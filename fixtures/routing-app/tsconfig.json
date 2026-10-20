@@ -5,7 +5,8 @@
 		"lib": ["ES2020"],
 		"types": ["@cloudflare/workers-types"],
 		"moduleResolution": "bundler",
-		"noEmit": true
+		"noEmit": true,
+		"strict": false
 	},
 	"include": ["**/*.ts"]
 }

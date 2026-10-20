@@ -44,7 +44,7 @@
 	},
 	"scripts": {
 		"build": "unbuild",
-		"check:type": "tsc --noEmit"
+		"check:type": "tsrs --noEmit"
 	},
 	"devDependencies": {
 		"@types/node-unenv": "npm:@types/node@^22.14.0",

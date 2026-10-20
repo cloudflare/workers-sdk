@@ -29,7 +29,7 @@
 	},
 	"scripts": {
 		"build": "node -r esbuild-register scripts/build.ts",
-		"check:type": "tsc",
+		"check:type": "tsrs",
 		"dev": "node -r esbuild-register scripts/build.ts --watch",
 		"test:ci": "vitest run --config ./vitest.config.mts",
 		"test:e2e": "vitest run --config ./vitest-e2e.config.mts",

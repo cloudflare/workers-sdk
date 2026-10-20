@@ -22,8 +22,8 @@
 	"main": "./dist/index.js",
 	"module": "./dist/index.js",
 	"scripts": {
-		"build": "tsc && vite build",
-		"check:type": "tsc && tsc -p tsconfig.node.json --noEmit",
+		"build": "tsrs && vite build",
+		"check:type": "tsrs && tsrs -p tsconfig.node.json --noEmit",
 		"dev": "vite"
 	},
 	"dependencies": {

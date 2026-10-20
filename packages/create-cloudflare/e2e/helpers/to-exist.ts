@@ -8,8 +8,6 @@ declare module "vitest" {
 	}
 	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- required by vitest's module augmentation pattern
 	interface Matchers<R> extends CustomMatchers<R> {}
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- required by vitest's module augmentation pattern
-	interface AsymmetricMatchersContaining extends CustomMatchers {}
 }
 
 expect.extend({

@@ -62,7 +62,7 @@
 	},
 	"scripts": {
 		"build": "tsdown",
-		"check:type": "tsc",
+		"check:type": "tsrs",
 		"deploy": "echo 'no deploy'",
 		"dev": "tsdown --watch",
 		"test:ci": "vitest run"

@@ -4,7 +4,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { generateRuntimeTypes } from "@cloudflare/runtime-types";
 import { removeDir } from "@cloudflare/workers-utils";
-import ts from "typescript";
+import { ScriptTarget } from "tsrs/unstable/ast";
+import {
+	API,
+	ModuleKind,
+	ModuleResolutionKind,
+	formatDiagnostics,
+} from "tsrs/unstable/sync";
 import { it } from "vitest";
 
 it("composes cloudflare:test types with generated runtime types when library checking is enabled", async ({
@@ -124,25 +130,30 @@ declare const secret: { get(): Promise<string> };
 `
 		);
 
-		const program = ts.createProgram({
-			rootNames: [runtimeTypesPath, cloudflareTestTypesPath, testSourcePath],
-			options: {
+		using api = new API({ cwd: temporaryDirectory });
+		using program = api.createProgram(
+			[runtimeTypesPath, cloudflareTestTypesPath, testSourcePath],
+			{
 				lib: ["lib.esnext.d.ts"],
-				module: ts.ModuleKind.ESNext,
-				moduleResolution: ts.ModuleResolutionKind.Bundler,
+				module: ModuleKind.ESNext,
+				moduleResolution: ModuleResolutionKind.Bundler,
 				noEmit: true,
 				skipLibCheck: false,
 				strict: true,
-				target: ts.ScriptTarget.ESNext,
+				target: ScriptTarget.ESNext,
 				types: [],
-			},
-		});
-		const diagnostics = ts.getPreEmitDiagnostics(program);
-		const formattedDiagnostics = ts.formatDiagnostics(diagnostics, {
-			getCanonicalFileName: (fileName) => fileName,
-			getCurrentDirectory: () => temporaryDirectory,
-			getNewLine: () => "\n",
-		});
+			}
+		);
+		const formattedDiagnostics = formatDiagnostics(
+			[
+				...program.getProgramDiagnostics(),
+				...program.getSyntacticDiagnostics(),
+				...program.getBindDiagnostics(),
+				...program.getGlobalDiagnostics(),
+				...program.getSemanticDiagnostics(),
+			],
+			api
+		);
 
 		expect(formattedDiagnostics).toBe("");
 	} finally {

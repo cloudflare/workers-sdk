@@ -3,10 +3,10 @@
 	"private": true,
 	"sideEffects": false,
 	"scripts": {
-		"check:type": "tsc",
+		"check:type": "tsrs",
 		"dev": "wrangler pages dev public --d1=D1 --d1=PUT=elsewhere --kv KV --kv KV_REF=other_kv --r2 r2bucket --r2=R2_REF=other-r2 --port 8794",
 		"test:ci": "vitest run",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
+		"type:tests": "tsrs -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",

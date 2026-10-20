@@ -10,7 +10,7 @@
  *   --bundle    After emitting declarations, run API Extractor to roll up all
  *               .d.ts files into a single dist/src/index.d.ts. Only meaningful
  *               when the tsconfig emits declarations (emitDeclarationOnly).
- *   --watch     Re-run on file changes (uses the TS compiler watch API).
+ *   --watch     Re-run on file changes (uses the tsrs CLI watch mode).
  *
  * Examples:
  *   # Build: emit .d.ts to dist-types/, then bundle into dist/src/index.d.ts
@@ -23,21 +23,17 @@
  *   node scripts/types.mjs src/workers/tsconfig.json --watch
  *
  * How it works:
- *   1. Reads the given tsconfig and creates a TypeScript program.
- *   2. Calls program.emit() — the tsconfig controls whether this produces .d.ts
- *      files (emitDeclarationOnly: true) or is a no-op (noEmit: true).
- *   3. Reports any type errors. Exits with code 1 if there are errors.
- *   4. If --bundle is set, runs API Extractor to roll up the individual .d.ts
- *      files from dist-types/ into a single dist/src/index.d.ts.
- *
- * Based on:
- *   https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API#writing-an-incremental-program-watcher
+ *   1. Runs tsrs against the given tsconfig to check types and emit declarations.
+ *   2. If --bundle is set, rolls up declarations with API Extractor after each
+ *      successful compilation.
  */
 
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { createInterface } from "node:readline";
+import { fileURLToPath } from "node:url";
 import { Extractor, ExtractorConfig } from "@microsoft/api-extractor";
-import ts from "typescript";
 import { getPackage, pkgRoot } from "./common.mjs";
 
 // --- CLI argument parsing ---
@@ -47,97 +43,54 @@ const argv = process.argv.slice(2);
 const configName = argv[0];
 /** When set, run API Extractor after emitting declarations. */
 const bundle = argv.includes("--bundle");
-/** When set, use the TS watch API to re-run on file changes. */
+/** When set, use tsrs watch mode to re-run on file changes. */
 const watch = argv.includes("--watch");
 
-// --- Diagnostics formatting ---
-
-/** @type {ts.FormatDiagnosticsHost} */
-const formatHost = {
-	getCanonicalFileName: (path) => path,
-	getCurrentDirectory: ts.sys.getCurrentDirectory,
-	getNewLine: () => ts.sys.newLine,
-};
-
-/** @param {ts.Diagnostic} diagnostic */
-function reportDiagnostic(diagnostic) {
-	process.stderr.write(ts.formatDiagnostic(diagnostic, formatHost));
-}
-
-/**
- * Called by the watch compiler host when the watch status changes.
- * Triggers bundling after a successful recompilation.
- * @param {ts.Diagnostic} diagnostic
- * @param {string} _newLine
- * @param {ts.CompilerOptions} _options
- * @param {number} [errorCount]
- */
-function reportWatchStatus(diagnostic, _newLine, _options, errorCount) {
-	process.stderr.write(ts.formatDiagnostic(diagnostic, formatHost));
-	if (errorCount === 0) {
-		bundleTypes();
-	}
-}
-
-// --- Main: compile and optionally bundle declarations ---
-
-/**
- * Run the TypeScript compiler against the given tsconfig.
- *
- * In one-shot mode: creates a program, emits, checks diagnostics, then
- * optionally bundles. In watch mode: creates a watch program that
- * re-emits and re-bundles on every successful recompilation.
- */
+/** Run tsrs and bundle declarations after successful compilations. */
 function buildTypes() {
-	const configPath = path.join(pkgRoot, configName);
-
-	if (watch) {
-		const host = ts.createWatchCompilerHost(
-			configPath,
-			{},
-			ts.sys,
-			ts.createEmitAndSemanticDiagnosticsBuilderProgram,
-			reportDiagnostic,
-			reportWatchStatus
-		);
-		ts.createWatchProgram(host);
-		return;
-	}
-
-	// One-shot mode: parse config, create program, emit, report errors.
-	const configFile = ts.readJsonConfigFile(configPath, ts.sys.readFile);
-	const parsedConfig = ts.parseJsonSourceFileConfigFileContent(
-		configFile,
-		ts.sys,
-		path.dirname(configPath)
+	const compilerPath = fileURLToPath(
+		new URL("bin/tsrs", import.meta.resolve("tsrs/package.json"))
+	);
+	const compiler = spawn(
+		process.execPath,
+		[
+			compilerPath,
+			"--project",
+			configName,
+			...(watch
+				? ["--watch", "--preserveWatchOutput", "--pretty", "false"]
+				: []),
+		],
+		{
+			cwd: pkgRoot,
+			stdio: watch && bundle ? ["inherit", "pipe", "inherit"] : "inherit",
+		}
 	);
 
-	if (parsedConfig.errors.length > 0) {
-		parsedConfig.errors.forEach(reportDiagnostic);
-		process.exitCode = 1;
-		return;
+	if (compiler.stdout) {
+		const output = createInterface({ input: compiler.stdout });
+		output.on("line", (line) => {
+			console.log(line);
+			// The watch status is printed only after all declaration files are written.
+			if (line.endsWith("Found 0 errors. Watching for file changes.")) {
+				bundleTypes();
+			}
+		});
 	}
 
-	const program = ts.createProgram({
-		rootNames: parsedConfig.fileNames,
-		options: parsedConfig.options,
+	for (const signal of ["SIGINT", "SIGTERM"]) {
+		process.once(signal, () => compiler.kill(signal));
+	}
+	compiler.on("error", (error) => {
+		console.error(error);
+		process.exitCode = 1;
 	});
-
-	// emit() respects the tsconfig: if noEmit is true, this is a no-op;
-	// if emitDeclarationOnly is true, only .d.ts files are written.
-	const result = program.emit();
-
-	const diagnostics = ts
-		.getPreEmitDiagnostics(program)
-		.concat(result.diagnostics);
-	diagnostics.forEach(reportDiagnostic);
-
-	if (diagnostics.length > 0) {
-		process.exitCode = 1;
-		return;
-	}
-
-	bundleTypes();
+	compiler.on("exit", (code, signal) => {
+		process.exitCode = code ?? (signal === "SIGINT" ? 130 : 1);
+		if (code === 0 && !watch) {
+			bundleTypes();
+		}
+	});
 }
 
 // --- API Extractor: roll up .d.ts files into a single declaration file ---
@@ -148,7 +101,7 @@ function buildTypes() {
 /** @type {import("@microsoft/api-extractor").IConfigFile} */
 const extractorCfgObject = {
 	projectFolder: "<lookup>",
-	// Input: individual .d.ts files emitted by tsc into dist-types/
+	// Input: individual .d.ts files emitted by tsrs into dist-types/
 	mainEntryPointFilePath: "<projectFolder>/dist-types/src/index.d.ts",
 	compiler: {
 		// Uses tsconfig.bundle.json which extends tsconfig.json but remaps

@@ -3,7 +3,7 @@
 	"private": true,
 	"description": "routing-app for testing",
 	"scripts": {
-		"check:type": "tsc"
+		"check:type": "tsrs"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "catalog:default"

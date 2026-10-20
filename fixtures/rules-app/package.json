@@ -6,7 +6,7 @@
 	"license": "ISC",
 	"author": "",
 	"scripts": {
-		"check:type": "tsc"
+		"check:type": "tsrs"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "catalog:default"

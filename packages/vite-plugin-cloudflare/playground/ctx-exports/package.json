@@ -4,7 +4,7 @@
 	"type": "module",
 	"scripts": {
 		"build:default": "vite build",
-		"check:type": "cf workers types --include-runtime=false && tsc --build",
+		"check:type": "cf workers types --include-runtime=false && tsrs --build",
 		"dev": "vite dev",
 		"preview": "vite preview"
 	},

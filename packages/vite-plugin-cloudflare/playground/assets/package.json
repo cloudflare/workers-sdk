@@ -7,7 +7,7 @@
 		"build:cf-build-output": "vite build -c vite.config.cf-build-output.ts",
 		"build:no-client-entry": "vite build -c vite.config.no-client-entry.ts",
 		"build:public-dir-only": "vite build -c vite.config.public-dir-only.ts",
-		"check:type": "tsc --build",
+		"check:type": "tsrs --build",
 		"dev": "vite dev",
 		"dev:cf-build-output": "vite dev -c vite.config.cf-build-output.ts",
 		"dev:no-client-entry": "vite dev -c vite.config.no-client-entry.ts",
