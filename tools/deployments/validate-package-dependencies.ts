@@ -24,7 +24,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { isBuiltin } from "node:module";
 import { dirname, resolve } from "node:path";
-import * as esbuild from "esbuild";
+import { rolldown } from "rolldown";
 import { glob } from "tinyglobby";
 
 export interface PackageJSON {
@@ -296,48 +296,45 @@ export function isBareSpecifier(spec: string): boolean {
  *
  * Returns top-level package names (e.g. "vitest" for "vitest/runtime").
  *
- * Uses esbuild's parser (via a `bundle: true` build with everything marked
- * external) so that specifiers found inside string literals, template
- * literals, comments, etc. are correctly ignored. `bundle: true` is required
- * to surface `require()` calls in the metafile — `bundle: false` only
- * reports ESM `import` statements. The `externalize-all` plugin short-
- * circuits resolution so esbuild never has to find the imports on disk.
+ * Uses Rolldown's Oxc parser and marks imports external before resolution.
+ * This catches CommonJS calls as well as ESM imports without executing code or
+ * confusing embedded source strings with real imports.
  */
 export async function extractBareImports(
 	content: string
 ): Promise<Set<string>> {
 	const imports = new Set<string>();
-
-	const result = await esbuild.build({
-		stdin: { contents: content, loader: "js" },
-		metafile: true,
-		bundle: true,
-		write: false,
-		logLevel: "silent",
+	const entry = "\0dist-import-scan";
+	const bundle = await rolldown({
+		input: entry,
 		platform: "neutral",
+		treeshake: false,
+		logLevel: "silent",
 		plugins: [
 			{
 				name: "externalize-all",
-				setup(build) {
-					build.onResolve({ filter: /.*/ }, (args) => {
-						if (args.kind === "entry-point") {
-							return undefined;
-						}
-						return { path: args.path, external: true };
-					});
+				resolveId(id) {
+					if (id === entry) {
+						return entry;
+					}
+					if (isBareSpecifier(id)) {
+						imports.add(getPackageNameFromSpecifier(id));
+					}
+					return { id, external: true };
+				},
+				load(id) {
+					if (id === entry) {
+						return content;
+					}
 				},
 			},
 		],
 	});
-
-	for (const input of Object.values(result.metafile.inputs)) {
-		for (const imp of input.imports) {
-			if (isBareSpecifier(imp.path)) {
-				imports.add(getPackageNameFromSpecifier(imp.path));
-			}
-		}
+	try {
+		await bundle.generate({ format: "esm" });
+	} finally {
+		await bundle.close();
 	}
-
 	return imports;
 }
 
