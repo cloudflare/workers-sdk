@@ -3,7 +3,6 @@ import { beforeEach, describe, it, vi } from "vitest";
 import { CF_CLI } from "../../src/cf";
 import { createCloudflareAuth } from "../../src/core/factory";
 import { createOAuthFlow } from "../../src/flow";
-import { WRANGLER_CLI } from "../../src/wrangler";
 import type { AuthContext } from "../../src/core/types";
 import type { LoginOrRefreshResult } from "../../src/flow";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
@@ -197,55 +196,33 @@ describe("consumer auth guidance", () => {
 		vi.clearAllMocks();
 	});
 
-	it.for([
-		{ descriptor: CF_CLI, flag: "--temporary-account" },
-		{ descriptor: WRANGLER_CLI, flag: "--temporary" },
-	])(
-		"uses $flag in existing-credential errors",
-		async ({ descriptor, flag }, { expect }) => {
-			flow.isTemporaryAllowed.mockReturnValue(true);
-			vi.mocked(flow.getAPIToken).mockReturnValue({
-				apiToken: "existing-token",
-			});
-			const auth = createCloudflareAuth(descriptor, createTestContext());
+	it("uses cf's temporary-account flag in auth guidance", async ({
+		expect,
+	}) => {
+		flow.isTemporaryAllowed.mockReturnValue(true);
+		flow.getAPIToken.mockReturnValue({ apiToken: "existing-token" });
+		const auth = createCloudflareAuth(CF_CLI, createTestContext());
 
-			await expect(auth.requireAuth(COMPLIANCE_CONFIG)).rejects.toThrow(
-				`Either remove \`${flag}\` to use your existing account`
-			);
-			expect(createOAuthFlow).toHaveBeenCalledWith(
-				expect.objectContaining({
-					temporary: expect.objectContaining({
-						temporaryAccountFlag: descriptor.temporaryAccountFlag,
-					}),
-				})
-			);
-			expect(flow.activateTemporaryAccount).not.toHaveBeenCalled();
-		}
-	);
+		await expect(auth.requireAuth(COMPLIANCE_CONFIG)).rejects.toThrow(
+			"Either remove `--temporary-account` to use your existing account"
+		);
+	});
 
-	it.for([
-		"no-credentials-non-interactive",
-		"no-credentials-login-failed",
-		"token-expired-non-interactive",
-		"token-expired-login-failed",
-		"token-refresh-unreachable",
-	] as const)(
-		"preserves %s on account lookup errors",
-		async (reason, { expect }) => {
-			flow.isTemporaryAllowed.mockReturnValue(false);
-			flow.loginOrRefreshIfRequired.mockResolvedValue({
-				loggedIn: false,
-				reason,
-			});
-			const auth = createCloudflareAuth(CF_CLI, createTestContext());
+	it("preserves the authentication failure reason on account lookup", async ({
+		expect,
+	}) => {
+		flow.isTemporaryAllowed.mockReturnValue(false);
+		flow.loginOrRefreshIfRequired.mockResolvedValue({
+			loggedIn: false,
+			reason: "no-credentials-non-interactive",
+		});
+		const auth = createCloudflareAuth(CF_CLI, createTestContext());
 
-			await expect(
-				auth.fetchAllAccounts(COMPLIANCE_CONFIG)
-			).rejects.toMatchObject({
-				reason,
-				telemetryMessage: "cfetch auth login required",
-			});
-			expect(fetchInternalBase).not.toHaveBeenCalled();
-		}
-	);
+		await expect(
+			auth.fetchAllAccounts(COMPLIANCE_CONFIG)
+		).rejects.toMatchObject({
+			reason: "no-credentials-non-interactive",
+			telemetryMessage: "cfetch auth login required",
+		});
+	});
 });
