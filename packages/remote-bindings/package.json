@@ -46,7 +46,7 @@
 		"@types/ws": "^8.5.13",
 		"capnweb": "catalog:default",
 		"esbuild": "catalog:default",
-		"tsdown": "0.16.3",
+		"tsdown": "0.23.1",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
 	}
