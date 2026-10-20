@@ -2693,6 +2693,41 @@ describe("wrangler dev", { concurrent: false }, () => {
 		});
 	});
 
+	describe("hyperdrive bindings", () => {
+		it("should report a `remote: true` Hyperdrive binding as remote", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				hyperdrive: [
+					{
+						binding: "HYPERDRIVE_REMOTE",
+						id: "remote-id",
+						remote: true,
+					},
+					{
+						binding: "HYPERDRIVE_LOCAL",
+						id: "local-id",
+						localConnectionString:
+							"postgres://user:pass@localhost:5432/database",
+					},
+				],
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWranglerUntilConfig("dev index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Your Worker has access to the following bindings:
+				Binding                                Resource               Mode
+				env.HYPERDRIVE_REMOTE (remote-id)      Hyperdrive Config      remote
+				env.HYPERDRIVE_LOCAL (local-id)        Hyperdrive Config      local
+
+				"
+			`);
+		});
+	});
+
 	describe("print bindings", () => {
 		it("should print bindings", async ({ expect }) => {
 			writeWranglerConfig({

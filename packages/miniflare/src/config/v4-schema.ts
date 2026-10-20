@@ -278,7 +278,7 @@ const V4QueueConsumerOptionsSchema = z.object({
 	retryDelay: V4QueueMessageDelaySchema,
 });
 
-const V4HyperdriveSchema = z
+const V4HyperdriveConnectionSchema = z
 	.union([z.url(), z.instanceof(URL)])
 	.superRefine((value, ctx) => {
 		const url = typeof value === "string" ? new URL(value) : value;
@@ -322,6 +322,14 @@ const V4HyperdriveSchema = z
 			});
 		}
 	});
+
+const V4HyperdriveSchema = z.union([
+	V4HyperdriveConnectionSchema,
+	z.object({
+		id: z.string().optional(),
+		remoteProxyConnectionString: RemoteProxyConnectionStringSchema,
+	}),
+]);
 
 const V4PipelineSchema = z.union([
 	z.string(),
@@ -867,7 +875,15 @@ export type V4WorkerOptionsShape = {
 				  })
 		  >
 		| string[];
-	hyperdrives?: Record<string, string | URL>;
+	hyperdrives?: Record<
+		string,
+		| string
+		| URL
+		| {
+				id?: string;
+				remoteProxyConnectionString: RemoteProxyConnectionString;
+		  }
+	>;
 	ratelimits?: Record<
 		string,
 		{ namespace_id: string; simple: { limit: number; period?: 10 | 60 } }

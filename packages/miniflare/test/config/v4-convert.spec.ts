@@ -4,6 +4,29 @@ import { convertV4MiniflareOptions } from "../../src/config/v4-convert";
 import type { RemoteProxyConnectionString } from "../../src/plugins/shared";
 
 describe("convertV4MiniflareOptions", () => {
+	test.for([undefined, "database-id"])(
+		"preserves remote Hyperdrive IDs, falling back to the binding name when absent: %s",
+		(id, { expect }) => {
+			const converted = convertV4MiniflareOptions({
+				script: "export default {};",
+				modules: true,
+				hyperdrives: {
+					DB: {
+						id,
+						remoteProxyConnectionString: new URL(
+							"http://127.0.0.1:8787"
+						) as RemoteProxyConnectionString,
+					},
+				},
+			});
+			expect(converted.workers[0].config.env?.DB).toEqual({
+				type: "hyperdrive",
+				id: id ?? "DB",
+				dev: { remote: true },
+			});
+		}
+	);
+
 	test("preserves opaque K2 stream IDs through v4 parsing and conversion", ({
 		expect,
 	}) => {

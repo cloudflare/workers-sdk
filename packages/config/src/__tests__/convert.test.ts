@@ -394,6 +394,23 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
+		it("maps remote Hyperdrive without a local connection string", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					env: {
+						HD: { type: "hyperdrive", id: "h-1", dev: { remote: true } },
+					},
+				},
+				containers: [],
+			});
+			expect(result.hyperdrive).toEqual([
+				{ binding: "HD", id: "h-1", remote: true },
+			]);
+		});
+
 		it("maps pipeline.name to stream", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
