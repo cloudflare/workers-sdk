@@ -525,6 +525,9 @@ test("default and named caches are disjoint", async ({ expect }) => {
 });
 
 test("purgeCache clears all default cache entries", async ({ expect }) => {
+	// Purging does not need a fake clock. An idle object can be evicted on slow
+	// runners, losing its fake clock and expiring entries written in 1970.
+	await ctx.defaultObject.disableFakeTimers();
 	const cache = ctx.caches.default;
 	const headers = { "Cache-Control": "max-age=3600" };
 
@@ -558,6 +561,7 @@ test("purgeCache clears all default cache entries", async ({ expect }) => {
 });
 
 test("purgeCache clears specific named cache", async ({ expect }) => {
+	await ctx.defaultObject.disableFakeTimers();
 	const defaultCache = ctx.caches.default;
 	const namedCache = await ctx.caches.open("my-cache");
 	const headers = { "Cache-Control": "max-age=3600" };
