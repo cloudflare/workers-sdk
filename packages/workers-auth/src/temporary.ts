@@ -16,6 +16,9 @@ import type {
 } from "./context";
 import type { PowSolution } from "./pow";
 
+/** Flag spelling used by consumers that don't specify their own. */
+export const DEFAULT_TEMPORARY_ACCOUNT_FLAG = "--temporary";
+
 export const TEMPORARY_TERMS_URLS = {
 	termsOfService: "https://www.cloudflare.com/terms/",
 	privacyPolicy: "https://www.cloudflare.com/privacypolicy/",
@@ -415,7 +418,7 @@ export async function getOrCreateTemporaryPreviewAccount(options: {
 
 	if (!termsAccepted) {
 		throw new UserError(
-			`You must accept Cloudflare's Terms of Service (${TEMPORARY_TERMS_URLS.termsOfService}) and Privacy Policy (${TEMPORARY_TERMS_URLS.privacyPolicy}) to use ${options.temporaryAccountFlag ?? "--temporary"}.`,
+			`You must accept Cloudflare's Terms of Service (${TEMPORARY_TERMS_URLS.termsOfService}) and Privacy Policy (${TEMPORARY_TERMS_URLS.privacyPolicy}) to use ${options.temporaryAccountFlag ?? DEFAULT_TEMPORARY_ACCOUNT_FLAG}.`,
 			{ telemetryMessage: "user temporary terms not accepted" }
 		);
 	}

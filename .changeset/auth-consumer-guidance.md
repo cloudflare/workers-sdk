@@ -1,5 +1,5 @@
 ---
-"@cloudflare/workers-auth": patch
+"@cloudflare/workers-auth": minor
 ---
 
 Use each CLI's temporary-account flag in authentication errors
