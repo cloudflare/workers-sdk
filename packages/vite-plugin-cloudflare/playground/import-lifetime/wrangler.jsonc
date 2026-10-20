@@ -1,0 +1,9 @@
+{
+	"name": "import-lifetime",
+	"main": "./src/index.ts",
+	"compatibility_date": "2026-04-01",
+	"compatibility_flags": [
+		"enable_request_signal",
+		"request_signal_passthrough",
+	],
+}

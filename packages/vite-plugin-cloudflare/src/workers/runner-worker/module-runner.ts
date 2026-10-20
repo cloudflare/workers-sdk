@@ -1,4 +1,4 @@
-import { DurableObject } from "cloudflare:workers";
+import { DurableObject, waitUntil } from "cloudflare:workers";
 import {
 	ModuleRunner,
 	ssrDynamicImportKey,
@@ -39,22 +39,28 @@ const callbackResults = new Map<number, unknown>();
  * since both run in the same V8 isolate). Only a numeric ID crosses the RPC
  * boundary.
  */
-async function runInRunnerObject(
+function runInRunnerObject(
 	env: WrapperEnv,
 	callback: () => Promise<unknown>
 ): Promise<unknown> {
-	const id = nextCallbackId++;
-	pendingCallbacks.set(id, callback);
+	const operation = (async () => {
+		const id = nextCallbackId++;
+		pendingCallbacks.set(id, callback);
 
-	try {
-		const stub = env.__VITE_RUNNER_OBJECT__.get("singleton");
-		await stub.executeCallback(id);
+		try {
+			const stub = env.__VITE_RUNNER_OBJECT__.get("singleton");
+			await stub.executeCallback(id);
 
-		return callbackResults.get(id);
-	} finally {
-		pendingCallbacks.delete(id);
-		callbackResults.delete(id);
-	}
+			return callbackResults.get(id);
+		} finally {
+			pendingCallbacks.delete(id);
+			callbackResults.delete(id);
+		}
+	})();
+
+	// Keep the caller's RPC continuation alive when its request ends.
+	waitUntil(operation);
+	return operation;
 }
 
 /**

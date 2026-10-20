@@ -1,0 +1,7 @@
+{
+	"extends": ["@cloudflare/workers-tsconfig/worker.json"],
+	"include": ["src"],
+	"compilerOptions": {
+		"allowJs": true
+	}
+}
