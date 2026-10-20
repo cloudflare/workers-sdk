@@ -719,7 +719,7 @@ describe("resolvePluginConfig - internal config path env fallback", () => {
 	});
 });
 
-describe("resolvePluginConfig - force-local env override", () => {
+describe("resolvePluginConfig - remote bindings", () => {
 	let tempDir: string;
 
 	beforeEach(() => {
@@ -748,29 +748,7 @@ describe("resolvePluginConfig - force-local env override", () => {
 		expect(result.remoteBindings).toBe(true);
 	});
 
-	test("CLOUDFLARE_VITE_FORCE_LOCAL=true forces remote bindings off", async ({
-		expect,
-	}) => {
-		vi.stubEnv("CLOUDFLARE_VITE_FORCE_LOCAL", "true");
-		const result = await resolvePluginConfig({}, { root: tempDir }, viteEnv);
-		expect(result.remoteBindings).toBe(false);
-	});
-
-	test("CLOUDFLARE_VITE_FORCE_LOCAL=true overrides remoteBindings: true in config", async ({
-		expect,
-	}) => {
-		vi.stubEnv("CLOUDFLARE_VITE_FORCE_LOCAL", "true");
-		const result = await resolvePluginConfig(
-			{ remoteBindings: true },
-			{ root: tempDir },
-			viteEnv
-		);
-		expect(result.remoteBindings).toBe(false);
-	});
-
-	test("unset CLOUDFLARE_VITE_FORCE_LOCAL respects remoteBindings config", async ({
-		expect,
-	}) => {
+	test("respects the remoteBindings config", async ({ expect }) => {
 		const result = await resolvePluginConfig(
 			{ remoteBindings: false },
 			{ root: tempDir },

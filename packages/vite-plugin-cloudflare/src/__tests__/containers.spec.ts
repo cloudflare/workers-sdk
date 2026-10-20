@@ -174,7 +174,6 @@ test("prepares registry images with their owning Worker configuration", async ({
 		dockerPath: "docker",
 		containerOptionsByWorker,
 		logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
-		cliDisplayName: "Wrangler",
 	});
 
 	expect(preparations).toEqual([
@@ -202,7 +201,6 @@ test("prepares the sidecar for a configured Worker without images or registry cr
 		dockerPath: "test-docker",
 		containerOptionsByWorker: new Map([[{}, []]]),
 		logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
-		cliDisplayName: "Wrangler",
 	});
 	expect(prepareContainerImagesForDev).toHaveBeenCalledExactlyOnceWith(
 		expect.objectContaining({
@@ -262,11 +260,7 @@ describe("Container image planning", () => {
 		);
 		const resolvedPluginConfig: PreviewResolvedConfig = {
 			type: "preview",
-			cliDisplayName: "Wrangler",
-			workers: ["first", "second"].map((name) => ({
-				source: "legacy",
-				config: createWorkerConfig(name),
-			})),
+			workers: ["first", "second"].map(createWorkerConfig),
 			persistState: false,
 			inspectorPort: false,
 			experimental: { headersAndRedirectsDevModeSupport: false },
@@ -339,68 +333,34 @@ describe("Container image planning", () => {
 
 test.for([
 	{
-		cliDisplayName: "Wrangler",
 		configPath: "project/wrangler.jsonc",
 		viteConfigFile: "project/vite.config.mts",
-		experimentalNewConfig: false,
 		configFileName: "wrangler.jsonc",
-		registryConfigureCommand: "wrangler containers registries configure",
 	},
 	{
-		cliDisplayName: "Wrangler",
 		configPath: undefined,
 		viteConfigFile: "project/vite.config.mts",
-		experimentalNewConfig: false,
 		configFileName: "vite.config.mts",
-		registryConfigureCommand: "wrangler containers registries configure",
 	},
 	{
-		cliDisplayName: "Wrangler",
 		configPath: undefined,
 		viteConfigFile: false as const,
-		experimentalNewConfig: false,
 		configFileName: "Vite plugin configuration",
-		registryConfigureCommand: "wrangler containers registries configure",
-	},
-	{
-		cliDisplayName: "Wrangler",
-		configPath: undefined,
-		viteConfigFile: "project/vite.config.ts",
-		experimentalNewConfig: true,
-		configFileName: "cloudflare.config.ts",
-		registryConfigureCommand: "wrangler containers registries configure",
-	},
-	{
-		cliDisplayName: "cf",
-		configPath: undefined,
-		viteConfigFile: false as const,
-		experimentalNewConfig: true,
-		configFileName: "cloudflare.config.ts",
-		registryConfigureCommand: "cf containers registries create",
 	},
 ])(
-	"passes $configFileName and $cliDisplayName guidance to the Container helper",
-	async (
-		{
-			cliDisplayName,
-			configPath,
-			viteConfigFile,
-			experimentalNewConfig,
-			configFileName,
-			registryConfigureCommand,
-		},
-		{ expect }
-	) => {
+	"passes $configFileName guidance to the Container helper",
+	async ({ configPath, viteConfigFile, configFileName }, { expect }) => {
 		await prepareContainerImagesForVite({
 			dockerPath: "test-docker",
 			containerOptionsByWorker: new Map([[{ configPath }, []]]),
 			logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
-			cliDisplayName,
 			viteConfigFile,
-			experimentalNewConfig,
 		});
 		expect(prepareContainerImagesForDev).toHaveBeenCalledExactlyOnceWith(
-			expect.objectContaining({ configFileName, registryConfigureCommand })
+			expect.objectContaining({
+				configFileName,
+				registryConfigureCommand: "wrangler containers registries configure",
+			})
 		);
 	}
 );
