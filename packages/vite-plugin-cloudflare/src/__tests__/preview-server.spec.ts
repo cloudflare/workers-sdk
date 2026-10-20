@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { fileURLToPath } from "node:url";
-import { getZoneFromRoute } from "@cloudflare/workers-utils";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
+import { getZoneFromRoute } from "@cloudflare/workers-utils";
 import { Miniflare } from "miniflare";
 import { createBuilder, preview } from "vite";
 import { afterEach, describe, test, vi } from "vitest";
