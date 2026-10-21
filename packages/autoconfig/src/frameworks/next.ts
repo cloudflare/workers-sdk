@@ -11,7 +11,7 @@ import type {
 // Later majors also use vinext rather than falling back to OpenNext, whose output cf does not deploy.
 const VINEXT_MINIMUM_NEXT_VERSION = "16.0.0";
 
-// `--name` requires vinext 1.2.0 or later; 1.3.0 is the latest release at the time of writing
+// `--name` requires vinext 1.2.0 or later
 const VINEXT_PACKAGE = "vinext@^1.3.0";
 
 const OPENNEXT_CONFIGURATION_DESCRIPTION =
