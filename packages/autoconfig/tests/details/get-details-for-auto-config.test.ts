@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { NpmPackageManager } from "@cloudflare/workers-utils";
 import {
 	mockConsoleMethods,
 	runInTempDir,
@@ -8,6 +9,7 @@ import {
 } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, describe, it, vi } from "vitest";
 import * as details from "../../src/details";
+import { detectFramework } from "../../src/details/framework-detection";
 import { createMockContext } from "../helpers/mock-context";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -48,6 +50,20 @@ vi.mock("node:fs/promises", async (importOriginal) => {
 			}
 			return Reflect.apply(original.stat, undefined, args);
 		},
+	};
+});
+
+// Passes through to the real detection unless a test overrides it, for cases
+// that cannot be reproduced with files on disk alone
+vi.mock("../../src/details/framework-detection", async (importOriginal) => {
+	const original =
+		await importOriginal<
+			typeof import("../../src/details/framework-detection")
+		>();
+
+	return {
+		...original,
+		detectFramework: vi.fn(original.detectFramework),
 	};
 });
 
@@ -775,6 +791,31 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 					details.getDetailsForAutoConfig({ context: nonInteractiveContext })
 				).resolves.toMatchObject({
 					framework: expect.objectContaining({ id: "astro" }),
+				});
+			});
+
+			it("should not throw in a non-interactive run when a detected framework is not recognised", async ({
+				expect,
+			}) => {
+				await seed({
+					"index.html": `<h1>Hello World</h1>`,
+					"functions/api/hello.js": pagesFunction,
+				});
+				// A framework detected with its output in the project root but missing
+				// from `allFrameworksInfos`, so it is handled as a static site
+				vi.mocked(detectFramework).mockResolvedValueOnce({
+					detectedFramework: {
+						framework: { id: "gatsby", name: "Gatsby" },
+						dist: ".",
+					},
+					packageManager: NpmPackageManager,
+				});
+
+				await expect(
+					details.getDetailsForAutoConfig({ context: nonInteractiveContext })
+				).resolves.toMatchObject({
+					framework: expect.objectContaining({ id: "static" }),
+					outputDir: ".",
 				});
 			});
 		});

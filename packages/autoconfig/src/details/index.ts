@@ -212,7 +212,7 @@ export async function getDetailsForAutoConfig({
 	// is not and continue as a static site, which would deploy the project root
 	// as assets and silently drop the Functions (the API routes). Stop instead.
 	if (
-		framework.id === staticFramework.id &&
+		detectedFramework.framework.id === staticFramework.id &&
 		(context.isNonInteractiveOrCI?.() ?? false) &&
 		resolve(projectPath, outputDir) === resolve(projectPath) &&
 		(await getPathStats(join(projectPath, "functions")))?.isDirectory()
