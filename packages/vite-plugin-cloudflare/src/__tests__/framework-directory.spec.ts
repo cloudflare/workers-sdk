@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { readBuildOutput } from "@cloudflare/build-output-utils";
 import { bindings } from "@cloudflare/config";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
-import { createBuilder, createServer, preview } from "vite";
+import { createBuilder, createServer, normalizePath, preview } from "vite";
 import { describe, test } from "vitest";
 import { cloudflare } from "../../dist/index.mjs";
 
@@ -13,7 +13,8 @@ describe("framework-owned directory through dev, build and preview", () => {
 	test("builds and previews static assets in the same framework-owned directory", async ({
 		expect,
 	}) => {
-		const root = process.cwd();
+		// Vite rejects Windows 8.3 paths (such as RUNNER~1 in os.tmpdir()).
+		const root = normalizePath(fs.realpathSync.native(process.cwd()));
 		fs.writeFileSync(
 			"index.html",
 			"<!doctype html><html><body>framework assets</body></html>"
@@ -69,8 +70,9 @@ describe("framework-owned directory through dev, build and preview", () => {
 	test("keeps all generated files below the configured directory with the real plugin", async ({
 		expect,
 	}) => {
-		const root = path.join(process.cwd(), "app");
-		fs.mkdirSync(root);
+		const appDirectory = path.join(process.cwd(), "app");
+		fs.mkdirSync(appDirectory);
+		const root = normalizePath(fs.realpathSync.native(appDirectory));
 		fs.writeFileSync(
 			path.join(root, "package.json"),
 			JSON.stringify({ type: "module" })
