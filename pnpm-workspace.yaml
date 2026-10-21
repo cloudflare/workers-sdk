@@ -28,14 +28,13 @@ patchedDependencies:
   toucan-js@4.0.0: patches/toucan-js@4.0.0.patch
   youch@4.1.0-beta.10: patches/youch@4.1.0-beta.10.patch
   buffer-equal-constant-time@1.0.1: patches/buffer-equal-constant-time@1.0.1.patch
-  vite@8.1.5: patches/vite@8.1.5.patch
 catalog:
   "@types/node": 22.15.17
   typescript: 5.8.3
   undici: 7.29.1
   undici-types: 7.29.1
   vitest: 5.0.4
-  vite: 8.1.5
+  vite: 8.3.4
   esbuild: 0.28.2
   "@playwright/test": 1.60.0
   playwright-chromium: 1.60.0
