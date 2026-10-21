@@ -2,13 +2,7 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { test } from "vitest";
-import {
-	getJsonResponse,
-	isBuild,
-	page,
-	satisfiesMinimumViteVersion,
-	testDir,
-} from "../../__test-utils__";
+import { getJsonResponse, isBuild, page, testDir } from "../../__test-utils__";
 
 test("disposes resources in reverse order in the Worker", async ({
 	expect,
@@ -33,12 +27,7 @@ test.runIf(isBuild)(
 	}
 );
 
-// The Worker-scoped esbuild override on Vite 6 and 7 must not reach the client.
-// Vite 8 has no such override, since the client keeps its own target. Also, the
-// pinned Vite 8.1.5 (Rolldown 1.1.5) leaves `using` in client bundles at an
-// explicit target with or without this plugin, so the assertion only holds on
-// Vite 6 and 7.
-test.runIf(isBuild && !satisfiesMinimumViteVersion("8.0.0"))(
+test.runIf(isBuild)(
 	"lowers using declarations in the client build",
 	async ({ expect }) => {
 		const clientDir = path.join(testDir, "dist", "client");

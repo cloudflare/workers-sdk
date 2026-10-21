@@ -65,7 +65,7 @@ jobs:
         env:
           VITE_MAJOR: ${{ matrix.vite }}
         shell: bash
-        run: pnpm --config.allow-unused-patches=true update -r --no-save "vite@^${VITE_MAJOR}.0.0"
+        run: pnpm update -r --no-save "vite@^${VITE_MAJOR}.0.0"
       - run: pnpm --filter @vite-plugin-cloudflare/playground playwright:install
       - run: pnpm dotenv -- turbo test:ci:serve --filter @vite-plugin-cloudflare/playground --only --summarize
         env:
