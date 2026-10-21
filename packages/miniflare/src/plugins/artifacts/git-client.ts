@@ -174,6 +174,11 @@ export async function runGit(
 		child.stdout.on("data", (chunk: Buffer) => stdout.push(chunk));
 		child.stderr.on("data", (chunk: Buffer) => stderr.push(chunk));
 		child.once("error", (error) => {
+			// Node emits AbortError before other abort listeners can stop Git's
+			// process group. Keep that listener until the abort finishes.
+			if ((error as NodeJS.ErrnoException).code !== "ABORT_ERR") {
+				options.signal?.removeEventListener("abort", stop);
+			}
 			clearTimeout(timeout);
 			reject(error);
 		});
