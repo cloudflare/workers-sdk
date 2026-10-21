@@ -330,3 +330,37 @@ describe("Container image planning", () => {
 		expect(new Set(runtimeImageTags)).toEqual(imageTags);
 	});
 });
+
+test.for([
+	{
+		configPath: "project/wrangler.jsonc",
+		viteConfigFile: "project/vite.config.mts",
+		configFileName: "wrangler.jsonc",
+	},
+	{
+		configPath: undefined,
+		viteConfigFile: "project/vite.config.mts",
+		configFileName: "vite.config.mts",
+	},
+	{
+		configPath: undefined,
+		viteConfigFile: false as const,
+		configFileName: "Vite plugin configuration",
+	},
+])(
+	"passes $configFileName guidance to the Container helper",
+	async ({ configPath, viteConfigFile, configFileName }, { expect }) => {
+		await prepareContainerImagesForVite({
+			dockerPath: "test-docker",
+			containerOptionsByWorker: new Map([[{ configPath }, []]]),
+			logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+			viteConfigFile,
+		});
+		expect(prepareContainerImagesForDev).toHaveBeenCalledExactlyOnceWith(
+			expect.objectContaining({
+				configFileName,
+				registryConfigureCommand: "wrangler containers registries configure",
+			})
+		);
+	}
+);

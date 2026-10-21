@@ -52,7 +52,7 @@
 		"ws": "8.22.0"
 	},
 	"devDependencies": {
-		"@cloudflare/containers-shared": "0.22.1",
+		"@cloudflare/containers-shared": "0.23.0",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/remote-bindings": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",

@@ -320,8 +320,8 @@ importers:
         version: 8.22.0
     devDependencies:
       '@cloudflare/containers-shared':
-        specifier: 0.22.1
-        version: 0.22.1(vitest@4.1.0)
+        specifier: 0.23.0
+        version: 0.23.0(vitest@4.1.0)
       '@cloudflare/mock-npm-registry':
         specifier: workspace:*
         version: link:../mock-npm-registry
@@ -1938,6 +1938,10 @@ packages:
 
   '@cloudflare/containers-shared@0.22.1':
     resolution: {integrity: sha512-zwvrXDNcLFfxcSRwjDkTH0eR5Moxk50oLsgBlgGblIHZXWblMk6N4xMx3xWD45/GcO8rWJ99aoZGIT/qWTnZZA==}
+    engines: {node: '>=22.0.0'}
+
+  '@cloudflare/containers-shared@0.23.0':
+    resolution: {integrity: sha512-Gkoizqq4G0NzOjPhM8VHEz4xV43doXzoeMc5R7c4m4b611MavjBgCUakynnuoH+d3QfsE2f3iN0hPaVaTuDnnQ==}
     engines: {node: '>=22.0.0'}
 
   '@cloudflare/deploy-helpers@0.21.0':
@@ -8480,6 +8484,15 @@ snapshots:
       zod: 4.6.5
 
   '@cloudflare/containers-shared@0.22.1(vitest@4.1.0)':
+    dependencies:
+      '@cloudflare/build-output-utils': 0.9.3
+      '@cloudflare/cli-shared-helpers': 0.2.6(vitest@4.1.0)
+      '@cloudflare/config': 0.27.0
+      '@cloudflare/workers-utils': 0.47.2(vitest@4.1.0)
+    transitivePeerDependencies:
+      - vitest
+
+  '@cloudflare/containers-shared@0.23.0(vitest@4.1.0)':
     dependencies:
       '@cloudflare/build-output-utils': 0.9.3
       '@cloudflare/cli-shared-helpers': 0.2.6(vitest@4.1.0)

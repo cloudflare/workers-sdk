@@ -1,3 +1,4 @@
+import path from "node:path";
 import {
 	configureOpenAPIForContainerPull,
 	isCloudflareRegistryImage,
@@ -15,7 +16,10 @@ import type {
 } from "@cloudflare/containers-shared";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
-type ContainerWorkerConfig = ComplianceConfig & { account_id?: string };
+type ContainerWorkerConfig = ComplianceConfig & {
+	account_id?: string;
+	configPath?: string;
+};
 
 /**
  * Configures the Containers API client used to retrieve image pull credentials.
@@ -73,13 +77,14 @@ export function normalizeContainerImageUris(
  * registry account and compliance settings, including Workers whose images
  * are selected at start time.
  *
- * @param args - Planned images, Docker executable, and Vite logger.
+ * @param args - Planned images, Docker executable, Vite logger, and configuration source.
  * @returns No value.
  */
 export async function prepareContainerImagesForVite(args: {
 	dockerPath: string;
 	containerOptionsByWorker: ContainerOptionsByWorker;
 	logger: ViteLogger;
+	viteConfigFile?: string | false;
 }): Promise<void> {
 	for (const [workerConfig, plannedOptions] of args.containerOptionsByWorker) {
 		let containerOptions = plannedOptions;
@@ -119,6 +124,12 @@ export async function prepareContainerImagesForVite(args: {
 			onContainerImagePreparationEnd: () => {},
 			logger: args.logger,
 			complianceConfig: workerConfig,
+			configFileName: workerConfig.configPath
+				? path.basename(workerConfig.configPath)
+				: args.viteConfigFile
+					? path.basename(args.viteConfigFile)
+					: "Vite plugin configuration",
+			registryConfigureCommand: "wrangler containers registries configure",
 		});
 	}
 }
