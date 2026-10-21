@@ -35,6 +35,9 @@ import { runWrangler } from "./helpers/run-wrangler";
 import type { EnvironmentNonInheritable } from "@cloudflare/workers-utils/config";
 import type { MockInstance } from "vitest";
 
+// Native compiler regressions run on Linux/macOS; Windows tests product output.
+const test = process.platform === "win32" ? it.skip : it;
+
 describe("isValidIdentifier", () => {
 	it("should return true for valid identifiers", ({ expect }) => {
 		expect(isValidIdentifier("valid")).toBe(true);
@@ -4397,7 +4400,7 @@ describe("generate types - API", () => {
 		expect(generated.content).toContain('declare module "*.html"');
 	});
 
-	it("includes module rules introduced by a named environment", async ({
+	test("includes module rules introduced by a named environment", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4432,7 +4435,7 @@ describe("generate types - API", () => {
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("unions module types when an environment override suppresses a default rule", async ({
+	test("unions module types when an environment override suppresses a default rule", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4481,7 +4484,7 @@ describe("generate types - API", () => {
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("unions broader environment matches into scoped module declarations", async ({
+	test("unions broader environment matches into scoped module declarations", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4521,7 +4524,7 @@ describe("generate types - API", () => {
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("unions broader scoped rules into narrower environment declarations", async ({
+	test("unions broader scoped rules into narrower environment declarations", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4561,7 +4564,7 @@ describe("generate types - API", () => {
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("uses broader scoped rules instead of recursive fallbacks for exact environment declarations", async ({
+	test("uses broader scoped rules instead of recursive fallbacks for exact environment declarations", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4609,7 +4612,7 @@ describe("generate types - API", () => {
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("keeps recursive types after non-representable scoped rules", async ({
+	test("keeps recursive types after non-representable scoped rules", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4650,7 +4653,7 @@ describe("generate types - API", () => {
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("uses direct-import glob semantics for exact environment declarations", async ({
+	test("uses direct-import glob semantics for exact environment declarations", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4708,7 +4711,7 @@ describe("generate types - API", () => {
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("uses discovery glob semantics for exact environment declarations", async ({
+	test("uses discovery glob semantics for exact environment declarations", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4760,7 +4763,7 @@ describe("generate types - API", () => {
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("defaults module discovery on for unbundled module rules", async ({
+	test("defaults module discovery on for unbundled module rules", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4838,7 +4841,7 @@ describe("generate types - API", () => {
 		);
 	});
 
-	it("preserves representable directory scopes for same-extension rules", async ({
+	test("preserves representable directory scopes for same-extension rules", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4882,7 +4885,7 @@ describe("generate types - API", () => {
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("uses a safe union when relative imports cannot preserve directory scope", async ({
+	test("uses a safe union when relative imports cannot preserve directory scope", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4930,7 +4933,7 @@ describe("generate types - API", () => {
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("uses a safe union when an exact rule overlaps a default rule", async ({
+	test("uses a safe union when an exact rule overlaps a default rule", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -5034,7 +5037,7 @@ describe("generate types - API", () => {
 		expect(std.warn).toBe("");
 	});
 
-	it.for([
+	test.for([
 		{ name: "simple", environmentConfig: {} },
 		{
 			name: "per-environment",

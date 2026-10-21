@@ -10,6 +10,9 @@ import { createFileSystemLayer } from "tsrs/unstable/fs";
 import { API, ModuleKind, ModuleResolutionKind } from "tsrs/unstable/sync";
 import { it } from "vitest";
 
+// Native compiler regressions run on Linux/macOS; Windows tests product output.
+const test = process.platform === "win32" ? it.skip : it;
+
 const source = `
 import { defineConfig, defineContainer, defineWorker } from "../definition";
 
@@ -39,7 +42,7 @@ defineContainer({
 const testFilePath = fileURLToPath(
 	new URL("inline-worker-jsdoc.ts", import.meta.url)
 );
-it("preserves JSDoc for define helper fields", ({ expect }) => {
+test("preserves JSDoc for define helper fields", ({ expect }) => {
 	using api = new API();
 	using snapshot = api.createSnapshot({
 		fileSystem: createFileSystemLayer([[testFilePath, source]]),

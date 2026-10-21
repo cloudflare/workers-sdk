@@ -13,7 +13,10 @@ import {
 } from "tsrs/unstable/sync";
 import { it } from "vitest";
 
-it("composes cloudflare:test types with generated runtime types when library checking is enabled", async ({
+// Native compiler regressions run on Linux/macOS; Windows tests product output.
+const test = process.platform === "win32" ? it.skip : it;
+
+test("composes cloudflare:test types with generated runtime types when library checking is enabled", async ({
 	expect,
 }) => {
 	const temporaryDirectory = await mkdtemp(
