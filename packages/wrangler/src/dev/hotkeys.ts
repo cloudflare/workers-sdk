@@ -85,14 +85,6 @@ export default function registerDevHotKeys(
 								}
 							}
 						});
-						// cleanup any existing containers
-
-						devEnv.runtimes.map((runtime) => {
-							if (runtime instanceof LocalRuntimeController) {
-								runtime.cleanupContainers();
-							}
-						});
-
 						const newContainerBuildId = generateContainerBuildId();
 
 						// updating the build ID will trigger a rebuild of the containers
