@@ -1,7 +1,8 @@
 // The production cf OAuth client's registered scope catalog. Registration alone
 // does not make a scope requestable: the consent service must also be able to
-// resolve its Bach mapping. The known exceptions are filtered below before the
-// catalog is used for defaults, types, or validation.
+// resolve its Bach mapping. Known exceptions are filtered below before the
+// catalog is used for types or validation, and sensitive scopes can be excluded
+// from login defaults while remaining explicitly requestable.
 //
 // Refresh the registration from `GET /accounts/{account}/oauth_clients/{id}`
 // and compare modern scope IDs with `GET /oauth/scopes`. Retain separately
@@ -56,6 +57,7 @@ export const CF_CLIENT_REGISTERED_SCOPES = [
 	"email_sending:read",
 	"email_sending:write",
 	"firstpartytags:write",
+	"hyperdrive-planetscale:setup",
 	"images:read",
 	"images:write",
 	"lb:edit",
@@ -521,6 +523,10 @@ type UngrantableScope = (typeof CF_REGISTERED_BUT_UNGRANTABLE_SCOPES)[number];
  */
 export type Scope = Exclude<ClientRegisteredScope, UngrantableScope>;
 
+const CF_EXPLICIT_ONLY_SCOPES = [
+	"hyperdrive-planetscale:setup",
+] as const satisfies readonly Scope[];
+
 const CF_UNGRANTABLE_SCOPE_SET: ReadonlySet<string> = new Set(
 	CF_REGISTERED_BUT_UNGRANTABLE_SCOPES
 );
@@ -531,7 +537,13 @@ export const CF_REQUESTABLE_SCOPES: readonly Scope[] =
 		(scope): scope is Scope => !CF_UNGRANTABLE_SCOPE_SET.has(scope)
 	);
 
-export let DefaultScopeKeys: Scope[] = [...CF_REQUESTABLE_SCOPES];
+const CF_EXPLICIT_ONLY_SCOPE_SET: ReadonlySet<string> = new Set(
+	CF_EXPLICIT_ONLY_SCOPES
+);
+
+export let DefaultScopeKeys: Scope[] = CF_REQUESTABLE_SCOPES.filter(
+	(scope) => !CF_EXPLICIT_ONLY_SCOPE_SET.has(scope)
+);
 
 export function setLoginScopeKeys(scopes: Scope[]) {
 	DefaultScopeKeys = scopes;

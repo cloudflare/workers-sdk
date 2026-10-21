@@ -3483,6 +3483,15 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			["single-page-application", "404-page", "none"]
 		) && isValid;
 
+	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"base_path",
+			(value as Assets).base_path,
+			"string"
+		) && isValid;
+
 	if ((value as Assets).run_worker_first !== undefined) {
 		if (typeof (value as Assets).run_worker_first === "boolean") {
 			isValid =
@@ -3516,6 +3525,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			"binding",
 			"html_handling",
 			"not_found_handling",
+			"base_path",
 			"run_worker_first",
 		]) && isValid;
 
@@ -5312,10 +5322,18 @@ const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	// `remote: true` opts the binding into connecting to the deployed Hyperdrive
+	// configuration at the edge during local dev (via the remote-bindings proxy).
+	// When set, a `localConnectionString` is optional.
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"id",
 		"localConnectionString",
+		"remote",
 	]);
 
 	return isValid;

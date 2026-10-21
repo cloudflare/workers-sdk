@@ -10,6 +10,7 @@ import { BuildOutputError } from "./errors";
 import {
 	BUILD_OUTPUT_VERSION,
 	DEFAULT_WORKER_DIRECTORY_NAME,
+	getBuildOutputDir,
 	getContainerConfigPath,
 	getContainersDir,
 	getRootConfigPath,
@@ -128,11 +129,12 @@ export interface BuildOutput {
  * complete manifests using the files in `bundle/`.
  *
  * @throws {BuildOutputError} if the root `config.json` is missing or
- * invalid, or if a Worker or Container config is missing, is not valid JSON,
- * or does not match its schema.
+ * invalid, if a Worker or Container config is missing, is not valid JSON,
+ * or does not match its schema, or if the build output contains a symlink.
  */
 export async function readBuildOutput(root: string): Promise<BuildOutput> {
 	const absoluteRoot = path.resolve(root);
+	await validateBuildOutputDirectory(absoluteRoot);
 	const rootConfig = await readRootConfig(absoluteRoot);
 	const [workers, containers] = await Promise.all([
 		readWorkers(absoluteRoot),
@@ -146,6 +148,40 @@ export async function readBuildOutput(root: string): Promise<BuildOutput> {
 		workers,
 		containers,
 	};
+}
+
+/** Reject symlinks so build output remains portable and self-contained. */
+async function validateBuildOutputDirectory(root: string): Promise<void> {
+	const buildOutputDir = getBuildOutputDir(root);
+
+	// Check the output path itself before scanning to avoid following a linked
+	// `.cloudflare` or `output` directory.
+	for (const directory of [path.dirname(buildOutputDir), buildOutputDir]) {
+		const entry = fs.lstatSync(directory, { throwIfNoEntry: false });
+		if (entry === undefined) {
+			return;
+		}
+		assertNotSymlink(directory, entry);
+		if (!entry.isDirectory()) {
+			return;
+		}
+	}
+
+	const entries = await fsp.readdir(buildOutputDir, {
+		recursive: true,
+		withFileTypes: true,
+	});
+	for (const entry of entries) {
+		assertNotSymlink(path.join(entry.parentPath, entry.name), entry);
+	}
+}
+
+function assertNotSymlink(filePath: string, entry: fs.Stats | fs.Dirent): void {
+	if (entry.isSymbolicLink()) {
+		throw new BuildOutputError(
+			`symlink found at ${filePath}. Symlinks are not permitted because the build output must be portable and self-contained.`
+		);
+	}
 }
 
 /** Read and parse the default Worker and any additional Worker configs. */

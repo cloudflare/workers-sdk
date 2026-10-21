@@ -830,6 +830,11 @@ interface EnvironmentInheritable {
 	/**
 	 * Include source maps when uploading this worker.
 	 *
+	 * Defaults to `true` for `wrangler deploy`, `wrangler versions upload`,
+	 * `wrangler preview` and `wrangler build --experimental-cf-build-output`,
+	 * where source maps that can't be resolved are skipped rather than failing
+	 * the upload.
+	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#source-maps
 	 *
 	 * @inheritable
@@ -1430,6 +1435,11 @@ export interface EnvironmentNonInheritable {
 		id: string;
 		/** The local database connection string for `wrangler dev` */
 		localConnectionString?: string;
+		/**
+		 * Connect to the deployed Hyperdrive configuration during local development
+		 * instead of a local database.
+		 */
+		remote?: boolean;
 	}[];
 
 	/**
@@ -1982,6 +1992,10 @@ export type Assets = {
 		| "none";
 	/** How to handle requests that do not match an asset. */
 	not_found_handling?: "single-page-application" | "404-page" | "none";
+	/**
+	 * The public URL prefix under which the application is served, e.g. `/subpath/`.
+	 */
+	base_path?: string;
 	/**
 	 * Matches will be routed to the User Worker, and matches to negative rules will go to the Asset Worker.
 	 *

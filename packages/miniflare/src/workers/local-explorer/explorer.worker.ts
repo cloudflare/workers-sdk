@@ -24,6 +24,9 @@ import {
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
+	zFlagshipCreateFlagData,
+	zFlagshipEvaluateFlagData,
+	zFlagshipUpdateFlagData,
 	zWorkersKvNamespaceWriteMultipleKeyValuePairsData,
 	zObservabilityQueryData,
 	zWorkflowsBatchDeleteInstancesData,
@@ -44,6 +47,14 @@ import {
 	sendTestEmail,
 } from "./resources/email";
 import {
+	createFlagshipFlag,
+	deleteFlagshipFlag,
+	evaluateFlagshipFlag,
+	listFlagshipApps,
+	listFlagshipFlags,
+	updateFlagshipFlag,
+} from "./resources/flagship";
+import {
 	bulkDeleteKVValues,
 	bulkGetKVValues,
 	bulkWriteKVValues,
@@ -55,6 +66,7 @@ import {
 } from "./resources/kv";
 import { clearTraces, runQuery } from "./resources/observability";
 import {
+	deleteR2Object,
 	deleteR2Objects,
 	getR2Object,
 	listR2Buckets,
@@ -347,6 +359,10 @@ app.put("/api/r2/buckets/:bucket_name/objects/:object_key", (c) =>
 	})
 );
 
+app.delete("/api/r2/buckets/:bucket_name/objects/:object_key{.+}", (c) =>
+	deleteR2Object(c, c.req.param("bucket_name"), c.req.param("object_key"))
+);
+
 app.delete(
 	"/api/r2/buckets/:bucket_name/objects",
 	validateRequestBody(zR2BucketDeleteObjectsData.shape.body),
@@ -426,6 +442,50 @@ app.delete("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 		c.req.param("workflow_name"),
 		c.req.param("instance_id")
 	)
+);
+
+// ============================================================================
+// Flagship Endpoints
+// ============================================================================
+
+app.get("/api/flagship/apps", (c) => listFlagshipApps(c));
+
+app.get("/api/flagship/apps/:app_id/flags", (c) =>
+	listFlagshipFlags(c, c.req.param("app_id"))
+);
+
+app.post(
+	"/api/flagship/apps/:app_id/flags",
+	validateRequestBody(zFlagshipCreateFlagData.shape.body),
+	(c) => createFlagshipFlag(c, c.req.param("app_id"), c.req.valid("json"))
+);
+
+app.patch(
+	"/api/flagship/apps/:app_id/flags/:flag_key",
+	validateRequestBody(zFlagshipUpdateFlagData.shape.body),
+	(c) =>
+		updateFlagshipFlag(
+			c,
+			c.req.param("app_id"),
+			c.req.param("flag_key"),
+			c.req.valid("json")
+		)
+);
+
+app.delete("/api/flagship/apps/:app_id/flags/:flag_key", (c) =>
+	deleteFlagshipFlag(c, c.req.param("app_id"), c.req.param("flag_key"))
+);
+
+app.post(
+	"/api/flagship/apps/:app_id/flags/:flag_key/evaluate",
+	validateRequestBody(zFlagshipEvaluateFlagData.shape.body),
+	(c) =>
+		evaluateFlagshipFlag(
+			c,
+			c.req.param("app_id"),
+			c.req.param("flag_key"),
+			c.req.valid("json").context ?? {}
+		)
 );
 
 // ============================================================================

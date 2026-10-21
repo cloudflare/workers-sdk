@@ -216,9 +216,35 @@ describe("multiworker", () => {
 			);
 		});
 
-		it("can fetch named entrypoint on b through a and do RPC", async ({
+		it("can call and prefix logs from a named-only RPC entrypoint", async ({
 			expect,
 		}) => {
+			await baseSeed(b, {
+				"src/index.ts": dedent /* javascript */ `
+					import { WorkerEntrypoint, RpcTarget } from "cloudflare:workers";
+
+					class Counter extends RpcTarget {
+						#value = 0;
+
+						increment(amount) {
+							this.#value += amount;
+							console.log("incremented counter", this.#value);
+							return this.#value;
+						}
+
+						get value() {
+							return this.#value;
+						}
+					}
+
+					export class CounterService extends WorkerEntrypoint {
+						async newCounter() {
+							return new Counter();
+						}
+					}
+				`,
+			});
+
 			const workerA = helper.runLongLived(
 				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
 				{ cwd: a }
@@ -228,6 +254,12 @@ describe("multiworker", () => {
 			await waitForLong(
 				async () => await expect(fetchText(`${url}/count`)).resolves.toBe("6")
 			);
+			await waitFor(() => {
+				const logLine = workerA.currentOutput
+					.split("\n")
+					.find((line) => line.includes("incremented counter 6"));
+				expect(logLine).toContain(`[${workerName2}]`);
+			});
 		});
 
 		it("can access service props through a binding", async ({ expect }) => {

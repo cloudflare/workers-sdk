@@ -856,7 +856,7 @@ describe("deploy", () => {
 			expect(previewAccountRequests).toBe(1);
 			expect(contentTypeHeader).toBe("application/json");
 			expect(std.out).not.toContain("Attempting to login via OAuth...");
-			expect(std.out).toContain("Temporary account ready:");
+			expect(std.err).toContain("Temporary account ready:");
 		});
 
 		it("requires --temporary when --event-code is passed", async ({
@@ -871,16 +871,6 @@ describe("deploy", () => {
 			await expect(
 				runWrangler('deploy index.js --temporary --event-code "   "')
 			).rejects.toThrow("--event-code cannot be empty");
-		});
-
-		it("does not accept --event-code on versions upload", async ({
-			expect,
-		}) => {
-			await expect(
-				runWrangler(
-					"versions upload index.js --temporary --event-code ABCD-EFGH-JKMN"
-				)
-			).rejects.toThrow(/Unknown argument.*event-code/);
 		});
 
 		it("rejects repeated event codes without exposing their values", async ({
@@ -1097,7 +1087,7 @@ describe("deploy", () => {
 			);
 
 			expect(previewAccountRequests).toBe(0);
-			expect(std.out).not.toContain("Temporary account ready:");
+			expect(std.err).not.toContain("Temporary account ready:");
 		});
 
 		describe("with temporary preview accounts", () => {
@@ -1184,12 +1174,12 @@ describe("deploy", () => {
 				expect(Buffer.from(solution.checkpoints, "base64").length).toBe(
 					(2 + 1) * 32
 				);
-				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.out).not.toContain("Temporary account ready:");
 				expect(std.out).not.toContain("Attempting to login via OAuth...");
-				expect(std.out).toContain(TEMPORARY_TERMS_NOTICE);
-				expect(std.out).toContain("Temporary account ready:");
-				expect(std.out).toContain("Account: Preview Account Alpha (created)");
-				expect(std.out).toContain("Claim within:");
+				expect(std.err).toContain(TEMPORARY_TERMS_NOTICE);
+				expect(std.err).toContain("Temporary account ready:");
+				expect(std.err).toContain("Account: Preview Account Alpha (created)");
+				expect(std.err).toContain("Claim within:");
 				expect(fs.existsSync(globalTemporaryAccountPath)).toBe(true);
 				expect(fs.existsSync(localTemporaryAccountPath)).toBe(false);
 				if (process.platform !== "win32") {
@@ -1241,7 +1231,7 @@ describe("deploy", () => {
 				);
 
 				expect(previewAccountRequests).toBe(0);
-				expect(std.out).not.toContain("Temporary account ready:");
+				expect(std.err).not.toContain("Temporary account ready:");
 			});
 
 			it("provisions the preview account against the staging API and caches it per-environment", async ({
@@ -1317,9 +1307,9 @@ describe("deploy", () => {
 				);
 
 				expect(stagingPreviewRequests).toBe(1);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.out).toContain("Temporary account ready:");
-				expect(std.out).toContain("Account: Preview Account Alpha (created)");
+				expect(std.out).not.toContain("Temporary account ready:");
+				expect(std.err).toContain("Temporary account ready:");
+				expect(std.err).toContain("Account: Preview Account Alpha (created)");
 				expect(fs.existsSync(stagingTemporaryAccountPath)).toBe(true);
 				expect(fs.existsSync(productionTemporaryAccountPath)).toBe(false);
 			});
@@ -1414,8 +1404,8 @@ describe("deploy", () => {
 				).resolves.toBeUndefined();
 
 				expect(previewAccountRequests).toBe(1);
-				expect(std.out).toContain("Temporary account ready:");
-				expect(std.out).toContain("Account: Preview Account Alpha (reused)");
+				expect(std.err).toContain("Temporary account ready:");
+				expect(std.err).toContain("Account: Preview Account Alpha (reused)");
 			});
 
 			it("treats a malformed temporary preview account cache as a miss and refetches", async ({
@@ -1489,7 +1479,7 @@ describe("deploy", () => {
 				).resolves.toBeUndefined();
 
 				expect(previewAccountRequests).toBe(1);
-				expect(std.out).toContain("Account: Preview Account Alpha (created)");
+				expect(std.err).toContain("Account: Preview Account Alpha (created)");
 				expect(TOML.parse(fs.readFileSync(cachePath, "utf-8"))).toMatchObject({
 					account: { id: "preview-account-id" },
 					claim: {

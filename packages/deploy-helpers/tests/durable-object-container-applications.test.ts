@@ -24,7 +24,10 @@ import type {
 	DurableObjectContainerApp,
 } from "@cloudflare/workers-utils";
 
-vi.mock("../src/shared/context", () => ({ logger: { log: vi.fn() } }));
+vi.mock("../src/shared/context", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../src/shared/context")>()),
+	logger: { log: vi.fn() },
+}));
 vi.mock("node:timers/promises", () => ({ setTimeout: vi.fn() }));
 vi.mock("@cloudflare/cli-shared-helpers", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@cloudflare/cli-shared-helpers")>()),
@@ -71,7 +74,13 @@ const exportConfig = {
 		},
 	],
 } as unknown as Config;
-const args = { accountId: "account", dryRun: false, scriptName: "worker" };
+const args = {
+	accountId: "account",
+	deployCommand: "wrangler deploy",
+	dryRun: false,
+	scriptName: "worker",
+	versionsUploadCommand: "wrangler versions upload",
+};
 const namespace = {
 	id: "namespace",
 	name: "sandbox",

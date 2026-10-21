@@ -29,10 +29,9 @@ if (isWindows) {
 ) {
 	describe.skip("Skipping remote bindings tests without account credentials.");
 } else {
-	describe
-		// Note: the reload test applies changes to the fixture files, so we do want the
-		//       tests to run sequentially in order to avoid race conditions
-		.sequential("remote bindings tests", () => {
+	// Note: the reload test applies changes to the fixture files, so we do want the
+	//       tests to run sequentially in order to avoid race conditions
+	describe("remote bindings tests", { concurrent: false }, () => {
 		const replacements = {
 			"<<REMOTE_WORKER_PLACEHOLDER>>": `preserve-e2e-vite-remote`,
 			"<<REMOTE_WORKER_PLACEHOLDER_ALT>>": `preserve-e2e-vite-remote-alt`,
@@ -153,7 +152,7 @@ if (isWindows) {
 			pm: "pnpm",
 		});
 
-		test("for connection to remote bindings during dev the account_id present in the wrangler config file is used", async ({
+		test("for connection to remote bindings during dev the accountId in cloudflare.config.ts is used", async ({
 			expect,
 		}) => {
 			const proc = await runLongLived("pnpm", "dev", projectPath);

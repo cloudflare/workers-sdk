@@ -1,5 +1,67 @@
 # @cloudflare/codemods
 
+## 0.5.1
+
+### Patch Changes
+
+- [#16240](https://github.com/cloudflare/workers-sdk/pull/16240) [`1a0e1a4`](https://github.com/cloudflare/workers-sdk/commit/1a0e1a4efb17ce6e2e02845e6682bb1748633289) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Explain how to preserve dependency metadata opt-outs when migrating to cf
+
+  Wrangler configurations with `dependencies_instrumentation.enabled` set to `false` now receive a migration follow-up directing them to `CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION=false`. Package exclusion lists remain required follow-up work because the environment variable controls dependency metadata as a whole.
+
+## 0.5.0
+
+### Minor Changes
+
+- [#16239](https://github.com/cloudflare/workers-sdk/pull/16239) [`f360829`](https://github.com/cloudflare/workers-sdk/commit/f3608290da40c11b248fff40101f30fc295652be) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support Cloudflare Access local development configuration in `cloudflare.config.ts`
+
+  Workers can now configure an Access audience and mock identity under `access.dev`, and `cf migrate` preserves this setting when converting a Wrangler configuration. Miniflare v5 now reads the setting from `config.access.dev`, aligning its Worker configuration with `@cloudflare/config`; the Miniflare v4 compatibility adapter continues to accept its existing `access` option.
+
+  ```ts
+  export default defineConfig({
+    worker: {
+      name: "api",
+      access: {
+        dev: {
+          aud: "my-access-audience",
+          identity: { email: "developer@example.com" },
+        },
+      },
+    },
+  });
+  ```
+
+  This is a breaking change for direct Miniflare v5 users: move `workers[].dev.access` to `workers[].config.access.dev`. Miniflare v5 is currently in beta.
+
+## 0.4.2
+
+### Patch Changes
+
+- [#16143](https://github.com/cloudflare/workers-sdk/pull/16143) [`271ac8e`](https://github.com/cloudflare/workers-sdk/commit/271ac8e3fe67e350c4c9a5927c2f981ba320f134) Thanks [@cpojer](https://github.com/cpojer)! - Share bundled dependencies between the CLI and library entry points
+
+  Build both entry points together to avoid shipping the same migration implementation and dependencies twice. The CLI command and public library exports remain unchanged.
+
+## 0.4.1
+
+### Patch Changes
+
+- [#16016](https://github.com/cloudflare/workers-sdk/pull/16016) [`f025bbf`](https://github.com/cloudflare/workers-sdk/commit/f025bbfddcdab0193bffffc9fe5a9bf143f2fa65) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Add `bindings.analytics()` as the preferred name for Analytics SQL bindings and deprecate `bindings.analyticsSQL()`.
+
+- [#15991](https://github.com/cloudflare/workers-sdk/pull/15991) [`b4f6054`](https://github.com/cloudflare/workers-sdk/commit/b4f6054d2f5d9f63f5ab9eb544637d75b2346f59) Thanks [@NuroDev](https://github.com/NuroDev)! - Use the default type generation behavior in projects migrated by `cf migrate`.
+
+  Wrangler projects without `dev.generate_types: false` no longer get a `wrangler.config.ts` solely for a redundant type setting. An explicit opt-out still emits `types.generate: false`, and other Wrangler tooling still produces a config when needed.
+
+- [#15946](https://github.com/cloudflare/workers-sdk/pull/15946) [`1d38b36`](https://github.com/cloudflare/workers-sdk/commit/1d38b36bc57705c1417aa7408aa049cb220eb125) Thanks [@NuroDev](https://github.com/NuroDev)! - Upgrade Wrangler dependencies to a version supported by `cf dev` when Wrangler-to-cf migration generates `wrangler.config.ts`.
+
+  Affected projects receive the latest Wrangler release and an updated lockfile through their existing package manager. Compatible workspace links and existing dependency sections are preserved, and `--no-install` and `--dry-run` avoid package installation.
+
+- [#15947](https://github.com/cloudflare/workers-sdk/pull/15947) [`969f760`](https://github.com/cloudflare/workers-sdk/commit/969f7603f03cb68c1cb7df476e3c67c317852132) Thanks [@NuroDev](https://github.com/NuroDev)! - Upgrade the Vite plugin when migrating a Wrangler project to cf with Vite
+
+  Vite migrations now install `@cloudflare/vite-plugin@beta`, keep the `beta` dist tag in `package.json`, and update the project's lockfile when the existing version is unsupported. Compatible installations remain unchanged, and Wrangler migrations do not update the plugin.
+
+- [#15990](https://github.com/cloudflare/workers-sdk/pull/15990) [`22dbde6`](https://github.com/cloudflare/workers-sdk/commit/22dbde63a5726ba5d17c15270db0b11b50122b79) Thanks [@NuroDev](https://github.com/NuroDev)! - Avoid a manual migration TODO when an R2 binding uses the same production and preview bucket name.
+
+  `cf migrate` now requests manual review only when the preview bucket name differs from the production bucket name.
+
 ## 0.4.0
 
 ### Minor Changes

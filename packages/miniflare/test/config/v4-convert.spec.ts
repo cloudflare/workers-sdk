@@ -4,6 +4,29 @@ import { convertV4MiniflareOptions } from "../../src/config/v4-convert";
 import type { RemoteProxyConnectionString } from "../../src/plugins/shared";
 
 describe("convertV4MiniflareOptions", () => {
+	test.for([undefined, "database-id"])(
+		"preserves remote Hyperdrive IDs, falling back to the binding name when absent: %s",
+		(id, { expect }) => {
+			const converted = convertV4MiniflareOptions({
+				script: "export default {};",
+				modules: true,
+				hyperdrives: {
+					DB: {
+						id,
+						remoteProxyConnectionString: new URL(
+							"http://127.0.0.1:8787"
+						) as RemoteProxyConnectionString,
+					},
+				},
+			});
+			expect(converted.workers[0].config.env?.DB).toEqual({
+				type: "hyperdrive",
+				id: id ?? "DB",
+				dev: { remote: true },
+			});
+		}
+	);
+
 	test("preserves opaque K2 stream IDs through v4 parsing and conversion", ({
 		expect,
 	}) => {
@@ -113,6 +136,27 @@ describe("convertV4MiniflareOptions", () => {
 				limits: { steps: 10 },
 			},
 		});
+	});
+
+	test("nests Access local development configuration in the Worker config", ({
+		expect,
+	}) => {
+		const converted = convertV4MiniflareOptions({
+			name: "worker",
+			script: "export default {};",
+			access: {
+				aud: "my-app-aud-tag",
+				identity: { email: "user@example.com" },
+			},
+		});
+
+		expect(converted.workers[0].config.access).toEqual({
+			dev: {
+				aud: "my-app-aud-tag",
+				identity: { email: "user@example.com" },
+			},
+		});
+		expect(converted.workers[0].dev).not.toHaveProperty("access");
 	});
 
 	test("converts module source and representative bindings", ({ expect }) => {
@@ -570,6 +614,7 @@ describe("convertV4MiniflareOptions", () => {
 				assetConfig: {
 					html_handling: "auto-trailing-slash",
 					not_found_handling: "single-page-application",
+					base_path: "/subpath",
 				},
 			},
 		});
@@ -577,6 +622,7 @@ describe("convertV4MiniflareOptions", () => {
 		expect(converted.workers[0].config.assets).toEqual({
 			directory: "./public",
 			hasUserWorker: true,
+			basePath: "/subpath",
 			htmlHandling: "auto-trailing-slash",
 			notFoundHandling: "single-page-application",
 			runWorkerFirst: true,

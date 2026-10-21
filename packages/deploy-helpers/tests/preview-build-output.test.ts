@@ -6,7 +6,7 @@ import { beforeEach, describe, it, vi } from "vitest";
 import { previewBuildOutput } from "../src/preview/preview";
 import type {
 	PreviewBuildOutput,
-	PreviewCallbacks,
+	PreviewOptions,
 } from "../src/preview/preview";
 import type {
 	ParsedOutputRootConfig,
@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
 	createPreviewParentWorker: vi.fn(),
 	editPreview: vi.fn(),
 	getPreview: vi.fn(),
+	getPreviewDeployment: vi.fn(),
 	syncAssets: vi.fn(),
 }));
 
@@ -29,6 +30,7 @@ vi.mock("../src/preview/api", async (importOriginal) => ({
 	createPreviewParentWorker: mocks.createPreviewParentWorker,
 	editPreview: mocks.editPreview,
 	getPreview: mocks.getPreview,
+	getPreviewDeployment: mocks.getPreviewDeployment,
 }));
 
 vi.mock("../src/deploy/helpers/assets", () => ({
@@ -40,7 +42,8 @@ vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
 	verifyDockerInstalled: vi.fn(),
 }));
 
-vi.mock("../src/shared/context", () => ({
+vi.mock("../src/shared/context", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../src/shared/context")>()),
 	logger: {
 		log: vi.fn(),
 		warn: vi.fn(),
@@ -101,6 +104,7 @@ describe("previewBuildOutput", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.getPreview.mockResolvedValue(previewResource);
+		mocks.getPreviewDeployment.mockResolvedValue(deploymentResource);
 		mocks.editPreview.mockResolvedValue(previewResource);
 		mocks.createPreview.mockResolvedValue(previewResource);
 		mocks.createPreviewParentWorker.mockResolvedValue(undefined);
@@ -134,6 +138,7 @@ describe("previewBuildOutput", () => {
 				placement: { mode: "smart" },
 				assets: {
 					htmlHandling: "auto-trailing-slash",
+					basePath: "/docs",
 					runWorkerFirst: true,
 				},
 				observability: { enabled: true },
@@ -184,6 +189,7 @@ describe("previewBuildOutput", () => {
 				jwt: "asset-token",
 				config: {
 					html_handling: "auto-trailing-slash",
+					base_path: "/docs",
 					run_worker_first: true,
 				},
 			},
@@ -204,7 +210,7 @@ describe("previewBuildOutput", () => {
 			.fn()
 			.mockResolvedValue(normalisedContainerConfig);
 		const deployPreviewContainers = vi.fn().mockResolvedValue(undefined);
-		const callbacks: PreviewCallbacks = {
+		const options: PreviewOptions = {
 			getNormalizedContainerOptions,
 			deployPreviewContainers,
 		};
@@ -232,7 +238,7 @@ describe("previewBuildOutput", () => {
 					},
 				],
 			},
-			callbacks
+			options
 		);
 
 		expect(getNormalizedContainerOptions).toHaveBeenCalledWith(
@@ -631,6 +637,47 @@ describe("previewBuildOutput", () => {
 		expect(request).not.toHaveProperty("env");
 	});
 
+	it("keeps secrets from the latest deployment of an existing Preview", async ({
+		expect,
+	}) => {
+		mocks.getPreviewDeployment.mockResolvedValue({
+			...deploymentResource,
+			env: {
+				API_KEY: { type: "secret_text" },
+				MODE: { type: "plain_text", text: "old" },
+			},
+		});
+
+		await uploadPreview(buildOutputConfig());
+
+		const request = mocks.createPreviewDeployment.mock.calls[0]?.[4];
+		expect(request.env).toEqual({ API_KEY: { type: "inherit" } });
+	});
+
+	it("does not look up the latest deployment of a new Preview", async ({
+		expect,
+	}) => {
+		mocks.getPreview.mockRejectedValue(
+			Object.assign(new Error("Preview not found"), { code: 10025 })
+		);
+
+		await uploadPreview(buildOutputConfig());
+
+		expect(mocks.createPreview).toHaveBeenCalled();
+		expect(mocks.getPreviewDeployment).not.toHaveBeenCalled();
+	});
+
+	it("does not deploy when the latest deployment cannot be read", async ({
+		expect,
+	}) => {
+		mocks.getPreviewDeployment.mockRejectedValue(new Error("Internal error"));
+
+		await expect(uploadPreview(buildOutputConfig())).rejects.toThrow(
+			"Internal error"
+		);
+		expect(mocks.createPreviewDeployment).not.toHaveBeenCalled();
+	});
+
 	it.for<[string, ParsedOutputRootConfig | undefined]>([
 		["missing", undefined],
 		["non-Preview", { buildContext: { isPreview: false } }],
@@ -650,8 +697,38 @@ describe("previewBuildOutput", () => {
 		expect(mocks.getPreview).not.toHaveBeenCalled();
 	});
 
+	it.for<NonNullable<ParsedOutputWorkerConfig["domains"]>>([
+		["example.com"],
+		[{ hostname: "example.com", production: true, previews: false }],
+		[{ hostname: "previews.example.com", production: false, previews: true }],
+		[{ hostname: "example.com", production: true, previews: true }],
+	])("uses parent hosting with domains %j", async (domains, { expect }) => {
+		const config = buildOutputConfig({ domains });
+		const preview = {
+			...previewResource,
+			urls: ["https://feature.previews.example.com"],
+		};
+		const deployment = {
+			...deploymentResource,
+			urls: ["https://deployment-id-feature.previews.example.com"],
+		};
+		mocks.getPreview.mockResolvedValue(preview);
+		mocks.getPreviewDeployment.mockResolvedValue(deployment);
+		mocks.createPreviewDeployment.mockResolvedValue(deployment);
+
+		const result = await uploadPreview(config);
+
+		expect(result).toMatchObject({ preview, deployment });
+		expect(mocks.createPreviewDeployment).toHaveBeenCalledOnce();
+		const request = mocks.createPreviewDeployment.mock.calls[0]?.[4];
+		expect(request).toMatchObject({ main_module: "index.js" });
+		expect(request).not.toHaveProperty("domains");
+		expect(request).not.toHaveProperty("routes");
+		expect(mocks.createPreviewParentWorker).not.toHaveBeenCalled();
+		expect(config.domains).toEqual(domains);
+	});
+
 	it.for<[string, Partial<ParsedOutputWorkerConfig>]>([
-		["custom domains", { domains: ["preview.example.com"] }],
 		["triggers", { triggers: [{ type: "scheduled", schedule: "0 * * * *" }] }],
 		[
 			"streaming tail consumers",

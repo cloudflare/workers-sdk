@@ -1004,6 +1004,7 @@ export const pagesDevCommand = createCommand({
 					tsconfig: undefined,
 					minify: undefined,
 					tunnelName: undefined,
+					tunnelAllowedMail: undefined,
 					env: undefined,
 					envFile: undefined,
 					ip,

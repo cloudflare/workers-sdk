@@ -181,8 +181,23 @@ const MiniflareBrowserBindingSchema = BrowserBindingSchema.extend({
 	headful: z.boolean().optional(),
 });
 
+/**
+ * Remote Hyperdrive bindings get their connection string from the proxy session.
+ */
 const MiniflareHyperdriveBindingSchema = HyperdriveBindingSchema.extend({
-	dev: z.strictObject({ connectionString: z.string() }),
+	dev: z.strictObject({
+		connectionString: z.string().optional(),
+		remote: z.boolean().optional(),
+	}),
+}).superRefine((value, ctx) => {
+	if (!value.dev.remote && value.dev.connectionString === undefined) {
+		ctx.addIssue({
+			code: "custom",
+			path: ["dev", "connectionString"],
+			message:
+				"A Hyperdrive binding requires a connection string unless it sets 'remote': true.",
+		});
+	}
 });
 
 /**
@@ -609,13 +624,6 @@ export const DevConfigSchema = z.strictObject({
 	// Zone to use for the CF-Worker header in outbound fetches. If not
 	// specified, defaults to `${worker-name}.example.com`
 	zone: z.string().optional(),
-	/** Cloudflare Access authentication metadata exposed as `ctx.access` */
-	access: z
-		.strictObject({
-			aud: z.string(),
-			identity: z.record(z.string(), z.unknown()).optional(),
-		})
-		.optional(),
 });
 
 export type DevConfig = z.input<typeof DevConfigSchema>;

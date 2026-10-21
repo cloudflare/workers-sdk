@@ -111,3 +111,5 @@ export type {
 	NpmRunner,
 	ScrubEncryptedCredentialsResult,
 } from "./credential-store";
+
+export { AuthenticationError } from "./core/authentication-error";

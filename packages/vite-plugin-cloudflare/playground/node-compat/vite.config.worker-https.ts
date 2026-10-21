@@ -7,7 +7,13 @@ export default defineConfig({
 	},
 	plugins: [
 		cloudflare({
-			configPath: "./worker-https/wrangler.jsonc",
+			types: { includeRuntime: false },
+			config: {
+				name: "worker",
+				entrypoint: "./worker-https/index.ts",
+				compatibilityDate: "2025-08-15",
+				compatibilityFlags: ["nodejs_compat"],
+			},
 			inspectorPort: false,
 			persistState: false,
 		}),

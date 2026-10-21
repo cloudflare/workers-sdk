@@ -84,7 +84,7 @@ describe("shared Container SSH", () => {
 		const { stdin, stdout } = streams(true);
 		const ws = await server();
 		const connected = once(ws, "connection");
-		const run = sshCommand({ id: "instance", stdio: true });
+		const run = sshCommand({ id: "instance", stdio: true }, "test-cli");
 		const [socket, request] = await connected;
 		expect(request.headers.authorization).toBe("Bearer ssh-token");
 		const received = once(socket, "message");
@@ -122,7 +122,9 @@ describe("shared Container SSH", () => {
 					"Error"
 				)
 			);
-			await expect(sshCommand({ id: "missing" })).rejects.toThrow(message);
+			await expect(sshCommand({ id: "missing" }, "test-cli")).rejects.toThrow(
+				message
+			);
 		}
 	});
 	it("forwards commands and options when OpenSSH connects after the WebSocket opens", async ({
@@ -150,13 +152,16 @@ describe("shared Container SSH", () => {
 			}
 			return child;
 		});
-		const run = sshCommand({
-			id: "instance",
-			identityFile: "/tmp/key",
-			option: ["A=yes", "B=no"],
-			tty: true,
-			command: ["echo", "001"],
-		});
+		const run = sshCommand(
+			{
+				id: "instance",
+				identityFile: "/tmp/key",
+				option: ["A=yes", "B=no"],
+				tty: true,
+				command: ["echo", "001"],
+			},
+			"test-cli"
+		);
 		const [socket] = await connected;
 		const received = once(socket, "message");
 		expect((await received)[0].toString()).toBe("client-ssh");
@@ -199,7 +204,10 @@ describe("shared Container SSH", () => {
 			);
 			return child;
 		});
-		await sshCommand({ id: "instance", tty: true, command: ["top"] });
+		await sshCommand(
+			{ id: "instance", tty: true, command: ["top"] },
+			"test-cli"
+		);
 		expect(childArgs).toContain("RequestTTY=force");
 		expect(childArgs.slice(-2)).toEqual(["--", "top"]);
 	});
@@ -223,7 +231,7 @@ describe("shared Container SSH", () => {
 				);
 				return child;
 			});
-			const run = sshCommand({ id: "instance" });
+			const run = sshCommand({ id: "instance" }, "test-cli");
 			const rejection = expect(run).rejects.toThrow(
 				failure === "missing-binary"
 					? "Verifying SSH installation failed"

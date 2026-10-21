@@ -137,13 +137,57 @@ describe("startTunnel", () => {
 		);
 	});
 
-	it("should pass the correct args for named tunnels", async ({ expect }) => {
+	it("should pass allowed mail to Quick Tunnels", async ({ expect }) => {
+		const proc = createMockProcess();
+		vi.mocked(spawnCloudflared).mockResolvedValue(proc as never);
+
+		const tunnel = startTunnel({
+			origin: new URL("http://localhost:8787"),
+			allowedMail: ["alice@example.com", "*@example.org"],
+			timeoutMs: TEST_TIMEOUT_MS,
+		});
+
+		await emitStderrNextTick(
+			proc,
+			"INF https://test-tunnel.trycloudflare.com\n"
+		);
+		await tunnel.ready();
+
+		expect(spawnCloudflared).toHaveBeenCalledWith(
+			[
+				"tunnel",
+				"--no-autoupdate",
+				"--url",
+				"http://localhost:8787/",
+				"--allowed-mail",
+				"alice@example.com",
+				"--allowed-mail",
+				"*@example.org",
+			],
+			{ stdio: "pipe", skipVersionCheck: true }
+		);
+	});
+
+	it("should reject allowed mail for named tunnels", ({ expect }) => {
+		expect(() =>
+			startTunnel({
+				origin: new URL("http://localhost:8787"),
+				token: "NAMED_TUNNEL_TOKEN",
+				allowedMail: ["alice@example.com"],
+			})
+		).toThrow("The `allowedMail` option is only supported for Quick Tunnels");
+	});
+
+	it("should allow an empty allowed mail list for named tunnels", async ({
+		expect,
+	}) => {
 		const proc = createMockProcess();
 		vi.mocked(spawnCloudflared).mockResolvedValue(proc as never);
 
 		const tunnel = startTunnel({
 			origin: new URL("http://localhost:8787"),
 			token: "NAMED_TUNNEL_TOKEN",
+			allowedMail: [],
 			timeoutMs: TEST_TIMEOUT_MS,
 		});
 

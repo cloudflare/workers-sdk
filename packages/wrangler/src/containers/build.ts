@@ -18,6 +18,9 @@ export const containersBuildCommand = createCommand({
 		status: "stable",
 		owner: "Product: Cloudchamber",
 	},
+	behaviour: {
+		supportTemporary: true,
+	},
 	args: {
 		PATH: {
 			type: "string",
@@ -53,7 +56,10 @@ export const containersBuildCommand = createCommand({
 	},
 	positionalArgs: ["PATH"],
 	async handler(args, { config }) {
-		initContainersSharedContext({ logger, fetchResult });
+		initContainersSharedContext({
+			logger,
+			fetchResult,
+		});
 		await fillOpenAPIConfiguration(config, containersScope);
 		await buildCommand(args, config);
 	},
@@ -64,6 +70,9 @@ export const containersPushCommand = createCommand({
 		description: "Push a local image to the Cloudflare managed registry",
 		status: "stable",
 		owner: "Product: Cloudchamber",
+	},
+	behaviour: {
+		supportTemporary: true,
 	},
 	args: {
 		TAG: {
@@ -79,7 +88,10 @@ export const containersPushCommand = createCommand({
 	},
 	positionalArgs: ["TAG"],
 	async handler(args, { config }) {
-		initContainersSharedContext({ logger, fetchResult });
+		initContainersSharedContext({
+			logger,
+			fetchResult,
+		});
 		await fillOpenAPIConfiguration(config, containersScope);
 		await pushCommand(args, await getOrSelectAccountId(config), config);
 	},

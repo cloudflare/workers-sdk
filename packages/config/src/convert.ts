@@ -259,6 +259,9 @@ function convertTopLevel(
 	if (config.observability !== undefined) {
 		result.observability = convertObservability(config.observability);
 	}
+	if (config.access !== undefined) {
+		result.access = config.access;
+	}
 	if (config.cache !== undefined) {
 		type RawCacheConfig = NonNullable<RawConfig["cache"]>;
 		const cache: RawCacheConfig = {
@@ -540,6 +543,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						id: binding.id,
+						remote: binding.dev?.remote,
 						localConnectionString: binding.dev?.connectionString,
 					})
 				);
@@ -856,6 +860,9 @@ function convertBindingsAndAssets(
 		if (config.assets?.notFoundHandling !== undefined) {
 			assets.not_found_handling = config.assets.notFoundHandling;
 		}
+		if (config.assets?.basePath !== undefined) {
+			assets.base_path = config.assets.basePath;
+		}
 		if (config.assets?.runWorkerFirst !== undefined) {
 			assets.run_worker_first = config.assets.runWorkerFirst;
 		}
@@ -1082,7 +1089,16 @@ function convertDomains(
 		? [...result.routes]
 		: [];
 	for (const domain of config.domains) {
-		routes.push({ pattern: domain, custom_domain: true });
+		routes.push(
+			typeof domain === "string"
+				? { pattern: domain, custom_domain: true }
+				: {
+						pattern: domain.hostname,
+						custom_domain: true,
+						enabled: domain.production,
+						previews_enabled: domain.previews,
+					}
+		);
 	}
 	result.routes = routes;
 }
