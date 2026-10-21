@@ -99,7 +99,6 @@ patchedDependencies:
   "youch@4.1.0-beta.10": "patches/youch@4.1.0-beta.10.patch"
   "@netlify/build-info@10.5.1": "patches/@netlify__build-info@10.5.1.patch"
   "buffer-equal-constant-time@1.0.1": "patches/buffer-equal-constant-time@1.0.1.patch"
-  "vite@8.1.5": "patches/vite@8.1.5.patch"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Catalog
@@ -120,7 +119,7 @@ catalog:
   # version of Undici
   undici-types: "7.29.1"
   vitest: "5.0.4"
-  vite: "8.1.5"
+  vite: "8.3.4"
   "ws": "8.21.0"
   esbuild: "0.28.2"
   "@playwright/test": "1.60.0"

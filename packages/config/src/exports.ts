@@ -161,6 +161,8 @@ export interface WorkerEntrypointExport extends WorkerEntrypointExportOptions {
 	type: "worker";
 }
 
+export const WORKFLOW_JURISDICTIONS = ["eu", "fedramp", "us"] as const;
+
 export interface WorkflowExportOptions {
 	/**
 	 * The name of the Workflow. It identifies the Workflow's instances and must
@@ -188,6 +190,11 @@ export interface WorkflowExportOptions {
 		/** How long to retain errored instances. */
 		errorRetention?: number | string;
 	};
+	/**
+	 * Jurisdiction that the Workflow's instances run and store their data in.
+	 * It is set when the Workflow is created and cannot be changed afterwards.
+	 */
+	jurisdiction?: (typeof WORKFLOW_JURISDICTIONS)[number];
 }
 
 export interface WorkflowExport extends WorkflowExportOptions {

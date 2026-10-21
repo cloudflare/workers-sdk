@@ -7,7 +7,7 @@ exports[`Wrangler Worker configuration conversion > converts Workflow bindings a
       "blocking": true,
       "code": "unsupported-binding-options",
       "docsUrl": undefined,
-      "message": "The options \`limits\` at \`workflows.2\` require manual migration.",
+      "message": "The options \`limits\`, \`jurisdiction\` at \`workflows.2\` require manual migration.",
       "sourcePath": "workflows.2",
     },
   ],
@@ -17,7 +17,7 @@ exports[`Wrangler Worker configuration conversion > converts Workflow bindings a
  * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
  */
 /**
- * TODO(@cloudflare): cf migrate: workflows.2: The options \`limits\` at \`workflows.2\` require manual migration.
+ * TODO(@cloudflare): cf migrate: workflows.2: The options \`limits\`, \`jurisdiction\` at \`workflows.2\` require manual migration.
  */
 throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
 
@@ -60,10 +60,11 @@ export default defineConfig({
 					errorRetention: 86400000,
 					successRetention: "3 days",
 				},
+				jurisdiction: "eu",
 			}),
 		},
 		/**
-		 * TODO(@cloudflare): cf migrate: The options \`limits\` at \`workflows.2\` require manual migration.
+		 * TODO(@cloudflare): cf migrate: The options \`limits\`, \`jurisdiction\` at \`workflows.2\` require manual migration.
 		 */
 	},
 });
@@ -165,6 +166,7 @@ export default defineConfig({
 					errorRetention: 86400000,
 					successRetention: "3 days",
 				},
+				jurisdiction: "fedramp",
 			}),
 		},
 		/**
