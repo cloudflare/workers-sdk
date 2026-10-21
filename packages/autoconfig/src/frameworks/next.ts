@@ -7,8 +7,12 @@ import type {
 	ConfigurationResults,
 } from "./framework-class";
 
-// vinext targets the latest Next.js major only, so older projects keep using OpenNext
+// vinext does not support Next.js versions before 16, so those projects keep using OpenNext.
+// Later majors also use vinext rather than falling back to OpenNext, whose output cf does not deploy.
 const VINEXT_MINIMUM_NEXT_VERSION = "16.0.0";
+
+// `--name` requires vinext 1.2.0 or later; 1.3.0 is the latest release at the time of writing
+const VINEXT_PACKAGE = "vinext@^1.3.0";
 
 const OPENNEXT_CONFIGURATION_DESCRIPTION =
 	"Configuring project for Next.js with OpenNext by running `@opennextjs/cloudflare migrate`";
@@ -58,6 +62,7 @@ export class NextJs extends Framework {
 async function configureWithVinext({
 	dryRun,
 	projectPath,
+	workerName,
 	packageManager,
 }: ConfigurationOptions): Promise<ConfigurationResults> {
 	const { npx, dlx } = packageManager;
@@ -66,7 +71,7 @@ async function configureWithVinext({
 		await runCommand(
 			[
 				...dlx,
-				"vinext",
+				VINEXT_PACKAGE,
 				"init",
 				// `vinext init` prompts for these choices and fails in agent environments
 				// when they are missing, so we pass the defaults it uses when non-interactive
@@ -75,6 +80,9 @@ async function configureWithVinext({
 				"--image-optimization=cloudflare-images",
 				// Cloudflare only serves pre-rendered routes when using the Static Assets cache
 				"--no-prerender",
+				// Without `--name`, vinext derives the Worker name from package.json, ignoring the
+				// name chosen during autoconfig (including `WRANGLER_CI_OVERRIDE_NAME`)
+				`--name=${workerName}`,
 			],
 			{
 				cwd: projectPath,

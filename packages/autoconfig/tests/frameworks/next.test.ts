@@ -45,12 +45,16 @@ function createNextJs(nextVersion: string): NextJs {
  */
 function getOptions(
 	target: AutoConfigTarget,
-	overrides: { dryRun?: boolean; packageManager?: PackageManager } = {}
+	overrides: {
+		dryRun?: boolean;
+		packageManager?: PackageManager;
+		workerName?: string;
+	} = {}
 ) {
 	return {
 		target,
 		projectPath: "/project",
-		workerName: "my-next-app",
+		workerName: overrides.workerName ?? "my-next-app",
 		outputDir: ".next",
 		dryRun: overrides.dryRun ?? false,
 		packageManager: overrides.packageManager ?? NpmPackageManager,
@@ -76,12 +80,13 @@ describe("Next.js framework configure()", () => {
 			expect(runCommand).toHaveBeenCalledWith(
 				[
 					"npx",
-					"vinext",
+					"vinext@^1.3.0",
 					"init",
 					"--platform=cloudflare",
 					"--cdn-cache=none",
 					"--image-optimization=cloudflare-images",
 					"--no-prerender",
+					"--name=my-next-app",
 				],
 				{ cwd: "/project" }
 			);
@@ -105,9 +110,53 @@ describe("Next.js framework configure()", () => {
 			);
 
 			expect(vi.mocked(runCommand).mock.calls[0]?.[0]).toEqual(
-				expect.arrayContaining(["pnpm", "dlx", "vinext", "init"])
+				expect.arrayContaining(["pnpm", "dlx", "vinext@^1.3.0", "init"])
 			);
 			expect(results.buildCommandOverride).toBe("pnpm vite build");
+		});
+
+		it("passes the selected Worker name to `vinext init` as a single argument", async ({
+			expect,
+		}) => {
+			const framework = createNextJs("16.1.0");
+
+			await framework.configure(
+				getOptions("cf", { workerName: "overridden-worker-name" })
+			);
+
+			const command = vi.mocked(runCommand).mock.calls[0]?.[0];
+			expect(command).toContain("--name=overridden-worker-name");
+			expect(command?.filter((arg) => arg.startsWith("--name"))).toEqual([
+				"--name=overridden-worker-name",
+			]);
+		});
+
+		it("runs `vinext init` for the cf target on Next.js versions later than 16", async ({
+			expect,
+		}) => {
+			const framework = createNextJs("17.0.0");
+
+			const results = await framework.configure(getOptions("cf"));
+
+			expect(vi.mocked(runCommand).mock.calls[0]?.[0]).toEqual(
+				expect.arrayContaining(["npx", "vinext@^1.3.0", "init"])
+			);
+			expect(results.buildTool).toBe("vite");
+			expect(framework.configurationDescription).toBe(
+				"Configuring project for Next.js with vinext by running `vinext init`"
+			);
+		});
+
+		it("treats prereleases of Next.js versions later than 16.0.0 as supported", async ({
+			expect,
+		}) => {
+			const framework = createNextJs("16.1.0-canary.1");
+
+			await framework.configure(getOptions("cf"));
+
+			expect(vi.mocked(runCommand).mock.calls[0]?.[0]).toContain(
+				"vinext@^1.3.0"
+			);
 		});
 
 		it("does not run `vinext init` during a dry run", async ({ expect }) => {
@@ -169,7 +218,9 @@ describe("Next.js framework configure()", () => {
 			});
 		});
 
-		it("treats Next.js 16 prereleases as older than 16", async ({ expect }) => {
+		it("treats Next.js 16.0.0 prereleases as older than 16", async ({
+			expect,
+		}) => {
 			const framework = createNextJs("16.0.0-canary.1");
 
 			await framework.configure(getOptions("cf"));
