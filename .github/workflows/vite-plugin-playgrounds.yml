@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
@@ -16,7 +17,12 @@ env:
   PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
 
 jobs:
+  windows-build:
+    uses: ./.github/workflows/build-for-windows.yml
+    secrets: inherit
+
   test:
+    needs: windows-build
     # Windows jobs that miss the turbo cache already take 15-25 minutes, and the
     # timeouts/retries in `playground/vitest.config.e2e.ts` give slow tests more
     # room to finish, so leave headroom before the hard job kill.
@@ -32,9 +38,9 @@ jobs:
             vite: "vite-7"
     runs-on: ${{ matrix.os }}
     env:
-      # Miniflare build outputs contain platform-specific paths. Include the OS
-      # in both the build cache key and the exported plugin build hash.
-      CI_OS: ${{ matrix.os }}
+      # Keep test caches separate by target OS. Windows consumes the Linux
+      # prebuild, which uses the same target label in its build cache keys.
+      CI_OS: ${{ runner.os }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -55,6 +61,10 @@ jobs:
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: Restore packages built on Linux
+        if: steps.changes.outputs.everything_but_markdown == 'true' && runner.os == 'Windows'
+        uses: ./.github/actions/restore-windows-build
       - name: Install playwright
         if: steps.changes.outputs.everything_but_markdown == 'true'
         run: |

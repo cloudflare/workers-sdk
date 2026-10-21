@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pull-requests: read
 
 # pnpm 11-specific settings - recognised by pnpm 11+ and
@@ -23,7 +24,12 @@ env:
   pnpm_config_verify_deps_before_run: "false"
 
 jobs:
+  windows-build:
+    uses: ./.github/workflows/build-for-windows.yml
+    secrets: inherit
+
   e2e:
+    needs: windows-build
     # Runs the non-frameworks C3 E2E tests on all supported operating systems
     # and package managers.
     timeout-minutes: 45
@@ -88,6 +94,10 @@ jobs:
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
+      - name: Restore packages built on Linux
+        if: steps.changes.outputs.everything_but_markdown == 'true' && runner.os == 'Windows'
+        uses: ./.github/actions/restore-windows-build
+
       - name: Install Python uv
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-python-uv
@@ -117,9 +127,11 @@ jobs:
           node -e "
             const fs = require('node:fs');
             const pkg = JSON.parse(fs.readFileSync('package.json','utf8'));
-            if (pkg.engines && pkg.engines.pnpm) pkg.engines.pnpm = '*';
+            if (pkg.engines && pkg.engines.pnpm && pkg.packageManager !== 'pnpm@' + process.env.MATRIX_PNPM_VERSION) pkg.engines.pnpm = '*';
             fs.writeFileSync('package.json', JSON.stringify(pkg, null, '\t') + '\n');
           "
+        env:
+          MATRIX_PNPM_VERSION: ${{ matrix.pm.version }}
       - name: Install matrix pnpm version for scaffolded installs
         if: matrix.pm.name == 'pnpm' && steps.changes.outputs.everything_but_markdown == 'true'
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9

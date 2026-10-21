@@ -4,22 +4,23 @@
 	"tasks": {
 		"build": {
 			"env": [
-				"npm_config_user_agent",
 				"CREATE_CLOUDFLARE_RELAUNCHED",
 				"CREATE_CLOUDFLARE_TELEMETRY_DISABLED",
 				"CREATE_CLOUDFLARE_TELEMETRY_DEBUG",
 				"SPARROW_SOURCE_KEY"
 			],
 			"inputs": ["$TURBO_DEFAULT$", "!e2e/**", "!vitest-e2e.config.mts"],
-			"outputs": ["dist/**"]
+			"outputs": ["dist/**", "templates*/**/__dot__gitignore"]
 		},
 		"test:ci": {
+			"env": ["npm_config_user_agent"],
 			"dependsOn": ["build"]
 		},
 		"test:e2e": {
 			"passThroughEnv": ["GITHUB_TOKEN"],
 			"env": [
 				"$TURBO_EXTENDS$",
+				"npm_config_user_agent",
 				"E2E_EXPERIMENTAL",
 				"E2E_TEST_FILTER",
 				"E2E_TEST_PM",

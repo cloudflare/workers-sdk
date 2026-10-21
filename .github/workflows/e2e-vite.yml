@@ -6,10 +6,16 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pull-requests: read
 
 jobs:
+  windows-build:
+    uses: ./.github/workflows/build-for-windows.yml
+    secrets: inherit
+
   e2e-vite-plugin-test:
+    needs: windows-build
     name: ${{ format('Vite Plugin E2E ({0})', matrix.description) }}
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}
@@ -53,6 +59,10 @@ jobs:
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
+      - name: Restore packages built on Linux
+        if: steps.changes.outputs.everything_but_markdown == 'true' && runner.os == 'Windows'
+        uses: ./.github/actions/restore-windows-build
+
       - name: Run Vite plugin E2E tests
         if: steps.changes.outputs.everything_but_markdown == 'true'
         run: pnpm test:e2e -F @cloudflare/vite-plugin --log-order=stream
@@ -63,7 +73,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ steps.check-remote.outputs.run-remote == 'true' && secrets.TEST_CLOUDFLARE_API_TOKEN || '' }}
           CLOUDFLARE_ACCOUNT_ID: ${{ steps.check-remote.outputs.run-remote == 'true' && secrets.TEST_CLOUDFLARE_ACCOUNT_ID || '' }}
           NODE_OPTIONS: "--max_old_space_size=8192"
-          CI_OS: ${{ matrix.os }}
+          CI_OS: ${{ runner.os }}
 
       - name: Upload turbo logs
         if: always()

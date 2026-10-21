@@ -6,10 +6,16 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pull-requests: read
 
 jobs:
+  windows-build:
+    uses: ./.github/workflows/build-for-windows.yml
+    secrets: inherit
+
   e2e-wrangler-test:
+    needs: windows-build
     name: ${{ format('Wrangler E2E ({0}, shard {1}/4)', matrix.description, matrix.shard) }}
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.shard }}
@@ -56,6 +62,10 @@ jobs:
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
+      - name: Restore packages built on Linux
+        if: steps.changes.outputs.everything_but_markdown == 'true' && runner.os == 'Windows'
+        uses: ./.github/actions/restore-windows-build
+
       - name: Run Wrangler E2E tests
         if: steps.changes.outputs.everything_but_markdown == 'true'
         run: pnpm run test:e2e:wrangler
@@ -67,7 +77,7 @@ jobs:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
-          CI_OS: ${{ matrix.os }}
+          CI_OS: ${{ runner.os }}
           E2E_SHARD: ${{ matrix.shard }}
           E2E_SHARD_COUNT: "4"
 
@@ -78,7 +88,7 @@ jobs:
           TEST_CLOUDFLARE_API_TOKEN: ${{ steps.check-remote.outputs.run-remote == 'true' && secrets.TEST_CLOUDFLARE_API_TOKEN || '' }}
           TEST_CLOUDFLARE_ACCOUNT_ID: ${{ steps.check-remote.outputs.run-remote == 'true' && secrets.TEST_CLOUDFLARE_ACCOUNT_ID || '' }}
           NODE_OPTIONS: "--max_old_space_size=8192"
-          CI_OS: ${{ matrix.os }}
+          CI_OS: ${{ runner.os }}
 
       - name: Upload turbo logs
         if: always()

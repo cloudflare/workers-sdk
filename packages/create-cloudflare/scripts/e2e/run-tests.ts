@@ -15,13 +15,16 @@ class TestRunner {
 			console.log(
 				`::group::${description} (${testPackageManager}${testPackageManagerVersion ? `@${testPackageManagerVersion}` : ""}${isExperimental ? " / experimental" : ""})`
 			);
+			// CLI arguments also change Turbo's prerequisite build hashes. Select
+			// the suite through the test environment so prebuilt packages are reused.
 			execSync(
-				`pnpm turbo test:e2e --log-order=stream --output-logs=new-only --summarize --filter=create-cloudflare -- ${testFilter}`,
+				`pnpm turbo test:e2e --log-order=stream --output-logs=new-only --summarize --filter=create-cloudflare`,
 				{
 					stdio: "inherit",
 					env: {
 						...process.env,
 						E2E_EXPERIMENTAL: `${isExperimental}`,
+						E2E_TEST_FILTER: testFilter,
 						E2E_TEST_PM: testPackageManager,
 						E2E_TEST_PM_VERSION: testPackageManagerVersion,
 					},
