@@ -12,6 +12,7 @@ import {
 	generateCommitMessage,
 	getDependencyChanges,
 	getPackageJsonDiff,
+	main,
 	parseDiffForChanges,
 	updatePathsForChanges,
 	writeChangeSet,
@@ -46,6 +47,78 @@ vitest.mock(
 function makeChanges(...names: string[]): Map<string, Change> {
 	return new Map(names.map((name) => [name, { from: "1.0.0", to: "1.0.1" }]));
 }
+
+describe("main()", () => {
+	it.for([
+		{
+			description: "should include C3 when workerd is bumped in the catalog",
+			dependencies: ["workerd", "@cloudflare/workers-types"],
+			packageNames: "miniflare, wrangler",
+			expectedHeader: dedent`
+				---
+				"miniflare": patch
+				"wrangler": patch
+				"create-cloudflare": patch
+				---`,
+			expectedTitle:
+				'Update dependencies of "miniflare", "wrangler", "create-cloudflare"',
+		},
+		{
+			description: "should not include C3 for other dependency updates",
+			dependencies: ["@cloudflare/workers-types"],
+			packageNames: "miniflare,wrangler",
+			expectedHeader: dedent`
+				---
+				"miniflare": patch
+				"wrangler": patch
+				---`,
+			expectedTitle: 'Update dependencies of "miniflare", "wrangler"',
+		},
+		{
+			description: "should not duplicate C3 when it is already included",
+			dependencies: ["workerd"],
+			packageNames: "miniflare,wrangler,create-cloudflare",
+			expectedHeader: dedent`
+				---
+				"miniflare": patch
+				"wrangler": patch
+				"create-cloudflare": patch
+				---`,
+			expectedTitle:
+				'Update dependencies of "miniflare", "wrangler", "create-cloudflare"',
+		},
+	])(
+		"$description",
+		(
+			{ dependencies, packageNames, expectedHeader, expectedTitle },
+			{ expect }
+		) => {
+			(spawnSync as Mock).mockImplementation((_command, args: string[]) => ({
+				output:
+					args[0] === "diff" && args[2].endsWith("pnpm-workspace.yaml")
+						? dependencies.flatMap((name) => [
+								`-  "${name}": "1.20261019.1"`,
+								`+  "${name}": "1.20261021.1"`,
+							])
+						: [],
+			}));
+			(writeFileSync as Mock).mockClear();
+
+			main({
+				prNumber: "16403",
+				packageNames,
+				packageJSONPath: "packages/miniflare/package.json",
+				changesetPrefix: "dependabot-update",
+			});
+
+			expect(writeFileSync).toHaveBeenCalledOnce();
+			expect(writeFileSync).toHaveBeenCalledWith(
+				".changeset/dependabot-update-16403.md",
+				expect.stringContaining(`${expectedHeader}\n\n${expectedTitle}\n`)
+			);
+		}
+	);
+});
 
 describe("updatePathsForChanges()", () => {
 	it("should refresh the default compatibility date when workerd is bumped", ({
