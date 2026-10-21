@@ -277,19 +277,30 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				// has finished its initial scan, so repeat the edit until a rebuild
 				// observes it. Poll recorded events rather than registering a waiter
 				// per attempt, because timed-out waiters would consume later events.
+				// Check before editing so a successful poll doesn't start another
+				// rebuild that can outlive teardown and access the removed directory.
 				let attempt = 0;
-				await vi.waitFor(
+				await vi.waitUntil(
 					async () => {
+						const renamed = bus.events.some(
+							(event) =>
+								event.type === "bundleComplete" &&
+								event.bundle.entry.exports.includes("Admin")
+						);
+						if (renamed) {
+							return true;
+						}
 						await seed({
 							"src/index.ts": `export class Admin {} // ${attempt++}`,
 						});
-						const bundles = bus.events.filter(
-							(event) => event.type === "bundleComplete"
-						);
-						expect(bundles.at(-1)?.bundle.entry.exports).toEqual(["Admin"]);
+						return false;
 					},
 					{ timeout: 8_000, interval: 500 }
 				);
+				const bundles = bus.events.filter(
+					(event) => event.type === "bundleComplete"
+				);
+				expect(bundles.at(-1)?.bundle.entry.exports).toEqual(["Admin"]);
 			}
 		);
 
