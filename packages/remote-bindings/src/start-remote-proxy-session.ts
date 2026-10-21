@@ -139,7 +139,11 @@ export async function startRemoteProxySession(
 		devEnv = new DevEnv(workerConfig);
 		devEnv.start();
 	} catch (startWorkerError: unknown) {
-		await devEnv?.teardown();
+		try {
+			await devEnv?.teardown();
+		} catch {
+			// Preserve the original startup error if cleanup also fails.
+		}
 		if (startWorkerError instanceof UserError) {
 			throw startWorkerError;
 		}
@@ -193,11 +197,16 @@ export async function startRemoteProxySession(
 		remoteProxyConnectionString = (await devEnv.proxy.ready.promise)
 			.url as RemoteProxyConnectionString;
 	} catch (error) {
-		await devEnv.teardown();
+		try {
+			await devEnv.teardown();
+		} catch {
+			// Preserve the original startup error if cleanup also fails.
+		}
 		throw error;
 	} finally {
 		devEnv.removeListener("error", onStartupError);
 	}
+	let disposePromise: Promise<void> | undefined;
 	const updateBindings = async (
 		newBindings: StartDevWorkerInput["bindings"]
 	) => {
@@ -225,7 +234,11 @@ export async function startRemoteProxySession(
 		ready: Promise.resolve(),
 		remoteProxyConnectionString,
 		updateBindings,
-		dispose: () => devEnv.teardown(),
+		dispose: () => {
+			// Share the same cleanup attempt across calls, even if it fails.
+			disposePromise ??= devEnv.teardown();
+			return disposePromise;
+		},
 	};
 }
 
