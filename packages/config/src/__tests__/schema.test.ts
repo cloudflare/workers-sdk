@@ -1681,6 +1681,7 @@ describe("ExportSchema", () => {
 				successRetention: "3 days",
 				errorRetention: 86_400_000,
 			},
+			jurisdiction: "eu",
 		});
 		const result = parseExports({ ScheduledWorkflow: scheduled });
 
@@ -1696,6 +1697,7 @@ describe("ExportSchema", () => {
 			{ concurrency: { limit: 0 } },
 			{ defaultRetention: { successRetention: -1 } },
 			{ defaultRetention: { errorRetention: "" } },
+			{ jurisdiction: "fedramp-high" },
 		]) {
 			const result = parseExports({
 				GreetingWorkflow: { type: "workflow", name: "greeting", ...settings },

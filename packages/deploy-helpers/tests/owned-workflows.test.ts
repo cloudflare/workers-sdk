@@ -1,5 +1,41 @@
 import { describe, it } from "vitest";
-import { validateOwnedWorkflowDeclarations } from "../src/deploy/helpers/owned-workflows";
+import {
+	getWorkflowsOwnedByScript,
+	validateOwnedWorkflowDeclarations,
+} from "../src/deploy/helpers/owned-workflows";
+
+describe("getWorkflowsOwnedByScript", () => {
+	it("keeps the jurisdiction from either declaration of a Workflow", ({
+		expect,
+	}) => {
+		expect(
+			getWorkflowsOwnedByScript(
+				{
+					workflows: [
+						{
+							binding: "GREETING",
+							name: "greeting",
+							class_name: "GreetingWorkflow",
+							jurisdiction: "eu",
+						},
+					],
+					exports: {
+						GreetingWorkflow: { type: "workflow", name: "greeting" },
+						OrdersWorkflow: {
+							type: "workflow",
+							name: "orders",
+							jurisdiction: "us",
+						},
+					},
+				},
+				"my-worker"
+			)
+		).toMatchObject([
+			{ name: "greeting", jurisdiction: "eu" },
+			{ name: "orders", jurisdiction: "us" },
+		]);
+	});
+});
 
 describe("validateOwnedWorkflowDeclarations", () => {
 	it("accepts a binding and an export that configure the same Workflow settings in different forms", ({
@@ -71,6 +107,7 @@ describe("validateOwnedWorkflowDeclarations", () => {
 							concurrency: { limit: 1 },
 							schedules: "0 * * * *",
 							default_retention: { success_retention: "1 day" },
+							jurisdiction: "eu",
 						},
 					],
 					exports: {
@@ -81,6 +118,7 @@ describe("validateOwnedWorkflowDeclarations", () => {
 							concurrency: { limit: 2 },
 							schedules: ["30 * * * *"],
 							default_retention: { success_retention: "2 days" },
+							jurisdiction: "us",
 						},
 					},
 				},
@@ -90,7 +128,8 @@ describe("validateOwnedWorkflowDeclarations", () => {
 			[Error: "workflows[0].limits" and "exports.GreetingWorkflow.limits" both configure the Workflow "greeting", but with different values. Set "limits" in only one of them.
 			"workflows[0].concurrency" and "exports.GreetingWorkflow.concurrency" both configure the Workflow "greeting", but with different values. Set "concurrency" in only one of them.
 			"workflows[0].schedules" and "exports.GreetingWorkflow.schedules" both configure the Workflow "greeting", but with different values. Set "schedules" in only one of them.
-			"workflows[0].default_retention" and "exports.GreetingWorkflow.default_retention" both configure the Workflow "greeting", but with different values. Set "default_retention" in only one of them.]
+			"workflows[0].default_retention" and "exports.GreetingWorkflow.default_retention" both configure the Workflow "greeting", but with different values. Set "default_retention" in only one of them.
+			"workflows[0].jurisdiction" and "exports.GreetingWorkflow.jurisdiction" both configure the Workflow "greeting", but with different values. Set "jurisdiction" in only one of them.]
 		`);
 	});
 

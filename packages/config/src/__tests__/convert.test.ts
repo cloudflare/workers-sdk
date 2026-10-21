@@ -1135,6 +1135,7 @@ describe("convertToWranglerConfig", () => {
 								successRetention: "3 days",
 								errorRetention: 86_400_000,
 							},
+							jurisdiction: "us",
 						},
 					},
 				},
@@ -1153,6 +1154,7 @@ describe("convertToWranglerConfig", () => {
 						success_retention: "3 days",
 						error_retention: 86_400_000,
 					},
+					jurisdiction: "us",
 				},
 			});
 		});
