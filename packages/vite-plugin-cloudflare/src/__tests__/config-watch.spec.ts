@@ -24,6 +24,25 @@ describe("withCloudflareStateIgnored", () => {
 });
 
 describe("getServerWatchConfig", () => {
+	test("ignores the complete framework directory while preserving user patterns and disabled watching", ({
+		expect,
+	}) => {
+		expect(
+			getServerWatchConfig(
+				{ ignored: "**/dist/**" },
+				"/project/.void/cloudflare"
+			)
+		).toEqual({
+			ignored: [
+				"**/dist/**",
+				"**/.cloudflare/**",
+				"/project/.void/cloudflare",
+				"/project/.void/cloudflare/**",
+			],
+		});
+		expect(getServerWatchConfig(null, "/project/.void/cloudflare")).toBeNull();
+	});
+
 	test("does not re-enable watching when the user set server.watch to null", ({
 		expect,
 	}) => {

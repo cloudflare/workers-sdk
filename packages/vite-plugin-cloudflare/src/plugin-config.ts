@@ -3,12 +3,14 @@ import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import {
 	DEFAULT_WORKER_DIRECTORY_NAME,
+	getBuildOutputDir,
 	normalizeDirectoryName,
 } from "@cloudflare/build-output-utils";
 import {
 	generateTypes,
 	InputWorkerSchema,
 	loadAndParseConfig,
+	resolveAndParseConfig,
 } from "@cloudflare/config";
 import {
 	generateRuntimeTypes,
@@ -29,6 +31,8 @@ import { readBuildOutputPreview } from "./build-output-preview";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
 import type { BuildOutputPreviewWorker } from "./build-output-preview";
 import type {
+	CloudflareConfig,
+	ConfigContext,
 	ParsedInputContainerConfig,
 	InputWorkerConfig,
 	ParsedInputConfig,
@@ -133,6 +137,22 @@ type WorkerConfigProvider =
 	  }) => InputWorkerConfig);
 
 export interface PluginConfig extends EntryWorkerOptions {
+	/**
+	 * Complete project configuration supplied by a framework instead of loading
+	 * `cloudflare.config.ts`. The existing `config` customizer is applied afterwards.
+	 * File-based type generation is skipped when this option is provided.
+	 */
+	projectConfig?:
+		| CloudflareConfig
+		| ((
+				context: ConfigContext
+		  ) => CloudflareConfig | Promise<CloudflareConfig>);
+	/**
+	 * Directory inside the project root for build output, generated types, local
+	 * state, and temporary resources. Defaults to `.cloudflare`.
+	 * Use the same directory for build and preview. `persistState.path` takes precedence.
+	 */
+	directory?: string;
 	auxiliaryWorkers?: AuxiliaryWorkerOptions[];
 	/** Configuration for a dedicated prerender Worker. */
 	prerenderWorker?: PrerenderWorkerOptions;
@@ -168,6 +188,8 @@ export interface Worker {
 }
 
 interface BaseResolvedConfig {
+	directory?: string;
+	outputDirectory?: string;
 	cliDisplayName: string;
 	persistState: PersistState;
 	inspectorPort: number | false | undefined;
@@ -306,9 +328,16 @@ export async function resolvePluginConfig(
 			? userConfig.mode
 			: viteEnv.mode;
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
+	const directory = path.resolve(root, pluginConfig.directory ?? ".cloudflare");
+	// Validate the directory itself as well as output: cleanup must never target
+	// the project root or an ancestor, including when a framework configures it.
+	getBuildOutputDir(root, { outputDirectory: directory });
+	const outputDirectory = path.join(directory, "output");
 	const envDir = resolveEnvDir(root, userConfig.envDir);
 	const preview = viteEnv.isPreview
-		? await readBuildOutputPreview(root, !!process.env.CLOUDFLARE_VITE_BUILD)
+		? await readBuildOutputPreview(root, !!process.env.CLOUDFLARE_VITE_BUILD, {
+				outputDirectory,
+			})
 		: undefined;
 	const localEnvMode = preview?.rootConfig.buildContext.mode ?? mode;
 	const [localEnv, devVars] = await Promise.all([
@@ -327,6 +356,8 @@ export async function resolvePluginConfig(
 	);
 	const types = normalizeTypes(pluginConfig.types);
 	const shared = {
+		directory,
+		outputDirectory,
 		cliDisplayName: getCliDisplayName(),
 		persistState: pluginConfig.persistState ?? true,
 		inspectorPort: pluginConfig.inspectorPort,
@@ -376,6 +407,8 @@ export async function resolvePluginConfig(
 		root,
 		mode,
 		types,
+		projectConfig: pluginConfig.projectConfig,
+		directory,
 	});
 	const settings = {
 		accountId: loadedConfig?.parsedConfig.accountId,
@@ -383,15 +416,16 @@ export async function resolvePluginConfig(
 	};
 	const containers = loadedConfig?.parsedConfig.containers ?? [];
 	if (loadedConfig) {
-		configPaths.add(loadedConfig.configPath);
+		if (loadedConfig.configPath) {
+			configPaths.add(loadedConfig.configPath);
+		}
 		for (const dep of loadedConfig.dependencies) {
 			configPaths.add(dep);
 		}
 	}
 
-	// Type generation happens while loading the file above. The plugin-level
-	// customizer is intentionally applied afterwards so generated declarations
-	// only describe `cloudflare.config.ts`.
+	// File-based type generation runs before the Worker customizer so generated
+	// declarations describe the authored file. Frameworks supply their own types.
 	const entryWorkerResolvedConfig = resolveEntryWorkerConfig({
 		workerConfig:
 			loadedConfig === undefined
@@ -689,7 +723,6 @@ const WRANGLER_CONFIG_FILENAMES = [
 	"wrangler.jsonc",
 	"wrangler.toml",
 ];
-const TYPES_OUTPUT_PATH = ".cloudflare/types/index.d.ts";
 const CONFIG_PACKAGE = "cf/config";
 
 /**
@@ -703,15 +736,37 @@ const CONFIG_PACKAGE = "cf/config";
 async function loadCloudflareConfig(options: {
 	root: string;
 	mode: string;
+	projectConfig?: PluginConfig["projectConfig"];
+	directory: string;
 	types: { generate: boolean; includeRuntime: boolean };
 }): Promise<
 	| {
 			parsedConfig: ParsedInputConfigWithWorker;
-			configPath: string;
+			configPath?: string;
 			dependencies: Set<string>;
 	  }
 	| undefined
 > {
+	if (options.projectConfig !== undefined) {
+		const result = await resolveAndParseConfig(options.projectConfig, {
+			isPreview: isPreviewBuild(),
+			mode: options.mode,
+		});
+		if (!result.success) {
+			throw new Error(
+				`Invalid \`projectConfig\`:\n${formatZodError(result.error)}`
+			);
+		}
+		if (!result.data.worker) {
+			throw new Error(
+				"`projectConfig` must define a Worker using the `worker` property."
+			);
+		}
+		return {
+			parsedConfig: { ...result.data, worker: result.data.worker },
+			dependencies: new Set(),
+		};
+	}
 	const configPath = path.resolve(options.root, CONFIG_FILENAME);
 
 	if (!fs.existsSync(configPath)) {
@@ -747,6 +802,7 @@ async function loadCloudflareConfig(options: {
 	if (options.types.generate) {
 		await writeCloudflareTypes({
 			root: options.root,
+			directory: options.directory,
 			configPath,
 			includeRuntime: options.types.includeRuntime,
 			compatibilityDate: worker.compatibilityDate,
@@ -777,12 +833,13 @@ async function loadCloudflareConfig(options: {
  */
 async function writeCloudflareTypes(options: {
 	root: string;
+	directory: string;
 	configPath: string;
 	includeRuntime: boolean;
 	compatibilityDate: string;
 	compatibilityFlags: string[];
 }): Promise<void> {
-	const outputPath = path.resolve(options.root, TYPES_OUTPUT_PATH);
+	const outputPath = path.join(options.directory, "types/index.d.ts");
 	const outputDir = path.dirname(outputPath);
 	const relativeConfigPath = vite.normalizePath(
 		path.relative(outputDir, options.configPath)

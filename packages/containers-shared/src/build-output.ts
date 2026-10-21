@@ -14,7 +14,10 @@ import {
 import { resolveInputContainerImage } from "./input-container-image";
 import { runDockerCmdWithOutput, verifyDockerInstalled } from "./utils";
 import type { InputContainerImage } from "./input-container-image";
-import type { WriteContainerConfigOptions } from "@cloudflare/build-output-utils";
+import type {
+	WriteContainerConfigOptions,
+	BuildOutputOptions,
+} from "@cloudflare/build-output-utils";
 import type {
 	ParsedInputContainerConfig,
 	ParsedOutputContainerConfig,
@@ -36,11 +39,13 @@ const DOCKER_REPOSITORY_NAME_LENGTH = 255;
  *
  * @param options - The validated Container configs and Docker build environment.
  */
-export async function buildAndWriteContainerOutput(options: {
-	containers: ParsedInputContainerConfig[];
-	root: string;
-	pathToDocker: string;
-}): Promise<void> {
+export async function buildAndWriteContainerOutput(
+	options: BuildOutputOptions & {
+		containers: ParsedInputContainerConfig[];
+		root: string;
+		pathToDocker: string;
+	}
+): Promise<void> {
 	const localTags = new Set<string>();
 	try {
 		const containers = resolveContainerDirectories(options.containers);
@@ -66,6 +71,7 @@ export async function buildAndWriteContainerOutput(options: {
 			for (const { config, directoryName } of containers) {
 				outputConfigs.push({
 					root: options.root,
+					outputDirectory: options.outputDirectory,
 					directoryName,
 					config: await buildContainerOutputConfig({
 						config,
@@ -85,7 +91,7 @@ export async function buildAndWriteContainerOutput(options: {
 		}
 	} catch (error) {
 		await Promise.allSettled([
-			cleanBuildOutputDir(options.root),
+			cleanBuildOutputDir(options.root, options),
 			cleanupBuiltImages(
 				Array.from(localTags, (localTag) => ({ localTag })),
 				options.pathToDocker

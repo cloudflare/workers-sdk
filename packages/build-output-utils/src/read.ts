@@ -20,6 +20,7 @@ import {
 	getWorkerDir,
 	getWorkersDir,
 } from "./paths";
+import type { BuildOutputOptions } from "./paths";
 import type {
 	ModuleType,
 	ParsedOutputContainerConfig,
@@ -121,7 +122,7 @@ export interface BuildOutput {
 
 /**
  * Read and parse the Build Output Specification tree at
- * `<root>/.cloudflare/output/v0/`.
+ * `<root>/.cloudflare/output/v0/`, or the configured `outputDirectory`.
  *
  * Reads the root `config.json`, then reads and parses each
  * `worker.config.json` and `container.config.json`, and resolves each Worker's
@@ -132,13 +133,16 @@ export interface BuildOutput {
  * invalid, if a Worker or Container config is missing, is not valid JSON,
  * or does not match its schema, or if the build output contains a symlink.
  */
-export async function readBuildOutput(root: string): Promise<BuildOutput> {
+export async function readBuildOutput(
+	root: string,
+	options?: BuildOutputOptions
+): Promise<BuildOutput> {
 	const absoluteRoot = path.resolve(root);
-	await validateBuildOutputDirectory(absoluteRoot);
-	const rootConfig = await readRootConfig(absoluteRoot);
+	await validateBuildOutputDirectory(absoluteRoot, options);
+	const rootConfig = await readRootConfig(absoluteRoot, options);
 	const [workers, containers] = await Promise.all([
-		readWorkers(absoluteRoot),
-		readContainers(absoluteRoot),
+		readWorkers(absoluteRoot, options),
+		readContainers(absoluteRoot, options),
 	]);
 
 	return {
@@ -151,12 +155,18 @@ export async function readBuildOutput(root: string): Promise<BuildOutput> {
 }
 
 /** Reject symlinks so build output remains portable and self-contained. */
-async function validateBuildOutputDirectory(root: string): Promise<void> {
-	const buildOutputDir = getBuildOutputDir(root);
+async function validateBuildOutputDirectory(
+	root: string,
+	options?: BuildOutputOptions
+): Promise<void> {
+	const buildOutputDir = getBuildOutputDir(root, options);
 
 	// Check the output path itself before scanning to avoid following a linked
-	// `.cloudflare` or `output` directory.
-	for (const directory of [path.dirname(buildOutputDir), buildOutputDir]) {
+	// directory at any depth of a framework-owned output path.
+	const relative = path.relative(path.resolve(root), buildOutputDir);
+	let directory = path.resolve(root);
+	for (const segment of relative.split(path.sep)) {
+		directory = path.join(directory, segment);
 		const entry = fs.lstatSync(directory, { throwIfNoEntry: false });
 		if (entry === undefined) {
 			return;
@@ -185,13 +195,32 @@ function assertNotSymlink(filePath: string, entry: fs.Stats | fs.Dirent): void {
 }
 
 /** Read and parse the default Worker and any additional Worker configs. */
-async function readWorkers(root: string): Promise<BuildOutputWorkers> {
-	const workersDir = getWorkersDir(root);
-	const defaultWorker = await readWorker(root, DEFAULT_WORKER_DIRECTORY_NAME);
+async function readWorkers(
+	root: string,
+	options?: BuildOutputOptions
+): Promise<BuildOutputWorkers> {
+	const workersDir = getWorkersDir(root, options);
+	const defaultWorker = await readWorker(
+		root,
+		DEFAULT_WORKER_DIRECTORY_NAME,
+		options
+	);
 	if (defaultWorker === undefined) {
-		const workerDir = getWorkerDir(root, DEFAULT_WORKER_DIRECTORY_NAME);
-		const bundleDir = getWorkerBundleDir(root, DEFAULT_WORKER_DIRECTORY_NAME);
-		const assetsDir = getWorkerAssetsDir(root, DEFAULT_WORKER_DIRECTORY_NAME);
+		const workerDir = getWorkerDir(
+			root,
+			DEFAULT_WORKER_DIRECTORY_NAME,
+			options
+		);
+		const bundleDir = getWorkerBundleDir(
+			root,
+			DEFAULT_WORKER_DIRECTORY_NAME,
+			options
+		);
+		const assetsDir = getWorkerAssetsDir(
+			root,
+			DEFAULT_WORKER_DIRECTORY_NAME,
+			options
+		);
 		throw new BuildOutputError(
 			`Default Worker at ${workerDir} has neither a bundle directory (${bundleDir}) nor an assets directory (${assetsDir}).`
 		);
@@ -206,7 +235,7 @@ async function readWorkers(root: string): Promise<BuildOutputWorkers> {
 		.map((entry) => entry.name);
 	const additionalWorkers = await Promise.all(
 		additionalWorkerDirectoryNames.map(async (workerDirectoryName) => {
-			const worker = await readWorker(root, workerDirectoryName);
+			const worker = await readWorker(root, workerDirectoryName, options);
 			return worker === undefined
 				? undefined
 				: ([workerDirectoryName, worker] as const);
@@ -225,8 +254,11 @@ async function readWorkers(root: string): Promise<BuildOutputWorkers> {
 }
 
 /** Read and parse all Container configs, if any. */
-async function readContainers(root: string): Promise<BuildOutputContainers> {
-	const containersDir = getContainersDir(root);
+async function readContainers(
+	root: string,
+	options?: BuildOutputOptions
+): Promise<BuildOutputContainers> {
+	const containersDir = getContainersDir(root, options);
 	if (!fs.existsSync(containersDir)) {
 		return [];
 	}
@@ -239,7 +271,7 @@ async function readContainers(root: string): Promise<BuildOutputContainers> {
 
 	return Promise.all(
 		containerDirectoryNames.map((containerDirectoryName) =>
-			readContainer(root, containerDirectoryName)
+			readContainer(root, containerDirectoryName, options)
 		)
 	);
 }
@@ -247,9 +279,14 @@ async function readContainers(root: string): Promise<BuildOutputContainers> {
 /** Read and parse one Container config. */
 async function readContainer(
 	root: string,
-	containerDirectoryName: string
+	containerDirectoryName: string,
+	options?: BuildOutputOptions
 ): Promise<BuildOutputContainer> {
-	const configPath = getContainerConfigPath(root, containerDirectoryName);
+	const configPath = getContainerConfigPath(
+		root,
+		containerDirectoryName,
+		options
+	);
 
 	if (!fs.existsSync(configPath)) {
 		throw new BuildOutputError(`no Container config found at ${configPath}.`);
@@ -279,9 +316,10 @@ async function readContainer(
  */
 async function readWorker(
 	root: string,
-	workerDirectoryName: string
+	workerDirectoryName: string,
+	options?: BuildOutputOptions
 ): Promise<BuildOutputWorker | undefined> {
-	const configPath = getWorkerConfigPath(root, workerDirectoryName);
+	const configPath = getWorkerConfigPath(root, workerDirectoryName, options);
 
 	if (!fs.existsSync(configPath)) {
 		throw new BuildOutputError(`no Worker config found at ${configPath}.`);
@@ -295,8 +333,8 @@ async function readWorker(
 		);
 	}
 
-	const bundleDir = getWorkerBundleDir(root, workerDirectoryName);
-	const assetsDir = getWorkerAssetsDir(root, workerDirectoryName);
+	const bundleDir = getWorkerBundleDir(root, workerDirectoryName, options);
+	const assetsDir = getWorkerAssetsDir(root, workerDirectoryName, options);
 	const hasBundleDir = fs.existsSync(bundleDir);
 	const hasAssetsDir = fs.existsSync(assetsDir);
 
@@ -402,8 +440,11 @@ function inferModuleType(modulePath: string): ModuleType | undefined {
  * @throws {BuildOutputError} if the file is missing, is not valid JSON, or
  * does not match its schema.
  */
-async function readRootConfig(root: string): Promise<ParsedOutputRootConfig> {
-	const configPath = getRootConfigPath(root);
+async function readRootConfig(
+	root: string,
+	options?: BuildOutputOptions
+): Promise<ParsedOutputRootConfig> {
+	const configPath = getRootConfigPath(root, options);
 
 	if (!fs.existsSync(configPath)) {
 		throw new BuildOutputError(`no root config found at ${configPath}.`);

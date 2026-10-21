@@ -3,7 +3,10 @@ import {
 	readBuildOutput,
 } from "@cloudflare/build-output-utils";
 import { PRERENDER_WORKER_DIRECTORY_NAME } from "./build-output";
-import type { BuildOutputWorker } from "@cloudflare/build-output-utils";
+import type {
+	BuildOutputWorker,
+	BuildOutputOptions,
+} from "@cloudflare/build-output-utils";
 import type {
 	ModuleType,
 	ParsedOutputContainerConfig,
@@ -36,11 +39,15 @@ export interface BuildOutputPreview {
  */
 export async function readBuildOutputPreview(
 	root: string,
-	isPrerender: boolean
+	isPrerender: boolean,
+	options?: BuildOutputOptions
 ): Promise<BuildOutputPreview> {
 	// `rootConfig` comes from the top-level `config.json` holding project-level
 	// settings and build context shared by every Worker.
-	const { workers, rootConfig, containers } = await readBuildOutput(root);
+	const { workers, rootConfig, containers } = await readBuildOutput(
+		root,
+		options
+	);
 	const defaultWorker = workers[DEFAULT_WORKER_DIRECTORY_NAME];
 	const entryWorker = isPrerender
 		? (workers[PRERENDER_WORKER_DIRECTORY_NAME] ?? defaultWorker)

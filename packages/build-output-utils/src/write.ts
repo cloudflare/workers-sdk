@@ -2,7 +2,6 @@ import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { removeDir } from "@cloudflare/workers-utils";
 import {
-	BUILD_OUTPUT_ROOT,
 	DEFAULT_WORKER_DIRECTORY_NAME,
 	getBuildOutputDir,
 	getContainerConfigPath,
@@ -12,6 +11,7 @@ import {
 	getWorkerConfigPath,
 	getWorkerDir,
 } from "./paths";
+import type { BuildOutputOptions } from "./paths";
 import type {
 	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
@@ -24,11 +24,14 @@ import type {
 /**
  * Clean the build output directory.
  */
-export async function cleanBuildOutputDir(root: string): Promise<void> {
-	await removeDir(getBuildOutputDir(root));
+export async function cleanBuildOutputDir(
+	root: string,
+	options?: BuildOutputOptions
+): Promise<void> {
+	await removeDir(getBuildOutputDir(root, options));
 }
 
-export interface WriteAssetsOptions {
+export interface WriteAssetsOptions extends BuildOutputOptions {
 	root: string;
 	sourceDirectory: string;
 }
@@ -38,30 +41,37 @@ export interface WriteAssetsOptions {
  *
  * Symlinks are dereferenced so the output remains portable and self-contained.
  *
- * When the project root is itself the asset source, the reserved
- * `.cloudflare` directory is omitted so the nested output is not copied into
- * itself.
+ * When the asset source contains the output, its containing directory is
+ * omitted so the nested output is not copied into itself.
  */
 export async function writeAssets({
 	root,
+	outputDirectory,
 	sourceDirectory,
 }: WriteAssetsOptions): Promise<void> {
-	const assetsDir = getWorkerAssetsDir(root);
+	const assetsDir = getWorkerAssetsDir(root, undefined, { outputDirectory });
 	await fsp.mkdir(assetsDir, { recursive: true });
 
-	if (path.resolve(sourceDirectory) !== path.resolve(root)) {
-		await fsp.cp(sourceDirectory, assetsDir, {
-			recursive: true,
-			force: false,
-			dereference: true,
-		});
-		return;
+	const outputDir = getBuildOutputDir(root, { outputDirectory });
+	const relativeOutput = path.relative(
+		path.resolve(sourceDirectory),
+		outputDir
+	);
+	// Omit the output's containing directory when the source is an ancestor,
+	// so copying project assets cannot recursively copy the build into itself.
+	const excluded =
+		relativeOutput !== ".." &&
+		!relativeOutput.startsWith(`..${path.sep}`) &&
+		!path.isAbsolute(relativeOutput)
+			? relativeOutput.split(path.sep)[0]
+			: undefined;
+	if (relativeOutput === "") {
+		throw new Error("The asset source cannot be the Build Output directory.");
 	}
-
 	const entries = await fsp.readdir(sourceDirectory);
 	await Promise.all(
 		entries
-			.filter((entry) => entry !== path.dirname(BUILD_OUTPUT_ROOT))
+			.filter((entry) => entry !== excluded)
 			.map((entry) =>
 				fsp.cp(path.join(sourceDirectory, entry), path.join(assetsDir, entry), {
 					recursive: true,
@@ -72,7 +82,7 @@ export async function writeAssets({
 	);
 }
 
-export interface WriteWorkerConfigOptions {
+export interface WriteWorkerConfigOptions extends BuildOutputOptions {
 	root: string;
 	config: ParsedInputWorkerConfig;
 	manifest?: ParsedOutputWorkerConfig["manifest"];
@@ -88,20 +98,23 @@ export interface WriteWorkerConfigOptions {
  */
 export async function writeWorkerConfig({
 	root,
+	outputDirectory,
 	config,
 	manifest,
 	directoryName = DEFAULT_WORKER_DIRECTORY_NAME,
 }: WriteWorkerConfigOptions): Promise<void> {
 	const { entrypoint: _entrypoint, ...rest } = config;
 	const outputConfig: ParsedOutputWorkerConfig = { ...rest, manifest };
-	await fsp.mkdir(getWorkerDir(root, directoryName), { recursive: true });
+	await fsp.mkdir(getWorkerDir(root, directoryName, { outputDirectory }), {
+		recursive: true,
+	});
 	await fsp.writeFile(
-		getWorkerConfigPath(root, directoryName),
+		getWorkerConfigPath(root, directoryName, { outputDirectory }),
 		JSON.stringify(outputConfig)
 	);
 }
 
-export interface WriteContainerConfigOptions {
+export interface WriteContainerConfigOptions extends BuildOutputOptions {
 	root: string;
 	config: ParsedOutputContainerConfig;
 	directoryName: string;
@@ -116,14 +129,15 @@ export interface WriteContainerConfigOptions {
  */
 export async function writeContainerConfig({
 	root,
+	outputDirectory,
 	config,
 	directoryName,
 }: WriteContainerConfigOptions): Promise<void> {
-	await fsp.mkdir(getContainerDir(root, directoryName), {
+	await fsp.mkdir(getContainerDir(root, directoryName, { outputDirectory }), {
 		recursive: true,
 	});
 	await fsp.writeFile(
-		getContainerConfigPath(root, directoryName),
+		getContainerConfigPath(root, directoryName, { outputDirectory }),
 		JSON.stringify(config)
 	);
 }
@@ -137,13 +151,14 @@ export async function writeContainerConfig({
 export async function writeRootConfig(
 	root: string,
 	settings: ParsedInputSettingsConfig | undefined,
-	buildContext: ConfigContext
+	buildContext: ConfigContext,
+	options?: BuildOutputOptions
 ): Promise<void> {
 	const outputConfig: ParsedOutputRootConfig = {
 		...settings,
 		buildContext,
 	};
-	const configPath = getRootConfigPath(root);
+	const configPath = getRootConfigPath(root, options);
 	await fsp.mkdir(path.dirname(configPath), { recursive: true });
 	await fsp.writeFile(configPath, JSON.stringify(outputConfig));
 }

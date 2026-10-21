@@ -781,7 +781,9 @@ describe("resolvePluginConfig", () => {
 		);
 
 		expect(result.type).toBe("preview");
-		expect(readBuildOutputPreviewMock).toHaveBeenCalledWith(root, false);
+		expect(readBuildOutputPreviewMock).toHaveBeenCalledWith(root, false, {
+			outputDirectory: path.join(root, ".cloudflare/output"),
+		});
 		if (result.type === "preview") {
 			expect(result.workers[0]?.config.name).toBe("preview-worker");
 			expect(result.containers).toEqual([
@@ -809,7 +811,9 @@ describe("resolvePluginConfig", () => {
 			{ mode: "production", command: "serve", isPreview: true }
 		);
 
-		expect(readBuildOutputPreviewMock).toHaveBeenCalledWith(root, true);
+		expect(readBuildOutputPreviewMock).toHaveBeenCalledWith(root, true, {
+			outputDirectory: path.join(root, ".cloudflare/output"),
+		});
 	});
 
 	test("preview loads local env using the mode recorded in Build Output", async ({

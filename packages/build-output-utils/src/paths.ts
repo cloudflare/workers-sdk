@@ -10,6 +10,11 @@ export const BUILD_OUTPUT_VERSION = "v0";
 /** Build output directory relative to the project root. */
 export const BUILD_OUTPUT_ROOT = ".cloudflare/output";
 
+/** Location of a Build Output tree, relative to the project root or absolute. */
+export interface BuildOutputOptions {
+	outputDirectory?: string;
+}
+
 /** Filename of the root config in the Build Output Specification. */
 export const ROOT_CONFIG_FILENAME = "config.json";
 
@@ -30,8 +35,26 @@ const WINDOWS_RESERVED_NAME =
 const MAX_DIRECTORY_NAME_BYTES = 254;
 
 /** Absolute path to the Build Output Specification directory. */
-export function getBuildOutputDir(root: string): string {
-	return path.resolve(root, BUILD_OUTPUT_ROOT);
+export function getBuildOutputDir(
+	root: string,
+	options: BuildOutputOptions = {}
+): string {
+	const directory = path.resolve(
+		root,
+		options.outputDirectory ?? BUILD_OUTPUT_ROOT
+	);
+	const relative = path.relative(path.resolve(root), directory);
+	if (
+		!relative ||
+		relative === ".." ||
+		relative.startsWith(`..${path.sep}`) ||
+		path.isAbsolute(relative)
+	) {
+		throw new Error(
+			"Build Output must be written to a directory inside the project root."
+		);
+	}
+	return directory;
 }
 
 /**
@@ -40,9 +63,12 @@ export function getBuildOutputDir(root: string): string {
  * Holds the settings declared at the top level of `cloudflare.config.ts` and
  * build context.
  */
-export function getRootConfigPath(root: string): string {
+export function getRootConfigPath(
+	root: string,
+	options?: BuildOutputOptions
+): string {
 	return path.join(
-		getBuildOutputDir(root),
+		getBuildOutputDir(root, options),
 		BUILD_OUTPUT_VERSION,
 		ROOT_CONFIG_FILENAME
 	);
@@ -51,15 +77,29 @@ export function getRootConfigPath(root: string): string {
 /**
  * Absolute path to the Workers output directory.
  */
-export function getWorkersDir(root: string): string {
-	return path.join(getBuildOutputDir(root), BUILD_OUTPUT_VERSION, "workers");
+export function getWorkersDir(
+	root: string,
+	options?: BuildOutputOptions
+): string {
+	return path.join(
+		getBuildOutputDir(root, options),
+		BUILD_OUTPUT_VERSION,
+		"workers"
+	);
 }
 
 /**
  * Absolute path to the Containers output directory.
  */
-export function getContainersDir(root: string): string {
-	return path.join(getBuildOutputDir(root), BUILD_OUTPUT_VERSION, "containers");
+export function getContainersDir(
+	root: string,
+	options?: BuildOutputOptions
+): string {
+	return path.join(
+		getBuildOutputDir(root, options),
+		BUILD_OUTPUT_VERSION,
+		"containers"
+	);
 }
 
 /**
@@ -115,20 +155,25 @@ function validateDirectoryName(name: string, resourceType: string): void {
  */
 export function getWorkerDir(
 	root: string,
-	directoryName = DEFAULT_WORKER_DIRECTORY_NAME
+	directoryName = DEFAULT_WORKER_DIRECTORY_NAME,
+	options?: BuildOutputOptions
 ): string {
 	validateDirectoryName(directoryName, "Worker");
 
-	return path.join(getWorkersDir(root), directoryName);
+	return path.join(getWorkersDir(root, options), directoryName);
 }
 
 /**
  * Absolute path to a Container's directory (`containers/<directory-name>`).
  */
-export function getContainerDir(root: string, directoryName: string): string {
+export function getContainerDir(
+	root: string,
+	directoryName: string,
+	options?: BuildOutputOptions
+): string {
 	validateDirectoryName(directoryName, "Container");
 
-	return path.join(getContainersDir(root), directoryName);
+	return path.join(getContainersDir(root, options), directoryName);
 }
 
 /**
@@ -136,10 +181,11 @@ export function getContainerDir(root: string, directoryName: string): string {
  */
 export function getContainerConfigPath(
 	root: string,
-	directoryName: string
+	directoryName: string,
+	options?: BuildOutputOptions
 ): string {
 	return path.join(
-		getContainerDir(root, directoryName),
+		getContainerDir(root, directoryName, options),
 		CONTAINER_CONFIG_FILENAME
 	);
 }
@@ -149,9 +195,13 @@ export function getContainerConfigPath(
  */
 export function getWorkerConfigPath(
 	root: string,
-	directoryName = DEFAULT_WORKER_DIRECTORY_NAME
+	directoryName = DEFAULT_WORKER_DIRECTORY_NAME,
+	options?: BuildOutputOptions
 ): string {
-	return path.join(getWorkerDir(root, directoryName), WORKER_CONFIG_FILENAME);
+	return path.join(
+		getWorkerDir(root, directoryName, options),
+		WORKER_CONFIG_FILENAME
+	);
 }
 
 /**
@@ -159,9 +209,10 @@ export function getWorkerConfigPath(
  */
 export function getWorkerBundleDir(
 	root: string,
-	directoryName = DEFAULT_WORKER_DIRECTORY_NAME
+	directoryName = DEFAULT_WORKER_DIRECTORY_NAME,
+	options?: BuildOutputOptions
 ): string {
-	return path.join(getWorkerDir(root, directoryName), "bundle");
+	return path.join(getWorkerDir(root, directoryName, options), "bundle");
 }
 
 /**
@@ -169,7 +220,8 @@ export function getWorkerBundleDir(
  */
 export function getWorkerAssetsDir(
 	root: string,
-	directoryName = DEFAULT_WORKER_DIRECTORY_NAME
+	directoryName = DEFAULT_WORKER_DIRECTORY_NAME,
+	options?: BuildOutputOptions
 ): string {
-	return path.join(getWorkerDir(root, directoryName), "assets");
+	return path.join(getWorkerDir(root, directoryName, options), "assets");
 }

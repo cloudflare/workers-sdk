@@ -83,13 +83,14 @@ const PUBLIC_DIR_PREFIX = "/__vite_public_dir__";
 
 function getPersistenceRoot(
 	root: string,
-	persistState: PersistState
+	persistState: PersistState,
+	directory = ".cloudflare"
 ): string | undefined {
 	if (persistState === false) {
 		return;
 	}
 
-	const defaultPersistPath = ".cloudflare/state";
+	const defaultPersistPath = path.join(directory, "state");
 	const persistPath = path.resolve(
 		root,
 		typeof persistState === "object" ? persistState.path : defaultPersistPath,
@@ -688,9 +689,14 @@ export async function getDevMiniflareOptions(
 		},
 		resourcePersistencePath: getPersistenceRoot(
 			resolvedViteConfig.root,
-			resolvedPluginConfig.persistState
+			resolvedPluginConfig.persistState,
+			resolvedPluginConfig.directory
 		),
-		resourceTmpPath: path.resolve(resolvedViteConfig.root, ".cloudflare/tmp"),
+		resourceTmpPath: path.resolve(
+			resolvedViteConfig.root,
+			resolvedPluginConfig.directory ?? ".cloudflare",
+			"tmp"
+		),
 		containerEngine,
 		workers: [...assetWorkers, ...userWorkers],
 		async unsafeModuleFallbackService(request) {
@@ -935,9 +941,14 @@ export async function getPreviewMiniflareOptions(
 		handleStructuredLogs: getStructuredLogsLogger(logger),
 		resourcePersistencePath: getPersistenceRoot(
 			resolvedViteConfig.root,
-			resolvedPluginConfig.persistState
+			resolvedPluginConfig.persistState,
+			resolvedPluginConfig.directory
 		),
-		resourceTmpPath: path.resolve(resolvedViteConfig.root, ".cloudflare/tmp"),
+		resourceTmpPath: path.resolve(
+			resolvedViteConfig.root,
+			resolvedPluginConfig.directory ?? ".cloudflare",
+			"tmp"
+		),
 		containerEngine,
 		workers,
 	};
