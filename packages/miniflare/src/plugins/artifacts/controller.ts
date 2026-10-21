@@ -1,4 +1,3 @@
-import { once } from "node:events";
 import path from "node:path";
 import { Worker } from "node:worker_threads";
 import getPort from "get-port";
@@ -46,6 +45,7 @@ export class ArtifactsController {
 	}
 
 	get(root: string): Promise<LocalArtifactsBackend> {
+		root = path.resolve(root);
 		if (!this.#pendingRoots) {
 			throw new Error("Artifacts backend requested outside runtime update");
 		}
@@ -100,7 +100,16 @@ export class ArtifactsController {
 							return;
 						}
 						stopping = true;
-						const exited = once(worker, "exit");
+						// `events.once()` rejects on a preceding error, even if the thread exits.
+						const exited = new Promise<void>((resolve) => {
+							const done = () => {
+								worker.off("exit", done);
+								worker.off("error", done);
+								resolve();
+							};
+							worker.once("exit", done);
+							worker.once("error", done);
+						});
 						worker.postMessage("close");
 						await exited;
 					},

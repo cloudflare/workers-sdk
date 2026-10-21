@@ -395,6 +395,26 @@ test("artifacts: local storage conflicts expose safe recovery guidance", async (
 	);
 });
 
+test("artifacts: relative and absolute storage paths share one sidecar", async ({
+	expect,
+}) => {
+	const controller = new ArtifactsController();
+	const absolute = path.join(await useTmp(), "repos");
+	const relative = path.relative(process.cwd(), absolute);
+	try {
+		controller.beginUpdate();
+		const first = await controller.get(relative);
+		const same = await controller.get(absolute);
+		expect(same).toBe(first);
+		await controller.commitUpdate();
+		controller.beginUpdate();
+		expect(await controller.get(absolute)).toBe(first);
+		await controller.commitUpdate();
+	} finally {
+		await controller.dispose();
+	}
+});
+
 test("artifacts: config update closes retired sidecars but abort preserves active ones", async ({
 	expect,
 }) => {
