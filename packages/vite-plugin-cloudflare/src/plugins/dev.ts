@@ -9,7 +9,6 @@ import {
 	kRequestType,
 	ROUTER_WORKER_NAME,
 } from "../constants";
-import { getDevContainerCleanup } from "../container-cleanup";
 import { prepareContainerImagesForVite } from "../containers";
 import { assertIsNotPreview } from "../context";
 import {
@@ -35,7 +34,6 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 	return {
 		async configureServer(viteDevServer) {
 			assertIsNotPreview(ctx);
-			const containerCleanup = getDevContainerCleanup(viteDevServer);
 			const initialOptions = await getDevMiniflareOptions(ctx, viteDevServer);
 			let containerOptions = initialOptions.containerOptions;
 			await ctx.startOrUpdateMiniflare(initialOptions.miniflareOptions);
@@ -54,9 +52,6 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						} catch (error) {
 							debuglog("Failed to dispose Miniflare instance:", error);
 						}
-					}
-					if (!containerCleanup.isRestarting) {
-						containerCleanup.cleanup();
 					}
 				}
 			};
@@ -228,10 +223,6 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						cliDisplayName: ctx.resolvedPluginConfig.cliDisplayName,
 					});
 
-					containerCleanup.track(
-						dockerPath,
-						containerOptions.map(({ image_tag }) => image_tag)
-					);
 					viteDevServer.config.logger.info(
 						colors.dim(
 							colors.yellow(
