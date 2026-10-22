@@ -1,5 +1,13 @@
 # create-cloudflare
 
+## 2.74.3
+
+### Patch Changes
+
+- [#16422](https://github.com/cloudflare/workers-sdk/pull/16422) [`559bf16`](https://github.com/cloudflare/workers-sdk/commit/559bf16db6f320837aa89c6a83b4797f9170b160) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update Astro scaffolding to require Node.js 22.23.4 or later
+
+  Match Astro's current Node.js requirement for Workers and Pages projects so that unsupported versions receive a clear upgrade message before scaffolding begins.
+
 ## 2.74.2
 
 ### Patch Changes
