@@ -1,5 +1,33 @@
 # @cloudflare/vite-plugin
 
+## 1.65.0
+
+### Minor Changes
+
+- [#16363](https://github.com/cloudflare/workers-sdk/pull/16363) [`d3240f2`](https://github.com/cloudflare/workers-sdk/commit/d3240f21d85bfee569aebc12524a7182db841932) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Remove the `experimental.newConfig` option from Vite plugin v1
+
+  Vite plugin v1 now supports Wrangler configuration files only. Projects using `cloudflare.config.ts` for configuration should upgrade to Vite plugin v2 beta.
+
+### Patch Changes
+
+- [#16334](https://github.com/cloudflare/workers-sdk/pull/16334) [`9cecd09`](https://github.com/cloudflare/workers-sdk/commit/9cecd09e1e16b63e4a13cb6cf2117843a353c2bc) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix Container setup guidance in Vite development and preview
+
+  Container registry instructions now show the Wrangler command and the configuration location, including Wrangler files and inline Vite configuration.
+
+- [#16333](https://github.com/cloudflare/workers-sdk/pull/16333) [`68d6eec`](https://github.com/cloudflare/workers-sdk/commit/68d6eecf9d05d03a32356b2082cd51807ed05e89) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update the local Workers runtime to the October 19 release
+
+  Include the fix for nested asset paths during local development on Windows, together with the compatible Wrangler release.
+
+  The runtime update also disposes Workflow step results and introspection modifiers after use, preventing undisposed RPC warnings and cancelled local Workflow requests.
+
+- [#16289](https://github.com/cloudflare/workers-sdk/pull/16289) [`bbe822f`](https://github.com/cloudflare/workers-sdk/commit/bbe822f7dd7d13ac4f975d987b3043a91687ca1f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Retry remote preview token refreshes after transient failures
+
+  Backport the retry fix to the private remote-bindings workspace package and require `wrangler@4.151.1` so long-running remote development sessions recover after a network outage.
+
+- [#16291](https://github.com/cloudflare/workers-sdk/pull/16291) [`0262f7d`](https://github.com/cloudflare/workers-sdk/commit/0262f7d180d9dd58649499e25de8dccccf2d3890) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Use published SDK dependencies for Vite plugin v1 maintenance
+
+  Pin the plugin's published SDK dependencies to their deployed npm versions. Keep private shared packages as workspace dependencies so their implementation and build tools remain available on the v1 maintenance branch.
+
 ## 1.64.0
 
 ### Minor Changes
