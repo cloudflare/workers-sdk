@@ -8,7 +8,7 @@ Tools for helping with CI
 - `deployments/ensure-fixtures-are-not-deployable.ts` - Ensures that we don't accidentally create git tags and releases for fixtures by someone inadvertently adding a version to their package.json or making them non-private.
   Used by test-and-check.yml GitHub Action workflows, as part of the `check` npm script.
 
-- `deployments/validate-changesets.ts` - Validate that changesets are formatted correctly.
+- `deployments/validate-changesets.ts` - Validate changeset formatting and require releases for public consumers of released workspace devDependencies, accounting for automatic runtime dependency bumps.
   Used by the changesets.yml and test-and-check.yml GitHub Action workflows.
 
 - `deployments/validate-pinned-dependencies.ts` - Ensures all non-bundled dependencies of published packages (and all pnpm catalog entries) are pinned to exact versions.

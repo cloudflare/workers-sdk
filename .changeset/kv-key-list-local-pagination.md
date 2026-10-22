@@ -1,5 +1,6 @@
 ---
 "wrangler": patch
+"create-cloudflare": patch
 ---
 
 Fix `kv key list` returning only the first 1000 keys in local mode
