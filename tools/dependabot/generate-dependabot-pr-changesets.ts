@@ -133,12 +133,12 @@ export function updatePathsForChanges(
 }
 
 /**
- * Finds all direct and transitive workspace dependants of a package, including
- * devDependencies because our published packages bundle them.
+ * Finds public direct and transitive workspace dependants of a package,
+ * including devDependencies because our published packages bundle them.
  *
  * @param packageName - The package whose dependants need to be released
- * @param packages - Packages eligible for changesets, excluding fixtures and
- * private packages without a deploy script
+ * @param packages - Packages eligible for changesets; private packages are
+ * ignored even if they have a deploy script
  * @returns Sorted dependant names, excluding the original package and duplicates
  */
 export function getPackageDependants(
@@ -149,7 +149,7 @@ export function getPackageDependants(
 	const dependants = new Set<string>();
 	for (const dependency of visited) {
 		for (const pkg of packages.values()) {
-			if (visited.has(pkg.name)) {
+			if (pkg.private || visited.has(pkg.name)) {
 				continue;
 			}
 			if (

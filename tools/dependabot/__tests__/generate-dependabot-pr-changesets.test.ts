@@ -2,6 +2,9 @@ import { spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import dedent from "ts-dedent";
 import { describe, it, vitest } from "vitest";
+import createCloudflarePackage from "../../../packages/create-cloudflare/package.json";
+import statusBotPackage from "../../../packages/devprod-status-bot/package.json";
+import wranglerPackage from "../../../packages/wrangler/package.json";
 import {
 	DEFAULT_COMPAT_DATE_PATH,
 	updateDefaultCompatDate,
@@ -51,6 +54,15 @@ vitest.mock("../../deployments/validate-changesets", () => ({
 					{
 						name: "wrangler",
 						dependencies: { "@cloudflare/workers-utils": "workspace:*" },
+					},
+				],
+				[
+					"private-service",
+					{
+						name: "private-service",
+						private: true,
+						scripts: { deploy: "wrangler deploy" },
+						devDependencies: { wrangler: "workspace:*" },
 					},
 				],
 			])
@@ -213,6 +225,57 @@ describe("getPackageDependants()", () => {
 			"consumer",
 			"transitive-consumer",
 		]);
+	});
+
+	it("should exclude private direct and transitive dependants with deploy scripts", ({
+		expect,
+	}) => {
+		const packages = new Map<string, PackageJSON>([
+			[
+				"public-consumer",
+				{
+					name: "public-consumer",
+					private: false,
+					devDependencies: { shared: "workspace:*" },
+				},
+			],
+			[
+				"private-direct-consumer",
+				{
+					name: "private-direct-consumer",
+					private: true,
+					scripts: { deploy: "wrangler deploy" },
+					dependencies: { shared: "workspace:*" },
+				},
+			],
+			[
+				"private-transitive-consumer",
+				{
+					name: "private-transitive-consumer",
+					private: true,
+					scripts: { deploy: "wrangler deploy" },
+					devDependencies: { "public-consumer": "workspace:*" },
+				},
+			],
+		]);
+
+		expect(getPackageDependants("shared", packages)).toEqual([
+			"public-consumer",
+		]);
+	});
+
+	it("should exclude the status bot while retaining public consumers using real manifests", ({
+		expect,
+	}) => {
+		const packages = new Map<string, PackageJSON>(
+			[createCloudflarePackage, statusBotPackage, wranglerPackage].map(
+				(pkg) => [pkg.name, pkg]
+			)
+		);
+
+		expect(getPackageDependants("@cloudflare/workers-utils", packages)).toEqual(
+			["create-cloudflare", "wrangler"]
+		);
 	});
 
 	it("should exclude unrelated packages and published versions outside the workspace", ({
