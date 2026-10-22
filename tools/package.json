@@ -10,6 +10,7 @@
 	"devDependencies": {
 		"@actions/core": "^1.10.1",
 		"@actions/github": "^6.0.0",
+		"@changesets/get-release-plan": "^4.0.13",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@octokit/webhooks-types": "^7.6.1",
 		"@types/semver": "^7.5.1",
