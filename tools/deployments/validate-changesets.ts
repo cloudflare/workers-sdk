@@ -138,6 +138,10 @@ export type ChangesetFile = {
 export type PackageJSON = {
 	name: string;
 	private?: boolean;
+	dependencies?: Record<string, string>;
+	devDependencies?: Record<string, string>;
+	peerDependencies?: Record<string, string>;
+	optionalDependencies?: Record<string, string>;
 	scripts?: Record<string, unknown>;
 	"workers-sdk"?: {
 		deploy?: boolean;

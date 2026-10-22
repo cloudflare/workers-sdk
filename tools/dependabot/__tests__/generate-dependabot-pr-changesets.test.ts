@@ -6,17 +6,20 @@ import {
 	DEFAULT_COMPAT_DATE_PATH,
 	updateDefaultCompatDate,
 } from "../../deployments/update-default-compat-date";
+import { findPackages } from "../../deployments/validate-changesets";
 import {
 	commitAndPush,
 	generateChangesetHeader,
 	generateCommitMessage,
 	getDependencyChanges,
 	getPackageJsonDiff,
+	getPackageDependants,
 	main,
 	parseDiffForChanges,
 	updatePathsForChanges,
 	writeChangeSet,
 } from "../generate-dependabot-pr-changesets";
+import type { PackageJSON } from "../../deployments/validate-changesets";
 import type { Change } from "../generate-dependabot-pr-changesets";
 import type { Mock } from "vitest";
 
@@ -31,6 +34,28 @@ vitest.mock("node:fs", async () => {
 		writeFileSync: vitest.fn(),
 	};
 });
+
+vitest.mock("../../deployments/validate-changesets", () => ({
+	findPackages: vitest.fn(
+		() =>
+			new Map<string, PackageJSON>([
+				[
+					"create-cloudflare",
+					{
+						name: "create-cloudflare",
+						devDependencies: { "@cloudflare/workers-utils": "workspace:*" },
+					},
+				],
+				[
+					"wrangler",
+					{
+						name: "wrangler",
+						dependencies: { "@cloudflare/workers-utils": "workspace:*" },
+					},
+				],
+			])
+	),
+}));
 
 vitest.mock(
 	"../../deployments/update-default-compat-date",
@@ -86,6 +111,7 @@ describe("main()", () => {
 			(writeFileSync as Mock).mockClear();
 			vitest.mocked(updateDefaultCompatDate).mockClear();
 			vitest.mocked(updateDefaultCompatDate).mockReturnValue(compatDate);
+			vitest.mocked(findPackages).mockClear();
 
 			main({
 				prNumber: "16403",
@@ -117,6 +143,8 @@ describe("main()", () => {
 					dedent`
 						---
 						"@cloudflare/workers-utils": patch
+						"create-cloudflare": patch
+						"wrangler": patch
 						---
 
 						Update \`DEFAULT_COMPAT_DATE\` to ${compatDate}
@@ -125,6 +153,7 @@ describe("main()", () => {
 					` + "\n"
 				);
 			}
+			expect(findPackages).toHaveBeenCalledTimes(compatDate ? 1 : 0);
 			expect(spawnSync).toHaveBeenCalledWith(
 				"git",
 				[
@@ -136,6 +165,85 @@ describe("main()", () => {
 			);
 		}
 	);
+});
+
+describe("getPackageDependants()", () => {
+	it.for([
+		"dependencies",
+		"devDependencies",
+		"peerDependencies",
+		"optionalDependencies",
+	] as const)("should include workspace %s", (field, { expect }) => {
+		const packages = new Map<string, PackageJSON>([
+			["consumer", { name: "consumer", [field]: { shared: "workspace:*" } }],
+		]);
+
+		expect(getPackageDependants("shared", packages)).toEqual(["consumer"]);
+	});
+
+	it("should include transitive dependants once and handle cycles", ({
+		expect,
+	}) => {
+		const packages = new Map<string, PackageJSON>([
+			[
+				"transitive-consumer",
+				{
+					name: "transitive-consumer",
+					devDependencies: { consumer: "workspace:^" },
+				},
+			],
+			[
+				"consumer",
+				{
+					name: "consumer",
+					dependencies: { shared: "workspace:*" },
+					devDependencies: { shared: "workspace:*" },
+				},
+			],
+			[
+				"shared",
+				{
+					name: "shared",
+					devDependencies: { "transitive-consumer": "workspace:~" },
+				},
+			],
+		]);
+
+		expect(getPackageDependants("shared", packages)).toEqual([
+			"consumer",
+			"transitive-consumer",
+		]);
+	});
+
+	it("should exclude unrelated packages and published versions outside the workspace", ({
+		expect,
+	}) => {
+		const packages = new Map<string, PackageJSON>([
+			[
+				"unrelated",
+				{ name: "unrelated", dependencies: { other: "workspace:*" } },
+			],
+			[
+				"pinned-consumer",
+				{ name: "pinned-consumer", dependencies: { shared: "1.0.0" } },
+			],
+			[
+				"aliased-consumer",
+				{
+					name: "aliased-consumer",
+					devDependencies: { shared: "npm:shared@1.0.0" },
+				},
+			],
+		]);
+
+		expect(getPackageDependants("shared", packages)).toEqual([]);
+	});
+
+	it("should return no dependants for an unused package", ({ expect }) => {
+		expect(
+			getPackageDependants("shared", new Map([["shared", { name: "shared" }]]))
+		).toEqual([]);
+	});
 });
 
 describe("updatePathsForChanges()", () => {
