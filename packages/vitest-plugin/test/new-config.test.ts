@@ -57,6 +57,182 @@ test("loads cloudflare.config.ts from the project root", async ({
 	await expect(result.exitCode).resolves.toBe(0);
 });
 
+test("binds the config's own Durable Objects, Workflows, Worker and secrets", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
+	await seed({
+		"vitest.config.mts": vitestConfig({
+			experimental: { newConfig: true },
+		}),
+		"cloudflare.config.ts": dedent`
+			export default {
+				worker: {
+					name: "test-worker",
+					compatibilityDate: "2025-12-02",
+					entrypoint: "./index.ts",
+					env: {
+						COUNTER: { type: "durable-object", worker: "test-worker", exportName: "Counter" },
+						MY_WORKFLOW: { type: "workflow", name: "my-workflow", worker: "test-worker", exportName: "MyWorkflow" },
+						SELF_SERVICE: { type: "worker", worker: "test-worker" },
+						API_KEY: { type: "secret" },
+					},
+					exports: {
+						Counter: { type: "durable-object", storage: "sqlite" },
+						MyWorkflow: { type: "workflow", name: "my-workflow" },
+					},
+				},
+			};
+		`,
+		".dev.vars": "API_KEY=from-dev-vars",
+		"index.ts": dedent`
+			import { DurableObject, WorkflowEntrypoint } from "cloudflare:workers";
+			export class Counter extends DurableObject {
+				count = 0;
+				increment() { return ++this.count; }
+			}
+			export class MyWorkflow extends WorkflowEntrypoint {
+				async run(event, step) {
+					return await step.do("greet", async () => "Hello, " + event.payload.name);
+				}
+			}
+			export default {
+				async fetch(request, env) {
+					return new Response(String(await env.COUNTER.getByName("fetch").increment()));
+				}
+			}
+		`,
+		"index.test.ts": dedent`
+			import { env, listDurableObjectIds, runInDurableObject } from "cloudflare:test";
+			import { it } from "vitest";
+
+			it("calls a Durable Object bound to its own Worker", async ({ expect }) => {
+				expect(await env.COUNTER.getByName("rpc").increment()).toBe(1);
+			});
+
+			it("runs code inside that Durable Object", async ({ expect }) => {
+				const stub = env.COUNTER.getByName("inside");
+				expect(await runInDurableObject(stub, (instance) => instance.increment())).toBe(1);
+				const ids = await listDurableObjectIds(env.COUNTER);
+				expect(ids.some((id) => id.equals(stub.id))).toBe(true);
+			});
+
+			it("runs a Workflow bound to its own Worker", async ({ expect }) => {
+				const instance = await env.MY_WORKFLOW.create({ params: { name: "World" } });
+				await expect
+					.poll(() => instance.status())
+					.toMatchObject({ status: "complete", output: "Hello, World" });
+			});
+
+			it("calls its own Worker through a service binding", async ({ expect }) => {
+				const response = await env.SELF_SERVICE.fetch("http://example.com");
+				expect(await response.text()).toBe("1");
+			});
+
+			it("fills declared secrets from .dev.vars", ({ expect }) => {
+				expect(env.API_KEY).toBe("from-dev-vars");
+			});
+		`,
+	});
+
+	const result = await vitestRun();
+
+	await expect(result.exitCode).resolves.toBe(0);
+	expect(result.stdout).toMatch("5 passed");
+});
+
+test("merges `miniflare` queue consumers and assets with the config's", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
+	await seed({
+		"vitest.config.mts": vitestConfig({
+			experimental: { newConfig: true },
+			miniflare: {
+				compatibilityDate: "2025-12-02",
+				compatibilityFlags: ["nodejs_compat"],
+				// `other-queue` doesn't replace the config's consumers, and
+				// `tuned-queue` overrides the config's settings for that queue
+				queueConsumers: {
+					"other-queue": {},
+					"tuned-queue": { maxBatchSize: 1 },
+				},
+				assets: { directory: "./public" },
+			},
+		}),
+		"cloudflare.config.ts": dedent`
+			export default {
+				worker: {
+					name: "test-worker",
+					compatibilityDate: "2025-12-02",
+					entrypoint: "./index.ts",
+					env: {
+						QUEUE: { type: "queue", name: "my-queue" },
+						TUNED_QUEUE: { type: "queue", name: "tuned-queue" },
+						RESULTS: { type: "kv" },
+						ASSETS: { type: "assets" },
+					},
+					triggers: [
+						{ type: "queue", name: "my-queue", maxBatchSize: 1 },
+						{ type: "queue", name: "tuned-queue", maxBatchSize: 100, maxBatchTimeout: 60 },
+					],
+					assets: { notFoundHandling: "404-page" },
+				},
+			};
+		`,
+		"public/hello.txt": "hello from assets",
+		"public/404.html": "not found page",
+		"index.ts": dedent`
+			export default {
+				async fetch() {
+					return new Response("ok");
+				},
+				async queue(batch, env) {
+					for (const message of batch.messages) {
+						await env.RESULTS.put(batch.queue, String(message.body));
+					}
+				},
+			};
+		`,
+		"index.test.ts": dedent`
+			import { env } from "cloudflare:test";
+			import { it } from "vitest";
+
+			it("delivers messages to the config's queue consumer", async ({ expect }) => {
+				await env.QUEUE.send("hello");
+				await expect
+					.poll(() => env.RESULTS.get("my-queue"), { timeout: 10_000 })
+					.toBe("hello");
+			});
+
+			it("applies \`miniflare\` settings for the same queue", async ({ expect }) => {
+				await env.TUNED_QUEUE.send("tuned");
+				await expect
+					.poll(() => env.RESULTS.get("tuned-queue"), { timeout: 10_000 })
+					.toBe("tuned");
+			});
+
+			it("serves \`miniflare.assets\` through the config's binding", async ({ expect }) => {
+				const response = await env.ASSETS.fetch("http://example.com/hello.txt");
+				expect(await response.text()).toBe("hello from assets");
+			});
+
+			it("applies the config's assets settings", async ({ expect }) => {
+				const response = await env.ASSETS.fetch("http://example.com/missing");
+				expect(response.status).toBe(404);
+				expect(await response.text()).toBe("not found page");
+			});
+		`,
+	});
+
+	const result = await vitestRun();
+
+	await expect(result.exitCode).resolves.toBe(0);
+	expect(result.stdout).toMatch("4 passed");
+});
+
 test("resolves a custom configPath and its entrypoint", async ({
 	expect,
 	seed,

@@ -29,15 +29,20 @@
 ## WORKER CONFIGURATION SOURCES
 
 `parseCustomPoolOptions()` in `src/pool/config.ts` resolves at most one configuration
-file into a normalised `Config`, then shares every downstream step (remote proxy
-session, `unstable_getMiniflareWorkerOptions()`, `main`, defines, module rules, tails):
+file:
 
 - `wrangler: { configPath, environment }` — a Wrangler configuration file, via
-  `wrangler.unstable_readConfig()`
+  `wrangler.unstable_readConfig()`, then `unstable_getMiniflareWorkerOptions()` (remote
+  proxy session, `main`, defines, module rules, tails) merged into the V4 `miniflare`
+  options
 - `experimental: { newConfig }` — a `cloudflare.config.ts`, via `src/pool/new-config.ts`
-  (`@cloudflare/config`'s `loadAndParseConfig()` → `convertToWranglerConfig()` →
-  `normalizeAndValidateConfig()`). Mirrors `@cloudflare/vite-plugin`'s
-  `experimental.newConfig`. `ctx.mode` comes from `project.vite.config.mode`.
+  (`@cloudflare/config`'s `loadAndParseConfig()`), never through Wrangler. It is already
+  in the shape of Miniflare's native `WorkerOptions.config`, so `applyCloudflareConfig()`
+  in `src/pool/index.ts` applies it to the runner after the pool's V4 options are
+  converted. Remote bindings use cf credentials (`src/pool/auth.ts`).
+  `src/pool/auth.ts`, `src/pool/local-env.ts` and `src/pool/remote-bindings.ts` mirror
+  `@cloudflare/vite-plugin`'s and must be kept in sync. `ctx.mode` comes from
+  `project.vite.config.mode`.
 
 The two are mutually exclusive. Whichever is used, the resolved path, config format and
 Worker name are recorded on `options.resolvedConfig` for the pool to consume — never
