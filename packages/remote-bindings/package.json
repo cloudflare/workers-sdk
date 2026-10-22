@@ -32,7 +32,7 @@
 	},
 	"dependencies": {
 		"@cloudflare/cli-shared-helpers": "0.2.7",
-		"@cloudflare/deploy-helpers": "0.22.2",
+		"@cloudflare/deploy-helpers": "0.23.0",
 		"@cloudflare/workers-auth": "0.15.0",
 		"@cloudflare/workers-utils": "0.48.0",
 		"chalk": "catalog:default",
