@@ -51,48 +51,29 @@ function makeChanges(...names: string[]): Map<string, Change> {
 describe("main()", () => {
 	it.for([
 		{
-			description: "should include C3 when workerd is bumped in the catalog",
+			description:
+				"should add a workers-utils changeset when the default compatibility date changes",
 			dependencies: ["workerd", "@cloudflare/workers-types"],
 			packageNames: "miniflare, wrangler",
-			expectedHeader: dedent`
-				---
-				"miniflare": patch
-				"wrangler": patch
-				"create-cloudflare": patch
-				---`,
-			expectedTitle:
-				'Update dependencies of "miniflare", "wrangler", "create-cloudflare"',
+			compatDate: "2026-10-21",
 		},
 		{
-			description: "should not include C3 for other dependency updates",
+			description:
+				"should not add a workers-utils changeset for other dependency updates",
 			dependencies: ["@cloudflare/workers-types"],
 			packageNames: "miniflare,wrangler",
-			expectedHeader: dedent`
-				---
-				"miniflare": patch
-				"wrangler": patch
-				---`,
-			expectedTitle: 'Update dependencies of "miniflare", "wrangler"',
+			compatDate: undefined,
 		},
 		{
-			description: "should not duplicate C3 when it is already included",
+			description:
+				"should not add a workers-utils changeset when the default compatibility date is unchanged",
 			dependencies: ["workerd"],
-			packageNames: "miniflare,wrangler,create-cloudflare",
-			expectedHeader: dedent`
-				---
-				"miniflare": patch
-				"wrangler": patch
-				"create-cloudflare": patch
-				---`,
-			expectedTitle:
-				'Update dependencies of "miniflare", "wrangler", "create-cloudflare"',
+			packageNames: "miniflare,wrangler",
+			compatDate: undefined,
 		},
 	])(
 		"$description",
-		(
-			{ dependencies, packageNames, expectedHeader, expectedTitle },
-			{ expect }
-		) => {
+		({ dependencies, packageNames, compatDate }, { expect }) => {
 			(spawnSync as Mock).mockImplementation((_command, args: string[]) => ({
 				output:
 					args[0] === "diff" && args[2].endsWith("pnpm-workspace.yaml")
@@ -103,6 +84,8 @@ describe("main()", () => {
 						: [],
 			}));
 			(writeFileSync as Mock).mockClear();
+			vitest.mocked(updateDefaultCompatDate).mockClear();
+			vitest.mocked(updateDefaultCompatDate).mockReturnValue(compatDate);
 
 			main({
 				prNumber: "16403",
@@ -111,10 +94,45 @@ describe("main()", () => {
 				changesetPrefix: "dependabot-update",
 			});
 
-			expect(writeFileSync).toHaveBeenCalledOnce();
-			expect(writeFileSync).toHaveBeenCalledWith(
+			expect(writeFileSync).toHaveBeenCalledTimes(compatDate ? 2 : 1);
+			expect(writeFileSync).toHaveBeenNthCalledWith(
+				1,
 				".changeset/dependabot-update-16403.md",
-				expect.stringContaining(`${expectedHeader}\n\n${expectedTitle}\n`)
+				expect.stringContaining(dedent`
+					---
+					"miniflare": patch
+					"wrangler": patch
+					---
+
+					Update dependencies of "miniflare", "wrangler"
+				`)
+			);
+			expect(updateDefaultCompatDate).toHaveBeenCalledTimes(
+				dependencies.includes("workerd") ? 1 : 0
+			);
+			if (compatDate) {
+				expect(writeFileSync).toHaveBeenNthCalledWith(
+					2,
+					".changeset/default-compat-date-16403.md",
+					dedent`
+						---
+						"@cloudflare/workers-utils": patch
+						---
+
+						Update \`DEFAULT_COMPAT_DATE\` to ${compatDate}
+
+						Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+					` + "\n"
+				);
+			}
+			expect(spawnSync).toHaveBeenCalledWith(
+				"git",
+				[
+					"add",
+					".changeset",
+					...(compatDate ? [DEFAULT_COMPAT_DATE_PATH] : []),
+				],
+				{ encoding: "utf-8" }
 			);
 		}
 	);
@@ -125,17 +143,30 @@ describe("updatePathsForChanges()", () => {
 		expect,
 	}) => {
 		(updateDefaultCompatDate as Mock).mockClear();
+		vitest.mocked(updateDefaultCompatDate).mockReturnValue("2026-10-21");
 
 		expect(
-			updatePathsForChanges(makeChanges("workerd", "some-package"))
+			updatePathsForChanges(makeChanges("workerd", "some-package"), "16403")
 		).toEqual([DEFAULT_COMPAT_DATE_PATH]);
 		expect(updateDefaultCompatDate).toHaveBeenCalledTimes(1);
+	});
+
+	it("should not write a changeset when the default compatibility date is unchanged", ({
+		expect,
+	}) => {
+		vitest.mocked(updateDefaultCompatDate).mockReturnValue(undefined);
+		vitest.mocked(writeFileSync).mockClear();
+
+		expect(updatePathsForChanges(makeChanges("workerd"), "16403")).toEqual([]);
+		expect(writeFileSync).not.toHaveBeenCalled();
 	});
 
 	it("should do nothing when workerd is not bumped", ({ expect }) => {
 		(updateDefaultCompatDate as Mock).mockClear();
 
-		expect(updatePathsForChanges(makeChanges("some-package"))).toEqual([]);
+		expect(updatePathsForChanges(makeChanges("some-package"), "16403")).toEqual(
+			[]
+		);
 		expect(updateDefaultCompatDate).not.toHaveBeenCalled();
 	});
 });

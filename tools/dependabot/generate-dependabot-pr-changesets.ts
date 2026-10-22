@@ -84,18 +84,13 @@ export function main({
 		return;
 	}
 	const packages = packageNames.split(",").map((name: string) => name.trim());
-	if (changes.has("workerd") && !packages.includes("create-cloudflare")) {
-		// C3 bundles DEFAULT_COMPAT_DATE through a dev dependency, so it needs
-		// an explicit release to ship the updated scaffolding default.
-		packages.push("create-cloudflare");
-	}
 	const changesetHeader = generateChangesetHeader(packages);
 	const commitMessage = generateCommitMessage(packages, changes);
 	console.log(dedent`
 		INFO: Writing changeset with the following commit message
 		${commitMessage}`);
 	writeChangeSet(changesetPrefix, prNumber, changesetHeader, commitMessage);
-	commitAndPush(commitMessage, updatePathsForChanges(changes));
+	commitAndPush(commitMessage, updatePathsForChanges(changes, prNumber));
 }
 
 /**
@@ -103,14 +98,31 @@ export function main({
  * bumped dependencies.
  *
  * The default compatibility date is derived from the pinned `workerd` version,
- * so it has to move with it or `pnpm check:compat-date` fails.
+ * so it has to move with it or `pnpm check:compat-date` fails. When it changes,
+ * write a workers-utils patch changeset for the updated shared value.
  */
-export function updatePathsForChanges(changes: Map<string, Change>): string[] {
+export function updatePathsForChanges(
+	changes: Map<string, Change>,
+	prNumber: string
+): string[] {
 	if (!changes.has("workerd")) {
 		return [];
 	}
 	console.log("INFO: Updating the default compatibility date for workerd");
-	updateDefaultCompatDate();
+	const compatDate = updateDefaultCompatDate();
+	if (compatDate === undefined) {
+		return [];
+	}
+	writeChangeSet(
+		"default-compat-date",
+		prNumber,
+		generateChangesetHeader(["@cloudflare/workers-utils"]),
+		dedent`
+			Update \`DEFAULT_COMPAT_DATE\` to ${compatDate}
+
+			Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+		`
+	);
 	return [DEFAULT_COMPAT_DATE_PATH];
 }
 
