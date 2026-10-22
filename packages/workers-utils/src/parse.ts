@@ -209,13 +209,15 @@ export function readFileSyncToBuffer(file: string): Buffer {
 		return fsReadFileSync(file);
 	} catch (err) {
 		const { message } = err as Error;
+		const notes: Message[] = [{ text: message.replace(file, resolve(file)) }];
+		if (file.startsWith("/dev/fd/") && /EBADF|bad file descriptor/i.test(message)) {
+			notes.push({
+				text: "Process substitution via /dev/fd/* is not reliably supported on macOS because the file descriptor is closed before Wrangler can read it. Use a temporary file or named pipe instead, e.g.: tmp=$(mktemp); cat > \"$tmp\" <<< \"$SECRET\"; wrangler deploy --secrets-file \"$tmp\"; rm \"$tmp\"",
+			});
+		}
 		throw new ParseError({
 			text: `Could not read file: ${file}`,
-			notes: [
-				{
-					text: message.replace(file, resolve(file)),
-				},
-			],
+			notes,
 			telemetryMessage: false,
 		});
 	}
@@ -234,13 +236,15 @@ export function readFileSync(file: string): string {
 		}
 
 		const { message } = err as Error;
+		const notes: Message[] = [{ text: message.replace(file, resolve(file)) }];
+		if (file.startsWith("/dev/fd/") && /EBADF|bad file descriptor/i.test(message)) {
+			notes.push({
+				text: "Process substitution via /dev/fd/* is not reliably supported on macOS because the file descriptor is closed before Wrangler can read it. Use a temporary file or named pipe instead, e.g.: tmp=$(mktemp); cat > \"$tmp\" <<< \"$SECRET\"; wrangler deploy --secrets-file \"$tmp\"; rm \"$tmp\"",
+			});
+		}
 		throw new ParseError({
 			text: `Could not read file: ${file}`,
-			notes: [
-				{
-					text: message.replace(file, resolve(file)),
-				},
-			],
+			notes,
 			telemetryMessage: "Could not read file",
 		});
 	}
