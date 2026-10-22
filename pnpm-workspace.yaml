@@ -34,7 +34,7 @@ catalog:
   typescript: 5.8.3
   undici: 7.29.1
   undici-types: 7.29.1
-  vitest: 4.1.0
+  vitest: 5.0.4
   vite: 8.1.5
   esbuild: 0.28.2
   "@playwright/test": 1.60.0
@@ -46,5 +46,5 @@ catalog:
   chalk: 5.3.0
   ws: 8.21.0
   capnweb: 0.12.0
-  "@cloudflare/vitest-pool-workers": 0.13.3
+  "@cloudflare/vitest-plugin": 1.4.3
   zod: 4.6.5
