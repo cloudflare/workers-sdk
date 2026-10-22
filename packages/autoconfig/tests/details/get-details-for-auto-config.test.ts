@@ -794,7 +794,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 				});
 			});
 
-			it("should not throw in a non-interactive run when a detected framework is not recognised", async ({
+			it("should throw in a non-interactive run when a detected framework is not recognised", async ({
 				expect,
 			}) => {
 				await seed({
@@ -802,7 +802,8 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 					"functions/api/hello.js": pagesFunction,
 				});
 				// A framework detected with its output in the project root but missing
-				// from `allFrameworksInfos`, so it is handled as a static site
+				// from `allFrameworksInfos`, so it is handled as a static site and would
+				// deploy the project root as assets
 				vi.mocked(detectFramework).mockResolvedValueOnce({
 					detectedFramework: {
 						framework: { id: "gatsby", name: "Gatsby" },
@@ -813,10 +814,9 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 
 				await expect(
 					details.getDetailsForAutoConfig({ context: nonInteractiveContext })
-				).resolves.toMatchObject({
-					framework: expect.objectContaining({ id: "static" }),
-					outputDir: ".",
-				});
+				).rejects.toThrow(
+					"looks like a Cloudflare Pages project using Pages Functions"
+				);
 			});
 		});
 
