@@ -1,5 +1,18 @@
 # @cloudflare/workers-auth
 
+## 0.15.0
+
+### Minor Changes
+
+- [#16375](https://github.com/cloudflare/workers-sdk/pull/16375) [`f43e2e6`](https://github.com/cloudflare/workers-sdk/commit/f43e2e61093b3218a48691dc76ce7f463a2123ce) Thanks [@penalosa](https://github.com/penalosa)! - Use each CLI's temporary-account flag in authentication errors
+
+  Default to `--temporary-account` while keeping Wrangler's `--temporary` spelling. Expose account-lookup authentication failure reasons so consumers can distinguish missing credentials from expired tokens without matching error messages.
+
+### Patch Changes
+
+- Updated dependencies [[`08f22d3`](https://github.com/cloudflare/workers-sdk/commit/08f22d36f42100af8b83ae9556643f63b536a4e9), [`182d6de`](https://github.com/cloudflare/workers-sdk/commit/182d6ded7126c29daa6f8d2eea5f175421b29917)]:
+  - @cloudflare/workers-utils@0.48.0
+
 ## 0.14.1
 
 ### Patch Changes

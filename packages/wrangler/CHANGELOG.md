@@ -1,5 +1,55 @@
 # wrangler
 
+## 4.152.0
+
+### Minor Changes
+
+- [#14900](https://github.com/cloudflare/workers-sdk/pull/14900) [`08f22d3`](https://github.com/cloudflare/workers-sdk/commit/08f22d36f42100af8b83ae9556643f63b536a4e9) Thanks [@mack-erel](https://github.com/mack-erel)! - Support remote Hyperdrive bindings in local development
+
+  ```jsonc
+  {
+    "hyperdrive": [
+      {
+        "binding": "HYPERDRIVE",
+        "id": "<your-hyperdrive-id>",
+        "remote": true
+      }
+    ]
+  }
+  ```
+
+- [#16357](https://github.com/cloudflare/workers-sdk/pull/16357) [`182d6de`](https://github.com/cloudflare/workers-sdk/commit/182d6ded7126c29daa6f8d2eea5f175421b29917) Thanks [@Naapperas](https://github.com/Naapperas)! - Add a `jurisdiction` setting to Workflows
+
+  A Workflow defined by the Worker can now set the jurisdiction that its instances run and store their data in, on either a `workflows` binding or a `workflow` export:
+
+  ```jsonc
+  {
+    "workflows": [
+      {
+        "binding": "MY_WORKFLOW",
+        "name": "my-workflow",
+        "class_name": "MyWorkflow",
+        "jurisdiction": "eu"
+      }
+    ]
+  }
+  ```
+
+  The accepted values are `eu`, `fedramp`, and `us`. `wrangler deploy` and `wrangler triggers deploy` send the jurisdiction when they create or update the Workflow. A Workflow's jurisdiction is set when it is created and cannot be changed afterwards, so `wrangler deploy` and `wrangler versions upload` stop before uploading when an existing Workflow has a different jurisdiction from the configured one. Leaving `jurisdiction` out keeps the Workflow's existing jurisdiction. `@cloudflare/config` adds the setting to `exports.workflow()`, `cf migrate` carries it over, and `wrangler workflows describe` prints it. Local development ignores it.
+
+### Patch Changes
+
+- [#16388](https://github.com/cloudflare/workers-sdk/pull/16388) [`80a9f96`](https://github.com/cloudflare/workers-sdk/commit/80a9f963d49cb62f1c80532c78a1b03018ad4152) Thanks [@DevVettel](https://github.com/DevVettel)! - Print `wrangler auth token --json` output regardless of `WRANGLER_LOG`
+
+  Previously the JSON was written through the normal log channel, so setting `WRANGLER_LOG` to `warn`, `error` or `none` made the command exit successfully with empty stdout. Tools that parse this output, such as the OpenNext Cloudflare adapter in CI, then failed to find any credentials. The JSON is now always printed, like other `--json` commands.
+
+- [#16361](https://github.com/cloudflare/workers-sdk/pull/16361) [`2878645`](https://github.com/cloudflare/workers-sdk/commit/2878645e27d736c67bdaf00c0dcef063065472ff) Thanks [@GrosserNL](https://github.com/GrosserNL)! - Report the R2 bucket location returned by the API when creating a bucket
+
+  `wrangler r2 bucket create --location` printed the requested location hint even when R2 ignored it. Recreating a deleted bucket name keeps the original location, so the success message could claim a placement the bucket does not have. The command now uses the location from the create response: it mentions the hint only when that location matches, and otherwise reports the location R2 actually applied.
+
+- Updated dependencies [[`08f22d3`](https://github.com/cloudflare/workers-sdk/commit/08f22d36f42100af8b83ae9556643f63b536a4e9), [`a4eb57d`](https://github.com/cloudflare/workers-sdk/commit/a4eb57d339483029fbce9d9e711515b48c60f2d7)]:
+  - miniflare@5.20261019.2-beta
+
 ## 4.151.3
 
 ### Patch Changes
