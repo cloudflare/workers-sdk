@@ -350,7 +350,9 @@ describe("r2", () => {
 					expect(std.warn).toEqual("");
 				});
 
-				it("should report the location R2 returned when the hint was ignored", async () => {
+				it("should report the location R2 returned when the hint was ignored", async ({
+					expect,
+				}) => {
 					msw.use(
 						http.post(
 							"*/accounts/:accountId/r2/buckets",
@@ -384,7 +386,9 @@ describe("r2", () => {
 					);
 				});
 
-				it("should treat a location hint as applied when only the case differs", async () => {
+				it("should treat a location hint as applied when only the case differs", async ({
+					expect,
+				}) => {
 					msw.use(
 						http.post(
 							"*/accounts/:accountId/r2/buckets",
@@ -408,7 +412,9 @@ describe("r2", () => {
 					expect(std.warn).toEqual("");
 				});
 
-				it("should not claim a location hint was applied when the API omits location", async () => {
+				it("should not claim a location hint was applied when the API omits location", async ({
+					expect,
+				}) => {
 					msw.use(
 						http.post(
 							"*/accounts/:accountId/r2/buckets",
