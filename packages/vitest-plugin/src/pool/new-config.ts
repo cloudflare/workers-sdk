@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import path from "node:path";
 import { loadAndParseConfig } from "@cloudflare/config";
 import { formatZodError } from "@cloudflare/workers-utils";
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
@@ -42,20 +43,38 @@ export async function loadNewConfig(
 	envDir: string | false,
 	remoteBindings?: boolean
 ): Promise<LoadedNewConfig> {
+	const fileName = path.basename(configPath);
 	if (!existsSync(configPath)) {
 		throw new TypeError(
-			`\`experimental.newConfig\` is enabled but no \`${NEW_CONFIG_FILENAME}\` was found at ${configPath}.`
+			`\`config\` is enabled but no \`${fileName}\` was found at ${configPath}.`
 		);
 	}
 
-	const { result } = await loadAndParseConfig(configPath, {
-		isPreview: false,
-		mode,
-	});
+	// Only once the file fails to load as a `cloudflare.config.ts`, suggest the
+	// `wrangler` option if it looks like a Wrangler configuration file
+	const wranglerHint = fileName.toLowerCase().includes("wrangler")
+		? `\n\`${fileName}\` looks like a Wrangler configuration file. Load it with \`wrangler: { configPath }\` instead of \`config\`.`
+		: "";
+
+	let result: Awaited<ReturnType<typeof loadAndParseConfig>>["result"];
+	try {
+		({ result } = await loadAndParseConfig(configPath, {
+			isPreview: false,
+			mode,
+		}));
+	} catch (e) {
+		if (wranglerHint === "") {
+			throw e;
+		}
+		throw new TypeError(
+			`Failed to load \`${fileName}\`: ${e instanceof Error ? e.message : String(e)}${wranglerHint}`,
+			{ cause: e }
+		);
+	}
 
 	if (!result.success) {
 		throw new TypeError(
-			`Invalid \`${NEW_CONFIG_FILENAME}\`:\n${formatZodError(result.error)}`
+			`Invalid \`${fileName}\`:\n${formatZodError(result.error)}${wranglerHint}`
 		);
 	}
 
@@ -63,7 +82,7 @@ export async function loadNewConfig(
 
 	if (worker === undefined) {
 		throw new TypeError(
-			`\`${NEW_CONFIG_FILENAME}\` must define a Worker using the \`worker\` property.`
+			`\`${fileName}\` must define a Worker using the \`worker\` property.${wranglerHint}`
 		);
 	}
 

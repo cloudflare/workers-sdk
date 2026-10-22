@@ -99,9 +99,9 @@ describe("remote bindings", () => {
 		const { parseProjectOptions } = await import("../src/pool/config");
 
 		const options = await parseProjectOptions(project, {
-			experimental: { newConfig: true },
+			config: true,
 		});
-		await parseProjectOptions(project, { experimental: { newConfig: true } });
+		await parseProjectOptions(project, { config: true });
 
 		const [[details, , auth, context], [, , secondAuth]] =
 			maybeStartOrUpdateRemoteProxySession.mock.calls;
@@ -143,14 +143,12 @@ describe("remote bindings", () => {
 		);
 		const { parseProjectOptions } = await import("../src/pool/config");
 
-		await parseProjectOptions(project, { experimental: { newConfig: true } });
+		await parseProjectOptions(project, { config: true });
 		const stagingProject = {
 			config: project.config,
 			vite: { config: { mode: "staging", envDir: process.cwd() } },
 		} as unknown as TestProject;
-		await parseProjectOptions(stagingProject, {
-			experimental: { newConfig: true },
-		});
+		await parseProjectOptions(stagingProject, { config: true });
 
 		const [[, , auth], [, , newAuth]] =
 			maybeStartOrUpdateRemoteProxySession.mock.calls;

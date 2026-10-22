@@ -35,7 +35,7 @@ file:
   `wrangler.unstable_readConfig()`, then `unstable_getMiniflareWorkerOptions()` (remote
   proxy session, `main`, defines, module rules, tails) merged into the V4 `miniflare`
   options
-- `experimental: { newConfig }` — a `cloudflare.config.ts`, via `src/pool/new-config.ts`
+- `config: true | "<path>"` — a `cloudflare.config.ts`, via `src/pool/new-config.ts`
   (`@cloudflare/config`'s `loadAndParseConfig()`), never through Wrangler. It is already
   in the shape of Miniflare's native `WorkerOptions.config`, so `applyCloudflareConfig()`
   in `src/pool/index.ts` applies it to the runner after the pool's V4 options are
@@ -44,9 +44,10 @@ file:
   `@cloudflare/vite-plugin`'s and must be kept in sync. `ctx.mode` comes from
   `project.vite.config.mode`.
 
-The two are mutually exclusive. Whichever is used, the resolved path, config format and
-Worker name are recorded on `options.resolvedConfig` for the pool to consume — never
-re-read the config file from disk.
+The two are mutually exclusive, and setting both is an error. Neither file is loaded unless
+its option is set; without either, the Worker comes from `miniflare` options alone.
+Whichever is used, the resolved path, config format and Worker name are recorded on
+`options.resolvedConfig` for the pool to consume — never re-read the config file from disk.
 
 ## BUILD
 

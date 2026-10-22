@@ -36,13 +36,9 @@ export interface WorkersConfigPluginAPI {
 	setMain(newMain?: string): void;
 }
 
-const ExperimentalNewConfigSchema = z.object({
-	/**
-	 * Path to the `cloudflare.config.ts` file, resolved relative to the project
-	 * root. Defaults to `cloudflare.config.ts` in the project root.
-	 */
-	configPath: z.string().optional(),
-});
+const CloudflareConfigSchema = z.union([z.boolean(), z.string().min(1)]);
+
+type CloudflareConfigOption = z.input<typeof CloudflareConfigSchema>;
 
 const WorkersPoolOptionsSchema = z.object({
 	/**
@@ -93,22 +89,18 @@ const WorkersPoolOptionsSchema = z.object({
 			environment: z.string().optional(),
 		})
 		.optional(),
-	experimental: z
-		.object({
-			/**
-			 * Load the Worker's configuration from a `cloudflare.config.ts` file
-			 * instead of a Wrangler configuration file. Cannot be combined with
-			 * `wrangler`.
-			 *
-			 * Pass `true` to load `cloudflare.config.ts` from the project root, or
-			 * an object to customise the behaviour.
-			 *
-			 * Config functions are called with `ctx.mode` set to Vite's mode, which
-			 * defaults to `"test"` and can be overridden with `--mode`.
-			 */
-			newConfig: z.union([z.boolean(), ExperimentalNewConfigSchema]).optional(),
-		})
-		.optional(),
+	/**
+	 * Load the Worker's configuration from a `cloudflare.config.ts` file instead
+	 * of a Wrangler configuration file. Cannot be combined with `wrangler`.
+	 *
+	 * Pass `true` to load `cloudflare.config.ts` from the project root, or a path
+	 * to the file, resolved relative to the project root. `false` is the same as
+	 * omitting the option.
+	 *
+	 * Config functions are called with `ctx.mode` set to Vite's mode, which
+	 * defaults to `"test"` and can be overridden with `--mode`.
+	 */
+	config: CloudflareConfigSchema.optional(),
 });
 
 type CompatibleWorkerOptions = LegacyWorkerOptions & {
@@ -155,8 +147,8 @@ export type WorkersPoolOptionsWithDefines = WorkersPoolOptions & {
 		workerName: string | undefined;
 	};
 	/**
-	 * The `cloudflare.config.ts` loaded for `experimental.newConfig`. Applied to
-	 * the runner Worker in Miniflare's native shape rather than through Wrangler.
+	 * The `cloudflare.config.ts` loaded for `config`. Applied to the
+	 * runner Worker in Miniflare's native shape rather than through Wrangler.
 	 */
 	loadedCloudflareConfig?: LoadedNewConfig;
 	/** Remote proxy session for `loadedCloudflareConfig`'s remote bindings. */
@@ -327,13 +319,14 @@ export async function disposeAllRemoteProxySessions(): Promise<void> {
 }
 
 /**
- * Normalise the `experimental.newConfig` option into its resolved form.
+ * Normalise the `config` option into its resolved form.
  *
  * @param option The user-provided option value.
- * @returns The resolved options, or `undefined` when new config is disabled.
+ * @returns The resolved options, or `undefined` when `cloudflare.config.ts`
+ * shouldn't be loaded.
  */
 function normalizeNewConfigOption(
-	option: boolean | { configPath?: string } | undefined
+	option: CloudflareConfigOption | undefined
 ): { configPath: string } | undefined {
 	if (option === undefined || option === false) {
 		return undefined;
@@ -341,7 +334,7 @@ function normalizeNewConfigOption(
 	if (option === true) {
 		return { configPath: NEW_CONFIG_FILENAME };
 	}
-	return { configPath: option.configPath ?? NEW_CONFIG_FILENAME };
+	return { configPath: option };
 }
 
 async function parseCustomPoolOptions(
@@ -350,6 +343,20 @@ async function parseCustomPoolOptions(
 	mode: string | undefined,
 	envDir: string | false
 ): Promise<WorkersPoolOptionsWithDefines> {
+	// `experimental.newConfig` was replaced by `config`. The schema strips
+	// unknown options, so reject it rather than silently ignoring the config.
+	const experimental = (value as { experimental?: unknown } | undefined)
+		?.experimental;
+	if (
+		typeof experimental === "object" &&
+		experimental !== null &&
+		"newConfig" in experimental
+	) {
+		throw new TypeError(
+			"`experimental.newConfig` has been removed. Use `config` instead."
+		);
+	}
+
 	// Try to parse pool specific options
 	const options = WorkersPoolOptionsSchema.parse(
 		value
@@ -403,11 +410,11 @@ async function parseCustomPoolOptions(
 	delete options.miniflare.modulesRules;
 
 	// Try to parse the project's configuration file, whichever format it uses
-	const newConfig = normalizeNewConfigOption(options.experimental?.newConfig);
+	const newConfig = normalizeNewConfigOption(options.config);
 
 	if (newConfig !== undefined && options.wrangler !== undefined) {
 		throw new TypeError(
-			"`wrangler` cannot be used together with `experimental.newConfig`. Configure the Worker via `cloudflare.config.ts` instead."
+			"`wrangler` and `config` cannot be used together. Use `wrangler` to load a Wrangler configuration file, or `config` to load `cloudflare.config.ts`."
 		);
 	}
 
