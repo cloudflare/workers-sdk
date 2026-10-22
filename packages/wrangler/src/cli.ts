@@ -116,7 +116,7 @@ export {
 } from "./cf-wrangler/args";
 
 // Export internal APIs required by the Vitest integration as `unstable_`
-export { splitSqlQuery as unstable_splitSqlQuery } from "./d1/splitter";
+export { splitSqlQuery as unstable_splitSqlQuery } from "@cloudflare/workers-utils";
 
 // `miniflare-cli/assets` dynamically imports`@cloudflare/pages-shared/environment-polyfills`.
 // `@cloudflare/pages-shared/environment-polyfills/types.ts` defines `global`
