@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { createLogger as createViteLogger } from "vite";
 import { test, vi } from "vitest";
 import { createLogger, getRemoteBindingsAuth } from "../auth";
+import type { AsyncHook, CfAccount } from "@cloudflare/workers-utils";
 
 const mocks = vi.hoisted(() => ({
 	cfAuth: {
@@ -20,8 +21,9 @@ vi.mock("@cloudflare/workers-auth/cf", () => ({
 test("remote bindings auth uses the cf profile for the project", async ({
 	expect,
 }) => {
+	const hooks = new Map<string, AsyncHook<CfAccount>>();
 	const logger = createLogger(createViteLogger("silent"));
-	const auth = getRemoteBindingsAuth("/project", "account-id", logger);
+	const auth = getRemoteBindingsAuth(hooks, "/project", "account-id", logger);
 	assert(typeof auth === "function");
 
 	await expect(auth()).resolves.toEqual({
@@ -34,8 +36,10 @@ test("remote bindings auth uses the cf profile for the project", async ({
 		account_id: "account-id",
 	});
 	// A different hook would make the next options update restart the session
-	expect(getRemoteBindingsAuth("/project", "account-id", logger)).toBe(auth);
-	expect(getRemoteBindingsAuth("/project", "other-account", logger)).not.toBe(
+	expect(getRemoteBindingsAuth(hooks, "/project", "account-id", logger)).toBe(
 		auth
 	);
+	expect(
+		getRemoteBindingsAuth(hooks, "/project", "other-account", logger)
+	).not.toBe(auth);
 });

@@ -70,26 +70,26 @@ export function createAuth(profileDir: string, logger: Logger) {
 	return auth;
 }
 
-const remoteBindingsAuthHooks = new Map<string, AsyncHook<CfAccount>>();
-
 /**
  * Get the cf auth hook for remote bindings sessions.
  *
  * Hooks are cached because `maybeStartOrUpdateRemoteProxySession()` restarts
  * the session whenever it receives a different hook.
  *
+ * @param hooks - Hook cache that persists across Vite server restarts.
  * @param profileDir - Directory used to resolve the cf auth profile.
  * @param accountId - The configured account ID, if any.
  * @param logger - Logger for the auth flow.
  * @returns A hook resolving the account ID and API token for the session.
  */
 export function getRemoteBindingsAuth(
+	hooks: Map<string, AsyncHook<CfAccount>>,
 	profileDir: string,
 	accountId: string | undefined,
 	logger: Logger
 ): AsyncHook<CfAccount> {
 	const key = JSON.stringify([profileDir, accountId]);
-	let hook = remoteBindingsAuthHooks.get(key);
+	let hook = hooks.get(key);
 	if (hook === undefined) {
 		let auth: CloudflareAuth | undefined;
 		hook = async () => {
@@ -102,7 +102,7 @@ export function getRemoteBindingsAuth(
 				apiToken: auth.requireApiToken(),
 			};
 		};
-		remoteBindingsAuthHooks.set(key, hook);
+		hooks.set(key, hook);
 	}
 	return hook;
 }

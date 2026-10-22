@@ -529,6 +529,7 @@ export async function getDevMiniflareOptions(
 											},
 											preExistingRemoteProxySession ?? null,
 											getRemoteBindingsAuth(
+												ctx.remoteBindingsAuthHooks,
 												resolvedViteConfig.root,
 												settings.accountId,
 												createLogger(viteDevServer.config.logger)
@@ -859,6 +860,7 @@ export async function getPreviewMiniflareOptions(
 						},
 						preExistingRemoteProxySessionData ?? null,
 						getRemoteBindingsAuth(
+							ctx.remoteBindingsAuthHooks,
 							resolvedViteConfig.root,
 							resolvedPluginConfig.settings.accountId,
 							createLogger(vitePreviewServer.config.logger)
