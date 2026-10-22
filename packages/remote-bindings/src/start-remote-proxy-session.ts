@@ -104,6 +104,16 @@ export async function startRemoteProxySession(
 		}
 	}
 
+	// The session hands its local proxy the remote connection in a control
+	// message sent through an undici `dispatcher`, which Bun's `fetch()` ignores,
+	// so every remote binding request would wait forever.
+	if (process.versions.bun) {
+		throw new UserError(
+			"Remote bindings can't work under Bun, because Bun's `fetch()` ignores the undici `dispatcher` that Miniflare routes them through (https://github.com/oven-sh/bun/issues/39247). Run this using Node.js, or turn remote bindings off.",
+			{ telemetryMessage: "remote proxy session under bun" }
+		);
+	}
+
 	options.logger.log(chalk.dim("⎔ Establishing remote connection..."));
 	initLogger(getInternalLogger(options.logger));
 	const rawBindings = toRawBindings(bindings);
