@@ -647,6 +647,11 @@ export default <ExportedHandler<Env>>{
 					s3Request = new Request(s3Url, request);
 					s3Request.headers.set("Host", originalHostname);
 				}
+				if (clientAcceptEncoding === null) {
+					s3Request.headers.delete("Accept-Encoding");
+				} else {
+					s3Request.headers.set("Accept-Encoding", clientAcceptEncoding);
+				}
 				return await r2S3Service.fetch(s3Request);
 			}
 
