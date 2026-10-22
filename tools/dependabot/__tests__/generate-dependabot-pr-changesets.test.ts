@@ -2,21 +2,27 @@ import { spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import dedent from "ts-dedent";
 import { describe, it, vitest } from "vitest";
+import createCloudflarePackage from "../../../packages/create-cloudflare/package.json";
+import statusBotPackage from "../../../packages/devprod-status-bot/package.json";
+import wranglerPackage from "../../../packages/wrangler/package.json";
 import {
 	DEFAULT_COMPAT_DATE_PATH,
 	updateDefaultCompatDate,
 } from "../../deployments/update-default-compat-date";
+import { findPackages } from "../../deployments/validate-changesets";
 import {
 	commitAndPush,
 	generateChangesetHeader,
 	generateCommitMessage,
 	getDependencyChanges,
 	getPackageJsonDiff,
+	getPackageDependants,
 	main,
 	parseDiffForChanges,
 	updatePathsForChanges,
 	writeChangeSet,
 } from "../generate-dependabot-pr-changesets";
+import type { PackageJSON } from "../../deployments/validate-changesets";
 import type { Change } from "../generate-dependabot-pr-changesets";
 import type { Mock } from "vitest";
 
@@ -31,6 +37,37 @@ vitest.mock("node:fs", async () => {
 		writeFileSync: vitest.fn(),
 	};
 });
+
+vitest.mock("../../deployments/validate-changesets", () => ({
+	findPackages: vitest.fn(
+		() =>
+			new Map<string, PackageJSON>([
+				[
+					"create-cloudflare",
+					{
+						name: "create-cloudflare",
+						devDependencies: { "@cloudflare/workers-utils": "workspace:*" },
+					},
+				],
+				[
+					"wrangler",
+					{
+						name: "wrangler",
+						dependencies: { "@cloudflare/workers-utils": "workspace:*" },
+					},
+				],
+				[
+					"private-service",
+					{
+						name: "private-service",
+						private: true,
+						scripts: { deploy: "wrangler deploy" },
+						devDependencies: { wrangler: "workspace:*" },
+					},
+				],
+			])
+	),
+}));
 
 vitest.mock(
 	"../../deployments/update-default-compat-date",
@@ -51,48 +88,29 @@ function makeChanges(...names: string[]): Map<string, Change> {
 describe("main()", () => {
 	it.for([
 		{
-			description: "should include C3 when workerd is bumped in the catalog",
+			description:
+				"should add a workers-utils changeset when the default compatibility date changes",
 			dependencies: ["workerd", "@cloudflare/workers-types"],
 			packageNames: "miniflare, wrangler",
-			expectedHeader: dedent`
-				---
-				"miniflare": patch
-				"wrangler": patch
-				"create-cloudflare": patch
-				---`,
-			expectedTitle:
-				'Update dependencies of "miniflare", "wrangler", "create-cloudflare"',
+			compatDate: "2026-10-21",
 		},
 		{
-			description: "should not include C3 for other dependency updates",
+			description:
+				"should not add a workers-utils changeset for other dependency updates",
 			dependencies: ["@cloudflare/workers-types"],
 			packageNames: "miniflare,wrangler",
-			expectedHeader: dedent`
-				---
-				"miniflare": patch
-				"wrangler": patch
-				---`,
-			expectedTitle: 'Update dependencies of "miniflare", "wrangler"',
+			compatDate: undefined,
 		},
 		{
-			description: "should not duplicate C3 when it is already included",
+			description:
+				"should not add a workers-utils changeset when the default compatibility date is unchanged",
 			dependencies: ["workerd"],
-			packageNames: "miniflare,wrangler,create-cloudflare",
-			expectedHeader: dedent`
-				---
-				"miniflare": patch
-				"wrangler": patch
-				"create-cloudflare": patch
-				---`,
-			expectedTitle:
-				'Update dependencies of "miniflare", "wrangler", "create-cloudflare"',
+			packageNames: "miniflare,wrangler",
+			compatDate: undefined,
 		},
 	])(
 		"$description",
-		(
-			{ dependencies, packageNames, expectedHeader, expectedTitle },
-			{ expect }
-		) => {
+		({ dependencies, packageNames, compatDate }, { expect }) => {
 			(spawnSync as Mock).mockImplementation((_command, args: string[]) => ({
 				output:
 					args[0] === "diff" && args[2].endsWith("pnpm-workspace.yaml")
@@ -103,6 +121,9 @@ describe("main()", () => {
 						: [],
 			}));
 			(writeFileSync as Mock).mockClear();
+			vitest.mocked(updateDefaultCompatDate).mockClear();
+			vitest.mocked(updateDefaultCompatDate).mockReturnValue(compatDate);
+			vitest.mocked(findPackages).mockClear();
 
 			main({
 				prNumber: "16403",
@@ -111,13 +132,181 @@ describe("main()", () => {
 				changesetPrefix: "dependabot-update",
 			});
 
-			expect(writeFileSync).toHaveBeenCalledOnce();
-			expect(writeFileSync).toHaveBeenCalledWith(
+			expect(writeFileSync).toHaveBeenCalledTimes(compatDate ? 2 : 1);
+			expect(writeFileSync).toHaveBeenNthCalledWith(
+				1,
 				".changeset/dependabot-update-16403.md",
-				expect.stringContaining(`${expectedHeader}\n\n${expectedTitle}\n`)
+				expect.stringContaining(dedent`
+					---
+					"miniflare": patch
+					"wrangler": patch
+					---
+
+					Update dependencies of "miniflare", "wrangler"
+				`)
+			);
+			expect(updateDefaultCompatDate).toHaveBeenCalledTimes(
+				dependencies.includes("workerd") ? 1 : 0
+			);
+			if (compatDate) {
+				expect(writeFileSync).toHaveBeenNthCalledWith(
+					2,
+					".changeset/default-compat-date-16403.md",
+					dedent`
+						---
+						"@cloudflare/workers-utils": patch
+						"create-cloudflare": patch
+						"wrangler": patch
+						---
+
+						Update \`DEFAULT_COMPAT_DATE\` to ${compatDate}
+
+						Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+					` + "\n"
+				);
+			}
+			expect(findPackages).toHaveBeenCalledTimes(compatDate ? 1 : 0);
+			expect(spawnSync).toHaveBeenCalledWith(
+				"git",
+				[
+					"add",
+					".changeset",
+					...(compatDate ? [DEFAULT_COMPAT_DATE_PATH] : []),
+				],
+				{ encoding: "utf-8" }
 			);
 		}
 	);
+});
+
+describe("getPackageDependants()", () => {
+	it.for([
+		"dependencies",
+		"devDependencies",
+		"peerDependencies",
+		"optionalDependencies",
+	] as const)("should include workspace %s", (field, { expect }) => {
+		const packages = new Map<string, PackageJSON>([
+			["consumer", { name: "consumer", [field]: { shared: "workspace:*" } }],
+		]);
+
+		expect(getPackageDependants("shared", packages)).toEqual(["consumer"]);
+	});
+
+	it("should include transitive dependants once and handle cycles", ({
+		expect,
+	}) => {
+		const packages = new Map<string, PackageJSON>([
+			[
+				"transitive-consumer",
+				{
+					name: "transitive-consumer",
+					devDependencies: { consumer: "workspace:^" },
+				},
+			],
+			[
+				"consumer",
+				{
+					name: "consumer",
+					dependencies: { shared: "workspace:*" },
+					devDependencies: { shared: "workspace:*" },
+				},
+			],
+			[
+				"shared",
+				{
+					name: "shared",
+					devDependencies: { "transitive-consumer": "workspace:~" },
+				},
+			],
+		]);
+
+		expect(getPackageDependants("shared", packages)).toEqual([
+			"consumer",
+			"transitive-consumer",
+		]);
+	});
+
+	it("should exclude private direct and transitive dependants with deploy scripts", ({
+		expect,
+	}) => {
+		const packages = new Map<string, PackageJSON>([
+			[
+				"public-consumer",
+				{
+					name: "public-consumer",
+					private: false,
+					devDependencies: { shared: "workspace:*" },
+				},
+			],
+			[
+				"private-direct-consumer",
+				{
+					name: "private-direct-consumer",
+					private: true,
+					scripts: { deploy: "wrangler deploy" },
+					dependencies: { shared: "workspace:*" },
+				},
+			],
+			[
+				"private-transitive-consumer",
+				{
+					name: "private-transitive-consumer",
+					private: true,
+					scripts: { deploy: "wrangler deploy" },
+					devDependencies: { "public-consumer": "workspace:*" },
+				},
+			],
+		]);
+
+		expect(getPackageDependants("shared", packages)).toEqual([
+			"public-consumer",
+		]);
+	});
+
+	it("should exclude the status bot while retaining public consumers using real manifests", ({
+		expect,
+	}) => {
+		const packages = new Map<string, PackageJSON>(
+			[createCloudflarePackage, statusBotPackage, wranglerPackage].map(
+				(pkg) => [pkg.name, pkg]
+			)
+		);
+
+		expect(getPackageDependants("@cloudflare/workers-utils", packages)).toEqual(
+			["create-cloudflare", "wrangler"]
+		);
+	});
+
+	it("should exclude unrelated packages and published versions outside the workspace", ({
+		expect,
+	}) => {
+		const packages = new Map<string, PackageJSON>([
+			[
+				"unrelated",
+				{ name: "unrelated", dependencies: { other: "workspace:*" } },
+			],
+			[
+				"pinned-consumer",
+				{ name: "pinned-consumer", dependencies: { shared: "1.0.0" } },
+			],
+			[
+				"aliased-consumer",
+				{
+					name: "aliased-consumer",
+					devDependencies: { shared: "npm:shared@1.0.0" },
+				},
+			],
+		]);
+
+		expect(getPackageDependants("shared", packages)).toEqual([]);
+	});
+
+	it("should return no dependants for an unused package", ({ expect }) => {
+		expect(
+			getPackageDependants("shared", new Map([["shared", { name: "shared" }]]))
+		).toEqual([]);
+	});
 });
 
 describe("updatePathsForChanges()", () => {
@@ -125,17 +314,30 @@ describe("updatePathsForChanges()", () => {
 		expect,
 	}) => {
 		(updateDefaultCompatDate as Mock).mockClear();
+		vitest.mocked(updateDefaultCompatDate).mockReturnValue("2026-10-21");
 
 		expect(
-			updatePathsForChanges(makeChanges("workerd", "some-package"))
+			updatePathsForChanges(makeChanges("workerd", "some-package"), "16403")
 		).toEqual([DEFAULT_COMPAT_DATE_PATH]);
 		expect(updateDefaultCompatDate).toHaveBeenCalledTimes(1);
+	});
+
+	it("should not write a changeset when the default compatibility date is unchanged", ({
+		expect,
+	}) => {
+		vitest.mocked(updateDefaultCompatDate).mockReturnValue(undefined);
+		vitest.mocked(writeFileSync).mockClear();
+
+		expect(updatePathsForChanges(makeChanges("workerd"), "16403")).toEqual([]);
+		expect(writeFileSync).not.toHaveBeenCalled();
 	});
 
 	it("should do nothing when workerd is not bumped", ({ expect }) => {
 		(updateDefaultCompatDate as Mock).mockClear();
 
-		expect(updatePathsForChanges(makeChanges("some-package"))).toEqual([]);
+		expect(updatePathsForChanges(makeChanges("some-package"), "16403")).toEqual(
+			[]
+		);
 		expect(updateDefaultCompatDate).not.toHaveBeenCalled();
 	});
 });
