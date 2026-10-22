@@ -62,7 +62,8 @@ function processArgs(): Args {
 	};
 }
 
-function main({
+/** Generates and commits a changeset for the dependency updates in a PR. */
+export function main({
 	prNumber,
 	packageNames,
 	packageJSONPath,
@@ -83,6 +84,11 @@ function main({
 		return;
 	}
 	const packages = packageNames.split(",").map((name: string) => name.trim());
+	if (changes.has("workerd") && !packages.includes("create-cloudflare")) {
+		// C3 bundles DEFAULT_COMPAT_DATE through a dev dependency, so it needs
+		// an explicit release to ship the updated scaffolding default.
+		packages.push("create-cloudflare");
+	}
 	const changesetHeader = generateChangesetHeader(packages);
 	const commitMessage = generateCommitMessage(packages, changes);
 	console.log(dedent`
