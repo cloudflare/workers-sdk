@@ -93,7 +93,11 @@ async function applyPreviewContainers(
 	accountId: string,
 	localImageReferences: Map<string, string> | undefined
 ): Promise<void> {
-	initContainersSharedContext({ logger, fetchPagedListResult, fetchResult });
+	initContainersSharedContext({
+		logger,
+		fetchPagedListResult,
+		fetchResult,
+	});
 	await fillOpenAPIConfiguration(scopedConfig, containersScope);
 	const dockerPath = getDockerPath();
 
@@ -180,7 +184,13 @@ async function applyPreviewContainers(
 		}
 
 		await apply(
-			{ imageRef, durable_object_namespace_id: namespaceId },
+			{
+				imageRef,
+				durable_object_namespace_id: namespaceId,
+				configFileName: "Wrangler config",
+				observabilityTargetPercentageField: "target_instance_percentage",
+				observabilityTargetCountField: "target_instance_count",
+			},
 			container,
 			scopedConfig,
 			accountId

@@ -154,6 +154,7 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
     - Private packages will run their `deploy` script, if they have one.
 - Tiered publishing
   - Instead of `changeset publish`, the `publish` step runs `tools/deployments/publish-packages.ts`.
+  - Each package is published under a dist-tag derived from its version: stable versions use `latest`, while prereleases use their first prerelease identifier (for example, both `5.0.0-beta` and `5.0.0-beta.1` use `beta`).
   - Packages pin their workspace siblings at an exact version (`workspace:*` is rewritten to the sibling's version at pack time). If a dependent lands on npm before its dependency has propagated, `npm install` of the dependent fails for the window in between — the release is published but broken.
   - The orchestrator therefore groups packages into dependency tiers (currently three: `miniflare` and friends, then `wrangler`, then `@cloudflare/vite-plugin` / `@cloudflare/vitest-plugin`) and publishes tier by tier. Packages within a tier publish in parallel, bounded by `PUBLISH_CONCURRENCY`.
   - Between tiers it polls the registry until every version just published is resolvable _and_ its tarball is fetchable, then waits a further `PUBLISH_PROPAGATION_MIN_SECONDS` — a successful read only proves the release runner's own CDN edge is up to date. That settle time is unconditional rather than a floor on the total gate duration: other edges can only serve a version once it is retrievable from the origin, and the first successful read is the best available proxy for when that happened. If a version never appears within `PUBLISH_PROPAGATION_TIMEOUT_SECONDS`, the release fails instead of publishing a broken dependent.
@@ -168,9 +169,16 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
 
 - Triggers
   - Updates to PRs.
+  - PRs in the merge queue.
 - Actions
-  - Runs the E2E tests for C3.
-  - C3 E2E tests do not receive Cloudflare API credentials.
+  - Runs C3 E2E tests without Cloudflare API credentials.
+  - Runs framework tests when C3 changes, on release PRs, in the merge queue, or with `run-c3-frameworks-tests`.
+  - Runs framework cases in parallel shards. Required framework checks wait for all shards to succeed.
+  - Framework tests default to one retry.
+  - Uploads test logs, Vitest results, Turbo summaries, and retry reports.
+  - `ci:no-turbo-cache` disables Turbo caching for tests and builds; apply it before pushing.
+
+See [C3 E2E instructions](../../packages/create-cloudflare/e2e/README.md) for local testing and configuration.
 
 ### Rerun Code Owners (rerun-codeowners.yml + rerun-codeowners-privileged.yml)
 

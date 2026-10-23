@@ -136,6 +136,7 @@ export { defineConfig, defineContainer, defineWorker } from "./definition";
 export type {
 	CloudflareConfig,
 	ContainerConfig,
+	CustomDomain,
 	ContainerObservabilityConfig,
 	DurableObjectContainerConfig,
 	Settings,

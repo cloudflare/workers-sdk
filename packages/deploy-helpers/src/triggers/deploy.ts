@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import {
 	APIError,
+	configFileName,
 	formatTime,
 	getSubdomainMixedStateCheckDisabled,
 	isNonInteractiveOrCI,
@@ -9,18 +10,16 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import PQueue from "p-queue";
-import { WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE } from "../deploy/helpers/error-codes";
+import {
+	WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE,
+	WORKFLOW_JURISDICTION_IMMUTABLE_CODE,
+} from "../deploy/helpers/error-codes";
 import {
 	getWorkflowsOwnedByScript,
 	isWorkflowDefinedInThisScript,
 	validateOwnedWorkflowDeclarations,
 } from "../deploy/helpers/owned-workflows";
-import {
-	cliPresentation,
-	fetchListResult,
-	fetchResult,
-	logger,
-} from "../shared/context";
+import { fetchListResult, fetchResult, logger } from "../shared/context";
 import { applyEmailRoutingAddresses } from "./email-routing";
 import {
 	publishCustomDomains,
@@ -59,7 +58,13 @@ export async function triggersDeploy(
 	assert(accountId);
 
 	if (props.validated !== true) {
-		await ensureQueuesExistByConfig(config, accountId, true, scriptName);
+		await ensureQueuesExistByConfig(
+			config,
+			accountId,
+			true,
+			scriptName,
+			props.queueCreateCommand
+		);
 	}
 
 	const routesOnly: Array<Route> = [];
@@ -274,7 +279,8 @@ export async function triggersDeploy(
 			config,
 			accountId,
 			scriptName,
-			config
+			config,
+			props.queueCreateCommand
 		);
 		deployments.push(
 			...consumerUpdates.map((update) =>
@@ -330,6 +336,16 @@ export async function triggersDeploy(
 					}
 				);
 			}
+			if (workflow.jurisdiction) {
+				throw new UserError(
+					`Workflow "${workflow.name}" has "jurisdiction" configured but references external script "${workflow.script_name}". ` +
+						`Configure jurisdiction on the worker that defines the workflow.`,
+					{
+						telemetryMessage:
+							"triggers deploy workflow jurisdiction external script",
+					}
+				);
+			}
 		}
 	}
 
@@ -357,6 +373,9 @@ export async function triggersDeploy(
 						...(workflow.default_retention && {
 							default_retention: workflow.default_retention,
 						}),
+						...(workflow.jurisdiction && {
+							jurisdiction: workflow.jurisdiction,
+						}),
 					}),
 					headers: {
 						"Content-Type": "application/json",
@@ -383,6 +402,26 @@ export async function triggersDeploy(
 									cause: error,
 									telemetryMessage:
 										"triggers deploy workflow cron requires paid plan",
+								}
+							),
+						};
+					}
+
+					if (
+						error instanceof APIError &&
+						error.code === WORKFLOW_JURISDICTION_IMMUTABLE_CODE &&
+						workflow.jurisdiction
+					) {
+						error.preventReport();
+						return {
+							category: "Workflows",
+							targets: [],
+							error: new UserError(
+								`Workflow "${workflow.name}" already exists with a different jurisdiction, and a Workflow's jurisdiction cannot be changed after it is created. Give the Workflow a new name, or delete the existing Workflow first, which also deletes its instances.`,
+								{
+									cause: error,
+									telemetryMessage:
+										"triggers deploy workflow jurisdiction immutable",
 								}
 							),
 						};
@@ -651,10 +690,12 @@ export function getSubdomainValuesAPIMock(
  */
 export function renderWorkersDevDefaultWarning(
 	beforeEnabled: boolean,
-	afterEnabled: boolean
+	afterEnabled: boolean,
+	configFile: string,
+	workersDevConfigFieldName: string,
+	workersDevConfigAssignment: (value: boolean) => string
 ): string {
-	const workersDevField = cliPresentation.configFields.workersDev;
-	const workersDevAssignment = `${workersDevField}${cliPresentation.configFieldAssignmentSeparator}${beforeEnabled}`;
+	const workersDevAssignment = workersDevConfigAssignment(beforeEnabled);
 	const status = (enabled: boolean, past: boolean) => {
 		if (past) {
 			return enabled ? "enabled" : "disabled";
@@ -664,8 +705,8 @@ export function renderWorkersDevDefaultWarning(
 	};
 
 	return [
-		`Because '${workersDevField}' is not in your ${cliPresentation.displayConfigFileName}, it will be ${status(afterEnabled, true)} for this deployment by default.`,
-		`To override this setting, you can ${status(beforeEnabled, false)} workers.dev by explicitly setting '${workersDevAssignment}' in your ${cliPresentation.displayConfigFileName}.`,
+		`Because '${workersDevConfigFieldName}' is not in your ${configFile}, it will be ${status(afterEnabled, true)} for this deployment by default.`,
+		`To override this setting, you can ${status(beforeEnabled, false)} workers.dev by explicitly setting '${workersDevAssignment}' in your ${configFile}.`,
 	].join("\n");
 }
 
@@ -674,7 +715,9 @@ async function validateSubdomainMixedState(
 	before: { workers_dev: boolean; preview_urls: boolean },
 	after: { workers_dev: boolean; preview_urls: boolean },
 	previewURLSuffix: string | undefined,
-	firstDeploy: boolean
+	firstDeploy: boolean,
+	configFile: string,
+	previewUrlsConfigAssignment: (value: boolean) => string
 ): Promise<{
 	workers_dev: boolean;
 	preview_urls: boolean;
@@ -720,7 +763,7 @@ async function validateSubdomainMixedState(
 				"Preview URLs will automatically generate a unique, shareable link for each new version which will be accessible at:",
 				`  ${previewUrl}`,
 				"",
-				`To prevent this Worker from being unintentionally public, you may want to disable the Preview URLs as well by setting \`preview_urls = false\` in your ${cliPresentation.displayConfigFileName}.`,
+				`To prevent this Worker from being unintentionally public, you may want to disable the Preview URLs as well by setting \`${previewUrlsConfigAssignment(false)}\` in your ${configFile}.`,
 			].join("\n")
 		);
 	}
@@ -733,7 +776,7 @@ async function validateSubdomainMixedState(
 				"Preview URLs will automatically generate a unique, shareable link for each new version which will be accessible at:",
 				`  ${previewUrl}`,
 				"",
-				`You may want to enable the Preview URLs as well by setting \`preview_urls = true\` in your ${cliPresentation.displayConfigFileName}.`,
+				`You may want to enable the Preview URLs as well by setting \`${previewUrlsConfigAssignment(true)}\` in your ${configFile}.`,
 			].join("\n")
 		);
 	}
@@ -751,6 +794,10 @@ async function subdomainDeploy(
 	firstDeploy: boolean
 ) {
 	const { config } = props;
+	const displayConfigFileName = configFileName(
+		config.configPath,
+		config.userConfigPath
+	);
 
 	// Get desired subdomain enablement status.
 
@@ -800,7 +847,15 @@ async function subdomainDeploy(
 		config.workers_dev == undefined &&
 		after.enabled !== before.enabled
 	) {
-		logger.warn(renderWorkersDevDefaultWarning(before.enabled, after.enabled));
+		logger.warn(
+			renderWorkersDevDefaultWarning(
+				before.enabled,
+				after.enabled,
+				displayConfigFileName,
+				props.workersDevConfigFieldName,
+				props.workersDevConfigAssignment
+			)
+		);
 	}
 
 	if (
@@ -817,8 +872,8 @@ async function subdomainDeploy(
 		};
 		logger.warn(
 			[
-				`Because your 'workers.dev' route is ${status(after.enabled, true)} and your 'preview_urls' setting is not in your ${cliPresentation.displayConfigFileName}, Preview URLs will be ${status(after.previews_enabled, true)} for this deployment by default.`,
-				`To override this setting, you can ${status(before.previews_enabled, false)} Preview URLs by explicitly setting 'preview_urls = ${before.previews_enabled}' in your ${cliPresentation.displayConfigFileName}.`,
+				`Because your 'workers.dev' route is ${status(after.enabled, true)} and your '${props.previewUrlsConfigFieldName}' setting is not in your ${displayConfigFileName}, Preview URLs will be ${status(after.previews_enabled, true)} for this deployment by default.`,
+				`To override this setting, you can ${status(before.previews_enabled, false)} Preview URLs by explicitly setting '${props.previewUrlsConfigAssignment(before.previews_enabled)}' in your ${displayConfigFileName}.`,
 			].join("\n")
 		);
 	}
@@ -829,7 +884,9 @@ async function subdomainDeploy(
 		{ workers_dev: before.enabled, preview_urls: before.previews_enabled },
 		{ workers_dev: after.enabled, preview_urls: after.previews_enabled },
 		before.preview_url_suffix,
-		firstDeploy
+		firstDeploy,
+		displayConfigFileName,
+		props.previewUrlsConfigAssignment
 	);
 
 	return {

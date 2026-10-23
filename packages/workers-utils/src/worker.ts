@@ -320,6 +320,11 @@ export interface CfHyperdrive {
 	binding: string;
 	id: string;
 	localConnectionString?: string;
+	/**
+	 * Connect to the deployed Hyperdrive configuration during local development
+	 * instead of a local database.
+	 */
+	remote?: boolean;
 }
 
 export interface CfDevPluginCfg {

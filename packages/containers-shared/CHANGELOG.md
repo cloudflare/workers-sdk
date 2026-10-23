@@ -1,5 +1,75 @@
 # @cloudflare/containers-shared
 
+## 0.23.2
+
+### Patch Changes
+
+- Updated dependencies [[`08f22d3`](https://github.com/cloudflare/workers-sdk/commit/08f22d36f42100af8b83ae9556643f63b536a4e9), [`182d6de`](https://github.com/cloudflare/workers-sdk/commit/182d6ded7126c29daa6f8d2eea5f175421b29917)]:
+  - @cloudflare/config@0.28.0
+  - @cloudflare/workers-utils@0.48.0
+  - @cloudflare/build-output-utils@0.9.4
+  - @cloudflare/cli-shared-helpers@0.2.8
+
+## 0.23.1
+
+### Patch Changes
+
+- Updated dependencies [[`017bf9b`](https://github.com/cloudflare/workers-sdk/commit/017bf9b5117a8a511f4ed2c10dd2bd0b80b24c31)]:
+  - @cloudflare/workers-utils@0.47.3
+  - @cloudflare/build-output-utils@0.9.3
+  - @cloudflare/cli-shared-helpers@0.2.7
+  - @cloudflare/config@0.27.0
+
+## 0.23.0
+
+### Minor Changes
+
+- [#16225](https://github.com/cloudflare/workers-sdk/pull/16225) [`fc51b96`](https://github.com/cloudflare/workers-sdk/commit/fc51b96c7f9952e46a6ceee6dfce22d004e539a8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Decouple shared deployment guidance from Wrangler
+
+  Shared deployment and Container helpers now receive only the command paths and configuration syntax required by each operation. Wrangler reuses the paths that register its command tree, while other consumers can supply their own values without global presentation state or Wrangler-specific fallbacks.
+
+## 0.22.1
+
+### Patch Changes
+
+- Updated dependencies [[`68f86a3`](https://github.com/cloudflare/workers-sdk/commit/68f86a32cb9f9fb8a8875bb5b2121c30b70c7b4c)]:
+  - @cloudflare/config@0.27.0
+  - @cloudflare/build-output-utils@0.9.3
+
+## 0.22.0
+
+### Minor Changes
+
+- [#16262](https://github.com/cloudflare/workers-sdk/pull/16262) [`fe8ce54`](https://github.com/cloudflare/workers-sdk/commit/fe8ce545e73d8195f5f3e04b1de258a2ad691ccd) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Export Container planning helpers for native Cloudflare configuration
+
+  Internal consumers can now create local-development and preview Container plans directly from parsed `cloudflare.config.ts` and Build Output configuration using `createContainerDevPlanForCfConfig` and `createContainerPreviewPlanForCfConfig`. The shared image handling also resolves Dockerfile paths consistently and avoids retagging an image to itself when a preview uses its existing reference.
+
+## 0.21.7
+
+### Patch Changes
+
+- Updated dependencies [[`f360829`](https://github.com/cloudflare/workers-sdk/commit/f3608290da40c11b248fff40101f30fc295652be)]:
+  - @cloudflare/config@0.26.0
+  - @cloudflare/build-output-utils@0.9.2
+
+## 0.21.6
+
+### Patch Changes
+
+- [#16025](https://github.com/cloudflare/workers-sdk/pull/16025) [`61e07fd`](https://github.com/cloudflare/workers-sdk/commit/61e07fd59d2ae474c2ddf4e5b3805319b7541fe3) Thanks [@kohjunhao](https://github.com/kohjunhao)! - Fix optional Docker lookups printing Docker CLI errors during successful builds
+
+  `cf build` looks for Container images left behind by earlier builds so it can remove them. This lookup is best effort, but when Docker could not be reached it still printed errors such as `Cannot connect to the Docker daemon`, even when the build succeeded and no image needed Docker. Docker commands whose output Wrangler reads no longer forward the Docker CLI's error output to the terminal. If one of these commands fails in a way that stops the command, the error message still includes the Docker CLI's output.
+
+- [#16038](https://github.com/cloudflare/workers-sdk/pull/16038) [`dc3e4df`](https://github.com/cloudflare/workers-sdk/commit/dc3e4df999e9d774469c6292a7b92b1f427b3dd9) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Use consumer-specific CLI names and commands in shared user-facing messages
+
+  Shared deployment, container, configuration, and authentication helpers can now render commands and configuration filenames for their calling CLI while preserving Wrangler-compatible defaults. This prevents `cf` workflows from presenting Wrangler-branded guidance when an equivalent `cf` command exists.
+
+- Updated dependencies [[`dc3e4df`](https://github.com/cloudflare/workers-sdk/commit/dc3e4df999e9d774469c6292a7b92b1f427b3dd9), [`d8b1fca`](https://github.com/cloudflare/workers-sdk/commit/d8b1fca2ba2fec3d3945fa6ec719b8f6766ad610)]:
+  - @cloudflare/workers-utils@0.47.2
+  - @cloudflare/config@0.25.0
+  - @cloudflare/build-output-utils@0.9.1
+  - @cloudflare/cli-shared-helpers@0.2.6
+
 ## 0.21.5
 
 ### Patch Changes

@@ -1076,7 +1076,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				);
 
 				await expect(runWrangler("deploy ./index")).rejects.toThrow(
-					'Wrangler could not automatically register "agent-project-name" as your `workers.dev` subdomain.'
+					'Could not automatically register "agent-project-name" as your `workers.dev` subdomain. Register a subdomain at https://dash.cloudflare.com/some-account-id/workers/onboarding.'
 				);
 			});
 
@@ -1643,10 +1643,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBecause 'workers_dev' is not in your Wrangler config file, it will be enabled for this deployment by default.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBecause 'workers_dev' is not in your wrangler.toml, it will be enabled for this deployment by default.[0m
 
 				  To override this setting, you can disable workers.dev by explicitly setting 'workers_dev = false'
-				  in your Wrangler config file.
+				  in your wrangler.toml.
 
 				"
 			`);
@@ -1675,10 +1675,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBecause your 'workers.dev' route is enabled and your 'preview_urls' setting is not in your Wrangler config file, Preview URLs will be enabled for this deployment by default.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBecause your 'workers.dev' route is enabled and your 'preview_urls' setting is not in your wrangler.toml, Preview URLs will be enabled for this deployment by default.[0m
 
 				  To override this setting, you can disable Preview URLs by explicitly setting 'preview_urls =
-				  false' in your Wrangler config file.
+				  false' in your wrangler.toml.
 
 				"
 			`);
@@ -1810,7 +1810,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				    [4mhttps://<VERSION_PREFIX>-test-name.test-sub-domain.workers.dev[0m
 
 				  To prevent this Worker from being unintentionally public, you may want to disable the Preview URLs
-				  as well by setting \`preview_urls = false\` in your Wrangler config file.
+				  as well by setting \`preview_urls = false\` in your wrangler.toml.
 
 				"
 			`);
@@ -1871,8 +1871,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				  be accessible at:
 				    [4mhttps://<VERSION_PREFIX>-test-name.test-sub-domain.workers.dev[0m
 
-				  You may want to enable the Preview URLs as well by setting \`preview_urls = true\` in your Wrangler
-				  config file.
+				  You may want to enable the Preview URLs as well by setting \`preview_urls = true\` in your
+				  wrangler.toml.
 
 				"
 			`);

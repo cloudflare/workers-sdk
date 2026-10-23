@@ -134,7 +134,7 @@ async function expectedHostAndZone(
 	return config;
 }
 
-describe.sequential("wrangler dev", () => {
+describe("wrangler dev", { concurrent: false }, () => {
 	let spy: MockInstance;
 	let setSpy: MockInstance;
 	const { setIsTTY } = useMockIsTTY();
@@ -191,6 +191,8 @@ describe.sequential("wrangler dev", () => {
 
 	describe("Local Explorer agent hint", () => {
 		beforeEach(() => {
+			vi.stubEnv("TURBO_HASH", "");
+			vi.stubEnv("TURBO_IS_TUI", "");
 			writeWranglerConfig({
 				name: "test-worker",
 				main: "index.js",
@@ -2688,6 +2690,41 @@ describe.sequential("wrangler dev", () => {
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+	});
+
+	describe("hyperdrive bindings", () => {
+		it("should report a `remote: true` Hyperdrive binding as remote", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				hyperdrive: [
+					{
+						binding: "HYPERDRIVE_REMOTE",
+						id: "remote-id",
+						remote: true,
+					},
+					{
+						binding: "HYPERDRIVE_LOCAL",
+						id: "local-id",
+						localConnectionString:
+							"postgres://user:pass@localhost:5432/database",
+					},
+				],
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWranglerUntilConfig("dev index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Your Worker has access to the following bindings:
+				Binding                                Resource               Mode
+				env.HYPERDRIVE_REMOTE (remote-id)      Hyperdrive Config      remote
+				env.HYPERDRIVE_LOCAL (local-id)        Hyperdrive Config      local
+
+				"
+			`);
 		});
 	});
 

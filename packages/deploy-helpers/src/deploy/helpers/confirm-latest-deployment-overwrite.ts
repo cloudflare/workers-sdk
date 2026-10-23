@@ -2,7 +2,6 @@ import * as cli from "@cloudflare/cli-shared-helpers";
 import { brandColor, gray, white } from "@cloudflare/cli-shared-helpers/colors";
 import { inputPrompt, leftT } from "@cloudflare/cli-shared-helpers/interactive";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
-import { cliPresentation } from "../../shared/context";
 import { fetchDeploymentVersions, fetchLatestDeployment } from "./versions-api";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type {
@@ -20,13 +19,17 @@ const BLANK_INPUT = "-";
 export async function confirmLatestDeploymentOverwrite(
 	config: Config,
 	accountId: string,
-	scriptName: string
+	scriptName: string,
+	deployCommand: string,
+	versionsDeployCommand: string
 ): Promise<boolean> {
 	return (
 		await confirmLatestDeploymentOverwriteAndGetLatest(
 			config,
 			accountId,
-			scriptName
+			scriptName,
+			deployCommand,
+			versionsDeployCommand
 		)
 	).confirmed;
 }
@@ -35,7 +38,9 @@ export async function confirmLatestDeploymentOverwrite(
 export async function confirmLatestDeploymentOverwriteAndGetLatest(
 	config: Config,
 	accountId: string,
-	scriptName: string
+	scriptName: string,
+	deployCommand: string,
+	versionsDeployCommand: string
 ): Promise<{
 	confirmed: boolean;
 	latestDeployment: ApiDeployment | undefined;
@@ -46,7 +51,7 @@ export async function confirmLatestDeploymentOverwriteAndGetLatest(
 			const versionCache: VersionCache = new Map();
 
 			cli.warn(
-				`Your last deployment has multiple versions. To progress that deployment use "${cliPresentation.commands.versionsDeploy}" instead.`,
+				`Your last deployment has multiple versions. To progress that deployment use "${versionsDeployCommand}" instead.`,
 				{ shape: cli.shapes.corners.tl, newlineBefore: false }
 			);
 			cli.newline();
@@ -61,7 +66,7 @@ export async function confirmLatestDeploymentOverwriteAndGetLatest(
 
 			const confirmed = await inputPrompt<boolean>({
 				type: "confirm",
-				question: `"${cliPresentation.commands.deploy}" will upload a new version and deploy it globally immediately.\nAre you sure you want to continue?`,
+				question: `"${deployCommand}" will upload a new version and deploy it globally immediately.\nAre you sure you want to continue?`,
 				label: "",
 				defaultValue: isNonInteractiveOrCI(),
 				acceptDefault: isNonInteractiveOrCI(),

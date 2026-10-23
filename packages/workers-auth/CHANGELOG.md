@@ -1,5 +1,50 @@
 # @cloudflare/workers-auth
 
+## 0.15.0
+
+### Minor Changes
+
+- [#16375](https://github.com/cloudflare/workers-sdk/pull/16375) [`f43e2e6`](https://github.com/cloudflare/workers-sdk/commit/f43e2e61093b3218a48691dc76ce7f463a2123ce) Thanks [@penalosa](https://github.com/penalosa)! - Use each CLI's temporary-account flag in authentication errors
+
+  Default to `--temporary-account` while keeping Wrangler's `--temporary` spelling. Expose account-lookup authentication failure reasons so consumers can distinguish missing credentials from expired tokens without matching error messages.
+
+### Patch Changes
+
+- Updated dependencies [[`08f22d3`](https://github.com/cloudflare/workers-sdk/commit/08f22d36f42100af8b83ae9556643f63b536a4e9), [`182d6de`](https://github.com/cloudflare/workers-sdk/commit/182d6ded7126c29daa6f8d2eea5f175421b29917)]:
+  - @cloudflare/workers-utils@0.48.0
+
+## 0.14.1
+
+### Patch Changes
+
+- [#16259](https://github.com/cloudflare/workers-sdk/pull/16259) [`017bf9b`](https://github.com/cloudflare/workers-sdk/commit/017bf9b5117a8a511f4ed2c10dd2bd0b80b24c31) Thanks [@NuroDev](https://github.com/NuroDev)! - Support Vitest 5 in shared test helpers
+
+  The optional Vitest peer ranges now accept both Vitest 4 and 5, allowing consumers to upgrade without dropping compatibility with Vitest 4.
+
+- Updated dependencies [[`017bf9b`](https://github.com/cloudflare/workers-sdk/commit/017bf9b5117a8a511f4ed2c10dd2bd0b80b24c31)]:
+  - @cloudflare/workers-utils@0.47.3
+
+## 0.14.0
+
+### Minor Changes
+
+- [#16184](https://github.com/cloudflare/workers-sdk/pull/16184) [`6c4153e`](https://github.com/cloudflare/workers-sdk/commit/6c4153e2f1b7a55ec6b31afe54fd14fff4990751) Thanks [@mtlemilio](https://github.com/mtlemilio)! - Allow cf consumers to explicitly request the `hyperdrive-planetscale:setup` OAuth scope
+
+  The scope remains excluded from default logins so permission to create Cloudflare-billed PlanetScale databases is requested only by commands that need it.
+
+- [#16038](https://github.com/cloudflare/workers-sdk/pull/16038) [`dc3e4df`](https://github.com/cloudflare/workers-sdk/commit/dc3e4df999e9d774469c6292a7b92b1f427b3dd9) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Use consumer-specific CLI names and commands in shared user-facing messages
+
+  Shared deployment, container, configuration, and authentication helpers can now render commands and configuration filenames for their calling CLI while preserving Wrangler-compatible defaults. This prevents `cf` workflows from presenting Wrangler-branded guidance when an equivalent `cf` command exists.
+
+### Patch Changes
+
+- [#16151](https://github.com/cloudflare/workers-sdk/pull/16151) [`cafd3f9`](https://github.com/cloudflare/workers-sdk/commit/cafd3f94207bd2c886e6ab20de17e45e0eb50f1e) Thanks [@DevVettel](https://github.com/DevVettel)! - Time out the OAuth token request instead of waiting indefinitely
+
+  The request that exchanges an authorization code or refresh token for an access token had no timeout, so a stalled connection (for example behind an HTTP proxy) could leave `wrangler login` hanging silently for many minutes after the browser step had succeeded. The request now gives up after 30 seconds and reports that the Cloudflare auth server could not be reached.
+
+- Updated dependencies [[`dc3e4df`](https://github.com/cloudflare/workers-sdk/commit/dc3e4df999e9d774469c6292a7b92b1f427b3dd9)]:
+  - @cloudflare/workers-utils@0.47.2
+
 ## 0.13.1
 
 ### Patch Changes

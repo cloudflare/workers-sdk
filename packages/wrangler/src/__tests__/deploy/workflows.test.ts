@@ -1,6 +1,9 @@
 import * as fs from "node:fs";
 import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
-import { WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE } from "@cloudflare/deploy-helpers";
+import {
+	WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE,
+	WORKFLOW_JURISDICTION_IMMUTABLE_CODE,
+} from "@cloudflare/deploy-helpers";
 import {
 	runInTempDir,
 	writeWranglerConfig,
@@ -485,6 +488,60 @@ describe("deploy", () => {
 			expect(std.out).toContain("workflow: my-workflow");
 		});
 
+		it("should deploy a workflow with a jurisdiction", async ({ expect }) => {
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						jurisdiction: "eu",
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class MyWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			const handler = http.put(
+				"*/accounts/:accountId/workflows/:workflowName",
+				async ({ params, request }) => {
+					expect(params.workflowName).toBe("my-workflow");
+					expect(await request.json()).toEqual({
+						script_name: "test-name",
+						class_name: "MyWorkflow",
+						jurisdiction: "eu",
+					});
+					return HttpResponse.json(
+						createFetchResult({ id: "mock-new-workflow-id" })
+					);
+				}
+			);
+			msw.use(handler);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.out).toContain("workflow: my-workflow");
+		});
+
 		it("should deploy a workflow with concurrency", async ({ expect }) => {
 			writeWranglerConfig({
 				main: "index.js",
@@ -673,6 +730,50 @@ describe("deploy", () => {
 
 				Successful trigger changes were not rolled back.]
 			`);
+		});
+
+		it("should explain that a workflow's jurisdiction cannot be changed", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						jurisdiction: "us",
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                import { WorkflowEntrypoint } from 'cloudflare:workers';
+                export default {};
+                export class MyWorkflow extends WorkflowEntrypoint {};
+            `
+			);
+
+			msw.use(
+				http.put("*/accounts/:accountId/workflows/:workflowName", () => {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{
+								code: WORKFLOW_JURISDICTION_IMMUTABLE_CODE,
+								message: "workflows.api.error.workflow.jurisdiction_immutable",
+							},
+						]),
+						{ status: 409 }
+					);
+				})
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				`Workflow "my-workflow" already exists with a different jurisdiction, and a Workflow's jurisdiction cannot be changed after it is created. Give the Workflow a new name, or delete the existing Workflow first, which also deletes its instances.`
+			);
 		});
 
 		it("should update event triggers when an unrelated Workflow fails", async ({
@@ -1117,6 +1218,48 @@ describe("deploy", () => {
 			);
 		});
 
+		it("should error when deploying a workflow with a jurisdiction that references an external script", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				name: "this-script",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						script_name: "another-script",
+						jurisdiction: "eu",
+					},
+				],
+			});
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedScriptName: "this-script",
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+						script_name: "another-script",
+					},
+				],
+			});
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                export default {};
+            `
+			);
+
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				'Workflow "my-workflow" has "jurisdiction" configured but references external script "another-script"'
+			);
+		});
+
 		describe("workflow exports", () => {
 			const workflowSource = `
 				import { WorkflowEntrypoint } from 'cloudflare:workers';
@@ -1187,6 +1330,7 @@ describe("deploy", () => {
 								success_retention: "3 days",
 								error_retention: 86_400_000,
 							},
+							jurisdiction: "fedramp",
 						},
 					},
 				});
@@ -1224,6 +1368,7 @@ describe("deploy", () => {
 							success_retention: "3 days",
 							error_retention: 86_400_000,
 						},
+						jurisdiction: "fedramp",
 					},
 				]);
 			});
@@ -1642,6 +1787,7 @@ describe("deploy", () => {
 						class_name: string;
 						created_on: string;
 						modified_on: string;
+						jurisdiction?: string;
 					} | null
 				>
 			) {
@@ -1731,7 +1877,7 @@ describe("deploy", () => {
 					"Workflow names must be unique per account."
 				);
 				expect(std.warn).toContain(
-					"If this reassignment is unintended, rename the workflow(s) in your Wrangler config file."
+					"If this reassignment is unintended, rename the workflow(s) in your wrangler.toml."
 				);
 			});
 
@@ -1909,6 +2055,147 @@ describe("deploy", () => {
 				expect(std.out).toContain("Uploaded test-name");
 			});
 
+			it("should error before uploading when a workflow's jurisdiction would change", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.js",
+					workflows: [
+						{
+							binding: "EU_WORKFLOW",
+							name: "eu-workflow",
+							class_name: "EuWorkflow",
+							jurisdiction: "us",
+						},
+						{
+							binding: "GLOBAL_WORKFLOW",
+							name: "global-workflow",
+							class_name: "GlobalWorkflow",
+							jurisdiction: "eu",
+						},
+					],
+				});
+				await fs.promises.writeFile(
+					"index.js",
+					`
+					import { WorkflowEntrypoint } from 'cloudflare:workers';
+					export default {};
+					export class EuWorkflow extends WorkflowEntrypoint {};
+					export class GlobalWorkflow extends WorkflowEntrypoint {};
+				`
+				);
+
+				mockGetWorkflow({
+					"eu-workflow": {
+						id: "existing-workflow-1",
+						name: "eu-workflow",
+						script_name: "test-name",
+						class_name: "EuWorkflow",
+						created_on: "2024-01-01T00:00:00Z",
+						modified_on: "2024-01-01T00:00:00Z",
+						jurisdiction: "eu",
+					},
+					"global-workflow": {
+						id: "existing-workflow-2",
+						name: "global-workflow",
+						script_name: "test-name",
+						class_name: "GlobalWorkflow",
+						created_on: "2024-01-01T00:00:00Z",
+						modified_on: "2024-01-01T00:00:00Z",
+					},
+				});
+
+				await expect(runWrangler("deploy")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+					[Error: The following Workflow(s) already exist with a different jurisdiction:
+					  - "eu-workflow" (has jurisdiction "eu", configured "us")
+					  - "global-workflow" (has no jurisdiction, configured "eu")
+
+					A Workflow's jurisdiction is set when it is created and cannot be changed. To use a different jurisdiction, rename the Workflow(s) in your wrangler.toml, or delete the existing Workflow(s) first, which also deletes their instances.]
+				`);
+				expect(std.out).not.toContain("Uploaded");
+			});
+
+			it("should deploy when the configured jurisdiction matches or is left out", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.js",
+					workflows: [
+						{
+							binding: "MATCHING_WORKFLOW",
+							name: "matching-workflow",
+							class_name: "MatchingWorkflow",
+							jurisdiction: "eu",
+						},
+						{
+							binding: "UNSET_WORKFLOW",
+							name: "unset-workflow",
+							class_name: "UnsetWorkflow",
+						},
+					],
+				});
+				await fs.promises.writeFile(
+					"index.js",
+					`
+					import { WorkflowEntrypoint } from 'cloudflare:workers';
+					export default {};
+					export class MatchingWorkflow extends WorkflowEntrypoint {};
+					export class UnsetWorkflow extends WorkflowEntrypoint {};
+				`
+				);
+
+				mockGetWorkflow({
+					"matching-workflow": {
+						id: "existing-workflow-1",
+						name: "matching-workflow",
+						script_name: "test-name",
+						class_name: "MatchingWorkflow",
+						created_on: "2024-01-01T00:00:00Z",
+						modified_on: "2024-01-01T00:00:00Z",
+						jurisdiction: "eu",
+					},
+					"unset-workflow": {
+						id: "existing-workflow-2",
+						name: "unset-workflow",
+						script_name: "test-name",
+						class_name: "UnsetWorkflow",
+						created_on: "2024-01-01T00:00:00Z",
+						modified_on: "2024-01-01T00:00:00Z",
+						jurisdiction: "eu",
+					},
+				});
+
+				const putBodies: Record<string, unknown> = {};
+				msw.use(
+					http.put(
+						"*/accounts/:accountId/workflows/:workflowName",
+						async ({ params, request }) => {
+							putBodies[params.workflowName as string] = await request.json();
+							return HttpResponse.json(
+								createFetchResult({ id: "mock-new-workflow-id" })
+							);
+						}
+					)
+				);
+				mockSubDomainRequest();
+				mockUploadWorkerRequest();
+
+				await runWrangler("deploy");
+
+				expect(putBodies).toEqual({
+					"matching-workflow": {
+						script_name: "test-name",
+						class_name: "MatchingWorkflow",
+						jurisdiction: "eu",
+					},
+					"unset-workflow": {
+						script_name: "test-name",
+						class_name: "UnsetWorkflow",
+					},
+				});
+			});
+
 			it("should warn about multiple conflicting workflows", async ({
 				expect,
 			}) => {
@@ -2056,7 +2343,7 @@ describe("deploy", () => {
 					    - "my-workflow" (currently belongs to "other-worker")
 
 					  Deploying will reassign these workflows to "test-name". Workflow names must be unique per account.
-					  If this reassignment is unintended, rename the workflow(s) in your Wrangler config file.
+					  If this reassignment is unintended, rename the workflow(s) in your wrangler.toml.
 
 					"
 				`);

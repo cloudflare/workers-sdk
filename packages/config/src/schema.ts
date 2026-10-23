@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { WORKFLOW_JURISDICTIONS } from "./exports";
 import type { SendEmailBinding, VpcNetworkBinding } from "./bindings";
 import type { Settings } from "./types";
 import type { ContainerConfig, WorkerConfig } from "./types";
@@ -99,7 +100,9 @@ export const FlagshipBindingSchema = z.strictObject({
 export const HyperdriveBindingSchema = z.strictObject({
 	type: z.literal("hyperdrive"),
 	id: z.string(),
-	dev: z.strictObject({ connectionString: z.string().optional() }).optional(),
+	dev: RemoteBindingDevSchema.extend({
+		connectionString: z.string().optional(),
+	}).optional(),
 });
 
 export const KnownBindingSchema = z.discriminatedUnion("type", [
@@ -626,6 +629,7 @@ export const WorkflowExportSchema = z.strictObject({
 			errorRetention: WorkflowRetentionSchema.optional(),
 		})
 		.optional(),
+	jurisdiction: z.enum(WORKFLOW_JURISDICTIONS).optional(),
 });
 
 // Containers are only supported on the SQLite storage engine, so each live
@@ -687,6 +691,15 @@ const ObservabilitySchema = z.strictObject({
 			headSamplingRate: z.number().optional(),
 			persist: z.boolean().optional(),
 			destinations: z.array(z.string()).optional(),
+		})
+		.optional(),
+});
+
+const AccessSchema = z.strictObject({
+	dev: z
+		.strictObject({
+			aud: z.string(),
+			identity: z.record(z.string(), z.unknown()).optional(),
 		})
 		.optional(),
 });
@@ -776,6 +789,19 @@ const UnsafeSchema = z.strictObject({
 		.optional(),
 });
 
+const DomainSchema = z.union([
+	z.string(),
+	z
+		.strictObject({
+			hostname: z.string(),
+			production: z.boolean(),
+			previews: z.boolean(),
+		})
+		.refine((domain) => domain.production || domain.previews, {
+			message: "At least one of production or previews must be enabled.",
+		}),
+]);
+
 /**
  * Base Worker schema — the set of fields shared between the input
  * (user-authored) and output (on-disk) Worker configs.
@@ -785,7 +811,7 @@ const BaseWorkerSchema = z.strictObject({
 	compatibilityDate: z.string(),
 	compatibilityFlags: z.array(z.string()).optional(),
 	assets: AssetsSchema.optional(),
-	domains: z.array(z.string()).optional(),
+	domains: z.array(DomainSchema).optional(),
 	triggers: z.array(TriggerSchema).optional(),
 	tailConsumers: z.array(TailConsumerSchema).optional(),
 	cache: CacheSchema.optional(),
@@ -793,6 +819,7 @@ const BaseWorkerSchema = z.strictObject({
 	limits: LimitsSchema.optional(),
 	logpush: z.boolean().optional(),
 	observability: ObservabilitySchema.optional(),
+	access: AccessSchema.optional(),
 	workersDev: z.boolean().optional(),
 	previewUrls: z.boolean().optional(),
 	firstPartyWorker: z.boolean().optional(),

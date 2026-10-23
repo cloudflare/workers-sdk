@@ -1,16 +1,20 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
+import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import {
 	mockConsoleMethods,
 	runInTempDir,
 } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
-import { previewBuildOutput } from "../src/preview/preview";
+import {
+	preview as previewFromConfig,
+	previewBuildOutput,
+} from "../src/preview/preview";
 import type {
 	PreviewBuildOutput,
-	PreviewCallbacks,
 	PreviewArgs,
+	PreviewOptions,
 } from "../src/preview/preview";
 import type {
 	ParsedOutputRootConfig,
@@ -145,6 +149,67 @@ describe("previewBuildOutput", () => {
 			deployment: deploymentResource,
 		});
 	});
+
+	it("uses consumer commands in the no-active-URL advice", async ({
+		expect,
+	}) => {
+		await previewBuildOutput(
+			"account-id",
+			{ name: "feature" },
+			{
+				workerConfig: buildOutputConfig(),
+				rootConfig: validRootConfig,
+				buildResult,
+			},
+			{
+				deployCommand: "custom deploy",
+				previewCommand: "custom preview",
+				getNormalizedContainerOptions: undefined,
+				deployPreviewContainers: undefined,
+			}
+		);
+		expect(std.out).toContain("`custom deploy`");
+		expect(std.out).toContain("`custom preview`");
+	});
+
+	it.for([false, true])(
+		"keeps consumer commands in custom-domain warnings without stdout (json=%s)",
+		async (json, { expect }) => {
+			const previewWithUrls = {
+				...previewResource,
+				urls: ["https://feature.preview-worker.workers.dev"],
+			};
+			mocks.getPreview.mockResolvedValueOnce(previewWithUrls);
+			mocks.editPreview.mockResolvedValueOnce(previewWithUrls);
+			await previewFromConfig(
+				"account-id",
+				{ name: "feature", ignoreBaseConfig: false, log: false, json },
+				{
+					...defaultWranglerConfig,
+					name: "preview-worker",
+					routes: [
+						{
+							pattern: "previews.example.com",
+							custom_domain: true,
+							previews_enabled: true,
+						},
+					],
+				},
+				buildResult,
+				undefined,
+				{
+					deployCommand: "custom deploy",
+					previewCommand: "custom preview",
+					getNormalizedContainerOptions: undefined,
+					deployPreviewContainers: undefined,
+				}
+			);
+			expect(std.out).toBe("");
+			expect(std.warn).toContain("Custom domain Preview URLs are configured");
+			expect(std.warn).toContain("`custom deploy`");
+			expect(std.warn).toContain("`custom preview`");
+		}
+	);
 
 	it.for([false, true])(
 		"returns the complete result without output when log is false (json=%s)",
@@ -432,7 +497,7 @@ describe("previewBuildOutput", () => {
 			.fn()
 			.mockResolvedValue(normalisedContainerConfig);
 		const deployPreviewContainers = vi.fn().mockResolvedValue(undefined);
-		const callbacks: PreviewCallbacks = {
+		const options: PreviewOptions = {
 			getNormalizedContainerOptions,
 			deployPreviewContainers,
 		};
@@ -460,7 +525,7 @@ describe("previewBuildOutput", () => {
 					},
 				],
 			},
-			callbacks
+			options
 		);
 
 		expect(getNormalizedContainerOptions).toHaveBeenCalledWith(
@@ -919,8 +984,38 @@ describe("previewBuildOutput", () => {
 		expect(mocks.getPreview).not.toHaveBeenCalled();
 	});
 
+	it.for<NonNullable<ParsedOutputWorkerConfig["domains"]>>([
+		["example.com"],
+		[{ hostname: "example.com", production: true, previews: false }],
+		[{ hostname: "previews.example.com", production: false, previews: true }],
+		[{ hostname: "example.com", production: true, previews: true }],
+	])("uses parent hosting with domains %j", async (domains, { expect }) => {
+		const config = buildOutputConfig({ domains });
+		const preview = {
+			...previewResource,
+			urls: ["https://feature.previews.example.com"],
+		};
+		const deployment = {
+			...deploymentResource,
+			urls: ["https://deployment-id-feature.previews.example.com"],
+		};
+		mocks.getPreview.mockResolvedValue(preview);
+		mocks.getPreviewDeployment.mockResolvedValue(deployment);
+		mocks.createPreviewDeployment.mockResolvedValue(deployment);
+
+		const result = await uploadPreview(config);
+
+		expect(result).toMatchObject({ preview, deployment });
+		expect(mocks.createPreviewDeployment).toHaveBeenCalledOnce();
+		const request = mocks.createPreviewDeployment.mock.calls[0]?.[4];
+		expect(request).toMatchObject({ main_module: "index.js" });
+		expect(request).not.toHaveProperty("domains");
+		expect(request).not.toHaveProperty("routes");
+		expect(mocks.createPreviewParentWorker).not.toHaveBeenCalled();
+		expect(config.domains).toEqual(domains);
+	});
+
 	it.for<[string, Partial<ParsedOutputWorkerConfig>]>([
-		["custom domains", { domains: ["preview.example.com"] }],
 		["triggers", { triggers: [{ type: "scheduled", schedule: "0 * * * *" }] }],
 		[
 			"streaming tail consumers",

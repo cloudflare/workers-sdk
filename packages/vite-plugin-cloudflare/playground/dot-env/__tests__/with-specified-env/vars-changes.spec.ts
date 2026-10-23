@@ -8,17 +8,16 @@ import {
 } from "../../../__test-utils__";
 
 test.runIf(!isBuild)(
-	"successfully updates when a var is updated in a .env.staging file",
+	"reloads Worker secrets when .env.staging changes",
 	async ({ expect }) => {
-		const originalResponseContent = {
+		const originalResponse = await getJsonResponse();
+		expect(originalResponse).toEqual({
 			"variables loaded from .env and .env.staging": {
 				MY_DEV_VAR_A: "my .env staging variable A",
 				MY_DEV_VAR_B: "my .env staging variable B",
-				MY_DEV_VAR_C: "my .env variable C", // Note that unlike .dev.vars, we merge .env files
+				MY_DEV_VAR_C: "my .env variable C",
 			},
-		};
-		const originalResponse = await getJsonResponse();
-		expect(originalResponse).toEqual(originalResponseContent);
+		});
 
 		mockFileChange(path.join(__dirname, "../../.env.staging"), (content) =>
 			content.replace(/my \.env staging/g, "my .env UPDATED staging")
@@ -30,7 +29,7 @@ test.runIf(!isBuild)(
 				"variables loaded from .env and .env.staging": {
 					MY_DEV_VAR_A: "my .env UPDATED staging variable A",
 					MY_DEV_VAR_B: "my .env UPDATED staging variable B",
-					MY_DEV_VAR_C: "my .env variable C", // Note that unlike .dev.vars, we merge .env files
+					MY_DEV_VAR_C: "my .env variable C",
 				},
 			});
 		}, WAIT_FOR_OPTIONS);

@@ -1,5 +1,6 @@
-import { APIError } from "@cloudflare/workers-utils";
-import { cliPresentation, fetchResult } from "../../shared/context";
+import { APIError, UserError } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils";
+import { fetchResult } from "../../shared/context";
 import { getWorkflowsOwnedByScript } from "./owned-workflows";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -10,6 +11,7 @@ export type Workflow = {
 	modified_on: string;
 	script_name: string;
 	class_name: string;
+	jurisdiction?: string;
 };
 
 export interface WorkflowConflict {
@@ -61,17 +63,34 @@ export async function checkWorkflowConflicts(
 	}
 
 	const workflowChecks = await Promise.all(
-		workflowsToDeploy.map(async (workflow) => {
-			const existing = await getWorkflow(config, accountId, workflow.name);
-			if (existing && existing.script_name !== scriptName) {
-				return { name: workflow.name, currentOwner: existing.script_name };
-			}
-			return null;
-		})
+		workflowsToDeploy.map(async (workflow) => ({
+			workflow,
+			existing: await getWorkflow(config, accountId, workflow.name),
+		}))
 	);
 
-	const conflicts = workflowChecks.filter(
-		(c): c is WorkflowConflict => c !== null
+	const jurisdictionChanges = workflowChecks.flatMap(
+		({ workflow, existing }) =>
+			existing !== null &&
+			workflow.jurisdiction !== undefined &&
+			existing.jurisdiction !== workflow.jurisdiction
+				? [
+						`  - "${workflow.name}" (${existing.jurisdiction ? `has jurisdiction "${existing.jurisdiction}"` : "has no jurisdiction"}, configured "${workflow.jurisdiction}")`,
+					]
+				: []
+	);
+	if (jurisdictionChanges.length > 0) {
+		throw new UserError(
+			`The following Workflow(s) already exist with a different jurisdiction:\n${jurisdictionChanges.join("\n")}\n\n` +
+				`A Workflow's jurisdiction is set when it is created and cannot be changed. To use a different jurisdiction, rename the Workflow(s) in your ${configFileName(config.configPath, config.userConfigPath)}, or delete the existing Workflow(s) first, which also deletes their instances.`,
+			{ telemetryMessage: "deploy workflow jurisdiction changed" }
+		);
+	}
+
+	const conflicts = workflowChecks.flatMap(({ workflow, existing }) =>
+		existing && existing.script_name !== scriptName
+			? [{ name: workflow.name, currentOwner: existing.script_name }]
+			: []
 	);
 
 	if (conflicts.length === 0) {
@@ -84,7 +103,7 @@ export async function checkWorkflowConflicts(
 
 	const message =
 		`The following workflow(s) already exist and belong to different workers:\n${conflictList}\n\n` +
-		`Deploying will reassign these workflows to "${scriptName}". Workflow names must be unique per account. If this reassignment is unintended, rename the workflow(s) in your ${cliPresentation.displayConfigFileName}.`;
+		`Deploying will reassign these workflows to "${scriptName}". Workflow names must be unique per account. If this reassignment is unintended, rename the workflow(s) in your ${configFileName(config.configPath, config.userConfigPath)}.`;
 
 	return { hasConflicts: true, conflicts, message };
 }

@@ -8,7 +8,7 @@ import {
 } from "../../__test-utils__";
 
 test.runIf(!isBuild)(
-	"successfully updates when a var is updated in a .env file",
+	"reloads Worker secrets when .env changes",
 	async ({ expect }) => {
 		await vi.waitFor(
 			async () =>
@@ -32,7 +32,7 @@ test.runIf(!isBuild)(
 					"variables loaded from .env": {
 						MY_DEV_VAR_A: "my .env UPDATED variable A",
 						MY_DEV_VAR_B: "my .env UPDATED variable B",
-						MY_DEV_VAR_C: "my .env UPDATED variable C", // Note that unlike .dev.vars, we merge .env files
+						MY_DEV_VAR_C: "my .env UPDATED variable C",
 					},
 				}),
 			WAIT_FOR_OPTIONS

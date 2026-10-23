@@ -4,6 +4,7 @@ import { CF_CLI } from "../../src/cf";
 import { createCloudflareAuth } from "../../src/core/factory";
 import { createOAuthFlow } from "../../src/flow";
 import type { AuthContext } from "../../src/core/types";
+import type { LoginOrRefreshResult } from "../../src/flow";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 const fetchInternalBase = vi.hoisted(() => vi.fn());
@@ -11,10 +12,12 @@ const flow = vi.hoisted(() => ({
 	activateTemporaryAccount: vi.fn(),
 	getActiveProfile: vi.fn(() => "default"),
 	getActiveTemporaryAccount: vi.fn(() => undefined),
-	getAPIToken: vi.fn(() => undefined),
+	getAPIToken: vi.fn((): { apiToken: string } | undefined => undefined),
 	isTemporaryAllowed: vi.fn(() => false),
 	login: vi.fn(async () => true),
-	loginOrRefreshIfRequired: vi.fn(async () => ({ loggedIn: true as const })),
+	loginOrRefreshIfRequired: vi.fn(async (): Promise<LoginOrRefreshResult> => ({
+		loggedIn: true,
+	})),
 	requireApiToken: vi.fn(() => ({ apiToken: "test-token" })),
 }));
 
@@ -183,5 +186,46 @@ describe("temporary account status messages", () => {
 		expect(ctx.logger.log).toHaveBeenCalledWith(
 			expect.stringContaining("Claim URL: https://claim.example")
 		);
+	});
+});
+
+describe("consumer auth guidance", () => {
+	runInTempDir();
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("defaults to cf's temporary-account flag in auth guidance", async ({
+		expect,
+	}) => {
+		flow.isTemporaryAllowed.mockReturnValue(true);
+		flow.getAPIToken.mockReturnValue({ apiToken: "existing-token" });
+		const auth = createCloudflareAuth(
+			{ ...CF_CLI, temporaryAccountFlag: undefined },
+			createTestContext()
+		);
+
+		await expect(auth.requireAuth(COMPLIANCE_CONFIG)).rejects.toThrow(
+			"Either remove `--temporary-account` to use your existing account"
+		);
+	});
+
+	it("preserves the authentication failure reason on account lookup", async ({
+		expect,
+	}) => {
+		flow.isTemporaryAllowed.mockReturnValue(false);
+		flow.loginOrRefreshIfRequired.mockResolvedValue({
+			loggedIn: false,
+			reason: "no-credentials-non-interactive",
+		});
+		const auth = createCloudflareAuth(CF_CLI, createTestContext());
+
+		await expect(
+			auth.fetchAllAccounts(COMPLIANCE_CONFIG)
+		).rejects.toMatchObject({
+			reason: "no-credentials-non-interactive",
+			telemetryMessage: "cfetch auth login required",
+		});
 	});
 });

@@ -97,6 +97,21 @@ test("serves files from assets directory", async ({ expect }) => {
 	expect(await res.text()).toBe("hello from asset");
 });
 
+test("serves nested assets with encoded path names", async ({ expect }) => {
+	const tmp = await useTmp();
+	const directory = path.join(tmp, "nested");
+	await fs.mkdir(directory);
+	await fs.writeFile(path.join(directory, "[fünky].txt"), "nested asset");
+	const mf = new Miniflare(makeOptions(tmp));
+	useDispose(mf);
+
+	const response = await mf.dispatchFetch(
+		"http://example.com/nested/%5Bf%C3%BCnky%5D.txt"
+	);
+	expect(response.status).toBe(200);
+	expect(await response.text()).toBe("nested asset");
+});
+
 test("serves files from assets directory relative to rootPath", async ({
 	expect,
 }) => {
