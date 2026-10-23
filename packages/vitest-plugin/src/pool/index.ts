@@ -785,6 +785,19 @@ async function buildProjectMiniflareOptions(
 	return miniflareOptions;
 }
 
+// Binding types a Worker can only have one of. Copied from
+// `SINGLETON_BINDING_TYPES` in `packages/config/src/schema.ts`; keep the two in sync.
+const SINGLETON_BINDING_TYPES = new Set([
+	"ai",
+	"assets",
+	"browser",
+	"analytics",
+	"images",
+	"media",
+	"stream",
+	"version-metadata",
+]);
+
 /**
  * Applies a `cloudflare.config.ts` Worker to the runner Worker, in Miniflare's
  * native shape. Options set by the pool or by the user's `miniflare` options
@@ -816,6 +829,13 @@ function applyCloudflareConfig(
 		...config
 	} = worker;
 	const runnerAssets = runner.config.assets;
+	// A `miniflare` binding of a type a Worker can only have one of replaces the
+	// config's, even under a different name
+	const runnerSingletonTypes = new Set(
+		Object.values(runner.config.env ?? {}).flatMap((binding) =>
+			SINGLETON_BINDING_TYPES.has(binding.type) ? [binding.type] : []
+		)
+	);
 	// `miniflare` queue consumers replace the config's for the same queue, as
 	// they do for Wrangler configs
 	const runnerQueueConsumers = new Set(
@@ -827,6 +847,9 @@ function applyCloudflareConfig(
 	const runnerEnv: NonNullable<WorkerOptions["config"]["env"]> = {};
 	for (const [name, binding] of Object.entries(env)) {
 		if (binding.type === "assets" && runnerAssets === undefined) {
+			continue;
+		}
+		if (runnerSingletonTypes.has(binding.type)) {
 			continue;
 		}
 		if (binding.type === "worker" && binding.worker === worker.name) {

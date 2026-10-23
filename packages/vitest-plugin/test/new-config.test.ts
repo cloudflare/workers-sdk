@@ -191,6 +191,8 @@ test("merges `miniflare` queue consumers and assets with the config's", async ({
 					"tuned-queue": { maxBatchSize: 1 },
 				},
 				assets: { directory: "./public" },
+				// Replaces the config's \`VERSION\`, as a Worker can only have one
+				versionMetadata: "MF_VERSION",
 			},
 		}),
 		"cloudflare.config.ts": dedent`
@@ -204,6 +206,7 @@ test("merges `miniflare` queue consumers and assets with the config's", async ({
 						TUNED_QUEUE: { type: "queue", name: "tuned-queue" },
 						RESULTS: { type: "kv" },
 						ASSETS: { type: "assets" },
+						VERSION: { type: "version-metadata" },
 					},
 					triggers: [
 						{ type: "queue", name: "my-queue", maxBatchSize: 1 },
@@ -255,13 +258,18 @@ test("merges `miniflare` queue consumers and assets with the config's", async ({
 				expect(response.status).toBe(404);
 				expect(await response.text()).toBe("not found page");
 			});
+
+			it("lets a \`miniflare\` binding replace a single-use config binding", ({ expect }) => {
+				expect(env.MF_VERSION).toBeDefined();
+				expect(env.VERSION).toBeUndefined();
+			});
 		`,
 	});
 
 	const result = await vitestRun();
 
 	await expect(result.exitCode).resolves.toBe(0);
-	expect(result.stdout).toMatch("4 passed");
+	expect(result.stdout).toMatch("5 passed");
 });
 
 test("resolves a custom config path and its entrypoint", async ({

@@ -72,7 +72,9 @@ export default defineConfig(async () => {
 			...commonOptions,
 			entry: path.join(pkgRoot, "src", "pool", "index.ts"),
 			outDir: path.join(pkgRoot, "dist", "pool"),
-			dts: true,
+			// Keeps internal pool state, typed with devDependencies, out of the
+			// published types
+			dts: { compilerOptions: { stripInternal: true } },
 			define: {
 				VITEST_POOL_WORKERS_DEFINE_BUILTIN_MODULES:
 					JSON.stringify(builtinModules),

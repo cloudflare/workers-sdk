@@ -53,7 +53,8 @@ const WorkersPoolOptionsSchema = z.object({
 	main: z.string().optional(),
 	/**
 	 * Enables remote bindings to access remote resources configured
-	 * with `remote: true` in the wrangler configuration file.
+	 * with `remote: true` in the wrangler configuration file, or
+	 * `dev: { remote: true }` in `cloudflare.config.ts`.
 	 */
 	remoteBindings: z.boolean().default(true),
 	/**
@@ -149,6 +150,8 @@ export type WorkersPoolOptionsWithDefines = WorkersPoolOptions & {
 	/**
 	 * The `cloudflare.config.ts` loaded for `config`. Applied to the
 	 * runner Worker in Miniflare's native shape rather than through Wrangler.
+	 *
+	 * @internal
 	 */
 	loadedCloudflareConfig?: LoadedNewConfig;
 	/** Remote proxy session for `loadedCloudflareConfig`'s remote bindings. */
@@ -307,7 +310,7 @@ export const remoteProxySessionsDataMap = new Map<
 /**
  * Disposes every remote proxy session and clears the map.
  *
- * Sessions are shared across pool workers by Wrangler config path and
+ * Sessions are shared across pool workers by config path and
  * consecutive workers overlap, so this is only safe to call once the last
  * pool worker has stopped — calling it earlier would dispose sessions that
  * later workers still depend on.

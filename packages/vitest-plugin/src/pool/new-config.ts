@@ -28,7 +28,9 @@ export interface LoadedNewConfig {
  * `WorkerOptions.config` accepts, without converting it to a Wrangler config.
  *
  * Mirrors `@cloudflare/vite-plugin`: load and parse via `@cloudflare/config`,
- * then resolve secrets from `.env`/`.dev.vars` files in Vite's `envDir`.
+ * then resolve secrets from `.env`/`.dev.vars` files in Vite's `envDir`. Unlike
+ * the Vite plugin, it doesn't copy `CLOUDFLARE_*` tool settings into
+ * `process.env`, because Vitest runs every project in one process.
  *
  * @param configPath Absolute path to the `cloudflare.config.ts` file.
  * @param mode The Vite mode, passed to config functions as `ctx.mode` and used
