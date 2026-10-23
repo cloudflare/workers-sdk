@@ -16,7 +16,7 @@ Vite plugin for Cloudflare Workers development. Exports `cloudflare()` plugin fa
 
 ## BUILD
 
-- Only package using `tsdown` as build tool
+- Uses `tsdown` for JavaScript builds and declaration bundling; tsrs emits declarations using `tsconfig.declarations.json`
 - Outputs ESM (`.mjs`) to `dist/index.mjs`
 - `src/cf-vite.ts` is a second top-level tsdown entry, bundled to `dist/cf-vite.mjs` (no dts)
 - Also bundles 4 internal worker scripts from `src/workers/*/index.ts` as separate neutral-platform outputs to `dist/workers/`

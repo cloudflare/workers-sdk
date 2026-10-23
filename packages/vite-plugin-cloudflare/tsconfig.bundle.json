@@ -1,0 +1,13 @@
+{
+	"extends": "./tsconfig.declarations.json",
+	"compilerOptions": {
+		"paths": {
+			"@cloudflare/workers-shared": [
+				"./emitted-types/packages/workers-shared/index.d.ts"
+			],
+			"@cloudflare/workers-shared/*": [
+				"./emitted-types/packages/workers-shared/*.d.ts"
+			]
+		}
+	}
+}
