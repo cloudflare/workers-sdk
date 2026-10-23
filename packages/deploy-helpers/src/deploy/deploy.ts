@@ -75,7 +75,7 @@ import {
 	validateWorkerProps,
 } from "./helpers/validate-worker-props";
 import {
-	createDeployment,
+	createDeploymentWithRetry,
 	patchNonVersionedScriptSettings,
 } from "./helpers/versions-api";
 import { addWorkersSitesBindings } from "./helpers/workers-sites-bindings";
@@ -556,13 +556,13 @@ async function deployWorker(
 					"code_update_strategy" in unsafeMetadata
 						? unsafeMetadata.code_update_strategy
 						: props.durableObjectsCodeUpdateStrategy;
-				await createDeployment(
+				await createDeploymentWithRetry(
 					config,
 					accountId,
 					scriptName,
 					versionMap,
 					props.message,
-					undefined,
+					latestDeployment?.id,
 					codeUpdateStrategy
 				);
 
