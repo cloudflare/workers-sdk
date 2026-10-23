@@ -37,7 +37,6 @@ import { createLoopbackHandler } from "./loopback";
 import { handleModuleFallbackRequest } from "./module-fallback";
 import type {
 	SourcelessWorkerOptions,
-	NativeMiniflareOptions,
 	WorkersPoolOptionsWithDefines,
 } from "./config";
 import type { LoadedNewConfig } from "./new-config";
@@ -178,11 +177,7 @@ export function getDurableObjectDesignators(
 ): Map<string /* bound name */, DurableObjectDesignator> {
 	const result = new Map<string, DurableObjectDesignator>();
 	const cloudflareConfig = options.loadedCloudflareConfig;
-	const overrides = options.nativeMiniflare?.config;
-	for (const [key, binding] of Object.entries({
-		...cloudflareConfig?.env,
-		...overrides?.env,
-	})) {
+	for (const [key, binding] of Object.entries(cloudflareConfig?.env ?? {})) {
 		if (binding.type === "durable-object") {
 			result.set(key, {
 				className: binding.exportName,
@@ -197,10 +192,9 @@ export function getDurableObjectDesignators(
 	// `exports` can declare Durable Objects that no binding points to. Register
 	// them by class name, as Wrangler configs do for unbound classes, so their
 	// stubs from `exports` work with the test helpers.
-	for (const [name, exported] of Object.entries({
-		...cloudflareConfig?.worker.exports,
-		...overrides?.exports,
-	})) {
+	for (const [name, exported] of Object.entries(
+		cloudflareConfig?.worker.exports ?? {}
+	)) {
 		if (
 			exported.type === "durable-object" &&
 			"storage" in exported &&
@@ -506,10 +500,9 @@ async function buildProjectWorkerOptions(
 	// `cloudflare.config.ts` declares its Durable Object and Workflow classes in
 	// `exports`. They're applied to the runner after conversion, but need
 	// wrappers like any other class defined in the runner.
-	for (const [name, exported] of Object.entries({
-		...customOptions.loadedCloudflareConfig?.worker.exports,
-		...customOptions.nativeMiniflare?.config?.exports,
-	})) {
+	for (const [name, exported] of Object.entries(
+		customOptions.loadedCloudflareConfig?.worker.exports ?? {}
+	)) {
 		if (exported.type === "durable-object" && "storage" in exported) {
 			durableObjectClassNames.add(name);
 		} else if (exported.type === "workflow") {
@@ -782,69 +775,44 @@ async function buildProjectMiniflareOptions(
 
 	const miniflareOptions = convertV4MiniflareOptions(options);
 	if (customOptions.loadedCloudflareConfig !== undefined) {
-		const nativeWorkers = customOptions.nativeMiniflare?.workers ?? [];
 		applyCloudflareConfig(
 			miniflareOptions.workers[0],
 			customOptions.loadedCloudflareConfig,
-			customOptions.nativeMiniflare,
-			customOptions.remoteProxyConnectionString,
-			nativeWorkers.map((worker) => worker.config.name)
+			customOptions.remoteProxyConnectionString
 		);
-		miniflareOptions.workers.push(...nativeWorkers);
 	}
 	return miniflareOptions;
 }
 
 /**
- * Applies a `cloudflare.config.ts` Worker and the user's native `miniflare`
- * options to the runner Worker, in Miniflare's native shape. The pool's own
- * options win, then `miniflare`'s, then the config's. `env` and `exports` are
- * merged by name, and queue triggers in `miniflare` replace the config's for
- * the same queue. Self-references are pointed at the (renamed) runner. The
- * config's tail consumers other than its own Worker or an auxiliary Worker are
- * dropped with a warning. Assets are only served when `miniflare.config.assets`
- * provides a directory.
+ * Applies a `cloudflare.config.ts` Worker to the runner Worker, in Miniflare's
+ * native shape. The pool's own options take precedence, and `env` and
+ * `exports` are merged by name. Self-references are pointed at the (renamed)
+ * runner. Tail consumers other than the config's own Worker are dropped with a
+ * warning, and so is the assets binding, as there's no assets directory.
  *
  * @param runner The runner Worker, as converted from the pool's V4 options.
  * @param cloudflareConfig The loaded `cloudflare.config.ts`.
- * @param overrides The user's `miniflare` options, in Miniflare's native shape.
  * @param remoteProxyConnectionString The config's remote proxy session, if any.
- * @param auxiliaryWorkerNames Names of the auxiliary Workers.
  */
 function applyCloudflareConfig(
 	runner: WorkerOptions,
 	{ worker, env }: LoadedNewConfig,
-	overrides: NativeMiniflareOptions | undefined,
-	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
-	auxiliaryWorkerNames: (string | undefined)[]
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined
 ): void {
 	const runnerName = runner.config.name;
 	const {
-		assets: configAssets,
+		assets: _assets,
 		entrypoint: _entrypoint,
 		env: _env,
 		exports: configExports,
 		tailConsumers,
-		triggers,
 		...config
 	} = worker;
-	const {
-		assets: overrideAssets,
-		env: overrideEnv,
-		exports: overrideExports,
-		tailConsumers: overrideTailConsumers,
-		triggers: overrideTriggers,
-		...overrideConfig
-	} = overrides?.config ?? {};
-	const overrideQueueConsumers = new Set(
-		(overrideTriggers ?? []).flatMap((trigger) =>
-			trigger.type === "queue" ? [trigger.name] : []
-		)
-	);
 
 	const runnerEnv: NonNullable<WorkerOptions["config"]["env"]> = {};
-	for (const [name, binding] of Object.entries({ ...env, ...overrideEnv })) {
-		if (binding.type === "assets" && overrideAssets === undefined) {
+	for (const [name, binding] of Object.entries(env)) {
+		if (binding.type === "assets") {
 			continue;
 		}
 		if (binding.type === "worker" && binding.worker === worker.name) {
@@ -872,9 +840,6 @@ function applyCloudflareConfig(
 		if (tail.worker === worker.name) {
 			return [{ ...tail, worker: runnerName }];
 		}
-		if (auxiliaryWorkerNames.includes(tail.worker)) {
-			return [tail];
-		}
 		log.warn(
 			`Tail consumer "${tail.worker}" was not found in your config. Make sure you add it if you'd like to simulate receiving tail events locally.`
 		);
@@ -883,53 +848,19 @@ function applyCloudflareConfig(
 
 	runner.config = {
 		...config,
-		...overrideConfig,
 		...runner.config,
 		env: { ...runnerEnv, ...runner.config.env },
-		exports: { ...runnerExports, ...overrideExports, ...runner.config.exports },
-		triggers: [
-			...(triggers ?? []).filter(
-				(trigger) =>
-					trigger.type !== "queue" || !overrideQueueConsumers.has(trigger.name)
-			),
-			...(overrideTriggers ?? []),
-			...(runner.config.triggers ?? []),
-		],
+		exports: { ...runnerExports, ...runner.config.exports },
 		tailConsumers: [
 			...runnerTailConsumers,
-			...(overrideTailConsumers ?? []),
 			...(runner.config.tailConsumers ?? []),
 		],
 	};
-	if (overrideAssets !== undefined) {
-		runner.config.assets = { ...configAssets, ...overrideAssets };
-	}
-	// A Worker routes all its remote bindings through one proxy
-	const overrideRemoteProxyConnectionString =
-		overrides?.dev?.remoteProxyConnectionString;
-	if (
-		overrideRemoteProxyConnectionString !== undefined &&
-		remoteProxyConnectionString !== undefined &&
-		String(overrideRemoteProxyConnectionString) !==
-			String(remoteProxyConnectionString)
-	) {
-		throw new TypeError(
-			"`miniflare.dev.remoteProxyConnectionString` and `cloudflare.config.ts` use different remote proxy sessions, but a Worker can only use one. Declare the remote bindings in `cloudflare.config.ts` instead."
-		);
-	}
 	runner.dev = {
+		...runner.dev,
 		zone: getWorkerZone(worker),
 		remoteProxyConnectionString,
-		...overrides?.dev,
-		// Converting leaves the pool's unset options as `undefined`
-		...withoutUndefined(runner.dev ?? {}),
 	};
-}
-
-function withoutUndefined<T extends object>(value: T): Partial<T> {
-	return Object.fromEntries(
-		Object.entries(value).filter(([, entry]) => entry !== undefined)
-	) as Partial<T>;
 }
 
 // Copied from `@cloudflare/vite-plugin` (`src/miniflare-options.ts`). Keep the

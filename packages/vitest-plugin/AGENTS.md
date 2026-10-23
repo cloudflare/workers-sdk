@@ -39,9 +39,7 @@ file:
   (`@cloudflare/config`'s `loadAndParseConfig()`), never through Wrangler. It is already
   in the shape of Miniflare's native `WorkerOptions.config`, so `applyCloudflareConfig()`
   in `src/pool/index.ts` applies it to the runner after the pool's V4 options are
-  converted. With `config`, the user's `miniflare` options must be Miniflare's native
-  `{ config, dev, workers }` (V4 keys are rejected), and `applyCloudflareConfig()` merges
-  them over the cf config; the pool still builds its own runner options in V4.
+  converted. `miniflare` options can't be combined with `config`.
   Remote bindings use cf credentials (`src/pool/auth.ts`).
   `src/pool/auth.ts`, `src/pool/local-env.ts` and `src/pool/remote-bindings.ts` mirror
   `@cloudflare/vite-plugin`'s and must be kept in sync. `ctx.mode` comes from

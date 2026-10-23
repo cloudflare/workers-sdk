@@ -173,24 +173,13 @@ test("binds the config's own Durable Objects, Workflows, Worker and secrets", as
 	expect(result.stdout).toMatch("6 passed");
 });
 
-test("merges native `miniflare` options with the config's", async ({
+test("applies the config's queue consumers", async ({
 	expect,
 	seed,
 	vitestRun,
 }) => {
 	await seed({
-		"vitest.config.mts": vitestConfig({
-			config: true,
-			miniflare: {
-				config: {
-					compatibilityFlags: ["nodejs_compat"],
-					env: { MESSAGE: { type: "text", value: "from miniflare" } },
-					// Replaces the config's consumer for `tuned-queue`
-					triggers: [{ type: "queue", name: "tuned-queue", maxBatchSize: 1 }],
-					assets: { directory: "./public" },
-				},
-			},
-		}),
+		"vitest.config.mts": vitestConfig({ config: true }),
 		"cloudflare.config.ts": dedent`
 			export default {
 				worker: {
@@ -199,26 +188,14 @@ test("merges native `miniflare` options with the config's", async ({
 					entrypoint: "./index.ts",
 					env: {
 						QUEUE: { type: "queue", name: "my-queue" },
-						TUNED_QUEUE: { type: "queue", name: "tuned-queue" },
 						RESULTS: { type: "kv" },
-						ASSETS: { type: "assets" },
-						MESSAGE: { type: "text", value: "from config" },
 					},
-					triggers: [
-						{ type: "queue", name: "my-queue", maxBatchSize: 1 },
-						{ type: "queue", name: "tuned-queue", maxBatchSize: 100, maxBatchTimeout: 60 },
-					],
-					assets: { notFoundHandling: "404-page" },
+					triggers: [{ type: "queue", name: "my-queue", maxBatchSize: 1 }],
 				},
 			};
 		`,
-		"public/hello.txt": "hello from assets",
-		"public/404.html": "not found page",
 		"index.ts": dedent`
 			export default {
-				async fetch() {
-					return new Response("ok");
-				},
 				async queue(batch, env) {
 					for (const message of batch.messages) {
 						await env.RESULTS.put(batch.queue, String(message.body));
@@ -236,35 +213,13 @@ test("merges native `miniflare` options with the config's", async ({
 					.poll(() => env.RESULTS.get("my-queue"), { timeout: 10_000 })
 					.toBe("hello");
 			});
-
-			it("applies \`miniflare\` settings for the same queue", async ({ expect }) => {
-				await env.TUNED_QUEUE.send("tuned");
-				await expect
-					.poll(() => env.RESULTS.get("tuned-queue"), { timeout: 10_000 })
-					.toBe("tuned");
-			});
-
-			it("replaces the config's bindings by name", ({ expect }) => {
-				expect(env.MESSAGE).toBe("from miniflare");
-			});
-
-			it("serves \`miniflare\` assets through the config's binding", async ({ expect }) => {
-				const response = await env.ASSETS.fetch("http://example.com/hello.txt");
-				expect(await response.text()).toBe("hello from assets");
-			});
-
-			it("applies the config's assets settings", async ({ expect }) => {
-				const response = await env.ASSETS.fetch("http://example.com/missing");
-				expect(response.status).toBe(404);
-				expect(await response.text()).toBe("not found page");
-			});
 		`,
 	});
 
 	const result = await vitestRun();
 
 	await expect(result.exitCode).resolves.toBe(0);
-	expect(result.stdout).toMatch("5 passed");
+	expect(result.stdout).toMatch("1 passed");
 });
 
 test("resolves a custom config path and its entrypoint", async ({
@@ -394,7 +349,7 @@ describe("validation", () => {
 		);
 	});
 
-	test("rejects V4 `miniflare` options with `config`", async ({
+	test("rejects `miniflare` combined with `config`", async ({
 		expect,
 		seed,
 		vitestRun,
@@ -411,7 +366,7 @@ describe("validation", () => {
 
 		expect(await result.exitCode).toBe(1);
 		expect(result.stderr).toMatch(
-			"`miniflare.kvNamespaces` is a Miniflare V4 option. With `config`, `miniflare` takes Miniflare's native Worker options: declare bindings in `miniflare.config.env`"
+			"`miniflare` and `config` cannot be used together. Configure the Worker in `cloudflare.config.ts` instead."
 		);
 	});
 

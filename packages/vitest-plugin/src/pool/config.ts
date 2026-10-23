@@ -28,7 +28,6 @@ import type {
 	LegacyWorkerOptions,
 	RemoteProxyConnectionString,
 	V4ModuleRule,
-	WorkerOptions,
 } from "miniflare";
 import type { TestProject } from "vitest/node";
 import type { ZodError } from "zod";
@@ -119,41 +118,14 @@ export type SourcelessWorkerOptions = Omit<
 	modulesRules?: V4ModuleRule[];
 };
 
-type V4MiniflarePoolOptions = SourcelessWorkerOptions & {
-	workers?: CompatibleWorkerOptions[];
-};
-
-/** `miniflare` options for `config`, in Miniflare's native Worker shape. */
-export interface NativeMiniflareOptions {
-	/** Runner Worker configuration, merged over `cloudflare.config.ts`. */
-	config?: Partial<WorkerOptions["config"]>;
-	/** Runner Worker development settings. */
-	dev?: WorkerOptions["dev"];
-	/** Auxiliary Workers. */
-	workers?: WorkerOptions[];
-}
-
 export type WorkersPoolOptions = z.input<typeof WorkersPoolOptionsSchema> & {
-	/**
-	 * Miniflare options for the runner Worker and auxiliary Workers. With
-	 * `config`, these use Miniflare's native Worker shape.
-	 */
-	miniflare?: V4MiniflarePoolOptions | NativeMiniflareOptions;
+	/** Miniflare options for the runner Worker. Can't be combined with `config`. */
+	miniflare?: SourcelessWorkerOptions & {
+		workers?: CompatibleWorkerOptions[];
+	};
 };
 
-export type WorkersPoolOptionsWithDefines = Omit<
-	WorkersPoolOptions,
-	"miniflare"
-> & {
-	/** The pool's own options for the runner, in Miniflare's V4 shape. */
-	miniflare?: V4MiniflarePoolOptions &
-		z.input<typeof WorkersPoolOptionsSchema>["miniflare"];
-	/**
-	 * The user's `miniflare` options for `config`.
-	 *
-	 * @internal
-	 */
-	nativeMiniflare?: NativeMiniflareOptions;
+export type WorkersPoolOptionsWithDefines = WorkersPoolOptions & {
 	defines?: Record<string, string>;
 	moduleRules?: V4ModuleRule[];
 	/**
@@ -351,57 +323,6 @@ export async function disposeAllRemoteProxySessions(): Promise<void> {
 }
 
 /**
- * Validate `miniflare` options for `config`, which take Miniflare's native
- * Worker shape rather than its V4 options.
- *
- * @param rootPath The project root, which auxiliary Workers resolve paths from.
- * @param value The user's `miniflare` options.
- * @returns The native options, or `undefined` if none were set.
- */
-function parseNativeMiniflareOptions(
-	rootPath: string,
-	value: Record<string, unknown> | undefined
-): NativeMiniflareOptions | undefined {
-	if (value === undefined) {
-		return undefined;
-	}
-	for (const key of Object.keys(value)) {
-		if (key !== "config" && key !== "dev" && key !== "workers") {
-			throw new TypeError(
-				`\`miniflare.${key}\` is a Miniflare V4 option. With \`config\`, \`miniflare\` takes Miniflare's native Worker options: ${getNativeOptionHint(key)}.`
-			);
-		}
-	}
-	const { config, dev, workers } = value as NativeMiniflareOptions;
-	return {
-		config,
-		dev,
-		workers: workers?.map((worker) => ({
-			...worker,
-			dev: { rootPath, ...worker.dev },
-		})),
-	};
-}
-
-function getNativeOptionHint(key: string): string {
-	switch (key) {
-		case "compatibilityDate":
-		case "compatibilityFlags":
-		case "assets":
-			return `use \`miniflare.config.${key}\``;
-		case "queueConsumers":
-			return "use queue triggers in `miniflare.config.triggers`";
-		case "outboundService":
-		case "zone":
-			return `use \`miniflare.dev.${key}\``;
-		case "modulesRules":
-			return "custom module rules aren't supported, so use Vite import suffixes such as `?raw`";
-		default:
-			return "declare bindings in `miniflare.config.env`, other Worker settings in `miniflare.config`, and development settings in `miniflare.dev`";
-	}
-}
-
-/**
  * Normalise the `config` option into its resolved form.
  *
  * @param option The user-provided option value.
@@ -445,14 +366,15 @@ async function parseCustomPoolOptions(
 		value
 	) as WorkersPoolOptionsWithDefines;
 	const newConfig = normalizeNewConfigOption(options.config);
-	// With `config`, `miniflare` is merged with `cloudflare.config.ts` in
-	// Miniflare's native shape, and the pool builds its own runner options
-	if (newConfig !== undefined) {
-		options.nativeMiniflare = parseNativeMiniflareOptions(
-			path.resolve(rootPath),
-			options.miniflare
+	if (newConfig !== undefined && options.wrangler !== undefined) {
+		throw new TypeError(
+			"`wrangler` and `config` cannot be used together. Use `wrangler` to load a Wrangler configuration file, or `config` to load `cloudflare.config.ts`."
 		);
-		options.miniflare = {};
+	}
+	if (newConfig !== undefined && options.miniflare !== undefined) {
+		throw new TypeError(
+			"`miniflare` and `config` cannot be used together. Configure the Worker in `cloudflare.config.ts` instead."
+		);
 	}
 	options.miniflare ??= {};
 	const miniflareModuleRules = options.miniflare.modulesRules;
@@ -503,12 +425,6 @@ async function parseCustomPoolOptions(
 	delete options.miniflare.modulesRules;
 
 	// Try to parse the project's configuration file, whichever format it uses
-	if (newConfig !== undefined && options.wrangler !== undefined) {
-		throw new TypeError(
-			"`wrangler` and `config` cannot be used together. Use `wrangler` to load a Wrangler configuration file, or `config` to load `cloudflare.config.ts`."
-		);
-	}
-
 	let configPath: string | undefined;
 	let config: Config | undefined;
 	// Wrangler environments have no `cloudflare.config.ts` equivalent yet
@@ -575,25 +491,12 @@ async function parseCustomPoolOptions(
 			);
 		}
 
-		// The runner's compatibility checks run on these, so apply them now.
-		// `miniflare` options take precedence, as they do for Wrangler configs.
-		const overrides = options.nativeMiniflare?.config;
-		options.miniflare.compatibilityDate ??=
-			overrides?.compatibilityDate ?? worker.compatibilityDate;
-		options.miniflare.compatibilityFlags = Array.from(
-			new Set([
-				...(worker.compatibilityFlags ?? []),
-				...(overrides?.compatibilityFlags ?? []),
-				...(options.miniflare.compatibilityFlags ?? []),
-			])
-		);
-		if (overrides?.assets !== undefined) {
-			overrides.assets.hasUserWorker ??= Boolean(options.main);
-		}
-		options.moduleRules = [
-			...DEFAULT_MODULE_RULES,
-			...(options.moduleRules ?? []),
+		// The runner's compatibility checks run on these, so apply them now
+		options.miniflare.compatibilityDate = worker.compatibilityDate;
+		options.miniflare.compatibilityFlags = [
+			...(worker.compatibilityFlags ?? []),
 		];
+		options.moduleRules = DEFAULT_MODULE_RULES;
 	} else if (options.wrangler?.configPath !== undefined) {
 		configPath = path.resolve(rootPath, options.wrangler.configPath);
 		// Make sure future accesses to `configPath` see a fully-resolved path
