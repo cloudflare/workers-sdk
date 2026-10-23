@@ -1,3 +1,4 @@
+import childProcess from "node:child_process";
 import crypto from "node:crypto";
 import http from "node:http";
 import type { Log } from "../shared";
@@ -8,6 +9,9 @@ const SESSION_LABEL = "dev.workerd.session";
 
 /** Delay before the second removal pass; see `removeSessionResources()`. */
 const SECOND_PASS_DELAY_MS = 250;
+
+/** Time after which a detached removal process gives up. */
+const DETACHED_REMOVAL_TIMEOUT_MS = 30_000;
 
 /**
  * The Docker resources workerd creates for one Container configuration.
@@ -107,8 +111,10 @@ export async function removeContainerSession(
 	const label = `${SESSION_LABEL}=${session.id}`;
 	try {
 		const removed = await removeSessionResources(
+			http,
 			getNodeSocketPath(session.socketPath),
-			label
+			label,
+			SECOND_PASS_DELAY_MS
 		);
 		log.debug(
 			`Removed Container session ${session.id}: ${removed.join(", ") || "nothing to remove"}`
@@ -121,6 +127,44 @@ export async function removeContainerSession(
 				`  docker volume rm $(docker volume ls --quiet --filter label=${label})`
 		);
 	}
+}
+
+/**
+ * Starts removing a session's Docker resources in a detached Node.js process,
+ * for exit hooks, where the event loop never runs again. The process outlives
+ * Miniflare's, and it is outside Miniflare's process group: exit hooks often
+ * run because the terminal signalled that group, and the terminal may signal
+ * it again, for example with `SIGHUP` when the shell exits.
+ *
+ * @param session Session to remove.
+ */
+export function removeContainerSessionDetached(
+	session: ContainerSession
+): void {
+	const args = JSON.stringify([
+		getNodeSocketPath(session.socketPath),
+		`${SESSION_LABEL}=${session.id}`,
+		SECOND_PASS_DELAY_MS,
+	]);
+	const script = [
+		`setTimeout(() => process.exit(1), ${DETACHED_REMOVAL_TIMEOUT_MS}).unref();`,
+		`(${removeSessionResources.toString()})(require("node:http"), ...JSON.parse(process.argv[1]))`,
+		`.catch(() => process.exit(1));`,
+	].join("\n");
+	childProcess
+		.spawn(process.execPath, ["-e", script, args], {
+			// Inherited debugger flags such as `--inspect-brk` would stop the
+			// process before it removes anything.
+			env: {
+				...process.env,
+				NODE_OPTIONS: undefined,
+				ELECTRON_RUN_AS_NODE: "1",
+			},
+			detached: true,
+			stdio: "ignore",
+			windowsHide: true,
+		})
+		.unref();
 }
 
 /**
@@ -140,15 +184,22 @@ function getNodeSocketPath(socketPath: string): string {
  * in use, and Podman also refuses to remove a container whose network
  * namespace another container joins. A create that Docker accepted before
  * workerd was killed can complete after the first listing, so a second pass
- * runs after `SECOND_PASS_DELAY_MS`.
+ * runs after `secondPassDelayMs`.
  *
+ * `removeContainerSessionDetached()` runs this function's source in another
+ * process, so it may use only its parameters and globals.
+ *
+ * @param httpModule `node:http`.
  * @param socketPath Docker Engine socket.
  * @param label Docker label filter selecting the session's resources.
+ * @param secondPassDelayMs Delay before the second pass.
  * @returns Names of the removed containers and volumes.
  */
 async function removeSessionResources(
+	httpModule: typeof http,
 	socketPath: string,
-	label: string
+	label: string,
+	secondPassDelayMs: number
 ): Promise<string[]> {
 	interface DockerContainer {
 		Id: string;
@@ -157,7 +208,7 @@ async function removeSessionResources(
 	}
 	function request(method: string, path: string): Promise<string> {
 		return new Promise((resolve, reject) => {
-			const req = http.request({ socketPath, method, path }, (res) => {
+			const req = httpModule.request({ socketPath, method, path }, (res) => {
 				let body = "";
 				res.setEncoding("utf8");
 				res.on("data", (chunk: string) => (body += chunk));
@@ -192,7 +243,7 @@ async function removeSessionResources(
 	const filters = encodeURIComponent(JSON.stringify({ label: [label] }));
 	for (const pass of [1, 2]) {
 		if (pass === 2) {
-			await new Promise((resolve) => setTimeout(resolve, SECOND_PASS_DELAY_MS));
+			await new Promise((resolve) => setTimeout(resolve, secondPassDelayMs));
 		}
 		const containers = JSON.parse(
 			await request("GET", `/containers/json?all=1&filters=${filters}`)

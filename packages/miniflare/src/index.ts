@@ -106,6 +106,7 @@ import {
 import {
 	assignContainerSession,
 	removeContainerSession,
+	removeContainerSessionDetached,
 } from "./runtime/container-session";
 import {
 	isFileNotFoundError,
@@ -988,6 +989,14 @@ export class Miniflare {
 		this.#runtime = new Runtime();
 		this.#removeExitHook = exitHook(() => {
 			void this.#runtime?.dispose();
+			for (const session of [
+				this.#containerSession,
+				...this.#endingContainerSessions.keys(),
+			]) {
+				if (session !== undefined) {
+					removeContainerSessionDetached(session);
+				}
+			}
 			// This exit hook is synchronous — the event loop will never run again
 			// after it returns, so any operation that schedules a microtask (like
 			// fs.promises.rm) will never even be executed, let alone completed.
@@ -2430,7 +2439,8 @@ export class Miniflare {
 
 	/**
 	 * Removes the Docker resources of an ended session once its last workerd
-	 * process has exited.
+	 * process has exited. Until removal settles, the exit hook removes them
+	 * instead.
 	 *
 	 * @param session Session to remove.
 	 * @param exited Settles when the session's last workerd process has exited.
@@ -3746,9 +3756,6 @@ export class Miniflare {
 			// Cleanup as much as possible even if `#init()` threw.
 			await this.#closeBrowserProcesses();
 
-			// Remove exit hook, we're cleaning up what they would've cleaned up now
-			this.#removeExitHook?.();
-
 			await this.#proxyClient?.dispose();
 		} catch (error) {
 			independentCleanupFailed = true;
@@ -3757,13 +3764,15 @@ export class Miniflare {
 
 		const runtimeCleanupOutcome = await runtimeDisposeOutcome;
 		// workerd has exited, so nothing creates resources for its session any
-		// more.
+		// more. The exit hook stays registered until they are removed.
 		const containerSession = this.#containerSession;
 		this.#containerSession = undefined;
 		if (containerSession !== undefined) {
 			void this.#endContainerSession(containerSession);
 		}
 		await Promise.all(this.#endingContainerSessions.values());
+		// Remove exit hook, we're cleaning up what they would've cleaned up now
+		this.#removeExitHook?.();
 		this.#devRegistry.unregisterWorkers();
 		// Close the undici Pool used for dispatching fetch requests to the
 		// runtime. This must happen after the runtime is disposed, so that

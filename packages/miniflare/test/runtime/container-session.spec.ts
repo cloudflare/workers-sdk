@@ -1,4 +1,6 @@
+import childProcess from "node:child_process";
 import crypto from "node:crypto";
+import { once } from "node:events";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
@@ -207,6 +209,28 @@ test("ends a Container session when its Container configuration changes", async 
 	const [first, , second] = docker.listedSessions;
 	expect(second).not.toBe(first);
 	expect(docker.listedSessions).toEqual([first, first, second, second]);
+});
+
+test("removes the Container session after the process exits without dispose()", async ({
+	expect,
+}) => {
+	const docker = await startDockerEngine();
+	const child = childProcess.spawn(
+		process.execPath,
+		[
+			"-e",
+			`const { Miniflare } = require(${JSON.stringify(require.resolve("miniflare"))});
+			new Miniflare(JSON.parse(process.argv[1])).ready.then(() => process.exit());`,
+			JSON.stringify(containerOptions(docker.socketPath, "app:1")),
+		],
+		{ stdio: "ignore" }
+	);
+	await once(child, "exit");
+
+	await vi.waitFor(() => expect(docker.listedSessions).toHaveLength(2), {
+		timeout: 10_000,
+	});
+	expect(docker.listedSessions[1]).toBe(docker.listedSessions[0]);
 });
 
 test("logs how to remove a session that it cannot remove", async ({
