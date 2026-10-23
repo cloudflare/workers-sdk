@@ -174,7 +174,8 @@ Each CLI is a thin **descriptor + entrypoint**:
 
 ## BUILD
 
-- tsup: two entry points — `src/index.ts` and `src/test-helpers/index.ts`
+- tsdown: core, Wrangler, cf, and test-helper entry points
+- tsrs emits declarations from `tsconfig.declarations.json`; tsdown bundles them from `emitted-types/`
 - ESM-only output to `dist/`
 - `@cloudflare/*`, `undici`, `msw`, and `vitest` are kept external
 

@@ -1,6 +1,7 @@
 {
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
+		"allowImportingTsExtensions": true,
 		"module": "ESNext",
 		"moduleResolution": "bundler",
 		"target": "ES2022",
