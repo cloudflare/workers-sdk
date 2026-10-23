@@ -1,9 +1,11 @@
 import {
 	DevelopmentOidcRequestPool,
+	DevelopmentOidcRequestTimeoutError,
 	DevelopmentOidcTokenCache,
 	snapshotDevelopmentOidcIdentity,
 	validateDevelopmentOidcAudience,
 } from "miniflare";
+import { DevelopmentOidcApiError } from "./development-oidc-errors";
 import type { CfAccount } from "@cloudflare/workers-utils";
 import type { DevelopmentOidcIdentity, DevelopmentOidcToken } from "miniflare";
 
@@ -63,6 +65,12 @@ export class DevelopmentOidcProvider {
 	#shutdown = new AbortController();
 	#state?: SessionState;
 	#authPromise?: Promise<OAuthAccount>;
+	#retryAfter?: {
+		accountId: string;
+		oauthToken: string;
+		deadline: number;
+		error: DevelopmentOidcApiError;
+	};
 	#callers = 0;
 
 	constructor(
@@ -125,6 +133,7 @@ export class DevelopmentOidcProvider {
 					(state.expiresAt * 1000 < Date.now() + 300000 ||
 						(state.monotonicExpiry ?? 0) < performance.now() + 300000))
 			) {
+				this.#checkRetryAfter(auth);
 				this.#invalidate();
 				const controller = new AbortController();
 				state = {
@@ -168,27 +177,52 @@ export class DevelopmentOidcProvider {
 				};
 				this.#state = state;
 			}
+			let established = false;
 			try {
 				const session = await state.session;
 				this.#checkCurrent(state);
+				established = true;
 				const audience = requestedAudience ?? session.defaultAudience;
 				const token = await this.#cache.getToken(
 					session.identity,
 					audience,
-					(signal) =>
-						this.#transport.issueToken(
+					(signal) => {
+						this.#checkRetryAfter(auth);
+						return this.#transport.issueToken(
 							auth,
 							session,
 							audience,
 							AbortSignal.any([signal, state.controller.signal])
-						)
+						);
+					}
 				);
 				// Invalidation can occur while awaiting even an already-cached token.
 				this.#checkCurrent(state);
 				return token;
 			} catch (error) {
 				if (this.#state === state) {
-					this.#invalidate();
+					const temporary =
+						error instanceof DevelopmentOidcRequestTimeoutError ||
+						(error instanceof DevelopmentOidcApiError &&
+							(error.kind === "unavailable" || error.kind === "rate_limited"));
+					// Failed creation must release its rejected promise. Only known
+					// temporary issuance failures can retain an established session.
+					if (!established || !temporary) {
+						this.#invalidate();
+					}
+					if (
+						temporary &&
+						error instanceof DevelopmentOidcApiError &&
+						error.retryAfterMs !== undefined &&
+						this.#retryAfter?.error !== error
+					) {
+						this.#retryAfter = {
+							accountId: auth.accountId,
+							oauthToken: auth.apiToken.apiToken,
+							deadline: performance.now() + error.retryAfterMs,
+							error,
+						};
+					}
 				}
 				throw error;
 			}
@@ -264,12 +298,24 @@ export class DevelopmentOidcProvider {
 	#invalidate(): void {
 		const state = this.#state;
 		this.#state = undefined;
+		this.#retryAfter = undefined;
 		this.#cache.clear();
 		state?.controller.abort(
 			new Error(
 				"Development OIDC credentials changed during issuance. Retry the getter."
 			)
 		);
+	}
+
+	#checkRetryAfter(auth: OAuthAccount): void {
+		const retry = this.#retryAfter;
+		if (
+			retry?.accountId === auth.accountId &&
+			retry.oauthToken === auth.apiToken.apiToken &&
+			performance.now() < retry.deadline
+		) {
+			throw retry.error;
+		}
 	}
 
 	#checkCurrent(state: SessionState): void {

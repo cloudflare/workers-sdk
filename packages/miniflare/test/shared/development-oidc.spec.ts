@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { DevelopmentOidcTokenCache } from "../../src/shared/development-oidc";
+import {
+	DevelopmentOidcRequestTimeoutError,
+	DevelopmentOidcTokenCache,
+} from "../../src/shared/development-oidc";
 import type {
 	DevelopmentOidcIdentity,
 	DevelopmentOidcToken,
@@ -323,7 +326,9 @@ describe("development OIDC resource and cancellation boundaries", () => {
 				fail = reject;
 			});
 		});
-		const rejected = expect(pending).rejects.toThrow("timed out");
+		const rejected = expect(pending).rejects.toBeInstanceOf(
+			DevelopmentOidcRequestTimeoutError
+		);
 		await vi.advanceTimersByTimeAsync(30_000);
 		await rejected;
 		expect(signal?.aborted).toBe(true);

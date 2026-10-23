@@ -3,6 +3,7 @@ import { TextDecoder } from "node:util";
 import { performApiFetchBase } from "@cloudflare/workers-utils";
 import { validateDevelopmentOidcAudience } from "miniflare";
 import { version } from "../package.json";
+import { DevelopmentOidcApiError } from "./development-oidc-errors";
 import type {
 	DevelopmentOidcSession,
 	DevelopmentOidcTransport,
@@ -14,8 +15,7 @@ import type {
 } from "@cloudflare/workers-utils";
 import type { Response } from "undici";
 
-/** Sanitized issuance errors that are safe to show in the host dev server. */
-export class DevelopmentOidcApiError extends Error {}
+export { DevelopmentOidcApiError } from "./development-oidc-errors";
 
 const PUBLIC_ID = /^[a-f0-9]{32}$/;
 const SESSION_ID =
@@ -54,18 +54,31 @@ export function validateDevelopmentOidcApiAudience(audience: string): void {
 	}
 }
 
+function retryAfterMs(response: Response): number | undefined {
+	const value = response.headers.get("Retry-After")?.trim();
+	if (!value) {
+		return;
+	}
+	const delay = /^\d+$/.test(value)
+		? Number(value) * 1000
+		: Date.parse(value) - Date.now();
+	return Number.isSafeInteger(delay) && delay >= 0 ? delay : undefined;
+}
+
 async function readResult(response: Response): Promise<unknown> {
 	// Never read or surface API error bodies, which could reflect credentials or bearer tokens.
 	if (!response.ok) {
 		await response.body?.cancel().catch(() => {});
 		if (response.status === 401) {
 			throw new DevelopmentOidcApiError(
-				"Development OIDC login expired. Sign in again with cf auth login or wrangler login, then retry the getter."
+				"Development OIDC login expired. Sign in again with cf auth login or wrangler login, then retry the getter.",
+				"login_required"
 			);
 		}
 		if (response.status === 403) {
 			throw new DevelopmentOidcApiError(
-				"Development OIDC access denied. Check the selected account, existing Worker, OAuth grant, and Worker edit permission."
+				"Development OIDC access denied. Check the selected account, existing Worker, OAuth grant, and Worker edit permission.",
+				"access_denied"
 			);
 		}
 		if (response.status === 404) {
@@ -75,11 +88,23 @@ async function readResult(response: Response): Promise<unknown> {
 		}
 		if (response.status === 429) {
 			throw new DevelopmentOidcApiError(
-				"Development OIDC is rate limited. Retry the getter later."
+				"Development OIDC is rate limited. Retry the getter later.",
+				"rate_limited",
+				retryAfterMs(response)
+			);
+		}
+		if (response.status === 409) {
+			throw new DevelopmentOidcApiError(
+				"Development OIDC session needs renewal. Retry the getter to create a new session.",
+				"session_renewal"
 			);
 		}
 		throw new DevelopmentOidcApiError(
-			"Development OIDC issuance is unavailable. Check connectivity and service availability, then retry the getter."
+			"Development OIDC issuance is unavailable. Check connectivity and service availability, then retry the getter.",
+			response.status >= 500 && response.status <= 599
+				? "unavailable"
+				: "invalid",
+			retryAfterMs(response)
 		);
 	}
 	if (
@@ -254,8 +279,10 @@ export function createDevelopmentOidcApiTransport(
 				auth.apiToken
 			);
 		} catch {
+			signal.throwIfAborted();
 			throw new DevelopmentOidcApiError(
-				"Development OIDC could not reach Cloudflare. Check connectivity and retry the getter."
+				"Development OIDC could not reach Cloudflare. Check connectivity and retry the getter.",
+				"unavailable"
 			);
 		}
 		return readResult(response);
