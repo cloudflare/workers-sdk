@@ -161,7 +161,7 @@ describe("development OIDC token cache", () => {
 		const token = issued();
 		await expect(
 			cache.getToken(identity, audience, async () => {
-				vi.advanceTimersByTime(241_000);
+				vi.setSystemTime(Date.now() + 241_000);
 				return token;
 			})
 		).rejects.toThrow("invalid token or lifetime");
@@ -210,7 +210,7 @@ describe("development OIDC token cache", () => {
 		const fresh = vi.fn(async () => issued());
 		await cache.getToken(identity, audience, fresh);
 		fail?.(new Error("old request failed"));
-		await expect(pending).rejects.toThrow("old request failed");
+		await expect(pending).rejects.toThrow("session changed");
 		await cache.getToken(identity, audience, fresh);
 		expect(fresh).toHaveBeenCalledOnce();
 	});
@@ -255,5 +255,158 @@ describe("development OIDC token cache", () => {
 		await expect(
 			cache.getToken(identity, audience, async () => issued())
 		).rejects.toThrow("disposed");
+	});
+});
+
+describe("development OIDC resource and cancellation boundaries", () => {
+	it.for([" ", "x".repeat(2049), "é".repeat(1025), "\ud800"])(
+		"rejects malformed or oversized audiences (%#)",
+		async (value, { expect }) => {
+			const issue = vi.fn(async () => issued());
+			await expect(
+				new DevelopmentOidcTokenCache().getToken(identity, value, issue)
+			).rejects.toThrow("1–2048 UTF-8 bytes");
+			expect(issue).not.toHaveBeenCalled();
+		}
+	);
+
+	it("bounds identity and token bytes, rather than just characters", async ({
+		expect,
+	}) => {
+		const cache = new DevelopmentOidcTokenCache();
+		const issue = vi.fn(async () => issued("é".repeat(32_769)));
+		await expect(
+			cache.getToken({ ...identity, policy: "é".repeat(2049) }, audience, issue)
+		).rejects.toThrow("bounded fields");
+		expect(issue).not.toHaveBeenCalled();
+		await expect(cache.getToken(identity, audience, issue)).rejects.toThrow(
+			"invalid token or lifetime"
+		);
+	});
+
+	it("does not start issuance if disposed before the deferred callback", async ({
+		expect,
+	}) => {
+		const cache = new DevelopmentOidcTokenCache();
+		const issue = vi.fn(async () => issued());
+		const pending = cache.getToken(identity, audience, issue);
+		const rejected = expect(pending).rejects.toThrow("session changed");
+		cache.dispose();
+		await rejected;
+		expect(issue).not.toHaveBeenCalled();
+	});
+
+	it("rejects immediately on invalidation even when the issuer ignores abort", async ({
+		expect,
+	}) => {
+		const cache = new DevelopmentOidcTokenCache();
+		const pending = cache.getToken(
+			identity,
+			audience,
+			() => new Promise(() => {})
+		);
+		const rejected = expect(pending).rejects.toThrow("session changed");
+		await Promise.resolve();
+		cache.clear();
+		await rejected;
+	});
+
+	it("times out stalled issuance and still observes a late rejection", async ({
+		expect,
+	}) => {
+		const cache = new DevelopmentOidcTokenCache();
+		let fail: ((reason: Error) => void) | undefined;
+		let signal: AbortSignal | undefined;
+		const pending = cache.getToken(identity, audience, (value) => {
+			signal = value;
+			return new Promise((_resolve, reject) => {
+				fail = reject;
+			});
+		});
+		const rejected = expect(pending).rejects.toThrow("timed out");
+		await vi.advanceTimersByTimeAsync(30_000);
+		await rejected;
+		expect(signal?.aborted).toBe(true);
+		fail?.(new Error("late network error"));
+		await Promise.resolve();
+		expect(await cache.getToken(identity, audience, async () => issued())).toBe(
+			"development-token"
+		);
+	});
+
+	it("bounds coalesced waiters as well as distinct issuances", async ({
+		expect,
+	}) => {
+		const cache = new DevelopmentOidcTokenCache();
+		const issue = vi.fn(() => new Promise<DevelopmentOidcToken>(() => {}));
+		const requests = Array.from({ length: 128 }, () =>
+			cache.getToken(identity, audience, issue)
+		);
+		const settled = Promise.allSettled(requests);
+		await expect(cache.getToken(identity, audience, issue)).rejects.toThrow(
+			"Too many concurrent"
+		);
+		expect(issue).toHaveBeenCalledOnce();
+		cache.dispose();
+		expect((await settled).every((value) => value.status === "rejected")).toBe(
+			true
+		);
+	});
+
+	it("keeps physical issuance bounded across repeated cache clears", async ({
+		expect,
+	}) => {
+		const cache = new DevelopmentOidcTokenCache();
+		const completions: ((value: DevelopmentOidcToken) => void)[] = [];
+		const issue = vi.fn(
+			() =>
+				new Promise<DevelopmentOidcToken>((resolve) => {
+					completions.push(resolve);
+				})
+		);
+		for (let i = 0; i < 128; i++) {
+			const pending = cache.getToken(identity, audience, issue);
+			const rejected = expect(pending).rejects.toThrow("session changed");
+			await Promise.resolve();
+			cache.clear();
+			await rejected;
+		}
+		await expect(cache.getToken(identity, audience, issue)).rejects.toThrow(
+			"Too many concurrent"
+		);
+		expect(issue).toHaveBeenCalledTimes(128);
+		completions.shift()?.(issued());
+		await vi.advanceTimersByTimeAsync(0);
+		expect(
+			await cache.getToken(identity, audience, async () => issued("fresh"))
+		).toBe("fresh");
+		for (const complete of completions) {
+			complete(issued());
+		}
+	});
+
+	it("snapshots an issuance response once for every waiter", async ({
+		expect,
+	}) => {
+		const cache = new DevelopmentOidcTokenCache();
+		let reads = 0;
+		const response = {
+			get token() {
+				reads++;
+				return "token-" + reads;
+			},
+			expiresAt: issued().expiresAt,
+		};
+		const results = await Promise.all(
+			Array.from({ length: 10 }, () =>
+				cache.getToken(identity, audience, async () => response)
+			)
+		);
+		expect(results).toEqual(Array(10).fill("token-1"));
+		expect(reads).toBe(1);
+		response.expiresAt = 0;
+		expect(await cache.getToken(identity, audience, async () => issued())).toBe(
+			"token-1"
+		);
 	});
 });

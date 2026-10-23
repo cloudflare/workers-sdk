@@ -206,9 +206,10 @@ describe("getDevelopmentOidcAuthHook", () => {
 				accountId: "oauth-account",
 				apiToken: { apiToken: "human-oauth-token" },
 			});
-			expect(auth.getOrSelectAccountId).toHaveBeenCalledWith({
-				account_id: "configured-account",
-			});
+			expect(auth.getOrSelectAccountId).toHaveBeenCalledWith(
+				{ account_id: "configured-account" },
+				{ credentials: { apiToken: "human-oauth-token" } }
+			);
 			expect(auth.requireApiToken).not.toHaveBeenCalled();
 			expect(auth.requireAuth).not.toHaveBeenCalled();
 			expect(
@@ -239,7 +240,16 @@ describe("getDevelopmentOidcAuthHook", () => {
 		expect((await hook()).apiToken).toEqual({ apiToken: "signed-in" });
 		expect((await hook()).apiToken).toEqual({ apiToken: "refreshed" });
 		await expect(hook()).rejects.toThrow("signed-in developer");
-		expect(mocks.wranglerAuth.getOrSelectAccountId).toHaveBeenCalledWith({});
+		expect(mocks.wranglerAuth.getOrSelectAccountId).toHaveBeenNthCalledWith(
+			1,
+			{},
+			{ credentials: { apiToken: "signed-in" } }
+		);
+		expect(mocks.wranglerAuth.getOrSelectAccountId).toHaveBeenNthCalledWith(
+			2,
+			{},
+			{ credentials: { apiToken: "refreshed" } }
+		);
 	});
 
 	it.for([true, false])(

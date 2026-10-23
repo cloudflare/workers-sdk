@@ -10,7 +10,8 @@ reads its human OAuth credentials on demand. API tokens, global keys, and tempor
 accounts cannot substitute for a developer's OAuth login. A parent `cf dev`
 process forwards its explicit profile through `CLOUDFLARE_DEV_AUTH_PROFILE`, with
 `CLOUDFLARE_CF_AUTH` selecting cf credential storage. Neither variable contains
-credentials.
+credentials. Account discovery uses that same OAuth credential even when an
+unrelated API token is present in the environment.
 
 `DevelopmentOidcProvider` owns one linked Worker's authenticated development
 session. Keep it across code reloads and dispose it on shutdown or Worker
@@ -24,7 +25,20 @@ account, Worker, user, development session, policy, and effective audience. It
 coalesces requests, bounds memory and concurrent issuance, and returns tokens only
 while at least 60 seconds remain. Renewal happens on demand, with no idle polling
 and no stale-token fallback. Cached lifetime also uses a monotonic deadline so a
-wall-clock rollback cannot extend it.
+wall-clock rollback cannot extend it. Identity fields are capped at 4 KiB each,
+audiences at 2,048 UTF-8 bytes, and token strings at 64 KiB. Metadata and issuance
+responses are copied into immutable snapshots; credential-bearing provider state
+uses JavaScript private fields.
+
+Each cache and provider permits at most 128 waiting getters. Each host request
+pool permits at most 128 underlying operations and imposes a 30-second deadline.
+Invalidation and shutdown reject waiting callers immediately. Operations that
+ignore abort retain their concurrency slot until they settle, including across
+cache clears; the pool fails closed if all slots are stuck. These are initial
+host-side limits, not Cloudflare's issuance rate limits, and need validation with
+real adapters and load tests. A transport must honor cancellation and bound HTTP
+response bodies before decoding them; these primitives cannot reclaim resources
+owned by a misbehaving adapter.
 
 `DevelopmentOidcTransport` is the host-only adapter contract. It must call the
 authorized Cloudflare development API, use human OAuth, and validate the returned

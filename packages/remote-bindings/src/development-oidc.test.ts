@@ -1,3 +1,5 @@
+import { inspect } from "node:util";
+import { DevelopmentOidcTokenCache } from "miniflare";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { DevelopmentOidcProvider } from "./development-oidc";
 import type { DevelopmentOidcSession } from "./development-oidc";
@@ -212,4 +214,207 @@ describe("development OIDC provider", () => {
 		await expect(pending).rejects.toThrow("session changed");
 		await expect(provider.getToken()).rejects.toThrow("disposed");
 	});
+});
+
+describe("development OIDC provider security boundaries", () => {
+	it("snapshots the requested audience before authentication", async ({
+		expect,
+	}) => {
+		const { provider, issueToken } = setup();
+		const options = { audience: "https://requested.example/" };
+		const pending = provider.getToken(options);
+		options.audience = "https://changed.example/";
+		await pending;
+		expect(issueToken.mock.calls[0]?.[2]).toBe("https://requested.example/");
+	});
+
+	it("snapshots credentials and session metadata instead of retaining mutable responses", async ({
+		expect,
+	}) => {
+		const { provider, getAuth, createSession, issueToken } = setup();
+		const auth = {
+			accountId: "account",
+			apiToken: { apiToken: "original-oauth" },
+		};
+		const response = {
+			identity: { ...session.identity },
+			defaultAudience: session.defaultAudience,
+		};
+		getAuth.mockResolvedValue(auth);
+		createSession.mockResolvedValue(response);
+		await provider.getToken();
+		const capturedAuth = createSession.mock.calls[0]?.[0];
+		auth.apiToken.apiToken = "mutated-secret";
+		expect(capturedAuth).toEqual({
+			accountId: "account",
+			apiToken: { apiToken: "original-oauth" },
+		});
+		// Restore auth so the second getter keeps the same authorized session.
+		auth.apiToken.apiToken = "original-oauth";
+		response.identity.workerId = "different-worker";
+		response.defaultAudience = "https://different.example/";
+		await provider.getToken({ audience: "another-audience" });
+		expect(createSession).toHaveBeenCalledOnce();
+		expect(issueToken.mock.calls[1]?.[1]).toEqual(session);
+		expect(Object.isFrozen(issueToken.mock.calls[1]?.[1].identity)).toBe(true);
+		expect(Object.isFrozen(capturedAuth?.apiToken)).toBe(true);
+	});
+
+	it("keeps credential-bearing state out of inspection and serialization", async ({
+		expect,
+	}) => {
+		const { provider } = setup();
+		await provider.getToken();
+		expect(Object.keys(provider)).toEqual([]);
+		expect(JSON.stringify(provider)).toBe("{}");
+		expect(inspect(provider, { showHidden: true })).not.toContain(
+			"human-oauth"
+		);
+	});
+
+	it.for([
+		null,
+		"secret-credential",
+		{ apiToken: "" },
+		{ apiToken: "human-oauth\n" },
+		{ apiToken: "é" },
+	])(
+		"rejects malformed credentials without echoing them (%#)",
+		async (apiToken, { expect }) => {
+			const { provider, getAuth, createSession } = setup();
+			getAuth.mockResolvedValue({
+				accountId: "account",
+				apiToken,
+			} as unknown as CfAccount);
+			await expect(provider.getToken()).rejects.toThrow(
+				/^Development OIDC requires human OAuth credentials and a valid account\.$/
+			);
+			expect(createSession).not.toHaveBeenCalled();
+		}
+	);
+
+	it("does not start authentication after immediate disposal", async ({
+		expect,
+	}) => {
+		const { provider, getAuth } = setup();
+		const pending = provider.getToken();
+		const rejected = expect(pending).rejects.toThrow("disposed");
+		provider.dispose();
+		await rejected;
+		expect(getAuth).not.toHaveBeenCalled();
+	});
+
+	it.for(["auth", "session"])(
+		"cancels a stalled %s immediately on shutdown",
+		async (stage, { expect }) => {
+			const { provider, getAuth, createSession } = setup();
+			if (stage === "auth") {
+				getAuth.mockImplementationOnce(() => new Promise(() => {}));
+			} else {
+				createSession.mockImplementationOnce(() => new Promise(() => {}));
+			}
+			const pending = provider.getToken();
+			const rejected = expect(pending).rejects.toThrow(
+				stage === "auth" ? "disposed" : "credentials changed"
+			);
+			await vi.waitFor(() =>
+				expect(
+					stage === "auth" ? getAuth : createSession
+				).toHaveBeenCalledOnce()
+			);
+			provider.dispose();
+			await rejected;
+		}
+	);
+
+	it.for(["auth", "session"])(
+		"times out a stalled %s",
+		async (stage, { expect }) => {
+			const { provider, getAuth, createSession } = setup();
+			if (stage === "auth") {
+				getAuth.mockImplementationOnce(() => new Promise(() => {}));
+			} else {
+				createSession.mockImplementationOnce(() => new Promise(() => {}));
+			}
+			const rejected = expect(provider.getToken()).rejects.toThrow("timed out");
+			await vi.waitFor(() =>
+				expect(
+					stage === "auth" ? getAuth : createSession
+				).toHaveBeenCalledOnce()
+			);
+			await vi.advanceTimersByTimeAsync(30_000);
+			await rejected;
+			expect(await provider.getToken()).toBe("development-token");
+		}
+	);
+
+	it("bounds callers waiting for the same authentication request", async ({
+		expect,
+	}) => {
+		const { provider, getAuth } = setup();
+		getAuth.mockImplementationOnce(() => new Promise(() => {}));
+		const pending = Promise.allSettled(
+			Array.from({ length: 128 }, () => provider.getToken())
+		);
+		await expect(provider.getToken()).rejects.toThrow("Too many concurrent");
+		expect(getAuth).toHaveBeenCalledOnce();
+		provider.dispose();
+		expect(
+			(await pending).every((result) => result.status === "rejected")
+		).toBe(true);
+	});
+
+	it("rechecks shutdown after awaiting a cache hit", async ({ expect }) => {
+		const { provider } = setup();
+		await provider.getToken();
+		const spy = vi
+			.spyOn(DevelopmentOidcTokenCache.prototype, "getToken")
+			.mockImplementationOnce(async () => {
+				queueMicrotask(() => provider.dispose());
+				return "cached-token";
+			});
+		try {
+			await expect(provider.getToken()).rejects.toThrow("disposed");
+		} finally {
+			spy.mockRestore();
+		}
+	});
+
+	it("cancels a pending session when credentials change and ignores its late failure", async ({
+		expect,
+	}) => {
+		const { provider, getAuth, createSession } = setup();
+		let fail: ((reason: Error) => void) | undefined;
+		createSession.mockImplementationOnce(
+			() =>
+				new Promise((_resolve, reject) => {
+					fail = reject;
+				})
+		);
+		const rejected = expect(provider.getToken()).rejects.toThrow(
+			"credentials changed"
+		);
+		await vi.waitFor(() => expect(createSession).toHaveBeenCalledOnce());
+		getAuth.mockResolvedValue({
+			accountId: "account",
+			apiToken: { apiToken: "new-oauth" },
+		});
+		expect(await provider.getToken()).toBe("development-token");
+		await rejected;
+		fail?.(new Error("late session failure"));
+		await provider.getToken();
+		expect(createSession).toHaveBeenCalledTimes(2);
+	});
+});
+
+it("rejects line terminators in account metadata before transport", async ({
+	expect,
+}) => {
+	const { provider, getAuth, createSession } = setup();
+	getAuth.mockResolvedValue({
+		accountId: "account\n",
+		apiToken: { apiToken: "human-oauth" },
+	});
+	await expect(provider.getToken()).rejects.toThrow("valid account");
+	expect(createSession).not.toHaveBeenCalled();
 });

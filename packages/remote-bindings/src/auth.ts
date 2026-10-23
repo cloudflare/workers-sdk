@@ -120,7 +120,8 @@ export function getDevelopmentOidcAuthHook(
 		}
 		return {
 			accountId: await auth.getOrSelectAccountId(
-				accountId ? { account_id: accountId } : {}
+				accountId ? { account_id: accountId } : {},
+				{ credentials: { apiToken: token } }
 			),
 			apiToken: { apiToken: token },
 		};
