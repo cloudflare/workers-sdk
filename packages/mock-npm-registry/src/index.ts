@@ -141,7 +141,9 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 
 	for (const [pkgName, pkgPath] of pkgs) {
 		debugLog("Publishing package " + pkgName);
-		execSync("pnpm publish --tag latest", {
+		// Turbo already built these packages, possibly on Linux for Windows tests.
+		// Re-running prepack would bypass those outputs and invoke tsrs on Windows.
+		execSync("pnpm publish --tag latest --ignore-scripts", {
 			cwd: path.join(repoRoot, pkgPath),
 			stdio: debugLog.enabled ? "inherit" : "ignore",
 		});
