@@ -157,7 +157,7 @@ While each workspace has its own dependencies, you install the dependencies usin
 
 ## Building and running
 
-Workspaces in this project are mostly written in [TypeScript](https://www.typescriptlang.org/) and compiled, by [esbuild](https://github.com/evanw/esbuild), into JavaScript bundles for distribution.
+Workspaces in this project are mostly written in [TypeScript](https://www.typescriptlang.org/) and compiled, by [tsdown](https://tsdown.dev/) and [Rolldown](https://rolldown.rs/), into JavaScript bundles for distribution.
 
 - Run a distributable for a specific workspace (e.g. wrangler)
 
@@ -442,7 +442,7 @@ Packages in this monorepo should bundle their dependencies into the distributabl
 
 ### The Rule
 
-- **Bundle dependencies**: Most dependencies should be listed in `devDependencies` and bundled into the package output by esbuild/tsup/etc.
+- **Bundle dependencies**: Most dependencies should be listed in `devDependencies` and bundled into the package output by tsdown/Rolldown
 - **External dependencies**: Only dependencies that _cannot_ be bundled should be listed in `dependencies`. These must be explicitly declared with documentation explaining why.
 
 ### Why This Matters

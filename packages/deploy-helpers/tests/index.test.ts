@@ -12,7 +12,7 @@ import type { Config, Logger } from "@cloudflare/workers-utils";
 
 describe("context singleton", () => {
 	// Verifies that both package entry points (. and ./context) share the same
-	// context module. This only holds if tsup's splitting is enabled — if it's
+	// context module. This only holds if Rolldown's code splitting is enabled — if it's
 	// disabled, each entry bundles its own copy and this test will fail.
 	it("init from main entry propagates to context entry", ({ expect }) => {
 		const mockLogger = { debug: () => {}, log: () => {} };
