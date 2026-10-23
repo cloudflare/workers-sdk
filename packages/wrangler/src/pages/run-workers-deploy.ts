@@ -1,4 +1,6 @@
+import { statSync } from "node:fs";
 import { initDeployHelpersContext } from "@cloudflare/deploy-helpers/context";
+import { UserError } from "@cloudflare/workers-utils";
 import {
 	fetchKVGetValue,
 	fetchListResult,
@@ -91,6 +93,33 @@ export async function runPagesToWorkersDeploy(
 	const config = readConfig(deployArgs, {
 		useRedirectIfAvailable: true,
 	});
+
+	// Deploy exactly the directory passed to `pages deploy <directory>`, never a
+	// broader one. It is checked up front because autoconfig writes files (config,
+	// `.gitignore`, package.json scripts) before the deploy itself validates it.
+	//
+	// For a project without a Workers config, autoconfig is pinned to the
+	// directory so it writes it into the generated config instead of detecting
+	// its own (which can resolve to the project root). This applies to static
+	// projects; a detected framework deploys its own build output. A project that
+	// already has a Workers config skips autoconfig, so there the directory is
+	// passed as `--assets`, which takes precedence over the config's own assets
+	// directory (Workers Sites configs are left as they are, as they cannot be
+	// combined with `--assets`). A Pages-style config (`pages_build_output_dir`)
+	// is detected by autoconfig as a Pages project and is not regenerated, so the
+	// pin has no effect there.
+	const { assetsDirectory } = delegation;
+	if (assetsDirectory !== undefined) {
+		assertAssetsDirectoryExists(assetsDirectory);
+	}
+	const hasWorkersConfig =
+		config.configPath !== undefined && !config.pages_build_output_dir;
+	const handlerArgs =
+		assetsDirectory !== undefined && hasWorkersConfig && !config.site
+			? { ...deployArgs, assets: assetsDirectory }
+			: deployArgs;
+	const autoConfigOutputDir = hasWorkersConfig ? undefined : assetsDirectory;
+
 	const experimentalFlags = {
 		MULTIWORKER: false,
 		RESOURCES_PROVISION: deployArgs.experimentalProvision ?? false,
@@ -110,9 +139,10 @@ export async function runPagesToWorkersDeploy(
 				select,
 			});
 
-			await runDeployCommandHandler(deployArgs, {
+			await runDeployCommandHandler(handlerArgs, {
 				config,
 				pagesToWorkersDelegation: true,
+				autoConfigOutputDir,
 			});
 		});
 	} catch (error) {
@@ -130,4 +160,23 @@ export async function runPagesToWorkersDeploy(
 		delegation.deployArgs,
 		delegation.agentId
 	);
+}
+
+/**
+ * Throws a user error unless `directory` exists and is a directory, mirroring
+ * the check a direct Pages deploy makes before uploading.
+ */
+function assertAssetsDirectoryExists(directory: string): void {
+	let isDirectory = false;
+	try {
+		isDirectory = statSync(directory).isDirectory();
+	} catch {
+		// Missing or inaccessible: reported below.
+	}
+	if (!isDirectory) {
+		throw new UserError(
+			`The directory "${directory}" passed to \`wrangler pages deploy\` does not exist or is not a directory.`,
+			{ telemetryMessage: "pages to workers delegation directory not found" }
+		);
+	}
 }

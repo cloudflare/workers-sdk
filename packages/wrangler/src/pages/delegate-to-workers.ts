@@ -86,6 +86,12 @@ export type PagesToWorkersDelegateResult =
 			command: PagesDelegateCommand;
 			agentId: string | null;
 			deployArgs: PagesToWorkersDeployArgs;
+			/**
+			 * The static-assets directory the user asked to deploy (`pages deploy`
+			 * only). The Workers deploy must upload exactly this directory and
+			 * nothing outside it. See `runPagesToWorkersDeploy`.
+			 */
+			assetsDirectory?: string;
 	  };
 
 /** The outcome recorded against the `delegate pages to workers` metrics event. */
@@ -294,6 +300,9 @@ export async function maybeDelegatePagesToWorkers(
 		command: options.command,
 		agentId: agent.id,
 		deployArgs: buildWorkersDeployArgs(options),
+		...(options.assetsDirectory !== undefined
+			? { assetsDirectory: options.assetsDirectory }
+			: {}),
 	};
 }
 
@@ -330,15 +339,17 @@ export function recordPagesToWorkersDelegateFailure(
 /**
  * Builds the `wrangler deploy` args for the delegation.
  *
- * We deliberately pass no positional path and no `--assets`, even though
- * `pages deploy` knows the assets directory. Passing `--assets` would disable
- * autoconfig (it only runs when no assets/path/config is supplied), and
- * autoconfig is what makes the delegated deploy viable: it detects the static
- * directory and writes a Workers config with a compatibility date. Without it,
- * a non-interactive agent deploy has no compatibility date and fails
- * validation. So we let autoconfig detect and configure the deploy, and only
- * carry across the agent's explicit, deliberate inputs (name, compatibility
- * date/flags), which take precedence on the deploy.
+ * The assets directory is deliberately not part of these args. Passing
+ * `--assets` would disable autoconfig (it only runs when no
+ * assets/path/config is supplied), and autoconfig is what makes the delegated
+ * deploy viable: it writes a Workers config with a compatibility date. Without
+ * it, a non-interactive agent deploy has no compatibility date and fails
+ * validation. Instead the directory travels separately as `assetsDirectory`,
+ * and `runPagesToWorkersDeploy` decides how to apply it: it pins autoconfig to
+ * the directory for an unconfigured project, and only passes `--assets` when a
+ * Workers config already exists (where autoconfig would not run anyway). Only
+ * the agent's explicit, deliberate inputs (name, compatibility date/flags) are
+ * carried here, and they take precedence on the deploy.
  */
 function buildWorkersDeployArgs(
 	options: MaybeDelegatePagesToWorkersOptions
