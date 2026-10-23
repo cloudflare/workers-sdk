@@ -956,6 +956,34 @@ describe("asset-server handler", () => {
 				}
 			`);
 		});
+
+		test("HEAD requests don't write to the preservation cache", async ({
+			expect,
+		}) => {
+			const metadata = createMetadataObject({
+				deploymentId: "deployment-" + Math.random(),
+			}) as Metadata;
+
+			const { response, spies } = await getTestResponse({
+				request: new Request("https://example.com/head-only", {
+					method: "HEAD",
+				}),
+				metadata,
+				findAssetEntryForPath: async (path: string) =>
+					path === "/head-only.html" ? "asset-key-head-only.html" : null,
+				caches,
+				fetchAsset: () =>
+					Promise.resolve(Object.assign(new Response("hello world!"))),
+			});
+			expect(response.status).toBe(200);
+
+			await Promise.all(spies.waitUntil);
+
+			const preservationCacheV2 = await caches.open("assetPreservationCacheV2");
+			expect(
+				await preservationCacheV2.match("https://example.com/head-only")
+			).toBeUndefined();
+		});
 	});
 
 	describe("isPreservationCacheResponseExpiring()", () => {

@@ -624,7 +624,9 @@ export async function generateHandler<
 				response.headers.set("x-robots-tag", "noindex");
 			}
 
-			if (options.preserve && waitUntil && caches) {
+			// Only GET requests write the preservation cache. Cache API `match()`
+			// never matches a HEAD request, so every HEAD would rewrite the entry.
+			if (options.preserve && waitUntil && caches && request.method === "GET") {
 				waitUntil(
 					(async () => {
 						try {
