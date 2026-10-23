@@ -173,7 +173,7 @@ test("binds the config's own Durable Objects, Workflows, Worker and secrets", as
 	expect(result.stdout).toMatch("6 passed");
 });
 
-test("merges `miniflare` queue consumers and assets with the config's", async ({
+test("merges native `miniflare` options with the config's", async ({
 	expect,
 	seed,
 	vitestRun,
@@ -182,17 +182,13 @@ test("merges `miniflare` queue consumers and assets with the config's", async ({
 		"vitest.config.mts": vitestConfig({
 			config: true,
 			miniflare: {
-				compatibilityDate: "2025-12-02",
-				compatibilityFlags: ["nodejs_compat"],
-				// `other-queue` doesn't replace the config's consumers, and
-				// `tuned-queue` overrides the config's settings for that queue
-				queueConsumers: {
-					"other-queue": {},
-					"tuned-queue": { maxBatchSize: 1 },
+				config: {
+					compatibilityFlags: ["nodejs_compat"],
+					env: { MESSAGE: { type: "text", value: "from miniflare" } },
+					// Replaces the config's consumer for `tuned-queue`
+					triggers: [{ type: "queue", name: "tuned-queue", maxBatchSize: 1 }],
+					assets: { directory: "./public" },
 				},
-				assets: { directory: "./public" },
-				// Replaces the config's \`VERSION\`, as a Worker can only have one
-				versionMetadata: "MF_VERSION",
 			},
 		}),
 		"cloudflare.config.ts": dedent`
@@ -206,7 +202,7 @@ test("merges `miniflare` queue consumers and assets with the config's", async ({
 						TUNED_QUEUE: { type: "queue", name: "tuned-queue" },
 						RESULTS: { type: "kv" },
 						ASSETS: { type: "assets" },
-						VERSION: { type: "version-metadata" },
+						MESSAGE: { type: "text", value: "from config" },
 					},
 					triggers: [
 						{ type: "queue", name: "my-queue", maxBatchSize: 1 },
@@ -248,7 +244,11 @@ test("merges `miniflare` queue consumers and assets with the config's", async ({
 					.toBe("tuned");
 			});
 
-			it("serves \`miniflare.assets\` through the config's binding", async ({ expect }) => {
+			it("replaces the config's bindings by name", ({ expect }) => {
+				expect(env.MESSAGE).toBe("from miniflare");
+			});
+
+			it("serves \`miniflare\` assets through the config's binding", async ({ expect }) => {
 				const response = await env.ASSETS.fetch("http://example.com/hello.txt");
 				expect(await response.text()).toBe("hello from assets");
 			});
@@ -257,11 +257,6 @@ test("merges `miniflare` queue consumers and assets with the config's", async ({
 				const response = await env.ASSETS.fetch("http://example.com/missing");
 				expect(response.status).toBe(404);
 				expect(await response.text()).toBe("not found page");
-			});
-
-			it("lets a \`miniflare\` binding replace a single-use config binding", ({ expect }) => {
-				expect(env.MF_VERSION).toBeDefined();
-				expect(env.VERSION).toBeUndefined();
 			});
 		`,
 	});
@@ -396,6 +391,27 @@ describe("validation", () => {
 		expect(await result.exitCode).toBe(1);
 		expect(result.stderr).toMatch(
 			"`wrangler` and `config` cannot be used together. Use `wrangler` to load a Wrangler configuration file, or `config` to load `cloudflare.config.ts`."
+		);
+	});
+
+	test("rejects V4 `miniflare` options with `config`", async ({
+		expect,
+		seed,
+		vitestRun,
+	}) => {
+		await seed({
+			"vitest.config.mts": vitestConfig({
+				config: true,
+				miniflare: { kvNamespaces: ["KV"] },
+			}),
+			"index.test.ts": "",
+		});
+
+		const result = await vitestRun();
+
+		expect(await result.exitCode).toBe(1);
+		expect(result.stderr).toMatch(
+			"`miniflare.kvNamespaces` is a Miniflare V4 option. With `config`, `miniflare` takes Miniflare's native Worker options: declare bindings in `miniflare.config.env`"
 		);
 	});
 
