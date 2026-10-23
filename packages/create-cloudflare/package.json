@@ -28,9 +28,9 @@
 		".": "./dist/cli.js"
 	},
 	"scripts": {
-		"build": "node -r esbuild-register scripts/build.ts",
+		"build": "tsdown",
 		"check:type": "tsrs",
-		"dev": "node -r esbuild-register scripts/build.ts --watch",
+		"dev": "tsdown --watch",
 		"test:ci": "vitest run --config ./vitest.config.mts",
 		"test:e2e": "vitest run --config ./vitest-e2e.config.mts",
 		"test:unit": "vitest run --config ./vitest.config.mts",
@@ -64,7 +64,6 @@
 		"degit": "^2.8.4",
 		"dns2": "^2.1.0",
 		"dotenv": "catalog:default",
-		"esbuild": "catalog:default",
 		"exit-hook": "2.2.1",
 		"get-port": "^7.1.0",
 		"haikunator": "^2.1.2",
@@ -77,6 +76,7 @@
 		"smol-toml": "catalog:default",
 		"tinyglobby": "catalog:default",
 		"tree-kill": "catalog:default",
+		"tsdown": "0.23.1",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
 		"vite": "catalog:default",
