@@ -79,7 +79,6 @@ describe("Container image preparation", () => {
 				containerOptions: [],
 			})
 		);
-		expect(controller.containerImageTagsSeen.size).toBe(0);
 	});
 
 	it.for(["disabled", "absent"])(
@@ -141,7 +140,7 @@ describe("Container image preparation", () => {
 		expect(prepareContainerImagesForDev).toHaveBeenCalledTimes(2);
 	});
 
-	it("still prepares and tracks configured images", async ({ expect }) => {
+	it("prepares configured images", async ({ expect }) => {
 		const plan = imageFreePlan();
 		plan.containerOptions.push({
 			class_name: "Probe",
@@ -153,9 +152,6 @@ describe("Container image preparation", () => {
 		await controller.prepare(data);
 		expect(prepareContainerImagesForDev).toHaveBeenCalledExactlyOnceWith(
 			expect.objectContaining({ containerOptions: plan.containerOptions })
-		);
-		expect(controller.containerImageTagsSeen).toEqual(
-			new Set(["cloudflare-dev/probe:test"])
 		);
 	});
 });

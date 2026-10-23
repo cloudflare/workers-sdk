@@ -1,11 +1,7 @@
-import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { isDeepStrictEqual } from "node:util";
-import {
-	cleanupContainers,
-	prepareContainerImagesForDev,
-} from "@cloudflare/containers-shared";
+import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
 import { configFileName, getDockerPath } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import {
@@ -268,11 +264,6 @@ export class LocalRuntimeController extends RuntimeController {
 		auth?: AsyncHook<CfAccount> | undefined;
 	} | null = null;
 
-	// Set of container images that have been seen in the current dev session.
-	// This is used to clean up containers at the end of the dev session.
-	containerImageTagsSeen: Set<string> = new Set();
-	// Stored here, so it can be used in `cleanupContainers()`
-	dockerPath: string | undefined;
 	#containerImagePreparationState?: ContainerImagePreparationState;
 
 	// Used to store the information and abort handle for the
@@ -283,11 +274,7 @@ export class LocalRuntimeController extends RuntimeController {
 		abortRequested: boolean;
 	};
 
-	onBundleStart(_: BundleStartEvent) {
-		// Remove any existing listener, then add a new one.
-		process.off("exit", this.cleanupContainers);
-		process.on("exit", this.cleanupContainers);
-	}
+	onBundleStart(_: BundleStartEvent) {}
 
 	/**
 	 * Surfaces uncaught Worker exceptions as typed `runtimeError` events
@@ -328,11 +315,6 @@ export class LocalRuntimeController extends RuntimeController {
 			!nextState.hasContainers
 		) {
 			return nextState;
-		}
-
-		this.dockerPath = nextState.dockerPath;
-		for (const { image_tag } of nextState.containerOptions) {
-			this.containerImageTagsSeen.add(image_tag);
 		}
 
 		logger.log(chalk.dim("⎔ Preparing container image(s)..."));
@@ -541,22 +523,8 @@ export class LocalRuntimeController extends RuntimeController {
 		// Ignored in local runtime
 	}
 
-	cleanupContainers = () => {
-		if (!this.containerImageTagsSeen.size) {
-			return;
-		}
-
-		assert(
-			this.dockerPath,
-			"Docker path should have been set if containers are enabled"
-		);
-		cleanupContainers(this.dockerPath, this.containerImageTagsSeen);
-	};
-
 	#teardown = async (): Promise<void> => {
 		logger.debug("LocalRuntimeController teardown beginning...");
-		process.off("exit", this.cleanupContainers);
-		this.cleanupContainers();
 
 		if (this.#mf) {
 			logger.log(chalk.dim("⎔ Shutting down local server..."));
