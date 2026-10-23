@@ -1,4 +1,9 @@
-import { DevelopmentOidcTokenCache } from "miniflare";
+import {
+	DevelopmentOidcRequestPool,
+	DevelopmentOidcTokenCache,
+	snapshotDevelopmentOidcIdentity,
+	validateDevelopmentOidcAudience,
+} from "miniflare";
 import type { CfAccount } from "@cloudflare/workers-utils";
 import type { DevelopmentOidcIdentity, DevelopmentOidcToken } from "miniflare";
 
@@ -11,7 +16,10 @@ export interface DevelopmentOidcSession {
 /**
  * Trusted host transport for development issuance. Both operations must use
  * human OAuth and server-side Worker authorization. No caller-supplied subject
- * or identity may become signing authority.
+ * or identity may become signing authority. Bind the session to the requested
+ * Worker, validate the full token profile and audience rules, cap HTTP response
+ * bodies before decoding them, and return errors that contain no credentials.
+ * Honor cancellation and release response bodies/connections on every path.
  */
 export interface DevelopmentOidcTransport {
 	createSession(
@@ -27,6 +35,8 @@ export interface DevelopmentOidcTransport {
 	): Promise<DevelopmentOidcToken>;
 }
 
+type OAuthAccount = CfAccount & { apiToken: { apiToken: string } };
+
 interface SessionState {
 	accountId: string;
 	oauthToken: string;
@@ -41,16 +51,29 @@ interface SessionState {
  * are read on every getter, so login/logout does not require a restart.
  */
 export class DevelopmentOidcProvider {
+	#workerName: string;
+	#getAuth: (signal: AbortSignal) => Promise<CfAccount>;
+	#transport: DevelopmentOidcTransport;
 	#cache = new DevelopmentOidcTokenCache();
+	#requests = new DevelopmentOidcRequestPool();
+	#shutdown = new AbortController();
 	#state?: SessionState;
-	#authPromise?: Promise<CfAccount>;
-	#disposed = false;
+	#authPromise?: Promise<OAuthAccount>;
+	#callers = 0;
 
 	constructor(
-		private readonly workerName: string,
-		private readonly getAuth: () => Promise<CfAccount>,
-		private readonly transport: DevelopmentOidcTransport
-	) {}
+		workerName: string,
+		getAuth: (signal: AbortSignal) => Promise<CfAccount>,
+		transport: DevelopmentOidcTransport
+	) {
+		this.#workerName = workerName;
+		this.#getAuth = getAuth;
+		// Snapshot adapter methods; keep them in native private fields with credentials.
+		this.#transport = Object.freeze({
+			createSession: transport.createSession.bind(transport),
+			issueToken: transport.issueToken.bind(transport),
+		});
+	}
 
 	/**
 	 * Get the linked Worker's development token, including for local DOs.
@@ -60,88 +83,158 @@ export class DevelopmentOidcProvider {
 	 */
 	async getToken(options: { audience?: string } = {}): Promise<string> {
 		this.#checkActive();
-		if (!this.workerName) {
+		if (
+			typeof this.#workerName !== "string" ||
+			this.#workerName.length > 255 ||
+			!this.#workerName.trim()
+		) {
 			throw new Error(
 				"Development OIDC requires an existing Worker name in your project configuration."
 			);
 		}
-		// The runtime also checks options. Retain the host-side restriction so
-		// neither an adapter nor a test mock can turn a local DO into a cloud DO.
+		if (options === null || typeof options !== "object") {
+			throw new Error("Development OIDC requires an options object.");
+		}
+		// Retain this restriction in the host even when an adapter bypasses workerd.
 		if ("subject" in options) {
 			throw new Error(
 				"Local Durable Objects use the Worker's development identity. Explicit object and namespace subjects require a cloud Preview."
 			);
 		}
-		let auth: CfAccount;
+		// Snapshot before the first await: callers may retain and mutate options.
+		const requestedAudience = options.audience;
+		if (requestedAudience !== undefined) {
+			validateDevelopmentOidcAudience(requestedAudience);
+		}
+		if (this.#callers >= 128) {
+			throw new Error("Too many concurrent development OIDC requests.");
+		}
+		this.#callers++;
 		try {
-			this.#authPromise ??= Promise.resolve().then(() => this.getAuth());
-			const pending = this.#authPromise;
+			const auth = await this.#readAuth();
+			this.#checkActive();
+			let state = this.#state;
+			if (
+				state?.accountId !== auth.accountId ||
+				state.oauthToken !== auth.apiToken.apiToken
+			) {
+				this.#invalidate();
+				const controller = new AbortController();
+				state = {
+					accountId: auth.accountId,
+					oauthToken: auth.apiToken.apiToken,
+					controller,
+					session: this.#requests.run(async (signal) => {
+						const response = await this.#transport.createSession(
+							auth,
+							this.#workerName,
+							signal
+						);
+						signal.throwIfAborted();
+						const identity = snapshotDevelopmentOidcIdentity(
+							response?.identity
+						);
+						const defaultAudience = response?.defaultAudience;
+						validateDevelopmentOidcAudience(defaultAudience);
+						if (identity.accountId !== auth.accountId) {
+							throw new Error(
+								"Development OIDC returned a session for a different account."
+							);
+						}
+						return Object.freeze({ identity, defaultAudience });
+					}, controller.signal),
+				};
+				this.#state = state;
+			}
 			try {
-				auth = await pending;
-			} finally {
+				const session = await state.session;
+				this.#checkCurrent(state);
+				const audience = requestedAudience ?? session.defaultAudience;
+				const token = await this.#cache.getToken(
+					session.identity,
+					audience,
+					(signal) =>
+						this.#transport.issueToken(
+							auth,
+							session,
+							audience,
+							AbortSignal.any([signal, state.controller.signal])
+						)
+				);
+				// Invalidation can occur while awaiting even an already-cached token.
+				this.#checkCurrent(state);
+				return token;
+			} catch (error) {
+				if (this.#state === state) {
+					this.#invalidate();
+				}
+				throw error;
+			}
+		} finally {
+			this.#callers--;
+		}
+	}
+
+	#readAuth(): Promise<OAuthAccount> {
+		if (this.#authPromise) {
+			return this.#authPromise;
+		}
+		const pending = this.#requests.run(async (signal) => {
+			const response = await this.#getAuth(signal);
+			signal.throwIfAborted();
+			const accountId = response?.accountId;
+			const credentials = response?.apiToken;
+			const token =
+				credentials &&
+				typeof credentials === "object" &&
+				"apiToken" in credentials
+					? credentials.apiToken
+					: undefined;
+			if (
+				typeof accountId !== "string" ||
+				accountId.length === 0 ||
+				accountId.length > 4096 ||
+				/[^A-Za-z0-9_-]/.test(accountId) ||
+				typeof token !== "string" ||
+				token.length === 0 ||
+				token.length > 65_536 ||
+				// RFC 6750 bearer syntax; trim also rejects a final line terminator,
+				// which JavaScript's `$` anchor otherwise permits.
+				token.trim() !== token ||
+				!/^[A-Za-z0-9._~+/-]+=*$/.test(token)
+			) {
+				throw new Error(
+					"Development OIDC requires human OAuth credentials and a valid account."
+				);
+			}
+			return Object.freeze({
+				accountId,
+				apiToken: Object.freeze({ apiToken: token }),
+			});
+		}, this.#shutdown.signal);
+		this.#authPromise = pending;
+		// One handler per auth generation invalidates before a newer read can start.
+		void pending.then(
+			() => {
 				if (this.#authPromise === pending) {
 					this.#authPromise = undefined;
 				}
+			},
+			() => {
+				if (this.#authPromise === pending) {
+					this.#authPromise = undefined;
+					this.#invalidate();
+				}
 			}
-		} catch (error) {
-			this.#invalidate();
-			throw error;
-		}
-		this.#checkActive();
-		if (!("apiToken" in auth.apiToken) || !auth.apiToken.apiToken) {
-			this.#invalidate();
-			throw new Error("Development OIDC requires human OAuth credentials.");
-		}
-		let state = this.#state;
-		if (
-			state?.accountId !== auth.accountId ||
-			state.oauthToken !== auth.apiToken.apiToken
-		) {
-			this.#invalidate();
-			const controller = new AbortController();
-			state = {
-				accountId: auth.accountId,
-				oauthToken: auth.apiToken.apiToken,
-				controller,
-				session: Promise.resolve().then(() =>
-					this.transport.createSession(auth, this.workerName, controller.signal)
-				),
-			};
-			this.#state = state;
-		}
-		try {
-			const session = await state.session;
-			this.#checkActive();
-			if (state.controller.signal.aborted) {
-				throw new Error(
-					"Development OIDC credentials changed during issuance. Retry the getter."
-				);
-			}
-			if (session.identity.accountId !== auth.accountId) {
-				throw new Error(
-					"Development OIDC returned a session for a different account."
-				);
-			}
-			const audience = options.audience ?? session.defaultAudience;
-			return await this.#cache.getToken(session.identity, audience, (signal) =>
-				this.transport.issueToken(
-					auth,
-					session,
-					audience,
-					AbortSignal.any([signal, state.controller.signal])
-				)
-			);
-		} catch (error) {
-			if (this.#state === state) {
-				this.#invalidate();
-			}
-			throw error;
-		}
+		);
+		return pending;
 	}
 
 	/** Stop the provider and cancel outstanding network requests on shutdown. */
 	dispose(): void {
-		this.#disposed = true;
+		this.#shutdown.abort(
+			new Error("The development OIDC provider has been disposed.")
+		);
 		this.#invalidate();
 		this.#cache.dispose();
 	}
@@ -150,12 +243,24 @@ export class DevelopmentOidcProvider {
 		const state = this.#state;
 		this.#state = undefined;
 		this.#cache.clear();
-		state?.controller.abort();
+		state?.controller.abort(
+			new Error(
+				"Development OIDC credentials changed during issuance. Retry the getter."
+			)
+		);
+	}
+
+	#checkCurrent(state: SessionState): void {
+		this.#checkActive();
+		state.controller.signal.throwIfAborted();
+		if (this.#state !== state) {
+			throw new Error(
+				"Development OIDC credentials changed during issuance. Retry the getter."
+			);
+		}
 	}
 
 	#checkActive(): void {
-		if (this.#disposed) {
-			throw new Error("The development OIDC provider has been disposed.");
-		}
+		this.#shutdown.signal.throwIfAborted();
 	}
 }
