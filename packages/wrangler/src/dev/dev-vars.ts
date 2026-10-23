@@ -9,6 +9,7 @@ import { getDefaultEnvFiles, loadDotEnv } from "../config/dot-env";
 import { logger } from "../logger";
 import type { Binding } from "../api/startDevWorker/types";
 import type { Config } from "@cloudflare/workers-utils";
+import type { DotenvParseOutput } from "dotenv";
 import type { Json } from "miniflare";
 
 /**
@@ -152,7 +153,7 @@ function toVarBinding(value: string | Json): VarBinding {
 
 export interface DotDevDotVars {
 	path: string;
-	parsed: dotenv.DotenvParseOutput;
+	parsed: DotenvParseOutput;
 }
 
 function tryLoadDotDevDotVars(basePath: string): DotDevDotVars | undefined {

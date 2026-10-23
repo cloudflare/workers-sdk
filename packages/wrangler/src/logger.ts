@@ -167,7 +167,7 @@ export class Logger {
 	}
 	console<M extends Exclude<keyof Console, "Console">>(
 		method: M,
-		...args: Parameters<Console[M]>
+		...args: Parameters<Extract<Console[M], (...args: never[]) => unknown>>
 	) {
 		// eslint-disable-next-line no-console -- Logger implementation must use console directly
 		if (typeof console[method] !== "function") {

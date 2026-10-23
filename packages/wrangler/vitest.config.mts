@@ -1,8 +1,7 @@
-import assert from "node:assert";
 import path from "node:path";
-import * as esbuild from "esbuild";
 import { dedent } from "ts-dedent";
 import { defineConfig } from "vitest/config";
+import { bundleWorker } from "../../tools/build/bundle-worker.mjs";
 import { getVitestShard } from "../../tools/test/vitest-shard.cjs";
 import type { PluginOption } from "vite";
 
@@ -25,26 +24,15 @@ function embedWorkersPlugin() {
 				return null;
 			}
 			id = id.substring(`\0worker:`.length);
-			const result = await esbuild.build({
-				platform: "node", // Marks `node:*` imports as external
-				format: "esm",
-				target: "esnext",
-				bundle: true,
-				sourcemap: true,
-				sourcesContent: false,
-				metafile: true,
-				entryPoints: [id],
-				outdir: OUTDIR,
-				external: ["cloudflare:email", "cloudflare:workers"],
-			});
-			const watchFiles = Object.keys(result?.metafile?.inputs ?? {});
-			const scriptPath = Object.keys(result?.metafile?.outputs ?? {}).find(
-				(filepath) => filepath.endsWith(".js")
+			const scriptPath = path.join(
+				OUTDIR,
+				path.relative(TEMPLATES_DIR, id).replace(/\.[cm]?[jt]s$/, ".js")
 			);
-			assert(scriptPath);
-			const absoluteScriptPath = JSON.stringify(
-				path.resolve(import.meta.dirname, scriptPath)
+			const { watchFiles } = await bundleWorker(
+				{ input: id },
+				{ file: scriptPath, sourcemap: true, sourcemapExcludeSources: true }
 			);
+			const absoluteScriptPath = JSON.stringify(scriptPath);
 
 			for (const file of watchFiles) {
 				this.addWatchFile(file);

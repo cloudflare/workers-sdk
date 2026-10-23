@@ -60,9 +60,24 @@ export const IGNORED_DIST_IMPORTS = [
 	// crypto implementation if installed; falls back to a JS implementation
 	// when missing.
 	"@aws-sdk/signature-v4-crt",
+
+	// @webcontainer/env probes this internal WebContainer API in a try/catch.
+	"@blitz/internal",
+
+	// ws optionally loads native accelerators, retaining JavaScript implementations
+	// when the consumer has not installed them.
+	"bufferutil",
+	"utf-8-validate",
+
+	// Recast tries the legacy parser only if its bundled @babel/parser fails.
+	"babylon",
 ];
 
-const pathToPackageJson = path.resolve(__dirname, "..", "package.json");
+const pathToPackageJson = path.resolve(
+	typeof __dirname === "string" ? __dirname : import.meta.dirname,
+	"..",
+	"package.json"
+);
 const packageJson = fs.readFileSync(pathToPackageJson, { encoding: "utf-8" });
 const { dependencies, devDependencies } = JSON.parse(packageJson);
 

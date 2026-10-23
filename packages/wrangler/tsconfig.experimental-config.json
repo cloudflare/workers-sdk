@@ -2,6 +2,7 @@
 	"extends": "@cloudflare/workers-tsconfig/worker.json",
 	"compilerOptions": {
 		"declaration": true,
+		"types": ["@cloudflare/workers-types/experimental"],
 		"declarationMap": true
 	},
 	"include": ["src/experimental-config"]

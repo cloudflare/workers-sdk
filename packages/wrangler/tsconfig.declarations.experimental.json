@@ -1,0 +1,20 @@
+{
+	"extends": "./tsconfig.experimental-config.json",
+	"compilerOptions": {
+		"rootDir": "../..",
+		"outDir": "emitted-types/experimental",
+		"declaration": true,
+		"declarationMap": true,
+		"emitDeclarationOnly": true,
+		"noEmit": false,
+		"noCheck": true,
+		"incremental": false
+	},
+	"files": [
+		"src/experimental-config.ts",
+		"../config/src/index.ts",
+		"../workers-shared/index.ts",
+		"../workers-shared/utils/types.ts"
+	],
+	"include": []
+}
