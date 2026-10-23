@@ -377,10 +377,14 @@ function getDurableObjectClassNames(
 }
 
 /**
- * Collects all external service bindings from all workers and overrides
- * them to point to the dev registry proxy worker's ExternalServiceProxy
- * entrypoint. Returns a map of external service names to the entrypoints
- * and DO classes that are referenced.
+ * Collects all external service bindings from all workers and returns copies
+ * of the worker options with those bindings pointed at the dev registry proxy
+ * worker's ExternalServiceProxy entrypoint, along with a map of external
+ * service names to the entrypoints and DO classes that are referenced.
+ *
+ * The given options are left untouched: restarting `workerd` after a crash
+ * assembles a new config from the same options, and rerouting an already
+ * rerouted binding would point it at the proxy worker itself.
  */
 function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 	const externalServices = new Map<
@@ -405,8 +409,11 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 		return externalService;
 	};
 
+	const reroutedWorkerOpts: ParsedWorkerOptions[] = [];
 	for (const workerOpts of allWorkerOpts) {
-		const { config, dev } = workerOpts;
+		const { dev } = workerOpts;
+		const config = { ...workerOpts.config };
+		reroutedWorkerOpts.push({ ...workerOpts, config });
 
 		// Tail consumers targeting a worker outside this instance. Reroute them
 		// through the dev-registry proxy worker (`ExternalServiceProxy`), mirroring
@@ -414,8 +421,9 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 		// binds its tail to a non-existent local service `core:user:<workerName>`
 		// and workerd refuses to start. Handled before the `env` guard since a
 		// worker may declare tail consumers without any `env` bindings.
-		const tailConsumers = config.tailConsumers;
-		if (tailConsumers !== undefined) {
+		if (config.tailConsumers !== undefined) {
+			const tailConsumers = [...config.tailConsumers];
+			config.tailConsumers = tailConsumers;
 			for (let i = 0; i < tailConsumers.length; i++) {
 				const consumer = tailConsumers[i];
 				const serviceName = consumer.worker;
@@ -437,10 +445,11 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 			}
 		}
 
-		const env = config.env;
-		if (env === undefined) {
+		if (config.env === undefined) {
 			continue;
 		}
+		const env = { ...config.env };
+		config.env = env;
 
 		// `worker` service bindings
 		for (const [name, binding] of getEnvBindingsOfType(config, "worker")) {
@@ -504,7 +513,7 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 		}
 	}
 
-	return externalServices;
+	return { workerOpts: reroutedWorkerOpts, externalServices };
 }
 
 function getQueueProducers(
@@ -1962,17 +1971,17 @@ export class Miniflare {
 		reusePorts: boolean
 	): Promise<Config> {
 		const allPreviousWorkerOpts = this.#previousWorkerOpts;
-		const allWorkerOpts = this.#workerOpts;
 		const sharedOpts = this.#sharedOpts;
 
-		await this.#loadExternalPlugins(allWorkerOpts);
+		await this.#loadExternalPlugins(this.#workerOpts);
 
 		sharedOpts.cf = await setupCf(this.#log, sharedOpts.cf);
 		this.#cfObject = sharedOpts.cf;
 
-		const externalServices = this.#devRegistry.isEnabled()
-			? getExternalServiceEntrypoints(allWorkerOpts)
-			: null;
+		const { workerOpts: allWorkerOpts, externalServices } =
+			this.#devRegistry.isEnabled()
+				? getExternalServiceEntrypoints(this.#workerOpts)
+				: { workerOpts: this.#workerOpts, externalServices: null };
 
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const workflowExporters = getWorkflowExporters(allWorkerOpts);
