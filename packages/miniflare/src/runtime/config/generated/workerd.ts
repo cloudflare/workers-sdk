@@ -3350,7 +3350,7 @@ export class Worker_DockerConfiguration extends $.Struct {
 	static readonly _capnp = {
 		displayName: "DockerConfiguration",
 		id: "e62f96c20d9fb872",
-		size: new $.ObjectSize(0, 2),
+		size: new $.ObjectSize(0, 3),
 	};
 	/**
 	 * Path to the Docker socket.
@@ -3374,6 +3374,26 @@ export class Worker_DockerConfiguration extends $.Struct {
 	}
 	set containerEgressInterceptorImage(value: string) {
 		$.utils.setText(1, value, this);
+	}
+	/**
+	 * Scopes the Docker resources workerd creates to a session chosen by the program that
+	 * supervises workerd, such as Miniflare. May contain only the characters Docker allows in
+	 * container names: letters, digits, `_`, `.` and `-`.
+	 *
+	 * When set, container and sidecar names include the session ID, so different sessions never
+	 * share or adopt each other's containers, while a workerd process started with the same
+	 * session adopts the containers an earlier one left running. Resources that do not outlive
+	 * the session carry the label `dev.workerd.session=<sessionId>`: application containers,
+	 * sidecars, snapshot helper containers, and snapshot clone volumes. The supervisor can remove
+	 * them by that label once the session ends. Snapshot volumes and container snapshot images
+	 * outlive sessions and are not labelled.
+	 *
+	 */
+	get sessionId(): string {
+		return $.utils.getText(2, this);
+	}
+	set sessionId(value: string) {
+		$.utils.setText(2, value, this);
 	}
 	toString(): string {
 		return "Worker_DockerConfiguration_" + super.toString();
