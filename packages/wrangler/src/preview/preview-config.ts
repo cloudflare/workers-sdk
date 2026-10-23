@@ -730,6 +730,20 @@ export function convertBinding(
 				],
 			};
 			break;
+		case "oidc":
+			config = {
+				oidc: [
+					{
+						binding: name,
+						identity_id: String(binding.identity_id ?? REPLACE_ME),
+						audience: String(binding.audience ?? REPLACE_ME),
+						...(Array.isArray(binding.allowed_audiences)
+							? { allowed_audiences: binding.allowed_audiences as string[] }
+							: {}),
+					},
+				],
+			};
+			break;
 		case "ratelimit":
 			if (binding.namespace_id === undefined || binding.simple === undefined) {
 				break;

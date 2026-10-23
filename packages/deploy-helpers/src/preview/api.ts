@@ -11,6 +11,9 @@ import type {
 } from "@cloudflare/workers-utils";
 
 export interface Binding {
+	identity_id?: string;
+	audience?: string;
+	allowed_audiences?: string[];
 	type: string;
 	text?: string;
 	json?: Json;

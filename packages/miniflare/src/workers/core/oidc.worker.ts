@@ -5,7 +5,7 @@ interface Env {
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		// Only the native getter can reach this service. Materialize its bounded
-		// JSON body before crossing the HTTP bridge; it contains only the audience.
+		// JSON body before crossing the HTTP bridge; it contains only the fixed selector, audience, and freshness option.
 		const body = await request.text();
 		return env.BROKER.fetch("http://oidc/token", {
 			method: "POST",

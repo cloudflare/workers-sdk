@@ -1,3 +1,4 @@
+import { isOidcBinding } from "@cloudflare/workers-utils/oidc";
 import * as z from "zod";
 import type { SendEmailBinding, VpcNetworkBinding } from "./bindings";
 import type { Settings } from "./types";
@@ -103,6 +104,25 @@ export const HyperdriveBindingSchema = z.strictObject({
 });
 
 export const KnownBindingSchema = z.discriminatedUnion("type", [
+	z
+		.strictObject({
+			type: z.literal("oidc"),
+			identity_id: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),
+			audience: z.string().min(1).max(2048),
+			allowed_audiences: z
+				.array(z.string().min(1).max(2048))
+				.min(1)
+				.max(64)
+				.optional(),
+		})
+		.refine(
+			({ type: _type, ...binding }) =>
+				isOidcBinding({ binding: "IDENTITY", ...binding }),
+			{
+				message:
+					"OIDC requires valid exact audiences and an allowed list containing its default.",
+			}
+		),
 	z.strictObject({
 		type: z.literal("agent-memory"),
 		namespace: z.string(),

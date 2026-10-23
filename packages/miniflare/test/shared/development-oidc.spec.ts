@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	DevelopmentOidcRequestTimeoutError,
-	DevelopmentOidcTokenCache,
+	DevelopmentOidcTokenRequests,
 } from "../../src/shared/development-oidc";
 import type {
 	DevelopmentOidcIdentity,
@@ -14,6 +14,9 @@ const identity: DevelopmentOidcIdentity = {
 	userId: "user",
 	developmentSessionId: "session",
 	policy: "policy",
+	identityId: "orders",
+	assignmentId: "local-orders",
+	policyRevision: "1:1",
 };
 const audience = "https://example.com";
 
@@ -27,11 +30,11 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 
-describe("development OIDC token cache", () => {
+describe("development OIDC token requests", () => {
 	it.for(Object.keys(identity) as (keyof DevelopmentOidcIdentity)[])(
 		"rejects missing %s before issuance",
 		async (field, { expect }) => {
-			const cache = new DevelopmentOidcTokenCache();
+			const cache = new DevelopmentOidcTokenRequests();
 			const issue = vi.fn(async () => issued());
 			await expect(
 				cache.getToken({ ...identity, [field]: "" }, audience, issue)
@@ -40,10 +43,10 @@ describe("development OIDC token cache", () => {
 		}
 	);
 
-	it("coalesces concurrent requests and performs no idle renewal", async ({
+	it("authorizes concurrent requests independently and performs no idle renewal", async ({
 		expect,
 	}) => {
-		const cache = new DevelopmentOidcTokenCache();
+		const cache = new DevelopmentOidcTokenRequests();
 		const issue = vi.fn(async () => issued());
 		expect(
 			await Promise.all(
@@ -52,33 +55,37 @@ describe("development OIDC token cache", () => {
 				)
 			)
 		).toEqual(Array(20).fill("development-token"));
-		expect(issue).toHaveBeenCalledOnce();
+		expect(issue).toHaveBeenCalledTimes(20);
 		await vi.advanceTimersByTimeAsync(24 * 60 * 60 * 1000);
-		expect(issue).toHaveBeenCalledOnce();
+		expect(issue).toHaveBeenCalledTimes(20);
 		expect(await cache.getToken(identity, audience, issue)).toBe(
 			"development-token"
 		);
-		expect(issue).toHaveBeenCalledTimes(2);
+		expect(issue).toHaveBeenCalledTimes(21);
 	});
 
-	it("reuses at exactly 60 seconds remaining and renews below it", async ({
+	it("accepts exactly 60 seconds remaining and rejects less", async ({
 		expect,
 	}) => {
-		const cache = new DevelopmentOidcTokenCache();
-		const issue = vi.fn(async () => issued());
-		await cache.getToken(identity, audience, issue);
-		vi.advanceTimersByTime(240_000);
-		await cache.getToken(identity, audience, issue);
-		expect(issue).toHaveBeenCalledOnce();
-		vi.advanceTimersByTime(1);
-		await cache.getToken(identity, audience, issue);
-		expect(issue).toHaveBeenCalledTimes(2);
+		const requests = new DevelopmentOidcTokenRequests();
+		await expect(
+			requests.getToken(identity, audience, async () => ({
+				token: "valid",
+				expiresAt: Date.now() / 1000 + 60,
+			}))
+		).resolves.toBe("valid");
+		await expect(
+			requests.getToken(identity, audience, async () => ({
+				token: "expired",
+				expiresAt: Date.now() / 1000 + 59,
+			}))
+		).rejects.toThrow("invalid token or lifetime");
 	});
 
 	it("does not extend cached lifetime when the wall clock moves backwards", async ({
 		expect,
 	}) => {
-		const cache = new DevelopmentOidcTokenCache();
+		const cache = new DevelopmentOidcTokenRequests();
 		const issue = vi.fn(async () => issued());
 		await cache.getToken(identity, audience, issue);
 		vi.advanceTimersByTime(241_000);
@@ -90,7 +97,7 @@ describe("development OIDC token cache", () => {
 	it.for(Object.keys(identity) as (keyof DevelopmentOidcIdentity)[])(
 		"separates %s",
 		async (field, { expect }) => {
-			const cache = new DevelopmentOidcTokenCache();
+			const cache = new DevelopmentOidcTokenRequests();
 			const issue = vi.fn(async () => issued());
 			await cache.getToken(identity, audience, issue);
 			await cache.getToken({ ...identity, [field]: "other" }, audience, issue);
@@ -101,7 +108,7 @@ describe("development OIDC token cache", () => {
 	it("separates audiences and keys containing separators", async ({
 		expect,
 	}) => {
-		const cache = new DevelopmentOidcTokenCache();
+		const cache = new DevelopmentOidcTokenRequests();
 		const issue = vi.fn(async () => issued());
 		await cache.getToken(identity, audience, issue);
 		await cache.getToken(identity, audience + "/other", issue);
@@ -121,7 +128,7 @@ describe("development OIDC token cache", () => {
 	it("propagates renewal failure without returning the old token, then recovers", async ({
 		expect,
 	}) => {
-		const cache = new DevelopmentOidcTokenCache();
+		const cache = new DevelopmentOidcTokenRequests();
 		const issue = vi
 			.fn(async () => issued())
 			.mockResolvedValueOnce(issued("old"));
@@ -139,7 +146,7 @@ describe("development OIDC token cache", () => {
 	it.for([NaN, Infinity, 1.5, -1, 1_800_000_059, 1_800_000_301])(
 		"rejects invalid expiry %s",
 		async (expiresAt, { expect }) => {
-			const cache = new DevelopmentOidcTokenCache();
+			const cache = new DevelopmentOidcTokenRequests();
 			await expect(
 				cache.getToken(identity, audience, async () => ({
 					token: "invalid",
@@ -152,7 +159,7 @@ describe("development OIDC token cache", () => {
 	it.for(["", "x".repeat(65_537)])(
 		"rejects invalid token length (%#)",
 		async (token, { expect }) => {
-			const cache = new DevelopmentOidcTokenCache();
+			const cache = new DevelopmentOidcTokenRequests();
 			await expect(
 				cache.getToken(identity, audience, async () => issued(token))
 			).rejects.toThrow("invalid token or lifetime");
@@ -160,7 +167,7 @@ describe("development OIDC token cache", () => {
 	);
 
 	it("checks lifetime again after awaiting issuance", async ({ expect }) => {
-		const cache = new DevelopmentOidcTokenCache();
+		const cache = new DevelopmentOidcTokenRequests();
 		const token = issued();
 		await expect(
 			cache.getToken(identity, audience, async () => {
@@ -173,7 +180,7 @@ describe("development OIDC token cache", () => {
 	it("clears cached tokens and rejects pending results across session changes", async ({
 		expect,
 	}) => {
-		const cache = new DevelopmentOidcTokenCache();
+		const cache = new DevelopmentOidcTokenRequests();
 		let complete: ((value: DevelopmentOidcToken) => void) | undefined;
 		const issue = vi.fn(
 			(signal: AbortSignal) =>
@@ -195,10 +202,10 @@ describe("development OIDC token cache", () => {
 		expect(fresh).toHaveBeenCalledTimes(2);
 	});
 
-	it("does not delete a replacement entry when an invalidated issuance fails", async ({
+	it("keeps new requests independent of an old cancelled request", async ({
 		expect,
 	}) => {
-		const cache = new DevelopmentOidcTokenCache();
+		const cache = new DevelopmentOidcTokenRequests();
 		let fail: ((reason: Error) => void) | undefined;
 		const pending = cache.getToken(
 			identity,
@@ -215,27 +222,26 @@ describe("development OIDC token cache", () => {
 		fail?.(new Error("old request failed"));
 		await expect(pending).rejects.toThrow("session changed");
 		await cache.getToken(identity, audience, fresh);
-		expect(fresh).toHaveBeenCalledOnce();
+		expect(fresh).toHaveBeenCalledTimes(2);
 	});
 
-	it("bounds completed entries with LRU eviction", async ({ expect }) => {
-		const cache = new DevelopmentOidcTokenCache();
+	it("rejects revoked authorization even after a successful token", async ({
+		expect,
+	}) => {
+		const requests = new DevelopmentOidcTokenRequests();
 		const issue = vi.fn(async () => issued());
-		for (let i = 0; i < 128; i++) {
-			await cache.getToken(identity, String(i), issue);
-		}
-		await cache.getToken(identity, "0", issue);
-		await cache.getToken(identity, "128", issue);
-		await cache.getToken(identity, "0", issue);
-		expect(issue).toHaveBeenCalledTimes(129);
-		await cache.getToken(identity, "1", issue);
-		expect(issue).toHaveBeenCalledTimes(130);
+		await requests.getToken(identity, audience, issue);
+		issue.mockRejectedValueOnce(new Error("assignment revoked"));
+		await expect(requests.getToken(identity, audience, issue)).rejects.toThrow(
+			"assignment revoked"
+		);
+		expect(issue).toHaveBeenCalledTimes(2);
 	});
 
 	it("bounds pending issuance and cancels it on disposal", async ({
 		expect,
 	}) => {
-		const cache = new DevelopmentOidcTokenCache();
+		const cache = new DevelopmentOidcTokenRequests();
 		const signals: AbortSignal[] = [];
 		const completions: ((value: DevelopmentOidcToken) => void)[] = [];
 		const requests = Array.from({ length: 128 }, (_, i) =>
@@ -267,7 +273,7 @@ describe("development OIDC resource and cancellation boundaries", () => {
 		async (value, { expect }) => {
 			const issue = vi.fn(async () => issued());
 			await expect(
-				new DevelopmentOidcTokenCache().getToken(identity, value, issue)
+				new DevelopmentOidcTokenRequests().getToken(identity, value, issue)
 			).rejects.toThrow("1–2048 UTF-8 bytes");
 			expect(issue).not.toHaveBeenCalled();
 		}
@@ -276,7 +282,7 @@ describe("development OIDC resource and cancellation boundaries", () => {
 	it("bounds identity and token bytes, rather than just characters", async ({
 		expect,
 	}) => {
-		const cache = new DevelopmentOidcTokenCache();
+		const cache = new DevelopmentOidcTokenRequests();
 		const issue = vi.fn(async () => issued("é".repeat(32_769)));
 		await expect(
 			cache.getToken({ ...identity, policy: "é".repeat(2049) }, audience, issue)
@@ -290,7 +296,7 @@ describe("development OIDC resource and cancellation boundaries", () => {
 	it("does not start issuance if disposed before the deferred callback", async ({
 		expect,
 	}) => {
-		const cache = new DevelopmentOidcTokenCache();
+		const cache = new DevelopmentOidcTokenRequests();
 		const issue = vi.fn(async () => issued());
 		const pending = cache.getToken(identity, audience, issue);
 		const rejected = expect(pending).rejects.toThrow("session changed");
@@ -302,7 +308,7 @@ describe("development OIDC resource and cancellation boundaries", () => {
 	it("rejects immediately on invalidation even when the issuer ignores abort", async ({
 		expect,
 	}) => {
-		const cache = new DevelopmentOidcTokenCache();
+		const cache = new DevelopmentOidcTokenRequests();
 		const pending = cache.getToken(
 			identity,
 			audience,
@@ -317,7 +323,7 @@ describe("development OIDC resource and cancellation boundaries", () => {
 	it("times out stalled issuance and still observes a late rejection", async ({
 		expect,
 	}) => {
-		const cache = new DevelopmentOidcTokenCache();
+		const cache = new DevelopmentOidcTokenRequests();
 		let fail: ((reason: Error) => void) | undefined;
 		let signal: AbortSignal | undefined;
 		const pending = cache.getToken(identity, audience, (value) => {
@@ -339,10 +345,8 @@ describe("development OIDC resource and cancellation boundaries", () => {
 		);
 	});
 
-	it("bounds coalesced waiters as well as distinct issuances", async ({
-		expect,
-	}) => {
-		const cache = new DevelopmentOidcTokenCache();
+	it("bounds concurrent calls for the same identity", async ({ expect }) => {
+		const cache = new DevelopmentOidcTokenRequests();
 		const issue = vi.fn(() => new Promise<DevelopmentOidcToken>(() => {}));
 		const requests = Array.from({ length: 128 }, () =>
 			cache.getToken(identity, audience, issue)
@@ -351,7 +355,7 @@ describe("development OIDC resource and cancellation boundaries", () => {
 		await expect(cache.getToken(identity, audience, issue)).rejects.toThrow(
 			"Too many concurrent"
 		);
-		expect(issue).toHaveBeenCalledOnce();
+		expect(issue).toHaveBeenCalledTimes(128);
 		cache.dispose();
 		expect((await settled).every((value) => value.status === "rejected")).toBe(
 			true
@@ -361,7 +365,7 @@ describe("development OIDC resource and cancellation boundaries", () => {
 	it("keeps physical issuance bounded across repeated cache clears", async ({
 		expect,
 	}) => {
-		const cache = new DevelopmentOidcTokenCache();
+		const cache = new DevelopmentOidcTokenRequests();
 		const completions: ((value: DevelopmentOidcToken) => void)[] = [];
 		const issue = vi.fn(
 			() =>
@@ -393,7 +397,7 @@ describe("development OIDC resource and cancellation boundaries", () => {
 	it("snapshots an issuance response once for every waiter", async ({
 		expect,
 	}) => {
-		const cache = new DevelopmentOidcTokenCache();
+		const cache = new DevelopmentOidcTokenRequests();
 		let reads = 0;
 		const response = {
 			get token() {
@@ -407,11 +411,13 @@ describe("development OIDC resource and cancellation boundaries", () => {
 				cache.getToken(identity, audience, async () => response)
 			)
 		);
-		expect(results).toEqual(Array(10).fill("token-1"));
-		expect(reads).toBe(1);
+		expect(results).toEqual(
+			Array.from({ length: 10 }, (_, i) => "token-" + (i + 1))
+		);
+		expect(reads).toBe(10);
 		response.expiresAt = 0;
 		expect(await cache.getToken(identity, audience, async () => issued())).toBe(
-			"token-1"
+			"development-token"
 		);
 	});
 });

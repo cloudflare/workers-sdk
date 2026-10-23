@@ -1,19 +1,28 @@
 import { inspect } from "node:util";
-import { DevelopmentOidcTokenCache } from "miniflare";
+import { DevelopmentOidcTokenRequests } from "miniflare";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { DevelopmentOidcProvider } from "./development-oidc";
 import { DevelopmentOidcApiError } from "./development-oidc-errors";
-import type { DevelopmentOidcSession } from "./development-oidc";
+import type {
+	DevelopmentOidcSession,
+	DevelopmentOidcBindingRequest,
+} from "./development-oidc";
 import type { CfAccount } from "@cloudflare/workers-utils";
 import type { DevelopmentOidcToken } from "miniflare";
 
+const binding = { binding: "IDENTITY", identity_id: "orders" };
 const session: DevelopmentOidcSession = {
+	binding: binding.binding,
+	allowedAudiences: ["https://workers.cloudflare.com/accounts/account"],
 	identity: {
 		accountId: "account",
 		workerId: "worker",
 		userId: "user",
 		developmentSessionId: "session",
 		policy: "policy",
+		identityId: "orders",
+		assignmentId: "local-orders",
+		policyRevision: "1:1",
 	},
 	defaultAudience: "https://workers.cloudflare.com/accounts/account",
 	expiresAt: 1800000000 + 28800,
@@ -29,20 +38,31 @@ function setup(workerName = "linked-worker") {
 		apiToken: { apiToken: "human-oauth" },
 	});
 	const createSession = vi.fn(
-		async (_auth: CfAccount, _name: string, _signal: AbortSignal) => session
+		async (
+			_auth: CfAccount,
+			_name: string,
+			_binding: DevelopmentOidcBindingRequest,
+			_signal: AbortSignal
+		) => session
 	);
 	const issueToken = vi.fn(
 		async (
 			_auth: CfAccount,
 			_session: DevelopmentOidcSession,
 			_audience: string,
+			_fresh: boolean,
 			_signal: AbortSignal
 		) => token()
 	);
-	const provider = new DevelopmentOidcProvider(workerName, getAuth, {
-		createSession,
-		issueToken,
-	});
+	const provider = new DevelopmentOidcProvider(
+		workerName,
+		getAuth,
+		{
+			createSession,
+			issueToken,
+		},
+		binding
+	);
 	return { provider, getAuth, createSession, issueToken };
 }
 
@@ -53,7 +73,7 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe("development OIDC provider", () => {
-	it("does nothing until the getter, then shares auth, session, and issuance", async ({
+	it("does nothing until the getter, then shares auth and session while authorizing every issuance", async ({
 		expect,
 	}) => {
 		const { provider, getAuth, createSession, issueToken } = setup();
@@ -68,14 +88,55 @@ describe("development OIDC provider", () => {
 		expect(createSession).toHaveBeenCalledWith(
 			{ accountId: "account", apiToken: { apiToken: "human-oauth" } },
 			"linked-worker",
+			binding,
 			expect.any(AbortSignal)
 		);
-		expect(issueToken).toHaveBeenCalledOnce();
+		expect(issueToken).toHaveBeenCalledTimes(10);
 		expect(issueToken.mock.calls[0]?.[2]).toBe(session.defaultAudience);
 		await provider.getToken();
 		expect(getAuth).toHaveBeenCalledTimes(2);
 		expect(createSession).toHaveBeenCalledOnce();
-		expect(issueToken).toHaveBeenCalledOnce();
+		expect(issueToken).toHaveBeenCalledTimes(11);
+	});
+
+	it("forwards every fresh request without coalescing", async ({ expect }) => {
+		const { provider, issueToken } = setup();
+		let count = 0;
+		issueToken.mockImplementation(async () => token(`fresh-${++count}`));
+		const tokens = await Promise.all(
+			Array.from({ length: 3 }, () => provider.getToken({ fresh: true }))
+		);
+		expect(new Set(tokens).size).toBe(3);
+		expect(issueToken.mock.calls.map((call) => call[3])).toEqual([
+			true,
+			true,
+			true,
+		]);
+	});
+	it.for([1, null, "true"])(
+		"rejects invalid fresh %s before authorization",
+		async (fresh, { expect }) => {
+			const { provider, getAuth } = setup();
+			await expect(provider.getToken({ fresh } as never)).rejects.toThrow(
+				"only audience and boolean fresh"
+			);
+			expect(getAuth).not.toHaveBeenCalled();
+		}
+	);
+	it("rejects configuration that differs from its approved local audience policy", async ({
+		expect,
+	}) => {
+		const { getAuth, createSession, issueToken } = setup();
+		const provider = new DevelopmentOidcProvider(
+			"linked-worker",
+			getAuth,
+			{ createSession, issueToken },
+			{ ...binding, audience: "different-recipient" }
+		);
+		await expect(provider.getToken()).rejects.toThrow(
+			"approved audience policy"
+		);
+		expect(issueToken).not.toHaveBeenCalled();
 	});
 
 	it("keeps audiences separate and preserves overrides exactly", async ({
@@ -90,6 +151,7 @@ describe("development OIDC provider", () => {
 			session.defaultAudience,
 			"https://EXAMPLE.com/",
 			"https://example.com/",
+			"https://EXAMPLE.com/",
 		]);
 	});
 
@@ -129,7 +191,7 @@ describe("development OIDC provider", () => {
 		await provider.getToken();
 		expect(createSession).toHaveBeenCalledTimes(2);
 		expect(issueToken).toHaveBeenCalledTimes(2);
-		expect(createSession.mock.calls[0]?.[2].aborted).toBe(true);
+		expect(createSession.mock.calls[0]?.[3].aborted).toBe(true);
 	});
 
 	it("isolates account changes and refuses mismatched server identities", async ({
@@ -171,7 +233,7 @@ describe("development OIDC provider", () => {
 			expect(await provider.getToken()).toBe("development-token");
 			expect(createSession).toHaveBeenCalledOnce();
 			expect(issueToken).toHaveBeenCalledTimes(3);
-			expect(createSession.mock.calls[0]?.[2].aborted).toBe(false);
+			expect(createSession.mock.calls[0]?.[3].aborted).toBe(false);
 		}
 	);
 
@@ -185,7 +247,7 @@ describe("development OIDC provider", () => {
 		const rejected = expect(provider.getToken()).rejects.toThrow("timed out");
 		await vi.advanceTimersByTimeAsync(30_000);
 		await rejected;
-		expect(issueToken.mock.calls[1]?.[3].aborted).toBe(true);
+		expect(issueToken.mock.calls[1]?.[4].aborted).toBe(true);
 		expect(await provider.getToken()).toBe("development-token");
 		expect(createSession).toHaveBeenCalledOnce();
 		expect(issueToken).toHaveBeenCalledTimes(3);
@@ -206,14 +268,14 @@ describe("development OIDC provider", () => {
 			await expect(provider.getToken({ audience: "other-api" })).rejects.toBe(
 				error
 			);
-			expect(createSession.mock.calls[0]?.[2].aborted).toBe(true);
+			expect(createSession.mock.calls[0]?.[3].aborted).toBe(true);
 			expect(await provider.getToken()).toBe("development-token");
 			expect(createSession).toHaveBeenCalledTimes(2);
 			expect(issueToken).toHaveBeenCalledTimes(3);
 		}
 	);
 
-	it("honors Retry-After across audiences without delaying cached reads or extending backoff", async ({
+	it("honors Retry-After for every audience without extending backoff", async ({
 		expect,
 	}) => {
 		const { provider, createSession, issueToken } = setup();
@@ -227,7 +289,7 @@ describe("development OIDC provider", () => {
 		await expect(provider.getToken({ audience: "other-api" })).rejects.toBe(
 			error
 		);
-		expect(await provider.getToken()).toBe("development-token");
+		await expect(provider.getToken()).rejects.toBe(error);
 		await vi.advanceTimersByTimeAsync(30_000);
 		await expect(provider.getToken({ audience: "third-api" })).rejects.toBe(
 			error
@@ -287,7 +349,7 @@ describe("development OIDC provider", () => {
 		for (const subject of ["object", "namespace"]) {
 			await expect(
 				configured.provider.getToken({ subject } as { audience?: string })
-			).rejects.toThrow("cloud Preview");
+			).rejects.toThrow("only audience and boolean fresh");
 		}
 		expect(configured.getAuth).not.toHaveBeenCalled();
 	});
@@ -316,7 +378,7 @@ describe("development OIDC provider", () => {
 		const pending = provider.getToken();
 		await vi.waitFor(() => expect(issueToken).toHaveBeenCalledOnce());
 		provider.dispose();
-		expect(issueToken.mock.calls[0]?.[3].aborted).toBe(true);
+		expect(issueToken.mock.calls[0]?.[4].aborted).toBe(true);
 		complete?.(token());
 		await expect(pending).rejects.toThrow("session changed");
 		await expect(provider.getToken()).rejects.toThrow("disposed");
@@ -344,6 +406,7 @@ describe("development OIDC provider security boundaries", () => {
 			apiToken: { apiToken: "original-oauth" },
 		};
 		const response = {
+			...session,
 			identity: { ...session.identity },
 			defaultAudience: session.defaultAudience,
 			expiresAt: session.expiresAt,
@@ -476,7 +539,7 @@ describe("development OIDC provider security boundaries", () => {
 		const { provider } = setup();
 		await provider.getToken();
 		const spy = vi
-			.spyOn(DevelopmentOidcTokenCache.prototype, "getToken")
+			.spyOn(DevelopmentOidcTokenRequests.prototype, "getToken")
 			.mockImplementationOnce(async () => {
 				queueMicrotask(() => provider.dispose());
 				return "cached-token";

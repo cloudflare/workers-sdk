@@ -469,6 +469,16 @@ export interface R2Binding extends R2BindingOptions {
 	type: "r2";
 }
 
+/** Requests an existing approved identity assignment. This configuration never grants access. */
+export interface OidcBindingOptions {
+	identity_id: string;
+	audience: string;
+	allowed_audiences?: string[];
+}
+export interface OidcBinding extends OidcBindingOptions {
+	type: "oidc";
+}
+
 export interface RateLimitBindingOptions {
 	/** The namespace ID for this rate limiter. */
 	namespace: string;
@@ -847,6 +857,7 @@ export interface Bindings {
 	 */
 	r2(options?: R2BindingOptions): R2Binding;
 	/** Binding to a rate limiter. */
+	oidc(options: OidcBindingOptions): OidcBinding;
 	rateLimit(options: RateLimitBindingOptions): RateLimitBinding;
 	/**
 	 * Declares a secret that is required by your Worker, exposed on `env` under
@@ -952,6 +963,7 @@ export const bindings = {
 	pipeline: (options) => ({ type: "pipeline", ...options }),
 	k2: (options) => ({ type: "k2", ...options }),
 	queue: (options) => ({ type: "queue", ...options }),
+	oidc: (options) => ({ type: "oidc", ...options }),
 	rateLimit: (options) => ({ type: "rate-limit", ...options }),
 	r2: (options) => ({ type: "r2", ...options }),
 	secret: () => ({ type: "secret" }),

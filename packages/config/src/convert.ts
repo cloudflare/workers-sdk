@@ -421,6 +421,17 @@ function convertBindingsAndAssets(
 		}
 
 		switch (binding.type) {
+			case "oidc": {
+				(result.oidc ??= []).push({
+					binding: name,
+					identity_id: binding.identity_id,
+					audience: binding.audience,
+					...(binding.allowed_audiences === undefined
+						? {}
+						: { allowed_audiences: binding.allowed_audiences }),
+				});
+				break;
+			}
 			case "agent-memory": {
 				agentMemory.push(
 					omitUndefined({

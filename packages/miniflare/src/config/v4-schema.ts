@@ -369,6 +369,18 @@ const V4WorkerOptionsShapeSchema = z.object({
 	unsafeInspectorProxy: z.boolean().optional(),
 	routes: z.array(z.string()).optional(),
 	cronTriggers: z.array(z.string()).optional(),
+	oidc: z
+		.record(
+			z.string(),
+			z
+				.object({
+					identity_id: z.string(),
+					audience: z.string(),
+					allowed_audiences: z.array(z.string()).optional(),
+				})
+				.strict()
+		)
+		.optional(),
 	bindings: z.record(z.string(), JsonSchema).optional(),
 	/** WASM binding file paths; string values are relative to `rootPath` if not absolute. */
 	wasmBindings: z
@@ -819,6 +831,10 @@ export type V4WorkerOptionsShape = {
 	unsafeInspectorProxy?: boolean;
 	routes?: string[];
 	cronTriggers?: string[];
+	oidc?: Record<
+		string,
+		{ identity_id: string; audience: string; allowed_audiences?: string[] }
+	>;
 	bindings?: Record<string, Json>;
 	wasmBindings?: Record<string, string | Uint8Array>;
 	textBlobBindings?: Record<string, string>;

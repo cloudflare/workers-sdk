@@ -1665,12 +1665,24 @@ export class Miniflare {
 					options === null ||
 					typeof options !== "object" ||
 					Array.isArray(options) ||
-					Object.keys(options).some((key) => key !== "audience") ||
+					Object.keys(options).some(
+						(key) => !["assignment", "audience", "fresh"].includes(key)
+					) ||
+					!("assignment" in options) ||
+					typeof options.assignment !== "string" ||
+					!/^[A-Za-z0-9_-]{1,128}$/.test(options.assignment) ||
+					("fresh" in options && typeof options.fresh !== "boolean") ||
 					("audience" in options && typeof options.audience !== "string")
 				) {
 					throw new Error("Invalid callback.");
 				}
-				const token = await this.#developmentOidc.getToken(capability, options);
+				const token = await this.#developmentOidc.getToken(capability, {
+					assignment: options.assignment,
+					...("audience" in options
+						? { audience: options.audience as string }
+						: {}),
+					...("fresh" in options ? { fresh: options.fresh as boolean } : {}),
+				});
 				response = new Response(token, {
 					headers: {
 						"Content-Type": "text/plain",

@@ -692,6 +692,17 @@ export function printBindings(
 		);
 	}
 
+	for (const { binding, identity_id } of extractBindingsOfType(
+		"oidc",
+		bindings
+	)) {
+		output.push({
+			name: binding,
+			type: "OIDC Identity",
+			value: identity_id,
+			mode: getMode({ isSimulatedLocally: false }),
+		});
+	}
 	if (ratelimits.length > 0) {
 		output.push(
 			...ratelimits.map(({ name, simple }) => ({

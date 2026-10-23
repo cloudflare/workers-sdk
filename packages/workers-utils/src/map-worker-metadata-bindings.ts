@@ -388,6 +388,11 @@ export function mapWorkerMetadataBindings(
 							];
 						}
 						break;
+					case "oidc": {
+						const { name, type: _type, ...request } = binding;
+						(configObj.oidc ??= []).push({ binding: name, ...request });
+						break;
+					}
 					case "ratelimit":
 						{
 							configObj.ratelimits = [

@@ -474,6 +474,20 @@ export function createWorkerUploadForm(
 		);
 	});
 
+	for (const {
+		binding,
+		identity_id,
+		audience,
+		allowed_audiences,
+	} of extractBindingsOfType("oidc", bindings)) {
+		metadataBindings.push({
+			type: "oidc",
+			name: binding,
+			identity_id,
+			audience,
+			...(allowed_audiences === undefined ? {} : { allowed_audiences }),
+		});
+	}
 	ratelimits.forEach(({ name, namespace_id, simple }) => {
 		metadataBindings.push({
 			name,

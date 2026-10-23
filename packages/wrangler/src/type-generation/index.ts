@@ -2846,6 +2846,15 @@ function collectCoreBindings(
 			addBinding(flagshipBinding.binding, "Flagship", "flagship", envName);
 		}
 
+		for (const binding of env.oidc ?? []) {
+			addBinding(
+				binding.binding,
+				"{ getToken(options?: { audience?: string; fresh?: boolean }): Promise<string> }",
+				"oidc",
+				envName
+			);
+		}
+
 		for (const [index, ratelimit] of (env.ratelimits ?? []).entries()) {
 			if (!ratelimit.name) {
 				throwMissingBindingError({
@@ -3906,6 +3915,14 @@ function collectCoreBindingsPerEnvironment(
 				bindingCategory: "flagship",
 				name: flagshipBinding.binding,
 				type: "Flagship",
+			});
+		}
+
+		for (const binding of env.oidc ?? []) {
+			bindings.push({
+				bindingCategory: "oidc",
+				name: binding.binding,
+				type: "{ getToken(options?: { audience?: string; fresh?: boolean }): Promise<string> }",
 			});
 		}
 

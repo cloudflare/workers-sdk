@@ -18,6 +18,7 @@ import {
 } from "./durable-object-exports";
 import { ARTIFACTS_EVENT_TYPES } from "./environment";
 import { partitionExports } from "./exports";
+import { isOidcBinding } from "./oidc";
 import {
 	all,
 	appendEnvName,
@@ -120,6 +121,7 @@ export type ConfigBindingFieldName =
 	| "k2"
 	| "secrets_store_secrets"
 	| "artifacts"
+	| "oidc"
 	| "ratelimits"
 	| "assets"
 	| "unsafe_hello_world"
@@ -162,6 +164,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	k2: "K2 Stream",
 	secrets_store_secrets: "Secrets Store Secret",
 	artifacts: "Artifacts",
+	oidc: "OIDC Identity",
 	ratelimits: "Rate Limit",
 	assets: "Assets",
 	unsafe_hello_world: "Hello World",
@@ -213,6 +216,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	logfwdr: "logfwdr",
 	unsafe_hello_world: "Hello World",
 	flagship: "Flagship",
+	oidc: "OIDC Identity",
 	ratelimit: "Rate Limit",
 	worker_loader: "Worker Loader",
 	vpc_service: "VPC Service",
@@ -2089,6 +2093,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateWorkerLoaderBinding),
 			[]
 		),
+		oidc: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"oidc",
+			validateBindingArray(envName, validateOidcBinding),
+			[]
+		),
 		ratelimits: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -3638,6 +3652,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 	}
 	if (isRequiredProperty(value, "type", "string")) {
 		const safeBindings = [
+			"oidc",
 			"plain_text",
 			"secret_text",
 			"json",
@@ -6422,6 +6437,16 @@ const validateWorkerLoaderBinding: ValidatorFn = (
 	return isValid;
 };
 
+const validateOidcBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (!isOidcBinding(value)) {
+		diagnostics.errors.push(
+			`"${field}" requires binding, identity_id, a valid audience, and optionally a nonempty allowed_audiences list containing the default. OIDC configuration cannot grant identity access or select a subject.`
+		);
+		return false;
+	}
+	return true;
+};
+
 const validateRateLimitBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
@@ -6587,6 +6612,7 @@ const validatePreviewsConfig =
 				"unsafe_hello_world",
 				"flagship",
 				"worker_loaders",
+				"oidc",
 				"ratelimits",
 				"vpc_services",
 				"version_metadata",
@@ -6883,6 +6909,14 @@ const validatePreviewsConfig =
 				diagnostics,
 				`${field}.worker_loaders`,
 				previews.worker_loaders,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateOidcBinding)(
+				diagnostics,
+				`${field}.oidc`,
+				previews.oidc,
 				undefined
 			) && isValid;
 

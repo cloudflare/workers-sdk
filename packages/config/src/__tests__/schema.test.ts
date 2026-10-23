@@ -1753,3 +1753,60 @@ describe("ExportSchema", () => {
 		expect(typeAssertions).toBeTypeOf("function");
 	});
 });
+
+describe("OIDC identity bindings", () => {
+	it("accepts several explicit identities and exact audience policies", ({
+		expect,
+	}) => {
+		const result = InputWorkerSchema.parse({
+			...baseConfig,
+			env: {
+				ORDERS: {
+					type: "oidc",
+					identity_id: "orders",
+					audience: "urn:orders",
+					allowed_audiences: ["urn:orders", "urn:reports"],
+				},
+				REPORTS: {
+					type: "oidc",
+					identity_id: "reports",
+					audience: "recipient",
+				},
+			},
+		});
+		expect(result.env?.ORDERS).toMatchObject({
+			identity_id: "orders",
+			audience: "urn:orders",
+		});
+	});
+	it.for([
+		{ identity_id: "orders", audience: " " },
+		{ identity_id: "orders", audience: "recipient", allowed_audiences: [] },
+		{
+			identity_id: "orders",
+			audience: "recipient",
+			allowed_audiences: ["other"],
+		},
+		{
+			identity_id: "orders",
+			audience: "recipient",
+			allowed_audiences: ["recipient", "recipient"],
+		},
+		{
+			identity_id: "orders",
+			audience: "recipient",
+			assignment_id: "copied-grant",
+		},
+		{ identity_id: "orders", audience: "recipient", subject: "identity:admin" },
+	])(
+		"rejects unapproved configuration fields or invalid audiences: %j",
+		(binding, { expect }) => {
+			expect(
+				InputWorkerSchema.safeParse({
+					...baseConfig,
+					env: { IDENTITY: { type: "oidc", ...binding } },
+				}).success
+			).toBe(false);
+		}
+	);
+});

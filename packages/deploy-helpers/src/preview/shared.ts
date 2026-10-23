@@ -661,6 +661,9 @@ function extractBindings(
 		};
 	}
 
+	for (const { binding, ...value } of previews?.oidc ?? []) {
+		env[binding] = { type: "oidc", ...value };
+	}
 	for (const ratelimit of previews?.ratelimits ?? []) {
 		env[ratelimit.name] = {
 			type: "ratelimit",

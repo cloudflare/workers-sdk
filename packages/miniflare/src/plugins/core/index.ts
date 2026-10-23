@@ -370,6 +370,9 @@ export const CORE_PLUGIN: Plugin = {
 	getBindings(options, _sharedOptions, workerIndex) {
 		const { config, legacy, dev } = options;
 		const bindings: Awaitable<Worker_Binding>[] = [];
+		for (const [name] of getEnvBindingsOfType(config, "oidc")) {
+			bindings.push({ name, oidc: name });
+		}
 
 		for (const [name, binding] of getEnvBindingsOfType(config, "json")) {
 			bindings.push({ name, json: JSON.stringify(binding.value) });

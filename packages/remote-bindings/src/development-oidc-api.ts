@@ -77,7 +77,7 @@ async function readResult(response: Response): Promise<unknown> {
 		}
 		if (response.status === 403) {
 			throw new DevelopmentOidcApiError(
-				"Development OIDC access denied. Check the selected account, existing Worker, OAuth grant, and Worker edit permission.",
+				"Development OIDC access denied. Check the selected account, existing Worker, OAuth grant, Worker edit permission, and approved local identity assignment.",
 				"access_denied"
 			);
 		}
@@ -198,7 +198,7 @@ export function validateDevelopmentOidcApiToken(
 	}
 	const header = decode(headerPart),
 		claims = decode(claimsPart);
-	const { accountId, workerId, userId, developmentSessionId } =
+	const { accountId, workerId, userId, developmentSessionId, identityId } =
 		session.identity;
 	const now = Date.now() / 1000;
 	const issued = claims.iat,
@@ -212,7 +212,11 @@ export function validateDevelopmentOidcApiToken(
 		"crit" in header ||
 		"b64" in header ||
 		claims.iss !== `https://oidc.cloudflare.app/accounts/${accountId}` ||
-		claims.sub !== `worker:${workerId}:development:user:${userId}` ||
+		claims.sub !== `identity:${identityId}` ||
+		claims.account_id !== accountId ||
+		claims.product !== "workers" ||
+		typeof claims.jti !== "string" ||
+		!/^[a-f0-9]{32}$/.test(claims.jti) ||
 		claims.aud !== audience ||
 		claims.execution !== "local" ||
 		claims.worker_id !== workerId ||
@@ -288,7 +292,7 @@ export function createDevelopmentOidcApiTransport(
 		return readResult(response);
 	}
 	return {
-		async createSession(auth, workerName, signal) {
+		async createSession(auth, workerName, binding, signal) {
 			if (
 				workerName.trim() !== workerName ||
 				!/^[A-Za-z0-9_-]{1,63}$/.test(workerName)
@@ -301,7 +305,7 @@ export function createDevelopmentOidcApiTransport(
 				await request(
 					auth,
 					`/accounts/${encodeURIComponent(auth.accountId)}/workers/scripts/${encodeURIComponent(workerName)}/oidc/development-sessions`,
-					{},
+					{ binding: binding.binding, identity_id: binding.identity_id },
 					signal
 				)
 			);
@@ -317,9 +321,18 @@ export function createDevelopmentOidcApiTransport(
 				typeof data.development_session_id !== "string" ||
 				data.development_session_id.length !== 36 ||
 				!SESSION_ID.test(data.development_session_id) ||
-				data.policy !== "workers-oidc-v1" ||
-				data.default_audience !==
-					`https://workers.cloudflare.com/accounts/${auth.accountId}` ||
+				data.policy !== "workers-oidc-v2" ||
+				data.identity_id !== binding.identity_id ||
+				data.binding !== binding.binding ||
+				typeof data.assignment_id !== "string" ||
+				!/^[A-Za-z0-9_-]{1,128}$/.test(data.assignment_id) ||
+				typeof data.policy_revision !== "string" ||
+				!/^[1-9][0-9]*:[1-9][0-9]*$/.test(data.policy_revision) ||
+				typeof data.default_audience !== "string" ||
+				!Array.isArray(data.allowed_audiences) ||
+				data.allowed_audiences.length < 1 ||
+				data.allowed_audiences.length > 64 ||
+				!data.allowed_audiences.includes(data.default_audience) ||
 				typeof data.expires_at !== "number" ||
 				!Number.isSafeInteger(data.expires_at) ||
 				data.expires_at < now + 300 ||
@@ -327,8 +340,12 @@ export function createDevelopmentOidcApiTransport(
 			) {
 				throw new DevelopmentOidcApiError(INVALID);
 			}
+			validateDevelopmentOidcApiAudience(data.default_audience);
+			for (const audience of data.allowed_audiences) {
+				validateDevelopmentOidcApiAudience(audience);
+			}
 			logger.info(
-				`Development OIDC subject for ${workerName}: worker:${data.worker_id}:development:user:${data.user_id} (local execution)`
+				`Development OIDC subject for ${workerName}: identity:${data.identity_id} (local execution)`
 			);
 			return {
 				identity: {
@@ -337,12 +354,17 @@ export function createDevelopmentOidcApiTransport(
 					userId: data.user_id,
 					developmentSessionId: data.development_session_id,
 					policy: data.policy,
+					identityId: data.identity_id,
+					assignmentId: data.assignment_id,
+					policyRevision: data.policy_revision,
 				},
 				defaultAudience: data.default_audience,
+				binding: data.binding,
+				allowedAudiences: data.allowed_audiences,
 				expiresAt: data.expires_at,
 			};
 		},
-		async issueToken(auth, session, audience, signal) {
+		async issueToken(auth, session, audience, fresh, signal) {
 			validateDevelopmentOidcApiAudience(audience);
 			if (
 				auth.accountId !== session.identity.accountId ||
@@ -355,7 +377,7 @@ export function createDevelopmentOidcApiTransport(
 				await request(
 					auth,
 					`/accounts/${encodeURIComponent(auth.accountId)}/workers/oidc/development-sessions/${session.identity.developmentSessionId}/tokens`,
-					{ audience },
+					{ audience, fresh },
 					signal
 				),
 				session,

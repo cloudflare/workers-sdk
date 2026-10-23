@@ -18,6 +18,13 @@ describe("live development OIDC opt-in", () => {
 					account_id: "a".repeat(32),
 					compatibility_date: "2026-01-01",
 					compatibility_flags: ["workers_oidc"],
+					oidc: [
+						{
+							binding: "IDENTITY",
+							identity_id: "orders",
+							audience: "recipient",
+						},
+					],
 				})
 			);
 			const project = {

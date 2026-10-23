@@ -8,6 +8,9 @@ export interface DevelopmentOidcIdentity {
 	userId: string;
 	developmentSessionId: string;
 	policy: string;
+	identityId: string;
+	assignmentId: string;
+	policyRevision: string;
 }
 
 /** A token returned by the trusted development issuance transport. */
@@ -139,6 +142,9 @@ export function snapshotDevelopmentOidcIdentity(
 		userId: identity?.userId,
 		developmentSessionId: identity?.developmentSessionId,
 		policy: identity?.policy,
+		identityId: identity?.identityId,
+		assignmentId: identity?.assignmentId,
+		policyRevision: identity?.policyRevision,
 	};
 	if (Object.values(snapshot).some((value) => !isBoundedString(value, 4096))) {
 		throw new Error(
@@ -152,32 +158,11 @@ interface CachedToken extends DevelopmentOidcToken {
 	monotonicExpiry: number;
 }
 
-interface Entry {
-	controller: AbortController;
-	result: Promise<Readonly<CachedToken>>;
-	token?: Readonly<CachedToken>;
-}
-
-/**
- * Bounded, in-memory development token cache shared by dev-server consumers.
- * Only the trusted host transport may supply identity and policy values. It
- * must authorize every fresh issuance and validate the returned token profile.
- * No timer renews tokens: renewal happens when the getter is called.
- */
-export class DevelopmentOidcTokenCache {
-	#entries = new Map<string, Entry>();
+/** Bound and validate each issuance. Only the server caches assertions, after current authorization. */
+export class DevelopmentOidcTokenRequests {
 	#requests = new DevelopmentOidcRequestPool();
-	#waiters = 0;
+	#controller = new AbortController();
 	#disposed = false;
-
-	/**
-	 * Return a token with at least one minute remaining, coalescing fresh issuance.
-	 *
-	 * @param identity Server-authorized account, Worker, user, session, and policy.
-	 * @param audience Effective audience, including the resolved account default.
-	 * @param issue Host callback used when no reusable token exists.
-	 * @returns The bearer token. Never log or persist the returned value.
-	 */
 	async getToken(
 		identity: DevelopmentOidcIdentity,
 		audience: string,
@@ -186,100 +171,47 @@ export class DevelopmentOidcTokenCache {
 		if (this.#disposed) {
 			throw new Error("The development OIDC session has been disposed.");
 		}
+		snapshotDevelopmentOidcIdentity(identity);
 		validateDevelopmentOidcAudience(audience);
-		const key = JSON.stringify([
-			...Object.values(snapshotDevelopmentOidcIdentity(identity)),
-			audience,
-		]);
-		let entry = this.#entries.get(key);
-		if (entry?.token) {
-			if (isReusable(entry.token)) {
-				this.#entries.delete(key);
-				this.#entries.set(key, entry);
-				return entry.token.token;
-			}
-			this.#entries.delete(key);
-			entry = undefined;
-		}
-		if (this.#waiters >= MAXIMUM_ENTRIES) {
-			throw new Error("Too many concurrent development OIDC requests.");
-		}
-		if (entry === undefined) {
-			if (this.#entries.size >= MAXIMUM_ENTRIES) {
-				const candidate = [...this.#entries].find(([, value]) => value.token);
-				if (candidate === undefined) {
-					throw new Error("Too many concurrent development OIDC requests.");
-				}
-				this.#entries.delete(candidate[0]);
-			}
-			const controller = new AbortController();
-			entry = {
-				controller,
-				result: this.#requests.run(async (signal) => {
-					const response = await issue(signal);
-					signal.throwIfAborted();
-					const token = response?.token;
-					const expiresAt = response?.expiresAt;
-					const remaining =
-						typeof expiresAt === "number" ? expiresAt * 1000 - Date.now() : NaN;
-					if (
-						!isBoundedString(token, 65_536) ||
-						!Number.isSafeInteger(expiresAt) ||
-						remaining < MINIMUM_LIFETIME_MS ||
-						remaining > MAXIMUM_LIFETIME_MS
-					) {
-						throw new Error(
-							"Development OIDC issuance returned an invalid token or lifetime. Retry the getter."
-						);
-					}
-					// Retain only this snapshot, never the mutable transport response.
-					return Object.freeze({
-						token,
-						expiresAt,
-						monotonicExpiry: performance.now() + remaining,
-					});
-				}, controller.signal),
-			};
-			this.#entries.set(key, entry);
-		} else {
-			this.#entries.delete(key);
-			this.#entries.set(key, entry);
-		}
-		this.#waiters++;
-		try {
-			const token = await entry.result;
-			entry.controller.signal.throwIfAborted();
-			if (!isReusable(token)) {
+		const controller = this.#controller;
+		const token = await this.#requests.run(async (signal) => {
+			const response = await issue(signal);
+			signal.throwIfAborted();
+			const token = response?.token,
+				expiresAt = response?.expiresAt;
+			const remaining = expiresAt * 1000 - Date.now();
+			if (
+				!isBoundedString(token, 65536) ||
+				!Number.isSafeInteger(expiresAt) ||
+				remaining < MINIMUM_LIFETIME_MS ||
+				remaining > MAXIMUM_LIFETIME_MS
+			) {
 				throw new Error(
 					"Development OIDC issuance returned an invalid token or lifetime. Retry the getter."
 				);
 			}
-			entry.token = token;
-			return token.token;
-		} catch (error) {
-			if (this.#entries.get(key) === entry) {
-				this.#entries.delete(key);
-			}
-			throw error;
-		} finally {
-			this.#waiters--;
-		}
-	}
-
-	/** Invalidate tokens and cancel pending issuance after an auth/session change. */
-	clear(): void {
-		const entries = this.#entries;
-		this.#entries = new Map();
-		for (const entry of entries.values()) {
-			entry.controller.abort(
-				new Error(
-					"The development OIDC session changed during issuance. Retry the getter."
-				)
+			return {
+				token,
+				expiresAt,
+				monotonicExpiry: performance.now() + remaining,
+			};
+		}, controller.signal);
+		controller.signal.throwIfAborted();
+		if (!isReusable(token)) {
+			throw new Error(
+				"Development OIDC issuance returned an invalid token or lifetime. Retry the getter."
 			);
 		}
+		return token.token;
 	}
-
-	/** Cancel pending issuance and prevent reuse after the dev server stops. */
+	clear(): void {
+		this.#controller.abort(
+			new Error(
+				"The development OIDC session changed during issuance. Retry the getter."
+			)
+		);
+		this.#controller = new AbortController();
+	}
 	dispose(): void {
 		this.#disposed = true;
 		this.clear();

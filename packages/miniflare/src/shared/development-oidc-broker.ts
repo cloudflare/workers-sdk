@@ -6,7 +6,11 @@ import {
 
 /** Host-side broker. Never place it or its credentials in Worker bindings. */
 export interface DevelopmentOidcBroker {
-	getToken(options: { audience?: string }): Promise<string>;
+	getToken(options: {
+		assignment: string;
+		audience?: string;
+		fresh?: boolean;
+	}): Promise<string>;
 	dispose(): void;
 }
 
@@ -88,7 +92,7 @@ export class DevelopmentOidcBrokers {
 	/** Handle a capability-authorized callback. Body limits must be applied before decoding. */
 	async getToken(
 		capability: string,
-		options: { audience?: string }
+		options: { assignment: string; audience?: string; fresh?: boolean }
 	): Promise<string> {
 		const entry = this.#find(capability);
 		if (!entry) {
