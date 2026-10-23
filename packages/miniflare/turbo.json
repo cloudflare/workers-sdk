@@ -4,7 +4,7 @@
 	"tasks": {
 		"build": {
 			"inputs": ["$TURBO_DEFAULT$", "!test/**"],
-			"outputs": ["dist/**", "worker-metafiles/**"],
+			"outputs": ["dist/**"],
 			"env": ["CI_OS", "SOURCEMAPS", "SPARROW_SOURCE_KEY"]
 		},
 		"test:ci": {
