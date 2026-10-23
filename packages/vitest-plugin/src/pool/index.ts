@@ -189,6 +189,20 @@ export function getDurableObjectDesignators(
 			});
 		}
 	}
+	// `exports` can declare Durable Objects that no binding points to. Register
+	// them by class name, as Wrangler configs do for unbound classes, so their
+	// stubs from `exports` work with the test helpers.
+	for (const [name, exported] of Object.entries(
+		cloudflareConfig?.worker.exports ?? {}
+	)) {
+		if (
+			exported.type === "durable-object" &&
+			"storage" in exported &&
+			!result.has(name)
+		) {
+			result.set(name, { className: name });
+		}
+	}
 	const durableObjects = options.miniflare?.durableObjects ?? {};
 	for (const [key, designator] of Object.entries(durableObjects)) {
 		if (typeof designator === "string") {
@@ -875,11 +889,25 @@ function applyCloudflareConfig(
 			...withoutUndefined(runnerAssets),
 		};
 	}
+	// A Worker routes all its remote bindings through one proxy, and converting
+	// `miniflare` options that use two already fails, so fail here too
+	const runnerRemoteProxyConnectionString =
+		runner.dev?.remoteProxyConnectionString;
+	if (
+		runnerRemoteProxyConnectionString !== undefined &&
+		remoteProxyConnectionString !== undefined &&
+		String(runnerRemoteProxyConnectionString) !==
+			String(remoteProxyConnectionString)
+	) {
+		throw new TypeError(
+			"Remote bindings in `miniflare` options and `cloudflare.config.ts` use different remote proxy sessions, but a Worker can only use one. Declare the remote bindings in `cloudflare.config.ts` instead."
+		);
+	}
 	runner.dev = {
 		...runner.dev,
 		zone: runner.dev?.zone ?? getWorkerZone(worker),
 		remoteProxyConnectionString:
-			runner.dev?.remoteProxyConnectionString ?? remoteProxyConnectionString,
+			runnerRemoteProxyConnectionString ?? remoteProxyConnectionString,
 	};
 }
 

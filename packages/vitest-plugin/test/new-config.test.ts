@@ -103,6 +103,7 @@ test("binds the config's own Durable Objects, Workflows, Worker and secrets", as
 					},
 					exports: {
 						Counter: { type: "durable-object", storage: "sqlite" },
+						Unbound: { type: "durable-object", storage: "sqlite" },
 						MyWorkflow: { type: "workflow", name: "my-workflow" },
 					},
 				},
@@ -115,6 +116,7 @@ test("binds the config's own Durable Objects, Workflows, Worker and secrets", as
 				count = 0;
 				increment() { return ++this.count; }
 			}
+			export class Unbound extends Counter {}
 			export class MyWorkflow extends WorkflowEntrypoint {
 				async run(event, step) {
 					return await step.do("greet", async () => "Hello, " + event.payload.name);
@@ -128,6 +130,7 @@ test("binds the config's own Durable Objects, Workflows, Worker and secrets", as
 		`,
 		"index.test.ts": dedent`
 			import { env, listDurableObjectIds, runInDurableObject } from "cloudflare:test";
+			import { exports } from "cloudflare:workers";
 			import { it } from "vitest";
 
 			it("calls a Durable Object bound to its own Worker", async ({ expect }) => {
@@ -139,6 +142,11 @@ test("binds the config's own Durable Objects, Workflows, Worker and secrets", as
 				expect(await runInDurableObject(stub, (instance) => instance.increment())).toBe(1);
 				const ids = await listDurableObjectIds(env.COUNTER);
 				expect(ids.some((id) => id.equals(stub.id))).toBe(true);
+			});
+
+			it("runs code inside a Durable Object that is only exported", async ({ expect }) => {
+				const stub = exports.Unbound.getByName("inside");
+				expect(await runInDurableObject(stub, (instance) => instance.increment())).toBe(1);
 			});
 
 			it("runs a Workflow bound to its own Worker", async ({ expect }) => {
@@ -162,7 +170,7 @@ test("binds the config's own Durable Objects, Workflows, Worker and secrets", as
 	const result = await vitestRun();
 
 	await expect(result.exitCode).resolves.toBe(0);
-	expect(result.stdout).toMatch("5 passed");
+	expect(result.stdout).toMatch("6 passed");
 });
 
 test("merges `miniflare` queue consumers and assets with the config's", async ({
