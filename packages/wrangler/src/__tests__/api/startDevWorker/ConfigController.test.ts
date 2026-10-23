@@ -165,6 +165,38 @@ describe("ConfigController", () => {
 		});
 	});
 
+	it.for([
+		{ remote: undefined, hostname: undefined },
+		{ remote: false, hostname: undefined },
+		{ remote: true, hostname: "route.example.com" },
+		{ remote: "minimal", hostname: "route.example.com" },
+	] as const)(
+		"should resolve the origin with inference disabled and remote=$remote",
+		async ({ remote, hostname }, { expect }) => {
+			await seed({
+				"src/index.ts": "export default {}",
+				"wrangler.json": JSON.stringify({
+					name: "my-worker",
+					main: "src/index.ts",
+					compatibility_date: "2024-06-01",
+					routes: [{ pattern: "route.example.com/*", zone_id: "some-zone-id" }],
+				}),
+			});
+
+			const config = await controller.set(
+				{
+					config: "./wrangler.json",
+					dev: { remote, inferOriginFromRoutes: false },
+				},
+				true
+			);
+
+			expect(config).toMatchObject({
+				dev: { origin: { hostname } },
+			});
+		}
+	);
+
 	it("should map UDP connect options for the local runtime", async ({
 		expect,
 	}) => {
