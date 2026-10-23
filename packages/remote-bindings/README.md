@@ -3,7 +3,7 @@
 This package supplies host-side remote binding sessions and authentication to
 Wrangler, the Cloudflare Vite plugin, and the Vitest plugin.
 
-## Development OIDC primitives
+## Authenticated local development OIDC
 
 `getDevelopmentOidcAuthHook()` resolves the selected cf or Wrangler profile and
 reads its human OAuth credentials on demand. API tokens, global keys, and temporary
@@ -47,27 +47,86 @@ Worker and user and create the session; local config and transport inputs grant
 no signing authority. Never log the OAuth credential or returned bearer token,
 and never sign development tokens locally.
 
-### Remaining integration dependencies
+### Consumer integration and native callback
 
-These primitives alone do **not** enable `ctx.oidc.getToken()` in local workerd.
-The following integration work requires the matching upstream contracts:
+`getDevelopmentOidcOptions()` supplies a lazy host broker for Workers with the
+`workers_oidc` compatibility flag. Wrangler local development, `cf dev` delegates,
+and the Cloudflare Vite plugin (dev and local preview) install it for each user
+Worker. Miniflare owns the broker lifecycle: code reloads retain a session;
+configuration changes and shutdown cancel and dispose it. Internal proxy, asset,
+and helper Workers do not receive the broker.
 
-- Add the concrete Cloudflare transport when the development session/issuance
-  route and request/response contract are available. Map sign-in, Worker permission,
-  network, rate-limit, and signing failures without logging response tokens.
-- Connect Miniflare's per-Worker native getter callback using the matching workerd
-  service configuration and protocol. Use its authenticated internal loopback;
-  expose no issuance route on the application's public dev server. Update the
-  workerd pin and regenerate schema/types from that release.
-- Retain one provider per user Worker in Wrangler's local and multiworker runtime
-  controllers and the Vite dev-server lifecycle. Exclude internal proxy, runner,
-  asset, and helper Workers. Show the server-authorized development subject.
-- Add a separate, default-off live-issuance opt-in in Vitest. Offline tests inject
-  mocks. Enabling remote bindings must not implicitly enable live OIDC issuance.
-- Prove the native getter end to end for Workers and local Durable Objects,
-  including service/RPC calls, Worker isolation, credential changes, cancellation,
-  and renewal/failure behavior. Vite core requires no change.
+The native `Worker.oidcTokenService` sends `POST /token` with `{}` or
+`{"audience":"exact audience"}` and receives a compact JWT as `text/plain`.
+Miniflare configures a private external service with a separate random capability
+for each Worker and instance. It is absent from `env`, the dev registry, and the
+Worker's outbound service. The callback checks the capability before reading a
+bounded body; host exceptions never enter Worker responses. The ordinary shared
+loopback credential alone cannot authorize issuance.
 
-Until those integrations are complete, native local issuance remains unsupported
-through Wrangler, Vite, and Vitest. The mock transport tests cover only the shared
-host-side provider and cache, not the runtime or a live Cloudflare endpoint.
+`createDevelopmentOidcApiTransport()` uses the existing Cloudflare API request
+helper with explicit human OAuth credentials and redirect refusal. Its v4 routes
+map to EWC's `/api/scripts/...` and `/api/oidc/...` handlers:
+
+- `POST /accounts/{account}/workers/scripts/{name}/oidc/development-sessions`, body
+  `{}`, returns server account, Worker, user, session, policy, default audience and
+  session expiry.
+- `POST /accounts/{account}/workers/oidc/development-sessions/{session}/tokens`, body
+  `{"audience":"exact audience"}`, returns `token` and `expires_at`.
+
+Responses use the usual Cloudflare `success`/`result` envelope. Bodies are capped
+at 128 KiB before JSON decoding. The adapter validates server identity, session
+bounds, exact audience, workload JOSE header, development claims and lifetime. It
+never fetches a token-supplied URL. Error responses are cancelled without decoding
+or logging their body. A validated session's development subject is displayed in
+the host dev server. Expiring sessions are recreated on the next getter.
+
+### Vitest and offline mocks
+
+Live issuance is disabled by default, independently of `remoteBindings`. Opt in
+explicitly in the Workers pool options passed to `cloudflareTest()`:
+
+```ts
+cloudflareTest({
+	wrangler: { configPath: "./wrangler.jsonc" },
+	developmentOidc: true,
+});
+```
+
+An offline test can instead supply a host-side broker through
+`miniflare.developmentOidc` (modern Miniflare uses `workers[].dev.developmentOidc`):
+
+```ts
+miniflare: {
+  developmentOidc: {
+    key: "offline-test",
+    create: () => ({
+      getToken: async () => fixtureJwt,
+      dispose() {},
+    }),
+  },
+}
+```
+
+The mock must return a compact JWT; it need not use Cloudflare or real keys. No
+OAuth credentials or host callback are exposed to the test Worker. Explicit local
+DO object/namespace subjects are rejected by workerd; default local DO getters
+share the linked Worker's development identity.
+
+### Upstream release dependencies
+
+The checked-in workerd npm pin predates `oidcTokenService`. Until the matching
+runtime is published, use its local build through `MINIFLARE_WORKERD_PATH` for
+integration development. `scripts/generate-workerd-config.mjs` generates the
+configuration serializer from the pinned schema plus this additive upstream
+field; remove the supplement when updating the runtime pin. The native broker
+suite runs when that override is provided. This does not enable the feature in
+an older runtime.
+
+Cloudflare must publish the two v4 gateway routes and deploy EWC's development
+session handlers, session migration, human OAuth verifier and constrained
+Edgeworker signer. The backend draft now wires its OAuth verifier and checks
+current Worker access and grant limits with IAM. Key provisioning, account opt-in
+and IAM confirmation of the permission/scope mapping remain rollout dependencies
+owned outside workers-sdk; mocked API and local native tests cannot prove live
+service authorization.

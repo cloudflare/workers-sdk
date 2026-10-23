@@ -15,6 +15,7 @@ const session: DevelopmentOidcSession = {
 		policy: "policy",
 	},
 	defaultAudience: "https://workers.cloudflare.com/accounts/account",
+	expiresAt: 1800000000 + 28800,
 };
 
 function token(value = "development-token"): DevelopmentOidcToken {
@@ -239,6 +240,7 @@ describe("development OIDC provider security boundaries", () => {
 		const response = {
 			identity: { ...session.identity },
 			defaultAudience: session.defaultAudience,
+			expiresAt: session.expiresAt,
 		};
 		getAuth.mockResolvedValue(auth);
 		createSession.mockResolvedValue(response);
@@ -417,4 +419,21 @@ it("rejects line terminators in account metadata before transport", async ({
 	});
 	await expect(provider.getToken()).rejects.toThrow("valid account");
 	expect(createSession).not.toHaveBeenCalled();
+});
+
+it("recreates an expiring server session only when the getter runs", async ({
+	expect,
+}) => {
+	const { provider, createSession, issueToken } = setup();
+	await provider.getToken();
+	await vi.advanceTimersByTimeAsync((28800 - 299) * 1000);
+	expect(createSession).toHaveBeenCalledOnce();
+	createSession.mockResolvedValueOnce({
+		...session,
+		expiresAt: Math.floor(Date.now() / 1000) + 28800,
+	});
+	await provider.getToken();
+	expect(createSession).toHaveBeenCalledTimes(2);
+	expect(issueToken).toHaveBeenCalledTimes(2);
+	provider.dispose();
 });

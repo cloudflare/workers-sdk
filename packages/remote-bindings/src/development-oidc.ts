@@ -11,6 +11,8 @@ import type { DevelopmentOidcIdentity, DevelopmentOidcToken } from "miniflare";
 export interface DevelopmentOidcSession {
 	identity: DevelopmentOidcIdentity;
 	defaultAudience: string;
+	/** Server session expiry in Unix seconds. */
+	expiresAt: number;
 }
 
 /**
@@ -42,6 +44,8 @@ interface SessionState {
 	oauthToken: string;
 	controller: AbortController;
 	session: Promise<DevelopmentOidcSession>;
+	monotonicExpiry?: number;
+	expiresAt?: number;
 }
 
 /**
@@ -85,7 +89,7 @@ export class DevelopmentOidcProvider {
 		this.#checkActive();
 		if (
 			typeof this.#workerName !== "string" ||
-			this.#workerName.length > 255 ||
+			this.#workerName.length > 63 ||
 			!this.#workerName.trim()
 		) {
 			throw new Error(
@@ -116,7 +120,10 @@ export class DevelopmentOidcProvider {
 			let state = this.#state;
 			if (
 				state?.accountId !== auth.accountId ||
-				state.oauthToken !== auth.apiToken.apiToken
+				state.oauthToken !== auth.apiToken.apiToken ||
+				(state.expiresAt !== undefined &&
+					(state.expiresAt * 1000 < Date.now() + 300000 ||
+						(state.monotonicExpiry ?? 0) < performance.now() + 300000))
 			) {
 				this.#invalidate();
 				const controller = new AbortController();
@@ -141,7 +148,22 @@ export class DevelopmentOidcProvider {
 								"Development OIDC returned a session for a different account."
 							);
 						}
-						return Object.freeze({ identity, defaultAudience });
+						const expiresAt = response?.expiresAt;
+						const remaining = expiresAt * 1000 - Date.now();
+						if (
+							!Number.isSafeInteger(expiresAt) ||
+							remaining < 300000 ||
+							remaining > 28800000
+						) {
+							throw new Error(
+								"Development OIDC returned an invalid session lifetime."
+							);
+						}
+						if (this.#state?.controller === controller) {
+							this.#state.expiresAt = expiresAt;
+							this.#state.monotonicExpiry = performance.now() + remaining;
+						}
+						return Object.freeze({ identity, defaultAudience, expiresAt });
 					}, controller.signal),
 				};
 				this.#state = state;
