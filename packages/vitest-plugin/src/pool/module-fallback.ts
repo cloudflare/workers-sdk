@@ -332,7 +332,7 @@ async function viteResolve(
 		specifier,
 		referrer,
 		{
-			// Vite 8 picks the `require` or `import` export condition from `kind`
+			// Vite 8.2.1, and later, picks the `require` or `import` export condition from `kind`
 			kind: isRequire ? "require-call" : "import-statement",
 			// Vite 7 and earlier read `isRequire` from here instead
 			// https://github.com/vitejs/vite/blob/v5.1.4/packages/vite/src/node/plugins/resolve.ts#L178-L179
