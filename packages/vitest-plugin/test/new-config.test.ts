@@ -222,6 +222,62 @@ test("applies the config's queue consumers", async ({
 	expect(result.stdout).toMatch("1 passed");
 });
 
+test("wraps Workflows bound to the config's own Worker and ignores tail consumers", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
+	await seed({
+		"vitest.config.mts": vitestConfig({ config: true }),
+		"cloudflare.config.ts": dedent`
+			export default {
+				worker: {
+					name: "test-worker",
+					// Before 2025-11-17, unexported Workflows need a wrapper
+					compatibilityDate: "2025-06-01",
+					entrypoint: "./index.ts",
+					env: {
+						MY_WORKFLOW: { type: "workflow", name: "my-workflow", worker: "test-worker", exportName: "MyWorkflow" },
+					},
+					tailConsumers: [{ worker: "test-worker" }],
+				},
+			};
+		`,
+		"index.ts": dedent`
+			import { WorkflowEntrypoint } from "cloudflare:workers";
+			export class MyWorkflow extends WorkflowEntrypoint {
+				async run(event, step) {
+					return await step.do("greet", async () => "Hello, " + event.payload.name);
+				}
+			}
+			export default {
+				tail(events) {
+					console.log("tail", events.length);
+				},
+			};
+		`,
+		"index.test.ts": dedent`
+			import { env } from "cloudflare:test";
+			import { it } from "vitest";
+
+			it("runs a Workflow bound to its own Worker", async ({ expect }) => {
+				const instance = await env.MY_WORKFLOW.create({ params: { name: "World" } });
+				await expect
+					.poll(() => instance.status())
+					.toMatchObject({ status: "complete", output: "Hello, World" });
+			});
+		`,
+	});
+
+	const result = await vitestRun();
+
+	await expect(result.exitCode).resolves.toBe(0);
+	expect(result.stdout).toMatch("1 passed");
+	expect(`${result.stdout}${result.stderr}`).toMatch(
+		'Tail consumers aren\'t supported with `config` yet, so "test-worker" was ignored.'
+	);
+});
+
 test("resolves a custom config path and its entrypoint", async ({
 	expect,
 	seed,

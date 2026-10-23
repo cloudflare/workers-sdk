@@ -498,15 +498,24 @@ async function buildProjectWorkerOptions(
 	const workflowClassNames = getWorkflowClasses(runnerWorker, configWorkerName);
 
 	// `cloudflare.config.ts` declares its Durable Object and Workflow classes in
-	// `exports`. They're applied to the runner after conversion, but need
-	// wrappers like any other class defined in the runner.
+	// `exports` or binds its own Workflows. They're applied to the runner after
+	// conversion, but need wrappers like any other class defined in the runner.
+	const cloudflareConfig = customOptions.loadedCloudflareConfig;
 	for (const [name, exported] of Object.entries(
-		customOptions.loadedCloudflareConfig?.worker.exports ?? {}
+		cloudflareConfig?.worker.exports ?? {}
 	)) {
 		if (exported.type === "durable-object" && "storage" in exported) {
 			durableObjectClassNames.add(name);
 		} else if (exported.type === "workflow") {
 			workflowClassNames.add(name);
+		}
+	}
+	for (const binding of Object.values(cloudflareConfig?.env ?? {})) {
+		if (
+			binding.type === "workflow" &&
+			binding.worker === cloudflareConfig?.worker.name
+		) {
+			workflowClassNames.add(binding.exportName);
 		}
 	}
 
@@ -788,8 +797,8 @@ async function buildProjectMiniflareOptions(
  * Applies a `cloudflare.config.ts` Worker to the runner Worker, in Miniflare's
  * native shape. The pool's own options take precedence, and `env` and
  * `exports` are merged by name. Self-references are pointed at the (renamed)
- * runner. Tail consumers other than the config's own Worker are dropped with a
- * warning, and so is the assets binding, as there's no assets directory.
+ * runner. Tail consumers aren't supported yet and are dropped with a warning,
+ * and so is the assets binding, as there's no assets directory.
  *
  * @param runner The runner Worker, as converted from the pool's V4 options.
  * @param cloudflareConfig The loaded `cloudflare.config.ts`.
@@ -836,25 +845,17 @@ function applyCloudflareConfig(
 		runnerExports[name] = rest;
 	}
 
-	const runnerTailConsumers = (tailConsumers ?? []).flatMap((tail) => {
-		if (tail.worker === worker.name) {
-			return [{ ...tail, worker: runnerName }];
-		}
+	for (const tail of tailConsumers ?? []) {
 		log.warn(
-			`Tail consumer "${tail.worker}" was not found in your config. Make sure you add it if you'd like to simulate receiving tail events locally.`
+			`Tail consumers aren't supported with \`config\` yet, so "${tail.worker}" was ignored.`
 		);
-		return [];
-	});
+	}
 
 	runner.config = {
 		...config,
 		...runner.config,
 		env: { ...runnerEnv, ...runner.config.env },
 		exports: { ...runnerExports, ...runner.config.exports },
-		tailConsumers: [
-			...runnerTailConsumers,
-			...(runner.config.tailConsumers ?? []),
-		],
 	};
 	runner.dev = {
 		...runner.dev,

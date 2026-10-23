@@ -155,7 +155,11 @@ export type WorkersPoolOptionsWithDefines = WorkersPoolOptions & {
 	 * @internal
 	 */
 	loadedCloudflareConfig?: LoadedNewConfig;
-	/** Remote proxy session for `loadedCloudflareConfig`'s remote bindings. */
+	/**
+	 * Remote proxy session for `loadedCloudflareConfig`'s remote bindings.
+	 *
+	 * @internal
+	 */
 	remoteProxyConnectionString?: RemoteProxyConnectionString;
 };
 

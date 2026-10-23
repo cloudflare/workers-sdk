@@ -41,8 +41,9 @@ file:
   in `src/pool/index.ts` applies it to the runner after the pool's V4 options are
   converted. `miniflare` options can't be combined with `config`.
   Remote bindings use cf credentials (`src/pool/auth.ts`).
-  `src/pool/auth.ts`, `src/pool/local-env.ts` and `src/pool/remote-bindings.ts` mirror
-  `@cloudflare/vite-plugin`'s and must be kept in sync. `ctx.mode` comes from
+  `src/pool/auth.ts`, `src/pool/local-env.ts`, `src/pool/remote-bindings.ts` and
+  `getWorkerZone()` in `src/pool/index.ts` mirror `@cloudflare/vite-plugin`'s, and
+  `DEFAULT_MODULE_RULES` in `src/pool/config.ts` mirrors Wrangler's; keep them in sync. `ctx.mode` comes from
   `project.vite.config.mode`.
 
 The two are mutually exclusive, and setting both is an error. Neither file is loaded unless
