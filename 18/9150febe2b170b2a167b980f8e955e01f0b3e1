@@ -1,0 +1,19 @@
+packages/autoconfig/src/details/index.ts
+  s_55f1d3f69d7c75::t_70fa65c3d40a72 209-237
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "189150febe2b170b2a167b980f8e955e01f0b3e1",
+  "prompts": {},
+  "sessions": {
+    "s_55f1d3f69d7c75": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "19f8e372-dfe4-482a-9e52-b491e3efe9de",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}
