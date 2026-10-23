@@ -2,6 +2,7 @@ import { inspect } from "node:util";
 import { DevelopmentOidcTokenCache } from "miniflare";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { DevelopmentOidcProvider } from "./development-oidc";
+import { DevelopmentOidcApiError } from "./development-oidc-errors";
 import type { DevelopmentOidcSession } from "./development-oidc";
 import type { CfAccount } from "@cloudflare/workers-utils";
 import type { DevelopmentOidcToken } from "miniflare";
@@ -158,17 +159,122 @@ describe("development OIDC provider", () => {
 		expect(await provider.getToken()).toBe("development-token");
 	});
 
-	it("reports fresh issuance failures without stale-token fallback", async ({
+	it.for(["unavailable", "rate_limited"] as const)(
+		"retains the session after %s without stale-token fallback",
+		async (kind, { expect }) => {
+			const { provider, createSession, issueToken } = setup();
+			await provider.getToken();
+			vi.advanceTimersByTime(241_000);
+			const error = new DevelopmentOidcApiError("Retry issuance", kind);
+			issueToken.mockRejectedValueOnce(error);
+			await expect(provider.getToken()).rejects.toBe(error);
+			expect(await provider.getToken()).toBe("development-token");
+			expect(createSession).toHaveBeenCalledOnce();
+			expect(issueToken).toHaveBeenCalledTimes(3);
+			expect(createSession.mock.calls[0]?.[2].aborted).toBe(false);
+		}
+	);
+
+	it("retains the session after the issuance deadline, then retries on demand", async ({
 		expect,
 	}) => {
-		const { provider, issueToken } = setup();
+		const { provider, createSession, issueToken } = setup();
 		await provider.getToken();
 		vi.advanceTimersByTime(241_000);
-		issueToken.mockRejectedValueOnce(new Error("Cloudflare is unreachable"));
-		await expect(provider.getToken()).rejects.toThrow(
-			"Cloudflare is unreachable"
+		issueToken.mockImplementationOnce(() => new Promise(() => {}));
+		const rejected = expect(provider.getToken()).rejects.toThrow("timed out");
+		await vi.advanceTimersByTimeAsync(30_000);
+		await rejected;
+		expect(issueToken.mock.calls[1]?.[3].aborted).toBe(true);
+		expect(await provider.getToken()).toBe("development-token");
+		expect(createSession).toHaveBeenCalledOnce();
+		expect(issueToken).toHaveBeenCalledTimes(3);
+	});
+
+	it.for([
+		new DevelopmentOidcApiError("Sign in again", "login_required"),
+		new DevelopmentOidcApiError("Access denied", "access_denied"),
+		new DevelopmentOidcApiError("Renew session", "session_renewal"),
+		new DevelopmentOidcApiError("Invalid response"),
+		new Error("Unknown failure"),
+	])(
+		"clears the session and all cached audiences after %s",
+		async (error, { expect }) => {
+			const { provider, createSession, issueToken } = setup();
+			await provider.getToken();
+			issueToken.mockRejectedValueOnce(error);
+			await expect(provider.getToken({ audience: "other-api" })).rejects.toBe(
+				error
+			);
+			expect(createSession.mock.calls[0]?.[2].aborted).toBe(true);
+			expect(await provider.getToken()).toBe("development-token");
+			expect(createSession).toHaveBeenCalledTimes(2);
+			expect(issueToken).toHaveBeenCalledTimes(3);
+		}
+	);
+
+	it("honors Retry-After across audiences without delaying cached reads or extending backoff", async ({
+		expect,
+	}) => {
+		const { provider, createSession, issueToken } = setup();
+		await provider.getToken();
+		const error = new DevelopmentOidcApiError(
+			"Rate limited",
+			"rate_limited",
+			60_000
+		);
+		issueToken.mockRejectedValueOnce(error);
+		await expect(provider.getToken({ audience: "other-api" })).rejects.toBe(
+			error
 		);
 		expect(await provider.getToken()).toBe("development-token");
+		await vi.advanceTimersByTimeAsync(30_000);
+		await expect(provider.getToken({ audience: "third-api" })).rejects.toBe(
+			error
+		);
+		expect(issueToken).toHaveBeenCalledTimes(2);
+		await vi.advanceTimersByTimeAsync(30_000);
+		expect(await provider.getToken({ audience: "other-api" })).toBe(
+			"development-token"
+		);
+		expect(createSession).toHaveBeenCalledOnce();
+		expect(issueToken).toHaveBeenCalledTimes(3);
+	});
+
+	it("backs off failed session creation and releases its rejected promise", async ({
+		expect,
+	}) => {
+		const { provider, createSession } = setup();
+		const error = new DevelopmentOidcApiError(
+			"Rate limited",
+			"rate_limited",
+			60_000
+		);
+		createSession.mockRejectedValueOnce(error);
+		await expect(provider.getToken()).rejects.toBe(error);
+		await vi.advanceTimersByTimeAsync(30_000);
+		await expect(provider.getToken()).rejects.toBe(error);
+		expect(createSession).toHaveBeenCalledOnce();
+		await vi.advanceTimersByTimeAsync(30_000);
+		expect(await provider.getToken()).toBe("development-token");
+		expect(createSession).toHaveBeenCalledTimes(2);
+	});
+
+	it("clears backoff when credentials change", async ({ expect }) => {
+		const { provider, getAuth, createSession, issueToken } = setup();
+		const error = new DevelopmentOidcApiError(
+			"Rate limited",
+			"rate_limited",
+			60_000
+		);
+		issueToken.mockRejectedValueOnce(error);
+		await expect(provider.getToken()).rejects.toBe(error);
+		getAuth.mockResolvedValue({
+			accountId: "account",
+			apiToken: { apiToken: "new-oauth" },
+		});
+		expect(await provider.getToken()).toBe("development-token");
+		expect(createSession).toHaveBeenCalledTimes(2);
 	});
 
 	it("requires a linked Worker and rejects explicit local DO identities", async ({

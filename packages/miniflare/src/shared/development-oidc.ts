@@ -27,6 +27,13 @@ const MAXIMUM_LIFETIME_MS = 300_000;
 const MAXIMUM_ENTRIES = 128;
 const REQUEST_TIMEOUT_MS = 30_000;
 
+/** A bounded host request timed out without invalidating its authorized session. */
+export class DevelopmentOidcRequestTimeoutError extends Error {
+	constructor() {
+		super("The development OIDC request timed out. Retry the getter.");
+	}
+}
+
 /**
  * Bound host operations even when an adapter ignores cancellation. An aborted
  * operation retains its slot until the underlying promise settles. Callers stop
@@ -54,9 +61,7 @@ export class DevelopmentOidcRequestPool {
 		const controller = new AbortController();
 		const signal = AbortSignal.any([parent, controller.signal]);
 		const timer = setTimeout(() => {
-			controller.abort(
-				new Error("The development OIDC request timed out. Retry the getter.")
-			);
+			controller.abort(new DevelopmentOidcRequestTimeoutError());
 		}, REQUEST_TIMEOUT_MS);
 		timer.unref();
 		const result = Promise.resolve().then(() => {

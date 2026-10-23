@@ -4,6 +4,7 @@ import { Response } from "undici";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	createDevelopmentOidcApiTransport,
+	DevelopmentOidcApiError,
 	validateDevelopmentOidcApiAudience,
 	validateDevelopmentOidcApiToken,
 } from "./development-oidc-api";
@@ -115,9 +116,18 @@ describe("development issuance API transport", () => {
 		expect(calls[1]?.[7]).toEqual(auth.apiToken);
 		expect(calls[1]?.[6]).toBe(signal);
 	});
-	it.for([401, 403, 404, 429, 503])(
-		"suppresses API error bodies and cancels them (%i)",
-		async (status, { expect }) => {
+	it.for([
+		[401, "login_required"],
+		[403, "access_denied"],
+		[404, "invalid"],
+		[409, "session_renewal"],
+		[429, "rate_limited"],
+		[500, "unavailable"],
+		[503, "unavailable"],
+		[400, "invalid"],
+	] as const)(
+		"classifies status %i without reading its error body",
+		async ([status, kind], { expect }) => {
 			const cancel = vi.fn();
 			const body = new ReadableStream({ cancel });
 			vi.mocked(performApiFetchBase).mockResolvedValue(
@@ -127,8 +137,36 @@ describe("development issuance API transport", () => {
 				{},
 				logger
 			).createSession(auth, "linked-worker", signal);
-			await expect(pending).rejects.toThrow(/Development OIDC/);
+			await expect(pending).rejects.toMatchObject({
+				message: expect.stringMatching(/^Development OIDC/),
+				kind,
+			});
 			expect(cancel).toHaveBeenCalledOnce();
+		}
+	);
+	it.for([
+		["60", 60_000],
+		[new Date((now + 60) * 1000).toUTCString(), 60_000],
+		["garbage", undefined],
+		["999999999999999999999", undefined],
+		["-1", undefined],
+	] as const)(
+		"reads bounded Retry-After metadata (%s)",
+		async ([value, delay], { expect }) => {
+			vi.mocked(performApiFetchBase).mockResolvedValue(
+				new Response(null, {
+					status: 429,
+					headers: { "Retry-After": value },
+				})
+			);
+			await expect(
+				createDevelopmentOidcApiTransport({}, logger).issueToken(
+					auth,
+					session,
+					audience,
+					signal
+				)
+			).rejects.toMatchObject({ kind: "rate_limited", retryAfterMs: delay });
 		}
 	);
 	it("cancels oversized streaming bodies before JSON decoding", async ({
@@ -171,7 +209,26 @@ describe("development issuance API transport", () => {
 		).rejects.toThrow("invalid development OIDC response");
 		await expect(
 			transport.createSession(auth, "linked-worker", signal)
-		).rejects.toThrow("could not reach Cloudflare");
+		).rejects.toMatchObject({
+			message: expect.stringContaining("could not reach Cloudflare"),
+			kind: "unavailable",
+		});
+	});
+	it("preserves cancellation reasons instead of treating shutdown as a network failure", async ({
+		expect,
+	}) => {
+		const controller = new AbortController();
+		const reason = new Error("Provider disposed");
+		controller.abort(reason);
+		vi.mocked(performApiFetchBase).mockRejectedValueOnce(new Error("aborted"));
+		await expect(
+			createDevelopmentOidcApiTransport({}, logger).createSession(
+				auth,
+				"linked-worker",
+				controller.signal
+			)
+		).rejects.toBe(reason);
+		expect(reason).not.toBeInstanceOf(DevelopmentOidcApiError);
 	});
 	it("rejects invalid UTF-8 even in otherwise unused response fields", async ({
 		expect,
