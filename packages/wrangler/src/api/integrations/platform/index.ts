@@ -1,5 +1,6 @@
 import path from "node:path";
 import { createContainerDevPlan } from "@cloudflare/containers-shared";
+import { getDevelopmentOidcOptions } from "@cloudflare/remote-bindings";
 import {
 	DEFAULT_COMPAT_DATE,
 	extractBindingsOfType,
@@ -404,6 +405,8 @@ export function unstable_getMiniflareWorkerOptions(
 	configPath: string,
 	env?: string,
 	options?: {
+		/** Enable authenticated local OIDC. Disabled for programmatic/offline consumers by default. */
+		developmentOidc?: boolean;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
@@ -416,6 +419,8 @@ export function unstable_getMiniflareWorkerOptions(
 	config: Config,
 	env?: string,
 	options?: {
+		/** Enable authenticated local OIDC. Disabled for programmatic/offline consumers by default. */
+		developmentOidc?: boolean;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
@@ -429,6 +434,8 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		envFiles?: string[];
+		/** Enable authenticated local OIDC. Disabled for programmatic/offline consumers by default. */
+		developmentOidc?: boolean;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
@@ -520,6 +527,9 @@ export function unstable_getMiniflareWorkerOptions(
 		modulesRules,
 		zone: getZoneFromConfig(config),
 		access: config.access?.dev,
+		developmentOidc: options?.developmentOidc
+			? getDevelopmentOidcOptions(config, logger, projectRoot)
+			: undefined,
 		connectHandlers: config.connect.map((handler) => ({
 			protocol: handler.protocol,
 			port: handler.port,

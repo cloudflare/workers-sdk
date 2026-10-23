@@ -92,6 +92,7 @@ export type Worker = (
 	containerEngine?: Worker_ContainerEngine;
 	accessBlobHeader?: string;
 	accessBindingService?: ServiceDesignator;
+	oidcTokenService?: ServiceDesignator;
 	workflowsEngine?: WorkflowsEngine;
 };
 

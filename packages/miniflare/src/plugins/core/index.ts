@@ -21,6 +21,7 @@ import { removeDirSync } from "@cloudflare/workers-utils/fs-helpers";
 import SCRIPT_ACCESS_IDENTITY from "worker:access/access-identity";
 import SCRIPT_DEV_CONTROL from "worker:core/dev-control";
 import SCRIPT_ENTRY from "worker:core/entry";
+import SCRIPT_OIDC from "worker:core/oidc";
 import OUTBOUND_WORKER from "worker:core/outbound";
 import { z } from "zod";
 import { kCurrentWorker } from "../../config/schema";
@@ -490,6 +491,7 @@ export const CORE_PLUGIN: Plugin = {
 		additionalModules,
 		loopbackHost,
 		loopbackPort,
+		developmentOidcSecret,
 	}) {
 		const { config, dev } = options;
 		// Define regular user worker
@@ -610,6 +612,34 @@ export const CORE_PLUGIN: Plugin = {
 				]
 			: userFlags;
 
+		if (developmentOidcSecret) {
+			// Use the same Worker-to-Node fetch bridge as other host services. The native
+			// request adapter's body stream currently cannot be pumped to an external service.
+			services.push({
+				name: `core:oidc:${workerIndex}`,
+				worker: {
+					modules: [{ name: "oidc.worker.js", esModule: SCRIPT_OIDC() }],
+					compatibilityDate: "2026-01-01",
+					bindings: [
+						{
+							name: "BROKER",
+							service: { name: `core:oidc:external:${workerIndex}` },
+						},
+					],
+				},
+			});
+			services.push({
+				name: `core:oidc:external:${workerIndex}`,
+				external: {
+					address: `${loopbackHost}:${loopbackPort}`,
+					http: {
+						injectRequestHeaders: [
+							{ name: "MF-OIDC-Capability", value: developmentOidcSecret },
+						],
+					},
+				},
+			});
+		}
 		services.push({
 			name: serviceName,
 			worker: {
@@ -628,6 +658,9 @@ export const CORE_PLUGIN: Plugin = {
 						: dev?.unsafeEphemeralDurableObjects
 							? { inMemory: kVoid }
 							: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
+				oidcTokenService: developmentOidcSecret
+					? { name: `core:oidc:${workerIndex}` }
+					: undefined,
 				globalOutbound: { name: getOutboundInterceptorName(workerIndex) },
 				cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
 				moduleFallback:

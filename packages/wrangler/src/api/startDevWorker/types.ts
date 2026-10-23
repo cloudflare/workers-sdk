@@ -80,6 +80,8 @@ export type StartDevWorkerOptions = Omit<
 	};
 	dev: StartDevWorkerInput["dev"] & {
 		persist: string | false;
+		/** Host-only broker created from the linked Worker configuration. */
+		developmentOidc?: import("miniflare").DevelopmentOidcBrokerFactory;
 		auth?: AsyncHook<CfAccount>; // redefine without config.account_id hook param (can only be provided by ConfigController with access to the Wrangler configuration file, not by other controllers eg RemoteRuntimeContoller)
 		/** Handles structured runtime logs. */
 		structuredLogsHandler?: (log: WorkerdStructuredLog) => void;

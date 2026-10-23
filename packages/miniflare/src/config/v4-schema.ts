@@ -14,6 +14,7 @@ import type { Miniflare } from "../index";
 import type { RemoteProxyConnectionString } from "../plugins/shared";
 import type { Json } from "../shared";
 import type { WorkerRegistry } from "../shared/dev-registry-types";
+import type { DevelopmentOidcBrokerFactory } from "../shared/development-oidc-broker";
 import type { Awaitable } from "../workers";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 import type * as http from "node:http";
@@ -385,6 +386,18 @@ const V4WorkerOptionsShapeSchema = z.object({
 	unsafeDirectSockets: z.array(V4UnsafeDirectSocketSchema).optional(),
 	connectHandlers: z.array(V4ConnectHandlerSchema).optional(),
 	unsafeOverrideFetchWorker: z.string().optional(),
+	developmentOidc: z
+		.custom<DevelopmentOidcBrokerFactory>(
+			(value) =>
+				typeof value === "object" &&
+				value !== null &&
+				"key" in value &&
+				typeof value.key === "string" &&
+				value.key.length <= 16384 &&
+				"create" in value &&
+				typeof value.create === "function"
+		)
+		.optional(),
 	unsafeEvalBinding: z.string().optional(),
 	unsafeUseModuleFallbackService: z.boolean().optional(),
 	unsafeRegisterWorker: z.boolean().optional(),
@@ -831,6 +844,8 @@ export type V4WorkerOptionsShape = {
 		  }
 	>;
 	unsafeOverrideFetchWorker?: string;
+	/** Host-only development OIDC broker; never exposed to Worker code. */
+	developmentOidc?: DevelopmentOidcBrokerFactory;
 	unsafeEvalBinding?: string;
 	unsafeUseModuleFallbackService?: boolean;
 	unsafeRegisterWorker?: boolean;

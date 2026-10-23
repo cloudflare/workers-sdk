@@ -3429,7 +3429,7 @@ export class Worker_DurableObjectStorage extends $.Struct {
 	static readonly _capnp = {
 		displayName: "durableObjectStorage",
 		id: "cc72b3faa57827d4",
-		size: new $.ObjectSize(8, 16),
+		size: new $.ObjectSize(8, 17),
 	};
 	get _isNone(): boolean {
 		return $.utils.getUint16(2, this) === 0;
@@ -3494,7 +3494,7 @@ export class Worker_ContainerEngine extends $.Struct {
 	static readonly _capnp = {
 		displayName: "containerEngine",
 		id: "82de68f58dc2eb24",
-		size: new $.ObjectSize(8, 16),
+		size: new $.ObjectSize(8, 17),
 	};
 	get _isNone(): boolean {
 		return $.utils.getUint16(4, this) === 0;
@@ -3591,7 +3591,7 @@ export class Worker extends $.Struct {
 	static readonly _capnp = {
 		displayName: "Worker",
 		id: "acfa77e88fd97d1c",
-		size: new $.ObjectSize(8, 16),
+		size: new $.ObjectSize(8, 17),
 		defaultGlobalOutbound: $.readRawPointer(
 			new Uint8Array([
 				16, 7, 80, 1, 3, 0, 0, 17, 9, 74, 0, 1, 255, 105, 110, 116, 101, 114,
@@ -3956,6 +3956,28 @@ export class Worker extends $.Struct {
 	}
 	set accessBindingService(value: ServiceDesignator) {
 		$.utils.copyFrom(value, $.utils.getPointer(14, this));
+	}
+	_adoptOidcTokenService(value: $.Orphan<ServiceDesignator>): void {
+		$.utils.adopt(value, $.utils.getPointer(16, this));
+	}
+	_disownOidcTokenService(): $.Orphan<ServiceDesignator> {
+		return $.utils.disown(this.oidcTokenService);
+	}
+	/**
+	 * Trusted local development broker; POST /token, JSON audience, text/plain JWT.
+	 *
+	 */
+	get oidcTokenService(): ServiceDesignator {
+		return $.utils.getStruct(16, ServiceDesignator, this);
+	}
+	_hasOidcTokenService(): boolean {
+		return !$.utils.isNull($.utils.getPointer(16, this));
+	}
+	_initOidcTokenService(): ServiceDesignator {
+		return $.utils.initStructAt(16, ServiceDesignator, this);
+	}
+	set oidcTokenService(value: ServiceDesignator) {
+		$.utils.copyFrom(value, $.utils.getPointer(16, this));
 	}
 	_adoptWorkflowsEngine(value: $.Orphan<WorkflowsEngine>): void {
 		$.utils.adopt(value, $.utils.getPointer(15, this));

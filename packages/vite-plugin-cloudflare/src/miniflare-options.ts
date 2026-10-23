@@ -415,6 +415,7 @@ export async function getDevMiniflareOptions(
 											remoteProxySessionData?.session
 												?.remoteProxyConnectionString,
 
+										developmentOidc: true,
 										containerBuildId,
 									}
 								);
@@ -829,6 +830,7 @@ export async function getPreviewMiniflareOptions(
 						remoteProxyConnectionString:
 							remoteProxySessionData?.session?.remoteProxyConnectionString,
 
+						developmentOidc: true,
 						containerBuildId,
 					});
 
