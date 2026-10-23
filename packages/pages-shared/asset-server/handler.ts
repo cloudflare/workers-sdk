@@ -624,9 +624,7 @@ export async function generateHandler<
 				response.headers.set("x-robots-tag", "noindex");
 			}
 
-			// Only GET requests write the preservation cache. Cache API `match()`
-			// never matches a HEAD request, so every HEAD would rewrite the entry.
-			if (options.preserve && waitUntil && caches && request.method === "GET") {
+			if (options.preserve && waitUntil && caches) {
 				waitUntil(
 					(async () => {
 						try {
@@ -637,7 +635,10 @@ export async function generateHandler<
 							// Check if the asset has changed since last written to cache
 							// or if the cached entry is getting too old and should have
 							// it's expiration reset.
-							const match = await assetPreservationCache.match(request);
+							// Look the entry up by URL, the same key `put()` writes and
+							// `notFound()` reads. `match(request)` never matches a HEAD
+							// request, so every HEAD request would rewrite the entry.
+							const match = await assetPreservationCache.match(request.url);
 							if (
 								!match ||
 								assetKey !== (await match.text()) ||

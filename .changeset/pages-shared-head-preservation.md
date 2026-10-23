@@ -2,6 +2,6 @@
 "@cloudflare/pages-shared": patch
 ---
 
-Stop HEAD requests from writing to the asset preservation cache
+Stop rewriting an asset's preservation entry on every HEAD request
 
-The asset server wrote the preservation cache entry for an asset whenever `cache.match()` found no entry for the request. The Cache API never matches a HEAD request, so every HEAD request served by the asset server wrote the entry again. Only GET requests write it now.
+Pages keeps a cache entry for each served asset so the asset can still be served after a later deployment removes it. HEAD requests rewrote that entry every time, so sites with frequent HEAD traffic made a cache write per request. HEAD requests now rewrite it only when it's missing, changed or close to expiring, the same as GET requests. Responses are unchanged.
