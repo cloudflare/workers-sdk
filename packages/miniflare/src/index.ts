@@ -106,6 +106,10 @@ import {
 	serializeConfig,
 } from "./runtime";
 import {
+	assignContainerSession,
+	removeContainerSession,
+} from "./runtime/container-session";
+import {
 	isFileNotFoundError,
 	MiniflareCoreError,
 	NoOpLog,
@@ -167,6 +171,7 @@ import type {
 	Worker_DurableObjectNamespace,
 	Worker_Module,
 } from "./runtime";
+import type { ContainerSession } from "./runtime/container-session";
 import type { Log } from "./shared";
 import type {
 	DevControl,
@@ -896,6 +901,13 @@ export class Miniflare {
 
 	#artifactsController = new ArtifactsController(() => this.#log);
 	#containerPrivilegesCache = new ContainerPrivilegesCache();
+	// Session of the running workerd's Containers; see `ContainerSession`.
+	#containerSession?: ContainerSession;
+	// Ended sessions whose Docker resources are still being removed.
+	readonly #endingContainerSessions = new Map<
+		ContainerSession,
+		Promise<void>
+	>();
 	#hyperdriveProxyController: HyperdriveProxyController =
 		new HyperdriveProxyController(this.#disposeController.signal);
 
@@ -2460,6 +2472,20 @@ export class Miniflare {
 		};
 	}
 
+	/**
+	 * Removes the Docker resources of a session whose workerd processes have
+	 * all exited.
+	 *
+	 * @param session Session to remove.
+	 */
+	#endContainerSession(session: ContainerSession): Promise<void> {
+		const removal = removeContainerSession(session, this.#log).finally(() =>
+			this.#endingContainerSessions.delete(session)
+		);
+		this.#endingContainerSessions.set(session, removal);
+		return removal;
+	}
+
 	#handleWorkerdCrash(): void {
 		this.#workerdCrashCount++;
 		// Recovery used to be entirely silent, which made a crash look like an
@@ -2567,6 +2593,10 @@ export class Miniflare {
 			loopbackPort,
 			reusePorts
 		);
+		const containerSession = assignContainerSession(
+			config,
+			this.#containerSession
+		);
 		const configBuffer = serializeConfig(config);
 
 		// Get all socket names we expect to get ports for
@@ -2620,6 +2650,15 @@ export class Miniflare {
 			this.#previousRuntimeInspectorPort = runtimeInspectorPort;
 		}
 		const loopbackAddress = `${loopbackHost}:${loopbackPort}`;
+		if (containerSession.ended !== undefined) {
+			// Names include the session, so the ended session's resources can be
+			// removed while the next workerd starts.
+			await runtime.dispose();
+			void this.#endContainerSession(containerSession.ended);
+		}
+		// Switch sessions only once the old workerd has stopped, so that a
+		// failure above leaves the running process's session tracked.
+		this.#containerSession = containerSession.session;
 		const runtimeOpts: Abortable & RuntimeOptions = {
 			signal: this.#disposeController.signal,
 			entryAddress,
@@ -3764,6 +3803,14 @@ export class Miniflare {
 				independentCleanupError = error;
 			}
 		}
+		// workerd has exited, so nothing creates resources for its session any
+		// more.
+		const containerSession = this.#containerSession;
+		this.#containerSession = undefined;
+		if (containerSession !== undefined) {
+			void this.#endContainerSession(containerSession);
+		}
+		await Promise.all(this.#endingContainerSessions.values());
 		this.#devRegistry.unregisterWorkers();
 		// Close the undici Pool used for dispatching fetch requests to the
 		// runtime. This must happen after the runtime is disposed, so that
