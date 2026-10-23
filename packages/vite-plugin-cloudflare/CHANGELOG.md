@@ -1,5 +1,41 @@
 # @cloudflare/vite-plugin
 
+## 1.65.0
+
+### Minor Changes
+
+- [#16438](https://github.com/cloudflare/workers-sdk/pull/16438) [`d936c09`](https://github.com/cloudflare/workers-sdk/commit/d936c099c354a98face6750de55e445755125090) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Remove the `experimental.newConfig` option from Vite plugin v1
+
+  Vite plugin v1 now supports Wrangler configuration files only. Projects using `cloudflare.config.ts` for configuration should upgrade to Vite plugin v2 beta.
+
+### Patch Changes
+
+- [#16373](https://github.com/cloudflare/workers-sdk/pull/16373) [`8cc5f87`](https://github.com/cloudflare/workers-sdk/commit/8cc5f8761042f8046e520ecb6a1c541492700390) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Report unsupported remote bindings under Bun instead of hanging
+
+  Starting remote bindings now fails with an actionable error explaining Bun's unsupported request routing. Use Node.js or disable remote bindings to continue local development.
+
+- [#16438](https://github.com/cloudflare/workers-sdk/pull/16438) [`d936c09`](https://github.com/cloudflare/workers-sdk/commit/d936c099c354a98face6750de55e445755125090) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix Container setup guidance in Vite development and preview
+
+  Container registry instructions now show the Wrangler command and the configuration location, including Wrangler files and inline Vite configuration.
+
+- [#16438](https://github.com/cloudflare/workers-sdk/pull/16438) [`d936c09`](https://github.com/cloudflare/workers-sdk/commit/d936c099c354a98face6750de55e445755125090) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update the local Workers runtime to the October 19 release
+
+  Include the fix for nested asset paths during local development on Windows, together with the compatible Wrangler release.
+
+  The runtime update also disposes Workflow step results and introspection modifiers after use, preventing undisposed RPC warnings and cancelled local Workflow requests.
+
+- [#16379](https://github.com/cloudflare/workers-sdk/pull/16379) [`160e655`](https://github.com/cloudflare/workers-sdk/commit/160e655cb02373882057dc7b9f027b31adef8df9) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update the local Workflow runtime to use native storage cleanup
+
+  Consume the Miniflare fix that queues Workflow persistence deletion with instance recreation, including deletion through the local Explorer. This prevents storage cleanup from racing reuse of the same Workflow instance ID.
+
+- [#16438](https://github.com/cloudflare/workers-sdk/pull/16438) [`d936c09`](https://github.com/cloudflare/workers-sdk/commit/d936c099c354a98face6750de55e445755125090) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Retry remote preview token refreshes after transient failures
+
+  Backport the retry fix to the private remote-bindings workspace package and require `wrangler@4.151.1` so long-running remote development sessions recover after a network outage.
+
+- [#16438](https://github.com/cloudflare/workers-sdk/pull/16438) [`d936c09`](https://github.com/cloudflare/workers-sdk/commit/d936c099c354a98face6750de55e445755125090) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Use published SDK dependencies for Vite plugin v1 maintenance
+
+  Pin the plugin's published SDK dependencies to their deployed npm versions. Keep private shared packages as workspace dependencies so their implementation and build tools remain available on the v1 maintenance branch.
+
 ## 1.64.0
 
 ### Minor Changes
