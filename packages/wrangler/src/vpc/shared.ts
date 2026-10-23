@@ -23,10 +23,15 @@ export function displayServiceDetails(service: ConnectivityService) {
 		}
 	}
 
-	// Display TLS settings
 	if (service.tls_settings) {
 		logger.log(
 			`   Cert Verification Mode: ${service.tls_settings.cert_verification_mode}`
+		);
+		logger.log(
+			`   Certificate Authority: ${service.tls_settings.certificate_authority ?? "None (system trust store)"}`
+		);
+		logger.log(
+			`   Client Certificate: ${service.tls_settings.client_certificate ?? "None"}`
 		);
 	}
 
