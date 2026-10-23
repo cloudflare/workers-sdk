@@ -8,8 +8,7 @@
 		"module": "es2022",
 		"moduleResolution": "bundler",
 		"skipLibCheck": true,
-		"noEmit": true,
-		"strict": false
+		"noEmit": true
 	},
 	"include": ["./src", "./test"],
 	"exclude": ["dist", "node_modules"]
