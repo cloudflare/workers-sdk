@@ -1,6 +1,7 @@
 {
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
+		"allowImportingTsExtensions": true,
 		"module": "esnext",
 		"types": ["node"],
 		"tsBuildInfoFile": ".tsbuildinfo"
