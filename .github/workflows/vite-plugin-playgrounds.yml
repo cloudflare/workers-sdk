@@ -40,7 +40,7 @@ jobs:
     env:
       # Keep test caches separate by target OS. Windows consumes the Linux
       # prebuild, which uses the same target label in its build cache keys.
-      CI_OS: ${{ runner.os }}
+      CI_OS: ${{ matrix.os == 'windows-latest' && 'Windows' || matrix.os == 'macos-latest' && 'macOS' || 'Linux' }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
