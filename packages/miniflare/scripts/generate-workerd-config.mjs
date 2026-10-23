@@ -23,6 +23,18 @@ if (!schema.includes("oidcTokenService @21")) {
 ${marker}`
 	);
 }
+if (!schema.includes("oidc @29")) {
+	const marker = "      workerdDebugPort @28";
+	assert(
+		schema.includes(marker),
+		"Workerd binding schema changed; update the OIDC supplement."
+	);
+	schema = schema.replace(
+		marker,
+		"      oidc @29 :Text;\n      # Fixed binding selector for the trusted OIDC broker.\n\n" +
+			marker
+	);
+}
 const directory = mkdtempSync(path.join(tmpdir(), "miniflare-capnp-"));
 try {
 	const input = path.join(directory, "workerd.capnp");

@@ -108,6 +108,9 @@ interface BindingTypeMap<TBinding> {
 	logfwdr: any;
 	media: MediaBinding;
 	"mtls-certificate": Fetcher;
+	oidc: {
+		getToken(options?: { audience?: string; fresh?: boolean }): Promise<string>;
+	};
 	"rate-limit": RateLimit;
 	r2: R2Bucket;
 	secret: string;

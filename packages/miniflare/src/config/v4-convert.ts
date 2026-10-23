@@ -731,6 +731,9 @@ function addProductBindings(
 				: { connectionString: String(value) },
 		};
 	}
+	for (const [name, binding] of Object.entries(worker.oidc ?? {})) {
+		env[name] = { type: "oidc", ...binding };
+	}
 	for (const [name, binding] of Object.entries(worker.ratelimits ?? {})) {
 		env[name] = {
 			type: "rate-limit",

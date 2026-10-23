@@ -22,30 +22,44 @@ const accountId = "a".repeat(32),
 const sessionId = "aaaabbbb-cccc-4ddd-8eee-ffff00001111";
 const auth = { accountId, apiToken: { apiToken: "human-oauth" } };
 const audience = `https://workers.cloudflare.com/accounts/${accountId}`;
+const binding = { binding: "IDENTITY", identity_id: "orders" };
 const session: DevelopmentOidcSession = {
+	binding: binding.binding,
+	allowedAudiences: [audience],
 	identity: {
 		accountId,
 		workerId,
 		userId,
 		developmentSessionId: sessionId,
-		policy: "workers-oidc-v1",
+		policy: "workers-oidc-v2",
+		identityId: "orders",
+		assignmentId: "local-orders",
+		policyRevision: "1:1",
 	},
 	defaultAudience: audience,
 	expiresAt: now + 28800,
 };
 const logger = { debug: vi.fn(), info: vi.fn() } as unknown as Logger;
 const rawSession = {
+	binding: binding.binding,
+	identity_id: "orders",
+	assignment_id: "local-orders",
+	policy_revision: "1:1",
+	allowed_audiences: [audience],
 	account_id: accountId,
 	worker_id: workerId,
 	user_id: userId,
 	development_session_id: sessionId,
-	policy: "workers-oidc-v1",
+	policy: "workers-oidc-v2",
 	default_audience: audience,
 	expires_at: session.expiresAt,
 };
 const claims = {
 	iss: `https://oidc.cloudflare.app/accounts/${accountId}`,
-	sub: `worker:${workerId}:development:user:${userId}`,
+	sub: "identity:orders",
+	account_id: accountId,
+	product: "workers",
+	jti: "1".repeat(32),
 	aud: audience,
 	execution: "local",
 	worker_id: workerId,
@@ -95,24 +109,26 @@ describe("development issuance API transport", () => {
 			);
 		const transport = createDevelopmentOidcApiTransport({}, logger);
 		expect(
-			await transport.createSession(auth, "linked-worker", signal)
+			await transport.createSession(auth, "linked-worker", binding, signal)
 		).toEqual(session);
-		expect(await transport.issueToken(auth, session, audience, signal)).toEqual(
-			{ token: token(), expiresAt: now + 300 }
-		);
+		expect(
+			await transport.issueToken(auth, session, audience, false, signal)
+		).toEqual({ token: token(), expiresAt: now + 300 });
 		const calls = vi.mocked(performApiFetchBase).mock.calls;
 		expect(calls[0]?.[1]).toBe(
 			`/accounts/${accountId}/workers/scripts/linked-worker/oidc/development-sessions`
 		);
 		expect(calls[0]?.[2]).toMatchObject({
 			method: "POST",
-			body: "{}",
+			body: JSON.stringify(binding),
 			redirect: "error",
 		});
 		expect(calls[1]?.[1]).toBe(
 			`/accounts/${accountId}/workers/oidc/development-sessions/${sessionId}/tokens`
 		);
-		expect(calls[1]?.[2]?.body).toBe(JSON.stringify({ audience }));
+		expect(calls[1]?.[2]?.body).toBe(
+			JSON.stringify({ audience, fresh: false })
+		);
 		expect(calls[1]?.[7]).toEqual(auth.apiToken);
 		expect(calls[1]?.[6]).toBe(signal);
 	});
@@ -136,7 +152,7 @@ describe("development issuance API transport", () => {
 			const pending = createDevelopmentOidcApiTransport(
 				{},
 				logger
-			).createSession(auth, "linked-worker", signal);
+			).createSession(auth, "linked-worker", binding, signal);
 			await expect(pending).rejects.toMatchObject({
 				message: expect.stringMatching(/^Development OIDC/),
 				kind,
@@ -164,6 +180,7 @@ describe("development issuance API transport", () => {
 					auth,
 					session,
 					audience,
+					false,
 					signal
 				)
 			).rejects.toMatchObject({ kind: "rate_limited", retryAfterMs: delay });
@@ -188,6 +205,7 @@ describe("development issuance API transport", () => {
 			createDevelopmentOidcApiTransport({}, logger).createSession(
 				auth,
 				"linked-worker",
+				binding,
 				signal
 			)
 		).rejects.toThrow("invalid development OIDC response");
@@ -205,10 +223,10 @@ describe("development issuance API transport", () => {
 			)
 			.mockRejectedValueOnce(new Error("oauth-secret"));
 		await expect(
-			transport.createSession(auth, "linked-worker", signal)
+			transport.createSession(auth, "linked-worker", binding, signal)
 		).rejects.toThrow("invalid development OIDC response");
 		await expect(
-			transport.createSession(auth, "linked-worker", signal)
+			transport.createSession(auth, "linked-worker", binding, signal)
 		).rejects.toMatchObject({
 			message: expect.stringContaining("could not reach Cloudflare"),
 			kind: "unavailable",
@@ -225,6 +243,7 @@ describe("development issuance API transport", () => {
 			createDevelopmentOidcApiTransport({}, logger).createSession(
 				auth,
 				"linked-worker",
+				binding,
 				controller.signal
 			)
 		).rejects.toBe(reason);
@@ -249,6 +268,7 @@ describe("development issuance API transport", () => {
 			createDevelopmentOidcApiTransport({}, logger).createSession(
 				auth,
 				"linked-worker",
+				binding,
 				signal
 			)
 		).rejects.toThrow("invalid development OIDC response");
@@ -272,6 +292,7 @@ describe("development issuance API transport", () => {
 				createDevelopmentOidcApiTransport({}, logger).createSession(
 					auth,
 					"linked-worker",
+					binding,
 					signal
 				)
 			).rejects.toThrow("invalid development OIDC response");
@@ -284,6 +305,7 @@ describe("development issuance API transport", () => {
 				createDevelopmentOidcApiTransport({}, logger).createSession(
 					auth,
 					name,
+					binding,
 					signal
 				)
 			).rejects.toThrow();

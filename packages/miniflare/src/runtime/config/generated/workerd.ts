@@ -2835,6 +2835,11 @@ export const Worker_Binding_Which = {
 	 */
 	WORKER_LOADER: 20,
 	/**
+	 * Fixed binding selector for the trusted OIDC broker.
+	 *
+	 */
+	OIDC: 22,
+	/**
 	 * A binding that provides a connect() method to dynamically connect to any workerd
 	 * instance's debug port. This allows dynamic access to worker entrypoints via the
 	 * WorkerdDebugPort RPC interface.
@@ -2873,6 +2878,7 @@ export class Worker_Binding extends $.Struct {
 	static readonly UNSAFE_EVAL = Worker_Binding_Which.UNSAFE_EVAL;
 	static readonly MEMORY_CACHE = Worker_Binding_Which.MEMORY_CACHE;
 	static readonly WORKER_LOADER = Worker_Binding_Which.WORKER_LOADER;
+	static readonly OIDC = Worker_Binding_Which.OIDC;
 	static readonly WORKERD_DEBUG_PORT = Worker_Binding_Which.WORKERD_DEBUG_PORT;
 	static readonly Type = Worker_Binding_Type;
 	static readonly DurableObjectNamespaceDesignator =
@@ -3415,6 +3421,21 @@ export class Worker_Binding extends $.Struct {
 	}
 	set workerLoader(_: true) {
 		$.utils.setUint16(0, 20, this);
+	}
+	/**
+	 * Fixed binding selector for the trusted OIDC broker.
+	 *
+	 */
+	get oidc(): string {
+		$.utils.testWhich("oidc", $.utils.getUint16(0, this), 22, this);
+		return $.utils.getText(1, this);
+	}
+	get _isOidc(): boolean {
+		return $.utils.getUint16(0, this) === 22;
+	}
+	set oidc(value: string) {
+		$.utils.setUint16(0, 22, this);
+		$.utils.setText(1, value, this);
 	}
 	get _isWorkerdDebugPort(): boolean {
 		return $.utils.getUint16(0, this) === 21;

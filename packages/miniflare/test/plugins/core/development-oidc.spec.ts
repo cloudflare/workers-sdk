@@ -6,12 +6,18 @@ import {
 import { describe, test, vi } from "vitest";
 import { singleModuleManifest, useDispose } from "../../test-shared";
 
+const identity = {
+	type: "oidc" as const,
+	identity_id: "orders",
+	audience: "recipient",
+};
 const token = "eyJhbGciOiJSUzI1NiJ9.eyJleGVjdXRpb24iOiJsb2NhbCJ9.c2ln";
 
 function worker(developmentOidc?: DevelopmentOidcBrokerFactory): WorkerOptions {
 	return {
 		config: {
 			name: "linked",
+			env: { IDENTITY: identity },
 			compatibilityDate: "2026-01-01",
 			compatibilityFlags: ["workers_oidc"],
 			manifest: singleModuleManifest(`
@@ -19,7 +25,7 @@ function worker(developmentOidc?: DevelopmentOidcBrokerFactory): WorkerOptions {
     try {
      if (new URL(request.url).pathname === "/env") return Response.json(Object.keys(env));
      const audience = new URL(request.url).searchParams.get("audience");
-     return new Response(await ctx.oidc.getToken(audience === null ? undefined : {audience}));
+     return new Response(await env.IDENTITY.getToken(audience === null ? undefined : {audience}));
     } catch (error) { return new Response(error.message, {status: 500}); }
    } };
   `),
@@ -33,6 +39,51 @@ function worker(developmentOidc?: DevelopmentOidcBrokerFactory): WorkerOptions {
 describe.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
 	"native development OIDC broker",
 	() => {
+		test("keeps multiple binding selectors and simultaneous fresh calls distinct", async ({
+			expect,
+		}) => {
+			let serial = 0;
+			const getToken = vi.fn(
+				async ({ assignment }: { assignment: string }) =>
+					`e30.e30.${Buffer.from(`${assignment}-${++serial}`).toString("base64url")}`
+			);
+			const mf = new Miniflare({
+				workers: [
+					{
+						config: {
+							name: "multiple",
+							compatibilityDate: "2026-01-01",
+							compatibilityFlags: ["workers_oidc"],
+							env: {
+								FIRST: identity,
+								SECOND: { ...identity, identity_id: "reports" },
+							},
+							manifest:
+								singleModuleManifest(`export default {async fetch(request, env) {
+                        return Response.json(await Promise.all([env.FIRST.getToken({fresh:true}), env.FIRST.getToken({fresh:true}), env.SECOND.getToken()]));
+                    }};`),
+						},
+						dev: {
+							developmentOidc: {
+								key: "multiple",
+								create: () => ({ getToken, dispose() {} }),
+							},
+						},
+					},
+				],
+			});
+			useDispose(mf);
+			const result = (await (
+				await mf.dispatchFetch("http://localhost/")
+			).json()) as string[];
+			expect(new Set(result).size).toBe(3);
+			expect(getToken.mock.calls.map((call) => call[0])).toEqual([
+				{ assignment: "FIRST", fresh: true },
+				{ assignment: "FIRST", fresh: true },
+				{ assignment: "SECOND", fresh: false },
+			]);
+		});
+
 		test("shares development identity with local DOs and isolates service/RPC target Workers", async ({
 			expect,
 		}) => {
@@ -49,17 +100,18 @@ describe.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
 							manifest: singleModuleManifest(`
      import { DurableObject } from "cloudflare:workers";
      export class LocalObject extends DurableObject {
-      async token() {return this.ctx.oidc.getToken();}
-      async explicit() {return this.ctx.oidc.getToken({subject: "object"});}
+      async token() {return this.env.IDENTITY.getToken();}
+      async explicit() {return this.env.IDENTITY.getToken({subject: "object"});}
      }
      export default {async fetch(request, env, ctx) {
       const one = env.OBJECTS.getByName("one"), two = env.OBJECTS.getByName("two");
       let explicitRejected = false;
       try {await one.explicit();} catch {explicitRejected = true;}
-      return Response.json({worker: await ctx.oidc.getToken(), one: await one.token(), two: await two.token(), target: await env.OTHER.token(), explicitRejected});
+      return Response.json({worker: await env.IDENTITY.getToken(), one: await one.token(), two: await two.token(), target: await env.OTHER.token(), explicitRejected});
      }};
     `),
 							env: {
+								IDENTITY: identity,
 								OBJECTS: {
 									type: "durable-object",
 									worker: "first",
@@ -85,11 +137,12 @@ describe.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
 					{
 						config: {
 							name: "second",
+							env: { IDENTITY: identity },
 							compatibilityDate: "2026-01-01",
 							compatibilityFlags: ["workers_oidc"],
 							manifest: singleModuleManifest(`
     import {WorkerEntrypoint} from "cloudflare:workers";
-    export class Issuer extends WorkerEntrypoint {async token() {return this.ctx.oidc.getToken();}}
+    export class Issuer extends WorkerEntrypoint {async token() {return this.env.IDENTITY.getToken();}}
     export default {fetch() {return new Response("second");}};
    `),
 						},
@@ -116,7 +169,7 @@ describe.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
 			expect(otherGetToken).toHaveBeenCalledOnce();
 		});
 
-		test("routes default/explicit audiences without exposing a binding; retains reloads and disposes changes", async ({
+		test("routes default/explicit audiences through explicit bindings; retains reloads and disposes changes", async ({
 			expect,
 		}) => {
 			const getToken = vi.fn(async () => token),
@@ -130,16 +183,23 @@ describe.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
 			expect(await (await mf.dispatchFetch("http://localhost/")).text()).toBe(
 				token
 			);
-			expect(getToken).toHaveBeenLastCalledWith({});
+			expect(getToken).toHaveBeenLastCalledWith({
+				assignment: "IDENTITY",
+				fresh: false,
+			});
 			expect(
 				await (
 					await mf.dispatchFetch("http://localhost/?audience=exact%22%E9%9B%AA")
 				).text()
 			).toBe(token);
-			expect(getToken).toHaveBeenLastCalledWith({ audience: 'exact"雪' });
+			expect(getToken).toHaveBeenLastCalledWith({
+				assignment: "IDENTITY",
+				audience: 'exact"雪',
+				fresh: false,
+			});
 			expect(
 				await (await mf.dispatchFetch("http://localhost/env")).json()
-			).toEqual([]);
+			).toEqual(["IDENTITY"]);
 			await mf.setOptions({ workers: [worker({ ...factory })] });
 			expect(await (await mf.dispatchFetch("http://localhost/")).text()).toBe(
 				token

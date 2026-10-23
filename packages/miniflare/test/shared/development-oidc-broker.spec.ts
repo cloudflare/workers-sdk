@@ -23,12 +23,16 @@ describe("development OIDC capability lifecycle", () => {
 		expect(first).not.toBe(second);
 		expect(other.isAuthorized(first)).toBe(false);
 		expect(manager.isAuthorized("é".repeat(64))).toBe(false);
-		expect(await manager.getToken(first, {})).toBe(token);
+		expect(await manager.getToken(first, { assignment: "IDENTITY" })).toBe(
+			token
+		);
 		expect(create).toHaveBeenCalledOnce();
 		manager.update([{ key: "new", create }]);
 		expect(manager.isAuthorized(first)).toBe(false);
 		expect(manager.isAuthorized(second)).toBe(false);
-		await expect(manager.getToken(first, {})).rejects.toThrow("unavailable");
+		await expect(
+			manager.getToken(first, { assignment: "IDENTITY" })
+		).rejects.toThrow("unavailable");
 		manager.dispose();
 	});
 	it("cancels pending getters on shutdown and observes late failures", async ({
@@ -49,7 +53,9 @@ describe("development OIDC capability lifecycle", () => {
 				}),
 			},
 		]);
-		const pending = manager.getToken(manager.capability(0) ?? "", {});
+		const pending = manager.getToken(manager.capability(0) ?? "", {
+			assignment: "IDENTITY",
+		});
 		await Promise.resolve();
 		manager.dispose();
 		await expect(pending).rejects.toThrow("configuration changed");
@@ -71,7 +77,9 @@ describe("development OIDC capability lifecycle", () => {
 			.spyOn(DevelopmentOidcRequestPool.prototype, "run")
 			.mockResolvedValueOnce(token);
 		try {
-			const pending = manager.getToken(manager.capability(0) ?? "", {});
+			const pending = manager.getToken(manager.capability(0) ?? "", {
+				assignment: "IDENTITY",
+			});
 			manager.update([]);
 			await expect(pending).rejects.toThrow("configuration changed");
 		} finally {
@@ -90,7 +98,9 @@ describe("development OIDC capability lifecycle", () => {
 				},
 			]);
 			await expect(
-				manager.getToken(manager.capability(0) ?? "", {})
+				manager.getToken(manager.capability(0) ?? "", {
+					assignment: "IDENTITY",
+				})
 			).rejects.toThrow("invalid token");
 			manager.dispose();
 		}

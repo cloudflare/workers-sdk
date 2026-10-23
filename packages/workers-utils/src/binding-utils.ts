@@ -322,6 +322,12 @@ export function convertConfigToBindings(
 				}
 				break;
 			}
+			case "oidc": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "oidc", ...x };
+				}
+				break;
+			}
 			case "ratelimits": {
 				for (const { name, ...x } of info) {
 					output[name] = { type: "ratelimit", ...x };

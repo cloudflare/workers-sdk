@@ -1,7 +1,7 @@
 import {
 	DevelopmentOidcRequestPool,
 	DevelopmentOidcRequestTimeoutError,
-	DevelopmentOidcTokenCache,
+	DevelopmentOidcTokenRequests,
 	snapshotDevelopmentOidcIdentity,
 	validateDevelopmentOidcAudience,
 } from "miniflare";
@@ -10,7 +10,16 @@ import type { CfAccount } from "@cloudflare/workers-utils";
 import type { DevelopmentOidcIdentity, DevelopmentOidcToken } from "miniflare";
 
 /** Session metadata returned by the authorized Cloudflare development API. */
+export interface DevelopmentOidcBindingRequest {
+	binding: string;
+	identity_id: string;
+	audience?: string;
+	allowed_audiences?: readonly string[];
+}
+
 export interface DevelopmentOidcSession {
+	binding: string;
+	allowedAudiences: readonly string[];
 	identity: DevelopmentOidcIdentity;
 	defaultAudience: string;
 	/** Server session expiry in Unix seconds. */
@@ -29,12 +38,14 @@ export interface DevelopmentOidcTransport {
 	createSession(
 		auth: CfAccount,
 		workerName: string,
+		binding: DevelopmentOidcBindingRequest,
 		signal: AbortSignal
 	): Promise<DevelopmentOidcSession>;
 	issueToken(
 		auth: CfAccount,
 		session: DevelopmentOidcSession,
 		audience: string,
+		fresh: boolean,
 		signal: AbortSignal
 	): Promise<DevelopmentOidcToken>;
 }
@@ -58,9 +69,10 @@ interface SessionState {
  */
 export class DevelopmentOidcProvider {
 	#workerName: string;
+	#binding: Readonly<DevelopmentOidcBindingRequest>;
 	#getAuth: (signal: AbortSignal) => Promise<CfAccount>;
 	#transport: DevelopmentOidcTransport;
-	#cache = new DevelopmentOidcTokenCache();
+	#tokens = new DevelopmentOidcTokenRequests();
 	#requests = new DevelopmentOidcRequestPool();
 	#shutdown = new AbortController();
 	#state?: SessionState;
@@ -76,9 +88,16 @@ export class DevelopmentOidcProvider {
 	constructor(
 		workerName: string,
 		getAuth: (signal: AbortSignal) => Promise<CfAccount>,
-		transport: DevelopmentOidcTransport
+		transport: DevelopmentOidcTransport,
+		binding: DevelopmentOidcBindingRequest
 	) {
 		this.#workerName = workerName;
+		this.#binding = Object.freeze({
+			...binding,
+			allowed_audiences:
+				binding.allowed_audiences &&
+				Object.freeze([...binding.allowed_audiences]),
+		});
 		this.#getAuth = getAuth;
 		// Snapshot adapter methods; keep them in native private fields with credentials.
 		this.#transport = Object.freeze({
@@ -93,7 +112,9 @@ export class DevelopmentOidcProvider {
 	 * @param options Audience override, preserved exactly as supplied.
 	 * @returns A server-signed token with at least 60 seconds remaining.
 	 */
-	async getToken(options: { audience?: string } = {}): Promise<string> {
+	async getToken(
+		options: { audience?: string; fresh?: boolean } = {}
+	): Promise<string> {
 		this.#checkActive();
 		if (
 			typeof this.#workerName !== "string" ||
@@ -107,12 +128,17 @@ export class DevelopmentOidcProvider {
 		if (options === null || typeof options !== "object") {
 			throw new Error("Development OIDC requires an options object.");
 		}
-		// Retain this restriction in the host even when an adapter bypasses workerd.
-		if ("subject" in options) {
+		if (
+			Reflect.ownKeys(options).some(
+				(key) => key !== "audience" && key !== "fresh"
+			) ||
+			("fresh" in options && typeof options.fresh !== "boolean")
+		) {
 			throw new Error(
-				"Local Durable Objects use the Worker's development identity. Explicit object and namespace subjects require a cloud Preview."
+				"Development OIDC accepts only audience and boolean fresh options."
 			);
 		}
+		const fresh = options.fresh ?? false;
 		// Snapshot before the first await: callers may retain and mutate options.
 		const requestedAudience = options.audience;
 		if (requestedAudience !== undefined) {
@@ -144,6 +170,7 @@ export class DevelopmentOidcProvider {
 						const response = await this.#transport.createSession(
 							auth,
 							this.#workerName,
+							this.#binding,
 							signal
 						);
 						signal.throwIfAborted();
@@ -152,10 +179,32 @@ export class DevelopmentOidcProvider {
 						);
 						const defaultAudience = response?.defaultAudience;
 						validateDevelopmentOidcAudience(defaultAudience);
-						if (identity.accountId !== auth.accountId) {
+						if (
+							identity.accountId !== auth.accountId ||
+							identity.identityId !== this.#binding.identity_id ||
+							response.binding !== this.#binding.binding ||
+							!Array.isArray(response.allowedAudiences) ||
+							!response.allowedAudiences.includes(defaultAudience)
+						) {
 							throw new Error(
 								"Development OIDC returned a session for a different account."
 							);
+						}
+						if (this.#binding.audience !== undefined) {
+							const requested = this.#binding.allowed_audiences ?? [
+								this.#binding.audience,
+							];
+							if (
+								defaultAudience !== this.#binding.audience ||
+								requested.length !== response.allowedAudiences.length ||
+								requested.some(
+									(audience) => !response.allowedAudiences.includes(audience)
+								)
+							) {
+								throw new Error(
+									"Development OIDC binding does not match its approved audience policy."
+								);
+							}
 						}
 						const expiresAt = response?.expiresAt;
 						const remaining = expiresAt * 1000 - Date.now();
@@ -172,7 +221,13 @@ export class DevelopmentOidcProvider {
 							this.#state.expiresAt = expiresAt;
 							this.#state.monotonicExpiry = performance.now() + remaining;
 						}
-						return Object.freeze({ identity, defaultAudience, expiresAt });
+						return Object.freeze({
+							identity,
+							defaultAudience,
+							expiresAt,
+							binding: response.binding,
+							allowedAudiences: Object.freeze([...response.allowedAudiences]),
+						});
 					}, controller.signal),
 				};
 				this.#state = state;
@@ -183,7 +238,7 @@ export class DevelopmentOidcProvider {
 				this.#checkCurrent(state);
 				established = true;
 				const audience = requestedAudience ?? session.defaultAudience;
-				const token = await this.#cache.getToken(
+				const token = await this.#tokens.getToken(
 					session.identity,
 					audience,
 					(signal) => {
@@ -192,11 +247,12 @@ export class DevelopmentOidcProvider {
 							auth,
 							session,
 							audience,
+							fresh,
 							AbortSignal.any([signal, state.controller.signal])
 						);
 					}
 				);
-				// Invalidation can occur while awaiting even an already-cached token.
+				// Recheck the session after the issuance request completes.
 				this.#checkCurrent(state);
 				return token;
 			} catch (error) {
@@ -292,14 +348,14 @@ export class DevelopmentOidcProvider {
 			new Error("The development OIDC provider has been disposed.")
 		);
 		this.#invalidate();
-		this.#cache.dispose();
+		this.#tokens.dispose();
 	}
 
 	#invalidate(): void {
 		const state = this.#state;
 		this.#state = undefined;
 		this.#retryAfter = undefined;
-		this.#cache.clear();
+		this.#tokens.clear();
 		state?.controller.abort(
 			new Error(
 				"Development OIDC credentials changed during issuance. Retry the getter."
