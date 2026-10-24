@@ -255,3 +255,61 @@ describe("validation", () => {
 		expect(result.stderr).toMatch("→ at worker.compatibilityDate");
 	});
 });
+
+test("binds a Durable Object exported by the Worker itself", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
+	await seed({
+		"vitest.config.mts": vitestConfig({
+			experimental: { newConfig: true },
+		}),
+		// `worker` is required on Durable Object bindings, so a binding to the
+		// Worker's own class names the Worker itself
+		"cloudflare.config.ts": dedent`
+			export default {
+				worker: {
+					name: "test-worker",
+					compatibilityDate: "2025-12-02",
+					entrypoint: "./index.ts",
+					exports: {
+						MyDurableObject: { type: "durable-object", storage: "sqlite" },
+					},
+					env: {
+						MY_DO: {
+							type: "durable-object",
+							worker: "test-worker",
+							exportName: "MyDurableObject",
+						},
+					},
+				},
+			};
+		`,
+		"index.ts": dedent`
+			import { DurableObject } from "cloudflare:workers";
+			export class MyDurableObject extends DurableObject {
+				ping() { return "pong"; }
+			}
+			export default {
+				async fetch() { return new Response("ok"); },
+			};
+		`,
+		"index.test.ts": dedent`
+			import { env, runInDurableObject } from "cloudflare:test";
+			import { it } from "vitest";
+
+			it("calls the Durable Object", async ({ expect }) => {
+				const stub = env.MY_DO.get(env.MY_DO.idFromName("test"));
+				expect(await stub.ping()).toBe("pong");
+				expect(
+					await runInDurableObject(stub, (instance) => instance.ping())
+				).toBe("pong");
+			});
+		`,
+	});
+
+	const result = await vitestRun();
+
+	await expect(result.exitCode).resolves.toBe(0);
+});
