@@ -14,6 +14,7 @@ import {
 import { WebSocketServer } from "ws";
 import { handleWebSocket } from "../websockets";
 import type { AddressInfo } from "node:net";
+import type { Duplex } from "node:stream";
 
 describe("handleWebSocket", () => {
 	let httpServer: http.Server;
@@ -430,6 +431,7 @@ describe("handleWebSocket", () => {
 		// The Worker has no route for the DevTools socket, so the plugin's
 		// dispatch resolves without a WebSocket after the owner has upgraded.
 		const owner = new WebSocketServer({ noServer: true });
+		let serverSocket: Duplex | undefined;
 		onTestFinished(() => {
 			for (const client of owner.clients) {
 				client.terminate();
@@ -438,6 +440,7 @@ describe("handleWebSocket", () => {
 		});
 		httpServer.on("upgrade", (request, socket, head) => {
 			if (request.url === "/__devtools/__ws") {
+				serverSocket = socket;
 				owner.handleUpgrade(request, socket, head, (ws) => {
 					owner.emit("connection", ws, request);
 				});
@@ -465,10 +468,23 @@ describe("handleWebSocket", () => {
 		);
 		await upgraded;
 
+		if (!serverSocket) {
+			throw new Error("expected the DevTools listener to claim the socket");
+		}
+		const destroy = vi.fn();
+		const originalDestroy = serverSocket.destroy.bind(serverSocket);
+		vi.spyOn(serverSocket, "destroy").mockImplementation((...args) => {
+			destroy();
+			originalDestroy(...args);
+		});
+
 		deferred.resolve(new Response("not found", { status: 404 }));
 		// Let the plugin handler resume and make its teardown decision.
 		await new Promise<void>((resolve) => setImmediate(resolve));
 
+		// Assert on the server socket directly; the client may not observe the
+		// close until a later poll phase.
+		expect(destroy).not.toHaveBeenCalled();
 		expect(socket.destroyed).toBe(false);
 		expect(Buffer.concat(chunks).toString("utf8")).toContain("HTTP/1.1 101");
 		socket.destroy();
