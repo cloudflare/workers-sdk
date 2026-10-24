@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { EventEmitter } from "node:events";
+import * as fs from "node:fs";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
@@ -17,10 +18,21 @@ import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import type { StartDevWorkerOptions } from "../../../api";
 import type { FSWatcher, Matcher } from "chokidar";
+import type { WatchOptions } from "node:fs";
 
 // Mock chokidar so we can drive watcher events and errors directly, without
 // depending on the filesystem delivering them.
 vi.mock("chokidar");
+
+// Replace only `watch` so darwin/win32 tests can drive a recursive native
+// watcher. Other fs methods stay real — this suite seeds a temp directory.
+vi.mock("node:fs", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("node:fs")>();
+	return {
+		...actual,
+		watch: vi.fn(actual.watch),
+	};
+});
 
 function configDefaults(
 	overrides: Partial<StartDevWorkerOptions> = {}
@@ -127,6 +139,64 @@ function mockWatchers(expect: ExpectStatic, { closeDelayMs = 0 } = {}) {
 			return Array.isArray(ignored) ? ignored : [ignored];
 		},
 	};
+}
+
+type FsWatchCall = {
+	watchPath: string;
+	options: WatchOptions | undefined;
+};
+
+/**
+ * Make `fs.watch()` hand the controller native watchers whose events we drive
+ * ourselves, recording every call so darwin/win32 tests can assert a single
+ * recursive watch and close them.
+ */
+function mockFsWatch(expect: ExpectStatic, { closeDelayMs = 0 } = {}) {
+	const created: FakeWatcher[] = [];
+	const calls: FsWatchCall[] = [];
+	vi.mocked(fs.watch).mockImplementation((watchPath, options) => {
+		const watchOptions =
+			typeof options === "object" && options !== null
+				? (options as WatchOptions)
+				: undefined;
+		calls.push({ watchPath: String(watchPath), options: watchOptions });
+		const fakeWatcher = new EventEmitter() as FakeWatcher;
+		let closing: Promise<void> | undefined;
+		// Repeated `close()` calls return the same promise, matching the
+		// chokidar fake, so reload-during-close tests can delay teardown.
+		fakeWatcher.close = vi.fn(() => (closing ??= setTimeout(closeDelayMs)));
+		created.push(fakeWatcher);
+		return fakeWatcher as unknown as fs.FSWatcher;
+	});
+	return {
+		created,
+		calls,
+		/** Wait for the watcher at `index` to be created, then return it. */
+		async at(index: number) {
+			await vi.waitFor(() => expect(created.length).toBeGreaterThan(index));
+			const watcher = created[index];
+			assert(watcher);
+			return watcher;
+		},
+	};
+}
+
+function stubPlatform(platform: NodeJS.Platform) {
+	const original = process.platform;
+	Object.defineProperty(process, "platform", {
+		value: platform,
+		configurable: true,
+	});
+	return () => {
+		Object.defineProperty(process, "platform", {
+			value: original,
+			configurable: true,
+		});
+	};
+}
+
+function bundleCompleteCount(bus: FakeBus) {
+	return bus.events.filter((event) => event.type === "bundleComplete").length;
 }
 
 describe("BundlerController — assets watcher", () => {
@@ -371,4 +441,263 @@ describe("BundlerController — assets watcher", () => {
 			expect(watcher.close).toHaveBeenCalled();
 		}
 	});
+
+	test("does not use recursive fs.watch on linux", async ({ expect }) => {
+		vi.mocked(fs.watch).mockClear();
+		const watchers = mockWatchers(expect);
+
+		const firstBundle = bus.waitFor("bundleComplete");
+		controller.onConfigUpdate({
+			type: "configUpdate",
+			config: assetsConfig(),
+		});
+		await firstBundle;
+		await watchers.at(0);
+
+		expect(fs.watch).not.toHaveBeenCalled();
+	});
 });
+
+describe.each(["darwin", "win32"] as const)(
+	"BundlerController — assets watcher (%s recursive fs.watch)",
+	(platform) => {
+		const std = mockConsoleMethods();
+		runInTempDir();
+
+		let bus: FakeBus;
+		let controller: BundlerController;
+		let restorePlatform: () => void;
+
+		beforeEach(async () => {
+			restorePlatform = stubPlatform(platform);
+			vi.mocked(fs.watch).mockReset();
+			vi.mocked(watch).mockReset();
+			bus = new FakeBus();
+			controller = new BundlerController(bus);
+
+			await seed({
+				"src/index.ts": `export default { fetch() { return new Response("ok"); } }`,
+				"assets/placeholder.txt": "hello",
+			});
+		});
+
+		afterEach(async () => {
+			await controller.teardown();
+			restorePlatform();
+		});
+
+		test("watches the assets directory with a single recursive fs.watch", async ({
+			expect,
+		}) => {
+			const fsWatchers = mockFsWatch(expect);
+			const assetsDir = path.resolve("assets");
+
+			const firstBundle = bus.waitFor("bundleComplete");
+			controller.onConfigUpdate({
+				type: "configUpdate",
+				config: assetsConfig(),
+			});
+			await firstBundle;
+			await fsWatchers.at(0);
+
+			expect(fsWatchers.calls).toEqual([
+				{
+					watchPath: assetsDir,
+					options: expect.objectContaining({
+						persistent: true,
+						recursive: true,
+					}),
+				},
+			]);
+			expect(vi.mocked(watch)).not.toHaveBeenCalled();
+		});
+
+		test("an asset change refreshes the current bundle", async ({ expect }) => {
+			const fsWatchers = mockFsWatch(expect);
+
+			const firstBundle = bus.waitFor("bundleComplete");
+			controller.onConfigUpdate({
+				type: "configUpdate",
+				config: assetsConfig(),
+			});
+			await firstBundle;
+			const fakeWatcher = await fsWatchers.at(0);
+
+			const secondBundle = bus.waitFor("bundleComplete");
+			fakeWatcher.emit("change", "change", "placeholder.txt");
+			await secondBundle;
+
+			expect(bundleCompleteCount(bus)).toBe(2);
+		});
+
+		test("ignores changes under the dev session write directories", async ({
+			expect,
+		}) => {
+			const fsWatchers = mockFsWatch(expect);
+
+			const projectRoot = path.resolve(".");
+			const firstBundle = bus.waitFor("bundleComplete");
+			controller.onConfigUpdate({
+				type: "configUpdate",
+				config: assetsAt(projectRoot),
+			});
+			await firstBundle;
+			const fakeWatcher = await fsWatchers.at(0);
+
+			fakeWatcher.emit(
+				"change",
+				"change",
+				path.join(".wrangler", "tmp", "built.js")
+			);
+			await setTimeout(500);
+			expect(bundleCompleteCount(bus)).toBe(1);
+
+			const secondBundle = bus.waitFor("bundleComplete");
+			fakeWatcher.emit("change", "change", "index.html");
+			await secondBundle;
+			expect(bundleCompleteCount(bus)).toBe(2);
+		});
+
+		test("ignores a persist directory inside the assets tree", async ({
+			expect,
+		}) => {
+			const fsWatchers = mockFsWatch(expect);
+
+			const projectRoot = path.resolve(".");
+			const persist = path.join(projectRoot, "persist-state");
+			const firstBundle = bus.waitFor("bundleComplete");
+			controller.onConfigUpdate({
+				type: "configUpdate",
+				config: assetsAt(projectRoot, persist),
+			});
+			await firstBundle;
+			const fakeWatcher = await fsWatchers.at(0);
+
+			fakeWatcher.emit(
+				"change",
+				"change",
+				path.join("persist-state", "kv.sqlite")
+			);
+			await setTimeout(500);
+			expect(bundleCompleteCount(bus)).toBe(1);
+
+			const secondBundle = bus.waitFor("bundleComplete");
+			fakeWatcher.emit("change", "change", "index.html");
+			await secondBundle;
+			expect(bundleCompleteCount(bus)).toBe(2);
+		});
+
+		test("keeps watching when the persist path is the assets directory", async ({
+			expect,
+		}) => {
+			const fsWatchers = mockFsWatch(expect);
+
+			const assetsDir = path.resolve("public");
+			const firstBundle = bus.waitFor("bundleComplete");
+			controller.onConfigUpdate({
+				type: "configUpdate",
+				config: assetsAt(assetsDir, assetsDir),
+			});
+			await firstBundle;
+			const fakeWatcher = await fsWatchers.at(0);
+
+			const secondBundle = bus.waitFor("bundleComplete");
+			fakeWatcher.emit("change", "change", "index.html");
+			await secondBundle;
+			expect(bundleCompleteCount(bus)).toBe(2);
+		});
+
+		test("a pending assets refresh is discarded on teardown", async ({
+			expect,
+		}) => {
+			const fsWatchers = mockFsWatch(expect);
+
+			const firstBundle = bus.waitFor("bundleComplete");
+			controller.onConfigUpdate({
+				type: "configUpdate",
+				config: assetsConfig(),
+			});
+			await firstBundle;
+			const fakeWatcher = await fsWatchers.at(0);
+
+			fakeWatcher.emit("change", "change", "placeholder.txt");
+			await controller.teardown();
+
+			const eventsAtTeardown = bus.events.length;
+			await setTimeout(500);
+			expect(bus.events.slice(eventsAtTeardown)).toEqual([]);
+		});
+
+		test(
+			"logs a warning and disables the watcher when the native watcher emits EMFILE",
+			{ timeout: 5_000 },
+			async ({ expect }) => {
+				const fsWatchers = mockFsWatch(expect);
+
+				controller.onConfigUpdate({
+					type: "configUpdate",
+					config: assetsConfig(),
+				});
+				const fakeWatcher = await fsWatchers.at(0);
+
+				const emfileError = Object.assign(
+					new Error("EMFILE: too many open files, watch"),
+					{ code: "EMFILE" }
+				);
+				fakeWatcher.emit("error", emfileError);
+				await setTimeout(0);
+
+				expect(std.warn).toContain("platform limit");
+				expect(std.warn).toContain("flattening");
+				expect(fakeWatcher.close).toHaveBeenCalled();
+			}
+		);
+
+		test(
+			"logs a warning and closes the watcher for non-EMFILE watcher errors",
+			{ timeout: 5_000 },
+			async ({ expect }) => {
+				const fsWatchers = mockFsWatch(expect);
+
+				controller.onConfigUpdate({
+					type: "configUpdate",
+					config: assetsConfig(),
+				});
+				const fakeWatcher = await fsWatchers.at(0);
+
+				const genericError = new Error("EACCES: permission denied");
+				fakeWatcher.emit("error", genericError);
+				await setTimeout(0);
+
+				expect(std.warn).toContain(
+					"encountered an error and has been disabled"
+				);
+				expect(std.warn).toContain("EACCES: permission denied");
+				expect(fakeWatcher.close).toHaveBeenCalled();
+			}
+		);
+
+		test("no watchers are created by a config reload that outlives teardown", async ({
+			expect,
+		}) => {
+			const watchers = mockWatchers(expect, { closeDelayMs: 200 });
+			const fsWatchers = mockFsWatch(expect, { closeDelayMs: 200 });
+
+			const config = customBuildAndAssetsConfig();
+			controller.onConfigUpdate({ type: "configUpdate", config });
+			await watchers.at(0);
+			await fsWatchers.at(0);
+
+			controller.onConfigUpdate({
+				type: "configUpdate",
+				config: { ...config, name: "replacement-worker" },
+			});
+			await controller.teardown();
+
+			expect(watchers.created).toHaveLength(1);
+			expect(fsWatchers.created).toHaveLength(1);
+			expect(watchers.created[0]?.close).toHaveBeenCalled();
+			expect(fsWatchers.created[0]?.close).toHaveBeenCalled();
+		});
+	}
+);

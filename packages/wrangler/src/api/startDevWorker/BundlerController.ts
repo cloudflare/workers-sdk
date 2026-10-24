@@ -25,10 +25,12 @@ import { debounce } from "../../utils/debounce";
 import { isAbortError } from "../../utils/isAbortError";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
+import { watchAssetsDirectory } from "./watch-assets-directory";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { ConfigUpdateEvent } from "./events";
 import type { StartDevWorkerOptions } from "./types";
+import type { AssetsWatcher } from "./watch-assets-directory";
 import type { EphemeralDirectory, Entry } from "@cloudflare/workers-utils";
 
 type PendingCustomBuild = {
@@ -532,7 +534,7 @@ export class BundlerController extends Controller {
 		);
 	}
 
-	#assetsWatcher?: ReturnType<typeof watch>;
+	#assetsWatcher?: AssetsWatcher;
 	#debouncedRefreshBundle?: ReturnType<typeof debounce>;
 
 	async #ensureWatchingAssets(config: StartDevWorkerOptions) {
@@ -566,18 +568,13 @@ export class BundlerController extends Controller {
 
 		if (config.dev.watch !== false && config.assets?.directory) {
 			const assetsDir = path.resolve(config.assets.directory);
-			const watcher = watch(assetsDir, {
-				persistent: true,
-				ignoreInitial: true,
-				// Chokidar does not walk an ignored directory, so writes under
-				// `.wrangler` and `dev.persist` do not reload. Drop a write directory
-				// only when it is the assets directory, or the watcher would ignore
-				// the tree it was created to watch.
-				ignored: getDevSessionWriteDirs(config).filter(
-					(dir) => path.resolve(dir) !== assetsDir
-				),
-			})
-				.on("all", async (eventName, filePath) => {
+			// Drop a write directory only when it is the assets directory, or
+			// the watcher would ignore the tree it was created to watch.
+			const ignoredDirs = getDevSessionWriteDirs(config).filter(
+				(dir) => path.resolve(dir) !== assetsDir
+			);
+			const watcher = watchAssetsDirectory(assetsDir, ignoredDirs)
+				.on("all", (eventName, filePath) => {
 					const message = getAssetChangeMessage(eventName, filePath);
 					logger.debug(`🌀 ${message}...`);
 					debouncedRefreshBundle();
