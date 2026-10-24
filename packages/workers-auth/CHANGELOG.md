@@ -1,5 +1,20 @@
 # @cloudflare/workers-auth
 
+## 0.15.1
+
+### Patch Changes
+
+- [#16403](https://github.com/cloudflare/workers-sdk/pull/16403) [`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-10-22
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16437](https://github.com/cloudflare/workers-sdk/pull/16437) [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-10-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e), [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876)]:
+  - @cloudflare/workers-utils@0.48.1
+
 ## 0.15.0
 
 ### Minor Changes

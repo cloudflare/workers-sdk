@@ -1,5 +1,50 @@
 # wrangler
 
+## 4.153.0
+
+### Minor Changes
+
+- [#14865](https://github.com/cloudflare/workers-sdk/pull/14865) [`c0e915f`](https://github.com/cloudflare/workers-sdk/commit/c0e915f935df9f56993e706604c0af986a6f7c78) Thanks [@TheSaiEaranti](https://github.com/TheSaiEaranti)! - Add an `--infer-origin-from-routes` flag to `wrangler dev`
+
+  When a config has `routes`, local dev infers the origin from the first route, so the Worker sees `request.url`, the `Host` header, and any `Origin` header rewritten to the route's host even though the client connected to `localhost`. That silently breaks Host/Origin-sensitive logic — for example a CORS check allowlisting `http://localhost:*` receives `http://<route-host>` instead and rejects the request only in local dev.
+
+  The inference is intentional and remains the default. Passing `--infer-origin-from-routes=false` now opts out, preserving the real local origin without removing `routes` from the config. An explicitly configured `--host`, `--local-upstream`, or `dev.host` continues to take precedence either way. The flag only affects local development: in remote mode the route host still determines the preview session as before.
+
+### Patch Changes
+
+- [#16403](https://github.com/cloudflare/workers-sdk/pull/16403) [`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-10-22
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16437](https://github.com/cloudflare/workers-sdk/pull/16437) [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-10-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16403](https://github.com/cloudflare/workers-sdk/pull/16403) [`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261019.1 | ^5.20261022.1 |
+  | workerd                   | 1.20261019.1  | 1.20261022.1  |
+
+- [#16437](https://github.com/cloudflare/workers-sdk/pull/16437) [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261022.1 | ^5.20261023.1 |
+  | workerd                   | 1.20261022.1  | 1.20261023.1  |
+
+- [#16405](https://github.com/cloudflare/workers-sdk/pull/16405) [`c709bff`](https://github.com/cloudflare/workers-sdk/commit/c709bff0e48b1baffe7aeb77a840cb9734d00346) Thanks [@ondraulehla](https://github.com/ondraulehla)! - Fix `kv key list` returning only the first 1000 keys in local mode
+
+  Listing a local namespace with more than 1000 keys stopped after the first 1000 without any warning, so the output looked complete when it wasn't. `kv key list` now returns every key in local mode, with or without `--prefix`.
+
+- Updated dependencies [[`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e), [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876), [`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e), [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876)]:
+  - miniflare@5.20261023.0-beta
+
 ## 4.152.0
 
 ### Minor Changes
