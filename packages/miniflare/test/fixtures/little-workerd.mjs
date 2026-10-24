@@ -7,6 +7,10 @@ import { arrayBuffer } from "stream/consumers";
 // Consume but otherwise ignore stdin (assuming config passed via stdin)
 await arrayBuffer(process.stdin);
 
+if (process.env.LITTLE_WORKERD_SIGTERM === "ignore") {
+	process.on("SIGTERM", () => {});
+}
+
 // Start server...
 const server = http.createServer((req, res) => {
 	res.end("When I grow up, I want to be a big workerd!");
