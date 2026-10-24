@@ -46,19 +46,19 @@
 	},
 	"dependencies": {
 		"@cloudflare/unenv-preset": "2.16.2",
-		"miniflare": "5.20261019.2-beta",
+		"miniflare": "5.20261023.0-beta",
 		"unenv": "2.0.0-rc.24",
-		"wrangler": "4.152.0",
+		"wrangler": "4.153.0",
 		"ws": "8.22.0"
 	},
 	"devDependencies": {
-		"@cloudflare/containers-shared": "0.23.2",
+		"@cloudflare/containers-shared": "0.23.3",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/remote-bindings": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "5.20261019.1",
-		"@cloudflare/workers-utils": "0.48.0",
+		"@cloudflare/workers-types": "5.20261023.1",
+		"@cloudflare/workers-utils": "0.48.1",
 		"@remix-run/node-fetch-server": "0.8.1",
 		"@types/node": "22.15.17",
 		"@types/semver": "7.8.0",
@@ -82,7 +82,7 @@
 	},
 	"peerDependencies": {
 		"vite": "^6.1.0 || ^7.0.0 || ^8.0.0",
-		"wrangler": "^4.152.0"
+		"wrangler": "^4.153.0"
 	},
 	"workers-sdk": {
 		"prerelease": true
