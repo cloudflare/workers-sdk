@@ -29,19 +29,27 @@
 ## WORKER CONFIGURATION SOURCES
 
 `parseCustomPoolOptions()` in `src/pool/config.ts` resolves at most one configuration
-file into a normalised `Config`, then shares every downstream step (remote proxy
-session, `unstable_getMiniflareWorkerOptions()`, `main`, defines, module rules, tails):
+file:
 
 - `wrangler: { configPath, environment }` — a Wrangler configuration file, via
-  `wrangler.unstable_readConfig()`
-- `experimental: { newConfig }` — a `cloudflare.config.ts`, via `src/pool/new-config.ts`
-  (`@cloudflare/config`'s `loadAndParseConfig()` → `convertToWranglerConfig()` →
-  `normalizeAndValidateConfig()`). Mirrors `@cloudflare/vite-plugin`'s
-  `experimental.newConfig`. `ctx.mode` comes from `project.vite.config.mode`.
+  `wrangler.unstable_readConfig()`, then `unstable_getMiniflareWorkerOptions()` (remote
+  proxy session, `main`, defines, module rules, tails) merged into the V4 `miniflare`
+  options
+- `config: true | "<path>"` — a `cloudflare.config.ts`, via `src/pool/new-config.ts`
+  (`@cloudflare/config`'s `loadAndParseConfig()`), never through Wrangler. It is already
+  in the shape of Miniflare's native `WorkerOptions.config`, so `applyCloudflareConfig()`
+  in `src/pool/index.ts` applies it to the runner after the pool's V4 options are
+  converted. `miniflare` options can't be combined with `config`.
+  Remote bindings use cf credentials (`src/pool/auth.ts`).
+  `src/pool/auth.ts`, `src/pool/local-env.ts`, `src/pool/remote-bindings.ts` and
+  `getWorkerZone()` in `src/pool/index.ts` mirror `@cloudflare/vite-plugin`'s, and
+  `DEFAULT_MODULE_RULES` in `src/pool/config.ts` mirrors Wrangler's; keep them in sync. `ctx.mode` comes from
+  `project.vite.config.mode`.
 
-The two are mutually exclusive. Whichever is used, the resolved path, config format and
-Worker name are recorded on `options.resolvedConfig` for the pool to consume — never
-re-read the config file from disk.
+The two are mutually exclusive, and setting both is an error. Neither file is loaded unless
+its option is set; without either, the Worker comes from `miniflare` options alone.
+Whichever is used, the resolved path, config format and Worker name are recorded on
+`options.resolvedConfig` for the pool to consume — never re-read the config file from disk.
 
 ## BUILD
 

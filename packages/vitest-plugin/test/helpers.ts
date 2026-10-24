@@ -43,10 +43,12 @@ export const vitestConfig = (
 	export default {
 		plugins: [
 			cloudflareTest({
-				miniflare: {
-					compatibilityDate: "2025-12-02",
-					compatibilityFlags: ["nodejs_compat"],
-				},
+				${
+					// \`miniflare\` can't be combined with \`config\`
+					cfOptions.config
+						? ""
+						: `miniflare: { compatibilityDate: "2025-12-02", compatibilityFlags: ["nodejs_compat"] },`
+				}
 				...${JSON.stringify(cfOptions)}
 			})
 		],

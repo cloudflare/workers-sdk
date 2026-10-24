@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import util from "node:util";
 import {
 	DEFAULT_COMPAT_DATE,
+	getZoneFromRoute,
 	isNodejsCompatDefaultOn,
 } from "@cloudflare/workers-utils";
 import * as devalue from "devalue";
@@ -36,14 +37,16 @@ import { createLoopbackHandler } from "./loopback";
 import { handleModuleFallbackRequest } from "./module-fallback";
 import type {
 	SourcelessWorkerOptions,
-	WorkersPoolOptions,
 	WorkersPoolOptionsWithDefines,
 } from "./config";
+import type { LoadedNewConfig } from "./new-config";
 import type {
 	MiniflareOptions,
 	LegacyWorkerOptions,
+	RemoteProxyConnectionString,
 	V4MiniflareOptions,
 	WorkerdStructuredLog,
+	WorkerOptions,
 } from "miniflare";
 import type { TestProject, Vitest } from "vitest/node";
 
@@ -170,9 +173,36 @@ interface DurableObjectDesignator {
  * the objects they point to.
  */
 export function getDurableObjectDesignators(
-	options: WorkersPoolOptions
+	options: WorkersPoolOptionsWithDefines
 ): Map<string /* bound name */, DurableObjectDesignator> {
 	const result = new Map<string, DurableObjectDesignator>();
+	const cloudflareConfig = options.loadedCloudflareConfig;
+	for (const [key, binding] of Object.entries(cloudflareConfig?.env ?? {})) {
+		if (binding.type === "durable-object") {
+			result.set(key, {
+				className: binding.exportName,
+				// A binding to the config's own Worker targets the (renamed) runner
+				scriptName:
+					binding.worker === cloudflareConfig?.worker.name
+						? undefined
+						: binding.worker,
+			});
+		}
+	}
+	// `exports` can declare Durable Objects that no binding points to. Register
+	// them by class name, as Wrangler configs do for unbound classes, so their
+	// stubs from `exports` work with the test helpers.
+	for (const [name, exported] of Object.entries(
+		cloudflareConfig?.worker.exports ?? {}
+	)) {
+		if (
+			exported.type === "durable-object" &&
+			"storage" in exported &&
+			!result.has(name)
+		) {
+			result.set(name, { className: name });
+		}
+	}
 	const durableObjects = options.miniflare?.durableObjects ?? {};
 	for (const [key, designator] of Object.entries(durableObjects)) {
 		if (typeof designator === "string") {
@@ -467,6 +497,28 @@ async function buildProjectWorkerOptions(
 
 	const workflowClassNames = getWorkflowClasses(runnerWorker, configWorkerName);
 
+	// `cloudflare.config.ts` declares its Durable Object and Workflow classes in
+	// `exports` or binds its own Workflows. They're applied to the runner after
+	// conversion, but need wrappers like any other class defined in the runner.
+	const cloudflareConfig = customOptions.loadedCloudflareConfig;
+	for (const [name, exported] of Object.entries(
+		cloudflareConfig?.worker.exports ?? {}
+	)) {
+		if (exported.type === "durable-object" && "storage" in exported) {
+			durableObjectClassNames.add(name);
+		} else if (exported.type === "workflow") {
+			workflowClassNames.add(name);
+		}
+	}
+	for (const binding of Object.values(cloudflareConfig?.env ?? {})) {
+		if (
+			binding.type === "workflow" &&
+			binding.worker === cloudflareConfig?.worker.name
+		) {
+			workflowClassNames.add(binding.exportName);
+		}
+	}
+
 	const selfWorkerExports: string[] = [];
 	if (
 		flagAssertions.isEnabled(
@@ -686,7 +738,7 @@ function getModuleFallbackService(ctx: Vitest): ModuleFallbackService {
 async function buildProjectMiniflareOptions(
 	ctx: Vitest,
 	project: TestProject,
-	customOptions: WorkersPoolOptions,
+	customOptions: WorkersPoolOptionsWithDefines,
 	main: string | undefined
 ): Promise<MiniflareOptions> {
 	const moduleFallbackService = getModuleFallbackService(ctx);
@@ -730,7 +782,114 @@ async function buildProjectMiniflareOptions(
 		workers: [runnerWorker, ...auxiliaryWorkers],
 	} satisfies V4MiniflareOptions;
 
-	return convertV4MiniflareOptions(options);
+	const miniflareOptions = convertV4MiniflareOptions(options);
+	if (customOptions.loadedCloudflareConfig !== undefined) {
+		applyCloudflareConfig(
+			miniflareOptions.workers[0],
+			customOptions.loadedCloudflareConfig,
+			customOptions.remoteProxyConnectionString
+		);
+	}
+	return miniflareOptions;
+}
+
+/**
+ * Applies a `cloudflare.config.ts` Worker to the runner Worker, in Miniflare's
+ * native shape. The pool's own options take precedence, and `env` and
+ * `exports` are merged by name. Self-references are pointed at the (renamed)
+ * runner. Tail consumers aren't supported yet and are dropped with a warning,
+ * and so is the assets binding, as there's no assets directory.
+ *
+ * @param runner The runner Worker, as converted from the pool's V4 options.
+ * @param cloudflareConfig The loaded `cloudflare.config.ts`.
+ * @param remoteProxyConnectionString The config's remote proxy session, if any.
+ */
+function applyCloudflareConfig(
+	runner: WorkerOptions,
+	{ worker, env }: LoadedNewConfig,
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined
+): void {
+	const runnerName = runner.config.name;
+	const {
+		assets: _assets,
+		entrypoint: _entrypoint,
+		env: _env,
+		exports: configExports,
+		tailConsumers,
+		...config
+	} = worker;
+
+	const runnerEnv: NonNullable<WorkerOptions["config"]["env"]> = {};
+	for (const [name, binding] of Object.entries(env)) {
+		if (binding.type === "assets") {
+			continue;
+		}
+		if (binding.type === "worker" && binding.worker === worker.name) {
+			runnerEnv[name] = { ...binding, worker: kCurrentWorker };
+		} else if (
+			(binding.type === "durable-object" || binding.type === "workflow") &&
+			binding.worker === worker.name
+		) {
+			runnerEnv[name] = { ...binding, worker: runnerName };
+		} else {
+			runnerEnv[name] = binding;
+		}
+	}
+
+	const runnerExports: NonNullable<WorkerOptions["config"]["exports"]> = {};
+	for (const [name, exported] of Object.entries(configExports ?? {})) {
+		// Containers aren't supported by the pool, as for Wrangler configs
+		const { container: _container, ...rest } = exported as typeof exported & {
+			container?: string;
+		};
+		runnerExports[name] = rest;
+	}
+
+	for (const tail of tailConsumers ?? []) {
+		log.warn(
+			`Tail consumers aren't supported with \`config\` yet, so "${tail.worker}" was ignored.`
+		);
+	}
+
+	runner.config = {
+		...config,
+		...runner.config,
+		env: { ...runnerEnv, ...runner.config.env },
+		exports: { ...runnerExports, ...runner.config.exports },
+	};
+	runner.dev = {
+		...runner.dev,
+		zone: getWorkerZone(worker),
+		remoteProxyConnectionString,
+	};
+}
+
+// Copied from `@cloudflare/vite-plugin` (`src/miniflare-options.ts`). Keep the
+// two in sync. Wrangler configs get the same zone from their first route.
+function getWorkerZone(
+	config: Pick<LoadedNewConfig["worker"], "domains" | "triggers">
+): string | undefined {
+	// Domains are converted to routes before fetch triggers, so this mirrors the
+	// first-route selection used by Wrangler's Miniflare options.
+	const domain = config.domains?.[0];
+	if (domain !== undefined) {
+		return getZoneFromRoute(
+			typeof domain === "string" ? domain : domain.hostname
+		);
+	}
+
+	const fetchTrigger = config.triggers?.find(
+		(trigger) => trigger.type === "fetch"
+	);
+	if (fetchTrigger?.type !== "fetch") {
+		return undefined;
+	}
+
+	return getZoneFromRoute(
+		fetchTrigger.zone?.includes(".")
+			? { pattern: fetchTrigger.pattern, zone_name: fetchTrigger.zone }
+			: fetchTrigger.pattern
+	);
 }
 export async function getProjectMiniflare(
 	ctx: Vitest,
