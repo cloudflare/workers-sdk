@@ -789,6 +789,13 @@ test("Miniflare: negotiates acceptable encoding", async ({ expect }) => {
 		AcceptEncoding: "br, gzip",
 		clientAcceptEncoding: "hello",
 	});
+	res = await fetch(url, {
+		headers: { "Accept-Encoding": "identity" },
+	});
+	expect(await res.json()).toEqual({
+		AcceptEncoding: "br, gzip",
+		clientAcceptEncoding: "identity",
+	});
 
 	// Check all encodings supported
 	res = await fetch(gzipUrl);
