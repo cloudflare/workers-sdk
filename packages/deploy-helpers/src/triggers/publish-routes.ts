@@ -1,4 +1,4 @@
-import { ParseError, UserError } from "@cloudflare/workers-utils";
+import { APIError, ParseError, UserError } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
 import {
 	confirm,
@@ -124,9 +124,24 @@ export async function publishRoutes(
 				scriptName,
 				accountId,
 			});
-		} else {
-			throw e;
 		}
+		if (
+			e instanceof APIError &&
+			e.status === 403 &&
+			e.code === undefined &&
+			e.notes.some(
+				(note) => note.text === "No access to the specified resource."
+			)
+		) {
+			throw new UserError(
+				"The Worker was uploaded, but its routes were not updated. Check that the API token has Workers Scripts: Edit for this Worker and Workers Routes: Edit for every zone in both the configured routes and the routes currently attached to this Worker.",
+				{
+					cause: e,
+					telemetryMessage: "triggers deploy routes permission denied",
+				}
+			);
+		}
+		throw e;
 	}
 }
 /**
