@@ -55,11 +55,6 @@ export const IGNORED_DIST_IMPORTS = [
 	"react-dom",
 	"react-router",
 	"waku",
-
-	// @aws-sdk/client-s3 (bundled devDependency) optionally uses this native
-	// crypto implementation if installed; falls back to a JS implementation
-	// when missing.
-	"@aws-sdk/signature-v4-crt",
 ];
 
 const pathToPackageJson = path.resolve(__dirname, "..", "package.json");
