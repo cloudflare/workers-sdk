@@ -28,6 +28,7 @@ import {
 	Response as MiniflareResponse,
 } from "miniflare";
 import { getAssetsConfig } from "./asset-config";
+import { createLogger, getRemoteBindingsAuth } from "./auth";
 import {
 	ASSET_WORKER_NAME,
 	kRequestType,
@@ -527,7 +528,12 @@ export async function getDevMiniflareOptions(
 												profileDir: resolvedViteConfig.root,
 											},
 											preExistingRemoteProxySession ?? null,
-											undefined,
+											getRemoteBindingsAuth(
+												ctx.remoteBindingsAuthHooks,
+												resolvedViteConfig.root,
+												settings.accountId,
+												createLogger(viteDevServer.config.logger)
+											),
 											{
 												cliDisplayName: resolvedPluginConfig.cliDisplayName,
 												logger: createRemoteBindingsLogger(
@@ -853,7 +859,12 @@ export async function getPreviewMiniflareOptions(
 							profileDir: resolvedViteConfig.root,
 						},
 						preExistingRemoteProxySessionData ?? null,
-						undefined,
+						getRemoteBindingsAuth(
+							ctx.remoteBindingsAuthHooks,
+							resolvedViteConfig.root,
+							resolvedPluginConfig.settings.accountId,
+							createLogger(vitePreviewServer.config.logger)
+						),
 						{
 							cliDisplayName: resolvedPluginConfig.cliDisplayName,
 							logger: createRemoteBindingsLogger(
