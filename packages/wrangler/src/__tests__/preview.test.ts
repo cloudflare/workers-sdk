@@ -7062,7 +7062,7 @@ describe("wrangler preview", () => {
 								queues: {
 									producers: [{ binding: "STAGE_QUEUE", queue: "jobs" }],
 								},
-								limits: { subrequests: 50 },
+								limits: { subrequests: 50, durable_object_memory_mb: 256 },
 							},
 						},
 					},
@@ -7077,7 +7077,11 @@ describe("wrangler preview", () => {
 			let deploymentRequestBody:
 				| {
 						compatibility_date?: string;
-						limits?: { cpu_ms?: number; subrequests?: number };
+						limits?: {
+							cpu_ms?: number;
+							subrequests?: number;
+							durable_object_memory_mb?: number;
+						};
 						placement?: { mode?: string; region?: string } | null;
 						env?: Record<
 							string,
@@ -7157,7 +7161,10 @@ describe("wrangler preview", () => {
 				enabled: false,
 			});
 			expect(deploymentRequestBody?.compatibility_date).toBe("2025-01-01");
-			expect(deploymentRequestBody?.limits).toEqual({ subrequests: 50 });
+			expect(deploymentRequestBody?.limits).toEqual({
+				subrequests: 50,
+				durable_object_memory_mb: 256,
+			});
 			expect(deploymentRequestBody?.placement).toEqual({
 				mode: "targeted",
 				region: "WEU",
