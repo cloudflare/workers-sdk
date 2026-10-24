@@ -12,6 +12,7 @@ export default defineConfig({
           include: ['hono/tiny'],
         },
         build: {
+          sourcemap: true,
           rolldownOptions: {
             platform: 'neutral',
           },
@@ -22,6 +23,7 @@ export default defineConfig({
           include: ['waku > rsc-html-stream/server'],
         },
         build: {
+          sourcemap: true,
           rolldownOptions: {
             platform: 'neutral',
           },
