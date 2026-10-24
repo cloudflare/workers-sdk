@@ -1,7 +1,7 @@
 import { Buffer } from "node:buffer";
 import { TextDecoder } from "node:util";
 import { performApiFetchBase } from "@cloudflare/workers-utils";
-import { validateDevelopmentOidcAudience } from "miniflare";
+import { validOidcAudience } from "@cloudflare/workers-utils/oidc";
 import { version } from "../package.json";
 import { DevelopmentOidcApiError } from "./development-oidc-errors";
 import type {
@@ -32,25 +32,10 @@ function object(value: unknown): Record<string, unknown> {
 
 /** Enforce the API's StringOrURI rules without fetching or normalizing audiences. */
 export function validateDevelopmentOidcApiAudience(audience: string): void {
-	validateDevelopmentOidcAudience(audience);
-	if (audience.includes(":")) {
-		// StringOrURI requires a URI scheme when a colon occurs. Preserve the original string.
-		if (
-			!/^[A-Za-z][A-Za-z0-9+.-]*:/.test(audience) ||
-			/[^\x21-\x7e]/.test(audience) ||
-			/%(?![A-Fa-f0-9]{2})/.test(audience)
-		) {
-			throw new DevelopmentOidcApiError(
-				"Development OIDC audiences containing a colon must be valid URIs."
-			);
-		}
-		try {
-			new URL(audience);
-		} catch {
-			throw new DevelopmentOidcApiError(
-				"Development OIDC audiences containing a colon must be valid URIs."
-			);
-		}
+	if (!validOidcAudience(audience)) {
+		throw new DevelopmentOidcApiError(
+			"Development OIDC requires a non-whitespace StringOrURI audience of 1–2048 UTF-8 bytes. Values containing a colon must be valid URIs."
+		);
 	}
 }
 
@@ -332,6 +317,8 @@ export function createDevelopmentOidcApiTransport(
 				!Array.isArray(data.allowed_audiences) ||
 				data.allowed_audiences.length < 1 ||
 				data.allowed_audiences.length > 64 ||
+				new Set(data.allowed_audiences).size !==
+					data.allowed_audiences.length ||
 				!data.allowed_audiences.includes(data.default_audience) ||
 				typeof data.expires_at !== "number" ||
 				!Number.isSafeInteger(data.expires_at) ||

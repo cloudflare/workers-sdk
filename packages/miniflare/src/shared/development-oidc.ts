@@ -1,5 +1,6 @@
 import { Buffer } from "node:buffer";
 import { addAbortListener } from "node:events";
+import { validOidcAudience } from "@cloudflare/workers-utils/oidc";
 
 /** The server-authorized identity and policy that own a development token. */
 export interface DevelopmentOidcIdentity {
@@ -112,17 +113,16 @@ function isBoundedString(value: unknown, maxBytes: number): value is string {
 }
 
 /**
- * Validate host-side audience bounds without normalizing the value. The trusted
- * transport must also enforce the signing API's StringOrURI rules.
+ * Validate the same exact StringOrURI grammar as the signing API.
  *
  * @param audience Audience received from a getter or authorized session.
  */
 export function validateDevelopmentOidcAudience(
 	audience: unknown
 ): asserts audience is string {
-	if (!isBoundedString(audience, 2048) || audience.trim().length === 0) {
+	if (!validOidcAudience(audience)) {
 		throw new Error(
-			"Development OIDC requires an audience of 1–2048 UTF-8 bytes that is not whitespace-only."
+			"Development OIDC requires a StringOrURI audience of 1–2048 UTF-8 bytes that is not whitespace-only."
 		);
 	}
 }

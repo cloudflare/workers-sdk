@@ -393,6 +393,9 @@ describe("local token profile", () => {
 		"x".repeat(2049),
 		"with spaces:bad",
 		"1invalid:scheme",
+		"https://host/\\path",
+		"https://host/[]",
+		"\u0085",
 		"https://example/%xx",
 		"urn:雪",
 	])("rejects invalid StringOrURI audiences", (value, { expect }) => {

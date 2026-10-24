@@ -128,19 +128,22 @@ export class DevelopmentOidcProvider {
 		if (options === null || typeof options !== "object") {
 			throw new Error("Development OIDC requires an options object.");
 		}
-		if (
-			Reflect.ownKeys(options).some(
-				(key) => key !== "audience" && key !== "fresh"
-			) ||
-			("fresh" in options && typeof options.fresh !== "boolean")
-		) {
+		const keys = Reflect.ownKeys(options);
+		if (keys.some((key) => key !== "audience" && key !== "fresh")) {
 			throw new Error(
 				"Development OIDC accepts only audience and boolean fresh options."
 			);
 		}
-		const fresh = options.fresh ?? false;
 		// Snapshot before the first await: callers may retain and mutate options.
-		const requestedAudience = options.audience;
+		const fresh = keys.includes("fresh") ? options.fresh : false;
+		if (typeof fresh !== "boolean") {
+			throw new Error(
+				"Development OIDC accepts only audience and boolean fresh options."
+			);
+		}
+		const requestedAudience = keys.includes("audience")
+			? options.audience
+			: undefined;
 		if (requestedAudience !== undefined) {
 			validateDevelopmentOidcAudience(requestedAudience);
 		}
@@ -182,13 +185,25 @@ export class DevelopmentOidcProvider {
 						if (
 							identity.accountId !== auth.accountId ||
 							identity.identityId !== this.#binding.identity_id ||
-							response.binding !== this.#binding.binding ||
+							response.binding !== this.#binding.binding
+						) {
+							throw new Error(
+								"Development OIDC returned a session for a different account or binding."
+							);
+						}
+						if (
 							!Array.isArray(response.allowedAudiences) ||
+							response.allowedAudiences.length > 64 ||
+							new Set(response.allowedAudiences).size !==
+								response.allowedAudiences.length ||
 							!response.allowedAudiences.includes(defaultAudience)
 						) {
 							throw new Error(
-								"Development OIDC returned a session for a different account."
+								"Development OIDC returned an invalid audience policy. Retry the getter."
 							);
+						}
+						for (const audience of response.allowedAudiences) {
+							validateDevelopmentOidcAudience(audience);
 						}
 						if (this.#binding.audience !== undefined) {
 							const requested = this.#binding.allowed_audiences ?? [

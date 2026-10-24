@@ -99,6 +99,51 @@ describe("development OIDC provider", () => {
 		expect(issueToken).toHaveBeenCalledTimes(11);
 	});
 
+	it("reads option getters once and ignores inherited authority options", async ({
+		expect,
+	}) => {
+		const { provider, issueToken } = setup();
+		let reads = 0;
+		await provider.getToken({
+			get fresh() {
+				return ++reads === 1;
+			},
+		});
+		expect(reads).toBe(1);
+		expect(issueToken.mock.calls[0]?.[3]).toBe(true);
+		await expect(
+			provider.getToken({
+				get fresh() {
+					++reads;
+					return false;
+				},
+				claims: {},
+			} as never)
+		).rejects.toThrow("only audience and boolean fresh");
+		expect(reads).toBe(1);
+		await provider.getToken(
+			Object.create({ fresh: true, audience: "inherited" })
+		);
+		expect(issueToken.mock.calls[1]?.[2]).toBe(session.defaultAudience);
+		expect(issueToken.mock.calls[1]?.[3]).toBe(false);
+		provider.dispose();
+	});
+
+	it.for([
+		Array(65).fill(session.defaultAudience),
+		[session.defaultAudience, session.defaultAudience],
+		[session.defaultAudience, "https://host/\\path"],
+	])(
+		"rejects malformed or oversized session audience policy",
+		async (allowedAudiences, { expect }) => {
+			const { provider, createSession, issueToken } = setup();
+			createSession.mockResolvedValue({ ...session, allowedAudiences });
+			await expect(provider.getToken()).rejects.toThrow();
+			expect(issueToken).not.toHaveBeenCalled();
+			provider.dispose();
+		}
+	);
+
 	it("forwards every fresh request without coalescing", async ({ expect }) => {
 		const { provider, issueToken } = setup();
 		let count = 0;
