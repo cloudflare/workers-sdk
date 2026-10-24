@@ -509,7 +509,7 @@ describe("handleWebSocket", () => {
 		const originalDestroy = serverSocket.destroy.bind(serverSocket);
 		vi.spyOn(serverSocket, "destroy").mockImplementation((...args) => {
 			destroy();
-			originalDestroy(...args);
+			return originalDestroy(...args);
 		});
 
 		deferred.resolve(new Response("not found", { status: 404 }));
