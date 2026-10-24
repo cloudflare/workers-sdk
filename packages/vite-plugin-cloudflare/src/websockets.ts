@@ -103,7 +103,6 @@ export function handleWebSocket(
 				// A listener claimed the socket while `dispatchFetch` was in
 				// flight, so a second upgrade would corrupt the connection.
 				if (isClaimed()) {
-					workerResponseHeaders.delete(request);
 					return;
 				}
 
