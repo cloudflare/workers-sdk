@@ -4415,6 +4415,114 @@ describe("wrangler preview", () => {
 			);
 		});
 
+		test("should keep stdout to the JSON payload when uploading assets with --json", async ({
+			expect,
+		}) => {
+			mkdirSync("public", { recursive: true });
+			writeFileSync("public/index.html", "<h1>Hello</h1>");
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					assets: { directory: "public" },
+					previews: {},
+				})
+			);
+			let deploymentRequestBody: Record<string, unknown> | undefined;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "preview-id-assets",
+									name: "test-preview",
+									slug: "test-preview",
+									urls: ["https://test-preview.test-worker.cloudflare.app"],
+									worker_name: "test-worker",
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/scripts/:workerId/assets-upload-session`,
+					async ({ request }) => {
+						const { manifest } = (await request.json()) as {
+							manifest: Record<string, { hash: string; size: number }>;
+						};
+						return HttpResponse.json({
+							success: true,
+							result: {
+								buckets: [Object.values(manifest).map(({ hash }) => hash)],
+								jwt: "assets-jwt-from-session",
+							},
+						});
+					}
+				),
+				http.post(`*/accounts/:accountId/workers/assets/upload`, () =>
+					HttpResponse.json(
+						{
+							success: true,
+							result: { jwt: "assets-completion-jwt" },
+						},
+						{ status: 201 }
+					)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = await readPreviewDeploymentRequest(request);
+						return HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-assets",
+									preview_id: "preview-id-assets",
+									preview_name: "test-preview",
+									urls: ["https://assets123.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview --json");
+
+			expect(deploymentRequestBody?.assets).toMatchObject({
+				jwt: "assets-completion-jwt",
+			});
+			// console.info writes to stdout too, so anything logged there would
+			// corrupt the payload for whoever parses it.
+			expect(std.info).toBe("");
+			expect(JSON.parse(std.out)).toMatchObject({
+				preview: { urls: ["https://test-preview.test-worker.cloudflare.app"] },
+				deployment: { urls: ["https://assets123.test-worker.cloudflare.app"] },
+			});
+		});
+
 		test("should include the assets binding in env using the configured binding name", async ({
 			expect,
 		}) => {
