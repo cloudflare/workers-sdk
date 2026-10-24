@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import { getRuntimeHeader } from "@cloudflare/runtime-types";
+import { removeDirSync } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import {
@@ -9,6 +10,8 @@ import {
 } from "typescript";
 import { afterAll, beforeAll, beforeEach, describe, it, vi } from "vitest";
 import { experimental_generateTypes } from "../api";
+import { readConfig } from "../config";
+import { getEntry } from "../deployment-bundle/entry";
 import {
 	constructTSModuleGlob,
 	constructTypeKey,
@@ -18,6 +21,7 @@ import {
 } from "../type-generation";
 import {
 	ENV_HEADER_COMMENT_PREFIX,
+	checkTypesDiff,
 	getEnvHeader,
 	throwMissingBindingError,
 	toEnvInterfaceName,
@@ -596,6 +600,152 @@ describe("generate types - CLI", () => {
 				compilerOptions: { types: ["worker-configuration.d.ts"] },
 			})
 		);
+	});
+
+	describe("main module inference", () => {
+		it.for(["src/index.ts", ".worker-src/index.ts", ".worker.ts"])(
+			"includes the main module by default for %s",
+			async (main, { expect }) => {
+				const directory = main.substring(0, main.lastIndexOf("/"));
+				if (directory) {
+					fs.mkdirSync(directory, { recursive: true });
+				}
+				fs.writeFileSync(main, "export default {};");
+				fs.writeFileSync("wrangler.jsonc", JSON.stringify({ main }));
+
+				await runWrangler("types --include-runtime=false");
+
+				expect(fs.readFileSync("worker-configuration.d.ts", "utf-8")).toContain(
+					`mainModule: typeof import("./${main.slice(0, -3)}");`
+				);
+				await runWrangler("types --check");
+				await expect(
+					runWrangler("types --check --include-main-module=false")
+				).rejects.toThrow("are out of date");
+			}
+		);
+
+		it.for([false, true])(
+			"keeps opted-out types stable before and after a build (per-environment: %s)",
+			async (perEnvironment, { expect }) => {
+				fs.writeFileSync(
+					"wrangler.jsonc",
+					JSON.stringify({
+						main: ".svelte-kit/cloudflare/_worker.js",
+						assets: { directory: ".svelte-kit/cloudflare", binding: "ASSETS" },
+						env: perEnvironment ? { staging: {} } : undefined,
+					})
+				);
+				const command =
+					"types --include-runtime=false --include-main-module=false";
+				await runWrangler(command);
+				const beforeBuild = fs.readFileSync(
+					"worker-configuration.d.ts",
+					"utf-8"
+				);
+				expect(beforeBuild).toContain("ASSETS: Fetcher;");
+				expect(beforeBuild).not.toContain("interface GlobalProps");
+
+				fs.mkdirSync(".svelte-kit/cloudflare", { recursive: true });
+				fs.writeFileSync(
+					".svelte-kit/cloudflare/_worker.js",
+					"export default { fetch() { return new Response('Hello'); } };"
+				);
+				await runWrangler("types --check");
+				await runWrangler(command);
+				expect(fs.readFileSync("worker-configuration.d.ts", "utf-8")).toBe(
+					beforeBuild
+				);
+				await expect(
+					runWrangler("types --check --include-main-module=true")
+				).rejects.toThrow("are out of date");
+
+				removeDirSync(".svelte-kit");
+				await runWrangler("types --check");
+			}
+		);
+
+		it.for([false, true])(
+			"preserves Durable Object namespace declarations and binding imports when opted out (per-environment: %s)",
+			async (perEnvironment, { expect }) => {
+				fs.writeFileSync(
+					"index.ts",
+					`import { DurableObject, WorkerEntrypoint, WorkflowEntrypoint } from "cloudflare:workers";
+					export class Counter extends DurableObject {}
+					export class Greeter extends WorkerEntrypoint {}
+					export class GreetingWorkflow extends WorkflowEntrypoint { async run(event) {} }
+					 export default {};`
+				);
+				fs.writeFileSync(
+					"wrangler.jsonc",
+					JSON.stringify({
+						name: "test-worker",
+						main: "index.ts",
+						durable_objects: {
+							bindings: [{ name: "COUNTER", class_name: "Counter" }],
+						},
+						migrations: [{ tag: "v1", new_sqlite_classes: ["Counter"] }],
+						services: [
+							{
+								binding: "SELF",
+								service: "test-worker",
+								entrypoint: "Greeter",
+							},
+						],
+						workflows: [
+							{
+								binding: "WORKFLOW",
+								name: "greeting",
+								class_name: "GreetingWorkflow",
+							},
+						],
+						env: perEnvironment ? { staging: {} } : undefined,
+					})
+				);
+
+				await runWrangler("types --include-main-module=false");
+				const content = fs.readFileSync("worker-configuration.d.ts", "utf-8");
+				expect(content).not.toContain("mainModule:");
+				expect(content).toContain('durableNamespaces: "Counter";');
+				const optional = perEnvironment ? "?" : "";
+				expect(content).toContain(
+					`COUNTER${optional}: DurableObjectNamespace<import("./index").Counter>;`
+				);
+				expect(content).toContain(
+					`SELF${optional}: Service<typeof import("./index").Greeter>;`
+				);
+				expect(content).toContain(
+					`WORKFLOW${optional}: Workflow<Parameters<import("./index").GreetingWorkflow['run']>[0]['payload']>;`
+				);
+				expect(content).toContain("<runtime types go here>");
+			}
+		);
+
+		it("preserves the opt-out across automatic regeneration", async ({
+			expect,
+		}) => {
+			fs.writeFileSync("index.ts", "export default {};");
+			const config = {
+				main: "index.ts",
+				compatibility_date: "2026-01-01",
+				dev: { generate_types: true },
+				vars: { VALUE: "initial" },
+			};
+			fs.writeFileSync("wrangler.jsonc", JSON.stringify(config));
+			await runWrangler("types --include-main-module=false");
+
+			for (const value of ["updated", "updated again"]) {
+				config.vars.VALUE = value;
+				fs.writeFileSync("wrangler.jsonc", JSON.stringify(config));
+				const resolvedConfig = readConfig({ config: "wrangler.jsonc" });
+				const entry = await getEntry({}, resolvedConfig, "types");
+				expect(await checkTypesDiff(resolvedConfig, entry)).toBe(true);
+				const content = fs.readFileSync("worker-configuration.d.ts", "utf-8");
+				expect(content).toContain("--include-main-module=false");
+				expect(content).not.toContain("mainModule:");
+				expect(content).toContain(`VALUE: "${value}";`);
+			}
+		});
 	});
 
 	it("keeps the runtime header stable after trailing whitespace is removed", async ({
@@ -4049,6 +4199,32 @@ describe("generate types - API", () => {
 				runtimeHeader: "// Runtime types generated with workerd@",
 				runtimeTypes: "<runtime types go here>",
 			})
+		);
+	});
+
+	it("supports opting out of main module inference through the API", async ({
+		expect,
+	}) => {
+		fs.writeFileSync("index.ts", "export default {};");
+		fs.writeFileSync(
+			"wrangler.jsonc",
+			JSON.stringify({ main: "index.ts", vars: { VALUE: "hello" } })
+		);
+		const defaultResult = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+		expect(defaultResult.env).toContain(
+			'mainModule: typeof import("./index");'
+		);
+
+		const result = await experimental_generateTypes({
+			includeMainModule: false,
+		});
+		expect(result.env).not.toContain("mainModule:");
+		expect(result.env).toContain('VALUE: "hello";');
+		expect(result.runtime).toBe("<runtime types go here>");
+		expect(result.content).toContain(
+			"wrangler types --include-main-module=false"
 		);
 	});
 
