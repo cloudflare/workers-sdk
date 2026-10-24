@@ -49,6 +49,44 @@ const BUILD_IDS = ["111111111111", "222222222222"];
 let root: string;
 
 describe("buildAndWriteContainerOutput", () => {
+	it("writes and cleans only the framework-owned output directory", async ({
+		expect,
+	}) => {
+		const outputDirectory = ".void/cloudflare/output";
+		const config = InputContainerSchema.parse({
+			name: "remote-container",
+			image: { reference: "registry.example.com/app:latest" },
+		});
+		const options = {
+			containers: [config],
+			root,
+			outputDirectory,
+			pathToDocker: "docker",
+		};
+		await buildAndWriteContainerOutput(options);
+		expect(
+			fs.existsSync(
+				getContainerConfigPath(root, "remote-container", { outputDirectory })
+			)
+		).toBe(true);
+		expect(fs.existsSync(path.join(root, ".cloudflare"))).toBe(false);
+		fs.mkdirSync(path.join(root, BUILD_OUTPUT_ROOT), { recursive: true });
+		fs.writeFileSync(
+			path.join(root, BUILD_OUTPUT_ROOT, "keep"),
+			"another build"
+		);
+		vi.mocked(writeContainerConfig).mockRejectedValueOnce(
+			new Error("write failed")
+		);
+		await expect(buildAndWriteContainerOutput(options)).rejects.toThrow(
+			"write failed"
+		);
+		expect(fs.existsSync(path.join(root, outputDirectory))).toBe(false);
+		expect(
+			fs.readFileSync(path.join(root, BUILD_OUTPUT_ROOT, "keep"), "utf8")
+		).toBe("another build");
+	});
+
 	beforeEach(() => {
 		vi.restoreAllMocks();
 		vi.clearAllMocks();

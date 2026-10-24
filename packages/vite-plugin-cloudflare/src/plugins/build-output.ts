@@ -47,6 +47,7 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				if (ctx.resolvedPluginConfig.type === "assets-only") {
 					await writeBuildOutputWorkerConfig({
 						root: builder.config.root,
+						outputDirectory: ctx.resolvedPluginConfig.outputDirectory,
 						config: ctx.resolvedPluginConfig.config,
 					});
 				}
@@ -70,6 +71,7 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				await buildAndWriteContainerOutput({
 					containers: ctx.resolvedPluginConfig.containers,
 					root: builder.config.root,
+					outputDirectory: ctx.resolvedPluginConfig.outputDirectory,
 					pathToDocker: getDockerPath(),
 				});
 				await writeRootConfig();
@@ -130,6 +132,7 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 			}
 			await writeBuildOutputWorkerConfig({
 				root: builder.config.root,
+				outputDirectory: ctx.resolvedPluginConfig.outputDirectory,
 				config: workerConfig,
 				directoryName: workerDirectoryName,
 			});
@@ -138,13 +141,15 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 
 		const bundleDir = getWorkerBundleDir(
 			builder.config.root,
-			workerDirectoryName
+			workerDirectoryName,
+			ctx.resolvedPluginConfig
 		);
 		const mainModule = environmentNameToMainModule.get(environmentName);
 		assert(mainModule, `Expected entry chunk with name "${MAIN_ENTRY_NAME}"`);
 
 		await writeBuildOutputWorkerConfig({
 			root: builder.config.root,
+			outputDirectory: ctx.resolvedPluginConfig.outputDirectory,
 			config: workerConfig,
 			manifest: {
 				type: "partial",
@@ -219,7 +224,8 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 			{
 				isPreview: isPreviewBuild(),
 				mode: ctx.resolvedViteConfig.mode,
-			}
+			},
+			ctx.resolvedPluginConfig
 		);
 	}
 });

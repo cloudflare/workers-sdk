@@ -27,22 +27,33 @@ export function withCloudflareStateIgnored(
 }
 
 /**
- * Merge `.cloudflare` into Vite's `server.watch` config.
+ * Ignore Cloudflare state and a framework's generated directory in Vite's watcher.
  *
  * Returns `null` when the user disabled watching with `server.watch: null`,
  * so this plugin does not turn the watcher back on.
  *
  * @param userWatch - The user's `server.watch` value from Vite config
+ * @param directory - Absolute, normalized directory for generated Cloudflare files
  * @returns `null` when watching is disabled, otherwise a watch object whose
  *   `ignored` list includes `.cloudflare` directories
  */
-export function getServerWatchConfig(userWatch: ServerWatch): ServerWatch {
+export function getServerWatchConfig(
+	userWatch: ServerWatch,
+	directory?: string
+): ServerWatch {
 	if (userWatch === null) {
 		return null;
 	}
 
+	const ignored = withCloudflareStateIgnored(userWatch?.ignored);
 	return {
 		...userWatch,
-		ignored: withCloudflareStateIgnored(userWatch?.ignored),
+		ignored: directory
+			? [
+					...(Array.isArray(ignored) ? ignored : [ignored]),
+					directory,
+					`${directory}/**`,
+				]
+			: ignored,
 	};
 }

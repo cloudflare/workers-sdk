@@ -65,6 +65,22 @@ describe("cloudflare.config.ts", () => {
 		);
 	}
 
+	test("writes file-based types below the framework directory", async ({
+		expect,
+	}) => {
+		seedWorker();
+		await resolvePluginConfig(
+			{ directory: ".void/cloudflare" },
+			{ root },
+			viteEnv
+		);
+		const output = path.join(root, ".void/cloudflare/types/index.d.ts");
+		expect(fs.readFileSync(output, "utf8")).toContain(
+			'import("../../../cloudflare.config")'
+		);
+		expect(fs.existsSync(path.join(root, ".cloudflare"))).toBe(false);
+	});
+
 	test("is optional", async ({ expect }) => {
 		const result = await resolvePluginConfig({}, { root }, viteEnv);
 

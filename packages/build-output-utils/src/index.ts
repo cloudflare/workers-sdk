@@ -5,6 +5,7 @@ export {
 	DEFAULT_WORKER_DIRECTORY_NAME,
 	getContainerConfigPath,
 	getContainerDir,
+	getBuildOutputDir,
 	getContainersDir,
 	getRootConfigPath,
 	getWorkerAssetsDir,
@@ -29,6 +30,7 @@ export type {
 	WriteWorkerConfigOptions,
 } from "./write";
 export { BuildOutputError } from "./errors";
+export type { BuildOutputOptions } from "./paths";
 export { readBuildOutput } from "./read";
 export type {
 	BuildOutput,

@@ -1,5 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { mkdtempSync } from "node:fs";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -18,7 +19,17 @@ export async function seed(
 		Object.entries(files).map(async ([name, contents]) => {
 			const filePath = path.resolve(root, name);
 			await mkdir(path.dirname(filePath), { recursive: true });
-			await writeFile(filePath, contents);
+			// Watchers must see complete files, especially when reloading config.
+			const temporaryPath = path.join(
+				path.dirname(filePath),
+				`.${path.basename(filePath)}.${randomUUID()}.tmp`
+			);
+			try {
+				await writeFile(temporaryPath, contents);
+				await rename(temporaryPath, filePath);
+			} finally {
+				await rm(temporaryPath, { force: true });
+			}
 		})
 	);
 }

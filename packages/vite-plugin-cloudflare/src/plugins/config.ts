@@ -46,6 +46,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 				".dev.vars",
 				".dev.vars.*",
 				"**/.cloudflare/**",
+				`${normalizePath(path.resolve(userConfig.root ?? process.cwd(), ctx.resolvedPluginConfig.directory ?? ".cloudflare"))}/**`,
 				"**/.wrangler/**",
 			];
 
@@ -56,7 +57,15 @@ export const configPlugin = createPlugin("config", (ctx) => {
 						ctx.getTunnelHostnames(),
 						userConfig.server?.allowedHosts
 					),
-					watch: getServerWatchConfig(userConfig.server?.watch),
+					watch: getServerWatchConfig(
+						userConfig.server?.watch,
+						normalizePath(
+							path.resolve(
+								userConfig.root ?? process.cwd(),
+								ctx.resolvedPluginConfig.directory ?? ".cloudflare"
+							)
+						)
+					),
 					fs: {
 						deny: [
 							...defaultDeniedFiles,
@@ -100,7 +109,10 @@ export const configPlugin = createPlugin("config", (ctx) => {
 
 			forceBuildOutputDirs(ctx.resolvedPluginConfig, ctx.resolvedViteConfig);
 			if (ctx.resolvedViteConfig.command === "build") {
-				await cleanBuildOutputDir(ctx.resolvedViteConfig.root);
+				await cleanBuildOutputDir(
+					ctx.resolvedViteConfig.root,
+					ctx.resolvedPluginConfig
+				);
 			}
 		},
 	};
@@ -195,7 +207,11 @@ function forceBuildOutputDirs(
 	] of resolvedPluginConfig.environmentNameToWorkerMap) {
 		const environment = resolvedViteConfig.environments[environmentName];
 		if (environment) {
-			environment.build.outDir = getWorkerBundleDir(root, worker.directoryName);
+			environment.build.outDir = getWorkerBundleDir(
+				root,
+				worker.directoryName,
+				resolvedPluginConfig
+			);
 		}
 	}
 
@@ -223,7 +239,11 @@ function forceBuildOutputDirs(
 
 	const clientEnvironment = resolvedViteConfig.environments.client;
 	if (clientEnvironment) {
-		clientEnvironment.build.outDir = getWorkerAssetsDir(root);
+		clientEnvironment.build.outDir = getWorkerAssetsDir(
+			root,
+			undefined,
+			resolvedPluginConfig
+		);
 	}
 }
 
