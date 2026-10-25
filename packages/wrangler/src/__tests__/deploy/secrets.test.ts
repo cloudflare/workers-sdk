@@ -206,10 +206,10 @@ SECRET3=value3`
 			`);
 		});
 
-		it("should expand the specified secrets file with Wrangler's environment", async ({
-			expect,
-		}) => {
+		it("should expand the specified secrets file with Wrangler's environment", async () => {
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", "process-token");
+			vi.stubEnv("BANDA_ALERTS_WEBHOOK_URL", "process-webhook");
+			vi.stubEnv("EMPTY_SECRET", "");
 			fs.writeFileSync(
 				".env",
 				"DEFAULT_ONLY=not-uploaded\nWRANGLER_ENV=from-dot-env"
@@ -217,10 +217,13 @@ SECRET3=value3`
 			fs.writeFileSync(
 				".env.production",
 				[
-					"CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN",
+					"CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}",
+					"BANDA_ALERTS_WEBHOOK_URL=${BANDA_ALERTS_WEBHOOK_URL}",
+					"EMPTY_SECRET=file-value",
 					"VERSION=v1",
 					"API_URL=https://api.example.com/$VERSION",
 					"FROM_WRANGLER_ENV=$WRANGLER_ENV",
+					"ESCAPED_SECRET=\\${CLOUDFLARE_API_TOKEN}",
 				].join("\n")
 			);
 
@@ -238,6 +241,16 @@ SECRET3=value3`
 					},
 					{
 						type: "secret_text",
+						name: "BANDA_ALERTS_WEBHOOK_URL",
+						text: "process-webhook",
+					},
+					{
+						type: "secret_text",
+						name: "EMPTY_SECRET",
+						text: "",
+					},
+					{
+						type: "secret_text",
 						name: "VERSION",
 						text: "v1",
 					},
@@ -250,6 +263,11 @@ SECRET3=value3`
 						type: "secret_text",
 						name: "FROM_WRANGLER_ENV",
 						text: "from-dot-env",
+					},
+					{
+						type: "secret_text",
+						name: "ESCAPED_SECRET",
+						text: "${CLOUDFLARE_API_TOKEN}",
 					},
 				],
 				expectedCompatibilityDate: "2022-01-12",
