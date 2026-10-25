@@ -30,9 +30,15 @@ import type { SpawnSyncReturns } from "node:child_process";
 export const PINNED_KEYRING_VERSION = "1.3.0";
 
 /** Signature of the `npm` invoker. Overridable for tests. */
-export type NpmRunner = (args: string[]) => SpawnSyncReturns<string>;
+export type NpmRunner = (
+	args: string[],
+	options?: { cwd?: string }
+) => SpawnSyncReturns<string>;
 
-function defaultNpmRunner(args: string[]): SpawnSyncReturns<string> {
+function defaultNpmRunner(
+	args: string[],
+	options: { cwd?: string } = {}
+): SpawnSyncReturns<string> {
 	// `shell: true` on Windows so `spawnSync` resolves the `npm.cmd` /
 	// `npm.ps1` shim that ships with Node for Windows.
 	//
@@ -44,19 +50,14 @@ function defaultNpmRunner(args: string[]): SpawnSyncReturns<string> {
 	// errors on supported Node versions. See
 	// https://nodejs.org/en/blog/vulnerability/april-2024-security-releases-2
 	//
-	// `shell: true` does pass arguments through `cmd.exe`, which in
-	// principle interprets `&|<>^` etc. as metacharacters. The only
-	// path-shaped argument we pass is the `--prefix` value derived from
-	// the consumer-provided config path, which is built from `HOME` /
-	// `APPDATA` (i.e. the user's own env vars — not attacker-controlled
-	// input). Node's array-form arg handling for shell launches on
-	// Windows also applies the upstream CVE-2024-27980 escaping fix.
-	// Defense-in-depth concern, not a real injection surface; the
-	// alternative (`shell: false`) is incompatible with .cmd files on
-	// modern Node, so we accept the trade-off.
+	// With `shell: true`, Node joins the arguments with spaces and does not
+	// quote them, so `cmd.exe` would split a path such as
+	// `C:\Users\John Smith\...` into several arguments. Only pass fixed
+	// flags here; callers give npm a path through `cwd` instead.
 	//
 	// On POSIX `shell: false` keeps the argv shape simple.
 	return spawnSync("npm", args, {
+		cwd: options.cwd,
 		encoding: "utf-8",
 		stdio: ["ignore", "pipe", "pipe"],
 		shell: process.platform === "win32",
@@ -209,9 +210,9 @@ export function installKeyringBindingSync(installDir: string): void {
 	mkdirSync(dir, { recursive: true });
 	const hostPkgJson = path.join(dir, "package.json");
 	if (!existsSync(hostPkgJson)) {
-		// `npm install --prefix` requires *some* package.json at the prefix
-		// to anchor the install. A minimal private one keeps npm happy and
-		// signals to anyone poking around that this dir is auth-managed.
+		// npm installs into the nearest directory with a package.json, so this
+		// anchors the install to `dir` when npm runs there. A minimal private one
+		// also signals to anyone poking around that this dir is auth-managed.
 		writeFileSync(
 			hostPkgJson,
 			JSON.stringify(
@@ -224,17 +225,18 @@ export function installKeyringBindingSync(installDir: string): void {
 	}
 	let r: SpawnSyncReturns<string>;
 	try {
-		r = npmRunner([
-			"install",
-			`@napi-rs/keyring@${PINNED_KEYRING_VERSION}`,
-			"--prefix",
-			dir,
-			"--no-save",
-			"--no-audit",
-			"--no-fund",
-			"--no-package-lock",
-			"--loglevel=error",
-		]);
+		r = npmRunner(
+			[
+				"install",
+				`@napi-rs/keyring@${PINNED_KEYRING_VERSION}`,
+				"--no-save",
+				"--no-audit",
+				"--no-fund",
+				"--no-package-lock",
+				"--loglevel=error",
+			],
+			{ cwd: dir }
+		);
 	} catch (e) {
 		throw new UserError(
 			`Failed to spawn \`npm\` to install the keyring backend: ${
