@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/codemods",
-	"version": "0.5.0",
+	"version": "0.6.0",
 	"description": "Codemods for upgrading Cloudflare developer projects",
 	"keywords": [
 		"cloudflare",
@@ -48,6 +48,7 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*",
 		"@types/node": "catalog:default",
+		"esbuild": "catalog:default",
 		"tinyglobby": "catalog:default",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",

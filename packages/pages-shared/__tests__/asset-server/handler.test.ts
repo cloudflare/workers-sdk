@@ -956,6 +956,82 @@ describe("asset-server handler", () => {
 				}
 			`);
 		});
+
+		test("assets that only get HEAD requests are preserved", async ({
+			expect,
+		}) => {
+			const metadata = createMetadataObject({
+				deploymentId: "deployment-" + Math.random(),
+			}) as Metadata;
+
+			const { response, spies } = await getTestResponse({
+				request: new Request("https://example.com/head-only", {
+					method: "HEAD",
+				}),
+				metadata,
+				findAssetEntryForPath: async (path: string) =>
+					path === "/head-only.html" ? "asset-key-head-only.html" : null,
+				caches,
+				fetchAsset: () =>
+					Promise.resolve(Object.assign(new Response("hello world!"))),
+			});
+			expect(response.status).toBe(200);
+
+			await Promise.all(spies.waitUntil);
+
+			// Delete the asset from the manifest and ensure it's served from preservation cache
+			const { response: response2 } = await getTestResponse({
+				request: new Request("https://example.com/head-only"),
+				metadata,
+				findAssetEntryForPath: async () => null,
+				caches,
+				fetchAsset: () =>
+					Promise.resolve(Object.assign(new Response("hello world!"))),
+			});
+			expect(response2.status).toBe(200);
+			expect(await response2.text()).toBe("hello world!");
+		});
+
+		test("HEAD requests don't rewrite an unchanged preservation entry", async ({
+			expect,
+		}) => {
+			const metadata = createMetadataObject({
+				deploymentId: "deployment-" + Math.random(),
+			}) as Metadata;
+
+			const preservationCacheV2 = await caches.open("assetPreservationCacheV2");
+			await preservationCacheV2.put(
+				"https://example.com/head-unchanged",
+				new Response("asset-key-head-unchanged.html", {
+					headers: {
+						"cache-control": "public, s-maxage=604800",
+						"x-original-entry": "1",
+					},
+				})
+			);
+
+			const { response, spies } = await getTestResponse({
+				request: new Request("https://example.com/head-unchanged", {
+					method: "HEAD",
+				}),
+				metadata,
+				findAssetEntryForPath: async (path: string) =>
+					path === "/head-unchanged.html"
+						? "asset-key-head-unchanged.html"
+						: null,
+				caches,
+				fetchAsset: () =>
+					Promise.resolve(Object.assign(new Response("hello world!"))),
+			});
+			expect(response.status).toBe(200);
+
+			await Promise.all(spies.waitUntil);
+
+			const preservationRes = await preservationCacheV2.match(
+				"https://example.com/head-unchanged"
+			);
+			expect(preservationRes?.headers.get("x-original-entry")).toBe("1");
+		});
 	});
 
 	describe("isPreservationCacheResponseExpiring()", () => {

@@ -13,7 +13,6 @@ import path from "node:path";
 import { json, text } from "node:stream/consumers";
 import util from "node:util";
 import { NODEJS_COMPAT_DEFAULT_ON_DATE } from "@cloudflare/workers-utils";
-import getPort from "get-port";
 import {
 	_transformsForContentEncodingAndContentType,
 	DeferredPromise,
@@ -3680,8 +3679,6 @@ test("Miniflare: dispatchConnect selects Worker TCP triggers", async ({
 	expect,
 	onTestFinished,
 }) => {
-	const firstPort = await getPort();
-	const secondPort = await getPort({ exclude: [firstPort] });
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -3698,10 +3695,9 @@ test("Miniflare: dispatchConnect selects Worker TCP triggers", async ({
 							},
 						};
 					`),
-					triggers: [
-						{ type: "connect", protocol: "tcp", port: firstPort },
-						{ type: "connect", protocol: "tcp", port: secondPort },
-					],
+					// Let workerd bind the port atomically. Trigger-selection
+					// ambiguity is covered without sockets in connect.spec.ts.
+					triggers: [{ type: "connect", protocol: "tcp", port: 0 }],
 				},
 			},
 			{
@@ -3725,15 +3721,14 @@ test("Miniflare: dispatchConnect selects Worker TCP triggers", async ({
 	});
 	onTestFinished(() => mf.dispose());
 
-	await expect(mf.dispatchConnect()).rejects.toThrow(
-		"Multiple TCP connect triggers configured for entrypoint worker; specify a port"
-	);
 	await expect(mf.dispatchConnect({ port: 123 })).rejects.toThrow(
 		"TCP connect trigger on port 123 not found for entrypoint worker"
 	);
 
-	const firstSocket = await mf.dispatchConnect({ port: firstPort });
-	expect(await text(firstSocket)).toBe("a");
+	const entrypointSocket = await mf.dispatchConnect();
+	expect(await text(entrypointSocket)).toBe("a");
+	const explicitPortSocket = await mf.dispatchConnect({ port: 0 });
+	expect(await text(explicitPortSocket)).toBe("a");
 	const secondWorkerSocket = await mf.dispatchConnect({ workerName: "b" });
 	expect(await text(secondWorkerSocket)).toBe("b");
 });
@@ -3842,9 +3837,10 @@ test("Miniflare: allows RPC between multiple instances", async ({ expect }) => {
 // with a shebang, directly as the replacement `workerd` binary, which won't
 // work on Windows.
 const isWindows = process.platform === "win32";
-const unixSerialTest = isWindows ? test.skip : test.sequential;
+const unixSerialTest = test.skipIf(isWindows);
 unixSerialTest(
 	"Miniflare: MINIFLARE_WORKERD_PATH overrides workerd path",
+	{ concurrent: false },
 	async ({ expect, onTestFinished }) => {
 		const workerdPath = path.join(FIXTURES_PATH, "little-workerd.mjs");
 
@@ -3884,6 +3880,7 @@ unixSerialTest(
 // See https://github.com/cloudflare/workers-sdk/issues/14077
 unixSerialTest(
 	"Miniflare: throws ERR_RUNTIME_FAILURE when workerd exits before all sockets are ready",
+	{ concurrent: false },
 	async ({ expect, onTestFinished }) => {
 		const workerdPath = path.join(FIXTURES_PATH, "crashing-workerd.mjs");
 
@@ -3925,30 +3922,32 @@ const TIMEZONE_WORKER = `
 	}
 `;
 
-test.sequential("Miniflare: workerd subprocess defaults to TZ=UTC to match production", async ({
-	expect,
-}) => {
-	// Deliberately set the host TZ to a non-UTC value, otherwise the test
-	// would falsely pass: the test-runner's vitest globalSetup already sets
-	// `process.env.TZ = "UTC"`, which would propagate to workerd via the
-	// inherited `process.env`.
-	vi.stubEnv("TZ", "America/Chicago");
-	const mf = new Miniflare({
-		workers: [
-			{
-				config: {
-					name: "",
-					compatibilityDate: "2025-05-01",
-					manifest: singleModuleManifest(TIMEZONE_WORKER),
+test(
+	"Miniflare: workerd subprocess defaults to TZ=UTC to match production",
+	{ concurrent: false },
+	async ({ expect }) => {
+		// Deliberately set the host TZ to a non-UTC value, otherwise the test
+		// would falsely pass: the test-runner's vitest globalSetup already sets
+		// `process.env.TZ = "UTC"`, which would propagate to workerd via the
+		// inherited `process.env`.
+		vi.stubEnv("TZ", "America/Chicago");
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(TIMEZONE_WORKER),
+					},
 				},
-			},
-		],
-	});
-	useDispose(mf);
+			],
+		});
+		useDispose(mf);
 
-	const res = await mf.dispatchFetch("http://localhost");
-	expect(await res.json()).toEqual({ tz: "UTC" });
-});
+		const res = await mf.dispatchFetch("http://localhost");
+		expect(await res.json()).toEqual({ tz: "UTC" });
+	}
+);
 
 // Skipped on Windows because workerd-on-Windows always reports `UTC` from
 // `Intl.DateTimeFormat().resolvedOptions().timeZone` regardless of the `TZ`
@@ -3959,6 +3958,7 @@ test.sequential("Miniflare: workerd subprocess defaults to TZ=UTC to match produ
 // platform-independent and exercised on macOS/Linux.
 unixSerialTest(
 	"Miniflare: unsafeRuntimeEnv overrides the default workerd subprocess env",
+	{ concurrent: false },
 	async ({ expect }) => {
 		vi.stubEnv("TZ", "UTC");
 

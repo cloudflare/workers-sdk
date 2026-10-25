@@ -104,6 +104,16 @@ export async function startRemoteProxySession(
 		}
 	}
 
+	// The session hands its local proxy the remote connection in a control
+	// message sent through an undici `dispatcher`, which Bun's `fetch()` ignores,
+	// so every remote binding request would wait forever.
+	if (process.versions.bun) {
+		throw new UserError(
+			"Remote bindings can't work under Bun, because Bun's `fetch()` ignores the undici `dispatcher` that Miniflare routes them through (https://github.com/oven-sh/bun/issues/39247). Run this using Node.js, or turn remote bindings off.",
+			{ telemetryMessage: "remote proxy session under bun" }
+		);
+	}
+
 	options.logger.log(chalk.dim("⎔ Establishing remote connection..."));
 	initLogger(getInternalLogger(options.logger));
 	const rawBindings = toRawBindings(bindings);
@@ -129,7 +139,11 @@ export async function startRemoteProxySession(
 		devEnv = new DevEnv(workerConfig);
 		devEnv.start();
 	} catch (startWorkerError: unknown) {
-		await devEnv?.teardown();
+		try {
+			await devEnv?.teardown();
+		} catch {
+			// Preserve the original startup error if cleanup also fails.
+		}
 		if (startWorkerError instanceof UserError) {
 			throw startWorkerError;
 		}
@@ -183,11 +197,16 @@ export async function startRemoteProxySession(
 		remoteProxyConnectionString = (await devEnv.proxy.ready.promise)
 			.url as RemoteProxyConnectionString;
 	} catch (error) {
-		await devEnv.teardown();
+		try {
+			await devEnv.teardown();
+		} catch {
+			// Preserve the original startup error if cleanup also fails.
+		}
 		throw error;
 	} finally {
 		devEnv.removeListener("error", onStartupError);
 	}
+	let disposePromise: Promise<void> | undefined;
 	const updateBindings = async (
 		newBindings: StartDevWorkerInput["bindings"]
 	) => {
@@ -215,7 +234,11 @@ export async function startRemoteProxySession(
 		ready: Promise.resolve(),
 		remoteProxyConnectionString,
 		updateBindings,
-		dispose: () => devEnv.teardown(),
+		dispose: () => {
+			// Share the same cleanup attempt across calls, even if it fails.
+			disposePromise ??= devEnv.teardown();
+			return disposePromise;
+		},
 	};
 }
 

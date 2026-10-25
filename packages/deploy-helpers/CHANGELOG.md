@@ -1,5 +1,70 @@
 # @cloudflare/deploy-helpers
 
+## 0.23.0
+
+### Minor Changes
+
+- [#16357](https://github.com/cloudflare/workers-sdk/pull/16357) [`182d6de`](https://github.com/cloudflare/workers-sdk/commit/182d6ded7126c29daa6f8d2eea5f175421b29917) Thanks [@Naapperas](https://github.com/Naapperas)! - Add a `jurisdiction` setting to Workflows
+
+  A Workflow defined by the Worker can now set the jurisdiction that its instances run and store their data in, on either a `workflows` binding or a `workflow` export:
+
+  ```jsonc
+  {
+    "workflows": [
+      {
+        "binding": "MY_WORKFLOW",
+        "name": "my-workflow",
+        "class_name": "MyWorkflow",
+        "jurisdiction": "eu"
+      }
+    ]
+  }
+  ```
+
+  The accepted values are `eu`, `fedramp`, and `us`. `wrangler deploy` and `wrangler triggers deploy` send the jurisdiction when they create or update the Workflow. A Workflow's jurisdiction is set when it is created and cannot be changed afterwards, so `wrangler deploy` and `wrangler versions upload` stop before uploading when an existing Workflow has a different jurisdiction from the configured one. Leaving `jurisdiction` out keeps the Workflow's existing jurisdiction. `@cloudflare/config` adds the setting to `exports.workflow()`, `cf migrate` carries it over, and `wrangler workflows describe` prints it. Local development ignores it.
+
+### Patch Changes
+
+- Updated dependencies [[`08f22d3`](https://github.com/cloudflare/workers-sdk/commit/08f22d36f42100af8b83ae9556643f63b536a4e9), [`a4eb57d`](https://github.com/cloudflare/workers-sdk/commit/a4eb57d339483029fbce9d9e711515b48c60f2d7), [`182d6de`](https://github.com/cloudflare/workers-sdk/commit/182d6ded7126c29daa6f8d2eea5f175421b29917)]:
+  - @cloudflare/config@0.28.0
+  - miniflare@5.20261019.2-beta
+  - @cloudflare/workers-utils@0.48.0
+  - @cloudflare/containers-shared@0.23.2
+  - @cloudflare/cli-shared-helpers@0.2.8
+
+## 0.22.1
+
+### Patch Changes
+
+- [#16370](https://github.com/cloudflare/workers-sdk/pull/16370) [`61fc739`](https://github.com/cloudflare/workers-sdk/commit/61fc7397b2982db1c9b099cbeaee3fd0428fdf8a) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Fetch the remote config diff from the configured compliance region
+
+  When a Worker was last deployed from the dashboard, `wrangler deploy` and `wrangler versions upload` download its remote configuration to compare with the local one. These requests ignored the `compliance_region` field in the Wrangler configuration file and only honoured the `CLOUDFLARE_COMPLIANCE_REGION` environment variable. A FedRAMP High Worker configured through the config file would send them to `api.cloudflare.com` instead of `api.fed.cloudflare.com`, and the deploy would fail with authentication errors. They now use the same compliance region as the rest of the deploy.
+
+- [#16359](https://github.com/cloudflare/workers-sdk/pull/16359) [`262021d`](https://github.com/cloudflare/workers-sdk/commit/262021dd0db4d24df33405d89e4c1a6622ce832f) Thanks [@tw4](https://github.com/tw4)! - Stop `--strict` deploys and version uploads from aborting when the API omits optional binding fields
+
+  Previously, `wrangler deploy --strict` and `wrangler versions upload --strict` could report a destructive change for an unchanged configuration, for example an R2 bucket in the default jurisdiction, because a field the API left out was compared as removed. Missing and unset optional fields are now treated as equal, so these commands proceed when the local configuration matches the deployed Worker.
+
+- Updated dependencies [[`3464abc`](https://github.com/cloudflare/workers-sdk/commit/3464abcfeb42bbe7fc3b30a4981cf1ef4c3970ba), [`017bf9b`](https://github.com/cloudflare/workers-sdk/commit/017bf9b5117a8a511f4ed2c10dd2bd0b80b24c31)]:
+  - miniflare@5.20261019.1-beta
+  - @cloudflare/workers-utils@0.47.3
+  - @cloudflare/cli-shared-helpers@0.2.7
+  - @cloudflare/config@0.27.0
+  - @cloudflare/containers-shared@0.23.1
+
+## 0.22.0
+
+### Minor Changes
+
+- [#16225](https://github.com/cloudflare/workers-sdk/pull/16225) [`fc51b96`](https://github.com/cloudflare/workers-sdk/commit/fc51b96c7f9952e46a6ceee6dfce22d004e539a8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Decouple shared deployment guidance from Wrangler
+
+  Shared deployment and Container helpers now receive only the command paths and configuration syntax required by each operation. Wrangler reuses the paths that register its command tree, while other consumers can supply their own values without global presentation state or Wrangler-specific fallbacks.
+
+### Patch Changes
+
+- Updated dependencies [[`37ab91c`](https://github.com/cloudflare/workers-sdk/commit/37ab91c639062dda2acd12f02df4ee49e67ba56f), [`0ae7926`](https://github.com/cloudflare/workers-sdk/commit/0ae7926b77d860a4330448c6cc398946b6797f3d), [`fc51b96`](https://github.com/cloudflare/workers-sdk/commit/fc51b96c7f9952e46a6ceee6dfce22d004e539a8)]:
+  - miniflare@5.20261019.0-beta
+  - @cloudflare/containers-shared@0.23.0
+
 ## 0.21.0
 
 ### Minor Changes

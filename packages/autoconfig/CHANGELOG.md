@@ -1,5 +1,33 @@
 # @cloudflare/autoconfig
 
+## 0.8.0
+
+### Minor Changes
+
+- [#16200](https://github.com/cloudflare/workers-sdk/pull/16200) [`5e77584`](https://github.com/cloudflare/workers-sdk/commit/5e7758406308b1e2a34c893230dc8173d5e99af9) Thanks [@MattieTK](https://github.com/MattieTK)! - Configure Next.js 16 and later projects with vinext when targeting `cf`
+
+  Autoconfig now runs `vinext init` (from `vinext@^1.3.0`) instead of `@opennextjs/cloudflare migrate` for projects on Next.js 16 or later that target `cf`. vinext builds the project with the Cloudflare Vite plugin, producing the Build Output that `cf` deploys, and creates the project's `cloudflare.config.ts`. Autoconfig passes `--platform=cloudflare --cdn-cache=none --image-optimization=cloudflare-images --no-prerender` so that `vinext init` does not prompt and can run in agent environments, and passes the selected Worker name with `--name` so that vinext uses it rather than deriving one from `package.json`.
+
+  Projects on earlier Next.js versions (including 16.0.0 prereleases), which vinext does not support, and all projects targeting Wrangler continue to be configured with OpenNext.
+
+### Patch Changes
+
+- [#16285](https://github.com/cloudflare/workers-sdk/pull/16285) [`3b3e64f`](https://github.com/cloudflare/workers-sdk/commit/3b3e64f65b04b586696642311c235467d3b88699) Thanks [@edmundhung](https://github.com/edmundhung)! - Install `@cloudflare/vite-plugin@^2.0.0-beta.v.0` when autoconfiguring projects for cf
+
+- Updated dependencies [[`08f22d3`](https://github.com/cloudflare/workers-sdk/commit/08f22d36f42100af8b83ae9556643f63b536a4e9), [`182d6de`](https://github.com/cloudflare/workers-sdk/commit/182d6ded7126c29daa6f8d2eea5f175421b29917)]:
+  - @cloudflare/config@0.28.0
+  - @cloudflare/workers-utils@0.48.0
+  - @cloudflare/cli-shared-helpers@0.2.8
+
+## 0.7.11
+
+### Patch Changes
+
+- Updated dependencies [[`017bf9b`](https://github.com/cloudflare/workers-sdk/commit/017bf9b5117a8a511f4ed2c10dd2bd0b80b24c31)]:
+  - @cloudflare/workers-utils@0.47.3
+  - @cloudflare/cli-shared-helpers@0.2.7
+  - @cloudflare/config@0.27.0
+
 ## 0.7.10
 
 ### Patch Changes

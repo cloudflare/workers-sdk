@@ -45,7 +45,7 @@ describe("getVitestShard", () => {
 				];
 				for (const shard of shards) {
 					vi.stubEnv("CI_TEST_SHARD", shard);
-					const ctx = await createVitest("test", { root });
+					const ctx = await createVitest({ root });
 					try {
 						const files = await ctx.globTestSpecifications();
 						if (shard === undefined) {

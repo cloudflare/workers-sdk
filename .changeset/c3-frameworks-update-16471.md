@@ -8,4 +8,4 @@ The following dependency versions have been updated:
 
 | Dependency      | From   | To     |
 | --------------- | ------ | ------ |
-| create-next-app | 16.4.1 | 16.4.2 |
+| create-next-app | 16.4.2 | 16.4.3 |

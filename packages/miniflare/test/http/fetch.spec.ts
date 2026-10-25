@@ -1,6 +1,8 @@
 import { Blob } from "node:buffer";
+import { execFile } from "node:child_process";
 import http from "node:http";
 import { URLSearchParams } from "node:url";
+import { promisify } from "node:util";
 import {
 	DeferredPromise,
 	DispatchFetchDispatcher,
@@ -20,6 +22,46 @@ test("fetch: performs regular http request", async ({ expect }) => {
 	const upstream = (await useServer((req, res) => res.end("upstream"))).http;
 	const res = await fetch(upstream);
 	expect(await res.text()).toBe("upstream");
+});
+test("fetch: rejects excessive content encodings without crashing the process", async ({
+	expect,
+}) => {
+	const upstream = (
+		await useServer((_req, res) => {
+			res.writeHead(200, {
+				"content-encoding": "gzip, gzip, gzip, gzip, gzip, gzip",
+				"content-length": "1",
+			});
+			res.flushHeaders();
+			res.socket?.end();
+		})
+	).http;
+
+	// An orphaned response stream used to emit an unhandled error after fetch
+	// rejected. Run in a child so that the regression must preserve process exit.
+	const result = await promisify(execFile)(
+		process.execPath,
+		[
+			"--input-type=module",
+			"-e",
+			`
+import assert from "node:assert/strict";
+import { setTimeout } from "node:timers/promises";
+const { fetch } = await import(process.argv[2]);
+await assert.rejects(fetch(process.argv[1]), (error) => {
+  assert.match(error.cause?.message ?? "", /too many content-encodings/);
+  return true;
+});
+await setTimeout(100);
+console.log("fetch rejected safely");
+`,
+			upstream.href,
+			new URL("../../dist/src/index.js", import.meta.url).href,
+		],
+		{ timeout: 10_000 }
+	);
+	expect(result.stdout.trim()).toBe("fetch rejected safely");
+	expect(result.stderr).toBe("");
 });
 test("fetch: performs http request with form data", async ({ expect }) => {
 	const echoUpstream = (

@@ -17,13 +17,18 @@ import {
 } from "../src/shared/module-path";
 import type { Vite } from "vitest/node";
 
-// The fallback handler only reads `vite.pluginContainer.resolveId`, and only
-// when a specifier can't be resolved directly from the filesystem. Returning
-// `null` mimics Vite failing to resolve, exercising the 404 fall-through.
+// The fallback handler only reads
+// `vite.environments.ssr.pluginContainer.resolveId`, and only when a specifier
+// can't be resolved directly from the filesystem. Returning `null` mimics Vite
+// failing to resolve, exercising the 404 fall-through.
 function fakeVite(): Vite.ViteDevServer {
 	return {
-		pluginContainer: {
-			resolveId: async () => null,
+		environments: {
+			ssr: {
+				pluginContainer: {
+					resolveId: async () => null,
+				},
+			},
 		},
 	} as unknown as Vite.ViteDevServer;
 }
@@ -37,8 +42,12 @@ function fakeVite(): Vite.ViteDevServer {
 // same rooted path that branch would have produced reaches the same place.
 function fakeViteResolvingTo(id: string): Vite.ViteDevServer {
 	return {
-		pluginContainer: {
-			resolveId: async () => ({ id }),
+		environments: {
+			ssr: {
+				pluginContainer: {
+					resolveId: async () => ({ id }),
+				},
+			},
 		},
 	} as unknown as Vite.ViteDevServer;
 }
@@ -48,10 +57,14 @@ function fakeViteResolving(
 	resolvedIds: Record<string, string>
 ): Vite.ViteDevServer {
 	return {
-		pluginContainer: {
-			resolveId: async (specifier: string) => {
-				const id = resolvedIds[specifier];
-				return id === undefined ? null : { id };
+		environments: {
+			ssr: {
+				pluginContainer: {
+					resolveId: async (specifier: string) => {
+						const id = resolvedIds[specifier];
+						return id === undefined ? null : { id };
+					},
+				},
 			},
 		},
 	} as unknown as Vite.ViteDevServer;

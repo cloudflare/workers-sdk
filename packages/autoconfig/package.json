@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/autoconfig",
-	"version": "0.7.10",
+	"version": "0.8.0",
 	"description": "Framework autoconfig detection and configuration for Cloudflare Workers",
 	"license": "MIT OR Apache-2.0",
 	"repository": {
@@ -41,6 +41,7 @@
 		"@types/node": "catalog:default",
 		"chalk": "catalog:default",
 		"empathic": "^2.0.0",
+		"esbuild": "catalog:default",
 		"esprima": "4.0.1",
 		"recast": "0.23.11",
 		"semiver": "^1.1.0",

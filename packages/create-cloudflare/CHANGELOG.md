@@ -1,5 +1,97 @@
 # create-cloudflare
 
+## 2.74.3
+
+### Patch Changes
+
+- [#16422](https://github.com/cloudflare/workers-sdk/pull/16422) [`559bf16`](https://github.com/cloudflare/workers-sdk/commit/559bf16db6f320837aa89c6a83b4797f9170b160) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update Astro scaffolding to require Node.js 22.23.4 or later
+
+  Match Astro's current Node.js requirement for Workers and Pages projects so that unsupported versions receive a clear upgrade message before scaffolding begins.
+
+## 2.74.2
+
+### Patch Changes
+
+- [#16259](https://github.com/cloudflare/workers-sdk/pull/16259) [`017bf9b`](https://github.com/cloudflare/workers-sdk/commit/017bf9b5117a8a511f4ed2c10dd2bd0b80b24c31) Thanks [@NuroDev](https://github.com/NuroDev)! - Use Vitest 5 in newly generated Workers projects
+
+  Workers templates now install Vitest 5 and require @cloudflare/vitest-plugin 1.4.3 or newer, which supports Vitest's filesystem module cache.
+
+## 2.74.1
+
+### Patch Changes
+
+- [#16308](https://github.com/cloudflare/workers-sdk/pull/16308) [`6895ddc`](https://github.com/cloudflare/workers-sdk/commit/6895ddc15afc89667f48b95162c8b344c05d8c07) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.682 | 0.0.685 |
+
+- [#16309](https://github.com/cloudflare/workers-sdk/pull/16309) [`ba31e6e`](https://github.com/cloudflare/workers-sdk/commit/ba31e6e0806cbc564c5e70c34a0737f4c61f1eed) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.8.0 | 2.8.1 |
+
+- [#16310](https://github.com/cloudflare/workers-sdk/pull/16310) [`62170b5`](https://github.com/cloudflare/workers-sdk/commit/62170b51f929f422a6eee038b0c5be5fa5e2a59d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 16.4.0 | 16.4.1 |
+
+- [#16312](https://github.com/cloudflare/workers-sdk/pull/16312) [`d7da6ac`](https://github.com/cloudflare/workers-sdk/commit/d7da6acb35a800dd394665e96d0b2795e4c3d738) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-vinext-app | 1.0.0 | 1.1.0 |
+
+- [#16341](https://github.com/cloudflare/workers-sdk/pull/16341) [`31096f6`](https://github.com/cloudflare/workers-sdk/commit/31096f6b586ec750babd04043cd0cb60a050510e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 16.4.1 | 16.4.2 |
+
+- [#16342](https://github.com/cloudflare/workers-sdk/pull/16342) [`c4b18e1`](https://github.com/cloudflare/workers-sdk/commit/c4b18e13bfb55f51b7c2247401a053a240fb0cc6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Use create-astro 5.3.0 for new Astro projects. If your Node.js version is older than 22.22.0, C3 now explains the required upgrade before starting the Astro generator.
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-astro | 5.2.6 | 5.3.0 |
+
+- [#16343](https://github.com/cloudflare/workers-sdk/pull/16343) [`4acae5b`](https://github.com/cloudflare/workers-sdk/commit/4acae5bea1236e0416074388d6c492bd374a587f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.2.2 | 22.2.3 |
+
+- [#16344](https://github.com/cloudflare/workers-sdk/pull/16344) [`0d826c6`](https://github.com/cloudflare/workers-sdk/commit/0d826c6aa3ae5d3db1c539c78ddca0ac42df5001) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.685 | 0.0.686 |
+
+- [#16345](https://github.com/cloudflare/workers-sdk/pull/16345) [`54f6da4`](https://github.com/cloudflare/workers-sdk/commit/54f6da46ff43e6fe1d85b529c454936a26f69937) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From   | To     |
+  | ------------- | ------ | ------ |
+  | @tanstack/cli | 0.71.1 | 0.72.0 |
+
 ## 2.74.0
 
 ### Minor Changes

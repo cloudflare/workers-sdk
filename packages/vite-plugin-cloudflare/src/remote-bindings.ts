@@ -85,6 +85,13 @@ export function getRemoteBindings(
 					remote: binding.dev?.remote,
 				};
 				break;
+			case "hyperdrive":
+				bindings[name] = {
+					type: "hyperdrive",
+					id: binding.id,
+					remote: binding.dev?.remote,
+				};
+				break;
 			case "images":
 				bindings[name] = { type: "images", remote: binding.dev?.remote };
 				break;

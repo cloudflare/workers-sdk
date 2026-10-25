@@ -8,4 +8,4 @@ The following dependency versions have been updated:
 
 | Dependency  | From    | To      |
 | ----------- | ------- | ------- |
-| create-vike | 0.0.685 | 0.0.686 |
+| create-vike | 0.0.686 | 0.0.687 |

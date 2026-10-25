@@ -1,5 +1,103 @@
 # wrangler
 
+## 4.152.0
+
+### Minor Changes
+
+- [#14900](https://github.com/cloudflare/workers-sdk/pull/14900) [`08f22d3`](https://github.com/cloudflare/workers-sdk/commit/08f22d36f42100af8b83ae9556643f63b536a4e9) Thanks [@mack-erel](https://github.com/mack-erel)! - Support remote Hyperdrive bindings in local development
+
+  ```jsonc
+  {
+    "hyperdrive": [
+      {
+        "binding": "HYPERDRIVE",
+        "id": "<your-hyperdrive-id>",
+        "remote": true
+      }
+    ]
+  }
+  ```
+
+- [#16357](https://github.com/cloudflare/workers-sdk/pull/16357) [`182d6de`](https://github.com/cloudflare/workers-sdk/commit/182d6ded7126c29daa6f8d2eea5f175421b29917) Thanks [@Naapperas](https://github.com/Naapperas)! - Add a `jurisdiction` setting to Workflows
+
+  A Workflow defined by the Worker can now set the jurisdiction that its instances run and store their data in, on either a `workflows` binding or a `workflow` export:
+
+  ```jsonc
+  {
+    "workflows": [
+      {
+        "binding": "MY_WORKFLOW",
+        "name": "my-workflow",
+        "class_name": "MyWorkflow",
+        "jurisdiction": "eu"
+      }
+    ]
+  }
+  ```
+
+  The accepted values are `eu`, `fedramp`, and `us`. `wrangler deploy` and `wrangler triggers deploy` send the jurisdiction when they create or update the Workflow. A Workflow's jurisdiction is set when it is created and cannot be changed afterwards, so `wrangler deploy` and `wrangler versions upload` stop before uploading when an existing Workflow has a different jurisdiction from the configured one. Leaving `jurisdiction` out keeps the Workflow's existing jurisdiction. `@cloudflare/config` adds the setting to `exports.workflow()`, `cf migrate` carries it over, and `wrangler workflows describe` prints it. Local development ignores it.
+
+### Patch Changes
+
+- [#16388](https://github.com/cloudflare/workers-sdk/pull/16388) [`80a9f96`](https://github.com/cloudflare/workers-sdk/commit/80a9f963d49cb62f1c80532c78a1b03018ad4152) Thanks [@DevVettel](https://github.com/DevVettel)! - Print `wrangler auth token --json` output regardless of `WRANGLER_LOG`
+
+  Previously the JSON was written through the normal log channel, so setting `WRANGLER_LOG` to `warn`, `error` or `none` made the command exit successfully with empty stdout. Tools that parse this output, such as the OpenNext Cloudflare adapter in CI, then failed to find any credentials. The JSON is now always printed, like other `--json` commands.
+
+- [#16361](https://github.com/cloudflare/workers-sdk/pull/16361) [`2878645`](https://github.com/cloudflare/workers-sdk/commit/2878645e27d736c67bdaf00c0dcef063065472ff) Thanks [@GrosserNL](https://github.com/GrosserNL)! - Report the R2 bucket location returned by the API when creating a bucket
+
+  `wrangler r2 bucket create --location` printed the requested location hint even when R2 ignored it. Recreating a deleted bucket name keeps the original location, so the success message could claim a placement the bucket does not have. The command now uses the location from the create response: it mentions the hint only when that location matches, and otherwise reports the location R2 actually applied.
+
+- Updated dependencies [[`08f22d3`](https://github.com/cloudflare/workers-sdk/commit/08f22d36f42100af8b83ae9556643f63b536a4e9), [`a4eb57d`](https://github.com/cloudflare/workers-sdk/commit/a4eb57d339483029fbce9d9e711515b48c60f2d7)]:
+  - miniflare@5.20261019.2-beta
+
+## 4.151.3
+
+### Patch Changes
+
+- [#15611](https://github.com/cloudflare/workers-sdk/pull/15611) [`4508172`](https://github.com/cloudflare/workers-sdk/commit/45081725e9e5cb79b76ade277a7e61395cb55950) Thanks [@taylorlee](https://github.com/taylorlee)! - Allow `wrangler dev` to start module Workers without a default export
+
+  Previously, `wrangler dev` failed to start module Workers that exported only named entrypoints, such as RPC services, unless an unused default export was added. These Workers now start normally in local development without that workaround.
+
+- [#16370](https://github.com/cloudflare/workers-sdk/pull/16370) [`61fc739`](https://github.com/cloudflare/workers-sdk/commit/61fc7397b2982db1c9b099cbeaee3fd0428fdf8a) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Fetch the remote config diff from the configured compliance region
+
+  When a Worker was last deployed from the dashboard, `wrangler deploy` and `wrangler versions upload` download its remote configuration to compare with the local one. These requests ignored the `compliance_region` field in the Wrangler configuration file and only honoured the `CLOUDFLARE_COMPLIANCE_REGION` environment variable. A FedRAMP High Worker configured through the config file would send them to `api.cloudflare.com` instead of `api.fed.cloudflare.com`, and the deploy would fail with authentication errors. They now use the same compliance region as the rest of the deploy.
+
+- [#15846](https://github.com/cloudflare/workers-sdk/pull/15846) [`a88cac4`](https://github.com/cloudflare/workers-sdk/commit/a88cac4d880629a4ad68f7173b3353941bea6081) Thanks [@oddharsh](https://github.com/oddharsh)! - Fail with an error instead of hanging when local dev requests can't work under Bun
+
+  Bun's `fetch()` ignores the undici `dispatcher` that Miniflare routes requests through (oven-sh/bun#39247). Under Bun, `createTestHarness()`'s `server.fetch()` and `server.getWorker()`'s `fetch()`, `email()` and `scheduled()` now throw a `UserError`, requests to the dev server URL get a 503 naming the cause, and starting remote bindings throws a `UserError`. Each of these used to hang with no error. `server.getWorker().getEnv()` and `getExport()` keep working under Bun.
+
+- [#16359](https://github.com/cloudflare/workers-sdk/pull/16359) [`262021d`](https://github.com/cloudflare/workers-sdk/commit/262021dd0db4d24df33405d89e4c1a6622ce832f) Thanks [@tw4](https://github.com/tw4)! - Stop `--strict` deploys and version uploads from aborting when the API omits optional binding fields
+
+  Previously, `wrangler deploy --strict` and `wrangler versions upload --strict` could report a destructive change for an unchanged configuration, for example an R2 bucket in the default jurisdiction, because a field the API left out was compared as removed. Missing and unset optional fields are now treated as equal, so these commands proceed when the local configuration matches the deployed Worker.
+
+- Updated dependencies [[`3464abc`](https://github.com/cloudflare/workers-sdk/commit/3464abcfeb42bbe7fc3b30a4981cf1ef4c3970ba)]:
+  - miniflare@5.20261019.1-beta
+
+## 4.151.2
+
+### Patch Changes
+
+- [#16307](https://github.com/cloudflare/workers-sdk/pull/16307) [`37ab91c`](https://github.com/cloudflare/workers-sdk/commit/37ab91c639062dda2acd12f02df4ee49e67ba56f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261006.1 | ^5.20261016.1 |
+  | workerd                   | 1.20261012.1  | 1.20261016.1  |
+
+- [#16352](https://github.com/cloudflare/workers-sdk/pull/16352) [`0ae7926`](https://github.com/cloudflare/workers-sdk/commit/0ae7926b77d860a4330448c6cc398946b6797f3d) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261016.1 | ^5.20261019.1 |
+  | workerd                   | 1.20261016.1  | 1.20261019.1  |
+
+- Updated dependencies [[`37ab91c`](https://github.com/cloudflare/workers-sdk/commit/37ab91c639062dda2acd12f02df4ee49e67ba56f), [`0ae7926`](https://github.com/cloudflare/workers-sdk/commit/0ae7926b77d860a4330448c6cc398946b6797f3d)]:
+  - miniflare@5.20261019.0-beta
+
 ## 4.151.1
 
 ### Patch Changes

@@ -1,5 +1,65 @@
 # @cloudflare/vite-plugin
 
+## 2.0.0-beta.v.4
+
+### Minor Changes
+
+- [#14900](https://github.com/cloudflare/workers-sdk/pull/14900) [`08f22d3`](https://github.com/cloudflare/workers-sdk/commit/08f22d36f42100af8b83ae9556643f63b536a4e9) Thanks [@mack-erel](https://github.com/mack-erel)! - Support remote Hyperdrive bindings in local development
+
+  ```jsonc
+  {
+    "hyperdrive": [
+      {
+        "binding": "HYPERDRIVE",
+        "id": "<your-hyperdrive-id>",
+        "remote": true
+      }
+    ]
+  }
+  ```
+
+### Patch Changes
+
+- [#16412](https://github.com/cloudflare/workers-sdk/pull/16412) [`b49580e`](https://github.com/cloudflare/workers-sdk/commit/b49580ebf4cc79d7c7e08ea6e2fb487f39f6e344) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix builds failing when a framework deletes the Worker's Vite manifest
+
+  The Vite plugin now records each Worker's main module from the bundle instead of reading `.vite/manifest.json` after the build.
+
+- Updated dependencies [[`08f22d3`](https://github.com/cloudflare/workers-sdk/commit/08f22d36f42100af8b83ae9556643f63b536a4e9), [`a4eb57d`](https://github.com/cloudflare/workers-sdk/commit/a4eb57d339483029fbce9d9e711515b48c60f2d7), [`182d6de`](https://github.com/cloudflare/workers-sdk/commit/182d6ded7126c29daa6f8d2eea5f175421b29917)]:
+  - @cloudflare/config@0.28.0
+  - miniflare@5.20261019.2-beta
+  - @cloudflare/build-output-utils@0.9.4
+  - @cloudflare/runtime-types@0.1.15
+
+## 2.0.0-beta.v.3
+
+### Patch Changes
+
+- [#15846](https://github.com/cloudflare/workers-sdk/pull/15846) [`a88cac4`](https://github.com/cloudflare/workers-sdk/commit/a88cac4d880629a4ad68f7173b3353941bea6081) Thanks [@oddharsh](https://github.com/oddharsh)! - Fail with an error instead of hanging when local dev requests can't work under Bun
+
+  Bun's `fetch()` ignores the undici `dispatcher` that Miniflare routes requests through (oven-sh/bun#39247). Under Bun, `createTestHarness()`'s `server.fetch()` and `server.getWorker()`'s `fetch()`, `email()` and `scheduled()` now throw a `UserError`, requests to the dev server URL get a 503 naming the cause, and starting remote bindings throws a `UserError`. Each of these used to hang with no error. `server.getWorker().getEnv()` and `getExport()` keep working under Bun.
+
+- [#16318](https://github.com/cloudflare/workers-sdk/pull/16318) [`ff1f971`](https://github.com/cloudflare/workers-sdk/commit/ff1f97121dbcb053a7eed1b7e1ef89605ed7d777) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Prevent legacy Wrangler configuration files from being silently ignored
+
+  The Vite plugin now stops with an actionable error when `wrangler.json`, `wrangler.jsonc`, or `wrangler.toml` is present without `cloudflare.config.ts`. Run `npx cf migrate --bundler vite` to migrate the project before building.
+
+- Updated dependencies [[`3464abc`](https://github.com/cloudflare/workers-sdk/commit/3464abcfeb42bbe7fc3b30a4981cf1ef4c3970ba)]:
+  - miniflare@5.20261019.1-beta
+  - @cloudflare/runtime-types@0.1.14
+  - @cloudflare/build-output-utils@0.9.3
+  - @cloudflare/config@0.27.0
+
+## 2.0.0-beta.v.2
+
+### Patch Changes
+
+- [#16225](https://github.com/cloudflare/workers-sdk/pull/16225) [`fc51b96`](https://github.com/cloudflare/workers-sdk/commit/fc51b96c7f9952e46a6ceee6dfce22d004e539a8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Decouple shared deployment guidance from Wrangler
+
+  Shared deployment and Container helpers now receive only the command paths and configuration syntax required by each operation. Wrangler reuses the paths that register its command tree, while other consumers can supply their own values without global presentation state or Wrangler-specific fallbacks.
+
+- Updated dependencies [[`37ab91c`](https://github.com/cloudflare/workers-sdk/commit/37ab91c639062dda2acd12f02df4ee49e67ba56f), [`0ae7926`](https://github.com/cloudflare/workers-sdk/commit/0ae7926b77d860a4330448c6cc398946b6797f3d)]:
+  - miniflare@5.20261019.0-beta
+  - @cloudflare/runtime-types@0.1.13
+
 ## 2.0.0-beta.v.1
 
 ### Minor Changes

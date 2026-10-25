@@ -103,6 +103,7 @@ test("duplicate Hyperdrive binding names do not retain unused listeners", async 
 }) => {
 	const first = "postgresql://user:password@127.0.0.1:5432/db?sslmode=require";
 	const second = "postgresql://user:password@127.0.0.1:5433/db?sslmode=require";
+	const before = listeningServers();
 	const mf = new Miniflare({
 		workers: [worker("first", first), worker("second")],
 	});
@@ -112,8 +113,17 @@ test("duplicate Hyperdrive binding names do not retain unused listeners", async 
 		await mf.setOptions({
 			workers: [worker("first", first), worker("second", second)],
 		});
+		await vi.waitFor(() => expect(listeningServers()).toBe(active + 1));
+		await mf.setOptions({
+			workers: [worker("first"), worker("second", second)],
+		});
 		await vi.waitFor(() => expect(listeningServers()).toBe(active));
+		await mf.setOptions({
+			workers: [worker("first"), worker("second")],
+		});
+		await vi.waitFor(() => expect(listeningServers()).toBe(active - 1));
 	} finally {
 		await mf.dispose();
 	}
+	await vi.waitFor(() => expect(listeningServers()).toBe(before));
 });

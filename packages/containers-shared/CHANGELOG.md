@@ -1,5 +1,33 @@
 # @cloudflare/containers-shared
 
+## 0.23.2
+
+### Patch Changes
+
+- Updated dependencies [[`08f22d3`](https://github.com/cloudflare/workers-sdk/commit/08f22d36f42100af8b83ae9556643f63b536a4e9), [`182d6de`](https://github.com/cloudflare/workers-sdk/commit/182d6ded7126c29daa6f8d2eea5f175421b29917)]:
+  - @cloudflare/config@0.28.0
+  - @cloudflare/workers-utils@0.48.0
+  - @cloudflare/build-output-utils@0.9.4
+  - @cloudflare/cli-shared-helpers@0.2.8
+
+## 0.23.1
+
+### Patch Changes
+
+- Updated dependencies [[`017bf9b`](https://github.com/cloudflare/workers-sdk/commit/017bf9b5117a8a511f4ed2c10dd2bd0b80b24c31)]:
+  - @cloudflare/workers-utils@0.47.3
+  - @cloudflare/build-output-utils@0.9.3
+  - @cloudflare/cli-shared-helpers@0.2.7
+  - @cloudflare/config@0.27.0
+
+## 0.23.0
+
+### Minor Changes
+
+- [#16225](https://github.com/cloudflare/workers-sdk/pull/16225) [`fc51b96`](https://github.com/cloudflare/workers-sdk/commit/fc51b96c7f9952e46a6ceee6dfce22d004e539a8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Decouple shared deployment guidance from Wrangler
+
+  Shared deployment and Container helpers now receive only the command paths and configuration syntax required by each operation. Wrangler reuses the paths that register its command tree, while other consumers can supply their own values without global presentation state or Wrangler-specific fallbacks.
+
 ## 0.22.1
 
 ### Patch Changes

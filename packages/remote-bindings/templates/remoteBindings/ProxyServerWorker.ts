@@ -48,6 +48,19 @@ function getExposedJSRPCBinding(request: Request, env: Env) {
 		throw new BindingNotFoundError(bindingName);
 	}
 
+	if (targetBinding.constructor.name === "Hyperdrive") {
+		const hyperdrive = targetBinding as Hyperdrive;
+		return {
+			getConnectionString() {
+				return hyperdrive.connectionString;
+			},
+			connect() {
+				const socket = hyperdrive.connect();
+				return { readable: socket.readable, writable: socket.writable };
+			},
+		};
+	}
+
 	if (targetBinding.constructor.name === "SendEmail") {
 		return {
 			async send(e: SendEmailInput) {

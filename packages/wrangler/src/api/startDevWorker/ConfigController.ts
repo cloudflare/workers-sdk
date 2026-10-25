@@ -161,9 +161,13 @@ async function resolveDevConfig(
 		origin: {
 			secure:
 				input.dev?.origin?.secure ?? config.dev.upstream_protocol === "https",
+			// Full and minimal remote preview sessions use the origin hostname
+			// as their host, so both ignore the local-mode opt-out.
 			hostname:
 				host ??
-				((input.dev?.inferOriginFromRoutes ?? true)
+				((input.dev?.inferOriginFromRoutes ?? true) ||
+				input.dev?.remote === true ||
+				input.dev?.remote === "minimal"
 					? getInferredHost(routes, config.configPath)
 					: undefined),
 		},

@@ -1,5 +1,43 @@
 # @cloudflare/vitest-plugin
 
+## 1.4.7
+
+### Patch Changes
+
+- Updated dependencies [[`80a9f96`](https://github.com/cloudflare/workers-sdk/commit/80a9f963d49cb62f1c80532c78a1b03018ad4152), [`08f22d3`](https://github.com/cloudflare/workers-sdk/commit/08f22d36f42100af8b83ae9556643f63b536a4e9), [`2878645`](https://github.com/cloudflare/workers-sdk/commit/2878645e27d736c67bdaf00c0dcef063065472ff), [`a4eb57d`](https://github.com/cloudflare/workers-sdk/commit/a4eb57d339483029fbce9d9e711515b48c60f2d7), [`182d6de`](https://github.com/cloudflare/workers-sdk/commit/182d6ded7126c29daa6f8d2eea5f175421b29917)]:
+  - wrangler@4.152.0
+  - miniflare@5.20261019.2-beta
+
+## 1.4.6
+
+### Patch Changes
+
+- [#15708](https://github.com/cloudflare/workers-sdk/pull/15708) [`3464abc`](https://github.com/cloudflare/workers-sdk/commit/3464abcfeb42bbe7fc3b30a4981cf1ef4c3970ba) Thanks [@samstarling](https://github.com/samstarling)! - Dispose Workflow step results and introspection modifiers after use
+
+  Release RPC resources deterministically during local Workflow execution and introspection. This prevents undisposed RPC warnings and requests being cancelled after their execution context has ended. Live step results retain their original data shape, including typed-array offsets and backing buffers. Callbacks that finish after a step times out also release their results, cancelling unused streams without delaying retries.
+
+  Disposing an introspector still aborts the instance if modifier acquisition failed, without introducing a teardown error. Non-stream results containing function-valued array properties are rejected according to the serialisable-output contract, instead of silently discarding those properties during storage normalisation.
+
+- [#15846](https://github.com/cloudflare/workers-sdk/pull/15846) [`a88cac4`](https://github.com/cloudflare/workers-sdk/commit/a88cac4d880629a4ad68f7173b3353941bea6081) Thanks [@oddharsh](https://github.com/oddharsh)! - Fail with an error instead of hanging when local dev requests can't work under Bun
+
+  Bun's `fetch()` ignores the undici `dispatcher` that Miniflare routes requests through (oven-sh/bun#39247). Under Bun, `createTestHarness()`'s `server.fetch()` and `server.getWorker()`'s `fetch()`, `email()` and `scheduled()` now throw a `UserError`, requests to the dev server URL get a 503 naming the cause, and starting remote bindings throws a `UserError`. Each of these used to hang with no error. `server.getWorker().getEnv()` and `getExport()` keep working under Bun.
+
+- Updated dependencies [[`4508172`](https://github.com/cloudflare/workers-sdk/commit/45081725e9e5cb79b76ade277a7e61395cb55950), [`61fc739`](https://github.com/cloudflare/workers-sdk/commit/61fc7397b2982db1c9b099cbeaee3fd0428fdf8a), [`3464abc`](https://github.com/cloudflare/workers-sdk/commit/3464abcfeb42bbe7fc3b30a4981cf1ef4c3970ba), [`a88cac4`](https://github.com/cloudflare/workers-sdk/commit/a88cac4d880629a4ad68f7173b3353941bea6081), [`262021d`](https://github.com/cloudflare/workers-sdk/commit/262021dd0db4d24df33405d89e4c1a6622ce832f)]:
+  - wrangler@4.151.3
+  - miniflare@5.20261019.1-beta
+
+## 1.4.5
+
+### Patch Changes
+
+- [#16135](https://github.com/cloudflare/workers-sdk/pull/16135) [`329d757`](https://github.com/cloudflare/workers-sdk/commit/329d757005350c3d58ad0cebcc45eecad4f9afd2) Thanks [@Zyles](https://github.com/Zyles)! - Fix test runs slowing down file after file, and stalling, with `isolate: false`
+
+  With `isolate: false`, Vitest hands a worker's module runner to the pool again for every test file the worker runs, and the pool wrapped the runner's module fetches in one more layer each time, so imports got slower with every file until runs stalled. The pool now patches each module runner once.
+
+- Updated dependencies [[`37ab91c`](https://github.com/cloudflare/workers-sdk/commit/37ab91c639062dda2acd12f02df4ee49e67ba56f), [`0ae7926`](https://github.com/cloudflare/workers-sdk/commit/0ae7926b77d860a4330448c6cc398946b6797f3d)]:
+  - miniflare@5.20261019.0-beta
+  - wrangler@4.151.2
+
 ## 1.4.4
 
 ### Patch Changes

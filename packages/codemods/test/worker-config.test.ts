@@ -56,6 +56,7 @@ describe("Wrangler Worker configuration conversion", () => {
 						error_retention: 86_400_000,
 						success_retention: "3 days",
 					},
+					jurisdiction: "fedramp",
 					limits: { steps: 10 },
 					name: "example-workflow",
 					schedules: ["0 * * * *", "30 * * * *"],
@@ -78,6 +79,7 @@ describe("Wrangler Worker configuration conversion", () => {
 		});
 
 		expect(result).toMatchSnapshot();
+		expect(result.output).toContain('jurisdiction: "fedramp"');
 		expect(result.output).toContain("idleTimeoutMs: 5000");
 		expect(result.output).toContain("addresses: []");
 	});
@@ -267,6 +269,7 @@ describe("Wrangler Worker configuration conversion", () => {
 						error_retention: 86_400_000,
 						success_retention: "3 days",
 					},
+					jurisdiction: "eu",
 					limits: { steps: 10 },
 					name: "local-workflow",
 					schedules: "0 * * * *",
@@ -279,6 +282,7 @@ describe("Wrangler Worker configuration conversion", () => {
 				{
 					binding: "REMOTE",
 					class_name: "RemoteWorkflow",
+					jurisdiction: "us",
 					limits: { steps: 5 },
 					name: "remote-workflow",
 					script_name: "other-worker",
@@ -290,6 +294,8 @@ describe("Wrangler Worker configuration conversion", () => {
 		expect(result.output).toContain('worker: "other-worker"');
 		expect(result.output).toContain("LocalWorkflow: exports.workflow({");
 		expect(result.output).toContain("defaultRetention: {");
+		expect(result.output).toContain('jurisdiction: "eu"');
+		expect(result.output).not.toContain('jurisdiction: "us"');
 		expect(result.output).not.toContain("RemoteWorkflow: exports.workflow(");
 		expect(
 			result.output.match(/DeclaredWorkflow: exports\.workflow\(/g)

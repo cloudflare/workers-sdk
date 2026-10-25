@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { WORKFLOW_JURISDICTIONS } from "./exports";
 import type { SendEmailBinding, VpcNetworkBinding } from "./bindings";
 import type { Settings } from "./types";
 import type { ContainerConfig, WorkerConfig } from "./types";
@@ -99,7 +100,9 @@ export const FlagshipBindingSchema = z.strictObject({
 export const HyperdriveBindingSchema = z.strictObject({
 	type: z.literal("hyperdrive"),
 	id: z.string(),
-	dev: z.strictObject({ connectionString: z.string().optional() }).optional(),
+	dev: RemoteBindingDevSchema.extend({
+		connectionString: z.string().optional(),
+	}).optional(),
 });
 
 export const KnownBindingSchema = z.discriminatedUnion("type", [
@@ -626,6 +629,7 @@ export const WorkflowExportSchema = z.strictObject({
 			errorRetention: WorkflowRetentionSchema.optional(),
 		})
 		.optional(),
+	jurisdiction: z.enum(WORKFLOW_JURISDICTIONS).optional(),
 });
 
 // Containers are only supported on the SQLite storage engine, so each live

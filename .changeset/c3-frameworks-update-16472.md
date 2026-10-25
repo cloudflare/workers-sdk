@@ -6,6 +6,6 @@ Update dependencies of "create-cloudflare"
 
 The following dependency versions have been updated:
 
-| Dependency  | From    | To      |
-| ----------- | ------- | ------- |
-| create-vike | 0.0.682 | 0.0.685 |
+| Dependency   | From  | To    |
+| ------------ | ----- | ----- |
+| create-astro | 5.3.0 | 5.3.1 |
