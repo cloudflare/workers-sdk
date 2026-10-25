@@ -50,13 +50,19 @@ function defaultNpmRunner(args: string[]): SpawnSyncReturns<string> {
 		// https://nodejs.org/en/blog/vulnerability/april-2024-security-releases-2
 		//
 		// Node joins shell arguments with spaces without quoting them, so
-		// `cmd.exe` would split a path such as `C:\Users\John Smith\...`. We
-		// quote each argument ourselves and pass a single command string, which
-		// also avoids Node's DEP0190 warning. Quoting stops `cmd.exe` treating
-		// `&|<>^` as metacharacters; the only path we pass is built from the
-		// user's own config dir, so `%VAR%` expansion is not an injection risk.
-		const command = ["npm", ...args.map((arg) => `"${arg}"`)].join(" ");
-		return spawnSync(command, { ...options, shell: true });
+		// `cmd.exe` would split a path such as `C:\Users\John Smith\...`, and it
+		// expands `%NAME%` even inside quotes. Each argument goes through an env
+		// var referenced as `"%VAR%"` instead: `cmd.exe` expands it in a single
+		// pass, so the value stays literal and the quotes keep spaces and `&|<>^`
+		// intact. A single command string also avoids Node's DEP0190 warning.
+		const env: NodeJS.ProcessEnv = { ...process.env };
+		const quotedArgRefs = args.map((arg, i) => {
+			const name = `WORKERS_AUTH_NPM_ARG_${i}`;
+			env[name] = arg;
+			return `"%${name}%"`;
+		});
+		const command = ["npm", ...quotedArgRefs].join(" ");
+		return spawnSync(command, { ...options, env, shell: true });
 	}
 	return spawnSync("npm", args, options);
 }

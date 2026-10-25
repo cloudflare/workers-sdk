@@ -342,7 +342,7 @@ describe("lazy keyring installer", () => {
 			expect(findKeyringBinding(installDir())).toBe(bindingDir);
 		});
 
-		it("passes an install dir containing a space to npm intact", ({
+		it("passes an install dir containing a space or `%` to npm intact", ({
 			expect,
 		}) => {
 			// A stand-in `npm` first on PATH exercises the real spawn (through
@@ -374,7 +374,8 @@ describe("lazy keyring installer", () => {
 			);
 			// eslint-disable-next-line turbo/no-undeclared-env-vars -- prepends the stand-in npm to the test process's own PATH, not a build input
 			vi.stubEnv("PATH", `${binDir}${path.delimiter}${process.env.PATH}`);
-			const dir = path.resolve("John Smith", "native", "keyring");
+			// `%OS%` is always defined on Windows, so cmd.exe would expand it.
+			const dir = path.resolve("John %OS% Smith", "native", "keyring");
 
 			installKeyringBindingSync(dir);
 
