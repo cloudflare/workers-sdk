@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { test, vi } from "vitest";
 import {
+	getJsonResponse,
 	getTextResponse,
 	isBuild,
 	rootDir,
@@ -14,6 +15,25 @@ test("basic hello-world functionality", async ({ expect }) => {
 	await vi.waitFor(
 		async () => expect(await getTextResponse()).toEqual("Hello World!"),
 		WAIT_FOR_OPTIONS
+	);
+});
+
+test("enables indirect eval only in the development runner", async ({
+	expect,
+}) => {
+	const result = await getJsonResponse("/indirect-eval");
+	expect(result).toEqual(
+		isBuild
+			? { error: "EvalError" }
+			: {
+					value: 42,
+					functionName: "FlightStack",
+					nonStringIdentity: true,
+					errors: [
+						{ name: "SyntaxError", message: expect.any(String) },
+						{ name: "Error", message: "development error" },
+					],
+				}
 	);
 });
 

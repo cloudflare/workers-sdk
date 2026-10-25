@@ -1,8 +1,16 @@
 import { a } from "./a";
 
+// Capture and use eval while application modules initialize, as React Flight
+// does when reconstructing development call stacks.
+const indirectEval = globalThis.eval;
+const evaluationAtStartup = evaluateDevelopmentStack();
+
 export default {
 	async fetch(request, _env, ctx) {
 		const url = new URL(request.url);
+		if (url.pathname === "/indirect-eval") {
+			return Response.json(evaluationAtStartup);
+		}
 		if (url.pathname === "/access") {
 			return Response.json({
 				aud: ctx.access?.aud,
@@ -44,6 +52,35 @@ export default {
 		return new Response("Hello World!");
 	},
 } satisfies ExportedHandler;
+
+function evaluateDevelopmentStack() {
+	try {
+		const value: unknown = indirectEval("40 + 2");
+		const stackFrame: unknown = indirectEval("(function FlightStack() {})");
+		const errors = ["(", 'throw new Error("development error")'].map(
+			(source) => {
+				try {
+					indirectEval(source);
+					return undefined;
+				} catch (error) {
+					return error instanceof Error
+						? { name: error.name, message: error.message }
+						: { name: typeof error, message: String(error) };
+				}
+			}
+		);
+		return {
+			value,
+			functionName: typeof stackFrame === "function" ? stackFrame.name : null,
+			nonStringIdentity: [undefined, null, 1, true, {}].every(
+				(input) => Reflect.apply(indirectEval, undefined, [input]) === input
+			),
+			errors,
+		};
+	} catch (error) {
+		return { error: error instanceof Error ? error.name : String(error) };
+	}
+}
 
 addEventListener("unhandledrejection", () => {
 	console.error("__unhandled rejection__");
