@@ -5,4 +5,4 @@
 
 Fix the Windows keyring install when the config path contains a space
 
-On Windows, `wrangler login --use-keyring` installs `@napi-rs/keyring` with npm through `cmd.exe`, which split an unquoted `--prefix` path such as `C:\Users\John Smith\...` at the space. The install failed and credentials fell back to the plaintext file. npm now runs in the install directory instead of receiving it as an argument.
+On Windows, `wrangler login --use-keyring` could not set up keyring storage when the configuration path contained a space, such as a `C:\Users\John Smith` profile, so credentials fell back to the plaintext file. Keyring setup now works for those paths and credentials are stored encrypted.
