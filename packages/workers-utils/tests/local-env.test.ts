@@ -32,6 +32,17 @@ describe("parseAndExpandDotEnv", () => {
 		expect(processEnv).toEqual({ TOKEN: "" });
 	});
 
+	it("expands unescaped references and preserves escaped dollar signs", ({
+		expect,
+	}) => {
+		expect(
+			parseAndExpandDotEnv("PASSWORD=pa$word\nESCAPED_PASSWORD=pa\\$word", {})
+		).toEqual({
+			PASSWORD: "pa",
+			ESCAPED_PASSWORD: "pa$word",
+		});
+	});
+
 	it.runIf(process.platform === "win32")(
 		"matches process keys case-insensitively on Windows",
 		({ expect }) => {

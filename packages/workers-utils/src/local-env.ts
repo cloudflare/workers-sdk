@@ -20,6 +20,20 @@ interface ParsedFile {
 	values: Record<string, string>;
 }
 
+/**
+ * Parses dotenv contents and expands variable references without changing the
+ * supplied process environment or adding its unrelated keys to the result.
+ *
+ * Process values override file values, including explicitly empty strings. On
+ * Windows, process keys are matched case-insensitively. References can use
+ * process values and earlier file values; unresolved references become empty
+ * strings. Escape a dollar sign with `\$` to keep it literal.
+ *
+ * @param contents The dotenv contents to parse and expand.
+ * @param processEnv The process values used for expansion and overrides.
+ * Defaults to `process.env`.
+ * @returns Expanded values for the keys declared in the dotenv contents.
+ */
 export function parseAndExpandDotEnv(
 	contents: string,
 	processEnv: NodeJS.ProcessEnv = process.env
