@@ -13,6 +13,7 @@ import {
 	VIRTUAL_WORKER_ENTRY,
 } from "../../shared";
 import { stripInternalEnv } from "./env";
+import { installIndirectEval } from "./eval-binding";
 import type { WrapperEnv } from "./env";
 
 declare global {
@@ -176,6 +177,10 @@ async function createModuleRunner(
 	webSocket: WebSocket,
 	environmentName: string
 ) {
+	installIndirectEval((source) =>
+		env.__VITE_UNSAFE_EVAL__.eval(source, "eval")
+	);
+
 	return new ModuleRunner(
 		{
 			sourcemapInterceptor: "prepareStackTrace",
