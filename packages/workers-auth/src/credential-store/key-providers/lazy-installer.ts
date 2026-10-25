@@ -3,7 +3,10 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { UserError } from "@cloudflare/workers-utils";
-import type { SpawnSyncReturns } from "node:child_process";
+import type {
+	SpawnSyncOptionsWithStringEncoding,
+	SpawnSyncReturns,
+} from "node:child_process";
 
 // This module is deliberately synchronous (`spawnSync`, `existsSync`,
 // `writeFileSync`): the `KeyProvider` / `CredentialStore` contract it
@@ -30,38 +33,32 @@ import type { SpawnSyncReturns } from "node:child_process";
 export const PINNED_KEYRING_VERSION = "1.3.0";
 
 /** Signature of the `npm` invoker. Overridable for tests. */
-export type NpmRunner = (
-	args: string[],
-	options?: { cwd?: string }
-) => SpawnSyncReturns<string>;
+export type NpmRunner = (args: string[]) => SpawnSyncReturns<string>;
 
-function defaultNpmRunner(
-	args: string[],
-	options: { cwd?: string } = {}
-): SpawnSyncReturns<string> {
-	// `shell: true` on Windows so `spawnSync` resolves the `npm.cmd` /
-	// `npm.ps1` shim that ships with Node for Windows.
-	//
-	// This is the *only* way to launch a `.cmd`/`.bat` since Node
-	// 20.12.2 / 21.7.2 / 22.x: CVE-2024-27980 made the runtime refuse to
-	// spawn batch files without an explicit `shell: true`. Spawning
-	// `npm.cmd` directly with `shell: false` (a common pre-CVE pattern)
-	// now throws `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`-style
-	// errors on supported Node versions. See
-	// https://nodejs.org/en/blog/vulnerability/april-2024-security-releases-2
-	//
-	// With `shell: true`, Node joins the arguments with spaces and does not
-	// quote them, so `cmd.exe` would split a path such as
-	// `C:\Users\John Smith\...` into several arguments. Only pass fixed
-	// flags here; callers give npm a path through `cwd` instead.
-	//
-	// On POSIX `shell: false` keeps the argv shape simple.
-	return spawnSync("npm", args, {
-		cwd: options.cwd,
+function defaultNpmRunner(args: string[]): SpawnSyncReturns<string> {
+	const options: SpawnSyncOptionsWithStringEncoding = {
 		encoding: "utf-8",
 		stdio: ["ignore", "pipe", "pipe"],
-		shell: process.platform === "win32",
-	});
+	};
+	if (process.platform === "win32") {
+		// A shell on Windows so `spawnSync` resolves the `npm.cmd` shim that
+		// ships with Node for Windows.
+		//
+		// This is the *only* way to launch a `.cmd`/`.bat` since Node
+		// 20.12.2 / 21.7.2 / 22.x: CVE-2024-27980 made the runtime refuse to
+		// spawn batch files without an explicit `shell: true`. See
+		// https://nodejs.org/en/blog/vulnerability/april-2024-security-releases-2
+		//
+		// Node joins shell arguments with spaces without quoting them, so
+		// `cmd.exe` would split a path such as `C:\Users\John Smith\...`. We
+		// quote each argument ourselves and pass a single command string, which
+		// also avoids Node's DEP0190 warning. Quoting stops `cmd.exe` treating
+		// `&|<>^` as metacharacters; the only path we pass is built from the
+		// user's own config dir, so `%VAR%` expansion is not an injection risk.
+		const command = ["npm", ...args.map((arg) => `"${arg}"`)].join(" ");
+		return spawnSync(command, { ...options, shell: true });
+	}
+	return spawnSync("npm", args, options);
 }
 
 let npmRunner: NpmRunner = defaultNpmRunner;
@@ -210,9 +207,9 @@ export function installKeyringBindingSync(installDir: string): void {
 	mkdirSync(dir, { recursive: true });
 	const hostPkgJson = path.join(dir, "package.json");
 	if (!existsSync(hostPkgJson)) {
-		// npm installs into the nearest directory with a package.json, so this
-		// anchors the install to `dir` when npm runs there. A minimal private one
-		// also signals to anyone poking around that this dir is auth-managed.
+		// `npm install --prefix` requires *some* package.json at the prefix
+		// to anchor the install. A minimal private one keeps npm happy and
+		// signals to anyone poking around that this dir is auth-managed.
 		writeFileSync(
 			hostPkgJson,
 			JSON.stringify(
@@ -225,18 +222,17 @@ export function installKeyringBindingSync(installDir: string): void {
 	}
 	let r: SpawnSyncReturns<string>;
 	try {
-		r = npmRunner(
-			[
-				"install",
-				`@napi-rs/keyring@${PINNED_KEYRING_VERSION}`,
-				"--no-save",
-				"--no-audit",
-				"--no-fund",
-				"--no-package-lock",
-				"--loglevel=error",
-			],
-			{ cwd: dir }
-		);
+		r = npmRunner([
+			"install",
+			`@napi-rs/keyring@${PINNED_KEYRING_VERSION}`,
+			"--prefix",
+			dir,
+			"--no-save",
+			"--no-audit",
+			"--no-fund",
+			"--no-package-lock",
+			"--loglevel=error",
+		]);
 	} catch (e) {
 		throw new UserError(
 			`Failed to spawn \`npm\` to install the keyring backend: ${

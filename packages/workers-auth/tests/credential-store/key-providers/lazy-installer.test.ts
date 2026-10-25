@@ -200,10 +200,8 @@ describe("lazy keyring installer", () => {
 				"@napi-rs",
 				"keyring"
 			);
-			let invocationCwd: string | undefined;
-			setNpmRunner((args, options) => {
+			setNpmRunner((args) => {
 				lastInvocation = args;
-				invocationCwd = options?.cwd;
 				// The install verifies its own work, so the runner has to
 				// actually land a loadable binding to count as a success.
 				mkdirSync(bindingDir, { recursive: true });
@@ -216,13 +214,11 @@ describe("lazy keyring installer", () => {
 			installKeyringBindingSync(installDir());
 			const hostPkgJson = path.join(installDir(), "package.json");
 			expect(existsSync(hostPkgJson)).toBe(true);
-			// The install dir is the working directory, not an argument: on
-			// Windows npm runs through cmd.exe, which splits unquoted paths at
-			// spaces (e.g. `C:\Users\John Smith\...`).
-			expect(invocationCwd).toBe(installDir());
 			expect(lastInvocation).toEqual([
 				"install",
 				`@napi-rs/keyring@${PINNED_KEYRING_VERSION}`,
+				"--prefix",
+				installDir(),
 				"--no-save",
 				"--no-audit",
 				"--no-fund",
@@ -346,12 +342,12 @@ describe("lazy keyring installer", () => {
 			expect(findKeyringBinding(installDir())).toBe(bindingDir);
 		});
 
-		it("installs through the real npm launcher when the install dir contains a space", ({
+		it("passes an install dir containing a space to npm intact", ({
 			expect,
 		}) => {
 			// A stand-in `npm` first on PATH exercises the real spawn (through
-			// cmd.exe on Windows) without network access. It records how it was
-			// called and lands a binding in the directory it ran in.
+			// cmd.exe on Windows) without network access. It records its
+			// arguments and lands a binding under the `--prefix` it was given.
 			const binDir = path.resolve("fake npm");
 			mkdirSync(binDir, { recursive: true });
 			writeFileSync(
@@ -359,8 +355,10 @@ describe("lazy keyring installer", () => {
 				[
 					'const fs = require("node:fs");',
 					'const path = require("node:path");',
-					'fs.writeFileSync(path.join(__dirname, "invocation.json"), JSON.stringify({ cwd: process.cwd(), args: process.argv.slice(2) }));',
-					'const binding = path.join(process.cwd(), "node_modules", "@napi-rs", "keyring");',
+					"const args = process.argv.slice(2);",
+					'fs.writeFileSync(path.join(__dirname, "invocation.json"), JSON.stringify(args));',
+					'const prefix = args[args.indexOf("--prefix") + 1];',
+					'const binding = path.join(prefix, "node_modules", "@napi-rs", "keyring");',
 					"fs.mkdirSync(binding, { recursive: true });",
 					'fs.writeFileSync(path.join(binding, "index.js"), "module.exports = {};");',
 				].join("\n")
@@ -382,18 +380,17 @@ describe("lazy keyring installer", () => {
 
 			expect(
 				JSON.parse(readFileSync(path.join(binDir, "invocation.json"), "utf8"))
-			).toEqual({
-				cwd: dir,
-				args: [
-					"install",
-					`@napi-rs/keyring@${PINNED_KEYRING_VERSION}`,
-					"--no-save",
-					"--no-audit",
-					"--no-fund",
-					"--no-package-lock",
-					"--loglevel=error",
-				],
-			});
+			).toEqual([
+				"install",
+				`@napi-rs/keyring@${PINNED_KEYRING_VERSION}`,
+				"--prefix",
+				dir,
+				"--no-save",
+				"--no-audit",
+				"--no-fund",
+				"--no-package-lock",
+				"--loglevel=error",
+			]);
 			expect(findKeyringBinding(dir)).toBe(
 				path.join(dir, "node_modules", "@napi-rs", "keyring")
 			);
