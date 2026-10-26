@@ -3860,6 +3860,7 @@ export type {
 export {
 	getDefaultDevRegistryPath,
 	getWorkerRegistry,
+	resolveDevRegistryPath,
 } from "./shared/dev-registry";
 export { parseModuleFallbackRequest } from "./plugins/core/module-fallback";
 export type {

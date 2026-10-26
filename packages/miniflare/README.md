@@ -628,6 +628,10 @@ Options shared between all Workers/"nanoservices".
   `~/.cloudflare` directories. It is scoped to the Miniflare major version;
   registry compatibility across major versions is not guaranteed.
 
+  Integrations that also read the registry can call the exported
+  `resolveDevRegistryPath(constructorPath?)` helper to use the same effective
+  path as Miniflare. Check whether the registry is enabled before calling it.
+
   Miniflare does not read `MINIFLARE_REGISTRY_PATH`, `WRANGLER_REGISTRY_PATH`, or
   `CLOUDFLARE_REGISTRY_PATH`. Integrations that still support these variables can
   pass an explicit constructor path, which the canonical environment variable

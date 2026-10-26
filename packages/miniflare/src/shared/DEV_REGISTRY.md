@@ -153,6 +153,12 @@ the Miniflare major version. Old registry environment variables are not read by
 Miniflare; consumers may still translate their own settings into constructor
 options during migration.
 
+Integrations that read registry files directly use the exported
+`resolveDevRegistryPath(constructorPath?)` helper after checking that their
+registry is enabled. Wrangler normalizes its dev registry through this helper
+before configuring the runtime or displaying bindings; its Flagship active-session
+check uses the same resolution with Wrangler's legacy path as the fallback.
+
 The proxy is only configured when `devRegistry.isEnabled()` returns `true` and there are external services. The workerd config includes:
 
 - A `dev-registry-proxy` worker service with the `workerdDebugPort` binding

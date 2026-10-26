@@ -32,7 +32,7 @@ import {
 	HttpOptions_Style,
 	TlsOptions_Version,
 } from "../runtime/config/workerd";
-import { getDefaultDevRegistryPath } from "../shared/dev-registry";
+import { resolveDevRegistryPath } from "../shared/dev-registry";
 import { kCurrentWorker } from "./current-worker";
 import type { Request, Response } from "../http";
 import type {
@@ -834,11 +834,7 @@ export const MiniflareOptionsSchema = InstanceOptionsSchema.extend({
 	.transform((options) => ({
 		...options,
 		unsafeDevRegistryPath: options.enableDevRegistry
-			? path.resolve(
-					process.env.CLOUDFLARE_DEV_REGISTRY_PATH ||
-						options.unsafeDevRegistryPath ||
-						getDefaultDevRegistryPath()
-				)
+			? resolveDevRegistryPath(options.unsafeDevRegistryPath)
 			: undefined,
 		// Resolve the effective isolated root once, here, so that everything
 		// downstream reads a single field that is always the path to persist to.

@@ -6,6 +6,7 @@ import {
 	getWorkerRegistry,
 	Miniflare,
 	MiniflareOptionsSchema,
+	resolveDevRegistryPath,
 } from "miniflare";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { singleModuleManifest, useDispose, useTmp } from "./test-shared";
@@ -48,6 +49,7 @@ describe("dev registry options", { concurrent: false }, () => {
 			path.join(config, "cloudflare", "dev-registry", "v5")
 		);
 		expect(getDefaultDevRegistryPath()).toBe(parsed.unsafeDevRegistryPath);
+		expect(resolveDevRegistryPath()).toBe(parsed.unsafeDevRegistryPath);
 	});
 
 	test("ignores legacy directories and environment variables", async ({
@@ -98,6 +100,9 @@ describe("dev registry options", { concurrent: false }, () => {
 			expect(parsed.unsafeDevRegistryPath).toBe(
 				path.resolve(unsafeDevRegistryPath)
 			);
+			expect(resolveDevRegistryPath(unsafeDevRegistryPath)).toBe(
+				parsed.unsafeDevRegistryPath
+			);
 		}
 	);
 
@@ -115,6 +120,9 @@ describe("dev registry options", { concurrent: false }, () => {
 
 			expect(parsed.unsafeDevRegistryPath).toBe(path.resolve(registryPath));
 			expect(getDefaultDevRegistryPath()).toBe(path.resolve(registryPath));
+			expect(resolveDevRegistryPath("constructor-registry")).toBe(
+				parsed.unsafeDevRegistryPath
+			);
 		}
 	);
 
