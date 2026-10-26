@@ -842,6 +842,18 @@ interface EnvironmentInheritable {
 	upload_source_maps: boolean | undefined;
 
 	/**
+	 * Include source maps for WebAssembly modules when uploading this worker.
+	 *
+	 * A module's source map is the file named by its `sourceMappingURL` custom
+	 * section, relative to the module. This is separate from
+	 * `upload_source_maps`, which covers JavaScript modules.
+	 *
+	 * @default false
+	 * @inheritable
+	 */
+	upload_wasm_source_maps: boolean | undefined;
+
+	/**
 	 * Specify how the Worker should be located to minimize round-trip time.
 	 *
 	 * More details: https://developers.cloudflare.com/workers/platform/smart-placement/

@@ -122,6 +122,7 @@ const FIELD_CASES = {
 	},
 	unsafe_hello_world: [],
 	upload_source_maps: true,
+	upload_wasm_source_maps: true,
 	vars: { VALUE: "text" },
 	vectorize: [{ binding: "VECTORIZE", index_name: "index" }],
 	version_metadata: { binding: "VERSION" },

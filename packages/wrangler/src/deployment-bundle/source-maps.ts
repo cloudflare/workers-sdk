@@ -118,6 +118,27 @@ function trySourceMapForModule(
 }
 
 /**
+ * Loads the source maps named by the `sourceMappingURL` custom sections of the
+ * Worker's WebAssembly modules.
+ *
+ * @param modules The modules of the Worker. Only `compiled-wasm` modules are read.
+ * @returns The source maps to upload alongside the Worker.
+ */
+export function loadWasmSourceMaps(modules: CfModule[]): CfWorkerSourceMap[] {
+	const maps: CfWorkerSourceMap[] = [];
+	for (const module of modules) {
+		if (module.type !== "compiled-wasm" || module.filePath === undefined) {
+			continue;
+		}
+		const sourceMapUrl = getWasmSourceMappingUrl(module);
+		if (sourceMapUrl !== undefined) {
+			maps.push(readSourceMap(module, module.filePath, sourceMapUrl));
+		}
+	}
+	return maps;
+}
+
+/**
  * Attaches a sourcemap, if found, to a JavaScript module.
  */
 export function tryAttachSourcemapToModule(module: CfModule) {
@@ -170,6 +191,66 @@ function getSourceMappingUrl(module: CfModule): string | undefined {
 	return undefined;
 }
 
+/**
+ * Reads the URL in a WebAssembly module's `sourceMappingURL` custom section,
+ * if it has one (https://tc39.es/ecma426/).
+ */
+function getWasmSourceMappingUrl(module: CfModule): string | undefined {
+	const bytes = module.content;
+	if (
+		typeof bytes === "string" ||
+		bytes.length < 8 ||
+		bytes.readUInt32LE(0) !== 0x6d736100
+	) {
+		return undefined;
+	}
+	let pos = 8; // Skip the magic number and version.
+	// Reads an unsigned LEB128 integer, as used for sizes and name lengths.
+	const readU32 = () => {
+		let result = 0;
+		for (let shift = 0; shift < 35; shift += 7) {
+			if (pos >= bytes.length) {
+				return undefined;
+			}
+			const byte = bytes[pos++];
+			result += (byte & 0x7f) * 2 ** shift;
+			if ((byte & 0x80) === 0) {
+				return result;
+			}
+		}
+		return undefined;
+	};
+	const readName = (end: number) => {
+		const length = readU32();
+		if (length === undefined || pos + length > end) {
+			return undefined;
+		}
+		const name = new TextDecoder().decode(bytes.subarray(pos, pos + length));
+		pos += length;
+		return name;
+	};
+	while (pos < bytes.length) {
+		const id = bytes[pos++];
+		const size = readU32();
+		if (size === undefined || pos + size > bytes.length) {
+			return undefined;
+		}
+		const end = pos + size;
+		// Custom sections have id 0 and start with their name.
+		if (id === 0 && readName(end) === "sourceMappingURL") {
+			const url = readName(end);
+			if (url?.startsWith("data:")) {
+				throw new Error(
+					`Unsupported source map path in ${module.filePath}: expected file path but found data URL.`
+				);
+			}
+			return url;
+		}
+		pos = end;
+	}
+	return undefined;
+}
+
 function sourceMapForModule(module: CfModule): CfWorkerSourceMap | undefined {
 	if (module.filePath === undefined) {
 		// virtual modules don't have sourcemaps so we can exit early here
@@ -180,12 +261,23 @@ function sourceMapForModule(module: CfModule): CfWorkerSourceMap | undefined {
 	if (sourceMapUrl === undefined) {
 		return;
 	}
+	return readSourceMap(module, module.filePath, sourceMapUrl);
+}
 
+/**
+ * Reads the source map at `sourceMapUrl`, relative to the module at
+ * `filePath`, and names it after the module in the multipart upload.
+ */
+function readSourceMap(
+	module: CfModule,
+	filePath: string,
+	sourceMapUrl: string
+): CfWorkerSourceMap {
 	// Convert source map path to an absolute path that we can read.
-	const sourcemapPath = path.join(path.dirname(module.filePath), sourceMapUrl);
+	const sourcemapPath = path.join(path.dirname(filePath), sourceMapUrl);
 	if (!fs.existsSync(sourcemapPath)) {
 		throw new Error(
-			`Invalid source map path in ${module.filePath}: ${sourcemapPath} does not exist.`
+			`Invalid source map path in ${filePath}: ${sourcemapPath} does not exist.`
 		);
 	}
 	const map = JSON.parse(

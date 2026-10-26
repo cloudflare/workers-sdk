@@ -95,6 +95,7 @@ const TOOLING_FIELDS = new Set<string>([
 	"send_metrics",
 	"text_blobs",
 	"tsconfig",
+	"upload_wasm_source_maps",
 	"wasm_modules",
 ] satisfies (keyof RawConfig)[]);
 
@@ -190,6 +191,7 @@ export const KNOWN_FIELDS = new Set<string>([
 	"unsafe_hello_world",
 	"unsafe",
 	"upload_source_maps",
+	"upload_wasm_source_maps",
 	"vars",
 	"vectorize",
 	"version_metadata",
@@ -301,6 +303,7 @@ function convertToolingObject(source: UnknownRecord): OutputObject {
 		["text_blobs", "textBlobs"],
 		["tsconfig", "tsconfig"],
 		["upload_source_maps", "uploadSourceMaps"],
+		["upload_wasm_source_maps", "uploadWasmSourceMaps"],
 		["wasm_modules", "wasmModules"],
 	];
 	for (const [sourceKey, targetKey] of mappings) {
