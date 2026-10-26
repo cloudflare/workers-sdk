@@ -628,6 +628,12 @@ Options shared between all Workers/"nanoservices".
   `~/.cloudflare` directories. It is scoped to the Miniflare major version;
   registry compatibility across major versions is not guaranteed.
 
+  The Vite v2 beta plugin follows this default. Current Wrangler (including
+  `getPlatformProxy()`) continues to supply its legacy registry path for
+  compatibility with existing Wrangler sessions. To connect Vite v2 and
+  Wrangler sessions, set the same `CLOUDFLARE_DEV_REGISTRY_PATH` for both
+  processes, including the process calling `getPlatformProxy()`.
+
   Integrations that also read the registry can call the exported
   `resolveDevRegistryPath(constructorPath?)` helper to use the same effective
   path as Miniflare. Check whether the registry is enabled before calling it.
