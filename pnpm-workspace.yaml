@@ -46,4 +46,4 @@ catalog:
   ws: 8.21.0
   capnweb: 0.12.0
   "@cloudflare/vitest-plugin": 1.4.3
-  zod: 4.6.5
+  zod: 4.6.6
