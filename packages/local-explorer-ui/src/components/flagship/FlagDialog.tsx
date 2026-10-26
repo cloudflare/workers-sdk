@@ -10,9 +10,14 @@ import {
 } from "@cloudflare/kumo";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { flagshipCreateFlag, flagshipUpdateFlag } from "../../api";
+import {
+	flagshipCreateFlag,
+	flagshipPatchFlag,
+	flagshipUpdateFlag,
+} from "../../api";
 import {
 	alignSplits,
+	canonicalRules,
 	defaultServeToRules,
 	defaultVariationsForType,
 	FLAG_TYPE_LABELS,
@@ -34,7 +39,11 @@ import {
 } from "./flag-helpers";
 import { Field, TextInput } from "./FormFields";
 import { RuleEditor } from "./RuleEditor";
-import type { FlagshipFlag, FlagshipJsonValue } from "../../api";
+import type {
+	FlagshipFlag,
+	FlagshipJsonValue,
+	FlagshipPatchFlagData,
+} from "../../api";
 import type { JSX } from "react";
 
 const TYPE_TABS = (
@@ -311,20 +320,6 @@ export function FlagDialog({
 		};
 		const usesSplit =
 			defaultServe.mode === "percentage" && form.variations.length > 1;
-		const ruleError = validateRuleDrafts(
-			form.rules,
-			new Set(variationNameById.keys()),
-			usesSplit
-		);
-		if (ruleError !== null) {
-			setError({ field: "rules", message: ruleError });
-			return;
-		}
-		const splitError = usesSplit ? validateDefaultServe(defaultServe) : null;
-		if (splitError !== null) {
-			setError({ field: "split", message: splitError });
-			return;
-		}
 		const targetingRules = ruleDraftsToRules(form.rules, variationNameById);
 		const rules = [
 			...targetingRules,
@@ -337,6 +332,28 @@ export function FlagDialog({
 				variationNameById
 			),
 		];
+		const replaceDefinition =
+			!editing ||
+			JSON.stringify(variations) !== JSON.stringify(flag.variations) ||
+			canonicalRules(rules) !== canonicalRules(flag.rules);
+
+		// Unchanged legacy rules remain valid for partial updates.
+		if (replaceDefinition) {
+			const ruleError = validateRuleDrafts(
+				form.rules,
+				new Set(variationNameById.keys()),
+				usesSplit
+			);
+			if (ruleError !== null) {
+				setError({ field: "rules", message: ruleError });
+				return;
+			}
+			const splitError = usesSplit ? validateDefaultServe(defaultServe) : null;
+			if (splitError !== null) {
+				setError({ field: "split", message: splitError });
+				return;
+			}
+		}
 
 		const defaultVariation = defaultRow.name.trim();
 		const savedDescription = flag?.description ?? null;
@@ -347,7 +364,24 @@ export function FlagDialog({
 
 		setSaving(true);
 		try {
-			if (editing) {
+			if (editing && !replaceDefinition) {
+				const body: FlagshipPatchFlagData["body"] = {};
+				if (defaultVariation !== flag.default_variation) {
+					body.default_variation = defaultVariation;
+				}
+				if (description !== savedDescription) {
+					body.description = description;
+				}
+				if (form.enabled !== flag.enabled) {
+					body.enabled = form.enabled;
+				}
+				if (Object.keys(body).length > 0) {
+					await flagshipPatchFlag({
+						body,
+						path: { app_id: appId, flag_key: flag.key },
+					});
+				}
+			} else if (editing) {
 				await flagshipUpdateFlag({
 					body: {
 						default_variation: defaultVariation,
