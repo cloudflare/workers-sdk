@@ -1863,7 +1863,7 @@ describe("flagship", () => {
 		});
 
 		it.for(["relative", "absolute"])(
-			"detects an active session in a %s canonical registry override",
+			"rejects local Flagship access while a dev session uses a %s canonical registry override",
 			async (kind, { expect }) => {
 				const registryPath = nodePath.resolve("shared-registry");
 				vi.stubEnv(
@@ -1879,8 +1879,9 @@ describe("flagship", () => {
 				const mf = new Miniflare(
 					convertV4MiniflareOptions({
 						name: workerName,
+						modules: true,
 						script:
-							'addEventListener("fetch", (e) => e.respondWith(new Response("ok")))',
+							'export default { fetch() { return new Response("ok"); } };',
 						unsafeDevRegistryPath: getRegistryPath(),
 					})
 				);
