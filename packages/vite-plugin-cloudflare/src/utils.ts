@@ -131,6 +131,27 @@ export function satisfiesMinimumViteVersion(minVersion: string): boolean {
 	return semverGte(viteVersion, minVersion);
 }
 
+/**
+ * Converts incoming request headers while preserving separate `Set-Cookie` values.
+ *
+ * @param req The incoming HTTP request
+ * @returns Fetch headers with the original cookie boundaries
+ */
+export function createHeadersForIncomingMessage(
+	req: http.IncomingMessage
+): Headers {
+	const headers = createHeaders(req);
+	const cookies = req.headers["set-cookie"];
+	if (cookies) {
+		// Upstream joins array entries with commas, which can also appear in Expires.
+		headers.delete("set-cookie");
+		for (const cookie of cookies) {
+			headers.append("set-cookie", cookie);
+		}
+	}
+	return headers;
+}
+
 export function createRequestForIncomingMessage(
 	req: vite.Connect.IncomingMessage,
 	res: http.ServerResponse,
@@ -142,7 +163,7 @@ export function createRequestForIncomingMessage(
 	});
 
 	const method = req.method ?? "GET";
-	const headers = createHeaders(req);
+	const headers = createHeadersForIncomingMessage(req);
 	const protocol =
 		options?.protocol ??
 		getScheme(req) ??
