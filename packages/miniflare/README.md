@@ -599,12 +599,39 @@ Options shared between all Workers/"nanoservices".
   - If set to a `string`, a real `cf` object will be fetched and cached at the
     provided path for 30 days
 
+- `enableDevRegistry?: boolean`
+
+  Enables cross-process discovery of Workers, service bindings, Durable Objects,
+  and shared storage owners. Defaults to `true`. Set to `false` to disable the
+  registry, even when a registry path is configured. Shared storage requires the
+  registry to be enabled.
+
+  `convertV4MiniflareOptions()` preserves v4's opt-in behavior: the converted
+  options disable the registry unless a nonempty explicit registry path was
+  supplied. This keeps legacy integrations and isolated test pools unchanged.
+
 - `unsafeDevRegistryPath?: string`
 
   Path to the dev registry directory. This allows Miniflare to automatically
   discover external services and Durable Objects running on another Miniflare
   instance and connect them. Workers are advertised by default; set
   `unsafeRegisterWorker` to `false` to opt out.
+
+  Miniflare resolves the path in this order:
+  1. A nonempty `CLOUDFLARE_DEV_REGISTRY_PATH` environment variable.
+  2. A nonempty `unsafeDevRegistryPath` constructor option.
+  3. `<Cloudflare config directory>/dev-registry/v5`.
+
+  Relative paths are resolved against the current working directory. The default
+  uses the platform's config directory (or `XDG_CONFIG_HOME`) under the
+  `cloudflare` namespace, without adopting legacy `~/.wrangler` or
+  `~/.cloudflare` directories. It is scoped to the Miniflare major version;
+  registry compatibility across major versions is not guaranteed.
+
+  Miniflare does not read `MINIFLARE_REGISTRY_PATH`, `WRANGLER_REGISTRY_PATH`, or
+  `CLOUDFLARE_REGISTRY_PATH`. Integrations that still support these variables can
+  pass an explicit constructor path, which the canonical environment variable
+  overrides.
 
 - `unsafeDevRegistryDurableObjectProxy?: boolean`
 

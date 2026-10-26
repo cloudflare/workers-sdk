@@ -4,6 +4,20 @@ import { convertV4MiniflareOptions } from "../../src/config/v4-convert";
 import type { RemoteProxyConnectionString } from "../../src/plugins/shared";
 
 describe("convertV4MiniflareOptions", () => {
+	test.for([undefined, "", "legacy-registry"])(
+		"preserves v4 registry opt-in semantics: %s",
+		(unsafeDevRegistryPath, { expect }) => {
+			const converted = convertV4MiniflareOptions({
+				script: "export default {};",
+				modules: true,
+				unsafeDevRegistryPath,
+			});
+
+			expect(converted.enableDevRegistry).toBe(Boolean(unsafeDevRegistryPath));
+			expect(converted.unsafeDevRegistryPath).toBe(unsafeDevRegistryPath);
+		}
+	);
+
 	test.for([undefined, "database-id"])(
 		"preserves remote Hyperdrive IDs, falling back to the binding name when absent: %s",
 		(id, { expect }) => {
