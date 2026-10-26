@@ -408,9 +408,14 @@ describe("createRequestHandler", () => {
 			expected: { status: 231, statusText: "global-before" },
 		},
 		{
-			name: "falls back to the default status text when none is set",
+			name: "preserves an empty status text",
+			init: { status: 231, statusText: "" },
+			expected: { status: 231, statusText: "" },
+		},
+		{
+			name: "preserves the default empty status text when none is set",
 			init: { status: 404 },
-			expected: { status: 404, statusText: "Not Found" },
+			expected: { status: 404, statusText: "" },
 		},
 	])("$name", async ({ init, expected }, { expect }) => {
 		const handler = createRequestHandler(

@@ -119,12 +119,6 @@ export function createRequestHandler(
 				response = new MiniflareResponse(response.body, response);
 				// HTTP/2 disallows use of the `transfer-encoding` header
 				response.headers.delete("transfer-encoding");
-			} else if (response.statusText) {
-				// `sendResponse` calls `res.writeHead()` without a reason phrase, so Node
-				// would otherwise replace the Worker's `statusText` with its default for
-				// the status code (or "unknown" for non-standard codes).
-				// HTTP/2 has no reason phrase, so this only applies to HTTP/1.x.
-				res.statusMessage = response.statusText;
 			}
 
 			warnIfQuickTunnelSseResponse(response.headers.get("content-type"));
