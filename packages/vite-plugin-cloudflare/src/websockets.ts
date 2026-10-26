@@ -71,7 +71,7 @@ export function handleWebSocket(
 				}
 
 				const response = await miniflare.dispatchFetch(url, {
-					headers: headers as unknown as Headers,
+					headers: [...headers],
 					method: request.method,
 				});
 				const workerWebSocket = response.webSocket;
@@ -131,26 +131,13 @@ function appendWorkerResponseHeaders(
 	responseHeaders: string[],
 	workerHeaders: Headers
 ) {
-	// `Set-Cookie` can appear multiple times in a single response.
-	// `Headers.forEach` collapses them into a single comma-joined value, which
-	// breaks cookies that themselves contain commas (e.g. Expires).
-	// `getSetCookie` returns them as a string array.
-	if (typeof workerHeaders.getSetCookie === "function") {
-		for (const cookie of workerHeaders.getSetCookie()) {
-			responseHeaders.push(`Set-Cookie: ${cookie}`);
-		}
-	}
-
-	workerHeaders.forEach((value, name) => {
-		const lower = name.toLowerCase();
-		if (lower === "set-cookie") {
-			return;
-		}
-		if (EXCLUDED_RESPONSE_HEADERS.has(lower)) {
-			return;
+	// Iteration preserves separate Set-Cookie values, including commas in Expires.
+	for (const [name, value] of workerHeaders) {
+		if (EXCLUDED_RESPONSE_HEADERS.has(name)) {
+			continue;
 		}
 		responseHeaders.push(`${name}: ${value}`);
-	});
+	}
 }
 
 /**

@@ -1,6 +1,6 @@
 import http from "node:http";
 import net from "node:net";
-import { DeferredPromise, Miniflare, Response } from "miniflare";
+import { DeferredPromise, Headers, Miniflare, Response } from "miniflare";
 import {
 	afterEach,
 	assert,
@@ -161,20 +161,15 @@ describe("handleWebSocket", () => {
 		);
 		expect(init.method).toBe("GET");
 
-		assert(
-			init.headers instanceof Headers,
-			"Test expects headers object passed to dispatchFetch to be Headers instance"
-		);
-		expect(init.headers.get("host")).toBe(
+		const headers = new Headers(init.headers);
+		expect(headers.get("host")).toBe(
 			`4567-my-sandbox-sup3rs3cr3t.localhost:${port}`
 		);
-		expect(init.headers.get("upgrade")).toBe("websocket");
-		expect(init.headers.get("connection")).toBe("Upgrade");
-		expect(init.headers.get("sec-websocket-key")).toBe(
-			"dGhlIHNhbXBsZSBub25jZQ=="
-		);
-		expect(init.headers.get("sec-websocket-protocol")).toBe("vite-hmr");
-		expect(init.headers.get("sec-websocket-version")).toBe("13");
+		expect(headers.get("upgrade")).toBe("websocket");
+		expect(headers.get("connection")).toBe("Upgrade");
+		expect(headers.get("sec-websocket-key")).toBe("dGhlIHNhbXBsZSBub25jZQ==");
+		expect(headers.get("sec-websocket-protocol")).toBe("vite-hmr");
+		expect(headers.get("sec-websocket-version")).toBe("13");
 	});
 
 	/**
@@ -243,12 +238,12 @@ describe("handleWebSocket", () => {
 
 		await vi.waitFor(() => expect(dispatchFetch).toHaveBeenCalled());
 		const init = dispatchFetch.mock.lastCall?.[1];
-		assert(init?.headers instanceof Headers);
-		expect(init.headers.getSetCookie()).toEqual([
+		const headers = new Headers(init?.headers);
+		expect(headers.getSetCookie()).toEqual([
 			"a=1; Expires=Wed, 21 Oct 2037 07:28:00 GMT",
 			"b=2; Path=/",
 		]);
-		expect(init.headers.get("cookie")).toBe("session=abc; theme=dark");
+		expect(headers.get("cookie")).toBe("session=abc; theme=dark");
 	});
 
 	test("falls back to `http://` when no `X-Forwarded-Proto` header is set", async ({
@@ -369,7 +364,7 @@ describe("handleWebSocket", () => {
 				const [client, server] = Object.values(new WebSocketPair());
 				server.accept();
 				const headers = new Headers({ "X-Hello": "testing" });
-				headers.append("Set-Cookie", "session=abc; Path=/");
+				headers.append("Set-Cookie", "session=abc; Path=/; Expires=Wed, 21 Oct 2037 07:28:00 GMT");
 				headers.append("Set-Cookie", "theme=dark; Path=/; HttpOnly");
 				return new Response(null, {
 					status: 101,
@@ -406,11 +401,15 @@ describe("handleWebSocket", () => {
 		const raw = Buffer.concat(chunks).toString("utf8");
 		const headerBlock = raw.slice(0, raw.indexOf("\r\n\r\n"));
 
-		// Fetch `Headers` normalize names to lowercase; `Set-Cookie` keeps its
-		// canonical casing because it is appended manually via `getSetCookie()`.
 		expect(headerBlock).toContain("x-hello: testing");
-		expect(headerBlock).toContain("Set-Cookie: session=abc; Path=/");
-		expect(headerBlock).toContain("Set-Cookie: theme=dark; Path=/; HttpOnly");
+		const cookies = headerBlock
+			.split("\r\n")
+			.filter((header) => /^set-cookie:/i.test(header))
+			.map((header) => header.slice("set-cookie: ".length));
+		expect(cookies).toEqual([
+			"session=abc; Path=/; Expires=Wed, 21 Oct 2037 07:28:00 GMT",
+			"theme=dark; Path=/; HttpOnly",
+		]);
 
 		socket.destroy();
 	});
