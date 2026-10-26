@@ -465,7 +465,8 @@ export function printBindings(
 					type: getBindingTypeFriendlyName("artifacts"),
 					value: namespace,
 					mode: getMode({
-						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+						isSimulatedLocally:
+							context.remoteBindingsDisabled || remote === false,
 					}),
 				};
 			})

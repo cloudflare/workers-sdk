@@ -41,7 +41,7 @@ describe("convertV4MiniflareOptions", () => {
 		}
 	);
 
-	test("Artifacts preserves omitted remote settings for local-default routing", ({
+	test("Artifacts defaults to remote and preserves explicit local selection", ({
 		expect,
 	}) => {
 		const remoteProxyConnectionString = new URL(
@@ -51,13 +51,20 @@ describe("convertV4MiniflareOptions", () => {
 			name: "worker",
 			script: "export default {};",
 			artifacts: {
-				LOCAL: { namespace: "local" },
+				DEFAULT: { namespace: "default" },
+				LOCAL: { namespace: "local", remote: false },
 				REMOTE: { namespace: "remote", remoteProxyConnectionString },
 			},
 		});
-		expect(converted.workers[0].config.env?.LOCAL).toEqual({
+		expect(converted.workers[0].config.env?.DEFAULT).toMatchObject({
+			type: "artifacts",
+			namespace: "default",
+			dev: { remote: true },
+		});
+		expect(converted.workers[0].config.env?.LOCAL).toMatchObject({
 			type: "artifacts",
 			namespace: "local",
+			dev: { remote: false },
 		});
 		expect(converted.workers[0].config.env?.REMOTE).toMatchObject({
 			dev: { remote: true },

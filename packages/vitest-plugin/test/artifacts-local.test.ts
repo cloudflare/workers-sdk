@@ -1,33 +1,35 @@
 import dedent from "ts-dedent";
 import { test, vitestConfig } from "./helpers";
 
-test.for([undefined, false] as const)(
-	"Workers Vitest uses local Artifacts without credentials (remote=%s)",
-	async (remote, { expect, seed, vitestRun }) => {
-		await seed({
-			"vitest.config.mts": vitestConfig({
-				wrangler: { configPath: "./wrangler.jsonc" },
-			}),
-			"wrangler.jsonc": JSON.stringify({
-				name: "artifacts-test-worker",
-				main: "./index.ts",
-				compatibility_date: "2026-09-03",
-				artifacts: [
-					{
-						binding: "REPOS",
-						namespace: "examples",
-						...(remote === undefined ? {} : { remote }),
-					},
-				],
-			}),
-			"index.ts": dedent`
+test("Workers Vitest uses local Artifacts with explicit remote=false", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
+	await seed({
+		"vitest.config.mts": vitestConfig({
+			wrangler: { configPath: "./wrangler.jsonc" },
+		}),
+		"wrangler.jsonc": JSON.stringify({
+			name: "artifacts-test-worker",
+			main: "./index.ts",
+			compatibility_date: "2026-09-03",
+			artifacts: [
+				{
+					binding: "REPOS",
+					namespace: "examples",
+					remote: false,
+				},
+			],
+		}),
+		"index.ts": dedent`
 				export default {
 					async fetch(request, env) {
 						return Response.json(await env.REPOS.list());
 					}
 				};
 			`,
-			"index.test.ts": dedent`
+		"index.test.ts": dedent`
 				import { env } from "cloudflare:test";
 				import { it } from "vitest";
 
@@ -40,9 +42,8 @@ test.for([undefined, false] as const)(
 					expect(await repo.readFile({ ref: "main", path: "missing.txt" })).toBeNull();
 				});
 			`,
-		});
+	});
 
-		const result = await vitestRun();
-		await expect(result.exitCode, result.stderr).resolves.toBe(0);
-	}
-);
+	const result = await vitestRun();
+	await expect(result.exitCode, result.stderr).resolves.toBe(0);
+});

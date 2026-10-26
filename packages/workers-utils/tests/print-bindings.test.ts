@@ -81,7 +81,7 @@ describe("printBindings", () => {
 	});
 
 	test.for([
-		{ label: "default", remote: undefined, disabled: false, mode: "local" },
+		{ label: "default", remote: undefined, disabled: false, mode: "remote" },
 		{ label: "explicit local", remote: false, disabled: false, mode: "local" },
 		{ label: "explicit remote", remote: true, disabled: false, mode: "remote" },
 		{ label: "remote disabled", remote: true, disabled: true, mode: "local" },

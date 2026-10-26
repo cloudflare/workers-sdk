@@ -29,7 +29,7 @@ type ArtifactsBinding = Extract<MiniflareBinding, { type: "artifacts" }>;
 type ArtifactsEntry = [name: string, binding: ArtifactsBinding];
 
 function isLocalArtifactsBinding(binding: ArtifactsBinding): boolean {
-	return binding.dev?.remote !== true;
+	return binding.dev?.remote === false;
 }
 
 function getLocalNamespaceNames(bindings: ArtifactsEntry[]): Set<string> {
@@ -60,7 +60,7 @@ export const ARTIFACTS_PLUGIN: Plugin = {
 	getBindings(options) {
 		return getEnvBindingsOfType(options.config, "artifacts").map(
 			([name, binding]) => {
-				// Omitted remote and false use local storage; true opts into the remote proxy.
+				// Local storage is opt-in; omitted remote settings use the remote proxy.
 				if (isLocalArtifactsBinding(binding)) {
 					validateLocalNamespace(binding.namespace);
 					return {
@@ -76,7 +76,10 @@ export const ARTIFACTS_PLUGIN: Plugin = {
 					service: {
 						name: ARTIFACTS_REMOTE_SERVICE_NAME,
 						props: buildRemoteProxyProps(
-							getRemoteProxyConnectionString(binding, options.dev),
+							getRemoteProxyConnectionString(
+								{ dev: { ...binding.dev, remote: true } },
+								options.dev
+							),
 							name
 						),
 					},
