@@ -59,6 +59,7 @@ import {
 	launchBrowser,
 	loadExternalPlugins,
 	PLUGIN_ENTRIES,
+	createNodeBindings,
 	ProxyClient,
 	ProxyNodeBinding,
 	QUEUES_PLUGIN_NAME,
@@ -91,6 +92,7 @@ import {
 import { ContainerPrivilegesCache } from "./plugins/core/container";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
 import { isModuleFallbackRequest } from "./plugins/core/module-fallback";
+import { PROXY_SECRET } from "./plugins/core/proxy";
 import { writeTempFile } from "./plugins/core/temp-file";
 import { HyperdriveProxyController } from "./plugins/hyperdrive/hyperdrive-proxy";
 import {
@@ -148,6 +150,8 @@ import type { DispatchFetch } from "./http";
 import type {
 	DurableObjectClassNames,
 	MiniflareFetcherBinding,
+	NodeBindingDescriptor,
+	PlatformProxyConnection,
 	Plugin,
 	PluginServicesOptions,
 	QueueConsumers,
@@ -3251,13 +3255,21 @@ export class Miniflare {
 	async getBindings<Env = Record<string, unknown>>(
 		workerName?: string
 	): Promise<Env> {
-		const bindings: Record<string, unknown> = {};
 		const proxyClient = await this._getProxyClient();
+		const { bindings } = await this.#getNodeBindingDescriptors(workerName);
+		return createNodeBindings<Env>(proxyClient, bindings);
+	}
+
+	async #getNodeBindingDescriptors(workerName?: string): Promise<{
+		workerName: string;
+		bindings: Record<string, NodeBindingDescriptor>;
+	}> {
+		const bindings: Record<string, NodeBindingDescriptor> = {};
 
 		// Find worker by name, defaulting to entrypoint worker if none specified
 		const workerIndex = this.#findAndAssertWorkerIndex(workerName);
 		const workerOpts = this.#workerOpts[workerIndex];
-		workerName = workerOpts.config.name;
+		const resolvedWorkerName = workerOpts.config.name;
 
 		// Populate bindings from each plugin
 		for (const [key, plugin] of this.#mergedPluginEntries) {
@@ -3266,25 +3278,49 @@ export class Miniflare {
 				workerIndex,
 			});
 			for (const [name, binding] of Object.entries(pluginBindings)) {
-				if (binding instanceof ProxyNodeBinding) {
-					const proxyBindingName = getProxyBindingName(key, workerName, name);
-					let proxy = proxyClient.env[proxyBindingName];
-					assert(
-						proxy !== undefined,
-						`Expected ${proxyBindingName} to be bound`
-					);
-					if (binding.proxyOverrideHandler) {
-						proxy = new Proxy(proxy, binding.proxyOverrideHandler);
-					}
-					bindings[name] = proxy;
-				} else {
-					bindings[name] = binding;
-				}
+				bindings[name] =
+					binding instanceof ProxyNodeBinding
+						? {
+								proxy: getProxyBindingName(key, resolvedWorkerName, name),
+								handler: binding.proxyOverrideHandler,
+							}
+						: { value: binding };
 			}
 		}
 
-		return bindings as Env;
+		return { workerName: resolvedWorkerName, bindings };
 	}
+
+	/**
+	 * Returns what another process needs to reach a Worker's bindings and
+	 * default entrypoint through this runtime's platform proxy, using
+	 * `ProxyClient` and `createNodeBindings()`. Includes the proxy secret.
+	 * Bindings that need this process (e.g. Hyperdrive) are omitted, and plain
+	 * values must survive JSON (legacy Wasm module bindings don't).
+	 */
+	async unsafeGetPlatformProxyConnection(
+		workerName?: string
+	): Promise<PlatformProxyConnection> {
+		await this._getProxyClient();
+		assert(this.#runtimeEntryURL !== undefined);
+		const { workerName: resolvedWorkerName, bindings } =
+			await this.#getNodeBindingDescriptors(workerName);
+		const portableBindings: Record<string, NodeBindingDescriptor> = {};
+		for (const [name, descriptor] of Object.entries(bindings)) {
+			if ("value" in descriptor) {
+				portableBindings[name] = descriptor;
+			} else if (descriptor.handler === undefined) {
+				portableBindings[name] = { proxy: descriptor.proxy };
+			}
+		}
+		return {
+			url: this.#runtimeEntryURL.href,
+			secret: PROXY_SECRET.toString("hex"),
+			bindings: portableBindings,
+			entrypoint: CoreBindings.SERVICE_USER_ROUTE_PREFIX + resolvedWorkerName,
+		};
+	}
+
 	async getWorker(workerName?: string): Promise<ReplaceWorkersTypes<Fetcher>> {
 		const proxyClient = await this._getProxyClient();
 
