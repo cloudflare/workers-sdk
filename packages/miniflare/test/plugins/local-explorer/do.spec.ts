@@ -974,6 +974,94 @@ describe("Durable Objects API", () => {
 			expect(data.success).toBe(false);
 		});
 	});
+	describe("POST /workers/durable_objects/namespaces/:namespace_id/objects/evict", () => {
+		let mf: Miniflare;
+		const namespaceId = "evict-worker-Counter";
+
+		beforeAll(async () => {
+			mf = new Miniflare({
+				inspectorPort: 0,
+				unsafeLocalExplorer: true,
+				workers: [
+					{
+						config: {
+							name: "evict-worker",
+							compatibilityDate: "2026-01-01",
+							manifest: singleModuleManifest(`
+					import { DurableObject } from "cloudflare:workers";
+
+					export class Counter extends DurableObject {
+						memory = 0;
+						async fetch() {
+							const stored = (this.ctx.storage.kv.get("count") ?? 0) + 1;
+							this.ctx.storage.kv.put("count", stored);
+							return new Response(\`\${++this.memory}:\${stored}\`);
+						}
+					}
+
+					export default {
+						fetch(request, env) {
+							return env.COUNTER.getByName("counter").fetch(request);
+						}
+					}
+				`),
+							env: {
+								COUNTER: {
+									type: "durable-object",
+									worker: "evict-worker",
+									exportName: "Counter",
+								},
+							},
+							exports: {
+								Counter: { type: "durable-object", storage: "sqlite" },
+							},
+						},
+					},
+				],
+			});
+		});
+
+		afterAll(async () => {
+			await disposeWithRetry(mf);
+		});
+
+		test("resets in-memory state but keeps storage", async ({ expect }) => {
+			expect(await (await mf.dispatchFetch("http://localhost/")).text()).toBe(
+				"1:1"
+			);
+			expect(await (await mf.dispatchFetch("http://localhost/")).text()).toBe(
+				"2:2"
+			);
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/workers/durable_objects/namespaces/${namespaceId}/objects/evict`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ durable_object_name: "counter" }),
+				}
+			);
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({ success: true });
+
+			expect(await (await mf.dispatchFetch("http://localhost/")).text()).toBe(
+				"1:3"
+			);
+		});
+
+		test("returns 404 for non-existent namespace", async ({ expect }) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/workers/durable_objects/namespaces/missing/objects/evict`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ durable_object_name: "counter" }),
+				}
+			);
+			expect(response.status).toBe(404);
+			expect(await response.json()).toMatchObject({ success: false });
+		});
+	});
 });
 
 interface QueryResult {

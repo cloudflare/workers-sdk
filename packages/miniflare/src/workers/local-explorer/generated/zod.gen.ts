@@ -1341,6 +1341,29 @@ export const zDurableObjectsNamespaceQuerySqliteResponse =
 		})
 	);
 
+export const zDurableObjectsNamespaceEvictObjectData = z.object({
+	body: z.union([
+		z.object({
+			durable_object_id: z.string(),
+			web_sockets: z.enum(["close", "hibernate"]).optional(),
+		}),
+		z.object({
+			durable_object_name: z.string(),
+			web_sockets: z.enum(["close", "hibernate"]).optional(),
+		}),
+	]),
+	path: z.object({
+		namespace_id: zWorkersSchemasId,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Eviction response.
+ */
+export const zDurableObjectsNamespaceEvictObjectResponse =
+	zWorkersApiResponseCommon;
+
 export const zLocalExplorerListWorkersData = z.object({
 	body: z.never().optional(),
 	path: z.never().optional(),
