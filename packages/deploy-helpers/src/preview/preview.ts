@@ -12,6 +12,7 @@ import {
 	isLiveDurableObjectExport,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { parseAndExpandDotEnv } from "@cloudflare/workers-utils/local-env";
 import chalk from "chalk";
 import { syncAssets } from "../deploy/helpers/assets";
 import { moduleTypeMimeType } from "../deploy/helpers/create-worker-upload-form";
@@ -1100,7 +1101,13 @@ async function runPreview(
 	// fails before the preview is created and assets are uploaded.
 	let secrets: Record<string, string> | undefined;
 	if (args.secretsFile) {
-		secrets = (await parseBulkInputToObject(args.secretsFile))?.content;
+		secrets = (
+			await parseBulkInputToObject(
+				args.secretsFile,
+				false,
+				parseAndExpandDotEnv
+			)
+		)?.content;
 	}
 
 	let previewName = args.name;
