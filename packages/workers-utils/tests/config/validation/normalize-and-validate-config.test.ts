@@ -121,6 +121,7 @@ describe("normalizeAndValidateConfig()", () => {
 			addresses: undefined,
 			logpush: undefined,
 			upload_source_maps: undefined,
+			upload_wasm_source_maps: undefined,
 			placement: undefined,
 			worker_loaders: [],
 			tail_consumers: undefined,
