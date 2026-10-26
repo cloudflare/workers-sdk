@@ -55,9 +55,14 @@ export class PluginContext {
 		debuglog("Miniflare is ready");
 	}
 
+	/**
+	 * Disposes the Miniflare instance and clears the export types it was configured with.
+	 * A server created later in the same process starts again from its own config.
+	 */
 	async disposeMiniflare(): Promise<void> {
 		await this.#sharedContext.miniflare?.dispose();
 		this.#sharedContext.miniflare = undefined;
+		this.#sharedContext.workerNameToExportTypesMap = undefined;
 	}
 
 	get miniflare(): Miniflare {
