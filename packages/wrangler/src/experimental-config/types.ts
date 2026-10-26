@@ -33,6 +33,7 @@ export interface WranglerConfig {
 	jsxFragment?: string;
 	pythonModules?: { exclude?: string[] };
 	uploadSourceMaps?: boolean;
+	uploadWasmSourceMaps?: boolean;
 	build?: { command?: string; cwd?: string; watchDir?: string | string[] };
 	/**
 	 * Assets directory — the only tooling-side asset setting. The runtime

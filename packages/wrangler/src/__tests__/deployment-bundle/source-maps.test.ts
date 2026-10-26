@@ -1,11 +1,14 @@
+import { Buffer } from "node:buffer";
 import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, it } from "vitest";
 import {
 	loadSourceMaps,
+	loadWasmSourceMaps,
 	tryAttachSourcemapToModule,
 } from "../../deployment-bundle/source-maps";
+import { wasmModuleWithSourceMappingUrl } from "../helpers/wasm-module";
 import type { SourceMapBundle } from "../../deployment-bundle/source-maps";
 import type { CfModule } from "@cloudflare/workers-utils";
 
@@ -154,6 +157,109 @@ describe("loadSourceMaps", () => {
 		expect(result).toHaveLength(2);
 		expect(result[0].name).toBe("a.js.map");
 		expect(result[1].name).toBe("b.js.map");
+	});
+});
+
+describe("loadWasmSourceMaps", () => {
+	function makeWasmModule(
+		name: string,
+		filePath: string | undefined,
+		sourceMappingUrl?: string
+	): CfModule {
+		return {
+			name,
+			filePath,
+			content: wasmModuleWithSourceMappingUrl(sourceMappingUrl),
+			type: "compiled-wasm",
+		};
+	}
+
+	it("loads the source map named by the sourceMappingURL section", ({
+		expect,
+	}) => {
+		const dir = createTempDir();
+		writeFileSync(
+			path.join(dir, "index_bg.wasm.map"),
+			JSON.stringify({
+				version: 3,
+				file: "index_bg.wasm",
+				sources: ["./src/lib.rs", "worker-0.8.0/src/lib.rs"],
+				names: [],
+				mappings: "gBAAA",
+			})
+		);
+		const wasm = makeWasmModule(
+			"./0123abcd-index_bg.wasm",
+			path.join(dir, "index_bg.wasm"),
+			"index_bg.wasm.map"
+		);
+
+		const result = loadWasmSourceMaps([wasm]);
+
+		expect(result.map((sourceMap) => sourceMap.name)).toEqual([
+			"./0123abcd-index_bg.wasm.map",
+		]);
+		expect(JSON.parse(result[0].content.toString())).toEqual({
+			version: 3,
+			file: "./0123abcd-index_bg.wasm",
+			sources: ["src/lib.rs", "worker-0.8.0/src/lib.rs"],
+			names: [],
+			mappings: "gBAAA",
+		});
+	});
+
+	it("ignores modules without a WebAssembly source map", ({ expect }) => {
+		const dir = createTempDir();
+		writeFileSync(path.join(dir, "index.js.map"), validSourceMap);
+		const js = makeModule(
+			"index.js",
+			path.join(dir, "index.js"),
+			"//# sourceMappingURL=index.js.map"
+		);
+		const noSection = makeWasmModule("a.wasm", path.join(dir, "a.wasm"));
+		const virtual = makeWasmModule("b.wasm", undefined, "b.wasm.map");
+		const notWasm: CfModule = {
+			name: "c.wasm",
+			filePath: path.join(dir, "c.wasm"),
+			content: Buffer.from("SOME WASM CONTENT"),
+			type: "compiled-wasm",
+		};
+		const truncated: CfModule = {
+			...notWasm,
+			name: "d.wasm",
+			content: Buffer.from(
+				wasmModuleWithSourceMappingUrl("d.wasm.map").subarray(0, 12)
+			),
+		};
+
+		expect(
+			loadWasmSourceMaps([js, noSection, virtual, notWasm, truncated])
+		).toEqual([]);
+	});
+
+	it("throws when the source map is missing", ({ expect }) => {
+		const dir = createTempDir();
+		const wasm = makeWasmModule(
+			"index_bg.wasm",
+			path.join(dir, "index_bg.wasm"),
+			"index_bg.wasm.map"
+		);
+
+		expect(() => loadWasmSourceMaps([wasm])).toThrow(
+			/Invalid source map path in .*index_bg\.wasm: .*index_bg\.wasm\.map does not exist\./
+		);
+	});
+
+	it("throws on a data URL", ({ expect }) => {
+		const wasm = makeWasmModule(
+			"index_bg.wasm",
+			path.join(createTempDir(), "index_bg.wasm"),
+			"data:application/json;base64,e30="
+		);
+
+		expect(() => loadWasmSourceMaps([wasm])).toThrow(
+			"expected file path but found data URL"
+		);
 	});
 });
 

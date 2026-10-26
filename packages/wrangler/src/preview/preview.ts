@@ -108,6 +108,7 @@ export const previewCommand = createCommand({
 				compatibilityDate: previewConfig.compatibility_date,
 				compatibilityFlags: previewConfig.compatibility_flags,
 				uploadSourceMaps: previewConfig.upload_source_maps,
+				uploadWasmSourceMaps: previewConfig.upload_wasm_source_maps,
 				jsxFactory: previewConfig.jsx_factory,
 				jsxFragment: previewConfig.jsx_fragment,
 				tsconfig: previewConfig.tsconfig,

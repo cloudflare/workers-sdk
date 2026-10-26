@@ -435,6 +435,7 @@ export const defaultWranglerConfig: Config = {
 	logfwdr: { bindings: [] },
 	logpush: undefined,
 	upload_source_maps: undefined,
+	upload_wasm_source_maps: undefined,
 	assets: undefined,
 	observability: { enabled: true },
 	access: undefined,

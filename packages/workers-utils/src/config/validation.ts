@@ -2187,6 +2187,14 @@ function normalizeAndValidateEnvironment(
 			isBoolean,
 			undefined
 		),
+		upload_wasm_source_maps: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"upload_wasm_source_maps",
+			isBoolean,
+			undefined
+		),
 		observability: inheritable(
 			diagnostics,
 			topLevelEnv,
