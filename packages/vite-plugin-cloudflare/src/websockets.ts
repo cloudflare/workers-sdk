@@ -4,6 +4,7 @@ import { UNKNOWN_HOST } from "./shared";
 import { createHeadersForIncomingMessage, getForwardedProto } from "./utils";
 import type { Headers, Miniflare } from "miniflare";
 import type { IncomingMessage } from "node:http";
+import type { Socket } from "node:net";
 import type { Duplex } from "node:stream";
 import type * as vite from "vite";
 
@@ -38,11 +39,25 @@ export function handleWebSocket(
 		}
 	);
 
-	httpServer.on(
+	// Prepend so the write-count baseline below is captured before another
+	// `upgrade` listener can answer the same request. Node dispatches `upgrade`
+	// to every listener, not just the first.
+	httpServer.prependListener(
 		"upgrade",
 		async (request: IncomingMessage, socket: Duplex, head: Buffer) => {
 			// Socket errors crash Node.js if unhandled
 			socket.on("error", () => socket.destroy());
+
+			// Another listener may already have completed the handshake (for
+			// example Vite DevTools at `/__devtools/__ws`, which the Worker does
+			// not route). `bytesWritten` is cumulative across keep-alive
+			// connections, so compare against a baseline rather than zero.
+			// See https://github.com/cloudflare/workers-sdk/issues/15654
+			const bytesWrittenAtStart =
+				(socket as unknown as Socket).bytesWritten ?? 0;
+			const isClaimed = () =>
+				socket.destroyed ||
+				((socket as unknown as Socket).bytesWritten ?? 0) > bytesWrittenAtStart;
 
 			try {
 				const rawHost = request.headers.host ?? UNKNOWN_HOST;
@@ -77,7 +92,17 @@ export function handleWebSocket(
 				const workerWebSocket = response.webSocket;
 
 				if (!workerWebSocket) {
-					socket.destroy();
+					// This listener does not own the socket. Destroy it only if no
+					// other listener has written a response in the meantime.
+					if (!isClaimed()) {
+						socket.destroy();
+					}
+					return;
+				}
+
+				// A listener claimed the socket while `dispatchFetch` was in
+				// flight, so a second upgrade would corrupt the connection.
+				if (isClaimed()) {
 					return;
 				}
 
@@ -104,9 +129,14 @@ export function handleWebSocket(
 				// This listener is `async`, so an uncaught rejection here escapes as
 				// an unhandled rejection — which terminates the Node.js process on
 				// modern versions and leaks the client socket. Tear the socket down
-				// instead, mirroring the `!workerWebSocket` path above.
+				// instead. Defer the teardown one tick so another listener can claim
+				// the socket first, mirroring the `!workerWebSocket` path above.
 				workerResponseHeaders.delete(request);
-				socket.destroy();
+				setImmediate(() => {
+					if (!isClaimed()) {
+						socket.destroy();
+					}
+				});
 			}
 		}
 	);
