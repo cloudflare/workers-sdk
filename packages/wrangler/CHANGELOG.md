@@ -1,5 +1,68 @@
 # wrangler
 
+## 4.153.0
+
+### Minor Changes
+
+- [#14865](https://github.com/cloudflare/workers-sdk/pull/14865) [`c0e915f`](https://github.com/cloudflare/workers-sdk/commit/c0e915f935df9f56993e706604c0af986a6f7c78) Thanks [@TheSaiEaranti](https://github.com/TheSaiEaranti)! - Add an `--infer-origin-from-routes` flag to `wrangler dev`
+
+  When a config has `routes`, local dev infers the origin from the first route, so the Worker sees `request.url`, the `Host` header, and any `Origin` header rewritten to the route's host even though the client connected to `localhost`. That silently breaks Host/Origin-sensitive logic — for example a CORS check allowlisting `http://localhost:*` receives `http://<route-host>` instead and rejects the request only in local dev.
+
+  The inference is intentional and remains the default. Passing `--infer-origin-from-routes=false` now opts out, preserving the real local origin without removing `routes` from the config. An explicitly configured `--host`, `--local-upstream`, or `dev.host` continues to take precedence either way. The flag only affects local development: in remote mode the route host still determines the preview session as before.
+
+- [#15955](https://github.com/cloudflare/workers-sdk/pull/15955) [`23ef63a`](https://github.com/cloudflare/workers-sdk/commit/23ef63a0aaa0264e9611b364f6d635297c287d90) Thanks [@ericclemmons](https://github.com/ericclemmons)! - Expand dotenv variable references in `--secrets-file` input
+
+  Dotenv files supplied through `--secrets-file` to `deploy`, `versions upload`, and `preview` now expand `$VAR` and `${VAR}` references using process values and earlier file values. Process environment values override matching file keys, including explicitly empty values. Treat dotenv secrets files as trusted input: they can read and upload any process environment value, such as a CI credential referenced by `X=${GITHUB_TOKEN}`. In CI, use secrets files whose contents untrusted contributors cannot modify.
+
+  This changes how existing dotenv secrets files are interpreted: an unset reference becomes an empty string, so `PASSWORD=pa$word` becomes `pa` when `word` is unset. Escape literal dollar signs with a backslash (`PASSWORD=pa\$word`), or use a JSON secrets file to preserve values exactly. JSON input and bulk-secret commands, including piped stdin, retain their existing literal parsing.
+
+### Patch Changes
+
+- [#16403](https://github.com/cloudflare/workers-sdk/pull/16403) [`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-10-22
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16437](https://github.com/cloudflare/workers-sdk/pull/16437) [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-10-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16403](https://github.com/cloudflare/workers-sdk/pull/16403) [`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261019.1 | ^5.20261022.1 |
+  | workerd                   | 1.20261019.1  | 1.20261022.1  |
+
+- [#16437](https://github.com/cloudflare/workers-sdk/pull/16437) [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261022.1 | ^5.20261023.1 |
+  | workerd                   | 1.20261022.1  | 1.20261023.1  |
+
+- [#16476](https://github.com/cloudflare/workers-sdk/pull/16476) [`8a30d8e`](https://github.com/cloudflare/workers-sdk/commit/8a30d8eec16110dcaaeb0822768ac03a5b45a902) Thanks [@tannerlinsley](https://github.com/tannerlinsley)! - Update Undici to 7.30.1 to prevent a malformed HTTP response from crashing development tools
+
+  The updated shared dependency rejects excessive content encodings without leaving an unhandled stream error when the server closes the connection early. This fixes GHSA-xjj6-f33q-929c and keeps the matching Undici types on the same version.
+
+- [#16485](https://github.com/cloudflare/workers-sdk/pull/16485) [`b7e762d`](https://github.com/cloudflare/workers-sdk/commit/b7e762d1bf26fc6f538f7387af36eb9566850153) Thanks [@Cherry](https://github.com/Cherry)! - Fix the Windows keyring install when the config path contains a space
+
+  On Windows, `wrangler login --use-keyring` could not set up keyring storage when the configuration path contained a space, such as a `C:\Users\John Smith` profile, so credentials fell back to the plaintext file. Keyring setup now works for those paths and credentials are stored encrypted.
+
+- [#16405](https://github.com/cloudflare/workers-sdk/pull/16405) [`c709bff`](https://github.com/cloudflare/workers-sdk/commit/c709bff0e48b1baffe7aeb77a840cb9734d00346) Thanks [@ondraulehla](https://github.com/ondraulehla)! - Fix `kv key list` returning only the first 1000 keys in local mode
+
+  Listing a local namespace with more than 1000 keys stopped after the first 1000 without any warning, so the output looked complete when it wasn't. `kv key list` now returns every key in local mode, with or without `--prefix`.
+
+- [#16490](https://github.com/cloudflare/workers-sdk/pull/16490) [`bcd618d`](https://github.com/cloudflare/workers-sdk/commit/bcd618d0e622a020fd2cb658df0620a5e3ec2206) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update Zod to 4.6.6 to address GHSA-mrhx-c7xc-m3w5
+
+  The updated shared dependency fixes excessive memory consumption when validating oversized collections. This updates both the published Zod dependencies and the copies bundled into development tools and Workers.
+
+- Updated dependencies [[`9e05ade`](https://github.com/cloudflare/workers-sdk/commit/9e05ade14e54e692c844a33bfb5b797804c3352a), [`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e), [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876), [`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e), [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876), [`8a30d8e`](https://github.com/cloudflare/workers-sdk/commit/8a30d8eec16110dcaaeb0822768ac03a5b45a902), [`bcd618d`](https://github.com/cloudflare/workers-sdk/commit/bcd618d0e622a020fd2cb658df0620a5e3ec2206)]:
+  - miniflare@5.20261023.0-beta
+
 ## 4.152.0
 
 ### Minor Changes
