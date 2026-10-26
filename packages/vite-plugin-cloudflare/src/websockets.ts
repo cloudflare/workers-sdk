@@ -1,8 +1,7 @@
-import { createHeaders } from "@remix-run/node-fetch-server";
 import { CoreHeaders, coupleWebSocket } from "miniflare";
 import { WebSocketServer } from "ws";
 import { UNKNOWN_HOST } from "./shared";
-import { getForwardedProto } from "./utils";
+import { createHeadersForIncomingMessage, getForwardedProto } from "./utils";
 import type { Headers, Miniflare } from "miniflare";
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
@@ -65,7 +64,7 @@ export function handleWebSocket(
 					return;
 				}
 
-				const headers = createHeaders(request);
+				const headers = createHeadersForIncomingMessage(request);
 
 				if (entryWorkerName) {
 					headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
