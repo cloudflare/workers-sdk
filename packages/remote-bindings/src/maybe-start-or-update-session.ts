@@ -17,11 +17,15 @@ export function pickRemoteBindings(
 ): Record<string, Binding> {
 	return Object.fromEntries(
 		Object.entries(bindings ?? {}).filter(([, binding]) => {
+			const localSupport = getBindingLocalSupport(binding.type);
 			if (
-				getBindingLocalSupport(binding.type) ===
+				localSupport ===
 				"DO-NOT-USE-this-resource-will-never-have-a-local-simulator"
 			) {
 				return true;
+			}
+			if (localSupport === "remote-default-with-local-opt-in") {
+				return !("remote" in binding) || binding.remote !== false;
 			}
 			return "remote" in binding && binding.remote;
 		})

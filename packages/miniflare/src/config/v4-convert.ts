@@ -799,14 +799,12 @@ function addProductBindings(
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.artifacts ?? {})) {
+		isRemote(binding.remoteProxyConnectionString);
 		env[name] = {
 			type: "artifacts",
 			namespace: binding.namespace,
-			// Preserve omitted legacy settings so the Artifacts plugin applies
-			// the same local default as a V5 binding.
-			...(binding.remoteProxyConnectionString === undefined
-				? {}
-				: { dev: { remote: isRemote(binding.remoteProxyConnectionString) } }),
+			// Local Artifacts is opt-in; omitted routing stays remote.
+			dev: { remote: binding.remote ?? true },
 		};
 	}
 	for (const name of Object.keys(worker.workerLoaders ?? {})) {

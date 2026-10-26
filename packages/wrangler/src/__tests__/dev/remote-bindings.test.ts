@@ -539,6 +539,7 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 					artifacts: {
 						MY_ARTIFACTS: {
 							namespace: "default",
+							remote: true,
 							remoteProxyConnectionString,
 						},
 					},
@@ -673,7 +674,7 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 		await wranglerStopped;
 	});
 
-	it("keeps Artifacts local when remote is omitted", async ({ expect }) => {
+	it("routes Artifacts remotely when remote is omitted", async ({ expect }) => {
 		await seed({
 			"wrangler.jsonc": JSON.stringify({
 				name: "worker",
@@ -687,14 +688,20 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
 			timeout: devReadyTimeout,
 		});
-		expect(startRemoteProxySessionCallCount).toBe(0);
-		expect(proxyWorkerBindings).toBeUndefined();
+		expect(startRemoteProxySessionCallCount).toBe(1);
+		expect(proxyWorkerBindings).toEqual({
+			MY_ARTIFACTS: expect.objectContaining({
+				type: "artifacts",
+				namespace: "default",
+			}),
+		});
 		expect(workerOptions).toEqual([
 			expect.objectContaining({
 				artifacts: {
 					MY_ARTIFACTS: {
 						namespace: "default",
-						remoteProxyConnectionString: undefined,
+						remote: undefined,
+						remoteProxyConnectionString,
 					},
 				},
 			}),

@@ -6,7 +6,7 @@ This first version of the local Artifacts emulator requires Git 2.32 or newer in
 
 Git 2.32 provides `GIT_CONFIG_GLOBAL`, which the emulator uses to isolate host Git settings. Use an up-to-date, security-patched release.
 
-A binding with `"remote": true` does not start the local emulator and does not need local Git. Production Artifacts also does not require Git on your machine. We plan to open-source a JavaScript Git engine in the future; it is not part of this initial local release, which uses native Git.
+A binding with `"remote": true` or an omitted `remote` setting does not start the local emulator and does not need local Git. Production Artifacts also does not require Git on your machine. We plan to open-source a JavaScript Git engine in the future; it is not part of this initial local release, which uses native Git.
 
 ## Configure a binding
 
@@ -17,7 +17,9 @@ For a Wrangler project, add an Artifacts binding to `wrangler.jsonc`:
 	"name": "example-worker",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-09-03",
-	"artifacts": [{ "binding": "REPOS", "namespace": "examples" }],
+	"artifacts": [
+		{ "binding": "REPOS", "namespace": "examples", "remote": false },
+	],
 }
 ```
 
@@ -33,7 +35,7 @@ pnpm --filter wrangler build
 node /path/to/workers-sdk/packages/wrangler/bin/wrangler.js dev --port=0 --inspector-port=0
 ```
 
-Open the URL on Wrangler's `Ready on` line. With `@cloudflare/vite-plugin`, use the same Wrangler config with `cloudflare()` in your Vite config and start the Vite dev server. In Workers Vitest, point `cloudflareTest({ wrangler: { configPath: "./wrangler.jsonc" } })` at this config. These paths share the Miniflare implementation. To force local behavior explicitly, add `"remote": false` to the binding. The absence of `remote` is also local; this differs from older development behavior that implicitly used a remote Artifacts resource. Do not rely on production repositories being available locally.
+Open the URL on Wrangler's `Ready on` line. With `@cloudflare/vite-plugin`, use a `cloudflare.config.ts` binding configured with `remote: false` and start the Vite dev server. In Workers Vitest, point `cloudflareTest({ wrangler: { configPath: "./wrangler.jsonc" } })` at this config. These paths share the Miniflare implementation. The local emulator is opt-in: set `"remote": false` on the binding. If `remote` is omitted or set to `true`, development continues to use the deployed Artifacts resource and the credentials required by that tool. Do not rely on production repositories being available locally.
 
 A Worker can create and inspect a local repository:
 
