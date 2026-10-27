@@ -84,6 +84,9 @@ overrides:
   "@cloudflare/elements>@types/react": "^18"
   "@types/node": "$@types/node"
   "@types/node>undici-types": "catalog:default"
+  # fast-xml-parser < 5.7.0 has entity-expansion and XMLBuilder injection advisories
+  # (GHSA-m7jm-9gc2-mpf2, GHSA-gh4j-gqv2-49f6); @aws-sdk/core pins an affected 4.x.
+  "fast-xml-parser@<5.7.0": "^5.11.2"
 
 peerDependencyRules:
   allowedVersions:
