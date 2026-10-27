@@ -33,6 +33,11 @@ import {
 	TlsOptions_Version,
 } from "../runtime/config/workerd";
 import { resolveDevRegistryPath } from "../shared/dev-registry";
+import {
+	ArtifactsEventSubscriptionSchema,
+	ArtifactsEventTriggerSchema,
+	type ArtifactsEventSubscription,
+} from "./artifacts-events";
 import { kCurrentWorker } from "./current-worker";
 import type { Request, Response } from "../http";
 import type {
@@ -454,13 +459,19 @@ export function isMiniflareUnsafeBinding(
 	return binding.type.startsWith("unsafe:");
 }
 
+const OutputTriggerSchema = OutputWorkerSchema.shape.triggers.unwrap().element;
+
 export const MiniflareWorkerConfigBaseSchema = OutputWorkerSchema.omit({
 	manifest: true,
 	env: true,
 	exports: true,
 	assets: true,
 	tailConsumers: true,
+	triggers: true,
 }).extend({
+	triggers: z
+		.array(z.union([OutputTriggerSchema, ArtifactsEventTriggerSchema]))
+		.optional(),
 	manifest: MiniflareManifestSchema.optional(),
 	env: z
 		.record(z.string(), MiniflareBindingSchema)
@@ -730,6 +741,12 @@ export const InstanceOptionsSchema = z.strictObject({
 	resourceTmpPath: z.string().optional(),
 
 	unsafeEnableSharedStorage: z.boolean().optional(),
+
+	/** Queues receiving events from local Artifacts namespaces. */
+	artifactsEventSubscriptions: z
+		.custom<ArtifactsEventSubscription[]>()
+		.pipe(z.array(ArtifactsEventSubscriptionSchema))
+		.optional(),
 
 	/** Enable cross-process Worker discovery and shared storage coordination. */
 	enableDevRegistry: z.boolean().default(true),

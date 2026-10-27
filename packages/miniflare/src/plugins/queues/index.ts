@@ -1,5 +1,4 @@
 import SCRIPT_QUEUE_BROKER_OBJECT from "worker:queues/broker";
-import SCRIPT_ARTIFACTS_EVENT_PRODUCER from "worker:queues/event-producer";
 import { kVoid } from "../../runtime";
 import {
 	getQueueServiceName,
@@ -7,7 +6,6 @@ import {
 	SERVICE_QUEUE_PREFIX,
 	SharedBindings,
 } from "../../workers";
-import { ARTIFACTS_EVENT_SERVICE_NAME } from "../../workers/queues/constants";
 import { getUserServiceName } from "../core";
 import {
 	getEnvBindingsOfType,
@@ -48,6 +46,7 @@ export const QUEUES_PLUGIN: Plugin = {
 	},
 	async getServices({
 		options,
+		sharedOptions,
 		workerNames,
 		queueProducers: allQueueProducers,
 		queueConsumers: allQueueConsumers,
@@ -60,12 +59,12 @@ export const QUEUES_PLUGIN: Plugin = {
 		const consumed = getTriggersOfType(options.config, "queue").map(
 			(trigger) => trigger.name
 		);
-		const hasLocalArtifacts = getEnvBindingsOfType(
-			options.config,
-			"artifacts"
-		).some(([, binding]) => binding.dev?.remote !== true);
-		const queueIds = new Set([...produced, ...consumed]);
-		if (queueIds.size === 0 && !hasLocalArtifacts) {
+		// Local Artifacts publishes subscribed events into these queues.
+		const subscribed = (sharedOptions.artifactsEventSubscriptions ?? []).map(
+			(subscription) => subscription.queue
+		);
+		const queueIds = new Set([...produced, ...consumed, ...subscribed]);
+		if (queueIds.size === 0) {
 			return [];
 		}
 
@@ -73,24 +72,6 @@ export const QUEUES_PLUGIN: Plugin = {
 			name: getQueueServiceName(id),
 			worker: objectEntryWorker(QUEUE_BROKER_OBJECT, id),
 		}));
-		if (hasLocalArtifacts) {
-			services.push({
-				name: ARTIFACTS_EVENT_SERVICE_NAME,
-				worker: {
-					compatibilityDate: "2026-09-03",
-					modules: [
-						{
-							name: "event-producer.worker.js",
-							esModule: SCRIPT_ARTIFACTS_EVENT_PRODUCER(),
-						},
-					],
-				},
-			});
-		}
-		if (queueIds.size === 0) {
-			return services;
-		}
-
 		const uniqueKey = `miniflare-${QUEUE_BROKER_OBJECT_CLASS_NAME}`;
 		const objectService: Service = {
 			name: SERVICE_QUEUE_PREFIX,

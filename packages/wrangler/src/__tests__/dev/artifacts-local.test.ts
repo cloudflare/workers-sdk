@@ -45,15 +45,34 @@ type Created = { remote: string; token: string };
 // Startup and reloads have taken over 20 seconds on shared Windows runners.
 const READY_TIMEOUT = 45_000;
 
+const eventsWorker = `import { WorkflowEntrypoint } from "cloudflare:workers";
+export class OnRepoCreated extends WorkflowEntrypoint {
+  async run(event, step) {
+    await step.do("record", async () => {
+      await this.env.EVENTS.put(event.payload.source.repoName, JSON.stringify(event.payload));
+      return "recorded";
+    });
+  }
+}
+export default {
+  async fetch(request, env) {
+    const name = new URL(request.url).pathname.slice(1);
+    if (request.method === "POST") return Response.json(await env.REPOS.create(name));
+    return new Response(await env.EVENTS.get(name), { status: 200 });
+  }
+};`;
+
 async function startLocalDev({
 	remote = false,
 	args = "",
+	files,
 }: {
 	/** `null` omits the setting. */
 	remote?: boolean | null;
 	args?: string;
+	files?: Record<string, string>;
 } = {}) {
-	await seed({
+	await seed(files ?? {
 		"wrangler.jsonc": JSON.stringify({
 			name: "artifacts-local-dev",
 			main: "index.js",
@@ -217,4 +236,55 @@ describe("Wrangler dev local Artifacts", { concurrent: false }, () => {
 			}
 		}
 	);
+
+	it("starts Workflows from Artifacts triggers.events", async ({ expect }) => {
+		const dev = await startLocalDev({ files: {
+			"wrangler.jsonc": JSON.stringify({
+				name: "artifacts-local-events",
+				main: "index.js",
+				compatibility_date: "2026-09-03",
+				artifacts: [{ binding: "REPOS", namespace: "examples", remote: false }],
+				kv_namespaces: [{ binding: "EVENTS", id: "events" }],
+				workflows: [
+					{
+						binding: "ON_REPO_CREATED",
+						name: "on-repo-created",
+						class_name: "OnRepoCreated",
+					},
+				],
+				triggers: {
+					events: [
+						{
+							type: "cf.artifacts.repo.created",
+							filter: { namespace: "examples", repo_name: "demo" },
+							targets: [{ type: "workflow", workflow_name: "on-repo-created" }],
+						},
+					],
+				},
+			}),
+			"index.js": eventsWorker,
+		}});
+		try {
+			await fetch(dev.url + "/ignored", { method: "POST" });
+			await fetch(dev.url + "/demo", { method: "POST" });
+			await vi.waitFor(
+				async () => {
+					expect(await (await fetch(dev.url + "/demo")).json()).toMatchObject({
+						type: "cf.artifacts.repo.created",
+						source: {
+							type: "artifacts",
+							namespace: "examples",
+							repoName: "demo",
+						},
+						payload: { defaultBranch: "main" },
+					});
+				},
+				{ timeout: 15_000 }
+			);
+			expect(await (await fetch(dev.url + "/ignored")).text()).toBe("");
+		} finally {
+			await stopRunningDev();
+			await dev.stopped;
+		}
+	});
 });

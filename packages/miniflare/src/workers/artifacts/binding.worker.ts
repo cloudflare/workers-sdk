@@ -1,6 +1,12 @@
 import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
-import { V1, type ArtifactsEvent, type RepoSnapshot } from "./events";
-import type { ArtifactsEventProducer } from "../queues/event-producer.worker";
+import {
+	createArtifactsEvent,
+	matchesArtifactsEventRoute,
+	toArtifactsEventMessage,
+	type ArtifactsEvent,
+	type ArtifactsEventRoute,
+	type RepoPayload,
+} from "./events";
 
 const repoName = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
@@ -208,7 +214,15 @@ interface LocalArtifactsEnvironment {
 	config: { namespace: string; origin: string };
 	localArtifactsNamespace: DurableObjectNamespace<LocalArtifactsNamespaceObject>;
 	gitBackend: Fetcher;
-	QUEUE_WORKER: Service<ArtifactsEventProducer>;
+	/** Subscriptions receiving this namespace's events. */
+	eventRoutes?: ArtifactsEventRoute[];
+	/** Queue and Workflow bindings named by `eventRoutes` targets. */
+	[target: `ARTIFACTS_EVENT_TARGET_${number}`]: unknown;
+}
+
+/** The parts of a Workflow binding service used to start an instance. */
+interface WorkflowCreateTarget {
+	create(options: { params: unknown }): Promise<unknown>;
 }
 
 type RepositoryMap = Record<string, Repository>;
@@ -299,16 +313,13 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 					);
 				}
 				this.publish(
-					V1.repoCreated({
-						repo: eventRepoSnapshot(repository),
-					})
+					createArtifactsEvent(
+						"cf.artifacts.repo.created",
+						eventRepo(repository),
+						repoPayload(repository)
+					)
 				);
-				this.publish(
-					V1.tokenCreated({
-						repo: { namespace: repository.namespace, name: repository.name },
-						token: eventToken(token.record),
-					})
-				);
+				this.publish(tokenCreatedEvent(repository, token.record));
 				return createRepoResult(repository, token);
 			} catch (error) {
 				if (error instanceof ArtifactsError) {
@@ -376,20 +387,17 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 				);
 			}
 			this.publish(
-				V1.repoImported({
-					repo: eventRepoSnapshot(repository),
-					importedFrom: {
-						url: publicSourceUrl.href,
-						branch: source.branch ?? null,
-					},
-				})
+				createArtifactsEvent(
+					"cf.artifacts.repo.imported",
+					eventRepo(repository),
+					{
+						...repoPayload(repository),
+						sourceUrl: publicSourceUrl.href,
+						branch: source.branch ?? repository.defaultBranch,
+					}
+				)
 			);
-			this.publish(
-				V1.tokenCreated({
-					repo: { namespace: repository.namespace, name: repository.name },
-					token: eventToken(token.record),
-				})
-			);
+			this.publish(tokenCreatedEvent(repository, token.record));
 			return createRepoResult(repository, token);
 		});
 	}
@@ -459,12 +467,7 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 			const repository = getRepo(repositories, name, expectedId);
 			const token = await createToken(repository, scope, ttl);
 			await this.saveRepos(repositories);
-			this.publish(
-				V1.tokenCreated({
-					repo: { namespace: repository.namespace, name: repository.name },
-					token: eventToken(token.record),
-				})
-			);
+			this.publish(tokenCreatedEvent(repository, token.record));
 			return tokenResult(token);
 		});
 	}
@@ -516,10 +519,11 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 			token.revokedAt = new Date().toISOString();
 			await this.saveRepos(repositories);
 			this.publish(
-				V1.tokenRevoked({
-					repo: { namespace: repository.namespace, name: repository.name },
-					token: { id: token.id },
-				})
+				createArtifactsEvent(
+					"cf.artifacts.repo.token.revoked",
+					eventRepo(repository),
+					{ tokenId: token.id }
+				)
 			);
 			return true;
 		});
@@ -578,18 +582,15 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 					"Unable to persist forked Artifacts repository"
 				);
 			}
+			// Fork events are published from the source repository.
 			this.publish(
-				V1.repoForked({
-					repo: eventRepoSnapshot(fork),
-					forkedFrom: { namespace: source.namespace, name: source.name },
+				createArtifactsEvent("cf.artifacts.repo.forked", eventRepo(source), {
+					...repoPayload(fork),
+					namespace: fork.namespace,
+					repoName: fork.name,
 				})
 			);
-			this.publish(
-				V1.tokenCreated({
-					repo: { namespace: fork.namespace, name: fork.name },
-					token: eventToken(token.record),
-				})
-			);
+			this.publish(tokenCreatedEvent(fork, token.record));
 			return createRepoResult(fork, token);
 		});
 	}
@@ -639,9 +640,11 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		delete repositories[key];
 		await this.saveRepos(repositories);
 		this.publish(
-			V1.repoDeleted({
-				repo: eventRepoSnapshot(repository),
-			})
+			createArtifactsEvent(
+				"cf.artifacts.repo.deleted",
+				eventRepo(repository),
+				repoPayload(repository)
+			)
 		);
 	}
 
@@ -740,12 +743,36 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 	}
 
 	private publish(event: ArtifactsEvent): void {
-		// Committed mutations must not fail because local event delivery failed.
-		this.ctx.waitUntil(
-			this.env.QUEUE_WORKER.sendEvent(event).catch(() => {
-				console.warn("Unable to publish local Artifacts event");
-			})
-		);
+		for (const route of this.env.eventRoutes ?? []) {
+			if (matchesArtifactsEventRoute(route, event)) {
+				// Committed mutations must not fail because event delivery failed.
+				this.ctx.waitUntil(
+					this.deliver(route, event).catch((error: unknown) => {
+						console.warn(
+							`Unable to deliver local Artifacts event ${event.type}: ${String(error)}`
+						);
+					})
+				);
+			}
+		}
+	}
+
+	private async deliver(
+		route: ArtifactsEventRoute,
+		event: ArtifactsEvent
+	): Promise<void> {
+		const message = toArtifactsEventMessage(event, route.id);
+		const target =
+			this.env[route.target.binding as `ARTIFACTS_EVENT_TARGET_${number}`];
+		if (route.target.type === "queue") {
+			await (target as Queue).send(message, { contentType: "json" });
+		} else {
+			// The instance handle is an RPC stub; release it straight away.
+			const instance = await (target as WorkflowCreateTarget).create({
+				params: message,
+			});
+			(instance as Partial<Disposable> | undefined)?.[Symbol.dispose]?.();
+		}
 	}
 
 	private async exclusive<T>(action: () => Promise<T>): Promise<T> {
@@ -763,12 +790,16 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 	}
 }
 
-function eventRepoSnapshot(repository: Repository): RepoSnapshot {
+function eventRepo(repository: Repository): {
+	namespace: string;
+	repoName: string;
+} {
+	return { namespace: repository.namespace, repoName: repository.name };
+}
+
+function repoPayload(repository: Repository): RepoPayload {
 	return {
-		id: repository.id,
-		namespace: repository.namespace,
-		name: repository.name,
-		jurisdiction: "unrestricted",
+		repoId: repository.id,
 		defaultBranch: repository.defaultBranch,
 		description: repository.description ?? null,
 		readOnly: repository.readOnly,
@@ -778,12 +809,15 @@ function eventRepoSnapshot(repository: Repository): RepoSnapshot {
 	};
 }
 
-function eventToken(token: RepositoryToken): {
-	id: string;
-	scope: string;
-	expiresAt: string;
-} {
-	return { id: token.id, scope: token.scope, expiresAt: token.expiresAt };
+function tokenCreatedEvent(
+	repository: Repository,
+	token: RepositoryToken
+): ArtifactsEvent<"cf.artifacts.repo.token.created"> {
+	return createArtifactsEvent(
+		"cf.artifacts.repo.token.created",
+		eventRepo(repository),
+		{ tokenId: token.id, scope: token.scope, expiresAt: token.expiresAt }
+	);
 }
 
 function createRepoHandle(

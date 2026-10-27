@@ -25,6 +25,7 @@ import type { LoggerLevel } from "../../logger";
 import type { EsbuildBundle } from "../use-esbuild";
 import type { ContainerDevRuntimeOptions } from "@cloudflare/containers-shared";
 import type {
+	ArtifactsEventTrigger,
 	AssetsOptions,
 	Binding,
 	CfD1Database,
@@ -94,6 +95,7 @@ export interface ConfigBundle {
 	routes: string[] | undefined;
 	queueConsumers: Config["queues"]["consumers"];
 	connectHandlers: ConnectHandler[];
+	artifactsEvents: ArtifactsEventTrigger[];
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
 	upstreamProtocol: "http" | "https";
@@ -1298,6 +1300,9 @@ export async function buildMiniflareOptions(
 				...assetOptions,
 				routes: config.routes,
 				cronTriggers: config.crons,
+				artifactsEventTriggers: toMiniflareArtifactsEventTriggers(
+					config.artifactsEvents
+				),
 				outboundService: config.outboundService,
 				zone: config.zone,
 				access: config.access?.dev,
@@ -1307,6 +1312,32 @@ export async function buildMiniflareOptions(
 		],
 	};
 	return options;
+}
+
+/**
+ * Converts Wrangler's Artifacts `triggers.events` into Miniflare triggers.
+ *
+ * @param events - Configured Artifacts event triggers
+ * @returns Miniflare Artifacts event triggers
+ */
+export function toMiniflareArtifactsEventTriggers(
+	events: ArtifactsEventTrigger[] | undefined
+): V4WorkerOptions["artifactsEventTriggers"] {
+	return events?.map((event) => ({
+		eventType: event.type,
+		...(event.filter === undefined
+			? {}
+			: {
+					filter: {
+						namespace: event.filter.namespace,
+						repoName: event.filter.repo_name,
+					},
+				}),
+		targets: event.targets.map((target) => ({
+			type: target.type,
+			workflowName: target.workflow_name,
+		})),
+	}));
 }
 
 /**
