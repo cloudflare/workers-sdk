@@ -7,7 +7,9 @@ import {
 	configFileName,
 	createFatalError,
 	JsonFriendlyFatalError,
+	normalizeSqlLineEndings,
 	readFileSync,
+	splitSqlQuery,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -21,7 +23,6 @@ import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
-import { normalizeSqlLineEndings, splitSqlQuery } from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
 import type {
 	Database,

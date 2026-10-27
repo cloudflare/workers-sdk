@@ -1,4 +1,4 @@
-import { trimSqlQuery } from "./trimmer";
+import { trimSqlQuery } from "./d1-trimmer";
 
 // Port of SQLite's sqlite3_complete() scanner: https://github.com/sqlite/sqlite/blob/version-3.44.2/src/complete.c
 
