@@ -109,11 +109,12 @@ function isPrimitiveErrorProperty(
 // Errors from bindings carry machine-readable properties such as Artifacts'
 // `code` and `numericCode`, and custom names such as `ArtifactsError`. Preserve
 // primitive own properties and the original name so Node callers can branch on
-// them. Non-primitive properties are skipped so they cannot make an error
-// unserialisable.
+// them. Like workerd's `enhanced_error_serialization`, this includes
+// non-enumerable properties. Non-primitive properties are skipped so they
+// cannot make an error unserialisable.
 function serializeError(error: Error, constructorName: string): unknown[] {
 	const properties: Record<string, string | number | boolean | null> = {};
-	for (const key of Object.keys(error)) {
+	for (const key of Object.getOwnPropertyNames(error)) {
 		const property = (error as unknown as Record<string, unknown>)[key];
 		if (!RESERVED_ERROR_KEYS.has(key) && isPrimitiveErrorProperty(property)) {
 			properties[key] = property;

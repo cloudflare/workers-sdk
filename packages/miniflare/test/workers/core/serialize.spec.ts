@@ -106,10 +106,10 @@ test("serialize Error preserves primitive own properties and custom names", ({
 }) => {
 	const input = Object.assign(new Error("Repository not found: missing."), {
 		code: "NOT_FOUND",
-		numericCode: 10200,
 		retryable: false,
 		details: null,
 	});
+	Object.defineProperty(input, "numericCode", { value: 10200 });
 	input.name = "ArtifactsError";
 
 	const serialized = stringify(input, structuredSerializableReducers);
