@@ -43,6 +43,20 @@ export function getArtifactsEventSourceType(
 	return ACCOUNT_EVENT_TYPES.has(type) ? "artifacts" : "artifacts.repo";
 }
 
+/**
+ * Returns every event type a subscription source publishes.
+ *
+ * @param source - Subscription source
+ * @returns Event types published by the source
+ */
+export function getArtifactsEventTypesForSource(
+	source: ArtifactsEventSourceType
+): ArtifactsEventType[] {
+	return ARTIFACTS_EVENT_TYPES.filter(
+		(type) => getArtifactsEventSourceType(type) === source
+	);
+}
+
 /** Repository state published in repository lifecycle events. */
 export interface RepoPayload {
 	repoId: string;
@@ -183,6 +197,7 @@ export function toArtifactsEventMessage<Type extends ArtifactsEventType>(
 			eventSchemaVersion: 1,
 			eventTimestamp: event.timestamp,
 		},
+		// TypeScript can't correlate `type` and `payload` through the generic.
 	} as ArtifactsEventMessage;
 }
 
@@ -198,12 +213,10 @@ export type ArtifactsEventTarget =
 export interface ArtifactsEventRoute {
 	/** Stable local subscription identifier, used as `eventSubscriptionId`. */
 	id: string;
-	/** Subscribed event types; `null` subscribes to every type of the source. */
-	types: ArtifactsEventType[] | null;
-	/** Restricts events to this source type, if set. */
-	sourceType: ArtifactsEventSourceType | null;
+	/** Event types to deliver; never empty. */
+	types: ArtifactsEventType[];
 	/** Restricts events to this repository, if set. */
-	repoName: string | null;
+	repoName?: string;
 	target: ArtifactsEventTarget;
 }
 
@@ -212,15 +225,14 @@ export interface ArtifactsEventRoute {
  *
  * @param route - Subscription route
  * @param event - Published event
- * @returns Whether the event matches the route's source, types and repository
+ * @returns Whether the event matches the route's types and repository
  */
 export function matchesArtifactsEventRoute(
 	route: ArtifactsEventRoute,
 	event: ArtifactsEvent
 ): boolean {
 	return (
-		(route.sourceType === null || route.sourceType === event.source.type) &&
-		(route.types === null || route.types.includes(event.type)) &&
-		(route.repoName === null || route.repoName === event.source.repoName)
+		route.types.includes(event.type) &&
+		(route.repoName === undefined || route.repoName === event.source.repoName)
 	);
 }

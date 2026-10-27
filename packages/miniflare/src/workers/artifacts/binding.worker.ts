@@ -214,10 +214,16 @@ interface LocalArtifactsEnvironment {
 	config: { namespace: string; origin: string };
 	localArtifactsNamespace: DurableObjectNamespace<LocalArtifactsNamespaceObject>;
 	gitBackend: Fetcher;
-	/** Subscriptions receiving this namespace's events. */
+	/**
+	 * Subscriptions receiving this namespace's events. Miniflare generates these
+	 * routes and their target bindings together, so each target binding exists
+	 * and matches its route's target type.
+	 */
 	eventRoutes?: ArtifactsEventRoute[];
-	/** Queue and Workflow bindings named by `eventRoutes` targets. */
-	[target: `ARTIFACTS_EVENT_TARGET_${number}`]: unknown;
+	[target: `ARTIFACTS_EVENT_TARGET_${number}`]:
+		| Queue
+		| WorkflowCreateTarget
+		| undefined;
 }
 
 /** The parts of a Workflow binding service used to start an instance. */
@@ -748,8 +754,9 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 				// Committed mutations must not fail because event delivery failed.
 				this.ctx.waitUntil(
 					this.deliver(route, event).catch((error: unknown) => {
+						// Name the subscription, never the payload: it may identify tokens.
 						console.warn(
-							`Unable to deliver local Artifacts event ${event.type}: ${String(error)}`
+							`Artifacts event delivery failed (event=${event.type} subscription=${route.id} target=${route.target.type}): ${String(error)}`
 						);
 					})
 				);
@@ -764,6 +771,9 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		const message = toArtifactsEventMessage(event, route.id);
 		const target =
 			this.env[route.target.binding as `ARTIFACTS_EVENT_TARGET_${number}`];
+		if (target === undefined) {
+			throw new Error(`Missing event target binding ${route.target.binding}`);
+		}
 		if (route.target.type === "queue") {
 			await (target as Queue).send(message, { contentType: "json" });
 		} else {
