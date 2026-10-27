@@ -4,7 +4,6 @@ import { UNKNOWN_HOST } from "./shared";
 import { createHeadersForIncomingMessage, getForwardedProto } from "./utils";
 import type { Headers, Miniflare } from "miniflare";
 import type { IncomingMessage } from "node:http";
-import type { Socket } from "node:net";
 import type { Duplex } from "node:stream";
 import type * as vite from "vite";
 
@@ -50,14 +49,12 @@ export function handleWebSocket(
 
 			// Another listener may already have completed the handshake (for
 			// example Vite DevTools at `/__devtools/__ws`, which the Worker does
-			// not route). `bytesWritten` is cumulative across keep-alive
-			// connections, so compare against a baseline rather than zero.
+			// not route). `ws` attaches a `data` listener when it takes ownership,
+			// while an in-flight HTTP response on the same keep-alive connection
+			// only writes bytes, so listener count distinguishes the two.
 			// See https://github.com/cloudflare/workers-sdk/issues/15654
-			const bytesWrittenAtStart =
-				(socket as unknown as Socket).bytesWritten ?? 0;
 			const isClaimed = () =>
-				socket.destroyed ||
-				((socket as unknown as Socket).bytesWritten ?? 0) > bytesWrittenAtStart;
+				socket.destroyed || socket.listenerCount("data") > 0;
 
 			try {
 				const rawHost = request.headers.host ?? UNKNOWN_HOST;

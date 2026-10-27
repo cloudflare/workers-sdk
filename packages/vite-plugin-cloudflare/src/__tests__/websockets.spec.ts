@@ -545,4 +545,59 @@ describe("handleWebSocket", () => {
 
 		await closed;
 	});
+
+	// A pipelined HTTP response can finish while `dispatchFetch` is still in
+	// flight. Its bytes must not be mistaken for another upgrade listener's
+	// handshake, or a valid Worker WebSocket is silently dropped.
+	test("does not treat an in-flight HTTP response as a claimed upgrade", async ({
+		expect,
+	}) => {
+		startMiniflare(`export default {
+				async fetch() {
+					await new Promise((resolve) => setTimeout(resolve, 100));
+					const [client, server] = Object.values(new WebSocketPair());
+					server.accept();
+					return new Response(null, { status: 101, webSocket: client });
+				}
+			}`);
+
+		httpServer.removeAllListeners("request");
+		httpServer.on("request", (request, response) => {
+			if (request.url === "/page") {
+				setTimeout(() => response.end("OK"), 20);
+			} else {
+				response.end("OK");
+			}
+		});
+
+		await listen();
+
+		const socket = await connect();
+		const chunks: Buffer[] = [];
+		const upgraded = new Promise<void>((resolve) => {
+			socket.on("data", (chunk) => {
+				chunks.push(chunk);
+				if (Buffer.concat(chunks).toString("utf8").includes("HTTP/1.1 101")) {
+					resolve();
+				}
+			});
+		});
+
+		// Pipeline a normal request and an upgrade on one connection so the
+		// normal response is written while the upgrade is still pending.
+		socket.write(
+			"GET /page HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n\r\n` +
+				"GET /ws HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await upgraded;
+		expect(Buffer.concat(chunks).toString("utf8")).toContain("HTTP/1.1 101");
+		socket.destroy();
+	}, 5000);
 });
