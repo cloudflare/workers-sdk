@@ -1,9 +1,11 @@
 import events from "node:events";
 import http from "node:http";
+import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { pathToFileURL } from "node:url";
 import getPort from "get-port";
 import { fetch, Miniflare, MiniflareCoreError } from "miniflare";
-import { beforeAll, test, vi } from "vitest";
+import { beforeAll, onTestFinished, test, vi } from "vitest";
 import WebSocket from "ws";
 import { InspectorProxyController } from "../../../../src/plugins/core/inspector-proxy";
 import {
@@ -12,6 +14,7 @@ import {
 	useDispose,
 } from "../../../test-shared";
 import type { MiniflareOptions } from "miniflare";
+import type { ExpectStatic } from "vitest";
 
 const nullScript =
 	'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));';
@@ -22,6 +25,29 @@ beforeAll(() => {
 	// setting process.env.MINIFLARE_ASSERT_BODIES_CONSUMED to undefined
 	process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = undefined;
 });
+
+/**
+ * Buffer inspector messages so extra notifications and reordered responses are
+ * allowed, consuming each match so repeated pauses require distinct events.
+ */
+function collectInspectorMessages(ws: WebSocket, expect: ExpectStatic) {
+	onTestFinished(() => ws.terminate());
+	const messages: unknown[] = [];
+	ws.on("message", (data) => {
+		messages.push(JSON.parse(data.toString()));
+	});
+
+	return async function expectMessage(expected: Record<string, unknown>) {
+		const matcher = expect.objectContaining(expected);
+		await expect
+			.poll(() => messages, { timeout: 10_000 })
+			.toContainEqual(matcher);
+		const index = messages.findIndex((message) =>
+			matcher.asymmetricMatch(message)
+		);
+		messages.splice(index, 1);
+	};
+}
 
 test("InspectorProxy: removes startup error handler after listening", async ({
 	expect,
@@ -452,32 +478,31 @@ test("InspectorProxy: should allow debugging a single worker", async ({
 
 	// Connect inspector WebSocket
 	const ws = new WebSocket(`ws://localhost:${port}`);
-	const messages = events.on(ws, "message");
-	async function nextMessage() {
-		const messageEvent = (await messages.next()).value;
-		return JSON.parse(messageEvent[0].toString());
-	}
+	const expectMessage = collectInspectorMessages(ws, expect);
 
 	await events.once(ws, "open");
 
 	ws.send(JSON.stringify({ id: 0, method: "Debugger.enable" }));
 
-	expect(await nextMessage()).toMatchObject({
+	await expectMessage({
 		method: "Debugger.scriptParsed",
+		params: expect.objectContaining({
+			url: pathToFileURL(path.resolve("index.mjs")).href,
+		}),
 	});
 
-	expect(await nextMessage()).toMatchObject({ id: 0 });
+	await expectMessage({ id: 0 });
 
 	// Send request and hit `debugger;` statement
 	const resPromise = mf.dispatchFetch("http://localhost");
-	expect(await nextMessage()).toMatchObject({ method: "Debugger.paused" });
+	await expectMessage({ method: "Debugger.paused" });
 
 	// Resume execution
 	ws.send(JSON.stringify({ id: 1, method: "Debugger.resume" }));
 
-	expect(await nextMessage()).toMatchObject({ id: 1 });
+	await expectMessage({ id: 1 });
 
-	expect(await nextMessage()).toMatchObject({ method: "Debugger.resumed" });
+	await expectMessage({ method: "Debugger.resumed" });
 
 	const res = await resPromise;
 	expect(await res.text()).toBe("body");
@@ -511,32 +536,31 @@ test("InspectorProxy: the devtools websocket communication should adapt to an in
 	const testDebuggingWorkerOn = async (port: number) => {
 		// Connect inspector WebSocket
 		const ws = new WebSocket(`ws://localhost:${port}`);
-		const messages = events.on(ws, "message");
-		async function nextMessage() {
-			const messageEvent = (await messages.next()).value;
-			return JSON.parse(messageEvent[0].toString());
-		}
+		const expectMessage = collectInspectorMessages(ws, expect);
 
 		await events.once(ws, "open");
 
 		ws.send(JSON.stringify({ id: 0, method: "Debugger.enable" }));
 
-		expect(await nextMessage()).toMatchObject({
+		await expectMessage({
 			method: "Debugger.scriptParsed",
+			params: expect.objectContaining({
+				url: pathToFileURL(path.resolve("index.mjs")).href,
+			}),
 		});
 
-		expect(await nextMessage()).toMatchObject({ id: 0 });
+		await expectMessage({ id: 0 });
 
 		// Send request and hit `debugger;` statement
 		const resPromise = mf.dispatchFetch("http://localhost");
-		expect(await nextMessage()).toMatchObject({ method: "Debugger.paused" });
+		await expectMessage({ method: "Debugger.paused" });
 
 		// Resume execution
 		ws.send(JSON.stringify({ id: 1, method: "Debugger.resume" }));
 
-		expect(await nextMessage()).toMatchObject({ id: 1 });
+		await expectMessage({ id: 1 });
 
-		expect(await nextMessage()).toMatchObject({ method: "Debugger.resumed" });
+		await expectMessage({ method: "Debugger.resumed" });
 
 		const res = await resPromise;
 		expect(await res.text()).toBe("body");
@@ -609,17 +633,12 @@ test("InspectorProxy: should allow debugging multiple workers", async ({
 		["worker-a"]: new WebSocket(`ws://localhost:${port}/worker-a`),
 		["worker-b"]: new WebSocket(`ws://localhost:${port}/worker-b`),
 	};
-	const messages = {
-		["worker-a"]: events.on(webSockets["worker-a"], "message"),
-		["worker-b"]: events.on(webSockets["worker-b"], "message"),
+	const expectMessage = {
+		["worker-a"]: collectInspectorMessages(webSockets["worker-a"], expect),
+		["worker-b"]: collectInspectorMessages(webSockets["worker-b"], expect),
 	};
 
 	type Worker = keyof typeof webSockets;
-
-	async function nextMessage(worker: Worker) {
-		const messageEvent = (await messages[worker].next()).value;
-		return JSON.parse(messageEvent[0].toString());
-	}
 
 	await Promise.all([
 		events.once(webSockets["worker-a"], "open"),
@@ -631,11 +650,14 @@ test("InspectorProxy: should allow debugging multiple workers", async ({
 	);
 
 	const waitForScriptParsed = async (worker: Worker) => {
-		expect(await nextMessage(worker)).toMatchObject({
+		await expectMessage[worker]({
 			method: "Debugger.scriptParsed",
+			params: expect.objectContaining({
+				url: pathToFileURL(path.resolve("index.mjs")).href,
+			}),
 		});
 
-		expect(await nextMessage(worker)).toMatchObject({ id: 0 });
+		await expectMessage[worker]({ id: 0 });
 	};
 
 	await waitForScriptParsed("worker-a");
@@ -643,15 +665,15 @@ test("InspectorProxy: should allow debugging multiple workers", async ({
 
 	// Send request and hit `debugger;` statements
 	const resPromise = mf.dispatchFetch("http://localhost");
-	expect(await nextMessage("worker-a")).toMatchObject({
+	await expectMessage["worker-a"]({
 		method: "Debugger.paused",
 	});
 
 	const resumeWorker = async (worker: Worker) => {
 		const id = Math.floor(Math.random() * 50_000);
 		webSockets[worker].send(JSON.stringify({ id, method: "Debugger.resume" }));
-		expect(await nextMessage(worker)).toMatchObject({ id });
-		expect(await nextMessage(worker)).toMatchObject({
+		await expectMessage[worker]({ id });
+		await expectMessage[worker]({
 			method: "Debugger.resumed",
 		});
 	};
@@ -659,29 +681,14 @@ test("InspectorProxy: should allow debugging multiple workers", async ({
 	// Resume execution (first worker-a debugger)
 	await resumeWorker("worker-a");
 
-	expect(await nextMessage("worker-b")).toMatchObject({
+	await expectMessage["worker-b"]({
 		method: "Debugger.paused",
 	});
 
 	// Resume execution (worker-b debugger)
 	await resumeWorker("worker-b");
 
-	// There are a few network messages send due to the communication from worker-b back
-	// to worker-a, these are not too relevant to test, so we just consume them until we
-	// hit the next worker-a debugger
-	while (true) {
-		const nextMessageWorkerA = await nextMessage("worker-a");
-		const messageMethod = nextMessageWorkerA.method;
-		if (
-			typeof messageMethod === "string" &&
-			messageMethod.startsWith("Network.")
-		) {
-			continue;
-		}
-
-		expect(nextMessageWorkerA).toMatchObject({ method: "Debugger.paused" });
-		break;
-	}
+	await expectMessage["worker-a"]({ method: "Debugger.paused" });
 
 	// Resume execution (second worker-a debugger)
 	await resumeWorker("worker-a");
@@ -717,7 +724,7 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 
 	await mf.ready;
 
-	mf.setOptions({
+	await mf.setOptions({
 		inspectorPort: 0,
 		workers: [
 			{
@@ -765,17 +772,12 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 		["worker-a"]: new WebSocket(`ws://localhost:${port}/worker-a`),
 		["worker-b"]: new WebSocket(`ws://localhost:${port}/worker-b`),
 	};
-	const messages = {
-		["worker-a"]: events.on(webSockets["worker-a"], "message"),
-		["worker-b"]: events.on(webSockets["worker-b"], "message"),
+	const expectMessage = {
+		["worker-a"]: collectInspectorMessages(webSockets["worker-a"], expect),
+		["worker-b"]: collectInspectorMessages(webSockets["worker-b"], expect),
 	};
 
 	type Worker = keyof typeof webSockets;
-
-	async function nextMessage(worker: Worker) {
-		const messageEvent = (await messages[worker].next()).value;
-		return JSON.parse(messageEvent[0].toString());
-	}
 
 	await Promise.all([
 		events.once(webSockets["worker-a"], "open"),
@@ -787,11 +789,14 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 	);
 
 	const waitForScriptParsed = async (worker: Worker) => {
-		expect(await nextMessage(worker)).toMatchObject({
+		await expectMessage[worker]({
 			method: "Debugger.scriptParsed",
+			params: expect.objectContaining({
+				url: pathToFileURL(path.resolve("index.mjs")).href,
+			}),
 		});
 
-		expect(await nextMessage(worker)).toMatchObject({ id: 0 });
+		await expectMessage[worker]({ id: 0 });
 	};
 
 	await waitForScriptParsed("worker-a");
@@ -799,15 +804,15 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 
 	// Send request and hit `debugger;` statements
 	const resPromise = mf.dispatchFetch("http://localhost");
-	expect(await nextMessage("worker-a")).toMatchObject({
+	await expectMessage["worker-a"]({
 		method: "Debugger.paused",
 	});
 
 	const resumeWorker = async (worker: Worker) => {
 		const id = Math.floor(Math.random() * 50_000);
 		webSockets[worker].send(JSON.stringify({ id, method: "Debugger.resume" }));
-		expect(await nextMessage(worker)).toMatchObject({ id });
-		expect(await nextMessage(worker)).toMatchObject({
+		await expectMessage[worker]({ id });
+		await expectMessage[worker]({
 			method: "Debugger.resumed",
 		});
 	};
@@ -815,29 +820,14 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 	// Resume execution (first worker-a debugger)
 	await resumeWorker("worker-a");
 
-	expect(await nextMessage("worker-b")).toMatchObject({
+	await expectMessage["worker-b"]({
 		method: "Debugger.paused",
 	});
 
 	// Resume execution (worker-b debugger)
 	await resumeWorker("worker-b");
 
-	// There are a few network messages send due to the communication from worker-b back
-	// to worker-a, these are not too relevant to test, so we just consume them until we
-	// hit the next worker-a debugger
-	while (true) {
-		const nextMessageWorkerA = await nextMessage("worker-a");
-		const messageMethod = nextMessageWorkerA.method;
-		if (
-			typeof messageMethod === "string" &&
-			messageMethod.startsWith("Network.")
-		) {
-			continue;
-		}
-
-		expect(nextMessageWorkerA).toMatchObject({ method: "Debugger.paused" });
-		break;
-	}
+	await expectMessage["worker-a"]({ method: "Debugger.paused" });
 
 	// Resume execution (second worker-a debugger)
 	await resumeWorker("worker-a");
@@ -886,46 +876,39 @@ test("InspectorProxy: can proxy messages > 1MB", async ({ expect }) => {
 
 	// Connect inspector WebSocket
 	const ws = new WebSocket(`ws://localhost:${port}`);
-	const messages = events.on(ws, "message");
-	async function nextMessage() {
-		const messageEvent = (await messages.next()).value;
-		return JSON.parse(messageEvent[0].toString());
-	}
+	const expectMessage = collectInspectorMessages(ws, expect);
 
 	await events.once(ws, "open");
 
 	ws.send(JSON.stringify({ id: 0, method: "Runtime.enable" }));
 
-	expect(await nextMessage()).toMatchObject({
+	await expectMessage({
 		method: "Runtime.executionContextCreated",
 	});
 
-	expect(await nextMessage()).toMatchObject({ id: 0 });
+	await expectMessage({ id: 0 });
 
 	ws.send(JSON.stringify({ id: 1, method: "Debugger.enable" }));
 
-	expect(await nextMessage()).toMatchObject({
+	await expectMessage({
 		method: "Debugger.scriptParsed",
+		params: expect.objectContaining({
+			url: pathToFileURL(path.resolve("index.mjs")).href,
+		}),
 	});
 
-	expect(await nextMessage()).toMatchObject({ id: 1 });
+	await expectMessage({ id: 1 });
 
-	// Send request had check that the large string gets logged
+	// Send request and check that the large string gets logged
 	const resPromise = mf.dispatchFetch("http://localhost");
 
-	const msg: {
-		method: string;
-		params: {
-			type: string;
-			args: { type: string; value: unknown }[];
-		};
-	} = await nextMessage();
-
-	expect(msg.method).toBe("Runtime.consoleAPICalled");
-	expect(msg.params.type).toBe("log");
-	expect(msg.params.args.length).toBe(1);
-	expect(msg.params.args[0].type).toBe("string");
-	expect(msg.params.args[0].value).toBe(LARGE_STRING);
+	await expectMessage({
+		method: "Runtime.consoleAPICalled",
+		params: expect.objectContaining({
+			type: "log",
+			args: [expect.objectContaining({ type: "string", value: LARGE_STRING })],
+		}),
+	});
 
 	const res = await resPromise;
 	expect(await res.text()).toBe(`body:${LARGE_STRING}`);
