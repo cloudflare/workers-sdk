@@ -1,3 +1,4 @@
+import { once } from "node:events";
 import http from "node:http";
 import net from "node:net";
 import { DeferredPromise, Headers, Miniflare, Response } from "miniflare";
@@ -11,10 +12,9 @@ import {
 	test,
 	vi,
 } from "vitest";
-import { WebSocketServer } from "ws";
+import { WebSocket, WebSocketServer } from "ws";
 import { handleWebSocket } from "../websockets";
 import type { AddressInfo } from "node:net";
-import type { Duplex } from "node:stream";
 
 describe("handleWebSocket", () => {
 	let httpServer: http.Server;
@@ -181,7 +181,8 @@ describe("handleWebSocket", () => {
 	async function dispatchUpgrade(
 		expect: ExpectStatic,
 		mf: Miniflare,
-		headers: Record<string, string>
+		headers: Record<string, string>,
+		pathname = "/"
 	) {
 		const deferred = new DeferredPromise<Response>();
 		const mockedDispatchFetch = vi
@@ -194,7 +195,7 @@ describe("handleWebSocket", () => {
 			.map(([k, v]) => `${k}: ${v}`)
 			.join("\r\n");
 		socket.write(
-			"GET / HTTP/1.1\r\n" +
+			`GET ${pathname} HTTP/1.1\r\n` +
 				`${headerLines}\r\n` +
 				"Upgrade: websocket\r\n" +
 				"Connection: Upgrade\r\n" +
@@ -455,72 +456,114 @@ describe("handleWebSocket", () => {
 	});
 
 	// https://github.com/cloudflare/workers-sdk/issues/15654
-	test("does not destroy a WebSocket another upgrade listener has already claimed", async ({
+	test.for(["/__devtools/__ws", "/__devtools/__ws?token=testing"])(
+		"leaves %s to Vite DevTools without dispatching to the Worker",
+		async (pathname, { expect }) => {
+			const mf = await listen();
+			const dispatchFetch = vi.spyOn(mf, "dispatchFetch");
+
+			const owner = new WebSocketServer({ noServer: true });
+			onTestFinished(() => {
+				for (const client of owner.clients) {
+					client.terminate();
+				}
+				owner.close();
+			});
+			httpServer.on("upgrade", (request, socket, head) => {
+				if (request.url === pathname) {
+					owner.handleUpgrade(request, socket, head, (ws) => {
+						ws.on("message", (message) => ws.send(message));
+					});
+				}
+			});
+
+			const socket = await connect();
+			const client = new WebSocket(`ws://127.0.0.1:${port}${pathname}`, {
+				createConnection: () => socket,
+			});
+			onTestFinished(() => client.terminate());
+			await once(client, "open");
+			const received = once(client, "message");
+			client.send("DevTools connected");
+			const [message] = await received;
+			expect(message.toString()).toBe("DevTools connected");
+			expect(dispatchFetch).not.toHaveBeenCalled();
+		}
+	);
+
+	test.for(["/__devtools/__ws", "/__devtools/__ws?token=testing"])(
+		"forwards Sandbox requests for %s to the Worker",
+		async (pathname, { expect }) => {
+			const mf = await listen();
+			const host = `4567-my-sandbox-sup3rs3cr3t.localhost:${port}`;
+			const url = await dispatchUpgrade(expect, mf, { Host: host }, pathname);
+			expect(`${url}`).toBe(`http://${host}${pathname}`);
+		}
+	);
+
+	test.for([
+		"/__devtools/__ws-extra",
+		"/__devtools/__ws/child",
+		"/__devtools/other",
+	])("forwards %s to the Worker", async (pathname, { expect }) => {
+		const mf = await listen();
+		const host = `127.0.0.1:${port}`;
+		const url = await dispatchUpgrade(expect, mf, { Host: host }, pathname);
+		expect(`${url}`).toBe(`http://${host}${pathname}`);
+	});
+
+	test("upgrades a Worker WebSocket after an earlier pipelined HTTP response", async ({
 		expect,
 	}) => {
-		const mf = await listen();
-		const deferred = new DeferredPromise<Response>();
-		vi.spyOn(mf, "dispatchFetch").mockReturnValue(deferred);
-
-		// The Worker has no route for the DevTools socket, so the plugin's
-		// dispatch resolves without a WebSocket after the owner has upgraded.
-		const owner = new WebSocketServer({ noServer: true });
-		let serverSocket: Duplex | undefined;
-		onTestFinished(() => {
-			for (const client of owner.clients) {
-				client.terminate();
-			}
-			owner.close();
+		const pageResponse = new DeferredPromise<http.ServerResponse>();
+		httpServer.removeAllListeners("request");
+		httpServer.on("request", (_request, response) => {
+			pageResponse.resolve(response);
 		});
-		httpServer.on("upgrade", (request, socket, head) => {
-			if (request.url === "/__devtools/__ws") {
-				serverSocket = socket;
-				owner.handleUpgrade(request, socket, head, (ws) => {
-					owner.emit("connection", ws, request);
-				});
-			}
+		const mf = await listen();
+		const dispatchFetch = mf.dispatchFetch.bind(mf);
+		const dispatchStarted = new DeferredPromise<void>();
+		const resumeDispatch = new DeferredPromise<void>();
+		onTestFinished(() => resumeDispatch.resolve());
+		vi.spyOn(mf, "dispatchFetch").mockImplementation(async (...args) => {
+			dispatchStarted.resolve();
+			await resumeDispatch;
+			return dispatchFetch(...args);
 		});
 
 		const socket = await connect();
 		const chunks: Buffer[] = [];
-		const upgraded = new Promise<void>((resolve) => {
-			socket.on("data", (chunk) => {
-				chunks.push(chunk);
-				if (Buffer.concat(chunks).toString("utf8").includes("HTTP/1.1 101")) {
-					resolve();
-				}
-			});
+		const upgraded = new DeferredPromise<void>();
+		socket.on("data", (chunk) => {
+			chunks.push(chunk);
+			if (Buffer.concat(chunks).toString("utf8").includes("HTTP/1.1 101")) {
+				upgraded.resolve();
+			}
 		});
-
 		socket.write(
-			"GET /__devtools/__ws HTTP/1.1\r\n" +
+			"GET /page HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n\r\n` +
+				"GET /ws HTTP/1.1\r\n" +
 				`Host: 127.0.0.1:${port}\r\n` +
 				"Upgrade: websocket\r\n" +
 				"Connection: Upgrade\r\n" +
 				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
 				"Sec-WebSocket-Version: 13\r\n\r\n"
 		);
+
+		// Finish the earlier HTTP response after the upgrade handler starts,
+		// but before the Worker returns its WebSocket.
+		await dispatchStarted;
+		const response = await pageResponse;
+		const finished = once(response, "finish");
+		response.end("OK");
+		await finished;
+		resumeDispatch.resolve();
 		await upgraded;
 
-		if (!serverSocket) {
-			throw new Error("expected the DevTools listener to claim the socket");
-		}
-		const destroy = vi.fn();
-		const originalDestroy = serverSocket.destroy.bind(serverSocket);
-		vi.spyOn(serverSocket, "destroy").mockImplementation((...args) => {
-			destroy();
-			return originalDestroy(...args);
-		});
-
-		deferred.resolve(new Response("not found", { status: 404 }));
-		// Let the plugin handler resume and make its teardown decision.
-		await new Promise<void>((resolve) => setImmediate(resolve));
-
-		// Assert on the server socket directly; the client may not observe the
-		// close until a later poll phase.
-		expect(destroy).not.toHaveBeenCalled();
-		expect(socket.destroyed).toBe(false);
-		expect(Buffer.concat(chunks).toString("utf8")).toContain("HTTP/1.1 101");
+		const raw = Buffer.concat(chunks).toString("utf8");
+		expect(raw).toMatch(/^HTTP\/1\.1 200/);
+		expect(raw).toContain("OKHTTP/1.1 101 Switching Protocols");
 		socket.destroy();
 	});
 
