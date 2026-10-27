@@ -178,6 +178,31 @@ test("ratelimit validation", async ({ expect }) => {
 			options: { period: 1 },
 			error: "Error: unsupported period: 1",
 		},
+		// `delta` errors match production, where workerd converts it to a `uint32`
+		{
+			options: { delta: "bad" },
+			error:
+				"TypeError: The value cannot be converted because it is not an integer.",
+		},
+		{
+			options: { delta: -1 },
+			error:
+				"TypeError: The value cannot be converted because it is negative and this API expects a positive number.",
+		},
+		{
+			options: { delta: 2 ** 32 },
+			error:
+				"TypeError: Value out of range. Must be less than or equal to 4294967295.",
+		},
+		{
+			options: { delta: 0 },
+			error: "RangeError: delta must be non-zero",
+		},
+		{
+			// Truncated to 0, as production does
+			options: { delta: 0.5 },
+			error: "RangeError: delta must be non-zero",
+		},
 	];
 
 	for (const { options, error } of TESTS) {
@@ -191,6 +216,62 @@ test("ratelimit validation", async ({ expect }) => {
 		// Mismatched error for [${body}]
 		expect(await res.text()).toBe(error);
 	}
+});
+
+test("ratelimit weighted increments with delta", async ({ expect }) => {
+	const mf = new Miniflare(
+		createRateLimitOptions({
+			env: {
+				TESTRATE: {
+					type: "rate-limit",
+					namespace: "weighted",
+					simple: { limit: 5, period: 60 },
+				},
+			},
+			script: `
+		export default {
+			async fetch(request, env, ctx) {
+				const url = new URL(request.url);
+				const options = { key: url.searchParams.get("key") };
+				if (url.searchParams.has("delta")) {
+					options.delta = Number(url.searchParams.get("delta"));
+				}
+				const { success } = await env.TESTRATE.limit(options);
+				return new Response(success ? "ok" : "limited", {
+					status: success ? 200 : 429,
+				});
+			},
+		}
+		`,
+		})
+	);
+	useDispose(mf);
+
+	const call = async (key: string, delta?: number) => {
+		const url = new URL("http://localhost");
+		url.searchParams.set("key", key);
+		if (delta !== undefined) {
+			url.searchParams.set("delta", String(delta));
+		}
+		const res = await mf.dispatchFetch(url);
+		await res.text();
+		return res.status;
+	};
+
+	await waitForFreshRateLimitWindow([60]);
+
+	// Each call consumes its weight: 2 + 2 leaves room for exactly one more.
+	expect(await call("a", 2)).toBe(200);
+	expect(await call("a", 2)).toBe(200);
+	expect(await call("a")).toBe(200);
+	expect(await call("a")).toBe(429);
+
+	// As in production, the decision uses the count before the call, so a call
+	// that overshoots the limit is still allowed while any headroom remains...
+	expect(await call("b", 4)).toBe(200);
+	expect(await call("b", 100)).toBe(200);
+	// ...and everything after it is limited.
+	expect(await call("b", 1)).toBe(429);
 });
 
 test("ratelimit counters are keyed by namespace_id", async ({ expect }) => {
