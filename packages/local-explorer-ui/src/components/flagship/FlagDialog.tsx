@@ -348,11 +348,13 @@ export function FlagDialog({
 				setError({ field: "rules", message: ruleError });
 				return;
 			}
-			const splitError = usesSplit ? validateDefaultServe(defaultServe) : null;
-			if (splitError !== null) {
-				setError({ field: "split", message: splitError });
-				return;
-			}
+		}
+		// The last split weight is implied by the encoded rules, so an invalid
+		// split may not change them.
+		const splitError = usesSplit ? validateDefaultServe(defaultServe) : null;
+		if (splitError !== null) {
+			setError({ field: "split", message: splitError });
+			return;
 		}
 
 		const defaultVariation = defaultRow.name.trim();

@@ -174,7 +174,10 @@ function baseCondition(condition: RuleConditionDraft): FlagshipBaseCondition {
 		condition.originalValueText === condition.value;
 	let value: FlagshipJsonValue = rawValue;
 	if (unchanged) {
-		value = condition.originalValue ?? rawValue;
+		value =
+			condition.originalValue === undefined
+				? rawValue
+				: condition.originalValue;
 	} else if (condition.operator === "in" || condition.operator === "not_in") {
 		value = rawValue
 			.split("\n")

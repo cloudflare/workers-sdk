@@ -329,6 +329,32 @@ describe("Flagship", () => {
 		]);
 	});
 
+	test("rejects an invalid split that would not change the rules", async ({
+		expect,
+	}) => {
+		const splitFlag = {
+			...STRING_FLAG,
+			rules: [
+				{
+					priority: 1,
+					conditions: [],
+					serve_variation: "treatment",
+					rollout: { percentage: 50 },
+				},
+			],
+		};
+		await seedFlag(splitFlag);
+		await navigateToFlagshipApp();
+		await openEditDialog(splitFlag.key);
+		const dialog = page.getByRole("dialog");
+		await dialog.getByLabel("Percentage for control").fill("60");
+		await dialog.getByRole("button", { name: "Save changes" }).click();
+		await waitForText("Percentage split must total 100% (currently 110%).");
+		expect((await fetchFlag(splitFlag.key)).rules).toMatchObject(
+			splitFlag.rules
+		);
+	});
+
 	test("evaluates a flag with an ad-hoc context", async () => {
 		await seedFlag(RULED_FLAG);
 		await navigateToFlagshipApp();
