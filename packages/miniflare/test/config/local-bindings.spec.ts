@@ -1,5 +1,5 @@
 import { describe, test } from "vitest";
-import { resolveLocalBindings } from "../local-env";
+import { resolveLocalBindings } from "../../src/config/local-bindings";
 
 const workerConfig = {
 	env: {

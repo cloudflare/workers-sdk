@@ -25,6 +25,7 @@ import {
 	Log,
 	LogLevel,
 	parseModuleFallbackRequest,
+	resolveLocalBindings,
 	Response as MiniflareResponse,
 } from "miniflare";
 import { getAssetsConfig } from "./asset-config";
@@ -37,7 +38,6 @@ import {
 	VITE_PROXY_WORKER_NAME,
 } from "./constants";
 import { getInputInspectorPort } from "./debug";
-import { resolveLocalBindings } from "./local-env";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import { getRemoteBindings } from "./remote-bindings";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
@@ -55,7 +55,6 @@ import type {
 	PreviewPluginContext,
 	WorkersPluginContext,
 } from "./context";
-import type { ResolvedLocalBindings } from "./local-env";
 import type { PersistState } from "./plugin-config";
 import type {
 	ParsedInputWorkerConfig,
@@ -73,6 +72,7 @@ import type {
 import type { LoadedEnv } from "@cloudflare/workers-utils/local-env";
 import type {
 	MiniflareOptions,
+	ResolvedLocalBindings,
 	WorkerdStructuredLog,
 	WorkerOptions,
 } from "miniflare";

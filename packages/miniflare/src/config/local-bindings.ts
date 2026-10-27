@@ -1,10 +1,10 @@
+import type { WorkerOptions } from "./schema";
 import type { ParsedInputWorkerConfig } from "@cloudflare/config";
-import type { WorkerOptions } from "miniflare";
 
 type MiniflareEnv = NonNullable<WorkerOptions["config"]["env"]>;
 
 export interface ResolvedLocalBindings {
-	bindings: MiniflareEnv;
+	bindings: NonNullable<WorkerOptions["config"]["env"]>;
 	missingSecrets: string[];
 }
 
