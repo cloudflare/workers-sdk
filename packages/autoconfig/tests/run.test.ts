@@ -36,6 +36,16 @@ class ViteBuildToolFramework extends Framework {
 	}
 }
 
+class OwnAssetsDirectoryFramework extends Framework {
+	configure(): ConfigurationResults {
+		return {
+			buildTool: "wrangler",
+			workerConfig: { entrypoint: "./.output/server/index.mjs" },
+			buildConfig: { assetsDirectory: "./.output/public/" },
+		};
+	}
+}
+
 class BuildCommandOverrideFramework extends Static {
 	configure(options: ConfigurationOptions): ConfigurationResults {
 		return {
@@ -421,5 +431,59 @@ describe("runAutoConfig()", () => {
 		expect(readFileSync("wrangler.config.ts", "utf8")).toBe(
 			existingBuildConfig
 		);
+	});
+
+	it("writes a root .assetsignore when the project root is the assets directory", async ({
+		expect,
+	}) => {
+		await seed({ "index.html": "<h1>Hello World</h1>", ".env": "KEY=1" });
+
+		await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "root-static-app",
+				framework: new Static({ id: "static", name: "Static" }),
+				outputDir: ".",
+				packageManager: NpmPackageManager,
+			},
+			{
+				context: createMockContext(),
+				skipConfirmations: true,
+				runBuild: false,
+			}
+		);
+
+		const assetsIgnore = readFileSync(".assetsignore", "utf8");
+		for (const entry of [".env*", ".dev.vars*", "/functions", "node_modules"]) {
+			expect(assetsIgnore.split("\n")).toContain(entry);
+		}
+	});
+
+	it("does not write a root .assetsignore when the framework configures a different assets directory", async ({
+		expect,
+	}) => {
+		await seed({ "index.html": "<h1>Hello World</h1>" });
+
+		await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "own-assets-app",
+				framework: new OwnAssetsDirectoryFramework({
+					id: "static",
+					name: "Static",
+				}),
+				outputDir: ".",
+				packageManager: NpmPackageManager,
+			},
+			{
+				context: createMockContext(),
+				skipConfirmations: true,
+				runBuild: false,
+			}
+		);
+
+		expect(existsSync(".assetsignore")).toBe(false);
 	});
 });

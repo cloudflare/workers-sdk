@@ -62,6 +62,20 @@ class MockAstroFramework extends Framework {
 	}
 }
 
+/**
+ * Framework subclass that returns fixed configuration results regardless of the
+ * detected output directory, as frameworks such as Nuxt do.
+ */
+class MockFixedConfigFramework extends Framework {
+	constructor(private readonly results: ConfigurationResults) {
+		super({ id: "static", name: "Static" });
+	}
+
+	configure(): ConfigurationResults {
+		return this.results;
+	}
+}
+
 vi.mock("../../package-manager", () => ({
 	getPackageManager() {
 		return {
@@ -770,6 +784,39 @@ describe("autoconfig (deploy)", () => {
 			}
 		});
 
+		it("a pre-existing assetsignore that only lists .env still gets .env* so other env files are skipped", async ({
+			expect,
+		}) => {
+			await writeFile(".assetsignore", ".env\n");
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
+			mockConfirm({
+				text: "Proceed with setup?",
+				result: true,
+			});
+
+			await autoconfig.runAutoConfig(
+				{
+					projectPath: process.cwd(),
+					workerName: "my-worker",
+					configured: false,
+					outputDir: ".",
+					framework: new MockStaticFramework({ id: "static", name: "Static" }),
+					packageManager: NpmPackageManager,
+				},
+				{ target: "wrangler", context }
+			);
+
+			const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(
+				process.cwd()
+			);
+			for (const path of [".env", ".env.production", ".env.local"]) {
+				expect(assetsIgnoreFunction(path), path).toBe(true);
+			}
+		});
+
 		it("warns that root Pages server code will not be deployed", async ({
 			expect,
 		}) => {
@@ -827,6 +874,100 @@ describe("autoconfig (deploy)", () => {
 			);
 
 			expect(existsSync(".assetsignore")).toBe(false);
+			expect(std.warn).not.toContain("will not be deployed");
+		});
+
+		it("does not write a root assetsignore or warn when the framework configures its own assets directory", async ({
+			expect,
+		}) => {
+			await mkdir("functions");
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
+			mockConfirm({
+				text: "Proceed with setup?",
+				result: true,
+			});
+
+			await autoconfig.runAutoConfig(
+				{
+					projectPath: process.cwd(),
+					workerName: "my-worker",
+					configured: false,
+					outputDir: ".",
+					framework: new MockFixedConfigFramework({
+						workerConfig: { entrypoint: "./.output/server/index.mjs" },
+						buildConfig: { assetsDirectory: "./.output/public/" },
+					}),
+					packageManager: NpmPackageManager,
+				},
+				{ target: "wrangler", context }
+			);
+
+			expect(existsSync(".assetsignore")).toBe(false);
+			expect(std.warn).not.toContain("will not be deployed");
+		});
+
+		it("writes a root assetsignore when the configured assets directory is the root, whatever the detected output directory", async ({
+			expect,
+		}) => {
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
+			mockConfirm({
+				text: "Proceed with setup?",
+				result: true,
+			});
+
+			await autoconfig.runAutoConfig(
+				{
+					projectPath: process.cwd(),
+					workerName: "my-worker",
+					configured: false,
+					outputDir: "public",
+					framework: new MockFixedConfigFramework({
+						workerConfig: {},
+						buildConfig: { assetsDirectory: "./" },
+					}),
+					packageManager: NpmPackageManager,
+				},
+				{ target: "wrangler", context }
+			);
+
+			expect(readFileSync(".assetsignore")).toContain(".env*");
+		});
+
+		it("does not warn about a root _worker.js when the project has a Worker entrypoint", async ({
+			expect,
+		}) => {
+			await writeFile("_worker.js", "export default {}");
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
+			mockConfirm({
+				text: "Proceed with setup?",
+				result: true,
+			});
+
+			await autoconfig.runAutoConfig(
+				{
+					projectPath: process.cwd(),
+					workerName: "my-worker",
+					configured: false,
+					outputDir: ".",
+					framework: new MockFixedConfigFramework({
+						workerConfig: { entrypoint: "./_worker.js/index.js" },
+						buildConfig: { assetsDirectory: "." },
+					}),
+					packageManager: NpmPackageManager,
+				},
+				{ target: "wrangler", context }
+			);
+
+			expect(readFileSync(".assetsignore")).toContain("/_worker.js");
 			expect(std.warn).not.toContain("will not be deployed");
 		});
 

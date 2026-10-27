@@ -37,12 +37,25 @@ export const PROJECT_ROOT_ASSETS_IGNORE_ENTRIES = [
  * Creates the file if it does not already exist.
  *
  * @param filePath Absolute or relative path to the ignore file to update.
- * @param additionalEntries Further entries to append after the Wrangler ones,
- * each added only if the file does not already contain that exact line.
+ * @param options
+ * @param options.additionalEntries Further entries to append after the
+ * Wrangler ones, each added only if it is not already an exact line in the
+ * file or queued to be added.
+ * @param options.requireEnvWildcard When `true`, only an existing `.env*` line
+ * counts as covering environment files. Narrower patterns such as `.env` or
+ * `.env.local` would leave other variants (for example `.env.production`)
+ * unmatched, which matters for ignore files that keep files from being
+ * published rather than from being committed.
  */
 export function maybeAppendWranglerToGitIgnoreLikeFile(
 	filePath: string,
-	additionalEntries: readonly string[] = []
+	{
+		additionalEntries = [],
+		requireEnvWildcard = false,
+	}: {
+		additionalEntries?: readonly string[];
+		requireEnvWildcard?: boolean;
+	} = {}
 ): void {
 	const filePreExisted = existsSync(filePath);
 
@@ -89,9 +102,12 @@ export function maybeAppendWranglerToGitIgnoreLikeFile(
 	 * ```
 	 * .env.<local|production|staging> # some trailing comment
 	 * ```
+	 *
+	 * With `requireEnvWildcard`, only an unanchored `.env*` line counts, since
+	 * `/.env*` would leave `.env` files in subdirectories unmatched.
 	 */
 	const hasDotEnv = existingGitIgnoreContent.match(
-		/^\/?\.env\*?(\..*?)?(\s|$)/m
+		requireEnvWildcard ? /^\.env\*(\s|$)/m : /^\/?\.env\*?(\..*?)?(\s|$)/m
 	);
 	if (!hasDotEnv) {
 		wranglerGitIgnoreFilesToAdd.push(".env*");
@@ -108,7 +124,10 @@ export function maybeAppendWranglerToGitIgnoreLikeFile(
 		existingGitIgnoreContent.split(/\r?\n/).map((line) => line.trim())
 	);
 	for (const entry of additionalEntries) {
-		if (!existingLines.has(entry)) {
+		if (
+			!existingLines.has(entry) &&
+			!wranglerGitIgnoreFilesToAdd.includes(entry)
+		) {
 			wranglerGitIgnoreFilesToAdd.push(entry);
 		}
 	}

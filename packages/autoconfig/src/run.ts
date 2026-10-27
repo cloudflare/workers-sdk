@@ -298,25 +298,37 @@ export async function runAutoConfig(
 
 	maybeAppendWranglerToGitIgnore(autoConfigDetails.projectPath);
 
-	// If we're uploading the project path as the output directory, make sure we
-	// don't accidentally upload sensitive files or anything a Cloudflare Pages
-	// upload would have skipped. Paths are resolved before comparing because the
-	// detected output directory is relative (e.g. ".") while projectPath is
-	// usually absolute.
+	// If the project root is the assets directory, make sure we don't
+	// accidentally upload sensitive files or anything a Cloudflare Pages upload
+	// would have skipped. Compare the assets directory the generated config uses
+	// rather than the detected output directory: frameworks such as Nuxt
+	// configure their own build output, and the uploader only reads the
+	// `.assetsignore` inside the assets directory. Paths are resolved because the
+	// configured directory is relative (e.g. ".") while projectPath is usually
+	// absolute.
+	const assetsDirectory = configurationResults.buildConfig?.assetsDirectory;
 	if (
-		resolve(autoConfigDetails.projectPath, autoConfigDetails.outputDir) ===
-		resolve(autoConfigDetails.projectPath)
+		assetsDirectory !== undefined &&
+		resolve(autoConfigDetails.projectPath, assetsDirectory) ===
+			resolve(autoConfigDetails.projectPath)
 	) {
 		maybeAppendWranglerToGitIgnoreLikeFile(
 			`${autoConfigDetails.projectPath}/.assetsignore`,
-			PROJECT_ROOT_ASSETS_IGNORE_ENTRIES
+			{
+				additionalEntries: PROJECT_ROOT_ASSETS_IGNORE_ENTRIES,
+				requireEnvWildcard: true,
+			}
 		);
 
-		// Pages server code at the root is now excluded from the assets rather than
-		// published, but it is not deployed as a Worker either, so say so.
-		const pagesServerCode = ["functions", "_worker.js"].filter((name) =>
-			existsSync(resolve(autoConfigDetails.projectPath, name))
-		);
+		// In an assets-only project, Pages server code at the root is now excluded
+		// from the assets rather than published, but it is not deployed as a
+		// Worker either, so say so. With a Worker entrypoint, a root `_worker.js`
+		// may be the framework's own build output.
+		const pagesServerCode = workerConfig?.entrypoint
+			? []
+			: ["functions", "_worker.js"].filter((name) =>
+					existsSync(resolve(autoConfigDetails.projectPath, name))
+				);
 		if (pagesServerCode.length > 0) {
 			context.logger.warn(
 				`${pagesServerCode.map((name) => `\`${name}\``).join(" and ")} in the project root will not be deployed: the project is configured as static assets, so Pages server code is excluded from the upload (via .assetsignore) and is not run. To keep it, migrate it to a Worker: https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/`
