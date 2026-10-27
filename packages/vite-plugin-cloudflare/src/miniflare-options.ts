@@ -39,7 +39,6 @@ import {
 } from "./constants";
 import { getInputInspectorPort } from "./debug";
 import { additionalModuleRE } from "./plugins/additional-modules";
-import { getRemoteBindings } from "./remote-bindings";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
 import { checkForNpmUpdate } from "./update-check";
 import {
@@ -503,8 +502,6 @@ export async function getDevMiniflareOptions(
 			? await Promise.all(
 					[...resolvedPluginConfig.environmentNameToWorkerMap].map(
 						async ([environmentName, worker]) => {
-							const bindings = getRemoteBindings(worker.config);
-
 							const preExistingRemoteProxySession =
 								remoteProxySessionsDataMap.get(worker.config.name);
 							const settings = resolvedPluginConfig.settings;
@@ -516,7 +513,8 @@ export async function getDevMiniflareOptions(
 									: await maybeStartOrUpdateRemoteProxySession(
 											{
 												name: worker.config.name,
-												bindings: bindings ?? {},
+												target: "cf",
+												env: worker.config.env,
 												complianceRegion: toApiComplianceRegion(
 													settings.complianceRegion
 												),
@@ -525,7 +523,6 @@ export async function getDevMiniflareOptions(
 											},
 											preExistingRemoteProxySession ?? null,
 											getRemoteBindingsAuth(
-												ctx.remoteBindingsAuthHooks,
 												resolvedViteConfig.root,
 												settings.accountId,
 												createLogger(viteDevServer.config.logger)
@@ -835,7 +832,6 @@ export async function getPreviewMiniflareOptions(
 	const workers: WorkerOptions[] = await Promise.all(
 		resolvedPluginConfig.workers.map(async (previewWorker) => {
 			const workerConfig = previewWorker.config;
-			const bindings = getRemoteBindings(workerConfig);
 			const preExistingRemoteProxySessionData = remoteProxySessionsDataMap.get(
 				workerConfig.name
 			);
@@ -844,7 +840,8 @@ export async function getPreviewMiniflareOptions(
 				: await maybeStartOrUpdateRemoteProxySession(
 						{
 							name: workerConfig.name,
-							bindings: bindings ?? {},
+							target: "cf",
+							env: workerConfig.env,
 							complianceRegion: toApiComplianceRegion(
 								resolvedPluginConfig.settings.complianceRegion
 							),
@@ -853,7 +850,6 @@ export async function getPreviewMiniflareOptions(
 						},
 						preExistingRemoteProxySessionData ?? null,
 						getRemoteBindingsAuth(
-							ctx.remoteBindingsAuthHooks,
 							resolvedViteConfig.root,
 							resolvedPluginConfig.settings.accountId,
 							createLogger(vitePreviewServer.config.logger)

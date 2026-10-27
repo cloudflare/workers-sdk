@@ -2,7 +2,6 @@ import assert from "node:assert";
 import { createLogger as createViteLogger } from "vite";
 import { test, vi } from "vitest";
 import { createLogger, getRemoteBindingsAuth } from "../auth";
-import type { AsyncHook, CfAccount } from "@cloudflare/workers-utils";
 
 const mocks = vi.hoisted(() => ({
 	cfAuth: {
@@ -21,12 +20,11 @@ vi.mock("@cloudflare/workers-auth/cf", () => ({
 test("remote bindings auth uses the cf profile for the project", async ({
 	expect,
 }) => {
-	const hooks = new Map<string, AsyncHook<CfAccount>>();
 	const logger = createLogger(createViteLogger("silent"));
-	const auth = getRemoteBindingsAuth(hooks, "/project", "account-id", logger);
-	assert(typeof auth === "function");
+	const auth = getRemoteBindingsAuth("/project", "account-id", logger);
+	assert(typeof auth.hook === "function");
 
-	await expect(auth()).resolves.toEqual({
+	await expect(auth.hook()).resolves.toEqual({
 		accountId: "cf-account-id",
 		apiToken: { apiToken: "cf-token" },
 	});
@@ -35,11 +33,11 @@ test("remote bindings auth uses the cf profile for the project", async ({
 	expect(mocks.cfAuth.requireAuth).toHaveBeenCalledWith({
 		account_id: "account-id",
 	});
-	// A different hook would make the next options update restart the session
-	expect(getRemoteBindingsAuth(hooks, "/project", "account-id", logger)).toBe(
-		auth
+	// The key identifies the credentials, so a rebuilt hook keeps the session
+	expect(getRemoteBindingsAuth("/project", "account-id", logger).key).toBe(
+		auth.key
 	);
 	expect(
-		getRemoteBindingsAuth(hooks, "/project", "other-account", logger)
-	).not.toBe(auth);
+		getRemoteBindingsAuth("/project", "other-account", logger).key
+	).not.toBe(auth.key);
 });
