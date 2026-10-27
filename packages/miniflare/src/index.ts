@@ -86,6 +86,7 @@ import {
 	getUserServiceName,
 	handlePrettyErrorRequest,
 	JsonErrorSchema,
+	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
 	reviveError,
 } from "./plugins/core";
 import { ContainerPrivilegesCache } from "./plugins/core/container";
@@ -383,7 +384,10 @@ function getDurableObjectClassNames(
  * entrypoint. Returns a map of external service names to the entrypoints
  * and DO classes that are referenced.
  */
-function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
+function getExternalServiceEntrypoints(
+	allWorkerOpts: ParsedWorkerOptions[],
+	sharedOpts: ParsedInstanceOptions
+) {
 	const externalServices = new Map<
 		string,
 		{
@@ -392,6 +396,10 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 		}
 	>();
 	const allWorkerNames = allWorkerOpts.map((opts) => opts.config.name);
+	if (sharedOpts.unsafeObservability) {
+		// Core creates this local service outside the user Worker configuration.
+		allWorkerNames.push(OBSERVABILITY_COLLECTOR_SERVICE_NAME);
+	}
 	const getEntrypoints = (name: string) => {
 		let externalService = externalServices.get(name);
 
@@ -1973,7 +1981,7 @@ export class Miniflare {
 		this.#cfObject = sharedOpts.cf;
 
 		const externalServices = this.#devRegistry.isEnabled()
-			? getExternalServiceEntrypoints(allWorkerOpts)
+			? getExternalServiceEntrypoints(allWorkerOpts, sharedOpts)
 			: null;
 
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
@@ -3852,6 +3860,7 @@ export type {
 export {
 	getDefaultDevRegistryPath,
 	getWorkerRegistry,
+	resolveDevRegistryPath,
 } from "./shared/dev-registry";
 export { parseModuleFallbackRequest } from "./plugins/core/module-fallback";
 export type {

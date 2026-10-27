@@ -14,7 +14,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
-import { getWorkerRegistry } from "miniflare";
+import { getWorkerRegistry, resolveDevRegistryPath } from "miniflare";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
 import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
 import { readConfig, readNewConfig } from "../../config";
@@ -367,6 +367,17 @@ async function resolveConfig(
 	config: StartDevWorkerOptions;
 	printCurrentBindings: (registry: WorkerRegistry | null) => void;
 }> {
+	// Keep registry readers and runtime registration on the same effective path.
+	// An absent or empty registry still explicitly disables discovery in Wrangler.
+	if (input.dev?.registry) {
+		input = {
+			...input,
+			dev: {
+				...input.dev,
+				registry: resolveDevRegistryPath(input.dev.registry),
+			},
+		};
+	}
 	if (
 		config.pages_build_output_dir &&
 		input.dev?.multiworkerPrimary === false

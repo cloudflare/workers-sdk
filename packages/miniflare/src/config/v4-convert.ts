@@ -59,6 +59,9 @@ function convertSharedOptions(options: ParsedV4MiniflareOptions) {
 		handleUncaughtError: options.handleUncaughtError,
 		upstream: options.upstream,
 		cf: options.cf,
+		// The v4 adapter preserves its opt-in registry semantics, including for
+		// isolated Vitest pools that have never advertised their Workers.
+		enableDevRegistry: Boolean(options.unsafeDevRegistryPath),
 		unsafeDevRegistryPath: options.unsafeDevRegistryPath,
 		unsafeHandleDevRegistryUpdate: options.unsafeHandleDevRegistryUpdate,
 		unsafeProxySharedSecret: options.unsafeProxySharedSecret,
