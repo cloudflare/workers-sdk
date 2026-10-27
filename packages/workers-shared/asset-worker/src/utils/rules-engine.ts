@@ -140,24 +140,30 @@ export const generateRedirectsMatcher = (
 		configuration.redirects.version === REDIRECTS_VERSION
 			? configuration.redirects.rules
 			: {},
-		({ status, to }, replacements) => {
-			const target = replacer(to, replacements).trim();
-			const protoPattern = /^(\w+:\/\/)/;
-			if (protoPattern.test(target)) {
-				// External redirects are not modified.
-				return {
-					status,
-					to: target,
-				};
-			} else {
-				// Relative redirects are modified to remove multiple slashes.
-				return {
-					status,
-					to: target.replace(/\/+/g, "/"),
-				};
-			}
-		}
+		({ status, to }, replacements) => ({
+			status,
+			to: normalizeRedirectTarget(replacer(to, replacements)),
+		})
 	);
+
+/**
+ * Normalize a substituted redirect pathname without changing query values,
+ * fragments or explicitly configured external URLs.
+ *
+ * @param value The redirect target after placeholder replacement.
+ * @returns A target with one slash per pathname separator.
+ */
+export function normalizeRedirectTarget(value: string): string {
+	const target = value.trim();
+	if (/^\w+:\/\//.test(target)) {
+		return target;
+	}
+
+	const suffixStart = target.search(/[?#]/);
+	const pathname = suffixStart === -1 ? target : target.slice(0, suffixStart);
+	const suffix = suffixStart === -1 ? "" : target.slice(suffixStart);
+	return pathname.replace(/[/\\]+/g, "/") + suffix;
+}
 
 export const generateStaticRoutingRuleMatcher =
 	(rules: string[]) =>
