@@ -63,6 +63,16 @@ export function maybeGetFile(filePath: PathOrFileDescriptor) {
 	}
 }
 
+/** An ignore file whose encoding cannot be used to match asset paths. */
+export class InvalidAssetsIgnoreError extends Error {
+	constructor(filePath: string) {
+		super(
+			`The .assetsignore file at "${filePath}" must be UTF-8 encoded and must not contain null characters. Save the file as UTF-8 and try again.`
+		);
+		this.name = "InvalidAssetsIgnoreError";
+	}
+}
+
 /** Read ignore patterns without silently replacing undecodable characters. */
 function readAssetsIgnoreFile(filePath: string): string | undefined {
 	let contents: Buffer;
@@ -83,9 +93,7 @@ function readAssetsIgnoreFile(filePath: string): string | undefined {
 		}
 		return text;
 	} catch {
-		throw new Error(
-			`The .assetsignore file at "${filePath}" must be UTF-8 encoded and must not contain null characters. Save the file as UTF-8 and try again.`
-		);
+		throw new InvalidAssetsIgnoreError(filePath);
 	}
 }
 

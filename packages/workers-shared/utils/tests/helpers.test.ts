@@ -3,7 +3,11 @@ import { writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "vitest";
-import { createAssetsIgnoreFunction, getContentType } from "../helpers";
+import {
+	createAssetsIgnoreFunction,
+	getContentType,
+	InvalidAssetsIgnoreError,
+} from "../helpers";
 
 describe("assets", () => {
 	const tmpDir = mkdtempSync(join(tmpdir(), "wrangler-tests"));
@@ -84,6 +88,9 @@ describe("assets", () => {
 			async ([, contents], { expect }) => {
 				await writeFile(join(tmpDir, ".assetsignore"), contents);
 
+				await expect(createAssetsIgnoreFunction(tmpDir)).rejects.toBeInstanceOf(
+					InvalidAssetsIgnoreError
+				);
 				await expect(createAssetsIgnoreFunction(tmpDir)).rejects.toThrow(
 					"Save the file as UTF-8 and try again."
 				);
