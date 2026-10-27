@@ -1,0 +1,19 @@
+packages/workers-utils/tests/map-worker-metadata-bindings.test.ts
+  s_eb9505de8c205e::t_e22dd60db60ef7 120-122,124-130,165-167,169-173
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "0ef5d0ba25b64fca42c83edc5f06f6b727cf5d80",
+  "prompts": {},
+  "sessions": {
+    "s_eb9505de8c205e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f3ecf0657ffeSaifwWkFycr33Y",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

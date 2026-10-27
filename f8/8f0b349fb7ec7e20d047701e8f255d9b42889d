@@ -1,0 +1,19 @@
+packages/wrangler/src/__tests__/preview/containers.test.ts
+  s_7befcead58ee09::t_84561d772f265c 272
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f88f0b349fb7ec7e20d047701e8f255d9b42889d",
+  "prompts": {},
+  "sessions": {
+    "s_7befcead58ee09": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2754d93dffemaqZXk0TpUufZa",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Greg Brimble <gbrimble@cloudflare.com>"
+    }
+  }
+}

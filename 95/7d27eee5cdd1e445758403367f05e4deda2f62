@@ -1,0 +1,21 @@
+packages/miniflare/test/index.spec.ts
+  s_18c7e5cb6a2433::t_3e2a9fcf0aaa7d 32,2621-2634,2638,2723-2730
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_18c7e5cb6a2433::t_190d25f9c002e2 141,143-159,468-472,498-504,516,555-561,751-756,760-765,787-799,803,808,897-903,945-951
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "957d27eee5cdd1e445758403367f05e4deda2f62",
+  "prompts": {},
+  "sessions": {
+    "s_18c7e5cb6a2433": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01037-530d-7492-b097-d583e38215c9",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

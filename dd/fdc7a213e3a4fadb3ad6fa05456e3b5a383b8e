@@ -1,0 +1,25 @@
+packages/deploy-helpers/src/triggers/deploy.ts
+  s_19c65b4b5b916c::t_06da959be68526 220
+packages/deploy-helpers/src/triggers/publish-routes.ts
+  s_19c65b4b5b916c::t_32272a3be8c93c 257,318-328,331-333
+packages/deploy-helpers/tests/publish-custom-domains.test.ts
+  s_19c65b4b5b916c::t_991f2b4c054fed 1-135
+packages/wrangler/src/__tests__/deploy/routes.test.ts
+  s_19c65b4b5b916c::t_0a709f31887568 564-626
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ddfdc7a213e3a4fadb3ad6fa05456e3b5a383b8e",
+  "prompts": {},
+  "sessions": {
+    "s_19c65b4b5b916c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fac8f45feffemtkcBcL1OrAaTp",
+        "model": "gpt-5.5"
+      },
+      "human_author": "yomna <yomna@cloudflare.com>"
+    }
+  }
+}

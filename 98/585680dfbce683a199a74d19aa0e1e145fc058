@@ -1,0 +1,33 @@
+packages/miniflare/src/plugins/core/temp-file.ts
+  s_6e1f600c752d6d::t_b65f47aadd2e46 1-43
+packages/miniflare/src/plugins/email/artifacts.ts
+  s_6e1f600c752d6d::t_6909d8830c1d4a 1-98
+packages/miniflare/src/plugins/email/index.ts
+  s_6e1f600c752d6d::t_7aef7c61542bf7 1,6-8,14,17,50-56,61-74,109-218,234-237,239,241,257,275-284,286-294,296,305,316-318
+packages/miniflare/src/plugins/shared/index.ts
+  s_6e1f600c752d6d::t_49a3c91837bccd 96-97
+packages/miniflare/src/workers/core/entry.worker.ts
+  s_6e1f600c752d6d::t_3583f78108a8b6 20,144-148,150,158,160,520,552
+packages/miniflare/src/workers/email/constants.ts
+  s_6e1f600c752d6d::t_d2d2cbb9827488 2
+packages/miniflare/src/workers/email/encoding.ts
+  s_6e1f600c752d6d::t_7bcbe325ad0c47 1-11
+packages/miniflare/src/workers/email/validate.ts
+  s_6e1f600c752d6d::t_023097d5e6adaa 3,67,73-75,132-134,139,142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "98585680dfbce683a199a74d19aa0e1e145fc058",
+  "prompts": {},
+  "sessions": {
+    "s_6e1f600c752d6d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_028d8866affegKfok4TFMf473c",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

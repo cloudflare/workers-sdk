@@ -1,0 +1,24 @@
+packages/local-explorer-ui/src/utils/observability.ts
+  s_9fff95db50b440::t_4bb7012fe81133 532-550,553-572,575-576,578-579,582-584,586-587,589-590,592-594,596,600-631
+  s_9fff95db50b440::t_311da68e883d68 632
+packages/local-explorer-ui/src/__tests__/observability/observability.test.ts
+  s_9fff95db50b440::t_9154dcf1ec68ba 11
+  s_9fff95db50b440::t_7b4a63b0ccbf48 225-299,345-350,352-364
+  s_9fff95db50b440::t_45964a494f4558 219-224,300-344,351,365-381
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6099a09122c748c76b527be1fea6caa1c56ab2f0",
+  "prompts": {},
+  "sessions": {
+    "s_9fff95db50b440": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_14864cef2ffe832xiZfAw0ontU",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

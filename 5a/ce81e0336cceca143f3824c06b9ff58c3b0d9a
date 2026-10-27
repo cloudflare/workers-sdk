@@ -1,0 +1,47 @@
+.changeset/assets-base-path-tooling.md
+  s_c17e830839df63::t_d7eaee8c45051b 1-25
+packages/config/src/convert.ts
+  s_c17e830839df63::t_b1624a1faa8fc8 684-686
+packages/config/src/schema.ts
+  s_c17e830839df63::t_fb84b87d6a2f70 16
+packages/config/src/types.ts
+  s_c17e830839df63::t_1d39c436ec7bc2 204-208
+packages/deploy-helpers/src/deploy/helpers/assets.ts
+  s_c17e830839df63::t_8c3bdd1d2d686b 560
+packages/deploy-helpers/src/deploy/helpers/create-worker-upload-form.ts
+  s_c17e830839df63::t_7014c236c1a557 89
+packages/deploy-helpers/src/preview/api.ts
+  s_c17e830839df63::t_6c0d446de12ec7 106
+packages/deploy-helpers/src/preview/preview.ts
+  s_c17e830839df63::t_40ae92588913c6 79,440
+packages/miniflare/src/config/v4-convert.ts
+  s_c17e830839df63::t_6143d58efa718c 848
+packages/miniflare/src/plugins/assets/index.ts
+  s_c17e830839df63::t_6d7dbba61ade37 223
+packages/workers-utils/src/config/environment.ts
+  s_c17e830839df63::t_06f3bf30c6a1ff 1828-1831
+packages/workers-utils/src/config/validation.ts
+  s_c17e830839df63::t_aacdf6233a7659 3148-3156,3190
+packages/workers-utils/src/types.ts
+  s_c17e830839df63::t_09f8efdde593a0 216
+packages/wrangler/src/assets.ts
+  s_c17e830839df63::t_f5f945dcb17e31 132,136-160
+packages/wrangler/src/experimental-config/load.ts
+  s_c17e830839df63::t_5f1d8f6385e469 173-175
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5ace81e0336cceca143f3824c06b9ff58c3b0d9a",
+  "prompts": {},
+  "sessions": {
+    "s_c17e830839df63": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03881-e96d-7ff3-8592-911517c3dc72",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_ae91e42aa48337::t_57983d33a1dcf8 627
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_ae91e42aa48337::t_e827be4f7b8f75 99,891
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_ae91e42aa48337::t_7ec48daf1e26b2 802,804
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_ae91e42aa48337::t_dc1b9c37e5420e 1453
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b2854d067920327687b4dfe4a716c98ecedce763",
+  "prompts": {},
+  "sessions": {
+    "s_ae91e42aa48337": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_00fa19cfeffebo2n7nnyRwu4Sf",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

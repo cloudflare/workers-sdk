@@ -1,0 +1,21 @@
+.changeset/email-artifact-message-ids.md
+  s_d33e8b2cd5474e::t_a5d1932981e475 1-5
+.changeset/email-reply-builder.md
+  s_d33e8b2cd5474e::t_9676e5dc720760 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b67c46c61bd78732d0940dc1ea268c2312f544e2",
+  "prompts": {},
+  "sessions": {
+    "s_d33e8b2cd5474e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a02014-3f16-7711-8c72-737d2e17d92c",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

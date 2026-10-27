@@ -1,0 +1,38 @@
+packages/vitest-plugin/src/pool/plugin.ts
+  s_ec7ca26dd5bb2d::t_363b7c670137ee 71,81-89,127-130,134
+packages/vitest-plugin/test/fs-module-cache.test.ts
+  s_09d77d62d4fbe9::t_7a4280c56981bc 1,60,71,79,102-175,236-263,265,268-270,273-277,279-281,283-294
+  s_09d77d62d4fbe9::t_e9c9b293d86b9a 176-196,198,201-203,206-210,212-213,215-226,228-235
+  h_0282ef8cb84129 197,199-200,204-205,211,214,227,264,266-267,271-272,278,282
+packages/vitest-plugin/test/coverage.test.ts
+  h_0282ef8cb84129 28,124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b90d5b54ebfd439cfd6ade0faba60bb09cceac25",
+  "prompts": {},
+  "humans": {
+    "h_0282ef8cb84129": {
+      "author": "Matt Johnson-Pint <mjohnson-pint@cloudflare.com>"
+    }
+  },
+  "sessions": {
+    "s_09d77d62d4fbe9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ec9822b80ffenibwjT5gJ0A3w4",
+        "model": "unknown"
+      },
+      "human_author": "Matt Johnson-Pint <mjohnson-pint@cloudflare.com>"
+    },
+    "s_ec7ca26dd5bb2d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ec98ec49cffevguEA0Nu5mSJ0W",
+        "model": "unknown"
+      },
+      "human_author": "Matt Johnson-Pint <mjohnson-pint@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,59 @@
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_9fff95db50b440::t_221e37cab429fd 1391-1424
+.changeset/wobs-local-observability.md
+  s_9fff95db50b440::t_a6c38d720fe730 16
+packages/miniflare/src/workers/local-explorer/explorer.worker.ts
+  s_9fff95db50b440::t_f9f002506b772a 35
+  s_9fff95db50b440::t_41af171cbcbb9d 367-368
+packages/vite-plugin-cloudflare/src/miniflare-options.ts
+  s_9fff95db50b440::t_12c2b9d82f4d87 476-482
+packages/vite-plugin-cloudflare/src/plugins/dev.ts
+  s_9fff95db50b440::t_0cd2ec0659cefb 85-127
+  s_9fff95db50b440::t_29d793ba6c2d7d 36-42
+packages/vite-plugin-cloudflare/src/context.ts
+  s_9fff95db50b440::t_987fc0ae3f4344 32-38,77
+  s_9fff95db50b440::t_a9c2f72fce8905 78-89
+packages/miniflare/src/workers/observability/collector.worker.ts
+  s_9fff95db50b440::t_8645243792527d 59-64
+packages/local-explorer-ui/src/routes/observability/index.tsx
+  s_9fff95db50b440::t_345b2d8aa4a8b4 13
+  s_9fff95db50b440::t_10161b92e3a4dd 111-115
+  s_9fff95db50b440::t_31c8f584985222 31,36,39
+  s_9fff95db50b440::t_0acf044b5e054e 178,180-186,192-210
+  s_9fff95db50b440::t_738e66fad48017 233,235-237,240
+  s_9fff95db50b440::t_8521f36212eec1 313-322
+  s_9fff95db50b440::t_fa287a95ef9fdb 344-354
+  s_9fff95db50b440::t_003976f44f175f 628-668,679-684
+  s_9fff95db50b440::t_a65e7bce62fcc3 30
+  s_9fff95db50b440::t_0e724b65c4e138 669-678
+  s_9fff95db50b440::t_f2cb1eb3753a6b 116
+  s_9fff95db50b440::t_87650b7553202b 212-227
+  s_9fff95db50b440::t_1e81d85dae286d 211
+packages/local-explorer-ui/src/utils/observability.ts
+  s_9fff95db50b440::t_a3aff93390c43f 1
+  s_9fff95db50b440::t_ca601a8714c006 90-114,120-146
+  s_9fff95db50b440::t_e4ffdfbfe6a95c 115-116,118-119
+  s_9fff95db50b440::t_7d6f976fbb4ce8 117
+packages/miniflare/src/workers/local-explorer/route-names.ts
+  s_9fff95db50b440::t_748d8d75f03634 32
+packages/miniflare/src/workers/local-explorer/resources/observability.ts
+  s_9fff95db50b440::t_ff93f53af9a56a 70-78
+packages/workers-utils/src/environment-variables/misc-variables.ts
+  s_9fff95db50b440::t_93e7a179202e80 357-368,373
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e7cb04a85e716e74d2aa62fe7df6969a1bc7b370",
+  "prompts": {},
+  "sessions": {
+    "s_9fff95db50b440": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_14864cef2ffe832xiZfAw0ontU",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

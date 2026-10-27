@@ -1,0 +1,58 @@
+packages/local-explorer-ui/src/__tests__/observability/observability.test.ts
+  s_1356a911e53448::t_69a020bf21f905 181-187,190-196,198
+  s_1356a911e53448::t_91ea5a76b51b13 25
+  s_1356a911e53448::t_01b402da21d18d 199-206
+  s_1356a911e53448::t_5d994b8e9ca09c 167-168,215-217
+  s_1356a911e53448::t_54f77c55956811 1-2,10-11,21-24
+  s_1356a911e53448::t_4821877aabfb8f 161-162,164-166,169-170,172-178,207-214
+  s_1356a911e53448::t_3b8b84d5d2b18f 197
+  s_1356a911e53448::t_d89535263b8af1 163,171,218-230,238
+  s_1356a911e53448::t_b79aa5cad904f3 188-189
+  s_1356a911e53448::t_48871b06083d0b 239
+  s_1356a911e53448::t_0aebf96b6c8ae0 179,231-237
+  s_1356a911e53448::t_3b88776de7daf9 180
+packages/workers-utils/src/dev-noise-paths.ts
+  s_1356a911e53448::t_e5527b5ce8917d 1,7-11
+  s_1356a911e53448::t_958eb4ca5ae218 2-6
+packages/workers-utils/AGENTS.md
+  s_1356a911e53448::t_04b2d882dc0d66 29-32
+packages/local-explorer-ui/src/utils/observability.ts
+  s_1356a911e53448::t_b4d88569f676f6 675
+  s_1356a911e53448::t_3172bc09051776 344
+  s_1356a911e53448::t_5203825f8eb9bb 504-505,508
+  s_1356a911e53448::t_e04b96e53b1c4a 506
+  s_1356a911e53448::t_d9e495d42ca323 337-343
+  s_1356a911e53448::t_0dc874a0f9b4e3 353
+  s_1356a911e53448::t_9ec163ee41379d 345-352,364,667
+  s_1356a911e53448::t_d538bb5f994432 507,509
+  s_1356a911e53448::t_34b5be9eb5d002 354-356,361-363
+  s_1356a911e53448::t_c92f26df699a82 365-367
+  s_1356a911e53448::t_fc9e2ef0facc29 665-666
+  s_1356a911e53448::t_624fdab9c1c04f 668-670,672-674
+packages/miniflare/test/index.spec.ts
+  s_1356a911e53448::t_f12dc28833125c 1615-1650
+  s_1356a911e53448::t_28572b72e44757 20
+  s_1356a911e53448::t_5935b894161271 1651-1685
+packages/miniflare/src/workers/core/entry.worker.ts
+  s_1356a911e53448::t_9107059c247856 1
+  s_1356a911e53448::t_e8f4a00bddd938 420
+  s_1356a911e53448::t_8ed5b201edf408 417-419
+  s_1356a911e53448::t_6decd0d0a29b45 400
+  s_1356a911e53448::t_87e8ec1980304a 399
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "eb5e37495678cb52ac9fb1db3772383601f38ed5",
+  "prompts": {},
+  "sessions": {
+    "s_1356a911e53448": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07a92a5c4ffd2WQ3OswPSBReuT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

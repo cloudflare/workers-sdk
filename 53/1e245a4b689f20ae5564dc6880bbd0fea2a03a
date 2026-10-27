@@ -1,0 +1,25 @@
+.changeset/remote-bindings-access-login-redirect.md
+  s_836a1d6d207713::t_5fabd206456f65 1-7
+packages/miniflare/src/index.ts
+  s_836a1d6d207713::t_fcf638774e1b8f 896-898,1762-1765,1770-1771,1782-1805
+packages/miniflare/src/workers/shared/remote-bindings-utils.ts
+  s_836a1d6d207713::t_723c7aba71a606 38-48,63-64,66-81,99-119,122-161,172,175-176,184,187,189-199
+packages/miniflare/test/plugins/shared/remote-bindings-access-warning.spec.ts
+  s_836a1d6d207713::t_a37279b6a94a84 20-23,214-337
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "531e245a4b689f20ae5564dc6880bbd0fea2a03a",
+  "prompts": {},
+  "sessions": {
+    "s_836a1d6d207713": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bf762bb4-b88e-434d-b43f-3b3635e9437e",
+        "model": "unknown"
+      },
+      "human_author": "Eric Falcao <efalcao@cloudflare.com>"
+    }
+  }
+}

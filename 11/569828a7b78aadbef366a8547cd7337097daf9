@@ -1,0 +1,23 @@
+packages/workers-utils/src/config/validation.ts
+  s_7d5df5632364c9::t_00f2840eb8c55d 5310
+packages/workers-utils/src/types.ts
+  s_7d5df5632364c9::t_eacd274d3686dd 436
+packages/config/src/__tests__/convert.test.ts
+  s_7d5df5632364c9::t_e175e8b82e40d0 989,997
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "11569828a7b78aadbef366a8547cd7337097daf9",
+  "prompts": {},
+  "sessions": {
+    "s_7d5df5632364c9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0462d798effe7zAY4Lxc6YAJ8q",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Thomas Rubini <trubini@cloudflare.com>"
+    }
+  }
+}

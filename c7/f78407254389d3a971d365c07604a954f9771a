@@ -1,0 +1,25 @@
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_ae91e42aa48337::t_7ec48daf1e26b2 635,645-651,682-692,838,840-842,849,853,856,888-898,2233,2235-2240
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_ae91e42aa48337::t_765ec4bc0a740a 821,823-826,1683-1686,1714,1807-1810,1838
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_ae91e42aa48337::t_7809093d73ff10 550-555,1055,1067-1069,1121,1133-1135
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_ae91e42aa48337::t_dc1b9c37e5420e 1287,1298-1305,1338-1348,1499,1501-1502,1510,1514,1518,1552-1562,3785,3787-3796
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c7f78407254389d3a971d365c07604a954f9771a",
+  "prompts": {},
+  "sessions": {
+    "s_ae91e42aa48337": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_00fa19cfeffebo2n7nnyRwu4Sf",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+.changeset/tcp-handlers.md
+  s_d3b4b4e0db91bd::t_4dcd433e9de07c 13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a823a8dcf3e044938c4bec7a986e42cbf4fafe01",
+  "prompts": {},
+  "sessions": {
+    "s_d3b4b4e0db91bd": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_037e0617dffe4T07leZH6wY6Sm",
+        "model": "@cf/moonshotai/kimi-k2.6"
+      },
+      "human_author": "Thomas Rubini <trubini@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+packages/miniflare/test/index.spec.ts
+  s_ae91e42aa48337::t_01d9ad0facd599 2445-2490,2622,2632-2635,2646,2659-2662,2683,2694,2706
+packages/miniflare/test/plugins/email/index.spec.ts
+  s_ae91e42aa48337::t_7f23238b64ae6e 1,1483,2190,2193,2240-2284,2328-2370,2422,2428-2449,2451-2463,2465-2466,2468-2474,2478,2485,2487,2497-2499,2502-2504,2506-2510,2513,2522,2524,2534-2535,2538-2540,2542-2548
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_ae91e42aa48337::t_853e98c15f36f8 1-1085
+packages/miniflare/test/plugins/local-explorer/index.spec.ts
+  s_ae91e42aa48337::t_12299f2b3d1a97 771,788,805
+packages/wrangler/e2e/createTestHarness.test.ts
+  s_ae91e42aa48337::t_1e40594899ba1b 1879-1882,1907-1910,1937-1940
+packages/wrangler/e2e/dev.test.ts
+  s_ae91e42aa48337::t_f09353aec14a16 29,2635-2790
+packages/wrangler/e2e/get-platform-proxy.test.ts
+  s_ae91e42aa48337::t_b81d08df93188b 697
+packages/wrangler/e2e/multiworker-dev.test.ts
+  s_ae91e42aa48337::t_f3f1aa4f25b7d2 673-745
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4fb256735b02c7b0a34bbfaddc3326970ae4e057",
+  "prompts": {},
+  "sessions": {
+    "s_ae91e42aa48337": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_00fa19cfeffebo2n7nnyRwu4Sf",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

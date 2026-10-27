@@ -1,0 +1,29 @@
+packages/deploy-helpers/src/preview/shared.ts
+  s_768bec3fe32406::t_e31cc0169e593f 363-376
+packages/workers-utils/src/config/validation.ts
+  s_768bec3fe32406::t_ef39ab2bcccef8 2186,3380-3388,3394-3396,3410-3435,3443-3444,3446,3482,5653,5987
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_768bec3fe32406::t_2a7320d682b224 11454-11509,11539-11570
+packages/wrangler/src/__tests__/preview/containers.test.ts
+  s_768bec3fe32406::t_50944708d4af9b 1-173
+packages/wrangler/src/preview/delete.ts
+  s_768bec3fe32406::t_610b994027491b 37
+packages/wrangler/src/preview/preview.ts
+  s_768bec3fe32406::t_91e629bfb7c82f 4,104
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7efad921319f23df480a2682c8b2fdbe202c2ff4",
+  "prompts": {},
+  "sessions": {
+    "s_768bec3fe32406": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_01364a252ffeVNd7EcdmXU42t1",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Will Taylor <williamtaylor@cloudflare.com>"
+    }
+  }
+}

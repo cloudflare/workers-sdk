@@ -1,0 +1,25 @@
+packages/miniflare/src/workers/core/entry.worker.ts
+  s_1356a911e53448::t_9107059c247856 1
+  s_1356a911e53448::t_87e8ec1980304a 399
+packages/workers-utils/src/dev-noise-paths.ts
+  s_1356a911e53448::t_958eb4ca5ae218 2-6
+  s_1356a911e53448::t_e5527b5ce8917d 1,7-11
+packages/local-explorer-ui/src/__tests__/observability/observability.test.ts
+  s_1356a911e53448::t_b79aa5cad904f3 188-189
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6f319af2e29874fb1013ee8ece8fc64f93b9c817",
+  "prompts": {},
+  "sessions": {
+    "s_1356a911e53448": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07a92a5c4ffd2WQ3OswPSBReuT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

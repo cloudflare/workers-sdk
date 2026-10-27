@@ -1,0 +1,19 @@
+.changeset/tidy-previews-observability.md
+  s_09949e83fb22cd::t_3c16ce50b5cf58 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "bc56b4e29de26d4fff67b23c46f465be7db11352",
+  "prompts": {},
+  "sessions": {
+    "s_09949e83fb22cd": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f3b7caf84ffeVhym9nk476hIFa",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

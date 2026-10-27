@@ -1,0 +1,29 @@
+packages/miniflare/src/plugins/email/index.ts
+  s_e771bd5e618774::t_bc48e03a5f9c71 6,205-213
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_c2586c182c96a1::t_9781c2524cd3ed 634
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ae00a47b13d871201e7a047705233368ebf80bda",
+  "prompts": {},
+  "sessions": {
+    "s_c2586c182c96a1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_032eb7497ffep5iIN2QXO8oIWm",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_e771bd5e618774": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_048515778ffe4EBFGtwSCLtvFn",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

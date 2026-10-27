@@ -1,0 +1,19 @@
+packages/local-explorer-ui/src/components/email/SendTestEmailDialog.tsx
+  s_dabb4773aed416::t_6cd52b0ae25000 54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "843b67fa6411fde88e315d06f94034a306c37c5a",
+  "prompts": {},
+  "sessions": {
+    "s_dabb4773aed416": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03f05-a9b9-7673-8100-25804b5737f1",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

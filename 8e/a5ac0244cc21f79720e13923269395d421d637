@@ -1,0 +1,33 @@
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_6d3bafc58e5d19::t_74a9d2fb4ac7b5 125-127,129,138,149,158,191-193,195,203,224
+packages/wrangler/e2e/createTestHarness.test.ts
+  s_bf0caaccc6ed8d::t_24d14ffa4024d4 1879-1882,1907-1910,1937-1940
+packages/wrangler/e2e/dev.test.ts
+  s_bf0caaccc6ed8d::t_13c9475d81d228 2683-2685,2687,2698,2708,2710
+packages/wrangler/e2e/get-platform-proxy.test.ts
+  s_bf0caaccc6ed8d::t_3b902833fbf984 697
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "8ea5ac0244cc21f79720e13923269395d421d637",
+  "prompts": {},
+  "sessions": {
+    "s_6d3bafc58e5d19": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0248e72b8ffekX5Mfi7gFY2Dpy",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_bf0caaccc6ed8d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_028716508ffe960pk9fWrTNbup",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

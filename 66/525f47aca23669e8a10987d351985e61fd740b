@@ -1,0 +1,19 @@
+pnpm-lock.yaml
+  s_0e56c3301e5173::t_3643f1747183e5 88-89,2300,2696,2770,4493,5725,5743,5761,5779,5797,15886-15887,17579,17588,17597,17606,17615,27875,27877-27881
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "66525f47aca23669e8a10987d351985e61fd740b",
+  "prompts": {},
+  "sessions": {
+    "s_0e56c3301e5173": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_09dbefc92ffel4Y7irj65GOs7y",
+        "model": "unknown"
+      },
+      "human_author": "Matt Provost <mprovost@cloudflare.com>"
+    }
+  }
+}

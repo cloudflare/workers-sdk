@@ -1,0 +1,21 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "50238257124bd2a17cadbf6071b8686b10924847",
+  "prompts": {
+    "cfc614b7b94b04d6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1b64896d5ffekG3KeRCvkYxiPm",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "Matt Kane",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 2,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    }
+  }
+}

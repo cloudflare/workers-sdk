@@ -1,0 +1,29 @@
+.changeset/quiet-pandas-preview.md
+  s_ed5659eb779c34::t_337037eb917c0a 7
+packages/deploy-helpers/src/preview/preview.ts
+  s_e9ae67e4efe89d::t_14263c773c0ce8 55,57,298-339,613,642,871
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "08028159769e05225526bfcaf287ac68a1b4858c",
+  "prompts": {},
+  "sessions": {
+    "s_e9ae67e4efe89d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f8dc8be4fffeZSs3ukXOgkNO1d",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "yomna <yomna@cloudflare.com>"
+    },
+    "s_ed5659eb779c34": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7ef85b82ffeTniKnrfNWddSGM",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "yomna <yomna@cloudflare.com>"
+    }
+  }
+}

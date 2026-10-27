@@ -1,0 +1,57 @@
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_c1da0c64966116::t_2dbd8996867b9e 611,1629-1779
+  s_27cf40cb8ff5f3::t_3dcda50ae05a36 836-839,873-893,896-899,916,934
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_c1da0c64966116::t_fb8c71263ebfca 1020-1102
+  s_27cf40cb8ff5f3::t_e8495064e1a454 554-563,566-569,576-589,600,616
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_c1da0c64966116::t_acea9e9fd1020a 1285-1537,3427
+  s_27cf40cb8ff5f3::t_19fe7b36573bca 3768-3774,3790,3841-3867,3872,3874,3934,3994
+packages/miniflare/src/plugins/core/index.ts
+  s_c1da0c64966116::t_ed7a2f029811c3 35,56,1208-1213,1369
+packages/miniflare/src/plugins/email/store.ts
+  s_c1da0c64966116::t_c91cd5a8b2aef3 1-55
+packages/miniflare/src/workers/core/email.ts
+  s_c1da0c64966116::t_35b3739a8103f8 8-12,22,186-190,264-265,330-332
+  s_27cf40cb8ff5f3::t_b872d155b74212 173-182
+packages/miniflare/src/workers/email/email-store.ts
+  s_c1da0c64966116::t_7bfd18cb1ba1f7 1-18,23-24,26-94,97,101,104-105,109,113,116-117,120-124
+packages/miniflare/src/workers/email/email-store.worker.ts
+  s_c1da0c64966116::t_b7211dba2e88b0 1-53
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_27cf40cb8ff5f3::t_896b90fe9c056a 682,2197-2204,2220,2246-2276,2280,2282-2283,2310,2337
+packages/miniflare/src/workers/email/send_email.worker.ts
+  s_27cf40cb8ff5f3::t_60aff5679a57f5 10,363
+packages/miniflare/src/workers/email/storage.ts
+  s_27cf40cb8ff5f3::t_007be7ddce3fe4 35-36,41,61
+packages/miniflare/src/workers/local-explorer/generated/index.ts
+  s_27cf40cb8ff5f3::t_a042ebb2704434 49
+packages/miniflare/src/workers/local-explorer/resources/email.ts
+  s_27cf40cb8ff5f3::t_29405c593ed8ad 53-55,58-61,72-84,87-106,108,110
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_27cf40cb8ff5f3::t_fb56dc53542b9d 5,188-464
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "78503f65bb7a91264cc9d4eedb5c9e3718bdec21",
+  "prompts": {},
+  "sessions": {
+    "s_27cf40cb8ff5f3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05b7a13f6ffewE11jNIdfs2beD",
+        "model": "claude-opus-5"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_c1da0c64966116": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05ccc4986ffenGK49lt16xdV1M",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

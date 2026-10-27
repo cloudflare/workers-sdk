@@ -1,0 +1,23 @@
+packages/deploy-helpers/src/preview/shared.ts
+  s_768bec3fe32406::t_19e0edaa4d700d 4,349-353,355-402,405-423
+packages/wrangler/src/containers/deploy.ts
+  s_768bec3fe32406::t_2e7f0e99b4fa2f 193,199-204,206
+packages/wrangler/src/preview/delete.ts
+  s_768bec3fe32406::t_efc8bf5d3cf97d 37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f01ad4a3dc2be6a0ca607972764966425915b2a2",
+  "prompts": {},
+  "sessions": {
+    "s_768bec3fe32406": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_01364a252ffeVNd7EcdmXU42t1",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Will Taylor <williamtaylor@cloudflare.com>"
+    }
+  }
+}

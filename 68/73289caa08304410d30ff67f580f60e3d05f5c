@@ -1,0 +1,79 @@
+packages/wrangler/src/__tests__/build-output.test.ts
+  s_33c7c508870361::t_446e577be5f44f 9-10,52,86,116,155,190,230,257,286,306
+packages/config/src/settings-definition.ts
+  s_33c7c508870361::t_7267954b4df410 1-17
+packages/workers-utils/src/config/environment.ts
+  s_33c7c508870361::t_9c2aba7ad5d4fc 4
+packages/config/src/__tests__/load.test.ts
+  s_b654aa20bc31a3::t_18d13d5fa744c3 13-17,19,26-28,31,33-34,77-113,201,231-232
+packages/wrangler/src/config/index.ts
+  s_33c7c508870361::t_8b8421bf0ea9a9 19-22,78,135
+packages/config/src/convert.ts
+  s_33c7c508870361::t_b248def706bceb 7,16-18,22-23,27-36,41-57
+packages/config/src/load.ts
+  s_33c7c508870361::t_f131878ad9fbea 28-31,35-37,40-41,50-59,63-67
+packages/wrangler/src/__tests__/experimental-config/load.test.ts
+  s_33c7c508870361::t_098ab7d21ee40b 7-8,33,60,89,111,132,152,171-251,259,275,280,290,312,326,346,378,409,425,440,456,472,494
+packages/config/src/worker-definition.ts
+  s_b654aa20bc31a3::t_5c0503f9ae58bd 1,7,13,16-17,20,22-25,32,74-75,77-97,99
+packages/wrangler/src/deployment-bundle/build-output.ts
+  s_33c7c508870361::t_4736683f78a744 8,15,23,35,65-68
+packages/config/src/definition.ts
+  s_33c7c508870361::t_74cf4ecc1f9518 1-56
+packages/vite-plugin-cloudflare/src/plugins/build-output.ts
+  s_33c7c508870361::t_4f403f7f8660fc 3-6,26-28,31,37,86,89-101
+packages/config/src/__tests__/schema.test.ts
+  s_33c7c508870361::t_127d6b5451e5ed 2-13,601-726
+packages/config/src/schema.ts
+  s_b654aa20bc31a3::t_80adb61bed51f9 2,433,469-523,556,569-572,574,578,586,593,598-613
+packages/config/src/config-loader.ts
+  s_b654aa20bc31a3::t_0a4f0aaa076eee 1-36
+packages/config/src/build-output.ts
+  s_33c7c508870361::t_9d7e383ef450bd 7,22-26,39-49,104-116
+packages/wrangler/src/build/run-build-output.ts
+  s_33c7c508870361::t_7ad01fff64fe9c 18-21,34
+.changeset/new-config-settings-export.md
+  s_33c7c508870361::t_50709d29583a18 1-27
+packages/config/src/inference.ts
+  s_33c7c508870361::t_dc9d77f0fd824d 14,251
+packages/vite-plugin-cloudflare/src/build-output-preview.ts
+  s_33c7c508870361::t_d06d496cca093f 5,11,54-60,71
+packages/vite-plugin-cloudflare/src/plugin-config.ts
+  s_33c7c508870361::t_05b2d163092a67 7,38-41,227,246-249,490,644-648,654,735,782,790,816,828,832,834,838-852,859-860,866
+packages/wrangler/src/__tests__/cf-wrangler/build.test.ts
+  s_33c7c508870361::t_7a6ad1392467f8 9-10,20
+packages/config/src/types.ts
+  s_33c7c508870361::t_52227e9692862e 138,140-143,145,148,150,408-439
+fixtures/experimental-new-config/cloudflare.config.ts
+  s_33c7c508870361::t_c3b2d2be9cb186 1-5,8-11
+packages/wrangler/src/experimental-config/load.ts
+  s_33c7c508870361::t_331660ca018428 5,17-20,34,36-37,77-80,82,84,89-105,108,116,131,156-157
+packages/config/src/public.ts
+  s_33c7c508870361::t_97981d55f5a8c3 79-80,83-84,87-88
+packages/config/src/index.ts
+  s_33c7c508870361::t_f30fe4097bbbcd 6,11,14,17,21,26-27,29,31,34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6873289caa08304410d30ff67f580f60e3d05f5c",
+  "prompts": {},
+  "sessions": {
+    "s_33c7c508870361": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_090720c6bffebgrhGM50B0Rkc6",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "James Opstad <13586373+jamesopstad@users.noreply.github.com>"
+    },
+    "s_b654aa20bc31a3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_099e7ccc8ffePLo6RHoj78WH63",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "James Opstad <13586373+jamesopstad@users.noreply.github.com>"
+    }
+  }
+}

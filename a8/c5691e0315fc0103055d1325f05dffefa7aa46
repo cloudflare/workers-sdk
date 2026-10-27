@@ -1,0 +1,45 @@
+.changeset/self-referencing-durable-object-bindings.md
+  s_7befcead58ee09::t_fdf71ed2a7c5ad 1-18
+packages/config/src/__tests__/config-loader.test.ts
+  s_7befcead58ee09::t_0028fc59161a3a 50-73
+packages/config/src/__tests__/convert.test.ts
+  s_7befcead58ee09::t_fc6bc21814a1be 729-770
+packages/config/src/__tests__/schema.test.ts
+  s_7befcead58ee09::t_fb564f8353743f 1180-1207
+packages/config/src/__tests__/worker-references.test-d.ts
+  s_7befcead58ee09::t_85ca889dc4e86e 71-85,128-147
+packages/config/src/bindings.ts
+  s_7befcead58ee09::t_f3d2b9615856e0 190-197,210,214-219,226-227,231-232,235,237-244,743-744,749-751,754
+packages/config/src/config-loader.ts
+  s_7befcead58ee09::t_6a2d35a48061b6 90-91
+packages/config/src/convert.ts
+  s_7befcead58ee09::t_69ae0a73d252d9 513-522
+packages/config/src/index.ts
+  s_7befcead58ee09::t_fc71c3ba34d74b 8
+packages/config/src/inference.ts
+  s_7befcead58ee09::t_39aa324474b269 131,170,172,175-203,205,207-215,295
+packages/config/src/schema.ts
+  s_7befcead58ee09::t_f016d38ccef437 38-44,139,926,928-934
+packages/miniflare/src/config/schema.ts
+  s_7befcead58ee09::t_ebe70f1b8386af 7,262-269,298,319,505-509
+packages/miniflare/test/config/schema.spec.ts
+  s_7befcead58ee09::t_c2717aa13f2688 182-203
+packages/wrangler/src/__tests__/api/startDevWorker/ConfigController.test.ts
+  s_7befcead58ee09::t_bfa37c5df79850 304-359
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a8c5691e0315fc0103055d1325f05dffefa7aa46",
+  "prompts": {},
+  "sessions": {
+    "s_7befcead58ee09": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2754d93dffemaqZXk0TpUufZa",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Greg Brimble <gbrimble@cloudflare.com>"
+    }
+  }
+}

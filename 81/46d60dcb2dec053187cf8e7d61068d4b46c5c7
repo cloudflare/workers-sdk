@@ -1,0 +1,52 @@
+packages/miniflare/src/workers/observability/tail-to-store.ts
+  s_9fff95db50b440::t_dfe58ca6aa578d 191-193
+  s_9fff95db50b440::t_b505e246bf19c6 2-7,9-14
+  s_9fff95db50b440::t_6fdc5d4b7eaf7a 410-411
+  s_9fff95db50b440::t_aeae3c002f630b 45-49
+packages/wrangler/src/dev/miniflare/index.ts
+  s_9fff95db50b440::t_af2412ad899a07 1168-1169
+packages/workers-utils/src/environment-variables/misc-variables.ts
+  s_9fff95db50b440::t_a2347096c2c158 357-361
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_9fff95db50b440::t_1073e9fb842a1f 1823
+  s_9fff95db50b440::t_df55a0e4227eb4 1292-1294
+packages/miniflare/test/plugins/core/observability.spec.ts
+  s_9fff95db50b440::t_412f2b01b2790a 9-15
+  s_9fff95db50b440::t_5689ca8c94f663 7
+packages/miniflare/src/plugins/core/index.ts
+  s_9fff95db50b440::t_63883af4832550 849-853
+  s_9fff95db50b440::t_3fc913e25bca6a 1315-1316
+  s_9fff95db50b440::t_e9b3f92b9c23d8 328-329
+packages/miniflare/src/workers/local-explorer/explorer.worker.ts
+  s_9fff95db50b440::t_aac538bf524657 358
+packages/miniflare/src/workers/observability/trace-store.ts
+  s_9fff95db50b440::t_204af52781b173 2-6,8-13
+  s_9fff95db50b440::t_424abd267da0ec 239-242,245-253,256
+  s_9fff95db50b440::t_ba139ee8af9170 299
+  s_9fff95db50b440::t_e92430c13624d1 243,255
+  s_9fff95db50b440::t_2edb44df9c35a4 264-267
+packages/miniflare/src/plugins/core/observability.ts
+  s_9fff95db50b440::t_213c0f1a80de39 11-15
+packages/miniflare/src/workers/observability/collector.worker.ts
+  s_9fff95db50b440::t_03f3dc608975d6 37
+  s_9fff95db50b440::t_15367dfcab80c3 2-6
+  s_9fff95db50b440::t_cf9cb80fe45e52 33-36
+packages/vite-plugin-cloudflare/src/miniflare-options.ts
+  s_9fff95db50b440::t_829a6569559c43 476-477,763-764
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "8146d60dcb2dec053187cf8e7d61068d4b46c5c7",
+  "prompts": {},
+  "sessions": {
+    "s_9fff95db50b440": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_14864cef2ffe832xiZfAw0ontU",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

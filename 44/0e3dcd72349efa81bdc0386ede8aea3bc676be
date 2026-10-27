@@ -1,0 +1,21 @@
+packages/miniflare/src/runtime/config/generated/workerd.ts
+  s_0e56c3301e5173::t_ac980ca1d32574 294-321,349,355,436-449,835,848-849,1019,1022-1028,1031,1034,1086,1111,1214,1217,1960-1961,1964,2038,2367-2371,2390,2394-2395,2397-2398,2401,2404,2408,2411,2603-2738,2740-2741,2745,2758-2795,3032,3097,3194,3512-3559,4372-4376,4536-4539
+pnpm-lock.yaml
+  s_0e56c3301e5173::t_3643f1747183e5 88-89,2300,2696,2770,4493,5725-5726,5743-5744,5761-5762,5779-5780,5797-5798,15886-15887,17579,17588,17597,17606,17615,27875,27877-27881
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "440e3dcd72349efa81bdc0386ede8aea3bc676be",
+  "prompts": {},
+  "sessions": {
+    "s_0e56c3301e5173": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_09dbefc92ffel4Y7irj65GOs7y",
+        "model": "unknown"
+      },
+      "human_author": "Matt Provost <mprovost@cloudflare.com>"
+    }
+  }
+}

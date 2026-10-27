@@ -1,0 +1,21 @@
+packages/miniflare/src/workers/local-explorer/resources/observability.ts
+  s_9fff95db50b440::t_b317292e1d675f 12-17,19,21
+packages/local-explorer-ui/src/utils/observability.ts
+  s_9fff95db50b440::t_990c73df8db953 93-95,97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "44a146655a52016a70340bdde28c8f702b36d787",
+  "prompts": {},
+  "sessions": {
+    "s_9fff95db50b440": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_14864cef2ffe832xiZfAw0ontU",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

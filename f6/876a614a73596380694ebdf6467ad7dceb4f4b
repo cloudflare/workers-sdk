@@ -1,0 +1,21 @@
+packages/miniflare/test/index.spec.ts
+  s_918348552515d1::t_b1620b1182ec41 2972-3140
+packages/vite-plugin-cloudflare/src/miniflare-options.ts
+  s_918348552515d1::t_b088ff4cafa7b8 38-42,481-492
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f6876a614a73596380694ebdf6467ad7dceb4f4b",
+  "prompts": {},
+  "sessions": {
+    "s_918348552515d1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_08f2594acffeCOohGc64mJpgle",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Matthew Phillips <matthewphillips@cloudflare.com>"
+    }
+  }
+}

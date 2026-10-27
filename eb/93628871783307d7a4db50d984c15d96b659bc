@@ -1,0 +1,32 @@
+packages/local-explorer-ui/src/utils/observability.ts
+  s_1356a911e53448::t_29005f52fbb79f 552
+  s_1356a911e53448::t_0dc874a0f9b4e3 163,376-377,381,384-403,410-415
+  s_1356a911e53448::t_1d15a1a8f138b8 164-172
+  s_1356a911e53448::t_ce1df45d933710 383
+  s_1356a911e53448::t_17a0a64decb5b2 774
+  s_1356a911e53448::t_0be10ad06cd6f7 765
+  s_1356a911e53448::t_b4d88569f676f6 766-770,773,775,779
+  s_1356a911e53448::t_3cc3dd08a63444 382
+  s_1356a911e53448::t_fd075a6fe6a21f 849
+  s_1356a911e53448::t_edd029e0dd6778 404-409
+packages/local-explorer-ui/src/__tests__/observability/observability.test.ts
+  s_1356a911e53448::t_54f77c55956811 1-2,11,21-24
+  s_1356a911e53448::t_4821877aabfb8f 161-165,168-172,174-177,180-188,191-198
+  s_1356a911e53448::t_91ea5a76b51b13 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "eb93628871783307d7a4db50d984c15d96b659bc",
+  "prompts": {},
+  "sessions": {
+    "s_1356a911e53448": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07a92a5c4ffd2WQ3OswPSBReuT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

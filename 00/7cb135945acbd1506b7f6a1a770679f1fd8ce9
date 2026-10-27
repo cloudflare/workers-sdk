@@ -1,0 +1,23 @@
+packages/wrangler/src/cloudchamber/images/images.ts
+  s_2025e41a9384d1::t_3827643f84b914 23,98,100,133-134,194-195,197-199,267,270
+packages/wrangler/src/containers/images.ts
+  s_2025e41a9384d1::t_4148aa3f5c0776 18,113,115,148-149,214-215,217-219,287,290
+packages/wrangler/src/containers/registries.ts
+  s_2025e41a9384d1::t_9e9ca9e359ff13 157,678-689,841
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "007cb135945acbd1506b7f6a1a770679f1fd8ce9",
+  "prompts": {},
+  "sessions": {
+    "s_2025e41a9384d1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ffd28-4773-7ff0-a58a-d4e60112ef5c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    }
+  }
+}

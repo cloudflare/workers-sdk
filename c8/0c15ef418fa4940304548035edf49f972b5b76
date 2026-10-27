@@ -1,0 +1,17 @@
+packages/wrangler/src/pages/deployments.ts
+  ai_agent 52-56,155-158
+packages/wrangler/src/pages/secret/index.ts
+  ai_agent 83-86
+packages/wrangler/src/pages/deployment-tails.ts
+  ai_agent 146-149
+packages/wrangler/src/pages/download-config.ts
+  ai_agent 322-325
+packages/wrangler/src/pages/deploy.ts
+  ai_agent 190-193
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "c80c15ef418fa4940304548035edf49f972b5b76",
+  "prompts": {}
+}

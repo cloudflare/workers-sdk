@@ -1,0 +1,21 @@
+packages/config/src/__tests__/load.test.ts
+  s_b654aa20bc31a3::t_18d13d5fa744c3 13-17,19,26-28,31,33-34,77-114,202,232-233
+packages/config/src/config-loader.ts
+  s_b654aa20bc31a3::t_0a4f0aaa076eee 1-73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a3ab1f21ea533f8c7339891cddd94a856bfcd4d6",
+  "prompts": {},
+  "sessions": {
+    "s_b654aa20bc31a3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_099e7ccc8ffePLo6RHoj78WH63",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "James Opstad <13586373+jamesopstad@users.noreply.github.com>"
+    }
+  }
+}

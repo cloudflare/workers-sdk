@@ -1,0 +1,43 @@
+.changeset/polite-rings-make.md
+  s_3fe88a80ac76fb::t_61e4a79b20a41c 1-4,6
+packages/workers-utils/src/config/environment.ts
+  s_3fe88a80ac76fb::t_3e46cc7234ad99 1953-1984
+packages/workers-utils/src/config/validation.ts
+  s_3fe88a80ac76fb::t_e0697df4ee2ee6 13-16,5964
+packages/wrangler/src/preview/preview.ts
+  s_3fe88a80ac76fb::t_78d0841c99d45b 1-13,14-17,25,30-39,45,59-61,68-74,103-113,124-134,136-139,212-240,242-251,253-261,263-334,337-349,359-361,363,364,366-369,372-387,471-476,478-480,497,499,505,507-508,510-512,518,523-526,531-533,545-547,550-553,576-582,584-587,590,592-593,596-597,599,655,657-661,666-678,683,688,694
+packages/workers-utils/tests/config/patch-config.test.ts
+  s_3fe88a80ac76fb::t_a2af0638cfea6d 506-522
+  s_3fe88a80ac76fb::t_914f8560fcc631 483-505
+packages/workers-utils/src/config/patch-config.ts
+  s_3fe88a80ac76fb::t_82398ed4d796ab 76-78,90-96
+packages/wrangler/src/__tests__/preview.test.ts
+  s_3fe88a80ac76fb::t_b4053ce8aec844 2,19,23,242,250,817-822,831,841-854,856-887,889-899,906-959,1585-1592,1594-1595,1597-1602,1603,1607-1611,1612-1614,1618-1634,1636-1646,1655-1661,1663-1880,1886-1982,1984-1991,2287,3021
+  s_5907a7f7a9368b::t_e9e9a1b8b2eb99 28,146,151,153,174,186-187,194,823-830,832-840,855,888,900-905,981-1579,1581,1584,1593,1596,1604-1606,1615-1617,1635,1647-1654,1662,1881-1885,1983,2355,2363,2700-2872,2901,2910,2919,2981-2986
+packages/deploy-helpers/src/preview/shared.ts
+  s_3fe88a80ac76fb::t_47efa1747de41e 466-467
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2f8605eec7e05d6dc54c0b5fda4897313195652a",
+  "prompts": {},
+  "sessions": {
+    "s_3fe88a80ac76fb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f98419adeffe0CohIZ5w8HSyG0",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Greg Brimble <gbrimble@cloudflare.com>"
+    },
+    "s_5907a7f7a9368b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f82d55475ffex5yTXhaP71NStM",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "yomna <yomna@cloudflare.com>"
+    }
+  }
+}

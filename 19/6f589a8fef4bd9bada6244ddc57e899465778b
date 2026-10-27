@@ -1,0 +1,19 @@
+packages/miniflare/test/plugins/email/index.spec.ts
+  s_61cbf955024170::t_1f932fa258db63 1-2,2076-2110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "196f589a8fef4bd9bada6244ddc57e899465778b",
+  "prompts": {},
+  "sessions": {
+    "s_61cbf955024170": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_095ce3467ffega16SMRQqoiXyb",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Matt Kane <mkane@cloudflare.com>"
+    }
+  }
+}

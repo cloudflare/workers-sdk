@@ -1,0 +1,77 @@
+.changeset/fuzzy-pandas-launch.md
+  s_3725c7a238f252::t_add3b5cfdbb528 1-13
+packages/containers-shared/src/client/index.ts
+  s_3725c7a238f252::t_05dcd14652618f 49-50,56,188,222
+packages/containers-shared/src/client/models/ContainerImagePreparation.ts
+  s_3725c7a238f252::t_2587808a62864c 1-12
+packages/containers-shared/src/client/models/ContainerImagePreparationStatus.ts
+  s_3725c7a238f252::t_cb7ccef19aba65 1-9
+packages/containers-shared/src/client/models/CreateDurableObjectApplicationRequest.ts
+  s_3725c7a238f252::t_0ef2d005dc7a4d 1-21
+packages/containers-shared/src/client/models/PrepareContainerImageRequestBody.ts
+  s_3725c7a238f252::t_a98e7c137d0612 1-7
+packages/containers-shared/src/client/models/SchedulingPolicy.ts
+  s_3725c7a238f252::t_c745c39993a0e2 9
+packages/containers-shared/src/client/services/ApplicationsService.ts
+  s_3725c7a238f252::t_7b4e45e93b2180 17,44-46
+packages/containers-shared/src/client/services/ContainerImagePreparationsService.ts
+  s_3725c7a238f252::t_e6bfa35ac56506 1-30
+packages/deploy-helpers/src/deploy/deploy.ts
+  s_3725c7a238f252::t_f5d635e81620e8 12,34,138-149,255-259,268,356,798-808
+packages/deploy-helpers/src/deploy/helpers/container-metadata.ts
+  s_3725c7a238f252::t_bc146cb1b6e498 1-13
+packages/deploy-helpers/src/deploy/helpers/durable.ts
+  s_3725c7a238f252::t_9abacbbc580f3f 5,106,114-139,142
+packages/deploy-helpers/src/deploy/versions-upload.ts
+  s_3725c7a238f252::t_686b1d502411d2 25,59-60,157-162,175,216
+packages/workers-utils/src/config/containers.ts
+  s_3725c7a238f252::t_1ba43a62da5033 2-43
+packages/workers-utils/src/config/environment.ts
+  s_3725c7a238f252::t_8b64f133d06395 350-379,426-428,436-438,443,458-460,465
+packages/workers-utils/src/config/index.ts
+  s_3725c7a238f252::t_4b727637364747 45,47,50
+packages/workers-utils/src/config/validation.ts
+  s_3725c7a238f252::t_d6f0ea92982634 10-13,3645,3670,6482-6492,6494-6596,6598,7358,7371-7375,7418-7424
+packages/workers-utils/src/index.ts
+  s_3725c7a238f252::t_16e8918a6da73b 18,20,23
+packages/workers-utils/src/worker.ts
+  s_3725c7a238f252::t_a33d4a98901c82 3,455-464
+packages/workers-utils/tests/config/containers.test.ts
+  s_3725c7a238f252::t_df44f8cde287d8 4,55-107
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_3725c7a238f252::t_80bf19eb13c23c 2656,4622-4854
+packages/wrangler/src/__tests__/containers/deploy.test.ts
+  s_3725c7a238f252::t_5ef7fa9d67c958 6,39,57,116-548,3238-3293,3634-3646
+packages/wrangler/src/__tests__/containers/schema.test.ts
+  s_3725c7a238f252::t_06eb503a082fc3 13-20,24-40,93-134
+packages/wrangler/src/__tests__/type-generation.test.ts
+  s_3725c7a238f252::t_0b1ae76bc3d895 1899-1942
+packages/wrangler/src/__tests__/versions/versions.upload.test.ts
+  s_3725c7a238f252::t_5ab16a6fecd53b 5,25,2407-2464
+packages/wrangler/src/containers/config.ts
+  s_3725c7a238f252::t_da87f9230fa438 65-68
+packages/wrangler/src/containers/deploy.ts
+  s_3725c7a238f252::t_6195e8b6a774bd 75,78,80,85-86,100,105,107,114-115,117-124,126-128,130-133,135-153,155-158,161-162,164-173
+packages/wrangler/src/containers/instance-applications.ts
+  s_3725c7a238f252::t_b4bd382e80c2b5 1-245
+packages/wrangler/src/deploy/index.ts
+  s_3725c7a238f252::t_1296354e7a26d9 10-13,210-211
+packages/wrangler/src/versions/upload.ts
+  s_3725c7a238f252::t_2b612a244cc0ca 6,73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4cd5dc119e06816a6a6713d229f5f7c2521b76bb",
+  "prompts": {},
+  "sessions": {
+    "s_3725c7a238f252": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd31e-cf47-7423-90ec-e5aaf3f09f91",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    }
+  }
+}

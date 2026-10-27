@@ -1,0 +1,19 @@
+packages/workers-shared/utils/testdata/base-path-normalization.json
+  s_ff9e97aa7f7ce5::t_1eae3854276805 1-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "83951169f9d6fb9de8af6ed0b562d4a8e3b18988",
+  "prompts": {},
+  "sessions": {
+    "s_ff9e97aa7f7ce5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a038f2-4760-7423-8b42-1eb8942b028b",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+packages/wrangler/src/__tests__/triggers.test.ts
+  s_b1ac6d1b2f94d8::t_8b8afb06466060 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2c1e2f62fe1678c33563b2de088dea69c6d8be16",
+  "prompts": {},
+  "sessions": {
+    "s_b1ac6d1b2f94d8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019faa56-489c-7cb2-a48e-ddeb1a651b06",
+        "model": "unknown"
+      },
+      "human_author": "Eric Clemmons <eclemmons@cloudflare.com>"
+    }
+  }
+}

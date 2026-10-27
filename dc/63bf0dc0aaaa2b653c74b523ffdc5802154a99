@@ -1,0 +1,25 @@
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_18c7e5cb6a2433::t_a2d787ab7eaf7c 662,699,868,905,2299-2303
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_18c7e5cb6a2433::t_d05eb9b4b21cf0 870-873
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_18c7e5cb6a2433::t_6ea54217ce668d 612-613,1059,1076,1125,1142
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_18c7e5cb6a2433::t_77c622415b49b1 1318,1360,1532,1574,3863-3874
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "dc63bf0dc0aaaa2b653c74b523ffdc5802154a99",
+  "prompts": {},
+  "sessions": {
+    "s_18c7e5cb6a2433": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01037-530d-7492-b097-d583e38215c9",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

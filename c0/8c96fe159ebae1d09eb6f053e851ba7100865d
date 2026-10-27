@@ -1,0 +1,21 @@
+packages/local-explorer-ui/src/__e2e__/email/utils.ts
+  s_dabb4773aed416::t_9695c367521482 85-89
+packages/local-explorer-ui/src/routes/email/routing/$emailId.tsx
+  s_dabb4773aed416::t_510cb23c0f652a 133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c08c96fe159ebae1d09eb6f053e851ba7100865d",
+  "prompts": {},
+  "sessions": {
+    "s_dabb4773aed416": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03f05-a9b9-7673-8100-25804b5737f1",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+packages/wrangler/src/__tests__/preview.test.ts
+  s_18d16161aabb4a::t_b24d2600094864 1774,1777,1841-1843
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "fa248b86fd1644d133df6c20a5c66bb1ef733c6e",
+  "prompts": {},
+  "sessions": {
+    "s_18d16161aabb4a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fdf4d83d3ffeBUI6LjdUdWhNC5",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,46 @@
+packages/wrangler/src/triggers/index.ts
+  s_dbbc503753dcd7::t_3d3b54464c8bb0 1-4,70
+.changeset/workflows-hotfix.md
+  s_6839e8c88e235c::t_dba03cf065c867 1-29
+  s_6839e8c88e235c::t_6e7de7d0da1b8d 1-29
+packages/deploy-helpers/src/deploy/helpers/validate-worker-props.ts
+  s_6839e8c88e235c::t_fa5a67f905e78d 11-14,103
+packages/deploy-helpers/src/shared/types.ts
+  s_6839e8c88e235c::t_1204c39543668c 159-160
+packages/deploy-helpers/src/triggers/deploy.ts
+  s_6839e8c88e235c::t_f0cbe53f2fc4df 30,49-52,189,202-205,225,247-254,286-288,309-312,321,334-339,341-342,346-416,437-440,450-454,457-494,496,749-772
+packages/workers-utils/src/config/environment.ts
+  s_6839e8c88e235c::t_d30872f4984b4d 593,595,597,604-607,805-830
+packages/workers-utils/src/config/validation.ts
+  s_6839e8c88e235c::t_7c890094147dbe 11,2244-2247,2257,2275-2375,2381
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_6839e8c88e235c::t_1811adcd54808f 838-947
+packages/wrangler/src/__tests__/deploy/routes.test.ts
+  s_6839e8c88e235c::t_d8b0be51d4fc77 763-768,1481-1490
+packages/wrangler/src/__tests__/deploy/workflows.test.ts
+  s_6839e8c88e235c::t_1582755f8317ef 184-320,501-513,535-539,556-564
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6c4cca973f91bc06018a4cb82fd04c14e0b89595",
+  "prompts": {},
+  "sessions": {
+    "s_6839e8c88e235c": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019fae0f-212d-7ffd-93e0-046ef22fa694",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "avenceslau <avenceslau@cloudflare.com>"
+    },
+    "s_dbbc503753dcd7": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019faea6-ae1d-7768-952d-5a3188583cce",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "avenceslau <avenceslau@cloudflare.com>"
+    }
+  }
+}

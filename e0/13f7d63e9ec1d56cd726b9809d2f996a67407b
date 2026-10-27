@@ -1,0 +1,23 @@
+packages/miniflare/test/index.spec.ts
+  s_31ed2bed2d2dec::t_1663b44dbf2879 14-17,776-805
+packages/workers-utils/src/index.ts
+  s_31ed2bed2d2dec::t_cc178b49202ba0 123
+packages/workers-utils/tests/compatibility-date.test.ts
+  s_31ed2bed2d2dec::t_fcaefe84d8999c 8,89-145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e013f7d63e9ec1d56cd726b9809d2f996a67407b",
+  "prompts": {},
+  "sessions": {
+    "s_31ed2bed2d2dec": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_00a569992ffez3szJwJ6t72XxB",
+        "model": "claude-opus-5"
+      },
+      "human_author": "James Opstad <13586373+jamesopstad@users.noreply.github.com>"
+    }
+  }
+}

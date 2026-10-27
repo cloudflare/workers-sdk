@@ -1,0 +1,19 @@
+packages/vitest-pool-workers/test/module-fallback.test.ts
+  s_dd24ec1092d176::t_50aa63874f4861 27-41,274-382
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "89dd1053c13315d59ee69eab1018e472de9970a5",
+  "prompts": {},
+  "sessions": {
+    "s_dd24ec1092d176": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05c337185ffeE4ih7nXy8k1irD",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Pete Bacon Darwin <pbacondarwin@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+packages/wrangler/e2e/preview.test.ts
+  s_15e6186ba40f86::t_75b0679b9a12e5 5,107-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5db314355ae7bf86b94e948d80fa6f0a43722806",
+  "prompts": {},
+  "sessions": {
+    "s_15e6186ba40f86": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f54eaf6c3ffeexteSUCaW7FUFJ",
+        "model": "cloudflare/auto"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

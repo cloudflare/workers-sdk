@@ -1,0 +1,23 @@
+packages/wrangler/src/__tests__/deploy/core.test.ts
+  s_82ae919c84e6c2::t_0c3ce3ba6af537 793,926
+packages/wrangler/src/__tests__/profiles.test.ts
+  s_82ae919c84e6c2::t_cb8cfc614f4bc2 223,241
+packages/wrangler/src/__tests__/user.test.ts
+  s_82ae919c84e6c2::t_ce2ebd94cead79 108,196,242,288,330,1309
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5b7b4a261fb4611ef49498a346563117221929ea",
+  "prompts": {},
+  "sessions": {
+    "s_82ae919c84e6c2": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07bf80f27ffeGYM5uASTKJxS3a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Gabriel Massadas <gmassadas@cloudflare.com>"
+    }
+  }
+}

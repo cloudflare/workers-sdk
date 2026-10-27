@@ -1,0 +1,21 @@
+packages/wrangler/e2e/dev.test.ts
+  s_d33e8b2cd5474e::t_ca693cf87d2887 67-68,2450-2460,2465,2636-2646,2649
+packages/wrangler/e2e/multiworker-dev.test.ts
+  s_d33e8b2cd5474e::t_1a08a386ab236f 741-744,747-749
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "baa219c9c4701bd08a7306178d8ff9c1731469c9",
+  "prompts": {},
+  "sessions": {
+    "s_d33e8b2cd5474e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a02014-3f16-7711-8c72-737d2e17d92c",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+.changeset/compact-preview-output.md
+  s_7d4bcaa337d715::t_0ecbc451ab5dea 1-8
+packages/deploy-helpers/src/preview/preview.ts
+  s_e5f33a5860c8d5::t_b5e096b72e2a65 288-290,293-295,298-301,304,306-307,311-313,315-317,453
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "56409f5e0d8aa75bbb0573a1671c89071747feb2",
+  "prompts": {},
+  "sessions": {
+    "s_7d4bcaa337d715": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_02339c7b7ffeEZk8DMX20sqICf",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    },
+    "s_e5f33a5860c8d5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_02332de60ffegc1ccXoAccO8Yr",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Patrick O'Donnell <podonnell@cloudflare.com>"
+    }
+  }
+}

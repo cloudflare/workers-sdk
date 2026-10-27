@@ -1,0 +1,19 @@
+packages/wrangler/src/__tests__/deploy/routes.test.ts
+  s_10a2b46995b274::t_be49584aba7f99 48-50,509-700
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f718608fb4c89f2ac11a43feb8178ae7671353cb",
+  "prompts": {},
+  "sessions": {
+    "s_10a2b46995b274": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f8d659cc1ffeYTdXbnRC2DfI56",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "yomna <yomna@cloudflare.com>"
+    }
+  }
+}

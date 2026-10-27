@@ -1,0 +1,19 @@
+.changeset/tidy-pandas-paginate.md
+  s_1ac6845434ff86::t_7b084d241e31ba 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6673cfb945ce11c99d8286a990cdd01cb1bc9eb6",
+  "prompts": {},
+  "sessions": {
+    "s_1ac6845434ff86": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fca05-2f14-76e0-b2f9-7975dcb4102f",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    }
+  }
+}

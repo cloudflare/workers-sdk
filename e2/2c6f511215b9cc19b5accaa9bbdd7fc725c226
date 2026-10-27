@@ -1,0 +1,19 @@
+pnpm-lock.yaml
+  s_4e2b1b732ed5f8::t_7e4549da7477bf 691-708
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e22c6f511215b9cc19b5accaa9bbdd7fc725c226",
+  "prompts": {},
+  "sessions": {
+    "s_4e2b1b732ed5f8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_02c30f901ffehBqrnaT6K8Rku7",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "James Opstad <13586373+jamesopstad@users.noreply.github.com>"
+    }
+  }
+}

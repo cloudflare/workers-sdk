@@ -1,0 +1,94 @@
+packages/miniflare/src/workers/core/entry.worker.ts
+  s_684f2d2be94584::t_073702593ec42a 142
+  s_0e56c3301e5173::t_e792ef426f7333 28,40-43,149-153,159-162,164-167,527,605-613
+packages/miniflare/src/config/v4-schema.ts
+  s_0e56c3301e5173::t_c1669013b061e4 376-382,790
+packages/miniflare/src/config/schema.ts
+  s_0e56c3301e5173::t_065f8c63dce073 623-629
+packages/workers-utils/src/types.ts
+  s_0e56c3301e5173::t_3bfaf4ece4f69d 568-570
+packages/workers-utils/src/config/validation.ts
+  s_0e56c3301e5173::t_397d73744af203 42,2149-2156,6566-6620
+packages/miniflare/src/workers/core/constants.ts
+  s_0e56c3301e5173::t_fa107fc53a718b 50,99-100
+packages/workers-utils/src/config/config.ts
+  s_0e56c3301e5173::t_ea20355f18eee8 436
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_0e56c3301e5173::t_16f005c069c6fc 10702-10897
+packages/workers-utils/src/config/environment.ts
+  s_0e56c3301e5173::t_2917123cd481b5 749-755,1829-1838
+packages/miniflare/src/workers/access/access-identity.worker.ts
+  s_0e56c3301e5173::t_0a770aa84a0e32 1-22
+packages/miniflare/src/runtime/config/generated/workerd.ts
+  s_0e56c3301e5173::t_59a8d53a9f66e2 2614-2620
+  s_0e56c3301e5173::t_6fad91613c29b0 2767-2769
+  s_0e56c3301e5173::t_65ee6cd60bc67d 2612-2613,2621,2624,2627,2630,2633,2636,2644-2745,2770,2773,2787-2788,2791,2797-2798,2803,3544,3548,3551,3554,3557,3572,3575,3578,3581
+  s_0e56c3301e5173::t_1574a37b783d28 2628-2629
+  s_0e56c3301e5173::t_51e501296e9602 3545-3547
+  s_0e56c3301e5173::t_0038bd7923a392 3552-3553
+  s_0e56c3301e5173::t_c1ea722fd13dbe 2637-2639
+  s_0e56c3301e5173::t_2d300beee2d7e6 3534,3558-3571
+  s_0e56c3301e5173::t_211323d828137e 3573-3574
+  s_0e56c3301e5173::t_b5eda556e72681 2771-2772
+  s_0e56c3301e5173::t_c6dac335267a7e 3576-3577
+  s_0e56c3301e5173::t_40ef2f9d3a1778 2634-2635
+  s_0e56c3301e5173::t_3a8b9df47538c3 2611
+  s_0e56c3301e5173::t_f5230b0e3bb3f3 2799-2802
+  s_0e56c3301e5173::t_0b792e77c1d7be 3549-3550
+  s_0e56c3301e5173::t_2cdb0a37313db8 3555-3556
+  s_0e56c3301e5173::t_cf537a94602434 2625-2626
+  s_0e56c3301e5173::t_6cc4bce96109ef 2640-2642
+  s_0e56c3301e5173::t_d010677cd84a0b 2774-2786
+  s_0e56c3301e5173::t_1c2009e4c5b9c8 2631-2632
+  s_0e56c3301e5173::t_25b9871582ce00 3579-3580
+  s_0e56c3301e5173::t_4d85d5dcdd2986 2792-2796
+  s_0e56c3301e5173::t_ac980ca1d32574 2643,2746
+  s_0e56c3301e5173::t_47dafd85653b55 2789-2790
+  s_0e56c3301e5173::t_e238d796fbd7c7 2622-2623
+  s_0e56c3301e5173::t_2ef64a885230d2 2766
+  s_0e56c3301e5173::t_51c2aa3371dc61 3535-3537,3541-3543
+packages/wrangler/src/api/startDevWorker/LocalRuntimeController.ts
+  s_0e56c3301e5173::t_142f01322d1604 219
+packages/miniflare/src/config/v4-convert.ts
+  s_0e56c3301e5173::t_82a1a657361d84 187
+packages/miniflare/test/plugins/core/access.spec.ts
+  s_0e56c3301e5173::t_e11beda2d4b2bc 1-156
+packages/miniflare/src/runtime/config/workerd.ts
+  s_0e56c3301e5173::t_3904b6b73104a4 79-80
+.changeset/access-local-dev.md
+  s_684f2d2be94584::t_6f9c10e75c9276 9-11
+  s_684f2d2be94584::t_5fc3dd751617e9 8
+  s_684f2d2be94584::t_e040176d6fe517 15-17
+  s_0e56c3301e5173::t_bb2e6834682aed 18-23
+  s_684f2d2be94584::t_655e0afd87105f 1-4
+  s_684f2d2be94584::t_c9662951b4d364 5-7
+  s_684f2d2be94584::t_92586bbf0be8fd 12-14
+packages/wrangler/src/dev/miniflare/index.ts
+  s_0e56c3301e5173::t_5fbb7adbebd43b 109,1208
+packages/wrangler/src/api/startDevWorker/ConfigController.ts
+  s_0e56c3301e5173::t_b99b09a87f861f 462
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "fb635638e7ae3781a88b9cca11845c641038f1ea",
+  "prompts": {},
+  "sessions": {
+    "s_0e56c3301e5173": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_09dbefc92ffel4Y7irj65GOs7y",
+        "model": "unknown"
+      },
+      "human_author": "Matt Provost <mprovost@cloudflare.com>"
+    },
+    "s_684f2d2be94584": {
+      "agent_id": {
+        "tool": "devin",
+        "id": "s_684f2d2be94584",
+        "model": "unknown"
+      },
+      "human_author": "Matt Provost <mprovost@cloudflare.com>"
+    }
+  }
+}

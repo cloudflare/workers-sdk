@@ -1,0 +1,67 @@
+.changeset/durable-object-application-settings.md
+  s_23cc57bf2d1f01::t_66e1a544692438 1-11
+.changeset/named-container-image-build-options.md
+  s_23cc57bf2d1f01::t_fd39f7c0d0ce0d 1-28
+.changeset/tidy-sandboxes-link.md
+  s_23cc57bf2d1f01::t_5ee741d8b50b68 1-9
+packages/containers-shared/src/build.ts
+  s_23cc57bf2d1f01::t_f2a0caf58091af 681,690,692-696,698-711,714-716
+packages/containers-shared/tests/build-and-push.test.ts
+  s_23cc57bf2d1f01::t_9bdf88de1ed89a 24,594-661
+packages/deploy-helpers/src/deploy/helpers/container-image-bindings.ts
+  s_23cc57bf2d1f01::t_9b103101c02f06 1-5,11,47,80-83
+packages/deploy-helpers/src/deploy/helpers/container-metadata.ts
+  s_23cc57bf2d1f01::t_ef2839b478b9ec 1,5,12-16,23,25-29,32-33,35,42,47,85-92
+packages/deploy-helpers/tests/container-image-bindings.test.ts
+  s_23cc57bf2d1f01::t_c15ff81da09960 1-4,10,17,20,32,35-42,44-58,71,141,258-259,266,277-278,293-294,317
+packages/deploy-helpers/tests/durable-object-container-applications.test.ts
+  s_23cc57bf2d1f01::t_456f850c764937 4,12,16,27,53-73,93-106,112-387,389-443,584-735,751,870,873-879,903
+packages/workers-utils/src/config/containers.ts
+  s_23cc57bf2d1f01::t_baee0df6298363 13-19,36-58,239-242
+packages/workers-utils/src/config/environment.ts
+  s_23cc57bf2d1f01::t_6b1789f2179ab1 109-115,124-125,218-220,228-229
+packages/workers-utils/src/config/index.ts
+  s_23cc57bf2d1f01::t_8ab7c3d700015d 49,54-57
+packages/workers-utils/src/config/validation.ts
+  s_23cc57bf2d1f01::t_fb494c10395e68 3736-3763,3765-3771,3786-3825,3855-3864,3880-3882,3914-3934,3937-3944,3948
+packages/workers-utils/src/index.ts
+  s_23cc57bf2d1f01::t_5053e0f4799113 22,27-30
+packages/workers-utils/src/print-bindings.ts
+  s_23cc57bf2d1f01::t_bdf694177e5772 956
+packages/workers-utils/tests/config/containers.test.ts
+  s_23cc57bf2d1f01::t_f567468314cd4c 6,35-72
+packages/workers-utils/tests/config/durable-object-container-settings.test.ts
+  s_23cc57bf2d1f01::t_f008e35a722426 1-68
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_23cc57bf2d1f01::t_f5daf0eb6b17ce 2660-2679,2681-2685,2687,2691-2692,2730-2749,2751-2755,2757,2762-2763,2765-2789,2791-2795,2797,2801-2802,2880-2904,2906-2910,2912,2916-2917,4852,4869,4873-4938,4981-5065
+packages/workers-utils/tests/print-bindings.test.ts
+  s_23cc57bf2d1f01::t_0b2b60aa682be5 50-62,64-66,68-73
+packages/wrangler/src/__tests__/config-schema.test.ts
+  s_23cc57bf2d1f01::t_8db1902a437845 85-99
+packages/wrangler/src/__tests__/containers/deploy.test.ts
+  s_23cc57bf2d1f01::t_9b768859126dc2 157,261-422,426,430,433,436-443,447,455-456,458-467,469,471-478,482-494,498-504,543-544,574-577,4251-4352,4766-4775,5172-5181,5497-5498,5510-5513
+packages/wrangler/src/__tests__/deployment-bundle/build-container-images.test.ts
+  s_23cc57bf2d1f01::t_1c84c6526704fb 9-12,34-36,76,93-246,311,328-332
+packages/wrangler/src/__tests__/versions/versions.deploy.test.ts
+  s_23cc57bf2d1f01::t_c5fccbe653b125 242-251,457-548,550-551,553-554,556,558-560,564-565,567-569,571-583,644,655,666-672,675,677,702-718,725
+packages/wrangler/src/__tests__/versions/versions.upload.test.ts
+  s_23cc57bf2d1f01::t_25df23141a3ccc 160-169,2404-2416,2419-2446,2449-2450,2453-2483,2485-2489,2491-2494,2496-2509,2511,2513-2520,2522-2553,2619-2657,2659-2668,2670-2680,2682-2684,2686,2688-2696,2698-2700,2702-2719
+packages/wrangler/src/deployment-bundle/build-container-images.ts
+  s_23cc57bf2d1f01::t_d1e9e2c18eecaa 11,13-16,58-62,65,81-112,120-123,134-137,141-143,165,168-189
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "dc4afa87d4f74d093da73b7c5689786d43dd348a",
+  "prompts": {},
+  "sessions": {
+    "s_23cc57bf2d1f01": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0722b-2bac-7980-85e3-fd36689799d5",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    }
+  }
+}

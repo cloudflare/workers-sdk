@@ -1,0 +1,63 @@
+packages/config/src/__tests__/convert.test.ts
+  s_c17e830839df63::t_26794e251e6d23 1104,1111
+packages/deploy-helpers/src/deploy/helpers/tests/assets.test.ts
+  s_c17e830839df63::t_cbf06f6e56fc6f 1-33
+packages/miniflare/README.md
+  s_c17e830839df63::t_f12ff6e630590a 463
+packages/miniflare/test/config/v4-convert.spec.ts
+  s_c17e830839df63::t_caf7cc60f1af65 479,487
+packages/miniflare/test/plugins/assets/index.spec.ts
+  s_c17e830839df63::t_fdfa5b3653eb7c 18-21,30,88,96-138
+packages/vite-plugin-cloudflare/playground/spa-with-api/__tests__/base-path/spa-with-api.spec.ts
+  s_c17e830839df63::t_26bba39e40c8f5 1-82
+packages/vite-plugin-cloudflare/playground/spa-with-api/api/index.ts
+  s_c17e830839df63::t_99b55a9fc948dc 10-11,13-14
+packages/vite-plugin-cloudflare/playground/spa-with-api/package.json
+  s_c17e830839df63::t_ae93337c5890a3 6,15
+packages/vite-plugin-cloudflare/playground/spa-with-api/public-base-path/_headers
+  s_c17e830839df63::t_7ff42643a4b276 1-2
+packages/vite-plugin-cloudflare/playground/spa-with-api/public-base-path/_redirects
+  s_c17e830839df63::t_862adc545cb7c9 1-2
+packages/vite-plugin-cloudflare/playground/spa-with-api/public-base-path/marker.txt
+  s_c17e830839df63::t_a60dec8a3d72f1 1
+packages/vite-plugin-cloudflare/playground/spa-with-api/public-base-path/target.txt
+  s_c17e830839df63::t_e87944461994e4 1
+packages/vite-plugin-cloudflare/playground/spa-with-api/public-base-path/vite.svg
+  s_c17e830839df63::t_59993dbe20939e 1
+packages/vite-plugin-cloudflare/playground/spa-with-api/src/App.tsx
+  s_c17e830839df63::t_28d935f372d65c 35-36
+packages/vite-plugin-cloudflare/playground/spa-with-api/vite.config.base-path.ts
+  s_c17e830839df63::t_f82e9c2277ae6e 1-17
+packages/vite-plugin-cloudflare/playground/spa-with-api/wrangler.base-path.jsonc
+  s_c17e830839df63::t_9a9ace4fad938a 1-10
+packages/vite-plugin-cloudflare/src/__tests__/asset-config.spec.ts
+  s_c17e830839df63::t_a4b90b535607ce 1-20,22-23,24-38,40-42,44-45,47-78,85-98,102-140
+packages/vite-plugin-cloudflare/src/__tests__/output-config.spec.ts
+  s_c17e830839df63::t_b6cf056fb9e3a0 22,152-170,172-178,180-183,185-193,195-218
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_c17e830839df63::t_79a016f086d517 3479-3583
+packages/wrangler/src/__tests__/assets.test.ts
+  s_c17e830839df63::t_3745e08f33b2c5 18,120-179
+packages/wrangler/src/__tests__/create-worker-upload-form/metadata.test.ts
+  s_c17e830839df63::t_525b7a68fe7a7c 320-361,371,382
+packages/wrangler/src/__tests__/preview.test.ts
+  s_c17e830839df63::t_3abd756f89c6eb 2278-2294,2342-2344,2364,2370,2382-2387
+packages/wrangler/src/__tests__/unstable-get-miniflare-worker-options.test.ts
+  s_c17e830839df63::t_23797e5cbf0dba 21-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2619cd0470a188482856bf8aee01d245ed25c880",
+  "prompts": {},
+  "sessions": {
+    "s_c17e830839df63": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03881-e96d-7ff3-8592-911517c3dc72",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

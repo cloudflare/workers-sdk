@@ -1,0 +1,24 @@
+packages/wrangler/src/d1/splitter.ts
+  s_be0334cb7b308b::t_adfbc11c2990d7 3-4,127-131,133-135,137,140-144,147-304,307-312,315-316,319-320,323-335
+  s_be0334cb7b308b::t_92361e47fceae5 336-338
+.changeset/split-sqlite-statements.md
+  s_be0334cb7b308b::t_aa7479c4cfe144 1-7
+packages/wrangler/src/__tests__/d1/splitter.test.ts
+  s_be0334cb7b308b::t_e6553799ad918a 141,144,160-163,196-198,251-259,261-263,266,268-314,537-539
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "bc8257b3bcf47b84bf98d44c1e930a2b71a4d729",
+  "prompts": {},
+  "sessions": {
+    "s_be0334cb7b308b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f50374ae3ffe2D128CaiQM9C29",
+        "model": "unknown"
+      },
+      "human_author": "David Laban <dlaban@cloudflare.com>"
+    }
+  }
+}

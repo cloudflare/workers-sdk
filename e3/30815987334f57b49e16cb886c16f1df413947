@@ -1,0 +1,39 @@
+.changeset/cli-gitignore-additional-entries.md
+  s_a8444baee7921e::t_4cec2481d3b1aa 5,7
+packages/autoconfig/src/run.ts
+  s_efd921acd917a4::t_5106940f12b49b 301-309,311-313,317-320,323-331
+packages/autoconfig/tests/run.test.ts
+  s_efd921acd917a4::t_e7c2d5cc2eb288 39-48,435-488
+packages/cli/__tests__/gitignore.test.ts
+  s_efd921acd917a4::t_cddc7a9407be81 345-347,388-390,404-473
+packages/cli/gitignore.ts
+  s_efd921acd917a4::t_5eb3c3f488088a 40-48,52-58,105-107,110,127-130
+packages/wrangler/src/__tests__/autoconfig/run.test.ts
+  s_a8444baee7921e::t_8eb3f286d62199 65-78,787-819,880-973
+.changeset/autoconfig-root-assetsignore.md
+  s_efd921acd917a4::t_826a9bfaffe833 10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e330815987334f57b49e16cb886c16f1df413947",
+  "prompts": {},
+  "sessions": {
+    "s_a8444baee7921e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1784b-5e08-7fb3-89b8-d88908adfa22",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    },
+    "s_efd921acd917a4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ce60afe4-d28d-4b41-822a-e5567f8ed5d6",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+.changeset/quiet-skills-update.md
+  s_bbf5010a08a6e5::t_57ce4bffcf096f 1-7
+packages/wrangler/src/__tests__/register-yargs-command-skills.test.ts
+  s_de2b5f8890143e::t_ea6f50f68f91e6 33,36,41,57,62-63,68,72,76-77,99,108,111,114,118,122-123,126,136
+packages/wrangler/src/core/register-yargs-command.ts
+  s_bbf5010a08a6e5::t_1309bc3437360a 355,357-360,362,364,371
+packages/wrangler/src/core/types.ts
+  s_bbf5010a08a6e5::t_3aad761b0feee7 228-229,231,233
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ad370bf4100dc4077c5d973ff365c59a6381d612",
+  "prompts": {},
+  "sessions": {
+    "s_bbf5010a08a6e5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a023e7-4ae8-7351-8dae-6b91911409bd",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    },
+    "s_de2b5f8890143e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a023e7-4a54-7da3-8684-9cc151571cd7",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+.changeset/remote-bindings-access-login-redirect.md
+  s_4c13ba280bf2a2::t_fbb6c01c2a9f3b 3,9-10
+packages/miniflare/test/plugins/shared/remote-bindings-access-warning.spec.ts
+  s_836a1d6d207713::t_f2ac0632cc3770 1-2,4,46-120,306,329,337-412,429,437,487-567
+packages/miniflare/src/workers/shared/remote-bindings-utils.ts
+  s_836a1d6d207713::t_566258bb9facdc 98-120,144-146,263-267
+packages/remote-bindings/templates/remoteBindings/ProxyServerWorker.ts
+  s_836a1d6d207713::t_2202a7d93461c0 312-331,355,362
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "74acdef39c52ac07d8649883244591b4fd875eec",
+  "prompts": {},
+  "sessions": {
+    "s_4c13ba280bf2a2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a145a3-a3b9-7872-b537-389070d02ac7",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Eric Falcao <efalcao@cloudflare.com>"
+    },
+    "s_836a1d6d207713": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bf762bb4-b88e-434d-b43f-3b3635e9437e",
+        "model": "unknown"
+      },
+      "human_author": "Eric Falcao <efalcao@cloudflare.com>"
+    }
+  }
+}

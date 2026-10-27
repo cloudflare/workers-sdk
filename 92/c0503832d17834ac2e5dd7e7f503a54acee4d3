@@ -1,0 +1,122 @@
+packages/wrangler/src/__tests__/deploy/helpers.ts
+  s_3725c7a238f252::t_cc8177856187ee 367,372-373,387
+packages/deploy-helpers/src/deploy/helpers/versions-types.ts
+  s_3725c7a238f252::t_dc71afba71d0ef 3,51
+packages/workers-utils/src/types.ts
+  s_3725c7a238f252::t_e216f19fd50f7c 297-301
+packages/wrangler/src/versions/deploy.ts
+  s_3725c7a238f252::t_753594c8bb5c69 18-21,33,206-216,222-229,274-293
+packages/wrangler/src/versions/upload.ts
+  s_3725c7a238f252::t_d5134b58357cc2 6-9,76-77
+packages/deploy-helpers/src/deploy/helpers/create-worker-upload-form.ts
+  s_3725c7a238f252::t_0d8950f780262e 885
+packages/deploy-helpers/tests/container-image-bindings.test.ts
+  s_3725c7a238f252::t_86662a308ab58f 1-212
+packages/workers-utils/src/config/validation.ts
+  s_3725c7a238f252::t_065769f35b2afd 10-14,3572-3586,3627-3718,3739-3760,3768,3770-3774,3797-3812,5062-5064
+packages/containers-shared/src/client/models/CreateDurableObjectApplicationRequest.ts
+  s_3725c7a238f252::t_89dda240cc1ee1 1-21
+packages/workers-utils/src/index.ts
+  s_3725c7a238f252::t_0e3f33b4024563 17,20-21,24
+packages/deploy-helpers/src/deploy/helpers/validate-worker-props.ts
+  s_3725c7a238f252::t_5ca384dc673d1e 7,121-125,173-191,339,349
+packages/workers-utils/src/config/containers.ts
+  s_3725c7a238f252::t_fbf4167819bd27 4-26
+packages/wrangler/src/type-generation/index.ts
+  s_3725c7a238f252::t_de7958a462f22f 6,11,45-47,2574-2582,3591-3598
+packages/deploy-helpers/src/deploy/helpers/container-image-bindings.ts
+  s_3725c7a238f252::t_8c0e75d0e5eb2a 1-53
+packages/wrangler/src/deploy/index.ts
+  s_3725c7a238f252::t_c09979a785c400 10-13,210-211
+packages/wrangler/src/versions/types.ts
+  s_3725c7a238f252::t_3c44d700bd91f6 3,51
+packages/wrangler/src/__tests__/containers/deploy.test.ts
+  s_3725c7a238f252::t_85c4c16ce88f9e 6,12,20,41,66-76,129-492,1602-1613,2824-2895,3284-3297,3340-3427,3693-3704
+packages/wrangler/src/__tests__/containers/schema.test.ts
+  s_3725c7a238f252::t_a44ed4df66d440 51
+packages/workers-utils/src/config/environment.ts
+  s_3725c7a238f252::t_0512945c5b04d5 101-120,154-163,190-193,196
+.changeset/fuzzy-pandas-launch.md
+  s_3725c7a238f252::t_da7b85a019fb16 1-13
+packages/deploy-helpers/src/deploy/versions-upload.ts
+  s_3725c7a238f252::t_99544fd8e8b5b8 9-10,27-28,62-69,166-171,208,225,449-462
+packages/wrangler/src/containers/config.ts
+  s_3725c7a238f252::t_fd82a02889911e 9,11,27-69,109-110,112-115,118-121,123-125
+packages/wrangler/src/__tests__/versions/versions.upload.test.ts
+  s_3725c7a238f252::t_5230075e9f5471 5,11-14,28,2346-2464,2529-2592
+packages/containers-shared/src/client/models/ContainerImagePreparation.ts
+  s_3725c7a238f252::t_39b02fd1402f5a 1-12
+packages/wrangler/src/__tests__/helpers/mock-upload-worker.ts
+  s_3725c7a238f252::t_c0f06d8460f13c 69-73,76,96-100
+packages/wrangler/src/__tests__/type-generation.test.ts
+  s_3725c7a238f252::t_ca3a0d644f2a60 1899-1950
+packages/workers-utils/tests/config/validation/normalize-and-validate-config.test.ts
+  s_3725c7a238f252::t_00b0e8d7347d94 4622-4891
+packages/workers-utils/tests/print-bindings.test.ts
+  s_3725c7a238f252::t_8b5fdf2e518641 49-72
+packages/wrangler/src/__tests__/containers/config.test.ts
+  s_3725c7a238f252::t_11f0dd94ca04c3 84-112,215-283
+packages/workers-utils/tests/config/containers.test.ts
+  s_3725c7a238f252::t_073f79b2828b9e 5-6,15-35
+packages/containers-shared/src/client/models/SchedulingPolicy.ts
+  s_3725c7a238f252::t_e59c69c1cc6251 9
+packages/workers-utils/src/config/index.ts
+  s_3725c7a238f252::t_e559bcfc9c7cbc 44,47-48,51
+packages/containers-shared/src/client/index.ts
+  s_3725c7a238f252::t_da8ab4d26af7ff 49-50,56,188,222
+packages/vite-plugin-cloudflare/src/containers.ts
+  s_3725c7a238f252::t_bab0697787de8a 10,72-78
+packages/wrangler/src/__tests__/dev/remote-bindings.test.ts
+  s_3725c7a238f252::t_b11523788f4be6 30-31,542,575,609,680,732,785,828
+packages/containers-shared/src/client/models/ContainerImagePreparationStatus.ts
+  s_3725c7a238f252::t_7535d0793f4120 1-9
+packages/deploy-helpers/tests/container-metadata.test.ts
+  s_3725c7a238f252::t_4446275d49b90b 1-71
+packages/workers-utils/src/worker.ts
+  s_3725c7a238f252::t_5256acf738c27c 498-504
+packages/wrangler/src/containers/durable-object-applications.ts
+  s_3725c7a238f252::t_e9ede55f957dcc 1-456
+packages/deploy-helpers/src/deploy/deploy.ts
+  s_3725c7a238f252::t_a3d9b1947022e5 12,34-35,139-150,256-262,333-336,362-364,810-821
+packages/containers-shared/src/client/models/PrepareContainerImageRequestBody.ts
+  s_3725c7a238f252::t_9e4e1741e3938c 1-7
+packages/wrangler/src/__tests__/config-schema.test.ts
+  s_3725c7a238f252::t_ecaf9a44758c13 9-26,47-65
+packages/vite-plugin-cloudflare/src/__tests__/containers.spec.ts
+  s_3725c7a238f252::t_0755b3a1f695f9 44-64
+packages/containers-shared/src/client/services/ApplicationsService.ts
+  s_3725c7a238f252::t_25ee79cf1ba200 17,44-46
+packages/deploy-helpers/src/deploy/helpers/container-metadata.ts
+  s_3725c7a238f252::t_8d485d63b963a9 1-34
+packages/wrangler/src/containers/deploy.ts
+  s_3725c7a238f252::t_7696667a0374e2 75,78,80,85-86,100,105,107,114-115,117-124,126-128,130-133,135-153,155-158,161-162,164-173
+  s_3725c7a238f252::t_5b85b68ec21e57 35,217
+packages/wrangler/src/__tests__/deploy/assets.test.ts
+  s_3725c7a238f252::t_17ee3121a8ccfd 30,1540-1543
+packages/workers-utils/src/print-bindings.ts
+  s_3725c7a238f252::t_861abb2e19a9dc 954-958
+packages/wrangler/src/__tests__/deploy/environments.test.ts
+  s_3725c7a238f252::t_0496f53ab7b101 35,248-251,1128-1131
+packages/containers-shared/src/client/services/ContainerImagePreparationsService.ts
+  s_3725c7a238f252::t_0805e3a33cb16f 1-30
+packages/vite-plugin-cloudflare/e2e/helpers.ts
+  s_3725c7a238f252::t_1b75726d39a7de 324-329
+packages/wrangler/src/__tests__/versions/versions.deploy.test.ts
+  s_3725c7a238f252::t_b82b156ef18b45 2,39,82-143,354-644
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "92c0503832d17834ac2e5dd7e7f503a54acee4d3",
+  "prompts": {},
+  "sessions": {
+    "s_3725c7a238f252": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd31e-cf47-7423-90ec-e5aaf3f09f91",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Nafeez Nazer <nafeez@cloudflare.com>"
+    }
+  }
+}

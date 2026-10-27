@@ -1,0 +1,25 @@
+packages/workflows-shared/tests/binding.test.ts
+  s_b554ffcd7ba695::t_e75ecd16eb4861 147-148,151,155-172,174-175,177-193
+packages/wrangler/src/__tests__/workflows.test.ts
+  s_b554ffcd7ba695::t_86b61946fbc9c6 202,692-704,706-709,714,722,724,726,728-750,1877,1881,1888,1900,1902,1904
+packages/wrangler/src/index.ts
+  s_b554ffcd7ba695::t_f1a9e748753c5a 539
+packages/wrangler/src/workflows/commands/instances/delete.ts
+  s_b554ffcd7ba695::t_99b5b507767fa2 1,6,10-11,15,29,31,37-47,50-55,58-63,66-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e05c00ac7d2d4b51269bb2304eb6e17cc35400f3",
+  "prompts": {},
+  "sessions": {
+    "s_b554ffcd7ba695": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "019f74df-f5c8-71b4-88d3-30b0c9e17ab0",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "vaish <vaishnav@cloudflare.com>"
+    }
+  }
+}

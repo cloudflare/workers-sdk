@@ -1,0 +1,23 @@
+packages/wrangler/src/__tests__/dev/start-dev.test.ts
+  s_1356a911e53448::t_d3cb819019bc0f 112-114
+.changeset/local-explorer-agent-hint-observability.md
+  s_1356a911e53448::t_0d91c6cfb10269 1-7
+packages/wrangler/src/dev/start-dev.ts
+  s_1356a911e53448::t_a3d8cd2980700f 384-385
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d05675667891141c90cc2385899f41c449958ebd",
+  "prompts": {},
+  "sessions": {
+    "s_1356a911e53448": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07a92a5c4ffd2WQ3OswPSBReuT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

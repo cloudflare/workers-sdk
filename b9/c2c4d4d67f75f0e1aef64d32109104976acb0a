@@ -1,0 +1,29 @@
+.changeset/tidy-browsers-close.md
+  s_78c3b3b2d5407a::t_3f2fe112fe39bf 1-7
+packages/miniflare/src/plugins/browser-rendering/process.ts
+  s_12efda9119b75b::t_65f1349cd275a1 1-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b9c2c4d4d67f75f0e1aef64d32109104976acb0a",
+  "prompts": {},
+  "sessions": {
+    "s_12efda9119b75b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0948ca992ffeCdMtpS53gRbQA6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Matt Kane <mkane@cloudflare.com>"
+    },
+    "s_78c3b3b2d5407a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0948ca96dffe2OkrQuZ7AzOwrN",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Matt Kane <mkane@cloudflare.com>"
+    }
+  }
+}

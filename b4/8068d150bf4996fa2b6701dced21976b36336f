@@ -1,0 +1,19 @@
+packages/local-explorer-ui/src/routes/email/shared/useCursorPaginatedList.ts
+  s_edaee386f8c5fc::t_19883f89dccb4f 70-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b48068d150bf4996fa2b6701dced21976b36336f",
+  "prompts": {},
+  "sessions": {
+    "s_edaee386f8c5fc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03848-8d78-70a3-8c57-c1badf801e10",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

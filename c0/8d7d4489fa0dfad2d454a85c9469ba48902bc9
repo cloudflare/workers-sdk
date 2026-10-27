@@ -1,0 +1,27 @@
+packages/miniflare/src/workers/core/email.ts
+  s_18c7e5cb6a2433::t_39ed5c7cd8004e 6-9,11,49-58,105-108,112,153-155,176,186,191,195,198-202,204,220-222,225-232,234-237,262-263,273-274,403,412,420-422
+packages/miniflare/src/workers/email/capture.ts
+  s_18c7e5cb6a2433::t_11885a1ba54726 1,3-6,11,13,22-24,26-30,53-121,128-129,131-132,136-137,139-149,151-152,157-159,161-227,229,233-288
+packages/miniflare/src/workers/email/email-store.ts
+  s_18c7e5cb6a2433::t_4c0e24e71c6e35 11-14,26-30,35,41,43,69-70,72-76,79-81,94,96-97,109-117,149-155,238-239,241,312-314,316-317,320-328,332-336,339-342,344,354-373,375-379,381
+packages/miniflare/src/workers/email/email-store.worker.ts
+  s_18c7e5cb6a2433::t_9acf90eab5b5c0 9,13,37-40,42,45-49,52-53,56,59-67
+packages/miniflare/src/workers/email/storage.ts
+  s_18c7e5cb6a2433::t_5f537e2c723774 76-77,91-95,116-127,130-134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c08d7d4489fa0dfad2d454a85c9469ba48902bc9",
+  "prompts": {},
+  "sessions": {
+    "s_18c7e5cb6a2433": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01037-530d-7492-b097-d583e38215c9",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

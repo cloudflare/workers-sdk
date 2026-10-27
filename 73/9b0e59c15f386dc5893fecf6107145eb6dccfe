@@ -1,0 +1,29 @@
+packages/autoconfig/src/details/index.ts
+  s_2661ba1d781ad5::t_404bef38fcf4b0 93,101-107,113-133
+packages/wrangler/src/autoconfig/index.ts
+  s_2661ba1d781ad5::t_00fb32ec794346 41,46,58
+packages/wrangler/src/deploy/autoconfig.ts
+  s_2661ba1d781ad5::t_57d0efcc286c41 78,113
+packages/wrangler/src/deploy/index.ts
+  s_2661ba1d781ad5::t_0370e71f94f19a 118-123,147
+packages/wrangler/src/pages/delegate-to-workers.ts
+  s_2661ba1d781ad5::t_3d1481e6401aeb 23,51-53,87-94,126-128,147-149,151-157,159-170,172,220-227,230-236,238-241,288-292,332
+packages/wrangler/src/pages/run-workers-deploy.ts
+  s_2661ba1d781ad5::t_1a733ec48e2fd7 112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "739b0e59c15f386dc5893fecf6107145eb6dccfe",
+  "prompts": {},
+  "sessions": {
+    "s_2661ba1d781ad5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-adb2da04122737941",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}

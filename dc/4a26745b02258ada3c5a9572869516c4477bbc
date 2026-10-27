@@ -1,0 +1,19 @@
+packages/wrangler/src/__tests__/preview.test.ts
+  s_926fb5de1d482d::t_f52e45e45d1230 3609-3723
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "dc4a26745b02258ada3c5a9572869516c4477bbc",
+  "prompts": {},
+  "sessions": {
+    "s_926fb5de1d482d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fac145c32ffea0itXLKBZnVT4z",
+        "model": "gpt-5.5"
+      },
+      "human_author": "yomna <yomna@cloudflare.com>"
+    }
+  }
+}

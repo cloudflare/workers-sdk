@@ -1,0 +1,60 @@
+packages/local-explorer-ui/src/routes/observability/index.tsx
+  s_9fff95db50b440::t_c7a9a63c9fb014 402-403,405-412,414-425,427-430,434-441
+  s_9fff95db50b440::t_55454fe83f8f73 186
+  s_9fff95db50b440::t_8f83325388778c 339
+  s_9fff95db50b440::t_b4b34b54b1a885 384
+  s_9fff95db50b440::t_23ba0f8ba742ea 348
+  s_9fff95db50b440::t_70f902111210a5 464-465
+  s_9fff95db50b440::t_dec527f7c9db5b 203
+  s_9fff95db50b440::t_44e3297cc1bec6 313-315,317
+  s_9fff95db50b440::t_d621c67fc1475f 7
+packages/local-explorer-ui/src/utils/sidebar-state.ts
+  s_9fff95db50b440::t_a32fe94965d315 4-11,18
+.changeset/wobs-local-observability.md
+  s_9fff95db50b440::t_95ca7cae8d0938 13
+  s_1356a911e53448::t_74ed0a36e96d3e 16
+  s_9fff95db50b440::t_f9b99f96d8e303 9
+packages/local-explorer-ui/src/routes/observability/events.tsx
+  s_1356a911e53448::t_de07a22fbf815a 1
+  s_1356a911e53448::t_5d3d9e73a3ca8e 261-263
+  s_9fff95db50b440::t_1870761b01a5d9 6
+  s_9fff95db50b440::t_71d3ceb7b20f03 109
+  s_9fff95db50b440::t_59fde2d12b6e85 145-149,151-152
+  s_9fff95db50b440::t_da122f22aaf4de 107
+  s_9fff95db50b440::t_0c6001134a505a 7
+  s_9fff95db50b440::t_4d8b5074bb0244 105-106
+  s_9fff95db50b440::t_022d05fc304883 144
+  s_9fff95db50b440::t_16cf4276effa7b 153-155
+  s_1356a911e53448::t_a079ece2b173eb 264-265
+packages/local-explorer-ui/src/__tests__/utils/sidebar-state.test.ts
+  s_9fff95db50b440::t_62e3a9259eff5d 109
+  s_9fff95db50b440::t_eb651c0fc41305 182
+  s_9fff95db50b440::t_c184d83a26fa8d 156
+packages/local-explorer-ui/src/components/Sidebar.tsx
+  s_9fff95db50b440::t_c5681799bdafac 90-116
+  s_9fff95db50b440::t_9d48ee66a5dfb5 273-313
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6255516ace3e5aacde2eb3d33c22d5054c6f4287",
+  "prompts": {},
+  "sessions": {
+    "s_1356a911e53448": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07a92a5c4ffd2WQ3OswPSBReuT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": null
+    },
+    "s_9fff95db50b440": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_14864cef2ffe832xiZfAw0ontU",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

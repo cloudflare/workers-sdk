@@ -1,0 +1,21 @@
+packages/wrangler/src/dev/start-dev.ts
+  s_1356a911e53448::t_541d2e4c7659d8 370-373
+packages/vite-plugin-cloudflare/src/plugins/agent-hint.ts
+  s_1356a911e53448::t_1e1c53f21f0631 59-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a603a106bf8be7ecdf28540a37458d4f8ba6d5c9",
+  "prompts": {},
+  "sessions": {
+    "s_1356a911e53448": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07a92a5c4ffd2WQ3OswPSBReuT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

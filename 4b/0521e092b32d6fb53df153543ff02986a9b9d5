@@ -1,0 +1,25 @@
+packages/autoconfig/src/types.ts
+  s_1aa7cf05bea79e::t_697965ff009003 75
+packages/autoconfig/tests/run-upgrade.test.ts
+  s_1aa7cf05bea79e::t_85933c8a2f1279 1-145
+packages/wrangler/src/__tests__/autoconfig/run.test.ts
+  s_1aa7cf05bea79e::t_1769f7796276b8 913
+pnpm-lock.yaml
+  s_1aa7cf05bea79e::t_d2f3d14db42670 1669-1671,1687-1689,16908,16917,16983,18695,19175,19188,23938,24328,24776,25996,26765,26792,27585
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4b0521e092b32d6fb53df153543ff02986a9b9d5",
+  "prompts": {},
+  "sessions": {
+    "s_1aa7cf05bea79e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05d0220a5ffexc1W7v47GXDn7c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Angus <ahawkings@cloudflare.com>"
+    }
+  }
+}

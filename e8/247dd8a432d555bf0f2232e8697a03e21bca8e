@@ -1,0 +1,25 @@
+packages/miniflare/test/plugins/email/capture.spec.ts
+  s_18c7e5cb6a2433::t_74a6bdad263ef5 1-139
+packages/miniflare/test/plugins/email/index.spec.ts
+  s_18c7e5cb6a2433::t_5b4cdffc8093fb 2298,2361,2464
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_18c7e5cb6a2433::t_10a74027fec987 12-15,77-85,87-90,97-122,132-137,148-154,166-168,442,446,456-459,487-493,496,501,505,532-540,544,552,565,581-587,594-598,601,604,612-616,620,623-627,633-635,637-678,680-689,696-704,748,750,754,759,787,792-794,798,801-810,812-815,839,842,845,848-865,867-896,990,993-994,997-1001,1005,1007,1016,1019-1023,1025,1027,1032-1033,1035-1097,1130-1144,1213-1256,1284-1297,1442-1451
+packages/wrangler/e2e/dev.test.ts
+  s_18c7e5cb6a2433::t_33251449d9f43c 2731
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e8247dd8a432d555bf0f2232e8697a03e21bca8e",
+  "prompts": {},
+  "sessions": {
+    "s_18c7e5cb6a2433": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01037-530d-7492-b097-d583e38215c9",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

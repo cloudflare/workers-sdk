@@ -1,0 +1,25 @@
+packages/local-explorer-ui/src/__e2e__/email-sending.spec.ts
+  s_fac814dd42479b::t_510e73b17026b4 158,171,175-182,186
+packages/local-explorer-ui/src/routes/email/routing/$emailId.tsx
+  s_fac814dd42479b::t_16cdc6e4f82cab 28-30
+packages/local-explorer-ui/src/routes/email/routing/index.tsx
+  s_fac814dd42479b::t_f5fb9ffcc97cde 28-30,86-87
+packages/local-explorer-ui/src/routes/email/sending.tsx
+  s_fac814dd42479b::t_7100b976705d45 41-43,130-131
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b3d93967219c6c404d7b10fbfcb3e6dacc5b37e4",
+  "prompts": {},
+  "sessions": {
+    "s_fac814dd42479b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03438-1082-7f11-a63e-51aaf4de84c0",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

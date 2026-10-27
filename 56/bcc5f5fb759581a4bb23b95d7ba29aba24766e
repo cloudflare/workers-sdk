@@ -1,0 +1,25 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "56bcc5f5fb759581a4bb23b95d7ba29aba24766e",
+  "prompts": {},
+  "sessions": {
+    "s_c2586c182c96a1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_032eb7497ffep5iIN2QXO8oIWm",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_e771bd5e618774": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_048515778ffe4EBFGtwSCLtvFn",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

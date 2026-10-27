@@ -1,0 +1,29 @@
+packages/vitest-plugin/src/pool/plugin.ts
+  s_ec7ca26dd5bb2d::t_363b7c670137ee 71,81-89,127-130,134
+packages/vitest-plugin/test/fs-module-cache.test.ts
+  s_09d77d62d4fbe9::t_7a4280c56981bc 1,60,71,79,102-230
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ef9ec364aa2071888d3f4157ce4ff5f585d0436b",
+  "prompts": {},
+  "sessions": {
+    "s_09d77d62d4fbe9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ec9822b80ffenibwjT5gJ0A3w4",
+        "model": "unknown"
+      },
+      "human_author": "Matt Johnson-Pint <mjohnson-pint@cloudflare.com>"
+    },
+    "s_ec7ca26dd5bb2d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ec98ec49cffevguEA0Nu5mSJ0W",
+        "model": "unknown"
+      },
+      "human_author": "Matt Johnson-Pint <mjohnson-pint@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "13aad0a0825382f93406f8c911255dcbec1d3e7b",
+  "prompts": {},
+  "sessions": {
+    "s_e136989dfafa02": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_051edf047ffeURqkUgtmfuwDKf",
+        "model": "claude-opus-5"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

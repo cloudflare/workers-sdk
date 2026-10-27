@@ -1,0 +1,45 @@
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_6e1f600c752d6d::t_47b104c17e6d4a 631-893,1929-1935,2140-2434
+packages/miniflare/src/plugins/core/constants.ts
+  s_6e1f600c752d6d::t_6ce46c727c659c 19-24
+packages/miniflare/src/plugins/email/store.ts
+  s_6e1f600c752d6d::t_1addc0ad5d7e3d 1-55
+packages/miniflare/src/plugins/index.ts
+  s_6e1f600c752d6d::t_ac80d85a8a6c5e 166
+packages/miniflare/src/workers/core/email.ts
+  s_6e1f600c752d6d::t_c5a223094d6275 8-13,23,32-38,46-48,140-143,146-192,194-231,235-236,238-248,250-286,288-291,293-302,304-311,313-333,335-339,341-344,346,348-363,366-367,369-371,373-393,395-396,399-400
+packages/miniflare/src/workers/email/email-store.ts
+  s_6e1f600c752d6d::t_6110b255302350 1-124
+packages/miniflare/src/workers/email/email-store.worker.ts
+  s_6e1f600c752d6d::t_970ef6eb0044bf 1-55
+packages/miniflare/src/workers/email/result.ts
+  s_6e1f600c752d6d::t_a2b894607a705c 1-58
+packages/miniflare/src/workers/email/storage.ts
+  s_6e1f600c752d6d::t_1c718251fbafc9 1-67
+packages/miniflare/src/workers/index.ts
+  s_6e1f600c752d6d::t_7707eb2d72f64d 3
+packages/miniflare/src/workers/local-explorer/generated/index.ts
+  s_6e1f600c752d6d::t_f90fbe0f871daa 49-82
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_6e1f600c752d6d::t_e73b0ddabc79e3 610-613,785-985,1674-1832
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_6e1f600c752d6d::t_a775446b951b1a 443,532-651,1052-1136
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_6e1f600c752d6d::t_e5a37eedf943ae 1285-1546,3430-3436,3672-4093
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ce14489fa301b7a5ff0faab04ee09605c8d019b0",
+  "prompts": {},
+  "sessions": {
+    "s_6e1f600c752d6d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_028d8866affegKfok4TFMf473c",
+        "model": "gpt-5.6-luna"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}

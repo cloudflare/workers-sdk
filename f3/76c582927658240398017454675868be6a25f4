@@ -1,0 +1,22 @@
+packages/vite-plugin-cloudflare/src/detect-agent.ts
+  s_1356a911e53448::t_47a7f727f7d322 2-7,12-15,21-26
+packages/vite-plugin-cloudflare/src/__tests__/detect-agent.spec.ts
+  s_1356a911e53448::t_42d861417ed929 1-28
+  s_1356a911e53448::t_807d7ee403a61c 29-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f376c582927658240398017454675868be6a25f4",
+  "prompts": {},
+  "sessions": {
+    "s_1356a911e53448": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07a92a5c4ffd2WQ3OswPSBReuT",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "nickhilpat <nickhil@cloudflare.com>"
+    }
+  }
+}

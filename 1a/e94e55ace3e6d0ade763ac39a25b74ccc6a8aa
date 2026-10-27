@@ -1,0 +1,23 @@
+packages/deploy-helpers/src/preview/preview.ts
+  s_4447962620fff9::t_fda23184cb5b3b 48
+packages/deploy-helpers/src/preview/shared.ts
+  s_4447962620fff9::t_36c6857dabb14e 161-162,168,185-187
+packages/wrangler/src/__tests__/preview.test.ts
+  s_4447962620fff9::t_f2dd346bafbc92 183,4702-4703
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1ae94e55ace3e6d0ade763ac39a25b74ccc6a8aa",
+  "prompts": {},
+  "sessions": {
+    "s_4447962620fff9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_feb782335ffeOY40n7WZbgLzmy",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Matt Price <mattprice@cloudflare.com>"
+    }
+  }
+}

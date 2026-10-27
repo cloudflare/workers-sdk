@@ -1,0 +1,140 @@
+packages/local-explorer-ui/src/routes/email/shared/ConstantsCard.tsx
+  s_ff9e97aa7f7ce5::t_0be8f88c88e5fb 3-7,25,47,51-53,75,78
+packages/local-explorer-ui/src/routes/email/routing/index.tsx
+  s_ff9e97aa7f7ce5::t_2ba76338e2db21 2,14-19,55-59,111-138,145-146,153-154,175,177-186
+packages/local-explorer-ui/src/routes/email.tsx
+  s_ff9e97aa7f7ce5::t_e30fc251997fb3 1-75
+packages/local-explorer-ui/src/components/email/SentEmailDetails.tsx
+  s_eeb838205f8100::t_efc9e2f5dcea35 3-4,18-20,25-48,51-53,82-108,116,121-128,158,161,170-178
+packages/local-explorer-ui/src/components/email/EmailTruncationWarning.tsx
+  s_26b06ef24f9c34::t_5651340e7e3310 25,28-30
+packages/local-explorer-ui/src/routes/email/shared/InfoFlow.tsx
+  s_26b06ef24f9c34::t_ec6ed7b42eb8e3 40
+packages/local-explorer-ui/src/components/email/EmailHtmlBody.tsx
+  s_eeb838205f8100::t_73a2a89d6c8f0f 1-52
+packages/local-explorer-ui/src/components/email/EmailList.tsx
+  s_26b06ef24f9c34::t_ad87490d5c7a60 56,107
+packages/local-explorer-ui/src/routes/email/shared/types.ts
+  s_ff9e97aa7f7ce5::t_97e82bf8b6ee34 8,22
+packages/local-explorer-ui/src/__tests__/utils/test-email-drafts.test.ts
+  s_ff9e97aa7f7ce5::t_6e3757ad331842 1-2,3-7,8-27,31
+packages/local-explorer-ui/src/components/email/SendTestEmailDialog.tsx
+  s_2aedf88cdc76d8::t_d84a783542bff8 93-106,108-111,114-117,119-133,135-143,146-147
+  s_26b06ef24f9c34::t_fb367cb5548f69 1-8,15,17,20-24,27,30,32,37-47,49-61,63-77,151,157,160,162,167,171,177-195,198-203,206-211,223,246,262-293,301,308-357,360-364,389-390,399-412,420-424,427-428,431-435,443-446,459-460,466-488,490-505,507,509-513,515,519-535,538-546,548-550,553-627,631-649,657,660-667,672,678-681,689-697,708,710-712,717
+  s_15d36e0bb8858f::t_67c1fb901abde0 91
+packages/local-explorer-ui/src/utils/email-headers.ts
+  s_ff9e97aa7f7ce5::t_52a621d3645353 1-60
+packages/local-explorer-ui/src/routes/__root.tsx
+  s_ff9e97aa7f7ce5::t_244d23da728c7f 5,9,44-48,83-92,95-96,99,119
+packages/local-explorer-ui/src/components/email/EmailContent.tsx
+  s_eeb838205f8100::t_41d41a3a5aa6c6 1-114
+packages/local-explorer-ui/src/components/email/ReceivedEmailHeaders.tsx
+  s_ff9e97aa7f7ce5::t_09dfbb3d924d0a 1-72
+packages/local-explorer-ui/src/utils/test-email-drafts.ts
+  s_ff9e97aa7f7ce5::t_886972c8fa0b60 1-26,28-29,32,34,37-39,42-45,47,49
+packages/local-explorer-ui/src/__e2e__/email/email-routing.spec.ts
+  s_36ed7407136496::t_151f184bcd6132 1,12-13,15-19,21-76,80-89,91-131,133-144,145-152,154-160,171-182,186-201,203-232,233-261,262-363,379-383,386-407,409-493
+  s_dabb4773aed416::t_3daa82be7df0d4 2-11,14,20,77-79,90,132,153,161-170,183-185,202,364-378,384-385,408
+packages/local-explorer-ui/src/routes/email/routing/$emailId.tsx
+  s_eeb838205f8100::t_3c02afed8b8c13 5,7,122,124-127
+  s_dabb4773aed416::t_f2d87ebd769f3b 119-121
+packages/local-explorer-ui/src/__e2e__/worker-selector.spec.ts
+  s_eeb838205f8100::t_9fbb3a9121f644 55-57,60,64,66-68,162-165,337,364-373
+packages/local-explorer-ui/src/routes/email/shared/EventNode.tsx
+  s_719ff7c6ab9093::t_9692e39d59eea4 11,58,69,116-117,119,124,167-170,174
+  s_dabb4773aed416::t_c9d49ffa54cd1f 55,95,103,112,118,135,157-158
+packages/miniflare/src/workers/email/contracts.ts
+  s_dabb4773aed416::t_7e7ed8eb7ed43c 33,149-150
+packages/miniflare/src/workers/email/email-store.ts
+  s_dabb4773aed416::t_f714ebc2daca7f 157-158
+packages/miniflare/src/workers/local-explorer/resources/email.ts
+  s_dabb4773aed416::t_b46cc19e597d58 1068-1069,1074-1077,1082-1088
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_dabb4773aed416::t_08c402093fd266 793,886-888,892,931-933,937
+packages/miniflare/test/plugins/local-explorer/email.spec.ts
+  s_dabb4773aed416::t_13a378f3d8a703 149-155,1286-1287,1327-1339,1468,1508-1510,1614-1615,1650,1670-1683,1685,1734,1737,1751,1753,1755-1759
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_dabb4773aed416::t_37b3d27debb995 3857,3979-3984,4088-4093
+packages/miniflare/test/index.spec.ts
+  s_dabb4773aed416::t_20d82c30ab3ac6 2795
+packages/miniflare/src/workers/core/email.ts
+  s_dabb4773aed416::t_b03e6dc9706d9b 191-194,419
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_dabb4773aed416::t_f505b4f79f1cb3 537,616-617,635-636
+packages/local-explorer-ui/src/__e2e__/email/utils.ts
+  s_dabb4773aed416::t_ec2349900518c7 1-202
+packages/local-explorer-ui/src/__tests__/components/email-truncation-warning.test.ts
+  s_dabb4773aed416::t_77478ff0166777 1-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "af39f040c42e28fc251587999bfdb074151fd9d1",
+  "prompts": {},
+  "sessions": {
+    "s_15d36e0bb8858f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03e77-5992-7101-bb13-f31b3a2f8297",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_26b06ef24f9c34": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03db1-6608-78f1-b5b3-7af6fdcaca61",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_2aedf88cdc76d8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0336c-1e6f-7863-8578-da23a2f61ef7",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_36ed7407136496": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03db1-92ff-7ec0-82f0-e9e57dac689c",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_719ff7c6ab9093": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03e7b-abcf-72b1-b33c-84183497c87b",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_dabb4773aed416": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a03f05-a9b9-7673-8100-25804b5737f1",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_eeb838205f8100": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a039cd-3150-73b3-a130-3b61bf89ed35",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    },
+    "s_ff9e97aa7f7ce5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a038f2-4760-7423-8b42-1eb8942b028b",
+        "model": "unknown"
+      },
+      "human_author": "tmo <tennyson@cloudflare.com>"
+    }
+  }
+}
