@@ -1,5 +1,25 @@
 # @cloudflare/vite-plugin
 
+## 2.0.0-beta.v.6
+
+### Minor Changes
+
+- [#16494](https://github.com/cloudflare/workers-sdk/pull/16494) [`0968b08`](https://github.com/cloudflare/workers-sdk/commit/0968b08c2a0b322fe6820bc2eb573440e6589a0b) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Enable Miniflare's development registry by default and centralize path resolution
+
+  In Miniflare v5 beta, resolve the registry from `CLOUDFLARE_DEV_REGISTRY_PATH`, then the `unsafeDevRegistryPath` constructor option, then `<Cloudflare config directory>/dev-registry/v5`. The default is independent of legacy Wrangler directories and is scoped to the Miniflare major version. The Vite v2 beta plugin follows this new default, while current Wrangler and `getPlatformProxy()` retain Wrangler's legacy default for compatibility with existing Wrangler sessions. Vite v2 and Wrangler therefore require the same `CLOUDFLARE_DEV_REGISTRY_PATH` to discover each other; set it for both processes when mixing these tools.
+
+  Add `enableDevRegistry: false` to disable registration and discovery explicitly. Shared storage now uses the resolved default without requiring an explicit path. As before, shared storage requires an enabled registry to elect a storage owner, so combining `unsafeEnableSharedStorage: true` with `enableDevRegistry: false` is rejected. Miniflare no longer reads `MINIFLARE_REGISTRY_PATH`; use `CLOUDFLARE_DEV_REGISTRY_PATH` instead. Expose `resolveDevRegistryPath()` for integrations that also read registry files. Wrangler uses the effective path for its runtime configuration, initial bindings display, and Flagship active-session check, so the canonical override cannot bypass that check. An explicitly disabled Wrangler registry remains disabled.
+
+### Patch Changes
+
+- [#15659](https://github.com/cloudflare/workers-sdk/pull/15659) [`8d98a15`](https://github.com/cloudflare/workers-sdk/commit/8d98a15a05fa1f4d27654168ed16df1ff4ff1173) Thanks [@dedsec-terminal](https://github.com/dedsec-terminal)! - Fix Vite DevTools WebSocket connections closing unexpectedly
+
+  Leave upgrades at `/__devtools/__ws` to Vite DevTools instead of forwarding them to the Worker. Sandbox preview requests continue to reach the Worker.
+
+- Updated dependencies [[`0968b08`](https://github.com/cloudflare/workers-sdk/commit/0968b08c2a0b322fe6820bc2eb573440e6589a0b), [`f3c13b3`](https://github.com/cloudflare/workers-sdk/commit/f3c13b3b6165b0ce84b5ce0893ba993856e7eef6)]:
+  - miniflare@5.20261023.1-beta
+  - @cloudflare/runtime-types@0.1.17
+
 ## 2.0.0-beta.v.5
 
 ### Patch Changes
