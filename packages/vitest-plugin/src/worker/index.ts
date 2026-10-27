@@ -16,6 +16,7 @@ import {
 	structuredSerializableRevivers,
 } from "../../../miniflare/src/workers/core/devalue";
 import { markCreateRequireUrl } from "../shared/module-path";
+import { createChunkReassembler, sendChunked } from "../shared/ws-chunk";
 import type { Session } from "node:inspector/promises";
 
 type CreateRequire = (url: string) => (specifier: string) => unknown;
@@ -362,7 +363,10 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 		const pendingConsoleLogs: unknown[] = [];
 		const sendPendingConsoleLogs = () => {
 			while (pendingConsoleLogs.length > 0) {
-				poolSocket.send(structuredSerializableStringify(pendingConsoleLogs[0]));
+				sendChunked(
+					(data) => poolSocket.send(data),
+					structuredSerializableStringify(pendingConsoleLogs[0])
+				);
 				pendingConsoleLogs.shift();
 			}
 		};
@@ -371,7 +375,10 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 			post: (response) => {
 				try {
 					sendPendingConsoleLogs();
-					poolSocket.send(structuredSerializableStringify(response));
+					sendChunked(
+						(data) => poolSocket.send(data),
+						structuredSerializableStringify(response)
+					);
 				} catch (error) {
 					// If the user called `console.log()` or similar from inside an
 					// `export default { fetch() {} }` handler (via `SELF`/`exports`) or
@@ -387,7 +394,10 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 							return;
 						}
 						const promise = runInRunnerObject(() => {
-							poolSocket.send(structuredSerializableStringify(response));
+							sendChunked(
+								(data) => poolSocket.send(data),
+								structuredSerializableStringify(response)
+							);
 						}).catch((e) => {
 							__console.error(
 								"Error sending to pool inside runner:",
@@ -402,8 +412,11 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 				}
 			},
 			on: (callback) => {
+				const receive = createChunkReassembler((serialized) => {
+					callback(structuredSerializableParse(serialized));
+				});
 				poolSocket.addEventListener("message", (m) => {
-					callback(structuredSerializableParse(m.data));
+					receive(m.data);
 				});
 			},
 			runTests: (state, traces) => {

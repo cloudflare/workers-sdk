@@ -5,6 +5,7 @@ import util from "node:util";
 import { compileModuleRules, testRegExps } from "miniflare";
 import { type ProvidedContext } from "vitest";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
+import { createChunkReassembler, sendChunked } from "../shared/ws-chunk";
 import { disposeAllRemoteProxySessions, parseProjectOptions } from "./config";
 import { poolWorkerStarted, poolWorkerStopped } from "./pages";
 import { type WorkerPoolOptionsContext } from "./plugin";
@@ -284,7 +285,11 @@ export class CloudflarePoolWorker implements PoolWorker {
 				toSend = inlinedResponse;
 			}
 		}
-		this.socket.send(structuredSerializableStringify(toSend));
+		const socket = this.socket;
+		sendChunked(
+			(data) => socket.send(data),
+			structuredSerializableStringify(toSend)
+		);
 	}
 
 	on(
@@ -306,10 +311,8 @@ export class CloudflarePoolWorker implements PoolWorker {
 		);
 
 		if (event === "message") {
-			const messageWrapper = (m: { data: string | ArrayBuffer }) => {
-				const d = structuredSerializableParse(
-					m.data as string
-				) as WorkerResponse;
+			const receive = createChunkReassembler((serialized) => {
+				const d = structuredSerializableParse(serialized) as WorkerResponse;
 
 				// This is a birpc serialised message before it's been parsed, which is why the properties are so unintelligible
 				// We're looking for a `fetch()` RPC call: https://github.com/vitest-dev/vitest/blob/v4.0.18/packages/vitest/src/types/rpc.ts#L8
@@ -326,6 +329,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 						this.socket,
 						"Message received from Worker before initialisation"
 					);
+					const socket = this.socket;
 					const specifier = d.a[0];
 
 					if (
@@ -334,7 +338,8 @@ export class CloudflarePoolWorker implements PoolWorker {
 						(/^(cloudflare|workerd):/.test(specifier) ||
 							workerdBuiltinModules.has(specifier))
 					) {
-						return this.socket.send(
+						return sendChunked(
+							(data) => socket.send(data),
 							// Tell Vitest to treat this module as "external" and load it using a workerd module import
 							structuredSerializableStringify({
 								t: "s",
@@ -367,7 +372,8 @@ export class CloudflarePoolWorker implements PoolWorker {
 							externalize = externalize.slice(0, -"?module".length);
 						}
 
-						return this.socket.send(
+						return sendChunked(
+							(data) => socket.send(data),
 							structuredSerializableStringify({
 								t: "s",
 								i: d.i,
@@ -393,6 +399,9 @@ export class CloudflarePoolWorker implements PoolWorker {
 					this.moduleFetchRequestIds.add(d.i);
 				}
 				(callback as (response: WorkerResponse) => void)(d);
+			});
+			const messageWrapper = (m: { data: string | ArrayBuffer }) => {
+				receive(m.data as string);
 			};
 			this.messageListener = messageWrapper as (
 				event: MiniflareMessageEvent
