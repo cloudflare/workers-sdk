@@ -1753,6 +1753,41 @@ describe("versions upload", () => {
 			expect(process.exitCode).not.toBe(0);
 		});
 
+		test("should ignore routes when checking dashboard config in strict mode", async ({
+			expect,
+		}) => {
+			mockGetScript({
+				default_environment: {
+					environment: "production",
+					script: {
+						last_deployed_from: "dash",
+						tag: "test-tag",
+						tags: null,
+					},
+				},
+			});
+			mockRemoteWorkerConfig([]);
+			mockUploadVersion(false);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				compatibility_date: "2024-01-01",
+				routes: ["example.com/*"],
+			});
+			writeWorkerSource();
+
+			await runWrangler("versions upload --strict");
+
+			expect(std.warn).not.toContain(
+				"Uploading the Worker will override the remote configuration with your local one."
+			);
+			expect(std.err).not.toContain(
+				"Aborting the upload operation because of conflicts"
+			);
+			expect(std.out).toContain("Uploaded test-name");
+		});
+
 		test("should abort in non-interactive strict mode when remote secrets would be overridden", async ({
 			expect,
 		}) => {
