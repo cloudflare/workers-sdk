@@ -38,9 +38,9 @@ file:
 - `config: true | "<path>"` — a `cloudflare.config.ts`, via `src/pool/new-config.ts`
   (`@cloudflare/config`'s `loadAndParseConfig()`), never through Wrangler. `miniflare`
   options are merged over the config's Worker. Secrets and Hyperdrive values are resolved
-  with Miniflare's `resolveLocalBindings()`, and remote bindings go
-  through `@cloudflare/remote-bindings`, which accepts the config's bindings as they
-  are. `ctx.mode` comes from `project.vite.config.mode`.
+  with Miniflare's `resolveLocalBindings()`, and remote bindings use cf
+  credentials (`src/pool/auth.ts`) through `@cloudflare/remote-bindings`, which accepts
+  the config's bindings as they are. `ctx.mode` comes from `project.vite.config.mode`.
 
 The two are mutually exclusive. Whichever is used, the resolved path, config format,
 top-level Worker name and effective environment Worker name are recorded on

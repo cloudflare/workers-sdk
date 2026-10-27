@@ -11,12 +11,29 @@ const remoteProxyConnectionString = new URL(
 	"http://localhost:8787"
 ) as RemoteProxyConnectionString;
 
-const { maybeStartOrUpdateRemoteProxySession } = vi.hoisted(() => ({
+const {
+	maybeStartOrUpdateRemoteProxySession,
+	requireAuth,
+	resolveProfile,
+	state,
+} = vi.hoisted(() => ({
 	maybeStartOrUpdateRemoteProxySession: vi.fn(),
+	requireAuth: vi.fn(async () => "cf-account-id"),
+	resolveProfile: vi.fn(() => ({ name: "cf-profile" })),
+	state: { wranglerImported: false },
 }));
 
 vi.mock("@cloudflare/remote-bindings", () => ({
 	maybeStartOrUpdateRemoteProxySession,
+}));
+
+vi.mock("@cloudflare/workers-auth/cf", () => ({
+	createCfAuth: () => ({
+		setProfile: vi.fn(),
+		requireAuth,
+		requireApiToken: () => ({ apiToken: "cf-token" }),
+	}),
+	createCfProfileStore: () => ({ resolve: resolveProfile }),
 }));
 
 const worker = dedent`
@@ -592,16 +609,81 @@ describe("remote bindings", () => {
 	let project: TestProject;
 
 	beforeEach(() => {
+		// Records whether Wrangler was imported. Registered after
+		// `vi.resetModules()`, so it runs again on each test's first import.
+		vi.resetModules();
+		vi.doMock("wrangler", () => {
+			state.wranglerImported = true;
+			return {};
+		});
+		state.wranglerImported = false;
 		project = {
 			name: "test",
 			config: { root: process.cwd() },
 			vite: { config: { mode: "test", envDir: process.cwd() } },
 		} as unknown as TestProject;
 		maybeStartOrUpdateRemoteProxySession.mockReset();
+		requireAuth.mockClear();
 		maybeStartOrUpdateRemoteProxySession.mockResolvedValue({
 			session: { remoteProxyConnectionString },
 			remoteBindings: {},
 		});
+	});
+
+	it("uses cf credentials with `config`, without Wrangler", async ({
+		expect,
+	}) => {
+		// A config function, so the account follows the mode between parses
+		await fs.writeFile(
+			"cloudflare.config.ts",
+			`export default ({ mode }) => ({
+				accountId: mode + "-account",
+				worker: {
+					name: "test-worker",
+					compatibilityDate: "2025-12-02",
+					env: {
+						KV: { type: "kv", id: "kv-id", dev: { remote: true } },
+					},
+				},
+			});`
+		);
+		const { parseProjectOptions } = await import("../src/pool/config");
+		const stagingProject = {
+			name: project.name,
+			config: project.config,
+			vite: { config: { mode: "staging", envDir: process.cwd() } },
+		} as unknown as TestProject;
+
+		const options = await parseProjectOptions(project, { config: true });
+		await parseProjectOptions(project, { config: true });
+		await parseProjectOptions(stagingProject, { config: true });
+
+		const [[details, , auth, context], [, , sameAuth], [, , stagingAuth]] =
+			maybeStartOrUpdateRemoteProxySession.mock.calls;
+		expect(details).toMatchObject({
+			name: "test-worker",
+			target: "cf",
+			env: { KV: { type: "kv", id: "kv-id", dev: { remote: true } } },
+		});
+		expect(context).toMatchObject({ cliDisplayName: "cf" });
+		expect(options.projectWorkers?.[0].dev?.remoteProxyConnectionString).toBe(
+			remoteProxyConnectionString
+		);
+		// The key identifies the credentials, so the session only restarts when
+		// the account changes
+		expect(sameAuth.key).toBe(auth.key);
+		expect(stagingAuth.key).not.toBe(auth.key);
+		await expect(auth.hook()).resolves.toEqual({
+			accountId: "cf-account-id",
+			apiToken: { apiToken: "cf-token" },
+		});
+		await stagingAuth.hook();
+		expect(requireAuth.mock.calls).toEqual([
+			[{ account_id: "test-account" }],
+			[{ account_id: "staging-account" }],
+		]);
+		expect(resolveProfile).toHaveBeenCalledWith({ cwd: process.cwd() });
+		expect(state.wranglerImported).toBe(false);
 	});
 
 	it("rejects `miniflare` remote bindings on another proxy session", async ({
