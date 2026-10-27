@@ -70,6 +70,33 @@ describe("convertV4MiniflareOptions", () => {
 			dev: { remote: true },
 		});
 	});
+	test("converts Artifacts event triggers and subscriptions", ({ expect }) => {
+		const converted = convertV4MiniflareOptions({
+			name: "worker",
+			script: "export default {};",
+			artifactsEventSubscriptions: [
+				{ queue: "events", source: { type: "artifacts" } },
+			],
+			artifactsEventTriggers: [
+				{
+					eventType: "cf.artifacts.repo.created",
+					filter: { repoName: "demo" },
+					targets: [{ type: "workflow", workflowName: "on-create" }],
+				},
+			],
+		});
+		expect(converted.artifactsEventSubscriptions).toEqual([
+			{ queue: "events", source: { type: "artifacts" } },
+		]);
+		expect(converted.workers[0].config.triggers).toEqual([
+			{
+				type: "artifacts-event",
+				eventType: "cf.artifacts.repo.created",
+				filter: { repoName: "demo" },
+				targets: [{ type: "workflow", workflowName: "on-create" }],
+			},
+		]);
+	});
 	test("preserves opaque K2 stream IDs through v4 parsing and conversion", ({
 		expect,
 	}) => {

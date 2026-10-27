@@ -1,5 +1,3 @@
-export const ARTIFACTS_EVENT_SERVICE_NAME = "queues:artifacts-event-producer";
-
 export const QueueBindings = {
 	SERVICE_WORKER_PREFIX: "MINIFLARE_WORKER_",
 	MAYBE_JSON_QUEUE_PRODUCERS: "MINIFLARE_QUEUE_PRODUCERS",

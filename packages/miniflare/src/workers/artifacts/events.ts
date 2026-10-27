@@ -1,9 +1,51 @@
-/** Local Artifacts repository snapshot used in canonical lifecycle events. */
-export interface RepoSnapshot {
-	id: string;
-	namespace: string;
-	name: string;
-	jurisdiction: "unrestricted";
+// Public Artifacts event messages, as documented at
+// https://developers.cloudflare.com/artifacts/guides/event-subscriptions/
+
+/** Event types Artifacts publishes to subscriptions. */
+export const ARTIFACTS_EVENT_TYPES = [
+	"cf.artifacts.repo.created",
+	"cf.artifacts.repo.deleted",
+	"cf.artifacts.repo.forked",
+	"cf.artifacts.repo.imported",
+	"cf.artifacts.repo.pushed",
+	"cf.artifacts.repo.cloned",
+	"cf.artifacts.repo.fetched",
+	"cf.artifacts.repo.token.created",
+	"cf.artifacts.repo.token.revoked",
+] as const;
+
+/** A published Artifacts event type. */
+export type ArtifactsEventType = (typeof ARTIFACTS_EVENT_TYPES)[number];
+
+/**
+ * Account-level events are published to the `artifacts` source; the remaining
+ * events are scoped to one repository through the `artifacts.repo` source.
+ */
+const ACCOUNT_EVENT_TYPES: ReadonlySet<ArtifactsEventType> = new Set([
+	"cf.artifacts.repo.created",
+	"cf.artifacts.repo.deleted",
+	"cf.artifacts.repo.forked",
+	"cf.artifacts.repo.imported",
+]);
+
+/** An Artifacts event source type. */
+export type ArtifactsEventSourceType = "artifacts" | "artifacts.repo";
+
+/**
+ * Returns the subscription source that publishes an event type.
+ *
+ * @param type - Event type
+ * @returns `artifacts` for account-level events, else `artifacts.repo`
+ */
+export function getArtifactsEventSourceType(
+	type: ArtifactsEventType
+): ArtifactsEventSourceType {
+	return ACCOUNT_EVENT_TYPES.has(type) ? "artifacts" : "artifacts.repo";
+}
+
+/** Repository state published in repository lifecycle events. */
+export interface RepoPayload {
+	repoId: string;
 	defaultBranch: string;
 	description: string | null;
 	readOnly: boolean;
@@ -12,15 +54,14 @@ export interface RepoSnapshot {
 	lastPushAt: string | null;
 }
 
-type NamespaceSnapshot = {
+/** A Git author or committer. */
+export interface GitIdentity {
 	name: string;
-	jurisdiction: "unrestricted";
-	createdAt: string;
-	updatedAt: string;
-};
-type RepoLocality = { namespace: string; name: string };
-type GitIdentity = { name: string; email: string };
-type PushCommit = {
+	email: string;
+}
+
+/** A commit summarised in a push event. */
+export interface PushedCommit {
 	id: string;
 	message: string;
 	messageTruncated: boolean;
@@ -28,155 +69,158 @@ type PushCommit = {
 	author: GitIdentity;
 	committer: GitIdentity;
 	parents: string[];
-};
-type Push = {
-	ref: string;
-	before: string;
-	after: string;
-	commits: PushCommit[];
-	totalCommitsCount: number;
-	commitsTruncated: boolean;
-};
+}
 
-type TransportEventType =
-	| "repo.pushed.v1"
-	| "repo.cloned.v1"
-	| "repo.fetched.v1"
-	| "repo.size_observed.v1";
+/** Payload of each published event type. */
+export interface ArtifactsEventPayloads {
+	"cf.artifacts.repo.created": RepoPayload;
+	"cf.artifacts.repo.deleted": RepoPayload;
+	"cf.artifacts.repo.forked": RepoPayload & {
+		namespace: string;
+		repoName: string;
+	};
+	"cf.artifacts.repo.imported": RepoPayload & {
+		sourceUrl: string;
+		branch: string | null;
+	};
+	"cf.artifacts.repo.pushed": {
+		ref: string;
+		before: string;
+		after: string;
+		commits: PushedCommit[];
+		totalCommitsCount: number;
+		commitsTruncated: boolean;
+	};
+	"cf.artifacts.repo.cloned": Record<string, never>;
+	"cf.artifacts.repo.fetched": Record<string, never>;
+	"cf.artifacts.repo.token.created": {
+		tokenId: string;
+		scope: string;
+		expiresAt: string;
+	};
+	"cf.artifacts.repo.token.revoked": { tokenId: string };
+}
 
-type Event<Type extends string, Payload> = {
-	envelopeVersion: 1;
-	eventId: string;
+/** The repository an event happened to. Forks name the source repository. */
+export interface ArtifactsEventSource {
+	type: ArtifactsEventSourceType;
+	namespace: string;
+	repoName: string;
+}
+
+/** An event before it is addressed to a subscription. */
+export interface ArtifactsEvent<
+	Type extends ArtifactsEventType = ArtifactsEventType,
+> {
 	type: Type;
-	timestamp: number;
-	source: "artifacts";
-	actor: {
-		account: { tag: string; internalId: string };
-	} & (Type extends TransportEventType
-		? { user?: never }
-		: { user?: { id: string; email: string } });
-	payload: Payload;
-};
+	source: ArtifactsEventSource;
+	payload: ArtifactsEventPayloads[Type];
+	timestamp: string;
+}
 
-/** Namespace creation event. */
-export type NamespaceCreatedV1 = Event<
-	"namespace.created.v1",
-	{ namespace: NamespaceSnapshot }
->;
-/** Namespace deletion event. */
-export type NamespaceDeletedV1 = Event<
-	"namespace.deleted.v1",
-	{ namespace: NamespaceSnapshot }
->;
-/** Repository creation event. */
-export type RepoCreatedV1 = Event<"repo.created.v1", { repo: RepoSnapshot }>;
-/** Repository deletion event. */
-export type RepoDeletedV1 = Event<"repo.deleted.v1", { repo: RepoSnapshot }>;
-/** Repository fork event. */
-export type RepoForkedV1 = Event<
-	"repo.forked.v1",
-	{ repo: RepoSnapshot; forkedFrom: RepoLocality }
->;
-/** Repository import event. */
-export type RepoImportedV1 = Event<
-	"repo.imported.v1",
-	{ repo: RepoSnapshot; importedFrom: { url: string; branch: string | null } }
->;
-/** One successful Git ref update. */
-export type RepoPushedV1 = Event<
-	"repo.pushed.v1",
-	{ repo: RepoLocality; push: Push }
->;
-/** Git storage-size observation. */
-export type RepoSizeObservedV1 = Event<
-	"repo.size_observed.v1",
-	{ repo: RepoLocality; sequence: number; gitServerSizeBytes: number }
->;
-/** Repository clone event. */
-export type RepoClonedV1 = Event<"repo.cloned.v1", { repo: RepoLocality }>;
-/** Repository incremental fetch event. */
-export type RepoFetchedV1 = Event<"repo.fetched.v1", { repo: RepoLocality }>;
-/** Repository access-token creation event. */
-export type TokenCreatedV1 = Event<
-	"token.created.v1",
-	{
-		repo: RepoLocality;
-		token: { id: string; scope: string; expiresAt: string };
-	}
->;
-/** Repository access-token revocation event. */
-export type TokenRevokedV1 = Event<
-	"token.revoked.v1",
-	{ repo: RepoLocality; token: { id: string } }
->;
+/** Delivery metadata added for each subscription. */
+export interface ArtifactsEventMetadata {
+	accountId: string;
+	eventSubscriptionId: string;
+	eventSchemaVersion: 1;
+	eventTimestamp: string;
+}
 
-/** Canonical local events; consumer-facing projections are separate. */
-export type ArtifactsEvent =
-	| NamespaceCreatedV1
-	| NamespaceDeletedV1
-	| RepoCreatedV1
-	| RepoDeletedV1
-	| RepoForkedV1
-	| RepoImportedV1
-	| RepoPushedV1
-	| RepoSizeObservedV1
-	| RepoClonedV1
-	| RepoFetchedV1
-	| TokenCreatedV1
-	| TokenRevokedV1;
+/** The message a Queue consumer or Workflow receives. */
+export type ArtifactsEventMessage<
+	Type extends ArtifactsEventType = ArtifactsEventType,
+> = {
+	[T in Type]: {
+		type: T;
+		source: ArtifactsEventSource;
+		payload: ArtifactsEventPayloads[T];
+		metadata: ArtifactsEventMetadata;
+	};
+}[Type];
 
-function make<Type extends string, Payload>(
+/** Local development has no Cloudflare account. */
+export const LOCAL_ACCOUNT_ID = "local";
+
+/**
+ * Creates an event happening now.
+ *
+ * @param type - Event type
+ * @param repo - Repository the event happened to
+ * @param payload - Event payload
+ * @returns The event
+ */
+export function createArtifactsEvent<Type extends ArtifactsEventType>(
 	type: Type,
-	payload: Payload
-): Event<Type, Payload> {
+	repo: { namespace: string; repoName: string },
+	payload: ArtifactsEventPayloads[Type]
+): ArtifactsEvent<Type> {
 	return {
-		envelopeVersion: 1,
-		eventId: crypto.randomUUID(),
 		type,
-		timestamp: Date.now(),
-		source: "artifacts",
-		// Local development has no authenticated account or user.
-		actor: { account: { tag: "local", internalId: "local" } },
+		source: { type: getArtifactsEventSourceType(type), ...repo },
 		payload,
+		timestamp: new Date().toISOString(),
 	};
 }
 
-/** Constructors for version-one canonical Artifacts events. */
-export const V1 = {
-	namespaceCreated(payload: NamespaceCreatedV1["payload"]): NamespaceCreatedV1 {
-		return make("namespace.created.v1", payload);
-	},
-	namespaceDeleted(payload: NamespaceDeletedV1["payload"]): NamespaceDeletedV1 {
-		return make("namespace.deleted.v1", payload);
-	},
-	repoCreated(payload: RepoCreatedV1["payload"]): RepoCreatedV1 {
-		return make("repo.created.v1", payload);
-	},
-	repoDeleted(payload: RepoDeletedV1["payload"]): RepoDeletedV1 {
-		return make("repo.deleted.v1", payload);
-	},
-	repoForked(payload: RepoForkedV1["payload"]): RepoForkedV1 {
-		return make("repo.forked.v1", payload);
-	},
-	repoImported(payload: RepoImportedV1["payload"]): RepoImportedV1 {
-		return make("repo.imported.v1", payload);
-	},
-	repoPushed(payload: RepoPushedV1["payload"]): RepoPushedV1 {
-		return make("repo.pushed.v1", payload);
-	},
-	repoSizeObserved(payload: RepoSizeObservedV1["payload"]): RepoSizeObservedV1 {
-		return make("repo.size_observed.v1", payload);
-	},
-	repoCloned(payload: RepoClonedV1["payload"]): RepoClonedV1 {
-		return make("repo.cloned.v1", payload);
-	},
-	repoFetched(payload: RepoFetchedV1["payload"]): RepoFetchedV1 {
-		return make("repo.fetched.v1", payload);
-	},
-	tokenCreated(payload: TokenCreatedV1["payload"]): TokenCreatedV1 {
-		return make("token.created.v1", payload);
-	},
-	tokenRevoked(payload: TokenRevokedV1["payload"]): TokenRevokedV1 {
-		return make("token.revoked.v1", payload);
-	},
-};
+/**
+ * Addresses an event to one subscription.
+ *
+ * @param event - Event to deliver
+ * @param eventSubscriptionId - Subscription receiving the event
+ * @returns The delivered message
+ */
+export function toArtifactsEventMessage<Type extends ArtifactsEventType>(
+	event: ArtifactsEvent<Type>,
+	eventSubscriptionId: string
+): ArtifactsEventMessage {
+	return {
+		type: event.type,
+		source: event.source,
+		payload: event.payload,
+		metadata: {
+			accountId: LOCAL_ACCOUNT_ID,
+			eventSubscriptionId,
+			eventSchemaVersion: 1,
+			eventTimestamp: event.timestamp,
+		},
+	} as ArtifactsEventMessage;
+}
+
+/** Where a subscription delivers events. */
+export type ArtifactsEventTarget =
+	| { type: "queue"; binding: string }
+	| { type: "workflow"; binding: string };
+
+/**
+ * A subscription resolved for one local namespace. Subscriptions for other
+ * namespaces are never passed to the namespace.
+ */
+export interface ArtifactsEventRoute {
+	/** Stable local subscription identifier, used as `eventSubscriptionId`. */
+	id: string;
+	/** Subscribed event types; `null` subscribes to every type of the source. */
+	types: ArtifactsEventType[] | null;
+	/** Restricts events to this source type, if set. */
+	sourceType: ArtifactsEventSourceType | null;
+	/** Restricts events to this repository, if set. */
+	repoName: string | null;
+	target: ArtifactsEventTarget;
+}
+
+/**
+ * Returns whether a route should receive an event.
+ *
+ * @param route - Subscription route
+ * @param event - Published event
+ * @returns Whether the event matches the route's source, types and repository
+ */
+export function matchesArtifactsEventRoute(
+	route: ArtifactsEventRoute,
+	event: ArtifactsEvent
+): boolean {
+	return (
+		(route.sourceType === null || route.sourceType === event.source.type) &&
+		(route.types === null || route.types.includes(event.type)) &&
+		(route.repoName === null || route.repoName === event.source.repoName)
+	);
+}

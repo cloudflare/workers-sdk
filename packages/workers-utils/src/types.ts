@@ -1,6 +1,7 @@
 import type { ApiCredentials } from "./cfetch";
 import type { Config } from "./config";
 import type {
+	ArtifactsEventTrigger,
 	CustomDomainRoute,
 	ContainerApp,
 	ContainerEngine,
@@ -457,7 +458,8 @@ export type Trigger =
 	| ({ type: "route" } & CustomDomainRoute)
 	| { type: "cron"; cron: string }
 	| ({ type: "queue-consumer" } & Omit<QueueConsumer, "type">)
-	| ({ type: "connect" } & ConnectHandler);
+	| ({ type: "connect" } & ConnectHandler)
+	| { type: "artifacts-event"; event: ArtifactsEventTrigger };
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
 	? Omit<T, K>

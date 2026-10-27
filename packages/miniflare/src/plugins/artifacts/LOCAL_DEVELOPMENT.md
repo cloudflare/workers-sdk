@@ -61,6 +61,118 @@ unset REPO_TOKEN
 
 After pushing `hello.txt` to `main`, read it in the Worker with `await repo.readFile({ ref: "main", path: "hello.txt" })` (a `Blob`, or `null` when absent). The initial create token permits writes. Its plaintext is returned only once; if you lose it, use `repo.createToken("read")` for cloning or `repo.createToken("write")` for pushing and save the returned `plaintext` securely. Revoke tokens that are no longer needed. Avoid printing tokens or committing them to config. A plain request without a token cannot clone a private local repository. Git's URL uses an ephemeral loopback port; obtain the current URL after restarting the dev server instead of hardcoding it.
 
+## Receive repository events
+
+Local namespaces publish the documented [Artifacts events](https://developers.cloudflare.com/artifacts/guides/event-subscriptions/) when you create, import, fork, or delete a repository, and when you create or revoke a repository token. Push, clone, and fetch events are not yet published locally. Each delivery has the deployed message shape (`type`, `source`, `payload`, and `metadata`). Locally, `metadata.accountId` is `"local"`, and `metadata.eventSubscriptionId` stays the same while the subscription's configuration does.
+
+### Start a Workflow
+
+Use the same `triggers.events` configuration you deploy. Each target must be a Workflow defined by the same Worker. A matching event starts a Workflow instance, and the event message is its `event.payload`:
+
+```jsonc
+{
+	"name": "example-worker",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-09-03",
+	"artifacts": [
+		{ "binding": "REPOS", "namespace": "examples", "remote": false },
+	],
+	"workflows": [
+		{
+			"binding": "ON_REPO_CREATED",
+			"name": "on-repo-created",
+			"class_name": "OnRepoCreated",
+		},
+	],
+	"triggers": {
+		"events": [
+			{
+				"type": "cf.artifacts.repo.created",
+				"filter": { "namespace": "examples" },
+				"targets": [{ "type": "workflow", "workflow_name": "on-repo-created" }],
+			},
+		],
+	},
+}
+```
+
+```ts
+import { WorkflowEntrypoint } from "cloudflare:workers";
+import type { ArtifactsEventMessage } from "miniflare";
+
+type RepoCreated = ArtifactsEventMessage<"cf.artifacts.repo.created">;
+
+export class OnRepoCreated extends WorkflowEntrypoint<Env, RepoCreated> {
+	async run(event, step) {
+		const { source, payload } = event.payload;
+		await step.do("bootstrap repository", async () => {
+			const repo = await this.env.REPOS.get(source.repoName);
+			return { repoId: payload.repoId, info: await repo.info() };
+		});
+	}
+}
+```
+
+Wrangler and Workers Vitest read `triggers.events` from `wrangler.jsonc`. The new `cloudflare.config.ts` format does not support Artifacts event triggers yet, so the Vite plugin does not start Workflows from events.
+
+### Consume events from a queue
+
+In production, Queues event subscriptions are created for an account (for example, with `wrangler queues subscription create`) rather than in `wrangler.jsonc`. To receive events locally, set `artifactsEventSubscriptions` when constructing Miniflare. This option is not yet available through Wrangler or the Vite plugin. Use `{ type: "artifacts" }` for repository create, import, fork, and delete events, or `{ type: "artifacts.repo", namespace, repoName }` for one repository's token events. `events` defaults to every event the source publishes:
+
+```ts
+const mf = new Miniflare({
+	artifactsEventSubscriptions: [
+		{ queue: "repo-events", source: { type: "artifacts" } },
+		{
+			queue: "repo-events",
+			source: {
+				type: "artifacts.repo",
+				namespace: "examples",
+				repoName: "demo",
+			},
+			events: ["cf.artifacts.repo.token.revoked"],
+		},
+	],
+	workers: [
+		{
+			config: {
+				name: "example-worker",
+				compatibilityDate: "2026-09-03",
+				manifest,
+				env: {
+					REPOS: {
+						type: "artifacts",
+						namespace: "examples",
+						dev: { remote: false },
+					},
+				},
+				triggers: [{ type: "queue", name: "repo-events" }],
+			},
+		},
+	],
+});
+```
+
+Consume the messages with an ordinary queue handler. The handler can also start Workflows itself, for example to run several Workflows for one event:
+
+```ts
+import type { ArtifactsEventMessage } from "miniflare";
+
+export default {
+	async queue(batch, env) {
+		for (const message of batch.messages) {
+			const event = message.body;
+			if (event.type === "cf.artifacts.repo.created") {
+				await env.ON_REPO_CREATED.create({ params: event });
+			}
+			message.ack();
+		}
+	},
+} satisfies ExportedHandler<Env, ArtifactsEventMessage>;
+```
+
+Delivery happens after the repository change commits and does not fail the repository operation. A failed delivery is logged and not retried, and the local queue broker keeps queued messages in memory only. The local queue drops messages when no Worker consumes the queue.
+
 ## Storage and network boundaries
 
 Local repositories and metadata persist under the dev tool's Miniflare resource persistence path (for example, Wrangler's `.wrangler/state/` when persistence is enabled). Use the same project root and persistence settings to keep local data across reloads and restarts. Disabling persistence (for example, Vite's `persistState: false`) makes the data temporary. Local and deployed Artifacts are separate: local create, push, and delete operations do not update remote resources. To opt in to a remote binding, set `"remote": true` on that Artifacts binding and configure the credentials required by your development tool. Remote mode uses a Cloudflare proxy, not the local Git store; do not assume local data migrates to it.
