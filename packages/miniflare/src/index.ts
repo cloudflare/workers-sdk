@@ -3903,7 +3903,7 @@ export {
 } from "./config/v4-schema";
 export { convertV4MiniflareOptions } from "./config/v4-convert";
 export { resolveLocalBindings } from "./config/local-bindings";
-export type { ResolvedLocalBindings } from "./config/local-bindings";
+export type { ResolveLocalBindingsOptions } from "./config/local-bindings";
 export type {
 	MiniflareOptions,
 	WorkerOptions,

@@ -3,29 +3,39 @@ import type { ParsedInputWorkerConfig } from "@cloudflare/config";
 
 type MiniflareEnv = NonNullable<WorkerOptions["config"]["env"]>;
 
-export interface ResolvedLocalBindings {
-	bindings: NonNullable<WorkerOptions["config"]["env"]>;
-	missingSecrets: string[];
+export interface ResolveLocalBindingsOptions {
+	/** Name of the Worker, used in the missing secrets warning. */
+	workerName: string;
+	/** Values resolved from `.env` files and the process environment. */
+	localEnv: Record<string, string>;
+	/**
+	 * Values from the selected `.dev.vars` file, which are used exclusively when
+	 * provided.
+	 */
+	devVars?: Record<string, string>;
+	/** The mode, used to name mode-specific files in the missing secrets warning. */
+	mode: string;
+	/** Whether remote binding sessions are enabled. Defaults to `true`. */
+	remoteBindings?: boolean;
+	/** Receives the warning about declared secrets without a local value. */
+	logger: { warn(message: string): void };
 }
 
 /**
  * Resolves local binding values from the loaded local env. This replaces
  * declared secret placeholders with text bindings and applies Hyperdrive
- * connection-string overrides. Missing secrets are omitted so Miniflare
- * doesn't receive an unresolved deployment-only placeholder.
+ * connection-string overrides. Missing secrets are omitted, with a warning, so
+ * Miniflare doesn't receive an unresolved deployment-only placeholder.
  *
  * @param configuredBindings The Worker's configured bindings.
- * @param localEnv Values resolved from `.env` files and the process environment.
- * @param devVars Values from the selected `.dev.vars` file, which are used exclusively when provided.
- * @param remoteBindings Whether remote binding sessions are enabled.
- * @returns The complete bindings and any secrets missing a local value.
+ * @param options Where local values come from, and how to report missing ones.
+ * @returns The complete bindings.
  */
 export function resolveLocalBindings(
 	configuredBindings: ParsedInputWorkerConfig["env"],
-	localEnv: Record<string, string>,
-	devVars?: Record<string, string>,
-	remoteBindings = true
-): ResolvedLocalBindings {
+	options: ResolveLocalBindingsOptions
+): NonNullable<WorkerOptions["config"]["env"]> {
+	const { localEnv, devVars, mode, remoteBindings = true } = options;
 	const bindings: MiniflareEnv = {};
 	const missingSecrets: string[] = [];
 	const localValues = devVars ?? localEnv;
@@ -64,5 +74,14 @@ export function resolveLocalBindings(
 		bindings[name] = binding;
 	}
 
-	return { bindings, missingSecrets };
+	if (missingSecrets.length > 0) {
+		options.logger.warn(
+			`Missing required secrets for Worker "${options.workerName}": ${missingSecrets.join(", ")}. ` +
+				`Add them to one of \`.dev.vars.${mode}\`, \`.dev.vars\`, ` +
+				`\`.env.${mode}.local\`, \`.env.${mode}\`, \`.env.local\`, or \`.env\`. ` +
+				"Alternatively, set them as environment variables."
+		);
+	}
+
+	return bindings;
 }

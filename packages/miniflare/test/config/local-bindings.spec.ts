@@ -1,56 +1,63 @@
-import { describe, test } from "vitest";
+import { describe, test, vi } from "vitest";
 import { resolveLocalBindings } from "../../src/config/local-bindings";
 
-const workerConfig = {
-	env: {
+describe("resolveLocalBindings", () => {
+	const env = {
 		SECRET: { type: "secret" as const },
 		MISSING: { type: "secret" as const },
 		TEXT: { type: "text" as const, value: "configured" },
-		HYPERDRIVE: {
-			type: "hyperdrive" as const,
-			id: "hyperdrive-id",
-		},
-	},
-};
+		HYPERDRIVE: { type: "hyperdrive" as const, id: "hyperdrive-id" },
+	};
 
-describe("local bindings", () => {
-	test("replaces only declared secrets and reports missing ones", ({
+	function options(
+		overrides: Partial<Parameters<typeof resolveLocalBindings>[1]> = {}
+	) {
+		return {
+			workerName: "worker",
+			localEnv: {},
+			mode: "test",
+			logger: { warn: vi.fn() },
+			...overrides,
+		};
+	}
+
+	test("replaces only declared secrets and warns about missing ones", ({
 		expect,
 	}) => {
-		const result = resolveLocalBindings(workerConfig.env, {
-			SECRET: "local",
-			TEXT: "not-used",
-			UNDECLARED: "ignored",
-			CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE:
-				"postgres://localhost/database",
+		const resolveOptions = options({
+			localEnv: {
+				SECRET: "local",
+				TEXT: "not-used",
+				UNDECLARED: "ignored",
+				CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE:
+					"postgres://localhost/database",
+			},
 		});
 
-		expect(result).toEqual({
-			bindings: {
-				SECRET: { type: "text", value: "local" },
-				TEXT: { type: "text", value: "configured" },
-				HYPERDRIVE: {
-					type: "hyperdrive",
-					id: "hyperdrive-id",
-					dev: { connectionString: "postgres://localhost/database" },
-				},
+		expect(resolveLocalBindings(env, resolveOptions)).toEqual({
+			SECRET: { type: "text", value: "local" },
+			TEXT: { type: "text", value: "configured" },
+			HYPERDRIVE: {
+				type: "hyperdrive",
+				id: "hyperdrive-id",
+				dev: { connectionString: "postgres://localhost/database" },
 			},
-			missingSecrets: ["MISSING"],
 		});
+		expect(resolveOptions.logger.warn).toHaveBeenCalledWith(
+			'Missing required secrets for Worker "worker": MISSING. Add them to one of `.dev.vars.test`, `.dev.vars`, `.env.test.local`, `.env.test`, `.env.local`, or `.env`. Alternatively, set them as environment variables.'
+		);
 	});
 
 	test("requires a local Hyperdrive connection string", ({ expect }) => {
-		expect(() => resolveLocalBindings(workerConfig.env, {})).toThrow(
+		expect(() =>
+			resolveLocalBindings({ HYPERDRIVE: env.HYPERDRIVE }, options())
+		).toThrow(
 			'Hyperdrive binding "HYPERDRIVE" must define dev.connectionString for local development.'
 		);
 		expect(() =>
 			resolveLocalBindings(
-				{
-					HYPERDRIVE: { ...workerConfig.env.HYPERDRIVE, dev: { remote: true } },
-				},
-				{},
-				undefined,
-				false
+				{ HYPERDRIVE: { ...env.HYPERDRIVE, dev: { remote: true } } },
+				options({ remoteBindings: false })
 			)
 		).toThrow(
 			'Hyperdrive binding "HYPERDRIVE" must define dev.connectionString'
@@ -60,8 +67,8 @@ describe("local bindings", () => {
 	test("does not require local credentials for remote Hyperdrive", ({
 		expect,
 	}) => {
-		const binding = { ...workerConfig.env.HYPERDRIVE, dev: { remote: true } };
-		expect(resolveLocalBindings({ HYPERDRIVE: binding }, {}).bindings).toEqual({
+		const binding = { ...env.HYPERDRIVE, dev: { remote: true } };
+		expect(resolveLocalBindings({ HYPERDRIVE: binding }, options())).toEqual({
 			HYPERDRIVE: binding,
 		});
 	});
