@@ -2,10 +2,31 @@ import { describe, test } from "vitest";
 import {
 	generateRulesMatcher,
 	generateStaticRoutingRuleMatcher,
+	normalizeRedirectTarget,
 	replacer,
 } from "../src/utils/rules-engine";
 
 describe("rules engine", () => {
+	test.for([
+		["//images/logo.png", "/images/logo.png"],
+		["///images//logo.png", "/images/logo.png"],
+		["/\\images\\logo.png", "/images/logo.png"],
+		["/%2Fimages/logo.png", "/%2Fimages/logo.png"],
+		[
+			"/images//logo.png?next=https://example.com/a//b#section//one",
+			"/images/logo.png?next=https://example.com/a//b#section//one",
+		],
+		[
+			"https://other.example//images/logo.png",
+			"https://other.example//images/logo.png",
+		],
+	])(
+		"normalizes relative redirect target %s",
+		([target, expected], { expect }) => {
+			expect(normalizeRedirectTarget(target)).toBe(expected);
+		}
+	);
+
 	test("it should match simple pathname hosts", ({ expect }) => {
 		const matcher = generateRulesMatcher({ "/test": 1, "/some%20page": 2 });
 		expect(
