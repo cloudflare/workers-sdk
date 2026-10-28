@@ -4,7 +4,9 @@ import { NonRetryableError } from "cloudflare:workflows";
 import { afterEach, describe, it, vi } from "vitest";
 import workerdUnsafe from "workerd:unsafe";
 import { DEFAULT_STEP_LIMIT, InstanceEvent, InstanceStatus } from "../src";
+import { DEFAULT_RETRY_DELAY_MS } from "../src/lib/delay";
 import { ABORT_REASONS, isAbortError } from "../src/lib/errors";
+import { TimePriorityQueue } from "../src/lib/timePriorityQueue";
 import { setTestWorkflowCallback } from "./test-entry";
 import { runWorkflow, runWorkflowAndAwait } from "./utils";
 import type {
@@ -14,6 +16,7 @@ import type {
 	Engine,
 	EngineLogs,
 } from "../src/engine";
+import type { InstanceMetadata } from "../src/instance";
 import type {
 	RollbackContext,
 	RollbackFn,
@@ -960,6 +963,41 @@ describe("Engine", () => {
 				throw e;
 			}
 		};
+
+		it("sets the alarm for the next deadline, or a little later once it is due", async ({
+			expect,
+		}) => {
+			const engineStub = env.ENGINE.get(
+				env.ENGINE.idFromName(`ALARM-DEADLINE-${crypto.randomUUID()}`)
+			);
+
+			await runInDurableObject(engineStub, async (_engine, state) => {
+				const priorityQueue = new TimePriorityQueue(
+					state,
+					{} as InstanceMetadata
+				);
+
+				const deadline = Date.now() + 500;
+				await priorityQueue.add({
+					hash: "sleep",
+					targetTimestamp: deadline,
+					type: "sleep",
+				});
+				expect(await state.storage.getAlarm()).toBe(deadline);
+
+				// A due entry can still be waited on by the running engine, so its
+				// alarm must not fire again straight away
+				const now = Date.now();
+				await priorityQueue.add({
+					hash: "retry",
+					targetTimestamp: now - 1000,
+					type: "retry",
+				});
+				expect(await state.storage.getAlarm()).toBeGreaterThanOrEqual(
+					now + DEFAULT_RETRY_DELAY_MS
+				);
+			});
+		});
 
 		it("resumes a sleeping instance after its engine is aborted", async ({
 			expect,

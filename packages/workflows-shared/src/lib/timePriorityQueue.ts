@@ -140,12 +140,13 @@ export class TimePriorityQueue {
 		// The engine's own alarm wakes it for the next entry, so a sleep, retry or
 		// timeout still runs after the engine is evicted or aborted. An entry that is
 		// already due can still be waited on by the running engine (a dynamic retry
-		// delay outlasts its placeholder), so the alarm stays a little ahead of it.
+		// delay outlasts its placeholder), so its alarm is set a little later instead
+		// of firing again straight away.
+		const now = Date.now();
 		await this.#ctx.storage.setAlarm(
-			Math.max(
-				nextWakeCall.targetTimestamp,
-				Date.now() + DEFAULT_RETRY_DELAY_MS
-			)
+			nextWakeCall.targetTimestamp > now
+				? nextWakeCall.targetTimestamp
+				: now + DEFAULT_RETRY_DELAY_MS
 		);
 	}
 
