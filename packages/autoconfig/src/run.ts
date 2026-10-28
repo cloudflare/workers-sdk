@@ -289,6 +289,7 @@ export async function runAutoConfig(
 		if (workerConfig !== null) {
 			await saveCloudflareConfig(autoConfigDetails.projectPath, workerConfig);
 		}
+		// Only projects with Worker code (an entrypoint) use the types that `cf-typegen` generates
 		if (workerConfig?.entrypoint) {
 			await saveCloudflareTypesTsconfigUpdate(
 				autoConfigDetails.projectPath,
@@ -622,7 +623,8 @@ export async function buildOperationsSummary(
 		logger.log("");
 	}
 
-	// `cf workers types` writes to a dot-directory that include globs don't match
+	// Projects with Worker code (an entrypoint) get the `cf-typegen` script. Its output in
+	// `.cloudflare/types` needs its own `include` entry, since patterns like `**/*` skip dot-directories
 	const tsconfigUpdate =
 		target === "cf" && workerConfig?.entrypoint
 			? getCloudflareTypesTsconfigUpdate(autoConfigDetails.projectPath)
