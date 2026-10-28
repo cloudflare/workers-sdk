@@ -1,5 +1,37 @@
 # @cloudflare/vite-plugin
 
+## 2.0.0-beta.v.7
+
+### Minor Changes
+
+- [#16536](https://github.com/cloudflare/workers-sdk/pull/16536) [`a95d647`](https://github.com/cloudflare/workers-sdk/commit/a95d647f9459e40a00871346b81082abbb27d2b3) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Support remote Analytics Engine bindings in local development
+
+  Setting `remote: true` on an Analytics Engine dataset now sends `writeDataPoint()` calls from `wrangler dev` and the Vite plugin to the real dataset. Without it, writes are still dropped locally.
+
+  ```jsonc
+  {
+    "analytics_engine_datasets": [
+      {
+        "binding": "EVENTS",
+        "dataset": "my-dataset",
+        "remote": true
+      }
+    ]
+  }
+  ```
+
+### Patch Changes
+
+- [#15290](https://github.com/cloudflare/workers-sdk/pull/15290) [`6e3924d`](https://github.com/cloudflare/workers-sdk/commit/6e3924dc1a02cdfa14c2bce5f92f0f3c5fb4193f) Thanks [@edmundhung](https://github.com/edmundhung)! - Close Vite HMR WebSocket upgrades when Vite WebSockets are disabled
+
+  Previously, `server.ws: false` left the browser's raw upgrade socket pending because no Vite handler claimed it. Worker and Sandbox WebSocket forwarding remains unchanged.
+
+- Updated dependencies [[`a95d647`](https://github.com/cloudflare/workers-sdk/commit/a95d647f9459e40a00871346b81082abbb27d2b3), [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1), [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1), [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1)]:
+  - @cloudflare/config@0.29.0
+  - miniflare@5.20261023.2-beta
+  - @cloudflare/build-output-utils@0.9.6
+  - @cloudflare/runtime-types@0.1.18
+
 ## 2.0.0-beta.v.6
 
 ### Minor Changes

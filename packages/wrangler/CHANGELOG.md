@@ -1,5 +1,42 @@
 # wrangler
 
+## 4.155.0
+
+### Minor Changes
+
+- [#16536](https://github.com/cloudflare/workers-sdk/pull/16536) [`a95d647`](https://github.com/cloudflare/workers-sdk/commit/a95d647f9459e40a00871346b81082abbb27d2b3) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Support remote Analytics Engine bindings in local development
+
+  Setting `remote: true` on an Analytics Engine dataset now sends `writeDataPoint()` calls from `wrangler dev` and the Vite plugin to the real dataset. Without it, writes are still dropped locally.
+
+  ```jsonc
+  {
+    "analytics_engine_datasets": [
+      {
+        "binding": "EVENTS",
+        "dataset": "my-dataset",
+        "remote": true
+      }
+    ]
+  }
+  ```
+
+### Patch Changes
+
+- [#16554](https://github.com/cloudflare/workers-sdk/pull/16554) [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Render terminal control characters as visible text in tail output
+
+  Pretty tail and remote-preview output now escape control characters in log strings, exceptions and event metadata. Unicode, tabs and multiline logs remain readable, and JSON output keeps the original structured values.
+
+- [#16554](https://github.com/cloudflare/workers-sdk/pull/16554) [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Keep Flagship flag metadata when updating flags
+
+  `wrangler flagship flags` commands that update an existing flag, such as `enable`, `set`, `rollout`, `split`, and `rules`, no longer clear the flag's metadata. `wrangler flagship flags pull` now copies metadata into the local flag store.
+
+- [#16554](https://github.com/cloudflare/workers-sdk/pull/16554) [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Validate `.assetsignore` encoding before building asset manifests
+
+  Asset uploads and local development now stop with an actionable user error when `.assetsignore` is not valid UTF-8 or contains null characters, instead of silently losing its patterns. This also applies to standalone Miniflare and the Wrangler, Vite and Vitest development integrations. Save the file as UTF-8 to continue; UTF-8 files with a byte order mark and intentionally empty files remain supported.
+
+- Updated dependencies [[`a95d647`](https://github.com/cloudflare/workers-sdk/commit/a95d647f9459e40a00871346b81082abbb27d2b3), [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1), [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1), [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1)]:
+  - miniflare@5.20261023.2-beta
+
 ## 4.154.0
 
 ### Minor Changes

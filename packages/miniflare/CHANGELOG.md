@@ -1,5 +1,41 @@
 # miniflare
 
+## 5.20261023.2-beta
+
+### Minor Changes
+
+- [#16536](https://github.com/cloudflare/workers-sdk/pull/16536) [`a95d647`](https://github.com/cloudflare/workers-sdk/commit/a95d647f9459e40a00871346b81082abbb27d2b3) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Support remote Analytics Engine bindings in local development
+
+  Setting `remote: true` on an Analytics Engine dataset now sends `writeDataPoint()` calls from `wrangler dev` and the Vite plugin to the real dataset. Without it, writes are still dropped locally.
+
+  ```jsonc
+  {
+    "analytics_engine_datasets": [
+      {
+        "binding": "EVENTS",
+        "dataset": "my-dataset",
+        "remote": true
+      }
+    ]
+  }
+  ```
+
+- [#16554](https://github.com/cloudflare/workers-sdk/pull/16554) [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support standalone local Flagship access through the Local Explorer API
+
+  You can now list, create, update, delete, and evaluate flags for any local Flagship app by its ID, even when no Worker binds it and no dev server is running. This lets `cf flagship` commands manage local flags with `--local`.
+
+  Explorer Flagship routes now follow the public Flagship API: evaluate moves to `/apps/{app_id}/evaluate`, full updates use `PUT`, and `PATCH` changes only `enabled`, `description`, `default_variation`, and `metadata`. Flag `metadata` is stored, validated, and returned in evaluation results.
+
+  Explorer requests are no longer routed to the development process that owns each app. To share flags between local processes, use the same persistence directory.
+
+### Patch Changes
+
+- [#16554](https://github.com/cloudflare/workers-sdk/pull/16554) [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Ensure Miniflare removes temporary files before disposal completes
+
+- [#16554](https://github.com/cloudflare/workers-sdk/pull/16554) [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Validate `.assetsignore` encoding before building asset manifests
+
+  Asset uploads and local development now stop with an actionable user error when `.assetsignore` is not valid UTF-8 or contains null characters, instead of silently losing its patterns. This also applies to standalone Miniflare and the Wrangler, Vite and Vitest development integrations. Save the file as UTF-8 to continue; UTF-8 files with a byte order mark and intentionally empty files remain supported.
+
 ## 5.20261023.1-beta
 
 ### Minor Changes
