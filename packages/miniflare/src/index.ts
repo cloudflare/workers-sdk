@@ -3760,7 +3760,11 @@ export class Miniflare {
 		// Best-effort cleanup: on Windows, workerd may not release file handles
 		// immediately after disposal, causing EBUSY errors. The temp directory
 		// lives in os.tmpdir() so the OS will clean it up eventually.
-		removeDir(this.#tmpPath, { fireAndForget: true });
+		try {
+			await removeDir(this.#tmpPath);
+		} catch (e) {
+			this.#log.debug(`Unable to remove temporary directory: ${String(e)}`);
+		}
 		// Clean up email session directories in the project temp path. When no
 		// project temp path is supplied, these live inside `#tmpPath` and are
 		// already removed above.
