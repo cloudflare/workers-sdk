@@ -420,8 +420,16 @@ function getExternalServiceEntrypoints(
 
 	const reroutedWorkerOpts: ParsedWorkerOptions[] = [];
 	for (const workerOpts of allWorkerOpts) {
-		const { dev } = workerOpts;
-		const config = { ...workerOpts.config };
+		const { config: originalConfig, dev } = workerOpts;
+		const config = {
+			...originalConfig,
+			env:
+				originalConfig.env === undefined
+					? undefined
+					: { ...originalConfig.env },
+			tailConsumers: originalConfig.tailConsumers?.slice(),
+		};
+		const { env, tailConsumers } = config;
 		reroutedWorkerOpts.push({ ...workerOpts, config });
 
 		// Tail consumers targeting a worker outside this instance. Reroute them
@@ -430,9 +438,7 @@ function getExternalServiceEntrypoints(
 		// binds its tail to a non-existent local service `core:user:<workerName>`
 		// and workerd refuses to start. Handled before the `env` guard since a
 		// worker may declare tail consumers without any `env` bindings.
-		if (config.tailConsumers !== undefined) {
-			const tailConsumers = [...config.tailConsumers];
-			config.tailConsumers = tailConsumers;
+		if (tailConsumers !== undefined) {
 			for (let i = 0; i < tailConsumers.length; i++) {
 				const consumer = tailConsumers[i];
 				const serviceName = consumer.worker;
@@ -454,11 +460,9 @@ function getExternalServiceEntrypoints(
 			}
 		}
 
-		if (config.env === undefined) {
+		if (env === undefined) {
 			continue;
 		}
-		const env = { ...config.env };
-		config.env = env;
 
 		// `worker` service bindings
 		for (const [name, binding] of getEnvBindingsOfType(config, "worker")) {
