@@ -111,7 +111,9 @@ export abstract class Framework {
 					}. Please update ${packages} to at least ${JSON.stringify(
 						minimumCfVersion.version
 					)} and try again.`,
-					{ telemetryMessage: "autoconfig framework version unsupported for cf" }
+					{
+						telemetryMessage: "autoconfig framework version unsupported for cf",
+					}
 				);
 			}
 		}
