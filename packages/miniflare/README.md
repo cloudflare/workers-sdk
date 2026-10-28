@@ -479,7 +479,15 @@ parameter in module format Workers.
 
 - `browserRendering: BrowserRenderingOptions`
 
-#### Analytics Engine, Sending Email, Vectorize and Workers for Platforms
+#### Analytics Engine
+
+- `analyticsEngineDatasets?: Record<string, { dataset: string; remoteProxyConnectionString?: RemoteProxyConnectionString }>`
+
+  Record mapping binding name to an Analytics Engine dataset. Locally,
+  `writeDataPoint()` calls are discarded. If `remoteProxyConnectionString` is
+  set, they are written to the remote dataset instead.
+
+#### Sending Email, Vectorize and Workers for Platforms
 
 _Not yet supported_
 
@@ -685,7 +693,7 @@ Options shared between all Workers/"nanoservices".
   logs). Falls back to a subdirectory of Miniflare's own temporary directory if
   not set.
 
-#### Analytics Engine, Sending Email, Vectorize, Workers AI and Workers for Platforms
+#### Sending Email, Vectorize, Workers AI and Workers for Platforms
 
 _Not yet supported_
 

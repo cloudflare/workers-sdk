@@ -89,6 +89,7 @@ export const R2BindingSchema = z.strictObject({
 export const AnalyticsEngineDatasetBindingSchema = z.strictObject({
 	type: z.literal("analytics-engine-dataset"),
 	name: z.string().optional(),
+	dev: RemoteBindingDevSchema.optional(),
 });
 
 export const FlagshipBindingSchema = z.strictObject({
