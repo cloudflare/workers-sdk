@@ -1,10 +1,13 @@
 ---
-"@cloudflare/config": patch
 "@cloudflare/vitest-plugin": patch
 "@cloudflare/vite-plugin": patch
+"@cloudflare/workers-utils": patch
+"@cloudflare/deploy-helpers": patch
 "wrangler": patch
 ---
 
-Treat a `cloudflare.config.ts` Durable Object binding to the Worker's own class as local
+Fix Durable Object self-references in tests and container validation
 
-A Durable Object binding's `worker` is required, so a binding to one of the Worker's own classes names the Worker itself. The conversion to Wrangler config emitted that name as `script_name`, which made the binding look like it pointed at another Worker. `@cloudflare/vitest-plugin` then failed to start with "no such service is defined", and attaching a container to the Durable Object was rejected. The conversion now omits `script_name` when it names the Worker itself, matching a local binding in a Wrangler configuration file.
+Durable Object bindings that explicitly name the Worker itself now resolve to the test runner in `@cloudflare/vitest-plugin`, for both `cloudflare.config.ts` and Wrangler configuration files. Container validation also accepts these self-references, using the effective deployment name to distinguish local and external bindings.
+
+Explicit binding targets remain intact during configuration conversion, so deploying with `--name` or a CI name override preserves the intended Durable Object target.

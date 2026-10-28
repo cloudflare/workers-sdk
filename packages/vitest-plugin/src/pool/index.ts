@@ -328,6 +328,25 @@ async function buildProjectWorkerOptions(
 		}
 	}
 
+	// Durable Object bindings can also explicitly name the Worker under test.
+	// Keep these local when the runner is renamed, preserving the other options
+	// (including SQLite storage and unique keys) on each designator.
+	if (configWorkerName && runnerWorker.durableObjects) {
+		for (const [key, designator] of Object.entries(
+			runnerWorker.durableObjects
+		)) {
+			if (
+				typeof designator === "object" &&
+				designator.scriptName === configWorkerName
+			) {
+				runnerWorker.durableObjects[key] = {
+					...designator,
+					scriptName: undefined,
+				};
+			}
+		}
+	}
+
 	runnerWorker.name = getRunnerName(project);
 
 	// Make sure the worker has the `nodejs_compat` and `export_commonjs_default`

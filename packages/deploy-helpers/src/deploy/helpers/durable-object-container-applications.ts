@@ -609,7 +609,7 @@ export async function prepareDurableObjectContainerApplications(
 	}: PrepareDurableObjectContainerApplicationsArgs
 ): Promise<PreparedContainerImages> {
 	validateDurableObjectContainerApplications(
-		config,
+		{ ...config, name: scriptName },
 		durableObjectContainerConfig,
 		configFileName(config.configPath, config.userConfigPath)
 	);

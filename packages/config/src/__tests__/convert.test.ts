@@ -769,7 +769,7 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
-		it("omits script_name for a durable-object binding to the Worker itself", ({
+		it("preserves the explicit Worker target of a self-named durable-object binding", ({
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({
@@ -786,7 +786,9 @@ describe("convertToWranglerConfig", () => {
 				containers: [],
 			});
 			expect(result.durable_objects).toEqual({
-				bindings: [{ name: "DO", class_name: "MyDO" }],
+				bindings: [
+					{ name: "DO", class_name: "MyDO", script_name: baseWorker.name },
+				],
 			});
 		});
 
