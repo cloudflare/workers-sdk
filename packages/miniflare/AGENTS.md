@@ -8,6 +8,9 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 
 - `src/index.ts` — Main `Miniflare` class, server setup, plugin orchestration, all exports
 - `src/workers/` — ~30 embedded worker scripts (D1, KV, R2, caches, etc.), built via `worker:` virtual import scheme
+- `src/workers/d1/entry.worker.ts` — D1-specific HTTP/RPC entrypoint; selects a database using binding props and adapts RPC queries to the database worker's HTTP protocol
+- `src/workers/d1/database.worker.ts` — local D1 SQLite execution, transactions, metadata, and export; protocol schemas shared with the entrypoint live in `src/workers/d1/schemas.ts`
+- `src/workers/d1/export.ts` — shared local export pragma recognition and dedicated RPC export adaptation; keeps the legacy export response separate from ordinary query contracts
 - `src/workers/shared/` — Shared utilities across embedded workers
 - `src/workers/core/dev-registry-proxy.worker.ts` — Proxy worker for cross-process service bindings via debug port RPC
 - `src/workers/core/dev-registry-proxy-shared.worker.ts` — Shared proxy logic (registry Map, DO proxy class, tail serializers)
@@ -24,6 +27,7 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 - Custom `scripts/build.mjs` bundles `src/index.ts` as CJS → `dist/src/index.js`
 - Also compiles ~30 embedded worker scripts via `worker:...` virtual import scheme — each triggers a nested esbuild sub-build producing standalone ESM worker scripts
 - Build outputs: `dist/`, `worker-metafiles/`
+- Release builds set `SOURCEMAPS=false` to omit package source maps; ordinary builds keep them for debugging. Non-watch builds clean `dist/` before compiling so maps from an earlier build cannot leak into a release. This does not disable user Worker source maps.
 
 ## Lint Status (Transitional)
 
@@ -41,7 +45,7 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 ## Testing
 
 - Test files use `.spec.ts` (NOT `.test.ts`)
-- `pool: "forks"`, `maxWorkers: 1` (Vitest 4 equivalent of the old `singleFork: true`)
+- `pool: "forks"`, `maxWorkers: 1` (limits test files to one worker)
 - Does NOT extend `vitest.shared.ts` — own full vitest config
 - Timeouts: 30s test, 30s hook
 - `globals: true`
@@ -58,4 +62,4 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 ## Version Pinning
 
 - Miniflare minor version must match workerd minor version
-- `.github/changeset-version.js` enforces this: if changeset bumps miniflare minor beyond workerd's, it converts to patch
+- `tools/deployments/changeset-version.ts` enforces this: if changeset bumps miniflare minor beyond workerd's, it converts to patch

@@ -1,9 +1,7 @@
-import {
-	COMPLIANCE_REGION_CONFIG_UNKNOWN,
-	constructWranglerConfig,
-} from "@cloudflare/workers-utils";
+import { constructWranglerConfig } from "@cloudflare/workers-utils";
 import { fetchResult } from "../../shared/context";
 import type {
+	ComplianceConfig,
 	RawConfig,
 	ServiceMetadataRes,
 	WorkerMetadata,
@@ -44,6 +42,7 @@ type RoutesRes = {
  * Downloads all information required to construct a Wrangler config file for a Worker from the API
  */
 export async function fetchWorkerConfig(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	workerName: string,
 	environment: string
@@ -57,27 +56,27 @@ export async function fetchWorkerConfig(
 		cronTriggers,
 	] = await Promise.all([
 		fetchResult<WorkerMetadata["bindings"]>(
-			COMPLIANCE_REGION_CONFIG_UNKNOWN,
+			complianceConfig,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/bindings`
 		),
 		fetchResult<RoutesRes>(
-			COMPLIANCE_REGION_CONFIG_UNKNOWN,
+			complianceConfig,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/routes?show_zonename=true`
 		),
 		fetchResult<CustomDomainsRes>(
-			COMPLIANCE_REGION_CONFIG_UNKNOWN,
+			complianceConfig,
 			`/accounts/${accountId}/workers/domains/records?page=0&per_page=5&service=${workerName}&environment=${environment}`
 		),
 		fetchResult<WorkerSubdomainRes>(
-			COMPLIANCE_REGION_CONFIG_UNKNOWN,
+			complianceConfig,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/subdomain`
 		),
 		fetchResult<ServiceMetadataRes["default_environment"]>(
-			COMPLIANCE_REGION_CONFIG_UNKNOWN,
+			complianceConfig,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}`
 		),
 		fetchResult<CronTriggersRes>(
-			COMPLIANCE_REGION_CONFIG_UNKNOWN,
+			complianceConfig,
 			`/accounts/${accountId}/workers/scripts/${workerName}/schedules`
 		),
 	]).catch((e) => {
@@ -101,6 +100,7 @@ export async function fetchWorkerConfig(
  * approximates what a wrangler config object for the worker was/would have been.
  */
 export async function downloadWorkerConfig(
+	complianceConfig: ComplianceConfig,
 	workerName: string,
 	environment: string,
 	entrypoint: string,
@@ -113,7 +113,12 @@ export async function downloadWorkerConfig(
 		subdomainStatus,
 		serviceEnvMetadata,
 		cronTriggers,
-	} = await fetchWorkerConfig(accountId, workerName, environment);
+	} = await fetchWorkerConfig(
+		complianceConfig,
+		accountId,
+		workerName,
+		environment
+	);
 
 	return constructWranglerConfig({
 		name: workerName,

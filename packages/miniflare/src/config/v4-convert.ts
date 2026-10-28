@@ -59,6 +59,9 @@ function convertSharedOptions(options: ParsedV4MiniflareOptions) {
 		handleUncaughtError: options.handleUncaughtError,
 		upstream: options.upstream,
 		cf: options.cf,
+		// The v4 adapter preserves its opt-in registry semantics, including for
+		// isolated Vitest pools that have never advertised their Workers.
+		enableDevRegistry: Boolean(options.unsafeDevRegistryPath),
 		unsafeDevRegistryPath: options.unsafeDevRegistryPath,
 		unsafeHandleDevRegistryUpdate: options.unsafeHandleDevRegistryUpdate,
 		unsafeProxySharedSecret: options.unsafeProxySharedSecret,
@@ -194,7 +197,9 @@ function convertWorkerOptions(
 	dev.unsafeEphemeralDurableObjects = worker.unsafeEphemeralDurableObjects;
 	dev.stripCfConnectingIp = worker.stripCfConnectingIp;
 	dev.zone = worker.zone;
-	dev.access = worker.access;
+	if (worker.access !== undefined) {
+		config.access = { dev: worker.access };
+	}
 
 	const options: WorkerOptions = { config };
 	if (Object.values(legacy).some((value) => value !== undefined)) {
@@ -702,10 +707,13 @@ function addProductBindings(
 		env[name] = { type: "analytics-engine-dataset", name: binding.dataset };
 	}
 	for (const [name, value] of Object.entries(worker.hyperdrives ?? {})) {
+		const isRemoteEntry = typeof value === "object" && !(value instanceof URL);
 		env[name] = {
 			type: "hyperdrive",
-			id: name,
-			dev: { connectionString: String(value) },
+			id: isRemoteEntry && value.id ? value.id : name,
+			dev: isRemoteEntry
+				? { remote: isRemote(value.remoteProxyConnectionString) }
+				: { connectionString: String(value) },
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.ratelimits ?? {})) {
@@ -794,7 +802,11 @@ function addProductBindings(
 		env[name] = {
 			type: "artifacts",
 			namespace: binding.namespace,
-			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
+			// At this stage, only explicit V5 dev.remote: false selects local.
+			// Do not reinterpret an omitted legacy setting as that opt-in.
+			...(binding.remoteProxyConnectionString === undefined
+				? {}
+				: { dev: { remote: isRemote(binding.remoteProxyConnectionString) } }),
 		};
 	}
 	for (const name of Object.keys(worker.workerLoaders ?? {})) {

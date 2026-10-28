@@ -1,8 +1,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { Miniflare } from "miniflare";
+import { Miniflare, MiniflareCoreError } from "miniflare";
 import { test } from "vitest";
-import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
+import {
+	disposeWithRetry,
+	singleModuleManifest,
+	useDispose,
+	useTmp,
+} from "../../test-shared";
 import type { MiniflareOptions } from "miniflare";
 
 // Minimal worker script. When assets are configured, all incoming `dispatchFetch`
@@ -97,6 +102,46 @@ test("serves files from assets directory", async ({ expect }) => {
 	expect(await res.text()).toBe("hello from asset");
 });
 
+test("reports an invalid .assetsignore encoding as a user validation error", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const tmp = await useTmp();
+	await fs.writeFile(
+		path.join(tmp, ".assetsignore"),
+		Buffer.from("ignored.txt", "utf16le")
+	);
+
+	const mf = new Miniflare(makeOptions(tmp));
+	// Disposing an instance whose startup failed rethrows the startup error.
+	onTestFinished(() =>
+		disposeWithRetry(mf).catch((error: unknown) => {
+			expect(error).toMatchObject({ code: "ERR_VALIDATION" });
+		})
+	);
+	const ready = mf.ready;
+	await expect(ready).rejects.toBeInstanceOf(MiniflareCoreError);
+	await expect(ready).rejects.toMatchObject({
+		code: "ERR_VALIDATION",
+		message: expect.stringContaining("Save the file as UTF-8 and try again."),
+	});
+});
+
+test("serves nested assets with encoded path names", async ({ expect }) => {
+	const tmp = await useTmp();
+	const directory = path.join(tmp, "nested");
+	await fs.mkdir(directory);
+	await fs.writeFile(path.join(directory, "[fünky].txt"), "nested asset");
+	const mf = new Miniflare(makeOptions(tmp));
+	useDispose(mf);
+
+	const response = await mf.dispatchFetch(
+		"http://example.com/nested/%5Bf%C3%BCnky%5D.txt"
+	);
+	expect(response.status).toBe(200);
+	expect(await response.text()).toBe("nested asset");
+});
+
 test("serves files from assets directory relative to rootPath", async ({
 	expect,
 }) => {
@@ -154,6 +199,39 @@ test("normalizes a relative basePath in the Asset Worker", async ({
 	);
 	expect(res.status).toBe(200);
 	expect(await res.text()).toBe("hello from asset");
+});
+
+test("serves each Worker's own assets when several Workers have assets", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const names = ["first", "second"];
+	for (const name of names) {
+		await fs.mkdir(path.join(tmp, name));
+		await fs.writeFile(path.join(tmp, name, "name.txt"), name);
+	}
+
+	const mf = new Miniflare({
+		workers: names.map((name) => ({
+			config: {
+				name,
+				compatibilityDate: "2026-04-29",
+				manifest: singleModuleManifest(
+					"export default { fetch(request, env) { return env.ASSETS.fetch(request); } }"
+				),
+				assets: { directory: path.join(tmp, name) },
+				env: { ASSETS: { type: "assets" } },
+			},
+		})),
+	});
+	useDispose(mf);
+
+	for (const name of names) {
+		const worker = await mf.getWorker(name);
+		const res = await worker.fetch("http://example.com/name.txt");
+		expect(res.status).toBe(200);
+		expect(await res.text()).toBe(name);
+	}
 });
 
 // ─── Watch / reload behaviour ────────────────────────────────────────────────

@@ -1,5 +1,150 @@
 # @cloudflare/config
 
+## 0.28.1
+
+### Patch Changes
+
+- [#16403](https://github.com/cloudflare/workers-sdk/pull/16403) [`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-10-22
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16437](https://github.com/cloudflare/workers-sdk/pull/16437) [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-10-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16490](https://github.com/cloudflare/workers-sdk/pull/16490) [`bcd618d`](https://github.com/cloudflare/workers-sdk/commit/bcd618d0e622a020fd2cb658df0620a5e3ec2206) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update Zod to 4.6.6 to address GHSA-mrhx-c7xc-m3w5
+
+  The updated shared dependency fixes excessive memory consumption when validating oversized collections. This updates both the published Zod dependencies and the copies bundled into development tools and Workers.
+
+## 0.28.0
+
+### Minor Changes
+
+- [#14900](https://github.com/cloudflare/workers-sdk/pull/14900) [`08f22d3`](https://github.com/cloudflare/workers-sdk/commit/08f22d36f42100af8b83ae9556643f63b536a4e9) Thanks [@mack-erel](https://github.com/mack-erel)! - Support remote Hyperdrive bindings in local development
+
+  ```jsonc
+  {
+    "hyperdrive": [
+      {
+        "binding": "HYPERDRIVE",
+        "id": "<your-hyperdrive-id>",
+        "remote": true
+      }
+    ]
+  }
+  ```
+
+- [#16357](https://github.com/cloudflare/workers-sdk/pull/16357) [`182d6de`](https://github.com/cloudflare/workers-sdk/commit/182d6ded7126c29daa6f8d2eea5f175421b29917) Thanks [@Naapperas](https://github.com/Naapperas)! - Add a `jurisdiction` setting to Workflows
+
+  A Workflow defined by the Worker can now set the jurisdiction that its instances run and store their data in, on either a `workflows` binding or a `workflow` export:
+
+  ```jsonc
+  {
+    "workflows": [
+      {
+        "binding": "MY_WORKFLOW",
+        "name": "my-workflow",
+        "class_name": "MyWorkflow",
+        "jurisdiction": "eu"
+      }
+    ]
+  }
+  ```
+
+  The accepted values are `eu`, `fedramp`, and `us`. `wrangler deploy` and `wrangler triggers deploy` send the jurisdiction when they create or update the Workflow. A Workflow's jurisdiction is set when it is created and cannot be changed afterwards, so `wrangler deploy` and `wrangler versions upload` stop before uploading when an existing Workflow has a different jurisdiction from the configured one. Leaving `jurisdiction` out keeps the Workflow's existing jurisdiction. `@cloudflare/config` adds the setting to `exports.workflow()`, `cf migrate` carries it over, and `wrangler workflows describe` prints it. Local development ignores it.
+
+## 0.27.0
+
+### Minor Changes
+
+- [#16266](https://github.com/cloudflare/workers-sdk/pull/16266) [`68f86a3`](https://github.com/cloudflare/workers-sdk/commit/68f86a32cb9f9fb8a8875bb5b2121c30b70c7b4c) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Add custom domain traffic settings to experimental programmatic Worker configuration
+
+  Domain objects accept `hostname`, `production`, and `previews` to serve production traffic, Preview traffic, or both. String domains continue to serve production traffic only. Apply hosting settings with a parent Worker or trigger deployment.
+
+## 0.26.0
+
+### Minor Changes
+
+- [#16239](https://github.com/cloudflare/workers-sdk/pull/16239) [`f360829`](https://github.com/cloudflare/workers-sdk/commit/f3608290da40c11b248fff40101f30fc295652be) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support Cloudflare Access local development configuration in `cloudflare.config.ts`
+
+  Workers can now configure an Access audience and mock identity under `access.dev`, and `cf migrate` preserves this setting when converting a Wrangler configuration. Miniflare v5 now reads the setting from `config.access.dev`, aligning its Worker configuration with `@cloudflare/config`; the Miniflare v4 compatibility adapter continues to accept its existing `access` option.
+
+  ```ts
+  export default defineConfig({
+    worker: {
+      name: "api",
+      access: {
+        dev: {
+          aud: "my-access-audience",
+          identity: { email: "developer@example.com" },
+        },
+      },
+    },
+  });
+  ```
+
+  This is a breaking change for direct Miniflare v5 users: move `workers[].dev.access` to `workers[].config.access.dev`. Miniflare v5 is currently in beta.
+
+## 0.25.0
+
+### Minor Changes
+
+- [#16175](https://github.com/cloudflare/workers-sdk/pull/16175) [`d8b1fca`](https://github.com/cloudflare/workers-sdk/commit/d8b1fca2ba2fec3d3945fa6ec719b8f6766ad610) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Allow Worker bindings to be included conditionally
+
+  Binding entries set to `false`, `null`, or `undefined` are now omitted from `env`. Generated environment types make conditionally included bindings optional.
+
+  ```ts
+  export default defineConfig(({ mode }) => ({
+    worker: {
+      name: "my-worker",
+      compatibilityDate: "2026-10-09",
+      env: {
+        PRODUCTION_KV:
+          mode === "production" && bindings.kv({ id: "production-kv-id" }),
+        STAGING_API_ORIGIN:
+          mode === "staging"
+            ? bindings.text("https://staging.example.com")
+            : undefined,
+      },
+    },
+  }));
+  ```
+
+## 0.24.1
+
+### Patch Changes
+
+- [#16140](https://github.com/cloudflare/workers-sdk/pull/16140) [`aaa6a88`](https://github.com/cloudflare/workers-sdk/commit/aaa6a880682fcc33a02366d7b193474f05e36717) Thanks [@cpojer](https://github.com/cpojer)! - Update Zod to 4.6.5
+
+  Align the published Zod dependencies in Cloudflare configuration and the Vitest plugin with other tools using Zod 4.6.5 so consumers can reuse one installation.
+
+- [#16138](https://github.com/cloudflare/workers-sdk/pull/16138) [`b606624`](https://github.com/cloudflare/workers-sdk/commit/b6066245aaccb0a6bb718ff063df4fa5a54e4215) Thanks [@Derpedyea](https://github.com/Derpedyea)! - Fix declaration emit for configs that use Durable Objects or wrap config helpers
+
+  Projects that generate TypeScript declarations can now export a Worker that declares a Durable Object, wrap helpers such as `bindings.kv()`, and re-export `defineConfig`, `defineContainer`, or `defineWorker`. Helper options types such as `KvBindingOptions` can now be imported by name, and `bindings.json()` values are no longer emitted as `any`.
+
+## 0.24.0
+
+### Minor Changes
+
+- [#16016](https://github.com/cloudflare/workers-sdk/pull/16016) [`f025bbf`](https://github.com/cloudflare/workers-sdk/commit/f025bbfddcdab0193bffffc9fe5a9bf143f2fa65) Thanks [@Ankcorn](https://github.com/Ankcorn)! - Add `bindings.analytics()` as the preferred name for Analytics SQL bindings and deprecate `bindings.analyticsSQL()`.
+
+- [#15998](https://github.com/cloudflare/workers-sdk/pull/15998) [`b75421f`](https://github.com/cloudflare/workers-sdk/commit/b75421fcd5b2d8208cefb38882479773a7387df4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `assets.base_path` support to Workers Assets
+
+  Serve an asset directory from a public URL prefix without changing its on-disk layout:
+
+  ```jsonc
+  {
+    "assets": {
+      "directory": "./public",
+      "base_path": "/docs"
+    }
+  }
+  ```
+
+  Wrangler, preview, Miniflare, and generated build configuration preserve the explicitly selected value, while the Asset Worker normalizes it and strips the prefix only for asset lookup. Requests passed to a user Worker, request-facing headers, and redirects retain the public path. Relative pathname inputs are interpreted as root-relative prefixes, URL-shaped values are rejected, and omitting the option preserves existing root-path behavior.
+
+  Authored `_headers` and `_redirects` rules continue to match full public paths. In particular, both the source and destination of an authored `200` asset rewrite must include the configured public prefix; Asset Worker-generated redirects are prefixed automatically.
+
 ## 0.23.0
 
 ### Minor Changes

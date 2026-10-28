@@ -1,4 +1,10 @@
-import type { Condition, FlagInput, FlagValue, Rule } from "./flags";
+import type {
+	Condition,
+	FlagInput,
+	FlagMetadata,
+	FlagValue,
+	Rule,
+} from "./flags";
 
 // Vendored from Flagship data-plane commit 3135610e4d329b35398316a9038b3af440cf8e3a.
 // Hashing and matching must remain byte-compatible with production.
@@ -29,6 +35,7 @@ export interface EvaluationDetails<T> {
 	value: T;
 	variant: string;
 	reason: EvaluationReason;
+	metadata?: FlagMetadata;
 	errorCode?: ErrorCode;
 	errorMessage?: string;
 }
@@ -325,7 +332,12 @@ export function evaluateFlag(
 	flagDef: EvalFlag | FlagInput,
 	context: EvaluationContext,
 	accountId: string
-): { value: FlagValue; variant: string; reason: EvaluationReason } {
+): {
+	value: FlagValue;
+	variant: string;
+	reason: EvaluationReason;
+	metadata?: FlagMetadata;
+} {
 	const serve = (variant: string, reason: EvaluationReason) => {
 		if (!Object.hasOwn(flagDef.variations, variant)) {
 			throw new FlagConfigError(
@@ -337,6 +349,7 @@ export function evaluateFlag(
 			value: flagDef.variations[variant] as FlagValue,
 			variant,
 			reason,
+			...(flagDef.metadata ? { metadata: flagDef.metadata } : {}),
 		};
 	};
 

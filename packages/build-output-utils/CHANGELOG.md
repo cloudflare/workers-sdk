@@ -1,5 +1,72 @@
 # @cloudflare/build-output-utils
 
+## 0.9.5
+
+### Patch Changes
+
+- [#16403](https://github.com/cloudflare/workers-sdk/pull/16403) [`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-10-22
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16437](https://github.com/cloudflare/workers-sdk/pull/16437) [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-10-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e), [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876), [`bcd618d`](https://github.com/cloudflare/workers-sdk/commit/bcd618d0e622a020fd2cb658df0620a5e3ec2206)]:
+  - @cloudflare/config@0.28.1
+
+## 0.9.4
+
+### Patch Changes
+
+- Updated dependencies [[`08f22d3`](https://github.com/cloudflare/workers-sdk/commit/08f22d36f42100af8b83ae9556643f63b536a4e9), [`182d6de`](https://github.com/cloudflare/workers-sdk/commit/182d6ded7126c29daa6f8d2eea5f175421b29917)]:
+  - @cloudflare/config@0.28.0
+
+## 0.9.3
+
+### Patch Changes
+
+- Updated dependencies [[`68f86a3`](https://github.com/cloudflare/workers-sdk/commit/68f86a32cb9f9fb8a8875bb5b2121c30b70c7b4c)]:
+  - @cloudflare/config@0.27.0
+
+## 0.9.2
+
+### Patch Changes
+
+- Updated dependencies [[`f360829`](https://github.com/cloudflare/workers-sdk/commit/f3608290da40c11b248fff40101f30fc295652be)]:
+  - @cloudflare/config@0.26.0
+
+## 0.9.1
+
+### Patch Changes
+
+- Updated dependencies [[`d8b1fca`](https://github.com/cloudflare/workers-sdk/commit/d8b1fca2ba2fec3d3945fa6ec719b8f6766ad610)]:
+  - @cloudflare/config@0.25.0
+
+## 0.9.0
+
+### Minor Changes
+
+- [#15981](https://github.com/cloudflare/workers-sdk/pull/15981) [`0d1bd50`](https://github.com/cloudflare/workers-sdk/commit/0d1bd50d6453e286160e78bee5143c7f7ce221fe) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Reject symlinks when reading experimental Build Output directories
+
+  Build Output directories must be portable and self-contained. The shared reader now rejects symlinks anywhere in the output tree, including links to files within it, and reports the offending path in a Build Output error before reading configs.
+
+### Patch Changes
+
+- [#16154](https://github.com/cloudflare/workers-sdk/pull/16154) [`7557322`](https://github.com/cloudflare/workers-sdk/commit/75573221a3e0f2cf0ea8b3d413797a9f1d1a6984) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Keep experimental Build Output portable when source assets are symlinks
+
+  Asset links are now copied as regular files and directories so Wrangler produces portable, self-contained Build Output that can be read successfully.
+
+- Updated dependencies [[`aaa6a88`](https://github.com/cloudflare/workers-sdk/commit/aaa6a880682fcc33a02366d7b193474f05e36717), [`b606624`](https://github.com/cloudflare/workers-sdk/commit/b6066245aaccb0a6bb718ff063df4fa5a54e4215)]:
+  - @cloudflare/config@0.24.1
+
+## 0.8.6
+
+### Patch Changes
+
+- Updated dependencies [[`f025bbf`](https://github.com/cloudflare/workers-sdk/commit/f025bbfddcdab0193bffffc9fe5a9bf143f2fa65), [`b75421f`](https://github.com/cloudflare/workers-sdk/commit/b75421fcd5b2d8208cefb38882479773a7387df4)]:
+  - @cloudflare/config@0.24.0
+
 ## 0.8.5
 
 ### Patch Changes

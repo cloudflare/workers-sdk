@@ -1,5 +1,93 @@
 # @cloudflare/workers-auth
 
+## 0.15.1
+
+### Patch Changes
+
+- [#16403](https://github.com/cloudflare/workers-sdk/pull/16403) [`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-10-22
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16437](https://github.com/cloudflare/workers-sdk/pull/16437) [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-10-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16476](https://github.com/cloudflare/workers-sdk/pull/16476) [`8a30d8e`](https://github.com/cloudflare/workers-sdk/commit/8a30d8eec16110dcaaeb0822768ac03a5b45a902) Thanks [@tannerlinsley](https://github.com/tannerlinsley)! - Update Undici to 7.30.1 to prevent a malformed HTTP response from crashing development tools
+
+  The updated shared dependency rejects excessive content encodings without leaving an unhandled stream error when the server closes the connection early. This fixes GHSA-xjj6-f33q-929c and keeps the matching Undici types on the same version.
+
+- [#16485](https://github.com/cloudflare/workers-sdk/pull/16485) [`b7e762d`](https://github.com/cloudflare/workers-sdk/commit/b7e762d1bf26fc6f538f7387af36eb9566850153) Thanks [@Cherry](https://github.com/Cherry)! - Fix the Windows keyring install when the config path contains a space
+
+  On Windows, `wrangler login --use-keyring` could not set up keyring storage when the configuration path contained a space, such as a `C:\Users\John Smith` profile, so credentials fell back to the plaintext file. Keyring setup now works for those paths and credentials are stored encrypted.
+
+- Updated dependencies [[`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e), [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876), [`8a30d8e`](https://github.com/cloudflare/workers-sdk/commit/8a30d8eec16110dcaaeb0822768ac03a5b45a902), [`23ef63a`](https://github.com/cloudflare/workers-sdk/commit/23ef63a0aaa0264e9611b364f6d635297c287d90), [`bcd618d`](https://github.com/cloudflare/workers-sdk/commit/bcd618d0e622a020fd2cb658df0620a5e3ec2206)]:
+  - @cloudflare/workers-utils@0.49.0
+
+## 0.15.0
+
+### Minor Changes
+
+- [#16375](https://github.com/cloudflare/workers-sdk/pull/16375) [`f43e2e6`](https://github.com/cloudflare/workers-sdk/commit/f43e2e61093b3218a48691dc76ce7f463a2123ce) Thanks [@penalosa](https://github.com/penalosa)! - Use each CLI's temporary-account flag in authentication errors
+
+  Default to `--temporary-account` while keeping Wrangler's `--temporary` spelling. Expose account-lookup authentication failure reasons so consumers can distinguish missing credentials from expired tokens without matching error messages.
+
+### Patch Changes
+
+- Updated dependencies [[`08f22d3`](https://github.com/cloudflare/workers-sdk/commit/08f22d36f42100af8b83ae9556643f63b536a4e9), [`182d6de`](https://github.com/cloudflare/workers-sdk/commit/182d6ded7126c29daa6f8d2eea5f175421b29917)]:
+  - @cloudflare/workers-utils@0.48.0
+
+## 0.14.1
+
+### Patch Changes
+
+- [#16259](https://github.com/cloudflare/workers-sdk/pull/16259) [`017bf9b`](https://github.com/cloudflare/workers-sdk/commit/017bf9b5117a8a511f4ed2c10dd2bd0b80b24c31) Thanks [@NuroDev](https://github.com/NuroDev)! - Support Vitest 5 in shared test helpers
+
+  The optional Vitest peer ranges now accept both Vitest 4 and 5, allowing consumers to upgrade without dropping compatibility with Vitest 4.
+
+- Updated dependencies [[`017bf9b`](https://github.com/cloudflare/workers-sdk/commit/017bf9b5117a8a511f4ed2c10dd2bd0b80b24c31)]:
+  - @cloudflare/workers-utils@0.47.3
+
+## 0.14.0
+
+### Minor Changes
+
+- [#16184](https://github.com/cloudflare/workers-sdk/pull/16184) [`6c4153e`](https://github.com/cloudflare/workers-sdk/commit/6c4153e2f1b7a55ec6b31afe54fd14fff4990751) Thanks [@mtlemilio](https://github.com/mtlemilio)! - Allow cf consumers to explicitly request the `hyperdrive-planetscale:setup` OAuth scope
+
+  The scope remains excluded from default logins so permission to create Cloudflare-billed PlanetScale databases is requested only by commands that need it.
+
+- [#16038](https://github.com/cloudflare/workers-sdk/pull/16038) [`dc3e4df`](https://github.com/cloudflare/workers-sdk/commit/dc3e4df999e9d774469c6292a7b92b1f427b3dd9) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Use consumer-specific CLI names and commands in shared user-facing messages
+
+  Shared deployment, container, configuration, and authentication helpers can now render commands and configuration filenames for their calling CLI while preserving Wrangler-compatible defaults. This prevents `cf` workflows from presenting Wrangler-branded guidance when an equivalent `cf` command exists.
+
+### Patch Changes
+
+- [#16151](https://github.com/cloudflare/workers-sdk/pull/16151) [`cafd3f9`](https://github.com/cloudflare/workers-sdk/commit/cafd3f94207bd2c886e6ab20de17e45e0eb50f1e) Thanks [@DevVettel](https://github.com/DevVettel)! - Time out the OAuth token request instead of waiting indefinitely
+
+  The request that exchanges an authorization code or refresh token for an access token had no timeout, so a stalled connection (for example behind an HTTP proxy) could leave `wrangler login` hanging silently for many minutes after the browser step had succeeded. The request now gives up after 30 seconds and reports that the Cloudflare auth server could not be reached.
+
+- Updated dependencies [[`dc3e4df`](https://github.com/cloudflare/workers-sdk/commit/dc3e4df999e9d774469c6292a7b92b1f427b3dd9)]:
+  - @cloudflare/workers-utils@0.47.2
+
+## 0.13.1
+
+### Patch Changes
+
+- Updated dependencies [[`ad7ff45`](https://github.com/cloudflare/workers-sdk/commit/ad7ff45076f762253268d03c28b5384f43889999), [`93c1069`](https://github.com/cloudflare/workers-sdk/commit/93c10696930e50e310b8b49a8e792671bf371e82)]:
+  - @cloudflare/workers-utils@0.47.1
+
+## 0.13.0
+
+### Minor Changes
+
+- [#16068](https://github.com/cloudflare/workers-sdk/pull/16068) [`26e03e2`](https://github.com/cloudflare/workers-sdk/commit/26e03e2560fcc4b6aaa7f843d19ab1feb645fff1) Thanks [@edevil](https://github.com/edevil)! - Add a `temporaryAccountLogger` option for temporary-account notices
+
+  `AuthContext.temporaryAccountLogger` receives the terms notice, the proof-of-work message, and the "Temporary account ready" claim details. A CLI whose commands write parseable output to stdout can route these messages to stderr. When it is not set, the messages go to `logger` as before.
+
+### Patch Changes
+
+- Updated dependencies [[`b75421f`](https://github.com/cloudflare/workers-sdk/commit/b75421fcd5b2d8208cefb38882479773a7387df4), [`2b1a0ca`](https://github.com/cloudflare/workers-sdk/commit/2b1a0ca78c30403934ab9df9b6264185d473b3ef), [`aa2f9b7`](https://github.com/cloudflare/workers-sdk/commit/aa2f9b73ed1177bceb83fd730eb9e47cbabc8c7f)]:
+  - @cloudflare/workers-utils@0.47.0
+
 ## 0.12.0
 
 ### Minor Changes

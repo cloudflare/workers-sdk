@@ -333,7 +333,12 @@ describe("r2", () => {
 									name: "test-bucket",
 									locationHint: "weur",
 								});
-								return HttpResponse.json(createFetchResult({}));
+								return HttpResponse.json(
+									createFetchResult({
+										name: "test-bucket",
+										location: "weur",
+									})
+								);
 							},
 							{ once: true }
 						)
@@ -342,6 +347,95 @@ describe("r2", () => {
 
 					await runWrangler("r2 bucket create test-bucket --location weur");
 					expect(std.out).toMatchSnapshot();
+					expect(std.warn).toEqual("");
+				});
+
+				it("should report the location R2 returned when the hint was ignored", async ({
+					expect,
+				}) => {
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/r2/buckets",
+							async ({ request }) => {
+								expect(await request.json()).toEqual({
+									name: "reused-bucket",
+									locationHint: "apac",
+								});
+								return HttpResponse.json(
+									createFetchResult({
+										name: "reused-bucket",
+										location: "ENAM",
+									})
+								);
+							},
+							{ once: true }
+						)
+					);
+					writeWranglerConfig({}, configPath);
+
+					await runWrangler("r2 bucket create reused-bucket --location apac");
+					expect(std.out).toContain(
+						"✅ Created bucket 'reused-bucket' with location ENAM and default storage class of Standard."
+					);
+					expect(std.out).not.toContain("location hint");
+					expect(std.warn).toContain(
+						'The location hint "apac" was not applied. The bucket location is "ENAM".'
+					);
+					expect(std.warn).toContain(
+						"https://developers.cloudflare.com/r2/reference/data-location/"
+					);
+				});
+
+				it("should treat a location hint as applied when only the case differs", async ({
+					expect,
+				}) => {
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/r2/buckets",
+							async () => {
+								return HttpResponse.json(
+									createFetchResult({
+										name: "test-bucket",
+										location: "ENAM",
+									})
+								);
+							},
+							{ once: true }
+						)
+					);
+					writeWranglerConfig({}, configPath);
+
+					await runWrangler("r2 bucket create test-bucket --location enam");
+					expect(std.out).toContain(
+						"✅ Created bucket 'test-bucket' with location hint ENAM and default storage class of Standard."
+					);
+					expect(std.warn).toEqual("");
+				});
+
+				it("should not claim a location hint was applied when the API omits location", async ({
+					expect,
+				}) => {
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/r2/buckets",
+							async ({ request }) => {
+								expect(await request.json()).toEqual({
+									name: "test-bucket",
+									locationHint: "apac",
+								});
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					writeWranglerConfig({}, configPath);
+
+					await runWrangler("r2 bucket create test-bucket --location apac");
+					expect(std.out).toContain(
+						"✅ Created bucket 'test-bucket' with default storage class of Standard."
+					);
+					expect(std.out).not.toContain("apac");
+					expect(std.warn).toEqual("");
 				});
 			});
 
@@ -2902,6 +2996,98 @@ describe("r2", () => {
 						Adding lifecycle rule 'my-rule' to bucket 'my-bucket'...
 						✨ Added lifecycle rule 'my-rule' to bucket 'my-bucket'."
 					`);
+				});
+
+				it("uses each action's own condition when expiring and transitioning by age", async () => {
+					const bucketName = "my-bucket";
+					const ruleId = "my-rule";
+					const prefix = "logs/";
+					let requestBody: unknown;
+
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async () => {
+								return HttpResponse.json(createFetchResult({ rules: [] }));
+							},
+							{ once: true }
+						),
+						http.put(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async ({ request }) => {
+								requestBody = await request.json();
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(
+						`r2 bucket lifecycle add ${bucketName} --name ${ruleId} --prefix ${prefix} --expire-days 365 --ia-transition-days 30`
+					);
+					expect(requestBody).toEqual({
+						rules: [
+							{
+								id: ruleId,
+								enabled: true,
+								conditions: { prefix: prefix },
+								deleteObjectsTransition: {
+									condition: { type: "Age", maxAge: 31536000 },
+								},
+								storageClassTransitions: [
+									{
+										condition: { type: "Age", maxAge: 2592000 },
+										storageClass: "InfrequentAccess",
+									},
+								],
+							},
+						],
+					});
+				});
+
+				it("uses each action's own condition when mixing a date and an age", async () => {
+					const bucketName = "my-bucket";
+					const ruleId = "my-rule";
+					const prefix = "logs/";
+					let requestBody: unknown;
+
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async () => {
+								return HttpResponse.json(createFetchResult({ rules: [] }));
+							},
+							{ once: true }
+						),
+						http.put(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async ({ request }) => {
+								requestBody = await request.json();
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(
+						`r2 bucket lifecycle add ${bucketName} --name ${ruleId} --prefix ${prefix} --expire-date 2027-01-01 --ia-transition-days 30`
+					);
+					expect(requestBody).toEqual({
+						rules: [
+							{
+								id: ruleId,
+								enabled: true,
+								conditions: { prefix: prefix },
+								deleteObjectsTransition: {
+									condition: { type: "Date", date: "2027-01-01T00:00:00.000Z" },
+								},
+								storageClassTransitions: [
+									{
+										condition: { type: "Age", maxAge: 2592000 },
+										storageClass: "InfrequentAccess",
+									},
+								],
+							},
+						],
+					});
 				});
 
 				it("it should add a date lifecycle rule using command-line arguments and id alias", async () => {

@@ -176,7 +176,7 @@ export async function usingLocalBucket<T>(
         try {
           if (request.method !== "PUT") return new Response(null, { status: 405 });
           const url = new URL(request.url);
-          const key = url.pathname.substring(1);
+          const key = decodeURIComponent(url.pathname.substring(1));
           const optsHeader = request.headers.get("Wrangler-R2-Put-Options");
           const opts = JSON.parse(optsHeader);
           await env.BUCKET.put(key, request.body, opts);

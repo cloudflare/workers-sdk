@@ -4,21 +4,20 @@ import { test, vitestConfig, waitFor } from "./helpers";
 // NOTE: The DO storage isolation tests (isolatedStorage/singleWorker) were removed
 // because these features were dropped in the vitest 4 pool rewrite.
 
-test("automatically re-runs unit tests", async ({
-	expect,
-	seed,
-	vitestDev,
-}) => {
-	await seed({
-		"vitest.config.mts": vitestConfig(),
-		"index.ts": dedent /* javascript */ `
+test(
+	"automatically re-runs unit tests",
+	{ timeout: 60_000 },
+	async ({ expect, seed, vitestDev }) => {
+		await seed({
+			"vitest.config.mts": vitestConfig(),
+			"index.ts": dedent /* javascript */ `
 			export default {
 				async fetch(request, env, ctx) {
 					return new Response("wrong");
 				}
 			}
 		`,
-		"index.test.ts": dedent /* javascript */ `
+			"index.test.ts": dedent /* javascript */ `
 			import { env, createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 			import { it, expect } from "vitest";
 			import worker from "./index";
@@ -30,48 +29,48 @@ test("automatically re-runs unit tests", async ({
 				expect(await response.text()).toBe("correct");
 			});
 		`,
-	});
-	const result = vitestDev();
-	await waitFor(() => {
-		expect(result.stderr).toMatch("expected 'wrong' to be 'correct'");
-		expect(result.stderr).toMatch("Failed Tests 1");
-	});
+		});
+		const result = vitestDev();
+		await waitFor(() => {
+			expect(result.stderr).toMatch("expected 'wrong' to be 'correct'");
+			expect(result.stderr).toMatch("Failed Tests 1");
+		}, 30_000);
 
-	await seed({
-		"index.ts": dedent /* javascript */ `
+		await seed({
+			"index.ts": dedent /* javascript */ `
 			export default {
 				async fetch(request, env, ctx) {
 					return new Response("correct");
 				}
 			}
 		`,
-	});
-	await waitFor(() => {
-		expect(result.stdout).toMatch("Tests  1 passed");
-	});
-});
+		});
+		await waitFor(() => {
+			expect(result.stdout).toMatch("Tests  1 passed");
+		});
+	}
+);
 
-test("automatically re-runs integration tests", async ({
-	expect,
-	seed,
-	vitestDev,
-}) => {
-	await seed({
-		"vitest.config.mts": vitestConfig({
-			main: "./index.ts",
-			miniflare: {
-				compatibilityDate: "2025-12-02",
-				compatibilityFlags: ["nodejs_compat"],
-			},
-		}),
-		"index.ts": dedent /* javascript */ `
+test(
+	"automatically re-runs integration tests",
+	{ timeout: 60_000 },
+	async ({ expect, seed, vitestDev }) => {
+		await seed({
+			"vitest.config.mts": vitestConfig({
+				main: "./index.ts",
+				miniflare: {
+					compatibilityDate: "2025-12-02",
+					compatibilityFlags: ["nodejs_compat"],
+				},
+			}),
+			"index.ts": dedent /* javascript */ `
 			export default {
 				async fetch(request, env, ctx) {
 					return new Response("wrong");
 				}
 			}
 		`,
-		"index.test.ts": dedent /* javascript */ `
+			"index.test.ts": dedent /* javascript */ `
 			import { SELF } from "cloudflare:test";
 			import { it, expect } from "vitest";
 			it("sends request", async () => {
@@ -79,46 +78,46 @@ test("automatically re-runs integration tests", async ({
 				expect(await response.text()).toBe("correct");
 			});
 		`,
-	});
-	const result = vitestDev();
-	await waitFor(() => {
-		expect(result.stderr).toMatch("expected 'wrong' to be 'correct'");
-		expect(result.stderr).toMatch("Failed Tests 1");
-	});
+		});
+		const result = vitestDev();
+		await waitFor(() => {
+			expect(result.stderr).toMatch("expected 'wrong' to be 'correct'");
+			expect(result.stderr).toMatch("Failed Tests 1");
+		}, 30_000);
 
-	await seed({
-		"index.ts": dedent /* javascript */ `
+		await seed({
+			"index.ts": dedent /* javascript */ `
 			export default {
 				async fetch(request, env, ctx) {
 					return new Response("correct");
 				}
 			}
 		`,
-	});
-	await waitFor(() => {
-		expect(result.stdout).toMatch("Tests  1 passed");
-	});
-});
+		});
+		await waitFor(() => {
+			expect(result.stdout).toMatch("Tests  1 passed");
+		});
+	}
+);
 
-test("automatically reset module graph", async ({
-	expect,
-	seed,
-	vitestDev,
-}) => {
-	await seed({
-		"vitest.config.mts": vitestConfig({
-			main: "./index.ts",
-			miniflare: {
-				compatibilityDate: "2025-12-02",
-				compatibilityFlags: ["nodejs_compat"],
-			},
-		}),
-		"answer.ts": dedent /* javascript */ `
+test(
+	"automatically reset module graph",
+	{ timeout: 60_000 },
+	async ({ expect, seed, vitestDev }) => {
+		await seed({
+			"vitest.config.mts": vitestConfig({
+				main: "./index.ts",
+				miniflare: {
+					compatibilityDate: "2025-12-02",
+					compatibilityFlags: ["nodejs_compat"],
+				},
+			}),
+			"answer.ts": dedent /* javascript */ `
 			export function getAnswer() {
 				return "wrong";
 			}
 		`,
-		"index.ts": dedent /* javascript */ `
+			"index.ts": dedent /* javascript */ `
 			import { getAnswer } from "./answer";
 
 			export default {
@@ -128,7 +127,7 @@ test("automatically reset module graph", async ({
 				}
 			}
 		`,
-		"index.test.ts": dedent /* javascript */ `
+			"index.test.ts": dedent /* javascript */ `
 			import { env, createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 			import { it, expect, vi } from "vitest";
 			import worker from "./index";
@@ -146,16 +145,16 @@ test("automatically reset module graph", async ({
 				expect(await response.text()).toBe("correct");
 			});
 		`,
-	});
-	const result = vitestDev();
+		});
+		const result = vitestDev();
 
-	await waitFor(() => {
-		expect(result.stdout).toMatch("Tests  1 passed");
-	});
+		await waitFor(() => {
+			expect(result.stdout).toMatch("Tests  1 passed");
+		}, 30_000);
 
-	// Trigger a re-run by updating the test file with an extra test.
-	await seed({
-		"index.test.ts": dedent /* javascript */ `
+		// Trigger a re-run by updating the test file with an extra test.
+		await seed({
+			"index.test.ts": dedent /* javascript */ `
 			import { env, createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 			import { it, expect, vi } from "vitest";
 			import worker from "./index";
@@ -183,9 +182,10 @@ test("automatically reset module graph", async ({
 				expect(await response.text()).toBe("test");
 			});
 		`,
-	});
+		});
 
-	await waitFor(() => {
-		expect(result.stdout).toMatch("Tests  2 passed");
-	});
-});
+		await waitFor(() => {
+			expect(result.stdout).toMatch("Tests  2 passed");
+		});
+	}
+);

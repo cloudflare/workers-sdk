@@ -3,7 +3,7 @@
 	"extends": ["//"],
 	"tasks": {
 		"test:ci": {
-			"inputs": ["../packages/*/package.json"],
+			"inputs": ["$TURBO_EXTENDS$", "../packages/*/package.json"],
 			"dependsOn": ["build"]
 		},
 		"build": {

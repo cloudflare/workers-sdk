@@ -18,7 +18,19 @@ opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async ({ expect }) => {
 
 	// Generate self-signed certificate
 	childProcess.execSync(
-		'openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 30 -out cert.pem -subj "/CN=localhost"',
+		'openssl req -newkey rsa:2048 -nodes -keyout ca-key.pem -x509 -days 30 -out ca.pem -subj "/CN=Test CA"',
+		{ cwd: tmp, stdio: "ignore" }
+	);
+	childProcess.execSync(
+		'openssl req -newkey rsa:2048 -nodes -keyout key.pem -out cert.csr -subj "/CN=localhost"',
+		{ cwd: tmp, stdio: "ignore" }
+	);
+	await fs.writeFile(
+		path.join(tmp, "extensions.cnf"),
+		"subjectAltName=DNS:localhost\nbasicConstraints=critical,CA:FALSE\nextendedKeyUsage=serverAuth\n"
+	);
+	childProcess.execSync(
+		"openssl x509 -req -in cert.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -days 30 -out cert.pem -extfile extensions.cnf",
 		{ cwd: tmp, stdio: "ignore" }
 	);
 	const keyPath = path.join(tmp, "key.pem");
@@ -26,7 +38,6 @@ opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async ({ expect }) => {
 	const key = await fs.readFile(keyPath);
 	const cert = await fs.readFile(certPath);
 
-	// Start HTTPS server with self-signed certificate
 	const responseBody = "secure body";
 	const server = https.createServer({ key, cert }, (req, res) => {
 		res.end(responseBody);
@@ -47,7 +58,10 @@ opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async ({ expect }) => {
 	// Write NODE_EXTRA_CA_CERTS file, with multiple certificates
 	// (see https://github.com/cloudflare/miniflare/pull/587/files#r1271579671)
 	const caCertsPath = path.join(tmp, "bundle.pem");
-	const caCerts = [...tls.rootCertificates, cert];
+	const caCerts = [
+		...tls.rootCertificates,
+		await fs.readFile(path.join(tmp, "ca.pem")),
+	];
 	await fs.writeFile(
 		caCertsPath,
 		["## This is a comment which should be ignored\n"].concat(

@@ -1,5 +1,21 @@
 # @cloudflare/workers-shared
 
+## 0.20.2
+
+### Patch Changes
+
+- [#16490](https://github.com/cloudflare/workers-sdk/pull/16490) [`bcd618d`](https://github.com/cloudflare/workers-sdk/commit/bcd618d0e622a020fd2cb658df0620a5e3ec2206) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update Zod to 4.6.6 to address GHSA-mrhx-c7xc-m3w5
+
+  The updated shared dependency fixes excessive memory consumption when validating oversized collections. This updates both the published Zod dependencies and the copies bundled into development tools and Workers.
+
+## 0.20.1
+
+### Patch Changes
+
+- [#16139](https://github.com/cloudflare/workers-sdk/pull/16139) [`2d1d563`](https://github.com/cloudflare/workers-sdk/commit/2d1d563e0076cdb524d44b9bab4eca2d610bd21d) Thanks [@cpojer](https://github.com/cpojer)! - Update esbuild to 0.28.2
+
+  Align esbuild dependency with tooling using the latest 0.28 patch so package managers can share one installation instead of downloading a second native binary.
+
 ## 0.20.0
 
 ### Minor Changes

@@ -50,13 +50,19 @@ export { WRANGLER_KEYRING_SERVICE_NAME } from "@cloudflare/workers-auth/wrangler
  * path, keyring preference, client id, redirect URI, `CLOUDFLARE_ACCOUNT_ID`
  * reader, CI detection, scope catalog, temporary-account storage). Only the
  * primitives that genuinely can't move are injected here:
- *   - the logger;
+ *   - the logger, plus a stderr logger for temporary-account notices;
  *   - the User-Agent string for the account/membership REST calls;
  *   - the interactive `prompt` / `select` (with the `select` prompt's
  *     non-interactive `NoDefaultValueProvided` signal).
  */
 const auth = createWranglerAuth({
 	logger,
+	// Temporary-account notices go to stderr so they never corrupt command
+	// output on stdout (JSON, piped values), and stay visible when `--json`
+	// commands lower the log level to "error".
+	temporaryAccountLogger: {
+		log: (...args: unknown[]) => logger.console("error", ...args),
+	},
 	userAgent: `wrangler/${wranglerVersion}`,
 	prompt,
 	select,

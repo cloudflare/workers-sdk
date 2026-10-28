@@ -554,7 +554,7 @@ export async function buildOperationsSummary(
 		if (configurationResults.buildTool === "vite") {
 			packagesToInstall.add(
 				target === "cf"
-					? "@cloudflare/vite-plugin@beta"
+					? "@cloudflare/vite-plugin@^2.0.0-beta.v.0"
 					: "@cloudflare/vite-plugin"
 			);
 		} else if (

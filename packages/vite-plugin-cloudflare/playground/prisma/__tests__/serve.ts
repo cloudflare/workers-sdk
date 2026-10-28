@@ -7,10 +7,12 @@ export async function preServe() {
 	const cwd = process.cwd();
 	try {
 		process.chdir(resolve(__dirname, ".."));
-		removeDirSync(".wrangler");
-		execSync(`pnpm wrangler d1 migrations apply prisma-demo-db --local`);
+		removeDirSync(".cloudflare/state");
 		execSync(
-			`pnpm wrangler d1 execute prisma-demo-db --command "INSERT INTO  "User" ("email", "name") VALUES ('jane@prisma.io', 'Jane Doe (Local)');" --local`
+			`pnpm wrangler d1 migrations apply prisma-demo-db --local --persist-to .cloudflare/state`
+		);
+		execSync(
+			`pnpm wrangler d1 execute prisma-demo-db --command "INSERT INTO  "User" ("email", "name") VALUES ('jane@prisma.io', 'Jane Doe (Local)');" --local --persist-to .cloudflare/state`
 		);
 		execSync(`pnpm prisma generate`);
 	} finally {

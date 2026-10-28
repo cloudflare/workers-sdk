@@ -1,5 +1,131 @@
 # @cloudflare/workers-utils
 
+## 0.49.0
+
+### Minor Changes
+
+- [#15955](https://github.com/cloudflare/workers-sdk/pull/15955) [`23ef63a`](https://github.com/cloudflare/workers-sdk/commit/23ef63a0aaa0264e9611b364f6d635297c287d90) Thanks [@ericclemmons](https://github.com/ericclemmons)! - Expand dotenv variable references in `--secrets-file` input
+
+  Dotenv files supplied through `--secrets-file` to `deploy`, `versions upload`, and `preview` now expand `$VAR` and `${VAR}` references using process values and earlier file values. Process environment values override matching file keys, including explicitly empty values. Treat dotenv secrets files as trusted input: they can read and upload any process environment value, such as a CI credential referenced by `X=${GITHUB_TOKEN}`. In CI, use secrets files whose contents untrusted contributors cannot modify.
+
+  This changes how existing dotenv secrets files are interpreted: an unset reference becomes an empty string, so `PASSWORD=pa$word` becomes `pa` when `word` is unset. Escape literal dollar signs with a backslash (`PASSWORD=pa\$word`), or use a JSON secrets file to preserve values exactly. JSON input and bulk-secret commands, including piped stdin, retain their existing literal parsing.
+
+### Patch Changes
+
+- [#16403](https://github.com/cloudflare/workers-sdk/pull/16403) [`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-10-22
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16437](https://github.com/cloudflare/workers-sdk/pull/16437) [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-10-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16476](https://github.com/cloudflare/workers-sdk/pull/16476) [`8a30d8e`](https://github.com/cloudflare/workers-sdk/commit/8a30d8eec16110dcaaeb0822768ac03a5b45a902) Thanks [@tannerlinsley](https://github.com/tannerlinsley)! - Update Undici to 7.30.1 to prevent a malformed HTTP response from crashing development tools
+
+  The updated shared dependency rejects excessive content encodings without leaving an unhandled stream error when the server closes the connection early. This fixes GHSA-xjj6-f33q-929c and keeps the matching Undici types on the same version.
+
+- [#16490](https://github.com/cloudflare/workers-sdk/pull/16490) [`bcd618d`](https://github.com/cloudflare/workers-sdk/commit/bcd618d0e622a020fd2cb658df0620a5e3ec2206) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update Zod to 4.6.6 to address GHSA-mrhx-c7xc-m3w5
+
+  The updated shared dependency fixes excessive memory consumption when validating oversized collections. This updates both the published Zod dependencies and the copies bundled into development tools and Workers.
+
+## 0.48.0
+
+### Minor Changes
+
+- [#14900](https://github.com/cloudflare/workers-sdk/pull/14900) [`08f22d3`](https://github.com/cloudflare/workers-sdk/commit/08f22d36f42100af8b83ae9556643f63b536a4e9) Thanks [@mack-erel](https://github.com/mack-erel)! - Support remote Hyperdrive bindings in local development
+
+  ```jsonc
+  {
+    "hyperdrive": [
+      {
+        "binding": "HYPERDRIVE",
+        "id": "<your-hyperdrive-id>",
+        "remote": true
+      }
+    ]
+  }
+  ```
+
+- [#16357](https://github.com/cloudflare/workers-sdk/pull/16357) [`182d6de`](https://github.com/cloudflare/workers-sdk/commit/182d6ded7126c29daa6f8d2eea5f175421b29917) Thanks [@Naapperas](https://github.com/Naapperas)! - Add a `jurisdiction` setting to Workflows
+
+  A Workflow defined by the Worker can now set the jurisdiction that its instances run and store their data in, on either a `workflows` binding or a `workflow` export:
+
+  ```jsonc
+  {
+    "workflows": [
+      {
+        "binding": "MY_WORKFLOW",
+        "name": "my-workflow",
+        "class_name": "MyWorkflow",
+        "jurisdiction": "eu"
+      }
+    ]
+  }
+  ```
+
+  The accepted values are `eu`, `fedramp`, and `us`. `wrangler deploy` and `wrangler triggers deploy` send the jurisdiction when they create or update the Workflow. A Workflow's jurisdiction is set when it is created and cannot be changed afterwards, so `wrangler deploy` and `wrangler versions upload` stop before uploading when an existing Workflow has a different jurisdiction from the configured one. Leaving `jurisdiction` out keeps the Workflow's existing jurisdiction. `@cloudflare/config` adds the setting to `exports.workflow()`, `cf migrate` carries it over, and `wrangler workflows describe` prints it. Local development ignores it.
+
+## 0.47.3
+
+### Patch Changes
+
+- [#16259](https://github.com/cloudflare/workers-sdk/pull/16259) [`017bf9b`](https://github.com/cloudflare/workers-sdk/commit/017bf9b5117a8a511f4ed2c10dd2bd0b80b24c31) Thanks [@NuroDev](https://github.com/NuroDev)! - Support Vitest 5 in shared test helpers
+
+  The optional Vitest peer ranges now accept both Vitest 4 and 5, allowing consumers to upgrade without dropping compatibility with Vitest 4.
+
+## 0.47.2
+
+### Patch Changes
+
+- [#16038](https://github.com/cloudflare/workers-sdk/pull/16038) [`dc3e4df`](https://github.com/cloudflare/workers-sdk/commit/dc3e4df999e9d774469c6292a7b92b1f427b3dd9) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Use consumer-specific CLI names and commands in shared user-facing messages
+
+  Shared deployment, container, configuration, and authentication helpers can now render commands and configuration filenames for their calling CLI while preserving Wrangler-compatible defaults. This prevents `cf` workflows from presenting Wrangler-branded guidance when an equivalent `cf` command exists.
+
+## 0.47.1
+
+### Patch Changes
+
+- [#16093](https://github.com/cloudflare/workers-sdk/pull/16093) [`ad7ff45`](https://github.com/cloudflare/workers-sdk/commit/ad7ff45076f762253268d03c28b5384f43889999) Thanks [@DiogoSantoss](https://github.com/DiogoSantoss)! - Document that `addresses` catch-all entries must use the zone apex
+
+  A `*@domain` entry in `addresses` must use the zone apex, such as `*@example.com`. The zone catch-all also receives mail for every subdomain in the zone that has no literal rule.
+
+- [#15617](https://github.com/cloudflare/workers-sdk/pull/15617) [`93c1069`](https://github.com/cloudflare/workers-sdk/commit/93c10696930e50e310b8b49a8e792671bf371e82) Thanks [@jpatel3](https://github.com/jpatel3)! - Stop the update check from recommending deprecated versions
+
+  Previously, the "update available" notice shown by `wrangler` and `@cloudflare/vite-plugin` always pointed at whichever version was tagged `latest` on npm, even after that version had been deprecated for shipping a bug. Deprecated versions are now never recommended: if the latest release has been deprecated, the newest non-deprecated stable release below it is suggested instead, or nothing at all if you are already on it.
+
+  The check now reads the npm registry directly instead of going through the `update-check` package, which discarded the deprecation information. The on-disk cache location and one-hour refresh interval are unchanged.
+
+## 0.47.0
+
+### Minor Changes
+
+- [#15998](https://github.com/cloudflare/workers-sdk/pull/15998) [`b75421f`](https://github.com/cloudflare/workers-sdk/commit/b75421fcd5b2d8208cefb38882479773a7387df4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `assets.base_path` support to Workers Assets
+
+  Serve an asset directory from a public URL prefix without changing its on-disk layout:
+
+  ```jsonc
+  {
+    "assets": {
+      "directory": "./public",
+      "base_path": "/docs"
+    }
+  }
+  ```
+
+  Wrangler, preview, Miniflare, and generated build configuration preserve the explicitly selected value, while the Asset Worker normalizes it and strips the prefix only for asset lookup. Requests passed to a user Worker, request-facing headers, and redirects retain the public path. Relative pathname inputs are interpreted as root-relative prefixes, URL-shaped values are rejected, and omitting the option preserves existing root-path behavior.
+
+  Authored `_headers` and `_redirects` rules continue to match full public paths. In particular, both the source and destination of an authored `200` asset rewrite must include the configured public prefix; Asset Worker-generated redirects are prefixed automatically.
+
+### Patch Changes
+
+- [#15534](https://github.com/cloudflare/workers-sdk/pull/15534) [`2b1a0ca`](https://github.com/cloudflare/workers-sdk/commit/2b1a0ca78c30403934ab9df9b6264185d473b3ef) Thanks [@vahidshaik1901](https://github.com/vahidshaik1901)! - Improve guidance for conflicting Wrangler configuration files
+
+  When user and generated deploy configurations are found under different base paths, Wrangler now identifies the expected deploy configuration location, suggests how to resolve the conflict, and links to the relevant documentation.
+
+- [#16030](https://github.com/cloudflare/workers-sdk/pull/16030) [`aa2f9b7`](https://github.com/cloudflare/workers-sdk/commit/aa2f9b73ed1177bceb83fd730eb9e47cbabc8c7f) Thanks [@edmundhung](https://github.com/edmundhung)! - Extend `startTunnel()` to support email-protected Quick Tunnels
+
+  Pass a list of email addresses or domain patterns through `TunnelOptions.allowedMail` to restrict access to a Quick Tunnel.
+
 ## 0.46.0
 
 ### Minor Changes

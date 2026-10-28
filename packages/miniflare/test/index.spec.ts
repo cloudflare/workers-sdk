@@ -2,6 +2,7 @@
 
 import assert from "node:assert";
 import childProcess from "node:child_process";
+import diagnosticsChannel from "node:diagnostics_channel";
 import { once } from "node:events";
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
@@ -12,7 +13,6 @@ import path from "node:path";
 import { json, text } from "node:stream/consumers";
 import util from "node:util";
 import { NODEJS_COMPAT_DEFAULT_ON_DATE } from "@cloudflare/workers-utils";
-import getPort from "get-port";
 import {
 	_transformsForContentEncodingAndContentType,
 	DeferredPromise,
@@ -443,6 +443,38 @@ test("Miniflare: replaces loopback startup error handler with persistent error l
 	expect(logWithLevel).toHaveBeenCalledTimes(2);
 	expect(await mf.ready).toEqual(ready);
 	expect(await (await mf.dispatchFetch("http://localhost/")).text()).toBe("ok");
+});
+
+test("Miniflare: rejects ready with ERR_ADDRESS_IN_USE when the port is taken", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const taken = net.createServer();
+	await new Promise<void>((resolve) => taken.listen(0, "127.0.0.1", resolve));
+	onTestFinished(() => void taken.close());
+	const { port } = taken.address() as AddressInfo;
+
+	const mf = new Miniflare({
+		host: "127.0.0.1",
+		port,
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2026-09-04",
+					manifest: singleModuleManifest(
+						`export default { fetch() { return new Response("ok"); } }`
+					),
+				},
+			},
+		],
+	});
+	onTestFinished(() => mf.dispose().catch(() => {}));
+
+	// Whether the message names the address depends on the workerd version.
+	await expect(mf.ready).rejects.toMatchObject({
+		code: "ERR_ADDRESS_IN_USE",
+	});
 });
 
 test("Miniflare: rejects ready when loopback server cannot bind", async ({
@@ -3647,8 +3679,6 @@ test("Miniflare: dispatchConnect selects Worker TCP triggers", async ({
 	expect,
 	onTestFinished,
 }) => {
-	const firstPort = await getPort();
-	const secondPort = await getPort({ exclude: [firstPort] });
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -3665,10 +3695,9 @@ test("Miniflare: dispatchConnect selects Worker TCP triggers", async ({
 							},
 						};
 					`),
-					triggers: [
-						{ type: "connect", protocol: "tcp", port: firstPort },
-						{ type: "connect", protocol: "tcp", port: secondPort },
-					],
+					// Let workerd bind the port atomically. Trigger-selection
+					// ambiguity is covered without sockets in connect.spec.ts.
+					triggers: [{ type: "connect", protocol: "tcp", port: 0 }],
 				},
 			},
 			{
@@ -3692,15 +3721,14 @@ test("Miniflare: dispatchConnect selects Worker TCP triggers", async ({
 	});
 	onTestFinished(() => mf.dispose());
 
-	await expect(mf.dispatchConnect()).rejects.toThrow(
-		"Multiple TCP connect triggers configured for entrypoint worker; specify a port"
-	);
 	await expect(mf.dispatchConnect({ port: 123 })).rejects.toThrow(
 		"TCP connect trigger on port 123 not found for entrypoint worker"
 	);
 
-	const firstSocket = await mf.dispatchConnect({ port: firstPort });
-	expect(await text(firstSocket)).toBe("a");
+	const entrypointSocket = await mf.dispatchConnect();
+	expect(await text(entrypointSocket)).toBe("a");
+	const explicitPortSocket = await mf.dispatchConnect({ port: 0 });
+	expect(await text(explicitPortSocket)).toBe("a");
 	const secondWorkerSocket = await mf.dispatchConnect({ workerName: "b" });
 	expect(await text(secondWorkerSocket)).toBe("b");
 });
@@ -3809,9 +3837,10 @@ test("Miniflare: allows RPC between multiple instances", async ({ expect }) => {
 // with a shebang, directly as the replacement `workerd` binary, which won't
 // work on Windows.
 const isWindows = process.platform === "win32";
-const unixSerialTest = isWindows ? test.skip : test.sequential;
+const unixSerialTest = test.skipIf(isWindows);
 unixSerialTest(
 	"Miniflare: MINIFLARE_WORKERD_PATH overrides workerd path",
+	{ concurrent: false },
 	async ({ expect, onTestFinished }) => {
 		const workerdPath = path.join(FIXTURES_PATH, "little-workerd.mjs");
 
@@ -3827,6 +3856,8 @@ unixSerialTest(
 		});
 
 		const mf = new Miniflare({
+			// This fake runtime only implements the entry socket, not debugger RPC.
+			enableDevRegistry: false,
 			workers: [
 				{
 					config: {
@@ -3851,6 +3882,7 @@ unixSerialTest(
 // See https://github.com/cloudflare/workers-sdk/issues/14077
 unixSerialTest(
 	"Miniflare: throws ERR_RUNTIME_FAILURE when workerd exits before all sockets are ready",
+	{ concurrent: false },
 	async ({ expect, onTestFinished }) => {
 		const workerdPath = path.join(FIXTURES_PATH, "crashing-workerd.mjs");
 
@@ -3892,30 +3924,32 @@ const TIMEZONE_WORKER = `
 	}
 `;
 
-test.sequential("Miniflare: workerd subprocess defaults to TZ=UTC to match production", async ({
-	expect,
-}) => {
-	// Deliberately set the host TZ to a non-UTC value, otherwise the test
-	// would falsely pass: the test-runner's vitest globalSetup already sets
-	// `process.env.TZ = "UTC"`, which would propagate to workerd via the
-	// inherited `process.env`.
-	vi.stubEnv("TZ", "America/Chicago");
-	const mf = new Miniflare({
-		workers: [
-			{
-				config: {
-					name: "",
-					compatibilityDate: "2025-05-01",
-					manifest: singleModuleManifest(TIMEZONE_WORKER),
+test(
+	"Miniflare: workerd subprocess defaults to TZ=UTC to match production",
+	{ concurrent: false },
+	async ({ expect }) => {
+		// Deliberately set the host TZ to a non-UTC value, otherwise the test
+		// would falsely pass: the test-runner's vitest globalSetup already sets
+		// `process.env.TZ = "UTC"`, which would propagate to workerd via the
+		// inherited `process.env`.
+		vi.stubEnv("TZ", "America/Chicago");
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(TIMEZONE_WORKER),
+					},
 				},
-			},
-		],
-	});
-	useDispose(mf);
+			],
+		});
+		useDispose(mf);
 
-	const res = await mf.dispatchFetch("http://localhost");
-	expect(await res.json()).toEqual({ tz: "UTC" });
-});
+		const res = await mf.dispatchFetch("http://localhost");
+		expect(await res.json()).toEqual({ tz: "UTC" });
+	}
+);
 
 // Skipped on Windows because workerd-on-Windows always reports `UTC` from
 // `Intl.DateTimeFormat().resolvedOptions().timeZone` regardless of the `TZ`
@@ -3926,6 +3960,7 @@ test.sequential("Miniflare: workerd subprocess defaults to TZ=UTC to match produ
 // platform-independent and exercised on macOS/Linux.
 unixSerialTest(
 	"Miniflare: unsafeRuntimeEnv overrides the default workerd subprocess env",
+	{ concurrent: false },
 	async ({ expect }) => {
 		vi.stubEnv("TZ", "UTC");
 
@@ -3981,16 +4016,125 @@ test("Miniflare: workerd crash during startup => ERR_RUNTIME_FAILURE", async ({
 	});
 });
 
-test("Miniflare: workerd crash in handler => restart", async ({ expect }) => {
-	const runtimeRestarted = new DeferredPromise<void>();
+test.for(["GET", "POST", "PUT"])(
+	"Miniflare: dispatchFetch does not replay a processed %s after a response failure",
+	async (method, { expect }) => {
+		const pendingResponse = new DeferredPromise<http.ServerResponse>();
+		const gate = await useServer((req, res) => pendingResponse.resolve(res));
+		const mf = new Miniflare({
+			log: new TestLog(),
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2026-09-26",
+						manifest: singleModuleManifest(`
+			let counter = 0;
+			export default {
+				fetch(request) {
+					if (new URL(request.url).pathname === "/count") {
+						return new Response(String(counter));
+					}
+					counter++;
+					if (counter > 1) return new Response("unexpected replay");
+					const { readable, writable } = new FixedLengthStream(10);
+					new ReadableStream({
+						start(controller) {
+							controller.enqueue(new TextEncoder().encode("hello"));
+						},
+						async pull(controller) {
+							await fetch(${JSON.stringify(gate.http.href)});
+							controller.error(new Error("response failed after side effect"));
+						}
+					}).pipeTo(writable).catch(() => {});
+					return new Response(readable, { headers: { etag: '"replay-test"' } });
+				}
+			};
+		`),
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const worker = await mf.getWorker();
+		const response = await mf.dispatchFetch("http://placeholder/mutate", {
+			method,
+			headers: { "accept-encoding": "identity" },
+		});
+		assert(response.body);
+		const reader = response.body.getReader();
+		expect(await reader.read()).toEqual({
+			done: false,
+			value: utf8Encode("hello"),
+		});
+		const failedResponse = expect(reader.read()).rejects.toThrow();
+		// Fail the stream only after the client receives the first chunk
+		(await pendingResponse).end("ok");
+		await failedResponse;
+		const count = await worker.fetch("http://placeholder/count");
+		expect(await count.text()).toBe("1");
+	}
+);
+
+test("Miniflare: dispatchFetch closes idle runtime sockets before workerd", async ({
+	expect,
+	onTestFinished,
+}) => {
 	const mf = new Miniflare({
-		unsafeHandleRuntimeRestart: () => runtimeRestarted.resolve(),
 		workers: [
 			{
 				config: {
 					name: "",
-					compatibilityDate: "2025-05-01",
-					manifest: singleModuleManifest(`
+					compatibilityDate: "2026-09-26",
+					manifest: singleModuleManifest(
+						'export default { fetch() { return new Response("ok"); } };'
+					),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+	const runtimeOrigin = (await mf.ready).origin;
+	let runtimeSocket: net.Socket | undefined;
+	const onSendHeaders = (message: unknown) => {
+		const { request, socket } = message as {
+			request: { origin: string };
+			socket: net.Socket;
+		};
+		if (request.origin === runtimeOrigin) {
+			runtimeSocket = socket;
+		}
+	};
+	diagnosticsChannel.subscribe("undici:client:sendHeaders", onSendHeaders);
+	onTestFinished(() => {
+		diagnosticsChannel.unsubscribe("undici:client:sendHeaders", onSendHeaders);
+	});
+
+	const response = await mf.dispatchFetch("http://localhost/idle-close");
+	expect(await response.text()).toBe("ok");
+	assert(runtimeSocket);
+	const socket = runtimeSocket;
+	await expect
+		.poll(() => socket.destroyed, { interval: 50, timeout: 2_500 })
+		.toBe(true);
+
+	const nextResponse = await mf.dispatchFetch("http://localhost/idle-close");
+	expect(await nextResponse.text()).toBe("ok");
+});
+
+test.for(["GET", "POST", "PUT"])(
+	"Miniflare: workerd crash in %s handler => restart",
+	async (method, { expect }) => {
+		const runtimeRestarted = new DeferredPromise<void>();
+		const mf = new Miniflare({
+			unsafeHandleRuntimeRestart: () => runtimeRestarted.resolve(),
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2026-09-26",
+						manifest: singleModuleManifest(`
 			import { abortIsolate } from "cloudflare:workers";
 			let counter = 1;
 			export default {
@@ -4002,36 +4146,45 @@ test("Miniflare: workerd crash in handler => restart", async ({ expect }) => {
 				},
 			}
 		`),
+					},
 				},
-			},
-		],
-	});
-	useDispose(mf);
+			],
+		});
+		useDispose(mf);
 
-	const ready = await mf.ready;
-	const worker = await mf.getWorker();
-	const r1 = await mf.dispatchFetch("http://placeholder/");
-	expect(await r1.text()).toBe("ok 1");
+		const ready = await mf.ready;
+		const worker = await mf.getWorker();
+		const init = { method, body: method === "GET" ? undefined : "hello" };
+		const r1 = await mf.dispatchFetch("http://placeholder/", init);
+		expect(await r1.text()).toBe("ok 1");
 
-	const r2 = await mf.dispatchFetch("http://placeholder/");
-	expect(await r2.text()).toBe("ok 2");
+		const r2 = await mf.dispatchFetch("http://placeholder/", init);
+		expect(await r2.text()).toBe("ok 2");
 
-	// Trigger crash
-	await expect(
-		mf.dispatchFetch("http://placeholder/?crash=1")
-	).rejects.toThrow();
+		// Trigger crash
+		await expect(
+			mf.dispatchFetch("http://placeholder/?crash=1", init)
+		).rejects.toThrow();
 
-	await runtimeRestarted;
-	expect(await mf.ready).toEqual(ready);
-	expect(() => worker.fetch("http://placeholder/")).toThrow(/poisoned stub/);
+		await runtimeRestarted;
+		expect(await mf.ready).toEqual(ready);
+		expect(() => worker.fetch("http://placeholder/")).toThrow(/poisoned stub/);
 
-	// Starts over with counter = 1 again
-	const r3 = await fetch(ready);
-	expect(await r3.text()).toBe("ok 1");
-	const restartedWorker = await mf.getWorker();
-	const r4 = await restartedWorker.fetch("http://placeholder/");
-	expect(await r4.text()).toBe("ok 2");
-});
+		// Exercise the existing dispatch pool first, before other clients connect
+		// The counter starts over in the restarted runtime
+		for (let counter = 1; counter <= 3; counter++) {
+			const response = await mf.dispatchFetch("http://placeholder/", init);
+			expect(response.status).toBe(200);
+			expect(await response.text()).toBe(`ok ${counter}`);
+		}
+
+		const r3 = await mf.dispatchFetch("http://placeholder/", init);
+		expect(await r3.text()).toBe("ok 4");
+		const restartedWorker = await mf.getWorker();
+		const r4 = await restartedWorker.fetch("http://placeholder/");
+		expect(await r4.text()).toBe("ok 5");
+	}
+);
 
 test("Miniflare: warns when workerd is restarted after a crash", async ({
 	expect,
@@ -5223,4 +5376,35 @@ test("Miniflare: dispatchFetch() preserves request body length", async ({
 		new Request("http://localhost/", { method: "PUT", body: "request" })
 	);
 	expect(await res.json()).toEqual({ contentLength: "7", body: "request" });
+});
+
+test("Miniflare: dispatchFetch() replays a known-length body after HTTP 421", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
+			async fetch(request) {
+				const body = await request.text();
+				return new Response("body=" + body, { status: 421 });
+			}
+		}`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("https://alias.test/", {
+		method: "POST",
+		body: "{}",
+		redirect: "manual",
+	});
+	expect(res.status).toBe(421);
+	expect(res.headers.get("location")).toBeNull();
+	expect(await res.text()).toBe("body={}");
 });

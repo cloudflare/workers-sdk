@@ -2,7 +2,7 @@ import assert from "node:assert";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { Request } from "miniflare";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
@@ -17,13 +17,18 @@ import {
 } from "../src/shared/module-path";
 import type { Vite } from "vitest/node";
 
-// The fallback handler only reads `vite.pluginContainer.resolveId`, and only
-// when a specifier can't be resolved directly from the filesystem. Returning
-// `null` mimics Vite failing to resolve, exercising the 404 fall-through.
+// The fallback handler only reads
+// `vite.environments.ssr.pluginContainer.resolveId`, and only when a specifier
+// can't be resolved directly from the filesystem. Returning `null` mimics Vite
+// failing to resolve, exercising the 404 fall-through.
 function fakeVite(): Vite.ViteDevServer {
 	return {
-		pluginContainer: {
-			resolveId: async () => null,
+		environments: {
+			ssr: {
+				pluginContainer: {
+					resolveId: async () => null,
+				},
+			},
 		},
 	} as unknown as Vite.ViteDevServer;
 }
@@ -37,8 +42,12 @@ function fakeVite(): Vite.ViteDevServer {
 // same rooted path that branch would have produced reaches the same place.
 function fakeViteResolvingTo(id: string): Vite.ViteDevServer {
 	return {
-		pluginContainer: {
-			resolveId: async () => ({ id }),
+		environments: {
+			ssr: {
+				pluginContainer: {
+					resolveId: async () => ({ id }),
+				},
+			},
 		},
 	} as unknown as Vite.ViteDevServer;
 }
@@ -48,10 +57,14 @@ function fakeViteResolving(
 	resolvedIds: Record<string, string>
 ): Vite.ViteDevServer {
 	return {
-		pluginContainer: {
-			resolveId: async (specifier: string) => {
-				const id = resolvedIds[specifier];
-				return id === undefined ? null : { id };
+		environments: {
+			ssr: {
+				pluginContainer: {
+					resolveId: async (specifier: string) => {
+						const id = resolvedIds[specifier];
+						return id === undefined ? null : { id };
+					},
+				},
 			},
 		},
 	} as unknown as Vite.ViteDevServer;
@@ -432,6 +445,83 @@ describe("built-ins unavailable at the Worker's compatibility settings", () => {
 			"/pool/dist/worker/lib/cloudflare/test-internal.mjs"
 		);
 	});
+});
+
+it("preserves Vitest 5's import.meta.url diagnostic", async ({ expect }) => {
+	const filePath = fileURLToPath(
+		new URL("module-evaluator.js", import.meta.resolve("vitest"))
+	);
+	const contents = fs.readFileSync(filePath, "utf8");
+	expect(contents).toContain("createRequire(import.meta.url)");
+
+	const response = await handleModuleFallbackRequest(
+		fakeVite(),
+		moduleFallbackRequest({
+			method: "import",
+			specifier: toWorkerdSpecifier(filePath),
+			referrer: toWorkerdSpecifier(import.meta.filename),
+		})
+	);
+
+	expect(response.status).toBe(200);
+	const body = (await response.json()) as { esModule?: string };
+	expect(body.esModule).toContain(contents);
+});
+
+it("only rewrites executable import.meta.url in legacy modules", async ({
+	expect,
+}) => {
+	const tmp = fs.realpathSync(
+		fs.mkdtempSync(path.join(os.tmpdir(), "mf-meta-"))
+	);
+	try {
+		const filePath = path.join(tmp, "module.mjs");
+		fs.writeFileSync(
+			filePath,
+			[
+				"export const actual = import.meta.url;",
+				"export const spaced = import . meta . url;",
+				"export const commented = import /*meta*/ . meta /*url*/ . url;",
+				'export const message = "Unexpected import.meta.url";',
+				"// import.meta.url",
+				"export const literal = `import.meta.url` ;",
+				"export const template = `url: ${import.meta.url}`;",
+				"export const pattern = /import.meta.url/;",
+				"export const other = import.meta.urlSuffix;",
+			].join("\n")
+		);
+		const response = await handleModuleFallbackRequest(
+			fakeVite(),
+			moduleFallbackRequest({
+				method: "import",
+				specifier: toWorkerdSpecifier(filePath),
+				referrer: toWorkerdSpecifier(path.join(tmp, "entry.mjs")),
+			})
+		);
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as { esModule?: string };
+		expect(body.esModule).toContain(
+			`export const actual = ${JSON.stringify(pathToFileURL(filePath).href)};`
+		);
+		expect(body.esModule).toContain(
+			`export const spaced = ${JSON.stringify(pathToFileURL(filePath).href)};`
+		);
+		expect(body.esModule).toContain(
+			`export const commented = ${JSON.stringify(pathToFileURL(filePath).href)};`
+		);
+		expect(body.esModule).toContain(
+			'export const message = "Unexpected import.meta.url";'
+		);
+		expect(body.esModule).toContain("// import.meta.url");
+		expect(body.esModule).toContain("`import.meta.url`");
+		expect(body.esModule).toContain(
+			"`url: ${" + JSON.stringify(pathToFileURL(filePath).href) + "}`"
+		);
+		expect(body.esModule).toContain("/import.meta.url/");
+		expect(body.esModule).toContain("import.meta.urlSuffix");
+	} finally {
+		removeDirSync(tmp);
+	}
 });
 
 describe("handleModuleFallbackRequest new module registry", () => {

@@ -6,7 +6,7 @@ import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { processArgument } from "helpers/args";
 import { detectPackageManager } from "helpers/packageManagers";
-import { chooseAccount, wranglerLogin } from "../../src/wrangler/accounts";
+import { chooseAccount, login } from "../../src/wrangler/accounts";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
@@ -90,7 +90,7 @@ const config: TemplateConfig = {
 	},
 	languages: ["js"],
 	configure: buildConfigure({
-		login: wranglerLogin,
+		login,
 		chooseAccount,
 		copyFiles: copyExistingWorkerFiles,
 	}),

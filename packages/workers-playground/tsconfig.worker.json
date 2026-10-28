@@ -1,0 +1,4 @@
+{
+	"extends": ["@cloudflare/workers-tsconfig/base.json"],
+	"include": ["worker", "cloudflare.config.ts", ".cloudflare/types"]
+}
