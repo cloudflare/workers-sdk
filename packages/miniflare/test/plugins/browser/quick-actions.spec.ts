@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import http from "node:http";
-import { Miniflare } from "miniflare";
+import { LogLevel, Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test, vi } from "vitest";
 import {
 	disposeWithRetry,
@@ -222,6 +222,99 @@ describe(
 			expect(((await res.json()) as { result: string }).result).toBe(
 				"```\na()\n```"
 			);
+		});
+
+		test("json returns placeholder data shaped like the schema, and warns", async ({
+			expect,
+		}) => {
+			log.logs = [];
+			const res = await quickAction("json", {
+				html: PAGE,
+				response_format: {
+					type: "json_schema",
+					json_schema: {
+						type: "object",
+						properties: {
+							title: { type: "string" },
+							count: { type: "integer" },
+							tags: { type: "array", items: { type: "string" } },
+							kind: { type: "string", enum: ["page", "post"] },
+							author: {
+								type: "object",
+								properties: { verified: { type: "boolean" } },
+							},
+							heading: { $ref: "#/$defs/text" },
+							list: { $ref: "#/$defs/node" },
+						},
+						$defs: {
+							text: { type: "string" },
+							node: {
+								type: "object",
+								properties: { next: { $ref: "#/$defs/node" } },
+							},
+						},
+					},
+				},
+			});
+			expect(res.status).toBe(200);
+			expect(await res.json()).toEqual({
+				success: true,
+				result: {
+					title: "",
+					count: 0,
+					tags: [],
+					kind: "page",
+					author: { verified: false },
+					heading: "",
+					list: { next: null },
+				},
+				meta: { status: 200, title: "Quick actions" },
+			});
+			expect(log.logsAtLevel(LogLevel.WARN)).toEqual([
+				expect.stringContaining('"remote": true'),
+			]);
+
+			const promptOnly = await quickAction("json", {
+				html: PAGE,
+				prompt: "Get the title",
+			});
+			expect(((await promptOnly.json()) as { result: unknown }).result).toEqual(
+				{}
+			);
+			expect(log.logsAtLevel(LogLevel.WARN)).toHaveLength(2);
+		});
+
+		test("json validates its options", async ({ expect }) => {
+			const missing = await quickAction("json", { html: PAGE });
+			expect(missing.status).toBe(400);
+			expect(await missing.json()).toEqual({
+				success: false,
+				errors: [
+					{
+						code: "custom",
+						message: "Either 'prompt' or 'response_format' must be defined",
+						path: ["prompt", "response_format"],
+					},
+				],
+			});
+
+			const invalid = await quickAction("json", {
+				html: PAGE,
+				response_format: { type: "json_schema" },
+				// Any number of models with any name is accepted
+				custom_ai: ["llama", "a", "b", "c"].map((model) => ({ model })),
+			});
+			expect(await invalid.json()).toEqual({
+				success: false,
+				errors: [
+					{
+						code: "custom",
+						message:
+							"response_format.json_schema is required and must be non-empty when response_format.type is 'json_schema'",
+						path: ["response_format", "json_schema"],
+					},
+				],
+			});
 		});
 
 		test("invalid options return the validation issues", async ({ expect }) => {
