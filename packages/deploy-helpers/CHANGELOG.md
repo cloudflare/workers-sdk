@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- [#16554](https://github.com/cloudflare/workers-sdk/pull/16554) [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Validate `.assetsignore` encoding before building asset manifests
+- [#16521](https://github.com/cloudflare/workers-sdk/pull/16521) [`ec6eddd`](https://github.com/cloudflare/workers-sdk/commit/ec6edddadd8395b4991b23c5300ea68b701ce720) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Validate `.assetsignore` encoding before building asset manifests
 
   Asset uploads and local development now stop with an actionable user error when `.assetsignore` is not valid UTF-8 or contains null characters, instead of silently losing its patterns. This also applies to standalone Miniflare and the Wrangler, Vite and Vitest development integrations. Save the file as UTF-8 to continue; UTF-8 files with a byte order mark and intentionally empty files remain supported.
 
