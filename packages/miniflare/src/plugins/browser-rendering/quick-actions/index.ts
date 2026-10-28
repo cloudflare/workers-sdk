@@ -3,7 +3,8 @@ import { Response } from "../../../http";
 import { launchBrowser } from "../index";
 import { closeBrowserProcess } from "../process";
 import { content } from "./content";
-import { quickActionErrorResponse } from "./errors";
+import { HtmlToMarkdownError, quickActionErrorResponse } from "./errors";
+import { markdown } from "./markdown";
 import { withTimeout } from "./page";
 import { browserSchema, commonOptionsSchema } from "./schemas";
 import type { Log } from "../../../shared";
@@ -22,6 +23,7 @@ function defineQuickAction<Schema extends z.ZodType>(
 
 const QUICK_ACTIONS: Record<QuickActionName, QuickActionDefinition> = {
 	content: defineQuickAction(commonOptionsSchema, content),
+	markdown: defineQuickAction(commonOptionsSchema, markdown),
 };
 
 export interface QuickActionBrowser {
@@ -108,7 +110,12 @@ export async function runQuickAction({
 		);
 		return withBrowserMs(response, Math.round(performance.now() - start));
 	} catch (error) {
-		return withBrowserMs(quickActionErrorResponse(error), 0);
+		// Only a failed Markdown conversion follows a completed browser session
+		const ms =
+			error instanceof HtmlToMarkdownError
+				? Math.round(performance.now() - start)
+				: 0;
+		return withBrowserMs(quickActionErrorResponse(error), ms);
 	} finally {
 		await context.close().catch(() => {});
 	}
