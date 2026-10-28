@@ -10,10 +10,16 @@ interface PageNode {
 }
 
 interface PageElement extends PageNode {
+	readonly attributes: ArrayLike<{ name: string; value: string }>;
 	readonly classList: { add(token: string): void };
 	readonly firstChild: PageNode | null;
+	readonly innerHTML: string;
+	readonly innerText: string;
+	readonly offsetHeight: number;
+	readonly offsetWidth: number;
 	readonly outerHTML: string;
 	getAttribute(name: string): string | null;
+	getBoundingClientRect(): { left: number; top: number };
 }
 
 interface PageDocument {
@@ -31,6 +37,27 @@ declare const document: PageDocument & {
 declare const XMLSerializer: new () => {
 	serializeToString(node: PageNode): string;
 };
+
+export function scrapeElements(elements: { selector: string }[]) {
+	return elements.map(({ selector }) => ({
+		results: Array.from(document.querySelectorAll(selector), (element) => {
+			const rect = element.getBoundingClientRect();
+			return {
+				attributes: Array.from(element.attributes, ({ name, value }) => ({
+					name,
+					value,
+				})),
+				height: element.offsetHeight,
+				html: element.innerHTML,
+				left: rect.left,
+				text: element.innerText,
+				top: rect.top,
+				width: element.offsetWidth,
+			};
+		}),
+		selector,
+	}));
+}
 
 export function contentForMarkdown(): string {
 	const isCode = (node: PageNode | null): node is PageElement =>
