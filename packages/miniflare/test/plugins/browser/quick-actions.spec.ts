@@ -224,6 +224,38 @@ describe(
 			);
 		});
 
+		test("scrape returns every match for each selector", async ({ expect }) => {
+			const res = await quickAction("scrape", {
+				html: PAGE,
+				elements: [{ selector: ".item" }, { selector: "table" }],
+			});
+			expect(res.status).toBe(200);
+			const body = (await res.json()) as {
+				result: { selector: string; results: Record<string, unknown>[] }[];
+				meta: { title: string };
+			};
+			expect(body.meta.title).toBe("");
+			expect(body.result.map(({ selector }) => selector)).toEqual([
+				".item",
+				"table",
+			]);
+			expect(body.result[0].results).toHaveLength(2);
+			// Heights and offsets from the top depend on the platform's fonts
+			expect(body.result[0].results[0]).toEqual({
+				attributes: [
+					{ name: "class", value: "item" },
+					{ name: "data-id", value: "1" },
+				],
+				height: expect.any(Number),
+				html: "First",
+				left: 8,
+				text: "First",
+				top: expect.any(Number),
+				width: 1904,
+			});
+			expect(body.result[1].results).toEqual([]);
+		});
+
 		test("json returns placeholder data shaped like the schema, and warns", async ({
 			expect,
 		}) => {
@@ -318,7 +350,7 @@ describe(
 		});
 
 		test("invalid options return the validation issues", async ({ expect }) => {
-			const res = await quickAction("content", {
+			const res = await quickAction("scrape", {
 				url: origin,
 				html: PAGE,
 				browser: "chrome",
@@ -333,6 +365,11 @@ describe(
 						message:
 							"url and html cannot be set at the same time, please remove one of them",
 						path: ["url"],
+					},
+					{
+						code: "custom",
+						message: "elements is required",
+						path: ["elements"],
 					},
 					{
 						code: "invalid_value",
@@ -401,6 +438,23 @@ describe(
 			});
 			expect(await actionTimeout.json()).toMatchObject({
 				errors: [{ code: 6002, detail: "Request timed out" }],
+			});
+
+			const selector = await quickAction("scrape", {
+				html: PAGE,
+				elements: [{ selector: "!!" }],
+			});
+			expect(selector.status).toBe(422);
+			expect(selector.headers.get("x-browser-ms-used")).toBe("0");
+			expect(await selector.json()).toEqual({
+				success: false,
+				errors: [
+					{
+						code: 6005,
+						message:
+							"An invalid CSS selector was provided. Check your selector/waitForSelector/root syntax.",
+					},
+				],
 			});
 		});
 
