@@ -63,7 +63,9 @@ describe(
 			// The CLI spinner shown while downloading Chrome writes to stdout
 			vi.spyOn(process.stdout, "write").mockImplementation(() => true);
 			server = http.createServer((req, res) => {
-				if (req.url === "/redirect") {
+				if (req.url === "/empty") {
+					req.socket.destroy();
+				} else if (req.url === "/redirect") {
 					res.writeHead(302, { location: "/" });
 					res.end();
 				} else if (req.url === "/") {
@@ -183,6 +185,66 @@ describe(
 						message: 'Invalid input: expected "kitesurf"',
 					},
 				],
+			});
+		});
+
+		test("page failures caused by the request return 422", async ({
+			expect,
+		}) => {
+			const empty = await quickAction("content", { url: `${origin}/empty` });
+			expect(empty.status).toBe(422);
+			expect(empty.headers.get("x-browser-ms-used")).toBe("0");
+			expect(await empty.json()).toEqual({
+				success: false,
+				errors: [
+					{
+						code: 5011,
+						message: "Empty response from server",
+						detail: `net::ERR_EMPTY_RESPONSE at ${origin}/empty`,
+					},
+				],
+			});
+
+			const timeout = await quickAction("content", {
+				html: PAGE,
+				waitForSelector: { selector: "#never", timeout: 100 },
+			});
+			expect(timeout.status).toBe(422);
+			expect(await timeout.json()).toEqual({
+				success: false,
+				errors: [
+					{
+						code: 6002,
+						message:
+							"A timeout was reached. Check gotoOptions/waitForSelector/waitForTimeout/actionTimeout options.",
+						detail:
+							"Waiting for selector `#never` failed: Waiting failed: 100ms exceeded",
+					},
+				],
+			});
+
+			const blocked = await quickAction("content", {
+				url: origin,
+				rejectRequestPattern: ["^http://localhost"],
+			});
+			expect(await blocked.json()).toEqual({
+				success: false,
+				errors: [
+					{
+						code: 5009,
+						message: "Network error when attempting to load page",
+						detail: `net::ERR_FAILED at ${origin}`,
+					},
+				],
+			});
+
+			const actionTimeout = await quickAction("content", {
+				html: PAGE,
+				waitForTimeout: 5_000,
+				actionTimeout: 100,
+			});
+			expect(await actionTimeout.json()).toMatchObject({
+				errors: [{ code: 6002, detail: "Request timed out" }],
 			});
 		});
 
