@@ -2,16 +2,27 @@ import { connect } from "@cloudflare/puppeteer";
 import { Response } from "../../../http";
 import { launchBrowser } from "../index";
 import { closeBrowserProcess } from "../process";
+import { content } from "./content";
 import { quickActionErrorResponse } from "./errors";
 import { withTimeout } from "./page";
-import { browserSchema } from "./schemas";
+import { browserSchema, commonOptionsSchema } from "./schemas";
 import type { Log } from "../../../shared";
 import type { QuickActionName } from "../../../workers/browser-rendering/quick-action-names";
-import type { QuickActionDefinition } from "./page";
+import type { QuickActionContext, QuickActionDefinition } from "./page";
 import type { CommonOptions } from "./schemas";
 import type { Browser, BrowserContext } from "@cloudflare/puppeteer";
+import type { z } from "zod";
 
-const QUICK_ACTIONS: Record<QuickActionName, QuickActionDefinition> = {};
+function defineQuickAction<Schema extends z.ZodType>(
+	schema: Schema,
+	run: (ctx: QuickActionContext<Schema>) => Promise<Response>
+): QuickActionDefinition {
+	return { schema, run };
+}
+
+const QUICK_ACTIONS: Record<QuickActionName, QuickActionDefinition> = {
+	content: defineQuickAction(commonOptionsSchema, content),
+};
 
 export interface QuickActionBrowser {
 	browser: Browser;
@@ -66,7 +77,7 @@ export async function runQuickAction({
 	getBrowser: () => Promise<Browser>;
 	log: Log;
 }): Promise<Response> {
-	const { schema, run }: QuickActionDefinition = QUICK_ACTIONS[action];
+	const { schema, run } = QUICK_ACTIONS[action];
 	const { browser, ...pageOptions } = options;
 	const parsed = schema.safeParse(pageOptions);
 	const parsedBrowser = browserSchema.safeParse(browser);
