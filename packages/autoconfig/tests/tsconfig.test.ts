@@ -84,6 +84,15 @@ describe("autoconfig - getCloudflareTypesTsconfigUpdate()", () => {
 		expect(getCloudflareTypesTsconfigUpdate(process.cwd())?.type).toBe(
 			"update"
 		);
+
+		await seed({
+			"tsconfig.json": JSON.stringify({
+				include: [".cloudflare/types/old.d.ts"],
+			}),
+		});
+		expect(getCloudflareTypesTsconfigUpdate(process.cwd())?.type).toBe(
+			"update"
+		);
 	});
 
 	test("keeps a UTF-8 byte order mark", async ({ expect }) => {
@@ -97,6 +106,24 @@ describe("autoconfig - getCloudflareTypesTsconfigUpdate()", () => {
 		expect(content.startsWith("\uFEFF")).toBe(true);
 		expect(JSON.parse(content.slice(1))).toEqual({
 			include: ["src", ".cloudflare/types"],
+		});
+	});
+
+	test("points to the referenced tsconfig when tsconfig.json uses project references", async ({
+		expect,
+	}) => {
+		await seed({
+			"tsconfig.json": JSON.stringify({
+				files: [],
+				references: [{ path: "./tsconfig.cloudflare.json" }],
+			}),
+		});
+
+		expect(getCloudflareTypesTsconfigUpdate(process.cwd())).toEqual({
+			type: "manual",
+			message: expect.stringContaining(
+				'Add ".cloudflare/types" to the `include` array of the referenced tsconfig'
+			),
 		});
 	});
 

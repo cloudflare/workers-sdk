@@ -19,15 +19,24 @@ export type CloudflareTypesTsconfigUpdate =
 /**
  * Builds the message asking the user to add the cf-generated types to `tsconfig.json`.
  *
- * @param hasInclude Whether `tsconfig.json` has its own `include` array
+ * @param tsconfig What `tsconfig.json` uses instead of an `include` array we can edit:
+ *   project `references`, no `include` at all, or `include` when the file can't be edited
  * @returns The message to show the user
  */
-function getManualUpdateMessage(hasInclude: boolean): string {
+function getManualUpdateMessage(
+	tsconfig: "include" | "no-include" | "references"
+): string {
+	const entry = JSON.stringify(CLOUDFLARE_TYPES_INCLUDE);
 	const reason =
 		"so that TypeScript can find the types that `cf workers types` generates";
-	return hasInclude
-		? `Add ${JSON.stringify(CLOUDFLARE_TYPES_INCLUDE)} to the \`include\` array in tsconfig.json ${reason}.`
-		: `Add an \`include\` array to tsconfig.json that keeps the files it includes today and adds ${JSON.stringify(CLOUDFLARE_TYPES_INCLUDE)}, for example ${JSON.stringify(["**/*", CLOUDFLARE_TYPES_INCLUDE])}, ${reason}.`;
+	switch (tsconfig) {
+		case "include":
+			return `Add ${entry} to the \`include\` array in tsconfig.json ${reason}.`;
+		case "no-include":
+			return `Add an \`include\` array to tsconfig.json that keeps the files it includes today and adds ${entry}, for example ${JSON.stringify(["**/*", CLOUDFLARE_TYPES_INCLUDE])}, ${reason}.`;
+		case "references":
+			return `tsconfig.json uses project references, which TypeScript checks separately. Add ${entry} to the \`include\` array of the referenced tsconfig that covers your Worker code ${reason}.`;
+	}
 }
 
 /**
@@ -44,7 +53,8 @@ function includesCloudflareTypes(entry: unknown): boolean {
 	return (
 		path === ".cloudflare" ||
 		path === CLOUDFLARE_TYPES_INCLUDE ||
-		path.startsWith(`${CLOUDFLARE_TYPES_INCLUDE}/`) ||
+		path === `${CLOUDFLARE_TYPES_INCLUDE}/index.d.ts` ||
+		path.startsWith(`${CLOUDFLARE_TYPES_INCLUDE}/*`) ||
 		path.startsWith(".cloudflare/**")
 	);
 }
@@ -69,17 +79,27 @@ export function getCloudflareTypesTsconfigUpdate(
 	let hasBom: boolean;
 	let json: string;
 	let include: unknown;
+	let references: unknown;
 	try {
 		const content = readFileSync(tsconfigPath, "utf8");
 		hasBom = content.startsWith(BOM);
 		json = hasBom ? content.slice(BOM.length) : content;
-		({ include } = parseJSONC(json, tsconfigPath) as { include?: unknown });
+		({ include, references } = parseJSONC(json, tsconfigPath) as {
+			include?: unknown;
+			references?: unknown;
+		});
 	} catch {
-		return { type: "manual", message: getManualUpdateMessage(true) };
+		return { type: "manual", message: getManualUpdateMessage("include") };
 	}
-	// Without an `include` array, adding one would replace the default or inherited includes
+	// Without an `include` array, adding one would replace the default or inherited includes,
+	// and a config that only references others doesn't check the Worker code itself
 	if (!Array.isArray(include)) {
-		return { type: "manual", message: getManualUpdateMessage(false) };
+		return {
+			type: "manual",
+			message: getManualUpdateMessage(
+				Array.isArray(references) ? "references" : "no-include"
+			),
+		};
 	}
 	if (include.some(includesCloudflareTypes)) {
 		return undefined;
@@ -118,6 +138,6 @@ export async function saveCloudflareTypesTsconfigUpdate(
 	try {
 		await writeFile(update.path, update.content);
 	} catch {
-		context.logger.warn(getManualUpdateMessage(true));
+		context.logger.warn(getManualUpdateMessage("include"));
 	}
 }
