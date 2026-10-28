@@ -47,7 +47,7 @@ async function runViteDev(
 	devRegistryPath?: string
 ): Promise<string> {
 	const proc = await runLongLived("pnpm", `vite --config ${config}`, cwd, {
-		MINIFLARE_REGISTRY_PATH: devRegistryPath,
+		CLOUDFLARE_DEV_REGISTRY_PATH: devRegistryPath,
 	});
 	const url = await waitForReady(proc);
 
@@ -78,7 +78,7 @@ async function runWranglerDev(
 				? config.map((configPath) => `--config=${configPath}`)
 				: [`--config=${config}`]
 		),
-		{ WRANGLER_REGISTRY_PATH: devRegistryPath }
+		{ CLOUDFLARE_DEV_REGISTRY_PATH: devRegistryPath }
 	);
 
 	onTestFailed(() => {
@@ -121,7 +121,7 @@ async function startTailPair(
 }
 
 async function setupPlatformProxy(config: string, devRegistryPath?: string) {
-	vi.stubEnv("WRANGLER_REGISTRY_PATH", devRegistryPath);
+	vi.stubEnv("CLOUDFLARE_DEV_REGISTRY_PATH", devRegistryPath);
 
 	onTestFinished(() => {
 		vi.unstubAllEnvs();
@@ -881,12 +881,25 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 });
 
 describe("Dev Registry: vite dev <-> wrangler dev", () => {
-	it("uses the same dev registry path by default", async () => {
+	it("shares the canonical registry override despite conflicting legacy paths", async ({
+		devRegistryPath,
+	}) => {
+		vi.stubEnv(
+			"WRANGLER_REGISTRY_PATH",
+			path.join(devRegistryPath, "wrangler")
+		);
+		vi.stubEnv(
+			"MINIFLARE_REGISTRY_PATH",
+			path.join(devRegistryPath, "miniflare")
+		);
+		onTestFinished(() => vi.unstubAllEnvs());
 		const workerEntrypoint = await runViteDev(
-			"vite.worker-entrypoint.config.ts"
+			"vite.worker-entrypoint.config.ts",
+			devRegistryPath
 		);
 		const exportedHandler = await runWranglerDev(
-			"wrangler.exported-handler.jsonc"
+			"wrangler.exported-handler.jsonc",
+			devRegistryPath
 		);
 
 		// Test wrangler dev -> vite dev yet
