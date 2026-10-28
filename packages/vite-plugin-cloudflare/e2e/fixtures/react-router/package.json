@@ -1,0 +1,29 @@
+{
+	"name": "@cloudflare/vite-plugin-e2e-react-router",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "react-router build",
+		"buildAndPreview": "react-router build && vite preview",
+		"dev": "react-router dev",
+		"preview": "vite preview"
+	},
+	"dependencies": {
+		"react": "^19.2.8",
+		"react-dom": "^19.2.8",
+		"react-router": "^8.5.1"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "*",
+		"@react-router/dev": "^8.5.1",
+		"@tailwindcss/vite": "^4.2.2",
+		"@types/node": "^22",
+		"@types/react": "^19.2.18",
+		"@types/react-dom": "^19.2.7",
+		"cf": "latest",
+		"isbot": "^5.2.2",
+		"tailwindcss": "^4.2.2",
+		"typescript": "^5.9.3",
+		"vite": "^8.0.3"
+	}
+}
