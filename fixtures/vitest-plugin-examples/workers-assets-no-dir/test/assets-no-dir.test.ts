@@ -1,12 +1,9 @@
 import { exports } from "cloudflare:workers";
 import { describe, it } from "vitest";
 
-// Regression test for https://github.com/cloudflare/workers-sdk/issues/9381
-//
-// When a wrangler config has `assets: { binding: "ASSETS" }` but no `directory`
-// (as is common when using @cloudflare/vite-plugin, which handles asset serving
-// independently via its dev server), vitest-plugin must not throw:
-//   "The `assets` property in your configuration is missing the required `directory` property."
+// `cloudflare.config.ts` declares an assets binding but never an assets
+// directory: as with @cloudflare/vite-plugin, the assets are served separately.
+// vitest-plugin must still start the Worker.
 
 describe("workers-assets-no-dir", () => {
 	it("worker starts and responds when assets binding has no directory configured", async ({

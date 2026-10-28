@@ -24,12 +24,12 @@ it("can access context exports for Durable Objects on exports.default", async ({
 	expect(await response.text()).toMatchInlineSnapshot(`"1"`);
 });
 
-it("will can access Durable Object context exports that could not be guessed on the exports.default worker but are described by DO migrations", async ({
+it("will can access Durable Object context exports that could not be guessed on the exports.default worker but are described by exports", async ({
 	expect,
 }) => {
 	// In this test, we are trying to access a durable-object that is wildcard (*) re-exported from a virtual module.
 	// This virtual module is understood by Vitest and TypeScript but not the lightweight esbuild that we use to guess exports.
-	// But since Durable Objects require explicit "migration" configuration in wrangler, we can still make this work.
+	// But since Durable Objects are declared in the `exports` of `cloudflare.config.ts`, we can still make this work.
 	const response = await exports.default.fetch(
 		"http://example.com/virtual-durable-object"
 	);

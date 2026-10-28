@@ -8,11 +8,8 @@ export default mergeConfig(
 		plugins: [
 			cloudflareTest({
 				remoteBindings: false,
-				wrangler: { configPath: "./wrangler.jsonc" },
+				config: true,
 			}),
 		],
-		test: {
-			globalSetup: ["./global-setup.ts"],
-		},
 	})
 );

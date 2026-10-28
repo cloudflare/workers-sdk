@@ -22,7 +22,7 @@ export default mergeConfig(
 	defineProject({
 		plugins: [
 			cloudflareTest({
-				wrangler: { configPath: "./src/wrangler.jsonc" },
+				config: "./src/cloudflare.config.ts",
 				miniflare: {
 					workers: [auxiliaryWorker],
 				},

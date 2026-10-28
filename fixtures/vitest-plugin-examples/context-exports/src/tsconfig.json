@@ -1,7 +1,10 @@
 {
 	"extends": "../../tsconfig.workerd.json",
-	"include": ["./**/*.ts"],
+	"include": ["./**/*.ts", "./.cloudflare/types"],
 	"compilerOptions": {
+		// `cloudflare.config.ts` references the entrypoint by path, including its
+		// `.ts` extension
+		"allowImportingTsExtensions": true,
 		"paths": {
 			// This path is used to simulate a virtual module that Vitest and TypeScript can understand,
 			// but esbuild (used by the vitest-plugin to guess exports) cannot.
