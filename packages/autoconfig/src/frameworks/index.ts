@@ -109,6 +109,8 @@ export type AutoConfigFrameworkPackageInfo = {
 	name: string;
 	/** The minimum version (if any) of the package/framework that autoconfig supports */
 	minimumVersion: string;
+	/** The minimum version required when configuring for cf, if it is higher than `minimumVersion` */
+	minimumCfVersion?: string;
 	/** The latest major version of the package/framework that autoconfig supports  */
 	maximumKnownMajorVersion: string;
 };

@@ -53,13 +53,16 @@ export abstract class Framework {
 	 * @param projectPath - Path to the project root used to resolve the installed version.
 	 * @param frameworkPackageInfo - Package metadata including name and version bounds.
 	 * @param context - The autoconfig context providing logger and other dependencies.
+	 * @param options.target - The configuration target; `cf` also enforces `minimumCfVersion`.
 	 * @throws {AssertionError} If the installed version cannot be determined.
-	 * @throws {AutoConfigFrameworkConfigurationError} If the version is below `minimumVersion`.
+	 * @throws {AutoConfigFrameworkConfigurationError} If the version is below `minimumVersion`,
+	 *   or below `minimumCfVersion` when the target is `cf`.
 	 */
 	validateFrameworkVersion(
 		projectPath: string,
 		frameworkPackageInfo: AutoConfigFrameworkPackageInfo,
-		context: AutoConfigContext
+		context: AutoConfigContext,
+		{ target }: { target?: AutoConfigTarget } = {}
 	) {
 		const frameworkVersion = getInstalledPackageVersion(
 			frameworkPackageInfo.name,
@@ -81,6 +84,22 @@ export abstract class Framework {
 					frameworkPackageInfo.minimumVersion
 				)} and try again.`,
 				{ telemetryMessage: "autoconfig framework version unsupported" }
+			);
+		}
+
+		const { minimumCfVersion } = frameworkPackageInfo;
+		if (
+			target === "cf" &&
+			minimumCfVersion &&
+			semiver(frameworkVersion, minimumCfVersion) < 0
+		) {
+			throw new AutoConfigFrameworkConfigurationError(
+				`The version of ${this.name} used in the project (${JSON.stringify(
+					frameworkVersion
+				)}) cannot be configured for cf. Please update the ${
+					this.name
+				} version to at least ${JSON.stringify(minimumCfVersion)} and try again.`,
+				{ telemetryMessage: "autoconfig framework version unsupported for cf" }
 			);
 		}
 

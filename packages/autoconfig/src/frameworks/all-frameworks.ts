@@ -127,6 +127,10 @@ export const allKnownFrameworks = [
 			// react-router.config.ts which are required for Cloudflare Workers support
 			// See: https://remix.run/blog/react-router-v7
 			minimumVersion: "7.0.0",
+			// cf needs the resolved Vite environment output directories and prerendering in
+			// post `buildApp` hooks, added in 8.5.1
+			// See: https://github.com/remix-run/react-router/pull/15480 and https://github.com/remix-run/react-router/pull/15481
+			minimumCfVersion: "8.5.1",
 			maximumKnownMajorVersion: "8",
 		},
 		supportsCf: true,

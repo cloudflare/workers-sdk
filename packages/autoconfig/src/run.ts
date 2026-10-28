@@ -125,7 +125,8 @@ export async function runAutoConfig(
 		autoConfigDetails.framework.validateFrameworkVersion(
 			autoConfigDetails.projectPath,
 			frameworkPackageInfo,
-			context
+			context,
+			{ target }
 		);
 	}
 
