@@ -322,6 +322,39 @@ describe("runAutoConfig()", () => {
 		});
 	});
 
+	it("adds the cf-generated types to tsconfig.json", async ({ expect }) => {
+		const packageJson = { name: "my-vite-app" };
+		await seed({
+			"package.json": JSON.stringify(packageJson),
+			"tsconfig.json": JSON.stringify({ include: ["src"] }),
+		});
+
+		await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "my-vite-app",
+				framework: new ViteBuildToolFramework({
+					id: "static",
+					name: "Static",
+				}),
+				outputDir: "dist",
+				packageJson,
+				packageManager: NpmPackageManager,
+			},
+			{
+				context: createMockContext(),
+				skipConfirmations: true,
+				runBuild: false,
+				enableTargetCliInstallation: false,
+			}
+		);
+
+		expect(JSON.parse(readFileSync("tsconfig.json", "utf8"))).toEqual({
+			include: ["src", ".cloudflare/types"],
+		});
+	});
+
 	it("keeps the Wrangler typegen command for Wrangler projects", async ({
 		expect,
 	}) => {

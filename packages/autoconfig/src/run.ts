@@ -30,6 +30,7 @@ import {
 } from "./frameworks";
 import { getFrameworkPackageInfo } from "./frameworks/all-frameworks";
 import { Static } from "./frameworks/static";
+import { getCloudflareTypesTsconfigUpdate } from "./tsconfig";
 import { usesTypescript } from "./uses-typescript";
 import type { AutoConfigContext, AutoConfigTarget } from "./context";
 import type {
@@ -283,6 +284,14 @@ export async function runAutoConfig(
 	if (target === "cf") {
 		if (workerConfig !== null) {
 			await saveCloudflareConfig(autoConfigDetails.projectPath, workerConfig);
+		}
+		if (workerConfig?.entrypoint) {
+			const tsconfigUpdate = getCloudflareTypesTsconfigUpdate(
+				autoConfigDetails.projectPath
+			);
+			if (tsconfigUpdate?.type === "update") {
+				await writeFile(tsconfigUpdate.path, tsconfigUpdate.content);
+			}
 		}
 		if (
 			configurationResults.buildTool === "wrangler" &&
@@ -608,6 +617,20 @@ export async function buildOperationsSummary(
 		for (const [name, script] of Object.entries(summary.scripts)) {
 			logger.log(` - "${name}": "${script}"`);
 		}
+		logger.log("");
+	}
+
+	// `cf workers types` writes to a dot-directory that include globs don't match
+	const tsconfigUpdate =
+		target === "cf" && workerConfig?.entrypoint
+			? getCloudflareTypesTsconfigUpdate(autoConfigDetails.projectPath)
+			: undefined;
+	if (tsconfigUpdate?.type === "update") {
+		logger.log("📝 Update tsconfig.json:");
+		logger.log(' - Add ".cloudflare/types" to "include"');
+		logger.log("");
+	} else if (tsconfigUpdate?.type === "manual") {
+		logger.warn(tsconfigUpdate.message);
 		logger.log("");
 	}
 

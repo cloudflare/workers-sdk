@@ -43,6 +43,7 @@
 		"empathic": "^2.0.0",
 		"esbuild": "catalog:default",
 		"esprima": "4.0.1",
+		"jsonc-parser": "catalog:default",
 		"recast": "0.23.11",
 		"semiver": "^1.1.0",
 		"ts-dedent": "^2.2.0",
