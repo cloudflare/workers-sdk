@@ -8,6 +8,8 @@ import type { Binding } from "../types";
  * `pickRemoteBindings()` and `validateBindingRemoteSetting()`.
  *
  * - `local-and-remote`: local simulator; `remote: true` opts into proxying.
+ * - `remote-default-with-local-opt-in`: remote by default; `remote: false`
+ *   opts into the local simulator.
  * - `local-only`: local simulator only; `remote: true` is a config error.
  * - `remote`: no local simulator *yet* — requires explicit `remote: true`.
  *   Move to `local-and-remote` once a simulator lands.
@@ -18,6 +20,7 @@ import type { Binding } from "../types";
  */
 export type BindingLocalSupport =
 	| "local-and-remote"
+	| "remote-default-with-local-opt-in"
 	| "local-only"
 	| "remote"
 	| "DO-NOT-USE-this-resource-will-never-have-a-local-simulator";
@@ -58,6 +61,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	// TODO: Miniflare currently ignores `remote: true` on queues, tracked in #13727.
 	queue: "local-and-remote",
 	flagship: "local-and-remote",
+	artifacts: "remote-default-with-local-opt-in",
 
 	vectorize: "remote",
 	mtls_certificate: "remote",
@@ -70,7 +74,6 @@ const BINDING_LOCAL_SUPPORT: Record<
 	ai_search_namespace:
 		"DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	media: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
-	artifacts: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	vpc_service: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	vpc_network: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	agent_memory: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
@@ -100,6 +103,8 @@ export function validateBindingRemoteSetting(
 	const support = getBindingLocalSupport(type);
 	switch (support) {
 		case "local-and-remote":
+			return;
+		case "remote-default-with-local-opt-in":
 			return;
 		case "local-only":
 			if (remote === true) {

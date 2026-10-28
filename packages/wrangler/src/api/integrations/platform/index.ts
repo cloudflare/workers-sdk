@@ -17,6 +17,7 @@ import {
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
 	getDefaultProjectTmpPath,
+	toMiniflareArtifactsEventTriggers,
 } from "../../../dev/miniflare";
 import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
@@ -532,6 +533,9 @@ export function unstable_getMiniflareWorkerOptions(
 				: {}),
 		})),
 		cronTriggers: config.triggers.crons,
+		artifactsEventTriggers: toMiniflareArtifactsEventTriggers(
+			config.triggers.events
+		),
 
 		...bindingOptions,
 		...sitesOptions,

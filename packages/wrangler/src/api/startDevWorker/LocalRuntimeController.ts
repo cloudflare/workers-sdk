@@ -119,6 +119,7 @@ export async function convertToConfigBundle(
 	const routes = [];
 	const queueConsumers = [];
 	const connectHandlers = [];
+	const artifactsEvents = [];
 	for (const trigger of event.config.triggers ?? []) {
 		if (trigger.type === "cron") {
 			crons.push(trigger.cron);
@@ -130,6 +131,8 @@ export async function convertToConfigBundle(
 		} else if (trigger.type === "connect") {
 			const { type: _, ...connectHandler } = trigger;
 			connectHandlers.push(connectHandler);
+		} else if (trigger.type === "artifacts-event") {
+			artifactsEvents.push(trigger.event);
 		}
 	}
 	if (event.bundle.entry.format === "service-worker") {
@@ -206,6 +209,7 @@ export async function convertToConfigBundle(
 		routes: event.config.dev.routeRequestsByRoutes ? routes : undefined,
 		queueConsumers,
 		connectHandlers,
+		artifactsEvents,
 		outboundService: event.config.dev.outboundService,
 		localProtocol: event.config.dev?.server?.secure ? "https" : "http",
 		localUpstream: event.config.dev?.origin?.hostname,

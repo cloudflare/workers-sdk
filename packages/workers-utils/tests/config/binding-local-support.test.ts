@@ -93,4 +93,17 @@ describe("validateBindingRemoteSetting", () => {
 			expect(warn).not.toHaveBeenCalled();
 		});
 	});
+
+	describe("remote-default bindings with local opt-in", () => {
+		it("allows default remote, explicit remote, and explicit local modes", ({
+			expect,
+		}) => {
+			for (const remote of [undefined, true, false]) {
+				expect(() =>
+					validateBindingRemoteSetting("artifacts", remote, warn)
+				).not.toThrow();
+			}
+			expect(warn).not.toHaveBeenCalled();
+		});
+	});
 });

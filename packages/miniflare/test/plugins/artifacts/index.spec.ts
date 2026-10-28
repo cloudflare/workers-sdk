@@ -537,19 +537,21 @@ test("artifacts: a stopped backend is replaced on the next config update", async
 	}
 });
 
-test("artifacts: omitted remote preserves remote routing without host Git", async ({
+test("artifacts: omitted remote does not start the local emulator", async ({
 	expect,
 }) => {
-	const root = await useTmp();
-	const previousPath = process.env.PATH;
-	process.env.PATH = root;
-	try {
-		const mf = new Miniflare(options("test", "REPOS", null));
-		useDispose(mf);
-		await expect(mf.ready).resolves.toBeDefined();
-	} finally {
-		process.env.PATH = previousPath;
-	}
+	const resourcePersistencePath = await useTmp();
+	const mf = new Miniflare({
+		...options("test", "REPOS", null),
+		resourcePersistencePath,
+	});
+	useDispose(mf);
+	await mf.ready;
+	await expect(
+		stat(path.join(resourcePersistencePath, "artifacts"))
+	).rejects.toMatchObject({
+		code: "ENOENT",
+	});
 });
 
 test("artifacts: rejects invalid local namespace before starting services", async ({
@@ -1319,7 +1321,7 @@ test("artifacts: missing Git gives an actionable error during local startup", as
 	const previousPath = process.env.PATH;
 	process.env.PATH = root;
 	try {
-		const mf = new Miniflare(options());
+		const mf = new Miniflare(options("test", "REPOS", false));
 		await expect(mf.ready).rejects.toThrow(
 			/requires Git 2\.32 or newer on PATH.*Install Git.*restart/i
 		);

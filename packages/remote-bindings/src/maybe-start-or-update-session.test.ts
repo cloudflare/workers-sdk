@@ -35,6 +35,32 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 		}
 	);
 
+	it("selects Artifacts remotely by default and locally only when opted in", ({
+		expect,
+	}) => {
+		const defaultRemote = {
+			type: "artifacts" as const,
+			namespace: "default-remote",
+		};
+		const local = {
+			type: "artifacts" as const,
+			namespace: "local",
+			remote: false,
+		};
+		const remote = {
+			type: "artifacts" as const,
+			namespace: "remote",
+			remote: true,
+		};
+		expect(
+			pickRemoteBindings({
+				DEFAULT: defaultRemote,
+				LOCAL: local,
+				REMOTE: remote,
+			})
+		).toEqual({ DEFAULT: defaultRemote, REMOTE: remote });
+	});
+
 	it("updates an existing session when all remote bindings are removed", async ({
 		expect,
 	}) => {

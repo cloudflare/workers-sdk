@@ -13,6 +13,8 @@
 		"DOCKER_HOST",
 		"LOCAL_TESTS_WITHOUT_DOCKER",
 		"MINIFLARE_CACHE_DIR",
+		"pnpm_config_pm_on_fail",
+		"pnpm_config_verify_deps_before_run",
 		"NODE_EXTRA_CA_CERTS",
 		"PWD",
 		"TEST_REPORT_PATH",

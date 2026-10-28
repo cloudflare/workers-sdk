@@ -41,7 +41,7 @@ describe("convertV4MiniflareOptions", () => {
 		}
 	);
 
-	test("Artifacts keeps legacy remote defaults until the local-default switch", ({
+	test("Artifacts defaults to remote and preserves explicit local selection", ({
 		expect,
 	}) => {
 		const remoteProxyConnectionString = new URL(
@@ -51,17 +51,51 @@ describe("convertV4MiniflareOptions", () => {
 			name: "worker",
 			script: "export default {};",
 			artifacts: {
-				LOCAL: { namespace: "local" },
+				DEFAULT: { namespace: "default" },
+				LOCAL: { namespace: "local", remote: false },
 				REMOTE: { namespace: "remote", remoteProxyConnectionString },
 			},
 		});
-		expect(converted.workers[0].config.env?.LOCAL).toEqual({
+		expect(converted.workers[0].config.env?.DEFAULT).toMatchObject({
+			type: "artifacts",
+			namespace: "default",
+			dev: { remote: true },
+		});
+		expect(converted.workers[0].config.env?.LOCAL).toMatchObject({
 			type: "artifacts",
 			namespace: "local",
+			dev: { remote: false },
 		});
 		expect(converted.workers[0].config.env?.REMOTE).toMatchObject({
 			dev: { remote: true },
 		});
+	});
+	test("converts Artifacts event triggers and subscriptions", ({ expect }) => {
+		const converted = convertV4MiniflareOptions({
+			name: "worker",
+			script: "export default {};",
+			artifactsEventSubscriptions: [
+				{ queue: "events", source: { type: "artifacts" } },
+			],
+			artifactsEventTriggers: [
+				{
+					eventType: "cf.artifacts.repo.created",
+					filter: { repoName: "demo" },
+					targets: [{ type: "workflow", workflowName: "on-create" }],
+				},
+			],
+		});
+		expect(converted.artifactsEventSubscriptions).toEqual([
+			{ queue: "events", source: { type: "artifacts" } },
+		]);
+		expect(converted.workers[0].config.triggers).toEqual([
+			{
+				type: "artifacts-event",
+				eventType: "cf.artifacts.repo.created",
+				filter: { repoName: "demo" },
+				targets: [{ type: "workflow", workflowName: "on-create" }],
+			},
+		]);
 	});
 	test("preserves opaque K2 stream IDs through v4 parsing and conversion", ({
 		expect,

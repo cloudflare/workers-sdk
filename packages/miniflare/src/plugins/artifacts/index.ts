@@ -10,14 +10,32 @@ import {
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 } from "../shared";
+import { getArtifactsNamespaceEventBindings } from "./events";
 import { assertGitAvailable } from "./git-client";
 import { assertSupportedGitLayout } from "./storage";
 import type { Service, Socket } from "../../runtime";
 import type { MiniflareBinding, Plugin } from "../shared";
 import type { ArtifactsController } from "./controller";
+import type { ArtifactsEventSubscriptionRoute } from "./events";
 
 export { ArtifactsController, type LocalArtifactsBackend } from "./controller";
 export type { GitSidecar } from "./git-sidecar";
+export type {
+	ArtifactsEventDestination,
+	ArtifactsEventSubscriptionRoute,
+} from "./events";
+export type {
+	ArtifactsEventMessage,
+	ArtifactsEventMetadata,
+	ArtifactsEventPayloads,
+	ArtifactsEventSource,
+	ArtifactsEventSourceType,
+	ArtifactsEventType,
+	GitIdentity,
+	PushedCommit,
+	RepoPayload,
+} from "../../workers/artifacts/events";
+export { ARTIFACTS_EVENT_TYPES } from "../../workers/artifacts/events";
 
 export const ARTIFACTS_PLUGIN_NAME = "artifacts";
 const ARTIFACTS_REMOTE_SERVICE_NAME = `${ARTIFACTS_PLUGIN_NAME}:remote`;
@@ -60,7 +78,7 @@ export const ARTIFACTS_PLUGIN: Plugin = {
 	getBindings(options) {
 		return getEnvBindingsOfType(options.config, "artifacts").map(
 			([name, binding]) => {
-				// In this stage, only explicit remote: false opts into local storage.
+				// Local storage is opt-in; omitted remote settings use the remote proxy.
 				if (isLocalArtifactsBinding(binding)) {
 					validateLocalNamespace(binding.namespace);
 					return {
@@ -76,7 +94,10 @@ export const ARTIFACTS_PLUGIN: Plugin = {
 					service: {
 						name: ARTIFACTS_REMOTE_SERVICE_NAME,
 						props: buildRemoteProxyProps(
-							getRemoteProxyConnectionString(binding, options.dev),
+							getRemoteProxyConnectionString(
+								{ dev: { ...binding.dev, remote: true } },
+								options.dev
+							),
 							name
 						),
 					},
@@ -92,7 +113,13 @@ export const ARTIFACTS_PLUGIN: Plugin = {
 			])
 		);
 	},
-	async getServices({ options, sharedOptions, tmpPath, artifactsController }) {
+	async getServices({
+		options,
+		sharedOptions,
+		tmpPath,
+		artifactsController,
+		artifactsEventSubscriptions,
+	}) {
 		const bindings = getEnvBindingsOfType(options.config, "artifacts");
 		const services: Service[] = [];
 		const sockets: Socket[] = [];
@@ -116,7 +143,8 @@ export const ARTIFACTS_PLUGIN: Plugin = {
 			const local = await createLocalNamespaceRuntime(
 				root,
 				namespace,
-				artifactsController
+				artifactsController,
+				artifactsEventSubscriptions
 			);
 			sockets.push(local.socket);
 			services.push(...local.services);
@@ -128,7 +156,8 @@ export const ARTIFACTS_PLUGIN: Plugin = {
 async function createLocalNamespaceRuntime(
 	root: string,
 	namespace: string,
-	artifactsController: ArtifactsController
+	artifactsController: ArtifactsController,
+	eventSubscriptions: ArtifactsEventSubscriptionRoute[]
 ): Promise<{ services: Service[]; socket: Socket }> {
 	await mkdir(root, { recursive: true });
 	await assertSupportedGitLayout(root);
@@ -181,6 +210,7 @@ async function createLocalNamespaceRuntime(
 					durableObjectNamespace: { className: OBJECT_CLASS },
 				},
 				{ name: "gitBackend", service: { name: backendName } },
+				...getArtifactsNamespaceEventBindings(eventSubscriptions, namespace),
 			],
 			// Keys must be unique across namespaces in one workerd, but should
 			// not repeat the long service prefix in SQLite's directory name.

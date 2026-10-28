@@ -75,6 +75,7 @@ function convertSharedOptions(options: ParsedV4MiniflareOptions) {
 		resourcePersistencePath: options.resourcePersistencePath,
 		isolatedResourcePersistencePath: options.isolatedResourcePersistencePath,
 		resourceTmpPath: options.resourceTmpPath,
+		artifactsEventSubscriptions: options.artifactsEventSubscriptions,
 		stripDisablePrettyError: options.stripDisablePrettyError,
 		telemetry: options.telemetry,
 		publicUrl: options.publicUrl,
@@ -146,6 +147,11 @@ function convertWorkerOptions(
 	for (const cron of worker.cronTriggers ?? []) {
 		config.triggers ??= [];
 		config.triggers.push({ type: "scheduled", schedule: cron });
+	}
+
+	for (const trigger of worker.artifactsEventTriggers ?? []) {
+		config.triggers ??= [];
+		config.triggers.push({ type: "artifacts-event", ...trigger });
 	}
 
 	for (const connectHandler of worker.connectHandlers ?? []) {
@@ -799,14 +805,12 @@ function addProductBindings(
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.artifacts ?? {})) {
+		isRemote(binding.remoteProxyConnectionString);
 		env[name] = {
 			type: "artifacts",
 			namespace: binding.namespace,
-			// At this stage, only explicit V5 dev.remote: false selects local.
-			// Do not reinterpret an omitted legacy setting as that opt-in.
-			...(binding.remoteProxyConnectionString === undefined
-				? {}
-				: { dev: { remote: isRemote(binding.remoteProxyConnectionString) } }),
+			// Local Artifacts is opt-in; omitted routing stays remote.
+			dev: { remote: binding.remote ?? true },
 		};
 	}
 	for (const name of Object.keys(worker.workerLoaders ?? {})) {
