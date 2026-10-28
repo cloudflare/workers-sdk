@@ -15,7 +15,7 @@ describe("detectFramework() / multiple frameworks detected", () => {
 		it("returns the known framework when multiple are detected but only one is known", async ({
 			expect,
 		}) => {
-			// gatsby is not in allKnownFrameworks, only astro is
+			// gatsby is not a known framework, only astro is
 			await seed({
 				"package.json": JSON.stringify({
 					dependencies: { astro: "5", gatsby: "5" },

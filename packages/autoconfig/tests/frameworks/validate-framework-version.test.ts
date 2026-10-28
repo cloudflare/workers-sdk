@@ -138,51 +138,15 @@ describe("Framework.validateFrameworkVersion()", () => {
 		expect(std.warn).toContain("is not officially supported");
 	});
 
-	it("enforces minimumCfVersion only when the target is cf", ({ expect }) => {
-		const versions: Record<string, string> = {
-			"some-pkg": "3.0.0",
-			"some-cf-pkg": "1.0.0",
-		};
-		vi.mocked(getInstalledPackageVersion).mockImplementation(
-			(name) => versions[name]
-		);
-		const framework = new TestFramework({ id: "test", name: "Test" });
-		const packageInfo = {
-			...PACKAGE_INFO,
-			minimumCfVersion: { name: "some-cf-pkg", version: "1.2.0" },
-		};
-
-		expect(() =>
-			framework.validateFrameworkVersion("/project", packageInfo, context, {
-				target: "cf",
-			})
-		).toThrowErrorMatchingInlineSnapshot(
-			`[Error: Test cannot be configured for cf: the project uses \`some-cf-pkg\` "1.0.0". Please update \`some-pkg\` and \`some-cf-pkg\` to at least "1.2.0" and try again.]`
-		);
-		expect(() =>
-			framework.validateFrameworkVersion("/project", packageInfo, context, {
-				target: "wrangler",
-			})
-		).not.toThrow();
-
-		delete versions["some-cf-pkg"];
-		expect(() =>
-			framework.validateFrameworkVersion("/project", packageInfo, context, {
-				target: "cf",
-			})
-		).toThrowErrorMatchingInlineSnapshot(
-			`[Error: Test cannot be configured for cf: the project doesn't have \`some-cf-pkg\` installed. Please update \`some-pkg\` and \`some-cf-pkg\` to at least "1.2.0" and try again.]`
-		);
-	});
-
 	it.for([
-		{ reactRouter: "8.5.1", dev: "8.5.1", throws: false },
-		{ reactRouter: "8.5.0", dev: "8.5.0", throws: true },
+		{ target: "cf", reactRouter: "8.5.1", dev: "8.5.1", throws: false },
+		{ target: "cf", reactRouter: "8.5.0", dev: "8.5.0", throws: true },
 		// `@react-router/dev` carries the fix, so `react-router@latest` alone isn't enough
-		{ reactRouter: "8.5.1", dev: "8.5.0", throws: true },
-	])(
-		"requires @react-router/dev 8.5.1 for cf (react-router $reactRouter, @react-router/dev $dev)",
-		({ reactRouter, dev, throws }, { expect }) => {
+		{ target: "cf", reactRouter: "8.5.1", dev: "8.5.0", throws: true },
+		{ target: "wrangler", reactRouter: "7.0.0", dev: "7.0.0", throws: false },
+	] as const)(
+		"checks the React Router version for $target (react-router $reactRouter, @react-router/dev $dev)",
+		({ target, reactRouter, dev, throws }, { expect }) => {
 			const versions: Record<string, string> = {
 				"react-router": reactRouter,
 				"@react-router/dev": dev,
@@ -194,15 +158,13 @@ describe("Framework.validateFrameworkVersion()", () => {
 				id: "react-router",
 				name: "React Router",
 			});
-			const packageInfo = getFrameworkPackageInfo("react-router");
+			const packageInfo = getFrameworkPackageInfo("react-router", target);
 			if (packageInfo === undefined) {
 				throw new Error("Expected React Router to have package information");
 			}
 
 			const validate = () =>
-				framework.validateFrameworkVersion("/project", packageInfo, context, {
-					target: "cf",
-				});
+				framework.validateFrameworkVersion("/project", packageInfo, context);
 			if (throws) {
 				expect(validate).toThrow(AutoConfigFrameworkConfigurationError);
 			} else {
@@ -214,7 +176,7 @@ describe("Framework.validateFrameworkVersion()", () => {
 	it("does not warn for Astro 7", ({ expect }) => {
 		vi.mocked(getInstalledPackageVersion).mockReturnValue("7.3.0");
 		const framework = new TestFramework({ id: "astro", name: "Astro" });
-		const packageInfo = getFrameworkPackageInfo("astro");
+		const packageInfo = getFrameworkPackageInfo("astro", "cf");
 
 		expect(packageInfo).toBeDefined();
 		if (packageInfo === undefined) {

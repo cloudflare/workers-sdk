@@ -3,20 +3,20 @@ import { isKnownFramework } from "../../src/frameworks";
 
 describe("isKnownFramework()", () => {
 	it("should return true for a known supported framework id", ({ expect }) => {
-		expect(isKnownFramework("astro")).toBe(true);
+		expect(isKnownFramework("astro", "cf")).toBe(true);
 	});
 
 	it("should return true for a known but unsupported framework id", ({
 		expect,
 	}) => {
-		expect(isKnownFramework("hono")).toBe(true);
+		expect(isKnownFramework("hono", "cf")).toBe(true);
 	});
 
 	it('should return true for the "static" framework id', ({ expect }) => {
-		expect(isKnownFramework("static")).toBe(true);
+		expect(isKnownFramework("static", "cf")).toBe(true);
 	});
 
 	it("should return false for an unknown framework id", ({ expect }) => {
-		expect(isKnownFramework("unknown-framework")).toBe(false);
+		expect(isKnownFramework("unknown-framework", "cf")).toBe(false);
 	});
 });

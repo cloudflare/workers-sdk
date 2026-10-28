@@ -53,17 +53,13 @@ export abstract class Framework {
 	 * @param projectPath - Path to the project root used to resolve the installed version.
 	 * @param frameworkPackageInfo - Package metadata including name and version bounds.
 	 * @param context - The autoconfig context providing logger and other dependencies.
-	 * @param options - Validation options.
-	 * @param options.target - The configuration target; `cf` also enforces `minimumCfVersion`.
 	 * @throws {AssertionError} If the installed version cannot be determined.
-	 * @throws {AutoConfigFrameworkConfigurationError} If the version is below `minimumVersion`,
-	 *   or, when the target is `cf`, if the `minimumCfVersion` package is missing or older.
+	 * @throws {AutoConfigFrameworkConfigurationError} If the version is below `minimumVersion`.
 	 */
 	validateFrameworkVersion(
 		projectPath: string,
 		frameworkPackageInfo: AutoConfigFrameworkPackageInfo,
-		context: AutoConfigContext,
-		{ target }: { target?: AutoConfigTarget } = {}
+		context: AutoConfigContext
 	) {
 		const frameworkVersion = getInstalledPackageVersion(
 			frameworkPackageInfo.name,
@@ -86,36 +82,6 @@ export abstract class Framework {
 				)} and try again.`,
 				{ telemetryMessage: "autoconfig framework version unsupported" }
 			);
-		}
-
-		const { minimumCfVersion } = frameworkPackageInfo;
-		if (target === "cf" && minimumCfVersion) {
-			const cfPackageVersion = getInstalledPackageVersion(
-				minimumCfVersion.name,
-				projectPath
-			);
-			if (
-				!cfPackageVersion ||
-				semiver(cfPackageVersion, minimumCfVersion.version) < 0
-			) {
-				const packages = [
-					...new Set([frameworkPackageInfo.name, minimumCfVersion.name]),
-				]
-					.map((name) => `\`${name}\``)
-					.join(" and ");
-				throw new AutoConfigFrameworkConfigurationError(
-					`${this.name} cannot be configured for cf: the project ${
-						cfPackageVersion
-							? `uses \`${minimumCfVersion.name}\` ${JSON.stringify(cfPackageVersion)}`
-							: `doesn't have \`${minimumCfVersion.name}\` installed`
-					}. Please update ${packages} to at least ${JSON.stringify(
-						minimumCfVersion.version
-					)} and try again.`,
-					{
-						telemetryMessage: "autoconfig framework version unsupported for cf",
-					}
-				);
-			}
 		}
 
 		if (
