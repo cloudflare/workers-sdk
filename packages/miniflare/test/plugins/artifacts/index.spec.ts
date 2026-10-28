@@ -537,39 +537,40 @@ test("artifacts: a stopped backend is replaced on the next config update", async
 	}
 });
 
-test("artifacts: omitted remote with a remote proxy does not need host Git or local storage", async ({
-	expect,
-}) => {
-	const resourcePersistencePath = await useTmp();
-	const emptyPath = await useTmp();
-	const previousPath = process.env.PATH;
-	process.env.PATH = emptyPath;
-	try {
-		const base = options("test", "REPOS", null);
-		const mf = new Miniflare({
-			...base,
-			resourcePersistencePath,
-			workers: base.workers.map((worker) => ({
-				...worker,
-				dev: {
-					// Never contacted: startup only wires the binding to the proxy.
-					remoteProxyConnectionString: new URL(
-						"http://127.0.0.1:1"
-					) as RemoteProxyConnectionString,
-				},
-			})),
+test.for([null, true] as const)(
+	"artifacts: remote=%s with a remote proxy does not need host Git or local storage",
+	async (remote, { expect }) => {
+		const resourcePersistencePath = await useTmp();
+		const emptyPath = await useTmp();
+		const previousPath = process.env.PATH;
+		process.env.PATH = emptyPath;
+		try {
+			const base = options("test", "REPOS", remote);
+			const mf = new Miniflare({
+				...base,
+				resourcePersistencePath,
+				workers: base.workers.map((worker) => ({
+					...worker,
+					dev: {
+						// Never contacted: startup only wires the binding to the proxy.
+						remoteProxyConnectionString: new URL(
+							"http://127.0.0.1:1"
+						) as RemoteProxyConnectionString,
+					},
+				})),
+			});
+			useDispose(mf);
+			await expect(mf.ready).resolves.toBeDefined();
+		} finally {
+			process.env.PATH = previousPath;
+		}
+		await expect(
+			stat(path.join(resourcePersistencePath, "artifacts"))
+		).rejects.toMatchObject({
+			code: "ENOENT",
 		});
-		useDispose(mf);
-		await expect(mf.ready).resolves.toBeDefined();
-	} finally {
-		process.env.PATH = previousPath;
 	}
-	await expect(
-		stat(path.join(resourcePersistencePath, "artifacts"))
-	).rejects.toMatchObject({
-		code: "ENOENT",
-	});
-});
+);
 
 test("artifacts: omitted remote without a remote proxy uses the local simulator", async ({
 	expect,

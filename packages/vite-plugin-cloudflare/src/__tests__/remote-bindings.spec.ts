@@ -1,5 +1,38 @@
-import { describe, test } from "vitest";
-import { getRemoteBindings } from "../remote-bindings";
+import { describe, test, vi } from "vitest";
+import {
+	getRemoteBindings,
+	warnForDefaultRemoteBindings,
+} from "../remote-bindings";
+
+describe("warnForDefaultRemoteBindings", () => {
+	test.for([
+		{ remote: undefined, enabled: true, warns: true },
+		{ remote: false, enabled: true, warns: false },
+		{ remote: true, enabled: true, warns: false },
+		{ remote: undefined, enabled: false, warns: false },
+		{ remote: false, enabled: false, warns: false },
+		{ remote: true, enabled: false, warns: false },
+	])(
+		"remote=$remote enabled=$enabled",
+		({ remote, enabled, warns }, { expect }) => {
+			const warn = vi.fn();
+			const bindings = getRemoteBindings({
+				env: {
+					REPOS: { type: "artifacts", namespace: "examples", dev: { remote } },
+					KV: { type: "kv", id: "kv-id" },
+				},
+			});
+			warnForDefaultRemoteBindings(bindings, enabled, warn);
+			if (warns) {
+				expect(warn).toHaveBeenCalledExactlyOnceWith(
+					"Artifacts binding REPOS uses the deployed resource. Set `remote: false` to use the local simulator, or `remote: true` to silence this warning."
+				);
+			} else {
+				expect(warn).not.toHaveBeenCalled();
+			}
+		}
+	);
+});
 
 describe("getRemoteBindings", () => {
 	test("maps supported remote bindings", ({ expect }) => {
