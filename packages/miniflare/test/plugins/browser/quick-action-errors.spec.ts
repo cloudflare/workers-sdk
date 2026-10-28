@@ -1,5 +1,8 @@
 import { describe, test } from "vitest";
-import { quickActionErrorResponse } from "../../../src/plugins/browser-rendering/quick-actions/errors";
+import {
+	HtmlToMarkdownError,
+	quickActionErrorResponse,
+} from "../../../src/plugins/browser-rendering/quick-actions/errors";
 
 interface ErrorBody {
 	success: boolean;
@@ -145,6 +148,17 @@ describe("quick action errors", () => {
 			);
 		}
 	);
+
+	test("a failed Markdown conversion returns a 422 with code 2012", async ({
+		expect,
+	}) => {
+		const res = quickActionErrorResponse(new HtmlToMarkdownError("boom"));
+		expect(res.status).toBe(422);
+		expect(await res.json()).toEqual({
+			success: false,
+			errors: [{ code: 2012, message: "boom" }],
+		});
+	});
 
 	test.for([
 		{
