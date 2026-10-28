@@ -229,6 +229,27 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/browser-run-quick-actions:
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 5.20261023.1
+      '@types/node':
+        specifier: 22.15.17
+        version: 22.15.17
+      typescript:
+        specifier: catalog:default
+        version: 5.8.3
+      vitest:
+        specifier: catalog:default
+        version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/container-app:
     devDependencies:
       '@cloudflare/workers-tsconfig':
