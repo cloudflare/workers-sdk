@@ -1,4 +1,5 @@
 import Heap from "heap-js";
+import { DEFAULT_RETRY_DELAY_MS } from "./delay";
 import type {
 	InstanceMetadata,
 	WakerPriorityEntry,
@@ -131,19 +132,21 @@ export class TimePriorityQueue {
 
 	// Idempotent, perhaps name should suggest so
 	async handleNextAlarm() {
-		// The engine's own alarm wakes it for the next entry, so a sleep, retry or
-		// timeout still runs after the engine is evicted or aborted. Entries in the
-		// past are left to the running engine, which removes them as they finish.
-		const now = Date.now();
-		const nextWakeCall = this.#heap
-			.toArray()
-			.filter((entry) => entry.targetTimestamp > now)
-			.sort(wakerPriorityEntryComparator)[0];
+		const nextWakeCall = this.#heap.peek();
 		if (nextWakeCall === undefined) {
 			await this.#ctx.storage.deleteAlarm();
 			return;
 		}
-		await this.#ctx.storage.setAlarm(nextWakeCall.targetTimestamp);
+		// The engine's own alarm wakes it for the next entry, so a sleep, retry or
+		// timeout still runs after the engine is evicted or aborted. An entry that is
+		// already due can still be waited on by the running engine (a dynamic retry
+		// delay outlasts its placeholder), so the alarm stays a little ahead of it.
+		await this.#ctx.storage.setAlarm(
+			Math.max(
+				nextWakeCall.targetTimestamp,
+				Date.now() + DEFAULT_RETRY_DELAY_MS
+			)
+		);
 	}
 
 	getFirst(

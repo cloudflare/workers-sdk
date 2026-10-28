@@ -949,22 +949,23 @@ describe("Engine", () => {
 	describe("alarms", () => {
 		// An aborted or evicted engine has nothing left in memory, so its alarm is
 		// what wakes it for the next sleep, retry or timeout (issue #15809)
+		const readLogs = async (engineId: DurableObjectId) => {
+			try {
+				return (await env.ENGINE.get(engineId).readLogs()) as EngineLogs;
+			} catch (e) {
+				// DO may still be aborting — retry
+				if (isAbortError(e)) {
+					return undefined;
+				}
+				throw e;
+			}
+		};
+
 		it("resumes a sleeping instance after its engine is aborted", async ({
 			expect,
 		}) => {
 			const instanceId = `ALARM-SLEEP-${crypto.randomUUID()}`;
 			const engineId = env.ENGINE.idFromName(instanceId);
-			const readLogs = async () => {
-				try {
-					return (await env.ENGINE.get(engineId).readLogs()) as EngineLogs;
-				} catch (e) {
-					// DO may still be aborting — retry
-					if (isAbortError(e)) {
-						return undefined;
-					}
-					throw e;
-				}
-			};
 
 			await runWorkflow(instanceId, async (_event, step) => {
 				await step.sleep("sleep", "1 second");
@@ -973,7 +974,7 @@ describe("Engine", () => {
 
 			await vi.waitUntil(
 				async () =>
-					(await readLogs())?.logs.some(
+					(await readLogs(engineId))?.logs.some(
 						(val) => val.event === InstanceEvent.SLEEP_START
 					),
 				{ timeout: 5000 }
@@ -982,7 +983,7 @@ describe("Engine", () => {
 
 			await vi.waitUntil(
 				async () =>
-					(await readLogs())?.logs.some(
+					(await readLogs(engineId))?.logs.some(
 						(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
 					),
 				{ timeout: 5000 }
@@ -990,6 +991,53 @@ describe("Engine", () => {
 			expect(await env.ENGINE.get(engineId).getStatus()).toBe(
 				InstanceStatus.Complete
 			);
+		});
+
+		it("resumes a dynamic retry delay after its engine is aborted", async ({
+			expect,
+		}) => {
+			const instanceId = `ALARM-DYNAMIC-RETRY-${crypto.randomUUID()}`;
+			const engineId = env.ENGINE.idFromName(instanceId);
+			const dynamicDelay: WorkflowDelayFunction = () => 2500;
+			let attempts = 0;
+
+			await runWorkflow(instanceId, async (_event, step) => {
+				await step.do(
+					"dynamic-delay-step",
+					{
+						retries: { limit: 1, delay: dynamicDelay, backoff: "constant" },
+					},
+					async () => {
+						attempts++;
+						if (attempts < 2) {
+							throw new Error("transient");
+						}
+						return "ok";
+					}
+				);
+				return "done";
+			});
+
+			await vi.waitUntil(
+				async () =>
+					(await readLogs(engineId))?.logs.some(
+						(val) => val.event === InstanceEvent.ATTEMPT_FAILURE
+					),
+				{ timeout: 5000 }
+			);
+			// The retry entry keeps its default delay placeholder, which is already
+			// due while the engine still waits for the computed delay
+			await new Promise((resolve) => setTimeout(resolve, 1500));
+			await workerdUnsafe.abortAllDurableObjects();
+
+			await vi.waitUntil(
+				async () =>
+					(await readLogs(engineId))?.logs.some(
+						(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+					),
+				{ timeout: 5000 }
+			);
+			expect(attempts).toBe(2);
 		});
 
 		it("keeps the sleep of a paused instance when its alarm fires", async ({
@@ -1005,7 +1053,7 @@ describe("Engine", () => {
 
 			await vi.waitUntil(
 				async () =>
-					((await env.ENGINE.get(engineId).readLogs()) as EngineLogs).logs.some(
+					(await readLogs(engineId))?.logs.some(
 						(val) => val.event === InstanceEvent.SLEEP_START
 					),
 				{ timeout: 5000 }
