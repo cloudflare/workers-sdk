@@ -16,6 +16,7 @@ import { pdf, pdfSchema } from "./pdf";
 import { browserSchema, commonOptionsSchema } from "./schemas";
 import { scrape, scrapeSchema } from "./scrape";
 import { screenshot, screenshotSchema } from "./screenshot";
+import { snapshot, snapshotSchema } from "./snapshot";
 import type { Log } from "../../../shared";
 import type { QuickActionName } from "../../../workers/browser-rendering/quick-action-names";
 import type { QuickActionContext, QuickActionDefinition } from "./page";
@@ -36,6 +37,7 @@ const QUICK_ACTIONS: Record<QuickActionName, QuickActionDefinition> = {
 	pdf: defineQuickAction(pdfSchema, pdf),
 	scrape: defineQuickAction(scrapeSchema, scrape),
 	links: defineQuickAction(linksSchema, links),
+	snapshot: defineQuickAction(snapshotSchema, snapshot),
 	accessibilityTree: defineQuickAction(
 		accessibilityTreeSchema,
 		accessibilityTree

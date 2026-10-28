@@ -7,6 +7,7 @@ export const QUICK_ACTION_NAMES = [
 	"pdf",
 	"scrape",
 	"links",
+	"snapshot",
 	"accessibilityTree",
 	"json",
 	"markdown",
