@@ -8,6 +8,7 @@ import { json, jsonSchema } from "./json";
 import { markdown } from "./markdown";
 import { withTimeout } from "./page";
 import { browserSchema, commonOptionsSchema } from "./schemas";
+import { scrape, scrapeSchema } from "./scrape";
 import type { Log } from "../../../shared";
 import type { QuickActionName } from "../../../workers/browser-rendering/quick-action-names";
 import type { QuickActionContext, QuickActionDefinition } from "./page";
@@ -24,6 +25,7 @@ function defineQuickAction<Schema extends z.ZodType>(
 
 const QUICK_ACTIONS: Record<QuickActionName, QuickActionDefinition> = {
 	content: defineQuickAction(commonOptionsSchema, content),
+	scrape: defineQuickAction(scrapeSchema, scrape),
 	json: defineQuickAction(jsonSchema, json),
 	markdown: defineQuickAction(commonOptionsSchema, markdown),
 };

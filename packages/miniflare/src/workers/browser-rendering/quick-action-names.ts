@@ -1,7 +1,12 @@
 // Shared by the binding Worker and the Node.js quick action runner, so this
 // module must not import anything.
 
-export const QUICK_ACTION_NAMES = ["content", "json", "markdown"] as const;
+export const QUICK_ACTION_NAMES = [
+	"content",
+	"scrape",
+	"json",
+	"markdown",
+] as const;
 
 export type QuickActionName = (typeof QUICK_ACTION_NAMES)[number];
 
