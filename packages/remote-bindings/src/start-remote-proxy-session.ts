@@ -122,7 +122,9 @@ export async function startRemoteProxySession(
 		cliDisplayName: options.cliDisplayName,
 		entrypointSource: remoteBindingsWorkerSource,
 		compatibilityDate: "2025-04-28",
-		compatibilityFlags: [],
+		// Keep custom error names and properties (for example Artifacts `code` and
+		// `numericCode`) when errors cross from the remote binding into this worker.
+		compatibilityFlags: ["enhanced_error_serialization"],
 		complianceRegion: options.complianceRegion,
 		bindings: rawBindings,
 		auth: getRemoteBindingsAuthHook(
