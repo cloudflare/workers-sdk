@@ -435,6 +435,67 @@ describe("DevEnv", { concurrent: false }, () => {
 	});
 
 	describe("DevEnv (local-only)", () => {
+		it("retries a bodyless OPTIONS request after a cancelled upload drops the UserWorker connection", async ({
+			expect,
+		}) => {
+			await helper.seed({
+				"src/index.ts": dedent`
+					export default {
+						async fetch(request) {
+							if (request.method === "PUT") {
+								const reader = request.body?.getReader();
+								let total = 0;
+								if (reader) {
+									for (;;) {
+										const { done, value } = await reader.read();
+										if (done) break;
+										total += value.byteLength;
+										if (total > 2_000_000) {
+											await reader.cancel();
+											return new Response("too large", { status: 413 });
+										}
+									}
+								}
+							}
+
+							return new Response(null, { status: 204 });
+						}
+					};
+				`,
+			});
+
+			const worker = await startWorker({
+				name: "test-worker",
+				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
+				compatibilityDate: "2026-08-10",
+				dev: {
+					server: { port: 0 },
+					inspector: false,
+				},
+			});
+			onTestFinished(worker.dispose);
+
+			const oversized = await worker.fetch("http://dummy", {
+				method: "PUT",
+				body: "x".repeat(2_142_932),
+			});
+			expect(oversized.status).toBe(413);
+			await expect(oversized.text()).resolves.toBe("too large");
+
+			// On affected runtimes, cancelling the upload leaves the ProxyWorker's
+			// pooled connection to the UserWorker unusable. The bodyless preflight
+			// must draw a fresh connection instead of surfacing "Network connection
+			// lost".
+			const preflight = await worker.fetch("http://dummy", {
+				method: "OPTIONS",
+				headers: {
+					Origin: "https://example.com",
+					"Access-Control-Request-Method": "PUT",
+				},
+			});
+			expect(preflight.status).toBe(204);
+		});
+
 		it("User worker exception", async ({ expect }) => {
 			await helper.seed({
 				"src/index.ts": dedent`

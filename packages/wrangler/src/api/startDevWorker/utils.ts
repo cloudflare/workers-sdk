@@ -127,6 +127,31 @@ export function isSameUserWorkerOrigin(
 	return requestUrl.origin === currentUserWorkerUrl?.origin;
 }
 
+/**
+ * Whether a request can be repeated automatically after the ProxyWorker loses
+ * its connection to the UserWorker.
+ *
+ * Keep this deliberately narrower than HTTP idempotency: the proxy cannot tell
+ * whether the UserWorker handled a request before the connection was lost.
+ * GET and HEAD cannot carry bodies, and a bodyless CORS preflight has no
+ * application side effects. Other methods must fail individually rather than
+ * risk repeating a mutation.
+ */
+export function isRequestSafeToRetry(request: {
+	method: string;
+	body: object | null;
+	headers: Pick<Headers, "has">;
+}): boolean {
+	return (
+		request.body === null &&
+		(request.method === "GET" ||
+			request.method === "HEAD" ||
+			(request.method === "OPTIONS" &&
+				request.headers.has("Origin") &&
+				request.headers.has("Access-Control-Request-Method")))
+	);
+}
+
 type UnwrapHook<
 	T extends HookValues | Promise<HookValues>,
 	Args extends unknown[],

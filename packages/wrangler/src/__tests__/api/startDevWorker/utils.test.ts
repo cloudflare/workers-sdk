@@ -4,9 +4,54 @@ import {
 	convertStartDevOptionsToBindings,
 } from "../../../api/startDevWorker/binding-utils";
 import {
+	isRequestSafeToRetry,
 	isSameUserWorkerOrigin,
 	rewriteUrlInHeaderValue,
 } from "../../../api/startDevWorker/utils";
+
+describe("isRequestSafeToRetry", () => {
+	// Regression coverage for https://github.com/cloudflare/workers-sdk/issues/16216:
+	// a bodyless CORS preflight is safe to repeat when the internal connection
+	// drops, while requests that may carry mutations must still fail once.
+	it.for([
+		["GET", null, new Headers(), true],
+		["HEAD", null, new Headers(), true],
+		[
+			"OPTIONS",
+			null,
+			new Headers({
+				Origin: "https://example.com",
+				"Access-Control-Request-Method": "PUT",
+			}),
+			true,
+		],
+		["OPTIONS", null, new Headers({ Origin: "https://example.com" }), false],
+		[
+			"OPTIONS",
+			null,
+			new Headers({ "Access-Control-Request-Method": "PUT" }),
+			false,
+		],
+		["OPTIONS", null, new Headers(), false],
+		[
+			"OPTIONS",
+			{},
+			new Headers({
+				Origin: "https://example.com",
+				"Access-Control-Request-Method": "PUT",
+			}),
+			false,
+		],
+		["POST", null, new Headers(), false],
+		["PUT", {}, new Headers(), false],
+		["DELETE", null, new Headers(), false],
+	] as const)(
+		"classifies %s with body %o and headers %o as retryable=%s",
+		([method, body, headers, expected], { expect }) => {
+			expect(isRequestSafeToRetry({ method, body, headers })).toBe(expected);
+		}
+	);
+});
 
 describe("isSameUserWorkerOrigin", () => {
 	const userWorker = { protocol: "http:", hostname: "localhost", port: "8787" };
