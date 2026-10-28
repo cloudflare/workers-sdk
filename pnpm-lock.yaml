@@ -2378,6 +2378,9 @@ importers:
       '@cloudflare/local-explorer-ui':
         specifier: workspace:*
         version: link:../local-explorer-ui
+      '@cloudflare/puppeteer':
+        specifier: ^1.4.0
+        version: 1.4.0
       '@cloudflare/workers-shared':
         specifier: workspace:*
         version: link:../workers-shared

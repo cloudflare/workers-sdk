@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { WorkerEntrypoint } from "cloudflare:workers";
 import {
 	DELETE,
 	GET,
@@ -9,6 +10,7 @@ import {
 	Router,
 	SharedBindings,
 } from "miniflare:shared";
+import { isQuickActionName } from "./quick-action-names";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
 import type {
 	MiniflareDurableObjectCf,
@@ -698,8 +700,28 @@ class BrowserRenderingRouter extends Router {
 	};
 }
 
-export default {
-	fetch(request: Request, env: Env) {
-		return new BrowserRenderingRouter(env).fetch(request);
-	},
-};
+export default class BrowserBinding extends WorkerEntrypoint<Env> {
+	fetch(request: Request): Promise<Response> {
+		return new BrowserRenderingRouter(this.env).fetch(request);
+	}
+
+	async quickAction(action: string, options: unknown) {
+		if (!isQuickActionName(action)) {
+			throw new Error(`Invalid quick action: ${action}`);
+		}
+		if (options === null || options === undefined) {
+			throw new TypeError(
+				`Cannot read properties of ${options} (reading 'url')`
+			);
+		}
+		if ((options as { browser?: unknown }).browser === "kitesurf") {
+			throw new Error(
+				'The "kitesurf" browser is not supported in local development. Remove the `browser` option to use the local browser.'
+			);
+		}
+		return this.env[SharedBindings.MAYBE_SERVICE_LOOPBACK].fetch(
+			"http://localhost/browser/quick-action",
+			{ method: "POST", body: JSON.stringify({ action, options }) }
+		);
+	}
+}

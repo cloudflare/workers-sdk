@@ -14,6 +14,7 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 - `src/workers/shared/` — Shared utilities across embedded workers
 - `src/workers/core/dev-registry-proxy.worker.ts` — Proxy worker for cross-process service bindings via debug port RPC
 - `src/workers/core/dev-registry-proxy-shared.worker.ts` — Shared proxy logic (registry Map, DO proxy class, tail serializers)
+- `src/plugins/browser-rendering/quick-actions/` — Browser Run `quickAction()` support; the binding Worker forwards calls to the loopback, where puppeteer drives a dedicated Chrome from Node.js
 - `src/shared/dev-registry.ts` — Filesystem-based worker registry (chokidar watch, heartbeat, stale cleanup)
 - `src/shared/persist-root-lock.ts` — Token-safe startup serialisation for shared persistent storage
 - `src/shared/DEV_REGISTRY.md` — Full architecture doc for the dev registry
