@@ -84,7 +84,18 @@ describe("printBindings", () => {
 		{ label: "default", remote: undefined, disabled: false, mode: "remote" },
 		{ label: "explicit local", remote: false, disabled: false, mode: "local" },
 		{ label: "explicit remote", remote: true, disabled: false, mode: "remote" },
-		{ label: "remote disabled", remote: true, disabled: true, mode: "local" },
+		{
+			label: "default, remote disabled",
+			remote: undefined,
+			disabled: true,
+			mode: "local",
+		},
+		{
+			label: "explicit remote, remote disabled",
+			remote: true,
+			disabled: true,
+			mode: "local",
+		},
 	])(
 		"labels Artifacts bindings as $mode for $label",
 		({ remote, disabled, mode }, { expect }) => {

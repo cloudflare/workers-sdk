@@ -90,6 +90,38 @@ export function getBindingLocalSupport(
 }
 
 /**
+ * Resolves whether a binding uses the deployed resource during local
+ * development. This is the single source of truth for routing a binding to a
+ * remote proxy session and for labelling it in the bindings table.
+ *
+ * @param type - Binding type
+ * @param remote - The binding's configured `remote` setting
+ * @param options.remoteBindingsDisabled - Whether the dev session runs without
+ * remote bindings, as with `wrangler dev --local`
+ * @returns Whether the binding uses the deployed resource. Bindings that will
+ * never have a local simulator always return `true`, even when remote bindings
+ * are disabled and the binding is therefore unavailable.
+ */
+export function resolveBindingRemote(
+	type: Binding["type"],
+	remote: boolean | undefined,
+	{ remoteBindingsDisabled = false }: { remoteBindingsDisabled?: boolean } = {}
+): boolean {
+	const support = getBindingLocalSupport(type);
+	switch (support) {
+		case "DO-NOT-USE-this-resource-will-never-have-a-local-simulator":
+			return true;
+		case "local-only":
+			return false;
+		case "remote-default-with-local-opt-in":
+			return !remoteBindingsDisabled && remote !== false;
+		case "local-and-remote":
+		case "remote":
+			return !remoteBindingsDisabled && remote === true;
+	}
+}
+
+/**
  * Validates the user's `remote` setting for a given binding against the
  * binding type's local-development capabilities. Throws `UserError` for
  * invalid combinations and uses the caller-provided logger for

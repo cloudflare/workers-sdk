@@ -6,14 +6,18 @@ import {
 	buildRemoteProxyProps,
 	getEnvBindingsOfType,
 	getPersistPath,
-	getRemoteProxyConnectionString,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 } from "../shared";
 import { assertGitAvailable } from "./git-client";
 import { assertSupportedGitLayout } from "./storage";
 import type { Service, Socket } from "../../runtime";
-import type { MiniflareBinding, Plugin } from "../shared";
+import type {
+	MiniflareBinding,
+	ParsedDevConfig,
+	Plugin,
+	RemoteProxyConnectionString,
+} from "../shared";
 import type { ArtifactsController } from "./controller";
 
 export { ArtifactsController, type LocalArtifactsBackend } from "./controller";
@@ -28,14 +32,31 @@ const LOCAL_NAMESPACE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 type ArtifactsBinding = Extract<MiniflareBinding, { type: "artifacts" }>;
 type ArtifactsEntry = [name: string, binding: ArtifactsBinding];
 
-function isLocalArtifactsBinding(binding: ArtifactsBinding): boolean {
-	return binding.dev?.remote === false;
+/**
+ * Returns the remote proxy connection an Artifacts binding uses, or
+ * `undefined` when it uses the local simulator.
+ *
+ * Artifacts uses the deployed resource unless `remote: false` opts into the
+ * simulator. Without a remote proxy connection (for example `wrangler dev
+ * --local`) the deployed resource is unreachable, so the simulator is used.
+ * Mirrors `resolveBindingRemote()` in `@cloudflare/workers-utils`.
+ */
+function getArtifactsRemoteConnection(
+	binding: ArtifactsBinding,
+	dev: ParsedDevConfig | undefined
+): RemoteProxyConnectionString | undefined {
+	return binding.dev?.remote === false
+		? undefined
+		: dev?.remoteProxyConnectionString;
 }
 
-function getLocalNamespaceNames(bindings: ArtifactsEntry[]): Set<string> {
+function getLocalNamespaceNames(
+	bindings: ArtifactsEntry[],
+	dev: ParsedDevConfig | undefined
+): Set<string> {
 	return new Set(
 		bindings
-			.filter(([, binding]) => isLocalArtifactsBinding(binding))
+			.filter(([, binding]) => !getArtifactsRemoteConnection(binding, dev))
 			.map(([, binding]) => binding.namespace)
 	);
 }
@@ -60,8 +81,11 @@ export const ARTIFACTS_PLUGIN: Plugin = {
 	getBindings(options) {
 		return getEnvBindingsOfType(options.config, "artifacts").map(
 			([name, binding]) => {
-				// Local storage is opt-in; omitted remote settings use the remote proxy.
-				if (isLocalArtifactsBinding(binding)) {
+				const remoteConnection = getArtifactsRemoteConnection(
+					binding,
+					options.dev
+				);
+				if (remoteConnection === undefined) {
 					validateLocalNamespace(binding.namespace);
 					return {
 						name,
@@ -75,13 +99,7 @@ export const ARTIFACTS_PLUGIN: Plugin = {
 					name,
 					service: {
 						name: ARTIFACTS_REMOTE_SERVICE_NAME,
-						props: buildRemoteProxyProps(
-							getRemoteProxyConnectionString(
-								{ dev: { ...binding.dev, remote: true } },
-								options.dev
-							),
-							name
-						),
+						props: buildRemoteProxyProps(remoteConnection, name),
 					},
 				};
 			}
@@ -99,13 +117,17 @@ export const ARTIFACTS_PLUGIN: Plugin = {
 		const bindings = getEnvBindingsOfType(options.config, "artifacts");
 		const services: Service[] = [];
 		const sockets: Socket[] = [];
-		if (bindings.some(([, binding]) => !isLocalArtifactsBinding(binding))) {
+		if (
+			bindings.some(([, binding]) =>
+				getArtifactsRemoteConnection(binding, options.dev)
+			)
+		) {
 			services.push({
 				name: ARTIFACTS_REMOTE_SERVICE_NAME,
 				worker: remoteProxyClientWorker(),
 			});
 		}
-		const namespaces = getLocalNamespaceNames(bindings);
+		const namespaces = getLocalNamespaceNames(bindings, options.dev);
 		if (namespaces.size > 0) {
 			await assertGitAvailable();
 		}

@@ -1,5 +1,113 @@
 import { beforeEach, describe, it, vi } from "vitest";
-import { validateBindingRemoteSetting } from "../../src/config/binding-local-support";
+import {
+	resolveBindingRemote,
+	validateBindingRemoteSetting,
+} from "../../src/config/binding-local-support";
+import type { Binding } from "../../src/types";
+
+describe("resolveBindingRemote", () => {
+	it.for<{
+		type: Binding["type"];
+		remote: boolean | undefined;
+		remoteBindingsDisabled: boolean;
+		expected: boolean;
+	}>([
+		// Remote by default with local opt-in.
+		{
+			type: "artifacts",
+			remote: undefined,
+			remoteBindingsDisabled: false,
+			expected: true,
+		},
+		{
+			type: "artifacts",
+			remote: true,
+			remoteBindingsDisabled: false,
+			expected: true,
+		},
+		{
+			type: "artifacts",
+			remote: false,
+			remoteBindingsDisabled: false,
+			expected: false,
+		},
+		{
+			type: "artifacts",
+			remote: undefined,
+			remoteBindingsDisabled: true,
+			expected: false,
+		},
+		{
+			type: "artifacts",
+			remote: true,
+			remoteBindingsDisabled: true,
+			expected: false,
+		},
+		{
+			type: "artifacts",
+			remote: false,
+			remoteBindingsDisabled: true,
+			expected: false,
+		},
+		// Local by default with remote opt-in.
+		{
+			type: "kv_namespace",
+			remote: undefined,
+			remoteBindingsDisabled: false,
+			expected: false,
+		},
+		{
+			type: "kv_namespace",
+			remote: true,
+			remoteBindingsDisabled: false,
+			expected: true,
+		},
+		{
+			type: "kv_namespace",
+			remote: true,
+			remoteBindingsDisabled: true,
+			expected: false,
+		},
+		{
+			type: "vectorize",
+			remote: true,
+			remoteBindingsDisabled: false,
+			expected: true,
+		},
+		{
+			type: "vectorize",
+			remote: undefined,
+			remoteBindingsDisabled: false,
+			expected: false,
+		},
+		// Fixed modes ignore the setting.
+		{
+			type: "ratelimit",
+			remote: true,
+			remoteBindingsDisabled: false,
+			expected: false,
+		},
+		{
+			type: "ai",
+			remote: undefined,
+			remoteBindingsDisabled: false,
+			expected: true,
+		},
+		{
+			type: "ai",
+			remote: undefined,
+			remoteBindingsDisabled: true,
+			expected: true,
+		},
+	])(
+		"$type with remote=$remote and remoteBindingsDisabled=$remoteBindingsDisabled is remote: $expected",
+		({ type, remote, remoteBindingsDisabled, expected }, { expect }) => {
+			expect(
+				resolveBindingRemote(type, remote, { remoteBindingsDisabled })
+			).toBe(expected);
+		}
+	);
+});
 
 describe("validateBindingRemoteSetting", () => {
 	const warn = vi.fn();

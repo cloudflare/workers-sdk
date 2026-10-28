@@ -8,6 +8,7 @@ import {
 	getWranglerHiddenDirPath,
 	isUnsafeBindingType,
 	partitionExports,
+	resolveBindingRemote,
 	UserError,
 	validateBindingRemoteSetting,
 } from "@cloudflare/workers-utils";
@@ -1007,8 +1008,12 @@ export function buildMiniflareBindingOptions(
 				{
 					namespace: binding.namespace,
 					remote: binding.remote,
-					remoteProxyConnectionString:
-						binding.remote !== false ? remoteProxyConnectionString : undefined,
+					remoteProxyConnectionString: resolveBindingRemote(
+						"artifacts",
+						binding.remote
+					)
+						? remoteProxyConnectionString
+						: undefined,
 				},
 			])
 		),

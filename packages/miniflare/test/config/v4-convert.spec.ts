@@ -41,7 +41,7 @@ describe("convertV4MiniflareOptions", () => {
 		}
 	);
 
-	test("Artifacts defaults to remote and preserves explicit local selection", ({
+	test("Artifacts uses a connected remote proxy unless local is selected", ({
 		expect,
 	}) => {
 		const remoteProxyConnectionString = new URL(
@@ -51,24 +51,35 @@ describe("convertV4MiniflareOptions", () => {
 			name: "worker",
 			script: "export default {};",
 			artifacts: {
-				DEFAULT: { namespace: "default" },
-				LOCAL: { namespace: "local", remote: false },
-				REMOTE: { namespace: "remote", remoteProxyConnectionString },
+				DEFAULT: { namespace: "default", remoteProxyConnectionString },
+				LOCAL: {
+					namespace: "local",
+					remote: false,
+					remoteProxyConnectionString,
+				},
+				// `wrangler dev --local` passes no connection string.
+				OFFLINE: { namespace: "offline" },
 			},
 		});
-		expect(converted.workers[0].config.env?.DEFAULT).toMatchObject({
+		const env = converted.workers[0].config.env;
+		expect(env?.DEFAULT).toEqual({
 			type: "artifacts",
 			namespace: "default",
 			dev: { remote: true },
 		});
-		expect(converted.workers[0].config.env?.LOCAL).toMatchObject({
+		expect(env?.LOCAL).toEqual({
 			type: "artifacts",
 			namespace: "local",
 			dev: { remote: false },
 		});
-		expect(converted.workers[0].config.env?.REMOTE).toMatchObject({
-			dev: { remote: true },
+		expect(env?.OFFLINE).toEqual({
+			type: "artifacts",
+			namespace: "offline",
+			dev: { remote: false },
 		});
+		expect(converted.workers[0].dev?.remoteProxyConnectionString).toBe(
+			remoteProxyConnectionString
+		);
 	});
 	test("preserves opaque K2 stream IDs through v4 parsing and conversion", ({
 		expect,

@@ -799,12 +799,16 @@ function addProductBindings(
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.artifacts ?? {})) {
-		isRemote(binding.remoteProxyConnectionString);
 		env[name] = {
 			type: "artifacts",
 			namespace: binding.namespace,
-			// Local Artifacts is opt-in; omitted routing stays remote.
-			dev: { remote: binding.remote ?? true },
+			// Without a remote proxy connection (for example `wrangler dev
+			// --local`) the deployed resource is unreachable, so use the simulator.
+			dev: {
+				remote:
+					binding.remote !== false &&
+					isRemote(binding.remoteProxyConnectionString),
+			},
 		};
 	}
 	for (const name of Object.keys(worker.workerLoaders ?? {})) {
