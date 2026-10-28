@@ -987,6 +987,13 @@ export class Engine extends DurableObject<Env, EngineProps> {
 				case InstanceStatus.Waiting:
 					this.writeLog(InstanceEvent.WORKFLOW_WAITING, null, null, {});
 					break;
+				case InstanceStatus.Complete:
+				case InstanceStatus.Errored:
+				case InstanceStatus.Terminated:
+					// A finished instance has nothing left to run, so its alarm must not
+					// wake the engine up again and reopen its storage (issue #15809)
+					await this.ctx.storage.deleteAlarm();
+					break;
 			}
 		}
 
@@ -1232,6 +1239,9 @@ export class Engine extends DurableObject<Env, EngineProps> {
 	// Called by the dispose function when introspecting the instance in tests
 	// TODO: Ideally this abort should be done by `abortAllDurableObjects` from worked called by vitest-plugin
 	async unsafeAbort(reason?: string) {
+		// deleteAll() keeps the alarm (see deleteInstance()), and sync() has to save
+		// its deletion before the abort
+		await this.ctx.storage.deleteAlarm();
 		await this.ctx.storage.sync();
 		await this.ctx.storage.deleteAll();
 
@@ -1479,6 +1489,9 @@ export class Engine extends DurableObject<Env, EngineProps> {
 			);
 		}
 
+		// deleteAll() keeps the alarm, which would wake the engine up again and
+		// recreate the storage of the deleted instance
+		await this.ctx.storage.deleteAlarm();
 		await this.ctx.storage.deleteAll();
 		await this.abort(ABORT_REASONS.USER_DELETE);
 	}
@@ -1787,7 +1800,6 @@ export class Engine extends DurableObject<Env, EngineProps> {
 			// Nothing runs after this, so stop the grace period wait, which would otherwise
 			// keep the finished engine busy for its full duration (issue #15809)
 			this.timeoutHandler.cancelGracePeriod();
-			await this.ctx.storage.deleteAlarm();
 			this.isRunning = false;
 		} catch (err) {
 			if (isAbortError(err)) {
@@ -1846,7 +1858,6 @@ export class Engine extends DurableObject<Env, EngineProps> {
 				await this.setStatus(accountId, instance.id, InstanceStatus.Errored);
 			});
 			this.timeoutHandler.cancelGracePeriod();
-			await this.ctx.storage.deleteAlarm();
 			this.isRunning = false;
 		}
 

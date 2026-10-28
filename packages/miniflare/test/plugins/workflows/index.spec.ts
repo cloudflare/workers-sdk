@@ -416,6 +416,12 @@ export class LifecycleWorkflow extends WorkflowEntrypoint {
 			throw new Error("continued after self-delete");
 		}
 
+		if (event.payload?.sleep) {
+			await step.do("before sleep", async () => "before-sleep-done");
+			await step.sleep("sleep", "1 second");
+			return "slept";
+		}
+
 		const first = await step.do("first step", async () => "step-1-done");
 
 		await step.do("long step", async () => {
@@ -433,10 +439,17 @@ export default {
 		const url = new URL(request.url);
 		const id = url.searchParams.get("id") || "lifecycle-test";
 
-		if (url.pathname === "/create" || url.pathname === "/selfDelete") {
+		if (
+			url.pathname === "/create" ||
+			url.pathname === "/selfDelete" ||
+			url.pathname === "/sleep"
+		) {
 			const instance = await env.LIFECYCLE_WORKFLOW.create({
 				id,
-				params: { selfDelete: url.pathname === "/selfDelete" },
+				params: {
+					selfDelete: url.pathname === "/selfDelete",
+					sleep: url.pathname === "/sleep",
+				},
 			});
 			const status = await instance.status();
 			return Response.json({ id: instance.id, status });
@@ -837,6 +850,40 @@ describe("workflow instance lifecycle methods", () => {
 		expect(statusResponse.status).toBe(500);
 		expect(await statusResponse.text()).toContain("instance.not_found");
 	});
+
+	test.for(["binding", "Explorer"])(
+		"does not recreate a sleeping workflow deleted through the %s",
+		async (via, { expect }) => {
+			const tmp = await useTmp();
+			const mf = new Miniflare({
+				...lifecycleMiniflareOpts(tmp),
+				unsafeLocalExplorer: true,
+			});
+			useDispose(mf);
+
+			const createResponse = await mf.dispatchFetch(
+				"http://localhost/sleep?id=delete-sleeping"
+			);
+			await createResponse.text();
+			await waitForStepOutput(mf, "delete-sleeping", "before-sleep-done");
+
+			const deleteResponse =
+				via === "binding"
+					? await mf.dispatchFetch("http://localhost/delete?id=delete-sleeping")
+					: await mf.dispatchFetch(
+							`http://localhost${CorePaths.EXPLORER}/api/workflows/LIFECYCLE_WORKFLOW/instances/delete-sleeping`,
+							{ method: "DELETE" }
+						);
+			expect(deleteResponse.status).toBe(200);
+			await deleteResponse.text();
+			expect(await getPersistedInstanceFiles(tmp)).toHaveLength(0);
+
+			// The alarm set for the end of the sleep must not wake the deleted
+			// instance up again, which would recreate its storage file
+			await scheduler.wait(1500);
+			expect(await getPersistedInstanceFiles(tmp)).toHaveLength(0);
+		}
+	);
 
 	test("delete multiple workflows", async ({ expect }) => {
 		const tmp = await useTmp();

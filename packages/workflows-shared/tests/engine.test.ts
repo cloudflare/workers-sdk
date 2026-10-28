@@ -1118,6 +1118,73 @@ describe("Engine", () => {
 				).toBeDefined();
 			});
 		});
+
+		it.for(["completes", "throws a NonRetryableError"])(
+			"deletes the alarm when the workflow %s",
+			async (outcome, { expect }) => {
+				const instanceId = `ALARM-FINISHED-${crypto.randomUUID()}`;
+
+				// The step's timeout sets the alarm, which is left as it is when the
+				// step ends
+				await runWorkflowAndAwait(instanceId, async (_event, step) => {
+					return await step.do("step", async () => {
+						if (outcome === "completes") {
+							return "result";
+						}
+						throw new NonRetryableError("Step errors out");
+					});
+				});
+
+				await runInDurableObject(
+					env.ENGINE.get(env.ENGINE.idFromName(instanceId)),
+					async (_engine, state) => {
+						expect(await state.storage.getAlarm()).toBeNull();
+					}
+				);
+			}
+		);
+
+		it.for(["terminate", "delete"])(
+			"deletes the alarm of a sleeping instance on %s",
+			async (action, { expect }) => {
+				const instanceId = `ALARM-${action.toUpperCase()}-${crypto.randomUUID()}`;
+				const engineId = env.ENGINE.idFromName(instanceId);
+
+				await runWorkflow(instanceId, async (_event, step) => {
+					await step.sleep("sleep", "1 hour");
+				});
+				await vi.waitUntil(
+					() =>
+						runInDurableObject(
+							env.ENGINE.get(engineId),
+							async (_engine, state) =>
+								(await state.storage.getAlarm()) !== null
+						),
+					{ timeout: 5000 }
+				);
+
+				try {
+					await runInDurableObject(env.ENGINE.get(engineId), (engine) =>
+						action === "terminate"
+							? engine.changeInstanceStatus("terminate")
+							: engine.deleteInstance()
+					);
+				} catch (e) {
+					if (!isAbortError(e)) {
+						throw e;
+					}
+				}
+
+				// Otherwise the engine is woken up again when the sleep ends, which also
+				// recreates the storage of a deleted instance
+				await runInDurableObject(
+					env.ENGINE.get(engineId),
+					async (_engine, state) => {
+						expect(await state.storage.getAlarm()).toBeNull();
+					}
+				);
+			}
+		);
 	});
 
 	describe("lifecycle methods", () => {
