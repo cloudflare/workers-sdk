@@ -161,6 +161,69 @@ describe(
 			]);
 		});
 
+		test("markdown converts the page, resolving links against the url", async ({
+			expect,
+		}) => {
+			const res = await quickAction("markdown", { url: origin });
+			expect(res.status).toBe(200);
+			const { result } = (await res.json()) as { result: string };
+			expect(result).toMatch(/^---\ntitle: "Quick actions"\n---\n/);
+			expect(result).toContain("# Hello");
+			expect(result).toContain(`[About](${origin}/about)`);
+		});
+
+		test("markdown keeps the language of code blocks mdream can't read it from", async ({
+			expect,
+		}) => {
+			const res = await quickAction("markdown", {
+				html: [
+					'<figure><figcaption><span>index.js</span><span>js</span></figcaption><pre class="astro-code" data-language="js"><code>a()</code></pre></figure>',
+					'<pre data-lang="js"><code>b()</code></pre>',
+					'<pre class="shiki language-js"><code>c()</code></pre>',
+					'<pre class="language-js"><code data-language="ts">d()</code></pre>',
+					'<pre data-language="js"><code data-lang="ts">e()</code></pre>',
+					'<pre data-language="js" class="language-ts"><code>f()</code></pre>',
+					'<pre data-language="sh"><code class="language-ts">g()</code></pre>',
+					'<pre data-language="TypeScript"><code>h()</code></pre>',
+					'<pre data-language="\t js \n"><code>i()</code></pre>',
+					'<pre data-language="a b"><code>j()</code></pre>',
+					'<pre lang="en" class="lang-de"><code>k()</code></pre>',
+					'<pre class="astro-code" data-lang="sh">l</pre>',
+				].join(""),
+			});
+			expect(res.status).toBe(200);
+			const { result } = (await res.json()) as { result: string };
+			expect(result).toBe(
+				[
+					"*index.jsjs*",
+					"```js\na()\n```",
+					"```js\nb()\n```",
+					"```js\nc()\n```",
+					"```ts\nd()\n```",
+					"```ts\ne()\n```",
+					"```ts\nf()\n```",
+					"```ts\ng()\n```",
+					"```TypeScript\nh()\n```",
+					"```js\ni()\n```",
+					"```\nj()\n```",
+					"```\nk()\n```",
+					"```sh\nl\n```",
+				].join("\n\n")
+			);
+		});
+
+		test("markdown uses the page's own HTML if the page hides document.cloneNode", async ({
+			expect,
+		}) => {
+			const res = await quickAction("markdown", {
+				html: '<form name="cloneNode"></form><pre data-language="js"><code>a()</code></pre>',
+			});
+			expect(res.status).toBe(200);
+			expect(((await res.json()) as { result: string }).result).toBe(
+				"```\na()\n```"
+			);
+		});
+
 		test("invalid options return the validation issues", async ({ expect }) => {
 			const res = await quickAction("content", {
 				url: origin,

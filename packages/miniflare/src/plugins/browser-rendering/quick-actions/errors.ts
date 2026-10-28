@@ -1,5 +1,7 @@
 import { Response } from "../../../http";
 
+export class HtmlToMarkdownError extends Error {}
+
 const CONTEXT_DESTROYED =
 	"The execution context was destroyed, most likely because of a navigation or page reload. Check gotoOptions/waitForSelector/waitForTimeout options.";
 const TARGET_CLOSED =
@@ -115,6 +117,12 @@ const USER_ERRORS: [(string | string[])[], number, string, (string | null)?][] =
 	];
 
 export function quickActionErrorResponse(error: unknown): Response {
+	if (error instanceof HtmlToMarkdownError) {
+		return Response.json(
+			{ success: false, errors: [{ code: 2012, message: error.message }] },
+			{ status: 422 }
+		);
+	}
 	const raw = error instanceof Error ? error.message : String(error);
 	const userError = USER_ERRORS.find(([entries]) =>
 		entries.some((entry) =>

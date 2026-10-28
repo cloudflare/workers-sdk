@@ -2489,6 +2489,9 @@ importers:
       kleur:
         specifier: ^4.1.5
         version: 4.1.5
+      mdream:
+        specifier: 2.0.3
+        version: 2.0.3
       mime:
         specifier: ^3.0.0
         version: 3.0.0
@@ -7606,6 +7609,94 @@ packages:
 
   '@marijn/find-cluster-break@1.0.2':
     resolution: {integrity: sha512-l0h88YhZFyKdXIFNfSWpyjStDjGHwZ/U7iobcK1cQQD8sejsONdQtTVU+1wVN1PBw40PiiHB1vA5S7VTfQiP9g==}
+
+  '@mdream/rust-android-arm-eabi@2.0.3':
+    resolution: {integrity: sha512-tL0Oq5xm4Bwph3NA2Ymuk2obGBuHZfN+TUPlBgowzuPv+yZK2G4zQ4xr4gmYQBVG6xPt9pygiM6hLMm6Q3xn1g==}
+    engines: {node: '>= 22.0.0'}
+    cpu: [arm]
+    os: [android]
+
+  '@mdream/rust-android-arm64@2.0.3':
+    resolution: {integrity: sha512-9yAyPh2yF2rjkKHviDmJwOiZE8oIIwQIP7XCCVrkzNfg0hxJikom6UUwKvTTmH9B/2NafUv6clIV0fl4hZ9TwA==}
+    engines: {node: '>= 22.0.0'}
+    cpu: [arm64]
+    os: [android]
+
+  '@mdream/rust-darwin-arm64@2.0.3':
+    resolution: {integrity: sha512-0tArymmWZ1Q1CVrTsdePxzuibB00+kJ8qPWIGh8sNiaXm9TKj+G1OprOxZYzZNerQKKZKF5MpMhKgYcyQdYliw==}
+    engines: {node: '>= 22.0.0'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@mdream/rust-darwin-x64@2.0.3':
+    resolution: {integrity: sha512-NvKFknrbNOLlK75Mb8/FbrGlJ69qyq6q7pNHbVqclrF79RgdTnL5UbAGv/EYquEa5BfQgpyINAZgtEcvxwILzA==}
+    engines: {node: '>= 22.0.0'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@mdream/rust-freebsd-x64@2.0.3':
+    resolution: {integrity: sha512-JFV6wtVp2yZRldJqsOeVYd+d11RxVYYytLeT6lWNzYR2hlANFTDHAvq00rhWS2aZW6ZzHU+oHyNbxO5MXJgxTg==}
+    engines: {node: '>= 22.0.0'}
+    cpu: [x64]
+    os: [freebsd]
+
+  '@mdream/rust-linux-arm-gnueabihf@2.0.3':
+    resolution: {integrity: sha512-QVLP41g2oItpV6wqNyKF3CkoDoz9sd/Sh8X27i4oBKy4jH3F7MjvEXX7+e548XY0iSrzCQq4MGSwG1tUx9jmmQ==}
+    engines: {node: '>= 22.0.0'}
+    cpu: [arm]
+    os: [linux]
+
+  '@mdream/rust-linux-arm64-gnu@2.0.3':
+    resolution: {integrity: sha512-5E06gnO+NWrjOoTszCidCv/IivLJj8joPEw6Wn8H3Qc6wRniUrlqe2LoOOTgNHyT2GR7hPXRP6bBEbMQYucD+A==}
+    engines: {node: '>= 22.0.0'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@mdream/rust-linux-arm64-musl@2.0.3':
+    resolution: {integrity: sha512-06b/C+5Nt3iEaR/u4aKU4Zm9zYBFvAqWwOGzmkLoRj6gEk4gAteSMNePsx8nA3UGbm34WEOOD+vG6Wj8yU14yw==}
+    engines: {node: '>= 22.0.0'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@mdream/rust-linux-x64-gnu@2.0.3':
+    resolution: {integrity: sha512-qmlIZS7vp+g/J9CFJJkUSP5cStVR64gfzwK0tmswbbGnIMgCfb3wn/KBTaJSn7Fhvvjlwh6CNFwmJ6jMd9TXfg==}
+    engines: {node: '>= 22.0.0'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@mdream/rust-linux-x64-musl@2.0.3':
+    resolution: {integrity: sha512-7WBEn+xmmVL/WT3du40kY0ilQoom6GlLKIyL2F2rvdRgenyjZ2eq34YYdg3DQa+mDcZZAsKn/TAR9xSzz8o+gw==}
+    engines: {node: '>= 22.0.0'}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@mdream/rust-wasm32-wasi@2.0.3':
+    resolution: {integrity: sha512-gjKh5NMj7Yr537HfiTZxlrRbmJ36S1mS16ytCJMwsJ9H0VtCWYSAdTFQJI27S6yLl+yAFZgtO2rPnqlnX2kaQA==}
+    engines: {node: '>= 22.0.0'}
+    cpu: [wasm32]
+    bundledDependencies:
+      - '@napi-rs/wasm-runtime'
+      - '@emnapi/core'
+      - '@emnapi/runtime'
+      - '@tybys/wasm-util'
+      - '@emnapi/wasi-threads'
+      - tslib
+
+  '@mdream/rust-win32-arm64-msvc@2.0.3':
+    resolution: {integrity: sha512-Ru7jM9QdrhJBspyCe43kwH7WHso/8WiE76AAQEho9OWo2xoiDKxPI02ecdAzRHbmhIVybUvPAbY4/MEzfr3/kA==}
+    engines: {node: '>= 22.0.0'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@mdream/rust-win32-x64-msvc@2.0.3':
+    resolution: {integrity: sha512-QiVAh+WDxHxYt3pkJeGdhVgm7MH5SEa2odSXcIannPC1bu6ylorZ1B9Xw9vxMKk/BmIHpFi+16r1FIEohziP6w==}
+    engines: {node: '>= 22.0.0'}
+    cpu: [x64]
+    os: [win32]
 
   '@microlabs/otel-cf-workers@1.0.0-rc.45':
     resolution: {integrity: sha512-PDHHTlgH1rwDGKe77DoNYjMvUlqE4uu2536/s2CqVBZFjSeKV5WK3/aeg6J6bd6h7ENJ6tndDprreiBHlimUsw==}
@@ -13061,6 +13152,10 @@ packages:
 
   mdn-data@2.0.30:
     resolution: {integrity: sha512-GaqWWShW4kv/G9IEucWScBx9G1/vsFZZJUO+tD26M8J8z3Kw5RDQjaoZe03YAClgeS/SWPOcb4nkFBTEi5DUEA==}
+
+  mdream@2.0.3:
+    resolution: {integrity: sha512-MQTuW2cHn/aHXH6zc23PmWys7vzw+yP8V8e6YUNkXK9tHA2dORNz0X8mkKqYOqHBDXWIyjYHtxVVFtpwactXoQ==}
+    hasBin: true
 
   media-typer@0.3.0:
     resolution: {integrity: sha512-dq+qelQ9akHpcOl/gUVRTxVIOkAJ1wR3QAvb4RsVjS8oVoFjDGTc679wJYmUmknUF5HwMLOgb5O+a3KxfWapPQ==}
@@ -18912,6 +19007,45 @@ snapshots:
 
   '@marijn/find-cluster-break@1.0.2': {}
 
+  '@mdream/rust-android-arm-eabi@2.0.3':
+    optional: true
+
+  '@mdream/rust-android-arm64@2.0.3':
+    optional: true
+
+  '@mdream/rust-darwin-arm64@2.0.3':
+    optional: true
+
+  '@mdream/rust-darwin-x64@2.0.3':
+    optional: true
+
+  '@mdream/rust-freebsd-x64@2.0.3':
+    optional: true
+
+  '@mdream/rust-linux-arm-gnueabihf@2.0.3':
+    optional: true
+
+  '@mdream/rust-linux-arm64-gnu@2.0.3':
+    optional: true
+
+  '@mdream/rust-linux-arm64-musl@2.0.3':
+    optional: true
+
+  '@mdream/rust-linux-x64-gnu@2.0.3':
+    optional: true
+
+  '@mdream/rust-linux-x64-musl@2.0.3':
+    optional: true
+
+  '@mdream/rust-wasm32-wasi@2.0.3':
+    optional: true
+
+  '@mdream/rust-win32-arm64-msvc@2.0.3':
+    optional: true
+
+  '@mdream/rust-win32-x64-msvc@2.0.3':
+    optional: true
+
   '@microlabs/otel-cf-workers@1.0.0-rc.45(@opentelemetry/api@1.9.1)':
     dependencies:
       '@opentelemetry/api': 1.9.1
@@ -24472,6 +24606,22 @@ snapshots:
   mdn-data@2.0.28: {}
 
   mdn-data@2.0.30: {}
+
+  mdream@2.0.3:
+    optionalDependencies:
+      '@mdream/rust-android-arm-eabi': 2.0.3
+      '@mdream/rust-android-arm64': 2.0.3
+      '@mdream/rust-darwin-arm64': 2.0.3
+      '@mdream/rust-darwin-x64': 2.0.3
+      '@mdream/rust-freebsd-x64': 2.0.3
+      '@mdream/rust-linux-arm-gnueabihf': 2.0.3
+      '@mdream/rust-linux-arm64-gnu': 2.0.3
+      '@mdream/rust-linux-arm64-musl': 2.0.3
+      '@mdream/rust-linux-x64-gnu': 2.0.3
+      '@mdream/rust-linux-x64-musl': 2.0.3
+      '@mdream/rust-wasm32-wasi': 2.0.3
+      '@mdream/rust-win32-arm64-msvc': 2.0.3
+      '@mdream/rust-win32-x64-msvc': 2.0.3
 
   media-typer@0.3.0: {}
 
