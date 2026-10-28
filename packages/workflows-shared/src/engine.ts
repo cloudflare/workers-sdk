@@ -1632,6 +1632,38 @@ export class Engine extends DurableObject<Env, EngineProps> {
 		void this.init(accountId, workflow, version, instance, event);
 	}
 
+	async alarm() {
+		if (this.isRunning) {
+			await this.priorityQueue?.handleNextAlarm();
+			return;
+		}
+
+		const metadata =
+			await this.ctx.storage.get<InstanceMetadata>(INSTANCE_METADATA);
+		if (metadata === undefined) {
+			return;
+		}
+
+		// The engine was evicted or aborted before its next sleep, retry or timeout,
+		// so pick the instance up again. A paused instance keeps its entries until it
+		// is resumed (init() would drop the ones that are due), and a finished one has
+		// nothing left to run.
+		const status = await this.getStatus();
+		if (
+			[
+				InstanceStatus.Errored,
+				InstanceStatus.Terminated,
+				InstanceStatus.Complete,
+				InstanceStatus.Paused,
+			].includes(status)
+		) {
+			return;
+		}
+
+		const { accountId, workflow, version, instance, event } = metadata;
+		void this.init(accountId, workflow, version, instance, event);
+	}
+
 	async hasInstance(): Promise<boolean> {
 		// INSTANCE_METADATA is written exactly once, by the first init() for this
 		// id, so its presence is the durable marker that the instance exists.
@@ -1755,6 +1787,7 @@ export class Engine extends DurableObject<Env, EngineProps> {
 			// Nothing runs after this, so stop the grace period wait, which would otherwise
 			// keep the finished engine busy for its full duration (issue #15809)
 			this.timeoutHandler.cancelGracePeriod();
+			await this.ctx.storage.deleteAlarm();
 			this.isRunning = false;
 		} catch (err) {
 			if (isAbortError(err)) {
@@ -1813,6 +1846,7 @@ export class Engine extends DurableObject<Env, EngineProps> {
 				await this.setStatus(accountId, instance.id, InstanceStatus.Errored);
 			});
 			this.timeoutHandler.cancelGracePeriod();
+			await this.ctx.storage.deleteAlarm();
 			this.isRunning = false;
 		}
 

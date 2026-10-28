@@ -1,4 +1,4 @@
-import { runInDurableObject } from "cloudflare:test";
+import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
 import { afterEach, describe, it, vi } from "vitest";
@@ -942,6 +942,94 @@ describe("Engine", () => {
 				expect(engine.timeoutHandler.latestGracePeriodAbortController).toBe(
 					undefined
 				);
+			});
+		});
+	});
+
+	describe("alarms", () => {
+		// An aborted or evicted engine has nothing left in memory, so its alarm is
+		// what wakes it for the next sleep, retry or timeout (issue #15809)
+		it("resumes a sleeping instance after its engine is aborted", async ({
+			expect,
+		}) => {
+			const instanceId = `ALARM-SLEEP-${crypto.randomUUID()}`;
+			const engineId = env.ENGINE.idFromName(instanceId);
+			const readLogs = async () => {
+				try {
+					return (await env.ENGINE.get(engineId).readLogs()) as EngineLogs;
+				} catch (e) {
+					// DO may still be aborting — retry
+					if (isAbortError(e)) {
+						return undefined;
+					}
+					throw e;
+				}
+			};
+
+			await runWorkflow(instanceId, async (_event, step) => {
+				await step.sleep("sleep", "1 second");
+				return await step.do("after sleep", async () => "result");
+			});
+
+			await vi.waitUntil(
+				async () =>
+					(await readLogs())?.logs.some(
+						(val) => val.event === InstanceEvent.SLEEP_START
+					),
+				{ timeout: 5000 }
+			);
+			await workerdUnsafe.abortAllDurableObjects();
+
+			await vi.waitUntil(
+				async () =>
+					(await readLogs())?.logs.some(
+						(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+					),
+				{ timeout: 5000 }
+			);
+			expect(await env.ENGINE.get(engineId).getStatus()).toBe(
+				InstanceStatus.Complete
+			);
+		});
+
+		it("keeps the sleep of a paused instance when its alarm fires", async ({
+			expect,
+		}) => {
+			const instanceId = `ALARM-PAUSED-SLEEP-${crypto.randomUUID()}`;
+			const engineId = env.ENGINE.idFromName(instanceId);
+
+			await runWorkflow(instanceId, async (_event, step) => {
+				await step.sleep("sleep", "1 second");
+				return await step.do("after sleep", async () => "result");
+			});
+
+			await vi.waitUntil(
+				async () =>
+					((await env.ENGINE.get(engineId).readLogs()) as EngineLogs).logs.some(
+						(val) => val.event === InstanceEvent.SLEEP_START
+					),
+				{ timeout: 5000 }
+			);
+			try {
+				await runInDurableObject(env.ENGINE.get(engineId), async (engine) => {
+					await engine.changeInstanceStatus("pause");
+				});
+			} catch (e) {
+				if (!isAbortError(e)) {
+					throw e;
+				}
+			}
+
+			// Stay paused past the end of the sleep, so its alarm runs while paused.
+			// The rest of the sleep must still be there when the instance is resumed.
+			await new Promise((resolve) => setTimeout(resolve, 1500));
+			await runDurableObjectAlarm(env.ENGINE.get(engineId));
+
+			await runInDurableObject(env.ENGINE.get(engineId), async (engine) => {
+				expect(await engine.getStatus()).toBe(InstanceStatus.Paused);
+				expect(
+					engine.priorityQueue?.getFirst((entry) => entry.type === "sleep")
+				).toBeDefined();
 			});
 		});
 	});

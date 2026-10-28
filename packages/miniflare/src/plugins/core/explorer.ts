@@ -194,8 +194,8 @@ export function getExplorerServices(
 	// Add Engine DO namespace bindings for each workflow.
 	// This gives the explorer direct access to Engine DOs via idFromString()
 	// for the instance detail view. Same pattern as DO namespace bindings above.
-	// The Engine DO has no alarms and its constructor is idempotent, so waking
-	// it up for reads is safe.
+	// The Engine DO's constructor is idempotent and its alarm only resumes an
+	// instance that is still running, so waking it up for reads is safe.
 	// Exported Workflows run their Engines in the Worker that exports them.
 	for (const workflowInfo of Object.values(bindingIdMap.workflows)) {
 		const exporter = workflowExporters.get(workflowInfo.name);

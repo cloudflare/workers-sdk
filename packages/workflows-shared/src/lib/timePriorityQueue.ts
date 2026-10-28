@@ -78,20 +78,10 @@ export class TimePriorityQueue {
 	 */
 	async add(entry: WakerPriorityEntry) {
 		await this.#ctx.storage.transaction(async () => {
-			// TODO: Handle this
-			// const waker = this.#env.WAKERS.idFromName(
-			// 	this.#instanceMetadata.instance.id
-			// );
-			// const wakerStub = this.#env.WAKERS.get(waker);
-			// We can optimise this by only calling it if time is sooner than any other
-			// await wakerStub.wake(
-			// 	new Date(entry.targetTimestamp),
-			// 	this.#instanceMetadata
-			// );
-
 			this.#heap.add(entry);
 			this.addEntryDB(entry);
 		});
+		await this.handleNextAlarm();
 	}
 
 	/**
@@ -141,19 +131,19 @@ export class TimePriorityQueue {
 
 	// Idempotent, perhaps name should suggest so
 	async handleNextAlarm() {
-		const nextWakeCall = this.#heap.peek();
+		// The engine's own alarm wakes it for the next entry, so a sleep, retry or
+		// timeout still runs after the engine is evicted or aborted. Entries in the
+		// past are left to the running engine, which removes them as they finish.
+		const now = Date.now();
+		const nextWakeCall = this.#heap
+			.toArray()
+			.filter((entry) => entry.targetTimestamp > now)
+			.sort(wakerPriorityEntryComparator)[0];
 		if (nextWakeCall === undefined) {
+			await this.#ctx.storage.deleteAlarm();
 			return;
 		}
-		// TODO: Handle this
-		// const waker = this.#env.WAKERS.idFromName(
-		// 	this.#instanceMetadata.instance.id
-		// );
-		// const wakerStub = this.#env.WAKERS.get(waker);
-		// await wakerStub.wake(
-		// 	new Date(nextWakeCall.targetTimestamp),
-		// 	this.#instanceMetadata
-		// );
+		await this.#ctx.storage.setAlarm(nextWakeCall.targetTimestamp);
 	}
 
 	getFirst(
