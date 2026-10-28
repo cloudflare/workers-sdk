@@ -7,9 +7,7 @@ export default mergeConfig(
 	defineProject({
 		plugins: [
 			cloudflareTest({
-				wrangler: {
-					configPath: "./wrangler.nodejs.jsonc",
-				},
+				config: "./cloudflare.nodejs.config.ts",
 			}),
 		],
 

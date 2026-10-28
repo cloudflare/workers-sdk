@@ -41,10 +41,12 @@ export class TestObject extends DurableObject<Env> {
 		const promises: Promise<void>[] = [];
 
 		for (let i = 0; i < calls; i++) {
+			// @ts-expect-error cf types leave bindings to this Worker untyped
 			promises.push(stub.record(`call-${i}`));
 		}
 
 		await Promise.all(promises);
+		// @ts-expect-error cf types leave bindings to this Worker untyped
 		return stub.getLog();
 	}
 
@@ -133,10 +135,12 @@ export class TestNamedEntrypoint extends WorkerEntrypoint<Env> {
 		const promises: Promise<void>[] = [];
 
 		for (let i = 0; i < calls; i++) {
+			// @ts-expect-error cf types leave bindings to this Worker untyped
 			promises.push(stub.record(`call-${i}`));
 		}
 
 		await Promise.all(promises);
+		// @ts-expect-error cf types leave bindings to this Worker untyped
 		return stub.getLog();
 	}
 }
