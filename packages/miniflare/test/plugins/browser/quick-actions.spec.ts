@@ -288,6 +288,34 @@ describe(
 			expect(body.result[1].results).toEqual([]);
 		});
 
+		test("screenshot returns image bytes or a base64 data URL", async ({
+			expect,
+		}) => {
+			const res = await quickAction("screenshot", { html: PAGE });
+			expect(res.status).toBe(200);
+			expect(res.headers.get("content-type")).toBe("image/png");
+			const png = Buffer.from(await res.arrayBuffer());
+			expect(png.subarray(1, 4).toString()).toBe("PNG");
+			// The IHDR chunk holds the width, which is the default viewport's
+			expect(png.readUInt32BE(16)).toBe(1920);
+
+			const base64 = await quickAction("screenshot", {
+				html: PAGE,
+				screenshotOptions: { type: "jpeg", encoding: "base64" },
+			});
+			expect(await base64.text()).toMatch(/^data:image\/jpeg;base64,\/9j\//);
+
+			const element = await quickAction("screenshot", {
+				html: PAGE,
+				selector: "h1",
+				scrollPage: true,
+			});
+			expect(element.status).toBe(200);
+			// Only the heading is captured, which spans the page minus its margins
+			const elementPng = Buffer.from(await element.arrayBuffer());
+			expect(elementPng.readUInt32BE(16)).toBe(1904);
+		});
+
 		test("json returns placeholder data shaped like the schema, and warns", async ({
 			expect,
 		}) => {
@@ -411,6 +439,50 @@ describe(
 					},
 				],
 			});
+
+			const invalidClip = await quickAction("screenshot", {
+				html: PAGE,
+				screenshotOptions: { type: "png", quality: 50, clip: 1 },
+				// Unknown options are ignored
+				foo: true,
+			});
+			expect(await invalidClip.json()).toEqual({
+				success: false,
+				errors: [
+					{
+						expected: "object",
+						code: "invalid_type",
+						path: ["screenshotOptions", "clip"],
+						message: "Invalid input: expected object, received number",
+					},
+				],
+			});
+
+			const conflicting = await quickAction("screenshot", {
+				html: PAGE,
+				screenshotOptions: {
+					fullPage: true,
+					clip: { x: 0, y: 0, width: 1, height: 1 },
+					quality: 50,
+				},
+			});
+			expect(await conflicting.json()).toEqual({
+				success: false,
+				errors: [
+					{
+						code: "custom",
+						message:
+							"screenshotOptions.clip and screenshotOptions.fullPage can't be set at the same time.",
+						path: ["screenshotOptions"],
+					},
+					{
+						code: "custom",
+						message:
+							"screenshotOptions.quality cannot be set when type is 'png'.",
+						path: ["screenshotOptions", "quality"],
+					},
+				],
+			});
 		});
 
 		test("page failures caused by the request return 422", async ({
@@ -485,6 +557,26 @@ describe(
 						code: 6005,
 						message:
 							"An invalid CSS selector was provided. Check your selector/waitForSelector/root syntax.",
+					},
+				],
+			});
+		});
+
+		test("other failures return 500 without browser time", async ({
+			expect,
+		}) => {
+			const res = await quickAction("screenshot", {
+				html: PAGE,
+				selector: "#missing",
+			});
+			expect(res.status).toBe(500);
+			expect(res.headers.has("x-browser-ms-used")).toBe(false);
+			expect(await res.json()).toEqual({
+				success: false,
+				errors: [
+					{
+						message: "Cannot read properties of null (reading 'screenshot')",
+						code: 2000,
 					},
 				],
 			});
