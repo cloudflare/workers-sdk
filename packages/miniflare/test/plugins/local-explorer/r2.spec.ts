@@ -67,7 +67,7 @@ describe("R2 API", () => {
 				])
 			);
 			expect(data.result_info).toMatchObject({
-				count: 2,
+				total_count: 2,
 			});
 		});
 	});

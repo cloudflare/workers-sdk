@@ -1693,6 +1693,9 @@ importers:
       esprima:
         specifier: 4.0.1
         version: 4.0.1
+      jsonc-parser:
+        specifier: catalog:default
+        version: 3.2.0
       recast:
         specifier: 0.23.11
         version: 0.23.11

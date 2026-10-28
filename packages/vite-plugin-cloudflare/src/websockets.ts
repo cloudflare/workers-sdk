@@ -4,7 +4,6 @@ import { UNKNOWN_HOST } from "./shared";
 import { createHeadersForIncomingMessage, getForwardedProto } from "./utils";
 import type { Headers, Miniflare } from "miniflare";
 import type { IncomingMessage } from "node:http";
-import type { Socket } from "node:net";
 import type { Duplex } from "node:stream";
 import type * as vite from "vite";
 
@@ -14,7 +13,8 @@ import type * as vite from "vite";
 export function handleWebSocket(
 	httpServer: vite.HttpServer,
 	miniflare: Miniflare,
-	entryWorkerName?: string
+	entryWorkerName?: string,
+	viteWebSocketEnabled = false
 ) {
 	const nodeWebSocket = new WebSocketServer({ noServer: true });
 
@@ -39,25 +39,11 @@ export function handleWebSocket(
 		}
 	);
 
-	// Prepend so the write-count baseline below is captured before another
-	// `upgrade` listener can answer the same request. Node dispatches `upgrade`
-	// to every listener, not just the first.
-	httpServer.prependListener(
+	httpServer.on(
 		"upgrade",
 		async (request: IncomingMessage, socket: Duplex, head: Buffer) => {
 			// Socket errors crash Node.js if unhandled
 			socket.on("error", () => socket.destroy());
-
-			// Another listener may already have completed the handshake (for
-			// example Vite DevTools at `/__devtools/__ws`, which the Worker does
-			// not route). `bytesWritten` is cumulative across keep-alive
-			// connections, so compare against a baseline rather than zero.
-			// See https://github.com/cloudflare/workers-sdk/issues/15654
-			const bytesWrittenAtStart =
-				(socket as unknown as Socket).bytesWritten ?? 0;
-			const isClaimed = () =>
-				socket.destroyed ||
-				((socket as unknown as Socket).bytesWritten ?? 0) > bytesWrittenAtStart;
 
 			try {
 				const rawHost = request.headers.host ?? UNKNOWN_HOST;
@@ -72,10 +58,16 @@ export function handleWebSocket(
 
 				const isViteRequest =
 					request.headers["sec-websocket-protocol"]?.startsWith("vite");
+				const isDevToolsRequest = url.pathname === "/__devtools/__ws";
 				const isSandboxRequest = hasSandboxOrigin(url.origin);
 
-				// Ignore Vite HMR WebSockets but forward on all sandbox requests.
-				if (isViteRequest && !isSandboxRequest) {
+				// Leave Vite HMR and DevTools upgrades to their own handlers, but
+				// forward all sandbox requests to the Worker.
+				if ((isViteRequest || isDevToolsRequest) && !isSandboxRequest) {
+					// No Vite handler claims HMR upgrades when `server.ws` is disabled.
+					if (isViteRequest && !viteWebSocketEnabled) {
+						socket.destroy();
+					}
 					return;
 				}
 
@@ -92,17 +84,11 @@ export function handleWebSocket(
 				const workerWebSocket = response.webSocket;
 
 				if (!workerWebSocket) {
-					// This listener does not own the socket. Destroy it only if no
-					// other listener has written a response in the meantime.
-					if (!isClaimed()) {
-						socket.destroy();
-					}
+					socket.destroy();
 					return;
 				}
 
-				// A listener claimed the socket while `dispatchFetch` was in
-				// flight, so a second upgrade would corrupt the connection.
-				if (isClaimed()) {
+				if (socket.destroyed) {
 					return;
 				}
 
@@ -129,14 +115,9 @@ export function handleWebSocket(
 				// This listener is `async`, so an uncaught rejection here escapes as
 				// an unhandled rejection — which terminates the Node.js process on
 				// modern versions and leaks the client socket. Tear the socket down
-				// instead. Defer the teardown one tick so another listener can claim
-				// the socket first, mirroring the `!workerWebSocket` path above.
+				// instead.
 				workerResponseHeaders.delete(request);
-				setImmediate(() => {
-					if (!isClaimed()) {
-						socket.destroy();
-					}
-				});
+				socket.destroy();
 			}
 		}
 	);
