@@ -6,7 +6,7 @@ This first version of the local Artifacts emulator requires Git 2.32 or newer in
 
 Git 2.32 provides `GIT_CONFIG_GLOBAL`, which the emulator uses to isolate host Git settings. Use an up-to-date, security-patched release.
 
-A binding with `"remote": true` or an omitted `remote` setting does not start the local emulator and does not need local Git. Production Artifacts also does not require Git on your machine. We plan to open-source a JavaScript Git engine in the future; it is not part of this initial local release, which uses native Git.
+A binding with `"remote": true` or an omitted `remote` setting does not start the local emulator and does not need local Git, unless remote bindings are disabled (see below). Production Artifacts also does not require Git on your machine. We plan to open-source a JavaScript Git engine in the future; it is not part of this initial local release, which uses native Git.
 
 ## Configure a binding
 
@@ -23,19 +23,29 @@ For a Wrangler project, add an Artifacts binding to `wrangler.jsonc`:
 }
 ```
 
-To try this unreleased feature from the Workers SDK checkout, install its dependencies and build Miniflare and Wrangler, then start the checkout's CLI from the app directory:
+With `@cloudflare/vite-plugin`, configure the binding in `cloudflare.config.ts`. There, `remote` is nested under `dev`, unlike Wrangler's top-level `"remote"`:
 
-```sh
-# From the workers-sdk root:
-pnpm install --frozen-lockfile
-pnpm --filter miniflare build
-pnpm --filter wrangler build
+```ts
+import { bindings, defineConfig } from "@cloudflare/config";
 
-# From your app directory, using the absolute path to this checkout:
-node /path/to/workers-sdk/packages/wrangler/bin/wrangler.js dev --port=0 --inspector-port=0
+export default defineConfig({
+	worker: {
+		name: "example-worker",
+		entrypoint: "./src/index.ts",
+		compatibilityDate: "2026-09-03",
+		env: {
+			REPOS: bindings.artifacts({
+				namespace: "examples",
+				dev: { remote: false },
+			}),
+		},
+	},
+});
 ```
 
-Open the URL on Wrangler's `Ready on` line. With `@cloudflare/vite-plugin`, use a `cloudflare.config.ts` binding configured with `remote: false` and start the Vite dev server. In Workers Vitest, point `cloudflareTest({ wrangler: { configPath: "./wrangler.jsonc" } })` at this config. These paths share the Miniflare implementation. The local emulator is opt-in: set `"remote": false` on the binding. If `remote` is omitted or set to `true`, development continues to use the deployed Artifacts resource and the credentials required by that tool. Do not rely on production repositories being available locally.
+In Workers Vitest, point `cloudflareTest({ wrangler: { configPath: "./wrangler.jsonc" } })` at the Wrangler config above. These paths share the Miniflare implementation.
+
+The local emulator is opt-in: set `remote: false` on the binding. If `remote` is omitted or set to `true`, development uses the deployed Artifacts resource and the credentials required by that tool; with `remote` omitted, the dev tool warns that changes affect real repositories. When remote bindings are disabled (`wrangler dev --local`, or Vite's `remoteBindings: false`), every Artifacts binding uses the local emulator. Do not rely on production repositories being available locally.
 
 A Worker can create and inspect a local repository:
 
@@ -65,15 +75,14 @@ After pushing `hello.txt` to `main`, read it in the Worker with `await repo.read
 
 Local repositories and metadata persist under the dev tool's Miniflare resource persistence path (for example, Wrangler's `.wrangler/state/` when persistence is enabled). Use the same project root and persistence settings to keep local data across reloads and restarts. Disabling persistence (for example, Vite's `persistState: false`) makes the data temporary. Local and deployed Artifacts are separate: local create, push, and delete operations do not update remote resources. To opt in to a remote binding, set `"remote": true` on that Artifacts binding and configure the credentials required by your development tool. Remote mode uses a Cloudflare proxy, not the local Git store; do not assume local data migrates to it.
 
-To reset local state, stop the dev server first, back up any repositories you need, then delete the `artifacts/` directory inside that dev tool's resource persistence path. Older draft persisted Artifacts layouts are not automatically migrated and may require this backup-and-reset procedure. Do not delete unrelated binding data in the same persistence directory.
+To reset local state, stop the dev server first, back up any repositories you need, then delete the `artifacts/` directory inside that dev tool's resource persistence path. Do not delete unrelated binding data in the same persistence directory.
 
 A local binding does not contact Cloudflare for repository operations. **Explicit imports from HTTPS Git sources are different:** they make outbound network requests from your development machine to the supplied host, including private-network hosts. Import does not follow HTTP redirects; supply the final HTTPS Git URL so credentials cannot be redirected to another destination. Imports can require authentication and may fail due to TLS certificates, connectivity, or upstream Git permissions. For a private Git CA, set `GIT_SSL_CAINFO` to the trusted CA file in the dev tool's host environment before starting the dev server. Do not disable certificate verification. After a successful import, URL credentials are omitted from the local repository metadata and Git config. In-flight process-crash recovery is not yet validated; treat partial local storage after an interrupted import as sensitive if the URL contained credentials. Treat the import URL as a secret while calling `import()` and avoid logging it. Avoid importing untrusted or private URLs in examples or tests. No remote resources are contacted by the local-only examples above.
 
 ## Troubleshooting and limits
 
 - If startup says local Artifacts requires Git, install Git globally, check `git --version` in the dev tool's environment, and restart the tool with `git` on PATH.
-- If startup rejects an older storage layout, back it up and reset only the Artifacts persistence directory; a restart alone will not convert it.
 - If Git asks for a username and password, use any username and the repository token as the password. If Git reports unauthorized, check the repository, scope, expiry, and revocation; do not use a Cloudflare or GitHub account password.
 - If startup reports `Address already in use`, the dev or inspector port may be occupied. Pass `--port=0 --inspector-port=0` and use the printed `Ready on` URL.
 - If a Git URL stops responding after restart, get the new `remote` from the binding; the loopback listener is tied to the dev process.
-- Local development is not a replica of production placement or infrastructure. The local Git endpoint is HTTP on loopback only, and local state and tokens do not transfer to a remote namespace. Miniflare Artifacts, Wrangler dev, and Vite local fixtures have passed Windows CI; Workers Vitest's Artifacts fixture has not been verified on Windows.
+- Local development is not a replica of production placement or infrastructure. The local Git endpoint is HTTP on loopback only, and local state and tokens do not transfer to a remote namespace.

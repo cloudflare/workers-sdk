@@ -1,15 +1,15 @@
-import { execFile } from "node:child_process";
-import { writeFile } from "node:fs/promises";
 import path from "node:path";
-import { promisify } from "node:util";
-import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
+import {
+	pushGitFixture,
+	runInTempDir,
+	seed,
+} from "@cloudflare/workers-utils/test-helpers";
 import { fetch } from "undici";
 import { afterEach, describe, it, vi } from "vitest";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { StartDevOptions } from "../../dev";
 
-const git = promisify(execFile);
 let stopDev: (() => Promise<void>) | undefined;
 vi.mock("../../dev/start-dev", async () => {
 	const actual = await vi.importActual<typeof import("../../dev/start-dev")>(
@@ -111,104 +111,89 @@ async function request<T>(url: string, endpoint: string): Promise<T> {
 	return (await response.json()) as T;
 }
 
+/** Starting dev twice, a reload and real Git can exceed the default timeout on slow runners. */
+const ARTIFACTS_DEV_TEST_TIMEOUT = 90_000;
+
+async function createAndPushDemo(url: string): Promise<Created> {
+	const created = await request<Created>(url, "/create");
+	await pushGitFixture({
+		directory: path.resolve("git-fixture"),
+		remote: created.remote,
+		token: created.token,
+		files: { "hello.txt": "hello artifacts\n" },
+	});
+	return created;
+}
+
 describe("Wrangler dev local Artifacts", { concurrent: false }, () => {
 	runInTempDir();
 
 	afterEach(async () => {
 		await stopRunningDev();
-		vi.unstubAllEnvs();
 	});
 
-	it("creates, pushes, reads and survives reload with remote=false", async ({
-		expect,
-	}) => {
-		const first = await startLocalDev();
-		let gitUrl = "";
-		try {
-			const created = await request<Created>(first.url, "/create");
-			gitUrl = created.remote;
-			expect(new URL(created.remote).hostname).toBe("127.0.0.1");
-			const directory = path.resolve("git-fixture");
-			await git("git", ["init", "--initial-branch=main", directory]);
-			await writeFile(path.join(directory, "hello.txt"), "hello artifacts\n");
-			// Do not inherit credential helpers, Cloudflare tokens or Git overrides.
-			const inherited = Object.fromEntries(
-				[
-					"PATH",
-					"SystemRoot",
-					"WINDIR",
-					"PATHEXT",
-					"TMP",
-					"TEMP",
-					"TMPDIR",
-					"LANG",
-				].map((key) => [key, process.env[key]])
-			);
-			const env = {
-				...inherited,
-				GIT_AUTHOR_NAME: "Example",
-				GIT_AUTHOR_EMAIL: "example@example.invalid",
-				GIT_COMMITTER_NAME: "Example",
-				GIT_COMMITTER_EMAIL: "example@example.invalid",
-				GIT_CONFIG_NOSYSTEM: "1",
-				// Git for Windows cannot use /dev/null as a global config file.
-				GIT_CONFIG_GLOBAL: path.join(directory, "absent-global-gitconfig"),
-				GIT_CONFIG_COUNT: "1",
-				GIT_CONFIG_KEY_0: "credential.helper",
-				GIT_CONFIG_VALUE_0: "",
-				GIT_TERMINAL_PROMPT: "0",
-			};
-			await git("git", ["add", "hello.txt"], { cwd: directory, env });
-			await git("git", ["commit", "-m", "fixture"], { cwd: directory, env });
-			await git(
-				"git",
-				[
-					"-c",
-					`http.extraHeader=Authorization: Bearer ${created.token}`,
-					"push",
-					created.remote,
-					"main",
-				],
-				{ cwd: directory, env }
-			);
-			expect(await (await fetch(first.url + "/file")).text()).toBe(
-				"hello artifacts\n"
-			);
-			expect(
-				(await request<{ repos: unknown[] }>(first.url, "/list")).repos
-			).toHaveLength(1);
-			await seed({ "index.js": worker.replace("initial", "reloaded") });
-			await vi.waitFor(
-				async () => {
-					expect(await (await fetch(first.url + "/version")).text()).toBe(
-						"reloaded"
-					);
-				},
-				{ timeout: 15_000 }
-			);
-			expect(await (await fetch(first.url + "/file")).text()).toBe(
-				"hello artifacts\n"
-			);
-		} finally {
-			await stopRunningDev();
-			await first.stopped;
+	it(
+		"creates, pushes and reads across a reload with remote=false",
+		{ timeout: ARTIFACTS_DEV_TEST_TIMEOUT },
+		async ({ expect }) => {
+			const dev = await startLocalDev();
+			try {
+				const created = await createAndPushDemo(dev.url);
+				expect(new URL(created.remote).hostname).toBe("127.0.0.1");
+				expect(await (await fetch(dev.url + "/file")).text()).toBe(
+					"hello artifacts\n"
+				);
+				expect(
+					(await request<{ repos: unknown[] }>(dev.url, "/list")).repos
+				).toHaveLength(1);
+				await seed({ "index.js": worker.replace("initial", "reloaded") });
+				await vi.waitFor(
+					async () => {
+						expect(await (await fetch(dev.url + "/version")).text()).toBe(
+							"reloaded"
+						);
+					},
+					{ timeout: 15_000 }
+				);
+				expect(await (await fetch(dev.url + "/file")).text()).toBe(
+					"hello artifacts\n"
+				);
+			} finally {
+				await stopRunningDev();
+				await dev.stopped;
+			}
 		}
-		await expect(
-			fetch(gitUrl + "/info/refs?service=git-upload-pack")
-		).rejects.toThrow();
-		const second = await startLocalDev();
-		try {
-			expect((await request<{ name: string }>(second.url, "/info")).name).toBe(
-				"demo"
-			);
-			expect(await (await fetch(second.url + "/file")).text()).toBe(
-				"hello artifacts\n"
-			);
-		} finally {
-			await stopRunningDev();
-			await second.stopped;
+	);
+
+	it(
+		"keeps repositories across restarts with remote=false",
+		{ timeout: ARTIFACTS_DEV_TEST_TIMEOUT },
+		async ({ expect }) => {
+			const first = await startLocalDev();
+			let gitUrl: string;
+			try {
+				gitUrl = (await createAndPushDemo(first.url)).remote;
+			} finally {
+				await stopRunningDev();
+				await first.stopped;
+			}
+			await expect(
+				fetch(gitUrl + "/info/refs?service=git-upload-pack")
+			).rejects.toThrow();
+			const second = await startLocalDev();
+			try {
+				expect(
+					(await request<{ name: string }>(second.url, "/info")).name
+				).toBe("demo");
+				expect(await (await fetch(second.url + "/file")).text()).toBe(
+					"hello artifacts\n"
+				);
+			} finally {
+				await stopRunningDev();
+				await second.stopped;
+			}
 		}
-	});
+	);
 
 	it("uses the local simulator for omitted remote with --local", async ({
 		expect,

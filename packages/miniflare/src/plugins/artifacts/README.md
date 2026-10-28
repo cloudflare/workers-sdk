@@ -7,9 +7,10 @@ The Artifacts plugin implements the local Artifacts binding in workerd. This
 first version requires Git 2.32 or newer installed globally on the host and
 available on PATH. Miniflare checks the Git version at local startup and gives
 installation or upgrade instructions if needed. A Node worker thread runs the
-native Git backend. An Artifacts binding uses local storage only when
-`dev.remote` is explicitly `false`; omitted or `true` settings use the remote
-proxy. We plan to open-source a JavaScript Git engine in the future; it is not
+native Git backend. An Artifacts binding uses the remote proxy when
+`dev.remote` is not `false` and the Worker has a remote proxy connection
+string; otherwise it uses local storage. Without a connection string, as with
+`wrangler dev --local`, the deployed resource is unreachable. We plan to open-source a JavaScript Git engine in the future; it is not
 included in this version.
 
 ## Local startup
@@ -142,10 +143,11 @@ A failed deletion leaves an inaccessible, persisted tombstone, so retrying
 `delete()` or creating the same name can finish native Git cleanup even after a
 process restart.
 
-## Explicit remote binding
+## Remote binding
 
-When `dev.remote` is `true`, this binding uses the remote-bindings proxy instead
-of creating local Artifacts storage or a local Git sidecar for that namespace.
+When `dev.remote` is not `false` and a remote proxy connection string is set,
+this binding uses the remote-bindings proxy instead of creating local Artifacts
+storage or a local Git sidecar for that namespace.
 
 ```mermaid
 sequenceDiagram
@@ -155,7 +157,7 @@ sequenceDiagram
     participant Proxy as Remote-bindings proxy
     participant CF as Cloudflare Artifacts
 
-    MF->>Plugin: getBindings() with remote: true
+    MF->>Plugin: getBindings() with a remote proxy connection
     Plugin-->>MF: Bind to remote proxy service
     MF->>Proxy: Start remote proxy Worker
     App->>Proxy: env.REPOS method call

@@ -1,88 +1,17 @@
-import { execFile } from "node:child_process";
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath as pathFromUrl } from "node:url";
-import { promisify } from "node:util";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { cloudflare } from "@cloudflare/vite-plugin";
 import { removeDirSync } from "@cloudflare/workers-utils";
-import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
+import { pushGitFixture } from "@cloudflare/workers-utils/test-helpers";
 import { createServer } from "vite";
 import { afterEach, test, vi } from "vitest";
-import { cloudflare } from "../index";
 
-vi.mock("node:fs", async (importOriginal) => {
-	const original = await importOriginal<typeof import("node:fs")>();
-	const { fileURLToPath } = await import("node:url");
-	const source = fileURLToPath(new URL("../workers/", import.meta.url));
-	const built = fileURLToPath(new URL("../../dist/workers/", import.meta.url));
-	return {
-		...original,
-		readFileSync(
-			file: Parameters<typeof original.readFileSync>[0],
-			options: Parameters<typeof original.readFileSync>[1]
-		) {
-			if (
-				typeof file === "string" &&
-				file.startsWith(source) &&
-				file.endsWith(".js")
-			) {
-				file = built + file.slice(source.length);
-			}
-			return original.readFileSync(file, options);
-		},
-	};
-});
+// Excluded from type checking, so a crashed run cannot leave a stray
+// `cloudflare.config.ts` in the plugin sources. A temp directory does not
+// work on Windows: Vite cannot load the entry from 8.3 paths like RUNNER~1.
+const FIXTURES_ROOT = path.resolve(__dirname, "fixtures", "artifacts-local");
 
-vi.mock("node:fs/promises", async (importOriginal) => {
-	const original = await importOriginal<typeof import("node:fs/promises")>();
-	const { fileURLToPath } = await import("node:url");
-	const source = fileURLToPath(new URL("../workers/", import.meta.url));
-	const built = fileURLToPath(new URL("../../dist/workers/", import.meta.url));
-	return {
-		...original,
-		readFile(
-			file: Parameters<typeof original.readFile>[0],
-			options: Parameters<typeof original.readFile>[1]
-		) {
-			if (
-				typeof file === "string" &&
-				file.startsWith(source) &&
-				file.endsWith(".js")
-			) {
-				file = built + file.slice(source.length);
-			}
-			return original.readFile(file, options);
-		},
-	};
-});
-
-const git = promisify(execFile);
-
-runInTempDir();
-afterEach(() => vi.unstubAllEnvs());
-
-test("Vite dev serves local Artifacts with explicit remote=false", async ({
-	expect,
-	onTestFinished,
-}) => {
-	vi.stubEnv("CLOUDFLARE_API_TOKEN", undefined);
-	vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
-	// On Windows, the system temp directory can use an 8.3 path (RUNNER~1).
-	// Vite resolves that entry as /index.js, but cannot load it from the
-	// virtual Worker module. Keep the fixture under the checkout instead.
-	const fixtureDir = fs.mkdtempSync(
-		path.join(
-			fs.realpathSync(path.dirname(pathFromUrl(import.meta.url))),
-			"artifacts-local-"
-		)
-	);
-	onTestFinished(() => removeDirSync(fixtureDir));
-	fs.writeFileSync(
-		path.join(fixtureDir, "package.json"),
-		JSON.stringify({ type: "module" })
-	);
-	fs.writeFileSync(
-		path.join(fixtureDir, "cloudflare.config.ts"),
-		`import { bindings, defineConfig } from "@cloudflare/config";
+const CONFIG = `import { bindings, defineConfig } from "@cloudflare/config";
 
 export default defineConfig({
 	worker: {
@@ -97,34 +26,52 @@ export default defineConfig({
 		},
 	},
 });
-`
-	);
-	fs.writeFileSync(
-		path.join(fixtureDir, "index.js"),
-		`export default {
+`;
+
+const WORKER = `export default {
   async fetch(request, env) {
-    if (new URL(request.url).pathname === "/create") return Response.json(await env.REPOS.create("demo"));
-    if (new URL(request.url).pathname === "/list") return Response.json(await env.REPOS.list());
+    const { pathname } = new URL(request.url);
+    if (pathname === "/create") return Response.json(await env.REPOS.create("demo"));
+    if (pathname === "/list") return Response.json(await env.REPOS.list());
     const repo = await env.REPOS.get("demo");
-    if (new URL(request.url).pathname === "/file") {
+    if (pathname === "/file") {
       const file = await repo.readFile({ ref: "main", path: "hello.txt" });
       return new Response(file ?? "missing", { status: file ? 200 : 404 });
     }
     return Response.json(await repo.info());
   }
-};`
+};`;
+
+function createFixture(): string {
+	fs.mkdirSync(FIXTURES_ROOT, { recursive: true });
+	const root = fs.realpathSync(
+		fs.mkdtempSync(path.join(FIXTURES_ROOT, "case-"))
 	);
+	fs.writeFileSync(
+		path.join(root, "package.json"),
+		JSON.stringify({ type: "module" })
+	);
+	fs.writeFileSync(path.join(root, "cloudflare.config.ts"), CONFIG);
+	fs.writeFileSync(path.join(root, "index.js"), WORKER);
+	return root;
+}
+
+afterEach(() => vi.unstubAllEnvs());
+
+test("Vite dev serves local Artifacts with explicit remote=false", async ({
+	expect,
+	onTestFinished,
+}) => {
+	vi.stubEnv("CLOUDFLARE_API_TOKEN", undefined);
+	vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
+	const root = createFixture();
+	onTestFinished(() => removeDirSync(root));
 	const server = await createServer({
-		root: fixtureDir,
+		root,
 		configFile: false,
 		logLevel: "silent",
 		server: { port: 0 },
-		plugins: [
-			cloudflare({
-				inspectorPort: false,
-				persistState: false,
-			}),
-		],
+		plugins: [cloudflare({ inspectorPort: false, persistState: false })],
 	});
 	let gitUrl: string | undefined;
 	try {
@@ -139,51 +86,12 @@ export default defineConfig({
 		};
 		gitUrl = created.remote;
 		expect(new URL(gitUrl).hostname).toBe("127.0.0.1");
-		const directory = path.join(fixtureDir, "git-fixture");
-		await git("git", ["init", "--initial-branch=main", directory]);
-		fs.writeFileSync(path.join(directory, "hello.txt"), "hello artifacts\n");
-		// Avoid inheriting host Git credentials or Cloudflare environment.
-		const inherited = Object.fromEntries(
-			[
-				"PATH",
-				"SystemRoot",
-				"WINDIR",
-				"PATHEXT",
-				"TMP",
-				"TEMP",
-				"TMPDIR",
-				"LANG",
-			].map((key) => [key, process.env[key]])
-		);
-		const gitOptions = {
-			cwd: directory,
-			env: {
-				...inherited,
-				GIT_AUTHOR_NAME: "Example",
-				GIT_AUTHOR_EMAIL: "example@example.invalid",
-				GIT_COMMITTER_NAME: "Example",
-				GIT_COMMITTER_EMAIL: "example@example.invalid",
-				GIT_CONFIG_NOSYSTEM: "1",
-				GIT_CONFIG_GLOBAL: path.join(directory, "absent-global-gitconfig"),
-				GIT_CONFIG_COUNT: "1",
-				GIT_CONFIG_KEY_0: "credential.helper",
-				GIT_CONFIG_VALUE_0: "",
-				GIT_TERMINAL_PROMPT: "0",
-			},
-		};
-		await git("git", ["add", "hello.txt"], gitOptions);
-		await git("git", ["commit", "-m", "fixture"], gitOptions);
-		await git(
-			"git",
-			[
-				"-c",
-				`http.extraHeader=Authorization: Bearer ${created.token}`,
-				"push",
-				gitUrl,
-				"main",
-			],
-			gitOptions
-		);
+		await pushGitFixture({
+			directory: path.join(root, "git-fixture"),
+			remote: created.remote,
+			token: created.token,
+			files: { "hello.txt": "hello artifacts\n" },
+		});
 		expect(await (await fetch(new URL("file", url))).text()).toBe(
 			"hello artifacts\n"
 		);
@@ -198,9 +106,7 @@ export default defineConfig({
 	} finally {
 		await server.close();
 	}
-	if (gitUrl) {
-		await expect(
-			fetch(gitUrl + "/info/refs?service=git-upload-pack")
-		).rejects.toThrow();
-	}
+	await expect(
+		fetch(gitUrl + "/info/refs?service=git-upload-pack")
+	).rejects.toThrow();
 });
