@@ -2,6 +2,10 @@ import { connect } from "@cloudflare/puppeteer";
 import { Response } from "../../../http";
 import { launchBrowser } from "../index";
 import { closeBrowserProcess } from "../process";
+import {
+	accessibilityTree,
+	accessibilityTreeSchema,
+} from "./accessibility-tree";
 import { content } from "./content";
 import { HtmlToMarkdownError, quickActionErrorResponse } from "./errors";
 import { json, jsonSchema } from "./json";
@@ -32,6 +36,10 @@ const QUICK_ACTIONS: Record<QuickActionName, QuickActionDefinition> = {
 	pdf: defineQuickAction(pdfSchema, pdf),
 	scrape: defineQuickAction(scrapeSchema, scrape),
 	links: defineQuickAction(linksSchema, links),
+	accessibilityTree: defineQuickAction(
+		accessibilityTreeSchema,
+		accessibilityTree
+	),
 	json: defineQuickAction(jsonSchema, json),
 	markdown: defineQuickAction(commonOptionsSchema, markdown),
 };

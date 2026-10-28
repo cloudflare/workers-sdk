@@ -288,6 +288,40 @@ describe(
 			expect(body.result[1].results).toEqual([]);
 		});
 
+		test("accessibilityTree returns the tree, or null for an unmatched root", async ({
+			expect,
+		}) => {
+			const res = await quickAction("accessibilityTree", { html: PAGE });
+			const { result } = (await res.json()) as {
+				result: { accessibilityTree: { role: string; name: string } };
+			};
+			expect(result.accessibilityTree).toMatchObject({
+				role: "RootWebArea",
+				name: "Quick actions",
+			});
+
+			const missing = await quickAction("accessibilityTree", {
+				html: PAGE,
+				root: "#missing",
+			});
+			expect(((await missing.json()) as { result: unknown }).result).toEqual({
+				accessibilityTree: null,
+			});
+
+			const heading = await quickAction("accessibilityTree", {
+				html: PAGE,
+				root: "h1",
+			});
+			expect(
+				((await heading.json()) as { result: { accessibilityTree: unknown } })
+					.result.accessibilityTree
+			).toMatchObject({
+				role: "heading",
+				name: "Hello",
+				children: [expect.objectContaining({ role: "StaticText" })],
+			});
+		});
+
 		test("screenshot returns image bytes or a base64 data URL", async ({
 			expect,
 		}) => {
