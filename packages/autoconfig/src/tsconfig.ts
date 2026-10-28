@@ -35,7 +35,7 @@ function getManualUpdateMessage(
 		case "no-include":
 			return `Add an \`include\` array to tsconfig.json that keeps the files it includes today and adds ${entry}, for example ${JSON.stringify(["**/*", CLOUDFLARE_TYPES_INCLUDE])}, ${reason}.`;
 		case "references":
-			return `tsconfig.json uses project references, which TypeScript checks separately. Add ${entry} to the \`include\` array of the referenced tsconfig that covers your Worker code ${reason}.`;
+			return `tsconfig.json uses project references, which TypeScript checks separately. Add this project's ${entry} folder to the \`include\` array of the referenced tsconfig that covers your Worker code, as a path relative to that tsconfig, ${reason}.`;
 	}
 }
 
@@ -97,7 +97,9 @@ export function getCloudflareTypesTsconfigUpdate(
 		return {
 			type: "manual",
 			message: getManualUpdateMessage(
-				Array.isArray(references) ? "references" : "no-include"
+				Array.isArray(references) && references.length > 0
+					? "references"
+					: "no-include"
 			),
 		};
 	}

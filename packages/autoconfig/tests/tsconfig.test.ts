@@ -122,8 +122,15 @@ describe("autoconfig - getCloudflareTypesTsconfigUpdate()", () => {
 		expect(getCloudflareTypesTsconfigUpdate(process.cwd())).toEqual({
 			type: "manual",
 			message: expect.stringContaining(
-				'Add ".cloudflare/types" to the `include` array of the referenced tsconfig'
+				"to the `include` array of the referenced tsconfig that covers your Worker code, as a path relative to that tsconfig"
 			),
+		});
+
+		// Without any referenced config, the root's default or inherited includes apply
+		await seed({ "tsconfig.json": JSON.stringify({ references: [] }) });
+		expect(getCloudflareTypesTsconfigUpdate(process.cwd())).toEqual({
+			type: "manual",
+			message: expect.stringContaining("Add an `include` array"),
 		});
 	});
 
