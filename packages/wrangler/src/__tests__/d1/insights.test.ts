@@ -77,18 +77,10 @@ describe("insights", () => {
 			...getMswSuccessMembershipHandlers([{ id: "1701", name: "enterprise" }]),
 			http.get("*/accounts/:accountId/d1/database/:id", ({ params }) => {
 				databaseLookups.push(String(params.id));
-				if (params.id === "deleted-db-uuid") {
-					return HttpResponse.json(
-						{ success: false, errors: [{ code: 7404, message: "Not Found" }] },
-						{ status: 404 }
-					);
-				}
-				return HttpResponse.json({
-					result: { uuid: params.id, name: "northwind" },
-					success: true,
-					errors: [],
-					messages: [],
-				});
+				return HttpResponse.json(
+					{ success: false, errors: [{ code: 7404, message: "Not Found" }] },
+					{ status: 404 }
+				);
 			}),
 			http.post("*/graphql", async ({ request }) => {
 				graphqlQuery = ((await request.json()) as { query: string }).query;
@@ -128,7 +120,7 @@ describe("insights", () => {
 										{
 											dimensions: {
 												query: "SELECT 1",
-												databaseId: "deleted-db-uuid",
+												databaseId: "other-db-uuid",
 											},
 											sum: { rowsRead: 1 },
 											count: 1,
@@ -147,10 +139,7 @@ describe("insights", () => {
 
 		expect(graphqlQuery).toContain("orderBy: [sum_queryDurationMs_DESC]");
 
-		expect(databaseLookups.sort()).toEqual([
-			"deleted-db-uuid",
-			"northwind-uuid",
-		]);
+		expect(databaseLookups).toEqual([]);
 		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
 			[
 			  {
@@ -158,7 +147,6 @@ describe("insights", () => {
 			    "avgRowsRead": 1000,
 			    "avgRowsWritten": 0,
 			    "databaseId": "northwind-uuid",
-			    "databaseName": "northwind",
 			    "numberOfTimesRun": 3,
 			    "query": "SELECT * FROM Orders",
 			    "queryEfficiency": 0.01,
@@ -171,7 +159,6 @@ describe("insights", () => {
 			    "avgRowsRead": 0,
 			    "avgRowsWritten": 0,
 			    "databaseId": "northwind-uuid",
-			    "databaseName": "northwind",
 			    "numberOfTimesRun": 2,
 			    "query": "SELECT * FROM Customers",
 			    "queryEfficiency": 0,
@@ -183,8 +170,7 @@ describe("insights", () => {
 			    "avgDurationMs": 0,
 			    "avgRowsRead": 0,
 			    "avgRowsWritten": 0,
-			    "databaseId": "deleted-db-uuid",
-			    "databaseName": null,
+			    "databaseId": "other-db-uuid",
 			    "numberOfTimesRun": 1,
 			    "query": "SELECT 1",
 			    "queryEfficiency": 0,
@@ -194,51 +180,6 @@ describe("insights", () => {
 			  },
 			]
 		`);
-	});
-
-	it("should name the D1: Read permission when a database name lookup is forbidden", async ({
-		expect,
-	}) => {
-		setIsTTY(false);
-		msw.use(
-			...getMswSuccessMembershipHandlers([{ id: "1701", name: "enterprise" }]),
-			http.get("*/accounts/:accountId/d1/database/:id", () =>
-				HttpResponse.json(
-					{
-						success: false,
-						errors: [{ code: 10000, message: "Authentication error" }],
-					},
-					{ status: 403 }
-				)
-			),
-			http.post("*/graphql", () =>
-				HttpResponse.json({
-					data: {
-						viewer: {
-							accounts: [
-								{
-									d1QueriesAdaptiveGroups: [
-										{
-											dimensions: {
-												query: "SELECT 1",
-												databaseId: "northwind-uuid",
-											},
-											sum: { rowsRead: 1 },
-											count: 1,
-										},
-									],
-								},
-							],
-						},
-					},
-					errors: null,
-				})
-			)
-		);
-
-		await expect(() => runWrangler("d1 insights --json")).rejects.toThrow(
-			/not allowed to read D1 database northwind-uuid[\s\S]*"Account Analytics: Read" and "D1: Read" permissions/
-		);
 	});
 
 	it("should throw if database doesn't exist", async ({ expect }) => {

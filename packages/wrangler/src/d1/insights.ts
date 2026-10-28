@@ -1,13 +1,10 @@
-import { APIError, UserError } from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { fetchGraphqlResultOrThrow, GraphQLAnalyticsError } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import {
-	getDatabaseByNameOrBinding,
-	getDatabaseInfoFromIdOrName,
-} from "./utils";
+import { getDatabaseByNameOrBinding } from "./utils";
 import type { D1QueriesGraphQLResponse } from "./types";
 
 const cliOptionToGraphQLOption = {
@@ -64,10 +61,6 @@ export function getDurationDates(durationString: string) {
 	return [startDate.toISOString(), endDate.toISOString()];
 }
 
-const REQUIRED_PERMISSIONS_HELP = dedent`
-	\`wrangler d1 insights\` needs the "Account Analytics: Read" and "D1: Read" permissions on this account. If you use CLOUDFLARE_API_TOKEN, add both permissions to the token at https://dash.cloudflare.com/profile/api-tokens. Otherwise run \`wrangler login\` again, and check that CLOUDFLARE_ACCOUNT_ID or \`account_id\` points at an account you are a member of.
-`;
-
 function toD1InsightsUserError(
 	error: GraphQLAnalyticsError,
 	accountId: string
@@ -88,7 +81,7 @@ function toD1InsightsUserError(
 				dedent`
 					Could not get D1 insights: not allowed to read analytics for account ${accountId} (${error.apiMessage}).
 
-					${REQUIRED_PERMISSIONS_HELP}
+					\`wrangler d1 insights\` needs the "Account Analytics: Read" permission on this account. If you use CLOUDFLARE_API_TOKEN, add that permission to the token at https://dash.cloudflare.com/profile/api-tokens. Otherwise run \`wrangler login\` again, and check that CLOUDFLARE_ACCOUNT_ID or \`account_id\` points at an account you are a member of.
 				`,
 				{ telemetryMessage: "d1 insights graphql unauthorized", cause: error }
 			);
@@ -236,52 +229,6 @@ export const d1InsightsCommand = createCommand({
 				throw err;
 			});
 
-		const databaseIds = db
-			? []
-			: [
-					...new Set(
-						(
-							graphqlQueriesResult?.data?.viewer?.accounts[0]
-								?.d1QueriesAdaptiveGroups ?? []
-						).flatMap((row) => row.dimensions.databaseId ?? [])
-					),
-				];
-		const databaseNames = new Map<string | undefined, string | null>(
-			await Promise.all(
-				databaseIds.map(
-					async (id) =>
-						[
-							id,
-							await getDatabaseInfoFromIdOrName(config, accountId, id).then(
-								(database) => database.name,
-								(err: unknown) => {
-									if (err instanceof APIError && err.status === 404) {
-										return null;
-									}
-									if (
-										err instanceof APIError &&
-										(err.status === 401 || err.status === 403)
-									) {
-										throw new UserError(
-											dedent`
-												Could not get D1 insights: not allowed to read D1 database ${id} in account ${accountId}. Without a database name, \`wrangler d1 insights\` looks up the name of each database in the results.
-
-												${REQUIRED_PERMISSIONS_HELP}
-											`,
-											{
-												telemetryMessage: "d1 insights database lookup unauthorized",
-												cause: err,
-											}
-										);
-									}
-									throw err;
-								}
-							),
-						] as const
-				)
-			)
-		);
-
 		graphqlQueriesResult?.data?.viewer?.accounts[0]?.d1QueriesAdaptiveGroups?.forEach(
 			(row) => {
 				if (!row.dimensions.query) {
@@ -300,13 +247,7 @@ export const d1InsightsCommand = createCommand({
 						row?.avg?.rowsReturned && row?.avg?.rowsRead
 							? row?.avg?.rowsReturned / row?.avg?.rowsRead
 							: 0,
-					...(db
-						? {}
-						: {
-								databaseId: row.dimensions.databaseId ?? null,
-								databaseName:
-									databaseNames.get(row.dimensions.databaseId) ?? null,
-							}),
+					...(db ? {} : { databaseId: row.dimensions.databaseId ?? null }),
 				});
 			}
 		);
