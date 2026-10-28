@@ -195,19 +195,22 @@ describe("Wrangler dev local Artifacts", { concurrent: false }, () => {
 		}
 	);
 
-	it("uses the local simulator for omitted remote with --local", async ({
-		expect,
-	}) => {
-		const dev = await startLocalDev({ remote: null, args: "--local" });
-		try {
-			expect(output.out).toMatch(/env\.REPOS \(examples\)\s+Artifacts\s+local/);
-			expect(
-				(await request<{ repos: unknown[] }>(dev.url, "/list")).repos
-			).toEqual([]);
-			expect(output.warn).not.toContain("uses the deployed resource");
-		} finally {
-			await stopRunningDev();
-			await dev.stopped;
+	it.for([null, true])(
+		"uses the local simulator for remote=%s with --local",
+		async (remote, { expect }) => {
+			const dev = await startLocalDev({ remote, args: "--local" });
+			try {
+				expect(output.out).toMatch(
+					/env\.REPOS \(examples\)\s+Artifacts\s+local/
+				);
+				expect(
+					(await request<{ repos: unknown[] }>(dev.url, "/list")).repos
+				).toEqual([]);
+				expect(output.warn).not.toContain("uses the deployed resource");
+			} finally {
+				await stopRunningDev();
+				await dev.stopped;
+			}
 		}
-	});
+	);
 });

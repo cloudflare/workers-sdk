@@ -3,7 +3,6 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
-
 /** Variables host Git needs to run; everything else is dropped. */
 const INHERITED_ENV_KEYS = [
 	"PATH",
