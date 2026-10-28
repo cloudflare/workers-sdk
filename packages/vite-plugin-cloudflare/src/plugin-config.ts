@@ -9,6 +9,7 @@ import {
 	generateTypes,
 	InputWorkerSchema,
 	loadAndParseConfig,
+	resolveAndParseConfig,
 } from "@cloudflare/config";
 import {
 	generateRuntimeTypes,
@@ -29,6 +30,8 @@ import { readBuildOutputPreview } from "./build-output-preview";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
 import type { BuildOutputPreviewWorker } from "./build-output-preview";
 import type {
+	CloudflareConfig,
+	ConfigContext,
 	ParsedInputContainerConfig,
 	InputWorkerConfig,
 	ParsedInputConfig,
@@ -133,6 +136,16 @@ type WorkerConfigProvider =
 	  }) => InputWorkerConfig);
 
 export interface PluginConfig extends EntryWorkerOptions {
+	/**
+	 * Complete project configuration supplied by a framework instead of loading
+	 * `cloudflare.config.ts`. The existing `config` customizer is applied afterwards.
+	 * File-based type generation is skipped when this option is provided.
+	 */
+	projectConfig?:
+		| CloudflareConfig
+		| ((
+				context: ConfigContext
+		  ) => CloudflareConfig | Promise<CloudflareConfig>);
 	auxiliaryWorkers?: AuxiliaryWorkerOptions[];
 	/** Configuration for a dedicated prerender Worker. */
 	prerenderWorker?: PrerenderWorkerOptions;
@@ -376,6 +389,7 @@ export async function resolvePluginConfig(
 		root,
 		mode,
 		types,
+		projectConfig: pluginConfig.projectConfig,
 	});
 	const settings = {
 		accountId: loadedConfig?.parsedConfig.accountId,
@@ -383,15 +397,16 @@ export async function resolvePluginConfig(
 	};
 	const containers = loadedConfig?.parsedConfig.containers ?? [];
 	if (loadedConfig) {
-		configPaths.add(loadedConfig.configPath);
+		if (loadedConfig.configPath) {
+			configPaths.add(loadedConfig.configPath);
+		}
 		for (const dep of loadedConfig.dependencies) {
 			configPaths.add(dep);
 		}
 	}
 
-	// Type generation happens while loading the file above. The plugin-level
-	// customizer is intentionally applied afterwards so generated declarations
-	// only describe `cloudflare.config.ts`.
+	// File-based type generation runs before the Worker customizer so generated
+	// declarations describe the authored file. Frameworks supply their own types.
 	const entryWorkerResolvedConfig = resolveEntryWorkerConfig({
 		workerConfig:
 			loadedConfig === undefined
@@ -693,25 +708,47 @@ const TYPES_OUTPUT_PATH = ".cloudflare/types/index.d.ts";
 const CONFIG_PACKAGE = "cf/config";
 
 /**
- * Load and validate `cloudflare.config.ts` via `@cloudflare/config`, if it
- * exists. Returns the parsed default export, the absolute path of the loaded file, and
- * the files imported while resolving the config (for watch-mode).
+ * Resolve and validate supplied project configuration, or load
+ * `cloudflare.config.ts` via `@cloudflare/config` if it exists. File-based
+ * configuration also returns the loaded file and its imports for watch-mode.
  *
  * When `types.generate` is true, also writes `.cloudflare/types/index.d.ts`
- * when the generated content differs from what's already on disk.
+ * when the generated content differs from what's already on disk. Supplied
+ * project configuration skips file-based type generation.
  */
 async function loadCloudflareConfig(options: {
 	root: string;
 	mode: string;
+	projectConfig?: PluginConfig["projectConfig"];
 	types: { generate: boolean; includeRuntime: boolean };
 }): Promise<
 	| {
 			parsedConfig: ParsedInputConfigWithWorker;
-			configPath: string;
+			configPath?: string;
 			dependencies: Set<string>;
 	  }
 	| undefined
 > {
+	if (options.projectConfig !== undefined) {
+		const result = await resolveAndParseConfig(options.projectConfig, {
+			isPreview: isPreviewBuild(),
+			mode: options.mode,
+		});
+		if (!result.success) {
+			throw new Error(
+				`Invalid \`projectConfig\`:\n${formatZodError(result.error)}`
+			);
+		}
+		if (!result.data.worker) {
+			throw new Error(
+				"`projectConfig` must define a Worker using the `worker` property."
+			);
+		}
+		return {
+			parsedConfig: { ...result.data, worker: result.data.worker },
+			dependencies: new Set(),
+		};
+	}
 	const configPath = path.resolve(options.root, CONFIG_FILENAME);
 
 	if (!fs.existsSync(configPath)) {
