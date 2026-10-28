@@ -59,7 +59,7 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "5.20261019.1",
 		"@cloudflare/workers-utils": "0.48.0",
-		"@remix-run/node-fetch-server": "0.8.1",
+		"@remix-run/node-fetch-server": "1.0.0",
 		"@types/node": "22.15.17",
 		"@types/semver": "7.8.0",
 		"@types/ws": "8.18.2",

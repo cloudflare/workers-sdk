@@ -401,6 +401,54 @@ describe("createRequestHandler", () => {
 		expect(capturedUrls[0]).toBe(`http://127.0.0.1:${port}/path`);
 	});
 
+	test.for([
+		{
+			name: "preserves a custom status text",
+			init: { status: 231, statusText: "global-before" },
+			expected: { status: 231, statusText: "global-before" },
+		},
+		{
+			name: "preserves an empty status text",
+			init: { status: 231, statusText: "" },
+			expected: { status: 231, statusText: "" },
+		},
+		{
+			name: "preserves the default empty status text when none is set",
+			init: { status: 404 },
+			expected: { status: 404, statusText: "" },
+		},
+	])("$name", async ({ init, expected }, { expect }) => {
+		const handler = createRequestHandler(
+			async () => new MiniflareResponse("body", init)
+		);
+
+		httpServer = http.createServer((req, res) => {
+			void handler(
+				req as unknown as Parameters<typeof handler>[0],
+				res,
+				(error: unknown) => {
+					res.statusCode = 500;
+					res.end(error instanceof Error ? error.message : String(error));
+				}
+			);
+		});
+
+		await new Promise<void>((r) =>
+			httpServer.listen(0, "127.0.0.1", () => {
+				port = (httpServer.address() as AddressInfo).port;
+				r();
+			})
+		);
+
+		const response = await fetch(`http://127.0.0.1:${port}/`);
+
+		expect({
+			status: response.status,
+			statusText: response.statusText,
+		}).toEqual(expected);
+		expect(await response.text()).toBe("body");
+	});
+
 	test("returns the Worker response when the Worker cancels an oversized body", async ({
 		expect,
 	}) => {

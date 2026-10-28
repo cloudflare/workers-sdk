@@ -338,8 +338,8 @@ importers:
         specifier: 0.48.0
         version: 0.48.0(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))
       '@remix-run/node-fetch-server':
-        specifier: 0.8.1
-        version: 0.8.1
+        specifier: 1.0.0
+        version: 1.0.0
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
@@ -3278,8 +3278,8 @@ packages:
       typescript:
         optional: true
 
-  '@remix-run/node-fetch-server@0.8.1':
-    resolution: {integrity: sha512-J1dev372wtJqmqn9U/qbpbZxbJSQrogNN2+Qv1lKlpATpe/WQ9aCZfl/xSb9d2Rgh1IyLSvNxZAXPZxruO6Xig==}
+  '@remix-run/node-fetch-server@1.0.0':
+    resolution: {integrity: sha512-M/zI70dmLQdIae+mG95XecvoI3uw0o/ZwflsMAFtaQA/MceznyKaT8aSPvvGVK6yRufzQrY++Ohwei7EhyY3qw==}
 
   '@remix-run/router@1.19.2':
     resolution: {integrity: sha512-baiMx18+IMuD1yyvOGaHM9QrVUPGGG0jC+z+IPHnRJWUAUvaKuWKyE8gjDj2rzv3sz9zOGoRSPgeBVHRhZnBlA==}
@@ -9181,7 +9181,7 @@ snapshots:
     optionalDependencies:
       typescript: 5.8.3
 
-  '@remix-run/node-fetch-server@0.8.1': {}
+  '@remix-run/node-fetch-server@1.0.0': {}
 
   '@remix-run/router@1.19.2': {}
 
