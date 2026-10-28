@@ -32,11 +32,11 @@
 	},
 	"dependencies": {
 		"@cloudflare/cli-shared-helpers": "0.2.7",
-		"@cloudflare/deploy-helpers": "0.24.0",
+		"@cloudflare/deploy-helpers": "0.24.1",
 		"@cloudflare/workers-auth": "0.15.1",
 		"@cloudflare/workers-utils": "0.49.0",
 		"chalk": "catalog:default",
-		"miniflare": "5.20261023.0-beta",
+		"miniflare": "5.20261023.1-beta",
 		"undici": "catalog:default",
 		"ws": "catalog:default"
 	},
