@@ -1,6 +1,7 @@
+import assert from "node:assert";
 import http from "node:http";
 import { Miniflare } from "miniflare";
-import { afterAll, beforeAll, describe, test } from "vitest";
+import { afterAll, beforeAll, describe, test, vi } from "vitest";
 import {
 	disposeWithRetry,
 	singleModuleManifest,
@@ -35,6 +36,8 @@ const PAGE = `<!DOCTYPE html>
 	<a href="#top">Top</a>
 </body></html>`;
 
+const CHROME_INSTALL_TIMEOUT = 10 * 60 * 1_000;
+
 let mf: Miniflare;
 let log: TestLog;
 let origin: string;
@@ -57,6 +60,8 @@ describe(
 	{ concurrent: false, timeout: 30_000 },
 	() => {
 		beforeAll(async () => {
+			// The CLI spinner shown while downloading Chrome writes to stdout
+			vi.spyOn(process.stdout, "write").mockImplementation(() => true);
 			server = http.createServer((req, res) => {
 				if (req.url === "/redirect") {
 					res.writeHead(302, { location: "/" });
@@ -89,19 +94,131 @@ describe(
 					},
 				],
 			});
-		});
+			// Launches (and on a cold machine downloads) Chrome before timed tests
+			const warm = await quickAction("content", { html: "<p>warm</p>" });
+			assert.strictEqual(warm.status, 200, await warm.text());
+		}, CHROME_INSTALL_TIMEOUT);
 
 		afterAll(async () => {
 			await disposeWithRetry(mf);
 			await new Promise((resolve) => server.close(resolve));
+			vi.restoreAllMocks();
 		});
 
-		test("unknown actions reject the call", async ({ expect }) => {
+		test("content returns the rendered HTML and page metadata", async ({
+			expect,
+		}) => {
+			const res = await quickAction("content", { html: PAGE });
+			expect(res.status).toBe(200);
+			expect(res.headers.get("content-type")).toBe("application/json");
+			expect(Number(res.headers.get("x-browser-ms-used"))).toBeGreaterThan(0);
+			const body = await res.json();
+			expect(body).toEqual({
+				success: true,
+				result: expect.stringContaining("<h1>Hello</h1>"),
+				meta: { status: 200, title: "Quick actions" },
+			});
+		});
+
+		test("content runs no page scripts if setJavaScriptEnabled is false", async ({
+			expect,
+		}) => {
+			const html =
+				'<title>static</title><script>document.title = "scripted"</script>';
+			const enabled = await quickAction("content", { html });
+			expect(
+				((await enabled.json()) as { meta: { title: string } }).meta.title
+			).toBe("scripted");
+			const disabled = await quickAction("content", {
+				html,
+				setJavaScriptEnabled: false,
+			});
+			expect(
+				((await disabled.json()) as { meta: { title: string } }).meta.title
+			).toBe("static");
+		});
+
+		test("content reports the origin response and redirects for a url", async ({
+			expect,
+		}) => {
+			const res = await quickAction("content", { url: `${origin}/redirect` });
+			expect(res.status).toBe(200);
+			const { meta } = (await res.json()) as {
+				meta: {
+					status: number;
+					finalUrl: string;
+					headers: Record<string, string>;
+					redirectChain: { url: string; status: number }[];
+				};
+			};
+			expect(meta.status).toBe(200);
+			expect(meta.finalUrl).toBe(`${origin}/`);
+			expect(meta.headers["x-custom"]).toBe("yes");
+			expect(meta.redirectChain).toMatchObject([
+				{ url: `${origin}/redirect`, status: 302 },
+			]);
+		});
+
+		test("invalid options return the validation issues", async ({ expect }) => {
+			const res = await quickAction("content", {
+				url: origin,
+				html: PAGE,
+				browser: "chrome",
+			});
+			expect(res.status).toBe(400);
+			expect(res.headers.get("x-browser-ms-used")).toBe("0");
+			expect(await res.json()).toEqual({
+				success: false,
+				errors: [
+					{
+						code: "custom",
+						message:
+							"url and html cannot be set at the same time, please remove one of them",
+						path: ["url"],
+					},
+					{
+						code: "invalid_value",
+						values: ["kitesurf"],
+						path: [],
+						message: 'Invalid input: expected "kitesurf"',
+					},
+				],
+			});
+		});
+
+		test("cacheTTL is accepted and ignored", async ({ expect }) => {
+			const res = await quickAction("content", { html: PAGE, cacheTTL: -1 });
+			expect(res.status).toBe(200);
+			expect(await res.json()).toMatchObject({ success: true });
+		});
+
+		test("unknown actions and missing options reject the call", async ({
+			expect,
+		}) => {
 			const unknown = await quickAction("crawl", { url: origin });
 			expect(unknown.status).toBe(599);
 			expect(await unknown.json()).toEqual({
 				name: "Error",
 				message: "Invalid quick action: crawl",
+			});
+
+			const missing = await call(["content"]);
+			expect(await missing.json()).toEqual({
+				name: "TypeError",
+				message: "Cannot read properties of undefined (reading 'url')",
+			});
+		});
+
+		test("the kitesurf browser rejects the call", async ({ expect }) => {
+			const res = await quickAction("content", {
+				html: PAGE,
+				browser: "kitesurf",
+			});
+			expect(res.status).toBe(599);
+			expect(await res.json()).toEqual({
+				name: "Error",
+				message:
+					'The "kitesurf" browser is not supported in local development. Remove the `browser` option to use the local browser.',
 			});
 		});
 	}
