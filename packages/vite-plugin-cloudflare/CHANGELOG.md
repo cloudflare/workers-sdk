@@ -1,5 +1,55 @@
 # @cloudflare/vite-plugin
 
+## 1.66.0
+
+### Minor Changes
+
+- [#16539](https://github.com/cloudflare/workers-sdk/pull/16539) [`046db08`](https://github.com/cloudflare/workers-sdk/commit/046db088800be3442f72475ad48b5950f3105309) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update the development registry to use the canonical Cloudflare path
+
+  Upgrade Miniflare to 5.20261023.1-beta and Wrangler to 4.154.0. Vite plugin v1 now uses `CLOUDFLARE_DEV_REGISTRY_PATH` or `<Cloudflare config directory>/dev-registry/v5` for Worker discovery. `MINIFLARE_REGISTRY_PATH` is no longer read. When mixing Vite and Wrangler development sessions, set the same `CLOUDFLARE_DEV_REGISTRY_PATH` for both because Wrangler retains its legacy default.
+
+- [#16407](https://github.com/cloudflare/workers-sdk/pull/16407) [`9ec1101`](https://github.com/cloudflare/workers-sdk/commit/9ec1101c2c8edacfb200f585d48210f98848fdeb) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Support remote Hyperdrive bindings in Vite plugin v1 development and preview
+
+  Set `remote: true` on a Hyperdrive binding in `wrangler.jsonc` to connect to its deployed configuration without a local database connection string. The retained remote proxy exposes the binding's connection string and socket streams, and remote session cleanup preserves startup errors and shares one disposal attempt.
+
+### Patch Changes
+
+- [#16542](https://github.com/cloudflare/workers-sdk/pull/16542) [`ef573d4`](https://github.com/cloudflare/workers-sdk/commit/ef573d403f8a564f2252e97ade451b617af8b77c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Preserve machine-readable error properties from remote bindings
+
+  Enable enhanced error serialization on the remote proxy Worker used by Vite plugin v1. Combined with Miniflare 5.20261023.1-beta, remote binding errors retain properties such as `code` and `numericCode` so Worker code can handle them without parsing error messages.
+
+- [#16480](https://github.com/cloudflare/workers-sdk/pull/16480) [`ccaa34a`](https://github.com/cloudflare/workers-sdk/commit/ccaa34ab1e1bade3a6c0e0c657b9ea10d132f28f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Prevent malformed token-exchange responses from crashing remote binding startup
+
+  Update the Undici dependency bundled from the retained remote-bindings package to `7.30.1`. Responses with excessive content encodings now reject without a later unhandled stream error when the server closes the connection early.
+
+- [#16502](https://github.com/cloudflare/workers-sdk/pull/16502) [`6f2eda1`](https://github.com/cloudflare/workers-sdk/commit/6f2eda116403adf41c34cee49596e6d02f353374) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update the retained asset configuration validator to Zod 4.6.6
+
+  The Vite plugin validates `_headers` and `_redirects` through its private workers-shared package. Update that bundled copy to address excessive memory consumption when validating oversized collections.
+
+- [#16444](https://github.com/cloudflare/workers-sdk/pull/16444) [`79678c4`](https://github.com/cloudflare/workers-sdk/commit/79678c41fa6eaf5214b767ee1b9e167cefe243d8) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update Vite plugin v1 to the October 23 Workers runtime
+
+  Use Miniflare `5.20261023.0-beta` and the matching Wrangler release for local development and preview. Align bundled helpers and Workers types with this runtime, and use `2026-10-23` as the fallback compatibility date when none is configured. The runtime and helper updates also prevent malformed HTTP responses with excessive content encodings from causing unhandled stream errors. The published helpers also update their bundled Zod validator and fix Windows keyring setup for remote-binding credentials when the configuration path contains spaces.
+
+- [#16479](https://github.com/cloudflare/workers-sdk/pull/16479) [`1d5354b`](https://github.com/cloudflare/workers-sdk/commit/1d5354b9b4da12eb349f1c082a72447ebae8b986) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Treat `cloudflare:durable-objects` as a built-in runtime module
+
+  Workers can import `retryable()` from `cloudflare:durable-objects` to mark Durable Object methods as safe to retry. The plugin now leaves that import for the runtime to resolve, as it does for `cloudflare:workers`, instead of trying to resolve it as a package.
+
+- [#16493](https://github.com/cloudflare/workers-sdk/pull/16493) [`4ce6176`](https://github.com/cloudflare/workers-sdk/commit/4ce61767e83e91fa04b23f8175513f3dc8b61a34) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Preserve a Worker response's `statusText` in Vite dev and preview
+
+  Responses such as `new Response(body, { status: 231, statusText: "Custom" })` now reach the browser as `231 Custom` instead of `231 unknown`. Empty status text is also preserved over HTTP/1.x.
+
+- [#16501](https://github.com/cloudflare/workers-sdk/pull/16501) [`109844e`](https://github.com/cloudflare/workers-sdk/commit/109844ec2d09c50f7fce775531e1b1a46a4e2f6a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Preserve separate `Set-Cookie` request headers in Vite dev and preview
+
+  Workers now receive each incoming `Set-Cookie` value separately for HTTP requests and WebSocket upgrades, including values with commas in an `Expires` date. Previously, multiple values could be combined into one header.
+
+- [#16503](https://github.com/cloudflare/workers-sdk/pull/16503) [`ca116f9`](https://github.com/cloudflare/workers-sdk/commit/ca116f9d3fa897bcaa472b23c20dc267577ae945) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix a dev server failing to start when an earlier dev server in the same process had different Worker exports
+
+  The Vite plugin now clears the Worker export types it detected when a dev server closes. A dev server created afterwards in the same process derives them from its own config again, so it no longer fails with `Class extends value undefined` for a Durable Object the earlier server's Worker did not export.
+
+- [#16504](https://github.com/cloudflare/workers-sdk/pull/16504) [`436fa9a`](https://github.com/cloudflare/workers-sdk/commit/436fa9ada618154ba3c1988a3523a651c023a098) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix Vite DevTools WebSocket connections closing unexpectedly
+
+  Leave upgrades at `/__devtools/__ws` to Vite DevTools instead of forwarding them to the Worker. Sandbox preview requests continue to reach the Worker.
+
 ## 1.65.0
 
 ### Minor Changes
