@@ -76,8 +76,10 @@ export class GraphQLAnalyticsError extends APIError {
 		apiMessage: string,
 		retryAfterMs: number | undefined
 	) {
+		// The API can report a depleted rate limit budget in the `errors` array
+		// of an HTTP 200 response, so match the message as well as the status.
 		const reason =
-			status === 429
+			status === 429 || /rate limiter budget depleted/i.test(apiMessage)
 				? "rate-limited"
 				: status === 401 || status === 403
 					? "unauthorized"

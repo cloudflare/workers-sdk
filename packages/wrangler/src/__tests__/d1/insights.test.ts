@@ -182,6 +182,30 @@ describe("insights", () => {
 		`);
 	});
 
+	it("should report a rate limit returned in the errors array of an HTTP 200 response", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		msw.use(
+			...getMswSuccessMembershipHandlers([{ id: "1701", name: "enterprise" }]),
+			http.post("*/graphql", () =>
+				HttpResponse.json({
+					data: null,
+					errors: [
+						{
+							message:
+								"Rate limiter budget depleted. Please try again after 5 minutes.",
+						},
+					],
+				})
+			)
+		);
+
+		await expect(() => runWrangler("d1 insights --json")).rejects.toThrow(
+			/rate limited the request[\s\S]*The rate limit resets within 5 minutes/
+		);
+	});
+
 	it("should throw if database doesn't exist", async ({ expect }) => {
 		setIsTTY(false);
 		msw.use(
