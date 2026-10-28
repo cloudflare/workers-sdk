@@ -329,15 +329,17 @@ async function buildProjectWorkerOptions(
 	}
 
 	// Durable Object bindings can also explicitly name the Worker under test.
-	// Keep these local when the runner is renamed, preserving the other options
-	// (including SQLite storage and unique keys) on each designator.
-	if (configWorkerName && runnerWorker.durableObjects) {
+	// Compare against the effective environment name so a staging Worker can
+	// still bind to its base Worker. Keep self-references local when the runner
+	// is renamed, preserving storage and namespace options on each designator.
+	const effectiveWorkerName = customOptions.resolvedConfig?.effectiveWorkerName;
+	if (effectiveWorkerName && runnerWorker.durableObjects) {
 		for (const [key, designator] of Object.entries(
 			runnerWorker.durableObjects
 		)) {
 			if (
 				typeof designator === "object" &&
-				designator.scriptName === configWorkerName
+				designator.scriptName === effectiveWorkerName
 			) {
 				runnerWorker.durableObjects[key] = {
 					...designator,
