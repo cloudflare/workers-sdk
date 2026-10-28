@@ -144,6 +144,7 @@ import {
 	SharedHeaders,
 	SiteBindings,
 } from "./workers";
+import { isQuickActionName } from "./workers/browser-rendering/quick-action-names";
 import { ADMIN_API as FLAGSHIP_ADMIN_API } from "./workers/flagship/constants";
 import { ADMIN_API } from "./workers/secrets-store/constants";
 import type {
@@ -161,6 +162,7 @@ import type {
 	QueueProducers,
 	ReplaceWorkersTypes,
 } from "./plugins";
+import type { QuickActionBrowser } from "./plugins/browser-rendering/quick-actions";
 import type {
 	Config,
 	Extension,
@@ -870,6 +872,10 @@ export class Miniflare {
 		string,
 		{ browserProcess: Process; wsEndpoint: string }
 	> = new Map();
+
+	// Quick actions share one Chrome, launched on first use. It isn't a
+	// session, so it's kept out of `#browserProcesses`.
+	#quickActionBrowser?: Promise<QuickActionBrowser>;
 
 	readonly #runtime?: Runtime;
 	readonly #removeExitHook?: () => void;
@@ -1722,6 +1728,41 @@ export class Miniflare {
 					});
 					response = new Response(null, { status: 200 });
 				}
+			} else if (url.pathname === "/browser/quick-action") {
+				const { action, options } = (await request.json()) as {
+					action: string;
+					options: Record<string, unknown>;
+				};
+				assert(isQuickActionName(action), `Unknown quick action: ${action}`);
+				// Puppeteer is only loaded once a Worker uses quick actions
+				const { runQuickAction, startQuickActionBrowser } =
+					await import("./plugins/browser-rendering/quick-actions");
+				response = await runQuickAction({
+					action,
+					options,
+					getBrowser: async () => {
+						if (this.#quickActionBrowser === undefined) {
+							const launching = startQuickActionBrowser({
+								browserVersion: BROWSER_VERSION,
+								log: this.#log,
+								tmpPath: this.#tmpPath,
+							});
+							this.#quickActionBrowser = launching;
+							// Launch a fresh Chrome on the next call if this one fails or crashes
+							const forget = () => {
+								if (this.#quickActionBrowser === launching) {
+									this.#quickActionBrowser = undefined;
+								}
+							};
+							launching.then(
+								({ browser }) => browser.once("disconnected", forget),
+								forget
+							);
+						}
+						return (await this.#quickActionBrowser).browser;
+					},
+					log: this.#log,
+				});
 			} else if (url.pathname === "/browser/sessionIds") {
 				const sessionIds = this.#browserProcesses.keys();
 				response = Response.json(Array.from(sessionIds));
@@ -3810,6 +3851,11 @@ export class Miniflare {
 		try {
 			// Cleanup as much as possible even if `#init()` threw.
 			await this.#closeBrowserProcesses();
+			// Unlike browser sessions, the quick-action Chrome outlives reloads
+			const quickActionBrowser = await this.#quickActionBrowser?.catch(
+				() => undefined
+			);
+			await quickActionBrowser?.close();
 
 			await this.#proxyClient?.dispose();
 		} catch (error) {
