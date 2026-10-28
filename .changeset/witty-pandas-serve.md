@@ -2,6 +2,6 @@
 "@cloudflare/vite-plugin": patch
 ---
 
-fix(vite-plugin): don't destroy WebSockets owned by other upgrade listeners
+Fix Vite DevTools WebSocket connections closing unexpectedly
 
-Node dispatches `upgrade` to every registered listener. The dev-server handler destroyed the raw socket when the Worker returned no route, even if another listener (such as Vite DevTools at `/__devtools/__ws`) had already completed the handshake. It now leaves the socket alone once another listener has written a response.
+Leave upgrades at `/__devtools/__ws` to Vite DevTools instead of forwarding them to the Worker. Sandbox preview requests continue to reach the Worker.
