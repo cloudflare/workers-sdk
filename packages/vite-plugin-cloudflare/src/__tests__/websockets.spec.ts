@@ -11,8 +11,10 @@ import {
 	test,
 	vi,
 } from "vitest";
+import { WebSocketServer } from "ws";
 import { handleWebSocket } from "../websockets";
 import type { AddressInfo } from "node:net";
+import type { Duplex } from "node:stream";
 
 describe("handleWebSocket", () => {
 	let httpServer: http.Server;
@@ -451,5 +453,97 @@ describe("handleWebSocket", () => {
 		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		expect(unhandled).not.toHaveBeenCalled();
+	});
+
+	// https://github.com/cloudflare/workers-sdk/issues/15654
+	test("does not destroy a WebSocket another upgrade listener has already claimed", async ({
+		expect,
+	}) => {
+		const mf = await listen();
+		const deferred = new DeferredPromise<Response>();
+		vi.spyOn(mf, "dispatchFetch").mockReturnValue(deferred);
+
+		// The Worker has no route for the DevTools socket, so the plugin's
+		// dispatch resolves without a WebSocket after the owner has upgraded.
+		const owner = new WebSocketServer({ noServer: true });
+		let serverSocket: Duplex | undefined;
+		onTestFinished(() => {
+			for (const client of owner.clients) {
+				client.terminate();
+			}
+			owner.close();
+		});
+		httpServer.on("upgrade", (request, socket, head) => {
+			if (request.url === "/__devtools/__ws") {
+				serverSocket = socket;
+				owner.handleUpgrade(request, socket, head, (ws) => {
+					owner.emit("connection", ws, request);
+				});
+			}
+		});
+
+		const socket = await connect();
+		const chunks: Buffer[] = [];
+		const upgraded = new Promise<void>((resolve) => {
+			socket.on("data", (chunk) => {
+				chunks.push(chunk);
+				if (Buffer.concat(chunks).toString("utf8").includes("HTTP/1.1 101")) {
+					resolve();
+				}
+			});
+		});
+
+		socket.write(
+			"GET /__devtools/__ws HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+		await upgraded;
+
+		if (!serverSocket) {
+			throw new Error("expected the DevTools listener to claim the socket");
+		}
+		const destroy = vi.fn();
+		const originalDestroy = serverSocket.destroy.bind(serverSocket);
+		vi.spyOn(serverSocket, "destroy").mockImplementation((...args) => {
+			destroy();
+			return originalDestroy(...args);
+		});
+
+		deferred.resolve(new Response("not found", { status: 404 }));
+		// Let the plugin handler resume and make its teardown decision.
+		await new Promise<void>((resolve) => setImmediate(resolve));
+
+		// Assert on the server socket directly; the client may not observe the
+		// close until a later poll phase.
+		expect(destroy).not.toHaveBeenCalled();
+		expect(socket.destroyed).toBe(false);
+		expect(Buffer.concat(chunks).toString("utf8")).toContain("HTTP/1.1 101");
+		socket.destroy();
+	});
+
+	test("destroys an unclaimed upgrade when the Worker does not route it", async () => {
+		const mf = await listen();
+		vi.spyOn(mf, "dispatchFetch").mockResolvedValue(
+			new Response("not found", { status: 404 })
+		);
+
+		const socket = await connect();
+		const closed = new Promise<void>((resolve) =>
+			socket.on("close", () => resolve())
+		);
+		socket.write(
+			"GET /unrouted HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await closed;
 	});
 });
