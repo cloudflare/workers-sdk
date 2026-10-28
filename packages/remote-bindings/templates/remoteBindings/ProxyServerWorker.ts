@@ -25,6 +25,8 @@ class BindingNotFoundError extends Error {
  *  - SendEmail bindings need to take EmailMessage as their first parameter,
  *    which is not serialisable. As such, we reconstruct it before sending it
  *    on to the binding. See packages/miniflare/src/workers/email/email.worker.ts
+ *  - Hyperdrive and Analytics Engine bindings are native objects that capnweb
+ *    can't expose directly, so we wrap their methods in a plain object.
  *  - Dispatch Namespace bindings have a synchronous .get() method. Since we
  *    can't emulate that over an async boundary, we mock it locally and _actually_
  *    perform the .get() remotely at the first appropriate async point. See
@@ -57,6 +59,15 @@ function getExposedJSRPCBinding(request: Request, env: Env) {
 			connect() {
 				const socket = hyperdrive.connect();
 				return { readable: socket.readable, writable: socket.writable };
+			},
+		};
+	}
+
+	if (targetBinding.constructor.name === "AnalyticsEngine") {
+		const dataset = targetBinding as AnalyticsEngineDataset;
+		return {
+			writeDataPoint(event?: AnalyticsEngineDataPoint) {
+				dataset.writeDataPoint(event);
 			},
 		};
 	}

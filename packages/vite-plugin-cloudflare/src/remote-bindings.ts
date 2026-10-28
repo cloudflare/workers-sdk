@@ -33,6 +33,13 @@ export function getRemoteBindings(
 					remote: binding.dev?.remote,
 				};
 				break;
+			case "analytics-engine-dataset":
+				bindings[name] = {
+					type: "analytics_engine",
+					dataset: binding.name,
+					remote: binding.dev?.remote,
+				};
+				break;
 			case "ai-search":
 				bindings[name] = {
 					type: "ai_search",

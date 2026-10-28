@@ -374,6 +374,7 @@ export interface CfVpcNetwork {
 export interface CfAnalyticsEngineDataset {
 	binding: string;
 	dataset?: string;
+	remote?: boolean;
 }
 
 export interface CfDispatchNamespace {
