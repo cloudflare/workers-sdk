@@ -31,6 +31,7 @@ interface PageDocument {
 }
 
 declare const document: PageDocument & {
+	readonly body: { readonly scrollHeight: number };
 	cloneNode(deep: true): PageDocument;
 	querySelector(selector: string): { readonly href?: string } | null;
 };
@@ -40,9 +41,13 @@ declare const XMLSerializer: new () => {
 };
 
 declare const window: {
+	readonly innerHeight: number;
+	readonly pageYOffset: number;
 	getComputedStyle(
 		element: PageElement
 	): Record<"display" | "visibility" | "opacity" | "overflow", string>;
+	scrollBy(x: number, y: number): void;
+	scrollTo(x: number, y: number): void;
 };
 
 export function scrapeElements(elements: { selector: string }[]) {
@@ -134,4 +139,20 @@ export function contentForMarkdown(): string {
 				: new XMLSerializer().serializeToString(node);
 	}
 	return html;
+}
+
+export function scrollThroughPage(viewportHeight: number): Promise<void> {
+	return new Promise((resolve) => {
+		const interval = setInterval(() => {
+			window.scrollBy(0, Math.floor(viewportHeight / 2));
+			if (
+				document.body.scrollHeight - (window.pageYOffset + window.innerHeight) <
+				viewportHeight
+			) {
+				clearInterval(interval);
+				window.scrollTo(0, 0);
+				setTimeout(resolve, 500);
+			}
+		}, 100);
+	});
 }

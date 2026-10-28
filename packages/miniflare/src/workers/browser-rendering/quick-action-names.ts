@@ -2,6 +2,7 @@
 // module must not import anything.
 
 export const QUICK_ACTION_NAMES = [
+	"screenshot",
 	"content",
 	"scrape",
 	"links",
