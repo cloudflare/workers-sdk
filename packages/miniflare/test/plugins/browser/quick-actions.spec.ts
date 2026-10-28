@@ -224,6 +224,38 @@ describe(
 			);
 		});
 
+		test("links resolves root-relative links and keeps other hrefs verbatim", async ({
+			expect,
+		}) => {
+			const res = await quickAction("links", { url: origin });
+			expect(await res.json()).toEqual({
+				success: true,
+				result: [
+					`${origin}/about`,
+					"https://example.com/page",
+					"mailto:hi@example.com",
+				],
+				meta: expect.objectContaining({ status: 200, title: "" }),
+			});
+
+			const internal = await quickAction("links", {
+				url: origin,
+				excludeExternalLinks: true,
+			});
+			expect(((await internal.json()) as { result: string[] }).result).toEqual([
+				`${origin}/about`,
+			]);
+
+			const html = await quickAction("links", {
+				html: '<base href="https://example.com/dir/"><a href="/a">A</a><a href="b">B</a><a href="/h" style="display:none">H</a>',
+				visibleLinksOnly: true,
+			});
+			expect(((await html.json()) as { result: string[] }).result).toEqual([
+				"https://example.com/a",
+				"b",
+			]);
+		});
+
 		test("scrape returns every match for each selector", async ({ expect }) => {
 			const res = await quickAction("scrape", {
 				html: PAGE,

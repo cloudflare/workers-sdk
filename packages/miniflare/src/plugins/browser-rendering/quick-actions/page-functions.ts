@@ -32,10 +32,17 @@ interface PageDocument {
 
 declare const document: PageDocument & {
 	cloneNode(deep: true): PageDocument;
+	querySelector(selector: string): { readonly href?: string } | null;
 };
 
 declare const XMLSerializer: new () => {
 	serializeToString(node: PageNode): string;
+};
+
+declare const window: {
+	getComputedStyle(
+		element: PageElement
+	): Record<"display" | "visibility" | "opacity" | "overflow", string>;
 };
 
 export function scrapeElements(elements: { selector: string }[]) {
@@ -57,6 +64,27 @@ export function scrapeElements(elements: { selector: string }[]) {
 		}),
 		selector,
 	}));
+}
+
+export function listHrefs(visibleOnly: boolean): (string | null)[] {
+	return Array.from(document.querySelectorAll("a"), (anchor) => {
+		if (visibleOnly) {
+			const style = window.getComputedStyle(anchor);
+			if (
+				style.display === "none" ||
+				style.visibility === "hidden" ||
+				style.opacity === "0" ||
+				style.overflow === "hidden"
+			) {
+				return null;
+			}
+		}
+		return anchor.getAttribute("href");
+	});
+}
+
+export function baseHref(): string {
+	return document.querySelector("base")?.href || "";
 }
 
 export function contentForMarkdown(): string {
