@@ -216,6 +216,41 @@ describe("handleWebSocket", () => {
 		return mockedDispatchFetch.mock.lastCall[0];
 	}
 
+	test("preserves repeated request Set-Cookie headers during upgrade", async ({
+		expect,
+	}) => {
+		const mf = await listen();
+		const dispatchFetch = vi
+			.spyOn(mf, "dispatchFetch")
+			.mockResolvedValue(new Response(null));
+		const socket = await connect();
+		socket.write(
+			[
+				"GET / HTTP/1.1",
+				`Host: localhost:${port}`,
+				"Upgrade: websocket",
+				"Connection: Upgrade",
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==",
+				"Sec-WebSocket-Version: 13",
+				"Set-Cookie: a=1; Expires=Wed, 21 Oct 2037 07:28:00 GMT",
+				"Set-Cookie: b=2; Path=/",
+				"Cookie: session=abc",
+				"Cookie: theme=dark",
+				"",
+				"",
+			].join("\r\n")
+		);
+
+		await vi.waitFor(() => expect(dispatchFetch).toHaveBeenCalled());
+		const init = dispatchFetch.mock.lastCall?.[1];
+		assert(init?.headers instanceof Headers);
+		expect(init.headers.getSetCookie()).toEqual([
+			"a=1; Expires=Wed, 21 Oct 2037 07:28:00 GMT",
+			"b=2; Path=/",
+		]);
+		expect(init.headers.get("cookie")).toBe("session=abc; theme=dark");
+	});
+
 	test("falls back to `http://` when no `X-Forwarded-Proto` header is set", async ({
 		expect,
 	}) => {
