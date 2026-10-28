@@ -12,9 +12,11 @@ import {
 import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import chalk from "chalk";
+import semiver from "semiver";
 import dedent from "ts-dedent";
 import { isFrameworkSupported, isKnownFramework } from "../frameworks";
 import { staticFramework } from "../frameworks/all-frameworks";
+import { getInstalledPackageVersion } from "../frameworks/utils/packages";
 import type { AutoConfigContext, AutoConfigTarget } from "../context";
 import type { PackageManager } from "@cloudflare/workers-utils";
 import type { Config, TelemetryMessage } from "@cloudflare/workers-utils";
@@ -122,6 +124,16 @@ export async function detectFramework(
 		maybeDetectedFramework.devCommand = detectedFrameworkSettings?.dev?.command;
 		maybeDetectedFramework.buildCommand =
 			detectedFrameworkSettings?.build?.command;
+
+		// @netlify/build-info 10 still reports SolidStart 1's Vinxi commands, but SolidStart 2 runs on Vite
+		const solidStartVersion =
+			detectedFrameworkSettings && frameworkId === "solid-start"
+				? getInstalledPackageVersion("@solidjs/start", projectPath)
+				: undefined;
+		if (solidStartVersion && semiver(solidStartVersion, "2.0.0-alpha") >= 0) {
+			maybeDetectedFramework.devCommand = "vite dev";
+			maybeDetectedFramework.buildCommand = "vite build";
+		}
 	}
 
 	if (

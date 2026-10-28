@@ -9,6 +9,12 @@ import * as recast from "recast";
 import semiver from "semiver";
 import { usesTypescript } from "../uses-typescript";
 import { Framework } from "./framework-class";
+import {
+	extractConfigObject,
+	getViteConfigPath,
+	transformViteConfig,
+} from "./utils/vite-config";
+import { installCloudflareVitePlugin } from "./utils/vite-plugin";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -18,7 +24,32 @@ export class SolidStart extends Framework {
 	async configure({
 		projectPath,
 		dryRun,
+		target,
+		packageManager,
+		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		if (target === "cf") {
+			// SolidStart 2 runs on Vite environments, so its `ssr` environment can run on the
+			// Cloudflare Vite plugin instead of Nitro, as SolidStart's deployment guide describes
+			if (!dryRun) {
+				await installCloudflareVitePlugin({
+					packageManager: packageManager.type,
+					isWorkspaceRoot,
+					projectPath,
+					version: "^2.0.0-beta.v.0",
+				});
+				transformViteConfig(projectPath, { viteEnvironmentName: "ssr" });
+				excludeSolidStartFromServerPrebundling(projectPath);
+			}
+
+			return {
+				buildTool: "vite",
+				workerConfig: {
+					entrypoint: `./src/entry-server.${usesTypescript(projectPath) ? "tsx" : "jsx"}`,
+				},
+			};
+		}
+
 		if (!dryRun) {
 			const solidStartVersion = this.frameworkVersion;
 
@@ -40,6 +71,61 @@ export class SolidStart extends Framework {
 			buildConfig: { assetsDirectory: "./.output/public" },
 		};
 	}
+}
+
+/**
+ * Keeps `@solidjs/start` out of the `ssr` environment's pre-bundled dependencies.
+ *
+ * The Cloudflare Vite plugin pre-bundles server dependencies in dev, which loads a second copy
+ * of SolidStart's server function registry, so calling a server function fails with
+ * "invalid server function". Excluding the package keeps a single copy.
+ *
+ * @param projectPath The path of the project
+ */
+function excludeSolidStartFromServerPrebundling(projectPath: string): void {
+	const b = recast.types.builders;
+
+	transformFile(getViteConfigPath(projectPath), {
+		visitCallExpression: function (n) {
+			const callee = n.node.callee as recast.types.namedTypes.Identifier;
+			if (callee.name !== "defineConfig") {
+				return this.traverse(n);
+			}
+
+			const configObject = extractConfigObject(n.node.arguments[0]);
+			if (configObject) {
+				const optimizeDeps = b.objectProperty(
+					b.identifier("optimizeDeps"),
+					b.objectExpression([
+						b.objectProperty(
+							b.identifier("exclude"),
+							b.arrayExpression([b.stringLiteral("@solidjs/start")])
+						),
+					])
+				);
+				optimizeDeps.comments = [
+					b.commentLine(
+						" Load SolidStart once in dev, so server functions work with the Cloudflare Vite plugin",
+						true,
+						false
+					),
+				];
+				mergeObjectProperties(configObject, [
+					b.objectProperty(
+						b.identifier("environments"),
+						b.objectExpression([
+							b.objectProperty(
+								b.identifier("ssr"),
+								b.objectExpression([optimizeDeps])
+							),
+						])
+					),
+				]);
+			}
+
+			return false;
+		},
+	});
 }
 
 /**
