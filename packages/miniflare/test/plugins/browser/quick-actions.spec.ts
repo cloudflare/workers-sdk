@@ -316,6 +316,23 @@ describe(
 			expect(elementPng.readUInt32BE(16)).toBe(1904);
 		});
 
+		test("pdf returns a PDF document", async ({ expect }) => {
+			const res = await quickAction("pdf", { html: PAGE });
+			expect(res.status).toBe(200);
+			expect(res.headers.get("content-type")).toBe("application/pdf");
+			const pdf = Buffer.from(await res.arrayBuffer());
+			expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
+
+			const landscape = await quickAction("pdf", {
+				html: PAGE,
+				pdfOptions: { landscape: true },
+			});
+			// A landscape Letter page, in points
+			expect(
+				Buffer.from(await landscape.arrayBuffer()).toString("latin1")
+			).toContain("/MediaBox [0 0 792 612]");
+		});
+
 		test("json returns placeholder data shaped like the schema, and warns", async ({
 			expect,
 		}) => {

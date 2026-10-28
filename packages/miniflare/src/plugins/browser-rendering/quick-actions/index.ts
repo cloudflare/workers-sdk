@@ -8,6 +8,7 @@ import { json, jsonSchema } from "./json";
 import { links, linksSchema } from "./links";
 import { markdown } from "./markdown";
 import { withTimeout } from "./page";
+import { pdf, pdfSchema } from "./pdf";
 import { browserSchema, commonOptionsSchema } from "./schemas";
 import { scrape, scrapeSchema } from "./scrape";
 import { screenshot, screenshotSchema } from "./screenshot";
@@ -28,6 +29,7 @@ function defineQuickAction<Schema extends z.ZodType>(
 const QUICK_ACTIONS: Record<QuickActionName, QuickActionDefinition> = {
 	screenshot: defineQuickAction(screenshotSchema, screenshot),
 	content: defineQuickAction(commonOptionsSchema, content),
+	pdf: defineQuickAction(pdfSchema, pdf),
 	scrape: defineQuickAction(scrapeSchema, scrape),
 	links: defineQuickAction(linksSchema, links),
 	json: defineQuickAction(jsonSchema, json),

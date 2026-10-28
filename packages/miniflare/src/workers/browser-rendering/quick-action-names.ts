@@ -4,6 +4,7 @@
 export const QUICK_ACTION_NAMES = [
 	"screenshot",
 	"content",
+	"pdf",
 	"scrape",
 	"links",
 	"json",
