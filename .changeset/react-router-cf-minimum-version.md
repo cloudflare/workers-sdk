@@ -2,6 +2,6 @@
 "@cloudflare/autoconfig": patch
 ---
 
-Require React Router 8.5.1 or later when configuring a project for `cf`
+Require `@react-router/dev` 8.5.1 or later when configuring a React Router project for `cf`
 
-React Router projects on earlier versions build into the wrong output directories for the Cloudflare Vite plugin v2, so `cf build` failed later with an unclear missing-file error. Autoconfig now stops before changing anything and asks you to update React Router to 8.5.1. Projects configured for Wrangler keep the existing minimum of 7.0.0.
+With earlier versions, React Router builds into output directories that the Cloudflare Vite plugin v2 doesn't use, so `cf build` fails later with an unclear missing-file error. Autoconfig now stops before changing anything and asks you to update `react-router` and `@react-router/dev` to 8.5.1. Projects configured for Wrangler keep the existing minimum of React Router 7.0.0.

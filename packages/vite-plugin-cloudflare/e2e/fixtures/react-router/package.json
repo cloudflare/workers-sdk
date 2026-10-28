@@ -16,13 +16,11 @@
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "*",
 		"@react-router/dev": "^8.5.1",
-		"@tailwindcss/vite": "^4.2.2",
 		"@types/node": "^22",
 		"@types/react": "^19.2.18",
 		"@types/react-dom": "^19.2.7",
 		"cf": "latest",
 		"isbot": "^5.2.2",
-		"tailwindcss": "^4.2.2",
 		"typescript": "^5.9.3",
 		"vite": "^8.0.3"
 	}
