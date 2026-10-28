@@ -2,10 +2,11 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
+import * as vite from "vite";
 import { describe, onTestFinished, test } from "vitest";
+import { cloudflare } from "../index";
 import { getOutputConfig } from "../plugins/output-config";
 import type { ResolvedWorkerConfig } from "../plugin-config";
-import type * as vite from "vite";
 
 describe("getWorkerOutputConfig", () => {
 	function createRoot() {
@@ -15,6 +16,42 @@ describe("getWorkerOutputConfig", () => {
 		onTestFinished(() => removeDirSync(tempRoot));
 		return tempRoot;
 	}
+
+	test.for([
+		["invalid UTF-8", Buffer.from([0xff, 0xfe])],
+		["null characters", Buffer.from("ignored\0.txt")],
+	] as const)(
+		"rejects source .assetsignore with %s before emitting it",
+		async ([, contents], { expect }) => {
+			const root = createRoot();
+			fs.mkdirSync(path.join(root, "public"));
+			fs.writeFileSync(path.join(root, "public/index.html"), "<h1>Assets</h1>");
+			fs.writeFileSync(path.join(root, "public/.assetsignore"), contents);
+			fs.writeFileSync(
+				path.join(root, "worker.js"),
+				'export default { fetch() { return new Response("ready"); } };'
+			);
+			fs.writeFileSync(
+				path.join(root, "wrangler.json"),
+				JSON.stringify({
+					name: "ignore-validation",
+					main: "worker.js",
+					compatibility_date: "2026-10-23",
+					assets: { binding: "ASSETS" },
+				})
+			);
+			const builder = await vite.createBuilder({
+				root,
+				configFile: false,
+				logLevel: "silent",
+				plugins: [cloudflare({ inspectorPort: false, persistState: false })],
+			});
+
+			await expect(builder.buildApp()).rejects.toThrow(
+				/must be UTF-8 encoded and must not contain null characters/
+			);
+		}
+	);
 
 	function resolvedViteConfig(root: string): vite.ResolvedConfig {
 		return {
