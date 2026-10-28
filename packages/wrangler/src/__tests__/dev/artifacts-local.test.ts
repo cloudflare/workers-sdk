@@ -42,7 +42,14 @@ const worker = `export default {
 
 type Created = { remote: string; token: string };
 
-async function startLocalDev() {
+async function startLocalDev({
+	remote = false,
+	args = "",
+}: {
+	/** `null` omits the setting. */
+	remote?: boolean | null;
+	args?: string;
+} = {}) {
 	await seed({
 		"wrangler.jsonc": JSON.stringify({
 			name: "artifacts-local-dev",
@@ -52,14 +59,14 @@ async function startLocalDev() {
 				{
 					binding: "REPOS",
 					namespace: "examples",
-					remote: false,
+					...(remote === null ? {} : { remote }),
 				},
 			],
 		}),
 		"index.js": worker,
 	});
 	const previousOutput = output.out;
-	const stopped = runWrangler("dev --port=0 --inspector-port=0", {
+	const stopped = runWrangler(`dev --port=0 --inspector-port=0 ${args}`, {
 		WRANGLER_CI_DISABLE_CONFIG_WATCHING: "false",
 		CLOUDFLARE_API_TOKEN: undefined,
 		CLOUDFLARE_ACCOUNT_ID: undefined,
@@ -200,6 +207,21 @@ describe("Wrangler dev local Artifacts", { concurrent: false }, () => {
 		} finally {
 			await stopRunningDev();
 			await second.stopped;
+		}
+	});
+
+	it("uses the local simulator for omitted remote with --local", async ({
+		expect,
+	}) => {
+		const dev = await startLocalDev({ remote: null, args: "--local" });
+		try {
+			expect(output.out).toMatch(/env\.REPOS \(examples\)\s+Artifacts\s+local/);
+			expect(
+				(await request<{ repos: unknown[] }>(dev.url, "/list")).repos
+			).toEqual([]);
+		} finally {
+			await stopRunningDev();
+			await dev.stopped;
 		}
 	});
 });

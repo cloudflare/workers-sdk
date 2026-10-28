@@ -84,6 +84,7 @@ export const friendlyBindingNames = validation.friendlyBindingNames;
 export {
 	type BindingLocalSupport,
 	getBindingLocalSupport,
+	resolveBindingRemote,
 	validateBindingRemoteSetting,
 } from "./config/binding-local-support";
 
