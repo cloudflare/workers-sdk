@@ -65,6 +65,16 @@ import type {
 	ScheduledTrigger,
 } from "./triggers";
 
+/** Traffic served by a custom domain on the parent Worker. */
+export interface CustomDomain {
+	/** Parent hostname for production and generated Preview subdomains. */
+	hostname: string;
+	/** Serve production traffic on this hostname. */
+	production: boolean;
+	/** Serve Previews on subdomains of this hostname. */
+	previews: boolean;
+}
+
 /** Account-level values shared by the resources in a configuration. */
 export interface Settings {
 	/**
@@ -442,10 +452,14 @@ export interface WorkerConfig {
 
 	/**
 	 * Custom domains that your Worker should be published to.
+	 * Strings serve production traffic only. Objects select production,
+	 * Preview traffic, or both; at least one must be enabled.
+	 * Domain settings are applied when deploying the parent Worker.
+	 * Preview uploads use the parent's existing hosting without applying domains.
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#types-of-routes
 	 */
-	domains?: string[];
+	domains?: Array<string | CustomDomain>;
 
 	/**
 	 * Event triggers — fetch routes, queue consumers, cron schedules, Email
@@ -577,6 +591,19 @@ export interface WorkerConfig {
 	};
 
 	/**
+	 * Cloudflare Access configuration for this Worker.
+	 */
+	access?: {
+		/** Local development simulation of Cloudflare Access authentication. */
+		dev?: {
+			/** The Access application audience tag (`aud`). */
+			aud: string;
+			/** Mock identity returned by `ctx.access.getIdentity()`. */
+			identity?: Record<string, unknown>;
+		};
+	};
+
+	/**
 	 * Whether we use `<name>.<subdomain>.workers.dev` to
 	 * test and deploy your Worker.
 	 *
@@ -632,9 +659,11 @@ export interface WorkerConfig {
 
 	/**
 	 * Bindings exposed on the Worker's `env` object. Construct entries with
-	 * `bindings.kv(...)`, `bindings.r2(...)`, etc.
+	 * `bindings.kv(...)`, `bindings.r2(...)`, etc. Entries set to `false`,
+	 * `null`, or `undefined` are omitted, which allows bindings to be included
+	 * conditionally.
 	 */
-	env?: Record<string, Binding>;
+	env?: Record<string, Binding | false | null | undefined>;
 
 	/**
 	 * Configuration for named exports declared by the Worker. Each entry's

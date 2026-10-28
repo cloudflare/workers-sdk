@@ -70,9 +70,14 @@ export interface CliDescriptor {
 	 */
 	displayName: string;
 
+	/** Temporary-account flag spelling in user guidance. Defaults to `--temporary-account`. */
+	temporaryAccountFlag?: string;
+
 	/** Commands surfaced in auth guidance. */
 	commands: {
 		login: string;
+		/** Command that clears cached auth state. */
+		logout: string;
 		whoami: string;
 		createProfile: string;
 		/**

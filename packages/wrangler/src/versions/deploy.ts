@@ -283,7 +283,10 @@ export const versionsDeployCommand = createCommand({
 						.trim() ??
 					"All versions in a multi-version deployment must declare identical `exports`.";
 				throw new UserError(
-					renderInconsistentExportsAcrossVersionsError(serverMessage),
+					renderInconsistentExportsAcrossVersionsError(
+						serverMessage,
+						"wrangler versions deploy <new-version-id>@100%"
+					),
 					{
 						telemetryMessage:
 							"versions deploy inconsistent exports across versions",

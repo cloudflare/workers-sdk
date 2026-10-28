@@ -1,5 +1,6 @@
 import { blue, bold, green, grey, red, reset, yellow } from "kleur/colors";
 import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
+import { parseForwardedProto } from "../../shared/forwarded-proto";
 import { isCompressedByCloudflareFL } from "../../shared/mime-types";
 import {
 	CoreBindings,
@@ -61,6 +62,19 @@ function getUserRequest(
 	// sitting in front of this User Worker, which is hosted on a different URL.
 	const originalUrl = request.headers.get(CoreHeaders.ORIGINAL_URL);
 	let url = new URL(originalUrl ?? request.url);
+	// Match the Vite dev server's handling of TLS-terminating proxies. Explicit
+	// URLs supplied by dispatchFetch() or another dev proxy remain authoritative.
+	if (originalUrl === null) {
+		const protocol = parseForwardedProto(
+			request.headers.get("X-Forwarded-Proto")
+		);
+		if (protocol !== undefined) {
+			url.protocol = protocol;
+			// Parsing request.url may have removed a default port for the physical
+			// protocol. Restore the original authority after changing the scheme.
+			url.host = request.headers.get("Host") ?? url.host;
+		}
+	}
 
 	let rewriteHeadersFromOriginalUrl = false;
 

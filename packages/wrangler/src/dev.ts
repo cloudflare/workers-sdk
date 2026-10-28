@@ -16,6 +16,7 @@ import { validateRoutes } from "./deployment-bundle/resolve-config-args";
 import { getVarsForDev } from "./dev/dev-vars";
 import { startDev } from "./dev/start-dev";
 import { experimentalNewConfigArg } from "./experimental-config/cli-flag";
+import isNonInteractiveTurborepo from "./is-non-interactive-turborepo";
 import { logger } from "./logger";
 import { detectAgent } from "./utils/detect-agent";
 import type { StartDevWorkerInput, Trigger } from "./api/startDevWorker/types";
@@ -141,6 +142,11 @@ export const dev = createCommand({
 			type: "string",
 			describe:
 				"Host to act as origin in local mode, defaults to dev.host or route",
+		},
+		"infer-origin-from-routes": {
+			type: "boolean",
+			describe:
+				"Use the first configured route to infer the origin (request.url and the Host header) seen by the Worker in local mode. Set to false to preserve the real local origin, e.g. localhost:8787. Has no effect in remote mode",
 		},
 		"enable-containers": {
 			type: "boolean",
@@ -318,7 +324,9 @@ export const dev = createCommand({
 	},
 	async handler(args) {
 		const interactiveDevSession =
-			isInteractive() && args.showInteractiveDevSession !== false;
+			isInteractive() &&
+			!isNonInteractiveTurborepo() &&
+			args.showInteractiveDevSession !== false;
 		const showLocalExplorerAgentHint =
 			!interactiveDevSession &&
 			!args.remote &&
@@ -498,9 +506,12 @@ function applyHyperdriveEnvVars(config: Config, local: boolean): void {
 			connectionStringFromEnv = process.env[varName];
 		}
 
-		// only require a local connection string in the wrangler file or the env if not using dev --remote
+		// only require a local connection string in the wrangler file or the env
+		// if not using dev --remote, and not opted into a remote Hyperdrive
+		// binding (which tunnels to the edge instead of a local database)
 		if (
 			local &&
+			!hyperdrive.remote &&
 			connectionStringFromEnv === undefined &&
 			hyperdrive.localConnectionString === undefined
 		) {

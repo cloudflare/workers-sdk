@@ -26,6 +26,7 @@ import {
 } from "@cloudflare/workers-shared/utils/constants";
 import {
 	createAssetsIgnoreFunction,
+	InvalidAssetsIgnoreError,
 	maybeGetFile,
 } from "@cloudflare/workers-shared/utils/helpers";
 import {
@@ -37,6 +38,7 @@ import SCRIPT_ASSETS from "worker:assets/assets";
 import SCRIPT_ASSETS_KV from "worker:assets/assets-kv";
 import SCRIPT_ROUTER from "worker:assets/router";
 import SCRIPT_RPC_PROXY from "worker:assets/rpc-proxy";
+import { MiniflareCoreError } from "../../shared";
 import { SharedBindings } from "../../workers";
 import { getUserServiceName } from "../core";
 import { getEnvBindingsOfType, ProxyNodeBinding } from "../shared";
@@ -392,7 +394,14 @@ const walk = async (dir: string) => {
 	const files = await fs.readdir(dir, { recursive: true });
 	const manifest: ManifestEntry[] = [];
 	const assetsReverseMap: AssetReverseMap = {};
-	const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(dir);
+	const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(dir).catch(
+		(error: unknown) => {
+			if (error instanceof InvalidAssetsIgnoreError) {
+				throw new MiniflareCoreError("ERR_VALIDATION", error.message);
+			}
+			throw error;
+		}
+	);
 	let counter = 0;
 	await Promise.all(
 		files.map(async (file) => {
@@ -461,7 +470,7 @@ const walk = async (dir: string) => {
 					contentHash,
 				});
 				assetsReverseMap[bytesToHex(contentHash)] = {
-					filePath: relativeFilepath,
+					filePath: relativeFilepath.split(path.sep).join("/"),
 					contentType: getContentType(filepath),
 				};
 				counter++;

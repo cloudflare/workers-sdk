@@ -28,8 +28,10 @@ describe("Analytics SQL plugin", () => {
 	});
 
 	test("creates Node proxy bindings", async ({ expect }) => {
-		const bindings =
-			await ANALYTICS_SQL_PLUGIN.getNodeBindings(workerOptions());
+		const bindings = await ANALYTICS_SQL_PLUGIN.getNodeBindings(
+			workerOptions(),
+			{} as Parameters<typeof ANALYTICS_SQL_PLUGIN.getNodeBindings>[1]
+		);
 
 		expect(Object.keys(bindings)).toEqual(["ANALYTICS"]);
 		expect(bindings.ANALYTICS).toBeInstanceOf(ProxyNodeBinding);

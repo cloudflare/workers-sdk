@@ -16,6 +16,9 @@ import type {
 } from "./context";
 import type { PowSolution } from "./pow";
 
+/** Flag spelling used by consumers that don't specify their own. */
+export const DEFAULT_TEMPORARY_ACCOUNT_FLAG = "--temporary-account";
+
 export const TEMPORARY_TERMS_URLS = {
 	termsOfService: "https://www.cloudflare.com/terms/",
 	privacyPolicy: "https://www.cloudflare.com/privacypolicy/",
@@ -23,8 +26,6 @@ export const TEMPORARY_TERMS_URLS = {
 
 export const TEMPORARY_TERMS_PROMPT = `You must accept Cloudflare's Terms of Service (${TEMPORARY_TERMS_URLS.termsOfService}) and Privacy Policy (${TEMPORARY_TERMS_URLS.privacyPolicy}) in order to continue. By typing "yes", you agree to these terms. Type "yes" to continue.`;
 export const TEMPORARY_TERMS_NOTICE = `Continuing means you accept Cloudflare's Terms of Service (${TEMPORARY_TERMS_URLS.termsOfService}) and Privacy Policy (${TEMPORARY_TERMS_URLS.privacyPolicy}).`;
-
-const TEMPORARY_TERMS_ERROR = `You must accept Cloudflare's Terms of Service (${TEMPORARY_TERMS_URLS.termsOfService}) and Privacy Policy (${TEMPORARY_TERMS_URLS.privacyPolicy}) to use --temporary.`;
 
 type TemporaryAccountPayload = {
 	account?: {
@@ -203,10 +204,16 @@ type PowChallengeResponse = {
 	};
 };
 
-// Requests a proof-of-work challenge and solves it. The challenge is required:
-// any failure aborts provisioning.
+/**
+ * Requests and solves the proof-of-work challenge required for provisioning.
+ *
+ * @param temporaryAccountLogger Logger used to report challenge progress.
+ * @param cliDisplayName Consumer name used in actionable errors.
+ * @returns The proof-of-work solution required by the provisioning request.
+ */
 async function requestPowSolution(
-	temporaryAccountLogger: TemporaryAccountLogger
+	temporaryAccountLogger: TemporaryAccountLogger,
+	cliDisplayName: string
 ): Promise<PowSolution> {
 	const response = await fetch(getTemporaryPreviewChallengeUrl(), {
 		method: "POST",
@@ -255,7 +262,7 @@ async function requestPowSolution(
 		Buffer.from(seed, "base64url").length !== 32
 	) {
 		throw new FatalError(
-			"The proof-of-work challenge is not supported by this version of Wrangler.",
+			`The proof-of-work challenge is not supported by this version of ${cliDisplayName}.`,
 			{
 				telemetryMessage:
 					"deploy temporary account challenge difficulty unsupported",
@@ -269,13 +276,19 @@ async function requestPowSolution(
 
 /**
  * Provision a brand new temporary preview account from the public provisioning
- * endpoint
+ * endpoint.
+ *
+ * @param temporaryAccountLogger Logger used to report provisioning progress.
+ * @param request Optional inputs for event-scoped account provisioning.
+ * @param cliDisplayName Consumer name used in actionable errors.
+ * @returns The newly provisioned temporary preview account.
  */
 export async function createTemporaryPreviewAccount(
 	temporaryAccountLogger: TemporaryAccountLogger,
-	request?: TemporaryAccountRequest
+	request?: TemporaryAccountRequest,
+	cliDisplayName = "Wrangler"
 ): Promise<TemporaryPreviewAccount> {
-	const pow = await requestPowSolution(temporaryAccountLogger);
+	const pow = await requestPowSolution(temporaryAccountLogger, cliDisplayName);
 
 	const response = await fetch(getTemporaryPreviewUrl(), {
 		method: "POST",
@@ -362,13 +375,22 @@ export async function createTemporaryPreviewAccount(
 
 /**
  * Return the cached temporary preview account if one is still valid, otherwise
- * mint a fresh one (running `beforeCreate` first, e.g. a terms-acceptance gate)
- * and persist it to the injected storage.
+ * mint a fresh one after terms acceptance and persist it to the injected
+ * storage.
+ *
+ * @param options Storage, prompting, logging, and consumer presentation inputs.
+ * @returns The active temporary preview account and whether it came from cache.
  */
 export async function getOrCreateTemporaryPreviewAccount(options: {
 	storage: TemporaryAccountStorage;
 	prompt: (question: string, notice: string) => Promise<boolean>;
 	temporaryAccountLogger: TemporaryAccountLogger;
+	/** Consumer name used in temporary-account errors. */
+	cliDisplayName?: string;
+	/** Consumer temporary-account flag spelling. Defaults to `--temporary-account`. */
+	temporaryAccountFlag?: string;
+	/** Consumer command used to clear a cached temporary account. */
+	logoutCommand?: string;
 	request?: TemporaryAccountRequest;
 }): Promise<{
 	account: TemporaryPreviewAccount;
@@ -380,7 +402,7 @@ export async function getOrCreateTemporaryPreviewAccount(options: {
 	if (cachedPreviewAccount) {
 		if (options.request?.eventCode) {
 			throw new UserError(
-				"A temporary account is already cached. Rerun without --event-code to reuse it, or run `wrangler logout` and retry to create an account for this event.",
+				`A temporary account is already cached. Rerun without --event-code to reuse it, or run \`${options.logoutCommand ?? "wrangler logout"}\` and retry to create an account for this event.`,
 				{
 					telemetryMessage: "deploy temporary event cache conflict",
 				}
@@ -395,14 +417,16 @@ export async function getOrCreateTemporaryPreviewAccount(options: {
 	);
 
 	if (!termsAccepted) {
-		throw new UserError(TEMPORARY_TERMS_ERROR, {
-			telemetryMessage: "user temporary terms not accepted",
-		});
+		throw new UserError(
+			`You must accept Cloudflare's Terms of Service (${TEMPORARY_TERMS_URLS.termsOfService}) and Privacy Policy (${TEMPORARY_TERMS_URLS.privacyPolicy}) to use ${options.temporaryAccountFlag ?? DEFAULT_TEMPORARY_ACCOUNT_FLAG}.`,
+			{ telemetryMessage: "user temporary terms not accepted" }
+		);
 	}
 
 	const temporaryPreviewAccount = await createTemporaryPreviewAccount(
 		options.temporaryAccountLogger,
-		options.request
+		options.request,
+		options.cliDisplayName
 	);
 	options.storage.write(temporaryPreviewAccount);
 

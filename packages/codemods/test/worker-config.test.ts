@@ -56,6 +56,7 @@ describe("Wrangler Worker configuration conversion", () => {
 						error_retention: 86_400_000,
 						success_retention: "3 days",
 					},
+					jurisdiction: "fedramp",
 					limits: { steps: 10 },
 					name: "example-workflow",
 					schedules: ["0 * * * *", "30 * * * *"],
@@ -78,6 +79,7 @@ describe("Wrangler Worker configuration conversion", () => {
 		});
 
 		expect(result).toMatchSnapshot();
+		expect(result.output).toContain('jurisdiction: "fedramp"');
 		expect(result.output).toContain("idleTimeoutMs: 5000");
 		expect(result.output).toContain("addresses: []");
 	});
@@ -108,6 +110,146 @@ describe("Wrangler Worker configuration conversion", () => {
 		expect(result).toMatchSnapshot();
 	});
 
+	it("reports invalid dependency instrumentation configuration", ({
+		expect,
+	}) => {
+		for (const dependenciesInstrumentation of [
+			{ enabled: "false" },
+			{ enabled: true, exclude_packages: "@internal/*" },
+			{ enabled: true, exclude_packages: [123] },
+		]) {
+			const result = convert({
+				compatibility_date: "2026-09-23",
+				dependencies_instrumentation: dependenciesInstrumentation,
+				name: "example-worker",
+			});
+
+			expect(result.followUps).toEqual([
+				expect.objectContaining({
+					blocking: true,
+					code: "unsupported-field",
+					message:
+						"The dependency instrumentation configuration is invalid and was not migrated.",
+					sourcePath: "dependencies_instrumentation",
+				}),
+			]);
+		}
+	});
+
+	it("preserves recognized guidance when unknown fields are present", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			dependencies_instrumentation: {
+				enabled: false,
+				unknown_field: true,
+			},
+			name: "example-worker",
+		});
+
+		expect(result.followUps).toEqual([
+			expect.objectContaining({
+				code: "dependencies-instrumentation-opt-out",
+				sourcePath: "dependencies_instrumentation",
+			}),
+		]);
+		expect(result.output).toContain(
+			"CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION=false"
+		);
+	});
+
+	it("reports how to preserve disabled dependency instrumentation", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			dependencies_instrumentation: { enabled: false },
+			name: "example-worker",
+		});
+
+		expect(result.followUps).toEqual([
+			expect.objectContaining({
+				blocking: true,
+				code: "dependencies-instrumentation-opt-out",
+				message:
+					"Set CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION=false before deploying to keep package dependency metadata disabled.",
+				sourcePath: "dependencies_instrumentation",
+			}),
+		]);
+		expect(result.output).toContain(
+			"CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION=false"
+		);
+		expect(result.output).toContain("Migration incomplete");
+	});
+
+	it("reports exclusions when dependency instrumentation is disabled", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			dependencies_instrumentation: {
+				enabled: false,
+				exclude_packages: ["@internal/*"],
+			},
+			name: "example-worker",
+		});
+
+		expect(result.followUps).toEqual([
+			expect.objectContaining({
+				blocking: true,
+				code: "dependencies-instrumentation-opt-out",
+				message: expect.stringContaining(
+					"The package exclusion list was not migrated"
+				),
+				sourcePath: "dependencies_instrumentation",
+			}),
+		]);
+		expect(result.output).toContain(
+			"if dependency metadata is later enabled, those packages will be included"
+		);
+	});
+
+	it("drops enabled dependency instrumentation without follow-up work", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			dependencies_instrumentation: { enabled: true },
+			name: "example-worker",
+		});
+
+		expect(result.followUps).toEqual([]);
+		expect(result.output).not.toContain(
+			"CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION"
+		);
+		expect(result.output).not.toContain("Migration incomplete");
+	});
+
+	it("reports dependency package exclusions that cannot be preserved", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			dependencies_instrumentation: {
+				enabled: true,
+				exclude_packages: ["@internal/*"],
+			},
+			name: "example-worker",
+		});
+
+		expect(result.followUps).toEqual([
+			expect.objectContaining({
+				blocking: true,
+				code: "dependencies-instrumentation-exclusions",
+				message: expect.stringContaining(
+					"only enables or disables dependency metadata as a whole"
+				),
+				sourcePath: "dependencies_instrumentation",
+			}),
+		]);
+	});
+
 	it("converts Workflow bindings and exports the Workflows the Worker defines", ({
 		expect,
 	}) => {
@@ -127,6 +269,7 @@ describe("Wrangler Worker configuration conversion", () => {
 						error_retention: 86_400_000,
 						success_retention: "3 days",
 					},
+					jurisdiction: "eu",
 					limits: { steps: 10 },
 					name: "local-workflow",
 					schedules: "0 * * * *",
@@ -139,6 +282,7 @@ describe("Wrangler Worker configuration conversion", () => {
 				{
 					binding: "REMOTE",
 					class_name: "RemoteWorkflow",
+					jurisdiction: "us",
 					limits: { steps: 5 },
 					name: "remote-workflow",
 					script_name: "other-worker",
@@ -150,6 +294,8 @@ describe("Wrangler Worker configuration conversion", () => {
 		expect(result.output).toContain('worker: "other-worker"');
 		expect(result.output).toContain("LocalWorkflow: exports.workflow({");
 		expect(result.output).toContain("defaultRetention: {");
+		expect(result.output).toContain('jurisdiction: "eu"');
+		expect(result.output).not.toContain('jurisdiction: "us"');
 		expect(result.output).not.toContain("RemoteWorkflow: exports.workflow(");
 		expect(
 			result.output.match(/DeclaredWorkflow: exports\.workflow\(/g)

@@ -12,7 +12,7 @@ async function withIsolatedStorage(
 	};
 }
 
-describe.sequential("owner presence integration", () => {
+describe("owner presence integration", { concurrent: false }, () => {
 	it("requires persistence and a dev registry", ({ expect }) => {
 		const worker = {
 			config: {
@@ -35,10 +35,11 @@ describe.sequential("owner presence integration", () => {
 				new Miniflare({
 					unsafeEnableSharedStorage: true,
 					resourcePersistencePath: ".state",
+					enableDevRegistry: false,
 					workers: [worker],
 				})
 		).toThrow(
-			"Shared storage requires `unsafeDevRegistryPath` to be set, as instances elect a storage owner through the dev registry."
+			"Shared storage requires `enableDevRegistry` to be enabled, as instances elect a storage owner through the dev registry."
 		);
 		expect(
 			() =>

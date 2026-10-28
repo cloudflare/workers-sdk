@@ -12,6 +12,7 @@ import {
 import {
 	createAssetsIgnoreFunction,
 	getContentType,
+	InvalidAssetsIgnoreError,
 	maybeGetFile,
 	normalizeFilePath,
 } from "@cloudflare/workers-shared/utils/helpers";
@@ -631,7 +632,14 @@ export const buildAssetManifest = async (dir: string) => {
 	const manifest: AssetManifest = {};
 
 	const { assetsIgnoreFunction, assetsIgnoreFilePresent } =
-		await createAssetsIgnoreFunction(dir);
+		await createAssetsIgnoreFunction(dir).catch((error: unknown) => {
+			if (error instanceof InvalidAssetsIgnoreError) {
+				throw new UserError(error.message, {
+					telemetryMessage: "assets ignore invalid encoding",
+				});
+			}
+			throw error;
+		});
 
 	await Promise.all(
 		files.map(async (relativeFilepath) => {

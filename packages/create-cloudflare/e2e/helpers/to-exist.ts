@@ -7,7 +7,7 @@ declare module "vitest" {
 		toExist(): R;
 	}
 	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- required by vitest's module augmentation pattern
-	interface Assertion<T> extends CustomMatchers<T> {}
+	interface Matchers<R> extends CustomMatchers<R> {}
 	// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- required by vitest's module augmentation pattern
 	interface AsymmetricMatchersContaining extends CustomMatchers {}
 }

@@ -1,0 +1,20 @@
+{
+	"name": "@playground/build-output",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build:default": "vite build",
+		"build:disable-source-maps": "vite build -c vite.config.disable-source-maps.ts",
+		"check:type": "cf workers types --include-runtime=false && tsc --build",
+		"dev": "vite dev",
+		"preview": "vite preview"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"cf": "catalog:default",
+		"typescript": "catalog:default",
+		"vite": "catalog:default"
+	}
+}

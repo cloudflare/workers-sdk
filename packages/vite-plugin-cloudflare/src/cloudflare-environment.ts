@@ -115,7 +115,9 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 			{
 				headers: {
 					[CoreHeaders.ROUTE_OVERRIDE]: workerConfig.name,
-					[WORKER_ENTRY_PATH_HEADER]: encodeURIComponent(workerConfig.main),
+					[WORKER_ENTRY_PATH_HEADER]: encodeURIComponent(
+						workerConfig.entrypoint
+					),
 					[IS_ENTRY_WORKER_HEADER]: String(options.isEntryWorker),
 					[ENVIRONMENT_NAME_HEADER]: this.name,
 					[IS_PARENT_ENVIRONMENT_HEADER]: String(options.isParentEnvironment),
@@ -186,6 +188,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 }
 
 export const cloudflareBuiltInModules = [
+	"cloudflare:durable-objects",
 	"cloudflare:email",
 	"cloudflare:node",
 	"cloudflare:sockets",
@@ -225,12 +228,27 @@ const resolveExtensions = [
 	".ctx",
 ];
 
+/**
+ * Worker source maps are written to the Worker's build output rather than its
+ * public assets, so emit them by default for readable stack traces. Users can
+ * opt out with Vite's `build.sourcemap`.
+ */
+function getWorkerSourcemap(
+	userConfig: vite.UserConfig,
+	environmentName: string
+): vite.BuildEnvironmentOptions["sourcemap"] {
+	return (
+		userConfig.environments?.[environmentName]?.build?.sourcemap ??
+		userConfig.build?.sourcemap ??
+		true
+	);
+}
+
 export function createCloudflareEnvironmentOptions({
 	workerConfig,
 	userConfig,
 	mode,
 	environmentName,
-	isEntryWorker,
 	isParentEnvironment,
 	hasNodeJsCompat,
 }: {
@@ -238,7 +256,6 @@ export function createCloudflareEnvironmentOptions({
 	userConfig: vite.UserConfig;
 	mode: vite.ConfigEnv["mode"];
 	environmentName: string;
-	isEntryWorker: boolean;
 	isParentEnvironment: boolean;
 	hasNodeJsCompat: boolean;
 }): vite.EnvironmentOptions {
@@ -289,8 +306,9 @@ export function createCloudflareEnvironmentOptions({
 			target,
 			cssTarget,
 			emitAssets: true,
-			manifest: isEntryWorker,
+			manifest: isParentEnvironment,
 			outDir: getOutputDirectory(userConfig, environmentName),
+			sourcemap: getWorkerSourcemap(userConfig, environmentName),
 			copyPublicDir: false,
 			ssr: true,
 			...(isRolldown
@@ -314,7 +332,7 @@ export function createCloudflareEnvironmentOptions({
 			// Longer term solution is to use full-bundle mode rather than `optimizeDeps`
 			ignoreOutdatedRequests: true,
 			// We need to normalize the path as it is treated as a glob and backslashes are therefore treated as escape characters.
-			entries: vite.normalizePath(workerConfig.main),
+			entries: vite.normalizePath(workerConfig.entrypoint),
 			exclude: [
 				...cloudflareBuiltInModules,
 				...nonPrefixedNodeModules,

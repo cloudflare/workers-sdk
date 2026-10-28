@@ -106,6 +106,9 @@ describe("deployPreviewContainers", () => {
 		expect(vi.mocked(apply).mock.calls[0]?.[1]).toMatchObject({
 			name: PREVIEW_APP_NAME,
 		});
+		expect(vi.mocked(apply).mock.calls[0]?.[0]).toMatchObject({
+			configFileName: "Wrangler config",
+		});
 	});
 
 	test("should lowercase an uppercase preview slug in the image repository name", async ({

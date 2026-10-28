@@ -1350,6 +1350,62 @@ export default { fetch() { return new Response(mod); } };`;
 			await runWrangler("deploy");
 		});
 
+		it("should include source map with bundle by default", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({ main: "index.ts" });
+			writeWorkerSource({ format: "ts" });
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedModules: {
+					"index.js.map": expect.stringMatching(
+						/"sources":\["another.ts","index.ts"\],"sourceRoot":"".*"file":"index.js"/
+					),
+				},
+			});
+
+			await runWrangler("deploy");
+		});
+
+		it("should skip unresolvable source maps by default rather than failing", async () => {
+			writeWranglerConfig({ no_bundle: true, main: "index.js" });
+			fs.writeFileSync(
+				"index.js",
+				`export default { fetch() { return new Response("Hello World"); } }\n` +
+					"//# sourceMappingURL=missing.js.map"
+			);
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedModules: {
+					"index.js.map": null,
+				},
+			});
+
+			await runWrangler("deploy");
+		});
+
+		it("should fail on unresolvable source maps when upload_source_maps = true", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				no_bundle: true,
+				main: "index.js",
+				upload_source_maps: true,
+			});
+			fs.writeFileSync(
+				"index.js",
+				`export default { fetch() { return new Response("Hello World"); } }\n` +
+					"//# sourceMappingURL=missing.js.map"
+			);
+
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				/Invalid source map path in .*index\.js: .*missing\.js\.map does not exist\./
+			);
+		});
+
 		it("should not include source map with bundle when upload_source_maps = false", async () => {
 			writeWranglerConfig({
 				main: "index.ts",

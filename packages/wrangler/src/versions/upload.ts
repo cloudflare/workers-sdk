@@ -15,6 +15,7 @@ import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { containersScope } from "../containers";
 import { createCommand } from "../core/create-command";
 import { buildDurableObjectContainerImages } from "../deployment-bundle/build-container-images";
+import { assertNoCloudflareBuildOutput } from "../deployment-bundle/cf-build-output-guard";
 import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
@@ -60,6 +61,19 @@ export const versionsUploadCommand = createCommand({
 		validateDeployVersionsArgs(args, "versions upload");
 	},
 	handler: async function versionsUploadHandler(args, { config }) {
+		// Runs before any build or upload work. `--dry-run` is exempt: it uploads
+		// nothing, so there is no version to stop.
+		if (!args.dryRun) {
+			assertNoCloudflareBuildOutput(
+				{
+					config,
+					explicitConfigPath: args.config,
+					scriptPath: args.script,
+				},
+				"versions upload"
+			);
+		}
+
 		// Merge CLI args with config (includes Sites validation and assets validation)
 		const { props, buildProps } = await mergeVersionsUploadConfigArgs(
 			args,
@@ -91,7 +105,18 @@ export const versionsUploadCommand = createCommand({
 			const { assetUploadStats: uploadStats } = await versionsUpload(
 				props,
 				config,
-				buildResult
+				buildResult,
+				{
+					deployCommand: "wrangler deploy",
+					versionsUploadCommand: "wrangler versions upload",
+					versionsDeployCommand: "wrangler versions deploy",
+					triggersDeployCommand: "wrangler triggers deploy",
+					d1ListCommand: "wrangler d1 list",
+					d1DeleteCommand: "wrangler d1 delete <database-name>",
+					queueCreateCommand: (queueName) =>
+						`wrangler queues create ${queueName}`,
+					versionsSecretPutCommand: "wrangler versions secret put",
+				}
 			);
 			assetUploadStats = uploadStats;
 		} finally {

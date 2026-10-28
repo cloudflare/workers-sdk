@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vite-plugin",
-	"version": "1.63.0",
+	"version": "2.0.0-beta.v.6",
 	"description": "Cloudflare plugin for Vite",
 	"keywords": [
 		"cloudflare",
@@ -49,25 +49,25 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
+		"@cloudflare/build-output-utils": "workspace:*",
+		"@cloudflare/config": "workspace:*",
+		"@cloudflare/runtime-types": "workspace:*",
 		"@cloudflare/unenv-preset": "workspace:*",
 		"miniflare": "workspace:*",
 		"unenv": "2.0.0-rc.24",
-		"workerd": "catalog:default",
-		"wrangler": "workspace:*",
 		"ws": "catalog:default"
 	},
 	"devDependencies": {
-		"@cloudflare/build-output-utils": "workspace:*",
-		"@cloudflare/config": "workspace:*",
+		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/remote-bindings": "workspace:*",
-		"@cloudflare/runtime-types": "workspace:*",
+		"@cloudflare/workers-auth": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "workspace:*",
-		"@remix-run/node-fetch-server": "^0.8.0",
+		"@remix-run/node-fetch-server": "^1.0.0",
 		"@types/node": "catalog:default",
 		"@types/semver": "^7.5.1",
 		"@types/ws": "^8.5.13",
@@ -89,10 +89,13 @@
 		"vitest": "catalog:default"
 	},
 	"peerDependencies": {
-		"vite": "^6.1.0 || ^7.0.0 || ^8.0.0",
-		"wrangler": "workspace:^"
+		"vite": "^7.0.0 || ^8.0.0"
 	},
 	"workers-sdk": {
-		"prerelease": true
+		"prerelease": true,
+		"npmPrerelease": {
+			"tag": "beta",
+			"numbered": true
+		}
 	}
 }

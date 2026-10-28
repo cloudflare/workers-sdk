@@ -33,11 +33,17 @@ export const containersSshCommand = createCommand({
 	positionalArgs: ["ID"],
 	async handler(args, { config }) {
 		await fillOpenAPIConfiguration(config, containersScope);
-		initContainersSharedContext({ logger, fetchResult });
-		await sshCommand({
-			...args,
-			id: args.ID,
-			command: args._.slice(2).map(String),
+		initContainersSharedContext({
+			logger,
+			fetchResult,
 		});
+		await sshCommand(
+			{
+				...args,
+				id: args.ID,
+				command: args._.slice(2).map(String),
+			},
+			"wrangler"
+		);
 	},
 });

@@ -23,7 +23,7 @@
 		// hash turbo computed for `@cloudflare/vite-plugin#build` as
 		// `VITE_PLUGIN_BUILD_HASH` and it is declared here to restore the same
 		// invalidation. Without it these tests replay from cache whenever a PR
-		// only touches the plugin, wrangler, miniflare or workerd (#14967).
+		// only touches the plugin, miniflare or workerd (#14967).
 		"test:ci:serve": {
 			"dependsOn": ["build"],
 			"env": [
@@ -36,7 +36,8 @@
 				"CLOUDFLARE_VITE_BUILD",
 				"VITE_DEBUG_SERVE",
 				"VITE_INLINE",
-				"VITE_TEST_BUILD"
+				"VITE_TEST_BUILD",
+				"WRANGLER_DOCKER_BIN"
 			],
 			"outputLogs": "new-only"
 		},
@@ -52,7 +53,8 @@
 			"passThroughEnv": [
 				"CLOUDFLARE_VITE_BUILD",
 				"VITE_DEBUG_SERVE",
-				"VITE_INLINE"
+				"VITE_INLINE",
+				"WRANGLER_DOCKER_BIN"
 			],
 			"outputLogs": "new-only"
 		}

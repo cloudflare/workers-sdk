@@ -100,3 +100,64 @@ test("does not treat an object with a forged Headers tag as Headers", ({
 		/symbolic keys/
 	);
 });
+
+test("serialize Error preserves primitive own properties and custom names", ({
+	expect,
+}) => {
+	const input = Object.assign(new Error("Repository not found: missing."), {
+		code: "NOT_FOUND",
+		retryable: false,
+		details: null,
+	});
+	Object.defineProperty(input, "numericCode", { value: 10200 });
+	input.name = "ArtifactsError";
+
+	const serialized = stringify(input, structuredSerializableReducers);
+	const deserialized = parse(serialized, structuredSerializableRevivers);
+
+	expect(deserialized).toBeInstanceOf(Error);
+	expect(deserialized).toMatchObject({
+		name: "ArtifactsError",
+		message: "Repository not found: missing.",
+		code: "NOT_FOUND",
+		numericCode: 10200,
+		retryable: false,
+		details: null,
+	});
+	expect(Object.keys(deserialized)).not.toContain("name");
+});
+
+test("serialize Error keeps built-in constructors and skips non-primitive properties", ({
+	expect,
+}) => {
+	const input = Object.assign(new TypeError("bad input"), {
+		code: "INVALID_INPUT",
+		callback: () => {},
+		nested: { value: 1 },
+	});
+
+	const serialized = stringify(input, structuredSerializableReducers);
+	const deserialized = parse(serialized, structuredSerializableRevivers);
+
+	expect(deserialized).toBeInstanceOf(TypeError);
+	expect(deserialized.name).toBe("TypeError");
+	expect(deserialized.code).toBe("INVALID_INPUT");
+	expect(deserialized).not.toHaveProperty("callback");
+	expect(deserialized).not.toHaveProperty("nested");
+});
+
+test("serialize Error without extra properties keeps the existing encoding", ({
+	expect,
+}) => {
+	const input = new RangeError("out of range");
+	input.stack = "stack";
+
+	const serialized = stringify(input, structuredSerializableReducers);
+
+	expect(serialized).toBe(
+		'[["Error",1],[2,3,4,-1],"RangeError","out of range","stack"]'
+	);
+	const deserialized = parse(serialized, structuredSerializableRevivers);
+	expect(deserialized).toBeInstanceOf(RangeError);
+	expect(deserialized.message).toBe("out of range");
+});

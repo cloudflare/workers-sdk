@@ -1,22 +1,24 @@
 import { describe, test } from "vitest";
 import {
 	getServerWatchConfig,
-	withWranglerStateIgnored,
-} from "../plugins/wrangler-watch-ignore";
+	withCloudflareStateIgnored,
+} from "../plugins/cloudflare-watch-ignore";
 
-describe("withWranglerStateIgnored", () => {
-	test("ignores .wrangler when the user has no watch.ignored", ({ expect }) => {
-		expect(withWranglerStateIgnored(undefined)).toBe("**/.wrangler/**");
+describe("withCloudflareStateIgnored", () => {
+	test("ignores .cloudflare when the user has no watch.ignored", ({
+		expect,
+	}) => {
+		expect(withCloudflareStateIgnored(undefined)).toBe("**/.cloudflare/**");
 	});
 
-	test("appends .wrangler to existing ignore patterns", ({ expect }) => {
-		expect(withWranglerStateIgnored("**/dist/**")).toEqual([
+	test("appends .cloudflare to existing ignore patterns", ({ expect }) => {
+		expect(withCloudflareStateIgnored("**/dist/**")).toEqual([
 			"**/dist/**",
-			"**/.wrangler/**",
+			"**/.cloudflare/**",
 		]);
-		expect(withWranglerStateIgnored(["**/node_modules/**"])).toEqual([
+		expect(withCloudflareStateIgnored(["**/node_modules/**"])).toEqual([
 			"**/node_modules/**",
-			"**/.wrangler/**",
+			"**/.cloudflare/**",
 		]);
 	});
 });
@@ -28,15 +30,15 @@ describe("getServerWatchConfig", () => {
 		expect(getServerWatchConfig(null)).toBeNull();
 	});
 
-	test("ignores .wrangler when watching is enabled", ({ expect }) => {
+	test("ignores .cloudflare when watching is enabled", ({ expect }) => {
 		expect(getServerWatchConfig(undefined)).toEqual({
-			ignored: "**/.wrangler/**",
+			ignored: "**/.cloudflare/**",
 		});
 		expect(
 			getServerWatchConfig({ usePolling: true, ignored: "**/dist/**" })
 		).toEqual({
 			usePolling: true,
-			ignored: ["**/dist/**", "**/.wrangler/**"],
+			ignored: ["**/dist/**", "**/.cloudflare/**"],
 		});
 	});
 });

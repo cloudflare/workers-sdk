@@ -363,7 +363,8 @@ export function resolveWorkerName(
 	if (!workerName) {
 		throw new UserError(
 			`Required Worker name missing. Please specify the Worker name in your ${configFileName(
-				config.configPath
+				config.configPath,
+				config.userConfigPath
 			)} file, or pass it with --worker-name <worker-name>.`,
 			{ telemetryMessage: "preview command missing worker name" }
 		);
