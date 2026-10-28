@@ -1,0 +1,19 @@
+packages/wrangler/src/__tests__/deploy/secrets.test.ts
+  s_df6c26589fbe91::t_422fe4a2128475 148,154-157,170,180,197-200,209-262
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "897085da2712b8e34846acd79d5dfe9fdf1fd396",
+  "prompts": {},
+  "sessions": {
+    "s_df6c26589fbe91": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a135bf-eeb5-7072-af34-1ad9cd37ce55",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Eric Clemmons <eclemmons@cloudflare.com>"
+    }
+  }
+}

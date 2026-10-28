@@ -1,0 +1,21 @@
+packages/wrangler/src/__tests__/pages/run-workers-deploy.test.ts
+  s_55f1d3f69d7c75::t_9cf61552406ba5 1-2,12,108-232
+packages/wrangler/src/autoconfig/index.ts
+  s_55f1d3f69d7c75::t_d8243b0e0b590b 33,41,46,59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a20d2eb2433079ed62fc205ea9e8793784b57731",
+  "prompts": {},
+  "sessions": {
+    "s_55f1d3f69d7c75": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "19f8e372-dfe4-482a-9e52-b491e3efe9de",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}

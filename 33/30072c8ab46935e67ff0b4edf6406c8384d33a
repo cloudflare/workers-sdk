@@ -1,0 +1,23 @@
+packages/miniflare/src/config/schema.ts
+  s_087d7eed307e24::t_911b8bdb36b484 777-781
+packages/miniflare/src/config/v4-convert.ts
+  s_087d7eed307e24::t_da960e8c49b8d5 70
+packages/miniflare/src/config/v4-schema.ts
+  s_087d7eed307e24::t_f53816f5ce2a97 653,950
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "3330072c8ab46935e67ff0b4edf6406c8384d33a",
+  "prompts": {},
+  "sessions": {
+    "s_087d7eed307e24": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0cf55-080c-7ab2-8e8b-e576fe75df62",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}

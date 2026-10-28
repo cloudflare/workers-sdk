@@ -1,0 +1,19 @@
+packages/vitest-plugin/src/pool/plugin.ts
+  s_ec7ca26dd5bb2d::t_363b7c670137ee 71,81-89,127-130,134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "da9018620b75d5c5f56a91206c4fc6ec15e17e8f",
+  "prompts": {},
+  "sessions": {
+    "s_ec7ca26dd5bb2d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ec98ec49cffevguEA0Nu5mSJ0W",
+        "model": "unknown"
+      },
+      "human_author": "Matt Johnson-Pint <mjohnson-pint@cloudflare.com>"
+    }
+  }
+}

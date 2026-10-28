@@ -1,0 +1,21 @@
+packages/cli/__tests__/gitignore.test.ts
+  s_55f1d3f69d7c75::t_c6e72dd97475a0 7,336-406
+packages/wrangler/src/__tests__/autoconfig/run.test.ts
+  s_55f1d3f69d7c75::t_ca2854b34ac08c 6,548,565-566,580-586,591-623,642,658-664,669-832
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6808ecc696b3656af302f36fc4c1b0c31b1b4859",
+  "prompts": {},
+  "sessions": {
+    "s_55f1d3f69d7c75": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "19f8e372-dfe4-482a-9e52-b491e3efe9de",
+        "model": "unknown"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}
