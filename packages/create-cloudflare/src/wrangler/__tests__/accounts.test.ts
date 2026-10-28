@@ -1,3 +1,4 @@
+import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { mockPackageManager, mockSpinner } from "helpers/__tests__/mocks";
 import { runWranglerCommand } from "helpers/command";
 import { hasSparrowSourceKey } from "helpers/sparrow";
@@ -326,4 +327,3 @@ describe("wrangler account helpers", () => {
 		});
 	});
 });
-import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
