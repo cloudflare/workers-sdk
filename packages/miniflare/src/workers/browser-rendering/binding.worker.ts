@@ -336,9 +336,16 @@ export class BrowserSession extends MiniflareDurableObject<BrowserSessionEnv> {
 		);
 
 		const wsUrl = this.sessionInfo.wsEndpoint.replace("ws://", "http://");
-		const resp = await this.#proxyRawWebSocket(wsUrl);
+		const connectionId = crypto.randomUUID();
+		const resp = await this.#proxyRawWebSocket(wsUrl, () => {
+			// A newer connection may have replaced this one
+			if (this.sessionInfo?.connectionId === connectionId) {
+				this.sessionInfo.connectionId = undefined;
+				this.sessionInfo.connectionStartTime = undefined;
+			}
+		});
 
-		this.sessionInfo.connectionId = crypto.randomUUID();
+		this.sessionInfo.connectionId = connectionId;
 		this.sessionInfo.connectionStartTime = Date.now();
 
 		return new Response(null, {
@@ -373,7 +380,10 @@ export class BrowserSession extends MiniflareDurableObject<BrowserSessionEnv> {
 		this.sessionInfo = undefined;
 	}
 
-	async #proxyRawWebSocket(targetWsUrl: string): Promise<Response> {
+	async #proxyRawWebSocket(
+		targetWsUrl: string,
+		onClose?: () => void
+	): Promise<Response> {
 		const response = await fetchWithConnectRetry(
 			targetWsUrl.replace("ws://", "http://"),
 			{
@@ -398,11 +408,13 @@ export class BrowserSession extends MiniflareDurableObject<BrowserSessionEnv> {
 			forwardClose(chrome, e);
 			forwardClose(server, e);
 			this.wss = this.wss.filter((p) => p !== pair);
+			onClose?.();
 		});
 		chrome.addEventListener("close", (e) => {
 			forwardClose(server, e);
 			forwardClose(chrome, e);
 			this.wss = this.wss.filter((p) => p !== pair);
+			onClose?.();
 		});
 
 		return new Response(null, { status: 101, webSocket: client });
