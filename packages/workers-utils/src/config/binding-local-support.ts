@@ -126,17 +126,35 @@ export function resolveBindingRemote(
  * binding type's local-development capabilities. Throws `UserError` for
  * invalid combinations and uses the caller-provided logger for
  * valid-but-noteworthy ones.
+ *
+ * @param options.binding - Binding name, used to identify the binding in warnings
+ * @param options.remoteBindingsDisabled - Whether the dev session runs without
+ * remote bindings, as with `wrangler dev --local`
  */
 export function validateBindingRemoteSetting(
 	type: Binding["type"],
 	remote: boolean | undefined,
-	warn: (message: string) => void
+	warn: (message: string) => void,
+	{
+		binding,
+		remoteBindingsDisabled = false,
+	}: { binding?: string; remoteBindingsDisabled?: boolean } = {}
 ) {
 	const support = getBindingLocalSupport(type);
 	switch (support) {
 		case "local-and-remote":
 			return;
 		case "remote-default-with-local-opt-in":
+			// Changes made during dev affect real data, so make the default visible.
+			if (remote === undefined && !remoteBindingsDisabled) {
+				const subject =
+					binding === undefined
+						? `${getBindingTypeFriendlyName(type)} bindings use`
+						: `${getBindingTypeFriendlyName(type)} binding ${binding} uses`;
+				warn(
+					`${subject} the deployed resource. Set \`remote: false\` to use the local simulator, or \`remote: true\` to silence this warning.`
+				);
+			}
 			return;
 		case "local-only":
 			if (remote === true) {

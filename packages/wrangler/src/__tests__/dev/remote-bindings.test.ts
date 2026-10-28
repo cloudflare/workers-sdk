@@ -706,6 +706,9 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 				},
 			}),
 		]);
+		expect(std.warn).toContain(
+			"Artifacts binding MY_ARTIFACTS uses the deployed resource. Set `remote: false` to use the local simulator, or `remote: true` to silence this warning."
+		);
 		await stopWrangler();
 		await wranglerStopped;
 	});
