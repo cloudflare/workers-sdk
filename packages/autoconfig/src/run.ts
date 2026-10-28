@@ -30,7 +30,11 @@ import {
 } from "./frameworks";
 import { getFrameworkPackageInfo } from "./frameworks/all-frameworks";
 import { Static } from "./frameworks/static";
-import { getCloudflareTypesTsconfigUpdate } from "./tsconfig";
+import {
+	CLOUDFLARE_TYPES_INCLUDE,
+	getCloudflareTypesTsconfigUpdate,
+	saveCloudflareTypesTsconfigUpdate,
+} from "./tsconfig";
 import { usesTypescript } from "./uses-typescript";
 import type { AutoConfigContext, AutoConfigTarget } from "./context";
 import type {
@@ -286,12 +290,10 @@ export async function runAutoConfig(
 			await saveCloudflareConfig(autoConfigDetails.projectPath, workerConfig);
 		}
 		if (workerConfig?.entrypoint) {
-			const tsconfigUpdate = getCloudflareTypesTsconfigUpdate(
-				autoConfigDetails.projectPath
+			await saveCloudflareTypesTsconfigUpdate(
+				autoConfigDetails.projectPath,
+				context
 			);
-			if (tsconfigUpdate?.type === "update") {
-				await writeFile(tsconfigUpdate.path, tsconfigUpdate.content);
-			}
 		}
 		if (
 			configurationResults.buildTool === "wrangler" &&
@@ -627,7 +629,9 @@ export async function buildOperationsSummary(
 			: undefined;
 	if (tsconfigUpdate?.type === "update") {
 		logger.log("📝 Update tsconfig.json:");
-		logger.log(' - Add ".cloudflare/types" to "include"');
+		logger.log(
+			` - Add ${JSON.stringify(CLOUDFLARE_TYPES_INCLUDE)} to "include"`
+		);
 		logger.log("");
 	} else if (tsconfigUpdate?.type === "manual") {
 		logger.warn(tsconfigUpdate.message);

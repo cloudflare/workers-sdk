@@ -6,12 +6,13 @@ import { getCloudflareTypesTsconfigUpdate } from "../src/tsconfig";
 describe("autoconfig - getCloudflareTypesTsconfigUpdate()", () => {
 	runInTempDir();
 
-	test("adds .cloudflare/types to include, keeping the existing formatting", async ({
+	test("adds .cloudflare/types to include, keeping the formatting of include", async ({
 		expect,
 	}) => {
 		await seed({
 			"tsconfig.json": dedent`
 				{
+				    // An over-indented comment
 				  "include": [
 				    "**/*",
 				    ".react-router/types/**/*"
@@ -27,6 +28,7 @@ describe("autoconfig - getCloudflareTypesTsconfigUpdate()", () => {
 
 		expect(update?.type === "update" && update.content).toMatchInlineSnapshot(`
 				"{
+				    // An over-indented comment
 				  "include": [
 				    "**/*",
 				    ".react-router/types/**/*",
@@ -75,6 +77,27 @@ describe("autoconfig - getCloudflareTypesTsconfigUpdate()", () => {
 			}),
 		});
 		expect(getCloudflareTypesTsconfigUpdate(process.cwd())).toBeUndefined();
+
+		await seed({
+			"tsconfig.json": JSON.stringify({ include: [".cloudflare-old"] }),
+		});
+		expect(getCloudflareTypesTsconfigUpdate(process.cwd())?.type).toBe(
+			"update"
+		);
+	});
+
+	test("keeps a UTF-8 byte order mark", async ({ expect }) => {
+		await seed({
+			"tsconfig.json": `\uFEFF${JSON.stringify({ include: ["src"] })}`,
+		});
+
+		const update = getCloudflareTypesTsconfigUpdate(process.cwd());
+		const content = update?.type === "update" ? update.content : "";
+
+		expect(content.startsWith("\uFEFF")).toBe(true);
+		expect(JSON.parse(content.slice(1))).toEqual({
+			include: ["src", ".cloudflare/types"],
+		});
 	});
 
 	test("asks for a manual update when tsconfig.json has no include array", async ({
@@ -87,7 +110,7 @@ describe("autoconfig - getCloudflareTypesTsconfigUpdate()", () => {
 		expect(getCloudflareTypesTsconfigUpdate(process.cwd()))
 			.toMatchInlineSnapshot(`
 				{
-				  "message": "Add ".cloudflare/types" to the \`include\` array in tsconfig.json so that TypeScript can find the types that \`cf workers types\` generates.",
+				  "message": "Add an \`include\` array to tsconfig.json that keeps the files it includes today and adds ".cloudflare/types", for example ["**/*",".cloudflare/types"], so that TypeScript can find the types that \`cf workers types\` generates.",
 				  "type": "manual",
 				}
 			`);

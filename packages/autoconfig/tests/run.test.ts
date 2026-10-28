@@ -47,7 +47,7 @@ class BuildCommandOverrideFramework extends Static {
 
 describe("runAutoConfig()", () => {
 	runInTempDir();
-	mockConsoleMethods();
+	const std = mockConsoleMethods();
 
 	it("rejects autoconfiguration for an unsupported framework", async ({
 		expect,
@@ -353,6 +353,38 @@ describe("runAutoConfig()", () => {
 		expect(JSON.parse(readFileSync("tsconfig.json", "utf8"))).toEqual({
 			include: ["src", ".cloudflare/types"],
 		});
+	});
+
+	it("lists the tsconfig.json change without writing it in a dry run", async ({
+		expect,
+	}) => {
+		const packageJson = { name: "my-vite-app" };
+		const tsconfig = JSON.stringify({ include: ["src"] });
+		await seed({
+			"package.json": JSON.stringify(packageJson),
+			"tsconfig.json": tsconfig,
+		});
+
+		await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "my-vite-app",
+				framework: new ViteBuildToolFramework({
+					id: "static",
+					name: "Static",
+				}),
+				outputDir: "dist",
+				packageJson,
+				packageManager: NpmPackageManager,
+			},
+			{ context: createMockContext(), dryRun: true }
+		);
+
+		expect(std.out).toContain(
+			'📝 Update tsconfig.json:\n - Add ".cloudflare/types" to "include"'
+		);
+		expect(readFileSync("tsconfig.json", "utf8")).toBe(tsconfig);
 	});
 
 	it("keeps the Wrangler typegen command for Wrangler projects", async ({
