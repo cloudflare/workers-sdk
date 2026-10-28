@@ -288,6 +288,55 @@ describe(
 			expect(body.result[1].results).toEqual([]);
 		});
 
+		test("snapshot returns only the requested formats", async ({ expect }) => {
+			const res = await quickAction("snapshot", {
+				html: PAGE,
+				formats: ["markdown", "accessibilityTree"],
+			});
+			const { result } = (await res.json()) as {
+				result: Record<string, unknown>;
+			};
+			expect(Object.keys(result)).toEqual(["accessibilityTree", "markdown"]);
+			expect(result.markdown).toContain("# Hello");
+			expect(result.accessibilityTree).toMatchObject({ role: "RootWebArea" });
+
+			const defaults = await quickAction("snapshot", { html: PAGE });
+			const { result: defaultResult } = (await defaults.json()) as {
+				result: Record<string, string>;
+			};
+			expect(Object.keys(defaultResult)).toEqual(["content", "screenshot"]);
+			// A base64 PNG starts with its encoded signature
+			expect(defaultResult.screenshot).toMatch(/^iVBORw0KGgo/);
+
+			const code = '<pre data-language="js"><code>a()</code></pre>';
+			const both = await quickAction("snapshot", {
+				html: code,
+				formats: ["content", "markdown"],
+			});
+			const { result: bothResult } = (await both.json()) as {
+				result: Record<string, string>;
+			};
+			expect(bothResult.content).toContain(code);
+			expect(bothResult.markdown).toBe("```js\na()\n```");
+
+			const single = await quickAction("snapshot", {
+				html: PAGE,
+				formats: ["content"],
+			});
+			expect(single.status).toBe(400);
+			expect(await single.json()).toEqual({
+				success: false,
+				errors: [
+					{
+						code: "custom",
+						message:
+							"This format must be combined with at least one other format. Use respective endpoint for this format request.",
+						path: ["formats"],
+					},
+				],
+			});
+		});
+
 		test("accessibilityTree returns the tree, or null for an unmatched root", async ({
 			expect,
 		}) => {
