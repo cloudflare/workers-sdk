@@ -764,7 +764,11 @@ export function buildMiniflareBindingOptions(
 	}
 
 	for (const artifact of artifactsBindings) {
-		validateBindingRemoteSetting("artifacts", artifact.remote, logger.warn);
+		validateBindingRemoteSetting("artifacts", artifact.remote, logger.warn, {
+			binding: artifact.binding,
+			// Without a remote proxy session the binding uses the local simulator.
+			remoteBindingsDisabled: remoteProxyConnectionString === undefined,
+		});
 	}
 
 	for (const flagship of flagshipBindings) {

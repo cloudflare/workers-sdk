@@ -219,6 +219,7 @@ describe("Wrangler dev local Artifacts", { concurrent: false }, () => {
 			expect(
 				(await request<{ repos: unknown[] }>(dev.url, "/list")).repos
 			).toEqual([]);
+			expect(output.warn).not.toContain("uses the deployed resource");
 		} finally {
 			await stopRunningDev();
 			await dev.stopped;
