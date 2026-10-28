@@ -72,6 +72,7 @@ describe("insights", () => {
 	}) => {
 		setIsTTY(false);
 		const databaseLookups: string[] = [];
+		let graphqlQuery = "";
 		msw.use(
 			...getMswSuccessMembershipHandlers([{ id: "1701", name: "enterprise" }]),
 			http.get("*/accounts/:accountId/d1/database/:id", ({ params }) => {
@@ -89,8 +90,9 @@ describe("insights", () => {
 					messages: [],
 				});
 			}),
-			http.post("*/graphql", () =>
-				HttpResponse.json({
+			http.post("*/graphql", async ({ request }) => {
+				graphqlQuery = ((await request.json()) as { query: string }).query;
+				return HttpResponse.json({
 					data: {
 						viewer: {
 							accounts: [
@@ -137,11 +139,13 @@ describe("insights", () => {
 						},
 					},
 					errors: null,
-				})
-			)
+				});
+			})
 		);
 
 		await runWrangler("d1 insights --json");
+
+		expect(graphqlQuery).toContain("orderBy: [sum_queryDurationMs_DESC]");
 
 		expect(databaseLookups.sort()).toEqual([
 			"deleted-db-uuid",
@@ -190,6 +194,51 @@ describe("insights", () => {
 			  },
 			]
 		`);
+	});
+
+	it("should name the D1: Read permission when a database name lookup is forbidden", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		msw.use(
+			...getMswSuccessMembershipHandlers([{ id: "1701", name: "enterprise" }]),
+			http.get("*/accounts/:accountId/d1/database/:id", () =>
+				HttpResponse.json(
+					{
+						success: false,
+						errors: [{ code: 10000, message: "Authentication error" }],
+					},
+					{ status: 403 }
+				)
+			),
+			http.post("*/graphql", () =>
+				HttpResponse.json({
+					data: {
+						viewer: {
+							accounts: [
+								{
+									d1QueriesAdaptiveGroups: [
+										{
+											dimensions: {
+												query: "SELECT 1",
+												databaseId: "northwind-uuid",
+											},
+											sum: { rowsRead: 1 },
+											count: 1,
+										},
+									],
+								},
+							],
+						},
+					},
+					errors: null,
+				})
+			)
+		);
+
+		await expect(() => runWrangler("d1 insights --json")).rejects.toThrow(
+			/not allowed to read D1 database northwind-uuid[\s\S]*"Account Analytics: Read" and "D1: Read" permissions/
+		);
 	});
 
 	it("should throw if database doesn't exist", async ({ expect }) => {
