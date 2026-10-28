@@ -208,11 +208,11 @@ importers:
   fixtures/browser-run:
     devDependencies:
       '@cloudflare/playwright':
-        specifier: ^1.0.0
-        version: 1.0.0
+        specifier: ^1.3.6
+        version: 1.3.6(playwright-core@1.60.0)
       '@cloudflare/puppeteer':
-        specifier: ^1.0.4
-        version: 1.0.4
+        specifier: ^1.4.0
+        version: 1.4.0
       '@cloudflare/vitest-plugin':
         specifier: workspace:*
         version: link:../../packages/vitest-plugin
@@ -5629,11 +5629,16 @@ packages:
     resolution: {integrity: sha512-jxQYkj8dSIzc0cD6cMMNdOc1UVjqSqu8BZdor5s8cGjW2I8BjODt/kWPVdY+u9zj3ms75Q5qaZgnxUad83+eAg==}
     engines: {node: '>=22.0.0'}
 
-  '@cloudflare/playwright@1.0.0':
-    resolution: {integrity: sha512-Z5LFFPJl1HxiI5+qJr+C3eoP8Lt5cv1xFesAWQG4ywL/Szx3b6S6ovJgOrPPZuZ6K9P5AFyqYEqFT3GjfVm/yA==}
+  '@cloudflare/playwright@1.3.6':
+    resolution: {integrity: sha512-pwNuh5/eUTcVVhXComAWfS9Im0mqBBVoU73dBXPv5cbUyOIuPGxd3bD2GrTgMOe6jJEK4ZHgQBYctYEwkzPH8w==}
+    peerDependencies:
+      playwright-core: '*'
+    peerDependenciesMeta:
+      playwright-core:
+        optional: true
 
-  '@cloudflare/puppeteer@1.0.4':
-    resolution: {integrity: sha512-I7vh9Er1hQ/7OnOL/NEPaiR0alRQ62wEWstyizilmr69AcRqvu+ufNlTc3A2uXREEvFBZ6TFajdcrBbh78/mtA==}
+  '@cloudflare/puppeteer@1.4.0':
+    resolution: {integrity: sha512-39lo96Y7ErOJFmu/KIJU1VLaOibhynx/BauKCZOW5+RVH/mG0jZrAEGJlqCdx5ZxLHyWppm78YX3jLNPCBB+fA==}
     engines: {node: '>=18'}
 
   '@cloudflare/runtime-types@0.1.11':
@@ -17466,9 +17471,11 @@ snapshots:
 
   '@cloudflare/kv-asset-handler@0.5.0': {}
 
-  '@cloudflare/playwright@1.0.0': {}
+  '@cloudflare/playwright@1.3.6(playwright-core@1.60.0)':
+    optionalDependencies:
+      playwright-core: 1.60.0
 
-  '@cloudflare/puppeteer@1.0.4':
+  '@cloudflare/puppeteer@1.4.0':
     dependencies:
       '@puppeteer/browsers': 2.2.4
       debug: 4.4.1(supports-color@9.2.2)
