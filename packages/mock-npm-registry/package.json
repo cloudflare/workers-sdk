@@ -19,7 +19,7 @@
 		"test:ci": "vitest run"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-utils": "0.48.0",
+		"@cloudflare/workers-utils": "0.49.0",
 		"@types/node": "catalog:default",
 		"@verdaccio/types": "^10.8.0",
 		"get-port": "^7.0.0",
