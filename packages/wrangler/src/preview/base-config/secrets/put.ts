@@ -8,7 +8,7 @@ import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
 import { readFromStdin, trimTrailingWhitespace } from "../../../utils/std";
 import { toSecretBindingsPatch } from "../../secrets";
-import { rejectUnsupportedPreviewArgs } from ".";
+import { rejectUnsupportedPreviewArgs, shouldPatchExistingPreviews } from ".";
 
 export const previewBaseConfigSecretPutCommand = createCommand({
 	metadata: {
@@ -31,6 +31,10 @@ export const previewBaseConfigSecretPutCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
+		"patch-existing-previews": {
+			describe: "Apply the base config update to existing Previews",
+			type: "boolean",
+		},
 	},
 	behaviour: {
 		suggestSkillsAfterHandler: true,
@@ -49,9 +53,15 @@ export const previewBaseConfigSecretPutCommand = createCommand({
 			`🌀 Creating the secret for the Preview base config on the Worker "${workerName}"${args.env ? ` (${args.env})` : ""}`
 		);
 
-		await patchPreviewBaseConfig(config, accountId, workerName, {
-			env: toSecretBindingsPatch({ [args.key]: secretValue }),
-		});
+		await patchPreviewBaseConfig(
+			config,
+			accountId,
+			workerName,
+			{
+				env: toSecretBindingsPatch({ [args.key]: secretValue }),
+			},
+			await shouldPatchExistingPreviews(args.patchExistingPreviews)
+		);
 
 		logger.log(
 			`✨ Success! Updated Preview base config for the Worker "${workerName}" with secret ${args.key}.`
