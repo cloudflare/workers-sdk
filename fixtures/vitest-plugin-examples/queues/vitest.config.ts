@@ -16,9 +16,7 @@ export default mergeConfig(
 						queue: { maxBatchTimeout: 0.05 /* 50ms */ },
 					},
 				},
-				wrangler: {
-					configPath: "./wrangler.jsonc",
-				},
+				config: true,
 			}),
 		],
 	})

@@ -1,4 +1,6 @@
 {
 	"extends": "../tsconfig.node.json",
-	"include": ["./*.ts"]
+	"include": ["./*.ts"],
+	// Type-checked with the Worker in `src/tsconfig.json`
+	"exclude": ["./cloudflare.config.ts"]
 }
