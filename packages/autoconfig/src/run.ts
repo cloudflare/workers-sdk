@@ -31,6 +31,11 @@ import {
 import { getFrameworkPackageInfo } from "./frameworks/all-frameworks";
 import { Static } from "./frameworks/static";
 import { writePnpmBuildApprovals } from "./pnpm-build-approvals";
+import {
+	CLOUDFLARE_TYPES_INCLUDE,
+	getCloudflareTypesTsconfigUpdate,
+	saveCloudflareTypesTsconfigUpdate,
+} from "./tsconfig";
 import { usesTypescript } from "./uses-typescript";
 import type { AutoConfigContext, AutoConfigTarget } from "./context";
 import type {
@@ -288,6 +293,13 @@ export async function runAutoConfig(
 	if (target === "cf") {
 		if (workerConfig !== null) {
 			await saveCloudflareConfig(autoConfigDetails.projectPath, workerConfig);
+		}
+		// Only projects with Worker code (an entrypoint) use the types that `cf-typegen` generates
+		if (workerConfig?.entrypoint) {
+			await saveCloudflareTypesTsconfigUpdate(
+				autoConfigDetails.projectPath,
+				context
+			);
 		}
 		if (
 			configurationResults.buildTool === "wrangler" &&
@@ -632,6 +644,23 @@ export async function buildOperationsSummary(
 		for (const [name, script] of Object.entries(summary.scripts)) {
 			logger.log(` - "${name}": "${script}"`);
 		}
+		logger.log("");
+	}
+
+	// Projects with Worker code (an entrypoint) get the `cf-typegen` script. Its output in
+	// `.cloudflare/types` needs its own `include` entry, since patterns like `**/*` skip dot-directories
+	const tsconfigUpdate =
+		target === "cf" && workerConfig?.entrypoint
+			? getCloudflareTypesTsconfigUpdate(autoConfigDetails.projectPath)
+			: undefined;
+	if (tsconfigUpdate?.type === "update") {
+		logger.log("📝 Update tsconfig.json:");
+		logger.log(
+			` - Add ${JSON.stringify(CLOUDFLARE_TYPES_INCLUDE)} to "include"`
+		);
+		logger.log("");
+	} else if (tsconfigUpdate?.type === "manual") {
+		logger.warn(tsconfigUpdate.message);
 		logger.log("");
 	}
 

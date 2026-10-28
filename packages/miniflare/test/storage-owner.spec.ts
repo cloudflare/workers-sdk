@@ -35,10 +35,11 @@ describe("owner presence integration", { concurrent: false }, () => {
 				new Miniflare({
 					unsafeEnableSharedStorage: true,
 					resourcePersistencePath: ".state",
+					enableDevRegistry: false,
 					workers: [worker],
 				})
 		).toThrow(
-			"Shared storage requires `unsafeDevRegistryPath` to be set, as instances elect a storage owner through the dev registry."
+			"Shared storage requires `enableDevRegistry` to be enabled, as instances elect a storage owner through the dev registry."
 		);
 		expect(
 			() =>

@@ -10,7 +10,11 @@ import {
 } from "@cloudflare/kumo";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { flagshipCreateFlag, flagshipUpdateFlag } from "../../api";
+import {
+	flagshipCreateFlag,
+	flagshipPatchFlag,
+	flagshipUpdateFlag,
+} from "../../api";
 import {
 	alignSplits,
 	canonicalRules,
@@ -35,7 +39,11 @@ import {
 } from "./flag-helpers";
 import { Field, TextInput } from "./FormFields";
 import { RuleEditor } from "./RuleEditor";
-import type { FlagshipFlag, FlagshipUpdateFlagData } from "../../api";
+import type {
+	FlagshipFlag,
+	FlagshipJsonValue,
+	FlagshipPatchFlagData,
+} from "../../api";
 import type { JSX } from "react";
 
 const TYPE_TABS = (
@@ -53,7 +61,6 @@ interface FlagDialogProps {
 	onOpenChange: (open: boolean) => void;
 	onSaved: () => Promise<void>;
 	open: boolean;
-	worker?: string;
 }
 
 interface FormState {
@@ -91,36 +98,6 @@ function emptyForm(): FormState {
 	};
 }
 
-type UpdateBody = NonNullable<FlagshipUpdateFlagData["body"]>;
-
-interface SavedValues {
-	default_variation: string;
-	description: string | null;
-	enabled: boolean;
-	rules: UpdateBody["rules"];
-	variations: Record<string, unknown>;
-}
-
-function changedFields(flag: FlagshipFlag, next: SavedValues): UpdateBody {
-	const body: UpdateBody = {};
-	if (next.default_variation !== flag.default_variation) {
-		body.default_variation = next.default_variation;
-	}
-	if (next.description !== (flag.description ?? null)) {
-		body.description = next.description;
-	}
-	if (next.enabled !== flag.enabled) {
-		body.enabled = next.enabled;
-	}
-	if (JSON.stringify(next.variations) !== JSON.stringify(flag.variations)) {
-		body.variations = next.variations;
-	}
-	if (canonicalRules(next.rules) !== canonicalRules(flag.rules)) {
-		body.rules = next.rules;
-	}
-	return body;
-}
-
 function formFromFlag(flag: FlagshipFlag): FormState {
 	const { type } = flag;
 	const variations = variationDraftsFrom(type, flag.variations);
@@ -154,7 +131,6 @@ export function FlagDialog({
 	onOpenChange,
 	onSaved,
 	open,
-	worker,
 }: FlagDialogProps): JSX.Element {
 	const [form, setForm] = useState<FormState>(emptyForm);
 	const [error, setError] = useState<FormError | null>(null);
@@ -303,7 +279,7 @@ export function FlagDialog({
 		}
 
 		const names = new Set<string>();
-		const variations: Record<string, unknown> = {};
+		const variations: Record<string, FlagshipJsonValue> = {};
 		for (const row of form.variations) {
 			const name = row.name.trim();
 			if (name === "") {
@@ -344,20 +320,6 @@ export function FlagDialog({
 		};
 		const usesSplit =
 			defaultServe.mode === "percentage" && form.variations.length > 1;
-		const ruleError = validateRuleDrafts(
-			form.rules,
-			new Set(variationNameById.keys()),
-			usesSplit
-		);
-		if (ruleError !== null) {
-			setError({ field: "rules", message: ruleError });
-			return;
-		}
-		const splitError = usesSplit ? validateDefaultServe(defaultServe) : null;
-		if (splitError !== null) {
-			setError({ field: "split", message: splitError });
-			return;
-		}
 		const targetingRules = ruleDraftsToRules(form.rules, variationNameById);
 		const rules = [
 			...targetingRules,
@@ -370,6 +332,30 @@ export function FlagDialog({
 				variationNameById
 			),
 		];
+		const replaceDefinition =
+			!editing ||
+			JSON.stringify(variations) !== JSON.stringify(flag.variations) ||
+			canonicalRules(rules) !== canonicalRules(flag.rules);
+
+		// Unchanged legacy rules remain valid for partial updates.
+		if (replaceDefinition) {
+			const ruleError = validateRuleDrafts(
+				form.rules,
+				new Set(variationNameById.keys()),
+				usesSplit
+			);
+			if (ruleError !== null) {
+				setError({ field: "rules", message: ruleError });
+				return;
+			}
+		}
+		// The last split weight is implied by the encoded rules, so an invalid
+		// split may not change them.
+		const splitError = usesSplit ? validateDefaultServe(defaultServe) : null;
+		if (splitError !== null) {
+			setError({ field: "split", message: splitError });
+			return;
+		}
 
 		const defaultVariation = defaultRow.name.trim();
 		const savedDescription = flag?.description ?? null;
@@ -380,17 +366,36 @@ export function FlagDialog({
 
 		setSaving(true);
 		try {
-			if (editing) {
+			if (editing && !replaceDefinition) {
+				const body: FlagshipPatchFlagData["body"] = {};
+				if (defaultVariation !== flag.default_variation) {
+					body.default_variation = defaultVariation;
+				}
+				if (description !== savedDescription) {
+					body.description = description;
+				}
+				if (form.enabled !== flag.enabled) {
+					body.enabled = form.enabled;
+				}
+				if (Object.keys(body).length > 0) {
+					await flagshipPatchFlag({
+						body,
+						path: { app_id: appId, flag_key: flag.key },
+					});
+				}
+			} else if (editing) {
 				await flagshipUpdateFlag({
-					body: changedFields(flag, {
+					body: {
 						default_variation: defaultVariation,
 						description,
 						enabled: form.enabled,
+						key: flag.key,
+						// The dialog doesn't edit metadata, and PUT clears it if omitted.
+						metadata: flag.metadata,
 						rules,
 						variations,
-					}),
+					},
 					path: { app_id: appId, flag_key: flag.key },
-					query: { worker },
 				});
 			} else {
 				await flagshipCreateFlag({
@@ -403,7 +408,6 @@ export function FlagDialog({
 						variations,
 					},
 					path: { app_id: appId },
-					query: { worker },
 				});
 			}
 		} catch (caught) {

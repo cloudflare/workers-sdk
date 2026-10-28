@@ -2913,10 +2913,15 @@ describe("wrangler preview", () => {
 			});
 		});
 
-		test("should upload secrets from a .env format --secrets-file as secret_text bindings", async ({
+		test("should expand a .env format --secrets-file as secret_text bindings", async ({
 			expect,
 		}) => {
-			writeFileSync(".env.preview", "SECRET_A=value-a\nSECRET_B=value-b\n");
+			vi.stubEnv("CI_SECRET", "process-secret");
+			vi.stubEnv("SECRET_B", "");
+			writeFileSync(
+				".env.preview",
+				"SECRET_A=${CI_SECRET}\nSECRET_B=file-value\nSECRET_C=pa\\$word\n"
+			);
 
 			let deploymentRequestBody:
 				| {
@@ -2980,11 +2985,15 @@ describe("wrangler preview", () => {
 
 			expect(deploymentRequestBody?.env?.SECRET_A).toEqual({
 				type: "secret_text",
-				text: "value-a",
+				text: "process-secret",
 			});
 			expect(deploymentRequestBody?.env?.SECRET_B).toEqual({
 				type: "secret_text",
-				text: "value-b",
+				text: "",
+			});
+			expect(deploymentRequestBody?.env?.SECRET_C).toEqual({
+				type: "secret_text",
+				text: "pa$word",
 			});
 		});
 

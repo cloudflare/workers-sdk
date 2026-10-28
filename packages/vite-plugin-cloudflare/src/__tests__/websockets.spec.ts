@@ -1,6 +1,7 @@
+import { once } from "node:events";
 import http from "node:http";
 import net from "node:net";
-import { DeferredPromise, Miniflare, Response } from "miniflare";
+import { DeferredPromise, Headers, Miniflare, Response } from "miniflare";
 import {
 	afterEach,
 	assert,
@@ -11,6 +12,7 @@ import {
 	test,
 	vi,
 } from "vitest";
+import { WebSocket, WebSocketServer } from "ws";
 import { handleWebSocket } from "../websockets";
 import type { AddressInfo } from "node:net";
 
@@ -19,6 +21,7 @@ describe("handleWebSocket", () => {
 	let miniflare: Miniflare | undefined;
 	let port: number;
 	const openSockets = new Set<net.Socket>();
+	const serverSockets = new Set<net.Socket>();
 
 	const DEFAULT_WORKER_SCRIPT = `export default {
 		fetch() {
@@ -31,6 +34,10 @@ describe("handleWebSocket", () => {
 	beforeEach(() => {
 		miniflare = undefined;
 		httpServer = http.createServer((_req, res) => res.end("OK"));
+		httpServer.on("connection", (socket) => {
+			serverSockets.add(socket);
+			socket.on("close", () => serverSockets.delete(socket));
+		});
 	});
 
 	/**
@@ -72,11 +79,40 @@ describe("handleWebSocket", () => {
 		return socket;
 	}
 
+	async function listenHttpServer() {
+		await new Promise<void>((resolve) =>
+			httpServer.listen(0, "127.0.0.1", resolve)
+		);
+		port = (httpServer.address() as AddressInfo).port;
+	}
+
+	function writeViteHmrUpgrade(socket: net.Socket) {
+		socket.write(
+			"GET / HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Protocol: vite-hmr\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+	}
+
+	function attachWebSocketHandler(viteWebSocketEnabled: boolean) {
+		const dispatchFetch = vi.fn();
+		handleWebSocket(
+			httpServer,
+			{ dispatchFetch } as unknown as Miniflare,
+			undefined,
+			viteWebSocketEnabled
+		);
+		return dispatchFetch;
+	}
+
 	async function listen(entryWorkerName?: string) {
 		const mf = miniflare ?? startMiniflare();
 		handleWebSocket(httpServer, mf, entryWorkerName);
-		await new Promise<void>((r) => httpServer.listen(0, "127.0.0.1", r));
-		port = (httpServer.address() as AddressInfo).port;
+		await listenHttpServer();
 		// Wait for `workerd` to boot here (under the generous `testTimeout`)
 		// rather than letting the cold start eat into the tight `vi.waitFor`
 		// budgets below, which caused Windows CI flakes.
@@ -91,6 +127,10 @@ describe("handleWebSocket", () => {
 			socket.destroy();
 		}
 		openSockets.clear();
+		for (const socket of serverSockets) {
+			socket.destroy();
+		}
+		serverSockets.clear();
 		httpServer?.closeAllConnections();
 		await miniflare?.dispose();
 		await new Promise<void>((resolve, reject) =>
@@ -161,20 +201,50 @@ describe("handleWebSocket", () => {
 		);
 		expect(init.method).toBe("GET");
 
-		assert(
-			init.headers instanceof Headers,
-			"Test expects headers object passed to dispatchFetch to be Headers instance"
-		);
-		expect(init.headers.get("host")).toBe(
+		const headers = new Headers(init.headers);
+		expect(headers.get("host")).toBe(
 			`4567-my-sandbox-sup3rs3cr3t.localhost:${port}`
 		);
-		expect(init.headers.get("upgrade")).toBe("websocket");
-		expect(init.headers.get("connection")).toBe("Upgrade");
-		expect(init.headers.get("sec-websocket-key")).toBe(
-			"dGhlIHNhbXBsZSBub25jZQ=="
-		);
-		expect(init.headers.get("sec-websocket-protocol")).toBe("vite-hmr");
-		expect(init.headers.get("sec-websocket-version")).toBe("13");
+		expect(headers.get("upgrade")).toBe("websocket");
+		expect(headers.get("connection")).toBe("Upgrade");
+		expect(headers.get("sec-websocket-key")).toBe("dGhlIHNhbXBsZSBub25jZQ==");
+		expect(headers.get("sec-websocket-protocol")).toBe("vite-hmr");
+		expect(headers.get("sec-websocket-version")).toBe("13");
+	});
+
+	// https://github.com/cloudflare/workers-sdk/issues/15285
+	test("closes Vite HMR upgrades when Vite WebSockets are disabled", async ({
+		expect,
+	}) => {
+		const dispatchFetch = attachWebSocketHandler(false);
+		await listenHttpServer();
+		const socket = await connect();
+
+		writeViteHmrUpgrade(socket);
+
+		await vi.waitFor(() => expect(socket.destroyed).toBe(true), {
+			timeout: 5_000,
+		});
+		expect(dispatchFetch).not.toHaveBeenCalled();
+	});
+
+	test("leaves Vite HMR upgrades for Vite when WebSockets are enabled", async ({
+		expect,
+	}) => {
+		const dispatchFetch = attachWebSocketHandler(true);
+		const viteHandled = new Promise<boolean>((resolve) => {
+			httpServer.on("upgrade", (_request, socket) => {
+				resolve(!socket.destroyed);
+				socket.destroy();
+			});
+		});
+		await listenHttpServer();
+		const socket = await connect();
+
+		writeViteHmrUpgrade(socket);
+
+		expect(await viteHandled).toBe(true);
+		expect(dispatchFetch).not.toHaveBeenCalled();
 	});
 
 	/**
@@ -184,7 +254,8 @@ describe("handleWebSocket", () => {
 	async function dispatchUpgrade(
 		expect: ExpectStatic,
 		mf: Miniflare,
-		headers: Record<string, string>
+		headers: Record<string, string>,
+		pathname = "/"
 	) {
 		const deferred = new DeferredPromise<Response>();
 		const mockedDispatchFetch = vi
@@ -197,7 +268,7 @@ describe("handleWebSocket", () => {
 			.map(([k, v]) => `${k}: ${v}`)
 			.join("\r\n");
 		socket.write(
-			"GET / HTTP/1.1\r\n" +
+			`GET ${pathname} HTTP/1.1\r\n` +
 				`${headerLines}\r\n` +
 				"Upgrade: websocket\r\n" +
 				"Connection: Upgrade\r\n" +
@@ -215,6 +286,41 @@ describe("handleWebSocket", () => {
 		assert(mockedDispatchFetch.mock.lastCall);
 		return mockedDispatchFetch.mock.lastCall[0];
 	}
+
+	test("preserves repeated request Set-Cookie headers during upgrade", async ({
+		expect,
+	}) => {
+		const mf = await listen();
+		const dispatchFetch = vi
+			.spyOn(mf, "dispatchFetch")
+			.mockResolvedValue(new Response(null));
+		const socket = await connect();
+		socket.write(
+			[
+				"GET / HTTP/1.1",
+				`Host: localhost:${port}`,
+				"Upgrade: websocket",
+				"Connection: Upgrade",
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==",
+				"Sec-WebSocket-Version: 13",
+				"Set-Cookie: a=1; Expires=Wed, 21 Oct 2037 07:28:00 GMT",
+				"Set-Cookie: b=2; Path=/",
+				"Cookie: session=abc",
+				"Cookie: theme=dark",
+				"",
+				"",
+			].join("\r\n")
+		);
+
+		await vi.waitFor(() => expect(dispatchFetch).toHaveBeenCalled());
+		const init = dispatchFetch.mock.lastCall?.[1];
+		const headers = new Headers(init?.headers);
+		expect(headers.getSetCookie()).toEqual([
+			"a=1; Expires=Wed, 21 Oct 2037 07:28:00 GMT",
+			"b=2; Path=/",
+		]);
+		expect(headers.get("cookie")).toBe("session=abc; theme=dark");
+	});
 
 	test("falls back to `http://` when no `X-Forwarded-Proto` header is set", async ({
 		expect,
@@ -334,7 +440,7 @@ describe("handleWebSocket", () => {
 				const [client, server] = Object.values(new WebSocketPair());
 				server.accept();
 				const headers = new Headers({ "X-Hello": "testing" });
-				headers.append("Set-Cookie", "session=abc; Path=/");
+				headers.append("Set-Cookie", "session=abc; Path=/; Expires=Wed, 21 Oct 2037 07:28:00 GMT");
 				headers.append("Set-Cookie", "theme=dark; Path=/; HttpOnly");
 				return new Response(null, {
 					status: 101,
@@ -371,11 +477,15 @@ describe("handleWebSocket", () => {
 		const raw = Buffer.concat(chunks).toString("utf8");
 		const headerBlock = raw.slice(0, raw.indexOf("\r\n\r\n"));
 
-		// Fetch `Headers` normalize names to lowercase; `Set-Cookie` keeps its
-		// canonical casing because it is appended manually via `getSetCookie()`.
 		expect(headerBlock).toContain("x-hello: testing");
-		expect(headerBlock).toContain("Set-Cookie: session=abc; Path=/");
-		expect(headerBlock).toContain("Set-Cookie: theme=dark; Path=/; HttpOnly");
+		const cookies = headerBlock
+			.split("\r\n")
+			.filter((header) => /^set-cookie:/i.test(header))
+			.map((header) => header.slice("set-cookie: ".length));
+		expect(cookies).toEqual([
+			"session=abc; Path=/; Expires=Wed, 21 Oct 2037 07:28:00 GMT",
+			"theme=dark; Path=/; HttpOnly",
+		]);
 
 		socket.destroy();
 	});
@@ -416,5 +526,139 @@ describe("handleWebSocket", () => {
 		await new Promise((resolve) => setTimeout(resolve, 50));
 
 		expect(unhandled).not.toHaveBeenCalled();
+	});
+
+	// https://github.com/cloudflare/workers-sdk/issues/15654
+	test.for(["/__devtools/__ws", "/__devtools/__ws?token=testing"])(
+		"leaves %s to Vite DevTools without dispatching to the Worker",
+		async (pathname, { expect }) => {
+			const mf = await listen();
+			const dispatchFetch = vi.spyOn(mf, "dispatchFetch");
+
+			const owner = new WebSocketServer({ noServer: true });
+			onTestFinished(() => {
+				for (const client of owner.clients) {
+					client.terminate();
+				}
+				owner.close();
+			});
+			httpServer.on("upgrade", (request, socket, head) => {
+				if (request.url === pathname) {
+					owner.handleUpgrade(request, socket, head, (ws) => {
+						ws.on("message", (message) => ws.send(message));
+					});
+				}
+			});
+
+			const socket = await connect();
+			const client = new WebSocket(`ws://127.0.0.1:${port}${pathname}`, {
+				createConnection: () => socket,
+			});
+			onTestFinished(() => client.terminate());
+			await once(client, "open");
+			const received = once(client, "message");
+			client.send("DevTools connected");
+			const [message] = await received;
+			expect(message.toString()).toBe("DevTools connected");
+			expect(dispatchFetch).not.toHaveBeenCalled();
+		}
+	);
+
+	test.for(["/__devtools/__ws", "/__devtools/__ws?token=testing"])(
+		"forwards Sandbox requests for %s to the Worker",
+		async (pathname, { expect }) => {
+			const mf = await listen();
+			const host = `4567-my-sandbox-sup3rs3cr3t.localhost:${port}`;
+			const url = await dispatchUpgrade(expect, mf, { Host: host }, pathname);
+			expect(`${url}`).toBe(`http://${host}${pathname}`);
+		}
+	);
+
+	test.for([
+		"/__devtools/__ws-extra",
+		"/__devtools/__ws/child",
+		"/__devtools/other",
+	])("forwards %s to the Worker", async (pathname, { expect }) => {
+		const mf = await listen();
+		const host = `127.0.0.1:${port}`;
+		const url = await dispatchUpgrade(expect, mf, { Host: host }, pathname);
+		expect(`${url}`).toBe(`http://${host}${pathname}`);
+	});
+
+	test("upgrades a Worker WebSocket after an earlier pipelined HTTP response", async ({
+		expect,
+	}) => {
+		const pageResponse = new DeferredPromise<http.ServerResponse>();
+		httpServer.removeAllListeners("request");
+		httpServer.on("request", (_request, response) => {
+			pageResponse.resolve(response);
+		});
+		const mf = await listen();
+		const dispatchFetch = mf.dispatchFetch.bind(mf);
+		const dispatchStarted = new DeferredPromise<void>();
+		const resumeDispatch = new DeferredPromise<void>();
+		onTestFinished(() => resumeDispatch.resolve());
+		vi.spyOn(mf, "dispatchFetch").mockImplementation(async (...args) => {
+			dispatchStarted.resolve();
+			await resumeDispatch;
+			return dispatchFetch(...args);
+		});
+
+		const socket = await connect();
+		const chunks: Buffer[] = [];
+		const upgraded = new DeferredPromise<void>();
+		socket.on("data", (chunk) => {
+			chunks.push(chunk);
+			if (Buffer.concat(chunks).toString("utf8").includes("HTTP/1.1 101")) {
+				upgraded.resolve();
+			}
+		});
+		socket.write(
+			"GET /page HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n\r\n` +
+				"GET /ws HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		// Finish the earlier HTTP response after the upgrade handler starts,
+		// but before the Worker returns its WebSocket.
+		await dispatchStarted;
+		const response = await pageResponse;
+		const finished = once(response, "finish");
+		response.end("OK");
+		await finished;
+		resumeDispatch.resolve();
+		await upgraded;
+
+		const raw = Buffer.concat(chunks).toString("utf8");
+		expect(raw).toMatch(/^HTTP\/1\.1 200/);
+		expect(raw).toContain("OKHTTP/1.1 101 Switching Protocols");
+		socket.destroy();
+	});
+
+	test("destroys an unclaimed upgrade when the Worker does not route it", async () => {
+		const mf = await listen();
+		vi.spyOn(mf, "dispatchFetch").mockResolvedValue(
+			new Response("not found", { status: 404 })
+		);
+
+		const socket = await connect();
+		const closed = new Promise<void>((resolve) =>
+			socket.on("close", () => resolve())
+		);
+		socket.write(
+			"GET /unrouted HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await closed;
 	});
 });

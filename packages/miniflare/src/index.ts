@@ -76,6 +76,7 @@ import {
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	WORKFLOWS_PLUGIN_NAME,
 } from "./plugins";
+import { ArtifactsController } from "./plugins/artifacts/controller";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
 import { BROWSER_VERSION } from "./plugins/browser-rendering/browser-version";
 import { closeBrowserProcess } from "./plugins/browser-rendering/process";
@@ -85,6 +86,7 @@ import {
 	getUserServiceName,
 	handlePrettyErrorRequest,
 	JsonErrorSchema,
+	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
 	reviveError,
 } from "./plugins/core";
 import { ContainerPrivilegesCache } from "./plugins/core/container";
@@ -382,7 +384,10 @@ function getDurableObjectClassNames(
  * entrypoint. Returns a map of external service names to the entrypoints
  * and DO classes that are referenced.
  */
-function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
+function getExternalServiceEntrypoints(
+	allWorkerOpts: ParsedWorkerOptions[],
+	sharedOpts: ParsedInstanceOptions
+) {
 	const externalServices = new Map<
 		string,
 		{
@@ -391,6 +396,10 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 		}
 	>();
 	const allWorkerNames = allWorkerOpts.map((opts) => opts.config.name);
+	if (sharedOpts.unsafeObservability) {
+		// Core creates this local service outside the user Worker configuration.
+		allWorkerNames.push(OBSERVABILITY_COLLECTOR_SERVICE_NAME);
+	}
 	const getEntrypoints = (name: string) => {
 		let externalService = externalServices.get(name);
 
@@ -872,6 +881,7 @@ export class Miniflare {
 	#maybeInspectorProxyController?: InspectorProxyController;
 	#previousRuntimeInspectorPort?: number;
 
+	#artifactsController = new ArtifactsController(() => this.#log);
 	#containerPrivilegesCache = new ContainerPrivilegesCache();
 	#hyperdriveProxyController: HyperdriveProxyController =
 		new HyperdriveProxyController(this.#disposeController.signal);
@@ -1971,7 +1981,7 @@ export class Miniflare {
 		this.#cfObject = sharedOpts.cf;
 
 		const externalServices = this.#devRegistry.isEnabled()
-			? getExternalServiceEntrypoints(allWorkerOpts)
+			? getExternalServiceEntrypoints(allWorkerOpts, sharedOpts)
 			: null;
 
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
@@ -2136,6 +2146,7 @@ export class Miniflare {
 				queueConsumers,
 				containerPrivilegesCache: this.#containerPrivilegesCache,
 				hyperdriveProxyController: this.#hyperdriveProxyController,
+				artifactsController: this.#artifactsController,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {
 				const pluginServicesExtensions = await plugin.getServices({
@@ -2151,6 +2162,11 @@ export class Miniflare {
 					} else {
 						pluginServices = pluginServicesExtensions.services;
 						extensions.push(...pluginServicesExtensions.extensions);
+						for (const socket of pluginServicesExtensions.sockets ?? []) {
+							if (!sockets.some((existing) => existing.name === socket.name)) {
+								sockets.push(socket);
+							}
+						}
 					}
 
 					for (const service of pluginServices) {
@@ -2482,6 +2498,7 @@ export class Miniflare {
 
 	async #assembleAndUpdateConfig(reusePorts = false) {
 		this.#hyperdriveProxyController.beginUpdate();
+		this.#artifactsController.beginUpdate();
 		try {
 			await this.#assembleAndUpdateConfigInternal(reusePorts);
 		} catch (error) {
@@ -2493,8 +2510,9 @@ export class Miniflare {
 				throw error;
 			}
 		} finally {
-			// If assembly or runtime startup failed, keep the old listeners and
-			// close only the new candidates. A successful update already committed.
+			// A failed update retains listeners used by the previous runtime and
+			// closes only candidates started during this attempt.
+			await this.#artifactsController.abortUpdate();
 			this.#hyperdriveProxyController.abortUpdate();
 		}
 	}
@@ -2618,6 +2636,7 @@ export class Miniflare {
 			}
 		}
 		this.#hyperdriveProxyController.commitUpdate(activeExternalAddresses);
+		await this.#artifactsController.commitUpdate();
 		// Note: `updateConfig()` doesn't resolve until ports for all required
 		// sockets have been recorded. At this point, `maybeSocketPorts` contains
 		// all of `requiredSockets` as keys.
@@ -3709,6 +3728,14 @@ export class Miniflare {
 		}
 
 		const runtimeCleanupOutcome = await runtimeDisposeOutcome;
+		try {
+			await this.#artifactsController.dispose();
+		} catch (error) {
+			if (!independentCleanupFailed) {
+				independentCleanupFailed = true;
+				independentCleanupError = error;
+			}
+		}
 		this.#devRegistry.unregisterWorkers();
 		// Close the undici Pool used for dispatching fetch requests to the
 		// runtime. This must happen after the runtime is disposed, so that
@@ -3733,7 +3760,11 @@ export class Miniflare {
 		// Best-effort cleanup: on Windows, workerd may not release file handles
 		// immediately after disposal, causing EBUSY errors. The temp directory
 		// lives in os.tmpdir() so the OS will clean it up eventually.
-		removeDir(this.#tmpPath, { fireAndForget: true });
+		try {
+			await removeDir(this.#tmpPath);
+		} catch (e) {
+			this.#log.debug(`Unable to remove temporary directory: ${String(e)}`);
+		}
 		// Clean up email session directories in the project temp path. When no
 		// project temp path is supplied, these live inside `#tmpPath` and are
 		// already removed above.
@@ -3801,6 +3832,7 @@ export type {
 	Flag,
 	FlagChanges,
 	FlagInput,
+	FlagMetadata,
 	FlagType,
 	Rule,
 } from "./workers/flagship/flags";
@@ -3833,6 +3865,7 @@ export type {
 export {
 	getDefaultDevRegistryPath,
 	getWorkerRegistry,
+	resolveDevRegistryPath,
 } from "./shared/dev-registry";
 export { parseModuleFallbackRequest } from "./plugins/core/module-fallback";
 export type {

@@ -3856,6 +3856,8 @@ unixSerialTest(
 		});
 
 		const mf = new Miniflare({
+			// This fake runtime only implements the entry socket, not debugger RPC.
+			enableDevRegistry: false,
 			workers: [
 				{
 					config: {

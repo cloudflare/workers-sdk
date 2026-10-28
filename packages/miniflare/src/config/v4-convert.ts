@@ -59,6 +59,9 @@ function convertSharedOptions(options: ParsedV4MiniflareOptions) {
 		handleUncaughtError: options.handleUncaughtError,
 		upstream: options.upstream,
 		cf: options.cf,
+		// The v4 adapter preserves its opt-in registry semantics, including for
+		// isolated Vitest pools that have never advertised their Workers.
+		enableDevRegistry: Boolean(options.unsafeDevRegistryPath),
 		unsafeDevRegistryPath: options.unsafeDevRegistryPath,
 		unsafeHandleDevRegistryUpdate: options.unsafeHandleDevRegistryUpdate,
 		unsafeProxySharedSecret: options.unsafeProxySharedSecret,
@@ -799,7 +802,11 @@ function addProductBindings(
 		env[name] = {
 			type: "artifacts",
 			namespace: binding.namespace,
-			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
+			// At this stage, only explicit V5 dev.remote: false selects local.
+			// Do not reinterpret an omitted legacy setting as that opt-in.
+			...(binding.remoteProxyConnectionString === undefined
+				? {}
+				: { dev: { remote: isRemote(binding.remoteProxyConnectionString) } }),
 		};
 	}
 	for (const name of Object.keys(worker.workerLoaders ?? {})) {

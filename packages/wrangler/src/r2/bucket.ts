@@ -3,7 +3,6 @@ import {
 	isValidR2BucketName,
 	UserError,
 } from "@cloudflare/workers-utils";
-import dedent from "ts-dedent";
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -24,6 +23,7 @@ import {
 	tableFromR2BucketsListResponse,
 	updateR2BucketStorageClass,
 } from "./helpers/bucket";
+import type { R2CreatedBucket } from "./helpers/bucket";
 
 export const r2BucketNamespace = createNamespace({
 	metadata: {
@@ -51,7 +51,7 @@ export const r2BucketCreateCommand = createCommand({
 		},
 		location: {
 			describe:
-				"The optional location hint that determines geographic placement of the R2 bucket",
+				"The optional location hint that determines geographic placement of the R2 bucket. Hints are only honored the first time a bucket name is created",
 			choices: LOCATION_CHOICES,
 			requiresArg: true,
 			type: "string",
@@ -97,7 +97,7 @@ export const r2BucketCreateCommand = createCommand({
 		}
 
 		logger.log(`Creating bucket '${fullBucketName}'...`);
-		await createR2Bucket(
+		const created = await createR2Bucket(
 			config,
 			accountId,
 			name,
@@ -105,10 +105,16 @@ export const r2BucketCreateCommand = createCommand({
 			jurisdiction,
 			storageClass
 		);
-		logger.log(dedent`
-			✅ Created bucket '${fullBucketName}' with${
-				location ? ` location hint ${location} and` : ``
-			} default storage class of ${storageClass ? storageClass : `Standard`}.`);
+		const { message, locationWarning } = formatR2BucketCreatedMessage(
+			fullBucketName,
+			location,
+			created,
+			storageClass
+		);
+		logger.log(message);
+		if (locationWarning !== undefined) {
+			logger.warn(locationWarning);
+		}
 
 		await createdResourceConfig(
 			"r2_buckets",
@@ -126,6 +132,72 @@ export const r2BucketCreateCommand = createCommand({
 		});
 	},
 });
+
+const R2_DATA_LOCATION_DOCS =
+	"https://developers.cloudflare.com/r2/reference/data-location/";
+
+/**
+ * Build the success line for `r2 bucket create` from the bucket R2 returned.
+ *
+ * The create API's `location` is the placement that was used. A requested hint
+ * is mentioned only when that location matches. When R2 returns a different
+ * location, the message reports it and `locationWarning` explains that the hint
+ * was ignored (for example, because the bucket name was reused).
+ *
+ * @param fullBucketName - Bucket name, including a jurisdiction suffix when set.
+ * @param requestedLocation - Location hint from `--location`, when one was passed.
+ * @param created - Create-bucket API result.
+ * @param storageClass - Storage class from `--storage-class`, when one was passed.
+ * @returns The success message, and a warning when the hint was not applied.
+ */
+function formatR2BucketCreatedMessage(
+	fullBucketName: string,
+	requestedLocation: string | undefined,
+	created: R2CreatedBucket,
+	storageClass: string | undefined
+): { message: string; locationWarning?: string } {
+	const storageClassLabel = storageClass ?? "Standard";
+	const actualLocation = created.location;
+	let locationClause = "";
+	let locationWarning: string | undefined;
+
+	if (
+		requestedLocation !== undefined &&
+		actualLocation !== undefined &&
+		locationsMatch(actualLocation, requestedLocation)
+	) {
+		locationClause = ` location hint ${actualLocation} and`;
+	} else if (requestedLocation !== undefined && actualLocation !== undefined) {
+		locationClause = ` location ${actualLocation} and`;
+		locationWarning = [
+			`The location hint "${requestedLocation}" was not applied. The bucket location is "${actualLocation}".`,
+			"Location hints are only honored the first time a bucket name is created. If you delete and recreate a bucket with the same name, the original bucket's location will be used.",
+			`See ${R2_DATA_LOCATION_DOCS}`,
+		].join("\n");
+	}
+
+	return {
+		message: `✅ Created bucket '${fullBucketName}' with${locationClause} default storage class of ${storageClassLabel}.`,
+		locationWarning,
+	};
+}
+
+/**
+ * Compare an R2 location with a requested hint.
+ *
+ * The create API documents lowercase hints, and bucket info can report the
+ * same location in uppercase. Matching ignores that case difference.
+ *
+ * @param actualLocation - Location from the create response.
+ * @param requestedLocation - Location hint from `--location`.
+ * @returns Whether the two name the same location.
+ */
+function locationsMatch(
+	actualLocation: string,
+	requestedLocation: string
+): boolean {
+	return actualLocation.toLowerCase() === requestedLocation.toLowerCase();
+}
 
 export const r2BucketUpdateNamespace = createNamespace({
 	metadata: {
