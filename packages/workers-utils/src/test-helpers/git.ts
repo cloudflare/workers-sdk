@@ -3,7 +3,6 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
-const execFileAsync = promisify(execFile);
 
 /** Variables host Git needs to run; everything else is dropped. */
 const INHERITED_ENV_KEYS = [
@@ -59,6 +58,9 @@ export async function pushGitFixture({
 	token: string;
 	files: Record<string, string>;
 }): Promise<void> {
+	// Resolve `execFile` per call: suites importing these helpers may mock
+	// `node:child_process` without it, and module-load access would throw.
+	const execFileAsync = promisify(execFile);
 	const env = isolatedGitEnv(directory);
 	await mkdir(directory, { recursive: true });
 	await execFileAsync("git", ["init", "--initial-branch=main", directory], {
