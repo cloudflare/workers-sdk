@@ -186,6 +186,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 }
 
 export const cloudflareBuiltInModules = [
+	"cloudflare:durable-objects",
 	"cloudflare:email",
 	"cloudflare:node",
 	"cloudflare:sockets",
