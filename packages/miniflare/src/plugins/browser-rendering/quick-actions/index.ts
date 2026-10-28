@@ -5,6 +5,7 @@ import { closeBrowserProcess } from "../process";
 import { content } from "./content";
 import { HtmlToMarkdownError, quickActionErrorResponse } from "./errors";
 import { json, jsonSchema } from "./json";
+import { links, linksSchema } from "./links";
 import { markdown } from "./markdown";
 import { withTimeout } from "./page";
 import { browserSchema, commonOptionsSchema } from "./schemas";
@@ -26,6 +27,7 @@ function defineQuickAction<Schema extends z.ZodType>(
 const QUICK_ACTIONS: Record<QuickActionName, QuickActionDefinition> = {
 	content: defineQuickAction(commonOptionsSchema, content),
 	scrape: defineQuickAction(scrapeSchema, scrape),
+	links: defineQuickAction(linksSchema, links),
 	json: defineQuickAction(jsonSchema, json),
 	markdown: defineQuickAction(commonOptionsSchema, markdown),
 };
