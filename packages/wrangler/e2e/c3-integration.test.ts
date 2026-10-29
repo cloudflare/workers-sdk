@@ -1,6 +1,7 @@
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { overrideConfigEnv } from "@cloudflare/mock-npm-registry/config-env";
 import { fetch } from "undici";
 import { assert, beforeAll, describe, it } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
@@ -26,7 +27,9 @@ describe.runIf(process.platform !== "win32")("c3 integration", () => {
 
 	it("init project via c3", async ({ expect }) => {
 		const env = {
-			...process.env,
+			// Generated projects test published dependencies independently of the SDK
+			// workspace's release-age policy, matching the C3 E2E harness.
+			...overrideConfigEnv(process.env, { "minimum-release-age": "0" }).env,
 			WRANGLER_C3_COMMAND: `--package ${c3Packed} dlx create-cloudflare`,
 			GIT_AUTHOR_NAME: "test-user",
 			GIT_AUTHOR_EMAIL: "test-user@cloudflare.com",
@@ -34,16 +37,17 @@ describe.runIf(process.platform !== "win32")("c3 integration", () => {
 			GIT_COMMITTER_EMAIL: "test-user@cloudflare.com",
 		};
 
-		await helper.run(`wrangler init ${workerName} --yes`, {
+		const result = await helper.run(`wrangler init ${workerName} --yes`, {
 			env,
 		});
 
+		expect(result.status).toBe(0);
 		expect(
 			readFileSync(
 				path.join(helper.tmpPath, workerName, "wrangler.jsonc"),
 				"utf8"
 			)
-		).not.toContain("<TBD>");
+		).not.toMatch(/<[A-Z_]+>/);
 	});
 
 	it("can run `wrangler dev` on generated worker", async ({ expect }) => {
