@@ -372,7 +372,6 @@ export async function resolvePluginConfig(
 		worker: createDefaultWorkerConfig(getWorkerNameFromProject(root)),
 		containers: [],
 	};
-	// Revalidate resource relationships as well as field shapes after customization.
 	const customizedConfig = pluginConfig.config
 		? InputConfigSchema.parse(pluginConfig.config(inputConfig))
 		: inputConfig;
