@@ -375,6 +375,46 @@ describe("getNormalizedContainerOptions", () => {
 		});
 	});
 
+	it("should not replay migrations for a container whose Durable Object is bound", async ({
+		expect,
+	}) => {
+		const config: Config = {
+			name: "test-worker",
+			configPath: "/test/wrangler.toml",
+			topLevelName: "test-worker",
+			containers: [
+				{
+					class_name: "TestContainer",
+					image: `${getCloudflareContainerRegistry()}/test:latest`,
+					name: "test-container",
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "TEST_DO",
+						class_name: "TestContainer",
+					},
+				],
+			},
+			// An already-applied history: `v2` deletes a class that no earlier
+			// tag in this file creates.
+			migrations: [
+				{ tag: "v1", new_sqlite_classes: ["TestContainer"] },
+				{ tag: "v2", deleted_classes: ["LegacyClass"] },
+			],
+		} as Partial<Config> as Config;
+
+		const result = await getNormalizedContainerOptions(config, {});
+
+		expect(result).toHaveLength(1);
+		expect(result[0]).toMatchObject({
+			name: "test-container",
+			class_name: "TestContainer",
+			image_uri: "registry.cloudflare.com/some-account-id/test:latest",
+		});
+	});
+
 	it("should use the FedRAMP High registry from Wrangler config", async ({
 		expect,
 	}) => {
