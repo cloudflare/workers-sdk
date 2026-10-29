@@ -3,7 +3,7 @@ import {
 	mockConsoleMethods,
 	runInTempDir,
 } from "@cloudflare/workers-utils/test-helpers";
-import { describe, it } from "vitest";
+import { afterEach, describe, it, vi } from "vitest";
 import { startPlatformProxy } from "../platform-proxy";
 import type { ParsedInputWorkerConfig } from "@cloudflare/config";
 
@@ -31,6 +31,9 @@ type Env = {
 describe("startPlatformProxy()", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
 
 	it("emulates the Worker's bindings", async ({ expect }) => {
 		const { env, dispose } = await startPlatformProxy<Env>(
@@ -91,25 +94,41 @@ describe("startPlatformProxy()", () => {
 	it("leaves out the bindings it can't emulate, with a warning", async ({
 		expect,
 	}) => {
+		vi.stubEnv(
+			"CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_OVERRIDDEN_DB",
+			"postgres://user:password@localhost:5432/overridden"
+		);
 		const { env, dispose } = await startPlatformProxy(
 			createWorker({
 				SECRET: { type: "secret" },
+				ASSETS: { type: "assets" },
 				COUNTER: {
 					type: "durable-object",
 					worker: "my-worker",
 					exportName: "Counter",
 				},
+				API: { type: "worker", worker: "my-worker", exportName: "Api" },
 				REMOTE_KV: { type: "kv", id: "abc", dev: { remote: true } },
 				DB: { type: "hyperdrive", id: "def" },
+				LOCAL_DB: {
+					type: "hyperdrive",
+					id: "ghi",
+					dev: {
+						connectionString: "postgres://user:password@localhost:5432/local",
+					},
+				},
+				OVERRIDDEN_DB: { type: "hyperdrive", id: "jkl" },
 			}),
 			process.cwd()
 		);
 
 		try {
-			expect(Object.keys(env)).toEqual([]);
+			expect(Object.keys(env).sort()).toEqual(["LOCAL_DB", "OVERRIDDEN_DB"]);
 			expect(std.warn).toMatchInlineSnapshot(`
 				"The platform proxy leaves out the \`SECRET\` binding: secrets aren't supported yet.
+				The platform proxy leaves out the \`ASSETS\` binding: the assets binding isn't supported yet.
 				The platform proxy leaves out the \`COUNTER\` binding: it refers to this Worker's own code, which the platform proxy doesn't run.
+				The platform proxy leaves out the \`API\` binding: it refers to this Worker's own code, which the platform proxy doesn't run.
 				The platform proxy leaves out the \`REMOTE_KV\` binding: remote bindings aren't supported yet.
 				The platform proxy leaves out the \`DB\` binding: it needs \`dev.connectionString\` for local development."
 			`);

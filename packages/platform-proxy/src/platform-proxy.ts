@@ -65,8 +65,11 @@ export async function startPlatformProxy<
 						},
 					},
 				},
+				// Keep the empty Worker out of the dev registry, where it would shadow the real one
+				dev: { unsafeRegisterWorker: false },
 			},
 		],
+		// Matches the Cloudflare Vite plugin's `getPersistenceRoot()`, so both share the same data
 		resourcePersistencePath:
 			options.persist === false
 				? undefined
@@ -79,8 +82,15 @@ export async function startPlatformProxy<
 					),
 	});
 
-	const env = await mf.getBindings<Env>();
-	const cf = await mf.getCf();
+	let env: Env;
+	let cf: Record<string, unknown>;
+	try {
+		env = await mf.getBindings<Env>();
+		cf = await mf.getCf();
+	} catch (error) {
+		await mf.dispose();
+		throw error;
+	}
 	deepFreeze(cf);
 
 	return {
@@ -110,16 +120,22 @@ function getEmulatedBindings(worker: ParsedInputWorkerConfig): MiniflareEnv {
 		} else if (isRemoteBinding(binding)) {
 			unsupported = "remote bindings aren't supported yet";
 		} else if (
-			(binding.type === "durable-object" || binding.type === "workflow") &&
+			(binding.type === "durable-object" ||
+				binding.type === "workflow" ||
+				binding.type === "worker") &&
 			binding.worker === worker.name
 		) {
 			unsupported =
 				"it refers to this Worker's own code, which the platform proxy doesn't run";
 		} else if (binding.type === "hyperdrive") {
-			if (binding.dev?.connectionString === undefined) {
+			// The same override the Cloudflare Vite plugin and Wrangler read
+			const connectionString =
+				process.env[`CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_${name}`] ||
+				binding.dev?.connectionString;
+			if (connectionString === undefined) {
 				unsupported = "it needs `dev.connectionString` for local development";
 			} else {
-				env[name] = { ...binding, dev: binding.dev };
+				env[name] = { ...binding, dev: { ...binding.dev, connectionString } };
 				continue;
 			}
 		} else {

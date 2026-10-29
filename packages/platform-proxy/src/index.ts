@@ -1,6 +1,6 @@
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { loadAndParseConfig } from "@cloudflare/config";
-import { formatZodError } from "@cloudflare/workers-utils";
 import { startPlatformProxy } from "./platform-proxy";
 import type { PlatformProxy, PlatformProxyOptions } from "./platform-proxy";
 
@@ -35,14 +35,21 @@ export async function getPlatformProxy<
 ): Promise<PlatformProxy<Env, CfProperties>> {
 	const configPath = path.resolve(options.configPath ?? "cloudflare.config.ts");
 	const configFile = path.basename(configPath);
+	if (!existsSync(configPath)) {
+		throw new Error(
+			`Could not find \`${configFile}\` at ${configPath}. If the project uses a Wrangler configuration file, run \`npx cf migrate\` to generate \`${configFile}\`.`
+		);
+	}
 	const { result } = await loadAndParseConfig(configPath, {
 		isPreview: false,
 		mode: options.mode ?? "development",
 	});
 	if (!result.success) {
-		throw new Error(
-			`Invalid \`${configFile}\`:\n${formatZodError(result.error)}`
+		const issues = result.error.issues.map(
+			(issue) =>
+				`  - ${issue.path.length > 0 ? `${issue.path.join(".")}: ` : ""}${issue.message}`
 		);
+		throw new Error(`Invalid \`${configFile}\`:\n${issues.join("\n")}`);
 	}
 	if (result.data.worker === undefined) {
 		throw new Error(

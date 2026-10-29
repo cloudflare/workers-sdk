@@ -282,6 +282,7 @@ describe("the real workspace", () => {
 			    "@cloudflare/build-output-utils",
 			    "@cloudflare/cli-shared-helpers",
 			    "@cloudflare/pages-shared",
+			    "@cloudflare/platform-proxy",
 			    "@cloudflare/runtime-types",
 			    "@cloudflare/workers-auth",
 			    "wrangler",

@@ -1,7 +1,7 @@
 import path from "node:path";
 import { loadAndParseConfig } from "@cloudflare/config";
-import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
-import { describe, it, vi } from "vitest";
+import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
+import { beforeEach, describe, it, vi } from "vitest";
 import { getPlatformProxy } from "../index";
 import type { LoadAndParseConfigResult } from "@cloudflare/config";
 
@@ -10,10 +10,14 @@ vi.mock("@cloudflare/config", () => ({ loadAndParseConfig: vi.fn() }));
 
 describe("getPlatformProxy()", () => {
 	runInTempDir();
+	beforeEach(() => {
+		vi.mocked(loadAndParseConfig).mockReset();
+	});
 
 	it("loads cloudflare.config.ts from the current directory in development mode", async ({
 		expect,
 	}) => {
+		await seed({ "cloudflare.config.ts": "export default {};" });
 		vi.mocked(loadAndParseConfig).mockResolvedValue({
 			result: {
 				success: true,
@@ -42,6 +46,7 @@ describe("getPlatformProxy()", () => {
 	});
 
 	it("requires cloudflare.config.ts to define a Worker", async ({ expect }) => {
+		await seed({ "cloudflare.config.ts": "export default {};" });
 		vi.mocked(loadAndParseConfig).mockResolvedValue({
 			result: { success: true, data: {} },
 			dependencies: [],
@@ -50,5 +55,14 @@ describe("getPlatformProxy()", () => {
 		await expect(getPlatformProxy()).rejects.toThrow(
 			"`cloudflare.config.ts` must define a Worker using the `worker` property."
 		);
+	});
+
+	it("explains how to get a cloudflare.config.ts when there is none", async ({
+		expect,
+	}) => {
+		await expect(getPlatformProxy()).rejects.toThrow(
+			"run `npx cf migrate` to generate `cloudflare.config.ts`"
+		);
+		expect(loadAndParseConfig).not.toHaveBeenCalled();
 	});
 });
