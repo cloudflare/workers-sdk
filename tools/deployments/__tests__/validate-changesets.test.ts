@@ -38,6 +38,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/local-explorer-ui",
 				"@cloudflare/pages-functions",
 				"@cloudflare/pages-shared",
+				"@cloudflare/platform-proxy",
 				"@cloudflare/playground-preview-worker",
 				"@cloudflare/quick-edit",
 				"@cloudflare/runtime-types",
