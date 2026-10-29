@@ -293,6 +293,7 @@ export async function getDetailsForAutoConfig({
  *
  * @param command The detected project command
  * @param packageManager The package manager to use for command prefixes
+ * @param packageJson The optional project manifest used to detect Vite+
  * @returns A runnable project command if detected, undefined otherwise
  */
 export function getProjectCommand(

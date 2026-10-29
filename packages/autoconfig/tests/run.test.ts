@@ -1,6 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
-import { NpmPackageManager } from "@cloudflare/workers-utils";
+import {
+	NpmPackageManager,
+	PnpmPackageManager,
+} from "@cloudflare/workers-utils";
 import {
 	mockConsoleMethods,
 	runInTempDir,
@@ -58,6 +61,44 @@ class BuildCommandOverrideFramework extends Static {
 describe("runAutoConfig()", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
+
+	it.for([
+		{ packageManager: NpmPackageManager, vitePlus: true },
+		{ packageManager: PnpmPackageManager, vitePlus: true },
+		{ packageManager: NpmPackageManager, vitePlus: false },
+	])(
+		"uses the vinext build override with $packageManager.type and Vite+=$vitePlus",
+		async ({ packageManager, vitePlus }, { expect }) => {
+			const packageJson = {
+				name: "next-app",
+				dependencies: { next: "16.1.0" },
+				devDependencies: vitePlus ? { "vite-plus": "1.4.0" } : {},
+			};
+			await seed({
+				"package.json": JSON.stringify(packageJson),
+				"node_modules/next/package.json": JSON.stringify({
+					name: "next",
+					version: "16.1.0",
+				}),
+			});
+			const summary = await runAutoConfig(
+				{
+					configured: false,
+					projectPath: process.cwd(),
+					workerName: "next-app",
+					framework: getFrameworkClassInstance("next"),
+					outputDir: ".next",
+					buildCommand: `${packageManager.npx} next build`,
+					packageManager,
+					packageJson,
+				},
+				{ context: createMockContext(), dryRun: true }
+			);
+			expect(summary.buildCommand).toBe(
+				`${packageManager.npx} ${vitePlus ? "vp" : "vite"} build`
+			);
+		}
+	);
 
 	it("rejects autoconfiguration for an unsupported framework", async ({
 		expect,

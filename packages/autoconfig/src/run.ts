@@ -22,6 +22,7 @@ import {
 	assertNonConfigured,
 	confirmAutoConfigDetails,
 	displayAutoConfigDetails,
+	getProjectCommand,
 } from "./details";
 import {
 	isFrameworkSupported,
@@ -165,9 +166,12 @@ export async function runAutoConfig(
 	}
 
 	const { npx } = packageManager;
-	const buildCommand =
+	const buildCommand = getProjectCommand(
 		dryRunConfigurationResults.buildCommandOverride ??
-		autoConfigDetails.buildCommand;
+			autoConfigDetails.buildCommand,
+		packageManager,
+		autoConfigDetails.packageJson
+	);
 
 	const autoConfigSummary = await buildOperationsSummary(
 		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
