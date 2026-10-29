@@ -10,7 +10,7 @@ import type {
 	ParsedInputConfigWithWorker,
 	WorkersResolvedConfig,
 } from "../plugin-config";
-import type { InputWorkerConfig, ParsedInputConfig } from "@cloudflare/config";
+import type { InputWorkerConfig } from "@cloudflare/config";
 
 const { readBuildOutputPreviewMock } = vi.hoisted(() => ({
 	readBuildOutputPreviewMock: vi.fn(),
@@ -309,7 +309,9 @@ describe("resolvePluginConfig", () => {
 			`export default ${JSON.stringify(originalConfig)};`
 		);
 		const customize = vi.fn(
-			(loadedConfig: ParsedInputConfigWithWorker): ParsedInputConfig => {
+			(
+				loadedConfig: ParsedInputConfigWithWorker
+			): ParsedInputConfigWithWorker => {
 				return {
 					...loadedConfig,
 					accountId: "customized-account",
@@ -471,6 +473,7 @@ describe("resolvePluginConfig", () => {
 		await expect(
 			resolvePluginConfig(
 				{
+					// @ts-expect-error Verify runtime validation for callers that bypass the required Worker type.
 					config: (loadedConfig) => ({ ...loadedConfig, worker: undefined }),
 				},
 				{ root },

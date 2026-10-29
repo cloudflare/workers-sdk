@@ -130,10 +130,12 @@ export interface PluginConfig extends EntryWorkerOptions {
 	/**
 	 * Customize the loaded configuration before development or building.
 	 * The loaded configuration always includes an entry Worker.
-	 * Return a new configuration object, copying any settings to preserve.
+	 * Return a new configuration object including an entry Worker, copying any settings to preserve.
 	 * Preview uses the configuration recorded in the build output.
 	 */
-	config?: (loadedConfig: ParsedInputConfigWithWorker) => ParsedInputConfig;
+	config?: (
+		loadedConfig: ParsedInputConfigWithWorker
+	) => ParsedInputConfigWithWorker;
 	auxiliaryWorkers?: AuxiliaryWorkerOptions[];
 	/** Configuration for a dedicated prerender Worker. */
 	prerenderWorker?: PrerenderWorkerOptions;
