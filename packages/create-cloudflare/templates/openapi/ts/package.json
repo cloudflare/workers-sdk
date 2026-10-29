@@ -19,7 +19,8 @@
 		"@cloudflare/workers-types": "^5.20260706.1",
 		"@types/node": "^25.6.0",
 		"wrangler": "^4.81.1",
-		"vite-plus": "1.4.0"
+		"vite-plus": "1.4.0",
+		"vite": "npm:@voidzero-dev/vite-plus-core@1.4.0"
 	},
 	"overrides": {
 		"vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",

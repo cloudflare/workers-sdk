@@ -13,7 +13,8 @@
 	"devDependencies": {
 		"typescript": "^5.0.4",
 		"wrangler": "^4.6.0",
-		"vite-plus": "1.4.0"
+		"vite-plus": "1.4.0",
+		"vite": "npm:@voidzero-dev/vite-plus-core@1.4.0"
 	},
 	"overrides": {
 		"vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
