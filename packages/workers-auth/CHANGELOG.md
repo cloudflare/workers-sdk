@@ -1,5 +1,12 @@
 # @cloudflare/workers-auth
 
+## 0.15.3
+
+### Patch Changes
+
+- Updated dependencies [[`8b64bec`](https://github.com/cloudflare/workers-sdk/commit/8b64becbd3817abb28654e270c0e0104170f29d7)]:
+  - @cloudflare/workers-utils@0.50.1
+
 ## 0.15.2
 
 ### Patch Changes
