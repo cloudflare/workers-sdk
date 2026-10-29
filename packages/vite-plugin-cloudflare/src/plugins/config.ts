@@ -75,33 +75,38 @@ export const configPlugin = createPlugin("config", (ctx) => {
 				},
 			};
 		},
-		async configResolved(resolvedViteConfig) {
-			ctx.setResolvedViteConfig(resolvedViteConfig);
+		configResolved: {
+			// Frameworks read the resolved output directories in their own `configResolved` hooks,
+			// so the Build Output directories have to be in place before those run
+			order: "pre",
+			async handler(resolvedViteConfig) {
+				ctx.setResolvedViteConfig(resolvedViteConfig);
 
-			if (ctx.resolvedPluginConfig.type === "preview") {
-				return;
-			}
+				if (ctx.resolvedPluginConfig.type === "preview") {
+					return;
+				}
 
-			validateWorkerEnvironmentOptions(
-				ctx.resolvedPluginConfig,
-				ctx.resolvedViteConfig
-			);
+				validateWorkerEnvironmentOptions(
+					ctx.resolvedPluginConfig,
+					ctx.resolvedViteConfig
+				);
 
-			// Assets-only configs can still hold Worker environments (a prerender
-			// Worker), so this covers both resolved config types.
-			const {
-				environmentNameToWorkerMap,
-				environmentNameToChildEnvironmentNamesMap,
-			} = ctx.resolvedPluginConfig;
-			applyWorkerEsbuildSupported(resolvedViteConfig, [
-				...environmentNameToWorkerMap.keys(),
-				...[...environmentNameToChildEnvironmentNamesMap.values()].flat(),
-			]);
+				// Assets-only configs can still hold Worker environments (a prerender
+				// Worker), so this covers both resolved config types.
+				const {
+					environmentNameToWorkerMap,
+					environmentNameToChildEnvironmentNamesMap,
+				} = ctx.resolvedPluginConfig;
+				applyWorkerEsbuildSupported(resolvedViteConfig, [
+					...environmentNameToWorkerMap.keys(),
+					...[...environmentNameToChildEnvironmentNamesMap.values()].flat(),
+				]);
 
-			forceBuildOutputDirs(ctx.resolvedPluginConfig, ctx.resolvedViteConfig);
-			if (ctx.resolvedViteConfig.command === "build") {
-				await cleanBuildOutputDir(ctx.resolvedViteConfig.root);
-			}
+				forceBuildOutputDirs(ctx.resolvedPluginConfig, ctx.resolvedViteConfig);
+				if (ctx.resolvedViteConfig.command === "build") {
+					await cleanBuildOutputDir(ctx.resolvedViteConfig.root);
+				}
+			},
 		},
 	};
 });
