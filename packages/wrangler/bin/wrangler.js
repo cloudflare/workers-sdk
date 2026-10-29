@@ -97,5 +97,3 @@ if (module === require.main) {
 		wranglerProcess && wranglerProcess.kill();
 	});
 }
-
-module.exports = { resolveExitCode };

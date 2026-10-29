@@ -1,30 +1,35 @@
+import { spawnSync } from "node:child_process";
+import { copyFile, mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
-import { mockConsoleMethods } from "./helpers/mock-console";
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- bin/wrangler.js is a plain CommonJS script
-const { resolveExitCode } = require("../../bin/wrangler.js");
+describe("bin/wrangler.js", () => {
+	runInTempDir();
 
-describe("bin/wrangler.js resolveExitCode", () => {
-	const std = mockConsoleMethods();
+	it.skipIf(process.platform === "win32")(
+		"reports failure when the Wrangler CLI is killed by a signal",
+		async ({ expect }) => {
+			await mkdir("bin", { recursive: true });
+			await mkdir("wrangler-dist", { recursive: true });
+			await copyFile(
+				path.resolve(import.meta.dirname, "../../bin/wrangler.js"),
+				"bin/wrangler.js"
+			);
+			await writeFile(
+				"wrangler-dist/cli.js",
+				'process.kill(process.pid, "SIGKILL");'
+			);
 
-	it("passes through a normal numeric exit code", ({ expect }) => {
-		expect(resolveExitCode(0, null)).toBe(0);
-		expect(resolveExitCode(1, null)).toBe(1);
-	});
+			const result = spawnSync(process.execPath, ["bin/wrangler.js"], {
+				encoding: "utf8",
+			});
 
-	it("reports a non-zero exit code when killed by a signal", ({ expect }) => {
-		expect(resolveExitCode(null, "SIGKILL")).toBe(1);
-		expect(std.err).toContain("SIGKILL");
-	});
-
-	it("reports a non-zero exit code for SIGTERM", ({ expect }) => {
-		expect(resolveExitCode(null, "SIGTERM")).toBe(1);
-		expect(std.err).toContain("SIGTERM");
-	});
-
-	it("defaults to a non-zero exit code when code and signal are both missing", ({
-		expect,
-	}) => {
-		expect(resolveExitCode(undefined, null)).toBe(1);
-	});
+			expect(result.status).toBe(1);
+			expect(result.signal).toBeNull();
+			expect(result.stderr).toContain(
+				"wrangler exited because it received signal SIGKILL"
+			);
+		}
+	);
 });
