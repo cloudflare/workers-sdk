@@ -8,6 +8,7 @@ import {
 	getPreEmitDiagnostics,
 } from "typescript";
 import { afterAll, beforeAll, beforeEach, describe, it, vi } from "vitest";
+import { version as workerdVersion } from "workerd";
 import { experimental_generateTypes } from "../api";
 import {
 	constructTSModuleGlob,
@@ -626,6 +627,40 @@ describe("generate types - CLI", () => {
 
 		expect(fs.readFileSync("./worker-configuration.d.ts", "utf-8")).toBe(
 			cleanedContent
+		);
+	});
+
+	it("should report CRLF types files as up to date (--check)", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2024-11-06",
+				vars: { value: "test" },
+			}),
+			"utf-8"
+		);
+		spy.mockResolvedValue({
+			runtimeHeader: getRuntimeHeader(workerdVersion, "2024-11-06"),
+			runtimeTypes: "<runtime types go here>",
+		});
+
+		await runWrangler("types");
+		// Simulate a checkout with `core.autocrlf=true` (the Git for Windows default)
+		const generatedContent = fs.readFileSync(
+			"./worker-configuration.d.ts",
+			"utf-8"
+		);
+		fs.writeFileSync(
+			"./worker-configuration.d.ts",
+			generatedContent.replace(/\n/g, "\r\n")
+		);
+
+		await runWrangler("types --check");
+
+		expect(std.out).toContain(
+			"Types at worker-configuration.d.ts are up to date."
 		);
 	});
 
