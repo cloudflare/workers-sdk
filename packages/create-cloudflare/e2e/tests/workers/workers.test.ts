@@ -15,7 +15,7 @@ import {
 	runC3ForWorkerTest,
 	verifyDeployment,
 	verifyLocalDev,
-	verifyProjectScript,
+	verifyTestScript,
 } from "../../helpers/workers-helpers";
 import { getWorkerTests } from "./test-config";
 import type { RunnerTestSuite } from "vitest";
@@ -79,13 +79,6 @@ describe
 							);
 						}
 
-						const packageJson = readJSON(pkgJsonPath) as {
-							devDependencies?: Record<string, string>;
-						};
-						if (packageJson.devDependencies?.["vite-plus"]) {
-							await verifyProjectScript(project.path, logStream, "check");
-						}
-
 						const { verifyDeploy, verifyTest } = testConfig;
 						if (verifyDeploy) {
 							if (deployedUrl) {
@@ -101,7 +94,7 @@ describe
 						}
 
 						if (verifyTest) {
-							await verifyProjectScript(project.path, logStream, "test");
+							await verifyTestScript(project.path, logStream);
 						}
 					} finally {
 						await deleteWorker(project.name);

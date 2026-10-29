@@ -4595,9 +4595,6 @@ importers:
       '@cloudflare/deploy-helpers':
         specifier: workspace:*
         version: link:../deploy-helpers
-      '@cloudflare/mock-npm-registry':
-        specifier: workspace:*
-        version: link:../mock-npm-registry
       '@cloudflare/pages-functions':
         specifier: workspace:*
         version: link:../pages-functions

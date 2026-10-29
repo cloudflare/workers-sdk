@@ -932,10 +932,7 @@ const validateTemplate = (path: string, config: TemplateConfig) => {
 	}
 };
 
-export const validateTemplateSrcDirectory = (
-	path: string,
-	config: TemplateConfig
-) => {
+const validateTemplateSrcDirectory = (path: string, config: TemplateConfig) => {
 	if (config.platform === "workers") {
 		const wranglerTomlPath = resolve(path, "wrangler.toml");
 		const wranglerJsonPath = resolve(path, "wrangler.json");
@@ -943,11 +940,10 @@ export const validateTemplateSrcDirectory = (
 		if (
 			!existsSync(wranglerTomlPath) &&
 			!existsSync(wranglerJsonPath) &&
-			!existsSync(wranglerJsoncPath) &&
-			!existsSync(resolve(path, "cloudflare.config.ts"))
+			!existsSync(wranglerJsoncPath)
 		) {
 			throw new Error(
-				`create-cloudflare templates must contain a "cloudflare.config.ts", "wrangler.toml", or "wrangler.json(c)" file.`
+				`create-cloudflare templates must contain a "wrangler.toml" or "wrangler.json(c)" file.`
 			);
 		}
 	}

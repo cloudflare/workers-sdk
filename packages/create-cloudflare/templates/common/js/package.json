@@ -5,25 +5,10 @@
 	"scripts": {
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
-		"start": "wrangler dev",
-		"format": "vp fmt",
-		"check": "vp check"
+		"start": "wrangler dev"
 	},
 	"devDependencies": {
 		"itty-router": "^3.0.12",
-		"wrangler": "^3.101.0",
-		"vite-plus": "1.4.0",
-		"vite": "npm:@voidzero-dev/vite-plus-core@1.4.0"
-	},
-	"overrides": {
-		"vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
-		"vitest": "5.0.5"
-	},
-	"engines": {
-		"node": "^22.18.0 || ^24.11.0 || >=26.0.0"
-	},
-	"resolutions": {
-		"vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
-		"vitest": "5.0.5"
+		"wrangler": "^3.101.0"
 	}
 }

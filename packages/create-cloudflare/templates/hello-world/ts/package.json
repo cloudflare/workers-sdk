@@ -6,28 +6,13 @@
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
 		"start": "wrangler dev",
-		"test": "vp test",
-		"cf-typegen": "wrangler types",
-		"format": "vp fmt",
-		"check": "wrangler types && vp check"
+		"test": "vitest",
+		"cf-typegen": "wrangler types"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-plugin": "^1.4.10",
+		"@cloudflare/vitest-plugin": "^1.4.3",
 		"typescript": "^5.5.2",
-		"vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
-		"vite-plus": "1.4.0",
-		"vitest": "5.0.5",
+		"vitest": "~5.0.3",
 		"wrangler": "^4"
-	},
-	"resolutions": {
-		"vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
-		"vitest": "5.0.5"
-	},
-	"overrides": {
-		"vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
-		"vitest": "5.0.5"
-	},
-	"engines": {
-		"node": "^22.18.0 || ^24.11.0 || >=26.0.0"
 	}
 }

@@ -12,7 +12,7 @@
 		/* Specify what module code is generated. */
 		"module": "es2022",
 		/* Specify how TypeScript looks up a file from a given module specifier. */
-		"moduleResolution": "Bundler",
+		"moduleResolution": "node",
 		/* Enable importing .json files */
 		"resolveJsonModule": true,
 

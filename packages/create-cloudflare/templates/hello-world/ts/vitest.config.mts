@@ -1,5 +1,5 @@
 import { cloudflareTest } from "@cloudflare/vitest-plugin";
-import { defineConfig } from "vite-plus";
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
 	plugins: [
