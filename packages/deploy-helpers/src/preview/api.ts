@@ -70,7 +70,6 @@ export interface PreviewResource {
 	name: string;
 	slug: string;
 	urls?: string[];
-	worker_name: string;
 	tags?: string[];
 	observability?: Observability;
 	logpush?: boolean;
@@ -117,6 +116,7 @@ export type CreatePreviewDeploymentRequestParams = {
 		config: {
 			html_handling?: string;
 			not_found_handling?: string;
+			base_path?: string;
 			run_worker_first?: string[] | boolean;
 		};
 	};

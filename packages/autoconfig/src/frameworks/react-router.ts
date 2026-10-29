@@ -479,6 +479,7 @@ export class ReactRouter extends Framework {
 		packageManager,
 		isWorkspaceRoot,
 		context,
+		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const useMiddlewarePattern = hasV8MiddlewareFlag(
 			projectPath,
@@ -489,6 +490,7 @@ export class ReactRouter extends Framework {
 				packageManager: packageManager.type,
 				projectPath,
 				isWorkspaceRoot,
+				version: target === "cf" ? "^2.0.0-beta.v.0" : undefined,
 			});
 
 			mkdirSync("workers");

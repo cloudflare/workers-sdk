@@ -1,6 +1,10 @@
 import { triggersDeploy } from "@cloudflare/deploy-helpers";
 import { createCommand, createNamespace } from "../core/create-command";
 import { resolveTriggersInput } from "../deployment-bundle/resolve-config-args";
+import {
+	routeZoneArgs,
+	validateRouteZoneArgs,
+} from "../deployment-bundle/route-zone-args";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 
@@ -39,6 +43,7 @@ export const triggersDeployCommand = createCommand({
 			requiresArg: true,
 			array: true,
 		},
+		...routeZoneArgs,
 		"dry-run": {
 			describe: "Don't actually deploy",
 			type: "boolean",
@@ -58,6 +63,9 @@ export const triggersDeployCommand = createCommand({
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 		suggestSkillsAfterHandler: true,
 	},
+	validateArgs(args) {
+		validateRouteZoneArgs(args);
+	},
 	async handler(args, { config }) {
 		metrics.sendMetricsEvent("deploy worker triggers", {
 			sendMetrics: config.send_metrics,
@@ -71,6 +79,11 @@ export const triggersDeployCommand = createCommand({
 			firstDeploy: false,
 			dryRun: args.dryRun,
 			validated: false,
+			queueCreateCommand: (queueName) => `wrangler queues create ${queueName}`,
+			workersDevConfigFieldName: "workers_dev",
+			workersDevConfigAssignment: (value) => `workers_dev = ${value}`,
+			previewUrlsConfigFieldName: "preview_urls",
+			previewUrlsConfigAssignment: (value) => `preview_urls = ${value}`,
 			...props,
 		});
 	},

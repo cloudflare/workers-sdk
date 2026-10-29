@@ -2,6 +2,12 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-	plugins: [cloudflare({ inspectorPort: false, persistState: false })],
+	plugins: [
+		cloudflare({
+			types: { includeRuntime: false },
+			inspectorPort: false,
+			persistState: false,
+		}),
+	],
 	logLevel: "error",
 });

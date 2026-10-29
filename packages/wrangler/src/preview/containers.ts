@@ -4,6 +4,7 @@ import {
 	buildAndMaybePush,
 	initContainersSharedContext,
 	listDurableObjects,
+	pushImageIfChanged,
 } from "@cloudflare/containers-shared";
 import { getDockerPath, UserError } from "@cloudflare/workers-utils";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
@@ -48,14 +49,15 @@ export async function deployPreviewContainers(
 	normalisedContainerConfig: ContainerNormalizedConfig[],
 	deployment: DeploymentResource,
 	accountId: string,
-	options: { quiet: boolean }
+	options: { quiet: boolean; localImageReferences?: Map<string, string> }
 ): Promise<void> {
 	if (!options.quiet) {
 		return applyPreviewContainers(
 			scopedConfig,
 			normalisedContainerConfig,
 			deployment,
-			accountId
+			accountId,
+			options.localImageReferences
 		);
 	}
 
@@ -73,7 +75,8 @@ export async function deployPreviewContainers(
 				scopedConfig,
 				normalisedContainerConfig,
 				deployment,
-				accountId
+				accountId,
+				options.localImageReferences
 			)
 		);
 	} finally {
@@ -95,9 +98,14 @@ async function applyPreviewContainers(
 	scopedConfig: Config,
 	normalisedContainerConfig: ContainerNormalizedConfig[],
 	deployment: DeploymentResource,
-	accountId: string
+	accountId: string,
+	localImageReferences: Map<string, string> | undefined
 ): Promise<void> {
-	initContainersSharedContext({ logger, fetchPagedListResult, fetchResult });
+	initContainersSharedContext({
+		logger,
+		fetchPagedListResult,
+		fetchResult,
+	});
 	await fillOpenAPIConfiguration(scopedConfig, containersScope);
 	const dockerPath = getDockerPath();
 
@@ -149,7 +157,19 @@ async function applyPreviewContainers(
 		}
 
 		let imageRef;
-		if ("dockerfile" in container) {
+		const localImageReference = localImageReferences?.get(container.class_name);
+		if (localImageReference !== undefined) {
+			imageRef = await pushImageIfChanged({
+				pathToDocker: dockerPath,
+				sourceTag: localImageReference,
+				targetTag: localImageReference,
+				accountId,
+				complianceConfig: scopedConfig,
+				containerConfig: container,
+				// Build Output can be uploaded again without rebuilding the image.
+				cleanupSourceTag: false,
+			});
+		} else if ("dockerfile" in container) {
 			// Docker rejects uppercase characters in an image repository name, and
 			// a preview application name embeds the Durable Object class name
 			// verbatim, which is conventionally PascalCase. Lowercase the name for
@@ -172,7 +192,13 @@ async function applyPreviewContainers(
 		}
 
 		await apply(
-			{ imageRef, durable_object_namespace_id: namespaceId },
+			{
+				imageRef,
+				durable_object_namespace_id: namespaceId,
+				configFileName: "Wrangler config",
+				observabilityTargetPercentageField: "target_instance_percentage",
+				observabilityTargetCountField: "target_instance_count",
+			},
 			container,
 			scopedConfig,
 			accountId

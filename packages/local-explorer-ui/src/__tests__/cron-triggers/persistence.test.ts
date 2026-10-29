@@ -1,0 +1,230 @@
+import { describe, it } from "vitest";
+import {
+	CRON_CUSTOM_ROWS_STORAGE_PREFIX,
+	CRON_TIME_PRESETS_STORAGE_PREFIX,
+	cronCustomRowsStorageKey,
+	cronTimePresetsStorageKey,
+	readPersistedCronTimePresets,
+	readPersistedCustomCronRows,
+	writePersistedCronTimePresets,
+	writePersistedCustomCronRows,
+} from "../../components/cron-triggers/persistence";
+import { createCronRow } from "../../components/cron-triggers/row-state";
+
+class MemoryStorage implements Storage {
+	#values = new Map<string, string>();
+	writesBlocked = false;
+
+	get length(): number {
+		return this.#values.size;
+	}
+
+	clear(): void {
+		this.#values.clear();
+	}
+
+	getItem(key: string): string | null {
+		return this.#values.get(key) ?? null;
+	}
+
+	key(index: number): string | null {
+		return [...this.#values.keys()][index] ?? null;
+	}
+
+	removeItem(key: string): void {
+		this.#values.delete(key);
+	}
+
+	setItem(key: string, value: string): void {
+		if (this.writesBlocked) {
+			throw new Error("quota exceeded");
+		}
+		this.#values.set(key, value);
+	}
+}
+
+describe("Cron Trigger custom-row persistence", () => {
+	it("uses the versioned project and encoded Worker key", ({ expect }) => {
+		expect(cronCustomRowsStorageKey(undefined, "worker")).toBeUndefined();
+		expect(cronCustomRowsStorageKey("project-scope", "a Worker/name")).toBe(
+			`${CRON_CUSTOM_ROWS_STORAGE_PREFIX}.project-scope.a%20Worker%2Fname`
+		);
+	});
+
+	it("persists editable custom drafts and rebuilds transient state", ({
+		expect,
+	}) => {
+		const storage = new MemoryStorage();
+		const custom = {
+			...createCronRow("0 12 * * *"),
+			calendarValue: "2026-09-10T12:34:56.789",
+			customEpochMs: 1,
+			invocation: {
+				cron: "0 12 * * *",
+				requestId: "request-id",
+				scheduledTime: 1,
+				status: "pending" as const,
+			},
+			timeMode: "custom" as const,
+		};
+
+		writePersistedCustomCronRows(storage, "key", [custom]);
+		const raw = storage.getItem("key") ?? "";
+		expect(raw).not.toContain(custom.id);
+		expect(raw).not.toContain("calendarValue");
+		expect(raw).not.toContain("customEpochMs");
+		expect(raw).not.toContain("request-id");
+		expect(raw).not.toContain("source");
+		expect(raw).not.toContain("timeMode");
+
+		const restored = readPersistedCustomCronRows(storage, "key");
+		expect(restored).toHaveLength(1);
+		expect(restored[0]).toMatchObject({
+			cron: "0 12 * * *",
+			source: "custom",
+			timeMode: "now",
+		});
+		expect(restored[0]?.calendarValue).toBeUndefined();
+		expect(restored[0]?.customEpochMs).toBeUndefined();
+		expect(restored[0]?.id).not.toBe(custom.id);
+		expect(restored[0]?.invocation).toBeUndefined();
+	});
+
+	it("accepts legacy per-row times without restoring them", ({ expect }) => {
+		const storage = new MemoryStorage();
+		storage.setItem(
+			"key",
+			JSON.stringify([
+				{
+					calendarValue: "2026-09-10T12:34:56.789",
+					cron: "legacy",
+					cronBuilder: { kind: "daily", hour: "", minute: "7" },
+					cronInputMode: "builder",
+					customTimeInputMode: "epoch",
+					epochValue: "123456789",
+					timeMode: "custom",
+				},
+			])
+		);
+
+		const restored = readPersistedCustomCronRows(storage, "key");
+		expect(restored[0]).toMatchObject({
+			cronBuilder: { kind: "daily", hour: "", minute: "7" },
+			cronInputMode: "builder",
+			timeMode: "now",
+		});
+		expect(restored[0]?.calendarValue).toBeUndefined();
+		expect(restored[0]?.customEpochMs).toBeUndefined();
+		expect(restored[0]?.epochValue).toBeUndefined();
+	});
+
+	for (const [label, raw] of [
+		["invalid JSON", "not json"],
+		["unknown envelope", JSON.stringify({ rows: [] })],
+		[
+			"unknown row field",
+			JSON.stringify([
+				{
+					cron: "* * * * *",
+					cronBuilder: { kind: "daily", hour: "0", minute: "0" },
+					cronInputMode: "expression",
+					customTimeInputMode: "calendar",
+					timeMode: "now",
+					unknown: true,
+				},
+			]),
+		],
+	] as const) {
+		it(`removes malformed or unknown storage: ${label}`, ({ expect }) => {
+			const storage = new MemoryStorage();
+			storage.setItem("key", raw);
+			expect(readPersistedCustomCronRows(storage, "key")).toEqual([]);
+			expect(storage.getItem("key")).toBeNull();
+		});
+	}
+
+	it("removes empty state and tolerates storage failures", ({ expect }) => {
+		const storage = new MemoryStorage();
+		storage.setItem("key", "old");
+		expect(writePersistedCustomCronRows(storage, "key", [])).toBe(true);
+		expect(storage.getItem("key")).toBeNull();
+
+		const quotaStorage = new MemoryStorage();
+		expect(
+			writePersistedCustomCronRows(quotaStorage, "key", [
+				createCronRow("persisted"),
+			])
+		).toBe(true);
+		const previous = quotaStorage.getItem("key");
+		quotaStorage.writesBlocked = true;
+		expect(
+			writePersistedCustomCronRows(quotaStorage, "key", [
+				createCronRow("not persisted"),
+			])
+		).toBe(false);
+		expect(quotaStorage.getItem("key")).toBe(previous);
+		quotaStorage.writesBlocked = false;
+		expect(
+			writePersistedCustomCronRows(quotaStorage, "key", [
+				createCronRow("retried"),
+			])
+		).toBe(true);
+		expect(readPersistedCustomCronRows(quotaStorage, "key")[0]?.cron).toBe(
+			"retried"
+		);
+
+		const throwing = {
+			getItem: () => {
+				throw new Error("blocked");
+			},
+			removeItem: () => {
+				throw new Error("blocked");
+			},
+			setItem: () => {
+				throw new Error("blocked");
+			},
+		} as unknown as Storage;
+		expect(() => readPersistedCustomCronRows(throwing, "key")).not.toThrow();
+		expect(
+			writePersistedCustomCronRows(throwing, "key", [createCronRow("cron")])
+		).toBe(false);
+	});
+});
+
+describe("Cron Trigger time-preset persistence", () => {
+	it("uses a separate versioned project and encoded Worker key", ({
+		expect,
+	}) => {
+		expect(cronTimePresetsStorageKey(undefined, "worker")).toBeUndefined();
+		expect(cronTimePresetsStorageKey("project-scope", "a Worker/name")).toBe(
+			`${CRON_TIME_PRESETS_STORAGE_PREFIX}.project-scope.a%20Worker%2Fname`
+		);
+	});
+
+	it("round trips valid scheduled-time presets", ({ expect }) => {
+		const storage = new MemoryStorage();
+		writePersistedCronTimePresets(storage, "key", [-1, 0, 123456789]);
+		expect(readPersistedCronTimePresets(storage, "key")).toEqual([
+			-1, 0, 123456789,
+		]);
+	});
+
+	it("removes malformed presets and preserves the last successful write", ({
+		expect,
+	}) => {
+		const malformed = new MemoryStorage();
+		malformed.setItem("key", JSON.stringify([1, 1]));
+		expect(readPersistedCronTimePresets(malformed, "key")).toEqual([]);
+		expect(malformed.getItem("key")).toBeNull();
+
+		const quotaStorage = new MemoryStorage();
+		expect(writePersistedCronTimePresets(quotaStorage, "key", [1])).toBe(true);
+		const previous = quotaStorage.getItem("key");
+		quotaStorage.writesBlocked = true;
+		expect(writePersistedCronTimePresets(quotaStorage, "key", [2])).toBe(false);
+		expect(quotaStorage.getItem("key")).toBe(previous);
+		quotaStorage.writesBlocked = false;
+		expect(writePersistedCronTimePresets(quotaStorage, "key", [2])).toBe(true);
+		expect(readPersistedCronTimePresets(quotaStorage, "key")).toEqual([2]);
+	});
+});

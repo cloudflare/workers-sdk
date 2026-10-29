@@ -1,10 +1,9 @@
 import { ms } from "itty-time";
+import { schedulerWait } from "./delay";
 import type { Engine } from "../engine";
 import type { WorkflowSleepDuration } from "cloudflare:workers";
 
 export const ENGINE_TIMEOUT = ms("5 minutes" satisfies WorkflowSleepDuration);
-
-let latestGracePeriodTimestamp: number | undefined = undefined;
 
 export type WaitingPromiseType = "pause";
 
@@ -14,6 +13,8 @@ export class GracePeriodSemaphore {
 	#counter: number = 0;
 	readonly callback: GracePeriodCallback;
 	readonly timeoutMs: number;
+	latestGracePeriodTimestamp: number | undefined = undefined;
+	latestGracePeriodAbortController: AbortController | undefined = undefined;
 	#waitingPromises: {
 		rejectCallback: () => void;
 		resolveCallback: (value: unknown) => void;
@@ -42,7 +43,9 @@ export class GracePeriodSemaphore {
 		}
 		// when the counter goes from 0 to 1 - we can safely reject the previous grace period
 		if (this.#counter == 0) {
-			latestGracePeriodTimestamp = undefined;
+			this.latestGracePeriodTimestamp = undefined;
+			this.latestGracePeriodAbortController?.abort();
+			this.latestGracePeriodAbortController = undefined;
 		}
 		this.#counter += 1;
 	}
@@ -121,6 +124,10 @@ export class GracePeriodSemaphore {
 	}
 
 	dispose() {
+		this.latestGracePeriodTimestamp = undefined;
+		this.latestGracePeriodAbortController?.abort();
+		this.latestGracePeriodAbortController = undefined;
+
 		// Reject all waiting step promises so they stop blocking
 		for (const promise of this.#waitingSteps) {
 			promise.rejectCallback();
@@ -145,6 +152,7 @@ export const startGracePeriod: GracePeriodCallback = async (
 	engine: Engine,
 	timeoutMs: number
 ) => {
+	const semaphore = engine.timeoutHandler;
 	const gracePeriodHandler = async () => {
 		const thisTimestamp = new Date().valueOf();
 
@@ -158,20 +166,32 @@ export const startGracePeriod: GracePeriodCallback = async (
 		// 2. Or if there is, it should be in the past
 		if (
 			!(
-				latestGracePeriodTimestamp === undefined ||
-				latestGracePeriodTimestamp < thisTimestamp
+				semaphore.latestGracePeriodTimestamp === undefined ||
+				semaphore.latestGracePeriodTimestamp < thisTimestamp
 			)
 		) {
 			throw new Error(
 				"Can't start grace period since there is already an active one started on " +
-					latestGracePeriodTimestamp
+					semaphore.latestGracePeriodTimestamp
 			);
 		}
 
-		latestGracePeriodTimestamp = thisTimestamp;
-		await scheduler.wait(timeoutMs);
+		semaphore.latestGracePeriodAbortController?.abort();
+		const abortController = new AbortController();
+		semaphore.latestGracePeriodAbortController = abortController;
+		semaphore.latestGracePeriodTimestamp = thisTimestamp;
+
+		const abortSignal = engine.engineAbortController?.signal
+			? AbortSignal.any([
+					abortController.signal,
+					engine.engineAbortController.signal,
+				])
+			: abortController.signal;
+
+		await schedulerWait(timeoutMs, { signal: abortSignal });
 		if (
-			thisTimestamp !== latestGracePeriodTimestamp ||
+			abortSignal.aborted ||
+			thisTimestamp !== semaphore.latestGracePeriodTimestamp ||
 			engine.timeoutHandler.isRunningStep()
 		) {
 			return;

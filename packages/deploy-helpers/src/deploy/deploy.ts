@@ -21,6 +21,7 @@ import {
 	UserError,
 	writeOutput,
 } from "@cloudflare/workers-utils";
+import { parseAndExpandDotEnv } from "@cloudflare/workers-utils/local-env";
 import { Response } from "undici";
 import { fetchPagedListResult, fetchResult, logger } from "../shared/context";
 import { triggersDeploy } from "../triggers/deploy";
@@ -35,10 +36,6 @@ import {
 	type BundleSize,
 } from "./helpers/bundle-reporter";
 import { confirmLatestDeploymentOverwriteAndGetLatest } from "./helpers/confirm-latest-deployment-overwrite";
-import {
-	addContainerImagesBinding,
-	clearRemovedContainerImagesBindings,
-} from "./helpers/container-image-bindings";
 import {
 	getContainerMetadata,
 	getContainerMetadataForRolloutSkip,
@@ -107,11 +104,22 @@ import type {
 import type { FormData } from "undici";
 
 /**
- * Wrangler-specific functions injected into `deploy()`. These remain in
- * wrangler because they depend on wrangler-only systems (account selection,
- * metrics, the dev-mode worker registry, etc.).
+ * Consumer-specific values and integrations injected into `deploy()`.
  */
-export type DeployCallbacks = {
+export type DeployOptions = {
+	deployCommand: string;
+	versionsDeployCommand: string;
+	d1ListCommand: string;
+	d1DeleteCommand: string;
+	queueCreateCommand: (queueName: string) => string;
+	secretPutCommand: string;
+	workersDevConfigFieldName: string;
+	workersDevConfigAssignment: (value: boolean) => string;
+	previewUrlsConfigFieldName: string;
+	previewUrlsConfigAssignment: (value: boolean) => string;
+	configFileName: string;
+	observabilityTargetPercentageField: string;
+	observabilityTargetCountField: string;
 	syncWorkersSite:
 		| ((
 				complianceConfig: ComplianceConfig,
@@ -147,11 +155,11 @@ export default async function deploy(
 	props: DeployProps,
 	config: ContainerlessConfig,
 	buildResult: WorkerBuildResult,
-	callbacks: DeployCallbacks
+	options: DeployOptions
 ): Promise<DeployResult> {
 	// DO NOT put anything in this function, this is just a thin wrapper to call writeOutput at the end
 
-	const result = await deployWorker(props, config, buildResult, callbacks);
+	const result = await deployWorker(props, config, buildResult, options);
 
 	writeOutput({
 		type: "deploy",
@@ -177,7 +185,7 @@ async function deployWorker(
 	props: DeployProps,
 	config: ContainerlessConfig,
 	buildResult: WorkerBuildResult,
-	callbacks: DeployCallbacks
+	options: DeployOptions
 ): Promise<DeployResult> {
 	const { entry, compatibilityDate, compatibilityFlags, keepVars, accountId } =
 		props;
@@ -190,7 +198,8 @@ async function deployWorker(
 	// any validation that DOES require API calls should go in preUploadApiChecks()
 	const { workerTag, tags, workerExists, aborted } = await preUploadApiChecks(
 		props,
-		config
+		config,
+		options.queueCreateCommand
 	);
 
 	if (aborted) {
@@ -214,7 +223,9 @@ async function deployWorker(
 		const confirmation = await confirmLatestDeploymentOverwriteAndGetLatest(
 			config,
 			accountId,
-			scriptName
+			scriptName,
+			options.deployCommand,
+			options.versionsDeployCommand
 		);
 		latestDeployment = confirmation.latestDeployment;
 		if (!confirmation.confirmed) {
@@ -302,8 +313,8 @@ async function deployWorker(
 		await buildAssetManifest(assetsOptions.directory);
 	}
 
-	const workersSitesAssets = callbacks.syncWorkersSite
-		? await callbacks.syncWorkersSite(
+	const workersSitesAssets = options.syncWorkersSite
+		? await options.syncWorkersSite(
 				config,
 				accountId,
 				scriptName,
@@ -326,7 +337,11 @@ async function deployWorker(
 	}
 
 	if (props.secretsFile) {
-		const secretsResult = await parseBulkInputToObject(props.secretsFile);
+		const secretsResult = await parseBulkInputToObject(
+			props.secretsFile,
+			false,
+			parseAndExpandDotEnv
+		);
 		if (secretsResult) {
 			for (const [secretName, secretValue] of Object.entries(
 				secretsResult.content
@@ -342,27 +357,9 @@ async function deployWorker(
 	addRequiredSecretsInheritBindings(config, bindings, {
 		type: "deploy",
 		workerExists,
+		secretPutCommand: options.secretPutCommand,
+		uploadCommand: options.deployCommand,
 	});
-	if (!skipContainerChanges && keepVars && !isDryRun && workerExists) {
-		await clearRemovedContainerImagesBindings(
-			config,
-			durableObjectContainerConfig,
-			bindings,
-			workerUrl
-		);
-	}
-	addContainerImagesBinding(
-		durableObjectContainerConfig,
-		bindings,
-		preparedContainerImages ?? {},
-		{
-			preserveExisting: skipContainerChanges,
-			exports: config.exports,
-			workerExists,
-			hasExistingBinding:
-				rolloutSkipContainerState?.hasExistingContainerImagesBinding,
-		}
-	);
 
 	if (workersSitesAssets.manifest) {
 		modules.push({
@@ -393,7 +390,9 @@ async function deployWorker(
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,
 		keepVars,
-		keepSecrets: keepVars || !!props.secretsFile,
+		// Never delete secret bindings when deploying. Inherit unchanged secrets
+		// from the previous Worker Version, including secrets absent from config.
+		keepSecrets: true,
 		logpush: props.logpush,
 		placement,
 		tail_consumers: config.tail_consumers,
@@ -454,6 +453,9 @@ async function deployWorker(
 		props.containers.source === undefined &&
 		// Rollout skip can recover Container metadata absent from local config.
 		containerMetadata === undefined;
+	if (!canUseNewVersionsDeploymentsApi) {
+		worker.code_update_strategy = props.durableObjectsCodeUpdateStrategy;
+	}
 
 	let workerBundle: FormData;
 	const dockerPath = getDockerPath();
@@ -498,6 +500,8 @@ async function deployWorker(
 				config,
 				{
 					skipConfigWriteback: props.skipProvisioningConfigWriteback,
+					d1ListCommand: options.d1ListCommand,
+					d1DeleteCommand: options.d1DeleteCommand,
 				}
 			);
 		}
@@ -551,13 +555,20 @@ async function deployWorker(
 				// Deploy new version to 100%
 				const versionMap = new Map<VersionId, Percentage>();
 				versionMap.set(versionResult.id, 100);
+				const unsafeMetadata = config.unsafe?.metadata;
+				const codeUpdateStrategy =
+					unsafeMetadata !== undefined &&
+					"code_update_strategy" in unsafeMetadata
+						? unsafeMetadata.code_update_strategy
+						: props.durableObjectsCodeUpdateStrategy;
 				await createDeployment(
 					config,
 					accountId,
 					scriptName,
 					versionMap,
 					props.message,
-					undefined
+					undefined,
+					codeUpdateStrategy
 				);
 
 				// Update service and environment tags when using environments
@@ -707,7 +718,7 @@ async function deployWorker(
 				workerBundle,
 				projectRoot,
 				// eslint-disable-next-line @typescript-eslint/no-deprecated -- compatibility callback for existing deploy-helpers consumers
-				callbacks.analyseBundle
+				options.analyseBundle
 			);
 			if (message !== null) {
 				logger.error(message);
@@ -716,6 +727,8 @@ async function deployWorker(
 			handleMissingSecretsError(err, config, {
 				type: "deploy",
 				workerExists,
+				secretPutCommand: options.secretPutCommand,
+				uploadCommand: options.deployCommand,
 			});
 
 			// Apply source mapping to validation startup errors if possible
@@ -732,7 +745,7 @@ async function deployWorker(
 					"binding DB of type d1 must have a valid `id` specified [code: 10021]"
 				) {
 					throw new UserError(
-						"You must use a real database in the database_id configuration. You can find your databases using 'wrangler d1 list', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development",
+						`You must use a real database in the database_id configuration. You can find your databases using '${options.d1ListCommand}', or read how to develop locally with D1 here: https://developers.cloudflare.com/d1/configuration/local-development`,
 						{ telemetryMessage: "deploy d1 database binding invalid id" }
 					);
 				}
@@ -787,7 +800,11 @@ async function deployWorker(
 
 	if (shouldDeployContainers) {
 		assert(versionId && accountId);
-		initContainersSharedContext({ logger, fetchPagedListResult, fetchResult });
+		initContainersSharedContext({
+			logger,
+			fetchPagedListResult,
+			fetchResult,
+		});
 		const containerDeployments: ResolvedContainerDeployment[] = [];
 		for (const container of normalisedContainerConfig) {
 			if ("dockerfile" in container) {
@@ -815,12 +832,20 @@ async function deployWorker(
 				});
 			}
 		}
-		await deployContainers(config, containerDeployments, {
-			versionId,
-			accountId,
-			scriptName,
-			dispatchNamespace: props.dispatchNamespace,
-		});
+		await deployContainers(
+			{ ...config, containers: props.containers.source },
+			containerDeployments,
+			{
+				versionId,
+				accountId,
+				scriptName,
+				dispatchNamespace: props.dispatchNamespace,
+				configFileName: options.configFileName,
+				observabilityTargetPercentageField:
+					options.observabilityTargetPercentageField,
+				observabilityTargetCountField: options.observabilityTargetCountField,
+			}
+		);
 	}
 	if (!skipContainerChanges && durableObjectContainerConfig.length > 0) {
 		assert(versionId && accountId);
@@ -837,7 +862,7 @@ async function deployWorker(
 			);
 		} catch (error) {
 			throw new UserError(
-				"The Worker version was deployed, but Wrangler could not finish applying its Durable Object-managed Container application settings. Re-run the same `wrangler deploy` command to retry and finish deployment.",
+				`The Worker version was deployed, but its Durable Object-managed Container application settings were not fully applied. Re-run the same \`${options.deployCommand}\` command to retry and finish deployment.`,
 				{
 					telemetryMessage:
 						"deploy durable object container application creation failed after deployment",
@@ -864,6 +889,11 @@ async function deployWorker(
 		routes: props.routes,
 		validated: true,
 		dryRun: false,
+		queueCreateCommand: options.queueCreateCommand,
+		workersDevConfigFieldName: options.workersDevConfigFieldName,
+		workersDevConfigAssignment: options.workersDevConfigAssignment,
+		previewUrlsConfigFieldName: options.previewUrlsConfigFieldName,
+		previewUrlsConfigAssignment: options.previewUrlsConfigAssignment,
 	});
 
 	logger.log("Current Version ID:", versionId);

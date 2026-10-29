@@ -9,9 +9,11 @@ import { removeDirSync } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	AccountService,
+	ApplicationsService,
 	buildCommand,
 	cleanupBuiltImages,
 	buildContainerImages,
+	deployContainers,
 	getCloudflareContainerRegistry,
 	getContainerImageTag,
 	ImageRegistriesService,
@@ -19,12 +21,18 @@ import {
 	InstanceType,
 	pushBuiltContainerImage,
 	pushCommand,
+	pushImageIfChanged,
 	SchedulingPolicy,
 } from "../index";
 import type { BuiltContainerImage, BuiltImage } from "../src/build";
 import type { CompleteAccountCustomer } from "../src/client";
 import type { ContainerNormalizedConfig } from "../src/types";
-import type { FetchResultFetcher, Logger } from "@cloudflare/workers-utils";
+import type {
+	Config,
+	FetchPagedListResultFetcher,
+	FetchResultFetcher,
+	Logger,
+} from "@cloudflare/workers-utils";
 
 vi.mock("node:child_process");
 
@@ -201,7 +209,10 @@ describe("buildCommand", () => {
 				throw new Error(`Unexpected fetchResult path: ${path}`);
 			}
 		) as FetchResultFetcher;
-		initContainersSharedContext({ logger, fetchResult: fetchResultMock });
+		initContainersSharedContext({
+			logger,
+			fetchResult: fetchResultMock,
+		});
 	});
 
 	afterEach(() => {
@@ -314,6 +325,64 @@ describe("buildCommand", () => {
 		]);
 	});
 
+	it("preserves a reusable Build Output image tag across uploads", async ({
+		expect,
+	}) => {
+		const digest =
+			"registry.cloudflare.com/some-account-id/test-app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+		inspectOutputs = [
+			"[]",
+			"53387881 2",
+			`["${digest}"]`,
+			`["${digest}"]`,
+			"53387881 2",
+		];
+		vi.mocked(execFileSync).mockReturnValue(
+			'{"Descriptor":{"digest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}'
+		);
+
+		for (let attempt = 0; attempt < 2; attempt++) {
+			await expect(
+				pushImageIfChanged({
+					pathToDocker: "docker",
+					sourceTag: "test-app:tag",
+					targetTag: "test-app:tag",
+					accountId: "some-account-id",
+					containerConfig: dockerfileContainer,
+					cleanupSourceTag: false,
+				})
+			).resolves.toEqual({
+				remoteDigest: `${getCloudflareContainerRegistry()}/some-account-id/test-app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`,
+			});
+		}
+
+		expectNoSpawnWith(["image", "rm", "test-app:tag"]);
+		expect(
+			vi.mocked(spawn).mock.calls.filter(([, args]) => args?.[0] === "push")
+		).toHaveLength(1);
+	});
+
+	it("validates a local image against its container disk limit", async ({
+		expect,
+	}) => {
+		inspectOutputs = ["[]", "2200000000 2"];
+
+		await expect(
+			pushImageIfChanged({
+				pathToDocker: "docker",
+				sourceTag: "test-app:tag",
+				targetTag: "test-app:tag",
+				accountId: "some-account-id",
+				containerConfig: dockerfileContainer,
+				cleanupSourceTag: false,
+			})
+		).rejects.toThrow(/Image too large/);
+		expectNoSpawnWith([
+			"push",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+	});
+
 	it("uses docker manifest inspect when pushed image inspect has no digest", async ({
 		expect,
 	}) => {
@@ -337,7 +406,7 @@ describe("buildCommand", () => {
 				"-v",
 				`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 			],
-			{ encoding: "utf8" }
+			{ encoding: "utf8", stdio: "pipe" }
 		);
 	});
 });
@@ -371,7 +440,10 @@ describe("deploy container image build and push", () => {
 				throw new Error(`Unexpected fetchResult path: ${path}`);
 			}
 		) as FetchResultFetcher;
-		initContainersSharedContext({ logger, fetchResult: fetchResultMock });
+		initContainersSharedContext({
+			logger,
+			fetchResult: fetchResultMock,
+		});
 	});
 
 	afterEach(() => {
@@ -400,6 +472,25 @@ describe("deploy container image build and push", () => {
 
 		await expect(
 			buildContainerImages([container, imageUriContainer], "docker", false)
+		).resolves.toStrictEqual([
+			{
+				container,
+				localTag: TEST_LOCAL_TAG,
+			},
+		]);
+	});
+
+	it("keeps the internal image tag stable", async ({ expect }) => {
+		const { dir, args } = createBuildArgs();
+		tempDirs.push(dir);
+		const container = {
+			...dockerfileContainer,
+			dockerfile: args.pathToDockerfile,
+			image_build_context: dir,
+		};
+
+		await expect(
+			buildContainerImages([container], "docker", false)
 		).resolves.toStrictEqual([
 			{
 				container,
@@ -659,13 +750,77 @@ describe("deploy container image build and push", () => {
 	});
 });
 
+describe("caller-specific container guidance", () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	it("uses consumer-owned config field names", async ({ expect }) => {
+		const container = {
+			...dockerfileContainer,
+			observability: {
+				logs_enabled: true,
+				target_instance_percentage: 10,
+			},
+		} satisfies ContainerNormalizedConfig;
+		const fetchPagedListResult = vi.fn(async () => [
+			{
+				id: "namespace-id",
+				class: container.class_name,
+				name: "namespace",
+				script: "worker",
+				use_sqlite: true,
+			},
+		]) as unknown as FetchPagedListResultFetcher;
+		initContainersSharedContext({
+			logger,
+			fetchResult: vi.fn() as never,
+			fetchPagedListResult,
+		});
+		vi.spyOn(ApplicationsService, "listApplications").mockResolvedValue([
+			{
+				id: "application-id",
+				name: container.name,
+				configuration: {
+					image: "registry.cloudflare.com/example/image:tag",
+					observability: { logs: { enabled: true } },
+				},
+				durable_objects: { namespace_id: "namespace-id" },
+			},
+		] as never);
+
+		await expect(
+			deployContainers(
+				{
+					containers: [container],
+					durable_objects: { bindings: [] },
+				} as unknown as Config,
+				[{ container, imageRef: { newTag: "example/image:tag" } }],
+				{
+					versionId: "version-id",
+					accountId: "account-id",
+					scriptName: "worker",
+					configFileName: "test.config.ts",
+					observabilityTargetPercentageField: "targetInstancePercentage",
+					observabilityTargetCountField: "targetInstanceCount",
+				}
+			)
+		).rejects.toThrow(
+			"Set containers[].observability.enabled = false in your test.config.ts and deploy once, then deploy again with targetInstancePercentage or targetInstanceCount."
+		);
+	});
+});
+
 describe("buildCommand arguments", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		tempDirs = [];
 		inspectOutputs = [];
 		mockDockerProcesses();
-		initContainersSharedContext({ logger, fetchResult: vi.fn() });
+		initContainersSharedContext({
+			logger,
+			fetchResult: vi.fn(),
+		});
 	});
 
 	afterEach(() => {

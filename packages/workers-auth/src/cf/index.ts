@@ -68,8 +68,10 @@ export type { UserPreferences } from "../core/preferences";
 export const CF_CLI: CliDescriptor = {
 	cliName: CF_CLI_NAME,
 	displayName: CF_DISPLAY_NAME,
+	temporaryAccountFlag: "--temporary-account",
 	commands: {
 		login: "cf auth login",
+		logout: "cf auth logout",
 		whoami: "cf auth whoami",
 		createProfile: "cf auth create",
 		deviceLogin: "cf auth login",
@@ -141,3 +143,5 @@ export function setKeyringPreference(
 ): SetKeyringPreferenceResult {
 	return cfKeyringPreference.setKeyringPreference(enabled, ctx);
 }
+
+export { AuthenticationError } from "../core/authentication-error";

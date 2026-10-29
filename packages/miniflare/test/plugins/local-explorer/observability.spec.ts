@@ -77,7 +77,6 @@ describe("Observability API", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "user",
 						compatibilityDate: "2026-01-01",
 						manifest: singleModuleManifest(SEED_WORKER),
@@ -227,7 +226,6 @@ describe("Observability API (observability disabled)", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2026-01-01",
 						manifest: singleModuleManifest(

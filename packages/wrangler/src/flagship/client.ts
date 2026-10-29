@@ -16,7 +16,9 @@ export type Operator =
 	| "starts_with"
 	| "ends_with"
 	| "in"
-	| "not_in";
+	| "not_in"
+	| "has"
+	| "not_has";
 
 export type LogicalOperator = "AND" | "OR";
 
@@ -45,6 +47,8 @@ export type Rule = {
 	rollout?: Rollout;
 };
 
+export type FlagMetadata = Record<string, boolean | string | number>;
+
 export type Flag = {
 	key: string;
 	type?: FlagType;
@@ -53,6 +57,7 @@ export type Flag = {
 	default_variation: string;
 	variations: Record<string, unknown>;
 	rules: Rule[];
+	metadata?: FlagMetadata;
 	updated_at?: string;
 	updated_by?: string;
 };
@@ -64,6 +69,7 @@ export type FlagInput = {
 	default_variation: string;
 	variations: Record<string, unknown>;
 	rules: Rule[];
+	metadata?: FlagMetadata | null;
 };
 
 export function toFlagInput(flag: Flag): FlagInput {
@@ -74,6 +80,8 @@ export function toFlagInput(flag: Flag): FlagInput {
 		default_variation: flag.default_variation,
 		variations: flag.variations,
 		rules: flag.rules,
+		// PUT clears metadata that is omitted, so carry it over.
+		metadata: flag.metadata,
 	};
 }
 
@@ -93,6 +101,7 @@ export type ChangelogEntry = {
 };
 
 export type EvaluationReason =
+	| "STATIC"
 	| "TARGETING_MATCH"
 	| "DEFAULT"
 	| "DISABLED"

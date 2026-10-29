@@ -68,6 +68,7 @@ export function createWorkerUploadForm(
 		main,
 		sourceMaps,
 		migrations,
+		code_update_strategy,
 		exports: configuredExports,
 		compatibility_date,
 		compatibility_flags,
@@ -90,6 +91,7 @@ export function createWorkerUploadForm(
 	const assetConfig: AssetConfigMetadata = {
 		html_handling: assets?.assetConfig?.html_handling,
 		not_found_handling: assets?.assetConfig?.not_found_handling,
+		base_path: assets?.assetConfig?.base_path,
 		run_worker_first: assets?.run_worker_first,
 		_redirects: assets?._redirects,
 		_headers: assets?._headers,
@@ -160,10 +162,12 @@ export function createWorkerUploadForm(
 	);
 	const mtls_certificates = extractBindingsOfType("mtls_certificate", bindings);
 	const pipelines = extractBindingsOfType("pipeline", bindings);
+	const k2 = extractBindingsOfType("k2", bindings);
 	const worker_loaders = extractBindingsOfType("worker_loader", bindings);
 	const logfwdr = extractBindingsOfType("logfwdr", bindings);
 	const wasm_modules = extractBindingsOfType("wasm_module", bindings);
 	const browser = extractBindingsOfType("browser", bindings)[0];
+	const analytics = extractBindingsOfType("analytics", bindings)[0];
 	const ai = extractBindingsOfType("ai", bindings)[0];
 	const images = extractBindingsOfType("images", bindings)[0];
 	const stream = extractBindingsOfType("stream", bindings)[0];
@@ -583,6 +587,10 @@ export function createWorkerUploadForm(
 		}
 	});
 
+	k2.forEach(({ binding, stream: k2Stream }) => {
+		metadataBindings.push({ name: binding, type: "k2", stream: k2Stream });
+	});
+
 	worker_loaders.forEach(({ binding }) => {
 		metadataBindings.push({
 			name: binding,
@@ -624,6 +632,13 @@ export function createWorkerUploadForm(
 			name: browser.binding,
 			type: "browser",
 			raw: browser.raw,
+		});
+	}
+
+	if (analytics !== undefined) {
+		metadataBindings.push({
+			name: analytics.binding,
+			type: "analytics",
 		});
 	}
 
@@ -882,6 +897,7 @@ export function createWorkerUploadForm(
 			compatibility_flags,
 		}),
 		...(migrations && { migrations }),
+		...(code_update_strategy && { code_update_strategy }),
 		...(configuredExports &&
 			Object.keys(configuredExports).length > 0 && {
 				exports: configuredExports,
@@ -911,7 +927,6 @@ export function createWorkerUploadForm(
 			metadata[key] = options.unsafe.metadata[key];
 		}
 	}
-
 	formData.set("metadata", JSON.stringify(metadata));
 
 	if (main.type === "commonjs" && modules && modules.length > 0) {

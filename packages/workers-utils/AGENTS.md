@@ -20,6 +20,10 @@ Shared utility package used across wrangler, miniflare, and others. Two main are
 - Validation pipeline normalizes wrangler.json/toml into typed config objects
 - Used by wrangler for all config loading
 
+### D1 migrations
+
+- `getD1MigrationFiles({ projectPath, migrationsDir, migrationsPattern })` — shared glob-based discovery used by Wrangler and the Vitest plugin. Honour `migrations_pattern` rather than recursively collecting every `.sql` file.
+
 ### Shared runtime utilities
 
 - `createConfigCache(logger)` — file-backed JSON config cache (node_modules/.cache or `.wrangler/cache`). Generic mechanism; the consumer passes its logger (this package has no logger singleton). Both `wrangler` (`src/config-cache.ts`) and `@cloudflare/workers-auth` build their own instances.

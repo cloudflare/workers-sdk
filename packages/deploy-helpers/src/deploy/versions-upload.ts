@@ -14,9 +14,10 @@ import {
 	UserError,
 	writeOutput,
 } from "@cloudflare/workers-utils";
+import { parseAndExpandDotEnv } from "@cloudflare/workers-utils/local-env";
 import { Response } from "undici";
 import { fetchResult, logger } from "../shared/context";
-import { getWorkersDevSubdomain } from "../triggers/subdomain";
+import { getWorkerSubdomain } from "../triggers/subdomain";
 import { resolveAssetOptions, syncAssets } from "./helpers/assets";
 import { renderBindingDependsOnExportError } from "./helpers/binding-depends-on-export";
 import {
@@ -24,10 +25,6 @@ import {
 	printBundleSize,
 	type BundleSize,
 } from "./helpers/bundle-reporter";
-import {
-	addContainerImagesBinding,
-	clearRemovedContainerImagesBindings,
-} from "./helpers/container-image-bindings";
 import { getContainerMetadata } from "./helpers/container-metadata";
 import { createWorkerUploadForm } from "./helpers/create-worker-upload-form";
 import {
@@ -64,14 +61,27 @@ import type {
 	VersionsUploadProps,
 	WorkerBuildResult,
 } from "../shared/types";
-import type { DeployCallbacks } from "./deploy";
 import type { AssetUploadStats } from "./helpers/assets";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type { CfWorkerInit } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
-/** Compatibility callback shape for existing deploy-helpers consumers. */
-export type VersionsUploadCallbacks = Pick<DeployCallbacks, "analyseBundle">;
+export type VersionsUploadOptions = {
+	deployCommand: string;
+	versionsUploadCommand: string;
+	versionsDeployCommand: string;
+	triggersDeployCommand: string;
+	d1ListCommand: string;
+	d1DeleteCommand: string;
+	queueCreateCommand: (queueName: string) => string;
+	versionsSecretPutCommand: string;
+	/**
+	 * @deprecated Startup profiling is provided by deploy-helpers automatically.
+	 */
+	analyseBundle?: (
+		workerBundle: string | FormData
+	) => Promise<Record<string, unknown>>;
+};
 
 type VersionsUploadResult = {
 	versionId: string | null;
@@ -86,16 +96,11 @@ export default async function versionsUpload(
 	props: VersionsUploadProps,
 	config: ContainerlessConfig,
 	buildResult: WorkerBuildResult,
-	callbacks: VersionsUploadCallbacks = {}
+	options: VersionsUploadOptions
 ): Promise<VersionsUploadResult> {
 	// DO NOT put anything in this function, this is just a thin wrapper to call writeOutput at the end
 
-	const result = await uploadWorkerVersion(
-		props,
-		config,
-		buildResult,
-		callbacks
-	);
+	const result = await uploadWorkerVersion(props, config, buildResult, options);
 
 	writeOutput({
 		type: "version-upload",
@@ -122,7 +127,7 @@ async function uploadWorkerVersion(
 	props: VersionsUploadProps,
 	config: ContainerlessConfig,
 	buildResult: WorkerBuildResult,
-	callbacks: VersionsUploadCallbacks
+	options: VersionsUploadOptions
 ): Promise<VersionsUploadResult> {
 	const { entry, compatibilityDate, compatibilityFlags, keepVars, accountId } =
 		props;
@@ -133,9 +138,10 @@ async function uploadWorkerVersion(
 	const { name } = validateWorkerProps(props, config);
 
 	// any validation that DOES require API calls should go in preUploadApiChecks()
-	const { workerTag, tags, workerExists, aborted } = await preUploadApiChecks(
+	const { workerTag, tags, aborted } = await preUploadApiChecks(
 		props,
-		config
+		config,
+		options.queueCreateCommand
 	);
 	if (aborted) {
 		return { versionId: null, workerTag };
@@ -186,7 +192,7 @@ async function uploadWorkerVersion(
 	});
 	if (migrations !== undefined) {
 		throw new UserError(
-			"This Worker has a pending Durable Object migration, which cannot be applied by `wrangler versions upload`. Durable Object migrations must be applied with `wrangler deploy`. Run `wrangler deploy` to apply the migration, then retry `wrangler versions upload`.",
+			`This Worker has a pending Durable Object migration, which cannot be applied by \`${options.versionsUploadCommand}\`. Durable Object migrations must be applied with \`${options.deployCommand}\`. Run \`${options.deployCommand}\` to apply the migration, then retry \`${options.versionsUploadCommand}\`.`,
 			{ telemetryMessage: "versions upload pending durable object migration" }
 		);
 	}
@@ -203,6 +209,9 @@ async function uploadWorkerVersion(
 				accountId,
 				dryRun: Boolean(props.dryRun),
 				scriptName,
+				requireExistingImageLessApplications: true,
+				deployCommand: options.deployCommand,
+				versionsUploadCommand: options.versionsUploadCommand,
 			}
 		);
 
@@ -214,7 +223,11 @@ async function uploadWorkerVersion(
 	const assetsJwt = assetsUploadResult?.jwt;
 
 	if (props.secretsFile) {
-		const secretsResult = await parseBulkInputToObject(props.secretsFile);
+		const secretsResult = await parseBulkInputToObject(
+			props.secretsFile,
+			false,
+			parseAndExpandDotEnv
+		);
 		if (secretsResult) {
 			for (const [secretName, secretValue] of Object.entries(
 				secretsResult.content
@@ -228,20 +241,6 @@ async function uploadWorkerVersion(
 	}
 
 	addRequiredSecretsInheritBindings(config, bindings, { type: "upload" });
-	if (keepVars && !props.dryRun && workerExists) {
-		await clearRemovedContainerImagesBindings(
-			config,
-			durableObjectContainerConfig,
-			bindings,
-			workerUrl
-		);
-	}
-	addContainerImagesBinding(
-		durableObjectContainerConfig,
-		bindings,
-		preparedContainerImages ?? {},
-		{ exports: config.exports }
-	);
 
 	const placement = parseConfigPlacement(config.placement);
 
@@ -333,6 +332,8 @@ async function uploadWorkerVersion(
 				config,
 				{
 					skipConfigWriteback: props.skipProvisioningConfigWriteback,
+					d1ListCommand: options.d1ListCommand,
+					d1DeleteCommand: options.d1DeleteCommand,
 				}
 			);
 		}
@@ -415,13 +416,17 @@ async function uploadWorkerVersion(
 				workerBundle,
 				projectRoot,
 				// eslint-disable-next-line @typescript-eslint/no-deprecated -- compatibility callback for existing deploy-helpers consumers
-				callbacks.analyseBundle
+				options.analyseBundle
 			);
 			if (message) {
 				logger.error(message);
 			}
 
-			handleMissingSecretsError(err, config, { type: "upload" });
+			handleMissingSecretsError(err, config, {
+				type: "upload",
+				secretPutCommand: options.versionsSecretPutCommand,
+				uploadCommand: options.versionsUploadCommand,
+			});
 
 			// Apply source mapping to validation startup errors if possible
 			if (
@@ -496,7 +501,9 @@ async function uploadWorkerVersion(
 		assert(versionId);
 		await deployDurableObjectContainerApplications(
 			config,
-			durableObjectContainerConfig,
+			durableObjectContainerConfig.filter(
+				(container) => Object.keys(container.images ?? {}).length > 0
+			),
 			{
 				versionId,
 				accountId,
@@ -515,28 +522,30 @@ async function uploadWorkerVersion(
 	let versionPreviewAliasUrl: string | undefined = undefined;
 
 	if (versionId && hasPreview) {
-		const { previews_enabled: previews_available_on_subdomain } =
-			await fetchResult<{
-				previews_enabled: boolean;
-			}>(config, `${workerUrl}/subdomain`);
+		const workerSubdomain = await getWorkerSubdomain(
+			config,
+			accountId,
+			workerName
+		);
 
-		if (previews_available_on_subdomain) {
-			const userSubdomain = await getWorkersDevSubdomain(config, accountId, {
-				configPath: config.configPath,
-			});
+		if (
+			workerSubdomain.previews_enabled &&
+			workerSubdomain.preview_url_suffix
+		) {
 			const shortVersion = versionId.slice(0, 8);
-			versionPreviewUrl = `https://${shortVersion}-${workerName}.${userSubdomain}`;
+			// The API-provided suffix includes the leading "-" separator.
+			versionPreviewUrl = `https://${shortVersion}${workerSubdomain.preview_url_suffix}`;
 			logger.log(`Version Preview URL: ${versionPreviewUrl}`);
 
 			if (props.previewAlias) {
-				versionPreviewAliasUrl = `https://${props.previewAlias}-${workerName}.${userSubdomain}`;
+				versionPreviewAliasUrl = `https://${props.previewAlias}${workerSubdomain.preview_url_suffix}`;
 				logger.log(`Version Preview Alias URL: ${versionPreviewAliasUrl}`);
 			}
 		}
 	}
 
-	const cmdVersionsDeploy = blue("wrangler versions deploy");
-	const cmdTriggersDeploy = blue("wrangler triggers deploy");
+	const cmdVersionsDeploy = blue(options.versionsDeployCommand);
+	const cmdTriggersDeploy = blue(options.triggersDeployCommand);
 	logger.info(
 		gray(`
 To deploy this version to production traffic use the command ${cmdVersionsDeploy}

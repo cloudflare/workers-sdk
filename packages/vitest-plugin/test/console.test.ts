@@ -17,7 +17,8 @@ test.skipIf(process.platform === "win32")(
 			});
 		`,
 		});
-		const result = vitestDev();
+		// Pin the reporter only where we assert its rendering of Worker console logs.
+		const result = vitestDev({ flags: ["--reporter=default"] });
 		await waitFor(() => {
 			expect(result.stdout).toMatch("stdout | index.test.ts\nglobal");
 			expect(result.stdout).toMatch("stdout | index.test.ts\ndescribe");
@@ -103,7 +104,7 @@ test("console.logs() inside `export default`ed handlers with SELF", async ({
 			});
 		`,
 	});
-	const result = await vitestRun();
+	const result = await vitestRun({ flags: ["--reporter=default"] });
 	expect(result.stdout).toMatch(
 		"stdout | index.test.ts > sends request\none\ntwo"
 	);
@@ -153,7 +154,7 @@ test("does not hang after logging from a rejected Durable Object input gate", as
 			});
 		`,
 	});
-	const result = await vitestRun();
+	const result = await vitestRun({ flags: ["--reporter=default"] });
 	expect(await result.exitCode).toBe(0);
 	expect(result.stdout).toMatch(/before rejection 1[\s\S]*before rejection 2/);
 	expect(result.stdout.match(/before rejection/g)).toHaveLength(2);

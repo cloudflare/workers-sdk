@@ -4,6 +4,7 @@
 		"skipLibCheck": true,
 		"target": "ES2022",
 		"resolveJsonModule": true,
+		"allowImportingTsExtensions": true,
 		"moduleDetection": "force",
 		"isolatedModules": true,
 		"verbatimModuleSyntax": true,

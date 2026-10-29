@@ -47,7 +47,7 @@ class BuildCommandOverrideFramework extends Static {
 
 describe("runAutoConfig()", () => {
 	runInTempDir();
-	mockConsoleMethods();
+	const std = mockConsoleMethods();
 
 	it("rejects autoconfiguration for an unsupported framework", async ({
 		expect,
@@ -71,6 +71,66 @@ describe("runAutoConfig()", () => {
 		).rejects.toThrow(
 			'The detected framework ("Hono") cannot be automatically configured.'
 		);
+	});
+
+	it("rejects a Wrangler-only framework when passed preconstructed cf details", async ({
+		expect,
+	}) => {
+		await expect(
+			runAutoConfig(
+				{
+					configured: false,
+					projectPath: process.cwd(),
+					workerName: "qwik-app",
+					framework: getFrameworkClassInstance("qwik"),
+					outputDir: "dist",
+					packageManager: NpmPackageManager,
+				},
+				{
+					target: "cf",
+					context: createMockContext(),
+					skipConfirmations: true,
+					runBuild: false,
+				}
+			)
+		).rejects.toThrow(
+			"cf does not support Qwik projects yet. You can still use Wrangler to develop and deploy this project."
+		);
+	});
+
+	it("allows selecting a cf-supported framework during confirmation", async ({
+		expect,
+	}) => {
+		vi.spyOn(cliPackages, "installWrangler").mockResolvedValue();
+		const context = createMockContext({
+			dialogs: {
+				confirm: vi.fn().mockResolvedValue(true),
+				prompt: vi
+					.fn()
+					.mockResolvedValueOnce("static-app")
+					.mockResolvedValueOnce("dist"),
+				select: vi.fn().mockResolvedValue("static"),
+			},
+		});
+
+		const summary = await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "qwik-app",
+				framework: getFrameworkClassInstance("qwik"),
+				outputDir: "dist",
+				packageManager: NpmPackageManager,
+			},
+			{
+				target: "cf",
+				context,
+				runBuild: false,
+				enableTargetCliInstallation: false,
+			}
+		);
+
+		expect(summary.frameworkId).toBe("static");
 	});
 
 	it("creates new configuration and cf scripts by default", async ({
@@ -122,7 +182,7 @@ describe("runAutoConfig()", () => {
 		expect(summary.deployCommand).toBe("npx cf deploy");
 		expect(summary.versionCommand).toBe("npx cf versions upload");
 		expect(readFileSync("cloudflare.config.ts", "utf8")).toContain(
-			'import { defineWorker } from "cf/config";\n\nexport default defineWorker({\n  "name": "my-static-app"'
+			'import { defineConfig } from "cf/config";\n\nexport default defineConfig({\n  worker: {\n    "name": "my-static-app"'
 		);
 		expect(readFileSync("wrangler.config.ts", "utf8")).toContain(
 			'import { defineWranglerConfig } from "wrangler/experimental-config";\n\nexport default defineWranglerConfig({\n  "assetsDirectory": "public"'
@@ -257,7 +317,110 @@ describe("runAutoConfig()", () => {
 		expect(installWrangler).not.toHaveBeenCalled();
 		expect(JSON.parse(readFileSync("package.json", "utf8"))).toMatchObject({
 			scripts: {
-				"cf-typegen": "cf types",
+				"cf-typegen": "cf workers types",
+			},
+		});
+	});
+
+	it("adds the cf-generated types to tsconfig.json", async ({ expect }) => {
+		const packageJson = { name: "my-vite-app" };
+		await seed({
+			"package.json": JSON.stringify(packageJson),
+			"tsconfig.json": JSON.stringify({ include: ["src"] }),
+		});
+
+		await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "my-vite-app",
+				framework: new ViteBuildToolFramework({
+					id: "static",
+					name: "Static",
+				}),
+				outputDir: "dist",
+				packageJson,
+				packageManager: NpmPackageManager,
+			},
+			{
+				context: createMockContext(),
+				skipConfirmations: true,
+				runBuild: false,
+				enableTargetCliInstallation: false,
+			}
+		);
+
+		expect(JSON.parse(readFileSync("tsconfig.json", "utf8"))).toEqual({
+			include: ["src", ".cloudflare/types"],
+		});
+	});
+
+	it("lists the tsconfig.json change without writing it in a dry run", async ({
+		expect,
+	}) => {
+		const packageJson = { name: "my-vite-app" };
+		const tsconfig = JSON.stringify({ include: ["src"] });
+		await seed({
+			"package.json": JSON.stringify(packageJson),
+			"tsconfig.json": tsconfig,
+		});
+
+		await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "my-vite-app",
+				framework: new ViteBuildToolFramework({
+					id: "static",
+					name: "Static",
+				}),
+				outputDir: "dist",
+				packageJson,
+				packageManager: NpmPackageManager,
+			},
+			{ context: createMockContext(), dryRun: true }
+		);
+
+		expect(std.out).toContain(
+			'📝 Update tsconfig.json:\n - Add ".cloudflare/types" to "include"'
+		);
+		expect(readFileSync("tsconfig.json", "utf8")).toBe(tsconfig);
+	});
+
+	it("keeps the Wrangler typegen command for Wrangler projects", async ({
+		expect,
+	}) => {
+		const packageJson = { name: "my-vite-app" };
+		await seed({
+			"package.json": JSON.stringify(packageJson),
+			"tsconfig.json": "{}",
+		});
+
+		await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "my-vite-app",
+				framework: new ViteBuildToolFramework({
+					id: "static",
+					name: "Static",
+				}),
+				outputDir: "dist",
+				packageJson,
+				packageManager: NpmPackageManager,
+			},
+			{
+				target: "wrangler",
+				context: createMockContext(),
+				skipConfirmations: true,
+				runBuild: false,
+				enableTargetCliInstallation: false,
+			}
+		);
+
+		expect(JSON.parse(readFileSync("package.json", "utf8"))).toMatchObject({
+			scripts: {
+				"cf-typegen": "wrangler types",
 			},
 		});
 	});

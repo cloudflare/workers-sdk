@@ -9,24 +9,20 @@
  * Unknown/missing verbs exit 2 (also the parent's version-detection
  * signal).
  *
- * Every verb forces the experimental Build Output Specification on by default by
- * setting `CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT` in `main()` before Vite
- * loads the user's config; the plugin reads it during config resolution
- * to enable `experimental.newConfig` + `experimental.newConfig.cfBuildOutput`.
- *
  * Spawn contract for `dev`: parent uses `stdio: "inherit"` and forwards
  * SIGINT/SIGTERM. Accepted flags mirror the sibling `cf-wrangler`
  * delegate (`--mode`, `--port`, `--host`, `--local`) so the parent can
  * drive either impl interchangeably; everything else lives in the user's
- * `vite.config.ts` / `wrangler.jsonc` (including the wrangler config
- * file, which is discovered by `cloudflare()` itself). `cf-vite` boots
+ * `vite.config.ts` / `cloudflare.config.ts`. `cf-vite` boots
  * Vite via `createServer()` against the user's own config (expected to
  * include `cloudflare()`); flags are bridged to it as documented inline.
  *
  * `build` runs Vite's full multi-environment app build via
  * `createBuilder().buildApp()` (NOT the legacy single-environment
  * `build()` helper, which would skip the plugin's worker builds). It
- * accepts `--mode` and the internal `--preview` build context flag.
+ * accepts only `--mode`. Preview build context is supplied through the
+ * `CLOUDFLARE_PREVIEW_BUILD` environment variable so framework-owned build
+ * commands can use the same contract.
  *
  * Exit codes: 0 graceful, 2 unknown verb / parse error, 130 SIGINT,
  * 143 SIGTERM.
@@ -34,10 +30,7 @@
 
 import { parseArgs as nodeParseArgs } from "node:util";
 import { createBuilder, createServer } from "vite";
-import {
-	FORCE_BUILD_OUTPUT_ENV_VAR,
-	PREVIEW_BUILD_ENV_VAR,
-} from "./build-output-env";
+import { CLI_DISPLAY_NAME_ENV_VAR } from "./build-output-env";
 import type { InlineConfig, ServerOptions } from "vite";
 
 interface DevArgs {
@@ -101,7 +94,6 @@ function parseDevArgs(argv: string[]): DevArgs {
 
 interface BuildArgs {
 	mode?: string;
-	preview?: boolean;
 }
 
 function parseBuildArgs(argv: string[]): BuildArgs {
@@ -111,7 +103,6 @@ function parseBuildArgs(argv: string[]): BuildArgs {
 			args: argv,
 			options: {
 				mode: { type: "string" },
-				preview: { type: "boolean" },
 			},
 			strict: true,
 			allowPositionals: false,
@@ -124,23 +115,16 @@ function parseBuildArgs(argv: string[]): BuildArgs {
 	if (parsed.values.mode !== undefined) {
 		out.mode = parsed.values.mode;
 	}
-	if (parsed.values.preview !== undefined) {
-		out.preview = parsed.values.preview;
-	}
 
 	return out;
 }
 
 async function main(): Promise<number> {
+	process.env[CLI_DISPLAY_NAME_ENV_VAR] = "cf";
+
 	// argv: [0] node [1] cf-vite.mjs [2] verb [3+] forwarded flags.
 	const verb = process.argv[2];
 	const userArgv = process.argv.slice(3);
-
-	// Force the experimental Build Output Specification on by default for every
-	// delegate verb. The plugin reads this during config resolution to
-	// enable `experimental.newConfig` + `.cfBuildOutput`. Set before Vite
-	// loads the user's `vite.config.ts`.
-	process.env[FORCE_BUILD_OUTPUT_ENV_VAR] = "true";
 
 	if (verb === "dev") {
 		return runDev(userArgv);
@@ -242,7 +226,6 @@ async function runBuild(userArgv: string[]): Promise<number> {
 		throw err;
 	}
 
-	process.env[PREVIEW_BUILD_ENV_VAR] = args.preview === true ? "true" : "false";
 	const inlineConfig: InlineConfig = {};
 	if (args.mode !== undefined) {
 		inlineConfig.mode = args.mode;

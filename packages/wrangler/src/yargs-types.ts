@@ -24,11 +24,9 @@ export type CommonYargsArgv = Argv<CommonYargsOptions>;
 
 // See http://stackoverflow.com/questions/51465182/how-to-remove-index-signature-using-mapped-types
 export type RemoveIndex<T> = {
-	[K in keyof T as string extends K
-		? never
-		: number extends K
-			? never
-			: K]: T[K];
+	[
+		K in keyof T as string extends K ? never : number extends K ? never : K
+	]: T[K];
 };
 
 /**

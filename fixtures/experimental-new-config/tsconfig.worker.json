@@ -8,6 +8,6 @@
 		"src",
 		"cloudflare.config.ts",
 		"wrangler.config.ts",
-		"worker-configuration.d.ts"
+		".cloudflare/types"
 	]
 }

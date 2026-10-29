@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import * as streams from "@cloudflare/cli-shared-helpers/streams";
 import {
 	mockCreateDate,
 	mockEndDate,
@@ -46,6 +47,34 @@ describe("wrangler workflows", () => {
 						result: instances,
 					});
 				},
+				{ once: true }
+			)
+		);
+	};
+
+	const createServiceUnavailableResponse = () =>
+		HttpResponse.json(
+			{
+				success: false,
+				errors: [{ code: 10013, message: "Service unavailable" }],
+				messages: [],
+				result: null,
+			},
+			{ status: 503 }
+		);
+
+	/** Makes the next request to `path` fail once, before later handlers run. */
+	const mockTransientFailure = (
+		path: string,
+		failure: "503" | "disconnect"
+	) => {
+		msw.use(
+			http.get(
+				path,
+				() =>
+					failure === "503"
+						? createServiceUnavailableResponse()
+						: HttpResponse.error(),
 				{ once: true }
 			)
 		);
@@ -349,7 +378,10 @@ describe("wrangler workflows", () => {
 			},
 		];
 
-		const mockDescribeWorkflow = async (versions = mockVersions) => {
+		const mockDescribeWorkflow = async (
+			versions = mockVersions,
+			workflow = mockWorkflow
+		) => {
 			msw.use(
 				http.get(
 					`*/accounts/:accountId/workflows/some-workflow`,
@@ -358,7 +390,7 @@ describe("wrangler workflows", () => {
 							success: true,
 							errors: [],
 							messages: [],
-							result: mockWorkflow,
+							result: workflow,
 						});
 					},
 					{ once: true }
@@ -404,6 +436,39 @@ describe("wrangler workflows", () => {
 				...mockWorkflow,
 				latest_version: null,
 			});
+		});
+
+		it("should print the jurisdiction of a workflow that has one", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			await mockDescribeWorkflow(mockVersions, {
+				...mockWorkflow,
+				jurisdiction: "eu",
+			});
+			const stdoutWrite = vi
+				.spyOn(streams.stdout, "write")
+				.mockImplementation(() => true);
+
+			await runWrangler(`workflows describe some-workflow`);
+
+			expect(stdoutWrite.mock.calls.join("")).toMatch(/Jurisdiction:\s+eu/);
+		});
+
+		it("should not print a jurisdiction for a workflow without one", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			await mockDescribeWorkflow();
+			const stdoutWrite = vi
+				.spyOn(streams.stdout, "write")
+				.mockImplementation(() => true);
+
+			await runWrangler(`workflows describe some-workflow`);
+
+			const output = stdoutWrite.mock.calls.join("");
+			expect(output).toContain("Class Name:");
+			expect(output).not.toContain("Jurisdiction");
 		});
 	});
 
@@ -883,6 +948,118 @@ describe("wrangler workflows", () => {
 			expect(JSON.parse(std.out)).toEqual([]);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
+
+		it("should retry after a transient 503 response", async ({ expect }) => {
+			writeWranglerConfig();
+			await mockGetInstances(mockInstances);
+			mockTransientFailure(
+				`*/accounts/:accountId/workflows/some-workflow/instances`,
+				"503"
+			);
+
+			await runWrangler(`workflows instances list some-workflow --json`);
+
+			expect(JSON.parse(std.out)).toEqual(mockInstances);
+		});
+
+		it("should retry after a dropped connection", async ({ expect }) => {
+			writeWranglerConfig();
+			await mockGetInstances(mockInstances);
+			mockTransientFailure(
+				`*/accounts/:accountId/workflows/some-workflow/instances`,
+				"disconnect"
+			);
+
+			await runWrangler(`workflows instances list some-workflow --json`);
+
+			expect(JSON.parse(std.out)).toEqual(mockInstances);
+		});
+
+		it("should keep Retry-After notices out of --json output", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			await mockGetInstances(mockInstances);
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workflows/some-workflow/instances`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								errors: [{ code: 10013, message: "Service unavailable" }],
+								messages: [],
+								result: null,
+							},
+							{ status: 503, headers: { "Retry-After": "0" } }
+						),
+					{ once: true }
+				)
+			);
+
+			await runWrangler(`workflows instances list some-workflow --json`);
+
+			expect(JSON.parse(std.out)).toEqual(mockInstances);
+			expect(std.info).toBe("");
+			expect(std.warn).toContain(
+				'Received a "Retry-After" header from the Cloudflare API.'
+			);
+		});
+
+		it("should keep the requested page when retrying", async ({ expect }) => {
+			writeWranglerConfig();
+			const [firstPage, secondPage] = [mockInstances[0], mockInstances[1]];
+			let secondPageFailed = false;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workflows/some-workflow/instances`,
+					({ request }) => {
+						const cursor = new URL(request.url).searchParams.get("cursor");
+						if (cursor === "page-2" && !secondPageFailed) {
+							secondPageFailed = true;
+							return createServiceUnavailableResponse();
+						}
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: cursor === "page-2" ? [secondPage] : [firstPage],
+							result_info: cursor === "page-2" ? {} : { cursor: "page-2" },
+						});
+					}
+				)
+			);
+
+			await runWrangler(
+				`workflows instances list some-workflow --page 2 --json`
+			);
+
+			expect(secondPageFailed).toBe(true);
+			expect(JSON.parse(std.out)).toEqual([secondPage]);
+		});
+
+		it("should surface a persistent failure after retrying", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			let requests = 0;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workflows/some-workflow/instances`,
+					() => {
+						requests++;
+						return createServiceUnavailableResponse();
+					}
+				)
+			);
+
+			await expect(
+				runWrangler(`workflows instances list some-workflow --json`)
+			).rejects.toThrow(
+				"A request to the Cloudflare API (/accounts/some-account-id/workflows/some-workflow/instances) failed."
+			);
+			expect(requests).toBe(3);
+		});
 	});
 
 	describe("instances describe", () => {
@@ -965,6 +1142,38 @@ describe("wrangler workflows", () => {
 				)
 			);
 		};
+
+		it("should retry the instance request after a transient failure", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			await mockDescribeInstances();
+			mockTransientFailure(
+				`*/accounts/:accountId/workflows/some-workflow/instances/:instanceId`,
+				"503"
+			);
+
+			await runWrangler(
+				`workflows instances describe some-workflow bar --json`
+			);
+
+			expect(JSON.parse(std.out).id).toEqual("bar");
+		});
+
+		it("should retry resolving the latest instance after a dropped connection", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			await mockDescribeInstances();
+			mockTransientFailure(
+				`*/accounts/:accountId/workflows/some-workflow/instances`,
+				"disconnect"
+			);
+
+			await runWrangler(`workflows instances describe some-workflow --json`);
+
+			expect(JSON.parse(std.out).status).toEqual("queued");
+		});
 
 		it("should describe the bar instance given a name", async ({ expect }) => {
 			writeWranglerConfig();
@@ -1550,6 +1759,62 @@ describe("wrangler workflows", () => {
 				deleted: [{ id: "foo" }, { id: "bar" }],
 				errors: [],
 			});
+		});
+
+		it("should keep Retry-After notices out of --json output when resolving latest", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workflows/some-workflow/instances`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								errors: [{ code: 10013, message: "Service unavailable" }],
+								messages: [],
+								result: null,
+							},
+							{ status: 503, headers: { "Retry-After": "0" } }
+						),
+					{ once: true }
+				),
+				http.get(
+					`*/accounts/:accountId/workflows/some-workflow/instances`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: [
+								{
+									id: "newest",
+									created_on: mockCreateDate.toISOString(),
+									modified_on: mockModifiedDate.toISOString(),
+									workflow_id: "b",
+									version_id: "c",
+									status: "complete",
+								},
+							],
+						}),
+					{ once: true }
+				)
+			);
+			mockDeleteInstances(expect, ["newest"]);
+
+			await runWrangler(
+				`workflows instances delete some-workflow latest --json`
+			);
+
+			expect(JSON.parse(std.out)).toEqual({
+				deleted: [{ id: "newest" }],
+				errors: [],
+			});
+			expect(std.info).toBe("");
+			expect(std.warn).toContain(
+				'Received a "Retry-After" header from the Cloudflare API.'
+			);
 		});
 
 		it("should emit JSON and still fail on a partial delete with --json", async ({

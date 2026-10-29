@@ -5,9 +5,5 @@
 		// `.ts` extension
 		"allowImportingTsExtensions": true
 	},
-	"include": [
-		"./**/*.ts",
-		"../cloudflare.config.ts",
-		"../worker-configuration.d.ts"
-	]
+	"include": ["./**/*.ts", "../cloudflare.config.ts", "../.cloudflare/types"]
 }

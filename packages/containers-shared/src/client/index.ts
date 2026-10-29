@@ -96,6 +96,8 @@ export type { DiskMB } from "./models/DiskMB";
 export type { DiskSizeWithUnit } from "./models/DiskSizeWithUnit";
 export type { DNSConfiguration } from "./models/DNSConfiguration";
 export type { Domain } from "./models/Domain";
+export type { DurableObjectApplicationConfiguration } from "./models/DurableObjectApplicationConfiguration";
+export type { DurableObjectApplicationObservability } from "./models/DurableObjectApplicationObservability";
 export type { DurableObjectsConfiguration } from "./models/DurableObjectsConfiguration";
 export { DurableObjectStatusHealth } from "./models/DurableObjectStatusHealth";
 export type { Duration } from "./models/Duration";

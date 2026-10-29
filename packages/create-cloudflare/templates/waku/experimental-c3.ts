@@ -21,6 +21,7 @@ const config: TemplateConfig = {
 	id: "waku",
 	frameworkCli: "create-waku",
 	platform: "workers",
+	languages: ["ts"],
 	displayName: "Waku",
 	generate,
 	devScript: "dev",

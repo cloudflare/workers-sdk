@@ -19,7 +19,7 @@ graph TB
 
     proxy -- "capnp RPC connect()" --> dpB
 
-    subgraph fs["~/.wrangler/registry/"]
+    subgraph fs["Cloudflare config directory/dev-registry/v5/"]
         fileA["worker-a { debugPortAddress: '...:9229' }"]
         fileB["worker-b { debugPortAddress: '...:9230' }"]
     end
@@ -46,7 +46,7 @@ The binding exposes two ways to reach a debug port. `connect(address)` dials ano
 
 ### Filesystem Registry (`dev-registry.ts`)
 
-The `DevRegistry` class manages worker registration via the filesystem. Each running worker writes a JSON file to `~/.wrangler/registry/<worker-name>` containing its `WorkerDefinition`:
+The `DevRegistry` class manages worker registration via the filesystem. Each running worker writes a JSON file to `<registry-path>/<worker-name>` containing its `WorkerDefinition`:
 
 ```typescript
 type WorkerDefinition = {
@@ -78,6 +78,10 @@ Contains the registry `Map`, `resolveTarget()`, `connectToActor()`, `createProxy
 
 When the filesystem watcher detects a change to an external service, Miniflare pushes the updated registry to the proxy worker via HTTP POST on a dedicated socket (`SOCKET_DEV_REGISTRY`). This avoids routing through the entry worker, which can break on Windows (WSARecv error 64).
 
+Registry pushes carry a random per-instance credential in `MF-Dev-Registry-Secret`. The proxy verifies the credential before parsing the body or replacing its registry. The credential is kept in the owning process and the proxy's private binding; it is never advertised in registry files. Updates accept only the expected loopback host and root path, and reject browser Origin headers.
+
+The Node.js loopback service also requires a separate per-instance credential, injected by workerd on internal requests. This covers registry discovery, storage helpers, custom services, browser control, and WebSocket upgrades. The opt-in workerd module-fallback protocol remains available on the root path only, without internal dispatch headers, because that protocol cannot supply authentication headers. These checks authenticate Miniflare's HTTP control plane; debugger RPC and module-fallback transport authentication remain separate workerd protocol changes.
+
 The push always reads the latest registry state (not a captured snapshot) and retries up to 3 times with 500ms delays.
 
 ### Shared Storage Candidates
@@ -90,7 +94,7 @@ KV, D1, R2, Rate Limits, Secrets Store, Images data, and Streams route through t
 
 Every instance -- including the elected owner -- routes these bindings through the proxy worker, so the owner would otherwise connect back to its own debug port over TCP. Because the registry entry carries the owner's `instanceId`, the proxy recognises that case and uses the in-process debug port instead.
 
-Shared mode requires `resourcePersistencePath`, `isolatedResourcePersistencePath`, and `unsafeDevRegistryPath`. The shared persistence root is created and resolved through the filesystem before it is used as an ownership scope.
+Shared mode requires `resourcePersistencePath`, `isolatedResourcePersistencePath`, and an enabled dev registry. Miniflare resolves the registry path automatically; an explicit `unsafeDevRegistryPath` is optional. The shared persistence root is created and resolved through the filesystem before it is used as an ownership scope.
 
 ## Request Flow
 
@@ -135,6 +139,25 @@ sequenceDiagram
 Scheduled events are forwarded via HTTP to the remote worker's `core:entry` service using the `MF-Route-Override` header pattern, and then run using the well-known `/cdn-cgi/handler/scheduled` path.
 
 ## Configuration
+
+The registry is enabled by default. `enableDevRegistry: false` disables both
+registration and discovery, including when a path override is present. Shared
+storage rejects this setting because it uses the registry to elect an owner.
+
+Miniflare resolves the registry path from the first nonempty value of
+`CLOUDFLARE_DEV_REGISTRY_PATH`, the `unsafeDevRegistryPath` constructor option,
+and `<Cloudflare config directory>/dev-registry/v5`. Paths are made absolute at
+option parsing, including on `setOptions()`. The default directory uses the
+`cloudflare` namespace without legacy home-directory fallbacks and is scoped to
+the Miniflare major version. Old registry environment variables are not read by
+Miniflare; consumers may still translate their own settings into constructor
+options during migration.
+
+Integrations that read registry files directly use the exported
+`resolveDevRegistryPath(constructorPath?)` helper after checking that their
+registry is enabled. Wrangler normalizes its dev registry through this helper
+before configuring the runtime or displaying bindings; its Flagship active-session
+check uses the same resolution with Wrangler's legacy path as the fallback.
 
 The proxy is only configured when `devRegistry.isEnabled()` returns `true` and there are external services. The workerd config includes:
 

@@ -1,5 +1,6 @@
 import path from "node:path";
 import { defineConfig } from "vitest/config";
+import { getVitestShard } from "../../tools/test/vitest-shard.cjs";
 
 export default defineConfig({
 	test: {
@@ -8,6 +9,7 @@ export default defineConfig({
 		hookTimeout: 30_000,
 		pool: "forks",
 		maxWorkers: 1,
+		shard: getVitestShard(),
 		include: ["test/**/*.spec.ts"],
 		setupFiles: [path.resolve(import.meta.dirname, "test/setup.mjs")],
 		globals: true,

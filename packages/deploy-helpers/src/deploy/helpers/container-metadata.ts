@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import { isDeepStrictEqual } from "node:util";
 import {
-	CONTAINER_IMAGES_BINDING,
 	getResolvedDurableObjectContainerApps,
 	isDurableObjectContainerApp,
 	UserError,
@@ -78,7 +77,6 @@ export async function getContainerMetadataForRolloutSkip(
 	}
 ): Promise<{
 	containers: CfWorkerInit["containers"];
-	hasExistingContainerImagesBinding: boolean;
 }> {
 	if (dryRun || !workerExists) {
 		return {
@@ -90,7 +88,6 @@ export async function getContainerMetadataForRolloutSkip(
 					exports: config.exports,
 				}
 			),
-			hasExistingContainerImagesBinding: false,
 		};
 	}
 
@@ -128,26 +125,6 @@ export async function getContainerMetadataForRolloutSkip(
 		undefined,
 		latestDeployment.versions.map(({ version_id }) => version_id)
 	);
-	const containerImagesBindingByVersion = versions.map((version) =>
-		version.resources.bindings.some(
-			(binding) => binding.name === CONTAINER_IMAGES_BINDING
-		)
-	);
-	const hasExistingContainerImagesBinding =
-		containerImagesBindingByVersion[0] ?? false;
-	if (
-		containerImagesBindingByVersion.some(
-			(hasBinding) => hasBinding !== hasExistingContainerImagesBinding
-		)
-	) {
-		throw new UserError(
-			`All currently deployed Worker Versions must have identical ${CONTAINER_IMAGES_BINDING} binding presence when using --containers-rollout=none.`,
-			{
-				telemetryMessage:
-					"rollout none inconsistent durable object container image binding",
-			}
-		);
-	}
 	const containerMetadataByVersion = versions.map(
 		(version) => version.resources?.script_runtime?.containers
 	);
@@ -158,7 +135,6 @@ export async function getContainerMetadataForRolloutSkip(
 	if (existingMetadata.length === 0) {
 		return {
 			containers: undefined,
-			hasExistingContainerImagesBinding,
 		};
 	}
 
@@ -180,6 +156,5 @@ export async function getContainerMetadataForRolloutSkip(
 
 	return {
 		containers: existingMetadata[0],
-		hasExistingContainerImagesBinding,
 	};
 }

@@ -30,6 +30,10 @@ export async function fetch(
 				`Fetch API cannot load: ${url.toString()}\nMake sure you're using http(s):// URLs for WebSocket requests via fetch.`
 			);
 		}
+		// `ws` doesn't use `dispatcher`, so apply its origin rewrite here
+		if (requestInit?.dispatcher instanceof DispatchFetchDispatcher) {
+			requestInit.dispatcher.rewriteOrigin(url);
+		}
 		url.protocol = url.protocol.replace("http", "ws");
 
 		// Normalise request headers to a format ws understands, extracting the
@@ -212,6 +216,14 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 		}
 	}
 
+	rewriteOrigin(/* mut */ url: URL) {
+		if (url.origin === this.userRuntimeOrigin) {
+			const runtimeURL = new URL(this.actualRuntimeOrigin);
+			url.protocol = runtimeURL.protocol;
+			url.host = runtimeURL.host;
+		}
+	}
+
 	dispatch(
 		/* mut */ options: undici.Dispatcher.DispatchOptions,
 		handler: undici.Dispatcher.DispatchHandler
@@ -242,11 +254,51 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 
 			options.headers = headers;
 
-			// Sometimes, keep-alive connections can sometimes cause issues with sockets
-			// disconnecting unexpectedly. To mitigate this, try to avoid keep-alive race
-			// conditions by telling the runtime to close the connection immediately after
-			// the request is complete
-			options.reset = true;
+			// Worker handlers can have side effects even for GET/HEAD, so never
+			// replay a request after a transport failure or pipeline it behind another
+			options.idempotent = false;
+
+			// Reuse successful connections for every method to avoid consuming one
+			// ephemeral port per dispatch, but surface failures instead of retrying
+			options.reset = false;
+
+			// undici 7 still invokes these callbacks. The published types mark them
+			// deprecated, so the names live on a local shape and the lint rule
+			// does not see the deprecated declarations.
+			const legacy = handler as {
+				onHeaders?(
+					status: number,
+					rawHeaders: Buffer[],
+					resume: () => void,
+					statusText: string
+				): boolean;
+				onError?(err: Error): void;
+			};
+			const onHeaders = legacy.onHeaders;
+			const onError = legacy.onError;
+			if (onHeaders !== undefined && onError !== undefined) {
+				let responseStatus = 0;
+				legacy.onHeaders = function (status, rawHeaders, resume, statusText) {
+					if (status >= 200) {
+						// 1xx replies arrive here before the final status;
+						// keep the final status >= 200
+						responseStatus = status;
+					}
+					return onHeaders.call(this, status, rawHeaders, resume, statusText);
+				};
+				legacy.onError = function (err) {
+					// A 421 retry aborts this connection. Ignore that abort so the
+					// replayed body still matches Content-Length.
+					const retryAbort =
+						responseStatus === 421 &&
+						err instanceof DOMException &&
+						err.name === "AbortError";
+					if (retryAbort) {
+						return;
+					}
+					return onError.call(this, err);
+				};
+			}
 
 			// Dispatch with runtime dispatcher to avoid certificate errors if using
 			// self-signed certificate

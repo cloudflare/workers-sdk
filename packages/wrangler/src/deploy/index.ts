@@ -4,6 +4,7 @@ import {
 } from "@cloudflare/containers-shared";
 import { deploy } from "@cloudflare/deploy-helpers";
 import {
+	configFileName,
 	getDockerPath,
 	getDurableObjectContainerApps,
 	getWorkerNameFromProject,
@@ -17,6 +18,7 @@ import {
 	buildDeployContainerImages,
 	buildDurableObjectContainerImages,
 } from "../deployment-bundle/build-container-images";
+import { assertNoCloudflareBuildOutput } from "../deployment-bundle/cf-build-output-guard";
 import {
 	sharedDeployVersionsArgs,
 	validateDeployVersionsArgs,
@@ -26,12 +28,17 @@ import {
 	cleanupDestination,
 	mergeDeployConfigArgs,
 } from "../deployment-bundle/merge-config-args";
+import {
+	routeZoneArgs,
+	validateRouteZoneArgs,
+} from "../deployment-bundle/route-zone-args";
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { syncWorkersSite } from "../sites";
 import { detectAgent } from "../utils/detect-agent";
 import { getScriptName } from "../utils/getScriptName";
+import { durableObjectsCodeUpdateModeArg } from "../versions/deployment-args";
 import { maybeRunAutoConfig, promptForMissingDeployConfig } from "./autoconfig";
 import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
 import type { Config } from "@cloudflare/workers-utils";
@@ -47,6 +54,7 @@ export const deployCommand = createCommand({
 	args: {
 		...experimentalNewConfigArg,
 		...sharedDeployVersionsArgs,
+		...durableObjectsCodeUpdateModeArg,
 		triggers: {
 			describe: "cron schedules to attach",
 			alias: ["schedule", "schedules"],
@@ -61,6 +69,7 @@ export const deployCommand = createCommand({
 			requiresArg: true,
 			array: true,
 		},
+		...routeZoneArgs,
 		domains: {
 			describe: "Custom domains to deploy to",
 			alias: "domain",
@@ -115,6 +124,7 @@ export const deployCommand = createCommand({
 	},
 	validateArgs(args) {
 		validateDeployVersionsArgs(args, "deploy");
+		validateRouteZoneArgs(args);
 	},
 	async handler(args, { config }) {
 		await runDeployCommandHandler(args, { config });
@@ -130,6 +140,20 @@ export async function runDeployCommandHandler(
 		pagesToWorkersDelegation = false,
 	}: { config: Config; pagesToWorkersDelegation?: boolean }
 ): Promise<void> {
+	// Runs before autoconfig, which may write a config file, and so before any
+	// local or remote mutation. `--dry-run` is exempt: it uploads nothing, so
+	// there is no deployment to stop.
+	if (!args.dryRun) {
+		assertNoCloudflareBuildOutput(
+			{
+				config,
+				explicitConfigPath: args.config,
+				scriptPath: args.script,
+			},
+			"deploy"
+		);
+	}
+
 	const detectedAgent = detectAgent();
 	const shouldUseProjectName =
 		detectedAgent.isAgent && !args.name && !config.name;
@@ -226,6 +250,23 @@ export async function runDeployCommandHandler(
 			config,
 			buildResult,
 			{
+				deployCommand: "wrangler deploy",
+				versionsDeployCommand: "wrangler versions deploy",
+				d1ListCommand: "wrangler d1 list",
+				d1DeleteCommand: "wrangler d1 delete <database-name>",
+				queueCreateCommand: (queueName) =>
+					`wrangler queues create ${queueName}`,
+				secretPutCommand: "wrangler secret put",
+				workersDevConfigFieldName: "workers_dev",
+				workersDevConfigAssignment: (value) => `workers_dev = ${value}`,
+				previewUrlsConfigFieldName: "preview_urls",
+				previewUrlsConfigAssignment: (value) => `preview_urls = ${value}`,
+				configFileName: configFileName(
+					config.configPath,
+					config.userConfigPath
+				),
+				observabilityTargetPercentageField: "target_instance_percentage",
+				observabilityTargetCountField: "target_instance_count",
 				syncWorkersSite,
 			}
 		);

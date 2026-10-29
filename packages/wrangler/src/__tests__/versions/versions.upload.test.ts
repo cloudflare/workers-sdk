@@ -8,10 +8,7 @@ import {
 	generatePreviewAlias,
 } from "@cloudflare/deploy-helpers";
 import { TEMPORARY_TERMS_NOTICE } from "@cloudflare/workers-auth";
-import {
-	CONTAINER_IMAGES_BINDING,
-	DEFAULT_COMPAT_DATE,
-} from "@cloudflare/workers-utils";
+import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import {
 	runInTempDir,
 	writeRedirectedWranglerConfig,
@@ -284,9 +281,9 @@ describe("versions upload", () => {
 			).resolves.toBeUndefined();
 
 			expect(previewAccountRequests).toBe(1);
-			expect(std.out).toContain(TEMPORARY_TERMS_NOTICE);
-			expect(std.out).toContain("Temporary account ready:");
-			expect(std.out).toContain("Account: Preview Account Alpha (created)");
+			expect(std.err).toContain(TEMPORARY_TERMS_NOTICE);
+			expect(std.err).toContain("Temporary account ready:");
+			expect(std.err).toContain("Account: Preview Account Alpha (created)");
 			expect(std.out).toContain("Uploaded test-name");
 		});
 	});
@@ -429,6 +426,22 @@ describe("versions upload", () => {
 			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993
 			Version Preview URL: https://51e4886e-test-name.test-sub-domain.workers.dev"
 		`);
+	});
+
+	test("should get the preview URL suffix from the Worker resource", async () => {
+		mockGetScript();
+		mockUploadVersion(true);
+		mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
+		writeWranglerConfig({ name: "test-name", main: "./index.js" });
+		writeWorkerSource();
+		setIsTTY(false);
+
+		await expect(runWrangler("versions upload")).resolves.toBeUndefined();
+
+		expect(std.out).toContain("Worker Version ID:");
+		expect(std.out).toContain(
+			"Version Preview URL: https://51e4886e-test-name.test-sub-domain.workers.dev"
+		);
 	});
 
 	test("should allow specifying --preview-alias", async () => {
@@ -826,7 +839,7 @@ describe("versions upload", () => {
 			});
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo top-level \`name\` has been defined in Wrangler configuration. Add a top-level \`name\` to group this Worker together with its sibling environments in the Cloudflare dashboard.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo top-level \`name\` has been defined in your wrangler.toml. Add a top-level \`name\` to group this Worker together with its sibling environments in the Cloudflare dashboard.[0m
 
 				"
 			`);
@@ -1063,12 +1076,10 @@ describe("versions upload", () => {
 		});
 
 		test.for([
-			{ bindingName: CONTAINER_IMAGES_BINDING, containers: [] },
 			{ bindingName: "USER_IMAGES", containers: [] },
-			{ bindingName: CONTAINER_IMAGES_BINDING, containers: undefined },
 			{ bindingName: "USER_IMAGES", containers: undefined },
 		])(
-			"clears only the reserved Container image binding with keep_vars: %j",
+			"keeps variables without generating Container image bindings: %j",
 			async ({ bindingName, containers }, { expect }) => {
 				mockGetScript();
 				const requests = mockUploadVersion(false, 0);
@@ -1098,11 +1109,7 @@ describe("versions upload", () => {
 				expect(metadata.keep_bindings).toEqual(
 					expect.arrayContaining(["json", "plain_text"])
 				);
-				expect(metadata.bindings).toEqual(
-					bindingName === CONTAINER_IMAGES_BINDING
-						? [{ name: CONTAINER_IMAGES_BINDING, type: "json", json: {} }]
-						: []
-				);
+				expect(metadata.bindings).toEqual([]);
 			}
 		);
 		test("should include plain_text and json in keep_bindings when keep_vars is true", async () => {
@@ -1267,12 +1274,7 @@ describe("versions upload", () => {
 				name: "test-name",
 				main: "./index.js",
 				durable_objects: {
-					bindings: [
-						{
-							name: "MY_DO",
-							class_name: "MyDurableObject",
-						},
-					],
+					bindings: [{ name: "MY_DO", class_name: "MyDurableObject" }],
 				},
 				migrations: [
 					{
@@ -2539,17 +2541,7 @@ describe("versions upload", () => {
 					},
 				]);
 				expect(metadata.bindings.filter(({ type }) => type === "json")).toEqual(
-					[
-						{
-							json: {
-								MyDurableObject: {
-									tools: image,
-								},
-							},
-							name: CONTAINER_IMAGES_BINDING,
-							type: "json",
-						},
-					]
+					[]
 				);
 				expect(applicationRequests).toEqual(
 					applicationExists
@@ -2634,9 +2626,16 @@ describe("versions upload", () => {
 			expect(metadata.migrations).toBeUndefined();
 		});
 
-		test.for(["populated", "empty"] as const)(
-			"uploads a name-only managed Container export with %s images and defers application creation",
-			async (imageMap, { expect }) => {
+		test.for([
+			{ imageMap: "populated", appState: "missing-namespace" },
+			{ imageMap: "empty", appState: "missing-namespace" },
+			{ imageMap: "empty", appState: "missing-app" },
+			{ imageMap: "empty", appState: "exists" },
+			{ imageMap: "empty", appState: "mismatch" },
+			{ imageMap: "empty", appState: "forbidden" },
+		] as const)(
+			"uploads a name-only managed Container export with $imageMap images and $appState",
+			async ({ imageMap, appState }, { expect }) => {
 				const image =
 					"registry.cloudflare.com/some-account-id/app@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 				const imageRefs: Record<string, string> =
@@ -2661,9 +2660,46 @@ describe("versions upload", () => {
 						"*/accounts/:accountId/workers/durable_objects/namespaces",
 						() => {
 							namespaceListRequests++;
-							return HttpResponse.json(createFetchResult([]));
+							return HttpResponse.json(
+								createFetchResult(
+									appState === "missing-namespace"
+										? []
+										: [
+												{
+													id: "existing-namespace",
+													class: "Sandbox",
+													script: "test-name",
+													use_sqlite: true,
+												},
+											]
+								)
+							);
 						}
 					),
+					http.get("*/applications/existing-namespace", () => {
+						if (appState === "missing-app" || appState === "forbidden") {
+							return HttpResponse.json(
+								createFetchResult(null, false, [
+									{
+										code: 1000,
+										message:
+											appState === "forbidden"
+												? "Forbidden"
+												: "Application not found",
+									},
+								]),
+								{ status: appState === "forbidden" ? 403 : 404 }
+							);
+						}
+						return HttpResponse.json(
+							createFetchResult({
+								id: "existing-namespace",
+								name: appState === "mismatch" ? "other-app" : "managed-app",
+								scheduling_policy: "durable_object",
+								durable_objects: { namespace_id: "existing-namespace" },
+							})
+						);
+					}),
 					http.patch("*/applications/:id", () => {
 						applicationRequests++;
 						return HttpResponse.json(createFetchResult({}));
@@ -2701,6 +2737,22 @@ describe("versions upload", () => {
 				);
 				writeWorkerSource({ durableObjects: ["Sandbox"] });
 
+				if (imageMap === "empty" && appState !== "exists") {
+					const message =
+						appState === "mismatch"
+							? "does not match Container"
+							: appState === "forbidden"
+								? "Forbidden"
+								: "Run `wrangler deploy`";
+					await expect(
+						runWrangler("versions upload --config ./wrangler.json")
+					).rejects.toThrow(message);
+					expect(requests).toHaveLength(0);
+					expect(applicationRequests).toBe(0);
+					expect(preparationRequests).toHaveLength(0);
+					return;
+				}
+
 				await runWrangler("versions upload --config ./wrangler.json");
 
 				const metadata = await getMetadata(requests[requests.length - 1]);
@@ -2718,21 +2770,94 @@ describe("versions upload", () => {
 						...(imageMap === "populated" && { images: imageRefs }),
 					},
 				]);
-				expect(metadata.bindings).toEqual(
-					expect.arrayContaining([
-						{
-							name: CONTAINER_IMAGES_BINDING,
-							type: "json",
-							json: { Sandbox: imageRefs },
-						},
-					])
-				);
+				expect(metadata.bindings).toEqual([]);
 				expect(preparationRequests).toEqual(
 					imageMap === "empty" ? [] : [{ image }]
 				);
 				expect(metadata.migrations).toBeUndefined();
-				expect(namespaceListRequests).toBe(0);
+				expect(namespaceListRequests).toBe(imageMap === "empty" ? 1 : 0);
 				expect(applicationRequests).toBe(0);
+			}
+		);
+
+		test.for(["namespace", "application"])(
+			"rejects an image-less Container missing its %s before preparing other images",
+			async (missing, { expect }) => {
+				const image =
+					"registry.cloudflare.com/some-account-id/tools@sha256:" +
+					"b".repeat(64);
+				mockGetScript();
+				mockContainersAccount();
+				const uploads = mockUploadVersion(false, 0);
+				let preparations = 0;
+				msw.use(
+					http.post("*/image-preparations", () => {
+						preparations++;
+						return HttpResponse.json(
+							createFetchResult({
+								image,
+								status: ContainerImagePreparationStatus.READY,
+							})
+						);
+					}),
+					http.get(
+						"*/accounts/:accountId/workers/durable_objects/namespaces",
+						() =>
+							HttpResponse.json(
+								createFetchResult(
+									missing === "namespace"
+										? []
+										: [
+												{
+													id: "sandbox-namespace",
+													class: "Sandbox",
+													script: "test-name",
+													use_sqlite: true,
+												},
+											]
+								)
+							)
+					),
+					http.get("*/applications/sandbox-namespace", () =>
+						HttpResponse.json(
+							createFetchResult(null, false, [
+								{ code: 1000, message: "Application not found" },
+							]),
+							{ status: 404 }
+						)
+					)
+				);
+				writeWranglerConfig({
+					name: "test-name",
+					main: "./index.js",
+					exports: {
+						Images: {
+							type: "durable-object",
+							storage: "sqlite",
+							container: "images-app",
+						},
+						Sandbox: {
+							type: "durable-object",
+							storage: "sqlite",
+							container: "sandbox-app",
+						},
+					},
+					containers: [
+						{
+							name: "images-app",
+							scheduling_policy: "durable_object",
+							images: { tools: { image } },
+						},
+						{ name: "sandbox-app", scheduling_policy: "durable_object" },
+					],
+				});
+				writeWorkerSource({ durableObjects: ["Images", "Sandbox"] });
+
+				await expect(runWrangler("versions upload")).rejects.toThrow(
+					"Run `wrangler deploy`"
+				);
+				expect(uploads).toHaveLength(0);
+				expect(preparations).toBe(0);
 			}
 		);
 
@@ -2834,6 +2959,95 @@ describe("versions upload", () => {
 			);
 			await expect(rejection).rejects.not.toThrow(
 				/declared in `exports` but not yet provisioned/
+			);
+		});
+	});
+
+	describe("workflow exports", () => {
+		beforeEach(() => {
+			setIsTTY(false);
+		});
+
+		test("sends workflow exports by name without provisioning the Workflow", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			const requests = mockUploadVersion(false, 0);
+			let workflowPuts = 0;
+			msw.use(
+				http.get("*/accounts/:accountId/workflows/:workflowName", () =>
+					HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 10200, message: "Workflow not found" },
+						]),
+						{ status: 404 }
+					)
+				),
+				http.put("*/accounts/:accountId/workflows/:workflowName", () => {
+					workflowPuts++;
+					return HttpResponse.json(createFetchResult({}));
+				})
+			);
+
+			writeWranglerConfig(
+				{
+					name: "test-name",
+					main: "./index.js",
+					exports: {
+						MyWorkflow: {
+							type: "workflow",
+							name: "my-workflow",
+							limits: { steps: 10 },
+						},
+					},
+				},
+				"./wrangler.json"
+			);
+			writeWorkerSource();
+
+			await runWrangler("versions upload --config ./wrangler.json");
+
+			const metadata = await getMetadata(requests[requests.length - 1]);
+			expect(metadata.exports).toEqual({
+				MyWorkflow: { type: "workflow", name: "my-workflow" },
+			});
+			expect(workflowPuts).toBe(0);
+		});
+
+		test("rejects a binding and an export that declare the same Workflow with different classes", async ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-name",
+					main: "./index.js",
+					workflows: [
+						{
+							binding: "WORKFLOW",
+							name: "my-workflow",
+							class_name: "OldWorkflow",
+						},
+					],
+					exports: {
+						MyWorkflow: { type: "workflow", name: "my-workflow" },
+					},
+				},
+				"./wrangler.json"
+			);
+			fs.writeFileSync(
+				"index.js",
+				dedent`
+					import { WorkflowEntrypoint } from "cloudflare:workers";
+					export default {};
+					export class OldWorkflow extends WorkflowEntrypoint {}
+					export class MyWorkflow extends WorkflowEntrypoint {}
+				`
+			);
+
+			await expect(
+				runWrangler("versions upload --config ./wrangler.json")
+			).rejects.toThrow(
+				'"workflows[0]" and "exports.MyWorkflow" both declare the Workflow "my-workflow", but with different classes ("OldWorkflow" and "MyWorkflow").'
 			);
 		});
 	});

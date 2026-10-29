@@ -56,14 +56,31 @@ function bucketFor(targetingKey: unknown): number {
 }
 
 describe("flagship evaluation", () => {
-	test("serves defaults, disabled flags, and the first matching rule", ({
+	test("serves static, default, disabled, and first matching rule", ({
 		expect,
 	}) => {
 		expect(evaluateFlag(flag(), {}, "local")).toEqual({
 			value: false,
 			variant: "off",
-			reason: "DEFAULT",
+			reason: "STATIC",
 		});
+		expect(
+			evaluateFlag(
+				flag({
+					rules: [
+						{
+							priority: 1,
+							conditions: [
+								{ attribute: "plan", operator: "equals", value: "pro" },
+							],
+							serve_variation: "on",
+						},
+					],
+				}),
+				{},
+				"local"
+			).reason
+		).toBe("DEFAULT");
 		expect(
 			evaluateFlag(
 				flag({
@@ -132,6 +149,39 @@ describe("flagship evaluation", () => {
 		expect(matches([{ logical_operator: "OR", clauses: [] }], {})).toBe(false);
 	});
 
+	test("treats null and empty values like Flagship", ({ expect }) => {
+		expect(
+			matches([{ attribute: "plan", operator: "not_equals", value: "pro" }], {
+				plan: null,
+			})
+		).toBe(true);
+		expect(
+			matches([{ attribute: "plan", operator: "equals", value: "null" }], {
+				plan: null,
+			})
+		).toBe(false);
+		expect(
+			matches([{ attribute: "plan", operator: "not_in", value: ["pro"] }], {
+				plan: null,
+			})
+		).toBe(true);
+		expect(
+			matches([{ attribute: "plan", operator: "in", value: [null] }], {
+				plan: "null",
+			})
+		).toBe(false);
+		expect(
+			matches([{ attribute: "tags", operator: "in", value: ["a"] }], {
+				tags: ["a"],
+			})
+		).toBe(false);
+		expect(
+			matches([{ attribute: "age", operator: "less_than", value: 1 }], {
+				age: " ",
+			})
+		).toBe(false);
+	});
+
 	test("does not match missing attributes or malformed operators", ({
 		expect,
 	}) => {
@@ -146,6 +196,51 @@ describe("flagship evaluation", () => {
 		expect(
 			matches([{ attribute: "id", operator: "invalid" as never, value: 1 }], {
 				id: 1,
+			})
+		).toBe(false);
+	});
+
+	test("resolves nested attributes and matches array membership like Flagship", ({
+		expect,
+	}) => {
+		expect(
+			matches(
+				[{ attribute: "profile.plan", operator: "equals", value: "pro" }],
+				{
+					profile: { plan: "pro" },
+				}
+			)
+		).toBe(true);
+		expect(
+			matches(
+				[{ attribute: "profile.plan", operator: "equals", value: "pro" }],
+				{
+					"profile.plan": "free",
+					profile: { plan: "pro" },
+				}
+			)
+		).toBe(false);
+		expect(
+			matches(
+				[{ attribute: "profile.plan", operator: "equals", value: "pro" }],
+				{
+					profile: Object.create({ plan: "pro" }),
+				}
+			)
+		).toBe(false);
+		expect(
+			matches([{ attribute: "groups", operator: "has", value: "beta" }], {
+				groups: ["beta"],
+			})
+		).toBe(true);
+		expect(
+			matches([{ attribute: "groups", operator: "not_has", value: "beta" }], {
+				groups: ["alpha"],
+			})
+		).toBe(true);
+		expect(
+			matches([{ attribute: "groups", operator: "has", value: "beta" }], {
+				groups: [{ name: "beta" }],
 			})
 		).toBe(false);
 	});
@@ -176,7 +271,7 @@ describe("flagship evaluation", () => {
 
 		test("honors rollout boundaries and custom attributes", ({ expect }) => {
 			expect(evaluateFlag(rolloutFlag(100), {}, ACCOUNT_TAG).reason).toBe(
-				"SPLIT"
+				"TARGETING_MATCH"
 			);
 			expect(
 				evaluateFlag(rolloutFlag(0), { targetingKey: "1" }, ACCOUNT_TAG).reason
@@ -193,6 +288,39 @@ describe("flagship evaluation", () => {
 			);
 		});
 
+		test("preserves integer buckets and splits fractional boundary buckets", ({
+			expect,
+		}) => {
+			const split = rolloutFlag(50.5);
+			split.key = "rollout_fractional";
+			expect(
+				evaluateFlag(split, { targetingKey: "199" }, ACCOUNT_TAG).reason
+			).toBe("SPLIT");
+			expect(
+				evaluateFlag(split, { targetingKey: "137" }, ACCOUNT_TAG).reason
+			).toBe("DEFAULT");
+			expect(
+				evaluateFlag(
+					{
+						...split,
+						rules: [{ ...split.rules[0], rollout: { percentage: 50 } }],
+					},
+					{ targetingKey: "199" },
+					ACCOUNT_TAG
+				).reason
+			).toBe("DEFAULT");
+		});
+
+		test("resolves nested rollout attributes", ({ expect }) => {
+			const split = rolloutFlag(50, "profile.id");
+			expect(
+				evaluateFlag(split, { profile: { id: "1" } }, ACCOUNT_TAG).reason
+			).toBe("SPLIT");
+			expect(
+				evaluateFlag(split, { profile: { id: "2" } }, ACCOUNT_TAG).reason
+			).toBe("DEFAULT");
+		});
+
 		test("seeds buckets by account and flag", ({ expect }) => {
 			const reasons = (flagKey: string, accountTag: string) =>
 				["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].map(
@@ -205,6 +333,18 @@ describe("flagship evaluation", () => {
 			const baseline = reasons("rollout_test", ACCOUNT_TAG);
 			expect(reasons("rollout_test", "local")).not.toEqual(baseline);
 			expect(reasons("other", ACCOUNT_TAG)).not.toEqual(baseline);
+		});
+
+		test("skips a rollout keyed by a non-scalar attribute", ({ expect }) => {
+			for (const percentage of [50, 100]) {
+				expect(
+					evaluateFlag(
+						rolloutFlag(percentage),
+						{ targetingKey: { id: "1" } },
+						ACCOUNT_TAG
+					).reason
+				).toBe("DEFAULT");
+			}
 		});
 	});
 });

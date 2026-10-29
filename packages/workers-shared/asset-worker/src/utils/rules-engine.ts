@@ -3,7 +3,7 @@
 // It's also everything included in the URLPattern escape (https://wicg.github.io/urlpattern/#escape-a-regexp-string), plus the following: -
 
 import { REDIRECTS_VERSION } from "../handler";
-import type { AssetConfig } from "../../../utils/types";
+import type { NormalizedAssetConfig } from "../types";
 
 // As the answer says, there's no downside to escaping these extra characters, so better safe than sorry
 const ESCAPE_REGEX_CHARACTERS = /[-/\\^$*+?.()|[\]{}]/g;
@@ -114,7 +114,7 @@ export const generateRulesMatcher = <T>(
 };
 
 export const staticRedirectsMatcher = (
-	configuration: Required<AssetConfig>,
+	configuration: NormalizedAssetConfig,
 	host: string,
 	pathname: string
 ) => {
@@ -134,7 +134,7 @@ export const staticRedirectsMatcher = (
 };
 
 export const generateRedirectsMatcher = (
-	configuration: Required<AssetConfig>
+	configuration: NormalizedAssetConfig
 ) =>
 	generateRulesMatcher(
 		configuration.redirects.version === REDIRECTS_VERSION

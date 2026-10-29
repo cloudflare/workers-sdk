@@ -24,7 +24,10 @@ import type {
 	DurableObjectContainerApp,
 } from "@cloudflare/workers-utils";
 
-vi.mock("../src/shared/context", () => ({ logger: { log: vi.fn() } }));
+vi.mock("../src/shared/context", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../src/shared/context")>()),
+	logger: { log: vi.fn() },
+}));
 vi.mock("node:timers/promises", () => ({ setTimeout: vi.fn() }));
 vi.mock("@cloudflare/cli-shared-helpers", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@cloudflare/cli-shared-helpers")>()),
@@ -71,7 +74,13 @@ const exportConfig = {
 		},
 	],
 } as unknown as Config;
-const args = { accountId: "account", dryRun: false, scriptName: "worker" };
+const args = {
+	accountId: "account",
+	deployCommand: "wrangler deploy",
+	dryRun: false,
+	scriptName: "worker",
+	versionsUploadCommand: "wrangler versions upload",
+};
 const namespace = {
 	id: "namespace",
 	name: "sandbox",
@@ -314,6 +323,74 @@ describe("Durable Object application settings", () => {
 		}
 	);
 
+	describe("SSH settings", () => {
+		const sshConfiguration = {
+			wrangler_ssh: { enabled: true, port: 2222 },
+			authorized_keys: [
+				{ name: "laptop", public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1" },
+			],
+		};
+		const sshContainers = getDurableObjectContainerApps([
+			{
+				name: "sandbox",
+				class_name: "Sandbox",
+				scheduling_policy: "durable_object",
+				ssh: sshConfiguration.wrangler_ssh,
+				authorized_keys: sshConfiguration.authorized_keys,
+			},
+		]);
+
+		it("initializes missing applications with SSH settings", async ({
+			expect,
+		}) => {
+			vi.mocked(ApplicationsService.getApplication).mockRejectedValue(
+				apiError(404)
+			);
+			await deployDurableObjectContainerApplications(
+				config,
+				sshContainers,
+				deployArgs
+			);
+			expect(ApplicationsService.createApplication).toHaveBeenCalledWith({
+				name: "sandbox",
+				scheduling_policy: "durable_object",
+				durable_objects: { namespace_id: "namespace" },
+				configuration: sshConfiguration,
+			});
+		});
+
+		it.for([
+			{ stored: {}, patched: true },
+			{ stored: sshConfiguration, patched: false },
+			{
+				stored: { ...sshConfiguration, wrangler_ssh: { enabled: false } },
+				patched: true,
+			},
+			{ stored: { ...sshConfiguration, authorized_keys: [] }, patched: true },
+		])(
+			"patches SSH settings only when they change: %j",
+			async ({ stored, patched }, { expect }) => {
+				vi.mocked(ApplicationsService.getApplication).mockResolvedValue({
+					...existing,
+					configuration: { image, ...stored },
+				});
+				await deployDurableObjectContainerApplications(
+					config,
+					sshContainers,
+					deployArgs
+				);
+				if (patched) {
+					expect(ApplicationsService.modifyApplication).toHaveBeenCalledWith(
+						"namespace",
+						{ configuration: sshConfiguration }
+					);
+				} else {
+					expect(ApplicationsService.modifyApplication).not.toHaveBeenCalled();
+				}
+			}
+		);
+	});
+
 	it("version deployments preserve application settings and ignore local config", async ({
 		expect,
 	}) => {
@@ -386,6 +463,87 @@ describe("Durable Object application settings", () => {
 });
 
 describe("Container image preparation", () => {
+	it.for(["missing-namespace", "missing-app", "mismatch", "ready", "dry-run"])(
+		"validates image-less applications before pushing Dockerfile images: %s",
+		async (state, { expect }) => {
+			const mixedConfig: Config = {
+				...exportConfig,
+				exports: {
+					...exportConfig.exports,
+					Empty: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "empty",
+					},
+				},
+				containers: [
+					...(exportConfig.containers ?? []),
+					{ name: "empty", scheduling_policy: "durable_object" },
+				],
+			};
+			vi.mocked(listDurableObjects).mockResolvedValue(
+				state === "missing-namespace" ? [] : [{ ...namespace, class: "Empty" }]
+			);
+			const getApplication = vi.spyOn(ApplicationsService, "getApplication");
+			if (state === "missing-app") {
+				getApplication.mockRejectedValue(apiError(404));
+			} else {
+				getApplication.mockResolvedValue({
+					...application,
+					id: namespace.id,
+					name: state === "mismatch" ? "other" : "empty",
+					durable_objects: { namespace_id: namespace.id },
+				});
+			}
+			vi.mocked(pushImageIfChanged).mockResolvedValue({ remoteDigest: image });
+			const prepare = vi
+				.spyOn(ContainerImagePreparationsService, "prepareContainerImage")
+				.mockResolvedValue({
+					image,
+					status: ContainerImagePreparationStatus.READY,
+				});
+			const result = prepareDurableObjectContainerApplications(
+				mixedConfig,
+				getDurableObjectContainerApps(mixedConfig.containers),
+				[
+					{
+						className: "Sandbox",
+						imageName: "tools",
+						localTag: "worker-sandbox-tools:wrangler-test",
+					},
+				],
+				{
+					...args,
+					dryRun: state === "dry-run",
+					requireExistingImageLessApplications: true,
+				}
+			);
+			if (state === "dry-run") {
+				await expect(result).resolves.toEqual({
+					Sandbox: { tools: "worker-sandbox-tools:wrangler-test" },
+				});
+				expect(listDurableObjects).not.toHaveBeenCalled();
+				expect(getApplication).not.toHaveBeenCalled();
+				expect(pushImageIfChanged).not.toHaveBeenCalled();
+				expect(prepare).not.toHaveBeenCalled();
+			} else if (state === "ready") {
+				await expect(result).resolves.toEqual({ Sandbox: { tools: image } });
+				expect(getApplication.mock.invocationCallOrder[0]).toBeLessThan(
+					vi.mocked(pushImageIfChanged).mock.invocationCallOrder[0]
+				);
+				expect(prepare).toHaveBeenCalledOnce();
+			} else {
+				await expect(result).rejects.toThrow(
+					state === "mismatch"
+						? "does not match Container"
+						: "Run `wrangler deploy`"
+				);
+				expect(pushImageIfChanged).not.toHaveBeenCalled();
+				expect(prepare).not.toHaveBeenCalled();
+			}
+		}
+	);
+
 	it("uses the export class for prepared image keys", async ({ expect }) => {
 		vi.mocked(pushImageIfChanged).mockResolvedValue({ remoteDigest: image });
 		vi.spyOn(

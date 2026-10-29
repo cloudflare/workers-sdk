@@ -10,7 +10,7 @@ import {
 	installPackages,
 	installWrangler,
 } from "@cloudflare/cli-shared-helpers/packages";
-import { convertToWranglerConfig, InputWorkerSchema } from "@cloudflare/config";
+import { convertToWranglerConfig, InputConfigSchema } from "@cloudflare/config";
 import {
 	DEFAULT_COMPAT_DATE,
 	FatalError,
@@ -26,9 +26,15 @@ import {
 	isFrameworkSupported,
 	isKnownFramework,
 	type PackageJsonScriptsOverrides,
+	validateFrameworkTargetSupport,
 } from "./frameworks";
 import { getFrameworkPackageInfo } from "./frameworks/all-frameworks";
 import { Static } from "./frameworks/static";
+import {
+	CLOUDFLARE_TYPES_INCLUDE,
+	getCloudflareTypesTsconfigUpdate,
+	saveCloudflareTypesTsconfigUpdate,
+} from "./tsconfig";
 import { usesTypescript } from "./uses-typescript";
 import type { AutoConfigContext, AutoConfigTarget } from "./context";
 import type {
@@ -41,7 +47,7 @@ import type {
 	AutoConfigOptions,
 	AutoConfigSummary,
 } from "./types";
-import type { WorkerConfigInput } from "@cloudflare/config";
+import type { WorkerConfig } from "@cloudflare/config";
 import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
 
 /**
@@ -83,6 +89,7 @@ export async function runAutoConfig(
 
 	autoConfigDetails = updatedAutoConfigDetails;
 	assertNonConfigured(autoConfigDetails);
+	validateFrameworkTargetSupport(autoConfigDetails.framework, target);
 
 	if (isKnownFramework(autoConfigDetails.framework.id)) {
 		const frameworkIsSupported = isFrameworkSupported(
@@ -105,7 +112,7 @@ export async function runAutoConfig(
 
 	const compatibilityDate = DEFAULT_COMPAT_DATE;
 
-	const defaultWorkerConfig: WorkerConfigInput = {
+	const defaultWorkerConfig: WorkerConfig = {
 		name: autoConfigDetails.workerName,
 		compatibilityDate,
 		observability: {
@@ -282,6 +289,13 @@ export async function runAutoConfig(
 		if (workerConfig !== null) {
 			await saveCloudflareConfig(autoConfigDetails.projectPath, workerConfig);
 		}
+		// Only projects with Worker code (an entrypoint) use the types that `cf-typegen` generates
+		if (workerConfig?.entrypoint) {
+			await saveCloudflareTypesTsconfigUpdate(
+				autoConfigDetails.projectPath,
+				context
+			);
+		}
 		if (
 			configurationResults.buildTool === "wrangler" &&
 			configurationResults.buildConfig
@@ -321,9 +335,9 @@ export async function runAutoConfig(
  * @returns The merged Worker configuration, or `null` when an external tool owns it
  */
 function mergeWorkerConfig(
-	defaultWorkerConfig: WorkerConfigInput,
-	workerConfig: Partial<WorkerConfigInput> | null
-): WorkerConfigInput | null {
+	defaultWorkerConfig: WorkerConfig,
+	workerConfig: Partial<WorkerConfig> | null
+): WorkerConfig | null {
 	return workerConfig === null
 		? null
 		: { ...defaultWorkerConfig, ...workerConfig };
@@ -337,18 +351,15 @@ function mergeWorkerConfig(
  * @returns The Wrangler configuration, or `null` when an external tool owns it
  */
 function getWranglerConfig(
-	workerConfig: WorkerConfigInput | null,
+	workerConfig: WorkerConfig | null,
 	configurationResults: ConfigurationResults
 ): RawConfig | null {
 	if (workerConfig === null) {
 		return null;
 	}
 
-	const parsedWorkerConfig = InputWorkerSchema.parse({
-		type: "worker",
-		...workerConfig,
-	});
-	const convertedWranglerConfig = convertToWranglerConfig(parsedWorkerConfig);
+	const parsedConfig = InputConfigSchema.parse({ worker: workerConfig });
+	const convertedWranglerConfig = convertToWranglerConfig(parsedConfig);
 	const wranglerConfig = ensureNodejsCompatIsEnabled({
 		$schema: "node_modules/wrangler/config-schema.json",
 		...convertedWranglerConfig,
@@ -440,7 +451,7 @@ export async function saveWranglerJsonc(
  */
 async function saveCloudflareConfig(
 	projectPath: string,
-	workerConfig: WorkerConfigInput
+	workerConfig: WorkerConfig
 ): Promise<void> {
 	await writeFile(
 		resolve(projectPath, "cloudflare.config.ts"),
@@ -470,8 +481,8 @@ async function saveWranglerConfigTs(
  * @param workerConfig The Worker configuration to render
  * @returns The configuration module source
  */
-function renderCloudflareConfig(workerConfig: WorkerConfigInput): string {
-	return `import { defineWorker } from "cf/config";\n\nexport default defineWorker(${JSON.stringify(workerConfig, null, 2)});\n`;
+function renderCloudflareConfig(workerConfig: WorkerConfig): string {
+	return `import { defineConfig } from "cf/config";\n\nexport default defineConfig({\n  worker: ${JSON.stringify(workerConfig, null, 2).replaceAll("\n", "\n  ")}\n});\n`;
 }
 
 /**
@@ -513,7 +524,7 @@ export async function buildOperationsSummary(
 	autoConfigDetails: AutoConfigDetailsForNonConfiguredProject & {
 		outputDir: NonNullable<AutoConfigDetails["outputDir"]>;
 	},
-	workerConfig: WorkerConfigInput | null,
+	workerConfig: WorkerConfig | null,
 	configurationResults: ConfigurationResults,
 	projectCommands: {
 		build?: string;
@@ -553,7 +564,11 @@ export async function buildOperationsSummary(
 			packagesToInstall.add(target);
 		}
 		if (configurationResults.buildTool === "vite") {
-			packagesToInstall.add("@cloudflare/vite-plugin");
+			packagesToInstall.add(
+				target === "cf"
+					? "@cloudflare/vite-plugin@^2.0.0-beta.v.0"
+					: "@cloudflare/vite-plugin"
+			);
 		} else if (
 			target === "cf" &&
 			configurationResults.buildTool === "wrangler"
@@ -597,13 +612,31 @@ export async function buildOperationsSummary(
 			!("cf-typegen" in (autoConfigDetails.packageJson.scripts ?? {}))
 		) {
 			summary.scripts["cf-typegen"] =
-				scriptOverrides?.typegen ?? `${target} types`;
+				scriptOverrides?.typegen ??
+				(target === "cf" ? "cf workers types" : "wrangler types");
 		}
 
 		logger.log("📝 Update package.json scripts:");
 		for (const [name, script] of Object.entries(summary.scripts)) {
 			logger.log(` - "${name}": "${script}"`);
 		}
+		logger.log("");
+	}
+
+	// Projects with Worker code (an entrypoint) get the `cf-typegen` script. Its output in
+	// `.cloudflare/types` needs its own `include` entry, since patterns like `**/*` skip dot-directories
+	const tsconfigUpdate =
+		target === "cf" && workerConfig?.entrypoint
+			? getCloudflareTypesTsconfigUpdate(autoConfigDetails.projectPath)
+			: undefined;
+	if (tsconfigUpdate?.type === "update") {
+		logger.log("📝 Update tsconfig.json:");
+		logger.log(
+			` - Add ${JSON.stringify(CLOUDFLARE_TYPES_INCLUDE)} to "include"`
+		);
+		logger.log("");
+	} else if (tsconfigUpdate?.type === "manual") {
+		logger.warn(tsconfigUpdate.message);
 		logger.log("");
 	}
 

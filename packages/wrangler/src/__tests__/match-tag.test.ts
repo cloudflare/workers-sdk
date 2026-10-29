@@ -106,7 +106,7 @@ describe("match-tag", () => {
 	});
 
 	describe("error cases", () => {
-		it("catches worker not found from API and throws validation error", async ({
+		it("reports when the Worker is not found in the account", async ({
 			expect,
 		}) => {
 			vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123");
@@ -118,7 +118,7 @@ describe("match-tag", () => {
 					"b-worker"
 				)
 			).rejects.toMatchInlineSnapshot(
-				`[Error: The name in your Wrangler configuration file (b-worker) must match the name of your Worker. Please update the name field in your Wrangler configuration file.]`
+				`[Error: The Worker "b-worker" was not found in your account. Check that the name in your Wrangler configuration file is correct and that the Worker exists in this account.]`
 			);
 		});
 
@@ -154,7 +154,7 @@ describe("match-tag", () => {
 					"network-error-worker"
 				)
 			).rejects.toMatchInlineSnapshot(
-				`[Error: Wrangler cannot validate that your Worker name matches what is expected by the build system. Please retry the build. If the problem persists, please contact support.]`
+				`[Error: The Worker name could not be validated against what is expected by the build system. Please retry the build. If the problem persists, please contact support.]`
 			);
 		});
 
@@ -195,7 +195,7 @@ describe("match-tag", () => {
 			beforeEach(() => {
 				writeWorkerSource();
 			});
-			it("catches worker not found from API and throws validation error", async ({
+			it("reports when the Worker is not found in the account", async ({
 				expect,
 			}) => {
 				vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123");
@@ -204,7 +204,7 @@ describe("match-tag", () => {
 				await expect(
 					runWrangler("deploy ./index.js")
 				).rejects.toMatchInlineSnapshot(
-					`[Error: The name in your wrangler.toml file (b-worker) must match the name of your Worker. Please update the name field in your wrangler.toml file.]`
+					`[Error: The Worker "b-worker" was not found in your account. Check that the name in your wrangler.toml file is correct and that the Worker exists in this account.]`
 				);
 			});
 

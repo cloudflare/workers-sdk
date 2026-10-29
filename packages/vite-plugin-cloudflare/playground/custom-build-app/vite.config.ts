@@ -1,14 +1,16 @@
 import assert from "node:assert";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
 
 export default defineConfig({
 	builder: {
 		async buildApp(builder) {
-			const workerEnvironment = builder.environments.worker;
+			const workerEnvironment = builder.environments.ssr;
 			const clientEnvironment = builder.environments.client;
 
-			assert(workerEnvironment, `No "worker" environment`);
+			assert(workerEnvironment, `No "ssr" environment`);
 			assert(clientEnvironment, `No "client" environment`);
 
 			builder.config.logger.info("__before-build__");
@@ -19,9 +21,21 @@ export default defineConfig({
 
 			await builder.build(clientEnvironment);
 
-			// The output `wrangler.json` will always include an `assets` field so will fail to run if there is no client build.
-			// To build correctly without assets, a custom `buildApp` would need to remove this field.
+			// Some frameworks delete the Vite manifests they enable so we do that here to test this scenario
+			fs.rmSync(
+				path.resolve(
+					builder.config.root,
+					workerEnvironment.config.build.outDir,
+					".vite/manifest.json"
+				)
+			);
 		},
 	},
-	plugins: [cloudflare({ inspectorPort: false, persistState: false })],
+	plugins: [
+		cloudflare({
+			types: { includeRuntime: false },
+			inspectorPort: false,
+			persistState: false,
+		}),
+	],
 });

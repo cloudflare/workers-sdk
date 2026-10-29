@@ -123,7 +123,7 @@ async function generate({
 		? `+${compatibilityFlags.join("+")}`
 		: "";
 
-	const path = `http://dummy.com/${compatibilityDate}${flagsString}`;
+	const path = `http://dummy.invalid/${compatibilityDate}${flagsString}`;
 
 	try {
 		const res = await mf.dispatchFetch(path);

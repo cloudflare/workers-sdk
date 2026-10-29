@@ -102,6 +102,7 @@ export function printBindings(
 	);
 	const text_blobs = extractBindingsOfType("text_blob", bindings);
 	const browser = extractBindingsOfType("browser", bindings);
+	const analytics = extractBindingsOfType("analytics", bindings);
 	const images = extractBindingsOfType("images", bindings);
 	const stream = extractBindingsOfType("stream", bindings);
 	const ai = extractBindingsOfType("ai", bindings);
@@ -128,6 +129,7 @@ export function printBindings(
 	);
 	const mtls_certificates = extractBindingsOfType("mtls_certificate", bindings);
 	const pipelines = extractBindingsOfType("pipeline", bindings);
+	const k2 = extractBindingsOfType("k2", bindings);
 	const ratelimits = extractBindingsOfType("ratelimit", bindings);
 	const assets = extractBindingsOfType("assets", bindings);
 	const unsafe_hello_world = extractBindingsOfType(
@@ -362,12 +364,14 @@ export function printBindings(
 
 	if (hyperdrive.length > 0) {
 		output.push(
-			...hyperdrive.map(({ binding, id }) => {
+			...hyperdrive.map(({ binding, id, remote }) => {
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("hyperdrive"),
 					value: id,
-					mode: getMode({ isSimulatedLocally: true }),
+					mode: getMode({
+						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+					}),
 				};
 			})
 		);
@@ -538,12 +542,14 @@ export function printBindings(
 
 	if (analytics_engine_datasets.length > 0) {
 		output.push(
-			...analytics_engine_datasets.map(({ binding, dataset }) => {
+			...analytics_engine_datasets.map(({ binding, dataset, remote }) => {
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("analytics_engine"),
 					value: dataset ?? binding,
-					mode: getMode({ isSimulatedLocally: true }),
+					mode: getMode({
+						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+					}),
 				};
 			})
 		);
@@ -573,6 +579,23 @@ export function printBindings(
 				value: undefined,
 				mode: getMode({
 					isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+				}),
+			}))
+		);
+	}
+
+	if (analytics.length > 0) {
+		output.push(
+			...analytics.map(({ binding, remote }) => ({
+				name: binding,
+				type: getBindingTypeFriendlyName("analytics"),
+				value: undefined,
+				mode: getMode({
+					isSimulatedLocally:
+						(remote === true || remote === undefined) &&
+						!context.remoteBindingsDisabled
+							? false
+							: undefined,
 				}),
 			}))
 		);
@@ -654,6 +677,22 @@ export function printBindings(
 					}),
 				})
 			)
+		);
+	}
+
+	if (k2.length > 0) {
+		output.push(
+			...k2.map(({ binding, stream: k2Stream }) => ({
+				name: binding,
+				type: getBindingTypeFriendlyName("k2"),
+				value: k2Stream,
+				mode: getMode({
+					// K2 always writes to the real stream; `remote: false` is rejected during validation.
+					isSimulatedLocally: context.remoteBindingsDisabled
+						? undefined
+						: false,
+				}),
+			}))
 		);
 	}
 

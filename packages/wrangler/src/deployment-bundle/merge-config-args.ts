@@ -19,7 +19,9 @@ import { getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import { getScriptName } from "../utils/getScriptName";
+import { resolveDurableObjectsCodeUpdateStrategy } from "../versions/deployment-args";
 import { getEntry } from "./entry";
+import { applyZoneArgsToRoutes } from "./route-zone-args";
 import type { HandlerArgs } from "../core/types";
 import type { DeployArgs } from "../deploy/index";
 import type { VersionsUploadArgs } from "../versions/upload";
@@ -141,8 +143,9 @@ export async function mergeDeployConfigArgs(
 		pattern: domain,
 		custom_domain: true as const,
 	}));
-	const routes =
-		args.routes ?? config.routes ?? (config.route ? [config.route] : []);
+	const routes = args.routes
+		? applyZoneArgsToRoutes(args.routes, args)
+		: (config.routes ?? (config.route ? [config.route] : []));
 	const normalizedContainerConfig = await getNormalizedContainerOptions(
 		config,
 		{
@@ -167,6 +170,10 @@ export async function mergeDeployConfigArgs(
 			dispatchNamespace: args.dispatchNamespace,
 			oldAssetTtl: args.oldAssetTtl,
 			containersRollout: args.containersRollout,
+			durableObjectsCodeUpdateStrategy: resolveDurableObjectsCodeUpdateStrategy(
+				args.durableObjectsCodeUpdateMode,
+				config.durable_objects.code_update_strategy
+			),
 			containers: {
 				...shared.containers,
 				standard: {

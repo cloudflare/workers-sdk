@@ -197,11 +197,20 @@ const V4UnsafeDirectSocketSchema = z.object({
 	proxy: z.boolean().optional(),
 });
 
-const V4ConnectHandlerSchema = z.object({
-	protocol: z.enum(["tcp"]),
-	port: z.number(),
-	address: z.string().optional(),
-});
+const V4ConnectHandlerSchema = z.discriminatedUnion("protocol", [
+	z.strictObject({
+		protocol: z.literal("tcp"),
+		port: z.number(),
+		address: z.string().optional(),
+	}),
+	z.strictObject({
+		protocol: z.literal("udp"),
+		port: z.number(),
+		address: z.string().optional(),
+		idleTimeoutMs: z.number().int().min(0).max(0xffffffff).optional(),
+		maxPendingBytes: z.number().int().min(0).max(0xffffffff).optional(),
+	}),
+]);
 
 const V4IdEntrySchema = z.object({
 	id: z.string(),
@@ -269,7 +278,7 @@ const V4QueueConsumerOptionsSchema = z.object({
 	retryDelay: V4QueueMessageDelaySchema,
 });
 
-const V4HyperdriveSchema = z
+const V4HyperdriveConnectionSchema = z
 	.union([z.url(), z.instanceof(URL)])
 	.superRefine((value, ctx) => {
 		const url = typeof value === "string" ? new URL(value) : value;
@@ -313,6 +322,14 @@ const V4HyperdriveSchema = z
 			});
 		}
 	});
+
+const V4HyperdriveSchema = z.union([
+	V4HyperdriveConnectionSchema,
+	z.object({
+		id: z.string().optional(),
+		remoteProxyConnectionString: RemoteProxyConnectionStringSchema,
+	}),
+]);
 
 const V4PipelineSchema = z.union([
 	z.string(),
@@ -358,6 +375,7 @@ const V4WorkerOptionsShapeSchema = z.object({
 	compatibilityFlags: z.array(z.string()).optional(),
 	unsafeInspectorProxy: z.boolean().optional(),
 	routes: z.array(z.string()).optional(),
+	cronTriggers: z.array(z.string()).optional(),
 	bindings: z.record(z.string(), JsonSchema).optional(),
 	/** WASM binding file paths; string values are relative to `rootPath` if not absolute. */
 	wasmBindings: z
@@ -464,8 +482,27 @@ const V4WorkerOptionsShapeSchema = z.object({
 			})
 		)
 		.optional(),
+	workflowExports: z
+		.record(
+			z.string(),
+			z.object({
+				name: z.string(),
+				stepLimit: z.number().int().min(1).optional(),
+			})
+		)
+		.optional(),
 	pipelines: z
 		.union([z.record(z.string(), V4PipelineSchema), z.array(z.string())])
+		.optional(),
+	k2: z
+		.record(
+			z.string(),
+			z.object({
+				stream: z.string(),
+				remoteProxyConnectionString:
+					RemoteProxyConnectionStringSchema.optional(),
+			})
+		)
 		.optional(),
 	secretsStoreSecrets: z
 		.record(
@@ -477,9 +514,17 @@ const V4WorkerOptionsShapeSchema = z.object({
 		.object({ send_email: z.array(V4EmailBindingOptionsSchema).optional() })
 		.optional(),
 	analyticsEngineDatasets: z
-		.record(z.string(), z.object({ dataset: z.string() }))
+		.record(
+			z.string(),
+			z.object({
+				dataset: z.string(),
+				remoteProxyConnectionString:
+					RemoteProxyConnectionStringSchema.optional(),
+			})
+		)
 		.optional(),
 	ai: V4RemoteBindingWithNameSchema.optional(),
+	analyticsSql: V4RemoteBindingWithNameSchema.optional(),
 	agentMemory: z
 		.record(
 			z.string(),
@@ -775,6 +820,7 @@ export type V4WorkerOptionsShape = {
 	compatibilityFlags?: string[];
 	unsafeInspectorProxy?: boolean;
 	routes?: string[];
+	cronTriggers?: string[];
 	bindings?: Record<string, Json>;
 	wasmBindings?: Record<string, string | Uint8Array>;
 	textBlobBindings?: Record<string, string>;
@@ -789,11 +835,16 @@ export type V4WorkerOptionsShape = {
 		entrypoint?: string;
 		proxy?: boolean;
 	}>;
-	connectHandlers?: Array<{
-		protocol: "tcp";
-		port: number;
-		address?: string;
-	}>;
+	connectHandlers?: Array<
+		| { protocol: "tcp"; port: number; address?: string }
+		| {
+				protocol: "udp";
+				port: number;
+				address?: string;
+				idleTimeoutMs?: number;
+				maxPendingBytes?: number;
+		  }
+	>;
 	unsafeOverrideFetchWorker?: string;
 	unsafeEvalBinding?: string;
 	unsafeUseModuleFallbackService?: boolean;
@@ -831,7 +882,15 @@ export type V4WorkerOptionsShape = {
 				  })
 		  >
 		| string[];
-	hyperdrives?: Record<string, string | URL>;
+	hyperdrives?: Record<
+		string,
+		| string
+		| URL
+		| {
+				id?: string;
+				remoteProxyConnectionString: RemoteProxyConnectionString;
+		  }
+	>;
 	ratelimits?: Record<
 		string,
 		{ namespace_id: string; simple: { limit: number; period?: 10 | 60 } }
@@ -857,6 +916,13 @@ export type V4WorkerOptionsShape = {
 			stepLimit?: number;
 		}
 	>;
+	workflowExports?: Record<
+		string,
+		{
+			name: string;
+			stepLimit?: number;
+		}
+	>;
 	pipelines?:
 		| Record<
 				string,
@@ -865,6 +931,7 @@ export type V4WorkerOptionsShape = {
 				| ({ pipeline: string } & V4RemoteBinding)
 		  >
 		| string[];
+	k2?: Record<string, { stream: string } & V4RemoteBinding>;
 	secretsStoreSecrets?: Record<
 		string,
 		{ store_id: string; secret_name: string }
@@ -887,8 +954,12 @@ export type V4WorkerOptionsShape = {
 			)
 		>;
 	};
-	analyticsEngineDatasets?: Record<string, { dataset: string }>;
+	analyticsEngineDatasets?: Record<
+		string,
+		{ dataset: string } & V4RemoteBinding
+	>;
 	ai?: V4RemoteBindingWithName;
+	analyticsSql?: V4RemoteBindingWithName;
 	agentMemory?: Record<string, { namespace: string } & V4RemoteBinding>;
 	aiSearchNamespaces?: Record<
 		string,

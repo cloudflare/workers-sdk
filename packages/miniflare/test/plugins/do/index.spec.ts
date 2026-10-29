@@ -68,7 +68,6 @@ test("persists Durable Object data in-memory between options reloads", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(COUNTER_SCRIPT(responsePrefix)),
@@ -131,7 +130,6 @@ test("persists Durable Object data on file-system", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "worker",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(COUNTER_SCRIPT()),
@@ -192,7 +190,6 @@ test("lists Durable Object ids with persisted storage", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "worker",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(COUNTER_SCRIPT()),
@@ -238,7 +235,6 @@ test("multiple Workers access same Durable Object data", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "entry",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -259,7 +255,6 @@ test("multiple Workers access same Durable Object data", async ({ expect }) => {
 			},
 			{
 				config: {
-					type: "worker",
 					name: "a",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(COUNTER_SCRIPT("a: ")),
@@ -282,7 +277,6 @@ test("multiple Workers access same Durable Object data", async ({ expect }) => {
 			},
 			{
 				config: {
-					type: "worker",
 					name: "b",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(COUNTER_SCRIPT("b: ")),
@@ -342,7 +336,6 @@ test("can use Durable Object ID from one object in another", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "a",
 					compatibilityDate: "2025-05-01",
 					triggers: [{ type: "fetch", pattern: "*/id" }],
@@ -378,7 +371,6 @@ test("can use Durable Object ID from one object in another", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "b",
 					compatibilityDate: "2025-05-01",
 					triggers: [{ type: "fetch", pattern: "*/*" }],
@@ -429,7 +421,6 @@ test("proxies Durable Object methods", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(COUNTER_SCRIPT("")),
@@ -474,7 +465,6 @@ test("proxies Durable Object methods", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -529,7 +519,6 @@ describe("evictions", { concurrent: true }, () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(STATEFUL_SCRIPT()),
@@ -571,7 +560,6 @@ describe("evictions", { concurrent: true }, () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(STATEFUL_SCRIPT()),
@@ -613,7 +601,6 @@ const MINIFLARE_WITH_SQLITE = (useSQLite: boolean) =>
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export class SQLiteDurableObject {
@@ -676,7 +663,6 @@ test("gets SQLite storage for Durable Objects", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "worker",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -800,7 +786,6 @@ test("colo-local actors", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export class TestObject {
@@ -853,7 +838,6 @@ test("multiple workers with DO useSQLite true and undefined does not cause optio
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "worker-a",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest("export default {}"),
@@ -869,7 +853,6 @@ test("multiple workers with DO useSQLite true and undefined does not cause optio
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "worker-a",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(`
@@ -893,7 +876,6 @@ test("multiple workers with DO useSQLite true and undefined does not cause optio
 				},
 				{
 					config: {
-						type: "worker",
 						name: "worker-b",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest("export default {}"),
@@ -944,7 +926,6 @@ test("Durable Object RPC calls do not block Node.js event loop", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(BLOCKING_DO_SCRIPT),
@@ -988,7 +969,6 @@ test("Durable Object RPC calls complete when unblocked", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(BLOCKING_DO_SCRIPT),

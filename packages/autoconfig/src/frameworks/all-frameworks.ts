@@ -32,6 +32,7 @@ export const allKnownFrameworks = [
 			minimumVersion: "2.0.0",
 			maximumKnownMajorVersion: "2",
 		},
+		supportsCf: false,
 		supported: true,
 	},
 	{
@@ -48,6 +49,7 @@ export const allKnownFrameworks = [
 			minimumVersion: "19.0.0",
 			maximumKnownMajorVersion: "22",
 		},
+		supportsCf: false,
 		supported: true,
 	},
 	{
@@ -62,6 +64,7 @@ export const allKnownFrameworks = [
 			minimumVersion: "4.0.0",
 			maximumKnownMajorVersion: "7",
 		},
+		supportsCf: true,
 		supported: true,
 	},
 	{
@@ -80,6 +83,7 @@ export const allKnownFrameworks = [
 			minimumVersion: "14.2.35",
 			maximumKnownMajorVersion: "16",
 		},
+		supportsCf: true,
 		supported: true,
 	},
 	{
@@ -95,6 +99,7 @@ export const allKnownFrameworks = [
 			minimumVersion: "3.21.0",
 			maximumKnownMajorVersion: "4",
 		},
+		supportsCf: false,
 		supported: true,
 	},
 	{
@@ -109,6 +114,7 @@ export const allKnownFrameworks = [
 			minimumVersion: "1.1.0",
 			maximumKnownMajorVersion: "1",
 		},
+		supportsCf: false,
 		supported: true,
 	},
 	{
@@ -123,6 +129,7 @@ export const allKnownFrameworks = [
 			minimumVersion: "7.0.0",
 			maximumKnownMajorVersion: "8",
 		},
+		supportsCf: true,
 		supported: true,
 	},
 	{
@@ -136,6 +143,7 @@ export const allKnownFrameworks = [
 			minimumVersion: "1.0.0",
 			maximumKnownMajorVersion: "2",
 		},
+		supportsCf: false,
 		supported: true,
 	},
 	{
@@ -150,6 +158,7 @@ export const allKnownFrameworks = [
 			minimumVersion: "2.20.3",
 			maximumKnownMajorVersion: "2",
 		},
+		supportsCf: false,
 		supported: true,
 	},
 	{
@@ -163,6 +172,7 @@ export const allKnownFrameworks = [
 			minimumVersion: "1.132.0",
 			maximumKnownMajorVersion: "1",
 		},
+		supportsCf: true,
 		supported: true,
 	},
 	{
@@ -179,6 +189,7 @@ export const allKnownFrameworks = [
 			minimumVersion: "6.0.0",
 			maximumKnownMajorVersion: "8",
 		},
+		supportsCf: true,
 		supported: true,
 	},
 	{
@@ -190,6 +201,7 @@ export const allKnownFrameworks = [
 			minimumVersion: "0.0.0",
 			maximumKnownMajorVersion: "0",
 		},
+		supportsCf: false,
 		supported: true,
 	},
 	{
@@ -205,6 +217,7 @@ export const allKnownFrameworks = [
 			minimumVersion: "1.0.0-alpha.4",
 			maximumKnownMajorVersion: "1",
 		},
+		supportsCf: false,
 		supported: true,
 	},
 	{
@@ -234,6 +247,7 @@ export const staticFramework = {
 	id: "static",
 	name: "Static",
 	class: Static,
+	supportsCf: true,
 	supported: true,
 } as const satisfies StaticFrameworkInfo;
 

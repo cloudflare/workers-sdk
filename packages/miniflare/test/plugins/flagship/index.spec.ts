@@ -1,3 +1,6 @@
+import { readdir } from "node:fs/promises";
+import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { Miniflare, WorkerOptionsSchema } from "miniflare";
 import { describe, test } from "vitest";
 import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
@@ -7,7 +10,6 @@ function workerConfigBase(
 	overrides?: Record<string, unknown>
 ): Record<string, unknown> {
 	return {
-		type: "worker",
 		name: "test-worker",
 		compatibilityDate: "2025-01-01",
 		manifest: {
@@ -38,7 +40,6 @@ function options(
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env,
@@ -270,6 +271,61 @@ describe("flagship plugin", () => {
 		expect(await admin.listFlags()).toEqual([]);
 	});
 
+	test("stores, validates, and evaluates flag metadata", async ({ expect }) => {
+		const mf = new Miniflare(options());
+		useDispose(mf);
+		const admin = await getAdmin(mf);
+		const metadata = { owner: "growth", ticket: 42, beta: true };
+
+		expect(await admin.createFlag({ ...BOOL_FLAG, metadata })).toMatchObject({
+			metadata,
+		});
+		expect(
+			await call(mf, "getBooleanDetails", BOOL_FLAG.key, false, { plan: "pro" })
+		).toMatchObject({ reason: "TARGETING_MATCH", metadata });
+		expect(
+			await call(mf, "getStringDetails", BOOL_FLAG.key, "fallback")
+		).toMatchObject({ errorCode: "TYPE_MISMATCH", metadata });
+		expect(await admin.evaluateFlag(BOOL_FLAG.key)).toMatchObject({
+			metadata,
+		});
+
+		await admin.patchFlag(BOOL_FLAG.key, { enabled: false });
+		expect(await admin.getFlag(BOOL_FLAG.key)).toMatchObject({ metadata });
+		await admin.patchFlag(BOOL_FLAG.key, { metadata: null });
+		expect(await admin.getFlag(BOOL_FLAG.key)).not.toHaveProperty("metadata");
+		await admin.updateFlag(BOOL_FLAG.key, { ...BOOL_FLAG, metadata });
+		await admin.updateFlag(BOOL_FLAG.key, BOOL_FLAG);
+		expect(await admin.getFlag(BOOL_FLAG.key)).not.toHaveProperty("metadata");
+		await admin.updateFlag(BOOL_FLAG.key, { ...BOOL_FLAG, metadata: {} });
+		expect(
+			await call(mf, "getBooleanDetails", BOOL_FLAG.key, false)
+		).not.toHaveProperty("metadata");
+
+		const invalid: [unknown, string][] = [
+			[["owner"], "metadata must be an object"],
+			[{ owner: { team: "growth" } }, "must be a boolean, string, or number"],
+			[{ "": "empty" }, "invalid metadata key ''"],
+			[{ ["k".repeat(65)]: 1 }, "invalid metadata key"],
+			[{ constructor: 1 }, "invalid metadata key 'constructor'"],
+			[
+				Object.fromEntries(Array.from({ length: 33 }, (_, i) => [`k${i}`, i])),
+				"32 or fewer entries",
+			],
+			[{ owner: "x".repeat(2048) }, "exceeds the 2048 byte limit"],
+		];
+		for (const [value, message] of invalid) {
+			expect(
+				await rejection(() =>
+					admin.putFlag({
+						...BOOL_FLAG,
+						metadata: value as FlagInput["metadata"],
+					})
+				)
+			).toContain(message);
+		}
+	});
+
 	test("reports missing and conflicting admin operations", async ({
 		expect,
 	}) => {
@@ -355,6 +411,17 @@ describe("flagship plugin", () => {
 					rules: [
 						{
 							...BOOL_FLAG.rules[0],
+							conditions: [{ logical_operator: "OR", clauses: [] }],
+						},
+					],
+				},
+				"'OR' condition without any clauses",
+			],
+			[
+				{
+					rules: [
+						{
+							...BOOL_FLAG.rules[0],
 							conditions: [
 								{ attribute: "plan", operator: "invalid", value: "pro" },
 							] as never,
@@ -386,9 +453,17 @@ describe("flagship plugin", () => {
 		}
 		const fractional = await admin.putFlag({
 			...BOOL_FLAG,
-			rules: [{ ...BOOL_FLAG.rules[0], rollout: { percentage: 33.333333 } }],
+			rules: [{ ...BOOL_FLAG.rules[0], rollout: { percentage: 33.33 } }],
 		});
-		expect(fractional.rules[0].rollout?.percentage).toBe(33.333333);
+		expect(fractional.rules[0].rollout?.percentage).toBe(33.33);
+		expect(
+			await rejection(() =>
+				admin.putFlag({
+					...BOOL_FLAG,
+					rules: [{ ...BOOL_FLAG.rules[0], rollout: { percentage: 33.333 } }],
+				})
+			)
+		).toContain("rollout percentage");
 		const partialRollout = await admin.putFlag({
 			...BOOL_FLAG,
 			rules: [
@@ -515,6 +590,59 @@ describe("flagship plugin", () => {
 				plan: "pro",
 			})
 		).toBe(true);
+	});
+
+	test("patches flags stored before stricter rule validation", async ({
+		expect,
+	}) => {
+		const persistence = await useTmp();
+		const opts = { ...options(), resourcePersistencePath: persistence };
+		const first = new Miniflare(opts);
+		await (await getAdmin(first)).createFlag(ROLLOUT_FLAG);
+		await first.dispose();
+
+		const legacyRules = [
+			{
+				priority: 1,
+				conditions: [{ logical_operator: "OR", clauses: [] }],
+				serve_variation: "on",
+				rollout: { percentage: 33.333 },
+			},
+		];
+		for (const file of await readdir(persistence, { recursive: true })) {
+			if (!file.endsWith(".sqlite")) {
+				continue;
+			}
+			const db = new DatabaseSync(path.join(persistence, file));
+			const hasFlags = db
+				.prepare("SELECT 1 FROM sqlite_master WHERE name = 'flags'")
+				.get();
+			if (hasFlags === undefined) {
+				db.close();
+				continue;
+			}
+			for (const row of db
+				.prepare("SELECT key, definition FROM flags")
+				.all() as { key: string; definition: string }[]) {
+				db.prepare("UPDATE flags SET definition = ? WHERE key = ?").run(
+					JSON.stringify({ ...JSON.parse(row.definition), rules: legacyRules }),
+					row.key
+				);
+			}
+			db.close();
+		}
+
+		const second = new Miniflare(opts);
+		useDispose(second);
+		const admin = await getAdmin(second);
+		expect(
+			await admin.patchFlag(ROLLOUT_FLAG.key, { enabled: false })
+		).toMatchObject({ enabled: false, rules: legacyRules });
+		expect(
+			await rejection(() =>
+				admin.patchFlag(ROLLOUT_FLAG.key, { rules: legacyRules as never })
+			)
+		).toContain("without any clauses");
 	});
 
 	test("shares live persistent storage across instances", async ({

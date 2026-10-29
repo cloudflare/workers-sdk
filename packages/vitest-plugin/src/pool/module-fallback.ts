@@ -198,9 +198,67 @@ function withSourceUrl(contents: string, url: string | URL): string {
 	return contents + sourceURL;
 }
 
-function withImportMetaUrl(contents: string, url: string | URL): string {
-	// TODO(soon): this isn't perfect, ideally need `workerd` support
-	return contents.replaceAll("import.meta.url", JSON.stringify(url.toString()));
+// The lexer stops at `import.meta`; ignore trivia between it and `.url`.
+function skipJavaScriptTrivia(contents: string, start: number): number {
+	let position = start;
+	while (position < contents.length) {
+		if (/\s/u.test(contents[position])) {
+			position++;
+		} else if (contents.startsWith("/*", position)) {
+			const end = contents.indexOf("*/", position + 2);
+			position = end === -1 ? contents.length : end + 2;
+		} else if (contents.startsWith("//", position)) {
+			const end = contents.slice(position + 2).search(/[\r\n\u2028\u2029]/u);
+			position = end === -1 ? contents.length : position + 2 + end;
+		} else {
+			break;
+		}
+	}
+	return position;
+}
+
+async function withImportMetaUrl(
+	contents: string,
+	url: string | URL
+): Promise<string> {
+	// Workerd's legacy registry leaves import.meta.url undefined in fallback
+	// modules, but the plugin has historically substituted the module's file URL.
+	if (!contents.includes("import")) {
+		return contents;
+	}
+	await esModuleLexer.init;
+	// Only parsed import.meta expressions are candidates, not diagnostic text,
+	// string literals or comments that happen to contain the same characters.
+	const [imports] = esModuleLexer.parse(contents);
+	const replacement = JSON.stringify(url.toString());
+	// Replacements change string lengths, so visit the lexer offsets backwards.
+	for (let index = imports.length - 1; index >= 0; index--) {
+		const imported = imports[index];
+		if (imported.d !== -2) {
+			continue;
+		}
+		// JavaScript permits whitespace or comments around the property access.
+		const dot = skipJavaScriptTrivia(contents, imported.e);
+		if (contents[dot] !== ".") {
+			continue;
+		}
+		const property = skipJavaScriptTrivia(contents, dot + 1);
+		if (contents.slice(property, property + 3) !== "url") {
+			continue;
+		}
+		const end = property + 3;
+		const nextCharacter = contents[end];
+		// Do not rewrite `import.meta.urlSuffix` (or another longer identifier).
+		if (
+			nextCharacter !== undefined &&
+			(nextCharacter === "\\" || /[\p{ID_Continue}$]/u.test(nextCharacter))
+		) {
+			continue;
+		}
+		contents =
+			contents.slice(0, imported.s) + replacement + contents.slice(end);
+	}
+	return contents;
 }
 
 // Extensions that Node's `require()` probes automatically but `workerd` won't.
@@ -270,11 +328,17 @@ async function viteResolve(
 	referrer: string,
 	isRequire: boolean
 ): Promise<string> {
-	const resolved = await vite.pluginContainer.resolveId(specifier, referrer, {
-		ssr: true,
-		// https://github.com/vitejs/vite/blob/v5.1.4/packages/vite/src/node/plugins/resolve.ts#L178-L179
-		custom: { "node-resolve": { isRequire } },
-	});
+	const resolved = await vite.environments.ssr.pluginContainer.resolveId(
+		specifier,
+		referrer,
+		{
+			// Vite 8.2.1, and later, picks the `require` or `import` export condition from `kind`
+			kind: isRequire ? "require-call" : "import-statement",
+			// Vite 7 and earlier read `isRequire` from here instead
+			// https://github.com/vitejs/vite/blob/v5.1.4/packages/vite/src/node/plugins/resolve.ts#L178-L179
+			custom: { "node-resolve": { isRequire } },
+		}
+	);
 	if (resolved === null) {
 		// Vite's resolution algorithm doesn't apply Node resolution to specifiers
 		// starting with a dot. Unfortunately, the `@prisma/client` package includes
@@ -641,7 +705,7 @@ async function load(
 
 	if (module.kind === "esm") {
 		// Respond with ES module
-		contents = withImportMetaUrl(contents, targetUrl);
+		contents = await withImportMetaUrl(contents, targetUrl);
 		debuglog(logBase, "esm:", filePath);
 		return buildModuleResponse(rawTarget, { esModule: contents });
 	}
@@ -1071,6 +1135,12 @@ async function handleV2ModuleFallbackRequest(
 ): Promise<Response> {
 	if (request.referrer === undefined) {
 		return new Response("Invalid module fallback request", { status: 400 });
+	}
+	// Workerd consults the fallback service even for this built-in. An empty
+	// response declines the request so workerd can load its native node:process;
+	// resolving it through Vite instead would replace that implementation.
+	if (request.specifier === "node:process") {
+		return new Response();
 	}
 
 	let vitestModulePaths = v2VitestModulePaths.get(vite);

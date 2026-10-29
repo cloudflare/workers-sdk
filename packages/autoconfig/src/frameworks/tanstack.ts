@@ -16,12 +16,14 @@ export class TanstackStart extends Framework {
 		projectPath,
 		packageManager,
 		isWorkspaceRoot,
+		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
 			await installCloudflareVitePlugin({
 				packageManager: packageManager.type,
 				isWorkspaceRoot,
 				projectPath,
+				version: target === "cf" ? "^2.0.0-beta.v.0" : undefined,
 			});
 
 			transformViteConfig(projectPath, { viteEnvironmentName: "ssr" });

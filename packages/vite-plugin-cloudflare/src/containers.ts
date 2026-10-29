@@ -9,14 +9,13 @@ import {
 	getCloudflareApiBaseUrl,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { toApiComplianceRegion } from "./utils";
+import type { ParsedInputSettingsConfig } from "@cloudflare/config";
 import type {
 	ContainerDevOptions,
 	ViteLogger,
 } from "@cloudflare/containers-shared";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
-
-type ContainerWorkerConfig = ComplianceConfig & { account_id?: string };
-
 /**
  * Configures the Containers API client used to retrieve image pull credentials.
  *
@@ -43,114 +42,95 @@ export function configureContainerPull(
  * Qualifies managed-registry image references with the selected Cloudflare
  * account before Docker pulls them.
  *
- * @param containerOptions - Planned Container images.
- * @param accountId - Cloudflare account ID that owns managed-registry images.
- * @param complianceConfig - Compliance configuration used to select the managed registry.
+ * @param options - Planned images and registry settings.
  * @returns Container options with managed-registry image references qualified.
  */
-export function normalizeContainerImageUris(
-	containerOptions: readonly ContainerDevOptions[],
-	accountId: string,
-	complianceConfig?: ComplianceConfig
-): ContainerDevOptions[] {
-	return containerOptions.map((option) =>
-		"image_uri" in option &&
-		isCloudflareRegistryImage(option.image_uri, complianceConfig)
+export function normalizeContainerImageUris(options: {
+	containerOptions: readonly ContainerDevOptions[];
+	accountId: string;
+	complianceConfig?: ComplianceConfig;
+}): ContainerDevOptions[] {
+	return options.containerOptions.map((containerOption) =>
+		"image_uri" in containerOption &&
+		isCloudflareRegistryImage(
+			containerOption.image_uri,
+			options.complianceConfig
+		)
 			? {
-					...option,
+					...containerOption,
 					image_uri: resolveImageName(
-						accountId,
-						option.image_uri,
-						complianceConfig
+						options.accountId,
+						containerOption.image_uri,
+						options.complianceConfig
 					),
 				}
-			: option
+			: containerOption
 	);
 }
 
 /**
- * Prepares each Worker's Container images with that Worker's registry account
- * and compliance settings.
+ * Builds or pulls the images in a Cloudflare config Container development plan.
  *
- * @param args - Planned images, Docker executable, and Vite logger.
- * @returns No value.
+ * @param options - Planned images, project settings, Docker executable, and Vite logger.
+ * @returns A promise that resolves when every image is ready.
  */
-export async function prepareContainerImagesForVite(args: {
+export async function prepareContainerImagesForVite(options: {
 	dockerPath: string;
-	containerTagToOptionsMap: ContainerTagToOptionsMap;
+	containerOptions: ContainerDevOptions[];
+	settings: ParsedInputSettingsConfig;
 	logger: ViteLogger;
+	cliDisplayName: string;
 }): Promise<void> {
-	const optionsByWorkerConfig = new Map<
-		ContainerWorkerConfig,
-		ContainerDevOptions[]
-	>();
-	for (const {
-		containerOptions,
-		workerConfig,
-	} of args.containerTagToOptionsMap.values()) {
-		const options = optionsByWorkerConfig.get(workerConfig) ?? [];
-		options.push(containerOptions);
-		optionsByWorkerConfig.set(workerConfig, options);
-	}
+	const complianceRegion = toApiComplianceRegion(
+		options.settings.complianceRegion
+	);
+	const complianceConfig =
+		complianceRegion === undefined
+			? undefined
+			: { compliance_region: complianceRegion };
+	let containerOptions = options.containerOptions;
+	const hasCloudflareRegistryImages = containerOptions.some(
+		(containerOption) =>
+			"image_uri" in containerOption &&
+			isCloudflareRegistryImage(containerOption.image_uri, complianceConfig)
+	);
 
-	for (const [workerConfig, plannedOptions] of optionsByWorkerConfig) {
-		let containerOptions = plannedOptions;
-		const hasCloudflareRegistryImages = containerOptions.some(
-			(options) =>
-				"image_uri" in options &&
-				isCloudflareRegistryImage(options.image_uri, workerConfig)
-		);
+	if (hasCloudflareRegistryImages) {
+		const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+		const accountId =
+			options.settings.accountId ?? process.env.CLOUDFLARE_ACCOUNT_ID;
 
-		if (hasCloudflareRegistryImages) {
-			const apiToken = process.env.CLOUDFLARE_API_TOKEN;
-			const accountId =
-				workerConfig.account_id ?? process.env.CLOUDFLARE_ACCOUNT_ID;
-
-			if (!apiToken || !accountId) {
-				throw new UserError(
-					"To use images from the Cloudflare-managed registry with the Vite plugin, " +
-						"set the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID environment variables.\n" +
-						"The API token requires Containers:Edit and Workers Scripts:Edit permissions.\n" +
-						"Alternatively, use a Dockerfile that references the image via FROM.",
-					{ telemetryMessage: false }
-				);
-			}
-
-			configureContainerPull(accountId, apiToken, workerConfig);
-			containerOptions = normalizeContainerImageUris(
-				containerOptions,
-				accountId,
-				workerConfig
+		if (!apiToken || !accountId) {
+			throw new UserError(
+				"To use images from the Cloudflare-managed registry with the Vite plugin, " +
+					"set the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID environment variables.\n" +
+					"The API token requires Containers:Edit and Workers Scripts:Edit permissions.\n" +
+					"Alternatively, use a Dockerfile that references the image via FROM.",
+				{ telemetryMessage: false }
 			);
 		}
 
-		await prepareContainerImagesForDev({
-			dockerPath: args.dockerPath,
+		configureContainerPull(accountId, apiToken, complianceConfig);
+		containerOptions = normalizeContainerImageUris({
 			containerOptions,
-			onContainerImagePreparationStart: () => {},
-			onContainerImagePreparationEnd: () => {},
-			logger: args.logger,
-			complianceConfig: workerConfig,
+			accountId,
+			complianceConfig,
 		});
 	}
+
+	await prepareContainerImagesForDev({
+		dockerPath: options.dockerPath,
+		containerOptions,
+		onContainerImagePreparationStart: () => {},
+		onContainerImagePreparationEnd: () => {},
+		logger: options.logger,
+		complianceConfig,
+		configFileName: "cloudflare.config.ts",
+		// TODO: The Vite plugin should not own this `cf` command. Remove the
+		// hardcoded value once `cf` can provide it directly.
+		registryConfigureCommand:
+			options.cliDisplayName === "cf"
+				? "cf containers registries create"
+				: "wrangler containers registries configure",
+	});
 }
-
-/**
- * Returns the path to the Docker executable as defined by the
- * `WRANGLER_DOCKER_BIN` environment variable, or the default value
- * `"docker"`
- */
-export function getDockerPath(): string {
-	const defaultDockerPath = "docker";
-	const dockerPathEnvVar = "WRANGLER_DOCKER_BIN";
-
-	return process.env[dockerPathEnvVar] || defaultDockerPath;
-}
-
-export type ContainerTagToOptionsMap = Map<
-	string,
-	{
-		containerOptions: ContainerDevOptions;
-		workerConfig: ContainerWorkerConfig;
-	}
->;

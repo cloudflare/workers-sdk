@@ -7,6 +7,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { isParsedUnsafeBinding } from "./schema";
 import type {
+	ParsedInputConfig,
 	ParsedInputContainerConfig,
 	ParsedInputSettingsConfig,
 	ParsedInputWorkerConfig,
@@ -22,36 +23,28 @@ const ROLLOUT_KIND_MAP = {
 /**
  * Convert a parsed `@cloudflare/config` config into a Wrangler `RawConfig`.
  *
- * The caller is responsible for unwrapping any function/promise wrappers and
- * validating the configs against their corresponding input schemas before
- * passing them in.
+ * The caller is responsible for resolving any function/promise wrappers and
+ * parsing the configuration before passing it in.
  *
- * @param workerConfig The parsed (post-validation) Worker config.
- * @param settingsConfig The optional parsed settings config, whose fields
- * are merged onto the result.
- * @param containerExports The parsed Container exports to include in the
- * result.
+ * @param config The parsed configuration.
  * @returns The corresponding Wrangler `RawConfig`.
  */
-export function convertToWranglerConfig(
-	workerConfig: ParsedInputWorkerConfig,
-	settingsConfig?: ParsedInputSettingsConfig,
-	containerExports: ParsedInputContainerConfig[] = []
-): RawConfig {
+export function convertToWranglerConfig(config: ParsedInputConfig): RawConfig {
 	const result: RawConfig = {};
+	const { worker, containers } = config;
 
-	convertTopLevel(workerConfig, result);
-	convertBindingsAndAssets(workerConfig, result);
-	convertExports(workerConfig, result);
-	convertDomains(workerConfig, result);
-	convertTriggers(workerConfig, result);
-	convertTailConsumers(workerConfig, result);
-
-	if (settingsConfig !== undefined) {
-		convertSettings(settingsConfig, result);
+	if (worker !== undefined) {
+		convertTopLevel(worker, result);
+		convertBindingsAndAssets(worker, result);
+		convertExports(worker, result);
+		convertDomains(worker, result);
+		convertTriggers(worker, result);
+		convertTailConsumers(worker, result);
 	}
-	if (containerExports.length > 0) {
-		result.containers = containerExports.map((container) =>
+
+	convertSettings(config, result);
+	if (containers.length > 0) {
+		result.containers = containers.map((container) =>
 			convertContainer(container)
 		);
 	}
@@ -71,6 +64,14 @@ function convertContainer(container: ParsedInputContainerConfig): ContainerApp {
 	}
 	if (container.unsafe !== undefined) {
 		converted.unsafe = container.unsafe;
+	}
+	if (container.ssh !== undefined) {
+		converted.ssh = container.ssh;
+	}
+	if (container.authorizedKeys !== undefined) {
+		converted.authorized_keys = container.authorizedKeys.map(
+			({ name, publicKey }) => ({ name, public_key: publicKey })
+		);
 	}
 	if (container.schedulingPolicy === "durable-object") {
 		converted.scheduling_policy = "durable_object";
@@ -120,14 +121,6 @@ function convertContainer(container: ParsedInputContainerConfig): ContainerApp {
 	}
 	if (container.schedulingPolicy !== undefined) {
 		converted.scheduling_policy = container.schedulingPolicy;
-	}
-	if (container.ssh !== undefined) {
-		converted.ssh = container.ssh;
-	}
-	if (container.authorizedKeys !== undefined) {
-		converted.authorized_keys = container.authorizedKeys.map(
-			({ name, publicKey }) => ({ name, public_key: publicKey })
-		);
 	}
 	if (container.constraints !== undefined) {
 		converted.constraints = container.constraints;
@@ -266,6 +259,9 @@ function convertTopLevel(
 	if (config.observability !== undefined) {
 		result.observability = convertObservability(config.observability);
 	}
+	if (config.access !== undefined) {
+		result.access = config.access;
+	}
 	if (config.cache !== undefined) {
 		type RawCacheConfig = NonNullable<RawConfig["cache"]>;
 		const cache: RawCacheConfig = {
@@ -380,6 +376,7 @@ function convertBindingsAndAssets(
 	const mtlsCertificates: NonNullable<RawConfig["mtls_certificates"]> = [];
 	const hyperdrive: NonNullable<RawConfig["hyperdrive"]> = [];
 	const pipelines: NonNullable<RawConfig["pipelines"]> = [];
+	const k2: NonNullable<RawConfig["k2"]> = [];
 	const flagship: NonNullable<RawConfig["flagship"]> = [];
 	const aiSearch: NonNullable<RawConfig["ai_search"]> = [];
 	const aiSearchNamespaces: NonNullable<RawConfig["ai_search_namespaces"]> = [];
@@ -463,7 +460,11 @@ function convertBindingsAndAssets(
 			}
 			case "analytics-engine-dataset": {
 				analyticsEngineDatasets.push(
-					omitUndefined({ binding: name, dataset: binding.name })
+					omitUndefined({
+						binding: name,
+						dataset: binding.name,
+						remote: binding.dev?.remote,
+					})
 				);
 				break;
 			}
@@ -483,6 +484,13 @@ function convertBindingsAndAssets(
 			}
 			case "browser": {
 				result.browser = omitUndefined({
+					binding: name,
+					remote: binding.dev?.remote,
+				});
+				break;
+			}
+			case "analytics": {
+				result.analytics = omitUndefined({
 					binding: name,
 					remote: binding.dev?.remote,
 				});
@@ -539,6 +547,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						id: binding.id,
+						remote: binding.dev?.remote,
 						localConnectionString: binding.dev?.connectionString,
 					})
 				);
@@ -591,6 +600,16 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						stream: binding.name,
+						remote: binding.dev?.remote,
+					})
+				);
+				break;
+			}
+			case "k2": {
+				k2.push(
+					omitUndefined({
+						binding: name,
+						stream: binding.stream,
 						remote: binding.dev?.remote,
 					})
 				);
@@ -732,17 +751,15 @@ function convertBindingsAndAssets(
 				workerLoaders.push({ binding: name });
 				break;
 			}
-			// TODO: re-enable when workflow bindings return.
-			// case "workflow": {
-			// 	workflows.push(
-			// 		omitUndefined({
-			// 			binding: name,
-			// 			class_name: binding.exportName,
-			// 			script_name: binding.worker,
-			// 		})
-			// 	);
-			// 	break;
-			// }
+			case "workflow": {
+				workflows.push({
+					binding: name,
+					name: binding.name,
+					class_name: binding.exportName,
+					script_name: binding.worker,
+				});
+				break;
+			}
 		}
 	}
 
@@ -767,6 +784,9 @@ function convertBindingsAndAssets(
 	}
 	if (pipelines.length) {
 		result.pipelines = pipelines;
+	}
+	if (k2.length) {
+		result.k2 = k2;
 	}
 	if (flagship.length) {
 		result.flagship = flagship;
@@ -844,6 +864,9 @@ function convertBindingsAndAssets(
 		if (config.assets?.notFoundHandling !== undefined) {
 			assets.not_found_handling = config.assets.notFoundHandling;
 		}
+		if (config.assets?.basePath !== undefined) {
+			assets.base_path = config.assets.basePath;
+		}
 		if (config.assets?.runWorkerFirst !== undefined) {
 			assets.run_worker_first = config.assets.runWorkerFirst;
 		}
@@ -869,6 +892,23 @@ function convertExports(
 	for (const [exportName, value] of Object.entries(exports)) {
 		if (value.type === "worker") {
 			converted[exportName] = value;
+			continue;
+		}
+		if (value.type === "workflow") {
+			const { defaultRetention, ...workflow } = value;
+			converted[exportName] = {
+				...workflow,
+				...(defaultRetention !== undefined && {
+					default_retention: {
+						...(defaultRetention.successRetention !== undefined && {
+							success_retention: defaultRetention.successRetention,
+						}),
+						...(defaultRetention.errorRetention !== undefined && {
+							error_retention: defaultRetention.errorRetention,
+						}),
+					},
+				}),
+			};
 			continue;
 		}
 
@@ -1007,6 +1047,12 @@ function convertTriggers(
 						protocol: trigger.protocol,
 						port: trigger.port,
 						address: trigger.address,
+						...(trigger.protocol === "udp"
+							? {
+									idle_timeout_ms: trigger.idleTimeoutMs,
+									max_pending_bytes: trigger.maxPendingBytes,
+								}
+							: {}),
 					})
 				);
 				break;
@@ -1047,7 +1093,16 @@ function convertDomains(
 		? [...result.routes]
 		: [];
 	for (const domain of config.domains) {
-		routes.push({ pattern: domain, custom_domain: true });
+		routes.push(
+			typeof domain === "string"
+				? { pattern: domain, custom_domain: true }
+				: {
+						pattern: domain.hostname,
+						custom_domain: true,
+						enabled: domain.production,
+						previews_enabled: domain.previews,
+					}
+		);
 	}
 	result.routes = routes;
 }

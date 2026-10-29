@@ -107,6 +107,25 @@ describe("deploy", () => {
 		clearOutputFilePath();
 	});
 
+	describe("k2", () => {
+		it("uploads K2 producer bindings with only the public stream identifier", async ({
+			expect,
+		}) => {
+			const stream = "0123456789abcdef0123456789abcdef";
+			writeWranglerConfig({
+				k2: [{ binding: "ORDERS", stream }],
+			});
+			await fs.promises.writeFile("index.js", "export default {};");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [{ type: "k2", name: "ORDERS", stream }],
+			});
+			await runWrangler("deploy index.js");
+			expect(std.out).toContain("K2 Stream");
+			expect(std.out).toContain(stream);
+		});
+	});
+
 	describe("bindings", () => {
 		it("should allow bindings with different names", async ({ expect }) => {
 			writeWranglerConfig({

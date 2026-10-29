@@ -20,6 +20,7 @@ const config: TemplateConfig = {
 	configVersion: 1,
 	id: "vike",
 	platform: "workers",
+	languages: ["ts"],
 	frameworkCli: "create-vike",
 	displayName: "Vike",
 	generate,

@@ -7,6 +7,7 @@ import {
 	getLocalObservabilityEnabledFromEnv,
 	getWranglerHiddenDirPath,
 	isUnsafeBindingType,
+	partitionExports,
 	UserError,
 	validateBindingRemoteSetting,
 } from "@cloudflare/workers-utils";
@@ -35,6 +36,7 @@ import type {
 	CfR2Bucket,
 	CfScriptFormat,
 	CfWorkflow,
+	ConnectHandler,
 	Config,
 	ContainerEngine,
 	LegacyAssetPaths,
@@ -90,7 +92,7 @@ export interface ConfigBundle {
 	crons: Config["triggers"]["crons"];
 	routes: string[] | undefined;
 	queueConsumers: Config["queues"]["consumers"];
-	connectHandlers: Config["connect"];
+	connectHandlers: ConnectHandler[];
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
 	upstreamProtocol: "http" | "https";
@@ -354,7 +356,49 @@ function pipelineEntry(
 		throw new Error("Pipeline must have either a stream");
 	}
 }
-function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
+function hyperdriveEntry(
+	hyperdrive: CfHyperdrive,
+	remoteProxyConnectionString?: RemoteProxyConnectionString
+):
+	| [string, string]
+	| [
+			string,
+			{
+				id: string;
+				remoteProxyConnectionString: RemoteProxyConnectionString;
+			},
+	  ] {
+	if (hyperdrive.remote && remoteProxyConnectionString) {
+		return [
+			hyperdrive.binding,
+			{
+				id: hyperdrive.id,
+				remoteProxyConnectionString,
+			},
+		];
+	}
+
+	// Opted into a remote binding, but no remote proxy session is available
+	// (not logged in, offline, or remote bindings turned off). There is nothing
+	// to tunnel to, so fall back to the local database if one was configured and
+	// otherwise explain how to get either half working — without this the empty
+	// connection string below fails miniflare's URL validation with an opaque
+	// error.
+	if (hyperdrive.remote) {
+		if (hyperdrive.localConnectionString === undefined) {
+			throw new UserError(
+				`The Hyperdrive binding "${hyperdrive.binding}" is configured with "remote": true, but no remote connection could be established, and it has no local database to fall back to. Please make sure you are authenticated (run \`wrangler login\`) and connected to the internet so that Wrangler can reach your Hyperdrive configuration, or set the value of the 'CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to a local Postgres connection string.`,
+				{
+					telemetryMessage:
+						"hyperdrive remote binding session and local connection string missing",
+				}
+			);
+		}
+		logger.once.warn(
+			`The Hyperdrive binding "${hyperdrive.binding}" is configured with "remote": true, but no remote connection could be established. Falling back to its "localConnectionString".`
+		);
+	}
+
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
 }
 function workflowEntry({
@@ -448,6 +492,7 @@ type WorkerOptionsBindings = Pick<
 	| "aiSearchNamespaces"
 	| "aiSearchInstances"
 	| "agentMemory"
+	| "analyticsSql"
 	| "textBlobBindings"
 	| "dataBlobBindings"
 	| "wasmBindings"
@@ -457,11 +502,13 @@ type WorkerOptionsBindings = Pick<
 	| "queueProducers"
 	| "queueConsumers"
 	| "pipelines"
+	| "k2"
 	| "hyperdrives"
 	| "durableObjects"
 	| "serviceBindings"
 	| "ratelimits"
 	| "workflows"
+	| "workflowExports"
 	| "secretsStoreSecrets"
 	| "images"
 	| "email"
@@ -524,6 +571,7 @@ export function buildMiniflareBindingOptions(
 	const d1Databases = extractBindingsOfType("d1", bindings);
 	const queues = extractBindingsOfType("queue", bindings);
 	const pipelines = extractBindingsOfType("pipeline", bindings);
+	const k2 = extractBindingsOfType("k2", bindings);
 	const hyperdrives = extractBindingsOfType("hyperdrive", bindings);
 	const workflows = extractBindingsOfType("workflow", bindings);
 	const durableObjects = extractBindingsOfType(
@@ -568,6 +616,7 @@ export function buildMiniflareBindingOptions(
 	);
 	const aiSearchInstanceBindings = extractBindingsOfType("ai_search", bindings);
 	const agentMemoryBindings = extractBindingsOfType("agent_memory", bindings);
+	const analyticsSqlBindings = extractBindingsOfType("analytics", bindings);
 	const imagesBindings = extractBindingsOfType("images", bindings);
 	const mediaBindings = extractBindingsOfType("media", bindings);
 	const browserBindings = extractBindingsOfType("browser", bindings);
@@ -705,6 +754,10 @@ export function buildMiniflareBindingOptions(
 		validateBindingRemoteSetting("agent_memory", memory.remote, logger.warn);
 	}
 
+	for (const analytics of analyticsSqlBindings) {
+		validateBindingRemoteSetting("analytics", analytics.remote, logger.warn);
+	}
+
 	for (const media of mediaBindings) {
 		validateBindingRemoteSetting("media", media.remote, logger.warn);
 	}
@@ -785,6 +838,24 @@ export function buildMiniflareBindingOptions(
 		vars[binding.binding] = binding.value as Json;
 	}
 
+	// Workflows declared under `exports` (accessible via `ctx.exports`) are
+	// carried to Miniflare separately from `workflows[]` env bindings, keyed by
+	// the exported class name.
+	const workflowExports: NonNullable<WorkerOptionsBindings["workflowExports"]> =
+		Object.fromEntries(
+			Object.entries(partitionExports(config.exports).workflow).map(
+				([className, workflow]) => [
+					className,
+					{
+						name: workflow.name,
+						...(workflow.limits?.steps !== undefined && {
+							stepLimit: workflow.limits.steps,
+						}),
+					},
+				]
+			)
+		);
+
 	const bindingOptions: WorkerOptionsBindings = {
 		bindings: vars,
 		versionMetadata: versionMetadataBindings[0]?.binding,
@@ -831,6 +902,14 @@ export function buildMiniflareBindingOptions(
 			])
 		),
 
+		analyticsSql:
+			analyticsSqlBindings.length > 0
+				? {
+						binding: analyticsSqlBindings[0].binding,
+						remoteProxyConnectionString,
+					}
+				: undefined,
+
 		kvNamespaces: Object.fromEntries(
 			kvNamespaces.map((kv) =>
 				kvNamespaceEntry(kv, remoteProxyConnectionString)
@@ -856,11 +935,31 @@ export function buildMiniflareBindingOptions(
 				pipelineEntry(pipeline, remoteProxyConnectionString)
 			)
 		),
-		hyperdrives: Object.fromEntries(hyperdrives.map(hyperdriveEntry)),
+		k2: Object.fromEntries(
+			k2.map(({ binding, stream, remote }) => {
+				validateBindingRemoteSetting("k2", remote, logger.warn);
+				return [
+					binding,
+					{
+						stream,
+						...(remoteProxyConnectionString && { remoteProxyConnectionString }),
+					},
+				];
+			})
+		),
+		hyperdrives: Object.fromEntries(
+			hyperdrives.map((hyperdrive) =>
+				hyperdriveEntry(hyperdrive, remoteProxyConnectionString)
+			)
+		),
 		analyticsEngineDatasets: Object.fromEntries(
 			analyticsEngineDatasets.map((binding) => [
 				binding.binding,
-				{ dataset: binding.dataset ?? "dataset" },
+				{
+					dataset: binding.dataset ?? "dataset",
+					...(remoteProxyConnectionString &&
+						binding.remote && { remoteProxyConnectionString }),
+				},
 			])
 		),
 		workflows: Object.fromEntries(
@@ -894,6 +993,7 @@ export function buildMiniflareBindingOptions(
 				return workflowEntry(workflow);
 			})
 		),
+		workflowExports,
 		secretsStoreSecrets: Object.fromEntries(
 			secretsStoreSecrets.map((binding) => [binding.binding, binding])
 		),
@@ -1186,6 +1286,7 @@ export async function buildMiniflareOptions(
 				...sitesOptions,
 				...assetOptions,
 				routes: config.routes,
+				cronTriggers: config.crons,
 				outboundService: config.outboundService,
 				zone: config.zone,
 				access: config.access?.dev,

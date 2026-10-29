@@ -77,6 +77,7 @@ const config: TemplateConfig = {
 	frameworkCli: "create-analog",
 	displayName: "Analog",
 	platform: "workers",
+	languages: ["ts"],
 	copyFiles: {
 		path: "./templates",
 	},

@@ -982,7 +982,7 @@ export class R2BucketObject extends MiniflareDurableObject {
 		key: string,
 		opts: InternalR2CreateMultipartUploadOptions
 	): Promise<R2CreateMultipartUploadResponse> {
-		validate.key(key);
+		validate.key(key).metadataSize(opts.customMetadata);
 
 		const uploadId = generateId();
 		this.#stmts.createMultipartUpload({

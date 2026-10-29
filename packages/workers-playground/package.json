@@ -1,14 +1,14 @@
 {
 	"name": "@cloudflare/workers-playground",
-	"version": "0.4.4",
+	"version": "0.4.5",
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "git clean -xdf dist && tsc && vite build",
+		"build": "pnpm run check:type && vite build",
 		"check": "pnpm run check:default-hashes && pnpm run check:type",
 		"check:default-hashes": "node -r esbuild-register ./generate-default-hashes.ts check",
-		"check:type": "tsc",
-		"deploy": "pnpm run build && CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 wrangler deploy",
+		"check:type": "cf workers types && tsc --build",
+		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 cf deploy",
 		"dev": "vite",
 		"generate:default-hashes": "node -r esbuild-register ./generate-default-hashes.ts && pnpm exec oxfmt ./src/QuickEditor/defaultHashes.js"
 	},
@@ -48,10 +48,10 @@
 		"@types/react-dom": "^18.2.0",
 		"@types/uuid": "^9.0.2",
 		"@vitejs/plugin-react": "^5.2.0",
+		"cf": "catalog:default",
 		"react-use-websocket": "^4.13.0",
 		"undici": "catalog:default",
-		"vite": "catalog:default",
-		"wrangler": "workspace:^"
+		"vite": "catalog:default"
 	},
 	"volta": {
 		"extends": "../../package.json"
