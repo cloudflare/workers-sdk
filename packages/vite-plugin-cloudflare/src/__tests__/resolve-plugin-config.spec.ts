@@ -382,6 +382,92 @@ describe("resolvePluginConfig", () => {
 		).rejects.toThrow(/containers/);
 	});
 
+	describe.each([buildEnv, { mode: "development", command: "serve" as const }])(
+		"customized Container relationships during $command",
+		(viteEnv) => {
+			test.for([
+				{
+					name: "duplicate Container names",
+					config: (loadedConfig) => ({
+						...loadedConfig,
+						containers: [
+							...loadedConfig.containers,
+							...loadedConfig.containers,
+						],
+					}),
+					error: /Container names must be unique/,
+				},
+				{
+					name: "removing a linked Container",
+					config: (loadedConfig) => ({ ...loadedConfig, containers: [] }),
+					error: /referenced Container "api" is not included/,
+				},
+				{
+					name: "renaming a linked Container without updating its reference",
+					config: (loadedConfig) => ({
+						...loadedConfig,
+						containers: loadedConfig.containers.map((container) => ({
+							...container,
+							name: "renamed-api",
+						})),
+					}),
+					error: /referenced Container "api" is not included/,
+				},
+				{
+					name: "linking multiple Durable Objects to the same Container",
+					config(loadedConfig) {
+						assert(loadedConfig.worker);
+						return {
+							...loadedConfig,
+							worker: {
+								...loadedConfig.worker,
+								exports: {
+									...loadedConfig.worker.exports,
+									Other: {
+										type: "durable-object",
+										storage: "sqlite",
+										container: "api",
+									},
+								},
+							},
+						};
+					},
+					error: /already referenced by `worker.exports.Api`/,
+				},
+			] satisfies {
+				name: string;
+				config: NonNullable<PluginConfig["config"]>;
+				error: RegExp;
+			}[])("rejects $name", async ({ config, error }, { expect }) => {
+				fs.writeFileSync(
+					path.join(root, "cloudflare.config.ts"),
+					[
+						"import { defineConfig, defineContainer, exports as workerExports } from '@cloudflare/config';",
+						"const api = defineContainer({ name: 'api', image: { dockerfile: './Dockerfile' } });",
+						"export default defineConfig({",
+						"  containers: [api],",
+						"  worker: {",
+						"    name: 'entry-worker', entrypoint: './src/index.ts', compatibilityDate: '2024-12-30',",
+						"    exports: { Api: workerExports.durableObject({ storage: 'sqlite', container: api }) },",
+						"  },",
+						"});",
+					].join("\n")
+				);
+				await expect(
+					resolvePluginConfig(
+						{ config, types: { generate: false } },
+						{ root },
+						viteEnv
+					)
+				).rejects.toMatchObject({
+					issues: expect.arrayContaining([
+						expect.objectContaining({ message: expect.stringMatching(error) }),
+					]),
+				});
+			});
+		}
+	);
+
 	test("requires a Worker in the customized configuration", async ({
 		expect,
 	}) => {
