@@ -4,6 +4,6 @@
 	"description": "Shared fixtures for testing",
 	"devDependencies": {
 		"@cloudflare/workers-utils": "0.50.0",
-		"wrangler": "4.155.0"
+		"wrangler": "4.155.1"
 	}
 }

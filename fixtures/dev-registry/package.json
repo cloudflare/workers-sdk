@@ -16,6 +16,6 @@
 		"typescript": "catalog:default",
 		"vite": "catalog:default",
 		"vitest": "catalog:default",
-		"wrangler": "4.155.0"
+		"wrangler": "4.155.1"
 	}
 }
