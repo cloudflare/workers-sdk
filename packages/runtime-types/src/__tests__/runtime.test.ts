@@ -125,6 +125,25 @@ describe("generateRuntimeTypes", () => {
 		expect(MiniflareMock).not.toHaveBeenCalled();
 	});
 
+	it("returns cached types when existingContent has CRLF line endings", async ({
+		expect,
+	}) => {
+		const header = getRuntimeHeader(WORKERD_VERSION, "2024-11-06", ["flag_a"]);
+
+		const result = await generateRuntimeTypes({
+			compatibilityDate: "2024-11-06",
+			compatibilityFlags: ["flag_a"],
+			existingContent: `${header}\r\nsome preamble\r\n${RUNTIME_TYPES_MARKER}\r\nCACHED TYPES\r\nmore`,
+		});
+
+		expect(result).toEqual({
+			runtimeHeader: header,
+			runtimeTypes: "CACHED TYPES\nmore",
+			isCached: true,
+		});
+		expect(MiniflareMock).not.toHaveBeenCalled();
+	});
+
 	it("regenerates when the cached header is stale", async ({ expect }) => {
 		const staleHeader = getRuntimeHeader(WORKERD_VERSION, "2020-01-01", []);
 

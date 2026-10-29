@@ -164,7 +164,7 @@ export const checkTypesUpToDate = async (
 ): Promise<boolean> => {
 	let typesFileLines = new Array<string>();
 	try {
-		typesFileLines = (await readFile(typesPath, "utf-8")).split("\n");
+		typesFileLines = (await readFile(typesPath, "utf-8")).split(/\r?\n/);
 	} catch (e) {
 		if ((e as NodeJS.ErrnoException).code === "ENOENT") {
 			throw new UserError(`Types file not found at ${typesPath}.`, {
@@ -302,7 +302,7 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 	} catch {
 		return;
 	}
-	const maybeExistingTypesFileLines = existingTypesFileContent.split("\n");
+	const maybeExistingTypesFileLines = existingTypesFileContent.split(/\r?\n/);
 
 	const existingEnvHeader = maybeExistingTypesFileLines.find((line) =>
 		line.startsWith(ENV_HEADER_COMMENT_PREFIX)
@@ -339,7 +339,7 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 	const newHash = newEnvHeader?.match(/hash: (?<hash>.*)\)/)?.groups?.hash;
 
 	const existingRuntimeHeader = maybeExistingTypesFileLines.find((line) =>
-		line.startsWith("// Runtime types generated with")
+		line.startsWith(RUNTIME_HEADER_COMMENT_PREFIX)
 	);
 	const newRuntimeHeader = getRuntimeHeader(
 		version,

@@ -8,6 +8,7 @@ import {
 	getPreEmitDiagnostics,
 } from "typescript";
 import { afterAll, beforeAll, beforeEach, describe, it, vi } from "vitest";
+import { version } from "workerd";
 import { experimental_generateTypes } from "../api";
 import {
 	constructTSModuleGlob,
@@ -17,6 +18,7 @@ import {
 	isValidIdentifier,
 } from "../type-generation";
 import {
+	checkTypesDiff,
 	ENV_HEADER_COMMENT_PREFIX,
 	getEnvHeader,
 	throwMissingBindingError,
@@ -31,7 +33,11 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { createFetchResult, msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { EnvironmentNonInheritable } from "@cloudflare/workers-utils";
+import type {
+	Config,
+	Entry,
+	EnvironmentNonInheritable,
+} from "@cloudflare/workers-utils";
 import type { MockInstance } from "vitest";
 
 describe("isValidIdentifier", () => {
@@ -1939,6 +1945,88 @@ describe("generate types - CLI", () => {
 		expect(std.out).toContain(
 			"Types at primary/worker-configuration.d.ts are up to date."
 		);
+	});
+
+	it("should report types as up to date when worker-configuration.d.ts has CRLF line endings (--check)", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				main: "./index.ts",
+				compatibility_date: "2024-11-06",
+				vars: { value: "test" },
+			}),
+			"utf-8"
+		);
+		fs.writeFileSync(
+			"./index.ts",
+			`export default { async fetch() { return new Response("ok"); } };`,
+			"utf-8"
+		);
+		spy.mockResolvedValue({
+			runtimeHeader: getRuntimeHeader(version, "2024-11-06"),
+			runtimeTypes: "<runtime types go here>",
+		});
+
+		await runWrangler("types");
+
+		// Convert generated worker-configuration.d.ts to CRLF line endings
+		const content = fs.readFileSync("./worker-configuration.d.ts", "utf-8");
+		const crlfContent = content.replace(/\r?\n/g, "\r\n");
+		fs.writeFileSync("./worker-configuration.d.ts", crlfContent, "utf-8");
+
+		await runWrangler("types --check");
+
+		expect(std.out).toContain(
+			"Types at worker-configuration.d.ts are up to date."
+		);
+	});
+
+	it("should report types as not changed in checkTypesDiff when worker-configuration.d.ts has CRLF line endings", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				main: "./index.ts",
+				compatibility_date: "2024-11-06",
+				vars: { value: "test" },
+			}),
+			"utf-8"
+		);
+		fs.writeFileSync(
+			"./index.ts",
+			`export default { async fetch() { return new Response("ok"); } };`,
+			"utf-8"
+		);
+		spy.mockResolvedValue({
+			runtimeHeader: getRuntimeHeader(version, "2024-11-06"),
+			runtimeTypes: "<runtime types go here>",
+		});
+
+		await runWrangler("types");
+
+		// Convert generated worker-configuration.d.ts to CRLF line endings
+		const content = fs.readFileSync("./worker-configuration.d.ts", "utf-8");
+		const crlfContent = content.replace(/\r?\n/g, "\r\n");
+		fs.writeFileSync("./worker-configuration.d.ts", crlfContent, "utf-8");
+
+		const changed = await checkTypesDiff(
+			{
+				compatibility_date: "2024-11-06",
+				vars: { value: "test" },
+				dev: {},
+			} as unknown as Config,
+			{
+				file: "index.ts",
+				directory: process.cwd(),
+				format: "modules",
+				moduleRoot: process.cwd(),
+			} as unknown as Entry
+		);
+
+		expect(changed).toBe(false);
 	});
 
 	it("should include secret keys from .env, if there is no .dev.vars", async ({
