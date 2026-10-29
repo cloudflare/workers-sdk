@@ -29,18 +29,18 @@ Return a new configuration object, spreading any existing fields you want to
 preserve. Nested objects and arrays are replaced rather than merged:
 
 ```ts
-import assert from "node:assert";
 import { cloudflare } from "@cloudflare/vite-plugin";
 
 cloudflare({
   config(loadedConfig) {
-    assert(loadedConfig.worker, "A Worker configuration is required.");
     return {
       ...loadedConfig,
       worker: {
-        ...loadedConfig.worker,
+        name: "my-worker",
+        compatibilityDate: "2026-10-01",
+        ...(loadedConfig.worker ?? {}),
         env: {
-          ...loadedConfig.worker.env,
+          ...loadedConfig.worker?.env,
           FRAMEWORK_NAME: { type: "text", value: "my-framework" },
         },
       },
