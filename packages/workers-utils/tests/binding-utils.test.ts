@@ -26,4 +26,23 @@ describe("convertConfigToBindings", () => {
 			},
 		});
 	});
+
+	test("ignores images url_transformations", ({ expect }) => {
+		const urlTransformations = { enabled: true, allowed_origins: ["*"] };
+
+		expect(
+			convertConfigToBindings({
+				images: { url_transformations: urlTransformations },
+			})
+		).toEqual({});
+		expect(
+			convertConfigToBindings({
+				images: {
+					binding: "IMAGES",
+					remote: true,
+					url_transformations: urlTransformations,
+				},
+			})
+		).toEqual({ IMAGES: { type: "images", remote: true } });
+	});
 });

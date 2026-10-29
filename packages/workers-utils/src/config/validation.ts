@@ -1996,7 +1996,7 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			envName,
 			"images",
-			validateNamedSimpleBinding(envName),
+			validateImagesBinding(envName),
 			undefined
 		),
 		stream: notInheritable(
@@ -3595,6 +3595,121 @@ const validateNamedSimpleBinding =
 
 		return isValid;
 	};
+
+const validateImagesBinding =
+	(envName: string): ValidatorFn =>
+	(diagnostics, field, value, config) => {
+		const fieldPath =
+			config === undefined ? `${field}` : `env.${envName}.${field}`;
+
+		if (typeof value !== "object" || value === null || Array.isArray(value)) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should be an object but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			return false;
+		}
+
+		const images = value as NonNullable<Config["images"]>;
+		let isValid = true;
+
+		if (
+			images.binding === undefined &&
+			images.url_transformations === undefined
+		) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should have a "binding" or "url_transformations" field.`
+			);
+			isValid = false;
+		}
+
+		isValid =
+			validateOptionalProperty(
+				diagnostics,
+				fieldPath,
+				"binding",
+				images.binding,
+				"string"
+			) && isValid;
+
+		if (!isRemoteValid(value, fieldPath, diagnostics)) {
+			isValid = false;
+		}
+
+		if (images.url_transformations !== undefined) {
+			isValid =
+				validateImagesUrlTransformations(
+					diagnostics,
+					`${fieldPath}.url_transformations`,
+					images.url_transformations
+				) && isValid;
+		}
+
+		validateAdditionalProperties(diagnostics, fieldPath, Object.keys(value), [
+			"binding",
+			"remote",
+			"url_transformations",
+		]);
+
+		return isValid;
+	};
+
+const validateImagesUrlTransformations = (
+	diagnostics: Diagnostics,
+	fieldPath: string,
+	value: unknown
+): boolean => {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		diagnostics.errors.push(
+			`The field "${fieldPath}" should be an object but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		return false;
+	}
+
+	const { enabled, allowed_origins } = value as {
+		enabled?: unknown;
+		allowed_origins?: unknown;
+	};
+
+	let isValid = validateRequiredProperty(
+		diagnostics,
+		fieldPath,
+		"enabled",
+		enabled,
+		"boolean"
+	);
+
+	if (allowed_origins !== undefined) {
+		if (
+			!validateTypedArray(
+				diagnostics,
+				`${fieldPath}.allowed_origins`,
+				allowed_origins,
+				"string"
+			)
+		) {
+			isValid = false;
+		} else if (
+			(allowed_origins as string[]).includes("*") &&
+			(allowed_origins as string[]).length > 1
+		) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}.allowed_origins" cannot contain "*" alongside other origins. Use ["*"] on its own to allow any origin.`
+			);
+			isValid = false;
+		}
+	}
+
+	validateAdditionalProperties(diagnostics, fieldPath, Object.keys(value), [
+		"enabled",
+		"allowed_origins",
+	]);
+
+	return isValid;
+};
 
 const validateAIBinding =
 	(envName: string): ValidatorFn =>
@@ -6845,6 +6960,16 @@ const validatePreviewsConfig =
 		}
 
 		if (previews.images !== undefined) {
+			if (
+				typeof previews.images === "object" &&
+				previews.images !== null &&
+				"url_transformations" in previews.images
+			) {
+				diagnostics.errors.push(
+					`The field "${field}.images.url_transformations" is not supported in previews.`
+				);
+				isValid = false;
+			}
 			isValid =
 				validateNamedSimpleBinding(envName)(
 					diagnostics,

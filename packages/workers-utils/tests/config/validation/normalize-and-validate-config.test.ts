@@ -4635,6 +4635,92 @@ describe("normalizeAndValidateConfig()", () => {
 					  - The field "images" should be an object but got null."
 				`);
 			});
+
+			it("should accept url_transformations without a binding", ({
+				expect,
+			}) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						images: {
+							url_transformations: {
+								enabled: true,
+								allowed_origins: ["example.com"],
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(config.images).toEqual({
+					url_transformations: {
+						enabled: true,
+						allowed_origins: ["example.com"],
+					},
+				});
+			});
+
+			it("should error if neither binding nor url_transformations is set", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ images: { remote: true } } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "images" should have a "binding" or "url_transformations" field."
+				`);
+			});
+
+			it("should error on invalid url_transformations", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						images: {
+							binding: "IMAGES",
+							url_transformations: { allowed_origins: "example.com" },
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "images.url_transformations.enabled" is a required field.
+					  - Expected "images.url_transformations.allowed_origins" to be an array of strings but got "example.com""
+				`);
+			});
+
+			it("should error if allowed_origins mixes * with other origins", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						images: {
+							url_transformations: {
+								enabled: true,
+								allowed_origins: ["*", "example.com"],
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "images.url_transformations.allowed_origins" cannot contain "*" alongside other origins. Use ["*"] on its own to allow any origin."
+				`);
+			});
 		});
 
 		// Media
@@ -14447,6 +14533,28 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.renderWarnings()).toContain(
 					'Unexpected fields found in previews.durable_objects field: "code_update_strategy"'
+				);
+			});
+
+			it("should reject images.url_transformations in previews", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						previews: {
+							images: {
+								binding: "IMAGES",
+								url_transformations: { enabled: true },
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toContain(
+					'The field "previews.images.url_transformations" is not supported in previews.'
 				);
 			});
 

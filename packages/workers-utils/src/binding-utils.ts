@@ -215,8 +215,10 @@ export function convertConfigToBindings(
 				break;
 			}
 			case "images": {
-				const { binding, ...x } = info;
-				output[binding] = { type: "images", ...x };
+				const { binding, url_transformations: _, ...x } = info;
+				if (binding) {
+					output[binding] = { type: "images", ...x };
+				}
 				break;
 			}
 			case "stream": {

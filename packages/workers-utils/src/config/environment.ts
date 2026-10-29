@@ -1577,9 +1577,19 @@ export interface EnvironmentNonInheritable {
 	 */
 	images:
 		| {
-				binding: string;
+				binding?: string;
 				/** Whether the Images binding should be remote or not in local development */
 				remote?: boolean;
+				/** Controls `/cdn-cgi/image/` URL transformations for requests served by this Worker */
+				url_transformations?: {
+					/** Whether URL transformations are enabled for this Worker */
+					enabled: boolean;
+					/**
+					 * Origins that images may be fetched from, in addition to the Worker's own zone.
+					 * Use `["*"]` to allow any origin.
+					 */
+					allowed_origins?: string[];
+				};
 		  }
 		| undefined;
 

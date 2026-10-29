@@ -2084,6 +2084,30 @@ describe("generate types - CLI", () => {
 		`);
 	});
 
+	it("should not generate an images binding for url_transformations alone", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				name: "test-name",
+				vars: { MY_VAR: "a" },
+				images: { url_transformations: { enabled: true } },
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+
+		const generated = fs.readFileSync("worker-configuration.d.ts", "utf-8");
+		expect(generated).toContain(dedent`
+			interface __BaseEnv_Env {
+				MY_VAR: "a";
+			}
+		`);
+		expect(generated).not.toContain("ImagesBinding");
+	});
+
 	it("should override vars with secrets", async ({ expect }) => {
 		fs.writeFileSync(
 			"./wrangler.jsonc",
