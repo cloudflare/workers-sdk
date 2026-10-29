@@ -2,7 +2,7 @@ import { describe, test } from "vitest";
 import { getRemoteBindings } from "../remote-bindings";
 
 describe("getRemoteBindings", () => {
-	test("maps bindings that always use remote resources", ({ expect }) => {
+	test("maps supported remote bindings", ({ expect }) => {
 		expect(
 			getRemoteBindings({
 				env: {
@@ -13,6 +13,11 @@ describe("getRemoteBindings", () => {
 					K2: {
 						type: "k2",
 						stream: "stream-id",
+					},
+					HYPERDRIVE: {
+						type: "hyperdrive",
+						id: "hyperdrive-id",
+						dev: { remote: true },
 					},
 				},
 			})
@@ -25,6 +30,11 @@ describe("getRemoteBindings", () => {
 				type: "k2",
 				stream: "stream-id",
 				remote: undefined,
+			},
+			HYPERDRIVE: {
+				type: "hyperdrive",
+				id: "hyperdrive-id",
+				remote: true,
 			},
 		});
 	});

@@ -38,50 +38,196 @@ type Env = {
 	ENGINE: DurableObjectNamespace<Engine>;
 	BINDING_NAME: string;
 	WORKFLOW_NAME: string;
-	MINIFLARE_LOOPBACK?: Fetcher;
+	WORKFLOW_STORAGE?: Fetcher;
 };
 
-/** Waits for Miniflare to finish deleting an instance's persistence files. */
+const STORAGE_DELETE_RETRY_INTERVAL_MS = 50;
+const STORAGE_DELETE_RETRY_BUDGET_MS = 2_000;
+const STORAGE_DELETE_MAX_RETRIES =
+	STORAGE_DELETE_RETRY_BUDGET_MS / STORAGE_DELETE_RETRY_INTERVAL_MS;
+
+const pendingDeletes = new Map<string, Promise<boolean>>();
+
+function getStorageUrl(workflowName: string, hexId: string): string {
+	if (
+		/[\\/]/.test(workflowName) ||
+		workflowName.includes("\0") ||
+		!/^[a-f0-9]{64}$/i.test(hexId)
+	) {
+		throw new Error("Invalid Workflow storage path");
+	}
+	return `http://disk/${encodeURIComponent(`miniflare-workflows-${workflowName}`)}/${hexId}`;
+}
+
+async function removeFile(disk: Fetcher, url: string): Promise<boolean> {
+	for (let attempt = 0; ; attempt++) {
+		let isDirectory = false;
+		try {
+			const file = await disk.fetch(url, { method: "HEAD" });
+			if (file.status === 404) {
+				return false;
+			}
+			if (
+				file.ok &&
+				file.headers.get("Content-Type") !== "application/octet-stream"
+			) {
+				isDirectory = true;
+			} else if (file.ok) {
+				const response = await disk.fetch(url, { method: "DELETE" });
+				if (response.ok || response.status === 404) {
+					return response.ok;
+				}
+			}
+		} catch (error) {
+			if (attempt === STORAGE_DELETE_MAX_RETRIES) {
+				throw error;
+			}
+		}
+		if (isDirectory) {
+			throw new Error("Refusing to delete a Workflow storage directory");
+		}
+		if (attempt === STORAGE_DELETE_MAX_RETRIES) {
+			throw new Error("Failed to delete Workflow storage file");
+		}
+		await scheduler.wait(STORAGE_DELETE_RETRY_INTERVAL_MS);
+	}
+}
+
+async function deleteWorkflowStorageFiles(
+	disk: Fetcher,
+	url: string,
+	deleted = false
+): Promise<boolean> {
+	let failure: unknown;
+	for (const extension of [".sqlite", ".sqlite-shm", ".sqlite-wal"]) {
+		try {
+			const removed = await removeFile(disk, url + extension);
+			deleted ||= extension === ".sqlite" && removed;
+		} catch (error) {
+			failure ??= error;
+		}
+	}
+	if (failure !== undefined) {
+		throw failure;
+	}
+	return deleted;
+}
+
+/** Aborts local execution and serializes file cleanup with reuse of the same ID. */
+export function deleteWorkflowStorage({
+	disk,
+	workflowName,
+	ctx,
+	hexId,
+	abort,
+	abortOnlyIfPersisted = false,
+}: {
+	disk?: Fetcher;
+	workflowName: string;
+	ctx: ExecutionContext;
+	hexId: string;
+	abort: () => Promise<void>;
+	abortOnlyIfPersisted?: boolean;
+}): Promise<boolean> {
+	if (disk === undefined) {
+		return abort().then(() => false);
+	}
+	const url = getStorageUrl(workflowName, hexId);
+	const previous = pendingDeletes.get(url);
+	const readyToDelete = (previous ?? Promise.resolve(false))
+		.catch(() => false)
+		.then(async (deleted) => {
+			if (
+				!abortOnlyIfPersisted ||
+				(await disk.fetch(url + ".sqlite", { method: "HEAD" })).status !== 404
+			) {
+				await abort();
+				await scheduler.wait(100);
+			}
+			return deleted;
+		});
+	const cleanup = readyToDelete.then((deleted) =>
+		deleteWorkflowStorageFiles(disk, url, deleted)
+	);
+	const pendingDelete = readyToDelete.then(
+		() => cleanup,
+		() => previous ?? false
+	);
+	pendingDeletes.set(url, pendingDelete);
+	ctx.waitUntil(
+		pendingDelete.then(
+			() => {
+				if (pendingDeletes.get(url) === pendingDelete) {
+					pendingDeletes.delete(url);
+				}
+			},
+			() => {}
+		)
+	);
+	return cleanup;
+}
+
+/** Waits for queued file cleanup, retrying a failed cleanup once before reuse. */
 async function waitForPersistedInstanceDelete(
 	env: Env,
 	id: string | undefined
 ): Promise<void> {
-	if (id === undefined || env.MINIFLARE_LOOPBACK === undefined) {
+	if (id === undefined || env.WORKFLOW_STORAGE === undefined) {
 		return;
 	}
 
 	const hexId = env.ENGINE.idFromName(id).toString();
-	const response = await env.MINIFLARE_LOOPBACK.fetch(
-		`http://localhost/core/workflow-storage/${encodeURIComponent(env.WORKFLOW_NAME)}/${hexId}?waitForPendingDelete=1`
-	);
-	if (!response.ok) {
-		throw new Error(
-			`Failed to wait for persisted workflow instance '${id}' deletion`
-		);
+	const url = getStorageUrl(env.WORKFLOW_NAME, hexId);
+	let retried = false;
+	let pending = pendingDeletes.get(url);
+	while (pending !== undefined) {
+		try {
+			await pending;
+		} catch (error) {
+			if (pendingDeletes.get(url) === pending) {
+				if (retried) {
+					throw error;
+				}
+				retried = true;
+				pendingDeletes.set(
+					url,
+					deleteWorkflowStorageFiles(env.WORKFLOW_STORAGE, url)
+				);
+			}
+		}
+		const latest = pendingDeletes.get(url);
+		if (latest === pending) {
+			pendingDeletes.delete(url);
+			return;
+		}
+		pending = latest;
 	}
 }
 
 /** Aborts an Engine object before removing its persistence files. */
-async function deletePersistedInstance(env: Env, id: string): Promise<void> {
-	if (env.MINIFLARE_LOOPBACK === undefined) {
+async function deletePersistedInstance(
+	env: Env,
+	ctx: ExecutionContext,
+	id: string
+): Promise<void> {
+	if (env.WORKFLOW_STORAGE === undefined) {
 		return;
 	}
 
 	const stub = env.ENGINE.get(env.ENGINE.idFromName(id));
-	try {
-		await stub.unsafeAbort();
-	} catch {
-		// Aborting the Durable Object rejects its RPC.
-	}
-
-	const response = await env.MINIFLARE_LOOPBACK.fetch(
-		`http://localhost/core/workflow-storage/${encodeURIComponent(env.WORKFLOW_NAME)}/${stub.id.toString()}?defer=1`,
-		{ method: "DELETE" }
-	);
-	if (!response.ok) {
-		throw new Error(`Failed to delete persisted workflow instance '${id}'`);
-	}
-	await waitForPersistedInstanceDelete(env, id);
+	await deleteWorkflowStorage({
+		disk: env.WORKFLOW_STORAGE,
+		workflowName: env.WORKFLOW_NAME,
+		ctx,
+		hexId: stub.id.toString(),
+		abort: async () => {
+			try {
+				await stub.unsafeAbort();
+			} catch {
+				// Aborting the Durable Object rejects its RPC.
+			}
+		},
+	});
 }
 
 type WorkflowIntrospectionSession = {
@@ -319,7 +465,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		);
 
 		if (introspectionSession !== undefined) {
-			const modifier = stub.getInstanceModifier();
+			using modifier = await stub.getInstanceModifier();
 			introspectionSession.instanceIds.push(id);
 			for (const operation of introspectionSession.operations) {
 				await applyWorkflowIntrospectionOperation(modifier, operation);
@@ -373,7 +519,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		// Pass a getter function so WorkflowHandle can get a fresh stub after abort
 		const getStub = () => this.env.ENGINE.get(this.env.ENGINE.idFromName(id));
 
-		const handle = new WorkflowHandle(id, stub, getStub);
+		const handle = new WorkflowHandle(id, stub, getStub, this);
 
 		try {
 			await handle.status();
@@ -593,15 +739,42 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		}
 
 		const stub = this.env.ENGINE.get(this.env.ENGINE.idFromName(id));
-		try {
-			await stub.deleteInstance();
-		} catch (error) {
-			// delete aborts the instance
-			if (!isUserTriggeredDelete(error)) {
-				throw error;
-			}
+		await deleteWorkflowStorage({
+			disk: this.env.WORKFLOW_STORAGE,
+			workflowName: this.env.WORKFLOW_NAME,
+			ctx: this.ctx,
+			hexId: stub.id.toString(),
+			abort: async () => {
+				try {
+					await stub.deleteInstance();
+				} catch (error) {
+					// delete aborts the instance
+					if (!isUserTriggeredDelete(error)) {
+						throw error;
+					}
+				}
+			},
+		});
+	}
+
+	/** Removes local persistence by hex ID, including orphaned instances in Explorer. */
+	public async unsafeDeletePersistedInstance(hexId: string): Promise<boolean> {
+		if (this.env.WORKFLOW_STORAGE === undefined) {
+			throw new Error("Workflow storage service not available");
 		}
-		await waitForPersistedInstanceDelete(this.env, id);
+		return deleteWorkflowStorage({
+			disk: this.env.WORKFLOW_STORAGE,
+			workflowName: this.env.WORKFLOW_NAME,
+			ctx: this.ctx,
+			hexId,
+			abort: async () => {
+				try {
+					const stub = this.env.ENGINE.get(this.env.ENGINE.idFromString(hexId));
+					await stub.unsafeAbort();
+				} catch {}
+			},
+			abortOnlyIfPersisted: true,
+		});
 	}
 
 	/** Deletes each unique instance once while preserving duplicate results. */
@@ -669,7 +842,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		);
 		const cleanupIds = [...missingIds];
 		const cleanups = await Promise.allSettled(
-			cleanupIds.map((id) => deletePersistedInstance(this.env, id))
+			cleanupIds.map((id) => deletePersistedInstance(this.env, this.ctx, id))
 		);
 		const failedCleanupIds = new Set(
 			cleanupIds.filter((_, index) => cleanups[index]?.status === "rejected")
@@ -796,7 +969,8 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 	constructor(
 		public id: string,
 		stub: DurableObjectStub<Engine>,
-		private getStub: () => DurableObjectStub<Engine>
+		private getStub: () => DurableObjectStub<Engine>,
+		private binding: WorkflowBinding
 	) {
 		super();
 		this.stub = stub;
@@ -831,14 +1005,7 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 	}
 
 	public async delete(): Promise<void> {
-		try {
-			await this.stub.deleteInstance();
-		} catch (e) {
-			// delete aborts the instance
-			if (!isUserTriggeredDelete(e)) {
-				throw e;
-			}
-		}
+		await this.binding.deleteInstance(this.id);
 	}
 
 	public async restart(

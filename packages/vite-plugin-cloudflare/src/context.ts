@@ -18,6 +18,7 @@ import type {
 	ParsedInputWorkerConfig,
 	ParsedOutputWorkerConfig,
 } from "@cloudflare/config";
+import type { AsyncHook, CfAccount } from "@cloudflare/workers-utils";
 import type { MiniflareOptions } from "miniflare";
 import type * as vite from "vite";
 
@@ -34,6 +35,8 @@ export interface SharedContext {
 	configChangeCoordinator?: ConfigChangeCoordinator;
 	/** Allowed hostnames for tunnel connections */
 	tunnelHostnames: Set<string>;
+	/** Remote bindings auth hooks, reused so remote proxy sessions are not restarted */
+	remoteBindingsAuthHooks?: Map<string, AsyncHook<CfAccount>>;
 }
 
 /** An explicitly typed additional module emitted by a Vite environment. */
@@ -72,9 +75,14 @@ export class PluginContext {
 		debuglog("Miniflare is ready");
 	}
 
+	/**
+	 * Disposes the Miniflare instance and clears the export types it was configured with.
+	 * A server created later in the same process starts again from its own config.
+	 */
 	async disposeMiniflare(): Promise<void> {
 		await this.#sharedContext.miniflare?.dispose();
 		this.#sharedContext.miniflare = undefined;
+		this.#sharedContext.workerNameToExportTypesMap = undefined;
 	}
 
 	get miniflare(): Miniflare {
@@ -116,6 +124,11 @@ export class PluginContext {
 		}
 
 		return this.#sharedContext.workerNameToExportTypesMap;
+	}
+
+	get remoteBindingsAuthHooks(): Map<string, AsyncHook<CfAccount>> {
+		this.#sharedContext.remoteBindingsAuthHooks ??= new Map();
+		return this.#sharedContext.remoteBindingsAuthHooks;
 	}
 
 	beginRestartingDevServer(): void {

@@ -43,5 +43,26 @@ describe("local bindings", () => {
 		expect(() => resolveLocalBindings(workerConfig.env, {})).toThrow(
 			'Hyperdrive binding "HYPERDRIVE" must define dev.connectionString for local development.'
 		);
+		expect(() =>
+			resolveLocalBindings(
+				{
+					HYPERDRIVE: { ...workerConfig.env.HYPERDRIVE, dev: { remote: true } },
+				},
+				{},
+				undefined,
+				false
+			)
+		).toThrow(
+			'Hyperdrive binding "HYPERDRIVE" must define dev.connectionString'
+		);
+	});
+
+	test("does not require local credentials for remote Hyperdrive", ({
+		expect,
+	}) => {
+		const binding = { ...workerConfig.env.HYPERDRIVE, dev: { remote: true } };
+		expect(resolveLocalBindings({ HYPERDRIVE: binding }, {}).bindings).toEqual({
+			HYPERDRIVE: binding,
+		});
 	});
 });

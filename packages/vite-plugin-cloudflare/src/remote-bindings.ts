@@ -33,6 +33,13 @@ export function getRemoteBindings(
 					remote: binding.dev?.remote,
 				};
 				break;
+			case "analytics-engine-dataset":
+				bindings[name] = {
+					type: "analytics_engine",
+					dataset: binding.name,
+					remote: binding.dev?.remote,
+				};
+				break;
 			case "ai-search":
 				bindings[name] = {
 					type: "ai_search",
@@ -82,6 +89,13 @@ export function getRemoteBindings(
 				bindings[name] = {
 					type: "flagship",
 					app_id: binding.id,
+					remote: binding.dev?.remote,
+				};
+				break;
+			case "hyperdrive":
+				bindings[name] = {
+					type: "hyperdrive",
+					id: binding.id,
 					remote: binding.dev?.remote,
 				};
 				break;

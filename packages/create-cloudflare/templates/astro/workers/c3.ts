@@ -37,7 +37,7 @@ const config: TemplateConfig = {
 	configVersion: 1,
 	id: "astro",
 	frameworkCli: "create-astro",
-	frameworkCliNodeVersion: ">=22.22.0",
+	frameworkCliNodeVersion: ">=22.23.4",
 	platform: "workers",
 	displayName: "Astro",
 	copyFiles: {

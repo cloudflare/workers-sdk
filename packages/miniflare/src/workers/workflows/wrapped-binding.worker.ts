@@ -90,6 +90,10 @@ class WorkflowImpl implements Workflow {
 		return this.binding.unsafeAbort(instanceId, reason);
 	}
 
+	async unsafeDeletePersistedInstance(hexId: string): Promise<boolean> {
+		return this.binding.unsafeDeletePersistedInstance(hexId);
+	}
+
 	async unsafeGetInstanceModifier(instanceId: string): Promise<unknown> {
 		return this.binding.unsafeGetInstanceModifier(instanceId);
 	}

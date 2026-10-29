@@ -34,12 +34,9 @@ const ROUTE_PATTERNS: [RegExp, string][] = [
 	[/^\/workflows\/[^/]+\/instances$/, "workflows.instances"],
 	[/^\/workflows\/[^/]+$/, "workflows.details"],
 	[/^\/workflows$/, "workflows.list"],
-	[
-		/^\/flagship\/apps\/[^/]+\/flags\/[^/]+\/evaluate$/,
-		"flagship.flag.evaluate",
-	],
 	[/^\/flagship\/apps\/[^/]+\/flags\/[^/]+$/, "flagship.flag"],
 	[/^\/flagship\/apps\/[^/]+\/flags$/, "flagship.flags"],
+	[/^\/flagship\/apps\/[^/]+\/evaluate$/, "flagship.evaluate"],
 	[/^\/flagship\/apps$/, "flagship.apps"],
 	[/^\/local\/observability\/query$/, "observability.query"],
 	[/^\/local\/observability\/clear$/, "observability.clear"],

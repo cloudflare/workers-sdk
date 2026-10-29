@@ -8,6 +8,8 @@ import {
 } from "@cloudflare/workers-utils";
 import { parse as dotenvParse } from "dotenv";
 
+type DotEnvParser = (contents: string) => Record<string, string>;
+
 export function validateFileSecrets(
 	content: unknown,
 	jsonFilePath: string
@@ -52,21 +54,32 @@ export type BulkInputNullableResult = {
 	secretFormat: "json" | "dotenv";
 };
 
-/** Override for callers that need non-nullable */
+/**
+ * Parses JSON or dotenv secrets from a file or stdin, excluding null values.
+ *
+ * @param input The file path, or `undefined` to read stdin.
+ * @param includeNull Whether to retain null values from JSON input.
+ * @param parseDotEnv The dotenv parser. Defaults to literal parsing; callers using
+ * `--secrets-file` can supply `parseAndExpandDotEnv` to opt into expansion.
+ * @returns Parsed secrets and input metadata, or `undefined` if stdin is invalid.
+ */
 export async function parseBulkInputToObject(
 	input?: string,
-	includeNull?: false
+	includeNull?: false,
+	parseDotEnv?: DotEnvParser
 ): Promise<BulkInputResult | undefined>;
 
 /** Override for callers that need nullable */
 export async function parseBulkInputToObject(
 	input?: string,
-	includeNull?: true
+	includeNull?: true,
+	parseDotEnv?: DotEnvParser
 ): Promise<BulkInputNullableResult | undefined>;
 
 export async function parseBulkInputToObject(
 	input?: string,
-	includeNull: boolean = false
+	includeNull: boolean = false,
+	parseDotEnv: DotEnvParser = dotenvParse
 ): Promise<BulkInputResult | BulkInputNullableResult | undefined> {
 	let content: Record<string, string | null>;
 	let secretSource: "file" | "stdin";
@@ -80,9 +93,9 @@ export async function parseBulkInputToObject(
 			content = parseJSON(fileContent) as Record<string, string | null>;
 			secretFormat = "json";
 		} catch {
-			content = dotenvParse(fileContent);
+			content = parseDotEnv(fileContent);
 			secretFormat = "dotenv";
-			// dotenvParse does not error unless fileContent is undefined, no keys === error
+			// Dotenv parsing does not error for invalid content, so no keys means an error.
 			if (Object.keys(content).length === 0) {
 				throw new UserError(`The contents of "${input}" is not valid.`, {
 					telemetryMessage: "secret bulk invalid input",
@@ -102,9 +115,9 @@ export async function parseBulkInputToObject(
 				content = parseJSON(pipedInput) as Record<string, string | null>;
 				secretFormat = "json";
 			} catch (e) {
-				content = dotenvParse(pipedInput);
+				content = parseDotEnv(pipedInput);
 				secretFormat = "dotenv";
-				// dotenvParse does not error unless fileContent is undefined, no keys === error
+				// Dotenv parsing does not error for invalid content, so no keys means an error.
 				if (Object.keys(content).length === 0) {
 					throw e;
 				}

@@ -2,6 +2,16 @@ import { describe, test } from "vitest";
 import { V4MiniflareOptionsSchema } from "../../src/config/v4-schema";
 
 describe("V4MiniflareOptionsSchema", () => {
+	test("requires a remote proxy for Hyperdrive object entries", ({
+		expect,
+	}) => {
+		const result = V4MiniflareOptionsSchema.safeParse({
+			script: "export default {}",
+			hyperdrives: { DB: {} },
+		});
+
+		expect(result.success).toBe(false);
+	});
 	test("parses a single-worker v4-shaped config", ({ expect }) => {
 		const parsed = V4MiniflareOptionsSchema.parse({
 			rootPath: "./project",

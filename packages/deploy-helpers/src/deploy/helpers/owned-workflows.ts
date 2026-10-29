@@ -46,6 +46,7 @@ export function getWorkflowsOwnedByScript(
 			schedules: binding?.schedules ?? workflowExport.schedules,
 			default_retention:
 				binding?.default_retention ?? workflowExport.default_retention,
+			jurisdiction: binding?.jurisdiction ?? workflowExport.jurisdiction,
 		});
 	}
 	return [...owned.values()];
@@ -101,6 +102,7 @@ export function validateOwnedWorkflowDeclarations(
 			"concurrency",
 			"schedules",
 			"default_retention",
+			"jurisdiction",
 		] as const) {
 			const bindingValue = workflow[key];
 			const exportValue = workflowExport[key];

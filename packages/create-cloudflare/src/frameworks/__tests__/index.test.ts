@@ -66,7 +66,7 @@ describe("framework CLI Node.js requirements", () => {
 	describe.each(Object.entries(astro.platformVariants))(
 		"Astro (%s)",
 		(_, template) => {
-			test.for(["22.0.0", "22.21.99"])(
+			test.for(["22.0.0", "22.22.0", "22.23.1", "22.23.3"])(
 				"rejects Node.js %s before running create-astro",
 				async (nodeVersion, { expect }) => {
 					vi.stubGlobal("process", {
@@ -79,13 +79,13 @@ describe("framework CLI Node.js requirements", () => {
 					await expect(
 						runFrameworkGenerator(ctx, [ctx.project.name])
 					).rejects.toThrow(
-						`Astro requires Node.js >=22.22.0. You are using Node.js ${nodeVersion}. Please upgrade Node.js and try again.`
+						`Astro requires Node.js >=22.23.4. You are using Node.js ${nodeVersion}. Please upgrade Node.js and try again.`
 					);
 					expect(runCommand).not.toHaveBeenCalled();
 				}
 			);
 
-			test.for(["22.22.0", "24.0.0", "26.0.0"])(
+			test.for(["22.23.4", "22.24.0", "24.0.0", "26.0.0"])(
 				"runs create-astro on Node.js %s",
 				async (nodeVersion, { expect }) => {
 					vi.stubGlobal("process", {

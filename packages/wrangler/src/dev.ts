@@ -143,6 +143,11 @@ export const dev = createCommand({
 			describe:
 				"Host to act as origin in local mode, defaults to dev.host or route",
 		},
+		"infer-origin-from-routes": {
+			type: "boolean",
+			describe:
+				"Use the first configured route to infer the origin (request.url and the Host header) seen by the Worker in local mode. Set to false to preserve the real local origin, e.g. localhost:8787. Has no effect in remote mode",
+		},
 		"enable-containers": {
 			type: "boolean",
 			describe: "Whether to build and enable containers during development",
@@ -501,9 +506,12 @@ function applyHyperdriveEnvVars(config: Config, local: boolean): void {
 			connectionStringFromEnv = process.env[varName];
 		}
 
-		// only require a local connection string in the wrangler file or the env if not using dev --remote
+		// only require a local connection string in the wrangler file or the env
+		// if not using dev --remote, and not opted into a remote Hyperdrive
+		// binding (which tunnels to the edge instead of a local database)
 		if (
 			local &&
+			!hyperdrive.remote &&
 			connectionStringFromEnv === undefined &&
 			hyperdrive.localConnectionString === undefined
 		) {

@@ -10,7 +10,10 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import PQueue from "p-queue";
-import { WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE } from "../deploy/helpers/error-codes";
+import {
+	WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE,
+	WORKFLOW_JURISDICTION_IMMUTABLE_CODE,
+} from "../deploy/helpers/error-codes";
 import {
 	getWorkflowsOwnedByScript,
 	isWorkflowDefinedInThisScript,
@@ -333,6 +336,16 @@ export async function triggersDeploy(
 					}
 				);
 			}
+			if (workflow.jurisdiction) {
+				throw new UserError(
+					`Workflow "${workflow.name}" has "jurisdiction" configured but references external script "${workflow.script_name}". ` +
+						`Configure jurisdiction on the worker that defines the workflow.`,
+					{
+						telemetryMessage:
+							"triggers deploy workflow jurisdiction external script",
+					}
+				);
+			}
 		}
 	}
 
@@ -360,6 +373,9 @@ export async function triggersDeploy(
 						...(workflow.default_retention && {
 							default_retention: workflow.default_retention,
 						}),
+						...(workflow.jurisdiction && {
+							jurisdiction: workflow.jurisdiction,
+						}),
 					}),
 					headers: {
 						"Content-Type": "application/json",
@@ -386,6 +402,26 @@ export async function triggersDeploy(
 									cause: error,
 									telemetryMessage:
 										"triggers deploy workflow cron requires paid plan",
+								}
+							),
+						};
+					}
+
+					if (
+						error instanceof APIError &&
+						error.code === WORKFLOW_JURISDICTION_IMMUTABLE_CODE &&
+						workflow.jurisdiction
+					) {
+						error.preventReport();
+						return {
+							category: "Workflows",
+							targets: [],
+							error: new UserError(
+								`Workflow "${workflow.name}" already exists with a different jurisdiction, and a Workflow's jurisdiction cannot be changed after it is created. Give the Workflow a new name, or delete the existing Workflow first, which also deletes its instances.`,
+								{
+									cause: error,
+									telemetryMessage:
+										"triggers deploy workflow jurisdiction immutable",
 								}
 							),
 						};

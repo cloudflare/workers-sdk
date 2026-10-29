@@ -1,4 +1,6 @@
 import assert from "node:assert";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
 
@@ -18,6 +20,15 @@ export default defineConfig({
 			builder.config.logger.info("__after-build__");
 
 			await builder.build(clientEnvironment);
+
+			// Some frameworks delete the Vite manifests they enable so we do that here to test this scenario
+			fs.rmSync(
+				path.resolve(
+					builder.config.root,
+					workerEnvironment.config.build.outDir,
+					".vite/manifest.json"
+				)
+			);
 		},
 	},
 	plugins: [

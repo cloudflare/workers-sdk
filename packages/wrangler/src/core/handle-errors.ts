@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { ApiError } from "@cloudflare/containers-shared";
+import { AuthenticationError } from "@cloudflare/workers-auth/wrangler";
 import {
 	APIError,
 	CommandLineArgsError,
@@ -304,6 +305,10 @@ export function getErrorType(e: unknown): string | undefined {
 	}
 	if (isBuildFailure(e) || isBuildFailureFromCause(e)) {
 		return "BuildFailure";
+	}
+	// Account lookup used UserError before exposing structured auth failures.
+	if (e instanceof AuthenticationError) {
+		return "UserError";
 	}
 	return e instanceof Error ? e.constructor.name : undefined;
 }

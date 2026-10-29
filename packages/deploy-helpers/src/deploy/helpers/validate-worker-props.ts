@@ -232,6 +232,7 @@ export async function preUploadApiChecks(
 
 			if (script.last_deployed_from === "dash") {
 				const remoteWorkerConfig = await downloadWorkerConfig(
+					config,
 					name,
 					serviceMetaData.default_environment.environment,
 					props.entry.file,

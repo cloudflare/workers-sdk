@@ -28,6 +28,7 @@ import {
 	Response as MiniflareResponse,
 } from "miniflare";
 import { getAssetsConfig } from "./asset-config";
+import { createLogger, getRemoteBindingsAuth } from "./auth";
 import {
 	ASSET_WORKER_NAME,
 	kRequestType,
@@ -259,7 +260,8 @@ export async function getDevMiniflareOptions(
 	const resolvedLocalBindingsByWorkerName = resolveLocalBindingsByWorkerName(
 		ctx.allWorkerConfigs,
 		resolvedPluginConfig.localEnv,
-		resolvedPluginConfig.devVars
+		resolvedPluginConfig.devVars,
+		resolvedPluginConfig.remoteBindings
 	);
 	warnForMissingSecrets(
 		resolvedLocalBindingsByWorkerName,
@@ -526,7 +528,12 @@ export async function getDevMiniflareOptions(
 												profileDir: resolvedViteConfig.root,
 											},
 											preExistingRemoteProxySession ?? null,
-											undefined,
+											getRemoteBindingsAuth(
+												ctx.remoteBindingsAuthHooks,
+												resolvedViteConfig.root,
+												settings.accountId,
+												createLogger(viteDevServer.config.logger)
+											),
 											{
 												cliDisplayName: resolvedPluginConfig.cliDisplayName,
 												logger: createRemoteBindingsLogger(
@@ -808,7 +815,8 @@ export async function getPreviewMiniflareOptions(
 	const resolvedLocalBindingsByWorkerName = resolveLocalBindingsByWorkerName(
 		ctx.allWorkerConfigs,
 		resolvedPluginConfig.localEnv,
-		resolvedPluginConfig.devVars
+		resolvedPluginConfig.devVars,
+		resolvedPluginConfig.remoteBindings
 	);
 	warnForMissingSecrets(
 		resolvedLocalBindingsByWorkerName,
@@ -851,7 +859,12 @@ export async function getPreviewMiniflareOptions(
 							profileDir: resolvedViteConfig.root,
 						},
 						preExistingRemoteProxySessionData ?? null,
-						undefined,
+						getRemoteBindingsAuth(
+							ctx.remoteBindingsAuthHooks,
+							resolvedViteConfig.root,
+							resolvedPluginConfig.settings.accountId,
+							createLogger(vitePreviewServer.config.logger)
+						),
 						{
 							cliDisplayName: resolvedPluginConfig.cliDisplayName,
 							logger: createRemoteBindingsLogger(
@@ -987,7 +1000,8 @@ export function createMiniflareExports(options: {
 function resolveLocalBindingsByWorkerName(
 	workerConfigs: Array<ParsedInputWorkerConfig | ParsedOutputWorkerConfig>,
 	localEnv: LoadedEnv,
-	devVars: Record<string, string> | undefined
+	devVars: Record<string, string> | undefined,
+	remoteBindings: boolean
 ): Map<string, ResolvedLocalBindings> {
 	const resolvedLocalBindingsByWorkerName = new Map<
 		string,
@@ -996,7 +1010,7 @@ function resolveLocalBindingsByWorkerName(
 	for (const config of workerConfigs) {
 		resolvedLocalBindingsByWorkerName.set(
 			config.name,
-			resolveLocalBindings(config.env, localEnv.values, devVars)
+			resolveLocalBindings(config.env, localEnv.values, devVars, remoteBindings)
 		);
 	}
 	return resolvedLocalBindingsByWorkerName;
