@@ -1,5 +1,37 @@
 # @cloudflare/deploy-helpers
 
+## 0.24.3
+
+### Patch Changes
+
+- [#16013](https://github.com/cloudflare/workers-sdk/pull/16013) [`8b64bec`](https://github.com/cloudflare/workers-sdk/commit/8b64becbd3817abb28654e270c0e0104170f29d7) Thanks [@swalker326](https://github.com/swalker326)! - Fix Durable Object self-references in tests and container validation
+
+  Durable Object bindings that explicitly name the Worker itself now resolve to the test runner in `@cloudflare/vitest-plugin`, for both `cloudflare.config.ts` and Wrangler configuration files. Named Wrangler environments use their effective Worker name, keeping bindings to the base Worker external. Container validation also accepts these self-references, using the effective deployment name to distinguish local and external bindings.
+
+  Explicit binding targets remain intact during configuration conversion, so deploying with `--name` or a CI name override preserves the intended Durable Object target.
+
+- Updated dependencies [[`b4653b4`](https://github.com/cloudflare/workers-sdk/commit/b4653b40cdc6e176c4e5ac98696cf0dae641ff6b), [`15fbaed`](https://github.com/cloudflare/workers-sdk/commit/15fbaed2de992a529ca05d99424f8063d63217bf), [`d8899ac`](https://github.com/cloudflare/workers-sdk/commit/d8899ac4c85ff839d73daa9055a76a36248cd2e3), [`8b64bec`](https://github.com/cloudflare/workers-sdk/commit/8b64becbd3817abb28654e270c0e0104170f29d7)]:
+  - @cloudflare/cli-shared-helpers@0.3.0
+  - miniflare@5.20261023.3-beta
+  - @cloudflare/workers-utils@0.50.1
+  - @cloudflare/containers-shared@0.23.5
+  - @cloudflare/config@0.29.0
+
+## 0.24.2
+
+### Patch Changes
+
+- [#16521](https://github.com/cloudflare/workers-sdk/pull/16521) [`ec6eddd`](https://github.com/cloudflare/workers-sdk/commit/ec6edddadd8395b4991b23c5300ea68b701ce720) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Validate `.assetsignore` encoding before building asset manifests
+
+  Asset uploads and local development now stop with an actionable user error when `.assetsignore` is not valid UTF-8 or contains null characters, instead of silently losing its patterns. This also applies to standalone Miniflare and the Wrangler, Vite and Vitest development integrations. Save the file as UTF-8 to continue; UTF-8 files with a byte order mark and intentionally empty files remain supported.
+
+- Updated dependencies [[`a95d647`](https://github.com/cloudflare/workers-sdk/commit/a95d647f9459e40a00871346b81082abbb27d2b3), [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1), [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1), [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1)]:
+  - @cloudflare/config@0.29.0
+  - @cloudflare/workers-utils@0.50.0
+  - miniflare@5.20261023.2-beta
+  - @cloudflare/containers-shared@0.23.4
+  - @cloudflare/cli-shared-helpers@0.2.10
+
 ## 0.24.1
 
 ### Patch Changes

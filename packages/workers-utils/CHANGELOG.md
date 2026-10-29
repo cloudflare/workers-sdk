@@ -1,5 +1,35 @@
 # @cloudflare/workers-utils
 
+## 0.50.1
+
+### Patch Changes
+
+- [#16013](https://github.com/cloudflare/workers-sdk/pull/16013) [`8b64bec`](https://github.com/cloudflare/workers-sdk/commit/8b64becbd3817abb28654e270c0e0104170f29d7) Thanks [@swalker326](https://github.com/swalker326)! - Fix Durable Object self-references in tests and container validation
+
+  Durable Object bindings that explicitly name the Worker itself now resolve to the test runner in `@cloudflare/vitest-plugin`, for both `cloudflare.config.ts` and Wrangler configuration files. Named Wrangler environments use their effective Worker name, keeping bindings to the base Worker external. Container validation also accepts these self-references, using the effective deployment name to distinguish local and external bindings.
+
+  Explicit binding targets remain intact during configuration conversion, so deploying with `--name` or a CI name override preserves the intended Durable Object target.
+
+## 0.50.0
+
+### Minor Changes
+
+- [#16536](https://github.com/cloudflare/workers-sdk/pull/16536) [`a95d647`](https://github.com/cloudflare/workers-sdk/commit/a95d647f9459e40a00871346b81082abbb27d2b3) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Support remote Analytics Engine bindings in local development
+
+  Setting `remote: true` on an Analytics Engine dataset now sends `writeDataPoint()` calls from `wrangler dev` and the Vite plugin to the real dataset. Without it, writes are still dropped locally.
+
+  ```jsonc
+  {
+    "analytics_engine_datasets": [
+      {
+        "binding": "EVENTS",
+        "dataset": "my-dataset",
+        "remote": true
+      }
+    ]
+  }
+  ```
+
 ## 0.49.0
 
 ### Minor Changes
