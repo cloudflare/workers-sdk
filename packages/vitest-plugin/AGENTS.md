@@ -39,9 +39,11 @@ session, `unstable_getMiniflareWorkerOptions()`, `main`, defines, module rules, 
   `normalizeAndValidateConfig()`). Mirrors `@cloudflare/vite-plugin`'s
   `experimental.newConfig`. `ctx.mode` comes from `project.vite.config.mode`.
 
-The two are mutually exclusive. Whichever is used, the resolved path, config format and
-Worker name are recorded on `options.resolvedConfig` for the pool to consume — never
-re-read the config file from disk.
+The two are mutually exclusive. Whichever is used, the resolved path, config format,
+top-level Worker name and effective environment Worker name are recorded on
+`options.resolvedConfig` for the pool to consume — never re-read the config file from
+disk. Durable Object self-references use the effective name so bindings to a base
+Worker remain external when testing a named environment.
 
 ## BUILD
 
