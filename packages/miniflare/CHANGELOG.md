@@ -1,5 +1,17 @@
 # miniflare
 
+## 5.20261023.3-beta
+
+### Patch Changes
+
+- [#16327](https://github.com/cloudflare/workers-sdk/pull/16327) [`15fbaed`](https://github.com/cloudflare/workers-sdk/commit/15fbaed2de992a529ca05d99424f8063d63217bf) Thanks [@dexvdev](https://github.com/dexvdev)! - Keep cross-process bindings working after a `workerd` crash restart
+
+  Bindings to Workers running in another dev session are rerouted through the dev registry proxy. That reroute used to rewrite the stored worker options in place, so when Miniflare restarted `workerd` after a crash and assembled the config again from the same options, it rerouted the proxy binding through itself. Every call over a cross-process service binding, Durable Object binding or tail consumer then failed with `Worker "dev-registry-proxy" not found` until the options were next updated. The reroute now works on copies of the options, so a restarted runtime routes those bindings to the other dev session as before.
+
+- [#16426](https://github.com/cloudflare/workers-sdk/pull/16426) [`d8899ac`](https://github.com/cloudflare/workers-sdk/commit/d8899ac4c85ff839d73daa9055a76a36248cd2e3) Thanks [@pmiguel](https://github.com/pmiguel)! - Fix signature verification for signed `Accept-Encoding` headers on the experimental local R2 S3 endpoint
+
+  Restore the original client-supplied header, including its absence, before forwarding requests to the local S3 endpoint. This prevents `SignatureDoesNotMatch` errors for some S3-compatible clients that sign `Accept-Encoding: identity`, while preserving header normalization for normal Worker requests.
+
 ## 5.20261023.2-beta
 
 ### Minor Changes

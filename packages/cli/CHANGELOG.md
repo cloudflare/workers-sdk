@@ -1,5 +1,18 @@
 # @cloudflare/cli
 
+## 0.3.0
+
+### Minor Changes
+
+- [#16367](https://github.com/cloudflare/workers-sdk/pull/16367) [`b4653b4`](https://github.com/cloudflare/workers-sdk/commit/b4653b40cdc6e176c4e5ac98696cf0dae641ff6b) Thanks [@MattieTK](https://github.com/MattieTK)! - Support writing `.assetsignore` files that keep local secrets and Pages-only files out of uploaded static assets
+
+  `maybeAppendWranglerToGitIgnoreLikeFile` now takes an options object. `additionalEntries` appends further entries after the Wrangler ones, skipping any already in the file or already queued. `requireEnvWildcard` makes the helper add `.env*` unless the file already has it, so that a narrower existing entry such as `.env` does not leave `.env.production` or `.env.local` to be uploaded. `PROJECT_ROOT_ASSETS_IGNORE_ENTRIES` lists the entries to add when a project root is used as the static assets directory.
+
+### Patch Changes
+
+- Updated dependencies [[`8b64bec`](https://github.com/cloudflare/workers-sdk/commit/8b64becbd3817abb28654e270c0e0104170f29d7)]:
+  - @cloudflare/workers-utils@0.50.1
+
 ## 0.2.10
 
 ### Patch Changes
