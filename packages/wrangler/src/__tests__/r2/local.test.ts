@@ -1,12 +1,38 @@
 import * as fs from "node:fs";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
+import type { Config } from "@cloudflare/workers-utils";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runWrangler } from "../helpers/run-wrangler";
+import { usingLocalBucket } from "../../r2/helpers/object";
 
 // Miniflare's use of undici doesn't play well with jest-mock-fetch
 // and it is not needed here anyway.
 vi.unmock("undici");
+
+/**
+ * Reads an object's `cacheExpiry` back out of the same local R2 state that
+ * the `wrangler r2 ... put --local` commands persisted to, using Miniflare
+ * directly, since the CLI has no command that prints `httpMetadata`. The
+ * value must be extracted inside the closure: the `head()` result is a
+ * proxy stub that is invalidated when `usingLocalBucket()` disposes its
+ * Miniflare instance.
+ */
+async function headLocalObjectCacheExpiry(
+	key: string,
+	bucketName = "bucket-object-test"
+) {
+	return usingLocalBucket(
+		undefined,
+		// `wrangler r2 object put` with no config file persists to
+		// `.wrangler/state` relative to the cwd, which is what an empty
+		// config resolves to here too.
+		{} as Config,
+		bucketName,
+		async (bucket) =>
+			(await bucket.head(key))?.httpMetadata?.cacheExpiry?.toISOString()
+	);
+}
 
 describe("r2", () => {
 	const std = mockConsoleMethods();
@@ -374,6 +400,66 @@ describe("r2", () => {
 					Downloading "file-two" from "bucket-object-test".
 					Download complete."
 				`);
+			});
+
+			it("should store an HTTP-date --expires value as the local object's cacheExpiry", async ({
+				expect,
+			}) => {
+				fs.writeFileSync("payload", "cache me");
+
+				await runWrangler(
+					`r2 object put bucket-object-test/http-date --file ./payload --expires "Wed, 21 Oct 2026 07:28:00 GMT"`
+				);
+
+				expect(await headLocalObjectCacheExpiry("http-date")).toBe(
+					"2026-10-21T07:28:00.000Z"
+				);
+			});
+
+			it("should store an ISO date --expires value as the local object's cacheExpiry", async ({
+				expect,
+			}) => {
+				fs.writeFileSync("payload", "cache me");
+
+				await runWrangler(
+					`r2 object put bucket-object-test/iso-date --file ./payload --expires 2026-10-21`
+				);
+
+				expect(await headLocalObjectCacheExpiry("iso-date")).toBe(
+					"2026-10-21T00:00:00.000Z"
+				);
+			});
+
+			it("should keep an all-digit --expires value as epoch milliseconds", async ({
+				expect,
+			}) => {
+				fs.writeFileSync("payload", "cache me");
+
+				await runWrangler(
+					`r2 object put bucket-object-test/epoch-ms --file ./payload --expires 1792966000000`
+				);
+
+				expect(await headLocalObjectCacheExpiry("epoch-ms")).toBe(
+					"2026-10-25T22:06:40.000Z"
+				);
+			});
+
+			it("should store an ISO date --expires value as the cacheExpiry of local bulk put objects", async ({
+				expect,
+			}) => {
+				fs.writeFileSync("payload", "cache me");
+				fs.writeFileSync(
+					"list.json",
+					JSON.stringify([{ key: "bulk-expires", file: "payload" }])
+				);
+
+				await runWrangler(
+					`r2 bulk put bucket-object-test --filename ./list.json --expires 2026-10-21`
+				);
+
+				expect(await headLocalObjectCacheExpiry("bulk-expires")).toBe(
+					"2026-10-21T00:00:00.000Z"
+				);
 			});
 		});
 	});
