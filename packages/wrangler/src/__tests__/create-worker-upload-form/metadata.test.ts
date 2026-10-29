@@ -384,6 +384,19 @@ describe("createWorkerUploadForm — assets metadata", () => {
 		const metadata = getMetadata(form);
 		expect(metadata.assets).not.toHaveProperty("config.base_path");
 	});
+
+	it("should omit empty asset compatibility flags", ({ expect }) => {
+		const worker = createEsmWorker({
+			assets: {
+				routerConfig: { has_user_worker: true },
+				jwt: "test-jwt",
+				assetConfig: { compatibility_flags: [] },
+			} as CfWorkerInit["assets"],
+		});
+		const form = createWorkerUploadForm(worker, {});
+		const metadata = getMetadata(form);
+		expect(metadata.assets).not.toHaveProperty("config.compatibility_flags");
+	});
 });
 
 describe("createWorkerUploadForm — static assets only", () => {

@@ -732,8 +732,10 @@ async function assemblePreviewDeploymentSettings(
 		request.assets = {
 			jwt: assetsUploadResult.jwt,
 			config: {
-				compatibility_flags:
-					options.assetsOptions.assetConfig.compatibility_flags,
+				...(options.assetsOptions.assetConfig.compatibility_flags?.length && {
+					compatibility_flags:
+						options.assetsOptions.assetConfig.compatibility_flags,
+				}),
 				html_handling: options.assetsOptions.assetConfig.html_handling,
 				not_found_handling:
 					options.assetsOptions.assetConfig.not_found_handling,
