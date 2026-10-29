@@ -1,4 +1,4 @@
-import type { ENABLEMENT_COMPATIBILITY_FLAGS } from "./compatibility-flags";
+import type { ENABLEMENT_COMPATIBILITY_FLAGS } from "../../utils/compatibility-flags";
 import type { ReadyAnalytics } from "./types";
 
 // This will allow us to make breaking changes to the analytic schema

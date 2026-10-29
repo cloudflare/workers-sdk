@@ -56,19 +56,16 @@ export function getAssetsConfig(
 			? resolvedPluginConfig.config.assets
 			: entryWorkerConfig?.assets;
 
-	const compatibilityOptions =
+	const compatConfig =
 		resolvedPluginConfig.type === "assets-only"
-			? {
-					compatibilityDate: resolvedPluginConfig.config.compatibilityDate,
-					compatibilityFlags: resolvedPluginConfig.config.compatibilityFlags,
-				}
-			: {
-					compatibilityDate: entryWorkerConfig?.compatibilityDate,
-					compatibilityFlags: entryWorkerConfig?.compatibilityFlags,
-				};
+			? resolvedPluginConfig.config
+			: entryWorkerConfig;
 
 	const config = {
-		compatibility_flags: resolveCompatibilityFlags(compatibilityOptions),
+		compatibility_flags: resolveCompatibilityFlags({
+			compatibilityDate: compatConfig?.compatibilityDate,
+			compatibilityFlags: compatConfig?.compatibilityFlags,
+		}),
 		...(assetsConfig?.htmlHandling
 			? { html_handling: assetsConfig.htmlHandling }
 			: {}),

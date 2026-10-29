@@ -1,8 +1,8 @@
-import { mockJaegerBinding } from "../../../utils/tracing";
 import {
 	flagIsEnabled,
 	SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING,
-} from "../compatibility-flags";
+} from "../../../utils/compatibility-flags";
+import { mockJaegerBinding } from "../../../utils/tracing";
 import { CACHE_CONTROL_BROWSER } from "../constants";
 import { HEADERS_VERSION } from "../handler";
 import { generateRulesMatcher, replacer } from "./rules-engine";

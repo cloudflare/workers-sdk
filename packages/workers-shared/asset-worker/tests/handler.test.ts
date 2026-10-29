@@ -1,8 +1,10 @@
 import { describe, it, vi } from "vitest";
-import { resolveCompatibilityFlags } from "../../utils/compatibility-flags";
+import {
+	resolveCompatibilityFlags,
+	SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING,
+} from "../../utils/compatibility-flags";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics } from "../src/analytics";
-import { SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING } from "../src/compatibility-flags";
 import { normalizeConfiguration } from "../src/configuration";
 import { canFetch, handleRequest } from "../src/handler";
 import type { AssetConfig } from "../../utils/types";
