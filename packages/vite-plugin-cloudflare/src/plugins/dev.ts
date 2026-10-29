@@ -17,7 +17,10 @@ import {
 	compareWorkerNameToExportTypesMaps,
 	getCurrentWorkerNameToExportTypesMap,
 } from "../export-types";
-import { getDevMiniflareOptions } from "../miniflare-options";
+import {
+	disposeRemoteProxySessions,
+	getDevMiniflareOptions,
+} from "../miniflare-options";
 import { UNKNOWN_HOST } from "../shared";
 import { createPlugin, createRequestHandler, debuglog } from "../utils";
 import { handleWebSocket } from "../websockets";
@@ -48,6 +51,11 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 							await ctx.disposeMiniflare();
 						} catch (error) {
 							debuglog("Failed to dispose Miniflare instance:", error);
+						}
+						try {
+							await disposeRemoteProxySessions();
+						} catch (error) {
+							debuglog("Failed to dispose remote proxy sessions:", error);
 						}
 					}
 					if (!containerCleanup.isRestarting) {
