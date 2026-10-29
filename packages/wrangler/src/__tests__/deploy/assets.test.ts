@@ -1970,7 +1970,11 @@ describe("deploy", () => {
 			mockUploadWorkerRequest({
 				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
-					config: { html_handling: "none", not_found_handling: "404-page" },
+					config: {
+						compatibility_flags: ["nodejs_compat"],
+						html_handling: "none",
+						not_found_handling: "404-page",
+					},
 				},
 				expectedBindings: [{ name: "ASSETS", type: "assets" }],
 				expectedMainModule: "index.js",
@@ -2005,6 +2009,7 @@ describe("deploy", () => {
 				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: {
+						compatibility_flags: ["nodejs_compat"],
 						html_handling: "none",
 						not_found_handling: "404-page",
 						run_worker_first: true,
@@ -2043,6 +2048,7 @@ describe("deploy", () => {
 				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: {
+						compatibility_flags: ["nodejs_compat"],
 						html_handling: "none",
 						not_found_handling: "404-page",
 						run_worker_first: true,
@@ -2081,6 +2087,7 @@ describe("deploy", () => {
 				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: {
+						compatibility_flags: ["nodejs_compat"],
 						html_handling: "none",
 						not_found_handling: "404-page",
 						run_worker_first: ["/api", "!/api/asset"],
@@ -2118,6 +2125,7 @@ describe("deploy", () => {
 				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: {
+						compatibility_flags: ["nodejs_compat"],
 						html_handling: "none",
 						not_found_handling: "404-page",
 					},
@@ -2150,7 +2158,10 @@ describe("deploy", () => {
 			mockUploadWorkerRequest({
 				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
-					config: { html_handling: "none" },
+					config: {
+						compatibility_flags: ["nodejs_compat"],
+						html_handling: "none",
+					},
 				},
 				expectedCompatibilityDate: "2024-09-27",
 				expectedCompatibilityFlags: ["nodejs_compat"],
@@ -2189,7 +2200,10 @@ describe("deploy", () => {
 			mockUploadWorkerRequest({
 				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
-					config: { html_handling: "none" },
+					config: {
+						compatibility_flags: ["nodejs_compat"],
+						html_handling: "none",
+					},
 				},
 				expectedCompatibilityDate: "2024-09-27",
 				expectedCompatibilityFlags: ["nodejs_compat"],
@@ -2224,7 +2238,10 @@ describe("deploy", () => {
 			mockUploadWorkerRequest({
 				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
-					config: { html_handling: "none" },
+					config: {
+						compatibility_flags: ["nodejs_compat"],
+						html_handling: "none",
+					},
 				},
 				expectedCompatibilityDate: "2024-09-27",
 				expectedCompatibilityFlags: ["nodejs_compat"],
