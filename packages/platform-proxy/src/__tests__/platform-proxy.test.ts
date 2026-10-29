@@ -98,6 +98,10 @@ describe("startPlatformProxy()", () => {
 			"CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_OVERRIDDEN_DB",
 			"postgres://user:password@localhost:5432/overridden"
 		);
+		vi.stubEnv(
+			"CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_BOTH_DB",
+			"postgres://user:password@localhost:5432/from-env"
+		);
 		const { env, dispose } = await startPlatformProxy(
 			createWorker({
 				SECRET: { type: "secret" },
@@ -118,19 +122,36 @@ describe("startPlatformProxy()", () => {
 					},
 				},
 				OVERRIDDEN_DB: { type: "hyperdrive", id: "jkl" },
+				BOTH_DB: {
+					type: "hyperdrive",
+					id: "mno",
+					dev: {
+						connectionString:
+							"postgres://user:password@localhost:5432/from-config",
+					},
+				},
 			}),
 			process.cwd()
 		);
 
 		try {
-			expect(Object.keys(env).sort()).toEqual(["LOCAL_DB", "OVERRIDDEN_DB"]);
+			expect(Object.keys(env).sort()).toEqual([
+				"BOTH_DB",
+				"LOCAL_DB",
+				"OVERRIDDEN_DB",
+			]);
+			// The environment variable wins over `dev.connectionString`, as in the Cloudflare Vite plugin
+			const database = (name: string) => (env[name] as Hyperdrive).database;
+			expect(database("LOCAL_DB")).toBe("local");
+			expect(database("OVERRIDDEN_DB")).toBe("overridden");
+			expect(database("BOTH_DB")).toBe("from-env");
 			expect(std.warn).toMatchInlineSnapshot(`
 				"The platform proxy leaves out the \`SECRET\` binding: secrets aren't supported yet.
 				The platform proxy leaves out the \`ASSETS\` binding: the assets binding isn't supported yet.
 				The platform proxy leaves out the \`COUNTER\` binding: it refers to this Worker's own code, which the platform proxy doesn't run.
 				The platform proxy leaves out the \`API\` binding: it refers to this Worker's own code, which the platform proxy doesn't run.
 				The platform proxy leaves out the \`REMOTE_KV\` binding: remote bindings aren't supported yet.
-				The platform proxy leaves out the \`DB\` binding: it needs \`dev.connectionString\` for local development."
+				The platform proxy leaves out the \`DB\` binding: it needs \`dev.connectionString\` or the \`CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DB\` environment variable for local development."
 			`);
 		} finally {
 			await dispose();

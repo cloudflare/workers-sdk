@@ -133,7 +133,7 @@ function getEmulatedBindings(worker: ParsedInputWorkerConfig): MiniflareEnv {
 				process.env[`CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_${name}`] ||
 				binding.dev?.connectionString;
 			if (connectionString === undefined) {
-				unsupported = "it needs `dev.connectionString` for local development";
+				unsupported = `it needs \`dev.connectionString\` or the \`CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_${name}\` environment variable for local development`;
 			} else {
 				env[name] = { ...binding, dev: { ...binding.dev, connectionString } };
 				continue;
