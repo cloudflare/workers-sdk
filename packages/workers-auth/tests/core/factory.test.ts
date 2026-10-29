@@ -1,6 +1,6 @@
 import { APIError } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
-import { beforeEach, describe, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CF_CLI } from "../../src/cf";
 import { createCloudflareAuth } from "../../src/core/factory";
 import { createOAuthFlow } from "../../src/flow";
@@ -142,7 +142,9 @@ describe.each([WRANGLER_CLI, CF_CLI])(
 		}) => {
 			fetchInternalBase.mockImplementation(async (_config, resource) => ({
 				response:
-					resource === "/memberships"
+					resource === "/user/tokens/verify"
+						? { success: false, errors: [{ code: 1000, message: "Invalid API Token" }] }
+						: resource === "/memberships"
 						? {
 								success: false,
 								result: null,
@@ -203,6 +205,9 @@ describe.each([WRANGLER_CLI, CF_CLI])(
 				if (resource === "/memberships") {
 					throw error;
 				}
+				if (resource === "/user/tokens/verify") {
+					return { response: { success: false, errors: [{ code: 1000, message: "Invalid API Token" }] }, status: 403 };
+				}
 				return {
 					response: { success: true, result: [] },
 					status: 200,
@@ -220,6 +225,29 @@ describe.each([WRANGLER_CLI, CF_CLI])(
 				{ text: expect.stringContaining("CLOUDFLARE_ACCOUNT_ID") },
 			]);
 		});
+
+		it.each(["user", "unavailable"])(
+			"does not claim account ownership when verification is %s",
+			async (kind) => {
+				fetchInternalBase.mockImplementation(async (_config, resource) => {
+					if (resource === "/user/tokens/verify") {
+						if (kind === "unavailable") throw new Error("verification unavailable");
+						return { response: { success: true, result: { id: "user-token" } }, status: 200 };
+					}
+					return {
+						response: resource === "/memberships"
+							? { success: false, errors: [{ code: 10001, message: "Unable to authenticate request" }] }
+							: { success: true, result: [{ id: "account-id", name: "Account" }] },
+						status: resource === "/memberships" ? 403 : 200,
+					};
+				});
+				const auth = createCloudflareAuth(descriptor, createTestContext());
+				const error = await auth.getOrSelectAccountId(COMPLIANCE_CONFIG).catch((e: unknown) => e);
+				expect(error).toBeInstanceOf(APIError);
+				expect(error.code).toBe(10001);
+				expect(error.notes).toEqual([{ text: "Unable to authenticate request [code: 10001]" }]);
+			}
+		);
 
 		it("preserves non-API failures carrying code 10001", async ({ expect }) => {
 			const error = Object.assign(new Error("Unexpected transport failure"), {

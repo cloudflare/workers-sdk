@@ -478,9 +478,22 @@ You may have incorrect permissions on your API token, or your authentication may
 					membershipsRes.reason instanceof APIError &&
 					membershipsRes.reason.code === 10001
 				) {
-					membershipsRes.reason.notes.push({
-						text: "If you are using an account-owned API token, set `CLOUDFLARE_ACCOUNT_ID` to select the account without querying the user-scoped `/memberships` endpoint.",
-					});
+					// Verify token ownership before offering account-token-specific guidance.
+					// An inconclusive verification must never hide the original error.
+					try {
+						const verification = await fetchInternalBase<FetchResult<{ id: string }>>(
+							complianceConfig, "/user/tokens/verify", {},
+							ctx.userAgent, logger, undefined, undefined, credentials
+						);
+						if (!verification.response.success &&
+							verification.response.errors?.some((error) => error.code === 1000)) {
+							membershipsRes.reason.notes.push({
+								text: "You are using an account-owned API token. Set `CLOUDFLARE_ACCOUNT_ID` to select the account without querying the user-scoped `/memberships` endpoint.",
+							});
+						}
+					} catch {
+							// Keep the original memberships error unchanged.
+					}
 				}
 				throw membershipsRes.reason;
 			}
