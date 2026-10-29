@@ -1955,6 +1955,34 @@ describe("User", () => {
 			expect(std.out).toContain("env-api-token");
 		});
 
+		it("should output only the token, without the banner, when stdout is non-interactive (command substitution)", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "env-api-token");
+
+			await runWrangler("auth token");
+
+			expect(std.out).toBe("env-api-token");
+		});
+
+		it("should output only the stored OAuth token, without the banner, when stdout is non-interactive (command substitution)", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			const futureDate = new Date(Date.now() + 100000 * 1000).toISOString();
+			writeAuthCredentials({
+				oauth_token: "test-access-token",
+				refresh_token: "test-refresh-token",
+				expiration_time: futureDate,
+				scopes: ["account:read"],
+			});
+
+			await runWrangler("auth token");
+
+			expect(std.out).toBe("test-access-token");
+		});
+
 		it("should error when using global auth key/email without --json", async ({
 			expect,
 		}) => {
