@@ -1,0 +1,19 @@
+packages/wrangler/src/__tests__/r2/local.test.ts
+  s_fe0978e339320d::t_da1d73be68c388 4-5,13-26,394-448
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4cfd24c1694edff8ac46c51b7a791ba1595c5d78",
+  "prompts": {},
+  "sessions": {
+    "s_fe0978e339320d": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a186da-bf3c-736a-a4d6-9a45a12f015b",
+        "model": "glm-5.3"
+      },
+      "human_author": "Christopher Little-Savage <clittle-savage@cloudflare.com>"
+    }
+  }
+}
