@@ -1,0 +1,19 @@
+packages/wrangler/src/__tests__/r2/local-expires.test.ts
+  s_69c057d3146400::t_ba43b511a68c19 1-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b73e63dd513a3439bfc5894d15f264f4572e5ec0",
+  "prompts": {},
+  "sessions": {
+    "s_69c057d3146400": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a186da-d530-71ca-9a85-f08a4eaa572c",
+        "model": "glm-5.3"
+      },
+      "human_author": "Christopher Little-Savage <clittle-savage@cloudflare.com>"
+    }
+  }
+}
