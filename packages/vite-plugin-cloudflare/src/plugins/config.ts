@@ -77,7 +77,8 @@ export const configPlugin = createPlugin("config", (ctx) => {
 		},
 		configResolved: {
 			// Frameworks read the resolved output directories in their own `configResolved` hooks,
-			// so the Build Output directories have to be in place before those run
+			// so the Build Output directories have to be in place before those run. Vite starts
+			// these hooks together, so keep `forceBuildOutputDirs()` before the first `await`.
 			order: "pre",
 			async handler(resolvedViteConfig) {
 				ctx.setResolvedViteConfig(resolvedViteConfig);
@@ -185,8 +186,10 @@ function getEnvironmentsConfig(
  * force Worker and client `build.outDir` values to their spec-mandated
  * locations. Child environments are nested within their parent environment.
  *
- * Runs after Vite's merge in `configResolved`, so it overrides any
- * user-supplied `build.outDir`
+ * Runs at the start of `configResolved`, after Vite's merge, so it overrides any
+ * user-supplied `build.outDir`, and other plugins' `configResolved` hooks see the forced
+ * directories. A plugin that moves `build.outDir` again in its own `configResolved` hook
+ * isn't followed: the Build Output is still written to the forced directories.
  */
 function forceBuildOutputDirs(
 	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,

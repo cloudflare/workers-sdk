@@ -26,7 +26,8 @@ test("sets the Build Output directories before other plugins' configResolved hoo
 				cloudflare({ inspectorPort: false, persistState: false }),
 			],
 		},
-		"build"
+		// `serve` rather than `build`, which would clean the shared fixture's Build Output
+		"serve"
 	);
 
 	expect(clientOutDir).toBe(getWorkerAssetsDir(fixturesPath));
