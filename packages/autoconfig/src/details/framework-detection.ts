@@ -125,7 +125,8 @@ export async function detectFramework(
 		maybeDetectedFramework.buildCommand =
 			detectedFrameworkSettings?.build?.command;
 
-		// @netlify/build-info 10 still reports SolidStart 1's Vinxi commands, but SolidStart 2 runs on Vite
+		// @netlify/build-info reports SolidStart 1's Vinxi commands before 11.3.0, but SolidStart 2
+		// runs on Vite. Remove this once autoconfig is on @netlify/build-info 11.3.0 or later.
 		const solidStartVersion =
 			detectedFrameworkSettings && frameworkId === "solid-start"
 				? getInstalledPackageVersion("@solidjs/start", projectPath)

@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import { blue } from "@cloudflare/cli-shared-helpers/colors";
 import {
@@ -15,6 +17,7 @@ import {
 	transformViteConfig,
 } from "./utils/vite-config";
 import { installCloudflareVitePlugin } from "./utils/vite-plugin";
+import type { AutoConfigContext } from "../context";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -27,6 +30,7 @@ export class SolidStart extends Framework {
 		target,
 		packageManager,
 		isWorkspaceRoot,
+		context,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (target === "cf") {
 			// SolidStart 2 runs on Vite environments, so its `ssr` environment can run on the
@@ -39,14 +43,12 @@ export class SolidStart extends Framework {
 					version: "^2.0.0-beta.v.0",
 				});
 				transformViteConfig(projectPath, { viteEnvironmentName: "ssr" });
-				excludeSolidStartFromServerPrebundling(projectPath);
+				excludeSolidStartFromServerPrebundling(projectPath, context);
 			}
 
 			return {
 				buildTool: "vite",
-				workerConfig: {
-					entrypoint: `./src/entry-server.${usesTypescript(projectPath) ? "tsx" : "jsx"}`,
-				},
+				workerConfig: { entrypoint: getServerEntrypoint(projectPath) },
 			};
 		}
 
@@ -74,6 +76,20 @@ export class SolidStart extends Framework {
 }
 
 /**
+ * Finds SolidStart's server entry, which the Worker runs.
+ *
+ * @param projectPath The path of the project
+ * @returns The path of the server entry, relative to the project
+ */
+function getServerEntrypoint(projectPath: string): string {
+	return (
+		["./src/entry-server.tsx", "./src/entry-server.jsx"].find((entrypoint) =>
+			existsSync(join(projectPath, entrypoint))
+		) ?? `./src/entry-server.${usesTypescript(projectPath) ? "tsx" : "jsx"}`
+	);
+}
+
+/**
  * Keeps `@solidjs/start` out of the `ssr` environment's pre-bundled dependencies.
  *
  * The Cloudflare Vite plugin pre-bundles server dependencies in dev, which loads a second copy
@@ -81,9 +97,14 @@ export class SolidStart extends Framework {
  * "invalid server function". Excluding the package keeps a single copy.
  *
  * @param projectPath The path of the project
+ * @param context The autoconfig context providing the logger
  */
-function excludeSolidStartFromServerPrebundling(projectPath: string): void {
+function excludeSolidStartFromServerPrebundling(
+	projectPath: string,
+	context: AutoConfigContext
+): void {
 	const b = recast.types.builders;
+	const t = recast.types.namedTypes;
 
 	transformFile(getViteConfigPath(projectPath), {
 		visitCallExpression: function (n) {
@@ -93,7 +114,19 @@ function excludeSolidStartFromServerPrebundling(projectPath: string): void {
 			}
 
 			const configObject = extractConfigObject(n.node.arguments[0]);
-			if (configObject) {
+			// Merging into existing environments isn't safe for every parser, so ask the user instead
+			const hasEnvironments = configObject?.properties.some(
+				(prop) =>
+					(t.Property.check(prop) || t.ObjectProperty.check(prop)) &&
+					((t.Identifier.check(prop.key) && prop.key.name === "environments") ||
+						((t.Literal.check(prop.key) || t.StringLiteral.check(prop.key)) &&
+							prop.key.value === "environments"))
+			);
+			if (hasEnvironments) {
+				context.logger.warn(
+					'Add `environments: { ssr: { optimizeDeps: { exclude: ["@solidjs/start"] } } }` to your Vite config so that server functions work in dev with the Cloudflare Vite plugin.'
+				);
+			} else if (configObject) {
 				const optimizeDeps = b.objectProperty(
 					b.identifier("optimizeDeps"),
 					b.objectExpression([
@@ -110,7 +143,7 @@ function excludeSolidStartFromServerPrebundling(projectPath: string): void {
 						false
 					),
 				];
-				mergeObjectProperties(configObject, [
+				configObject.properties.push(
 					b.objectProperty(
 						b.identifier("environments"),
 						b.objectExpression([
@@ -119,8 +152,8 @@ function excludeSolidStartFromServerPrebundling(projectPath: string): void {
 								b.objectExpression([optimizeDeps])
 							),
 						])
-					),
-				]);
+					)
+				);
 			}
 
 			return false;
