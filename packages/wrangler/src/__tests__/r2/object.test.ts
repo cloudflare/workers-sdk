@@ -95,6 +95,35 @@ describe("r2", () => {
 				`);
 			});
 
+			it("should upload an R2 object whose key contains '..' without a literal '..' in the request path", async ({
+				expect,
+			}) => {
+				fs.writeFileSync("a.pdf", "x");
+				let objectKeyInPath: string | undefined;
+				msw.use(
+					http.put(
+						"*/accounts/:accountId/r2/buckets/:bucketName/objects/*",
+						({ request }) => {
+							objectKeyInPath = new URL(request.url).pathname.split(
+								"/objects/"
+							)[1];
+							return HttpResponse.json(createFetchResult({}));
+						}
+					)
+				);
+				await runWrangler(
+					`r2 object put --remote bucket-object-test/files/Voice_2012_dec..pdf --file ./a.pdf`
+				);
+
+				expect(std.out).toContain("Upload complete.");
+				// The key must be escaped so the edge doesn't see a literal ".."
+				// (which its traversal protection blocks with an HTML page).
+				expect(objectKeyInPath).not.toContain("..");
+				expect(decodeURIComponent(objectKeyInPath ?? "")).toBe(
+					"files/Voice_2012_dec..pdf"
+				);
+			});
+
 			it("should upload R2 object with storage class to bucket", async ({
 				expect,
 			}) => {
