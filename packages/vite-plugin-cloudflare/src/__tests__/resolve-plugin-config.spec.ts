@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
@@ -8,6 +7,7 @@ import { resolvePluginConfig } from "../plugin-config";
 import type {
 	AssetsOnlyResolvedConfig,
 	PluginConfig,
+	ParsedInputConfigWithWorker,
 	WorkersResolvedConfig,
 } from "../plugin-config";
 import type { InputWorkerConfig, ParsedInputConfig } from "@cloudflare/config";
@@ -225,7 +225,6 @@ describe("resolvePluginConfig", () => {
 		const result = (await resolvePluginConfig(
 			{
 				config(loadedConfig) {
-					assert(loadedConfig.worker);
 					return {
 						...loadedConfig,
 						worker: {
@@ -266,7 +265,6 @@ describe("resolvePluginConfig", () => {
 		const result = (await resolvePluginConfig(
 			{
 				config(loadedConfig) {
-					assert(loadedConfig.worker);
 					return {
 						...loadedConfig,
 						worker: {
@@ -291,7 +289,7 @@ describe("resolvePluginConfig", () => {
 	test("customizes account settings, Containers, and the entry Worker together", async ({
 		expect,
 	}) => {
-		const originalConfig: ParsedInputConfig = {
+		const originalConfig: ParsedInputConfigWithWorker = {
 			accountId: "original-account",
 			worker: {
 				name: "entry-worker",
@@ -311,8 +309,7 @@ describe("resolvePluginConfig", () => {
 			`export default ${JSON.stringify(originalConfig)};`
 		);
 		const customize = vi.fn(
-			(loadedConfig: ParsedInputConfig): ParsedInputConfig => {
-				assert(loadedConfig.worker);
+			(loadedConfig: ParsedInputConfigWithWorker): ParsedInputConfig => {
 				return {
 					...loadedConfig,
 					accountId: "customized-account",
@@ -416,7 +413,6 @@ describe("resolvePluginConfig", () => {
 				{
 					name: "linking multiple Durable Objects to the same Container",
 					config(loadedConfig) {
-						assert(loadedConfig.worker);
 						return {
 							...loadedConfig,
 							worker: {
@@ -491,7 +487,6 @@ describe("resolvePluginConfig", () => {
 		const result = await resolvePluginConfig(
 			{
 				config(loadedConfig) {
-					assert(loadedConfig.worker);
 					return {
 						...loadedConfig,
 						worker: { ...loadedConfig.worker, entrypoint: "./src/index.ts" },

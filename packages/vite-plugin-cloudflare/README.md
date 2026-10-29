@@ -21,9 +21,10 @@ Full documentation can be found [here](https://developers.cloudflare.com/workers
 ## Programmatic configuration
 
 The `config` option accepts a customizer with the signature
-`(loadedConfig: ParsedInputConfig) => ParsedInputConfig`. It receives the parsed
+`(loadedConfig: ParsedInputConfigWithWorker) => ParsedInputConfig`. It receives the parsed
 `cloudflare.config.ts` configuration, or a default Worker configuration when no
 file exists, and can customize account settings, Containers, and the entry Worker.
+The loaded configuration always includes a Worker, even for assets-only projects.
 
 Return a new configuration object, spreading any existing fields you want to
 preserve. Nested objects and arrays are replaced rather than merged:
@@ -36,11 +37,9 @@ cloudflare({
     return {
       ...loadedConfig,
       worker: {
-        name: "my-worker",
-        compatibilityDate: "2026-10-01",
-        ...(loadedConfig.worker ?? {}),
+        ...loadedConfig.worker,
         env: {
-          ...loadedConfig.worker?.env,
+          ...loadedConfig.worker.env,
           FRAMEWORK_NAME: { type: "text", value: "my-framework" },
         },
       },

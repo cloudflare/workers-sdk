@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
 
@@ -9,7 +8,6 @@ export default defineConfig({
 			inspectorPort: false,
 			persistState: false,
 			config(loadedConfig) {
-				assert(loadedConfig.worker);
 				return {
 					...loadedConfig,
 					worker: {

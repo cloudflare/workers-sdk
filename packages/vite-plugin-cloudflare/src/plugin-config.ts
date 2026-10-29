@@ -39,7 +39,8 @@ import type {
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type { LoadedEnv } from "@cloudflare/workers-utils/local-env";
 
-type ParsedInputConfigWithWorker = Omit<ParsedInputConfig, "worker"> & {
+/** Parsed configuration with the entry Worker required by the Vite plugin. */
+export type ParsedInputConfigWithWorker = Omit<ParsedInputConfig, "worker"> & {
 	worker: ParsedInputWorkerConfig;
 };
 
@@ -128,10 +129,11 @@ type WorkerConfigProvider =
 export interface PluginConfig extends EntryWorkerOptions {
 	/**
 	 * Customize the loaded configuration before development or building.
+	 * The loaded configuration always includes an entry Worker.
 	 * Return a new configuration object, copying any settings to preserve.
 	 * Preview uses the configuration recorded in the build output.
 	 */
-	config?: (loadedConfig: ParsedInputConfig) => ParsedInputConfig;
+	config?: (loadedConfig: ParsedInputConfigWithWorker) => ParsedInputConfig;
 	auxiliaryWorkers?: AuxiliaryWorkerOptions[];
 	/** Configuration for a dedicated prerender Worker. */
 	prerenderWorker?: PrerenderWorkerOptions;
@@ -368,10 +370,11 @@ export async function resolvePluginConfig(
 	// Type generation happens while loading the file above. The plugin-level
 	// customizer is intentionally applied afterwards so generated declarations
 	// only describe `cloudflare.config.ts`.
-	const inputConfig: ParsedInputConfig = loadedConfig?.parsedConfig ?? {
-		worker: createDefaultWorkerConfig(getWorkerNameFromProject(root)),
-		containers: [],
-	};
+	const inputConfig: ParsedInputConfigWithWorker =
+		loadedConfig?.parsedConfig ?? {
+			worker: createDefaultWorkerConfig(getWorkerNameFromProject(root)),
+			containers: [],
+		};
 	const customizedConfig = pluginConfig.config
 		? InputConfigSchema.parse(pluginConfig.config(inputConfig))
 		: inputConfig;

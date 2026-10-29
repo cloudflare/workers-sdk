@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
@@ -150,7 +149,6 @@ describe("cloudflare.config.ts", () => {
 		const result = (await resolvePluginConfig(
 			{
 				config(loadedConfig) {
-					assert(loadedConfig.worker);
 					return {
 						...loadedConfig,
 						worker: {

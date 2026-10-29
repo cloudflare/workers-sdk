@@ -6,7 +6,7 @@ import { Miniflare } from "miniflare";
 import { createBuilder, preview } from "vite";
 import { afterEach, describe, test, vi } from "vitest";
 import { cloudflare } from "../index";
-import type { ParsedInputConfig } from "@cloudflare/config";
+import type { ParsedInputConfigWithWorker } from "../index";
 
 vi.mock("@cloudflare/workers-utils");
 
@@ -44,7 +44,6 @@ describe("preview server", () => {
 						inspectorPort: false,
 						persistState: false,
 						config(loadedConfig) {
-							assert(loadedConfig.worker);
 							return {
 								...loadedConfig,
 								accountId: "customized-account",
@@ -83,9 +82,11 @@ describe("preview server", () => {
 					maxInstances: 2,
 				}),
 			]);
-			const customizePreview = vi.fn((loadedConfig: ParsedInputConfig) => ({
-				...loadedConfig,
-			}));
+			const customizePreview = vi.fn(
+				(loadedConfig: ParsedInputConfigWithWorker) => ({
+					...loadedConfig,
+				})
+			);
 
 			// Start a preview server
 			const previewServer = await preview({
