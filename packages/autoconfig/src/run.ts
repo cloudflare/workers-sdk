@@ -166,12 +166,17 @@ export async function runAutoConfig(
 	}
 
 	const { npx } = packageManager;
-	const buildCommand = getProjectCommand(
+	let buildCommand =
 		dryRunConfigurationResults.buildCommandOverride ??
-			autoConfigDetails.buildCommand,
-		packageManager,
-		autoConfigDetails.packageJson
-	);
+		autoConfigDetails.buildCommand;
+	// Preserve shell commands while normalizing Vite selected by framework overrides.
+	if (buildCommand === "vite build" || buildCommand === `${npx} vite build`) {
+		buildCommand = getProjectCommand(
+			buildCommand,
+			packageManager,
+			autoConfigDetails.packageJson
+		);
+	}
 
 	const autoConfigSummary = await buildOperationsSummary(
 		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },

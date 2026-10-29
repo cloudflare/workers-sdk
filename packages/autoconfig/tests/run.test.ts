@@ -63,6 +63,44 @@ describe("runAutoConfig()", () => {
 	const std = mockConsoleMethods();
 
 	it.for([
+		{ vitePlus: false, override: false },
+		{ vitePlus: true, override: false },
+		{ vitePlus: false, override: true },
+		{ vitePlus: true, override: true },
+	])(
+		"preserves custom build commands with Vite+=$vitePlus and override=$override",
+		async ({ vitePlus, override }, { expect }) => {
+			const buildCommand = "echo 'built' > build.txt";
+			const packageJson = {
+				name: "static-app",
+				devDependencies: vitePlus ? { "vite-plus": "1.4.0" } : {},
+			};
+			await seed({ "package.json": JSON.stringify(packageJson) });
+			const framework = getFrameworkClassInstance("static");
+			vi.spyOn(framework, "configure").mockReturnValue({
+				buildTool: "wrangler",
+				workerConfig: {},
+				buildConfig: { assetsDirectory: "public" },
+				...(override && { buildCommandOverride: buildCommand }),
+			});
+			const summary = await runAutoConfig(
+				{
+					configured: false,
+					projectPath: process.cwd(),
+					workerName: "static-app",
+					framework,
+					outputDir: "public",
+					buildCommand: override ? "npm run build" : buildCommand,
+					packageManager: NpmPackageManager,
+					packageJson,
+				},
+				{ context: createMockContext(), dryRun: true }
+			);
+			expect(summary.buildCommand).toBe(buildCommand);
+		}
+	);
+
+	it.for([
 		{ packageManager: NpmPackageManager, vitePlus: true },
 		{ packageManager: PnpmPackageManager, vitePlus: true },
 		{ packageManager: NpmPackageManager, vitePlus: false },
