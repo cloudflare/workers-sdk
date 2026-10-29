@@ -89,6 +89,7 @@ export function createWorkerUploadForm(
 	} = worker;
 
 	const assetConfig: AssetConfigMetadata = {
+		compatibility_flags: assets?.assetConfig?.compatibility_flags,
 		html_handling: assets?.assetConfig?.html_handling,
 		not_found_handling: assets?.assetConfig?.not_found_handling,
 		base_path: assets?.assetConfig?.base_path,

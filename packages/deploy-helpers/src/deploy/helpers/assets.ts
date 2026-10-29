@@ -818,6 +818,8 @@ export function resolveAssetOptions(
 		);
 	}
 
+	// These files are parsed in Miniflare during dev. Upload the raw contents for
+	// the platform to parse during deploy.
 	const _redirects = directoryExists
 		? maybeGetFile(path.join(directory, REDIRECTS_FILENAME))
 		: undefined;
@@ -829,7 +831,6 @@ export function resolveAssetOptions(
 		html_handling: config.assets?.html_handling,
 		not_found_handling: config.assets?.not_found_handling,
 		base_path: config.assets?.base_path,
-		// The _redirects and _headers files are parsed in Miniflare in dev and parsing is not required for deploy
 		compatibility_flags: resolveCompatibilityFlags({
 			compatibilityDate: config.compatibility_date,
 			compatibilityFlags: config.compatibility_flags,
