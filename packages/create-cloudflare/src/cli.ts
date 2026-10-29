@@ -24,6 +24,7 @@ import {
 	isIgnoredBuildsError,
 	writePnpmBuildApprovals,
 } from "helpers/pnpmBuildApprovals";
+import { formatVitePlusProject } from "helpers/vite-plus";
 import { version } from "../package.json";
 import { usesCfCli } from "./cf/config";
 import { maybeOpenBrowser, offerToDeploy, runDeploy } from "./deploy";
@@ -186,6 +187,8 @@ const configure = async (ctx: C3Context) => {
 
 		await addTypes(ctx);
 	}
+
+	await formatVitePlusProject(ctx);
 
 	// Autoconfig doesn't mess with version control, so C3 runs this after autoconfig
 	await offerGit(ctx);

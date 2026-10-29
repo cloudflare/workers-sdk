@@ -15,6 +15,7 @@ import {
 	getOtherTemplateMap,
 	updatePackageName,
 	writeAgentsMd,
+	validateTemplateSrcDirectory,
 } from "../templates";
 import type { MultiPlatformTemplateConfig, TemplateConfig } from "../templates";
 import type { C3Args, C3Context } from "types";
@@ -550,5 +551,44 @@ describe("writeAgentsMd", () => {
 		writeAgentsMd(projectPath);
 
 		expect(writeFileMock).not.toHaveBeenCalled();
+	});
+});
+
+describe("validateTemplateSrcDirectory", () => {
+	test.for([
+		"cloudflare.config.ts",
+		"wrangler.toml",
+		"wrangler.json",
+		"wrangler.jsonc",
+	])("accepts a Worker template with %s", (filename, { expect }) => {
+		vi.mocked(existsSync).mockImplementation(
+			(path) =>
+				String(path).endsWith(filename) || String(path).endsWith("package.json")
+		);
+		expect(() =>
+			validateTemplateSrcDirectory("/template", {
+				platform: "workers",
+			} as TemplateConfig)
+		).not.toThrow();
+	});
+	test("rejects a Worker template without configuration", ({ expect }) => {
+		vi.mocked(existsSync).mockImplementation((path) =>
+			String(path).endsWith("package.json")
+		);
+		expect(() =>
+			validateTemplateSrcDirectory("/template", {
+				platform: "workers",
+			} as TemplateConfig)
+		).toThrow("cloudflare.config.ts");
+	});
+	test("still requires a manifest for a cf template", ({ expect }) => {
+		vi.mocked(existsSync).mockImplementation((path) =>
+			String(path).endsWith("cloudflare.config.ts")
+		);
+		expect(() =>
+			validateTemplateSrcDirectory("/template", {
+				platform: "workers",
+			} as TemplateConfig)
+		).toThrow("package.json");
 	});
 });

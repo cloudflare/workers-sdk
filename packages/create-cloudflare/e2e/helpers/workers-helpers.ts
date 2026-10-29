@@ -122,12 +122,13 @@ export async function verifyLocalDev(
 	}
 }
 
-export async function verifyTestScript(
+export async function verifyProjectScript(
 	projectPath: string,
-	logStream: Writable
+	logStream: Writable,
+	script: "test" | "check"
 ) {
 	const proc = spawnWithLogging(
-		[pm, "run", "test"],
+		[pm, "run", script],
 		{
 			cwd: projectPath,
 			env: {

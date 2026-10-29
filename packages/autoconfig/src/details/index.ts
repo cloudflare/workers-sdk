@@ -209,10 +209,18 @@ export async function getDetailsForAutoConfig({
 		packageManager,
 		devCommand: useStaticAssets
 			? undefined
-			: getProjectCommand(detectedFramework.devCommand, packageManager),
+			: getProjectCommand(
+					detectedFramework.devCommand,
+					packageManager,
+					packageJson
+				),
 		buildCommand: useStaticAssets
 			? undefined
-			: getProjectCommand(detectedFramework.buildCommand, packageManager),
+			: getProjectCommand(
+					detectedFramework.buildCommand,
+					packageManager,
+					packageJson
+				),
 		env: framework.env,
 		workerName: getWorkerName(packageJson?.name, projectPath),
 	};
@@ -287,15 +295,29 @@ export async function getDetailsForAutoConfig({
  * @param packageManager The package manager to use for command prefixes
  * @returns A runnable project command if detected, undefined otherwise
  */
-function getProjectCommand(
+export function getProjectCommand(
 	command: string | undefined,
-	packageManager: PackageManager
+	packageManager: PackageManager,
+	packageJson?: PackageJSON
 ): string | undefined {
 	if (!command) {
 		return undefined;
 	}
 
 	const { type, dlx, npx } = packageManager;
+	if (
+		packageJson?.dependencies?.["vite-plus"] ||
+		packageJson?.devDependencies?.["vite-plus"]
+	) {
+		if (
+			["vite", "vite dev", `${npx} vite`, `${npx} vite dev`].includes(command)
+		) {
+			return `${npx} vp dev`;
+		}
+		if (command === "vite build" || command === `${npx} vite build`) {
+			return `${npx} vp build`;
+		}
+	}
 
 	for (const packageManagerCommandPrefix of [type, dlx.join(" "), npx]) {
 		if (command.startsWith(packageManagerCommandPrefix)) {
