@@ -338,15 +338,15 @@ function convertToolingObject(source: UnknownRecord): OutputObject {
 			properties.push({ key: "dev", value: devOptions });
 		}
 	}
-	const generateTypes =
-		typeof dev?.generate_types === "boolean" ? dev.generate_types : false;
-	properties.push({
-		key: "types",
-		value: {
-			kind: "object",
-			properties: [{ key: "generate", value: generateTypes }],
-		},
-	});
+	if (dev?.generate_types === false) {
+		properties.push({
+			key: "types",
+			value: {
+				kind: "object",
+				properties: [{ key: "generate", value: false }],
+			},
+		});
+	}
 
 	const assets = getRecord(source, "assets");
 	if (assets && typeof assets.directory === "string") {
@@ -466,15 +466,16 @@ function convertToolingBranch(
 		? convertToolingObject(createPreviewSource(source, previews))
 		: undefined;
 
-	if (!config && !previewConfig) {
+	if (
+		config.properties.length === 0 &&
+		(previewConfig?.properties.length ?? 0) === 0
+	) {
 		return undefined;
 	}
 
 	return {
-		config: config ?? { kind: "object", properties: [] },
-		previewConfig: previews
-			? (previewConfig ?? { kind: "object", properties: [] })
-			: undefined,
+		config,
+		previewConfig,
 	};
 }
 

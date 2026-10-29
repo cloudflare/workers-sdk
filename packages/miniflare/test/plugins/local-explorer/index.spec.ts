@@ -786,6 +786,7 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			            "useSqlite": false,
 			          },
 			        ],
+			        "flagship": [],
 			        "kv": [
 			          {
 			            "bindingName": "MY_KV",
@@ -821,6 +822,7 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			      "bindings": {
 			        "d1": [],
 			        "do": [],
+			        "flagship": [],
 			        "kv": [
 			          {
 			            "bindingName": "KV_A2",
@@ -846,6 +848,7 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			          },
 			        ],
 			        "do": [],
+			        "flagship": [],
 			        "kv": [],
 			        "r2": [],
 			        "sendEmail": [],

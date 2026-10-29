@@ -326,7 +326,7 @@ export const authTokenCommand = createCommand({
 		}
 
 		if (json) {
-			logger.log(JSON.stringify(result, null, 2));
+			logger.json(result);
 		} else {
 			// For non-JSON output, only output a single token for scripting
 			if (result.type === "api_key") {

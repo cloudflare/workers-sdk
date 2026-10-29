@@ -642,7 +642,7 @@ export const CORE_PLUGIN: Plugin = {
 					.filter((consumer) => consumer.streaming)
 					.map<ServiceDesignator>(getTailServiceDesignator),
 				containerEngine,
-				...(dev?.access
+				...(config.access?.dev
 					? {
 							accessBlobHeader: CoreHeaders.ACCESS_BLOB,
 							accessBindingService: {
@@ -729,7 +729,7 @@ export const CORE_PLUGIN: Plugin = {
 		}
 
 		// Access identity binding worker for ctx.access.getIdentity()
-		if (dev?.access) {
+		if (config.access?.dev) {
 			services.push({
 				name: getAccessIdentityServiceName(workerIndex),
 				worker: {
@@ -754,6 +754,8 @@ export const CORE_PLUGIN: Plugin = {
 
 export interface GlobalServicesOptions {
 	sharedOptions: ParsedInstanceOptions;
+	/** Per-instance credential for internal loopback requests. */
+	loopbackSecret: string;
 	allWorkerRoutes: Map<string, string[]>;
 	fallbackWorkerName: string | undefined;
 	tmpPath: string;
@@ -768,6 +770,7 @@ export interface GlobalServicesOptions {
 }
 export function getGlobalServices({
 	sharedOptions,
+	loopbackSecret,
 	allWorkerRoutes,
 	fallbackWorkerName,
 	tmpPath,
@@ -902,10 +905,10 @@ export function getGlobalServices({
 		});
 	}
 	// Inject per-worker Cloudflare Access blob bindings into the entry worker.
-	// Each worker with dev.access gets its own blob keyed by worker name so the
-	// entry worker can pick the correct one after routing.
+	// Each worker with config.access.dev gets its own blob keyed by worker name so
+	// the entry worker can pick the correct one after routing.
 	for (const workerOpt of allWorkerOpts ?? []) {
-		const accessOpts = workerOpt.dev?.access;
+		const accessOpts = workerOpt.config.access?.dev;
 		if (accessOpts) {
 			const accessBlob: {
 				app_aud: string;
@@ -929,14 +932,27 @@ export function getGlobalServices({
 	const services: Service[] = [
 		{
 			name: SERVICE_LOOPBACK,
-			external: { http: { cfBlobHeader: CoreHeaders.CF_BLOB } },
+			external: {
+				http: {
+					cfBlobHeader: CoreHeaders.CF_BLOB,
+					injectRequestHeaders: [
+						{ name: CoreHeaders.LOOPBACK_SECRET, value: loopbackSecret },
+					],
+				},
+			},
 		},
 		{
 			name: SERVICE_ENTRY,
 			worker: {
 				modules: [{ name: "entry.worker.js", esModule: SCRIPT_ENTRY() }],
 				compatibilityDate: "2025-03-17",
-				compatibilityFlags: ["nodejs_compat", "service_binding_extra_handlers"],
+				compatibilityFlags: [
+					"nodejs_compat",
+					"service_binding_extra_handlers",
+					// Keep custom error names and properties (for example Artifacts
+					// `code`) when binding errors reach `ProxyServer` for Node callers.
+					"enhanced_error_serialization",
+				],
 				bindings: serviceEntryBindings,
 				durableObjectNamespaces: [
 					{

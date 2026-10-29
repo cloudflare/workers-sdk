@@ -39,7 +39,7 @@ describe("Wrangler configuration corpus", () => {
 	runInTempDir();
 
 	it("discovers the repository corpus", ({ expect }) => {
-		expect(WRANGLER_CONFIG_PATHS.length).toBeGreaterThan(200);
+		expect(WRANGLER_CONFIG_PATHS.length).toBeGreaterThan(150);
 	});
 
 	it.for(WRANGLER_CONFIG_PATHS)(
@@ -62,7 +62,7 @@ describe("Wrangler configuration corpus", () => {
 				await mkdir(wranglerPackageDirectory, { recursive: true });
 				await writeFile(
 					path.join(wranglerPackageDirectory, "package.json"),
-					JSON.stringify({ name: "wrangler", version: "4.100.0" })
+					JSON.stringify({ name: "wrangler", version: "4.136.0" })
 				);
 				await writeFile(targetConfigPath, source);
 

@@ -6,7 +6,8 @@ export default defineConfig({
 	plugins: [
 		react(),
 		cloudflare({
-			configPath: "./wrangler.static-routing.jsonc",
+			types: { includeRuntime: false },
+			config: { assets: { runWorkerFirst: ["/api/*", "!/api/asset.txt"] } },
 			inspectorPort: false,
 			persistState: false,
 		}),

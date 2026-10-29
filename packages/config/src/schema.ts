@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { WORKFLOW_JURISDICTIONS } from "./exports";
 import type { SendEmailBinding, VpcNetworkBinding } from "./bindings";
 import type { Settings } from "./types";
 import type { ContainerConfig, WorkerConfig } from "./types";
@@ -19,6 +20,7 @@ export const AssetsSchema = z.strictObject({
 	notFoundHandling: z
 		.enum(["single-page-application", "404-page", "none"])
 		.optional(),
+	basePath: z.string().optional(),
 	runWorkerFirst: z.union([z.array(z.string()), z.boolean()]).optional(),
 });
 
@@ -87,6 +89,7 @@ export const R2BindingSchema = z.strictObject({
 export const AnalyticsEngineDatasetBindingSchema = z.strictObject({
 	type: z.literal("analytics-engine-dataset"),
 	name: z.string().optional(),
+	dev: RemoteBindingDevSchema.optional(),
 });
 
 export const FlagshipBindingSchema = z.strictObject({
@@ -98,7 +101,9 @@ export const FlagshipBindingSchema = z.strictObject({
 export const HyperdriveBindingSchema = z.strictObject({
 	type: z.literal("hyperdrive"),
 	id: z.string(),
-	dev: z.strictObject({ connectionString: z.string().optional() }).optional(),
+	dev: RemoteBindingDevSchema.extend({
+		connectionString: z.string().optional(),
+	}).optional(),
 });
 
 export const KnownBindingSchema = z.discriminatedUnion("type", [
@@ -625,6 +630,7 @@ export const WorkflowExportSchema = z.strictObject({
 			errorRetention: WorkflowRetentionSchema.optional(),
 		})
 		.optional(),
+	jurisdiction: z.enum(WORKFLOW_JURISDICTIONS).optional(),
 });
 
 // Containers are only supported on the SQLite storage engine, so each live
@@ -686,6 +692,15 @@ const ObservabilitySchema = z.strictObject({
 			headSamplingRate: z.number().optional(),
 			persist: z.boolean().optional(),
 			destinations: z.array(z.string()).optional(),
+		})
+		.optional(),
+});
+
+const AccessSchema = z.strictObject({
+	dev: z
+		.strictObject({
+			aud: z.string(),
+			identity: z.record(z.string(), z.unknown()).optional(),
 		})
 		.optional(),
 });
@@ -775,6 +790,19 @@ const UnsafeSchema = z.strictObject({
 		.optional(),
 });
 
+const DomainSchema = z.union([
+	z.string(),
+	z
+		.strictObject({
+			hostname: z.string(),
+			production: z.boolean(),
+			previews: z.boolean(),
+		})
+		.refine((domain) => domain.production || domain.previews, {
+			message: "At least one of production or previews must be enabled.",
+		}),
+]);
+
 /**
  * Base Worker schema — the set of fields shared between the input
  * (user-authored) and output (on-disk) Worker configs.
@@ -784,7 +812,7 @@ const BaseWorkerSchema = z.strictObject({
 	compatibilityDate: z.string(),
 	compatibilityFlags: z.array(z.string()).optional(),
 	assets: AssetsSchema.optional(),
-	domains: z.array(z.string()).optional(),
+	domains: z.array(DomainSchema).optional(),
 	triggers: z.array(TriggerSchema).optional(),
 	tailConsumers: z.array(TailConsumerSchema).optional(),
 	cache: CacheSchema.optional(),
@@ -792,6 +820,7 @@ const BaseWorkerSchema = z.strictObject({
 	limits: LimitsSchema.optional(),
 	logpush: z.boolean().optional(),
 	observability: ObservabilitySchema.optional(),
+	access: AccessSchema.optional(),
 	workersDev: z.boolean().optional(),
 	previewUrls: z.boolean().optional(),
 	firstPartyWorker: z.boolean().optional(),
@@ -941,14 +970,20 @@ type _ResolvedBinding<TBinding> = TBinding extends {
 	: TBinding;
 
 type _ResolvedWorkerConfigEnv =
-	| Record<string, _ResolvedBinding<NonNullable<WorkerConfig["env"]>[string]>>
+	| Record<
+			string,
+			Exclude<
+				_ResolvedBinding<NonNullable<WorkerConfig["env"]>[string]>,
+				false | null | undefined
+			>
+	  >
 	| undefined;
 
 /**
- * Drift checks between the schema and resolved public `env` types. Authored
- * cross-Worker bindings may contain a Worker config reference; the config
- * loader replaces those references with names before parsing. Schema input is
- * otherwise intentionally broader for bindings with cross-field validation.
+ * Drift checks between the schema and resolved public `env` types. The config
+ * loader removes omitted bindings and replaces cross-Worker config references
+ * with names before parsing. Schema input is otherwise intentionally broader
+ * for bindings with cross-field validation.
  *
  * These checks catch fields or bindings that are missing, renamed, or typed
  * differently between the public definitions and the schema.

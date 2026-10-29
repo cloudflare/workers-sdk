@@ -68,9 +68,7 @@ export function cloudflareTest(
 				ctx: WorkerPoolOptionsContext
 		  ) => Promise<WorkersPoolOptions> | WorkersPoolOptions)
 ): Vite.Plugin {
-	// Use a unique ID for each `cloudflare:test` module so updates in one `main`
-	// don't trigger re-runs in all other projects, just the one that changed.
-	const uuid = crypto.randomUUID();
+	let cloudflareTestId = "\0cloudflare:test";
 	let main: string | undefined;
 	return {
 		name: "@cloudflare/vitest-plugin",
@@ -80,6 +78,15 @@ export function cloudflareTest(
 			},
 		},
 		configureVitest(context: VitestPluginContext) {
+			// Keep the ID project-specific so changes to one main don't rerun other
+			// projects, but stable across sessions so cached imports still resolve.
+			const projectId = crypto
+				.createHash("sha256")
+				.update(
+					JSON.stringify([context.project.config.root, context.project.name])
+				)
+				.digest("hex");
+			cloudflareTestId = `\0cloudflare:test-${projectId}`;
 			context.project.config.poolRunner = cloudflarePool(options);
 			context.project.config.pool = "cloudflare-pool";
 			context.project.config.snapshotEnvironment = "cloudflare:snapshot";
@@ -96,29 +103,6 @@ export function cloudflareTest(
 			config.test.server ??= {};
 			config.test.server.deps ??= {};
 
-			// V8 coverage requires `node:inspector` to collect coverage data from
-			// V8's profiler. workerd provides `node:inspector` as a non-functional
-			// stub, so V8 coverage silently fails or crashes. Istanbul works because
-			// it instruments source code at build time without needing V8 access.
-			// See: https://github.com/cloudflare/workers-sdk/issues/5266
-			const coverage = config.test.coverage;
-			if (coverage && coverage.enabled) {
-				const provider = "provider" in coverage ? coverage.provider : undefined;
-				if (provider === "v8" || provider === undefined) {
-					const lines = [
-						'Coverage provider "v8" is not supported by `@cloudflare/vitest-plugin`.',
-						"V8 native coverage requires `node:inspector` which is not functional in the Workers runtime.",
-						"",
-						"Use Istanbul instead — it works by instrumenting source code and runs on any JavaScript runtime:",
-						"",
-						"  1. Install: npm i -D @vitest/coverage-istanbul",
-						'  2. Set `test.coverage.provider` to "istanbul" in your Vitest config',
-						"",
-						"See https://vitest.dev/guide/coverage#istanbul-provider for more details.",
-					];
-					throw new Error(lines.join("\n"));
-				}
-			}
 			// See https://vitest.dev/config/server.html#inline
 			// Without this Vitest delegates to native import() for external deps in node_modules
 			config.test.server.deps.inline = true;
@@ -140,12 +124,14 @@ export function cloudflareTest(
 			config.ssr.target = "webworker";
 		},
 		resolveId(id) {
-			if (id === "cloudflare:test") {
-				return `\0cloudflare:test-${uuid}`;
+			if (id === "cloudflare:test" || id.startsWith("\0cloudflare:test-")) {
+				// Remap IDs from other projects sharing the cache or older sessions.
+				// Vitest invalidates cached importers when resolved dependencies change.
+				return cloudflareTestId;
 			}
 		},
 		async load(id) {
-			if (id === `\0cloudflare:test-${uuid}`) {
+			if (id === cloudflareTestId) {
 				let contents = await fs.readFile(cloudflareTestPath, "utf8");
 
 				if (main !== undefined) {

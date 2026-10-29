@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import * as path from "node:path";
 import { assertHasNodeJsCompat } from "../nodejs-compat";
 import {
 	VIRTUAL_EXPORT_TYPES,
@@ -29,24 +30,22 @@ export const virtualModulesPlugin = createPlugin("virtual-modules", (ctx) => {
 		resolveId: {
 			filter: { id: virtualCloudflareResolveRE },
 			async handler(source) {
-				// Fallback for when filter is not applied
-				// TODO: remove when we drop support for Vite 6
-				if (!virtualCloudflareResolveRE.test(source)) {
-					return;
-				}
-
 				if (source === VIRTUAL_USER_ENTRY) {
 					const workerConfig = ctx.getWorkerConfig(this.environment.name);
 					assert(workerConfig, "Expected `workerConfig` to be defined");
-					const main = await this.resolve(workerConfig.main);
+					const entrypoint =
+						(await this.resolve(workerConfig.entrypoint)) ??
+						(await this.resolve(
+							path.resolve(ctx.resolvedViteConfig.root, workerConfig.entrypoint)
+						));
 
-					if (!main) {
+					if (!entrypoint) {
 						throw new Error(
-							`Failed to resolve main entry file "${workerConfig.main}" for environment "${this.environment.name}"`
+							`Failed to resolve Worker entrypoint "${workerConfig.entrypoint}" for environment "${this.environment.name}"`
 						);
 					}
 
-					return main;
+					return entrypoint;
 				}
 
 				return `\0${source}`;
@@ -151,25 +150,13 @@ export const virtualClientFallbackPlugin = createPlugin(
 			},
 			resolveId: {
 				filter: { id: virtualClientFallbackResolveRE },
-				handler(source) {
-					// Fallback for when filter is not applied
-					// TODO: remove when we drop support for Vite 6
-					if (!virtualClientFallbackResolveRE.test(source)) {
-						return;
-					}
-
+				handler() {
 					return `\0${VIRTUAL_CLIENT_FALLBACK_ENTRY}`;
 				},
 			},
 			load: {
 				filter: { id: virtualClientFallbackLoadRE },
-				handler(id) {
-					// Fallback for when filter is not applied
-					// TODO: remove when we drop support for Vite 6
-					if (!virtualClientFallbackLoadRE.test(id)) {
-						return;
-					}
-
+				handler() {
 					return "";
 				},
 			},

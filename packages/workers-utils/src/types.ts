@@ -216,6 +216,7 @@ export type WorkerMetadataBinding =
 export type AssetConfigMetadata = {
 	html_handling?: AssetConfig["html_handling"];
 	not_found_handling?: AssetConfig["not_found_handling"];
+	base_path?: AssetConfig["base_path"];
 	run_worker_first?: boolean | string[];
 	_redirects?: string;
 	_headers?: string;
@@ -709,6 +710,8 @@ export interface StartDevWorkerInput {
 		tunnel?: {
 			enabled: boolean;
 			name?: string;
+			/** Email addresses or domain patterns allowed to authenticate to a Quick Tunnel. */
+			allowedMail?: string[];
 		};
 	};
 	legacy?: {

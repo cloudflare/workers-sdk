@@ -104,6 +104,30 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("passes Cloudflare Access local development configuration through", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					access: {
+						dev: {
+							aud: "my-app-aud-tag",
+							identity: { email: "user@example.com" },
+						},
+					},
+				},
+				containers: [],
+			});
+
+			expect(result.access).toEqual({
+				dev: {
+					aud: "my-app-aud-tag",
+					identity: { email: "user@example.com" },
+				},
+			});
+		});
+
 		it("passes cache through unchanged", ({ expect }) => {
 			expect(
 				convertToWranglerConfig({
@@ -367,6 +391,23 @@ describe("convertToWranglerConfig", () => {
 					id: "h-1",
 					localConnectionString: "postgres://...",
 				},
+			]);
+		});
+
+		it("maps remote Hyperdrive without a local connection string", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					env: {
+						HD: { type: "hyperdrive", id: "h-1", dev: { remote: true } },
+					},
+				},
+				containers: [],
+			});
+			expect(result.hyperdrive).toEqual([
+				{ binding: "HD", id: "h-1", remote: true },
 			]);
 		});
 
@@ -1094,6 +1135,7 @@ describe("convertToWranglerConfig", () => {
 								successRetention: "3 days",
 								errorRetention: 86_400_000,
 							},
+							jurisdiction: "us",
 						},
 					},
 				},
@@ -1112,6 +1154,7 @@ describe("convertToWranglerConfig", () => {
 						success_retention: "3 days",
 						error_retention: 86_400_000,
 					},
+					jurisdiction: "us",
 				},
 			});
 		});
@@ -1372,6 +1415,57 @@ describe("convertToWranglerConfig", () => {
 	});
 
 	describe("domains", () => {
+		it.for([
+			{ production: true, previews: false },
+			{ production: false, previews: true },
+			{ production: true, previews: true },
+		])(
+			"converts domain traffic settings $production/$previews",
+			(traffic, { expect }) => {
+				const result = convertToWranglerConfig({
+					worker: {
+						...baseWorker,
+						domains: [{ hostname: "app.example.com", ...traffic }],
+					},
+					containers: [],
+				});
+				expect(result.routes).toEqual([
+					{
+						pattern: "app.example.com",
+						custom_domain: true,
+						enabled: traffic.production,
+						previews_enabled: traffic.previews,
+					},
+				]);
+			}
+		);
+
+		it("mixes string domains and Preview domain objects", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					domains: [
+						"example.com",
+						{
+							hostname: "previews.example.com",
+							production: false,
+							previews: true,
+						},
+					],
+				},
+				containers: [],
+			});
+			expect(result.routes).toEqual([
+				{ pattern: "example.com", custom_domain: true },
+				{
+					pattern: "previews.example.com",
+					custom_domain: true,
+					enabled: false,
+					previews_enabled: true,
+				},
+			]);
+		});
+
 		it("converts each domain to a custom_domain route", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
@@ -1410,6 +1504,7 @@ describe("convertToWranglerConfig", () => {
 					assets: {
 						htmlHandling: "none",
 						notFoundHandling: "404-page",
+						basePath: "/docs",
 						runWorkerFirst: ["/api/*"],
 					},
 				},
@@ -1418,6 +1513,7 @@ describe("convertToWranglerConfig", () => {
 			expect(result.assets).toEqual({
 				html_handling: "none",
 				not_found_handling: "404-page",
+				base_path: "/docs",
 				run_worker_first: ["/api/*"],
 			});
 		});

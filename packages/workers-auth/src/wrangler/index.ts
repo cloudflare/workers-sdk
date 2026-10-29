@@ -70,8 +70,10 @@ export type WranglerLoginProps = CloudflareLoginProps;
 export const WRANGLER_CLI: CliDescriptor = {
 	cliName: WRANGLER_CLI_NAME,
 	displayName: WRANGLER_DISPLAY_NAME,
+	temporaryAccountFlag: "--temporary",
 	commands: {
 		login: "wrangler login",
+		logout: "wrangler logout",
 		whoami: "wrangler whoami",
 		createProfile: "wrangler auth create",
 		deviceLogin: "wrangler login --device",
@@ -152,3 +154,5 @@ export function setKeyringPreference(
 }
 
 export type { KeyringPreferenceContext } from "../core/keyring-preference";
+
+export { AuthenticationError } from "../core/authentication-error";

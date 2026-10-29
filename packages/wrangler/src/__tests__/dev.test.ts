@@ -134,7 +134,7 @@ async function expectedHostAndZone(
 	return config;
 }
 
-describe.sequential("wrangler dev", () => {
+describe("wrangler dev", { concurrent: false }, () => {
 	let spy: MockInstance;
 	let setSpy: MockInstance;
 	const { setIsTTY } = useMockIsTTY();
@@ -191,6 +191,8 @@ describe.sequential("wrangler dev", () => {
 
 	describe("Local Explorer agent hint", () => {
 		beforeEach(() => {
+			vi.stubEnv("TURBO_HASH", "");
+			vi.stubEnv("TURBO_IS_TUI", "");
 			writeWranglerConfig({
 				name: "test-worker",
 				main: "index.js",
@@ -1044,6 +1046,54 @@ describe.sequential("wrangler dev", () => {
 				"dev --local-upstream some-host.com"
 			);
 			expect(config.dev.origin?.hostname).toEqual("some-host.com");
+		});
+
+		it("should not infer the origin from routes with --infer-origin-from-routes=false", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				route: "https://4.some-host.com/some/path/*",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig(
+				"dev --infer-origin-from-routes=false"
+			);
+			expect(config.dev.origin?.hostname).toBeUndefined();
+		});
+
+		it("should still respect an explicit host with --infer-origin-from-routes=false", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				route: "https://4.some-host.com/some/path/*",
+				dev: {
+					host: "2.some-host.com",
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig(
+				"dev --infer-origin-from-routes=false"
+			);
+			expect(config.dev.origin?.hostname).toEqual("2.some-host.com");
+		});
+
+		it("should ignore --infer-origin-from-routes=false in remote mode", async ({
+			expect,
+		}) => {
+			mockGetZones(expect, "4.some-host.com", [{ id: "some-zone-id-4" }]);
+			writeWranglerConfig({
+				main: "index.js",
+				route: "https://4.some-host.com/some/path/*",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			// The origin hostname doubles as the remote preview session's
+			// host, so the local-mode opt-out must not remove it.
+			const config = await runWranglerUntilConfig(
+				"dev --remote --infer-origin-from-routes=false"
+			);
+			expect(config.dev.origin?.hostname).toEqual("4.some-host.com");
 		});
 	});
 
@@ -2691,6 +2741,41 @@ describe.sequential("wrangler dev", () => {
 		});
 	});
 
+	describe("hyperdrive bindings", () => {
+		it("should report a `remote: true` Hyperdrive binding as remote", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				hyperdrive: [
+					{
+						binding: "HYPERDRIVE_REMOTE",
+						id: "remote-id",
+						remote: true,
+					},
+					{
+						binding: "HYPERDRIVE_LOCAL",
+						id: "local-id",
+						localConnectionString:
+							"postgres://user:pass@localhost:5432/database",
+					},
+				],
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWranglerUntilConfig("dev index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Your Worker has access to the following bindings:
+				Binding                                Resource               Mode
+				env.HYPERDRIVE_REMOTE (remote-id)      Hyperdrive Config      remote
+				env.HYPERDRIVE_LOCAL (local-id)        Hyperdrive Config      local
+
+				"
+			`);
+		});
+	});
+
 	describe("print bindings", () => {
 		it("should print bindings", async ({ expect }) => {
 			writeWranglerConfig({
@@ -3170,6 +3255,7 @@ describe.sequential("wrangler dev", () => {
 			expect(config.input.dev?.tunnel).toEqual({
 				enabled: true,
 				name: undefined,
+				allowedMail: undefined,
 			});
 		});
 
@@ -3187,6 +3273,37 @@ describe.sequential("wrangler dev", () => {
 			expect(config.input.dev?.tunnel).toEqual({
 				enabled: true,
 				name: "my-tunnel",
+				allowedMail: undefined,
+			});
+		});
+
+		it("should reject --tunnel-allowed-mail with --tunnel-name", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler(
+					"dev --tunnel --tunnel-name=my-tunnel --tunnel-allowed-mail=alice@example.com"
+				)
+			).rejects.toThrow(
+				"--tunnel-allowed-mail is only supported for Quick Tunnels"
+			);
+		});
+
+		it("should allow --tunnel-allowed-mail without enabling tunnel", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				compatibility_date: "2024-01-01",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig(
+				"dev --tunnel-allowed-mail=alice@example.com"
+			);
+			expect(config.input.dev?.tunnel).toEqual({
+				enabled: false,
+				name: undefined,
+				allowedMail: ["alice@example.com"],
 			});
 		});
 
@@ -3204,6 +3321,7 @@ describe.sequential("wrangler dev", () => {
 			expect(config.input.dev?.tunnel).toEqual({
 				enabled: false,
 				name: "my-tunnel",
+				allowedMail: undefined,
 			});
 		});
 
@@ -3219,6 +3337,7 @@ describe.sequential("wrangler dev", () => {
 			expect(config.input.dev?.tunnel).toEqual({
 				enabled: false,
 				name: undefined,
+				allowedMail: undefined,
 			});
 		});
 

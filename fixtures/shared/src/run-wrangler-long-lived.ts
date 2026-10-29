@@ -110,8 +110,14 @@ async function runLongLivedWrangler(
 	if (!env?.WRANGLER_REGISTRY_PATH && !process.env.WRANGLER_REGISTRY_PATH) {
 		registryEnv.WRANGLER_REGISTRY_PATH = getIsolatedRegistryPath();
 	}
-	if (!env?.MINIFLARE_REGISTRY_PATH && !process.env.MINIFLARE_REGISTRY_PATH) {
-		registryEnv.MINIFLARE_REGISTRY_PATH = getIsolatedRegistryPath();
+	if (
+		!env?.CLOUDFLARE_DEV_REGISTRY_PATH &&
+		!process.env.CLOUDFLARE_DEV_REGISTRY_PATH
+	) {
+		registryEnv.CLOUDFLARE_DEV_REGISTRY_PATH =
+			env?.WRANGLER_REGISTRY_PATH ||
+			process.env.WRANGLER_REGISTRY_PATH ||
+			getIsolatedRegistryPath();
 	}
 
 	const wranglerProcess = fork(wranglerEntryPath, command, {

@@ -8,6 +8,13 @@ import {
 } from "miniflare:shared";
 import { z } from "miniflare:zod";
 import { dumpSql } from "./dumpSql";
+import { isD1ExportPragma } from "./export";
+import {
+	D1QueriesSchema,
+	D1_SESSION_COMMIT_TOKEN_HTTP_HEADER,
+} from "./schemas";
+import type { D1ExportPragma } from "./export";
+import type { D1Meta, D1Query, D1RowsAndColumns, D1Value } from "./schemas";
 import type {
 	MiniflareDurableObjectEnv,
 	RouteHandler,
@@ -15,36 +22,11 @@ import type {
 	TypedValue,
 } from "miniflare:shared";
 
-const D1ValueSchema = z.union([
-	z.number(),
-	z.string(),
-	z.null(),
-	z.number().array(),
-]);
-type D1Value = z.infer<typeof D1ValueSchema>;
-
-const D1QuerySchema = z.object({
-	sql: z.string(),
-	params: z.array(D1ValueSchema).nullable().optional(),
-});
-type D1Query = z.infer<typeof D1QuerySchema>;
-const D1QueriesSchema = z.union([D1QuerySchema, z.array(D1QuerySchema)]);
-
-const D1_EXPORT_PRAGMA = `PRAGMA miniflare_d1_export(?,?,?);`;
-type D1ExportPragma = [
-	{ sql: typeof D1_EXPORT_PRAGMA; params: [number, number, ...string[]] },
-];
-
 const D1ResultsFormatSchema = z
 	.enum(["ARRAY_OF_OBJECTS", "ROWS_AND_COLUMNS", "NONE"])
 	.catch("ARRAY_OF_OBJECTS");
 
 type D1ResultsFormat = z.infer<typeof D1ResultsFormatSchema>;
-
-interface D1RowsAndColumns {
-	columns: string[];
-	rows: D1Value[][];
-}
 
 type D1Results = D1RowsAndColumns | Record<string, D1Value>[] | undefined;
 
@@ -52,24 +34,12 @@ const served_by = "miniflare.db";
 interface D1SuccessResponse {
 	success: true;
 	results: D1Results;
-	meta: {
-		served_by: string;
-		duration: number;
-		changes: number;
-		last_row_id: number;
-		changed_db: boolean;
-		size_after: number;
-		rows_read: number;
-		rows_written: number;
-	};
+	meta: D1Meta;
 }
 interface D1FailureResponse {
 	success: false;
 	error: string;
 }
-
-// See https://github.com/cloudflare/workerd/blob/bcaf44290296c71f396175c30b43cff6b570231f/src/cloudflare/internal/d1-api.ts#L68-L72
-const D1_SESSION_COMMIT_TOKEN_HTTP_HEADER = "x-cf-d1-session-commit-token";
 
 export class D1Error extends HttpError {
 	constructor(readonly cause: unknown) {
@@ -143,15 +113,18 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 	}
 
 	#query = (format: D1ResultsFormat, query: D1Query): D1SuccessResponse => {
-		const beforeTime = performance.now();
-
 		const beforeSize = this.state.storage.sql.databaseSize;
 		const beforeChanges = this.#changes();
 
 		const params = convertParams(query.params ?? []);
+		// Include cursor consumption in SQL time, but exclude metadata queries and
+		// blob/object conversion so duration has the same meaning as in D1.
+		const beforeTime = performance.now();
 		const cursor = this.db.prepare(query.sql)(...params);
 		const columns = cursor.columnNames;
-		const rows = convertRows(Array.from(cursor.raw()));
+		const rawRows = Array.from(cursor.raw());
+		const duration = performance.now() - beforeTime;
+		const rows = convertRows(rawRows);
 
 		let results = undefined;
 		if (format === "ROWS_AND_COLUMNS") {
@@ -162,11 +135,9 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 		// Note that the "NONE" format behaviour here is inconsistent with workerd.
 		// See comment: https://github.com/cloudflare/workers-sdk/pull/5917#issuecomment-2133313156
 
-		const afterTime = performance.now();
 		const afterSize = this.state.storage.sql.databaseSize;
 		const afterChanges = this.#changes();
 
-		const duration = afterTime - beforeTime;
 		const changes = afterChanges.totalChanges - beforeChanges.totalChanges;
 
 		const hasChanges = changes !== 0;
@@ -179,6 +150,9 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 			results,
 			meta: {
 				served_by,
+				served_by_primary: true,
+				total_attempts: 1,
+				timings: { sql_duration_ms: duration },
 				duration,
 				changes,
 				last_row_id: afterChanges.lastRowId,
@@ -190,7 +164,10 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 		};
 	};
 
-	#txn(queries: D1Query[], format: D1ResultsFormat): D1SuccessResponse[] {
+	async #txn(
+		queries: D1Query[],
+		format: D1ResultsFormat
+	): Promise<{ results: D1SuccessResponse[]; commitToken: string }> {
 		// Filter out queries that are just comments
 		queries = queries.filter(
 			(query) => query.sql.replace(/^\s+--.*/gm, "").trim().length > 0
@@ -201,9 +178,21 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 		}
 
 		try {
-			return this.state.storage.transactionSync(() =>
-				queries.map(this.#query.bind(this, format))
-			);
+			// Roll back the queries if bookmark retrieval fails, so a catchable
+			// D1_ERROR never reports these writes as failed after committing them.
+			return await this.state.storage.transaction(async () => {
+				const results = queries.map(this.#query.bind(this, format));
+				let commitToken: string;
+				try {
+					commitToken = await this.state.storage.getCurrentBookmark();
+				} catch (e) {
+					const message = e instanceof Error ? e.message : String(e);
+					throw new Error(`Failed to get session commit token: ${message}`, {
+						cause: e,
+					});
+				}
+				return { results, commitToken };
+			});
 		} catch (e) {
 			throw new D1Error(e);
 		}
@@ -218,7 +207,7 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 		}
 
 		// Special local-mode-only handlers
-		if (this.#isExportPragma(queries)) {
+		if (isD1ExportPragma(queries)) {
 			return this.#doExportData(queries);
 		}
 
@@ -227,27 +216,14 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 			searchParams.get("resultsFormat")
 		);
 
-		return Response.json(this.#txn(queries, resultsFormat), {
-			headers: {
-				[D1_SESSION_COMMIT_TOKEN_HTTP_HEADER]:
-					await this.state.storage.getCurrentBookmark(),
-			},
+		const { results, commitToken } = await this.#txn(queries, resultsFormat);
+
+		return Response.json(results, {
+			headers: { [D1_SESSION_COMMIT_TOKEN_HTTP_HEADER]: commitToken },
 		});
 	};
 
-	#isExportPragma(queries: D1Query[]): queries is D1ExportPragma {
-		return (
-			queries.length === 1 &&
-			queries[0].sql === D1_EXPORT_PRAGMA &&
-			(queries[0].params?.length || 0) >= 2
-		);
-	}
-
-	#doExportData(
-		queries: [
-			{ sql: typeof D1_EXPORT_PRAGMA; params: [number, number, ...string[]] },
-		]
-	) {
+	#doExportData(queries: D1ExportPragma) {
 		const [noSchema, noData, ...tables] = queries[0].params;
 		const options = {
 			noSchema: Boolean(noSchema),

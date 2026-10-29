@@ -158,7 +158,8 @@ export function convertBindings(
 		"analytics_engine_datasets",
 		"binding",
 		"bindings.analyticsEngineDataset",
-		[["dataset", "name"]]
+		[["dataset", "name"]],
+		{ remote: true }
 	);
 	convertArrayBindings(
 		"artifacts",
@@ -304,12 +305,17 @@ export function convertBindings(
 			sourcePath,
 			report
 		);
-		reportUnsupportedOptions(
-			entry,
-			["preview_bucket_name"],
-			sourcePath,
-			report
-		);
+		if (
+			hasOwn(entry, "preview_bucket_name") &&
+			entry.preview_bucket_name !== entry.bucket_name
+		) {
+			reportUnsupportedOptions(
+				entry,
+				["preview_bucket_name"],
+				sourcePath,
+				report
+			);
+		}
 	}
 	convertArrayBindings(
 		"secrets_store_secrets",
@@ -605,7 +611,7 @@ export function convertBindings(
 	}
 
 	convertSingletonBinding("ai", "binding", "bindings.ai", ["staging"]);
-	convertSingletonBinding("analytics", "binding", "bindings.analyticsSQL");
+	convertSingletonBinding("analytics", "binding", "bindings.analytics");
 	convertSingletonBinding("browser", "binding", "bindings.browser");
 	convertSingletonBinding("images", "binding", "bindings.images");
 	convertSingletonBinding("media", "binding", "bindings.media");

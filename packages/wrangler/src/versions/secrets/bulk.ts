@@ -9,7 +9,8 @@ import { patchLatestWorkerVersionWithSecrets } from "./index";
 
 export const versionsSecretBulkCommand = createCommand({
 	metadata: {
-		description: "Create or update a secret variable for a Worker",
+		description:
+			"Create, update, or delete multiple secret variables for a Worker",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},
@@ -21,7 +22,7 @@ export const versionsSecretBulkCommand = createCommand({
 	},
 	args: {
 		file: {
-			describe: `The file of key-value pairs to upload, as JSON in form {"key": value, ...} or .dev.vars file in the form KEY=VALUE`,
+			describe: `The file of key-value pairs to create, update, or delete, as JSON in form {"key": "value", ...} or .env file in the form KEY=VALUE. Set a key to null in the JSON file to delete it. Deletion is not supported with .env files. If omitted, Wrangler expects to receive input from stdin rather than a file.`,
 			type: "string",
 		},
 		name: {
@@ -53,10 +54,10 @@ export const versionsSecretBulkCommand = createCommand({
 		const accountId = await requireAuth(config);
 
 		logger.log(
-			`🌀 Creating the secrets for the Worker "${scriptName}" ${args.env ? `(${args.env})` : ""}`
+			`🌀 Processing the secrets for the Worker "${scriptName}" ${args.env ? `(${args.env})` : ""}`
 		);
 
-		const result = await parseBulkInputToObject(args.file);
+		const result = await parseBulkInputToObject(args.file, true);
 
 		if (!result) {
 			return logger.error(`No content found in file or piped input.`);
@@ -78,8 +79,16 @@ export const versionsSecretBulkCommand = createCommand({
 			noVersionsTelemetryMessage: "versions secrets bulk no uploaded versions",
 		});
 
-		for (const [name] of secretEntries) {
-			logger.log(`✨ Successfully created secret for key: ${name}`);
+		let created = 0;
+		let deleted = 0;
+		for (const [name, value] of secretEntries) {
+			if (value === null) {
+				deleted++;
+				logger.log(`💥 Successfully deleted secret for key: ${name}`);
+			} else {
+				created++;
+				logger.log(`✨ Successfully created secret for key: ${name}`);
+			}
 		}
 
 		metrics.sendMetricsEvent(
@@ -96,7 +105,7 @@ export const versionsSecretBulkCommand = createCommand({
 		);
 
 		logger.log(
-			`✨ Success! Created version ${newVersion.id} with ${secretEntries.length} secrets.` +
+			`✨ Success! Created version ${newVersion.id} with ${created} secret${created === 1 ? "" : "s"} created and ${deleted} secret${deleted === 1 ? "" : "s"} deleted.` +
 				`\n➡️  To deploy this version to production traffic use the command "wrangler versions deploy".`
 		);
 	},

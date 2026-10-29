@@ -16,6 +16,7 @@ import { validateRoutes } from "./deployment-bundle/resolve-config-args";
 import { getVarsForDev } from "./dev/dev-vars";
 import { startDev } from "./dev/start-dev";
 import { experimentalNewConfigArg } from "./experimental-config/cli-flag";
+import isNonInteractiveTurborepo from "./is-non-interactive-turborepo";
 import { logger } from "./logger";
 import { detectAgent } from "./utils/detect-agent";
 import type { StartDevWorkerInput, Trigger } from "./api/startDevWorker/types";
@@ -141,6 +142,11 @@ export const dev = createCommand({
 			type: "string",
 			describe:
 				"Host to act as origin in local mode, defaults to dev.host or route",
+		},
+		"infer-origin-from-routes": {
+			type: "boolean",
+			describe:
+				"Use the first configured route to infer the origin (request.url and the Host header) seen by the Worker in local mode. Set to false to preserve the real local origin, e.g. localhost:8787. Has no effect in remote mode",
 		},
 		"enable-containers": {
 			type: "boolean",
@@ -269,6 +275,13 @@ export const dev = createCommand({
 				"Use an existing named Cloudflare Tunnel when `--tunnel` is enabled.",
 			type: "string",
 		},
+		"tunnel-allowed-mail": {
+			describe:
+				"Require email authentication for a Quick Tunnel. Accepts an exact address or domain wildcard such as user@example.com or *@example.org. May be repeated or comma-separated.",
+			type: "string",
+			array: true,
+			nargs: 1,
+		},
 	},
 	async validateArgs(args) {
 		if (args.nodeCompat) {
@@ -281,6 +294,14 @@ export const dev = createCommand({
 			throw new UserError(
 				"--live-reload is only supported in local mode. Please just use one of either --remote or --live-reload.",
 				{ telemetryMessage: "dev command live reload remote conflict" }
+			);
+		}
+		if (args.tunnelName && (args.tunnelAllowedMail?.length ?? 0) > 0) {
+			throw new UserError(
+				"--tunnel-allowed-mail is only supported for Quick Tunnels and cannot be used with --tunnel-name.",
+				{
+					telemetryMessage: "dev command tunnel allowed mail named conflict",
+				}
 			);
 		}
 		if (args.tunnel && args.remote) {
@@ -303,7 +324,9 @@ export const dev = createCommand({
 	},
 	async handler(args) {
 		const interactiveDevSession =
-			isInteractive() && args.showInteractiveDevSession !== false;
+			isInteractive() &&
+			!isNonInteractiveTurborepo() &&
+			args.showInteractiveDevSession !== false;
 		const showLocalExplorerAgentHint =
 			!interactiveDevSession &&
 			!args.remote &&
@@ -483,9 +506,12 @@ function applyHyperdriveEnvVars(config: Config, local: boolean): void {
 			connectionStringFromEnv = process.env[varName];
 		}
 
-		// only require a local connection string in the wrangler file or the env if not using dev --remote
+		// only require a local connection string in the wrangler file or the env
+		// if not using dev --remote, and not opted into a remote Hyperdrive
+		// binding (which tunnels to the edge instead of a local database)
 		if (
 			local &&
+			!hyperdrive.remote &&
 			connectionStringFromEnv === undefined &&
 			hyperdrive.localConnectionString === undefined
 		) {
