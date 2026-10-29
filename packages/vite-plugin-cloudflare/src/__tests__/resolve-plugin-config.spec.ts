@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
@@ -9,7 +10,7 @@ import type {
 	PluginConfig,
 	WorkersResolvedConfig,
 } from "../plugin-config";
-import type { InputWorkerConfig } from "@cloudflare/config";
+import type { InputWorkerConfig, ParsedInputConfig } from "@cloudflare/config";
 
 const { readBuildOutputPreviewMock } = vi.hoisted(() => ({
 	readBuildOutputPreviewMock: vi.fn(),
@@ -223,7 +224,16 @@ describe("resolvePluginConfig", () => {
 
 		const result = (await resolvePluginConfig(
 			{
-				config: { compatibilityDate: "2025-02-02" },
+				config(loadedConfig) {
+					assert(loadedConfig.worker);
+					return {
+						...loadedConfig,
+						worker: {
+							...loadedConfig.worker,
+							compatibilityDate: "2025-02-02",
+						},
+					};
+				},
 				auxiliaryWorkers: [
 					{
 						viteEnvironment: { name: "auxiliary" },
@@ -249,16 +259,23 @@ describe("resolvePluginConfig", () => {
 		expect(auxiliary?.directoryName).toBe("entry-worker-auxiliary-2025-02-02");
 	});
 
-	test("resolves an entry Worker config customizer result", async ({
+	test("uses the returned configuration without merging the loaded configuration", async ({
 		expect,
 	}) => {
 		writeEntryConfig({ compatibilityFlags: ["nodejs_compat"] });
 		const result = (await resolvePluginConfig(
 			{
-				config: (workerConfig) => ({
-					name: `customized-${workerConfig.name}`,
-					compatibilityFlags: ["global_fetch_strictly_public"],
-				}),
+				config(loadedConfig) {
+					assert(loadedConfig.worker);
+					return {
+						...loadedConfig,
+						worker: {
+							...loadedConfig.worker,
+							name: `customized-${loadedConfig.worker.name}`,
+							compatibilityFlags: ["global_fetch_strictly_public"],
+						},
+					};
+				},
 			},
 			{ root },
 			buildEnv
@@ -266,28 +283,118 @@ describe("resolvePluginConfig", () => {
 
 		const entryWorker = result.environmentNameToWorkerMap.get("ssr");
 		expect(entryWorker?.config.name).toBe("customized-entry-worker");
-		expect(entryWorker?.config.compatibilityFlags).toEqual(
-			expect.arrayContaining(["nodejs_compat", "global_fetch_strictly_public"])
-		);
+		expect(entryWorker?.config.compatibilityFlags).toEqual([
+			"global_fetch_strictly_public",
+		]);
 	});
 
-	test("resolves an in-place entry Worker config customization", async ({
+	test("customizes account settings, Containers, and the entry Worker together", async ({
 		expect,
 	}) => {
-		writeEntryConfig();
-		const result = (await resolvePluginConfig(
-			{
-				config(workerConfig) {
-					workerConfig.compatibilityDate = "2025-06-01";
-				},
+		const originalConfig: ParsedInputConfig = {
+			accountId: "original-account",
+			worker: {
+				name: "entry-worker",
+				entrypoint: "./src/index.ts",
+				compatibilityDate: "2024-12-30",
 			},
+			containers: [
+				{
+					name: "original-container",
+					image: { reference: "docker.io/cloudflare/hello-world:latest" },
+					maxInstances: 1,
+				},
+			],
+		};
+		fs.writeFileSync(
+			path.join(root, "cloudflare.config.ts"),
+			`export default ${JSON.stringify(originalConfig)};`
+		);
+		const customize = vi.fn(
+			(loadedConfig: ParsedInputConfig): ParsedInputConfig => {
+				assert(loadedConfig.worker);
+				return {
+					...loadedConfig,
+					accountId: "customized-account",
+					complianceRegion: "fedramp-high",
+					containers: [
+						...loadedConfig.containers,
+						{
+							name: "customized-container",
+							image: { reference: "docker.io/cloudflare/hello-world:latest" },
+							maxInstances: 2,
+						},
+					],
+					worker: {
+						...loadedConfig.worker,
+						exports: {
+							CustomContainer: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: "customized-container",
+							},
+						},
+					},
+				};
+			}
+		);
+		const result = (await resolvePluginConfig(
+			{ config: customize },
 			{ root },
 			buildEnv
 		)) as WorkersResolvedConfig;
 
+		expect(customize).toHaveBeenCalledExactlyOnceWith(originalConfig);
+		expect(result.settings).toEqual({
+			accountId: "customized-account",
+			complianceRegion: "fedramp-high",
+		});
+		expect(result.containers.map(({ name }) => name)).toEqual([
+			"original-container",
+			"customized-container",
+		]);
 		expect(
-			result.environmentNameToWorkerMap.get("ssr")?.config.compatibilityDate
-		).toBe("2025-06-01");
+			result.environmentNameToWorkerMap.get("ssr")?.config.exports
+		).toEqual({
+			CustomContainer: {
+				type: "durable-object",
+				storage: "sqlite",
+				container: "customized-container",
+			},
+		});
+	});
+
+	test("validates customized Container configuration", async ({ expect }) => {
+		writeEntryConfig();
+		await expect(
+			resolvePluginConfig(
+				{
+					config: (loadedConfig) => ({
+						...loadedConfig,
+						containers: [
+							{ name: "invalid", image: { reference: "" }, maxInstances: 1 },
+						],
+					}),
+				},
+				{ root },
+				buildEnv
+			)
+		).rejects.toThrow(/containers/);
+	});
+
+	test("requires a Worker in the customized configuration", async ({
+		expect,
+	}) => {
+		writeEntryConfig();
+		await expect(
+			resolvePluginConfig(
+				{
+					config: (loadedConfig) => ({ ...loadedConfig, worker: undefined }),
+				},
+				{ root },
+				buildEnv
+			)
+		).rejects.toThrow("The customized configuration must define a `worker`.");
 	});
 
 	test("resolves entry and auxiliary Workers configured only in Vite", async ({
@@ -297,7 +404,13 @@ describe("resolvePluginConfig", () => {
 		writeSource("src/aux.ts");
 		const result = await resolvePluginConfig(
 			{
-				config: { entrypoint: "./src/index.ts" },
+				config(loadedConfig) {
+					assert(loadedConfig.worker);
+					return {
+						...loadedConfig,
+						worker: { ...loadedConfig.worker, entrypoint: "./src/index.ts" },
+					};
+				},
 				auxiliaryWorkers: [
 					{ config: createAuxiliaryWorkerConfig("viteOnlyWorker") },
 				],

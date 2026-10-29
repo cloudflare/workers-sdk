@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
@@ -139,7 +140,7 @@ describe("cloudflare.config.ts", () => {
 		});
 	});
 
-	test("generates types from the config file before applying the entry customizer", async ({
+	test("generates types from the config file before applying the customizer", async ({
 		expect,
 	}) => {
 		seedWorker({
@@ -148,9 +149,19 @@ describe("cloudflare.config.ts", () => {
 
 		const result = (await resolvePluginConfig(
 			{
-				config: {
-					compatibilityDate: "2025-01-15",
-					env: { PLUGIN_ONLY: { type: "text", value: "plugin" } },
+				config(loadedConfig) {
+					assert(loadedConfig.worker);
+					return {
+						...loadedConfig,
+						worker: {
+							...loadedConfig.worker,
+							compatibilityDate: "2025-01-15",
+							env: {
+								...loadedConfig.worker.env,
+								PLUGIN_ONLY: { type: "text", value: "plugin" },
+							},
+						},
+					};
 				},
 			},
 			{ root },
