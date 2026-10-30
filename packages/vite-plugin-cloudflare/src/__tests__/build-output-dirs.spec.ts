@@ -6,7 +6,7 @@ import { test } from "vitest";
 
 const fixturesPath = fileURLToPath(new URL("./fixtures", import.meta.url));
 
-test("sets the Build Output directories before other plugins' configResolved hooks run", async ({
+test("puts the Build Output directories in the resolved config that other plugins read", async ({
 	expect,
 }) => {
 	let clientOutDir: string | undefined;

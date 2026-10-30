@@ -27,8 +27,12 @@ import type * as vite from "vite";
  * Plugin to handle configuration and config file watching
  */
 export const configPlugin = createPlugin("config", (ctx) => {
+	let root: string;
+
 	return {
 		config(userConfig, env) {
+			root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
+
 			if (ctx.resolvedPluginConfig.type === "preview") {
 				return {
 					appType: "custom",
@@ -75,39 +79,50 @@ export const configPlugin = createPlugin("config", (ctx) => {
 				},
 			};
 		},
-		configResolved: {
-			// Frameworks read the resolved output directories in their own `configResolved` hooks,
-			// so the Build Output directories have to be in place before those run. Vite starts
-			// these hooks together, so keep `forceBuildOutputDirs()` before the first `await`.
-			order: "pre",
-			async handler(resolvedViteConfig) {
-				ctx.setResolvedViteConfig(resolvedViteConfig);
-
+		// Set the Build Output directories before Vite resolves the config, so that every plugin
+		// reads them from the resolved config. `post` overrides directories set by the user or
+		// by other plugins' `configEnvironment` hooks.
+		configEnvironment: {
+			order: "post",
+			handler(environmentName) {
 				if (ctx.resolvedPluginConfig.type === "preview") {
 					return;
 				}
-
-				validateWorkerEnvironmentOptions(
+				const outDir = getBuildOutputDir(
 					ctx.resolvedPluginConfig,
-					ctx.resolvedViteConfig
+					root,
+					environmentName
 				);
-
-				// Assets-only configs can still hold Worker environments (a prerender
-				// Worker), so this covers both resolved config types.
-				const {
-					environmentNameToWorkerMap,
-					environmentNameToChildEnvironmentNamesMap,
-				} = ctx.resolvedPluginConfig;
-				applyWorkerEsbuildSupported(resolvedViteConfig, [
-					...environmentNameToWorkerMap.keys(),
-					...[...environmentNameToChildEnvironmentNamesMap.values()].flat(),
-				]);
-
-				forceBuildOutputDirs(ctx.resolvedPluginConfig, ctx.resolvedViteConfig);
-				if (ctx.resolvedViteConfig.command === "build") {
-					await cleanBuildOutputDir(ctx.resolvedViteConfig.root);
-				}
+				return outDir ? { build: { outDir } } : undefined;
 			},
+		},
+		async configResolved(resolvedViteConfig) {
+			ctx.setResolvedViteConfig(resolvedViteConfig);
+
+			if (ctx.resolvedPluginConfig.type === "preview") {
+				return;
+			}
+
+			validateWorkerEnvironmentOptions(
+				ctx.resolvedPluginConfig,
+				ctx.resolvedViteConfig
+			);
+
+			// Assets-only configs can still hold Worker environments (a prerender
+			// Worker), so this covers both resolved config types.
+			const {
+				environmentNameToWorkerMap,
+				environmentNameToChildEnvironmentNamesMap,
+			} = ctx.resolvedPluginConfig;
+			applyWorkerEsbuildSupported(resolvedViteConfig, [
+				...environmentNameToWorkerMap.keys(),
+				...[...environmentNameToChildEnvironmentNamesMap.values()].flat(),
+			]);
+
+			forceBuildOutputDirs(ctx.resolvedPluginConfig, ctx.resolvedViteConfig);
+			if (ctx.resolvedViteConfig.command === "build") {
+				await cleanBuildOutputDir(ctx.resolvedViteConfig.root);
+			}
 		},
 	};
 });
@@ -182,56 +197,68 @@ function getEnvironmentsConfig(
 }
 
 /**
- * When the Build Output Specification is enabled,
- * force Worker and client `build.outDir` values to their spec-mandated
- * locations. Child environments are nested within their parent environment.
+ * Gets the directory the Build Output Specification mandates for an environment's build.
+ * Child environments are nested within their parent environment's directory.
  *
- * Runs at the start of `configResolved`, after Vite's merge, so it overrides any
- * user-supplied `build.outDir`, and other plugins' `configResolved` hooks see the forced
- * directories. A plugin that moves `build.outDir` again in its own `configResolved` hook
- * isn't followed: the Build Output is still written to the forced directories.
+ * @param resolvedPluginConfig The resolved plugin configuration
+ * @param root The Vite project root
+ * @param environmentName The name of the environment
+ * @returns The environment's Build Output directory, or `undefined` if it has none
  */
-function forceBuildOutputDirs(
+function getBuildOutputDir(
 	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
-	resolvedViteConfig: vite.ResolvedConfig
-): void {
-	const { root } = resolvedViteConfig;
+	root: string,
+	environmentName: string
+): string | undefined {
+	if (environmentName === "client") {
+		return getWorkerAssetsDir(root);
+	}
 
-	for (const [
-		environmentName,
-		worker,
-	] of resolvedPluginConfig.environmentNameToWorkerMap) {
-		const environment = resolvedViteConfig.environments[environmentName];
-		if (environment) {
-			environment.build.outDir = getWorkerBundleDir(root, worker.directoryName);
-		}
+	const worker =
+		resolvedPluginConfig.environmentNameToWorkerMap.get(environmentName);
+	if (worker) {
+		return getWorkerBundleDir(root, worker.directoryName);
 	}
 
 	for (const [
 		parentEnvironmentName,
 		childEnvironmentNames,
 	] of resolvedPluginConfig.environmentNameToChildEnvironmentNamesMap) {
-		const parentEnvironment =
-			resolvedViteConfig.environments[parentEnvironmentName];
-		if (!parentEnvironment) {
-			continue;
-		}
-
-		for (const childEnvironmentName of childEnvironmentNames) {
-			const childEnvironment =
-				resolvedViteConfig.environments[childEnvironmentName];
-			if (childEnvironment) {
-				childEnvironment.build.outDir = path.join(
-					parentEnvironment.build.outDir,
-					childEnvironmentName
-				);
-			}
+		if (childEnvironmentNames.includes(environmentName)) {
+			const parentDir = getBuildOutputDir(
+				resolvedPluginConfig,
+				root,
+				parentEnvironmentName
+			);
+			return parentDir && path.join(parentDir, environmentName);
 		}
 	}
 
-	const clientEnvironment = resolvedViteConfig.environments.client;
-	if (clientEnvironment) {
-		clientEnvironment.build.outDir = getWorkerAssetsDir(root);
+	return undefined;
+}
+
+/**
+ * Forces each environment's `build.outDir` to its Build Output directory.
+ *
+ * The `configEnvironment` hook already sets these directories before Vite resolves the config.
+ * This runs again after Vite's merge in `configResolved`, so it also overrides any
+ * `build.outDir` set later than that hook.
+ */
+function forceBuildOutputDirs(
+	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
+	resolvedViteConfig: vite.ResolvedConfig
+): void {
+	for (const [environmentName, environment] of Object.entries(
+		resolvedViteConfig.environments
+	)) {
+		const outDir = getBuildOutputDir(
+			resolvedPluginConfig,
+			resolvedViteConfig.root,
+			environmentName
+		);
+		if (outDir) {
+			environment.build.outDir = outDir;
+		}
 	}
 }
 
