@@ -13,7 +13,7 @@ import {
 import { AutoConfigDetectionError } from "../errors";
 import { getFrameworkClassInstance } from "../frameworks";
 import {
-	allFrameworksInfos,
+	getAllFrameworksInfos,
 	staticFramework,
 } from "../frameworks/all-frameworks";
 import { detectFramework } from "./framework-detection";
@@ -171,7 +171,8 @@ export async function getDetailsForAutoConfig({
 		await detectFramework(projectPath, context, { wranglerConfig, target });
 
 	const detectedFrameworkInstance = getFrameworkClassInstance(
-		detectedFramework.framework.id
+		detectedFramework.framework.id,
+		target
 	);
 	const configured =
 		hasCloudflareConfig ||
@@ -181,7 +182,7 @@ export async function getDetailsForAutoConfig({
 		requestedOutputDir !== undefined &&
 		detectedFramework.framework.id !== "cloudflare-pages";
 	const framework = useStaticAssets
-		? getFrameworkClassInstance(staticFramework.id)
+		? getFrameworkClassInstance(staticFramework.id, target)
 		: detectedFrameworkInstance;
 	const packageJsonPath = resolve(projectPath, "package.json");
 
@@ -343,13 +344,16 @@ export function displayAutoConfigDetails(
  *
  * @param autoConfigDetails - The detected project details.
  * @param context - The autoconfig context providing dialogs.
+ * @param target - The configuration target, defaults to cf.
  * @returns The (possibly updated) autoconfig details.
  */
 export async function confirmAutoConfigDetails(
 	autoConfigDetails: AutoConfigDetails,
-	context: AutoConfigContext
+	context: AutoConfigContext,
+	target: AutoConfigTarget = "cf"
 ): Promise<AutoConfigDetails> {
 	const { dialogs } = context;
+	const allFrameworksInfos = getAllFrameworksInfos(target);
 	const modifySettings = await dialogs.confirm(
 		"Do you want to modify these settings?",
 		{ defaultValue: false, fallbackValue: false }
@@ -400,7 +404,10 @@ export async function confirmAutoConfigDetails(
 		}
 	);
 
-	updatedAutoConfigDetails.framework = getFrameworkClassInstance(frameworkId);
+	updatedAutoConfigDetails.framework = getFrameworkClassInstance(
+		frameworkId,
+		target
+	);
 
 	const outputDir = await dialogs.prompt(
 		"What directory contains your applications' output/asset files?",
