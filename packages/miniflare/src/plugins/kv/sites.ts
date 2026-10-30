@@ -129,7 +129,8 @@ export function getSitesServices(
 	const storageServiceName = `${SERVICE_NAMESPACE_SITE}:storage`;
 	const storageService: Service = {
 		name: storageServiceName,
-		disk: { path: persist, writable: true },
+		// Reject writes even when callers bypass the read-only namespace Worker.
+		disk: { path: persist, writable: false },
 	};
 	const namespaceService: Service = {
 		name: SERVICE_NAMESPACE_SITE,
