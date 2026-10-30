@@ -4,4 +4,6 @@
 
 Fix signed Accept-Encoding headers on the experimental local R2 S3 endpoint
 
-Upgrade Miniflare to `5.20261023.3-beta` and Wrangler to `4.155.1` so S3 clients that sign `Accept-Encoding: identity` can use the endpoint exposed by Vite development and preview without `SignatureDoesNotMatch` errors.
+Upgrade Miniflare to `5.20261023.3-beta` and Wrangler to `4.156.0` so S3 clients that sign `Accept-Encoding: identity` can use the endpoint exposed by Vite development and preview without `SignatureDoesNotMatch` errors.
+
+Preserve the original S3 request header in the Vite request adapter so the runtime verifies the exact value signed by the client.

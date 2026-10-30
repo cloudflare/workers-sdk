@@ -31,10 +31,10 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
-		"@cloudflare/cli-shared-helpers": "0.2.10",
+		"@cloudflare/cli-shared-helpers": "0.3.0",
 		"@cloudflare/deploy-helpers": "0.24.3",
 		"@cloudflare/workers-auth": "0.15.1",
-		"@cloudflare/workers-utils": "0.50.0",
+		"@cloudflare/workers-utils": "0.50.1",
 		"chalk": "catalog:default",
 		"miniflare": "5.20261023.3-beta",
 		"undici": "catalog:default",

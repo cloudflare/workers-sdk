@@ -358,6 +358,61 @@ describe("createRequestHandler", () => {
 		);
 	}
 
+	test.for([
+		{
+			pathname: "/cdn-cgi/local/r2/s3",
+			encoding: "identity",
+			expected: "identity",
+		},
+		{
+			pathname: "/cdn-cgi/local/r2/s3/bucket/object",
+			encoding: "identity",
+			expected: "identity",
+		},
+		{
+			pathname: "/cdn-cgi/local/r2/s3/bucket/object",
+			encoding: "gzip, deflate",
+			expected: "gzip, deflate",
+		},
+		{
+			pathname: "/cdn-cgi/local/r2/s3/bucket/object",
+			encoding: undefined,
+			expected: null,
+		},
+		{
+			pathname: "/cdn-cgi/local/r2/s3-other",
+			encoding: "gzip",
+			expected: "identity, gzip",
+		},
+		{ pathname: "/worker", encoding: "gzip", expected: "identity, gzip" },
+	])(
+		"forwards Accept-Encoding for $pathname ($encoding)",
+		async ({ pathname, encoding, expected }, { expect }) => {
+			await startServer(async (request) =>
+				MiniflareResponse.json({
+					acceptEncoding: request.headers.get("accept-encoding"),
+				})
+			);
+			// Use Node HTTP because Fetch supplies its own Accept-Encoding when absent.
+			const response = await new Promise<http.IncomingMessage>(
+				(resolve, reject) => {
+					http
+						.get(
+							`http://127.0.0.1:${port}${pathname}`,
+							{
+								headers:
+									encoding === undefined ? {} : { "Accept-Encoding": encoding },
+							},
+							resolve
+						)
+						.on("error", reject);
+				}
+			);
+			expect(response.statusCode).toBe(200);
+			expect(await json(response)).toEqual({ acceptEncoding: expected });
+		}
+	);
+
 	test("preserves repeated request Set-Cookie headers", async ({ expect }) => {
 		await startServer(async (request) =>
 			MiniflareResponse.json({

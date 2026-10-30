@@ -239,6 +239,7 @@ function createCancellableRequestBody(
 	});
 }
 
+/** Convert a Vite request for the local runtime, preserving signed S3 headers. */
 export function toMiniflareRequest(request: Request): MiniflareRequest {
 	const host = request.headers.get("Host") ?? new URL(request.url).host;
 	const xForwardedHost = request.headers.get("X-Forwarded-Host");
@@ -259,9 +260,16 @@ export function toMiniflareRequest(request: Request): MiniflareRequest {
 	if (secFetchMode) {
 		request.headers.set(CoreHeaders.SEC_FETCH_MODE, secFetchMode);
 	}
+	const pathname = new URL(request.url).pathname;
+	// S3 signatures include the original header value; adding identity invalidates them.
+	const isLocalS3Request =
+		pathname === "/cdn-cgi/local/r2/s3" ||
+		pathname.startsWith("/cdn-cgi/local/r2/s3/");
 	return new MiniflareRequest(request.url, {
 		method: request.method,
-		headers: [["accept-encoding", "identity"], ...request.headers],
+		headers: isLocalS3Request
+			? [...request.headers]
+			: [["accept-encoding", "identity"], ...request.headers],
 		body: request.body,
 		duplex: "half",
 		signal: request.signal,
