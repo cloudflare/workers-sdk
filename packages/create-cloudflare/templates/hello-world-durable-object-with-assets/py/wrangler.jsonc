@@ -18,6 +18,8 @@
     }
   ],
   "durable_objects": {
+    // Let active objects adopt new code after hibernating (up to 300 seconds).
+    "code_update_strategy": { "mode": "deferred" },
     "bindings": [
       {
         "class_name": "MyDurableObject",

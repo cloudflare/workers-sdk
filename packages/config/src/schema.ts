@@ -808,6 +808,26 @@ const DomainSchema = z.union([
  * (user-authored) and output (on-disk) Worker configs.
  */
 const BaseWorkerSchema = z.strictObject({
+	durableObjects: z
+		.strictObject({
+			codeUpdateStrategy: z.discriminatedUnion("mode", [
+				z.strictObject({ mode: z.literal("immediate") }),
+				z.strictObject({
+					mode: z.literal("deferred"),
+					maxDelay: z
+						.number()
+						.min(0)
+						.max(86400)
+						.refine(
+							(value) =>
+								Math.abs(value * 1000 - Math.round(value * 1000)) < 1e-6,
+							"Use seconds with at most millisecond precision"
+						)
+						.optional(),
+				}),
+			]),
+		})
+		.optional(),
 	name: z.string(),
 	compatibilityDate: z.string(),
 	compatibilityFlags: z.array(z.string()).optional(),
