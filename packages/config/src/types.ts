@@ -380,6 +380,17 @@ export type ContainerConfig =
  * being passed to downstream tooling.
  */
 export interface WorkerConfig {
+	/** Controls when active Durable Objects adopt newly deployed code. */
+	durableObjects?: {
+		/** Deferred updates wait for hibernation, for up to 300 seconds by default. */
+		codeUpdateStrategy:
+			| { mode: "immediate" }
+			| {
+					mode: "deferred";
+					/** Seconds, from 0 to 86400, with millisecond precision. */ maxDelay?: number;
+			  };
+	};
+
 	/**
 	 * The name of your Worker.
 	 */

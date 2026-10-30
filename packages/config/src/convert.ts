@@ -36,6 +36,21 @@ export function convertToWranglerConfig(config: ParsedInputConfig): RawConfig {
 	if (worker !== undefined) {
 		convertTopLevel(worker, result);
 		convertBindingsAndAssets(worker, result);
+		if (worker.durableObjects !== undefined) {
+			const strategy = worker.durableObjects.codeUpdateStrategy;
+			result.durable_objects = {
+				...result.durable_objects,
+				code_update_strategy:
+					strategy.mode === "immediate"
+						? { mode: "immediate" }
+						: {
+								mode: "deferred",
+								...(strategy.maxDelay !== undefined && {
+									max_delay: strategy.maxDelay,
+								}),
+							},
+			};
+		}
 		convertExports(worker, result);
 		convertDomains(worker, result);
 		convertTriggers(worker, result);
