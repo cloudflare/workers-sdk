@@ -1,5 +1,8 @@
 import { existsSync } from "node:fs";
-import { loadAndParseConfig } from "@cloudflare/config";
+import {
+	loadAndParseConfig,
+	SINGLETON_BINDING_TYPES,
+} from "@cloudflare/config";
 import { formatZodError, getZoneFromRoute } from "@cloudflare/workers-utils";
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import { Log, LogLevel, resolveLocalBindings } from "miniflare";
@@ -85,20 +88,6 @@ export async function loadNewConfig(
 		devVars,
 	};
 }
-
-// Binding types a Worker can only have one of. Copied from
-// `SINGLETON_BINDING_TYPES` in `packages/config/src/schema.ts`; keep the two in
-// sync.
-const SINGLETON_BINDING_TYPES = new Set([
-	"ai",
-	"assets",
-	"browser",
-	"analytics",
-	"images",
-	"media",
-	"stream",
-	"version-metadata",
-]);
 
 /**
  * Merges the Worker declared in `cloudflare.config.ts`, already in Miniflare's
