@@ -339,17 +339,14 @@ export function recordPagesToWorkersDelegateFailure(
 /**
  * Builds the `wrangler deploy` args for the delegation.
  *
- * The assets directory is deliberately not part of these args. Passing
- * `--assets` would disable autoconfig (it only runs when no
- * assets/path/config is supplied), and autoconfig is what makes the delegated
- * deploy viable: it writes a Workers config with a compatibility date. Without
- * it, a non-interactive agent deploy has no compatibility date and fails
- * validation. Instead the directory travels separately as `assetsDirectory`,
- * and `runPagesToWorkersDeploy` decides how to apply it: it pins autoconfig to
- * the directory for an unconfigured project, and passes `--assets` (or `--site`
- * for Workers Sites) when a Workers config already exists. Only
- * the agent's explicit, deliberate inputs (name, compatibility date/flags) are
- * carried here, and they take precedence on the deploy.
+ * Keep the assets directory separate so unconfigured projects can run
+ * autoconfig before receiving an `--assets` override, which would disable
+ * autoconfig. The delegate pins autoconfig to that directory or passes
+ * `--assets` (`--site` for Workers Sites) when a Workers config already exists.
+ * If autoconfig leaves no Wrangler config, the deploy handler supplies the
+ * assets directory and a default compatibility date for that invocation
+ * without writing a config. The agent's explicit name, compatibility date,
+ * and flags take precedence on the deploy.
  */
 function buildWorkersDeployArgs(
 	options: MaybeDelegatePagesToWorkersOptions

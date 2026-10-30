@@ -5,6 +5,7 @@ import {
 import { deploy } from "@cloudflare/deploy-helpers";
 import {
 	configFileName,
+	DEFAULT_COMPAT_DATE,
 	getDockerPath,
 	getDurableObjectContainerApps,
 	getWorkerNameFromProject,
@@ -197,6 +198,25 @@ export async function runDeployCommandHandler(
 		return;
 	}
 	config = autoConfigResult.config;
+
+	// Autoconfig may leave no Wrangler config, for example for an existing Vite
+	// deployment or a dry run. Apply the delegated assets and compatibility date
+	// for this invocation without writing configuration.
+	if (
+		pagesToWorkersDelegation &&
+		autoConfigOutputDir !== undefined &&
+		!config.configPath &&
+		!config.pages_build_output_dir
+	) {
+		args = {
+			...args,
+			assets: args.assets ?? autoConfigOutputDir,
+			compatibilityDate:
+				args.compatibilityDate ??
+				config.compatibility_date ??
+				DEFAULT_COMPAT_DATE,
+		};
+	}
 
 	// Interatively handle missing/incorrect --assets, --script, --name, --compatibility-date
 	args = await promptForMissingDeployConfig(args, config, {

@@ -1,13 +1,14 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi, type ExpectStatic } from "vitest";
 import * as autoconfig from "../../autoconfig";
 import { readConfig } from "../../config";
 import { runDeployCommandHandler, type DeployArgs } from "../../deploy";
 import * as deploy from "../../deploy";
-import { maybeRunAutoConfig } from "../../deploy/autoconfig";
 import { mergeDeployConfigArgs } from "../../deployment-bundle/merge-config-args";
+import * as configArgs from "../../deployment-bundle/merge-config-args";
 import { run } from "../../experimental-flags";
 import { runPagesToWorkersDeploy } from "../../pages/run-workers-deploy";
 import { detectAgent } from "../../utils/detect-agent";
@@ -55,8 +56,8 @@ describe("Pages-to-Workers delegated deploy assets directory", () => {
 
 	/**
 	 * Runs a delegated dry-run deploy and returns the autoconfig summary. A dry
-	 * run plans the config without writing it, so the deploy itself then stops
-	 * for want of an entry-point; only the plan matters here.
+	 * run plans the config without writing it. With an explicit directory the
+	 * deploy can also validate the assets; without one it stops after planning.
 	 */
 	async function planDelegatedDeploy(
 		expect: ExpectStatic,
@@ -64,15 +65,18 @@ describe("Pages-to-Workers delegated deploy assets directory", () => {
 	): Promise<AutoConfigSummary> {
 		const args = delegatedDeployArgs();
 		const config = readConfig(args, { useRedirectIfAvailable: true });
-		await expect(
-			run(experimentalFlags, () =>
-				runDeployCommandHandler(args, {
-					config,
-					pagesToWorkersDelegation: true,
-					autoConfigOutputDir,
-				})
-			)
-		).rejects.toThrow("Missing entry-point");
+		const deployment = run(experimentalFlags, () =>
+			runDeployCommandHandler(args, {
+				config,
+				pagesToWorkersDelegation: true,
+				autoConfigOutputDir,
+			})
+		);
+		if (autoConfigOutputDir === undefined) {
+			await expect(deployment).rejects.toThrow("Missing entry-point");
+		} else {
+			await expect(deployment).resolves.toBeUndefined();
+		}
 
 		const entry = readFileSync(outputFile, "utf8")
 			.split("\n")
@@ -138,43 +142,67 @@ describe("Pages-to-Workers delegated deploy assets directory", () => {
 		}
 	);
 
-	it("preserves a Vite-plugin-only deployment without generating static-assets config", async ({
-		expect,
-	}) => {
-		const packageJson = JSON.stringify({
-			name: "my-site",
-			dependencies: { vite: "8", "@cloudflare/vite-plugin": "1" },
-			scripts: { build: "vite build", deploy: "vite build && wrangler deploy" },
-		});
-		const viteConfig = `import { cloudflare } from "@cloudflare/vite-plugin";
+	it.for([undefined, "2026-10-01"])(
+		"deploys the requested assets without rewriting a Vite-plugin-only project (compatibility date: %s)",
+		async (compatibilityDate, { expect }) => {
+			const packageJson = JSON.stringify({
+				name: "my-site",
+				dependencies: { vite: "8", "@cloudflare/vite-plugin": "1" },
+				scripts: {
+					build: "vite build",
+					deploy: "vite build && wrangler deploy",
+				},
+			});
+			const viteConfig = `import { cloudflare } from "@cloudflare/vite-plugin";
 			import { defineConfig } from "vite";
 			export default defineConfig({ plugins: [cloudflare()] });`;
-		writeFileSync("package.json", packageJson);
-		writeFileSync("vite.config.ts", viteConfig);
-		const args = { ...delegatedDeployArgs(), dryRun: false };
-		const config = readConfig(args, { useRedirectIfAvailable: true });
-		// Guard the write path so a regression fails before attempting to install
-		// packages or replace the existing deployment's configuration.
-		const configure = vi
-			.spyOn(autoconfig, "runAutoConfigLogic")
-			.mockRejectedValue(
-				new Error("Existing deployment must not be reconfigured")
-			);
-		try {
-			await expect(
-				maybeRunAutoConfig(args, config, {
-					skipConfirmations: true,
-					outputDir: "public",
-				})
-			).resolves.toEqual({ config, aborted: false });
-			expect(configure).not.toHaveBeenCalled();
-			expect(existsSync("wrangler.jsonc")).toBe(false);
-			expect(readFileSync("package.json", "utf8")).toBe(packageJson);
-			expect(readFileSync("vite.config.ts", "utf8")).toBe(viteConfig);
-		} finally {
-			configure.mockRestore();
+			writeFileSync("package.json", packageJson);
+			writeFileSync("vite.config.ts", viteConfig);
+			// Guard the write path so a regression fails before attempting to install
+			// packages or replace the existing deployment's configuration.
+			const configure = vi
+				.spyOn(autoconfig, "runAutoConfigLogic")
+				.mockRejectedValue(
+					new Error("Existing deployment must not be reconfigured")
+				);
+			const actualHandler = runDeployCommandHandler;
+			const handler = vi
+				.spyOn(deploy, "runDeployCommandHandler")
+				.mockImplementationOnce(async (args, options) => {
+					await actualHandler({ ...args, dryRun: true }, options);
+				});
+			const actualMergeConfigArgs = mergeDeployConfigArgs;
+			const mergeConfigArgs = vi
+				.spyOn(configArgs, "mergeDeployConfigArgs")
+				.mockImplementationOnce(async (args, config) => {
+					const result = await actualMergeConfigArgs(args, config);
+					expect(result.props.assetsDir?.directory).toBe(resolve("public"));
+					expect(result.props.compatibilityDate).toBe(
+						compatibilityDate ?? DEFAULT_COMPAT_DATE
+					);
+					return result;
+				});
+			try {
+				await runPagesToWorkersDeploy({
+					delegate: true,
+					command: "deploy",
+					agentId: "test-agent",
+					deployArgs: { name: "my-site", compatibilityDate },
+					assetsDirectory: "public",
+				});
+				expect(handler).toHaveBeenCalledOnce();
+				expect(mergeConfigArgs).toHaveBeenCalledOnce();
+				expect(configure).not.toHaveBeenCalled();
+				expect(existsSync("wrangler.jsonc")).toBe(false);
+				expect(readFileSync("package.json", "utf8")).toBe(packageJson);
+				expect(readFileSync("vite.config.ts", "utf8")).toBe(viteConfig);
+			} finally {
+				mergeConfigArgs.mockRestore();
+				handler.mockRestore();
+				configure.mockRestore();
+			}
 		}
-	});
+	);
 
 	it("overrides a legacy Workers Sites bucket before preparing the upload", async ({
 		expect,
