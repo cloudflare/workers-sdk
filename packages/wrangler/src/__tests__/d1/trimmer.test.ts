@@ -27,6 +27,39 @@ describe("mayContainTransaction()", () => {
 			)
 		).toBe(true);
 	});
+
+	it("should return false when the phrase only appears inside a string literal", ({
+		expect,
+	}) => {
+		expect(
+			mayContainTransaction(
+				`UPDATE Nodes SET text = 'remember to remove BEGIN TRANSACTION and COMMIT' WHERE id = 537;`
+			)
+		).toBe(false);
+		expect(
+			mayContainTransaction(
+				`UPDATE Nodes SET text = 'remove BEGIN TRANSACTION; and COMMIT;' WHERE id = 537;`
+			)
+		).toBe(false);
+		expect(
+			mayContainTransaction(
+				`INSERT INTO Nodes (text) VALUES ("a BEGIN TRANSACTION mention");`
+			)
+		).toBe(false);
+	});
+
+	it("should return false when the phrase only appears inside a comment", ({
+		expect,
+	}) => {
+		expect(
+			mayContainTransaction(
+				`-- BEGIN TRANSACTION is handled by D1\nSELECT * FROM my_table;`
+			)
+		).toBe(false);
+		expect(
+			mayContainTransaction(`/* BEGIN TRANSACTION; */ SELECT * FROM my_table;`)
+		).toBe(false);
+	});
 });
 
 describe("trimSqlQuery()", () => {
@@ -89,6 +122,18 @@ describe("trimSqlQuery()", () => {
 			D1 runs your SQL in a transaction for you.
 			Please export an SQL file from your SQLite database and try again.]
 		`);
+	});
+
+	it("should not throw when a string literal contains the words BEGIN TRANSACTION", ({
+		expect,
+	}) => {
+		expect(
+			trimSqlQuery(
+				`UPDATE Nodes SET text = 'remove BEGIN TRANSACTION; and COMMIT;' WHERE id = 537;`
+			)
+		).toMatchInlineSnapshot(
+			`"UPDATE Nodes SET text = 'remove BEGIN TRANSACTION; and COMMIT;' WHERE id = 537;"`
+		);
 	});
 
 	it("should handle strings", ({ expect }) => {
@@ -246,5 +291,36 @@ describe("trimSqlQuery()", () => {
 		                json_extract(new.properties, '$.preferredUsername'));
 		    END;"
 	`);
+	});
+});
+
+describe("trimSqlQuery review follow-ups", () => {
+	it("removes only the last COMMIT when the data contains an earlier one", () => {
+		const sql = [
+			"BEGIN TRANSACTION;",
+			"INSERT INTO t VALUES('COMMIT;');",
+			"COMMIT;",
+		].join("\n");
+		const trimmed = trimSqlQuery(sql);
+		// The COMMIT inside the string literal must survive untouched.
+		expect(trimmed).toContain("INSERT INTO t VALUES('COMMIT;');");
+		expect(trimmed).not.toMatch(/^\s*COMMIT;/m);
+	});
+
+	it("throws when a COMMIT has no opening BEGIN TRANSACTION", () => {
+		expect(() => trimSqlQuery("SELECT 1;\nCOMMIT;")).toThrowError(
+			/unbalanced transaction/
+		);
+	});
+
+	it("throws when a BEGIN TRANSACTION is never committed", () => {
+		expect(() => trimSqlQuery("BEGIN TRANSACTION;\nSELECT 1;")).toThrowError(
+			/unbalanced transaction/
+		);
+	});
+
+	it("ignores a transaction keyword inside a bracketed identifier", () => {
+		const sql = "INSERT INTO [weird BEGIN TRANSACTION col] VALUES(1);";
+		expect(trimSqlQuery(sql)).toBe(sql);
 	});
 });
