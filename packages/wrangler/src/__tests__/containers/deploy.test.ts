@@ -2002,6 +2002,145 @@ describe("wrangler deploy with containers", () => {
 		`);
 	});
 
+	it("does not patch or roll out when the applications listing lags behind the application's current state", async ({
+		expect,
+	}) => {
+		// The applications listing can briefly report an application one
+		// version behind the direct read while a rollout is still reported as
+		// active, even though that rollout already completed with the same
+		// image. The deploy diff must not act on that stale listing.
+		// https://github.com/cloudflare/workers-sdk/issues/16596
+		mockGetVersion("Galaxy-Class");
+		setupDockerMocks(expect, "my-container", "Galaxy");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [DEFAULT_CONTAINER_FROM_DOCKERFILE],
+		});
+		const currentImage =
+			getCloudflareContainerRegistry() +
+			"/some-account-id/my-container@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+		const staleListedImage =
+			getCloudflareContainerRegistry() +
+			"/some-account-id/my-container@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+		const currentApp: Application = {
+			id: "abc",
+			name: "my-container",
+			instances: 0,
+			max_instances: 10,
+			created_at: new Date().toString(),
+			version: 75,
+			account_id: "1",
+			scheduling_policy: SchedulingPolicy.DEFAULT,
+			rollout_active_grace_period: 0,
+			configuration: {
+				image: currentImage,
+				disk: {
+					size: "2GB",
+					size_mb: 2000,
+				},
+				vcpu: 0.0625,
+				memory: "256MB",
+				memory_mib: 256,
+			},
+			constraints: {
+				tiers: [1, 2],
+			},
+			durable_objects: {
+				namespace_id: "1",
+			},
+		};
+		// The listing is one version behind and still reports an active
+		// rollout, with the previous image digest.
+		const staleListedApp: Application = {
+			...currentApp,
+			version: 74,
+			active_rollout_id: "rollout-74",
+			configuration: {
+				...currentApp.configuration,
+				image: staleListedImage,
+			},
+		};
+		mockGetApplications([staleListedApp]);
+		msw.use(
+			http.get("*/applications/:id", () =>
+				HttpResponse.json(createFetchResult(currentApp))
+			)
+		);
+		const modifySpy = mockTrackApplicationModification();
+		const rolloutSpy = mockTrackApplicationRollout();
+		fs.writeFileSync("./Dockerfile", "FROM scratch");
+		mockGenerateImageRegistryCredentials(expect);
+
+		await runWrangler("deploy index.js --containers-rollout=immediate");
+
+		expect(modifySpy).not.toHaveBeenCalled();
+		expect(rolloutSpy).not.toHaveBeenCalled();
+	});
+
+	it("reports the API request_id when creating a rollout fails with a 500", async ({
+		expect,
+	}) => {
+		// A failing rollout request should surface the request_id from the
+		// API error payload so the failure can be reported to support.
+		// https://github.com/cloudflare/workers-sdk/issues/16596
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
+		});
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container",
+				instances: 0,
+				max_instances: 10,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.DEFAULT,
+				rollout_active_grace_period: 0,
+				configuration: {
+					image: "registry.cloudflare.com/some-account-id/my-container:old",
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
+				},
+				constraints: {
+					tiers: [1, 2],
+				},
+				durable_objects: {
+					namespace_id: "1",
+				},
+			},
+		]);
+		mockModifyApplication(expect);
+		msw.use(
+			http.post("*/applications/:id/rollouts", () =>
+				HttpResponse.json(
+					{
+						error: JSON.stringify({
+							error: "Internal Server Error",
+							request_id: "bc4a1b8e-0d0e-4d1b-8d9f-0f6a9b7c2d0e",
+						}),
+					},
+					{ status: 500 }
+				)
+			)
+		);
+		fs.writeFileSync(
+			"index.js",
+			`export class ExampleDurableObject {}; export default{};`
+		);
+
+		await expect(
+			runWrangler("deploy index.js --containers-rollout=immediate")
+		).rejects.toThrowError(/bc4a1b8e-0d0e-4d1b-8d9f-0f6a9b7c2d0e/);
+	});
+
 	it("should error when no scope for containers", async ({ expect }) => {
 		// Reset the spy from setupCommonMocks before setting empty scopes
 		vi.mocked(user.getScopes).mockReset();
