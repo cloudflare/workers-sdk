@@ -66,12 +66,7 @@ export function createAuth(profileDir: string, logger: Logger) {
 	};
 	const auth = createCfAuth(context);
 	const profileStore = createCfProfileStore({ logger });
-	auth.setProfile(
-		profileStore.resolve({
-			profile: process.env.CLOUDFLARE_VITE_AUTH_PROFILE,
-			cwd: profileDir,
-		})
-	);
+	auth.setProfile(profileStore.resolve({ cwd: profileDir }));
 	return auth;
 }
 

@@ -11,8 +11,8 @@
  *
  * Spawn contract for `dev`: parent uses `stdio: "inherit"` and forwards
  * SIGINT/SIGTERM. Accepted flags mirror the sibling `cf-wrangler`
- * delegate (`--profile`, `--mode`, `--port`, `--host`, `--local`) so the
- * parent can drive either impl interchangeably; everything else lives in the user's
+ * delegate (`--mode`, `--port`, `--host`, `--local`) so the parent can
+ * drive either impl interchangeably; everything else lives in the user's
  * `vite.config.ts` / `cloudflare.config.ts`. `cf-vite` boots
  * Vite via `createServer()` against the user's own config (expected to
  * include `cloudflare()`); flags are bridged to it as documented inline.
@@ -34,7 +34,6 @@ import { CLI_DISPLAY_NAME_ENV_VAR } from "./build-output-env";
 import type { InlineConfig, ServerOptions } from "vite";
 
 interface DevArgs {
-	profile?: string;
 	mode?: string;
 	port?: number;
 	host?: string;
@@ -55,7 +54,6 @@ function parseDevArgs(argv: string[]): DevArgs {
 		parsed = nodeParseArgs({
 			args: argv,
 			options: {
-				profile: { type: "string" },
 				mode: { type: "string" },
 				host: { type: "string" },
 				// `node:util.parseArgs` has no `number` type; coerce below.
@@ -70,9 +68,6 @@ function parseDevArgs(argv: string[]): DevArgs {
 	}
 
 	const out: DevArgs = {};
-	if (parsed.values.profile !== undefined) {
-		out.profile = parsed.values.profile;
-	}
 	if (parsed.values.mode !== undefined) {
 		out.mode = parsed.values.mode;
 	}
@@ -161,14 +156,9 @@ async function runDev(userArgv: string[]): Promise<number> {
 
 	// Bridge plugin-owned flags via env vars the plugin reads during config
 	// resolution — must be set before `createServer()`.
-	//   - `--profile`: overrides the project's cf profile binding for every
-	//     auth consumer, including remote bindings and tunnels.
 	//   - `--local`: overrides `remoteBindings` outright, mirroring
 	//     `wrangler dev --local` (force local even if config opts into
 	//     remote).
-	if (args.profile !== undefined) {
-		process.env.CLOUDFLARE_VITE_AUTH_PROFILE = args.profile;
-	}
 	if (args.local) {
 		process.env.CLOUDFLARE_VITE_FORCE_LOCAL = "true";
 	}

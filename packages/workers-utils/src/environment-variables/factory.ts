@@ -11,6 +11,8 @@ type VariableNames =
 	| "CLOUDFLARE_ACCOUNT_ID"
 	/** API token for authentication. Preferred over API key + email. */
 	| "CLOUDFLARE_API_TOKEN"
+	/** Auth profile to use when no explicit profile argument is provided. Overrides directory bindings. */
+	| "CLOUDFLARE_AUTH_PROFILE"
 	/** Legacy API key for authentication. Requires CLOUDFLARE_EMAIL. It is preferred to use `CLOUDFLARE_API_TOKEN`. */
 	| "CLOUDFLARE_API_KEY"
 	/** Email address for API key authentication. Used with `CLOUDFLARE_API_KEY`. It is preferred to use `CLOUDFLARE_API_TOKEN`. */

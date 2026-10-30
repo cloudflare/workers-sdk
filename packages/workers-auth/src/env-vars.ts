@@ -6,6 +6,14 @@ import {
 import { validateAccountId } from "./account-id";
 
 /**
+ * Select a named auth profile for this process and its children.
+ * Explicit profile arguments take precedence; directory bindings are the fallback.
+ */
+export const getCloudflareAuthProfileFromEnv = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_AUTH_PROFILE",
+});
+
+/**
  * `WRANGLER_AUTH_DOMAIN` is the URL base domain that is used
  * to access OAuth URLs for the Cloudflare APIs.
  *

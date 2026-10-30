@@ -43,13 +43,13 @@ describe("cf-wrangler dev", () => {
 	});
 
 	it.for([
-		{ argv: ["--profile", "work"], profile: "work" },
-		{ argv: ["--profile=work"], profile: "work" },
-		{ argv: ["--profile", "default"], profile: "default" },
-		{ argv: [], profile: "personal" },
+		{ envProfile: "work", profile: "work" },
+		{ envProfile: "default", profile: "default" },
+		{ envProfile: undefined, profile: "personal" },
 	])(
-		"uses cf profile $profile for $argv",
-		async ({ argv, profile }, { expect }) => {
+		"uses cf profile $profile with CLOUDFLARE_AUTH_PROFILE=$envProfile",
+		async ({ envProfile, profile }, { expect }) => {
+			vi.stubEnv("CLOUDFLARE_AUTH_PROFILE", envProfile);
 			const devEnv = new EventEmitter();
 			mocks.startDev.mockImplementation(async () => {
 				expect(getActiveProfile()).toBe(profile);
@@ -67,7 +67,7 @@ describe("cf-wrangler dev", () => {
 					runCfWranglerDev: runDev,
 				}),
 				process: {
-					argv: ["node", "cf-wrangler", "dev", ...argv],
+					argv: ["node", "cf-wrangler", "dev"],
 					exit,
 					stderr: { write: vi.fn() },
 				},

@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { createLogger as createViteLogger } from "vite";
-import { afterEach, test, vi } from "vitest";
+import { test, vi } from "vitest";
 import { createLogger, getRemoteBindingsAuth } from "../auth";
 import type { AsyncHook, CfAccount } from "@cloudflare/workers-utils";
 
@@ -18,15 +18,9 @@ vi.mock("@cloudflare/workers-auth/cf", () => ({
 	createCfProfileStore: () => ({ resolve: mocks.resolveProfile }),
 }));
 
-afterEach(() => {
-	vi.unstubAllEnvs();
-	vi.clearAllMocks();
-});
-
 test("remote bindings auth uses the cf profile for the project", async ({
 	expect,
 }) => {
-	vi.stubEnv("CLOUDFLARE_VITE_AUTH_PROFILE", undefined);
 	const hooks = new Map<string, AsyncHook<CfAccount>>();
 	const logger = createLogger(createViteLogger("silent"));
 	const auth = getRemoteBindingsAuth(hooks, "/project", "account-id", logger);
@@ -36,10 +30,7 @@ test("remote bindings auth uses the cf profile for the project", async ({
 		accountId: "cf-account-id",
 		apiToken: { apiToken: "cf-token" },
 	});
-	expect(mocks.resolveProfile).toHaveBeenCalledWith({
-		profile: undefined,
-		cwd: "/project",
-	});
+	expect(mocks.resolveProfile).toHaveBeenCalledWith({ cwd: "/project" });
 	expect(mocks.cfAuth.setProfile).toHaveBeenCalledWith("cf-profile");
 	expect(mocks.cfAuth.requireAuth).toHaveBeenCalledWith({
 		account_id: "account-id",
@@ -52,26 +43,3 @@ test("remote bindings auth uses the cf profile for the project", async ({
 		getRemoteBindingsAuth(hooks, "/project", "other-account", logger)
 	).not.toBe(auth);
 });
-
-test.for(["work", "default"])(
-	"remote bindings auth resolves the delegate's explicit profile %s",
-	async (profile, { expect }) => {
-		vi.stubEnv("CLOUDFLARE_VITE_AUTH_PROFILE", profile);
-		mocks.resolveProfile.mockReturnValueOnce(profile);
-		const hook = getRemoteBindingsAuth(
-			new Map(),
-			"/project",
-			undefined,
-			createLogger(createViteLogger("silent"))
-		);
-		assert(typeof hook === "function");
-
-		await hook();
-
-		expect(mocks.resolveProfile).toHaveBeenCalledWith({
-			profile,
-			cwd: "/project",
-		});
-		expect(mocks.cfAuth.setProfile).toHaveBeenCalledWith(profile);
-	}
-);

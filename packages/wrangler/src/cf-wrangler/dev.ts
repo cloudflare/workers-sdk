@@ -13,7 +13,6 @@ import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import { useCfAuth } from "../user";
 import type { StartDevOptions } from "../dev";
-import type { DevArgs } from "./args";
 
 /**
  * Run the dev server until it tears down (a hotkey quit in a TTY, or a
@@ -21,16 +20,13 @@ import type { DevArgs } from "./args";
  * handler and installs no signal handlers of its own, so signal handling
  * and exit codes match `wrangler dev` exactly.
  *
- * @param options Dev-server options and optional cf auth profile, built in `bin/cf-wrangler.js`.
+ * @param options Fully-built `StartDevOptions` (built in `bin/cf-wrangler.js`).
  * @returns `0` on a clean teardown.
  */
-export async function runCfWranglerDev({
-	profile,
-	...options
-}: StartDevOptions & Pick<DevArgs, "profile">): Promise<number> {
-	useCfAuth(
-		createCfProfileStore({ logger }).resolve({ profile, cwd: process.cwd() })
-	);
+export async function runCfWranglerDev(
+	options: StartDevOptions
+): Promise<number> {
+	useCfAuth(createCfProfileStore({ logger }).resolve({ cwd: process.cwd() }));
 
 	// `startDev` reads experimental flags from async-local storage. This
 	// entrypoint is single-worker and never provisions resources.

@@ -1,8 +1,10 @@
 ---
 "wrangler": patch
 "@cloudflare/vite-plugin": patch
+"@cloudflare/workers-auth": patch
+"@cloudflare/remote-bindings": patch
 ---
 
-Honor explicit auth profiles in the `cf-vite` and `cf-wrangler` development delegates
+Support `CLOUDFLARE_AUTH_PROFILE` for shared authentication profile selection
 
-The delegates now accept `--profile`, allowing `cf dev --profile work` to use the selected cf profile instead of the profile bound to the project directory. The `cf-wrangler` delegate also uses cf's credential store and OAuth flow for development authentication.
+Cloudflare tooling can pass a selected profile to child processes through `CLOUDFLARE_AUTH_PROFILE`. Explicit profile arguments take precedence over the variable, followed by directory bindings and the default profile. The `cf-wrangler` development delegate also initializes cf authentication so it reads the selected cf credentials.

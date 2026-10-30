@@ -9,8 +9,6 @@ describe("cf-wrangler parseArgs", () => {
 	describe("happy paths", () => {
 		it("parses all flags in --flag value form", ({ expect }) => {
 			const out = parseArgs([
-				"--profile",
-				"work",
 				"--mode",
 				"production",
 				"--port",
@@ -20,7 +18,6 @@ describe("cf-wrangler parseArgs", () => {
 				"--local",
 			]);
 			expect(out).toEqual({
-				profile: "work",
 				mode: "production",
 				port: 8788,
 				host: "example.com",
@@ -30,14 +27,12 @@ describe("cf-wrangler parseArgs", () => {
 
 		it("parses all flags in --flag=value form", ({ expect }) => {
 			const out = parseArgs([
-				"--profile=work",
 				"--mode=production",
 				"--port=8788",
 				"--host=example.com",
 				"--local",
 			]);
 			expect(out).toEqual({
-				profile: "work",
 				mode: "production",
 				port: 8788,
 				host: "example.com",
@@ -134,10 +129,6 @@ describe("cf-wrangler parseArgs", () => {
 	});
 
 	describe("structural rejections", () => {
-		it("rejects --profile without a value", ({ expect }) => {
-			expect(() => parseArgs(["--profile"])).toThrow(ArgParseError);
-		});
-
 		it("rejects positional arguments", ({ expect }) => {
 			expect(() => parseArgs(["./worker.ts"])).toThrow(ArgParseError);
 			expect(() => parseArgs(["./worker.ts"])).toThrow(/positional/);
