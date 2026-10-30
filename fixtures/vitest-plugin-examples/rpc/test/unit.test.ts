@@ -34,11 +34,13 @@ describe("named entrypoints", () => {
 		});
 	});
 	it("calls method with rpc", async ({ expect }) => {
+		// @ts-expect-error cf types leave bindings to this Worker untyped
 		const result = await env.TEST_NAMED_ENTRYPOINT.ping();
 		expect(result).toBe("pong");
 	});
 
 	it("receives RpcTarget over RPC", async ({ expect }) => {
+		// @ts-expect-error cf types leave bindings to this Worker untyped
 		const result = await env.TEST_NAMED_ENTRYPOINT.getCounter();
 		expect(await result.value).toBe(0);
 		result.increment();
@@ -51,6 +53,7 @@ describe("named entrypoints", () => {
 	});
 
 	it("receives plain objects over RPC", async ({ expect }) => {
+		// @ts-expect-error cf types leave bindings to this Worker untyped
 		const result = await env.TEST_NAMED_ENTRYPOINT.getCounter();
 		result.increment();
 		expect(await result.asObject()).toMatchObject({ val: 1 });
@@ -98,9 +101,11 @@ describe("Durable Object", () => {
 		});
 
 		// Check calling method over RPC
+		// @ts-expect-error cf types leave bindings to this Worker untyped
 		expect(await stub.increment(3)).toBe(4);
 
 		// Check accessing property over RPC
+		// @ts-expect-error cf types leave bindings to this Worker untyped
 		expect(await stub.value).toBe(4);
 	});
 	it("dispatches RPC methods from proxy-returning Durable Objects", async ({
@@ -108,12 +113,14 @@ describe("Durable Object", () => {
 	}) => {
 		const id = env.PROXIED_TEST_OBJECT.newUniqueId();
 		const stub = env.PROXIED_TEST_OBJECT.get(id);
+		// @ts-expect-error cf types leave bindings to this Worker untyped
 		expect(await stub.readPrivateValue()).toBe("private value");
 	});
 	it("rejects instance overrides of prototype methods", async ({ expect }) => {
 		const id = env.TEST_OBJECT.newUniqueId();
 		const stub = env.TEST_OBJECT.get(id);
 		await expect(
+			// @ts-expect-error cf types leave bindings to this Worker untyped
 			async () => await stub.overriddenPrototypeMethod()
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[TypeError: The RPC receiver does not implement the method "overriddenPrototypeMethod".]`
@@ -123,10 +130,13 @@ describe("Durable Object", () => {
 		// Schedule alarm by directly calling method over RPC
 		const id = env.TEST_OBJECT.newUniqueId();
 		const stub = env.TEST_OBJECT.get(id);
+		// @ts-expect-error cf types leave bindings to this Worker untyped
 		await stub.increment(3);
+		// @ts-expect-error cf types leave bindings to this Worker untyped
 		await stub.scheduleReset(60_000);
 
 		// Check counter has non-zero value
+		// @ts-expect-error cf types leave bindings to this Worker untyped
 		expect(await stub.value).toBe(3);
 
 		// Immediately execute the alarm to reset the counter
@@ -134,11 +144,13 @@ describe("Durable Object", () => {
 		expect(ran).toBe(true); // ...as there was an alarm scheduled
 
 		// Check counter value was reset
+		// @ts-expect-error cf types leave bindings to this Worker untyped
 		expect(await stub.value).toBe(0);
 	});
 	it("cannot access instance properties or methods", async ({ expect }) => {
 		const id = env.TEST_OBJECT.newUniqueId();
 		const stub = env.TEST_OBJECT.get(id);
+		// @ts-expect-error cf types leave bindings to this Worker untyped
 		await expect(async () => await stub.instanceProperty).rejects
 			.toThrowErrorMatchingInlineSnapshot(`
 			[TypeError: The RPC receiver's prototype does not implement "instanceProperty", but the receiver instance does.
@@ -160,6 +172,7 @@ describe("Durable Object", () => {
 	it("receives RpcTarget over RPC", async ({ expect }) => {
 		const id = env.TEST_OBJECT.newUniqueId();
 		const stub = env.TEST_OBJECT.get(id);
+		// @ts-expect-error cf types leave bindings to this Worker untyped
 		using result = await stub.getCounter();
 		expect(await result.value).toBe(0);
 		await result.increment();
@@ -175,6 +188,7 @@ describe("Durable Object", () => {
 	it("receives plain objects over RPC", async ({ expect }) => {
 		const id = env.TEST_OBJECT.newUniqueId();
 		const stub = env.TEST_OBJECT.get(id);
+		// @ts-expect-error cf types leave bindings to this Worker untyped
 		using result = await stub.getObject();
 		expect(result).toMatchObject({ hello: "world" });
 	});
@@ -189,11 +203,13 @@ describe("Durable Object", () => {
 			const promises: Promise<void>[] = [];
 
 			for (let i = 0; i < orderingCalls; i++) {
+				// @ts-expect-error cf types leave bindings to this Worker untyped
 				promises.push(stub.record(`call-${i}`));
 			}
 
 			await Promise.all(promises);
 
+			// @ts-expect-error cf types leave bindings to this Worker untyped
 			expect(await stub.getLog()).toEqual(expectedOrderingLog());
 		}
 	});
@@ -206,15 +222,18 @@ describe("Durable Object", () => {
 				orderingTargetName("prewarmed-ordering", attempt)
 			);
 			const stub = env.TEST_OBJECT.get(id);
+			// @ts-expect-error cf types leave bindings to this Worker untyped
 			await stub.getLog();
 			const promises: Promise<void>[] = [];
 
 			for (let i = 0; i < orderingCalls; i++) {
+				// @ts-expect-error cf types leave bindings to this Worker untyped
 				promises.push(stub.record(`call-${i}`));
 			}
 
 			await Promise.all(promises);
 
+			// @ts-expect-error cf types leave bindings to this Worker untyped
 			expect(await stub.getLog()).toEqual(expectedOrderingLog());
 		}
 	});
@@ -224,6 +243,7 @@ describe("Durable Object", () => {
 	}) => {
 		for (let attempt = 0; attempt < orderingAttempts; attempt++) {
 			expect(
+				// @ts-expect-error cf types leave bindings to this Worker untyped
 				await env.TEST_NAMED_ENTRYPOINT.recordFromWorkerEntrypoint(
 					orderingTargetName("worker-entrypoint-ordering", attempt),
 					orderingCalls
@@ -241,6 +261,7 @@ describe("Durable Object", () => {
 			);
 			const stub = env.TEST_OBJECT.get(id);
 			expect(
+				// @ts-expect-error cf types leave bindings to this Worker untyped
 				await stub.recordFromDurableObject(
 					orderingTargetName("do-caller-ordering", attempt),
 					orderingCalls
