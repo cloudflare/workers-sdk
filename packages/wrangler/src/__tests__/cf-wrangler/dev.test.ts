@@ -54,7 +54,7 @@ describe("cf-wrangler dev", () => {
 		{ envProfile: "default", profile: "default" },
 		{ envProfile: undefined, profile: "personal" },
 	])(
-		"uses cf profile $profile with CLOUDFLARE_AUTH_PROFILE=$envProfile",
+		"should use cf profile $profile with CLOUDFLARE_AUTH_PROFILE=$envProfile",
 		async ({ envProfile, profile }, { expect }) => {
 			vi.stubEnv("CLOUDFLARE_AUTH_PROFILE", envProfile);
 			const devEnv = new EventEmitter();
@@ -80,7 +80,7 @@ describe("cf-wrangler dev", () => {
 		}
 	);
 
-	it("preserves Wrangler authentication when startup fails", async ({
+	it("should preserve Wrangler authentication when startup fails", async ({
 		expect,
 	}) => {
 		vi.stubEnv("CLOUDFLARE_AUTH_PROFILE", "work");

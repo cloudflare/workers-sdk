@@ -26,7 +26,7 @@ describe.each([
 		profiles.bindings.activate("personal", process.cwd());
 	});
 
-	it("prefers an explicit profile to the environment", ({ expect }) => {
+	it("should prefer an explicit profile over the environment", ({ expect }) => {
 		vi.stubEnv("CLOUDFLARE_AUTH_PROFILE", "work");
 
 		expect(profiles.resolve({ profile: "other", cwd: process.cwd() })).toBe(
@@ -37,20 +37,20 @@ describe.each([
 		);
 	});
 
-	it("prefers the environment to directory bindings", ({ expect }) => {
+	it("should prefer the environment over directory bindings", ({ expect }) => {
 		vi.stubEnv("CLOUDFLARE_AUTH_PROFILE", "work");
 
 		expect(profiles.resolve({ cwd: process.cwd() })).toBe("work");
 	});
 
-	it("allows the environment to select the default profile", ({ expect }) => {
+	it("should select the default profile from the environment", ({ expect }) => {
 		vi.stubEnv("CLOUDFLARE_AUTH_PROFILE", "default");
 
 		expect(profiles.resolve({ cwd: process.cwd() })).toBe("default");
 	});
 
 	it.for([undefined, ""])(
-		"uses directory bindings when the environment is %j",
+		"should use directory bindings with environment profile %j",
 		(profile, { expect }) => {
 			vi.stubEnv("CLOUDFLARE_AUTH_PROFILE", profile);
 
@@ -58,14 +58,16 @@ describe.each([
 		}
 	);
 
-	it("falls back to default without an override or binding", ({ expect }) => {
+	it("should fall back to default without an override or binding", ({
+		expect,
+	}) => {
 		expect(profiles.resolve({ cwd: path.dirname(process.cwd()) })).toBe(
 			"default"
 		);
 	});
 
 	it.for(["../work", "my profile", "staging"])(
-		"validates the environment profile %s",
+		"should reject invalid environment profile %s",
 		(profile, { expect }) => {
 			vi.stubEnv("CLOUDFLARE_AUTH_PROFILE", profile);
 
@@ -75,7 +77,7 @@ describe.each([
 		}
 	);
 
-	it("ignores an invalid environment override when an explicit profile is given", ({
+	it("should ignore an invalid environment override when the caller selects an explicit profile", ({
 		expect,
 	}) => {
 		vi.stubEnv("CLOUDFLARE_AUTH_PROFILE", "../invalid");

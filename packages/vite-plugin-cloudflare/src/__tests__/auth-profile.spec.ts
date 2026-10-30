@@ -36,7 +36,7 @@ describe("remote bindings auth profiles", () => {
 	afterEach(() => vi.unstubAllEnvs());
 
 	it.for(["personal", "default", undefined])(
-		"replaces cached authentication when the environment profile changes to %s",
+		"should replace cached authentication when the environment profile changes to %s",
 		async (profile, { expect }) => {
 			const hooks = new Map<string, AsyncHook<CfAccount>>();
 			vi.stubEnv("CLOUDFLARE_AUTH_PROFILE", "work");
@@ -71,7 +71,7 @@ describe("remote bindings auth profiles", () => {
 		}
 	);
 
-	it("keeps each lazy hook bound to the profile selected when it was created", async ({
+	it("should use each hook's original profile when loading credentials lazily", async ({
 		expect,
 	}) => {
 		const hooks = new Map<string, AsyncHook<CfAccount>>();
