@@ -158,3 +158,54 @@ test.for([
 		expect(await result.exitCode, result.stdout + result.stderr).toBe(0);
 	}
 );
+
+test("runs self-bound Durable Objects when only the environment names the Worker", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
+	await seed({
+		"vitest.config.mts": vitestConfig({
+			wrangler: { configPath: "./wrangler.jsonc", environment: "staging" },
+			miniflare: { compatibilityFlags: ["nodejs_compat"] },
+		}),
+		"wrangler.jsonc": JSON.stringify({
+			main: "./index.ts",
+			compatibility_date: "2025-09-01",
+			migrations: [{ tag: "v1", new_sqlite_classes: ["Counter"] }],
+			env: {
+				staging: {
+					name: "beta",
+					durable_objects: {
+						bindings: [
+							{ name: "UNNAMED_DO", class_name: "Counter" },
+							{ name: "NAMED_DO", class_name: "Counter", script_name: "beta" },
+						],
+					},
+				},
+			},
+		}),
+		"index.ts": dedent`
+			import { DurableObject } from "cloudflare:workers";
+			export class Counter extends DurableObject {
+				ping() {
+					return this.ctx.storage.sql.exec("SELECT 'pong' AS message").one().message;
+				}
+			}
+			export default { fetch() { return new Response("ok"); } };
+		`,
+		"index.test.ts": dedent`
+			import { env, runInDurableObject } from "cloudflare:test";
+			import { it } from "vitest";
+			it("calls both local Durable Objects", async ({ expect }) => {
+				const unnamed = env.UNNAMED_DO.get(env.UNNAMED_DO.idFromName("test"));
+				expect(await unnamed.ping()).toBe("pong");
+				const named = env.NAMED_DO.get(env.NAMED_DO.idFromName("test"));
+				expect(await runInDurableObject(named, (instance) => instance.ping())).toBe("pong");
+			});
+		`,
+	});
+
+	const result = await vitestRun();
+	expect(await result.exitCode, result.stdout + result.stderr).toBe(0);
+});

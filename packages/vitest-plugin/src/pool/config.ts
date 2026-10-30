@@ -1,10 +1,15 @@
+import assert from "node:assert";
 import path from "node:path";
+import util from "node:util";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import {
+	DEFAULT_COMPAT_DATE,
 	formatZodError,
 	getCloudflareComplianceRegion,
 } from "@cloudflare/workers-utils";
 import {
+	convertV4MiniflareOptions,
+	kCurrentWorker,
 	Log,
 	LogLevel,
 	mergeWorkerOptions,
@@ -15,6 +20,8 @@ import {
 	getProjectPath,
 	getRelativeProjectConfigPath,
 	getRelativeProjectPath,
+	getRunnerName,
+	WORKER_NAME_PREFIX,
 } from "./helpers";
 import { loadNewConfig, NEW_CONFIG_FILENAME } from "./new-config";
 import type {
@@ -22,7 +29,11 @@ import type {
 	RemoteProxySessionData,
 } from "@cloudflare/remote-bindings";
 import type { Config } from "@cloudflare/workers-utils";
-import type { LegacyWorkerOptions, V4ModuleRule } from "miniflare";
+import type {
+	LegacyWorkerOptions,
+	V4ModuleRule,
+	WorkerOptions,
+} from "miniflare";
 import type { TestProject } from "vitest/node";
 import type { ZodError } from "zod";
 
@@ -143,16 +154,23 @@ export type WorkersPoolOptionsWithDefines = WorkersPoolOptions & {
 		newConfig: boolean;
 		/**
 		 * The Worker name declared in the configuration file, before any
-		 * environment name is appended. Self-referential service, tail and
-		 * Workflow bindings are written against this name.
+		 * environment name is appended. Self-referential service and tail
+		 * bindings are written against this name.
 		 */
 		workerName: string | undefined;
 		/**
 		 * The effective Worker name after selecting a Wrangler environment.
-		 * Durable Object script names target this name without environment rewriting.
+		 * Durable Object and Workflow script names target this name without
+		 * environment rewriting.
 		 */
 		effectiveWorkerName: string | undefined;
 	};
+	/**
+	 * The Worker under test, then the auxiliary Workers, resolved from the
+	 * configuration file and `miniflare` options in Miniflare's native shape.
+	 * Set while parsing; not a user-facing option.
+	 */
+	projectWorkers?: ProjectWorkers;
 };
 
 function normalizeMiniflareWorkerOptions(value: Record<string, unknown>): void {
@@ -237,6 +255,7 @@ function parseWorkerOptions(
 }
 
 const log = new Log(LogLevel.WARN, { prefix: "vpw" });
+const debug = util.debuglog("vitest-plugin");
 
 const remoteBindingsLogger: RemoteBindingsLogger = {
 	loggerLevel: "log",
@@ -257,30 +276,32 @@ const remoteBindingsLogger: RemoteBindingsLogger = {
 // }
 
 function filterTails(
-	tails: LegacyWorkerOptions["tails"],
-	userWorkers?: { name?: string }[]
+	tails: WorkerOptions["config"]["tailConsumers"],
+	auxiliaryWorkers: WorkerOptions[]
 ) {
 	// Only connect the tail consumers that represent Workers that are defined in the Vitest config. Warn that a tail will be omitted otherwise
 	// This _differs from service bindings_ because tail consumers are "optional" in a sense, and shouldn't affect the runtime behaviour of a Worker
-	return tails?.filter((tailService) => {
-		let name: string;
-		if (typeof tailService === "string") {
-			name = tailService;
-		} else if (
-			typeof tailService === "object" &&
-			"name" in tailService &&
-			typeof tailService.name === "string"
-		) {
-			name = tailService.name;
-		} else {
-			// Don't interfere with network-based tail connections (e.g. via the dev registry), or kCurrentWorker
-			return true;
+	const seen = new Set<string>();
+	return tails?.filter((tail) => {
+		// The configuration file and `miniflare` options may name the same tail consumer
+		const key = JSON.stringify([
+			tail.worker,
+			tail.streaming ?? false,
+			tail.entrypoint,
+			tail.props,
+		]);
+		if (seen.has(key)) {
+			return false;
 		}
-		const found = userWorkers?.some((w) => w.name === name);
+		seen.add(key);
+
+		const found = auxiliaryWorkers.some(
+			(auxiliaryWorker) => auxiliaryWorker.config.name === tail.worker
+		);
 
 		if (!found) {
 			log.warn(
-				`Tail consumer "${name}" was not found in your config. Make sure you add it if you'd like to simulate receiving tail events locally.`
+				`Tail consumer "${tail.worker}" was not found in \`miniflare.workers\`. Make sure you add it if you'd like to simulate receiving tail events locally.`
 			);
 		}
 
@@ -326,7 +347,194 @@ function normalizeNewConfigOption(
 	return { configPath: option.configPath ?? NEW_CONFIG_FILENAME };
 }
 
+export type ProjectWorkers = [
+	runnerWorker: WorkerOptions,
+	...auxiliaryWorkers: WorkerOptions[],
+];
+
+/**
+ * Converts the Worker under test and any auxiliary Workers, configured with
+ * `wrangler` or `miniflare` options in Miniflare's V4 shape, to its native
+ * shape.
+ *
+ * @param project The Vitest project.
+ * @param options The project's parsed pool options.
+ * @param workerName The name to convert the Worker under test with. Bindings
+ * that name it are converted as bindings to itself.
+ * @returns The Worker under test, followed by the auxiliary Workers.
+ */
+function convertUserWorkers(
+	project: TestProject,
+	options: WorkersPoolOptionsWithDefines,
+	workerName: string
+): ProjectWorkers {
+	const { workers = [], ...worker } = options.miniflare ?? {};
+
+	for (const [i, auxiliaryWorker] of workers.entries()) {
+		const name: unknown = (auxiliaryWorker as { name?: unknown }).name;
+		// Make sure the worker has a non-empty name...
+		if (typeof name !== "string" || name === "") {
+			throw new Error(
+				`In project ${getRelativeProjectPath(
+					project
+				)}, \`miniflare.workers[${i}].name\` must be non-empty`
+			);
+		}
+		// ...that doesn't start with our reserved prefix
+		if (name.startsWith(WORKER_NAME_PREFIX)) {
+			throw new Error(
+				`In project ${getRelativeProjectPath(
+					project
+				)}, \`miniflare.workers[${i}].name\` must not start with "${WORKER_NAME_PREFIX}", got ${name}`
+			);
+		}
+	}
+
+	let compatibilityDate = worker.compatibilityDate;
+	if (compatibilityDate === undefined) {
+		// No compatibility date was provided, so use the default
+		compatibilityDate = DEFAULT_COMPAT_DATE;
+		debug(
+			"No compatibility date was provided for project %s, defaulting to %s.",
+			getRelativeProjectPath(project),
+			compatibilityDate
+		);
+	}
+
+	let converted: WorkerOptions[];
+	try {
+		// Miniflare validates the auxiliary Workers' options
+		({ workers: converted = [] } = convertV4MiniflareOptions({
+			workers: [
+				// Conversion requires a source, so give the Worker under test an empty
+				// one. The runner's own modules replace it.
+				{
+					...worker,
+					name: workerName,
+					compatibilityDate,
+					script: "",
+					modules: true,
+				} as LegacyWorkerOptions,
+				...(workers as LegacyWorkerOptions[]),
+			],
+		}));
+	} catch (e) {
+		// Options from a configuration file can fail here too, so don't let
+		// `parseProjectOptions()` report this as an error in the pool's options
+		throw isZodErrorLike(e) ? new Error(formatZodError(e), { cause: e }) : e;
+	}
+	const [userWorker, ...auxiliaryWorkers] = converted;
+	assert(userWorker !== undefined);
+	return [userWorker, ...auxiliaryWorkers];
+}
+
+/**
+ * Points the bindings of the Worker under test that target the Worker itself at
+ * the runner, which is renamed. Service bindings use `kCurrentWorker`, which
+ * resolves relative to the calling Worker.
+ *
+ * @param worker The Worker under test.
+ * @param configWorkerName The Worker's top-level name in its configuration
+ *   file, if it has one.
+ * @param effectiveWorkerName The Worker's name with its Wrangler environment
+ *   applied.
+ * @param runnerName Name of the runner Worker.
+ */
+function pointSelfBindingsAtRunner(
+	worker: WorkerOptions,
+	configWorkerName: string | undefined,
+	effectiveWorkerName: string,
+	runnerName: string
+): void {
+	const env = worker.config.env ?? {};
+	for (const [name, binding] of Object.entries(env)) {
+		if (binding.type === "worker" && binding.worker === configWorkerName) {
+			env[name] = { ...binding, worker: kCurrentWorker };
+		} else if (
+			// Durable Objects and Workflows target the effective name, so a binding
+			// to the base Worker from a named environment stays external
+			(binding.type === "durable-object" || binding.type === "workflow") &&
+			binding.worker === effectiveWorkerName
+		) {
+			env[name] = { ...binding, worker: runnerName };
+		}
+	}
+}
+
+/**
+ * Points an auxiliary Worker's streaming tail consumers that target the Worker
+ * under test's configured name at the runner, which is renamed.
+ *
+ * @param worker An auxiliary Worker.
+ * @param configWorkerName The Worker under test's name in its configuration file.
+ * @param runnerName Name of the runner Worker.
+ */
+function pointStreamingTailsAtRunner(
+	worker: WorkerOptions,
+	configWorkerName: string,
+	runnerName: string
+): void {
+	worker.config.tailConsumers = worker.config.tailConsumers?.map((tail) =>
+		tail.streaming && tail.worker === configWorkerName
+			? { ...tail, worker: runnerName }
+			: tail
+	);
+}
+
+/**
+ * Resolves the Worker under test and the auxiliary Workers in Miniflare's
+ * native shape, from `miniflare` options and the project's configuration file.
+ * The Worker under test takes the runner's name, and references to its
+ * configured name are pointed at the runner.
+ *
+ * @param project The Vitest project.
+ * @param options The project's parsed pool options.
+ * @returns The Worker under test, followed by the auxiliary Workers.
+ */
+function resolveProjectWorkers(
+	project: TestProject,
+	options: WorkersPoolOptionsWithDefines
+): ProjectWorkers {
+	const runnerName = getRunnerName(project);
+	const configWorkerName = options.resolvedConfig?.workerName;
+	const effectiveWorkerName = options.resolvedConfig?.effectiveWorkerName;
+	const [worker, ...auxiliaryWorkers] = convertUserWorkers(
+		project,
+		options,
+		effectiveWorkerName || runnerName
+	);
+
+	worker.config.tailConsumers = filterTails(
+		worker.config.tailConsumers,
+		auxiliaryWorkers
+	);
+
+	// The runner replaces the Worker under test, so it takes the runner's name
+	worker.config.name = runnerName;
+	// A Wrangler environment can name the Worker when the top level doesn't
+	if (effectiveWorkerName) {
+		pointSelfBindingsAtRunner(
+			worker,
+			configWorkerName,
+			effectiveWorkerName,
+			runnerName
+		);
+	}
+	if (configWorkerName) {
+		for (const auxiliaryWorker of auxiliaryWorkers) {
+			pointStreamingTailsAtRunner(
+				auxiliaryWorker,
+				configWorkerName,
+				runnerName
+			);
+		}
+	}
+
+	return [worker, ...auxiliaryWorkers];
+}
+
 async function parseCustomPoolOptions(
+	project: TestProject,
 	rootPath: string,
 	value: unknown,
 	mode: string | undefined
@@ -496,14 +704,6 @@ async function parseCustomPoolOptions(
 			options.miniflare as SourcelessWorkerOptions
 		);
 
-		options.miniflare = {
-			...options.miniflare,
-			tails: filterTails(
-				workerOptions.tails as LegacyWorkerOptions["tails"],
-				options.miniflare.workers
-			),
-		};
-
 		// Record any `define`s from the config
 		options.defines = define;
 	}
@@ -515,6 +715,8 @@ async function parseCustomPoolOptions(
 			options.main
 		);
 	}
+
+	options.projectWorkers = resolveProjectWorkers(project, options);
 
 	return options;
 }
@@ -549,6 +751,7 @@ export async function parseProjectOptions(
 
 	try {
 		return await parseCustomPoolOptions(
+			project,
 			projectPath,
 			poolOptions,
 			// Vitest is Vite, so `cloudflare.config.ts` functions see the same mode

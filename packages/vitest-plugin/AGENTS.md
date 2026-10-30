@@ -42,8 +42,15 @@ session, `unstable_getMiniflareWorkerOptions()`, `main`, defines, module rules, 
 The two are mutually exclusive. Whichever is used, the resolved path, config format,
 top-level Worker name and effective environment Worker name are recorded on
 `options.resolvedConfig` for the pool to consume — never re-read the config file from
-disk. Durable Object self-references use the effective name so bindings to a base
-Worker remain external when testing a named environment.
+disk. Durable Object and Workflow self-references use the effective name so bindings
+to a base Worker remain external when testing a named environment.
+
+Parsing then resolves the Worker under test and the auxiliary Workers once, into
+Miniflare's native `WorkerOptions` shape, on `options.projectWorkers`
+(`resolveProjectWorkers()`), through `convertV4MiniflareOptions()`. The Worker takes the
+runner's name, and references to its configured name are pointed at the runner.
+`buildProjectWorkerOptions()` in `src/pool/index.ts` adds the pool's modules and internal
+bindings to it, and the Durable Object designators are read from it.
 
 ## BUILD
 
