@@ -404,6 +404,7 @@ export type ServiceMetadataRes = {
 			limits: {
 				cpu_ms: number;
 				subrequests: number;
+				durable_object_memory_mb?: 128 | 256 | 512;
 			};
 			compatibility_date: string;
 			compatibility_flags: string[];

@@ -1262,6 +1262,29 @@ describe("init", () => {
 			});
 		});
 
+		it("should include the durable_object_memory_mb user limit", async () => {
+			worker = makeWorker({
+				id: "isolinear-optical-chip",
+				limits: {
+					cpu_ms: 75,
+					durable_object_memory_mb: 256,
+				},
+			});
+
+			const { config } = await downloadWorker(
+				"LCARS",
+				"isolinear-optical-chip"
+			);
+			expect(config).toMatchObject({
+				...mockConfigExpected,
+				main: "index.js",
+				limits: {
+					cpu_ms: 75,
+					durable_object_memory_mb: 256,
+				},
+			});
+		});
+
 		it.each(["bundled", "unbound", "standard"])(
 			"should ignore usage_model = %s",
 			async (usage_model) => {
