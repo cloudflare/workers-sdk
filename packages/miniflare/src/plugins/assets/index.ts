@@ -13,6 +13,7 @@ import {
 	PATH_HASH_OFFSET,
 	PATH_HASH_SIZE,
 } from "@cloudflare/workers-shared";
+import { resolveCompatibilityFlags } from "@cloudflare/workers-shared/utils/compatibility-flags";
 import {
 	constructHeaders,
 	constructRedirects,
@@ -218,8 +219,10 @@ export const ASSETS_PLUGIN: Plugin = {
 		const routerConfig = resolveRouterConfig(options.config);
 
 		const assetConfig: AssetConfig = {
-			compatibility_date: options.config.compatibilityDate,
-			compatibility_flags: options.config.compatibilityFlags,
+			compatibility_flags: resolveCompatibilityFlags({
+				compatibilityDate: options.config.compatibilityDate,
+				compatibilityFlags: options.config.compatibilityFlags,
+			}),
 			html_handling: assets.htmlHandling,
 			not_found_handling: assets.notFoundHandling,
 			base_path: assets.basePath,

@@ -28,4 +28,15 @@ describe("resolveAssetOptions", () => {
 
 		expect(result?.assetConfig.base_path).toBe("https://example.com/docs");
 	});
+
+	test("resolves date-enabled compatibility flags for upload", ({ expect }) => {
+		const result = resolveAssetOptions({ assetsDir, main: undefined }, {
+			compatibility_date: "2025-04-01",
+			assets: { directory: "./public" },
+		} as Config);
+
+		expect(result?.assetConfig.compatibility_flags).toContain(
+			"assets_navigation_prefers_asset_serving"
+		);
+	});
 });

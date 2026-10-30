@@ -56,7 +56,6 @@ const RemoteProxyConnectionStringSchema =
 	z.custom<RemoteProxyConnectionString>();
 
 const V4AssetConfigSchema = AssetConfigSchema.omit({
-	compatibility_date: true,
 	compatibility_flags: true,
 });
 
@@ -901,10 +900,7 @@ export type V4WorkerOptionsShape = {
 		binding?: string;
 		run_worker_first?: boolean | string[];
 		routerConfig?: RouterConfig;
-		assetConfig?: Omit<
-			AssetConfig,
-			"compatibility_date" | "compatibility_flags"
-		>;
+		assetConfig?: Omit<AssetConfig, "compatibility_flags">;
 	};
 	workflows?: Record<
 		string,

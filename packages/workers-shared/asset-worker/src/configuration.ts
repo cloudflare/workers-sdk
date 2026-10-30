@@ -1,20 +1,16 @@
 import { normalizeBasePath } from "../../utils/base-path";
-import { resolveCompatibilityOptions } from "./compatibility-flags";
 import type { AssetConfig } from "../../utils/types";
 import type { NormalizedAssetConfig } from "./types";
 
 export const normalizeConfiguration = (
 	configuration?: AssetConfig
 ): NormalizedAssetConfig => {
-	const compatibilityOptions = resolveCompatibilityOptions(configuration);
 	const basePath = normalizeBasePath(configuration?.base_path ?? "/");
 	if (!basePath.valid) {
 		throw new Error(`Invalid assets base_path: ${basePath.error}`);
 	}
-
 	return {
-		compatibility_date: compatibilityOptions.compatibilityDate,
-		compatibility_flags: compatibilityOptions.compatibilityFlags,
+		compatibility_flags: configuration?.compatibility_flags ?? [],
 		html_handling: configuration?.html_handling ?? "auto-trailing-slash",
 		not_found_handling: configuration?.not_found_handling ?? "none",
 		base_path: basePath.value,
