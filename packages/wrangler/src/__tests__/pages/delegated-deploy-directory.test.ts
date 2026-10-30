@@ -1,10 +1,12 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi, type ExpectStatic } from "vitest";
+import * as autoconfig from "../../autoconfig";
 import { readConfig } from "../../config";
 import { runDeployCommandHandler, type DeployArgs } from "../../deploy";
 import * as deploy from "../../deploy";
+import { maybeRunAutoConfig } from "../../deploy/autoconfig";
 import { mergeDeployConfigArgs } from "../../deployment-bundle/merge-config-args";
 import { run } from "../../experimental-flags";
 import { runPagesToWorkersDeploy } from "../../pages/run-workers-deploy";
@@ -135,6 +137,44 @@ describe("Pages-to-Workers delegated deploy assets directory", () => {
 			expect(summary.buildCommand).toBeUndefined();
 		}
 	);
+
+	it("preserves a Vite-plugin-only deployment without generating static-assets config", async ({
+		expect,
+	}) => {
+		const packageJson = JSON.stringify({
+			name: "my-site",
+			dependencies: { vite: "8", "@cloudflare/vite-plugin": "1" },
+			scripts: { build: "vite build", deploy: "vite build && wrangler deploy" },
+		});
+		const viteConfig = `import { cloudflare } from "@cloudflare/vite-plugin";
+			import { defineConfig } from "vite";
+			export default defineConfig({ plugins: [cloudflare()] });`;
+		writeFileSync("package.json", packageJson);
+		writeFileSync("vite.config.ts", viteConfig);
+		const args = { ...delegatedDeployArgs(), dryRun: false };
+		const config = readConfig(args, { useRedirectIfAvailable: true });
+		// Guard the write path so a regression fails before attempting to install
+		// packages or replace the existing deployment's configuration.
+		const configure = vi
+			.spyOn(autoconfig, "runAutoConfigLogic")
+			.mockRejectedValue(
+				new Error("Existing deployment must not be reconfigured")
+			);
+		try {
+			await expect(
+				maybeRunAutoConfig(args, config, {
+					skipConfirmations: true,
+					outputDir: "public",
+				})
+			).resolves.toEqual({ config, aborted: false });
+			expect(configure).not.toHaveBeenCalled();
+			expect(existsSync("wrangler.jsonc")).toBe(false);
+			expect(readFileSync("package.json", "utf8")).toBe(packageJson);
+			expect(readFileSync("vite.config.ts", "utf8")).toBe(viteConfig);
+		} finally {
+			configure.mockRestore();
+		}
+	});
 
 	it("overrides a legacy Workers Sites bucket before preparing the upload", async ({
 		expect,

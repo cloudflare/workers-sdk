@@ -136,7 +136,8 @@ export async function getDetailsForAutoConfig({
 	 * for example the directory passed to `wrangler pages deploy <directory>`.
 	 * Selects static-asset configuration instead of framework configuration, so
 	 * a framework adapter or build cannot replace the requested assets. Existing
-	 * Workers and Pages configurations retain their usual detection behavior.
+	 * Workers and Pages configurations, including framework-managed deployments,
+	 * retain their usual detection behavior.
 	 * Relative paths are resolved against `projectPath`.
 	 */
 	outputDir?: string;
@@ -169,12 +170,19 @@ export async function getDetailsForAutoConfig({
 	const { detectedFramework, packageManager, isWorkspaceRoot } =
 		await detectFramework(projectPath, context, { wranglerConfig, target });
 
+	const detectedFrameworkInstance = getFrameworkClassInstance(
+		detectedFramework.framework.id
+	);
+	const configured =
+		hasCloudflareConfig ||
+		detectedFrameworkInstance.isConfigured(projectPath, { target });
 	const useStaticAssets =
+		!configured &&
 		requestedOutputDir !== undefined &&
 		detectedFramework.framework.id !== "cloudflare-pages";
-	const framework = getFrameworkClassInstance(
-		useStaticAssets ? staticFramework.id : detectedFramework.framework.id
-	);
+	const framework = useStaticAssets
+		? getFrameworkClassInstance(staticFramework.id)
+		: detectedFrameworkInstance;
 	const packageJsonPath = resolve(projectPath, "package.json");
 
 	let packageJson: PackageJSON | undefined;
@@ -187,9 +195,6 @@ export async function getDetailsForAutoConfig({
 	} catch {
 		logger.debug("No package.json found when running autoconfig");
 	}
-
-	const configured =
-		hasCloudflareConfig || framework.isConfigured(projectPath, { target });
 
 	const outputDir =
 		requestedOutputDir !== undefined && framework.id === staticFramework.id

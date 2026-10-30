@@ -496,6 +496,45 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		}
 	);
 
+	it.for(["cf", "wrangler"] as const)(
+		"a caller-supplied outputDir should preserve an existing Vite deployment for %s",
+		async (target, { expect }) => {
+			await seed({
+				"package.json": JSON.stringify({
+					name: "my-vite-app",
+					dependencies: { vite: "8", "@cloudflare/vite-plugin": "1" },
+					scripts: {
+						build: "vite build",
+						deploy: "vite build && wrangler deploy",
+					},
+				}),
+				"vite.config.ts": `import { cloudflare } from "@cloudflare/vite-plugin";
+					import { defineConfig } from "vite";
+					export default defineConfig({ plugins: [cloudflare()] });`,
+				"public/index.html": "<h1>Hello World</h1>",
+				...(target === "cf"
+					? { "cloudflare.config.ts": "export default {};" }
+					: {}),
+			});
+			const existingDetails = await details.getDetailsForAutoConfig({
+				context,
+				target,
+			});
+
+			const result = await details.getDetailsForAutoConfig({
+				context,
+				target,
+				outputDir: "public",
+			});
+
+			expect(result).toMatchObject({
+				configured: true,
+				framework: { id: "vite" },
+			});
+			expect(result).toEqual(existingDetails);
+		}
+	);
+
 	it.for([
 		{ input: "./public/", expected: "public" },
 		{ input: "public/nested/..", expected: "public" },
