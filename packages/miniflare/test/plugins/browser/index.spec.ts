@@ -561,20 +561,20 @@ export default {
 	);
 
 	const GET_SESSIONS_AFTER_DISCONNECT_SCRIPT = `
-${waitForClosedConnection.toString()}
-
 export default {
 	async fetch(request, env) {
 		const { sessionId } = await env.MYBROWSER.fetch("https://localhost/v1/acquire").then(res => res.json());
-		const { webSocket: ws } = await env.MYBROWSER.fetch(\`https://localhost/v1/connectDevtools?browser_session=\${sessionId}\`, {
+		const connectPath = new URL(request.url).searchParams.get("path").replace(":sessionId", sessionId);
+		const { webSocket: ws } = await env.MYBROWSER.fetch(\`https://localhost\${connectPath}\`, {
 			headers: { "Upgrade": "websocket" },
 		});
 		ws.accept();
 
 		const { sessions: [connectedSession] } = await env.MYBROWSER.fetch("https://localhost/v1/sessions").then(res => res.json());
+		// The session clears its connection before echoing the close
+		const closed = new Promise((resolve) => ws.addEventListener("close", resolve, { once: true }));
 		ws.close();
-
-		await waitForClosedConnection(ws);
+		await closed;
 
 		const { sessions: [disconnectedSession] } = await env.MYBROWSER.fetch("https://localhost/v1/sessions").then(res => res.json());
 
@@ -583,10 +583,13 @@ export default {
 };
 `;
 
-	test(
-		"gets sessions while connecting and disconnecting session",
+	test.for([
+		"/v1/connectDevtools?browser_session=:sessionId",
+		"/v1/devtools/browser/:sessionId",
+	])(
+		"gets sessions while connecting and disconnecting session via %s",
 		BROWSER_RENDERING_RETRY,
-		async ({ expect }) => {
+		async (connectPath, { expect }) => {
 			const opts: MiniflareOptions = {
 				workers: [
 					{
@@ -605,7 +608,9 @@ export default {
 			useDispose(mf);
 
 			const { connectedSession, disconnectedSession } = (await mf
-				.dispatchFetch("https://localhost")
+				.dispatchFetch(
+					`https://localhost?path=${encodeURIComponent(connectPath)}`
+				)
 				.then((res) => res.json())) as any;
 			expect(connectedSession.sessionId).toBe(disconnectedSession.sessionId);
 			expect(

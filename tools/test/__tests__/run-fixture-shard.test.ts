@@ -86,11 +86,15 @@ describe("getFixtureShard", () => {
 
 	it("retains the existing Linux-only Browser Run exclusion", ({ expect }) => {
 		fixture("browser-run");
+		fixture("browser-run-quick-actions");
 		fixture("other");
 		expect(getFixtureShard(root, "1/1", "linux")).toEqual(["./fixtures/other"]);
 		for (const platform of ["darwin", "win32"] as const) {
-			expect(getFixtureShard(root, "1/1", platform)).toContain(
-				"./fixtures/browser-run"
+			expect(getFixtureShard(root, "1/1", platform)).toEqual(
+				expect.arrayContaining([
+					"./fixtures/browser-run",
+					"./fixtures/browser-run-quick-actions",
+				])
 			);
 		}
 	});
