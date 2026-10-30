@@ -36,6 +36,10 @@ import {
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import {
+	hasSuccessfulDelegatedDeployment,
+	recordSuccessfulDelegatedDeployment,
+} from "../pages/delegated-deploy-cache";
 import { syncWorkersSite } from "../sites";
 import { detectAgent } from "../utils/detect-agent";
 import { getScriptName } from "../utils/getScriptName";
@@ -177,8 +181,8 @@ export async function runDeployCommandHandler(
 	//
 	// We guard both agent-generated names and the Pages-to-Workers delegation.
 	// In either case an existing Worker with the same name may be a different
-	// resource that we must not clobber. Repeat deploys are unaffected because
-	// the first one writes a config file (so `configPath` is then set).
+	// resource that we must not clobber. Repeat deploys can prove ownership using
+	// a generated config or the record of a successful deployment checked below.
 	//
 	// Plain `wrangler deploy` is NOT guarded, even in CI with an autoconfigured
 	// name: autoconfigured projects are routinely redeployed in CI (e.g. when the
@@ -202,12 +206,12 @@ export async function runDeployCommandHandler(
 	// Autoconfig may leave no Wrangler config, for example for an existing Vite
 	// deployment or a dry run. Apply the delegated assets and compatibility date
 	// for this invocation without writing configuration.
-	if (
+	const usesDelegatedAssets =
 		pagesToWorkersDelegation &&
 		autoConfigOutputDir !== undefined &&
 		!config.configPath &&
-		!config.pages_build_output_dir
-	) {
+		!config.pages_build_output_dir;
+	if (usesDelegatedAssets) {
 		args = {
 			...args,
 			assets: args.assets ?? autoConfigOutputDir,
@@ -244,7 +248,20 @@ export async function runDeployCommandHandler(
 
 	// Merge CLI args with config into props for building and deploying
 	const { props, buildProps } = await mergeDeployConfigArgs(args, config);
-	props.failIfWorkerNameTaken = nameOwnershipUnverified;
+	const delegatedDeploymentTarget =
+		usesDelegatedAssets && props.accountId && props.name
+			? {
+					projectPath: props.entry.projectRoot,
+					accountId: props.accountId,
+					workerName: props.name,
+				}
+			: undefined;
+	props.failIfWorkerNameTaken =
+		nameOwnershipUnverified &&
+		!(
+			delegatedDeploymentTarget &&
+			hasSuccessfulDelegatedDeployment(delegatedDeploymentTarget)
+		);
 	props.autoRegisterWorkersDevSubdomain = detectedAgent.isAgent
 		? getWorkerNameFromProject(process.cwd())
 		: undefined;
@@ -277,7 +294,7 @@ export async function runDeployCommandHandler(
 			await fillOpenAPIConfiguration(config, containersScope);
 		}
 
-		const { sourceMapSize, assetUploadStats } = await deploy(
+		const { sourceMapSize, assetUploadStats, versionId } = await deploy(
 			props,
 			config,
 			buildResult,
@@ -302,6 +319,10 @@ export async function runDeployCommandHandler(
 				syncWorkersSite,
 			}
 		);
+
+		if (delegatedDeploymentTarget && !props.dryRun && versionId) {
+			recordSuccessfulDelegatedDeployment(delegatedDeploymentTarget, versionId);
+		}
 
 		metrics.sendMetricsEvent(
 			"deploy worker script",
