@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
+import { DEFAULT_COMPAT_DATE, removeDirSync } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, it, vi } from "vitest";
@@ -91,6 +91,11 @@ describe("config-free delegated deployment ownership", () => {
 			http.get(
 				"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
 				() => HttpResponse.json(createFetchResult({ deployments: [] }))
+			),
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/versions/:versionId",
+				({ params }) =>
+					HttpResponse.json(createFetchResult({ id: params.versionId }))
 			)
 		);
 	});
@@ -113,6 +118,68 @@ describe("config-free delegated deployment ownership", () => {
 		expect(existsSync("wrangler.jsonc")).toBe(false);
 		expect(readFileSync("package.json", "utf8")).toBe(packageJson);
 		expect(readFileSync("vite.config.ts", "utf8")).toBe(viteConfig);
+	});
+
+	it("can redeploy after reinstalling dependencies", async ({ expect }) => {
+		vi.stubEnv("WRANGLER_CACHE_DIR", "");
+		mkdirSync("node_modules");
+		mockUpload();
+		await runPagesToWorkersDeploy(delegation);
+		workerExists = true;
+		removeDirSync("node_modules");
+		mkdirSync("node_modules");
+		mockUpload();
+		await runPagesToWorkersDeploy(delegation);
+		expect(manifests).toHaveLength(2);
+	});
+
+	it("does not overwrite a replacement Worker when the recorded version is missing", async ({
+		expect,
+	}) => {
+		mockUpload();
+		await runPagesToWorkersDeploy(delegation);
+		workerExists = true;
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/versions/:versionId",
+				() =>
+					HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 10007, message: "Version not found" },
+						]),
+						{ status: 404 }
+					)
+			)
+		);
+		mockUpload();
+		await expect(runPagesToWorkersDeploy(delegation)).rejects.toThrow(
+			"already exists in your account"
+		);
+		expect(manifests).toHaveLength(1);
+	});
+
+	it("does not overwrite a Worker when version verification fails", async ({
+		expect,
+	}) => {
+		mockUpload();
+		await runPagesToWorkersDeploy(delegation);
+		workerExists = true;
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/versions/:versionId",
+				() =>
+					HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 10000, message: "Forbidden" },
+						]),
+						{ status: 403 }
+					)
+			)
+		);
+		await expect(runPagesToWorkersDeploy(delegation)).rejects.toMatchObject({
+			status: 403,
+		});
+		expect(manifests).toHaveLength(1);
 	});
 
 	it.for(["account", "project", "name"])(
@@ -187,8 +254,8 @@ describe("config-free delegated deployment ownership", () => {
 	it("reports success even if the local ownership record cannot be written", async ({
 		expect,
 	}) => {
-		writeFileSync("not-a-directory", "");
-		vi.stubEnv("WRANGLER_CACHE_DIR", resolve("not-a-directory"));
+		mkdirSync(".wrangler");
+		writeFileSync(".wrangler/deployments", "");
 		mockUpload();
 		await runPagesToWorkersDeploy(delegation);
 		expect(manifests).toHaveLength(1);

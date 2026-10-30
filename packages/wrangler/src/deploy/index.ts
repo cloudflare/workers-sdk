@@ -39,7 +39,7 @@ import * as metrics from "../metrics";
 import {
 	hasSuccessfulDelegatedDeployment,
 	recordSuccessfulDelegatedDeployment,
-} from "../pages/delegated-deploy-cache";
+} from "../pages/delegated-deploy-ownership";
 import { syncWorkersSite } from "../sites";
 import { detectAgent } from "../utils/detect-agent";
 import { getScriptName } from "../utils/getScriptName";
@@ -256,17 +256,21 @@ export async function runDeployCommandHandler(
 					workerName: props.name,
 				}
 			: undefined;
-	props.failIfWorkerNameTaken =
-		nameOwnershipUnverified &&
-		!(
-			delegatedDeploymentTarget &&
-			hasSuccessfulDelegatedDeployment(delegatedDeploymentTarget)
-		);
 	props.autoRegisterWorkersDevSubdomain = detectedAgent.isAgent
 		? getWorkerNameFromProject(process.cwd())
 		: undefined;
 
 	try {
+		props.failIfWorkerNameTaken =
+			nameOwnershipUnverified &&
+			!(
+				delegatedDeploymentTarget &&
+				(await hasSuccessfulDelegatedDeployment(
+					delegatedDeploymentTarget,
+					config
+				))
+			);
+
 		// Derive workerNameOverridden by comparing pre-merge name with post-merge name
 		const preMergeName = getScriptName(args, config);
 		props.workerNameOverridden =
