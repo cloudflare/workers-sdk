@@ -29,21 +29,33 @@
 ## WORKER CONFIGURATION SOURCES
 
 `parseCustomPoolOptions()` in `src/pool/config.ts` resolves at most one configuration
-file into a normalised `Config`, then shares every downstream step (remote proxy
-session, `unstable_getMiniflareWorkerOptions()`, `main`, defines, module rules, tails):
+file:
 
 - `wrangler: { configPath, environment }` — a Wrangler configuration file, via
-  `wrangler.unstable_readConfig()`
-- `experimental: { newConfig }` — a `cloudflare.config.ts`, via `src/pool/new-config.ts`
-  (`@cloudflare/config`'s `loadAndParseConfig()` → `convertToWranglerConfig()` →
-  `normalizeAndValidateConfig()`). Mirrors `@cloudflare/vite-plugin`'s
-  `experimental.newConfig`. `ctx.mode` comes from `project.vite.config.mode`.
+  `wrangler.unstable_readConfig()`, then `unstable_getMiniflareWorkerOptions()` (remote
+  proxy session, `main`, defines, module rules, tails) merged into the V4 `miniflare`
+  options
+- `config: true | "<path>"` — a `cloudflare.config.ts`, via `src/pool/new-config.ts`
+  (`@cloudflare/config`'s `loadAndParseConfig()`), never through Wrangler. `miniflare`
+  options are merged over the config's Worker. Secrets and Hyperdrive values are resolved
+  with Miniflare's `resolveLocalBindings()`, and remote bindings use cf
+  credentials (`src/pool/auth.ts`) through `@cloudflare/remote-bindings`, which accepts
+  the config's bindings as they are. `ctx.mode` comes from `project.vite.config.mode`.
 
 The two are mutually exclusive. Whichever is used, the resolved path, config format,
 top-level Worker name and effective environment Worker name are recorded on
 `options.resolvedConfig` for the pool to consume — never re-read the config file from
-disk. Durable Object self-references use the effective name so bindings to a base
-Worker remain external when testing a named environment.
+disk. Durable Object and Workflow self-references use the effective name so bindings
+to a base Worker remain external when testing a named environment.
+
+Parsing then resolves the Worker under test and the auxiliary Workers once, into
+Miniflare's native `WorkerOptions` shape, on `options.projectWorkers`
+(`resolveProjectWorkers()`). `wrangler`/`miniflare` options go through
+`convertV4MiniflareOptions()`. With `config`, `mergeCloudflareConfigWorker()` in
+`src/pool/new-config.ts` merges them over the config's Worker, which is used as it is.
+The Worker takes the runner's name, and references to its configured name are pointed at
+the runner. `buildProjectWorkerOptions()` in `src/pool/index.ts` adds the pool's modules
+and internal bindings to it, and the Durable Object designators are read from it.
 
 ## BUILD
 

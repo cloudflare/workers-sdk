@@ -5,7 +5,7 @@
 
 import "cloudflare/shims/web";
 import process from "node:process";
-import { FatalError } from "@cloudflare/workers-utils";
+import { FatalError, splitSqlQuery } from "@cloudflare/workers-utils";
 import { hideBin } from "yargs/helpers";
 import {
 	convertConfigBindingsToStartWorkerBindings,
@@ -116,7 +116,14 @@ export {
 } from "./cf-wrangler/args";
 
 // Export internal APIs required by the Vitest integration as `unstable_`
-export { splitSqlQuery as unstable_splitSqlQuery } from "./d1/splitter";
+/**
+ * Split an SQLQuery into an array of statements
+ */
+export function unstable_splitSqlQuery(sql: string): string[] {
+	// Wrapped, so the published types declare it rather than importing it from
+	// `@cloudflare/workers-utils`, which is bundled
+	return splitSqlQuery(sql);
+}
 
 // `miniflare-cli/assets` dynamically imports`@cloudflare/pages-shared/environment-polyfills`.
 // `@cloudflare/pages-shared/environment-polyfills/types.ts` defines `global`

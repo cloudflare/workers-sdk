@@ -223,3 +223,4 @@ export type {
 	D1MigrationFile,
 	GetD1MigrationFilesOptions,
 } from "./d1-migrations";
+export { normalizeSqlLineEndings, splitSqlQuery } from "./d1-splitter";

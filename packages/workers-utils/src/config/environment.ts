@@ -1962,6 +1962,16 @@ export type ConfigModuleRuleType =
 	| "PythonModule"
 	| "PythonRequirement";
 
+/**
+ * The rules applied after a Worker's own `rules`, so these modules can be
+ * imported without configuring them.
+ */
+export const DEFAULT_MODULE_RULES: Rule[] = [
+	{ type: "Text", globs: ["**/*.txt", "**/*.html", "**/*.sql"] },
+	{ type: "Data", globs: ["**/*.bin"] },
+	{ type: "CompiledWasm", globs: ["**/*.wasm", "**/*.wasm?module"] },
+];
+
 export type TailConsumer = {
 	/** The name of the service tail events will be forwarded to. */
 	service: string;
