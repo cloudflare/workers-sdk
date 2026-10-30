@@ -1,5 +1,6 @@
 import {
 	generateRulesMatcher,
+	normalizeRedirectTarget,
 	replacer,
 } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import {
@@ -226,7 +227,7 @@ export async function generateHandler<
 				: {},
 			({ status, to }, replacements) => ({
 				status,
-				to: replacer(to, replacements),
+				to: normalizeRedirectTarget(replacer(to, replacements)),
 			})
 		);
 

@@ -1227,6 +1227,43 @@ describe("asset-server handler", () => {
 	});
 
 	describe("redirects", () => {
+		test.for([
+			["/old/*", "/old//images/logo.png", "/:splat", "/images/logo.png"],
+			["/old*", "/old/images/logo.png", "/:splat", "/images/logo.png"],
+			[
+				"/old/*",
+				"/old///images/logo.png?keep=1",
+				"/:splat",
+				"/images/logo.png?keep=1",
+			],
+			["/old/*", "/old/%2Fimages/logo.png", "/:splat", "/%2Fimages/logo.png"],
+			[
+				"/old/*",
+				"/old//images/logo.png",
+				"/:splat?next=https://example.com/a//b#section//one",
+				"/images/logo.png?next=https://example.com/a//b#section//one",
+			],
+			[
+				"/old/*",
+				"/old//images/logo.png",
+				"https://other.example/:splat",
+				"https://other.example//images/logo.png",
+			],
+		])(
+			"normalizes the pathname of %s -> %s (%s)",
+			async ([from, path, to, location], { expect }) => {
+				const { response } = await getTestResponse({
+					request: `https://foo.com${path}`,
+					metadata: createMetadataObjectWithRedirects([
+						{ from, to, status: 302 },
+					]),
+				});
+
+				expect(response.status).toBe(302);
+				expect(response.headers.get("Location")).toBe(location);
+			}
+		);
+
 		test("it should redirect uri-encoded paths", async ({ expect }) => {
 			const { response, spies } = await getTestResponse({
 				request: "https://foo.com/some%20page",
