@@ -11,7 +11,7 @@ import { createCfProfileStore } from "@cloudflare/workers-auth/cf";
 import { startDev } from "../dev/start-dev";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
-import { useCfAuth } from "../user";
+import { withCfAuth } from "../user";
 import type { StartDevOptions } from "../dev";
 
 /**
@@ -26,22 +26,25 @@ import type { StartDevOptions } from "../dev";
 export async function runCfWranglerDev(
 	options: StartDevOptions
 ): Promise<number> {
-	useCfAuth(createCfProfileStore({ logger }).resolve({ cwd: process.cwd() }));
+	const profile = createCfProfileStore({ logger }).resolve({
+		cwd: process.cwd(),
+	});
+	return withCfAuth(profile, async () => {
+		// `startDev` reads experimental flags from async-local storage. This
+		// entrypoint is single-worker and never provisions resources.
+		const devInstance = await run(
+			{
+				MULTIWORKER: false,
+				RESOURCES_PROVISION: false,
+				AUTOCREATE_RESOURCES: false,
+			},
+			() => startDev(options)
+		);
 
-	// `startDev` reads experimental flags from async-local storage. This
-	// entrypoint is single-worker and never provisions resources.
-	const devInstance = await run(
-		{
-			MULTIWORKER: false,
-			RESOURCES_PROVISION: false,
-			AUTOCREATE_RESOURCES: false,
-		},
-		() => startDev(options)
-	);
+		await events.once(devInstance.devEnv, "teardown");
+		await Promise.all(devInstance.secondary.map((d) => d.teardown()));
+		devInstance.unregisterHotKeys?.();
 
-	await events.once(devInstance.devEnv, "teardown");
-	await Promise.all(devInstance.secondary.map((d) => d.teardown()));
-	devInstance.unregisterHotKeys?.();
-
-	return 0;
+		return 0;
+	});
 }

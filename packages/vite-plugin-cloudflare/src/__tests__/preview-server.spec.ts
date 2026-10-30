@@ -8,7 +8,11 @@ import { afterEach, describe, test, vi } from "vitest";
 import { cloudflare } from "../index";
 import type { ParsedInputConfigWithWorker } from "../index";
 
-vi.mock("@cloudflare/workers-utils");
+vi.mock("@cloudflare/workers-utils", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@cloudflare/workers-utils")>();
+	return { ...actual, getZoneFromRoute: vi.fn() };
+});
 
 const fixturesPath = fileURLToPath(new URL("./fixtures", import.meta.url));
 

@@ -7,7 +7,7 @@
 //   - It builds the shared auth layer via `createWranglerAuth(...)`, injecting
 //     the few wrangler primitives that can't move into the shared package: the
 //     logger, the interactive `prompt` / `select`, and the User-Agent string.
-//     The `cf-wrangler` delegate selects cf's auth layer via `useCfAuth`.
+//     The `cf-wrangler` delegate scopes cf's auth layer via `withCfAuth`.
 //   - It re-exports the resulting helpers as thin wrappers so the historical
 //     `from "../user"` import path — and the `vi.mock` / `vi.spyOn` seams in the
 //     test suite — keep working unchanged.
@@ -15,6 +15,7 @@
 //     the mutable `DefaultScopeKeys`), which is wrangler product config rather
 //     than shared auth machinery.
 
+import { AsyncLocalStorage } from "node:async_hooks";
 import { getAuthFromEnv as getAuthFromEnvShared } from "@cloudflare/workers-auth";
 import { createCfAuth } from "@cloudflare/workers-auth/cf";
 import {
@@ -35,7 +36,7 @@ import type {
 	TemporaryAccountRequest,
 	UserAuthConfig,
 } from "@cloudflare/workers-auth";
-import type { AuthContext } from "@cloudflare/workers-auth/cf";
+import type { AuthContext, CloudflareAuth } from "@cloudflare/workers-auth/cf";
 import type {
 	ApiCredentials,
 	ComplianceConfig,
@@ -73,26 +74,42 @@ const authContext: AuthContext = {
 		error instanceof NoDefaultValueProvided,
 };
 
-let auth = createWranglerAuth(authContext);
+const auth = createWranglerAuth(authContext);
+const authStorage = new AsyncLocalStorage<CloudflareAuth>();
 
-/** Select cf's credential store and OAuth flow for the `cf-wrangler` delegate. */
-export function useCfAuth(profile: string): void {
-	auth = createCfAuth(authContext);
-	auth.setProfile(profile);
+/**
+ * Run a delegate and its asynchronous work using cf authentication, keeping
+ * Wrangler's authentication in the calling process independent.
+ *
+ * @param profile - The cf profile selected for this invocation.
+ * @param callback - The delegate's complete development lifecycle.
+ * @returns The callback's result.
+ */
+export function withCfAuth<Result>(
+	profile: string,
+	callback: () => Result
+): Result {
+	const cfAuth = createCfAuth(authContext);
+	cfAuth.setProfile(profile);
+	return authStorage.run(cfAuth, callback);
+}
+
+function getAuth(): CloudflareAuth {
+	return authStorage.getStore() ?? auth;
 }
 
 /**
  * Set the active auth profile for all subsequent credential lookups.
  */
 export function setProfile(profile: string): void {
-	auth.setProfile(profile);
+	getAuth().setProfile(profile);
 }
 
 /**
  * Return the active auth profile name.
  */
 export function getActiveProfile(): string {
-	return auth.getActiveProfile();
+	return getAuth().getActiveProfile();
 }
 
 /**
@@ -103,7 +120,7 @@ export function getActiveProfile(): string {
  * live.
  */
 export function getCredentialStore(): CredentialStore {
-	return auth.getCredentialStore();
+	return getAuth().getCredentialStore();
 }
 
 /**
@@ -113,7 +130,7 @@ export function setTemporaryAllowed(
 	allowed: boolean,
 	request?: TemporaryAccountRequest
 ): void {
-	auth.setTemporaryAllowed(allowed, request);
+	getAuth().setTemporaryAllowed(allowed, request);
 }
 
 /**
@@ -159,7 +176,7 @@ export function getScopes(): Scope[] | undefined {
 	// Routes through the flow, which resolves the keyring-aware storage for
 	// the active profile via `storageFactory`, so this honours both the
 	// active profile and the plaintext/encrypted preference.
-	return auth.getScopes() as Scope[] | undefined;
+	return getAuth().getScopes() as Scope[] | undefined;
 }
 
 export function printScopes(scopes: Scope[]) {
@@ -176,7 +193,7 @@ export function printScopes(scopes: Scope[]) {
 // ---------------------------------------------------------------------------
 
 export function getAPIToken(): ApiCredentials | undefined {
-	return auth.getAPIToken();
+	return getAuth().getAPIToken();
 }
 
 /**
@@ -186,7 +203,7 @@ export function getAPIToken(): ApiCredentials | undefined {
  * historical `from "../user"` import path (and test mocks/spies) keep working.
  */
 export function requireApiToken(): ApiCredentials {
-	return auth.requireApiToken();
+	return getAuth().requireApiToken();
 }
 
 // ---------------------------------------------------------------------------
@@ -212,11 +229,11 @@ export async function login(
 	complianceConfig: ComplianceConfig,
 	props?: WranglerLoginProps
 ): Promise<boolean> {
-	return auth.login(complianceConfig, props);
+	return getAuth().login(complianceConfig, props);
 }
 
 export async function logout(profile?: string): Promise<void> {
-	return auth.logout(profile);
+	return getAuth().logout(profile);
 }
 
 /**
@@ -232,13 +249,13 @@ export async function loginOrRefreshIfRequired(
 	complianceConfig: ComplianceConfig,
 	props?: WranglerLoginProps
 ): Promise<LoginOrRefreshResult> {
-	return auth.loginOrRefreshIfRequired(complianceConfig, props);
+	return getAuth().loginOrRefreshIfRequired(complianceConfig, props);
 }
 
 export async function getOAuthTokenFromLocalState(): Promise<
 	string | undefined
 > {
-	return auth.getOAuthTokenFromLocalState();
+	return getAuth().getOAuthTokenFromLocalState();
 }
 
 export {
@@ -262,7 +279,7 @@ export type { UserAuthConfig } from "@cloudflare/workers-auth";
  * file on disk).
  */
 export function readAuthCredentials(): UserAuthConfig | undefined {
-	return auth.readAuthCredentials();
+	return getAuth().readAuthCredentials();
 }
 
 /**
@@ -271,7 +288,7 @@ export function readAuthCredentials(): UserAuthConfig | undefined {
  * Renamed from `writeAuthConfigFile` (see {@link readAuthCredentials}).
  */
 export function writeAuthCredentials(config: UserAuthConfig): void {
-	auth.writeAuthCredentials(config);
+	getAuth().writeAuthCredentials(config);
 }
 // `PKCE_CHARSET` is re-exported for any external consumers that used to
 // import it from this barrel.
@@ -296,7 +313,7 @@ export { PKCE_CHARSET } from "@cloudflare/workers-auth";
 export function getActiveAccountId(config: {
 	account_id?: string;
 }): string | undefined {
-	return auth.getActiveAccountId(config);
+	return getAuth().getActiveAccountId(config);
 }
 
 /**
@@ -319,7 +336,7 @@ export function getActiveAccountId(config: {
 export async function getOrSelectAccountId(
 	config: ComplianceConfig & { account_id?: string }
 ): Promise<string> {
-	return auth.getOrSelectAccountId(config);
+	return getAuth().getOrSelectAccountId(config);
 }
 
 /**
@@ -341,7 +358,7 @@ export async function requireAuth(
 		account_id?: string;
 	}
 ): Promise<string> {
-	return auth.requireAuth(config);
+	return getAuth().requireAuth(config);
 }
 
 /**
@@ -351,7 +368,7 @@ export async function fetchAllAccounts(
 	complianceConfig: ComplianceConfig,
 	options?: { throwOnEmpty?: boolean }
 ): Promise<Account[]> {
-	return auth.fetchAllAccounts(complianceConfig, options);
+	return getAuth().fetchAllAccounts(complianceConfig, options);
 }
 
 /**
@@ -360,5 +377,5 @@ export async function fetchAllAccounts(
  * @returns The cached account if present, `undefined` otherwise
  */
 export function getAccountFromCache(): undefined | Account {
-	return auth.getAccountFromCache();
+	return getAuth().getAccountFromCache();
 }
