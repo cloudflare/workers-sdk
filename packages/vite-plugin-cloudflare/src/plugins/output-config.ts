@@ -1,6 +1,6 @@
 import assert from "node:assert";
-import * as fs from "node:fs";
 import * as path from "node:path";
+import { readAssetsIgnoreFile as readAssetsIgnorePatterns } from "@cloudflare/workers-shared/utils/helpers";
 import * as vite from "vite";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { assertIsNotPreview } from "../context";
@@ -263,9 +263,7 @@ function rewriteMigrationsPattern(
 }
 
 function readAssetsIgnoreFile(assetsIgnorePath: string): string {
-	const content = fs.existsSync(assetsIgnorePath)
-		? fs.readFileSync(assetsIgnorePath, "utf-8")
-		: "";
+	const content = readAssetsIgnorePatterns(assetsIgnorePath) ?? "";
 	if (content.length === 0) {
 		return "";
 	}
