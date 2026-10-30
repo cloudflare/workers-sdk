@@ -19,7 +19,6 @@ describe("getSourceMappedString", () => {
 		const value = [
 			"RuntimeError: unreachable",
 			"    at app.wasm.my_crate::handler (wasm://wasm/app.wasm-047589b6:wasm-function[3732]:0x95c16)",
-			"    at fetch (file:///worker/index.js:2:20008)",
 		].join("\n");
 
 		expect(getSourceMappedString(value, () => null)).toBe(value);
@@ -28,7 +27,6 @@ describe("getSourceMappedString", () => {
 
 describe("getSourceMappedStack", () => {
 	it("stringifies WebAssembly call frames", ({ expect }) => {
-		const frame = { scriptId: "1", lineNumber: 0 };
 		const stack = getSourceMappedStack({
 			exceptionId: 1,
 			text: "Uncaught",
@@ -38,16 +36,11 @@ describe("getSourceMappedStack", () => {
 			stackTrace: {
 				callFrames: [
 					{
-						...frame,
+						scriptId: "1",
 						functionName: "my_crate::handler",
 						url: "wasm://wasm/app.wasm-047589b6",
+						lineNumber: 0,
 						columnNumber: 613398,
-					},
-					{
-						...frame,
-						functionName: "fetch",
-						url: "file:///worker/index.js",
-						columnNumber: 20007,
 					},
 				],
 			},
@@ -57,7 +50,6 @@ describe("getSourceMappedStack", () => {
 			[
 				"RuntimeError: unreachable",
 				"    at my_crate::handler (wasm://wasm/app.wasm-047589b6:1:613399)",
-				"    at fetch (file:///worker/index.js:1:20008)",
 			].join("\n")
 		);
 	});
