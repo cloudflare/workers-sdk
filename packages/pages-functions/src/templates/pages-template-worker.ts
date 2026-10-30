@@ -60,7 +60,8 @@ type WorkerContext = {
 };
 
 function* executeRequest(request: Request) {
-	const requestPath = new URL(request.url).pathname;
+	// Match the asset server's slash normalization so requests cannot bypass middleware.
+	const requestPath = new URL(request.url).pathname.replace(/\/+/g, "/");
 
 	// First, iterate through the routes (backwards) and execute "middlewares" on partial route matches
 	for (const route of [...routes].reverse()) {
