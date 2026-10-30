@@ -22,6 +22,7 @@ import {
 	assertNonConfigured,
 	confirmAutoConfigDetails,
 	displayAutoConfigDetails,
+	getProjectCommand,
 } from "./details";
 import {
 	isFrameworkSupported,
@@ -165,9 +166,17 @@ export async function runAutoConfig(
 	}
 
 	const { npx } = packageManager;
-	const buildCommand =
+	let buildCommand =
 		dryRunConfigurationResults.buildCommandOverride ??
 		autoConfigDetails.buildCommand;
+	// Preserve shell commands while normalizing Vite selected by framework overrides.
+	if (buildCommand === "vite build" || buildCommand === `${npx} vite build`) {
+		buildCommand = getProjectCommand(
+			buildCommand,
+			packageManager,
+			autoConfigDetails.packageJson
+		);
+	}
 
 	const autoConfigSummary = await buildOperationsSummary(
 		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
