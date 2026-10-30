@@ -165,6 +165,47 @@ describe("access", () => {
 			).toBeTruthy();
 		});
 
+		it("should detect a domain behind a Managed OAuth Access app (401 with a cloudflare-access-protected-resource WWW-Authenticate header)", async ({
+			expect,
+		}) => {
+			// Regression test for workers-sdk#16604: with Managed OAuth
+			// enabled, Access answers a non-browser request (no `Accept:
+			// text/html`) with a 401 and a Bearer WWW-Authenticate header
+			// instead of the 302 redirect this probe looks for.
+			msw.use(
+				http.get("https://managed-oauth.workers.dev/", () => {
+					return HttpResponse.json(null, {
+						status: 401,
+						headers: {
+							"www-authenticate":
+								'Bearer realm="OAuth", error="invalid_token", error_description="Missing or invalid access token", resource_metadata="https://managed-oauth.workers.dev/.well-known/cloudflare-access-protected-resource/"',
+						},
+					});
+				})
+			);
+
+			expect(
+				await domainUsesAccess("managed-oauth.workers.dev", silentLogger)
+			).toBeTruthy();
+		});
+
+		it("should not treat a plain 401 without an Access WWW-Authenticate header as Access-protected", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get("https://plain-unauthorized.workers.dev/", () => {
+					return HttpResponse.json(null, {
+						status: 401,
+						headers: { "www-authenticate": 'Bearer realm="other"' },
+					});
+				})
+			);
+
+			expect(
+				await domainUsesAccess("plain-unauthorized.workers.dev", silentLogger)
+			).toBeFalsy();
+		});
+
 		it("re-probes with a later preview token after a token-bearing probe misses Access", async ({
 			expect,
 		}) => {
@@ -392,6 +433,39 @@ See https://developers.cloudflare.com/cloudflare-one/access-controls/service-cre
 					})
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: The domain "access-protected.com" is behind Cloudflare Access, but no Access Service Token credentials were found and the current environment is non-interactive.
+Set the CLOUDFLARE_ACCESS_CLIENT_ID and CLOUDFLARE_ACCESS_CLIENT_SECRET environment variables to authenticate with an Access Service Token.
+See https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/]`
+				);
+			});
+
+			it("should throw actionable error for a Managed OAuth Access app (401 instead of 302)", async ({
+				expect,
+			}) => {
+				// Regression test for workers-sdk#16604: with Managed OAuth
+				// enabled, the probe gets a 401 with a Bearer
+				// WWW-Authenticate header instead of a 302 redirect. The
+				// domain must still be recognised as Access-protected, so
+				// the caller gets the actionable service-token error rather
+				// than empty headers and a confusing 401 from the binding.
+				msw.use(
+					http.get("https://managed-oauth.workers.dev/", () => {
+						return HttpResponse.json(null, {
+							status: 401,
+							headers: {
+								"www-authenticate":
+									'Bearer realm="OAuth", error="invalid_token", error_description="Missing or invalid access token", resource_metadata="https://managed-oauth.workers.dev/.well-known/cloudflare-access-protected-resource/"',
+							},
+						});
+					})
+				);
+
+				await expect(
+					getAccessHeaders("managed-oauth.workers.dev", {
+						logger: silentLogger,
+						isNonInteractiveOrCI,
+					})
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: The domain "managed-oauth.workers.dev" is behind Cloudflare Access, but no Access Service Token credentials were found and the current environment is non-interactive.
 Set the CLOUDFLARE_ACCESS_CLIENT_ID and CLOUDFLARE_ACCESS_CLIENT_SECRET environment variables to authenticate with an Access Service Token.
 See https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/]`
 				);
