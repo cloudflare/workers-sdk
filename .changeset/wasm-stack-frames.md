@@ -5,4 +5,4 @@
 
 Fix WebAssembly stack frames printing as `at [object Object]` in source-mapped errors
 
-Source mapping passes `wasm://` call sites through unchanged and stringifies them, which only works with V8's own call sites. The call sites parsed from error strings now stringify to their original text, so WebAssembly frames are preserved.
+WebAssembly frames in source-mapped error stack traces now show their original function and location instead of `[object Object]`.
