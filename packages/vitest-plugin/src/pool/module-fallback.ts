@@ -10,7 +10,7 @@ import * as esModuleLexer from "es-module-lexer";
 import { parseModuleFallbackRequest, Response } from "miniflare";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { ENCODED_PATH_PREFIX } from "../shared/module-path";
-import { isFileNotFoundError } from "./helpers";
+import { isFileNotFoundError, realPackagePath } from "./helpers";
 import type {
 	Request,
 	V2ModuleFallbackRequest,
@@ -382,7 +382,10 @@ async function viteResolve(
 		return id;
 	}
 
-	return trimViteVersionHash(resolved.id);
+	const id = trimViteVersionHash(resolved.id);
+	return isRequire && vite.environments.ssr.config.resolve.preserveSymlinks
+		? realPackagePath(id)
+		: id;
 }
 
 const wasmModuleSuffix = ".wasm?module";
