@@ -1,14 +1,21 @@
+import { once } from "node:events";
+import fs from "node:fs/promises";
+import https from "node:https";
+import path from "node:path";
+import { getGlobalWranglerCachePath } from "@cloudflare/workers-utils/global-wrangler-config-path";
 import { Log, LogLevel, Miniflare } from "miniflare";
 import {
 	afterEach,
 	beforeAll,
 	beforeEach,
+	onTestFinished,
 	describe,
 	test,
 	type TestOptions,
 	vi,
 } from "vitest";
-import { singleModuleManifest, useDispose } from "../../test-shared";
+import { CERT, KEY } from "../../../src/http/cert";
+import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
 import type { MiniflareOptions } from "miniflare";
 
 async function sendMessage(ws: WebSocket, message: unknown) {
@@ -184,6 +191,7 @@ describe("browser rendering", { concurrent: false, timeout: 20_000 }, () => {
 	});
 	afterEach(() => {
 		vi.restoreAllMocks();
+		vi.unstubAllEnvs();
 	});
 
 	test(
@@ -208,6 +216,95 @@ describe("browser rendering", { concurrent: false, timeout: 20_000 }, () => {
 			const res = await mf.dispatchFetch("https://localhost/session");
 			const text = await res.text();
 			expect(text.includes("sessionId")).toBe(true);
+		}
+	);
+
+	test(
+		"verifies HTTPS with a private user home",
+		BROWSER_RENDERING_RETRY,
+		async ({ expect }) => {
+			const tmp = await useTmp();
+			const home = await fs.mkdtemp(path.join(tmp, "home-"));
+			// Keep the warmed Chrome install when changing HOME for this session.
+			vi.stubEnv("XDG_CACHE_HOME", path.dirname(getGlobalWranglerCachePath()));
+			vi.stubEnv("HOME", home);
+			vi.stubEnv("XDG_CONFIG_HOME", path.join(home, ".config"));
+
+			const server = https.createServer(
+				{ key: KEY, cert: CERT },
+				(_req, res) => {
+					res.end("<title>Local HTTPS fixture</title>");
+				}
+			);
+			onTestFinished(async () => {
+				server.closeAllConnections();
+				await new Promise<void>((resolve, reject) => {
+					server.close((error) => (error ? reject(error) : resolve()));
+				});
+			});
+			server.listen(0, "127.0.0.1");
+			await once(server, "listening");
+			const address = server.address();
+			if (address === null || typeof address === "string") {
+				throw new Error("Expected a TCP listener");
+			}
+			const url = `https://127.0.0.1:${address.port}`;
+			const mf = new Miniflare({
+				workers: [
+					{
+						config: {
+							name: "https-browser",
+							compatibilityDate: "2024-11-20",
+							env: { MYBROWSER: { type: "browser" } },
+							manifest: singleModuleManifest(`
+export default {
+	async fetch(request, env) {
+		const { sessionId } = await env.MYBROWSER.fetch("https://localhost/v1/acquire").then(r => r.json());
+		const targets = await env.MYBROWSER.fetch(
+			\`https://localhost/v1/devtools/browser/\${sessionId}/json/list\`
+		).then(r => r.json());
+		const { webSocket: ws } = await env.MYBROWSER.fetch(
+			\`https://localhost/v1/devtools/browser/\${sessionId}/page/\${targets[0].id}\`,
+			{ headers: { Upgrade: "websocket" } }
+		);
+		ws.accept();
+		const result = await new Promise(resolve => {
+			ws.addEventListener("message", event => {
+				const message = JSON.parse(event.data);
+				if (message.id === 1) resolve(message);
+			});
+			ws.send(JSON.stringify({ id: 1, method: "Page.navigate", params: { url: ${JSON.stringify(url)} } }));
+		});
+		ws.close();
+		return Response.json(result);
+	}
+};`),
+						},
+					},
+				],
+			});
+			useDispose(mf);
+			const response = await mf.dispatchFetch("https://localhost");
+			const body = await response.text();
+			expect(response.status, body).toBe(200);
+			// Exercise certificate verification before checking Linux's NSS files.
+			expect(JSON.parse(body)).toMatchObject({
+				result: { errorText: "net::ERR_CERT_AUTHORITY_INVALID" },
+			});
+			if (process.platform !== "linux") {
+				return;
+			}
+			const nss = path.join(home, ".pki", "nssdb");
+			for (const directory of [home, path.dirname(nss), nss]) {
+				const stat = await fs.stat(directory);
+				expect(stat.uid).toBe(process.getuid?.());
+				expect(stat.mode & 0o777).toBe(0o700);
+			}
+			for (const file of ["cert9.db", "key4.db", "pkcs11.txt"]) {
+				const stat = await fs.stat(path.join(nss, file));
+				expect(stat.uid).toBe(process.getuid?.());
+				expect(stat.mode & 0o077).toBe(0);
+			}
 		}
 	);
 
