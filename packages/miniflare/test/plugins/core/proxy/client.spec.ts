@@ -80,6 +80,72 @@ describe("ProxyClient", () => {
 		expect(event.data).toBe("echo:hello");
 	});
 
+	test("preserves error codes and names thrown by RPC bindings", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: {
+							BINDING: {
+								type: "worker",
+								worker: "binding",
+								exportName: "BindingEntrypoint",
+							},
+						},
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+				{
+					config: {
+						name: "binding",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["enhanced_error_serialization"],
+						manifest: singleModuleManifest(`
+							import { WorkerEntrypoint } from "cloudflare:workers";
+							class BindingError extends Error {
+								name = "BindingError";
+								constructor(message, code, numericCode) {
+									super(message);
+									this.code = code;
+									this.numericCode = numericCode;
+								}
+							}
+							export class BindingEntrypoint extends WorkerEntrypoint {
+								get(name) {
+									throw new BindingError("Repository not found: " + name + ".", "NOT_FOUND", 10200);
+								}
+							}
+							export default { fetch() { return new Response(null, { status: 404 }); } };
+						`),
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const { BINDING } = await mf.getBindings<{
+			BINDING: { get(name: string): Promise<never> };
+		}>();
+
+		let error: unknown;
+		try {
+			await BINDING.get("missing");
+		} catch (caught) {
+			error = caught;
+		}
+		expect(error).toBeInstanceOf(Error);
+		expect(error).toMatchObject({
+			name: "BindingError",
+			message: "Repository not found: missing.",
+			code: "NOT_FOUND",
+			numericCode: 10200,
+		});
+	});
+
 	test("preserves original URL for service binding fetch", async ({
 		expect,
 	}) => {

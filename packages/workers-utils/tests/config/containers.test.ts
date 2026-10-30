@@ -6,6 +6,7 @@ import {
 	getResolvedDurableObjectContainerApps,
 	isDurableObjectContainerApp,
 	resolveContainerClassName,
+	validateDurableObjectContainerApplications,
 } from "../../src/config/containers";
 import type { ContainerApp, Exports } from "../../src/config/environment";
 
@@ -14,6 +15,61 @@ function container(props: Partial<ContainerApp>): ContainerApp {
 }
 
 describe("Durable Object-managed containers", () => {
+	test.for([undefined, "alpha"])(
+		"accepts a local binding with script_name %j",
+		(scriptName, { expect }) => {
+			expect(() =>
+				validateDurableObjectContainerApplications({
+					name: "alpha",
+					migrations: [],
+					exports: {
+						Sandbox: {
+							type: "durable-object",
+							storage: "sqlite",
+							container: "sandbox",
+						},
+					},
+					durable_objects: {
+						bindings: [
+							{
+								name: "SANDBOX",
+								class_name: "Sandbox",
+								script_name: scriptName,
+							},
+						],
+					},
+					containers: [
+						{ name: "sandbox", scheduling_policy: "durable_object" },
+					],
+				})
+			).not.toThrow();
+		}
+	);
+
+	test("rejects a binding to another Worker even when its class is also exported locally", ({
+		expect,
+	}) => {
+		expect(() =>
+			validateDurableObjectContainerApplications({
+				name: "beta",
+				migrations: [],
+				exports: {
+					Sandbox: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "sandbox",
+					},
+				},
+				durable_objects: {
+					bindings: [
+						{ name: "SANDBOX", class_name: "Sandbox", script_name: "alpha" },
+					],
+				},
+				containers: [{ name: "sandbox", scheduling_policy: "durable_object" }],
+			})
+		).toThrow("appears to be defined on the alpha Worker instead");
+	});
+
 	test("selects only durable_object entries", ({ expect }) => {
 		const containers: ContainerApp[] = [
 			container({ class_name: "Scheduled" }),

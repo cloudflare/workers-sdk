@@ -203,63 +203,6 @@ function prefixIssues(
 	}));
 }
 
-function validateUniqueContainerNames(
-	config: ParsedInputConfig
-): z.core.$ZodIssue[] {
-	const issues: z.core.$ZodIssue[] = [];
-	const firstIndexByName = new Map<string, number>();
-
-	for (const [index, container] of config.containers.entries()) {
-		const firstIndex = firstIndexByName.get(container.name);
-		if (firstIndex !== undefined) {
-			issues.push({
-				code: "custom",
-				input: container.name,
-				path: ["containers", index, "name"],
-				message: `The Container name "${container.name}" is also used by \`containers[${firstIndex}]\`. Container names must be unique.`,
-			});
-			continue;
-		}
-
-		firstIndexByName.set(container.name, index);
-	}
-
-	return issues;
-}
-
-function validateContainerLinks(config: ParsedInputConfig): z.core.$ZodIssue[] {
-	const issues: z.core.$ZodIssue[] = [];
-	const firstExportByContainerName = new Map<string, string>();
-
-	for (const [exportName, workerExport] of Object.entries(
-		config.worker?.exports ?? {}
-	)) {
-		if (
-			workerExport.type !== "durable-object" ||
-			!("container" in workerExport) ||
-			workerExport.container === undefined
-		) {
-			continue;
-		}
-
-		const containerName = workerExport.container;
-		const firstExportName = firstExportByContainerName.get(containerName);
-		if (firstExportName !== undefined) {
-			issues.push({
-				code: "custom",
-				input: containerName,
-				path: ["worker", "exports", exportName, "container"],
-				message: `The Container "${containerName}" is already referenced by \`worker.exports.${firstExportName}\`. A Container can only be linked to one Durable Object.`,
-			});
-			continue;
-		}
-
-		firstExportByContainerName.set(containerName, exportName);
-	}
-
-	return issues;
-}
-
 /** Resolve and parse the default configuration export. */
 export async function resolveAndParseConfig(
 	input: unknown,
@@ -297,11 +240,6 @@ export async function resolveAndParseConfig(
 
 	if (!result.success) {
 		issues.push(...result.error.issues);
-	} else {
-		issues.push(
-			...validateUniqueContainerNames(result.data),
-			...validateContainerLinks(result.data)
-		);
 	}
 
 	return issues.length > 0

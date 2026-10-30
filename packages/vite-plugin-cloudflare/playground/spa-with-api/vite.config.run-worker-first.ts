@@ -7,7 +7,15 @@ export default defineConfig({
 		react(),
 		cloudflare({
 			types: { includeRuntime: false },
-			config: { assets: { runWorkerFirst: true } },
+			config(loadedConfig) {
+				return {
+					...loadedConfig,
+					worker: {
+						...loadedConfig.worker,
+						assets: { ...loadedConfig.worker.assets, runWorkerFirst: true },
+					},
+				};
+			},
 			inspectorPort: false,
 			persistState: false,
 		}),

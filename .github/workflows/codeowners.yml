@@ -23,7 +23,7 @@ on:
 
 concurrency:
   group: codeowners-${{ github.event.pull_request.number }}
-  cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
+  cancel-in-progress: ${{ !(github.event.pull_request.user.login == 'workers-devprod' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.head_ref, 'changeset-release/')) }}
 
 permissions:
   contents: read
@@ -34,24 +34,25 @@ jobs:
   codeowners:
     name: "Run Codeowners Plus"
     runs-on: ubuntu-latest
-    # Skip evaluation for auto-generated changeset release PRs only. Running on
-    # every other PR supports stacks regardless of parent PR creation order.
+    # Skip evaluation for workers-devprod release PRs from this repository only.
+    # Running on every other PR supports stacks regardless of parent PR creation
+    # order.
     steps:
       - name: "Checkout Base Branch"
-        if: github.event.pull_request.head.ref != 'changeset-release/main'
+        if: ${{ !(github.event.pull_request.user.login == 'workers-devprod' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'changeset-release/')) }}
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: "Fetch PR Head (for diff computation)"
-        if: github.event.pull_request.head.ref != 'changeset-release/main'
+        if: ${{ !(github.event.pull_request.user.login == 'workers-devprod' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'changeset-release/')) }}
         run: git fetch origin +refs/pull/${{ github.event.pull_request.number }}/head
         env:
           GITHUB_TOKEN: "${{ secrets.CODEOWNERS_GITHUB_PAT }}"
 
       - name: "Codeowners Plus"
-        if: github.event.pull_request.head.ref != 'changeset-release/main'
+        if: ${{ !(github.event.pull_request.user.login == 'workers-devprod' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'changeset-release/')) }}
         uses: multimediallc/codeowners-plus@ff02aa993a92e8efe01642916d0877beb9439e9f # v1.9.0
         with:
           github-token: "${{ secrets.CODEOWNERS_GITHUB_PAT }}"

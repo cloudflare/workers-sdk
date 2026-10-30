@@ -1,6 +1,7 @@
 import path from "node:path";
 import * as TOML from "smol-toml";
 import { assert, describe, it, test, vi } from "vitest";
+import { WORKFLOW_JURISDICTIONS } from "../../../src/config/environment";
 import { normalizeAndValidateConfig } from "../../../src/config/validation";
 import { normalizeString } from "../../../src/test-helpers";
 import type {
@@ -2483,6 +2484,55 @@ describe("normalizeAndValidateConfig()", () => {
 					  - "exports.EmptySchedulesWorkflow" export "schedules" field must not be an empty array.
 					  - "exports.ConcurrencyWorkflow" export "concurrency.limit" field must be a positive integer but got 0.
 					  - "exports.RetentionWorkflow" export "default_retention.error_retention" field must be a positive integer of milliseconds or a duration string such as "3 days", but got -1."
+				`);
+			});
+
+			it("accepts workflow jurisdictions", ({ expect }) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						EuWorkflow: { type: "workflow", name: "eu", jurisdiction: "eu" },
+						FedrampWorkflow: {
+							type: "workflow",
+							name: "fedramp",
+							jurisdiction: "fedramp",
+						},
+						UsWorkflow: { type: "workflow", name: "us", jurisdiction: "us" },
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("errors when a workflow jurisdiction is not supported", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							GreetingWorkflow: {
+								type: "workflow",
+								name: "greeting",
+								jurisdiction: "EU",
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "exports.GreetingWorkflow" export "jurisdiction" field must be one of "eu", "fedramp", or "us", but got "EU"."
 				`);
 			});
 
@@ -9907,6 +9957,57 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - Unexpected fields found in workflows[0].default_retention field: "retention""
+				`);
+			});
+
+			it.for(WORKFLOW_JURISDICTIONS)(
+				"should accept the jurisdiction %s",
+				(jurisdiction, { expect }) => {
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						{
+							workflows: [
+								{
+									binding: "MY_WORKFLOW",
+									name: "my-workflow",
+									class_name: "MyWorkflow",
+									jurisdiction,
+								},
+							],
+						},
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(config.workflows[0]?.jurisdiction).toBe(jurisdiction);
+					expect(diagnostics.hasErrors()).toBe(false);
+					expect(diagnostics.hasWarnings()).toBe(false);
+				}
+			);
+
+			it("should error if jurisdiction is not a supported value", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								jurisdiction: "fedramp-high",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings "jurisdiction" field must be one of "eu", "fedramp", or "us", but got "fedramp-high"."
 				`);
 			});
 

@@ -8,7 +8,7 @@ import {
 } from "@cloudflare/workers-utils/test-helpers";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, it } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { readConfig } from "../config";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { getDefaultPersistRoot } from "../dev/miniflare";
@@ -771,6 +771,28 @@ describe("flagship", () => {
 			await runWrangler("flagship flags enable app-1 new-ui");
 			await expect(body).resolves.toMatchObject({ enabled: true });
 			expect(std.out).toContain("Enabled flag");
+		});
+
+		it("keeps flag metadata when updating a flag", async ({ expect }) => {
+			const metadata = { owner: "growth", ticket: 42 };
+			mockGet("apps/app-1/flags/new-ui", {
+				key: "new-ui",
+				enabled: false,
+				default_variation: "off",
+				variations: { on: true, off: false },
+				rules: [],
+				metadata,
+			});
+			const body = captureBody("put", "apps/app-1/flags/new-ui", {
+				key: "new-ui",
+				enabled: true,
+				default_variation: "off",
+				variations: { on: true, off: false },
+				rules: [],
+				metadata,
+			});
+			await runWrangler("flagship flags enable app-1 new-ui");
+			await expect(body).resolves.toMatchObject({ enabled: true, metadata });
 		});
 
 		it("disables multiple flags", async ({ expect }) => {
@@ -1796,6 +1818,7 @@ describe("flagship", () => {
 					rollout: { percentage: 50 },
 				},
 			],
+			metadata: { owner: "growth" },
 		};
 
 		beforeEach(() => writeWranglerConfig());
@@ -1815,6 +1838,7 @@ describe("flagship", () => {
 					enabled: true,
 					default_variation: "off",
 					rules: REMOTE_FLAG.rules,
+					metadata: REMOTE_FLAG.metadata,
 				}),
 			]);
 			expect(std.out).toContain("Pulled 1 flag from app-1");
@@ -1861,6 +1885,45 @@ describe("flagship", () => {
 				`Cannot use local Flagship commands while a dev session for '${workerName}' is running. Stop the dev session and retry.`
 			);
 		});
+
+		it.for(["relative", "absolute"])(
+			"rejects local Flagship access while a dev session uses a %s canonical registry override",
+			async (kind, { expect }) => {
+				const registryPath = nodePath.resolve("shared-registry");
+				vi.stubEnv(
+					"WRANGLER_REGISTRY_PATH",
+					nodePath.resolve("legacy-registry")
+				);
+				vi.stubEnv(
+					"CLOUDFLARE_DEV_REGISTRY_PATH",
+					kind === "relative" ? "shared-registry" : registryPath
+				);
+				const config = readConfig({});
+				const workerName = config.name ?? "worker";
+				const mf = new Miniflare(
+					convertV4MiniflareOptions({
+						name: workerName,
+						modules: true,
+						script:
+							'export default { fetch() { return new Response("ok"); } };',
+						unsafeDevRegistryPath: getRegistryPath(),
+					})
+				);
+				try {
+					await mf.ready;
+					expect(await fs.readdir(registryPath)).toContain(workerName);
+					const callback = vi.fn(async () => undefined);
+					await expect(
+						usingLocalFlagshipAPI(undefined, config, "app-1", callback)
+					).rejects.toThrow(
+						`Cannot use local Flagship commands while a dev session for '${workerName}' is running. Stop the dev session and retry.`
+					);
+					expect(callback).not.toHaveBeenCalled();
+				} finally {
+					await mf.dispose();
+				}
+			}
+		);
 
 		it("writes where a dev session reads, under a different binding name", async ({
 			expect,

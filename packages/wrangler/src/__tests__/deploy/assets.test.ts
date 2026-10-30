@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import { getEdgeKvUploadConcurrency } from "@cloudflare/deploy-helpers";
+import { UserError } from "@cloudflare/workers-utils";
 import {
 	createDeferred,
 	runInTempDir,
@@ -688,6 +689,28 @@ describe("deploy", () => {
 				  },
 				}
 			`);
+		});
+
+		it("reports invalid .assetsignore encoding as user input before uploading", async ({
+			expect,
+		}) => {
+			writeAssets([{ filePath: "ignored.txt", content: "asset" }], "assets");
+			fs.writeFileSync(
+				"assets/.assetsignore",
+				Buffer.from("ignored.txt", "utf16le")
+			);
+			writeWranglerConfig({ assets: { directory: "assets" } });
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+
+			const deploy = runWrangler("deploy");
+			await expect(deploy).rejects.toBeInstanceOf(UserError);
+			await expect(deploy).rejects.toMatchObject({
+				telemetryMessage: "assets ignore invalid encoding",
+			});
+			expect(std.err).toContain("Save the file as UTF-8 and try again.");
+			expect(std.out).not.toContain("If you think this is a bug");
+			expect(bodies).toEqual([]);
 		});
 
 		it("should error if it is going to upload a _worker.js file as an asset", async ({

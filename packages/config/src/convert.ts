@@ -460,7 +460,11 @@ function convertBindingsAndAssets(
 			}
 			case "analytics-engine-dataset": {
 				analyticsEngineDatasets.push(
-					omitUndefined({ binding: name, dataset: binding.name })
+					omitUndefined({
+						binding: name,
+						dataset: binding.name,
+						remote: binding.dev?.remote,
+					})
 				);
 				break;
 			}
@@ -543,6 +547,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						id: binding.id,
+						remote: binding.dev?.remote,
 						localConnectionString: binding.dev?.connectionString,
 					})
 				);

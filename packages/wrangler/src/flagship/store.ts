@@ -3,6 +3,7 @@ import {
 	convertV4MiniflareOptions,
 	getWorkerRegistry,
 	Miniflare,
+	resolveDevRegistryPath,
 } from "miniflare";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { getDefaultPersistRoot } from "../dev/miniflare";
@@ -73,7 +74,8 @@ export async function usingLocalFlagshipAPI<T>(
 	callback: (admin: FlagshipAdmin) => Promise<T>
 ): Promise<T> {
 	const workerName = config.name ?? "worker";
-	if (Object.hasOwn(getWorkerRegistry(getRegistryPath()), workerName)) {
+	const registryPath = resolveDevRegistryPath(getRegistryPath());
+	if (Object.hasOwn(getWorkerRegistry(registryPath), workerName)) {
 		throw new UserError(
 			`Cannot use local Flagship commands while a dev session for '${workerName}' is running. Stop the dev session and retry.`,
 			{ telemetryMessage: "flagship local store dev session active" }

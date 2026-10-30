@@ -17,12 +17,14 @@ export interface ResolvedLocalBindings {
  * @param configuredBindings The Worker's configured bindings.
  * @param localEnv Values resolved from `.env` files and the process environment.
  * @param devVars Values from the selected `.dev.vars` file, which are used exclusively when provided.
+ * @param remoteBindings Whether remote binding sessions are enabled.
  * @returns The complete bindings and any secrets missing a local value.
  */
 export function resolveLocalBindings(
 	configuredBindings: ParsedInputWorkerConfig["env"],
 	localEnv: Record<string, string>,
-	devVars?: Record<string, string>
+	devVars?: Record<string, string>,
+	remoteBindings = true
 ): ResolvedLocalBindings {
 	const bindings: MiniflareEnv = {};
 	const missingSecrets: string[] = [];
@@ -30,6 +32,10 @@ export function resolveLocalBindings(
 
 	for (const [name, binding] of Object.entries(configuredBindings ?? {})) {
 		if (binding.type === "hyperdrive") {
+			if (binding.dev?.remote && remoteBindings) {
+				bindings[name] = { ...binding, dev: binding.dev };
+				continue;
+			}
 			const connectionString =
 				localEnv[`CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_${name}`] ||
 				binding.dev?.connectionString;

@@ -13,7 +13,7 @@ import { waitFor } from "./helpers/wait-for";
 const port = await getPort();
 const inspectorPort = await getPort();
 const cmd = "wrangler pages dev";
-describe.sequential("wrangler pages dev", () => {
+describe("wrangler pages dev", { concurrent: false }, () => {
 	it("should redirect Unicode HTML paths and serve the decoded filename", async ({
 		expect,
 	}) => {

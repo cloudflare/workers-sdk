@@ -271,6 +271,61 @@ describe("flagship plugin", () => {
 		expect(await admin.listFlags()).toEqual([]);
 	});
 
+	test("stores, validates, and evaluates flag metadata", async ({ expect }) => {
+		const mf = new Miniflare(options());
+		useDispose(mf);
+		const admin = await getAdmin(mf);
+		const metadata = { owner: "growth", ticket: 42, beta: true };
+
+		expect(await admin.createFlag({ ...BOOL_FLAG, metadata })).toMatchObject({
+			metadata,
+		});
+		expect(
+			await call(mf, "getBooleanDetails", BOOL_FLAG.key, false, { plan: "pro" })
+		).toMatchObject({ reason: "TARGETING_MATCH", metadata });
+		expect(
+			await call(mf, "getStringDetails", BOOL_FLAG.key, "fallback")
+		).toMatchObject({ errorCode: "TYPE_MISMATCH", metadata });
+		expect(await admin.evaluateFlag(BOOL_FLAG.key)).toMatchObject({
+			metadata,
+		});
+
+		await admin.patchFlag(BOOL_FLAG.key, { enabled: false });
+		expect(await admin.getFlag(BOOL_FLAG.key)).toMatchObject({ metadata });
+		await admin.patchFlag(BOOL_FLAG.key, { metadata: null });
+		expect(await admin.getFlag(BOOL_FLAG.key)).not.toHaveProperty("metadata");
+		await admin.updateFlag(BOOL_FLAG.key, { ...BOOL_FLAG, metadata });
+		await admin.updateFlag(BOOL_FLAG.key, BOOL_FLAG);
+		expect(await admin.getFlag(BOOL_FLAG.key)).not.toHaveProperty("metadata");
+		await admin.updateFlag(BOOL_FLAG.key, { ...BOOL_FLAG, metadata: {} });
+		expect(
+			await call(mf, "getBooleanDetails", BOOL_FLAG.key, false)
+		).not.toHaveProperty("metadata");
+
+		const invalid: [unknown, string][] = [
+			[["owner"], "metadata must be an object"],
+			[{ owner: { team: "growth" } }, "must be a boolean, string, or number"],
+			[{ "": "empty" }, "invalid metadata key ''"],
+			[{ ["k".repeat(65)]: 1 }, "invalid metadata key"],
+			[{ constructor: 1 }, "invalid metadata key 'constructor'"],
+			[
+				Object.fromEntries(Array.from({ length: 33 }, (_, i) => [`k${i}`, i])),
+				"32 or fewer entries",
+			],
+			[{ owner: "x".repeat(2048) }, "exceeds the 2048 byte limit"],
+		];
+		for (const [value, message] of invalid) {
+			expect(
+				await rejection(() =>
+					admin.putFlag({
+						...BOOL_FLAG,
+						metadata: value as FlagInput["metadata"],
+					})
+				)
+			).toContain(message);
+		}
+	});
+
 	test("reports missing and conflicting admin operations", async ({
 		expect,
 	}) => {

@@ -1,8 +1,12 @@
-import { createExecutionContext, runInDurableObject } from "cloudflare:test";
+import {
+	createExecutionContext,
+	runInDurableObject,
+	waitOnExecutionContext,
+} from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { describe, it, vi } from "vitest";
 import { InstanceEvent, InstanceStatus } from "../src";
-import { WorkflowBinding } from "../src/binding";
+import { deleteWorkflowStorage, WorkflowBinding } from "../src/binding";
 import { WorkflowSubscriptionTarget } from "../src/subscription";
 import { setTestWorkflowCallback } from "./test-entry";
 import type {
@@ -127,25 +131,85 @@ describe("WorkflowBinding", () => {
 		});
 
 		for (const method of ["create", "createBatch"] as const) {
-			it(`${method} should block creation when pending persistence deletion fails`, async ({
+			it(`${method} should retry failed cleanup before reusing an instance ID`, async ({
 				expect,
 			}) => {
-				const binding = new WorkflowBinding(createExecutionContext(), {
+				const id = uniqueId("cleanup-failed");
+				const ctx = createExecutionContext();
+				const abort = vi.fn(async () => {});
+				const diskFetch = vi.fn((_url: string, _init?: RequestInit) =>
+					Promise.resolve(
+						new Response(null, {
+							headers: { "Content-Type": "application/json" },
+						})
+					)
+				);
+				const storageEnv = {
 					ENGINE: env.ENGINE,
 					BINDING_NAME: "TEST_WORKFLOW",
 					WORKFLOW_NAME: "test-workflow",
-					MINIFLARE_LOOPBACK: {
-						fetch: () => Promise.resolve(new Response(null, { status: 500 })),
-					} as unknown as Fetcher,
-				});
+					WORKFLOW_STORAGE: { fetch: diskFetch } as unknown as Fetcher,
+				};
+				const binding = new WorkflowBinding(ctx, storageEnv);
+				const deletionError = "Refusing to delete a Workflow storage directory";
+				await expect(
+					deleteWorkflowStorage({
+						disk: storageEnv.WORKFLOW_STORAGE,
+						workflowName: storageEnv.WORKFLOW_NAME,
+						ctx,
+						hexId: env.ENGINE.idFromName(id).toString(),
+						abort,
+					})
+				).rejects.toThrow(deletionError);
 
 				await expect(
+					deleteWorkflowStorage({
+						disk: storageEnv.WORKFLOW_STORAGE,
+						workflowName: storageEnv.WORKFLOW_NAME,
+						ctx,
+						hexId: env.ENGINE.idFromName(id).toString(),
+						abort: async () => {
+							throw new Error("instance.not_found");
+						},
+					})
+				).rejects.toThrow("instance.not_found");
+
+				diskFetch.mockClear();
+				await expect(
 					method === "create"
-						? binding.create({ id: "cleanup-failed" })
-						: binding.createBatch([{ id: "cleanup-failed" }])
-				).rejects.toThrow(
-					"Failed to wait for persisted workflow instance 'cleanup-failed' deletion"
+						? binding.create({ id })
+						: binding.createBatch([{ id }])
+				).rejects.toThrow(deletionError);
+				expect(
+					diskFetch.mock.calls.filter(([url]) => url.endsWith(".sqlite"))
+				).toHaveLength(1);
+				await expect(waitOnExecutionContext(ctx)).resolves.toBeUndefined();
+
+				diskFetch.mockImplementation((_url, init) =>
+					Promise.resolve(
+						new Response(null, {
+							status: init?.method === "DELETE" ? 204 : 200,
+							headers: { "Content-Type": "application/octet-stream" },
+						})
+					)
 				);
+				setTestWorkflowCallback(async () => "done");
+				const freshBinding = new WorkflowBinding(ctx, storageEnv);
+				await expect(
+					method === "create"
+						? freshBinding.create({ id })
+						: freshBinding.createBatch([{ id }])
+				).resolves.toEqual(method === "create" ? { id } : [{ id }]);
+				expect(diskFetch).toHaveBeenCalledWith(
+					expect.stringMatching(/\.sqlite$/),
+					{ method: "DELETE" }
+				);
+				expect(abort).toHaveBeenCalledOnce();
+				await waitUntilLogEvent(
+					env.ENGINE.get(env.ENGINE.idFromName(id)),
+					InstanceEvent.WORKFLOW_SUCCESS
+				);
+				await waitOnExecutionContext(ctx);
 			});
 		}
 	});
@@ -317,8 +381,8 @@ describe("WorkflowBinding", () => {
 				.mockRejectedValue(new Error("sensitive failure"));
 			const binding = new WorkflowBinding(createExecutionContext(), {
 				ENGINE: {
-					idFromName: (id: string) => id,
-					get: () => ({ deleteInstance }),
+					idFromName: (id: string) => env.ENGINE.idFromName(id),
+					get: (id: DurableObjectId) => ({ id, deleteInstance }),
 				} as unknown as DurableObjectNamespace<Engine>,
 				BINDING_NAME: "TEST_WORKFLOW",
 				WORKFLOW_NAME: "test-workflow",
@@ -345,20 +409,30 @@ describe("WorkflowBinding", () => {
 			const abort = vi.fn(() =>
 				Promise.reject(new Error("Durable Object aborted"))
 			);
-			const loopbackFetch = vi.fn((url: string) =>
+			const cleanupFailedId =
+				env.ENGINE.idFromName("cleanup-failed").toString();
+			const missingId = env.ENGINE.idFromName("missing").toString();
+			const ctx = createExecutionContext();
+			const diskFetch = vi.fn((url: string, init?: RequestInit) =>
 				Promise.resolve(
 					new Response(null, {
-						status: url.includes("/cleanup-failed") ? 500 : 204,
+						status:
+							url.includes(cleanupFailedId) && url.endsWith(".sqlite")
+								? init?.method === "HEAD"
+									? 200
+									: 500
+								: 404,
+						headers: { "Content-Type": "application/octet-stream" },
 					})
 				)
 			);
-			const binding = new WorkflowBinding(createExecutionContext(), {
+			const binding = new WorkflowBinding(ctx, {
 				ENGINE: {
-					idFromName: (id: string) => ({ toString: () => id }),
-					get: (id: { toString(): string }) => ({
+					idFromName: (id: string) => env.ENGINE.idFromName(id),
+					get: (id: DurableObjectId) => ({
 						id,
 						deleteInstance: () => {
-							if (id.toString() === "missing") {
+							if (id.toString() === missingId) {
 								return Promise.reject(
 									new Error("(instance.not_found) Instance does not exist")
 								);
@@ -370,7 +444,7 @@ describe("WorkflowBinding", () => {
 				} as unknown as DurableObjectNamespace<Engine>,
 				BINDING_NAME: "TEST_WORKFLOW",
 				WORKFLOW_NAME: "test-workflow",
-				MINIFLARE_LOOPBACK: { fetch: loopbackFetch } as unknown as Fetcher,
+				WORKFLOW_STORAGE: { fetch: diskFetch } as unknown as Fetcher,
 			});
 
 			await expect(
@@ -398,12 +472,11 @@ describe("WorkflowBinding", () => {
 				],
 			});
 			expect(abort).toHaveBeenCalledOnce();
-			expect(loopbackFetch.mock.calls.map(([url]) => url)).toEqual(
-				expect.arrayContaining([
-					expect.stringContaining("/missing?defer=1"),
-					expect.stringContaining("/missing?waitForPendingDelete=1"),
-				])
+			expect(diskFetch).toHaveBeenCalledWith(
+				`http://disk/miniflare-workflows-test-workflow/${missingId}.sqlite`,
+				{ method: "HEAD" }
 			);
+			await expect(waitOnExecutionContext(ctx)).resolves.toBeUndefined();
 		});
 
 		it("should reject invalid batches", async ({ expect }) => {
@@ -756,15 +829,32 @@ describe("WorkflowBinding", () => {
 			expect,
 		}) => {
 			const id = uniqueId("batch-cleanup-failed");
-			const binding = new WorkflowBinding(createExecutionContext(), {
+			const ctx = createExecutionContext();
+			const diskFetch = vi.fn(() =>
+				Promise.resolve(
+					new Response(null, {
+						headers: { "Content-Type": "application/json" },
+					})
+				)
+			);
+			const storageEnv = {
 				ENGINE: env.ENGINE,
 				BINDING_NAME: "TEST_WORKFLOW",
 				WORKFLOW_NAME: "test-workflow",
-				MINIFLARE_LOOPBACK: {
-					fetch: () => Promise.resolve(new Response(null, { status: 500 })),
-				} as unknown as Fetcher,
-			});
-			const deletionError = `Failed to wait for persisted workflow instance '${id}' deletion`;
+				WORKFLOW_STORAGE: { fetch: diskFetch } as unknown as Fetcher,
+			};
+			const binding = new WorkflowBinding(ctx, storageEnv);
+			const hexId = env.ENGINE.idFromName(id).toString();
+			const deletionError = "Refusing to delete a Workflow storage directory";
+			await expect(
+				deleteWorkflowStorage({
+					disk: storageEnv.WORKFLOW_STORAGE,
+					workflowName: storageEnv.WORKFLOW_NAME,
+					ctx,
+					hexId,
+					abort: async () => {},
+				})
+			).rejects.toThrow(deletionError);
 
 			await expect(binding.createBatch([{ id }])).rejects.toThrow(
 				deletionError
@@ -775,54 +865,107 @@ describe("WorkflowBinding", () => {
 			await expect(createBinding().get(id)).rejects.toThrow(
 				"instance.not_found"
 			);
-		});
 
-		it("should wait once for each batch id's pending deletion", async ({
-			expect,
-		}) => {
-			const first = uniqueId("batch-pending-delete");
-			const second = uniqueId("batch-pending-delete");
-			const loopbackFetch = vi.fn((_url: string) =>
-				Promise.resolve(new Response(null, { status: 204 }))
+			diskFetch.mockImplementation(() =>
+				Promise.resolve(new Response(null, { status: 404 }))
 			);
-			const binding = new WorkflowBinding(createExecutionContext(), {
-				ENGINE: env.ENGINE,
-				BINDING_NAME: "TEST_WORKFLOW",
-				WORKFLOW_NAME: "test-workflow",
-				MINIFLARE_LOOPBACK: { fetch: loopbackFetch } as unknown as Fetcher,
-			});
 			setTestWorkflowCallback(async () => "done");
-
-			const explicit = await binding.createBatch({
-				instances: [{ id: first }, { id: second }, { id: first }],
+			await expect(
+				binding.createBatch({ instances: [{ id }] })
+			).resolves.toEqual({
+				created: [{ id }],
+				errors: [],
 			});
-			expect(loopbackFetch.mock.calls.map(([url]) => url).sort()).toEqual(
-				[first, second]
-					.map(
-						(id) =>
-							`http://localhost/core/workflow-storage/test-workflow/${env.ENGINE.idFromName(id).toString()}?waitForPendingDelete=1`
-					)
-					.sort()
+			await waitUntilLogEvent(
+				env.ENGINE.get(env.ENGINE.idFromName(id)),
+				InstanceEvent.WORKFLOW_SUCCESS
 			);
-
-			loopbackFetch.mockClear();
-			const counted = await binding.createBatch({ count: 2 });
-			expect(loopbackFetch.mock.calls.map(([url]) => url).sort()).toEqual(
-				counted.created
-					.map(
-						({ id }) =>
-							`http://localhost/core/workflow-storage/test-workflow/${env.ENGINE.idFromName(id).toString()}?waitForPendingDelete=1`
-					)
-					.sort()
-			);
-
-			for (const { id } of [...explicit.created, ...counted.created]) {
-				await waitUntilLogEvent(
-					env.ENGINE.get(env.ENGINE.idFromName(id)),
-					InstanceEvent.WORKFLOW_SUCCESS
-				);
-			}
+			await expect(waitOnExecutionContext(ctx)).resolves.toBeUndefined();
 		});
+
+		for (const kind of ["explicit", "generated"] as const) {
+			it(`should wait for each ${kind} batch id's pending deletion`, async ({
+				expect,
+			}) => {
+				const first = crypto.randomUUID();
+				const second = crypto.randomUUID();
+				if (kind === "generated") {
+					vi.spyOn(crypto, "randomUUID")
+						.mockReturnValueOnce(first)
+						.mockReturnValueOnce(second);
+				}
+				const ctx = createExecutionContext();
+				const firstCleanup = Promise.withResolvers<void>();
+				const secondCleanup = Promise.withResolvers<void>();
+				const firstHexId = env.ENGINE.idFromName(first).toString();
+				const secondHexId = env.ENGINE.idFromName(second).toString();
+				const firstUrl = `http://disk/miniflare-workflows-test-workflow/${firstHexId}.sqlite`;
+				const secondUrl = `http://disk/miniflare-workflows-test-workflow/${secondHexId}.sqlite`;
+				const cleanupGates = new Map([
+					[firstUrl, firstCleanup.promise],
+					[secondUrl, secondCleanup.promise],
+				]);
+				const engineGet = vi.fn((id: DurableObjectId) => env.ENGINE.get(id));
+				const diskFetch = vi.fn(async (url: string) => {
+					await cleanupGates.get(url);
+					return new Response(null, { status: 404 });
+				});
+				const storageEnv = {
+					ENGINE: {
+						idFromName: (id: string) => env.ENGINE.idFromName(id),
+						get: engineGet,
+					} as unknown as DurableObjectNamespace<Engine>,
+					BINDING_NAME: "TEST_WORKFLOW",
+					WORKFLOW_NAME: "test-workflow",
+					WORKFLOW_STORAGE: {
+						fetch: diskFetch,
+					} as unknown as Fetcher,
+				};
+				const binding = new WorkflowBinding(ctx, storageEnv);
+				setTestWorkflowCallback(async () => "done");
+
+				const deletions = [first, second].map((id) =>
+					deleteWorkflowStorage({
+						disk: storageEnv.WORKFLOW_STORAGE,
+						workflowName: storageEnv.WORKFLOW_NAME,
+						ctx,
+						hexId: env.ENGINE.idFromName(id).toString(),
+						abort: async () => {},
+					})
+				);
+				const creation = binding.createBatch(
+					kind === "explicit"
+						? { instances: [{ id: first }, { id: second }, { id: first }] }
+						: { count: 2 }
+				);
+				await vi.waitFor(() => {
+					for (const url of [firstUrl, secondUrl]) {
+						expect(diskFetch).toHaveBeenCalledWith(url, { method: "HEAD" });
+					}
+				});
+				expect(engineGet).not.toHaveBeenCalled();
+				firstCleanup.resolve();
+				await deletions[0];
+				await vi.waitFor(() => {
+					expect(engineGet.mock.calls.map(([id]) => id.toString())).toContain(
+						firstHexId
+					);
+				});
+				expect(engineGet.mock.calls.map(([id]) => id.toString())).not.toContain(
+					secondHexId
+				);
+				secondCleanup.resolve();
+				await Promise.all(deletions);
+				const result = await creation;
+				expect(result.created).toEqual([{ id: first }, { id: second }]);
+				for (const { id } of result.created) {
+					await waitUntilLogEvent(
+						env.ENGINE.get(env.ENGINE.idFromName(id)),
+						InstanceEvent.WORKFLOW_SUCCESS
+					);
+				}
+			});
+		}
 
 		it("should create batch entries without ids under generated ids", async ({
 			expect,
@@ -881,6 +1024,7 @@ describe("WorkflowBinding", () => {
 describe("WorkflowBinding", () => {
 	it("should not call dispose when sending an event to an instance", async ({
 		expect,
+		onTestFinished,
 	}) => {
 		const id = uniqueId();
 		const binding = createBinding();
@@ -903,13 +1047,17 @@ describe("WorkflowBinding", () => {
 		const disposeSpy = vi.fn();
 
 		await runInDurableObject<Engine, void>(engineStub, (engine) => {
-			const originalReceiveEvent = engine.receiveEvent.bind(engine);
-			engine.receiveEvent = (event) => {
-				const result = originalReceiveEvent(event);
+			// RPC methods must remain on the prototype to be callable by workerd.
+			const enginePrototype = Object.getPrototypeOf(engine) as Engine;
+			const originalReceiveEvent = enginePrototype.receiveEvent;
+			const receiveEventSpy = vi.spyOn(enginePrototype, "receiveEvent");
+			onTestFinished(() => receiveEventSpy.mockRestore());
+			receiveEventSpy.mockImplementation(function (event) {
+				const result = originalReceiveEvent.call(this, event);
 				return Object.assign(result, {
 					[Symbol.dispose]: disposeSpy,
 				});
-			};
+			});
 		});
 
 		using _ = (await instance.sendEvent({
