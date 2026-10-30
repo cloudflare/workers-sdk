@@ -1,5 +1,13 @@
 # @cloudflare/pages-functions
 
+## 0.1.3
+
+### Patch Changes
+
+- [#16603](https://github.com/cloudflare/workers-sdk/pull/16603) [`2667a9f`](https://github.com/cloudflare/workers-sdk/commit/2667a9f1e5dabd0ca5c9a238f3c6a1ca0719d935) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix repeated slashes in URL paths bypassing Pages Functions middleware
+
+  Pages Functions now collapse repeated slashes when looking up middleware, so requests such as `//secure/one` run the same middleware as `/secure/one`. The original request URL and function-route matching are preserved. Middleware receives a `functionPath` prefix from the original URL so imported assets can still resolve their relative paths.
+
 ## 0.1.2
 
 ### Patch Changes

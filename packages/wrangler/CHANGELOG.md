@@ -1,5 +1,42 @@
 # wrangler
 
+## 4.156.1
+
+### Patch Changes
+
+- [#16594](https://github.com/cloudflare/workers-sdk/pull/16594) [`effe4ed`](https://github.com/cloudflare/workers-sdk/commit/effe4ed13b1677744428cfb0c37e4512ec5d52f7) Thanks [@jaeminbird](https://github.com/jaeminbird)! - Fix `wrangler types --check` reporting CRLF types files as out of date
+
+  When `worker-configuration.d.ts` was checked out with CRLF line endings (for example with Git's `core.autocrlf=true`, the default on Windows), the runtime header kept a trailing `\r` and never matched the expected header. `wrangler types --check` then always failed, `wrangler dev` always warned that the types might be out of date, and cached runtime types were never reused. Generated types files are now read with either line ending.
+
+- [#16535](https://github.com/cloudflare/workers-sdk/pull/16535) [`5740867`](https://github.com/cloudflare/workers-sdk/commit/57408671a0e1ff04ee1881d37c217c0e86a01c0c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Keep Pages development asset lookups within the configured directory
+
+  Validate resolved asset paths relative to the Pages output directory, preventing neighboring files and directories with a shared name prefix from being served. This also applies to the Vitest Pages ASSETS helper. Assets inside the directory and existing not-found fallbacks retain their behavior.
+
+- [#16366](https://github.com/cloudflare/workers-sdk/pull/16366) [`d174de8`](https://github.com/cloudflare/workers-sdk/commit/d174de8818c79ff82293150917fa6da11516e795) Thanks [@MattieTK](https://github.com/MattieTK)! - Deploy the requested directory when `wrangler pages deploy <directory>` is run as a Workers static-assets deploy
+
+  When `wrangler pages deploy <directory>` was carried out as a Workers static-assets deploy, the `<directory>` argument was only used to check for unsupported Pages features and was then dropped. Autoconfig detected an assets directory of its own instead, and when the project root contained an `index.html` it chose the whole project root, even when a narrower directory such as `public` had been requested. Source files and configuration outside the requested directory that were not excluded by `.assetsignore` could then be uploaded as public static assets.
+
+  The requested directory is now validated before files are written and passed through to the deploy. Unconfigured projects are set up for static assets even when framework dependencies are present; existing Workers configs receive an `--assets` or legacy `--site` override. Projects configured through the Cloudflare Vite plugin alone keep their configuration and scripts, using the requested directory and an explicit or default compatibility date just for this deploy. Successful deployments without a config file are recorded in the project's `.wrangler/deployments` directory for that account and Worker, surviving dependency reinstalls. Repeat deploys verify the recorded version still belongs to the target Worker before allowing an update, preserving protection against name collisions and replacements.
+
+- [#16562](https://github.com/cloudflare/workers-sdk/pull/16562) [`aece4df`](https://github.com/cloudflare/workers-sdk/commit/aece4df134bc89ebba4f59ca3f737c049ac09668) Thanks [@audricbizouarn-dashdoc](https://github.com/audricbizouarn-dashdoc)! - Retry transient failures when starting a Workers assets upload session
+
+  Asset manifest registration now uses the same bounded API retry policy as Worker uploads, including support for `Retry-After`. Temporary server errors no longer immediately abort an otherwise valid deployment. Persistent failures still surface the original error after the retry limit; this does not repair server-side issues affecting a specific Worker.
+
+- [#16603](https://github.com/cloudflare/workers-sdk/pull/16603) [`2667a9f`](https://github.com/cloudflare/workers-sdk/commit/2667a9f1e5dabd0ca5c9a238f3c6a1ca0719d935) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix repeated slashes in URL paths bypassing Pages Functions middleware
+
+  Pages Functions now collapse repeated slashes when looking up middleware, so requests such as `//secure/one` run the same middleware as `/secure/one`. The original request URL and function-route matching are preserved. Middleware receives a `functionPath` prefix from the original URL so imported assets can still resolve their relative paths.
+
+- [#16525](https://github.com/cloudflare/workers-sdk/pull/16525) [`ed7fb41`](https://github.com/cloudflare/workers-sdk/commit/ed7fb4165a0c5de605b57b8f8443ff401b5194c4) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Validate OAuth error callbacks against the pending login
+
+  All authorization callbacks, including ones without a code or error, now require the matching login state. Unrelated callbacks leave the login running so the authorization page can complete it, and control characters in provider error messages are displayed as escaped text.
+
+- [#16597](https://github.com/cloudflare/workers-sdk/pull/16597) [`f9dbb22`](https://github.com/cloudflare/workers-sdk/commit/f9dbb2232d5c233a09828fbe0c6272ea0e7cf471) Thanks [@guybedford](https://github.com/guybedford)! - Fix WebAssembly stack frames printing as `at [object Object]` in source-mapped errors
+
+  WebAssembly frames in source-mapped error stack traces now show their original function and location instead of `[object Object]`.
+
+- Updated dependencies [[`009ca6e`](https://github.com/cloudflare/workers-sdk/commit/009ca6e0483fd4a89f44bd02251b0a64491dab14)]:
+  - miniflare@5.20261023.4-beta
+
 ## 4.156.0
 
 ### Minor Changes

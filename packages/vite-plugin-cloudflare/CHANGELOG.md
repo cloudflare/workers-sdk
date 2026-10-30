@@ -1,5 +1,23 @@
 # @cloudflare/vite-plugin
 
+## 2.0.0-beta.v.9
+
+### Minor Changes
+
+- [#16573](https://github.com/cloudflare/workers-sdk/pull/16573) [`91f0e03`](https://github.com/cloudflare/workers-sdk/commit/91f0e03b28790e349d0bd7371fae7b59d755f79d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Customize the full parsed Cloudflare configuration through the beta Vite plugin's `config` callback
+
+  The `config` option now accepts `(loadedConfig: ParsedInputConfigWithWorker) => ParsedInputConfigWithWorker`, allowing frameworks to customize account settings and Containers alongside the entry Worker. Both the loaded and returned configurations include a Worker, and `ParsedInputConfigWithWorker` is exported for framework authors. The returned configuration is revalidated, including resource relationships, before being used for development and recorded in the build output for preview and deployment.
+
+  This is a breaking change to the beta API: object overrides and callbacks that mutate or return partial Worker configurations must return a complete configuration instead. Copy the loaded configuration and any nested fields to preserve, for example `config: (loadedConfig) => ({ ...loadedConfig, worker: { ...loadedConfig.worker, name: "my-worker", compatibilityDate: "2026-10-01" } })`. Fields and arrays are replaced rather than deep-merged.
+
+### Patch Changes
+
+- Updated dependencies [[`91f0e03`](https://github.com/cloudflare/workers-sdk/commit/91f0e03b28790e349d0bd7371fae7b59d755f79d), [`effe4ed`](https://github.com/cloudflare/workers-sdk/commit/effe4ed13b1677744428cfb0c37e4512ec5d52f7), [`009ca6e`](https://github.com/cloudflare/workers-sdk/commit/009ca6e0483fd4a89f44bd02251b0a64491dab14)]:
+  - @cloudflare/config@0.29.1
+  - @cloudflare/runtime-types@0.1.20
+  - miniflare@5.20261023.4-beta
+  - @cloudflare/build-output-utils@0.9.7
+
 ## 2.0.0-beta.v.8
 
 ### Patch Changes
