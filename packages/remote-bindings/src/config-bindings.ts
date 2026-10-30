@@ -6,6 +6,9 @@ import type { Binding } from "@cloudflare/workers-utils";
 
 type WorkerConfig = ParsedInputWorkerConfig | ParsedOutputWorkerConfig;
 
+/** Bindings as declared in `cloudflare.config.ts`. */
+export type ConfigBindings = WorkerConfig["env"];
+
 /**
  * Convert native config bindings to the transport shape consumed by the
  * remote-bindings session API. Local-only bindings are intentionally omitted.
