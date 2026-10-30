@@ -1744,8 +1744,23 @@ export class Miniflare {
 		socket: Duplex,
 		head: Buffer
 	) => {
+		// Node strips its own error listener from a socket it hands to an
+		// "upgrade" listener, so this socket is ours to manage until the
+		// WebSocket server takes it over below:
+		// https://nodejs.org/api/http.html#event-upgrade_1
+		// Without this, a client resetting the connection mid-upgrade throws
+		// an unhandled "error" event and takes down the host process.
+		socket.on("error", () => socket.destroy());
+
 		// Try handle the request in a worker
 		const response = await this.#handleLoopback(req);
+
+		// The client may have disconnected while the request was being
+		// handled, in which case the error listener above has already
+		// destroyed the socket and there's nothing left to respond to
+		if (!socket.writable) {
+			return;
+		}
 
 		// Check web socket response was returned
 		const webSocket = response?.webSocket;
@@ -1765,6 +1780,14 @@ export class Miniflare {
 		// https://nodejs.org/api/http.html#event-upgrade_1
 		assert(socket instanceof net.Socket);
 		res.assignSocket(socket);
+
+		// The connection was detached from the server for the upgrade: nothing
+		// will parse another request on it, and ending the response doesn't
+		// close the socket. End the connection once the response has been
+		// written, so the client sees a FIN instead of an idle socket nobody
+		// owns (the loopback server disables its keep-alive timeout, so it
+		// would otherwise linger forever).
+		res.on("finish", () => socket.end());
 
 		// If no response was provided, or it was an "ok" response, log an error
 		if (!response || response.ok) {
