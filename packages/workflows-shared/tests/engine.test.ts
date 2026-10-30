@@ -1,18 +1,22 @@
-import { runInDurableObject } from "cloudflare:test";
+import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
 import { afterEach, describe, it, vi } from "vitest";
 import workerdUnsafe from "workerd:unsafe";
 import { DEFAULT_STEP_LIMIT, InstanceEvent, InstanceStatus } from "../src";
+import { DEFAULT_RETRY_DELAY_MS } from "../src/lib/delay";
 import { ABORT_REASONS, isAbortError } from "../src/lib/errors";
+import { TimePriorityQueue } from "../src/lib/timePriorityQueue";
 import { setTestWorkflowCallback } from "./test-entry";
 import { runWorkflow, runWorkflowAndAwait } from "./utils";
 import type {
 	DatabaseInstance,
 	DatabaseVersion,
 	DatabaseWorkflow,
+	Engine,
 	EngineLogs,
 } from "../src/engine";
+import type { InstanceMetadata } from "../src/instance";
 import type {
 	RollbackContext,
 	RollbackFn,
@@ -896,6 +900,289 @@ describe("Engine", () => {
 				expect(success?.metadata.result).toEqual({ completed: steps });
 				expect(progress.completed).toBe(steps);
 				progress.phase = "complete";
+			}
+		);
+	});
+
+	describe("grace period", () => {
+		// A grace period left waiting keeps a finished engine busy, so it is never
+		// evicted and keeps its storage files open (issue #15809). The ids are unique
+		// so a retry runs a new instance instead of reading the finished one.
+		it("cancels the grace period when the workflow completes", async ({
+			expect,
+		}) => {
+			const engineStub = await runWorkflowAndAwait(
+				`GRACE-PERIOD-COMPLETE-${crypto.randomUUID()}`,
+				async (_event, step) => {
+					return await step.do("step", async () => "result");
+				}
+			);
+
+			await runInDurableObject<Engine, void>(engineStub, (engine) => {
+				expect(engine.timeoutHandler.latestGracePeriodAbortController).toBe(
+					undefined
+				);
+			});
+		});
+
+		it("cancels the grace period when the workflow fails", async ({
+			expect,
+		}) => {
+			const engineStub = await runWorkflowAndAwait(
+				`GRACE-PERIOD-ERRORED-${crypto.randomUUID()}`,
+				async (_event, step) => {
+					await step.do(
+						"step",
+						{ retries: { limit: 0, delay: "0 seconds" } },
+						async () => {
+							throw new Error("Step errors out");
+						}
+					);
+				}
+			);
+
+			await runInDurableObject<Engine, void>(engineStub, (engine) => {
+				expect(engine.timeoutHandler.latestGracePeriodAbortController).toBe(
+					undefined
+				);
+			});
+		});
+	});
+
+	describe("alarms", () => {
+		// An aborted or evicted engine has nothing left in memory, so its alarm is
+		// what wakes it for the next sleep, retry or timeout (issue #15809)
+		const readLogs = async (engineId: DurableObjectId) => {
+			try {
+				return (await env.ENGINE.get(engineId).readLogs()) as EngineLogs;
+			} catch (e) {
+				// DO may still be aborting — retry
+				if (isAbortError(e)) {
+					return undefined;
+				}
+				throw e;
+			}
+		};
+
+		it("sets the alarm for the next deadline, or a little later once it is due", async ({
+			expect,
+		}) => {
+			const engineStub = env.ENGINE.get(
+				env.ENGINE.idFromName(`ALARM-DEADLINE-${crypto.randomUUID()}`)
+			);
+
+			await runInDurableObject(engineStub, async (_engine, state) => {
+				const priorityQueue = new TimePriorityQueue(
+					state,
+					{} as InstanceMetadata
+				);
+
+				const deadline = Date.now() + 500;
+				await priorityQueue.add({
+					hash: "sleep",
+					targetTimestamp: deadline,
+					type: "sleep",
+				});
+				expect(await state.storage.getAlarm()).toBe(deadline);
+
+				// A due entry can still be waited on by the running engine, so its
+				// alarm must not fire again straight away
+				const now = Date.now();
+				await priorityQueue.add({
+					hash: "retry",
+					targetTimestamp: now - 1000,
+					type: "retry",
+				});
+				expect(await state.storage.getAlarm()).toBeGreaterThanOrEqual(
+					now + DEFAULT_RETRY_DELAY_MS
+				);
+			});
+		});
+
+		it("resumes a sleeping instance after its engine is aborted", async ({
+			expect,
+		}) => {
+			const instanceId = `ALARM-SLEEP-${crypto.randomUUID()}`;
+			const engineId = env.ENGINE.idFromName(instanceId);
+
+			await runWorkflow(instanceId, async (_event, step) => {
+				await step.sleep("sleep", "1 second");
+				return await step.do("after sleep", async () => "result");
+			});
+
+			await vi.waitUntil(
+				async () =>
+					(await readLogs(engineId))?.logs.some(
+						(val) => val.event === InstanceEvent.SLEEP_START
+					),
+				{ timeout: 5000 }
+			);
+			await workerdUnsafe.abortAllDurableObjects();
+
+			await vi.waitUntil(
+				async () =>
+					(await readLogs(engineId))?.logs.some(
+						(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+					),
+				{ timeout: 5000 }
+			);
+			expect(await env.ENGINE.get(engineId).getStatus()).toBe(
+				InstanceStatus.Complete
+			);
+		});
+
+		it("resumes a dynamic retry delay after its engine is aborted", async ({
+			expect,
+		}) => {
+			const instanceId = `ALARM-DYNAMIC-RETRY-${crypto.randomUUID()}`;
+			const engineId = env.ENGINE.idFromName(instanceId);
+			const dynamicDelay: WorkflowDelayFunction = () => 2500;
+			let attempts = 0;
+
+			await runWorkflow(instanceId, async (_event, step) => {
+				await step.do(
+					"dynamic-delay-step",
+					{
+						retries: { limit: 1, delay: dynamicDelay, backoff: "constant" },
+					},
+					async () => {
+						attempts++;
+						if (attempts < 2) {
+							throw new Error("transient");
+						}
+						return "ok";
+					}
+				);
+				return "done";
+			});
+
+			await vi.waitUntil(
+				async () =>
+					(await readLogs(engineId))?.logs.some(
+						(val) => val.event === InstanceEvent.ATTEMPT_FAILURE
+					),
+				{ timeout: 5000 }
+			);
+			// The retry entry keeps its default delay placeholder, which is already
+			// due while the engine still waits for the computed delay
+			await new Promise((resolve) => setTimeout(resolve, 1500));
+			await workerdUnsafe.abortAllDurableObjects();
+
+			await vi.waitUntil(
+				async () =>
+					(await readLogs(engineId))?.logs.some(
+						(val) => val.event === InstanceEvent.WORKFLOW_SUCCESS
+					),
+				{ timeout: 5000 }
+			);
+			expect(attempts).toBe(2);
+		});
+
+		it("keeps the sleep of a paused instance when its alarm fires", async ({
+			expect,
+		}) => {
+			const instanceId = `ALARM-PAUSED-SLEEP-${crypto.randomUUID()}`;
+			const engineId = env.ENGINE.idFromName(instanceId);
+
+			await runWorkflow(instanceId, async (_event, step) => {
+				await step.sleep("sleep", "1 second");
+				return await step.do("after sleep", async () => "result");
+			});
+
+			await vi.waitUntil(
+				async () =>
+					(await readLogs(engineId))?.logs.some(
+						(val) => val.event === InstanceEvent.SLEEP_START
+					),
+				{ timeout: 5000 }
+			);
+			try {
+				await runInDurableObject(env.ENGINE.get(engineId), async (engine) => {
+					await engine.changeInstanceStatus("pause");
+				});
+			} catch (e) {
+				if (!isAbortError(e)) {
+					throw e;
+				}
+			}
+
+			// Stay paused past the end of the sleep, so its alarm runs while paused.
+			// The rest of the sleep must still be there when the instance is resumed.
+			await new Promise((resolve) => setTimeout(resolve, 1500));
+			await runDurableObjectAlarm(env.ENGINE.get(engineId));
+
+			await runInDurableObject(env.ENGINE.get(engineId), async (engine) => {
+				expect(await engine.getStatus()).toBe(InstanceStatus.Paused);
+				expect(
+					engine.priorityQueue?.getFirst((entry) => entry.type === "sleep")
+				).toBeDefined();
+			});
+		});
+
+		it.for(["completes", "throws a NonRetryableError"])(
+			"deletes the alarm when the workflow %s",
+			async (outcome, { expect }) => {
+				const instanceId = `ALARM-FINISHED-${crypto.randomUUID()}`;
+
+				// The step's timeout sets the alarm, which is left as it is when the
+				// step ends
+				await runWorkflowAndAwait(instanceId, async (_event, step) => {
+					return await step.do("step", async () => {
+						if (outcome === "completes") {
+							return "result";
+						}
+						throw new NonRetryableError("Step errors out");
+					});
+				});
+
+				await runInDurableObject(
+					env.ENGINE.get(env.ENGINE.idFromName(instanceId)),
+					async (_engine, state) => {
+						expect(await state.storage.getAlarm()).toBeNull();
+					}
+				);
+			}
+		);
+
+		it.for(["terminate", "delete"])(
+			"deletes the alarm of a sleeping instance on %s",
+			async (action, { expect }) => {
+				const instanceId = `ALARM-${action.toUpperCase()}-${crypto.randomUUID()}`;
+				const engineId = env.ENGINE.idFromName(instanceId);
+
+				await runWorkflow(instanceId, async (_event, step) => {
+					await step.sleep("sleep", "1 hour");
+				});
+				await vi.waitUntil(
+					() =>
+						runInDurableObject(
+							env.ENGINE.get(engineId),
+							async (_engine, state) =>
+								(await state.storage.getAlarm()) !== null
+						),
+					{ timeout: 5000 }
+				);
+
+				try {
+					await runInDurableObject(env.ENGINE.get(engineId), (engine) =>
+						action === "terminate"
+							? engine.changeInstanceStatus("terminate")
+							: engine.deleteInstance()
+					);
+				} catch (e) {
+					if (!isAbortError(e)) {
+						throw e;
+					}
+				}
+
+				// Otherwise the engine is woken up again when the sleep ends, which also
+				// recreates the storage of a deleted instance
+				await runInDurableObject(
+					env.ENGINE.get(engineId),
+					async (_engine, state) => {
+						expect(await state.storage.getAlarm()).toBeNull();
+					}
+				);
 			}
 		);
 	});

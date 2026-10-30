@@ -987,6 +987,13 @@ export class Engine extends DurableObject<Env, EngineProps> {
 				case InstanceStatus.Waiting:
 					this.writeLog(InstanceEvent.WORKFLOW_WAITING, null, null, {});
 					break;
+				case InstanceStatus.Complete:
+				case InstanceStatus.Errored:
+				case InstanceStatus.Terminated:
+					// A finished instance has nothing left to run, so its alarm must not
+					// wake the engine up again and reopen its storage (issue #15809)
+					await this.ctx.storage.deleteAlarm();
+					break;
 			}
 		}
 
@@ -1232,6 +1239,9 @@ export class Engine extends DurableObject<Env, EngineProps> {
 	// Called by the dispose function when introspecting the instance in tests
 	// TODO: Ideally this abort should be done by `abortAllDurableObjects` from worked called by vitest-plugin
 	async unsafeAbort(reason?: string) {
+		// deleteAll() keeps the alarm (see deleteInstance()), and sync() has to save
+		// its deletion before the abort
+		await this.ctx.storage.deleteAlarm();
 		await this.ctx.storage.sync();
 		await this.ctx.storage.deleteAll();
 
@@ -1479,6 +1489,9 @@ export class Engine extends DurableObject<Env, EngineProps> {
 			);
 		}
 
+		// deleteAll() keeps the alarm, which would wake the engine up again and
+		// recreate the storage of the deleted instance
+		await this.ctx.storage.deleteAlarm();
 		await this.ctx.storage.deleteAll();
 		await this.abort(ABORT_REASONS.USER_DELETE);
 	}
@@ -1632,6 +1645,38 @@ export class Engine extends DurableObject<Env, EngineProps> {
 		void this.init(accountId, workflow, version, instance, event);
 	}
 
+	async alarm() {
+		if (this.isRunning) {
+			await this.priorityQueue?.handleNextAlarm();
+			return;
+		}
+
+		const metadata =
+			await this.ctx.storage.get<InstanceMetadata>(INSTANCE_METADATA);
+		if (metadata === undefined) {
+			return;
+		}
+
+		// The engine was evicted or aborted before its next sleep, retry or timeout,
+		// so pick the instance up again. A paused instance keeps its entries until it
+		// is resumed (init() would drop the ones that are due), and a finished one has
+		// nothing left to run.
+		const status = await this.getStatus();
+		if (
+			[
+				InstanceStatus.Errored,
+				InstanceStatus.Terminated,
+				InstanceStatus.Complete,
+				InstanceStatus.Paused,
+			].includes(status)
+		) {
+			return;
+		}
+
+		const { accountId, workflow, version, instance, event } = metadata;
+		void this.init(accountId, workflow, version, instance, event);
+	}
+
 	async hasInstance(): Promise<boolean> {
 		// INSTANCE_METADATA is written exactly once, by the first init() for this
 		// id, so its presence is the durable marker that the instance exists.
@@ -1733,12 +1778,18 @@ export class Engine extends DurableObject<Env, EngineProps> {
 				event,
 				stubStep as unknown as WorkflowStep
 			);
-			await this.ctx.storage.put(WORKFLOW_OUTPUT_KEY, {
-				value: normalizeForStorage(result),
-			});
-			this.writeLog(InstanceEvent.WORKFLOW_SUCCESS, null, null, {
-				result,
-			});
+			try {
+				await this.ctx.storage.put(WORKFLOW_OUTPUT_KEY, {
+					value: normalizeForStorage(result),
+				});
+				this.writeLog(InstanceEvent.WORKFLOW_SUCCESS, null, null, {
+					result,
+				});
+			} finally {
+				// `run()` returns an RPC result, which keeps the engine busy until it is
+				// disposed, so a finished engine could never be evicted (issue #15809)
+				(result as Partial<Disposable> | undefined)?.[Symbol.dispose]?.();
+			}
 			// NOTE(lduarte): we want to run this in a transaction to guarentee ordering with running setstatus call
 			// in case that it returns immediately
 			await this.ctx.storage.transaction(async () => {
@@ -1746,6 +1797,9 @@ export class Engine extends DurableObject<Env, EngineProps> {
 			});
 			// Dispose dup'd stubs; otherwise they leak across DO lifetimes.
 			clearRollbackRegistry(this.rollbackRegistry);
+			// Nothing runs after this, so stop the grace period wait, which would otherwise
+			// keep the finished engine busy for its full duration (issue #15809)
+			this.timeoutHandler.cancelGracePeriod();
 			this.isRunning = false;
 		} catch (err) {
 			if (isAbortError(err)) {
@@ -1803,6 +1857,7 @@ export class Engine extends DurableObject<Env, EngineProps> {
 			await this.ctx.storage.transaction(async () => {
 				await this.setStatus(accountId, instance.id, InstanceStatus.Errored);
 			});
+			this.timeoutHandler.cancelGracePeriod();
 			this.isRunning = false;
 		}
 
