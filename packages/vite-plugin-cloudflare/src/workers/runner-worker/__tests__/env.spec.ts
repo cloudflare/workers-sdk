@@ -11,6 +11,7 @@ const internalEnv = {
 	},
 	__VITE_UNSAFE_EVAL__: {
 		eval: () => () => {},
+		newFunction: () => () => {},
 	},
 };
 
