@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { once } from "node:events";
 import http from "node:http";
+import { fetch } from "undici";
 import { describe, it, vi } from "vitest";
 import { getOauthToken } from "../src/callback-server";
 import {
@@ -34,6 +35,11 @@ function createLogger(): OAuthFlowContext["logger"] {
 
 describe("OAuth callback state", () => {
 	it.for<ParsedUrlQuery>([
+		{},
+		{ state: "other-state" },
+		{ state: ["expected-state", "other-state"] },
+		{ code: "" },
+		{ error: "" },
 		{ error: "invalid_scope" },
 		{ error: "access_denied", state: "other-state" },
 		{ error: "invalid_scope", state: ["expected-state", "other-state"] },
@@ -48,10 +54,27 @@ describe("OAuth callback state", () => {
 		expect(state.authorizationCode).toBeUndefined();
 	});
 
-	it("requires an initialized login state", ({ expect }) => {
-		expect(() =>
-			isReturningFromAuthServer({ error: "invalid_scope" }, {}, createLogger())
-		).toThrow(ErrorInvalidReturnedStateParam);
+	it.for<ParsedUrlQuery>([{}, { error: "invalid_scope" }])(
+		"requires an initialized login state for %j",
+		(query, { expect }) => {
+			expect(() =>
+				isReturningFromAuthServer(query, {}, createLogger())
+			).toThrow(ErrorInvalidReturnedStateParam);
+		}
+	);
+
+	it("returns false for a matching callback without a code or error", ({
+		expect,
+	}) => {
+		const state: OAuthFlowState = { stateQueryParam: "expected-state" };
+		expect(
+			isReturningFromAuthServer(
+				{ state: "expected-state" },
+				state,
+				createLogger()
+			)
+		).toBe(false);
+		expect(state.authorizationCode).toBeUndefined();
 	});
 
 	it("handles a matching provider error", ({ expect }) => {
@@ -91,7 +114,7 @@ describe("OAuth callback state", () => {
 	});
 });
 
-it("keeps the callback server available after unrelated errors and codes", async ({
+it("keeps the callback server available after unrelated callbacks", async ({
 	expect,
 	onTestFinished,
 }) => {
@@ -168,6 +191,10 @@ it("keeps the callback server available after unrelated errors and codes", async
 	});
 
 	for (const query of [
+		"",
+		"state=other-state",
+		"state=expected-state&state=other-state",
+		"code=&error=",
 		"error=invalid_scope",
 		"error=access_denied&state=other-state",
 		"code=example-code&state=other-state",
