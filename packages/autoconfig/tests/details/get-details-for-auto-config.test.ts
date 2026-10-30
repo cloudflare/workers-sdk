@@ -194,7 +194,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 	it("should select the known framework when multiple frameworks are detected but only one is known", async ({
 		expect,
 	}) => {
-		// Gatsby is not in allKnownFrameworks, so only Astro should be considered
+		// Gatsby is not a known framework, so only Astro should be considered
 		await writeFile(
 			"package.json",
 			JSON.stringify({

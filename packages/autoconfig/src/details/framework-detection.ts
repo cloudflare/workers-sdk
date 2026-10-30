@@ -101,12 +101,14 @@ export async function detectFramework(
 
 	const maybeDetectedFramework = maybeFindDetectedFramework(
 		buildSettings,
-		context
+		context,
+		target
 	);
 	if (maybeDetectedFramework && target === "cf") {
 		const frameworkId = maybeDetectedFramework.framework.id;
 		const frameworkIsSupported =
-			isKnownFramework(frameworkId) && isFrameworkSupported(frameworkId);
+			isKnownFramework(frameworkId, target) &&
+			isFrameworkSupported(frameworkId, target);
 
 		// @netlify/build-info prefers package.json scripts over the framework's
 		// built-in commands. cf needs direct commands for supported frameworks, but
@@ -303,13 +305,16 @@ async function isPagesProject(
  * change the detected framework) an error is instead thrown.
  *
  * @param settings The array of framework settings
+ * @param context The autoconfig context
+ * @param target The configuration target
  * @returns The selected framework settings, or `undefined` if none provided
  * @throws {MultipleFrameworksCIError} In CI environments when multiple known frameworks
  *         are detected and no clear winner can be determined
  */
 function maybeFindDetectedFramework(
 	settings: Settings[],
-	context: AutoConfigContext
+	context: AutoConfigContext,
+	target: AutoConfigTarget
 ): DetectedFramework | undefined {
 	if (settings.length === 0) {
 		return undefined;
@@ -320,7 +325,7 @@ function maybeFindDetectedFramework(
 	}
 
 	const settingsForOnlyKnownFrameworks = settings.filter(({ framework }) =>
-		isKnownFramework(framework.id)
+		isKnownFramework(framework.id, target)
 	);
 
 	if (settingsForOnlyKnownFrameworks.length === 0) {

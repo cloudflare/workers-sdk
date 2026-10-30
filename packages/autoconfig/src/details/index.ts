@@ -13,7 +13,7 @@ import {
 import { AutoConfigDetectionError } from "../errors";
 import { getFrameworkClassInstance } from "../frameworks";
 import {
-	allFrameworksInfos,
+	getAllFrameworksInfos,
 	staticFramework,
 } from "../frameworks/all-frameworks";
 import { detectFramework } from "./framework-detection";
@@ -151,7 +151,10 @@ export async function getDetailsForAutoConfig({
 	const { detectedFramework, packageManager, isWorkspaceRoot } =
 		await detectFramework(projectPath, context, { wranglerConfig, target });
 
-	const framework = getFrameworkClassInstance(detectedFramework.framework.id);
+	const framework = getFrameworkClassInstance(
+		detectedFramework.framework.id,
+		target
+	);
 	const packageJsonPath = resolve(projectPath, "package.json");
 
 	let packageJson: PackageJSON | undefined;
@@ -312,13 +315,16 @@ export function displayAutoConfigDetails(
  *
  * @param autoConfigDetails - The detected project details.
  * @param context - The autoconfig context providing dialogs.
+ * @param target - The configuration target, defaults to cf.
  * @returns The (possibly updated) autoconfig details.
  */
 export async function confirmAutoConfigDetails(
 	autoConfigDetails: AutoConfigDetails,
-	context: AutoConfigContext
+	context: AutoConfigContext,
+	target: AutoConfigTarget = "cf"
 ): Promise<AutoConfigDetails> {
 	const { dialogs } = context;
+	const allFrameworksInfos = getAllFrameworksInfos(target);
 	const modifySettings = await dialogs.confirm(
 		"Do you want to modify these settings?",
 		{ defaultValue: false, fallbackValue: false }
@@ -369,7 +375,10 @@ export async function confirmAutoConfigDetails(
 		}
 	);
 
-	updatedAutoConfigDetails.framework = getFrameworkClassInstance(frameworkId);
+	updatedAutoConfigDetails.framework = getFrameworkClassInstance(
+		frameworkId,
+		target
+	);
 
 	const outputDir = await dialogs.prompt(
 		"What directory contains your applications' output/asset files?",

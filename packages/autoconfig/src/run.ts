@@ -80,7 +80,7 @@ export async function runAutoConfig(
 
 	const updatedAutoConfigDetails = skipConfirmations
 		? autoConfigDetails
-		: await confirmAutoConfigDetails(autoConfigDetails, context);
+		: await confirmAutoConfigDetails(autoConfigDetails, context, target);
 
 	if (autoConfigDetails !== updatedAutoConfigDetails) {
 		displayAutoConfigDetails(updatedAutoConfigDetails, context, {
@@ -92,9 +92,10 @@ export async function runAutoConfig(
 	assertNonConfigured(autoConfigDetails);
 	validateFrameworkTargetSupport(autoConfigDetails.framework, target);
 
-	if (isKnownFramework(autoConfigDetails.framework.id)) {
+	if (isKnownFramework(autoConfigDetails.framework.id, target)) {
 		const frameworkIsSupported = isFrameworkSupported(
-			autoConfigDetails.framework.id
+			autoConfigDetails.framework.id,
+			target
 		);
 		if (!frameworkIsSupported) {
 			throw new FatalError(
@@ -125,7 +126,8 @@ export async function runAutoConfig(
 	const isWorkspaceRoot = autoConfigDetails.isWorkspaceRoot ?? false;
 
 	const frameworkPackageInfo = getFrameworkPackageInfo(
-		autoConfigDetails.framework.id
+		autoConfigDetails.framework.id,
+		target
 	);
 	if (frameworkPackageInfo) {
 		autoConfigDetails.framework.validateFrameworkVersion(
