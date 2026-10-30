@@ -70,6 +70,16 @@ export function isReturningFromAuthServer(
 	state: OAuthFlowState,
 	logger: OAuthFlowContext["logger"]
 ): boolean {
+	const stateQueryParam = query.state;
+	if (!state.stateQueryParam || stateQueryParam !== state.stateQueryParam) {
+		logger.warn(
+			"Received query string parameter doesn't match the one sent! Possible malicious activity somewhere."
+		);
+		throw new ErrorInvalidReturnedStateParam("", {
+			telemetryMessage: "user oauth invalid returned state",
+		});
+	}
+
 	if (query.error) {
 		const error = Array.isArray(query.error) ? query.error[0] : query.error;
 		const description = Array.isArray(query.error_description)
@@ -86,15 +96,6 @@ export function isReturningFromAuthServer(
 		return false;
 	}
 
-	const stateQueryParam = query.state;
-	if (stateQueryParam !== state.stateQueryParam) {
-		logger.warn(
-			"Received query string parameter doesn't match the one sent! Possible malicious activity somewhere."
-		);
-		throw new ErrorInvalidReturnedStateParam("", {
-			telemetryMessage: "user oauth invalid returned state",
-		});
-	}
 	assert(!Array.isArray(code));
 	state.authorizationCode = code;
 	state.hasAuthCodeBeenExchangedForAccessToken = false;
