@@ -13,4 +13,4 @@ cloudflareTest({ config: "./worker/cloudflare.config.ts" });
 
 `config` can't be combined with `wrangler`. `miniflare` options are merged over the Worker from `cloudflare.config.ts`, with `miniflare` values taking precedence. Config functions receive Vitest's mode as `ctx.mode`, which defaults to `test` and can be changed with `--mode`.
 
-If you used `experimental.newConfig`, secrets are now read from Vite's `envDir`, and remote bindings use `cf` credentials.
+If you're moving from `experimental.newConfig`, secrets are now read from Vite's `envDir` instead of the directory containing `cloudflare.config.ts`, and remote bindings authenticate with `cf` instead of Wrangler.
