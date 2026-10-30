@@ -1,5 +1,6 @@
 import { URLSearchParams } from "node:url";
 import {
+	deleteNotificationConsumer as deleteNotificationConsumerImpl,
 	deletePullConsumer as deletePullConsumerImpl,
 	deleteWorkerConsumer as deleteWorkerConsumerImpl,
 	getQueue as getQueueImpl,
@@ -32,6 +33,7 @@ import type { Config } from "@cloudflare/workers-utils";
 export type {
 	Consumer,
 	ConsumerSettings,
+	MechanismEntry,
 	PostQueueBody,
 	PostQueueResponse,
 	PostTypedConsumerBody,
@@ -231,6 +233,14 @@ export async function putConsumer(
 		body,
 		queueCreateCommand
 	);
+}
+
+export async function deleteNotificationConsumer(
+	config: Config,
+	queueName: string
+): Promise<void> {
+	const accountId = await requireAuth(config);
+	return deleteNotificationConsumerImpl(config, accountId, queueName);
 }
 
 export async function deletePullConsumer(
