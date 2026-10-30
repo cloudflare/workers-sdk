@@ -322,6 +322,29 @@ describe("handleWebSocket", () => {
 		expect(headers.get("cookie")).toBe("session=abc; theme=dark");
 	});
 
+	test.for([
+		["/live?token=a%2Fb&token=+", "/live?token=a%2Fb&token=+"],
+		["//attacker.example/live", "//attacker.example/live"],
+		["///attacker.example:8000/live", "///attacker.example:8000/live"],
+		[String.raw`/\attacker.example/live`, "//attacker.example/live"],
+		[
+			"/%2f%5C/live?next=//attacker.example&empty=&flag",
+			"/%2f%5C/live?next=//attacker.example&empty=&flag",
+		],
+	])(
+		"keeps upgrade target %s on the server origin",
+		async ([target, expected], { expect }) => {
+			const mf = await listen();
+			const url = await dispatchUpgrade(
+				expect,
+				mf,
+				{ Host: `127.0.0.1:${port}` },
+				target
+			);
+			expect(`${url}`).toBe(`http://127.0.0.1:${port}${expected}`);
+		}
+	);
+
 	test("falls back to `http://` when no `X-Forwarded-Proto` header is set", async ({
 		expect,
 	}) => {
