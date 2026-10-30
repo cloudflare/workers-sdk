@@ -132,13 +132,12 @@ export async function getDetailsForAutoConfig({
 	/** The configuration target, defaults to cf. */
 	target?: AutoConfigTarget;
 	/**
-	 * An output directory the caller has already chosen for a static project,
+	 * A directory of built static assets the caller has already chosen,
 	 * for example the directory passed to `wrangler pages deploy <directory>`.
-	 * When the project is detected as static, it is used as-is instead of being
-	 * detected, so autoconfig never swaps an explicitly chosen directory for a
-	 * different (possibly much broader) one. Relative paths are resolved against
-	 * `projectPath`. Projects using a framework keep the framework's own build
-	 * output directory, because the framework configuration depends on it.
+	 * Selects static-asset configuration instead of framework configuration, so
+	 * a framework adapter or build cannot replace the requested assets. Existing
+	 * Workers and Pages configurations retain their usual detection behavior.
+	 * Relative paths are resolved against `projectPath`.
 	 */
 	outputDir?: string;
 	/** The autoconfig context providing logger, dialogs, and other dependencies. */
@@ -170,7 +169,12 @@ export async function getDetailsForAutoConfig({
 	const { detectedFramework, packageManager, isWorkspaceRoot } =
 		await detectFramework(projectPath, context, { wranglerConfig, target });
 
-	const framework = getFrameworkClassInstance(detectedFramework.framework.id);
+	const useStaticAssets =
+		requestedOutputDir !== undefined &&
+		detectedFramework.framework.id !== "cloudflare-pages";
+	const framework = getFrameworkClassInstance(
+		useStaticAssets ? staticFramework.id : detectedFramework.framework.id
+	);
 	const packageJsonPath = resolve(projectPath, "package.json");
 
 	let packageJson: PackageJSON | undefined;
@@ -197,11 +201,12 @@ export async function getDetailsForAutoConfig({
 		framework,
 		packageJson,
 		packageManager,
-		devCommand: getProjectCommand(detectedFramework.devCommand, packageManager),
-		buildCommand: getProjectCommand(
-			detectedFramework.buildCommand,
-			packageManager
-		),
+		devCommand: useStaticAssets
+			? undefined
+			: getProjectCommand(detectedFramework.devCommand, packageManager),
+		buildCommand: useStaticAssets
+			? undefined
+			: getProjectCommand(detectedFramework.buildCommand, packageManager),
 		env: framework.env,
 		workerName: getWorkerName(packageJson?.name, projectPath),
 	};

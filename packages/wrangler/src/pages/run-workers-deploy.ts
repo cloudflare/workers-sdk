@@ -90,36 +90,6 @@ export async function runPagesToWorkersDeploy(
 		// the `undefined` placeholders above.
 		...delegation.deployArgs,
 	} satisfies DeployArgs;
-	const config = readConfig(deployArgs, {
-		useRedirectIfAvailable: true,
-	});
-
-	// Deploy exactly the directory passed to `pages deploy <directory>`, never a
-	// broader one. It is checked up front because autoconfig writes files (config,
-	// `.gitignore`, package.json scripts) before the deploy itself validates it.
-	//
-	// For a project without a Workers config, autoconfig is pinned to the
-	// directory so it writes it into the generated config instead of detecting
-	// its own (which can resolve to the project root). This applies to static
-	// projects; a detected framework deploys its own build output. A project that
-	// already has a Workers config skips autoconfig, so there the directory is
-	// passed as `--assets`, which takes precedence over the config's own assets
-	// directory (Workers Sites configs are left as they are, as they cannot be
-	// combined with `--assets`). A Pages-style config (`pages_build_output_dir`)
-	// is detected by autoconfig as a Pages project and is not regenerated, so the
-	// pin has no effect there.
-	const { assetsDirectory } = delegation;
-	if (assetsDirectory !== undefined) {
-		assertAssetsDirectoryExists(assetsDirectory);
-	}
-	const hasWorkersConfig =
-		config.configPath !== undefined && !config.pages_build_output_dir;
-	const handlerArgs =
-		assetsDirectory !== undefined && hasWorkersConfig && !config.site
-			? { ...deployArgs, assets: assetsDirectory }
-			: deployArgs;
-	const autoConfigOutputDir = hasWorkersConfig ? undefined : assetsDirectory;
-
 	const experimentalFlags = {
 		MULTIWORKER: false,
 		RESOURCES_PROVISION: deployArgs.experimentalProvision ?? false,
@@ -127,6 +97,27 @@ export async function runPagesToWorkersDeploy(
 	};
 
 	try {
+		// Validate before autoconfig can write files, while preserving delegation
+		// failure telemetry and agent guidance for invalid directories.
+		const { assetsDirectory } = delegation;
+		if (assetsDirectory !== undefined) {
+			assertAssetsDirectoryExists(assetsDirectory);
+		}
+		const config = readConfig(deployArgs, {
+			useRedirectIfAvailable: true,
+		});
+		const hasWorkersConfig =
+			config.configPath !== undefined && !config.pages_build_output_dir;
+		// Existing configs skip autoconfig, so override their assets directory
+		// directly. Workers Sites requires --site instead of --assets.
+		const handlerArgs =
+			assetsDirectory !== undefined && hasWorkersConfig
+				? config.site
+					? { ...deployArgs, site: assetsDirectory }
+					: { ...deployArgs, assets: assetsDirectory }
+				: deployArgs;
+		const autoConfigOutputDir = hasWorkersConfig ? undefined : assetsDirectory;
+
 		await run(experimentalFlags, async () => {
 			initDeployHelpersContext({
 				logger,

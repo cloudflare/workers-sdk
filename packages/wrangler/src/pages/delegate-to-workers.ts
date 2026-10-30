@@ -346,8 +346,8 @@ export function recordPagesToWorkersDelegateFailure(
  * it, a non-interactive agent deploy has no compatibility date and fails
  * validation. Instead the directory travels separately as `assetsDirectory`,
  * and `runPagesToWorkersDeploy` decides how to apply it: it pins autoconfig to
- * the directory for an unconfigured project, and only passes `--assets` when a
- * Workers config already exists (where autoconfig would not run anyway). Only
+ * the directory for an unconfigured project, and passes `--assets` (or `--site`
+ * for Workers Sites) when a Workers config already exists. Only
  * the agent's explicit, deliberate inputs (name, compatibility date/flags) are
  * carried here, and they take precedence on the deploy.
  */

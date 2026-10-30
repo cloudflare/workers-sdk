@@ -1,9 +1,13 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi, type ExpectStatic } from "vitest";
 import { readConfig } from "../../config";
 import { runDeployCommandHandler, type DeployArgs } from "../../deploy";
+import * as deploy from "../../deploy";
+import { mergeDeployConfigArgs } from "../../deployment-bundle/merge-config-args";
 import { run } from "../../experimental-flags";
+import { runPagesToWorkersDeploy } from "../../pages/run-workers-deploy";
 import { detectAgent } from "../../utils/detect-agent";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -111,6 +115,71 @@ describe("Pages-to-Workers delegated deploy assets directory", () => {
 		);
 
 		expect(summary.wranglerConfig?.assets?.directory).toBe("public");
+	});
+
+	it.for(["astro", "next", "nuxt", "vite"])(
+		"configures the requested static assets without running %s framework configuration or builds",
+		async (framework, { expect }) => {
+			writeFileSync(
+				"package.json",
+				JSON.stringify({
+					name: "my-site",
+					dependencies: { [framework]: "5" },
+					scripts: { build: `${framework} build` },
+				})
+			);
+			const summary = await planDelegatedDeploy(expect, "public");
+
+			expect(summary.wranglerConfig?.assets?.directory).toBe("public");
+			expect(summary.wranglerConfig?.main).toBeUndefined();
+			expect(summary.buildCommand).toBeUndefined();
+		}
+	);
+
+	it("overrides a legacy Workers Sites bucket before preparing the upload", async ({
+		expect,
+	}) => {
+		writeFileSync(
+			"wrangler.jsonc",
+			JSON.stringify({
+				name: "my-site",
+				main: "worker.js",
+				compatibility_date: "2026-10-01",
+				site: { bucket: "." },
+			})
+		);
+		writeFileSync("worker.js", "export default {};");
+		const handler = vi
+			.spyOn(deploy, "runDeployCommandHandler")
+			.mockImplementationOnce(async (args, { config }) => {
+				const { props } = await mergeDeployConfigArgs(
+					{ ...args, dryRun: true },
+					config
+				);
+				expect(props.isWorkersSite).toBe(true);
+				expect(props.legacyAssetPaths).toMatchObject({
+					baseDirectory: process.cwd(),
+					assetDirectory: "public",
+				});
+				expect(
+					resolve(
+						props.legacyAssetPaths?.baseDirectory ?? "",
+						props.legacyAssetPaths?.assetDirectory ?? ""
+					)
+				).toBe(resolve("public"));
+			});
+		try {
+			await runPagesToWorkersDeploy({
+				delegate: true,
+				command: "deploy",
+				agentId: "test-agent",
+				deployArgs: { name: "my-site" },
+				assetsDirectory: "public",
+			});
+			expect(handler).toHaveBeenCalledOnce();
+		} finally {
+			handler.mockRestore();
+		}
 	});
 
 	it("still detects the directory when none is requested", async ({

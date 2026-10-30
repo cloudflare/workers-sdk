@@ -456,26 +456,29 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 	});
 
-	it("a caller-supplied outputDir should not replace a detected framework's dist directory", async ({
-		expect,
-	}) => {
-		// Framework configuration derives paths from its own build output, so the
-		// override only applies to static projects.
-		await seed({
-			"package.json": JSON.stringify({
-				name: "my-app",
-				dependencies: { astro: "5" },
-			}),
-			"static/index.html": `<h1>Hello World</h1>`,
-		});
+	it.for(["astro", "next", "nuxt", "vite"])(
+		"a caller-supplied outputDir should select static assets instead of configuring %s",
+		async (framework, { expect }) => {
+			await seed({
+				"package.json": JSON.stringify({
+					name: "my-app",
+					dependencies: { [framework]: "5" },
+					scripts: { build: `${framework} build` },
+				}),
+				"static/index.html": `<h1>Hello World</h1>`,
+			});
 
-		await expect(
-			details.getDetailsForAutoConfig({ context, outputDir: "static" })
-		).resolves.toMatchObject({
-			framework: expect.objectContaining({ id: "astro" }),
-			outputDir: "dist",
-		});
-	});
+			await expect(
+				details.getDetailsForAutoConfig({ context, outputDir: "static" })
+			).resolves.toMatchObject({
+				configured: false,
+				framework: expect.objectContaining({ id: "static" }),
+				outputDir: "static",
+				buildCommand: undefined,
+				devCommand: undefined,
+			});
+		}
+	);
 
 	it.for([
 		{ input: "./public/", expected: "public" },

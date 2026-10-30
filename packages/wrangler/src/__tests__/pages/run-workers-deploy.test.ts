@@ -174,7 +174,7 @@ describe("runPagesToWorkersDeploy", () => {
 			);
 		});
 
-		it("does not pass --assets for a Workers Sites config, which cannot combine with it", async ({
+		it("overrides a Workers Sites bucket with --site instead of --assets", async ({
 			expect,
 		}) => {
 			mocks.readConfig.mockReturnValueOnce({
@@ -185,7 +185,7 @@ describe("runPagesToWorkersDeploy", () => {
 			await runPagesToWorkersDeploy(delegation);
 
 			expect(runDeployCommandHandler).toHaveBeenCalledWith(
-				expect.objectContaining({ assets: undefined }),
+				expect.objectContaining({ site: "public", assets: undefined }),
 				expect.objectContaining({ autoConfigOutputDir: undefined })
 			);
 		});
@@ -199,6 +199,16 @@ describe("runPagesToWorkersDeploy", () => {
 				'The directory "pubic" passed to `wrangler pages deploy` does not exist or is not a directory.'
 			);
 			expect(runDeployCommandHandler).not.toHaveBeenCalled();
+			expect(readConfig).not.toHaveBeenCalled();
+			expect(mocks.recordPagesToWorkersDelegateFailure).toHaveBeenCalledWith(
+				"deploy",
+				delegation.deployArgs,
+				"test-agent",
+				expect.objectContaining({
+					telemetryMessage: "pages to workers delegation directory not found",
+				})
+			);
+			expect(mocks.recordPagesToWorkersDelegateSuccess).not.toHaveBeenCalled();
 		});
 
 		it("fails before deploying when the requested path is a file", async ({
@@ -213,6 +223,13 @@ describe("runPagesToWorkersDeploy", () => {
 				})
 			).rejects.toThrow("does not exist or is not a directory");
 			expect(runDeployCommandHandler).not.toHaveBeenCalled();
+			expect(mocks.recordPagesToWorkersDelegateFailure).toHaveBeenCalledWith(
+				"deploy",
+				delegation.deployArgs,
+				"test-agent",
+				expect.any(Error)
+			);
+			expect(mocks.recordPagesToWorkersDelegateSuccess).not.toHaveBeenCalled();
 		});
 
 		it("leaves autoconfig detection alone when no directory was requested", async ({
