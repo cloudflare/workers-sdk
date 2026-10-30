@@ -3039,6 +3039,87 @@
 				"tags": ["Durable Objects Namespace"]
 			}
 		},
+		"/workers/durable_objects/namespaces/{namespace_id}/objects/evict": {
+			"post": {
+				"description": "Evict a running Durable Object instance while preserving its storage. In-memory state is reset the next time the object starts.",
+				"operationId": "durable-objects-namespace-evict-object",
+				"parameters": [
+					{
+						"in": "path",
+						"name": "namespace_id",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/workers_schemas-id"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"oneOf": [
+									{
+										"type": "object",
+										"required": ["durable_object_id"],
+										"properties": {
+											"durable_object_id": {
+												"type": "string",
+												"description": "Hex string ID of the Durable Object"
+											},
+											"web_sockets": {
+												"type": "string",
+												"enum": ["close", "hibernate"],
+												"description": "What to do with the object's WebSockets. Defaults to closing them."
+											}
+										}
+									},
+									{
+										"type": "object",
+										"required": ["durable_object_name"],
+										"properties": {
+											"durable_object_name": {
+												"type": "string",
+												"description": "Name to derive the ID via idFromName()"
+											},
+											"web_sockets": {
+												"type": "string",
+												"enum": ["close", "hibernate"],
+												"description": "What to do with the object's WebSockets. Defaults to closing them."
+											}
+										}
+									}
+								]
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common"
+								}
+							}
+						},
+						"description": "Eviction response."
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/workers_api-response-common-failure"
+								}
+							}
+						},
+						"description": "Eviction response failure."
+					}
+				},
+				"summary": "Evict Durable Object",
+				"tags": ["Durable Objects Namespace"]
+			}
+		},
 		"/local/workers": {
 			"get": {
 				"description": "List all workers in the local dev registry.",

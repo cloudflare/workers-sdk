@@ -12,6 +12,10 @@ const ROUTE_PATTERNS: [RegExp, string][] = [
 	[/^\/d1\/database\/[^/]+\/raw$/, "d1.query"],
 	[/^\/d1\/database$/, "d1.databases"],
 	[/^\/workers\/durable_objects\/namespaces\/[^/]+\/query$/, "do.query"],
+	[
+		/^\/workers\/durable_objects\/namespaces\/[^/]+\/objects\/evict$/,
+		"do.evict",
+	],
 	[/^\/workers\/durable_objects\/namespaces\/[^/]+\/objects$/, "do.objects"],
 	[/^\/workers\/durable_objects\/namespaces$/, "do.namespaces"],
 	[/^\/r2\/buckets\/[^/]+\/objects\/.+$/, "r2.object"],

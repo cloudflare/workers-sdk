@@ -12,6 +12,7 @@ import { EXPLORER_REFRESH_HEADER } from "./explorer-refresh";
 import {
 	zD1ListDatabasesData,
 	zD1RawDatabaseQueryData,
+	zDurableObjectsNamespaceEvictObjectData,
 	zDurableObjectsNamespaceListObjectsData,
 	zDurableObjectsNamespaceQuerySqliteData,
 	zEmailListRoutingData,
@@ -37,7 +38,12 @@ import {
 } from "./generated/zod.gen";
 import openApiSpec from "./openapi.local.json";
 import { listD1Databases, rawD1Database } from "./resources/d1";
-import { listDONamespaces, listDOObjects, queryDOSqlite } from "./resources/do";
+import {
+	evictDurableObject,
+	listDONamespaces,
+	listDOObjects,
+	queryDOSqlite,
+} from "./resources/do";
 import {
 	getReceivedEmail,
 	getReceivedEmailByCaptureId,
@@ -96,6 +102,7 @@ import type {
 	BindingIdMap,
 	ExplorerWorkerOpts,
 } from "../../plugins/core/types";
+import type { DevControl } from "../../shared/dev-control";
 import type { WorkerRegistry } from "../../shared/dev-registry-types";
 import type { CoreBindings } from "../core";
 import type { WorkerdDebugPortConnector } from "../core/dev-registry-proxy-shared.worker";
@@ -147,6 +154,9 @@ export type Env = {
 	[CoreBindings.SERVICE_OBSERVABILITY_COLLECTOR]?: Fetcher;
 	// Email store RPC. Backs the Email tab's routing/sending views.
 	[CoreBindings.SERVICE_EMAIL_STORE]: EmailStoreService;
+	// Dev control RPC for Durable Object eviction — only bound when there are
+	// Durable Objects (see getExplorerServices).
+	[CoreBindings.SERVICE_DEV_CONTROL]?: DevControl;
 };
 
 export type AppBindings = { Bindings: Env };
@@ -343,6 +353,12 @@ app.post(
 	"/api/workers/durable_objects/namespaces/:namespace_id/query",
 	validateRequestBody(zDurableObjectsNamespaceQuerySqliteData.shape.body),
 	(c) => queryDOSqlite(c, c.req.param("namespace_id"), c.req.valid("json"))
+);
+
+app.post(
+	"/api/workers/durable_objects/namespaces/:namespace_id/objects/evict",
+	validateRequestBody(zDurableObjectsNamespaceEvictObjectData.shape.body),
+	(c) => evictDurableObject(c, c.req.param("namespace_id"), c.req.valid("json"))
 );
 
 // ============================================================================
