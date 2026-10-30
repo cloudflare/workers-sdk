@@ -13,7 +13,8 @@ import type * as vite from "vite";
 export function handleWebSocket(
 	httpServer: vite.HttpServer,
 	miniflare: Miniflare,
-	entryWorkerName?: string
+	entryWorkerName?: string,
+	viteWebSocketEnabled = true
 ) {
 	const nodeWebSocket = new WebSocketServer({ noServer: true });
 
@@ -63,6 +64,10 @@ export function handleWebSocket(
 				// Leave Vite HMR and DevTools upgrades to their own handlers, but
 				// forward all sandbox requests to the Worker.
 				if ((isViteRequest || isDevToolsRequest) && !isSandboxRequest) {
+					// No Vite handler claims HMR upgrades when `server.ws` is disabled.
+					if (isViteRequest && !viteWebSocketEnabled) {
+						socket.destroy();
+					}
 					return;
 				}
 
