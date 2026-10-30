@@ -81,7 +81,8 @@ export const configPlugin = createPlugin("config", (ctx) => {
 		},
 		// Set the Build Output directories before Vite resolves the config, so that every plugin
 		// reads them from the resolved config. `post` overrides directories set by the user or
-		// by other plugins' earlier `configEnvironment` hooks.
+		// by other plugins' earlier `configEnvironment` hooks; a build fails if a later hook
+		// moves them (see `validateBuildOutputDirs`).
 		configEnvironment: {
 			order: "post",
 			handler(environmentName) {
@@ -119,8 +120,12 @@ export const configPlugin = createPlugin("config", (ctx) => {
 				...[...environmentNameToChildEnvironmentNamesMap.values()].flat(),
 			]);
 
-			forceBuildOutputDirs(ctx.resolvedPluginConfig, ctx.resolvedViteConfig);
 			if (ctx.resolvedViteConfig.command === "build") {
+				validateBuildOutputDirs(
+					ctx.resolvedPluginConfig,
+					ctx.resolvedViteConfig,
+					root
+				);
 				await cleanBuildOutputDir(ctx.resolvedViteConfig.root);
 			}
 		},
@@ -238,27 +243,43 @@ function getEnvironmentBuildOutputDir(
 }
 
 /**
- * Forces each environment's `build.outDir` to its Build Output directory.
+ * Throws if another plugin moved an environment's `build.outDir` after the `configEnvironment`
+ * hook set it to the environment's Build Output directory.
  *
- * The `configEnvironment` hook already sets these directories before Vite resolves the config.
- * This runs again after Vite's merge in `configResolved`, so it also overrides any
- * `build.outDir` set later than that hook.
+ * @param resolvedPluginConfig The resolved plugin configuration
+ * @param resolvedViteConfig The resolved Vite config
+ * @param root The project root the `configEnvironment` hook resolved the directories against.
+ * Vite's resolved root can differ in spelling (Vite 8 resolves it through symlinks), so the
+ * directories are compared as that hook computed them.
  */
-function forceBuildOutputDirs(
+function validateBuildOutputDirs(
 	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
-	resolvedViteConfig: vite.ResolvedConfig
+	resolvedViteConfig: vite.ResolvedConfig,
+	root: string
 ): void {
-	for (const [environmentName, environment] of Object.entries(
-		resolvedViteConfig.environments
-	)) {
-		const outDir = getEnvironmentBuildOutputDir(
-			resolvedPluginConfig,
-			resolvedViteConfig.root,
-			environmentName
-		);
-		if (outDir) {
-			environment.build.outDir = outDir;
+	const movedDirs = Object.entries(resolvedViteConfig.environments).flatMap(
+		([environmentName, environment]) => {
+			const expectedDir = getEnvironmentBuildOutputDir(
+				resolvedPluginConfig,
+				root,
+				environmentName
+			);
+			const outDir = path.resolve(
+				resolvedViteConfig.root,
+				environment.build.outDir
+			);
+			return expectedDir && outDir !== expectedDir
+				? [
+						`	- "${environmentName}" environment: \`build.outDir\`: ${JSON.stringify(outDir)} (required: ${JSON.stringify(expectedDir)})\n`,
+					]
+				: [];
 		}
+	);
+
+	if (movedDirs.length) {
+		throw new Error(
+			`The following environment options are incompatible with the Cloudflare Vite plugin:\n${movedDirs.join("")}Another plugin changed them after the Cloudflare Vite plugin set them. The Cloudflare Vite plugin builds each environment into its Build Output directory, which can't be changed.\n`
+		);
 	}
 }
 
