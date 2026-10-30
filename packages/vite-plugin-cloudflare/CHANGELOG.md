@@ -1,5 +1,25 @@
 # @cloudflare/vite-plugin
 
+## 1.67.0
+
+### Minor Changes
+
+- [#16543](https://github.com/cloudflare/workers-sdk/pull/16543) [`0489cda`](https://github.com/cloudflare/workers-sdk/commit/0489cda2da1321f993049c04f297b28b99106200) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Validate asset ignore files and update local Flagship support
+
+  Upgrade Miniflare to 5.20261023.2-beta and Wrangler to 4.155.0. Builds and asset manifest generation now reject `.assetsignore` files with invalid UTF-8 or null characters instead of silently ignoring their patterns. The Local Explorer also supports Flagship management by app ID, and local flag evaluations retain metadata.
+
+  Miniflare also waits for temporary file cleanup before disposal completes, so closing or restarting a Vite dev server finishes cleanup before returning.
+
+- [#16579](https://github.com/cloudflare/workers-sdk/pull/16579) [`e696113`](https://github.com/cloudflare/workers-sdk/commit/e6961138f2c22ee2fe231bc9c9553501a60f3f15) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Support remote Analytics Engine bindings in Vite plugin v1
+
+  Set `remote: true` on an `analytics_engine_datasets` entry in `wrangler.jsonc` to send `writeDataPoint()` calls from local development and preview to the real dataset.
+
+### Patch Changes
+
+- [#16578](https://github.com/cloudflare/workers-sdk/pull/16578) [`2eae147`](https://github.com/cloudflare/workers-sdk/commit/2eae147fbc53aee87188e17938f22bf7a06c2385) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Close Vite HMR WebSocket upgrades when Vite WebSockets are disabled
+
+  Previously, `server.ws: false` left the browser's raw upgrade socket pending because no Vite handler claimed it. Worker and Sandbox WebSocket forwarding remains unchanged.
+
 ## 1.66.0
 
 ### Minor Changes
