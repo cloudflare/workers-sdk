@@ -81,14 +81,14 @@ export const configPlugin = createPlugin("config", (ctx) => {
 		},
 		// Set the Build Output directories before Vite resolves the config, so that every plugin
 		// reads them from the resolved config. `post` overrides directories set by the user or
-		// by other plugins' `configEnvironment` hooks.
+		// by other plugins' earlier `configEnvironment` hooks.
 		configEnvironment: {
 			order: "post",
 			handler(environmentName) {
 				if (ctx.resolvedPluginConfig.type === "preview") {
 					return;
 				}
-				const outDir = getBuildOutputDir(
+				const outDir = getEnvironmentBuildOutputDir(
 					ctx.resolvedPluginConfig,
 					root,
 					environmentName
@@ -205,7 +205,7 @@ function getEnvironmentsConfig(
  * @param environmentName The name of the environment
  * @returns The environment's Build Output directory, or `undefined` if it has none
  */
-function getBuildOutputDir(
+function getEnvironmentBuildOutputDir(
 	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
 	root: string,
 	environmentName: string
@@ -225,7 +225,7 @@ function getBuildOutputDir(
 		childEnvironmentNames,
 	] of resolvedPluginConfig.environmentNameToChildEnvironmentNamesMap) {
 		if (childEnvironmentNames.includes(environmentName)) {
-			const parentDir = getBuildOutputDir(
+			const parentDir = getEnvironmentBuildOutputDir(
 				resolvedPluginConfig,
 				root,
 				parentEnvironmentName
@@ -251,7 +251,7 @@ function forceBuildOutputDirs(
 	for (const [environmentName, environment] of Object.entries(
 		resolvedViteConfig.environments
 	)) {
-		const outDir = getBuildOutputDir(
+		const outDir = getEnvironmentBuildOutputDir(
 			resolvedPluginConfig,
 			resolvedViteConfig.root,
 			environmentName

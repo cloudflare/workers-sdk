@@ -2,6 +2,6 @@
 "@cloudflare/vite-plugin": patch
 ---
 
-Set the Build Output directories while Vite resolves the config
+Show the Build Output directories to other plugins while Vite resolves the config
 
-The plugin used to move each environment's `build.outDir` into the Build Output directory after Vite had resolved the config. It now sets them in a `configEnvironment` hook, so other plugins read the Build Output directories from the resolved config. Frameworks that read the client output directory in their own `configResolved` hook, such as Nuxt's Vite builder, now find their build output.
+Plugins that read an environment's `build.outDir` in their `configResolved` hook could see the directory from before it was moved into the Build Output directory. They now see the Build Output directory. For example, Nuxt 4.6 with `server: { builder: 'vite' }` no longer fails with `NUXT_B7021` looking for the client manifest in `.output/public`.

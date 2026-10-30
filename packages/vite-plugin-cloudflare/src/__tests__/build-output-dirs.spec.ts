@@ -1,5 +1,8 @@
 import { fileURLToPath } from "node:url";
-import { getWorkerAssetsDir } from "@cloudflare/build-output-utils";
+import {
+	getWorkerAssetsDir,
+	getWorkerBundleDir,
+} from "@cloudflare/build-output-utils";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { resolveConfig } from "vite";
 import { test } from "vitest";
@@ -10,6 +13,7 @@ test("puts the Build Output directories in the resolved config that other plugin
 	expect,
 }) => {
 	let clientOutDir: string | undefined;
+	let workerOutDir: string | undefined;
 
 	await resolveConfig(
 		{
@@ -21,6 +25,7 @@ test("puts the Build Output directories in the resolved config that other plugin
 					name: "read-client-out-dir",
 					configResolved(config) {
 						clientOutDir = config.environments.client?.build.outDir;
+						workerOutDir = config.environments.ssr?.build.outDir;
 					},
 				},
 				cloudflare({ inspectorPort: false, persistState: false }),
@@ -31,4 +36,5 @@ test("puts the Build Output directories in the resolved config that other plugin
 	);
 
 	expect(clientOutDir).toBe(getWorkerAssetsDir(fixturesPath));
+	expect(workerOutDir).toBe(getWorkerBundleDir(fixturesPath));
 });
