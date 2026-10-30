@@ -2,7 +2,7 @@ import t from "@bomb.sh/tab";
 import { CommandLineArgsError } from "@cloudflare/workers-utils";
 import { createCommand } from "./core/create-command";
 import { experimental_getWranglerCommands } from "./experimental-commands-api";
-import type { DefinitionTreeNode } from "./core/types";
+import type { ExperimentalDefinitionTreeNode } from "./experimental-commands-api";
 
 function setupCompletions(): void {
 	const { registry, globalFlags } = experimental_getWranglerCommands();
@@ -28,7 +28,7 @@ function setupCompletions(): void {
 
 	// Recursively add commands from the registry tree
 	function addCommandsFromTree(
-		node: DefinitionTreeNode,
+		node: ExperimentalDefinitionTreeNode,
 		parentPath: string[] = []
 	): void {
 		for (const [name, childNode] of node.subtree.entries()) {
