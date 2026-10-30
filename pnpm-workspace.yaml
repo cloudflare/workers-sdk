@@ -59,7 +59,7 @@ allowBuilds:
   esbuild: true
   workerd: true
   # miniflare's direct `sharp` (0.35+) has no install script, but the
-  # catalog-pinned published @cloudflare/vitest-pool-workers (the pre-rename name)
+  # catalog-pinned published @cloudflare/vitest-plugin
   # still pulls in sharp@0.34.x transitively (via published miniflare), which does.
   # Remove once that pin uses a published miniflare built on sharp 0.35+.
   sharp: true
@@ -99,36 +99,33 @@ patchedDependencies:
   "youch@4.1.0-beta.10": "patches/youch@4.1.0-beta.10.patch"
   "@netlify/build-info@10.5.1": "patches/@netlify__build-info@10.5.1.patch"
   "buffer-equal-constant-time@1.0.1": "patches/buffer-equal-constant-time@1.0.1.patch"
-  "vite@8.1.5": "patches/vite@8.1.5.patch"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Catalog
 # ──────────────────────────────────────────────────────────────────────────────
 
 catalog:
-  cf: "1.0.0-beta.7"
+  cf: "1.0.0-beta.17"
   chalk: "5.3.0"
   command-exists: "1.2.9"
   dotenv: "16.3.1"
   "@hey-api/openapi-ts": "0.94.0"
   "@types/node": "22.15.17"
 
-  "@vitest/runner": 4.1.0
-  "@vitest/snapshot": 4.1.0
-  "@vitest/ui": 4.1.0
+  "@vitest/ui": "5.0.4"
   typescript: "5.8.3"
-  undici: "7.29.1"
+  undici: "7.30.1"
   # Override undici-types from @types/node so that the Cloudflare SDK typings match our installed
   # version of Undici
-  undici-types: "7.29.1"
-  vitest: "4.1.0"
-  vite: "8.1.5"
+  undici-types: "7.30.1"
+  vitest: "5.0.4"
+  vite: "8.3.4"
   "ws": "8.21.0"
   esbuild: "0.28.2"
   "@playwright/test": "1.60.0"
   playwright-chromium: "1.60.0"
-  "@cloudflare/workers-types": "^5.20261006.1"
-  workerd: "1.20261012.1"
+  "@cloudflare/workers-types": "^5.20261023.1"
+  workerd: "1.20261023.1"
   jsonc-parser: "3.2.0"
   smol-toml: "1.9.0"
   msw: "2.14.6"
@@ -136,20 +133,9 @@ catalog:
   "tree-kill": "1.2.2"
   "capnp-es": "0.0.16"
   "capnweb": "0.12.0"
-  zod: "4.6.5"
+  zod: "4.6.6"
   "ci-info": "4.4.0"
   "open": "11.0.0"
   "signal-exit": "4.1.0"
-  # CAUTION: This is the PRE-RENAME published package name. The workspace package is now
-  # @cloudflare/vitest-plugin, and most usage in this monorepo should use workspace:* against
-  # that instead of this catalog version.
-  # However, some packages (pages-shared, workers-shared, etc...) need to be tested using the
-  # plugin but are themselves ultimately included in it (through Wrangler), causing a circular
-  # dependency. They therefore depend on this older published 0.x release under the old name.
-  # TODO: Repoint these to "@cloudflare/vitest-plugin" once v1.0.0 is published to npm.
-  "@cloudflare/vitest-pool-workers": "0.13.3"
-
-catalogs:
-  vitest5:
-    "@vitest/ui": "5.0.4"
-    vitest: "5.0.4"
+  # Use a published plugin for packages bundled into Wrangler to avoid a workspace cycle.
+  "@cloudflare/vitest-plugin": "1.4.3"

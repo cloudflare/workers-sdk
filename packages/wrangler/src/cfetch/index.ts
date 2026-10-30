@@ -1,5 +1,6 @@
 import { URLSearchParams } from "node:url";
 import {
+	APIError,
 	throwFetchError,
 	hasCursor,
 	hasMorePages,
@@ -64,6 +65,55 @@ export async function fetchGraphqlResult<ResponseType>(
 	} else {
 		throw new Error("A request to the Cloudflare API (/graphql) failed.");
 	}
+}
+
+export class GraphQLAnalyticsError extends APIError {
+	readonly reason: "rate-limited" | "unauthorized" | "other";
+	readonly apiMessage: string;
+
+	constructor(
+		status: number,
+		apiMessage: string,
+		retryAfterMs: number | undefined
+	) {
+		// The API can report a depleted rate limit budget in the `errors` array
+		// of an HTTP 200 response, so match the message as well as the status.
+		const reason =
+			status === 429 || /rate limiter budget depleted/i.test(apiMessage)
+				? "rate-limited"
+				: status === 401 || status === 403
+					? "unauthorized"
+					: "other";
+		super({
+			text: `The GraphQL Analytics API returned an error: ${apiMessage}`,
+			status,
+			retryAfterMs,
+			telemetryMessage: `cfetch graphql ${reason}`,
+		});
+		this.reason = reason;
+		this.apiMessage = apiMessage;
+	}
+}
+
+export async function fetchGraphqlResultOrThrow<
+	ResponseType extends { errors?: { message?: string }[] | null },
+>(
+	complianceConfig: ComplianceConfig,
+	init: RequestInit = {}
+): Promise<ResponseType> {
+	const { response, status, retryAfterMs } = await fetchInternal<ResponseType>(
+		complianceConfig,
+		"/graphql",
+		{ ...init, method: "POST" }
+	);
+	const errors = response.errors ?? [];
+	if (status >= 400 || errors.length > 0) {
+		const apiMessage =
+			errors.flatMap((error) => error.message ?? []).join("; ") ||
+			`HTTP ${status} with no error message`;
+		throw new GraphQLAnalyticsError(status, apiMessage, retryAfterMs);
+	}
+	return response;
 }
 
 /**

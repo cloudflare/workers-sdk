@@ -158,7 +158,8 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					handleWebSocket(
 						viteDevServer.httpServer,
 						ctx.miniflare,
-						entryWorkerName
+						entryWorkerName,
+						viteDevServer.config.server.ws !== false
 					);
 				}
 
@@ -217,6 +218,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						containerOptions,
 						settings: ctx.resolvedPluginConfig.settings,
 						logger: viteDevServer.config.logger,
+						cliDisplayName: ctx.resolvedPluginConfig.cliDisplayName,
 					});
 
 					containerCleanup.track(

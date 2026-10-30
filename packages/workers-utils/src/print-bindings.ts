@@ -364,12 +364,14 @@ export function printBindings(
 
 	if (hyperdrive.length > 0) {
 		output.push(
-			...hyperdrive.map(({ binding, id }) => {
+			...hyperdrive.map(({ binding, id, remote }) => {
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("hyperdrive"),
 					value: id,
-					mode: getMode({ isSimulatedLocally: true }),
+					mode: getMode({
+						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+					}),
 				};
 			})
 		);
@@ -540,12 +542,14 @@ export function printBindings(
 
 	if (analytics_engine_datasets.length > 0) {
 		output.push(
-			...analytics_engine_datasets.map(({ binding, dataset }) => {
+			...analytics_engine_datasets.map(({ binding, dataset, remote }) => {
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("analytics_engine"),
 					value: dataset ?? binding,
-					mode: getMode({ isSimulatedLocally: true }),
+					mode: getMode({
+						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+					}),
 				};
 			})
 		);

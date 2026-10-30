@@ -5,6 +5,7 @@ export type Workflow = {
 	modified_on: string;
 	script_name: string;
 	class_name: string;
+	jurisdiction?: string;
 };
 
 export type Version = {

@@ -29,10 +29,9 @@ if (isWindows) {
 ) {
 	describe.skip("Skipping remote bindings tests without account credentials.");
 } else {
-	describe
-		// Note: the reload test applies changes to the fixture files, so we do want the
-		//       tests to run sequentially in order to avoid race conditions
-		.sequential("remote bindings tests", () => {
+	// Note: the reload test applies changes to the fixture files, so we do want the
+	//       tests to run sequentially in order to avoid race conditions
+	describe("remote bindings tests", { concurrent: false }, () => {
 		const replacements = {
 			"<<REMOTE_WORKER_PLACEHOLDER>>": `preserve-e2e-vite-remote`,
 			"<<REMOTE_WORKER_PLACEHOLDER_ALT>>": `preserve-e2e-vite-remote-alt`,
@@ -205,30 +204,32 @@ describe.skipIf(isWindows)(
 		test("uses directory-bound auth profile instead of triggering oauth", async ({
 			expect,
 		}) => {
-			// Set up a fake HOME with a .wrangler global config directory containing:
+			// Set up a fake HOME with a cf global config directory containing:
 			//  - a named profile with a dummy oauth token
 			//  - a directory binding mapping the project path to that profile
 			const fakeHome = path.join(projectPath, ".fake-home");
-			const wranglerDir = path.join(fakeHome, ".wrangler");
+			const xdgConfigHome = path.join(fakeHome, ".config");
+			const cfDir = path.join(xdgConfigHome, "cloudflare");
 
-			mkdirSync(path.join(wranglerDir, "config"), { recursive: true });
+			mkdirSync(path.join(cfDir, "config"), { recursive: true });
 			writeFileSync(
-				path.join(wranglerDir, "config", "e2e-test-profile.toml"),
-				[
-					'oauth_token = "fake-oauth-token-for-e2e-test"',
-					'refresh_token = "fake-refresh-token"',
-					`expiration_time = "2099-01-01T00:00:00+00:00"`,
-				].join("\n")
+				path.join(cfDir, "config", "e2e-test-profile.json"),
+				JSON.stringify({
+					oauth_token: "fake-oauth-token-for-e2e-test",
+					refresh_token: "fake-refresh-token",
+					expiration_time: "2099-01-01T00:00:00+00:00",
+				})
 			);
 
-			mkdirSync(path.join(wranglerDir, "profiles"), { recursive: true });
+			mkdirSync(path.join(cfDir, "profiles"), { recursive: true });
 			writeFileSync(
-				path.join(wranglerDir, "profiles", "directory-bindings.json"),
+				path.join(cfDir, "profiles", "directory-bindings.json"),
 				JSON.stringify({ [projectPath]: "e2e-test-profile" })
 			);
 
 			const proc = await runLongLived("pnpm", "dev", projectPath, {
 				HOME: fakeHome,
+				XDG_CONFIG_HOME: xdgConfigHome,
 				CLOUDFLARE_API_TOKEN: undefined,
 				CLOUDFLARE_API_KEY: undefined,
 				CLOUDFLARE_EMAIL: undefined,

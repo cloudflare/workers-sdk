@@ -1,5 +1,5 @@
 import { describe, it } from "vitest";
-import { DefaultScopeKeys, validateScopeKeys } from "../../src/cf";
+import { CF_CLI, DefaultScopeKeys, validateScopeKeys } from "../../src/cf";
 import {
 	CF_CLIENT_REGISTERED_SCOPES,
 	CF_REQUESTABLE_SCOPES,
@@ -31,15 +31,20 @@ describe("cf OAuth scopes", () => {
 		expect(validateScopeKeys(["hyperdrive-planetscale:setup"])).toBe(true);
 	});
 
+	it("requests user token management in cf login defaults", ({ expect }) => {
+		expect(CF_CLI.getDefaultScopeKeys()).toContain("user-api-tokens.write");
+		expect(validateScopeKeys(["user-api-tokens.write"])).toBe(true);
+	});
+
 	it("matches the production client registration", ({ expect }) => {
-		expect(CF_CLIENT_REGISTERED_SCOPES).toHaveLength(482);
+		expect(CF_CLIENT_REGISTERED_SCOPES).toHaveLength(483);
 		expect(new Set(CF_CLIENT_REGISTERED_SCOPES).size).toBe(
 			CF_CLIENT_REGISTERED_SCOPES.length
 		);
 	});
 
 	it("matches the explicitly requestable production catalog", ({ expect }) => {
-		expect(CF_REQUESTABLE_SCOPES).toHaveLength(476);
+		expect(CF_REQUESTABLE_SCOPES).toHaveLength(477);
 		expect(new Set(CF_REQUESTABLE_SCOPES).size).toBe(
 			CF_REQUESTABLE_SCOPES.length
 		);

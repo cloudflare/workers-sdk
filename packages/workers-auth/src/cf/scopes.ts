@@ -441,6 +441,7 @@ export const CF_CLIENT_REGISTERED_SCOPES = [
 	"trust-and-safety.write",
 	"url-scanner.read",
 	"url-scanner.write",
+	"user-api-tokens.write",
 	"user-details.read",
 	"user-details.write",
 	"vectorize.read",

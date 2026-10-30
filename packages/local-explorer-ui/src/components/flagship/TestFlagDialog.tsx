@@ -1,10 +1,14 @@
 import { Badge, Banner, Button, Dialog, Label, Select } from "@cloudflare/kumo";
 import { FlagBannerIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { flagshipEvaluateFlag } from "../../api";
+import { flagshipEvaluateFlagPost } from "../../api";
 import { flagshipErrorMessage, parseContextValue } from "./flag-helpers";
 import { TextInput } from "./FormFields";
-import type { FlagshipEvaluation, FlagshipFlag } from "../../api";
+import type {
+	FlagshipEvaluationResult,
+	FlagshipFlag,
+	FlagshipJsonValue,
+} from "../../api";
 import type { BadgeVariant } from "@cloudflare/kumo";
 import type { JSX } from "react";
 
@@ -18,12 +22,11 @@ function newContextEntry(): ContextEntry {
 	return { id: crypto.randomUUID(), key: "", value: "" };
 }
 
-type EvaluationReason = NonNullable<FlagshipEvaluation["reason"]>;
+type EvaluationReason = FlagshipEvaluationResult["reason"];
 
 const REASON_VARIANTS: Record<EvaluationReason, BadgeVariant> = {
 	DEFAULT: "secondary",
 	DISABLED: "warning",
-	ERROR: "error",
 	SPLIT: "info",
 	STATIC: "secondary",
 	TARGETING_MATCH: "success",
@@ -35,7 +38,6 @@ interface TestFlagDialogProps {
 	initialFlagKey: string | null;
 	onOpenChange: (open: boolean) => void;
 	open: boolean;
-	worker?: string;
 }
 
 function formatResultValue(value: unknown): string {
@@ -48,7 +50,6 @@ export function TestFlagDialog({
 	initialFlagKey,
 	onOpenChange,
 	open,
-	worker,
 }: TestFlagDialogProps): JSX.Element {
 	const flagKeys = useMemo(() => flags.map(({ key }) => key), [flags]);
 	const flagKeyItems = useMemo(
@@ -58,7 +59,7 @@ export function TestFlagDialog({
 	const defaultFlagKey = initialFlagKey ?? flagKeys[0] ?? "";
 	const [selectedFlagKey, setSelectedFlagKey] = useState(defaultFlagKey);
 	const [context, setContext] = useState<ContextEntry[]>([]);
-	const [result, setResult] = useState<FlagshipEvaluation | null>(null);
+	const [result, setResult] = useState<FlagshipEvaluationResult | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [evaluating, setEvaluating] = useState(false);
 	const wasOpen = useRef(false);
@@ -87,7 +88,7 @@ export function TestFlagDialog({
 		if (selectedFlagKey === "" || evaluating) {
 			return;
 		}
-		const attributes: Record<string, unknown> = {};
+		const attributes: Record<string, FlagshipJsonValue> = {};
 		for (const entry of context) {
 			const key = entry.key.trim();
 			if (key !== "") {
@@ -100,16 +101,15 @@ export function TestFlagDialog({
 		setError(null);
 		setResult(null);
 		try {
-			const response = await flagshipEvaluateFlag({
-				body: { context: attributes },
-				path: { app_id: appId, flag_key: selectedFlagKey },
-				query: { worker },
+			const response = await flagshipEvaluateFlagPost({
+				body: { context: attributes, flagKey: selectedFlagKey },
+				path: { app_id: appId },
 			});
 			if (requestId.current !== currentRequest) {
 				return;
 			}
-			setResult(response.data?.result ?? null);
-			if (response.data?.result === undefined) {
+			setResult(response.data ?? null);
+			if (response.data === undefined) {
 				setError("The flag evaluated but no result was returned.");
 			}
 		} catch (caught) {

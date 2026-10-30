@@ -5,9 +5,15 @@ export default defineConfig({
 	plugins: [
 		cloudflare({
 			types: { includeRuntime: false },
-			config: {
-				name: "static-with-api",
-				entrypoint: "./api/index.ts",
+			config(loadedConfig) {
+				return {
+					...loadedConfig,
+					worker: {
+						...loadedConfig.worker,
+						name: "static-with-api",
+						entrypoint: "./api/index.ts",
+					},
+				};
 			},
 			inspectorPort: false,
 			persistState: false,

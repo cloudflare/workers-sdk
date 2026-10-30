@@ -123,6 +123,33 @@ describe("kv", () => {
 			`);
 		});
 
+		it("should list every local key when there are more than 1000", async ({
+			expect,
+		}) => {
+			const keyValues = Array.from({ length: 1500 }, (_, i) => ({
+				key: `key-${String(i).padStart(4, "0")}`,
+				value: "value",
+			}));
+			keyValues.push({ key: "other", value: "value" });
+			writeFileSync("./keys.json", JSON.stringify(keyValues));
+			await runWrangler(
+				`kv bulk put keys.json --namespace-id some-namespace-id`
+			);
+			std.getAndClearOut();
+
+			await runWrangler(`kv key list --namespace-id some-namespace-id`);
+			const all = JSON.parse(std.getAndClearOut());
+			expect(all).toHaveLength(1501);
+			expect(all.at(-1)).toEqual({ name: "other" });
+
+			await runWrangler(
+				`kv key list --namespace-id some-namespace-id --prefix key-`
+			);
+			const prefixed = JSON.parse(std.getAndClearOut());
+			expect(prefixed).toHaveLength(1500);
+			expect(prefixed.at(-1)).toEqual({ name: "key-1499" });
+		});
+
 		it("should delete local kv storage", async ({ expect }) => {
 			await runWrangler(
 				`kv key put val value --namespace-id some-namespace-id`

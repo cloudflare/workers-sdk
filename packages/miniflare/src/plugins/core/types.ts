@@ -13,7 +13,6 @@ export type BindingIdMap = {
 
 export type FlagshipBindingInfo = {
 	appId: string; // Flagship app id
-	binding: string; // service binding name in the explorer's env
 	bindings: string[]; // user-facing binding names using this app
 };
 

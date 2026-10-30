@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import * as streams from "@cloudflare/cli-shared-helpers/streams";
 import {
 	mockCreateDate,
 	mockEndDate,
@@ -377,7 +378,10 @@ describe("wrangler workflows", () => {
 			},
 		];
 
-		const mockDescribeWorkflow = async (versions = mockVersions) => {
+		const mockDescribeWorkflow = async (
+			versions = mockVersions,
+			workflow = mockWorkflow
+		) => {
 			msw.use(
 				http.get(
 					`*/accounts/:accountId/workflows/some-workflow`,
@@ -386,7 +390,7 @@ describe("wrangler workflows", () => {
 							success: true,
 							errors: [],
 							messages: [],
-							result: mockWorkflow,
+							result: workflow,
 						});
 					},
 					{ once: true }
@@ -432,6 +436,39 @@ describe("wrangler workflows", () => {
 				...mockWorkflow,
 				latest_version: null,
 			});
+		});
+
+		it("should print the jurisdiction of a workflow that has one", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			await mockDescribeWorkflow(mockVersions, {
+				...mockWorkflow,
+				jurisdiction: "eu",
+			});
+			const stdoutWrite = vi
+				.spyOn(streams.stdout, "write")
+				.mockImplementation(() => true);
+
+			await runWrangler(`workflows describe some-workflow`);
+
+			expect(stdoutWrite.mock.calls.join("")).toMatch(/Jurisdiction:\s+eu/);
+		});
+
+		it("should not print a jurisdiction for a workflow without one", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			await mockDescribeWorkflow();
+			const stdoutWrite = vi
+				.spyOn(streams.stdout, "write")
+				.mockImplementation(() => true);
+
+			await runWrangler(`workflows describe some-workflow`);
+
+			const output = stdoutWrite.mock.calls.join("");
+			expect(output).toContain("Class Name:");
+			expect(output).not.toContain("Jurisdiction");
 		});
 	});
 

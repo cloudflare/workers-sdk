@@ -74,7 +74,14 @@ const exportConfig = {
 		},
 	],
 } as unknown as Config;
-const args = { accountId: "account", dryRun: false, scriptName: "worker" };
+const args = {
+	accountId: "account",
+	deployCommand: "wrangler deploy",
+	dryRun: false,
+	scriptName: "worker",
+	versionsUploadCommand: "wrangler versions upload",
+};
+
 const namespace = {
 	id: "namespace",
 	name: "sandbox",
@@ -457,6 +464,36 @@ describe("Durable Object application settings", () => {
 });
 
 describe("Container image preparation", () => {
+	it.for(["alpha", "beta"])(
+		"validates self-named container bindings against deployment name %s",
+		async (scriptName, { expect }) => {
+			const selfBoundConfig = {
+				...config,
+				name: "alpha",
+				durable_objects: {
+					bindings: [
+						{ name: "SANDBOX", class_name: "Sandbox", script_name: "alpha" },
+					],
+				},
+			};
+			const preparation = prepareDurableObjectContainerApplications(
+				selfBoundConfig,
+				durableObjectContainerConfig,
+				[],
+				{ ...args, dryRun: true, scriptName }
+			);
+			if (scriptName === "alpha") {
+				await expect(preparation).resolves.toEqual({
+					Sandbox: { tools: image },
+				});
+			} else {
+				await expect(preparation).rejects.toThrow(
+					"appears to be defined on the alpha Worker instead"
+				);
+			}
+		}
+	);
+
 	it.for(["missing-namespace", "missing-app", "mismatch", "ready", "dry-run"])(
 		"validates image-less applications before pushing Dockerfile images: %s",
 		async (state, { expect }) => {

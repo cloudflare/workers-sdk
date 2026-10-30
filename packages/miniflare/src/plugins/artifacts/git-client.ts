@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { lstat, mkdtemp, open, rename, unlink } from "node:fs/promises";
 import { devNull, tmpdir } from "node:os";
@@ -12,6 +12,7 @@ type GitOptions = {
 	allowFailure?: boolean;
 	timeout?: number;
 	httpAuthorization?: { origin: string; value: string };
+	signal?: AbortSignal;
 };
 type GitResult = { stdout: Buffer; stderr: Buffer; status: number };
 
@@ -58,6 +59,35 @@ export function gitEnvironment(
 		GIT_CONFIG_VALUE_0: "",
 		GIT_TERMINAL_PROMPT: "0",
 	};
+}
+
+/**
+ * Stop a Git invocation's process tree so HTTPS helpers cannot keep its pipes open.
+ * POSIX invocations own a process group; Windows requires taskkill /T.
+ */
+export function stopGitProcess(child: ChildProcessWithoutNullStreams): void {
+	if (process.platform === "win32" && child.pid !== undefined) {
+		// Git for Windows can spawn git-remote-https; killing only git leaves it alive.
+		const killer = spawn("taskkill", ["/PID", String(child.pid), "/T", "/F"], {
+			windowsHide: true,
+			stdio: "ignore",
+		});
+		killer.once("error", () => child.kill());
+		killer.unref();
+	} else if (child.pid !== undefined) {
+		try {
+			process.kill(-child.pid, "SIGTERM");
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== "ESRCH") {
+				child.kill();
+			}
+		}
+	} else {
+		child.kill();
+	}
+	child.stdin.destroy();
+	child.stdout.destroy();
+	child.stderr.destroy();
 }
 
 /** Require Git 2.32's GIT_CONFIG_GLOBAL to isolate native Git subprocesses. */
@@ -123,18 +153,37 @@ export async function runGit(
 		const child = spawn("git", gitArgumentsWithoutHooks(args), {
 			env,
 			stdio: ["pipe", "pipe", "pipe"],
+			detached: process.platform !== "win32",
+			signal: options.signal,
 		});
+		if (options.signal?.aborted) {
+			stopGitProcess(child);
+		} else {
+			options.signal?.addEventListener("abort", stop, { once: true });
+		}
+		function stop() {
+			stopGitProcess(child);
+		}
 		const stdout: Buffer[] = [];
 		const stderr: Buffer[] = [];
-		const timeout = setTimeout(() => child.kill(), options.timeout ?? 300_000);
+		const timeout = setTimeout(
+			() => stopGitProcess(child),
+			options.timeout ?? 300_000
+		);
 		timeout.unref();
 		child.stdout.on("data", (chunk: Buffer) => stdout.push(chunk));
 		child.stderr.on("data", (chunk: Buffer) => stderr.push(chunk));
 		child.once("error", (error) => {
+			// Node emits AbortError before other abort listeners can stop Git's
+			// process group. Keep that listener until the abort finishes.
+			if ((error as NodeJS.ErrnoException).code !== "ABORT_ERR") {
+				options.signal?.removeEventListener("abort", stop);
+			}
 			clearTimeout(timeout);
 			reject(error);
 		});
 		child.once("close", (status) => {
+			options.signal?.removeEventListener("abort", stop);
 			clearTimeout(timeout);
 			const result = {
 				stdout: Buffer.concat(stdout),
@@ -188,6 +237,15 @@ export interface GitTreeEntry {
 
 type GitObjectType = "blob" | "tree" | "commit" | "tag";
 
+export class LocalRepositoryStorageError extends Error {
+	constructor(
+		readonly kind: "creation-lock" | "on-disk-conflict",
+		message: string
+	) {
+		super(message);
+	}
+}
+
 /** Only one host process may publish a repository at this path at a time. */
 export async function withRepositoryCreationLock<T>(
 	repository: string,
@@ -206,7 +264,8 @@ export async function withRepositoryCreationLock<T>(
 		lock = await open(lockPath, "wx", 0o600);
 	} catch (error) {
 		if ((error as NodeJS.ErrnoException).code === "EEXIST") {
-			throw new Error(
+			throw new LocalRepositoryStorageError(
+				"creation-lock",
 				`Another local process is creating this Git repository. Stop it and retry; if it crashed, remove "${lockPath}" only after confirming no process uses this storage path.`
 			);
 		}
@@ -222,19 +281,28 @@ export async function withRepositoryCreationLock<T>(
 
 /** Repository-scoped Git operations; clone/init are supported before it exists. */
 export class GitClient {
-	constructor(readonly repository: string) {}
+	constructor(
+		readonly repository: string,
+		private readonly signal?: AbortSignal
+	) {}
+
+	/** Create a client for another repository with the same cancellation signal. */
+	withRepository(repository: string): GitClient {
+		return new GitClient(repository, this.signal);
+	}
 
 	private git(args: string[], options?: GitOptions): Promise<GitResult> {
-		return runGit(["-C", this.repository, ...args], options);
+		return runGit(["-C", this.repository, ...args], {
+			...options,
+			signal: this.signal,
+		});
 	}
 
 	async init(defaultBranch: string): Promise<void> {
-		await runGit([
-			"init",
-			"--bare",
-			`--initial-branch=${defaultBranch}`,
-			this.repository,
-		]);
+		await runGit(
+			["init", "--bare", `--initial-branch=${defaultBranch}`, this.repository],
+			{ signal: this.signal }
+		);
 	}
 
 	async forkFrom(
@@ -245,6 +313,7 @@ export class GitClient {
 		const sourceBranch = `refs/heads/${branch}`;
 		const validBranch = await runGit(["check-ref-format", sourceBranch], {
 			allowFailure: true,
+			signal: this.signal,
 		});
 		if (validBranch.status !== 0) {
 			throw new Error("Git fork source branch is invalid");
@@ -261,16 +330,19 @@ export class GitClient {
 			{ allowFailure: true }
 		);
 		if (defaultBranchOnly && sourceHasBranch.status === 0) {
-			await runGit([
-				"clone",
-				"--bare",
-				"--local",
-				"--single-branch",
-				"--branch",
-				branch,
-				source.repository,
-				this.repository,
-			]);
+			await runGit(
+				[
+					"clone",
+					"--bare",
+					"--local",
+					"--single-branch",
+					"--branch",
+					branch,
+					source.repository,
+					this.repository,
+				],
+				{ signal: this.signal }
+			);
 		} else if (defaultBranchOnly) {
 			// Only an unborn HEAD on the requested branch permits an empty fork.
 			// A typo or a missing source must never create a repository instead.
@@ -285,13 +357,10 @@ export class GitClient {
 			}
 			await this.init(branch);
 		} else {
-			await runGit([
-				"clone",
-				"--bare",
-				"--local",
-				source.repository,
-				this.repository,
-			]);
+			await runGit(
+				["clone", "--bare", "--local", source.repository, this.repository],
+				{ signal: this.signal }
+			);
 		}
 	}
 
@@ -334,10 +403,17 @@ export class GitClient {
 			}
 			args.push(source.url, staged);
 			try {
-				await runGit(args, { httpAuthorization: source.authorization });
+				await runGit(args, {
+					httpAuthorization: source.authorization,
+					signal: this.signal,
+				});
 				// A bare clone records remote.origin.url in its local Git config. It may
 				// include credentials used only for the import. Never retain the remote.
-				await new GitClient(staged).git(["remote", "remove", "origin"]);
+				await new GitClient(staged, this.signal).git([
+					"remote",
+					"remove",
+					"origin",
+				]);
 				await assertImportTargetAvailable(this.repository);
 				await rename(staged, this.repository);
 			} catch (error) {

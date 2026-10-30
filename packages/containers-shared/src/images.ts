@@ -1,7 +1,6 @@
 import { UserError } from "@cloudflare/workers-utils/errors";
 import { startContainerBuild } from "./build";
 import { ExternalRegistryKind } from "./client/models/ExternalRegistryKind";
-import { cliPresentation } from "./context";
 import { getCloudflareContainerRegistry } from "./knobs";
 import { dockerLoginImageRegistry } from "./login";
 import { getCloudflareRegistryWithAccountNamespace } from "./registry";
@@ -53,7 +52,8 @@ export async function pullImage(
 	dockerPath: string,
 	options: Exclude<ContainerDevOptions, DockerfileConfig>,
 	logger: WranglerLogger | ViteLogger,
-	complianceConfig?: ComplianceConfig
+	complianceConfig: ComplianceConfig | undefined,
+	registryConfigureCommand: string
 ): Promise<{ abort: () => void; ready: Promise<{ aborted: boolean }> }> {
 	const domain = new URL(`http://${options.image_uri}`).hostname;
 
@@ -67,7 +67,7 @@ export async function pullImage(
 		}
 		logger?.warn(
 			"Unable to retrieve configured registry credentials from Cloudflare." +
-				`\nUnless this is a public image, you will need to run \`${cliPresentation.commands.containerRegistryConfigure}\` before deploying.` +
+				`\nUnless this is a public image, you will need to run \`${registryConfigureCommand}\` before deploying.` +
 				"\nAttempting to pull image anyway..."
 		);
 	}
@@ -125,6 +125,8 @@ export async function prepareContainerImagesForDev(args: {
 	}) => void;
 	logger: WranglerLogger | ViteLogger;
 	complianceConfig?: ComplianceConfig;
+	configFileName: string;
+	registryConfigureCommand: string;
 }): Promise<{ aborted: boolean }> {
 	const {
 		dockerPath,
@@ -146,7 +148,7 @@ export async function prepareContainerImagesForDev(args: {
 			containerOptions.length !== 1
 				? "the configured images"
 				: "the configured image",
-		hint: `To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your ${cliPresentation.displayConfigFileName} or pass --enable-containers=false.`,
+		hint: `To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your ${args.configFileName} or pass --enable-containers=false.`,
 	});
 	for (const options of containerOptions) {
 		if ("dockerfile" in options) {
@@ -178,7 +180,8 @@ export async function prepareContainerImagesForDev(args: {
 				dockerPath,
 				options,
 				args.logger,
-				args.complianceConfig
+				args.complianceConfig,
+				args.registryConfigureCommand
 			);
 			onContainerImagePreparationStart({
 				containerOptions: options,

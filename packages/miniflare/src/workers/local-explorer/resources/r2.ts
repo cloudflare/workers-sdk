@@ -182,6 +182,7 @@ export async function listR2Buckets(c: AppContext) {
 		...wrapResponse({ buckets: allBuckets }),
 		result_info: {
 			count: allBuckets.length,
+			total_count: allBuckets.length,
 		},
 	});
 }

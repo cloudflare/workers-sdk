@@ -59,6 +59,7 @@ describe("module resolution", async () => {
 				"(cloudflare:workers) WorkerEntrypoint.name": "WorkerEntrypoint",
 				"(cloudflare:workers) DurableObject.name": durableObjectName,
 				"(cloudflare:sockets) typeof connect": "function",
+				"(cloudflare:durable-objects) typeof retryable": "function",
 			});
 		});
 

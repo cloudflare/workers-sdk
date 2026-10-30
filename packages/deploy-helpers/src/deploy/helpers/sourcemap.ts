@@ -112,14 +112,18 @@ export function getSourceMappedStack(
 }
 
 function callFrameToCallSite(frame: Protocol.Runtime.CallFrame): CallSite {
+	const lineNumber = frame.lineNumber + 1;
+	const columnNumber = frame.columnNumber + 1;
+	const location = `${frame.url}:${lineNumber}:${columnNumber}`;
 	return new CallSite({
 		typeName: null,
 		functionName: frame.functionName,
 		methodName: null,
 		fileName: frame.url,
-		lineNumber: frame.lineNumber + 1,
-		columnNumber: frame.columnNumber + 1,
+		lineNumber,
+		columnNumber,
 		native: false,
+		text: frame.functionName ? `${frame.functionName} (${location})` : location,
 	});
 }
 
@@ -260,6 +264,7 @@ function lineMatchToCallSite(lineMatch: RegExpMatchArray): CallSite {
 		lineNumber: parseInt(lineMatch[3]) || null,
 		columnNumber: parseInt(lineMatch[4]) || null,
 		native: isNative,
+		text: lineMatch[0].substring(lineMatch[0].indexOf("at ") + 3),
 	});
 }
 
@@ -271,6 +276,7 @@ interface CallSiteOptions {
 	lineNumber: number | null;
 	columnNumber: number | null;
 	native: boolean;
+	text: string;
 }
 
 // https://v8.dev/docs/stack-trace-api#customizing-stack-traces
@@ -344,5 +350,10 @@ class CallSite implements NodeJS.CallSite {
 	}
 	getPromiseIndex(): number | null {
 		return null;
+	}
+	// Source mapping passes some call sites (e.g. `wasm://` frames) through
+	// unchanged and stringifies them, relying on V8's `CallSite#toString()`.
+	toString(): string {
+		return this.opts.text;
 	}
 }

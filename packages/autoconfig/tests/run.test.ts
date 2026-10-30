@@ -36,6 +36,16 @@ class ViteBuildToolFramework extends Framework {
 	}
 }
 
+class OwnAssetsDirectoryFramework extends Framework {
+	configure(): ConfigurationResults {
+		return {
+			buildTool: "wrangler",
+			workerConfig: { entrypoint: "./.output/server/index.mjs" },
+			buildConfig: { assetsDirectory: "./.output/public/" },
+		};
+	}
+}
+
 class BuildCommandOverrideFramework extends Static {
 	configure(options: ConfigurationOptions): ConfigurationResults {
 		return {
@@ -47,7 +57,7 @@ class BuildCommandOverrideFramework extends Static {
 
 describe("runAutoConfig()", () => {
 	runInTempDir();
-	mockConsoleMethods();
+	const std = mockConsoleMethods();
 
 	it("rejects autoconfiguration for an unsupported framework", async ({
 		expect,
@@ -58,7 +68,7 @@ describe("runAutoConfig()", () => {
 					configured: false,
 					projectPath: process.cwd(),
 					workerName: "hono-app",
-					framework: getFrameworkClassInstance("hono"),
+					framework: getFrameworkClassInstance("hono", "cf"),
 					outputDir: "dist",
 					packageManager: NpmPackageManager,
 				},
@@ -82,7 +92,7 @@ describe("runAutoConfig()", () => {
 					configured: false,
 					projectPath: process.cwd(),
 					workerName: "qwik-app",
-					framework: getFrameworkClassInstance("qwik"),
+					framework: getFrameworkClassInstance("qwik", "cf"),
 					outputDir: "dist",
 					packageManager: NpmPackageManager,
 				},
@@ -118,7 +128,7 @@ describe("runAutoConfig()", () => {
 				configured: false,
 				projectPath: process.cwd(),
 				workerName: "qwik-app",
-				framework: getFrameworkClassInstance("qwik"),
+				framework: getFrameworkClassInstance("qwik", "cf"),
 				outputDir: "dist",
 				packageManager: NpmPackageManager,
 			},
@@ -322,6 +332,71 @@ describe("runAutoConfig()", () => {
 		});
 	});
 
+	it("adds the cf-generated types to tsconfig.json", async ({ expect }) => {
+		const packageJson = { name: "my-vite-app" };
+		await seed({
+			"package.json": JSON.stringify(packageJson),
+			"tsconfig.json": JSON.stringify({ include: ["src"] }),
+		});
+
+		await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "my-vite-app",
+				framework: new ViteBuildToolFramework({
+					id: "static",
+					name: "Static",
+				}),
+				outputDir: "dist",
+				packageJson,
+				packageManager: NpmPackageManager,
+			},
+			{
+				context: createMockContext(),
+				skipConfirmations: true,
+				runBuild: false,
+				enableTargetCliInstallation: false,
+			}
+		);
+
+		expect(JSON.parse(readFileSync("tsconfig.json", "utf8"))).toEqual({
+			include: ["src", ".cloudflare/types"],
+		});
+	});
+
+	it("lists the tsconfig.json change without writing it in a dry run", async ({
+		expect,
+	}) => {
+		const packageJson = { name: "my-vite-app" };
+		const tsconfig = JSON.stringify({ include: ["src"] });
+		await seed({
+			"package.json": JSON.stringify(packageJson),
+			"tsconfig.json": tsconfig,
+		});
+
+		await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "my-vite-app",
+				framework: new ViteBuildToolFramework({
+					id: "static",
+					name: "Static",
+				}),
+				outputDir: "dist",
+				packageJson,
+				packageManager: NpmPackageManager,
+			},
+			{ context: createMockContext(), dryRun: true }
+		);
+
+		expect(std.out).toContain(
+			'📝 Update tsconfig.json:\n - Add ".cloudflare/types" to "include"'
+		);
+		expect(readFileSync("tsconfig.json", "utf8")).toBe(tsconfig);
+	});
+
 	it("keeps the Wrangler typegen command for Wrangler projects", async ({
 		expect,
 	}) => {
@@ -421,5 +496,59 @@ describe("runAutoConfig()", () => {
 		expect(readFileSync("wrangler.config.ts", "utf8")).toBe(
 			existingBuildConfig
 		);
+	});
+
+	it("writes a root .assetsignore when the project root is the assets directory", async ({
+		expect,
+	}) => {
+		await seed({ "index.html": "<h1>Hello World</h1>", ".env": "KEY=1" });
+
+		await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "root-static-app",
+				framework: new Static({ id: "static", name: "Static" }),
+				outputDir: ".",
+				packageManager: NpmPackageManager,
+			},
+			{
+				context: createMockContext(),
+				skipConfirmations: true,
+				runBuild: false,
+			}
+		);
+
+		const assetsIgnore = readFileSync(".assetsignore", "utf8");
+		for (const entry of [".env*", ".dev.vars*", "/functions", "node_modules"]) {
+			expect(assetsIgnore.split("\n")).toContain(entry);
+		}
+	});
+
+	it("does not write a root .assetsignore when the framework configures a different assets directory", async ({
+		expect,
+	}) => {
+		await seed({ "index.html": "<h1>Hello World</h1>" });
+
+		await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "own-assets-app",
+				framework: new OwnAssetsDirectoryFramework({
+					id: "static",
+					name: "Static",
+				}),
+				outputDir: ".",
+				packageManager: NpmPackageManager,
+			},
+			{
+				context: createMockContext(),
+				skipConfirmations: true,
+				runBuild: false,
+			}
+		);
+
+		expect(existsSync(".assetsignore")).toBe(false);
 	});
 });

@@ -23,7 +23,7 @@ export class TanstackStart extends Framework {
 				packageManager: packageManager.type,
 				isWorkspaceRoot,
 				projectPath,
-				version: target === "cf" ? "beta" : undefined,
+				version: target === "cf" ? "^2.0.0-beta.v.0" : undefined,
 			});
 
 			transformViteConfig(projectPath, { viteEnvironmentName: "ssr" });

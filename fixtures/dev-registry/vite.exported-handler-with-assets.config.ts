@@ -7,40 +7,44 @@ export default defineConfig({
 	publicDir: "./assets",
 	plugins: [
 		cloudflare({
-			config: {
-				name: "exported-handler-with-assets",
-				entrypoint: "./workers/exported-handler.ts",
-				compatibilityDate: "2025-05-01",
-				env: {
-					SERVICE_WORKER: {
-						type: "worker",
-						worker: "service-worker",
+			config: (loadedConfig) => ({
+				...loadedConfig,
+				worker: {
+					...loadedConfig.worker,
+					name: "exported-handler-with-assets",
+					entrypoint: "./workers/exported-handler.ts",
+					compatibilityDate: "2025-05-01",
+					env: {
+						SERVICE_WORKER: {
+							type: "worker",
+							worker: "service-worker",
+						},
+						EXPORTED_HANDLER: {
+							type: "worker",
+							worker: "exported-worker",
+						},
+						WORKER_ENTRYPOINT: {
+							type: "worker",
+							worker: "worker-entrypoint",
+						},
+						WORKER_ENTRYPOINT_WITH_ASSETS: {
+							type: "worker",
+							worker: "worker-entrypoint-with-assets",
+						},
+						NAMED_ENTRYPOINT: {
+							type: "worker",
+							worker: "worker-entrypoint",
+							exportName: "NamedEntrypoint",
+						},
+						NAMED_ENTRYPOINT_WITH_ASSETS: {
+							type: "worker",
+							worker: "worker-entrypoint-with-assets",
+							exportName: "NamedEntrypoint",
+						},
 					},
-					EXPORTED_HANDLER: {
-						type: "worker",
-						worker: "exported-worker",
-					},
-					WORKER_ENTRYPOINT: {
-						type: "worker",
-						worker: "worker-entrypoint",
-					},
-					WORKER_ENTRYPOINT_WITH_ASSETS: {
-						type: "worker",
-						worker: "worker-entrypoint-with-assets",
-					},
-					NAMED_ENTRYPOINT: {
-						type: "worker",
-						worker: "worker-entrypoint",
-						exportName: "NamedEntrypoint",
-					},
-					NAMED_ENTRYPOINT_WITH_ASSETS: {
-						type: "worker",
-						worker: "worker-entrypoint-with-assets",
-						exportName: "NamedEntrypoint",
-					},
+					tailConsumers: [{ worker: "exported-handler" }],
 				},
-				tailConsumers: [{ worker: "exported-handler" }],
-			},
+			}),
 			inspectorPort: false,
 			persistState: false,
 		}),

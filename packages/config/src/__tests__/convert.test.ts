@@ -394,6 +394,23 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
+		it("maps remote Hyperdrive without a local connection string", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					env: {
+						HD: { type: "hyperdrive", id: "h-1", dev: { remote: true } },
+					},
+				},
+				containers: [],
+			});
+			expect(result.hyperdrive).toEqual([
+				{ binding: "HD", id: "h-1", remote: true },
+			]);
+		});
+
 		it("maps pipeline.name to stream", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
@@ -748,6 +765,29 @@ describe("convertToWranglerConfig", () => {
 			expect(result.durable_objects).toEqual({
 				bindings: [
 					{ name: "DO", class_name: "MyDO", script_name: "other-worker" },
+				],
+			});
+		});
+
+		it("preserves the explicit Worker target of a self-named durable-object binding", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					env: {
+						DO: {
+							type: "durable-object",
+							worker: baseWorker.name,
+							exportName: "MyDO",
+						},
+					},
+				},
+				containers: [],
+			});
+			expect(result.durable_objects).toEqual({
+				bindings: [
+					{ name: "DO", class_name: "MyDO", script_name: baseWorker.name },
 				],
 			});
 		});
@@ -1118,6 +1158,7 @@ describe("convertToWranglerConfig", () => {
 								successRetention: "3 days",
 								errorRetention: 86_400_000,
 							},
+							jurisdiction: "us",
 						},
 					},
 				},
@@ -1136,6 +1177,7 @@ describe("convertToWranglerConfig", () => {
 						success_retention: "3 days",
 						error_retention: 86_400_000,
 					},
+					jurisdiction: "us",
 				},
 			});
 		});

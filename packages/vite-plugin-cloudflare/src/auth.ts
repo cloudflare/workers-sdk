@@ -7,6 +7,8 @@ import {
 } from "@cloudflare/workers-auth/cf";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { debuglog } from "./utils";
+import type { RemoteBindingsAuth } from "@cloudflare/remote-bindings";
+import type { CloudflareAuth } from "@cloudflare/workers-auth/cf";
 import type { Logger } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
 
@@ -67,6 +69,36 @@ export function createAuth(profileDir: string, logger: Logger) {
 	const profileStore = createCfProfileStore({ logger });
 	auth.setProfile(profileStore.resolve({ cwd: profileDir }));
 	return auth;
+}
+
+/**
+ * Get the cf credentials for remote bindings sessions.
+ *
+ * @param profileDir - Directory used to resolve the cf auth profile.
+ * @param accountId - The configured account ID, if any.
+ * @param logger - Logger for the auth flow.
+ * @returns A hook resolving the account ID and API token, with a key
+ * identifying those credentials.
+ */
+export function getRemoteBindingsAuth(
+	profileDir: string,
+	accountId: string | undefined,
+	logger: Logger
+): RemoteBindingsAuth {
+	let auth: CloudflareAuth | undefined;
+	return {
+		hook: async () => {
+			// Only resolve the profile once a session actually needs credentials
+			auth ??= createAuth(profileDir, logger);
+			return {
+				accountId: await auth.requireAuth(
+					accountId ? { account_id: accountId } : {}
+				),
+				apiToken: auth.requireApiToken(),
+			};
+		},
+		key: JSON.stringify([profileDir, accountId]),
+	};
 }
 
 /** Adapt Vite's logger to the shared Cloudflare API logger interface. */

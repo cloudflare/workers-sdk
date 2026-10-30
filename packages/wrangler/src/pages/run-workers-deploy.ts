@@ -1,4 +1,6 @@
+import { statSync } from "node:fs";
 import { initDeployHelpersContext } from "@cloudflare/deploy-helpers/context";
+import { UserError } from "@cloudflare/workers-utils";
 import {
 	fetchKVGetValue,
 	fetchListResult,
@@ -88,9 +90,6 @@ export async function runPagesToWorkersDeploy(
 		// the `undefined` placeholders above.
 		...delegation.deployArgs,
 	} satisfies DeployArgs;
-	const config = readConfig(deployArgs, {
-		useRedirectIfAvailable: true,
-	});
 	const experimentalFlags = {
 		MULTIWORKER: false,
 		RESOURCES_PROVISION: deployArgs.experimentalProvision ?? false,
@@ -98,6 +97,27 @@ export async function runPagesToWorkersDeploy(
 	};
 
 	try {
+		// Validate before autoconfig can write files, while preserving delegation
+		// failure telemetry and agent guidance for invalid directories.
+		const { assetsDirectory } = delegation;
+		if (assetsDirectory !== undefined) {
+			assertAssetsDirectoryExists(assetsDirectory);
+		}
+		const config = readConfig(deployArgs, {
+			useRedirectIfAvailable: true,
+		});
+		const hasWorkersConfig =
+			config.configPath !== undefined && !config.pages_build_output_dir;
+		// Existing configs skip autoconfig, so override their assets directory
+		// directly. Workers Sites requires --site instead of --assets.
+		const handlerArgs =
+			assetsDirectory !== undefined && hasWorkersConfig
+				? config.site
+					? { ...deployArgs, site: assetsDirectory }
+					: { ...deployArgs, assets: assetsDirectory }
+				: deployArgs;
+		const autoConfigOutputDir = hasWorkersConfig ? undefined : assetsDirectory;
+
 		await run(experimentalFlags, async () => {
 			initDeployHelpersContext({
 				logger,
@@ -110,9 +130,10 @@ export async function runPagesToWorkersDeploy(
 				select,
 			});
 
-			await runDeployCommandHandler(deployArgs, {
+			await runDeployCommandHandler(handlerArgs, {
 				config,
 				pagesToWorkersDelegation: true,
+				autoConfigOutputDir,
 			});
 		});
 	} catch (error) {
@@ -130,4 +151,23 @@ export async function runPagesToWorkersDeploy(
 		delegation.deployArgs,
 		delegation.agentId
 	);
+}
+
+/**
+ * Throws a user error unless `directory` exists and is a directory, mirroring
+ * the check a direct Pages deploy makes before uploading.
+ */
+function assertAssetsDirectoryExists(directory: string): void {
+	let isDirectory = false;
+	try {
+		isDirectory = statSync(directory).isDirectory();
+	} catch {
+		// Missing or inaccessible: reported below.
+	}
+	if (!isDirectory) {
+		throw new UserError(
+			`The directory "${directory}" passed to \`wrangler pages deploy\` does not exist or is not a directory.`,
+			{ telemetryMessage: "pages to workers delegation directory not found" }
+		);
+	}
 }

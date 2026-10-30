@@ -7,6 +7,8 @@ import {
 	DEFAULT_COMPAT_DATE_PATH,
 	updateDefaultCompatDate,
 } from "../deployments/update-default-compat-date";
+import { findPackages } from "../deployments/validate-changesets";
+import type { PackageJSON } from "../deployments/validate-changesets";
 
 if (require.main === module) {
 	try {
@@ -62,7 +64,8 @@ function processArgs(): Args {
 	};
 }
 
-function main({
+/** Generates and commits a changeset for the dependency updates in a PR. */
+export function main({
 	prNumber,
 	packageNames,
 	packageJSONPath,
@@ -89,7 +92,7 @@ function main({
 		INFO: Writing changeset with the following commit message
 		${commitMessage}`);
 	writeChangeSet(changesetPrefix, prNumber, changesetHeader, commitMessage);
-	commitAndPush(commitMessage, updatePathsForChanges(changes));
+	commitAndPush(commitMessage, updatePathsForChanges(changes, prNumber));
 }
 
 /**
@@ -97,15 +100,72 @@ function main({
  * bumped dependencies.
  *
  * The default compatibility date is derived from the pinned `workerd` version,
- * so it has to move with it or `pnpm check:compat-date` fails.
+ * so it has to move with it or `pnpm check:compat-date` fails. When it changes,
+ * write a patch changeset for workers-utils and its workspace dependants.
+ * Bundled devDependencies need explicit releases because Changesets skips them.
  */
-export function updatePathsForChanges(changes: Map<string, Change>): string[] {
+export function updatePathsForChanges(
+	changes: Map<string, Change>,
+	prNumber: string
+): string[] {
 	if (!changes.has("workerd")) {
 		return [];
 	}
 	console.log("INFO: Updating the default compatibility date for workerd");
-	updateDefaultCompatDate();
+	const compatDate = updateDefaultCompatDate();
+	if (compatDate === undefined) {
+		return [];
+	}
+	writeChangeSet(
+		"default-compat-date",
+		prNumber,
+		generateChangesetHeader([
+			"@cloudflare/workers-utils",
+			...getPackageDependants("@cloudflare/workers-utils"),
+		]),
+		dedent`
+			Update \`DEFAULT_COMPAT_DATE\` to ${compatDate}
+
+			Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+		`
+	);
 	return [DEFAULT_COMPAT_DATE_PATH];
+}
+
+/**
+ * Finds public direct and transitive workspace dependants of a package,
+ * including devDependencies because our published packages bundle them.
+ *
+ * @param packageName - The package whose dependants need to be released
+ * @param packages - Packages eligible for changesets; private packages are
+ * ignored even if they have a deploy script
+ * @returns Sorted dependant names, excluding the original package and duplicates
+ */
+export function getPackageDependants(
+	packageName: string,
+	packages: ReadonlyMap<string, PackageJSON> = findPackages()
+): string[] {
+	const visited = new Set([packageName]);
+	const dependants = new Set<string>();
+	for (const dependency of visited) {
+		for (const pkg of packages.values()) {
+			if (pkg.private || visited.has(pkg.name)) {
+				continue;
+			}
+			if (
+				[
+					pkg.dependencies,
+					pkg.devDependencies,
+					pkg.peerDependencies,
+					pkg.optionalDependencies,
+				].some((field) => field?.[dependency]?.startsWith("workspace:"))
+			) {
+				visited.add(pkg.name);
+				dependants.add(pkg.name);
+			}
+		}
+	}
+	return [...dependants].sort();
 }
 
 export function getPackageJsonDiff(packageJSONPath: string): string[] {

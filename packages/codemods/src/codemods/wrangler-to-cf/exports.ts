@@ -17,6 +17,7 @@ export const WORKFLOW_SETTINGS = [
 	"concurrency",
 	"schedules",
 	"default_retention",
+	"jurisdiction",
 ] as const;
 
 /**
@@ -59,6 +60,10 @@ function workflowExportOptions(record: UnknownRecord): OutputObject {
 	const retention = getRecord(record, "default_retention");
 	if (retention) {
 		properties.push({ key: "defaultRetention", value: camelObject(retention) });
+	}
+	const jurisdiction = toOutputValue(record.jurisdiction);
+	if (jurisdiction !== undefined) {
+		properties.push({ key: "jurisdiction", value: jurisdiction });
 	}
 	return { kind: "object", properties };
 }

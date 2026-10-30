@@ -18,6 +18,40 @@ export default defineConfig({
 
 Full documentation can be found [here](https://developers.cloudflare.com/workers/vite-plugin/).
 
+## Programmatic configuration
+
+The `config` option accepts a customizer with the signature
+`(loadedConfig: ParsedInputConfigWithWorker) => ParsedInputConfigWithWorker`. It receives the parsed
+`cloudflare.config.ts` configuration, or a default Worker configuration when no
+file exists, and can customize account settings, Containers, and the entry Worker.
+The loaded and returned configurations must include a Worker, even for assets-only projects.
+
+Return a new configuration object, spreading any existing fields you want to
+preserve. Nested objects and arrays are replaced rather than merged:
+
+```ts
+import { cloudflare } from "@cloudflare/vite-plugin";
+
+cloudflare({
+  config(loadedConfig) {
+    return {
+      ...loadedConfig,
+      worker: {
+        ...loadedConfig.worker,
+        env: {
+          ...loadedConfig.worker.env,
+          FRAMEWORK_NAME: { type: "text", value: "my-framework" },
+        },
+      },
+    };
+  },
+});
+```
+
+The customized configuration is recorded in the build output. Preview and
+deployment from that output use the recorded configuration. Generated types
+continue to describe `cloudflare.config.ts`.
+
 ## Features
 
 - Uses the Vite [Environment API](https://vite.dev/guide/api-environment) to integrate Vite with the Workers runtime

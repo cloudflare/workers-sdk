@@ -1,7 +1,9 @@
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import dedent from "ts-dedent";
-import { afterAll, assert, beforeAll, describe, it } from "vitest";
+import { fetch } from "undici";
+import { afterAll, assert, beforeAll, describe, it, vi } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import {
 	importMiniflare,
@@ -743,6 +745,150 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 				45_000
 			);
 		}
+
+		it("queries remote Hyperdrive before and after a Miniflare reload", async ({
+			expect,
+		}) => {
+			const { id } = await helper.hyperdrive(false, "mysql");
+			const session = await startRemoteProxySession({
+				HYPERDRIVE_BINDING: { type: "hyperdrive", id },
+			});
+			try {
+				await helper.seed({
+					"hyperdrive-query.jsonc": JSON.stringify({
+						name: "hyperdrive-query",
+						compatibility_date: "2026-09-01",
+						compatibility_flags: ["nodejs_compat"],
+						alias: { "mysql2/promise": require.resolve("mysql2/promise") },
+					}),
+				});
+				await helper.run(
+					"wrangler deploy hyperdrive-query.js --config hyperdrive-query.jsonc --dry-run --outdir hyperdrive-query-output"
+				);
+				const queryOptions: MiniflareOptions = {
+					workers: [
+						{
+							config: {
+								name: "hyperdrive-query",
+								compatibilityDate: "2026-09-01",
+								compatibilityFlags: ["nodejs_compat"],
+								manifest: createManifest(helper.tmpPath, [
+									"hyperdrive-query-output/hyperdrive-query.js",
+								]),
+								env: {
+									HYPERDRIVE_BINDING: {
+										type: "hyperdrive",
+										id,
+										dev: { remote: true },
+									},
+								},
+							},
+							dev: {
+								remoteProxyConnectionString:
+									session.remoteProxyConnectionString,
+							},
+						},
+					],
+				};
+				const queryMf = new Miniflare(queryOptions);
+				try {
+					for (const reload of [false, true]) {
+						if (reload) {
+							await queryMf.setOptions(queryOptions);
+						}
+						const response = await queryMf.dispatchFetch("http://localhost/");
+						expect(response.status).toBe(200);
+						expect(await response.json()).toEqual([
+							{ remote_hyperdrive_probe: 1 },
+						]);
+					}
+				} finally {
+					await queryMf.dispose();
+				}
+			} finally {
+				await session.dispose();
+			}
+		});
+	});
+
+	// Separate describe block for Analytics Engine because `writeDataPoint()`
+	// returns nothing, so the only way to check the write reached the real
+	// dataset is to query it back through the SQL API.
+	describe("Remote bindings (Analytics Engine)", () => {
+		it("writes data points to the remote dataset", async ({ expect }) => {
+			const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+			assert(apiToken, "CLOUDFLARE_API_TOKEN environment variable is required");
+
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed(path.resolve(__dirname, "./workers"));
+
+			// Datasets are created on first write and can't be deleted, so reuse one
+			// and tell runs apart with a unique marker.
+			const dataset = "wrangler_e2e_remote_bindings";
+			const marker = randomUUID();
+
+			const remoteProxySession = await startRemoteProxySession({
+				ANALYTICS_ENGINE: { type: "analytics_engine", dataset },
+			});
+			const mf = new Miniflare({
+				workers: [
+					{
+						config: {
+							name: "",
+							compatibilityDate: "2025-09-06",
+							manifest: createManifest(helper.tmpPath, ["analytics-engine.js"]),
+							env: {
+								ANALYTICS_ENGINE: {
+									type: "analytics-engine-dataset",
+									name: dataset,
+									dev: { remote: true },
+								},
+							},
+						},
+						dev: {
+							remoteProxyConnectionString:
+								remoteProxySession.remoteProxyConnectionString,
+						},
+					},
+				],
+			});
+
+			try {
+				const resp = await mf.dispatchFetch(
+					`http://example.com/?marker=${marker}`
+				);
+				expect(await resp.text()).toBe(
+					"Data point written to env.ANALYTICS_ENGINE"
+				);
+
+				// Data points take a little while to become queryable. The SQL API
+				// returns raw query results rather than the usual v4 API envelope,
+				// so this can't use Wrangler's `fetchResult()`.
+				await vi.waitFor(
+					async () => {
+						const response = await fetch(
+							`https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/analytics_engine/sql`,
+							{
+								method: "POST",
+								headers: { Authorization: `Bearer ${apiToken}` },
+								body: `SELECT count() AS count FROM ${dataset} WHERE timestamp > NOW() - INTERVAL '1' HOUR AND blob1 = '${marker}' FORMAT JSON`,
+							}
+						);
+						const body = await response.text();
+						expect(response.status, body).toBe(200);
+
+						const result = JSON.parse(body) as {
+							data: { count: string | number }[];
+						};
+						expect(Number(result.data[0]?.count)).toBe(1);
+					},
+					{ interval: 5_000, timeout: 120_000 }
+				);
+			} finally {
+				await mf.dispose();
+				await remoteProxySession.dispose();
+			}
+		}, 180_000);
 	});
 
 	// Separate describe block for mTLS because it needs a custom remote-binding

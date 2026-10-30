@@ -9,7 +9,6 @@ import {
 import { buildAndWriteContainerOutput } from "@cloudflare/containers-shared";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import * as vite from "vite";
-import { loadViteManifest } from "../build";
 import { isPreviewBuild } from "../build-output-env";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { assertIsNotPreview } from "../context";
@@ -20,7 +19,25 @@ import type { ModuleType } from "@cloudflare/config";
 
 /** Emits Workers using the Build Output Specification after every environment has built. */
 export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
+	// Frameworks may delete the Vite manifests they enable before post
+	// `buildApp` hooks run, so record the main module from the bundle instead.
+	const environmentNameToMainModule = new Map<string, string>();
+
 	return {
+		writeBundle(_options, bundle) {
+			for (const output of Object.values(bundle)) {
+				if (
+					output.type === "chunk" &&
+					output.isEntry &&
+					output.name === MAIN_ENTRY_NAME
+				) {
+					environmentNameToMainModule.set(
+						this.environment.name,
+						output.fileName
+					);
+				}
+			}
+		},
 		buildApp: {
 			order: "post",
 			async handler(builder) {
@@ -123,17 +140,15 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 			builder.config.root,
 			workerDirectoryName
 		);
-		const entryChunk = Object.values(loadViteManifest(bundleDir)).find(
-			(chunk) => chunk.isEntry && chunk.name === MAIN_ENTRY_NAME
-		);
-		assert(entryChunk, `Expected entry chunk with name "${MAIN_ENTRY_NAME}"`);
+		const mainModule = environmentNameToMainModule.get(environmentName);
+		assert(mainModule, `Expected entry chunk with name "${MAIN_ENTRY_NAME}"`);
 
 		await writeBuildOutputWorkerConfig({
 			root: builder.config.root,
 			config: workerConfig,
 			manifest: {
 				type: "partial",
-				mainModule: entryChunk.file,
+				mainModule,
 				modules: collectAdditionalModules(builder, environmentName, bundleDir),
 			},
 			directoryName: workerDirectoryName,

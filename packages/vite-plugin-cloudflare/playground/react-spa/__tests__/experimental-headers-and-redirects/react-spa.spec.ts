@@ -9,84 +9,80 @@ import {
 	WAIT_FOR_OPTIONS,
 } from "../../../__test-utils__";
 
-describe(
-	"react-spa (with experimental support)",
-	{ sequential: true, concurrent: false },
-	() => {
-		test("returns the correct home page", async ({ expect }) => {
-			const content = await page.textContent("h1");
-			expect(content).toBe("Vite + React");
+describe("react-spa (with experimental support)", { concurrent: false }, () => {
+	test("returns the correct home page", async ({ expect }) => {
+		const content = await page.textContent("h1");
+		expect(content).toBe("Vite + React");
+	});
+
+	test("allows updating state", async ({ expect }) => {
+		const button = page.getByRole("button", { name: "increment" });
+		const contentBefore = await button.innerText();
+		expect(contentBefore).toBe("count is 0");
+		await button.click();
+		const contentAfter = await button.innerText();
+		expect(contentAfter).toBe("count is 1");
+	});
+
+	test("returns the home page for not found routes", async ({ expect }) => {
+		await page.goto(`${viteTestUrl}/random-page`);
+		const content = await page.textContent("h1");
+		expect(content).toBe("Vite + React");
+	});
+
+	// All these tests will fail without experimental support turned on
+	describe("_headers", () => {
+		test("applies _headers to HTML responses", async ({ expect }) => {
+			const response = await fetch(viteTestUrl);
+			expect(response.headers.get("X-Header")).toBe("Custom-Value!!!");
 		});
 
-		test("allows updating state", async ({ expect }) => {
-			const button = page.getByRole("button", { name: "increment" });
-			const contentBefore = await button.innerText();
-			expect(contentBefore).toBe("count is 0");
-			await button.click();
-			const contentAfter = await button.innerText();
-			expect(contentAfter).toBe("count is 1");
-		});
-
-		test("returns the home page for not found routes", async ({ expect }) => {
-			await page.goto(`${viteTestUrl}/random-page`);
-			const content = await page.textContent("h1");
-			expect(content).toBe("Vite + React");
-		});
-
-		// All these tests will fail without experimental support turned on
-		describe("_headers", () => {
-			test("applies _headers to HTML responses", async ({ expect }) => {
-				const response = await fetch(viteTestUrl);
+		// Since Vite will return static assets immediately without invoking the Worker at all
+		// such requests will not have _headers applied.
+		failsIf(!isBuild)(
+			"applies _headers to static assets",
+			async ({ expect }) => {
+				const response = await fetch(`${viteTestUrl}/vite.svg`);
 				expect(response.headers.get("X-Header")).toBe("Custom-Value!!!");
-			});
+			}
+		);
+	});
 
-			// Since Vite will return static assets immediately without invoking the Worker at all
-			// such requests will not have _headers applied.
-			failsIf(!isBuild)(
-				"applies _headers to static assets",
-				async ({ expect }) => {
-					const response = await fetch(`${viteTestUrl}/vite.svg`);
-					expect(response.headers.get("X-Header")).toBe("Custom-Value!!!");
-				}
-			);
+	// All these tests will fail without experimental support turned on
+	describe("_redirects", () => {
+		test("applies _redirects to HTML responses", async ({ expect }) => {
+			const response = await fetch(`${viteTestUrl}/foo`, {
+				redirect: "manual",
+			});
+			expect(response.status).toBe(302);
+			expect(response.headers.get("Location")).toBe("/bar");
 		});
 
-		// All these tests will fail without experimental support turned on
-		describe("_redirects", () => {
-			test("applies _redirects to HTML responses", async ({ expect }) => {
-				const response = await fetch(`${viteTestUrl}/foo`, {
+		// Since Vite will return static assets immediately without invoking the Worker at all
+		// such requests will not have _redirects applied.
+		failsIf(!isBuild)(
+			"applies _redirects to static assets",
+			async ({ expect }) => {
+				const response = await fetch(`${viteTestUrl}/redirect.svg`, {
 					redirect: "manual",
 				});
 				expect(response.status).toBe(302);
-				expect(response.headers.get("Location")).toBe("/bar");
-			});
+				expect(response.headers.get("Location")).toBe("/target.svg");
+			}
+		);
 
-			// Since Vite will return static assets immediately without invoking the Worker at all
-			// such requests will not have _redirects applied.
-			failsIf(!isBuild)(
-				"applies _redirects to static assets",
-				async ({ expect }) => {
-					const response = await fetch(`${viteTestUrl}/redirect.svg`, {
-						redirect: "manual",
-					});
-					expect(response.status).toBe(302);
-					expect(response.headers.get("Location")).toBe("/target.svg");
-				}
-			);
-
-			// Since Vite will return static assets immediately without invoking the Worker at all
-			// such requests will not have _redirects applied.
-			failsIf(!isBuild)(
-				"supports proxying static assets to rewritten contents with _redirects",
-				async ({ expect }) => {
-					const response = await fetch(`${viteTestUrl}/rewrite.svg`);
-					expect(response.status).toBe(200);
-					expect(await response.text()).toContain("target.svg");
-				}
-			);
-		});
-	}
-);
+		// Since Vite will return static assets immediately without invoking the Worker at all
+		// such requests will not have _redirects applied.
+		failsIf(!isBuild)(
+			"supports proxying static assets to rewritten contents with _redirects",
+			async ({ expect }) => {
+				const response = await fetch(`${viteTestUrl}/rewrite.svg`);
+				expect(response.status).toBe(200);
+				expect(await response.text()).toContain("target.svg");
+			}
+		);
+	});
+});
 
 describe("reloading the server", () => {
 	test.skipIf(isBuild)(

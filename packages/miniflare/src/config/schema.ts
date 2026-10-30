@@ -32,6 +32,7 @@ import {
 	HttpOptions_Style,
 	TlsOptions_Version,
 } from "../runtime/config/workerd";
+import { resolveDevRegistryPath } from "../shared/dev-registry";
 import { kCurrentWorker } from "./current-worker";
 import type { Request, Response } from "../http";
 import type {
@@ -181,8 +182,23 @@ const MiniflareBrowserBindingSchema = BrowserBindingSchema.extend({
 	headful: z.boolean().optional(),
 });
 
+/**
+ * Remote Hyperdrive bindings get their connection string from the proxy session.
+ */
 const MiniflareHyperdriveBindingSchema = HyperdriveBindingSchema.extend({
-	dev: z.strictObject({ connectionString: z.string() }),
+	dev: z.strictObject({
+		connectionString: z.string().optional(),
+		remote: z.boolean().optional(),
+	}),
+}).superRefine((value, ctx) => {
+	if (!value.dev.remote && value.dev.connectionString === undefined) {
+		ctx.addIssue({
+			code: "custom",
+			path: ["dev", "connectionString"],
+			message:
+				"A Hyperdrive binding requires a connection string unless it sets 'remote': true.",
+		});
+	}
 });
 
 /**
@@ -715,6 +731,9 @@ export const InstanceOptionsSchema = z.strictObject({
 
 	unsafeEnableSharedStorage: z.boolean().optional(),
 
+	/** Enable cross-process Worker discovery and shared storage coordination. */
+	enableDevRegistry: z.boolean().default(true),
+
 	containerEngine: z
 		.union([
 			z.string(),
@@ -738,7 +757,11 @@ export const InstanceOptionsSchema = z.strictObject({
 
 	// Internal
 	publicUrl: z.url().optional(),
-	/** Dev registry filesystem path; relative to cwd if not absolute. */
+	/**
+	 * Dev registry filesystem path; relative to cwd if not absolute. Overridden
+	 * by `CLOUDFLARE_DEV_REGISTRY_PATH`; defaults to Miniflare's global registry.
+	 * Use `enableDevRegistry: false` to disable the registry.
+	 */
 	unsafeDevRegistryPath: z.string().optional(),
 	unsafeHandleDevRegistryUpdate: z
 		.custom<(registry: WorkerRegistry) => void>()
@@ -799,17 +822,20 @@ export const MiniflareOptionsSchema = InstanceOptionsSchema.extend({
 					"Shared storage requires `isolatedResourcePersistencePath` to be set to a per-project directory, for resources that cannot be shared.",
 			});
 		}
-		if (!options.unsafeDevRegistryPath?.trim()) {
+		if (!options.enableDevRegistry) {
 			ctx.addIssue({
 				code: "custom",
-				path: ["unsafeDevRegistryPath"],
+				path: ["enableDevRegistry"],
 				message:
-					"Shared storage requires `unsafeDevRegistryPath` to be set, as instances elect a storage owner through the dev registry.",
+					"Shared storage requires `enableDevRegistry` to be enabled, as instances elect a storage owner through the dev registry.",
 			});
 		}
 	})
 	.transform((options) => ({
 		...options,
+		unsafeDevRegistryPath: options.enableDevRegistry
+			? resolveDevRegistryPath(options.unsafeDevRegistryPath)
+			: undefined,
 		// Resolve the effective isolated root once, here, so that everything
 		// downstream reads a single field that is always the path to persist to.
 		// Without shared storage nothing is shared, so every resource is isolated

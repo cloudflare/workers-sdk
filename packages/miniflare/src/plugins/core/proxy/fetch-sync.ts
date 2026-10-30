@@ -68,9 +68,19 @@ port.addEventListener("message", async (event) => {
     headers["${CoreHeaders.OP_SYNC}"] = "true";
     // body cannot be a ReadableStream, so no need to specify duplex
     const response = await fetch(url, { method, headers, body, dispatcher });
-    const responseBody = response.headers.get("${CoreHeaders.OP_RESULT_TYPE}") === "ReadableStream"
+    const resultType = response.headers.get("${CoreHeaders.OP_RESULT_TYPE}");
+    const responseBody = resultType === "ReadableStream"
       ? response.body
       : await response.arrayBuffer();
+    if (resultType === "ReadableStream") {
+      // The stream is transferred to the main thread and may outlive this
+      // request. Retire its pool so a later synchronous fetch doesn't reuse
+      // the stream's connection after the consumer finishes reading it.
+      const responseDispatcher = dispatcher;
+      dispatcher = undefined;
+      dispatcherUrl = undefined;
+      void responseDispatcher.close().catch(() => {});
+    }
     const transferList = responseBody === null ? undefined : [responseBody];
     port.postMessage(
       {

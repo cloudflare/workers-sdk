@@ -2913,10 +2913,15 @@ describe("wrangler preview", () => {
 			});
 		});
 
-		test("should upload secrets from a .env format --secrets-file as secret_text bindings", async ({
+		test("should expand a .env format --secrets-file as secret_text bindings", async ({
 			expect,
 		}) => {
-			writeFileSync(".env.preview", "SECRET_A=value-a\nSECRET_B=value-b\n");
+			vi.stubEnv("CI_SECRET", "process-secret");
+			vi.stubEnv("SECRET_B", "");
+			writeFileSync(
+				".env.preview",
+				"SECRET_A=${CI_SECRET}\nSECRET_B=file-value\nSECRET_C=pa\\$word\n"
+			);
 
 			let deploymentRequestBody:
 				| {
@@ -2980,11 +2985,15 @@ describe("wrangler preview", () => {
 
 			expect(deploymentRequestBody?.env?.SECRET_A).toEqual({
 				type: "secret_text",
-				text: "value-a",
+				text: "process-secret",
 			});
 			expect(deploymentRequestBody?.env?.SECRET_B).toEqual({
 				type: "secret_text",
-				text: "value-b",
+				text: "",
+			});
+			expect(deploymentRequestBody?.env?.SECRET_C).toEqual({
+				type: "secret_text",
+				text: "pa$word",
 			});
 		});
 
@@ -3805,7 +3814,7 @@ describe("wrangler preview", () => {
 				expect(std.out).not.toContain(NO_ACTIVE_PREVIEW_URLS_MESSAGE);
 				if (testCase.shouldWarn) {
 					expect(std.warn).toContain(
-						"Custom domain Preview URLs are configured, but none are active for this Preview. If you added `previews_enabled = true` after your last deployment, run `wrangler deploy` once to publish the custom domain Preview route, then run `wrangler preview` again. If you already deployed with that setting, the custom domain may still be provisioning."
+						"Custom domain Preview URLs are configured, but none are active for this Preview. If you enabled Preview URLs after your last deployment, run `wrangler deploy` once to publish the custom domain Preview route, then run `wrangler preview` again. If you already deployed with that setting, the custom domain may still be provisioning."
 					);
 				} else {
 					expect(std.warn).not.toContain(
@@ -5487,107 +5496,117 @@ describe("wrangler preview", () => {
 			expect(deploymentRequestBody).not.toHaveProperty("containers");
 		});
 
-		test("should exclude containers whose DO binding has script_name set", async ({
-			expect,
-		}) => {
-			writeFileSync(
-				"src/index.ts",
-				"export default { fetch() { return new Response('ok'); } };"
-			);
-			writeFileSync(
-				"wrangler.json",
-				JSON.stringify({
-					name: "test-worker",
-					main: "src/index.ts",
-					compatibility_date: "2025-01-01",
-					previews: {
-						durable_objects: {
-							bindings: [
+		test.for(["owner-worker", "test-worker"])(
+			"should exclude containers whose DO binding targets deployed Worker %s",
+			async (scriptName, { expect }) => {
+				writeFileSync(
+					"src/index.ts",
+					"export default { fetch() { return new Response('ok'); } };"
+				);
+				writeFileSync(
+					"wrangler.json",
+					JSON.stringify({
+						name: "test-worker",
+						main: "src/index.ts",
+						compatibility_date: "2025-01-01",
+						previews: {
+							durable_objects: {
+								bindings: [
+									{
+										name: "EXTERNAL_CONTAINER",
+										class_name: "ExternalContainer",
+										script_name: scriptName,
+									},
+								],
+							},
+							containers: [
 								{
-									name: "EXTERNAL_CONTAINER",
 									class_name: "ExternalContainer",
-									script_name: "owner-worker",
+									image:
+										"registry.cloudflare.com/some-account-id/external:latest",
 								},
 							],
 						},
-						containers: [
-							{
-								class_name: "ExternalContainer",
-								image:
-									"registry.cloudflare.com/some-account-id/external:latest",
-							},
-						],
+					})
+				);
+				let deploymentRequestBody: Record<string, unknown> | undefined;
+				let createApplicationCalls = 0;
+				msw.use(
+					http.get(
+						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+						() =>
+							HttpResponse.json(
+								{
+									success: false,
+									result: null,
+									errors: [{ code: 10025, message: "Preview not found" }],
+								},
+								{ status: 404 }
+							)
+					),
+					http.post(
+						`*/accounts/:accountId/workers/workers/:workerId/previews`,
+						() =>
+							HttpResponse.json(
+								{
+									success: true,
+									result: {
+										id: "preview-id-cross-script",
+										name: "test-preview",
+										slug: "test-preview",
+										urls: ["https://test-preview.test-worker.cloudflare.app"],
+										worker_name: "test-worker",
+										created_on: new Date().toISOString(),
+									},
+								},
+								{ status: 201 }
+							)
+					),
+					http.post(
+						`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+						async ({ request }) => {
+							deploymentRequestBody = (await readPreviewDeploymentRequest(
+								request
+							)) as Record<string, unknown>;
+							return HttpResponse.json(
+								{
+									success: true,
+									result: {
+										id: "deployment-id-cross-script",
+										preview_id: "preview-id-cross-script",
+										preview_name: "test-preview",
+										urls: ["https://crossscript.test-worker.cloudflare.app"],
+										compatibility_date: "2025-01-01",
+										env: {},
+										created_on: new Date().toISOString(),
+									},
+								},
+								{ status: 201 }
+							);
+						}
+					),
+					http.post("*/applications", () => {
+						createApplicationCalls++;
+						return HttpResponse.json({
+							success: true,
+							result: { id: "app-id" },
+						});
+					})
+				);
+				await runWrangler("preview --name test-preview");
+				expect(deploymentRequestBody).toMatchObject({
+					env: {
+						EXTERNAL_CONTAINER: {
+							type: "durable_object_namespace",
+							class_name: "ExternalContainer",
+							script_name: scriptName,
+						},
 					},
-				})
-			);
-			let deploymentRequestBody: Record<string, unknown> | undefined;
-			let createApplicationCalls = 0;
-			msw.use(
-				http.get(
-					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
-					() =>
-						HttpResponse.json(
-							{
-								success: false,
-								result: null,
-								errors: [{ code: 10025, message: "Preview not found" }],
-							},
-							{ status: 404 }
-						)
-				),
-				http.post(
-					`*/accounts/:accountId/workers/workers/:workerId/previews`,
-					() =>
-						HttpResponse.json(
-							{
-								success: true,
-								result: {
-									id: "preview-id-cross-script",
-									name: "test-preview",
-									slug: "test-preview",
-									urls: ["https://test-preview.test-worker.cloudflare.app"],
-									worker_name: "test-worker",
-									created_on: new Date().toISOString(),
-								},
-							},
-							{ status: 201 }
-						)
-				),
-				http.post(
-					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
-					async ({ request }) => {
-						deploymentRequestBody = (await readPreviewDeploymentRequest(
-							request
-						)) as Record<string, unknown>;
-						return HttpResponse.json(
-							{
-								success: true,
-								result: {
-									id: "deployment-id-cross-script",
-									preview_id: "preview-id-cross-script",
-									preview_name: "test-preview",
-									urls: ["https://crossscript.test-worker.cloudflare.app"],
-									compatibility_date: "2025-01-01",
-									env: {},
-									created_on: new Date().toISOString(),
-								},
-							},
-							{ status: 201 }
-						);
-					}
-				),
-				http.post("*/applications", () => {
-					createApplicationCalls++;
-					return HttpResponse.json({
-						success: true,
-						result: { id: "app-id" },
-					});
-				})
-			);
-			await runWrangler("preview --name test-preview");
-			expect(deploymentRequestBody).not.toHaveProperty("containers");
-			expect(createApplicationCalls).toBe(0);
-		});
+				});
+				expect(deploymentRequestBody).not.toHaveProperty("containers");
+				expect(createApplicationCalls).toBe(0);
+			}
+		);
 
 		test("should fail before creating the preview deployment when a container's class_name matches no Durable Object class", async ({
 			expect,

@@ -50,6 +50,8 @@ export function mockUploadWorkerRequest(
 		 * envelope alongside the success response so deploy.ts can render it.
 		 */
 		mockUploadReturnsExportsReconciliation?: ExportsReconciliationResult;
+		/** Version ID returned by either the legacy upload or versions API. */
+		mockUploadReturnsVersionId?: string;
 		expectedTailConsumers?: CfWorkerInit["tail_consumers"];
 		expectedUnsafeMetaData?: Record<string, unknown>;
 		expectedCapnpSchema?: string;
@@ -209,7 +211,7 @@ export function mockUploadWorkerRequest(
 					pipeline_hash: "hash9999",
 					mutable_pipeline_id: "mutableId",
 					tag: "sample-tag",
-					deployment_id: "Galaxy-Class",
+					deployment_id: options.mockUploadReturnsVersionId ?? "Galaxy-Class",
 					startup_time_ms: 100,
 					...(mockUploadReturnsExportsReconciliation && {
 						exports_reconciliation: mockUploadReturnsExportsReconciliation,
@@ -220,7 +222,7 @@ export function mockUploadWorkerRequest(
 
 		return HttpResponse.json(
 			createFetchResult({
-				id: "Galaxy-Class",
+				id: options.mockUploadReturnsVersionId ?? "Galaxy-Class",
 				startup_time_ms: 100,
 				resources: {
 					script: {

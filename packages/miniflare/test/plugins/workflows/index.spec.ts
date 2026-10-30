@@ -700,6 +700,25 @@ describe("workflow instance lifecycle methods", () => {
 		expect(await cronDeleteResponse.text()).toContain("instance.not_found");
 	});
 
+	test("returns 404 when Explorer deletes a missing instance", async ({
+		expect,
+	}) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			...lifecycleMiniflareOpts(tmp),
+			unsafeLocalExplorer: true,
+		});
+		useDispose(mf);
+
+		const response = await mf.dispatchFetch(
+			`http://localhost${CorePaths.EXPLORER}/api/workflows/LIFECYCLE_WORKFLOW/instances/never-created`,
+			{ method: "DELETE" }
+		);
+		const body = await response.text();
+		expect(response.status, body).toBe(404);
+		expect(await getPersistedInstanceFiles(tmp)).toHaveLength(0);
+	});
+
 	test("reports overlapping storage deletion as successful", async ({
 		expect,
 	}) => {

@@ -27,7 +27,7 @@ import {
 	CreateApplicationRolloutRequest,
 	RolloutsService,
 } from "./client";
-import { cliPresentation, fetchPagedListResult, fetchResult } from "./context";
+import { fetchPagedListResult, fetchResult } from "./context";
 import { Diff } from "./diff";
 import { resolveImageName } from "./images";
 import { inferInstanceType } from "./limits";
@@ -57,6 +57,9 @@ type DeployContainersArgs = {
 	versionId: string;
 	accountId: string;
 	scriptName: string;
+	configFileName: string;
+	observabilityTargetPercentageField: string;
+	observabilityTargetCountField: string;
 };
 
 type ObservabilityWriteTarget = "top-level" | "configuration";
@@ -89,7 +92,15 @@ export type DurableObjectNamespace = {
 
 export function createDurableObjectNamespaceResolver(
 	config: Config,
-	{ versionId, accountId, scriptName, dispatchNamespace }: DeployContainersArgs
+	{
+		versionId,
+		accountId,
+		scriptName,
+		dispatchNamespace,
+	}: Pick<
+		DeployContainersArgs,
+		"versionId" | "accountId" | "scriptName" | "dispatchNamespace"
+	>
 ): (className: string) => Promise<string> {
 	const boundDOs = new Set(
 		config.durable_objects.bindings.map((binding) => binding.class_name)
@@ -155,7 +166,15 @@ export function createDurableObjectNamespaceResolver(
 export async function deployContainers(
 	config: Config,
 	containerDeployments: ResolvedContainerDeployment[],
-	{ versionId, accountId, scriptName, dispatchNamespace }: DeployContainersArgs
+	{
+		versionId,
+		accountId,
+		scriptName,
+		dispatchNamespace,
+		configFileName,
+		observabilityTargetPercentageField,
+		observabilityTargetCountField,
+	}: DeployContainersArgs
 ) {
 	const resolveNamespaceId = createDurableObjectNamespaceResolver(config, {
 		versionId,
@@ -170,6 +189,9 @@ export async function deployContainers(
 			{
 				imageRef,
 				durable_object_namespace_id: namespaceId,
+				configFileName,
+				observabilityTargetPercentageField,
+				observabilityTargetCountField,
 			},
 			container,
 			config,
@@ -483,7 +505,12 @@ function buildApplicationObservabilityPatch(
 
 function assertCanUseApplicationObservabilityTargeting(
 	prevApp: Application,
-	containerConfig: ContainerNormalizedConfig
+	containerConfig: ContainerNormalizedConfig,
+	options: {
+		configFileName: string;
+		observabilityTargetPercentageField: string;
+		observabilityTargetCountField: string;
+	}
 ) {
 	if (!hasTopLevelOnlyObservabilityFields(containerConfig.observability)) {
 		return;
@@ -494,7 +521,7 @@ function assertCanUseApplicationObservabilityTargeting(
 	}
 
 	throw new UserError(
-		`Application-level observability targeting cannot be enabled for container ${containerConfig.name} while it still uses legacy rollout-based observability. Set containers[].observability.enabled = false in your ${cliPresentation.displayConfigFileName} and deploy once, then deploy again with ${cliPresentation.configFields.containerObservabilityTargetPercentage} or ${cliPresentation.configFields.containerObservabilityTargetCount}.`,
+		`Application-level observability targeting cannot be enabled for container ${containerConfig.name} while it still uses legacy rollout-based observability. Set containers[].observability.enabled = false in your ${options.configFileName} and deploy once, then deploy again with ${options.observabilityTargetPercentageField} or ${options.observabilityTargetCountField}.`,
 		{
 			telemetryMessage: "containers deploy observability migration blocked",
 		}
@@ -607,6 +634,9 @@ export async function apply(
 	args: {
 		imageRef: ImageRef;
 		durable_object_namespace_id: string;
+		configFileName: string;
+		observabilityTargetPercentageField: string;
+		observabilityTargetCountField: string;
 	},
 	containerConfig: ContainerNormalizedConfig,
 	config: Config,
@@ -702,7 +732,11 @@ export async function apply(
 	const observabilityWriteTarget = selectObservabilityWriteTarget(prevApp);
 
 	if (prevApp !== undefined) {
-		assertCanUseApplicationObservabilityTargeting(prevApp, containerConfig);
+		assertCanUseApplicationObservabilityTargeting(
+			prevApp,
+			containerConfig,
+			args
+		);
 	}
 
 	// let's always convert normalised container config -> CreateApplicationRequest

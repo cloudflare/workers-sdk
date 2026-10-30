@@ -13,7 +13,7 @@ import {
 import { AutoConfigDetectionError } from "../errors";
 import { getFrameworkClassInstance } from "../frameworks";
 import {
-	allFrameworksInfos,
+	getAllFrameworksInfos,
 	staticFramework,
 } from "../frameworks/all-frameworks";
 import { detectFramework } from "./framework-detection";
@@ -101,6 +101,14 @@ async function findAssetsDir(from: string): Promise<string | undefined> {
 }
 
 /**
+ * Expresses a caller-supplied output directory relative to the project, matching
+ * the shape of a detected one (e.g. `"public"`, or `"."` for the project itself).
+ */
+function normalizeOutputDir(projectPath: string, outputDir: string): string {
+	return relative(projectPath, resolve(projectPath, outputDir)) || ".";
+}
+
+/**
  * Detects project details needed for autoconfig: framework, package manager,
  * output directory, worker name, commands, and whether the project is already configured.
  * By default, the project is considered configured when `cloudflare.config.ts`
@@ -114,6 +122,7 @@ export async function getDetailsForAutoConfig({
 	projectPath = process.cwd(),
 	wranglerConfig,
 	target = "cf",
+	outputDir: requestedOutputDir,
 	context,
 }: {
 	/** The path to the project, defaults to cwd. */
@@ -122,6 +131,16 @@ export async function getDetailsForAutoConfig({
 	wranglerConfig?: Config;
 	/** The configuration target, defaults to cf. */
 	target?: AutoConfigTarget;
+	/**
+	 * A directory of built static assets the caller has already chosen,
+	 * for example the directory passed to `wrangler pages deploy <directory>`.
+	 * Selects static-asset configuration instead of framework configuration, so
+	 * a framework adapter or build cannot replace the requested assets. Existing
+	 * Workers and Pages configurations, including framework-managed deployments,
+	 * retain their usual detection behavior.
+	 * Relative paths are resolved against `projectPath`.
+	 */
+	outputDir?: string;
 	/** The autoconfig context providing logger, dialogs, and other dependencies. */
 	context: AutoConfigContext;
 }): Promise<AutoConfigDetails> {
@@ -151,7 +170,20 @@ export async function getDetailsForAutoConfig({
 	const { detectedFramework, packageManager, isWorkspaceRoot } =
 		await detectFramework(projectPath, context, { wranglerConfig, target });
 
-	const framework = getFrameworkClassInstance(detectedFramework.framework.id);
+	const detectedFrameworkInstance = getFrameworkClassInstance(
+		detectedFramework.framework.id,
+		target
+	);
+	const configured =
+		hasCloudflareConfig ||
+		detectedFrameworkInstance.isConfigured(projectPath, { target });
+	const useStaticAssets =
+		!configured &&
+		requestedOutputDir !== undefined &&
+		detectedFramework.framework.id !== "cloudflare-pages";
+	const framework = useStaticAssets
+		? getFrameworkClassInstance(staticFramework.id, target)
+		: detectedFrameworkInstance;
 	const packageJsonPath = resolve(projectPath, "package.json");
 
 	let packageJson: PackageJSON | undefined;
@@ -165,22 +197,22 @@ export async function getDetailsForAutoConfig({
 		logger.debug("No package.json found when running autoconfig");
 	}
 
-	const configured =
-		hasCloudflareConfig || framework.isConfigured(projectPath, { target });
-
 	const outputDir =
-		detectedFramework?.dist ?? (await findAssetsDir(projectPath));
+		requestedOutputDir !== undefined && framework.id === staticFramework.id
+			? normalizeOutputDir(projectPath, requestedOutputDir)
+			: (detectedFramework?.dist ?? (await findAssetsDir(projectPath)));
 
 	const baseDetails = {
 		projectPath,
 		framework,
 		packageJson,
 		packageManager,
-		devCommand: getProjectCommand(detectedFramework.devCommand, packageManager),
-		buildCommand: getProjectCommand(
-			detectedFramework.buildCommand,
-			packageManager
-		),
+		devCommand: useStaticAssets
+			? undefined
+			: getProjectCommand(detectedFramework.devCommand, packageManager),
+		buildCommand: useStaticAssets
+			? undefined
+			: getProjectCommand(detectedFramework.buildCommand, packageManager),
 		env: framework.env,
 		workerName: getWorkerName(packageJson?.name, projectPath),
 	};
@@ -204,6 +236,38 @@ export async function getDetailsForAutoConfig({
 			frameworkId: framework.id,
 			configured,
 		});
+	}
+
+	// A `functions` directory next to static files in the project root usually
+	// means a Cloudflare Pages project using Pages Functions. Interactively the
+	// user is asked whether it is a Pages project; non-interactive runs assume it
+	// is not and continue as a static site, which would deploy the project root
+	// as assets and silently drop the Functions (the API routes). Stop instead.
+	// This checks the framework class rather than the detected id, because
+	// detected frameworks missing from `allFrameworksInfos` are also configured as
+	// static sites and would deploy the project root the same way.
+	if (
+		framework.id === staticFramework.id &&
+		(context.isNonInteractiveOrCI?.() ?? false) &&
+		resolve(projectPath, outputDir) === resolve(projectPath) &&
+		(await getPathStats(join(projectPath, "functions")))?.isDirectory()
+	) {
+		const configFile =
+			target === "cf"
+				? `a \`${CLOUDFLARE_CONFIG_FILE}\` file`
+				: "a Wrangler configuration file";
+		throw new AutoConfigDetectionError(
+			"This project has a `functions` directory and static files in its root, which looks like a Cloudflare Pages project using Pages Functions. " +
+				"Automatic configuration cannot migrate Pages Functions to Workers yet, and deploying the project root as static assets would leave the Functions undeployed.\n" +
+				"If `functions` contains Pages Functions, move the static files into a subdirectory (for example `public/`) and deploy with `wrangler pages deploy public --project-name <name>`, " +
+				"or migrate the Functions to a Worker: https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/\n" +
+				`If \`functions\` is not Pages Functions, move the static files into a subdirectory or add ${configFile} for the Worker.`,
+			{
+				telemetryMessage: "autoconfig details pages functions with root assets",
+				frameworkId: framework.id,
+				configured,
+			}
+		);
 	}
 
 	return {
@@ -280,13 +344,16 @@ export function displayAutoConfigDetails(
  *
  * @param autoConfigDetails - The detected project details.
  * @param context - The autoconfig context providing dialogs.
+ * @param target - The configuration target, defaults to cf.
  * @returns The (possibly updated) autoconfig details.
  */
 export async function confirmAutoConfigDetails(
 	autoConfigDetails: AutoConfigDetails,
-	context: AutoConfigContext
+	context: AutoConfigContext,
+	target: AutoConfigTarget = "cf"
 ): Promise<AutoConfigDetails> {
 	const { dialogs } = context;
+	const allFrameworksInfos = getAllFrameworksInfos(target);
 	const modifySettings = await dialogs.confirm(
 		"Do you want to modify these settings?",
 		{ defaultValue: false, fallbackValue: false }
@@ -337,7 +404,10 @@ export async function confirmAutoConfigDetails(
 		}
 	);
 
-	updatedAutoConfigDetails.framework = getFrameworkClassInstance(frameworkId);
+	updatedAutoConfigDetails.framework = getFrameworkClassInstance(
+		frameworkId,
+		target
+	);
 
 	const outputDir = await dialogs.prompt(
 		"What directory contains your applications' output/asset files?",

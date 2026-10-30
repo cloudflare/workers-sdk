@@ -526,7 +526,7 @@ export interface WorkerEntrypointExport {
  */
 export interface WorkflowExport extends Pick<
 	WorkflowBinding,
-	"limits" | "concurrency" | "schedules" | "default_retention"
+	"limits" | "concurrency" | "schedules" | "default_retention" | "jurisdiction"
 > {
 	type: "workflow";
 	name: string;
@@ -987,6 +987,10 @@ export type ArtifactsEventTrigger = {
 	}[];
 };
 
+export const WORKFLOW_JURISDICTIONS = ["eu", "fedramp", "us"] as const;
+
+export type WorkflowJurisdiction = (typeof WORKFLOW_JURISDICTIONS)[number];
+
 export type WorkflowBinding = {
 	/** The name of the binding used to refer to the Workflow */
 	binding: string;
@@ -1019,6 +1023,11 @@ export type WorkflowBinding = {
 		/** How long to retain errored instances */
 		error_retention?: number | string;
 	};
+	/**
+	 * Optional jurisdiction that the Workflow's instances run and store their data in. It is set
+	 * when the Workflow is created and cannot be changed afterwards.
+	 */
+	jurisdiction?: WorkflowJurisdiction;
 };
 
 type ConnectHandlerConfigBase = {
@@ -1435,6 +1444,11 @@ export interface EnvironmentNonInheritable {
 		id: string;
 		/** The local database connection string for `wrangler dev` */
 		localConnectionString?: string;
+		/**
+		 * Connect to the deployed Hyperdrive configuration during local development
+		 * instead of a local database.
+		 */
+		remote?: boolean;
 	}[];
 
 	/**
@@ -1490,6 +1504,8 @@ export interface EnvironmentNonInheritable {
 		binding: string;
 		/** The name of this dataset to write to. */
 		dataset?: string;
+		/** Whether the dataset should be remote or not in local development */
+		remote?: boolean;
 	}[];
 
 	/**

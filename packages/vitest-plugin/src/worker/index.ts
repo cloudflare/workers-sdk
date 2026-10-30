@@ -167,6 +167,11 @@ function isUserConsoleLogResponse(response: unknown): boolean {
 	);
 }
 
+// Module runners whose transport, `createRequire` and `createImportMeta` are
+// patched already (see `onModuleRunner` below). Module scope, as a reused
+// worker's runner outlives the pool connection of the file that patched it.
+const patchedModuleRunners = new WeakSet<object>();
+
 let patchedFunction = false;
 function ensurePatchedFunction(unsafeEval: UnsafeEval) {
 	if (patchedFunction) {
@@ -347,13 +352,18 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 		const v8CoverageEvaluators = new WeakSet<ModuleEvaluator>();
 
 		poolSocket.accept();
-		// Sending over the runner's WebSocket from another Durable Object requires
-		// I/O that cannot complete if that object's input gate breaks. Buffer console
-		// messages and flush them on the next successful post from the runner's
-		// context instead. In practice Vitest always sends further RPC messages
-		// (e.g. task updates/results) from the runner once execution returns to it,
-		// so buffered logs are flushed; there's no guarantee for logs emitted with
-		// nothing following, but dropping them is preferable to hanging teardown.
+		// Sending over the runner's WebSocket from another I/O context (a handler
+		// reached through `SELF`, a user Durable Object, a queue consumer, ...)
+		// fails. Buffer console messages and flush them from the runner's context
+		// instead: on the next successful post, and on a timer created here, in the
+		// runner's own context, because Vitest awaits every RPC call it made
+		// (`rpcDone()`) before it posts a file's result and a buffered log's call
+		// only settles once the message is sent — a log with nothing from the
+		// runner following it (a queue batch consumed as the file ends, a
+		// `waitUntil()` callback) would otherwise leave the run waiting on itself.
+		// The other context cannot resend from the runner reliably: an object
+		// whose input gate broke never completes that request (#14180), and
+		// neither does a handler that already answered.
 		const pendingConsoleLogs: unknown[] = [];
 		const sendPendingConsoleLogs = () => {
 			while (pendingConsoleLogs.length > 0) {
@@ -361,7 +371,20 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 				pendingConsoleLogs.shift();
 			}
 		};
-
+		const pendingConsoleLogsFlushInterval = setInterval(() => {
+			if (pendingConsoleLogs.length === 0) {
+				return;
+			}
+			try {
+				sendPendingConsoleLogs();
+			} catch (error) {
+				clearInterval(pendingConsoleLogsFlushInterval);
+				__console.error("Error flushing console logs from the runner:", error);
+			}
+		}, 50);
+		poolSocket.addEventListener("close", () => {
+			clearInterval(pendingConsoleLogsFlushInterval);
+		});
 		init({
 			post: (response) => {
 				try {
@@ -450,47 +473,57 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 						this.v8CoverageWindow = window;
 					}
 				}
-				if (runner.evaluator?.createRequire) {
-					const originalCreateRequire = runner.evaluator.createRequire.bind(
-						runner.evaluator
-					);
+				// Vitest passes a reused worker's module runner to `onModuleRunner` again
+				// for every test file it runs there (`isolate: false`). Patching it again
+				// would wrap `transport.invoke`, `createRequire` and `createImportMeta` in
+				// one more layer per file, so each module import would cost more than the
+				// one before.
+				if (!patchedModuleRunners.has(runner)) {
+					patchedModuleRunners.add(runner);
+					if (runner.evaluator?.createRequire) {
+						const originalCreateRequire = runner.evaluator.createRequire.bind(
+							runner.evaluator
+						);
 
-					// workerd echoes percent-encoded module names back to the fallback
-					// service, so the require base URL must carry the sentinel marker.
-					function createRequire(url: string): ReturnType<CreateRequire> {
-						return originalCreateRequire(markCreateRequireUrl(url));
+						// workerd echoes percent-encoded module names back to the fallback
+						// service, so the require base URL must carry the sentinel marker.
+						function createRequire(url: string): ReturnType<CreateRequire> {
+							return originalCreateRequire(markCreateRequireUrl(url));
+						}
+
+						runner.evaluator.createRequire = createRequire;
+					} else {
+						__console.warn(
+							"[vitest-plugin] Could not patch module runner createRequire. " +
+								"Relative require() may fail when the project path contains encoded characters."
+						);
 					}
-
-					runner.evaluator.createRequire = createRequire;
-				} else {
-					__console.warn(
-						"[vitest-plugin] Could not patch module runner createRequire. " +
-							"Relative require() may fail when the project path contains encoded characters."
-					);
-				}
-				if (
-					runner.options?.createImportMeta !== undefined &&
-					import.meta.resolve !== undefined
-				) {
-					const originalCreateImportMeta = runner.options.createImportMeta;
-					runner.options.createImportMeta = async (modulePath) => {
-						const meta = await originalCreateImportMeta(modulePath);
-						// Workerd's native resolver is bound to the Vitest module that
-						// created it, so resolve inlined modules relative to their own URL.
-						meta.resolve = (specifier) => new URL(specifier, meta.url).href;
-						return meta;
-					};
-				}
-				if (runner.transport?.invoke) {
-					const originalInvoke = runner.transport.invoke.bind(runner.transport);
-					runner.transport.invoke = (...args: unknown[]) => {
-						return runInRunnerObject(() => originalInvoke(...args));
-					};
-				} else {
-					__console.warn(
-						"[vitest-plugin] Could not patch module runner transport. " +
-							"Dynamic import() inside entrypoint/DO handlers may fail."
-					);
+					if (
+						runner.options?.createImportMeta !== undefined &&
+						import.meta.resolve !== undefined
+					) {
+						const originalCreateImportMeta = runner.options.createImportMeta;
+						runner.options.createImportMeta = async (modulePath) => {
+							const meta = await originalCreateImportMeta(modulePath);
+							// Workerd's native resolver is bound to the Vitest module that
+							// created it, so resolve inlined modules relative to their own URL.
+							meta.resolve = (specifier) => new URL(specifier, meta.url).href;
+							return meta;
+						};
+					}
+					if (runner.transport?.invoke) {
+						const originalInvoke = runner.transport.invoke.bind(
+							runner.transport
+						);
+						runner.transport.invoke = (...args: unknown[]) => {
+							return runInRunnerObject(() => originalInvoke(...args));
+						};
+					} else {
+						__console.warn(
+							"[vitest-plugin] Could not patch module runner transport. " +
+								"Dynamic import() inside entrypoint/DO handlers may fail."
+						);
+					}
 				}
 
 				const evaluator = runner.evaluator;

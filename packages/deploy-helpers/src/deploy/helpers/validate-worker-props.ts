@@ -8,12 +8,7 @@ import {
 	isNonInteractiveOrCI,
 	UserError,
 } from "@cloudflare/workers-utils";
-import {
-	cliPresentation,
-	confirm,
-	fetchResult,
-	logger,
-} from "../../shared/context";
+import { confirm, fetchResult, logger } from "../../shared/context";
 import {
 	getSubdomainValues,
 	validateEventTriggerTargets,
@@ -159,7 +154,8 @@ export type PreUploadApiChecksResult = {
  */
 export async function preUploadApiChecks(
 	props: DeployProps | VersionsUploadProps,
-	config: ContainerlessConfig
+	config: ContainerlessConfig,
+	queueCreateCommand: (queueName: string) => string
 ): Promise<PreUploadApiChecksResult> {
 	const { accountId, name } = props;
 
@@ -229,13 +225,14 @@ export async function preUploadApiChecks(
 			// propagates.
 			if (props.command === "deploy" && props.failIfWorkerNameTaken) {
 				throw new UserError(
-					`A Worker named "${name}" already exists in your account. This deploy could not confirm that it should update that Worker, so it stopped instead of overwriting it. To update the existing Worker, add a ${cliPresentation.displayConfigFileName} that names "${name}"; to deploy separately, use a different name.`,
+					`A Worker named "${name}" already exists in your account. This deploy could not confirm that it should update that Worker, so it stopped instead of overwriting it. To update the existing Worker, add a ${configFileName(config.configPath, config.userConfigPath)} that names "${name}"; to deploy separately, use a different name.`,
 					{ telemetryMessage: "deploy unverified worker name already exists" }
 				);
 			}
 
 			if (script.last_deployed_from === "dash") {
 				const remoteWorkerConfig = await downloadWorkerConfig(
+					config,
 					name,
 					serviceMetaData.default_environment.environment,
 					props.entry.file,
@@ -339,7 +336,8 @@ export async function preUploadApiChecks(
 		config,
 		accountId,
 		!props.resourcesProvision,
-		name
+		name,
+		queueCreateCommand
 	);
 
 	// Resolve whether this deploy will actually publish to workers.dev, using

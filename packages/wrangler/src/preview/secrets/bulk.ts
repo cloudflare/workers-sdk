@@ -107,7 +107,7 @@ export const previewSecretBulkCommand = createCommand({
 					? `\n➡️  Your Preview "${previewName}" is now live at ${liveUrls
 							.map((url) => chalk.bold.underline(url))
 							.join(", ")}`
-					: `\n${formatNoActivePreviewUrlsMessage(config)}`)
+					: `\n${formatNoActivePreviewUrlsMessage(config, "wrangler deploy", "wrangler preview")}`)
 		);
 	},
 });

@@ -8,12 +8,16 @@ export default defineConfig({
 	plugins: [
 		cloudflare({
 			types: { includeRuntime: false },
-			config: {
-				name: "worker",
-				entrypoint: "./worker-https/index.ts",
-				compatibilityDate: "2025-08-15",
-				compatibilityFlags: ["nodejs_compat"],
-			},
+			config: (loadedConfig) => ({
+				...loadedConfig,
+				worker: {
+					...loadedConfig.worker,
+					name: "worker",
+					entrypoint: "./worker-https/index.ts",
+					compatibilityDate: "2025-08-15",
+					compatibilityFlags: ["nodejs_compat"],
+				},
+			}),
 			inspectorPort: false,
 			persistState: false,
 		}),

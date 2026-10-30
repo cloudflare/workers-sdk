@@ -199,6 +199,7 @@ export async function unstable_dev(
 		routes: undefined,
 		host: undefined,
 		localUpstream: undefined,
+		inferOriginFromRoutes: undefined,
 		upstreamProtocol: undefined,
 		var: undefined,
 		define: undefined,

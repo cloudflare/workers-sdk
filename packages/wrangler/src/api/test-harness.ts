@@ -28,6 +28,7 @@ import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { runWithLogLevel } from "../logger";
 import { requireApiToken, requireAuth } from "../user";
+import { BUN_UNSUPPORTED_MESSAGE, isBun } from "../utils/is-bun";
 import { DevEnv } from "./startDevWorker/DevEnv";
 import { MultiworkerRuntimeController } from "./startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "./startDevWorker/NoOpProxyController";
@@ -316,6 +317,12 @@ export type TestHarness = {
 	 * await server.fetch("http://example.com/api/data");
 	 * // Dispatches a request to the API Worker with URL "http://example.com/api/data"
 	 * ```
+	 *
+	 * Under Bun, this method, `server.getWorker()`'s `fetch()`, `email()` and
+	 * `scheduled()`, and the URL returned by `listen()` cannot reach the Worker,
+	 * because Bun's `fetch()` ignores the undici `dispatcher` that Miniflare routes
+	 * requests through. The methods throw a `UserError` and the URL answers with a
+	 * 503. `server.getWorker().getEnv()` and `getExport()` keep working under Bun.
 	 */
 	fetch: DispatchFetch;
 	/**
@@ -969,6 +976,16 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		worker?: string,
 		event = "fetch"
 	) {
+		// Miniflare's `dispatchFetch()` routes every request, `getWorker()` ones
+		// included, through an undici dispatcher that Bun's `fetch()` ignores, so
+		// a request can leave for the network. Refuse before sending anything.
+		if (isBun()) {
+			throw new UserError(
+				`${BUN_UNSUPPORTED_MESSAGE} \`server.getWorker().getEnv()\` and \`getExport()\` still work under Bun.`,
+				{ telemetryMessage: "test harness dispatch under bun" }
+			);
+		}
+
 		let resolvedInput = input;
 
 		if (typeof input === "string" && !URL.canParse(input)) {

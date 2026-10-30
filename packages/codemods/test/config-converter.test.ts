@@ -177,6 +177,24 @@ describe("Wrangler environment and tooling conversion", () => {
 		);
 	});
 
+	it("reports dependency instrumentation opt-outs", ({ expect }) => {
+		const converted = convertWranglerConfig(
+			{
+				compatibility_date: "2026-09-23",
+				dependencies_instrumentation: { enabled: false },
+				name: "example-worker",
+			},
+			"vite",
+			[]
+		);
+
+		expect(
+			converted.followUps
+				.filter(({ code }) => code === "dependencies-instrumentation-opt-out")
+				.map(({ sourcePath }) => sourcePath)
+		).toEqual(["dependencies_instrumentation"]);
+	});
+
 	it("reports a Vite assets directory once", ({ expect }) => {
 		const result = convert({
 			assets: { directory: "public" },
