@@ -2,6 +2,6 @@
 "miniflare": patch
 ---
 
-Make local asset directories read-only in the runtime
+Prevent Workers from changing local static assets and Workers Sites files during development
 
-Static assets and Workers Sites now use read-only disk services. Normal serving and updates made by the developer continue to work.
+Asset files remain available to serve and can still be updated by editing them on disk.
