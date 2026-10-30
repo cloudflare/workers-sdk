@@ -657,6 +657,64 @@ describe("InputWorkerSchema", () => {
 			expect(result.success).toBe(true);
 		});
 
+		it("accepts an event trigger", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				triggers: [
+					{
+						type: "event",
+						event: "cf.artifacts.repo.pushed",
+						filter: { namespace: "ci", repoName: "my-repo" },
+						targets: [{ type: "workflow", workflowName: "ci-workflow" }],
+					},
+				],
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects an event trigger with an unknown event type", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				triggers: [
+					{
+						type: "event",
+						event: "cf.artifacts.repo.renamed",
+						targets: [{ type: "workflow", workflowName: "ci-workflow" }],
+					},
+				],
+			});
+
+			expect(result.success).toBe(false);
+		});
+
+		it("rejects an event trigger without targets", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				triggers: [
+					{ type: "event", event: "cf.artifacts.repo.pushed", targets: [] },
+				],
+			});
+
+			expect(result.success).toBe(false);
+		});
+
+		it("rejects unknown keys in an event trigger filter", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				triggers: [
+					{
+						type: "event",
+						event: "cf.artifacts.repo.pushed",
+						filter: { repo_name: "my-repo" },
+						targets: [{ type: "workflow", workflowName: "ci-workflow" }],
+					},
+				],
+			});
+
+			expect(result.success).toBe(false);
+		});
+
 		it("rejects UDP options on a TCP connect trigger", ({ expect }) => {
 			const result = InputWorkerSchema.safeParse({
 				...baseConfig,

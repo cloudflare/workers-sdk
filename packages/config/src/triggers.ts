@@ -126,10 +126,64 @@ export type ConnectTriggerOptions =
 export type ConnectTrigger = ConnectTriggerOptions & { type: "connect" };
 
 /**
+ * Cloudflare event types that can trigger a Worker.
+ *
+ * Keep in sync with `ARTIFACTS_EVENT_TYPES` in
+ * `packages/workers-utils/src/config/environment.ts`.
+ */
+export const EVENT_TRIGGER_TYPES = [
+	"cf.artifacts.repo.created",
+	"cf.artifacts.repo.deleted",
+	"cf.artifacts.repo.forked",
+	"cf.artifacts.repo.imported",
+	"cf.artifacts.repo.pushed",
+	"cf.artifacts.repo.cloned",
+	"cf.artifacts.repo.fetched",
+	"cf.artifacts.repo.token.created",
+	"cf.artifacts.repo.token.revoked",
+] as const;
+
+export type EventTriggerType = (typeof EVENT_TRIGGER_TYPES)[number];
+
+export interface EventTriggerFilter {
+	/** Only match events from this Artifacts namespace. */
+	namespace?: string;
+	/** Only match events from this Artifacts repository. */
+	repoName?: string;
+}
+
+export interface WorkflowEventTriggerTarget {
+	type: "workflow";
+	/** The name of a Workflow exported by this Worker. */
+	workflowName: string;
+}
+
+export interface EventTriggerOptions {
+	/** The Cloudflare event that starts the targets. */
+	event: EventTriggerType;
+	/** Narrows which events start the targets. Matches all events if omitted. */
+	filter?: EventTriggerFilter;
+	/** Workflows owned by this Worker to start when the event occurs. */
+	targets: WorkflowEventTriggerTarget[];
+}
+
+/**
+ * Event trigger — starts this Worker's Workflows when a Cloudflare event,
+ * such as an Artifacts repository push, occurs.
+ *
+ * More details here https://developers.cloudflare.com/artifacts/guides/event-subscriptions/
+ */
+export interface EventTrigger extends EventTriggerOptions {
+	type: "event";
+}
+
+/**
  * Event triggers — fetch routes, queue consumers, cron schedules, Email
- * Routing addresses, and raw sockets — that invoke this Worker.
+ * Routing addresses, raw sockets, and Cloudflare events — that invoke this
+ * Worker.
  * Construct entries with `triggers.fetch(...)`, `triggers.queue(...)`,
- * `triggers.scheduled(...)`, `triggers.email(...)`, or `triggers.connect(...)`.
+ * `triggers.scheduled(...)`, `triggers.email(...)`, `triggers.connect(...)`,
+ * or `triggers.event(...)`.
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#triggers
  */
@@ -164,6 +218,13 @@ export interface Triggers {
 	 * protocol/port.
 	 */
 	connect(options: ConnectTriggerOptions): ConnectTrigger;
+	/**
+	 * Event trigger — starts this Worker's Workflows when a Cloudflare event,
+	 * such as an Artifacts repository push, occurs.
+	 *
+	 * More details here https://developers.cloudflare.com/artifacts/guides/event-subscriptions/
+	 */
+	event(options: EventTriggerOptions): EventTrigger;
 }
 
 /**
@@ -184,6 +245,11 @@ export interface Triggers {
  *       triggers.scheduled({ schedule: "30 0 * * *" }),
  *       triggers.email({ addresses: ["support@example.com"] }),
  *       triggers.connect({ protocol: "tcp", port: 5432 }),
+ *       triggers.event({
+ *         event: "cf.artifacts.repo.pushed",
+ *         filter: { namespace: "ci", repoName: "my-repo" },
+ *         targets: [{ type: "workflow", workflowName: "ci-workflow" }],
+ *       }),
  *     ],
  *   },
  * });
@@ -195,4 +261,5 @@ export const triggers: Triggers = {
 	scheduled: (options) => ({ type: "scheduled", ...options }),
 	email: (options) => ({ type: "email", ...options }),
 	connect: (options) => ({ type: "connect", ...options }),
+	event: (options) => ({ type: "event", ...options }),
 };
