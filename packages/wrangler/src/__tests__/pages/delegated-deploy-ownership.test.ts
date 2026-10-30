@@ -51,9 +51,10 @@ describe("config-free delegated deployment ownership", () => {
 		writeFileSync("public/index.html", "<h1>public</h1>");
 	}
 
-	function mockUpload() {
+	function mockUpload(versionId?: string) {
 		mockUploadWorkerRequest({
 			useOldUploadApi: !workerExists,
+			mockUploadReturnsVersionId: versionId,
 			expectedType: "none",
 			expectedCompatibilityDate: DEFAULT_COMPAT_DATE,
 			expectedAssets: { jwt: "<<aus-completion-token>>", config: {} },
@@ -118,6 +119,42 @@ describe("config-free delegated deployment ownership", () => {
 		expect(existsSync("wrangler.jsonc")).toBe(false);
 		expect(readFileSync("package.json", "utf8")).toBe(packageJson);
 		expect(readFileSync("vite.config.ts", "utf8")).toBe(viteConfig);
+	});
+
+	it("verifies normalized version IDs across legacy and versions API uploads", async ({
+		expect,
+	}) => {
+		const firstVersionId = "11111111-2222-3333-4444-555555555555";
+		const secondVersionId = "66666666-7777-8888-9999-aaaaaaaaaaaa";
+		const verifiedVersions: string[] = [];
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/workers/scripts/:scriptName/versions/:versionId",
+				({ params }) => {
+					verifiedVersions.push(String(params.versionId));
+					return HttpResponse.json(
+						createFetchResult({
+							id:
+								verifiedVersions.length === 1
+									? firstVersionId
+									: secondVersionId,
+						})
+					);
+				}
+			)
+		);
+		// The legacy response calls the version ID `deployment_id` and omits
+		// UUID hyphens. It is normalized by deploy() before being recorded.
+		mockUpload(firstVersionId.replaceAll("-", ""));
+		await runPagesToWorkersDeploy(delegation);
+		workerExists = true;
+		mockUpload(secondVersionId);
+		await runPagesToWorkersDeploy(delegation);
+		mockUpload();
+		await runPagesToWorkersDeploy(delegation);
+
+		expect(verifiedVersions).toEqual([firstVersionId, secondVersionId]);
+		expect(manifests).toHaveLength(3);
 	});
 
 	it("can redeploy after reinstalling dependencies", async ({ expect }) => {
@@ -249,6 +286,35 @@ describe("config-free delegated deployment ownership", () => {
 			"already exists in your account"
 		);
 		expect(manifests).toHaveLength(0);
+	});
+
+	it("can dry run offline after recording a successful deployment", async ({
+		expect,
+	}) => {
+		mockUpload();
+		await runPagesToWorkersDeploy(delegation);
+		workerExists = true;
+		const apiRequests: string[] = [];
+		msw.use(
+			http.all("https://api.cloudflare.com/*", ({ request }) => {
+				apiRequests.push(request.url);
+				return HttpResponse.error();
+			})
+		);
+		const actualHandler = deploy.runDeployCommandHandler;
+		const handler = vi
+			.spyOn(deploy, "runDeployCommandHandler")
+			.mockImplementationOnce((args, options) =>
+				actualHandler({ ...args, dryRun: true }, options)
+			);
+		try {
+			await runPagesToWorkersDeploy(delegation);
+		} finally {
+			handler.mockRestore();
+		}
+		expect(apiRequests).toEqual([]);
+		expect(manifests).toHaveLength(1);
+		expect(std.out).toContain("--dry-run: exiting now.");
 	});
 
 	it("reports success even if the local ownership record cannot be written", async ({

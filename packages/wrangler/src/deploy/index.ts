@@ -249,7 +249,7 @@ export async function runDeployCommandHandler(
 	// Merge CLI args with config into props for building and deploying
 	const { props, buildProps } = await mergeDeployConfigArgs(args, config);
 	const delegatedDeploymentTarget =
-		usesDelegatedAssets && props.accountId && props.name
+		usesDelegatedAssets && !props.dryRun && props.accountId && props.name
 			? {
 					projectPath: props.entry.projectRoot,
 					accountId: props.accountId,
