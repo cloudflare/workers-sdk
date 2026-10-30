@@ -456,7 +456,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 	});
 
-	it("a caller-supplied outputDir should be used instead of the detected project directory", async ({
+	it("should use a caller-supplied outputDir instead of the detected project directory", async ({
 		expect,
 	}) => {
 		await seed({
@@ -473,7 +473,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 	});
 
 	it.for(["astro", "next", "nuxt", "vite"])(
-		"a caller-supplied outputDir should select static assets instead of configuring %s",
+		"should select static assets for a caller-supplied outputDir instead of configuring %s",
 		async (framework, { expect }) => {
 			await seed({
 				"package.json": JSON.stringify({
@@ -497,7 +497,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 	);
 
 	it.for(["cf", "wrangler"] as const)(
-		"a caller-supplied outputDir should preserve an existing Vite deployment for %s",
+		"should preserve an existing Vite deployment for %s when outputDir is supplied",
 		async (target, { expect }) => {
 			await seed({
 				"package.json": JSON.stringify({
@@ -542,7 +542,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		{ input: "./", expected: "." },
 		{ input: "../site", expected: join("..", "site") },
 	])(
-		"a caller-supplied outputDir of $input should be normalised to $expected",
+		"should normalize a caller-supplied outputDir of $input to $expected",
 		async ({ input, expected }, { expect }) => {
 			await seed({ "public/index.html": `<h1>Hello World</h1>` });
 
@@ -554,7 +554,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		}
 	);
 
-	it("an absolute caller-supplied outputDir should be made relative to the project", async ({
+	it("should express an absolute caller-supplied outputDir relative to the project", async ({
 		expect,
 	}) => {
 		await seed({ "public/index.html": `<h1>Hello World</h1>` });
