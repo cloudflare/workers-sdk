@@ -27,12 +27,15 @@ export async function chooseAccount(ctx: C3Context) {
 		? await cf.listAccounts()
 		: await listAccounts();
 
-	let account = accounts[0];
-	if (!account) {
+	if (accounts.length === 0) {
 		throw new Error(
 			"Unable to find any accounts to deploy to! Please ensure you're logged in as a user that can deploy Workers."
 		);
-	} else if (accounts.length === 1) {
+	}
+
+	let account: C3Context["account"];
+	if (accounts.length === 1) {
+		account = accounts[0];
 		s.stop(`${brandColor("account")} ${dim(account.name)}`);
 	} else {
 		s.stop(
