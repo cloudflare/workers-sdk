@@ -7,6 +7,7 @@ import {
 } from "@cloudflare/build-output-utils";
 import {
 	generateTypes,
+	InputConfigSchema,
 	InputWorkerSchema,
 	loadAndParseConfig,
 } from "@cloudflare/config";
@@ -21,7 +22,6 @@ import {
 	getWorkerNameFromProject,
 } from "@cloudflare/workers-utils";
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
-import { defu } from "defu";
 import * as vite from "vite";
 import { PRERENDER_WORKER_DIRECTORY_NAME } from "./build-output";
 import { getCliDisplayName, isPreviewBuild } from "./build-output-env";
@@ -39,7 +39,8 @@ import type {
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type { LoadedEnv } from "@cloudflare/workers-utils/local-env";
 
-type ParsedInputConfigWithWorker = Omit<ParsedInputConfig, "worker"> & {
+/** Parsed configuration with the entry Worker required by the Vite plugin. */
+export type ParsedInputConfigWithWorker = Omit<ParsedInputConfig, "worker"> & {
 	worker: ParsedInputWorkerConfig;
 };
 
@@ -63,7 +64,6 @@ interface BaseWorkerOptions {
 type DevOnly = boolean | (() => boolean);
 
 interface EntryWorkerOptions extends BaseWorkerOptions {
-	config?: EntryWorkerConfigCustomizer;
 	/**
 	 * Whether the entry Worker should be omitted from the production build.
 	 * Can be a boolean or a function that returns a boolean. The function is
@@ -120,12 +120,6 @@ function normalizeTypes(
 	};
 }
 
-type EntryWorkerConfigCustomizer =
-	| Partial<ParsedInputWorkerConfig>
-	| ((
-			config: ParsedInputWorkerConfig
-	  ) => Partial<ParsedInputWorkerConfig> | void);
-
 type WorkerConfigProvider =
 	| InputWorkerConfig
 	| ((options: {
@@ -133,6 +127,15 @@ type WorkerConfigProvider =
 	  }) => InputWorkerConfig);
 
 export interface PluginConfig extends EntryWorkerOptions {
+	/**
+	 * Customize the loaded configuration before development or building.
+	 * The loaded configuration always includes an entry Worker.
+	 * Return a new configuration object including an entry Worker, copying any settings to preserve.
+	 * Preview uses the configuration recorded in the build output.
+	 */
+	config?: (
+		loadedConfig: ParsedInputConfigWithWorker
+	) => ParsedInputConfigWithWorker;
 	auxiliaryWorkers?: AuxiliaryWorkerOptions[];
 	/** Configuration for a dedicated prerender Worker. */
 	prerenderWorker?: PrerenderWorkerOptions;
@@ -219,24 +222,6 @@ function createDefaultWorkerConfig(name: string): ParsedInputWorkerConfig {
 		name,
 		compatibilityDate: DEFAULT_COMPAT_DATE,
 	};
-}
-
-/** Resolves the entry Worker config. */
-function resolveEntryWorkerConfig(options: {
-	workerConfig: ParsedInputWorkerConfig;
-	configCustomizer: EntryWorkerConfigCustomizer | undefined;
-}): ResolvedWorker {
-	const configResult =
-		typeof options.configCustomizer === "function"
-			? options.configCustomizer(options.workerConfig)
-			: options.configCustomizer;
-	const config = InputWorkerSchema.parse(
-		configResult
-			? defu(configResult, options.workerConfig)
-			: options.workerConfig
-	);
-
-	return resolveWorkerType({ config, isEntryWorker: true });
 }
 
 /** Resolves an auxiliary or prerender Worker config. */
@@ -377,11 +362,6 @@ export async function resolvePluginConfig(
 		mode,
 		types,
 	});
-	const settings = {
-		accountId: loadedConfig?.parsedConfig.accountId,
-		complianceRegion: loadedConfig?.parsedConfig.complianceRegion,
-	};
-	const containers = loadedConfig?.parsedConfig.containers ?? [];
 	if (loadedConfig) {
 		configPaths.add(loadedConfig.configPath);
 		for (const dep of loadedConfig.dependencies) {
@@ -392,12 +372,25 @@ export async function resolvePluginConfig(
 	// Type generation happens while loading the file above. The plugin-level
 	// customizer is intentionally applied afterwards so generated declarations
 	// only describe `cloudflare.config.ts`.
-	const entryWorkerResolvedConfig = resolveEntryWorkerConfig({
-		workerConfig:
-			loadedConfig === undefined
-				? createDefaultWorkerConfig(getWorkerNameFromProject(root))
-				: loadedConfig.parsedConfig.worker,
-		configCustomizer: pluginConfig.config,
+	const inputConfig: ParsedInputConfigWithWorker =
+		loadedConfig?.parsedConfig ?? {
+			worker: createDefaultWorkerConfig(getWorkerNameFromProject(root)),
+			containers: [],
+		};
+	const customizedConfig = pluginConfig.config
+		? InputConfigSchema.parse(pluginConfig.config(inputConfig))
+		: inputConfig;
+	if (customizedConfig.worker === undefined) {
+		throw new Error("The customized configuration must define a `worker`.");
+	}
+	const settings = {
+		accountId: customizedConfig.accountId,
+		complianceRegion: customizedConfig.complianceRegion,
+	};
+	const containers = customizedConfig.containers;
+	const entryWorkerResolvedConfig = resolveWorkerType({
+		config: customizedConfig.worker,
+		isEntryWorker: true,
 	});
 
 	const environmentNameToWorkerMap = new Map<string, Worker>();

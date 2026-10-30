@@ -48,7 +48,10 @@ export function getLocalWorkerdCompatibilityDate(_options?: {
 	return { date: DEFAULT_COMPAT_DATE, source: "workerd" };
 }
 
-export type { PluginConfig } from "./plugin-config";
+export type {
+	ParsedInputConfigWithWorker,
+	PluginConfig,
+} from "./plugin-config";
 export type { WorkerConfig } from "@cloudflare/config";
 
 const sharedContext: SharedContext = {
