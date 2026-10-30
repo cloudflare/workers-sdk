@@ -309,7 +309,6 @@ const CacheSchema = z.strictObject({
 /**
  * Binding types that can only be defined once per worker.
  */
-/** Binding types a Worker can only have one of. */
 export const SINGLETON_BINDING_TYPES: ReadonlySet<string> = new Set([
 	"ai",
 	"assets",
