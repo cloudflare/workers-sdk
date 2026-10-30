@@ -7,6 +7,7 @@
 //   - It builds the shared auth layer via `createWranglerAuth(...)`, injecting
 //     the few wrangler primitives that can't move into the shared package: the
 //     logger, the interactive `prompt` / `select`, and the User-Agent string.
+//     The `cf-wrangler` delegate selects cf's auth layer via `useCfAuth`.
 //   - It re-exports the resulting helpers as thin wrappers so the historical
 //     `from "../user"` import path — and the `vi.mock` / `vi.spyOn` seams in the
 //     test suite — keep working unchanged.
@@ -15,6 +16,7 @@
 //     than shared auth machinery.
 
 import { getAuthFromEnv as getAuthFromEnvShared } from "@cloudflare/workers-auth";
+import { createCfAuth } from "@cloudflare/workers-auth/cf";
 import {
 	createWranglerAuth,
 	DefaultScopes,
@@ -33,6 +35,7 @@ import type {
 	TemporaryAccountRequest,
 	UserAuthConfig,
 } from "@cloudflare/workers-auth";
+import type { AuthContext } from "@cloudflare/workers-auth/cf";
 import type {
 	ApiCredentials,
 	ComplianceConfig,
@@ -55,7 +58,7 @@ export { WRANGLER_KEYRING_SERVICE_NAME } from "@cloudflare/workers-auth/wrangler
  *   - the interactive `prompt` / `select` (with the `select` prompt's
  *     non-interactive `NoDefaultValueProvided` signal).
  */
-const auth = createWranglerAuth({
+const authContext: AuthContext = {
 	logger,
 	// Temporary-account notices go to stderr so they never corrupt command
 	// output on stdout (JSON, piped values), and stay visible when `--json`
@@ -68,7 +71,15 @@ const auth = createWranglerAuth({
 	select,
 	isNoDefaultValueProvidedError: (error) =>
 		error instanceof NoDefaultValueProvided,
-});
+};
+
+let auth = createWranglerAuth(authContext);
+
+/** Select cf's credential store and OAuth flow for the `cf-wrangler` delegate. */
+export function useCfAuth(profile: string): void {
+	auth = createCfAuth(authContext);
+	auth.setProfile(profile);
+}
 
 /**
  * Set the active auth profile for all subsequent credential lookups.

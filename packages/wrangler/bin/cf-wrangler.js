@@ -61,11 +61,12 @@ function runCfWranglerDevFromArgs(parsedArgs) {
 
 function createDevOptions(parsedArgs) {
 	// Build wrangler dev's full (yargs-derived) options object. Every field
-	// must be present; we set the four accepted flags, force cf's new config
+	// must be present; we set the accepted flags, force cf's new config
 	// format, and otherwise use `wrangler dev`'s defaults.
 	return {
 		_: [],
 		$0: "",
+		profile: parsedArgs.profile,
 		env: parsedArgs.mode,
 		port: parsedArgs.port,
 		host: parsedArgs.host,

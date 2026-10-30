@@ -5,6 +5,7 @@
 import { parseArgs as nodeParseArgs } from "node:util";
 
 export interface DevArgs {
+	profile?: string;
 	mode?: string; // maps to wrangler's `env` (named environment)
 	port?: number;
 	host?: string; // acts-as-origin hostname (`dev.origin.hostname`)
@@ -32,6 +33,7 @@ export function parseDevArgs(argv: string[]): DevArgs {
 		parsed = nodeParseArgs({
 			args: argv,
 			options: {
+				profile: { type: "string" },
 				mode: { type: "string" },
 				host: { type: "string" },
 				// `node:util.parseArgs` has no `number` type; coerce below.
@@ -48,6 +50,9 @@ export function parseDevArgs(argv: string[]): DevArgs {
 	}
 
 	const out: DevArgs = {};
+	if (parsed.values.profile !== undefined) {
+		out.profile = parsed.values.profile;
+	}
 	if (parsed.values.mode !== undefined) {
 		out.mode = parsed.values.mode;
 	}

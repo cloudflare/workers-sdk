@@ -34,8 +34,8 @@ contract so the parent can drive either impl interchangeably.
   verbs today; future verbs (`deploy`) follow the same shape.
   Unknown/missing verbs exit `2` (this doubles as the parent's
   version-detection signal — no JSON handshake).
-- **Shared flag vocabulary (`dev`).** For `dev`, only `--mode`, `--port`,
-  `--host`, `--local` are accepted, mirroring `cf-wrangler` exactly.
+- **Shared flag vocabulary (`dev`).** For `dev`, only `--profile`, `--mode`,
+  `--port`, `--host`, `--local` are accepted, mirroring `cf-wrangler` exactly.
   Parsed with `node:util.parseArgs` strict mode → unknown flags exit `2`.
   Do NOT add flags here unless `cf-wrangler` grows them too. (There is no
   `--config` flag: the wrangler config is discovered by `cloudflare()`
@@ -61,7 +61,9 @@ contract so the parent can drive either impl interchangeably.
 - **`dev`** `cf-vite dev` boots Vite via `createServer()`
   against the user's own `vite.config.ts` (which must include
   `cloudflare()`). Plugin-owned flags are bridged via env vars the plugin
-  already reads (`--local` → `CLOUDFLARE_VITE_FORCE_LOCAL`); Vite-owned
+  reads (`--local` → `CLOUDFLARE_VITE_FORCE_LOCAL`, `--profile` →
+  `CLOUDFLARE_VITE_AUTH_PROFILE`); the auth bridge passes the explicit profile
+  to cf profile resolution before falling back to directory bindings. Vite-owned
   flags go through inline config (`--port`/`--host` → `server.*`,
   `--mode` → `mode`).
 - **`--local`** forces remote bindings off. There is no plugin env knob
