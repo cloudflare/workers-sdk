@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { realPackagePath } from "./helpers";
 import { cloudflarePool } from "./pool";
 import type { WorkersPoolOptions } from "./config";
 import type { ProvidedContext } from "vitest";
@@ -123,12 +124,31 @@ export function cloudflareTest(
 			// https://github.com/vitejs/vite/blob/v5.1.4/packages/vite/src/node/plugins/resolve.ts#L175
 			config.ssr.target = "webworker";
 		},
-		resolveId(id) {
-			if (id === "cloudflare:test" || id.startsWith("\0cloudflare:test-")) {
-				// Remap IDs from other projects sharing the cache or older sessions.
-				// Vitest invalidates cached importers when resolved dependencies change.
-				return cloudflareTestId;
-			}
+		resolveId: {
+			order: "pre",
+			async handler(id, importer, resolveOptions) {
+				if (id === "cloudflare:test" || id.startsWith("\0cloudflare:test-")) {
+					// Remap IDs from other projects sharing the cache or older sessions.
+					// Vitest invalidates cached importers when resolved dependencies change.
+					return cloudflareTestId;
+				}
+				// `this.resolve()` drops `kind`, so the module fallback service applies
+				// `realPackagePath()` to `require()` calls itself.
+				if (
+					!this.environment.config.resolve.preserveSymlinks ||
+					resolveOptions.kind === "require-call"
+				) {
+					return;
+				}
+				const resolved = await this.resolve(id, importer, {
+					...resolveOptions,
+					skipSelf: true,
+				});
+				if (resolved === null || resolved.external) {
+					return resolved;
+				}
+				return { ...resolved, id: realPackagePath(resolved.id) };
+			},
 		},
 		async load(id) {
 			if (id === cloudflareTestId) {
