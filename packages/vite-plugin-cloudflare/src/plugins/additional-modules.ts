@@ -1,7 +1,9 @@
 import assert from "node:assert";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
+import { DEFAULT_MODULE_RULES } from "@cloudflare/workers-utils";
 import MagicString from "magic-string";
+import { globsToRegExps } from "miniflare";
 import * as vite from "vite";
 import { cleanUrl, createPlugin } from "../utils";
 import type { ModuleType } from "@cloudflare/config";
@@ -158,11 +160,16 @@ type ModuleRules = Array<{
 	pattern: RegExp;
 }>;
 
-const moduleRules: ModuleRules = [
-	{ type: "CompiledWasm", pattern: /\.wasm(\?module)?$/ },
-	{ type: "Data", pattern: /\.bin$/ },
-	{ type: "Text", pattern: /\.(txt|html|sql)$/ },
-];
+// The default module rules, shared with Wrangler and the Vitest plugin
+const moduleRules: ModuleRules = DEFAULT_MODULE_RULES.flatMap(
+	({ type, globs }) =>
+		isAdditionalModuleType(type)
+			? globsToRegExps(globs, { endAnchor: true }).include.map((pattern) => ({
+					type,
+					pattern,
+				}))
+			: []
+);
 
 const subpathImportRE = /^#/;
 const moduleRuleFilters = [
