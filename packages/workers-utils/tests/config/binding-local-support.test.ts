@@ -1,5 +1,113 @@
 import { beforeEach, describe, it, vi } from "vitest";
-import { validateBindingRemoteSetting } from "../../src/config/binding-local-support";
+import {
+	resolveBindingRemote,
+	validateBindingRemoteSetting,
+} from "../../src/config/binding-local-support";
+import type { Binding } from "../../src/types";
+
+describe("resolveBindingRemote", () => {
+	it.for<{
+		type: Binding["type"];
+		remote: boolean | undefined;
+		remoteBindingsDisabled: boolean;
+		expected: boolean;
+	}>([
+		// Remote by default with local opt-in.
+		{
+			type: "artifacts",
+			remote: undefined,
+			remoteBindingsDisabled: false,
+			expected: true,
+		},
+		{
+			type: "artifacts",
+			remote: true,
+			remoteBindingsDisabled: false,
+			expected: true,
+		},
+		{
+			type: "artifacts",
+			remote: false,
+			remoteBindingsDisabled: false,
+			expected: false,
+		},
+		{
+			type: "artifacts",
+			remote: undefined,
+			remoteBindingsDisabled: true,
+			expected: false,
+		},
+		{
+			type: "artifacts",
+			remote: true,
+			remoteBindingsDisabled: true,
+			expected: false,
+		},
+		{
+			type: "artifacts",
+			remote: false,
+			remoteBindingsDisabled: true,
+			expected: false,
+		},
+		// Local by default with remote opt-in.
+		{
+			type: "kv_namespace",
+			remote: undefined,
+			remoteBindingsDisabled: false,
+			expected: false,
+		},
+		{
+			type: "kv_namespace",
+			remote: true,
+			remoteBindingsDisabled: false,
+			expected: true,
+		},
+		{
+			type: "kv_namespace",
+			remote: true,
+			remoteBindingsDisabled: true,
+			expected: false,
+		},
+		{
+			type: "vectorize",
+			remote: true,
+			remoteBindingsDisabled: false,
+			expected: true,
+		},
+		{
+			type: "vectorize",
+			remote: undefined,
+			remoteBindingsDisabled: false,
+			expected: false,
+		},
+		// Fixed modes ignore the setting.
+		{
+			type: "ratelimit",
+			remote: true,
+			remoteBindingsDisabled: false,
+			expected: false,
+		},
+		{
+			type: "ai",
+			remote: undefined,
+			remoteBindingsDisabled: false,
+			expected: true,
+		},
+		{
+			type: "ai",
+			remote: undefined,
+			remoteBindingsDisabled: true,
+			expected: true,
+		},
+	])(
+		"$type with remote=$remote and remoteBindingsDisabled=$remoteBindingsDisabled is remote: $expected",
+		({ type, remote, remoteBindingsDisabled, expected }, { expect }) => {
+			expect(
+				resolveBindingRemote(type, remote, { remoteBindingsDisabled })
+			).toBe(expected);
+		}
+	);
+});
 
 describe("validateBindingRemoteSetting", () => {
 	const warn = vi.fn();
@@ -90,6 +198,34 @@ describe("validateBindingRemoteSetting", () => {
 			expect(() =>
 				validateBindingRemoteSetting("flagship", undefined, warn)
 			).not.toThrow();
+			expect(warn).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("remote-default bindings with local opt-in", () => {
+		it("warns when `remote` is omitted, naming the binding", ({ expect }) => {
+			validateBindingRemoteSetting("artifacts", undefined, warn, {
+				binding: "REPOS",
+			});
+			expect(warn).toHaveBeenCalledWith(
+				"Artifacts binding REPOS uses the deployed resource. Set `remote: false` to use the local simulator, or `remote: true` to silence this warning."
+			);
+		});
+
+		it("does not warn when remote bindings are disabled", ({ expect }) => {
+			validateBindingRemoteSetting("artifacts", undefined, warn, {
+				binding: "REPOS",
+				remoteBindingsDisabled: true,
+			});
+			expect(warn).not.toHaveBeenCalled();
+		});
+
+		it("does not throw or warn for an explicit setting", ({ expect }) => {
+			for (const remote of [true, false]) {
+				expect(() =>
+					validateBindingRemoteSetting("artifacts", remote, warn)
+				).not.toThrow();
+			}
 			expect(warn).not.toHaveBeenCalled();
 		});
 	});

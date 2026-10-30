@@ -641,6 +641,7 @@ const V4WorkerOptionsShapeSchema = z.object({
 			z.string(),
 			z.object({
 				namespace: z.string(),
+				remote: z.boolean().optional(),
 				remoteProxyConnectionString:
 					RemoteProxyConnectionStringSchema.optional(),
 			})
@@ -985,7 +986,10 @@ export type V4WorkerOptionsShape = {
 	>;
 	helloWorld?: Record<string, { enable_timer?: boolean }>;
 	flagship?: Record<string, { app_id: string } & V4RemoteBinding>;
-	artifacts?: Record<string, { namespace: string } & V4RemoteBinding>;
+	artifacts?: Record<
+		string,
+		{ namespace: string; remote?: boolean } & V4RemoteBinding
+	>;
 	workerLoaders?: Record<string, Record<string, never>>;
 	media?: V4RemoteBindingWithName;
 	versionMetadata?: string;

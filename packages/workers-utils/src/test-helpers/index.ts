@@ -12,6 +12,7 @@ export {
 	mockQueuedDate,
 	mockStartDate,
 } from "./normalize";
+export { pushGitFixture } from "./git";
 export { runInTempDir } from "./run-in-tmp";
 export { seed } from "./seed";
 export {

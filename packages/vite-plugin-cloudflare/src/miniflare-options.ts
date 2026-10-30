@@ -39,7 +39,10 @@ import {
 import { getInputInspectorPort } from "./debug";
 import { resolveLocalBindings } from "./local-env";
 import { additionalModuleRE } from "./plugins/additional-modules";
-import { getRemoteBindings } from "./remote-bindings";
+import {
+	getRemoteBindings,
+	warnForDefaultRemoteBindings,
+} from "./remote-bindings";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
 import { checkForNpmUpdate } from "./update-check";
 import {
@@ -508,6 +511,11 @@ export async function getDevMiniflareOptions(
 					[...resolvedPluginConfig.environmentNameToWorkerMap].map(
 						async ([environmentName, worker]) => {
 							const bindings = getRemoteBindings(worker.config);
+							warnForDefaultRemoteBindings(
+								bindings,
+								resolvedPluginConfig.remoteBindings,
+								(message) => viteDevServer.config.logger.warn(message)
+							);
 
 							const preExistingRemoteProxySession =
 								remoteProxySessionsDataMap.get(worker.config.name);
@@ -843,6 +851,11 @@ export async function getPreviewMiniflareOptions(
 		resolvedPluginConfig.workers.map(async (previewWorker) => {
 			const workerConfig = previewWorker.config;
 			const bindings = getRemoteBindings(workerConfig);
+			warnForDefaultRemoteBindings(
+				bindings,
+				resolvedPluginConfig.remoteBindings,
+				(message) => vitePreviewServer.config.logger.warn(message)
+			);
 			const preExistingRemoteProxySessionData = remoteProxySessionsDataMap.get(
 				workerConfig.name
 			);

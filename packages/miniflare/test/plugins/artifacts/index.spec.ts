@@ -28,7 +28,7 @@ import {
 } from "../../../src/plugins/artifacts/git-sidecar";
 import { repositoryPath } from "../../../src/plugins/artifacts/storage";
 import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
-import type { MiniflareOptions } from "miniflare";
+import type { MiniflareOptions, RemoteProxyConnectionString } from "miniflare";
 
 const exec = promisify(execFile);
 const SCRIPT = `
@@ -537,19 +537,48 @@ test("artifacts: a stopped backend is replaced on the next config update", async
 	}
 });
 
-test("artifacts: omitted remote preserves remote routing without host Git", async ({
+test.for([null, true] as const)(
+	"artifacts: remote=%s with a remote proxy does not need host Git or local storage",
+	async (remote, { expect }) => {
+		const resourcePersistencePath = await useTmp();
+		const emptyPath = await useTmp();
+		const previousPath = process.env.PATH;
+		process.env.PATH = emptyPath;
+		try {
+			const base = options("test", "REPOS", remote);
+			const mf = new Miniflare({
+				...base,
+				resourcePersistencePath,
+				workers: base.workers.map((worker) => ({
+					...worker,
+					dev: {
+						// Never contacted: startup only wires the binding to the proxy.
+						remoteProxyConnectionString: new URL(
+							"http://127.0.0.1:1"
+						) as RemoteProxyConnectionString,
+					},
+				})),
+			});
+			useDispose(mf);
+			await expect(mf.ready).resolves.toBeDefined();
+		} finally {
+			process.env.PATH = previousPath;
+		}
+		await expect(
+			stat(path.join(resourcePersistencePath, "artifacts"))
+		).rejects.toMatchObject({
+			code: "ENOENT",
+		});
+	}
+);
+
+test("artifacts: omitted remote without a remote proxy uses the local simulator", async ({
 	expect,
 }) => {
-	const root = await useTmp();
-	const previousPath = process.env.PATH;
-	process.env.PATH = root;
-	try {
-		const mf = new Miniflare(options("test", "REPOS", null));
-		useDispose(mf);
-		await expect(mf.ready).resolves.toBeDefined();
-	} finally {
-		process.env.PATH = previousPath;
-	}
+	// `wrangler dev --local` and Vite `remoteBindings: false` start no proxy.
+	const mf = new Miniflare(options("test", "REPOS", null));
+	useDispose(mf);
+	expect((await rpc(mf, "create", ["offline"])).name).toBe("offline");
 });
 
 test("artifacts: rejects invalid local namespace before starting services", async ({
@@ -1319,7 +1348,7 @@ test("artifacts: missing Git gives an actionable error during local startup", as
 	const previousPath = process.env.PATH;
 	process.env.PATH = root;
 	try {
-		const mf = new Miniflare(options());
+		const mf = new Miniflare(options("test", "REPOS", false));
 		await expect(mf.ready).rejects.toThrow(
 			/requires Git 2\.32 or newer on PATH.*Install Git.*restart/i
 		);

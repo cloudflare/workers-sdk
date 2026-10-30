@@ -1,6 +1,7 @@
 import { stripVTControlCharacters } from "node:util";
 import chalk from "chalk";
 import { extractBindingsOfType, isUnsafeBindingType } from "./binding-utils";
+import { resolveBindingRemote } from "./config/binding-local-support";
 import { getBindingTypeFriendlyName } from "./config/validation";
 import type { ContainerApp } from "./config/environment";
 import type { Binding } from "./types";
@@ -459,12 +460,16 @@ export function printBindings(
 
 	if (artifacts.length > 0) {
 		output.push(
-			...artifacts.map(({ binding, namespace }) => {
+			...artifacts.map(({ binding, namespace, remote }) => {
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("artifacts"),
 					value: namespace,
-					mode: getMode({ isSimulatedLocally: false }),
+					mode: getMode({
+						isSimulatedLocally: !resolveBindingRemote("artifacts", remote, {
+							remoteBindingsDisabled: context.remoteBindingsDisabled,
+						}),
+					}),
 				};
 			})
 		);
