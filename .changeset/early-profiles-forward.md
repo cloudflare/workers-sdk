@@ -2,7 +2,6 @@
 "wrangler": minor
 "@cloudflare/vite-plugin": minor
 "@cloudflare/workers-auth": minor
-"@cloudflare/remote-bindings": minor
 ---
 
 Support `CLOUDFLARE_AUTH_PROFILE` for shared authentication profile selection
