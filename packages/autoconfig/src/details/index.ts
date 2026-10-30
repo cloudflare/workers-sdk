@@ -101,6 +101,14 @@ async function findAssetsDir(from: string): Promise<string | undefined> {
 }
 
 /**
+ * Expresses a caller-supplied output directory relative to the project, matching
+ * the shape of a detected one (e.g. `"public"`, or `"."` for the project itself).
+ */
+function normalizeOutputDir(projectPath: string, outputDir: string): string {
+	return relative(projectPath, resolve(projectPath, outputDir)) || ".";
+}
+
+/**
  * Detects project details needed for autoconfig: framework, package manager,
  * output directory, worker name, commands, and whether the project is already configured.
  * By default, the project is considered configured when `cloudflare.config.ts`
@@ -114,6 +122,7 @@ export async function getDetailsForAutoConfig({
 	projectPath = process.cwd(),
 	wranglerConfig,
 	target = "cf",
+	outputDir: requestedOutputDir,
 	context,
 }: {
 	/** The path to the project, defaults to cwd. */
@@ -122,6 +131,16 @@ export async function getDetailsForAutoConfig({
 	wranglerConfig?: Config;
 	/** The configuration target, defaults to cf. */
 	target?: AutoConfigTarget;
+	/**
+	 * A directory of built static assets the caller has already chosen,
+	 * for example the directory passed to `wrangler pages deploy <directory>`.
+	 * Selects static-asset configuration instead of framework configuration, so
+	 * a framework adapter or build cannot replace the requested assets. Existing
+	 * Workers and Pages configurations, including framework-managed deployments,
+	 * retain their usual detection behavior.
+	 * Relative paths are resolved against `projectPath`.
+	 */
+	outputDir?: string;
 	/** The autoconfig context providing logger, dialogs, and other dependencies. */
 	context: AutoConfigContext;
 }): Promise<AutoConfigDetails> {
@@ -151,10 +170,20 @@ export async function getDetailsForAutoConfig({
 	const { detectedFramework, packageManager, isWorkspaceRoot } =
 		await detectFramework(projectPath, context, { wranglerConfig, target });
 
-	const framework = getFrameworkClassInstance(
+	const detectedFrameworkInstance = getFrameworkClassInstance(
 		detectedFramework.framework.id,
 		target
 	);
+	const configured =
+		hasCloudflareConfig ||
+		detectedFrameworkInstance.isConfigured(projectPath, { target });
+	const useStaticAssets =
+		!configured &&
+		requestedOutputDir !== undefined &&
+		detectedFramework.framework.id !== "cloudflare-pages";
+	const framework = useStaticAssets
+		? getFrameworkClassInstance(staticFramework.id, target)
+		: detectedFrameworkInstance;
 	const packageJsonPath = resolve(projectPath, "package.json");
 
 	let packageJson: PackageJSON | undefined;
@@ -168,22 +197,22 @@ export async function getDetailsForAutoConfig({
 		logger.debug("No package.json found when running autoconfig");
 	}
 
-	const configured =
-		hasCloudflareConfig || framework.isConfigured(projectPath, { target });
-
 	const outputDir =
-		detectedFramework?.dist ?? (await findAssetsDir(projectPath));
+		requestedOutputDir !== undefined && framework.id === staticFramework.id
+			? normalizeOutputDir(projectPath, requestedOutputDir)
+			: (detectedFramework?.dist ?? (await findAssetsDir(projectPath)));
 
 	const baseDetails = {
 		projectPath,
 		framework,
 		packageJson,
 		packageManager,
-		devCommand: getProjectCommand(detectedFramework.devCommand, packageManager),
-		buildCommand: getProjectCommand(
-			detectedFramework.buildCommand,
-			packageManager
-		),
+		devCommand: useStaticAssets
+			? undefined
+			: getProjectCommand(detectedFramework.devCommand, packageManager),
+		buildCommand: useStaticAssets
+			? undefined
+			: getProjectCommand(detectedFramework.buildCommand, packageManager),
 		env: framework.env,
 		workerName: getWorkerName(packageJson?.name, projectPath),
 	};

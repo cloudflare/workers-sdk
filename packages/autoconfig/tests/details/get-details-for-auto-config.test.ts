@@ -456,6 +456,119 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 	});
 
+	it("should use a caller-supplied outputDir instead of the detected project directory", async ({
+		expect,
+	}) => {
+		await seed({
+			"index.html": `<h1>Hello World</h1>`,
+			".env": "SECRET=1",
+			"public/index.html": `<h1>Hello World</h1>`,
+		});
+
+		await expect(
+			details.getDetailsForAutoConfig({ context, outputDir: "public" })
+		).resolves.toMatchObject({
+			outputDir: "public",
+		});
+	});
+
+	it.for(["astro", "next", "nuxt", "vite"])(
+		"should select static assets for a caller-supplied outputDir instead of configuring %s",
+		async (framework, { expect }) => {
+			await seed({
+				"package.json": JSON.stringify({
+					name: "my-app",
+					dependencies: { [framework]: "5" },
+					scripts: { build: `${framework} build` },
+				}),
+				"static/index.html": `<h1>Hello World</h1>`,
+			});
+
+			await expect(
+				details.getDetailsForAutoConfig({ context, outputDir: "static" })
+			).resolves.toMatchObject({
+				configured: false,
+				framework: expect.objectContaining({ id: "static" }),
+				outputDir: "static",
+				buildCommand: undefined,
+				devCommand: undefined,
+			});
+		}
+	);
+
+	it.for(["cf", "wrangler"] as const)(
+		"should preserve an existing Vite deployment for %s when outputDir is supplied",
+		async (target, { expect }) => {
+			await seed({
+				"package.json": JSON.stringify({
+					name: "my-vite-app",
+					dependencies: { vite: "8", "@cloudflare/vite-plugin": "1" },
+					scripts: {
+						build: "vite build",
+						deploy: "vite build && wrangler deploy",
+					},
+				}),
+				"vite.config.ts": `import { cloudflare } from "@cloudflare/vite-plugin";
+					import { defineConfig } from "vite";
+					export default defineConfig({ plugins: [cloudflare()] });`,
+				"public/index.html": "<h1>Hello World</h1>",
+				...(target === "cf"
+					? { "cloudflare.config.ts": "export default {};" }
+					: {}),
+			});
+			const existingDetails = await details.getDetailsForAutoConfig({
+				context,
+				target,
+			});
+
+			const result = await details.getDetailsForAutoConfig({
+				context,
+				target,
+				outputDir: "public",
+			});
+
+			expect(result).toMatchObject({
+				configured: true,
+				framework: { id: "vite" },
+			});
+			expect(result).toEqual(existingDetails);
+		}
+	);
+
+	it.for([
+		{ input: "./public/", expected: "public" },
+		{ input: "public/nested/..", expected: "public" },
+		{ input: ".", expected: "." },
+		{ input: "./", expected: "." },
+		{ input: "../site", expected: join("..", "site") },
+	])(
+		"should normalize a caller-supplied outputDir of $input to $expected",
+		async ({ input, expected }, { expect }) => {
+			await seed({ "public/index.html": `<h1>Hello World</h1>` });
+
+			await expect(
+				details.getDetailsForAutoConfig({ context, outputDir: input })
+			).resolves.toMatchObject({
+				outputDir: expected,
+			});
+		}
+	);
+
+	it("should express an absolute caller-supplied outputDir relative to the project", async ({
+		expect,
+	}) => {
+		await seed({ "public/index.html": `<h1>Hello World</h1>` });
+
+		await expect(
+			details.getDetailsForAutoConfig({
+				context,
+				outputDir: join(process.cwd(), "public"),
+			})
+		).resolves.toMatchObject({
+			outputDir: "public",
+		});
+	});
+
 	const workerNamesToTest = [
 		{ rawName: "my-project-1", normalizedName: "my-project-1" },
 		{
