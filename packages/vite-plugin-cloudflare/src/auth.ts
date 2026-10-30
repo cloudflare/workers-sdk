@@ -29,6 +29,11 @@ export const USER_AGENT = `vite-plugin/${packageVersion}`;
  * Set up cf authentication using the profile associated with the Vite project.
  */
 export function createAuth(profileDir: string, logger: Logger) {
+	const profile = createCfProfileStore({ logger }).resolve({ cwd: profileDir });
+	return createAuthForProfile(profile, logger);
+}
+
+function createAuthForProfile(profile: string, logger: Logger): CloudflareAuth {
 	const context = {
 		logger,
 		userAgent: USER_AGENT,
@@ -65,8 +70,7 @@ export function createAuth(profileDir: string, logger: Logger) {
 			error instanceof AccountSelectionUnavailable,
 	};
 	const auth = createCfAuth(context);
-	const profileStore = createCfProfileStore({ logger });
-	auth.setProfile(profileStore.resolve({ cwd: profileDir }));
+	auth.setProfile(profile);
 	return auth;
 }
 
@@ -74,7 +78,8 @@ export function createAuth(profileDir: string, logger: Logger) {
  * Get the cf auth hook for remote bindings sessions.
  *
  * Hooks are cached because `maybeStartOrUpdateRemoteProxySession()` restarts
- * the session whenever it receives a different hook.
+ * the session whenever it receives a different hook. A changed profile needs
+ * a new hook so that the session uses the newly selected credentials.
  *
  * @param hooks - Hook cache that persists across Vite server restarts.
  * @param profileDir - Directory used to resolve the cf auth profile.
@@ -88,13 +93,14 @@ export function getRemoteBindingsAuth(
 	accountId: string | undefined,
 	logger: Logger
 ): AsyncHook<CfAccount> {
-	const key = JSON.stringify([profileDir, accountId]);
+	const profile = createCfProfileStore({ logger }).resolve({ cwd: profileDir });
+	const key = JSON.stringify([profileDir, accountId, profile]);
 	let hook = hooks.get(key);
 	if (hook === undefined) {
 		let auth: CloudflareAuth | undefined;
 		hook = async () => {
-			// Only resolve the profile once a session actually needs credentials
-			auth ??= createAuth(profileDir, logger);
+			// Only initialize authentication once a session actually needs credentials
+			auth ??= createAuthForProfile(profile, logger);
 			return {
 				accountId: await auth.requireAuth(
 					accountId ? { account_id: accountId } : {}

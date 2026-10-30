@@ -64,6 +64,10 @@ contract so the parent can drive either impl interchangeably.
   already reads (`--local` → `CLOUDFLARE_VITE_FORCE_LOCAL`); Vite-owned
   flags go through inline config (`--port`/`--host` → `server.*`,
   `--mode` → `mode`).
+- **Authentication.** Profiles resolve through `@cloudflare/workers-auth`, including
+  `CLOUDFLARE_AUTH_PROFILE` inherited from the parent. Remote-binding auth hooks
+  are cached by the resolved profile as well as project directory and account,
+  so a profile change on restart replaces the session's authentication.
 - **`--local`** forces remote bindings off. There is no plugin env knob
   for `remoteBindings` other than `CLOUDFLARE_VITE_FORCE_LOCAL`, which
   `resolvePluginConfig` in `plugin-config.ts` honours by overriding the
