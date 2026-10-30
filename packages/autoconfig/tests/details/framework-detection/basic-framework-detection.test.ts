@@ -47,6 +47,31 @@ describe("detectFramework() / basic framework detection", () => {
 		expect(result.detectedFramework?.buildCommand).toContain("astro build");
 	});
 
+	it("uses Vite commands for SolidStart 2 when targeting cf", async ({
+		expect,
+	}) => {
+		await seed({
+			"package.json": JSON.stringify({
+				dependencies: { "@solidjs/start": "^2.1.0" },
+			}),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+			"node_modules/@solidjs/start/package.json": JSON.stringify({
+				name: "@solidjs/start",
+				version: "2.1.0",
+			}),
+		});
+
+		const result = await detectFramework(process.cwd(), context, {
+			target: "cf",
+		});
+
+		expect(result.detectedFramework).toMatchObject({
+			framework: { id: "solid-start" },
+			buildCommand: "vite build",
+			devCommand: "vite dev",
+		});
+	});
+
 	it("clears commands for an unknown framework when targeting cf", async ({
 		expect,
 	}) => {
