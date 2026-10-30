@@ -1,5 +1,13 @@
 # create-cloudflare
 
+## 2.74.6
+
+### Patch Changes
+
+- [#16524](https://github.com/cloudflare/workers-sdk/pull/16524) [`3819800`](https://github.com/cloudflare/workers-sdk/commit/38198002a3ae331d214b2bc78c6574275203f3ed) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Preserve accounts with duplicate display names during account selection
+
+  Create Cloudflare now keeps accounts by their IDs and includes each ID in the selection prompt, so accounts with the same name remain distinct choices. This applies to both Wrangler and cf projects.
+
 ## 2.74.5
 
 ### Patch Changes

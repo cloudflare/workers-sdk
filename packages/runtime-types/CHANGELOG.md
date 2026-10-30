@@ -1,5 +1,16 @@
 # @cloudflare/runtime-types
 
+## 0.1.20
+
+### Patch Changes
+
+- [#16594](https://github.com/cloudflare/workers-sdk/pull/16594) [`effe4ed`](https://github.com/cloudflare/workers-sdk/commit/effe4ed13b1677744428cfb0c37e4512ec5d52f7) Thanks [@jaeminbird](https://github.com/jaeminbird)! - Fix `wrangler types --check` reporting CRLF types files as out of date
+
+  When `worker-configuration.d.ts` was checked out with CRLF line endings (for example with Git's `core.autocrlf=true`, the default on Windows), the runtime header kept a trailing `\r` and never matched the expected header. `wrangler types --check` then always failed, `wrangler dev` always warned that the types might be out of date, and cached runtime types were never reused. Generated types files are now read with either line ending.
+
+- Updated dependencies [[`009ca6e`](https://github.com/cloudflare/workers-sdk/commit/009ca6e0483fd4a89f44bd02251b0a64491dab14)]:
+  - miniflare@5.20261023.4-beta
+
 ## 0.1.19
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # miniflare
 
+## 5.20261023.4-beta
+
+### Minor Changes
+
+- [#16514](https://github.com/cloudflare/workers-sdk/pull/16514) [`009ca6e`](https://github.com/cloudflare/workers-sdk/commit/009ca6e0483fd4a89f44bd02251b0a64491dab14) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `resolveLocalBindings()`
+
+  It fills in a Worker's secrets and Hyperdrive connection strings for local development, and warns about secrets that have no local value.
+
 ## 5.20261023.3-beta
 
 ### Patch Changes
