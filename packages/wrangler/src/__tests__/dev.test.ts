@@ -3239,6 +3239,34 @@ describe("wrangler dev", { concurrent: false }, () => {
 				expect(std.out).not.toContain("types might be out of date");
 				expect(std.out).not.toContain("types looked out of date");
 			});
+
+			it("should not warn about up to date types with CRLF line endings", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.ts",
+					vars: { EXISTING_VAR: "existing value" },
+				});
+				fs.writeFileSync("index.ts", `export default {};`);
+
+				generateRuntimeTypesSpy.mockRestore();
+
+				await runWrangler("types");
+
+				// Simulate a checkout with `core.autocrlf=true` (the Git for Windows default)
+				const typesContent = fs.readFileSync(
+					DEFAULT_WORKERS_TYPES_FILE_PATH,
+					"utf-8"
+				);
+				fs.writeFileSync(
+					DEFAULT_WORKERS_TYPES_FILE_PATH,
+					typesContent.replace(/\n/g, "\r\n")
+				);
+
+				await runWranglerUntilConfig("dev");
+
+				expect(std.out).not.toContain("types might be out of date");
+			});
 		});
 	});
 
