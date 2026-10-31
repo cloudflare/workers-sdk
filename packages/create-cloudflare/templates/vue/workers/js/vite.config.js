@@ -11,8 +11,11 @@ export default defineConfig({
 	plugins: [
 		vue(),
 		vueDevTools(),
-		cloudflare()
+		cloudflare({ viteEnvironment: { name: "worker" } })
 	],
+	environments: {
+		worker: { build: { sourcemap: true } },
+	},
 	resolve: {
 		alias: {
 			'@': fileURLToPath(new URL('./src', import.meta.url))
