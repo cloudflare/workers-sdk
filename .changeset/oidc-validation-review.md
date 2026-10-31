@@ -1,6 +1,5 @@
 ---
 "@cloudflare/workers-utils": minor
-"@cloudflare/remote-bindings": minor
 "miniflare": minor
 ---
 
