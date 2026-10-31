@@ -1024,6 +1024,17 @@ export class ServiceDesignator extends $.Struct {
 	_initProps(): ServiceDesignator_Props {
 		return $.utils.getAs(ServiceDesignator_Props, this);
 	}
+	/**
+	 * Standalone internal ingress routing only. Preserve ordinary HTTP credential semantics.
+	 * Local service graph configuration establishes no production authentication.
+	 *
+	 */
+	get suppressNativeCaller(): boolean {
+		return $.utils.getBit(16, this);
+	}
+	set suppressNativeCaller(value: boolean) {
+		$.utils.setBit(16, value, this);
+	}
 	toString(): string {
 		return "ServiceDesignator_" + super.toString();
 	}

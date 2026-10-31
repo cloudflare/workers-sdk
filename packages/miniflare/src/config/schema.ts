@@ -614,6 +614,8 @@ export const DevConfigSchema = z.strictObject({
 	unsafeDirectSockets: z.array(UnsafeDirectSocketSchema).optional(),
 	unsafeOverrideFetchWorker: z.string().optional(),
 	unsafeEvalBinding: z.string().optional(),
+	/** Test-only native verifier injection. Never deploy or infer trust from this mock. */
+	unsafeWorkloadIdentityService: WorkerBindingSchema.optional(),
 	useModuleFallbackService: z.boolean().optional(),
 	/** Whether this Worker is 'public' - whether should be advertised in the dev registry
 	 * and whether it should be included in local obs capture. Defaults to `true`. */

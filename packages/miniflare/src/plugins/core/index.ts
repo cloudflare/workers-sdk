@@ -650,6 +650,16 @@ export const CORE_PLUGIN: Plugin = {
 							: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
 				globalOutbound: { name: getOutboundInterceptorName(workerIndex) },
 				cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
+				workloadIdentityService: dev?.unsafeWorkloadIdentityService
+					? getCustomServiceDesignator(
+							config.name,
+							workerIndex,
+							CustomServiceKind.KNOWN,
+							"__workload_identity_test_verifier",
+							dev.unsafeWorkloadIdentityService,
+							dev
+						)
+					: undefined,
 				moduleFallback:
 					dev?.useModuleFallbackService &&
 					sharedOptions.unsafeModuleFallbackService !== undefined
@@ -820,11 +830,11 @@ export function getGlobalServices({
 		{ name: CoreBindings.JSON_LOG_LEVEL, json: JSON.stringify(log.level) },
 		{
 			name: CoreBindings.SERVICE_USER_FALLBACK,
-			service: { name: fallbackWorkerName },
+			service: { name: fallbackWorkerName, suppressNativeCaller: true },
 		},
 		...workerNames.map((name) => ({
 			name: CoreBindings.SERVICE_USER_ROUTE_PREFIX + name,
-			service: { name: getUserServiceName(name) },
+			service: { name: getUserServiceName(name), suppressNativeCaller: true },
 		})),
 		{
 			name: CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY,

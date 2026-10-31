@@ -838,12 +838,26 @@ For debugging purposes, you can also set `MINIFLARE_WORKERD_CONFIG_DEBUG=<file_p
 
 ## Receive a caller through the runtime
 
+For a direct call through a static Worker's own configured service binding,
+`caller()` returns a frozen `{ kind: "service-binding", accountId, workerId }`.
+It also works inside a top-level `WorkerEntrypoint` RPC method through
+`this.ctx.identity.caller()`. You add no identity binding or verifier. Production
+facts use the public account tag and immutable Worker product ID (`scriptTag`),
+never the pipeline stable ID `main`. Each hop identifies its immediate caller.
+Native facts take precedence over every HTTP credential, even malformed fields;
+you can read the body first. Cross-account, Durable Object, Preview, dynamic,
+loopback, transferred/restored binding, callback, returned-target and persistent
+stub paths fail with `WorkloadIdentityUnavailableError` when you ask for identity.
+They do not fall back to HTTP credentials. Ordinary URL fetches keep the HTTP
+credential contract below. Local static bindings use account `local` and
+`local:<worker-name>` IDs; those IDs never establish production identity.
+
 The receiving Worker calls `await ctx.identity.caller()` with no arguments or
 receiver binding. The caller is the authenticated software making the request:
 an agent, Worker, service, or another supported workload. Keep any human identity
 it acts for separate. The runtime verifies lazily and returns frozen facts;
 the application checks the exact caller, operation, resource, and JWT audience.
-Missing credentials return `null`. Invalid credentials reject with
+On the HTTP credential path, missing credentials return `null`. Invalid credentials reject with
 `WorkloadIdentityError`; unavailable discovery or replay storage rejects with
 `WorkloadIdentityUnavailableError`. Signature fields take precedence and never
 fall back to bearer verification. Call before reading or locking a signed body.
@@ -851,8 +865,8 @@ fall back to bearer verification. Call before reading or locking a signed body.
 The private `WorkloadVerifier` service holds public verification data and a
 Cloudflare-owned SQLite replay namespace, with no signing secrets. Its host
 channel supplies receiver scope in protected props. All versions, replicas and
-domains of the same receiving Worker share replay scope. Service/RPC calls do not
-inherit a verified caller. External receivers still implement the wire profile.
+domains of the same receiving Worker share replay scope. Service calls use
+fresh native caller facts rather than inheriting a verified HTTP credential. External receivers still implement the wire profile.
 
 Ship the receiver only after the native runtime, host channel, protected compiler
 metadata, verifier, replay migration, compatibility review and service access
