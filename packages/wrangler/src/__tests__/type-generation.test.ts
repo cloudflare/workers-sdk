@@ -330,6 +330,7 @@ const bindingsConfigMock: Omit<
 	"define" | "tail_consumers" | "cloudchamber"
 > &
 	Record<string, unknown> = {
+	identities: [],
 	kv_namespaces: [{ binding: "TEST_KV_NAMESPACE", id: "1234" }],
 	vars: {
 		SOMETHING: "asdasdfasdf",
@@ -596,6 +597,28 @@ describe("generate types - CLI", () => {
 			JSON.stringify({
 				compilerOptions: { types: ["worker-configuration.d.ts"] },
 			})
+		);
+	});
+
+	it("generates the complete identity capability API", async ({ expect }) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-10-31",
+				compatibility_flags: ["workers_oidc"],
+				identities: [{ binding: "IDENTITY", audience: "urn:inventory" }],
+			})
+		);
+
+		await runWrangler("types --include-runtime=false");
+		const types = fs.readFileSync("./worker-configuration.d.ts", "utf-8");
+		expect(types).toContain("IDENTITY:");
+		expect(types).toContain("getToken(): Promise<string>");
+		expect(types).toContain(
+			"getAuthorizationGrant(options: { authorizationServer: string; scope?: string[] }): Promise<string>"
+		);
+		expect(types).toContain(
+			"fetch(input: Request | string | URL, init?: RequestInit): Promise<Response>"
 		);
 	});
 
