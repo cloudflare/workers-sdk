@@ -1,5 +1,6 @@
 import { describe, it } from "vitest";
 import { exports as exportConfig } from "../exports";
+import { KnownBindingSchema } from "../schema";
 import {
 	BindingSchema,
 	InputConfigSchema,
@@ -1945,4 +1946,25 @@ describe("OIDC capability bindings", () => {
 			).toBe(false);
 		}
 	);
+});
+
+it("accepts customer WBA signing with compiled origin and method limits", ({
+	expect,
+}) => {
+	const binding = {
+		type: "identity",
+		audience: "urn:api",
+		request_signing: {
+			profile: "web-bot-auth",
+			allowed_origins: ["https://api.example"],
+			allowed_methods: ["GET"],
+		},
+	};
+	expect(KnownBindingSchema.safeParse(binding).success).toBe(true);
+	expect(
+		KnownBindingSchema.safeParse({
+			...binding,
+			request_signing: { ...binding.request_signing, customer_id: "forged" },
+		}).success
+	).toBe(false);
 });

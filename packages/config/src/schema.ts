@@ -122,7 +122,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 				.optional(),
 			request_signing: z
 				.strictObject({
-					profile: z.literal("cloudflare-workload-http-v1"),
+					profile: z.enum(["cloudflare-workload-http-v1", "web-bot-auth"]),
 					allowed_origins: z.array(z.string()),
 					allowed_methods: z.array(z.string()),
 				})

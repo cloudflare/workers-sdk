@@ -85,3 +85,31 @@ it("bounds UTF-8 and rejects ambiguous binding fields", ({ expect }) => {
 		)
 	).toBe(false);
 });
+
+it.for(["cloudflare-workload-http-v1", "web-bot-auth"])(
+	"accepts the %s signing profile while preserving limits",
+	(profile, { expect }) => {
+		const config = {
+			binding: "IDENTITY",
+			audience: "urn:api",
+			request_signing: {
+				profile,
+				allowed_origins: ["https://api.example"],
+				allowed_methods: ["GET"],
+			},
+		};
+		expect(isIdentityBinding(config)).toBe(true);
+		expect(
+			isIdentityBinding({
+				...config,
+				request_signing: { ...config.request_signing, profile: "unknown" },
+			})
+		).toBe(false);
+		expect(
+			isIdentityBinding({
+				...config,
+				request_signing: { ...config.request_signing, customer_id: "forged" },
+			})
+		).toBe(false);
+	}
+);
