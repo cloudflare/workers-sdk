@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 const { spawn } = require("child_process");
+const fs = require("fs");
 const path = require("path");
 
 const MIN_NODE_VERSION = "22.0.0";
@@ -30,7 +31,7 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
 			...process.argv.slice(2),
 		],
 		{
-			stdio: ["inherit", "inherit", "inherit", "ipc"],
+			stdio: getWranglerStdio(process.argv.slice(2)),
 		}
 	)
 		.on("exit", (code) =>
@@ -46,6 +47,47 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
 				process.disconnect();
 			}
 		});
+}
+
+/**
+ * Builds the `stdio` option used to spawn the Wrangler child process.
+ *
+ * On macOS, `child_process.spawn()` only passes the file descriptors listed in
+ * `stdio` to the child. A `/dev/fd/<n>` argument, such as the path that Bash
+ * process substitution creates for `--secrets-file <(...)`, would therefore
+ * refer to a closed file descriptor in the child and fail with `EBADF`. Forward
+ * those file descriptors at the same numbers so the path stays valid.
+ *
+ * @param {string[]} args The arguments passed to Wrangler.
+ * @returns {Array<string | number>} The `stdio` option for `spawn()`.
+ */
+function getWranglerStdio(args) {
+	const stdio = ["inherit", "inherit", "inherit", "ipc"];
+	const ipcFd = stdio.length - 1;
+	for (const arg of args) {
+		const match = /(?:^|=)\/dev\/fd\/(\d+)$/.exec(arg);
+		if (match === null) {
+			continue;
+		}
+		const fd = Number(match[1]);
+		if (fd <= ipcFd || !isOpenFileDescriptor(fd)) {
+			continue;
+		}
+		while (stdio.length <= fd) {
+			stdio.push("ignore");
+		}
+		stdio[fd] = fd;
+	}
+	return stdio;
+}
+
+function isOpenFileDescriptor(fd) {
+	try {
+		fs.fstatSync(fd);
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 // semiver implementation via https://github.com/lukeed/semiver/blob/ae7eebe6053c96be63032b14fb0b68e2553fcac4/src/index.js
@@ -79,6 +121,8 @@ function semiver(a, b, bool) {
 }
 
 // end semiver implementation
+
+module.exports = { getWranglerStdio };
 
 if (module === require.main) {
 	wranglerProcess = runWrangler();
