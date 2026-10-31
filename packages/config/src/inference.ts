@@ -109,6 +109,17 @@ interface BindingTypeMap<TBinding> {
 	media: MediaBinding;
 	"mtls-certificate": Fetcher;
 	identity: {
+		getIdentity(label?: string): Promise<
+			Rpc.RpcTargetBranded & {
+				readonly id: string;
+				readonly signatureAgent: string;
+				readonly directoryURL: string;
+				fetch(
+					input: Request | string | URL,
+					init?: RequestInit
+				): Promise<Response>;
+			}
+		>;
 		getToken(): Promise<string>;
 		getAuthorizationGrant(options: {
 			authorizationServer: string;

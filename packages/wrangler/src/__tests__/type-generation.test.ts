@@ -606,13 +606,26 @@ describe("generate types - CLI", () => {
 			JSON.stringify({
 				compatibility_date: "2026-10-31",
 				compatibility_flags: ["workers_oidc"],
-				identities: [{ binding: "IDENTITY", audience: "urn:inventory" }],
+				identities: [
+					{
+						binding: "IDENTITY",
+						request_signing: {
+							allowed_origins: ["https://api.example.com"],
+							allowed_methods: ["GET", "POST"],
+						},
+					},
+				],
 			})
 		);
 
 		await runWrangler("types --include-runtime=false");
 		const types = fs.readFileSync("./worker-configuration.d.ts", "utf-8");
 		expect(types).toContain("IDENTITY:");
+		expect(types).toContain("getIdentity(label?: string)");
+		expect(types).toContain("Rpc.RpcTargetBranded");
+		for (const field of ["id", "signatureAgent", "directoryURL"]) {
+			expect(types).toContain(`readonly ${field}: string`);
+		}
 		expect(types).toContain("getToken(): Promise<string>");
 		expect(types).toContain(
 			"getAuthorizationGrant(options: { authorizationServer: string; scope?: string[] }): Promise<string>"

@@ -44,6 +44,11 @@ import type {
 	Rule,
 } from "@cloudflare/workers-utils";
 
+// Keep generated types usable before workerd publishes the experimental binding.
+// The RPC brand lets a fixed-selection fetcher cross ordinary typed RPC calls.
+const IDENTITY_BINDING_TYPE =
+	"{ getIdentity(label?: string): Promise<Rpc.RpcTargetBranded & { readonly id: string; readonly signatureAgent: string; readonly directoryURL: string; fetch(input: Request | string | URL, init?: RequestInit): Promise<Response> }>; getToken(): Promise<string>; getAuthorizationGrant(options: { authorizationServer: string; scope?: string[] }): Promise<string>; fetch(input: Request | string | URL, init?: RequestInit): Promise<Response> }";
+
 export interface GenerateTypesOptions {
 	/**
 	 * Path to the Wrangler config file to use. Can be an array for multi-config type resolution.
@@ -2847,12 +2852,7 @@ function collectCoreBindings(
 		}
 
 		for (const binding of env.identities ?? []) {
-			addBinding(
-				binding.binding,
-				"{ getToken(): Promise<string>; getAuthorizationGrant(options: { authorizationServer: string; scope?: string[] }): Promise<string>; fetch(input: Request | string | URL, init?: RequestInit): Promise<Response> }",
-				"identity",
-				envName
-			);
+			addBinding(binding.binding, IDENTITY_BINDING_TYPE, "identity", envName);
 		}
 
 		for (const [index, ratelimit] of (env.ratelimits ?? []).entries()) {
@@ -3922,7 +3922,7 @@ function collectCoreBindingsPerEnvironment(
 			bindings.push({
 				bindingCategory: "identity",
 				name: binding.binding,
-				type: "{ getToken(): Promise<string>; getAuthorizationGrant(options: { authorizationServer: string; scope?: string[] }): Promise<string>; fetch(input: Request | string | URL, init?: RequestInit): Promise<Response> }",
+				type: IDENTITY_BINDING_TYPE,
 			});
 		}
 
