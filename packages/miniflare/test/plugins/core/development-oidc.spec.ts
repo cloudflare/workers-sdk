@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import {
 	Miniflare,
 	type DevelopmentOidcBrokerFactory,
@@ -61,8 +62,9 @@ describe("development OIDC private RPC shim", () => {
 		expect(result.rejected).toBe(4);
 		expect(result.env).toEqual(["IDENTITY"]);
 		expect(invoke).toHaveBeenCalledTimes(8);
-		for (const [call] of invoke.mock.calls)
+		for (const [call] of invoke.mock.calls) {
 			expect(call).toEqual({ binding: "IDENTITY", operation: "token" });
+		}
 	});
 	test("dispatches grants and streams receiver errors without exposing credentials", async ({
 		expect,
@@ -184,7 +186,8 @@ describe("development OIDC private RPC shim", () => {
 		const call = invoke.mock.calls[0]?.[0] as unknown as {
 			request: { body: string; headers: [string, string][] };
 		};
-		const type = new Headers(call.request.headers).get("content-type")!;
+		const type = new Headers(call.request.headers).get("content-type");
+		assert(type);
 		expect(type).toMatch(/^multipart\/form-data; boundary=/);
 		expect(atob(call.request.body)).toContain(type.split("boundary=")[1]);
 		expect(atob(call.request.body)).toContain("hello");

@@ -289,10 +289,11 @@ export function createDevelopmentOidcApiTransport(
 			);
 		}
 		const result = await readResult(response);
-		if (raw)
+		if (raw) {
 			throw new DevelopmentOidcApiError(
 				"Cloudflare did not return a signed dispatch response."
 			);
+		}
 		return result;
 	}
 	return {
@@ -390,7 +391,8 @@ function sessionPath(auth: CfAccount, session: DevelopmentOidcSession): string {
 	if (
 		auth.accountId !== session.identity.accountId ||
 		!SESSION_ID.test(session.identity.developmentSessionId)
-	)
+	) {
 		throw new DevelopmentOidcApiError(INVALID);
+	}
 	return `/accounts/${encodeURIComponent(auth.accountId)}/workers/oidc/development-sessions/${session.identity.developmentSessionId}/tokens`;
 }

@@ -73,10 +73,11 @@ export class DevelopmentOidcProvider {
 			!isIdentityBinding(binding) ||
 			binding.subject === "durable-object-namespace" ||
 			!/^[A-Za-z0-9_-]{1,63}$/.test(workerName)
-		)
+		) {
 			throw new Error(
 				"Local OIDC requires an existing Worker name and a valid Worker-subject binding."
 			);
+		}
 		this.#workerName = workerName;
 		this.#binding = Object.freeze(structuredClone(binding));
 		this.#getAuth = getAuth;
@@ -88,7 +89,9 @@ export class DevelopmentOidcProvider {
 		};
 	}
 	async getToken(...args: unknown[]): Promise<string> {
-		if (args.length) throw new TypeError("getToken() takes no arguments.");
+		if (args.length) {
+			throw new TypeError("getToken() takes no arguments.");
+		}
 		return (
 			await this.invoke({ binding: this.#binding.binding, operation: "token" })
 		).text();
@@ -98,8 +101,9 @@ export class DevelopmentOidcProvider {
 		parent?: AbortSignal
 	): Promise<Response> {
 		const operation = structuredClone(call);
-		if (operation.binding !== this.#binding.binding)
+		if (operation.binding !== this.#binding.binding) {
 			throw new Error("Development OIDC binding is not configured.");
+		}
 		const signal = parent
 			? AbortSignal.any([parent, this.#shutdown.signal])
 			: this.#shutdown.signal;
@@ -168,10 +172,11 @@ export class DevelopmentOidcProvider {
 						!Number.isSafeInteger(response.expiresAt) ||
 						remaining < 300000 ||
 						remaining > 28800000
-					)
+					) {
 						throw new Error(
 							"Development OIDC returned an invalid session. Retry the getter."
 						);
+					}
 					current.deadline = performance.now() + remaining;
 					return Object.freeze({ ...response, identity });
 				},
@@ -187,13 +192,14 @@ export class DevelopmentOidcProvider {
 					operation.operation === "fetch" &&
 					operation.request &&
 					!operation.grant
-				)
+				) {
 					return this.#transport.dispatch(
 						auth,
 						session,
 						operation.request,
 						requestSignal
 					);
+				}
 				const result =
 					operation.operation === "token" &&
 					!operation.request &&
@@ -219,10 +225,11 @@ export class DevelopmentOidcProvider {
 					result.expiresAt * 1000 < Date.now() + 60000 ||
 					result.expiresAt * 1000 > Date.now() + 300000 ||
 					result.expiresAt > session.expiresAt
-				)
+				) {
 					throw new Error(
 						"Development OIDC returned an invalid assertion. Retry with a fresh call."
 					);
+				}
 				return new Response(result.token, {
 					headers: {
 						"Content-Type": "text/plain",
@@ -231,7 +238,9 @@ export class DevelopmentOidcProvider {
 				});
 			}, current);
 		} catch (error) {
-			if (this.#state === state) this.#invalidate();
+			if (this.#state === state) {
+				this.#invalidate();
+			}
 			throw error;
 		}
 	}

@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { DevelopmentOidcBrokers } from "miniflare";
 import { describe, it, vi } from "vitest";
 const call = { binding: "IDENTITY", operation: "token" as const };
@@ -15,8 +16,9 @@ describe("development OIDC broker capabilities", () => {
 			{ key: "two", create },
 		]);
 		expect(create).not.toHaveBeenCalled();
-		const first = manager.capability(0)!,
-			second = manager.capability(1)!;
+		const first = manager.capability(0),
+			second = manager.capability(1);
+		assert(first && second);
 		expect(first).toHaveLength(64);
 		expect(first).not.toBe(second);
 		expect(other.isAuthorized(first)).toBe(false);
@@ -48,7 +50,9 @@ describe("development OIDC broker capabilities", () => {
 				}),
 			},
 		]);
-		const pending = manager.invoke(manager.capability(0)!, call);
+		const capability = manager.capability(0);
+		assert(capability);
+		const pending = manager.invoke(capability, call);
 		const rejected = expect(pending).rejects.toThrow("configuration changed");
 		await vi.waitFor(() => expect(fail).toBeTypeOf("function"));
 		manager.dispose();
@@ -68,8 +72,10 @@ describe("development OIDC broker capabilities", () => {
 				dispose() {},
 			}));
 			manager.update([{ key: "one", create }]);
+			const capability = manager.capability(0);
+			assert(capability);
 			await expect(
-				manager.invoke(manager.capability(0)!, options as never)
+				manager.invoke(capability, options as never)
 			).rejects.toThrow();
 			expect(create).not.toHaveBeenCalled();
 			manager.dispose();
