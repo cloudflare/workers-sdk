@@ -126,7 +126,8 @@ describe("kv", () => {
 		it("should list every local key when there are more than 1000", async ({
 			expect,
 		}) => {
-			const keyValues = Array.from({ length: 1500 }, (_, i) => ({
+			// Cross the 1000-key page boundary without extra serial writes on Windows.
+			const keyValues = Array.from({ length: 1001 }, (_, i) => ({
 				key: `key-${String(i).padStart(4, "0")}`,
 				value: "value",
 			}));
@@ -139,15 +140,15 @@ describe("kv", () => {
 
 			await runWrangler(`kv key list --namespace-id some-namespace-id`);
 			const all = JSON.parse(std.getAndClearOut());
-			expect(all).toHaveLength(1501);
+			expect(all).toHaveLength(1002);
 			expect(all.at(-1)).toEqual({ name: "other" });
 
 			await runWrangler(
 				`kv key list --namespace-id some-namespace-id --prefix key-`
 			);
 			const prefixed = JSON.parse(std.getAndClearOut());
-			expect(prefixed).toHaveLength(1500);
-			expect(prefixed.at(-1)).toEqual({ name: "key-1499" });
+			expect(prefixed).toHaveLength(1001);
+			expect(prefixed.at(-1)).toEqual({ name: "key-1000" });
 		});
 
 		it("should delete local kv storage", async ({ expect }) => {

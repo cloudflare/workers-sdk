@@ -10,10 +10,12 @@ import {
 	runWranglerPagesDev,
 } from "../../shared/src/run-wrangler-long-lived";
 
+// Allow a cold Windows dev server time to send its first response under CI load.
+const requestTimeout = process.platform === "win32" ? 5_000 : 2_000;
 const timeoutAgent = new Agent({
-	connectTimeout: 2_000,
-	bodyTimeout: 2_000,
-	headersTimeout: 2_000,
+	connectTimeout: requestTimeout,
+	bodyTimeout: requestTimeout,
+	headersTimeout: requestTimeout,
 });
 setGlobalDispatcher(timeoutAgent);
 
@@ -36,10 +38,9 @@ export async function seed(root: string, files: Record<string, string>) {
 
 function waitFor<T>(
 	callback: Parameters<typeof vi.waitFor<T>>[0],
-	timeout = 5_000
+	timeout = process.platform === "win32" ? 15_000 : 5_000
 ) {
-	// The default timeout of `vi.waitFor()` is only 1s, which is a little
-	// short for some of these tests, especially on Windows.
+	// Leave room for multiple bounded HTTP attempts, including on Windows.
 	return vi.waitFor(callback, { timeout, interval: 250 });
 }
 
