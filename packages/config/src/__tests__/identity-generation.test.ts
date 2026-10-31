@@ -12,6 +12,7 @@ const runtimeTypes =
 const nodeTypes = require.resolve("@types/node/index.d.ts");
 runInTempDir();
 
+// Cold Windows runners need longer than Vitest's default for the full compiler.
 it("typechecks generated signing-only bindings and minted fetchers across RPC", async ({
 	expect,
 }) => {
@@ -82,4 +83,4 @@ it("typechecks generated signing-only bindings and minted fetchers across RPC", 
 				`${diagnostic.file?.fileName ?? "config"}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")}`
 		);
 	expect(diagnostics).toEqual([]);
-});
+}, 30_000);
