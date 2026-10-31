@@ -11,6 +11,7 @@ IDENTITY: bindings.identity({
 		allowed_scopes: ["items:read"],
 	},
 	request_signing: {
+		profile: "cloudflare-workload-http-v1",
 		allowed_origins: ["https://api.example.com"],
 		allowed_methods: ["GET", "POST"],
 	},
