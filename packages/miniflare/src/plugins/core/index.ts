@@ -604,7 +604,7 @@ export const CORE_PLUGIN: Plugin = {
 		const userFlags = config.compatibilityFlags
 			? stripRedundantNodejsCompatFlags(
 					compatibilityDate,
-					config.compatibilityFlags.filter((flag) => flag !== "workers_oidc")
+					config.compatibilityFlags
 				)
 			: undefined;
 		// Only add the flags the worker doesn't already declare. A worker that sets

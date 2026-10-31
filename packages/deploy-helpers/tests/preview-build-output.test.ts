@@ -130,7 +130,6 @@ describe("previewBuildOutput", () => {
 		};
 		await uploadPreview(
 			buildOutputConfig({
-				compatibilityFlags: ["workers_oidc"],
 				env: { IDENTITY: identity },
 			})
 		);

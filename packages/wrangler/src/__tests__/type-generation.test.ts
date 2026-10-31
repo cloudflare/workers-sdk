@@ -605,7 +605,6 @@ describe("generate types - CLI", () => {
 			"./wrangler.jsonc",
 			JSON.stringify({
 				compatibility_date: "2026-10-31",
-				compatibility_flags: ["workers_oidc"],
 				identities: [
 					{
 						binding: "IDENTITY",
@@ -622,9 +621,12 @@ describe("generate types - CLI", () => {
 		const types = fs.readFileSync("./worker-configuration.d.ts", "utf-8");
 		expect(types).toContain("IDENTITY:");
 		expect(types).toContain("getIdentity(label?: string)");
-		expect(types).toContain("Rpc.RpcTargetBranded");
+		expect(types).toContain("Promise<Rpc.Stub<Rpc.RpcTargetBranded &");
+		expect(types).toContain(
+			"fetch(input: Request | string, init?: Omit<RequestInit, 'body' | 'cf'>"
+		);
 		for (const field of ["id", "signatureAgent", "directoryURL"]) {
-			expect(types).toContain(`readonly ${field}: string`);
+			expect(types).toContain(`readonly ${field}: Promise<string>`);
 		}
 		expect(types).toContain("getToken(): Promise<string>");
 		expect(types).toContain(

@@ -34,17 +34,30 @@ it("typechecks generated signing-only bindings and minted fetchers across RPC", 
       declare const env: Env;
       const identity = await env.IDENTITY.getIdentity("customer-x");
       const defaultIdentity = await env.IDENTITY.getIdentity();
-      const localId: string = identity.id;
+      const selectedId: string = await identity.id;
+      const pendingId: Promise<string> = identity.id;
       await identity.fetch("https://api.example.com", { method: "POST", body: "hello" });
       await env.IDENTITY.fetch("https://api.example.com");
       class Relay extends WorkerEntrypoint {
-        relay(value: typeof identity): typeof identity { return value; }
+        relay(value: typeof identity): typeof identity { return value.dup(); }
       }
       declare const relay: Service<Relay>;
       const forwarded = await relay.relay(identity);
       const remoteId: Promise<string> = forwarded.id;
       const response: Promise<Response> = forwarded.fetch("https://api.example.com");
-      void [defaultIdentity, localId, remoteId, response];
+      void [defaultIdentity, selectedId, pendingId, remoteId, response];
+      // @ts-expect-error Even newly selected metadata requires await.
+      const unawaited: string = identity.id;
+      void unawaited;
+      // @ts-expect-error URL must be normalized before RPC serialization.
+      identity.fetch(new URL("https://api.example.com"));
+      await identity.fetch(new Request(new URL("https://api.example.com")));
+      // @ts-expect-error FormData must be normalized into Request before RPC.
+      void identity.fetch("https://api.example.com", { method: "POST", body: new FormData() });
+      // @ts-expect-error URLSearchParams must be normalized into Request before RPC.
+      void identity.fetch("https://api.example.com", { method: "POST", body: new URLSearchParams() });
+      // @ts-expect-error Routing overrides are not accepted.
+      void identity.fetch("https://api.example.com", { cf: { resolveOverride: "other.example" } });
       // @ts-expect-error Remote metadata requires await.
       const invalid: string = forwarded.id;
       void invalid;

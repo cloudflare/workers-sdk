@@ -45,9 +45,9 @@ import type {
 } from "@cloudflare/workers-utils";
 
 // Keep generated types usable before workerd publishes the experimental binding.
-// The RPC brand lets a fixed-selection fetcher cross ordinary typed RPC calls.
+// Returned identities are remote RPC targets, including their metadata getters.
 const IDENTITY_BINDING_TYPE =
-	"{ getIdentity(label?: string): Promise<Rpc.RpcTargetBranded & { readonly id: string; readonly signatureAgent: string; readonly directoryURL: string; fetch(input: Request | string | URL, init?: RequestInit): Promise<Response> }>; getToken(): Promise<string>; getAuthorizationGrant(options: { authorizationServer: string; scope?: string[] }): Promise<string>; fetch(input: Request | string | URL, init?: RequestInit): Promise<Response> }";
+	"{ getIdentity(label?: string): Promise<Rpc.Stub<Rpc.RpcTargetBranded & { readonly id: Promise<string>; readonly signatureAgent: Promise<string>; readonly directoryURL: Promise<string>; fetch(input: Request | string, init?: Omit<RequestInit, 'body' | 'cf'> & { body?: string | ArrayBuffer | ArrayBufferView | ReadableStream<Uint8Array> | Blob }): Promise<Response> }>>; getToken(): Promise<string>; getAuthorizationGrant(options: { authorizationServer: string; scope?: string[] }): Promise<string>; fetch(input: Request | string | URL, init?: RequestInit): Promise<Response> }";
 
 export interface GenerateTypesOptions {
 	/**
