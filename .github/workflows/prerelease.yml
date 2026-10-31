@@ -13,6 +13,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # Prereleases only build and upload packages; no browser tests run here.
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
 jobs:
   build:
     if: ${{ github.repository_owner == 'cloudflare' }}
