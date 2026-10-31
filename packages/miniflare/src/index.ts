@@ -3095,9 +3095,11 @@ export class Miniflare {
 		// on the Content-Encoding header rather than trying to infer it from the body.
 		// Technically, at this point, this a malformed response so let's remove the header
 		// Retain it as MF-Content-Encoding so we can tell the body was actually compressed.
+		// Content-Length describes the compressed body too, so remove it as well.
 		const contentEncoding = response.headers.get("Content-Encoding");
 		if (contentEncoding) {
 			response.headers.set("MF-Content-Encoding", contentEncoding);
+			response.headers.delete("Content-Length");
 		}
 		response.headers.delete("Content-Encoding");
 

@@ -693,6 +693,47 @@ test("Miniflare: custom service using Content-Encoding header", async ({
 	// await test("deflate, gzip");
 });
 
+test("Miniflare: removes Content-Length of decoded responses", async ({
+	expect,
+}) => {
+	const testBody = "x".repeat(100_000);
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: { TEST_BODY: { type: "text", value: testBody } },
+					manifest: singleModuleManifest(`
+		export default {
+			async fetch(request, env, ctx) {
+				const stream = new Response(env.TEST_BODY).body.pipeThrough(
+					new CompressionStream("gzip")
+				);
+				// Buffer the body so the response has a known Content-Length
+				const compressedBody = await new Response(stream).arrayBuffer();
+				return new Response(compressedBody, {
+					encodeBody: "manual",
+					headers: { "Content-Encoding": "gzip" },
+				});
+			},
+		};
+		`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		headers: { "Accept-Encoding": "gzip" },
+	});
+	expect(await res.text()).toBe(testBody);
+	expect(res.headers.get("MF-Content-Encoding")).toBe("gzip");
+	// The header described the compressed body, which `undici` has decoded
+	expect(res.headers.get("Content-Length")).toBe(null);
+});
+
 test("Miniflare: negotiates acceptable encoding", async ({ expect }) => {
 	const testBody = "x".repeat(100);
 	const mf = new Miniflare({
