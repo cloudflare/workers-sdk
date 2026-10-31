@@ -40,6 +40,12 @@ const remoteResponse: Promise<Response> = forwarded.fetch(
 );
 void [remoteId, remoteResponse];
 
+// @ts-expect-error Select the default identity before fetching.
+void env.IDENTITY.fetch("https://api.example.com");
+void identity.fetch("https://api.example.com", {
+	// @ts-expect-error AbortSignal options are not part of the RPC fetch contract.
+	signal: AbortSignal.timeout(1000),
+});
 // @ts-expect-error A newly selected target property requires an RPC await.
 const unawaitedSelectedId: string = identity.id;
 void unawaitedSelectedId;

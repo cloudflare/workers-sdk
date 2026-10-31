@@ -20,7 +20,9 @@ export class IdentityBinding extends WorkerEntrypoint {
 	}
 
 	override async fetch(): Promise<Response> {
-		return unsupported();
+		throw new TypeError(
+			"Use getIdentity().fetch() for signed requests. Identity issuance is unavailable in local development. Use a deployed Preview or mock the binding in tests."
+		);
 	}
 }
 
