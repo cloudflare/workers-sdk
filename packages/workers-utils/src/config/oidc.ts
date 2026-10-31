@@ -157,13 +157,12 @@ export interface OidcAuthorizationGrants {
 	allowed_scopes: string[];
 }
 export interface OidcRequestSigning {
-	profile: "cloudflare-workload-http-v1" | "web-bot-auth";
 	allowed_origins: string[];
 	allowed_methods: string[];
 }
 export interface IdentityBindingConfig {
 	binding: string;
-	audience: string;
+	audience?: string;
 	subject?: "worker" | "durable-object-namespace";
 	namespace_id?: string;
 	authorization_grants?: OidcAuthorizationGrants;
@@ -231,7 +230,7 @@ export function isIdentityBinding(
 		]) ||
 		typeof value.binding !== "string" ||
 		!/^[A-Za-z0-9_-]{1,128}$/.test(value.binding) ||
-		!validOidcAudience(value.audience)
+		(value.audience !== undefined && !validOidcAudience(value.audience))
 	) {
 		return false;
 	}
@@ -263,10 +262,7 @@ export function isIdentityBinding(
 	if (
 		h !== undefined &&
 		(!record(h) ||
-			!fields(h, ["profile", "allowed_origins", "allowed_methods"]) ||
-			!["cloudflare-workload-http-v1", "web-bot-auth"].includes(
-				String(h.profile)
-			) ||
+			!fields(h, ["allowed_origins", "allowed_methods"]) ||
 			!set(h.allowed_origins, validOidcOrigin) ||
 			!set(
 				h.allowed_methods,

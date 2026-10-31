@@ -7,8 +7,7 @@ const script = `export default {
     const errors = [];
     for (const call of [
       () => env.IDENTITY.getToken(),
-      () => env.IDENTITY.getCustomerIdentity("customer_x"),
-      () => env.IDENTITY.fetchForCustomer("customer_x", "https://api.example"),
+      () => env.IDENTITY.getIdentity("customer_x"),
       () => env.IDENTITY.getAuthorizationGrant({authorizationServer: "https://auth.example"}),
       () => env.IDENTITY.fetch("https://api.example", {method: "POST", body: "private"}),
     ]) {
@@ -55,7 +54,7 @@ for (const legacy of [false, true]) {
 		useDispose(mf);
 		const response = await mf.dispatchFetch("http://localhost/");
 		const errors = (await response.json()) as string[];
-		expect(errors).toHaveLength(5);
+		expect(errors).toHaveLength(4);
 		for (const error of errors) {
 			expect(error).toContain(
 				"Identity issuance is unavailable in local development"

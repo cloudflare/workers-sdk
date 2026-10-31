@@ -141,7 +141,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 	z
 		.strictObject({
 			type: z.literal("identity"),
-			audience: z.string(),
+			audience: z.string().optional(),
 			subject: z.enum(["worker", "durable-object-namespace"]).optional(),
 			namespace_id: z.string().optional(),
 			authorization_grants: z
@@ -152,7 +152,6 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 				.optional(),
 			request_signing: z
 				.strictObject({
-					profile: z.enum(["cloudflare-workload-http-v1", "web-bot-auth"]),
 					allowed_origins: z.array(z.string()),
 					allowed_methods: z.array(z.string()),
 				})
@@ -163,7 +162,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 				isIdentityBinding({ binding: "IDENTITY", ...binding }),
 			{
 				message:
-					"OIDC requires one audience, a valid subject profile, and valid optional purpose limits.",
+					"Identity requires a valid optional audience, subject, and purpose limits.",
 			}
 		),
 	z.strictObject({

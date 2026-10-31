@@ -5,6 +5,6 @@
 "wrangler": minor
 ---
 
-Add the experimental `web-bot-auth` identity signing profile
+Add managed identity signing configuration
 
-Accept the profile through shared configuration and upload validation. Customer identity methods remain explicitly unsupported during local development; use a deployed Preview or mocks.
+Allow signing-only identity bindings without a token audience and remove protocol selectors. All HTTP identities use managed Web Bot Auth signing. Local identity methods, including getIdentity(), remain unsupported; use deployed Previews or mocks.
