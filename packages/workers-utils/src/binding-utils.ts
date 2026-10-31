@@ -322,9 +322,9 @@ export function convertConfigToBindings(
 				}
 				break;
 			}
-			case "oidc": {
+			case "identities": {
 				for (const { binding, ...x } of info) {
-					output[binding] = { type: "oidc", ...x };
+					output[binding] = { type: "identity", ...x };
 				}
 				break;
 			}

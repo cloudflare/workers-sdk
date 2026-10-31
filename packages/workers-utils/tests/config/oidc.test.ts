@@ -1,7 +1,7 @@
 import { it } from "vitest";
-import { isOidcBinding, validOidcAudience } from "../../src/config/oidc";
+import { isIdentityBinding, validOidcAudience } from "../../src/config/oidc";
 
-// The same cases exercise the Go policy and native signer grammar.
+// The same cases exercise the Go compiler and private signer grammar.
 const accepted = [
 	"recipient",
 	"two words",
@@ -74,14 +74,13 @@ it("bounds UTF-8 and rejects ambiguous binding fields", ({ expect }) => {
 	expect(validOidcAudience("雪".repeat(683))).toBe(false);
 	const binding = {
 		binding: "IDENTITY",
-		identity_id: "orders",
 		audience: "recipient",
 	};
-	expect(isOidcBinding(binding)).toBe(true);
-	expect(isOidcBinding({ ...binding, identity_id: "orders\n" })).toBe(false);
-	expect(isOidcBinding({ ...binding, [Symbol("claims")]: {} })).toBe(false);
+	expect(isIdentityBinding(binding)).toBe(true);
+	expect(isIdentityBinding({ ...binding, binding: "ORDERS\n" })).toBe(false);
+	expect(isIdentityBinding({ ...binding, [Symbol("claims")]: {} })).toBe(false);
 	expect(
-		isOidcBinding(
+		isIdentityBinding(
 			Object.defineProperty({ ...binding }, "claims", { value: {} })
 		)
 	).toBe(false);

@@ -152,44 +152,121 @@ function ipLiteral(value: string): boolean {
 	return compressed ? groups < 8 : groups === 8;
 }
 
-/** Validate a binding request. The API independently resolves its approved assignment. */
-export function isOidcBinding(value: unknown): boolean {
-	if (!value || typeof value !== "object" || Array.isArray(value)) {
-		return false;
-	}
-	const v = value as Record<string, unknown>;
-	if (
-		Reflect.ownKeys(v).some(
-			(k) =>
-				!["binding", "identity_id", "audience", "allowed_audiences"].includes(
-					String(k)
-				)
-		)
-	) {
-		return false;
-	}
-	if (
-		![v.binding, v.identity_id].every(
-			(x) =>
-				typeof x === "string" &&
-				x.length > 0 &&
-				x.length <= 128 &&
-				!/[^A-Za-z0-9_-]/.test(x)
-		)
-	) {
-		return false;
-	}
-	if (!validOidcAudience(v.audience)) {
-		return false;
-	}
-	const a = v.allowed_audiences;
-	return (
-		a === undefined ||
-		(Array.isArray(a) &&
-			a.length > 0 &&
-			a.length <= 64 &&
-			a.every(validOidcAudience) &&
-			new Set(a).size === a.length &&
-			a.includes(v.audience))
+export interface OidcAuthorizationGrants {
+	allowed_authorization_servers: string[];
+	allowed_scopes: string[];
+}
+export interface OidcRequestSigning {
+	profile: "cloudflare-workload-http-v1";
+	allowed_origins: string[];
+	allowed_methods: string[];
+}
+export interface IdentityBindingConfig {
+	binding: string;
+	audience: string;
+	subject?: "worker" | "durable-object-namespace";
+	namespace_id?: string;
+	authorization_grants?: OidcAuthorizationGrants;
+	request_signing?: OidcRequestSigning;
+}
+function record(value: unknown): value is Record<string, unknown> {
+	return !!value && typeof value === "object" && !Array.isArray(value);
+}
+function fields(value: Record<string, unknown>, allowed: string[]) {
+	return Reflect.ownKeys(value).every(
+		(k) => typeof k === "string" && allowed.includes(k)
 	);
+}
+function set(
+	value: unknown,
+	validate: (s: string) => boolean,
+	empty = false
+): value is string[] {
+	return (
+		Array.isArray(value) &&
+		value.length <= 64 &&
+		(empty || value.length > 0) &&
+		new Set(value).size === value.length &&
+		value.every((s) => typeof s === "string" && validate(s))
+	);
+}
+export function validOidcAuthorizationServer(value: string): boolean {
+	if (
+		!validOidcAudience(value) ||
+		!value.startsWith("https://") ||
+		/[?#]/.test(value)
+	)
+		return false;
+	try {
+		const u = new URL(value);
+		return !!u.hostname && !u.username && !u.password;
+	} catch {
+		return false;
+	}
+}
+export function validOidcOrigin(value: string): boolean {
+	if (!validOidcAuthorizationServer(value)) return false;
+	try {
+		return new URL(value).origin === value;
+	} catch {
+		return false;
+	}
+}
+/** Validate only configured limits. EWC supplies trusted origin properties. */
+export function isIdentityBinding(
+	value: unknown
+): value is IdentityBindingConfig {
+	if (
+		!record(value) ||
+		!fields(value, [
+			"binding",
+			"audience",
+			"subject",
+			"namespace_id",
+			"authorization_grants",
+			"request_signing",
+		]) ||
+		typeof value.binding !== "string" ||
+		!/^[A-Za-z0-9_-]{1,128}$/.test(value.binding) ||
+		!validOidcAudience(value.audience)
+	)
+		return false;
+	const subject = value.subject ?? "worker";
+	if (
+		subject === "worker"
+			? value.namespace_id !== undefined
+			: subject !== "durable-object-namespace" ||
+				typeof value.namespace_id !== "string" ||
+				!/^[A-Za-z0-9_-]{1,128}$/.test(value.namespace_id)
+	)
+		return false;
+	const g = value.authorization_grants;
+	if (
+		g !== undefined &&
+		(!record(g) ||
+			!fields(g, ["allowed_authorization_servers", "allowed_scopes"]) ||
+			!set(g.allowed_authorization_servers, validOidcAuthorizationServer) ||
+			!set(
+				g.allowed_scopes,
+				(s) => /^[\x21\x23-\x5b\x5d-\x7e]+$/.test(s),
+				true
+			))
+	)
+		return false;
+	const h = value.request_signing;
+	if (
+		h !== undefined &&
+		(!record(h) ||
+			!fields(h, ["profile", "allowed_origins", "allowed_methods"]) ||
+			h.profile !== "cloudflare-workload-http-v1" ||
+			!set(h.allowed_origins, validOidcOrigin) ||
+			!set(
+				h.allowed_methods,
+				(s) =>
+					/^[A-Z!#$%&'*+.^_`|~-]+$/.test(s) &&
+					!["CONNECT", "TRACE", "TRACK"].includes(s)
+			))
+	)
+		return false;
+	return true;
 }

@@ -346,7 +346,7 @@ type WorkerOptionsBindings = Pick<
 	| "hyperdrives"
 	| "durableObjects"
 	| "serviceBindings"
-	| "oidc"
+	| "identities"
 	| "ratelimits"
 	| "workflows"
 	| "workflowExports"
@@ -1002,8 +1002,8 @@ export function buildMiniflareBindingOptions(
 		),
 		additionalUnboundDurableObjects,
 
-		oidc: Object.fromEntries(
-			extractBindingsOfType("oidc", bindings).map(
+		identities: Object.fromEntries(
+			extractBindingsOfType("identity", bindings).map(
 				({ binding, type: _type, ...x }) => [binding, x]
 			)
 		),

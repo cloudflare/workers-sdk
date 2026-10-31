@@ -13,7 +13,7 @@ import type {
 	ComplianceConfig,
 	Logger,
 } from "@cloudflare/workers-utils";
-import type { Response } from "undici";
+import type { Response as ApiResponse } from "undici";
 
 export { DevelopmentOidcApiError } from "./development-oidc-errors";
 
@@ -39,7 +39,7 @@ export function validateDevelopmentOidcApiAudience(audience: string): void {
 	}
 }
 
-function retryAfterMs(response: Response): number | undefined {
+function retryAfterMs(response: ApiResponse): number | undefined {
 	const value = response.headers.get("Retry-After")?.trim();
 	if (!value) {
 		return;
@@ -50,7 +50,7 @@ function retryAfterMs(response: Response): number | undefined {
 	return Number.isSafeInteger(delay) && delay >= 0 ? delay : undefined;
 }
 
-async function readResult(response: Response): Promise<unknown> {
+async function readResult(response: ApiResponse): Promise<unknown> {
 	// Never read or surface API error bodies, which could reflect credentials or bearer tokens.
 	if (!response.ok) {
 		await response.body?.cancel().catch(() => {});
@@ -62,7 +62,7 @@ async function readResult(response: Response): Promise<unknown> {
 		}
 		if (response.status === 403) {
 			throw new DevelopmentOidcApiError(
-				"Development OIDC access denied. Check the selected account, existing Worker, OAuth grant, Worker edit permission, and approved local identity assignment.",
+				"Development OIDC access denied. Check the selected account, existing Worker, OAuth grant, Worker edit permission, and binding configuration.",
 				"access_denied"
 			);
 		}
@@ -161,7 +161,8 @@ function decode(segment: string): Record<string, unknown> {
 export function validateDevelopmentOidcApiToken(
 	value: unknown,
 	session: DevelopmentOidcSession,
-	audience: string
+	audience: string,
+	grant?: { scope?: string[] }
 ): { token: string; expiresAt: number } {
 	const result = object(value);
 	const token = result.token;
@@ -183,26 +184,30 @@ export function validateDevelopmentOidcApiToken(
 	}
 	const header = decode(headerPart),
 		claims = decode(claimsPart);
-	const { accountId, workerId, userId, developmentSessionId, identityId } =
+	const { accountId, workerId, userId, developmentSessionId } =
 		session.identity;
 	const now = Date.now() / 1000;
 	const issued = claims.iat,
 		expires = claims.exp;
 	if (
 		header.alg !== "RS256" ||
-		header.typ !== "cf-workload+jwt" ||
+		header.typ !== (grant ? "JWT" : "cf-workload+jwt") ||
 		typeof header.kid !== "string" ||
 		!header.kid ||
 		header.kid.length > 128 ||
 		"crit" in header ||
 		"b64" in header ||
 		claims.iss !== `https://oidc.cloudflare.app/accounts/${accountId}` ||
-		claims.sub !== `identity:${identityId}` ||
+		claims.sub !== `worker:${workerId}:development:local` ||
 		claims.account_id !== accountId ||
 		claims.product !== "workers" ||
 		typeof claims.jti !== "string" ||
-		!/^[a-f0-9]{32}$/.test(claims.jti) ||
+		!/^[A-Za-z0-9_-]{22,128}$/.test(claims.jti) ||
 		claims.aud !== audience ||
+		claims.scope !==
+			(grant?.scope === undefined
+				? undefined
+				: [...new Set(grant.scope)].sort().join(" ")) ||
 		claims.execution !== "local" ||
 		claims.worker_id !== workerId ||
 		claims.user_id !== userId ||
@@ -236,7 +241,8 @@ export function createDevelopmentOidcApiTransport(
 		auth: CfAccount,
 		resource: string,
 		body: object,
-		signal: AbortSignal
+		signal: AbortSignal,
+		raw = false
 	): Promise<unknown> {
 		if (
 			auth.accountId.length !== 32 ||
@@ -247,7 +253,7 @@ export function createDevelopmentOidcApiTransport(
 				"Development OIDC requires human OAuth and a valid account."
 			);
 		}
-		let response: Response;
+		let response: ApiResponse;
 		try {
 			response = await performApiFetchBase(
 				compliance,
@@ -274,7 +280,20 @@ export function createDevelopmentOidcApiTransport(
 				"unavailable"
 			);
 		}
-		return readResult(response);
+		if (raw && response.headers.get("X-Workers-OIDC-Result") === "fetch") {
+			const headers = new Headers([...response.headers]);
+			headers.delete("X-Workers-OIDC-Result");
+			return new globalThis.Response(
+				response.body as ReadableStream<Uint8Array>,
+				{ status: response.status, statusText: response.statusText, headers }
+			);
+		}
+		const result = await readResult(response);
+		if (raw)
+			throw new DevelopmentOidcApiError(
+				"Cloudflare did not return a signed dispatch response."
+			);
+		return result;
 	}
 	return {
 		async createSession(auth, workerName, binding, signal) {
@@ -290,7 +309,7 @@ export function createDevelopmentOidcApiTransport(
 				await request(
 					auth,
 					`/accounts/${encodeURIComponent(auth.accountId)}/workers/scripts/${encodeURIComponent(workerName)}/oidc/development-sessions`,
-					{ binding: binding.binding, identity_id: binding.identity_id },
+					binding,
 					signal
 				)
 			);
@@ -306,20 +325,8 @@ export function createDevelopmentOidcApiTransport(
 				typeof data.development_session_id !== "string" ||
 				data.development_session_id.length !== 36 ||
 				!SESSION_ID.test(data.development_session_id) ||
-				data.policy !== "workers-oidc-v2" ||
-				data.identity_id !== binding.identity_id ||
 				data.binding !== binding.binding ||
-				typeof data.assignment_id !== "string" ||
-				!/^[A-Za-z0-9_-]{1,128}$/.test(data.assignment_id) ||
-				typeof data.policy_revision !== "string" ||
-				!/^[1-9][0-9]*:[1-9][0-9]*$/.test(data.policy_revision) ||
-				typeof data.default_audience !== "string" ||
-				!Array.isArray(data.allowed_audiences) ||
-				data.allowed_audiences.length < 1 ||
-				data.allowed_audiences.length > 64 ||
-				new Set(data.allowed_audiences).size !==
-					data.allowed_audiences.length ||
-				!data.allowed_audiences.includes(data.default_audience) ||
+				data.default_audience !== binding.audience ||
 				typeof data.expires_at !== "number" ||
 				!Number.isSafeInteger(data.expires_at) ||
 				data.expires_at < now + 300 ||
@@ -328,11 +335,8 @@ export function createDevelopmentOidcApiTransport(
 				throw new DevelopmentOidcApiError(INVALID);
 			}
 			validateDevelopmentOidcApiAudience(data.default_audience);
-			for (const audience of data.allowed_audiences) {
-				validateDevelopmentOidcApiAudience(audience);
-			}
 			logger.info(
-				`Development OIDC subject for ${workerName}: identity:${data.identity_id} (local execution)`
+				`Development OIDC subject for ${workerName}: worker:${data.worker_id}:development:local`
 			);
 			return {
 				identity: {
@@ -340,36 +344,53 @@ export function createDevelopmentOidcApiTransport(
 					workerId: data.worker_id,
 					userId: data.user_id,
 					developmentSessionId: data.development_session_id,
-					policy: data.policy,
-					identityId: data.identity_id,
-					assignmentId: data.assignment_id,
-					policyRevision: data.policy_revision,
 				},
 				defaultAudience: data.default_audience,
 				binding: data.binding,
-				allowedAudiences: data.allowed_audiences,
 				expiresAt: data.expires_at,
 			};
 		},
-		async issueToken(auth, session, audience, fresh, signal) {
-			validateDevelopmentOidcApiAudience(audience);
-			if (
-				auth.accountId !== session.identity.accountId ||
-				session.identity.developmentSessionId.length !== 36 ||
-				!SESSION_ID.test(session.identity.developmentSessionId)
-			) {
-				throw new DevelopmentOidcApiError(INVALID);
-			}
+		async issueToken(auth, session, signal) {
 			return validateDevelopmentOidcApiToken(
 				await request(
 					auth,
-					`/accounts/${encodeURIComponent(auth.accountId)}/workers/oidc/development-sessions/${session.identity.developmentSessionId}/tokens`,
-					{ audience, fresh },
+					sessionPath(auth, session),
+					{ operation: "token" },
 					signal
 				),
 				session,
-				audience
+				session.defaultAudience
 			);
 		},
+		async issueGrant(auth, session, options, signal) {
+			return validateDevelopmentOidcApiToken(
+				await request(
+					auth,
+					sessionPath(auth, session),
+					{ operation: "grant", grant: options },
+					signal
+				),
+				session,
+				options.authorization_server,
+				options
+			);
+		},
+		async dispatch(auth, session, options, signal) {
+			return (await request(
+				auth,
+				sessionPath(auth, session),
+				{ operation: "fetch", request: options },
+				signal,
+				true
+			)) as globalThis.Response;
+		},
 	};
+}
+function sessionPath(auth: CfAccount, session: DevelopmentOidcSession): string {
+	if (
+		auth.accountId !== session.identity.accountId ||
+		!SESSION_ID.test(session.identity.developmentSessionId)
+	)
+		throw new DevelopmentOidcApiError(INVALID);
+	return `/accounts/${encodeURIComponent(auth.accountId)}/workers/oidc/development-sessions/${session.identity.developmentSessionId}/tokens`;
 }

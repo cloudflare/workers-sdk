@@ -34,7 +34,7 @@ describe("normalizeAndValidateConfig()", () => {
 			},
 			compatibility_date: undefined,
 			compatibility_flags: [],
-			oidc: [],
+			identities: [],
 			configPath: undefined,
 			d1_databases: [],
 			vectorize: [],

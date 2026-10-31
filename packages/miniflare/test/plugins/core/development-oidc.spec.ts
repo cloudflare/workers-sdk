@@ -5,241 +5,188 @@ import {
 } from "miniflare";
 import { describe, test, vi } from "vitest";
 import { singleModuleManifest, useDispose } from "../../test-shared";
-
-const identity = {
-	type: "oidc" as const,
-	identity_id: "orders",
-	audience: "recipient",
+const limits = {
+	type: "identity" as const,
+	audience: "urn:inventory",
+	authorization_grants: {
+		allowed_authorization_servers: ["https://auth.example"],
+		allowed_scopes: ["read"],
+	},
+	request_signing: {
+		profile: "cloudflare-workload-http-v1" as const,
+		allowed_origins: ["https://api.example"],
+		allowed_methods: ["GET", "POST"],
+	},
 };
-const token = "eyJhbGciOiJSUzI1NiJ9.eyJleGVjdXRpb24iOiJsb2NhbCJ9.c2ln";
-
-function worker(developmentOidc?: DevelopmentOidcBrokerFactory): WorkerOptions {
+function worker(
+	script: string,
+	developmentOidc?: DevelopmentOidcBrokerFactory
+): WorkerOptions {
 	return {
 		config: {
 			name: "linked",
-			env: { IDENTITY: identity },
 			compatibilityDate: "2026-01-01",
 			compatibilityFlags: ["workers_oidc"],
-			manifest: singleModuleManifest(`
-   export default { async fetch(request, env, ctx) {
-    try {
-     if (new URL(request.url).pathname === "/env") return Response.json(Object.keys(env));
-     const audience = new URL(request.url).searchParams.get("audience");
-     return new Response(await env.IDENTITY.getToken(audience === null ? undefined : {audience}));
-    } catch (error) { return new Response(error.message, {status: 500}); }
-   } };
-  `),
+			env: { IDENTITY: limits },
+			manifest: singleModuleManifest(script),
 		},
 		dev: { developmentOidc },
 	};
 }
-
-// The native callback has not reached the pinned npm runtime yet. CI enables
-// this suite when testing the matching workerd build through its standard override.
-describe.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
-	"native development OIDC broker",
-	() => {
-		test("keeps multiple binding selectors and simultaneous fresh calls distinct", async ({
-			expect,
-		}) => {
-			let serial = 0;
-			const getToken = vi.fn(
-				async ({ assignment }: { assignment: string }) =>
-					`e30.e30.${Buffer.from(`${assignment}-${++serial}`).toString("base64url")}`
-			);
-			const mf = new Miniflare({
-				workers: [
-					{
-						config: {
-							name: "multiple",
-							compatibilityDate: "2026-01-01",
-							compatibilityFlags: ["workers_oidc"],
-							env: {
-								FIRST: identity,
-								SECOND: { ...identity, identity_id: "reports" },
-							},
-							manifest:
-								singleModuleManifest(`export default {async fetch(request, env) {
-                        return Response.json(await Promise.all([env.FIRST.getToken({fresh:true}), env.FIRST.getToken({fresh:true}), env.SECOND.getToken()]));
-                    }};`),
-						},
-						dev: {
-							developmentOidc: {
-								key: "multiple",
-								create: () => ({ getToken, dispose() {} }),
-							},
-						},
-					},
+describe("development OIDC private RPC shim", () => {
+	test("issues fresh concurrent calls, rejects all getter arguments and hides the host broker", async ({
+		expect,
+	}) => {
+		let serial = 0;
+		const invoke = vi.fn(
+			async (_call: unknown) => new Response(`token-${++serial}`)
+		);
+		const mf = new Miniflare({
+			workers: [
+				worker(
+					`export default {async fetch(request,env){
+   const tokens=await Promise.all(Array.from({length:8},()=>env.IDENTITY.getToken()));let rejected=0;
+   for(const args of [[undefined],[{}],[{fresh:true}],[{audience:"other"}]])try{await env.IDENTITY.getToken(...args);}catch{rejected++;}
+   return Response.json({tokens,rejected,env:Object.keys(env)});
+  }};`,
+					{ key: "one", create: () => ({ invoke, dispose() {} }) }
+				),
+			],
+		});
+		useDispose(mf);
+		const result = (await (
+			await mf.dispatchFetch("http://localhost/")
+		).json()) as { tokens: string[]; rejected: number; env: string[] };
+		expect(new Set(result.tokens).size).toBe(8);
+		expect(result.rejected).toBe(4);
+		expect(result.env).toEqual(["IDENTITY"]);
+		expect(invoke).toHaveBeenCalledTimes(8);
+		for (const [call] of invoke.mock.calls)
+			expect(call).toEqual({ binding: "IDENTITY", operation: "token" });
+	});
+	test("dispatches grants and streams receiver errors without exposing credentials", async ({
+		expect,
+	}) => {
+		const invoke = vi.fn(async (call: { operation: string }) =>
+			call.operation === "grant"
+				? new Response("grant")
+				: new Response("receiver denied", {
+						status: 403,
+						headers: { "X-Receiver": "test" },
+					})
+		);
+		const mf = new Miniflare({
+			workers: [
+				worker(
+					`export default {async fetch(request,env){
+   const grant=await env.IDENTITY.getAuthorizationGrant({authorizationServer:"https://auth.example",scope:["read"]});
+   const response=await env.IDENTITY.fetch("https://api.example/items",{method:"POST",body:"hello",headers:{Authorization:"Bearer upstream"}});
+   return Response.json({grant,status:response.status,body:await response.text(),marker:response.headers.get("X-MF-OIDC-Result")});
+  }};`,
+					{ key: "one", create: () => ({ invoke, dispose() {} }) }
+				),
+			],
+		});
+		useDispose(mf);
+		const result = await mf.dispatchFetch("http://localhost/");
+		const body = await result.text();
+		expect(result.ok, body).toBe(true);
+		expect(JSON.parse(body)).toEqual({
+			grant: "grant",
+			status: 403,
+			body: "receiver denied",
+			marker: null,
+		});
+		expect(invoke.mock.calls[1]?.[0]).toMatchObject({
+			binding: "IDENTITY",
+			operation: "fetch",
+			request: {
+				url: "https://api.example/items",
+				method: "POST",
+				body: btoa("hello"),
+				headers: [
+					["authorization", "Bearer upstream"],
+					["content-type", "text/plain;charset=UTF-8"],
 				],
-			});
-			useDispose(mf);
-			const result = (await (
-				await mf.dispatchFetch("http://localhost/")
-			).json()) as string[];
-			expect(new Set(result).size).toBe(3);
-			expect(getToken.mock.calls.map((call) => call[0])).toEqual([
-				{ assignment: "FIRST", fresh: true },
-				{ assignment: "FIRST", fresh: true },
-				{ assignment: "SECOND", fresh: false },
-			]);
+			},
 		});
-
-		test("shares development identity with local DOs and isolates service/RPC target Workers", async ({
-			expect,
-		}) => {
-			const otherToken = "e30.eyJ3b3JrZXIiOiJvdGhlciJ9.c2ln";
-			const getToken = vi.fn(async () => token),
-				otherGetToken = vi.fn(async () => otherToken);
-			const mf = new Miniflare({
-				workers: [
-					{
-						config: {
-							name: "first",
-							compatibilityDate: "2026-01-01",
-							compatibilityFlags: ["workers_oidc"],
-							manifest: singleModuleManifest(`
-     import { DurableObject } from "cloudflare:workers";
-     export class LocalObject extends DurableObject {
-      async token() {return this.env.IDENTITY.getToken();}
-      async explicit() {return this.env.IDENTITY.getToken({subject: "object"});}
-     }
-     export default {async fetch(request, env, ctx) {
-      const one = env.OBJECTS.getByName("one"), two = env.OBJECTS.getByName("two");
-      let explicitRejected = false;
-      try {await one.explicit();} catch {explicitRejected = true;}
-      return Response.json({worker: await env.IDENTITY.getToken(), one: await one.token(), two: await two.token(), target: await env.OTHER.token(), explicitRejected});
-     }};
-    `),
-							env: {
-								IDENTITY: identity,
-								OBJECTS: {
-									type: "durable-object",
-									worker: "first",
-									exportName: "LocalObject",
-								},
-								OTHER: {
-									type: "worker",
-									worker: "second",
-									exportName: "Issuer",
-								},
-							},
-							exports: {
-								LocalObject: { type: "durable-object", storage: "sqlite" },
-							},
-						},
-						dev: {
-							developmentOidc: {
-								key: "first",
-								create: () => ({ getToken, dispose() {} }),
-							},
-						},
-					},
-					{
-						config: {
-							name: "second",
-							env: { IDENTITY: identity },
-							compatibilityDate: "2026-01-01",
-							compatibilityFlags: ["workers_oidc"],
-							manifest: singleModuleManifest(`
-    import {WorkerEntrypoint} from "cloudflare:workers";
-    export class Issuer extends WorkerEntrypoint {async token() {return this.env.IDENTITY.getToken();}}
-    export default {fetch() {return new Response("second");}};
-   `),
-						},
-						dev: {
-							developmentOidc: {
-								key: "second",
-								create: () => ({ getToken: otherGetToken, dispose() {} }),
-							},
-						},
-					},
-				],
-			});
-			useDispose(mf);
-			expect(
-				await (await mf.dispatchFetch("http://localhost/")).json()
-			).toEqual({
-				worker: token,
-				one: token,
-				two: token,
-				target: otherToken,
-				explicitRejected: true,
-			});
-			expect(getToken).toHaveBeenCalledTimes(3);
-			expect(otherGetToken).toHaveBeenCalledOnce();
+	});
+	test("checks destinations before reading bodies and fails closed without a broker", async ({
+		expect,
+	}) => {
+		const invoke = vi.fn(async () => new Response("token"));
+		const script = `export default {async fetch(request,env){let rejected=0;for(const url of ["http://api.example/","https://other.example/"])try{await env.IDENTITY.fetch(url,{method:"POST",body:new ReadableStream({pull(){throw new Error("body touched");}})});}catch(error){if(!error.message.includes("body touched"))rejected++;}try{await env.IDENTITY.getToken();}catch{rejected++;}return new Response(String(rejected));}};`;
+		const mf = new Miniflare({ workers: [worker(script)] });
+		useDispose(mf);
+		expect(await (await mf.dispatchFetch("http://localhost/")).text()).toBe(
+			"3"
+		);
+		expect(invoke).not.toHaveBeenCalled();
+	});
+	test("reuses equal broker keys and disposes changed configurations", async ({
+		expect,
+	}) => {
+		const invoke = vi.fn(async () => new Response("token")),
+			dispose = vi.fn(),
+			create = vi.fn(() => ({ invoke, dispose }));
+		const script = `export default {async fetch(r,e){return new Response(await e.IDENTITY.getToken());}};`;
+		const options = worker(script, { key: "one", create }),
+			mf = new Miniflare({ workers: [options] });
+		useDispose(mf);
+		await (await mf.dispatchFetch("http://localhost/")).text();
+		await mf.setOptions({ workers: [options] });
+		await (await mf.dispatchFetch("http://localhost/")).text();
+		expect(create).toHaveBeenCalledOnce();
+		await mf.setOptions({ workers: [worker(script, { key: "two", create })] });
+		expect(dispose).toHaveBeenCalledOnce();
+	});
+	test("rejects caller transport overrides before the host sees a request", async ({
+		expect,
+	}) => {
+		const invoke = vi.fn(async () => new Response("unexpected"));
+		const mf = new Miniflare({
+			workers: [
+				worker(
+					`export default {async fetch(r,e){let denied=0;
+   for(const init of [{redirect:"follow"},{cf:{resolveOverride:"other.example"}},{headers:{Host:"other.example"}},{headers:{"Content-Length":"1"}}]) {
+    try {await e.IDENTITY.fetch("https://api.example/",init);} catch {denied++;}
+   }
+   let reads=0;try {await e.IDENTITY.fetch("https://denied.example/",{method:"POST",body:new ReadableStream({pull(){reads++;}},{highWaterMark:0})});}catch{denied++;}
+   return Response.json({denied,reads});
+  }};`,
+					{ key: "one", create: () => ({ invoke, dispose() {} }) }
+				),
+			],
 		});
-
-		test("routes default/explicit audiences through explicit bindings; retains reloads and disposes changes", async ({
-			expect,
-		}) => {
-			const getToken = vi.fn(async () => token),
-				dispose = vi.fn();
-			const create = vi.fn(() => ({ getToken, dispose }));
-			const factory = { key: "linked", create };
-			const mf = new Miniflare({ workers: [worker(factory)] });
-			useDispose(mf);
-			await mf.ready;
-			expect(create).not.toHaveBeenCalled();
-			expect(await (await mf.dispatchFetch("http://localhost/")).text()).toBe(
-				token
-			);
-			expect(getToken).toHaveBeenLastCalledWith({
-				assignment: "IDENTITY",
-				fresh: false,
-			});
-			expect(
-				await (
-					await mf.dispatchFetch("http://localhost/?audience=exact%22%E9%9B%AA")
-				).text()
-			).toBe(token);
-			expect(getToken).toHaveBeenLastCalledWith({
-				assignment: "IDENTITY",
-				audience: 'exact"雪',
-				fresh: false,
-			});
-			expect(
-				await (await mf.dispatchFetch("http://localhost/env")).json()
-			).toEqual(["IDENTITY"]);
-			await mf.setOptions({ workers: [worker({ ...factory })] });
-			expect(await (await mf.dispatchFetch("http://localhost/")).text()).toBe(
-				token
-			);
-			expect(create).toHaveBeenCalledOnce();
-			expect(dispose).not.toHaveBeenCalled();
-			await mf.setOptions({
-				workers: [worker({ ...factory, key: "another" })],
-			});
-			expect(dispose).toHaveBeenCalledOnce();
-			expect(await (await mf.dispatchFetch("http://localhost/")).text()).toBe(
-				token
-			);
-			await mf.dispose();
-			expect(dispose).toHaveBeenCalledTimes(2);
+		useDispose(mf);
+		expect(await (await mf.dispatchFetch("http://localhost/")).json()).toEqual({
+			denied: 5,
+			reads: 0,
 		});
-		test("rejects absent brokers and suppresses host exception secrets", async ({
-			expect,
-		}) => {
-			const mf = new Miniflare({
-				workers: [
-					worker({
-						key: "errors",
-						create: () => ({
-							getToken: async () => {
-								throw new Error("bearer-secret");
-							},
-							dispose() {},
-						}),
-					}),
-				],
-			});
-			useDispose(mf);
-			const response = await mf.dispatchFetch("http://localhost/");
-			expect(response.status).toBe(500);
-			expect(await response.text()).not.toContain("bearer-secret");
-			await mf.setOptions({ workers: [worker()] });
-			const unavailable = await mf.dispatchFetch("http://localhost/");
-			expect(unavailable.status).toBe(500);
-			await unavailable.text();
+		expect(invoke).not.toHaveBeenCalled();
+	});
+	test("serializes FormData once before forwarding final bytes", async ({
+		expect,
+	}) => {
+		const invoke = vi.fn(async (_call: unknown) => new Response("ok"));
+		const mf = new Miniflare({
+			workers: [
+				worker(
+					`export default {async fetch(r,e){const body=new FormData();body.set("message","hello");return e.IDENTITY.fetch("https://api.example/",{method:"POST",body});}};`,
+					{ key: "one", create: () => ({ invoke, dispose() {} }) }
+				),
+			],
 		});
-	}
-);
+		useDispose(mf);
+		expect(await (await mf.dispatchFetch("http://localhost/")).text()).toBe(
+			"ok"
+		);
+		const call = invoke.mock.calls[0]?.[0] as unknown as {
+			request: { body: string; headers: [string, string][] };
+		};
+		const type = new Headers(call.request.headers).get("content-type")!;
+		expect(type).toMatch(/^multipart\/form-data; boundary=/);
+		expect(atob(call.request.body)).toContain(type.split("boundary=")[1]);
+		expect(atob(call.request.body)).toContain("hello");
+	});
+});

@@ -31,7 +31,7 @@ import type {
 	PipelineBinding,
 	QueueBinding,
 	R2Binding,
-	OidcBinding,
+	IdentityBinding,
 	RateLimitBinding,
 	SecretBinding,
 	SecretsStoreSecretBinding,
@@ -126,7 +126,7 @@ type Binding =
 	| PipelineBinding
 	| QueueBinding
 	| R2Binding
-	| OidcBinding
+	| IdentityBinding
 	| RateLimitBinding
 	| SecretBinding
 	| SecretsStoreSecretBinding
