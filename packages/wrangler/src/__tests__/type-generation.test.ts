@@ -835,7 +835,7 @@ describe("generate types - CLI", () => {
 		expect(types).toContain("getIdentity(label?: string)");
 		expect(types).toContain("Promise<Rpc.Stub<Rpc.RpcTargetBranded &");
 		expect(types).toContain(
-			"fetch(input: Request | string, init?: Omit<RequestInit, 'body' | 'cf'>"
+			"fetch(input: Request | string, init?: Omit<RequestInit, 'body' | 'cf' | 'signal'>"
 		);
 		for (const field of ["id", "signatureAgent", "directoryURL"]) {
 			expect(types).toContain(`readonly ${field}: Promise<string>`);
@@ -844,9 +844,7 @@ describe("generate types - CLI", () => {
 		expect(types).toContain(
 			"getAuthorizationGrant(options: { authorizationServer: string; scope?: string[] }): Promise<string>"
 		);
-		expect(types).toContain(
-			"fetch(input: Request | string | URL, init?: RequestInit): Promise<Response>"
-		);
+		expect(types).not.toContain("fetch(input: Request | string | URL");
 	});
 
 	it("keeps the runtime header stable after trailing whitespace is removed", async ({

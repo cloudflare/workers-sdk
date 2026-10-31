@@ -117,7 +117,7 @@ interface BindingTypeMap<TBinding> {
 					readonly directoryURL: Promise<string>;
 					fetch(
 						input: Request | string,
-						init?: Omit<RequestInit, "body" | "cf"> & {
+						init?: Omit<RequestInit, "body" | "cf" | "signal"> & {
 							body?:
 								| string
 								| ArrayBuffer
@@ -134,7 +134,6 @@ interface BindingTypeMap<TBinding> {
 			authorizationServer: string;
 			scope?: string[];
 		}): Promise<string>;
-		fetch(input: Request | string | URL, init?: RequestInit): Promise<Response>;
 	};
 	"rate-limit": RateLimit;
 	r2: R2Bucket;

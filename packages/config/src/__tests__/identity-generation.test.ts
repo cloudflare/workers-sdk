@@ -37,7 +37,11 @@ it("typechecks generated signing-only bindings and minted fetchers across RPC", 
       const selectedId: string = await identity.id;
       const pendingId: Promise<string> = identity.id;
       await identity.fetch("https://api.example.com", { method: "POST", body: "hello" });
-      await env.IDENTITY.fetch("https://api.example.com");
+      await defaultIdentity.fetch("https://api.example.com");
+      // @ts-expect-error Select the default identity before fetching.
+      env.IDENTITY.fetch("https://api.example.com");
+      // @ts-expect-error Signal options are outside the RPC fetch contract.
+      identity.fetch("https://api.example.com", { signal: AbortSignal.timeout(1000) });
       class Relay extends WorkerEntrypoint {
         relay(value: typeof identity): typeof identity { return value.dup(); }
       }
