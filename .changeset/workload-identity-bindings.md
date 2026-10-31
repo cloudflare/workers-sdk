@@ -1,5 +1,6 @@
 ---
 "@cloudflare/config": minor
+"@cloudflare/codemods": minor
 "@cloudflare/workers-utils": minor
 "@cloudflare/deploy-helpers": minor
 "miniflare": minor

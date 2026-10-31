@@ -24,6 +24,61 @@ function convert(
 }
 
 describe("Wrangler environment and tooling conversion", () => {
+	it.for(["vite", "wrangler"] as const)(
+		"preserves identity limits without inheriting bindings for %s",
+		(bundler, { expect }) => {
+			const result = convert(
+				{
+					compatibility_date: "2026-10-31",
+					identities: [
+						{
+							binding: "IDENTITY",
+							audience: "urn:inventory",
+							subject: "durable-object-namespace",
+							namespace_id: "0123456789abcdef0123456789abcdef",
+							authorization_grants: {
+								allowed_authorization_servers: ["https://auth.example.com/"],
+								allowed_scopes: ["items:read"],
+							},
+							request_signing: {
+								profile: "cloudflare-workload-http-v1",
+								allowed_origins: ["https://api.example.com"],
+								allowed_methods: ["GET"],
+							},
+						},
+					],
+					env: { staging: { vars: { MODE: "staging" } } },
+					previews: { vars: { MODE: "preview" } },
+				},
+				bundler
+			);
+
+			expect(
+				result.cloudflareConfig.match(/IDENTITY: bindings\.identity/g)
+			).toHaveLength(1);
+			expect(result.cloudflareConfig).toContain('audience: "urn:inventory"');
+			expect(result.cloudflareConfig).toContain(
+				'subject: "durable-object-namespace"'
+			);
+			expect(result.cloudflareConfig).toContain(
+				'namespace_id: "0123456789abcdef0123456789abcdef"'
+			);
+			expect(result.cloudflareConfig).toContain(
+				"allowed_authorization_servers: ["
+			);
+			expect(result.cloudflareConfig).toContain('"https://auth.example.com/"');
+			expect(result.cloudflareConfig).toContain("allowed_scopes: [");
+			expect(result.cloudflareConfig).toContain('"items:read"');
+			expect(result.cloudflareConfig).toContain(
+				'profile: "cloudflare-workload-http-v1"'
+			);
+			expect(result.cloudflareConfig).toContain("allowed_origins: [");
+			expect(result.cloudflareConfig).toContain('"https://api.example.com"');
+			expect(result.cloudflareConfig).toContain("allowed_methods: [");
+			expect(result.cloudflareConfig).toContain('"GET"');
+		}
+	);
+
 	it("converts environments and previews without inheriting bindings", ({
 		expect,
 	}) => {

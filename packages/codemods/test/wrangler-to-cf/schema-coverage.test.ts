@@ -65,6 +65,7 @@ const FIELD_CASES = {
 	first_party_worker: true,
 	flagship: [{ app_id: "app-id", binding: "FLAGSHIP" }],
 	hyperdrive: [{ binding: "HYPERDRIVE", id: "id" }],
+	identities: [{ binding: "IDENTITY", audience: "urn:inventory" }],
 	images: { binding: "IMAGES" },
 	jsx_factory: "h",
 	jsx_fragment: "Fragment",
