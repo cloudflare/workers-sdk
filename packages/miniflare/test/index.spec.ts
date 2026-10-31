@@ -693,6 +693,56 @@ test("Miniflare: custom service using Content-Encoding header", async ({
 	// await test("deflate, gzip");
 });
 
+test("Miniflare: pre-encoded body retains encoded Content-Length", async ({
+	expect,
+}) => {
+	// A Worker returning a pre-compressed body (e.g. an R2 object stored gzipped,
+	// with `encodeBody: "manual"`) makes workerd send a `Content-Length` matching
+	// the *encoded* size. `undici.fetch` inside `dispatchFetch` decompresses the
+	// body, and `dispatchFetch` removes the `Content-Encoding` header, but any
+	// retained `Content-Length` then describes a body the response no longer has.
+	// Callers like the Vite plugin forward it, truncating the decoded body.
+	const testBody = "x".repeat(1000);
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					env: { TEST_BODY: { type: "text", value: testBody } },
+					manifest: singleModuleManifest(`
+						export default {
+							async fetch(request, env, ctx) {
+								const stream = new Blob([env.TEST_BODY]).stream()
+									.pipeThrough(new CompressionStream("gzip"));
+								const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+								return new Response(bytes, {
+									encodeBody: "manual",
+									headers: {
+										"Content-Type": "text/html",
+										"Content-Encoding": "gzip",
+									},
+								});
+							},
+						};
+					`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		headers: { "Accept-Encoding": "gzip" },
+	});
+	// undici has decompressed the response body
+	expect(await res.text()).toBe(testBody);
+	expect(res.headers.get("MF-Content-Encoding")).toBe("gzip");
+	expect(res.headers.get("Content-Encoding")).toBe(null);
+	// ...so the `Content-Length` must not still describe the encoded body
+	expect(res.headers.get("Content-Length")).toBe(null);
+});
+
 test("Miniflare: negotiates acceptable encoding", async ({ expect }) => {
 	const testBody = "x".repeat(100);
 	const mf = new Miniflare({
