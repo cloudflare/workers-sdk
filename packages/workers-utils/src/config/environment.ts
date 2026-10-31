@@ -7,6 +7,7 @@
  */
 
 import type { Json } from "../types";
+import type { IdentityBindingConfig } from "./oidc";
 
 /**
  * The `Environment` interface declares all the configuration fields that
@@ -1052,7 +1053,7 @@ export interface EnvironmentNonInheritable {
 	 * @default []
 	 * @nonInheritable
 	 */
-	identities: import("./oidc").IdentityBindingConfig[];
+	identities: IdentityBindingConfig[];
 
 	/**
 	 * A map of values to substitute when deploying your Worker.
