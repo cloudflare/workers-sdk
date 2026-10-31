@@ -131,7 +131,6 @@ import {
 	getStorageCandidateName,
 	getWorkerRegistry,
 } from "./shared/dev-registry";
-import { DevelopmentOidcBrokers } from "./shared/development-oidc-broker";
 import {
 	getOutboundDoProxyClassName,
 	normaliseServiceDesignator,
@@ -979,9 +978,6 @@ export class Miniflare {
 
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
-		this.#developmentOidc.update(
-			workerOpts.map((worker) => worker.dev?.developmentOidc)
-		);
 
 		const workerNamesToProxy = this.#workerNamesToProxy();
 		const enableInspectorProxy = workerNamesToProxy.size > 0;
@@ -1163,7 +1159,6 @@ export class Miniflare {
 	// Control-plane credentials belong to one instance and never enter the registry.
 	readonly #devRegistrySecret = crypto.randomBytes(32);
 	readonly #loopbackSecret = crypto.randomBytes(32).toString("hex");
-	readonly #developmentOidc = new DevelopmentOidcBrokers();
 	#registryPushPromise: Promise<void> = Promise.resolve();
 
 	#queueRegistryUpdate(): Promise<void> {
@@ -1544,58 +1539,6 @@ export class Miniflare {
 		req: http.IncomingMessage,
 		res?: http.ServerResponse
 	): Promise<Response | undefined> => {
-		const capability = req.headers["mf-oidc-capability"];
-		if (typeof capability === "string") {
-			let response: Response;
-			try {
-				if (
-					!this.#developmentOidc.isAuthorized(capability) ||
-					req.method !== "POST" ||
-					req.url !== "/invoke" ||
-					req.headers["content-type"] !== "application/json"
-				) {
-					throw new Error("Invalid callback.");
-				}
-				// Bound the base64 body plus the compiled operation envelope.
-				const bytes = Buffer.alloc(12 * 1024 * 1024);
-				let size = 0;
-				for await (const chunk of req) {
-					if (chunk.length > bytes.length - size) {
-						throw new Error("Invalid callback.");
-					}
-					bytes.set(chunk, size);
-					size += chunk.length;
-				}
-				const options: unknown = JSON.parse(
-					new TextDecoder("utf-8", { fatal: true }).decode(
-						bytes.subarray(0, size)
-					)
-				);
-				const result = await this.#developmentOidc.invoke(
-					capability,
-					options as import("./shared/development-oidc-broker").DevelopmentOidcCall
-				);
-				response = new Response(result.body, {
-					status: result.status,
-					statusText: result.statusText,
-					headers: [...result.headers],
-				});
-				if ((options as { operation?: string }).operation === "fetch") {
-					response = new Response(response.body, response);
-					response.headers.set("X-MF-OIDC-Result", "fetch");
-				}
-			} catch {
-				// Never serialize host exceptions: adapters may include credentials in them.
-				response = new Response(
-					"Local OIDC issuance failed. Check the dev server for login or permission errors.",
-					{ status: 503, headers: { "Cache-Control": "no-store" } }
-				);
-			}
-			if (res !== undefined) {
-				await this.#writeResponse(response, res);
-			}
-			return response;
-		}
 		const supplied = req.headers[CoreHeaders.LOOPBACK_SECRET.toLowerCase()];
 		const actual = Buffer.from(typeof supplied === "string" ? supplied : "");
 		const expected = Buffer.from(this.#loopbackSecret);
@@ -2372,7 +2315,6 @@ export class Miniflare {
 				workerNames,
 				loopbackHost,
 				loopbackPort,
-				developmentOidcSecret: this.#developmentOidc.capability(workerIndex),
 				durableObjectClassNames,
 				unsafeEphemeralDurableObjects,
 				workflowExporters,
@@ -3258,9 +3200,6 @@ export class Miniflare {
 		this.#previousWorkerOpts = this.#workerOpts;
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
-		this.#developmentOidc.update(
-			workerOpts.map((worker) => worker.dev?.developmentOidc)
-		);
 		this.#log = this.#sharedOpts.log ?? this.#log;
 		this.#hyperdriveProxyController.log = this.#log;
 
@@ -3999,7 +3938,6 @@ export class Miniflare {
 
 	async dispose(): Promise<void> {
 		this.#disposeController.abort();
-		this.#developmentOidc.dispose();
 		for (const socket of this.#dispatchConnectTcpSockets) {
 			socket.destroy();
 		}
