@@ -68,7 +68,7 @@ export const previewCommand = createCommand({
 		},
 		"secrets-file": {
 			describe:
-				"Path to a file containing secrets to upload with the Preview deployment (JSON or .env format)",
+				"Path to a file containing secrets to upload with the Preview deployment (JSON or .env format). Dotenv values expand $VAR and ${VAR}; process environment values override file values. Only use trusted dotenv secrets files; they can read and upload any process environment value. Escape literal dollar signs with \\$ or use JSON.",
 			type: "string",
 			requiresArg: true,
 		},

@@ -8,7 +8,52 @@ import {
 	getEnvPaths,
 	loadDevVars,
 	loadEnv,
+	parseAndExpandDotEnv,
 } from "../src/local-env";
+
+describe("parseAndExpandDotEnv", () => {
+	it("parses and expands dotenv values", ({ expect }) => {
+		expect(
+			parseAndExpandDotEnv(
+				"API_VERSION=v1\nAPI_URL=https://api.example.com/$API_VERSION"
+			)
+		).toEqual({
+			API_VERSION: "v1",
+			API_URL: "https://api.example.com/v1",
+		});
+	});
+
+	it("preserves an empty process override", ({ expect }) => {
+		const processEnv = { TOKEN: "" };
+
+		expect(parseAndExpandDotEnv("TOKEN=file-token", processEnv)).toEqual({
+			TOKEN: "",
+		});
+		expect(processEnv).toEqual({ TOKEN: "" });
+	});
+
+	it("expands unescaped references and preserves escaped dollar signs", ({
+		expect,
+	}) => {
+		expect(
+			parseAndExpandDotEnv("PASSWORD=pa$word\nESCAPED_PASSWORD=pa\\$word", {})
+		).toEqual({
+			PASSWORD: "pa",
+			ESCAPED_PASSWORD: "pa$word",
+		});
+	});
+
+	it.runIf(process.platform === "win32")(
+		"matches process keys case-insensitively on Windows",
+		({ expect }) => {
+			expect(
+				parseAndExpandDotEnv("token=file-token", { TOKEN: "process-token" })
+			).toEqual({
+				token: "process-token",
+			});
+		}
+	);
+});
 
 describe("loadEnv", () => {
 	runInTempDir();

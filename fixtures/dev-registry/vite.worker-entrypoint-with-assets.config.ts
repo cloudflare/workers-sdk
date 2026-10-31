@@ -7,34 +7,38 @@ export default defineConfig({
 	publicDir: "./assets",
 	plugins: [
 		cloudflare({
-			config: {
-				name: "worker-entrypoint-with-assets",
-				entrypoint: "./workers/worker-entrypoint.ts",
-				compatibilityDate: "2025-05-01",
-				env: {
-					SERVICE_WORKER: {
-						type: "worker",
-						worker: "service-worker",
-					},
-					EXPORTED_HANDLER: {
-						type: "worker",
-						worker: "exported-handler",
-					},
-					EXPORTED_HANDLER_WITH_ASSETS: {
-						type: "worker",
-						worker: "exported-handler-with-assets",
-					},
-					WORKER_ENTRYPOINT: {
-						type: "worker",
-						worker: "worker-entrypoint",
-					},
-					NAMED_ENTRYPOINT: {
-						type: "worker",
-						worker: "worker-entrypoint",
-						exportName: "NamedEntrypoint",
+			config: (loadedConfig) => ({
+				...loadedConfig,
+				worker: {
+					...loadedConfig.worker,
+					name: "worker-entrypoint-with-assets",
+					entrypoint: "./workers/worker-entrypoint.ts",
+					compatibilityDate: "2025-05-01",
+					env: {
+						SERVICE_WORKER: {
+							type: "worker",
+							worker: "service-worker",
+						},
+						EXPORTED_HANDLER: {
+							type: "worker",
+							worker: "exported-handler",
+						},
+						EXPORTED_HANDLER_WITH_ASSETS: {
+							type: "worker",
+							worker: "exported-handler-with-assets",
+						},
+						WORKER_ENTRYPOINT: {
+							type: "worker",
+							worker: "worker-entrypoint",
+						},
+						NAMED_ENTRYPOINT: {
+							type: "worker",
+							worker: "worker-entrypoint",
+							exportName: "NamedEntrypoint",
+						},
 					},
 				},
-			},
+			}),
 			inspectorPort: false,
 			persistState: false,
 			auxiliaryWorkers: [

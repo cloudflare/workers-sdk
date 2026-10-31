@@ -140,6 +140,7 @@ export interface D1QueriesGraphQLResponse {
 			accounts: { d1QueriesAdaptiveGroups?: D1Queries[] }[];
 		};
 	};
+	errors?: { message?: string }[] | null;
 }
 
 export type ImportInitResponse = {

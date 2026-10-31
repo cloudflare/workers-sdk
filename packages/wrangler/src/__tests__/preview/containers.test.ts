@@ -163,48 +163,50 @@ describe("deployPreviewContainers", () => {
 		});
 	});
 
-	// A cross-script binding names a Durable Object owned by another Worker, so
-	// its namespace must never be selected for this preview's container. The
-	// class-name-keyed map would otherwise let it overwrite the local entry.
-	test("should ignore a cross-script Durable Object binding that shares a class name", async ({
-		expect,
-	}) => {
-		const container = containerConfig();
-		const config = {
-			...defaultWranglerConfig,
-			containers: [container],
-		} as unknown as Config;
-		const deploymentWithCrossScriptBinding = {
-			id: "deployment-id",
-			env: {
-				MY_CONTAINER: {
-					type: "durable_object_namespace",
-					class_name: "MyContainer",
-					namespace_id: "preview-do-ns-id",
+	// Deployed namespaces, including the parent's, must never be selected for
+	// this preview's container. The class-name-keyed map would otherwise let a
+	// binding with an explicit script name overwrite the local entry.
+	test.for(["owner-worker", "test-worker"])(
+		"should ignore a binding to deployed Worker %s that shares a class name",
+		async (scriptName, { expect }) => {
+			const container = containerConfig();
+			const config = {
+				...defaultWranglerConfig,
+				name: "test-worker",
+				containers: [container],
+			} as unknown as Config;
+			const deploymentWithCrossScriptBinding = {
+				id: "deployment-id",
+				env: {
+					MY_CONTAINER: {
+						type: "durable_object_namespace",
+						class_name: "MyContainer",
+						namespace_id: "preview-do-ns-id",
+					},
+					// Declared last so an unfiltered map would select deployed storage
+					// instead of the preview's namespace, even for its parent Worker.
+					FOREIGN_CONTAINER: {
+						type: "durable_object_namespace",
+						class_name: "MyContainer",
+						namespace_id: "other-worker-do-ns-id",
+						script_name: scriptName,
+					},
 				},
-				// Same class name, implemented by another Worker. Declared last so
-				// an unfiltered map would end up holding this namespace_id.
-				FOREIGN_CONTAINER: {
-					type: "durable_object_namespace",
-					class_name: "MyContainer",
-					namespace_id: "other-worker-do-ns-id",
-					script_name: "owner-worker",
-				},
-			},
-		} as unknown as DeploymentResource;
+			} as unknown as DeploymentResource;
 
-		await deployPreviewContainers(
-			config,
-			[container],
-			deploymentWithCrossScriptBinding,
-			ACCOUNT_ID,
-			{ quiet: false }
-		);
+			await deployPreviewContainers(
+				config,
+				[container],
+				deploymentWithCrossScriptBinding,
+				ACCOUNT_ID,
+				{ quiet: false }
+			);
 
-		expect(vi.mocked(apply).mock.calls[0]?.[0]).toMatchObject({
-			durable_object_namespace_id: "preview-do-ns-id",
-		});
-	});
+			expect(vi.mocked(apply).mock.calls[0]?.[0]).toMatchObject({
+				durable_object_namespace_id: "preview-do-ns-id",
+			});
+		}
+	);
 
 	test("should not build an image for a container configured with an image URI", async ({
 		expect,

@@ -1504,6 +1504,8 @@ export interface EnvironmentNonInheritable {
 		binding: string;
 		/** The name of this dataset to write to. */
 		dataset?: string;
+		/** Whether the dataset should be remote or not in local development */
+		remote?: boolean;
 	}[];
 
 	/**

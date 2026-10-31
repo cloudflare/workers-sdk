@@ -12,6 +12,7 @@ import {
 	isLiveDurableObjectExport,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { parseAndExpandDotEnv } from "@cloudflare/workers-utils/local-env";
 import chalk from "chalk";
 import { syncAssets } from "../deploy/helpers/assets";
 import { moduleTypeMimeType } from "../deploy/helpers/create-worker-upload-form";
@@ -336,9 +337,10 @@ function buildPreviewContainerConfig(
 	// hand back a preview with no container and no explanation, so reject it
 	// here, before the preview deployment is created.
 	//
-	// A class that does match a binding carrying `script_name` is excluded
-	// rather than rejected: that DO is implemented by another Worker, which owns
-	// its own container application.
+	// A class reached only through a binding carrying `script_name` is excluded
+	// rather than rejected: the named Worker owns its container application.
+	// This includes the parent Worker's deployed namespace, which is separate
+	// from the preview's namespace even though the Worker name is the same.
 	for (const { className } of linkedContainers) {
 		if (
 			ownedDOClasses.has(className) ||
@@ -366,11 +368,9 @@ function buildPreviewContainerConfig(
 	}
 
 	// `getNormalizedContainerOptions` resolves a container's Durable Object with
-	// `find()` on `class_name`, and rejects the container outright if that first
-	// match carries `script_name`. A class bound both locally and cross-script
-	// would then fail as though another Worker owned it, purely because of
-	// binding order. Put the locally implemented bindings first so the lookup
-	// lands on the one this preview owns.
+	// `find()` on `class_name`. Put preview-local bindings first so validation
+	// selects the preview's binding even when another binding to the same class
+	// names a deployed Worker, including the parent.
 	const localBindingsFirst = [
 		...previewDOBindings.filter((b) => b.script_name === undefined),
 		...previewDOBindings.filter((b) => b.script_name !== undefined),
@@ -844,9 +844,9 @@ async function assemblePreviewDeploymentSettings(
 	//
 	// We only emit `class_name`s where the DO is implemented by THIS script,
 	// whether it is declared through `migrations`, through `exports`, or bound
-	// under `previews.durable_objects` without a `script_name`. A binding
-	// carrying `script_name` references a DO implemented by another worker,
-	// which owns its own container application.
+	// under `previews.durable_objects` without a `script_name`. An explicit
+	// `script_name`, including the parent Worker's name, targets a deployed
+	// namespace rather than this preview's isolated namespace.
 	//
 	// A container that names no class is rejected by
 	// `buildPreviewContainerConfig` before we get here, so it is dropped rather
@@ -1131,7 +1131,13 @@ async function runPreview(
 	// fails before the preview is created and assets are uploaded.
 	let secrets: Record<string, string> | undefined;
 	if (args.secretsFile) {
-		secrets = (await parseBulkInputToObject(args.secretsFile))?.content;
+		secrets = (
+			await parseBulkInputToObject(
+				args.secretsFile,
+				false,
+				parseAndExpandDotEnv
+			)
+		)?.content;
 	}
 
 	let previewName = args.name;

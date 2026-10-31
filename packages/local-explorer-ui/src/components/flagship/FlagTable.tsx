@@ -171,7 +171,7 @@ function ValueText({ value }: { value: string }): JSX.Element {
 }
 
 function updatedTime(flag: FlagshipFlag): number {
-	const time = new Date(flag.updated_at).getTime();
+	const time = new Date(flag.updated_at ?? "").getTime();
 	return Number.isNaN(time) ? 0 : time;
 }
 

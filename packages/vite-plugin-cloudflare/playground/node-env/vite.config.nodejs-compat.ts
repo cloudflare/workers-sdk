@@ -7,7 +7,15 @@ export default defineConfig({
 			types: { includeRuntime: false },
 			inspectorPort: false,
 			persistState: false,
-			config: { compatibilityFlags: ["nodejs_compat"] },
+			config(loadedConfig) {
+				return {
+					...loadedConfig,
+					worker: {
+						...loadedConfig.worker,
+						compatibilityFlags: ["nodejs_compat"],
+					},
+				};
+			},
 		}),
 	],
 });

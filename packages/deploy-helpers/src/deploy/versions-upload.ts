@@ -14,6 +14,7 @@ import {
 	UserError,
 	writeOutput,
 } from "@cloudflare/workers-utils";
+import { parseAndExpandDotEnv } from "@cloudflare/workers-utils/local-env";
 import { Response } from "undici";
 import { fetchResult, logger } from "../shared/context";
 import { getWorkerSubdomain } from "../triggers/subdomain";
@@ -222,7 +223,11 @@ async function uploadWorkerVersion(
 	const assetsJwt = assetsUploadResult?.jwt;
 
 	if (props.secretsFile) {
-		const secretsResult = await parseBulkInputToObject(props.secretsFile);
+		const secretsResult = await parseBulkInputToObject(
+			props.secretsFile,
+			false,
+			parseAndExpandDotEnv
+		);
 		if (secretsResult) {
 			for (const [secretName, secretValue] of Object.entries(
 				secretsResult.content

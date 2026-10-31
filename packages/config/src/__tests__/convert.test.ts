@@ -769,6 +769,29 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("preserves the explicit Worker target of a self-named durable-object binding", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					env: {
+						DO: {
+							type: "durable-object",
+							worker: baseWorker.name,
+							exportName: "MyDO",
+						},
+					},
+				},
+				containers: [],
+			});
+			expect(result.durable_objects).toEqual({
+				bindings: [
+					{ name: "DO", class_name: "MyDO", script_name: baseWorker.name },
+				],
+			});
+		});
+
 		it("maps Workflow binding to workflows", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {

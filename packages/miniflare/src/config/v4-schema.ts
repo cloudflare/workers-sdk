@@ -514,7 +514,14 @@ const V4WorkerOptionsShapeSchema = z.object({
 		.object({ send_email: z.array(V4EmailBindingOptionsSchema).optional() })
 		.optional(),
 	analyticsEngineDatasets: z
-		.record(z.string(), z.object({ dataset: z.string() }))
+		.record(
+			z.string(),
+			z.object({
+				dataset: z.string(),
+				remoteProxyConnectionString:
+					RemoteProxyConnectionStringSchema.optional(),
+			})
+		)
 		.optional(),
 	ai: V4RemoteBindingWithNameSchema.optional(),
 	analyticsSql: V4RemoteBindingWithNameSchema.optional(),
@@ -947,7 +954,10 @@ export type V4WorkerOptionsShape = {
 			)
 		>;
 	};
-	analyticsEngineDatasets?: Record<string, { dataset: string }>;
+	analyticsEngineDatasets?: Record<
+		string,
+		{ dataset: string } & V4RemoteBinding
+	>;
 	ai?: V4RemoteBindingWithName;
 	analyticsSql?: V4RemoteBindingWithName;
 	agentMemory?: Record<string, { namespace: string } & V4RemoteBinding>;

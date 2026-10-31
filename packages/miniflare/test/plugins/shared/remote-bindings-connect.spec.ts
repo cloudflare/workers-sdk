@@ -734,7 +734,7 @@ describe("remoteProxyClientWorker: raw TCP opt-in", () => {
 		const worker = remoteProxyClientWorker();
 		expect(
 			(worker as { compatibilityFlags?: string[] }).compatibilityFlags
-		).toBeUndefined();
+		).toEqual(["enhanced_error_serialization"]);
 	});
 
 	test("enables the experimental flag when rawTcp is set", ({ expect }) => {
@@ -743,7 +743,7 @@ describe("remoteProxyClientWorker: raw TCP opt-in", () => {
 		});
 		expect(
 			(worker as { compatibilityFlags?: string[] }).compatibilityFlags
-		).toEqual(["experimental"]);
+		).toEqual(["experimental", "enhanced_error_serialization"]);
 	});
 });
 
@@ -771,7 +771,10 @@ describe("VPC_SERVICES plugin: raw TCP opt-in", () => {
 			worker?: { compatibilityFlags?: string[] };
 		}>;
 		expect(serviceList).toHaveLength(1);
-		expect(serviceList[0].worker?.compatibilityFlags).toEqual(["experimental"]);
+		expect(serviceList[0].worker?.compatibilityFlags).toEqual([
+			"experimental",
+			"enhanced_error_serialization",
+		]);
 	});
 });
 

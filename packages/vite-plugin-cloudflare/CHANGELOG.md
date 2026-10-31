@@ -1,5 +1,115 @@
 # @cloudflare/vite-plugin
 
+## 2.0.0-beta.v.8
+
+### Patch Changes
+
+- [#16013](https://github.com/cloudflare/workers-sdk/pull/16013) [`8b64bec`](https://github.com/cloudflare/workers-sdk/commit/8b64becbd3817abb28654e270c0e0104170f29d7) Thanks [@swalker326](https://github.com/swalker326)! - Fix Durable Object self-references in tests and container validation
+
+  Durable Object bindings that explicitly name the Worker itself now resolve to the test runner in `@cloudflare/vitest-plugin`, for both `cloudflare.config.ts` and Wrangler configuration files. Named Wrangler environments use their effective Worker name, keeping bindings to the base Worker external. Container validation also accepts these self-references, using the effective deployment name to distinguish local and external bindings.
+
+  Explicit binding targets remain intact during configuration conversion, so deploying with `--name` or a CI name override preserves the intended Durable Object target.
+
+- Updated dependencies [[`15fbaed`](https://github.com/cloudflare/workers-sdk/commit/15fbaed2de992a529ca05d99424f8063d63217bf), [`d8899ac`](https://github.com/cloudflare/workers-sdk/commit/d8899ac4c85ff839d73daa9055a76a36248cd2e3)]:
+  - miniflare@5.20261023.3-beta
+  - @cloudflare/runtime-types@0.1.19
+  - @cloudflare/build-output-utils@0.9.6
+  - @cloudflare/config@0.29.0
+
+## 2.0.0-beta.v.7
+
+### Minor Changes
+
+- [#16536](https://github.com/cloudflare/workers-sdk/pull/16536) [`a95d647`](https://github.com/cloudflare/workers-sdk/commit/a95d647f9459e40a00871346b81082abbb27d2b3) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Support remote Analytics Engine bindings in local development
+
+  Setting `remote: true` on an Analytics Engine dataset now sends `writeDataPoint()` calls from `wrangler dev` and the Vite plugin to the real dataset. Without it, writes are still dropped locally.
+
+  ```jsonc
+  {
+    "analytics_engine_datasets": [
+      {
+        "binding": "EVENTS",
+        "dataset": "my-dataset",
+        "remote": true
+      }
+    ]
+  }
+  ```
+
+### Patch Changes
+
+- [#15290](https://github.com/cloudflare/workers-sdk/pull/15290) [`6e3924d`](https://github.com/cloudflare/workers-sdk/commit/6e3924dc1a02cdfa14c2bce5f92f0f3c5fb4193f) Thanks [@edmundhung](https://github.com/edmundhung)! - Close Vite HMR WebSocket upgrades when Vite WebSockets are disabled
+
+  Previously, `server.ws: false` left the browser's raw upgrade socket pending because no Vite handler claimed it. Worker and Sandbox WebSocket forwarding remains unchanged.
+
+- Updated dependencies [[`a95d647`](https://github.com/cloudflare/workers-sdk/commit/a95d647f9459e40a00871346b81082abbb27d2b3), [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1), [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1), [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1)]:
+  - @cloudflare/config@0.29.0
+  - miniflare@5.20261023.2-beta
+  - @cloudflare/build-output-utils@0.9.6
+  - @cloudflare/runtime-types@0.1.18
+
+## 2.0.0-beta.v.6
+
+### Minor Changes
+
+- [#16494](https://github.com/cloudflare/workers-sdk/pull/16494) [`0968b08`](https://github.com/cloudflare/workers-sdk/commit/0968b08c2a0b322fe6820bc2eb573440e6589a0b) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Enable Miniflare's development registry by default and centralize path resolution
+
+  In Miniflare v5 beta, resolve the registry from `CLOUDFLARE_DEV_REGISTRY_PATH`, then the `unsafeDevRegistryPath` constructor option, then `<Cloudflare config directory>/dev-registry/v5`. The default is independent of legacy Wrangler directories and is scoped to the Miniflare major version. The Vite v2 beta plugin follows this new default, while current Wrangler and `getPlatformProxy()` retain Wrangler's legacy default for compatibility with existing Wrangler sessions. Vite v2 and Wrangler therefore require the same `CLOUDFLARE_DEV_REGISTRY_PATH` to discover each other; set it for both processes when mixing these tools.
+
+  Add `enableDevRegistry: false` to disable registration and discovery explicitly. Shared storage now uses the resolved default without requiring an explicit path. As before, shared storage requires an enabled registry to elect a storage owner, so combining `unsafeEnableSharedStorage: true` with `enableDevRegistry: false` is rejected. Miniflare no longer reads `MINIFLARE_REGISTRY_PATH`; use `CLOUDFLARE_DEV_REGISTRY_PATH` instead. Expose `resolveDevRegistryPath()` for integrations that also read registry files. Wrangler uses the effective path for its runtime configuration, initial bindings display, and Flagship active-session check, so the canonical override cannot bypass that check. An explicitly disabled Wrangler registry remains disabled.
+
+### Patch Changes
+
+- [#15659](https://github.com/cloudflare/workers-sdk/pull/15659) [`8d98a15`](https://github.com/cloudflare/workers-sdk/commit/8d98a15a05fa1f4d27654168ed16df1ff4ff1173) Thanks [@dedsec-terminal](https://github.com/dedsec-terminal)! - Fix Vite DevTools WebSocket connections closing unexpectedly
+
+  Leave upgrades at `/__devtools/__ws` to Vite DevTools instead of forwarding them to the Worker. Sandbox preview requests continue to reach the Worker.
+
+- Updated dependencies [[`0968b08`](https://github.com/cloudflare/workers-sdk/commit/0968b08c2a0b322fe6820bc2eb573440e6589a0b), [`f3c13b3`](https://github.com/cloudflare/workers-sdk/commit/f3c13b3b6165b0ce84b5ce0893ba993856e7eef6)]:
+  - miniflare@5.20261023.1-beta
+  - @cloudflare/runtime-types@0.1.17
+
+## 2.0.0-beta.v.5
+
+### Patch Changes
+
+- [#16403](https://github.com/cloudflare/workers-sdk/pull/16403) [`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-10-22
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16437](https://github.com/cloudflare/workers-sdk/pull/16437) [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-10-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16490](https://github.com/cloudflare/workers-sdk/pull/16490) [`bcd618d`](https://github.com/cloudflare/workers-sdk/commit/bcd618d0e622a020fd2cb658df0620a5e3ec2206) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update Zod to 4.6.6 to address GHSA-mrhx-c7xc-m3w5
+
+  The updated shared dependency fixes excessive memory consumption when validating oversized collections. This updates both the published Zod dependencies and the copies bundled into development tools and Workers.
+
+- [#16452](https://github.com/cloudflare/workers-sdk/pull/16452) [`c4a3f9d`](https://github.com/cloudflare/workers-sdk/commit/c4a3f9d197e677610c6f7b7177e71ee08a176f37) Thanks [@apeacock1991](https://github.com/apeacock1991)! - Treat `cloudflare:durable-objects` as a built-in runtime module
+
+  Workers can import `retryable()` from `cloudflare:durable-objects` to mark Durable Object methods as safe to retry. The plugin now leaves that import for the runtime to resolve, as it does for `cloudflare:workers`, instead of trying to resolve it as a package.
+
+- [#16453](https://github.com/cloudflare/workers-sdk/pull/16453) [`18fe656`](https://github.com/cloudflare/workers-sdk/commit/18fe6560982cc75207edb77a90836dea0e734cf3) Thanks [@james-elicx](https://github.com/james-elicx)! - Preserve a Worker response's `statusText` in Vite dev and preview
+
+  Responses such as `new Response(body, { status: 231, statusText: "Custom" })` now reach the browser as `231 Custom` instead of `231 unknown`. Empty status text is also preserved over HTTP/1.x.
+
+- [#16428](https://github.com/cloudflare/workers-sdk/pull/16428) [`7684ef4`](https://github.com/cloudflare/workers-sdk/commit/7684ef407e538547416de9e6d26344a53eb9844c) Thanks [@edmundhung](https://github.com/edmundhung)! - Use cf credentials for remote bindings in `vite dev` and `vite preview`
+
+  Remote bindings previously used cf credentials only when Vite was started by `cf dev`. If remote bindings report that you aren't authenticated, run `cf auth login` or set `CLOUDFLARE_API_TOKEN`.
+
+- [#16486](https://github.com/cloudflare/workers-sdk/pull/16486) [`f09d7c9`](https://github.com/cloudflare/workers-sdk/commit/f09d7c91ac1747a415845f36dd9202559252fb5d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Preserve separate `Set-Cookie` request headers in Vite dev and preview
+
+  Workers now receive each incoming `Set-Cookie` value separately for HTTP requests and WebSocket upgrades, including values with commas in an `Expires` date. Previously, multiple values could be combined into one header.
+
+- [#16457](https://github.com/cloudflare/workers-sdk/pull/16457) [`ab5c335`](https://github.com/cloudflare/workers-sdk/commit/ab5c3359c6401a2631271c3492f7f1bbf91c74a0) Thanks [@Eshan05](https://github.com/Eshan05)! - Fix a dev server failing to start when an earlier dev server in the same process had different Worker exports
+
+  The Vite plugin now clears the Worker export types it detected when a dev server closes. A dev server created afterwards in the same process derives them from its own config again, so it no longer fails with `Class extends value undefined` for a Durable Object the earlier server's Worker did not export.
+
+- Updated dependencies [[`9e05ade`](https://github.com/cloudflare/workers-sdk/commit/9e05ade14e54e692c844a33bfb5b797804c3352a), [`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e), [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876), [`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e), [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876), [`8a30d8e`](https://github.com/cloudflare/workers-sdk/commit/8a30d8eec16110dcaaeb0822768ac03a5b45a902), [`bcd618d`](https://github.com/cloudflare/workers-sdk/commit/bcd618d0e622a020fd2cb658df0620a5e3ec2206)]:
+  - miniflare@5.20261023.0-beta
+  - @cloudflare/build-output-utils@0.9.5
+  - @cloudflare/config@0.28.1
+  - @cloudflare/runtime-types@0.1.16
+
 ## 2.0.0-beta.v.4
 
 ### Minor Changes

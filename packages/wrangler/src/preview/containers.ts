@@ -101,13 +101,12 @@ async function applyPreviewContainers(
 	await fillOpenAPIConfiguration(scopedConfig, containersScope);
 	const dockerPath = getDockerPath();
 
-	// Skip bindings carrying `script_name`. Those name a Durable Object
-	// implemented by another Worker, which owns its own container application,
-	// so their namespace belongs to that Worker. A preview may bind the same
-	// class name both locally and cross-script, and since this map is keyed on
-	// class name alone, an unfiltered cross-script entry could overwrite the
-	// preview's own namespace_id and attach the container to the wrong storage.
-	// `wrangler deploy` applies the same restriction.
+	// Skip bindings carrying `script_name`, including the parent Worker's name:
+	// those target deployed namespaces rather than this preview's isolated
+	// namespace. A preview may bind the same class name both locally and
+	// cross-script, and since this map is keyed on class name alone, an unfiltered
+	// cross-script entry could overwrite the preview's own namespace_id and
+	// attach the container to the wrong storage.
 	const classNameToNamespaceId = new Map<string, string>();
 	for (const binding of Object.values(deployment.env ?? {})) {
 		if (

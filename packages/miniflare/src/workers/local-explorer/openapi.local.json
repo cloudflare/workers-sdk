@@ -15,14 +15,14 @@
 		"/storage/kv/namespaces": {
 			"get": {
 				"operationId": "workers-kv-namespace-list-namespaces",
-				"summary": "List Namespaces",
-				"description": "Returns the namespaces owned by an account.",
+				"summary": "List namespaces",
+				"description": "Lists Workers KV namespaces owned by the specified account. Use `page` and `per_page` to select a page of results, and `order` and `direction` to control sorting.",
 				"parameters": [
 					{
 						"name": "order",
 						"in": "query",
 						"schema": {
-							"description": "Field to order results by.",
+							"description": "Namespace field to sort by (`id` or `title`).",
 							"type": "string",
 							"example": "id",
 							"enum": ["id", "title"]
@@ -32,7 +32,7 @@
 						"name": "direction",
 						"in": "query",
 						"schema": {
-							"description": "Direction to order namespaces.",
+							"description": "Sort namespaces in ascending (`asc`) or descending (`desc`) order.",
 							"type": "string",
 							"example": "asc",
 							"enum": ["asc", "desc"]
@@ -82,8 +82,8 @@
 		"/storage/kv/namespaces/{namespace_id}/keys": {
 			"get": {
 				"operationId": "workers-kv-namespace-list-a-namespace'-s-keys",
-				"summary": "List a Namespace's Keys",
-				"description": "Lists a namespace's keys.",
+				"summary": "List keys in a namespace",
+				"description": "Lists key names in the specified Workers KV namespace, with expiration times and metadata when present. Use `prefix` to filter names and `cursor` to request the next page. Values are not included.",
 				"parameters": [
 					{
 						"name": "namespace_id",
@@ -97,7 +97,7 @@
 						"name": "limit",
 						"in": "query",
 						"schema": {
-							"description": "Limits the number of keys returned in the response. The cursor attribute may be used to iterate over the next batch of keys if there are more than the limit.",
+							"description": "Maximum number of keys to return in one response. Pass `result_info.cursor` from the response as `cursor` to request the next page.",
 							"type": "number",
 							"default": 1000,
 							"maximum": 1000,
@@ -117,7 +117,7 @@
 						"name": "cursor",
 						"in": "query",
 						"schema": {
-							"description": "Opaque token indicating the position from which to continue when requesting the next set of records if the amount of list results was limited by the limit parameter. A valid value for the cursor can be obtained from the `cursors` object in the `result_info` structure.",
+							"description": "Opaque pagination token from `result_info.cursor` in the previous response. Pass it unchanged to request the next page of keys.",
 							"type": "string",
 							"example": "6Ck1la0VxJ0djhidm1MdX2FyDGxLKVeeHZZmORS_8XeSuhz9SjIJRaSa2lnsF01tQOHrfTGAP3R5X1Kv5iVUuMbNKhWNAXHOl6ePB0TUL8nw"
 						}
@@ -169,8 +169,8 @@
 		"/storage/kv/namespaces/{namespace_id}/values/{key_name}": {
 			"get": {
 				"operationId": "workers-kv-namespace-read-key-value-pair",
-				"summary": "Read key-value pair",
-				"description": "Returns the value associated with the given key in the given namespace. Use URL-encoding to use special characters (for example, `:`, `!`, `%`) in the key name. If the KV-pair is set to expire at some point, the expiration time as measured in seconds since the UNIX epoch will be returned in the `expiration` response header.",
+				"summary": "Get a key's value",
+				"description": "Returns the value stored under the specified key in the Workers KV namespace as raw bytes. Use URL-encoding for special characters (for example, `:`, `!`, `%`) in the key name when constructing the request URL. If the key-value pair expires, the `expiration` response header contains its expiration time in seconds since the UNIX epoch.",
 				"parameters": [
 					{
 						"name": "key_name",
@@ -215,8 +215,8 @@
 			},
 			"put": {
 				"operationId": "workers-kv-namespace-write-key-value-pair-with-metadata",
-				"summary": "Write key-value pair with optional metadata",
-				"description": "Write a value identified by a key. Use URL-encoding to use special characters (for example, `:`, `!`, `%`) in the key name. Body should be the value to be stored. If JSON metadata to be associated with the key/value pair is needed, use `multipart/form-data` content type for your PUT request (see dropdown below in `REQUEST BODY SCHEMA`). Existing values, expirations, and metadata will be overwritten. If neither `expiration` nor `expiration_ttl` is specified, the key-value pair will never expire. If both are set, `expiration_ttl` is used and `expiration` is ignored.",
+				"summary": "Write a key-value pair with optional metadata",
+				"description": "Writes a value under the specified key in the Workers KV namespace, creating the key-value pair or replacing its existing value, expiration, and metadata. Send the value as an `application/octet-stream` request body, or use `multipart/form-data` with a `value` part and an optional JSON `metadata` part. Use URL-encoding for special characters (for example, `:`, `!`, `%`) in the key name when constructing the request URL. If neither `expiration` nor `expiration_ttl` is specified, the key-value pair will not expire. If both are set, `expiration_ttl` takes precedence.",
 				"parameters": [
 					{
 						"name": "key_name",
@@ -290,8 +290,8 @@
 			},
 			"delete": {
 				"operationId": "workers-kv-namespace-delete-key-value-pair",
-				"summary": "Delete key-value pair",
-				"description": "Remove a KV pair from the namespace. Use URL-encoding to use special characters (for example, `:`, `!`, `%`) in the key name.",
+				"summary": "Delete a key-value pair",
+				"description": "Deletes the specified key and its value from the Workers KV namespace. Use URL-encoding for special characters (for example, `:`, `!`, `%`) in the key name when constructing the request URL.",
 				"parameters": [
 					{
 						"name": "key_name",
@@ -310,12 +310,6 @@
 						}
 					}
 				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {}
-					}
-				},
 				"responses": {
 					"200": {
 						"description": "Delete key-value pair response.",
@@ -345,7 +339,7 @@
 			"put": {
 				"operationId": "workers-kv-namespace-write-multiple-key-value-pairs",
 				"summary": "Write multiple key-value pairs",
-				"description": "Write multiple keys and values at once. Body should be an array of up to 10,000 key-value pairs to be stored, along with optional expiration information. Existing values and expirations will be overwritten. If neither `expiration` nor `expiration_ttl` is specified, the key-value pair will never expire. If both are set, `expiration_ttl` is used and `expiration` is ignored. The entire request size must be 100 megabytes or less.",
+				"description": "Writes up to 10,000 key-value pairs to the specified Workers KV namespace from a JSON array, with optional metadata and expiration settings for each pair. Existing values and expirations are overwritten. If neither `expiration` nor `expiration_ttl` is specified, the key-value pair will not expire. If both are set, `expiration_ttl` takes precedence. The entire request must be 100 megabytes or less. The result reports the number of successful writes and any keys that failed and should be retried.",
 				"parameters": [
 					{
 						"name": "namespace_id",
@@ -419,7 +413,7 @@
 			"post": {
 				"operationId": "workers-kv-namespace-delete-multiple-key-value-pairs",
 				"summary": "Delete multiple key-value pairs",
-				"description": "Remove multiple KV pairs from the namespace. Body should be an array of up to 10,000 keys to be removed.",
+				"description": "Deletes up to 10,000 key-value pairs from the specified Workers KV namespace. Send a JSON array of the key names to delete. The result reports the number of successful deletions and any keys that failed and should be retried.",
 				"parameters": [
 					{
 						"name": "namespace_id",
@@ -493,7 +487,7 @@
 			"post": {
 				"operationId": "workers-kv-namespace-get-multiple-key-value-pairs",
 				"summary": "Get multiple key-value pairs",
-				"description": "Retrieve up to 100 KV pairs from the namespace. Keys must contain text-based values. JSON values can optionally be parsed instead of being returned as a string value. Metadata can be included if `withMetadata` is true.",
+				"description": "Retrieves the text-based values of up to 100 keys from the specified Workers KV namespace. The result maps each requested key to its value. Set `type` to `json` to parse JSON values instead of returning strings, and set `withMetadata` to `true` to include metadata with each value. Binary values are not supported by this operation.",
 				"parameters": [
 					{
 						"name": "namespace_id",
@@ -573,7 +567,7 @@
 			"get": {
 				"operationId": "d1-list-databases",
 				"summary": "List D1 Databases",
-				"description": "Returns a list of D1 databases.",
+				"description": "List D1 databases in your account.",
 				"parameters": [
 					{
 						"name": "name",
@@ -612,7 +606,8 @@
 														}
 													}
 												}
-											}
+											},
+											"type": "object"
 										}
 									]
 								}
@@ -637,7 +632,7 @@
 			"post": {
 				"operationId": "d1-raw-database-query",
 				"summary": "Raw D1 Database query",
-				"description": "Returns the query result rows as arrays rather than objects. This is a performance-optimized version of the /query endpoint.",
+				"description": "Execute a SQL query against a D1 database and return result rows as arrays rather than objects. This is a performance-optimized version of the /query endpoint.",
 				"parameters": [
 					{
 						"name": "database_id",
@@ -676,7 +671,8 @@
 														"$ref": "#/components/schemas/d1_raw-result-response"
 													}
 												}
-											}
+											},
+											"type": "object"
 										}
 									]
 								}
@@ -1037,7 +1033,7 @@
 		"/workers/durable_objects/namespaces": {
 			"get": {
 				"operationId": "durable-objects-namespace-list-namespaces",
-				"summary": "List Namespaces",
+				"summary": "List Durable Object Namespaces",
 				"description": "Returns the Durable Object namespaces owned by an account.",
 				"parameters": [],
 				"responses": {
@@ -1105,8 +1101,8 @@
 		"/workers/durable_objects/namespaces/{id}/objects": {
 			"get": {
 				"operationId": "durable-objects-namespace-list-objects",
-				"summary": "List Objects",
-				"description": "Returns the Durable Objects in a given namespace.",
+				"summary": "List Objects in a Durable Object namespace",
+				"description": "Returns the Durable Objects in a given Durable Object namespace.",
 				"parameters": [
 					{
 						"name": "id",
@@ -1229,8 +1225,12 @@
 			"get": {
 				"operationId": "r2-list-buckets",
 				"summary": "List Buckets",
-				"description": "Lists all R2 buckets on your account.",
-				"parameters": [],
+				"description": "Lists a page of R2 buckets in the account and selected jurisdiction. Use the returned cursor to retrieve the next page.",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/r2_cf-r2-jurisdiction"
+					}
+				],
 				"responses": {
 					"200": {
 						"description": "List Buckets response.",
@@ -1252,7 +1252,8 @@
 																"$ref": "#/components/schemas/r2_bucket"
 															}
 														}
-													}
+													},
+													"required": ["buckets"]
 												}
 											},
 											"type": "object"
@@ -1289,6 +1290,9 @@
 						"schema": {
 							"$ref": "#/components/schemas/r2_bucket_name"
 						}
+					},
+					{
+						"$ref": "#/components/parameters/r2_cf-r2-jurisdiction"
 					}
 				],
 				"responses": {
@@ -1326,6 +1330,1256 @@
 					}
 				},
 				"tags": ["R2 Bucket"]
+			}
+		},
+		"/flagship/apps/{app_id}/flags": {
+			"get": {
+				"operationId": "flagship_list_flags",
+				"summary": "List flags",
+				"description": "Lists an app's flags ordered by key. Pass `cursor` from `result_info` to page forward; a null cursor indicates the last page.",
+				"parameters": [
+					{
+						"name": "app_id",
+						"in": "path",
+						"description": "Flagship app ID returned when the app was created.",
+						"required": true,
+						"schema": {
+							"description": "Flagship app ID returned when the app was created.",
+							"type": "string"
+						}
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"description": "Max items to return (1–200).",
+						"schema": {
+							"description": "Max items to return (1–200).",
+							"type": "integer",
+							"maximum": 200,
+							"minimum": 1
+						}
+					},
+					{
+						"name": "cursor",
+						"in": "query",
+						"description": "Pagination cursor from a previous response.",
+						"schema": {
+							"description": "Pagination cursor from a previous response.",
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Paginated list of flags.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"message": {
+														"type": "string"
+													}
+												},
+												"required": ["message"],
+												"type": "object"
+											}
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"message": {
+														"type": "string"
+													}
+												},
+												"required": ["message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"$ref": "#/components/schemas/flagship_FlagsPage"
+										},
+										"result_info": {
+											"$ref": "#/components/schemas/flagship_ResultInfo"
+										},
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"success",
+										"result",
+										"result_info",
+										"errors",
+										"messages"
+									]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Forbidden.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Not found.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Too many requests.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Flags"]
+			},
+			"post": {
+				"operationId": "flagship_create_flag",
+				"summary": "Create flag",
+				"description": "Creates a flag. Returns 409 if the key already exists. `type` is always inferred from variation values; legacy request-side values are ignored. Optional `metadata` can be attached at creation.",
+				"parameters": [
+					{
+						"name": "app_id",
+						"in": "path",
+						"description": "Flagship app ID returned when the app was created.",
+						"required": true,
+						"schema": {
+							"description": "Flagship app ID returned when the app was created.",
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"default_variation": {
+										"description": "Variation the API serves when the flag is off, or when it's on but no rule matches the context. Must be a key in `variations`.",
+										"type": "string",
+										"minLength": 1
+									},
+									"description": {
+										"description": "Optional operator-facing description. It does not affect flag evaluation.",
+										"type": "string",
+										"maxLength": 512,
+										"nullable": true
+									},
+									"enabled": {
+										"description": "When false, the flag bypasses all rules and always serves `default_variation`.",
+										"type": "boolean"
+									},
+									"key": {
+										"description": "Unique identifier for the flag within an app. Used in all evaluation and SDK calls.",
+										"type": "string",
+										"maxLength": 64,
+										"minLength": 1,
+										"pattern": "^[a-zA-Z0-9_-]+$"
+									},
+									"metadata": {
+										"description": "Key-value metadata associated with the flag. `null` or an empty object clears existing metadata; omission semantics depend on the endpoint (PUT clears it, PATCH preserves it).",
+										"type": "object",
+										"additionalProperties": {
+											"anyOf": [
+												{
+													"type": "boolean"
+												},
+												{
+													"type": "string"
+												},
+												{
+													"type": "number"
+												}
+											]
+										},
+										"maxProperties": 32,
+										"nullable": true
+									},
+									"rules": {
+										"description": "Targeting rules evaluated in ascending `priority`; the first matching rule wins. An empty array means the flag always serves `default_variation`.",
+										"type": "array",
+										"items": {
+											"$ref": "#/components/schemas/flagship_Rule"
+										}
+									},
+									"type": {
+										"description": "Deprecated compatibility field. Omit it; the API ignores this value and infers the type from the flag's variations.",
+										"type": "string",
+										"enum": ["boolean", "string", "number", "json"],
+										"deprecated": true
+									},
+									"variations": {
+										"description": "Map of variation name to value. All values share the same type (boolean, string, number, or JSON object/array), and each serialized value stays within 10KB.",
+										"type": "object",
+										"additionalProperties": {
+											"$ref": "#/components/schemas/flagship_JsonValue"
+										}
+									}
+								},
+								"additionalProperties": false,
+								"required": [
+									"key",
+									"default_variation",
+									"variations",
+									"rules",
+									"enabled"
+								]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Flag created.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"message": {
+														"type": "string"
+													}
+												},
+												"required": ["message"],
+												"type": "object"
+											}
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"message": {
+														"type": "string"
+													}
+												},
+												"required": ["message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"$ref": "#/components/schemas/flagship_Flag"
+										},
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": ["success", "result", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Forbidden.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Not found.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Too many requests.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Flags"]
+			}
+		},
+		"/flagship/apps/{app_id}/flags/{flag_key}": {
+			"get": {
+				"operationId": "flagship_get_flag",
+				"summary": "Get flag",
+				"description": "Returns the full flag definition including rules, variations, metadata, and audit fields.",
+				"parameters": [
+					{
+						"name": "app_id",
+						"in": "path",
+						"description": "Flagship app ID returned when the app was created.",
+						"required": true,
+						"schema": {
+							"description": "Flagship app ID returned when the app was created.",
+							"type": "string"
+						}
+					},
+					{
+						"name": "flag_key",
+						"in": "path",
+						"description": "Case-sensitive key identifying the flag within the app.",
+						"required": true,
+						"schema": {
+							"description": "Case-sensitive key identifying the flag within the app.",
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Flag details.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"message": {
+														"type": "string"
+													}
+												},
+												"required": ["message"],
+												"type": "object"
+											}
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"message": {
+														"type": "string"
+													}
+												},
+												"required": ["message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"$ref": "#/components/schemas/flagship_Flag"
+										},
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": ["success", "result", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Forbidden.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Not found.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Too many requests.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Flags"]
+			},
+			"put": {
+				"operationId": "flagship_update_flag",
+				"summary": "Update flag",
+				"description": "Replaces the entire flag definition. Omitted fields are cleared, not preserved — read before writing. The path key identifies the flag and cannot be renamed by changing the body `key`. A changelog entry is appended when the flag content actually changes; identical updates are no-ops.",
+				"parameters": [
+					{
+						"name": "app_id",
+						"in": "path",
+						"description": "Flagship app ID returned when the app was created.",
+						"required": true,
+						"schema": {
+							"description": "Flagship app ID returned when the app was created.",
+							"type": "string"
+						}
+					},
+					{
+						"name": "flag_key",
+						"in": "path",
+						"description": "Case-sensitive key identifying the flag within the app.",
+						"required": true,
+						"schema": {
+							"description": "Case-sensitive key identifying the flag within the app.",
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"default_variation": {
+										"description": "Variation the API serves when the flag is off, or when it's on but no rule matches the context. Must be a key in `variations`.",
+										"type": "string",
+										"minLength": 1
+									},
+									"description": {
+										"description": "Optional operator-facing description. It does not affect flag evaluation.",
+										"type": "string",
+										"maxLength": 512,
+										"nullable": true
+									},
+									"enabled": {
+										"description": "When false, the flag bypasses all rules and always serves `default_variation`.",
+										"type": "boolean"
+									},
+									"key": {
+										"description": "Unique identifier for the flag within an app. Used in all evaluation and SDK calls.",
+										"type": "string",
+										"maxLength": 64,
+										"minLength": 1,
+										"pattern": "^[a-zA-Z0-9_-]+$"
+									},
+									"metadata": {
+										"description": "Key-value metadata associated with the flag. `null` or an empty object clears existing metadata; omission semantics depend on the endpoint (PUT clears it, PATCH preserves it).",
+										"type": "object",
+										"additionalProperties": {
+											"anyOf": [
+												{
+													"type": "boolean"
+												},
+												{
+													"type": "string"
+												},
+												{
+													"type": "number"
+												}
+											]
+										},
+										"maxProperties": 32,
+										"nullable": true
+									},
+									"rules": {
+										"description": "Targeting rules evaluated in ascending `priority`; the first matching rule wins. An empty array means the flag always serves `default_variation`.",
+										"type": "array",
+										"items": {
+											"$ref": "#/components/schemas/flagship_Rule"
+										}
+									},
+									"type": {
+										"description": "Deprecated compatibility field. Omit it; the API ignores this value and infers the type from the flag's variations.",
+										"type": "string",
+										"enum": ["boolean", "string", "number", "json"],
+										"deprecated": true
+									},
+									"variations": {
+										"description": "Map of variation name to value. All values share the same type (boolean, string, number, or JSON object/array), and each serialized value stays within 10KB.",
+										"type": "object",
+										"additionalProperties": {
+											"$ref": "#/components/schemas/flagship_JsonValue"
+										}
+									}
+								},
+								"additionalProperties": false,
+								"required": [
+									"key",
+									"default_variation",
+									"variations",
+									"rules",
+									"enabled"
+								]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Updated flag.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"message": {
+														"type": "string"
+													}
+												},
+												"required": ["message"],
+												"type": "object"
+											}
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"message": {
+														"type": "string"
+													}
+												},
+												"required": ["message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"$ref": "#/components/schemas/flagship_Flag"
+										},
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": ["success", "result", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Forbidden.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Not found.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Too many requests.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Flags"]
+			},
+			"patch": {
+				"operationId": "flagship_patch_flag",
+				"summary": "Partially update flag",
+				"description": "Applies a partial update to lightweight flag fields: `enabled`, `description`, `metadata`, and `default_variation`. Only fields present in the request body are modified; omitted fields are preserved. `metadata: null` or an empty object clears metadata. `default_variation` must exist in the current `variations`. Structural changes to `variations` and `rules` use PUT. A changelog entry is appended when the flag content actually changes.",
+				"parameters": [
+					{
+						"name": "app_id",
+						"in": "path",
+						"description": "Flagship app ID returned when the app was created.",
+						"required": true,
+						"schema": {
+							"description": "Flagship app ID returned when the app was created.",
+							"type": "string"
+						}
+					},
+					{
+						"name": "flag_key",
+						"in": "path",
+						"description": "Case-sensitive key identifying the flag within the app.",
+						"required": true,
+						"schema": {
+							"description": "Case-sensitive key identifying the flag within the app.",
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"default_variation": {
+										"description": "Variation the API serves when the flag is off, or when it's on but no rule matches the context. Must be a key in `variations`.",
+										"type": "string",
+										"minLength": 1
+									},
+									"description": {
+										"description": "Optional operator-facing description. It does not affect flag evaluation.",
+										"type": "string",
+										"maxLength": 512,
+										"nullable": true
+									},
+									"enabled": {
+										"description": "When false, the flag bypasses all rules and always serves `default_variation`.",
+										"type": "boolean"
+									},
+									"metadata": {
+										"description": "Key-value metadata associated with the flag. `null` or an empty object clears existing metadata; omission semantics depend on the endpoint (PUT clears it, PATCH preserves it).",
+										"type": "object",
+										"additionalProperties": {
+											"anyOf": [
+												{
+													"type": "boolean"
+												},
+												{
+													"type": "string"
+												},
+												{
+													"type": "number"
+												}
+											]
+										},
+										"maxProperties": 32,
+										"nullable": true
+									}
+								},
+								"additionalProperties": false
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Updated flag.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"message": {
+														"type": "string"
+													}
+												},
+												"required": ["message"],
+												"type": "object"
+											}
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"message": {
+														"type": "string"
+													}
+												},
+												"required": ["message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"$ref": "#/components/schemas/flagship_Flag"
+										},
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": ["success", "result", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Forbidden.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Not found.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Too many requests.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Flags"]
+			},
+			"delete": {
+				"operationId": "flagship_delete_flag",
+				"summary": "Delete flag",
+				"description": "Deletes a flag permanently. After deletion propagates, direct evaluations return not found; typed binding accessors may return the caller-supplied default. Cannot be undone.",
+				"parameters": [
+					{
+						"name": "app_id",
+						"in": "path",
+						"description": "Flagship app ID returned when the app was created.",
+						"required": true,
+						"schema": {
+							"description": "Flagship app ID returned when the app was created.",
+							"type": "string"
+						}
+					},
+					{
+						"name": "flag_key",
+						"in": "path",
+						"description": "Case-sensitive key identifying the flag within the app.",
+						"required": true,
+						"schema": {
+							"description": "Case-sensitive key identifying the flag within the app.",
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Flag deleted.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"message": {
+														"type": "string"
+													}
+												},
+												"required": ["message"],
+												"type": "object"
+											}
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"message": {
+														"type": "string"
+													}
+												},
+												"required": ["message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"$ref": "#/components/schemas/flagship_DeleteFlagResult"
+										},
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": ["success", "result", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Forbidden.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Not found.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"429": {
+						"description": "Too many requests.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Flags"]
+			}
+		},
+		"/flagship/apps/{app_id}/evaluate": {
+			"get": {
+				"operationId": "flagship_evaluate_flag",
+				"summary": "Evaluate flag from query context",
+				"description": "Evaluates a flag against the provided context. Pass context attributes as query parameters; values are coerced to numbers or booleans where unambiguous. For low-latency in-Worker evaluation, prefer the Flagship binding over this endpoint.",
+				"parameters": [
+					{
+						"name": "app_id",
+						"in": "path",
+						"description": "Flagship app ID returned when the app was created.",
+						"required": true,
+						"schema": {
+							"description": "Flagship app ID returned when the app was created.",
+							"type": "string"
+						}
+					},
+					{
+						"name": "flagKey",
+						"in": "query",
+						"description": "The flag key to evaluate.",
+						"required": true,
+						"schema": {
+							"description": "The flag key to evaluate.",
+							"type": "string"
+						}
+					},
+					{
+						"name": "targetingKey",
+						"in": "query",
+						"description": "Context targeting key (per OpenFeature spec); used for percentage rollout bucketing.",
+						"schema": {
+							"description": "Context targeting key (per OpenFeature spec); used for percentage rollout bucketing.",
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Flag evaluation result.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_EvaluationResult"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Missing or invalid flagKey.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_EvaluationError"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Forbidden.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Flag or app not found.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_EvaluationError"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Evaluation error.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_EvaluationError"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Flag store temporarily unavailable.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_EvaluationError"
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Evaluation"]
+			},
+			"post": {
+				"operationId": "flagship_evaluate_flag_post",
+				"summary": "Evaluate flag with JSON context",
+				"description": "Evaluates a flag against the provided context, passed as a JSON request body (OFREP-shaped) rather than query parameters. Returns the same response shape as the GET variant.",
+				"parameters": [
+					{
+						"name": "app_id",
+						"in": "path",
+						"description": "Flagship app ID returned when the app was created.",
+						"required": true,
+						"schema": {
+							"description": "Flagship app ID returned when the app was created.",
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"context": {
+										"description": "Evaluation attributes keyed by name. Values may be any JSON value; the context supports up to 100 entries, nesting depth of 10, 10,000 values, and 32 KB.",
+										"type": "object",
+										"default": {},
+										"additionalProperties": {
+											"$ref": "#/components/schemas/flagship_JsonValue"
+										}
+									},
+									"flagKey": {
+										"description": "Key of the flag to evaluate within the app.",
+										"type": "string",
+										"maxLength": 64,
+										"minLength": 1,
+										"pattern": "^[a-zA-Z0-9_-]+$"
+									}
+								},
+								"additionalProperties": false,
+								"required": ["flagKey"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Flag evaluation result.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_EvaluationResult"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Missing or invalid flagKey, or malformed context.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_EvaluationError"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Forbidden.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_Error"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Flag or app not found.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_EvaluationError"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Evaluation error.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_EvaluationError"
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Flag store temporarily unavailable.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/flagship_EvaluationError"
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Evaluation"]
 			}
 		},
 		"/r2/buckets/{bucket_name}/objects": {
@@ -3149,439 +4403,470 @@
 				"summary": "List Flagship Apps",
 				"tags": ["Flagship"]
 			}
-		},
-		"/flagship/apps/{app_id}/flags": {
-			"get": {
-				"description": "Returns the flags in a local Flagship app.",
-				"operationId": "flagship-list-flags",
-				"parameters": [
-					{
-						"in": "path",
-						"name": "app_id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"description": "Worker whose local Flagship store should be used.",
-						"in": "query",
-						"name": "worker",
-						"required": false,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"responses": {
-					"200": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"allOf": [
-										{
-											"$ref": "#/components/schemas/workers_api-response-common"
-										},
-										{
-											"properties": {
-												"result": {
-													"items": {
-														"$ref": "#/components/schemas/flagship_flag"
-													},
-													"type": "array"
-												}
-											},
-											"type": "object"
-										}
-									]
-								}
-							}
-						},
-						"description": "List Flagship Flags response."
-					},
-					"4XX": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/workers_api-response-common-failure"
-								}
-							}
-						},
-						"description": "List Flagship Flags response failure."
-					}
-				},
-				"summary": "List Flagship Flags",
-				"tags": ["Flagship"]
-			},
-			"post": {
-				"description": "Creates a flag in a local Flagship app.",
-				"operationId": "flagship-create-flag",
-				"parameters": [
-					{
-						"in": "path",
-						"name": "app_id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"description": "Worker whose local Flagship store should be used.",
-						"in": "query",
-						"name": "worker",
-						"required": false,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"required": ["key", "default_variation", "variations"],
-								"properties": {
-									"key": {
-										"description": "Flag key",
-										"type": "string"
-									},
-									"description": {
-										"description": "Human readable description",
-										"nullable": true,
-										"type": "string"
-									},
-									"enabled": {
-										"description": "Whether the flag is enabled",
-										"type": "boolean"
-									},
-									"default_variation": {
-										"description": "Variation served when no rule matches",
-										"type": "string"
-									},
-									"variations": {
-										"additionalProperties": true,
-										"description": "Named values the flag can serve",
-										"type": "object"
-									},
-									"rules": {
-										"description": "Targeting rules, in priority order",
-										"items": {
-											"$ref": "#/components/schemas/flagship_rule"
-										},
-										"type": "array"
-									}
-								},
-								"type": "object"
-							}
-						}
-					},
-					"required": true
-				},
-				"responses": {
-					"200": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"allOf": [
-										{
-											"$ref": "#/components/schemas/workers_api-response-common"
-										},
-										{
-											"properties": {
-												"result": {
-													"$ref": "#/components/schemas/flagship_flag"
-												}
-											},
-											"type": "object"
-										}
-									]
-								}
-							}
-						},
-						"description": "Create Flagship Flag response."
-					},
-					"4XX": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/workers_api-response-common-failure"
-								}
-							}
-						},
-						"description": "Create Flagship Flag response failure."
-					}
-				},
-				"summary": "Create Flagship Flag",
-				"tags": ["Flagship"]
-			}
-		},
-		"/flagship/apps/{app_id}/flags/{flag_key}": {
-			"patch": {
-				"description": "Updates a flag. Omitted fields keep their current values; provided rules replace the existing ones.",
-				"operationId": "flagship-update-flag",
-				"parameters": [
-					{
-						"in": "path",
-						"name": "app_id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"in": "path",
-						"name": "flag_key",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"description": "Worker whose local Flagship store should be used.",
-						"in": "query",
-						"name": "worker",
-						"required": false,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"properties": {
-									"description": {
-										"description": "Human readable description",
-										"nullable": true,
-										"type": "string"
-									},
-									"enabled": {
-										"description": "Whether the flag is enabled",
-										"type": "boolean"
-									},
-									"default_variation": {
-										"description": "Variation served when no rule matches",
-										"type": "string"
-									},
-									"variations": {
-										"additionalProperties": true,
-										"description": "Named values the flag can serve",
-										"type": "object"
-									},
-									"rules": {
-										"description": "Targeting rules, in priority order",
-										"items": {
-											"$ref": "#/components/schemas/flagship_rule"
-										},
-										"type": "array"
-									}
-								},
-								"type": "object"
-							}
-						}
-					},
-					"required": true
-				},
-				"responses": {
-					"200": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"allOf": [
-										{
-											"$ref": "#/components/schemas/workers_api-response-common"
-										},
-										{
-											"properties": {
-												"result": {
-													"$ref": "#/components/schemas/flagship_flag"
-												}
-											},
-											"type": "object"
-										}
-									]
-								}
-							}
-						},
-						"description": "Update Flagship Flag response."
-					},
-					"4XX": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/workers_api-response-common-failure"
-								}
-							}
-						},
-						"description": "Update Flagship Flag response failure."
-					}
-				},
-				"summary": "Update Flagship Flag",
-				"tags": ["Flagship"]
-			},
-			"delete": {
-				"description": "Deletes a flag from a local Flagship app.",
-				"operationId": "flagship-delete-flag",
-				"parameters": [
-					{
-						"in": "path",
-						"name": "app_id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"in": "path",
-						"name": "flag_key",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"description": "Worker whose local Flagship store should be used.",
-						"in": "query",
-						"name": "worker",
-						"required": false,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"responses": {
-					"200": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"allOf": [
-										{
-											"$ref": "#/components/schemas/workers_api-response-common"
-										},
-										{
-											"properties": {
-												"result": {
-													"properties": {
-														"success": {
-															"type": "boolean"
-														}
-													},
-													"type": "object"
-												}
-											},
-											"type": "object"
-										}
-									]
-								}
-							}
-						},
-						"description": "Delete Flagship Flag response."
-					},
-					"4XX": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/workers_api-response-common-failure"
-								}
-							}
-						},
-						"description": "Delete Flagship Flag response failure."
-					}
-				},
-				"summary": "Delete Flagship Flag",
-				"tags": ["Flagship"]
-			}
-		},
-		"/flagship/apps/{app_id}/flags/{flag_key}/evaluate": {
-			"post": {
-				"description": "Evaluates a flag against an evaluation context, as a Worker binding would.",
-				"operationId": "flagship-evaluate-flag",
-				"parameters": [
-					{
-						"in": "path",
-						"name": "app_id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"in": "path",
-						"name": "flag_key",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"description": "Worker whose local Flagship store should be used.",
-						"in": "query",
-						"name": "worker",
-						"required": false,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"requestBody": {
-					"content": {
-						"application/json": {
-							"schema": {
-								"properties": {
-									"context": {
-										"additionalProperties": true,
-										"description": "Attributes used for rule matching and rollout bucketing.",
-										"type": "object"
-									}
-								},
-								"type": "object"
-							}
-						}
-					},
-					"required": true
-				},
-				"responses": {
-					"200": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"allOf": [
-										{
-											"$ref": "#/components/schemas/workers_api-response-common"
-										},
-										{
-											"properties": {
-												"result": {
-													"$ref": "#/components/schemas/flagship_evaluation"
-												}
-											},
-											"type": "object"
-										}
-									]
-								}
-							}
-						},
-						"description": "Evaluate Flagship Flag response."
-					},
-					"4XX": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/workers_api-response-common-failure"
-								}
-							}
-						},
-						"description": "Evaluate Flagship Flag response failure."
-					}
-				},
-				"summary": "Evaluate Flagship Flag",
-				"tags": ["Flagship"]
-			}
 		}
 	},
 	"components": {
 		"schemas": {
+			"flagship_EvaluationError": {
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/flagship_Error"
+					},
+					{
+						"properties": {
+							"errorCode": {
+								"description": "OpenFeature error code for the failed evaluation.",
+								"type": "string",
+								"enum": [
+									"PROVIDER_NOT_READY",
+									"FLAG_NOT_FOUND",
+									"PARSE_ERROR",
+									"TYPE_MISMATCH",
+									"TARGETING_KEY_MISSING",
+									"INVALID_CONTEXT",
+									"GENERAL"
+								]
+							}
+						},
+						"required": ["errorCode"],
+						"type": "object"
+					}
+				]
+			},
+			"flagship_Error": {
+				"type": "object",
+				"properties": {
+					"errors": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/flagship_ApiMessage"
+						}
+					},
+					"messages": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/flagship_ApiMessage"
+						}
+					},
+					"result": {
+						"type": "object",
+						"enum": [null],
+						"nullable": true
+					},
+					"success": {
+						"type": "boolean"
+					}
+				},
+				"required": ["success", "result", "errors", "messages"]
+			},
+			"flagship_ApiMessage": {
+				"type": "object",
+				"properties": {
+					"message": {
+						"type": "string"
+					}
+				},
+				"required": ["message"]
+			},
+			"flagship_EvaluationResult": {
+				"type": "object",
+				"properties": {
+					"flagKey": {
+						"description": "Key of the evaluated flag.",
+						"type": "string"
+					},
+					"metadata": {
+						"description": "Key-value metadata associated with the flag. Returned only when the flag has metadata.",
+						"type": "object",
+						"additionalProperties": {
+							"anyOf": [
+								{
+									"type": "boolean"
+								},
+								{
+									"type": "string"
+								},
+								{
+									"type": "number"
+								}
+							]
+						},
+						"maxProperties": 32
+					},
+					"reason": {
+						"description": "Reason the evaluator selected this variation.",
+						"type": "string",
+						"enum": [
+							"STATIC",
+							"TARGETING_MATCH",
+							"DEFAULT",
+							"DISABLED",
+							"SPLIT"
+						]
+					},
+					"value": {
+						"$ref": "#/components/schemas/flagship_JsonValue"
+					},
+					"variant": {
+						"description": "Name of the variation that supplied the resolved value.",
+						"type": "string"
+					}
+				},
+				"required": ["flagKey", "variant", "reason"]
+			},
+			"flagship_JsonValue": {
+				"oneOf": [
+					{
+						"nullable": true,
+						"type": "string"
+					},
+					{
+						"type": "number"
+					},
+					{
+						"type": "boolean"
+					},
+					{
+						"additionalProperties": {
+							"$ref": "#/components/schemas/flagship_JsonValue"
+						},
+						"type": "object"
+					},
+					{
+						"items": {
+							"$ref": "#/components/schemas/flagship_JsonValue"
+						},
+						"type": "array"
+					}
+				]
+			},
+			"flagship_DeleteFlagResult": {
+				"type": "object",
+				"properties": {
+					"key": {
+						"type": "string"
+					}
+				},
+				"required": ["key"]
+			},
+			"flagship_Flag": {
+				"type": "object",
+				"properties": {
+					"default_variation": {
+						"description": "Variation the API serves when the flag is off, or when it's on but no rule matches the context. Must be a key in `variations`.",
+						"type": "string",
+						"minLength": 1
+					},
+					"description": {
+						"description": "Optional operator-facing description. It does not affect flag evaluation.",
+						"type": "string",
+						"maxLength": 512,
+						"nullable": true
+					},
+					"enabled": {
+						"description": "When false, the flag bypasses all rules and always serves `default_variation`.",
+						"type": "boolean"
+					},
+					"key": {
+						"description": "Unique identifier for the flag within an app. Used in all evaluation and SDK calls.",
+						"type": "string",
+						"maxLength": 64,
+						"minLength": 1,
+						"pattern": "^[a-zA-Z0-9_-]+$"
+					},
+					"metadata": {
+						"description": "Key-value metadata associated with the flag. Returned only when the flag has metadata.",
+						"type": "object",
+						"additionalProperties": {
+							"anyOf": [
+								{
+									"type": "boolean"
+								},
+								{
+									"type": "string"
+								},
+								{
+									"type": "number"
+								}
+							]
+						},
+						"maxProperties": 32
+					},
+					"rules": {
+						"description": "Targeting rules evaluated in ascending `priority`; the first matching rule wins. An empty array means the flag always serves `default_variation`.",
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/flagship_Rule"
+						}
+					},
+					"type": {
+						"description": "Server-inferred value type shared by all of the flag's variations.",
+						"type": "string",
+						"enum": ["boolean", "string", "number", "json"]
+					},
+					"updated_at": {
+						"type": "string"
+					},
+					"updated_by": {
+						"type": "string"
+					},
+					"variations": {
+						"description": "Map of variation name to value. All values share the same type (boolean, string, number, or JSON object/array), and each serialized value stays within 10KB.",
+						"type": "object",
+						"additionalProperties": {
+							"$ref": "#/components/schemas/flagship_JsonValue"
+						}
+					}
+				},
+				"additionalProperties": false,
+				"required": [
+					"key",
+					"type",
+					"default_variation",
+					"variations",
+					"rules",
+					"enabled"
+				]
+			},
+			"flagship_Rule": {
+				"type": "object",
+				"properties": {
+					"conditions": {
+						"description": "Conditions the context must satisfy for this rule to match. An empty array matches all contexts.",
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/flagship_Condition"
+						}
+					},
+					"priority": {
+						"description": "Evaluation order: the API evaluates rules with lower numbers first. Must be unique across the flag's rules.",
+						"type": "integer",
+						"minimum": 1
+					},
+					"rollout": {
+						"type": "object",
+						"additionalProperties": false,
+						"properties": {
+							"attribute": {
+								"description": "Context attribute used for sticky bucketing. Defaults to `targetingKey`. If absent at evaluation time, bucketing is random per request.",
+								"type": "string",
+								"maxLength": 64,
+								"minLength": 1
+							},
+							"percentage": {
+								"description": "Percentage of matching traffic (0–100, up to 2 decimal places) served this variation. For multi-way splits, use cumulative upper bounds across rules (e.g. 30, 70, 100).",
+								"type": "number",
+								"maximum": 100,
+								"minimum": 0,
+								"multipleOf": 0.01
+							}
+						},
+						"required": ["percentage"]
+					},
+					"serve_variation": {
+						"description": "Variation the API serves when this rule matches. Must be a key in `variations`.",
+						"type": "string",
+						"minLength": 1
+					}
+				},
+				"additionalProperties": false,
+				"required": ["priority", "conditions", "serve_variation"]
+			},
+			"flagship_Condition": {
+				"anyOf": [
+					{
+						"$ref": "#/components/schemas/flagship_BaseCondition"
+					},
+					{
+						"$ref": "#/components/schemas/flagship_LogicalCondition"
+					}
+				]
+			},
+			"flagship_LogicalCondition": {
+				"type": "object",
+				"properties": {
+					"clauses": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/flagship_Condition1"
+						},
+						"minItems": 1
+					},
+					"logical_operator": {
+						"type": "string",
+						"enum": ["AND", "OR"]
+					}
+				},
+				"additionalProperties": false,
+				"required": ["logical_operator", "clauses"]
+			},
+			"flagship_Condition1": {
+				"anyOf": [
+					{
+						"$ref": "#/components/schemas/flagship_BaseCondition"
+					},
+					{
+						"$ref": "#/components/schemas/flagship_LogicalCondition1"
+					}
+				]
+			},
+			"flagship_LogicalCondition1": {
+				"type": "object",
+				"properties": {
+					"clauses": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/flagship_Condition2"
+						},
+						"minItems": 1
+					},
+					"logical_operator": {
+						"type": "string",
+						"enum": ["AND", "OR"]
+					}
+				},
+				"additionalProperties": false,
+				"required": ["logical_operator", "clauses"]
+			},
+			"flagship_Condition2": {
+				"anyOf": [
+					{
+						"$ref": "#/components/schemas/flagship_BaseCondition"
+					},
+					{
+						"$ref": "#/components/schemas/flagship_LogicalCondition2"
+					}
+				]
+			},
+			"flagship_LogicalCondition2": {
+				"type": "object",
+				"properties": {
+					"clauses": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/flagship_Condition3"
+						},
+						"minItems": 1
+					},
+					"logical_operator": {
+						"type": "string",
+						"enum": ["AND", "OR"]
+					}
+				},
+				"additionalProperties": false,
+				"required": ["logical_operator", "clauses"]
+			},
+			"flagship_Condition3": {
+				"anyOf": [
+					{
+						"$ref": "#/components/schemas/flagship_BaseCondition"
+					},
+					{
+						"$ref": "#/components/schemas/flagship_LogicalCondition3"
+					}
+				]
+			},
+			"flagship_LogicalCondition3": {
+				"type": "object",
+				"properties": {
+					"clauses": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/flagship_Condition4"
+						},
+						"minItems": 1
+					},
+					"logical_operator": {
+						"type": "string",
+						"enum": ["AND", "OR"]
+					}
+				},
+				"additionalProperties": false,
+				"required": ["logical_operator", "clauses"]
+			},
+			"flagship_Condition4": {
+				"anyOf": [
+					{
+						"$ref": "#/components/schemas/flagship_BaseCondition"
+					},
+					{
+						"$ref": "#/components/schemas/flagship_LogicalCondition4"
+					}
+				]
+			},
+			"flagship_LogicalCondition4": {
+				"type": "object",
+				"properties": {
+					"clauses": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/flagship_BaseCondition"
+						},
+						"minItems": 1
+					},
+					"logical_operator": {
+						"type": "string",
+						"enum": ["AND", "OR"]
+					}
+				},
+				"additionalProperties": false,
+				"required": ["logical_operator", "clauses"]
+			},
+			"flagship_BaseCondition": {
+				"type": "object",
+				"properties": {
+					"attribute": {
+						"type": "string",
+						"maxLength": 64,
+						"minLength": 1
+					},
+					"operator": {
+						"type": "string",
+						"enum": [
+							"equals",
+							"not_equals",
+							"greater_than",
+							"less_than",
+							"greater_than_or_equals",
+							"less_than_or_equals",
+							"contains",
+							"starts_with",
+							"ends_with",
+							"in",
+							"not_in",
+							"has",
+							"not_has"
+						]
+					},
+					"value": {
+						"$ref": "#/components/schemas/flagship_JsonValue"
+					}
+				},
+				"additionalProperties": false,
+				"required": ["attribute", "operator", "value"]
+			},
+			"flagship_ResultInfo": {
+				"type": "object",
+				"properties": {
+					"count": {
+						"description": "Number of items returned in this page.",
+						"type": "integer",
+						"minimum": 0
+					},
+					"cursor": {
+						"description": "Cursor to pass back to fetch the next page, or null when this is the last page.",
+						"type": "string",
+						"nullable": true
+					}
+				},
+				"required": ["count", "cursor"]
+			},
+			"flagship_FlagsPage": {
+				"type": "array",
+				"items": {
+					"$ref": "#/components/schemas/flagship_Flag"
+				}
+			},
 			"r2_v4_response": {
 				"type": "object",
 				"properties": {
@@ -3680,13 +4965,22 @@
 								"$ref": "#/components/schemas/r2_result_info"
 							}
 						},
+						"required": ["result_info"],
 						"type": "object"
 					}
 				]
 			},
 			"r2_result_info": {
 				"type": "object",
-				"properties": {}
+				"properties": {
+					"total_count": {
+						"description": "Total number of active buckets in the requested jurisdiction. This count is not affected by filtering or pagination and is eventually consistent for accounts with elevated bucket limits.",
+						"type": "integer",
+						"example": 42,
+						"minimum": 0
+					}
+				},
+				"required": ["total_count"]
 			},
 			"workers_cursor": {
 				"description": "Opaque token indicating the position from which to continue when requesting the next set of records. A valid value for the cursor can be obtained from the cursors object in the result_info structure.",
@@ -4108,9 +5402,6 @@
 					"messages": {
 						"$ref": "#/components/schemas/d1_messages"
 					},
-					"result": {
-						"type": "object"
-					},
 					"success": {
 						"description": "Whether the API call was successful",
 						"type": "boolean",
@@ -4148,22 +5439,18 @@
 									"$ref": "#/components/schemas/workers-kv_expiration"
 								},
 								"metadata": {
+									"description": "The metadata associated with the key.",
 									"allOf": [
 										{
 											"$ref": "#/components/schemas/workers-kv_any"
-										},
-										{
-											"description": "The metadata associated with the key."
 										}
 									]
 								},
 								"value": {
+									"description": "The value associated with the key.",
 									"allOf": [
 										{
 											"$ref": "#/components/schemas/workers-kv_any"
-										},
-										{
-											"description": "The value associated with the key."
 										}
 									]
 								}
@@ -4255,12 +5542,12 @@
 				"type": "object",
 				"properties": {
 					"successful_key_count": {
-						"description": "Number of keys successfully updated.",
+						"description": "Number of keys successfully written or deleted by the bulk operation.",
 						"type": "number",
 						"example": 100
 					},
 					"unsuccessful_keys": {
-						"description": "Name of the keys that failed to be fully updated. They should be retried.",
+						"description": "Names of keys that failed to be written or deleted. Retry the operation for these keys.",
 						"type": "array",
 						"items": {
 							"type": "string"
@@ -4302,20 +5589,18 @@
 				"maxItems": 10000
 			},
 			"workers-kv_list_metadata": {
+				"description": "Arbitrary JSON that is associated with a key.",
+				"example": {
+					"someMetadataKey": "someMetadataValue"
+				},
 				"allOf": [
 					{
 						"$ref": "#/components/schemas/workers-kv_any"
-					},
-					{
-						"description": "Arbitrary JSON that is associated with a key.",
-						"example": {
-							"someMetadataKey": "someMetadataValue"
-						}
 					}
 				]
 			},
 			"workers-kv_expiration_ttl": {
-				"description": "Expires the key after a number of seconds. Must be at least 60.",
+				"description": "Number of seconds until the key expires. Must be at least 60. Takes precedence over `expiration` when both are specified.",
 				"type": "number",
 				"example": 300,
 				"minimum": 60
@@ -4373,15 +5658,13 @@
 				"uniqueItems": true
 			},
 			"workers-kv_metadata": {
+				"description": "Associates arbitrary JSON data with a key/value pair.",
+				"example": {
+					"someMetadataKey": "someMetadataValue"
+				},
 				"allOf": [
 					{
 						"$ref": "#/components/schemas/workers-kv_any"
-					},
-					{
-						"description": "Associates arbitrary JSON data with a key/value pair.",
-						"example": {
-							"someMetadataKey": "someMetadataValue"
-						}
 					}
 				]
 			},
@@ -4418,7 +5701,7 @@
 				}
 			},
 			"workers-kv_cursor": {
-				"description": "Opaque token indicating the position from which to continue when requesting the next set of records if the amount of list results was limited by the limit parameter. A valid value for the cursor can be obtained from the cursors object in the result_info structure.",
+				"description": "Opaque pagination token returned in `result_info.cursor`. Pass it unchanged as the `cursor` query parameter to request the next page of keys.",
 				"type": "string",
 				"example": "6Ck1la0VxJ0djhidm1MdX2FyDGxLKVeeHZZmORS_8XeSuhz9SjIJRaSa2lnsF01tQOHrfTGAP3R5X1Kv5iVUuMbNKhWNAXHOl6ePB0TUL8nw"
 			},
@@ -4441,7 +5724,7 @@
 				"required": ["name"]
 			},
 			"workers-kv_namespace_identifier": {
-				"description": "Namespace identifier tag.",
+				"description": "ID of the Workers KV namespace.",
 				"type": "string",
 				"example": "0f2ac74b498b48028cb68387c421e279",
 				"maxLength": 32,
@@ -4491,6 +5774,9 @@
 					"id": {
 						"$ref": "#/components/schemas/workers-kv_namespace_identifier"
 					},
+					"mode": {
+						"$ref": "#/components/schemas/workers-kv_namespace_mode"
+					},
 					"title": {
 						"$ref": "#/components/schemas/workers-kv_namespace_title"
 					}
@@ -4498,10 +5784,16 @@
 				"required": ["id", "title"]
 			},
 			"workers-kv_namespace_title": {
-				"description": "A human-readable string name for a Namespace.",
+				"description": "Human-readable string name for a Workers KV namespace.",
 				"type": "string",
 				"example": "My Own Namespace",
 				"maxLength": 512
+			},
+			"workers-kv_namespace_mode": {
+				"description": "The mode of the Workers KV namespace. Specify `instant` when creating a namespace to create a KV Instant namespace. Omit this field when creating a namespace to create a classic namespace. Currently, `instant` is the only supported explicit value.",
+				"type": "string",
+				"example": "instant",
+				"enum": ["instant"]
 			},
 			"workers-kv_api-response-collection": {
 				"type": "object",
@@ -4572,183 +5864,6 @@
 							"type": "string"
 						},
 						"description": "Binding names in this instance using the app"
-					}
-				}
-			},
-			"flagship_base-condition": {
-				"type": "object",
-				"required": ["attribute", "operator", "value"],
-				"properties": {
-					"attribute": {
-						"type": "string"
-					},
-					"operator": {
-						"type": "string",
-						"enum": [
-							"equals",
-							"not_equals",
-							"greater_than",
-							"less_than",
-							"greater_than_or_equals",
-							"less_than_or_equals",
-							"contains",
-							"starts_with",
-							"ends_with",
-							"in",
-							"not_in",
-							"has",
-							"not_has"
-						]
-					},
-					"value": {}
-				}
-			},
-			"flagship_logical-condition": {
-				"type": "object",
-				"required": ["logical_operator", "clauses"],
-				"properties": {
-					"logical_operator": {
-						"type": "string",
-						"enum": ["AND", "OR"]
-					},
-					"clauses": {
-						"type": "array",
-						"items": {
-							"$ref": "#/components/schemas/flagship_condition"
-						}
-					}
-				}
-			},
-			"flagship_condition": {
-				"oneOf": [
-					{
-						"$ref": "#/components/schemas/flagship_base-condition"
-					},
-					{
-						"$ref": "#/components/schemas/flagship_logical-condition"
-					}
-				]
-			},
-			"flagship_rule": {
-				"type": "object",
-				"required": ["priority", "conditions", "serve_variation"],
-				"properties": {
-					"priority": {
-						"type": "integer",
-						"description": "Evaluation order, lowest first"
-					},
-					"conditions": {
-						"type": "array",
-						"items": {
-							"$ref": "#/components/schemas/flagship_condition"
-						},
-						"description": "Conditions that must match for the rule to apply"
-					},
-					"serve_variation": {
-						"type": "string",
-						"description": "Variation served when the rule matches"
-					},
-					"rollout": {
-						"type": "object",
-						"required": ["percentage"],
-						"properties": {
-							"percentage": {
-								"type": "number",
-								"minimum": 0,
-								"maximum": 100,
-								"multipleOf": 0.01
-							},
-							"attribute": {
-								"type": "string"
-							}
-						},
-						"description": "Percentage rollout applied to matching contexts"
-					}
-				}
-			},
-			"flagship_flag": {
-				"type": "object",
-				"required": [
-					"key",
-					"type",
-					"enabled",
-					"default_variation",
-					"variations",
-					"rules",
-					"updated_at"
-				],
-				"properties": {
-					"key": {
-						"type": "string",
-						"description": "Flag key"
-					},
-					"type": {
-						"type": "string",
-						"enum": ["boolean", "string", "number", "json"],
-						"description": "Type shared by the flag's variations"
-					},
-					"description": {
-						"description": "Human readable description",
-						"nullable": true,
-						"type": "string"
-					},
-					"enabled": {
-						"description": "Whether the flag is enabled",
-						"type": "boolean"
-					},
-					"default_variation": {
-						"description": "Variation served when no rule matches",
-						"type": "string"
-					},
-					"variations": {
-						"additionalProperties": true,
-						"description": "Named values the flag can serve",
-						"type": "object"
-					},
-					"rules": {
-						"description": "Targeting rules, in priority order",
-						"items": {
-							"$ref": "#/components/schemas/flagship_rule"
-						},
-						"type": "array"
-					},
-					"updated_at": {
-						"type": "string",
-						"description": "When the flag was last written locally"
-					}
-				}
-			},
-			"flagship_evaluation": {
-				"type": "object",
-				"required": ["flagKey", "value", "variant", "reason"],
-				"properties": {
-					"flagKey": {
-						"type": "string"
-					},
-					"value": {
-						"description": "The resolved flag value"
-					},
-					"variant": {
-						"type": "string",
-						"description": "Name of the variation served"
-					},
-					"reason": {
-						"type": "string",
-						"enum": [
-							"STATIC",
-							"TARGETING_MATCH",
-							"DEFAULT",
-							"DISABLED",
-							"SPLIT",
-							"ERROR"
-						],
-						"description": "Why this value was served"
-					},
-					"errorCode": {
-						"type": "string"
-					},
-					"errorMessage": {
-						"type": "string"
 					}
 				}
 			},
@@ -5930,6 +7045,18 @@
 					"sentAt"
 				],
 				"additionalProperties": false
+			}
+		},
+		"parameters": {
+			"r2_cf-r2-jurisdiction": {
+				"description": "Jurisdiction where objects in this bucket are guaranteed to be stored.",
+				"in": "header",
+				"name": "cf-r2-jurisdiction",
+				"schema": {
+					"type": "string",
+					"default": "default",
+					"enum": ["default", "eu", "us", "fedramp", "fedramp-high"]
+				}
 			}
 		}
 	}

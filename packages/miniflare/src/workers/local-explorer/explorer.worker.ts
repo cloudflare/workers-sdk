@@ -25,7 +25,9 @@ import {
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
 	zFlagshipCreateFlagData,
-	zFlagshipEvaluateFlagData,
+	zFlagshipEvaluateFlagPostData,
+	zFlagshipListFlagsData,
+	zFlagshipPatchFlagData,
 	zFlagshipUpdateFlagData,
 	zWorkersKvNamespaceWriteMultipleKeyValuePairsData,
 	zObservabilityQueryData,
@@ -49,9 +51,12 @@ import {
 import {
 	createFlagshipFlag,
 	deleteFlagshipFlag,
-	evaluateFlagshipFlag,
+	evaluateFlagshipApp,
+	evaluateFlagshipAppQuery,
+	getFlagshipFlag,
 	listFlagshipApps,
 	listFlagshipFlags,
+	patchFlagshipFlag,
 	updateFlagshipFlag,
 } from "./resources/flagship";
 import {
@@ -95,6 +100,8 @@ import type { WorkerRegistry } from "../../shared/dev-registry-types";
 import type { CoreBindings } from "../core";
 import type { WorkerdDebugPortConnector } from "../core/dev-registry-proxy-shared.worker";
 import type { EmailStoreService } from "../email/storage";
+import type { FlagshipAdmin } from "../flagship/admin";
+import type { ADMIN_API } from "../flagship/constants";
 import type { LocalExplorerWorker } from "./generated";
 
 // Generated object schemas strip unknown keys, so reject invalid rollback
@@ -125,6 +132,10 @@ export type Env = {
 	// Worker names for this instance, used to filter self from dev registry during aggregation
 	[CoreBindings.JSON_LOCAL_EXPLORER_WORKER_NAMES]: string[];
 	[CoreBindings.SERVICE_D1]: Fetcher;
+	[CoreBindings.SERVICE_FLAGSHIP]: Record<
+		typeof ADMIN_API,
+		(appId: string) => FlagshipAdmin
+	>;
 	[CoreBindings.SERVICE_KV]: Fetcher;
 	[CoreBindings.SERVICE_R2]: Fetcher;
 	// Per-worker resource bindings for the /local/workers endpoint
@@ -450,8 +461,10 @@ app.delete("/api/workflows/:workflow_name/instances/:instance_id", (c) =>
 
 app.get("/api/flagship/apps", (c) => listFlagshipApps(c));
 
-app.get("/api/flagship/apps/:app_id/flags", (c) =>
-	listFlagshipFlags(c, c.req.param("app_id"))
+app.get(
+	"/api/flagship/apps/:app_id/flags",
+	validateQuery(zFlagshipListFlagsData.shape.query.unwrap()),
+	(c) => listFlagshipFlags(c, c.req.param("app_id"), c.req.valid("query"))
 );
 
 app.post(
@@ -460,7 +473,11 @@ app.post(
 	(c) => createFlagshipFlag(c, c.req.param("app_id"), c.req.valid("json"))
 );
 
-app.patch(
+app.get("/api/flagship/apps/:app_id/flags/:flag_key", (c) =>
+	getFlagshipFlag(c, c.req.param("app_id"), c.req.param("flag_key"))
+);
+
+app.put(
 	"/api/flagship/apps/:app_id/flags/:flag_key",
 	validateRequestBody(zFlagshipUpdateFlagData.shape.body),
 	(c) =>
@@ -472,20 +489,30 @@ app.patch(
 		)
 );
 
+app.patch(
+	"/api/flagship/apps/:app_id/flags/:flag_key",
+	validateRequestBody(zFlagshipPatchFlagData.shape.body),
+	(c) =>
+		patchFlagshipFlag(
+			c,
+			c.req.param("app_id"),
+			c.req.param("flag_key"),
+			c.req.valid("json")
+		)
+);
+
 app.delete("/api/flagship/apps/:app_id/flags/:flag_key", (c) =>
 	deleteFlagshipFlag(c, c.req.param("app_id"), c.req.param("flag_key"))
 );
 
+app.get("/api/flagship/apps/:app_id/evaluate", (c) =>
+	evaluateFlagshipAppQuery(c, c.req.param("app_id"))
+);
+
 app.post(
-	"/api/flagship/apps/:app_id/flags/:flag_key/evaluate",
-	validateRequestBody(zFlagshipEvaluateFlagData.shape.body),
-	(c) =>
-		evaluateFlagshipFlag(
-			c,
-			c.req.param("app_id"),
-			c.req.param("flag_key"),
-			c.req.valid("json").context ?? {}
-		)
+	"/api/flagship/apps/:app_id/evaluate",
+	validateRequestBody(zFlagshipEvaluateFlagPostData.shape.body),
+	(c) => evaluateFlagshipApp(c, c.req.param("app_id"), c.req.valid("json"))
 );
 
 // ============================================================================

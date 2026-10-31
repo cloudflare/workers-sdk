@@ -1,4 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
+import { APIError } from "@cloudflare/workers-utils";
 import {
 	mockConsoleMethods,
 	runInTempDir,
@@ -61,6 +62,36 @@ describe("asset upload output", () => {
 				bucket.length ? "completion-token" : "session-token"
 			);
 			expect(result.assetUploadStats.assetUploadFileCount).toBe(bucket.length);
+		}
+	);
+
+	it.for([undefined, 0])(
+		"retries upload sessions without progress in quiet mode (Retry-After=%s)",
+		async (retryAfterMs, { expect }) => {
+			const error = new APIError({
+				text: "Temporary upload session failure",
+				status: 500,
+				retryAfterMs,
+				telemetryMessage: false,
+			});
+			mocks.fetchResult
+				.mockRejectedValueOnce(error)
+				.mockResolvedValueOnce({ buckets: [], jwt: "session-token" });
+
+			const result = await syncAssets(
+				{},
+				"account-id",
+				"assets",
+				"worker",
+				undefined,
+				{ quiet: true }
+			);
+
+			expect(mocks.fetchResult).toHaveBeenCalledTimes(2);
+			expect(result.jwt).toBe("session-token");
+			expect(std.out).toBe("");
+			expect(std.info).toBe("");
+			expect(std.debug).toBe("");
 		}
 	);
 

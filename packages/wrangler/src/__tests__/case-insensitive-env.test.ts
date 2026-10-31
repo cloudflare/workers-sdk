@@ -1,5 +1,5 @@
+import { caseInsensitiveEnv } from "@cloudflare/workers-utils/local-env";
 import { describe, it } from "vitest";
-import { caseInsensitiveEnv } from "../config/case-insensitive-env";
 
 describe("caseInsensitiveEnv", () => {
 	it("resolves get/has/delete case-insensitively", ({ expect }) => {

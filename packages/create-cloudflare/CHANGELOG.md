@@ -1,5 +1,85 @@
 # create-cloudflare
 
+## 2.74.5
+
+### Patch Changes
+
+- [#16583](https://github.com/cloudflare/workers-sdk/pull/16583) [`ff162ac`](https://github.com/cloudflare/workers-sdk/commit/ff162ac1a0dec15efa8bb785be1ce9b9d48ead64) Thanks [@taylorlee](https://github.com/taylorlee)! - Add a `.gitignore` to the `hello-world-workflows` template
+
+  The Workflow template didn't include a `.gitignore`, unlike the other Hello World templates. That meant new projects could end up with `node_modules` and other generated files tracked by git. The template now ships the same `.gitignore` as the other Hello World templates.
+
+## 2.74.4
+
+### Patch Changes
+
+- [#16469](https://github.com/cloudflare/workers-sdk/pull/16469) [`d92a24f`](https://github.com/cloudflare/workers-sdk/commit/d92a24f390624121bef361f2b8f5c8f7cb5fa6ec) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 9.2.1 | 9.3.1 |
+
+- [#16470](https://github.com/cloudflare/workers-sdk/pull/16470) [`7e3a38b`](https://github.com/cloudflare/workers-sdk/commit/7e3a38b776d7e2f5fcf43c25cd7759521765976c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.8.1 | 2.9.2 |
+
+- [#16471](https://github.com/cloudflare/workers-sdk/pull/16471) [`4637cff`](https://github.com/cloudflare/workers-sdk/commit/4637cffda4e9397768a288c70b0d9d4847793c30) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 16.4.2 | 16.4.3 |
+
+- [#16472](https://github.com/cloudflare/workers-sdk/pull/16472) [`094e9f6`](https://github.com/cloudflare/workers-sdk/commit/094e9f6ccea4654428c746f7f97b130f9b345d09) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-astro | 5.3.0 | 5.3.1 |
+
+- [#16473](https://github.com/cloudflare/workers-sdk/pull/16473) [`c883557`](https://github.com/cloudflare/workers-sdk/commit/c88355755bfb358a5252ad8b38c2ef6cfad3d0e6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.686 | 0.0.687 |
+
+- [#16474](https://github.com/cloudflare/workers-sdk/pull/16474) [`0ec392c`](https://github.com/cloudflare/workers-sdk/commit/0ec392c83746a6561c5bd4aa12042453002a601e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.2.3 | 22.2.4 |
+
+- [#16475](https://github.com/cloudflare/workers-sdk/pull/16475) [`b94d039`](https://github.com/cloudflare/workers-sdk/commit/b94d039e1cf81836582ba077517b3369369ca43f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 8.4.0 | 8.5.0 |
+
+- [#16403](https://github.com/cloudflare/workers-sdk/pull/16403) [`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-10-22
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16437](https://github.com/cloudflare/workers-sdk/pull/16437) [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-10-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16476](https://github.com/cloudflare/workers-sdk/pull/16476) [`8a30d8e`](https://github.com/cloudflare/workers-sdk/commit/8a30d8eec16110dcaaeb0822768ac03a5b45a902) Thanks [@tannerlinsley](https://github.com/tannerlinsley)! - Update Undici to 7.30.1 to prevent a malformed HTTP response from crashing development tools
+
+  The updated shared dependency rejects excessive content encodings without leaving an unhandled stream error when the server closes the connection early. This fixes GHSA-xjj6-f33q-929c and keeps the matching Undici types on the same version.
+
 ## 2.74.3
 
 ### Patch Changes

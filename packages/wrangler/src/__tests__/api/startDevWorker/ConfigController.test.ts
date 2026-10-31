@@ -62,6 +62,57 @@ describe("ConfigController", () => {
 		logger.resetLoggerLevel();
 	});
 
+	it("uses the effective registry for runtime config and the initial bindings display", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_DEV_REGISTRY_PATH", "shared-registry");
+		await seed({
+			"src/index.ts": "export default {}",
+			"shared-registry/api-worker": JSON.stringify({
+				debugPortAddress: "127.0.0.1:9229",
+			}),
+		});
+
+		const config = await controller.set(
+			{
+				entrypoint: "src/index.ts",
+				bindings: { SERVICE: { type: "service", service: "api-worker" } },
+				dev: { registry: "legacy-registry", watch: false },
+			},
+			true
+		);
+
+		expect(config?.dev.registry).toBe(path.resolve("shared-registry"));
+		expect(std.out).toMatch(/env\.SERVICE \(api-worker\).*local \[connected\]/);
+		expect(controller.latestInput?.dev?.registry).toBe("legacy-registry");
+	});
+
+	it.for([undefined, ""])(
+		"preserves a disabled registry with an environment override: %s",
+		async (registry, { expect }) => {
+			vi.stubEnv("CLOUDFLARE_DEV_REGISTRY_PATH", "shared-registry");
+			await seed({
+				"src/index.ts": "export default {}",
+				"shared-registry/api-worker": JSON.stringify({
+					debugPortAddress: "127.0.0.1:9229",
+				}),
+			});
+
+			const config = await controller.set(
+				{
+					entrypoint: "src/index.ts",
+					bindings: { SERVICE: { type: "service", service: "api-worker" } },
+					dev: { registry, watch: false },
+				},
+				true
+			);
+
+			expect(config?.dev.registry).toBe(registry);
+			expect(std.out).not.toContain("[connected]");
+			expect(std.out).not.toContain("[not connected]");
+		}
+	);
+
 	it("should prompt user to update types if they're out of date", async ({
 		expect,
 	}) => {
@@ -164,6 +215,38 @@ describe("ConfigController", () => {
 			},
 		});
 	});
+
+	it.for([
+		{ remote: undefined, hostname: undefined },
+		{ remote: false, hostname: undefined },
+		{ remote: true, hostname: "route.example.com" },
+		{ remote: "minimal", hostname: "route.example.com" },
+	] as const)(
+		"should resolve the origin with inference disabled and remote=$remote",
+		async ({ remote, hostname }, { expect }) => {
+			await seed({
+				"src/index.ts": "export default {}",
+				"wrangler.json": JSON.stringify({
+					name: "my-worker",
+					main: "src/index.ts",
+					compatibility_date: "2024-06-01",
+					routes: [{ pattern: "route.example.com/*", zone_id: "some-zone-id" }],
+				}),
+			});
+
+			const config = await controller.set(
+				{
+					config: "./wrangler.json",
+					dev: { remote, inferOriginFromRoutes: false },
+				},
+				true
+			);
+
+			expect(config).toMatchObject({
+				dev: { origin: { hostname } },
+			});
+		}
+	);
 
 	it("should map UDP connect options for the local runtime", async ({
 		expect,

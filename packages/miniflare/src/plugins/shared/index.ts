@@ -12,6 +12,7 @@ import type {
 	Extension,
 	Service,
 	ServiceDesignator,
+	Socket,
 	Worker_Binding,
 	Worker_Module,
 } from "../../runtime";
@@ -21,6 +22,7 @@ import type {
 	QueueConsumerSchema,
 	QueueProducerSchema,
 } from "../../workers";
+import type { ArtifactsController } from "../artifacts/controller";
 import type { ContainerPrivilegesCache } from "../core/container";
 import type { DOContainerOptions } from "../do";
 import type { HyperdriveProxyController } from "../hyperdrive/hyperdrive-proxy";
@@ -88,11 +90,14 @@ export interface PluginServicesOptions {
 	devRegistryEnabled: boolean;
 	containerPrivilegesCache: ContainerPrivilegesCache;
 	hyperdriveProxyController: HyperdriveProxyController;
+	artifactsController: ArtifactsController;
 }
 
 export interface ServicesExtensions {
 	services: Service[];
 	extensions: Extension[];
+	// Internal plugin listeners (e.g. Git smart HTTP), deduplicated by name.
+	sockets?: Socket[];
 }
 
 /**

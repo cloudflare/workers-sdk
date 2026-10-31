@@ -542,12 +542,14 @@ export function printBindings(
 
 	if (analytics_engine_datasets.length > 0) {
 		output.push(
-			...analytics_engine_datasets.map(({ binding, dataset }) => {
+			...analytics_engine_datasets.map(({ binding, dataset, remote }) => {
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("analytics_engine"),
 					value: dataset ?? binding,
-					mode: getMode({ isSimulatedLocally: true }),
+					mode: getMode({
+						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+					}),
 				};
 			})
 		);

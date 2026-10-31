@@ -4,6 +4,210 @@ export type ClientOptions = {
 	baseUrl: `${string}://${string}/cdn-cgi/local/explorer/api` | (string & {});
 };
 
+export type FlagshipEvaluationError = FlagshipError & {
+	/**
+	 * OpenFeature error code for the failed evaluation.
+	 */
+	errorCode:
+		| "PROVIDER_NOT_READY"
+		| "FLAG_NOT_FOUND"
+		| "PARSE_ERROR"
+		| "TYPE_MISMATCH"
+		| "TARGETING_KEY_MISSING"
+		| "INVALID_CONTEXT"
+		| "GENERAL";
+};
+
+export type FlagshipError = {
+	errors: Array<FlagshipApiMessage>;
+	messages: Array<FlagshipApiMessage>;
+	result: null;
+	success: boolean;
+};
+
+export type FlagshipApiMessage = {
+	message: string;
+};
+
+export type FlagshipEvaluationResult = {
+	/**
+	 * Key of the evaluated flag.
+	 */
+	flagKey: string;
+	/**
+	 * Key-value metadata associated with the flag. Returned only when the flag has metadata.
+	 */
+	metadata?: {
+		[key: string]: boolean | string | number;
+	};
+	/**
+	 * Reason the evaluator selected this variation.
+	 */
+	reason: "STATIC" | "TARGETING_MATCH" | "DEFAULT" | "DISABLED" | "SPLIT";
+	value?: FlagshipJsonValue;
+	/**
+	 * Name of the variation that supplied the resolved value.
+	 */
+	variant: string;
+};
+
+export type FlagshipJsonValue =
+	| string
+	| null
+	| number
+	| boolean
+	| {
+			[key: string]: FlagshipJsonValue;
+	  }
+	| Array<FlagshipJsonValue>;
+
+export type FlagshipDeleteFlagResult = {
+	key: string;
+};
+
+export type FlagshipFlag = {
+	/**
+	 * Variation the API serves when the flag is off, or when it's on but no rule matches the context. Must be a key in `variations`.
+	 */
+	default_variation: string;
+	/**
+	 * Optional operator-facing description. It does not affect flag evaluation.
+	 */
+	description?: string | null;
+	/**
+	 * When false, the flag bypasses all rules and always serves `default_variation`.
+	 */
+	enabled: boolean;
+	/**
+	 * Unique identifier for the flag within an app. Used in all evaluation and SDK calls.
+	 */
+	key: string;
+	/**
+	 * Key-value metadata associated with the flag. Returned only when the flag has metadata.
+	 */
+	metadata?: {
+		[key: string]: boolean | string | number;
+	};
+	/**
+	 * Targeting rules evaluated in ascending `priority`; the first matching rule wins. An empty array means the flag always serves `default_variation`.
+	 */
+	rules: Array<FlagshipRule>;
+	/**
+	 * Server-inferred value type shared by all of the flag's variations.
+	 */
+	type: "boolean" | "string" | "number" | "json";
+	updated_at?: string;
+	updated_by?: string;
+	/**
+	 * Map of variation name to value. All values share the same type (boolean, string, number, or JSON object/array), and each serialized value stays within 10KB.
+	 */
+	variations: {
+		[key: string]: FlagshipJsonValue;
+	};
+};
+
+export type FlagshipRule = {
+	/**
+	 * Conditions the context must satisfy for this rule to match. An empty array matches all contexts.
+	 */
+	conditions: Array<FlagshipCondition>;
+	/**
+	 * Evaluation order: the API evaluates rules with lower numbers first. Must be unique across the flag's rules.
+	 */
+	priority: number;
+	rollout?: {
+		/**
+		 * Context attribute used for sticky bucketing. Defaults to `targetingKey`. If absent at evaluation time, bucketing is random per request.
+		 */
+		attribute?: string;
+		/**
+		 * Percentage of matching traffic (0–100, up to 2 decimal places) served this variation. For multi-way splits, use cumulative upper bounds across rules (e.g. 30, 70, 100).
+		 */
+		percentage: number;
+	};
+	/**
+	 * Variation the API serves when this rule matches. Must be a key in `variations`.
+	 */
+	serve_variation: string;
+};
+
+export type FlagshipCondition =
+	| FlagshipBaseCondition
+	| FlagshipLogicalCondition;
+
+export type FlagshipLogicalCondition = {
+	clauses: Array<FlagshipCondition1>;
+	logical_operator: "AND" | "OR";
+};
+
+export type FlagshipCondition1 =
+	| FlagshipBaseCondition
+	| FlagshipLogicalCondition1;
+
+export type FlagshipLogicalCondition1 = {
+	clauses: Array<FlagshipCondition2>;
+	logical_operator: "AND" | "OR";
+};
+
+export type FlagshipCondition2 =
+	| FlagshipBaseCondition
+	| FlagshipLogicalCondition2;
+
+export type FlagshipLogicalCondition2 = {
+	clauses: Array<FlagshipCondition3>;
+	logical_operator: "AND" | "OR";
+};
+
+export type FlagshipCondition3 =
+	| FlagshipBaseCondition
+	| FlagshipLogicalCondition3;
+
+export type FlagshipLogicalCondition3 = {
+	clauses: Array<FlagshipCondition4>;
+	logical_operator: "AND" | "OR";
+};
+
+export type FlagshipCondition4 =
+	| FlagshipBaseCondition
+	| FlagshipLogicalCondition4;
+
+export type FlagshipLogicalCondition4 = {
+	clauses: Array<FlagshipBaseCondition>;
+	logical_operator: "AND" | "OR";
+};
+
+export type FlagshipBaseCondition = {
+	attribute: string;
+	operator:
+		| "equals"
+		| "not_equals"
+		| "greater_than"
+		| "less_than"
+		| "greater_than_or_equals"
+		| "less_than_or_equals"
+		| "contains"
+		| "starts_with"
+		| "ends_with"
+		| "in"
+		| "not_in"
+		| "has"
+		| "not_has";
+	value: FlagshipJsonValue;
+};
+
+export type FlagshipResultInfo = {
+	/**
+	 * Number of items returned in this page.
+	 */
+	count: number;
+	/**
+	 * Cursor to pass back to fetch the next page, or null when this is the last page.
+	 */
+	cursor: string | null;
+};
+
+export type FlagshipFlagsPage = Array<FlagshipFlag>;
+
 export type R2V4Response = {
 	errors: R2Errors;
 	messages: R2Messages;
@@ -50,11 +254,14 @@ export type R2Bucket = {
 };
 
 export type R2V4ResponseList = R2V4Response & {
-	result_info?: R2ResultInfo;
+	result_info: R2ResultInfo;
 };
 
 export type R2ResultInfo = {
-	[key: string]: unknown;
+	/**
+	 * Total number of active buckets in the requested jurisdiction. This count is not affected by filtering or pagination and is eventually consistent for accounts with elevated bucket limits.
+	 */
+	total_count: number;
 };
 
 /**
@@ -281,8 +488,14 @@ export type WorkersKvBulkGetResultWithMetadata = {
 	values?: {
 		[key: string]: {
 			expiration?: WorkersKvExpiration;
-			metadata: WorkersKvAny & unknown;
-			value: WorkersKvAny & unknown;
+			/**
+			 * The metadata associated with the key.
+			 */
+			metadata: WorkersKvAny;
+			/**
+			 * The value associated with the key.
+			 */
+			value: WorkersKvAny;
 		} | null;
 	};
 };
@@ -328,11 +541,11 @@ export type WorkersKvBulkDelete = Array<WorkersKvKeyNameBulk>;
 
 export type WorkersKvBulkResult = {
 	/**
-	 * Number of keys successfully updated.
+	 * Number of keys successfully written or deleted by the bulk operation.
 	 */
 	successful_key_count?: number;
 	/**
-	 * Name of the keys that failed to be fully updated. They should be retried.
+	 * Names of keys that failed to be written or deleted. Retry the operation for these keys.
 	 */
 	unsuccessful_keys?: Array<string>;
 };
@@ -352,10 +565,13 @@ export type WorkersKvBulkWrite = Array<{
 	value: string;
 }>;
 
-export type WorkersKvListMetadata = WorkersKvAny & unknown;
+/**
+ * Arbitrary JSON that is associated with a key.
+ */
+export type WorkersKvListMetadata = WorkersKvAny;
 
 /**
- * Expires the key after a number of seconds. Must be at least 60.
+ * Number of seconds until the key expires. Must be at least 60. Takes precedence over `expiration` when both are specified.
  */
 export type WorkersKvExpirationTtl = number;
 
@@ -379,7 +595,10 @@ export type WorkersKvMessages = Array<{
 	message: string;
 }>;
 
-export type WorkersKvMetadata = WorkersKvAny & unknown;
+/**
+ * Associates arbitrary JSON data with a key/value pair.
+ */
+export type WorkersKvMetadata = WorkersKvAny;
 
 /**
  * A byte sequence to be stored, up to 25 MiB in length.
@@ -400,7 +619,7 @@ export type WorkersKvCursorResultInfo = {
 };
 
 /**
- * Opaque token indicating the position from which to continue when requesting the next set of records if the amount of list results was limited by the limit parameter. A valid value for the cursor can be obtained from the cursors object in the result_info structure.
+ * Opaque pagination token returned in `result_info.cursor`. Pass it unchanged as the `cursor` query parameter to request the next page of keys.
  */
 export type WorkersKvCursor = string;
 
@@ -417,7 +636,7 @@ export type WorkersKvKey = {
 };
 
 /**
- * Namespace identifier tag.
+ * ID of the Workers KV namespace.
  */
 export type WorkersKvNamespaceIdentifier = string;
 
@@ -435,13 +654,19 @@ export type WorkersKvApiResponseCommonFailure = {
 
 export type WorkersKvNamespace = {
 	id: WorkersKvNamespaceIdentifier;
+	mode?: WorkersKvNamespaceMode;
 	title: WorkersKvNamespaceTitle;
 };
 
 /**
- * A human-readable string name for a Namespace.
+ * Human-readable string name for a Workers KV namespace.
  */
 export type WorkersKvNamespaceTitle = string;
+
+/**
+ * The mode of the Workers KV namespace. Specify `instant` when creating a namespace to create a KV Instant namespace. Omit this field when creating a namespace to create a classic namespace. Currently, `instant` is the only supported explicit value.
+ */
+export type WorkersKvNamespaceMode = "instant";
 
 export type WorkersKvApiResponseCollection = WorkersKvApiResponseCommon & {
 	result_info?: WorkersKvResultInfo;
@@ -477,117 +702,6 @@ export type FlagshipApp = {
 	 * Binding names in this instance using the app
 	 */
 	bindings: Array<string>;
-};
-
-export type FlagshipBaseCondition = {
-	attribute: string;
-	operator:
-		| "equals"
-		| "not_equals"
-		| "greater_than"
-		| "less_than"
-		| "greater_than_or_equals"
-		| "less_than_or_equals"
-		| "contains"
-		| "starts_with"
-		| "ends_with"
-		| "in"
-		| "not_in"
-		| "has"
-		| "not_has";
-	value: unknown;
-};
-
-export type FlagshipLogicalCondition = {
-	logical_operator: "AND" | "OR";
-	clauses: Array<FlagshipCondition>;
-};
-
-export type FlagshipCondition =
-	| FlagshipBaseCondition
-	| FlagshipLogicalCondition;
-
-export type FlagshipRule = {
-	/**
-	 * Evaluation order, lowest first
-	 */
-	priority: number;
-	/**
-	 * Conditions that must match for the rule to apply
-	 */
-	conditions: Array<FlagshipCondition>;
-	/**
-	 * Variation served when the rule matches
-	 */
-	serve_variation: string;
-	/**
-	 * Percentage rollout applied to matching contexts
-	 */
-	rollout?: {
-		percentage: number;
-		attribute?: string;
-	};
-};
-
-export type FlagshipFlag = {
-	/**
-	 * Flag key
-	 */
-	key: string;
-	/**
-	 * Type shared by the flag's variations
-	 */
-	type: "boolean" | "string" | "number" | "json";
-	/**
-	 * Human readable description
-	 */
-	description?: string | null;
-	/**
-	 * Whether the flag is enabled
-	 */
-	enabled: boolean;
-	/**
-	 * Variation served when no rule matches
-	 */
-	default_variation: string;
-	/**
-	 * Named values the flag can serve
-	 */
-	variations: {
-		[key: string]: unknown;
-	};
-	/**
-	 * Targeting rules, in priority order
-	 */
-	rules: Array<FlagshipRule>;
-	/**
-	 * When the flag was last written locally
-	 */
-	updated_at: string;
-};
-
-export type FlagshipEvaluation = {
-	flagKey: string;
-	/**
-	 * The resolved flag value
-	 */
-	value: unknown;
-	/**
-	 * Name of the variation served
-	 */
-	variant: string;
-	/**
-	 * Why this value was served
-	 */
-	reason:
-		| "STATIC"
-		| "TARGETING_MATCH"
-		| "DEFAULT"
-		| "DISABLED"
-		| "SPLIT"
-		| "ERROR";
-	errorCode?: string;
-	errorMessage?: string;
 };
 
 export type R2Object = {
@@ -1301,9 +1415,15 @@ export type EmailSendingDetail = {
 	rawBase64?: string;
 };
 
-export type R2ResultInfoWritable = {
-	[key: string]: unknown;
-};
+export type FlagshipJsonValueWritable =
+	| string
+	| null
+	| number
+	| boolean
+	| {
+			[key: string]: FlagshipJsonValueWritable;
+	  }
+	| Array<FlagshipJsonValueWritable>;
 
 export type WorkersNamespaceWritable = {
 	class?: string;
@@ -1331,24 +1451,41 @@ export type WorkersKvAnyWritable =
 
 export type WorkersKvBulkDeleteWritable = Array<WorkersKvKeyNameBulk>;
 
-export type WorkersKvListMetadataWritable = WorkersKvAnyWritable & unknown;
+/**
+ * Arbitrary JSON that is associated with a key.
+ */
+export type WorkersKvListMetadataWritable = WorkersKvAnyWritable;
 
-export type WorkersKvMetadataWritable = WorkersKvAnyWritable & unknown;
+/**
+ * Associates arbitrary JSON data with a key/value pair.
+ */
+export type WorkersKvMetadataWritable = WorkersKvAnyWritable;
 
 export type WorkersKvNamespaceWritable = {
+	mode?: WorkersKvNamespaceMode;
 	title: WorkersKvNamespaceTitle;
 };
+
+/**
+ * Jurisdiction where objects in this bucket are guaranteed to be stored.
+ */
+export type R2CfR2Jurisdiction =
+	| "default"
+	| "eu"
+	| "us"
+	| "fedramp"
+	| "fedramp-high";
 
 export type WorkersKvNamespaceListNamespacesData = {
 	body?: never;
 	path?: never;
 	query?: {
 		/**
-		 * Field to order results by.
+		 * Namespace field to sort by (`id` or `title`).
 		 */
 		order?: "id" | "title";
 		/**
-		 * Direction to order namespaces.
+		 * Sort namespaces in ascending (`asc`) or descending (`desc`) order.
 		 */
 		direction?: "asc" | "desc";
 	};
@@ -1384,7 +1521,7 @@ export type WorkersKvNamespaceListANamespaceSKeysData = {
 	};
 	query?: {
 		/**
-		 * Limits the number of keys returned in the response. The cursor attribute may be used to iterate over the next batch of keys if there are more than the limit.
+		 * Maximum number of keys to return in one response. Pass `result_info.cursor` from the response as `cursor` to request the next page.
 		 */
 		limit?: number;
 		/**
@@ -1392,7 +1529,7 @@ export type WorkersKvNamespaceListANamespaceSKeysData = {
 		 */
 		prefix?: string;
 		/**
-		 * Opaque token indicating the position from which to continue when requesting the next set of records if the amount of list results was limited by the limit parameter. A valid value for the cursor can be obtained from the `cursors` object in the `result_info` structure.
+		 * Opaque pagination token from `result_info.cursor` in the previous response. Pass it unchanged to request the next page of keys.
 		 */
 		cursor?: string;
 	};
@@ -1423,7 +1560,7 @@ export type WorkersKvNamespaceListANamespaceSKeysResponse =
 	WorkersKvNamespaceListANamespaceSKeysResponses[keyof WorkersKvNamespaceListANamespaceSKeysResponses];
 
 export type WorkersKvNamespaceDeleteKeyValuePairData = {
-	body: unknown;
+	body?: never;
 	path: {
 		key_name: WorkersKvKeyName;
 		namespace_id: WorkersKvNamespaceIdentifier;
@@ -1897,6 +2034,12 @@ export type DurableObjectsNamespaceListObjectsResponse =
 
 export type R2ListBucketsData = {
 	body?: never;
+	headers?: {
+		/**
+		 * Jurisdiction where objects in this bucket are guaranteed to be stored.
+		 */
+		"cf-r2-jurisdiction"?: "default" | "eu" | "us" | "fedramp" | "fedramp-high";
+	};
 	path?: never;
 	query?: never;
 	url: "/r2/buckets";
@@ -1917,7 +2060,7 @@ export type R2ListBucketsResponses = {
 	 */
 	200: R2V4ResponseList & {
 		result?: {
-			buckets?: Array<R2Bucket>;
+			buckets: Array<R2Bucket>;
 		};
 	};
 };
@@ -1927,6 +2070,12 @@ export type R2ListBucketsResponse =
 
 export type R2GetBucketData = {
 	body?: never;
+	headers?: {
+		/**
+		 * Jurisdiction where objects in this bucket are guaranteed to be stored.
+		 */
+		"cf-r2-jurisdiction"?: "default" | "eu" | "us" | "fedramp" | "fedramp-high";
+	};
 	path: {
 		bucket_name: R2BucketName;
 	};
@@ -1954,6 +2103,619 @@ export type R2GetBucketResponses = {
 
 export type R2GetBucketResponse =
 	R2GetBucketResponses[keyof R2GetBucketResponses];
+
+export type FlagshipListFlagsData = {
+	body?: never;
+	path: {
+		/**
+		 * Flagship app ID returned when the app was created.
+		 */
+		app_id: string;
+	};
+	query?: {
+		/**
+		 * Max items to return (1–200).
+		 */
+		limit?: number;
+		/**
+		 * Pagination cursor from a previous response.
+		 */
+		cursor?: string;
+	};
+	url: "/flagship/apps/{app_id}/flags";
+};
+
+export type FlagshipListFlagsErrors = {
+	/**
+	 * Bad request.
+	 */
+	400: FlagshipError;
+	/**
+	 * Unauthorized.
+	 */
+	401: FlagshipError;
+	/**
+	 * Forbidden.
+	 */
+	403: FlagshipError;
+	/**
+	 * Not found.
+	 */
+	404: FlagshipError;
+	/**
+	 * Too many requests.
+	 */
+	429: FlagshipError;
+	/**
+	 * Internal server error.
+	 */
+	500: FlagshipError;
+};
+
+export type FlagshipListFlagsError =
+	FlagshipListFlagsErrors[keyof FlagshipListFlagsErrors];
+
+export type FlagshipListFlagsResponses = {
+	/**
+	 * Paginated list of flags.
+	 */
+	200: {
+		errors: Array<{
+			message: string;
+		}>;
+		messages: Array<{
+			message: string;
+		}>;
+		result: FlagshipFlagsPage;
+		result_info: FlagshipResultInfo;
+		success: boolean;
+	};
+};
+
+export type FlagshipListFlagsResponse =
+	FlagshipListFlagsResponses[keyof FlagshipListFlagsResponses];
+
+export type FlagshipCreateFlagData = {
+	body: {
+		/**
+		 * Variation the API serves when the flag is off, or when it's on but no rule matches the context. Must be a key in `variations`.
+		 */
+		default_variation: string;
+		/**
+		 * Optional operator-facing description. It does not affect flag evaluation.
+		 */
+		description?: string | null;
+		/**
+		 * When false, the flag bypasses all rules and always serves `default_variation`.
+		 */
+		enabled: boolean;
+		/**
+		 * Unique identifier for the flag within an app. Used in all evaluation and SDK calls.
+		 */
+		key: string;
+		/**
+		 * Key-value metadata associated with the flag. `null` or an empty object clears existing metadata; omission semantics depend on the endpoint (PUT clears it, PATCH preserves it).
+		 */
+		metadata?: {
+			[key: string]: boolean | string | number;
+		} | null;
+		/**
+		 * Targeting rules evaluated in ascending `priority`; the first matching rule wins. An empty array means the flag always serves `default_variation`.
+		 */
+		rules: Array<FlagshipRule>;
+		/**
+		 * Deprecated compatibility field. Omit it; the API ignores this value and infers the type from the flag's variations.
+		 *
+		 * @deprecated
+		 */
+		type?: "boolean" | "string" | "number" | "json";
+		/**
+		 * Map of variation name to value. All values share the same type (boolean, string, number, or JSON object/array), and each serialized value stays within 10KB.
+		 */
+		variations: {
+			[key: string]: FlagshipJsonValueWritable;
+		};
+	};
+	path: {
+		/**
+		 * Flagship app ID returned when the app was created.
+		 */
+		app_id: string;
+	};
+	query?: never;
+	url: "/flagship/apps/{app_id}/flags";
+};
+
+export type FlagshipCreateFlagErrors = {
+	/**
+	 * Bad request.
+	 */
+	400: FlagshipError;
+	/**
+	 * Unauthorized.
+	 */
+	401: FlagshipError;
+	/**
+	 * Forbidden.
+	 */
+	403: FlagshipError;
+	/**
+	 * Not found.
+	 */
+	404: FlagshipError;
+	/**
+	 * Too many requests.
+	 */
+	429: FlagshipError;
+	/**
+	 * Internal server error.
+	 */
+	500: FlagshipError;
+};
+
+export type FlagshipCreateFlagError =
+	FlagshipCreateFlagErrors[keyof FlagshipCreateFlagErrors];
+
+export type FlagshipCreateFlagResponses = {
+	/**
+	 * Flag created.
+	 */
+	201: {
+		errors: Array<{
+			message: string;
+		}>;
+		messages: Array<{
+			message: string;
+		}>;
+		result: FlagshipFlag;
+		success: boolean;
+	};
+};
+
+export type FlagshipCreateFlagResponse =
+	FlagshipCreateFlagResponses[keyof FlagshipCreateFlagResponses];
+
+export type FlagshipDeleteFlagData = {
+	body?: never;
+	path: {
+		/**
+		 * Flagship app ID returned when the app was created.
+		 */
+		app_id: string;
+		/**
+		 * Case-sensitive key identifying the flag within the app.
+		 */
+		flag_key: string;
+	};
+	query?: never;
+	url: "/flagship/apps/{app_id}/flags/{flag_key}";
+};
+
+export type FlagshipDeleteFlagErrors = {
+	/**
+	 * Bad request.
+	 */
+	400: FlagshipError;
+	/**
+	 * Unauthorized.
+	 */
+	401: FlagshipError;
+	/**
+	 * Forbidden.
+	 */
+	403: FlagshipError;
+	/**
+	 * Not found.
+	 */
+	404: FlagshipError;
+	/**
+	 * Too many requests.
+	 */
+	429: FlagshipError;
+	/**
+	 * Internal server error.
+	 */
+	500: FlagshipError;
+};
+
+export type FlagshipDeleteFlagError =
+	FlagshipDeleteFlagErrors[keyof FlagshipDeleteFlagErrors];
+
+export type FlagshipDeleteFlagResponses = {
+	/**
+	 * Flag deleted.
+	 */
+	200: {
+		errors: Array<{
+			message: string;
+		}>;
+		messages: Array<{
+			message: string;
+		}>;
+		result: FlagshipDeleteFlagResult;
+		success: boolean;
+	};
+};
+
+export type FlagshipDeleteFlagResponse =
+	FlagshipDeleteFlagResponses[keyof FlagshipDeleteFlagResponses];
+
+export type FlagshipGetFlagData = {
+	body?: never;
+	path: {
+		/**
+		 * Flagship app ID returned when the app was created.
+		 */
+		app_id: string;
+		/**
+		 * Case-sensitive key identifying the flag within the app.
+		 */
+		flag_key: string;
+	};
+	query?: never;
+	url: "/flagship/apps/{app_id}/flags/{flag_key}";
+};
+
+export type FlagshipGetFlagErrors = {
+	/**
+	 * Bad request.
+	 */
+	400: FlagshipError;
+	/**
+	 * Unauthorized.
+	 */
+	401: FlagshipError;
+	/**
+	 * Forbidden.
+	 */
+	403: FlagshipError;
+	/**
+	 * Not found.
+	 */
+	404: FlagshipError;
+	/**
+	 * Too many requests.
+	 */
+	429: FlagshipError;
+	/**
+	 * Internal server error.
+	 */
+	500: FlagshipError;
+};
+
+export type FlagshipGetFlagError =
+	FlagshipGetFlagErrors[keyof FlagshipGetFlagErrors];
+
+export type FlagshipGetFlagResponses = {
+	/**
+	 * Flag details.
+	 */
+	200: {
+		errors: Array<{
+			message: string;
+		}>;
+		messages: Array<{
+			message: string;
+		}>;
+		result: FlagshipFlag;
+		success: boolean;
+	};
+};
+
+export type FlagshipGetFlagResponse =
+	FlagshipGetFlagResponses[keyof FlagshipGetFlagResponses];
+
+export type FlagshipPatchFlagData = {
+	body: {
+		/**
+		 * Variation the API serves when the flag is off, or when it's on but no rule matches the context. Must be a key in `variations`.
+		 */
+		default_variation?: string;
+		/**
+		 * Optional operator-facing description. It does not affect flag evaluation.
+		 */
+		description?: string | null;
+		/**
+		 * When false, the flag bypasses all rules and always serves `default_variation`.
+		 */
+		enabled?: boolean;
+		/**
+		 * Key-value metadata associated with the flag. `null` or an empty object clears existing metadata; omission semantics depend on the endpoint (PUT clears it, PATCH preserves it).
+		 */
+		metadata?: {
+			[key: string]: boolean | string | number;
+		} | null;
+	};
+	path: {
+		/**
+		 * Flagship app ID returned when the app was created.
+		 */
+		app_id: string;
+		/**
+		 * Case-sensitive key identifying the flag within the app.
+		 */
+		flag_key: string;
+	};
+	query?: never;
+	url: "/flagship/apps/{app_id}/flags/{flag_key}";
+};
+
+export type FlagshipPatchFlagErrors = {
+	/**
+	 * Bad request.
+	 */
+	400: FlagshipError;
+	/**
+	 * Unauthorized.
+	 */
+	401: FlagshipError;
+	/**
+	 * Forbidden.
+	 */
+	403: FlagshipError;
+	/**
+	 * Not found.
+	 */
+	404: FlagshipError;
+	/**
+	 * Too many requests.
+	 */
+	429: FlagshipError;
+	/**
+	 * Internal server error.
+	 */
+	500: FlagshipError;
+};
+
+export type FlagshipPatchFlagError =
+	FlagshipPatchFlagErrors[keyof FlagshipPatchFlagErrors];
+
+export type FlagshipPatchFlagResponses = {
+	/**
+	 * Updated flag.
+	 */
+	200: {
+		errors: Array<{
+			message: string;
+		}>;
+		messages: Array<{
+			message: string;
+		}>;
+		result: FlagshipFlag;
+		success: boolean;
+	};
+};
+
+export type FlagshipPatchFlagResponse =
+	FlagshipPatchFlagResponses[keyof FlagshipPatchFlagResponses];
+
+export type FlagshipUpdateFlagData = {
+	body: {
+		/**
+		 * Variation the API serves when the flag is off, or when it's on but no rule matches the context. Must be a key in `variations`.
+		 */
+		default_variation: string;
+		/**
+		 * Optional operator-facing description. It does not affect flag evaluation.
+		 */
+		description?: string | null;
+		/**
+		 * When false, the flag bypasses all rules and always serves `default_variation`.
+		 */
+		enabled: boolean;
+		/**
+		 * Unique identifier for the flag within an app. Used in all evaluation and SDK calls.
+		 */
+		key: string;
+		/**
+		 * Key-value metadata associated with the flag. `null` or an empty object clears existing metadata; omission semantics depend on the endpoint (PUT clears it, PATCH preserves it).
+		 */
+		metadata?: {
+			[key: string]: boolean | string | number;
+		} | null;
+		/**
+		 * Targeting rules evaluated in ascending `priority`; the first matching rule wins. An empty array means the flag always serves `default_variation`.
+		 */
+		rules: Array<FlagshipRule>;
+		/**
+		 * Deprecated compatibility field. Omit it; the API ignores this value and infers the type from the flag's variations.
+		 *
+		 * @deprecated
+		 */
+		type?: "boolean" | "string" | "number" | "json";
+		/**
+		 * Map of variation name to value. All values share the same type (boolean, string, number, or JSON object/array), and each serialized value stays within 10KB.
+		 */
+		variations: {
+			[key: string]: FlagshipJsonValueWritable;
+		};
+	};
+	path: {
+		/**
+		 * Flagship app ID returned when the app was created.
+		 */
+		app_id: string;
+		/**
+		 * Case-sensitive key identifying the flag within the app.
+		 */
+		flag_key: string;
+	};
+	query?: never;
+	url: "/flagship/apps/{app_id}/flags/{flag_key}";
+};
+
+export type FlagshipUpdateFlagErrors = {
+	/**
+	 * Bad request.
+	 */
+	400: FlagshipError;
+	/**
+	 * Unauthorized.
+	 */
+	401: FlagshipError;
+	/**
+	 * Forbidden.
+	 */
+	403: FlagshipError;
+	/**
+	 * Not found.
+	 */
+	404: FlagshipError;
+	/**
+	 * Too many requests.
+	 */
+	429: FlagshipError;
+	/**
+	 * Internal server error.
+	 */
+	500: FlagshipError;
+};
+
+export type FlagshipUpdateFlagError =
+	FlagshipUpdateFlagErrors[keyof FlagshipUpdateFlagErrors];
+
+export type FlagshipUpdateFlagResponses = {
+	/**
+	 * Updated flag.
+	 */
+	200: {
+		errors: Array<{
+			message: string;
+		}>;
+		messages: Array<{
+			message: string;
+		}>;
+		result: FlagshipFlag;
+		success: boolean;
+	};
+};
+
+export type FlagshipUpdateFlagResponse =
+	FlagshipUpdateFlagResponses[keyof FlagshipUpdateFlagResponses];
+
+export type FlagshipEvaluateFlagData = {
+	body?: never;
+	path: {
+		/**
+		 * Flagship app ID returned when the app was created.
+		 */
+		app_id: string;
+	};
+	query: {
+		/**
+		 * The flag key to evaluate.
+		 */
+		flagKey: string;
+		/**
+		 * Context targeting key (per OpenFeature spec); used for percentage rollout bucketing.
+		 */
+		targetingKey?: string;
+	};
+	url: "/flagship/apps/{app_id}/evaluate";
+};
+
+export type FlagshipEvaluateFlagErrors = {
+	/**
+	 * Missing or invalid flagKey.
+	 */
+	400: FlagshipEvaluationError;
+	/**
+	 * Unauthorized.
+	 */
+	401: FlagshipError;
+	/**
+	 * Forbidden.
+	 */
+	403: FlagshipError;
+	/**
+	 * Flag or app not found.
+	 */
+	404: FlagshipEvaluationError;
+	/**
+	 * Evaluation error.
+	 */
+	500: FlagshipEvaluationError;
+	/**
+	 * Flag store temporarily unavailable.
+	 */
+	503: FlagshipEvaluationError;
+};
+
+export type FlagshipEvaluateFlagError =
+	FlagshipEvaluateFlagErrors[keyof FlagshipEvaluateFlagErrors];
+
+export type FlagshipEvaluateFlagResponses = {
+	/**
+	 * Flag evaluation result.
+	 */
+	200: FlagshipEvaluationResult;
+};
+
+export type FlagshipEvaluateFlagResponse =
+	FlagshipEvaluateFlagResponses[keyof FlagshipEvaluateFlagResponses];
+
+export type FlagshipEvaluateFlagPostData = {
+	body: {
+		/**
+		 * Evaluation attributes keyed by name. Values may be any JSON value; the context supports up to 100 entries, nesting depth of 10, 10,000 values, and 32 KB.
+		 */
+		context?: {
+			[key: string]: FlagshipJsonValueWritable;
+		};
+		/**
+		 * Key of the flag to evaluate within the app.
+		 */
+		flagKey: string;
+	};
+	path: {
+		/**
+		 * Flagship app ID returned when the app was created.
+		 */
+		app_id: string;
+	};
+	query?: never;
+	url: "/flagship/apps/{app_id}/evaluate";
+};
+
+export type FlagshipEvaluateFlagPostErrors = {
+	/**
+	 * Missing or invalid flagKey, or malformed context.
+	 */
+	400: FlagshipEvaluationError;
+	/**
+	 * Unauthorized.
+	 */
+	401: FlagshipError;
+	/**
+	 * Forbidden.
+	 */
+	403: FlagshipError;
+	/**
+	 * Flag or app not found.
+	 */
+	404: FlagshipEvaluationError;
+	/**
+	 * Evaluation error.
+	 */
+	500: FlagshipEvaluationError;
+	/**
+	 * Flag store temporarily unavailable.
+	 */
+	503: FlagshipEvaluationError;
+};
+
+export type FlagshipEvaluateFlagPostError =
+	FlagshipEvaluateFlagPostErrors[keyof FlagshipEvaluateFlagPostErrors];
+
+export type FlagshipEvaluateFlagPostResponses = {
+	/**
+	 * Flag evaluation result.
+	 */
+	200: FlagshipEvaluationResult;
+};
+
+export type FlagshipEvaluateFlagPostResponse =
+	FlagshipEvaluateFlagPostResponses[keyof FlagshipEvaluateFlagPostResponses];
 
 export type R2BucketDeleteObjectsData = {
 	/**
@@ -2930,245 +3692,3 @@ export type FlagshipListAppsResponses = {
 
 export type FlagshipListAppsResponse =
 	FlagshipListAppsResponses[keyof FlagshipListAppsResponses];
-
-export type FlagshipListFlagsData = {
-	body?: never;
-	path: {
-		app_id: string;
-	};
-	query?: {
-		/**
-		 * Worker whose local Flagship store should be used.
-		 */
-		worker?: string;
-	};
-	url: "/flagship/apps/{app_id}/flags";
-};
-
-export type FlagshipListFlagsErrors = {
-	/**
-	 * List Flagship Flags response failure.
-	 */
-	"4XX": WorkersApiResponseCommonFailure;
-};
-
-export type FlagshipListFlagsError =
-	FlagshipListFlagsErrors[keyof FlagshipListFlagsErrors];
-
-export type FlagshipListFlagsResponses = {
-	/**
-	 * List Flagship Flags response.
-	 */
-	200: WorkersApiResponseCommon & {
-		result?: Array<FlagshipFlag>;
-	};
-};
-
-export type FlagshipListFlagsResponse =
-	FlagshipListFlagsResponses[keyof FlagshipListFlagsResponses];
-
-export type FlagshipCreateFlagData = {
-	body: {
-		/**
-		 * Flag key
-		 */
-		key: string;
-		/**
-		 * Human readable description
-		 */
-		description?: string | null;
-		/**
-		 * Whether the flag is enabled
-		 */
-		enabled?: boolean;
-		/**
-		 * Variation served when no rule matches
-		 */
-		default_variation: string;
-		/**
-		 * Named values the flag can serve
-		 */
-		variations: {
-			[key: string]: unknown;
-		};
-		/**
-		 * Targeting rules, in priority order
-		 */
-		rules?: Array<FlagshipRule>;
-	};
-	path: {
-		app_id: string;
-	};
-	query?: {
-		/**
-		 * Worker whose local Flagship store should be used.
-		 */
-		worker?: string;
-	};
-	url: "/flagship/apps/{app_id}/flags";
-};
-
-export type FlagshipCreateFlagErrors = {
-	/**
-	 * Create Flagship Flag response failure.
-	 */
-	"4XX": WorkersApiResponseCommonFailure;
-};
-
-export type FlagshipCreateFlagError =
-	FlagshipCreateFlagErrors[keyof FlagshipCreateFlagErrors];
-
-export type FlagshipCreateFlagResponses = {
-	/**
-	 * Create Flagship Flag response.
-	 */
-	200: WorkersApiResponseCommon & {
-		result?: FlagshipFlag;
-	};
-};
-
-export type FlagshipCreateFlagResponse =
-	FlagshipCreateFlagResponses[keyof FlagshipCreateFlagResponses];
-
-export type FlagshipDeleteFlagData = {
-	body?: never;
-	path: {
-		app_id: string;
-		flag_key: string;
-	};
-	query?: {
-		/**
-		 * Worker whose local Flagship store should be used.
-		 */
-		worker?: string;
-	};
-	url: "/flagship/apps/{app_id}/flags/{flag_key}";
-};
-
-export type FlagshipDeleteFlagErrors = {
-	/**
-	 * Delete Flagship Flag response failure.
-	 */
-	"4XX": WorkersApiResponseCommonFailure;
-};
-
-export type FlagshipDeleteFlagError =
-	FlagshipDeleteFlagErrors[keyof FlagshipDeleteFlagErrors];
-
-export type FlagshipDeleteFlagResponses = {
-	/**
-	 * Delete Flagship Flag response.
-	 */
-	200: WorkersApiResponseCommon & {
-		result?: {
-			success?: boolean;
-		};
-	};
-};
-
-export type FlagshipDeleteFlagResponse =
-	FlagshipDeleteFlagResponses[keyof FlagshipDeleteFlagResponses];
-
-export type FlagshipUpdateFlagData = {
-	body: {
-		/**
-		 * Human readable description
-		 */
-		description?: string | null;
-		/**
-		 * Whether the flag is enabled
-		 */
-		enabled?: boolean;
-		/**
-		 * Variation served when no rule matches
-		 */
-		default_variation?: string;
-		/**
-		 * Named values the flag can serve
-		 */
-		variations?: {
-			[key: string]: unknown;
-		};
-		/**
-		 * Targeting rules, in priority order
-		 */
-		rules?: Array<FlagshipRule>;
-	};
-	path: {
-		app_id: string;
-		flag_key: string;
-	};
-	query?: {
-		/**
-		 * Worker whose local Flagship store should be used.
-		 */
-		worker?: string;
-	};
-	url: "/flagship/apps/{app_id}/flags/{flag_key}";
-};
-
-export type FlagshipUpdateFlagErrors = {
-	/**
-	 * Update Flagship Flag response failure.
-	 */
-	"4XX": WorkersApiResponseCommonFailure;
-};
-
-export type FlagshipUpdateFlagError =
-	FlagshipUpdateFlagErrors[keyof FlagshipUpdateFlagErrors];
-
-export type FlagshipUpdateFlagResponses = {
-	/**
-	 * Update Flagship Flag response.
-	 */
-	200: WorkersApiResponseCommon & {
-		result?: FlagshipFlag;
-	};
-};
-
-export type FlagshipUpdateFlagResponse =
-	FlagshipUpdateFlagResponses[keyof FlagshipUpdateFlagResponses];
-
-export type FlagshipEvaluateFlagData = {
-	body: {
-		/**
-		 * Attributes used for rule matching and rollout bucketing.
-		 */
-		context?: {
-			[key: string]: unknown;
-		};
-	};
-	path: {
-		app_id: string;
-		flag_key: string;
-	};
-	query?: {
-		/**
-		 * Worker whose local Flagship store should be used.
-		 */
-		worker?: string;
-	};
-	url: "/flagship/apps/{app_id}/flags/{flag_key}/evaluate";
-};
-
-export type FlagshipEvaluateFlagErrors = {
-	/**
-	 * Evaluate Flagship Flag response failure.
-	 */
-	"4XX": WorkersApiResponseCommonFailure;
-};
-
-export type FlagshipEvaluateFlagError =
-	FlagshipEvaluateFlagErrors[keyof FlagshipEvaluateFlagErrors];
-
-export type FlagshipEvaluateFlagResponses = {
-	/**
-	 * Evaluate Flagship Flag response.
-	 */
-	200: WorkersApiResponseCommon & {
-		result?: FlagshipEvaluation;
-	};
-};
-
-export type FlagshipEvaluateFlagResponse =
-	FlagshipEvaluateFlagResponses[keyof FlagshipEvaluateFlagResponses];

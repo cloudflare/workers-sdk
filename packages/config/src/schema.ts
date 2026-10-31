@@ -89,6 +89,7 @@ export const R2BindingSchema = z.strictObject({
 export const AnalyticsEngineDatasetBindingSchema = z.strictObject({
 	type: z.literal("analytics-engine-dataset"),
 	name: z.string().optional(),
+	dev: RemoteBindingDevSchema.optional(),
 });
 
 export const FlagshipBindingSchema = z.strictObject({
@@ -852,12 +853,70 @@ export const InputSettingsSchema = z.object({
 
 export type ParsedInputSettingsConfig = z.output<typeof InputSettingsSchema>;
 
-/** The resolved, user-authored project configuration. */
-export const InputConfigSchema = z.strictObject({
-	...InputSettingsSchema.shape,
-	worker: InputWorkerSchema.optional(),
-	containers: z.array(InputContainerSchema).default([]),
-});
+/** Validate relationships after resource definitions have been resolved to names. */
+function validateInputConfigRelationships(
+	config: {
+		worker?: ParsedInputWorkerConfig;
+		containers: ParsedInputContainerConfig[];
+	},
+	ctx: z.RefinementCtx
+): void {
+	const firstIndexByName = new Map<string, number>();
+	for (const [index, container] of config.containers.entries()) {
+		const firstIndex = firstIndexByName.get(container.name);
+		if (firstIndex !== undefined) {
+			ctx.addIssue({
+				code: "custom",
+				path: ["containers", index, "name"],
+				message: `The Container name "${container.name}" is also used by \`containers[${firstIndex}]\`. Container names must be unique.`,
+			});
+			continue;
+		}
+		firstIndexByName.set(container.name, index);
+	}
+
+	const firstExportByContainerName = new Map<string, string>();
+	for (const [exportName, workerExport] of Object.entries(
+		config.worker?.exports ?? {}
+	)) {
+		if (
+			workerExport.type !== "durable-object" ||
+			!("container" in workerExport) ||
+			workerExport.container === undefined
+		) {
+			continue;
+		}
+
+		const containerName = workerExport.container;
+		const issuePath = ["worker", "exports", exportName, "container"];
+		if (!firstIndexByName.has(containerName)) {
+			ctx.addIssue({
+				code: "custom",
+				path: issuePath,
+				message: `The referenced Container "${containerName}" is not included in the \`containers\` array.`,
+			});
+		}
+		const firstExportName = firstExportByContainerName.get(containerName);
+		if (firstExportName !== undefined) {
+			ctx.addIssue({
+				code: "custom",
+				path: issuePath,
+				message: `The Container "${containerName}" is already referenced by \`worker.exports.${firstExportName}\`. A Container can only be linked to one Durable Object.`,
+			});
+			continue;
+		}
+		firstExportByContainerName.set(containerName, exportName);
+	}
+}
+
+/** The resolved project configuration, including relationships between resources. */
+export const InputConfigSchema = z
+	.strictObject({
+		...InputSettingsSchema.shape,
+		worker: InputWorkerSchema.optional(),
+		containers: z.array(InputContainerSchema).default([]),
+	})
+	.superRefine(validateInputConfigRelationships);
 
 export type ParsedInputConfig = z.output<typeof InputConfigSchema>;
 

@@ -12,6 +12,7 @@ import {
 import {
 	createAssetsIgnoreFunction,
 	getContentType,
+	InvalidAssetsIgnoreError,
 	maybeGetFile,
 	normalizeFilePath,
 } from "@cloudflare/workers-shared/utils/helpers";
@@ -20,6 +21,7 @@ import {
 	FatalError,
 	formatTime,
 	LOGGER_LEVELS,
+	retryOnAPIFailure,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -90,8 +92,14 @@ export const syncAssets = async (
 ): Promise<AssetsUploadResult> => {
 	assert(accountId, "Missing accountId");
 	// Keep progress suppression local to this upload, including concurrent callers.
-	const assetLogger: AssetLogger = options.quiet
-		? { debug() {}, info() {}, log() {} }
+	const assetLogger: Logger = options.quiet
+		? {
+				debug() {},
+				info() {},
+				log() {},
+				warn: (...args) => logger.warn(...args),
+				error: (...args) => logger.error(...args),
+			}
 		: logger;
 
 	// 1. generate asset manifest
@@ -104,12 +112,15 @@ export const syncAssets = async (
 
 	// 2. fetch buckets w/ hashes
 	assetLogger.info("🌀 Starting asset upload...");
-	const initializeAssetsResponse =
-		await fetchResult<InitializeAssetsResponse | null>(complianceConfig, url, {
-			headers: { "Content-Type": "application/json" },
-			method: "POST",
-			body: JSON.stringify({ manifest: manifest }),
-		});
+	const initializeAssetsResponse = await retryOnAPIFailure(
+		() =>
+			fetchResult<InitializeAssetsResponse | null>(complianceConfig, url, {
+				headers: { "Content-Type": "application/json" },
+				method: "POST",
+				body: JSON.stringify({ manifest: manifest }),
+			}),
+		assetLogger
+	);
 
 	// In the past we've seen the endpoint return that incorrectly doesn't contain
 	// a null response (see: https://github.com/cloudflare/workers-sdk/issues/9465).
@@ -653,7 +664,14 @@ export const buildAssetManifest = async (
 	const manifest: AssetManifest = {};
 
 	const { assetsIgnoreFunction, assetsIgnoreFilePresent } =
-		await createAssetsIgnoreFunction(dir);
+		await createAssetsIgnoreFunction(dir).catch((error: unknown) => {
+			if (error instanceof InvalidAssetsIgnoreError) {
+				throw new UserError(error.message, {
+					telemetryMessage: "assets ignore invalid encoding",
+				});
+			}
+			throw error;
+		});
 
 	await Promise.all(
 		files.map(async (relativeFilepath) => {
