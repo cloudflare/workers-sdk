@@ -19,6 +19,9 @@ env:
   # Match the test/check workflow's opt-in benchmarks, including nested builds.
   TURBO_CACHE: ${{ contains(github.event.pull_request.labels.*.name, 'ci:no-turbo-cache') && 'local:,remote:' || 'local:rw,remote:rw' }}
   TURBO_RUN_SUMMARY: "true"
+  # Nested builds and generated projects must keep the matrix-selected pnpm.
+  # Automatic downloads can race when parallel Turbo tasks provision pnpm.
+  pnpm_config_manage_package_manager_versions: "false"
   pnpm_config_pm_on_fail: ignore
   pnpm_config_verify_deps_before_run: "false"
 
@@ -326,10 +329,6 @@ jobs:
         run: pnpm run test:ci:logged .turbo/ci-logs/c3.log run test:e2e:c3
         env:
           NODE_VERSION: ${{ env.NODE_VERSION }}
-          # Some framework generators write a different pnpm version to `packageManager`.
-          # By default pnpm downloads and runs it. Concurrent tests can then provision
-          # that version in the same pnpm tool store, causing recursive installs.
-          pnpm_config_manage_package_manager_versions: "false"
           E2E_EXPERIMENTAL: ${{ matrix.experimental }}
           E2E_TEST_PM: ${{ matrix.pm.name }}
           E2E_TEST_PM_VERSION: ${{ matrix.pm.version }}
