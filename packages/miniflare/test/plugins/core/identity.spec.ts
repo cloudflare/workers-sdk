@@ -30,7 +30,6 @@ for (const legacy of [false, true]) {
 						modules: true,
 						script,
 						compatibilityDate: "2026-01-01",
-						compatibilityFlags: ["workers_oidc"],
 						identities: { IDENTITY: identity },
 						outboundService: outbound,
 					})
@@ -40,7 +39,6 @@ for (const legacy of [false, true]) {
 								config: {
 									name: "test",
 									compatibilityDate: "2026-01-01",
-									compatibilityFlags: ["workers_oidc"],
 									env: { IDENTITY: { type: "identity", ...identity } },
 									manifest: singleModuleManifest(script),
 								},
