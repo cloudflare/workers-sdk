@@ -112,12 +112,11 @@ describe("previewBuildOutput", () => {
 		mocks.syncAssets.mockResolvedValue({ jwt: "asset-token" });
 	});
 
-	it("preserves fixed-audience identity limits in Preview metadata", async ({
+	it("preserves signing-only identity limits in Preview metadata", async ({
 		expect,
 	}) => {
 		const identity = {
 			type: "identity" as const,
-			audience: "urn:inventory",
 			subject: "durable-object-namespace" as const,
 			namespace_id: "a".repeat(32),
 			authorization_grants: {
@@ -125,7 +124,6 @@ describe("previewBuildOutput", () => {
 				allowed_scopes: ["items:read"],
 			},
 			request_signing: {
-				profile: "cloudflare-workload-http-v1" as const,
 				allowed_origins: ["https://api.example.com"],
 				allowed_methods: ["GET"],
 			},

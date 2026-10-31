@@ -1058,7 +1058,7 @@ type ConnectHandlerConfig = TcpConnectHandlerConfig | UdpConnectHandlerConfig;
  * for each named environment.
  */
 export interface EnvironmentNonInheritable {
-	/** Platform-derived workload capabilities. Each binding fixes one audience.
+	/** Platform-derived workload capabilities. An optional audience enables ordinary token issuance.
 	 * @default []
 	 * @nonInheritable
 	 */

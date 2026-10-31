@@ -6484,7 +6484,7 @@ const validateWorkerLoaderBinding: ValidatorFn = (
 const validateIdentityBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (!isIdentityBinding(value)) {
 		diagnostics.errors.push(
-			`"${field}" requires binding, one audience, a valid subject profile, and valid optional authorization_grants/request_signing limits.`
+			`"${field}" requires binding, a valid optional audience, a valid subject profile, and valid optional authorization_grants/request_signing limits.`
 		);
 		return false;
 	}

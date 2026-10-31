@@ -86,30 +86,34 @@ it("bounds UTF-8 and rejects ambiguous binding fields", ({ expect }) => {
 	).toBe(false);
 });
 
-it.for(["cloudflare-workload-http-v1", "web-bot-auth"])(
-	"accepts the %s signing profile while preserving limits",
-	(profile, { expect }) => {
-		const config = {
-			binding: "IDENTITY",
-			audience: "urn:api",
-			request_signing: {
-				profile,
-				allowed_origins: ["https://api.example"],
-				allowed_methods: ["GET"],
-			},
-		};
-		expect(isIdentityBinding(config)).toBe(true);
+it("accepts managed signing without a token audience and rejects protocol options", ({
+	expect,
+}) => {
+	const config = {
+		binding: "IDENTITY",
+		request_signing: {
+			allowed_origins: ["https://api.example"],
+			allowed_methods: ["GET"],
+		},
+	};
+	expect(isIdentityBinding(config)).toBe(true);
+	for (const profile of [
+		"cloudflare-workload-http-v1",
+		"web-bot-auth",
+		"unknown",
+	]) {
 		expect(
 			isIdentityBinding({
 				...config,
-				request_signing: { ...config.request_signing, profile: "unknown" },
-			})
-		).toBe(false);
-		expect(
-			isIdentityBinding({
-				...config,
-				request_signing: { ...config.request_signing, customer_id: "forged" },
+				request_signing: { ...config.request_signing, profile },
 			})
 		).toBe(false);
 	}
-);
+	expect(isIdentityBinding({ ...config, audience: "" })).toBe(false);
+	expect(
+		isIdentityBinding({
+			...config,
+			request_signing: { ...config.request_signing, customer_id: "forged" },
+		})
+	).toBe(false);
+});

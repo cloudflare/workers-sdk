@@ -1902,7 +1902,6 @@ describe("OIDC capability bindings", () => {
 		const limits = {
 			audience: "urn:orders",
 			request_signing: {
-				profile: "cloudflare-workload-http-v1",
 				allowed_origins: ["https://api.example"],
 				allowed_methods: ["POST"],
 			},
@@ -1948,14 +1947,10 @@ describe("OIDC capability bindings", () => {
 	);
 });
 
-it("accepts customer WBA signing with compiled origin and method limits", ({
-	expect,
-}) => {
+it("accepts managed signing without a token audience", ({ expect }) => {
 	const binding = {
 		type: "identity",
-		audience: "urn:api",
 		request_signing: {
-			profile: "web-bot-auth",
 			allowed_origins: ["https://api.example"],
 			allowed_methods: ["GET"],
 		},

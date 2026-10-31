@@ -41,7 +41,6 @@ describe("Wrangler environment and tooling conversion", () => {
 								allowed_scopes: ["items:read"],
 							},
 							request_signing: {
-								profile: "cloudflare-workload-http-v1",
 								allowed_origins: ["https://api.example.com"],
 								allowed_methods: ["GET"],
 							},
@@ -69,9 +68,7 @@ describe("Wrangler environment and tooling conversion", () => {
 			expect(result.cloudflareConfig).toContain('"https://auth.example.com/"');
 			expect(result.cloudflareConfig).toContain("allowed_scopes: [");
 			expect(result.cloudflareConfig).toContain('"items:read"');
-			expect(result.cloudflareConfig).toContain(
-				'profile: "cloudflare-workload-http-v1"'
-			);
+			expect(result.cloudflareConfig).not.toContain("profile:");
 			expect(result.cloudflareConfig).toContain("allowed_origins: [");
 			expect(result.cloudflareConfig).toContain('"https://api.example.com"');
 			expect(result.cloudflareConfig).toContain("allowed_methods: [");

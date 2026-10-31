@@ -15,11 +15,7 @@ export class IdentityBinding extends WorkerEntrypoint {
 		return unsupported();
 	}
 
-	async getCustomerIdentity(): Promise<never> {
-		return unsupported();
-	}
-
-	async fetchForCustomer(): Promise<Response> {
+	async getIdentity(): Promise<never> {
 		return unsupported();
 	}
 
