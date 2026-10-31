@@ -20,10 +20,7 @@ class NoDefaultValueProvided extends UserError {
 	}
 }
 
-export function createRemoteBindingsAuth(
-	logger: RemoteBindingsLogger,
-	useCfAuth = "CLOUDFLARE_CF_AUTH" in process.env
-) {
+export function createRemoteBindingsAuth(logger: RemoteBindingsLogger) {
 	const context = {
 		logger,
 		userAgent: `remote-bindings/${packageVersion}`,
@@ -59,6 +56,7 @@ export function createRemoteBindingsAuth(
 		isNoDefaultValueProvidedError: (error: unknown) =>
 			error instanceof NoDefaultValueProvided,
 	};
+	const useCfAuth = "CLOUDFLARE_CF_AUTH" in process.env;
 	return {
 		auth: useCfAuth ? createCfAuth(context) : createWranglerAuth(context),
 		useCfAuth,
@@ -77,7 +75,13 @@ export function getRemoteBindingsAuthHook(
 
 	const { auth: remoteBindingsAuth, useCfAuth } =
 		createRemoteBindingsAuth(logger);
-	selectDevelopmentProfile(remoteBindingsAuth, useCfAuth, profileDir, logger);
+	const profileStore = useCfAuth
+		? createCfProfileStore({ logger })
+		: createWranglerProfileStore({ logger });
+	const profile = profileStore.resolve({
+		cwd: profileDir ?? process.cwd(),
+	});
+	remoteBindingsAuth.setProfile(profile);
 
 	return async () => ({
 		accountId: await remoteBindingsAuth.requireAuth(
@@ -85,65 +89,4 @@ export function getRemoteBindingsAuthHook(
 		),
 		apiToken: remoteBindingsAuth.requireApiToken(),
 	});
-}
-
-/**
- * Resolve human OAuth credentials for development OIDC issuance. This
- * deliberately reads the selected profile on every call, including when an
- * API token or temporary account is active for other development features.
- * Server-side authorization still determines which Worker the user can use.
- *
- * @param accountId Configured account selection, if known.
- * @param profileDir Project directory used for profile selection.
- * @param logger Development server logger.
- * @returns A lazy hook; creating it never logs in or makes a network request.
- */
-export function getDevelopmentOidcAuthHook(
-	accountId: Config["account_id"] | undefined,
-	profileDir: string | undefined,
-	logger: RemoteBindingsLogger,
-	cfAuth?: boolean
-): () => Promise<CfAccount> {
-	const { auth, useCfAuth } = createRemoteBindingsAuth(logger, cfAuth);
-	const profile = selectDevelopmentProfile(auth, useCfAuth, profileDir, logger);
-	return async () => {
-		const token = await auth.getOAuthTokenFromLocalState();
-		if (!token) {
-			const cli = useCfAuth ? "cf" : "wrangler";
-			const command =
-				profile === "default"
-					? useCfAuth
-						? "cf auth login"
-						: "wrangler login"
-					: `${cli} auth create ${profile}`;
-			throw new UserError(
-				`Development OIDC requires a signed-in developer. Run \`${command}\` for the selected profile, then retry the getter. If you are already signed in, check your connection so the OAuth token can refresh. API tokens and temporary accounts cannot issue development identities.`,
-				{ telemetryMessage: "development oidc oauth required" }
-			);
-		}
-		return {
-			accountId: await auth.getOrSelectAccountId(
-				accountId ? { account_id: accountId } : {},
-				{ credentials: { apiToken: token } }
-			),
-			apiToken: { apiToken: token },
-		};
-	};
-}
-
-function selectDevelopmentProfile(
-	auth: ReturnType<typeof createRemoteBindingsAuth>["auth"],
-	useCfAuth: boolean,
-	profileDir: string | undefined,
-	logger: RemoteBindingsLogger
-): string {
-	const profileStore = useCfAuth
-		? createCfProfileStore({ logger })
-		: createWranglerProfileStore({ logger });
-	const profile = profileStore.resolve({
-		profile: useCfAuth ? process.env.CLOUDFLARE_DEV_AUTH_PROFILE : undefined,
-		cwd: profileDir ?? process.cwd(),
-	});
-	auth.setProfile(profile);
-	return profile;
 }

@@ -246,7 +246,6 @@ const embedWorkersPlugin = {
 						"miniflare:shared",
 						"miniflare:zod",
 						"cloudflare:workers",
-						"cloudflare-internal:wrapped-binding",
 						"workerd:unsafe",
 					],
 					metafile: true,

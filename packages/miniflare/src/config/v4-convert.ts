@@ -191,7 +191,6 @@ function convertWorkerOptions(
 	dev.unsafeInspectorProxy = worker.unsafeInspectorProxy;
 	dev.unsafeDirectSockets = worker.unsafeDirectSockets;
 	dev.unsafeOverrideFetchWorker = worker.unsafeOverrideFetchWorker;
-	dev.developmentOidc = worker.developmentOidc;
 	dev.unsafeEvalBinding = worker.unsafeEvalBinding;
 	dev.useModuleFallbackService = worker.unsafeUseModuleFallbackService;
 	dev.unsafeRegisterWorker = worker.unsafeRegisterWorker ?? true;

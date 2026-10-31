@@ -22,7 +22,6 @@ import SCRIPT_ACCESS_IDENTITY from "worker:access/access-identity";
 import SCRIPT_DEV_CONTROL from "worker:core/dev-control";
 import SCRIPT_ENTRY from "worker:core/entry";
 import SCRIPT_OIDC from "worker:core/oidc";
-import SCRIPT_OIDC_API from "worker:core/oidc-api";
 import OUTBOUND_WORKER from "worker:core/outbound";
 import { z } from "zod";
 import { kCurrentWorker } from "../../config/schema";
@@ -368,44 +367,15 @@ function getServiceBindings(
 }
 
 export const CORE_PLUGIN: Plugin = {
-	getExtensions({ options }) {
-		return options.some(
-			(o) => getEnvBindingsOfType(o.config, "identity").length
-		)
-			? [
-					{
-						modules: [
-							{
-								name: "miniflare-internal:oidc-api",
-								esModule: SCRIPT_OIDC_API(),
-								internal: true,
-							},
-						],
-					},
-				]
-			: [];
-	},
 	getBindings(options, _sharedOptions, workerIndex) {
 		const { config, legacy, dev } = options;
 		const bindings: Awaitable<Worker_Binding>[] = [];
-		for (const [name, { type: _type, ...limits }] of getEnvBindingsOfType(
-			config,
-			"identity"
-		)) {
+		for (const [name] of getEnvBindingsOfType(config, "identity")) {
 			bindings.push({
 				name,
-				wrapped: {
-					moduleName: "miniflare-internal:oidc-api",
-					innerBindings: [
-						{
-							name: "fetcher",
-							service: {
-								name: `core:oidc:${workerIndex}`,
-								entrypoint: "IdentityBinding",
-								props: { json: JSON.stringify({ binding: name, ...limits }) },
-							},
-						},
-					],
+				service: {
+					name: `core:oidc:${workerIndex}`,
+					entrypoint: "IdentityBinding",
 				},
 			});
 		}
@@ -530,7 +500,6 @@ export const CORE_PLUGIN: Plugin = {
 		additionalModules,
 		loopbackHost,
 		loopbackPort,
-		developmentOidcSecret,
 	}) {
 		const { config, dev } = options;
 		// Define regular user worker
@@ -651,39 +620,16 @@ export const CORE_PLUGIN: Plugin = {
 				]
 			: userFlags;
 
-		if (
-			developmentOidcSecret ||
-			getEnvBindingsOfType(config, "identity").length
-		) {
-			// Private RPC shim; only the host bridge holds its broker capability.
+		if (getEnvBindingsOfType(config, "identity").length) {
 			services.push({
 				name: `core:oidc:${workerIndex}`,
 				worker: {
 					modules: [{ name: "oidc.worker.js", esModule: SCRIPT_OIDC() }],
 					compatibilityDate: "2026-10-01",
-					bindings: [
-						{
-							name: "BROKER",
-							service: { name: `core:oidc:external:${workerIndex}` },
-						},
-					],
-				},
-			});
-			services.push({
-				name: `core:oidc:external:${workerIndex}`,
-				external: {
-					address: `${loopbackHost}:${loopbackPort}`,
-					http: {
-						injectRequestHeaders: [
-							{
-								name: "MF-OIDC-Capability",
-								value: developmentOidcSecret ?? "",
-							},
-						],
-					},
 				},
 			});
 		}
+
 		services.push({
 			name: serviceName,
 			worker: {

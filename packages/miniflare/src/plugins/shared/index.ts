@@ -76,7 +76,6 @@ export interface PluginServicesOptions {
 	workerNames: string[];
 	loopbackHost: string;
 	loopbackPort: number;
-	developmentOidcSecret?: string;
 
 	// ~~Leaky abstractions~~ "Plugin specific options" :)
 	durableObjectClassNames: DurableObjectClassNames;
