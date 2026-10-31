@@ -109,8 +109,9 @@ export class DevelopmentOidcBrokers {
 			typeof options.binding !== "string" ||
 			!/^[A-Za-z0-9_-]{1,128}$/.test(options.binding) ||
 			!["token", "grant", "fetch"].includes(options.operation)
-		)
+		) {
 			throw new Error("Development OIDC operation is invalid.");
+		}
 		const broker = (entry.broker ??= entry.factory.create());
 		const response = await this.#requests.run(
 			(signal) => broker.invoke(options, signal),

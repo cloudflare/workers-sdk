@@ -734,10 +734,11 @@ export function convertBinding(
 		case "identity": {
 			const { type: _type, ...limits } = binding;
 			const candidate = { binding: name, ...limits };
-			if (!isIdentityBinding(candidate))
+			if (!isIdentityBinding(candidate)) {
 				throw new TypeError(
 					"Invalid OIDC binding metadata. Check its fixed audience and limits."
 				);
+			}
 			config = { identities: [candidate] };
 			break;
 		}

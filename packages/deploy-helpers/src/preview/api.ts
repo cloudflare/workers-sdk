@@ -11,11 +11,11 @@ import type {
 	Config,
 	Observability,
 } from "@cloudflare/workers-utils/config";
+import type { IdentityBindingConfig } from "@cloudflare/workers-utils/oidc";
 
-export interface Binding {
-	identity_id?: string;
-	audience?: string;
-	allowed_audiences?: string[];
+export interface Binding extends Partial<
+	Omit<IdentityBindingConfig, "binding">
+> {
 	type: string;
 	text?: string;
 	json?: Json;

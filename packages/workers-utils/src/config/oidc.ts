@@ -195,8 +195,9 @@ export function validOidcAuthorizationServer(value: string): boolean {
 		!validOidcAudience(value) ||
 		!value.startsWith("https://") ||
 		/[?#]/.test(value)
-	)
+	) {
 		return false;
+	}
 	try {
 		const u = new URL(value);
 		return !!u.hostname && !u.username && !u.password;
@@ -205,7 +206,9 @@ export function validOidcAuthorizationServer(value: string): boolean {
 	}
 }
 export function validOidcOrigin(value: string): boolean {
-	if (!validOidcAuthorizationServer(value)) return false;
+	if (!validOidcAuthorizationServer(value)) {
+		return false;
+	}
 	try {
 		return new URL(value).origin === value;
 	} catch {
@@ -229,8 +232,9 @@ export function isIdentityBinding(
 		typeof value.binding !== "string" ||
 		!/^[A-Za-z0-9_-]{1,128}$/.test(value.binding) ||
 		!validOidcAudience(value.audience)
-	)
+	) {
 		return false;
+	}
 	const subject = value.subject ?? "worker";
 	if (
 		subject === "worker"
@@ -238,8 +242,9 @@ export function isIdentityBinding(
 			: subject !== "durable-object-namespace" ||
 				typeof value.namespace_id !== "string" ||
 				!/^[A-Za-z0-9_-]{1,128}$/.test(value.namespace_id)
-	)
+	) {
 		return false;
+	}
 	const g = value.authorization_grants;
 	if (
 		g !== undefined &&
@@ -251,8 +256,9 @@ export function isIdentityBinding(
 				(s) => /^[\x21\x23-\x5b\x5d-\x7e]+$/.test(s),
 				true
 			))
-	)
+	) {
 		return false;
+	}
 	const h = value.request_signing;
 	if (
 		h !== undefined &&
@@ -266,7 +272,8 @@ export function isIdentityBinding(
 					/^[A-Z!#$%&'*+.^_`|~-]+$/.test(s) &&
 					!["CONNECT", "TRACE", "TRACK"].includes(s)
 			))
-	)
+	) {
 		return false;
+	}
 	return true;
 }
