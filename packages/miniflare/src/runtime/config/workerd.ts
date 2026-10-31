@@ -59,6 +59,7 @@ export type Service = {
 );
 
 export interface ServiceDesignator {
+	suppressNativeCaller?: boolean;
 	name?: string;
 	entrypoint?: string;
 	props?: { json: string };
