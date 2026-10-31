@@ -553,3 +553,41 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 		});
 	});
 });
+
+describe("development OIDC integration", () => {
+	runInTempDir();
+	it("keeps programmatic/offline consumers opt-in and requires the runtime flag", ({
+		expect,
+	}) => {
+		writeWranglerConfig(
+			{
+				name: "linked-worker",
+				account_id: "a".repeat(32),
+				compatibility_date: "2026-01-01",
+				compatibility_flags: ["workers_oidc"],
+				identities: [{ binding: "IDENTITY", audience: "recipient" }],
+			},
+			"./wrangler.json"
+		);
+		expect(
+			unstable_getMiniflareWorkerOptions("./wrangler.json").workerOptions
+				.developmentOidc
+		).toBeUndefined();
+		const configured = asRecord(
+			unstable_getMiniflareWorkerOptions("./wrangler.json", undefined, {
+				developmentOidc: true,
+			}).workerOptions.developmentOidc
+		);
+		expect(configured?.key).toContain("linked-worker");
+		expect(configured?.create).toBeTypeOf("function");
+		writeWranglerConfig(
+			{ name: "linked-worker", compatibility_date: "2026-01-01" },
+			"./wrangler.json"
+		);
+		expect(
+			unstable_getMiniflareWorkerOptions("./wrangler.json", undefined, {
+				developmentOidc: true,
+			}).workerOptions.developmentOidc
+		).toBeUndefined();
+	});
+});

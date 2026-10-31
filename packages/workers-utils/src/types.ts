@@ -69,6 +69,10 @@ export type Json =
 	| { [id: string]: Json };
 
 export type WorkerMetadataBinding =
+	| ({ type: "identity"; name: string } & Omit<
+			import("./config/oidc").IdentityBindingConfig,
+			"binding"
+	  >)
 	// If you add any new binding types here, also add it to safeBindings
 	// under validateUnsafeBinding in config/validation.ts
 
@@ -465,6 +469,10 @@ type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
 type BindingOmit<T> = DistributiveOmit<T, "binding">;
 type NameOmit<T> = DistributiveOmit<T, "name">;
 export type Binding =
+	| ({ type: "identity" } & Omit<
+			import("./config/oidc").IdentityBindingConfig,
+			"binding"
+	  >)
 	| {
 			type: "plain_text";
 			value: string;

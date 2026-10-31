@@ -9,8 +9,11 @@ import type {
 	Json,
 	Observability,
 } from "@cloudflare/workers-utils";
+import type { IdentityBindingConfig } from "@cloudflare/workers-utils/oidc";
 
-export interface Binding {
+export interface Binding extends Partial<
+	Omit<IdentityBindingConfig, "binding">
+> {
 	type: string;
 	text?: string;
 	json?: Json;

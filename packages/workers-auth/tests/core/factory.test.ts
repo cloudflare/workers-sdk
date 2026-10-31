@@ -105,6 +105,31 @@ describe("per-CLI login defaults", () => {
 		expect(fetchInternalBase).toHaveBeenCalledTimes(2);
 	});
 
+	it("uses explicit OAuth credentials for all account discovery requests", async ({
+		expect,
+	}) => {
+		const account = { id: "oauth-account", name: "OAuth account" };
+		const credentials = { apiToken: "selected-profile-oauth" };
+		fetchInternalBase.mockImplementation(async (_config, resource) => ({
+			response: {
+				success: true,
+				result: resource === "/accounts" ? [account] : [{ account }],
+				result_info: { page: 1, total_pages: 1 },
+			},
+			status: 200,
+		}));
+		const auth = createCloudflareAuth(CF_CLI, createTestContext());
+		await expect(
+			auth.getOrSelectAccountId(COMPLIANCE_CONFIG, { credentials })
+		).resolves.toBe(account.id);
+		expect(flow.requireApiToken).not.toHaveBeenCalled();
+		expect(flow.loginOrRefreshIfRequired).not.toHaveBeenCalled();
+		expect(fetchInternalBase).toHaveBeenCalledTimes(2);
+		for (const call of fetchInternalBase.mock.calls) {
+			expect(call[7]).toEqual(credentials);
+		}
+	});
+
 	it("honours an explicit device-flow opt-out", async ({ expect }) => {
 		const auth = createCloudflareAuth(CF_CLI, createTestContext());
 

@@ -54,6 +54,8 @@ const WorkersPoolOptionsSchema = z.object({
 	 * with `remote: true` in the wrangler configuration file.
 	 */
 	remoteBindings: z.boolean().default(true),
+	/** Allow authenticated live development OIDC issuance. Offline by default; independent of remote bindings. */
+	developmentOidc: z.boolean().default(false),
 	/**
 	 * Enables verbose workerd logging. Defaults to `true`.
 	 */
@@ -456,6 +458,7 @@ async function parseCustomPoolOptions(
 
 		const { workerOptions, externalWorkers, define, main } =
 			wrangler.unstable_getMiniflareWorkerOptions(config, environment, {
+				developmentOidc: options.developmentOidc,
 				overrides: {
 					assets: options.miniflare.assets,
 					// doesn't work with containers yet so let's just disable it

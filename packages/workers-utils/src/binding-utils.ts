@@ -322,6 +322,12 @@ export function convertConfigToBindings(
 				}
 				break;
 			}
+			case "identities": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "identity", ...x };
+				}
+				break;
+			}
 			case "ratelimits": {
 				for (const { name, ...x } of info) {
 					output[name] = { type: "ratelimit", ...x };

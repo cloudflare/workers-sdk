@@ -1895,3 +1895,54 @@ describe("ExportSchema", () => {
 		expect(typeAssertions).toBeTypeOf("function");
 	});
 });
+
+describe("OIDC capability bindings", () => {
+	it("accepts fixed audiences and separate purpose limits", ({ expect }) => {
+		const limits = {
+			audience: "urn:orders",
+			request_signing: {
+				profile: "cloudflare-workload-http-v1",
+				allowed_origins: ["https://api.example"],
+				allowed_methods: ["POST"],
+			},
+		};
+		expect(
+			InputWorkerSchema.parse({
+				...baseConfig,
+				env: { IDENTITY: { type: "identity", ...limits } },
+			}).env?.IDENTITY
+		).toEqual({ type: "identity", ...limits });
+	});
+	it.for([
+		{ audience: " " },
+		{ audience: "urn:orders", identity_id: "orders" },
+		{ audience: "urn:orders", allowed_audiences: ["urn:orders"] },
+		{ audience: "urn:orders", subject: "durable-object-namespace" },
+		{ audience: "urn:orders", namespace_id: "namespace" },
+		{
+			audience: "urn:orders",
+			request_signing: {
+				profile: "other",
+				allowed_origins: ["https://api.example"],
+				allowed_methods: ["GET"],
+			},
+		},
+		{
+			audience: "urn:orders",
+			authorization_grants: {
+				allowed_authorization_servers: ["https://auth.example?query"],
+				allowed_scopes: [],
+			},
+		},
+	])(
+		"rejects invalid limits or caller authority: %j",
+		(binding, { expect }) => {
+			expect(
+				InputWorkerSchema.safeParse({
+					...baseConfig,
+					env: { IDENTITY: { type: "identity", ...binding } },
+				}).success
+			).toBe(false);
+		}
+	);
+});

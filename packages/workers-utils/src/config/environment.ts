@@ -7,6 +7,7 @@
  */
 
 import type { Json } from "../types";
+import type { IdentityBindingConfig } from "./oidc";
 
 /**
  * The `Environment` interface declares all the configuration fields that
@@ -1057,6 +1058,12 @@ type ConnectHandlerConfig = TcpConnectHandlerConfig | UdpConnectHandlerConfig;
  * for each named environment.
  */
 export interface EnvironmentNonInheritable {
+	/** Platform-derived workload capabilities. Each binding fixes one audience.
+	 * @default []
+	 * @nonInheritable
+	 */
+	identities: IdentityBindingConfig[];
+
 	/**
 	 * A map of values to substitute when deploying your Worker.
 	 *

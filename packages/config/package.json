@@ -35,12 +35,12 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
+		"@cloudflare/workers-utils": "workspace:*",
 		"zod": "catalog:default"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
-		"@cloudflare/workers-utils": "workspace:*",
 		"ts-dedent": "^2.2.0",
 		"tsdown": "0.16.3",
 		"typescript": "catalog:default",

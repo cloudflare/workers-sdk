@@ -474,6 +474,17 @@ export function createWorkerUploadForm(
 		);
 	});
 
+	for (const {
+		binding,
+		type: _type,
+		...bindingLimits
+	} of extractBindingsOfType("identity", bindings)) {
+		metadataBindings.push({
+			type: "identity",
+			name: binding,
+			...bindingLimits,
+		});
+	}
 	ratelimits.forEach(({ name, namespace_id, simple }) => {
 		metadataBindings.push({
 			name,

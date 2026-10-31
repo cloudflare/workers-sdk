@@ -10,7 +10,10 @@ import {
 	generateContainerBuildId,
 	resolveDockerHost,
 } from "@cloudflare/containers-shared";
-import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
+import {
+	getDevelopmentOidcOptions,
+	maybeStartOrUpdateRemoteProxySession,
+} from "@cloudflare/remote-bindings";
 import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
@@ -57,6 +60,7 @@ import type {
 import type { PersistState } from "./plugin-config";
 import type {
 	ParsedInputWorkerConfig,
+	ParsedInputSettingsConfig,
 	ParsedOutputWorkerConfig,
 } from "@cloudflare/config";
 import type {
@@ -629,6 +633,12 @@ export async function getDevMiniflareOptions(
 								},
 								dev: {
 									zone: getWorkerZone(config),
+									developmentOidc: getWorkerDevelopmentOidc(
+										config,
+										resolvedPluginConfig.settings,
+										resolvedViteConfig.root,
+										createRemoteBindingsLogger(viteDevServer.config.logger)
+									),
 									remoteProxyConnectionString:
 										remoteProxySessionData?.session
 											?.remoteProxyConnectionString,
@@ -901,6 +911,12 @@ export async function getPreviewMiniflareOptions(
 				},
 				dev: {
 					zone: getWorkerZone(config),
+					developmentOidc: getWorkerDevelopmentOidc(
+						config,
+						resolvedPluginConfig.settings,
+						resolvedViteConfig.root,
+						createRemoteBindingsLogger(vitePreviewServer.config.logger)
+					),
 					remoteProxyConnectionString:
 						remoteProxySessionData?.session?.remoteProxyConnectionString,
 					unsafeInspectorProxy: inputInspectorPort !== false,
@@ -1100,4 +1116,32 @@ function getStructuredLogsLogger(logger: Log) {
 
 		return logger.info(message);
 	};
+}
+
+function getWorkerDevelopmentOidc(
+	config: ParsedInputWorkerConfig | ParsedOutputWorkerConfig,
+	settings: ParsedInputSettingsConfig,
+	root: string,
+	logger: RemoteBindingsLogger
+) {
+	return getDevelopmentOidcOptions(
+		{
+			name: config.name,
+			account_id: settings.accountId,
+			compliance_region: toApiComplianceRegion(settings.complianceRegion),
+			compatibility_flags: config.compatibilityFlags ?? [],
+			identities: Object.entries(config.env ?? {}).flatMap(
+				([binding, value]) => {
+					if (value.type !== "identity") {
+						return [];
+					}
+					const { type: _type, ...limits } = value;
+					return [{ binding, ...limits }];
+				}
+			),
+		},
+		logger,
+		root,
+		true
+	);
 }

@@ -421,6 +421,11 @@ function convertBindingsAndAssets(
 		}
 
 		switch (binding.type) {
+			case "identity": {
+				const { type: _type, ...limits } = binding;
+				(result.identities ??= []).push({ binding: name, ...limits });
+				break;
+			}
 			case "agent-memory": {
 				agentMemory.push(
 					omitUndefined({

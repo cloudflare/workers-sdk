@@ -43,6 +43,7 @@ import type {
 import type { UnsafeUniqueKey } from "../plugins/shared/constants";
 import type { Log } from "../shared";
 import type { WorkerRegistry } from "../shared/dev-registry-types";
+import type { DevelopmentOidcBrokerFactory } from "../shared/development-oidc-broker";
 import type { Awaitable } from "../workers";
 import type * as http from "node:http";
 
@@ -613,6 +614,18 @@ export const DevConfigSchema = z.strictObject({
 	unsafeInspectorProxy: z.boolean().optional(),
 	unsafeDirectSockets: z.array(UnsafeDirectSocketSchema).optional(),
 	unsafeOverrideFetchWorker: z.string().optional(),
+	developmentOidc: z
+		.custom<DevelopmentOidcBrokerFactory>(
+			(value) =>
+				typeof value === "object" &&
+				value !== null &&
+				"key" in value &&
+				typeof value.key === "string" &&
+				value.key.length <= 16384 &&
+				"create" in value &&
+				typeof value.create === "function"
+		)
+		.optional(),
 	unsafeEvalBinding: z.string().optional(),
 	useModuleFallbackService: z.boolean().optional(),
 	/** Whether this Worker is 'public' - whether should be advertised in the dev registry

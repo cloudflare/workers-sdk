@@ -696,6 +696,17 @@ export function printBindings(
 		);
 	}
 
+	for (const { binding, audience } of extractBindingsOfType(
+		"identity",
+		bindings
+	)) {
+		output.push({
+			name: binding,
+			type: "Identity",
+			value: audience,
+			mode: getMode({ isSimulatedLocally: false }),
+		});
+	}
 	if (ratelimits.length > 0) {
 		output.push(
 			...ratelimits.map(({ name, simple }) => ({

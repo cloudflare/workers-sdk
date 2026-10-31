@@ -4,6 +4,7 @@ import {
 	createContainerDevPlan,
 	resolveDockerHost,
 } from "@cloudflare/containers-shared";
+import { getDevelopmentOidcOptions } from "@cloudflare/remote-bindings";
 import {
 	configFileName,
 	DEFAULT_COMPAT_DATE,
@@ -145,6 +146,18 @@ async function resolveDevConfig(
 
 	return {
 		auth,
+		developmentOidc: getDevelopmentOidcOptions(
+			{
+				...config,
+				name: input.name ?? config.name,
+				compatibility_flags:
+					input.compatibilityFlags ?? config.compatibility_flags,
+			},
+			logger,
+			config.userConfigPath
+				? path.dirname(config.userConfigPath)
+				: process.cwd()
+		),
 		remote: input.dev?.remote,
 		server: {
 			hostname: input.dev?.server?.hostname || config.dev.ip,

@@ -1812,6 +1812,9 @@ importers:
 
   packages/config:
     dependencies:
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
       zod:
         specifier: catalog:default
         version: 4.6.6
@@ -1822,9 +1825,6 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20261023.1
-      '@cloudflare/workers-utils':
-        specifier: workspace:*
-        version: link:../workers-utils
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0

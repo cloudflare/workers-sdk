@@ -1837,3 +1837,20 @@ describe("convertToWranglerConfig", () => {
 		});
 	});
 });
+
+it("preserves OIDC capability limits when converting cf configuration", ({
+	expect,
+}) => {
+	const limits = {
+		audience: "urn:orders",
+		authorization_grants: {
+			allowed_authorization_servers: ["https://auth.example"],
+			allowed_scopes: ["read"],
+		},
+	};
+	const result = convertToWranglerConfig({
+		worker: { ...baseWorker, env: { ORDERS: { type: "identity", ...limits } } },
+		containers: [],
+	});
+	expect(result.identities).toEqual([{ binding: "ORDERS", ...limits }]);
+});

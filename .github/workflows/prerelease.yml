@@ -1,6 +1,7 @@
 name: Prerelease
 
 on:
+  workflow_dispatch:
   pull_request:
   push:
     branches:
@@ -34,6 +35,10 @@ jobs:
         # packages from the registry and rebuild every task from source,
         # rather than restoring from a (potentially poisoned) cache.
         uses: ./.github/actions/install-dependencies
+        env:
+          # Packaging does not run browsers; older Playwright releases cannot
+          # download Chromium on newer ubuntu-latest images.
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
         with:
           disable-cache: "true"
 

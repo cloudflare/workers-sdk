@@ -2,6 +2,7 @@ import {
 	AssetConfigSchema,
 	RouterConfigSchema,
 } from "@cloudflare/workers-shared";
+import { isIdentityBinding } from "@cloudflare/workers-utils/oidc";
 import { z } from "zod";
 import {
 	HttpOptions_Style,
@@ -14,6 +15,7 @@ import type { Miniflare } from "../index";
 import type { RemoteProxyConnectionString } from "../plugins/shared";
 import type { Json } from "../shared";
 import type { WorkerRegistry } from "../shared/dev-registry-types";
+import type { DevelopmentOidcBrokerFactory } from "../shared/development-oidc-broker";
 import type { Awaitable } from "../workers";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 import type * as http from "node:http";
@@ -376,6 +378,19 @@ const V4WorkerOptionsShapeSchema = z.object({
 	unsafeInspectorProxy: z.boolean().optional(),
 	routes: z.array(z.string()).optional(),
 	cronTriggers: z.array(z.string()).optional(),
+	identities: z
+		.record(
+			z.string(),
+			z.custom<
+				Omit<
+					import("@cloudflare/workers-utils/oidc").IdentityBindingConfig,
+					"binding"
+				>
+			>((value) =>
+				isIdentityBinding({ binding: "IDENTITY", ...(value as object) })
+			)
+		)
+		.optional(),
 	bindings: z.record(z.string(), JsonSchema).optional(),
 	/** WASM binding file paths; string values are relative to `rootPath` if not absolute. */
 	wasmBindings: z
@@ -393,6 +408,18 @@ const V4WorkerOptionsShapeSchema = z.object({
 	unsafeDirectSockets: z.array(V4UnsafeDirectSocketSchema).optional(),
 	connectHandlers: z.array(V4ConnectHandlerSchema).optional(),
 	unsafeOverrideFetchWorker: z.string().optional(),
+	developmentOidc: z
+		.custom<DevelopmentOidcBrokerFactory>(
+			(value) =>
+				typeof value === "object" &&
+				value !== null &&
+				"key" in value &&
+				typeof value.key === "string" &&
+				value.key.length <= 16384 &&
+				"create" in value &&
+				typeof value.create === "function"
+		)
+		.optional(),
 	unsafeEvalBinding: z.string().optional(),
 	unsafeUseModuleFallbackService: z.boolean().optional(),
 	unsafeRegisterWorker: z.boolean().optional(),
@@ -821,6 +848,13 @@ export type V4WorkerOptionsShape = {
 	unsafeInspectorProxy?: boolean;
 	routes?: string[];
 	cronTriggers?: string[];
+	identities?: Record<
+		string,
+		Omit<
+			import("@cloudflare/workers-utils/oidc").IdentityBindingConfig,
+			"binding"
+		>
+	>;
 	bindings?: Record<string, Json>;
 	wasmBindings?: Record<string, string | Uint8Array>;
 	textBlobBindings?: Record<string, string>;
@@ -846,6 +880,8 @@ export type V4WorkerOptionsShape = {
 		  }
 	>;
 	unsafeOverrideFetchWorker?: string;
+	/** Host-only development OIDC broker; never exposed to Worker code. */
+	developmentOidc?: DevelopmentOidcBrokerFactory;
 	unsafeEvalBinding?: string;
 	unsafeUseModuleFallbackService?: boolean;
 	unsafeRegisterWorker?: boolean;

@@ -121,14 +121,20 @@ export interface CloudflareAuth {
 
 	/** Returns the active account ID without side effects (config → env → cache). */
 	getActiveAccountId: (config: { account_id?: string }) => string | undefined;
-	/** Resolve the account ID to use for API requests (fetching / prompting if needed). */
-	getOrSelectAccountId: (config: RequireAuthConfig) => Promise<string>;
+	/**
+	 * Resolve the account ID (fetching / prompting if needed). When credentials
+	 * are supplied, account discovery uses only that principal, ignoring env auth.
+	 */
+	getOrSelectAccountId: (
+		config: RequireAuthConfig,
+		options?: { credentials?: ApiCredentials }
+	) => Promise<string>;
 	/** Retrieve the cached account for the active profile, if any. */
 	getAccountFromCache: () => Account | undefined;
 	/** Fetch the accounts the current login auth can actually use. */
 	fetchAllAccounts: (
 		complianceConfig: ComplianceConfig,
-		options?: { throwOnEmpty?: boolean }
+		options?: { throwOnEmpty?: boolean; credentials?: ApiCredentials }
 	) => Promise<Account[]>;
 
 	/** Ensure the user is logged in and resolve a valid account ID. */
@@ -428,18 +434,31 @@ export function createCloudflareAuth(
 
 	async function fetchAllAccounts(
 		complianceConfig: ComplianceConfig,
-		options: { throwOnEmpty?: boolean } = {}
+		options: { throwOnEmpty?: boolean; credentials?: ApiCredentials } = {}
 	): Promise<Account[]> {
 		const { throwOnEmpty = true } = options;
-		const loginResult = await loginOrRefreshIfRequired(complianceConfig);
-		if (!loginResult.loggedIn) {
-			throw new AuthenticationError(
-				`Not logged in. ${NOT_LOGGED_IN_ERROR_BODIES[loginResult.reason]}${NOT_LOGGED_IN_WHOAMI_TIP}`,
-				loginResult.reason,
-				"cfetch auth login required"
-			);
+		let credentials =
+			options.credentials === undefined
+				? undefined
+				: Object.freeze(
+						"apiToken" in options.credentials
+							? { apiToken: options.credentials.apiToken }
+							: {
+									authKey: options.credentials.authKey,
+									authEmail: options.credentials.authEmail,
+								}
+					);
+		if (credentials === undefined) {
+			const loginResult = await loginOrRefreshIfRequired(complianceConfig);
+			if (!loginResult.loggedIn) {
+				throw new AuthenticationError(
+					`Not logged in. ${NOT_LOGGED_IN_ERROR_BODIES[loginResult.reason]}${NOT_LOGGED_IN_WHOAMI_TIP}`,
+					loginResult.reason,
+					"cfetch auth login required"
+				);
+			}
+			credentials = requireApiToken();
 		}
-		const credentials = requireApiToken();
 
 		const [accountsRes, membershipsRes] = await Promise.allSettled([
 			fetchAccountsPaged<Account>(complianceConfig, `/accounts`, credentials),
@@ -528,7 +547,8 @@ Alternatively, try running \`${descriptor.commands.login}\` to re-authenticate.`
 	}
 
 	async function getOrSelectAccountId(
-		config: RequireAuthConfig
+		config: RequireAuthConfig,
+		options: { credentials?: ApiCredentials } = {}
 	): Promise<string> {
 		// TODO: v5 we should prioritise the env var instead of the config value here,
 		// for consistency with other env vars.
@@ -537,7 +557,7 @@ Alternatively, try running \`${descriptor.commands.login}\` to re-authenticate.`
 			return activeAccountId;
 		}
 
-		const accounts = await fetchAllAccounts(config);
+		const accounts = await fetchAllAccounts(config, options);
 		if (accounts.length === 1) {
 			saveAccountToCache({ id: accounts[0].id, name: accounts[0].name });
 			return accounts[0].id;

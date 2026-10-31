@@ -36,6 +36,7 @@ export default defineConfig(() => [
 			"src/global-wrangler-config-path.ts",
 			"src/local-env.ts",
 			"src/zod-format.ts",
+			"src/oidc.ts",
 		],
 		platform: "node",
 		// Provide require for bundled CommonJS dependencies. The __filename

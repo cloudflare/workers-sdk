@@ -112,6 +112,35 @@ describe("previewBuildOutput", () => {
 		mocks.syncAssets.mockResolvedValue({ jwt: "asset-token" });
 	});
 
+	it("preserves fixed-audience identity limits in Preview metadata", async ({
+		expect,
+	}) => {
+		const identity = {
+			type: "identity" as const,
+			audience: "urn:inventory",
+			subject: "durable-object-namespace" as const,
+			namespace_id: "a".repeat(32),
+			authorization_grants: {
+				allowed_authorization_servers: ["https://auth.example.com"],
+				allowed_scopes: ["items:read"],
+			},
+			request_signing: {
+				profile: "cloudflare-workload-http-v1" as const,
+				allowed_origins: ["https://api.example.com"],
+				allowed_methods: ["GET"],
+			},
+		};
+		await uploadPreview(
+			buildOutputConfig({
+				compatibilityFlags: ["workers_oidc"],
+				env: { IDENTITY: identity },
+			})
+		);
+		expect(
+			mocks.createPreviewDeployment.mock.calls[0]?.[4].env.IDENTITY
+		).toEqual(identity);
+	});
+
 	it("uploads only bindings and settings from resolved Build Output", async ({
 		expect,
 	}) => {

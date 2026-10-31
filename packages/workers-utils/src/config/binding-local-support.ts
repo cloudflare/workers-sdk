@@ -40,6 +40,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	durable_object_namespace: "local-only",
 	fetcher: "local-only",
 	secrets_store_secret: "local-only",
+	identity: "local-only",
 	ratelimit: "local-only",
 	worker_loader: "local-only",
 

@@ -108,6 +108,14 @@ interface BindingTypeMap<TBinding> {
 	logfwdr: any;
 	media: MediaBinding;
 	"mtls-certificate": Fetcher;
+	identity: {
+		getToken(): Promise<string>;
+		getAuthorizationGrant(options: {
+			authorizationServer: string;
+			scope?: string[];
+		}): Promise<string>;
+		fetch(input: Request | string | URL, init?: RequestInit): Promise<Response>;
+	};
 	"rate-limit": RateLimit;
 	r2: R2Bucket;
 	secret: string;
