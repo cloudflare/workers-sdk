@@ -835,3 +835,33 @@ $ export MINIFLARE_WORKERD_PATH="<WORKERD_REPO_DIR>/bazel-bin/src/workerd/server
 ```
 
 For debugging purposes, you can also set `MINIFLARE_WORKERD_CONFIG_DEBUG=<file_path>` which will dump the workerd config to the specified file path.
+
+## Receive a caller through the runtime
+
+The receiving Worker calls `await ctx.identity.caller()` with no arguments or
+receiver binding. The caller is the authenticated software making the request:
+an agent, Worker, service, or another supported workload. Keep any human identity
+it acts for separate. The runtime verifies lazily and returns frozen facts;
+the application checks the exact caller, operation, resource, and JWT audience.
+Missing credentials return `null`. Invalid credentials reject with
+`WorkloadIdentityError`; unavailable discovery or replay storage rejects with
+`WorkloadIdentityUnavailableError`. Signature fields take precedence and never
+fall back to bearer verification. Call before reading or locking a signed body.
+
+The private `WorkloadVerifier` service holds public verification data and a
+Cloudflare-owned SQLite replay namespace, with no signing secrets. Its host
+channel supplies receiver scope in protected props. All versions, replicas and
+domains of the same receiving Worker share replay scope. Service/RPC calls do not
+inherit a verified caller. External receivers still implement the wire profile.
+
+Ship the receiver only after the native runtime, host channel, protected compiler
+metadata, verifier, replay migration, compatibility review and service access
+checks pass together. Local anonymous requests return `null`; credential
+verification without the private channel fails unavailable. Explicit test mocks
+are not cryptographic proof. Keep sender issuance independently deployable.
+
+Until the companion runtime release ships, run the receiver contract test with
+`MINIFLARE_WORKERD_PATH` pointing at the built runtime from workerd PR #8121.
+Regenerate runtime types and the Cap'n Proto schema from that same release before
+publishing the SDK. Wrangler, cf, Vite and Vitest consume the Miniflare behavior;
+none should add a receiver binding or a JavaScript verification polyfill.

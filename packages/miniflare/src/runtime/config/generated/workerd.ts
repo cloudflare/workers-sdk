@@ -9,7 +9,7 @@ export class Config extends $.Struct {
 	static readonly _capnp = {
 		displayName: "Config",
 		id: "8794486c76aaa7d6",
-		size: new $.ObjectSize(8, 6),
+		size: new $.ObjectSize(8, 7),
 		defaultStructuredLogging: $.getBitMask(false, 0),
 	};
 	static _Services: $.ListCtor<Service>;
@@ -187,8 +187,163 @@ export class Config extends $.Struct {
 	set logging(value: LoggingOptions) {
 		$.utils.copyFrom(value, $.utils.getPointer(5, this));
 	}
+	_adoptCluster(value: $.Orphan<ClusterConfig>): void {
+		$.utils.adopt(value, $.utils.getPointer(6, this));
+	}
+	_disownCluster(): $.Orphan<ClusterConfig> {
+		return $.utils.disown(this.cluster);
+	}
+	/**
+	 * Set when this instance should join a cluster. Requires `--experimental`.
+	 *
+	 */
+	get cluster(): ClusterConfig {
+		return $.utils.getStruct(6, ClusterConfig, this);
+	}
+	_hasCluster(): boolean {
+		return !$.utils.isNull($.utils.getPointer(6, this));
+	}
+	_initCluster(): ClusterConfig {
+		return $.utils.initStructAt(6, ClusterConfig, this);
+	}
+	set cluster(value: ClusterConfig) {
+		$.utils.copyFrom(value, $.utils.getPointer(6, this));
+	}
 	toString(): string {
 		return "Config_" + super.toString();
+	}
+}
+/**
+ * workerd instances can work together in a cluster, to distribute Durable Objects among them.
+ * Each Durable Object runs on one instance at a time, its owner; any instance routes requests
+ * for it there.
+ *
+ * The cluster's shared state lives in an S3-compatible bucket: each instance renews a lease
+ * record naming its address, and each Durable Object's owner is a record claimed by a conditional
+ * write. Taking an object over from an owner whose lease expired bumps its ownership epoch.
+ * Instances need no shared filesystem: `durableObjectStorage.localDisk` is each instance's own
+ * disk. Durable Objects stored in memory stay local to each instance. The bucket's copy of an
+ * object replaces the instance's, so a `localDisk` already holding Durable Objects from before
+ * cluster mode is refused at startup; they are not imported.
+ *
+ * All instances in the cluster MUST have identical configuration: any instance may forward any
+ * request to any other and it must produce the same result. During a rolling upgrade, instances
+ * may differ in backwards-compatible ways.
+ *
+ */
+export class ClusterConfig extends $.Struct {
+	static readonly _capnp = {
+		displayName: "ClusterConfig",
+		id: "f9cef8636c5b389e",
+		size: new $.ObjectSize(8, 5),
+		defaultUnsafePublicAddress: $.getBitMask(false, 0),
+	};
+	/**
+	 * The bucket that holds the cluster's shared state: `s3://bucket/prefix`.
+	 *
+	 */
+	get bucket(): string {
+		return $.utils.getText(0, this);
+	}
+	set bucket(value: string) {
+		$.utils.setText(0, value, this);
+	}
+	_adoptBucketOptions(value: $.Orphan<$.List<string>>): void {
+		$.utils.adopt(value, $.utils.getPointer(1, this));
+	}
+	_disownBucketOptions(): $.Orphan<$.List<string>> {
+		return $.utils.disown(this.bucketOptions);
+	}
+	/**
+	 * `key=value` settings for `bucket`: `aws_endpoint=https://...`, `aws_region=auto`,
+	 * `aws_access_key_id=...`, `aws_secret_access_key=...`, and `aws_token=...`. In place of the
+	 * last three, `aws_credentials_file=<path>` names a file of `AWS_ACCESS_KEY_ID=`,
+	 * `AWS_SECRET_ACCESS_KEY=` and `AWS_SESSION_TOKEN=` lines, reread whenever it changes, so
+	 * short-lived credentials rotate without a restart. Replace it by rename, not in place. Each
+	 * setting not given falls back to an environment variable: `AWS_ENDPOINT_URL`, `AWS_REGION`,
+	 * `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, `AWS_CREDENTIALS_FILE`.
+	 *
+	 */
+	get bucketOptions(): $.List<string> {
+		return $.utils.getList(1, $.TextList, this);
+	}
+	_hasBucketOptions(): boolean {
+		return !$.utils.isNull($.utils.getPointer(1, this));
+	}
+	_initBucketOptions(length: number): $.List<string> {
+		return $.utils.initList(1, $.TextList, length, this);
+	}
+	set bucketOptions(value: $.List<string>) {
+		$.utils.copyFrom(value, $.utils.getPointer(1, this));
+	}
+	/**
+	 * Where this instance listens for other instances: `host:port`, a port of 0 for an ephemeral
+	 * one. Overridden by `--cluster-addr`. Holders of `key` get full access to every service in the
+	 * process through it, and its traffic is not encrypted: only the cluster's instances should
+	 * reach it, on a private network (a VPC, WireGuard, Tailscale). A public IP is refused unless
+	 * `unsafePublicAddress` is set; a wildcard (`0.0.0.0`) listens on every interface, so firewall
+	 * the port.
+	 *
+	 */
+	get address(): string {
+		return $.utils.getText(2, this);
+	}
+	set address(value: string) {
+		$.utils.setText(2, value, this);
+	}
+	/**
+	 * The address other instances reach this one at, which goes in its lease record in the bucket.
+	 * Optional: by default, the address bound, with the port it got. Required when that is a
+	 * wildcard (`0.0.0.0:7000`) or not what peers can reach (NAT, a container). Overridden by
+	 * `--cluster-advertise`. A public IP is refused unless `unsafePublicAddress` is set.
+	 *
+	 */
+	get advertise(): string {
+		return $.utils.getText(4, this);
+	}
+	set advertise(value: string) {
+		$.utils.setText(4, value, this);
+	}
+	/**
+	 * A secret known only to members of the cluster, at least 32 bytes: random, such as the output
+	 * of `openssl rand -hex 32`. Each connection between instances opens with
+	 * a MAC keyed by it, over the target, a timestamp and a nonce, so a header seen on the wire
+	 * cannot be replayed; the instances' clocks must agree within 30 seconds. It also keys channel
+	 * tokens, which pass service and Durable Object stubs over RPC. Traffic is not encrypted: run
+	 * the cluster on a private network (a VPC, WireGuard, Tailscale).
+	 *
+	 * TODO(someday): Support some way to gradually roll out a rotated key.
+	 *
+	 */
+	get key(): string {
+		return $.utils.getText(3, this);
+	}
+	set key(value: string) {
+		$.utils.setText(3, value, this);
+	}
+	/**
+	 * Allow a public IP as `address` or `advertise`. Refused by default, since traffic between
+	 * instances is not encrypted. Private, loopback, link-local and shared (100.64.0.0/10, as
+	 * Tailscale uses) addresses, wildcards and hostnames are allowed.
+	 *
+	 */
+	get unsafePublicAddress(): boolean {
+		return $.utils.getBit(
+			0,
+			this,
+			ClusterConfig._capnp.defaultUnsafePublicAddress
+		);
+	}
+	set unsafePublicAddress(value: boolean) {
+		$.utils.setBit(
+			0,
+			value,
+			this,
+			ClusterConfig._capnp.defaultUnsafePublicAddress
+		);
+	}
+	toString(): string {
+		return "ClusterConfig_" + super.toString();
 	}
 }
 export class LoggingOptions extends $.Struct {
@@ -245,6 +400,23 @@ export class LoggingOptions extends $.Struct {
 		return "LoggingOptions_" + super.toString();
 	}
 }
+export const Socket_TcpTlsMode = {
+	/**
+	 * Perform the TLS handshake as soon as a connection is accepted. The `connect()` handler sees
+	 * only the decrypted stream, and its socket does not support `startTls()`.
+	 *
+	 */
+	IMPLICIT: 0,
+	/**
+	 * Accept connections in plaintext. The `connect()` handler's socket has secureTransport set to
+	 * "starttls" and the handler performs the TLS handshake as the server by calling `startTls()` at
+	 * the point in its protocol where the upgrade belongs.
+	 *
+	 */
+	START_TLS: 1,
+} as const;
+export type Socket_TcpTlsMode =
+	(typeof Socket_TcpTlsMode)[keyof typeof Socket_TcpTlsMode];
 export class Socket_Https extends $.Struct {
 	static readonly _capnp = {
 		displayName: "https",
@@ -296,6 +468,7 @@ export class Socket_Tcp extends $.Struct {
 		displayName: "tcp",
 		id: "b59d8ecf6886b64c",
 		size: new $.ObjectSize(16, 5),
+		defaultTlsMode: $.getUint16Mask(0),
 	};
 	_adoptTlsOptions(value: $.Orphan<TlsOptions>): void {
 		$.utils.adopt(value, $.utils.getPointer(2, this));
@@ -314,6 +487,20 @@ export class Socket_Tcp extends $.Struct {
 	}
 	set tlsOptions(value: TlsOptions) {
 		$.utils.copyFrom(value, $.utils.getPointer(2, this));
+	}
+	/**
+	 * How `tlsOptions` is applied to accepted connections. Ignored if `tlsOptions` is not set.
+	 *
+	 */
+	get tlsMode(): Socket_TcpTlsMode {
+		return $.utils.getUint16(
+			4,
+			this,
+			Socket_Tcp._capnp.defaultTlsMode
+		) as Socket_TcpTlsMode;
+	}
+	set tlsMode(value: Socket_TcpTlsMode) {
+		$.utils.setUint16(4, value, this, Socket_Tcp._capnp.defaultTlsMode);
 	}
 	toString(): string {
 		return "Socket_Tcp_" + super.toString();
@@ -375,6 +562,7 @@ export class Socket extends $.Struct {
 	static readonly HTTPS = Socket_Which.HTTPS;
 	static readonly TCP = Socket_Which.TCP;
 	static readonly UDP = Socket_Which.UDP;
+	static readonly TcpTlsMode = Socket_TcpTlsMode;
 	static readonly _capnp = {
 		displayName: "Socket",
 		id: "9a0eba45530ee79f",
@@ -1442,79 +1630,11 @@ export class Worker_Binding_Type extends $.Struct {
 		return $.utils.getUint16(0, this) as Worker_Binding_Type_Which;
 	}
 }
-export class Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy
-	extends $.Struct
-{
-	static readonly _capnp = {
-		displayName: "RetryPolicy",
-		id: "d9f9c39c6b94b8fb",
-		size: new $.ObjectSize(8, 0),
-		defaultMaxAttempts: $.getUint32Mask(4),
-		defaultTimeoutMs: $.getUint32Mask(10000),
-	};
-	/**
-	 * Maximum number of retries after the initial attempt. Zero disables retries, and one
-	 * allows a single retry. The default matches the runtime's default of five attempts in
-	 * total.
-	 *
-	 */
-	get maxAttempts(): number {
-		return $.utils.getUint32(
-			0,
-			this,
-			Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy._capnp
-				.defaultMaxAttempts
-		);
-	}
-	set maxAttempts(value: number) {
-		$.utils.setUint32(
-			0,
-			value,
-			this,
-			Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy._capnp
-				.defaultMaxAttempts
-		);
-	}
-	/**
-	 * Time in milliseconds, measured from the start of the call, after which no retry may
-	 * start. A retry still running when it expires is cancelled, and the caller gets the
-	 * error that caused the first retry. The initial request, and the first request after each
-	 * redirect, always run to completion. The clock starts after any output-gate wait, and a
-	 * redirect shares the original call's timeout. Must be between 500 and 60,000. The default
-	 * matches the runtime's default.
-	 *
-	 */
-	get timeoutMs(): number {
-		return $.utils.getUint32(
-			4,
-			this,
-			Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy._capnp
-				.defaultTimeoutMs
-		);
-	}
-	set timeoutMs(value: number) {
-		$.utils.setUint32(
-			4,
-			value,
-			this,
-			Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy._capnp
-				.defaultTimeoutMs
-		);
-	}
-	toString(): string {
-		return (
-			"Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy_" +
-			super.toString()
-		);
-	}
-}
 /**
  * The type of a Durable Object namespace binding.
  *
  */
 export class Worker_Binding_DurableObjectNamespaceDesignator extends $.Struct {
-	static readonly RetryPolicy =
-		Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy;
 	static readonly _capnp = {
 		displayName: "DurableObjectNamespaceDesignator",
 		id: "804f144ff477aac7",
@@ -1548,39 +1668,19 @@ export class Worker_Binding_DurableObjectNamespaceDesignator extends $.Struct {
 	set serviceName(value: string) {
 		$.utils.setText(1, value, this);
 	}
-	_adoptRetryPolicy(
-		value: $.Orphan<Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy>
-	): void {
+	_adoptObsolete2(value: $.Orphan<$.Pointer>): void {
 		$.utils.adopt(value, $.utils.getPointer(2, this));
 	}
-	_disownRetryPolicy(): $.Orphan<Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy> {
-		return $.utils.disown(this.retryPolicy);
+	_disownObsolete2(): $.Orphan<$.Pointer> {
+		return $.utils.disown(this.obsolete2);
 	}
-	/**
-	 * Limits on how the runtime retries calls through stubs minted from this binding. When
-	 * absent, the runtime's default retry behavior applies.
-	 *
-	 */
-	get retryPolicy(): Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy {
-		return $.utils.getStruct(
-			2,
-			Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy,
-			this
-		);
+	get obsolete2(): $.Pointer {
+		return $.utils.getPointer(2, this);
 	}
-	_hasRetryPolicy(): boolean {
+	_hasObsolete2(): boolean {
 		return !$.utils.isNull($.utils.getPointer(2, this));
 	}
-	_initRetryPolicy(): Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy {
-		return $.utils.initStructAt(
-			2,
-			Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy,
-			this
-		);
-	}
-	set retryPolicy(
-		value: Worker_Binding_DurableObjectNamespaceDesignator_RetryPolicy
-	) {
+	set obsolete2(value: $.Pointer) {
 		$.utils.copyFrom(value, $.utils.getPointer(2, this));
 	}
 	toString(): string {
@@ -3350,7 +3450,7 @@ export class Worker_DockerConfiguration extends $.Struct {
 	static readonly _capnp = {
 		displayName: "DockerConfiguration",
 		id: "e62f96c20d9fb872",
-		size: new $.ObjectSize(0, 2),
+		size: new $.ObjectSize(0, 3),
 	};
 	/**
 	 * Path to the Docker socket.
@@ -3374,6 +3474,26 @@ export class Worker_DockerConfiguration extends $.Struct {
 	}
 	set containerEgressInterceptorImage(value: string) {
 		$.utils.setText(1, value, this);
+	}
+	/**
+	 * Scopes the Docker resources workerd creates to a session chosen by the program that
+	 * supervises workerd, such as Miniflare. May contain only the characters Docker allows in
+	 * container names: letters, digits, `_`, `.` and `-`.
+	 *
+	 * When set, container and sidecar names include the session ID, so different sessions never
+	 * share or adopt each other's containers, while a workerd process started with the same
+	 * session adopts the containers an earlier one left running. Resources that do not outlive
+	 * the session carry the label `dev.workerd.session=<sessionId>`: application containers,
+	 * sidecars, snapshot helper containers, and snapshot clone volumes. The supervisor can remove
+	 * them by that label once the session ends. Snapshot volumes and container snapshot images
+	 * outlive sessions and are not labelled.
+	 *
+	 */
+	get sessionId(): string {
+		return $.utils.getText(2, this);
+	}
+	set sessionId(value: string) {
+		$.utils.setText(2, value, this);
 	}
 	toString(): string {
 		return "Worker_DockerConfiguration_" + super.toString();
@@ -3429,7 +3549,7 @@ export class Worker_DurableObjectStorage extends $.Struct {
 	static readonly _capnp = {
 		displayName: "durableObjectStorage",
 		id: "cc72b3faa57827d4",
-		size: new $.ObjectSize(8, 16),
+		size: new $.ObjectSize(8, 17),
 	};
 	get _isNone(): boolean {
 		return $.utils.getUint16(2, this) === 0;
@@ -3494,7 +3614,7 @@ export class Worker_ContainerEngine extends $.Struct {
 	static readonly _capnp = {
 		displayName: "containerEngine",
 		id: "82de68f58dc2eb24",
-		size: new $.ObjectSize(8, 16),
+		size: new $.ObjectSize(8, 17),
 	};
 	get _isNone(): boolean {
 		return $.utils.getUint16(4, this) === 0;
@@ -3591,7 +3711,7 @@ export class Worker extends $.Struct {
 	static readonly _capnp = {
 		displayName: "Worker",
 		id: "acfa77e88fd97d1c",
-		size: new $.ObjectSize(8, 16),
+		size: new $.ObjectSize(8, 17),
 		defaultGlobalOutbound: $.readRawPointer(
 			new Uint8Array([
 				16, 7, 80, 1, 3, 0, 0, 17, 9, 74, 0, 1, 255, 105, 110, 116, 101, 114,
@@ -3926,6 +4046,29 @@ export class Worker extends $.Struct {
 	}
 	set accessBlobHeader(value: string) {
 		$.utils.setText(13, value, this);
+	}
+	_adoptWorkloadIdentityService(value: $.Orphan<ServiceDesignator>): void {
+		$.utils.adopt(value, $.utils.getPointer(16, this));
+	}
+	_disownWorkloadIdentityService(): $.Orphan<ServiceDesignator> {
+		return $.utils.disown(this.workloadIdentityService);
+	}
+	/**
+	 * Private workload verifier for development/tests. Receives verify(originalRequest) over RPC.
+	 * Hosted Workers supplies this channel automatically, with protected receiver scope.
+	 *
+	 */
+	get workloadIdentityService(): ServiceDesignator {
+		return $.utils.getStruct(16, ServiceDesignator, this);
+	}
+	_hasWorkloadIdentityService(): boolean {
+		return !$.utils.isNull($.utils.getPointer(16, this));
+	}
+	_initWorkloadIdentityService(): ServiceDesignator {
+		return $.utils.initStructAt(16, ServiceDesignator, this);
+	}
+	set workloadIdentityService(value: ServiceDesignator) {
+		$.utils.copyFrom(value, $.utils.getPointer(16, this));
 	}
 	_adoptAccessBindingService(value: $.Orphan<ServiceDesignator>): void {
 		$.utils.adopt(value, $.utils.getPointer(14, this));

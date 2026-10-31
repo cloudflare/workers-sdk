@@ -65,3 +65,40 @@ for (const legacy of [false, true]) {
 		expect(outbound).not.toHaveBeenCalled();
 	});
 }
+
+// This contract needs the companion runtime until its published release lands.
+// No local polyfill may turn decoding or a mocked claim into verified identity.
+test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
+	"runtime caller needs no binding and distinguishes missing from unavailable",
+	async ({ expect }) => {
+		const outbound = vi.fn(() => new Response("unexpected outbound request"));
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "receiver",
+						compatibilityDate: "2026-10-31",
+						manifest:
+							singleModuleManifest(`export default { async fetch(request, env, ctx) {
+				try { const caller = await ctx.identity.caller(); return Response.json({caller}); }
+				catch (error) { return Response.json({name:error.name}); }
+			}}`),
+					},
+					dev: { outboundService: { type: "fetcher", handler: outbound } },
+				},
+			],
+		});
+		useDispose(mf);
+		expect(await (await mf.dispatchFetch("http://localhost/")).json()).toEqual({
+			caller: null,
+		});
+		expect(
+			await (
+				await mf.dispatchFetch("http://localhost/", {
+					headers: { authorization: "Bearer credential" },
+				})
+			).json()
+		).toEqual({ name: "WorkloadIdentityUnavailableError" });
+		expect(outbound).not.toHaveBeenCalled();
+	}
+);
