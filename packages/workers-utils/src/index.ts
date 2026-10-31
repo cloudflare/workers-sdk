@@ -1,4 +1,4 @@
-export { validOidcAudience, isOidcBinding } from "./config/oidc";
+export { validOidcAudience, isIdentityBinding } from "./config/oidc";
 export type {
 	RawConfig,
 	Config,

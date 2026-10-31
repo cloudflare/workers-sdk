@@ -12,7 +12,7 @@ import type { DevelopmentOidcBrokerFactory } from "miniflare";
 
 /**
  * Build a lazy host-only broker factory for a configured local Worker.
- * No login or API request runs until its native getter is called. Miniflare
+ * No login or API request runs until the application calls the binding. Miniflare
  * retains equal keys across code reloads and disposes removed/changed factories.
  * @param config Linked Worker, account, and compatibility configuration.
  * @param logger Host development server logger.
@@ -22,23 +22,24 @@ import type { DevelopmentOidcBrokerFactory } from "miniflare";
 export function getDevelopmentOidcOptions(
 	config: Pick<
 		Config,
-		"name" | "account_id" | "compatibility_flags" | "compliance_region" | "oidc"
+		| "name"
+		| "account_id"
+		| "compatibility_flags"
+		| "compliance_region"
+		| "identities"
 	>,
 	logger: RemoteBindingsLogger,
 	profileDir = process.cwd()
 ): DevelopmentOidcBrokerFactory | undefined {
 	if (
 		!config.compatibility_flags.includes("workers_oidc") ||
-		!config.oidc?.length
+		!config.identities?.length
 	) {
 		return undefined;
 	}
 	const snapshot = {
 		name: config.name ?? "",
-		oidc: config.oidc.map((binding) => ({
-			...binding,
-			allowed_audiences: binding.allowed_audiences?.slice(),
-		})),
+		identities: structuredClone(config.identities),
 		account_id: config.account_id,
 		compliance_region: config.compliance_region,
 	};
@@ -50,7 +51,7 @@ export function getDevelopmentOidcOptions(
 	return {
 		key: JSON.stringify([
 			snapshot.name,
-			snapshot.oidc,
+			snapshot.identities,
 			snapshot.account_id,
 			snapshot.compliance_region,
 			directory,
@@ -60,7 +61,7 @@ export function getDevelopmentOidcOptions(
 		create() {
 			let readAuth: ReturnType<typeof getDevelopmentOidcAuthHook> | undefined;
 			const providers = new Map(
-				snapshot.oidc.map((binding) => [
+				snapshot.identities.map((binding) => [
 					binding.binding,
 					new DevelopmentOidcProvider(
 						snapshot.name,
@@ -90,26 +91,18 @@ export function getDevelopmentOidcOptions(
 				])
 			);
 			return {
-				async getToken(options) {
+				async invoke(options, signal) {
 					try {
-						const provider = providers.get(options.assignment);
-						if (!provider) {
-							throw new Error("OIDC binding is not configured.");
-						}
-						return await provider.getToken({
-							...(options.audience === undefined
-								? {}
-								: { audience: options.audience }),
-							fresh: options.fresh ?? false,
-						});
+						const provider = providers.get(options.binding);
+						if (!provider) throw new Error("OIDC binding is not configured.");
+						return await provider.invoke(options, signal);
 					} catch (error) {
-						// Log only errors created by trusted code; never serialize API bodies or adapters.
 						logger.error(
 							error instanceof DevelopmentOidcApiError
 								? error.message
-								: "Development OIDC issuance failed. Check the linked Worker, login, and connectivity, then retry the getter."
+								: "Development OIDC failed. Check the linked Worker, login, configured limits, and connectivity."
 						);
-						throw new Error("Development OIDC issuance failed.");
+						throw new Error("Development OIDC operation failed.");
 					}
 				},
 				dispose() {

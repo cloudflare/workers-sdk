@@ -42,7 +42,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	fetcher: "local-only",
 	analytics_engine: "local-only",
 	secrets_store_secret: "local-only",
-	oidc: "local-only",
+	identity: "local-only",
 	ratelimit: "local-only",
 	worker_loader: "local-only",
 

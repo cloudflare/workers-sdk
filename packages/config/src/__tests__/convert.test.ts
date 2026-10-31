@@ -1745,35 +1745,19 @@ describe("convertToWranglerConfig", () => {
 	});
 });
 
-it("preserves explicit OIDC identities when converting cf configuration", ({
+it("preserves OIDC capability limits when converting cf configuration", ({
 	expect,
 }) => {
-	const result = convertToWranglerConfig({
-		worker: {
-			...baseWorker,
-			env: {
-				ORDERS: {
-					type: "oidc",
-					identity_id: "orders",
-					audience: "urn:orders",
-					allowed_audiences: ["urn:orders", "urn:reports"],
-				},
-				REPORTS: {
-					type: "oidc",
-					identity_id: "reports",
-					audience: "recipient",
-				},
-			},
+	const limits = {
+		audience: "urn:orders",
+		authorization_grants: {
+			allowed_authorization_servers: ["https://auth.example"],
+			allowed_scopes: ["read"],
 		},
+	};
+	const result = convertToWranglerConfig({
+		worker: { ...baseWorker, env: { ORDERS: { type: "identity", ...limits } } },
 		containers: [],
 	});
-	expect(result.oidc).toEqual([
-		{
-			binding: "ORDERS",
-			identity_id: "orders",
-			audience: "urn:orders",
-			allowed_audiences: ["urn:orders", "urn:reports"],
-		},
-		{ binding: "REPORTS", identity_id: "reports", audience: "recipient" },
-	]);
+	expect(result.identities).toEqual([{ binding: "ORDERS", ...limits }]);
 });

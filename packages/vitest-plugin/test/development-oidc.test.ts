@@ -18,10 +18,9 @@ describe("live development OIDC opt-in", () => {
 					account_id: "a".repeat(32),
 					compatibility_date: "2026-01-01",
 					compatibility_flags: ["workers_oidc"],
-					oidc: [
+					identities: [
 						{
 							binding: "IDENTITY",
-							identity_id: "orders",
 							audience: "recipient",
 						},
 					],
@@ -46,7 +45,7 @@ describe("live development OIDC opt-in", () => {
 		expect,
 	}) => {
 		const create = () => ({
-			getToken: async () => "e30.e30.c2ln",
+			invoke: async () => new Response("e30.e30.c2ln"),
 			dispose() {},
 		});
 		const mock = { key: "offline-test", create };

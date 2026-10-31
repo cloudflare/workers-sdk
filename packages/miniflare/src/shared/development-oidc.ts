@@ -2,16 +2,12 @@ import { Buffer } from "node:buffer";
 import { addAbortListener } from "node:events";
 import { validOidcAudience } from "@cloudflare/workers-utils/oidc";
 
-/** The server-authorized identity and policy that own a development token. */
+/** The server-authorized identity that own a development token. */
 export interface DevelopmentOidcIdentity {
 	accountId: string;
 	workerId: string;
 	userId: string;
 	developmentSessionId: string;
-	policy: string;
-	identityId: string;
-	assignmentId: string;
-	policyRevision: string;
 }
 
 /** A token returned by the trusted development issuance transport. */
@@ -141,10 +137,6 @@ export function snapshotDevelopmentOidcIdentity(
 		workerId: identity?.workerId,
 		userId: identity?.userId,
 		developmentSessionId: identity?.developmentSessionId,
-		policy: identity?.policy,
-		identityId: identity?.identityId,
-		assignmentId: identity?.assignmentId,
-		policyRevision: identity?.policyRevision,
 	};
 	if (Object.values(snapshot).some((value) => !isBoundedString(value, 4096))) {
 		throw new Error(
@@ -158,7 +150,7 @@ interface CachedToken extends DevelopmentOidcToken {
 	monotonicExpiry: number;
 }
 
-/** Bound and validate each issuance. Only the server caches assertions, after current authorization. */
+/** Bound and validate each issuance. Every invocation issues a fresh assertion after current authorization. */
 export class DevelopmentOidcTokenRequests {
 	#requests = new DevelopmentOidcRequestPool();
 	#controller = new AbortController();

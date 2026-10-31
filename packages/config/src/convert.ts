@@ -421,15 +421,9 @@ function convertBindingsAndAssets(
 		}
 
 		switch (binding.type) {
-			case "oidc": {
-				(result.oidc ??= []).push({
-					binding: name,
-					identity_id: binding.identity_id,
-					audience: binding.audience,
-					...(binding.allowed_audiences === undefined
-						? {}
-						: { allowed_audiences: binding.allowed_audiences }),
-				});
+			case "identity": {
+				const { type: _type, ...limits } = binding;
+				(result.identities ??= []).push({ binding: name, ...limits });
 				break;
 			}
 			case "agent-memory": {

@@ -2846,11 +2846,11 @@ function collectCoreBindings(
 			addBinding(flagshipBinding.binding, "Flagship", "flagship", envName);
 		}
 
-		for (const binding of env.oidc ?? []) {
+		for (const binding of env.identities ?? []) {
 			addBinding(
 				binding.binding,
-				"{ getToken(options?: { audience?: string; fresh?: boolean }): Promise<string> }",
-				"oidc",
+				"{ getToken(): Promise<string>; getAuthorizationGrant(options: { authorizationServer: string; scope?: string[] }): Promise<string>; fetch(input: Request | string | URL, init?: RequestInit): Promise<Response> }",
+				"identity",
 				envName
 			);
 		}
@@ -3918,11 +3918,11 @@ function collectCoreBindingsPerEnvironment(
 			});
 		}
 
-		for (const binding of env.oidc ?? []) {
+		for (const binding of env.identities ?? []) {
 			bindings.push({
-				bindingCategory: "oidc",
+				bindingCategory: "identity",
 				name: binding.binding,
-				type: "{ getToken(options?: { audience?: string; fresh?: boolean }): Promise<string> }",
+				type: "{ getToken(): Promise<string>; getAuthorizationGrant(options: { authorizationServer: string; scope?: string[] }): Promise<string>; fetch(input: Request | string | URL, init?: RequestInit): Promise<Response> }",
 			});
 		}
 

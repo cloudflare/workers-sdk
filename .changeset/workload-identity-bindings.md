@@ -8,10 +8,8 @@
 "@cloudflare/vitest-plugin": minor
 ---
 
-Replace implicit context OIDC access with explicit identity bindings.
+Add fixed-audience `identities` bindings with fresh `getToken()`, opt-in WAGs, and signed HTTP dispatch. Preserve configuration through uploads, Previews, local development and generated types.
 
-Configure an existing identity with its approved audience policy, then call `env.IDENTITY.getToken({ audience, fresh })`. Preserve bindings through cf configuration, uploads, Previews, local runtime configuration, and generated types. Configuration requests an approved assignment; it cannot create one.
+Derive subjects from protected platform IDs. Compile each binding into a private Worker service capability and preserve its original authority through RPC forwarding. Use the existing wrapped-binding serializer for the public three-method interface.
 
-Recheck OAuth, Worker access, and the current local assignment on every getter. Keep session renewal lazy, forward every fresh request separately, and reject sessions that do not match the configured identity and audience policy. Local Durable Objects use the local identity profile. Vitest still requires an explicit live-issuance opt-in.
-
-Native execution requires the matching workerd identity-binding implementation and Cloudflare authorization services. Until a runtime release includes those changes, use `MINIFLARE_WORKERD_PATH` with that build.
+Local calls require current human OAuth and permission to develop an existing named Worker. Keep credentials outside application code and cache only the eight-hour session. Vitest requires explicit live-issuance opt-in.

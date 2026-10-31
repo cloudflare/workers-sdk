@@ -1641,13 +1641,13 @@ export class Miniflare {
 				if (
 					!this.#developmentOidc.isAuthorized(capability) ||
 					req.method !== "POST" ||
-					req.url !== "/token" ||
+					req.url !== "/invoke" ||
 					req.headers["content-type"] !== "application/json"
 				) {
 					throw new Error("Invalid callback.");
 				}
-				// Native getters send at most 2048 bytes of audience (JSON escaping can expand this).
-				const bytes = Buffer.alloc(16384);
+				// Bound the base64 body plus the compiled operation envelope.
+				const bytes = Buffer.alloc(12 * 1024 * 1024);
 				let size = 0;
 				for await (const chunk of req) {
 					if (chunk.length > bytes.length - size) {
@@ -1661,34 +1661,19 @@ export class Miniflare {
 						bytes.subarray(0, size)
 					)
 				);
-				if (
-					options === null ||
-					typeof options !== "object" ||
-					Array.isArray(options) ||
-					Object.keys(options).some(
-						(key) => !["assignment", "audience", "fresh"].includes(key)
-					) ||
-					!("assignment" in options) ||
-					typeof options.assignment !== "string" ||
-					!/^[A-Za-z0-9_-]{1,128}$/.test(options.assignment) ||
-					("fresh" in options && typeof options.fresh !== "boolean") ||
-					("audience" in options && typeof options.audience !== "string")
-				) {
-					throw new Error("Invalid callback.");
+				const result = await this.#developmentOidc.invoke(
+					capability,
+					options as import("./shared/development-oidc-broker").DevelopmentOidcCall
+				);
+				response = new Response(result.body, {
+					status: result.status,
+					statusText: result.statusText,
+					headers: [...result.headers],
+				});
+				if ((options as { operation?: string }).operation === "fetch") {
+					response = new Response(response.body, response);
+					response.headers.set("X-MF-OIDC-Result", "fetch");
 				}
-				const token = await this.#developmentOidc.getToken(capability, {
-					assignment: options.assignment,
-					...("audience" in options
-						? { audience: options.audience as string }
-						: {}),
-					...("fresh" in options ? { fresh: options.fresh as boolean } : {}),
-				});
-				response = new Response(token, {
-					headers: {
-						"Content-Type": "text/plain",
-						"Cache-Control": "no-store",
-					},
-				});
 			} catch {
 				// Never serialize host exceptions: adapters may include credentials in them.
 				response = new Response(

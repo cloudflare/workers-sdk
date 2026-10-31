@@ -1,16 +1,20 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import {
-	DevelopmentOidcRequestPool,
-	validateDevelopmentOidcAudience,
-} from "./development-oidc";
+import { DevelopmentOidcRequestPool } from "./development-oidc";
 
 /** Host-side broker. Never place it or its credentials in Worker bindings. */
+export interface DevelopmentOidcCall {
+	binding: string;
+	operation: "token" | "grant" | "fetch";
+	grant?: { authorization_server: string; scope?: string[] };
+	request?: {
+		url: string;
+		method: string;
+		headers: [string, string][];
+		body?: string;
+	};
+}
 export interface DevelopmentOidcBroker {
-	getToken(options: {
-		assignment: string;
-		audience?: string;
-		fresh?: boolean;
-	}): Promise<string>;
+	invoke(call: DevelopmentOidcCall, signal?: AbortSignal): Promise<Response>;
 	dispose(): void;
 }
 
@@ -90,33 +94,30 @@ export class DevelopmentOidcBrokers {
 	}
 
 	/** Handle a capability-authorized callback. Body limits must be applied before decoding. */
-	async getToken(
+	async invoke(
 		capability: string,
-		options: { assignment: string; audience?: string; fresh?: boolean }
-	): Promise<string> {
+		options: DevelopmentOidcCall
+	): Promise<Response> {
 		const entry = this.#find(capability);
-		if (!entry) {
-			throw new Error("Development OIDC callback is unavailable.");
-		}
-		if (options.audience !== undefined) {
-			validateDevelopmentOidcAudience(options.audience);
-		}
+		if (
+			!entry ||
+			!options ||
+			typeof options !== "object" ||
+			Reflect.ownKeys(options).some(
+				(k) => !["binding", "operation", "grant", "request"].includes(String(k))
+			) ||
+			typeof options.binding !== "string" ||
+			!/^[A-Za-z0-9_-]{1,128}$/.test(options.binding) ||
+			!["token", "grant", "fetch"].includes(options.operation)
+		)
+			throw new Error("Development OIDC operation is invalid.");
 		const broker = (entry.broker ??= entry.factory.create());
-		const token = await this.#requests.run(
-			() => broker.getToken(options),
+		const response = await this.#requests.run(
+			(signal) => broker.invoke(options, signal),
 			entry.controller.signal
 		);
-		// Reconfiguration can run after the operation settles but before this continuation.
 		entry.controller.signal.throwIfAborted();
-		if (
-			typeof token !== "string" ||
-			token.length > 65536 ||
-			token.trim() !== token ||
-			!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token)
-		) {
-			throw new Error("Development OIDC returned an invalid token.");
-		}
-		return token;
+		return response;
 	}
 
 	/** Cancel callbacks before shutting down the runtime. */

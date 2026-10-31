@@ -24,9 +24,7 @@ test("local Vite preview links each Worker's broker with remote bindings disable
 				account_id: "a".repeat(32),
 				compatibility_date: "2026-01-01",
 				compatibility_flags: ["workers_oidc"],
-				oidc: [
-					{ binding: "IDENTITY", identity_id: "orders", audience: "recipient" },
-				],
+				identities: [{ binding: "IDENTITY", audience: "recipient" }],
 			})
 		);
 		return wrangler.unstable_readConfig({ config: configPath });

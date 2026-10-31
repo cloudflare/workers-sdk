@@ -34,7 +34,7 @@ const reorderableBindings = {
 	k2: true,
 	secrets_store_secrets: true,
 	artifacts: true,
-	oidc: true,
+	identities: true,
 	ratelimits: true,
 	analytics_engine_datasets: true,
 	unsafe_hello_world: true,

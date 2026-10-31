@@ -18,7 +18,7 @@ import {
 } from "./durable-object-exports";
 import { ARTIFACTS_EVENT_TYPES } from "./environment";
 import { partitionExports } from "./exports";
-import { isOidcBinding } from "./oidc";
+import { isIdentityBinding } from "./oidc";
 import {
 	all,
 	appendEnvName,
@@ -121,7 +121,7 @@ export type ConfigBindingFieldName =
 	| "k2"
 	| "secrets_store_secrets"
 	| "artifacts"
-	| "oidc"
+	| "identities"
 	| "ratelimits"
 	| "assets"
 	| "unsafe_hello_world"
@@ -164,7 +164,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	k2: "K2 Stream",
 	secrets_store_secrets: "Secrets Store Secret",
 	artifacts: "Artifacts",
-	oidc: "OIDC Identity",
+	identities: "Identity",
 	ratelimits: "Rate Limit",
 	assets: "Assets",
 	unsafe_hello_world: "Hello World",
@@ -216,7 +216,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	logfwdr: "logfwdr",
 	unsafe_hello_world: "Hello World",
 	flagship: "Flagship",
-	oidc: "OIDC Identity",
+	identity: "Identity",
 	ratelimit: "Rate Limit",
 	worker_loader: "Worker Loader",
 	vpc_service: "VPC Service",
@@ -2093,14 +2093,14 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateWorkerLoaderBinding),
 			[]
 		),
-		oidc: notInheritable(
+		identities: notInheritable(
 			diagnostics,
 			topLevelEnv,
 			rawConfig,
 			rawEnv,
 			envName,
-			"oidc",
-			validateBindingArray(envName, validateOidcBinding),
+			"identities",
+			validateBindingArray(envName, validateIdentityBinding),
 			[]
 		),
 		ratelimits: notInheritable(
@@ -3652,7 +3652,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 	}
 	if (isRequiredProperty(value, "type", "string")) {
 		const safeBindings = [
-			"oidc",
+			"identity",
 			"plain_text",
 			"secret_text",
 			"json",
@@ -6437,10 +6437,10 @@ const validateWorkerLoaderBinding: ValidatorFn = (
 	return isValid;
 };
 
-const validateOidcBinding: ValidatorFn = (diagnostics, field, value) => {
-	if (!isOidcBinding(value)) {
+const validateIdentityBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (!isIdentityBinding(value)) {
 		diagnostics.errors.push(
-			`"${field}" requires binding, identity_id, a valid audience, and optionally a nonempty allowed_audiences list containing the default. OIDC configuration cannot grant identity access or select a subject.`
+			`"${field}" requires binding, one audience, a valid subject profile, and valid optional authorization_grants/request_signing limits.`
 		);
 		return false;
 	}
@@ -6612,7 +6612,7 @@ const validatePreviewsConfig =
 				"unsafe_hello_world",
 				"flagship",
 				"worker_loaders",
-				"oidc",
+				"identities",
 				"ratelimits",
 				"vpc_services",
 				"version_metadata",
@@ -6913,10 +6913,10 @@ const validatePreviewsConfig =
 			) && isValid;
 
 		isValid =
-			validateBindingArray(envName, validateOidcBinding)(
+			validateBindingArray(envName, validateIdentityBinding)(
 				diagnostics,
-				`${field}.oidc`,
-				previews.oidc,
+				`${field}.identities`,
+				previews.identities,
 				undefined
 			) && isValid;
 

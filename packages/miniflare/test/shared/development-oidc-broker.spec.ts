@@ -1,107 +1,77 @@
-import { DevelopmentOidcBrokers, DevelopmentOidcRequestPool } from "miniflare";
+import { DevelopmentOidcBrokers } from "miniflare";
 import { describe, it, vi } from "vitest";
-
-const token = "e30.e30.c2ln";
-describe("development OIDC capability lifecycle", () => {
-	it("isolates instances and workers, revokes removed capabilities, and creates lazily", async ({
+const call = { binding: "IDENTITY", operation: "token" as const };
+describe("development OIDC broker capabilities", () => {
+	it("isolates workers and instances, creates lazily, invalidates changed configurations", async ({
 		expect,
 	}) => {
 		const manager = new DevelopmentOidcBrokers(),
 			other = new DevelopmentOidcBrokers();
-		const create = vi.fn(() => ({
-			getToken: async () => token,
-			dispose: vi.fn(),
-		}));
+		const dispose = vi.fn(),
+			invoke = vi.fn(async () => new Response("token"));
+		const create = vi.fn(() => ({ invoke, dispose }));
 		manager.update([
 			{ key: "one", create },
 			{ key: "two", create },
 		]);
 		expect(create).not.toHaveBeenCalled();
-		const first = manager.capability(0) ?? "",
-			second = manager.capability(1) ?? "";
+		const first = manager.capability(0)!,
+			second = manager.capability(1)!;
 		expect(first).toHaveLength(64);
 		expect(first).not.toBe(second);
 		expect(other.isAuthorized(first)).toBe(false);
 		expect(manager.isAuthorized("é".repeat(64))).toBe(false);
-		expect(await manager.getToken(first, { assignment: "IDENTITY" })).toBe(
-			token
-		);
+		expect(await (await manager.invoke(first, call)).text()).toBe("token");
 		expect(create).toHaveBeenCalledOnce();
 		manager.update([{ key: "new", create }]);
 		expect(manager.isAuthorized(first)).toBe(false);
 		expect(manager.isAuthorized(second)).toBe(false);
-		await expect(
-			manager.getToken(first, { assignment: "IDENTITY" })
-		).rejects.toThrow("unavailable");
+		await expect(manager.invoke(first, call)).rejects.toThrow();
+		expect(dispose).toHaveBeenCalledOnce();
 		manager.dispose();
+		other.dispose();
 	});
-	it("cancels pending getters on shutdown and observes late failures", async ({
+	it("aborts pending operations on disposal and observes late failures", async ({
 		expect,
 	}) => {
 		const manager = new DevelopmentOidcBrokers();
-		let reject: ((error: Error) => void) | undefined;
-		const dispose = vi.fn();
+		let fail!: (error: Error) => void;
 		manager.update([
 			{
 				key: "one",
 				create: () => ({
-					getToken: () =>
-						new Promise((_, fail) => {
-							reject = fail;
+					invoke: () =>
+						new Promise<Response>((_, reject) => {
+							fail = reject;
 						}),
-					dispose,
+					dispose() {},
 				}),
 			},
 		]);
-		const pending = manager.getToken(manager.capability(0) ?? "", {
-			assignment: "IDENTITY",
-		});
-		await Promise.resolve();
+		const pending = manager.invoke(manager.capability(0)!, call);
+		const rejected = expect(pending).rejects.toThrow("configuration changed");
+		await vi.waitFor(() => expect(fail).toBeTypeOf("function"));
 		manager.dispose();
-		await expect(pending).rejects.toThrow("configuration changed");
-		reject?.(new Error("late"));
-		expect(dispose).toHaveBeenCalledOnce();
+		await rejected;
+		fail(new Error("late"));
 	});
-	it("rejects a resolved operation if its authority changes before the caller resumes", async ({
-		expect,
-	}) => {
-		const manager = new DevelopmentOidcBrokers();
-		manager.update([
-			{
-				key: "one",
-				create: () => ({ getToken: async () => token, dispose() {} }),
-			},
-		]);
-		// Simulate the operation settling before the awaiting caller resumes.
-		const operation = vi
-			.spyOn(DevelopmentOidcRequestPool.prototype, "run")
-			.mockResolvedValueOnce(token);
-		try {
-			const pending = manager.getToken(manager.capability(0) ?? "", {
-				assignment: "IDENTITY",
-			});
-			manager.update([]);
-			await expect(pending).rejects.toThrow("configuration changed");
-		} finally {
-			operation.mockRestore();
-			manager.dispose();
-		}
-	});
-	it.for(["invalid", "x".repeat(65537), "a.b.c\n"])(
-		"rejects malformed or oversized broker tokens",
-		async (value, { expect }) => {
+	it.for([
+		{ ...call, audience: "other" },
+		{ ...call, operation: "signRequest" },
+		{ ...call, binding: "../other" },
+	])(
+		"rejects unknown operations and authority options",
+		async (options, { expect }) => {
 			const manager = new DevelopmentOidcBrokers();
-			manager.update([
-				{
-					key: "one",
-					create: () => ({ getToken: async () => value, dispose() {} }),
-				},
-			]);
+			const create = vi.fn(() => ({
+				invoke: async () => new Response("token"),
+				dispose() {},
+			}));
+			manager.update([{ key: "one", create }]);
 			await expect(
-				manager.getToken(manager.capability(0) ?? "", {
-					assignment: "IDENTITY",
-				})
-			).rejects.toThrow("invalid token");
+				manager.invoke(manager.capability(0)!, options as never)
+			).rejects.toThrow();
+			expect(create).not.toHaveBeenCalled();
 			manager.dispose();
 		}
 	);

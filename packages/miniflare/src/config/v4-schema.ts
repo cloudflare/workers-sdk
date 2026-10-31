@@ -2,6 +2,7 @@ import {
 	AssetConfigSchema,
 	RouterConfigSchema,
 } from "@cloudflare/workers-shared";
+import { isIdentityBinding } from "@cloudflare/workers-utils/oidc";
 import { z } from "zod";
 import {
 	HttpOptions_Style,
@@ -369,16 +370,17 @@ const V4WorkerOptionsShapeSchema = z.object({
 	unsafeInspectorProxy: z.boolean().optional(),
 	routes: z.array(z.string()).optional(),
 	cronTriggers: z.array(z.string()).optional(),
-	oidc: z
+	identities: z
 		.record(
 			z.string(),
-			z
-				.object({
-					identity_id: z.string(),
-					audience: z.string(),
-					allowed_audiences: z.array(z.string()).optional(),
-				})
-				.strict()
+			z.custom<
+				Omit<
+					import("@cloudflare/workers-utils/oidc").IdentityBindingConfig,
+					"binding"
+				>
+			>((value) =>
+				isIdentityBinding({ binding: "IDENTITY", ...(value as object) })
+			)
 		)
 		.optional(),
 	bindings: z.record(z.string(), JsonSchema).optional(),
@@ -831,9 +833,12 @@ export type V4WorkerOptionsShape = {
 	unsafeInspectorProxy?: boolean;
 	routes?: string[];
 	cronTriggers?: string[];
-	oidc?: Record<
+	identities?: Record<
 		string,
-		{ identity_id: string; audience: string; allowed_audiences?: string[] }
+		Omit<
+			import("@cloudflare/workers-utils/oidc").IdentityBindingConfig,
+			"binding"
+		>
 	>;
 	bindings?: Record<string, Json>;
 	wasmBindings?: Record<string, string | Uint8Array>;

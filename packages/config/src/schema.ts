@@ -1,4 +1,4 @@
-import { isOidcBinding } from "@cloudflare/workers-utils/oidc";
+import { isIdentityBinding } from "@cloudflare/workers-utils/oidc";
 import * as z from "zod";
 import type { SendEmailBinding, VpcNetworkBinding } from "./bindings";
 import type { Settings } from "./types";
@@ -106,21 +106,30 @@ export const HyperdriveBindingSchema = z.strictObject({
 export const KnownBindingSchema = z.discriminatedUnion("type", [
 	z
 		.strictObject({
-			type: z.literal("oidc"),
-			identity_id: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),
-			audience: z.string().min(1).max(2048),
-			allowed_audiences: z
-				.array(z.string().min(1).max(2048))
-				.min(1)
-				.max(64)
+			type: z.literal("identity"),
+			audience: z.string(),
+			subject: z.enum(["worker", "durable-object-namespace"]).optional(),
+			namespace_id: z.string().optional(),
+			authorization_grants: z
+				.strictObject({
+					allowed_authorization_servers: z.array(z.string()),
+					allowed_scopes: z.array(z.string()),
+				})
+				.optional(),
+			request_signing: z
+				.strictObject({
+					profile: z.literal("cloudflare-workload-http-v1"),
+					allowed_origins: z.array(z.string()),
+					allowed_methods: z.array(z.string()),
+				})
 				.optional(),
 		})
 		.refine(
 			({ type: _type, ...binding }) =>
-				isOidcBinding({ binding: "IDENTITY", ...binding }),
+				isIdentityBinding({ binding: "IDENTITY", ...binding }),
 			{
 				message:
-					"OIDC requires valid exact audiences and an allowed list containing its default.",
+					"OIDC requires one audience, a valid subject profile, and valid optional purpose limits.",
 			}
 		),
 	z.strictObject({

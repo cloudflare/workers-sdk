@@ -692,14 +692,14 @@ export function printBindings(
 		);
 	}
 
-	for (const { binding, identity_id } of extractBindingsOfType(
-		"oidc",
+	for (const { binding, audience } of extractBindingsOfType(
+		"identity",
 		bindings
 	)) {
 		output.push({
 			name: binding,
-			type: "OIDC Identity",
-			value: identity_id,
+			type: "Identity",
+			value: audience,
 			mode: getMode({ isSimulatedLocally: false }),
 		});
 	}

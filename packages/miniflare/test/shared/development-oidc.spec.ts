@@ -13,10 +13,6 @@ const identity: DevelopmentOidcIdentity = {
 	workerId: "worker",
 	userId: "user",
 	developmentSessionId: "session",
-	policy: "policy",
-	identityId: "orders",
-	assignmentId: "local-orders",
-	policyRevision: "1:1",
 };
 const audience = "https://example.com";
 
@@ -285,7 +281,11 @@ describe("development OIDC resource and cancellation boundaries", () => {
 		const cache = new DevelopmentOidcTokenRequests();
 		const issue = vi.fn(async () => issued("é".repeat(32_769)));
 		await expect(
-			cache.getToken({ ...identity, policy: "é".repeat(2049) }, audience, issue)
+			cache.getToken(
+				{ ...identity, workerId: "é".repeat(2049) },
+				audience,
+				issue
+			)
 		).rejects.toThrow("bounded fields");
 		expect(issue).not.toHaveBeenCalled();
 		await expect(cache.getToken(identity, audience, issue)).rejects.toThrow(

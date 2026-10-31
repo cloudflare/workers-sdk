@@ -1048,16 +1048,11 @@ type ConnectHandlerConfig = TcpConnectHandlerConfig | UdpConnectHandlerConfig;
  * for each named environment.
  */
 export interface EnvironmentNonInheritable {
-	/** Experimental workload identity bindings. Configuration requests an existing administrator-approved assignment.
+	/** Platform-derived workload capabilities. Each binding fixes one audience.
 	 * @default []
 	 * @nonInheritable
 	 */
-	oidc: {
-		binding: string;
-		identity_id: string;
-		audience: string;
-		allowed_audiences?: string[];
-	}[];
+	identities: import("./oidc").IdentityBindingConfig[];
 
 	/**
 	 * A map of values to substitute when deploying your Worker.

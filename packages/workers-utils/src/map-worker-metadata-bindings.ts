@@ -388,9 +388,9 @@ export function mapWorkerMetadataBindings(
 							];
 						}
 						break;
-					case "oidc": {
+					case "identity": {
 						const { name, type: _type, ...request } = binding;
-						(configObj.oidc ??= []).push({ binding: name, ...request });
+						(configObj.identities ??= []).push({ binding: name, ...request });
 						break;
 					}
 					case "ratelimit":

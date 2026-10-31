@@ -1754,57 +1754,51 @@ describe("ExportSchema", () => {
 	});
 });
 
-describe("OIDC identity bindings", () => {
-	it("accepts several explicit identities and exact audience policies", ({
-		expect,
-	}) => {
-		const result = InputWorkerSchema.parse({
-			...baseConfig,
-			env: {
-				ORDERS: {
-					type: "oidc",
-					identity_id: "orders",
-					audience: "urn:orders",
-					allowed_audiences: ["urn:orders", "urn:reports"],
-				},
-				REPORTS: {
-					type: "oidc",
-					identity_id: "reports",
-					audience: "recipient",
-				},
-			},
-		});
-		expect(result.env?.ORDERS).toMatchObject({
-			identity_id: "orders",
+describe("OIDC capability bindings", () => {
+	it("accepts fixed audiences and separate purpose limits", ({ expect }) => {
+		const limits = {
 			audience: "urn:orders",
-		});
+			request_signing: {
+				profile: "cloudflare-workload-http-v1",
+				allowed_origins: ["https://api.example"],
+				allowed_methods: ["POST"],
+			},
+		};
+		expect(
+			InputWorkerSchema.parse({
+				...baseConfig,
+				env: { IDENTITY: { type: "identity", ...limits } },
+			}).env?.IDENTITY
+		).toEqual({ type: "identity", ...limits });
 	});
 	it.for([
-		{ identity_id: "orders", audience: " " },
-		{ identity_id: "orders", audience: "recipient", allowed_audiences: [] },
+		{ audience: " " },
+		{ audience: "urn:orders", identity_id: "orders" },
+		{ audience: "urn:orders", allowed_audiences: ["urn:orders"] },
+		{ audience: "urn:orders", subject: "durable-object-namespace" },
+		{ audience: "urn:orders", namespace_id: "namespace" },
 		{
-			identity_id: "orders",
-			audience: "recipient",
-			allowed_audiences: ["other"],
+			audience: "urn:orders",
+			request_signing: {
+				profile: "other",
+				allowed_origins: ["https://api.example"],
+				allowed_methods: ["GET"],
+			},
 		},
 		{
-			identity_id: "orders",
-			audience: "recipient",
-			allowed_audiences: ["recipient", "recipient"],
+			audience: "urn:orders",
+			authorization_grants: {
+				allowed_authorization_servers: ["https://auth.example?query"],
+				allowed_scopes: [],
+			},
 		},
-		{
-			identity_id: "orders",
-			audience: "recipient",
-			assignment_id: "copied-grant",
-		},
-		{ identity_id: "orders", audience: "recipient", subject: "identity:admin" },
 	])(
-		"rejects unapproved configuration fields or invalid audiences: %j",
+		"rejects invalid limits or caller authority: %j",
 		(binding, { expect }) => {
 			expect(
 				InputWorkerSchema.safeParse({
 					...baseConfig,
-					env: { IDENTITY: { type: "oidc", ...binding } },
+					env: { IDENTITY: { type: "identity", ...binding } },
 				}).success
 			).toBe(false);
 		}

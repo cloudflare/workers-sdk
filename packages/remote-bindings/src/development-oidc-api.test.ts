@@ -22,19 +22,15 @@ const accountId = "a".repeat(32),
 const sessionId = "aaaabbbb-cccc-4ddd-8eee-ffff00001111";
 const auth = { accountId, apiToken: { apiToken: "human-oauth" } };
 const audience = `https://workers.cloudflare.com/accounts/${accountId}`;
-const binding = { binding: "IDENTITY", identity_id: "orders" };
+const binding = { binding: "IDENTITY", audience };
 const session: DevelopmentOidcSession = {
 	binding: binding.binding,
-	allowedAudiences: [audience],
+
 	identity: {
 		accountId,
 		workerId,
 		userId,
 		developmentSessionId: sessionId,
-		policy: "workers-oidc-v2",
-		identityId: "orders",
-		assignmentId: "local-orders",
-		policyRevision: "1:1",
 	},
 	defaultAudience: audience,
 	expiresAt: now + 28800,
@@ -42,21 +38,18 @@ const session: DevelopmentOidcSession = {
 const logger = { debug: vi.fn(), info: vi.fn() } as unknown as Logger;
 const rawSession = {
 	binding: binding.binding,
-	identity_id: "orders",
-	assignment_id: "local-orders",
-	policy_revision: "1:1",
-	allowed_audiences: [audience],
+
 	account_id: accountId,
 	worker_id: workerId,
 	user_id: userId,
 	development_session_id: sessionId,
-	policy: "workers-oidc-v2",
+
 	default_audience: audience,
 	expires_at: session.expiresAt,
 };
 const claims = {
 	iss: `https://oidc.cloudflare.app/accounts/${accountId}`,
-	sub: "identity:orders",
+	sub: `worker:${workerId}:development:local`,
 	account_id: accountId,
 	product: "workers",
 	jti: "1".repeat(32),
@@ -111,9 +104,10 @@ describe("development issuance API transport", () => {
 		expect(
 			await transport.createSession(auth, "linked-worker", binding, signal)
 		).toEqual(session);
-		expect(
-			await transport.issueToken(auth, session, audience, false, signal)
-		).toEqual({ token: token(), expiresAt: now + 300 });
+		expect(await transport.issueToken(auth, session, signal)).toEqual({
+			token: token(),
+			expiresAt: now + 300,
+		});
 		const calls = vi.mocked(performApiFetchBase).mock.calls;
 		expect(calls[0]?.[1]).toBe(
 			`/accounts/${accountId}/workers/scripts/linked-worker/oidc/development-sessions`
@@ -126,9 +120,7 @@ describe("development issuance API transport", () => {
 		expect(calls[1]?.[1]).toBe(
 			`/accounts/${accountId}/workers/oidc/development-sessions/${sessionId}/tokens`
 		);
-		expect(calls[1]?.[2]?.body).toBe(
-			JSON.stringify({ audience, fresh: false })
-		);
+		expect(calls[1]?.[2]?.body).toBe(JSON.stringify({ operation: "token" }));
 		expect(calls[1]?.[7]).toEqual(auth.apiToken);
 		expect(calls[1]?.[6]).toBe(signal);
 	});
@@ -279,7 +271,6 @@ describe("development issuance API transport", () => {
 		{ user_id: "bad" },
 		{ development_session_id: "../tokens" },
 		{ default_audience: "attacker" },
-		{ policy: "other" },
 		{ expires_at: now + 299 },
 		{ expires_at: now + 28801 },
 	])(
@@ -324,7 +315,7 @@ describe("local token profile", () => {
 		).toEqual({ token: token(), expiresAt: now + 300 });
 	});
 	it.for([120, 240])(
-		"accepts a server-cached token with the required remaining lifetime (age %i)",
+		"validates a received assertion within its original lifetime (age %i)",
 		(age, { expect }) => {
 			const expiresAt = now + 300 - age;
 			const cached = token({ iat: now - age, exp: expiresAt });
