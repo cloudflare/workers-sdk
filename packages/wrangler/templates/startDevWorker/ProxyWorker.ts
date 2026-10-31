@@ -15,6 +15,9 @@ interface Env {
 	PROXY_CONTROLLER: Fetcher;
 	PROXY_CONTROLLER_AUTH_SECRET: string;
 	DURABLE_OBJECT: DurableObjectNamespace;
+	// Set when the ProxyController can never reach this Worker, so requests
+	// fail with this message instead of queueing for a `play` that won't arrive.
+	UNSUPPORTED_RUNTIME_MESSAGE?: string;
 }
 
 // request.cf.hostMetadata is verbose to type using the workers-types Request -- this allows us to have Request correctly typed in this scope
@@ -56,6 +59,12 @@ export class ProxyWorker implements DurableObject {
 			// requests from ProxyController
 
 			return this.processProxyControllerRequest(request);
+		}
+
+		if (this.env.UNSUPPORTED_RUNTIME_MESSAGE) {
+			return new Response(this.env.UNSUPPORTED_RUNTIME_MESSAGE, {
+				status: 503,
+			});
 		}
 
 		// regular requests to be proxied

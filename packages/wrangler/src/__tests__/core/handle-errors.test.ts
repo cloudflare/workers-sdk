@@ -1,3 +1,4 @@
+import { AuthenticationError } from "@cloudflare/workers-auth/wrangler";
 import { APIError, ParseError } from "@cloudflare/workers-utils";
 import { Cloudflare } from "cloudflare";
 import { beforeEach, describe, it, vi } from "vitest";
@@ -263,6 +264,18 @@ describe("getErrorType", () => {
 	});
 
 	describe("Authentication errors", () => {
+		it("preserves the UserError telemetry type for account lookup failures", ({
+			expect,
+		}) => {
+			const error = new AuthenticationError(
+				"Not logged in.",
+				"no-credentials-non-interactive",
+				"cfetch auth login required"
+			);
+
+			expect(getErrorType(error)).toBe("UserError");
+		});
+
 		it("should return 'AuthenticationError' for code 10000 (expired/revoked token)", ({
 			expect,
 		}) => {

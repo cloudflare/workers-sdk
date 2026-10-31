@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import fs from "node:fs";
 import path from "node:path";
 import util from "node:util";
 import { compileModuleRules, testRegExps } from "miniflare";
@@ -34,9 +35,79 @@ import type {
 	WorkerResponse,
 } from "vitest/node";
 
+/**
+ * On a filesystem-cache hit, Vitest sends `{ cached: true, tmp }` instead of
+ * transformed `code`. Its worker then reads `tmp`, but workerd cannot access
+ * that host path. Read it in Node and remove `cached` and `tmp` so Vitest uses
+ * the supplied `code` instead of trying to read the file again.
+ */
+function inlineCachedModule(
+	module: unknown,
+	cacheContents: Map<string, string>
+): unknown {
+	if (
+		module === null ||
+		typeof module !== "object" ||
+		!("cached" in module) ||
+		module.cached !== true ||
+		!("tmp" in module) ||
+		typeof module.tmp !== "string"
+	) {
+		return module;
+	}
+
+	const { cached, tmp, ...result } = module;
+	let code = cacheContents.get(tmp);
+	if (code === undefined) {
+		code = fs.readFileSync(tmp, "utf8");
+		cacheContents.set(tmp, code);
+	}
+	return { ...result, code };
+}
+
+/**
+ * `fetch()` returns one module result; `fetchWarmModules()` returns a map of
+ * module IDs to results. Vitest checks the map before calling `fetch()`, so
+ * both paths need inlining. Reuse reads within this reply because aliases in
+ * the map can reference the same cache file.
+ */
+function inlineCachedModules(response: unknown): unknown {
+	const cacheContents = new Map<string, string>();
+	let inlined: unknown;
+	try {
+		inlined = inlineCachedModule(response, cacheContents);
+	} catch {
+		return response;
+	}
+	if (
+		inlined !== response ||
+		response === null ||
+		typeof response !== "object" ||
+		Array.isArray(response)
+	) {
+		return inlined;
+	}
+
+	let hasCachedModules = false;
+	const entries = Object.entries(response).flatMap(([specifier, module]) => {
+		try {
+			const inlinedModule = inlineCachedModule(module, cacheContents);
+			hasCachedModules ||= inlinedModule !== module;
+			return [[specifier, inlinedModule] as const];
+		} catch {
+			// If the cache file disappeared, omit this entry so Vitest falls back
+			// to `fetch()` for the module instead of using the stale snapshot path.
+			hasCachedModules = true;
+			return [];
+		}
+	});
+	return hasCachedModules ? Object.fromEntries(entries) : response;
+}
+
 export class CloudflarePoolWorker implements PoolWorker {
 	name = "cloudflare-pool";
 	private readonly debug = util.debuglog("vitest-plugin");
+	private readonly moduleFetchRequestIds = new Set<string>();
 	private mf: Miniflare | undefined;
 	private socket: WebSocket | undefined;
 	private parsedPoolOptions: WorkersPoolOptionsWithDefines | undefined;
@@ -113,6 +184,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 	async stop(): Promise<void> {
 		this.socket?.close();
 		this.socket = undefined;
+		this.moduleFetchRequestIds.clear();
 		// Disposal errors should not override the test result, but log them for
 		// diagnostics in case they indicate an underlying teardown issue.
 		await this.mf?.dispose().catch((err) => {
@@ -191,6 +263,26 @@ export class CloudflarePoolWorker implements PoolWorker {
 					},
 				},
 			};
+		}
+		// BiRPC marks calls with `t: "q"` and replies with `t: "s"`. Replies
+		// carry the original request ID (`i`) and return value (`r`), but no
+		// method name. Only rewrite replies to the module-fetch calls recorded
+		// in on("message"): unrelated RPC results can look like cached modules.
+		// Consume the ID even for failed replies (`e` without a result) so
+		// finished requests do not leave stale state.
+		// https://github.com/antfu-collective/birpc/blob/f5bb5a45b/src/index.ts#L202-L246
+		const rpcResponse = message as { t?: string; i?: string; r?: unknown };
+		if (
+			rpcResponse.t === "s" &&
+			typeof rpcResponse.i === "string" &&
+			this.moduleFetchRequestIds.delete(rpcResponse.i) &&
+			rpcResponse.r !== undefined
+		) {
+			const inlined = inlineCachedModules(rpcResponse.r);
+			if (inlined !== rpcResponse.r) {
+				const inlinedResponse = { ...message, r: inlined };
+				toSend = inlinedResponse;
+			}
 		}
 		this.socket.send(structuredSerializableStringify(toSend));
 	}
@@ -285,6 +377,20 @@ export class CloudflarePoolWorker implements PoolWorker {
 							})
 						);
 					}
+				}
+				// Track only calls forwarded to Vitest; fetches answered locally
+				// above never pass through send() and need no response adaptation.
+				if (
+					d &&
+					typeof d === "object" &&
+					"t" in d &&
+					d.t === "q" &&
+					"m" in d &&
+					(d.m === "fetch" || d.m === "fetchWarmModules") &&
+					"i" in d &&
+					typeof d.i === "string"
+				) {
+					this.moduleFetchRequestIds.add(d.i);
 				}
 				(callback as (response: WorkerResponse) => void)(d);
 			};

@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/remote-bindings",
-	"version": "0.0.47",
+	"version": "0.0.56",
 	"private": true,
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/remote-bindings#readme",
 	"bugs": {
@@ -41,6 +41,7 @@
 		"ws": "catalog:default"
 	},
 	"devDependencies": {
+		"@cloudflare/config": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/ws": "^8.5.13",

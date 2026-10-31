@@ -49,6 +49,8 @@ const std = mockConsoleMethods();
 describe("startDev", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		vi.stubEnv("TURBO_HASH", "");
+		vi.stubEnv("TURBO_IS_TUI", "");
 		logger.clearHistory();
 		mocks.configSet.mockResolvedValue(undefined);
 		mocks.fakeDevEnv.proxy.ready.promise = new Promise(() => {});

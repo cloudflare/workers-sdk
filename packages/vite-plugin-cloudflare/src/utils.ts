@@ -13,6 +13,8 @@ import * as vite from "vite";
 import { PROXY_SHARED_SECRET } from "./constants";
 import { warnIfQuickTunnelSseResponse } from "./plugins/tunnel";
 import type { PluginContext } from "./context";
+import type { ParsedInputSettingsConfig } from "@cloudflare/config";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type * as http from "node:http";
 
 export const debuglog = util.debuglog("@cloudflare:vite-plugin");
@@ -56,6 +58,12 @@ export type Optional<T, K extends keyof T> = Omit<T, K> & Pick<Partial<T>, K>;
 export type MaybePromise<T> = Promise<T> | T;
 
 export type Defined<T> = Exclude<T, undefined>;
+
+export function toApiComplianceRegion(
+	region: ParsedInputSettingsConfig["complianceRegion"]
+): ComplianceConfig["compliance_region"] {
+	return region === "fedramp-high" ? "fedramp_high" : region;
+}
 
 export function withTrailingSlash(path: string): string {
 	return path.endsWith("/") ? path : `${path}/`;
@@ -131,6 +139,27 @@ export function satisfiesMinimumViteVersion(minVersion: string): boolean {
 	return semverGte(viteVersion, minVersion);
 }
 
+/**
+ * Converts incoming request headers while preserving separate `Set-Cookie` values.
+ *
+ * @param req The incoming HTTP request
+ * @returns Fetch headers with the original cookie boundaries
+ */
+export function createHeadersForIncomingMessage(
+	req: http.IncomingMessage
+): Headers {
+	const headers = createHeaders(req);
+	const cookies = req.headers["set-cookie"];
+	if (cookies) {
+		// Upstream joins array entries with commas, which can also appear in Expires.
+		headers.delete("set-cookie");
+		for (const cookie of cookies) {
+			headers.append("set-cookie", cookie);
+		}
+	}
+	return headers;
+}
+
 export function createRequestForIncomingMessage(
 	req: vite.Connect.IncomingMessage,
 	res: http.ServerResponse,
@@ -142,7 +171,7 @@ export function createRequestForIncomingMessage(
 	});
 
 	const method = req.method ?? "GET";
-	const headers = createHeaders(req);
+	const headers = createHeadersForIncomingMessage(req);
 	const protocol =
 		options?.protocol ??
 		getScheme(req) ??

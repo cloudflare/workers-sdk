@@ -11,6 +11,14 @@ vi.mock("@cloudflare/workers-utils", async (importOriginal) => ({
 const ACCOUNT_ID = "some-account-id";
 const WORKER_NAME = "test-name";
 const WORKER_TAG = "a7e6fb77503c41d8a7f3113c6918f10c";
+const TEST_TRIGGER_GUIDANCE = {
+	queueCreateCommand: (queueName: string) =>
+		`test-cli queue create ${queueName}`,
+	workersDevConfigFieldName: "workersDev",
+	workersDevConfigAssignment: (value: boolean) => `workersDev: ${value}`,
+	previewUrlsConfigFieldName: "previewUrls",
+	previewUrlsConfigAssignment: (value: boolean) => `previewUrls: ${value}`,
+};
 
 describe("triggersDeploy Email Routing integration", () => {
 	let metadataRequests: number;
@@ -85,6 +93,7 @@ describe("triggersDeploy Email Routing integration", () => {
 		expect,
 	}) => {
 		await triggersDeploy({
+			...TEST_TRIGGER_GUIDANCE,
 			config: config(),
 			accountId: ACCOUNT_ID,
 			scriptName: WORKER_NAME,
@@ -104,6 +113,7 @@ describe("triggersDeploy Email Routing integration", () => {
 		expect,
 	}) => {
 		await triggersDeploy({
+			...TEST_TRIGGER_GUIDANCE,
 			config: config(),
 			accountId: ACCOUNT_ID,
 			scriptName: WORKER_NAME,
@@ -125,6 +135,7 @@ describe("triggersDeploy Email Routing integration", () => {
 
 		await expect(
 			triggersDeploy({
+				...TEST_TRIGGER_GUIDANCE,
 				config: config(),
 				accountId: ACCOUNT_ID,
 				scriptName: WORKER_NAME,
@@ -141,6 +152,7 @@ describe("triggersDeploy Email Routing integration", () => {
 	it("reconciles when another trigger deployment fails", async ({ expect }) => {
 		await expect(
 			triggersDeploy({
+				...TEST_TRIGGER_GUIDANCE,
 				config: config(),
 				accountId: ACCOUNT_ID,
 				scriptName: WORKER_NAME,
@@ -228,6 +240,7 @@ describe("triggersDeploy preflight", () => {
 		expect,
 	}) => {
 		await triggersDeploy({
+			...TEST_TRIGGER_GUIDANCE,
 			config: baseConfig({
 				workflows: [{ name: "workflow", class_name: "Workflow" }],
 				triggers: {
@@ -258,6 +271,7 @@ describe("triggersDeploy preflight", () => {
 	}) => {
 		await expect(
 			triggersDeploy({
+				...TEST_TRIGGER_GUIDANCE,
 				config: baseConfig({
 					triggers: {
 						events: [
@@ -289,6 +303,7 @@ describe("triggersDeploy preflight", () => {
 	}) => {
 		await expect(
 			triggersDeploy({
+				...TEST_TRIGGER_GUIDANCE,
 				config: baseConfig({
 					queues: {
 						producers: [{ binding: "QUEUE", queue: "missing-queue" }],
@@ -311,6 +326,7 @@ describe("triggersDeploy preflight", () => {
 
 	it("skips queue preflight when already validated", async ({ expect }) => {
 		await triggersDeploy({
+			...TEST_TRIGGER_GUIDANCE,
 			config: baseConfig({
 				queues: {
 					producers: [{ binding: "QUEUE", queue: "missing-queue" }],

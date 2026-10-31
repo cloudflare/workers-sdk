@@ -1,7 +1,7 @@
 import { describe, test } from "vitest";
 import { getJsonResponse } from "../../../__test-utils__";
 
-describe("zero-config mode (no wrangler config files)", async () => {
+describe("inline auxiliary Worker config", async () => {
 	test("entry worker returns a response", async ({ expect }) => {
 		const result = await getJsonResponse();
 		expect(result).toEqual({ name: "Worker C (no config file)" });

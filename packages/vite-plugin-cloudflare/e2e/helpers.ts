@@ -16,7 +16,6 @@ import {
 	onTestFinished,
 	vi,
 } from "vitest";
-import wranglerPackage from "../../wrangler/package.json";
 import vitePluginPackage from "../package.json";
 
 const debuglog = util.debuglog("vite-plugin:test");
@@ -62,7 +61,7 @@ export function seed(
 			errorOnExist: true,
 		});
 		debuglog("Fixture copied to " + projectPath);
-		await updateVitePluginAndWranglerVersion(projectPath, pm);
+		await updateVitePluginVersion(projectPath, pm);
 		debuglog("Fixing up replacements in seeded files");
 		await fixupReplacements(projectPath, replacements);
 		debuglog("Updated vite-plugin version in package.json");
@@ -192,7 +191,7 @@ function wrap(proc: childProcess.ChildProcess): Process {
 	return wrappedProc;
 }
 
-async function updateVitePluginAndWranglerVersion(
+async function updateVitePluginVersion(
 	projectPath: string,
 	pm: "pnpm" | "yarn" | "npm"
 ) {
@@ -203,10 +202,6 @@ async function updateVitePluginAndWranglerVersion(
 	for (const field of fields) {
 		if (pkg[field]?.["@cloudflare/vite-plugin"]) {
 			pkg[field]["@cloudflare/vite-plugin"] = vitePluginPackage.version;
-		}
-		// Some fixtures require the current version of wrangler to be installed
-		if (pkg[field]?.["wrangler"] === "*") {
-			pkg[field]["wrangler"] = wranglerPackage.version;
 		}
 	}
 	if (pm === "npm") {

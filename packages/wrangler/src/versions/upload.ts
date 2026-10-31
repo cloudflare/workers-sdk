@@ -105,7 +105,18 @@ export const versionsUploadCommand = createCommand({
 			const { assetUploadStats: uploadStats } = await versionsUpload(
 				props,
 				config,
-				buildResult
+				buildResult,
+				{
+					deployCommand: "wrangler deploy",
+					versionsUploadCommand: "wrangler versions upload",
+					versionsDeployCommand: "wrangler versions deploy",
+					triggersDeployCommand: "wrangler triggers deploy",
+					d1ListCommand: "wrangler d1 list",
+					d1DeleteCommand: "wrangler d1 delete <database-name>",
+					queueCreateCommand: (queueName) =>
+						`wrangler queues create ${queueName}`,
+					versionsSecretPutCommand: "wrangler versions secret put",
+				}
 			);
 			assetUploadStats = uploadStats;
 		} finally {

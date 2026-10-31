@@ -4,6 +4,8 @@ import {
 } from "@cloudflare/containers-shared";
 import { deploy } from "@cloudflare/deploy-helpers";
 import {
+	configFileName,
+	DEFAULT_COMPAT_DATE,
 	getDockerPath,
 	getDurableObjectContainerApps,
 	getWorkerNameFromProject,
@@ -34,6 +36,10 @@ import {
 import { experimentalNewConfigArg } from "../experimental-config/cli-flag";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import {
+	hasSuccessfulDelegatedDeployment,
+	recordSuccessfulDelegatedDeployment,
+} from "../pages/delegated-deploy-ownership";
 import { syncWorkersSite } from "../sites";
 import { detectAgent } from "../utils/detect-agent";
 import { getScriptName } from "../utils/getScriptName";
@@ -137,7 +143,18 @@ export async function runDeployCommandHandler(
 	{
 		config,
 		pagesToWorkersDelegation = false,
-	}: { config: Config; pagesToWorkersDelegation?: boolean }
+		autoConfigOutputDir,
+	}: {
+		config: Config;
+		pagesToWorkersDelegation?: boolean;
+		/**
+		 * Assets directory autoconfig must use for a static project instead of
+		 * detecting one. Set by the Pages-to-Workers delegation so the directory
+		 * passed to `wrangler pages deploy <directory>` is the one that gets
+		 * deployed.
+		 */
+		autoConfigOutputDir?: string;
+	}
 ): Promise<void> {
 	// Runs before autoconfig, which may write a config file, and so before any
 	// local or remote mutation. `--dry-run` is exempt: it uploads nothing, so
@@ -164,8 +181,8 @@ export async function runDeployCommandHandler(
 	//
 	// We guard both agent-generated names and the Pages-to-Workers delegation.
 	// In either case an existing Worker with the same name may be a different
-	// resource that we must not clobber. Repeat deploys are unaffected because
-	// the first one writes a config file (so `configPath` is then set).
+	// resource that we must not clobber. Repeat deploys can prove ownership using
+	// a generated config or the record of a successful deployment checked below.
 	//
 	// Plain `wrangler deploy` is NOT guarded, even in CI with an autoconfigured
 	// name: autoconfigured projects are routinely redeployed in CI (e.g. when the
@@ -179,11 +196,31 @@ export async function runDeployCommandHandler(
 	// --- Step 0. Auto-config --- //
 	const autoConfigResult = await maybeRunAutoConfig(args, config, {
 		skipConfirmations: pagesToWorkersDelegation || detectedAgent.isAgent,
+		outputDir: autoConfigOutputDir,
 	});
 	if (autoConfigResult.aborted) {
 		return;
 	}
 	config = autoConfigResult.config;
+
+	// Autoconfig may leave no Wrangler config, for example for an existing Vite
+	// deployment or a dry run. Apply the delegated assets and compatibility date
+	// for this invocation without writing configuration.
+	const usesDelegatedAssets =
+		pagesToWorkersDelegation &&
+		autoConfigOutputDir !== undefined &&
+		!config.configPath &&
+		!config.pages_build_output_dir;
+	if (usesDelegatedAssets) {
+		args = {
+			...args,
+			assets: args.assets ?? autoConfigOutputDir,
+			compatibilityDate:
+				args.compatibilityDate ??
+				config.compatibility_date ??
+				DEFAULT_COMPAT_DATE,
+		};
+	}
 
 	// Interatively handle missing/incorrect --assets, --script, --name, --compatibility-date
 	args = await promptForMissingDeployConfig(args, config, {
@@ -211,12 +248,29 @@ export async function runDeployCommandHandler(
 
 	// Merge CLI args with config into props for building and deploying
 	const { props, buildProps } = await mergeDeployConfigArgs(args, config);
-	props.failIfWorkerNameTaken = nameOwnershipUnverified;
+	const delegatedDeploymentTarget =
+		usesDelegatedAssets && !props.dryRun && props.accountId && props.name
+			? {
+					projectPath: props.entry.projectRoot,
+					accountId: props.accountId,
+					workerName: props.name,
+				}
+			: undefined;
 	props.autoRegisterWorkersDevSubdomain = detectedAgent.isAgent
 		? getWorkerNameFromProject(process.cwd())
 		: undefined;
 
 	try {
+		props.failIfWorkerNameTaken =
+			nameOwnershipUnverified &&
+			!(
+				delegatedDeploymentTarget &&
+				(await hasSuccessfulDelegatedDeployment(
+					delegatedDeploymentTarget,
+					config
+				))
+			);
+
 		// Derive workerNameOverridden by comparing pre-merge name with post-merge name
 		const preMergeName = getScriptName(args, config);
 		props.workerNameOverridden =
@@ -244,14 +298,35 @@ export async function runDeployCommandHandler(
 			await fillOpenAPIConfiguration(config, containersScope);
 		}
 
-		const { sourceMapSize, assetUploadStats } = await deploy(
+		const { sourceMapSize, assetUploadStats, versionId } = await deploy(
 			props,
 			config,
 			buildResult,
 			{
+				deployCommand: "wrangler deploy",
+				versionsDeployCommand: "wrangler versions deploy",
+				d1ListCommand: "wrangler d1 list",
+				d1DeleteCommand: "wrangler d1 delete <database-name>",
+				queueCreateCommand: (queueName) =>
+					`wrangler queues create ${queueName}`,
+				secretPutCommand: "wrangler secret put",
+				workersDevConfigFieldName: "workers_dev",
+				workersDevConfigAssignment: (value) => `workers_dev = ${value}`,
+				previewUrlsConfigFieldName: "preview_urls",
+				previewUrlsConfigAssignment: (value) => `preview_urls = ${value}`,
+				configFileName: configFileName(
+					config.configPath,
+					config.userConfigPath
+				),
+				observabilityTargetPercentageField: "target_instance_percentage",
+				observabilityTargetCountField: "target_instance_count",
 				syncWorkersSite,
 			}
 		);
+
+		if (delegatedDeploymentTarget && !props.dryRun && versionId) {
+			recordSuccessfulDelegatedDeployment(delegatedDeploymentTarget, versionId);
+		}
 
 		metrics.sendMetricsEvent(
 			"deploy worker script",

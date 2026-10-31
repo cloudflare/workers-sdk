@@ -20,7 +20,10 @@ class NoDefaultValueProvided extends UserError {
 	}
 }
 
-export function createRemoteBindingsAuth(logger: RemoteBindingsLogger) {
+export function createRemoteBindingsAuth(
+	logger: RemoteBindingsLogger,
+	useCfAuth = "CLOUDFLARE_CF_AUTH" in process.env
+) {
 	const context = {
 		logger,
 		userAgent: `remote-bindings/${packageVersion}`,
@@ -56,7 +59,6 @@ export function createRemoteBindingsAuth(logger: RemoteBindingsLogger) {
 		isNoDefaultValueProvidedError: (error: unknown) =>
 			error instanceof NoDefaultValueProvided,
 	};
-	const useCfAuth = "CLOUDFLARE_CF_AUTH" in process.env;
 	return {
 		auth: useCfAuth ? createCfAuth(context) : createWranglerAuth(context),
 		useCfAuth,
@@ -99,9 +101,10 @@ export function getRemoteBindingsAuthHook(
 export function getDevelopmentOidcAuthHook(
 	accountId: Config["account_id"] | undefined,
 	profileDir: string | undefined,
-	logger: RemoteBindingsLogger
+	logger: RemoteBindingsLogger,
+	cfAuth?: boolean
 ): () => Promise<CfAccount> {
-	const { auth, useCfAuth } = createRemoteBindingsAuth(logger);
+	const { auth, useCfAuth } = createRemoteBindingsAuth(logger, cfAuth);
 	const profile = selectDevelopmentProfile(auth, useCfAuth, profileDir, logger);
 	return async () => {
 		const token = await auth.getOAuthTokenFromLocalState();

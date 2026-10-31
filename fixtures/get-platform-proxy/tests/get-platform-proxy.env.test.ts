@@ -10,6 +10,13 @@ import type {
 	KVNamespace,
 	Workflow,
 } from "@cloudflare/workers-types";
+import type { MatchImageSnapshotOptions } from "jest-image-snapshot";
+
+declare module "vitest" {
+	interface Matchers<R> {
+		toMatchImageSnapshot(options?: MatchImageSnapshotOptions): R;
+	}
+}
 
 type Env = {
 	MY_VAR: string;

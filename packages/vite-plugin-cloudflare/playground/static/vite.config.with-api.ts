@@ -4,7 +4,17 @@ import { defineConfig } from "vite";
 export default defineConfig({
 	plugins: [
 		cloudflare({
-			configPath: "./wrangler.with-api.jsonc",
+			types: { includeRuntime: false },
+			config(loadedConfig) {
+				return {
+					...loadedConfig,
+					worker: {
+						...loadedConfig.worker,
+						name: "static-with-api",
+						entrypoint: "./api/index.ts",
+					},
+				};
+			},
 			inspectorPort: false,
 			persistState: false,
 		}),

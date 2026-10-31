@@ -6,7 +6,7 @@ Vite plugin for Cloudflare Workers development. Exports `cloudflare()` plugin fa
 
 ## STRUCTURE
 
-- `src/index.ts` — Plugin factory (uses top-level `await` for `assertWranglerVersion()`)
+- `src/index.ts` — Plugin factory
 - `src/cf-vite.ts` — `cf-vite` delegate binary entry (see below)
 - `bin/cf-vite` — shebang shim that dynamic-imports `dist/cf-vite.mjs`
 - `src/workers/` — 4 internal worker entries: `asset-worker`, `router-worker`, `runner-worker`, `vite-proxy-worker`
@@ -48,18 +48,16 @@ contract so the parent can drive either impl interchangeably.
   a build and exit `2`). Preview build context is supplied through
   `CLOUDFLARE_PREVIEW_BUILD`, which also works when a framework runs Vite as
   part of its own build command.
-- **Build Output Specification forced for every verb.** `main()` sets
-  `CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT` unconditionally (before Vite
-  loads the user's config), enabling `experimental.newConfig` +
-  `experimental.newConfig.cfBuildOutput` (overriding plugin config),
-  which requires a `cloudflare.config.ts` at the project root. The env
-  var name and read logic live in `build-output-env.ts`
-  (`FORCE_BUILD_OUTPUT_ENV_VAR` / `isForcedBuildOutput()`), shared by the
-  two read sites that MUST agree: `index.ts` (selects the build-output
-  plugin at construction) and `resolvePluginConfig`. Both read directly
-  from `process.env` (NOT Vite's `loadEnv`), since `index.ts` runs before
-  Vite resolves a root/mode and this is an internal bridge, not a
-  `.env`-file knob.
+- **Build Output Specification is the core build pipeline.** Every build emits
+  Build Output; there is no feature flag or legacy output-config path. Preview
+  reads Workers and Containers exclusively from that output. The v2 plugin
+  always installs its build-output plugin, so `cf-vite` does not need the
+  internal force-build-output flag used by v1.
+- **Caller identity.** `main()` sets `CLOUDFLARE_VITE_CLI_DISPLAY_NAME=cf`
+  before Vite loads the user's config. `resolvePluginConfig` reads this through
+  `getCliDisplayName()` so shared services can use `cf` in actionable messages;
+  direct Vite plugin use defaults to `Wrangler`. This is an internal bridge,
+  not a `.env`-file knob.
 - **`dev`** `cf-vite dev` boots Vite via `createServer()`
   against the user's own `vite.config.ts` (which must include
   `cloudflare()`). Plugin-owned flags are bridged via env vars the plugin
@@ -79,15 +77,13 @@ contract so the parent can drive either impl interchangeably.
 
 ## CONVENTIONS
 
-- No named imports from `"wrangler"` — must use `import * as wrangler from "wrangler"` (namespace import only, enforced by eslint)
-- Top-level `await` in entry — only possible because ESM-only
 - Playground directory `worker-♫/` has unicode in name (intentional)
 
 ## TESTING
 
 - Unit tests: `.spec.ts` in `__tests__/`
 - E2E tests: `.test.ts` in `e2e/`, own vitest config
-- Playground tests: Playwright-based, tested across Vite 6/7/8 in CI
+- Playground tests: Playwright-based, tested across Vite 7/8 in CI
 - Playground request helpers (`playground/__test-utils__/responses.ts`):
   - `getTextResponse()` / `getJsonResponse()` issue a request with browser
     navigation headers (`Sec-Fetch-Mode: navigate` et al), which the asset and

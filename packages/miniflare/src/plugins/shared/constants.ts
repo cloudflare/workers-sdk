@@ -140,11 +140,15 @@ export function remoteProxyClientWorker(
 ) {
 	return {
 		compatibilityDate: "2025-01-01",
-		// Raw TCP bindings (e.g. VPC networks) tunnel `binding.connect()` traffic
-		// through this worker's inbound `connect` handler, which requires the
-		// `experimental` compatibility flag (workerd#6059). Other bindings only
-		// proxy HTTP/JSRPC and must not opt in.
-		...(options?.rawTcp ? { compatibilityFlags: ["experimental"] } : {}),
+		// `enhanced_error_serialization` keeps custom error names and properties
+		// (for example Artifacts `code` and `numericCode`) when this worker rethrows
+		// remote errors to the user Worker. Raw TCP bindings (e.g. VPC networks)
+		// tunnel `binding.connect()` traffic through this worker's inbound `connect`
+		// handler, which also requires the `experimental` compatibility flag
+		// (workerd#6059). Other bindings only proxy HTTP/JSRPC and must not opt in.
+		compatibilityFlags: options?.rawTcp
+			? ["experimental", "enhanced_error_serialization"]
+			: ["enhanced_error_serialization"],
 		modules: [
 			{
 				name: "index.worker.js",

@@ -3,7 +3,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
 	environments: {
-		worker: {
+		ssr: {
 			build: {
 				assetsInlineLimit: 0,
 			},
@@ -11,7 +11,17 @@ export default defineConfig({
 	},
 	plugins: [
 		cloudflare({
-			configPath: "./wrangler.public-dir-only.jsonc",
+			types: { includeRuntime: false },
+			config(loadedConfig) {
+				return {
+					...loadedConfig,
+					worker: {
+						...loadedConfig.worker,
+						entrypoint: undefined,
+						name: "public-only",
+					},
+				};
+			},
 			inspectorPort: false,
 			persistState: false,
 		}),

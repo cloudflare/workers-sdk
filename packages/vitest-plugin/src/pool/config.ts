@@ -149,6 +149,11 @@ export type WorkersPoolOptionsWithDefines = WorkersPoolOptions & {
 		 * Workflow bindings are written against this name.
 		 */
 		workerName: string | undefined;
+		/**
+		 * The effective Worker name after selecting a Wrangler environment.
+		 * Durable Object script names target this name without environment rewriting.
+		 */
+		effectiveWorkerName: string | undefined;
 	};
 };
 
@@ -419,6 +424,7 @@ async function parseCustomPoolOptions(
 			path: configPath,
 			newConfig: newConfig !== undefined,
 			workerName: config.topLevelName,
+			effectiveWorkerName: config.name,
 		};
 
 		// Already imported above for a Wrangler config; the module registry makes

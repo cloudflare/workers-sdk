@@ -38,9 +38,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	assets: "local-only",
 	unsafe_hello_world: "local-only",
 	durable_object_namespace: "local-only",
-	hyperdrive: "local-only",
 	fetcher: "local-only",
-	analytics_engine: "local-only",
 	secrets_store_secret: "local-only",
 	identity: "local-only",
 	ratelimit: "local-only",
@@ -49,6 +47,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	kv_namespace: "local-and-remote",
 	r2_bucket: "local-and-remote",
 	d1: "local-and-remote",
+	hyperdrive: "local-and-remote",
 	workflow: "local-only",
 	browser: "local-and-remote",
 	images: "local-and-remote",
@@ -59,6 +58,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	// TODO: Miniflare currently ignores `remote: true` on queues, tracked in #13727.
 	queue: "local-and-remote",
 	flagship: "local-and-remote",
+	analytics_engine: "local-and-remote",
 
 	vectorize: "remote",
 	mtls_certificate: "remote",

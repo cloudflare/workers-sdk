@@ -1,5 +1,13 @@
 # workers-playground
 
+## 0.4.5
+
+### Patch Changes
+
+- [#16323](https://github.com/cloudflare/workers-sdk/pull/16323) [`3fa1e33`](https://github.com/cloudflare/workers-sdk/commit/3fa1e334e0a2134eb173d028ebd8053f549fd103) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Migrate Workers Playground to use `@cloudflare/vite-plugin` v2 beta and `cf`
+
+  A single `cloudflare.config.ts` file is now used for development and builds. `cf` is used in place of Wrangler for deployments.
+
 ## 0.4.4
 
 ### Patch Changes

@@ -2,6 +2,166 @@
 
 import * as z from "miniflare:zod";
 
+export const zFlagshipApiMessage = z.object({
+	message: z.string(),
+});
+
+export const zFlagshipError = z.object({
+	errors: z.array(zFlagshipApiMessage),
+	messages: z.array(zFlagshipApiMessage),
+	result: z.unknown().nullable(),
+	success: z.boolean(),
+});
+
+export const zFlagshipEvaluationError = zFlagshipError.and(
+	z.object({
+		errorCode: z.enum([
+			"PROVIDER_NOT_READY",
+			"FLAG_NOT_FOUND",
+			"PARSE_ERROR",
+			"TYPE_MISMATCH",
+			"TARGETING_KEY_MISSING",
+			"INVALID_CONTEXT",
+			"GENERAL",
+		]),
+	})
+);
+
+export const zFlagshipJsonValue = z
+	.union([
+		z.string(),
+		z.number(),
+		z.boolean(),
+		z.record(
+			z.string(),
+			z.lazy((): any => zFlagshipJsonValue)
+		),
+		z.array(z.lazy((): any => zFlagshipJsonValue)),
+	])
+	.nullable();
+
+export const zFlagshipEvaluationResult = z.object({
+	flagKey: z.string(),
+	metadata: z
+		.record(z.string(), z.union([z.boolean(), z.string(), z.number()]))
+		.optional(),
+	reason: z.enum(["STATIC", "TARGETING_MATCH", "DEFAULT", "DISABLED", "SPLIT"]),
+	value: zFlagshipJsonValue.optional(),
+	variant: z.string(),
+});
+
+export const zFlagshipDeleteFlagResult = z.object({
+	key: z.string(),
+});
+
+export const zFlagshipBaseCondition = z.object({
+	attribute: z.string().min(1).max(64),
+	operator: z.enum([
+		"equals",
+		"not_equals",
+		"greater_than",
+		"less_than",
+		"greater_than_or_equals",
+		"less_than_or_equals",
+		"contains",
+		"starts_with",
+		"ends_with",
+		"in",
+		"not_in",
+		"has",
+		"not_has",
+	]),
+	value: zFlagshipJsonValue,
+});
+
+export const zFlagshipLogicalCondition4 = z.object({
+	clauses: z.array(zFlagshipBaseCondition).min(1),
+	logical_operator: z.enum(["AND", "OR"]),
+});
+
+export const zFlagshipCondition4 = z.union([
+	zFlagshipBaseCondition,
+	zFlagshipLogicalCondition4,
+]);
+
+export const zFlagshipLogicalCondition3 = z.object({
+	clauses: z.array(zFlagshipCondition4).min(1),
+	logical_operator: z.enum(["AND", "OR"]),
+});
+
+export const zFlagshipCondition3 = z.union([
+	zFlagshipBaseCondition,
+	zFlagshipLogicalCondition3,
+]);
+
+export const zFlagshipLogicalCondition2 = z.object({
+	clauses: z.array(zFlagshipCondition3).min(1),
+	logical_operator: z.enum(["AND", "OR"]),
+});
+
+export const zFlagshipCondition2 = z.union([
+	zFlagshipBaseCondition,
+	zFlagshipLogicalCondition2,
+]);
+
+export const zFlagshipLogicalCondition1 = z.object({
+	clauses: z.array(zFlagshipCondition2).min(1),
+	logical_operator: z.enum(["AND", "OR"]),
+});
+
+export const zFlagshipCondition1 = z.union([
+	zFlagshipBaseCondition,
+	zFlagshipLogicalCondition1,
+]);
+
+export const zFlagshipLogicalCondition = z.object({
+	clauses: z.array(zFlagshipCondition1).min(1),
+	logical_operator: z.enum(["AND", "OR"]),
+});
+
+export const zFlagshipCondition = z.union([
+	zFlagshipBaseCondition,
+	zFlagshipLogicalCondition,
+]);
+
+export const zFlagshipRule = z.object({
+	conditions: z.array(zFlagshipCondition),
+	priority: z.int().gte(1),
+	rollout: z
+		.object({
+			attribute: z.string().min(1).max(64).optional(),
+			percentage: z.number().gte(0).lte(100),
+		})
+		.optional(),
+	serve_variation: z.string().min(1),
+});
+
+export const zFlagshipFlag = z.object({
+	default_variation: z.string().min(1),
+	description: z.string().max(512).nullish(),
+	enabled: z.boolean(),
+	key: z
+		.string()
+		.min(1)
+		.max(64)
+		.regex(/^[a-zA-Z0-9_-]+$/),
+	metadata: z
+		.record(z.string(), z.union([z.boolean(), z.string(), z.number()]))
+		.optional(),
+	rules: z.array(zFlagshipRule),
+	type: z.enum(["boolean", "string", "number", "json"]),
+	updated_at: z.string().optional(),
+	updated_by: z.string().optional(),
+	variations: z.record(z.string(), zFlagshipJsonValue),
+});
+
+export const zFlagshipResultInfo = z.object({
+	count: z.int().gte(0),
+	cursor: z.string().nullable(),
+});
+
+export const zFlagshipFlagsPage = z.array(zFlagshipFlag);
+
 export const zR2Messages = z.array(z.string());
 
 export const zR2Errors = z.array(
@@ -42,11 +202,13 @@ export const zR2Bucket = z.object({
 	name: zR2BucketName.optional(),
 });
 
-export const zR2ResultInfo = z.record(z.string(), z.unknown());
+export const zR2ResultInfo = z.object({
+	total_count: z.int().gte(0),
+});
 
 export const zR2V4ResponseList = zR2V4Response.and(
 	z.object({
-		result_info: zR2ResultInfo.optional(),
+		result_info: zR2ResultInfo,
 	})
 );
 
@@ -240,8 +402,8 @@ export const zWorkersKvBulkGetResultWithMetadata = z.object({
 			z
 				.object({
 					expiration: zWorkersKvExpiration.optional(),
-					metadata: zWorkersKvAny.and(z.unknown()),
-					value: zWorkersKvAny.and(z.unknown()),
+					metadata: zWorkersKvAny,
+					value: zWorkersKvAny,
 				})
 				.nullable()
 		)
@@ -276,10 +438,13 @@ export const zWorkersKvBulkResult = z.object({
 	unsuccessful_keys: z.array(z.string()).optional(),
 });
 
-export const zWorkersKvListMetadata = zWorkersKvAny.and(z.unknown());
+/**
+ * Arbitrary JSON that is associated with a key.
+ */
+export const zWorkersKvListMetadata = zWorkersKvAny;
 
 /**
- * Expires the key after a number of seconds. Must be at least 60.
+ * Number of seconds until the key expires. Must be at least 60. Takes precedence over `expiration` when both are specified.
  */
 export const zWorkersKvExpirationTtl = z.number().gte(60);
 
@@ -316,7 +481,10 @@ export const zWorkersKvApiResponseCommonNoResult =
 		})
 	);
 
-export const zWorkersKvMetadata = zWorkersKvAny.and(z.unknown());
+/**
+ * Associates arbitrary JSON data with a key/value pair.
+ */
+export const zWorkersKvMetadata = zWorkersKvAny;
 
 /**
  * A byte sequence to be stored, up to 25 MiB in length.
@@ -329,7 +497,7 @@ export const zWorkersKvValue = z.union([z.string(), z.string()]);
 export const zWorkersKvKeyName = z.string().max(512);
 
 /**
- * Opaque token indicating the position from which to continue when requesting the next set of records if the amount of list results was limited by the limit parameter. A valid value for the cursor can be obtained from the cursors object in the result_info structure.
+ * Opaque pagination token returned in `result_info.cursor`. Pass it unchanged as the `cursor` query parameter to request the next page of keys.
  */
 export const zWorkersKvCursor = z.string();
 
@@ -348,7 +516,7 @@ export const zWorkersKvKey = z.object({
 });
 
 /**
- * Namespace identifier tag.
+ * ID of the Workers KV namespace.
  */
 export const zWorkersKvNamespaceIdentifier = z.string().max(32).readonly();
 
@@ -360,12 +528,18 @@ export const zWorkersKvApiResponseCommonFailure = z.object({
 });
 
 /**
- * A human-readable string name for a Namespace.
+ * Human-readable string name for a Workers KV namespace.
  */
 export const zWorkersKvNamespaceTitle = z.string().max(512);
 
+/**
+ * The mode of the Workers KV namespace. Specify `instant` when creating a namespace to create a KV Instant namespace. Omit this field when creating a namespace to create a classic namespace. Currently, `instant` is the only supported explicit value.
+ */
+export const zWorkersKvNamespaceMode = z.enum(["instant"]);
+
 export const zWorkersKvNamespace = z.object({
 	id: zWorkersKvNamespaceIdentifier,
+	mode: zWorkersKvNamespaceMode.optional(),
 	title: zWorkersKvNamespaceTitle,
 });
 
@@ -392,42 +566,6 @@ export const zLocalExplorerScheduledResult = z.object({
 export const zFlagshipApp = z.object({
 	id: z.string(),
 	bindings: z.array(z.string()),
-});
-
-export const zFlagshipBaseCondition = z.object({
-	attribute: z.string(),
-	operator: z.enum([
-		"equals",
-		"not_equals",
-		"greater_than",
-		"less_than",
-		"greater_than_or_equals",
-		"less_than_or_equals",
-		"contains",
-		"starts_with",
-		"ends_with",
-		"in",
-		"not_in",
-		"has",
-		"not_has",
-	]),
-	value: z.unknown(),
-});
-
-export const zFlagshipEvaluation = z.object({
-	flagKey: z.string(),
-	value: z.unknown(),
-	variant: z.string(),
-	reason: z.enum([
-		"STATIC",
-		"TARGETING_MATCH",
-		"DEFAULT",
-		"DISABLED",
-		"SPLIT",
-		"ERROR",
-	]),
-	errorCode: z.string().optional(),
-	errorMessage: z.string().optional(),
 });
 
 export const zR2Object = z.object({
@@ -782,7 +920,18 @@ export const zEmailSendingDetail = z.object({
 	rawBase64: z.string().optional(),
 });
 
-export const zR2ResultInfoWritable = z.record(z.string(), z.unknown());
+export const zFlagshipJsonValueWritable = z
+	.union([
+		z.string(),
+		z.number(),
+		z.boolean(),
+		z.record(
+			z.string(),
+			z.lazy((): any => zFlagshipJsonValueWritable)
+		),
+		z.array(z.lazy((): any => zFlagshipJsonValueWritable)),
+	])
+	.nullable();
 
 export const zWorkersNamespaceWritable = z.object({
 	class: z.string().optional(),
@@ -812,50 +961,31 @@ export const zWorkersKvBulkDeleteWritable = z
 	.array(zWorkersKvKeyNameBulk)
 	.max(10000);
 
-export const zWorkersKvListMetadataWritable = zWorkersKvAnyWritable.and(
-	z.unknown()
-);
+/**
+ * Arbitrary JSON that is associated with a key.
+ */
+export const zWorkersKvListMetadataWritable = zWorkersKvAnyWritable;
 
-export const zWorkersKvMetadataWritable = zWorkersKvAnyWritable.and(
-	z.unknown()
-);
+/**
+ * Associates arbitrary JSON data with a key/value pair.
+ */
+export const zWorkersKvMetadataWritable = zWorkersKvAnyWritable;
 
 export const zWorkersKvNamespaceWritable = z.object({
+	mode: zWorkersKvNamespaceMode.optional(),
 	title: zWorkersKvNamespaceTitle,
 });
 
-export const zFlagshipLogicalCondition = z.object({
-	logical_operator: z.enum(["AND", "OR"]),
-	clauses: z.array(z.lazy((): any => zFlagshipCondition)),
-});
-
-export const zFlagshipCondition = z.union([
-	zFlagshipBaseCondition,
-	zFlagshipLogicalCondition,
+/**
+ * Jurisdiction where objects in this bucket are guaranteed to be stored.
+ */
+export const zR2CfR2Jurisdiction = z.enum([
+	"default",
+	"eu",
+	"us",
+	"fedramp",
+	"fedramp-high",
 ]);
-
-export const zFlagshipRule = z.object({
-	priority: z.int(),
-	conditions: z.array(zFlagshipCondition),
-	serve_variation: z.string(),
-	rollout: z
-		.object({
-			percentage: z.number().gte(0).lte(100),
-			attribute: z.string().optional(),
-		})
-		.optional(),
-});
-
-export const zFlagshipFlag = z.object({
-	key: z.string(),
-	type: z.enum(["boolean", "string", "number", "json"]),
-	description: z.string().nullish(),
-	enabled: z.boolean(),
-	default_variation: z.string(),
-	variations: z.record(z.string(), z.unknown()),
-	rules: z.array(zFlagshipRule),
-	updated_at: z.string(),
-});
 
 export const zWorkersKvNamespaceListNamespacesData = z.object({
 	body: z.never().optional(),
@@ -904,7 +1034,7 @@ export const zWorkersKvNamespaceListANamespaceSKeysResponse =
 	);
 
 export const zWorkersKvNamespaceDeleteKeyValuePairData = z.object({
-	body: z.unknown(),
+	body: z.never().optional(),
 	path: z.object({
 		key_name: zWorkersKvKeyName,
 		namespace_id: zWorkersKvNamespaceIdentifier,
@@ -1174,6 +1304,13 @@ export const zR2ListBucketsData = z.object({
 	body: z.never().optional(),
 	path: z.never().optional(),
 	query: z.never().optional(),
+	headers: z
+		.object({
+			"cf-r2-jurisdiction": z
+				.enum(["default", "eu", "us", "fedramp", "fedramp-high"])
+				.optional(),
+		})
+		.optional(),
 });
 
 /**
@@ -1183,7 +1320,7 @@ export const zR2ListBucketsResponse = zR2V4ResponseList.and(
 	z.object({
 		result: z
 			.object({
-				buckets: z.array(zR2Bucket).optional(),
+				buckets: z.array(zR2Bucket),
 			})
 			.optional(),
 	})
@@ -1195,6 +1332,13 @@ export const zR2GetBucketData = z.object({
 		bucket_name: zR2BucketName,
 	}),
 	query: z.never().optional(),
+	headers: z
+		.object({
+			"cf-r2-jurisdiction": z
+				.enum(["default", "eu", "us", "fedramp", "fedramp-high"])
+				.optional(),
+		})
+		.optional(),
 });
 
 /**
@@ -1205,6 +1349,248 @@ export const zR2GetBucketResponse = zR2V4Response.and(
 		result: zR2Bucket.optional(),
 	})
 );
+
+export const zFlagshipListFlagsData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		app_id: z.string(),
+	}),
+	query: z
+		.object({
+			limit: z.int().gte(1).lte(200).optional(),
+			cursor: z.string().optional(),
+		})
+		.optional(),
+});
+
+/**
+ * Paginated list of flags.
+ */
+export const zFlagshipListFlagsResponse = z.object({
+	errors: z.array(
+		z.object({
+			message: z.string(),
+		})
+	),
+	messages: z.array(
+		z.object({
+			message: z.string(),
+		})
+	),
+	result: zFlagshipFlagsPage,
+	result_info: zFlagshipResultInfo,
+	success: z.boolean(),
+});
+
+export const zFlagshipCreateFlagData = z.object({
+	body: z.object({
+		default_variation: z.string().min(1),
+		description: z.string().max(512).nullish(),
+		enabled: z.boolean(),
+		key: z
+			.string()
+			.min(1)
+			.max(64)
+			.regex(/^[a-zA-Z0-9_-]+$/),
+		metadata: z
+			.record(z.string(), z.union([z.boolean(), z.string(), z.number()]))
+			.nullish(),
+		rules: z.array(zFlagshipRule),
+		type: z.enum(["boolean", "string", "number", "json"]).optional(),
+		variations: z.record(z.string(), zFlagshipJsonValueWritable),
+	}),
+	path: z.object({
+		app_id: z.string(),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Flag created.
+ */
+export const zFlagshipCreateFlagResponse = z.object({
+	errors: z.array(
+		z.object({
+			message: z.string(),
+		})
+	),
+	messages: z.array(
+		z.object({
+			message: z.string(),
+		})
+	),
+	result: zFlagshipFlag,
+	success: z.boolean(),
+});
+
+export const zFlagshipDeleteFlagData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		app_id: z.string(),
+		flag_key: z.string(),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Flag deleted.
+ */
+export const zFlagshipDeleteFlagResponse = z.object({
+	errors: z.array(
+		z.object({
+			message: z.string(),
+		})
+	),
+	messages: z.array(
+		z.object({
+			message: z.string(),
+		})
+	),
+	result: zFlagshipDeleteFlagResult,
+	success: z.boolean(),
+});
+
+export const zFlagshipGetFlagData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		app_id: z.string(),
+		flag_key: z.string(),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Flag details.
+ */
+export const zFlagshipGetFlagResponse = z.object({
+	errors: z.array(
+		z.object({
+			message: z.string(),
+		})
+	),
+	messages: z.array(
+		z.object({
+			message: z.string(),
+		})
+	),
+	result: zFlagshipFlag,
+	success: z.boolean(),
+});
+
+export const zFlagshipPatchFlagData = z.object({
+	body: z.object({
+		default_variation: z.string().min(1).optional(),
+		description: z.string().max(512).nullish(),
+		enabled: z.boolean().optional(),
+		metadata: z
+			.record(z.string(), z.union([z.boolean(), z.string(), z.number()]))
+			.nullish(),
+	}),
+	path: z.object({
+		app_id: z.string(),
+		flag_key: z.string(),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Updated flag.
+ */
+export const zFlagshipPatchFlagResponse = z.object({
+	errors: z.array(
+		z.object({
+			message: z.string(),
+		})
+	),
+	messages: z.array(
+		z.object({
+			message: z.string(),
+		})
+	),
+	result: zFlagshipFlag,
+	success: z.boolean(),
+});
+
+export const zFlagshipUpdateFlagData = z.object({
+	body: z.object({
+		default_variation: z.string().min(1),
+		description: z.string().max(512).nullish(),
+		enabled: z.boolean(),
+		key: z
+			.string()
+			.min(1)
+			.max(64)
+			.regex(/^[a-zA-Z0-9_-]+$/),
+		metadata: z
+			.record(z.string(), z.union([z.boolean(), z.string(), z.number()]))
+			.nullish(),
+		rules: z.array(zFlagshipRule),
+		type: z.enum(["boolean", "string", "number", "json"]).optional(),
+		variations: z.record(z.string(), zFlagshipJsonValueWritable),
+	}),
+	path: z.object({
+		app_id: z.string(),
+		flag_key: z.string(),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Updated flag.
+ */
+export const zFlagshipUpdateFlagResponse = z.object({
+	errors: z.array(
+		z.object({
+			message: z.string(),
+		})
+	),
+	messages: z.array(
+		z.object({
+			message: z.string(),
+		})
+	),
+	result: zFlagshipFlag,
+	success: z.boolean(),
+});
+
+export const zFlagshipEvaluateFlagData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		app_id: z.string(),
+	}),
+	query: z.object({
+		flagKey: z.string(),
+		targetingKey: z.string().optional(),
+	}),
+});
+
+/**
+ * Flag evaluation result.
+ */
+export const zFlagshipEvaluateFlagResponse = zFlagshipEvaluationResult;
+
+export const zFlagshipEvaluateFlagPostData = z.object({
+	body: z.object({
+		context: z
+			.record(z.string(), zFlagshipJsonValueWritable)
+			.optional()
+			.default({}),
+		flagKey: z
+			.string()
+			.min(1)
+			.max(64)
+			.regex(/^[a-zA-Z0-9_-]+$/),
+	}),
+	path: z.object({
+		app_id: z.string(),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Flag evaluation result.
+ */
+export const zFlagshipEvaluateFlagPostResponse = zFlagshipEvaluationResult;
 
 export const zR2BucketDeleteObjectsData = z.object({
 	body: z.array(z.string()),
@@ -1776,132 +2162,5 @@ export const zFlagshipListAppsData = z.object({
 export const zFlagshipListAppsResponse = zWorkersApiResponseCommon.and(
 	z.object({
 		result: z.array(zFlagshipApp).optional(),
-	})
-);
-
-export const zFlagshipDeleteFlagData = z.object({
-	body: z.never().optional(),
-	path: z.object({
-		app_id: z.string(),
-		flag_key: z.string(),
-	}),
-	query: z
-		.object({
-			worker: z.string().optional(),
-		})
-		.optional(),
-});
-
-/**
- * Delete Flagship Flag response.
- */
-export const zFlagshipDeleteFlagResponse = zWorkersApiResponseCommon.and(
-	z.object({
-		result: z
-			.object({
-				success: z.boolean().optional(),
-			})
-			.optional(),
-	})
-);
-
-export const zFlagshipEvaluateFlagData = z.object({
-	body: z.object({
-		context: z.record(z.string(), z.unknown()).optional(),
-	}),
-	path: z.object({
-		app_id: z.string(),
-		flag_key: z.string(),
-	}),
-	query: z
-		.object({
-			worker: z.string().optional(),
-		})
-		.optional(),
-});
-
-/**
- * Evaluate Flagship Flag response.
- */
-export const zFlagshipEvaluateFlagResponse = zWorkersApiResponseCommon.and(
-	z.object({
-		result: zFlagshipEvaluation.optional(),
-	})
-);
-
-export const zFlagshipListFlagsData = z.object({
-	body: z.never().optional(),
-	path: z.object({
-		app_id: z.string(),
-	}),
-	query: z
-		.object({
-			worker: z.string().optional(),
-		})
-		.optional(),
-});
-
-/**
- * List Flagship Flags response.
- */
-export const zFlagshipListFlagsResponse = zWorkersApiResponseCommon.and(
-	z.object({
-		result: z.array(zFlagshipFlag).optional(),
-	})
-);
-
-export const zFlagshipCreateFlagData = z.object({
-	body: z.object({
-		key: z.string(),
-		description: z.string().nullish(),
-		enabled: z.boolean().optional(),
-		default_variation: z.string(),
-		variations: z.record(z.string(), z.unknown()),
-		rules: z.array(zFlagshipRule).optional(),
-	}),
-	path: z.object({
-		app_id: z.string(),
-	}),
-	query: z
-		.object({
-			worker: z.string().optional(),
-		})
-		.optional(),
-});
-
-/**
- * Create Flagship Flag response.
- */
-export const zFlagshipCreateFlagResponse = zWorkersApiResponseCommon.and(
-	z.object({
-		result: zFlagshipFlag.optional(),
-	})
-);
-
-export const zFlagshipUpdateFlagData = z.object({
-	body: z.object({
-		description: z.string().nullish(),
-		enabled: z.boolean().optional(),
-		default_variation: z.string().optional(),
-		variations: z.record(z.string(), z.unknown()).optional(),
-		rules: z.array(zFlagshipRule).optional(),
-	}),
-	path: z.object({
-		app_id: z.string(),
-		flag_key: z.string(),
-	}),
-	query: z
-		.object({
-			worker: z.string().optional(),
-		})
-		.optional(),
-});
-
-/**
- * Update Flagship Flag response.
- */
-export const zFlagshipUpdateFlagResponse = zWorkersApiResponseCommon.and(
-	z.object({
-		result: zFlagshipFlag.optional(),
 	})
 );

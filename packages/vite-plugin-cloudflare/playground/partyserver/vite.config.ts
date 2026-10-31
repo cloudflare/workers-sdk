@@ -6,7 +6,11 @@ import { defineConfig } from "vite";
 export default defineConfig({
 	plugins: [
 		react(),
-		cloudflare({ inspectorPort: false, persistState: false }),
+		cloudflare({
+			types: { includeRuntime: false },
+			inspectorPort: false,
+			persistState: false,
+		}),
 		tailwindcss(),
 	],
 });

@@ -394,9 +394,12 @@ describe("Cross-process aggregation", () => {
 			enabled: true,
 			default_variation: "off",
 			variations: { on: true, off: false },
+			rules: [],
 		};
 
-		test("lists apps from both instances", async ({ expect }) => {
+		test("only lists local Flagship apps without shared storage", async ({
+			expect,
+		}) => {
 			const response = await instanceA.dispatchFetch(
 				`${BASE_URL}/flagship/apps`
 			);
@@ -413,61 +416,37 @@ describe("Cross-process aggregation", () => {
 				    },
 				    {
 				      "bindings": [
-				        "FLAGS_B",
-				      ],
-				      "id": "app-b",
-				    },
-				    {
-				      "bindings": [
 				        "SHARED_A",
-				        "SHARED_B",
 				      ],
 				      "id": "shared-app",
 				    },
 				  ],
 				  "result_info": {
-				    "count": 3,
+				    "count": 2,
 				  },
 				}
 			`);
 		});
 
-		test("routes a shared app to the selected worker", async ({ expect }) => {
-			const created = await instanceA.dispatchFetch(
-				`${BASE_URL}/flagship/apps/shared-app/flags?worker=worker-b`,
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ ...FLAG, key: "worker-b-flag" }),
-				}
-			);
-			await created.text();
-			expect(created.status).toBe(200);
-
-			const local = await instanceA.dispatchFetch(
-				`${BASE_URL}/flagship/apps/shared-app/flags?worker=worker-a`
-			);
-			expect(((await local.json()) as ListResponse).result).toStrictEqual([]);
-
-			const peer = await instanceA.dispatchFetch(
-				`${BASE_URL}/flagship/apps/shared-app/flags?worker=worker-b`
-			);
-			expect(
-				((await peer.json()) as ListResponse).result?.map((flag) => flag.key)
-			).toStrictEqual(["worker-b-flag"]);
-
-			const deleted = await instanceA.dispatchFetch(
-				`${BASE_URL}/flagship/apps/shared-app/flags/worker-b-flag?worker=worker-b`,
-				{ method: "DELETE" }
-			);
-			await deleted.text();
-			expect(deleted.status).toBe(200);
-		});
-
-		test("creates, reads and deletes a flag owned by a peer", async ({
+		test("does not read a peer's flags without shared storage", async ({
 			expect,
 		}) => {
-			const created = await instanceA.dispatchFetch(
+			const adminB = (await instanceB.getFlagshipBindingAPI("FLAGS_B"))();
+			await adminB.putFlag(FLAG);
+
+			const response = await instanceA.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-b/flags`
+			);
+
+			expect(await response.json()).toMatchObject({
+				success: true,
+				result: [],
+			});
+			await adminB.deleteFlag(FLAG.key);
+		});
+
+		test("writes an arbitrary app ID locally", async ({ expect }) => {
+			const response = await instanceA.dispatchFetch(
 				`${BASE_URL}/flagship/apps/app-b/flags`,
 				{
 					method: "POST",
@@ -475,30 +454,17 @@ describe("Cross-process aggregation", () => {
 					body: JSON.stringify(FLAG),
 				}
 			);
-			await created.text();
-			expect(created.status).toBe(200);
+			expect(response.status).toBe(201);
+			await response.json(); // Consume body
 
-			const listed = await instanceA.dispatchFetch(
-				`${BASE_URL}/flagship/apps/app-b/flags`
+			const adminB = (await instanceB.getFlagshipBindingAPI("FLAGS_B"))();
+			expect(await adminB.listFlags()).toStrictEqual([]);
+			const local = await instanceA.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-b/flags/peer-flag`
 			);
-			const listedData = (await listed.json()) as ListResponse;
-			expect(listedData.result?.map((flag) => flag.key)).toStrictEqual([
-				"peer-flag",
-			]);
-
-			const deleted = await instanceA.dispatchFetch(
-				`${BASE_URL}/flagship/apps/app-b/flags/peer-flag`,
-				{ method: "DELETE" }
-			);
-			await deleted.text();
-			expect(deleted.status).toBe(200);
-
-			const afterDelete = await instanceB.dispatchFetch(
-				`${BASE_URL}/flagship/apps/app-b/flags`
-			);
-			expect(((await afterDelete.json()) as ListResponse).result).toStrictEqual(
-				[]
-			);
+			expect(await local.json()).toMatchObject({
+				result: { key: "peer-flag" },
+			});
 		});
 	});
 
@@ -521,6 +487,7 @@ describe("Cross-process aggregation", () => {
 			expect(data.result_info).toMatchInlineSnapshot(`
 				{
 				  "count": 1,
+				  "total_count": 1,
 				}
 			`);
 

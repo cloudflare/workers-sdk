@@ -63,7 +63,10 @@ export async function writeBuildOutput({
 			assetsOptions,
 		});
 
-		initContainersSharedContext({ logger, fetchResult });
+		initContainersSharedContext({
+			logger,
+			fetchResult,
+		});
 		const pathToDocker = getDockerPath();
 		await buildAndWriteContainerOutput({
 			containers: parsedConfig.containers,

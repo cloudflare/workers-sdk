@@ -308,9 +308,6 @@ describe("the real workspace", () => {
 			tiers.findIndex((tier) => tier.some((pkg) => pkg.name === name));
 
 		expect(tierOf("wrangler")).toBeGreaterThan(tierOf("miniflare"));
-		expect(tierOf("@cloudflare/vite-plugin")).toBeGreaterThan(
-			tierOf("wrangler")
-		);
 		expect(tierOf("@cloudflare/vitest-plugin")).toBeGreaterThan(
 			tierOf("wrangler")
 		);

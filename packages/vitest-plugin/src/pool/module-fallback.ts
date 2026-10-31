@@ -328,11 +328,17 @@ async function viteResolve(
 	referrer: string,
 	isRequire: boolean
 ): Promise<string> {
-	const resolved = await vite.pluginContainer.resolveId(specifier, referrer, {
-		ssr: true,
-		// https://github.com/vitejs/vite/blob/v5.1.4/packages/vite/src/node/plugins/resolve.ts#L178-L179
-		custom: { "node-resolve": { isRequire } },
-	});
+	const resolved = await vite.environments.ssr.pluginContainer.resolveId(
+		specifier,
+		referrer,
+		{
+			// Vite 8.2.1, and later, picks the `require` or `import` export condition from `kind`
+			kind: isRequire ? "require-call" : "import-statement",
+			// Vite 7 and earlier read `isRequire` from here instead
+			// https://github.com/vitejs/vite/blob/v5.1.4/packages/vite/src/node/plugins/resolve.ts#L178-L179
+			custom: { "node-resolve": { isRequire } },
+		}
+	);
 	if (resolved === null) {
 		// Vite's resolution algorithm doesn't apply Node resolution to specifiers
 		// starting with a dot. Unfortunately, the `@prisma/client` package includes

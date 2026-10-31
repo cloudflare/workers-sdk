@@ -102,7 +102,7 @@ Each changeset should reference all packages that have user-facing changes:
 
 - If a change affects multiple packages, list them all in the changeset
 - Alternatively, create separate changesets for each package if the changes warrant different descriptions
-- You do NOT need to include packages that will only be released because they depend on a changed package - changesets handles this automatically
+- Changesets automatically releases packages affected through runtime dependencies. Include consumers of bundled `devDependencies` explicitly, because Changesets does not bump their versions automatically.
 
 ## When a Changeset is NOT Required
 

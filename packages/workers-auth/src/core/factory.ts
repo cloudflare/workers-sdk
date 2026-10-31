@@ -32,6 +32,8 @@ import { createCredentialStorageContext } from "../credential-store";
 import { getAuthFromEnv } from "../credentials";
 import { getCloudflareAccountIdFromEnv as getAccountIdFromEnv } from "../env-vars";
 import { createOAuthFlow } from "../flow";
+import { DEFAULT_TEMPORARY_ACCOUNT_FLAG } from "../temporary";
+import { AuthenticationError } from "./authentication-error";
 import { createFileStorage } from "./file-storage";
 import { createPreferences } from "./preferences";
 import { createTemporaryTermsPrompt } from "./temporary-terms";
@@ -84,7 +86,7 @@ export interface CloudflareAuth {
 	getActiveProfile: () => string;
 	/** The currently-active credential store for the active profile. */
 	getCredentialStore: () => CredentialStore;
-	/** Mark whether `--temporary` is permitted for the current invocation. */
+	/** Mark whether temporary-account mode is permitted for the current invocation. */
 	setTemporaryAllowed: (
 		allowed: boolean,
 		request?: TemporaryAccountRequest
@@ -203,6 +205,8 @@ export function createCloudflareAuth(
 	const { logger } = ctx;
 	const temporaryAccountLogger = ctx.temporaryAccountLogger ?? logger;
 	const cliName = descriptor.cliName;
+	const temporaryAccountFlag =
+		descriptor.temporaryAccountFlag ?? DEFAULT_TEMPORARY_ACCOUNT_FLAG;
 	const NOT_LOGGED_IN_ERROR_BODIES = notLoggedInErrorBodies(
 		descriptor.commands.login
 	);
@@ -273,6 +277,7 @@ export function createCloudflareAuth(
 			),
 			cliDisplayName: descriptor.displayName,
 			logoutCommand: descriptor.commands.logout,
+			temporaryAccountFlag,
 			prompt: createTemporaryTermsPrompt({
 				temporaryAccountLogger,
 				prompt: ctx.prompt,
@@ -446,9 +451,10 @@ export function createCloudflareAuth(
 		if (credentials === undefined) {
 			const loginResult = await loginOrRefreshIfRequired(complianceConfig);
 			if (!loginResult.loggedIn) {
-				throw new UserError(
+				throw new AuthenticationError(
 					`Not logged in. ${NOT_LOGGED_IN_ERROR_BODIES[loginResult.reason]}${NOT_LOGGED_IN_WHOAMI_TIP}`,
-					{ telemetryMessage: "cfetch auth login required" }
+					loginResult.reason,
+					"cfetch auth login required"
 				);
 			}
 			credentials = requireApiToken();
@@ -618,12 +624,12 @@ ${accounts
 				return latchedTemporaryAccount.account.id;
 			}
 
-			// `--temporary` is only for unauthenticated use. If any credentials are
+			// Temporary-account mode is only for unauthenticated use. If credentials are
 			// already available (env, global key, or a stored OAuth token), refuse
 			// rather than silently provisioning a throwaway account alongside them.
 			if (getAPIToken()) {
 				throw new UserError(
-					"You're already authenticated with Cloudflare, so `--temporary` can't be used. Temporary preview accounts are only for unauthenticated use. Either remove `--temporary` to use your existing account, or log out (and unset CLOUDFLARE_API_TOKEN) first.",
+					`You're already authenticated with Cloudflare, so \`${temporaryAccountFlag}\` can't be used. Temporary preview accounts are only for unauthenticated use. Either remove \`${temporaryAccountFlag}\` to use your existing account, or log out (and unset CLOUDFLARE_API_TOKEN) first.`,
 					{
 						telemetryMessage: "user temporary account already authenticated",
 					}

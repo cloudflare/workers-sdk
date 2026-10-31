@@ -29,7 +29,8 @@ export function getDevelopmentOidcOptions(
 		| "identities"
 	>,
 	logger: RemoteBindingsLogger,
-	profileDir = process.cwd()
+	profileDir = process.cwd(),
+	cfAuth?: boolean
 ): DevelopmentOidcBrokerFactory | undefined {
 	if (
 		!config.compatibility_flags.includes("workers_oidc") ||
@@ -44,7 +45,7 @@ export function getDevelopmentOidcOptions(
 		compliance_region: config.compliance_region,
 	};
 	const directory = path.resolve(profileDir);
-	const useCfAuth = "CLOUDFLARE_CF_AUTH" in process.env;
+	const useCfAuth = cfAuth ?? "CLOUDFLARE_CF_AUTH" in process.env;
 	const profile = useCfAuth
 		? process.env.CLOUDFLARE_DEV_AUTH_PROFILE
 		: undefined;
@@ -70,7 +71,8 @@ export function getDevelopmentOidcOptions(
 								readAuth ??= getDevelopmentOidcAuthHook(
 									snapshot.account_id,
 									directory,
-									logger
+									logger,
+									useCfAuth
 								);
 								return await readAuth();
 							} catch (error) {
@@ -94,7 +96,9 @@ export function getDevelopmentOidcOptions(
 				async invoke(options, signal) {
 					try {
 						const provider = providers.get(options.binding);
-						if (!provider) throw new Error("OIDC binding is not configured.");
+						if (!provider) {
+							throw new Error("OIDC binding is not configured.");
+						}
 						return await provider.invoke(options, signal);
 					} catch (error) {
 						logger.error(

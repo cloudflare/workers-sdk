@@ -1,51 +1,49 @@
-import fs from "node:fs";
-import path from "node:path";
-import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
+import { InputWorkerSchema } from "@cloudflare/config";
 import { resolveConfig } from "vite";
 import { test } from "vitest";
-import * as wrangler from "wrangler";
 import { getPreviewMiniflareOptions } from "../miniflare-options";
 import type { PreviewPluginContext } from "../context";
 import type { PreviewResolvedConfig } from "../plugin-config";
 import type * as vite from "vite";
 
-runInTempDir();
 test("local Vite preview links each Worker's broker with remote bindings disabled", async ({
 	expect,
 }) => {
-	fs.writeFileSync("index.js", "export default {};");
-	const configs = ["first-worker", "second-worker"].map((name) => {
-		const configPath = path.resolve(`${name}.jsonc`);
-		fs.writeFileSync(
-			configPath,
-			JSON.stringify({
-				name,
-				main: "./index.js",
-				account_id: "a".repeat(32),
-				compatibility_date: "2026-01-01",
-				compatibility_flags: ["workers_oidc"],
-				identities: [{ binding: "IDENTITY", audience: "recipient" }],
-			})
-		);
-		return wrangler.unstable_readConfig({ config: configPath });
-	});
+	const configs = ["first-worker", "second-worker"].map((name) =>
+		InputWorkerSchema.parse({
+			name,
+			compatibilityDate: "2026-01-01",
+			compatibilityFlags: ["workers_oidc"],
+			env: { IDENTITY: { type: "identity", audience: "recipient" } },
+		})
+	);
 	const resolvedViteConfig = await resolveConfig(
-		{ logLevel: "silent", root: process.cwd() },
+		{ logLevel: "silent", configFile: false },
 		"serve"
 	);
 	const resolvedPluginConfig: PreviewResolvedConfig = {
 		type: "preview",
-		cliDisplayName: "Wrangler",
-		workers: configs.map((config) => ({ source: "legacy", config })),
+		cliDisplayName: "cf",
+		workers: configs.map((config) => ({
+			config,
+			assetsDir: undefined,
+			bundle: undefined,
+		})),
 		persistState: false,
 		inspectorPort: false,
-		experimental: { headersAndRedirectsDevModeSupport: false },
+		types: { generate: false, includeRuntime: false },
+		experimental: {},
 		remoteBindings: false,
 		tunnel: { autoStart: false },
+		containers: [],
+		localEnv: { values: {}, sources: {} },
+		devVars: undefined,
+		settings: { accountId: "a".repeat(32) },
 	};
 	const ctx = {
 		resolvedPluginConfig,
 		resolvedViteConfig,
+		allWorkerConfigs: configs,
 	} as PreviewPluginContext;
 	const { miniflareOptions } = await getPreviewMiniflareOptions(ctx, {
 		config: resolvedViteConfig,
@@ -57,4 +55,9 @@ test("local Vite preview links each Worker's broker with remote bindings disable
 	expect(brokers[0]?.key).toContain("first-worker");
 	expect(brokers[1]?.key).toContain("second-worker");
 	expect(brokers[0]?.key).not.toBe(brokers[1]?.key);
+	expect(JSON.parse(brokers[0]?.key ?? "null")[5]).toBe(true);
+	expect(miniflareOptions.workers[0]?.config.env?.IDENTITY).toEqual({
+		type: "identity",
+		audience: "recipient",
+	});
 });

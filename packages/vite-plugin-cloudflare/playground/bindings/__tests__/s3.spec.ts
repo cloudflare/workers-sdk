@@ -8,7 +8,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { assert, onTestFinished, test } from "vitest";
 import { viteTestUrl } from "../../__test-utils__";
 
-// Must match `local_dev.experimental_s3_credentials` in ../wrangler.jsonc
+// Must match `experimentalS3Credentials` in `../cloudflare.config.ts`.
 const credentials = {
 	accessKeyId: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
 	secretAccessKey: "local-secret-access-key",

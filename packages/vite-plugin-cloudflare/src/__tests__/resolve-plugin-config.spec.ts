@@ -1,999 +1,894 @@
 import * as fs from "node:fs";
-import * as os from "node:os";
 import * as path from "node:path";
-import { DEFAULT_COMPAT_DATE, removeDirSync } from "@cloudflare/workers-utils";
-import { afterEach, assert, beforeEach, describe, test, vi } from "vitest";
+import { removeDirSync } from "@cloudflare/workers-utils";
+import { afterEach, beforeEach, describe, test, vi } from "vitest";
+import { CLI_DISPLAY_NAME_ENV_VAR } from "../build-output-env";
 import { resolvePluginConfig } from "../plugin-config";
 import type {
 	AssetsOnlyResolvedConfig,
 	PluginConfig,
+	ParsedInputConfigWithWorker,
 	WorkersResolvedConfig,
 } from "../plugin-config";
+import type { InputWorkerConfig } from "@cloudflare/config";
 
-describe("resolvePluginConfig - auxiliary workers", () => {
-	let tempDir: string;
+const { readBuildOutputPreviewMock } = vi.hoisted(() => ({
+	readBuildOutputPreviewMock: vi.fn(),
+}));
+
+vi.mock("../build-output-preview", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../build-output-preview")>()),
+	readBuildOutputPreview: readBuildOutputPreviewMock,
+}));
+
+const FIXTURES_ROOT = path.resolve(__dirname, "fixtures", "plugin-config");
+const buildEnv = { mode: "production", command: "build" as const };
+
+describe("resolvePluginConfig", () => {
+	let root: string;
 
 	beforeEach(() => {
-		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "vite-plugin-test-"));
-		return () => removeDirSync(tempDir);
+		readBuildOutputPreviewMock.mockReset();
+		fs.mkdirSync(FIXTURES_ROOT, { recursive: true });
+		root = fs.realpathSync(fs.mkdtempSync(path.join(FIXTURES_ROOT, "case-")));
 	});
 
-	const viteEnv = { mode: "development", command: "serve" as const };
+	afterEach(() => {
+		vi.unstubAllEnvs();
+		removeDirSync(root);
+	});
 
-	function createEntryWorkerConfig(dir: string) {
-		const configPath = path.join(dir, "wrangler.jsonc");
-		fs.writeFileSync(
-			configPath,
-			JSON.stringify({
-				name: "entry-worker",
-				main: "./src/index.ts",
-				compatibility_date: "2024-01-01",
-			})
-		);
-		// Create the main file so validation passes
-		fs.mkdirSync(path.join(dir, "src"), { recursive: true });
-		fs.writeFileSync(path.join(dir, "src/index.ts"), "export default {}");
-		return configPath;
+	function writeSource(relativePath: string) {
+		const sourcePath = path.join(root, relativePath);
+		fs.mkdirSync(path.dirname(sourcePath), { recursive: true });
+		fs.writeFileSync(sourcePath, "export default {};");
 	}
 
-	test("should resolve auxiliary worker from config file", async ({
+	function writeEntryConfig(options?: {
+		assetsOnly?: boolean;
+		compatibilityFlags?: string[];
+		entrypoint?: string;
+		noEntrypoint?: boolean;
+	}) {
+		if (!options?.assetsOnly && !options?.noEntrypoint) {
+			writeSource("src/index.ts");
+		}
+		fs.writeFileSync(
+			path.join(root, "cloudflare.config.ts"),
+			[
+				"import { defineConfig } from '@cloudflare/config';",
+				"export default defineConfig({",
+				"  worker: {",
+				"    name: 'entry-worker',",
+				options?.assetsOnly
+					? "    assets: {},"
+					: options?.noEntrypoint
+						? ""
+						: `    entrypoint: ${JSON.stringify(options?.entrypoint ?? "./src/index.ts")},`,
+				"    compatibilityDate: '2024-12-30',",
+				options?.compatibilityFlags
+					? `    compatibilityFlags: ${JSON.stringify(options.compatibilityFlags)},`
+					: "",
+				"  },",
+				"});",
+			].join("\n")
+		);
+	}
+
+	function createAuxiliaryWorkerConfig(
+		name: string,
+		overrides: Partial<InputWorkerConfig> = {}
+	): InputWorkerConfig {
+		return {
+			name,
+			entrypoint: "./src/aux.ts",
+			compatibilityDate: "2024-12-30",
+			...overrides,
+		};
+	}
+
+	test("rejects a cloudflare.config.ts without a Worker", async ({
 		expect,
 	}) => {
-		const entryConfigPath = createEntryWorkerConfig(tempDir);
-
-		// Create auxiliary worker config
-		const auxDir = path.join(tempDir, "aux");
-		fs.mkdirSync(auxDir, { recursive: true });
-		const auxConfigPath = path.join(auxDir, "wrangler.jsonc");
 		fs.writeFileSync(
-			auxConfigPath,
-			JSON.stringify({
-				name: "aux-worker",
-				main: "./worker.ts",
-				compatibility_date: "2024-01-01",
-			})
+			path.join(root, "cloudflare.config.ts"),
+			"export default {};"
 		);
-		fs.writeFileSync(path.join(auxDir, "worker.ts"), "export default {}");
 
-		const pluginConfig: PluginConfig = {
-			configPath: entryConfigPath,
-			auxiliaryWorkers: [{ configPath: auxConfigPath }],
-		};
-
-		const result = (await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
-		)) as WorkersResolvedConfig;
-		expect(result.type).toBe("workers");
-		expect(result.environmentNameToWorkerMap.get("aux_worker")).toBeDefined();
+		await expect(resolvePluginConfig({}, { root }, buildEnv)).rejects.toThrow(
+			"`cloudflare.config.ts` must define a Worker using the `worker` property."
+		);
 	});
 
-	test("should resolve inline auxiliary worker with config object", async ({
+	test.for(["wrangler.json", "wrangler.jsonc", "wrangler.toml"])(
+		"rejects %s without cloudflare.config.ts",
+		async (wranglerConfigFilename, { expect }) => {
+			fs.writeFileSync(path.join(root, wranglerConfigFilename), "");
+
+			await expect(resolvePluginConfig({}, { root }, buildEnv)).rejects.toThrow(
+				`Found \`${wranglerConfigFilename}\` but no \`cloudflare.config.ts\`. The Cloudflare Vite plugin no longer reads Wrangler configuration files, so this configuration would be ignored. Run \`npx cf migrate --bundler vite\` to generate \`cloudflare.config.ts\`.`
+			);
+		}
+	);
+
+	test("loads cloudflare.config.ts when a Wrangler config also exists", async ({
 		expect,
 	}) => {
-		const entryConfigPath = createEntryWorkerConfig(tempDir);
-		// Create the inline worker's main file
-		fs.writeFileSync(path.join(tempDir, "src/aux.ts"), "export default {}");
+		writeEntryConfig();
+		fs.writeFileSync(path.join(root, "wrangler.jsonc"), "");
 
-		const pluginConfig: PluginConfig = {
-			configPath: entryConfigPath,
-			auxiliaryWorkers: [
-				{
-					config: {
-						name: "inline-aux-worker",
-						main: "./src/aux.ts",
+		await expect(
+			resolvePluginConfig({}, { root }, buildEnv)
+		).resolves.toMatchObject({ type: "workers" });
+	});
+
+	test.for([
+		["Wrangler", undefined],
+		["cf", "cf"],
+	] as const)(
+		"uses %s for caller-specific messages",
+		async ([expected, caller], { expect }) => {
+			vi.stubEnv(CLI_DISPLAY_NAME_ENV_VAR, caller);
+			writeEntryConfig();
+
+			const result = await resolvePluginConfig({}, { root }, buildEnv);
+
+			expect(result.cliDisplayName).toBe(expected);
+		}
+	);
+
+	test("sets the config context from CLOUDFLARE_PREVIEW_BUILD", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_PREVIEW_BUILD", "true");
+		writeSource("src/index.ts");
+		fs.writeFileSync(
+			path.join(root, "cloudflare.config.ts"),
+			[
+				"import { defineConfig } from '@cloudflare/config';",
+				"export default defineConfig((ctx) => ({ worker: {",
+				"  name: ctx.isPreview ? 'preview-worker' : 'production-worker',",
+				"  entrypoint: './src/index.ts',",
+				"  compatibilityDate: '2024-12-30',",
+				"} }));",
+			].join("\n")
+		);
+
+		const result = (await resolvePluginConfig(
+			{},
+			{ root },
+			buildEnv
+		)) as WorkersResolvedConfig;
+
+		expect(result.environmentNameToWorkerMap.get("ssr")?.config.name).toBe(
+			"preview-worker"
+		);
+	});
+
+	test("preserves package entrypoints for Vite to resolve", async ({
+		expect,
+	}) => {
+		const entrypoint = "@playground/main-resolution-package/entry";
+		writeEntryConfig({ entrypoint });
+		const result = (await resolvePluginConfig(
+			{},
+			{ root },
+			buildEnv
+		)) as WorkersResolvedConfig;
+
+		expect(
+			result.environmentNameToWorkerMap.get("ssr")?.config.entrypoint
+		).toBe(entrypoint);
+	});
+
+	test("preserves virtual module entrypoints for Vite to resolve", async ({
+		expect,
+	}) => {
+		const entrypoint = "virtual:entry";
+		writeEntryConfig({ entrypoint });
+		const result = (await resolvePluginConfig(
+			{},
+			{ root },
+			buildEnv
+		)) as WorkersResolvedConfig;
+
+		expect(
+			result.environmentNameToWorkerMap.get("ssr")?.config.entrypoint
+		).toBe(entrypoint);
+	});
+
+	test.for(["src/index.ts", "./src/missing.ts"] as const)(
+		"preserves the %s filesystem entrypoint for Vite to resolve",
+		async (entrypoint, { expect }) => {
+			writeEntryConfig({ entrypoint });
+			const result = (await resolvePluginConfig(
+				{},
+				{ root },
+				buildEnv
+			)) as WorkersResolvedConfig;
+
+			expect(
+				result.environmentNameToWorkerMap.get(result.entryWorkerEnvironmentName)
+					?.config.entrypoint
+			).toBe(entrypoint);
+		}
+	);
+
+	test("resolves an auxiliary Worker from the entry Worker config", async ({
+		expect,
+	}) => {
+		writeEntryConfig({
+			compatibilityFlags: ["nodejs_compat"],
+		});
+		writeSource("src/aux.ts");
+
+		const result = (await resolvePluginConfig(
+			{
+				config(loadedConfig) {
+					return {
+						...loadedConfig,
+						worker: {
+							...loadedConfig.worker,
+							compatibilityDate: "2025-02-02",
+						},
+					};
+				},
+				auxiliaryWorkers: [
+					{
+						viteEnvironment: { name: "auxiliary" },
+						config: ({ entryWorkerConfig }) => ({
+							name: `${entryWorkerConfig.name}-auxiliary-${entryWorkerConfig.compatibilityDate}`,
+							entrypoint: "./src/aux.ts",
+							compatibilityDate: "2025-01-15",
+						}),
 					},
+				],
+			},
+			{ root },
+			buildEnv
+		)) as WorkersResolvedConfig;
+
+		const auxiliary = result.environmentNameToWorkerMap.get("auxiliary");
+		expect(auxiliary?.config).toMatchObject({
+			name: "entry-worker-auxiliary-2025-02-02",
+			entrypoint: "./src/aux.ts",
+			compatibilityDate: "2025-01-15",
+		});
+		expect(auxiliary?.config.compatibilityFlags).toBeUndefined();
+		expect(auxiliary?.directoryName).toBe("entry-worker-auxiliary-2025-02-02");
+	});
+
+	test("uses the returned configuration without merging the loaded configuration", async ({
+		expect,
+	}) => {
+		writeEntryConfig({ compatibilityFlags: ["nodejs_compat"] });
+		const result = (await resolvePluginConfig(
+			{
+				config(loadedConfig) {
+					return {
+						...loadedConfig,
+						worker: {
+							...loadedConfig.worker,
+							name: `customized-${loadedConfig.worker.name}`,
+							compatibilityFlags: ["global_fetch_strictly_public"],
+						},
+					};
+				},
+			},
+			{ root },
+			buildEnv
+		)) as WorkersResolvedConfig;
+
+		const entryWorker = result.environmentNameToWorkerMap.get("ssr");
+		expect(entryWorker?.config.name).toBe("customized-entry-worker");
+		expect(entryWorker?.config.compatibilityFlags).toEqual([
+			"global_fetch_strictly_public",
+		]);
+	});
+
+	test("customizes account settings, Containers, and the entry Worker together", async ({
+		expect,
+	}) => {
+		const originalConfig: ParsedInputConfigWithWorker = {
+			accountId: "original-account",
+			worker: {
+				name: "entry-worker",
+				entrypoint: "./src/index.ts",
+				compatibilityDate: "2024-12-30",
+			},
+			containers: [
+				{
+					name: "original-container",
+					image: { reference: "docker.io/cloudflare/hello-world:latest" },
+					maxInstances: 1,
 				},
 			],
 		};
-
+		fs.writeFileSync(
+			path.join(root, "cloudflare.config.ts"),
+			`export default ${JSON.stringify(originalConfig)};`
+		);
+		const customize = vi.fn(
+			(
+				loadedConfig: ParsedInputConfigWithWorker
+			): ParsedInputConfigWithWorker => {
+				return {
+					...loadedConfig,
+					accountId: "customized-account",
+					complianceRegion: "fedramp-high",
+					containers: [
+						...loadedConfig.containers,
+						{
+							name: "customized-container",
+							image: { reference: "docker.io/cloudflare/hello-world:latest" },
+							maxInstances: 2,
+						},
+					],
+					worker: {
+						...loadedConfig.worker,
+						exports: {
+							CustomContainer: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: "customized-container",
+							},
+						},
+					},
+				};
+			}
+		);
 		const result = (await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
+			{ config: customize },
+			{ root },
+			buildEnv
 		)) as WorkersResolvedConfig;
-		expect(result.type).toBe("workers");
-		const auxWorker =
-			result.environmentNameToWorkerMap.get("inline_aux_worker");
-		assert(auxWorker);
-		expect(auxWorker.config.name).toBe("inline-aux-worker");
-		// main should now be resolved to an absolute path
-		expect(auxWorker.config.main).toBe(path.join(tempDir, "src/aux.ts"));
+
+		expect(customize).toHaveBeenCalledExactlyOnceWith(originalConfig);
+		expect(result.settings).toEqual({
+			accountId: "customized-account",
+			complianceRegion: "fedramp-high",
+		});
+		expect(result.containers.map(({ name }) => name)).toEqual([
+			"original-container",
+			"customized-container",
+		]);
+		expect(
+			result.environmentNameToWorkerMap.get("ssr")?.config.exports
+		).toEqual({
+			CustomContainer: {
+				type: "durable-object",
+				storage: "sqlite",
+				container: "customized-container",
+			},
+		});
 	});
 
-	test("should resolve inline auxiliary worker with config function", async ({
-		expect,
-	}) => {
-		const entryConfigPath = createEntryWorkerConfig(tempDir);
-		// Create the inline worker's main file
-		fs.writeFileSync(path.join(tempDir, "src/fn-aux.ts"), "export default {}");
-
-		const pluginConfig: PluginConfig = {
-			configPath: entryConfigPath,
-			auxiliaryWorkers: [
+	test("validates customized Container configuration", async ({ expect }) => {
+		writeEntryConfig();
+		await expect(
+			resolvePluginConfig(
 				{
-					config: () => ({
-						name: "fn-aux-worker",
-						main: "./src/fn-aux.ts",
+					config: (loadedConfig) => ({
+						...loadedConfig,
+						containers: [
+							{ name: "invalid", image: { reference: "" }, maxInstances: 1 },
+						],
 					}),
 				},
-			],
-		};
-
-		const result = (await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
-		)) as WorkersResolvedConfig;
-		expect(result.type).toBe("workers");
-		const auxWorker = result.environmentNameToWorkerMap.get("fn_aux_worker");
-		assert(auxWorker);
-		expect(auxWorker.config.name).toBe("fn-aux-worker");
+				{ root },
+				buildEnv
+			)
+		).rejects.toThrow(/containers/);
 	});
 
-	test("should auto-populate topLevelName from name if not set", async ({
-		expect,
-	}) => {
-		const entryConfigPath = createEntryWorkerConfig(tempDir);
-		// Create the inline worker's main file
-		fs.writeFileSync(path.join(tempDir, "src/aux.ts"), "export default {}");
-
-		const pluginConfig: PluginConfig = {
-			configPath: entryConfigPath,
-			auxiliaryWorkers: [
+	describe.each([buildEnv, { mode: "development", command: "serve" as const }])(
+		"customized Container relationships during $command",
+		(viteEnv) => {
+			test.for([
 				{
-					config: {
-						name: "my-aux-worker",
-						main: "./src/aux.ts",
-					},
+					name: "duplicate Container names",
+					config: (loadedConfig) => ({
+						...loadedConfig,
+						containers: [
+							...loadedConfig.containers,
+							...loadedConfig.containers,
+						],
+					}),
+					error: /Container names must be unique/,
 				},
-			],
-		};
-
-		const result = (await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
-		)) as WorkersResolvedConfig;
-		expect(result.type).toBe("workers");
-		const auxWorker = result.environmentNameToWorkerMap.get("my_aux_worker");
-		assert(auxWorker);
-		expect(auxWorker.config.name).toBe("my-aux-worker");
-		expect(auxWorker.config.topLevelName).toBe("my-aux-worker");
-	});
-
-	test("should apply config to file-based auxiliary worker", async ({
-		expect,
-	}) => {
-		const entryConfigPath = createEntryWorkerConfig(tempDir);
-
-		// Create auxiliary worker config with initial values
-		const auxDir = path.join(tempDir, "aux");
-		fs.mkdirSync(auxDir, { recursive: true });
-		const auxConfigPath = path.join(auxDir, "wrangler.jsonc");
-		fs.writeFileSync(
-			auxConfigPath,
-			JSON.stringify({
-				name: "aux-worker",
-				main: "./worker.ts",
-				compatibility_date: "2024-01-01",
-			})
-		);
-		fs.writeFileSync(path.join(auxDir, "worker.ts"), "export default {}");
-
-		const pluginConfig: PluginConfig = {
-			configPath: entryConfigPath,
-			auxiliaryWorkers: [
 				{
-					configPath: auxConfigPath,
-					config: {
-						compatibility_date: "2025-01-01",
-					},
+					name: "removing a linked Container",
+					config: (loadedConfig) => ({ ...loadedConfig, containers: [] }),
+					error: /referenced Container "api" is not included/,
 				},
-			],
-		};
-
-		const result = (await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
-		)) as WorkersResolvedConfig;
-		expect(result.type).toBe("workers");
-		const auxWorker = result.environmentNameToWorkerMap.get("aux_worker");
-		assert(auxWorker);
-		// The config should override the file's compatibility_date
-		expect(auxWorker.config.compatibility_date).toBe("2025-01-01");
-		// But preserve the name from file
-		expect(auxWorker.config.name).toBe("aux-worker");
-	});
-
-	test("should pass entryWorkerConfig as second parameter to auxiliary worker config function", async ({
-		expect,
-	}) => {
-		const entryConfigPath = createEntryWorkerConfig(tempDir);
-		fs.writeFileSync(path.join(tempDir, "src/aux.ts"), "export default {}");
-
-		const pluginConfig: PluginConfig = {
-			configPath: entryConfigPath,
-			auxiliaryWorkers: [
 				{
-					config: (userConfig, { entryWorkerConfig }) => {
-						// Verify we receive both parameters
-						expect(userConfig).toBeDefined();
-						expect(entryWorkerConfig).toBeDefined();
-						expect("name" in entryWorkerConfig).toBe(false);
-						expect("topLevelName" in entryWorkerConfig).toBe(false);
-						expect(entryWorkerConfig.compatibility_date).toBe("2024-01-01");
-
+					name: "renaming a linked Container without updating its reference",
+					config: (loadedConfig) => ({
+						...loadedConfig,
+						containers: loadedConfig.containers.map((container) => ({
+							...container,
+							name: "renamed-api",
+						})),
+					}),
+					error: /referenced Container "api" is not included/,
+				},
+				{
+					name: "linking multiple Durable Objects to the same Container",
+					config(loadedConfig) {
 						return {
-							name: "aux-worker",
-							main: "./src/aux.ts",
-							// Use entry worker's compatibility_date
-							compatibility_date: entryWorkerConfig.compatibility_date,
+							...loadedConfig,
+							worker: {
+								...loadedConfig.worker,
+								exports: {
+									...loadedConfig.worker.exports,
+									Other: {
+										type: "durable-object",
+										storage: "sqlite",
+										container: "api",
+									},
+								},
+							},
+						};
+					},
+					error: /already referenced by `worker.exports.Api`/,
+				},
+			] satisfies {
+				name: string;
+				config: NonNullable<PluginConfig["config"]>;
+				error: RegExp;
+			}[])("rejects $name", async ({ config, error }, { expect }) => {
+				fs.writeFileSync(
+					path.join(root, "cloudflare.config.ts"),
+					[
+						"import { defineConfig, defineContainer, exports as workerExports } from '@cloudflare/config';",
+						"const api = defineContainer({ name: 'api', image: { dockerfile: './Dockerfile' } });",
+						"export default defineConfig({",
+						"  containers: [api],",
+						"  worker: {",
+						"    name: 'entry-worker', entrypoint: './src/index.ts', compatibilityDate: '2024-12-30',",
+						"    exports: { Api: workerExports.durableObject({ storage: 'sqlite', container: api }) },",
+						"  },",
+						"});",
+					].join("\n")
+				);
+				await expect(
+					resolvePluginConfig(
+						{ config, types: { generate: false } },
+						{ root },
+						viteEnv
+					)
+				).rejects.toMatchObject({
+					issues: expect.arrayContaining([
+						expect.objectContaining({ message: expect.stringMatching(error) }),
+					]),
+				});
+			});
+		}
+	);
+
+	test("requires a Worker in the customized configuration", async ({
+		expect,
+	}) => {
+		writeEntryConfig();
+		await expect(
+			resolvePluginConfig(
+				{
+					// @ts-expect-error Verify runtime validation for callers that bypass the required Worker type.
+					config: (loadedConfig) => ({ ...loadedConfig, worker: undefined }),
+				},
+				{ root },
+				buildEnv
+			)
+		).rejects.toThrow("The customized configuration must define a `worker`.");
+	});
+
+	test("resolves entry and auxiliary Workers configured only in Vite", async ({
+		expect,
+	}) => {
+		writeSource("src/index.ts");
+		writeSource("src/aux.ts");
+		const result = await resolvePluginConfig(
+			{
+				config(loadedConfig) {
+					return {
+						...loadedConfig,
+						worker: { ...loadedConfig.worker, entrypoint: "./src/index.ts" },
+					};
+				},
+				auxiliaryWorkers: [
+					{ config: createAuxiliaryWorkerConfig("viteOnlyWorker") },
+				],
+			},
+			{ root },
+			buildEnv
+		);
+
+		expect(result.type).toBe("workers");
+		if (result.type === "workers") {
+			expect(
+				result.environmentNameToWorkerMap.get(result.entryWorkerEnvironmentName)
+					?.config.entrypoint
+			).toBe("./src/index.ts");
+			expect(
+				result.environmentNameToWorkerMap.get("viteOnlyWorker")?.config
+					.entrypoint
+			).toBe("./src/aux.ts");
+			expect(result.configPaths).toEqual(new Set());
+		}
+	});
+
+	test("skips type generation when cloudflare.config.ts does not exist", async ({
+		expect,
+	}) => {
+		await resolvePluginConfig(
+			{},
+			{ root },
+			{ mode: "development", command: "serve" }
+		);
+
+		expect(fs.existsSync(path.join(root, ".cloudflare/types/index.d.ts"))).toBe(
+			false
+		);
+	});
+
+	test("normalizes the auxiliary Worker Build Output directory", async ({
+		expect,
+	}) => {
+		writeEntryConfig();
+		writeSource("src/aux.ts");
+		const result = (await resolvePluginConfig(
+			{
+				auxiliaryWorkers: [
+					{ config: createAuxiliaryWorkerConfig("API-Production") },
+				],
+			},
+			{ root },
+			buildEnv
+		)) as WorkersResolvedConfig;
+
+		expect(
+			result.environmentNameToWorkerMap.get("API_Production")?.directoryName
+		).toBe("api-production");
+	});
+
+	test.for([
+		["default", "_default"],
+		["prerender", "_prerender"],
+	] as const)(
+		"escapes the reserved %s auxiliary Worker Build Output directory",
+		async ([workerName, expectedDirectoryName], { expect }) => {
+			writeEntryConfig();
+			writeSource("src/aux.ts");
+			const result = (await resolvePluginConfig(
+				{
+					auxiliaryWorkers: [
+						{ config: createAuxiliaryWorkerConfig(workerName) },
+					],
+				},
+				{ root },
+				buildEnv
+			)) as WorkersResolvedConfig;
+
+			expect(
+				result.environmentNameToWorkerMap.get(workerName)?.directoryName
+			).toBe(expectedDirectoryName);
+		}
+	);
+
+	test("rejects auxiliary Worker Build Output directory collisions", async ({
+		expect,
+	}) => {
+		writeEntryConfig();
+		writeSource("src/aux.ts");
+		await expect(
+			resolvePluginConfig(
+				{
+					auxiliaryWorkers: [
+						{ config: createAuxiliaryWorkerConfig("worker-a") },
+						{ config: createAuxiliaryWorkerConfig("WORKER-A") },
+					],
+				},
+				{ root },
+				buildEnv
+			)
+		).rejects.toThrow(/both produce.*`worker-a`/);
+	});
+
+	test("rejects duplicate Worker names", async ({ expect }) => {
+		writeEntryConfig();
+		writeSource("src/aux.ts");
+		await expect(
+			resolvePluginConfig(
+				{
+					auxiliaryWorkers: [
+						{ config: createAuxiliaryWorkerConfig("entry-worker") },
+					],
+				},
+				{ root },
+				buildEnv
+			)
+		).rejects.toThrow('Duplicate Worker name: "entry-worker"');
+	});
+
+	test("includes every configured auxiliary Worker", async ({ expect }) => {
+		writeEntryConfig();
+		writeSource("src/aux.ts");
+		const result = await resolvePluginConfig(
+			{
+				auxiliaryWorkers: [
+					{ config: createAuxiliaryWorkerConfig("auxiliary-worker-a") },
+					{ config: createAuxiliaryWorkerConfig("auxiliary-worker-b") },
+				],
+			},
+			{ root },
+			buildEnv
+		);
+		expect(result.type).toBe("workers");
+		if (result.type === "workers") {
+			expect(result.environmentNameToWorkerMap.has("auxiliary_worker_a")).toBe(
+				true
+			);
+			expect(result.environmentNameToWorkerMap.has("auxiliary_worker_b")).toBe(
+				true
+			);
+		}
+	});
+
+	test("requires an auxiliary Worker entrypoint", async ({ expect }) => {
+		writeEntryConfig();
+		await expect(
+			resolvePluginConfig(
+				{
+					auxiliaryWorkers: [
+						{
+							config: {
+								name: "auxiliary-worker",
+								compatibilityDate: "2024-12-30",
+							},
+						},
+					],
+				},
+				{ root },
+				buildEnv
+			)
+		).rejects.toThrow(
+			/Auxiliary and prerender Workers must configure an `entrypoint`/
+		);
+	});
+
+	test("rejects assets on an auxiliary Worker", async ({ expect }) => {
+		writeEntryConfig();
+		writeSource("src/aux.ts");
+		await expect(
+			resolvePluginConfig(
+				{
+					auxiliaryWorkers: [
+						{
+							config: createAuxiliaryWorkerConfig("auxiliary-worker", {
+								assets: {},
+							}),
+						},
+					],
+				},
+				{ root },
+				buildEnv
+			)
+		).rejects.toThrow(/assets are only supported by the default Worker/);
+	});
+
+	test("rejects assets on the prerender Worker", async ({ expect }) => {
+		writeEntryConfig();
+		writeSource("src/prerender.ts");
+		await expect(
+			resolvePluginConfig(
+				{
+					prerenderWorker: {
+						config: {
+							name: "prerender-worker",
+							entrypoint: "./src/prerender.ts",
+							compatibilityDate: "2024-12-30",
+							assets: {},
+						},
+					},
+				},
+				{ root },
+				buildEnv
+			)
+		).rejects.toThrow(/assets are only supported by the default Worker/);
+	});
+
+	test("resolves the prerender Worker during build", async ({ expect }) => {
+		writeEntryConfig();
+		writeSource("src/prerender.ts");
+		const result = (await resolvePluginConfig(
+			{
+				prerenderWorker: {
+					config: {
+						name: "prerender-worker",
+						entrypoint: "./src/prerender.ts",
+						compatibilityDate: "2024-12-30",
+					},
+				},
+			},
+			{ root },
+			buildEnv
+		)) as WorkersResolvedConfig;
+
+		expect(result.prerenderWorkerEnvironmentName).toBe("prerender_worker");
+		expect(
+			result.environmentNameToWorkerMap.get("prerender_worker")?.config
+				.entrypoint
+		).toBe("./src/prerender.ts");
+	});
+
+	test("configures the prerender Worker from the entry Worker config", async ({
+		expect,
+	}) => {
+		writeEntryConfig();
+		writeSource("src/prerender.ts");
+		const result = (await resolvePluginConfig(
+			{
+				prerenderWorker: {
+					viteEnvironment: { name: "prerender" },
+					config: ({ entryWorkerConfig }) => ({
+						name: `prerender-${entryWorkerConfig.compatibilityDate}`,
+						entrypoint: "./src/prerender.ts",
+						compatibilityDate: "2025-01-15",
+					}),
+				},
+			},
+			{ root },
+			buildEnv
+		)) as WorkersResolvedConfig;
+
+		expect(
+			result.environmentNameToWorkerMap.get("prerender")?.config.name
+		).toBe("prerender-2024-12-30");
+	});
+
+	test("resolves an inline prerender Worker during build", async ({
+		expect,
+	}) => {
+		writeEntryConfig();
+		writeSource("src/prerender.ts");
+		const result = (await resolvePluginConfig(
+			{
+				prerenderWorker: {
+					config({ entryWorkerConfig }) {
+						return {
+							...entryWorkerConfig,
+							name: "prerender-worker",
+							entrypoint: "./src/prerender.ts",
 						};
 					},
 				},
-			],
-		};
-
-		const result = (await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
-		)) as WorkersResolvedConfig;
-		expect(result.type).toBe("workers");
-		const auxWorker = result.environmentNameToWorkerMap.get("aux_worker");
-		assert(auxWorker);
-		expect(auxWorker.config.name).toBe("aux-worker");
-		// Should have inherited entry worker's compatibility_date
-		expect(auxWorker.config.compatibility_date).toBe("2024-01-01");
-	});
-
-	test("should allow auxiliary worker to inherit entry worker compatibility_flags", async ({
-		expect,
-	}) => {
-		// Create entry worker with compatibility_flags
-		const configPath = path.join(tempDir, "wrangler.jsonc");
-		fs.writeFileSync(
-			configPath,
-			JSON.stringify({
-				name: "entry-worker",
-				main: "./src/index.ts",
-				compatibility_date: "2025-01-01",
-				compatibility_flags: ["nodejs_compat", "global_fetch_strictly_public"],
-			})
-		);
-		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
-		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
-		fs.writeFileSync(path.join(tempDir, "src/aux.ts"), "export default {}");
-
-		const pluginConfig: PluginConfig = {
-			configPath,
-			auxiliaryWorkers: [
-				{
-					config: (_, { entryWorkerConfig }) => ({
-						name: "aux-worker",
-						main: "./src/aux.ts",
-						// Inherit all compatibility settings from entry worker
-						compatibility_date: entryWorkerConfig.compatibility_date,
-						compatibility_flags: entryWorkerConfig.compatibility_flags,
-					}),
-				},
-			],
-		};
-
-		const result = (await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
-		)) as WorkersResolvedConfig;
-		expect(result.type).toBe("workers");
-		const auxWorker = result.environmentNameToWorkerMap.get("aux_worker");
-		assert(auxWorker);
-		expect(auxWorker.config.compatibility_flags).toEqual(
-			expect.arrayContaining(["nodejs_compat", "global_fetch_strictly_public"])
-		);
-	});
-
-	test("should throw if inline auxiliary worker is missing required fields", async ({
-		expect,
-	}) => {
-		const entryConfigPath = createEntryWorkerConfig(tempDir);
-
-		const pluginConfig: PluginConfig = {
-			configPath: entryConfigPath,
-			auxiliaryWorkers: [
-				{
-					config: {
-						// Missing name and main
-					},
-				},
-			],
-		};
-
-		await expect(
-			resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv)
-		).rejects.toThrow();
-	});
-});
-
-describe("resolvePluginConfig - entry worker config()", () => {
-	let tempDir: string;
-
-	beforeEach(() => {
-		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "vite-plugin-test-"));
-	});
-
-	afterEach(() => {
-		removeDirSync(tempDir);
-	});
-
-	const viteEnv = { mode: "development", command: "serve" as const };
-
-	test("should convert assets-only worker to worker with server logic when config() adds main", async ({
-		expect,
-	}) => {
-		// Create a config file without main (assets-only)
-		const configPath = path.join(tempDir, "wrangler.jsonc");
-		fs.writeFileSync(
-			configPath,
-			JSON.stringify({
-				name: "my-worker",
-				compatibility_date: "2024-01-01",
-				// No main field - would normally be assets-only
-			})
-		);
-
-		// Create the main file so validation passes
-		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
-		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
-
-		const pluginConfig: PluginConfig = {
-			configPath,
-			config: {
-				main: "./src/index.ts",
 			},
-		};
-
-		const result = (await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
+			{ root },
+			buildEnv
 		)) as WorkersResolvedConfig;
-		// Should now be a worker with server logic, not assets-only
-		expect(result.type).toBe("workers");
-		const entryWorker = result.environmentNameToWorkerMap.get(
-			result.entryWorkerEnvironmentName
-		);
-		assert(entryWorker);
-		expect(entryWorker.config.main).toMatch(/index\.ts$/);
+
+		expect(result.prerenderWorkerEnvironmentName).toBe("prerender_worker");
+		expect(
+			result.environmentNameToWorkerMap.get("prerender_worker")?.config
+				.entrypoint
+		).toBe("./src/prerender.ts");
 	});
 
-	test("should allow config() function to add main field", async ({
-		expect,
-	}) => {
-		const configPath = path.join(tempDir, "wrangler.jsonc");
-		fs.writeFileSync(
-			configPath,
-			JSON.stringify({
-				name: "my-worker",
-				compatibility_date: "2024-01-01",
-			})
-		);
-
-		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
-		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
-
-		const pluginConfig: PluginConfig = {
-			configPath,
-			config: () => ({
-				main: "./src/index.ts",
-			}),
-		};
-
+	test("supports an assets-only entry Worker", async ({ expect }) => {
+		writeEntryConfig({ assetsOnly: true });
 		const result = (await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
-		)) as WorkersResolvedConfig;
-		expect(result.type).toBe("workers");
-		const entryWorker = result.environmentNameToWorkerMap.get(
-			result.entryWorkerEnvironmentName
-		);
-		expect(entryWorker).toBeDefined();
-	});
-
-	test("should remain assets-only when config() does not add main", async ({
-		expect,
-	}) => {
-		const configPath = path.join(tempDir, "wrangler.jsonc");
-		fs.writeFileSync(
-			configPath,
-			JSON.stringify({
-				name: "my-worker",
-				compatibility_date: "2024-01-01",
-			})
-		);
-
-		const pluginConfig: PluginConfig = {
-			configPath,
-			config: {
-				compatibility_flags: ["nodejs_compat"],
-			},
-		};
-
-		const result = await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
-		);
+			{},
+			{ root },
+			buildEnv
+		)) as AssetsOnlyResolvedConfig;
 
 		expect(result.type).toBe("assets-only");
-		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
-		expect(assetsOnlyResult.config.compatibility_flags).toContain(
-			"nodejs_compat"
-		);
-	});
-});
-
-describe("resolvePluginConfig - zero-config mode", () => {
-	let tempDir: string;
-
-	beforeEach(() => {
-		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "vite-plugin-test-"));
+		expect(result.config).toMatchObject({
+			name: "entry-worker",
+			assets: {},
+		});
 	});
 
-	afterEach(() => {
-		removeDirSync(tempDir);
-	});
-
-	const viteEnv = { mode: "development", command: "serve" as const };
-
-	test("should return an assets-only config when no wrangler config exists", async ({
+	test("supports an assets-only entry Worker without an assets config", async ({
 		expect,
 	}) => {
-		const pluginConfig: PluginConfig = {};
-
-		const result = await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
-		);
+		writeEntryConfig({ noEntrypoint: true });
+		const result = await resolvePluginConfig({}, { root }, buildEnv);
 
 		expect(result.type).toBe("assets-only");
-	});
-
-	test("should derive worker name from package.json name", async ({
-		expect,
-	}) => {
-		fs.writeFileSync(
-			path.join(tempDir, "package.json"),
-			JSON.stringify({ name: "my-awesome-app" })
-		);
-
-		const pluginConfig: PluginConfig = {};
-
-		const result = await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
-		);
-
-		expect(result.type).toBe("assets-only");
-		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
-		expect(assetsOnlyResult.config.name).toBe("my-awesome-app");
-		expect(assetsOnlyResult.config.topLevelName).toBe("my-awesome-app");
-	});
-
-	test("should normalize invalid worker names from package.json", async ({
-		expect,
-	}) => {
-		fs.writeFileSync(
-			path.join(tempDir, "package.json"),
-			JSON.stringify({ name: "@scope/my_package_name" })
-		);
-
-		const pluginConfig: PluginConfig = {};
-
-		const result = await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
-		);
-
-		expect(result.type).toBe("assets-only");
-		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
-		// underscores become dashes, invalid chars removed
-		expect(assetsOnlyResult.config.name).toBe("scope-my-package-name");
-	});
-
-	test("should fall back to directory name when package.json has no name", async ({
-		expect,
-	}) => {
-		const namedDir = path.join(tempDir, "my-test-project");
-		fs.mkdirSync(namedDir);
-		fs.writeFileSync(
-			path.join(namedDir, "package.json"),
-			JSON.stringify({ version: "1.0.0" })
-		);
-
-		const pluginConfig: PluginConfig = {};
-
-		const result = await resolvePluginConfig(
-			pluginConfig,
-			{ root: namedDir },
-			viteEnv
-		);
-
-		expect(result.type).toBe("assets-only");
-		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
-		expect(assetsOnlyResult.config.name).toBe("my-test-project");
-	});
-
-	test("should fall back to directory name when no package.json exists", async ({
-		expect,
-	}) => {
-		const namedDir = path.join(tempDir, "another-project");
-		fs.mkdirSync(namedDir);
-
-		const pluginConfig: PluginConfig = {};
-
-		const result = await resolvePluginConfig(
-			pluginConfig,
-			{ root: namedDir },
-			viteEnv
-		);
-
-		expect(result.type).toBe("assets-only");
-		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
-		expect(assetsOnlyResult.config.name).toBe("another-project");
-	});
-
-	test("should set a compatibility date in zero-config mode", async ({
-		expect,
-	}) => {
-		const pluginConfig: PluginConfig = {};
-
-		const result = await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
-		);
-
-		expect(result.type).toBe("assets-only");
-		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
-		expect(assetsOnlyResult.config.compatibility_date).toBe(
-			DEFAULT_COMPAT_DATE
-		);
-	});
-
-	test("should allow config() to add main in zero-config mode", async ({
-		expect,
-	}) => {
-		fs.writeFileSync(
-			path.join(tempDir, "package.json"),
-			JSON.stringify({ name: "my-worker" })
-		);
-		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
-		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
-
-		const pluginConfig: PluginConfig = {
-			config: {
-				main: "./src/index.ts",
-			},
-		};
-
-		const result = (await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
-		)) as WorkersResolvedConfig;
-		expect(result.type).toBe("workers");
-		const entryWorker = result.environmentNameToWorkerMap.get(
-			result.entryWorkerEnvironmentName
-		);
-		assert(entryWorker);
-		expect(entryWorker.config.name).toBe("my-worker");
-	});
-});
-
-describe("resolvePluginConfig - internal config path env fallback", () => {
-	let tempDir: string;
-	let originalConfigPathEnvVar: string | undefined;
-
-	beforeEach(() => {
-		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "vite-plugin-test-"));
-		originalConfigPathEnvVar = process.env.CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH;
-	});
-
-	afterEach(() => {
-		vi.unstubAllEnvs();
-		if (originalConfigPathEnvVar === undefined) {
-			delete process.env.CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH;
-		} else {
-			process.env.CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH =
-				originalConfigPathEnvVar;
+		if (result.type === "assets-only") {
+			expect(result.config.assets).toBeUndefined();
 		}
-		removeDirSync(tempDir);
 	});
 
-	const viteEnv = { mode: "development", command: "serve" as const };
-
-	function createWorkerConfig(dir: string, name: string) {
-		const configPath = path.join(dir, "wrangler.jsonc");
-		fs.mkdirSync(path.join(dir, "src"), { recursive: true });
-		fs.writeFileSync(
-			configPath,
-			JSON.stringify({
-				name,
-				main: "./src/index.ts",
-				compatibility_date: "2024-01-01",
-			})
-		);
-		fs.writeFileSync(path.join(dir, "src/index.ts"), "export default {}");
-		return configPath;
-	}
-
-	test("should resolve entry worker config from CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH loaded from env files", async ({
+	test("supports auxiliary Workers with an assets-only default export", async ({
 		expect,
 	}) => {
-		const hiddenConfigPath = createWorkerConfig(
-			path.join(tempDir, ".sst"),
-			"hidden-worker"
-		);
-		fs.writeFileSync(
-			path.join(tempDir, ".env.development"),
-			"CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH=.sst/wrangler.jsonc\n"
+		writeEntryConfig({ assetsOnly: true });
+		writeSource("src/aux.ts");
+		const result = await resolvePluginConfig(
+			{
+				auxiliaryWorkers: [
+					{ config: createAuxiliaryWorkerConfig("auxiliary-worker") },
+				],
+			},
+			{ root },
+			buildEnv
 		);
 
-		const result = (await resolvePluginConfig(
-			{},
-			{ root: tempDir },
-			viteEnv
-		)) as WorkersResolvedConfig;
-
-		expect(result.type).toBe("workers");
-		const entryWorker = result.environmentNameToWorkerMap.get(
-			result.entryWorkerEnvironmentName
-		);
-		assert(entryWorker);
-		expect(entryWorker.config.name).toBe("hidden-worker");
-		expect(entryWorker.config.main).toBe(
-			path.join(tempDir, ".sst", "src/index.ts")
-		);
-		expect([...result.configPaths]).toEqual([hiddenConfigPath]);
+		expect(result.type).toBe("assets-only");
+		if (result.type === "assets-only") {
+			expect(
+				result.environmentNameToWorkerMap.get("auxiliary_worker")?.directoryName
+			).toBe("auxiliary-worker");
+		}
 	});
 
-	test("should prefer CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH over auto-discovered config", async ({
+	test("resolves Cloudflare environment files from Vite's envDir and exposes Cloudflare-prefixed values to process.env", async ({
 		expect,
 	}) => {
-		createWorkerConfig(tempDir, "root-worker");
-		const hiddenConfigPath = createWorkerConfig(
-			path.join(tempDir, ".sst"),
-			"hidden-worker"
-		);
-		vi.stubEnv("CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH", ".sst/wrangler.jsonc");
-
-		const result = (await resolvePluginConfig(
-			{},
-			{ root: tempDir },
-			viteEnv
-		)) as WorkersResolvedConfig;
-
-		expect(result.type).toBe("workers");
-		const entryWorker = result.environmentNameToWorkerMap.get(
-			result.entryWorkerEnvironmentName
-		);
-		assert(entryWorker);
-		expect(entryWorker.config.name).toBe("hidden-worker");
-		expect([...result.configPaths]).toEqual([hiddenConfigPath]);
-	});
-
-	test("should prefer explicit configPath over CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH", async ({
-		expect,
-	}) => {
-		createWorkerConfig(path.join(tempDir, ".sst"), "hidden-worker");
-		const explicitConfigPath = createWorkerConfig(
-			path.join(tempDir, "visible"),
-			"explicit-worker"
-		);
-		vi.stubEnv("CLOUDFLARE_VITE_WRANGLER_CONFIG_PATH", ".sst/wrangler.jsonc");
-
-		const result = (await resolvePluginConfig(
-			{ configPath: explicitConfigPath },
-			{ root: tempDir },
-			viteEnv
-		)) as WorkersResolvedConfig;
-
-		expect(result.type).toBe("workers");
-		const entryWorker = result.environmentNameToWorkerMap.get(
-			result.entryWorkerEnvironmentName
-		);
-		assert(entryWorker);
-		expect(entryWorker.config.name).toBe("explicit-worker");
-		expect(entryWorker.config.main).toBe(
-			path.join(tempDir, "visible", "src/index.ts")
-		);
-		expect([...result.configPaths]).toEqual([explicitConfigPath]);
-	});
-});
-
-describe("resolvePluginConfig - force-local env override", () => {
-	let tempDir: string;
-
-	beforeEach(() => {
-		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "vite-plugin-test-"));
-		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
+		writeEntryConfig();
+		const envDir = path.join(root, "environment");
+		fs.mkdirSync(envDir);
 		fs.writeFileSync(
-			path.join(tempDir, "wrangler.jsonc"),
-			JSON.stringify({
-				name: "worker",
-				main: "./src/index.ts",
-				compatibility_date: "2024-01-01",
-			})
+			path.join(envDir, ".env.production"),
+			"CLOUDFLARE_VITE_FORCE_LOCAL=true\nCLOUDFLARE_ACCOUNT_ID=test-account-id"
 		);
-		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
+		fs.writeFileSync(
+			path.join(envDir, ".dev.vars.production"),
+			"CLOUDFLARE_ACCOUNT_ID=from-dev-vars"
+		);
+		vi.stubEnv("CLOUDFLARE_VITE_FORCE_LOCAL", undefined);
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
+
+		const result = await resolvePluginConfig(
+			{ remoteBindings: true },
+			{ root, envDir: "environment" },
+			buildEnv
+		);
+
+		expect(result.remoteBindings).toBe(false);
+		expect(result.localEnv.values.CLOUDFLARE_VITE_FORCE_LOCAL).toBe("true");
+		expect(result.devVars?.CLOUDFLARE_ACCOUNT_ID).toBe("from-dev-vars");
+		expect(process.env.CLOUDFLARE_ACCOUNT_ID).toBe("test-account-id");
 	});
 
-	afterEach(() => {
-		vi.unstubAllEnvs();
-		removeDirSync(tempDir);
-	});
+	test("honours Vite's envDir false option", async ({ expect }) => {
+		writeEntryConfig();
+		fs.writeFileSync(
+			path.join(root, ".env.production"),
+			"CLOUDFLARE_VITE_FORCE_LOCAL=true"
+		);
+		vi.stubEnv("CLOUDFLARE_VITE_FORCE_LOCAL", undefined);
 
-	const viteEnv = { mode: "development", command: "serve" as const };
+		const result = await resolvePluginConfig(
+			{ remoteBindings: true },
+			{ root, envDir: false },
+			buildEnv
+		);
 
-	test("remote bindings default to enabled", async ({ expect }) => {
-		const result = await resolvePluginConfig({}, { root: tempDir }, viteEnv);
 		expect(result.remoteBindings).toBe(true);
 	});
 
-	test("CLOUDFLARE_VITE_FORCE_LOCAL=true forces remote bindings off", async ({
-		expect,
-	}) => {
-		vi.stubEnv("CLOUDFLARE_VITE_FORCE_LOCAL", "true");
-		const result = await resolvePluginConfig({}, { root: tempDir }, viteEnv);
-		expect(result.remoteBindings).toBe(false);
-	});
-
-	test("CLOUDFLARE_VITE_FORCE_LOCAL=true overrides remoteBindings: true in config", async ({
-		expect,
-	}) => {
-		vi.stubEnv("CLOUDFLARE_VITE_FORCE_LOCAL", "true");
-		const result = await resolvePluginConfig(
-			{ remoteBindings: true },
-			{ root: tempDir },
-			viteEnv
-		);
-		expect(result.remoteBindings).toBe(false);
-	});
-
-	test("unset CLOUDFLARE_VITE_FORCE_LOCAL respects remoteBindings config", async ({
-		expect,
-	}) => {
-		const result = await resolvePluginConfig(
-			{ remoteBindings: false },
-			{ root: tempDir },
-			viteEnv
-		);
-		expect(result.remoteBindings).toBe(false);
-	});
-});
-
-describe("resolvePluginConfig - defaults fill in missing fields", () => {
-	let tempDir: string;
-
-	beforeEach(() => {
-		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "vite-plugin-test-"));
-	});
-
-	afterEach(() => {
-		removeDirSync(tempDir);
-	});
-
-	const viteEnv = { mode: "development", command: "serve" as const };
-
-	test("should accept Wrangler config file with only name, filling in compatibility_date from defaults", async ({
-		expect,
-	}) => {
-		const configPath = path.join(tempDir, "wrangler.jsonc");
-		fs.writeFileSync(
-			configPath,
-			JSON.stringify({
-				name: "my-worker",
-				// No compatibility_date - should be filled from defaults
-			})
-		);
-
-		const pluginConfig: PluginConfig = {
-			configPath,
-		};
-
-		const result = await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
-		);
-
-		expect(result.type).toBe("assets-only");
-		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
-		expect(assetsOnlyResult.config.name).toBe("my-worker");
-		// compatibility_date should be filled from defaults
-		expect(assetsOnlyResult.config.compatibility_date).toBe(
-			DEFAULT_COMPAT_DATE
-		);
-	});
-
-	test("should accept Wrangler config file missing name when config() provides it", async ({
-		expect,
-	}) => {
-		const configPath = path.join(tempDir, "wrangler.jsonc");
-		fs.writeFileSync(
-			configPath,
-			JSON.stringify({
-				compatibility_date: "2024-01-01",
-				// No name - should be provided by config()
-			})
-		);
-
-		const pluginConfig: PluginConfig = {
-			configPath,
-			config: {
-				name: "configured-worker",
-			},
-		};
-
-		const result = await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
-		);
-
-		expect(result.type).toBe("assets-only");
-		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
-		expect(assetsOnlyResult.config.name).toBe("configured-worker");
-	});
-
-	test("should accept Wrangler config file missing compatibility_date when config() provides it", async ({
-		expect,
-	}) => {
-		const configPath = path.join(tempDir, "wrangler.jsonc");
-		fs.writeFileSync(
-			configPath,
-			JSON.stringify({
-				name: "my-worker",
-				// No compatibility_date
-			})
-		);
-
-		const pluginConfig: PluginConfig = {
-			configPath,
-			config: {
-				compatibility_date: "2025-06-01",
-			},
-		};
-
-		const result = await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
-		);
-
-		expect(result.type).toBe("assets-only");
-		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
-		expect(assetsOnlyResult.config.compatibility_date).toBe("2025-06-01");
-	});
-
-	test("should accept minimal Wrangler config file when all required fields come from config()", async ({
-		expect,
-	}) => {
-		const configPath = path.join(tempDir, "wrangler.jsonc");
-		fs.writeFileSync(
-			configPath,
-			JSON.stringify({
-				// Minimal config - just empty object or some other field
-				compatibility_flags: ["nodejs_compat"],
-			})
-		);
-
-		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
-		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
-
-		const pluginConfig: PluginConfig = {
-			configPath,
-			config: {
-				name: "configured-worker",
-				compatibility_date: "2025-01-01",
-				main: "./src/index.ts",
-			},
-		};
-
-		const result = (await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
-		)) as WorkersResolvedConfig;
-		expect(result.type).toBe("workers");
-		const entryWorker = result.environmentNameToWorkerMap.get(
-			result.entryWorkerEnvironmentName
-		);
-		assert(entryWorker);
-		expect(entryWorker.config.name).toBe("configured-worker");
-		expect(entryWorker.config.compatibility_date).toBe("2025-01-01");
-		expect(entryWorker.config.compatibility_flags).toContain("nodejs_compat");
-	});
-
-	test("should accept auxiliary worker Wrangler config file missing fields when config() provides them", async ({
-		expect,
-	}) => {
-		// Create entry worker config
-		const entryConfigPath = path.join(tempDir, "wrangler.jsonc");
-		fs.writeFileSync(
-			entryConfigPath,
-			JSON.stringify({
-				name: "entry-worker",
-				main: "./src/index.ts",
-				compatibility_date: "2024-01-01",
-			})
-		);
-		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
-		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
-
-		// Create auxiliary worker config with only some fields
-		const auxDir = path.join(tempDir, "aux");
-		fs.mkdirSync(auxDir, { recursive: true });
-		const auxConfigPath = path.join(auxDir, "wrangler.jsonc");
-		fs.writeFileSync(
-			auxConfigPath,
-			JSON.stringify({
-				// Only has main, missing name
-				main: "./worker.ts",
-			})
-		);
-		fs.writeFileSync(path.join(auxDir, "worker.ts"), "export default {}");
-
-		const pluginConfig: PluginConfig = {
-			configPath: entryConfigPath,
-			auxiliaryWorkers: [
+	test("rejects duplicate Vite environment names", async ({ expect }) => {
+		writeEntryConfig();
+		writeSource("src/aux.ts");
+		await expect(
+			resolvePluginConfig(
 				{
-					configPath: auxConfigPath,
-					config: {
-						name: "aux-from-config",
-					},
+					viteEnvironment: { name: "worker" },
+					auxiliaryWorkers: [
+						{
+							viteEnvironment: { name: "worker" },
+							config: createAuxiliaryWorkerConfig("auxiliary-worker"),
+						},
+					],
 				},
-			],
-		};
-
-		const result = (await resolvePluginConfig(
-			pluginConfig,
-			{ root: tempDir },
-			viteEnv
-		)) as WorkersResolvedConfig;
-		expect(result.type).toBe("workers");
-		const auxWorker = result.environmentNameToWorkerMap.get("aux_from_config");
-		assert(auxWorker);
-		expect(auxWorker.config.name).toBe("aux-from-config");
-		// compatibility_date should be filled from defaults
-		expect(auxWorker.config.compatibility_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+				{ root },
+				buildEnv
+			)
+		).rejects.toThrow(/Duplicate Vite environment name: "worker"/);
 	});
-});
-
-describe("resolvePluginConfig - tunnel", () => {
-	let tempDir: string;
-
-	beforeEach(() => {
-		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "vite-plugin-test-"));
-		fs.writeFileSync(
-			path.join(tempDir, "wrangler.jsonc"),
-			JSON.stringify({ name: "my-worker" })
-		);
-	});
-
-	afterEach(() => {
-		removeDirSync(tempDir);
-	});
-
-	const viteEnv = { mode: "development", command: "serve" as const };
 
 	test("resolves allowed mail for a Quick Tunnel", async ({ expect }) => {
 		const result = await resolvePluginConfig(
@@ -1003,8 +898,8 @@ describe("resolvePluginConfig - tunnel", () => {
 					allowedMail: ["alice@example.com", "*@example.org"],
 				},
 			},
-			{ root: tempDir },
-			viteEnv
+			{ root },
+			{ mode: "development", command: "serve" }
 		);
 
 		expect(result.tunnel).toEqual({
@@ -1023,8 +918,8 @@ describe("resolvePluginConfig - tunnel", () => {
 						allowedMail: ["alice@example.com"],
 					},
 				},
-				{ root: tempDir },
-				viteEnv
+				{ root },
+				{ mode: "development", command: "serve" }
 			)
 		).rejects.toThrow(
 			"`tunnel.allowedMail` is only supported for Quick Tunnels"
@@ -1041,8 +936,8 @@ describe("resolvePluginConfig - tunnel", () => {
 					allowedMail: [],
 				},
 			},
-			{ root: tempDir },
-			viteEnv
+			{ root },
+			{ mode: "development", command: "serve" }
 		);
 
 		expect(result.tunnel).toEqual({
@@ -1051,147 +946,147 @@ describe("resolvePluginConfig - tunnel", () => {
 			allowedMail: undefined,
 		});
 	});
-});
 
-describe("resolvePluginConfig - environment name validation", () => {
-	let tempDir: string;
-
-	beforeEach(() => {
-		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "vite-plugin-test-"));
-	});
-
-	afterEach(() => {
-		removeDirSync(tempDir);
-	});
-
-	const viteEnv = { mode: "development", command: "serve" as const };
-
-	test("throws when environment name is 'client'", async ({ expect }) => {
-		const configPath = path.join(tempDir, "wrangler.jsonc");
-		fs.writeFileSync(
-			configPath,
-			JSON.stringify({ name: "entry-worker", main: "./src/index.ts" })
-		);
-		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
-		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
-
-		const pluginConfig: PluginConfig = {
-			configPath,
-			viteEnvironment: { name: "client" },
-		};
-
-		await expect(
-			resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv)
-		).rejects.toThrow('"client" is a reserved Vite environment name');
-	});
-
-	test("throws when child environment duplicates parent", async ({
+	test("preview reads only the Build Output Specification", async ({
 		expect,
 	}) => {
-		const configPath = path.join(tempDir, "wrangler.jsonc");
-		fs.writeFileSync(
-			configPath,
-			JSON.stringify({ name: "entry-worker", main: "./src/index.ts" })
-		);
-		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
-		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
-
-		const pluginConfig: PluginConfig = {
-			configPath,
-			viteEnvironment: { childEnvironments: ["entry_worker"] },
-		};
-
-		await expect(
-			resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv)
-		).rejects.toThrow('Duplicate Vite environment name: "entry_worker"');
-	});
-
-	test("throws when child environments duplicate each other", async ({
-		expect,
-	}) => {
-		const configPath = path.join(tempDir, "wrangler.jsonc");
-		fs.writeFileSync(
-			configPath,
-			JSON.stringify({ name: "entry-worker", main: "./src/index.ts" })
-		);
-		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
-		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
-
-		const pluginConfig: PluginConfig = {
-			configPath,
-			viteEnvironment: { childEnvironments: ["child", "child"] },
-		};
-
-		await expect(
-			resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv)
-		).rejects.toThrow('Duplicate Vite environment name: "child"');
-	});
-
-	test("throws when auxiliary Worker duplicates entry Worker", async ({
-		expect,
-	}) => {
-		const configPath = path.join(tempDir, "wrangler.jsonc");
-		fs.writeFileSync(
-			configPath,
-			JSON.stringify({ name: "entry-worker", main: "./src/index.ts" })
-		);
-		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
-		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
-
-		const auxDir = path.join(tempDir, "aux");
-		fs.mkdirSync(auxDir, { recursive: true });
-		fs.writeFileSync(
-			path.join(auxDir, "wrangler.jsonc"),
-			JSON.stringify({ name: "aux-worker", main: "./worker.ts" })
-		);
-		fs.writeFileSync(path.join(auxDir, "worker.ts"), "export default {}");
-
-		const pluginConfig: PluginConfig = {
-			configPath,
-			auxiliaryWorkers: [
+		readBuildOutputPreviewMock.mockResolvedValue({
+			rootConfig: { buildContext: { isPreview: false } },
+			containers: [
 				{
-					configPath: path.join(auxDir, "wrangler.jsonc"),
-					viteEnvironment: { name: "entry_worker" },
+					name: "api",
+					image: { localReference: "cloudflare-build/project/api:123" },
+					maxInstances: 20,
 				},
 			],
-		};
-
-		await expect(
-			resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv)
-		).rejects.toThrow('Duplicate Vite environment name: "entry_worker"');
-	});
-
-	test("throws when auxiliary Worker child duplicates entry Worker", async ({
-		expect,
-	}) => {
-		const configPath = path.join(tempDir, "wrangler.jsonc");
-		fs.writeFileSync(
-			configPath,
-			JSON.stringify({ name: "entry-worker", main: "./src/index.ts" })
-		);
-		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
-		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
-
-		const auxDir = path.join(tempDir, "aux");
-		fs.mkdirSync(auxDir, { recursive: true });
-		fs.writeFileSync(
-			path.join(auxDir, "wrangler.jsonc"),
-			JSON.stringify({ name: "aux-worker", main: "./worker.ts" })
-		);
-		fs.writeFileSync(path.join(auxDir, "worker.ts"), "export default {}");
-
-		const pluginConfig: PluginConfig = {
-			configPath,
-			auxiliaryWorkers: [
+			workers: [
 				{
-					configPath: path.join(auxDir, "wrangler.jsonc"),
-					viteEnvironment: { childEnvironments: ["entry_worker"] },
+					config: {
+						name: "preview-worker",
+						compatibilityDate: "2024-12-30",
+					},
+					assetsDir: undefined,
+					bundle: undefined,
 				},
 			],
-		};
+		});
 
-		await expect(
-			resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv)
-		).rejects.toThrow('Duplicate Vite environment name: "entry_worker"');
+		const result = await resolvePluginConfig(
+			{} satisfies PluginConfig,
+			{ root },
+			{ mode: "production", command: "serve", isPreview: true }
+		);
+
+		expect(result.type).toBe("preview");
+		expect(readBuildOutputPreviewMock).toHaveBeenCalledWith(root, false);
+		if (result.type === "preview") {
+			expect(result.workers[0]?.config.name).toBe("preview-worker");
+			expect(result.containers).toEqual([
+				expect.objectContaining({
+					name: "api",
+					image: { localReference: "cloudflare-build/project/api:123" },
+				}),
+			]);
+		}
+	});
+
+	test("preview selects the prerender Build Output during a build", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_VITE_BUILD", "true");
+		readBuildOutputPreviewMock.mockResolvedValue({
+			rootConfig: { buildContext: { isPreview: false } },
+			containers: [],
+			workers: [],
+		});
+
+		await resolvePluginConfig(
+			{} satisfies PluginConfig,
+			{ root },
+			{ mode: "production", command: "serve", isPreview: true }
+		);
+
+		expect(readBuildOutputPreviewMock).toHaveBeenCalledWith(root, true);
+	});
+
+	test("preview loads local env using the mode recorded in Build Output", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			path.join(root, ".env.production"),
+			"PREVIEW_MODE_VALUE=preview-mode"
+		);
+		fs.writeFileSync(
+			path.join(root, ".env.staging"),
+			"PREVIEW_MODE_VALUE=build-mode"
+		);
+		fs.writeFileSync(
+			path.join(root, ".dev.vars.production"),
+			"PREVIEW_SECRET=preview-mode"
+		);
+		fs.writeFileSync(
+			path.join(root, ".dev.vars.staging"),
+			"PREVIEW_SECRET=build-mode"
+		);
+		readBuildOutputPreviewMock.mockResolvedValue({
+			rootConfig: {
+				buildContext: { isPreview: false, mode: "staging" },
+			},
+			containers: [],
+			workers: [
+				{
+					config: {
+						name: "preview-worker",
+						compatibilityDate: "2024-12-30",
+					},
+					assetsDir: undefined,
+					bundle: undefined,
+				},
+			],
+		});
+
+		const result = await resolvePluginConfig(
+			{} satisfies PluginConfig,
+			{ root },
+			{ mode: "production", command: "serve", isPreview: true }
+		);
+
+		expect(result.type).toBe("preview");
+		expect(result.localEnv.values.PREVIEW_MODE_VALUE).toBe("build-mode");
+		expect(result.devVars?.PREVIEW_SECRET).toBe("build-mode");
+	});
+
+	test("preview uses all Workers read from Build Output", async ({
+		expect,
+	}) => {
+		readBuildOutputPreviewMock.mockResolvedValue({
+			rootConfig: { buildContext: { isPreview: false } },
+			containers: [],
+			workers: [
+				{
+					config: {
+						name: "entry-worker",
+						compatibilityDate: "2024-12-30",
+					},
+					assetsDir: undefined,
+					bundle: undefined,
+				},
+			],
+		});
+		const result = await resolvePluginConfig(
+			{
+				auxiliaryWorkers: [
+					{ config: createAuxiliaryWorkerConfig("ignored-during-preview") },
+				],
+			},
+			{ root },
+			{ mode: "production", command: "serve", isPreview: true }
+		);
+
+		expect(result.type).toBe("preview");
+		if (result.type === "preview") {
+			expect(result.workers).toHaveLength(1);
+			expect(result.workers[0]?.config.name).toBe("entry-worker");
+		}
 	});
 });

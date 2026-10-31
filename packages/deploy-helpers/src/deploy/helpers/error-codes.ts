@@ -39,3 +39,6 @@ export const ACTOR_BINDING_DEPENDS_ON_EXPORT_CODE = 100406;
 
 /** Workflows API code for `workflow.cron_requires_paid_plan`. */
 export const WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE = 10208;
+
+/** Workflows API code for `workflow.jurisdiction_immutable`. */
+export const WORKFLOW_JURISDICTION_IMMUTABLE_CODE = 10209;

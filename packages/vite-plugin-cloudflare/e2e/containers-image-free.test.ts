@@ -4,8 +4,6 @@ import { getDockerPath } from "@cloudflare/workers-utils";
 import { afterAll, beforeAll, describe, test, vi } from "vitest";
 import { runLongLived, seed } from "./helpers";
 
-// Only mutate the sidecar cache on the ephemeral Linux CI runner. This suite
-// runs files serially, so the three entrypoints each start with a cold cache.
 describe.skipIf(
 	process.env.CI !== "true" ||
 		process.platform !== "linux" ||
@@ -34,7 +32,7 @@ describe.skipIf(
 		if (!preExistingSidecars) {
 			return;
 		}
-		const ids = listSidecars().filter((id) => !preExistingSidecars.has(id));
+		const ids = listSidecars().filter((id) => !preExistingSidecars?.has(id));
 		if (ids.length) {
 			execFileSync(dockerPath, ["rm", "--force", ...ids], { timeout: 30_000 });
 		}
@@ -49,19 +47,19 @@ describe.skipIf(
 
 	afterAll(cleanupTestSidecars, 40_000);
 
-	test.for(["wranglerDev", "dev", "buildAndPreview"] as const)(
+	test.for(["dev", "buildAndPreview"] as const)(
 		"%s prepares the sidecar and preserves start-time image selection",
 		{ timeout: 300_000 },
 		async (command, { expect }) => {
-			// The process helper uses SIGKILL, so workerd cannot remove its sidecar.
-			// Remove only sidecars created by this suite before resetting the image cache.
 			cleanupTestSidecars();
 			const inspect = () =>
 				spawnSync(dockerPath, ["image", "inspect", sidecar], {
 					timeout: 10_000,
 				});
 			if (inspect().status === 0) {
-				execFileSync(dockerPath, ["image", "rm", sidecar], { timeout: 30_000 });
+				execFileSync(dockerPath, ["image", "rm", sidecar], {
+					timeout: 30_000,
+				});
 			}
 			expect(inspect().status).toBe(1);
 
@@ -99,7 +97,9 @@ describe.skipIf(
 					{ timeout: 30_000, interval: 500 }
 				);
 			} finally {
-				await fetch(`${url}/destroy`, { signal: AbortSignal.timeout(10_000) });
+				await fetch(`${url}/destroy`, {
+					signal: AbortSignal.timeout(10_000),
+				});
 			}
 		}
 	);

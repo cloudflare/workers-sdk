@@ -152,6 +152,7 @@ export const versionsRollbackCommand = createCommand({
 					);
 				} else {
 					cli.cancel("Aborting rollback...");
+					return;
 				}
 			} else {
 				throw e;

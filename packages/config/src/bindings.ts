@@ -94,6 +94,8 @@ export interface AiSearchNamespaceBinding extends AiSearchNamespaceBindingOption
 export interface AnalyticsEngineDatasetBindingOptions {
 	/** The name of this dataset to write to. */
 	name?: string;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /**
@@ -253,7 +255,7 @@ export interface HyperdriveBindingOptions {
 	/** The ID of the Hyperdrive configuration. */
 	id: string;
 	/** Options that only apply during local development. */
-	dev?: {
+	dev?: BindingDevOptions & {
 		/** The database connection string used during local development. */
 		connectionString?: string;
 	};

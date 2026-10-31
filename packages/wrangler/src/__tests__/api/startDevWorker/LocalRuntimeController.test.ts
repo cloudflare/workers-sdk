@@ -723,37 +723,43 @@ describe("LocalRuntimeController", () => {
 
 			// Connect inspector WebSocket
 			const ws = new WebSocket(inspectorUrl);
-			const messages = events.on(ws, "message");
-			async function nextMessage() {
-				const messageEvent = (await messages.next()).value;
-				return JSON.parse(messageEvent[0].toString());
+			teardown(() => ws.terminate());
+			// Retain messages so notifications and command responses can arrive in any order.
+			const messages: unknown[] = [];
+			ws.on("message", (data) => {
+				messages.push(JSON.parse(data.toString()));
+			});
+			async function expectMessage(expected: Record<string, unknown>) {
+				await expect
+					.poll(() => messages, { timeout: 10_000 })
+					.toContainEqual(expect.objectContaining(expected));
 			}
 
 			// Enable `Debugger` domain
 			await events.once(ws, "open");
 			ws.send(JSON.stringify({ id: 0, method: "Debugger.enable" }));
 			if (isWindows) {
-				expect(await nextMessage()).toMatchObject({
+				await expectMessage({
 					method: "Debugger.scriptParsed",
-					params: {
+					params: expect.objectContaining({
 						url: expect.stringMatching(/file:\/\/\/[A-Z]:\/virtual\/index.mjs/),
-					},
+					}),
 				});
 			} else {
-				expect(await nextMessage()).toMatchObject({
+				await expectMessage({
 					method: "Debugger.scriptParsed",
-					params: { url: "file:///virtual/index.mjs" },
+					params: expect.objectContaining({ url: "file:///virtual/index.mjs" }),
 				});
 			}
-			expect(await nextMessage()).toMatchObject({ id: 0 });
+			await expectMessage({ id: 0 });
 
 			// Send request and hit `debugger;` statement
 			const resPromise = fetch(url);
-			expect(await nextMessage()).toMatchObject({ method: "Debugger.paused" });
+			await expectMessage({ method: "Debugger.paused" });
 
 			// Resume execution
 			ws.send(JSON.stringify({ id: 1, method: "Debugger.resume" }));
-			expect(await nextMessage()).toMatchObject({ id: 1 });
+			await expectMessage({ id: 1 });
 			const res = await resPromise;
 			expect(await res.text()).toBe("body");
 		});

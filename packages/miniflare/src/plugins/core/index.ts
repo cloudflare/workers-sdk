@@ -1020,7 +1020,13 @@ export function getGlobalServices({
 			worker: {
 				modules: [{ name: "entry.worker.js", esModule: SCRIPT_ENTRY() }],
 				compatibilityDate: "2025-03-17",
-				compatibilityFlags: ["nodejs_compat", "service_binding_extra_handlers"],
+				compatibilityFlags: [
+					"nodejs_compat",
+					"service_binding_extra_handlers",
+					// Keep custom error names and properties (for example Artifacts
+					// `code`) when binding errors reach `ProxyServer` for Node callers.
+					"enhanced_error_serialization",
+				],
 				bindings: serviceEntryBindings,
 				durableObjectNamespaces: [
 					{

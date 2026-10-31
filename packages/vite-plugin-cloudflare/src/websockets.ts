@@ -1,8 +1,7 @@
-import { createHeaders } from "@remix-run/node-fetch-server";
 import { CoreHeaders, coupleWebSocket } from "miniflare";
 import { WebSocketServer } from "ws";
 import { UNKNOWN_HOST } from "./shared";
-import { getForwardedProto } from "./utils";
+import { createHeadersForIncomingMessage, getForwardedProto } from "./utils";
 import type { Headers, Miniflare } from "miniflare";
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
@@ -14,7 +13,8 @@ import type * as vite from "vite";
 export function handleWebSocket(
 	httpServer: vite.HttpServer,
 	miniflare: Miniflare,
-	entryWorkerName?: string
+	entryWorkerName?: string,
+	viteWebSocketEnabled = false
 ) {
 	const nodeWebSocket = new WebSocketServer({ noServer: true });
 
@@ -58,27 +58,37 @@ export function handleWebSocket(
 
 				const isViteRequest =
 					request.headers["sec-websocket-protocol"]?.startsWith("vite");
+				const isDevToolsRequest = url.pathname === "/__devtools/__ws";
 				const isSandboxRequest = hasSandboxOrigin(url.origin);
 
-				// Ignore Vite HMR WebSockets but forward on all sandbox requests.
-				if (isViteRequest && !isSandboxRequest) {
+				// Leave Vite HMR and DevTools upgrades to their own handlers, but
+				// forward all sandbox requests to the Worker.
+				if ((isViteRequest || isDevToolsRequest) && !isSandboxRequest) {
+					// No Vite handler claims HMR upgrades when `server.ws` is disabled.
+					if (isViteRequest && !viteWebSocketEnabled) {
+						socket.destroy();
+					}
 					return;
 				}
 
-				const headers = createHeaders(request);
+				const headers = createHeadersForIncomingMessage(request);
 
 				if (entryWorkerName) {
 					headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
 				}
 
 				const response = await miniflare.dispatchFetch(url, {
-					headers: headers as unknown as Headers,
+					headers: [...headers],
 					method: request.method,
 				});
 				const workerWebSocket = response.webSocket;
 
 				if (!workerWebSocket) {
 					socket.destroy();
+					return;
+				}
+
+				if (socket.destroyed) {
 					return;
 				}
 
@@ -105,7 +115,7 @@ export function handleWebSocket(
 				// This listener is `async`, so an uncaught rejection here escapes as
 				// an unhandled rejection — which terminates the Node.js process on
 				// modern versions and leaks the client socket. Tear the socket down
-				// instead, mirroring the `!workerWebSocket` path above.
+				// instead.
 				workerResponseHeaders.delete(request);
 				socket.destroy();
 			}
@@ -132,26 +142,13 @@ function appendWorkerResponseHeaders(
 	responseHeaders: string[],
 	workerHeaders: Headers
 ) {
-	// `Set-Cookie` can appear multiple times in a single response.
-	// `Headers.forEach` collapses them into a single comma-joined value, which
-	// breaks cookies that themselves contain commas (e.g. Expires).
-	// `getSetCookie` returns them as a string array.
-	if (typeof workerHeaders.getSetCookie === "function") {
-		for (const cookie of workerHeaders.getSetCookie()) {
-			responseHeaders.push(`Set-Cookie: ${cookie}`);
-		}
-	}
-
-	workerHeaders.forEach((value, name) => {
-		const lower = name.toLowerCase();
-		if (lower === "set-cookie") {
-			return;
-		}
-		if (EXCLUDED_RESPONSE_HEADERS.has(lower)) {
-			return;
+	// Iteration preserves separate Set-Cookie values, including commas in Expires.
+	for (const [name, value] of workerHeaders) {
+		if (EXCLUDED_RESPONSE_HEADERS.has(name)) {
+			continue;
 		}
 		responseHeaders.push(`${name}: ${value}`);
-	});
+	}
 }
 
 /**

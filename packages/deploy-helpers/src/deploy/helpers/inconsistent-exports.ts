@@ -1,5 +1,3 @@
-import { cliPresentation } from "../../shared/context";
-
 /**
  * Build the user-facing error message for EWC code 100405
  * (inconsistent declarative DO `exports` across versions in a
@@ -9,10 +7,12 @@ import { cliPresentation } from "../../shared/context";
  * concrete CLI-specific next step and a link to the gradual-deployments docs.
  *
  * @param serverMessage Error message returned by the deployment API.
+ * @param versionsDeployAt100Command Command that deploys the version at 100%.
  * @returns The server message followed by consumer-specific recovery guidance.
  */
 export function renderInconsistentExportsAcrossVersionsError(
-	serverMessage: string
+	serverMessage: string,
+	versionsDeployAt100Command: string
 ): string {
 	return [
 		serverMessage,
@@ -21,7 +21,7 @@ export function renderInconsistentExportsAcrossVersionsError(
 		"",
 		"What to do:",
 		"  1. Deploy the version that changes `exports` at 100% first:",
-		`       ${cliPresentation.commands.versionsDeployAt(100)}`,
+		`       ${versionsDeployAt100Command}`,
 		"  2. Once that deploy is stable, run your percentage-split deploy.",
 		"",
 		"Learn more: https://developers.cloudflare.com/workers/configuration/versions-and-deployments/gradual-deployments/#gradual-deployments-for-durable-objects",

@@ -26,6 +26,7 @@ import {
 import { validateHttpsOptions } from "../../https-options";
 import { logger } from "../../logger";
 import { getSourceMappedStack } from "../../sourcemap";
+import { BUN_UNSUPPORTED_MESSAGE, isBun } from "../../utils/is-bun";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import { createDeferred } from "./utils";
@@ -116,6 +117,12 @@ export class ProxyController extends Controller {
 					},
 					bindings: {
 						PROXY_CONTROLLER_AUTH_SECRET: this.secret,
+						// Bun's `fetch()` ignores the undici `dispatcher` that carries
+						// control messages here, so the ProxyWorker would queue every
+						// request forever waiting for a `play` message.
+						...(isBun() && {
+							UNSUPPORTED_RUNTIME_MESSAGE: BUN_UNSUPPORTED_MESSAGE,
+						}),
 					},
 
 					// no need to use file-system, so don't

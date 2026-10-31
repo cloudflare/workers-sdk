@@ -565,6 +565,7 @@ describe("development OIDC integration", () => {
 				account_id: "a".repeat(32),
 				compatibility_date: "2026-01-01",
 				compatibility_flags: ["workers_oidc"],
+				identities: [{ binding: "IDENTITY", audience: "recipient" }],
 			},
 			"./wrangler.json"
 		);

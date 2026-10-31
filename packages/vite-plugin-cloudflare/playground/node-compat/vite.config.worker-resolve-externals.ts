@@ -8,14 +8,24 @@ export default defineConfig({
 	},
 	plugins: [
 		cloudflare({
-			configPath: "./worker-resolve-externals/wrangler.jsonc",
+			types: { includeRuntime: false },
+			config: (loadedConfig) => ({
+				...loadedConfig,
+				worker: {
+					...loadedConfig.worker,
+					name: "worker",
+					entrypoint: "./worker-resolve-externals/index.ts",
+					compatibilityDate: "2024-12-30",
+					compatibilityFlags: ["nodejs_compat"],
+				},
+			}),
 			inspectorPort: false,
 			persistState: false,
 		}),
 		{
 			name: "test-plugin",
 			async configureServer(viteDevServer) {
-				const workerEnvironment = viteDevServer.environments.worker;
+				const workerEnvironment = viteDevServer.environments.ssr;
 				assert(workerEnvironment);
 
 				const resolved =

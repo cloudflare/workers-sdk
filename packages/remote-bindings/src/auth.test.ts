@@ -185,6 +185,30 @@ describe("getRemoteBindingsAuthHook", () => {
 });
 
 describe("getDevelopmentOidcAuthHook", () => {
+	it("uses cf OAuth for a direct Vite caller without changing the process environment", async ({
+		expect,
+	}) => {
+		delete process.env.CLOUDFLARE_CF_AUTH;
+		const hook = getDevelopmentOidcAuthHook(
+			undefined,
+			"/vite-project",
+			createTestLogger(),
+			true
+		);
+		mocks.cfAuth.getOAuthTokenFromLocalState.mockResolvedValueOnce(
+			"vite-human-oauth"
+		);
+		expect((await hook()).apiToken).toEqual({ apiToken: "vite-human-oauth" });
+		expect(mocks.cfProfileStore.resolve).toHaveBeenCalledWith({
+			cwd: "/vite-project",
+			profile: undefined,
+		});
+		expect(
+			mocks.wranglerAuth.getOAuthTokenFromLocalState
+		).not.toHaveBeenCalled();
+		expect(process.env.CLOUDFLARE_CF_AUTH).toBeUndefined();
+	});
+
 	it.for([true, false])(
 		"uses the selected human OAuth profile (cf: %s)",
 		async (useCfAuth, { expect }) => {

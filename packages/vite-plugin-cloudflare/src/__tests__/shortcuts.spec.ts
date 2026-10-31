@@ -1,9 +1,16 @@
 import * as fs from "node:fs";
-import * as os from "node:os";
 import * as path from "node:path";
 import { stripVTControlCharacters } from "node:util";
-import { removeDirSync } from "@cloudflare/workers-utils";
-import { afterAll, beforeAll, beforeEach, describe, test, vi } from "vitest";
+import { printBindings, removeDirSync } from "@cloudflare/workers-utils";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	onTestFinished,
+	test,
+	vi,
+} from "vitest";
 import { PluginContext } from "../context";
 import { resolvePluginConfig } from "../plugin-config";
 import { addShortcuts } from "../plugins/shortcuts";
@@ -13,6 +20,11 @@ import type * as vite from "vite";
 
 const mockOpen = vi.hoisted(() => vi.fn(() => ({ on: vi.fn() })));
 vi.mock("open", () => ({ default: mockOpen }));
+vi.mock("@cloudflare/workers-utils", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@cloudflare/workers-utils")>();
+	return { ...actual, printBindings: vi.fn(actual.printBindings) };
+});
 
 /**
  * Creates a mock ViteDevServer with the minimum interface needed for shortcuts tests
@@ -49,15 +61,14 @@ const normalize = (logs: string[]) =>
 		.map((line) => line.trim())
 		.join("\n");
 
+const FIXTURES_ROOT = path.resolve(__dirname, "fixtures", "shortcuts");
+
 describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 	let tempDir: string;
-	let primaryConfigPath: string;
-	let auxiliaryConfigPath: string;
 	let serverLogs: { info: string[] };
 	let mockServer: vite.ViteDevServer;
 
 	beforeAll(() => {
-		vi.stubEnv("CI", undefined);
 		process.stdin.isTTY = true;
 	});
 
@@ -67,49 +78,39 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 	});
 
 	beforeEach(() => {
+		vi.stubEnv("CI", undefined);
 		// Create temp directory for test fixtures
-		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "vite-shortcuts-test-"));
+		fs.mkdirSync(FIXTURES_ROOT, { recursive: true });
+		tempDir = fs.realpathSync(
+			fs.mkdtempSync(path.join(FIXTURES_ROOT, "case-"))
+		);
 
 		// Create primary worker config
-		primaryConfigPath = path.join(tempDir, "wrangler.jsonc");
 		fs.writeFileSync(
-			primaryConfigPath,
-			JSON.stringify({
-				name: "primary-worker",
-				main: "./src/index.ts",
-				compatibility_date: "2024-12-30",
-				kv_namespaces: [{ binding: "KV", id: "test-kv-id" }],
-				images: { binding: "IMAGES" },
-				unsafe_hello_world: [{ binding: "HELLO_WORLD" }],
-				analytics_engine_datasets: [{ dataset: "test", binding: "WAE" }],
-				hyperdrive: [{ binding: "HYPERDRIVE", id: "test-hyperdrive-id" }],
-				unsafe: {
-					bindings: [
-						{
-							name: "RATE_LIMITER",
-							type: "ratelimit",
-							namespace_id: "1001",
-							simple: { limit: 1, period: 60 },
-						},
-					],
-				},
-			})
+			path.join(tempDir, "cloudflare.config.ts"),
+			[
+				"import { defineConfig } from '@cloudflare/config';",
+				"export default defineConfig({",
+				"  worker: {",
+				"    name: 'primary-worker',",
+				"    entrypoint: './src/index.ts',",
+				"    compatibilityDate: '2024-12-30',",
+				"    env: {",
+				"      KV: { type: 'kv', id: 'test-kv-id' },",
+				"      IMAGES: { type: 'images' },",
+				"      WAE: { type: 'analytics-engine-dataset', name: 'test' },",
+				"      HYPERDRIVE: { type: 'hyperdrive', id: 'test-hyperdrive-id', dev: { connectionString: 'postgres://localhost/test' } },",
+				"      RATE_LIMITER: { type: 'rate-limit', namespace: '1001', simple: { limit: 1, period: 60 } },",
+				"    },",
+				"  },",
+				"});",
+			].join("\n")
 		);
 		// Create the main file so validation passes
 		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
 		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
 
-		// Create auxiliary worker config
-		auxiliaryConfigPath = path.join(tempDir, "wrangler.auxiliary.jsonc");
-		fs.writeFileSync(
-			auxiliaryConfigPath,
-			JSON.stringify({
-				name: "auxiliary-worker",
-				main: "./aux/index.ts",
-				compatibility_date: "2024-12-30",
-				services: [{ binding: "SERVICE", service: "primary-worker" }],
-			})
-		);
+		// Create auxiliary worker source
 		fs.mkdirSync(path.join(tempDir, "aux"), { recursive: true });
 		fs.writeFileSync(path.join(tempDir, "aux/index.ts"), "export default {}");
 
@@ -120,22 +121,34 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		return () => removeDirSync(tempDir);
 	});
 
-	async function createMockContext(options?: {
-		auxiliaryWorkers?: Array<{ configPath: string }>;
-	}) {
+	async function createMockContext(options?: { auxiliaryWorker?: boolean }) {
 		const mockContext = new PluginContext({
-			hasShownWorkerConfigWarnings: false,
 			restartingDevServerCount: 0,
 			tunnelHostnames: new Set(),
 		});
-
 		mockContext.setResolvedPluginConfig(
 			await resolvePluginConfig(
 				{
-					configPath: primaryConfigPath,
-					auxiliaryWorkers: options?.auxiliaryWorkers,
+					types: { generate: false },
+					auxiliaryWorkers: options?.auxiliaryWorker
+						? [
+								{
+									config: {
+										name: "auxiliary-worker",
+										entrypoint: "./aux/index.ts",
+										compatibilityDate: "2024-12-30",
+										env: {
+											SERVICE: {
+												type: "worker",
+												worker: "primary-worker",
+											},
+										},
+									},
+								},
+							]
+						: undefined,
 				},
-				{},
+				{ root: tempDir },
 				{ command: "serve", mode: "development" }
 			)
 		);
@@ -212,12 +225,41 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 			Binding                                    Resource
 			env.KV (test-kv-id)                        KV Namespace
 			env.HYPERDRIVE (test-hyperdrive-id)        Hyperdrive Config
-			env.HELLO_WORLD (Timer disabled)           Hello World
 			env.WAE (test)                             Analytics Engine Dataset
 			env.IMAGES                                 Images
-			env.RATE_LIMITER (ratelimit)               Unsafe Metadata
+			env.RATE_LIMITER (1 requests/60s)          Rate Limit
 			"
 		`);
+	});
+
+	test("prints input Containers linked to the Worker", async ({ expect }) => {
+		fs.writeFileSync(
+			path.join(tempDir, "cloudflare.config.ts"),
+			[
+				"import { defineConfig, defineContainer, exports as workerExports } from '@cloudflare/config';",
+				"const app = defineContainer({ name: 'app', schedulingPolicy: 'durable-object' });",
+				"export default defineConfig({",
+				"  containers: [app],",
+				"  worker: {",
+				"    name: 'primary-worker',",
+				"    entrypoint: './src/index.ts',",
+				"    compatibilityDate: '2024-12-30',",
+				"    exports: { Container: workerExports.durableObject({ storage: 'sqlite', container: app }) },",
+				"  },",
+				"});",
+			].join("\n")
+		);
+		const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");
+		addShortcuts(mockServer, await createMockContext());
+
+		const { customShortcuts } = mockBindCLIShortcuts.mock.calls[0]?.[0] ?? {};
+		void customShortcuts
+			?.find((shortcut) => shortcut.key === "b")
+			?.action?.(mockServer);
+
+		expect(normalize(serverLogs.info)).toContain(
+			"The following containers are available:\n- Container (durable_object)"
+		);
 	});
 
 	test("prints bindings with multi Workers", async ({ expect }) => {
@@ -225,7 +267,7 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		addShortcuts(
 			mockServer,
 			await createMockContext({
-				auxiliaryWorkers: [{ configPath: auxiliaryConfigPath }],
+				auxiliaryWorker: true,
 			})
 		);
 
@@ -242,16 +284,60 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 			Binding                                    Resource
 			env.KV (test-kv-id)                        KV Namespace
 			env.HYPERDRIVE (test-hyperdrive-id)        Hyperdrive Config
-			env.HELLO_WORLD (Timer disabled)           Hello World
 			env.WAE (test)                             Analytics Engine Dataset
 			env.IMAGES                                 Images
-			env.RATE_LIMITER (ratelimit)               Unsafe Metadata
+			env.RATE_LIMITER (1 requests/60s)          Rate Limit
 
 			auxiliary-worker has access to the following bindings:
 			Binding                           Resource
 			env.SERVICE (primary-worker)      Worker
 			"
 		`);
+	});
+
+	test("reads service registrations from the canonical registry override", async ({
+		expect,
+	}) => {
+		const registryPath = path.join(tempDir, "registry");
+		vi.stubEnv(
+			"CLOUDFLARE_DEV_REGISTRY_PATH",
+			path.relative(process.cwd(), registryPath)
+		);
+		vi.stubEnv(
+			"MINIFLARE_REGISTRY_PATH",
+			path.join(tempDir, "legacy-registry")
+		);
+		onTestFinished(() => {
+			vi.unstubAllEnvs();
+		});
+		fs.mkdirSync(registryPath);
+		fs.writeFileSync(
+			path.join(registryPath, "primary-worker"),
+			JSON.stringify({ debugPortAddress: "127.0.0.1:1234" })
+		);
+		const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");
+		vi.mocked(printBindings).mockClear();
+		addShortcuts(
+			mockServer,
+			await createMockContext({ auxiliaryWorker: true })
+		);
+
+		const { customShortcuts } = mockBindCLIShortcuts.mock.calls[0]?.[0] ?? {};
+		await customShortcuts
+			?.find((shortcut) => shortcut.key === "b")
+			?.action?.(mockServer);
+
+		expect(printBindings).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				name: "auxiliary-worker",
+				registry: expect.objectContaining({
+					"primary-worker": expect.objectContaining({
+						debugPortAddress: "127.0.0.1:1234",
+					}),
+				}),
+			})
+		);
 	});
 
 	test("registers explorer shortcut with correct URL", async ({ expect }) => {

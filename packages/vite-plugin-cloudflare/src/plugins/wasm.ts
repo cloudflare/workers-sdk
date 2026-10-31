@@ -14,12 +14,6 @@ export const wasmHelperPlugin = createPlugin("wasm-helper", (ctx) => {
 		load: {
 			filter: { id: wasmInitRE },
 			handler(id) {
-				// Fallback for when filter is not applied
-				// TODO: remove when we drop support for Vite 6
-				if (!wasmInitRE.test(id)) {
-					return;
-				}
-
 				return `
 					import wasm from "${cleanUrl(id)}";
 					export default function(opts = {}) {

@@ -4,8 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { startMockNpmRegistry } from "@cloudflare/mock-npm-registry";
 import { removeDir } from "@cloudflare/workers-utils";
-import { version as installedVitestVersion } from "vitest/package.json";
 import { version } from "../package.json";
+import { vitestVersion } from "./versions";
 import type { TestProject } from "vitest/node";
 
 // Using a global setup means we can modify tests without having to re-install
@@ -39,7 +39,6 @@ async function createTestProject() {
 		await fs.mkdtemp(path.join(os.tmpdir(), "vitest-plugin temp-"))
 	);
 	const packageJsonPath = path.join(projectPath, "package.json");
-	const vitestVersion = process.env.VITEST_VERSION ?? installedVitestVersion;
 	const packageJson = {
 		name: "vitest-plugin-e2e-tests",
 		private: true,

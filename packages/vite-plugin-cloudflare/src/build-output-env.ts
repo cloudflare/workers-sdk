@@ -1,15 +1,12 @@
-/**
- * Shared definition of the internal env var that the `cf-vite build`
- * delegate uses to force the experimental Build Output Specification on by default.
- */
-export const FORCE_BUILD_OUTPUT_ENV_VAR = "CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT";
+/** Internal caller name set by the `cf-vite` delegate. */
+export const CLI_DISPLAY_NAME_ENV_VAR = "CLOUDFLARE_VITE_CLI_DISPLAY_NAME";
 
 /** Shared build context flag set by Cloudflare tooling for Preview builds. */
 export const PREVIEW_BUILD_ENV_VAR = "CLOUDFLARE_PREVIEW_BUILD";
 
-/** Whether `cf-vite build` has forced the Build Output Specification on. */
-export function isForcedBuildOutput(): boolean {
-	return process.env[FORCE_BUILD_OUTPUT_ENV_VAR] === "true";
+/** Return the CLI name used in actionable messages. */
+export function getCliDisplayName(): "cf" | "Wrangler" {
+	return process.env[CLI_DISPLAY_NAME_ENV_VAR] === "cf" ? "cf" : "Wrangler";
 }
 
 /** Whether Cloudflare tooling requested Preview Build Output. */

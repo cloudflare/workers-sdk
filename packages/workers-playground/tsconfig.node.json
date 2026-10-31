@@ -1,12 +1,5 @@
 {
-	"compilerOptions": {
-		"composite": true,
-		"skipLibCheck": true,
-		"module": "ESNext",
-		"moduleResolution": "bundler",
-		"allowSyntheticDefaultImports": true,
-		"target": "ES2021",
-		"lib": ["ES2021"]
-	},
+	"extends": ["@cloudflare/workers-tsconfig/base.json"],
+	"compilerOptions": { "allowJs": true },
 	"include": ["vite.config.ts", "eslintrc.cjs", "generate-default-hashes.ts"]
 }

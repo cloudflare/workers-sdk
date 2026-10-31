@@ -68,19 +68,14 @@ test("surfaces the response body when fetching Worker export types fails", async
 	);
 });
 
-function getWorkerSourcemap(
-	userConfig: UserConfig,
-	workerConfig: Partial<ResolvedWorkerConfig> = {}
-) {
+function getWorkerSourcemap(userConfig: UserConfig) {
 	const options = createCloudflareEnvironmentOptions({
 		workerConfig: {
-			main: "./src/index.ts",
-			...workerConfig,
+			entrypoint: "./src/index.ts",
 		} as ResolvedWorkerConfig,
 		userConfig,
 		mode: "production",
 		environmentName: "worker",
-		isEntryWorker: true,
 		isParentEnvironment: true,
 		hasNodeJsCompat: false,
 	});
@@ -89,34 +84,28 @@ function getWorkerSourcemap(
 }
 
 test.for([
-	{ label: "by default", userConfig: {}, workerConfig: {}, expected: true },
+	{ label: "by default", userConfig: {}, expected: true },
 	{
 		label: "from the environment's `build.sourcemap`",
 		userConfig: { environments: { worker: { build: { sourcemap: false } } } },
-		workerConfig: {},
 		expected: false,
 	},
 	{
 		label: "from the top-level `build.sourcemap`",
 		userConfig: { build: { sourcemap: "hidden" as const } },
-		workerConfig: {},
 		expected: "hidden",
 	},
 	{
-		label: "from `upload_source_maps`",
-		userConfig: {},
-		workerConfig: { upload_source_maps: false },
+		label: "prefers the environment's `build.sourcemap` over the top level",
+		userConfig: {
+			build: { sourcemap: true },
+			environments: { worker: { build: { sourcemap: false } } },
+		},
 		expected: false,
-	},
-	{
-		label: "preferring `build.sourcemap` over `upload_source_maps`",
-		userConfig: { build: { sourcemap: true } },
-		workerConfig: { upload_source_maps: false },
-		expected: true,
 	},
 ])(
 	"resolves the Worker environment's `build.sourcemap` $label",
-	({ userConfig, workerConfig, expected }, { expect }) => {
-		expect(getWorkerSourcemap(userConfig, workerConfig)).toBe(expected);
+	({ userConfig, expected }, { expect }) => {
+		expect(getWorkerSourcemap(userConfig)).toBe(expected);
 	}
 );

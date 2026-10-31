@@ -11,6 +11,7 @@ import { MultiworkerRuntimeController } from "../api/startDevWorker/MultiworkerR
 import { NoOpProxyController } from "../api/startDevWorker/NoOpProxyController";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import registerDevHotKeys from "../dev/hotkeys";
+import isNonInteractiveTurborepo from "../is-non-interactive-turborepo";
 import { logger } from "../logger";
 import { getSiteAssetPaths } from "../sites";
 import { TunnelManager } from "../tunnel/dev";
@@ -124,7 +125,9 @@ export async function startDev(args: StartDevOptions) {
 		});
 
 		const interactiveDevSession =
-			isInteractive() && args.showInteractiveDevSession !== false;
+			isInteractive() &&
+			!isNonInteractiveTurborepo() &&
+			args.showInteractiveDevSession !== false;
 
 		if (interactiveDevSession) {
 			unregisterHotKeys = registerDevHotKeys(devEnvs, args, { tunnelManager });
@@ -265,6 +268,7 @@ async function setupDevEnv(
 							? undefined
 							: args.upstreamProtocol === "https",
 				},
+				inferOriginFromRoutes: args.inferOriginFromRoutes,
 				persist: args.persist === false ? false : args.persistTo,
 				liveReload: args.liveReload,
 				testScheduled: args.testScheduled,

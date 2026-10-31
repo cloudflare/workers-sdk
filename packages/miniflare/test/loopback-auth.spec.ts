@@ -21,7 +21,7 @@ async function webSocketStatus(url: string): Promise<number> {
 	});
 }
 
-describe.sequential("loopback authentication", () => {
+describe("loopback authentication", { concurrent: false }, () => {
 	test("rejects a loopback credential from a disposed runtime", async ({
 		expect,
 		start,

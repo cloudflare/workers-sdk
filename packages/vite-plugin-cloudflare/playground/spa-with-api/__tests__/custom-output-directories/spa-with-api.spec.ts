@@ -11,11 +11,29 @@ describe.runIf(isBuild)("output directories", () => {
 		await vi.waitFor(() => {
 			expect(
 				fs.existsSync(
-					path.join(rootDir, "custom-root-output-directory", "worker")
+					path.join(
+						rootDir,
+						".cloudflare",
+						"output",
+						"v0",
+						"workers",
+						"default",
+						"bundle"
+					)
 				)
 			).toBe(true);
 			expect(
-				fs.existsSync(path.join(rootDir, "custom-client-output-directory"))
+				fs.existsSync(
+					path.join(
+						rootDir,
+						".cloudflare",
+						"output",
+						"v0",
+						"workers",
+						"default",
+						"assets"
+					)
+				)
 			).toBe(true);
 		}, WAIT_FOR_OPTIONS);
 	});

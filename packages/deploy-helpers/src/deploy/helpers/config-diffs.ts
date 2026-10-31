@@ -101,15 +101,41 @@ export function getRemoteConfigDiff(
 		normalizedLocalConfig
 	);
 
+	// The API omits unset optional binding fields while our mapped and resolved configs
+	// can carry them as `undefined`, both mean the same thing so they must not show as a diff
 	const diff = diffJsonObjects(
-		normalizedRemoteConfig as unknown as Record<string, JsonLike>,
-		normalizedLocalConfig as unknown as Record<string, JsonLike>
+		omitUndefinedProperties(
+			normalizedRemoteConfig as unknown as Record<string, JsonLike>
+		),
+		omitUndefinedProperties(
+			normalizedLocalConfig as unknown as Record<string, JsonLike>
+		)
 	);
 
 	return {
 		diff,
 		nonDestructive: isNonDestructive(diff),
 	};
+}
+
+/**
+ * Recursively removes the object properties whose value is `undefined`.
+ *
+ * @param value The target value
+ * @returns A copy of the value without `undefined` object properties
+ */
+function omitUndefinedProperties<T extends JsonLike>(value: T): T {
+	if (Array.isArray(value)) {
+		return value.map(omitUndefinedProperties) as T;
+	}
+	if (value === null || typeof value !== "object") {
+		return value;
+	}
+	return Object.fromEntries(
+		Object.entries(value)
+			.filter(([, fieldValue]) => fieldValue !== undefined)
+			.map(([key, fieldValue]) => [key, omitUndefinedProperties(fieldValue)])
+	) as T;
 }
 
 /**

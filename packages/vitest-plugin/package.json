@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vitest-plugin",
-	"version": "1.4.2",
+	"version": "1.4.11",
 	"description": "Workers Vitest integration for writing Vitest unit and integration tests that run inside the Workers runtime",
 	"keywords": [
 		"cloudflare",
@@ -67,7 +67,7 @@
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@types/node": "catalog:default",
 		"@types/semver": "^7.5.1",
-		"@vitest/ui": "catalog:vitest5",
+		"@vitest/ui": "catalog:default",
 		"birpc": "0.2.14",
 		"capnp-es": "catalog:default",
 		"devalue": "^5.6.3",
@@ -79,7 +79,7 @@
 		"tsdown": "0.16.3",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
-		"vitest": "catalog:vitest5"
+		"vitest": "catalog:default"
 	},
 	"peerDependencies": {
 		"vitest": "^4.1.0 || ^5.0.0"

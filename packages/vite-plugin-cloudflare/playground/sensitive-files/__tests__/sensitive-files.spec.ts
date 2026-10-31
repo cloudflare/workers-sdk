@@ -42,13 +42,15 @@ describe.skipIf(isBuild)("denies access to sensitive files in dev", () => {
 		expect(response.status()).toBe(403);
 	});
 
-	test("denies access to root wrangler config", async ({ expect }) => {
-		const response = await getResponse("/wrangler.jsonc");
+	test("denies access to cloudflare.config.ts", async ({ expect }) => {
+		const response = await getResponse("/cloudflare.config.ts");
 		expect(response.status()).toBe(403);
 	});
 
-	test("denies access to auxiliary wrangler config", async ({ expect }) => {
-		const response = await getResponse("/worker-b/wrangler.jsonc");
+	test("denies access to files imported by cloudflare.config.ts", async ({
+		expect,
+	}) => {
+		const response = await getResponse("/constants.ts");
 		expect(response.status()).toBe(403);
 	});
 
@@ -129,13 +131,15 @@ describe.runIf(isBuild)("doesn't serve sensitive files in preview", () => {
 		expect(response).toBe("Worker A response");
 	});
 
-	test("doesn't serve root wrangler config", async ({ expect }) => {
-		const response = await getTextResponse("/wrangler.jsonc");
+	test("doesn't serve cloudflare.config.ts", async ({ expect }) => {
+		const response = await getTextResponse("/cloudflare.config.ts");
 		expect(response).toBe("Worker A response");
 	});
 
-	test("doesn't serve auxiliary wrangler config", async ({ expect }) => {
-		const response = await getTextResponse("/worker-b/wrangler.jsonc");
+	test("doesn't serve files imported by cloudflare.config.ts", async ({
+		expect,
+	}) => {
+		const response = await getTextResponse("/constants.ts");
 		expect(response).toBe("Worker A response");
 	});
 

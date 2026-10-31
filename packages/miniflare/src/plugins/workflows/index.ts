@@ -14,13 +14,13 @@ import {
 	getUserBindingServiceName,
 	ProxyNodeBinding,
 	SERVICE_DEV_REGISTRY_PROXY,
-	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import type { Service, ServiceDesignator } from "../../runtime";
 import type { ParsedWorkerOptions, Plugin, WorkflowExporters } from "../shared";
 
 export const WORKFLOWS_PLUGIN_NAME = "workflows";
 export const WORKFLOWS_STORAGE_SERVICE_NAME = `${WORKFLOWS_PLUGIN_NAME}:storage`;
+const WORKFLOW_STORAGE_BINDING = "WORKFLOW_STORAGE";
 
 /** Service implementing the Workflow API for `env` and `ctx.exports`. */
 export function getWorkflowBindingServiceName(workflowName: string) {
@@ -175,14 +175,10 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 			sharedOptions.isolatedResourcePersistencePath
 		);
 		await fs.mkdir(persistPath, { recursive: true });
-		// each workflow should get its own storage service
-		const storageServices: Service[] = [
-			...workflows.map(([, binding]) => binding.name),
-			...exportedWorkflows.map(([, workflow]) => workflow.name),
-		].map<Service>((workflowName) => ({
-			name: `${WORKFLOWS_STORAGE_SERVICE_NAME}-${workflowName}`,
+		const storageService: Service = {
+			name: WORKFLOWS_STORAGE_SERVICE_NAME,
 			disk: { path: persistPath, writable: true },
-		}));
+		};
 
 		// The engine service is built here, not through the core plugin's
 		// per-user-worker path, so tail it explicitly or workflow invocations are
@@ -244,7 +240,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 						},
 					],
 					durableObjectStorage: {
-						localDisk: `${WORKFLOWS_STORAGE_SERVICE_NAME}-${binding.name}`,
+						localDisk: WORKFLOWS_STORAGE_SERVICE_NAME,
 					},
 					bindings: [
 						{
@@ -280,8 +276,12 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 							name: "WORKFLOW_NAME",
 							json: JSON.stringify(binding.name),
 						},
-						// Workflow deletion needs the Node.js host to remove its SQLite files.
-						WORKER_BINDING_SERVICE_LOOPBACK,
+						{
+							name: WORKFLOW_STORAGE_BINDING,
+							service: {
+								name: WORKFLOWS_STORAGE_SERVICE_NAME,
+							},
+						},
 						...(stepLimit !== undefined
 							? [
 									{
@@ -298,7 +298,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 		});
 
 		if (exportedWorkflows.length === 0) {
-			return [...storageServices, ...services];
+			return [storageService, ...services];
 		}
 
 		// workerd runs exported Workflows in the exporting Worker: it creates each
@@ -317,10 +317,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 			worker: {
 				...engineWorker,
 				...getStreamingTails(config.name),
-				bindings: [
-					WORKER_BINDING_SERVICE_LOOPBACK,
-					{ name: "STEP_LIMITS", json: JSON.stringify(stepLimits) },
-				],
+				bindings: [{ name: "STEP_LIMITS", json: JSON.stringify(stepLimits) }],
 			},
 		};
 		const exportedBindingServices = exportedWorkflows.map<Service>(
@@ -330,7 +327,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 					...engineWorker,
 					...getStreamingTails(workflow.name),
 					durableObjectStorage: {
-						localDisk: `${WORKFLOWS_STORAGE_SERVICE_NAME}-${workflow.name}`,
+						localDisk: WORKFLOWS_STORAGE_SERVICE_NAME,
 					},
 					bindings: [
 						{
@@ -342,14 +339,19 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 						},
 						{ name: "BINDING_NAME", json: JSON.stringify(className) },
 						{ name: "WORKFLOW_NAME", json: JSON.stringify(workflow.name) },
-						WORKER_BINDING_SERVICE_LOOPBACK,
+						{
+							name: WORKFLOW_STORAGE_BINDING,
+							service: {
+								name: WORKFLOWS_STORAGE_SERVICE_NAME,
+							},
+						},
 					],
 				},
 			})
 		);
 
 		return [
-			...storageServices,
+			storageService,
 			...services,
 			engineService,
 			...exportedBindingServices,

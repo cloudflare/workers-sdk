@@ -8,7 +8,7 @@ import {
 } from "../../__test-utils__";
 
 test.runIf(!isBuild)(
-	"successfully updates when a var is updated in a .dev.vars file",
+	"reloads Worker secrets when .dev.vars changes",
 	async ({ expect }) => {
 		await vi.waitFor(
 			async () =>

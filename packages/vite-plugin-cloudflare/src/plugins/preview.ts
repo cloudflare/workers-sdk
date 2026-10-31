@@ -1,12 +1,11 @@
-import { buildPublicUrl, Request as MiniflareRequest } from "miniflare";
+import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
+import { buildPublicUrl } from "miniflare";
 import colors from "picocolors";
-import { createContainerCleanup } from "../container-cleanup";
-import { getDockerPath, prepareContainerImagesForVite } from "../containers";
+import { prepareContainerImagesForVite } from "../containers";
 import { assertIsPreview } from "../context";
 import { getPreviewMiniflareOptions } from "../miniflare-options";
 import { createPlugin, createRequestHandler } from "../utils";
 import { handleWebSocket } from "../websockets";
-import { rewriteLegacyMiniflarePath } from "./trigger-handlers";
 
 /**
  * Plugin to provide core preview functionality
@@ -16,24 +15,35 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 		async configurePreviewServer(vitePreviewServer) {
 			assertIsPreview(ctx);
 
-			const dockerPath = getDockerPath();
-			const containerCleanup = createContainerCleanup();
-
 			// Ensure Miniflare is disposed when the preview server is closed during prerendering
 			const closePreviewServer =
 				vitePreviewServer.close.bind(vitePreviewServer);
 			vitePreviewServer.close = async () => {
-				try {
-					await Promise.all([ctx.disposeMiniflare(), closePreviewServer()]);
-				} finally {
-					containerCleanup.cleanup();
-				}
+				await Promise.all([ctx.disposeMiniflare(), closePreviewServer()]);
 			};
 
-			const { miniflareOptions, containerOptionsByWorker } =
+			const { miniflareOptions, containerOptions } =
 				await getPreviewMiniflareOptions(ctx, vitePreviewServer);
-
 			await ctx.startOrUpdateMiniflare(miniflareOptions);
+
+			if (containerOptions !== undefined) {
+				vitePreviewServer.config.logger.info(
+					colors.dim(
+						colors.yellow("∷ Preparing Containers for local preview...\n")
+					)
+				);
+				// Local application images were prepared by the build and are
+				// referenced directly from Build Output. Remote references are pulled
+				// here so managed registry authentication can be applied. The
+				// Miniflare Container sidecar is always prepared as well.
+				await prepareContainerImagesForVite({
+					dockerPath: getDockerPath(),
+					containerOptions,
+					settings: ctx.resolvedPluginConfig.settings,
+					logger: vitePreviewServer.config.logger,
+					cliDisplayName: ctx.resolvedPluginConfig.cliDisplayName,
+				});
+			}
 
 			// Once the HTTP server is listening, update Miniflare's publicUrl with
 			// the actual address. This ensures "Cloudflare Stream" preview URLs always reflect
@@ -54,42 +64,11 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 					}
 				});
 			}
-
-			if (containerOptionsByWorker.size) {
-				vitePreviewServer.config.logger.info(
-					colors.dim(
-						colors.yellow("∷ Building container images for local preview...\n")
-					)
-				);
-
-				await prepareContainerImagesForVite({
-					dockerPath,
-					containerOptionsByWorker,
-					logger: vitePreviewServer.config.logger,
-				});
-
-				containerCleanup.track(
-					dockerPath,
-					[...containerOptionsByWorker.values()].flatMap((options) =>
-						options.map(({ image_tag }) => image_tag)
-					)
-				);
-				vitePreviewServer.config.logger.info(
-					colors.dim(colors.yellow("\n⚡️ Containers successfully built.\n"))
-				);
-			}
-
 			handleWebSocket(vitePreviewServer.httpServer, ctx.miniflare);
 
 			// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
 			vitePreviewServer.middlewares.use(
 				createRequestHandler((request) => {
-					const url = new URL(request.url);
-					const rewritten = rewriteLegacyMiniflarePath(url.pathname);
-					if (rewritten !== url.pathname) {
-						url.pathname = rewritten;
-						request = new MiniflareRequest(url, request);
-					}
 					return ctx.miniflare.dispatchFetch(request, { redirect: "manual" });
 				})
 			);

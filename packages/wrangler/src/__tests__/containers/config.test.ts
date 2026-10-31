@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
-import { UserError } from "@cloudflare/workers-utils";
+import { defaultWranglerConfig, UserError } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { getNormalizedContainerOptions } from "../../containers/config";
@@ -175,7 +175,48 @@ describe("getNormalizedContainerOptions", () => {
 		);
 	});
 
-	it("should throw error when durable object has script_name defined", async ({
+	it.for(["default", "durable_object"] as const)(
+		"accepts a self-named Durable Object binding for %s containers",
+		async (schedulingPolicy, { expect }) => {
+			const config: Config = {
+				...defaultWranglerConfig,
+				name: "test-worker",
+				containers: [
+					{
+						name: "test-container",
+						class_name: "TestContainer",
+						scheduling_policy: schedulingPolicy,
+						image: "docker.io/httpd:1",
+					},
+				],
+				durable_objects: {
+					bindings: [
+						{
+							name: "TEST_DO",
+							class_name: "TestContainer",
+							script_name: "test-worker",
+						},
+					],
+				},
+				exports: {
+					TestContainer: { type: "durable-object", storage: "sqlite" },
+				},
+			};
+
+			await expect(
+				getNormalizedContainerOptions(config, { dryRun: true })
+			).resolves.toEqual(
+				schedulingPolicy === "durable_object"
+					? []
+					: [expect.objectContaining({ class_name: "TestContainer" })]
+			);
+			expect(config.durable_objects.bindings[0].script_name).toBe(
+				"test-worker"
+			);
+		}
+	);
+
+	it("should throw error when durable object targets another Worker", async ({
 		expect,
 	}) => {
 		const config: Config = {

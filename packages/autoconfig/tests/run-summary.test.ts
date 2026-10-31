@@ -250,7 +250,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 		});
 
 		test.for([
-			{ target: "cf", plugin: "@cloudflare/vite-plugin@beta" },
+			{ target: "cf", plugin: "@cloudflare/vite-plugin@^2.0.0-beta.v.0" },
 			{ target: "wrangler", plugin: "@cloudflare/vite-plugin" },
 		] as const)(
 			"shows that $plugin will be installed for $target",

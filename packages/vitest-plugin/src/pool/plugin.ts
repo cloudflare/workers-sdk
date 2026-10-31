@@ -68,9 +68,7 @@ export function cloudflareTest(
 				ctx: WorkerPoolOptionsContext
 		  ) => Promise<WorkersPoolOptions> | WorkersPoolOptions)
 ): Vite.Plugin {
-	// Use a unique ID for each `cloudflare:test` module so updates in one `main`
-	// don't trigger re-runs in all other projects, just the one that changed.
-	const uuid = crypto.randomUUID();
+	let cloudflareTestId = "\0cloudflare:test";
 	let main: string | undefined;
 	return {
 		name: "@cloudflare/vitest-plugin",
@@ -80,6 +78,15 @@ export function cloudflareTest(
 			},
 		},
 		configureVitest(context: VitestPluginContext) {
+			// Keep the ID project-specific so changes to one main don't rerun other
+			// projects, but stable across sessions so cached imports still resolve.
+			const projectId = crypto
+				.createHash("sha256")
+				.update(
+					JSON.stringify([context.project.config.root, context.project.name])
+				)
+				.digest("hex");
+			cloudflareTestId = `\0cloudflare:test-${projectId}`;
 			context.project.config.poolRunner = cloudflarePool(options);
 			context.project.config.pool = "cloudflare-pool";
 			context.project.config.snapshotEnvironment = "cloudflare:snapshot";
@@ -117,12 +124,14 @@ export function cloudflareTest(
 			config.ssr.target = "webworker";
 		},
 		resolveId(id) {
-			if (id === "cloudflare:test") {
-				return `\0cloudflare:test-${uuid}`;
+			if (id === "cloudflare:test" || id.startsWith("\0cloudflare:test-")) {
+				// Remap IDs from other projects sharing the cache or older sessions.
+				// Vitest invalidates cached importers when resolved dependencies change.
+				return cloudflareTestId;
 			}
 		},
 		async load(id) {
-			if (id === `\0cloudflare:test-${uuid}`) {
+			if (id === cloudflareTestId) {
 				let contents = await fs.readFile(cloudflareTestPath, "utf8");
 
 				if (main !== undefined) {

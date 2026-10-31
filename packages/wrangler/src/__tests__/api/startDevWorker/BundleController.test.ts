@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
@@ -6,14 +7,21 @@ import {
 	runInTempDir,
 	seed,
 } from "@cloudflare/workers-utils/test-helpers";
+import * as chokidar from "chokidar";
 import * as esbuild from "esbuild";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { BundlerController } from "../../../api/startDevWorker/BundlerController";
+import * as additionalModules from "../../../deployment-bundle/find-additional-modules";
 import { runCustomBuild } from "../../../deployment-bundle/run-custom-build";
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import type { StartDevWorkerOptions } from "../../../api";
+
+vi.mock("chokidar", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("chokidar")>();
+	return { ...actual, watch: vi.fn(actual.watch) };
+});
 
 // Find the bundled result of a particular source file
 function findSourceFile(source: string, name: string): string {
@@ -179,6 +187,161 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 					};
 					"
 				`);
+		});
+
+		test.for([
+			{
+				name: "default to named-only",
+				initialExports: ["default"],
+				initialSource: dedent /* javascript */ `
+					export default { fetch() { return new Response("default") } }
+				`,
+				updatedExports: ["Api"],
+				updatedSource: "export class Api {}",
+			},
+			{
+				name: "named-only to default",
+				initialExports: ["Api"],
+				initialSource: "export class Api {}",
+				updatedExports: ["default"],
+				updatedSource: dedent /* javascript */ `
+					export default { fetch() { return new Response("default") } }
+				`,
+			},
+		])(
+			"reconfigures the middleware facade when exports change ($name)",
+			async (
+				{ initialExports, initialSource, updatedExports, updatedSource },
+				{ expect }
+			) => {
+				await seed({ "src/index.ts": initialSource });
+				const config = configDefaults({
+					entrypoint: path.resolve("src/index.ts"),
+					projectRoot: path.resolve("src"),
+					build: { exports: initialExports },
+				});
+
+				const initialBuild = bus.waitFor("bundleComplete");
+				controller.onConfigUpdate({ type: "configUpdate", config });
+				const initialBundle = (await initialBuild).bundle;
+				expect(initialBundle.entry.exports).toEqual(initialExports);
+				expect(initialBundle.entrypointSource).toContain(
+					initialExports.includes("default")
+						? "middleware_loader_entry_default"
+						: "var Api = class"
+				);
+
+				const eventCountBeforeEdit = bus.events.length;
+				const rebuilt = bus.waitFor("bundleComplete");
+				await seed({ "src/index.ts": updatedSource });
+				const updatedBundle = (await rebuilt).bundle;
+				const rebuildEvents = bus.events.slice(eventCountBeforeEdit);
+				expect(rebuildEvents.filter(({ type }) => type === "error")).toEqual(
+					[]
+				);
+				expect(
+					rebuildEvents.filter(({ type }) => type === "bundleComplete")
+				).toHaveLength(1);
+				expect(updatedBundle.entry.exports).toEqual(updatedExports);
+				if (updatedExports.includes("default")) {
+					expect(updatedBundle.entrypointSource).toContain(
+						"middleware_loader_entry_default"
+					);
+				} else {
+					expect(updatedBundle.entrypointSource).not.toContain(
+						"middleware_loader_entry_default"
+					);
+					expect(updatedBundle.entrypointSource).toContain("var Api = class");
+				}
+			}
+		);
+
+		test.for([
+			{ name: "bundled", build: {} },
+			{ name: "unbundled", build: { bundle: false } },
+		])(
+			"publishes renamed named entrypoints ($name)",
+			async ({ build }, { expect }) => {
+				await seed({ "src/index.ts": "export class Api {}" });
+				const config = configDefaults({
+					entrypoint: path.resolve("src/index.ts"),
+					projectRoot: path.resolve("src"),
+					build: { ...build, exports: ["Api"] },
+				});
+
+				const initialBuild = bus.waitFor("bundleComplete");
+				controller.onConfigUpdate({ type: "configUpdate", config });
+				expect((await initialBuild).bundle.entry.exports).toEqual(["Api"]);
+
+				// The initial bundle can be emitted before the unbundled file watcher
+				// has finished its initial scan, so repeat the edit until a rebuild
+				// observes it. Poll recorded events rather than registering a waiter
+				// per attempt, because timed-out waiters would consume later events.
+				// Check before editing so a successful poll doesn't start another
+				// rebuild that can outlive teardown and access the removed directory.
+				let attempt = 0;
+				await vi.waitUntil(
+					async () => {
+						const renamed = bus.events.some(
+							(event) =>
+								event.type === "bundleComplete" &&
+								event.bundle.entry.exports.includes("Admin")
+						);
+						if (renamed) {
+							return true;
+						}
+						await seed({
+							"src/index.ts": `export class Admin {} // ${attempt++}`,
+						});
+						return false;
+					},
+					{ timeout: 8_000, interval: 500 }
+				);
+				const bundles = bus.events.filter(
+					(event) => event.type === "bundleComplete"
+				);
+				expect(bundles.at(-1)?.bundle.entry.exports).toEqual(["Admin"]);
+			}
+		);
+
+		test("teardown waits for an in-flight unbundled module scan", async ({
+			expect,
+		}) => {
+			await seed({ "src/index.ts": "export class Api {}" });
+			const watch = vi.spyOn(chokidar, "watch");
+			const initialBuild = bus.waitFor("bundleComplete");
+			controller.onConfigUpdate({
+				type: "configUpdate",
+				config: configDefaults({ build: { bundle: false } }),
+			});
+			await initialBuild;
+			const watcher = watch.mock.results.at(-1)?.value;
+			assert(watcher);
+
+			const started = Promise.withResolvers<void>();
+			const resume = Promise.withResolvers<void>();
+			const findModules = additionalModules.findAdditionalModules;
+			const scan = vi
+				.spyOn(additionalModules, "findAdditionalModules")
+				.mockImplementationOnce(async (...args) => {
+					started.resolve();
+					await resume.promise;
+					return findModules(...args);
+				});
+			watcher.emit("change", path.resolve("src/index.ts"));
+			await started.promise;
+			const finished = vi.fn();
+			const teardown = controller.teardown().then(finished);
+			try {
+				await watcher.close();
+				await setTimeout(0);
+				expect(finished).not.toHaveBeenCalled();
+			} finally {
+				resume.resolve();
+				await teardown;
+				scan.mockRestore();
+				watch.mockRestore();
+			}
 		});
 
 		test("a watch-mode rebuild failure emits an error event and recovers", async ({
@@ -367,6 +530,76 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				{ timeout: 5_000, interval: 500 }
 			);
 		});
+
+		test.for([
+			{
+				name: "default to named-only",
+				initialExports: ["default"],
+				initialSource: dedent /* javascript */ `
+					export default { fetch() { return new Response("default") } }
+				`,
+				updatedExports: ["Api"],
+				updatedSource: "export class Api {}",
+			},
+			{
+				name: "named-only to default",
+				initialExports: ["Api"],
+				initialSource: "export class Api {}",
+				updatedExports: ["default"],
+				updatedSource: dedent /* javascript */ `
+					export default { fetch() { return new Response("default") } }
+				`,
+			},
+		])(
+			"custom build refreshes exports when its output changes ($name)",
+			async (
+				{ initialExports, initialSource, updatedExports, updatedSource },
+				{ expect }
+			) => {
+				await seed({ "custom_build_dir/index.ts": initialSource });
+				const config = configDefaults({
+					entrypoint: path.resolve("out.ts"),
+					projectRoot: path.resolve("."),
+					build: {
+						custom: {
+							command: `node -e "fs.cpSync('custom_build_dir/index.ts', 'out.ts')"`,
+							watch: "custom_build_dir",
+						},
+						moduleRoot: path.resolve("."),
+						exports: initialExports,
+					},
+				});
+
+				await runInitialCustomBuild(config);
+				const initialBuild = bus.waitFor("bundleComplete");
+				controller.onConfigUpdate({ type: "configUpdate", config });
+				expect((await initialBuild).bundle.entry.exports).toEqual(
+					initialExports
+				);
+
+				await vi.waitFor(
+					async () => {
+						const rebuilt = bus.waitFor("bundleComplete");
+						await seed({ "custom_build_dir/index.ts": updatedSource });
+						const updatedBundle = (await rebuilt).bundle;
+						expect(updatedBundle.entry.exports).toEqual(updatedExports);
+						if (updatedExports.includes("default")) {
+							expect(updatedBundle.entrypointSource).toContain(
+								"middleware_loader_entry_default"
+							);
+						} else {
+							expect(updatedBundle.entrypointSource).not.toContain(
+								"middleware_loader_entry_default"
+							);
+							expect(updatedBundle.entrypointSource).toContain(
+								"var Api = class"
+							);
+						}
+					},
+					{ timeout: 5_000, interval: 500 }
+				);
+			}
+		);
 
 		test("does not run the custom build command again for a config it has already been run for", async ({
 			expect,

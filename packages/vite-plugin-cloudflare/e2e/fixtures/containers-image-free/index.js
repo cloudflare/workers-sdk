@@ -26,7 +26,7 @@ export class Probe extends DurableObject {
 }
 
 export default {
-	fetch(request, env) {
-		return env.PROBE.getByName("probe").fetch(request);
+	fetch(request, _env, ctx) {
+		return ctx.exports.Probe.getByName("probe").fetch(request);
 	},
 };

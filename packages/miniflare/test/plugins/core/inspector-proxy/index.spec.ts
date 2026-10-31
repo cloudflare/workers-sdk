@@ -3,7 +3,7 @@ import http from "node:http";
 import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import { fetch, Miniflare, MiniflareCoreError } from "miniflare";
-import { beforeAll, test, vi } from "vitest";
+import { beforeAll, type ExpectStatic, test, vi } from "vitest";
 import WebSocket from "ws";
 import { InspectorProxyController } from "../../../../src/plugins/core/inspector-proxy";
 import {
@@ -462,11 +462,9 @@ test("InspectorProxy: should allow debugging a single worker", async ({
 
 	ws.send(JSON.stringify({ id: 0, method: "Debugger.enable" }));
 
-	expect(await nextMessage()).toMatchObject({
-		method: "Debugger.scriptParsed",
-	});
-
-	expect(await nextMessage()).toMatchObject({ id: 0 });
+	expect(await nextMessagesUntilResponse(nextMessage, 0)).toContainEqual(
+		userScriptParsedEvent(expect)
+	);
 
 	// Send request and hit `debugger;` statement
 	const resPromise = mf.dispatchFetch("http://localhost");
@@ -521,11 +519,9 @@ test("InspectorProxy: the devtools websocket communication should adapt to an in
 
 		ws.send(JSON.stringify({ id: 0, method: "Debugger.enable" }));
 
-		expect(await nextMessage()).toMatchObject({
-			method: "Debugger.scriptParsed",
-		});
-
-		expect(await nextMessage()).toMatchObject({ id: 0 });
+		expect(await nextMessagesUntilResponse(nextMessage, 0)).toContainEqual(
+			userScriptParsedEvent(expect)
+		);
 
 		// Send request and hit `debugger;` statement
 		const resPromise = mf.dispatchFetch("http://localhost");
@@ -631,11 +627,9 @@ test("InspectorProxy: should allow debugging multiple workers", async ({
 	);
 
 	const waitForScriptParsed = async (worker: Worker) => {
-		expect(await nextMessage(worker)).toMatchObject({
-			method: "Debugger.scriptParsed",
-		});
-
-		expect(await nextMessage(worker)).toMatchObject({ id: 0 });
+		expect(
+			await nextMessagesUntilResponse(() => nextMessage(worker), 0)
+		).toContainEqual(userScriptParsedEvent(expect));
 	};
 
 	await waitForScriptParsed("worker-a");
@@ -787,11 +781,9 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 	);
 
 	const waitForScriptParsed = async (worker: Worker) => {
-		expect(await nextMessage(worker)).toMatchObject({
-			method: "Debugger.scriptParsed",
-		});
-
-		expect(await nextMessage(worker)).toMatchObject({ id: 0 });
+		expect(
+			await nextMessagesUntilResponse(() => nextMessage(worker), 0)
+		).toContainEqual(userScriptParsedEvent(expect));
 	};
 
 	await waitForScriptParsed("worker-a");
@@ -904,11 +896,9 @@ test("InspectorProxy: can proxy messages > 1MB", async ({ expect }) => {
 
 	ws.send(JSON.stringify({ id: 1, method: "Debugger.enable" }));
 
-	expect(await nextMessage()).toMatchObject({
-		method: "Debugger.scriptParsed",
-	});
-
-	expect(await nextMessage()).toMatchObject({ id: 1 });
+	expect(await nextMessagesUntilResponse(nextMessage, 1)).toContainEqual(
+		userScriptParsedEvent(expect)
+	);
 
 	// Send request had check that the large string gets logged
 	const resPromise = mf.dispatchFetch("http://localhost");
@@ -941,4 +931,47 @@ async function getInspectorPortReady(mf: Miniflare) {
 
 	const { port } = await mf.getInspectorURL();
 	return parseInt(port);
+}
+
+type InspectorMessage = { id?: number; method?: string; params?: unknown };
+
+/**
+ * Reads inspector messages until the response to the command with the given
+ * `id` arrives. Before responding, the runtime may emit any number of events,
+ * such as a `Debugger.scriptParsed` event for each script it loaded before the
+ * user's code. The number of those scripts varies between workerd versions, so
+ * tests should not depend on it.
+ *
+ * @param nextMessage Returns the next message received from the inspector
+ * @param id The `id` of the command whose response should be awaited
+ * @returns The messages received before the response
+ */
+async function nextMessagesUntilResponse(
+	nextMessage: () => Promise<InspectorMessage>,
+	id: number
+): Promise<InspectorMessage[]> {
+	const preceding: InspectorMessage[] = [];
+	while (true) {
+		const message = await nextMessage();
+		if (message.id === id) {
+			return preceding;
+		}
+		preceding.push(message);
+	}
+}
+
+/**
+ * Matches the `Debugger.scriptParsed` event for a test worker's `index.mjs`
+ * main module, ignoring events for scripts internal to the runtime.
+ *
+ * @param expect The `expect` from the test context
+ * @returns An asymmetric matcher for the event
+ */
+function userScriptParsedEvent(expect: ExpectStatic) {
+	return expect.objectContaining({
+		method: "Debugger.scriptParsed",
+		params: expect.objectContaining({
+			url: expect.stringMatching(/\/index\.mjs$/),
+		}),
+	});
 }

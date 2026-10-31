@@ -169,10 +169,28 @@ export async function getR2BucketMetrics(
 }
 
 /**
+ * Bucket returned by the R2 create-bucket API.
+ *
+ * `location` is the placement R2 actually used. A `locationHint` on the
+ * request is not a guarantee: hints are honored only the first time a bucket
+ * name is created, and a deleted name keeps its original location.
+ */
+export interface R2CreatedBucket {
+	name?: string;
+	creation_date?: string;
+	location?: string;
+	storage_class?: string;
+	jurisdiction?: string;
+}
+
+/**
  * Create a bucket with the given `bucketName` within the account given by `accountId`.
  *
  * A 400 is returned if the account already owns a bucket with this name.
  * A bucket must be explicitly deleted to be replaced.
+ *
+ * @returns The bucket R2 created, including the location that was applied.
+ * The result may omit `location` when the API does not report one.
  *
  * Keep in sync with the local provisioning copy in
  * packages/deploy-helpers/src/deploy/helpers/provision-bindings.ts.
@@ -184,12 +202,12 @@ export async function createR2Bucket(
 	location?: string,
 	jurisdiction?: string,
 	storageClass?: string
-): Promise<void> {
+): Promise<R2CreatedBucket> {
 	const headers: HeadersInit = {};
 	if (jurisdiction !== undefined) {
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
-	return await fetchResult<void>(
+	const created = await fetchResult<R2CreatedBucket | null>(
 		complianceConfig,
 		`/accounts/${accountId}/r2/buckets`,
 		{
@@ -202,6 +220,7 @@ export async function createR2Bucket(
 			headers,
 		}
 	);
+	return created ?? {};
 }
 
 /**

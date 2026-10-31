@@ -1,6 +1,6 @@
 {
 	"name": "create-cloudflare",
-	"version": "2.74.0",
+	"version": "2.74.5",
 	"description": "A CLI for creating and deploying new applications to Cloudflare.",
 	"keywords": [
 		"cloudflare",
@@ -43,7 +43,7 @@
 		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/shared-ast-primitives": "workspace:*",
-		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/vite-plugin": "npm:@cloudflare/vite-plugin@1.63.2",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "workspace:*",

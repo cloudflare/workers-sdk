@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { Miniflare } from "miniflare";
 import { getInitialWorkerNameToExportTypesMap } from "./export-types";
 import { debuglog } from "./utils";
+import type { ConfigChangeCoordinator } from "./config-change-coordinator";
 import type { ExportTypes } from "./export-types";
 import type { NodeJsCompat } from "./nodejs-compat";
 import type {
@@ -12,10 +13,13 @@ import type {
 	Worker,
 	WorkersResolvedConfig,
 } from "./plugin-config";
-import type { ParsedInputWorkerConfig } from "@cloudflare/config";
+import type {
+	ModuleType,
+	ParsedInputWorkerConfig,
+	ParsedOutputWorkerConfig,
+} from "@cloudflare/config";
 import type { MiniflareOptions } from "miniflare";
 import type * as vite from "vite";
-import type { Unstable_Config } from "wrangler";
 
 /**
  * Used to store state that should persist across server restarts.
@@ -24,11 +28,19 @@ import type { Unstable_Config } from "wrangler";
 export interface SharedContext {
 	miniflare?: Miniflare;
 	workerNameToExportTypesMap?: Map<string, ExportTypes>;
-	hasShownWorkerConfigWarnings: boolean;
 	/** Tracks the number of in-flight dev server restarts (0 means no restart in progress) */
 	restartingDevServerCount: number;
+	/** Coordinates config changes across the PluginContext created for each restart. */
+	configChangeCoordinator?: ConfigChangeCoordinator;
 	/** Allowed hostnames for tunnel connections */
 	tunnelHostnames: Set<string>;
+}
+
+/** An explicitly typed additional module emitted by a Vite environment. */
+export interface AdditionalModuleMetadata {
+	environmentName: string;
+	fileName: string;
+	type: ModuleType;
 }
 
 /**
@@ -39,6 +51,10 @@ export class PluginContext {
 	#sharedContext: SharedContext;
 	#resolvedPluginConfig?: ResolvedPluginConfig;
 	#resolvedViteConfig?: vite.ResolvedConfig;
+	#environmentNameToAdditionalModules = new Map<
+		string,
+		Map<string, ModuleType>
+	>();
 
 	constructor(sharedContext: SharedContext) {
 		this.#sharedContext = sharedContext;
@@ -56,9 +72,14 @@ export class PluginContext {
 		debuglog("Miniflare is ready");
 	}
 
+	/**
+	 * Disposes the Miniflare instance and clears the export types it was configured with.
+	 * A server created later in the same process starts again from its own config.
+	 */
 	async disposeMiniflare(): Promise<void> {
 		await this.#sharedContext.miniflare?.dispose();
 		this.#sharedContext.miniflare = undefined;
+		this.#sharedContext.workerNameToExportTypesMap = undefined;
 	}
 
 	get miniflare(): Miniflare {
@@ -102,15 +123,6 @@ export class PluginContext {
 		return this.#sharedContext.workerNameToExportTypesMap;
 	}
 
-	setHasShownWorkerConfigWarnings(hasShownWorkerConfigWarnings: boolean): void {
-		this.#sharedContext.hasShownWorkerConfigWarnings =
-			hasShownWorkerConfigWarnings;
-	}
-
-	get hasShownWorkerConfigWarnings(): boolean {
-		return this.#sharedContext.hasShownWorkerConfigWarnings;
-	}
-
 	beginRestartingDevServer(): void {
 		this.#sharedContext.restartingDevServerCount++;
 	}
@@ -121,6 +133,15 @@ export class PluginContext {
 
 	get isRestartingDevServer(): boolean {
 		return this.#sharedContext.restartingDevServerCount > 0;
+	}
+
+	get configChangeCoordinator(): ConfigChangeCoordinator {
+		assert(
+			this.#sharedContext.configChangeCoordinator,
+			"Expected `configChangeCoordinator` to be defined"
+		);
+
+		return this.#sharedContext.configChangeCoordinator;
 	}
 
 	getTunnelHostnames(): string[] {
@@ -210,10 +231,59 @@ export class PluginContext {
 	getWorkerNewConfig(
 		environmentName: string
 	): ParsedInputWorkerConfig | undefined {
-		return this.#getWorker(environmentName)?.parsedNewWorkerConfig;
+		return this.#getWorker(environmentName)?.config;
 	}
 
-	get allWorkerConfigs(): Unstable_Config[] {
+	/** Clear the additional modules collected for an environment before rebuilding it. */
+	clearAdditionalModules(environmentName: string): void {
+		this.#environmentNameToAdditionalModules.delete(environmentName);
+	}
+
+	/** Record an explicitly typed additional module emitted by an environment. */
+	addAdditionalModule(
+		environmentName: string,
+		fileName: string,
+		type: ModuleType
+	): void {
+		const additionalModules =
+			this.#environmentNameToAdditionalModules.get(environmentName) ??
+			new Map();
+		const existingType = additionalModules.get(fileName);
+		assert(
+			existingType === undefined || existingType === type,
+			`Additional module "${fileName}" was emitted with conflicting types "${existingType}" and "${type}".`
+		);
+		additionalModules.set(fileName, type);
+		this.#environmentNameToAdditionalModules.set(
+			environmentName,
+			additionalModules
+		);
+	}
+
+	/** Get the additional modules emitted by a Worker environment and its children. */
+	getAdditionalModules(
+		workerEnvironmentName: string
+	): AdditionalModuleMetadata[] {
+		const environmentNames = [
+			workerEnvironmentName,
+			...(this.resolvedPluginConfig.type === "preview"
+				? []
+				: (this.resolvedPluginConfig.environmentNameToChildEnvironmentNamesMap.get(
+						workerEnvironmentName
+					) ?? [])),
+		];
+
+		return environmentNames.flatMap((environmentName) =>
+			Array.from(
+				this.#environmentNameToAdditionalModules.get(environmentName) ?? [],
+				([fileName, type]) => ({ environmentName, fileName, type })
+			)
+		);
+	}
+
+	get allWorkerConfigs(): Array<
+		ParsedInputWorkerConfig | ParsedOutputWorkerConfig
+	> {
 		if (this.resolvedPluginConfig.type === "preview") {
 			return this.resolvedPluginConfig.workers.map((worker) => worker.config);
 		}

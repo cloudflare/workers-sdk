@@ -25,6 +25,48 @@ const baseContainer = {
 const baseOutputConfig = { ...baseConfig } as const;
 const baseOutputContainer = { ...baseContainer } as const;
 
+describe.each([
+	["input", InputWorkerSchema],
+	["output", OutputWorkerSchema],
+] as const)("%s Worker domains", (_name, schema) => {
+	it.for([
+		{ production: true, previews: false },
+		{ production: false, previews: true },
+		{ production: true, previews: true },
+	])(
+		"accepts traffic settings $production/$previews",
+		(traffic, { expect }) => {
+			const domains = [
+				"example.com",
+				{ hostname: "previews.example.com", ...traffic },
+			];
+			const result = schema.parse({ ...baseConfig, domains });
+			expect(result.domains).toEqual(domains);
+		}
+	);
+
+	it.for([
+		{ hostname: "example.com", production: false, previews: false },
+		{ hostname: "example.com", production: true },
+		{ hostname: "example.com", previews: true },
+		{ hostname: "example.com", production: "true", previews: false },
+		{ hostname: "example.com", production: false, previews: "true" },
+		{ production: true, previews: false },
+		{ hostname: 123, production: true, previews: false },
+		{
+			hostname: "example.com",
+			production: true,
+			previews: false,
+			enabled: true,
+		},
+		123,
+	])("rejects invalid domain %j", (domain, { expect }) => {
+		expect(schema.safeParse({ ...baseConfig, domains: [domain] }).success).toBe(
+			false
+		);
+	});
+});
+
 describe("InputWorkerSchema", () => {
 	describe("env singleton bindings", () => {
 		it("accepts undefined env", ({ expect }) => {
@@ -1445,6 +1487,104 @@ describe("InputConfigSchema", () => {
 
 		expect(result.success).toBe(true);
 	});
+
+	it("accepts resolved Container links and unlinked Containers", ({
+		expect,
+	}) => {
+		const result = InputConfigSchema.safeParse({
+			worker: {
+				...baseConfig,
+				exports: {
+					Api: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "my-container",
+					},
+				},
+			},
+			containers: [baseContainer, { ...baseContainer, name: "unlinked" }],
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects duplicate Container names without a Worker", ({ expect }) => {
+		const result = InputConfigSchema.safeParse({
+			containers: [baseContainer, { ...baseContainer }],
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues).toContainEqual(
+				expect.objectContaining({
+					path: ["containers", 1, "name"],
+					message: expect.stringContaining("Container names must be unique"),
+				})
+			);
+		}
+	});
+
+	it("rejects references to missing Containers", ({ expect }) => {
+		const result = InputConfigSchema.safeParse({
+			worker: {
+				...baseConfig,
+				exports: {
+					Api: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "missing",
+					},
+				},
+			},
+			containers: [baseContainer],
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues).toContainEqual(
+				expect.objectContaining({
+					path: ["worker", "exports", "Api", "container"],
+					message:
+						'The referenced Container "missing" is not included in the `containers` array.',
+				})
+			);
+		}
+	});
+
+	it("rejects multiple Durable Objects linked to the same Container", ({
+		expect,
+	}) => {
+		const result = InputConfigSchema.safeParse({
+			worker: {
+				...baseConfig,
+				exports: {
+					Api: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "my-container",
+					},
+					Other: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "my-container",
+					},
+				},
+			},
+			containers: [baseContainer],
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues).toContainEqual(
+				expect.objectContaining({
+					path: ["worker", "exports", "Other", "container"],
+					message: expect.stringContaining(
+						"already referenced by `worker.exports.Api`"
+					),
+				})
+			);
+		}
+	});
 });
 
 describe("InputSettingsSchema", () => {
@@ -1639,6 +1779,7 @@ describe("ExportSchema", () => {
 				successRetention: "3 days",
 				errorRetention: 86_400_000,
 			},
+			jurisdiction: "eu",
 		});
 		const result = parseExports({ ScheduledWorkflow: scheduled });
 
@@ -1654,6 +1795,7 @@ describe("ExportSchema", () => {
 			{ concurrency: { limit: 0 } },
 			{ defaultRetention: { successRetention: -1 } },
 			{ defaultRetention: { errorRetention: "" } },
+			{ jurisdiction: "fedramp-high" },
 		]) {
 			const result = parseExports({
 				GreetingWorkflow: { type: "workflow", name: "greeting", ...settings },

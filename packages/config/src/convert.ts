@@ -465,7 +465,11 @@ function convertBindingsAndAssets(
 			}
 			case "analytics-engine-dataset": {
 				analyticsEngineDatasets.push(
-					omitUndefined({ binding: name, dataset: binding.name })
+					omitUndefined({
+						binding: name,
+						dataset: binding.name,
+						remote: binding.dev?.remote,
+					})
 				);
 				break;
 			}
@@ -548,6 +552,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						id: binding.id,
+						remote: binding.dev?.remote,
 						localConnectionString: binding.dev?.connectionString,
 					})
 				);
@@ -1093,7 +1098,16 @@ function convertDomains(
 		? [...result.routes]
 		: [];
 	for (const domain of config.domains) {
-		routes.push({ pattern: domain, custom_domain: true });
+		routes.push(
+			typeof domain === "string"
+				? { pattern: domain, custom_domain: true }
+				: {
+						pattern: domain.hostname,
+						custom_domain: true,
+						enabled: domain.production,
+						previews_enabled: domain.previews,
+					}
+		);
 	}
 	result.routes = routes;
 }

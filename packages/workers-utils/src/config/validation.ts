@@ -16,7 +16,7 @@ import {
 	getDurableObjectExports,
 	isLiveDurableObjectExport,
 } from "./durable-object-exports";
-import { ARTIFACTS_EVENT_TYPES } from "./environment";
+import { ARTIFACTS_EVENT_TYPES, WORKFLOW_JURISDICTIONS } from "./environment";
 import { partitionExports } from "./exports";
 import { isIdentityBinding } from "./oidc";
 import {
@@ -3296,6 +3296,33 @@ function validateWorkflowConcurrency(
 }
 
 /**
+ * Check the optional `jurisdiction` setting of a Workflow binding or export.
+ */
+function validateWorkflowJurisdiction(
+	diagnostics: Diagnostics,
+	field: string,
+	kind: string,
+	value: Record<string, unknown>
+): boolean {
+	const { jurisdiction } = value;
+	if (
+		jurisdiction === undefined ||
+		WORKFLOW_JURISDICTIONS.some((valid) => valid === jurisdiction)
+	) {
+		return true;
+	}
+	const validJurisdictions = new Intl.ListFormat("en-US", {
+		type: "disjunction",
+	}).format(WORKFLOW_JURISDICTIONS.map((valid) => JSON.stringify(valid)));
+	diagnostics.errors.push(
+		`"${field}" ${kind} "jurisdiction" field must be one of ${validJurisdictions}, but got ${JSON.stringify(
+			jurisdiction
+		)}.`
+	);
+	return false;
+}
+
+/**
  * Check that the given field is a valid "workflow" binding object.
  */
 const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
@@ -3365,6 +3392,9 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 	isValid =
 		validateWorkflowConcurrency(diagnostics, field, "bindings", settings) &&
 		isValid;
+	isValid =
+		validateWorkflowJurisdiction(diagnostics, field, "bindings", settings) &&
+		isValid;
 
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
@@ -3375,6 +3405,7 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		"concurrency",
 		"schedules",
 		"default_retention",
+		"jurisdiction",
 	]);
 
 	return isValid;
@@ -5337,10 +5368,18 @@ const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	// `remote: true` opts the binding into connecting to the deployed Hyperdrive
+	// configuration at the edge during local dev (via the remote-bindings proxy).
+	// When set, a `localConnectionString` is optional.
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"id",
 		"localConnectionString",
+		"remote",
 	]);
 
 	return isValid;
@@ -5694,7 +5733,12 @@ const validateAnalyticsEngineBinding: ValidatorFn = (
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"dataset",
+		"remote",
 	]);
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
 
 	return isValid;
 };
@@ -7449,6 +7493,13 @@ function validateWorkflowExport(
 	valid =
 		validateWorkflowConcurrency(diagnostics, field, "export", workflowExport) &&
 		valid;
+	valid =
+		validateWorkflowJurisdiction(
+			diagnostics,
+			field,
+			"export",
+			workflowExport
+		) && valid;
 
 	valid =
 		validateAdditionalProperties(
@@ -7462,6 +7513,7 @@ function validateWorkflowExport(
 				"concurrency",
 				"schedules",
 				"default_retention",
+				"jurisdiction",
 			]
 		) && valid;
 

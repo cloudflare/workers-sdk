@@ -13,7 +13,11 @@ export default defineConfig(
 				experimental: { bundledDev: true },
 				plugins: [
 					react(),
-					cloudflare({ inspectorPort: false, persistState: false }),
+					cloudflare({
+						types: { includeRuntime: false },
+						inspectorPort: false,
+						persistState: false,
+					}),
 				],
 			}
 );

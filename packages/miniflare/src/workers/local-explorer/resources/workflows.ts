@@ -35,6 +35,10 @@ interface DirectoryEntry {
 	birthtimeMs: number;
 }
 
+interface WorkflowBinding extends Workflow {
+	unsafeDeletePersistedInstance(hexId: string): Promise<boolean>;
+}
+
 /** Methods on a WorkflowInstance handle (from workflow.get()). */
 interface WorkflowHandle {
 	pause(): Promise<void>;
@@ -178,12 +182,15 @@ function getEngineNamespace(
  * Get the Workflow proxy binding for a workflow.
  * Used for operations that go through the standard Workflow interface (create).
  */
-function getWorkflowBinding(env: Env, workflowName: string): Workflow | null {
+function getWorkflowBinding(
+	env: Env,
+	workflowName: string
+): WorkflowBinding | null {
 	const info = env.LOCAL_EXPLORER_BINDING_MAP.workflows[workflowName];
 	if (!info) {
 		return null;
 	}
-	return env[info.binding] as Workflow;
+	return env[info.binding] as WorkflowBinding;
 }
 
 function getLocalWorkflows(env: Env): WorkflowsWorkflow[] {
@@ -1044,8 +1051,7 @@ export async function deleteWorkflowInstances(
 /**
  * Delete a workflow instance by removing its .sqlite persistence files.
  *
- * Converts the instance ID to a hex DO ID via idFromName(), then calls the
- * loopback to delete the .sqlite (and -shm/-wal) files from disk.
+ * Uses the binding's cleanup queue so deletion cannot race instance recreation.
  */
 export async function deleteWorkflowInstance(
 	c: AppContext,
@@ -1074,8 +1080,9 @@ export async function deleteWorkflowInstance(
 		);
 	}
 
-	if (c.env.MINIFLARE_LOOPBACK === undefined) {
-		return errorResponse(500, 10001, "Loopback service not available");
+	const workflow = getWorkflowBinding(c.env, workflowName);
+	if (workflow === null) {
+		return errorResponse(500, 10001, "Workflow binding not available");
 	}
 
 	// Convert instance ID to hex DO ID.
@@ -1086,22 +1093,15 @@ export async function deleteWorkflowInstance(
 		? instanceId
 		: engineNamespace.idFromName(instanceId).toString();
 
-	const encodedName = encodeURIComponent(workflowName);
-	const encodedHexId = encodeURIComponent(hexId);
-	const loopbackUrl = `http://localhost/core/workflow-storage/${encodedName}/${encodedHexId}`;
-
-	const response = await c.env.MINIFLARE_LOOPBACK.fetch(loopbackUrl, {
-		method: "DELETE",
-	});
-
-	if (!response.ok) {
-		if (response.status === 404) {
+	try {
+		if (!(await workflow.unsafeDeletePersistedInstance(hexId))) {
 			return errorResponse(
 				404,
 				WORKFLOW_ERROR_NOT_FOUND,
 				`Workflow instance '${instanceId}' not found.`
 			);
 		}
+	} catch {
 		return errorResponse(500, 10001, "Failed to delete instance");
 	}
 

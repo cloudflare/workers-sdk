@@ -4,6 +4,7 @@ import { beforeEach, describe, test, vi } from "vitest";
 import {
 	maybeAppendWranglerToGitIgnore,
 	maybeAppendWranglerToGitIgnoreLikeFile,
+	PROJECT_ROOT_ASSETS_IGNORE_ENTRIES,
 } from "../gitignore";
 import type { PathLike } from "node:fs";
 import type { Mock } from "vitest";
@@ -330,6 +331,144 @@ describe("maybeAppendWranglerToGitIgnoreLikeFile", () => {
 			  ],
 			]
 		`);
+	});
+
+	test("should append additional entries after the wrangler entries", ({
+		expect,
+	}) => {
+		mockIgnoreFile(
+			"my-project/.assetsignore",
+			`
+      *.bak
+    `
+		);
+		maybeAppendWranglerToGitIgnoreLikeFile("my-project/.assetsignore", {
+			additionalEntries: PROJECT_ROOT_ASSETS_IGNORE_ENTRIES,
+		});
+
+		expect(appendFileSyncMock.mock.calls).toMatchInlineSnapshot(`
+			[
+			  [
+			    "my-project/.assetsignore",
+			    "
+			# wrangler files
+			.wrangler
+			.dev.vars*
+			!.dev.vars.example
+			.env*
+			!.env.example
+			/_worker.js
+			/_routes.json
+			/functions
+			node_modules
+			.git
+			.DS_Store
+			.npmrc
+			",
+			  ],
+			]
+		`);
+	});
+
+	test("should only append additional entries that are not already present as exact lines", ({
+		expect,
+	}) => {
+		mockIgnoreFile(
+			"my-project/.assetsignore",
+			`
+      .wrangler
+      .dev.vars*
+      !.dev.vars.example
+      .env*
+      !.env.example
+      /functions
+      .git
+    `
+		);
+		maybeAppendWranglerToGitIgnoreLikeFile("my-project/.assetsignore", {
+			additionalEntries: ["/functions", ".git", ".npmrc"],
+		});
+
+		expect(appendFileSyncMock.mock.calls).toMatchInlineSnapshot(`
+			[
+			  [
+			    "my-project/.assetsignore",
+			    "
+			.npmrc
+			",
+			  ],
+			]
+		`);
+	});
+
+	test("should not append an additional entry twice when it is repeated or already queued", ({
+		expect,
+	}) => {
+		mockIgnoreFile("my-project/.assetsignore", "");
+		maybeAppendWranglerToGitIgnoreLikeFile("my-project/.assetsignore", {
+			additionalEntries: [".npmrc", ".npmrc", ".env*"],
+		});
+
+		expect(appendFileSyncMock.mock.calls).toMatchInlineSnapshot(`
+			[
+			  [
+			    "my-project/.assetsignore",
+			    "
+
+			# wrangler files
+			.wrangler
+			.dev.vars*
+			!.dev.vars.example
+			.env*
+			!.env.example
+			.npmrc
+			",
+			  ],
+			]
+		`);
+	});
+
+	test.for([".env", ".env.local", "/.env*"])(
+		"should add .env* when only %s is present and requireEnvWildcard is set",
+		(existingEnvEntry, { expect }) => {
+			mockIgnoreFile(
+				"my-project/.assetsignore",
+				`
+        .wrangler
+        .dev.vars*
+        !.dev.vars.example
+        ${existingEnvEntry}
+        !.env.example
+      `
+			);
+			maybeAppendWranglerToGitIgnoreLikeFile("my-project/.assetsignore", {
+				requireEnvWildcard: true,
+			});
+
+			expect(appendFileSyncMock.mock.calls).toEqual([
+				["my-project/.assetsignore", "\n.env*\n"],
+			]);
+		}
+	);
+
+	test("should not add .env* when it is already present and requireEnvWildcard is set", ({
+		expect,
+	}) => {
+		mockIgnoreFile(
+			"my-project/.assetsignore",
+			`
+      .wrangler
+      .dev.vars*
+      !.dev.vars.example
+      .env* # comment
+      !.env.example
+    `
+		);
+		maybeAppendWranglerToGitIgnoreLikeFile("my-project/.assetsignore", {
+			requireEnvWildcard: true,
+		});
+
+		expect(appendFileSyncMock).not.toHaveBeenCalled();
 	});
 
 	function mockIgnoreFile(path: string, content: string) {

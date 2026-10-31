@@ -652,13 +652,21 @@ export const kvKeyListCommand = createCommand({
 		let result: NamespaceKeyInfo[];
 		let metricEvent: EventNames;
 		if (localMode) {
-			const listResult = await usingLocalNamespace(
+			result = await usingLocalNamespace(
 				args.persistTo,
 				config,
 				namespaceId,
-				(namespace) => namespace.list({ prefix })
+				async (namespace) => {
+					const keys: NamespaceKeyInfo[] = [];
+					let cursor: string | undefined;
+					do {
+						const listResult = await namespace.list({ prefix, cursor });
+						keys.push(...(listResult.keys as NamespaceKeyInfo[]));
+						cursor = listResult.list_complete ? undefined : listResult.cursor;
+					} while (cursor);
+					return keys;
+				}
 			);
-			result = listResult.keys as NamespaceKeyInfo[];
 
 			metricEvent = "list kv keys (local)";
 		} else {

@@ -171,8 +171,6 @@ describe("development issuance API transport", () => {
 				createDevelopmentOidcApiTransport({}, logger).issueToken(
 					auth,
 					session,
-					audience,
-					false,
 					signal
 				)
 			).rejects.toMatchObject({ kind: "rate_limited", retryAfterMs: delay });
