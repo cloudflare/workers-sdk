@@ -157,7 +157,7 @@ export interface OidcAuthorizationGrants {
 	allowed_scopes: string[];
 }
 export interface OidcRequestSigning {
-	profile: "cloudflare-workload-http-v1";
+	profile: "cloudflare-workload-http-v1" | "web-bot-auth";
 	allowed_origins: string[];
 	allowed_methods: string[];
 }
@@ -264,7 +264,9 @@ export function isIdentityBinding(
 		h !== undefined &&
 		(!record(h) ||
 			!fields(h, ["profile", "allowed_origins", "allowed_methods"]) ||
-			h.profile !== "cloudflare-workload-http-v1" ||
+			!["cloudflare-workload-http-v1", "web-bot-auth"].includes(
+				String(h.profile)
+			) ||
 			!set(h.allowed_origins, validOidcOrigin) ||
 			!set(
 				h.allowed_methods,
