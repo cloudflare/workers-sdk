@@ -290,7 +290,6 @@ describe("the real workspace", () => {
 			[
 			  [
 			    "@cloudflare/codemods",
-			    "@cloudflare/config",
 			    "@cloudflare/kv-asset-handler",
 			    "@cloudflare/pages-functions",
 			    "@cloudflare/unenv-preset",
@@ -301,8 +300,8 @@ describe("the real workspace", () => {
 			    "solarflare-theme",
 			  ],
 			  [
-			    "@cloudflare/build-output-utils",
 			    "@cloudflare/cli-shared-helpers",
+			    "@cloudflare/config",
 			    "@cloudflare/pages-shared",
 			    "@cloudflare/runtime-types",
 			    "@cloudflare/vitest-plugin",
@@ -311,6 +310,10 @@ describe("the real workspace", () => {
 			  ],
 			  [
 			    "@cloudflare/autoconfig",
+			    "@cloudflare/build-output-utils",
+			    "@cloudflare/vitest-plugin",
+			  ],
+			  [
 			    "@cloudflare/containers-shared",
 			    "@cloudflare/vite-plugin",
 			  ],
