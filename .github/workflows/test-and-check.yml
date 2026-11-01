@@ -15,6 +15,8 @@ env:
   TURBO_CACHE: ${{ contains(github.event.pull_request.labels.*.name, 'ci:no-turbo-cache') && 'local:,remote:' || 'local:rw,remote:rw' }}
   TURBO_RUN_SUMMARY: "true"
 
+# Playwright 1.60 does not ship Chromium for Ubuntu 26.04. Keep Linux jobs on
+# its supported 24.04 image until the browser dependency supports newer images.
 jobs:
   add-to-project:
     if: github.head_ref != 'changeset-release/main'
@@ -23,7 +25,7 @@ jobs:
       cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
     timeout-minutes: 30
     name: Add PR to project
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - run: curl -X POST https://devprod-status-bot.devprod.workers.dev/pr-project/workers-sdk/${{ github.event.number }}
 
@@ -34,7 +36,7 @@ jobs:
       cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
 
     name: "Checks"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout Repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -104,7 +106,7 @@ jobs:
       matrix:
         os:
           - macos-latest
-          - ubuntu-latest
+          - ubuntu-24.04
           - windows-latest
         suite:
           - packages-and-tools
@@ -127,7 +129,7 @@ jobs:
           - os: macos-latest
             description: macOS
             runtime-shards: 2
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             description: Linux
             runtime-shards: 2
           - os: windows-latest
@@ -184,7 +186,7 @@ jobs:
       # `fixtures`.
       - name: Restore Chrome browser cache (Browser Run)
         id: chrome-cache
-        if: steps.changes.outputs.everything_but_markdown == 'true' && (matrix.suite == 'runtime' || (matrix.suite == 'fixtures' && matrix.os != 'ubuntu-latest'))
+        if: steps.changes.outputs.everything_but_markdown == 'true' && (matrix.suite == 'runtime' || (matrix.suite == 'fixtures' && matrix.os != 'ubuntu-24.04'))
         uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           # The Chrome version lives in
@@ -200,7 +202,7 @@ jobs:
 
       - name: Run tests (tools only)
         # tools _only_ needs to be tested on Linux because they're only intended to run in CI
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-latest'
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-24.04'
         run: |
           mkdir -p .turbo/ci-logs
           pnpm run test:ci:logged .turbo/ci-logs/tools.log run test:ci --log-order=stream --filter="@cloudflare/tools"
@@ -255,7 +257,7 @@ jobs:
           CI_OS: ${{ matrix.description }}
 
       - name: Test release source maps (Miniflare and Vite plugin)
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-latest'
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-24.04'
         run: |
           rm -rf packages/miniflare/dist packages/vite-plugin-cloudflare/dist
           pnpm run build --filter=miniflare --filter=@cloudflare/vite-plugin
@@ -349,7 +351,7 @@ jobs:
     if: always()
     timeout-minutes: 5
     name: "Tests"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Require all test partitions to pass
         env:
