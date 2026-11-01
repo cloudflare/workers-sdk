@@ -35,7 +35,7 @@ import {
 } from "./functions/buildWorker";
 import type { BundleResult } from "../deployment-bundle/bundle";
 import type { Config } from "@cloudflare/workers-utils";
-import type { NodeJSCompatMode } from "miniflare";
+import type { NodeJSCompatMode } from "@cloudflare/workers-utils/node-compat";
 
 export const pagesFunctionsBuildCommand = createCommand({
 	metadata: {
