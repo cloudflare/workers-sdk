@@ -1972,11 +1972,11 @@ it("preserves managed OAuth and optional explicit client authority", ({
 			oauth: { ...policy, http_message_signatures: "web_bot_auth" },
 		};
 		expect(KnownBindingSchema.parse(combined)).toEqual(combined);
-		for (const value of [null, "", "other", true]) {
+		for (const profile of [null, "", "other", true]) {
 			expect(() =>
 				KnownBindingSchema.parse({
 					...combined,
-					oauth: { ...policy, http_message_signatures: value },
+					oauth: { ...policy, http_message_signatures: profile },
 				})
 			).toThrow();
 		}
