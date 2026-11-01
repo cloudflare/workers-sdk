@@ -153,7 +153,6 @@ it("validates both managed OAuth profiles and independent public assertion autho
 		scope: ["read"],
 		allowed_origins: ["https://api.example"],
 		allowed_methods: ["GET"],
-		require_sender_constraint: true,
 	};
 	const config = { binding: "API", oauth, client_authentication: true };
 	for (const exchange of ["client_credentials", "workload_authorization"]) {
@@ -218,9 +217,7 @@ it("validates both managed OAuth profiles and independent public assertion autho
 	);
 });
 
-it("validates optional DPoP policy without weakening legacy required configuration", ({
-	expect,
-}) => {
+it("uses automatic DPoP without public policy fields", ({ expect }) => {
 	const oauth = {
 		exchange: "workload_authorization",
 		authorization_server: "https://auth.example",
@@ -230,18 +227,12 @@ it("validates optional DPoP policy without weakening legacy required configurati
 		allowed_origins: ["https://api.example"],
 		allowed_methods: ["GET"],
 	};
+	expect(isIdentityBinding({ binding: "API", oauth })).toBe(true);
 	for (const policy of [
-		{},
 		{ dpop: "preferred" },
 		{ dpop: "required" },
 		{ dpop: "disabled" },
 		{ require_sender_constraint: true },
-	]) {
-		expect(
-			isIdentityBinding({ binding: "API", oauth: { ...oauth, ...policy } })
-		).toBe(true);
-	}
-	for (const policy of [
 		{ dpop: null },
 		{ dpop: false },
 		{ dpop: "unknown" },
