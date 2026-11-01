@@ -1,8 +1,14 @@
 import assert from "node:assert";
 import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
+import { transformFile } from "@cloudflare/shared-ast-primitives";
+import {
+	DEFAULT_COMPAT_DATE,
+	isNodejsCompatDefaultOn,
+} from "@cloudflare/workers-utils";
 import { runFrameworkGenerator } from "frameworks/index";
 import { detectPackageManager } from "helpers/packageManagers";
+import * as recast from "recast";
 import { usesCfCli } from "../../src/cf/config";
 import { downloadRemoteTemplate, updatePackageName } from "../../src/templates";
 import type { TemplateConfig } from "../../src/templates";
@@ -120,6 +126,63 @@ const generate = async (ctx: C3Context) => {
 	await generateVinext(ctx);
 };
 
+const configure = async (ctx: C3Context) => {
+	if (ctx.args.variant !== "vinext" || !usesCfCli(ctx.project.path)) {
+		return;
+	}
+
+	// create-vinext-app uses today's date, which can exceed the workerd version
+	// bundled with the scaffolded project.
+	transformFile("cloudflare.config.ts", {
+		visitObjectExpression(n) {
+			const properties = n.node.properties;
+			const dateProperty = properties.find(
+				(property) =>
+					recast.types.namedTypes.ObjectProperty.check(property) &&
+					recast.types.namedTypes.Identifier.check(property.key) &&
+					property.key.name === "compatibilityDate"
+			);
+			if (
+				dateProperty &&
+				recast.types.namedTypes.ObjectProperty.check(dateProperty) &&
+				recast.types.namedTypes.StringLiteral.check(dateProperty.value)
+			) {
+				const date =
+					dateProperty.value.value > DEFAULT_COMPAT_DATE
+						? DEFAULT_COMPAT_DATE
+						: dateProperty.value.value;
+				dateProperty.value = recast.types.builders.stringLiteral(date);
+
+				if (isNodejsCompatDefaultOn(date)) {
+					const flagsIndex = properties.findIndex(
+						(property) =>
+							recast.types.namedTypes.ObjectProperty.check(property) &&
+							recast.types.namedTypes.Identifier.check(property.key) &&
+							property.key.name === "compatibilityFlags"
+					);
+					const flagsProperty = properties[flagsIndex];
+					if (
+						flagsProperty &&
+						recast.types.namedTypes.ObjectProperty.check(flagsProperty) &&
+						recast.types.namedTypes.ArrayExpression.check(flagsProperty.value)
+					) {
+						flagsProperty.value.elements = flagsProperty.value.elements.filter(
+							(flag) =>
+								!recast.types.namedTypes.StringLiteral.check(flag) ||
+								(flag.value !== "nodejs_compat" &&
+									flag.value !== "nodejs_compat_v2")
+						);
+						if (flagsProperty.value.elements.length === 0) {
+							properties.splice(flagsIndex, 1);
+						}
+					}
+				}
+			}
+			this.traverse(n);
+		},
+	});
+};
+
 const envInterfaceName = "CloudflareEnv";
 
 export default {
@@ -132,6 +195,7 @@ export default {
 	languages: ["ts"],
 	displayName: "Next.js",
 	generate,
+	configure,
 	transformPackageJson: async (_pkgJson, ctx) => {
 		// OpenNext's remote template already has deploy/preview/cf-typegen.
 		if (ctx.args.variant === "opennext") {
