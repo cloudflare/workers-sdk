@@ -1961,6 +1961,27 @@ it("preserves managed OAuth and optional explicit client authority", ({
 		require_sender_constraint: true,
 	};
 	const value = { type: "identity", oauth, client_authentication: true };
+	for (const exchange of ["client_credentials", "workload_authorization"]) {
+		const policy = {
+			...oauth,
+			exchange,
+			client_id: exchange === "client_credentials" ? "provider-id" : undefined,
+		};
+		const combined = {
+			type: "identity",
+			oauth: { ...policy, http_message_signatures: "web_bot_auth" },
+		};
+		expect(KnownBindingSchema.parse(combined)).toEqual(combined);
+		for (const value of [null, "", "other", true]) {
+			expect(() =>
+				KnownBindingSchema.parse({
+					...combined,
+					oauth: { ...policy, http_message_signatures: value },
+				})
+			).toThrow();
+		}
+	}
+
 	expect(KnownBindingSchema.parse(value)).toEqual(value);
 	expect(() =>
 		KnownBindingSchema.parse({

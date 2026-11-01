@@ -660,6 +660,7 @@ it.for(["workload_authorization", "client_credentials"] as const)(
 			allowed_origins: ["https://api.example.com"],
 			allowed_methods: ["GET"],
 			require_sender_constraint: true as const,
+			http_message_signatures: "web_bot_auth" as const,
 		};
 		const form = createWorkerUploadForm(createEsmWorker(), {
 			API: { type: "identity", oauth, client_authentication: true },

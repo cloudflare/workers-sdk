@@ -115,6 +115,7 @@ const ManagedOAuthBaseSchema = z.strictObject({
 	allowed_origins: z.array(z.string()),
 	allowed_methods: z.array(z.string()),
 	require_sender_constraint: z.literal(true),
+	http_message_signatures: z.literal("web_bot_auth").optional(),
 });
 const ManagedOAuthSchema = z.discriminatedUnion("exchange", [
 	ManagedOAuthBaseSchema.extend({

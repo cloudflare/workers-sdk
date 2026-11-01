@@ -156,6 +156,29 @@ it("validates both managed OAuth profiles and independent public assertion autho
 		require_sender_constraint: true,
 	};
 	const config = { binding: "API", oauth, client_authentication: true };
+	for (const exchange of ["client_credentials", "workload_authorization"]) {
+		const policy = {
+			...oauth,
+			exchange,
+			client_id: exchange === "client_credentials" ? "provider-id" : undefined,
+		};
+		expect(isIdentityBinding({ binding: "API", oauth: policy })).toBe(true);
+		expect(
+			isIdentityBinding({
+				binding: "API",
+				oauth: { ...policy, http_message_signatures: "web_bot_auth" },
+			})
+		).toBe(true);
+		for (const value of [null, "", "other", true, {}, []]) {
+			expect(
+				isIdentityBinding({
+					binding: "API",
+					oauth: { ...policy, http_message_signatures: value },
+				})
+			).toBe(false);
+		}
+	}
+
 	expect(isIdentityBinding(config)).toBe(true);
 	expect(
 		isIdentityBinding({
