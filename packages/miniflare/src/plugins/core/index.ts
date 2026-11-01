@@ -1261,3 +1261,4 @@ export * from "./proxy";
 export * from "./constants";
 export * from "./modules";
 export { kCurrentWorker } from "../../config/schema";
+export * from "./node-compat";
