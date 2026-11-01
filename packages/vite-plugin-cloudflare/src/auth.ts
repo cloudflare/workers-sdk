@@ -30,6 +30,11 @@ export const USER_AGENT = `vite-plugin/${packageVersion}`;
  * Set up cf authentication using the profile associated with the Vite project.
  */
 export function createAuth(profileDir: string, logger: Logger) {
+	const profile = createCfProfileStore({ logger }).resolve({ cwd: profileDir });
+	return createAuthForProfile(profile, logger);
+}
+
+function createAuthForProfile(profile: string, logger: Logger): CloudflareAuth {
 	const context = {
 		logger,
 		userAgent: USER_AGENT,
@@ -66,13 +71,15 @@ export function createAuth(profileDir: string, logger: Logger) {
 			error instanceof AccountSelectionUnavailable,
 	};
 	const auth = createCfAuth(context);
-	const profileStore = createCfProfileStore({ logger });
-	auth.setProfile(profileStore.resolve({ cwd: profileDir }));
+	auth.setProfile(profile);
 	return auth;
 }
 
 /**
  * Get the cf credentials for remote bindings sessions.
+ *
+ * The key includes the resolved profile so a profile change restarts the
+ * session with the newly selected credentials.
  *
  * @param profileDir - Directory used to resolve the cf auth profile.
  * @param accountId - The configured account ID, if any.
@@ -85,11 +92,12 @@ export function getRemoteBindingsAuth(
 	accountId: string | undefined,
 	logger: Logger
 ): RemoteBindingsAuth {
+	const profile = createCfProfileStore({ logger }).resolve({ cwd: profileDir });
 	let auth: CloudflareAuth | undefined;
 	return {
 		hook: async () => {
-			// Only resolve the profile once a session actually needs credentials
-			auth ??= createAuth(profileDir, logger);
+			// Only initialize authentication once a session actually needs credentials
+			auth ??= createAuthForProfile(profile, logger);
 			return {
 				accountId: await auth.requireAuth(
 					accountId ? { account_id: accountId } : {}
@@ -97,7 +105,7 @@ export function getRemoteBindingsAuth(
 				apiToken: auth.requireApiToken(),
 			};
 		},
-		key: JSON.stringify([profileDir, accountId]),
+		key: JSON.stringify([profileDir, accountId, profile]),
 	};
 }
 
