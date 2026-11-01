@@ -1,7 +1,7 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { getNodeCompat } from "miniflare/node-compat";
+import { getNodeCompat } from "@cloudflare/workers-utils/node-compat";
 import { logger } from "../../shared/context";
-import type { NodeJSCompatMode } from "miniflare";
+import type { NodeJSCompatMode } from "@cloudflare/workers-utils/node-compat";
 
 /**
  * Computes and validates the Node.js compatibility mode we are running.

@@ -26,6 +26,9 @@ Shared utility package used across wrangler, miniflare, and others. Two main are
 
 ### Shared runtime utilities
 
+- `getNodeCompat()` / `NodeJSCompatMode` — shared compatibility mode and flag resolution through `/node-compat`; Miniflare retains compatibility exports.
+- `getFreshSourceMapSupport()` — isolated source-map-support instances through `/sourcemap`. Keep source-map-support external because the helper manipulates its CommonJS module cache.
+
 - `createConfigCache(logger)` — file-backed JSON config cache (node_modules/.cache or `.wrangler/cache`). Generic mechanism; the consumer passes its logger (this package has no logger singleton). Both `wrangler` (`src/config-cache.ts`) and `@cloudflare/workers-auth` build their own instances.
 - `openInBrowser(url, logger)` — opens the `open` package with a graceful copy-paste fallback when no browser opener is available. Logger is a parameter, not imported.
 - `isInteractive()` / `isNonInteractiveOrCI()` / `isCI()` — TTY / CI detection (the TTY check is inlined here to avoid a cycle back through `@cloudflare/cli-shared-helpers`). `isCI()` keys off CI specifically (ignoring TTY), for behaviour like redacting account names in public CI logs. These read `ci-info`, which is bundled into consumers' distributables. Because a bundled `ci-info` is an unmockable separate instance (and reads the real environment), consumers that need to fake CI in their tests mock **this package's** exports rather than `ci-info` — e.g. wrangler's `vitest.setup.ts` mocks `@cloudflare/workers-utils` so `isInteractive`/`isNonInteractiveOrCI`/`isCI` delegate to the mockable `ci-info`, which reaches both wrangler-source and bundled `@cloudflare/workers-auth` consumers (since `@cloudflare/*` is external in workers-auth's bundle).

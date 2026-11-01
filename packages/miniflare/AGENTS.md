@@ -7,7 +7,6 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 ## Structure
 
 - `src/index.ts` — Main `Miniflare` class, server setup, plugin orchestration, all exports
-- `src/node-compat.ts`, `src/sourcemap.ts` — Utility entry points that must not load the runtime or workerd
 - `src/workers/` — ~30 embedded worker scripts (D1, KV, R2, caches, etc.), built via `worker:` virtual import scheme
 - `src/workers/d1/entry.worker.ts` — D1-specific HTTP/RPC entrypoint; selects a database using binding props and adapts RPC queries to the database worker's HTTP protocol
 - `src/workers/d1/database.worker.ts` — local D1 SQLite execution, transactions, metadata, and export; protocol schemas shared with the entrypoint live in `src/workers/d1/schemas.ts`
@@ -25,7 +24,7 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 
 ## Build
 
-- Custom `scripts/build.mjs` bundles the runtime and utility entry points as CJS → `dist/src/`; `scripts/types.mjs` rolls up declarations for each entry point
+- Custom `scripts/build.mjs` bundles `src/index.ts` as CJS → `dist/src/index.js`
 - Also compiles ~30 embedded worker scripts via `worker:...` virtual import scheme — each triggers a nested esbuild sub-build producing standalone ESM worker scripts
 - Build outputs: `dist/`, `worker-metafiles/`
 - Release builds set `SOURCEMAPS=false` to omit package source maps; ordinary builds keep them for debugging. Non-watch builds clean `dist/` before compiling so maps from an earlier build cannot leak into a release. This does not disable user Worker source maps.

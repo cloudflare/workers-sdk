@@ -1,16 +1,31 @@
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { expectTypeOf, it } from "vitest";
-import type { getNodeCompat, NodeJSCompatMode } from "miniflare/node-compat";
-import type { getFreshSourceMapSupport } from "miniflare/sourcemap";
+import type {
+	getNodeCompat,
+	NodeJSCompatMode,
+} from "@cloudflare/workers-utils/node-compat";
+import type { getFreshSourceMapSupport } from "@cloudflare/workers-utils/sourcemap";
+import type {
+	getFreshSourceMapSupport as getMiniflareSourceMapSupport,
+	getNodeCompat as getMiniflareNodeCompat,
+	NodeJSCompatMode as MiniflareNodeJSCompatMode,
+} from "miniflare";
 
-it("preserves the public types of Miniflare's utility entry points", () => {
+it("preserves the public types of the shared utility entry points", () => {
 	expectTypeOf<typeof getFreshSourceMapSupport>().returns.toEqualTypeOf<
 		typeof import("@cspotcode/source-map-support")
 	>();
 	expectTypeOf<
 		ReturnType<typeof getNodeCompat>["mode"]
 	>().toEqualTypeOf<NodeJSCompatMode>();
+	expectTypeOf<typeof getMiniflareSourceMapSupport>().toEqualTypeOf<
+		typeof getFreshSourceMapSupport
+	>();
+	expectTypeOf<typeof getMiniflareNodeCompat>().toEqualTypeOf<
+		typeof getNodeCompat
+	>();
+	expectTypeOf<MiniflareNodeJSCompatMode>().toEqualTypeOf<NodeJSCompatMode>();
 });
 
 it("imports the built package and uses its utilities without loading the runtime", ({

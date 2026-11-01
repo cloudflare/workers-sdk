@@ -47,6 +47,14 @@
 			"import": "./dist/docker-path.mjs",
 			"types": "./dist/docker-path.d.mts"
 		},
+		"./node-compat": {
+			"types": "./dist/node-compat.d.mts",
+			"import": "./dist/node-compat.mjs"
+		},
+		"./sourcemap": {
+			"types": "./dist/sourcemap.d.mts",
+			"import": "./dist/sourcemap.mjs"
+		},
 		"./errors": {
 			"import": "./dist/errors.mjs",
 			"types": "./dist/errors.d.mts"
@@ -74,6 +82,7 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"dependencies": {
+		"@cspotcode/source-map-support": "0.8.1",
 		"chalk": "catalog:default",
 		"dotenv": "catalog:default",
 		"undici": "catalog:default"
