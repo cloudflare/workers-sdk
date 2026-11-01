@@ -108,6 +108,7 @@ interface BindingTypeMap<TBinding> {
 	logfwdr: any;
 	media: MediaBinding;
 	"mtls-certificate": Fetcher;
+	// Replace with ambient IdentityBinding after the matching workers-types release.
 	identity: {
 		getIdentity(label?: string): Promise<
 			Rpc.Stub<

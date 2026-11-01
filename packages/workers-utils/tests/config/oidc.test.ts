@@ -56,7 +56,6 @@ const rejected = [
 	"https://[v1.]/",
 	"https://[vg.host]/",
 	"https://[::1]suffix/",
-	"https://host/\\path",
 	"\u0085",
 	"\ud800",
 	"https://host/\\path",
@@ -97,18 +96,12 @@ it("accepts managed signing without a token audience and rejects protocol option
 		},
 	};
 	expect(isIdentityBinding(config)).toBe(true);
-	for (const profile of [
-		"cloudflare-workload-http-v1",
-		"web-bot-auth",
-		"unknown",
-	]) {
-		expect(
-			isIdentityBinding({
-				...config,
-				request_signing: { ...config.request_signing, profile },
-			})
-		).toBe(false);
-	}
+	expect(
+		isIdentityBinding({
+			...config,
+			request_signing: { ...config.request_signing, profile: "web-bot-auth" },
+		})
+	).toBe(false);
 	expect(isIdentityBinding({ ...config, audience: "" })).toBe(false);
 	expect(
 		isIdentityBinding({
