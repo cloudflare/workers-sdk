@@ -15,4 +15,4 @@ Configure an optional fixed token audience and separate authorization-grant or H
 
 Select a handle before fetching, await its metadata, and use normal RPC forwarding and disposal. Normalize URL, FormData, and URLSearchParams inputs with `new Request(...)`; AbortSignal transport and cross-RPC cancellation are outside the contract. Local issuance remains unsupported: use mocks or deployed Previews.
 
-For a companion runtime, expose local immediate callers through ordinary configured service bindings and support explicit `dev.unsafeWorkloadIdentityService` injection for receiver tests. Credentials fail unavailable without that private channel; mock verification establishes no cryptographic trust.
+For a companion runtime, expose local immediate callers through ordinary configured service bindings. HTTP credential verification is unavailable locally without a managed verifier channel.
