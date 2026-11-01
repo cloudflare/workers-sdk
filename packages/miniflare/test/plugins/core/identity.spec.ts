@@ -44,7 +44,7 @@ for (const legacy of [false, true]) {
 					scope: ["read"],
 					allowed_origins: ["https://api.example"],
 					allowed_methods: ["GET"],
-					require_sender_constraint: true as const,
+					dpop: "preferred" as const,
 				},
 			};
 			const mf = new Miniflare(

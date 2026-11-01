@@ -45,7 +45,7 @@ it.for([
 							scope: ["read"],
 							allowed_origins: ["https://api.example.com"],
 							allowed_methods: ["GET", "POST"],
-							require_sender_constraint: true,
+							dpop: "preferred",
 							...(mode.endsWith("+wba")
 								? { http_message_signatures: "web_bot_auth" }
 								: {}),
