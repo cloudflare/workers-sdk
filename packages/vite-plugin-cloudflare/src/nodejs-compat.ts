@@ -4,7 +4,7 @@ import {
 	getCloudflarePreset,
 	nonPrefixedNodeModules,
 } from "@cloudflare/unenv-preset";
-import { getNodeCompat } from "miniflare";
+import { getNodeCompat } from "@cloudflare/workers-utils/node-compat";
 import { resolvePathSync } from "mlly";
 import { defineEnv } from "unenv";
 import { VIRTUAL_NODEJS_GLOBAL_INJECT_PREFIX } from "./plugins/virtual-modules";

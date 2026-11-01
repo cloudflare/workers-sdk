@@ -4552,6 +4552,9 @@ importers:
       '@cloudflare/unenv-preset':
         specifier: workspace:*
         version: link:../unenv-preset
+      '@cspotcode/source-map-support':
+        specifier: 0.8.1
+        version: 0.8.1
       blake3-wasm:
         specifier: 2.1.5
         version: 2.1.5
@@ -4634,9 +4637,6 @@ importers:
       '@cloudflare/workflows-shared':
         specifier: workspace:*
         version: link:../workflows-shared
-      '@cspotcode/source-map-support':
-        specifier: 0.8.1
-        version: 0.8.1
       '@netlify/build-info':
         specifier: 10.5.1
         version: 10.5.1(patch_hash=d4dab4e515b41a301041eaf8700001b612ab00616fa5837c8a65bcb3ce2df039)

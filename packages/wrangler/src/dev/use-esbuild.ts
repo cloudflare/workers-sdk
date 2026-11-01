@@ -23,8 +23,8 @@ import type {
 	Config,
 	Entry,
 } from "@cloudflare/workers-utils";
+import type { NodeJSCompatMode } from "@cloudflare/workers-utils/node-compat";
 import type { Metafile, Message, Plugin } from "esbuild";
-import type { NodeJSCompatMode } from "miniflare";
 
 export type EsbuildBundle = {
 	id: number;

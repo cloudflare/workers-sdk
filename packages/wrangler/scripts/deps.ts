@@ -5,6 +5,10 @@ import path from "node:path";
  * Dependencies that _are not_ bundled along with wrangler
  */
 export const EXTERNAL_DEPENDENCIES = [
+	// The shared source-map helper reloads this module through the real require
+	// cache to isolate stack-trace handlers, so it cannot be bundled.
+	"@cspotcode/source-map-support",
+
 	// Wrangler depends on a pinned version of esbuild.
 	"esbuild",
 

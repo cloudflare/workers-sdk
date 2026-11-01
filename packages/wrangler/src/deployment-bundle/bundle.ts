@@ -34,7 +34,7 @@ import type {
 	Entry,
 	WorkflowBinding,
 } from "@cloudflare/workers-utils";
-import type { NodeJSCompatMode } from "miniflare";
+import type { NodeJSCompatMode } from "@cloudflare/workers-utils/node-compat";
 
 // Taken from https://stackoverflow.com/a/3561711
 // which is everything from the tc39 proposal, plus the following two characters: ^/

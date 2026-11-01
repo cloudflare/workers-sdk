@@ -10,10 +10,10 @@ import {
 	parseJSONC,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { getNodeCompat } from "@cloudflare/workers-utils/node-compat";
 import chalk from "chalk";
 import * as find from "empathic/find";
 import globToRegExp from "glob-to-regexp";
-import { getNodeCompat } from "miniflare";
 import yargs from "yargs";
 import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
