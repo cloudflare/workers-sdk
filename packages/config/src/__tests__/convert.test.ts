@@ -1859,10 +1859,9 @@ it.for(["workload_authorization", "client_credentials"] as const)(
 	"preserves combined %s OAuth authority when converting cf configuration",
 	(exchange, { expect }) => {
 		const oauth = {
-			exchange,
 			...(exchange === "client_credentials"
-				? { client_id: "provider-id" }
-				: {}),
+				? { exchange, client_id: "provider-id" }
+				: { exchange }),
 			authorization_server: "https://auth.example.com",
 			token_endpoint: "https://auth.example.com/token",
 			resource: "https://api.example.com",
