@@ -4549,6 +4549,9 @@ importers:
       '@cloudflare/unenv-preset':
         specifier: workspace:*
         version: link:../unenv-preset
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
       blake3-wasm:
         specifier: 2.1.5
         version: 2.1.5
@@ -4561,6 +4564,9 @@ importers:
       path-to-regexp:
         specifier: 6.3.0
         version: 6.3.0
+      undici:
+        specifier: catalog:default
+        version: 7.30.1
       unenv:
         specifier: 2.0.0-rc.24
         version: 2.0.0-rc.24
@@ -4625,9 +4631,6 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 5.20261023.1
-      '@cloudflare/workers-utils':
-        specifier: workspace:*
-        version: link:../workers-utils
       '@cloudflare/workflows-shared':
         specifier: workspace:*
         version: link:../workflows-shared
@@ -4853,9 +4856,6 @@ importers:
       typescript:
         specifier: catalog:default
         version: 5.8.3
-      undici:
-        specifier: catalog:default
-        version: 7.30.1
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1))
