@@ -26,6 +26,21 @@
 	],
 	"main": "./dist/src/index.js",
 	"types": "./dist/src/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/src/index.d.ts",
+			"default": "./dist/src/index.js"
+		},
+		"./node-compat": {
+			"types": "./dist/src/node-compat.d.ts",
+			"default": "./dist/src/node-compat.js"
+		},
+		"./sourcemap": {
+			"types": "./dist/src/sourcemap.d.ts",
+			"default": "./dist/src/sourcemap.js"
+		},
+		"./*": "./*"
+	},
 	"publishConfig": {
 		"access": "public"
 	},
