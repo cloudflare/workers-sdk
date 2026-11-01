@@ -16,8 +16,8 @@ catalogs:
       specifier: 0.94.0
       version: 0.94.0
     '@playwright/test':
-      specifier: 1.60.0
-      version: 1.60.0
+      specifier: 1.61.0
+      version: 1.61.0
     '@vitest/ui':
       specifier: 5.0.4
       version: 5.0.4
@@ -55,8 +55,8 @@ catalogs:
       specifier: 11.0.0
       version: 11.0.0
     playwright-chromium:
-      specifier: 1.60.0
-      version: 1.60.0
+      specifier: 1.61.0
+      version: 1.61.0
     signal-exit:
       specifier: 4.1.0
       version: 4.1.0
@@ -266,7 +266,7 @@ importers:
         version: 5.20261023.1
       '@playwright/test':
         specifier: catalog:default
-        version: 1.60.0
+        version: 1.61.0
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
@@ -1574,7 +1574,7 @@ importers:
         version: 6.5.1
       playwright-chromium:
         specifier: catalog:default
-        version: 1.60.0
+        version: 1.61.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -1601,7 +1601,7 @@ importers:
         version: 22.15.17
       playwright-chromium:
         specifier: catalog:default
-        version: 1.60.0
+        version: 1.61.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2319,7 +2319,7 @@ importers:
         version: 9.2.1
       playwright-chromium:
         specifier: catalog:default
-        version: 1.60.0
+        version: 1.61.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2967,7 +2967,7 @@ importers:
         version: link:../../workers-tsconfig
       playwright-chromium:
         specifier: catalog:default
-        version: 1.60.0
+        version: 1.61.0
       semver:
         specifier: ^7.7.1
         version: 7.7.3
@@ -8140,8 +8140,8 @@ packages:
   '@playground/module-resolution-requires@file:packages/vite-plugin-cloudflare/playground/module-resolution/packages/requires':
     resolution: {directory: packages/vite-plugin-cloudflare/playground/module-resolution/packages/requires, type: directory}
 
-  '@playwright/test@1.60.0':
-    resolution: {integrity: sha512-O71yZIbAh/PxDMNGns37GHBIfrVkEVyn+AXyIa5dOTfb4/xNvRWV+Vv/NMbNCtODB/pO7vLlF2OTmMVLhmr7Ag==}
+  '@playwright/test@1.61.0':
+    resolution: {integrity: sha512-cKA5B6lpFEMyMGjxF54QihfYpB4FkEGH+qZhtArDEG+wezQAJY8Pq6C7T1SjWz+FFzt3TbyoXBQYk/0292TdJA==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -13854,18 +13854,18 @@ packages:
     resolution: {integrity: sha512-8xCNE/aT/EXKenuMDZ+xTVwkT8gsoHN2z/Q29l80u0ppGEXVvsKRzNMbtKhg8LS8k1tJLAHHylf6p4VFmP6XUQ==}
     engines: {node: '>= 0.4.0'}
 
-  playwright-chromium@1.60.0:
-    resolution: {integrity: sha512-xxz9pc2HIxQW/Qg9ijG2fZOHRT//KhLo0KfvJRa45YYRrcA7ZONoilgJR40SW5pmecb6HkuROaeViXoCaXTZyQ==}
+  playwright-chromium@1.61.0:
+    resolution: {integrity: sha512-7gZbsqqLT4WSeK/DUrsAFFvPdzP3Bh3kn9sK+YLZ9Q2e6CB+vd0TeqHvmkPQKK2IyXhPNGx5DV0YbEP6sTFBHA==}
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright-core@1.60.0:
-    resolution: {integrity: sha512-9bW6zvX/m0lEbgTKJ6YppOKx8H3VOPBMOCFh2irXFOT4BbHgrx5hPjwJYLT40Lu+4qtD36qKc/Hn56StUW57IA==}
+  playwright-core@1.61.0:
+    resolution: {integrity: sha512-caX7TrY3Ml6egyDX0WUcTHDxodl/b51y5wJOdCEA36QviK/s2g081hvmGs8eaE3DWb6NYZQ6BjO/QkNRPenoPA==}
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright@1.60.0:
-    resolution: {integrity: sha512-hheHdokM8cdqCb0lcE3s+zT4t4W+vvjpGxsZlDnikarzx8tSzMebh3UiFtgqwFwnTnjYQcsyMF8ei2mCO/tpeA==}
+  playwright@1.61.0:
+    resolution: {integrity: sha512-Z+7BeeqQPRRzklHsVFP4KTGIyMxKUmfeRA4WisM6G3/XW6nwGeX6fX9qYaDa+CiUqpOkb2f6X3nar05R3kSuJQ==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -19353,9 +19353,9 @@ snapshots:
 
   '@playground/module-resolution-requires@file:packages/vite-plugin-cloudflare/playground/module-resolution/packages/requires': {}
 
-  '@playwright/test@1.60.0':
+  '@playwright/test@1.61.0':
     dependencies:
-      playwright: 1.60.0
+      playwright: 1.61.0
 
   '@pnpm/config.env-replace@1.1.0': {}
 
@@ -25261,15 +25261,15 @@ snapshots:
 
   pkginfo@0.4.1: {}
 
-  playwright-chromium@1.60.0:
+  playwright-chromium@1.61.0:
     dependencies:
-      playwright-core: 1.60.0
+      playwright-core: 1.61.0
 
-  playwright-core@1.60.0: {}
+  playwright-core@1.61.0: {}
 
-  playwright@1.60.0:
+  playwright@1.61.0:
     dependencies:
-      playwright-core: 1.60.0
+      playwright-core: 1.61.0
     optionalDependencies:
       fsevents: 2.3.2
 
