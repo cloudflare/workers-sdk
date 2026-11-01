@@ -78,6 +78,7 @@ test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
 					config: {
 						name: "receiver",
 						compatibilityDate: "2026-10-31",
+						compatibilityFlags: ["enable_workload_identity_context"],
 						manifest:
 							singleModuleManifest(`export default { async fetch(request, env, ctx) {
 				try { const caller = await ctx.identity.caller(); return Response.json({caller}); }
@@ -112,6 +113,7 @@ test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
 					config: {
 						name: "receiver",
 						compatibilityDate: "2026-10-31",
+						compatibilityFlags: ["enable_workload_identity_context"],
 						manifest:
 							singleModuleManifest(`export default { async fetch(request, env, ctx) {
               return Response.json(await ctx.identity.caller());
@@ -130,6 +132,7 @@ test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
 					config: {
 						name: "explicit-test-verifier",
 						compatibilityDate: "2026-10-31",
+						compatibilityFlags: ["enable_workload_identity_context"],
 						manifest:
 							singleModuleManifest(`import {WorkerEntrypoint} from "cloudflare:workers";
               // This fake service tests plumbing, never cryptographic verification.
@@ -164,6 +167,7 @@ test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
 					config: {
 						name: "a",
 						compatibilityDate: "2026-10-31",
+						compatibilityFlags: ["enable_workload_identity_context"],
 						manifest:
 							singleModuleManifest(`export default {async fetch(request,env,ctx){
         const own=await ctx.identity.caller();
@@ -179,6 +183,7 @@ test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
 					config: {
 						name: "b",
 						compatibilityDate: "2026-10-31",
+						compatibilityFlags: ["enable_workload_identity_context"],
 						manifest:
 							singleModuleManifest(`import {WorkerEntrypoint} from "cloudflare:workers";
         export class Receiver extends WorkerEntrypoint {
@@ -193,6 +198,7 @@ test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
 					config: {
 						name: "c",
 						compatibilityDate: "2026-10-31",
+						compatibilityFlags: ["enable_workload_identity_context"],
 						manifest:
 							singleModuleManifest(`import {WorkerEntrypoint} from "cloudflare:workers";
         export class Receiver extends WorkerEntrypoint {who(){return this.ctx.identity.caller();}}`),
