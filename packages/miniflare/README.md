@@ -32,6 +32,19 @@ console.log(await response.text()); // Hello Miniflare!
 await mf.dispose();
 ```
 
+## Utilities without the runtime
+
+Import compatibility checks and source-map support through their dedicated entry
+points when your tool does not need to run Workers:
+
+```js
+import { getNodeCompat } from "miniflare/node-compat";
+import { getFreshSourceMapSupport } from "miniflare/sourcemap";
+```
+
+These entry points support both ESM and CommonJS without loading workerd. The
+same functions remain available from the main `miniflare` entry point.
+
 ## API
 
 ### `type Awaitable<T>`

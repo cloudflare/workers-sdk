@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import url from "node:url";
 import { maybeGetFile } from "@cloudflare/workers-shared";
-import { getFreshSourceMapSupport } from "miniflare";
+import { getFreshSourceMapSupport } from "miniflare/sourcemap";
 import { logger } from "../../shared/context";
 import type { Options } from "@cspotcode/source-map-support";
 import type Protocol from "devtools-protocol";
