@@ -26,6 +26,7 @@ function mockRuntimeFailure(chunks: string[]) {
 			control.end();
 			process.emit("exit", 1, null);
 		});
+		queueMicrotask(() => process.emit("spawn"));
 		return process;
 	});
 }
