@@ -1916,24 +1916,6 @@ describe("OIDC capability bindings", () => {
 	it.for([
 		{ audience: " " },
 		{ audience: "urn:orders", identity_id: "orders" },
-		{ audience: "urn:orders", allowed_audiences: ["urn:orders"] },
-		{ audience: "urn:orders", subject: "durable-object-namespace" },
-		{ audience: "urn:orders", namespace_id: "namespace" },
-		{
-			audience: "urn:orders",
-			request_signing: {
-				profile: "other",
-				allowed_origins: ["https://api.example"],
-				allowed_methods: ["GET"],
-			},
-		},
-		{
-			audience: "urn:orders",
-			authorization_grants: {
-				allowed_authorization_servers: ["https://auth.example?query"],
-				allowed_scopes: [],
-			},
-		},
 	])(
 		"rejects invalid limits or caller authority: %j",
 		(binding, { expect }) => {

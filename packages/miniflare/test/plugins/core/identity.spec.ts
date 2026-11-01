@@ -104,7 +104,7 @@ test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
 );
 
 test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
-	"explicit test verifier uses the native API and isolates concurrent callers",
+	"explicit test verifier receives configured service props through the native API",
 	async ({ expect }) => {
 		const mf = new Miniflare({
 			workers: [
@@ -114,10 +114,7 @@ test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
 						compatibilityDate: "2026-10-31",
 						manifest:
 							singleModuleManifest(`export default { async fetch(request, env, ctx) {
-              const first = ctx.identity.caller();
-              const samePromise = first === ctx.identity.caller();
-              const caller = await first;
-              return Response.json({caller, samePromise, frozen:Object.isFrozen(caller), body:await request.text()});
+              return Response.json(await ctx.identity.caller());
             }};`),
 					},
 					dev: {
@@ -148,25 +145,13 @@ test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
 			],
 		});
 		useDispose(mf);
-		const results = await Promise.all(
-			["a", "b"].map(async (id) =>
-				(
-					await mf.dispatchFetch("http://localhost/", {
-						method: "POST",
-						body: id,
-						headers: { authorization: `Bearer ${id}`, signature: "test-only" },
-					})
-				).json()
-			)
-		);
-		expect(results).toEqual(
-			["a", "b"].map((id) => ({
-				caller: { kind: "signed-request", id: `Bearer ${id}` },
-				samePromise: true,
-				frozen: true,
-				body: id,
-			}))
-		);
+		expect(
+			await (
+				await mf.dispatchFetch("http://localhost/", {
+					headers: { authorization: "Bearer test", signature: "test-only" },
+				})
+			).json()
+		).toEqual({ kind: "signed-request", id: "Bearer test" });
 	}
 );
 

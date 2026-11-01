@@ -9,8 +9,10 @@
 "@cloudflare/vitest-plugin": minor
 ---
 
-Add fixed-audience `identities` bindings with fresh `getToken()`, opt-in WAGs, and signed HTTP dispatch. Preserve configuration through uploads, Previews, local development and generated types.
+Add experimental Workers identity bindings and native caller support in local development
 
-Derive subjects from protected platform IDs. Compile each binding into a private Worker service capability and preserve its original authority through RPC forwarding. Expose the three-method interface directly over JSRPC. Select the default or labeled HTTP identity with `getIdentity()` and sign through its returned RPC fetcher.
+Configure an optional fixed token audience and separate authorization-grant or HTTP origin/method limits. Use fresh `getToken()` assertions, opt-in `getAuthorizationGrant()` calls, and `getIdentity(label?)` RPC handles for managed Web Bot Auth signing. Preserve configuration through uploads, Previews, and generated types, with exact audience validation and no identity resource provisioning.
 
-Local calls report that issuance is unsupported. Use deployed Previews for real tokens, grants and signed requests, or supply mocks in tests.
+Select a handle before fetching, await its metadata, and use normal RPC forwarding and disposal. Normalize URL, FormData, and URLSearchParams inputs with `new Request(...)`; AbortSignal transport and cross-RPC cancellation are outside the contract. Local issuance remains unsupported: use mocks or deployed Previews.
+
+For a companion runtime, expose local immediate callers through ordinary configured service bindings and support explicit `dev.unsafeWorkloadIdentityService` injection for receiver tests. Credentials fail unavailable without that private channel; mock verification establishes no cryptographic trust.

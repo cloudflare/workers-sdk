@@ -110,3 +110,33 @@ it("accepts managed signing without a token audience and rejects protocol option
 		})
 	).toBe(false);
 });
+
+// Configuration consumers delegate these rules to the shared validator.
+it.for([
+	{ audience: " " },
+	{ identity_id: "orders" },
+	{ allowed_audiences: ["urn:orders"] },
+	{ subject: "durable-object-namespace" },
+	{ namespace_id: "namespace" },
+	{
+		request_signing: {
+			profile: "other",
+			allowed_origins: ["https://api.example"],
+			allowed_methods: ["GET"],
+		},
+	},
+	{
+		authorization_grants: {
+			allowed_authorization_servers: ["https://auth.example?query"],
+			allowed_scopes: [],
+		},
+	},
+])("rejects invalid identity configuration %j", (limits, { expect }) => {
+	expect(
+		isIdentityBinding({
+			binding: "IDENTITY",
+			audience: "urn:orders",
+			...limits,
+		})
+	).toBe(false);
+});
