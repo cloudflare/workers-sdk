@@ -225,7 +225,6 @@ it("migrates managed OAuth and independent assertion authority", ({
 		scope: ["read"],
 		allowed_origins: ["https://api.example.com"],
 		allowed_methods: ["GET"],
-		dpop: "preferred",
 		http_message_signatures: "web_bot_auth",
 	};
 	const result = convertWranglerConfig(

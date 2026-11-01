@@ -165,10 +165,6 @@ export type OidcManagedOAuth = OidcRequestSigning & {
 	token_endpoint: string;
 	resource: string;
 	scope: string[];
-	/** DPoP policy. Defaults to preferred; cannot accompany require_sender_constraint. */
-	dpop?: "preferred" | "required" | "disabled";
-	/** Legacy required DPoP. Cannot accompany dpop. */
-	require_sender_constraint?: true;
 	/** Sign the final authenticated request; the receiver must verify OAuth, applicable DPoP, and WBA. */
 	http_message_signatures?: "web_bot_auth";
 } & (
@@ -311,8 +307,6 @@ export function isIdentityBinding(
 				"scope",
 				"allowed_origins",
 				"allowed_methods",
-				"require_sender_constraint",
-				"dpop",
 				"http_message_signatures",
 			]) ||
 			!["workload_authorization", "client_credentials"].includes(
@@ -346,13 +340,7 @@ export function isIdentityBinding(
 					!["CONNECT", "TRACE", "TRACK"].includes(s)
 			) ||
 			(p.http_message_signatures !== undefined &&
-				p.http_message_signatures !== "web_bot_auth") ||
-			(p.require_sender_constraint !== undefined &&
-				p.require_sender_constraint !== true) ||
-			(p.dpop !== undefined &&
-				(typeof p.dpop !== "string" ||
-					!["preferred", "required", "disabled"].includes(p.dpop))) ||
-			(p.dpop !== undefined && p.require_sender_constraint !== undefined)
+				p.http_message_signatures !== "web_bot_auth")
 		) {
 			return false;
 		}

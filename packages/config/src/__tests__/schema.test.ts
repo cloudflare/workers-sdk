@@ -1958,7 +1958,6 @@ it("preserves managed OAuth and optional explicit client authority", ({
 		scope: ["read"],
 		allowed_origins: ["https://api.example"],
 		allowed_methods: ["GET"],
-		require_sender_constraint: true,
 	};
 	const value = { type: "identity", oauth, client_authentication: true };
 	for (const exchange of ["client_credentials", "workload_authorization"]) {

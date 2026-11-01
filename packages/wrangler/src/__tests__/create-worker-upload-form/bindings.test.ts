@@ -659,7 +659,6 @@ it.for(["workload_authorization", "client_credentials"] as const)(
 			scope: ["read"],
 			allowed_origins: ["https://api.example.com"],
 			allowed_methods: ["GET"],
-			dpop: "preferred" as const,
 			http_message_signatures: "web_bot_auth" as const,
 		};
 		const form = createWorkerUploadForm(createEsmWorker(), {

@@ -6,6 +6,6 @@
 "@cloudflare/codemods": minor
 ---
 
-Support optional DPoP policy for experimental managed identity OAuth
+Use automatic DPoP for managed identity OAuth
 
-Configure `oauth.dpop` as `preferred` (the default), `required`, or `disabled` in either configuration format. Preserve legacy `require_sender_constraint: true` as required DPoP and reject conflicting policies. Local identity issuance remains unsupported.
+Remove public DPoP policy settings. Always request DPoP and accept either DPoP or Bearer from the original exchange; preserve policy-free configuration through schemas, conversion, upload and local stubs.
