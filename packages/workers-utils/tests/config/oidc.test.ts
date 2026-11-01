@@ -140,3 +140,57 @@ it.for([
 		})
 	).toBe(false);
 });
+
+it("validates both managed OAuth profiles and independent public assertion authority", ({
+	expect,
+}) => {
+	const oauth = {
+		exchange: "client_credentials",
+		client_id: "provider-id",
+		authorization_server: "https://auth.example",
+		token_endpoint: "https://auth.example/token",
+		resource: "https://api.example",
+		scope: ["read"],
+		allowed_origins: ["https://api.example"],
+		allowed_methods: ["GET"],
+		require_sender_constraint: true,
+	};
+	const config = { binding: "API", oauth, client_authentication: true };
+	expect(isIdentityBinding(config)).toBe(true);
+	expect(
+		isIdentityBinding({
+			...config,
+			oauth: {
+				...oauth,
+				exchange: "workload_authorization",
+				client_id: undefined,
+			},
+		})
+	).toBe(true);
+	for (const patch of [
+		{ exchange: "workload_authorization" },
+		{ client_id: undefined },
+		{ require_sender_constraint: false },
+		{ scope: [] },
+		{ scope: ["read", "read"] },
+		{ allowed_methods: ["TRACE"] },
+		{ token_endpoint: "http://auth.example/token" },
+		{ extra: true },
+	]) {
+		expect(
+			isIdentityBinding({ ...config, oauth: { ...oauth, ...patch } })
+		).toBe(false);
+	}
+	expect(
+		isIdentityBinding({
+			...config,
+			request_signing: {
+				allowed_origins: oauth.allowed_origins,
+				allowed_methods: ["GET"],
+			},
+		})
+	).toBe(false);
+	expect(isIdentityBinding({ ...config, client_authentication: "true" })).toBe(
+		false
+	);
+});

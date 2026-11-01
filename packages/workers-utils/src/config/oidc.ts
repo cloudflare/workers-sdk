@@ -160,6 +160,16 @@ export interface OidcRequestSigning {
 	allowed_origins: string[];
 	allowed_methods: string[];
 }
+export type OidcManagedOAuth = OidcRequestSigning & {
+	authorization_server: string;
+	token_endpoint: string;
+	resource: string;
+	scope: string[];
+	require_sender_constraint: true;
+} & (
+		| { exchange: "workload_authorization"; client_id?: never }
+		| { exchange: "client_credentials"; client_id: string }
+	);
 export interface IdentityBindingConfig {
 	binding: string;
 	audience?: string;
@@ -167,6 +177,8 @@ export interface IdentityBindingConfig {
 	namespace_id?: string;
 	authorization_grants?: OidcAuthorizationGrants;
 	request_signing?: OidcRequestSigning;
+	oauth?: OidcManagedOAuth;
+	client_authentication?: boolean;
 }
 function record(value: unknown): value is Record<string, unknown> {
 	return !!value && typeof value === "object" && !Array.isArray(value);
@@ -227,6 +239,8 @@ export function isIdentityBinding(
 			"namespace_id",
 			"authorization_grants",
 			"request_signing",
+			"oauth",
+			"client_authentication",
 		]) ||
 		typeof value.binding !== "string" ||
 		!/^[A-Za-z0-9_-]{1,128}$/.test(value.binding) ||
@@ -272,6 +286,69 @@ export function isIdentityBinding(
 			))
 	) {
 		return false;
+	}
+	const p = value.oauth;
+	if (
+		value.client_authentication !== undefined &&
+		typeof value.client_authentication !== "boolean"
+	) {
+		return false;
+	}
+	if (p !== undefined) {
+		if (
+			!record(p) ||
+			!fields(p, [
+				"exchange",
+				"client_id",
+				"authorization_server",
+				"token_endpoint",
+				"resource",
+				"scope",
+				"allowed_origins",
+				"allowed_methods",
+				"require_sender_constraint",
+			]) ||
+			!["workload_authorization", "client_credentials"].includes(
+				String(p.exchange)
+			) ||
+			(p.exchange === "client_credentials"
+				? typeof p.client_id !== "string" ||
+					!p.client_id.trim().length ||
+					new TextEncoder().encode(p.client_id).length > 2048 ||
+					[...p.client_id].some(
+						(c) => c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127
+					)
+				: p.client_id !== undefined) ||
+			typeof p.authorization_server !== "string" ||
+			!validOidcAuthorizationServer(p.authorization_server) ||
+			typeof p.token_endpoint !== "string" ||
+			!validOidcAuthorizationServer(p.token_endpoint) ||
+			typeof p.resource !== "string" ||
+			!validOidcAudience(p.resource) ||
+			!p.resource.includes(":") ||
+			p.resource.includes("#") ||
+			[...p.resource].some(
+				(c) => c.charCodeAt(0) <= 32 || c.charCodeAt(0) === 127
+			) ||
+			!set(p.scope, (s) => /^[\x21\x23-\x5b\x5d-\x7e]+$/.test(s)) ||
+			!set(p.allowed_origins, validOidcOrigin) ||
+			!set(
+				p.allowed_methods,
+				(s) =>
+					/^[A-Z!#$%&'*+.^_`|~-]+$/.test(s) &&
+					!["CONNECT", "TRACE", "TRACK"].includes(s)
+			) ||
+			p.require_sender_constraint !== true
+		) {
+			return false;
+		}
+		if (
+			record(h) &&
+			Array.isArray(h.allowed_origins) &&
+			h.allowed_origins.some((o) => (p.allowed_origins as string[]).includes(o))
+		) {
+			return false;
+		}
 	}
 	return true;
 }
