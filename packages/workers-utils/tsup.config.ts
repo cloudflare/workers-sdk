@@ -35,6 +35,8 @@ export default defineConfig(() => [
 			"src/fs-helpers.ts",
 			"src/global-wrangler-config-path.ts",
 			"src/local-env.ts",
+			"src/node-compat.ts",
+			"src/sourcemap.ts",
 			"src/zod-format.ts",
 		],
 		platform: "node",

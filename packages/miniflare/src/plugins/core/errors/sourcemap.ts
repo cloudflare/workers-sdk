@@ -1,51 +1,9 @@
 import assert from "node:assert";
-import { createRequire } from "node:module";
+import { getFreshSourceMapSupport } from "@cloudflare/workers-utils/sourcemap";
 import { parseStack } from "./callsite";
-import type * as sourceMapSupport from "@cspotcode/source-map-support";
 import type { Options } from "@cspotcode/source-map-support";
 
-// `source-map-support` will only modify `Error.prepareStackTrace` if this is
-// the first time `install()` has been called. This is governed by shared data
-// stored using a well-known symbol on `globalThis`. To ensure...
-//
-// a) `miniflare` and `wrangler` can have differing `install()` options
-// b) We're not affecting external user's use of this package
-// c) `Error.prepareStackTrace` is always updated on `install()`
-//
-// ...load a fresh copy, by resetting then restoring the `require` cache, and
-// overriding `Symbol.for()` to return a unique symbol.
-export function getFreshSourceMapSupport(): typeof sourceMapSupport {
-	// Under Yarn PnP, Node's ESM->CJS bridge (`loadCJSModule` in
-	// `node:internal/modules/esm/translators`) hands this module a re-invented
-	// `require` that only carries `.resolve` and `.main`, with no `.cache`. The
-	// cache-swap below needs a real CJS cache, so fall back to a require built
-	// via `createRequire(__filename)` when we detect the stub.
-	const realRequire = require.cache ? require : createRequire(__filename);
-	const resolvedSupportPath = realRequire.resolve(
-		"@cspotcode/source-map-support"
-	);
-
-	const originalSymbolFor = Symbol.for;
-	const originalSupport = realRequire.cache[resolvedSupportPath];
-	try {
-		Symbol.for = (key) => {
-			// Make sure we only override the expected symbol. If we upgrade this
-			// package, and new symbols are used, this assertion will fail in tests.
-			// We want to guard against `source-map-support/sharedData` changing to
-			// something else. If this new symbol *should* be shared across package
-			// instances, we'll need to add an
-			// `if (key === "...") return originalSymbolFor(key);` here.
-			assert.strictEqual(key, "source-map-support/sharedData");
-			return Symbol(key);
-		};
-		delete realRequire.cache[resolvedSupportPath];
-		// eslint-disable-next-line @typescript-eslint/no-require-imports -- require needed to bypass module cache for fresh copy
-		return realRequire(resolvedSupportPath);
-	} finally {
-		Symbol.for = originalSymbolFor;
-		realRequire.cache[resolvedSupportPath] = originalSupport;
-	}
-}
+export { getFreshSourceMapSupport };
 
 const sourceMapInstallBaseOptions: Options = {
 	environment: "node",
