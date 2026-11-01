@@ -23,7 +23,7 @@ jobs:
             description: macOS
           - os: windows-latest
             description: Windows
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             description: Linux
     runs-on: ${{ matrix.os }}
     steps:
