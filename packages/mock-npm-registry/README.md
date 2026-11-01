@@ -26,6 +26,11 @@ and then run `pnpm install`, which will install the locally published packages.
 
 The path to this temporary test project is provided to tests.
 
+Packages with a `workers-sdk.npmPrerelease.tag` setting in their `package.json`
+are published under that dist-tag, such as `beta`. Other packages use `latest`.
+This lets tests install the local `@cloudflare/vite-plugin@beta` while stable
+Vite plugin versions remain available through the public npm registry.
+
 ## Debugging
 
 If you are having problems with the mock npm registry, you can get additional debug logging by setting the `NODE_DEBUG` environment variable.
