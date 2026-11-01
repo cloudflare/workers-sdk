@@ -30,6 +30,22 @@
 			"import": "./dist/create-worker-upload-form.mjs",
 			"types": "./dist/create-worker-upload-form.d.mts"
 		},
+		"./deploy": {
+			"import": "./dist/deploy.mjs",
+			"types": "./dist/deploy.d.mts"
+		},
+		"./versions-upload": {
+			"import": "./dist/versions-upload.mjs",
+			"types": "./dist/versions-upload.d.mts"
+		},
+		"./triggers": {
+			"import": "./dist/triggers.mjs",
+			"types": "./dist/triggers.d.mts"
+		},
+		"./preview": {
+			"import": "./dist/preview.mjs",
+			"types": "./dist/preview.d.mts"
+		},
 		"./startup-profile": {
 			"import": "./dist/startup-profile.mjs",
 			"types": "./dist/startup-profile.d.mts"

@@ -1,8 +1,22 @@
 import { execFileSync } from "node:child_process";
 import path from "node:path";
+import * as helpers from "@cloudflare/deploy-helpers";
+import { deploy } from "@cloudflare/deploy-helpers/deploy";
+import { previewBuildOutput } from "@cloudflare/deploy-helpers/preview";
+import { triggersDeploy } from "@cloudflare/deploy-helpers/triggers";
+import { versionsUpload } from "@cloudflare/deploy-helpers/versions-upload";
 import { expectTypeOf, it } from "vitest";
 import type { getNodeCompat, NodeJSCompatMode } from "miniflare/node-compat";
 import type { getFreshSourceMapSupport } from "miniflare/sourcemap";
+
+it("shares workflow implementations with the root entry point", ({
+	expect,
+}) => {
+	expect(deploy).toBe(helpers.deploy);
+	expect(versionsUpload).toBe(helpers.versionsUpload);
+	expect(triggersDeploy).toBe(helpers.triggersDeploy);
+	expect(previewBuildOutput).toBe(helpers.previewBuildOutput);
+});
 
 it("preserves the public types of Miniflare's utility entry points", () => {
 	expectTypeOf<typeof getFreshSourceMapSupport>().returns.toEqualTypeOf<
@@ -33,6 +47,16 @@ it("imports the built package and uses its utilities without loading the runtime
 			},
 		});
 		const helpers = await import("@cloudflare/deploy-helpers");
+		for (const [entry, name] of [["deploy", "deploy"], ["versions-upload", "versionsUpload"], ["triggers", "triggersDeploy"], ["preview", "previewBuildOutput"]]) {
+			const workflow = await import("@cloudflare/deploy-helpers/" + entry);
+			assert.equal(workflow[name], helpers[name]);
+		}
+		const messages = [];
+		const context = await import("@cloudflare/deploy-helpers/context");
+		context.initDeployHelpersContext({ logger: { log: (message) => messages.push(message) } });
+		const triggers = await import("@cloudflare/deploy-helpers/triggers");
+		await triggers.triggersDeploy({ config: {}, validated: true, dryRun: true, scriptName: "test", routes: [], crons: [] });
+		assert.deepEqual(messages, ["--dry-run: exiting now."]);
 		assert.equal(helpers.validateNodeCompatMode("2026-08-04", [], {}), "v2");
 		assert.equal(helpers.getSourceMappedString("Error: example"), "Error: example");
 		await assert.rejects(import("@cloudflare/deploy-helpers/startup-profile"), /Unexpected runtime import: miniflare/);
