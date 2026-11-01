@@ -1,5 +1,28 @@
 # @cloudflare/deploy-helpers
 
+## 0.24.4
+
+### Patch Changes
+
+- [#16635](https://github.com/cloudflare/workers-sdk/pull/16635) [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-01
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16562](https://github.com/cloudflare/workers-sdk/pull/16562) [`aece4df`](https://github.com/cloudflare/workers-sdk/commit/aece4df134bc89ebba4f59ca3f737c049ac09668) Thanks [@audricbizouarn-dashdoc](https://github.com/audricbizouarn-dashdoc)! - Retry transient failures when starting a Workers assets upload session
+
+  Asset manifest registration now uses the same bounded API retry policy as Worker uploads, including support for `Retry-After`. Temporary server errors no longer immediately abort an otherwise valid deployment. Persistent failures still surface the original error after the retry limit; this does not repair server-side issues affecting a specific Worker.
+
+- [#16597](https://github.com/cloudflare/workers-sdk/pull/16597) [`f9dbb22`](https://github.com/cloudflare/workers-sdk/commit/f9dbb2232d5c233a09828fbe0c6272ea0e7cf471) Thanks [@guybedford](https://github.com/guybedford)! - Fix WebAssembly stack frames printing as `at [object Object]` in source-mapped errors
+
+  WebAssembly frames in source-mapped error stack traces now show their original function and location instead of `[object Object]`.
+
+- Updated dependencies [[`91f0e03`](https://github.com/cloudflare/workers-sdk/commit/91f0e03b28790e349d0bd7371fae7b59d755f79d), [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286), [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286), [`009ca6e`](https://github.com/cloudflare/workers-sdk/commit/009ca6e0483fd4a89f44bd02251b0a64491dab14)]:
+  - @cloudflare/config@0.29.1
+  - @cloudflare/workers-utils@0.50.2
+  - @cloudflare/cli-shared-helpers@0.3.1
+  - @cloudflare/containers-shared@0.23.6
+  - miniflare@5.20261101.0-beta
+
 ## 0.24.3
 
 ### Patch Changes

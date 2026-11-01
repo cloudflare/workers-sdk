@@ -1,5 +1,24 @@
 # @cloudflare/workers-auth
 
+## 0.15.4
+
+### Patch Changes
+
+- [#16557](https://github.com/cloudflare/workers-sdk/pull/16557) [`30d9f72`](https://github.com/cloudflare/workers-sdk/commit/30d9f7207938b7091f6c54e12a9e6f69b83bb3ec) Thanks [@Kmschr](https://github.com/Kmschr)! - Request the user API token management scope when logging in with cf
+
+  Include `user-api-tokens.write` in cf's default OAuth scopes so users can list and manage their user API tokens, including when they have reached the token creation limit. Existing OAuth sessions need a new login to request the scope.
+
+- [#16635](https://github.com/cloudflare/workers-sdk/pull/16635) [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-01
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16525](https://github.com/cloudflare/workers-sdk/pull/16525) [`ed7fb41`](https://github.com/cloudflare/workers-sdk/commit/ed7fb4165a0c5de605b57b8f8443ff401b5194c4) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Validate OAuth error callbacks against the pending login
+
+  All authorization callbacks, including ones without a code or error, now require the matching login state. Unrelated callbacks leave the login running so the authorization page can complete it, and control characters in provider error messages are displayed as escaped text.
+
+- Updated dependencies [[`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286)]:
+  - @cloudflare/workers-utils@0.50.2
+
 ## 0.15.3
 
 ### Patch Changes

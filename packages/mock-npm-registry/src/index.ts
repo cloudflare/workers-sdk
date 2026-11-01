@@ -8,6 +8,7 @@ import getPort from "get-port";
 import treeKill from "tree-kill";
 import { dedent } from "ts-dedent";
 import { ConfigBuilder } from "verdaccio";
+import { publishPackage, restoreLatestTag } from "./publish-package.js";
 
 export { overrideConfigEnv } from "./config-env.js";
 
@@ -139,12 +140,16 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 		debugLog(execSync("pnpm config list", { encoding: "utf8" }));
 	}
 
+	const prereleasePackages: string[] = [];
 	for (const [pkgName, pkgPath] of pkgs) {
 		debugLog("Publishing package " + pkgName);
-		execSync("pnpm publish --tag latest", {
-			cwd: path.join(repoRoot, pkgPath),
-			stdio: debugLog.enabled ? "inherit" : "ignore",
-		});
+		const tag = await publishPackage(
+			path.join(repoRoot, pkgPath),
+			debugLog.enabled ? "inherit" : "ignore"
+		);
+		if (tag !== "latest") {
+			prereleasePackages.push(pkgName);
+		}
 	}
 
 	// Rewrite the config to turn on uplinks for doing installs
@@ -154,6 +159,9 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 	});
 	await stopServer();
 	stopServer = await startVerdaccioServer(configPath);
+	for (const name of prereleasePackages) {
+		await restoreLatestTag(name, `http://localhost:${registryPort}/`);
+	}
 
 	return async function stop() {
 		console.log("Stopping local npm registry");

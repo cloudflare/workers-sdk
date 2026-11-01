@@ -1,5 +1,17 @@
 # @cloudflare/config
 
+## 0.29.1
+
+### Patch Changes
+
+- [#16573](https://github.com/cloudflare/workers-sdk/pull/16573) [`91f0e03`](https://github.com/cloudflare/workers-sdk/commit/91f0e03b28790e349d0bd7371fae7b59d755f79d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Reject duplicate Container names and invalid Container links
+
+  Duplicate Container names, references to missing Containers, and multiple Durable Objects linked to the same Container now produce configuration errors before development starts or build output is generated. This also catches invalid Container links introduced by the Vite plugin's `config` customizer.
+
+- [#16635](https://github.com/cloudflare/workers-sdk/pull/16635) [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-01
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
 ## 0.29.0
 
 ### Minor Changes
