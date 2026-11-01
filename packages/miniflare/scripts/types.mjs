@@ -148,8 +148,6 @@ function buildTypes() {
 /** @type {import("@microsoft/api-extractor").IConfigFile} */
 const extractorCfgObject = {
 	projectFolder: "<lookup>",
-	// Shared helpers are bundled into Miniflare, including their public types.
-	bundledPackages: ["@cloudflare/workers-utils"],
 	// Input: individual .d.ts files emitted by tsc into dist-types/
 	mainEntryPointFilePath: "<projectFolder>/dist-types/src/index.d.ts",
 	compiler: {

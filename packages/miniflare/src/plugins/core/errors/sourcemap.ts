@@ -3,8 +3,6 @@ import { getFreshSourceMapSupport } from "@cloudflare/workers-utils/sourcemap";
 import { parseStack } from "./callsite";
 import type { Options } from "@cspotcode/source-map-support";
 
-export { getFreshSourceMapSupport };
-
 const sourceMapInstallBaseOptions: Options = {
 	environment: "node",
 	// Don't add Node `uncaughtException` handler

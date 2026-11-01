@@ -4,10 +4,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import util from "node:util";
 import { isNodejsCompatDefaultOn } from "@cloudflare/workers-utils";
+import { getNodeCompat } from "@cloudflare/workers-utils/node-compat";
 import * as devalue from "devalue";
 import getPort, { portNumbers } from "get-port";
 import {
-	getNodeCompat,
 	kCurrentWorker,
 	kUnsafeEphemeralUniqueKey,
 	Log,

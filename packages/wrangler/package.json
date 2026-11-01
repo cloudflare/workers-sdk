@@ -84,6 +84,7 @@
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/unenv-preset": "workspace:*",
+		"@cspotcode/source-map-support": "0.8.1",
 		"blake3-wasm": "2.1.5",
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
@@ -113,7 +114,6 @@
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "workspace:*",
 		"@cloudflare/workflows-shared": "workspace:*",
-		"@cspotcode/source-map-support": "0.8.1",
 		"@netlify/build-info": "10.5.1",
 		"@sentry/node": "^7.86.0",
 		"@sentry/types": "^7.86.0",

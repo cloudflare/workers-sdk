@@ -32,6 +32,24 @@ console.log(await response.text()); // Hello Miniflare!
 await mf.dispose();
 ```
 
+## Migrating shared helpers in v5
+
+Miniflare v5 removes the `getNodeCompat`, `NodeJSCompatMode`, and
+`getFreshSourceMapSupport` exports. Tools using these helpers must add a dependency
+on `@cloudflare/workers-utils` and update their imports:
+
+```ts
+import {
+	getNodeCompat,
+	type NodeJSCompatMode,
+} from "@cloudflare/workers-utils/node-compat";
+import { getFreshSourceMapSupport } from "@cloudflare/workers-utils/sourcemap";
+```
+
+These focused entry points support compatibility checks and isolated source-map
+handling without loading Miniflare or resolving the workerd binary. Miniflare
+continues to use the shared source-map helper internally.
+
 ## API
 
 ### `type Awaitable<T>`

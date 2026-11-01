@@ -6,11 +6,6 @@ import type {
 	NodeJSCompatMode,
 } from "@cloudflare/workers-utils/node-compat";
 import type { getFreshSourceMapSupport } from "@cloudflare/workers-utils/sourcemap";
-import type {
-	getFreshSourceMapSupport as getMiniflareSourceMapSupport,
-	getNodeCompat as getMiniflareNodeCompat,
-	NodeJSCompatMode as MiniflareNodeJSCompatMode,
-} from "miniflare";
 
 it("preserves the public types of the shared utility entry points", () => {
 	expectTypeOf<typeof getFreshSourceMapSupport>().returns.toEqualTypeOf<
@@ -19,13 +14,6 @@ it("preserves the public types of the shared utility entry points", () => {
 	expectTypeOf<
 		ReturnType<typeof getNodeCompat>["mode"]
 	>().toEqualTypeOf<NodeJSCompatMode>();
-	expectTypeOf<typeof getMiniflareSourceMapSupport>().toEqualTypeOf<
-		typeof getFreshSourceMapSupport
-	>();
-	expectTypeOf<typeof getMiniflareNodeCompat>().toEqualTypeOf<
-		typeof getNodeCompat
-	>();
-	expectTypeOf<MiniflareNodeJSCompatMode>().toEqualTypeOf<NodeJSCompatMode>();
 });
 
 it("imports the built package and uses its utilities without loading the runtime", ({
