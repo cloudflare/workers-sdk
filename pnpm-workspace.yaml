@@ -36,8 +36,8 @@ catalog:
   vitest: 5.0.4
   vite: 8.3.4
   esbuild: 0.28.2
-  "@playwright/test": 1.60.0
-  playwright-chromium: 1.60.0
+  "@playwright/test": 1.61.0
+  playwright-chromium: 1.61.0
   "@cloudflare/workers-types": 5.20261023.1
   jsonc-parser: 3.2.0
   msw: 2.14.6
