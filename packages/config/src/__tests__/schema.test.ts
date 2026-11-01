@@ -1,7 +1,7 @@
 import { describe, it } from "vitest";
 import { exports as exportConfig } from "../exports";
-import { KnownBindingSchema } from "../schema";
 import {
+	KnownBindingSchema,
 	BindingSchema,
 	InputConfigSchema,
 	InputContainerSchema,
@@ -1944,4 +1944,28 @@ it("accepts managed signing without a token audience", ({ expect }) => {
 			request_signing: { ...binding.request_signing, customer_id: "forged" },
 		}).success
 	).toBe(false);
+});
+
+it("preserves managed OAuth and optional explicit client authority", ({
+	expect,
+}) => {
+	const oauth = {
+		exchange: "client_credentials",
+		client_id: "provider-id",
+		authorization_server: "https://auth.example",
+		token_endpoint: "https://auth.example/token",
+		resource: "https://api.example",
+		scope: ["read"],
+		allowed_origins: ["https://api.example"],
+		allowed_methods: ["GET"],
+		require_sender_constraint: true,
+	};
+	const value = { type: "identity", oauth, client_authentication: true };
+	expect(KnownBindingSchema.parse(value)).toEqual(value);
+	expect(() =>
+		KnownBindingSchema.parse({
+			...value,
+			oauth: { ...oauth, require_sender_constraint: false },
+		})
+	).toThrow();
 });

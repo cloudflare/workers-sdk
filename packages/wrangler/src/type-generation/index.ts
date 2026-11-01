@@ -47,7 +47,7 @@ import type {
 // Keep generated types usable before workerd publishes the experimental binding.
 // Returned identities are remote RPC targets, including their metadata getters.
 const IDENTITY_BINDING_TYPE =
-	"{ getIdentity(label?: string): Promise<Rpc.Stub<Rpc.RpcTargetBranded & { readonly id: Promise<string>; readonly signatureAgent: Promise<string>; readonly directoryURL: Promise<string>; fetch(input: Request | string, init?: Omit<RequestInit, 'body' | 'cf' | 'signal'> & { body?: string | ArrayBuffer | ArrayBufferView | ReadableStream<Uint8Array> | Blob }): Promise<Response> }>>; getToken(): Promise<string>; getAuthorizationGrant(options: { authorizationServer: string; scope?: string[] }): Promise<string> }";
+	"{ getIdentity(label?: string): Promise<Rpc.Stub<Rpc.RpcTargetBranded & { getClientMetadata(clientId?: string): Promise<{ client_id: string; client_name: string; token_endpoint_auth_method: 'private_key_jwt'; token_endpoint_auth_signing_alg: 'Ed25519'; jwks: { keys: { kty: string; crv?: string; x?: string; kid?: string; alg?: string; use?: string }[] }; grant_types: 'client_credentials'[]; response_types: never[] }>; getClientAssertion(options: { clientId: string; audience: string }): Promise<string>; readonly id: Promise<string>; readonly signatureAgent: Promise<string>; readonly directoryURL: Promise<string>; fetch(input: Request | string, init?: Omit<RequestInit, 'body' | 'cf' | 'signal'> & { body?: string | ArrayBuffer | ArrayBufferView | ReadableStream<Uint8Array> | Blob }): Promise<Response> }>>; getToken(): Promise<string>; getAuthorizationGrant(options: { authorizationServer: string; scope?: string[] }): Promise<string> }";
 
 export interface GenerateTypesOptions {
 	/**

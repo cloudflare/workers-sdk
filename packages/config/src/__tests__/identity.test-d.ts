@@ -35,3 +35,11 @@ void [remoteId, remoteResponse];
 // This test covers the config inference and Service<Relay> mapping.
 // @ts-expect-error Config inference must preserve selection before fetch.
 void env.IDENTITY.fetch("https://api.example.com");
+
+const metadata = await identity.getClientMetadata();
+const clientId: string = metadata.client_id;
+const assertion: string = await identity.getClientAssertion({
+	clientId: "provider-id",
+	audience: "https://auth.example",
+});
+void [clientId, assertion];

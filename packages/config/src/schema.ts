@@ -107,6 +107,26 @@ export const HyperdriveBindingSchema = z.strictObject({
 	}).optional(),
 });
 
+const ManagedOAuthBaseSchema = z.strictObject({
+	authorization_server: z.string(),
+	token_endpoint: z.string(),
+	resource: z.string(),
+	scope: z.array(z.string()),
+	allowed_origins: z.array(z.string()),
+	allowed_methods: z.array(z.string()),
+	require_sender_constraint: z.literal(true),
+});
+const ManagedOAuthSchema = z.discriminatedUnion("exchange", [
+	ManagedOAuthBaseSchema.extend({
+		exchange: z.literal("workload_authorization"),
+		client_id: z.never().optional(),
+	}),
+	ManagedOAuthBaseSchema.extend({
+		exchange: z.literal("client_credentials"),
+		client_id: z.string(),
+	}),
+]);
+
 export const KnownBindingSchema = z.discriminatedUnion("type", [
 	z
 		.strictObject({
@@ -120,6 +140,8 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 					allowed_scopes: z.array(z.string()),
 				})
 				.optional(),
+			client_authentication: z.boolean().optional(),
+			oauth: ManagedOAuthSchema.optional(),
 			request_signing: z
 				.strictObject({
 					allowed_origins: z.array(z.string()),

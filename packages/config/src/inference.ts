@@ -113,6 +113,28 @@ interface BindingTypeMap<TBinding> {
 		getIdentity(label?: string): Promise<
 			Rpc.Stub<
 				Rpc.RpcTargetBranded & {
+					getClientMetadata(clientId?: string): Promise<{
+						client_id: string;
+						client_name: string;
+						token_endpoint_auth_method: "private_key_jwt";
+						token_endpoint_auth_signing_alg: "Ed25519";
+						jwks: {
+							keys: {
+								kty: string;
+								crv?: string;
+								x?: string;
+								kid?: string;
+								alg?: string;
+								use?: string;
+							}[];
+						};
+						grant_types: "client_credentials"[];
+						response_types: never[];
+					}>;
+					getClientAssertion(options: {
+						clientId: string;
+						audience: string;
+					}): Promise<string>;
 					readonly id: Promise<string>;
 					readonly signatureAgent: Promise<string>;
 					readonly directoryURL: Promise<string>;

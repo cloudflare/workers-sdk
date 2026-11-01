@@ -21,49 +21,71 @@ const script = `export default {
 };`;
 
 for (const legacy of [false, true]) {
-	test(`identity calls fail without outbound requests (${legacy ? "legacy" : "config"})`, async ({
-		expect,
-	}) => {
-		const outbound = vi.fn(() => new Response("unexpected outbound request"));
-		const identity = { audience: "urn:inventory" };
-		const mf = new Miniflare(
-			legacy
-				? convertV4MiniflareOptions({
-						modules: true,
-						script,
-						compatibilityDate: "2026-01-01",
-						identities: { IDENTITY: identity },
-						outboundService: outbound,
-					})
-				: {
-						workers: [
-							{
-								config: {
-									name: "test",
-									compatibilityDate: "2026-01-01",
-									env: { IDENTITY: { type: "identity", ...identity } },
-									manifest: singleModuleManifest(script),
+	for (const exchange of [
+		"workload_authorization",
+		"client_credentials",
+	] as const) {
+		test(`identity calls fail without outbound requests (${legacy ? "legacy" : "config"}, ${exchange})`, async ({
+			expect,
+		}) => {
+			const outbound = vi.fn(() => new Response("unexpected outbound request"));
+			const identity = {
+				client_authentication: true,
+				oauth: {
+					...(exchange === "client_credentials"
+						? {
+								exchange: "client_credentials" as const,
+								client_id: "provider-id",
+							}
+						: { exchange: "workload_authorization" as const }),
+					authorization_server: "https://auth.example",
+					token_endpoint: "https://auth.example/token",
+					resource: "https://api.example",
+					scope: ["read"],
+					allowed_origins: ["https://api.example"],
+					allowed_methods: ["GET"],
+					require_sender_constraint: true as const,
+				},
+			};
+			const mf = new Miniflare(
+				legacy
+					? convertV4MiniflareOptions({
+							modules: true,
+							script,
+							compatibilityDate: "2026-01-01",
+							identities: { IDENTITY: identity },
+							outboundService: outbound,
+						})
+					: {
+							workers: [
+								{
+									config: {
+										name: "test",
+										compatibilityDate: "2026-01-01",
+										env: { IDENTITY: { type: "identity", ...identity } },
+										manifest: singleModuleManifest(script),
+									},
+									dev: {
+										outboundService: { type: "fetcher", handler: outbound },
+									},
 								},
-								dev: {
-									outboundService: { type: "fetcher", handler: outbound },
-								},
-							},
-						],
-					}
-		);
-		useDispose(mf);
-		const response = await mf.dispatchFetch("http://localhost/");
-		const errors = (await response.json()) as string[];
-		expect(errors).toHaveLength(5);
-		expect(errors[4]).toContain("Use getIdentity().fetch()");
-		for (const error of errors) {
-			expect(error).toContain(
-				"Identity issuance is unavailable in local development"
+							],
+						}
 			);
-			expect(error).toContain("deployed Preview");
-		}
-		expect(outbound).not.toHaveBeenCalled();
-	});
+			useDispose(mf);
+			const response = await mf.dispatchFetch("http://localhost/");
+			const errors = (await response.json()) as string[];
+			expect(errors).toHaveLength(5);
+			expect(errors[4]).toContain("Use getIdentity().fetch()");
+			for (const error of errors) {
+				expect(error).toContain(
+					"Identity issuance is unavailable in local development"
+				);
+				expect(error).toContain("deployed Preview");
+			}
+			expect(outbound).not.toHaveBeenCalled();
+		});
+	}
 }
 
 // This contract needs the companion runtime until its published release lands.

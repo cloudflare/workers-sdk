@@ -644,3 +644,31 @@ describe("createWorkerUploadForm — bindings", () => {
 		});
 	});
 });
+
+it.for(["workload_authorization", "client_credentials"] as const)(
+	"preserves %s policy and independent assertion authority in upload metadata",
+	(exchange, { expect }) => {
+		const oauth = {
+			exchange,
+			...(exchange === "client_credentials"
+				? { client_id: "provider-id" }
+				: {}),
+			authorization_server: "https://auth.example.com",
+			token_endpoint: "https://auth.example.com/token",
+			resource: "https://api.example.com",
+			scope: ["read"],
+			allowed_origins: ["https://api.example.com"],
+			allowed_methods: ["GET"],
+			require_sender_constraint: true as const,
+		};
+		const form = createWorkerUploadForm(createEsmWorker(), {
+			API: { type: "identity", oauth, client_authentication: true },
+		} as StartDevWorkerInput["bindings"]);
+		expect(getBindings(form)).toContainEqual({
+			name: "API",
+			type: "identity",
+			oauth,
+			client_authentication: true,
+		});
+	}
+);

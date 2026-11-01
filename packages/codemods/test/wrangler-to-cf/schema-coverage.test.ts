@@ -212,3 +212,31 @@ describe("Wrangler schema coverage", () => {
 		});
 	}
 });
+
+it("migrates managed OAuth and independent assertion authority", ({
+	expect,
+}) => {
+	const oauth = {
+		exchange: "client_credentials",
+		client_id: "provider-id",
+		authorization_server: "https://auth.example.com",
+		token_endpoint: "https://auth.example.com/token",
+		resource: "https://api.example.com",
+		scope: ["read"],
+		allowed_origins: ["https://api.example.com"],
+		allowed_methods: ["GET"],
+		require_sender_constraint: true,
+	};
+	const result = convertWranglerConfig(
+		{
+			...BASE_CONFIG,
+			identities: [{ binding: "API", oauth, client_authentication: true }],
+		} as RawConfig,
+		"wrangler",
+		[]
+	);
+	const rendered = renderCloudflareConfig(result);
+	expect(rendered).toContain("client_authentication: true");
+	expect(rendered).toContain("client_credentials");
+	expect(rendered).toContain("provider-id");
+});
