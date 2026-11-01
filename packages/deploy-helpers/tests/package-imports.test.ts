@@ -6,8 +6,16 @@ import { previewBuildOutput } from "@cloudflare/deploy-helpers/preview";
 import { triggersDeploy } from "@cloudflare/deploy-helpers/triggers";
 import { versionsUpload } from "@cloudflare/deploy-helpers/versions-upload";
 import { expectTypeOf, it } from "vitest";
-import type { getNodeCompat, NodeJSCompatMode } from "miniflare/node-compat";
-import type { getFreshSourceMapSupport } from "miniflare/sourcemap";
+import type {
+	getNodeCompat,
+	NodeJSCompatMode,
+} from "@cloudflare/workers-utils/node-compat";
+import type { getFreshSourceMapSupport } from "@cloudflare/workers-utils/sourcemap";
+import type {
+	getFreshSourceMapSupport as getMiniflareSourceMapSupport,
+	getNodeCompat as getMiniflareNodeCompat,
+	NodeJSCompatMode as MiniflareNodeJSCompatMode,
+} from "miniflare";
 
 it("shares workflow implementations with the root entry point", ({
 	expect,
@@ -18,13 +26,20 @@ it("shares workflow implementations with the root entry point", ({
 	expect(previewBuildOutput).toBe(helpers.previewBuildOutput);
 });
 
-it("preserves the public types of Miniflare's utility entry points", () => {
+it("preserves the public types of the shared utility entry points", () => {
 	expectTypeOf<typeof getFreshSourceMapSupport>().returns.toEqualTypeOf<
 		typeof import("@cspotcode/source-map-support")
 	>();
 	expectTypeOf<
 		ReturnType<typeof getNodeCompat>["mode"]
 	>().toEqualTypeOf<NodeJSCompatMode>();
+	expectTypeOf<typeof getMiniflareSourceMapSupport>().toEqualTypeOf<
+		typeof getFreshSourceMapSupport
+	>();
+	expectTypeOf<typeof getMiniflareNodeCompat>().toEqualTypeOf<
+		typeof getNodeCompat
+	>();
+	expectTypeOf<MiniflareNodeJSCompatMode>().toEqualTypeOf<NodeJSCompatMode>();
 });
 
 it("imports the built package and uses its utilities without loading the runtime", ({

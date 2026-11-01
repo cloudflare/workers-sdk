@@ -149,6 +149,8 @@ export {
 	stripRedundantNodejsCompatFlags,
 } from "./compatibility-date";
 export type { CompatDate } from "./compatibility-date";
+export { getNodeCompat } from "./node-compat";
+export { getFreshSourceMapSupport } from "./sourcemap";
 export { DEFAULT_COMPAT_DATE } from "./default-compat-date";
 
 export { isDockerfile } from "./config/validation";

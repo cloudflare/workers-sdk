@@ -38,7 +38,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { Extractor, ExtractorConfig } from "@microsoft/api-extractor";
 import ts from "typescript";
-import { entryPoints, getPackage, pkgRoot } from "./common.mjs";
+import { getPackage, pkgRoot } from "./common.mjs";
 
 // --- CLI argument parsing ---
 
@@ -148,6 +148,8 @@ function buildTypes() {
 /** @type {import("@microsoft/api-extractor").IConfigFile} */
 const extractorCfgObject = {
 	projectFolder: "<lookup>",
+	// Shared helpers are bundled into Miniflare, including their public types.
+	bundledPackages: ["@cloudflare/workers-utils"],
 	// Input: individual .d.ts files emitted by tsc into dist-types/
 	mainEntryPointFilePath: "<projectFolder>/dist-types/src/index.d.ts",
 	compiler: {
@@ -225,40 +227,31 @@ function bundleTypes() {
 	// Temporarily swap index.d.ts with index.ts content (see workaround above)
 	fs.copyFileSync(indexTsPath, indexDtsPath);
 	try {
-		for (const entry of entryPoints) {
-			const extractorCfg = ExtractorConfig.prepare({
-				projectFolderLookupToken: pkgRoot,
-				packageJsonFullPath: path.join(pkgRoot, "package.json"),
-				packageJson: getPackage(pkgRoot),
-				configObjectFullPath: path.join(pkgRoot, "api-extractor.json"),
-				configObject: {
-					...extractorCfgObject,
-					mainEntryPointFilePath: `<projectFolder>/dist-types/src/${entry}.d.ts`,
-					dtsRollup: {
-						...extractorCfgObject.dtsRollup,
-						publicTrimmedFilePath: `<projectFolder>/dist/src/${entry}.d.ts`,
-					},
-				},
-			});
+		const extractorCfg = ExtractorConfig.prepare({
+			projectFolderLookupToken: pkgRoot,
+			packageJsonFullPath: path.join(pkgRoot, "package.json"),
+			packageJson: getPackage(pkgRoot),
+			configObjectFullPath: path.join(pkgRoot, "api-extractor.json"),
+			configObject: extractorCfgObject,
+		});
 
-			const extractorRes = Extractor.invoke(extractorCfg, {
-				localBuild: true,
-				showVerboseMessages: true,
-			});
+		const extractorRes = Extractor.invoke(extractorCfg, {
+			localBuild: true,
+			showVerboseMessages: true,
+		});
 
-			const { errorCount, warningCount } = extractorRes;
-			const failed = errorCount + warningCount > 0;
-			const colour = failed ? 31 : 32;
-			console.log(
-				[
-					`\n\x1b[${colour}mBundled types `,
-					`with ${errorCount} error(s) and ${warningCount} warning(s)`,
-					"\x1b[39m",
-				].join("")
-			);
-			if (failed) {
-				process.exitCode = 1;
-			}
+		const { errorCount, warningCount } = extractorRes;
+		const failed = errorCount + warningCount > 0;
+		const colour = failed ? 31 : 32;
+		console.log(
+			[
+				`\n\x1b[${colour}mBundled types `,
+				`with ${errorCount} error(s) and ${warningCount} warning(s)`,
+				"\x1b[39m",
+			].join("")
+		);
+		if (failed) {
+			process.exitCode = 1;
 		}
 	} finally {
 		// Restore the original index.d.ts
