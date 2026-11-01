@@ -6,7 +6,10 @@ import exitHook from "exit-hook";
  */
 export default async function globalSetup() {
 	let stopMockNpmRegistry: (() => void) | undefined =
-		await startMockNpmRegistry("create-cloudflare");
+		await startMockNpmRegistry(
+			"create-cloudflare",
+			"@cloudflare/vitest-plugin"
+		);
 	const onExit = () => {
 		stopMockNpmRegistry?.();
 		stopMockNpmRegistry = undefined;

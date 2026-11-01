@@ -34,7 +34,7 @@
 				"pnpm_config_pm_on_fail",
 				"pnpm_config_verify_deps_before_run"
 			],
-			"dependsOn": ["build"],
+			"dependsOn": ["build", "@cloudflare/vitest-plugin#build"],
 			"inputs": [
 				"e2e/**",
 				"vitest-e2e.config.mts",
