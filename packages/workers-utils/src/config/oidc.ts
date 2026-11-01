@@ -166,6 +166,8 @@ export type OidcManagedOAuth = OidcRequestSigning & {
 	resource: string;
 	scope: string[];
 	require_sender_constraint: true;
+	/** Sign the final authenticated request; the receiver must verify OAuth/DPoP and WBA. */
+	http_message_signatures?: "web_bot_auth";
 } & (
 		| { exchange: "workload_authorization"; client_id?: never }
 		| { exchange: "client_credentials"; client_id: string }
@@ -307,6 +309,7 @@ export function isIdentityBinding(
 				"allowed_origins",
 				"allowed_methods",
 				"require_sender_constraint",
+				"http_message_signatures",
 			]) ||
 			!["workload_authorization", "client_credentials"].includes(
 				String(p.exchange)
@@ -338,6 +341,8 @@ export function isIdentityBinding(
 					/^[A-Z!#$%&'*+.^_`|~-]+$/.test(s) &&
 					!["CONNECT", "TRACE", "TRACK"].includes(s)
 			) ||
+			(p.http_message_signatures !== undefined &&
+				p.http_message_signatures !== "web_bot_auth") ||
 			p.require_sender_constraint !== true
 		) {
 			return false;

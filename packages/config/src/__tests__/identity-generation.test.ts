@@ -13,10 +13,17 @@ const nodeTypes = require.resolve("@types/node/index.d.ts");
 runInTempDir();
 
 // Cold Windows runners need longer than Vitest's default for the full compiler.
-it.for(["signing", "workload_authorization", "client_credentials"])(
+it.for([
+	"signing",
+	"workload_authorization",
+	"client_credentials",
+	"workload_authorization+wba",
+	"client_credentials+wba",
+])(
 	"typechecks generated %s identity bindings",
 	{ timeout: 30_000 },
 	async (mode, { expect }) => {
+		const exchange = mode.replace("+wba", "");
 		const policy =
 			mode === "signing"
 				? {
@@ -28,8 +35,8 @@ it.for(["signing", "workload_authorization", "client_credentials"])(
 				: {
 						client_authentication: true,
 						oauth: {
-							exchange: mode,
-							...(mode === "client_credentials"
+							exchange,
+							...(exchange === "client_credentials"
 								? { client_id: "provider-id" }
 								: {}),
 							authorization_server: "https://auth.example.com",
@@ -39,6 +46,9 @@ it.for(["signing", "workload_authorization", "client_credentials"])(
 							allowed_origins: ["https://api.example.com"],
 							allowed_methods: ["GET", "POST"],
 							require_sender_constraint: true,
+							...(mode.endsWith("+wba")
+								? { http_message_signatures: "web_bot_auth" }
+								: {}),
 						},
 					};
 		await seed({
@@ -85,7 +95,12 @@ it.for(["signing", "workload_authorization", "client_credentials"])(
 				moduleResolution: ts.ModuleResolutionKind.Bundler,
 				lib: ["lib.es2024.d.ts", "lib.esnext.disposable.d.ts"],
 				types: [],
-				paths: { "@cloudflare/config": [publicConfig] },
+				paths: {
+					"@cloudflare/config": [publicConfig],
+					"@cloudflare/workers-utils/oidc": [
+						resolve(import.meta.dirname, "../../../workers-utils/src/oidc.ts"),
+					],
+				},
 			},
 		});
 		const diagnostics = ts

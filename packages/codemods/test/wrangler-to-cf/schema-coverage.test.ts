@@ -226,6 +226,7 @@ it("migrates managed OAuth and independent assertion authority", ({
 		allowed_origins: ["https://api.example.com"],
 		allowed_methods: ["GET"],
 		require_sender_constraint: true,
+		http_message_signatures: "web_bot_auth",
 	};
 	const result = convertWranglerConfig(
 		{
@@ -238,5 +239,6 @@ it("migrates managed OAuth and independent assertion authority", ({
 	const rendered = renderCloudflareConfig(result);
 	expect(rendered).toContain("client_authentication: true");
 	expect(rendered).toContain("client_credentials");
+	expect(rendered).toContain('http_message_signatures: "web_bot_auth"');
 	expect(rendered).toContain("provider-id");
 });
