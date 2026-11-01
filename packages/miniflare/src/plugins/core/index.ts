@@ -650,16 +650,6 @@ export const CORE_PLUGIN: Plugin = {
 							: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
 				globalOutbound: { name: getOutboundInterceptorName(workerIndex) },
 				cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
-				workloadIdentityService: dev?.unsafeWorkloadIdentityService
-					? getCustomServiceDesignator(
-							config.name,
-							workerIndex,
-							CustomServiceKind.KNOWN,
-							"__workload_identity_test_verifier",
-							dev.unsafeWorkloadIdentityService,
-							dev
-						)
-					: undefined,
 				moduleFallback:
 					dev?.useModuleFallbackService &&
 					sharedOptions.unsafeModuleFallbackService !== undefined

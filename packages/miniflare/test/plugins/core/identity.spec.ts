@@ -105,60 +105,6 @@ test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
 );
 
 test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
-	"explicit test verifier receives configured service props through the native API",
-	async ({ expect }) => {
-		const mf = new Miniflare({
-			workers: [
-				{
-					config: {
-						name: "receiver",
-						compatibilityDate: "2026-10-31",
-						compatibilityFlags: ["enable_workload_identity_context"],
-						manifest:
-							singleModuleManifest(`export default { async fetch(request, env, ctx) {
-              return Response.json(await ctx.identity.caller());
-            }};`),
-					},
-					dev: {
-						unsafeWorkloadIdentityService: {
-							type: "worker",
-							worker: "explicit-test-verifier",
-							exportName: "MockVerifier",
-							props: { testOnly: true },
-						},
-					},
-				},
-				{
-					config: {
-						name: "explicit-test-verifier",
-						compatibilityDate: "2026-10-31",
-						compatibilityFlags: ["enable_workload_identity_context"],
-						manifest:
-							singleModuleManifest(`import {WorkerEntrypoint} from "cloudflare:workers";
-              // This fake service tests plumbing, never cryptographic verification.
-              export class MockVerifier extends WorkerEntrypoint {
-                async verify(request) {
-                  if (this.ctx.props.testOnly !== true) throw Error("Missing test marker");
-                  await request.text();
-                  return {status:"verified",identity:{kind:"signed-request",id:request.headers.get("authorization")}};
-                }
-              }`),
-					},
-				},
-			],
-		});
-		useDispose(mf);
-		expect(
-			await (
-				await mf.dispatchFetch("http://localhost/", {
-					headers: { authorization: "Bearer test", signature: "test-only" },
-				})
-			).json()
-		).toEqual({ kind: "signed-request", id: "Bearer test" });
-	}
-);
-
-test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
 	"ordinary service bindings expose local immediate callers through fetch and RPC",
 	async ({ expect }) => {
 		const mf = new Miniflare({

@@ -838,44 +838,17 @@ For debugging purposes, you can also set `MINIFLARE_WORKERD_CONFIG_DEBUG=<file_p
 
 ## Receive a caller through the runtime
 
-For a direct call through a static Worker's own configured service binding,
-`caller()` returns a frozen `{ kind: "service-binding", accountId, workerId }`.
-It also works inside a top-level `WorkerEntrypoint` RPC method through
-`this.ctx.identity.caller()`. You add no identity binding or verifier. Production
-facts use the public account tag and immutable Worker product ID (`scriptTag`),
-never the pipeline stable ID `main`. Each hop identifies its immediate caller.
-Native facts take precedence over every HTTP credential, even malformed fields;
-you can read the body first. Cross-account, Durable Object, Preview, dynamic,
-loopback, transferred/restored binding, callback, returned-target and persistent
-stub paths fail with `WorkloadIdentityUnavailableError` when you ask for identity.
-They do not fall back to HTTP credentials. Ordinary URL fetches keep the HTTP
-credential contract below. Local static bindings use account `local` and
-`local:<worker-name>` IDs; those IDs never establish production identity.
+Local receiver support needs the companion runtime from workerd PR #8121.
+Set `MINIFLARE_WORKERD_PATH` to that binary and opt in with
+`enable_workload_identity_context` in the receiver's compatibility flags.
+Regenerate runtime types and the Cap'n Proto schema from the same release
+before publishing the SDK.
 
-The receiving Worker calls `await ctx.identity.caller()` with no arguments or
-receiver binding. The caller is the authenticated software making the request:
-an agent, Worker, service, or another supported workload. Keep any human identity
-it acts for separate. The runtime verifies lazily and returns frozen facts;
-the application checks the exact caller, operation, resource, and JWT audience.
-On the HTTP credential path, missing credentials return `null`. Invalid credentials reject with
-`WorkloadIdentityError`; unavailable discovery or replay storage rejects with
-`WorkloadIdentityUnavailableError`. Signature fields take precedence and never
-fall back to bearer verification. Call before reading or locking a signed body.
+Static service bindings expose local immediate callers using account `local`
+and `local:<worker-name>` IDs. These IDs establish no production authority.
+Anonymous requests return `null`; HTTP credential verification is unavailable
+without a managed verifier channel. Sender issuance remains unsupported locally.
 
-The private `WorkloadVerifier` service holds public verification data and a
-Cloudflare-owned SQLite replay namespace, with no signing secrets. Its host
-channel supplies receiver scope in protected props. All versions, replicas and
-domains of the same receiving Worker share replay scope. Service calls use
-fresh native caller facts rather than inheriting a verified HTTP credential. External receivers still implement the wire profile.
-
-Ship the receiver only after the native runtime, host channel, protected compiler
-metadata, verifier, replay migration, compatibility review and service access
-checks pass together. Local anonymous requests return `null`; credential
-verification without the private channel fails unavailable. Explicit test mocks
-are not cryptographic proof. Keep sender issuance independently deployable.
-
-Until the companion runtime release ships, run the receiver contract test with
-`MINIFLARE_WORKERD_PATH` pointing at the built runtime from workerd PR #8121.
-Regenerate runtime types and the Cap'n Proto schema from that same release before
-publishing the SDK. Wrangler, cf, Vite and Vitest consume the Miniflare behavior;
-none should add a receiver binding or a JavaScript verification polyfill.
+Wrangler, cf, Vite and Vitest consume this Miniflare behavior. Add no receiver
+binding or JavaScript verification polyfill. See the [runtime caller contract](https://developers.cloudflare.com/workers/runtime-apis/context/#identitycaller)
+for caller kinds, body ordering and application authorization.
