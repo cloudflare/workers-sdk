@@ -13,6 +13,7 @@ import type {
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "./config/environment";
+import type { NodeJSCompatMode } from "./node-compat";
 import type {
 	CfAIBinding,
 	CfAgentMemory,
@@ -542,8 +543,7 @@ export type AsyncHook<T extends HookValues, Args extends unknown[] = []> =
 
 export type LogLevel = "debug" | "info" | "log" | "warn" | "error" | "none";
 
-// Duplicate of Miniflare's NodeJSCompatMode to keep workers-utils from depending on Miniflare.
-export type NodeJSCompatMode = "als" | "v1" | "v2" | null;
+export type { NodeJSCompatMode } from "./node-compat";
 
 export interface StartDevWorkerInput {
 	/** The name of the worker. */

@@ -5,7 +5,6 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 export const pkgRoot = path.resolve(__dirname, "..");
-export const entryPoints = ["index", "node-compat", "sourcemap"];
 
 /**
  * @typedef {object} ~Package

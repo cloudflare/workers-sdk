@@ -35,7 +35,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
 import esbuild from "esbuild";
-import { entryPoints, getPackage, pkgRoot } from "./common.mjs";
+import { getPackage, pkgRoot } from "./common.mjs";
 
 // --- CLI argument parsing ---
 
@@ -416,6 +416,7 @@ async function patchSourcemaps(outPath) {
 async function buildPackage() {
 	const pkg = getPackage(pkgRoot);
 
+	const indexPath = path.join(pkgRoot, "src", "index.ts");
 	const outPath = path.join(pkgRoot, "dist");
 	if (!watch) {
 		// A release build must not retain maps emitted by an earlier development build.
@@ -446,7 +447,7 @@ async function buildPackage() {
 		outdir: outPath,
 		outbase: pkgRoot,
 		entryPoints: [
-			...entryPoints.map((entry) => path.join(pkgRoot, "src", `${entry}.ts`)),
+			indexPath,
 			// A separate thread keeps native Git available during synchronous Node
 			// binding-proxy calls, which block Miniflare's main event loop.
 			path.join(pkgRoot, "src/plugins/artifacts/git-sidecar.ts"),
