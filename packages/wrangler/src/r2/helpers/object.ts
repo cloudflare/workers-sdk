@@ -64,6 +64,28 @@ export function validateUploadSize(key: string, sizeBytes: number): void {
 	}
 }
 
+/**
+ * Parse an expires parameter for local R2 object put.
+ * Supports standard HTTP-dates (RFC 7234 / RFC 2822), ISO 8601 strings,
+ * or raw epoch milliseconds.
+ */
+export function parseExpires(expires: string): number {
+	const parsed = Date.parse(expires);
+	if (!isNaN(parsed)) {
+		return parsed;
+	}
+	if (/^\d+$/.test(expires)) {
+		const num = parseInt(expires, 10);
+		if (!isNaN(num)) {
+			return num;
+		}
+	}
+	throw new UserError(
+		`Cannot parse '${expires}' as a valid date. Please provide a valid date string (e.g. "Wed, 21 Oct 2026 07:28:00 GMT" or "2026-10-21") or epoch milliseconds.`,
+		{ telemetryMessage: "r2 object invalid expires date" }
+	);
+}
+
 const putHeaderKeys = [
 	"cache-control",
 	"content-disposition",

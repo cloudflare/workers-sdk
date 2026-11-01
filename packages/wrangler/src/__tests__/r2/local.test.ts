@@ -1,6 +1,8 @@
 import * as fs from "node:fs";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
+import { readConfig } from "../../config";
+import { parseExpires, usingLocalBucket } from "../../r2/helpers/object";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runWrangler } from "../helpers/run-wrangler";
 
@@ -374,6 +376,116 @@ describe("r2", () => {
 					Downloading "file-two" from "bucket-object-test".
 					Download complete."
 				`);
+			});
+
+			it("should parse and store --expires correctly for local puts (HTTP date, ISO date, epoch ms)", async ({
+				expect,
+			}) => {
+				fs.writeFileSync("expires-payload", "expires test content");
+
+				// 1. HTTP date (RFC 7234)
+				await runWrangler(
+					`r2 object put bucket-object-test/file-expires-http --file ./expires-payload --expires "Wed, 21 Oct 2026 07:28:00 GMT"`
+				);
+				await usingLocalBucket(
+					undefined,
+					readConfig({}),
+					"bucket-object-test",
+					async (bucket) => {
+						const obj = await bucket.head("file-expires-http");
+						expect(obj?.httpMetadata?.cacheExpiry).toEqual(
+							new Date("Wed, 21 Oct 2026 07:28:00 GMT")
+						);
+					}
+				);
+
+				// 2. ISO date (YYYY-MM-DD)
+				await runWrangler(
+					`r2 object put bucket-object-test/file-expires-iso --file ./expires-payload --expires 2026-10-21`
+				);
+				await usingLocalBucket(
+					undefined,
+					readConfig({}),
+					"bucket-object-test",
+					async (bucket) => {
+						const obj = await bucket.head("file-expires-iso");
+						expect(obj?.httpMetadata?.cacheExpiry).toEqual(
+							new Date("2026-10-21")
+						);
+					}
+				);
+
+				// 3. Epoch milliseconds
+				await runWrangler(
+					`r2 object put bucket-object-test/file-expires-ms --file ./expires-payload --expires 1792966000000`
+				);
+				await usingLocalBucket(
+					undefined,
+					readConfig({}),
+					"bucket-object-test",
+					async (bucket) => {
+						const obj = await bucket.head("file-expires-ms");
+						expect(obj?.httpMetadata?.cacheExpiry).toEqual(
+							new Date(1792966000000)
+						);
+					}
+				);
+
+				// 4. Invalid date format should fail with a clean UserError
+				await expect(() =>
+					runWrangler(
+						`r2 object put bucket-object-test/file-invalid --file ./expires-payload --expires not-a-date`
+					)
+				).rejects.toThrowError(/Cannot parse 'not-a-date' as a valid date/);
+
+				// 5. Bulk put with --expires
+				fs.writeFileSync(
+					"bulk-expires-list.json",
+					JSON.stringify([
+						{
+							key: "bulk-expires-file",
+							file: "expires-payload",
+						},
+					])
+				);
+				await runWrangler(
+					`r2 bulk put bucket-object-test --filename ./bulk-expires-list.json --expires "Wed, 21 Oct 2026 07:28:00 GMT"`
+				);
+				await usingLocalBucket(
+					undefined,
+					readConfig({}),
+					"bucket-object-test",
+					async (bucket) => {
+						const obj = await bucket.head("bulk-expires-file");
+						expect(obj?.httpMetadata?.cacheExpiry).toEqual(
+							new Date("Wed, 21 Oct 2026 07:28:00 GMT")
+						);
+					}
+				);
+
+				std.getAndClearOut();
+			});
+		});
+
+		describe("parseExpires", () => {
+			it("should parse standard HTTP dates", ({ expect }) => {
+				const expected = Date.parse("Wed, 21 Oct 2026 07:28:00 GMT");
+				expect(parseExpires("Wed, 21 Oct 2026 07:28:00 GMT")).toBe(expected);
+			});
+
+			it("should parse ISO 8601 dates", ({ expect }) => {
+				const expected = Date.parse("2026-10-21");
+				expect(parseExpires("2026-10-21")).toBe(expected);
+			});
+
+			it("should preserve numeric epoch milliseconds", ({ expect }) => {
+				expect(parseExpires("1792966000000")).toBe(1792966000000);
+			});
+
+			it("should throw UserError for invalid date strings", ({ expect }) => {
+				expect(() => parseExpires("invalid-date")).toThrow(
+					"Cannot parse 'invalid-date' as a valid date."
+				);
 			});
 		});
 	});
