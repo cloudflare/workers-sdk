@@ -1854,3 +1854,28 @@ it("preserves OIDC capability limits when converting cf configuration", ({
 	});
 	expect(result.identities).toEqual([{ binding: "ORDERS", ...limits }]);
 });
+
+it.for(["workload_authorization", "client_credentials"] as const)(
+	"preserves combined %s OAuth authority when converting cf configuration",
+	(exchange, { expect }) => {
+		const oauth = {
+			exchange,
+			...(exchange === "client_credentials"
+				? { client_id: "provider-id" }
+				: {}),
+			authorization_server: "https://auth.example.com",
+			token_endpoint: "https://auth.example.com/token",
+			resource: "https://api.example.com",
+			scope: ["read"],
+			allowed_origins: ["https://api.example.com"],
+			allowed_methods: ["GET"],
+			require_sender_constraint: true as const,
+			http_message_signatures: "web_bot_auth" as const,
+		};
+		const result = convertToWranglerConfig({
+			worker: { ...baseWorker, env: { API: { type: "identity", oauth } } },
+			containers: [],
+		});
+		expect(result.identities).toEqual([{ binding: "API", oauth }]);
+	}
+);
