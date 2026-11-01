@@ -217,3 +217,45 @@ it("validates both managed OAuth profiles and independent public assertion autho
 		false
 	);
 });
+
+it("validates optional DPoP policy without weakening legacy required configuration", ({
+	expect,
+}) => {
+	const oauth = {
+		exchange: "workload_authorization",
+		authorization_server: "https://auth.example",
+		token_endpoint: "https://auth.example/token",
+		resource: "https://api.example",
+		scope: ["read"],
+		allowed_origins: ["https://api.example"],
+		allowed_methods: ["GET"],
+	};
+	for (const policy of [
+		{},
+		{ dpop: "preferred" },
+		{ dpop: "required" },
+		{ dpop: "disabled" },
+		{ require_sender_constraint: true },
+	]) {
+		expect(
+			isIdentityBinding({ binding: "API", oauth: { ...oauth, ...policy } })
+		).toBe(true);
+	}
+	for (const policy of [
+		{ dpop: null },
+		{ dpop: false },
+		{ dpop: "unknown" },
+		{ dpop: ["required"] },
+		{ dpop: new String("preferred") },
+		{ require_sender_constraint: false },
+		{ require_sender_constraint: null },
+		...["preferred", "required", "disabled"].map((dpop) => ({
+			dpop,
+			require_sender_constraint: true,
+		})),
+	]) {
+		expect(
+			isIdentityBinding({ binding: "API", oauth: { ...oauth, ...policy } })
+		).toBe(false);
+	}
+});
