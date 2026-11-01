@@ -5465,7 +5465,8 @@ function mockDockerBuild(
 		expect(cmd).toBe("/usr/bin/docker");
 		expect(args).toEqual([
 			"build",
-			"--load",
+			"--output",
+			"type=docker,oci-mediatypes=true,compression=zstd,compression-level=3,force-compression=true",
 			"-t",
 			`${containerName}:${tag}`,
 			"--platform",

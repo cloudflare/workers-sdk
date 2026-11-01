@@ -238,7 +238,8 @@ describe("buildCommand", () => {
 
 		expectSpawnWith([
 			"build",
-			"--load",
+			"--output",
+			"type=docker,oci-mediatypes=true,compression=zstd,compression-level=3,force-compression=true",
 			"-t",
 			"test-app:tag",
 			"--platform",
@@ -248,6 +249,22 @@ describe("buildCommand", () => {
 			"-",
 			dir,
 		]);
+	});
+
+	it("allows opting out of zstd compression", async ({ expect }) => {
+		vi.stubEnv("WRANGLER_CONTAINER_IMAGE_COMPRESSION", "gzip");
+		const { dir, args } = createBuildArgs();
+		tempDirs.push(dir);
+
+		await buildCommand({
+			PATH: dir,
+			tag: args.tag,
+			pathToDocker: "docker",
+			push: false,
+		});
+		expect(
+			vi.mocked(spawn).mock.calls.some(([, args]) => args?.includes("type=docker"))
+		).toBe(true);
 	});
 
 	it("tags and pushes new images, returning the pushed digest", async ({
@@ -542,7 +559,8 @@ describe("deploy container image build and push", () => {
 
 		expectSpawnWith([
 			"build",
-			"--load",
+			"--output",
+			"type=docker,oci-mediatypes=true,compression=zstd,compression-level=3,force-compression=true",
 			"-t",
 			TEST_LOCAL_TAG,
 			"--platform",
@@ -846,7 +864,8 @@ describe("buildCommand arguments", () => {
 
 		expectSpawnCommandWith("/custom/docker", [
 			"build",
-			"--load",
+			"--output",
+			"type=docker,oci-mediatypes=true,compression=zstd,compression-level=3,force-compression=true",
 			"-t",
 			"test-app:tag",
 			"--platform",
@@ -876,7 +895,8 @@ describe("buildCommand arguments", () => {
 
 		expectSpawnCommandWith("/env/docker", [
 			"build",
-			"--load",
+			"--output",
+			"type=docker,oci-mediatypes=true,compression=zstd,compression-level=3,force-compression=true",
 			"-t",
 			"test-app:tag",
 			"--platform",

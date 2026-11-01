@@ -62,10 +62,15 @@ export function isDockerfileContainerConfig(
 }
 
 async function constructBuildCommand(options: BuildArgs) {
+	const imageOutput =
+		process.env.WRANGLER_CONTAINER_IMAGE_COMPRESSION === "gzip"
+			? "type=docker"
+			: "type=docker,oci-mediatypes=true,compression=zstd,compression-level=3,force-compression=true";
 	const platform = options.platform ?? "linux/amd64";
 	const buildCmd = [
 		"build",
-		"--load",
+		"--output",
+		imageOutput,
 		"-t",
 		options.tag,
 		"--platform",
