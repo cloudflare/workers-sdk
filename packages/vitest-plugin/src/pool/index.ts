@@ -8,11 +8,11 @@ import {
 	DEFAULT_COMPAT_DATE,
 	isNodejsCompatDefaultOn,
 } from "@cloudflare/workers-utils";
+import { getNodeCompat } from "@cloudflare/workers-utils/node-compat";
 import * as devalue from "devalue";
 import getPort, { portNumbers } from "get-port";
 import {
 	convertV4MiniflareOptions,
-	getNodeCompat,
 	kCurrentWorker,
 	kUnsafeEphemeralUniqueKey,
 	Log,

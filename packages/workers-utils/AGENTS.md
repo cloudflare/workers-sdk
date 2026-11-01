@@ -26,7 +26,7 @@ Shared utility package used across wrangler, miniflare, and others. Two main are
 
 ### Shared runtime utilities
 
-- `getNodeCompat()` / `NodeJSCompatMode` — shared compatibility mode and flag resolution through `/node-compat`; Miniflare retains compatibility exports.
+- `getNodeCompat()` / `NodeJSCompatMode` — shared compatibility mode and flag resolution through `/node-compat`, used by deployment tooling and the Vite/Vitest integrations.
 - `getFreshSourceMapSupport()` — isolated source-map-support instances through `/sourcemap`. Keep source-map-support external because the helper manipulates its CommonJS module cache.
 
 - `createConfigCache(logger)` — file-backed JSON config cache (node_modules/.cache or `.wrangler/cache`). Generic mechanism; the consumer passes its logger (this package has no logger singleton). Both `wrangler` (`src/config-cache.ts`) and `@cloudflare/workers-auth` build their own instances.

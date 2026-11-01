@@ -17,7 +17,7 @@ import { getPagesTmpDir, RUNNING_BUILDERS } from "./utils";
 import type { BundleResult } from "../deployment-bundle/bundle";
 import type { pagesFunctionsBuildCommand } from "./build";
 import type { Config } from "@cloudflare/pages-functions";
-import type { NodeJSCompatMode } from "miniflare";
+import type { NodeJSCompatMode } from "@cloudflare/workers-utils/node-compat";
 
 /**
  * Map a {@link PagesFunctionsErrorCode} to the original Wrangler error class

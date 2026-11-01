@@ -1,5 +1,5 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { getNodeCompat } from "miniflare";
+import { getNodeCompat } from "@cloudflare/workers-utils/node-compat";
 
 export function isProcessEnvPopulated(
 	compatibility_date: string | undefined,
