@@ -12,6 +12,9 @@ import type { Log } from "../../../shared";
 import type { ParsedWorkerOptions } from "../../shared";
 import type { RawSourceMap, UrlAndMap } from "@cspotcode/source-map-support";
 
+/** @deprecated Import from `@cloudflare/workers-utils/sourcemap` instead. */
+export { getFreshSourceMapSupport } from "@cloudflare/workers-utils/sourcemap";
+
 // Worker source is provided inline in the config, so stack frames are resolved
 // directly against it. There are two forms, with corresponding file specifiers
 // reported in workerd stack traces:
