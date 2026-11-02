@@ -36,17 +36,15 @@ export class TestObject extends DurableObject<Env> {
 	}
 
 	async recordFromDurableObject(targetName: string, calls: number) {
-		const id = this.env.TEST_OBJECT.idFromName(targetName);
-		const stub = this.env.TEST_OBJECT.get(id);
+		const id = this.ctx.exports.TestObject.idFromName(targetName);
+		const stub = this.ctx.exports.TestObject.get(id);
 		const promises: Promise<void>[] = [];
 
 		for (let i = 0; i < calls; i++) {
-			// @ts-expect-error cf types leave bindings to this Worker untyped
 			promises.push(stub.record(`call-${i}`));
 		}
 
 		await Promise.all(promises);
-		// @ts-expect-error cf types leave bindings to this Worker untyped
 		return stub.getLog();
 	}
 
@@ -130,17 +128,15 @@ export class TestNamedEntrypoint extends WorkerEntrypoint<Env> {
 	}
 
 	async recordFromWorkerEntrypoint(targetName: string, calls: number) {
-		const id = this.env.TEST_OBJECT.idFromName(targetName);
-		const stub = this.env.TEST_OBJECT.get(id);
+		const id = this.ctx.exports.TestObject.idFromName(targetName);
+		const stub = this.ctx.exports.TestObject.get(id);
 		const promises: Promise<void>[] = [];
 
 		for (let i = 0; i < calls; i++) {
-			// @ts-expect-error cf types leave bindings to this Worker untyped
 			promises.push(stub.record(`call-${i}`));
 		}
 
 		await Promise.all(promises);
-		// @ts-expect-error cf types leave bindings to this Worker untyped
 		return stub.getLog();
 	}
 }
