@@ -40,7 +40,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	durable_object_namespace: "local-only",
 	fetcher: "local-only",
 	secrets_store_secret: "local-only",
-	identity: "local-only", // Unsupported stub; use a deployed Preview for issuance.
+	identity: "local-only", // Shared Miniflare authority issues and verifies isolated local credentials.
 	ratelimit: "local-only",
 	worker_loader: "local-only",
 

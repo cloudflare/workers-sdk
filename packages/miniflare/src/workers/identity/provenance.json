@@ -1,0 +1,8 @@
+{
+	"repository": "https://gitlab.cfdata.org/birvine-broque/workers-oidc",
+	"revision": "1a59402a31a7d224198b4f118fb58ba78ed42070",
+	"entrypoint": "local/worker.ts",
+	"entrypointSha256": "4eb5f881d1f2ec557baed7598cbde38b6602b9eafa1caea9bd3a953bc7d06ee8",
+	"bundleSha256": "71aa1f3270735d83b7dd45104678cea75be60051f34a617b7483d03f1e3f80f5",
+	"regenerate": "bun scripts/bundle-local.mjs /path/to/workers-sdk"
+}

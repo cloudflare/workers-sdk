@@ -704,7 +704,7 @@ export function printBindings(
 			name: binding,
 			type: "Identity",
 			value: audience,
-			mode: getMode({ isSimulatedLocally: false }),
+			mode: getMode({ isSimulatedLocally: true }),
 		});
 	}
 	if (ratelimits.length > 0) {
