@@ -40,7 +40,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	durable_object_namespace: "local-only",
 	fetcher: "local-only",
 	secrets_store_secret: "local-only",
-	identity: "local-only", // Source-built local authority; credentials remain in the isolated realm.
+	identity: "local-only", // Shared Miniflare authority issues and verifies isolated local credentials.
 	ratelimit: "local-only",
 	worker_loader: "local-only",
 

@@ -76,14 +76,8 @@ import {
 	getExplorerServices,
 	wrapDurableObjectModules,
 } from "./explorer";
-import {
-	getLocalIdentityBindings,
-	getLocalIdentityServices,
-	getLocalIdentityVerifier,
-	usesLocalIdentity,
-	LOCAL_IDENTITY_ROUTER,
-	LOCAL_IDENTITY_ENTRY_BINDING,
-} from "./identity";
+import { LOCAL_IDENTITY_ROUTER } from "./local-identity";
+import { usesLocalIdentity, LOCAL_IDENTITY_ENTRY_BINDING } from "./identity";
 import {
 	buildStringScriptPath,
 	convertManifestModule,
@@ -377,7 +371,6 @@ export const CORE_PLUGIN: Plugin = {
 	async getBindings(options, sharedOptions, workerIndex) {
 		const { config, legacy, dev } = options;
 		const bindings: Awaitable<Worker_Binding>[] = [];
-		bindings.push(...(await getLocalIdentityBindings(options, sharedOptions)));
 
 		for (const [name, binding] of getEnvBindingsOfType(config, "json")) {
 			bindings.push({ name, json: JSON.stringify(binding.value) });
@@ -485,7 +478,10 @@ export const CORE_PLUGIN: Plugin = {
 				)
 			);
 		}
-		for (const [name] of getServiceBindings(config)) {
+		for (const [name] of [
+			...getServiceBindings(config),
+			...getEnvBindingsOfType(config, "identity"),
+		]) {
 			bindingEntries.push([name, new ProxyNodeBinding()]);
 		}
 		return Object.fromEntries(await Promise.all(bindingEntries));
@@ -499,6 +495,7 @@ export const CORE_PLUGIN: Plugin = {
 		workerIndex,
 		durableObjectClassNames,
 		containerPrivilegesCache,
+		localIdentity,
 		additionalModules,
 		loopbackHost,
 		loopbackPort,
@@ -506,6 +503,11 @@ export const CORE_PLUGIN: Plugin = {
 		const { config, dev } = options;
 		// Define regular user worker
 		const workerScript = getWorkerScript(options, workerIndex);
+		if (localIdentity) {
+			workerBindings.push(
+				...localIdentity.bindings(options, JSON.stringify(workerScript))
+			);
+		}
 		// Add additional modules (e.g. "__STATIC_CONTENT_MANIFEST") if any
 		if ("modules" in workerScript) {
 			const subDirs = new Set(
@@ -621,22 +623,18 @@ export const CORE_PLUGIN: Plugin = {
 				]
 			: userFlags;
 
-		services.push(
-			...(await getLocalIdentityServices(options, sharedOptions, tmpPath))
-		);
-		const workloadIdentityService = await getLocalIdentityVerifier(
-			options,
-			sharedOptions
-		);
-
 		services.push({
 			name: serviceName,
 			worker: {
 				...workerScript,
-				workloadIdentityService,
 				compatibilityDate,
 				compatibilityFlags,
 				bindings: workerBindings,
+				workloadIdentityService: compatibilityFlags?.includes(
+					"enable_workload_identity_context"
+				)
+					? localIdentity?.receiver(config.name)
+					: undefined,
 				durableObjectNamespaces: getDurableObjectNamespaces(
 					classNames,
 					config.name,
@@ -749,6 +747,31 @@ export const CORE_PLUGIN: Plugin = {
 							name: "STRIP_CF_CONNECTING_IP",
 							json: JSON.stringify(dev?.stripCfConnectingIp ?? true),
 						},
+						...(localIdentity
+							? [
+									{
+										name: "LOCAL_IDENTITY_ROUTER",
+										service: {
+											name: LOCAL_IDENTITY_ROUTER,
+											entrypoint: "LocalRouter",
+											suppressNativeCaller: true,
+										},
+									},
+									{
+										name: "LOCAL_IDENTITY_ORIGINS",
+										json: JSON.stringify([
+											new URL(localIdentity.metadata.issuer).origin,
+											...Object.values(localIdentity.metadata.workers).flatMap(
+												(w) => w.origins
+											),
+										]),
+									},
+									{
+										name: "LOCAL_IDENTITY_DIRECTORY",
+										text: localIdentity.metadata.directoryDomain,
+									},
+								]
+							: []),
 						WORKER_BINDING_SERVICE_LOOPBACK,
 					],
 					globalOutbound: getGlobalOutbound(workerIndex, config, dev),
