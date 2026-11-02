@@ -21,6 +21,7 @@ import {
 	stopGitProcess,
 	withRepositoryCreationLock,
 } from "./git-client";
+import { startGitProxy } from "./git-proxy";
 import {
 	assertSupportedGitLayout,
 	repositoryDirectory,
@@ -42,7 +43,11 @@ if (parentPort) {
 	const port = parentPort;
 	void startGitSidecar(workerData.root).then(
 		(sidecar) => {
-			port.postMessage({ address: sidecar.address, secret: sidecar.secret });
+			port.postMessage({
+				address: sidecar.address,
+				secret: sidecar.secret,
+				port: sidecar.port,
+			});
 			port.once("message", () => {
 				void sidecar.close().then(
 					() => port.close(),
@@ -65,6 +70,7 @@ if (parentPort) {
 export interface GitSidecar {
 	address: string;
 	secret: string;
+	port: number;
 	close(): Promise<void>;
 }
 
@@ -141,9 +147,23 @@ export async function startGitSidecar(root: string): Promise<GitSidecar> {
 	const shutdown = new AbortController();
 	const repositoryLocks: RepositoryLocks = new Map();
 	const inFlight = new Map<string, InFlightGitRequest>();
+	const proxy = await startGitProxy();
 	const server = createServer((request, response) => {
 		if (request.headers["x-local-artifacts-backend"] !== secret) {
 			response.writeHead(403).end("Forbidden");
+			return;
+		}
+		if (
+			request.method === "PUT" &&
+			request.url?.startsWith(`${adminPath}/proxy/`)
+		) {
+			const target = Number(request.url.slice(`${adminPath}/proxy/`.length));
+			if (!Number.isInteger(target) || target < 1 || target > 65535) {
+				response.writeHead(400).end("Invalid Git listener port");
+				return;
+			}
+			proxy.setTarget(target);
+			response.writeHead(204).end();
 			return;
 		}
 		void handleRequest(
@@ -176,6 +196,9 @@ export async function startGitSidecar(root: string): Promise<GitSidecar> {
 			server.off("error", reject);
 			resolve();
 		});
+	}).catch(async (error: unknown) => {
+		await proxy.close();
+		throw error;
 	});
 	// The listener outlives this function; ArtifactsController closes it on disposal.
 	// `using` here would close it before workerd could make any requests.
@@ -188,12 +211,16 @@ export async function startGitSidecar(root: string): Promise<GitSidecar> {
 	return {
 		address,
 		secret,
-		close() {
+		port: proxy.port,
+		async close() {
 			shutdown.abort();
 			server.closeAllConnections();
-			return new Promise<void>((resolve, reject) => {
-				server.close((error) => (error ? reject(error) : resolve()));
-			});
+			await Promise.all([
+				proxy.close(),
+				new Promise<void>((resolve, reject) => {
+					server.close((error) => (error ? reject(error) : resolve()));
+				}),
+			]);
 		},
 	};
 }
