@@ -255,8 +255,8 @@ importers:
         specifier: 0.24.4
         version: 0.24.4(@types/node@22.15.17)(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))
       '@cloudflare/workers-auth':
-        specifier: 0.15.1
-        version: 0.15.1(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))
+        specifier: 0.15.4
+        version: 0.15.4(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))
       '@cloudflare/workers-utils':
         specifier: 0.50.2
         version: 0.50.2(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))
@@ -2021,8 +2021,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@cloudflare/workers-auth@0.15.1':
-    resolution: {integrity: sha512-6+AmHDZgKbk0ZwGmxX04tY5M1p3SbJRH2u26HqGLygTrpJpmo+VKOWzzKB3iyLny5j2T1gSteuDFMsKJZZP94Q==}
+  '@cloudflare/workers-auth@0.15.4':
+    resolution: {integrity: sha512-rX0hXCgyxUsimv3zflxhBV+fGJ9w5FtBBKVRCxBFd7NW13R43YY2owbzxD/tq8stsdI4qBjfdQhDx5njdezy3g==}
     peerDependencies:
       msw: 2.14.6
       vitest: ^4.1.0 || ^5.0.0
@@ -2037,14 +2037,6 @@ packages:
 
   '@cloudflare/workers-types@5.20261101.1':
     resolution: {integrity: sha512-malJEW9V9x+MygAc9RDGiWF0I8HFYfMzY5CXMn3tbzCxUiQBHtHWUTG5aFmO9oaFenc2z5OyT7e+a46ZaGs3cQ==}
-
-  '@cloudflare/workers-utils@0.49.0':
-    resolution: {integrity: sha512-HLeFcpoph6oyioClJPxJ0qu+9FnjQ1cJG9HBRqijwAi1lrfFCGmYBR2CdMSiMv4/x9/6KSlFYXjhkonKDSWO1A==}
-    peerDependencies:
-      vitest: ^4.1.0 || ^5.0.0
-    peerDependenciesMeta:
-      vitest:
-        optional: true
 
   '@cloudflare/workers-utils@0.50.2':
     resolution: {integrity: sha512-rmXZ0sktlPR2zxscwleD8ja9TOq0WAphaOkVV7ovK8C8lOc1+FlVoufOwrKZfSxfnbYyK/GsOQvWg98wJ4sxUg==}
@@ -8305,9 +8297,9 @@ snapshots:
   '@cloudflare/workerd-windows-64@1.20261101.1':
     optional: true
 
-  '@cloudflare/workers-auth@0.15.1(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))':
+  '@cloudflare/workers-auth@0.15.4(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))':
     dependencies:
-      '@cloudflare/workers-utils': 0.49.0(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))
+      '@cloudflare/workers-utils': 0.50.2(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))
       undici: 7.30.1
     optionalDependencies:
       msw: 2.14.6(@types/node@22.15.17)(typescript@5.8.3)
@@ -8316,14 +8308,6 @@ snapshots:
   '@cloudflare/workers-types@4.20260702.1': {}
 
   '@cloudflare/workers-types@5.20261101.1': {}
-
-  '@cloudflare/workers-utils@0.49.0(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))':
-    dependencies:
-      chalk: 5.3.0
-      dotenv: 16.3.1
-      undici: 7.30.1
-    optionalDependencies:
-      vitest: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
 
   '@cloudflare/workers-utils@0.50.2(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))':
     dependencies:
