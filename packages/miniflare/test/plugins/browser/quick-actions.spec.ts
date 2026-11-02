@@ -1,13 +1,41 @@
 import assert from "node:assert";
 import http from "node:http";
 import { LogLevel, Miniflare } from "miniflare";
-import { afterAll, beforeAll, describe, test, vi } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	test,
+	vi,
+} from "vitest";
+import { runQuickAction } from "../../../src/plugins/browser-rendering/quick-actions";
+import { withStepTimeout } from "../../../src/plugins/browser-rendering/quick-actions/page";
+import { commonOptionsSchema } from "../../../src/plugins/browser-rendering/quick-actions/schemas";
+import { NoOpLog } from "../../../src/shared";
 import {
 	disposeWithRetry,
 	singleModuleManifest,
 	TestLog,
 } from "../../test-shared";
+import type { Browser } from "@cloudflare/puppeteer";
 import type { AddressInfo } from "node:net";
+
+// The deadline tests import the source, where the embedded Worker and mdream's
+// WebAssembly don't load. They launch no Chrome and convert no Markdown, and
+// the Miniflare tests use the build, which these mocks don't touch.
+vi.mock("../../../src/plugins/browser-rendering/index", () => ({
+	launchBrowser: vi.fn(),
+}));
+vi.mock(
+	"../../../src/plugins/browser-rendering/quick-actions/markdown",
+	() => ({
+		markdown: vi.fn(),
+		readForMarkdown: vi.fn(),
+		toMarkdown: vi.fn(),
+	})
+);
 
 // Forwards `{ action, options }` to the binding, and reports a rejected call as
 // a 599 so tests can tell it apart from a returned error response
@@ -493,8 +521,10 @@ describe(
 			const invalid = await quickAction("json", {
 				html: PAGE,
 				response_format: { type: "json_schema" },
-				// Any number of models with any name is accepted
-				custom_ai: ["llama", "a", "b", "c"].map((model) => ({ model })),
+				// Any model name is accepted, but not more than 3 models
+				custom_ai: ["llama", "openai/a", "openai/b", "openai/c"].map(
+					(model) => ({ model })
+				),
 			});
 			expect(await invalid.json()).toEqual({
 				success: false,
@@ -504,6 +534,11 @@ describe(
 						message:
 							"response_format.json_schema is required and must be non-empty when response_format.type is 'json_schema'",
 						path: ["response_format", "json_schema"],
+					},
+					{
+						code: "custom",
+						message: "You can only specify up to 3 custom AI models.",
+						path: ["custom_ai"],
 					},
 				],
 			});
@@ -543,8 +578,6 @@ describe(
 			const invalidClip = await quickAction("screenshot", {
 				html: PAGE,
 				screenshotOptions: { type: "png", quality: 50, clip: 1 },
-				// Unknown options are ignored
-				foo: true,
 			});
 			expect(await invalidClip.json()).toEqual({
 				success: false,
@@ -554,6 +587,72 @@ describe(
 						code: "invalid_type",
 						path: ["screenshotOptions", "clip"],
 						message: "Invalid input: expected object, received number",
+					},
+				],
+			});
+
+			const unknown = await quickAction("content", { html: PAGE, foo: true });
+			expect(unknown.status).toBe(400);
+			expect(await unknown.json()).toEqual({
+				success: false,
+				errors: [
+					{
+						code: "unrecognized_keys",
+						keys: ["foo"],
+						path: [],
+						message: 'Unrecognized key: "foo"',
+					},
+				],
+			});
+
+			// Options passed through to puppeteer reject unknown keys too
+			for (const [action, options, path] of [
+				["content", { addScriptTag: [{ src: "a.js" }] }, ["addScriptTag", 0]],
+				[
+					"screenshot",
+					{ screenshotOptions: { src: "a.js" } },
+					["screenshotOptions"],
+				],
+				[
+					"snapshot",
+					{ screenshotOptions: { src: "a.js" } },
+					["screenshotOptions"],
+				],
+				["pdf", { pdfOptions: { src: "a.js" } }, ["pdfOptions"]],
+			] as const) {
+				const res = await quickAction(action, { html: PAGE, ...options });
+				expect(res.status).toBe(400);
+				expect(await res.json()).toMatchObject({
+					errors: [{ code: "unrecognized_keys", keys: ["src"], path }],
+				});
+			}
+
+			const timeouts = await quickAction("content", {
+				html: PAGE,
+				gotoOptions: { timeout: 60_001 },
+				waitForSelector: { selector: "#never", timeout: 120_001 },
+				waitForTimeout: 120_001,
+				actionTimeout: 300_000,
+			});
+			expect(timeouts.status).toBe(400);
+			expect(await timeouts.json()).toMatchObject({
+				success: false,
+				errors: [
+					{
+						path: ["gotoOptions", "timeout"],
+						message: "Timeout cannot exceed 60000ms.",
+					},
+					{
+						path: ["waitForSelector", "timeout"],
+						message: "Timeout cannot exceed 120000ms.",
+					},
+					{
+						path: ["waitForTimeout"],
+						message: "Timeout cannot exceed 120000ms.",
+					},
+					{
+						path: ["actionTimeout"],
+						message: "Timeout cannot exceed 120000ms.",
 					},
 				],
 			});
@@ -719,3 +818,59 @@ describe(
 		});
 	}
 );
+
+// A browser whose pages never open, so only a deadline can end the action
+function stalledBrowser() {
+	const close = vi.fn(async () => {});
+	const browser = {
+		createBrowserContext: async () => ({
+			newPage: () => new Promise(() => {}),
+			close,
+		}),
+	} as unknown as Browser;
+	return { browser, close };
+}
+
+describe("quick action deadlines", () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+	});
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	test("an action without actionTimeout times out after 60 seconds", async ({
+		expect,
+	}) => {
+		const { browser, close } = stalledBrowser();
+		let settled = false;
+		const result = runQuickAction({
+			action: "content",
+			options: { html: "<p>hi</p>" },
+			getBrowser: async () => browser,
+			log: new NoOpLog(),
+		}).finally(() => {
+			settled = true;
+		});
+
+		await vi.advanceTimersByTimeAsync(59_999);
+		expect(settled).toBe(false);
+		await vi.advanceTimersByTimeAsync(1);
+		const response = await result;
+		expect(response.status).toBe(422);
+		expect(await response.json()).toMatchObject({
+			errors: [{ code: 6002, detail: "Request timed out" }],
+		});
+		expect(close).toHaveBeenCalledOnce();
+	});
+
+	test("a step without actionTimeout times out after 30 seconds", async ({
+		expect,
+	}) => {
+		const options = commonOptionsSchema.parse({ html: "<p>hi</p>" });
+		const step = withStepTimeout(options, new Promise(() => {}), "Content");
+		const rejected = expect(step).rejects.toThrow("Content timed out");
+		await vi.advanceTimersByTimeAsync(30_000);
+		await rejected;
+	});
+});

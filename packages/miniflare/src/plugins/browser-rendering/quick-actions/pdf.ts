@@ -8,7 +8,7 @@ const length = z.union([z.string(), z.number()]).optional();
 
 export const pdfSchema = quickActionOptions({
 	pdfOptions: z
-		.object({
+		.strictObject({
 			scale: z.number().min(0.1).max(2).optional(),
 			displayHeaderFooter: z.boolean().optional(),
 			headerTemplate: z.string().optional(),
