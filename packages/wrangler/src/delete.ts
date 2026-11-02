@@ -176,11 +176,15 @@ export const deleteCommand = createCommand({
 				new URLSearchParams({ force: needsForceDelete.toString() })
 			);
 
-			await deleteSiteNamespaceIfExisting(config, scriptName, accountId);
+			try {
+				await deleteSiteNamespaceIfExisting(config, scriptName, accountId);
 
-			logger.log("Successfully deleted", scriptName);
-
-			await handleContainerApplications(scriptName, containerApplications);
+				logger.log("Successfully deleted", scriptName);
+			} finally {
+				// The Worker is already gone, so its Container applications must still
+				// be handled even if the Workers Sites cleanup fails.
+				await handleContainerApplications(scriptName, containerApplications);
+			}
 		}
 	},
 });
@@ -251,9 +255,11 @@ async function handleContainerApplications(
 		return;
 	}
 
+	let deleted = 0;
 	for (const application of applications) {
 		try {
 			await deleteContainerApplication(application.id);
+			deleted++;
 			logger.log(`🗑️ Deleted Container application "${application.name}"`);
 		} catch (error) {
 			// One failure must not hide the remaining applications, and the Worker
@@ -265,11 +271,13 @@ async function handleContainerApplications(
 			);
 		}
 	}
-	logger.log(
-		`Deleted ${count} Container ${noun}. ${
-			count === 1 ? "Its" : "Their"
-		} instances may take a while to shut down.`
-	);
+	if (deleted > 0) {
+		logger.log(
+			deleted === 1
+				? "Deleted 1 Container application. Its instances may take a while to shut down."
+				: `Deleted ${deleted} Container applications. Their instances may take a while to shut down.`
+		);
+	}
 }
 
 async function deleteSiteNamespaceIfExisting(

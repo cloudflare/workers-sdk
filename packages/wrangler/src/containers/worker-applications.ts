@@ -2,7 +2,6 @@ import {
 	ApplicationsService,
 	initContainersSharedContext,
 	listDurableObjects,
-	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
@@ -18,19 +17,20 @@ export type WorkerContainerApplication = {
 /**
  * The Container applications that `wrangler deploy` created for a Worker.
  *
- * Every Container application Wrangler provisions for a Worker is backed by one
- * of that Worker's Durable Object namespaces, and the application records that
- * namespace in `durable_objects.namespace_id`. Deleting the Worker removes the
- * namespaces but leaves the applications running and billing, so the pairing has
- * to be resolved from the namespaces while the Worker still exists.
+ * Every Container application Wrangler provisions for a Worker, whatever its
+ * scheduling policy, is backed by one of that Worker's Durable Object
+ * namespaces, and the application records that namespace in
+ * `durable_objects.namespace_id`. Deleting the Worker removes the namespaces
+ * but leaves the applications running and billing, so the pairing has to be
+ * resolved from the namespaces while the Worker still exists.
  *
  * Matching on the recorded namespace rather than on the application's own ID
  * means a change to how application IDs are assigned cannot silently stop this
  * lookup from finding anything.
  *
  * Applications deployed standalone (for example with `wrangler containers
- * apply`) are not Durable Object managed and are deliberately not returned here,
- * because nothing ties them to this Worker.
+ * apply`) have no Durable Object namespace and are deliberately not returned
+ * here, because nothing ties them to this Worker.
  */
 export async function findWorkerContainerApplications(
 	config: Config,
@@ -62,7 +62,6 @@ export async function findWorkerContainerApplications(
 	return applications
 		.filter(
 			(application) =>
-				application.scheduling_policy === SchedulingPolicy.DURABLE_OBJECT &&
 				application.durable_objects !== undefined &&
 				ownedNamespaceIds.has(application.durable_objects.namespace_id)
 		)

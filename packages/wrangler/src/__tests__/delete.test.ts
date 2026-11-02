@@ -429,7 +429,8 @@ describe("delete", () => {
 		function durableObjectApplication(
 			name: string,
 			id: string,
-			namespace: string
+			namespace: string,
+			schedulingPolicy = "durable_object"
 		) {
 			return {
 				id,
@@ -437,7 +438,7 @@ describe("delete", () => {
 				account_id: "some-account-id",
 				created_at: "2026-01-01T00:00:00Z",
 				version: 1,
-				scheduling_policy: "durable_object",
+				scheduling_policy: schedulingPolicy,
 				instances: 0,
 				configuration: { image: "registry.cloudflare.com/example:v1" },
 				durable_objects: { namespace_id: namespace },
@@ -460,47 +461,50 @@ describe("delete", () => {
 			);
 		}
 
-		it("deletes the Worker's Container applications when confirmed", async ({
-			expect,
-		}) => {
-			mockConfirm({
-				text: `Are you sure you want to delete my-script? This action cannot be undone.`,
-				result: true,
-			});
-			mockConfirm({
-				text: `my-script also created 1 Cloudflare Container application, which will keep running and billing after the Worker is deleted:
+		// `wrangler deploy` links both scheduler-backed and Durable Object-managed
+		// applications to the Worker's namespace.
+		it.for(["default", "durable_object"])(
+			"deletes the Worker's %s Container application when confirmed",
+			async (schedulingPolicy, { expect }) => {
+				mockConfirm({
+					text: `Are you sure you want to delete my-script? This action cannot be undone.`,
+					result: true,
+				});
+				mockConfirm({
+					text: `my-script also created 1 Cloudflare Container application, which will keep running and billing after the Worker is deleted:
 - my-script-container (${applicationId})
 
 Delete it as well?`,
-				options: { defaultValue: false },
-				result: true,
-			});
-			mockListKVNamespacesRequest(expect);
-			mockListReferencesRequest(expect, "my-script");
-			mockListTailsByConsumerRequest(expect, "my-script");
-			mockDurableObjectNamespaces(expect, [
-				{
-					id: namespaceId,
-					class: "MyContainer",
-					name: "my-script-container",
-					script: "my-script",
-					use_sqlite: true,
-				},
-			]);
-			mockListContainerApplications(expect, [
-				durableObjectApplication(
-					"my-script-container",
-					applicationId,
-					namespaceId
-				),
-			]);
-			mockDeleteWorkerRequest(expect, { name: "my-script" });
-			mockDeleteContainerApplication(expect, applicationId);
+					options: { defaultValue: false },
+					result: true,
+				});
+				mockListKVNamespacesRequest(expect);
+				mockListReferencesRequest(expect, "my-script");
+				mockListTailsByConsumerRequest(expect, "my-script");
+				mockDurableObjectNamespaces(expect, [
+					{
+						id: namespaceId,
+						class: "MyContainer",
+						name: "my-script-container",
+						script: "my-script",
+						use_sqlite: true,
+					},
+				]);
+				mockListContainerApplications(expect, [
+					durableObjectApplication(
+						"my-script-container",
+						applicationId,
+						namespaceId,
+						schedulingPolicy
+					),
+				]);
+				mockDeleteWorkerRequest(expect, { name: "my-script" });
+				mockDeleteContainerApplication(expect, applicationId);
 
-			await runWrangler("delete --name my-script");
+				await runWrangler("delete --name my-script");
 
-			// The application is deleted by its own ID, not its namespace's.
-			expect(std).toMatchInlineSnapshot(`
+				// The application is deleted by its own ID, not its namespace's.
+				expect(std).toMatchInlineSnapshot(`
 				{
 				  "debug": "",
 				  "err": "",
@@ -514,8 +518,9 @@ Delete it as well?`,
 				  "warn": "",
 				}
 			`);
-			expect(std.err).toBe("");
-		});
+				expect(std.err).toBe("");
+			}
+		);
 
 		it("does not call the Containers API for a Worker without Durable Objects", async ({
 			expect,
@@ -778,7 +783,10 @@ Delete them as well?`,
 			]);
 			mockDeleteWorkerRequest(expect, { name: "my-script" });
 			msw.use(
-				http.delete("*/applications/:id", () => {
+				http.delete("*/applications/:id", ({ params }) => {
+					if (params.id === otherApplicationId) {
+						return HttpResponse.json({ success: true, result: {} });
+					}
 					return HttpResponse.json(
 						{
 							success: false,
@@ -796,10 +804,56 @@ Delete them as well?`,
 			expect(std.warn).toContain(
 				'Could not delete Container application "my-script-container"'
 			);
-			expect(std.warn).toContain(
-				'Could not delete Container application "my-script-other"'
+			expect(std.out).toContain(
+				'🗑️ Deleted Container application "my-script-other"'
 			);
+			// Only the application that was actually deleted is counted.
+			expect(std.out).toContain("Deleted 1 Container application.");
 			expect(std.err).toBe("");
+		});
+
+		it("still reports Container applications when Workers Sites cleanup fails", async ({
+			expect,
+		}) => {
+			setIsTTY(false);
+			mockListReferencesRequest(expect, "my-script");
+			mockListTailsByConsumerRequest(expect, "my-script");
+			mockDurableObjectNamespaces(expect, [
+				{
+					id: namespaceId,
+					class: "MyContainer",
+					name: "my-script-container",
+					script: "my-script",
+					use_sqlite: true,
+				},
+			]);
+			mockListContainerApplications(expect, [
+				durableObjectApplication(
+					"my-script-container",
+					applicationId,
+					namespaceId
+				),
+			]);
+			mockDeleteWorkerRequest(expect, { name: "my-script" });
+			msw.use(
+				http.get("*/accounts/:accountId/storage/kv/namespaces", () =>
+					HttpResponse.json(
+						{
+							success: false,
+							errors: [{ code: 1000, message: "something happened" }],
+							messages: [],
+							result: null,
+						},
+						{ status: 500 }
+					)
+				)
+			);
+
+			await expect(runWrangler("delete --name my-script")).rejects.toThrow(
+				"A request to the Cloudflare API (/accounts/some-account-id/storage/kv/namespaces) failed."
+			);
+
+			expect(std.warn).toContain(`- my-script-container (${applicationId})`);
 		});
 	});
 

@@ -1,9 +1,7 @@
 ---
-"wrangler": minor
+"wrangler": patch
 ---
 
-Warn about and offer to delete Container applications when running `wrangler delete`
+Offer to delete a Worker's Container applications when running `wrangler delete`
 
-`wrangler deploy` creates a Containers application for each Durable Object-backed Container, but `wrangler delete` only removed the Worker. The applications survived with their instances still running and billing, with nothing in the Worker's own listing to reveal them.
-
-`wrangler delete` now resolves the Container applications the Worker owns from its Durable Object namespaces before deleting it, and then offers to delete them too. When the command cannot prompt — CI, or a non-interactive terminal — it prints the leftover applications with the `wrangler containers delete <id>` command for each, rather than leaving them to be discovered elsewhere. The lookup only reaches the Containers API for Workers that actually have Durable Objects, and a failed lookup is reported but never fails the delete. Ownership is matched on the Durable Object namespace each application records in `durable_objects.namespace_id` rather than on the application's own ID, so a change to how application IDs are assigned cannot silently stop the lookup from finding anything.
+Previously, `wrangler delete` removed only the Worker, leaving the Container applications that `wrangler deploy` created for it running and billing. It now offers to delete them as well. In CI and other non-interactive contexts, it lists them instead so they can be removed with `wrangler containers delete <id>`.
