@@ -855,3 +855,5 @@ Use `https://<worker-name>.local.test` to reach cooperating Workers in one Minif
 Wrangler, cf, Vite and Vitest consume this Miniflare behavior. Add no receiver
 binding or JavaScript verification polyfill. See the [runtime caller contract](https://developers.cloudflare.com/workers/runtime-apis/context/#identitycaller)
 for caller kinds, body ordering and application authorization.
+
+If a local runtime exits without cleanup, stop all runtimes using that state and remove its `owner.json` lock. Keep `authority.json` and replay storage together to retain the realm safely. Automatic stale-lock reclamation would let concurrent processes steal a replacement lock.

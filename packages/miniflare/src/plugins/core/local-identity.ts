@@ -112,37 +112,17 @@ async function loadState(directory: string): Promise<State> {
 async function ownRealm(directory: string, owner: string) {
 	const file = path.join(directory, "owner.json");
 	const value = JSON.stringify({ pid: process.pid, owner });
-	for (let attempt = 0; attempt < 2; attempt++) {
-		try {
-			if (await createPrivateFile(file, value)) {
-				break;
-			}
-			const exists = new Error("Realm already exists") as NodeJS.ErrnoException;
-			exists.code = "EEXIST";
-			throw exists;
-		} catch (error) {
-			if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
-				throw error;
-			}
-			const current = JSON.parse(await fs.readFile(file, "utf8")) as {
-				pid: number;
-				owner: string;
-			};
-			if (current.owner === owner) {
-				break;
-			}
-			let alive = true;
-			try {
-				process.kill(current.pid, 0);
-			} catch (error) {
-				alive = (error as NodeJS.ErrnoException).code !== "ESRCH";
-			}
-			if (alive || attempt > 0) {
-				throw new Error(
-					`Another local runtime owns identity state at ${directory}. Stop that runtime or choose a separate persistence directory; shared identity realms across processes are unsupported.`
-				);
-			}
-			await fs.unlink(file);
+	if (!(await createPrivateFile(file, value))) {
+		const current = JSON.parse(await fs.readFile(file, "utf8")) as {
+			pid: number;
+			owner: string;
+		};
+		if (current.owner !== owner) {
+			// Do not reclaim stale locks automatically: two contenders could both
+			// observe a dead owner and remove a newly acquired replacement lock.
+			throw new Error(
+				`Another local runtime owns identity state at ${directory} (process ${current.pid}). Stop that runtime or choose a separate persistence directory. If it exited without cleanup, confirm all runtimes using this state have stopped, then remove ${file}; keep authority.json and replay storage together.`
+			);
 		}
 	}
 	return async () => {
