@@ -40,9 +40,12 @@ import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type { LoadedEnv } from "@cloudflare/workers-utils/local-env";
 
 /** Parsed configuration with the entry Worker required by the Vite plugin. */
-export type ParsedInputConfigWithWorker = Omit<ParsedInputConfig, "worker"> & {
+export type CloudflareConfig = Omit<ParsedInputConfig, "worker"> & {
 	worker: ParsedInputWorkerConfig;
 };
+
+/** @deprecated Use `CloudflareConfig` instead. */
+export type ParsedInputConfigWithWorker = CloudflareConfig;
 
 export type PersistState = boolean | { path: string };
 export type TunnelConfig = {
@@ -133,9 +136,7 @@ export interface PluginConfig extends EntryWorkerOptions {
 	 * Return a new configuration object including an entry Worker, copying any settings to preserve.
 	 * Preview uses the configuration recorded in the build output.
 	 */
-	config?: (
-		loadedConfig: ParsedInputConfigWithWorker
-	) => ParsedInputConfigWithWorker;
+	config?: (loadedConfig: CloudflareConfig) => CloudflareConfig;
 	auxiliaryWorkers?: AuxiliaryWorkerOptions[];
 	/** Configuration for a dedicated prerender Worker. */
 	prerenderWorker?: PrerenderWorkerOptions;
@@ -372,11 +373,10 @@ export async function resolvePluginConfig(
 	// Type generation happens while loading the file above. The plugin-level
 	// customizer is intentionally applied afterwards so generated declarations
 	// only describe `cloudflare.config.ts`.
-	const inputConfig: ParsedInputConfigWithWorker =
-		loadedConfig?.parsedConfig ?? {
-			worker: createDefaultWorkerConfig(getWorkerNameFromProject(root)),
-			containers: [],
-		};
+	const inputConfig: CloudflareConfig = loadedConfig?.parsedConfig ?? {
+		worker: createDefaultWorkerConfig(getWorkerNameFromProject(root)),
+		containers: [],
+	};
 	const customizedConfig = pluginConfig.config
 		? InputConfigSchema.parse(pluginConfig.config(inputConfig))
 		: inputConfig;
@@ -699,7 +699,7 @@ async function loadCloudflareConfig(options: {
 	types: { generate: boolean; includeRuntime: boolean };
 }): Promise<
 	| {
-			parsedConfig: ParsedInputConfigWithWorker;
+			parsedConfig: CloudflareConfig;
 			configPath: string;
 			dependencies: Set<string>;
 	  }
