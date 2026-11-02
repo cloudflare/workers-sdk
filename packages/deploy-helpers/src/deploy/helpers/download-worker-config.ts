@@ -1,5 +1,6 @@
 import { constructWranglerConfig } from "@cloudflare/workers-utils";
 import { fetchResult } from "../../shared/context";
+import { partitionRoutes } from "../../shared/partition-routes";
 import type {
 	ComplianceConfig,
 	RawConfig,
@@ -51,16 +52,13 @@ export async function fetchWorkerConfig(
 	environment: string,
 	localRoutes?: Route[]
 ) {
+	const partitionedRoutes =
+		localRoutes === undefined ? undefined : partitionRoutes(localRoutes);
 	const fetchRoutes =
-		localRoutes === undefined ||
-		localRoutes.some(
-			(route) => typeof route === "string" || !route.custom_domain
-		);
+		partitionedRoutes === undefined || partitionedRoutes.routesOnly.length > 0;
 	const fetchCustomDomains =
-		localRoutes === undefined ||
-		localRoutes.some(
-			(route) => typeof route !== "string" && route.custom_domain
-		);
+		partitionedRoutes === undefined ||
+		partitionedRoutes.customDomainsOnly.length > 0;
 	const [
 		bindings,
 		routes,
