@@ -765,7 +765,7 @@ Delete it as well?`,
 			expect(std.err).toBe("");
 		});
 
-		it("skips the lookup quietly when the login lacks the Containers scope", async ({
+		it("warns once when the login lacks the Containers scope", async ({
 			expect,
 		}) => {
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", "");
@@ -797,7 +797,12 @@ Delete it as well?`,
 			await runWrangler("delete --name my-script");
 
 			expect(std.out).toContain("Successfully deleted my-script");
-			expect(std.warn).toBe("");
+			// One warning, without the error and scope list that
+			// `fillOpenAPIConfiguration` prints for a missing scope.
+			expect(std.warn).toContain(
+				'Could not check whether "my-script" owns any Cloudflare Container applications: the current login does not have the "containers:write" scope'
+			);
+			expect(std.out).not.toContain("account:read");
 			expect(std.err).toBe("");
 		});
 

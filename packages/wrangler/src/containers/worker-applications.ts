@@ -57,15 +57,13 @@ export async function findWorkerContainerApplications(
 		return [];
 	}
 
-	// Most Workers with Durable Objects have no Container applications, so a
-	// login without the Containers scope skips the lookup quietly instead of
-	// letting `fillOpenAPIConfiguration` report the missing scope as an error.
+	// `fillOpenAPIConfiguration` prints an error and the full scope list before
+	// throwing, so report a missing Containers scope as a plain lookup failure.
 	const scopes = getScopes();
 	if (scopes !== undefined && !scopes.includes(containersScope)) {
-		logger.debug(
-			`Skipping the Container application lookup for "${scriptName}" because the current login does not have the "${containersScope}" scope.`
+		throw new Error(
+			`the current login does not have the "${containersScope}" scope`
 		);
-		return [];
 	}
 
 	await fillOpenAPIConfiguration(config, containersScope);
