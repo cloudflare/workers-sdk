@@ -14,7 +14,8 @@ export function handleWebSocket(
 	httpServer: vite.HttpServer,
 	miniflare: Miniflare,
 	entryWorkerName?: string,
-	viteWebSocketEnabled = false
+	viteWebSocketEnabled = false,
+	viteProxy?: ViteProxyConfig
 ) {
 	const nodeWebSocket = new WebSocketServer({ noServer: true });
 
@@ -71,6 +72,13 @@ export function handleWebSocket(
 					return;
 				}
 
+				// Leave upgrades that Vite's own `server.proxy` forwards to its
+				// proxy handler. Dispatching them to the Worker would destroy the
+				// socket the proxy is using when the Worker has no WebSocket route.
+				if (isViteProxyWebSocketUpgrade(request.url ?? "", viteProxy)) {
+					return;
+				}
+
 				const headers = createHeadersForIncomingMessage(request);
 
 				if (entryWorkerName) {
@@ -120,6 +128,50 @@ export function handleWebSocket(
 				socket.destroy();
 			}
 		}
+	);
+}
+
+type ViteProxyConfig = Record<string, string | vite.ProxyOptions | undefined>;
+
+/**
+ * Returns `true` if Vite's proxy middleware (`server.proxy` or `preview.proxy`)
+ * forwards a WebSocket upgrade for `url`. Mirrors the `upgrade` listener in
+ * Vite's proxy middleware: entries are checked in order, falsy entries are
+ * skipped, and a matching entry handles the upgrade only if it sets `ws` or
+ * targets a `ws:`/`wss:` URL.
+ *
+ * @param url The raw request URL (`request.url`), as Vite matches it
+ * @param viteProxy The resolved `server.proxy` or `preview.proxy` config
+ * @returns Whether Vite's proxy owns the upgrade for `url`
+ */
+export function isViteProxyWebSocketUpgrade(
+	url: string,
+	viteProxy: ViteProxyConfig = {}
+): boolean {
+	return Object.entries(viteProxy).some(
+		([context, options]) =>
+			!!options &&
+			doesProxyContextMatchUrl(context, url) &&
+			isWebSocketProxy(
+				typeof options === "string" ? { target: options } : options
+			)
+	);
+}
+
+/**
+ * Mirrors Vite's proxy context matching: a context starting with `^` is a
+ * RegExp tested against the URL, otherwise it is a URL prefix.
+ */
+function doesProxyContextMatchUrl(context: string, url: string): boolean {
+	return context.startsWith("^")
+		? new RegExp(context).test(url)
+		: url.startsWith(context);
+}
+
+function isWebSocketProxy(options: vite.ProxyOptions): boolean {
+	const target = options.target ? String(options.target) : "";
+	return (
+		Boolean(options.ws) || target.startsWith("ws:") || target.startsWith("wss:")
 	);
 }
 

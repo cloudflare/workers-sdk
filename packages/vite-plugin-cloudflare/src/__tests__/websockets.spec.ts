@@ -13,8 +13,9 @@ import {
 	vi,
 } from "vitest";
 import { WebSocket, WebSocketServer } from "ws";
-import { handleWebSocket } from "../websockets";
+import { handleWebSocket, isViteProxyWebSocketUpgrade } from "../websockets";
 import type { AddressInfo } from "node:net";
+import type * as vite from "vite";
 
 describe("handleWebSocket", () => {
 	let httpServer: http.Server;
@@ -109,9 +110,12 @@ describe("handleWebSocket", () => {
 		return dispatchFetch;
 	}
 
-	async function listen(entryWorkerName?: string) {
+	async function listen(
+		entryWorkerName?: string,
+		viteProxy?: Record<string, string | vite.ProxyOptions>
+	) {
 		const mf = miniflare ?? startMiniflare();
-		handleWebSocket(httpServer, mf, entryWorkerName);
+		handleWebSocket(httpServer, mf, entryWorkerName, false, viteProxy);
 		await listenHttpServer();
 		// Wait for `workerd` to boot here (under the generous `testTimeout`)
 		// rather than letting the cold start eat into the tight `vi.waitFor`
@@ -660,5 +664,139 @@ describe("handleWebSocket", () => {
 		);
 
 		await closed;
+	});
+
+	// https://github.com/cloudflare/workers-sdk/issues/16638
+	test("leaves upgrades matching a `server.proxy` WebSocket rule to Vite's proxy", async ({
+		expect,
+	}) => {
+		const mf = await listen(undefined, {
+			"/graphql": { target: "http://127.0.0.1:1", ws: true },
+		});
+		const dispatchFetch = vi
+			.spyOn(mf, "dispatchFetch")
+			.mockResolvedValue(new Response("not found", { status: 404 }));
+
+		// Stands in for Vite's proxy `upgrade` listener.
+		const proxy = new WebSocketServer({ noServer: true });
+		onTestFinished(() => {
+			for (const client of proxy.clients) {
+				client.terminate();
+			}
+			proxy.close();
+		});
+		httpServer.on("upgrade", (request, socket, head) => {
+			if (request.url?.startsWith("/graphql")) {
+				proxy.handleUpgrade(request, socket, head, (ws) => {
+					ws.on("message", (message) => ws.send(message));
+				});
+			}
+		});
+
+		const socket = await connect();
+		const client = new WebSocket(`ws://127.0.0.1:${port}/graphql`, {
+			createConnection: () => socket,
+		});
+		onTestFinished(() => client.terminate());
+		const closed = once(client, "close").then(() => "closed");
+		await once(client, "open");
+		// Give a (wrongly) dispatched upgrade time to resolve and destroy the socket.
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		const received = once(client, "message").then(([message]) =>
+			String(message)
+		);
+		client.send("proxied");
+		expect(await Promise.race([received, closed])).toBe("proxied");
+		expect(dispatchFetch).not.toHaveBeenCalled();
+	});
+
+	test("forwards upgrades matching a non-WebSocket `server.proxy` rule to the Worker", async ({
+		expect,
+	}) => {
+		const mf = await listen(undefined, { "/api": "http://127.0.0.1:1" });
+		const host = `127.0.0.1:${port}`;
+		const url = await dispatchUpgrade(expect, mf, { Host: host }, "/api/ws");
+		expect(`${url}`).toBe(`http://${host}/api/ws`);
+	});
+});
+
+describe("isViteProxyWebSocketUpgrade", () => {
+	test("returns false without a proxy config", ({ expect }) => {
+		expect(isViteProxyWebSocketUpgrade("/graphql")).toBe(false);
+		expect(isViteProxyWebSocketUpgrade("/graphql", {})).toBe(false);
+	});
+
+	test("matches string contexts as URL prefixes", ({ expect }) => {
+		const proxy = { "/graphql": { target: "http://localhost:4000", ws: true } };
+		expect(isViteProxyWebSocketUpgrade("/graphql", proxy)).toBe(true);
+		expect(isViteProxyWebSocketUpgrade("/graphql/ws?token=1", proxy)).toBe(
+			true
+		);
+		expect(isViteProxyWebSocketUpgrade("/graphqlx", proxy)).toBe(true);
+		expect(isViteProxyWebSocketUpgrade("/api/graphql", proxy)).toBe(false);
+	});
+
+	test("matches contexts starting with `^` as regular expressions", ({
+		expect,
+	}) => {
+		const proxy = {
+			"^/socket/\\d+$": { target: "http://localhost:4000", ws: true },
+		};
+		expect(isViteProxyWebSocketUpgrade("/socket/42", proxy)).toBe(true);
+		expect(isViteProxyWebSocketUpgrade("/socket/abc", proxy)).toBe(false);
+		expect(isViteProxyWebSocketUpgrade("/socket/42/extra", proxy)).toBe(false);
+	});
+
+	test("ignores matching entries that do not proxy WebSockets", ({
+		expect,
+	}) => {
+		expect(
+			isViteProxyWebSocketUpgrade("/api", {
+				"/api": { target: "http://localhost:4000" },
+			})
+		).toBe(false);
+		expect(
+			isViteProxyWebSocketUpgrade("/api", {
+				"/api": { target: "http://localhost:4000", ws: false },
+			})
+		).toBe(false);
+		// The string shorthand has no `ws` option.
+		expect(
+			isViteProxyWebSocketUpgrade("/api", { "/api": "http://localhost:4000" })
+		).toBe(false);
+	});
+
+	test.for(["ws://localhost:4000", "wss://localhost:4000"])(
+		"treats entries targeting %s as WebSocket proxies",
+		(target, { expect }) => {
+			expect(isViteProxyWebSocketUpgrade("/ws", { "/ws": { target } })).toBe(
+				true
+			);
+			expect(isViteProxyWebSocketUpgrade("/ws", { "/ws": target })).toBe(true);
+		}
+	);
+
+	test("treats URL object targets like Vite does", ({ expect }) => {
+		expect(
+			isViteProxyWebSocketUpgrade("/ws", {
+				"/ws": { target: new URL("ws://localhost:4000") },
+			})
+		).toBe(true);
+		expect(
+			isViteProxyWebSocketUpgrade("/ws", {
+				"/ws": { target: new URL("http://localhost:4000") },
+			})
+		).toBe(false);
+	});
+
+	test("checks later entries when an earlier match does not proxy WebSockets", ({
+		expect,
+	}) => {
+		const proxy = {
+			"/api": "http://localhost:4000",
+			"/api/ws": { target: "http://localhost:4001", ws: true },
+		};
+		expect(isViteProxyWebSocketUpgrade("/api/ws", proxy)).toBe(true);
+		expect(isViteProxyWebSocketUpgrade("/api/other", proxy)).toBe(false);
 	});
 });
