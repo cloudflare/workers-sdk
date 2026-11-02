@@ -25,10 +25,14 @@ function checkEvent(name: string, conclusion = "failure") {
 }
 
 async function handleCheck(name: string, conclusion = "failure") {
+	return handleWebhook(checkEvent(name, conclusion));
+}
+
+async function handleWebhook(body: unknown) {
 	return worker.fetch(
 		new Request("https://bot.example.com/github", {
 			method: "POST",
-			body: JSON.stringify(checkEvent(name, conclusion)),
+			body: JSON.stringify(body),
 		}),
 		env
 	);
@@ -60,6 +64,54 @@ describe("Version Packages CI alerts", () => {
 		async (conclusion, { expect }) => {
 			await handleCheck("Tests", conclusion);
 			expect(fetchMock).not.toHaveBeenCalled();
+		}
+	);
+
+	it.for([
+		{ owner: "..", repo: "workers-sdk" },
+		{ owner: "cloudflare/../other-org", repo: "workers-sdk" },
+		{ owner: "cloudflare", repo: "workers-sdk/../../other-repo" },
+		{ owner: "cloudflare", repo: "another-repo" },
+	])(
+		"does not authenticate lookups outside workers-sdk: %j",
+		async ({ owner, repo }, { expect }) => {
+			const event = checkEvent("Tests");
+			await handleWebhook({
+				...event,
+				repository: { owner: { login: owner }, name: repo },
+			});
+
+			expect(fetchMock).toHaveBeenCalledTimes(1);
+			expect(fetchMock.mock.calls[0][0].toString()).toContain(
+				env.ALERTS_WEBHOOK
+			);
+		}
+	);
+
+	it.for([
+		"456/../../other-path",
+		"456?unexpected=query",
+		null,
+		0,
+		-1,
+		1.5,
+		Number.MAX_SAFE_INTEGER + 1,
+	])(
+		"does not authenticate lookups with an invalid suite ID: %s",
+		async (suiteId, { expect }) => {
+			const event = checkEvent("Tests");
+			await handleWebhook({
+				...event,
+				check_run: {
+					...event.check_run,
+					check_suite: { ...event.check_run.check_suite, id: suiteId },
+				},
+			});
+
+			expect(fetchMock).toHaveBeenCalledTimes(1);
+			expect(fetchMock.mock.calls[0][0].toString()).toContain(
+				env.ALERTS_WEBHOOK
+			);
 		}
 	);
 

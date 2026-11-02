@@ -3,7 +3,7 @@
 	"version": "1.5.0",
 	"private": true,
 	"scripts": {
-		"check:type": "tsc",
+		"check:type": "tsc && tsc -p tsconfig.tests.json",
 		"deploy": "wrangler deploy",
 		"test:ci": "vitest run"
 	},
@@ -12,6 +12,7 @@
 		"@octokit/types": "^13.8.0",
 		"@octokit/webhooks-types": "^7.6.1",
 		"ts-dedent": "^2.2.0",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

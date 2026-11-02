@@ -408,6 +408,17 @@ async function isCancelledTestSummary(
 		return false;
 	}
 
+	// This webhook endpoint also receives unverified input. Limit the new
+	// PAT-authenticated lookup to this repository and a valid check suite ID.
+	if (
+		owner !== "cloudflare" ||
+		repo !== "workers-sdk" ||
+		!Number.isSafeInteger(checkRun.check_suite.id) ||
+		checkRun.check_suite.id <= 0
+	) {
+		return false;
+	}
+
 	type CheckResult = { name: string; conclusion: string | null };
 	const dependencies: CheckResult[] = [];
 	let fetchedCount = 0;
@@ -415,7 +426,7 @@ async function isCancelledTestSummary(
 	try {
 		for (let page = 1; ; page++) {
 			const response = await fetch(
-				`https://api.github.com/repos/${owner}/${repo}/check-suites/${checkRun.check_suite.id}/check-runs?per_page=100&page=${page}`,
+				`https://api.github.com/repos/cloudflare/workers-sdk/check-suites/${checkRun.check_suite.id}/check-runs?per_page=100&page=${page}`,
 				{
 					headers: {
 						"User-Agent": "Cloudflare ANT Status bot",
