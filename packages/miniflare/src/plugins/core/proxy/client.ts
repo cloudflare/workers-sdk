@@ -111,10 +111,21 @@ function isClientError(status: number) {
 export class ProxyClient {
 	#bridge: ProxyClientBridge;
 
-	constructor(runtimeEntryURL: URL, dispatchFetch: DispatchFetch) {
+	/**
+	 * @param runtimeEntryURL URL of the `workerd` entry socket serving the proxy.
+	 * @param dispatchFetch Function used to send requests to the proxy.
+	 * @param secretHex Hex-encoded secret the proxy server expects. Defaults to
+	 * this process's secret; pass another to reach a runtime started elsewhere.
+	 */
+	constructor(
+		runtimeEntryURL: URL,
+		dispatchFetch: DispatchFetch,
+		secretHex = PROXY_SECRET_HEX
+	) {
 		this.#bridge = new ProxyClientBridge(
 			new URL(CorePaths.PLATFORM_PROXY, runtimeEntryURL),
-			dispatchFetch
+			dispatchFetch,
+			secretHex
 		);
 	}
 
@@ -187,12 +198,16 @@ class ProxyClientBridge {
 	// requests.
 	readonly #finalizeBatch: NativeTargetHeldValue[] = [];
 	#finalizeBatchTimeout?: ReturnType<typeof setTimeout>;
+	// Addresses this client may still reference, freed on `dispose()` so a
+	// client in another process doesn't leave them on the shared "heap"
+	readonly #liveAddresses = new Set<number>();
 
 	readonly sync = new SynchronousFetcher();
 
 	constructor(
 		public url: URL,
-		readonly dispatchFetch: DispatchFetch
+		readonly dispatchFetch: DispatchFetch,
+		readonly secretHex: string
 	) {
 		this.#finalizationRegistry = new FinalizationRegistry(this.#finalizeProxy);
 	}
@@ -248,8 +263,13 @@ class ProxyClientBridge {
 			// but it doesn't hurt to be careful.
 			if (held.version === this.#version) {
 				addresses.push(held.address);
+				this.#liveAddresses.delete(held.address);
 			}
 		}
+		await this.#free(addresses);
+	};
+
+	async #free(addresses: number[]): Promise<void> {
 		// If there are no addresses to free, we don't need to send a request
 		if (addresses.length === 0) {
 			return;
@@ -258,7 +278,7 @@ class ProxyClientBridge {
 			await this.dispatchFetch(this.url, {
 				method: "DELETE",
 				headers: {
-					[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
+					[CoreHeaders.OP_SECRET]: this.secretHex,
 					[CoreHeaders.OP]: ProxyOps.FREE,
 					[CoreHeaders.OP_TARGET]: addresses.join(","),
 				},
@@ -269,7 +289,7 @@ class ProxyClientBridge {
 			// destroyed anyway. There's a small chance of a memory leak here if this
 			// threw for another reason.
 		}
-	};
+	}
 
 	getProxy<T extends object>(target: NativeTarget): T {
 		const handler = new ProxyStubHandler(this, target);
@@ -290,11 +310,13 @@ class ProxyClientBridge {
 		proxyTarget[util.inspect.custom] = handler.inspect;
 		const proxy = new Proxy<T>(proxyTarget as T, handler);
 
-		const held: NativeTargetHeldValue = {
-			address: target[kAddress],
-			version: this.#version,
-		};
-		this.#finalizationRegistry.register(proxy, held, this);
+		// `globalThis` and `env` are shared by every client, so never free them
+		const address = target[kAddress];
+		if (address >= ProxyAddresses.USER_START) {
+			const held: NativeTargetHeldValue = { address, version: this.#version };
+			this.#finalizationRegistry.register(proxy, held, this);
+			this.#liveAddresses.add(address);
+		}
 		return proxy;
 	}
 
@@ -305,11 +327,14 @@ class ProxyClientBridge {
 		// and we don't want a new object added with the same address to be freed
 		// when it's still accessible.
 		this.#finalizationRegistry.unregister(this);
+		this.#liveAddresses.clear();
 	}
 
-	dispose(): Promise<void> {
+	async dispose(): Promise<void> {
 		clearTimeout(this.#finalizeBatchTimeout);
+		const addresses = [...this.#liveAddresses];
 		this.poisonProxies();
+		await this.#free(addresses);
 		return this.sync.dispose();
 	}
 }
@@ -347,7 +372,7 @@ class ProxyStubHandler<T extends object>
 				const resPromise = this.bridge.dispatchFetch(this.bridge.url, {
 					method: "POST",
 					headers: {
-						[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
+						[CoreHeaders.OP_SECRET]: this.bridge.secretHex,
 						[CoreHeaders.OP]: ProxyOps.GET, // GET without key just gets target
 						[CoreHeaders.OP_TARGET]: stringify(target, reducers),
 					},
@@ -579,7 +604,7 @@ class ProxyStubHandler<T extends object>
 		const syncRes = this.bridge.sync.fetch(this.bridge.url, {
 			method: "POST",
 			headers: {
-				[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
+				[CoreHeaders.OP_SECRET]: this.bridge.secretHex,
 				[CoreHeaders.OP]: ProxyOps.GET,
 				[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
 				[CoreHeaders.OP_KEY]: key,
@@ -633,7 +658,7 @@ class ProxyStubHandler<T extends object>
 		const syncRes = this.bridge.sync.fetch(this.bridge.url, {
 			method: "POST",
 			headers: {
-				[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
+				[CoreHeaders.OP_SECRET]: this.bridge.secretHex,
 				[CoreHeaders.OP]: ProxyOps.GET_OWN_DESCRIPTOR,
 				[CoreHeaders.OP_KEY]: key,
 				[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
@@ -660,7 +685,7 @@ class ProxyStubHandler<T extends object>
 		const syncRes = this.bridge.sync.fetch(this.bridge.url, {
 			method: "POST",
 			headers: {
-				[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
+				[CoreHeaders.OP_SECRET]: this.bridge.secretHex,
 				[CoreHeaders.OP]: ProxyOps.GET_OWN_KEYS,
 				[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
 			},
@@ -760,7 +785,7 @@ class ProxyStubHandler<T extends object>
 		const syncRes = this.bridge.sync.fetch(this.bridge.url, {
 			method: "POST",
 			headers: {
-				[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
+				[CoreHeaders.OP_SECRET]: this.bridge.secretHex,
 				[CoreHeaders.OP]: ProxyOps.CALL,
 				[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
 				[CoreHeaders.OP_KEY]: key,
@@ -783,7 +808,7 @@ class ProxyStubHandler<T extends object>
 			resPromise = this.bridge.dispatchFetch(this.bridge.url, {
 				method: "POST",
 				headers: {
-					[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
+					[CoreHeaders.OP_SECRET]: this.bridge.secretHex,
 					[CoreHeaders.OP]: ProxyOps.CALL,
 					[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
 					[CoreHeaders.OP_KEY]: key,
@@ -802,7 +827,7 @@ class ProxyStubHandler<T extends object>
 			resPromise = this.bridge.dispatchFetch(this.bridge.url, {
 				method: "POST",
 				headers: {
-					[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
+					[CoreHeaders.OP_SECRET]: this.bridge.secretHex,
 					[CoreHeaders.OP]: ProxyOps.CALL,
 					[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
 					[CoreHeaders.OP_KEY]: key,
@@ -859,7 +884,7 @@ class ProxyStubHandler<T extends object>
 		// If adding new headers here, remember to `delete()` them in `ProxyServer`
 		// before calling `fetch()`.
 		request.headers.set(CoreHeaders.OP_ORIGINAL_URL, userRequest.url);
-		request.headers.set(CoreHeaders.OP_SECRET, PROXY_SECRET_HEX);
+		request.headers.set(CoreHeaders.OP_SECRET, this.bridge.secretHex);
 		request.headers.set(CoreHeaders.OP, ProxyOps.CALL);
 		request.headers.set(CoreHeaders.OP_TARGET, this.#stringifiedTarget);
 		request.headers.set(CoreHeaders.OP_KEY, "fetch");

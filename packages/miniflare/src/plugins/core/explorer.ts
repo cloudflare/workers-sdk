@@ -181,6 +181,11 @@ export function getExplorerServices(
 	}
 
 	if (hasDurableObjects) {
+		// Dev control service, used to evict Durable Objects
+		explorerBindings.push({
+			name: CoreBindings.SERVICE_DEV_CONTROL,
+			service: { name: CoreBindings.SERVICE_DEV_CONTROL },
+		});
 		// Add Durable Object namespace bindings for the explorer
 		// Yes we are binding to 'unbound' DOs, but that has no effect
 		// on the user's access via ctx.exports

@@ -105,6 +105,7 @@ export {
 	CORE_PLUGIN_NAME,
 	SERVICE_ENTRY,
 	getGlobalServices,
+	createNodeBindings,
 	ProxyClient,
 	getFreshSourceMapSupport,
 	kCurrentWorker,
@@ -116,7 +117,9 @@ export {
 export type {
 	CompiledModuleRule,
 	GlobalServicesOptions,
+	NodeBindingDescriptor,
 	NodeJSCompatMode,
+	PlatformProxyConnection,
 } from "./core";
 export type {
 	ContainerPrivileges,

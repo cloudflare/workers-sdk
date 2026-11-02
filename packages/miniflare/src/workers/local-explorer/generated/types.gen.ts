@@ -2947,6 +2947,55 @@ export type DurableObjectsNamespaceQuerySqliteResponses = {
 export type DurableObjectsNamespaceQuerySqliteResponse =
 	DurableObjectsNamespaceQuerySqliteResponses[keyof DurableObjectsNamespaceQuerySqliteResponses];
 
+export type DurableObjectsNamespaceEvictObjectData = {
+	body:
+		| {
+				/**
+				 * Hex string ID of the Durable Object
+				 */
+				durable_object_id: string;
+				/**
+				 * What to do with the object's WebSockets. Defaults to closing them.
+				 */
+				web_sockets?: "close" | "hibernate";
+		  }
+		| {
+				/**
+				 * Name to derive the ID via idFromName()
+				 */
+				durable_object_name: string;
+				/**
+				 * What to do with the object's WebSockets. Defaults to closing them.
+				 */
+				web_sockets?: "close" | "hibernate";
+		  };
+	path: {
+		namespace_id: WorkersSchemasId;
+	};
+	query?: never;
+	url: "/workers/durable_objects/namespaces/{namespace_id}/objects/evict";
+};
+
+export type DurableObjectsNamespaceEvictObjectErrors = {
+	/**
+	 * Eviction response failure.
+	 */
+	"4XX": WorkersApiResponseCommonFailure;
+};
+
+export type DurableObjectsNamespaceEvictObjectError =
+	DurableObjectsNamespaceEvictObjectErrors[keyof DurableObjectsNamespaceEvictObjectErrors];
+
+export type DurableObjectsNamespaceEvictObjectResponses = {
+	/**
+	 * Eviction response.
+	 */
+	200: WorkersApiResponseCommon;
+};
+
+export type DurableObjectsNamespaceEvictObjectResponse =
+	DurableObjectsNamespaceEvictObjectResponses[keyof DurableObjectsNamespaceEvictObjectResponses];
+
 export type LocalExplorerListWorkersData = {
 	body?: never;
 	path?: never;

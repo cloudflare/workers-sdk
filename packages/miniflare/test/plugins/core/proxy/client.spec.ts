@@ -6,10 +6,13 @@ import { text } from "node:stream/consumers";
 import { ReadableStream, WritableStream } from "node:stream/web";
 import util from "node:util";
 import {
+	CoreHeaders,
 	CorePaths,
+	createNodeBindings,
 	DeferredPromise,
 	fetch,
 	Miniflare,
+	ProxyClient,
 	Request,
 	Response,
 	WebSocketPair,
@@ -20,7 +23,10 @@ import {
 	singleModuleManifest,
 	useDispose,
 } from "../../../test-shared";
-import type { Fetcher } from "@cloudflare/workers-types/experimental";
+import type {
+	Fetcher,
+	KVNamespace,
+} from "@cloudflare/workers-types/experimental";
 import type {
 	MessageEvent,
 	ReplaceWorkersTypes,
@@ -34,6 +40,78 @@ const nullScript =
 	'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));';
 
 describe("ProxyClient", () => {
+	test("builds bindings from a serialized platform proxy connection", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "worker",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(
+							'export default { fetch() { return new Response("entrypoint"); } }'
+						),
+						env: {
+							GREETING: { type: "text", value: "hello" },
+							NAMESPACE: { type: "kv" },
+						},
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		// Round-trip through JSON, as another process would receive it
+		const connection = JSON.parse(
+			JSON.stringify(await mf.unsafeGetPlatformProxyConnection())
+		);
+		const freed: string[] = [];
+		const client = new ProxyClient(
+			new URL(connection.url),
+			(input, init) => {
+				if (init?.method === "DELETE") {
+					freed.push(
+						new Headers(init.headers).get(CoreHeaders.OP_TARGET) ?? ""
+					);
+				}
+				return fetch(input, init);
+			},
+			connection.secret
+		);
+		const env = createNodeBindings<{
+			GREETING: string;
+			NAMESPACE: ReplaceWorkersTypes<KVNamespace>;
+		}>(client, connection.bindings);
+
+		expect(env.GREETING).toBe("hello");
+		await env.NAMESPACE.put("key", "value");
+		expect(
+			await (await mf.getBindings<typeof env>()).NAMESPACE.get("key")
+		).toBe("value");
+		const entrypoint = client.env[connection.entrypoint] as Fetcher;
+		expect(await (await entrypoint.fetch("http://localhost/")).text()).toBe(
+			"entrypoint"
+		);
+
+		// Disposing frees what this client referenced, but never the shared
+		// `globalThis` (0) and `env` (1) roots
+		await client.dispose();
+		const addresses = freed.flatMap((targets) => targets.split(","));
+		expect(addresses.length).toBeGreaterThan(0);
+		expect(addresses).not.toContain("0");
+		expect(addresses).not.toContain("1");
+
+		// The secret is what grants access
+		const wrongSecret = new ProxyClient(
+			new URL(connection.url),
+			fetch,
+			"00".repeat(16)
+		);
+		onTestFinished(() => wrongSecret.dispose());
+		expect(() => wrongSecret.env.GREETING).toThrow();
+	});
+
 	test("supports service bindings with WebSockets", async ({ expect }) => {
 		const mf = new Miniflare({
 			workers: [

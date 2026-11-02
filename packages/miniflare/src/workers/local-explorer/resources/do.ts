@@ -16,6 +16,7 @@ import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type { WorkersNamespace } from "../generated";
 import type {
+	zDurableObjectsNamespaceEvictObjectData,
 	zDurableObjectsNamespaceListObjectsData,
 	zDurableObjectsNamespaceQuerySqliteData,
 } from "../generated/zod.gen";
@@ -402,4 +403,44 @@ async function executeQueryDOSqlite(
 		const message = error instanceof Error ? error.message : "Query failed";
 		return errorResponse(400, 10001, message);
 	}
+}
+
+type EvictBody = z.output<
+	typeof zDurableObjectsNamespaceEvictObjectData
+>["body"];
+
+/**
+ * Evict a running local Durable Object while preserving its storage, using
+ * the dev control service that also backs `Miniflare#unsafeEvictDurableObject()`.
+ */
+export async function evictDurableObject(
+	c: AppContext,
+	namespaceId: string,
+	body: EvictBody
+): Promise<Response> {
+	const info = c.env.LOCAL_EXPLORER_BINDING_MAP.do[namespaceId];
+	const devControl = c.env.MINIFLARE_DEV_CONTROL;
+	if (info === undefined || devControl === undefined) {
+		return errorResponse(
+			404,
+			DO_ERROR_NAMESPACE_NOT_FOUND,
+			`Durable Object namespace ID '${namespaceId}' not found.`
+		);
+	}
+
+	try {
+		await devControl.evictDurableObject(info.scriptName, info.className, {
+			...("durable_object_id" in body
+				? { id: body.durable_object_id }
+				: { name: body.durable_object_name }),
+			webSockets: body.web_sockets,
+		});
+	} catch (error) {
+		return errorResponse(
+			400,
+			10001,
+			error instanceof Error ? error.message : String(error)
+		);
+	}
+	return c.json(wrapResponse(null));
 }

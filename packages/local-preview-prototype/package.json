@@ -1,0 +1,29 @@
+{
+	"name": "@cloudflare/local-preview-prototype",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Prototype for discussion (RM-31812). Not for release.",
+	"type": "module",
+	"scripts": {
+		"build:fixture": "cd fixture && wrangler build --x-new-config --x-cf-build-output",
+		"check:type": "openapi-ts && tsc",
+		"generate": "openapi-ts",
+		"test:ci": "pnpm generate && pnpm build:fixture && vitest run"
+	},
+	"dependencies": {
+		"@cloudflare/build-output-utils": "workspace:*",
+		"@cloudflare/config": "workspace:*",
+		"@cloudflare/workers-utils": "workspace:*",
+		"miniflare": "workspace:*"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"@hey-api/openapi-ts": "catalog:default",
+		"@types/node": "catalog:default",
+		"cf": "catalog:default",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	}
+}
