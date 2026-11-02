@@ -153,7 +153,9 @@ test("keeps local keys and subjects across reload/restart; separates projects an
 			authorityFiles[0],
 			"authority.json"
 		);
-		expect((await fs.stat(authority)).mode & 0o777).toBe(0o600);
+		if (process.platform !== "win32") {
+			expect((await fs.stat(authority)).mode & 0o777).toBe(0o600);
+		}
 		await second.dispose();
 		const lock = path.join(path.dirname(authority), "owner.json");
 		await fs.writeFile(
