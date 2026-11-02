@@ -2,7 +2,6 @@ import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils";
 import { beforeEach, describe, it, vi } from "vitest";
 import { fetchWorkerConfig } from "../src/deploy/helpers/download-worker-config";
 import { initDeployHelpersContext } from "../src/shared/context";
-import type { Route } from "@cloudflare/workers-utils";
 
 describe("fetchWorkerConfig", () => {
 	const fetchResult = vi.fn(async (_config: unknown, resource: string) => {
@@ -40,49 +39,45 @@ describe("fetchWorkerConfig", () => {
 
 	it.for([
 		{
-			name: "all route metadata when no local routes are supplied",
-			localRoutes: undefined,
-			expectedRouteRequest: true,
-			expectedCustomDomainRequest: true,
+			name: "all route metadata",
+			fetchRoutes: true,
+			fetchCustomDomains: true,
 		},
 		{
-			name: "no route metadata for an empty local route list",
-			localRoutes: [],
-			expectedRouteRequest: false,
-			expectedCustomDomainRequest: false,
+			name: "no route metadata",
+			fetchRoutes: false,
+			fetchCustomDomains: false,
 		},
 		{
-			name: "ordinary route metadata for an ordinary local route",
-			localRoutes: ["example.com/*"],
-			expectedRouteRequest: true,
-			expectedCustomDomainRequest: false,
+			name: "ordinary route metadata",
+			fetchRoutes: true,
+			fetchCustomDomains: false,
 		},
 		{
-			name: "custom-domain metadata for a local custom domain",
-			localRoutes: [{ pattern: "example.com", custom_domain: true as const }],
-			expectedRouteRequest: false,
-			expectedCustomDomainRequest: true,
+			name: "custom-domain metadata",
+			fetchRoutes: false,
+			fetchCustomDomains: true,
 		},
 	] satisfies {
 		name: string;
-		localRoutes: Route[] | undefined;
-		expectedRouteRequest: boolean;
-		expectedCustomDomainRequest: boolean;
+		fetchRoutes: boolean;
+		fetchCustomDomains: boolean;
 	}[])("fetches $name", async (testCase, { expect }) => {
 		await fetchWorkerConfig(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
 			"account-id",
 			"worker-name",
 			"production",
-			testCase.localRoutes
+			testCase.fetchRoutes,
+			testCase.fetchCustomDomains
 		);
 
 		const resources = fetchResult.mock.calls.map(([, resource]) => resource);
 		expect(resources.some((resource) => resource.includes("/routes?"))).toBe(
-			testCase.expectedRouteRequest
+			testCase.fetchRoutes
 		);
 		expect(
 			resources.some((resource) => resource.includes("/domains/records?"))
-		).toBe(testCase.expectedCustomDomainRequest);
+		).toBe(testCase.fetchCustomDomains);
 	});
 });
