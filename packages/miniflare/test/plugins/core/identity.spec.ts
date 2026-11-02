@@ -155,6 +155,20 @@ test("keeps local keys and subjects across reload/restart; separates projects an
 		);
 		expect((await fs.stat(authority)).mode & 0o777).toBe(0o600);
 		await second.dispose();
+		const lock = path.join(path.dirname(authority), "owner.json");
+		await fs.writeFile(
+			lock,
+			JSON.stringify({ pid: 2147483647, owner: "crashed" })
+		);
+		const crashed = new Miniflare(make(script));
+		await expect(crashed.ready).rejects.toThrow("exited without cleanup");
+		await crashed.dispose().catch(() => {});
+		expect(JSON.parse(await fs.readFile(lock, "utf8")).owner).toBe("crashed");
+		await fs.unlink(lock);
+		const recovered = new Miniflare(make(script));
+		useDispose(recovered);
+		expect((await recovered.getLocalIdentity())?.issuer).toBe(metadata?.issuer);
+		await recovered.dispose();
 		const isolated = new Miniflare(make(script, false));
 		useDispose(isolated);
 		expect((await isolated.getLocalIdentity())?.issuer).not.toBe(
