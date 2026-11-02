@@ -6,7 +6,7 @@ import { Miniflare } from "miniflare";
 import { createBuilder, preview } from "vite";
 import { afterEach, describe, test, vi } from "vitest";
 import { cloudflare } from "../index";
-import type { ParsedInputConfigWithWorker } from "../index";
+import type { CloudflareConfig } from "../index";
 
 vi.mock("@cloudflare/workers-utils");
 
@@ -82,11 +82,9 @@ describe("preview server", () => {
 					maxInstances: 2,
 				}),
 			]);
-			const customizePreview = vi.fn(
-				(loadedConfig: ParsedInputConfigWithWorker) => ({
-					...loadedConfig,
-				})
-			);
+			const customizePreview = vi.fn((loadedConfig: CloudflareConfig) => ({
+				...loadedConfig,
+			}));
 
 			// Start a preview server
 			const previewServer = await preview({
