@@ -35,6 +35,7 @@ type WorkerResponse = { id: number } & (
 
 const WORKER_SCRIPT = /* javascript */ `
 const { createRequire } = require("module");
+const path = require("path");
 const { parentPort, workerData } = require("worker_threads");
 
 // Requests use their own port so we can call receiveMessageOnPort() in host
@@ -44,7 +45,11 @@ const { notifyHandle, port, filename } = workerData;
 // with "Error: Cannot find module 'undici'". Instead we need to create a
 // 'require' using the '__filename' of the host... :(
 const actualRequire = createRequire(filename);
-const { Pool, fetch } = actualRequire("undici");
+// Load undici by path: Bun resolves the bare "undici" specifier to a built-in
+// module whose fetch() ignores the \`dispatcher\` option
+const { Pool, fetch } = actualRequire(
+	path.join(path.dirname(actualRequire.resolve("undici/package.json")), "index.js")
+);
 
 // Lets SynchronousFetcher#warm() know requests can now be served
 parentPort.postMessage("ready");

@@ -325,6 +325,35 @@ const embedWorkersPlugin = {
 	},
 };
 
+// --- undici ---
+
+/**
+ * Bun resolves the bare "undici" specifier to a built-in module, even when the
+ * undici package is installed. That module's fetch() ignores the `dispatcher`
+ * option, so `DispatchFetchDispatcher` never runs and `Miniflare#dispatchFetch()`
+ * requests miss workerd (ECONNREFUSED). Load the installed package by path, so
+ * the same undici is used on every runtime. On Node this resolves to the same
+ * module as `require("undici")`.
+ *
+ * @type {esbuild.Plugin}
+ */
+const undiciByPathPlugin = {
+	name: "undici-by-path",
+	setup(build) {
+		build.onResolve({ filter: /^undici$/ }, () => ({
+			path: "undici",
+			namespace: "undici-by-path",
+		}));
+		build.onLoad({ filter: /.*/, namespace: "undici-by-path" }, () => ({
+			contents: [
+				'const path = require("node:path");',
+				'module.exports = require(path.join(path.dirname(require.resolve("undici/package.json")), "index.js"));',
+			].join("\n"),
+			loader: "js",
+		}));
+	},
+};
+
 // --- Local Explorer UI ---
 
 /**
@@ -442,7 +471,7 @@ async function buildPackage() {
 			// esbuild is used by test fixtures at runtime
 			"esbuild",
 		],
-		plugins: [embedWorkersPlugin],
+		plugins: [embedWorkersPlugin, undiciByPathPlugin],
 		logLevel: watch ? "info" : "warning",
 		outdir: outPath,
 		outbase: pkgRoot,
