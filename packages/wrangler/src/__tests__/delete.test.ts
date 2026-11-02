@@ -625,6 +625,36 @@ Delete it as well?`,
 			expect(std.err).toBe("");
 		});
 
+		it("warns without prompting when --force is used", async ({ expect }) => {
+			// The terminal is interactive, but `--force` skips every prompt.
+			mockListKVNamespacesRequest(expect);
+			mockDurableObjectNamespaces(expect, [
+				{
+					id: namespaceId,
+					class: "MyContainer",
+					name: "my-script-container",
+					script: "my-script",
+					use_sqlite: true,
+				},
+			]);
+			mockListContainerApplications(expect, [
+				durableObjectApplication(
+					"my-script-container",
+					applicationId,
+					namespaceId
+				),
+			]);
+			mockDeleteWorkerRequest(expect, { name: "my-script", force: true });
+
+			await runWrangler("delete --name my-script --force");
+
+			expect(std.warn).toContain(
+				"my-script owned 1 Cloudflare Container application, which keeps running and billing now that the Worker is gone:"
+			);
+			expect(std.warn).toContain(`- my-script-container (${applicationId})`);
+			expect(std.err).toBe("");
+		});
+
 		it("ignores applications that the deployed Worker does not own", async ({
 			expect,
 		}) => {

@@ -183,7 +183,11 @@ export const deleteCommand = createCommand({
 			} finally {
 				// The Worker is already gone, so its Container applications must still
 				// be handled even if the Workers Sites cleanup fails.
-				await handleContainerApplications(scriptName, containerApplications);
+				await handleContainerApplications(
+					scriptName,
+					containerApplications,
+					Boolean(args.force)
+				);
 			}
 		}
 	},
@@ -216,14 +220,16 @@ async function tryFindWorkerContainerApplications(
 /**
  * Remove the Container applications that `wrangler deploy` created alongside the
  * Worker. Deleting the Worker leaves them running and billing, so either offer to
- * delete them or, when that isn't possible, name what is still running.
+ * delete them or, when that isn't possible or `--force` skips prompts, name what
+ * is still running.
  *
  * Failures here are reported rather than thrown: the Worker is already gone at
  * this point, so aborting would only hide the rest of the cleanup.
  */
 async function handleContainerApplications(
 	scriptName: string,
-	applications: WorkerContainerApplication[]
+	applications: WorkerContainerApplication[],
+	force: boolean
 ): Promise<void> {
 	if (applications.length === 0) {
 		return;
@@ -237,7 +243,7 @@ async function handleContainerApplications(
 		.map((application) => `- ${application.name} (${application.id})`)
 		.join("\n");
 
-	if (isNonInteractiveOrCI()) {
+	if (force || isNonInteractiveOrCI()) {
 		logger.warn(
 			`${scriptName} owned ${count} Cloudflare Container ${noun}, which ${verb} running and billing now that the Worker is gone:\n${summary}\n\nDelete ${pronoun} with: wrangler containers delete <id>`
 		);
