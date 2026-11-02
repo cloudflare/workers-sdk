@@ -192,9 +192,9 @@ export const deleteCommand = createCommand({
 /**
  * Look up the Worker's Container applications without ever failing the delete.
  *
- * A Worker without Durable Objects never reaches the Containers API, so this is
- * normally free. When the lookup itself is not permitted we say so rather than
- * leaving the user to discover the leftovers by another route.
+ * A Worker without Durable Objects stops after listing namespaces and never
+ * reaches the Containers API. When the lookup itself is not permitted we say so
+ * rather than leaving the user to discover the leftovers by another route.
  */
 async function tryFindWorkerContainerApplications(
 	config: Config,

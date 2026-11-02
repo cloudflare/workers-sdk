@@ -6,6 +6,7 @@ import {
 import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { logger } from "../logger";
+import { getScopes } from "../user";
 import { containersScope } from "./index";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -53,6 +54,17 @@ export async function findWorkerContainerApplications(
 	// A Worker without Durable Object namespaces cannot own Container
 	// applications, so the Containers API is never called for one.
 	if (ownedNamespaceIds.size === 0) {
+		return [];
+	}
+
+	// Most Workers with Durable Objects have no Container applications, so a
+	// login without the Containers scope skips the lookup quietly instead of
+	// letting `fillOpenAPIConfiguration` report the missing scope as an error.
+	const scopes = getScopes();
+	if (scopes !== undefined && !scopes.includes(containersScope)) {
+		logger.debug(
+			`Skipping the Container application lookup for "${scriptName}" because the current login does not have the "${containersScope}" scope.`
+		);
 		return [];
 	}
 
