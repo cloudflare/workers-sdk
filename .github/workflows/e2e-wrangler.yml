@@ -18,14 +18,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-24.04]
+        os: [macos-latest, windows-latest, ubuntu-latest]
         shard: [1, 2, 3, 4]
         include:
           - os: macos-latest
             description: macOS
           - os: windows-latest
             description: Windows
-          - os: ubuntu-24.04
+          - os: ubuntu-latest
             description: Linux
 
     runs-on: ${{ matrix.os }}
