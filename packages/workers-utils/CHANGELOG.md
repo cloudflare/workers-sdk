@@ -1,5 +1,27 @@
 # @cloudflare/workers-utils
 
+## 0.51.0
+
+### Minor Changes
+
+- [#16623](https://github.com/cloudflare/workers-sdk/pull/16623) [`51bbf8b`](https://github.com/cloudflare/workers-sdk/commit/51bbf8b257dbf5c7a8f26600f5875ba45acbe89c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Share compatibility and source-map helpers without loading the Workers runtime
+
+  Move `getNodeCompat`, `NodeJSCompatMode`, and `getFreshSourceMapSupport` into workers-utils, with `/node-compat` and `/sourcemap` entry points. Import the shared helpers directly in deploy-helpers so deployment utilities no longer resolve the platform workerd binary. Startup profiling continues to load the runtime on demand.
+
+- [#16424](https://github.com/cloudflare/workers-sdk/pull/16424) [`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `DEFAULT_MODULE_RULES`
+
+  These are the module rules Wrangler applies after a Worker's own `rules`, moved from Wrangler so other tools can share them.
+
+- [#16424](https://github.com/cloudflare/workers-sdk/pull/16424) [`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `splitSqlQuery()` and `normalizeSqlLineEndings()`
+
+  They're moved from Wrangler, and split a D1 SQL file into its statements, as Wrangler does when executing it.
+
+### Patch Changes
+
+- [#16642](https://github.com/cloudflare/workers-sdk/pull/16642) [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-02
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
 ## 0.50.2
 
 ### Patch Changes

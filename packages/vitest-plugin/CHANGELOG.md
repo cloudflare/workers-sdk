@@ -1,5 +1,48 @@
 # @cloudflare/vitest-plugin
 
+## 1.5.0
+
+### Minor Changes
+
+- [#16424](https://github.com/cloudflare/workers-sdk/pull/16424) [`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72) Thanks [@edmundhung](https://github.com/edmundhung)! - Promote `experimental.newConfig` to a stable `config` option
+
+  The experimental `experimental.newConfig` option is now the stable `config` option. Pass `config: true` to `cloudflareTest()` to load your Worker's bindings, entrypoint and compatibility settings from `cloudflare.config.ts` in the project root, or pass the path of a `cloudflare.config.ts` elsewhere:
+
+  ```ts
+  cloudflareTest({ config: true });
+  cloudflareTest({ config: "./worker/cloudflare.config.ts" });
+  ```
+
+  `config` can't be combined with `wrangler`. `miniflare` options are merged over the Worker from `cloudflare.config.ts`, with `miniflare` values taking precedence. Config functions receive Vitest's mode as `ctx.mode`, which defaults to `test` and can be changed with `--mode`.
+
+  If you're moving from `experimental.newConfig`, secrets are now read from Vite's `envDir` instead of the directory containing `cloudflare.config.ts`, and remote bindings authenticate with `cf` instead of Wrangler.
+
+### Patch Changes
+
+- [#16642](https://github.com/cloudflare/workers-sdk/pull/16642) [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-02
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16623](https://github.com/cloudflare/workers-sdk/pull/16623) [`51bbf8b`](https://github.com/cloudflare/workers-sdk/commit/51bbf8b257dbf5c7a8f26600f5875ba45acbe89c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Deprecate shared tooling helper exports from Miniflare
+
+  Miniflare continues to export `getNodeCompat`, `NodeJSCompatMode`, and `getFreshSourceMapSupport` for compatibility. These exports are deprecated and now use the implementations in `@cloudflare/workers-utils`. Add a dependency on that package and replace the Miniflare imports with:
+
+  ```ts
+  import {
+    getNodeCompat,
+    type NodeJSCompatMode,
+  } from "@cloudflare/workers-utils/node-compat";
+  import { getFreshSourceMapSupport } from "@cloudflare/workers-utils/sourcemap";
+  ```
+
+  Wrangler and the Cloudflare Vite and Vitest plugins now use the shared helpers directly. The helpers retain their behavior and can be imported without loading the Workers runtime.
+
+  The deprecated Miniflare exports will be removed in a later release, allowing downstream tools such as cf to migrate and release independently first.
+
+- Updated dependencies [[`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67), [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67), [`51bbf8b`](https://github.com/cloudflare/workers-sdk/commit/51bbf8b257dbf5c7a8f26600f5875ba45acbe89c), [`e5b1798`](https://github.com/cloudflare/workers-sdk/commit/e5b179899567d35959144b7bc82e3f1a5ed04ca5)]:
+  - miniflare@5.20261102.0-beta
+  - wrangler@4.156.2
+
 ## 1.4.12
 
 ### Patch Changes
