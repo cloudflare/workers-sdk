@@ -3,7 +3,7 @@ import {
 	runDurableObjectAlarm,
 	runInDurableObject,
 } from "cloudflare:test";
-import { env, RpcStub } from "cloudflare:workers";
+import { env, exports, RpcStub } from "cloudflare:workers";
 import { describe, it, onTestFinished } from "vitest";
 import TestDefaultEntrypoint, { TestObject } from "../src";
 import { Counter } from "../src/counter";
@@ -12,7 +12,9 @@ describe("named entrypoints", () => {
 	it("dispatches fetch request to named ExportedHandler", async ({
 		expect,
 	}) => {
-		const response = await env.TEST_NAMED_HANDLER.fetch("https://example.com");
+		const response = await exports.testNamedHandler.fetch(
+			"https://example.com"
+		);
 		expect(await response.json()).toMatchObject({
 			ctxWaitUntil: "function",
 			method: "GET",
@@ -23,7 +25,7 @@ describe("named entrypoints", () => {
 	it("dispatches fetch request to named WorkerEntrypoint", async ({
 		expect,
 	}) => {
-		const response = await env.TEST_NAMED_ENTRYPOINT.fetch(
+		const response = await exports.TestNamedEntrypoint.fetch(
 			"https://example.com"
 		);
 		expect(await response.json()).toMatchObject({
@@ -34,14 +36,12 @@ describe("named entrypoints", () => {
 		});
 	});
 	it("calls method with rpc", async ({ expect }) => {
-		// @ts-expect-error cf types leave bindings to this Worker untyped
-		const result = await env.TEST_NAMED_ENTRYPOINT.ping();
+		const result = await exports.TestNamedEntrypoint.ping();
 		expect(result).toBe("pong");
 	});
 
 	it("receives RpcTarget over RPC", async ({ expect }) => {
-		// @ts-expect-error cf types leave bindings to this Worker untyped
-		const result = await env.TEST_NAMED_ENTRYPOINT.getCounter();
+		const result = await exports.TestNamedEntrypoint.getCounter();
 		expect(await result.value).toBe(0);
 		result.increment();
 		result.increment();
@@ -53,8 +53,7 @@ describe("named entrypoints", () => {
 	});
 
 	it("receives plain objects over RPC", async ({ expect }) => {
-		// @ts-expect-error cf types leave bindings to this Worker untyped
-		const result = await env.TEST_NAMED_ENTRYPOINT.getCounter();
+		const result = await exports.TestNamedEntrypoint.getCounter();
 		result.increment();
 		expect(await result.asObject()).toMatchObject({ val: 1 });
 	});
@@ -72,8 +71,8 @@ describe("Durable Object", () => {
 	}
 
 	it("dispatches fetch request", async ({ expect }) => {
-		const id = env.TEST_OBJECT.newUniqueId();
-		const stub = env.TEST_OBJECT.get(id);
+		const id = exports.TestObject.newUniqueId();
+		const stub = exports.TestObject.get(id);
 		const response = await stub.fetch("https://example.com");
 		expect(await response.json()).toMatchObject({
 			ctxWaitUntil: "function",
@@ -86,8 +85,8 @@ describe("Durable Object", () => {
 		expect,
 	}) => {
 		// Check sending request directly to instance
-		const id = env.TEST_OBJECT.idFromName("/path");
-		const stub = env.TEST_OBJECT.get(id);
+		const id = exports.TestObject.idFromName("/path");
+		const stub = exports.TestObject.get(id);
 		const result = await runInDurableObject(stub, (instance: TestObject) => {
 			expect(instance).toBeInstanceOf(TestObject); // Exact same class as import
 			return instance.increment(1);
@@ -101,26 +100,22 @@ describe("Durable Object", () => {
 		});
 
 		// Check calling method over RPC
-		// @ts-expect-error cf types leave bindings to this Worker untyped
 		expect(await stub.increment(3)).toBe(4);
 
 		// Check accessing property over RPC
-		// @ts-expect-error cf types leave bindings to this Worker untyped
 		expect(await stub.value).toBe(4);
 	});
 	it("dispatches RPC methods from proxy-returning Durable Objects", async ({
 		expect,
 	}) => {
-		const id = env.PROXIED_TEST_OBJECT.newUniqueId();
-		const stub = env.PROXIED_TEST_OBJECT.get(id);
-		// @ts-expect-error cf types leave bindings to this Worker untyped
+		const id = exports.ProxiedTestObject.newUniqueId();
+		const stub = exports.ProxiedTestObject.get(id);
 		expect(await stub.readPrivateValue()).toBe("private value");
 	});
 	it("rejects instance overrides of prototype methods", async ({ expect }) => {
-		const id = env.TEST_OBJECT.newUniqueId();
-		const stub = env.TEST_OBJECT.get(id);
+		const id = exports.TestObject.newUniqueId();
+		const stub = exports.TestObject.get(id);
 		await expect(
-			// @ts-expect-error cf types leave bindings to this Worker untyped
 			async () => await stub.overriddenPrototypeMethod()
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[TypeError: The RPC receiver does not implement the method "overriddenPrototypeMethod".]`
@@ -128,15 +123,12 @@ describe("Durable Object", () => {
 	});
 	it("immediately executes alarm", async ({ expect }) => {
 		// Schedule alarm by directly calling method over RPC
-		const id = env.TEST_OBJECT.newUniqueId();
-		const stub = env.TEST_OBJECT.get(id);
-		// @ts-expect-error cf types leave bindings to this Worker untyped
+		const id = exports.TestObject.newUniqueId();
+		const stub = exports.TestObject.get(id);
 		await stub.increment(3);
-		// @ts-expect-error cf types leave bindings to this Worker untyped
 		await stub.scheduleReset(60_000);
 
 		// Check counter has non-zero value
-		// @ts-expect-error cf types leave bindings to this Worker untyped
 		expect(await stub.value).toBe(3);
 
 		// Immediately execute the alarm to reset the counter
@@ -144,13 +136,11 @@ describe("Durable Object", () => {
 		expect(ran).toBe(true); // ...as there was an alarm scheduled
 
 		// Check counter value was reset
-		// @ts-expect-error cf types leave bindings to this Worker untyped
 		expect(await stub.value).toBe(0);
 	});
 	it("cannot access instance properties or methods", async ({ expect }) => {
-		const id = env.TEST_OBJECT.newUniqueId();
-		const stub = env.TEST_OBJECT.get(id);
-		// @ts-expect-error cf types leave bindings to this Worker untyped
+		const id = exports.TestObject.newUniqueId();
+		const stub = exports.TestObject.get(id);
 		await expect(async () => await stub.instanceProperty).rejects
 			.toThrowErrorMatchingInlineSnapshot(`
 			[TypeError: The RPC receiver's prototype does not implement "instanceProperty", but the receiver instance does.
@@ -160,8 +150,8 @@ describe("Durable Object", () => {
 		`);
 	});
 	it("cannot access non-existent properties or methods", async ({ expect }) => {
-		const id = env.TEST_OBJECT.newUniqueId();
-		const stub = env.TEST_OBJECT.get(id);
+		const id = exports.TestObject.newUniqueId();
+		const stub = exports.TestObject.get(id);
 		await expect(
 			// @ts-expect-error intentionally testing incorrect types
 			async () => await stub.nonExistentProperty
@@ -170,9 +160,8 @@ describe("Durable Object", () => {
 		);
 	});
 	it("receives RpcTarget over RPC", async ({ expect }) => {
-		const id = env.TEST_OBJECT.newUniqueId();
-		const stub = env.TEST_OBJECT.get(id);
-		// @ts-expect-error cf types leave bindings to this Worker untyped
+		const id = exports.TestObject.newUniqueId();
+		const stub = exports.TestObject.get(id);
 		using result = await stub.getCounter();
 		expect(await result.value).toBe(0);
 		await result.increment();
@@ -186,9 +175,8 @@ describe("Durable Object", () => {
 	});
 
 	it("receives plain objects over RPC", async ({ expect }) => {
-		const id = env.TEST_OBJECT.newUniqueId();
-		const stub = env.TEST_OBJECT.get(id);
-		// @ts-expect-error cf types leave bindings to this Worker untyped
+		const id = exports.TestObject.newUniqueId();
+		const stub = exports.TestObject.get(id);
 		using result = await stub.getObject();
 		expect(result).toMatchObject({ hello: "world" });
 	});
@@ -196,20 +184,18 @@ describe("Durable Object", () => {
 	// Regression repro for https://github.com/cloudflare/workers-sdk/issues/13433.
 	it("preserves same-type RPC call order", async ({ expect }) => {
 		for (let attempt = 0; attempt < orderingAttempts; attempt++) {
-			const id = env.TEST_OBJECT.idFromName(
+			const id = exports.TestObject.idFromName(
 				orderingTargetName("ordering", attempt)
 			);
-			const stub = env.TEST_OBJECT.get(id);
+			const stub = exports.TestObject.get(id);
 			const promises: Promise<void>[] = [];
 
 			for (let i = 0; i < orderingCalls; i++) {
-				// @ts-expect-error cf types leave bindings to this Worker untyped
 				promises.push(stub.record(`call-${i}`));
 			}
 
 			await Promise.all(promises);
 
-			// @ts-expect-error cf types leave bindings to this Worker untyped
 			expect(await stub.getLog()).toEqual(expectedOrderingLog());
 		}
 	});
@@ -218,22 +204,19 @@ describe("Durable Object", () => {
 		expect,
 	}) => {
 		for (let attempt = 0; attempt < orderingAttempts; attempt++) {
-			const id = env.TEST_OBJECT.idFromName(
+			const id = exports.TestObject.idFromName(
 				orderingTargetName("prewarmed-ordering", attempt)
 			);
-			const stub = env.TEST_OBJECT.get(id);
-			// @ts-expect-error cf types leave bindings to this Worker untyped
+			const stub = exports.TestObject.get(id);
 			await stub.getLog();
 			const promises: Promise<void>[] = [];
 
 			for (let i = 0; i < orderingCalls; i++) {
-				// @ts-expect-error cf types leave bindings to this Worker untyped
 				promises.push(stub.record(`call-${i}`));
 			}
 
 			await Promise.all(promises);
 
-			// @ts-expect-error cf types leave bindings to this Worker untyped
 			expect(await stub.getLog()).toEqual(expectedOrderingLog());
 		}
 	});
@@ -243,8 +226,7 @@ describe("Durable Object", () => {
 	}) => {
 		for (let attempt = 0; attempt < orderingAttempts; attempt++) {
 			expect(
-				// @ts-expect-error cf types leave bindings to this Worker untyped
-				await env.TEST_NAMED_ENTRYPOINT.recordFromWorkerEntrypoint(
+				await exports.TestNamedEntrypoint.recordFromWorkerEntrypoint(
 					orderingTargetName("worker-entrypoint-ordering", attempt),
 					orderingCalls
 				)
@@ -256,12 +238,11 @@ describe("Durable Object", () => {
 		expect,
 	}) => {
 		for (let attempt = 0; attempt < orderingAttempts; attempt++) {
-			const id = env.TEST_OBJECT.idFromName(
+			const id = exports.TestObject.idFromName(
 				orderingTargetName("do-caller", attempt)
 			);
-			const stub = env.TEST_OBJECT.get(id);
+			const stub = exports.TestObject.get(id);
 			expect(
-				// @ts-expect-error cf types leave bindings to this Worker untyped
 				await stub.recordFromDurableObject(
 					orderingTargetName("do-caller-ordering", attempt),
 					orderingCalls
