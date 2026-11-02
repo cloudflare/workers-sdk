@@ -1458,9 +1458,7 @@ function validateDiffInput(
 								part.startsWith(".") ||
 								part.endsWith(".") ||
 								part.endsWith(".lock")
-						) ||
-					(/^[0-9a-fA-F]+$/.test(ref) && ref.length >= 7) ||
-					(ref.length === 40 && !ref.includes("/"))))
+						)))
 		) {
 			fail(
 				"INVALID_INPUT",

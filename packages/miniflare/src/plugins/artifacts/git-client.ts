@@ -560,6 +560,15 @@ export class GitClient {
 							break;
 						}
 					}
+					if (
+						!hash &&
+						(/^[0-9a-fA-F]{7,}$/.test(ref) ||
+							(ref.length === 40 && !ref.includes("/")))
+					)
+						throw new GitDiffError(
+							"INVALID_INPUT",
+							`${side} expected a full 40-character commit hash`
+						);
 					for (let depth = 0; depth <= 8; depth++) {
 						if (!hash)
 							throw new GitDiffError(
