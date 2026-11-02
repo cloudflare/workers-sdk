@@ -235,7 +235,7 @@ export async function preUploadApiChecks(
 				// route categories present in the local configuration. Avoid requiring
 				// unrelated route permissions just to compare versioned settings.
 				const localRoutes = props.command === "deploy" ? props.routes : [];
-				const downloadedWorkerConfig = await downloadWorkerConfig(
+				const remoteWorkerConfig = await downloadWorkerConfig(
 					config,
 					name,
 					serviceMetaData.default_environment.environment,
@@ -243,12 +243,6 @@ export async function preUploadApiChecks(
 					accountId,
 					localRoutes
 				);
-				// `versions upload` cannot update routes, so they must not take part in
-				// deciding whether the upload would overwrite dashboard configuration.
-				const remoteWorkerConfig =
-					props.command === "versions upload"
-						? { ...downloadedWorkerConfig, routes: undefined }
-						: downloadedWorkerConfig;
 
 				const configForDiff =
 					props.command === "deploy"
