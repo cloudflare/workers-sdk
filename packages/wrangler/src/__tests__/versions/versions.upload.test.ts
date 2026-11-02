@@ -1753,9 +1753,11 @@ describe("versions upload", () => {
 			expect(process.exitCode).not.toBe(0);
 		});
 
-		test("should ignore routes when checking dashboard config in strict mode", async ({
+		test("should not fetch routes when checking dashboard config in strict mode", async ({
 			expect,
 		}) => {
+			let routeRequests = 0;
+			let customDomainRequests = 0;
 			mockGetScript({
 				default_environment: {
 					environment: "production",
@@ -1767,6 +1769,19 @@ describe("versions upload", () => {
 				},
 			});
 			mockRemoteWorkerConfig([]);
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/workers/services/:serviceName/environments/:env/routes",
+					() => {
+						routeRequests++;
+						return HttpResponse.json({}, { status: 403 });
+					}
+				),
+				http.get("*/accounts/:accountId/workers/domains/records", () => {
+					customDomainRequests++;
+					return HttpResponse.json({}, { status: 403 });
+				})
+			);
 			mockUploadVersion(false);
 
 			writeWranglerConfig({
@@ -1779,6 +1794,8 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload --strict");
 
+			expect(routeRequests).toBe(0);
+			expect(customDomainRequests).toBe(0);
 			expect(std.warn).not.toContain(
 				"Uploading the Worker will override the remote configuration with your local one."
 			);
