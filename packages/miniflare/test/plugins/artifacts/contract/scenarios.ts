@@ -1,5 +1,14 @@
+import type {
+	ArtifactsDiffOptions,
+	ArtifactsDiffResult,
+} from "../../../../src/plugins/artifacts/repo-diff";
 /* Shared observable scenarios. No HTTP RPC shim: calls use the real Worker binding. */
 export interface Repository {
+	diff(
+		from: string | null,
+		to: string,
+		opts?: ArtifactsDiffOptions
+	): Promise<ArtifactsDiffResult>;
 	info(): Promise<unknown>;
 	createToken(
 		scope?: "read" | "write",
@@ -205,6 +214,15 @@ export async function runScenarios(
 		// The initial create token is only returned by create, not info; prepare via a fresh token.
 		const write = await repo.createToken("write");
 		await prepareFixture({ ...created, token: write.plaintext });
+		await record("diff empty tree", () => repo.diff(null, "main"));
+		await record("diff identical", () => repo.diff("main", "main"));
+		await record("diff invalid limit", () =>
+			repo.diff(null, "main", { limit: 0 })
+		);
+		await record("diff missing from", () => repo.diff("missing", "main"));
+		await record("diff invalid cursor", () =>
+			repo.diff(null, "main", { cursor: "bad" })
+		);
 		const log = await repo.log({ ref: "main" });
 		await record("log main", () => repo.log({ ref: "main" }));
 		await record("log page", () =>

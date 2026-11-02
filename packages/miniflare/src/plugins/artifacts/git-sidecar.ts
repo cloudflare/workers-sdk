@@ -12,6 +12,7 @@ import { Transform } from "node:stream";
 import { parentPort, workerData } from "node:worker_threads";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
 import { z } from "zod";
+import { GitDiffError } from "./git-client";
 import {
 	assertGitAvailable,
 	GitClient,
@@ -74,6 +75,14 @@ const adminBase = z.object({
 });
 const generatedRepo = adminBase.extend({ generation: z.string().min(1) });
 const AdminRequestSchema = z.discriminatedUnion("action", [
+	generatedRepo.extend({
+		action: z.literal("diff"),
+		from: z.string().nullable(),
+		to: z.string(),
+		opts: z
+			.object({ limit: z.number().optional(), cursor: z.string().optional() })
+			.optional(),
+	}),
 	generatedRepo.extend({
 		action: z.literal("create"),
 		defaultBranch: z.string().optional(),
@@ -160,6 +169,9 @@ export async function startGitSidecar(root: string): Promise<GitSidecar> {
 				const storageError = error instanceof LocalRepositoryStorageError;
 				response.writeHead(storageError ? 409 : 500, {
 					"Content-Type": "text/plain",
+					...(error instanceof GitDiffError
+						? { "X-Local-Artifacts-Diff-Error": error.code }
+						: {}),
 					...(storageError
 						? { "X-Local-Artifacts-Storage-Error": error.kind }
 						: {}),
@@ -360,6 +372,8 @@ async function handleAction(
 			return git.state();
 		case "readBlob":
 			return git.readBlob(body.hash);
+		case "diff":
+			return git.diff(body.from, body.to, body.opts);
 		case "readTree":
 			return git.readTree(body.hash);
 		case "readCommit":

@@ -1,4 +1,8 @@
 import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
+import type {
+	ArtifactsDiffOptions,
+	ArtifactsDiffResult,
+} from "../../plugins/artifacts/repo-diff";
 
 const repoName = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
@@ -113,6 +117,12 @@ interface BackendState {
 }
 
 type BackendRequest =
+	| {
+			action: "diff";
+			from: string | null;
+			to: string;
+			opts?: ArtifactsDiffOptions;
+	  }
 	| { action: "create"; defaultBranch: string }
 	| { action: "delete" }
 	| {
@@ -149,6 +159,11 @@ interface CommitMetadata {
 }
 
 interface LocalArtifactsRepo {
+	diff(
+		from: string | null,
+		to: string,
+		opts?: ArtifactsDiffOptions
+	): Promise<ArtifactsDiffResult>;
 	info(): Promise<RepositoryMetadata>;
 	createToken(scope?: TokenScope, ttl?: number): Promise<CreateTokenResult>;
 	listTokens(): Promise<{ total: number; tokens: TokenInfo[] }>;
@@ -610,6 +625,14 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		);
 		if (!response.ok) {
 			const message = await response.text();
+			const diffError = response.headers.get("X-Local-Artifacts-Diff-Error");
+			if (
+				request.action === "diff" &&
+				(diffError === "INVALID_INPUT" ||
+					diffError === "NOT_FOUND" ||
+					diffError === "MEMORY_LIMIT")
+			)
+				throw new ArtifactsError(diffError, message);
 			const storageError = response.headers.get(
 				"X-Local-Artifacts-Storage-Error"
 			);
@@ -747,6 +770,18 @@ function createRepoHandle(
 			});
 			return result === null ? null : new Blob([decodeBase64(result.data)]);
 		},
+		diff: (from: string | null, to: string, opts?: ArtifactsDiffOptions) =>
+			publicCall(async () => {
+				validateDiffInput(from, to, opts, (code, message) => {
+					throw new ArtifactsError(code, message);
+				});
+				return read<ArtifactsDiffResult>({
+					action: "diff",
+					from,
+					to,
+					...(opts === undefined ? {} : { opts }),
+				});
+			}),
 		readTree: async (hash: string) => {
 			validateHash(hash);
 			return await read({ action: "readTree", hash });
@@ -1382,4 +1417,76 @@ function classifyImportError(message: string): ArtifactsError {
 		"UPSTREAM_UNAVAILABLE",
 		"The upstream service is unavailable. Please retry."
 	);
+}
+
+// Keep input validation aligned with the service/native diff reader. This Worker
+// is also loaded standalone by lifecycle tests, so it has no runtime imports.
+const HEX40 = /^[0-9a-fA-F]{40}$/;
+function validateDiffInput(
+	from: string | null,
+	to: string,
+	opts: ArtifactsDiffOptions | undefined,
+	fail: (code: "INVALID_INPUT" | "MEMORY_LIMIT", message: string) => never
+): number {
+	for (const [side, ref] of [
+		["from", from],
+		["to", to],
+	] as const) {
+		if (side === "from" && ref === null) continue;
+		// Full ref names and short branch/tag names are both accepted. Revision
+		// expressions and abbreviated object IDs are deliberately not accepted.
+		if (
+			typeof ref !== "string" ||
+			ref.length === 0 ||
+			ref.length > 1024 ||
+			(!HEX40.test(ref) &&
+				(/[~^:?*[\\]/.test(ref) ||
+					Array.from(ref).some(
+						(character) =>
+							character.charCodeAt(0) <= 32 || character.charCodeAt(0) === 127
+					) ||
+					ref.includes("..") ||
+					ref.includes("@{") ||
+					ref.includes("//") ||
+					ref.startsWith("-") ||
+					ref.startsWith("/") ||
+					ref.endsWith("/") ||
+					ref
+						.split("/")
+						.some(
+							(part) =>
+								part.startsWith(".") ||
+								part.endsWith(".") ||
+								part.endsWith(".lock")
+						) ||
+					(/^[0-9a-fA-F]+$/.test(ref) && ref.length >= 7) ||
+					(ref.length === 40 && !ref.includes("/"))))
+		) {
+			fail(
+				"INVALID_INPUT",
+				`${side} must be a branch, tag, or full 40-character commit hash`
+			);
+		}
+	}
+	if (
+		opts !== undefined &&
+		(opts === null || typeof opts !== "object" || Array.isArray(opts))
+	)
+		fail("INVALID_INPUT", "opts must be an object");
+	const limit = opts?.limit ?? 100;
+	if (
+		!Number.isInteger(limit) ||
+		limit < 1 ||
+		limit > 1000 ||
+		opts?.limit === null
+	)
+		fail("INVALID_INPUT", "limit must be an integer between 1 and 1000");
+	if (
+		opts?.cursor !== undefined &&
+		(typeof opts.cursor !== "string" ||
+			opts.cursor.length === 0 ||
+			opts.cursor.length > 24000)
+	)
+		fail("INVALID_INPUT", "Invalid diff cursor");
+	return limit;
 }
