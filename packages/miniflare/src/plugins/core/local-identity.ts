@@ -1,4 +1,5 @@
 import { createHash, generateKeyPairSync, randomBytes } from "node:crypto";
+import { readFileSync, unlinkSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import AUTHORITY from "worker:identity/authority";
@@ -44,6 +45,7 @@ export interface LocalIdentityMetadata {
 export interface LocalIdentityGraph {
 	directory: string;
 	dispose(): Promise<void>;
+	disposeSync(): void;
 	metadata: LocalIdentityMetadata;
 	services: Service[];
 	bindings(worker: ParsedWorkerOptions, script: string): Worker_Binding[];
@@ -125,10 +127,10 @@ async function ownRealm(directory: string, owner: string) {
 			);
 		}
 	}
-	return async () => {
+	return () => {
 		try {
-			if ((await fs.readFile(file, "utf8")) === value) {
-				await fs.unlink(file);
+			if (readFileSync(file, "utf8") === value) {
+				unlinkSync(file);
 			}
 		} catch (error) {
 			if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
@@ -265,7 +267,8 @@ export async function createLocalIdentityGraph(
 	const dispose = await ownRealm(directory, tmpPath);
 	return {
 		directory,
-		dispose,
+		dispose: async () => dispose(),
+		disposeSync: dispose,
 		metadata,
 		services: [
 			{

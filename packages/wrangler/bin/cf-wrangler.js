@@ -51,6 +51,13 @@ verbHandler
 	.run(parsed)
 	.then((code) => process.exit(code))
 	.catch((err) => {
-		process.stderr.write(`${(err && err.stack) || err}\n`);
+		const detail =
+			err?.stack ||
+			err?.cause?.stack ||
+			err?.cause?.message ||
+			err?.message ||
+			err?.reason ||
+			err;
+		process.stderr.write(`${detail}\n`);
 		process.exit(1);
 	});

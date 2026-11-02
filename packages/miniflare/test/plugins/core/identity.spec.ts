@@ -1,6 +1,9 @@
+import { spawn } from "node:child_process";
+import { once } from "node:events";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { createInterface } from "node:readline";
 import { removeDir } from "@cloudflare/workers-utils";
 import { Miniflare, Response, convertV4MiniflareOptions } from "miniflare";
 import { test, vi } from "vitest";
@@ -147,12 +150,17 @@ test("keeps local keys and subjects across reload/restart; separates projects an
 			await (await second.dispatchFetch("http://localhost/")).text()
 		).not.toBe(token);
 		const authorityFiles = await fs.readdir(path.join(root, "identity"));
-		const authority = path.join(
-			root,
-			"identity",
-			authorityFiles[0],
-			"authority.json"
-		);
+		let authority = "";
+		for (const project of authorityFiles) {
+			const candidate = path.join(root, "identity", project, "authority.json");
+			const state = JSON.parse(await fs.readFile(candidate, "utf8")) as {
+				realm: string;
+			};
+			if (metadata?.issuer.includes(`oidc.${state.realm}.test`)) {
+				authority = candidate;
+			}
+		}
+		expect(authority).not.toBe("");
 		if (process.platform !== "win32") {
 			expect((await fs.stat(authority)).mode & 0o777).toBe(0o600);
 		}
@@ -460,6 +468,45 @@ test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
 			expect(outbound).not.toHaveBeenCalled();
 		} finally {
 			await mf.dispose();
+			await removeDir(root);
+		}
+	}
+);
+
+test.skipIf(process.platform === "win32")(
+	"releases persisted identity ownership on process signals and keeps the realm",
+	async ({ expect, onTestFinished }) => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), "identity-signal-"));
+		try {
+			let issuer: string | undefined;
+			for (const signal of ["SIGINT", "SIGTERM"] as const) {
+				const script = `const {Miniflare,convertV4MiniflareOptions}=require(${JSON.stringify(path.resolve(__dirname, "../../../dist/src/index.js"))});
+const mf=new Miniflare(convertV4MiniflareOptions({name:'sender',rootPath:${JSON.stringify(root)},resourcePersistencePath:${JSON.stringify(root)},host:'127.0.0.1',cf:false,enableDevRegistry:false,modules:true,script:'export default {fetch(){return new Response("ok")}}',compatibilityDate:'2026-10-01',identities:{IDENTITY:{audience:'urn:api'}}}));
+mf.getLocalIdentity().then(metadata=>console.log(JSON.stringify(metadata)));`;
+				const child = spawn(process.execPath, ["-e", script], {
+					stdio: ["ignore", "pipe", "pipe"],
+				});
+				onTestFinished(() => {
+					child.kill("SIGKILL");
+				});
+				child.stderr.resume();
+				const lines = createInterface({ input: child.stdout });
+				const [line] = await once(lines, "line");
+				const metadata = JSON.parse(line as string) as { issuer: string };
+				issuer ??= metadata.issuer;
+				expect(metadata.issuer).toBe(issuer);
+				const exited = once(child, "exit");
+				child.kill(signal);
+				const [code] = await exited;
+				expect(code).toBe(signal === "SIGINT" ? 130 : 143);
+				lines.close();
+				for (const project of await fs.readdir(path.join(root, "identity"))) {
+					await expect(
+						fs.stat(path.join(root, "identity", project, "owner.json"))
+					).rejects.toMatchObject({ code: "ENOENT" });
+				}
+			}
+		} finally {
 			await removeDir(root);
 		}
 	}

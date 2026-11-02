@@ -1079,6 +1079,9 @@ export class Miniflare {
 					removeContainerSessionDetached(session);
 				}
 			}
+			// Runtime disposal sends SIGKILL synchronously. Release ownership only
+			// after that request; async cleanup cannot run during process exit.
+			this.#localIdentity?.disposeSync();
 			// This exit hook is synchronous — the event loop will never run again
 			// after it returns, so any operation that schedules a microtask (like
 			// fs.promises.rm) will never even be executed, let alone completed.
