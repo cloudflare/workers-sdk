@@ -108,6 +108,9 @@ export interface ConfigBundle {
 	// Zone to use for the CF-Worker header in outbound fetches
 	zone: string | undefined;
 	access: Config["access"] | undefined;
+	imageUrlTransformations:
+		| NonNullable<Config["images"]>["url_transformations"]
+		| undefined;
 	sendMetrics: boolean | undefined;
 	// The stable, externally-reachable URL of the proxy server in front of
 	// this Miniflare instance (e.g. Wrangler's ProxyWorker URL).
@@ -1301,12 +1304,34 @@ export async function buildMiniflareOptions(
 				outboundService: config.outboundService,
 				zone: config.zone,
 				access: config.access?.dev,
+				imageUrlTransformations: buildImageUrlTransformationsOptions(
+					config.imageUrlTransformations
+				),
 				connectHandlers: config.connectHandlers,
 			},
 			...externalWorkers,
 		],
 	};
 	return options;
+}
+
+/**
+ * Converts the Wrangler `images.url_transformations` config to Miniflare's
+ * `imageUrlTransformations` option.
+ *
+ * @param urlTransformations The Wrangler `images.url_transformations` config.
+ * @returns The Miniflare option, or `undefined` if not configured.
+ */
+export function buildImageUrlTransformationsOptions(
+	urlTransformations: NonNullable<Config["images"]>["url_transformations"]
+): V4WorkerOptions["imageUrlTransformations"] {
+	if (urlTransformations === undefined) {
+		return undefined;
+	}
+	return {
+		enabled: urlTransformations.enabled,
+		allowedOrigins: urlTransformations.allowed_origins,
+	};
 }
 
 /**

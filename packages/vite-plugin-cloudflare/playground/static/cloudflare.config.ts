@@ -5,5 +5,6 @@ export default defineConfig({
 		name: "static",
 		compatibilityDate: "2024-12-30",
 		assets: {},
+		images: { urlTransformations: { enabled: true } },
 	},
 });

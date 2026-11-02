@@ -818,6 +818,12 @@ export function getGlobalServices({
 			name: CoreBindings.STRIP_DISABLE_PRETTY_ERROR,
 			json: JSON.stringify(sharedOptions.stripDisablePrettyError),
 		},
+		{
+			name: CoreBindings.IMAGE_URL_TRANSFORMATIONS_PASSTHROUGH,
+			json: JSON.stringify(
+				!!sharedOptions.unsafeImageUrlTransformationsPassthrough
+			),
+		},
 		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`
 		...proxyBindings,
 		// Add cache service binding for purgeCache() API
@@ -920,6 +926,19 @@ export function getGlobalServices({
 			serviceEntryBindings.push({
 				name: CoreBindings.JSON_ACCESS_BLOB_PREFIX + workerOpt.config.name,
 				json: JSON.stringify(accessBlob),
+			});
+		}
+	}
+	// Per-worker `/cdn-cgi/image/` config, keyed by worker name so the entry
+	// worker can pick the correct one after routing.
+	for (const workerOpt of allWorkerOpts ?? []) {
+		const urlTransformations = workerOpt.config.images?.urlTransformations;
+		if (urlTransformations !== undefined) {
+			serviceEntryBindings.push({
+				name:
+					CoreBindings.JSON_IMAGE_URL_TRANSFORMATIONS_PREFIX +
+					workerOpt.config.name,
+				json: JSON.stringify(urlTransformations),
 			});
 		}
 	}

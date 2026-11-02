@@ -705,6 +705,33 @@ const AccessSchema = z.strictObject({
 		.optional(),
 });
 
+const ImagesSchema = z.strictObject({
+	urlTransformations: z
+		.strictObject({
+			enabled: z.boolean(),
+			allowedOrigins: z
+				.array(
+					z
+						.string()
+						.min(1)
+						.refine((origin) => !origin.includes(","), {
+							message: "Allowed origins must not contain commas",
+						})
+						.refine((origin) => !/^https?:\/\//i.test(origin), {
+							message: "Allowed origins must be hostnames without a protocol",
+						})
+				)
+				.min(1)
+				.max(10)
+				.refine(
+					(origins) => origins.length === 1 || !origins.includes("*"),
+					{ message: 'Allowed origins must not combine "*" with other origins' }
+				)
+				.optional(),
+		})
+		.optional(),
+});
+
 const PlacementSchema = z.union([
 	z.strictObject({
 		mode: z.enum(["off", "smart"]),
@@ -821,6 +848,7 @@ const BaseWorkerSchema = z.strictObject({
 	logpush: z.boolean().optional(),
 	observability: ObservabilitySchema.optional(),
 	access: AccessSchema.optional(),
+	images: ImagesSchema.optional(),
 	workersDev: z.boolean().optional(),
 	previewUrls: z.boolean().optional(),
 	firstPartyWorker: z.boolean().optional(),

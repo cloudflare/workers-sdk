@@ -24,6 +24,8 @@ export const CorePaths = {
 	R2_PUBLIC: "/cdn-cgi/local/r2/public",
 	/** S3-compatible API endpoint for local R2 buckets */
 	R2_S3: "/cdn-cgi/local/r2/s3",
+	/** Image transformations via URL, mirroring the production path */
+	IMAGE_TRANSFORM: "/cdn-cgi/image",
 } as const;
 
 export const CoreHeaders = {
@@ -108,6 +110,9 @@ export const CoreBindings = {
 	SERVICE_R2_S3: "MINIFLARE_R2_S3",
 	SERVICE_OBSERVABILITY_COLLECTOR: "MINIFLARE_OBSERVABILITY_COLLECTOR",
 	JSON_ACCESS_BLOB_PREFIX: "MINIFLARE_ACCESS_BLOB_",
+	JSON_IMAGE_URL_TRANSFORMATIONS_PREFIX: "MINIFLARE_IMAGE_URL_TRANSFORMATIONS_",
+	IMAGE_URL_TRANSFORMATIONS_PASSTHROUGH:
+		"MINIFLARE_IMAGE_URL_TRANSFORMATIONS_PASSTHROUGH",
 	TEXT_FALLBACK_WORKER_NAME: "MINIFLARE_FALLBACK_WORKER_NAME",
 	SERVICE_EMAIL_STORE: "MINIFLARE_EMAIL_STORE",
 	// Prefix for the local explorer's direct service bindings to each user

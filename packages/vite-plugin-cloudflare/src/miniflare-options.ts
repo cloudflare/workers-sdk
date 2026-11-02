@@ -277,6 +277,12 @@ export async function getDevMiniflareOptions(
 				// TODO: Move this handling into Miniflare so Access is applied to the
 				// user Worker invocation without propagating through Worker boundaries.
 				access: entryWorkerConfig?.access,
+				// Requests are routed to the router, so Miniflare looks up the
+				// `/cdn-cgi/image/` config here
+				images:
+					resolvedPluginConfig.type === "assets-only"
+						? resolvedPluginConfig.config.images
+						: entryWorkerConfig?.images,
 				compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
 				compatibilityFlags: ["enable_ctx_exports"],
 				manifest: routerWorkerManifest,

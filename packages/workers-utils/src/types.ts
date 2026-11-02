@@ -599,6 +599,9 @@ export interface StartDevWorkerInput {
 	/** Cloudflare Access authentication configuration */
 	access?: Config["access"];
 
+	/** `/cdn-cgi/image/` URL transformations configuration */
+	imageUrlTransformations?: NonNullable<Config["images"]>["url_transformations"];
+
 	/**
 	 * Whether Wrangler should send usage metrics to Cloudflare for this project.
 	 *

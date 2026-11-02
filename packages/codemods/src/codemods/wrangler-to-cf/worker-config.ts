@@ -161,6 +161,25 @@ export function convertWorkerConfig(
 	);
 	addProperty(properties, source, "access");
 
+	const images = getRecord(source, "images");
+	const urlTransformations = images
+		? getRecord(images, "url_transformations")
+		: undefined;
+	if (urlTransformations) {
+		properties.push({
+			key: "images",
+			value: {
+				kind: "object",
+				properties: [
+					{
+						key: "urlTransformations",
+						value: camelObject(urlTransformations),
+					},
+				],
+			},
+		});
+	}
+
 	const assets = getRecord(source, "assets");
 	if (assets) {
 		const runtimeAssets = optionsFromRecord(assets, [

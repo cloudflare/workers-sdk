@@ -89,6 +89,9 @@ export class ProxyController extends Controller {
 			httpsKey: cert?.key,
 			stripDisablePrettyError: false,
 			unsafeLocalExplorer: false,
+			// The user Worker's Miniflare instance (or the edge, in remote mode)
+			// handles `/cdn-cgi/image/`
+			unsafeImageUrlTransformationsPassthrough: true,
 			workers: [
 				{
 					name: "ProxyWorker",
