@@ -383,6 +383,86 @@ function isVersionPackagesPRCheckRun(message: WebhookEvent): {
 	};
 }
 
+/**
+ * Summary jobs deliberately fail when a dependency is cancelled to keep branch
+ * protection intact. Only suppress their alerts when all their dependencies
+ * either passed or were cancelled, so genuine failures still get reported.
+ */
+async function isCancelledTestSummary(
+	apiToken: string,
+	{
+		checkRun,
+		owner,
+		repo,
+	}: {
+		checkRun: CheckRunCompletedEvent["check_run"];
+		owner: string;
+		repo: string;
+	}
+): Promise<boolean> {
+	if (
+		checkRun.conclusion !== "failure" ||
+		(checkRun.name !== "Tests" &&
+			!/^C3 E2E \(.+\) - frameworks$/.test(checkRun.name))
+	) {
+		return false;
+	}
+
+	type CheckResult = { name: string; conclusion: string | null };
+	const dependencies: CheckResult[] = [];
+	let fetchedCount = 0;
+
+	try {
+		for (let page = 1; ; page++) {
+			const response = await fetch(
+				`https://api.github.com/repos/${owner}/${repo}/check-suites/${checkRun.check_suite.id}/check-runs?per_page=100&page=${page}`,
+				{
+					headers: {
+						"User-Agent": "Cloudflare ANT Status bot",
+						Authorization: `Bearer ${apiToken}`,
+						Accept: "application/vnd.github+json",
+					},
+				}
+			);
+			if (!response.ok) {
+				throw new Error(`GitHub check runs request failed: ${response.status}`);
+			}
+			const { check_runs, total_count } = await response.json<{
+				check_runs: CheckResult[];
+				total_count: number;
+			}>();
+			// Each C3 summary depends on the entire framework shard matrix,
+			// including the shards for other package managers.
+			dependencies.push(
+				...check_runs.filter((check) =>
+					checkRun.name === "Tests"
+						? check.name.startsWith("Test partition (")
+						: /^C3 E2E \(.+\) - frameworks \d+\/\d+$/.test(check.name)
+				)
+			);
+			fetchedCount += check_runs.length;
+			if (fetchedCount >= total_count) {
+				break;
+			}
+			if (check_runs.length < 100) {
+				return false;
+			}
+		}
+	} catch (error) {
+		// Keep the alert if GitHub cannot confirm this is cancellation-only.
+		console.error("Error checking cancelled test dependencies:", error);
+		return false;
+	}
+
+	return (
+		dependencies.some((check) => check.conclusion === "cancelled") &&
+		dependencies.every(
+			(check) =>
+				check.conclusion === "success" || check.conclusion === "cancelled"
+		)
+	);
+}
+
 async function sendSecurityAlert(
 	webhookUrl: string,
 	{
@@ -825,7 +905,13 @@ export default {
 			}
 			// Notifies when any CI check fails on the Version Packages PR
 			const maybeVersionPackagesFailure = isVersionPackagesPRCheckRun(body);
-			if (maybeVersionPackagesFailure) {
+			if (
+				maybeVersionPackagesFailure &&
+				!(await isCancelledTestSummary(
+					env.GITHUB_PAT,
+					maybeVersionPackagesFailure
+				))
+			) {
 				await sendVersionPackagesCIFailureAlert(
 					env.ALERTS_WEBHOOK,
 					maybeVersionPackagesFailure
