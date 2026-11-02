@@ -181,7 +181,9 @@ export async function runGit(
 		);
 		timeout.unref();
 		const collect = (target: Buffer[], chunk: Buffer) => {
-			if (overflow) return;
+			if (overflow) {
+				return;
+			}
 			outputBytes += chunk.length;
 			if (outputBytes > (options.maxOutputBytes ?? Infinity)) {
 				overflow = true;
@@ -526,11 +528,12 @@ export class GitClient {
 			const size = await this.git(["cat-file", "-s", hash], {
 				maxOutputBytes: 1024,
 			});
-			if (Number(size.stdout.toString().trim()) > DIFF_OBJECT_LIMIT)
+			if (Number(size.stdout.toString().trim()) > DIFF_OBJECT_LIMIT) {
 				throw new GitDiffError(
 					"MEMORY_LIMIT",
 					"Diff object exceeds its memory budget"
 				);
+			}
 			return (
 				await this.git(["cat-file", type, hash], {
 					maxOutputBytes: DIFF_OBJECT_LIMIT,
@@ -564,32 +567,41 @@ export class GitClient {
 						!hash &&
 						(/^[0-9a-fA-F]{7,}$/.test(ref) ||
 							(ref.length === 40 && !ref.includes("/")))
-					)
+					) {
 						throw new GitDiffError(
 							"INVALID_INPUT",
 							`${side} expected a full 40-character commit hash`
 						);
+					}
 					for (let depth = 0; depth <= 8; depth++) {
-						if (!hash)
+						if (!hash) {
 							throw new GitDiffError(
 								"NOT_FOUND",
 								`diff ${side} not found: ${ref}`
 							);
+						}
 						const type = await this.objectType(hash);
-						if (!type)
+						if (!type) {
 							throw new GitDiffError(
 								"NOT_FOUND",
 								`diff ${side} not found: ${ref}`
 							);
-						if (type !== "commit" && (direct || type !== "tag" || depth === 8))
+						}
+						if (
+							type !== "commit" &&
+							(direct || type !== "tag" || depth === 8)
+						) {
 							throw new GitDiffError(
 								"INVALID_INPUT",
 								`${side} must resolve to a commit`
 							);
+						}
 						const data = await readObject(hash, type);
 						if (type === "commit") {
 							const tree = /^tree ([0-9a-f]{40})\n/.exec(data.toString())?.[1];
-							if (!tree) throw new Error("Invalid commit tree");
+							if (!tree) {
+								throw new Error("Invalid commit tree");
+							}
 							return { hash, tree };
 						}
 						hash =
@@ -605,15 +617,17 @@ export class GitClient {
 					const entries = [];
 					let offset = 0;
 					while (offset < data.length) {
-						if (entries.length === 8192)
+						if (entries.length === 8192) {
 							throw new GitDiffError(
 								"MEMORY_LIMIT",
 								"Diff tree has too many entries"
 							);
+						}
 						const space = data.indexOf(32, offset);
 						const zero = data.indexOf(0, space + 1);
-						if (space < offset || zero < space || zero + 21 > data.length)
+						if (space < offset || zero < space || zero + 21 > data.length) {
 							throw new Error("Invalid tree");
+						}
 						entries.push({
 							mode: data.subarray(offset, space).toString(),
 							name: data.subarray(space + 1, zero).toString("hex"),

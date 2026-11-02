@@ -631,8 +631,9 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 				(diffError === "INVALID_INPUT" ||
 					diffError === "NOT_FOUND" ||
 					diffError === "MEMORY_LIMIT")
-			)
+			) {
 				throw new ArtifactsError(diffError, message);
+			}
 			const storageError = response.headers.get(
 				"X-Local-Artifacts-Storage-Error"
 			);
@@ -1432,7 +1433,9 @@ function validateDiffInput(
 		["from", from],
 		["to", to],
 	] as const) {
-		if (side === "from" && ref === null) continue;
+		if (side === "from" && ref === null) {
+			continue;
+		}
 		// Full ref names and short branch/tag names are both accepted. Revision
 		// expressions and abbreviated object IDs are deliberately not accepted.
 		if (
@@ -1469,22 +1472,25 @@ function validateDiffInput(
 	if (
 		opts !== undefined &&
 		(opts === null || typeof opts !== "object" || Array.isArray(opts))
-	)
+	) {
 		fail("INVALID_INPUT", "opts must be an object");
+	}
 	const limit = opts?.limit ?? 100;
 	if (
 		!Number.isInteger(limit) ||
 		limit < 1 ||
 		limit > 1000 ||
 		opts?.limit === null
-	)
+	) {
 		fail("INVALID_INPUT", "limit must be an integer between 1 and 1000");
+	}
 	if (
 		opts?.cursor !== undefined &&
 		(typeof opts.cursor !== "string" ||
 			opts.cursor.length === 0 ||
 			opts.cursor.length > 24000)
-	)
+	) {
 		fail("INVALID_INPUT", "Invalid diff cursor");
+	}
 	return limit;
 }

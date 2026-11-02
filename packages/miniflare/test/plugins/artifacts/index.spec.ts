@@ -1672,8 +1672,9 @@ test("artifacts: diff over real RPC matches native Git, paginates, and reports e
 		["refs/heads/before", diffFixture.before],
 		["refs/heads/unrelated", diffFixture.unrelated],
 		["refs/tags/v-after", diffFixture.tag],
-	])
+	]) {
 		await git(["update-ref", ref, hash], directory);
+	}
 	const auth = [
 		"-c",
 		`http.extraHeader=Authorization: Bearer ${created.token}`,

@@ -63,7 +63,9 @@ export function validateDiffInput(
 		["from", from],
 		["to", to],
 	] as const) {
-		if (side === "from" && ref === null) continue;
+		if (side === "from" && ref === null) {
+			continue;
+		}
 		// Full ref names and short branch/tag names are both accepted. Revision
 		// expressions and abbreviated object IDs are deliberately not accepted.
 		if (
@@ -100,23 +102,26 @@ export function validateDiffInput(
 	if (
 		opts !== undefined &&
 		(opts === null || typeof opts !== "object" || Array.isArray(opts))
-	)
+	) {
 		fail("INVALID_INPUT", "opts must be an object");
+	}
 	const limit = opts?.limit ?? 100;
 	if (
 		!Number.isInteger(limit) ||
 		limit < 1 ||
 		limit > 1000 ||
 		opts?.limit === null
-	)
+	) {
 		fail("INVALID_INPUT", "limit must be an integer between 1 and 1000");
+	}
 	if (
 		opts?.cursor !== undefined &&
 		(typeof opts.cursor !== "string" ||
 			opts.cursor.length === 0 ||
 			opts.cursor.length > 24000)
-	)
+	) {
 		fail("INVALID_INPUT", "Invalid diff cursor");
+	}
 	return limit;
 }
 
@@ -143,9 +148,13 @@ async function decodeCursor(
 	to: string,
 	fail: DiffSource["fail"]
 ): Promise<string> {
-	if (cursor === undefined) return "";
+	if (cursor === undefined) {
+		return "";
+	}
 	try {
-		if (!/^[A-Za-z0-9_-]+$/.test(cursor)) throw new Error("encoding");
+		if (!/^[A-Za-z0-9_-]+$/.test(cursor)) {
+			throw new Error("encoding");
+		}
 		const envelope: unknown = JSON.parse(
 			Buffer.from(cursor, "base64url").toString()
 		);
@@ -154,8 +163,9 @@ async function decodeCursor(
 			envelope.length !== 2 ||
 			typeof envelope[0] !== "string" ||
 			envelope[1] !== (await checksum(envelope[0]))
-		)
+		) {
 			throw new Error("checksum");
+		}
 		const value: unknown = JSON.parse(envelope[0]);
 		if (
 			!Array.isArray(value) ||
@@ -166,8 +176,9 @@ async function decodeCursor(
 			typeof value[3] !== "string" ||
 			!/^(?:[0-9a-f]{2})+$/.test(value[3]) ||
 			value[3].length > MAX_PATH_BYTES * 2
-		)
+		) {
 			throw new Error("pair");
+		}
 		return value[3];
 	} catch {
 		return fail(
@@ -229,31 +240,40 @@ export async function diffSnapshots(
 		prefix: string,
 		depth: number
 	): Promise<void> => {
-		if (oldHash === newHash) return;
-		if (depth > MAX_DEPTH)
+		if (oldHash === newHash) {
+			return;
+		}
+		if (depth > MAX_DEPTH) {
 			source.fail("MEMORY_LIMIT", "Diff tree depth exceeds its memory budget");
+		}
 		// Each side is capped before parsing; this map is at most two tree objects.
 		const tasks = new Map<string, Task>();
 		for (const [side, hash] of [
 			["old", oldHash],
 			["next", newHash],
 		] as const) {
-			if (hash === undefined) continue;
+			if (hash === undefined) {
+				continue;
+			}
 			for (const entry of await source.tree(hash)) {
 				const path = prefix + entry.name + (isTree(entry) ? "2f" : "");
-				if (path.length > MAX_PATH_BYTES * 2)
+				if (path.length > MAX_PATH_BYTES * 2) {
 					source.fail("MEMORY_LIMIT", "Diff path exceeds its memory budget");
+				}
 				// Seek directly to the cursor's subtree; earlier subtrees are not read.
-				if (path <= last && !(isTree(entry) && last.startsWith(path))) continue;
+				if (path <= last && !(isTree(entry) && last.startsWith(path))) {
+					continue;
+				}
 				let task = tasks.get(path);
 				if (!task) {
 					task = { path, depth };
 					pendingBytes += cost(task);
-					if (pendingBytes > MAX_PENDING_BYTES)
+					if (pendingBytes > MAX_PENDING_BYTES) {
 						source.fail(
 							"MEMORY_LIMIT",
 							"Diff frontier exceeds its memory budget"
 						);
+					}
 					tasks.set(path, task);
 				}
 				task[side] = entry;
@@ -271,13 +291,16 @@ export async function diffSnapshots(
 	await enqueueTree(before?.tree, after.tree, "", 0);
 	while (stack.length) {
 		const task = stack.pop();
-		if (!task) break;
+		if (!task) {
+			break;
+		}
 		pendingBytes -= cost(task);
 		if (
 			task.old?.hash === task.next?.hash &&
 			task.old?.mode === task.next?.mode
-		)
+		) {
 			continue;
+		}
 		if (isTree(task.old) || isTree(task.next)) {
 			await enqueueTree(
 				task.old?.hash,
