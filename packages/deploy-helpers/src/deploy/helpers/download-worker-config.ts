@@ -1,8 +1,10 @@
 import { constructWranglerConfig } from "@cloudflare/workers-utils";
 import { fetchResult } from "../../shared/context";
+import { partitionRoutes } from "../../shared/partition-routes";
 import type {
 	ComplianceConfig,
 	RawConfig,
+	Route,
 	ServiceMetadataRes,
 	WorkerMetadata,
 } from "@cloudflare/workers-utils";
@@ -39,14 +41,24 @@ type RoutesRes = {
 }[];
 
 /**
- * Downloads all information required to construct a Wrangler config file for a Worker from the API
+ * Downloads the information required to construct a Wrangler config file for a Worker from the API.
+ * When `localRoutes` is provided, only fetches the route categories that the
+ * current deployment can change. Omit it when downloading a complete config.
  */
 export async function fetchWorkerConfig(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	workerName: string,
-	environment: string
+	environment: string,
+	localRoutes?: Route[]
 ) {
+	const partitionedRoutes =
+		localRoutes === undefined ? undefined : partitionRoutes(localRoutes);
+	const fetchRoutes =
+		partitionedRoutes === undefined || partitionedRoutes.routesOnly.length > 0;
+	const fetchCustomDomains =
+		partitionedRoutes === undefined ||
+		partitionedRoutes.customDomainsOnly.length > 0;
 	const [
 		bindings,
 		routes,
@@ -59,14 +71,18 @@ export async function fetchWorkerConfig(
 			complianceConfig,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/bindings`
 		),
-		fetchResult<RoutesRes>(
-			complianceConfig,
-			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/routes?show_zonename=true`
-		),
-		fetchResult<CustomDomainsRes>(
-			complianceConfig,
-			`/accounts/${accountId}/workers/domains/records?page=0&per_page=5&service=${workerName}&environment=${environment}`
-		),
+		fetchRoutes
+			? fetchResult<RoutesRes>(
+					complianceConfig,
+					`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/routes?show_zonename=true`
+				)
+			: Promise.resolve([]),
+		fetchCustomDomains
+			? fetchResult<CustomDomainsRes>(
+					complianceConfig,
+					`/accounts/${accountId}/workers/domains/records?page=0&per_page=5&service=${workerName}&environment=${environment}`
+				)
+			: Promise.resolve([]),
 		fetchResult<WorkerSubdomainRes>(
 			complianceConfig,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/subdomain`
@@ -98,13 +114,16 @@ export async function fetchWorkerConfig(
 /**
  * Downloads all the remote information we can gather for a worker and from them generates a raw configuration object that
  * approximates what a wrangler config object for the worker was/would have been.
+ * When `localRoutes` is provided, route metadata is limited to categories that
+ * the current deployment can change. Omit it when downloading a complete config.
  */
 export async function downloadWorkerConfig(
 	complianceConfig: ComplianceConfig,
 	workerName: string,
 	environment: string,
 	entrypoint: string,
-	accountId: string
+	accountId: string,
+	localRoutes?: Route[]
 ): Promise<RawConfig> {
 	const {
 		bindings,
@@ -117,7 +136,8 @@ export async function downloadWorkerConfig(
 		complianceConfig,
 		accountId,
 		workerName,
-		environment
+		environment,
+		localRoutes
 	);
 
 	return constructWranglerConfig({
