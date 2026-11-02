@@ -3,8 +3,7 @@ import {
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, it, vi } from "vitest";
-import { writeAuthConfigFile } from "../user";
+import { beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
@@ -762,47 +761,6 @@ Delete it as well?`,
 			expect(std.warn).toContain(
 				'Could not check whether "my-script" owns any Cloudflare Container applications'
 			);
-			expect(std.err).toBe("");
-		});
-
-		it("warns once when the login lacks the Containers scope", async ({
-			expect,
-		}) => {
-			vi.stubEnv("CLOUDFLARE_API_TOKEN", "");
-			delete process.env.CLOUDFLARE_API_TOKEN;
-			writeAuthConfigFile({
-				oauth_token: "some-oauth-token",
-				refresh_token: "some-refresh-token",
-				expiration_time: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-				scopes: ["account:read", "workers_scripts:write"],
-			});
-			mockConfirm({
-				text: `Are you sure you want to delete my-script? This action cannot be undone.`,
-				result: true,
-			});
-			mockListKVNamespacesRequest(expect);
-			mockListReferencesRequest(expect, "my-script");
-			mockListTailsByConsumerRequest(expect, "my-script");
-			mockDurableObjectNamespaces(expect, [
-				{
-					id: namespaceId,
-					class: "Counter",
-					name: "my-script-counter",
-					script: "my-script",
-					use_sqlite: true,
-				},
-			]);
-			mockDeleteWorkerRequest(expect, { name: "my-script" });
-
-			await runWrangler("delete --name my-script");
-
-			expect(std.out).toContain("Successfully deleted my-script");
-			// One warning, without the error and scope list that
-			// `fillOpenAPIConfiguration` prints for a missing scope.
-			expect(std.warn).toContain(
-				'Could not check whether "my-script" owns any Cloudflare Container applications: the current login does not have the "containers:write" scope'
-			);
-			expect(std.out).not.toContain("account:read");
 			expect(std.err).toBe("");
 		});
 

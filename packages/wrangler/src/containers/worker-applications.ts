@@ -6,7 +6,6 @@ import {
 import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { logger } from "../logger";
-import { getScopes } from "../user";
 import { containersScope } from "./index";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -55,15 +54,6 @@ export async function findWorkerContainerApplications(
 	// applications, so the Containers API is never called for one.
 	if (ownedNamespaceIds.size === 0) {
 		return [];
-	}
-
-	// `fillOpenAPIConfiguration` prints an error and the full scope list before
-	// throwing, so report a missing Containers scope as a plain lookup failure.
-	const scopes = getScopes();
-	if (scopes !== undefined && !scopes.includes(containersScope)) {
-		throw new Error(
-			`the current login does not have the "${containersScope}" scope`
-		);
 	}
 
 	await fillOpenAPIConfiguration(config, containersScope);
