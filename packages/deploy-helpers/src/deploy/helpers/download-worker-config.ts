@@ -1,10 +1,8 @@
 import { constructWranglerConfig } from "@cloudflare/workers-utils";
 import { fetchResult } from "../../shared/context";
-import { partitionRoutes } from "../../shared/partition-routes";
 import type {
 	ComplianceConfig,
 	RawConfig,
-	Route,
 	ServiceMetadataRes,
 	WorkerMetadata,
 } from "@cloudflare/workers-utils";
@@ -42,23 +40,15 @@ type RoutesRes = {
 
 /**
  * Downloads the information required to construct a Wrangler config file for a Worker from the API.
- * When `localRoutes` is provided, only fetches the route categories that the
- * current deployment can change. Omit it when downloading a complete config.
  */
 export async function fetchWorkerConfig(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	workerName: string,
 	environment: string,
-	localRoutes?: Route[]
+	fetchRoutes: boolean,
+	fetchCustomDomains: boolean
 ) {
-	const partitionedRoutes =
-		localRoutes === undefined ? undefined : partitionRoutes(localRoutes);
-	const fetchRoutes =
-		partitionedRoutes === undefined || partitionedRoutes.routesOnly.length > 0;
-	const fetchCustomDomains =
-		partitionedRoutes === undefined ||
-		partitionedRoutes.customDomainsOnly.length > 0;
 	const [
 		bindings,
 		routes,
@@ -114,8 +104,6 @@ export async function fetchWorkerConfig(
 /**
  * Downloads all the remote information we can gather for a worker and from them generates a raw configuration object that
  * approximates what a wrangler config object for the worker was/would have been.
- * When `localRoutes` is provided, route metadata is limited to categories that
- * the current deployment can change. Omit it when downloading a complete config.
  */
 export async function downloadWorkerConfig(
 	complianceConfig: ComplianceConfig,
@@ -123,7 +111,8 @@ export async function downloadWorkerConfig(
 	environment: string,
 	entrypoint: string,
 	accountId: string,
-	localRoutes?: Route[]
+	fetchRoutes: boolean,
+	fetchCustomDomains: boolean
 ): Promise<RawConfig> {
 	const {
 		bindings,
@@ -137,7 +126,8 @@ export async function downloadWorkerConfig(
 		accountId,
 		workerName,
 		environment,
-		localRoutes
+		fetchRoutes,
+		fetchCustomDomains
 	);
 
 	return constructWranglerConfig({
