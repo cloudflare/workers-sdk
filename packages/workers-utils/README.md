@@ -17,5 +17,4 @@ import { getFreshSourceMapSupport } from "@cloudflare/workers-utils/sourcemap";
 The Node compatibility helper resolves the mode and explicit flags for a
 compatibility date. The source-map helper loads an isolated source-map-support
 instance so tools can install their own stack-trace handlers. Import these helpers
-directly from workers-utils. Miniflare retains deprecated exports for existing
-consumers; migrate before those exports are removed in a future release.
+directly from workers-utils.
