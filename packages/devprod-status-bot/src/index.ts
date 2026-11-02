@@ -1,4 +1,5 @@
 import dedent from "ts-dedent";
+import { sendMessage } from "./gchat";
 import type {
 	CheckRunCompletedEvent,
 	IssueCommentEvent,
@@ -225,39 +226,6 @@ async function addPRToProject(apiToken: string, repo: string, number: string) {
 				  }`,
 		}),
 	});
-}
-
-function getThreadID(date?: string | Date, label = "-pull-requests") {
-	// Apply an offset so we rollover days at around 10am UTC
-	return (
-		(date ? new Date(date) : new Date())
-			.toLocaleString("en-GB", { timeZone: "Pacific/Kiritimati" })
-			.split(",")[0] + label
-	);
-}
-
-async function sendMessage(
-	webhookUrl: string,
-	message: Record<string, unknown>,
-	label?: string
-) {
-	const threadId = getThreadID(new Date(), label);
-
-	const url = new URL(webhookUrl);
-
-	url.searchParams.set("threadKey", threadId);
-	url.searchParams.set(
-		"messageReplyOption",
-		"REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD"
-	);
-
-	const response = await fetch(url, {
-		method: "POST",
-		headers: { "Content-Type": "application/json; charset=utf-8" },
-		body: JSON.stringify(message),
-	});
-
-	console.log(await response.json());
 }
 
 function isIssueOrPREvent(
@@ -914,7 +882,8 @@ export default {
 					maybeRepositoryAdvisory
 				);
 			}
-			// Notifies when any CI check fails on the Version Packages PR
+			// Notifies when a CI check fails on the Version Packages PR, except for
+			// summary failures caused only by cancelled prerequisites.
 			const maybeVersionPackagesFailure = isVersionPackagesPRCheckRun(body);
 			if (
 				maybeVersionPackagesFailure &&

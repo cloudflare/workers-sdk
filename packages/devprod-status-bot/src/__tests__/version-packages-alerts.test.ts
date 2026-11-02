@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { sendMessage } from "../gchat";
 import worker from "../index";
+
+vi.mock("../gchat", () => ({ sendMessage: vi.fn() }));
 
 const env = {
 	ALERTS_WEBHOOK: "https://chat.example.com/alerts",
@@ -47,11 +50,12 @@ function suiteResponse(
 
 describe("Version Packages CI alerts", () => {
 	const fetchMock = vi.fn<typeof fetch>();
+	const sendMessageMock = vi.mocked(sendMessage);
 
 	beforeEach(() => {
 		fetchMock.mockReset().mockImplementation(async () => Response.json({}));
+		sendMessageMock.mockReset().mockResolvedValue(undefined);
 		vi.stubGlobal("fetch", fetchMock);
-		vi.spyOn(console, "log").mockImplementation(() => {});
 		vi.spyOn(console, "error").mockImplementation(() => {});
 	});
 
@@ -63,6 +67,7 @@ describe("Version Packages CI alerts", () => {
 		"ignores %s checks without fetching GitHub",
 		async (conclusion, { expect }) => {
 			await handleCheck("Tests", conclusion);
+			expect(sendMessageMock).not.toHaveBeenCalled();
 			expect(fetchMock).not.toHaveBeenCalled();
 		}
 	);
@@ -81,10 +86,8 @@ describe("Version Packages CI alerts", () => {
 				repository: { owner: { login: owner }, name: repo },
 			});
 
-			expect(fetchMock).toHaveBeenCalledTimes(1);
-			expect(fetchMock.mock.calls[0][0].toString()).toContain(
-				env.ALERTS_WEBHOOK
-			);
+			expect(sendMessageMock).toHaveBeenCalledOnce();
+			expect(fetchMock).not.toHaveBeenCalled();
 		}
 	);
 
@@ -108,10 +111,8 @@ describe("Version Packages CI alerts", () => {
 				},
 			});
 
-			expect(fetchMock).toHaveBeenCalledTimes(1);
-			expect(fetchMock.mock.calls[0][0].toString()).toContain(
-				env.ALERTS_WEBHOOK
-			);
+			expect(sendMessageMock).toHaveBeenCalledOnce();
+			expect(fetchMock).not.toHaveBeenCalled();
 		}
 	);
 
@@ -132,6 +133,7 @@ describe("Version Packages CI alerts", () => {
 
 		await handleCheck("Tests");
 
+		expect(sendMessageMock).not.toHaveBeenCalled();
 		expect(fetchMock).toHaveBeenCalledExactlyOnceWith(
 			"https://api.github.com/repos/cloudflare/workers-sdk/check-suites/456/check-runs?per_page=100&page=1",
 			{
@@ -160,7 +162,7 @@ describe("Version Packages CI alerts", () => {
 
 		await handleCheck(name);
 
-		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(sendMessageMock).not.toHaveBeenCalled();
 	});
 
 	it.for(["failure", "timed_out", "skipped", null])(
@@ -178,10 +180,7 @@ describe("Version Packages CI alerts", () => {
 
 			await handleCheck("Tests");
 
-			expect(fetchMock).toHaveBeenCalledTimes(2);
-			expect(fetchMock.mock.calls[1][0].toString()).toContain(
-				env.ALERTS_WEBHOOK
-			);
+			expect(sendMessageMock).toHaveBeenCalledOnce();
 		}
 	);
 
@@ -198,7 +197,7 @@ describe("Version Packages CI alerts", () => {
 
 		await handleCheck("C3 E2E (npm, Linux) - frameworks");
 
-		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(sendMessageMock).not.toHaveBeenCalled();
 	});
 
 	it("retains a C3 summary alert when another package manager's shard failed", async ({
@@ -219,7 +218,7 @@ describe("Version Packages CI alerts", () => {
 
 		await handleCheck("C3 E2E (npm, Linux) - frameworks");
 
-		expect(fetchMock).toHaveBeenCalledTimes(2);
+		expect(sendMessageMock).toHaveBeenCalledOnce();
 	});
 
 	it("retains an alert when only unrelated C3 jobs were cancelled", async ({
@@ -234,7 +233,7 @@ describe("Version Packages CI alerts", () => {
 
 		await handleCheck("C3 E2E (npm, Linux) - frameworks");
 
-		expect(fetchMock).toHaveBeenCalledTimes(2);
+		expect(sendMessageMock).toHaveBeenCalledOnce();
 	});
 
 	it("retains an alert when dependency results are missing", async ({
@@ -244,7 +243,7 @@ describe("Version Packages CI alerts", () => {
 
 		await handleCheck("Tests");
 
-		expect(fetchMock).toHaveBeenCalledTimes(2);
+		expect(sendMessageMock).toHaveBeenCalledOnce();
 	});
 
 	it.for([
@@ -256,14 +255,25 @@ describe("Version Packages CI alerts", () => {
 		async ([name, conclusion], { expect }) => {
 			await handleCheck(name, conclusion);
 
-			expect(fetchMock).toHaveBeenCalledTimes(1);
-			expect(fetchMock.mock.calls[0][0].toString()).toContain(
-				env.ALERTS_WEBHOOK
+			expect(sendMessageMock).toHaveBeenCalledExactlyOnceWith(
+				env.ALERTS_WEBHOOK,
+				expect.objectContaining({ cardsV2: expect.any(Array) }),
+				"-vp-ci-failure-pr-16646"
 			);
-			const card = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
-			expect(card.cardsV2[0].card.header.title).toContain(
-				conclusion === "timed_out" ? "Timed out" : "Failed"
-			);
+			expect(sendMessageMock.mock.calls[0][1]).toMatchObject({
+				cardsV2: [
+					{
+						card: {
+							header: {
+								title: expect.stringContaining(
+									conclusion === "timed_out" ? "Timed out" : "Failed"
+								),
+							},
+						},
+					},
+				],
+			});
+			expect(fetchMock).not.toHaveBeenCalled();
 		}
 	);
 
@@ -287,9 +297,9 @@ describe("Version Packages CI alerts", () => {
 
 		await handleCheck("Tests");
 
-		expect(fetchMock).toHaveBeenCalledTimes(3);
+		expect(sendMessageMock).toHaveBeenCalledOnce();
+		expect(fetchMock).toHaveBeenCalledTimes(2);
 		expect(fetchMock.mock.calls[1][0]).toContain("page=2");
-		expect(fetchMock.mock.calls[2][0].toString()).toContain(env.ALERTS_WEBHOOK);
 	});
 
 	it("retains the alert when a later page is incomplete", async ({
@@ -309,8 +319,8 @@ describe("Version Packages CI alerts", () => {
 
 		await handleCheck("Tests");
 
-		expect(fetchMock).toHaveBeenCalledTimes(3);
-		expect(fetchMock.mock.calls[2][0].toString()).toContain(env.ALERTS_WEBHOOK);
+		expect(sendMessageMock).toHaveBeenCalledOnce();
+		expect(fetchMock).toHaveBeenCalledTimes(2);
 	});
 
 	it.for([403, 500])(
@@ -320,10 +330,7 @@ describe("Version Packages CI alerts", () => {
 
 			await handleCheck("Tests");
 
-			expect(fetchMock).toHaveBeenCalledTimes(2);
-			expect(fetchMock.mock.calls[1][0].toString()).toContain(
-				env.ALERTS_WEBHOOK
-			);
+			expect(sendMessageMock).toHaveBeenCalledOnce();
 		}
 	);
 
@@ -332,7 +339,6 @@ describe("Version Packages CI alerts", () => {
 
 		await handleCheck("Tests");
 
-		expect(fetchMock).toHaveBeenCalledTimes(2);
-		expect(fetchMock.mock.calls[1][0].toString()).toContain(env.ALERTS_WEBHOOK);
+		expect(sendMessageMock).toHaveBeenCalledOnce();
 	});
 });
