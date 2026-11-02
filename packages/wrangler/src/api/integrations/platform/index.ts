@@ -2,6 +2,7 @@ import path from "node:path";
 import { createContainerDevPlan } from "@cloudflare/containers-shared";
 import {
 	DEFAULT_COMPAT_DATE,
+	DEFAULT_MODULE_RULES,
 	extractBindingsOfType,
 	getRegistryPath,
 } from "@cloudflare/workers-utils";
@@ -9,7 +10,6 @@ import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
 import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
-import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../../../dev/class-names-sqlite";
 import {

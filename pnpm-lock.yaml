@@ -4110,6 +4110,9 @@ importers:
         specifier: catalog:default
         version: 4.6.6
     devDependencies:
+      '@cloudflare/cli-shared-helpers':
+        specifier: workspace:*
+        version: link:../cli
       '@cloudflare/config':
         specifier: workspace:*
         version: link:../config
@@ -4122,6 +4125,9 @@ importers:
       '@cloudflare/runtime-types':
         specifier: workspace:*
         version: link:../runtime-types
+      '@cloudflare/workers-auth':
+        specifier: workspace:*
+        version: link:../workers-auth
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
