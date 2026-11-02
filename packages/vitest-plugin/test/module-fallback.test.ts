@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { Request } from "miniflare";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { realPackagePath } from "../src/pool/helpers";
 import {
 	decodeEncodedSpecifier,
 	encodeRedirectLocation,
@@ -17,7 +18,7 @@ import {
 } from "../src/shared/module-path";
 import type { Vite } from "vitest/node";
 
-// The fallback handler only reads
+// The fallback handler only reads `vite.environments.ssr.config` and
 // `vite.environments.ssr.pluginContainer.resolveId`, and only when a specifier
 // can't be resolved directly from the filesystem. Returning `null` mimics Vite
 // failing to resolve, exercising the 404 fall-through.
@@ -25,6 +26,7 @@ function fakeVite(): Vite.ViteDevServer {
 	return {
 		environments: {
 			ssr: {
+				config: { resolve: { preserveSymlinks: false } },
 				pluginContainer: {
 					resolveId: async () => null,
 				},
@@ -44,6 +46,7 @@ function fakeViteResolvingTo(id: string): Vite.ViteDevServer {
 	return {
 		environments: {
 			ssr: {
+				config: { resolve: { preserveSymlinks: false } },
 				pluginContainer: {
 					resolveId: async () => ({ id }),
 				},
@@ -59,6 +62,7 @@ function fakeViteResolving(
 	return {
 		environments: {
 			ssr: {
+				config: { resolve: { preserveSymlinks: false } },
 				pluginContainer: {
 					resolveId: async (specifier: string) => {
 						const id = resolvedIds[specifier];
@@ -921,5 +925,72 @@ describe("handleModuleFallbackRequest new module registry", () => {
 				`import { VitestSnapshotEnvironment } from ${JSON.stringify(pathToFileURL(vitestRuntimePath).href)};`,
 			].join("\n"),
 		});
+	});
+});
+
+describe("realPackagePath", () => {
+	let tmp: string;
+
+	beforeEach(() => {
+		tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "mf-real-")));
+		fs.mkdirSync(path.join(tmp, "store/pkg"), { recursive: true });
+		fs.writeFileSync(path.join(tmp, "store/pkg/index.js"), "");
+		fs.mkdirSync(path.join(tmp, "node_modules/.store/pkg"), {
+			recursive: true,
+		});
+		fs.writeFileSync(path.join(tmp, "node_modules/.store/pkg/index.js"), "");
+		fs.symlinkSync(
+			path.join(tmp, "store/pkg"),
+			path.join(tmp, "node_modules/pkg"),
+			"junction"
+		);
+		fs.symlinkSync(
+			path.join(tmp, "node_modules/.store/pkg"),
+			path.join(tmp, "node_modules/store-pkg"),
+			"junction"
+		);
+	});
+
+	afterEach(() => {
+		removeDirSync(tmp);
+	});
+
+	it("maps a package linked from a store to its real path", ({ expect }) => {
+		const root = tmp.replaceAll("\\", "/");
+		expect(realPackagePath(`${root}/node_modules/store-pkg/index.js?v=1`)).toBe(
+			`${root}/node_modules/.store/pkg/index.js?v=1`
+		);
+	});
+
+	it("keeps the fragment of a package path", ({ expect }) => {
+		const root = tmp.replaceAll("\\", "/");
+		expect(realPackagePath(`${root}/node_modules/store-pkg/index.js#a`)).toBe(
+			`${root}/node_modules/.store/pkg/index.js#a`
+		);
+	});
+
+	it("maps a file with # in its path", ({ expect }) => {
+		const root = tmp.replaceAll("\\", "/");
+		fs.mkdirSync(path.join(tmp, "node_modules/.store/pkg/#"));
+		fs.writeFileSync(path.join(tmp, "node_modules/.store/pkg/#/index.js"), "");
+		expect(realPackagePath(`${root}/node_modules/store-pkg/#/index.js`)).toBe(
+			`${root}/node_modules/.store/pkg/#/index.js`
+		);
+	});
+
+	it("keeps the symlinked path of a package linked from outside node_modules", ({
+		expect,
+	}) => {
+		const root = tmp.replaceAll("\\", "/");
+		expect(realPackagePath(`${root}/node_modules/pkg/index.js`)).toBe(
+			`${root}/node_modules/pkg/index.js`
+		);
+	});
+
+	it("leaves missing files unchanged", ({ expect }) => {
+		const root = tmp.replaceAll("\\", "/");
+		expect(realPackagePath(`${root}/node_modules/missing/index.js`)).toBe(
+			`${root}/node_modules/missing/index.js`
+		);
 	});
 });
