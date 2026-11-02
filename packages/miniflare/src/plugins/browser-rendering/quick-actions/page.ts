@@ -45,7 +45,8 @@ export function withStepTimeout<T>(
 ): Promise<T> {
 	return withTimeout(
 		promise,
-		options.actionTimeout,
+		// The service's default for each step
+		options.actionTimeout || 30_000,
 		new Error(`${step} timed out`)
 	);
 }

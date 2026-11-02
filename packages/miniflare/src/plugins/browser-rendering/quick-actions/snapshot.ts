@@ -11,7 +11,9 @@ const { encoding: _encoding, ...snapshotScreenshotOptionsShape } =
 
 export const snapshotSchema = quickActionOptions(
 	{
-		screenshotOptions: z.object(snapshotScreenshotOptionsShape).optional(),
+		screenshotOptions: z
+			.strictObject(snapshotScreenshotOptionsShape)
+			.optional(),
 		formats: z
 			.array(z.enum(["content", "screenshot", "markdown", "accessibilityTree"]))
 			.default(["content", "screenshot"]),

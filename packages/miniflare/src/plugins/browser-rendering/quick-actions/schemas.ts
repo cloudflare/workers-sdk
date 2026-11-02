@@ -32,10 +32,15 @@ const resourceType = z.union(
 	).map((type) => z.literal(type))
 );
 
+const stepTimeout = z
+	.number()
+	.max(120_000, "Timeout cannot exceed 120000ms.")
+	.optional();
+
 const commonShape = {
 	addScriptTag: z
 		.array(
-			z.object({
+			z.strictObject({
 				content: z.string().optional(),
 				url: z.url().optional(),
 				type: z.string().optional(),
@@ -89,7 +94,10 @@ const commonShape = {
 	emulateMediaType: z.string().optional(),
 	gotoOptions: z
 		.object({
-			timeout: z.number().optional(),
+			timeout: z
+				.number()
+				.max(60_000, "Timeout cannot exceed 60000ms.")
+				.default(30_000),
 			waitUntil: z
 				.union([lifecycleEvent, z.array(lifecycleEvent)])
 				.default("domcontentloaded"),
@@ -106,7 +114,7 @@ const commonShape = {
 	userAgent: z
 		.string()
 		.default(
-			"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+			"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36"
 		),
 	viewport: z
 		.object({
@@ -123,13 +131,13 @@ const commonShape = {
 		.object({
 			hidden: z.literal(true).optional(),
 			selector: z.string(),
-			timeout: z.number().optional(),
+			timeout: stepTimeout,
 			visible: z.literal(true).optional(),
 		})
 		.optional(),
-	waitForTimeout: z.number().optional(),
+	waitForTimeout: stepTimeout,
 	bestAttempt: z.boolean().optional(),
-	actionTimeout: z.number().optional(),
+	actionTimeout: stepTimeout,
 	url: z
 		.url()
 		.refine((url) => !/^(chrome|javascript|file):/i.test(url), {
@@ -156,8 +164,9 @@ export function quickActionOptions<Shape extends z.ZodRawShape>(
 	actionShape: Shape,
 	refine?: Refinement
 ) {
+	// The service rejects unknown options, so reject them before deployment
 	return z
-		.object({ ...commonShape, ...actionShape })
+		.strictObject({ ...commonShape, ...actionShape })
 		.superRefine((data: Record<string, unknown>, ctx) => {
 			if (data.rejectRequestPattern && data.allowRequestPattern) {
 				addIssue(

@@ -100,7 +100,8 @@ export async function runQuickAction({
 	log: Log;
 }): Promise<Response> {
 	const { schema, run } = QUICK_ACTIONS[action];
-	const { browser, ...pageOptions } = options;
+	// Nothing is cached locally, but the strict schemas would reject cacheTTL
+	const { browser, cacheTTL: _cacheTTL, ...pageOptions } = options;
 	const parsed = schema.safeParse(pageOptions);
 	const parsedBrowser = browserSchema.safeParse(browser);
 	if (!parsed.success || !parsedBrowser.success) {
@@ -125,7 +126,8 @@ export async function runQuickAction({
 	try {
 		const response = await withTimeout(
 			run({ context, options: validated, log }),
-			validated.actionTimeout && validated.actionTimeout + 500,
+			// The service gives each attempt 60 seconds unless actionTimeout is set
+			validated.actionTimeout ? validated.actionTimeout + 500 : 60_000,
 			new Error("Request timed out")
 		);
 		return withBrowserMs(response, Math.round(performance.now() - start));

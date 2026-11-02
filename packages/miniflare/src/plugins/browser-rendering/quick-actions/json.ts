@@ -27,7 +27,8 @@ export const jsonSchema = quickActionOptions(
 				}
 			})
 			.optional(),
-		// Supported models and limits change over time, so they're not checked
+		// The service also checks each model's provider, but its provider list
+		// changes often, so model names aren't checked
 		custom_ai: z
 			.array(
 				z.object({
@@ -43,6 +44,13 @@ export const jsonSchema = quickActionOptions(
 				ctx,
 				["prompt", "response_format"],
 				"Either 'prompt' or 'response_format' must be defined"
+			);
+		}
+		if (Array.isArray(data.custom_ai) && data.custom_ai.length > 3) {
+			addIssue(
+				ctx,
+				["custom_ai"],
+				"You can only specify up to 3 custom AI models."
 			);
 		}
 	}

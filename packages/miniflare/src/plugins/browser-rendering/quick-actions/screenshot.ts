@@ -34,7 +34,7 @@ export const screenshotSchema = quickActionOptions(
 	{
 		scrollPage: z.boolean().optional(),
 		selector: z.string().optional(),
-		screenshotOptions: z.object(screenshotOptionsShape).prefault({}),
+		screenshotOptions: z.strictObject(screenshotOptionsShape).prefault({}),
 	},
 	(data, ctx) => {
 		const options = data.screenshotOptions as z.output<
