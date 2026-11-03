@@ -1,6 +1,7 @@
 import path from "node:path";
 import { convertToWranglerConfig } from "@cloudflare/config";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
+import { resolveCompatibilityFlags } from "@cloudflare/workers-shared/utils/compatibility-flags";
 import { maybeGetFile } from "@cloudflare/workers-shared/utils/helpers";
 import {
 	configFileName,
@@ -89,6 +90,7 @@ export type PreviewArgs = {
 export type PreviewAssetsOptions = {
 	directory: string;
 	assetConfig: {
+		compatibility_flags?: string[];
 		html_handling?: string;
 		not_found_handling?: string;
 		base_path?: string;
@@ -729,6 +731,10 @@ async function assemblePreviewDeploymentSettings(
 		request.assets = {
 			jwt: assetsUploadResult.jwt,
 			config: {
+				...(options.assetsOptions.assetConfig.compatibility_flags?.length && {
+					compatibility_flags:
+						options.assetsOptions.assetConfig.compatibility_flags,
+				}),
 				html_handling: options.assetsOptions.assetConfig.html_handling,
 				not_found_handling:
 					options.assetsOptions.assetConfig.not_found_handling,
@@ -1447,6 +1453,10 @@ export async function previewBuildOutput(
 			assets._redirects ??
 			maybeGetFile(path.join(assets.directory, "_redirects")),
 		assetConfig: {
+			compatibility_flags: resolveCompatibilityFlags({
+				compatibilityDate: convertedConfig.compatibility_date,
+				compatibilityFlags: convertedConfig.compatibility_flags,
+			}),
 			html_handling: convertedConfig.assets?.html_handling,
 			not_found_handling: convertedConfig.assets?.not_found_handling,
 			base_path: convertedConfig.assets?.base_path,

@@ -1,4 +1,5 @@
 import * as path from "node:path";
+import { resolveCompatibilityFlags } from "@cloudflare/workers-shared/utils/compatibility-flags";
 import {
 	constructHeaders,
 	constructRedirects,
@@ -55,18 +56,16 @@ export function getAssetsConfig(
 			? resolvedPluginConfig.config.assets
 			: entryWorkerConfig?.assets;
 
-	const workerConfig =
+	const compatConfig =
 		resolvedPluginConfig.type === "assets-only"
 			? resolvedPluginConfig.config
 			: entryWorkerConfig;
 
 	const config = {
-		...(workerConfig?.compatibilityDate
-			? { compatibility_date: workerConfig.compatibilityDate }
-			: {}),
-		...(workerConfig?.compatibilityFlags
-			? { compatibility_flags: workerConfig.compatibilityFlags }
-			: {}),
+		compatibility_flags: resolveCompatibilityFlags({
+			compatibilityDate: compatConfig?.compatibilityDate,
+			compatibilityFlags: compatConfig?.compatibilityFlags,
+		}),
 		...(assetsConfig?.htmlHandling
 			? { html_handling: assetsConfig.htmlHandling }
 			: {}),

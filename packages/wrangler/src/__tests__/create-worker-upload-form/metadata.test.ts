@@ -348,6 +348,7 @@ describe("createWorkerUploadForm — assets metadata", () => {
 				routerConfig: { has_user_worker: true },
 				jwt: "test-jwt",
 				assetConfig: {
+					compatibility_flags: ["assets_navigation_prefers_asset_serving"],
 					html_handling: "auto-trailing-slash",
 					not_found_handling: "single-page-application",
 					base_path: "/subpath",
@@ -359,6 +360,7 @@ describe("createWorkerUploadForm — assets metadata", () => {
 		expect(metadata.assets).toMatchObject({
 			jwt: "test-jwt",
 			config: {
+				compatibility_flags: ["assets_navigation_prefers_asset_serving"],
 				html_handling: "auto-trailing-slash",
 				not_found_handling: "single-page-application",
 				base_path: "/subpath",
@@ -372,6 +374,7 @@ describe("createWorkerUploadForm — assets metadata", () => {
 				routerConfig: { has_user_worker: true },
 				jwt: "test-jwt",
 				assetConfig: {
+					compatibility_flags: ["assets_navigation_prefers_asset_serving"],
 					html_handling: "auto-trailing-slash",
 					not_found_handling: "single-page-application",
 				},
@@ -380,6 +383,19 @@ describe("createWorkerUploadForm — assets metadata", () => {
 		const form = createWorkerUploadForm(worker, {});
 		const metadata = getMetadata(form);
 		expect(metadata.assets).not.toHaveProperty("config.base_path");
+	});
+
+	it("should omit empty asset compatibility flags", ({ expect }) => {
+		const worker = createEsmWorker({
+			assets: {
+				routerConfig: { has_user_worker: true },
+				jwt: "test-jwt",
+				assetConfig: { compatibility_flags: [] },
+			} as CfWorkerInit["assets"],
+		});
+		const form = createWorkerUploadForm(worker, {});
+		const metadata = getMetadata(form);
+		expect(metadata.assets).not.toHaveProperty("config.compatibility_flags");
 	});
 });
 
@@ -390,6 +406,7 @@ describe("createWorkerUploadForm — static assets only", () => {
 				routerConfig: { has_user_worker: false },
 				jwt: "test-jwt",
 				assetConfig: {
+					compatibility_flags: ["assets_navigation_prefers_asset_serving"],
 					html_handling: "auto-trailing-slash",
 					not_found_handling: "single-page-application",
 					base_path: "/subpath",
@@ -401,6 +418,7 @@ describe("createWorkerUploadForm — static assets only", () => {
 		expect(metadata.assets).toEqual({
 			jwt: "test-jwt",
 			config: {
+				compatibility_flags: ["assets_navigation_prefers_asset_serving"],
 				html_handling: "auto-trailing-slash",
 				not_found_handling: "single-page-application",
 				base_path: "/subpath",

@@ -16,6 +16,7 @@ test("maps the native asset base path to the Asset Worker config", ({
 		getAssetsConfig(resolvedPluginConfig, undefined, {} as vite.ResolvedConfig)
 	).toEqual({
 		base_path: "/docs",
+		compatibility_flags: [],
 		has_static_routing: false,
 	});
 });
