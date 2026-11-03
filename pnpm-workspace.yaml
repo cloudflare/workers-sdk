@@ -84,6 +84,12 @@ overrides:
   "@cloudflare/elements>@types/react": "^18"
   "@types/node": "$@types/node"
   "@types/node>undici-types": "catalog:default"
+  # Security fixes for brace-expansion (Dependabot alerts). Every parent in the
+  # tree (minimatch 5/7/9 and 10) still asks for ^2.0.1 or ^5.0.5, so a parent
+  # bump would not move it. These are scoped to the existing major lines.
+  # Remove once no dependency resolves brace-expansion below 2.1.7 or 5.0.12.
+  "brace-expansion@2": "^2.1.7"
+  "brace-expansion@5": "^5.0.12"
 
 peerDependencyRules:
   allowedVersions:
