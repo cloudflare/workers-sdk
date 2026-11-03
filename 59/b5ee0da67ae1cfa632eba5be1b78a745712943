@@ -1,0 +1,19 @@
+packages/workers-auth/AGENTS.md
+  s_6b6b46cf93ef0b::t_8c42181297f2e8 149-154
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "59b5ee0da67ae1cfa632eba5be1b78a745712943",
+  "prompts": {},
+  "sessions": {
+    "s_6b6b46cf93ef0b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_33bc14ce5ffeY9MJfBDvvL4nuJ",
+        "model": "claude-sonnet-4-5"
+      },
+      "human_author": "emilio <emilio@cloudflare.com>"
+    }
+  }
+}

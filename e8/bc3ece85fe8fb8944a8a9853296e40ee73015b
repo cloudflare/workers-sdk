@@ -1,0 +1,29 @@
+packages/workers-auth/AGENTS.md
+  s_9bc73c6411e558::t_a010501a576f75 148-152
+packages/workers-auth/tests/cf/scopes.test.ts
+  s_526dd36c79b209::t_5675256a6b20c5 18-23,28-33,35,41-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e8bc3ece85fe8fb8944a8a9853296e40ee73015b",
+  "prompts": {},
+  "sessions": {
+    "s_526dd36c79b209": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f02d44a9cfferTg7pzlu9tCym3",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "emilio <emilio@cloudflare.com>"
+    },
+    "s_9bc73c6411e558": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee855d552ffepbcy08mX2gl9N4",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "emilio <emilio@cloudflare.com>"
+    }
+  }
+}

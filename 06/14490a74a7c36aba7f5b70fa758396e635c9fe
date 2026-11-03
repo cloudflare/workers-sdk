@@ -1,0 +1,29 @@
+packages/wrangler/src/__tests__/hyperdrive.test.ts
+  s_ab6a52ac9be487::t_3c14f387249c77 41,79,138
+.changeset/hyperdrive-planetscale.md
+  s_6b6b46cf93ef0b::t_dfeae05b4d62b9 10-15,18-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "0614490a74a7c36aba7f5b70fa758396e635c9fe",
+  "prompts": {},
+  "sessions": {
+    "s_6b6b46cf93ef0b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_33bc14ce5ffeY9MJfBDvvL4nuJ",
+        "model": "claude-sonnet-4-5"
+      },
+      "human_author": "emilio <emilio@cloudflare.com>"
+    },
+    "s_ab6a52ac9be487": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2ab391360ffe6O2WIVAyEYsBkM",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "emilio <emilio@cloudflare.com>"
+    }
+  }
+}

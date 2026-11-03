@@ -1,0 +1,23 @@
+packages/workers-auth/tests/cf/scopes.test.ts
+  s_526dd36c79b209::t_fac083a185b02a 18-21,26-29,39,58-63
+packages/workers-auth/src/cf/scopes.ts
+  s_526dd36c79b209::t_93f8d317a6ac77 4,312,519,535
+.changeset/cf-default-planetscale-scope.md
+  s_526dd36c79b209::t_35fff567b82f2a 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7326c536fc15350d36af1d733f38439e1402e192",
+  "prompts": {},
+  "sessions": {
+    "s_526dd36c79b209": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f02d44a9cfferTg7pzlu9tCym3",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "emilio <emilio@cloudflare.com>"
+    }
+  }
+}

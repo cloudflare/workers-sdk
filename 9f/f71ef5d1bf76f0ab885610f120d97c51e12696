@@ -1,0 +1,20 @@
+packages/wrangler/src/__tests__/hyperdrive.test.ts
+  s_ab6a52ac9be487::t_77fec18e0ea261 65,88,126,142-389
+  s_ab6a52ac9be487::t_a9ea839e28f9fb 19-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9ff71ef5d1bf76f0ab885610f120d97c51e12696",
+  "prompts": {},
+  "sessions": {
+    "s_ab6a52ac9be487": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2ab391360ffe6O2WIVAyEYsBkM",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "emilio <emilio@cloudflare.com>"
+    }
+  }
+}
