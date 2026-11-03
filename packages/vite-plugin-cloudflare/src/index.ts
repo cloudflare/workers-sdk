@@ -88,12 +88,21 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				ctx.configChangeCoordinator.registerServer(ctx, viteDevServer);
 
 				// Patch the `server.restart` method to track whether the server is restarting or not.
+				// The dev plugin keeps the Miniflare instance across a restart for the restarted
+				// server to reuse, so dispose it if the restarted config drops the dev plugin.
 				const restartServer = viteDevServer.restart.bind(viteDevServer);
 				viteDevServer.restart = async () => {
 					try {
 						ctx.beginRestartingDevServer();
 						debuglog("From server.restart(): Restarting server...");
 						await restartServer();
+						if (
+							!viteDevServer.config.plugins.some(
+								(plugin) => plugin.name === "vite-plugin-cloudflare:dev"
+							)
+						) {
+							await ctx.disposeMiniflare();
+						}
 						debuglog("From server.restart(): Restarted server...");
 					} finally {
 						ctx.endRestartingDevServer();

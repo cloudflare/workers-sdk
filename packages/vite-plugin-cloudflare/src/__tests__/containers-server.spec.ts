@@ -3,9 +3,12 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
+import { Miniflare } from "miniflare";
 import { createBuilder, createServer, preview } from "vite";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { cloudflare } from "../index";
+import type { ViteDevServer } from "vite";
+import type { TestContext } from "vitest";
 
 vi.mock("node:fs", async (importOriginal) => {
 	const original = await importOriginal<typeof import("node:fs")>();
@@ -109,6 +112,58 @@ function writeCloudflareConfig(options: {
 	);
 }
 
+/**
+ * Writes a `vite.config.mjs` that loads this module's `cloudflare` through
+ * the bridge that {@link startDevServerFromConfigFile} creates, so a server
+ * restarted from the file shares the test's plugin state.
+ *
+ * @param includeCloudflare - Whether the config includes the Cloudflare plugin.
+ */
+function writeViteConfig(includeCloudflare: boolean): void {
+	fs.writeFileSync(
+		"vite.config.mjs",
+		includeCloudflare
+			? `
+import { createRequire } from "node:module";
+const { cloudflare } = createRequire(import.meta.url)("./factory.cjs");
+export default { plugins: [cloudflare({ inspectorPort: false, persistState: false, remoteBindings: false, types: { generate: false } })] };
+`
+			: "export default { plugins: [] };\n"
+	);
+}
+
+/**
+ * Starts a dev server from a `vite.config.mjs` that includes the Cloudflare
+ * plugin, so that `server.restart()` reloads the file. The server doesn't
+ * watch files, so it restarts only when the test calls `server.restart()`.
+ *
+ * @param onTestFinished - The test's `onTestFinished`, which closes the server.
+ * @returns The listening server.
+ */
+async function startDevServerFromConfigFile(
+	onTestFinished: TestContext["onTestFinished"]
+): Promise<ViteDevServer> {
+	const require = createRequire(import.meta.url);
+	const bridgePath = path.resolve("factory.cjs");
+	fs.writeFileSync(bridgePath, "module.exports = {};\n");
+	const bridge = require(bridgePath) as {
+		cloudflare: typeof cloudflare;
+	};
+	bridge.cloudflare = cloudflare;
+	onTestFinished(() => {
+		delete require.cache[bridgePath];
+	});
+	writeViteConfig(true);
+	const server = await createServer({
+		configFile: path.resolve("vite.config.mjs"),
+		logLevel: "silent",
+		server: { port: 0, watch: null },
+	});
+	onTestFinished(() => server.close());
+	await server.listen();
+	return server;
+}
+
 describe.each(["dev", "preview"] as const)(
 	"Container preparation in Vite %s",
 	(mode) => {
@@ -134,31 +189,7 @@ describe.each(["dev", "preview"] as const)(
 				async (scenario, { expect, onTestFinished }) => {
 					writeWorkerSource();
 					writeCloudflareConfig({ scenario });
-					const require = createRequire(import.meta.url);
-					const bridgePath = path.resolve("factory.cjs");
-					fs.writeFileSync(bridgePath, "module.exports = {};\n");
-					const bridge = require(bridgePath) as {
-						cloudflare: typeof cloudflare;
-					};
-					bridge.cloudflare = cloudflare;
-					onTestFinished(() => {
-						delete require.cache[bridgePath];
-					});
-					fs.writeFileSync(
-						"vite.config.mjs",
-						`
-import { createRequire } from "node:module";
-const { cloudflare } = createRequire(import.meta.url)("./factory.cjs");
-export default { plugins: [cloudflare({ inspectorPort: false, persistState: false, remoteBindings: false, types: { generate: false } })] };
-`
-					);
-					const server = await createServer({
-						configFile: path.resolve("vite.config.mjs"),
-						logLevel: "silent",
-						server: { port: 0 },
-					});
-					onTestFinished(() => server.close());
-					await server.listen();
+					const server = await startDevServerFromConfigFile(onTestFinished);
 					const configHashes = () =>
 						Object.fromEntries(
 							Object.entries(server.environments)
@@ -174,6 +205,24 @@ export default { plugins: [cloudflare({ inspectorPort: false, persistState: fals
 					expect(configHashes()).toEqual(initialHashes);
 				}
 			);
+			test("disposes Miniflare once when overlapping restarts remove the Cloudflare plugin", async ({
+				expect,
+				onTestFinished,
+			}) => {
+				writeWorkerSource();
+				writeCloudflareConfig({ scenario: "configured" });
+				const dispose = vi.spyOn(Miniflare.prototype, "dispose");
+				const server = await startDevServerFromConfigFile(onTestFinished);
+
+				await server.restart();
+				expect(dispose).not.toHaveBeenCalled();
+
+				writeViteConfig(false);
+				// Overlapping restarts, such as a config watcher restart and a manual
+				// one, share Vite's restart promise, so both find the plugin removed.
+				await Promise.all([server.restart(), server.restart()]);
+				expect(dispose).toHaveBeenCalledOnce();
+			});
 			test("uses distinct image tags for same-class Containers in different Workers", async ({
 				expect,
 				onTestFinished,
