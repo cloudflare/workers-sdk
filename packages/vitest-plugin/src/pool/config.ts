@@ -19,6 +19,7 @@ import {
 import { z } from "zod";
 import { getRemoteBindingsAuth } from "./auth";
 import {
+	getCloudflareConfigContainerConfiguration,
 	getWranglerContainerConfiguration,
 	prepareProjectContainers,
 } from "./containers";
@@ -37,9 +38,13 @@ import {
 	loadNewConfig,
 	mergeCloudflareConfigWorker,
 	NEW_CONFIG_FILENAME,
+	toApiComplianceRegion,
 } from "./new-config";
 import type { LoadedNewConfig } from "./new-config";
-import type { ViteLogger } from "@cloudflare/containers-shared";
+import type {
+	ContainerDevRuntimeOptions,
+	ViteLogger,
+} from "@cloudflare/containers-shared";
 import type {
 	RemoteBindingsLogger,
 	RemoteProxySessionData,
@@ -516,13 +521,16 @@ function pointStreamingTailsAtRunner(
  * @param options The project's parsed pool options.
  * @param cloudflareConfig The `cloudflare.config.ts` loaded for `config`, if any.
  * @param remoteProxyConnectionString The config's remote proxy session, if any.
+ * @param containerRuntimeOptions The runtime options of the config's
+ *   Container-backed Durable Object classes, if any.
  * @returns The Worker under test, followed by the auxiliary Workers.
  */
 function resolveProjectWorkers(
 	project: TestProject,
 	options: WorkersPoolOptionsWithDefines,
 	cloudflareConfig: LoadedNewConfig | undefined,
-	remoteProxyConnectionString: RemoteProxyConnectionString | undefined
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
+	containerRuntimeOptions: Map<string, ContainerDevRuntimeOptions> | undefined
 ): ProjectWorkers {
 	const runnerName = getRunnerName(project);
 	const configWorkerName = options.resolvedConfig?.workerName;
@@ -539,6 +547,7 @@ function resolveProjectWorkers(
 			: mergeCloudflareConfigWorker(convertedWorker, cloudflareConfig, {
 					remoteBindings: options.remoteBindings,
 					remoteProxyConnectionString,
+					containerRuntimeOptions,
 				});
 
 	worker.config.tailConsumers = filterTails(
@@ -655,6 +664,9 @@ async function parseCustomPoolOptions(
 	let environment: string | undefined;
 	let cloudflareConfig: LoadedNewConfig | undefined;
 	let remoteProxyConnectionString: RemoteProxyConnectionString | undefined;
+	let containerRuntimeOptions:
+		| Map<string, ContainerDevRuntimeOptions>
+		| undefined;
 
 	if (newConfig !== undefined) {
 		configPath = path.resolve(rootPath, newConfig.configPath);
@@ -673,6 +685,13 @@ async function parseCustomPoolOptions(
 			workerName: worker.name,
 			effectiveWorkerName: worker.name,
 		};
+		const containerEnvironment = await prepareProjectContainers(
+			project,
+			getCloudflareConfigContainerConfiguration(cloudflareConfig, configPath),
+			containerLogger
+		);
+		options.containerEngine = containerEnvironment?.containerEngine;
+		containerRuntimeOptions = containerEnvironment?.containerRuntimeOptions;
 
 		const preExistingRemoteProxySessionData =
 			remoteProxySessionsDataMap.get(configPath);
@@ -682,10 +701,7 @@ async function parseCustomPoolOptions(
 						name: worker.name,
 						target: "cf",
 						env: worker.env,
-						complianceRegion:
-							settings.complianceRegion === "fedramp-high"
-								? "fedramp_high"
-								: settings.complianceRegion,
+						complianceRegion: toApiComplianceRegion(settings.complianceRegion),
 					},
 					preExistingRemoteProxySessionData ?? null,
 					// `cloudflare.config.ts` belongs to cf, so use cf's credentials
@@ -840,7 +856,8 @@ async function parseCustomPoolOptions(
 		project,
 		options,
 		cloudflareConfig,
-		remoteProxyConnectionString
+		remoteProxyConnectionString,
+		containerRuntimeOptions
 	);
 
 	return options;
