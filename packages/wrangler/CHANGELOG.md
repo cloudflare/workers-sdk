@@ -1,5 +1,33 @@
 # wrangler
 
+## 4.157.0
+
+### Minor Changes
+
+- [#16660](https://github.com/cloudflare/workers-sdk/pull/16660) [`34f34b3`](https://github.com/cloudflare/workers-sdk/commit/34f34b3dbf9ae70218115a4067f66565d184ed5e) Thanks [@punkeel](https://github.com/punkeel)! - Allow opting into zstd compression for Wrangler-built container image layers with `WRANGLER_CONTAINER_IMAGE_COMPRESSION=zstd`.
+
+### Patch Changes
+
+- [#16670](https://github.com/cloudflare/workers-sdk/pull/16670) [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-03
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16011](https://github.com/cloudflare/workers-sdk/pull/16011) [`44d1ee4`](https://github.com/cloudflare/workers-sdk/commit/44d1ee439c0a077f2fed4d86e35a4edf46b51f74) Thanks [@wra-sol](https://github.com/wra-sol)! - Offer to delete a Worker's Container applications when running `wrangler delete`
+
+  Previously, `wrangler delete` removed only the Worker, leaving the Container applications that `wrangler deploy` created for it running and billing. It now offers to delete them as well. With `--force`, or in CI and other non-interactive contexts, it lists them instead so they can be removed with `wrangler containers delete <id>`.
+
+- [#16670](https://github.com/cloudflare/workers-sdk/pull/16670) [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261102.1 | ^5.20261103.1 |
+  | workerd                   | 1.20261102.1  | 1.20261103.1  |
+
+- Updated dependencies [[`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815), [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815), [`d2eda1c`](https://github.com/cloudflare/workers-sdk/commit/d2eda1cf7446ba4b43c9b87e337614ba67a1b014), [`2750917`](https://github.com/cloudflare/workers-sdk/commit/2750917df4239be111bb2704654dbb99e922dba7)]:
+  - miniflare@5.20261103.0-beta
+
 ## 4.156.2
 
 ### Patch Changes

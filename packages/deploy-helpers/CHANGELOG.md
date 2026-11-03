@@ -1,5 +1,26 @@
 # @cloudflare/deploy-helpers
 
+## 0.25.0
+
+### Minor Changes
+
+- [#16653](https://github.com/cloudflare/workers-sdk/pull/16653) [`8ac43df`](https://github.com/cloudflare/workers-sdk/commit/8ac43df32667a77cd7e8e267da86e96645e3031b) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Require explicit route metadata flags when downloading Worker configuration
+
+  `fetchWorkerConfig` and `downloadWorkerConfig` now accept separate `fetchRoutes` and `fetchCustomDomains` booleans instead of inferring them from an optional local route list. This clarifies which route metadata callers require without changing Wrangler behavior.
+
+### Patch Changes
+
+- [#16670](https://github.com/cloudflare/workers-sdk/pull/16670) [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-03
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815), [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815), [`d2eda1c`](https://github.com/cloudflare/workers-sdk/commit/d2eda1cf7446ba4b43c9b87e337614ba67a1b014), [`2750917`](https://github.com/cloudflare/workers-sdk/commit/2750917df4239be111bb2704654dbb99e922dba7)]:
+  - @cloudflare/workers-utils@0.51.1
+  - @cloudflare/cli-shared-helpers@0.3.3
+  - @cloudflare/config@0.30.1
+  - @cloudflare/containers-shared@0.23.8
+  - miniflare@5.20261103.0-beta
+
 ## 0.24.5
 
 ### Patch Changes

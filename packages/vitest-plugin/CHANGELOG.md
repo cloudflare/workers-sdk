@@ -1,5 +1,21 @@
 # @cloudflare/vitest-plugin
 
+## 1.5.1
+
+### Patch Changes
+
+- [#16670](https://github.com/cloudflare/workers-sdk/pull/16670) [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-03
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16609](https://github.com/cloudflare/workers-sdk/pull/16609) [`da26b7f`](https://github.com/cloudflare/workers-sdk/commit/da26b7f90ee3dddf7211f5d0af8484b2821d6137) Thanks [@gpanders](https://github.com/gpanders)! - Fix tests failing to start with `resolve.preserveSymlinks` in isolated `node_modules` layouts
+
+  With `resolve.preserveSymlinks: true` in a pnpm project, tests failed to start with `No such module ".../node_modules/vitest/dist/chai"`, because a package's own dependencies are linked only next to its real path. Packages linked from a store inside `node_modules` now load from their real paths, and other files keep their symlinked paths.
+
+- Updated dependencies [[`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815), [`44d1ee4`](https://github.com/cloudflare/workers-sdk/commit/44d1ee439c0a077f2fed4d86e35a4edf46b51f74), [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815), [`d2eda1c`](https://github.com/cloudflare/workers-sdk/commit/d2eda1cf7446ba4b43c9b87e337614ba67a1b014), [`2750917`](https://github.com/cloudflare/workers-sdk/commit/2750917df4239be111bb2704654dbb99e922dba7), [`34f34b3`](https://github.com/cloudflare/workers-sdk/commit/34f34b3dbf9ae70218115a4067f66565d184ed5e)]:
+  - miniflare@5.20261103.0-beta
+  - wrangler@4.157.0
+
 ## 1.5.0
 
 ### Minor Changes
