@@ -11,6 +11,7 @@ import type {
 	DatabaseInstance,
 	DatabaseVersion,
 	DatabaseWorkflow,
+	Engine,
 	EngineLogs,
 } from "../src/engine";
 import type {
@@ -1672,6 +1673,66 @@ describe("Engine", () => {
 			);
 			expect(status).toBe(InstanceStatus.Paused);
 		});
+
+		it("waitForStatus resolves when the status changes during its initial storage read (#16298)", async ({
+		expect,
+	}) => {
+		const instanceId = "WAIT-FOR-STATUS-READ-RACE";
+		const engineId = env.ENGINE.idFromName(instanceId);
+		const engineStub = env.ENGINE.get(engineId);
+
+		// Simulate the race deterministically: hold the first ENGINE_STATUS
+		// read issued by waitForStatus in flight (snapshotting its value at
+		// call time), drive the instance to the target status while that read
+		// is still unresolved, and only then let the read settle.
+		const outcome = await runInDurableObject<Engine, string>(
+			engineStub,
+			async (engine, state) => {
+				const ENGINE_STATUS_KEY = "ENGINE_STATUS";
+				const realGet = state.storage.get.bind(state.storage);
+
+				await state.storage.put(ENGINE_STATUS_KEY, InstanceStatus.Running);
+
+				let holdNextStatusRead = true;
+				let releaseHeldRead!: () => void;
+				const heldReadGate = new Promise<void>(
+					(resolve) => (releaseHeldRead = resolve)
+				);
+				state.storage.get = ((
+					key: string,
+					options: unknown
+				): Promise<unknown> => {
+					if (holdNextStatusRead && key === ENGINE_STATUS_KEY) {
+						holdNextStatusRead = false;
+						// The value is snapshotted when the read is issued (the
+						// pre-transition status) but only handed back once the
+						// gate opens, so the status changes while it is "in flight".
+						return realGet(ENGINE_STATUS_KEY, options).then((value) =>
+							heldReadGate.then(() => value)
+						);
+					}
+					return realGet(key, options);
+				}) as typeof state.storage.get;
+
+				const waitPromise = engine.waitForStatus("complete");
+
+				// The instance reaches the target status while waitForStatus's
+				// initial read is still in flight: setStatus finds no waiter to
+				// resolve, exactly as in the race.
+				await engine.setStatus(0, instanceId, InstanceStatus.Complete);
+				releaseHeldRead();
+
+				return await Promise.race([
+					waitPromise.then(() => "resolved"),
+					new Promise<string>((resolve) =>
+						setTimeout(() => resolve("timed out"), 1000)
+					),
+				]);
+			}
+		);
+
+		expect(outcome).toBe("resolved");
+	});
 	});
 });
 
