@@ -6621,6 +6621,75 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
+			it("should error if an authorized_keys public_key comment contains a space", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "test-class",
+								image: "registry.cloudflare.com/test:latest",
+								authorized_keys: [
+									{
+										name: "laptop",
+										// `ssh-keygen -t ed25519 -C "my laptop"` produces a
+										// comment with a space, which the API rejects.
+										public_key:
+											"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI my laptop",
+									},
+								],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toContain(
+					"containers.authorized_keys[0].public_key"
+				);
+			});
+
+			it("should accept authorized_keys comments without spaces, including tabs", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "test-class",
+								image: "registry.cloudflare.com/test:latest",
+								authorized_keys: [
+									// no comment
+									{ name: "one", public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1" },
+									// one-word comment
+									{
+										name: "two",
+										public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1 probe",
+									},
+									// a tab in the comment is accepted by the API
+									{
+										name: "three",
+										public_key:
+											"ssh-ed25519 AAAAC3NzaC1lZDI1 my\tprobe",
+									},
+								],
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
 			it.for([{ value: 25 }, { value: [20, 50, 100] }])(
 				"should accept rollout_step_percentage set to $value",
 				(value, { expect }) => {
