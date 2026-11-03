@@ -3066,18 +3066,8 @@ function collectCoreBindings(
 			}
 		}
 
-		if (env.images) {
-			if (!env.images.binding) {
-				throwMissingBindingError({
-					binding: env.images,
-					bindingType: "images",
-					configPath: args.config,
-					envName,
-					fieldName: "binding",
-				});
-			} else {
-				addBinding(env.images.binding, "ImagesBinding", "images", envName);
-			}
+		if (env.images?.binding) {
+			addBinding(env.images.binding, "ImagesBinding", "images", envName);
 		}
 
 		if (env.stream) {
@@ -4094,22 +4084,12 @@ function collectCoreBindingsPerEnvironment(
 			}
 		}
 
-		if (env.images) {
-			if (!env.images.binding) {
-				throwMissingBindingError({
-					binding: env.images,
-					bindingType: "images",
-					configPath: args.config,
-					envName,
-					fieldName: "binding",
-				});
-			} else {
-				bindings.push({
-					bindingCategory: "images",
-					name: env.images.binding,
-					type: "ImagesBinding",
-				});
-			}
+		if (env.images?.binding) {
+			bindings.push({
+				bindingCategory: "images",
+				name: env.images.binding,
+				type: "ImagesBinding",
+			});
 		}
 
 		if (env.stream) {
