@@ -18,7 +18,10 @@ import {
 } from "miniflare";
 import { z } from "zod";
 import { getRemoteBindingsAuth } from "./auth";
-import { prepareProjectContainers } from "./containers";
+import {
+	getWranglerContainerConfiguration,
+	prepareProjectContainers,
+} from "./containers";
 import {
 	getProjectPath,
 	getRelativeProjectConfigPath,
@@ -747,8 +750,7 @@ async function parseCustomPoolOptions(
 		};
 		const containerEnvironment = await prepareProjectContainers(
 			project,
-			config,
-			configPath,
+			getWranglerContainerConfiguration(config, configPath),
 			containerLogger
 		);
 		options.containerEngine = containerEnvironment?.containerEngine;

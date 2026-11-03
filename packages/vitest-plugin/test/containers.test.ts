@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	beginContainerConfiguration,
 	cancelContainerPreparationOnProcessExit,
+	getWranglerContainerConfiguration,
 	prepareProjectContainers,
 } from "../src/pool/containers";
 import type {
@@ -197,7 +198,11 @@ describe("project Container environments", () => {
 	});
 
 	function prepare(workerConfig = config) {
-		return prepareProjectContainers(project, workerConfig, CONFIG_PATH, logger);
+		return prepareProjectContainers(
+			project,
+			getWranglerContainerConfiguration(workerConfig, CONFIG_PATH),
+			logger
+		);
 	}
 
 	it("drops cached environments when Containers are disabled", async ({
@@ -262,7 +267,11 @@ describe("project Container environments", () => {
 
 		await Promise.all([
 			prepare(),
-			prepareProjectContainers(otherProject, config, CONFIG_PATH, logger),
+			prepareProjectContainers(
+				otherProject,
+				getWranglerContainerConfiguration(config, CONFIG_PATH),
+				logger
+			),
 		]);
 		expect(prepareContainerImagesForDev).toHaveBeenCalledTimes(2);
 

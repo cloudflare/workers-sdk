@@ -10,15 +10,41 @@ import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { UserError } from "@cloudflare/workers-utils/errors";
 import type {
 	ContainerDevOptions,
+	ContainerDevPlan,
 	ViteLogger,
 } from "@cloudflare/containers-shared";
-import type { Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 import type { V4MiniflareOptions } from "miniflare";
 import type { TestProject, Vitest } from "vitest/node";
 
 interface ProjectContainerEnvironment {
 	containerBuildId: string;
 	containerEngine: NonNullable<V4MiniflareOptions["containerEngine"]>;
+}
+
+/**
+ * The local Containers of a Vitest project's Worker, independent of the format
+ * of the configuration file that defines them.
+ */
+export interface ProjectContainerConfiguration {
+	/** Absolute path of the configuration file. */
+	configPath: string;
+	/** Selects the registry domain of Cloudflare-managed images. */
+	complianceConfig: ComplianceConfig;
+	/** Docker engine the configuration selects, if any. */
+	containerEngine?: NonNullable<V4MiniflareOptions["containerEngine"]>;
+	/** Command that configures registry credentials, for error messages. */
+	registryConfigureCommand: string;
+	/** Configuration the plan derives from; images are prepared again when it changes. */
+	planInputs: unknown;
+	/**
+	 * Plans the images to prepare and the runtime options of each
+	 * Container-backed Durable Object class.
+	 *
+	 * @param containerBuildId - Build ID that tags the prepared images.
+	 * @returns The plan, or `undefined` when no Durable Object uses a Container.
+	 */
+	createPlan(containerBuildId: string): ContainerDevPlan | undefined;
 }
 
 interface PreparationState {
@@ -66,18 +92,15 @@ const CONTAINER_INPUT_EVENTS = [
 ] as const;
 
 function getEnvironmentFingerprint(
-	config: Config,
-	configPath: string,
+	containerConfig: ProjectContainerConfiguration,
 	dockerPath: string,
 	containerEngine: NonNullable<V4MiniflareOptions["containerEngine"]>
 ): string {
 	return JSON.stringify([
-		configPath,
+		containerConfig.configPath,
 		dockerPath,
 		containerEngine,
-		config.compliance_region,
-		config.containers,
-		config.exports,
+		containerConfig.planInputs,
 	]);
 }
 
@@ -273,8 +296,7 @@ function getPreparationError(project: TestProject, error: unknown): UserError {
 }
 
 async function prepareImages(
-	config: Config,
-	configPath: string,
+	containerConfig: ProjectContainerConfiguration,
 	dockerPath: string,
 	containerOptions: ContainerDevOptions[],
 	state: PreparationState,
@@ -284,7 +306,10 @@ async function prepareImages(
 		containerOptions.some(
 			(option) =>
 				"image_uri" in option &&
-				isCloudflareRegistryImage(option.image_uri, config)
+				isCloudflareRegistryImage(
+					option.image_uri,
+					containerConfig.complianceConfig
+				)
 		)
 	) {
 		throw new UserError(
@@ -308,14 +333,45 @@ async function prepareImages(
 			state.abort = undefined;
 		},
 		logger,
-		complianceConfig: config,
-		configFileName: path.basename(configPath),
-		registryConfigureCommand: "wrangler containers registries configure",
+		complianceConfig: containerConfig.complianceConfig,
+		configFileName: path.basename(containerConfig.configPath),
+		registryConfigureCommand: containerConfig.registryConfigureCommand,
 	});
 
 	if (state.cancelled || result.aborted) {
 		throw new Error("Container image preparation was aborted");
 	}
+}
+
+/**
+ * Gets the local Containers that a Wrangler configuration defines.
+ *
+ * @param config - Normalized Worker configuration.
+ * @param configPath - Absolute path to the Wrangler configuration file.
+ * @returns The Containers, or `undefined` when `dev.enable_containers` is
+ * `false` or the configuration defines none.
+ */
+export function getWranglerContainerConfiguration(
+	config: Config,
+	configPath: string
+): ProjectContainerConfiguration | undefined {
+	if (!config.dev.enable_containers || !config.containers?.length) {
+		return undefined;
+	}
+	return {
+		configPath,
+		complianceConfig: config,
+		containerEngine: config.dev.container_engine,
+		registryConfigureCommand: "wrangler containers registries configure",
+		planInputs: [config.compliance_region, config.containers, config.exports],
+		createPlan: (containerBuildId) =>
+			createContainerDevPlan({
+				containers: config.containers,
+				exports: config.exports,
+				containerBuildId,
+				configPath,
+			}),
+	};
 }
 
 /**
@@ -325,18 +381,17 @@ async function prepareImages(
  * build-context file changes.
  *
  * @param project - Vitest project that owns the prepared environment.
- * @param config - Normalized Worker configuration.
- * @param configPath - Absolute path to the selected Worker configuration.
+ * @param containerConfig - Containers of the project's Worker, if it has any.
  * @param logger - Logger used by image preparation and cancellation.
- * @returns Runtime Container options, or `undefined` when Containers are inactive.
+ * @returns Runtime Container options, or `undefined` when no Durable Object
+ * uses a Container.
  */
 export async function prepareProjectContainers(
 	project: TestProject,
-	config: Config,
-	configPath: string,
+	containerConfig: ProjectContainerConfiguration | undefined,
 	logger: ViteLogger
 ): Promise<ProjectContainerEnvironment | undefined> {
-	if (!config.dev.enable_containers || !config.containers?.length) {
+	if (containerConfig === undefined) {
 		unwatchProject(project);
 		dropEnvironment(project);
 		return undefined;
@@ -351,14 +406,9 @@ export async function prepareProjectContainers(
 	}
 
 	const containerBuildId = generateContainerBuildId();
-	let plan: ReturnType<typeof createContainerDevPlan>;
+	let plan: ContainerDevPlan | undefined;
 	try {
-		plan = createContainerDevPlan({
-			containers: config.containers,
-			exports: config.exports,
-			containerBuildId,
-			configPath,
-		});
+		plan = containerConfig.createPlan(containerBuildId);
 	} catch (error) {
 		throw getPreparationError(project, error);
 	}
@@ -370,10 +420,9 @@ export async function prepareProjectContainers(
 
 	const dockerPath = getDockerPath();
 	const containerEngine =
-		config.dev.container_engine ?? resolveDockerHost(dockerPath);
+		containerConfig.containerEngine ?? resolveDockerHost(dockerPath);
 	const fingerprint = getEnvironmentFingerprint(
-		config,
-		configPath,
+		containerConfig,
 		dockerPath,
 		containerEngine
 	);
@@ -390,8 +439,7 @@ export async function prepareProjectContainers(
 		containerEngine,
 	};
 	const preparation = prepareImages(
-		config,
-		configPath,
+		containerConfig,
 		dockerPath,
 		plan.containerOptions,
 		state,
