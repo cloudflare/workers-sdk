@@ -91,8 +91,7 @@ export const CF_CLI: CliDescriptor = {
 	// cf gets its own cache dir (`.cache/cloudflare` / `.cloudflare/cache`) so
 	// `cf auth login`/`logout` never purges wrangler's shared cache.
 	cacheNamespace: "cloudflare",
-	// cf persists its default account in `config.json` (`defaults.accountId`);
-	// this label is surfaced in the "set account_id in your <file>" hint.
+	// This label is surfaced in the generic "set account_id in your <file>" hint.
 	getConfigFileLabel: () => "cf config",
 	getDefaultScopeKeys: () => DefaultScopeKeys,
 };

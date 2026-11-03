@@ -56,7 +56,7 @@ function createAuthForProfile(profile: string, logger: Logger): CloudflareAuth {
 			if (isNonInteractiveOrCI()) {
 				throw new AccountSelectionUnavailable();
 			}
-			return inputPrompt<string>({
+			const accountId = await inputPrompt<string>({
 				type: "select",
 				question,
 				label: "Account",
@@ -66,6 +66,14 @@ function createAuthForProfile(profile: string, logger: Logger): CloudflareAuth {
 				})),
 				throwOnError: true,
 			});
+			logger.info(
+				[
+					"To use this account automatically in future, configure accountId in cloudflare.config.ts:",
+					"",
+					`  accountId: ${JSON.stringify(accountId)},`,
+				].join("\n")
+			);
+			return accountId;
 		},
 		isNoDefaultValueProvidedError: (error: unknown) =>
 			error instanceof AccountSelectionUnavailable,

@@ -127,6 +127,13 @@ export interface CliDescriptor {
 	fileFormat: FileFormat;
 
 	/**
+	 * Whether an account selected from the current credentials is persisted in
+	 * the config cache for later invocations. When disabled, the selection is
+	 * retained only for the lifetime of the auth instance. Defaults to `false`.
+	 */
+	persistAccountSelection?: boolean;
+
+	/**
 	 * Filename prefix for the cached account selection in the config cache
 	 * (e.g. `"wrangler-account"` → `wrangler-account.json`). Always JSON.
 	 */

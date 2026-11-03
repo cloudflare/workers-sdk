@@ -57,10 +57,20 @@ import type {
 } from "@cloudflare/workers-utils";
 
 /** Details for one of the user's accounts. */
-export type Account = { id: string; name: string };
+export interface Account {
+	id: string;
+	name: string;
+}
+
+interface AccountSelection {
+	account: Account;
+	profile: string;
+}
 
 /** The config surface {@link CloudflareAuth.requireAuth} needs: compliance settings plus an optional `account_id`. */
-export type RequireAuthConfig = ComplianceConfig & { account_id?: string };
+export interface RequireAuthConfig extends ComplianceConfig {
+	account_id?: string;
+}
 
 /** Overrides accepted by {@link CloudflareAuth.login} / {@link CloudflareAuth.loginOrRefreshIfRequired}. */
 export interface CloudflareLoginProps {
@@ -119,7 +129,7 @@ export interface CloudflareAuth {
 	/** Persist OAuth credentials via the active credential store. */
 	writeAuthCredentials: (config: UserAuthConfig) => void;
 
-	/** Returns the active account ID without side effects (config → env → cache). */
+	/** Returns the active account ID without fetching accounts or prompting. */
 	getActiveAccountId: (config: { account_id?: string }) => string | undefined;
 	/** Resolve the account ID to use for API requests (fetching / prompting if needed). */
 	getOrSelectAccountId: (config: RequireAuthConfig) => Promise<string>;
@@ -207,6 +217,7 @@ export function createCloudflareAuth(
 	const NOT_LOGGED_IN_WHOAMI_TIP = `\nRun \`${descriptor.commands.whoami}\` to check your current authentication status.`;
 
 	const preferences = createPreferences(descriptor.getConfigPath);
+	const persistAccountSelection = descriptor.persistAccountSelection ?? false;
 
 	// The config cache is generic file-backed storage owned by
 	// `@cloudflare/workers-utils`; build our own instance bound to the injected
@@ -218,6 +229,18 @@ export function createCloudflareAuth(
 			? { namespace: descriptor.cacheNamespace }
 			: undefined
 	);
+	// Non-persistent consumers still reuse a choice for this auth instance so
+	// long-running sessions can refresh without prompting for the account again.
+	let accountSelection: AccountSelection | undefined;
+
+	function clearAccountSelection(): void {
+		accountSelection = undefined;
+	}
+
+	function purgeAccountCaches(): void {
+		clearAccountSelection();
+		configCache.purgeConfigCaches();
+	}
 
 	// The CLI's credential-storage bundle. Plumbs the user-level keyring
 	// opt-in preference into the storage resolver so the OAuth flow's
@@ -253,7 +276,7 @@ export function createCloudflareAuth(
 		openInBrowser: (url) => openInBrowser(url, logger),
 		hasEnvCredentials: () =>
 			getAuthFromEnv({ allowGlobalAuthKey }) !== undefined,
-		purgeOnLoginOrLogout: configCache.purgeConfigCaches,
+		purgeOnLoginOrLogout: purgeAccountCaches,
 		clientId: descriptor.clientId,
 		consent: descriptor.consent,
 		cliDisplayName: descriptor.displayName,
@@ -359,6 +382,7 @@ export function createCloudflareAuth(
 	}
 
 	function writeAuthCredentials(config: UserAuthConfig): void {
+		clearAccountSelection();
 		credentialStorage.storageFactory(getActiveProfile()).write(config);
 	}
 
@@ -370,14 +394,37 @@ export function createCloudflareAuth(
 		return `${descriptor.accountCachePrefix}-${profile}.json`;
 	}
 
-	function saveAccountToCache(account: Account): void {
-		configCache.saveToConfigCache<{ account: Account }>(
-			getAccountCacheFileName(),
-			{ account }
-		);
+	function retainAccountSelection(account: Account): void {
+		accountSelection = {
+			account,
+			profile: getActiveProfile(),
+		};
+		if (persistAccountSelection) {
+			configCache.saveToConfigCache<{ account: Account }>(
+				getAccountCacheFileName(),
+				{ account }
+			);
+		}
+	}
+
+	function resolveAccountSelection(): Account | undefined {
+		const profile = getActiveProfile();
+		if (accountSelection?.profile !== profile) {
+			clearAccountSelection();
+		}
+		if (accountSelection === undefined) {
+			const account = getAccountFromCache();
+			if (account) {
+				accountSelection = { account, profile };
+			}
+		}
+		return accountSelection?.account;
 	}
 
 	function getAccountFromCache(): Account | undefined {
+		if (!persistAccountSelection) {
+			return undefined;
+		}
 		return configCache.getConfigCache<{ account: Account }>(
 			getAccountCacheFileName()
 		).account;
@@ -524,7 +571,7 @@ Alternatively, try running \`${descriptor.commands.login}\` to re-authenticate.`
 		if (envAccountId) {
 			return envAccountId;
 		}
-		return getAccountFromCache()?.id;
+		return resolveAccountSelection()?.id;
 	}
 
 	async function getOrSelectAccountId(
@@ -539,7 +586,7 @@ Alternatively, try running \`${descriptor.commands.login}\` to re-authenticate.`
 
 		const accounts = await fetchAllAccounts(config);
 		if (accounts.length === 1) {
-			saveAccountToCache({ id: accounts[0].id, name: accounts[0].name });
+			retainAccountSelection({ id: accounts[0].id, name: accounts[0].name });
 			return accounts[0].id;
 		}
 
@@ -554,7 +601,7 @@ Alternatively, try running \`${descriptor.commands.login}\` to re-authenticate.`
 			if (!account) {
 				throw new Error("Selected account not found in accounts list");
 			}
-			saveAccountToCache({ id: account.id, name: account.name });
+			retainAccountSelection({ id: account.id, name: account.name });
 			return accountID;
 		} catch (e) {
 			// Did we try to select an account in CI or a non-interactive terminal?
