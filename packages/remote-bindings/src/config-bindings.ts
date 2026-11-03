@@ -6,6 +6,9 @@ import type { Binding } from "@cloudflare/workers-utils";
 
 type WorkerConfig = ParsedInputWorkerConfig | ParsedOutputWorkerConfig;
 
+/** Bindings as declared in `cloudflare.config.ts`. */
+export type ConfigBindings = WorkerConfig["env"];
+
 /**
  * Convert native config bindings to the transport shape consumed by the
  * remote-bindings session API. Local-only bindings are intentionally omitted.
@@ -30,6 +33,13 @@ export function getRemoteBindings(
 			case "analytics":
 				bindings[name] = {
 					type: "analytics",
+					remote: binding.dev?.remote,
+				};
+				break;
+			case "analytics-engine-dataset":
+				bindings[name] = {
+					type: "analytics_engine",
+					dataset: binding.name,
 					remote: binding.dev?.remote,
 				};
 				break;

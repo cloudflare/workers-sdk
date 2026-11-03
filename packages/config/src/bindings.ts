@@ -94,6 +94,8 @@ export interface AiSearchNamespaceBinding extends AiSearchNamespaceBindingOption
 export interface AnalyticsEngineDatasetBindingOptions {
 	/** The name of this dataset to write to. */
 	name?: string;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /**

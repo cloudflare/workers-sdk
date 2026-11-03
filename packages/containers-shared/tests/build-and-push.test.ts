@@ -250,6 +250,56 @@ describe("buildCommand", () => {
 		]);
 	});
 
+	it("allows opting into zstd compression", async () => {
+		vi.stubEnv("WRANGLER_CONTAINER_IMAGE_COMPRESSION", "zstd");
+		vi.mocked(execFileSync).mockReturnValueOnce(
+			'[["driver-type","io.containerd.snapshotter.v1"]]'
+		);
+		const { dir, args } = createBuildArgs();
+		tempDirs.push(dir);
+
+		await buildCommand({
+			PATH: dir,
+			tag: args.tag,
+			pathToDocker: "docker",
+			push: false,
+		});
+		expectSpawnWith([
+			"build",
+			"--output",
+			"type=docker,oci-mediatypes=true,compression=zstd,compression-level=3,force-compression=true",
+			"-t",
+			"test-app:tag",
+			"--platform",
+			"linux/amd64",
+			"--provenance=false",
+			"-f",
+			"-",
+			dir,
+		]);
+	});
+
+	it("rejects zstd compression with Docker's classic image store", async ({
+		expect,
+	}) => {
+		vi.stubEnv("WRANGLER_CONTAINER_IMAGE_COMPRESSION", "zstd");
+		vi.mocked(execFileSync).mockReturnValueOnce('[["driver-type","overlay2"]]');
+		const { dir, args } = createBuildArgs();
+		tempDirs.push(dir);
+
+		await expect(
+			buildCommand({
+				PATH: dir,
+				tag: args.tag,
+				pathToDocker: "docker",
+				push: false,
+			})
+		).rejects.toThrow(
+			"Zstd compression requires Docker's containerd image store. Enable the containerd image store or unset WRANGLER_CONTAINER_IMAGE_COMPRESSION."
+		);
+		expect(spawn).not.toHaveBeenCalled();
+	});
+
 	it("tags and pushes new images, returning the pushed digest", async ({
 		expect,
 	}) => {

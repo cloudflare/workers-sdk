@@ -154,14 +154,23 @@ function formatOAuthErrorMessage(
 	description: string | undefined,
 	uri: string | undefined
 ): string {
-	let message = `OAuth error: ${code}`;
+	let message = `OAuth error: ${escapeOAuthErrorText(code)}`;
 	if (description) {
-		message += `\n  ${description}`;
+		message += `\n  ${escapeOAuthErrorText(description)}`;
 	}
 	if (uri) {
-		message += `\n  See: ${uri}`;
+		message += `\n  See: ${escapeOAuthErrorText(uri)}`;
 	}
 	return message;
+}
+
+/** Keep provider text distinct from terminal formatting owned by the CLI. */
+function escapeOAuthErrorText(value: string): string {
+	return value.replace(
+		// eslint-disable-next-line no-control-regex -- Render terminal control bytes as visible text.
+		/[\u0000-\u001f\u007f-\u009f]/g,
+		(character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`
+	);
 }
 
 /**

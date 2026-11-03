@@ -158,7 +158,8 @@ export function convertBindings(
 		"analytics_engine_datasets",
 		"binding",
 		"bindings.analyticsEngineDataset",
-		[["dataset", "name"]]
+		[["dataset", "name"]],
+		{ remote: true }
 	);
 	convertArrayBindings(
 		"artifacts",

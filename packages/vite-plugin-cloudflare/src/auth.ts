@@ -7,8 +7,9 @@ import {
 } from "@cloudflare/workers-auth/cf";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { debuglog } from "./utils";
+import type { RemoteBindingsAuth } from "@cloudflare/remote-bindings";
 import type { CloudflareAuth } from "@cloudflare/workers-auth/cf";
-import type { AsyncHook, CfAccount, Logger } from "@cloudflare/workers-utils";
+import type { Logger } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
 
 class AccountSelectionUnavailable extends Error {
@@ -71,28 +72,22 @@ export function createAuth(profileDir: string, logger: Logger) {
 }
 
 /**
- * Get the cf auth hook for remote bindings sessions.
+ * Get the cf credentials for remote bindings sessions.
  *
- * Hooks are cached because `maybeStartOrUpdateRemoteProxySession()` restarts
- * the session whenever it receives a different hook.
- *
- * @param hooks - Hook cache that persists across Vite server restarts.
  * @param profileDir - Directory used to resolve the cf auth profile.
  * @param accountId - The configured account ID, if any.
  * @param logger - Logger for the auth flow.
- * @returns A hook resolving the account ID and API token for the session.
+ * @returns A hook resolving the account ID and API token, with a key
+ * identifying those credentials.
  */
 export function getRemoteBindingsAuth(
-	hooks: Map<string, AsyncHook<CfAccount>>,
 	profileDir: string,
 	accountId: string | undefined,
 	logger: Logger
-): AsyncHook<CfAccount> {
-	const key = JSON.stringify([profileDir, accountId]);
-	let hook = hooks.get(key);
-	if (hook === undefined) {
-		let auth: CloudflareAuth | undefined;
-		hook = async () => {
+): RemoteBindingsAuth {
+	let auth: CloudflareAuth | undefined;
+	return {
+		hook: async () => {
 			// Only resolve the profile once a session actually needs credentials
 			auth ??= createAuth(profileDir, logger);
 			return {
@@ -101,10 +96,9 @@ export function getRemoteBindingsAuth(
 				),
 				apiToken: auth.requireApiToken(),
 			};
-		};
-		hooks.set(key, hook);
-	}
-	return hook;
+		},
+		key: JSON.stringify([profileDir, accountId]),
+	};
 }
 
 /** Adapt Vite's logger to the shared Cloudflare API logger interface. */

@@ -147,7 +147,7 @@ export async function mergeDeployConfigArgs(
 		? applyZoneArgsToRoutes(args.routes, args)
 		: (config.routes ?? (config.route ? [config.route] : []));
 	const normalizedContainerConfig = await getNormalizedContainerOptions(
-		config,
+		{ ...config, name: shared.name },
 		{
 			containersRollout: args.containersRollout,
 			dryRun: shared.dryRun,

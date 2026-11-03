@@ -36,6 +36,17 @@ export function throwRemoteRequired(bindingName: string): never {
 }
 
 /**
+ * How Cloudflare Access stopped a request to the remote-bindings proxy server:
+ *  - `"blocked"`: a 403 Access block page (e.g. a Service Auth-only policy
+ *    rejecting the request).
+ *  - `"login-redirect"`: a redirect to the Access login page, meaning the
+ *    request carried no valid Access credentials at all (for example, Access
+ *    was not detected when the dev session started, or the `CF_Authorization`
+ *    cookie has since expired).
+ */
+type AccessBlockReason = "blocked" | "login-redirect";
+
+/**
  * Build a plain-text body for the Cloudflare Access block substitution
  * response. We replace the original Access HTML so that:
  *  - Bindings that propagate the response body into an error message (e.g.
@@ -49,8 +60,25 @@ export function throwRemoteRequired(bindingName: string): never {
  */
 function buildAccessBlockResponseBody(
 	bindingName: string,
-	proxyUrl: string
+	proxyUrl: string,
+	reason: AccessBlockReason
 ): string {
+	if (reason === "login-redirect") {
+		return [
+			`Cloudflare Access redirected this remote bindings request to its login page (binding "${bindingName}").`,
+			``,
+			`The local remote-bindings proxy client tried to reach ${proxyUrl}, but the`,
+			`remote workers.dev proxy server redirected to the Cloudflare Access login`,
+			`page, so the request did not carry valid Access credentials.`,
+			``,
+			`Restart your dev server to sign in to Access again, and make sure Wrangler`,
+			`or the Cloudflare Vite plugin is up to date. In non-interactive environments,`,
+			`set the CLOUDFLARE_ACCESS_CLIENT_ID and CLOUDFLARE_ACCESS_CLIENT_SECRET`,
+			`environment variables (Service Token credentials).`,
+			``,
+			`See https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/`,
+		].join("\n");
+	}
 	return [
 		`Cloudflare Access blocked this remote bindings request (binding "${bindingName}").`,
 		``,
@@ -68,16 +96,93 @@ function buildAccessBlockResponseBody(
 }
 
 /**
- * If the response from the remote-bindings proxy server is a Cloudflare Access
- * block page, report it to the Miniflare host via the loopback service so that
- * a single, actionable warning can be surfaced to the user. Also substitutes
- * the original HTML body for a readable plain-text body so that the warning
- * surfaces in error messages (for bindings that propagate the body) and in
- * browsers (for bindings whose response is piped back to the client).
+ * Set by the remote-bindings proxy server (ProxyServerWorker in
+ * @cloudflare/remote-bindings) on every response it forwards from a binding.
+ * Responses generated in front of the proxy server, such as a Cloudflare Access
+ * login redirect or block page, never carry it. Older proxy servers don't set
+ * it at all, in which case every response is checked for an Access block.
+ * Like the `MF-*` request headers, the name is reserved for remote bindings: a
+ * binding's own header of the same name doesn't reach the caller.
+ */
+const FORWARDED_RESPONSE_HEADER = "MF-Forwarded-Response";
+
+/**
+ * Remove {@link FORWARDED_RESPONSE_HEADER} so bindings see the response exactly
+ * as the remote binding returned it.
+ */
+function stripForwardedResponseMarker(response: Response): Response {
+	// A WebSocket upgrade response can't be re-wrapped without losing its socket.
+	if (response.webSocket) {
+		return response;
+	}
+	const stripped = new Response(response.body, response);
+	stripped.headers.delete(FORWARDED_RESPONSE_HEADER);
+	return stripped;
+}
+
+/**
+ * Whether `location` points at a Cloudflare Access login page, i.e.
+ * `https://<team>.cloudflareaccess.com/cdn-cgi/access/login/<host>?...`.
+ */
+function isCloudflareAccessLoginUrl(location: string | null): boolean {
+	if (location === null) {
+		return false;
+	}
+	try {
+		const { hostname, pathname } = new URL(location);
+		return (
+			hostname.endsWith(".cloudflareaccess.com") &&
+			pathname.startsWith("/cdn-cgi/access/login")
+		);
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Classify a response from the remote-bindings proxy server as a Cloudflare
+ * Access block, if it is one.
  *
- * The remote-bindings proxy CLIENT worker only ever calls the
- * `remoteProxyConnectionString`, so a 403 with a Cloudflare Access body here
- * is unambiguously an Access block — never a user-worker 403.
+ * Only called for responses without {@link FORWARDED_RESPONSE_HEADER}: a 403
+ * with a Cloudflare Access body, or a redirect to the Access login page, then
+ * came from Access in front of the proxy server rather than from the binding.
+ */
+async function getCloudflareAccessBlockReason(
+	response: Response
+): Promise<AccessBlockReason | undefined> {
+	if (response.status >= 300 && response.status < 400) {
+		return isCloudflareAccessLoginUrl(response.headers.get("Location"))
+			? "login-redirect"
+			: undefined;
+	}
+	if (response.status !== 403) {
+		return undefined;
+	}
+	let text: string;
+	try {
+		text = await response.clone().text();
+	} catch {
+		return undefined;
+	}
+	// Cloudflare Access block pages reliably contain the literal string
+	// "Cloudflare Access" in the HTML body (title: "Error ・ Cloudflare Access").
+	// Combined with the 403 status, this is a low-false-positive signal.
+	return text.includes("Cloudflare Access") ? "blocked" : undefined;
+}
+
+/**
+ * If the response from the remote-bindings proxy server is a Cloudflare Access
+ * block (see {@link getCloudflareAccessBlockReason}), report it to the
+ * Miniflare host via the loopback service so that a single, actionable warning
+ * can be surfaced to the user. Also substitutes the original response for a
+ * readable plain-text body so that the warning surfaces in error messages (for
+ * bindings that propagate the body) and in browsers (for bindings whose
+ * response is piped back to the client).
+ *
+ * A login redirect must never be passed back to the binding: its `fetch()`
+ * would follow it through the same service binding to the proxy server, which
+ * redirects again, looping until workerd fails with "Too many redirects" (and
+ * an error message containing the Access login URL and its `meta` JWT).
  *
  * Dedup of the warning is performed on the Miniflare/Node side; the worker
  * just fires the loopback notification for every blocked request.
@@ -88,20 +193,11 @@ async function maybeReportCloudflareAccessBlock(
 	proxyUrl: string,
 	loopback: Fetcher | undefined
 ): Promise<Response> {
-	if (!loopback || response.status !== 403) {
+	if (!loopback) {
 		return response;
 	}
-	let text: string;
-	try {
-		text = await response.clone().text();
-	} catch {
-		return response;
-	}
-	// Cloudflare Access block pages reliably contain the literal string
-	// "Cloudflare Access" in the HTML body (title: "Error ・ Cloudflare Access").
-	// Combined with the 403 status and the fact that this worker only ever
-	// calls the remote-bindings proxy URL, this is a low-false-positive signal.
-	if (!text.includes("Cloudflare Access")) {
+	const reason = await getCloudflareAccessBlockReason(response);
+	if (reason === undefined) {
 		return response;
 	}
 	await loopback.fetch("http://localhost/core/remote-bindings-access-warning", {
@@ -109,17 +205,22 @@ async function maybeReportCloudflareAccessBlock(
 		headers: {
 			"MF-Binding": bindingName,
 			"MF-Proxy-URL": proxyUrl,
+			"MF-Access-Block-Reason": reason,
 		},
 	});
-	// Replace the original Access HTML body with our own readable plain-text
+	// Replace the original Access response with our own readable plain-text
 	// guidance. Headers are not copied from the original response — they may
-	// include Access-specific cookies and other artefacts that aren't relevant
-	// to the synthesised body.
-	return new Response(buildAccessBlockResponseBody(bindingName, proxyUrl), {
-		status: response.status,
-		statusText: response.statusText,
-		headers: { "Content-Type": "text/plain; charset=utf-8" },
-	});
+	// include Access-specific cookies, the login `Location`, and other
+	// artefacts that aren't relevant to the synthesised body.
+	const init: ResponseInit =
+		reason === "login-redirect"
+			? // Any redirect status would just be followed again.
+				{ status: 401 }
+			: { status: response.status, statusText: response.statusText };
+	return new Response(
+		buildAccessBlockResponseBody(bindingName, proxyUrl, reason),
+		{ ...init, headers: { "Content-Type": "text/plain; charset=utf-8" } }
+	);
 }
 
 export function makeFetch(
@@ -161,6 +262,11 @@ export function makeFetch(
 		});
 
 		const response = await fetch(remoteProxyConnectionString, req);
+		if (response.headers.has(FORWARDED_RESPONSE_HEADER)) {
+			// The remote proxy server got this response from the binding itself,
+			// so it can't be an Access block, even if it looks like one.
+			return stripForwardedResponseMarker(response);
+		}
 		// Awaited (rather than fire-and-forget) so the loopback POST isn't
 		// cancelled when the proxy client returns. The happy path
 		// (non-403) short-circuits before any body read or loopback call,

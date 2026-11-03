@@ -1,4 +1,4 @@
-import { resolveNodejsCompat } from "@cloudflare/workers-utils/compatibility-date";
+import { resolveNodejsCompat } from "./compatibility-date";
 
 /**
  * We can provide Node.js compatibility in a number of different modes:

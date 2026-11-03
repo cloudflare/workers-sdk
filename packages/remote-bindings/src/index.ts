@@ -3,6 +3,7 @@ export {
 	pickRemoteBindings,
 } from "./maybe-start-or-update-session";
 export type {
+	RemoteBindingsAuth,
 	RemoteBindingsContext,
 	RemoteProxySessionData,
 	WorkerConfigObject,

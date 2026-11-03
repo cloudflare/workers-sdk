@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { NpmPackageManager } from "@cloudflare/workers-utils";
 import {
 	mockConsoleMethods,
 	runInTempDir,
@@ -8,6 +9,7 @@ import {
 } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, describe, it, vi } from "vitest";
 import * as details from "../../src/details";
+import { detectFramework } from "../../src/details/framework-detection";
 import { createMockContext } from "../helpers/mock-context";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -48,6 +50,20 @@ vi.mock("node:fs/promises", async (importOriginal) => {
 			}
 			return Reflect.apply(original.stat, undefined, args);
 		},
+	};
+});
+
+// Passes through to the real detection unless a test overrides it, for cases
+// that cannot be reproduced with files on disk alone
+vi.mock("../../src/details/framework-detection", async (importOriginal) => {
+	const original =
+		await importOriginal<
+			typeof import("../../src/details/framework-detection")
+		>();
+
+	return {
+		...original,
+		detectFramework: vi.fn(original.detectFramework),
 	};
 });
 
@@ -178,7 +194,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 	it("should select the known framework when multiple frameworks are detected but only one is known", async ({
 		expect,
 	}) => {
-		// Gatsby is not in allKnownFrameworks, so only Astro should be considered
+		// Gatsby is not a known framework, so only Astro should be considered
 		await writeFile(
 			"package.json",
 			JSON.stringify({
@@ -440,6 +456,119 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 	});
 
+	it("should use a caller-supplied outputDir instead of the detected project directory", async ({
+		expect,
+	}) => {
+		await seed({
+			"index.html": `<h1>Hello World</h1>`,
+			".env": "SECRET=1",
+			"public/index.html": `<h1>Hello World</h1>`,
+		});
+
+		await expect(
+			details.getDetailsForAutoConfig({ context, outputDir: "public" })
+		).resolves.toMatchObject({
+			outputDir: "public",
+		});
+	});
+
+	it.for(["astro", "next", "nuxt", "vite"])(
+		"should select static assets for a caller-supplied outputDir instead of configuring %s",
+		async (framework, { expect }) => {
+			await seed({
+				"package.json": JSON.stringify({
+					name: "my-app",
+					dependencies: { [framework]: "5" },
+					scripts: { build: `${framework} build` },
+				}),
+				"static/index.html": `<h1>Hello World</h1>`,
+			});
+
+			await expect(
+				details.getDetailsForAutoConfig({ context, outputDir: "static" })
+			).resolves.toMatchObject({
+				configured: false,
+				framework: expect.objectContaining({ id: "static" }),
+				outputDir: "static",
+				buildCommand: undefined,
+				devCommand: undefined,
+			});
+		}
+	);
+
+	it.for(["cf", "wrangler"] as const)(
+		"should preserve an existing Vite deployment for %s when outputDir is supplied",
+		async (target, { expect }) => {
+			await seed({
+				"package.json": JSON.stringify({
+					name: "my-vite-app",
+					dependencies: { vite: "8", "@cloudflare/vite-plugin": "1" },
+					scripts: {
+						build: "vite build",
+						deploy: "vite build && wrangler deploy",
+					},
+				}),
+				"vite.config.ts": `import { cloudflare } from "@cloudflare/vite-plugin";
+					import { defineConfig } from "vite";
+					export default defineConfig({ plugins: [cloudflare()] });`,
+				"public/index.html": "<h1>Hello World</h1>",
+				...(target === "cf"
+					? { "cloudflare.config.ts": "export default {};" }
+					: {}),
+			});
+			const existingDetails = await details.getDetailsForAutoConfig({
+				context,
+				target,
+			});
+
+			const result = await details.getDetailsForAutoConfig({
+				context,
+				target,
+				outputDir: "public",
+			});
+
+			expect(result).toMatchObject({
+				configured: true,
+				framework: { id: "vite" },
+			});
+			expect(result).toEqual(existingDetails);
+		}
+	);
+
+	it.for([
+		{ input: "./public/", expected: "public" },
+		{ input: "public/nested/..", expected: "public" },
+		{ input: ".", expected: "." },
+		{ input: "./", expected: "." },
+		{ input: "../site", expected: join("..", "site") },
+	])(
+		"should normalize a caller-supplied outputDir of $input to $expected",
+		async ({ input, expected }, { expect }) => {
+			await seed({ "public/index.html": `<h1>Hello World</h1>` });
+
+			await expect(
+				details.getDetailsForAutoConfig({ context, outputDir: input })
+			).resolves.toMatchObject({
+				outputDir: expected,
+			});
+		}
+	);
+
+	it("should express an absolute caller-supplied outputDir relative to the project", async ({
+		expect,
+	}) => {
+		await seed({ "public/index.html": `<h1>Hello World</h1>` });
+
+		await expect(
+			details.getDetailsForAutoConfig({
+				context,
+				outputDir: join(process.cwd(), "public"),
+			})
+		).resolves.toMatchObject({
+			outputDir: "public",
+		});
+	});
+
 	const workerNamesToTest = [
 		{ rawName: "my-project-1", normalizedName: "my-project-1" },
 		{
@@ -610,6 +739,198 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 
 			expect(result.framework?.id).toBe("static");
 			expect(result.framework?.name).toBe("Static");
+		});
+
+		describe("functions directory with static files in the project root", () => {
+			// Mirrors Wrangler in CI and agent sessions: the Pages prompt falls back
+			// to `false` and the context reports a non-interactive environment.
+			const nonInteractiveContext = createMockContext({
+				isNonInteractiveOrCI: () => true,
+				dialogs: {
+					confirm: vi.fn().mockResolvedValue(false),
+					prompt: vi.fn().mockResolvedValue(""),
+					select: vi.fn().mockResolvedValue(""),
+				},
+			});
+			const pagesFunction = `
+				export function onRequest(context) {
+					return new Response("Hello, world!");
+				}
+			`;
+
+			it("should throw in a non-interactive run instead of deploying the root without its Functions", async ({
+				expect,
+			}) => {
+				await seed({
+					"index.html": `<h1>Hello World</h1>`,
+					"functions/api/hello.js": pagesFunction,
+				});
+
+				await expect(
+					details.getDetailsForAutoConfig({ context: nonInteractiveContext })
+				).rejects.toThrowErrorMatchingInlineSnapshot(`
+					[Error: This project has a \`functions\` directory and static files in its root, which looks like a Cloudflare Pages project using Pages Functions. Automatic configuration cannot migrate Pages Functions to Workers yet, and deploying the project root as static assets would leave the Functions undeployed.
+					If \`functions\` contains Pages Functions, move the static files into a subdirectory (for example \`public/\`) and deploy with \`wrangler pages deploy public --project-name <name>\`, or migrate the Functions to a Worker: https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/
+					If \`functions\` is not Pages Functions, move the static files into a subdirectory or add a \`cloudflare.config.ts\` file for the Worker.]
+				`);
+			});
+
+			it("should name a Wrangler configuration file in the error for the wrangler target", async ({
+				expect,
+			}) => {
+				await seed({
+					"index.html": `<h1>Hello World</h1>`,
+					"functions/api/hello.js": pagesFunction,
+				});
+
+				await expect(
+					details.getDetailsForAutoConfig({
+						context: nonInteractiveContext,
+						target: "wrangler",
+					})
+				).rejects.toThrow(
+					"move the static files into a subdirectory or add a Wrangler configuration file for the Worker."
+				);
+			});
+
+			it("should not throw in a non-interactive run when `functions` is a file", async ({
+				expect,
+			}) => {
+				await seed({
+					"index.html": `<h1>Hello World</h1>`,
+					functions: "not a directory",
+				});
+
+				await expect(
+					details.getDetailsForAutoConfig({ context: nonInteractiveContext })
+				).resolves.toMatchObject({
+					framework: expect.objectContaining({ id: "static" }),
+					outputDir: ".",
+				});
+			});
+
+			it("should not throw in a non-interactive run for a project detected as Pages through its Wrangler config", async ({
+				expect,
+			}) => {
+				await seed({
+					"index.html": `<h1>Hello World</h1>`,
+					"functions/api/hello.js": pagesFunction,
+				});
+
+				await expect(
+					details.getDetailsForAutoConfig({
+						context: nonInteractiveContext,
+						target: "wrangler",
+						wranglerConfig: {
+							pages_build_output_dir: process.cwd(),
+						} as Config,
+					})
+				).resolves.toMatchObject({
+					framework: expect.objectContaining({ id: "cloudflare-pages" }),
+				});
+			});
+
+			it("should not throw in a non-interactive run for a project detected as Pages through the Pages cache", async ({
+				expect,
+			}) => {
+				await seed({
+					"index.html": `<h1>Hello World</h1>`,
+					"functions/api/hello.js": pagesFunction,
+					".wrangler/cache/pages.json": "{}",
+				});
+				const cachedContext = createMockContext({
+					...nonInteractiveContext,
+					getCacheFolder: () => join(process.cwd(), ".wrangler/cache"),
+				});
+
+				await expect(
+					details.getDetailsForAutoConfig({ context: cachedContext })
+				).resolves.toMatchObject({
+					framework: expect.objectContaining({ id: "cloudflare-pages" }),
+				});
+			});
+
+			it("should not throw in a non-interactive run when the static files are in a subdirectory", async ({
+				expect,
+			}) => {
+				// e.g. a Firebase project: `functions/` holds server code for another
+				// platform and `public/` is what gets deployed
+				await seed({
+					"public/index.html": `<h1>Hello World</h1>`,
+					"functions/index.js": pagesFunction,
+				});
+
+				await expect(
+					details.getDetailsForAutoConfig({ context: nonInteractiveContext })
+				).resolves.toMatchObject({
+					framework: expect.objectContaining({ id: "static" }),
+					outputDir: "public",
+				});
+			});
+
+			it("should not throw when an interactive user says it is not a Pages project", async ({
+				expect,
+			}) => {
+				await seed({
+					"index.html": `<h1>Hello World</h1>`,
+					"functions/api/hello.js": pagesFunction,
+				});
+				const denyContext = createMockContext({
+					dialogs: {
+						confirm: vi.fn().mockResolvedValue(false),
+						prompt: vi.fn().mockResolvedValue(""),
+						select: vi.fn().mockResolvedValue(""),
+					},
+				});
+
+				await expect(
+					details.getDetailsForAutoConfig({ context: denyContext })
+				).resolves.toMatchObject({
+					framework: expect.objectContaining({ id: "static" }),
+					outputDir: ".",
+				});
+			});
+
+			it("should not throw in a non-interactive run when a framework is detected", async ({
+				expect,
+			}) => {
+				await seed({
+					"package.json": JSON.stringify({ dependencies: { astro: "5" } }),
+					"index.html": `<h1>Hello World</h1>`,
+					"functions/api/hello.js": pagesFunction,
+				});
+
+				await expect(
+					details.getDetailsForAutoConfig({ context: nonInteractiveContext })
+				).resolves.toMatchObject({
+					framework: expect.objectContaining({ id: "astro" }),
+				});
+			});
+
+			it("should throw in a non-interactive run when a detected framework is not recognised", async ({
+				expect,
+			}) => {
+				await seed({
+					"index.html": `<h1>Hello World</h1>`,
+					"functions/api/hello.js": pagesFunction,
+				});
+				// A framework detected with its output in the project root but missing
+				// from `allFrameworksInfos`, so it is handled as a static site and would
+				// deploy the project root as assets
+				vi.mocked(detectFramework).mockResolvedValueOnce({
+					detectedFramework: {
+						framework: { id: "gatsby", name: "Gatsby" },
+						dist: ".",
+					},
+					packageManager: NpmPackageManager,
+				});
+
+				await expect(
+					details.getDetailsForAutoConfig({ context: nonInteractiveContext })
+				).rejects.toThrow(
+					"looks like a Cloudflare Pages project using Pages Functions"
+				);
+			});
 		});
 
 		it("should not detect Pages project when functions directory exists but a framework is detected", async ({

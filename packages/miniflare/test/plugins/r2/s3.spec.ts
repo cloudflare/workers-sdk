@@ -1,4 +1,6 @@
 import crypto from "node:crypto";
+import http from "node:http";
+import { text } from "node:stream/consumers";
 import { Sha256 } from "@aws-crypto/sha256-js";
 import {
 	AbortMultipartUploadCommand,
@@ -204,6 +206,107 @@ test("rejects anonymous requests", async ({ expect }) => {
 		"<Code>InvalidArgument</Code><Message>Authorization</Message>"
 	);
 });
+
+test.for([undefined, "", "identity", "gzip"])(
+	"verifies signatures against the original Accept-Encoding: %s",
+	async (acceptEncoding, { expect }) => {
+		const url = s3Url("bucket/signed-encoding.txt");
+		await (await bucket()).put("signed-encoding.txt", "signed encoding");
+		const signer = new SignatureV4({
+			credentials: CREDENTIALS,
+			region: "auto",
+			service: "s3",
+			sha256: Sha256,
+			uriEscapePath: false,
+		});
+		const signed = await signer.sign(
+			{
+				method: "GET",
+				protocol: url.protocol,
+				hostname: url.hostname,
+				path: url.pathname,
+				headers: {
+					host: url.host,
+					...(acceptEncoding !== undefined
+						? { "accept-encoding": acceptEncoding }
+						: {}),
+				},
+			},
+			{ signableHeaders: new Set(["accept-encoding"]) }
+		);
+		if (acceptEncoding === undefined) {
+			expect(signed.headers.authorization).not.toContain("accept-encoding");
+		} else {
+			expect(signed.headers.authorization).toContain(
+				"SignedHeaders=accept-encoding;"
+			);
+		}
+		const response = await new Promise<http.IncomingMessage>(
+			(resolve, reject) => {
+				http.get(url, { headers: signed.headers }, resolve).on("error", reject);
+			}
+		);
+		const body = await text(response);
+		expect(response.statusCode).toBe(200);
+		expect(body).toBe("signed encoding");
+	}
+);
+
+test.for([
+	{
+		name: "repeated lines signed with comma-space",
+		header: ["one", "two"],
+		signedValue: "one, two",
+	},
+	{
+		name: "single line containing a bare comma",
+		header: "one,two",
+		signedValue: "one,two",
+	},
+	{
+		name: "single line containing comma-space",
+		header: "one, two",
+		signedValue: "one, two",
+	},
+])(
+	"verifies signatures for comma-separated header values: $name",
+	async (options, { expect }) => {
+		const url = s3Url("bucket/repeated-headers.txt");
+		await (await bucket()).put("repeated-headers.txt", "repeated headers");
+		const signer = new SignatureV4({
+			credentials: CREDENTIALS,
+			region: "auto",
+			service: "s3",
+			sha256: Sha256,
+			uriEscapePath: false,
+		});
+		const signed = await signer.sign({
+			method: "GET",
+			protocol: url.protocol,
+			hostname: url.hostname,
+			path: url.pathname,
+			headers: {
+				host: url.host,
+				"x-test-header": options.signedValue,
+			},
+		});
+		expect(signed.headers.authorization).toContain(";x-test-header,");
+		const response = await new Promise<http.IncomingMessage>(
+			(resolve, reject) => {
+				http
+					.get(
+						url,
+						{ headers: { ...signed.headers, "x-test-header": options.header } },
+						resolve
+					)
+					.on("error", reject);
+			}
+		);
+		const body = await text(response);
+		expect(response.statusCode).toBe(200);
+		expect(body).toBe("repeated headers");
+	}
+);
 
 test("rejects a wrong secret with SignatureDoesNotMatch", async ({
 	expect,

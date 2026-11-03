@@ -6,6 +6,7 @@ import { generateContainerBuildId } from "@cloudflare/containers-shared";
 import {
 	convertConfigToBindings,
 	normalizeAndValidateConfig,
+	splitSqlQuery,
 	UserError,
 } from "@cloudflare/workers-utils";
 import {
@@ -22,7 +23,6 @@ import {
 	getUnappliedMigrationNames,
 	resolveMigrationsConfig,
 } from "../d1/migrations/helpers";
-import { splitSqlQuery } from "../d1/splitter";
 import { getDatabaseInfoFromConfig } from "../d1/utils";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";

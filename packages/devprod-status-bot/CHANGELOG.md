@@ -1,5 +1,13 @@
 # devprod-status-bot
 
+## 1.5.1
+
+### Patch Changes
+
+- [#16649](https://github.com/cloudflare/workers-sdk/pull/16649) [`199efb6`](https://github.com/cloudflare/workers-sdk/commit/199efb66a6d48af31ab71ea238f5d82216c6623b) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Suppress Version Packages CI alerts for test summaries that failed only because their dependencies were cancelled
+
+  Check the summary's test partitions or framework shards before sending an alert. Genuine failures and timeouts still alert, and alerts are retained if GitHub cannot confirm the dependency results.
+
 ## 1.5.0
 
 ### Minor Changes

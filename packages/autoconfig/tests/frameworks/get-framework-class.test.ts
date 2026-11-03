@@ -8,7 +8,7 @@ describe("getFrameworkClassInstance()", () => {
 	it("should return a Static framework when frameworkId is unknown", ({
 		expect,
 	}) => {
-		const framework = getFrameworkClassInstance("unknown-framework");
+		const framework = getFrameworkClassInstance("unknown-framework", "cf");
 
 		expect(framework).toBeInstanceOf(Static);
 		expect(framework.id).toBe("static");
@@ -18,7 +18,7 @@ describe("getFrameworkClassInstance()", () => {
 	it("should return a target framework when frameworkId is known and supported", ({
 		expect,
 	}) => {
-		const framework = getFrameworkClassInstance("next");
+		const framework = getFrameworkClassInstance("next", "cf");
 
 		expect(framework).toBeInstanceOf(NextJs);
 		expect(framework.id).toBe("next");
@@ -28,7 +28,7 @@ describe("getFrameworkClassInstance()", () => {
 	it("should return a NoOpFramework for an unsupported framework (hono)", ({
 		expect,
 	}) => {
-		const framework = getFrameworkClassInstance("hono");
+		const framework = getFrameworkClassInstance("hono", "cf");
 
 		expect(framework).toBeInstanceOf(NoOpFramework);
 		expect(framework.id).toBe("hono");

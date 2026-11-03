@@ -1,5 +1,5 @@
 import { describe, test } from "vitest";
-import { getRemoteBindings } from "../remote-bindings";
+import { getRemoteBindings } from "./config-bindings";
 
 describe("getRemoteBindings", () => {
 	test("maps supported remote bindings", ({ expect }) => {

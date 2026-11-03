@@ -25,6 +25,7 @@ import {
 	Log,
 	LogLevel,
 	parseModuleFallbackRequest,
+	resolveLocalBindings,
 	Response as MiniflareResponse,
 } from "miniflare";
 import { getAssetsConfig } from "./asset-config";
@@ -37,9 +38,7 @@ import {
 	VITE_PROXY_WORKER_NAME,
 } from "./constants";
 import { getInputInspectorPort } from "./debug";
-import { resolveLocalBindings } from "./local-env";
 import { additionalModuleRE } from "./plugins/additional-modules";
-import { getRemoteBindings } from "./remote-bindings";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
 import { checkForNpmUpdate } from "./update-check";
 import {
@@ -55,7 +54,6 @@ import type {
 	PreviewPluginContext,
 	WorkersPluginContext,
 } from "./context";
-import type { ResolvedLocalBindings } from "./local-env";
 import type { PersistState } from "./plugin-config";
 import type {
 	ParsedInputWorkerConfig,
@@ -261,10 +259,7 @@ export async function getDevMiniflareOptions(
 		ctx.allWorkerConfigs,
 		resolvedPluginConfig.localEnv,
 		resolvedPluginConfig.devVars,
-		resolvedPluginConfig.remoteBindings
-	);
-	warnForMissingSecrets(
-		resolvedLocalBindingsByWorkerName,
+		resolvedPluginConfig.remoteBindings,
 		resolvedViteConfig.mode,
 		viteDevServer.config.logger
 	);
@@ -507,8 +502,6 @@ export async function getDevMiniflareOptions(
 			? await Promise.all(
 					[...resolvedPluginConfig.environmentNameToWorkerMap].map(
 						async ([environmentName, worker]) => {
-							const bindings = getRemoteBindings(worker.config);
-
 							const preExistingRemoteProxySession =
 								remoteProxySessionsDataMap.get(worker.config.name);
 							const settings = resolvedPluginConfig.settings;
@@ -520,7 +513,8 @@ export async function getDevMiniflareOptions(
 									: await maybeStartOrUpdateRemoteProxySession(
 											{
 												name: worker.config.name,
-												bindings: bindings ?? {},
+												target: "cf",
+												env: worker.config.env,
 												complianceRegion: toApiComplianceRegion(
 													settings.complianceRegion
 												),
@@ -529,7 +523,6 @@ export async function getDevMiniflareOptions(
 											},
 											preExistingRemoteProxySession ?? null,
 											getRemoteBindingsAuth(
-												ctx.remoteBindingsAuthHooks,
 												resolvedViteConfig.root,
 												settings.accountId,
 												createLogger(viteDevServer.config.logger)
@@ -574,7 +567,7 @@ export async function getDevMiniflareOptions(
 							const resolvedLocalBindings =
 								resolvedLocalBindingsByWorkerName.get(worker.config.name);
 							assert(resolvedLocalBindings);
-							const env = { ...resolvedLocalBindings.bindings };
+							const env = { ...resolvedLocalBindings };
 							for (const [name, binding] of Object.entries(env)) {
 								if (binding.type === "assets") {
 									env[name] = {
@@ -816,10 +809,7 @@ export async function getPreviewMiniflareOptions(
 		ctx.allWorkerConfigs,
 		resolvedPluginConfig.localEnv,
 		resolvedPluginConfig.devVars,
-		resolvedPluginConfig.remoteBindings
-	);
-	warnForMissingSecrets(
-		resolvedLocalBindingsByWorkerName,
+		resolvedPluginConfig.remoteBindings,
 		resolvedViteConfig.mode,
 		vitePreviewServer.config.logger
 	);
@@ -842,7 +832,6 @@ export async function getPreviewMiniflareOptions(
 	const workers: WorkerOptions[] = await Promise.all(
 		resolvedPluginConfig.workers.map(async (previewWorker) => {
 			const workerConfig = previewWorker.config;
-			const bindings = getRemoteBindings(workerConfig);
 			const preExistingRemoteProxySessionData = remoteProxySessionsDataMap.get(
 				workerConfig.name
 			);
@@ -851,7 +840,8 @@ export async function getPreviewMiniflareOptions(
 				: await maybeStartOrUpdateRemoteProxySession(
 						{
 							name: workerConfig.name,
-							bindings: bindings ?? {},
+							target: "cf",
+							env: workerConfig.env,
 							complianceRegion: toApiComplianceRegion(
 								resolvedPluginConfig.settings.complianceRegion
 							),
@@ -860,7 +850,6 @@ export async function getPreviewMiniflareOptions(
 						},
 						preExistingRemoteProxySessionData ?? null,
 						getRemoteBindingsAuth(
-							ctx.remoteBindingsAuthHooks,
 							resolvedViteConfig.root,
 							resolvedPluginConfig.settings.accountId,
 							createLogger(vitePreviewServer.config.logger)
@@ -885,7 +874,7 @@ export async function getPreviewMiniflareOptions(
 				workerConfig.name
 			);
 			assert(resolvedLocalBindings);
-			const env = { ...resolvedLocalBindings.bindings };
+			const env = { ...resolvedLocalBindings };
 			const workerExports = createMiniflareExports({
 				exports,
 				containerRuntimeOptions: containerPlansByWorkerName.get(
@@ -1001,40 +990,25 @@ function resolveLocalBindingsByWorkerName(
 	workerConfigs: Array<ParsedInputWorkerConfig | ParsedOutputWorkerConfig>,
 	localEnv: LoadedEnv,
 	devVars: Record<string, string> | undefined,
-	remoteBindings: boolean
-): Map<string, ResolvedLocalBindings> {
-	const resolvedLocalBindingsByWorkerName = new Map<
-		string,
-		ResolvedLocalBindings
-	>();
+	remoteBindings: boolean,
+	mode: string,
+	logger: vite.Logger
+): Map<string, MiniflareEnv> {
+	const resolvedLocalBindingsByWorkerName = new Map<string, MiniflareEnv>();
 	for (const config of workerConfigs) {
 		resolvedLocalBindingsByWorkerName.set(
 			config.name,
-			resolveLocalBindings(config.env, localEnv.values, devVars, remoteBindings)
+			resolveLocalBindings(config.env, {
+				workerName: config.name,
+				localEnv: localEnv.values,
+				devVars,
+				mode,
+				remoteBindings,
+				logger,
+			})
 		);
 	}
 	return resolvedLocalBindingsByWorkerName;
-}
-
-function warnForMissingSecrets(
-	resolvedLocalBindingsByWorkerName: Map<string, ResolvedLocalBindings>,
-	mode: string,
-	logger: vite.Logger
-): void {
-	for (const [
-		workerName,
-		{ missingSecrets },
-	] of resolvedLocalBindingsByWorkerName) {
-		if (missingSecrets.length === 0) {
-			continue;
-		}
-		logger.warn(
-			`Missing required secrets for Worker "${workerName}": ${missingSecrets.join(", ")}. ` +
-				`Add them to one of \`.dev.vars.${mode}\`, \`.dev.vars\`, ` +
-				`\`.env.${mode}.local\`, \`.env.${mode}\`, \`.env.local\`, or \`.env\`. ` +
-				"Alternatively, set them as environment variables."
-		);
-	}
 }
 
 /**

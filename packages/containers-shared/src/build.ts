@@ -62,10 +62,14 @@ export function isDockerfileContainerConfig(
 }
 
 async function constructBuildCommand(options: BuildArgs) {
+	const imageOutput =
+		process.env.WRANGLER_CONTAINER_IMAGE_COMPRESSION === "zstd"
+			? "type=docker,oci-mediatypes=true,compression=zstd,compression-level=3,force-compression=true"
+			: undefined;
 	const platform = options.platform ?? "linux/amd64";
 	const buildCmd = [
 		"build",
-		"--load",
+		...(imageOutput ? ["--output", imageOutput] : ["--load"]),
 		"-t",
 		options.tag,
 		"--platform",
@@ -132,6 +136,19 @@ export async function startContainerBuild({
 	pathToDocker: string;
 	verifyDockerIsRunning?: boolean;
 }): Promise<StartedContainerBuild> {
+	if (process.env.WRANGLER_CONTAINER_IMAGE_COMPRESSION === "zstd") {
+		const driverStatus = runDockerCmdWithOutput(pathToDocker, [
+			"info",
+			"--format",
+			"{{json .DriverStatus}}",
+		]);
+		if (!driverStatus.includes("io.containerd.snapshotter.v1")) {
+			throw new UserError(
+				"Zstd compression requires Docker's containerd image store. Enable the containerd image store or unset WRANGLER_CONTAINER_IMAGE_COMPRESSION.",
+				{ telemetryMessage: false }
+			);
+		}
+	}
 	const { buildCmd, dockerfile } = await constructBuildCommand(build);
 	return await dockerBuild(pathToDocker, {
 		buildCmd,

@@ -87,6 +87,35 @@ describe("convertV4MiniflareOptions", () => {
 		);
 	});
 
+	test("converts local and remote Analytics Engine datasets", ({ expect }) => {
+		const remoteProxyConnectionString = new URL(
+			"http://127.0.0.1:8787"
+		) as RemoteProxyConnectionString;
+		const converted = convertV4MiniflareOptions({
+			name: "writer",
+			script: "export default {};",
+			modules: true,
+			analyticsEngineDatasets: {
+				LOCAL: { dataset: "local" },
+				REMOTE: { dataset: "remote", remoteProxyConnectionString },
+			},
+		});
+
+		expect(converted.workers[0].config.env?.LOCAL).toEqual({
+			type: "analytics-engine-dataset",
+			name: "local",
+			dev: { remote: false },
+		});
+		expect(converted.workers[0].config.env?.REMOTE).toEqual({
+			type: "analytics-engine-dataset",
+			name: "remote",
+			dev: { remote: true },
+		});
+		expect(converted.workers[0].dev?.remoteProxyConnectionString).toEqual(
+			remoteProxyConnectionString
+		);
+	});
+
 	test("converts local, external, and unbound durable objects", ({
 		expect,
 	}) => {

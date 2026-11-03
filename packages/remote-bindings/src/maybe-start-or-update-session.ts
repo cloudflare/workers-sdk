@@ -1,7 +1,9 @@
 import assert from "node:assert";
 import { getBindingLocalSupport } from "@cloudflare/workers-utils";
 import { getRemoteBindingsAuthHook } from "./auth";
+import { getRemoteBindings } from "./config-bindings";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
+import type { ConfigBindings } from "./config-bindings";
 import type { RemoteBindingsLogger } from "./logger";
 import type { RemoteProxySession } from "./start-remote-proxy-session";
 import type {
@@ -31,20 +33,43 @@ export function pickRemoteBindings(
 export type WorkerConfigObject = {
 	/** The name of the worker. */
 	name?: string;
-	/** The Worker's bindings. */
-	bindings: NonNullable<StartDevWorkerInput["bindings"]>;
 	/** If running in a non-public compliance region, set this here. */
 	complianceRegion?: Config["compliance_region"];
 	/** ID of the account owning the worker. */
 	account_id?: Config["account_id"];
 	/** Directory used to resolve the auth profile from directory bindings. */
 	profileDir?: string;
+} & (
+	| {
+			/** The format of the Worker's bindings. Defaults to Wrangler's. */
+			target?: "wrangler";
+			/** The Worker's bindings, in Wrangler's format. */
+			bindings: NonNullable<StartDevWorkerInput["bindings"]>;
+	  }
+	| {
+			/** The format of the Worker's bindings: `cloudflare.config.ts`'s. */
+			target: "cf";
+			/** The Worker's bindings, as declared in `cloudflare.config.ts`. */
+			env: ConfigBindings;
+	  }
+);
+
+/** Credentials for a remote proxy session. */
+export type RemoteBindingsAuth = {
+	/** Resolves the account ID and API token for the session. */
+	hook: AsyncHook<CfAccount>;
+	/**
+	 * Identifies the credentials `hook` resolves. When set, a session is only
+	 * restarted when the key changes; otherwise, when it gets a different `hook`.
+	 */
+	key?: string;
 };
 
 export type RemoteProxySessionData = {
 	session: RemoteProxySession;
 	remoteBindings: Record<string, Binding>;
 	auth?: AsyncHook<CfAccount>;
+	authKey?: string;
 };
 
 export type RemoteBindingsContext = {
@@ -56,21 +81,30 @@ export type RemoteBindingsContext = {
 export async function maybeStartOrUpdateRemoteProxySession(
 	workerConfigObject: WorkerConfigObject,
 	preExistingRemoteProxySessionData: RemoteProxySessionData | null | undefined,
-	auth: AsyncHook<CfAccount> | undefined,
+	auth: RemoteBindingsAuth | AsyncHook<CfAccount> | undefined,
 	context: RemoteBindingsContext,
 	startSession: typeof startRemoteProxySession = startRemoteProxySession
 ): Promise<RemoteProxySessionData | null> {
-	const remoteBindings = pickRemoteBindings(workerConfigObject.bindings);
+	// Wrangler passes its hook alone
+	const { hook, key }: Partial<RemoteBindingsAuth> =
+		auth !== undefined && "hook" in auth ? auth : { hook: auth };
+	const remoteBindings = pickRemoteBindings(
+		// The remote proxy Worker takes bindings in Wrangler's format
+		workerConfigObject.target === "cf"
+			? getRemoteBindings({ env: workerConfigObject.env })
+			: workerConfigObject.bindings
+	);
 	if (
 		Object.keys(remoteBindings).length === 0 &&
 		!preExistingRemoteProxySessionData?.session
 	) {
 		return null;
 	}
-	const authSameAsBefore = deepStrictEqual(
-		auth,
-		preExistingRemoteProxySessionData?.auth
-	);
+	const authSameAsBefore =
+		key !== undefined ||
+		preExistingRemoteProxySessionData?.authKey !== undefined
+			? key === preExistingRemoteProxySessionData?.authKey
+			: deepStrictEqual(hook, preExistingRemoteProxySessionData?.auth);
 	let remoteProxySession = preExistingRemoteProxySessionData?.session;
 
 	if (!authSameAsBefore) {
@@ -83,7 +117,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 			complianceRegion: workerConfigObject.complianceRegion,
 			cliDisplayName: context.cliDisplayName,
 			auth: getRemoteBindingsAuthHook(
-				auth,
+				hook,
 				workerConfigObject.account_id,
 				workerConfigObject.profileDir,
 				context.logger
@@ -104,7 +138,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 						complianceRegion: workerConfigObject.complianceRegion,
 						cliDisplayName: context.cliDisplayName,
 						auth: getRemoteBindingsAuthHook(
-							auth,
+							hook,
 							workerConfigObject.account_id,
 							workerConfigObject.profileDir,
 							context.logger
@@ -125,7 +159,8 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	return {
 		session: remoteProxySession,
 		remoteBindings,
-		auth,
+		auth: hook,
+		authKey: key,
 	};
 }
 

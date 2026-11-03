@@ -1,5 +1,6 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { fetchGraphqlResult } from "../cfetch";
+import dedent from "ts-dedent";
+import { fetchGraphqlResultOrThrow, GraphQLAnalyticsError } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
@@ -60,9 +61,47 @@ export function getDurationDates(durationString: string) {
 	return [startDate.toISOString(), endDate.toISOString()];
 }
 
+function toD1InsightsUserError(
+	error: GraphQLAnalyticsError,
+	accountId: string
+): UserError {
+	switch (error.reason) {
+		case "rate-limited":
+			return new UserError(
+				dedent`
+					Could not get D1 insights: the GraphQL Analytics API rate limited the request (${error.apiMessage}).
+
+					${error.retryAfterMs === undefined ? "The rate limit resets within 5 minutes: wait" : `Wait ${Math.ceil(error.retryAfterMs / 1000)} seconds`} before running \`wrangler d1 insights\` again. To use less of the rate limit budget, pass a database name, a shorter --time-period, or a smaller --limit.
+					See https://developers.cloudflare.com/analytics/graphql-api/limits/
+				`,
+				{ telemetryMessage: "d1 insights graphql rate limited", cause: error }
+			);
+		case "unauthorized":
+			return new UserError(
+				dedent`
+					Could not get D1 insights: not allowed to read analytics for account ${accountId} (${error.apiMessage}).
+
+					\`wrangler d1 insights\` needs the "Account Analytics: Read" permission on this account. If you use CLOUDFLARE_API_TOKEN, add that permission to the token at https://dash.cloudflare.com/profile/api-tokens. Otherwise run \`wrangler login\` again, and check that CLOUDFLARE_ACCOUNT_ID or \`account_id\` points at an account you are a member of.
+				`,
+				{ telemetryMessage: "d1 insights graphql unauthorized", cause: error }
+			);
+		case "other":
+			return new UserError(
+				dedent`
+					Could not get D1 insights: the GraphQL Analytics API returned an error (${error.apiMessage}).
+
+					Check the --time-period, --limit and sort options, then run \`wrangler d1 insights\` again.
+					See https://developers.cloudflare.com/analytics/graphql-api/errors/
+				`,
+				{ telemetryMessage: "d1 insights graphql error", cause: error }
+			);
+	}
+}
+
 export const d1InsightsCommand = createCommand({
 	metadata: {
-		description: "Get information about the queries run on a D1 database",
+		description:
+			"Get information about the queries run on a D1 database, or on all D1 databases in the account",
 		epilogue: "This command acts on remote D1 Databases.",
 		status: "experimental",
 		owner: "Product: D1",
@@ -74,8 +113,8 @@ export const d1InsightsCommand = createCommand({
 	args: {
 		name: {
 			type: "string",
-			demandOption: true,
-			description: "The name of the DB",
+			description:
+				"The name or binding of the DB. Omit to get insights for every D1 database in the account",
 		},
 		"time-period": {
 			type: "string",
@@ -124,9 +163,12 @@ export const d1InsightsCommand = createCommand({
 		{ config }
 	) {
 		const accountId = await requireAuth(config);
-		const db = await getDatabaseByNameOrBinding(config, accountId, name);
+		const db =
+			name === undefined
+				? undefined
+				: await getDatabaseByNameOrBinding(config, accountId, name);
 
-		const output: Record<string, string | number>[] = [];
+		const output: Record<string, string | number | null>[] = [];
 
 		const [startDate, endDate] = getDurationDates(timePeriod);
 		const parsedSortBy = cliOptionToGraphQLOption[sortBy];
@@ -135,7 +177,7 @@ export const d1InsightsCommand = createCommand({
 				? `${parsedSortBy}_${sortDirection}`
 				: `${sortType}_${parsedSortBy}_${sortDirection}`;
 		const graphqlQueriesResult =
-			await fetchGraphqlResult<D1QueriesGraphQLResponse>(config, {
+			await fetchGraphqlResultOrThrow<D1QueriesGraphQLResponse>(config, {
 				method: "POST",
 				body: JSON.stringify({
 					query: `query getD1QueriesOverviewQuery($accountTag: string, $filter: ZoneWorkersRequestsFilter_InputObject) {
@@ -157,6 +199,7 @@ export const d1InsightsCommand = createCommand({
 											count
 											dimensions {
 													query
+													databaseId
 											}
 										}
 									}
@@ -170,7 +213,7 @@ export const d1InsightsCommand = createCommand({
 								{
 									datetimeHour_geq: startDate,
 									datetimeHour_leq: endDate,
-									databaseId: db.uuid,
+									...(db ? { databaseId: db.uuid } : {}),
 								},
 							],
 						},
@@ -179,6 +222,11 @@ export const d1InsightsCommand = createCommand({
 				headers: {
 					"Content-Type": "application/json",
 				},
+			}).catch((err: unknown) => {
+				if (err instanceof GraphQLAnalyticsError) {
+					throw toD1InsightsUserError(err, accountId);
+				}
+				throw err;
 			});
 
 		graphqlQueriesResult?.data?.viewer?.accounts[0]?.d1QueriesAdaptiveGroups?.forEach(
@@ -199,6 +247,7 @@ export const d1InsightsCommand = createCommand({
 						row?.avg?.rowsReturned && row?.avg?.rowsRead
 							? row?.avg?.rowsReturned / row?.avg?.rowsRead
 							: 0,
+					...(db ? {} : { databaseId: row.dimensions.databaseId ?? null }),
 				});
 			}
 		);

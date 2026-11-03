@@ -8,7 +8,15 @@ export default defineConfig({
 	plugins: [
 		cloudflare({
 			types: { includeRuntime: false },
-			config: { compatibilityFlags: ["new_module_registry"] },
+			config(loadedConfig) {
+				return {
+					...loadedConfig,
+					worker: {
+						...loadedConfig.worker,
+						compatibilityFlags: ["new_module_registry"],
+					},
+				};
+			},
 			inspectorPort: false,
 			persistState: false,
 		}),

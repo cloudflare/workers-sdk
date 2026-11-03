@@ -5,6 +5,10 @@
  * This list is validated by `tools/deployments/validate-package-dependencies.ts`.
  */
 export const EXTERNAL_DEPENDENCIES = [
+	// The sourcemap helper resolves fresh instances through the CommonJS
+	// require cache, so source-map-support must remain a separate module.
+	"@cspotcode/source-map-support",
+
 	// Wrangler and the Vite plugin also bundle packages that use chalk (for
 	// example, @cloudflare/remote-bindings). Keeping chalk external allows the
 	// final application bundle to deduplicate those imports to a single copy.

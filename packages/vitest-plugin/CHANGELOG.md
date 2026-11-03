@@ -1,5 +1,102 @@
 # @cloudflare/vitest-plugin
 
+## 1.5.1
+
+### Patch Changes
+
+- [#16670](https://github.com/cloudflare/workers-sdk/pull/16670) [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-03
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16609](https://github.com/cloudflare/workers-sdk/pull/16609) [`da26b7f`](https://github.com/cloudflare/workers-sdk/commit/da26b7f90ee3dddf7211f5d0af8484b2821d6137) Thanks [@gpanders](https://github.com/gpanders)! - Fix tests failing to start with `resolve.preserveSymlinks` in isolated `node_modules` layouts
+
+  With `resolve.preserveSymlinks: true` in a pnpm project, tests failed to start with `No such module ".../node_modules/vitest/dist/chai"`, because a package's own dependencies are linked only next to its real path. Packages linked from a store inside `node_modules` now load from their real paths, and other files keep their symlinked paths.
+
+- Updated dependencies [[`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815), [`44d1ee4`](https://github.com/cloudflare/workers-sdk/commit/44d1ee439c0a077f2fed4d86e35a4edf46b51f74), [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815), [`d2eda1c`](https://github.com/cloudflare/workers-sdk/commit/d2eda1cf7446ba4b43c9b87e337614ba67a1b014), [`2750917`](https://github.com/cloudflare/workers-sdk/commit/2750917df4239be111bb2704654dbb99e922dba7), [`34f34b3`](https://github.com/cloudflare/workers-sdk/commit/34f34b3dbf9ae70218115a4067f66565d184ed5e)]:
+  - miniflare@5.20261103.0-beta
+  - wrangler@4.157.0
+
+## 1.5.0
+
+### Minor Changes
+
+- [#16424](https://github.com/cloudflare/workers-sdk/pull/16424) [`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72) Thanks [@edmundhung](https://github.com/edmundhung)! - Promote `experimental.newConfig` to a stable `config` option
+
+  The experimental `experimental.newConfig` option is now the stable `config` option. Pass `config: true` to `cloudflareTest()` to load your Worker's bindings, entrypoint and compatibility settings from `cloudflare.config.ts` in the project root, or pass the path of a `cloudflare.config.ts` elsewhere:
+
+  ```ts
+  cloudflareTest({ config: true });
+  cloudflareTest({ config: "./worker/cloudflare.config.ts" });
+  ```
+
+  `config` can't be combined with `wrangler`. `miniflare` options are merged over the Worker from `cloudflare.config.ts`, with `miniflare` values taking precedence. Config functions receive Vitest's mode as `ctx.mode`, which defaults to `test` and can be changed with `--mode`.
+
+  If you're moving from `experimental.newConfig`, secrets are now read from Vite's `envDir` instead of the directory containing `cloudflare.config.ts`, and remote bindings authenticate with `cf` instead of Wrangler.
+
+### Patch Changes
+
+- [#16642](https://github.com/cloudflare/workers-sdk/pull/16642) [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-02
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16623](https://github.com/cloudflare/workers-sdk/pull/16623) [`51bbf8b`](https://github.com/cloudflare/workers-sdk/commit/51bbf8b257dbf5c7a8f26600f5875ba45acbe89c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Deprecate shared tooling helper exports from Miniflare
+
+  Miniflare continues to export `getNodeCompat`, `NodeJSCompatMode`, and `getFreshSourceMapSupport` for compatibility. These exports are deprecated and now use the implementations in `@cloudflare/workers-utils`. Add a dependency on that package and replace the Miniflare imports with:
+
+  ```ts
+  import {
+    getNodeCompat,
+    type NodeJSCompatMode,
+  } from "@cloudflare/workers-utils/node-compat";
+  import { getFreshSourceMapSupport } from "@cloudflare/workers-utils/sourcemap";
+  ```
+
+  Wrangler and the Cloudflare Vite and Vitest plugins now use the shared helpers directly. The helpers retain their behavior and can be imported without loading the Workers runtime.
+
+  The deprecated Miniflare exports will be removed in a later release, allowing downstream tools such as cf to migrate and release independently first.
+
+- Updated dependencies [[`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67), [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67), [`51bbf8b`](https://github.com/cloudflare/workers-sdk/commit/51bbf8b257dbf5c7a8f26600f5875ba45acbe89c), [`e5b1798`](https://github.com/cloudflare/workers-sdk/commit/e5b179899567d35959144b7bc82e3f1a5ed04ca5)]:
+  - miniflare@5.20261102.0-beta
+  - wrangler@4.156.2
+
+## 1.4.12
+
+### Patch Changes
+
+- [#16635](https://github.com/cloudflare/workers-sdk/pull/16635) [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-01
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`effe4ed`](https://github.com/cloudflare/workers-sdk/commit/effe4ed13b1677744428cfb0c37e4512ec5d52f7), [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286), [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286), [`009ca6e`](https://github.com/cloudflare/workers-sdk/commit/009ca6e0483fd4a89f44bd02251b0a64491dab14), [`5740867`](https://github.com/cloudflare/workers-sdk/commit/57408671a0e1ff04ee1881d37c217c0e86a01c0c), [`d174de8`](https://github.com/cloudflare/workers-sdk/commit/d174de8818c79ff82293150917fa6da11516e795), [`aece4df`](https://github.com/cloudflare/workers-sdk/commit/aece4df134bc89ebba4f59ca3f737c049ac09668), [`2667a9f`](https://github.com/cloudflare/workers-sdk/commit/2667a9f1e5dabd0ca5c9a238f3c6a1ca0719d935), [`ed7fb41`](https://github.com/cloudflare/workers-sdk/commit/ed7fb4165a0c5de605b57b8f8443ff401b5194c4), [`f9dbb22`](https://github.com/cloudflare/workers-sdk/commit/f9dbb2232d5c233a09828fbe0c6272ea0e7cf471)]:
+  - wrangler@4.156.1
+  - miniflare@5.20261101.0-beta
+
+## 1.4.11
+
+### Patch Changes
+
+- [#15565](https://github.com/cloudflare/workers-sdk/pull/15565) [`142230d`](https://github.com/cloudflare/workers-sdk/commit/142230d2dac0c7d24fea4c039ae5de0e51886839) Thanks [@luccamordente](https://github.com/luccamordente)! - Flush `console.log()` calls made from another I/O context without waiting for the runner's next message
+
+  Vitest awaits every RPC call it made before it reports a test file as finished. A `console.log()` from another I/O context (a handler reached through `SELF`, a queue consumer, a `waitUntil()` callback) is buffered and sent with the runner's next message, so a log with nothing from the runner following it — the last batch of a queue consumed as the file ends, for example — left the run waiting on itself: the file's tests passed and vitest never finished. The buffer is now flushed from the runner's context as soon as a log is buffered.
+
+- [#16013](https://github.com/cloudflare/workers-sdk/pull/16013) [`8b64bec`](https://github.com/cloudflare/workers-sdk/commit/8b64becbd3817abb28654e270c0e0104170f29d7) Thanks [@swalker326](https://github.com/swalker326)! - Fix Durable Object self-references in tests and container validation
+
+  Durable Object bindings that explicitly name the Worker itself now resolve to the test runner in `@cloudflare/vitest-plugin`, for both `cloudflare.config.ts` and Wrangler configuration files. Named Wrangler environments use their effective Worker name, keeping bindings to the base Worker external. Container validation also accepts these self-references, using the effective deployment name to distinguish local and external bindings.
+
+  Explicit binding targets remain intact during configuration conversion, so deploying with `--name` or a CI name override preserves the intended Durable Object target.
+
+- Updated dependencies [[`ec0bea4`](https://github.com/cloudflare/workers-sdk/commit/ec0bea48d6316c8ca893241efbf31f1ffcfa6134), [`b4653b4`](https://github.com/cloudflare/workers-sdk/commit/b4653b40cdc6e176c4e5ac98696cf0dae641ff6b), [`25802bc`](https://github.com/cloudflare/workers-sdk/commit/25802bce9f605916239bfd4714263c88f9b3098b), [`25802bc`](https://github.com/cloudflare/workers-sdk/commit/25802bce9f605916239bfd4714263c88f9b3098b), [`15fbaed`](https://github.com/cloudflare/workers-sdk/commit/15fbaed2de992a529ca05d99424f8063d63217bf), [`d8899ac`](https://github.com/cloudflare/workers-sdk/commit/d8899ac4c85ff839d73daa9055a76a36248cd2e3), [`8b64bec`](https://github.com/cloudflare/workers-sdk/commit/8b64becbd3817abb28654e270c0e0104170f29d7)]:
+  - wrangler@4.156.0
+  - miniflare@5.20261023.3-beta
+
+## 1.4.10
+
+### Patch Changes
+
+- Updated dependencies [[`a95d647`](https://github.com/cloudflare/workers-sdk/commit/a95d647f9459e40a00871346b81082abbb27d2b3), [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1), [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1), [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1), [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1), [`c7a3373`](https://github.com/cloudflare/workers-sdk/commit/c7a3373cce06bdda0469d2b7d3d3286f3abbc3b1)]:
+  - miniflare@5.20261023.2-beta
+  - wrangler@4.155.0
+
 ## 1.4.9
 
 ### Patch Changes

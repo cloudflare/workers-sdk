@@ -166,6 +166,8 @@ The proxy is only configured when `devRegistry.isEnabled()` returns `true` and t
 - A dedicated `SOCKET_DEV_REGISTRY` HTTP socket for registry push updates
 - External service bindings configured with `capnpConnectHost` pointing at the proxy's entrypoints
 
+Bindings and tail consumers that target a Worker outside this instance are rerouted to the proxy by `getExternalServiceEntrypoints()`, on copies of the worker options. The options Miniflare holds are left as given, because restarting `workerd` after a crash assembles a new config from them, and rerouting a binding that already targets the proxy would point it at the proxy itself.
+
 ## Default Entrypoint Routing
 
 The `defaultEntrypointService` in `WorkerDefinition` varies by worker type:

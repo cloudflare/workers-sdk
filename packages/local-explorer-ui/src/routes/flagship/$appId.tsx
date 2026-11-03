@@ -16,7 +16,6 @@ import {
 import {
 	createFileRoute,
 	getRouteApi,
-	notFound,
 	useRouter,
 	useRouterState,
 } from "@tanstack/react-router";
@@ -24,7 +23,7 @@ import { useMemo, useState } from "react";
 import {
 	flagshipDeleteFlag,
 	flagshipListFlags,
-	flagshipUpdateFlag,
+	flagshipPatchFlag,
 } from "../../api";
 import { Breadcrumbs } from "../../components/Breadcrumbs";
 import { flagshipErrorMessage } from "../../components/flagship/flag-helpers";
@@ -32,7 +31,6 @@ import { FlagDialog } from "../../components/flagship/FlagDialog";
 import { FlagTable } from "../../components/flagship/FlagTable";
 import { TextInput } from "../../components/flagship/FormFields";
 import { TestFlagDialog } from "../../components/flagship/TestFlagDialog";
-import { NotFound } from "../../components/NotFound";
 import { ResourceError } from "../../components/ResourceError";
 import { getSelectedWorker } from "../../components/WorkerSelector";
 import type { FlagshipFlag } from "../../api";
@@ -43,27 +41,21 @@ const rootRoute = getRouteApi("__root__");
 export const Route = createFileRoute("/flagship/$appId")({
 	component: FlagshipAppView,
 	errorComponent: ResourceError,
-	loaderDeps: ({ search }) => ({ worker: search.worker }),
-	loader: async ({ deps, params }) => {
-		const response = await flagshipListFlags({
-			path: { app_id: params.appId },
-			query: { worker: deps.worker },
-			throwOnError: false,
-		});
-		if (response.response?.status === 404) {
-			throw notFound();
-		}
-		if (response.error) {
-			throw new Error(`Failed to list flags for app "${params.appId}"`);
-		}
-		return { flags: response.data?.result ?? [] };
+	loader: async ({ params }) => {
+		const flags: FlagshipFlag[] = [];
+		let cursor: string | undefined;
+		do {
+			const response = await flagshipListFlags({
+				path: { app_id: params.appId },
+				query: { cursor, limit: 200 },
+			});
+			flags.push(...(response.data?.result ?? []));
+			cursor = response.data?.result_info?.cursor ?? undefined;
+		} while (cursor !== undefined);
+		return { flags };
 	},
-	notFoundComponent: NotFound,
-	// Reset open dialogs so they cannot write one worker's flag to another.
-	remountDeps: ({ loaderDeps, params }) => ({
-		appId: params.appId,
-		worker: loaderDeps.worker,
-	}),
+	// Reset open dialogs so they cannot write one app's flag to another.
+	remountDeps: ({ params }) => ({ appId: params.appId }),
 	validateSearch: (search: Record<string, unknown>): { worker?: string } => ({
 		worker: typeof search.worker === "string" ? search.worker : undefined,
 	}),
@@ -74,7 +66,6 @@ export const Route = createFileRoute("/flagship/$appId")({
  */
 function FlagshipAppView(): JSX.Element {
 	const { appId } = Route.useParams();
-	const { worker } = Route.useSearch();
 	const { flags } = Route.useLoaderData();
 	const router = useRouter();
 	const toast = useKumoToastManager();
@@ -133,10 +124,9 @@ function FlagshipAppView(): JSX.Element {
 	async function toggleFlag(flag: FlagshipFlag): Promise<void> {
 		setPendingKey(flag.key);
 		try {
-			await flagshipUpdateFlag({
+			await flagshipPatchFlag({
 				body: { enabled: !flag.enabled },
 				path: { app_id: appId, flag_key: flag.key },
-				query: { worker },
 			});
 		} catch (error) {
 			toast.add({
@@ -159,7 +149,6 @@ function FlagshipAppView(): JSX.Element {
 		try {
 			await flagshipDeleteFlag({
 				path: { app_id: appId, flag_key: deleteTarget.key },
-				query: { worker },
 			});
 		} catch (error) {
 			toast.add({
@@ -322,7 +311,6 @@ function FlagshipAppView(): JSX.Element {
 				}}
 				onSaved={refresh}
 				open={creating || editTarget !== null}
-				worker={worker}
 			/>
 
 			<TestFlagDialog
@@ -335,7 +323,6 @@ function FlagshipAppView(): JSX.Element {
 					}
 				}}
 				open={testTarget !== undefined}
-				worker={worker}
 			/>
 
 			<Dialog.Root

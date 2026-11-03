@@ -74,9 +74,21 @@ describe("cf account helpers", () => {
 	test("listAccounts", async ({ expect }) => {
 		vi.mocked(runWranglerCommand).mockResolvedValueOnce(loggedInWhoamiOutput);
 
-		await expect(listAccounts()).resolves.toEqual({
-			testacct: "g8s9dl23jv90xa0xxxx990ds09xxxxda",
-		});
+		await expect(listAccounts()).resolves.toEqual([
+			{ name: "testacct", id: "g8s9dl23jv90xa0xxxx990ds09xxxxda" },
+		]);
+	});
+
+	test("listAccounts preserves duplicate display names", async ({ expect }) => {
+		const accounts = [
+			{ id: "a".repeat(32), name: "Example account" },
+			{ id: "b".repeat(32), name: "Example account" },
+		];
+		vi.mocked(runWranglerCommand).mockResolvedValueOnce(
+			JSON.stringify({ accounts })
+		);
+
+		await expect(listAccounts()).resolves.toEqual(accounts);
 	});
 
 	describe("login", () => {

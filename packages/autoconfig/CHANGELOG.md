@@ -1,5 +1,94 @@
 # @cloudflare/autoconfig
 
+## 0.9.2
+
+### Patch Changes
+
+- [#16670](https://github.com/cloudflare/workers-sdk/pull/16670) [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-03
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815)]:
+  - @cloudflare/workers-utils@0.51.1
+  - @cloudflare/cli-shared-helpers@0.3.3
+  - @cloudflare/config@0.30.1
+
+## 0.9.1
+
+### Patch Changes
+
+- [#16642](https://github.com/cloudflare/workers-sdk/pull/16642) [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-02
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72), [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67), [`51bbf8b`](https://github.com/cloudflare/workers-sdk/commit/51bbf8b257dbf5c7a8f26600f5875ba45acbe89c), [`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72), [`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72)]:
+  - @cloudflare/config@0.30.0
+  - @cloudflare/workers-utils@0.51.0
+  - @cloudflare/cli-shared-helpers@0.3.2
+
+## 0.9.0
+
+### Minor Changes
+
+- [#16366](https://github.com/cloudflare/workers-sdk/pull/16366) [`d174de8`](https://github.com/cloudflare/workers-sdk/commit/d174de8818c79ff82293150917fa6da11516e795) Thanks [@MattieTK](https://github.com/MattieTK)! - Add an `outputDir` option to `getDetailsForAutoConfig`
+
+  Callers that already know which directory holds their built static assets can pass it as `outputDir` instead of having autoconfig detect one. Relative paths are resolved against the project path. This selects static-asset configuration for unconfigured projects even when framework dependencies are present, without running framework migrations or builds that could replace the requested assets. Existing Workers and Pages configurations, including deployments configured through the Cloudflare Vite plugin alone, retain their usual detection behavior.
+
+  Checking whether a Vite project already uses the Cloudflare plugin no longer writes the Vite config back to disk, preserving its line endings and trailing newline.
+
+### Patch Changes
+
+- [#16635](https://github.com/cloudflare/workers-sdk/pull/16635) [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-01
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16537](https://github.com/cloudflare/workers-sdk/pull/16537) [`a2d1338`](https://github.com/cloudflare/workers-sdk/commit/a2d1338708fa36881bb265d277a579e64fe59eb7) Thanks [@edmundhung](https://github.com/edmundhung)! - Support React Router on `cf` from version 8.5.1
+
+  React Router 8.5.1 builds into the output directories that the Cloudflare Vite plugin v2 uses, which `cf` needs. Autoconfig now requires React Router 8.5.1 or later when configuring a project for `cf`, and stops with a clear message on earlier versions instead of letting `cf build` fail later. Projects configured for Wrangler keep the existing minimum of React Router 7.0.0.
+
+- [#16588](https://github.com/cloudflare/workers-sdk/pull/16588) [`3f14c76`](https://github.com/cloudflare/workers-sdk/commit/3f14c760aba638b3ef4ade1a1c5b935e64ddcc64) Thanks [@irvinebroque](https://github.com/irvinebroque)! - Run the project-local Vite+ executable for Vite+ projects
+
+  Use `vp dev` and `vp build` when Vite+ is declared. Its Vite alias does not expose a `vite` executable, so invoking `vite` can fail with pnpm or cause npm to fetch a separate Vite. Preserve framework-owned commands and custom scripts.
+
+- Updated dependencies [[`91f0e03`](https://github.com/cloudflare/workers-sdk/commit/91f0e03b28790e349d0bd7371fae7b59d755f79d), [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286)]:
+  - @cloudflare/config@0.29.1
+  - @cloudflare/workers-utils@0.50.2
+  - @cloudflare/cli-shared-helpers@0.3.1
+
+## 0.8.3
+
+### Patch Changes
+
+- [#16369](https://github.com/cloudflare/workers-sdk/pull/16369) [`ec0bea4`](https://github.com/cloudflare/workers-sdk/commit/ec0bea48d6316c8ca893241efbf31f1ffcfa6134) Thanks [@MattieTK](https://github.com/MattieTK)! - Stop autoconfig in non-interactive runs when a project root holds both static files and a Pages `functions` directory
+
+  When a project without a detected framework has a `functions` directory, autoconfig asks whether it is a Cloudflare Pages project. Non-interactive runs (CI and coding agents) assume it is not and continue as a static site. When the static files are in the project root, that deploys the root as static assets, and the Pages Functions (the project's API routes) are not deployed.
+
+  In that case autoconfig now stops with an error explaining that Pages Functions cannot be migrated automatically yet. For Pages Functions it suggests moving the static files into a subdirectory and deploying with `wrangler pages deploy`, or migrating the Functions to a Worker; for a `functions` directory that is not Pages Functions, it suggests moving the static files into a subdirectory or adding a configuration file. Projects whose static files are already in a subdirectory, projects detected as Pages or with a detected framework, and interactive runs where the user answers the prompt are unaffected.
+
+- [#16367](https://github.com/cloudflare/workers-sdk/pull/16367) [`b4653b4`](https://github.com/cloudflare/workers-sdk/commit/b4653b40cdc6e176c4e5ac98696cf0dae641ff6b) Thanks [@MattieTK](https://github.com/MattieTK)! - Write a protective `.assetsignore` when autoconfig uses the project root as the static assets directory
+
+  Autoconfig is meant to write an `.assetsignore` when the project root itself is the assets directory, so that local files are not uploaded as public assets. The check compared the detected output directory, which is relative (`"."`), with the absolute project path, so it never matched and no `.assetsignore` was written. A static project with an `index.html` at its root (for example after `wrangler setup` or a zero-config `wrangler deploy`) then uploaded files such as `.env`, `.dev.vars`, `.git` and `node_modules` as public assets.
+
+  The check now resolves the assets directory that the generated configuration uses and compares it with the project root, so frameworks that set their own build output directory (such as Nuxt or SvelteKit) do not get an unused root `.assetsignore`. The generated `.assetsignore` also covers what a Cloudflare Pages upload skips, alongside the existing `.wrangler`, `.dev.vars*` and `.env*` entries: `/_worker.js`, `/_routes.json` and `/functions` at the root (so nested paths such as `blog/functions/index.html` are still uploaded), `node_modules`, `.git` and `.DS_Store` at any depth, and `.npmrc`. If an existing `.assetsignore` only lists a narrower pattern such as `.env`, `.env*` is added so that files like `.env.production` are skipped too. When the project root of an assets-only project contains a Pages `functions` directory or `_worker.js`, autoconfig now warns that it will not be deployed, since it is excluded from the assets and not run as server code.
+
+- Updated dependencies [[`b4653b4`](https://github.com/cloudflare/workers-sdk/commit/b4653b40cdc6e176c4e5ac98696cf0dae641ff6b), [`8b64bec`](https://github.com/cloudflare/workers-sdk/commit/8b64becbd3817abb28654e270c0e0104170f29d7)]:
+  - @cloudflare/cli-shared-helpers@0.3.0
+  - @cloudflare/workers-utils@0.50.1
+  - @cloudflare/config@0.29.0
+
+## 0.8.2
+
+### Patch Changes
+
+- [#16546](https://github.com/cloudflare/workers-sdk/pull/16546) [`dd31809`](https://github.com/cloudflare/workers-sdk/commit/dd31809eb76dd385b68f8c63d921444c0203ebe8) Thanks [@edmundhung](https://github.com/edmundhung)! - Include the types generated by `cf workers types` in `tsconfig.json` when configuring for `cf`
+
+  `cf workers types` writes the Worker's types to `.cloudflare/types`. Patterns in the `include` array of `tsconfig.json`, such as `**/*`, skip folders whose names start with a dot, so type checking couldn't find `Env` after autoconfig. Autoconfig now adds `.cloudflare/types` to that `include` array for `cf` projects with a Worker, as `cf init` does for new projects. When `tsconfig.json` has no `include` array, autoconfig asks you to add the entry yourself.
+
+- Updated dependencies [[`a95d647`](https://github.com/cloudflare/workers-sdk/commit/a95d647f9459e40a00871346b81082abbb27d2b3)]:
+  - @cloudflare/config@0.29.0
+  - @cloudflare/workers-utils@0.50.0
+  - @cloudflare/cli-shared-helpers@0.2.10
+
 ## 0.8.1
 
 ### Patch Changes
