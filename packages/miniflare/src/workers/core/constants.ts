@@ -59,11 +59,6 @@ export const CoreHeaders = {
 	OP_SECRET: "MF-Op-Secret",
 	OP: "MF-Op",
 	OP_TARGET: "MF-Op-Target",
-	OP_KEY: "MF-Op-Key",
-	OP_SYNC: "MF-Op-Sync",
-	OP_STRINGIFIED_SIZE: "MF-Op-Stringified-Size",
-	OP_STREAM_SIZE: "MF-Op-Stream-Size",
-	OP_RESULT_TYPE: "MF-Op-Result-Type",
 	OP_ORIGINAL_URL: "MF-Op-Original-URL",
 } as const;
 
@@ -116,23 +111,65 @@ export const CoreBindings = {
 } as const;
 
 export const ProxyOps = {
-	// Get the target or a property of the target
-	GET: "GET",
-	// Get the descriptor for a property of the target
-	GET_OWN_DESCRIPTOR: "GET_OWN_DESCRIPTOR",
-	// Get the target's own property names
-	GET_OWN_KEYS: "GET_OWN_KEYS",
-	// Call a method on the target
-	CALL: "CALL",
-	// Remove the strong reference to the target on the "heap", allowing it to be
-	// garbage collected
-	FREE: "FREE",
+	// Open the Cap'n Web WebSocket session used for all asynchronous operations
+	CONNECT: "CONNECT",
+	// Get a value a synchronous API must return (see `ProxySyncRequest`)
+	SYNC: "SYNC",
+	// Call `fetch()` on a `Fetcher` or Durable Object stub, identified by a token
+	// in `CoreHeaders.OP_TARGET`. Sent with `dispatchFetch()` rather than Cap'n
+	// Web, as this supports WebSockets, and the request and response don't need
+	// to be serialised.
+	FETCH: "FETCH",
 } as const;
-export const ProxyAddresses = {
-	GLOBAL: 0, // globalThis
-	ENV: 1, // env
-	USER_START: 2,
-} as const;
+
+/**
+ * How `ProxyServer` revives a `DurableObjectId` created in Node.js: from a
+ * name, or a string returned by `DurableObjectId#toString()`.
+ */
+export type ProxyDurableObjectId = ["name" | "string", string];
+
+/**
+ * Main interface `ProxyServer` exposes over its Cap'n Web session.
+ */
+export interface ProxyRpcApi {
+	/**
+	 * Returns the names of the classes of bindings in the `ProxyServer`'s `env`
+	 * that must be used through stubs, by binding name.
+	 */
+	describeEnv(): Record<string, string>;
+	/** Returns a stub for the object bound to `name`. */
+	getEnv(name: string): unknown;
+	/** Returns a stub for the global `CacheStorage`. */
+	getCaches(): unknown;
+	/**
+	 * Returns a stub for a D1 session. `token` identifies the session in
+	 * `ProxySyncRequest`s.
+	 */
+	getD1Session(
+		binding: string,
+		constraint: string | undefined,
+		token: string
+	): unknown;
+}
+
+/** Request for a value a synchronous API must return. */
+export type ProxySyncRequest =
+	| {
+			type: "DurableObjectId#toString";
+			binding: string;
+			id: ProxyDurableObjectId;
+	  }
+	| {
+			type: "DurableObjectNamespace#newUniqueId";
+			binding: string;
+			options?: unknown;
+	  }
+	| {
+			type: "D1DatabaseSession#getBookmark";
+			binding: string;
+			constraint: string | undefined;
+			token: string;
+	  };
 
 /**
  * Recovers the serialised error a Worker put in `ERROR_STACK_PAYLOAD`, for the
@@ -152,52 +189,4 @@ export function decodeErrorPayload(response: {
 	} catch {
 		return null;
 	}
-}
-
-// ### Proxy Special Cases
-// The proxy supports serialising `Request`/`Response`s for the Cache API. It
-// doesn't support serialising `WebSocket`s though. Rather than attempting this,
-// we call `Fetcher#fetch()` using `dispatchFetch()` directly, using the passed
-// request. This gives us WebSocket support, and is much more efficient, since
-// there's no need to serialise the `Request`/`Response`: we just pass
-// everything to `dispatchFetch()` and return what that gives us.
-export function isFetcherFetch(targetName: string, key: string) {
-	// `DurableObject` and `WorkerRpc` are the internal names of `DurableObjectStub`:
-	// https://github.com/cloudflare/workerd/blob/62b9ceee4c94d2b238692397dc4f604fef84f474/src/workerd/api/actor.h#L86
-	// https://github.com/cloudflare/workerd/blob/62b9ceee4c94d2b238692397dc4f604fef84f474/src/workerd/api/worker-rpc.h#L30
-	return (
-		(targetName === "Fetcher" ||
-			targetName === "DurableObject" ||
-			targetName === "WorkerRpc") &&
-		key === "fetch"
-	);
-}
-// `R2Object#writeHttpMetadata()` is one of the few functions that mutates its
-// arguments. This would be proxied correctly if the argument were a native
-// target proxy itself, but `Headers` can be constructed in Node. Instead, we
-// respond with the updated headers in the proxy server, then copy them to the
-// original argument on the client.
-export function isR2ObjectWriteHttpMetadata(targetName: string, key: string) {
-	// `HeadResult` and `GetResult` are the internal names of `R2Object` and `R2ObjectBody` respectively:
-	// https://github.com/cloudflare/workerd/blob/ae612f0563d864c82adbfa4c2e5ed78b547aa0a1/src/workerd/api/r2-bucket.h#L210
-	// https://github.com/cloudflare/workerd/blob/ae612f0563d864c82adbfa4c2e5ed78b547aa0a1/src/workerd/api/r2-bucket.h#L263-L264
-	return (
-		(targetName === "HeadResult" || targetName === "GetResult") &&
-		key === "writeHttpMetadata"
-	);
-}
-
-/**
- * See #createMediaProxy() comment for why this is special
- */
-export function isImagesInput(targetName: string, key: string) {
-	return targetName === "ImagesBindingImpl" && key === "input";
-}
-
-// Durable Object stub RPC calls should always be async to avoid blocking the
-// Node.js event loop. The internal names are "DurableObject" and "WorkerRpc".
-// https://github.com/cloudflare/workerd/blob/62b9ceee/src/workerd/api/actor.h#L86
-// https://github.com/cloudflare/workerd/blob/62b9ceee/src/workerd/api/worker-rpc.h#L30
-export function isDurableObjectStub(targetName: string) {
-	return targetName === "DurableObject" || targetName === "WorkerRpc";
 }

@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import { ReadableStream } from "node:stream/web";
 import {
 	MessageChannel,
 	receiveMessageOnPort,
@@ -23,9 +22,7 @@ export interface SynchronousRequestInit {
 export interface SynchronousResponse<H = Headers> {
 	status: number;
 	headers: H;
-	// `ReadableStream` returned if `CoreHeaders.OP_RESULT_TYPE` header is
-	// `ReadableStream`. In that case, we'll return the `ReadableStream` directly.
-	body: ReadableStream | ArrayBuffer | null;
+	body: ArrayBuffer;
 }
 
 type WorkerResponse = { id: number } & (
@@ -65,23 +62,10 @@ port.addEventListener("message", async (event) => {
       bodyTimeout: 0,
       });
     }
-    headers["${CoreHeaders.OP_SYNC}"] = "true";
     // body cannot be a ReadableStream, so no need to specify duplex
     const response = await fetch(url, { method, headers, body, dispatcher });
-    const resultType = response.headers.get("${CoreHeaders.OP_RESULT_TYPE}");
-    const responseBody = resultType === "ReadableStream"
-      ? response.body
-      : await response.arrayBuffer();
-    if (resultType === "ReadableStream") {
-      // The stream is transferred to the main thread and may outlive this
-      // request. Retire its pool so a later synchronous fetch doesn't reuse
-      // the stream's connection after the consumer finishes reading it.
-      const responseDispatcher = dispatcher;
-      dispatcher = undefined;
-      dispatcherUrl = undefined;
-      void responseDispatcher.close().catch(() => {});
-    }
-    const transferList = responseBody === null ? undefined : [responseBody];
+    const responseBody = await response.arrayBuffer();
+    const transferList = [responseBody];
     port.postMessage(
       {
         id,
@@ -222,10 +206,7 @@ export class SynchronousFetcher {
 			const { status, headers: rawHeaders, body } = message.response;
 			const headers = new Headers(rawHeaders);
 			const stack = headers.get(CoreHeaders.ERROR_STACK);
-			if (status === 500 && stack !== null && body !== null) {
-				// `CoreHeaders.ERROR_STACK` header should never be set with
-				// `CoreHeaders.OP_RESULT_TYPE: ReadableStream`
-				assert(!(body instanceof ReadableStream));
+			if (status === 500 && stack !== null) {
 				const caught = JsonErrorSchema.parse(JSON.parse(DECODER.decode(body)));
 				// No need to specify `workerSrcOpts` here assuming we only
 				// synchronously fetch from internal Miniflare code (e.g. proxy server)

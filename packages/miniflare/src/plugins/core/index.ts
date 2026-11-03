@@ -958,11 +958,11 @@ export function getGlobalServices({
 					{
 						className: "ProxyServer",
 						uniqueKey: `${SERVICE_ENTRY}-ProxyServer`,
-						// `ProxyServer` relies on a singleton object containing of "heap"
-						// mapping addresses to native references. If the singleton object
-						// were evicted, addresses would be invalidated. Therefore, we
-						// prevent eviction to ensure heap addresses stay valid for the
-						// lifetime of the `workerd` process
+						// `ProxyServer` relies on a singleton object holding the client's
+						// sessions, and the objects they've returned. If the singleton
+						// object were evicted, these would be lost. Therefore, we prevent
+						// eviction to ensure they stay valid for the lifetime of the
+						// `workerd` process
 						preventEviction: true,
 					},
 				],

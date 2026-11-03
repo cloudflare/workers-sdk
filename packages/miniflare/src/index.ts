@@ -2470,7 +2470,7 @@ export class Miniflare {
 				this.#workerdCrashCount
 			}). ` + "Any additional runtime output above may indicate the cause."
 		);
-		// A crash destroys the proxy server heap just like a config update.
+		// A crash closes the proxy server's sessions just like a config update.
 		this.#proxyClient?.poisonProxies();
 		// The runtime behind this candidate is gone. Withdraw before restarting so
 		// peers can take ownership if recovery stalls; successful assembly registers
@@ -3048,8 +3048,8 @@ export class Miniflare {
 
 	setOptions(opts: MiniflareOptions): Promise<void> {
 		this.#checkDisposed();
-		// The `ProxyServer` "heap" will be destroyed when `workerd` restarts,
-		// invalidating all existing native references. Mark all proxies as invalid.
+		// The `ProxyServer`'s sessions will be closed when `workerd` restarts,
+		// invalidating all existing stubs. Mark all proxies as invalid.
 		this.#proxyClient?.poisonProxies();
 		// Wait for initial initialisation and other setOptions to complete before
 		// changing options
@@ -3261,12 +3261,16 @@ export class Miniflare {
 		this.#checkDisposed();
 		await this.ready;
 		assert(this.#proxyClient !== undefined);
-		// Proxies make synchronous calls, which would otherwise block the main
-		// thread, and every other request it serves, while that worker starts
-		await this.#proxyClient.warm();
-		// dispose() may have terminated that worker while we waited, and a
-		// synchronous call to it would then block forever
-		this.#checkDisposed();
+		// Proxies need the bindings in the runtime, and make synchronous calls,
+		// which would otherwise block the main thread, and every other request it
+		// serves, while that worker starts
+		try {
+			await this.#proxyClient.warm();
+		} finally {
+			// dispose() may have closed the session, or terminated that worker, while
+			// we waited, and a synchronous call to it would then block forever
+			this.#checkDisposed();
+		}
 		return this.#proxyClient;
 	}
 
@@ -3409,8 +3413,7 @@ export class Miniflare {
 	// TODO(someday): would be nice to define these in plugins
 	async getCaches(): Promise<ReplaceWorkersTypes<CacheStorage>> {
 		const proxyClient = await this._getProxyClient();
-		return proxyClient.global
-			.caches as unknown as ReplaceWorkersTypes<CacheStorage>;
+		return proxyClient.caches as unknown as ReplaceWorkersTypes<CacheStorage>;
 	}
 	/**
 	 * Purges all entries from the cache.
@@ -3602,13 +3605,14 @@ export class Miniflare {
 		bindingName: string,
 		workerName?: string
 	): Promise<() => SecretsStoreSecretAdmin> {
-		return this.#getProxy(
+		return this.#getProxy<Record<string, () => SecretsStoreSecretAdmin>>(
 			SECRET_STORE_PLUGIN_NAME,
 			bindingName,
 			workerName
 		).then((binding) => {
-			// @ts-expect-error We exposed an admin API on this key
-			return binding[ADMIN_API];
+			// We exposed an admin API on this key. Like Workers RPC, the method is a
+			// thenable property, so wrap it rather than returning it to be awaited.
+			return () => binding[ADMIN_API]();
 		});
 	}
 	getSecretsStoreSecret(
@@ -3654,12 +3658,15 @@ export class Miniflare {
 		bindingName: string,
 		workerName?: string
 	): Promise<() => FlagshipAdmin> {
-		return this.#getProxy(FLAGSHIP_PLUGIN_NAME, bindingName, workerName).then(
-			(binding) => {
-				// @ts-expect-error We exposed an admin API on this key
-				return binding[FLAGSHIP_ADMIN_API];
-			}
-		);
+		return this.#getProxy<Record<string, () => FlagshipAdmin>>(
+			FLAGSHIP_PLUGIN_NAME,
+			bindingName,
+			workerName
+		).then((binding) => {
+			// We exposed an admin API on this key. Like Workers RPC, the method is a
+			// thenable property, so wrap it rather than returning it to be awaited.
+			return () => binding[FLAGSHIP_ADMIN_API]();
+		});
 	}
 	getStreamBinding(
 		bindingName: string,
@@ -3707,8 +3714,8 @@ export class Miniflare {
 			closeDatagramSocket(socket);
 		}
 		this.#dispatchConnectDatagramSockets.clear();
-		// The `ProxyServer` "heap" will be destroyed when `workerd` shuts down,
-		// invalidating all existing native references. Mark all proxies as invalid.
+		// The `ProxyServer`'s sessions will be closed when `workerd` shuts down,
+		// invalidating all existing stubs. Mark all proxies as invalid.
 		// Note `dispose()`ing the `#proxyClient` implicitly poison's proxies, but
 		// we'd like them to be poisoned synchronously here.
 		this.#proxyClient?.poisonProxies();

@@ -1,110 +1,233 @@
-/* eslint-disable @typescript-eslint/no-unsafe-function-type -- Proxy client uses Function type for dynamic RPC method proxying */
 import assert from "node:assert";
 import crypto from "node:crypto";
-import { ReadableStream, TransformStream } from "node:stream/web";
+import { Readable } from "node:stream";
+import { arrayBuffer, json, text } from "node:stream/consumers";
 import util from "node:util";
-import { stringify } from "devalue";
-import { Request } from "../../../http";
-import { prefixStream, readPrefix } from "../../../shared";
+import { newWebSocketRpcSession } from "capnweb";
+import { Agent, WebSocket } from "undici";
+import { Headers, Request, Response } from "../../../http";
+import { CoreHeaders, CorePaths, ProxyOps } from "../../../workers";
+// Imported directly, so the codec isn't part of Miniflare's public API
 import {
-	CoreHeaders,
-	CorePaths,
-	createHTTPReducers,
-	createHTTPRevivers,
-	isDurableObjectStub,
-	isFetcherFetch,
-	isHeadersLike,
-	isR2ObjectWriteHttpMetadata,
-	parseWithReadableStreams,
-	ProxyAddresses,
-	ProxyOps,
-	stringifyWithStreams,
-	structuredSerializableReducers,
-	structuredSerializableRevivers,
-} from "../../../workers";
+	assertInlineSize,
+	PROXY_ENCODED_KEY,
+	prepareErrorForSend,
+	ProxyCodec,
+	restoreErrorName,
+	setStreamLength,
+} from "../../../workers/core/proxy-codec";
 import { DECODER, SynchronousFetcher } from "./fetch-sync";
-import { NODE_PLATFORM_IMPL } from "./types";
-import type { DispatchFetch, RequestInit, Response } from "../../../http";
+import type { DispatchFetch, RequestInit } from "../../../http";
 import type {
-	Awaitable,
-	ReducersRevivers,
-	StringifiedWithStream,
+	ProxyDurableObjectId,
+	ProxyRpcApi,
+	ProxySyncRequest,
 } from "../../../workers";
-import type { SynchronousResponse } from "./fetch-sync";
 import type {
-	ImageDrawOptions,
-	ImageOutputOptions,
-	ImagesBinding,
-	ImageTransform,
-	ImageTransformationResult,
-	ImageTransformer,
-	ServiceWorkerGlobalScope,
-} from "@cloudflare/workers-types/experimental";
-
-const kAddress = Symbol("kAddress");
-const kName = Symbol("kName");
-const kIsFunction = Symbol("kIsFunction");
-// Registered globally, unlike the symbols above, as streams may be passed
-// between proxies created by different loaded copies of Miniflare (e.g. the
-// Vitest plugin and Wrangler resolving separate installs), which would
-// otherwise each have their own distinct symbol and never see the length.
-const kStreamLength: unique symbol = Symbol.for("miniflare.kStreamLength");
-interface LengthTrackedStream extends ReadableStream {
-	[kStreamLength]?: number;
-}
-interface NativeTarget {
-	// `kAddress` is used as a brand for `NativeTarget`. Pointer to the "heap"
-	// map in the `ProxyServer` Durable Object.
-	[kAddress]: number;
-	// Use `Symbol` for name too, so we can use it as a unique property key in
-	// `ProxyClientHandler`. Usually the `.constructor.name` of the object.
-	[kName]: string;
-	// Use `Symbol` for isFunction too, so we can use it as a unique property key in
-	// `ProxyClientHandler`. This is a field needed because we need to treat functions ad-hoc.
-	[kIsFunction]: boolean;
-}
-
-function isNativeTarget(value: unknown): value is NativeTarget {
-	return (
-		typeof value === "object" &&
-		value !== null &&
-		kAddress in value &&
-		kIsFunction in value
-	);
-}
-
-// Special targets for objects automatically added to the `ProxyServer` "heap"
-const TARGET_GLOBAL: NativeTarget = {
-	[kAddress]: ProxyAddresses.GLOBAL,
-	[kName]: "global",
-	[kIsFunction]: false,
-};
-const TARGET_ENV: NativeTarget = {
-	[kAddress]: ProxyAddresses.ENV,
-	[kName]: "env",
-	[kIsFunction]: false,
-};
-
-const reducers: ReducersRevivers = {
-	...structuredSerializableReducers,
-	...createHTTPReducers(NODE_PLATFORM_IMPL),
-	Native(value) {
-		if (isNativeTarget(value)) {
-			return [value[kAddress], value[kName], value[kIsFunction]];
-		}
-	},
-};
-const revivers: ReducersRevivers = {
-	...structuredSerializableRevivers,
-	...createHTTPRevivers(NODE_PLATFORM_IMPL),
-	// `Native` reviver depends on `ProxyStubHandler` methods
-};
+	EncodeState,
+	ProxyEncoded,
+} from "../../../workers/core/proxy-codec";
+import type { RpcPromise, RpcStub } from "capnweb";
+import type { ReadableStream } from "node:stream/web";
 
 export const PROXY_SECRET = crypto.randomBytes(16);
 const PROXY_SECRET_HEX = PROXY_SECRET.toString("hex");
 
-function isClientError(status: number) {
-	return 400 <= status && status < 500;
+function poisonedError() {
+	return new Error(
+		"Attempted to use poisoned stub. Stubs to runtime objects must be " +
+			"re-created after calling `Miniflare#setOptions()` or `Miniflare#dispose()`."
+	);
+}
+
+function connectionLostError() {
+	return new Error(
+		"Attempted to use stub after the connection to the Workers runtime was " +
+			"lost. Stubs returned by bindings must be re-created."
+	);
+}
+
+// `instanceof` checks against a specific `Headers`/`Request`/`Response`
+// implementation fail for values created against a *different* copy of that
+// class. This happens more often than you'd expect: for example, Node's
+// built-in global `Headers` is backed by an internal copy of `undici` that
+// isn't `instanceof` the `undici` package Miniflare imports. All
+// spec-compliant implementations set `Symbol.toStringTag` though, so use that
+// as a realm-independent discriminator.
+function hasStringTag(value: unknown, tag: string): boolean {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		(value as { [Symbol.toStringTag]?: unknown })[Symbol.toStringTag] === tag
+	);
+}
+// Beyond the tag, also check for a couple of members the real class always
+// has: `Symbol.toStringTag` is otherwise just an own/inherited property, so
+// an unrelated object could set it to have its (possibly side-effecting)
+// getters/methods invoked while being converted.
+function isHeadersLike(value: unknown): value is Headers {
+	return (
+		hasStringTag(value, "Headers") &&
+		typeof (value as Headers).entries === "function" &&
+		typeof (value as Headers).get === "function"
+	);
+}
+function isRequestLike(value: unknown): value is Request {
+	return (
+		hasStringTag(value, "Request") &&
+		typeof (value as Request).method === "string" &&
+		isHeadersLike((value as Request).headers)
+	);
+}
+function isResponseLike(value: unknown): value is Response {
+	return (
+		hasStringTag(value, "Response") &&
+		typeof (value as Response).status === "number" &&
+		isHeadersLike((value as Response).headers)
+	);
+}
+
+/**
+ * Converts `Headers`, `Request`s and `Response`s from other implementations
+ * (e.g. Miniflare's `undici` classes) to Node's globals, the only ones Cap'n Web
+ * can serialise.
+ *
+ * @param value Value about to be sent over Cap'n Web
+ * @returns Equivalent global instance, or `undefined` if `value` isn't one of
+ * these types or is already global
+ */
+function toGlobalHTTPObject(value: object): object | undefined {
+	if (
+		value instanceof globalThis.Headers ||
+		value instanceof globalThis.Request ||
+		value instanceof globalThis.Response
+	) {
+		return;
+	}
+	if (isHeadersLike(value)) {
+		return new globalThis.Headers([...value.entries()]);
+	}
+	if (isRequestLike(value)) {
+		const request = new globalThis.Request(value.url, {
+			method: value.method,
+			headers: [...value.headers.entries()],
+			body: value.body as globalThis.ReadableStream | null,
+			redirect: value.redirect as globalThis.RequestInit["redirect"],
+			duplex: value.body === null ? undefined : "half",
+		});
+		// Cap'n Web sends `cf` if present (e.g. for `cf.cacheKey`)
+		if (value.cf !== undefined) {
+			Object.defineProperty(request, "cf", { value: value.cf });
+		}
+		return request;
+	}
+	if (isResponseLike(value)) {
+		return new globalThis.Response(
+			value.body as globalThis.ReadableStream | null,
+			{
+				status: value.status,
+				statusText: value.statusText,
+				headers: [...value.headers.entries()],
+			}
+		);
+	}
+}
+
+/**
+ * Converts Node's global `Headers`, `Request`s and `Response`s, which Cap'n Web
+ * returns, to Miniflare's classes.
+ *
+ * @param value Value received over Cap'n Web
+ * @returns Equivalent Miniflare instance, or `undefined` if `value` isn't one
+ * of these types
+ */
+function fromGlobalHTTPObject(value: unknown): object | undefined {
+	if (value instanceof globalThis.Headers) {
+		return new Headers([...value.entries()]);
+	}
+	if (value instanceof globalThis.Request) {
+		return new Request(value.url, {
+			method: value.method,
+			headers: [...value.headers.entries()],
+			body: value.body as ReadableStream | null,
+			redirect: value.redirect,
+			duplex: value.body === null ? undefined : "half",
+		});
+	}
+	if (value instanceof globalThis.Response) {
+		return new Response(value.body as ReadableStream | null, {
+			status: value.status,
+			statusText: value.statusText,
+			headers: [...value.headers.entries()],
+		});
+	}
+}
+
+// Cap'n Web stub for `ProxyServer`'s main interface. Methods return
+// `RpcPromise`s, so calls can be pipelined on the results without awaiting
+// them.
+type ProxyRpcStub = {
+	[K in keyof ProxyRpcApi]: (
+		...args: Parameters<ProxyRpcApi[K]>
+	) => RpcPromise<unknown>;
+} & Disposable;
+
+// Cap'n Web stub, or promise, for a `Forwarder` in `ProxyServer`
+interface ForwarderStub extends Disposable {
+	get(path: string[]): RpcPromise<unknown>;
+	call(path: string[], args: unknown[]): RpcPromise<unknown>;
+	getFetcherToken(path: string[]): RpcPromise<string | undefined>;
+}
+
+// Cap'n Web session with `ProxyServer`
+class ProxyRpcSession {
+	readonly api: ProxyRpcStub;
+	// Use `undici`'s `WebSocket` with our own dispatcher, rather than `ws` or
+	// the global `WebSocket`, so request mocking libraries (e.g. MSW) don't
+	// intercept the connection
+	readonly #dispatcher: Agent;
+	readonly #webSocket: WebSocket;
+	#closed = false;
+
+	constructor(url: URL) {
+		const webSocketUrl = new URL(url);
+		webSocketUrl.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+		this.#dispatcher = new Agent({
+			connect: { rejectUnauthorized: false },
+			// We trust `ProxyServer`, so allow results as large as Node can handle
+			webSocket: { maxPayloadSize: 0 },
+		});
+		this.#webSocket = new WebSocket(webSocketUrl, {
+			headers: {
+				[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
+				[CoreHeaders.OP]: ProxyOps.CONNECT,
+			},
+			dispatcher: this.#dispatcher,
+		});
+		this.api = newWebSocketRpcSession(
+			this.#webSocket as unknown as globalThis.WebSocket,
+			undefined,
+			{
+				limits: { maxMessageSize: Infinity },
+				onSendError: prepareErrorForSend,
+			}
+		) as unknown as ProxyRpcStub;
+		// Cap'n Web queues calls until the WebSocket opens, and listens for
+		// "error"s to reject them
+		this.#webSocket.addEventListener("close", () => (this.#closed = true), {
+			once: true,
+		});
+	}
+
+	get closed(): boolean {
+		return this.#closed;
+	}
+
+	dispose(): void {
+		this.#closed = true;
+		this.api[Symbol.dispose]();
+		void this.#dispatcher.destroy().catch(() => {});
+	}
 }
 
 // Exported public API of the proxy system
@@ -119,28 +242,32 @@ export class ProxyClient {
 	}
 
 	// Lazily initialise proxies as required
-	#globalProxy?: ServiceWorkerGlobalScope;
-	#envProxy?: Record<string, unknown>;
-	get global(): ServiceWorkerGlobalScope {
-		return (this.#globalProxy ??= this.#bridge.getProxy(TARGET_GLOBAL));
+	#cachesProxy?: object;
+	get caches(): object {
+		return (this.#cachesProxy ??= this.#bridge.createProxy(
+			new BindingStubSource(this.#bridge, "CacheStorage", (api) =>
+				api.getCaches()
+			),
+			[],
+			{ callable: false }
+		));
 	}
 	get env(): Record<string, unknown> {
-		return (this.#envProxy ??= this.#bridge.getProxy(TARGET_ENV));
+		return this.#bridge.env;
 	}
 
 	poisonProxies(): void {
 		this.#bridge.poisonProxies();
-		// Reset `#{global,env}Proxy` so they aren't poisoned on next access
-		this.#globalProxy = undefined;
-		this.#envProxy = undefined;
+		// Reset `#cachesProxy` so it isn't poisoned on next access
+		this.#cachesProxy = undefined;
 	}
 
 	/**
-	 * Resolves once synchronous proxy calls can be served without blocking the
-	 * main thread on worker startup.
+	 * Resolves once the bindings in `env` are known, and synchronous calls can
+	 * be served without blocking the main thread on worker startup.
 	 */
 	warm(): Promise<void> {
-		return this.#bridge.sync.warm();
+		return this.#bridge.warm();
 	}
 
 	setRuntimeEntryURL(runtimeEntryURL: URL) {
@@ -150,675 +277,358 @@ export class ProxyClient {
 	}
 
 	dispose(): Promise<void> {
-		// Intentionally not resetting `#{global,env}Proxy` to keep them poisoned.
+		// Intentionally not resetting `#cachesProxy` to keep it poisoned.
 		// `workerd` won't be started again by this `Miniflare` instance after
 		// `dispose()` is called.
 		return this.#bridge.dispose();
 	}
 }
 
-interface NativeTargetHeldValue {
-	address: number;
-	version: number;
+// Where proxies get the Cap'n Web stub they forward to
+abstract class StubSource {
+	readonly #version: number;
+
+	constructor(
+		readonly bridge: ProxyClientBridge,
+		// Name of the target's class, if known, for inspecting
+		readonly name?: string
+	) {
+		this.#version = bridge.version;
+	}
+
+	get poisoned(): boolean {
+		return this.#version !== this.bridge.version;
+	}
+
+	/** Throws if the stub can no longer be used. */
+	assertUsable(): void {
+		if (this.poisoned) {
+			throw poisonedError();
+		}
+	}
+
+	/** Returns the stub, throwing if it can no longer be used. */
+	abstract stub(): ForwarderStub;
 }
 
-// Class containing functions that should accessible by both `ProxyClient` and
-// `ProxyStubHandler`, but not exported to consumers of `ProxyClient`
+// Stub for a binding, got again by name if the connection is lost
+class BindingStubSource extends StubSource {
+	#session?: ProxyRpcSession;
+	#stub?: ForwarderStub;
+
+	constructor(
+		bridge: ProxyClientBridge,
+		name: string,
+		readonly getStub: (api: ProxyRpcStub) => unknown
+	) {
+		super(bridge, name);
+	}
+
+	stub(): ForwarderStub {
+		this.assertUsable();
+		const session = this.bridge.session;
+		if (this.#session !== session || this.#stub === undefined) {
+			this.#session = session;
+			this.#stub = this.getStub(session.api) as ForwarderStub;
+		}
+		return this.#stub;
+	}
+}
+
+// Stub received over a session, released once no longer used
+class OwnedStubSource extends StubSource {
+	readonly #session: ProxyRpcSession | undefined;
+	readonly #stub: ForwarderStub;
+
+	constructor(
+		bridge: ProxyClientBridge,
+		// Undefined if the stub was received after proxies were poisoned
+		session: ProxyRpcSession | undefined,
+		stub: ForwarderStub
+	) {
+		super(bridge);
+		this.#session = session;
+		this.#stub = stub;
+	}
+
+	assertUsable(): void {
+		super.assertUsable();
+		if (this.#session?.closed !== false) {
+			throw connectionLostError();
+		}
+	}
+
+	stub(): ForwarderStub {
+		this.assertUsable();
+		return this.#stub;
+	}
+}
+
+interface ProxyOptions {
+	// Whether the proxy can be called, so its target must be a function
+	callable?: boolean;
+	// Whether the proxy can be awaited (e.g. a call's result, or a property)
+	thenable?: boolean;
+	// Properties implemented by the client, used instead of the target's
+	local?: object;
+}
+
+// Class containing functions that should be accessible by both `ProxyClient`
+// and proxy handlers, but not exported to consumers of `ProxyClient`
 class ProxyClientBridge {
-	// Each proxy stub is initialised with the version stored here. Whenever
+	// Each proxy is initialised with the version stored here. Whenever
 	// `poisonProxies()` is called, this version is incremented. Before the
-	// proxy makes any request to `workerd`, it checks the version number here
-	// matches its own internal version, and throws if not.
+	// proxy is used, it checks the version number here matches its own internal
+	// version, and throws if not.
 	#version = 0;
-	// Whenever the `ProxyServer` returns a native target, it adds a strong
-	// reference to the "heap" in the singleton object. This prevents the object
-	// being garbage collected. To solve this, we register the native target
-	// proxies on the client in a `FinalizationRegistry`. When the proxies get
-	// garbage collected, we let the `ProxyServer` know it can release the strong
-	// "heap" reference, as we'll never be able to access it again. Importantly,
-	// we need to unregister all proxies from the registry when we poison them,
-	// as the references will be invalid, and a new object with the same address
-	// may be added to the "heap".
-	readonly #finalizationRegistry: FinalizationRegistry<NativeTargetHeldValue>;
-	// Garbage collection passes will free lots of objects at once. Rather than
-	// sending a `DELETE` request for each address, we batch finalisations within
-	// 100ms of each other into one request. This ensures we don't create *lots*
-	// of TCP connections to `workerd` in `dispatchFetch()` for all the concurrent
-	// requests.
-	readonly #finalizeBatch: NativeTargetHeldValue[] = [];
-	#finalizeBatchTimeout?: ReturnType<typeof setTimeout>;
+	// Stubs returned by `ProxyServer` are released when the proxies using them
+	// are garbage collected. All are unregistered when proxies are poisoned, as
+	// the session they belong to is closed.
+	readonly #finalizationRegistry = new FinalizationRegistry<Disposable>(
+		(stub) => stub[Symbol.dispose]()
+	);
+	readonly #proxies = new WeakMap<object, RpcProxyHandler>();
+	#session?: ProxyRpcSession;
+	#env?: { version: number; value: Record<string, unknown> };
 
 	readonly sync = new SynchronousFetcher();
+	readonly codec = new ClientCodec(this);
 
 	constructor(
 		public url: URL,
 		readonly dispatchFetch: DispatchFetch
-	) {
-		this.#finalizationRegistry = new FinalizationRegistry(this.#finalizeProxy);
-	}
+	) {}
 
 	get version(): number {
 		return this.#version;
 	}
 
-	/**
-	 * Records the `Content-Length` of a stream returned by the `ProxyServer`,
-	 * so it can be restored if the same stream is passed back in.
-	 *
-	 * @param stream Stream returned to the caller of a proxied method
-	 * @param headers Headers of the response `stream` was read from
-	 */
-	trackStreamLength(
-		stream: ReadableStream,
-		headers: { get(name: string): string | null }
-	): void {
-		const contentLength = headers.get("Content-Length");
-		if (contentLength === null) {
-			return;
+	get session(): ProxyRpcSession {
+		if (this.#session === undefined || this.#session.closed) {
+			this.#session = new ProxyRpcSession(this.url);
 		}
-		const length = parseInt(contentLength);
-		if (!Number.isNaN(length)) {
-			(stream as LengthTrackedStream)[kStreamLength] = length;
-		}
+		return this.#session;
 	}
 
-	/**
-	 * @param stream Stream about to be sent as a proxied call argument
-	 * @returns The length recorded by `trackStreamLength()` for this exact
-	 * stream object, or `undefined` if it wasn't returned by the `ProxyServer`
-	 * or had no known length
-	 */
-	getStreamLength(stream: ReadableStream): number | undefined {
-		return (stream as LengthTrackedStream)[kStreamLength];
+	/** Session stubs are currently received over, without opening one. */
+	get activeSession(): ProxyRpcSession | undefined {
+		return this.#session;
 	}
 
-	#finalizeProxy = (held: NativeTargetHeldValue) => {
-		// Called when the `Proxy` with address `targetAddress` gets garbage
-		// collected. This removes the target from the `ProxyServer` "heap".
-		this.#finalizeBatch.push(held);
-		clearTimeout(this.#finalizeBatchTimeout);
-		this.#finalizeBatchTimeout = setTimeout(this.#finalizeProxyBatch, 100);
-	};
-
-	#finalizeProxyBatch = async () => {
-		const addresses: number[] = [];
-		for (const held of this.#finalizeBatch.splice(0)) {
-			// Sanity check: make sure the proxy hasn't been poisoned. We should
-			// unregister all proxies from the finalisation registry when poisoning,
-			// but it doesn't hurt to be careful.
-			if (held.version === this.#version) {
-				addresses.push(held.address);
-			}
+	get env(): Record<string, unknown> {
+		assert(this.#env !== undefined, "Expected `warm()` to be awaited");
+		if (this.#env.version !== this.#version) {
+			throw poisonedError();
 		}
-		// If there are no addresses to free, we don't need to send a request
-		if (addresses.length === 0) {
+		return this.#env.value;
+	}
+
+	async warm(): Promise<void> {
+		await Promise.all([this.#loadEnv(), this.sync.warm()]);
+	}
+
+	async #loadEnv(): Promise<void> {
+		const version = this.#version;
+		if (this.#env?.version === version) {
 			return;
 		}
-		try {
-			await this.dispatchFetch(this.url, {
-				method: "DELETE",
-				headers: {
-					[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
-					[CoreHeaders.OP]: ProxyOps.FREE,
-					[CoreHeaders.OP_TARGET]: addresses.join(","),
-				},
+		const types = (await this.session.api.describeEnv()) as Record<
+			string,
+			string
+		>;
+		const value: Record<string, unknown> = {};
+		for (const [name, type] of Object.entries(types)) {
+			// Create proxies lazily, so they're only created for bindings used
+			let binding: unknown;
+			Object.defineProperty(value, name, {
+				get: () => (binding ??= this.#createBinding(name, type)),
+				enumerable: true,
 			});
-		} catch {
-			// Ignore network errors when freeing. If this `dispatchFetch()` throws,
-			// it's likely the runtime has shutdown, so the entire "heap" has been
-			// destroyed anyway. There's a small chance of a memory leak here if this
-			// threw for another reason.
 		}
-	};
+		this.#env = { version, value };
+	}
 
-	getProxy<T extends object>(target: NativeTarget): T {
-		const handler = new ProxyStubHandler(this, target);
-
-		type WithCustomInspect<T> = T & {
-			[util.inspect.custom]?: unknown;
-		};
-		let proxyTarget: WithCustomInspect<object | Function>;
-		if (target[kIsFunction]) {
-			// the proxy target needs to be a function so that the consumer of the proxy
-			// can simply call it (if we didn't do this consumers would get a
-			// `x is not a function` type error)
-			// eslint-disable-next-line @typescript-eslint/no-implied-eval -- intentional: creates callable proxy target
-			proxyTarget = new Function();
-		} else {
-			proxyTarget = {};
+	#createBinding(name: string, type: string): unknown {
+		const source = new BindingStubSource(this, type, (api) => api.getEnv(name));
+		let local: object | undefined;
+		switch (type) {
+			case "DurableObjectNamespace":
+				local = createDurableObjectNamespaceMethods(this, name, source);
+				break;
+			case "D1Database":
+				local = {
+					withSession: (constraint?: string) => {
+						source.assertUsable();
+						// Identifies the session when getting its bookmark
+						const token = crypto.randomUUID();
+						const session = this.session;
+						const stub = session.api.getD1Session(name, constraint, token);
+						return this.createProxy(
+							this.ownStub(session, stub as unknown as ForwarderStub),
+							[],
+							{
+								callable: false,
+								local: {
+									getBookmark: () =>
+										this.syncCall({
+											type: "D1DatabaseSession#getBookmark",
+											binding: name,
+											constraint,
+											token,
+										}),
+								},
+							}
+						);
+					},
+				};
+				break;
+			case "R2Bucket":
+				local = {
+					resumeMultipartUpload: (key: string, uploadId: string) => {
+						const result = source
+							.stub()
+							.call(
+								["resumeMultipartUpload"],
+								this.encodeArgs([key, uploadId])
+							);
+						// Pipeline calls on the result, as its data is known
+						return this.createProxy(
+							this.ownStub(this.session, result as unknown as ForwarderStub),
+							[],
+							{ callable: false, local: { key, uploadId } }
+						);
+					},
+				};
+				break;
+			case "LocalAnalyticsEngineDataset":
+				local = {
+					writeDataPoint: (event?: unknown) => {
+						// Like `workerd`, return without waiting for the data point to be
+						// written, then release the result, which will never be used
+						const result = source
+							.stub()
+							.call(["writeDataPoint"], this.encodeArgs([event]));
+						result[Symbol.dispose]();
+					},
+				};
+				break;
 		}
-		proxyTarget[util.inspect.custom] = handler.inspect;
-		const proxy = new Proxy<T>(proxyTarget as T, handler);
+		return this.createProxy(source, [], { callable: false, local });
+	}
 
-		const held: NativeTargetHeldValue = {
-			address: target[kAddress],
-			version: this.#version,
-		};
-		this.#finalizationRegistry.register(proxy, held, this);
+	/**
+	 * Creates a proxy forwarding gets and calls to a stub.
+	 *
+	 * @param source Where to get the stub from
+	 * @param path Path of the property on the stub's target to forward to
+	 * @param options Options for the proxy
+	 */
+	createProxy(
+		source: StubSource,
+		path: string[],
+		options: ProxyOptions = {}
+	): object {
+		const handler = new RpcProxyHandler(this, source, path, options);
+		type ProxyTarget = object & { [util.inspect.custom]?: unknown };
+		const target: ProxyTarget = options.callable === false ? {} : () => {};
+		// `util.inspect()` inspects the target directly, rather than the `Proxy`
+		target[util.inspect.custom] = handler.inspect;
+		const proxy = new Proxy(target, handler);
+		this.#proxies.set(proxy, handler);
 		return proxy;
 	}
 
-	poisonProxies(): void {
-		this.#version++;
-		// This function will be called whenever `setOptions()` or `dispose()` is
-		// called. We must also unregister all finalizers as the heap will be reset,
-		// and we don't want a new object added with the same address to be freed
-		// when it's still accessible.
-		this.#finalizationRegistry.unregister(this);
-	}
-
-	dispose(): Promise<void> {
-		clearTimeout(this.#finalizeBatchTimeout);
-		this.poisonProxies();
-		return this.sync.dispose();
-	}
-}
-
-class ProxyStubHandler<T extends object>
-	extends Function
-	implements ProxyHandler<T>
-{
-	readonly #version: number;
-	readonly #stringifiedTarget: string;
-	readonly #knownValues = new Map<string, unknown>();
-	readonly #knownDescriptors = new Map<
-		string,
-		PropertyDescriptor | undefined
-	>();
-	#knownOwnKeys?: string[];
-
-	revivers: ReducersRevivers = {
-		...revivers,
-		Native: (value) => {
-			assert(Array.isArray(value));
-			const [address, name, isFunction] = value as unknown[];
-			assert(typeof address === "number");
-			assert(typeof name === "string");
-			assert(typeof isFunction === "boolean");
-			const target: NativeTarget = {
-				[kAddress]: address,
-				[kName]: name,
-				[kIsFunction]: isFunction,
-			};
-			if (name === "Promise") {
-				// We'll only see `Promise`s here if we're parsing from
-				// `#parseSyncResponse`. In that case, we'll want to make an async fetch
-				// to actually resolve the `Promise` and get the value.
-				const resPromise = this.bridge.dispatchFetch(this.bridge.url, {
-					method: "POST",
-					headers: {
-						[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
-						[CoreHeaders.OP]: ProxyOps.GET, // GET without key just gets target
-						[CoreHeaders.OP_TARGET]: stringify(target, reducers),
-					},
-				});
-				return this.#parseAsyncResponse(resPromise);
-			} else {
-				// See #createMediaProxy() for why this is special
-				if (name === "ImagesBindingImpl") {
-					return this.#createMediaProxy(target);
-				}
-				// Otherwise, return a `Proxy` for this target
-				return this.bridge.getProxy(target);
-			}
-		},
-	};
 	/**
-	 * Images bindings are some of the most complex bindings from an API perspective, other than RPC. In particular, they expose a _synchronous_ API that accepts ReadableStream arguments.
-	 * Multiple synchronous APIs are chained together in a builder pattern (e.g. `await env.IMAGES.input(stream).transform(...).output(...)`) before the final `.output()` call is awaited.
-	 * This breaks our assumptions around functions that accept ReadableStream arguments always being async, and so doesn't work without some special casing.
-	 *
-	 * Ref: https://developers.cloudflare.com/images/transform-images/bindings/
+	 * @param value Value that may be a proxy
+	 * @returns The handler for `value`, if it's a proxy created by this bridge
 	 */
-	#createMediaProxy(target: NativeTarget) {
-		type Operation = {
-			type: "transform" | "draw";
-			arguments: unknown[];
-		};
-		const transformer = (
-			target: {
-				input: (
-					stream: ReadableStream,
-					operations: Operation[],
-					options: ImageOutputOptions
-				) => ImageTransformationResult;
-			},
-			stream: ReadableStream,
-			operations: Operation[]
-		): ImageTransformer => {
-			return {
-				transform: (transform: ImageTransform): ImageTransformer => {
-					return transformer(target, stream, [
-						...operations,
-						{ type: "transform", arguments: [transform] },
-					]);
-				},
-				draw: (image: ImageTransformer, options?: ImageDrawOptions) => {
-					return transformer(target, stream, [
-						...operations,
-						{ type: "draw", arguments: [image, options] },
-					]);
-				},
-				output: async (options: ImageOutputOptions) => {
-					// This signature doesn't exist on the production binding, but will be intercepted in the proxy server
-					return await target.input(stream, operations, options);
-				},
-			};
-		};
-		const proxy = this.bridge.getProxy(target) as any;
-		const binding = {
-			info: (stream: ReadableStream<Uint8Array>) => {
-				return proxy["info"](stream);
-			},
-			input: (stream: ReadableStream<Uint8Array>) => {
-				return transformer(proxy, stream, []);
-			},
-			get hosted(): ImagesBinding["hosted"] {
-				return proxy["hosted"];
-			},
-		};
-		return binding;
+	getProxyHandler(value: object): RpcProxyHandler | undefined {
+		return this.#proxies.get(value);
 	}
 
-	constructor(
-		readonly bridge: ProxyClientBridge,
-		readonly target: NativeTarget
-	) {
-		super();
-		this.#version = bridge.version;
-		this.#stringifiedTarget = stringify(this.target, reducers);
+	/**
+	 * Takes ownership of a stub received over `session`, releasing it once the
+	 * proxies using it are garbage collected.
+	 *
+	 * @param session Session `stub` was received over
+	 * @param stub Cap'n Web stub, or promise for a call's result
+	 */
+	ownStub(
+		session: ProxyRpcSession | undefined,
+		stub: ForwarderStub
+	): OwnedStubSource {
+		const source = new OwnedStubSource(this, session, stub);
+		this.#finalizationRegistry.register(source, stub, this);
+		return source;
 	}
 
-	get #poisoned() {
-		return this.#version !== this.bridge.version;
-	}
-	#assertSafe() {
-		if (this.#poisoned) {
-			throw new Error(
-				"Attempted to use poisoned stub. Stubs to runtime objects must be " +
-					"re-created after calling `Miniflare#setOptions()` or `Miniflare#dispose()`."
-			);
-		}
-	}
-
-	inspect = (depth: number, options: util.InspectOptions) => {
-		const details = { name: this.target[kName], poisoned: this.#poisoned };
-		return `ProxyStub ${util.inspect(details, options)}`;
-	};
-
-	#maybeThrow(
-		res: { status: number },
-		result: unknown,
-		caller: Function
-	): unknown {
-		if (res.status === 500) {
-			if (typeof result === "object" && result !== null) {
-				// Update the stack trace to include the calling location in Node
-				// (as opposed to inside the proxy server) which is much more useful
-				// for debugging. Specifying the original `caller` here hides our
-				// internal implementation functions from the stack.
-				Error.captureStackTrace(result, caller);
-			}
-			throw result;
-		} else {
-			// Returning a non-200/500 is an internal error. Note we special case
-			// `Fetcher#fetch()` calls, so user can still return any status code.
-			assert(res.status === 200);
-			return result;
-		}
-	}
-	async #parseAsyncResponse(resPromise: Promise<Response>): Promise<unknown> {
-		const res = await resPromise;
-		assert(!isClientError(res.status));
-
-		const typeHeader = res.headers.get(CoreHeaders.OP_RESULT_TYPE);
-		if (typeHeader === "Promise, ReadableStream") {
-			if (res.body !== null) {
-				this.bridge.trackStreamLength(res.body, res.headers);
-			}
-			return res.body;
-		}
-		assert(typeHeader === "Promise"); // Must be async
-
-		let stringifiedResult: string;
-		let unbufferedStream: ReadableStream | undefined;
-		const stringifiedSizeHeader = res.headers.get(
-			CoreHeaders.OP_STRINGIFIED_SIZE
-		);
-		if (stringifiedSizeHeader === null) {
-			// No unbuffered stream
-			stringifiedResult = await res.text();
-		} else {
-			// Response contains unbuffered `ReadableStream`
-			const stringifiedSize = parseInt(stringifiedSizeHeader);
-			assert(!Number.isNaN(stringifiedSize));
-			assert(res.body !== null);
-			const [buffer, rest] = await readPrefix(res.body, stringifiedSize);
-			stringifiedResult = buffer.toString();
-			// Need to `.pipeThrough()` here otherwise we'll get
-			// `TypeError: Response body object should not be disturbed or locked`
-			// when trying to construct a `Response` with the stream.
-			// TODO(soon): add support for MINIFLARE_ASSERT_BODIES_CONSUMED here
-			unbufferedStream = rest.pipeThrough(new TransformStream());
-		}
-
-		const result = parseWithReadableStreams(
-			NODE_PLATFORM_IMPL,
-			{ value: stringifiedResult, unbufferedStream },
-			this.revivers
-		);
-
-		// We get an empty stack trace if we thread the caller through here,
-		// specifying `this.#parseAsyncResponse` is good enough though, we just
-		// get an extra `processTicksAndRejections` entry
-		return this.#maybeThrow(res, result, this.#parseAsyncResponse);
-	}
-	#parseSyncResponse(syncRes: SynchronousResponse, caller: Function): unknown {
-		assert(!isClientError(syncRes.status));
-		assert(syncRes.body !== null);
-		// Unbuffered streams should only be sent as part of async responses
-		assert(syncRes.headers.get(CoreHeaders.OP_STRINGIFIED_SIZE) === null);
-		if (syncRes.body instanceof ReadableStream) {
-			this.bridge.trackStreamLength(syncRes.body, syncRes.headers);
-			return syncRes.body;
-		}
-
-		const stringifiedResult = DECODER.decode(syncRes.body);
-		const result = parseWithReadableStreams(
-			NODE_PLATFORM_IMPL,
-			{ value: stringifiedResult },
-			this.revivers
-		);
-		return this.#maybeThrow(syncRes, result, caller);
+	/**
+	 * Encodes a value to send to `ProxyServer`.
+	 *
+	 * @param value Value to send (e.g. a call's arguments)
+	 */
+	encode(value: unknown): unknown {
+		const state: EncodeState = { inlineSize: 0 };
+		const encoded = this.codec.encode(value, state);
+		assertInlineSize(state);
+		return encoded;
 	}
 
-	#thisFnKnownAsync = false;
-
-	apply(_target: T, ...args: unknown[]) {
-		const result = this.#call(
-			"__miniflareWrappedFunction",
-			this.#thisFnKnownAsync,
-			args[1] as unknown[],
-			this as Function
-		);
-		if (!this.#thisFnKnownAsync && result instanceof Promise) {
-			this.#thisFnKnownAsync = true;
-		}
-		return result;
+	/**
+	 * Encodes arguments for a call over Cap'n Web.
+	 *
+	 * @param args Arguments passed by the user
+	 */
+	encodeArgs(args: unknown[]): unknown[] {
+		return this.encode(args) as unknown[];
 	}
 
-	get(_target: T, key: string | symbol, _receiver: unknown) {
-		this.#assertSafe();
-
-		// When `devalue` `stringify`ing `Proxy`, treat it as a `NativeTarget`
-		// (allows native proxies to be used as arguments, e.g. `DurableObjectId`s)
-		if (key === kAddress) {
-			return this.target[kAddress];
-		}
-		if (key === kName) {
-			return this.target[kName];
-		}
-		if (key === kIsFunction) {
-			return this.target[kIsFunction];
-		}
-		// Ignore all other symbol properties, or `then()`s. We should never return
-		// `Promise`s or thenables as native targets, and want to avoid the extra
-		// network call when `await`ing the proxy.
-		if (typeof key === "symbol" || key === "then") {
-			return undefined;
-		}
-
-		// See optimisation comments below for cases where this will be set
-		const maybeKnown = this.#knownValues.get(key);
-		if (maybeKnown !== undefined) {
-			return maybeKnown;
-		}
-
-		// Always perform a synchronous GET, if this returns a `Promise`, we'll
-		// do an asynchronous GET in the reviver
-		const syncRes = this.bridge.sync.fetch(this.bridge.url, {
+	/**
+	 * Gets a value a synchronous API must return, blocking the main thread.
+	 *
+	 * @param request What to get
+	 */
+	syncCall(request: ProxySyncRequest): unknown {
+		const res = this.sync.fetch(this.url, {
 			method: "POST",
 			headers: {
 				[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
-				[CoreHeaders.OP]: ProxyOps.GET,
-				[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
-				[CoreHeaders.OP_KEY]: key,
+				[CoreHeaders.OP]: ProxyOps.SYNC,
 			},
+			body: JSON.stringify(request),
 		});
-		let result: unknown;
-		if (syncRes.headers.get(CoreHeaders.OP_RESULT_TYPE) === "Function") {
-			result = this.#createFunction(key);
-		} else {
-			result = this.#parseSyncResponse(syncRes, this.get);
-		}
-
-		if (
-			// Optimisation: if this property is a function, we assume constant
-			// prototypes of proxied objects, so it's never going to change
-			typeof result === "function" ||
-			// Optimisation: if this property is a reference, we assume it's never
-			// going to change. This allows us to reuse the known cache of nested
-			// objects on multiple access (e.g. reusing `env["...<bucket>"]` proxy if
-			// `getR2Bucket(<bucket>)` is called on the same bucket multiple times).
-			isNativeTarget(result) ||
-			// Once a `ReadableStream` sent across proxy, we won't be able to read it
-			// again in the server, so reuse the same stream for future accesses
-			// (e.g. accessing `R2ObjectBody#body` multiple times)
-			result instanceof ReadableStream
-		) {
-			this.#knownValues.set(key, result);
-		}
-		return result;
+		assert(res.status === 200);
+		return JSON.parse(DECODER.decode(res.body));
 	}
 
-	has(target: T, key: string | symbol) {
-		// Not technically correct, but a close enough approximation for `in`
-		return this.get(target, key, undefined) !== undefined;
-	}
-
-	getOwnPropertyDescriptor(target: T, key: string | symbol) {
-		this.#assertSafe();
-
-		if (typeof key === "symbol") {
-			return undefined;
-		}
-
-		// Optimisation: assume constant prototypes of proxied objects, descriptors
-		// should never change after we've fetched them
-		const maybeKnown = this.#knownDescriptors.get(key);
-		if (maybeKnown !== undefined) {
-			return maybeKnown;
-		}
-
-		const syncRes = this.bridge.sync.fetch(this.bridge.url, {
-			method: "POST",
-			headers: {
-				[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
-				[CoreHeaders.OP]: ProxyOps.GET_OWN_DESCRIPTOR,
-				[CoreHeaders.OP_KEY]: key,
-				[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
-			},
-		});
-		const result = this.#parseSyncResponse(
-			syncRes,
-			this.getOwnPropertyDescriptor
-		) as PropertyDescriptor | undefined;
-
-		this.#knownDescriptors.set(key, result);
-		return result;
-	}
-
-	ownKeys(_target: T) {
-		this.#assertSafe();
-
-		// Optimisation: assume constant prototypes of proxied objects, own keys
-		// should never change after we've fetched them
-		if (this.#knownOwnKeys !== undefined) {
-			return this.#knownOwnKeys;
-		}
-
-		const syncRes = this.bridge.sync.fetch(this.bridge.url, {
-			method: "POST",
-			headers: {
-				[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
-				[CoreHeaders.OP]: ProxyOps.GET_OWN_KEYS,
-				[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
-			},
-		});
-		const result = this.#parseSyncResponse(syncRes, this.ownKeys) as string[];
-
-		this.#knownOwnKeys = result;
-		return result;
-	}
-
-	getPrototypeOf(_target: T) {
-		this.#assertSafe();
-
-		// Return a `null` prototype, so users know this isn't a plain object
-		return null;
-	}
-
-	#createFunction(key: string) {
-		// Optimisation: if the function returns a `Promise`, we know it must be
-		// async (assuming all async functions always return `Promise`s). When
-		// combined with the optimisation to cache known methods, this allows us to
-		// perform a single async network call per invocation as opposed to three:
-		// 1) Synchronously get method
-		// 2) Synchronously call method returning `Promise`
-		// 3) Asynchronously resolve returned `Promise`
-		let knownAsync = false;
-		// `{ [key]: () => {} }[key]` evaluates to a function named `key` as opposed
-		// to `(anonymous)`. This is useful for debugging, as logging the function
-		// will include the name.
-		const func = {
-			[key]: (...args: unknown[]) => {
-				const result = this.#call(key, knownAsync, args, func);
-				if (!knownAsync && result instanceof Promise) {
-					knownAsync = true;
-				}
-				return result;
-			},
-		}[key];
-		return func;
-	}
-	#call(
-		key: string,
-		knownAsync: boolean,
-		args: unknown[],
-		caller: Function
-	): unknown {
-		this.#assertSafe();
-
-		const targetName = this.target[kName];
-		// See `isFetcherFetch()` comment for why this is special
-		if (isFetcherFetch(targetName, key)) {
-			return this.#fetcherFetchCall(args);
-		}
-
-		const stringified = stringifyWithStreams(
-			NODE_PLATFORM_IMPL,
-			args,
-			reducers,
-			/* allowUnbufferedStream */ true
-		);
-		if (
-			knownAsync ||
-			// Durable Object stub RPC calls should always be async to avoid blocking
-			// the Node.js event loop with `Atomics.wait()`. This allows Promise.race()
-			// and timeouts to work correctly when racing against DO method calls.
-			isDurableObjectStub(targetName) ||
-			// We assume every call with `ReadableStream`/`Blob` arguments is async.
-			// Note that you can't consume `ReadableStream`/`Blob` synchronously: if
-			// you tried a similar trick to `SynchronousFetcher`, blocking the main
-			// thread with `Atomics.wait()` would prevent chunks being read. This
-			// assumption doesn't hold for `Blob`s and `FormData#{append,set}()`, but
-			// we should never expose proxies for those APIs to users.
-			stringified instanceof Promise || // (instanceof Promise if buffered `ReadableStream`/`Blob`s)
-			stringified.unbufferedStream !== undefined // (if at least one `ReadableStream` passed)
-		) {
-			return this.#asyncCall(key, stringified);
-		} else {
-			const result = this.#syncCall(key, stringified.value, caller);
-			// See `isR2ObjectWriteHttpMetadata()` comment for why this special
-			if (isR2ObjectWriteHttpMetadata(targetName, key)) {
-				const arg = args[0];
-				// `arg` may be a `Headers` instance from a different realm than the
-				// `undici` copy Miniflare uses internally (e.g. Node's global
-				// `Headers`), so check its shape rather than its prototype chain.
-				assert(isHeadersLike(arg));
-				assert(isHeadersLike(result));
-				for (const [key, value] of result) {
-					arg.set(key, value);
-				}
-				return; // void
-			}
-			return result;
-		}
-	}
-	#syncCall(key: string, stringifiedValue: string, caller: Function): unknown {
-		const argsSize = Buffer.byteLength(stringifiedValue).toString();
-		const syncRes = this.bridge.sync.fetch(this.bridge.url, {
-			method: "POST",
-			headers: {
-				[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
-				[CoreHeaders.OP]: ProxyOps.CALL,
-				[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
-				[CoreHeaders.OP_KEY]: key,
-				[CoreHeaders.OP_STRINGIFIED_SIZE]: argsSize,
-				"Content-Length": argsSize,
-			},
-			body: stringifiedValue,
-		});
-		return this.#parseSyncResponse(syncRes, caller);
-	}
-	async #asyncCall(
-		key: string,
-		stringifiedAwaitable: Awaitable<StringifiedWithStream<ReadableStream>>
+	/**
+	 * Calls `fetch()` on a stub's target. If it's a `Fetcher` or Durable Object
+	 * stub, this is sent with `dispatchFetch()` (see `ProxyOps.FETCH`).
+	 *
+	 * @param source Source of the stub
+	 * @param path Path of the property on the stub's target to call `fetch()` on
+	 * @param args Arguments passed to `fetch()`
+	 */
+	async fetch(
+		source: StubSource,
+		path: string[],
+		args: unknown[]
 	): Promise<unknown> {
-		const stringified = await stringifiedAwaitable;
-
-		let resPromise: Promise<Response>;
-		if (stringified.unbufferedStream === undefined) {
-			const argsSize = Buffer.byteLength(stringified.value).toString();
-			resPromise = this.bridge.dispatchFetch(this.bridge.url, {
-				method: "POST",
-				headers: {
-					[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
-					[CoreHeaders.OP]: ProxyOps.CALL,
-					[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
-					[CoreHeaders.OP_KEY]: key,
-					[CoreHeaders.OP_STRINGIFIED_SIZE]: argsSize,
-					"Content-Length": argsSize,
-				},
-				body: stringified.value,
-			});
-		} else {
-			const encodedArgs = Buffer.from(stringified.value);
-			const argsSize = encodedArgs.byteLength.toString();
-			const streamSize = this.bridge.getStreamLength(
-				stringified.unbufferedStream
-			);
-			const body = prefixStream(encodedArgs, stringified.unbufferedStream);
-			resPromise = this.bridge.dispatchFetch(this.bridge.url, {
-				method: "POST",
-				headers: {
-					[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
-					[CoreHeaders.OP]: ProxyOps.CALL,
-					[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
-					[CoreHeaders.OP_KEY]: key,
-					[CoreHeaders.OP_STRINGIFIED_SIZE]: argsSize,
-					...(streamSize === undefined
-						? {}
-						: { [CoreHeaders.OP_STREAM_SIZE]: streamSize.toString() }),
-				},
-				duplex: "half",
-				body,
-			});
+		const stub = source.stub();
+		const token = await stub.getFetcherToken(path);
+		if (token === undefined) {
+			// Call any other `fetch()` method like other methods
+			const result = stub.call(
+				[...path, "fetch"],
+				this.encodeArgs(args)
+			) as unknown as ForwarderStub;
+			try {
+				return await this.codec.decode(await result.get([]));
+			} finally {
+				result[Symbol.dispose]();
+			}
 		}
 
-		return this.#parseAsyncResponse(resPromise);
-	}
-	#fetcherFetchCall(args: unknown[]) {
 		let userRequest: Request | globalThis.Request;
 		if (args[0] instanceof globalThis.Request) {
 			const globalRequestInit = args[1] as ConstructorParameters<
@@ -834,7 +644,7 @@ class ProxyStubHandler<T extends object>
 		// Create an internal transport request with the proxy URL. `mode` and
 		// `keepalive` aren't sent over HTTP, and undici rejects exposed stream
 		// bodies combined with `no-cors` or `keepalive`.
-		const request = new Request(this.bridge.url, {
+		const request = new Request(this.url, {
 			method: userRequest.method,
 			headers: userRequest.headers,
 			redirect: userRequest.redirect,
@@ -860,9 +670,417 @@ class ProxyStubHandler<T extends object>
 		// before calling `fetch()`.
 		request.headers.set(CoreHeaders.OP_ORIGINAL_URL, userRequest.url);
 		request.headers.set(CoreHeaders.OP_SECRET, PROXY_SECRET_HEX);
-		request.headers.set(CoreHeaders.OP, ProxyOps.CALL);
-		request.headers.set(CoreHeaders.OP_TARGET, this.#stringifiedTarget);
-		request.headers.set(CoreHeaders.OP_KEY, "fetch");
-		return this.bridge.dispatchFetch(request);
+		request.headers.set(CoreHeaders.OP, ProxyOps.FETCH);
+		request.headers.set(CoreHeaders.OP_TARGET, token);
+		return this.dispatchFetch(request);
+	}
+
+	poisonProxies(): void {
+		this.#version++;
+		// This function will be called whenever `setOptions()` or `dispose()` is
+		// called. The session is closed, so its stubs don't need releasing.
+		this.#finalizationRegistry.unregister(this);
+		this.#session?.dispose();
+		this.#session = undefined;
+	}
+
+	dispose(): Promise<void> {
+		this.poisonProxies();
+		return this.sync.dispose();
+	}
+}
+
+class ClientCodec extends ProxyCodec {
+	constructor(readonly bridge: ProxyClientBridge) {
+		super();
+	}
+
+	protected encodeSpecial(value: object): unknown {
+		const handler = this.bridge.getProxyHandler(value);
+		if (handler !== undefined) {
+			// Like Workers RPC, properties can't be sent without awaiting them
+			if (handler.path.length > 0) {
+				throw new DOMException(
+					'Could not serialize object of type "RpcProperty". This type does not support serialization.',
+					"DataCloneError"
+				);
+			}
+			return { [PROXY_ENCODED_KEY]: "Stub", value: handler.source.stub() };
+		}
+		if (value instanceof DurableObjectId) {
+			return { [PROXY_ENCODED_KEY]: "DurableObjectId", value: value[kId] };
+		}
+		return toGlobalHTTPObject(value);
+	}
+
+	protected encodeReference(value: object): unknown {
+		if (typeof value !== "function") {
+			// Cap'n Web throws when serialising this
+			return value;
+		}
+		// Callbacks, which `ProxyServer` may pass values to
+		return async (...args: unknown[]) => {
+			const decodedArgs = (await this.decode(args)) as unknown[];
+			return this.bridge.encode(await value(...decodedArgs));
+		};
+	}
+
+	protected decodeStub(stub: RpcStub<never>): unknown {
+		const bridge = this.bridge;
+		return bridge.createProxy(
+			bridge.ownStub(bridge.activeSession, stub as unknown as ForwarderStub),
+			[]
+		);
+	}
+
+	protected async decodeSpecial(encoded: ProxyEncoded): Promise<unknown> {
+		const type = encoded[PROXY_ENCODED_KEY];
+		const value = await this.decode(encoded.value);
+		switch (type) {
+			case "R2Object":
+				return new R2Object(value as R2ObjectData);
+			case "R2ObjectBody":
+				return new R2ObjectBody(value as R2ObjectBodyData);
+			case "R2MultipartUpload":
+			case "WorkflowInstance": {
+				const bridge = this.bridge;
+				const stub = encoded.stub as ForwarderStub;
+				return bridge.createProxy(
+					bridge.ownStub(bridge.activeSession, stub),
+					[],
+					{
+						callable: false,
+						local: value as object,
+					}
+				);
+			}
+			case "ImageTransformationResult": {
+				const { contentType, image } = value as {
+					contentType: string;
+					image: ReadableStream;
+				};
+				return {
+					contentType: () => contentType,
+					image: () => image,
+					response: () =>
+						new Response(image, { headers: { "Content-Type": contentType } }),
+				};
+			}
+		}
+		assert.fail(`Unexpected encoded value type: ${type}`);
+	}
+
+	decode(value: unknown): Promise<unknown> {
+		// Cap'n Web revives `Uint8Array`s as Node.js `Buffer`s
+		if (Buffer.isBuffer(value)) {
+			return Promise.resolve(
+				new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
+			);
+		}
+		const httpObject = fromGlobalHTTPObject(value);
+		if (httpObject !== undefined) {
+			return Promise.resolve(httpObject);
+		}
+		return super.decode(value);
+	}
+}
+
+// Proxy handler forwarding gets and calls to a stub, for both native bindings
+// and objects that speak Workers RPC. Everything is sent over Cap'n Web, so
+// these never block the main thread.
+class RpcProxyHandler implements ProxyHandler<object> {
+	#settled?: Promise<unknown>;
+
+	constructor(
+		readonly bridge: ProxyClientBridge,
+		readonly source: StubSource,
+		readonly path: string[],
+		readonly options: ProxyOptions
+	) {}
+
+	inspect = (_depth: number, options: util.InspectOptions) => {
+		const name = [this.source.name, ...this.path]
+			.filter((part) => part !== undefined)
+			.join(".");
+		const details = { name: name || undefined, poisoned: this.source.poisoned };
+		return `ProxyStub ${util.inspect(details, options)}`;
+	};
+
+	#settle(): Promise<unknown> {
+		return (this.#settled ??= this.#resolve());
+	}
+	async #resolve(): Promise<unknown> {
+		try {
+			const value = await this.source.stub().get(this.path);
+			return await this.bridge.codec.decode(value);
+		} catch (e) {
+			restoreErrorName(e);
+			if (typeof e === "object" && e !== null) {
+				// Update the stack trace to include the calling location in Node
+				// (as opposed to inside the proxy server) which is much more useful
+				// for debugging. Specifying `#resolve` here hides our internal
+				// implementation functions from the stack.
+				Error.captureStackTrace(e, this.#resolve);
+			}
+			throw e;
+		}
+	}
+
+	get(_target: object, key: string | symbol) {
+		if (key === util.inspect.custom) {
+			return this.inspect;
+		}
+		this.source.assertUsable();
+
+		const local = this.options.local;
+		if (local !== undefined && Object.hasOwn(local, key)) {
+			return (local as Record<string | symbol, unknown>)[key];
+		}
+		if (this.options.thenable) {
+			if (key === "then") {
+				return (
+					onFulfilled?: (value: unknown) => unknown,
+					onRejected?: (reason: unknown) => unknown
+				) => this.#settle().then(onFulfilled, onRejected);
+			}
+			if (key === "catch") {
+				return (onRejected?: (reason: unknown) => unknown) =>
+					this.#settle().catch(onRejected);
+			}
+			if (key === "finally") {
+				return (onFinally?: () => void) => this.#settle().finally(onFinally);
+			}
+		}
+		if (
+			key === Symbol.dispose &&
+			this.path.length === 0 &&
+			this.source instanceof OwnedStubSource
+		) {
+			const stub = this.source.stub();
+			return () => stub[Symbol.dispose]();
+		}
+		// Ignore all other symbol properties, or `then()`s of stubs, which
+		// shouldn't be thenable
+		if (typeof key === "symbol" || key === "then") {
+			return undefined;
+		}
+		return this.bridge.createProxy(this.source, [...this.path, key], {
+			thenable: true,
+		});
+	}
+
+	apply(_target: object, _thisArg: unknown, args: unknown[]) {
+		if (this.path[this.path.length - 1] === "fetch") {
+			return this.bridge.fetch(this.source, this.path.slice(0, -1), args);
+		}
+		const stub = this.source.stub();
+		const session = this.bridge.session;
+		const result = stub.call(this.path, this.bridge.encodeArgs(args));
+		return this.bridge.createProxy(
+			this.bridge.ownStub(session, result as unknown as ForwarderStub),
+			[],
+			{ thenable: true }
+		);
+	}
+}
+
+const kId = Symbol("kId");
+
+// `DurableObjectId` created in Node.js. Created from the arguments passed to
+// the namespace, which `ProxyServer` revives it from.
+class DurableObjectId {
+	readonly #bridge: ProxyClientBridge;
+	readonly #binding: string;
+	readonly #id: ProxyDurableObjectId;
+	#string?: string;
+
+	constructor(
+		bridge: ProxyClientBridge,
+		binding: string,
+		id: ProxyDurableObjectId
+	) {
+		this.#bridge = bridge;
+		this.#binding = binding;
+		this.#id = id;
+	}
+
+	get [kId](): [string, ProxyDurableObjectId] {
+		return [this.#binding, this.#id];
+	}
+
+	get name(): string | undefined {
+		const [kind, value] = this.#id;
+		return kind === "name" ? value : undefined;
+	}
+
+	toString(): string {
+		const [kind, value] = this.#id;
+		if (kind === "string") {
+			return value;
+		}
+		return (this.#string ??= this.#bridge.syncCall({
+			type: "DurableObjectId#toString",
+			binding: this.#binding,
+			id: this.#id,
+		}) as string);
+	}
+
+	equals(other: DurableObjectId): boolean {
+		return (
+			other instanceof DurableObjectId && this.toString() === other.toString()
+		);
+	}
+}
+
+/**
+ * Creates the methods of a Durable Object namespace implemented by the client.
+ * IDs are created locally, as their methods are synchronous.
+ *
+ * @param bridge Bridge to create stubs with
+ * @param binding Name of the namespace binding
+ * @param source Source of the stub for the namespace
+ */
+function createDurableObjectNamespaceMethods(
+	bridge: ProxyClientBridge,
+	binding: string,
+	source: StubSource
+): object {
+	const get = (id: DurableObjectId, options?: unknown) => {
+		if (!(id instanceof DurableObjectId)) {
+			throw new TypeError(
+				"Failed to execute 'get' on 'DurableObjectNamespace': parameter 1 is not of type 'DurableObjectId'."
+			);
+		}
+		const session = bridge.session;
+		const result = source
+			.stub()
+			.call(["get"], bridge.encodeArgs([id, options]));
+		return bridge.createProxy(
+			bridge.ownStub(session, result as unknown as ForwarderStub),
+			[],
+			{ callable: false, local: { id, name: id.name } }
+		);
+	};
+	return {
+		idFromName: (name: string) =>
+			new DurableObjectId(bridge, binding, ["name", name]),
+		idFromString: (id: string) => {
+			// Validate the format locally, so invalid IDs still throw synchronously
+			if (!/^[0-9a-f]{64}$/i.test(id)) {
+				throw new TypeError("Invalid Durable Object ID: must be 64 hex digits");
+			}
+			return new DurableObjectId(bridge, binding, ["string", id.toLowerCase()]);
+		},
+		newUniqueId: (options?: unknown) =>
+			new DurableObjectId(bridge, binding, [
+				"string",
+				bridge.syncCall({
+					type: "DurableObjectNamespace#newUniqueId",
+					binding,
+					options,
+				}) as string,
+			]),
+		get,
+		getByName: (name: string, options?: unknown) =>
+			get(new DurableObjectId(bridge, binding, ["name", name]), options),
+	};
+}
+
+type R2ObjectData = Record<string, unknown> & {
+	httpMetadata?: Record<string, unknown>;
+	checksums: Record<string, ArrayBuffer | undefined>;
+};
+type R2ObjectBodyData = R2ObjectData & {
+	size: number;
+	range?: { length?: number };
+	body: ReadableStream;
+};
+
+const R2_CHECKSUM_NAMES = ["md5", "sha1", "sha256", "sha384", "sha512"];
+
+// `R2Checksums` returned by `ProxyServer` with its data
+class R2Checksums {
+	constructor(data: Record<string, ArrayBuffer | undefined>) {
+		Object.assign(this, data);
+	}
+
+	toJSON(): Record<string, string> {
+		const checksums = this as unknown as Record<
+			string,
+			ArrayBuffer | undefined
+		>;
+		const result: Record<string, string> = {};
+		for (const name of R2_CHECKSUM_NAMES) {
+			const checksum = checksums[name];
+			if (checksum !== undefined) {
+				result[name] = Buffer.from(checksum).toString("hex");
+			}
+		}
+		return result;
+	}
+}
+
+// `R2Object` returned by `ProxyServer` with its data
+class R2Object {
+	constructor(data: R2ObjectData) {
+		Object.assign(this, data, { checksums: new R2Checksums(data.checksums) });
+	}
+
+	writeHttpMetadata(headers: Headers): void {
+		const metadata = (this as unknown as R2ObjectData).httpMetadata ?? {};
+		const headerNames: Record<string, string> = {
+			contentType: "Content-Type",
+			contentLanguage: "Content-Language",
+			contentDisposition: "Content-Disposition",
+			contentEncoding: "Content-Encoding",
+			cacheControl: "Cache-Control",
+		};
+		for (const [key, name] of Object.entries(headerNames)) {
+			const value = metadata[key];
+			if (typeof value === "string") {
+				headers.set(name, value);
+			}
+		}
+		if (metadata.cacheExpiry instanceof Date) {
+			headers.set("Expires", metadata.cacheExpiry.toUTCString());
+		}
+	}
+}
+
+// `R2ObjectBody` returned by `ProxyServer` with its data and body
+class R2ObjectBody extends R2Object {
+	readonly #body: ReadableStream;
+
+	constructor({ body, ...data }: R2ObjectBodyData) {
+		super(data);
+		this.#body = body;
+		// Allows the body to be put back to R2
+		setStreamLength(body, data.range?.length ?? data.size);
+	}
+
+	get body(): ReadableStream {
+		return this.#body;
+	}
+	get bodyUsed(): boolean {
+		return Readable.isDisturbed(this.#body as unknown as NodeJS.ReadableStream);
+	}
+
+	arrayBuffer(): Promise<ArrayBuffer> {
+		return arrayBuffer(this.#body);
+	}
+	async bytes(): Promise<Uint8Array> {
+		return new Uint8Array(await arrayBuffer(this.#body));
+	}
+	text(): Promise<string> {
+		return text(this.#body);
+	}
+	json<T>(): Promise<T> {
+		return json(this.#body) as Promise<T>;
+	}
+	async blob(): Promise<Blob> {
+		const type = (this as unknown as R2ObjectData).httpMetadata?.contentType;
+		return new Blob([await arrayBuffer(this.#body)], {
+			type: typeof type === "string" ? type : "",
+		});
 	}
 }

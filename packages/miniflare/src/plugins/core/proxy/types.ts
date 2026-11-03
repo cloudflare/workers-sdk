@@ -1,40 +1,16 @@
-import { Blob } from "node:buffer";
-import { arrayBuffer } from "node:stream/consumers";
-import { ReadableStream } from "node:stream/web";
-import { Headers } from "undici";
-import { Request, Response } from "../../../http";
-import type { RequestInit } from "../../../http";
-import type { PlatformImpl } from "../../../workers";
+import type { Request, RequestInit, Response } from "../../../http";
 import type {
 	AbortSignal as WorkerAbortSignal,
 	Blob as WorkerBlob,
-	File as WorkerFile,
 	Headers as WorkerHeaders,
 	ReadableStream as WorkerReadableStream,
 	Request as WorkerRequest,
 	RequestInit as WorkerRequestInit,
 	Response as WorkerResponse,
 } from "@cloudflare/workers-types/experimental";
-
-export const NODE_PLATFORM_IMPL: PlatformImpl<ReadableStream> = {
-	// Node's implementation of these classes don't quite match Workers',
-	// but they're close enough for us
-	Blob: Blob as unknown as typeof WorkerBlob,
-	File: File as unknown as typeof WorkerFile,
-	Headers: Headers as unknown as typeof WorkerHeaders,
-	Request: Request as unknown as typeof WorkerRequest,
-	Response: Response as unknown as typeof WorkerResponse,
-
-	isReadableStream(value): value is ReadableStream {
-		return value instanceof ReadableStream;
-	},
-	bufferReadableStream(stream) {
-		return arrayBuffer(stream);
-	},
-	unbufferReadableStream(buffer) {
-		return new Blob([new Uint8Array(buffer)]).stream();
-	},
-};
+import type { Blob } from "node:buffer";
+import type { ReadableStream } from "node:stream/web";
+import type { Headers } from "undici";
 
 // Substitutes workers types with the corresponding Node implementations.
 // prettier-ignore

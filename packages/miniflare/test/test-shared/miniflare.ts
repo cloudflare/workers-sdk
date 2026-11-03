@@ -136,8 +136,9 @@ export function namespace<T>(ns: string, binding: T): Namespaced<T> {
 						keys,
 						...args
 					);
-					if (result instanceof Promise) {
-						return result.then((res) => {
+					// Results of calls through the API proxy are promise-like
+					if (typeof (result as PromiseLike<unknown>)?.then === "function") {
+						return Promise.resolve(result).then((res) => {
 							// KV.get([a,b,c]) would be prefixed with ns, so we strip this prefix from response.
 							// Map keys => [{ns}{a}, {ns}{b}, {ns}{b}] -> [a,b,c]
 							if (res instanceof Map) {

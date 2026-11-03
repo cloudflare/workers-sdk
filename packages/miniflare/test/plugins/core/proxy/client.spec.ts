@@ -9,6 +9,7 @@ import {
 	CorePaths,
 	DeferredPromise,
 	fetch,
+	kUnsafeEphemeralUniqueKey,
 	Miniflare,
 	Request,
 	Response,
@@ -69,6 +70,65 @@ describe("ProxyClient", () => {
 		}>();
 
 		const res = await CUSTOM.fetch("http://placeholder/", {
+			headers: { Upgrade: "websocket" },
+		});
+		assert(res.webSocket !== null);
+		const eventPromise = new DeferredPromise<MessageEvent>();
+		res.webSocket.addEventListener("message", eventPromise.resolve);
+		res.webSocket.accept();
+		res.webSocket.send("hello");
+		const event = await eventPromise;
+		expect(event.data).toBe("echo:hello");
+	});
+
+	test("supports WebSockets with Durable Objects in ephemeral namespaces", async ({
+		expect,
+	}) => {
+		// The Vitest plugin connects to its runner like this
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`
+							import { DurableObject } from "cloudflare:workers";
+							export class Runner extends DurableObject {
+								fetch() {
+									const { 0: webSocket1, 1: webSocket2 } = new WebSocketPair();
+									webSocket1.accept();
+									webSocket1.addEventListener("message", (event) => {
+										webSocket1.send(\`echo:\${event.data}\`);
+									});
+									return new Response(null, { status: 101, webSocket: webSocket2 });
+								}
+							}
+							export default { fetch() { return new Response(null, { status: 404 }); } };
+						`),
+						env: {
+							RUNNER: {
+								type: "durable-object",
+								worker: "",
+								exportName: "Runner",
+							},
+						},
+						exports: {
+							Runner: {
+								type: "durable-object",
+								storage: "legacy-kv",
+								unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
+							},
+						},
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const ns = await mf.getDurableObjectNamespace("RUNNER");
+		// @ts-expect-error `ColoLocalActorNamespace`s are not included in types
+		const stub: ReplaceWorkersTypes<Fetcher> = ns.get("singleton");
+		const res = await stub.fetch("http://placeholder/", {
 			headers: { Upgrade: "websocket" },
 		});
 		assert(res.webSocket !== null);
@@ -144,6 +204,210 @@ describe("ProxyClient", () => {
 			code: "NOT_FOUND",
 			numericCode: 10200,
 		});
+	});
+
+	test("sends Miniflare's `Request`s and `Response`s", async ({ expect }) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { BINDING: { type: "worker", worker: "binding" } },
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+				{
+					config: {
+						name: "binding",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`
+							import { WorkerEntrypoint } from "cloudflare:workers";
+							export default class extends WorkerEntrypoint {
+								describe(request, response) {
+									return [request.url, request.headers.get("X-Key"), response.status];
+								}
+							}
+						`),
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const { BINDING } = await mf.getBindings<{
+			BINDING: {
+				describe(request: Request, response: Response): Promise<unknown[]>;
+			};
+		}>();
+		const request = new Request("http://localhost/", {
+			headers: { "X-Key": "value" },
+		});
+		const response = new Response(null, { status: 204 });
+		expect(await BINDING.describe(request, response)).toEqual([
+			"http://localhost/",
+			"value",
+			204,
+		]);
+	});
+
+	test("sends values over workerd's WebSocket message limit", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { BINDING: { type: "worker", worker: "binding" } },
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+				{
+					config: {
+						name: "binding",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`
+							import { WorkerEntrypoint } from "cloudflare:workers";
+							export default class extends WorkerEntrypoint {
+								async size(value) {
+									if (Array.isArray(value)) return value.length;
+									if (value instanceof Blob) return value.size;
+									if (value instanceof ReadableStream) {
+										return (await new Response(value).arrayBuffer()).byteLength;
+									}
+									return value.byteLength;
+								}
+							}
+						`),
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const { BINDING } = await mf.getBindings<{
+			BINDING: {
+				size(
+					value: Uint8Array | Uint8Array[] | Blob | ReadableStream
+				): Promise<number>;
+			};
+		}>();
+		// Large values are streamed in chunks small enough for `workerd`. Base64
+		// encoded, these would be over 32 MiB. Node.js streams `Blob`s and
+		// `Response`s as one chunk.
+		const bytes = new Uint8Array(25 * 1024 * 1024);
+		expect(await BINDING.size(bytes)).toBe(bytes.byteLength);
+		expect(await BINDING.size(new Blob([bytes]))).toBe(bytes.byteLength);
+		const stream = new Response(bytes).body;
+		assert(stream !== null);
+		expect(await BINDING.size(stream)).toBe(bytes.byteLength);
+		// Base64 encoded, these small values are over 32 MiB together. Like other
+		// values that can't be sent, this throws when calling.
+		const chunks = Array.from({ length: 500 }, () => new Uint8Array(60_000));
+		expect(() => BINDING.size(chunks)).toThrow(RangeError);
+		// Rejected before it was sent, so the session is still usable
+		expect(await BINDING.size(new Uint8Array(1))).toBe(1);
+	});
+
+	test("gets new stubs for bindings after losing the connection to the runtime", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { BINDING: { type: "worker", worker: "binding" } },
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+				{
+					config: {
+						name: "binding",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`
+							import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
+							class Counter extends RpcTarget {
+								#count = 0;
+								increment() { return ++this.#count; }
+							}
+							export default class extends WorkerEntrypoint {
+								getCounter() { return new Counter(); }
+								read(stream) { return new Response(stream).text(); }
+							}
+						`),
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const { BINDING } = await mf.getBindings<{
+			BINDING: {
+				getCounter(): Promise<{ increment(): Promise<number> }> & {
+					increment(): Promise<number>;
+				};
+				read(stream: ReadableStream<string>): Promise<string>;
+			};
+		}>();
+		const counter = await BINDING.getCounter();
+		// `workerd` closes the connection when it receives a message over 32 MiB,
+		// such as this chunk, as strings in streams aren't split
+		const stream = new ReadableStream<string>({
+			start(controller) {
+				controller.enqueue("x".repeat(33 * 1024 * 1024));
+				controller.close();
+			},
+		});
+		await expect(BINDING.read(stream)).rejects.toThrow("Message is too large");
+
+		expect(await BINDING.getCounter().increment()).toBe(1);
+		expect(() => counter.increment()).toThrow(
+			"Attempted to use stub after the connection to the Workers runtime was lost. Stubs returned by bindings must be re-created."
+		);
+	});
+
+	test("returns Workers RPC stubs from native methods", async ({ expect }) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`
+							import { WorkflowEntrypoint } from "cloudflare:workers";
+							export class MyWorkflow extends WorkflowEntrypoint {
+								async run() { return "done"; }
+							}
+							export default { fetch() { return new Response(null, { status: 404 }); } };
+						`),
+						env: {
+							WORKFLOW: {
+								type: "workflow",
+								name: "WORKFLOW",
+								worker: "",
+								exportName: "MyWorkflow",
+							},
+						},
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const { WORKFLOW } = await mf.getBindings<{
+			WORKFLOW: {
+				unsafeGetInstanceModifier(
+					id: string
+				): Promise<{ disableSleeps(): Promise<void> }>;
+			};
+		}>();
+		// The modifier is an `RpcStub`, which must be returned without calling it
+		const modifier = await WORKFLOW.unsafeGetInstanceModifier("id");
+		await expect(modifier.disableSleeps()).resolves.toBeUndefined();
 	});
 
 	test("preserves original URL for service binding fetch", async ({
@@ -351,7 +615,9 @@ describe("ProxyClient", () => {
 		expect(util.inspect(caches, inspectOpts)).toBe(
 			"ProxyStub { name: 'CacheStorage', poisoned: false }"
 		);
-		expect(util.inspect(caches.open, inspectOpts)).toBe("[Function: open]");
+		expect(util.inspect(caches.open, inspectOpts)).toBe(
+			"ProxyStub { name: 'CacheStorage.open', poisoned: false }"
+		);
 	});
 
 	test("stack traces don't include internal implementation", async ({
@@ -422,6 +688,21 @@ describe("ProxyClient", () => {
 			}
 		}
 		await asyncUserFunction();
+
+		async function rpcUserFunction() {
+			try {
+				const stub = ns.get(ns.idFromName("name")) as unknown as {
+					missing(): Promise<void>;
+				};
+				await stub.missing();
+				throw new Error("Test failed");
+			} catch (e) {
+				assert(hasStack(e));
+				expect(e.stack).toMatch(/rpcUserFunction/);
+				expect(e.stack).not.toMatch(/RpcProxyHandler/);
+			}
+		}
+		await rpcUserFunction();
 	});
 	test("can access ReadableStream property multiple times", async ({
 		expect,
@@ -640,7 +921,7 @@ describe("ProxyClient", () => {
 		expect(await text(copy.body)).toBe(value);
 	});
 
-	test("can `JSON.stringify()` proxies", async ({ expect }) => {
+	test("can `JSON.stringify()` R2 objects", async ({ expect }) => {
 		const mf = new Miniflare({
 			workers: [
 				{
@@ -658,7 +939,6 @@ describe("ProxyClient", () => {
 		const bucket = await mf.getR2Bucket("BUCKET");
 		const object = await bucket.put("key", "value");
 		assert(object !== null);
-		expect(Object.getPrototypeOf(object)).toBe(null);
 		const plainObject = JSON.parse(JSON.stringify(object));
 		expect(plainObject).toEqual({
 			checksums: {
@@ -845,7 +1125,7 @@ describe("ProxyClient", () => {
 		const statusPromise = new DeferredPromise<number>();
 		const req = http.get(
 			proxyUrl,
-			{ setHost: false, headers: { "MF-Op": "GET", Host: "localhost" } },
+			{ setHost: false, headers: { "MF-Op": "CONNECT", Host: "localhost" } },
 			(res) => statusPromise.resolve(res.statusCode ?? 0)
 		);
 		req.on("error", (error) => statusPromise.reject(error));
@@ -853,17 +1133,17 @@ describe("ProxyClient", () => {
 
 		// Check validates `MF-Op-Secret` header
 		let res = await fetch(proxyUrl, {
-			headers: { "MF-Op": "GET" }, // (missing)
+			headers: { "MF-Op": "CONNECT" }, // (missing)
 		});
 		expect(res.status).toBe(401);
 		await res.arrayBuffer(); // (drain)
 		res = await fetch(proxyUrl, {
-			headers: { "MF-Op": "GET", "MF-Op-Secret": "aaaa" }, // (too short)
+			headers: { "MF-Op": "CONNECT", "MF-Op-Secret": "aaaa" }, // (too short)
 		});
 		expect(res.status).toBe(401);
 		await res.arrayBuffer(); // (drain)
 		res = await fetch(proxyUrl, {
-			headers: { "MF-Op": "GET", "MF-Op-Secret": "a".repeat(32) }, // (wrong)
+			headers: { "MF-Op": "CONNECT", "MF-Op-Secret": "a".repeat(32) }, // (wrong)
 		});
 		expect(res.status).toBe(401);
 		await res.arrayBuffer(); // (drain)

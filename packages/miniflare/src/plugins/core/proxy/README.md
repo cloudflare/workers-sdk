@@ -1,49 +1,51 @@
 # Miniflare API Proxy
 
 Miniflare provides methods for accessing bindings from Node.js, outside a
-`workerd` process. These are implemented by an API proxy that proxies accesses
-and calls to properties and methods over HTTP calls. The directory implements
-the client for this. The server is implemented as a Durable Object in
+`workerd` process. These are implemented by an API proxy that forwards accesses
+and calls over [Cap'n Web](https://github.com/cloudflare/capnweb). The directory
+implements the client for this. The server is implemented as a Durable Object in
 [`src/workers/core/proxy.worker.ts`](../../../workers/core/proxy.worker.ts).
 
 Using a Durable Object allows us to share references containing I/O objects like
-streams across requests. The Durable Object contains a "heap", mapping addresses
-to references. The "heap" is initialised with `globalThis` and `env`.
+streams across requests. The client opens a Cap'n Web WebSocket session with the
+`ProxyServer`, and gets a stub for each binding by name. Bindings are wrapped
+in a `Forwarder` by the server, which forwards property gets and method calls
+to the binding. The result of every call is wrapped in a `Forwarder` too, so
+calls can be pipelined on it without awaiting it first, whatever it is.
+Awaiting it gets its value. Cap'n Web's export table holds these objects, and
+they're released when the client disposes its stubs.
 
-The proxy client builds proxies for each object on the heap. Accessing a
-property on a proxy will result in a synchronous `GET` operation to the proxy
-server. If the property is not a method, the value will be serialised back to
-the client. Note this may involve putting more references on the "heap".
+Values are sent with a codec shared by the client and server
+([`src/workers/core/proxy-codec.ts`](../../../workers/core/proxy-codec.ts)), in
+both directions. This supports values Cap'n Web can't send itself, such as
+`Map`s, `Set`s, `File`s, custom error names, and objects with keys like
+`constructor`, so native bindings and objects that speak Workers RPC have the
+same fidelity. Large strings, bytes and `Blob`s, and large chunks of streams,
+are split into chunks, as `workerd` closes WebSockets receiving messages over
+32 MiB. Calls with more data than this left in strings and bytes are rejected
+before they're sent.
 
-If the property is a method, the client will return a function from the access.
-Future accesses to the same property key will return the same function without
-the synchronous `GET` operation. Calling this function will serialise all the
-arguments, then perform a synchronous `CALL` operation on the target, and the
-return value will be serialised back to the client. If this function returns a
-`Promise`, it will be stored on the "heap", and a reference returned. An
-asynchronous `GET` operation will then be performed to resolve the `Promise`,
-and serialise the result. If a function returns a `Promise` once, all future
-calls will send asynchronous `CALL` operations instead, that resolve the
-`Promise` without an additional round trip.
+Some objects are returned with their data, so their synchronous properties and
+methods can be implemented by the client: `R2Object`s, `R2ObjectBody`s,
+`R2MultipartUpload`s, Workflow instances and Images transformation results.
+Durable Object IDs are created by the client, and revived by the server from
+the name or string they were created with. Values synchronous APIs must return
+that only the server knows (`DurableObjectId#toString()`, IDs from
+`newUniqueId()`, and D1 sessions' `getBookmark()`) are fetched by blocking the
+main thread with `Atomics.wait()` until a worker thread receives a response.
 
-If the function call had `ReadableStream` arguments, the first will be sent
-unbuffered after the rest of the arguments. All function calls with
-`ReadableStream` or `Blob` arguments are assumed to be asynchronous. This
-assumption is required as synchronous operations block the main thread and
-prevent chunks from `ReadableStream`s being read.
+`fetch()` on `Fetcher`s and Durable Object stubs is sent with `dispatchFetch()`
+rather than Cap'n Web, using a token the server gives the client for the
+target. This gives us WebSocket support, and avoids serialising the request and
+response.
 
-If the function call threw, or returned a `Promise` that rejected, the error
-will be serialised and re-thrown/rejected in the client. Note that the stack
-trace will be updated to reflect the calling location in the client, not the
-server.
-
-To prevent unbounded growth of the "heap", all proxies are registered with a
-`FinalizationRegistry`. When the proxy is garbage collected, a `FREE` operation
-will remove the corresponding "heap" entry allowing it to be garbage collected
-on the server too.
+The sources of stubs proxies use are registered with a `FinalizationRegistry`.
+When they're garbage collected, the stubs are disposed, allowing the server to
+release the objects they point to. Proxies derived from others (e.g. for a
+property) share their source, keeping it alive. If the session closes
+unexpectedly, bindings get new stubs on a new session, but objects returned
+over the old session can no longer be used.
 
 When `workerd` is restarted with `Miniflare#setOptions()` or stopped with
-`Miniflare#dispose()`, all proxies are _poisoned_. Once a proxy is poisoned, it
-cannot be used, and must be recreated. Poisoned proxies are unregistered from
-the `FinalizationRegistry` too, as the addresses they point too will be invalid
-and shouldn't be freed again.
+`Miniflare#dispose()`, the Cap'n Web session is closed and all proxies are
+_poisoned_. Once a proxy is poisoned, it cannot be used, and must be recreated.

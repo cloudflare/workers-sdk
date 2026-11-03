@@ -1,173 +1,393 @@
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
-import { parse } from "devalue";
-import { readPrefix, reduceError } from "miniflare:shared";
+import { newWorkersWebSocketRpcResponse, RpcTarget } from "capnweb";
+import * as workers from "cloudflare:workers";
+import { reduceError } from "miniflare:shared";
+import { CoreBindings, CoreHeaders, ProxyOps } from "./constants";
 import {
-	CoreBindings,
-	CoreHeaders,
-	isFetcherFetch,
-	isImagesInput,
-	isR2ObjectWriteHttpMetadata,
-	ProxyAddresses,
-	ProxyOps,
+	PROXY_ENCODED_KEY,
+	prepareErrorForSend,
+	ProxyCodec,
+	restoreErrorName,
+} from "./proxy-codec";
+import type {
+	ProxyDurableObjectId,
+	ProxyRpcApi,
+	ProxySyncRequest,
 } from "./constants";
-import {
-	__MiniflareFunctionWrapper,
-	createHTTPReducers,
-	createHTTPRevivers,
-	parseWithReadableStreams,
-	stringifyWithStreams,
-	structuredSerializableReducers,
-	structuredSerializableRevivers,
-} from "./devalue";
-import type { PlatformImpl, ReducersRevivers } from "./devalue";
+import type { ProxyEncoded } from "./proxy-codec";
+import type { RpcStub } from "capnweb";
 
-const ENCODER = new TextEncoder();
-const DECODER = new TextDecoder();
-const ALLOWED_HOSTNAMES = ["127.0.0.1", "[::1]", "localhost"];
-
-const WORKERS_PLATFORM_IMPL: PlatformImpl<ReadableStream> = {
-	Blob,
-	File,
-	Headers,
-	Request,
-	Response,
-
-	isReadableStream(value): value is ReadableStream {
-		return value instanceof ReadableStream;
-	},
-	bufferReadableStream(stream) {
-		return new Response(stream).arrayBuffer();
-	},
-	unbufferReadableStream(buffer) {
-		const body = new Response(buffer).body;
-		assert(body !== null);
-		return body;
-	},
+// Not declared by `@cloudflare/workers-types`
+const { ServiceStub } = workers as unknown as {
+	ServiceStub: abstract new (...args: never[]) => object;
 };
 
-// Helpers taken from `devalue` (unfortunately not exported):
-// https://github.com/Rich-Harris/devalue/blob/50af63e2b2c648f6e6ea29904a14faac25a581fc/src/utils.js#L31-L51
-const objectProtoNames = Object.getOwnPropertyNames(Object.prototype)
-	.sort()
-	.join("\0");
-function isPlainObject(value: unknown) {
-	const proto = Object.getPrototypeOf(value);
-	if (value?.constructor?.name === "RpcStub") {
-		return false;
-	}
-	if (isObject(value)) {
-		const valueAsRecord = value as Record<string, unknown>;
-		if (objectContainsFunctions(valueAsRecord)) {
-			return false;
-		}
-	}
-	return (
-		proto === Object.prototype ||
-		proto === null ||
-		Object.getOwnPropertyNames(proto).sort().join("\0") === objectProtoNames
-	);
-}
-function objectContainsFunctions(
-	obj: Record<string | symbol, unknown>
-): boolean {
-	const propertyNames = Object.getOwnPropertyNames(obj);
-	const propertySymbols = Object.getOwnPropertySymbols(obj);
-	const properties = [...propertyNames, ...propertySymbols];
-
-	for (const property of properties) {
-		const entry = obj[property];
-		if (typeof entry === "function") {
-			return true;
-		}
-		if (
-			isObject(entry) &&
-			objectContainsFunctions(entry as Record<string, unknown>)
-		) {
-			return true;
-		}
-	}
-
-	return false;
-}
-
-function isObject(
-	value: unknown
-): value is Record<string | number | symbol, unknown> {
-	return !!value && typeof value === "object";
-}
-
-function getType(value: unknown) {
-	return Object.prototype.toString.call(value).slice(8, -1); // `[object <type>]`
-}
-
-function isInternal(value: unknown) {
-	return isObject(value) && value[Symbol.for("cloudflare:internal-class")];
-}
+const ALLOWED_HOSTNAMES = ["127.0.0.1", "[::1]", "localhost"];
 
 type Env = Record<string, unknown> & {
 	[CoreBindings.DATA_PROXY_SECRET]: ArrayBuffer;
 };
 
+/**
+ * @param value Object to get the class name of
+ * @returns Name of `value`'s class. Read from its prototype, as accessing any
+ * property of a Workers RPC stub (e.g. `constructor`) calls the remote object.
+ */
+function getClassName(value: object): string {
+	return Object.getPrototypeOf(value)?.constructor?.name ?? "Object";
+}
+
+/**
+ * @param value Value bound in the `ProxyServer`'s `env`
+ * @returns Whether `value` must be used through a stub. Other bindings (e.g.
+ * JSON) are provided in Node.js without the proxy.
+ */
+function isObjectBinding(value: unknown): value is object {
+	if (typeof value !== "object" || value === null) {
+		return false;
+	}
+	const proto = Object.getPrototypeOf(value);
+	return (
+		(proto !== Object.prototype && proto !== Array.prototype) ||
+		Object.values(value).some((v) => typeof v === "function")
+	);
+}
+
+/**
+ * @param object `R2Object` or `R2ObjectBody`
+ * @returns Data properties of `object`. These are all own properties, except
+ * `checksums`, whose properties must be copied out of its class.
+ */
+function getR2ObjectData(object: R2Object): Record<string, unknown> {
+	return { ...object, checksums: { ...object.checksums } };
+}
+
+/** Returned by `Forwarder#unwrap()`. Passed by reference by local calls. */
+class Unwrapped {
+	constructor(readonly target: unknown) {}
+}
+
+class ServerCodec extends ProxyCodec {
+	constructor(readonly server: ProxyServer) {
+		super();
+	}
+
+	protected encodeSpecial(value: object): unknown {
+		// Objects returned with their data, so it can be accessed synchronously
+		// by the client, which implements their synchronous methods itself
+		switch (getClassName(value)) {
+			// Internal names of `R2Object` and `R2ObjectBody`
+			case "HeadResult":
+				return this.#encodeWithData(
+					"R2Object",
+					getR2ObjectData(value as R2Object)
+				);
+			case "GetResult": {
+				const object = value as R2ObjectBody;
+				return this.#encodeWithData("R2ObjectBody", {
+					...getR2ObjectData(object),
+					body: object.body,
+				});
+			}
+			case "R2MultipartUpload": {
+				const upload = value as R2MultipartUpload;
+				return this.#encodeWithData(
+					"R2MultipartUpload",
+					{ key: upload.key, uploadId: upload.uploadId },
+					upload
+				);
+			}
+			// Name of Workflow instances in Miniflare's Workflows binding
+			case "InstanceImpl": {
+				const instance = value as WorkflowInstance;
+				return this.#encodeWithData(
+					"WorkflowInstance",
+					{ id: instance.id },
+					instance
+				);
+			}
+			// Name of results from Images binding transformations
+			case "TransformationResultImpl": {
+				const result = value as ImageTransformationResult;
+				return this.#encodeWithData("ImageTransformationResult", {
+					contentType: result.contentType(),
+					image: result.image(),
+				});
+			}
+		}
+	}
+
+	/**
+	 * @param type Type of the object
+	 * @param data Data of the object
+	 * @param target Object to forward the client's calls to, if it has methods
+	 * the client doesn't implement
+	 */
+	#encodeWithData(type: string, data: object, target?: object): ProxyEncoded {
+		const encoded: ProxyEncoded = {
+			[PROXY_ENCODED_KEY]: type,
+			value: this.encode(data),
+		};
+		if (target !== undefined) {
+			encoded.stub = new Forwarder(this.server, target);
+		}
+		return encoded;
+	}
+
+	protected encodeReference(value: object): unknown {
+		return new Forwarder(this.server, value);
+	}
+
+	decode(value: unknown): Promise<unknown> {
+		// Cap'n Web cancels streams received as arguments that haven't been read
+		// by the time the call returns, but native methods may read them later
+		// (e.g. `ImagesBinding#input()`)
+		if (value instanceof ReadableStream) {
+			return Promise.resolve(value.pipeThrough(new TransformStream()));
+		}
+		return super.decode(value);
+	}
+
+	protected decodeStub(stub: RpcStub<never>): unknown {
+		// Stubs received from the client are functions it passed as callbacks.
+		// Cap'n Web disposes them once the call returns, but Workers RPC lets the
+		// callee keep them, then calls `Symbol.dispose` once it's released them.
+		const callback = (stub as unknown as { dup(): typeof stub }).dup();
+		const call = callback as unknown as (...args: unknown[]) => unknown;
+		return Object.assign(
+			async (...args: unknown[]) => {
+				try {
+					return await this.decode(
+						await call(...(this.encode(args) as unknown[]))
+					);
+				} catch (e) {
+					restoreErrorName(e);
+					throw e;
+				}
+			},
+			{ [Symbol.dispose]: () => (callback as Disposable)[Symbol.dispose]() }
+		);
+	}
+
+	protected async decodeSpecial(encoded: ProxyEncoded): Promise<unknown> {
+		const type = encoded[PROXY_ENCODED_KEY];
+		switch (type) {
+			// Objects the client got from us. Pass the objects themselves, rather
+			// than stubs to them, so native methods accept them too.
+			case "Stub": {
+				const stub = encoded.value as RpcStub<Forwarder>;
+				return ((await stub.unwrap()) as unknown as Unwrapped).target;
+			}
+			case "DurableObjectId": {
+				const [binding, id] = encoded.value as [string, ProxyDurableObjectId];
+				return this.getDurableObjectId(binding, id);
+			}
+			// Streams sent with their length, as some APIs (e.g. `R2Bucket#put()`)
+			// reject streams without one
+			case "Stream": {
+				const [stream, length] = encoded.value as [ReadableStream, number];
+				return stream.pipeThrough(new FixedLengthStream(length));
+			}
+		}
+		assert.fail(`Unexpected encoded value type: ${type}`);
+	}
+
+	/**
+	 * @param binding Name of the Durable Object namespace binding
+	 * @param id How the ID was created by the client
+	 * @returns The Durable Object ID
+	 */
+	getDurableObjectId(
+		binding: string,
+		[kind, value]: ProxyDurableObjectId
+	): DurableObjectId {
+		const namespace = this.server.env[binding] as DurableObjectNamespace;
+		return kind === "name"
+			? namespace.idFromName(value)
+			: namespace.idFromString(value);
+	}
+}
+
+/**
+ * Cap'n Web target that forwards gets and calls to an object in `workerd`,
+ * using the codec for arguments and results. Native bindings and objects that
+ * speak Workers RPC are both used through this, so values have the same
+ * fidelity for each. Objects it holds are released by garbage collection, once
+ * the client has disposed its stubs to it.
+ */
+class Forwarder extends RpcTarget {
+	readonly #server: ProxyServer;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Forwards arbitrary property accesses and calls
+	readonly #target: any;
+	readonly #onDispose?: () => void;
+	// Resolves once the target has been called for the last call received.
+	// Targets are called in the order calls arrive, like Workers RPC, even if
+	// decoding arguments (e.g. reading large strings) takes longer for some.
+	#called: Promise<void> = Promise.resolve();
+	// Tokens for `fetch()` targets in `ProxyServer#fetchers`, by path
+	readonly #fetcherTokens = new Map<string, string>();
+
+	constructor(server: ProxyServer, target: unknown, onDispose?: () => void) {
+		super();
+		this.#server = server;
+		this.#target = target;
+		this.#onDispose = onDispose;
+	}
+
+	#follow(path: string[]): unknown {
+		let value = this.#target;
+		for (const key of path) {
+			value = value[key];
+		}
+		return value;
+	}
+
+	async get(path: string[]): Promise<unknown> {
+		await this.#called;
+		return this.#server.codec.encode(await this.#follow(path));
+	}
+
+	/**
+	 * Calls a method of the target. Returns the result in another `Forwarder`,
+	 * so the client can pipeline calls on it whatever it is, then get it if it
+	 * awaits it.
+	 */
+	async call(path: string[], args: unknown[]): Promise<Forwarder> {
+		const decodedArgs = this.#server.codec.decode(args);
+		// Wrapped, so awaiting this doesn't wait for the call's result
+		const called = Promise.all([this.#called, decodedArgs]).then(
+			([, args]) => ({ result: this.#invoke(path, args as unknown[]) })
+		);
+		this.#called = called.then(
+			() => {},
+			() => {}
+		);
+		const { result } = await called;
+		return new Forwarder(this.#server, await result);
+	}
+
+	#invoke(path: string[], args: unknown[]): unknown {
+		if (path.length === 0) {
+			return this.#target(...args);
+		}
+		const parent = this.#follow(path.slice(0, -1)) as Record<string, unknown>;
+		const method = parent[path[path.length - 1]];
+		if (typeof method !== "function") {
+			throw new TypeError(`${path.join(".")} is not a function`);
+		}
+		// Not `method.apply()`, as properties of Workers RPC stubs are remote
+		return Reflect.apply(method, parent, args);
+	}
+
+	/**
+	 * Gets a token for the target at `path` if it's a `Fetcher` or Durable
+	 * Object stub, so the client can call its `fetch()` method with
+	 * `dispatchFetch()` (see `ProxyOps.FETCH`).
+	 */
+	getFetcherToken(path: string[]): string | undefined {
+		const key = JSON.stringify(path);
+		let token = this.#fetcherTokens.get(key);
+		if (token === undefined) {
+			const target = this.#follow(path);
+			if (!(target instanceof ServiceStub)) {
+				return;
+			}
+			token = crypto.randomUUID();
+			this.#server.fetchers.set(token, target as Fetcher);
+			this.#fetcherTokens.set(key, token);
+		}
+		return token;
+	}
+
+	unwrap(): Unwrapped {
+		return new Unwrapped(this.#target);
+	}
+
+	[Symbol.dispose](): void {
+		for (const token of this.#fetcherTokens.values()) {
+			this.#server.fetchers.delete(token);
+		}
+		this.#onDispose?.();
+	}
+}
+
+/**
+ * Cap'n Web main interface, used to get stubs for bindings.
+ */
+class ProxyRpc extends RpcTarget implements ProxyRpcApi {
+	readonly #server: ProxyServer;
+
+	constructor(server: ProxyServer) {
+		super();
+		this.#server = server;
+	}
+
+	describeEnv(): Record<string, string> {
+		const types: Record<string, string> = {};
+		for (const [name, value] of Object.entries(this.#server.env)) {
+			if (isObjectBinding(value)) {
+				types[name] = getClassName(value);
+			}
+		}
+		return types;
+	}
+
+	getEnv(name: string): Forwarder {
+		const value = this.#server.env[name];
+		assert(isObjectBinding(value), `Expected ${name} to be an object`);
+		return new Forwarder(this.#server, value);
+	}
+
+	getCaches(): Forwarder {
+		return new Forwarder(this.#server, caches);
+	}
+
+	getD1Session(
+		binding: string,
+		constraint: string | undefined,
+		token: string
+	): Forwarder {
+		const server = this.#server;
+		const session = server.getD1Session(binding, constraint, token);
+		return new Forwarder(server, session, () => server.deleteD1Session(token));
+	}
+}
+
 // TODO(someday): extract `ProxyServer` into component that could be used by
 //  other (user) Durable Objects
 export class ProxyServer implements DurableObject {
-	nextHeapAddress = ProxyAddresses.USER_START;
-	readonly heap = new Map<number, unknown>();
-
-	reducers: ReducersRevivers = {
-		...structuredSerializableReducers,
-		...createHTTPReducers(WORKERS_PLATFORM_IMPL),
-		// Corresponding revivers in `ProxyClient`
-		// `Native` reducer *MUST* be applied last
-		Native: (value) => {
-			// For instances of runtime API classes implemented in C++, `getType()`
-			// should only ever return `Object`, as none override `Symbol.toStringTag`
-			// https://tc39.es/ecma262/multipage/fundamental-objects.html#sec-object.prototype.tostring
-			const type = getType(value);
-			if (
-				((type === "Object" || isInternal(value)) && !isPlainObject(value)) ||
-				type === "Promise"
-			) {
-				const address = this.nextHeapAddress++;
-				this.heap.set(address, value);
-				assert(value !== null);
-				const name = value?.constructor.name;
-				const isFunction = value instanceof __MiniflareFunctionWrapper;
-				return [address, name, isFunction];
-			}
-		},
-	};
-	revivers: ReducersRevivers = {
-		...structuredSerializableRevivers,
-		...createHTTPRevivers(WORKERS_PLATFORM_IMPL),
-		// Corresponding reducers in `ProxyClient`
-		Native: (value) => {
-			assert(Array.isArray(value));
-			const [address] = value as unknown[];
-			assert(typeof address === "number");
-			const heapValue = this.heap.get(address);
-			assert(heapValue !== undefined);
-			// We should only store `Promise`s on the heap if we attempted to make a
-			// synchronous GET/CALL that then returned a `Promise`. In that case,
-			// we'll immediately make an asynchronous GET to resolve the `Promise`.
-			// Rather than worrying about cleaning up `Promise`s some other way, we
-			// just remove them from the heap immediately, since we should never make
-			// a request to resolve them again.
-			if (heapValue instanceof Promise) {
-				this.heap.delete(address);
-			}
-			return heapValue;
-		},
-	};
-	nativeReviver: ReducersRevivers = { Native: this.revivers.Native };
+	readonly codec = new ServerCodec(this);
+	// `fetch()` targets, by the token the client identifies them with
+	readonly fetchers = new Map<string, Fetcher>();
+	// D1 sessions created by the client, by the token it identifies them with
+	readonly #d1Sessions = new Map<string, D1DatabaseSession>();
 
 	constructor(
 		_state: DurableObjectState,
 		readonly env: Env
-	) {
-		this.heap.set(ProxyAddresses.GLOBAL, globalThis);
-		this.heap.set(ProxyAddresses.ENV, env);
+	) {}
+
+	/**
+	 * Gets a D1 session for the client, creating it if this is the first
+	 * request for `token`. Requests for its bookmark may arrive before the
+	 * Cap'n Web call creating it, as they're sent on another connection.
+	 */
+	getD1Session(
+		binding: string,
+		constraint: string | undefined,
+		token: string
+	): D1DatabaseSession {
+		let session = this.#d1Sessions.get(token);
+		if (session === undefined) {
+			session = (this.env[binding] as D1Database).withSession(constraint);
+			this.#d1Sessions.set(token, session);
+		}
+		return session;
+	}
+
+	deleteD1Session(token: string): void {
+		this.#d1Sessions.delete(token);
 	}
 
 	async fetch(request: Request) {
@@ -212,222 +432,62 @@ export class ProxyServer implements DurableObject {
 		}
 
 		const opHeader = request.headers.get(CoreHeaders.OP);
-		const targetHeader = request.headers.get(CoreHeaders.OP_TARGET);
-		const keyHeader = request.headers.get(CoreHeaders.OP_KEY);
-		const allowAsync = request.headers.get(CoreHeaders.OP_SYNC) === null;
-		const argsSizeHeader = request.headers.get(CoreHeaders.OP_STRINGIFIED_SIZE);
-		const contentLengthHeader = request.headers.get("Content-Length");
-
-		// Get target to perform operations on
-		if (targetHeader === null) {
-			return new Response(null, { status: 400 });
+		if (opHeader === ProxyOps.CONNECT) {
+			return newWorkersWebSocketRpcResponse(request, new ProxyRpc(this), {
+				onSendError: prepareErrorForSend,
+			});
 		}
-
-		// If this is a FREE operation, remove the target(s) from the heap
-		if (opHeader === ProxyOps.FREE) {
-			for (const targetValue of targetHeader.split(",")) {
-				const targetAddress = parseInt(targetValue);
-				assert(!Number.isNaN(targetAddress));
-				this.heap.delete(targetAddress);
-			}
-			return new Response(null, { status: 204 });
+		if (opHeader === ProxyOps.SYNC) {
+			return Response.json(this.#sync(await request.json()));
 		}
-
-		// Revive the target from the heap
-		const target: Record<string, unknown> = parse(
-			targetHeader,
-			this.nativeReviver
-		);
-		const targetName = target.constructor.name;
-
-		let status = 200;
-		let result: unknown;
-		let unbufferedRest: ReadableStream | undefined;
-		let rpcAwaited = false;
-		if (opHeader === ProxyOps.GET) {
-			// If no key header is specified, just return the target
-			result = keyHeader === null ? target : target[keyHeader];
-
-			// Immediately resolve all RpcProperties
-			if (result?.constructor.name === "RpcProperty") {
-				result = await result;
-			}
-
-			if (typeof result === "function") {
-				// Calling functions-which-return-functions not yet supported
-				return new Response(null, {
-					status: 204,
-					headers: { [CoreHeaders.OP_RESULT_TYPE]: "Function" },
-				});
-			}
-		} else if (opHeader === ProxyOps.GET_OWN_DESCRIPTOR) {
-			if (keyHeader === null) {
-				return new Response(null, { status: 400 });
-			}
-			const descriptor = Object.getOwnPropertyDescriptor(target, keyHeader);
-			if (descriptor !== undefined) {
-				result = <PropertyDescriptor>{
-					configurable: descriptor.configurable,
-					enumerable: descriptor.enumerable,
-					writable: descriptor.writable,
-				};
-			}
-		} else if (opHeader === ProxyOps.GET_OWN_KEYS) {
-			result = Object.getOwnPropertyNames(target);
-		} else if (opHeader === ProxyOps.CALL) {
-			assert(keyHeader !== null);
-			const func = target[keyHeader];
-			assert(typeof func === "function");
-
-			// See `isFetcherFetch()` comment for why this special
-			if (isFetcherFetch(targetName, keyHeader)) {
-				const originalUrl =
-					request.headers.get(CoreHeaders.OP_ORIGINAL_URL) ??
-					request.headers.get(CoreHeaders.ORIGINAL_URL);
-				const url = new URL(originalUrl ?? request.url);
-				// Create a new request to allow header mutation and use original URL
-				request = new Request(url, request);
-				request.headers.delete(CoreHeaders.OP_SECRET);
-				request.headers.delete(CoreHeaders.OP);
-				request.headers.delete(CoreHeaders.OP_TARGET);
-				request.headers.delete(CoreHeaders.OP_KEY);
-				request.headers.delete(CoreHeaders.OP_ORIGINAL_URL);
-				request.headers.delete(CoreHeaders.ORIGINAL_URL);
-				request.headers.delete(CoreHeaders.DISABLE_PRETTY_ERROR);
-				return func.call(target, request);
-			}
-
-			let args: unknown;
-			if (argsSizeHeader === null || argsSizeHeader === contentLengthHeader) {
-				// No unbuffered `ReadableStream`
-				args = parseWithReadableStreams(
-					WORKERS_PLATFORM_IMPL,
-					{ value: await request.text() },
-					this.revivers
-				);
-			} else {
-				// Unbuffered `ReadableStream` argument
-				const argsSize = parseInt(argsSizeHeader);
-				assert(!Number.isNaN(argsSize));
-				assert(request.body !== null);
-				// If the client sent the stream's length, restore it on the rest of
-				// the request body, as some APIs (e.g. `R2Bucket#put()`) reject
-				// streams without one.
-				const streamSizeHeader = request.headers.get(
-					CoreHeaders.OP_STREAM_SIZE
-				);
-				let restTransform: IdentityTransformStream | undefined;
-				if (streamSizeHeader !== null) {
-					const streamSize = parseInt(streamSizeHeader);
-					assert(!Number.isNaN(streamSize));
-					restTransform = new FixedLengthStream(streamSize);
-				}
-				const [encodedArgs, rest] = await readPrefix(
-					request.body,
-					argsSize,
-					restTransform
-				);
-				unbufferedRest = rest;
-				const stringifiedArgs = DECODER.decode(encodedArgs);
-				args = parseWithReadableStreams(
-					WORKERS_PLATFORM_IMPL,
-					{ value: stringifiedArgs, unbufferedStream: rest },
-					this.revivers
-				);
-			}
-			assert(Array.isArray(args));
-			try {
-				// See #createMediaProxy() for why this is special
-				if (isImagesInput(targetName, keyHeader)) {
-					let transform = func.apply(target, [args[0]]);
-					for (const operation of args[1]) {
-						transform = transform[operation.type](...operation.arguments);
-					}
-					// We intentionally don't await this `output()` call so that it's treated as a regular promise
-					result = transform.output(args[2]);
-				} else if (["RpcProperty", "RpcStub"].includes(func.constructor.name)) {
-					// let's resolve RpcPromise instances right away (to support serialization)
-					result = await func(...args);
-					// Mark that we've awaited this RPC call, so we set the Promise header below
-					rpcAwaited = true;
-				} else {
-					result = func.apply(target, args);
-				}
-
-				// See `isR2ObjectWriteHttpMetadata()` comment for why this special
-				if (isR2ObjectWriteHttpMetadata(targetName, keyHeader)) {
-					result = args[0];
-				}
-			} catch (e) {
-				status = 500;
-				result = e;
-			}
-		} else {
-			return new Response(null, { status: 404 });
+		if (opHeader === ProxyOps.FETCH) {
+			return this.#fetchTarget(request);
 		}
+		return new Response(null, { status: 400 });
+	}
 
-		const headers = new Headers();
-		if (allowAsync && (result instanceof Promise || rpcAwaited)) {
-			// Note we only resolve `Promise`s if we're allowing async operations.
-			// Otherwise, we'll treat the `Promise` as a native target. This allows
-			// us to use regular HTTP status/headers to indicate whether the `Promise`
-			// resolved/rejected and whether the body should be interpreted as a raw
-			// `ReadableStream`. Otherwise, we'd need to devise an encoding scheme for
-			// this in the body.
-			try {
-				result = await result;
-			} catch (e) {
-				status = 500;
-				result = e;
+	#sync(request: ProxySyncRequest): unknown {
+		switch (request.type) {
+			case "DurableObjectId#toString":
+				return this.codec
+					.getDurableObjectId(request.binding, request.id)
+					.toString();
+			case "DurableObjectNamespace#newUniqueId": {
+				const namespace = this.env[request.binding] as DurableObjectNamespace;
+				return namespace
+					.newUniqueId(
+						request.options as DurableObjectNamespaceNewUniqueIdOptions
+					)
+					.toString();
 			}
-			headers.append(CoreHeaders.OP_RESULT_TYPE, "Promise");
-		}
-		// Make sure we fully-consume the request body if it wasn't used (e.g. key
-		// validation failed). Without this, we'll get a `TypeError: Can't read from
-		// request stream after response has been sent.`
-		// TODO(soon): remove once https://github.com/cloudflare/workerd/issues/918 fixed
-		if (unbufferedRest !== undefined && !unbufferedRest.locked) {
-			try {
-				await unbufferedRest.pipeTo(new WritableStream());
-			} catch {}
-		}
-		if (result instanceof ReadableStream) {
-			// If this was also a resolve `Promise`, the result type header will end
-			// up as "Promise, ReadableStream"
-			headers.append(CoreHeaders.OP_RESULT_TYPE, "ReadableStream");
-			return new Response(result, { status, headers });
-		} else {
-			const stringified = await stringifyWithStreams(
-				WORKERS_PLATFORM_IMPL,
-				result,
-				this.reducers,
-				/* allowUnbufferedStream */ allowAsync
-			);
-			if (stringified.unbufferedStream === undefined) {
-				return new Response(stringified.value, { status, headers });
-			} else {
-				const body = new IdentityTransformStream();
-				const encodedValue = ENCODER.encode(stringified.value);
-				const encodedSize = encodedValue.byteLength.toString();
-				headers.set(CoreHeaders.OP_STRINGIFIED_SIZE, encodedSize);
-				void this.#writeWithUnbufferedStream(
-					body.writable,
-					encodedValue,
-					stringified.unbufferedStream
-				);
-				return new Response(body.readable, { status, headers });
-			}
+			case "D1DatabaseSession#getBookmark":
+				return this.getD1Session(
+					request.binding,
+					request.constraint,
+					request.token
+				).getBookmark();
 		}
 	}
 
-	async #writeWithUnbufferedStream(
-		writable: WritableStream,
-		encodedValue: Uint8Array,
-		unbufferedStream: ReadableStream
-	) {
-		const writer = writable.getWriter();
-		await writer.write(encodedValue);
-		writer.releaseLock();
-		await unbufferedStream.pipeTo(writable);
+	#fetchTarget(request: Request) {
+		const token = request.headers.get(CoreHeaders.OP_TARGET);
+		const fetcher = token === null ? undefined : this.fetchers.get(token);
+		if (fetcher === undefined) {
+			return new Response(null, { status: 400 });
+		}
+
+		const originalUrl =
+			request.headers.get(CoreHeaders.OP_ORIGINAL_URL) ??
+			request.headers.get(CoreHeaders.ORIGINAL_URL);
+		const url = new URL(originalUrl ?? request.url);
+		// Create a new request to allow header mutation and use original URL
+		request = new Request(url, request);
+		request.headers.delete(CoreHeaders.OP_SECRET);
+		request.headers.delete(CoreHeaders.OP);
+		request.headers.delete(CoreHeaders.OP_TARGET);
+		request.headers.delete(CoreHeaders.OP_ORIGINAL_URL);
+		request.headers.delete(CoreHeaders.ORIGINAL_URL);
+		request.headers.delete(CoreHeaders.DISABLE_PRETTY_ERROR);
+		return fetcher.fetch(request);
 	}
 }
