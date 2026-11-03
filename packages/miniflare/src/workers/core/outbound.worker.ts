@@ -17,7 +17,9 @@ import { CoreBindings, CoreHeaders } from "./constants";
 import type { RequestInitCfPropertiesImage } from "@cloudflare/workers-types/experimental";
 
 interface Env {
-	MINIFLARE_LOCAL_IDENTITY?: Fetcher;
+	LOCAL_IDENTITY_ROUTER?: Fetcher;
+	LOCAL_IDENTITY_ORIGINS?: string[];
+	LOCAL_IDENTITY_DIRECTORY?: string;
 	CF_WORKER_ZONE: string;
 	STRIP_CF_CONNECTING_IP: boolean;
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
@@ -29,11 +31,18 @@ let warnedLowFidelity = false;
 
 export default {
 	async fetch(request, env: Env) {
+		const url = new URL(request.url);
 		if (
-			env.MINIFLARE_LOCAL_IDENTITY &&
-			new URL(request.url).hostname.endsWith(".identity.local")
-		)
-			return env.MINIFLARE_LOCAL_IDENTITY.fetch(request);
+			env.LOCAL_IDENTITY_ROUTER &&
+			(env.LOCAL_IDENTITY_ORIGINS?.includes(url.origin) ||
+				url.hostname.endsWith(".identity.local") ||
+				(url.protocol === "https:" && url.hostname.endsWith(".local.test")) ||
+				(url.protocol === "https:" &&
+					!url.port &&
+					url.hostname.endsWith(`.${env.LOCAL_IDENTITY_DIRECTORY}`)))
+		) {
+			return env.LOCAL_IDENTITY_ROUTER.fetch(request);
+		}
 		const image = (
 			request.cf as { image?: RequestInitCfPropertiesImage } | undefined
 		)?.image;

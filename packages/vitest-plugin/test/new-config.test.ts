@@ -313,3 +313,26 @@ test("binds a Durable Object exported by the Worker itself", async ({
 
 	await expect(result.exitCode).resolves.toBe(0);
 });
+
+test("issues real local credentials through cloudflare:test without cloud auth", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
+	await seed({
+		"vitest.config.mts": vitestConfig({ experimental: { newConfig: true } }),
+		"cloudflare.config.ts": `export default {worker:{name:'identity-vitest',compatibilityDate:'2026-07-01',entrypoint:'./index.ts',env:{IDENTITY:{type:'identity',audience:'urn:vitest'}}}};`,
+		"index.ts":
+			"export default {fetch(){return new Response('identity test')}};",
+		"index.test.ts": `import {env} from 'cloudflare:test';import {it} from 'vitest';
+   it('verifies local issuer signatures',async({expect})=>{
+    const token=await env.IDENTITY.getToken();const c=JSON.parse(atob(token.split('.')[1].replaceAll('-','+').replaceAll('_','/')));
+    expect(c.execution).toBe('local');expect(c.aud).toBe('urn:vitest');
+    const jwks=await(await fetch(c.iss+'/.well-known/jwks.json')).json();
+    const key=await crypto.subtle.importKey('jwk',jwks.keys[0],{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['verify']);
+    expect(await crypto.subtle.verify('RSASSA-PKCS1-v1_5',key,Uint8Array.from(atob(token.split('.')[2].replaceAll('-','+').replaceAll('_','/')),c=>c.charCodeAt(0)),new TextEncoder().encode(token.split('.').slice(0,2).join('.')))).toBe(true);
+   });`,
+	});
+	const result = await vitestRun();
+	await expect(result.exitCode).resolves.toBe(0);
+});

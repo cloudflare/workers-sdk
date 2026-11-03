@@ -40,13 +40,13 @@ const forwardedGrant: Promise<string> = forwarded.getAuthorizationGrant({
 });
 void [defaultIdentity, agentToken, forwardedGrant];
 // @ts-expect-error Saved connections are not implemented by workload bindings.
-env.IDENTITY.getIdentity({ customerId: "acme", connectionId: "conn_1" });
+void env.IDENTITY.getIdentity({ customerId: "acme", connectionId: "conn_1" });
 // @ts-expect-error Agent selection does not accept a second positional argument.
-env.IDENTITY.getIdentity("agent_17", { connectionId: "conn_1" });
+void env.IDENTITY.getIdentity("agent_17", { connectionId: "conn_1" });
 // @ts-expect-error Forwarding fixes the actor and does not permit reselection.
 forwarded.getIdentity("agent_18");
 // @ts-expect-error Token issuance cannot select a different actor.
-namedIdentity.getToken({ agentId: "agent_18" });
+void namedIdentity.getToken({ agentId: "agent_18" });
 
 // The full API restriction matrix belongs to workerd's types/test/types/oidc.ts.
 // This test covers the config inference and Service<Relay> mapping.
@@ -64,7 +64,7 @@ void [clientId, assertion];
 const algorithm: "ES256" | "Ed25519" = metadata.token_endpoint_auth_signing_alg;
 const publicY: string | undefined = metadata.jwks.keys[0]?.y;
 void [algorithm, publicY];
-identity.getClientAssertion({
+void identity.getClientAssertion({
 	clientId: "provider-id",
 	audience: "https://auth.example",
 	// @ts-expect-error The service chooses the client signing algorithm.

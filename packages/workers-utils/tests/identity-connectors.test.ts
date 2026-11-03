@@ -1,7 +1,8 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { it, vi } from "vitest";
+import { removeDir } from "../src/fs-helpers";
 import {
 	IdentityConnectorProvisioning,
 	IdentityConnectorFileStateStore,
@@ -15,7 +16,7 @@ const permissions = {
 	scope: ["read"],
 	resources: [{ origin: "https://api.example", methods: ["GET" as const] }],
 };
-const binding: ConnectionBindingConfig = {
+const binding = {
 	binding: "APP",
 	...permissions,
 	oauth: {
@@ -31,7 +32,7 @@ const binding: ConnectionBindingConfig = {
 			authentication: "none",
 		},
 	},
-};
+} satisfies ConnectionBindingConfig;
 function fixture() {
 	let state: IdentityConnectorState | undefined;
 	const record = { id, revision: 1, permissions };
@@ -64,8 +65,9 @@ it("dry-run has no remote methods or retained-state writes", async ({
 		"create"
 	);
 	expect(await f.store.read()).toBeUndefined();
-	for (const method of Object.values(f.client))
+	for (const method of Object.values(f.client)) {
 		expect(method).not.toHaveBeenCalled();
+	}
 });
 it("recovers a lost create response on another runner and retains the resource after upload failure", async ({
 	expect,
@@ -136,7 +138,7 @@ it("rejects changed unresolved setup and broader attachment authority", async ({
 		f.apply.apply(
 			{
 				...binding,
-				oauth: { ...binding.oauth!, resource: "https://api.example/other" },
+				oauth: { ...binding.oauth, resource: "https://api.example/other" },
 			},
 			"issues"
 		)
@@ -173,6 +175,6 @@ it("persists atomic file state and serializes competing local apply attempts", a
 		);
 		await withIdentityConnectorState(file, async () => undefined);
 	} finally {
-		await rm(dir, { recursive: true, force: true });
+		await removeDir(dir);
 	}
 });

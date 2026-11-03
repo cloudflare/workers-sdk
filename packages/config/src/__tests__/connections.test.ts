@@ -28,8 +28,9 @@ it("preserves account connector attachment metadata and rejects protected fields
 		{
 			inspection_resources: [{ url: "https://evil.example", methods: ["GET"] }],
 		},
-	])
+	]) {
 		expect(isIdentityBinding({ ...valid, ...extra })).toBe(false);
+	}
 });
 
 it("validates inline setup independently from narrowed attachment permissions", ({
@@ -62,6 +63,18 @@ it("validates inline setup independently from narrowed attachment permissions", 
 		resources: [{ url: "https://api.example/items?limit=1", methods: ["GET"] }],
 	};
 	expect(isIdentityBinding(input)).toBe(true);
+	const { resource: _resource, ...withoutIndicator } = oauth;
+	expect(isIdentityBinding({ ...input, oauth: withoutIndicator })).toBe(true);
+	for (const resource of [
+		"",
+		null,
+		"http://api.example",
+		"https://api.example/#fragment",
+	]) {
+		expect(isIdentityBinding({ ...input, oauth: { ...oauth, resource } })).toBe(
+			false
+		);
+	}
 	expect(
 		isIdentityBinding({
 			...input,
@@ -90,6 +103,7 @@ it("validates inline setup independently from narrowed attachment permissions", 
 			},
 		},
 		{ oauth: { ...oauth, authorization_parameters: { state: "override" } } },
-	])
+	]) {
 		expect(isIdentityBinding({ ...input, ...patch })).toBe(false);
+	}
 });

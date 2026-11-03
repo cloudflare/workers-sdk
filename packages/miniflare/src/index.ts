@@ -91,6 +91,11 @@ import {
 } from "./plugins/core";
 import { ContainerPrivilegesCache } from "./plugins/core/container";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
+import {
+	createLocalIdentityGraph,
+	type LocalIdentityGraph,
+	type LocalIdentityMetadata,
+} from "./plugins/core/local-identity";
 import { isModuleFallbackRequest } from "./plugins/core/module-fallback";
 import { writeTempFile } from "./plugins/core/temp-file";
 import { HyperdriveProxyController } from "./plugins/hyperdrive/hyperdrive-proxy";
@@ -872,6 +877,7 @@ export class Miniflare {
 	// Object storage. Note this may not exist, it's up to the consumers to
 	// create this if needed. Deleted on `dispose()`.
 	readonly #tmpPath: string;
+	#localIdentity?: LocalIdentityGraph;
 
 	// Mutual exclusion lock for runtime operations (i.e. initialisation and
 	// updating config). This essentially puts initialisation and future updates
@@ -999,6 +1005,9 @@ export class Miniflare {
 		this.#runtime = new Runtime();
 		this.#removeExitHook = exitHook(() => {
 			void this.#runtime?.dispose();
+			// Runtime disposal sends SIGKILL synchronously. Release ownership only
+			// after that request; async cleanup cannot run during process exit.
+			this.#localIdentity?.disposeSync();
 			// This exit hook is synchronous — the event loop will never run again
 			// after it returns, so any operation that schedules a microtask (like
 			// fs.promises.rm) will never even be executed, let alone completed.
@@ -1989,7 +1998,15 @@ export class Miniflare {
 
 		await this.#loadExternalPlugins(this.#workerOpts);
 
-		sharedOpts.cf = await setupCf(this.#log, sharedOpts.cf);
+		const localIdentityEnabled = this.#workerOpts.some(
+			({ config }) =>
+				getEnvBindingsOfType(config, "identity").length ||
+				config.compatibilityFlags?.includes("enable_workload_identity_context")
+		);
+		sharedOpts.cf = await setupCf(
+			this.#log,
+			sharedOpts.cf ?? (localIdentityEnabled ? false : undefined)
+		);
 		this.#cfObject = sharedOpts.cf;
 
 		const { workerOpts: allWorkerOpts, externalServices } =
@@ -2010,7 +2027,25 @@ export class Miniflare {
 		const workerNames = [...allWorkerRoutes.keys()];
 
 		// Use Map to dedupe services by name
-		const services = new Map<string, Service>();
+		const previousIdentity = this.#localIdentity;
+		this.#localIdentity = await createLocalIdentityGraph(
+			this.#workerOpts,
+			sharedOpts,
+			this.#tmpPath,
+			allWorkerRoutes
+		);
+		if (
+			previousIdentity &&
+			previousIdentity.directory !== this.#localIdentity?.directory
+		) {
+			await previousIdentity.dispose();
+		}
+		const services = new Map<string, Service>(
+			this.#localIdentity?.services.map((service) => {
+				assert(service.name);
+				return [service.name, service];
+			})
+		);
 		const extensions: Extension[] = [
 			{
 				modules: [
@@ -2145,6 +2180,7 @@ export class Miniflare {
 				"options" | "sharedOptions" | "devRegistryEnabled"
 			> = {
 				log: this.#log,
+				localIdentity: this.#localIdentity,
 				workerBindings,
 				workerIndex,
 				additionalModules,
@@ -3269,6 +3305,14 @@ export class Miniflare {
 		}
 	}
 
+	/** Return public local issuer, subjects, revisions, and route metadata. */
+	async getLocalIdentity(): Promise<LocalIdentityMetadata | undefined> {
+		await this.ready;
+		return this.#localIdentity
+			? structuredClone(this.#localIdentity.metadata)
+			: undefined;
+	}
+
 	async getBindings<Env = Record<string, unknown>>(
 		workerName?: string
 	): Promise<Env> {
@@ -3741,6 +3785,7 @@ export class Miniflare {
 		}
 
 		const runtimeCleanupOutcome = await runtimeDisposeOutcome;
+		await this.#localIdentity?.dispose();
 		try {
 			await this.#artifactsController.dispose();
 		} catch (error) {
@@ -3934,3 +3979,5 @@ export type {
 	V4WorkerOptionsShape,
 	V4WorkerdStructuredLog,
 } from "./config/v4-schema";
+
+export type { LocalIdentityMetadata } from "./plugins/core/local-identity";

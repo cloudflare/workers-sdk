@@ -66,6 +66,7 @@ export type QueueProducers = Map<string, z.infer<typeof QueueProducerSchema>>;
 export type QueueConsumers = Map<string, z.infer<typeof QueueConsumerSchema>>;
 
 export interface PluginServicesOptions {
+	localIdentity?: import("../core/local-identity").LocalIdentityGraph;
 	log: Log;
 	options: ParsedWorkerOptions;
 	sharedOptions: ParsedInstanceOptions;

@@ -855,7 +855,7 @@ keys. HTTP caller verification uses the same private verifier channel as the run
 Identity bindings also support app/customer saved accounts through a generic local
 broker, authorization server and API fixture. Configure the ordinary binding;
 no application adapter or provisioning harness is needed. Local realms and encrypted
-broker state persist under the Miniflare persistence directory. A new directory
+broker state persist under a project-scoped realm in the Miniflare persistence directory. One runtime owns that state; stop it before starting another. Stale ownership requires explicit recovery after all owners stop. Keep authority keys and replay storage together. A new directory
 creates a new realm. Corrupt authority state fails rather than silently rotating keys.
 
 The deterministic fixture uses `https://as.identity.local` and

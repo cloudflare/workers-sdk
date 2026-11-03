@@ -14,7 +14,7 @@ import {
 } from "@cloudflare/workers-utils/oidc";
 import SCRIPT_ROUTER from "worker:core/identity-router";
 import { withPersistRootStartupLock } from "../../shared/persist-root-lock";
-import { getEnvBindingsOfType, getPersistPath } from "../shared";
+import { getEnvBindingsOfType } from "../shared";
 import { IDENTITY_SERVICE_BUNDLES } from "./identity-services.generated";
 import type {
 	ParsedInstanceOptions,
@@ -42,8 +42,9 @@ export async function getLocalIdentityVerifier(
 		!options.config.compatibilityFlags?.includes(
 			"enable_workload_identity_context"
 		)
-	)
+	) {
 		return undefined;
+	}
 	const local = await authority(shared);
 	return {
 		name: serviceName("verifier"),
@@ -60,7 +61,7 @@ export async function getLocalIdentityVerifier(
 	};
 }
 interface Authority {
-	version: 1;
+	version: 2;
 	realm: string;
 	accountId: string;
 	oidc: { privateKey: string; publicKey: string };
@@ -70,15 +71,25 @@ interface Authority {
 	credential: string;
 }
 const authorities = new WeakMap<ParsedInstanceOptions, Promise<Authority>>();
+const authorityDirectories = new WeakMap<ParsedInstanceOptions, string>();
+export function getLocalIdentityAuthority(
+	options: ParsedInstanceOptions,
+	directory: string
+): Promise<Authority> {
+	authorityDirectories.set(options, directory);
+	return authority(options);
+}
 function validAuthority(raw: unknown): raw is Authority {
-	if (!raw || typeof raw !== "object") return false;
+	if (!raw || typeof raw !== "object") {
+		return false;
+	}
 	const value = raw as Partial<Authority>;
 	const key = (v: unknown, encoding: BufferEncoding) =>
 		typeof v === "string" &&
 		Buffer.from(v, encoding).length === 32 &&
 		Buffer.from(v, encoding).toString(encoding) === v;
 	if (
-		value.version !== 1 ||
+		value.version !== 2 ||
 		typeof value.realm !== "string" ||
 		!/^[a-f0-9]{32}$/.test(value.realm) ||
 		typeof value.accountId !== "string" ||
@@ -90,8 +101,9 @@ function validAuthority(raw: unknown): raw is Authority {
 				v.length === 2 &&
 				v.every((k) => key(k, "base64url"))
 		)
-	)
+	) {
 		return false;
+	}
 	try {
 		return (
 			[value.oidc, value.wag].every((pair) => {
@@ -99,8 +111,9 @@ function validAuthority(raw: unknown): raw is Authority {
 					!pair ||
 					typeof pair.privateKey !== "string" ||
 					typeof pair.publicKey !== "string"
-				)
+				) {
 					return false;
+				}
 				const privateKey = createPrivateKey(pair.privateKey);
 				return (
 					privateKey.asymmetricKeyType === "rsa" &&
@@ -134,22 +147,26 @@ function authority(options: ParsedInstanceOptions): Promise<Authority> {
 	let result = authorities.get(options);
 	if (!result) {
 		result = (async () => {
-			const directory = options.isolatedResourcePersistencePath
-				? path.resolve(options.isolatedResourcePersistencePath, "identity")
-				: undefined;
+			const directory =
+				authorityDirectories.get(options) ??
+				(options.isolatedResourcePersistencePath
+					? path.resolve(options.isolatedResourcePersistencePath, "identity")
+					: undefined);
 			return withPersistRootStartupLock(directory, async () => {
 				const file = directory && path.join(directory, "authority.json");
 				if (file) {
 					try {
-						if ((await fs.stat(file)).size > 32768)
+						if ((await fs.stat(file)).size > 32768) {
 							throw new Error(
 								"Local identity authority exceeds its size limit."
 							);
+						}
 						const raw: unknown = JSON.parse(await fs.readFile(file, "utf8"));
-						if (!validAuthority(raw))
+						if (!validAuthority(raw)) {
 							throw new Error(
 								"Unsupported local identity authority. Reset the identity directory to start a new isolated realm."
 							);
+						}
 						await fs.chmod(file, 0o600);
 						return raw;
 					} catch (error) {
@@ -157,13 +174,14 @@ function authority(options: ParsedInstanceOptions): Promise<Authority> {
 							!(error instanceof Error) ||
 							!("code" in error) ||
 							error.code !== "ENOENT"
-						)
+						) {
 							throw error;
+						}
 					}
 				}
 				const [oidc, wag] = await Promise.all([keyPair(), keyPair()]);
 				const fresh: Authority = {
-					version: 1,
+					version: 2,
 					realm: randomBytes(16).toString("hex"),
 					accountId: randomBytes(16).toString("hex"),
 					oidc,
@@ -227,13 +245,16 @@ export async function getLocalIdentityBindings(
 	shared: ParsedInstanceOptions
 ): Promise<Worker_Binding[]> {
 	const bindings = getEnvBindingsOfType(options.config, "identity");
-	if (!bindings.length) return [];
+	if (!bindings.length) {
+		return [];
+	}
 	const local = await authority(shared);
 	return bindings.map(([name, binding]) => {
 		const { type: _type, ...limits } = binding;
 		const input = { ...limits, binding: name };
-		if (!isIdentityBinding(input))
+		if (!isIdentityBinding(input)) {
 			throw new Error(`Invalid identity binding ${name}.`);
+		}
 		const origin = {
 			accountId: local.accountId,
 			workerId: createHash("sha256")
@@ -306,10 +327,11 @@ function localIdentityCallback(shared: ParsedInstanceOptions): string {
 		callbackURL.search ||
 		callbackURL.hash ||
 		callbackURL.pathname !== "/cdn-cgi/local/identity/oauth/callback"
-	)
+	) {
 		throw new Error(
 			"MINIFLARE_IDENTITY_CALLBACK_URL must name the local /cdn-cgi/local/identity/oauth/callback route."
 		);
+	}
 	return callbackURL.href;
 }
 export async function getLocalIdentityServices(
@@ -317,14 +339,15 @@ export async function getLocalIdentityServices(
 	shared: ParsedInstanceOptions,
 	tmpPath: string
 ): Promise<Service[]> {
-	if (!usesLocalIdentity(options)) return [];
+	if (!usesLocalIdentity(options)) {
+		return [];
+	}
 	const local = await authority(shared);
-	const issuer = `https://${local.realm}.identity.local`;
-	const directory = `${local.realm}.wba.identity.local`;
-	const storage = getPersistPath(
-		"identity/storage",
-		tmpPath,
-		shared.isolatedResourcePersistencePath
+	const issuer = `https://oidc.${local.realm}.test`;
+	const directory = `wba.${local.realm}.test`;
+	const storage = path.join(
+		authorityDirectories.get(shared) ?? path.join(tmpPath, "identity"),
+		"storage"
 	);
 	await fs.mkdir(storage, { recursive: true, mode: 0o700 });
 	const callback = localIdentityCallback(shared);

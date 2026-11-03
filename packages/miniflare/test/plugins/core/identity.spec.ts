@@ -1,288 +1,204 @@
-import { createPublicKey, verify } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
+import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
+import { createInterface } from "node:readline";
+import { removeDir } from "@cloudflare/workers-utils";
 import { Miniflare, Response, convertV4MiniflareOptions } from "miniflare";
 import { test, vi } from "vitest";
-import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
-import type { JsonWebKey } from "node:crypto";
+import { singleModuleManifest, useDispose } from "../../test-shared";
 
 for (const legacy of [false, true]) {
-	test(`source-built local issuance and discovery (${legacy ? "legacy" : "config"})`, async ({
+	test(`issues and verifies actual local JWTs without a cloud request (${legacy ? "legacy" : "config"})`, async ({
 		expect,
 	}) => {
-		const identity = {
-			audience: "urn:local-receiver",
-			authorization_grants: {
-				allowed_authorization_servers: ["https://as.identity.local"],
-				allowed_scopes: ["read"],
-			},
-			request_signing: {
-				allowed_origins: ["https://api.identity.local"],
-				allowed_methods: ["GET"],
-			},
-		};
-		const script = `export default { async fetch(request, env) {
-      using a = await env.IDENTITY.getIdentity("agent-a"), b = await env.IDENTITY.getIdentity("agent-b");
-      const token = await a.getToken(), other = await b.getToken(), fresh = await a.getToken();
-      const grant = await a.getAuthorizationGrant({authorizationServer:"https://as.identity.local",scope:["read"]});
-      const claims = JSON.parse(atob(token.split(".")[1].replaceAll("-","+").replaceAll("_","/")));
-      const discovery = await (await fetch(claims.iss + "/.well-known/openid-configuration")).json();
-      const jwks = await (await fetch(discovery.jwks_uri)).json();
-      const wagKeys = await (await fetch(claims.iss + "/.well-known/wag-jwks.json")).json();
-      const signed = await (await a.fetch("https://api.identity.local/signed")).json();
-      return Response.json({token,other,fresh,grant,jwks,wagKeys,id:await a.id,signed});
-    }};`;
+		const outbound = vi.fn(() => new Response("unexpected outbound"));
+		const script = `export default {async fetch(request,env) {
+    const token=await env.IDENTITY.getToken();
+    const claims=JSON.parse(atob(token.split('.')[1].replaceAll('-','+').replaceAll('_','/')));
+    const jwks=await (await fetch(claims.iss+'/.well-known/jwks.json')).json();
+    const key=await crypto.subtle.importKey('jwk',jwks.keys[0],{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['verify']);
+    const signature=Uint8Array.from(atob(token.split('.')[2].replaceAll('-','+').replaceAll('_','/')),c=>c.charCodeAt(0));
+    const verified=await crypto.subtle.verify('RSASSA-PKCS1-v1_5',key,signature,new TextEncoder().encode(token.split('.').slice(0,2).join('.')));
+    return Response.json({claims,verified,jwks});
+  }};`;
 		const mf = new Miniflare(
 			legacy
 				? convertV4MiniflareOptions({
+						name: "sender",
 						modules: true,
 						script,
-						compatibilityDate: "2026-10-30",
-						identities: { IDENTITY: identity },
+						host: "127.0.0.1",
+						enableDevRegistry: false,
+						cf: false,
+						compatibilityDate: "2026-10-01",
+						identities: { IDENTITY: { audience: "urn:local-api" } },
+						outboundService: outbound,
 					})
 				: {
+						host: "127.0.0.1",
+						enableDevRegistry: false,
+						cf: false,
 						workers: [
 							{
 								config: {
-									name: "local-agents",
-									compatibilityDate: "2026-10-30",
-									env: { IDENTITY: { type: "identity", ...identity } },
+									name: "sender",
+									compatibilityDate: "2026-10-01",
 									manifest: singleModuleManifest(script),
+									env: {
+										IDENTITY: { type: "identity", audience: "urn:local-api" },
+									},
+								},
+								dev: {
+									outboundService: { type: "fetcher", handler: outbound },
 								},
 							},
 						],
 					}
 		);
 		useDispose(mf);
-		const data = (await (
+		const result = (await (
 			await mf.dispatchFetch("http://localhost/")
 		).json()) as {
-			token: string;
-			other: string;
-			fresh: string;
-			grant: string;
-			jwks: { keys: JsonWebKey[] };
-			wagKeys: { keys: JsonWebKey[] };
-			id: string;
-			signed: { status: string; identity: { signatureAgent: string } };
+			claims: Record<string, unknown>;
+			verified: boolean;
+			jwks: { keys: Record<string, unknown>[] };
 		};
-		const decode = (jwt: string) =>
-			JSON.parse(Buffer.from(jwt.split(".")[1], "base64url").toString());
-		const validate = (jwt: string, keys: JsonWebKey[]) => {
-			const [header, body, signature] = jwt.split(".");
-			expect(
-				verify(
-					"RSA-SHA256",
-					Buffer.from(`${header}.${body}`),
-					createPublicKey({ key: keys[0], format: "jwk" }),
-					Buffer.from(signature, "base64url")
-				)
-			).toBe(true);
-		};
-		validate(data.token, data.jwks.keys);
-		validate(data.grant, data.wagKeys.keys);
-		const actor = decode(data.token),
-			other = decode(data.other),
-			grant = decode(data.grant);
-		expect(actor.sub).toMatch(/^agent:[a-z2-7]{52}$/);
-		expect(actor.sub).not.toBe(other.sub);
-		expect(actor.iss).toMatch(
-			/^https:\/\/[a-f0-9]{32}\.identity\.local\/accounts\/[a-f0-9]{32}$/
+		const metadata = await mf.getLocalIdentity();
+		expect(result.verified).toBe(true);
+		expect(result.claims).toMatchObject({
+			iss: metadata?.issuer,
+			sub: metadata?.workers.sender.subject,
+			execution: "local",
+			aud: "urn:local-api",
+		});
+		expect((result.claims.exp as number) - (result.claims.iat as number)).toBe(
+			300
 		);
-		expect(actor.parent_sub).toMatch(/^worker:/);
-		expect(actor.execution).toBe("local");
-		expect(grant.execution).toBe("local");
-		expect(grant.sub).toBe(actor.sub);
-		expect(actor.sub).toBe(`agent:${data.id}`);
-		expect(data.signed.status).toBe("verified");
-		expect(new URL(data.signed.identity.signatureAgent).hostname).toMatch(
-			new RegExp(`^${data.id}\\.`)
+		expect(JSON.stringify(result.jwks)).not.toContain("PRIVATE");
+		expect(result.jwks.keys[0]).not.toHaveProperty("d");
+		expect(JSON.stringify(metadata)).not.toMatch(
+			/PRIVATE KEY|SIGNING_KEY|ROOT_A/
 		);
-		expect(decode(data.fresh).jti).not.toBe(actor.jti);
-		expect(data.jwks.keys).not.toEqual(data.wagKeys.keys);
+		expect(outbound).not.toHaveBeenCalled();
 	});
 }
 
-test("persists an isolated authority and starts a new realm after reset", async ({
+test("keeps local keys and subjects across reload/restart; separates projects and resets authority with replay", async ({
 	expect,
 }) => {
-	const directory = await useTmp();
-	const options = {
-		resourcePersistencePath: directory,
-		workers: [
-			{
-				config: {
-					name: "persistent",
-					compatibilityDate: "2026-10-30",
-					env: {
-						IDENTITY: { type: "identity" as const, audience: "urn:local" },
-					},
-					manifest: singleModuleManifest(
-						`export default {async fetch(r,env){return new Response(await env.IDENTITY.getToken())}}`
-					),
-				},
-			},
-		],
-	};
-	const first = new Miniflare(options);
-	const a = await (await first.dispatchFetch("http://localhost/")).text();
-	await first.dispose();
-	const second = new Miniflare(options);
-	useDispose(second);
-	const b = await (await second.dispatchFetch("http://localhost/")).text();
-	const decode = (jwt: string) =>
-		JSON.parse(Buffer.from(jwt.split(".")[1], "base64url").toString());
-	expect(decode(a).iss).toBe(decode(b).iss);
-	const keys = JSON.parse(
-		await readFile(path.join(directory, "identity", "authority.json"), "utf8")
-	);
-	expect(keys.version).toBe(1);
-	const third = new Miniflare({
-		...options,
-		resourcePersistencePath: await useTmp(),
-	});
-	useDispose(third);
-	expect(
-		decode(await (await third.dispatchFetch("http://localhost/")).text()).iss
-	).not.toBe(decode(a).iss);
-});
-
-for (const selection of ["app", "customer"] as const) {
-	for (const authentication of [
-		"none",
-		"private_key_jwt",
-		"client_secret_basic",
-	] as const) {
-		test(`normal local consent, inspection, DPoP and disconnect (${selection}, ${authentication})`, async ({
-			expect,
-		}) => {
-			const scope = ["read"],
-				resources = [
-					{ origin: "https://api.identity.local", methods: ["GET" as const] },
-				],
-				inspection_resources = [
-					{
-						url: "https://api.identity.local/profile",
-						methods: ["GET" as const],
-					},
-				],
-				return_urls = ["http://127.0.0.1:8787/complete"];
-			const identity = {
-				type: "identity" as const,
-				selection,
-				connection_management: true,
-				scope,
-				resources,
-				inspection_resources,
-				return_urls,
-				oauth: {
-					grant: "authorization_code" as const,
-					authorization_server: "https://as.identity.local",
-					resource: "https://api.identity.local",
-					discovery: true,
-					permission_ceiling: {
-						scope,
-						resources,
-						inspection_resources,
-						return_urls,
-					},
-					client_registration: { mode: "dynamic" as const, authentication },
-				},
-			};
-			const prefix = selection === "customer" ? '"customer-a",' : "";
-			const selector =
-				selection === "customer"
-					? '{customerId:"customer-a",agentId:"agent-a"}'
-					: '"agent-a"';
-			const script = `export default {async fetch(request,env){
-        const path=new URL(request.url).pathname;
-        if(path==="/start") return Response.json(await env.ISSUES.beginConnection(${prefix}{sessionId:"application-session-12345678901234567890",returnTo:"http://127.0.0.1:8787/complete"}));
-        if(path==="/finish") {
-          const result=await request.json();
-          const input={...result,sessionId:"application-session-12345678901234567890"};
-          const metadata=await env.ISSUES.previewConnection(${prefix}input);
-          using pending=await env.ISSUES.getPendingIdentity(${prefix}input);
-          const inspection=await (await pending.fetch("https://api.identity.local/profile")).json();
-          const completed=await env.ISSUES.completeConnection(${prefix}input);
-          return Response.json({metadata,inspection,completed});
-        }
-        if(path==="/disconnect") return Response.json(await env.ISSUES.disconnectAll(${selection === "customer" ? '"customer-a"' : ""}));
-        using selected=await env.ISSUES.getIdentity(${selector});
-        const status=await selected.getStatus();
-        return Response.json({status,...(status.state==="ready"?{data:await(await selected.fetch("https://api.identity.local/items")).json()}:{}),connectionId:await selected.connectionId});
-      }}`;
-			const mf = new Miniflare({
-				workers: [
-					{
-						config: {
-							name: "local-connections",
-							compatibilityDate: "2026-10-30",
-							env: { ISSUES: identity },
-							manifest: singleModuleManifest(script),
+	const root = await fs.mkdtemp(path.join(os.tmpdir(), "local-identity-"));
+	try {
+		const make = (script: string, persist = true) => ({
+			host: "127.0.0.1",
+			enableDevRegistry: false,
+			cf: false as const,
+			resourcePersistencePath: persist ? root : undefined,
+			workers: [
+				{
+					config: {
+						name: "sender",
+						compatibilityDate: "2026-10-01",
+						manifest: singleModuleManifest(script),
+						env: {
+							IDENTITY: { type: "identity" as const, audience: "urn:api" },
 						},
 					},
-				],
-			});
-			useDispose(mf);
-			const start = (await (
-				await mf.dispatchFetch("http://localhost/start")
-			).json()) as { authorizationUrl: string; flowId: string };
-			expect(start.authorizationUrl).toContain(
-				"/cdn-cgi/local/identity/authorize?"
-			);
-			const authorization = await mf.dispatchFetch(start.authorizationUrl, {
-				redirect: "manual",
-			});
-			await authorization.body?.cancel();
-			expect(authorization.status).toBe(303);
-			const callback = authorization.headers.get("location");
-			if (!callback) throw new Error("Missing fixture callback");
-			const callbackResponse = await mf.dispatchFetch(callback, {
-				redirect: "manual",
-			});
-			await callbackResponse.body?.cancel();
-			expect(callbackResponse.status).toBe(303);
-			const returned = callbackResponse.headers.get("location");
-			if (!returned) throw new Error("Missing application callback");
-			const receipt = Object.fromEntries(
-				new URLSearchParams(new URL(returned).hash.slice(1))
-			);
-			const finish = (await (
-				await mf.dispatchFetch("http://localhost/finish", {
-					method: "POST",
-					body: JSON.stringify(receipt),
-				})
-			).json()) as {
-				completed: { status: string };
-				inspection: { workspace: { key: string } };
-			};
-			expect(finish.completed.status).toBe("ready");
-			expect(finish.inspection.workspace.key).toBe("standards-fixture");
-			const result = (await (
-				await mf.dispatchFetch("http://localhost/data")
-			).json()) as {
-				status: { state: string };
-				data: { records: unknown[] };
-				connectionId: string;
-			};
-			expect(result.status.state).toBe("ready");
-			expect(result.data.records).toHaveLength(1);
-			expect(result.connectionId).toMatch(/^[a-f0-9-]{36}$/);
-			const disconnected = (await (
-				await mf.dispatchFetch("http://localhost/disconnect")
-			).json()) as { providerCleanup: string };
-			expect(disconnected.providerCleanup).toBe("complete");
-			expect(
-				await (await mf.dispatchFetch("http://localhost/data")).json()
-			).toMatchObject({ status: { state: "default_required" } });
+					dev: { rootPath: root },
+				},
+			],
 		});
+		const script =
+			"export default {async fetch(request,env){return new Response(await env.IDENTITY.getToken())}}";
+		const first = new Miniflare(make(script));
+		useDispose(first);
+		const token = await (await first.dispatchFetch("http://localhost/")).text();
+		const metadata = await first.getLocalIdentity();
+		const collision = new Miniflare(make(script));
+		await expect(collision.ready).rejects.toThrow(
+			"Another local runtime owns identity state"
+		);
+		await collision.dispose().catch(() => {});
+		const separateRoot = path.join(root, "separate");
+		await fs.mkdir(separateRoot);
+		const separateOptions = make(script);
+		separateOptions.workers[0].dev.rootPath = separateRoot;
+		const separate = new Miniflare(separateOptions);
+		useDispose(separate);
+		expect((await separate.getLocalIdentity())?.issuer).not.toBe(
+			metadata?.issuer
+		);
+		expect(
+			(await separate.getLocalIdentity())?.workers.sender.subject
+		).not.toBe(metadata?.workers.sender.subject);
+		await separate.dispose();
+
+		await first.setOptions(make(script + "; // change"));
+		expect((await first.getLocalIdentity())?.issuer).toBe(metadata?.issuer);
+		expect((await first.getLocalIdentity())?.workers.sender.subject).toBe(
+			metadata?.workers.sender.subject
+		);
+		expect((await first.getLocalIdentity())?.workers.sender.revision).not.toBe(
+			metadata?.workers.sender.revision
+		);
+		await first.dispose();
+		const second = new Miniflare(make(script));
+		useDispose(second);
+		expect((await second.getLocalIdentity())?.issuer).toBe(metadata?.issuer);
+		expect(
+			await (await second.dispatchFetch("http://localhost/")).text()
+		).not.toBe(token);
+		const authorityFiles = await fs.readdir(path.join(root, "identity"));
+		let authority = "";
+		for (const project of authorityFiles) {
+			const candidate = path.join(root, "identity", project, "authority.json");
+			const state = JSON.parse(await fs.readFile(candidate, "utf8")) as {
+				realm: string;
+			};
+			if (metadata?.issuer.includes(`oidc.${state.realm}.test`)) {
+				authority = candidate;
+			}
+		}
+		expect(authority).not.toBe("");
+		if (process.platform !== "win32") {
+			expect((await fs.stat(authority)).mode & 0o777).toBe(0o600);
+		}
+		await second.dispose();
+		const lock = path.join(path.dirname(authority), "owner.json");
+		await fs.writeFile(
+			lock,
+			JSON.stringify({ pid: 2147483647, owner: "crashed" })
+		);
+		const crashed = new Miniflare(make(script));
+		await expect(crashed.ready).rejects.toThrow("exited without cleanup");
+		await crashed.dispose().catch(() => {});
+		expect(JSON.parse(await fs.readFile(lock, "utf8")).owner).toBe("crashed");
+		await fs.unlink(lock);
+		const recovered = new Miniflare(make(script));
+		useDispose(recovered);
+		expect((await recovered.getLocalIdentity())?.issuer).toBe(metadata?.issuer);
+		await recovered.dispose();
+		const isolated = new Miniflare(make(script, false));
+		useDispose(isolated);
+		expect((await isolated.getLocalIdentity())?.issuer).not.toBe(
+			metadata?.issuer
+		);
+		await isolated.dispose();
+		await removeDir(path.join(root, "identity"));
+		const reset = new Miniflare(make(script));
+		useDispose(reset);
+		expect((await reset.getLocalIdentity())?.issuer).not.toBe(metadata?.issuer);
+		await reset.dispose();
+	} finally {
+		await removeDir(root);
 	}
-}
+});
 
 // This contract needs the companion runtime until its published release lands.
 // No local polyfill may turn decoding or a mocked claim into verified identity.
 test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
-	"runtime caller needs no binding and rejects malformed credentials locally",
+	"runtime caller needs no binding and rejects invalid credentials without outbound discovery",
 	async ({ expect }) => {
 		const outbound = vi.fn(() => new Response("unexpected outbound request"));
 		const mf = new Miniflare({
@@ -391,56 +307,207 @@ test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
 );
 
 test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
-	"native local receiver verifies selected JWTs without a receiver binding",
+	"verifies local JWT and WBA URLs through the native API; rejects tamper, cross-realm credentials and replay across reload/restart",
 	async ({ expect }) => {
-		const mf = new Miniflare({
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), "identity-replay-"));
+		const outbound = vi.fn(() => new Response("unexpected network"));
+		const receiverScript = `export default {async fetch(request,env,ctx){
+    try {const caller=await ctx.identity.caller();const body=await request.text();return Response.json({caller,url:request.url,body,headers:Object.fromEntries(request.headers)});}
+    catch(error){return Response.json({error:error.name},{status:401});}
+  }};`;
+		const senderScript = `export default {async fetch(request,env){
+    const path=new URL(request.url).pathname;
+    if(path==='/token')return new Response(await env.IDENTITY.getToken());
+    if(path==='/unsigned')return fetch('https://receiver.local.test/items');
+    if(path==='/jwt')return fetch('https://receiver.local.test/items',{headers:{authorization:'Bearer '+await env.IDENTITY.getToken()}});
+    if(path==='/external'){try {return await (await env.IDENTITY.getIdentity()).fetch('https://missing.local.test/items');}catch(error){return new Response(error.message);}}
+    return (await env.IDENTITY.getIdentity('customer')).fetch('https://receiver.local.test/items?q=1',{method:'POST',body:'original'});
+  }};`;
+		const options = {
+			host: "127.0.0.1",
+			cf: false as const,
+			enableDevRegistry: false,
+			resourcePersistencePath: root,
 			workers: [
 				{
 					config: {
-						name: "local-receiver",
-						compatibilityDate: "2026-10-30",
+						name: "sender",
+						compatibilityDate: "2026-10-31",
 						compatibilityFlags: ["enable_workload_identity_context"],
+						manifest: singleModuleManifest(senderScript),
 						env: {
-							IDENTITY: { type: "identity", audience: "urn:local-receiver" },
+							IDENTITY: {
+								type: "identity" as const,
+								audience: "urn:api",
+								request_signing: {
+									allowed_origins: [
+										"https://receiver.local.test",
+										"https://missing.local.test",
+									],
+									allowed_methods: ["GET", "POST"],
+								},
+							},
 						},
-						manifest:
-							singleModuleManifest(`export default {async fetch(r,env,ctx){
-  if(new URL(r.url).pathname==="/token") return new Response(await (await env.IDENTITY.getIdentity("immutable-agent")).getToken());
-  try{return Response.json(await ctx.identity.caller())}catch(e){return Response.json({error:e.name})}
- }}`),
+					},
+					dev: {
+						rootPath: root,
+						outboundService: { type: "fetcher" as const, handler: outbound },
+					},
+				},
+				{
+					config: {
+						name: "receiver",
+						compatibilityDate: "2026-10-31",
+						compatibilityFlags: ["enable_workload_identity_context"],
+						manifest: singleModuleManifest(receiverScript),
+					},
+					dev: {
+						rootPath: root,
+						outboundService: { type: "fetcher" as const, handler: outbound },
 					},
 				},
 			],
-		});
+		};
+		let mf = new Miniflare(options);
 		useDispose(mf);
-		const token = await (
-			await mf.dispatchFetch("http://localhost/token")
-		).text();
-		const claims = JSON.parse(
-			Buffer.from(token.split(".")[1], "base64url").toString()
-		);
-		const result = await (
-			await mf.dispatchFetch("http://localhost/", {
-				headers: { authorization: `Bearer ${token}` },
-			})
-		).json();
-		expect(result).toMatchObject({
-			kind: "jwt",
-			subject: claims.sub,
-			issuer: claims.iss,
-			audience: "urn:local-receiver",
-			originVersionId: claims.version_id,
-		});
-		const pieces = token.split(".");
-		const signature = Buffer.from(pieces[2], "base64url");
-		signature[0] ^= 1;
-		pieces[2] = signature.toString("base64url");
-		expect(
-			await (
-				await mf.dispatchFetch("http://localhost/", {
-					headers: { authorization: `Bearer ${pieces.join(".")}` },
-				})
-			).json()
-		).toEqual({ error: "WorkloadIdentityError" });
+		try {
+			const metadata = await mf.getLocalIdentity();
+			const jwt = (await (
+				await mf.dispatchFetch("http://localhost/jwt")
+			).json()) as { caller: unknown };
+			expect(jwt.caller).toMatchObject({
+				kind: "jwt",
+				issuer: metadata?.issuer,
+				subject: metadata?.workers.sender.subject,
+				audience: "urn:api",
+				originVersionId: metadata?.workers.sender.revision,
+			});
+			expect(
+				await (await mf.dispatchFetch("http://localhost/unsigned")).json()
+			).toMatchObject({ caller: null });
+			const signed = (await (
+				await mf.dispatchFetch("http://localhost/signed")
+			).json()) as {
+				caller: { kind: string };
+				url: string;
+				headers: Record<string, string>;
+				body: string;
+			};
+			expect(signed).toMatchObject({
+				url: "https://receiver.local.test/items?q=1",
+				body: "original",
+			});
+			expect(signed.caller.kind).toBe("signed-request");
+			delete signed.headers["content-length"];
+			const send = async (
+				url = signed.url,
+				body = signed.body,
+				headers = signed.headers
+			) =>
+				(await mf.getWorker("receiver")).fetch(url, {
+					method: "POST",
+					headers,
+					body,
+				});
+			for (const request of [
+				() => send(signed.url, signed.body + "tampered"),
+				() => send(signed.url + "&changed=1"),
+				() =>
+					send(signed.url, signed.body, {
+						...signed.headers,
+						signature: "invalid",
+					}),
+			]) {
+				const response = await request();
+				await response.text();
+				expect(response.status).toBe(401);
+			}
+			{
+				const response = await send();
+				await response.text();
+				expect(response.status).toBe(401);
+			}
+			await mf.setOptions(options);
+			{
+				const response = await send();
+				await response.text();
+				expect(response.status).toBe(401);
+			}
+			await mf.dispose();
+			mf = new Miniflare(options);
+			useDispose(mf);
+			{
+				const response = await send();
+				await response.text();
+				expect(response.status).toBe(401);
+			}
+			const other = new Miniflare({
+				...options,
+				resourcePersistencePath: undefined,
+			});
+			useDispose(other);
+			const otherToken = await (
+				await other.dispatchFetch("http://localhost/token")
+			).text();
+			const receiver = await mf.getWorker("receiver");
+			const token = await (
+				await mf.dispatchFetch("http://localhost/token")
+			).text();
+			for (const credential of [otherToken, token.slice(0, -8) + "tampered"]) {
+				const response = await receiver.fetch(
+					"https://receiver.local.test/items",
+					{ headers: { authorization: "Bearer " + credential } }
+				);
+				await response.text();
+				expect(response.status).toBe(401);
+			}
+
+			expect(
+				await (await mf.dispatchFetch("http://localhost/external")).text()
+			).toContain("no Worker in this local graph");
+			expect(outbound).not.toHaveBeenCalled();
+		} finally {
+			await mf.dispose();
+			await removeDir(root);
+		}
+	}
+);
+
+test.skipIf(process.platform === "win32")(
+	"releases persisted identity ownership on process signals and keeps the realm",
+	async ({ expect, onTestFinished }) => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), "identity-signal-"));
+		try {
+			let issuer: string | undefined;
+			for (const signal of ["SIGINT", "SIGTERM"] as const) {
+				const script = `const {Miniflare,convertV4MiniflareOptions}=require(${JSON.stringify(path.resolve(__dirname, "../../../dist/src/index.js"))});
+const mf=new Miniflare(convertV4MiniflareOptions({name:'sender',rootPath:${JSON.stringify(root)},resourcePersistencePath:${JSON.stringify(root)},host:'127.0.0.1',cf:false,enableDevRegistry:false,modules:true,script:'export default {fetch(){return new Response("ok")}}',compatibilityDate:'2026-10-01',identities:{IDENTITY:{audience:'urn:api'}}}));
+mf.getLocalIdentity().then(metadata=>console.log(JSON.stringify(metadata)));`;
+				const child = spawn(process.execPath, ["-e", script], {
+					stdio: ["ignore", "pipe", "pipe"],
+				});
+				onTestFinished(() => {
+					child.kill("SIGKILL");
+				});
+				child.stderr.resume();
+				const lines = createInterface({ input: child.stdout });
+				const [line] = await once(lines, "line");
+				const metadata = JSON.parse(line as string) as { issuer: string };
+				issuer ??= metadata.issuer;
+				expect(metadata.issuer).toBe(issuer);
+				const exited = once(child, "exit");
+				child.kill(signal);
+				const [code] = await exited;
+				expect(code).toBe(signal === "SIGINT" ? 130 : 143);
+				lines.close();
+				for (const project of await fs.readdir(path.join(root, "identity"))) {
+					await expect(
+						fs.stat(path.join(root, "identity", project, "owner.json"))
+					).rejects.toMatchObject({ code: "ENOENT" });
+				}
+			}
+		} finally {
+			await removeDir(root);
+		}
 	}
 );

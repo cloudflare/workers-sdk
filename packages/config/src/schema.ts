@@ -199,8 +199,9 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		)
 		.transform(({ type, ...binding }) => {
 			const candidate = { binding: "IDENTITY", ...binding };
-			if (!isIdentityBinding(candidate))
+			if (!isIdentityBinding(candidate)) {
 				throw new Error("Invalid identity binding");
+			}
 			const { binding: _name, ...configuration } = candidate;
 			return { type, ...configuration };
 		}),

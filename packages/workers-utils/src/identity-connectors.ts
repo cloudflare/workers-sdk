@@ -45,13 +45,16 @@ export interface IdentityConnectorStateStore {
 	write(state: IdentityConnectorState): Promise<void>;
 }
 function canonical(value: unknown): string {
-	if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
-	if (typeof value === "object" && value !== null)
+	if (Array.isArray(value)) {
+		return `[${value.map(canonical).join(",")}]`;
+	}
+	if (typeof value === "object" && value !== null) {
 		return `{${Object.entries(value)
 			.filter(([, v]) => v !== undefined)
 			.sort(([a], [b]) => a.localeCompare(b))
 			.map(([k, v]) => `${JSON.stringify(k)}:${canonical(v)}`)
 			.join(",")}}`;
+	}
 	return JSON.stringify(value);
 }
 function digest(oauth: ConnectionOAuthConfig) {
@@ -65,8 +68,9 @@ function validRecord(record: IdentityConnectorResource) {
 			connector_revision: record.revision,
 			...record.permissions,
 		})
-	)
+	) {
 		throw new Error("Invalid private connector response.");
+	}
 }
 function validateAttachment(
 	binding: ConnectionBindingConfig,
@@ -93,10 +97,11 @@ function validateAttachment(
 				permission_ceiling: record.permissions,
 			},
 		})
-	)
+	) {
 		throw new Error(
 			"Identity attachment exceeds the account connector's permissions."
 		);
+	}
 }
 export type IdentityConnectorPlan = {
 	action: "attach" | "create" | "reconcile";
@@ -126,8 +131,9 @@ export class IdentityConnectorProvisioning {
 			!isConnectionBinding(binding) ||
 			!/^[A-Za-z][A-Za-z0-9_-]{0,127}$/.test(resourceKey) ||
 			["constructor", "prototype"].includes(resourceKey)
-		)
+		) {
 			throw new Error("Invalid identity connector configuration.");
+		}
 		const state = (await this.options.store.read()) ?? {
 			version: 1,
 			accountId: this.options.accountId,
@@ -138,10 +144,11 @@ export class IdentityConnectorProvisioning {
 			state.version !== 1 ||
 			state.accountId !== this.options.accountId ||
 			state.realm !== this.options.realm
-		)
+		) {
 			throw new Error(
 				"Retained identity connector state belongs to another account or realm."
 			);
+		}
 		const retained = state.resources[resourceKey];
 		const connectorId = binding.connector_id ?? retained?.connectorId;
 		const revision = binding.connector_revision ?? retained?.connectorRevision;
@@ -152,37 +159,44 @@ export class IdentityConnectorProvisioning {
 			...(revision ? { connectorRevision: revision } : {}),
 		};
 		// Planning does not create even a local operation record and does not invoke a platform method.
-		if (dryRun) return { plan, binding };
+		if (dryRun) {
+			return { plan, binding };
+		}
 		let record: IdentityConnectorResource;
 		if (!binding.oauth) {
-			if (!connectorId || !revision)
+			if (!connectorId || !revision) {
 				throw new Error(
 					"ID-only attachment requires retained connector ID and revision."
 				);
+			}
 			record = await this.options.client.get(connectorId, revision);
-			if (record.id !== connectorId || record.revision !== revision)
+			if (record.id !== connectorId || record.revision !== revision) {
 				throw new Error(
 					"Requested identity connector revision is unavailable."
 				);
+			}
 		} else if (connectorId) {
-			if (!revision)
+			if (!revision) {
 				throw new Error("Reconcile requires an expected connector revision.");
+			}
 			// Explicit IDs, including deleted/unknown IDs, never become creates.
 			record = await this.options.client.reconcile(
 				connectorId,
 				revision,
 				binding.oauth
 			);
-			if (record.id !== connectorId)
+			if (record.id !== connectorId) {
 				throw new Error(
 					"Private connector reconcile changed resource identity."
 				);
+			}
 		} else {
 			const definitionDigest = digest(binding.oauth);
-			if (retained && retained.definitionDigest !== definitionDigest)
+			if (retained && retained.definitionDigest !== definitionDigest) {
 				throw new Error(
 					"Unresolved connector create has different input. Recover it before changing setup."
 				);
+			}
 			const progress: IdentityConnectorProgress = retained ?? {
 				operationId: randomUUID(),
 				definitionDigest,
@@ -222,14 +236,20 @@ export class IdentityConnectorFileStateStore implements IdentityConnectorStateSt
 		try {
 			contents = await fs.readFile(this.file, "utf8");
 		} catch (error) {
-			if (error instanceof Error && "code" in error && error.code === "ENOENT")
+			if (
+				error instanceof Error &&
+				"code" in error &&
+				error.code === "ENOENT"
+			) {
 				return undefined;
+			}
 			throw error;
 		}
-		if (contents.length > 1048576)
+		if (contents.length > 1048576) {
 			throw new Error(
 				"Retained identity connector state exceeds its size limit."
 			);
+		}
 		const value: unknown = JSON.parse(contents);
 		if (
 			typeof value !== "object" ||
@@ -244,8 +264,9 @@ export class IdentityConnectorFileStateStore implements IdentityConnectorStateSt
 			typeof value.resources !== "object" ||
 			value.resources === null ||
 			Array.isArray(value.resources)
-		)
+		) {
 			throw new Error("Unsupported retained identity connector state.");
+		}
 		for (const entry of Object.values(value.resources)) {
 			if (
 				typeof entry !== "object" ||
@@ -254,8 +275,9 @@ export class IdentityConnectorFileStateStore implements IdentityConnectorStateSt
 				typeof entry.operationId !== "string" ||
 				!("definitionDigest" in entry) ||
 				typeof entry.definitionDigest !== "string"
-			)
+			) {
 				throw new Error("Invalid retained identity connector operation.");
+			}
 		}
 		return value as IdentityConnectorState;
 	}

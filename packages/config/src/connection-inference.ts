@@ -50,7 +50,7 @@ type Prefix<T> = T extends { selection: "customer" }
 	? [customerId: string]
 	: [];
 type Selection = { agentId?: string; connectionId?: string };
-type FetchIdentity<Properties = {}> = Rpc.Stub<
+type FetchIdentity<Properties = object> = Rpc.Stub<
 	Rpc.RpcTargetBranded &
 		Properties & {
 			fetch(
@@ -112,4 +112,6 @@ interface ConnectionManagement<T> {
 	enableConnections(...args: Prefix<T>): Promise<void>;
 }
 export type InferredConnectionBinding<T> = ConnectionUse<T> &
-	(T extends { connection_management: true } ? ConnectionManagement<T> : {});
+	(T extends { connection_management: true }
+		? ConnectionManagement<T>
+		: object);
