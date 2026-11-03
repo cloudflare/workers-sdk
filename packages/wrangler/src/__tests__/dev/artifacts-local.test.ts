@@ -72,21 +72,23 @@ async function startLocalDev({
 	args?: string;
 	files?: Record<string, string>;
 } = {}) {
-	await seed(files ?? {
-		"wrangler.jsonc": JSON.stringify({
-			name: "artifacts-local-dev",
-			main: "index.js",
-			compatibility_date: "2026-09-03",
-			artifacts: [
-				{
-					binding: "REPOS",
-					namespace: "examples",
-					...(remote === null ? {} : { remote }),
-				},
-			],
-		}),
-		"index.js": worker,
-	});
+	await seed(
+		files ?? {
+			"wrangler.jsonc": JSON.stringify({
+				name: "artifacts-local-dev",
+				main: "index.js",
+				compatibility_date: "2026-09-03",
+				artifacts: [
+					{
+						binding: "REPOS",
+						namespace: "examples",
+						...(remote === null ? {} : { remote }),
+					},
+				],
+			}),
+			"index.js": worker,
+		}
+	);
 	const previousOutput = output.out;
 	const stopped = runWrangler(`dev --port=0 --inspector-port=0 ${args}`, {
 		WRANGLER_CI_DISABLE_CONFIG_WATCHING: "false",
@@ -238,32 +240,38 @@ describe("Wrangler dev local Artifacts", { concurrent: false }, () => {
 	);
 
 	it("starts Workflows from Artifacts triggers.events", async ({ expect }) => {
-		const dev = await startLocalDev({ files: {
-			"wrangler.jsonc": JSON.stringify({
-				name: "artifacts-local-events",
-				main: "index.js",
-				compatibility_date: "2026-09-03",
-				artifacts: [{ binding: "REPOS", namespace: "examples", remote: false }],
-				kv_namespaces: [{ binding: "EVENTS", id: "events" }],
-				workflows: [
-					{
-						binding: "ON_REPO_CREATED",
-						name: "on-repo-created",
-						class_name: "OnRepoCreated",
-					},
-				],
-				triggers: {
-					events: [
+		const dev = await startLocalDev({
+			files: {
+				"wrangler.jsonc": JSON.stringify({
+					name: "artifacts-local-events",
+					main: "index.js",
+					compatibility_date: "2026-09-03",
+					artifacts: [
+						{ binding: "REPOS", namespace: "examples", remote: false },
+					],
+					kv_namespaces: [{ binding: "EVENTS", id: "events" }],
+					workflows: [
 						{
-							type: "cf.artifacts.repo.created",
-							filter: { namespace: "examples", repo_name: "demo" },
-							targets: [{ type: "workflow", workflow_name: "on-repo-created" }],
+							binding: "ON_REPO_CREATED",
+							name: "on-repo-created",
+							class_name: "OnRepoCreated",
 						},
 					],
-				},
-			}),
-			"index.js": eventsWorker,
-		}});
+					triggers: {
+						events: [
+							{
+								type: "cf.artifacts.repo.created",
+								filter: { namespace: "examples", repo_name: "demo" },
+								targets: [
+									{ type: "workflow", workflow_name: "on-repo-created" },
+								],
+							},
+						],
+					},
+				}),
+				"index.js": eventsWorker,
+			},
+		});
 		try {
 			await fetch(dev.url + "/ignored", { method: "POST" });
 			await fetch(dev.url + "/demo", { method: "POST" });
