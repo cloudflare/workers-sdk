@@ -43,8 +43,6 @@ const ENTRYPOINT = "LocalArtifactsNamespace";
 const OBJECT_CLASS = "LocalArtifactsNamespaceObject";
 const LOCAL_NAMESPACE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
-type ArtifactsBinding = Extract<MiniflareBinding, { type: "artifacts" }>;
-
 // Artifacts routes like every other binding: remote only when `dev.remote` is
 // `true` and the Worker has a remote proxy connection. Its deployed-by-default
 // rule is resolved before Miniflare, by `resolveBindingRemote()` in
