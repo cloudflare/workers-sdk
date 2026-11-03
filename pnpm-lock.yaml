@@ -4485,8 +4485,8 @@ importers:
         specifier: catalog:default
         version: 3.2.0
       minimatch:
-        specifier: ^5.1.0
-        version: 5.1.6
+        specifier: ^5.1.9
+        version: 5.1.9
       open:
         specifier: catalog:default
         version: 11.0.0
@@ -4784,8 +4784,8 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0
       minimatch:
-        specifier: ^5.1.0
-        version: 5.1.6
+        specifier: ^5.1.9
+        version: 5.1.9
       mock-socket:
         specifier: ^9.3.1
         version: 9.3.1
@@ -13188,8 +13188,8 @@ packages:
   minimatch@3.1.2:
     resolution: {integrity: sha512-J7p63hRiAjw1NDEww1W7i37+ByIrOWO5XQQAzZ3VOcL0PNybwpfmV/N05zFAzwQ9USyEcX6t3UO+K5aqBQOIHw==}
 
-  minimatch@5.1.6:
-    resolution: {integrity: sha512-lKwV/1brpG6mBUFHtb7NUmtABCb2WZZmm2wNiOA5hAb8VdCS4B3dtMWyvcoViccwAW/COERjXLt0zP1zXUN26g==}
+  minimatch@5.1.9:
+    resolution: {integrity: sha512-7o1wEA2RyMP7Iu7GNba9vc0RWWGACJOCZBJX2GJWip0ikV+wcOsgVuY9uE8CPiyQhkGFSlhuSkZPavN7u1c2Fw==}
     engines: {node: '>=10'}
 
   minimatch@7.4.6:
@@ -23597,7 +23597,7 @@ snapshots:
       fs.realpath: 1.0.0
       inflight: 1.0.6
       inherits: 2.0.4
-      minimatch: 5.1.6
+      minimatch: 5.1.9
       once: 1.4.0
 
   globals@14.0.0: {}
@@ -24601,7 +24601,7 @@ snapshots:
     dependencies:
       brace-expansion: 1.1.11
 
-  minimatch@5.1.6:
+  minimatch@5.1.9:
     dependencies:
       brace-expansion: 2.1.7
 

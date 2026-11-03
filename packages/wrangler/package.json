@@ -159,7 +159,7 @@
 		"jsonc-parser": "catalog:default",
 		"md5-file": "5.0.0",
 		"mime": "^3.0.0",
-		"minimatch": "^5.1.0",
+		"minimatch": "^5.1.9",
 		"mock-socket": "^9.3.1",
 		"msw": "catalog:default",
 		"mysql2": "^3.15.3",
