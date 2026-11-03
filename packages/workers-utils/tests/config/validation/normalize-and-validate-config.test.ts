@@ -6621,6 +6621,74 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
+			it(
+				"should error if an authorized_keys public_key comment contains a space",
+				({ expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							name: "test-worker",
+							containers: [
+								{
+									class_name: "test-class",
+									image: "registry.cloudflare.com/test:latest",
+									authorized_keys: [
+										{
+											name: "laptop",
+											public_key:
+												"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI example my laptop",
+										},
+									],
+								},
+							],
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.hasErrors()).toBe(true);
+					expect(diagnostics.renderErrors()).toContain(
+						"containers.authorized_keys[0].public_key"
+					);
+				}
+			);
+
+			it(
+				"should accept authorized_keys with no comment, a single-word comment, or a tab in the comment",
+				({ expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							name: "test-worker",
+							containers: [
+								{
+									class_name: "test-class",
+									image: "registry.cloudflare.com/test:latest",
+									authorized_keys: [
+										{
+											name: "no-comment",
+											public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI",
+										},
+										{
+											name: "single-word",
+											public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI probe",
+										},
+										{
+											name: "tab-comment",
+											public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI my\tprobe",
+										},
+									],
+								},
+							],
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.hasErrors()).toBe(false);
+				}
+			);
+
 			it.for([{ value: 25 }, { value: [20, 50, 100] }])(
 				"should accept rollout_step_percentage set to $value",
 				(value, { expect }) => {
