@@ -72,6 +72,48 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 		).toEqual({ DEFAULT: defaultRemote, REMOTE: remote });
 	});
 
+	it.for([undefined, false, true])(
+		"routes native Artifacts and warns only for the default remote=%s",
+		async (remote, { expect }) => {
+			const logger = createTestLogger();
+			const startSession = vi.fn<typeof startRemoteProxySession>(async () =>
+				createTestSession()
+			);
+			const result = await maybeStartOrUpdateRemoteProxySession(
+				{
+					target: "cf",
+					env: {
+						REPOS: {
+							type: "artifacts",
+							namespace: "examples",
+							dev: { remote },
+						},
+					},
+				},
+				undefined,
+				undefined,
+				{ cliDisplayName: "Test CLI", logger },
+				startSession
+			);
+			if (remote === false) {
+				expect(result).toBeNull();
+				expect(startSession).not.toHaveBeenCalled();
+			} else {
+				expect(startSession).toHaveBeenCalledWith(
+					{ REPOS: { type: "artifacts", namespace: "examples", remote } },
+					expect.anything()
+				);
+			}
+			if (remote === undefined) {
+				expect(logger.warn).toHaveBeenCalledExactlyOnceWith(
+					"Artifacts binding REPOS uses the deployed resource. Set `remote: false` to use the local simulator, or `remote: true` to silence this warning."
+				);
+			} else {
+				expect(logger.warn).not.toHaveBeenCalled();
+			}
+		}
+	);
+
 	it("updates an existing session when all remote bindings are removed", async ({
 		expect,
 	}) => {

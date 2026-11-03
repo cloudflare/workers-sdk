@@ -1,7 +1,10 @@
 import assert from "node:assert";
 import { resolveBindingRemote } from "@cloudflare/workers-utils";
 import { getRemoteBindingsAuthHook } from "./auth";
-import { getRemoteBindings, warnForDefaultRemoteBindings } from "./config-bindings";
+import {
+	getRemoteBindings,
+	warnForDefaultRemoteBindings,
+} from "./config-bindings";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
 import type { ConfigBindings } from "./config-bindings";
 import type { RemoteBindingsLogger } from "./logger";
