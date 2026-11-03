@@ -167,7 +167,8 @@ export const ASSETS_PLUGIN: Plugin = {
 			name: storageServiceName,
 			disk: {
 				path: assetDirectory,
-				writable: true,
+				// Reject writes even when callers bypass the read-only namespace Worker.
+				writable: false,
 				allowDotfiles: true,
 			},
 		};
