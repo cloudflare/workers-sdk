@@ -6,6 +6,7 @@ import {
 	formatConfigSnippet,
 	isDurableObjectContainerApp,
 	isNonInteractiveOrCI,
+	resolveContainerClassName,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { confirm, fetchResult, logger } from "../../shared/context";
@@ -103,6 +104,38 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	}
 
 	validateOwnedWorkflowDeclarations(config, name);
+
+	const deprecatedContainers = props.containers.source?.filter((container) => {
+		// Match the default and unsafe override applied to the application request.
+		const policy =
+			container.unsafe && "scheduling_policy" in container.unsafe
+				? container.unsafe.scheduling_policy
+				: (container.scheduling_policy ?? "default");
+		return policy === "default";
+	});
+	if (deprecatedContainers?.length) {
+		const applications = deprecatedContainers.map((container) => {
+			const className = resolveContainerClassName(container, config.exports);
+			return `  - ${container.name ?? className}${className ? ` (class: ${className})` : ""}`;
+		});
+		logger.warn(
+			[
+				"DEPRECATED: Legacy container scheduling",
+				"",
+				'These Container applications use the deprecated "default" scheduling policy:',
+				...applications,
+				"",
+				"Wrangler selects this policy automatically when scheduling_policy is omitted.",
+				"",
+				'Migrate to the "durable_object" scheduling policy. Existing applications need',
+				"code changes and a replacement application; changing the setting alone will",
+				"not migrate them.",
+				"",
+				"This warning does not block deployment.",
+				"Migration guide: https://developers.cloudflare.com/containers/guides/migrate-to-durable-object-scheduling-policy/",
+			].join("\n")
+		);
+	}
 
 	if (props.command === "deploy") {
 		validateEventTriggerTargets(config, name);
