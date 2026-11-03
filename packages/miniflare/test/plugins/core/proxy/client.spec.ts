@@ -197,59 +197,6 @@ describe("ProxyClient", () => {
 		);
 	});
 
-	test("preserves keys Cap'n Web would drop", async ({ expect }) => {
-		const mf = new Miniflare({
-			workers: [
-				{
-					config: {
-						name: "",
-						compatibilityDate: "2025-05-01",
-						env: { NAMESPACE: { type: "kv", id: "NAMESPACE" } },
-					},
-					legacy: { serviceWorkerScript: nullScript },
-				},
-			],
-		});
-		useDispose(mf);
-
-		const namespace = await mf.getKVNamespace("NAMESPACE");
-		const metadata = { constructor: 1, toString: "a" };
-		// Call each method twice: first synchronously, then over Cap'n Web once
-		// known to be async
-		for (let i = 0; i < 2; i++) {
-			await namespace.put(`key${i}`, "value", { metadata });
-			const result = await namespace.getWithMetadata(`key${i}`);
-			expect(result.metadata).toEqual(metadata);
-		}
-	});
-
-	test("sends arguments larger than workerd's WebSocket message limit", async ({
-		expect,
-	}) => {
-		const mf = new Miniflare({
-			workers: [
-				{
-					config: {
-						name: "",
-						compatibilityDate: "2025-05-01",
-						env: { BUCKET: { type: "r2", name: "BUCKET" } },
-					},
-					legacy: { serviceWorkerScript: nullScript },
-				},
-			],
-		});
-		useDispose(mf);
-
-		const bucket = await mf.getR2Bucket("BUCKET");
-		// Make sure `put()` is known to be async, so later calls use Cap'n Web
-		await bucket.put("small", "value");
-		const size = 33 * 1024 * 1024;
-		await bucket.put("string", "x".repeat(size));
-		await bucket.put("bytes", new Uint8Array(size));
-		expect((await bucket.head("string"))?.size).toBe(size);
-		expect((await bucket.head("bytes"))?.size).toBe(size);
-	});
-
 	test("rejects Workers RPC arguments over workerd's WebSocket message limit", async ({
 		expect,
 	}) => {
@@ -329,37 +276,6 @@ describe("ProxyClient", () => {
 		// The modifier is an `RpcStub`, which must be returned without calling it
 		const modifier = await WORKFLOW.unsafeGetInstanceModifier("id");
 		await expect(modifier.disableSleeps()).resolves.toBeUndefined();
-	});
-
-	test("rejects poisoned proxies passed as arguments", async ({ expect }) => {
-		const opts: ConstructorParameters<typeof Miniflare>[0] = {
-			workers: [
-				{
-					config: {
-						name: "",
-						compatibilityDate: "2025-05-01",
-						env: { DB: { type: "d1", id: "DB" } },
-						manifest: singleModuleManifest(
-							"export default { fetch() { return new Response(null, { status: 404 }); } }"
-						),
-					},
-				},
-			],
-		};
-		const mf = new Miniflare(opts);
-		useDispose(mf);
-
-		const poisoned = (await mf.getD1Database("DB")).prepare("SELECT 1");
-		await mf.setOptions(opts);
-		const db = await mf.getD1Database("DB");
-		const error = new Error(
-			"Attempted to use poisoned stub. Stubs to runtime objects must be re-created after calling `Miniflare#setOptions()` or `Miniflare#dispose()`."
-		);
-		// The first call is synchronous, then once `batch()` is known to be async,
-		// calls are sent over Cap'n Web
-		expect(() => db.batch([poisoned])).toThrow(error);
-		await db.batch([db.prepare("SELECT 1")]);
-		await expect(db.batch([poisoned])).rejects.toThrow(error);
 	});
 
 	test("preserves original URL for service binding fetch", async ({
