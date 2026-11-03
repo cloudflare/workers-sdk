@@ -104,6 +104,42 @@ describe("wrangler check startup", () => {
 		).resolves.toContain("callFrame");
 	});
 
+	test("reports failed module evaluation while keeping the profile", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({ main: "index.js", no_bundle: true });
+		// The entry imports a module that no_bundle leaves out of the upload,
+		// so module evaluation fails during startup profiling.
+		writeFileSync(
+			"index.js",
+			`
+				import { value } from "./sibling.mjs";
+
+				export default {
+					fetch() {
+						return new Response(String(value));
+					},
+				};
+			`
+		);
+		writeFileSync(
+			"sibling.mjs",
+			`
+				export const value = 42;
+			`
+		);
+
+		await runWrangler("deploy --dry-run --outfile worker.bundle");
+
+		await expect(
+			runWrangler("check startup --worker-bundle worker.bundle")
+		).rejects.toThrow(/module evaluation/i);
+
+		await expect(
+			readFile("worker-startup.cpuprofile", "utf8")
+		).resolves.toContain("callFrame");
+	});
+
 	test("pages (config file)", async ({ expect }) => {
 		mkdirSync("public");
 		writeFileSync("public/README.md", "This is a readme");
