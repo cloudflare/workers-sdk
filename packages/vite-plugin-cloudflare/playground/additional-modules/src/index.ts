@@ -1,5 +1,6 @@
 import bin from "./modules/bin-example.bin";
 import html from "./modules/html-example.html";
+import otherWasmWithSourceMap from "./modules/other/wasm-with-source-map.wasm";
 import sql from "./modules/sql-example.sql";
 import text from "./modules/text-example.txt";
 import text2 from "./modules/text__example__2.txt";
@@ -71,6 +72,14 @@ export default {
 					wasmWithSourceMap
 				)) as Instance;
 				const result = instance.exports.add(9, 10);
+
+				return Response.json({ result });
+			}
+			case "/other-wasm-with-source-map": {
+				const instance = (await WebAssembly.instantiate(
+					otherWasmWithSourceMap
+				)) as Instance;
+				const result = instance.exports.add(11, 12);
 
 				return Response.json({ result });
 			}
