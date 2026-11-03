@@ -1,5 +1,5 @@
 ---
-"@cloudflare/vite-plugin": patch
+"@cloudflare/vite-plugin": minor
 ---
 
 Support opting into zstd compression for local Container image builds in v1
