@@ -230,6 +230,33 @@ test("query bookmarks can be reused and sessions observe committed writes", asyn
 	expect(response.status).toBe(200);
 });
 
+// Regression test for https://github.com/cloudflare/workers-sdk/issues/16549.
+test("query returns a bookmark only when the request has a bookmark", async ({
+	expect,
+}) => {
+	const mf = createD1Worker(`
+		const queries = [{ sql: "SELECT 1 AS answer" }];
+		const omitted = await env.DB.query({ queries });
+		const empty = await env.DB.query({ queries, bookmark: "" });
+		const whitespace = await env.DB.query({ queries, bookmark: "  " });
+		const withBookmark = await env.DB.query({ queries, bookmark: "first-unconstrained" });
+		return Response.json({
+			omitted: "bookmark" in omitted,
+			empty: "bookmark" in empty,
+			whitespace: "bookmark" in whitespace,
+			withBookmark: withBookmark.bookmark,
+		});
+	`);
+	const response = await mf.dispatchFetch("http://localhost");
+	expect(await response.json()).toEqual({
+		omitted: false,
+		empty: false,
+		whitespace: false,
+		withBookmark: expect.stringMatching(/.+/),
+	});
+	expect(response.status).toBe(200);
+});
+
 test("bindings route RPC queries to separate databases", async ({ expect }) => {
 	const mf = createD1Worker(`
 		for (const [db, answer] of [[env.DB, 42], [env.OTHER_DB, 43]]) {
