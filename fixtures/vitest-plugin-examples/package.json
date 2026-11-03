@@ -61,6 +61,7 @@
 		"vite": "catalog:default",
 		"vitest": "catalog:default",
 		"wasm-module-dep": "file:./module-resolution/vendor/wasm-module-dep",
-		"wrangler": "workspace:*"
+		"wrangler": "workspace:*",
+		"@cloudflare/config": "workspace:*"
 	}
 }
