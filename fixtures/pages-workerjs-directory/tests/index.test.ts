@@ -64,7 +64,7 @@ describe("Pages _worker.js/ directory", () => {
 		}
 
 		expect(existsSync(join(tmpDir, "./v3/d1"))).toBeTruthy();
-		expect(existsSync(join(tmpDir, "./v3/kv"))).toBeTruthy();
+		expect(existsSync(join(tmpDir, "./v3/builtin"))).toBeTruthy();
 		expect(existsSync(join(tmpDir, "./v3/r2"))).toBeTruthy();
 	});
 

@@ -1,9 +1,14 @@
 import { createHash } from "node:crypto";
+import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { MiniflareCoreError } from "../../shared";
 import { getUserServiceName } from "../core";
-import { SERVICE_DEV_REGISTRY_PROXY, type UnsafeUniqueKey } from "./constants";
+import {
+	SERVICE_BUILTIN_STORAGE,
+	SERVICE_DEV_REGISTRY_PROXY,
+	type UnsafeUniqueKey,
+} from "./constants";
 import type {
 	ParsedInstanceOptions,
 	ParsedWorkerOptions,
@@ -229,6 +234,24 @@ export function getPersistPath(
 	// errors. Forward slashes work for both Node.js fs APIs and workerd on all
 	// platforms.
 	return result.replaceAll("\\", "/");
+}
+
+// The disk for workerd's built-ins, one directory for all of them: workerd
+// gives each product subdirectories of its own.
+export async function getBuiltinStorageService(
+	tmpPath: string,
+	resourcePersistencePath: string | undefined
+): Promise<Service> {
+	const persistPath = getPersistPath(
+		"builtin",
+		tmpPath,
+		resourcePersistencePath
+	);
+	await fs.mkdir(persistPath, { recursive: true });
+	return {
+		name: SERVICE_BUILTIN_STORAGE,
+		disk: { path: persistPath, writable: true },
+	};
 }
 
 /**

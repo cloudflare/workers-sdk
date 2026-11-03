@@ -6,7 +6,6 @@ import { KV_PLUGIN_NAME, MAX_BULK_GET_KEYS, Miniflare } from "miniflare";
 import { beforeEach, type ExpectStatic, test } from "vitest";
 import {
 	createJunkStream,
-	MiniflareDurableObjectControlStub,
 	miniflareTest,
 	namespace,
 	useDispose,
@@ -20,31 +19,38 @@ import type {
 } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, ReplaceWorkersTypes } from "miniflare";
 
-function secondsToMillis(seconds: number): number {
-	return seconds * 1000;
-}
-
-// Time in seconds the fake `Date.now()` always returns
-export const TIME_NOW = 1000;
+// workerd's built-in KV runs on the real clock, in seconds here
+const TIME_NOW = Math.floor(Date.now() / 1000);
 // Expiration value to signal a key that will expire in the future
-export const TIME_FUTURE = 1500;
+const TIME_FUTURE = TIME_NOW + 3600;
 
-function sqlStmts(object: MiniflareDurableObjectControlStub) {
-	return {
-		getBlobIdByKey: async (key: string): Promise<string | undefined> => {
-			const rows = await object.sqlQuery<{ blob_id: string }>(
-				"SELECT blob_id FROM _mf_entries WHERE key = ?",
-				key
-			);
-			return rows[0]?.blob_id;
-		},
+// Runs `f` with workerd's KV expiration clock advanced by `advance(ms)`,
+// then winds the clock back. workerd enables the clock for tests with
+// `WORKERD_KV_TEST_CLOCK`, which `test/setup.mjs` sets.
+async function withClock(
+	f: (advance: (ms: number) => Promise<void>) => Promise<void>
+) {
+	const entry = await ctx.mf._getInternalFetcher(KV_PLUGIN_NAME, "kv:ns:entry");
+	let total = 0;
+	const advance = async (ms: number) => {
+		const res = await entry.fetch(`http://kv/clock?advance=${ms}`, {
+			method: "POST",
+			headers: { "MF-Namespace": "namespace" },
+		});
+		await res.arrayBuffer();
+		assert(res.ok, `advancing the clock: ${res.status}`);
+		total += ms;
 	};
+	try {
+		await f(advance);
+	} finally {
+		await advance(-total);
+	}
 }
 
 interface Context extends MiniflareTestContext {
 	ns: string;
 	kv: Namespaced<ReplaceWorkersTypes<KVNamespace>>; // :D
-	object: MiniflareDurableObjectControlStub;
 }
 
 const opts: Partial<MiniflareOptions> = {
@@ -70,17 +76,6 @@ beforeEach(async () => {
 	)}`;
 	ctx.ns = ns;
 	ctx.kv = namespace(ns, await ctx.mf.getKVNamespace("NAMESPACE"));
-
-	// Enable fake timers
-	const objectNamespace = await ctx.mf._getInternalDurableObjectNamespace(
-		KV_PLUGIN_NAME,
-		"kv:ns",
-		"KVNamespaceObject"
-	);
-	const objectId = objectNamespace.idFromName("namespace");
-	const objectStub = objectNamespace.get(objectId);
-	ctx.object = new MiniflareDurableObjectControlStub(objectStub);
-	await ctx.object.enableFakeTimers(secondsToMillis(TIME_NOW));
 });
 
 async function testValidatesKey(
@@ -269,16 +264,14 @@ test("bulk get: get with metadata for 404", async ({ expect }) => {
 
 test("bulk get: get over size limit", async ({ expect }) => {
 	const { kv } = ctx;
-	const bigValue = new Array(1024).fill("x").join("");
+	const bigValue = "x".repeat(13 * 1024 * 1024);
 	await kv.put("key1", bigValue);
 	await kv.put("key2", bigValue);
-	try {
-		await kv.getWithMetadata(["key1", "key2"]);
-	} catch (error: any) {
-		expect(error.message).toEqual(
-			"KV GET_BULK failed: 413 Total size of request exceeds the limit of 0.0009765625MB" // 1024 Bytes for testing
-		);
-	}
+	await expect(kv.getWithMetadata(["key1", "key2"])).rejects.toThrow(
+		new Error(
+			"KV GET_BULK failed: 413 Total size of request exceeds the limit of 25MB"
+		)
+	);
 });
 
 test("get: returns null for non-existent keys", async ({ expect }) => {
@@ -286,11 +279,13 @@ test("get: returns null for non-existent keys", async ({ expect }) => {
 	expect(await kv.get("key")).toBe(null);
 });
 test("get: returns null for expired keys", async ({ expect }) => {
-	const { kv, object } = ctx;
+	const { kv } = ctx;
 	await kv.put("key", "value", { expirationTtl: 60 });
 	expect(await kv.get("key")).not.toBe(null);
-	await object.advanceFakeTime(60_000);
-	expect(await kv.get("key")).toBe(null);
+	await withClock(async (advance) => {
+		await advance(60_000);
+		expect(await kv.get("key")).toBe(null);
+	});
 });
 test("get: validates but ignores cache ttl", async ({ expect }) => {
 	const { kv } = ctx;
@@ -364,11 +359,8 @@ test("bulk get: check metadata for falsy json values", async ({ expect }) => {
 	expect(result).toEqual(expectedResult);
 });
 test("put: overrides existing keys", async ({ expect }) => {
-	const { kv, ns, object } = ctx;
-	const stmts = sqlStmts(object);
+	const { kv } = ctx;
 	await kv.put("key", "value1");
-	const blobId = await stmts.getBlobIdByKey(`${ns}key`);
-	assert(blobId !== undefined);
 	await kv.put("key", "value2", {
 		expiration: TIME_FUTURE,
 		metadata: { testing: true },
@@ -376,15 +368,6 @@ test("put: overrides existing keys", async ({ expect }) => {
 	const result = await kv.getWithMetadata("key");
 	expect(result.value).toBe("value2");
 	expect(result.metadata).toEqual({ testing: true });
-
-	// Check deletes old blob
-	await object.waitForFakeTasks();
-	expect(await object.getBlob(blobId)).toBe(null);
-
-	// Check created new blob
-	const newBlobId = await stmts.getBlobIdByKey(`${ns}key`);
-	assert(newBlobId !== undefined);
-	expect(blobId).not.toBe(newBlobId);
 });
 test("put: keys are case-sensitive", async ({ expect }) => {
 	const { kv } = ctx;
@@ -443,7 +426,7 @@ test("put: validates expiration", async ({ expect }) => {
 });
 test("put: validates value size", async ({ expect }) => {
 	const { kv } = ctx;
-	const maxValueSize = 1024;
+	const maxValueSize = 25 * 1024 * 1024;
 	const byteLength = maxValueSize + 1;
 	// Check with and without `valueLengthHint`
 	await expect(kv.put("key", createJunkStream(byteLength))).rejects.toThrow(
@@ -747,15 +730,19 @@ test("list: returns keys inserted whilst paginating", async ({ expect }) => {
 	assert(page.list_complete);
 });
 test("list: ignores expired keys", async ({ expect }) => {
-	const { kv, ns, object } = ctx;
+	const { kv, ns } = ctx;
+	// Expirations must be at least 60 seconds away when written
+	const now = Math.floor(Date.now() / 1000) + 30;
 	for (let i = 1; i <= 3; i++) {
-		await kv.put(`key${i}`, `value${i}`, { expiration: TIME_NOW + i * 60 });
+		await kv.put(`key${i}`, `value${i}`, { expiration: now + i * 60 });
 	}
-	await object.advanceFakeTime(130_000 /* 2m10s */);
-	expect(await kv.list({ prefix: ns })).toEqual({
-		keys: [{ name: `${ns}key3`, expiration: TIME_NOW + 3 * 60 }],
-		list_complete: true,
-		cacheStatus: null,
+	await withClock(async (advance) => {
+		await advance(160_000 /* 2m40s */);
+		expect(await kv.list({ prefix: ns })).toEqual({
+			keys: [{ name: `${ns}key3`, expiration: now + 3 * 60 }],
+			list_complete: true,
+			cacheStatus: null,
+		});
 	});
 });
 test("list: sorts lexicographically", async ({ expect }) => {
@@ -856,9 +843,9 @@ test("persists on file-system", async ({ expect }) => {
 	await kv.put("key", "value");
 	expect(await kv.get("key")).toBe("value");
 
-	// Check directory created for namespace under the plugin subdirectory
-	const names = await fs.readdir(path.join(tmp, KV_PLUGIN_NAME));
-	expect(names.includes("miniflare-KVNamespaceObject")).toBe(true);
+	// Check workerd's built-in KV keeps its objects under the persist path
+	const names = await fs.readdir(path.join(tmp, "builtin"));
+	expect(names.includes("workerd-KVNamespace")).toBe(true);
 
 	// Check "restarting" keeps persisted data
 	await mf.dispose();

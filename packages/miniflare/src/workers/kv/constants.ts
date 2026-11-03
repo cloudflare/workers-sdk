@@ -28,6 +28,13 @@ export const KVHeaders = {
 } as const;
 
 export const KV_LOCAL_ENTRY_SERVICE_NAME = "kv:ns:entry";
+// workerd's built-in KV, reached with props `{ namespace }`. It exists
+// whenever the config sets `builtinStorage`.
+export const KV_BUILTIN_SERVICE_NAME = "workerd:kv";
+
+export const KVBindings = {
+	DEBUG_PORT: "MINIFLARE_DEBUG_PORT",
+} as const;
 
 export const SiteBindings = {
 	KV_NAMESPACE_SITE: "__STATIC_CONTENT",

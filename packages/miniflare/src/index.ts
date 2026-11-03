@@ -66,6 +66,7 @@ import {
 	R2_PLUGIN_NAME,
 	RATELIMIT_PLUGIN_NAME,
 	SECRET_STORE_PLUGIN_NAME,
+	SERVICE_BUILTIN_STORAGE,
 	SERVICE_DEV_REGISTRY_PROXY,
 	SERVICE_ENTRY,
 	SOCKET_DEBUG_PORT,
@@ -650,8 +651,8 @@ function buildProxyBinding(
 	}
 	return proxyBinding;
 }
-// Gets an array of proxy bindings for internal Durable Objects, only used in
-// testing for accessing internal methods
+// Gets an array of proxy bindings for internal services and their Durable
+// Objects, only used in testing for accessing internal methods
 function getInternalDurableObjectProxyBindings(
 	plugin: string,
 	service: Service
@@ -662,13 +663,20 @@ function getInternalDurableObjectProxyBindings(
 	assert(service.worker !== undefined);
 	const serviceName = service.name;
 	assert(serviceName !== undefined);
-	return service.worker.durableObjectNamespaces?.map(({ className }) => {
-		assert(className !== undefined);
-		return {
-			name: getProxyBindingName(`${plugin}-internal`, serviceName, className),
-			durableObjectNamespace: { serviceName, className },
-		};
-	});
+	const fetcher = {
+		name: getProxyBindingName(`${plugin}-internal`, serviceName, "fetch"),
+		service: { name: serviceName },
+	};
+	const objects = (service.worker.durableObjectNamespaces ?? []).map(
+		({ className }) => {
+			assert(className !== undefined);
+			return {
+				name: getProxyBindingName(`${plugin}-internal`, serviceName, className),
+				durableObjectNamespace: { serviceName, className },
+			};
+		}
+	);
+	return [fetcher, ...objects];
 }
 
 type StoppableServer = http.Server & stoppable.WithStop;
@@ -2436,6 +2444,9 @@ export class Miniflare {
 			// that Miniflare parses and either forwards to a `handleStructuredLogs`
 			// handler or writes to the console by default.
 			structuredLogging: true,
+			builtinStorage: services.has(SERVICE_BUILTIN_STORAGE)
+				? SERVICE_BUILTIN_STORAGE
+				: undefined,
 			autogates: process.env.MINIFLARE_WORKERD_AUTOGATES
 				? process.env.MINIFLARE_WORKERD_AUTOGATES.split(" ")
 				: [],
@@ -3676,6 +3687,14 @@ export class Miniflare {
 			);
 		}
 		return this.#getProxy(`${pluginName}-internal`, className, serviceName);
+	}
+
+	/** @internal */
+	async _getInternalFetcher(
+		pluginName: string,
+		serviceName: string
+	): Promise<ReplaceWorkersTypes<Fetcher>> {
+		return this.#getProxy(`${pluginName}-internal`, "fetch", serviceName);
 	}
 
 	get #mergedPluginEntries() {
