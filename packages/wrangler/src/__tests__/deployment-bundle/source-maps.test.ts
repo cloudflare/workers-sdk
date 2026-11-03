@@ -238,6 +238,20 @@ describe("loadSourceMaps for WebAssembly modules", () => {
 		expect(loadSourceMaps(main, [wasm], {}, { strict: false })).toEqual([]);
 	});
 
+	it("skips a source map named by an absolute URL, even when strict", ({
+		expect,
+	}) => {
+		const dir = createTempDir();
+		const main = makeModule("index.js", path.join(dir, "index.js"), "");
+		const wasm = makeWasmModule(
+			"index_bg.wasm",
+			path.join(dir, "index_bg.wasm"),
+			"https://example.com/index_bg.wasm.map"
+		);
+
+		expect(loadSourceMaps(main, [wasm], {})).toEqual([]);
+	});
+
 	it("throws on a data URL", ({ expect }) => {
 		const dir = createTempDir();
 		const main = makeModule("index.js", path.join(dir, "index.js"), "");
