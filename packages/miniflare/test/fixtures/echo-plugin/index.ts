@@ -14,9 +14,9 @@ const ECHO_MODULE_NAME = "cloudflare-internal:echo-plugin:module";
 const ECHO_MODULE = /* javascript */ `
 class Identity {
 	async asyncIdentity(...args) {
-		const i = args.findIndex((arg) => arg instanceof ReadableStream);
-		if (i !== -1) args[i] = args[i].pipeThrough(new TransformStream());
-		return args;
+		return args.map((arg) =>
+			arg instanceof ReadableStream ? arg.pipeThrough(new TransformStream()) : arg
+		);
 	}
 }
 export default function () {

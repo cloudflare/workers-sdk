@@ -146,6 +146,182 @@ describe("ProxyClient", () => {
 		});
 	});
 
+	test("supports Workers RPC pipelining, callbacks and properties", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { BINDING: { type: "worker", worker: "binding" } },
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+				{
+					config: {
+						name: "binding",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`
+							import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
+							class Counter extends RpcTarget {
+								#count = 0;
+								increment() { return ++this.#count; }
+							}
+							export default class extends WorkerEntrypoint {
+								get property() { return "value"; }
+								getCounter() { return new Counter(); }
+								async callback(fn) { return \`called with \${await fn("arg")}\`; }
+							}
+						`),
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const { BINDING } = await mf.getBindings<{
+			BINDING: {
+				property: Promise<string>;
+				getCounter(): Promise<{ increment(): Promise<number> }> & {
+					increment(): Promise<number>;
+				};
+				callback(fn: (value: string) => string): Promise<string>;
+			};
+		}>();
+		expect(await BINDING.property).toBe("value");
+		expect(await BINDING.getCounter().increment()).toBe(1);
+		expect(await BINDING.callback((value) => value.toUpperCase())).toBe(
+			"called with ARG"
+		);
+	});
+
+	test("preserves keys Cap'n Web would drop", async ({ expect }) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { NAMESPACE: { type: "kv", id: "NAMESPACE" } },
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+			],
+		});
+		useDispose(mf);
+
+		const namespace = await mf.getKVNamespace("NAMESPACE");
+		const metadata = { constructor: 1, toString: "a" };
+		// Call each method twice: first synchronously, then over Cap'n Web once
+		// known to be async
+		for (let i = 0; i < 2; i++) {
+			await namespace.put(`key${i}`, "value", { metadata });
+			const result = await namespace.getWithMetadata(`key${i}`);
+			expect(result.metadata).toEqual(metadata);
+		}
+	});
+
+	test("sends arguments larger than workerd's WebSocket message limit", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { BUCKET: { type: "r2", name: "BUCKET" } },
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+			],
+		});
+		useDispose(mf);
+
+		const bucket = await mf.getR2Bucket("BUCKET");
+		// Make sure `put()` is known to be async, so later calls use Cap'n Web
+		await bucket.put("small", "value");
+		const size = 33 * 1024 * 1024;
+		await bucket.put("string", "x".repeat(size));
+		await bucket.put("bytes", new Uint8Array(size));
+		expect((await bucket.head("string"))?.size).toBe(size);
+		expect((await bucket.head("bytes"))?.size).toBe(size);
+	});
+
+	test("rejects Workers RPC arguments over workerd's WebSocket message limit", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { BINDING: { type: "worker", worker: "binding" } },
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+				{
+					config: {
+						name: "binding",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`
+							import { WorkerEntrypoint } from "cloudflare:workers";
+							export default class extends WorkerEntrypoint {
+								size(bytes) { return bytes.byteLength; }
+							}
+						`),
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const { BINDING } = await mf.getBindings<{
+			BINDING: { size(bytes: Uint8Array): Promise<number> };
+		}>();
+		// Base64 encoded, this is over 32 MiB. Like other values that can't be
+		// sent, this throws when calling.
+		expect(() => BINDING.size(new Uint8Array(25 * 1024 * 1024))).toThrow(
+			RangeError
+		);
+		// Rejected before it was sent, so the session is still usable
+		expect(await BINDING.size(new Uint8Array(1))).toBe(1);
+	});
+
+	test("rejects poisoned proxies passed as arguments", async ({ expect }) => {
+		const opts: ConstructorParameters<typeof Miniflare>[0] = {
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { DB: { type: "d1", id: "DB" } },
+						manifest: singleModuleManifest(
+							"export default { fetch() { return new Response(null, { status: 404 }); } }"
+						),
+					},
+				},
+			],
+		};
+		const mf = new Miniflare(opts);
+		useDispose(mf);
+
+		const poisoned = (await mf.getD1Database("DB")).prepare("SELECT 1");
+		await mf.setOptions(opts);
+		const db = await mf.getD1Database("DB");
+		const error = new Error(
+			"Attempted to use poisoned stub. Stubs to runtime objects must be re-created after calling `Miniflare#setOptions()` or `Miniflare#dispose()`."
+		);
+		// The first call is synchronous, then once `batch()` is known to be async,
+		// calls are sent over Cap'n Web
+		expect(() => db.batch([poisoned])).toThrow(error);
+		await db.batch([db.prepare("SELECT 1")]);
+		await expect(db.batch([poisoned])).rejects.toThrow(error);
+	});
+
 	test("preserves original URL for service binding fetch", async ({
 		expect,
 	}) => {
@@ -422,6 +598,21 @@ describe("ProxyClient", () => {
 			}
 		}
 		await asyncUserFunction();
+
+		async function rpcUserFunction() {
+			try {
+				const stub = ns.get(ns.idFromName("name")) as unknown as {
+					missing(): Promise<void>;
+				};
+				await stub.missing();
+				throw new Error("Test failed");
+			} catch (e) {
+				assert(hasStack(e));
+				expect(e.stack).toMatch(/rpcUserFunction/);
+				expect(e.stack).not.toMatch(/RpcProxyHandler/);
+			}
+		}
+		await rpcUserFunction();
 	});
 	test("can access ReadableStream property multiple times", async ({
 		expect,
