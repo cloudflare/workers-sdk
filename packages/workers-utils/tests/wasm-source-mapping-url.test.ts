@@ -1,5 +1,8 @@
 import { describe, it } from "vitest";
-import { getWasmSourceMappingUrl } from "../src/wasm-source-mapping-url";
+import {
+	getWasmSourceMappingUrl,
+	setWasmSourceMappingUrl,
+} from "../src/wasm-source-mapping-url";
 
 /** Encodes `text` as a WebAssembly name: its UTF-8 length, then its bytes. */
 function name(text: string): number[] {
@@ -46,5 +49,47 @@ describe("getWasmSourceMappingUrl", () => {
 
 		expect(getWasmSourceMappingUrl(bytes.subarray(0, 12))).toBeUndefined();
 		expect(getWasmSourceMappingUrl(bytes.subarray(0, 30))).toBeUndefined();
+	});
+});
+
+describe("setWasmSourceMappingUrl", () => {
+	it("replaces the section, keeping the others", ({ expect }) => {
+		const type = [1, [0]] as [number, number[]];
+		const producers = [0, [...name("producers"), 0]] as [number, number[]];
+		const bytes = wasmModule(
+			type,
+			[0, [...name("sourceMappingURL"), ...name("index_bg.wasm.map")]],
+			producers
+		);
+
+		expect(setWasmSourceMappingUrl(bytes, "a.wasm.map")).toEqual(
+			wasmModule(
+				type,
+				[0, [...name("sourceMappingURL"), ...name("a.wasm.map")]],
+				producers
+			)
+		);
+	});
+
+	it("appends a section to a module without one", ({ expect }) => {
+		const bytes = wasmModule([1, [0]]);
+		const updated = setWasmSourceMappingUrl(bytes, "a.wasm.map");
+
+		expect(updated.subarray(0, bytes.length)).toEqual(bytes);
+		expect(getWasmSourceMappingUrl(updated)).toBe("a.wasm.map");
+	});
+
+	it("writes a URL longer than one LEB128 byte can size", ({ expect }) => {
+		const url = `${"a".repeat(200)}.wasm.map`;
+
+		expect(
+			getWasmSourceMappingUrl(setWasmSourceMappingUrl(wasmModule(), url))
+		).toBe(url);
+	});
+
+	it("throws for bytes that aren't a module", ({ expect }) => {
+		expect(() =>
+			setWasmSourceMappingUrl(new Uint8Array([1, 2, 3]), "a.wasm.map")
+		).toThrow("Expected a WebAssembly module.");
 	});
 });

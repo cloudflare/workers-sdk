@@ -7,9 +7,49 @@
  * a valid module.
  */
 export function getWasmSourceMappingUrl(bytes: Uint8Array): string | undefined {
+	return findSourceMappingUrlSection(bytes)?.url;
+}
+
+/**
+ * Points a WebAssembly module's `sourceMappingURL` custom section at `url`,
+ * replacing the module's section or appending one.
+ *
+ * @param bytes The module's bytes.
+ * @param url The URL to write.
+ * @returns The updated module's bytes.
+ * @throws If `bytes` isn't a valid module.
+ */
+export function setWasmSourceMappingUrl(
+	bytes: Uint8Array,
+	url: string
+): Uint8Array {
+	const section = findSourceMappingUrlSection(bytes);
+	if (section === null) {
+		throw new Error("Expected a WebAssembly module.");
+	}
+	const payload = [...encodeName("sourceMappingURL"), ...encodeName(url)];
+	const replacement = [0, ...encodeU32(payload.length), ...payload];
+	const start = section?.start ?? bytes.length;
+	const end = section?.end ?? bytes.length;
+	return new Uint8Array([
+		...bytes.subarray(0, start),
+		...replacement,
+		...bytes.subarray(end),
+	]);
+}
+
+/**
+ * Finds a WebAssembly module's `sourceMappingURL` custom section.
+ *
+ * @returns The section's byte range and URL, `undefined` if the module has no
+ * such section, or `null` if `bytes` isn't a valid module.
+ */
+function findSourceMappingUrlSection(
+	bytes: Uint8Array
+): { start: number; end: number; url: string } | undefined | null {
 	const magic = [0x00, 0x61, 0x73, 0x6d];
 	if (bytes.length < 8 || magic.some((byte, i) => bytes[i] !== byte)) {
-		return undefined;
+		return null;
 	}
 	let pos = 8; // Skip the magic number and version.
 	// Reads an unsigned LEB128 integer, as used for sizes and name lengths.
@@ -37,17 +77,39 @@ export function getWasmSourceMappingUrl(bytes: Uint8Array): string | undefined {
 		return name;
 	};
 	while (pos < bytes.length) {
+		const start = pos;
 		const id = bytes[pos++];
 		const size = readU32();
 		if (size === undefined || pos + size > bytes.length) {
-			return undefined;
+			return null;
 		}
 		const end = pos + size;
 		// Custom sections have id 0 and start with their name.
 		if (id === 0 && readName(end) === "sourceMappingURL") {
-			return readName(end);
+			const url = readName(end);
+			return url === undefined ? null : { start, end, url };
 		}
 		pos = end;
 	}
 	return undefined;
+}
+
+/** Encodes `value` as an unsigned LEB128 integer. */
+function encodeU32(value: number): number[] {
+	const bytes = [];
+	do {
+		let byte = value & 0x7f;
+		value >>>= 7;
+		if (value !== 0) {
+			byte |= 0x80;
+		}
+		bytes.push(byte);
+	} while (value !== 0);
+	return bytes;
+}
+
+/** Encodes `text` as a WebAssembly name: its UTF-8 length, then its bytes. */
+function encodeName(text: string): number[] {
+	const bytes = new TextEncoder().encode(text);
+	return [...encodeU32(bytes.length), ...bytes];
 }

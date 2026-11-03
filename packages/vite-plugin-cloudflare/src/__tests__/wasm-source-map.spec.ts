@@ -24,26 +24,49 @@ function wasmModule(sourceMappingUrl?: string): Uint8Array {
 
 describe("readWasmSourceMap", () => {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wasm-source-map-"));
-	const modulePath = path.join(dir, "index_bg.wasm");
+	const modulePath = path.join(dir, "pkg", "index_bg.wasm");
+	fs.mkdirSync(path.join(dir, "pkg"));
+	fs.mkdirSync(path.join(dir, "maps"));
+	const map = { version: 3, file: "index_bg.wasm", mappings: "" };
 	fs.writeFileSync(
-		path.join(dir, "index_bg.wasm.map"),
-		JSON.stringify({ version: 3, file: "index_bg.wasm", mappings: "" })
+		path.join(dir, "pkg", "index_bg.wasm.map"),
+		JSON.stringify(map)
 	);
-	fs.writeFileSync(path.join(dir, "invalid.wasm.map"), "not json");
+	fs.writeFileSync(
+		path.join(dir, "maps", "index_bg.wasm.map"),
+		JSON.stringify(map)
+	);
+	fs.writeFileSync(path.join(dir, "pkg", "invalid.wasm.map"), "not json");
 
-	it("reads the map and names it next to the emitted module", async ({
-		expect,
-	}) => {
+	it("reads the map and names it after the module", async ({ expect }) => {
+		expect(
+			await readWasmSourceMap(modulePath, wasmModule("index_bg.wasm.map"))
+		).toEqual({
+			fileName: expect.stringMatching(/^index_bg-[\da-f]{8}\.wasm\.map$/),
+			sourceMap: map,
+		});
+	});
+
+	it("reads a map from another directory", async ({ expect }) => {
 		expect(
 			await readWasmSourceMap(
 				modulePath,
-				wasmModule("index_bg.wasm.map"),
-				"assets/index_bg-a1b2c3.wasm"
+				wasmModule("../maps/index_bg.wasm.map")
 			)
-		).toEqual({
-			fileName: "assets/index_bg.wasm.map",
-			sourceMap: { version: 3, file: "index_bg.wasm", mappings: "" },
-		});
+		).toMatchObject({ sourceMap: map });
+	});
+
+	it("names the maps of different modules differently", async ({ expect }) => {
+		const a = await readWasmSourceMap(
+			modulePath,
+			wasmModule("index_bg.wasm.map")
+		);
+		const b = await readWasmSourceMap(
+			modulePath,
+			wasmModule("../maps/index_bg.wasm.map")
+		);
+
+		expect(a?.fileName).not.toBe(b?.fileName);
 	});
 
 	it.for([
@@ -51,18 +74,17 @@ describe("readWasmSourceMap", () => {
 		["an absolute URL", "https://example.com/index_bg.wasm.map"],
 	])("returns undefined for %s", async ([, url], { expect }) => {
 		expect(
-			await readWasmSourceMap(modulePath, wasmModule(url), "index_bg.wasm")
+			await readWasmSourceMap(modulePath, wasmModule(url))
 		).toBeUndefined();
 	});
 
 	it.for([
 		["a data URL", "data:application/json;base64,e30=", "data URL"],
-		["a path outside the build output", "../index_bg.wasm.map", "inside"],
 		["a missing map", "missing.wasm.map", "ENOENT"],
 		["a map that isn't JSON", "invalid.wasm.map", "JSON"],
 	])("throws for %s", async ([, url, message], { expect }) => {
 		await expect(
-			readWasmSourceMap(modulePath, wasmModule(url), "index_bg.wasm")
+			readWasmSourceMap(modulePath, wasmModule(url))
 		).rejects.toThrow(message);
 	});
 });

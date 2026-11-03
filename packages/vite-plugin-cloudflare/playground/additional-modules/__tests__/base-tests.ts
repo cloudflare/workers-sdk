@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { getWorkerBundleDir } from "@cloudflare/build-output-utils";
+import { getWasmSourceMappingUrl } from "@cloudflare/workers-utils";
 import { describe, test } from "vitest";
 import {
 	getJsonResponse,
@@ -79,33 +80,40 @@ test("supports CompiledWasm modules with a source map", async ({ expect }) => {
 	expect(result).toEqual({ result: 19 });
 });
 
+test("supports CompiledWasm modules whose source maps share a name", async ({
+	expect,
+}) => {
+	const result = await getJsonResponse("/other-wasm-with-source-map");
+	expect(result).toEqual({ result: 23 });
+});
+
 describe.runIf(isBuild)("WebAssembly source maps", () => {
-	test("emits the source map next to its module, naming the module", ({
+	test("emits each module's source map next to it, naming the module", ({
 		expect,
 	}) => {
 		const bundleDir = getWorkerBundleDir(rootDir);
-		const modulePath = fs
+		const moduleNames = fs
 			.readdirSync(bundleDir, { recursive: true, encoding: "utf8" })
-			.find((file) => /wasm-with-source-map-[\w-]+\.wasm$/.test(file));
-		expect(modulePath).toBeDefined();
-		const moduleName = (modulePath ?? "").split(path.sep).join("/");
-		const sourceMap = JSON.parse(
-			fs.readFileSync(
-				path.join(
-					bundleDir,
-					path.dirname(moduleName),
-					"wasm-with-source-map.wasm.map"
-				),
-				"utf8"
-			)
-		);
+			.filter((file) => /wasm-with-source-map-[\w-]+\.wasm$/.test(file))
+			.map((file) => file.split(path.sep).join("/"));
+		expect(moduleNames).toHaveLength(2);
 
-		expect(sourceMap).toEqual({
-			version: 3,
-			file: `./${moduleName}`,
-			sources: ["add.c"],
-			names: [],
-			mappings: "",
+		const sources = moduleNames.map((moduleName) => {
+			const sourceMapUrl = getWasmSourceMappingUrl(
+				fs.readFileSync(path.join(bundleDir, moduleName))
+			);
+			expect(sourceMapUrl).toMatch(
+				/^wasm-with-source-map-[\da-f]{8}\.wasm\.map$/
+			);
+			const sourceMap = JSON.parse(
+				fs.readFileSync(
+					path.join(bundleDir, path.dirname(moduleName), sourceMapUrl ?? ""),
+					"utf8"
+				)
+			);
+			expect(sourceMap.file).toBe(`./${moduleName}`);
+			return sourceMap.sources;
 		});
+		expect(sources.sort()).toEqual([["add.c"], ["other.c"]]);
 	});
 });
