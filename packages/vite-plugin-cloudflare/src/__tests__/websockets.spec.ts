@@ -876,12 +876,12 @@ describe("getWorkerUpgradeUrl", () => {
 		);
 	});
 
-	test.for([
+	test.for<[string, NonNullable<vite.ProxyOptions["bypass"]>]>([
 		["false", () => false],
 		["undefined", () => undefined],
 		["null", () => null],
 		["an error", () => Promise.reject(new Error("bypass failed"))],
-	] as const)(
+	])(
 		"leaves the upgrade to Vite when `bypass` returns %s",
 		async ([, bypass], { expect }) => {
 			const proxy = {
