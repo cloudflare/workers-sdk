@@ -620,7 +620,9 @@ describe("generate types - CLI", () => {
 		await runWrangler("types --include-runtime=false");
 		const types = fs.readFileSync("./worker-configuration.d.ts", "utf-8");
 		expect(types).toContain("IDENTITY:");
-		expect(types).toContain("getIdentity(label?: string)");
+		expect(types).toContain(
+			"getIdentity(selection?: string | { agentId?: string })"
+		);
 		expect(types).toContain("Promise<Rpc.Stub<Rpc.RpcTargetBranded &");
 		expect(types).toContain(
 			"fetch(input: Request | string, init?: Omit<RequestInit, 'body' | 'cf' | 'signal'>"

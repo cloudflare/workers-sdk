@@ -74,3 +74,16 @@ await env.USE.disableConnections("customer-a");
 await handle.getAuthorizationGrant({
 	authorizationServer: "https://auth.example",
 });
+
+const pending = await env.MANAGE.previewConnection("customer-a", {
+	sessionId: "session",
+	flowId: "flow",
+	receipt: "receipt",
+});
+const issuer: string | undefined = pending.authorization.issuer;
+const subject: string | undefined = pending.authorization.subject;
+const scopeSource: "token_response" | "requested" | "unknown" =
+	pending.authorization.scopeSource;
+// @ts-expect-error Pending facts do not export provider credentials.
+void pending.authorization.accessToken;
+void [issuer, subject, scopeSource];

@@ -33,6 +33,12 @@ interface PendingConnection {
 	flowId: string;
 	expiresAt: number;
 	scopes: string[];
+	/** Opaque protocol facts for application checks before activation. */
+	authorization: {
+		issuer?: string;
+		subject?: string;
+		scopeSource: "token_response" | "requested" | "unknown";
+	};
 }
 interface ConnectionFlow {
 	connectionId: string;
