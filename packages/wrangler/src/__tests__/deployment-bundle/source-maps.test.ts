@@ -252,6 +252,26 @@ describe("loadSourceMaps for WebAssembly modules", () => {
 		expect(loadSourceMaps(main, [wasm], {})).toEqual([]);
 	});
 
+	it.for(["../private.json", "maps/../../private.json", "/private.json"])(
+		"won't read %s outside the module's directory, unless not strict",
+		(url, { expect }) => {
+			const dir = createTempDir();
+			mkdirSync(path.join(dir, "pkg"));
+			writeFileSync(path.join(dir, "private.json"), validSourceMap);
+			const main = makeModule("index.js", path.join(dir, "index.js"), "");
+			const wasm = makeWasmModule(
+				"index_bg.wasm",
+				path.join(dir, "pkg", "index_bg.wasm"),
+				url
+			);
+
+			expect(() => loadSourceMaps(main, [wasm], {})).toThrow(
+				"expected a file in the module's directory"
+			);
+			expect(loadSourceMaps(main, [wasm], {}, { strict: false })).toEqual([]);
+		}
+	);
+
 	it("throws on a data URL", ({ expect }) => {
 		const dir = createTempDir();
 		const main = makeModule("index.js", path.join(dir, "index.js"), "");

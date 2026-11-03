@@ -21,8 +21,8 @@ export interface WasmSourceMap {
  * module, or `undefined` if the module has no section or names a map by an
  * absolute URL, such as one from Emscripten's `--source-map-base`, which is
  * hosted elsewhere.
- * @throws If the section names a `data:` URL, or a file that can't be read as
- * JSON.
+ * @throws If the section names a `data:` URL, a file outside the module's
+ * directory, or a file that can't be read as JSON.
  */
 export async function readWasmSourceMap(
 	modulePath: string,
@@ -39,11 +39,20 @@ export async function readWasmSourceMap(
 		return undefined;
 	}
 
+	// Toolchains write the map next to the module. Reading only there stops a
+	// module from naming an unrelated file elsewhere on disk.
+	const moduleDir = path.dirname(modulePath);
+	const sourceMapPath = path.resolve(moduleDir, sourceMapUrl);
+	const relativePath = path.relative(moduleDir, sourceMapPath);
+	if (
+		relativePath === ".." ||
+		relativePath.startsWith(`..${path.sep}`) ||
+		path.isAbsolute(relativePath)
+	) {
+		throw new Error("expected a file in the module's directory.");
+	}
 	const sourceMap = JSON.parse(
-		await fsp.readFile(
-			path.join(path.dirname(modulePath), sourceMapUrl),
-			"utf8"
-		)
+		await fsp.readFile(sourceMapPath, "utf8")
 	) as Record<string, unknown>;
 	// Modules from different directories can name maps with the same name, so
 	// name each map after its module and a hash of the module, as Vite names
