@@ -173,6 +173,8 @@ describe("ProxyClient", () => {
 								get property() { return "value"; }
 								getCounter() { return new Counter(); }
 								async callback(fn) { return \`called with \${await fn("arg")}\`; }
+								increment(counter) { return counter.increment(); }
+								text(response) { return response.text(); }
 							}
 						`),
 					},
@@ -188,6 +190,8 @@ describe("ProxyClient", () => {
 					increment(): Promise<number>;
 				};
 				callback(fn: (value: string) => string): Promise<string>;
+				increment(counter: { increment(): Promise<number> }): Promise<number>;
+				text(response: Response): Promise<string>;
 			};
 		}>();
 		expect(await BINDING.property).toBe("value");
@@ -195,6 +199,13 @@ describe("ProxyClient", () => {
 		expect(await BINDING.callback((value) => value.toUpperCase())).toBe(
 			"called with ARG"
 		);
+
+		// Returned stubs can be passed back, and still used afterwards
+		const counter = await BINDING.getCounter();
+		expect(await BINDING.increment(counter)).toBe(1);
+		expect(await counter.increment()).toBe(2);
+		// Miniflare's `Request`, `Response` and `Headers` can be sent
+		expect(await BINDING.text(new Response("body"))).toBe("body");
 	});
 
 	test("rejects Workers RPC arguments over workerd's WebSocket message limit", async ({

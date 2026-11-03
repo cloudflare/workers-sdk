@@ -26,12 +26,10 @@ import {
 import type { ProxyRpcApi } from "./constants";
 import type { PlatformImpl, ReducersRevivers } from "./devalue";
 
-// Not all of these are declared by `@cloudflare/workers-types`
-const { RpcPromise, RpcProperty, RpcStub, ServiceStub } =
-	workers as unknown as Record<
-		"RpcPromise" | "RpcProperty" | "RpcStub" | "ServiceStub",
-		abstract new (...args: never[]) => object
-	>;
+// Not declared by `@cloudflare/workers-types`
+const { ServiceStub } = workers as unknown as {
+	ServiceStub: abstract new (...args: never[]) => object;
+};
 
 const ENCODER = new TextEncoder();
 const DECODER = new TextDecoder();
@@ -128,34 +126,16 @@ function isInternal(value: unknown) {
 }
 
 /**
- * @param value Object about to be stored on the "heap"
- * @returns Name of `value`'s class. Read from its prototype, as accessing any
- * property of a Workers RPC stub (e.g. `name` or `constructor`) calls the
- * remote object.
- */
-function getClassName(value: object): string {
-	return Object.getPrototypeOf(value)?.constructor?.name ?? "Object";
-}
-
-/**
  * @param value Value about to be stored on the "heap"
  * @returns Whether `value` speaks Workers RPC, so should be used by the client
  * through a Cap'n Web stub rather than a native "heap" object proxy
  */
 function isRpc(value: unknown): boolean {
-	if (typeof value === "function") {
-		return true;
-	}
-	if (!isObject(value)) {
-		return false;
-	}
-	const proto = Object.getPrototypeOf(value);
+	// Workers RPC stubs and promises are functions too
 	return (
+		typeof value === "function" ||
 		value instanceof ServiceStub ||
-		value instanceof RpcTarget ||
-		proto === RpcStub.prototype ||
-		proto === RpcPromise.prototype ||
-		proto === RpcProperty.prototype
+		value instanceof RpcTarget
 	);
 }
 
@@ -183,8 +163,6 @@ export class ProxyServer implements DurableObject {
 				((type === "Object" || isInternal(value)) && !isPlainObject(value)) ||
 				type === "Promise"
 			) {
-				assert(value !== null);
-				const name = getClassName(value as object);
 				if (value instanceof __MiniflareFunctionWrapper) {
 					// Store the function itself, so it can be used as a Cap'n Web stub
 					value = (value as { __miniflareWrappedFunction: unknown })
@@ -192,6 +170,8 @@ export class ProxyServer implements DurableObject {
 				}
 				const address = this.nextHeapAddress++;
 				this.heap.set(address, value);
+				assert(value !== null);
+				const name = value?.constructor.name;
 				return [address, name, isRpc(value)];
 			}
 		},

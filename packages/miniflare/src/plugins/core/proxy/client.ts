@@ -3,7 +3,7 @@ import assert from "node:assert";
 import crypto from "node:crypto";
 import { ReadableStream, TransformStream } from "node:stream/web";
 import util from "node:util";
-import { newWebSocketRpcSession, RpcPromise, RpcStub } from "capnweb";
+import { newWebSocketRpcSession, RpcStub } from "capnweb";
 import { stringify } from "devalue";
 import { Agent, WebSocket } from "undici";
 import { Request } from "../../../http";
@@ -46,6 +46,7 @@ import type {
 	ImageTransformer,
 	ServiceWorkerGlobalScope,
 } from "@cloudflare/workers-types/experimental";
+import type { RpcPromise } from "capnweb";
 
 const kAddress = Symbol("kAddress");
 const kName = Symbol("kName");
@@ -67,11 +68,7 @@ interface NativeTarget {
 }
 
 function isNativeTarget(value: unknown): value is NativeTarget {
-	return (
-		(typeof value === "object" || typeof value === "function") &&
-		value !== null &&
-		kAddress in value
-	);
+	return typeof value === "object" && value !== null && kAddress in value;
 }
 
 // Special targets for objects automatically added to the `ProxyServer` "heap"
@@ -168,21 +165,16 @@ function toGlobalHTTPObject(value: object): object | undefined {
 		return new globalThis.Headers([...value.entries()]);
 	}
 	if (isRequestLike(value)) {
-		const request = new globalThis.Request(value.url, {
+		return new globalThis.Request(value.url, {
 			method: value.method,
 			headers: [...value.headers.entries()],
 			body: value.body as globalThis.ReadableStream | null,
 			redirect: value.redirect as globalThis.RequestInit["redirect"],
 			duplex: value.body === null ? undefined : "half",
 		});
-		// Cap'n Web serialises `cf` if present
-		if (value.cf !== undefined) {
-			Object.defineProperty(request, "cf", { value: value.cf });
-		}
-		return request;
 	}
 	if (isResponseLike(value)) {
-		const response = new globalThis.Response(
+		return new globalThis.Response(
 			value.body as globalThis.ReadableStream | null,
 			{
 				status: value.status,
@@ -190,10 +182,6 @@ function toGlobalHTTPObject(value: object): object | undefined {
 				headers: [...value.headers.entries()],
 			}
 		);
-		if (value.cf !== undefined) {
-			Object.defineProperty(response, "cf", { value: value.cf });
-		}
-		return response;
 	}
 }
 
@@ -208,8 +196,6 @@ type ProxyRpcStub = {
 // Cap'n Web session with `ProxyServer`, used for objects that speak Workers RPC
 class ProxyRpcSession {
 	readonly api: ProxyRpcStub;
-	// Resolves once the WebSocket has opened, or failed to
-	readonly ready: Promise<void>;
 	// Use `undici`'s `WebSocket` with our own dispatcher, rather than `ws` or
 	// the global `WebSocket`, so request mocking libraries (e.g. MSW) don't
 	// intercept the connection
@@ -237,19 +223,10 @@ class ProxyRpcSession {
 			undefined,
 			{ limits: { maxMessageSize: Infinity } }
 		) as unknown as ProxyRpcStub;
-		this.ready = new Promise((resolve) => {
-			this.#webSocket.addEventListener("open", () => resolve(), {
-				once: true,
-			});
-			// Cap'n Web listens for "error"s and rejects pending calls
-			this.#webSocket.addEventListener(
-				"close",
-				() => {
-					this.#closed = true;
-					resolve();
-				},
-				{ once: true }
-			);
+		// Cap'n Web queues calls until the WebSocket opens, and listens for
+		// "error"s to reject them
+		this.#webSocket.addEventListener("close", () => (this.#closed = true), {
+			once: true,
 		});
 	}
 
@@ -294,10 +271,10 @@ export class ProxyClient {
 
 	/**
 	 * Resolves once synchronous proxy calls can be served without blocking the
-	 * main thread on worker startup, and the Cap'n Web session has connected.
+	 * main thread on worker startup.
 	 */
 	warm(): Promise<void> {
-		return this.#bridge.warm();
+		return this.#bridge.sync.warm();
 	}
 
 	setRuntimeEntryURL(runtimeEntryURL: URL) {
@@ -356,7 +333,7 @@ class ProxyClientBridge {
 	// arguments
 	readonly #rpcProxies = new WeakMap<
 		object,
-		{ raw: object; target?: NativeTarget; version: number }
+		{ raw: object; version: number }
 	>();
 
 	constructor(
@@ -375,13 +352,6 @@ class ProxyClientBridge {
 			this.#session = new ProxyRpcSession(this.url);
 		}
 		return this.#session.api;
-	}
-
-	async warm(): Promise<void> {
-		// Make sure the session exists before waiting for it
-		void this.rpc;
-		assert(this.#session !== undefined);
-		await Promise.all([this.sync.warm(), this.#session.ready]);
 	}
 
 	/**
@@ -518,7 +488,7 @@ class ProxyClientBridge {
 		proxyTarget[util.inspect.custom] = handler.inspect;
 		const proxy = new Proxy(proxyTarget, handler);
 		handler.proxy = proxy;
-		this.#rpcProxies.set(proxy, { raw, target, version: this.#version });
+		this.#rpcProxies.set(proxy, { raw, version: this.#version });
 		return proxy;
 	}
 
@@ -577,15 +547,6 @@ class ProxyClientBridge {
 		if (globalHTTPObject !== undefined) {
 			return globalHTTPObject;
 		}
-		// Cap'n Web only accepts exact `Blob`s, but Node.js sometimes returns
-		// subclasses (e.g. from `Blob#slice()` in Node.js 22)
-		if (
-			value instanceof Blob &&
-			!(value instanceof File) &&
-			Object.getPrototypeOf(value) !== Blob.prototype
-		) {
-			return new Blob([value], { type: value.type });
-		}
 		if (Array.isArray(value)) {
 			return value.map((v) => this.#encode(v, state));
 		}
@@ -612,11 +573,9 @@ class ProxyClientBridge {
 		) {
 			return value;
 		}
+		// Cap'n Web resolves promises in results before returning them
 		if (value instanceof RpcStub) {
 			return this.createOwnedRpcProxy(value as unknown as Disposable);
-		}
-		if (value instanceof RpcPromise) {
-			return this.createRpcProxy(value, undefined, /* isPromise */ true);
 		}
 		if (value instanceof Error) {
 			restoreErrorName(value);
@@ -721,15 +680,6 @@ class RpcProxyHandler implements ProxyHandler<() => void> {
 			return this.inspect;
 		}
 		this.#assertSafe();
-		if (this.target !== undefined) {
-			// Allows this to be sent to native methods (e.g. by `devalue`)
-			if (key === kAddress) {
-				return this.target[kAddress];
-			}
-			if (key === kName) {
-				return this.target[kName];
-			}
-		}
 
 		if (this.isPromise) {
 			if (key === "then") {
@@ -754,23 +704,6 @@ class RpcProxyHandler implements ProxyHandler<() => void> {
 		// shouldn't be thenable
 		if (typeof key === "symbol" || key === "then") {
 			return undefined;
-		}
-		// Cap'n Web's own stub methods
-		if (key === "dup") {
-			return () => this.bridge.createOwnedRpcProxy(this.raw.dup());
-		}
-		if (key === "onRpcBroken") {
-			return (callback: (error: unknown) => void) =>
-				this.raw.onRpcBroken(callback);
-		}
-		if (key === "map") {
-			return (func: (value: unknown) => unknown) =>
-				this.bridge.createRpcProxy(
-					this.raw.map(func),
-					undefined,
-					true,
-					this.proxy
-				);
 		}
 
 		if (this.target !== undefined) {
@@ -797,14 +730,6 @@ class RpcProxyHandler implements ProxyHandler<() => void> {
 			true,
 			this.proxy
 		);
-	}
-
-	has(target: () => void, key: string | symbol) {
-		if (this.target !== undefined && (key === kAddress || key === kName)) {
-			return true;
-		}
-		// Like Workers RPC stubs, appear to have every property
-		return typeof key === "string" || Reflect.has(target, key);
 	}
 
 	apply(_target: () => void, _thisArg: unknown, args: unknown[]) {

@@ -952,9 +952,6 @@ export function getGlobalServices({
 					// Keep custom error names and properties (for example Artifacts
 					// `code`) when binding errors reach `ProxyServer` for Node callers.
 					"enhanced_error_serialization",
-					// Match Cap'n Web's stub ownership rules, so `ProxyServer` can
-					// forward stubs from Node to Workers RPC targets
-					"rpc_params_dup_stubs",
 				],
 				bindings: serviceEntryBindings,
 				durableObjectNamespaces: [
