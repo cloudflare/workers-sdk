@@ -65,6 +65,7 @@ port.addEventListener("message", async (event) => {
       bodyTimeout: 0,
       });
     }
+    headers["${CoreHeaders.OP_SYNC}"] = "true";
     // body cannot be a ReadableStream, so no need to specify duplex
     const response = await fetch(url, { method, headers, body, dispatcher });
     const resultType = response.headers.get("${CoreHeaders.OP_RESULT_TYPE}");

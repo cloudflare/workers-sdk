@@ -60,6 +60,9 @@ export const CoreHeaders = {
 	OP: "MF-Op",
 	OP_TARGET: "MF-Op-Target",
 	OP_KEY: "MF-Op-Key",
+	OP_SYNC: "MF-Op-Sync",
+	OP_STRINGIFIED_SIZE: "MF-Op-Stringified-Size",
+	OP_STREAM_SIZE: "MF-Op-Stream-Size",
 	OP_RESULT_TYPE: "MF-Op-Result-Type",
 	OP_ORIGINAL_URL: "MF-Op-Original-URL",
 } as const;
@@ -113,16 +116,19 @@ export const CoreBindings = {
 } as const;
 
 export const ProxyOps = {
-	// Open the Cap'n Web WebSocket session used for asynchronous operations
+	// Open the Cap'n Web WebSocket session used for Workers RPC objects
 	CONNECT: "CONNECT",
-	// Synchronously get a property of the target
+	// Get the target or a property of the target
 	GET: "GET",
-	// Synchronously get the descriptor for a property of the target
+	// Get the descriptor for a property of the target
 	GET_OWN_DESCRIPTOR: "GET_OWN_DESCRIPTOR",
-	// Synchronously get the target's own property names
+	// Get the target's own property names
 	GET_OWN_KEYS: "GET_OWN_KEYS",
-	// Synchronously call a method on the target
+	// Call a method on the target
 	CALL: "CALL",
+	// Remove the strong reference to the target on the "heap", allowing it to be
+	// garbage collected
+	FREE: "FREE",
 } as const;
 export const ProxyAddresses = {
 	GLOBAL: 0, // globalThis
@@ -131,48 +137,11 @@ export const ProxyAddresses = {
 } as const;
 
 /**
- * Methods `ProxyServer` exposes over its Cap'n Web session. Values exchanged
- * with `call()` and `resolve()` reference "heap" objects and types Cap'n Web
- * doesn't support using {@link ProxyEncoded} values.
+ * Main interface `ProxyServer` exposes over its Cap'n Web session.
  */
 export interface ProxyRpcApi {
 	/** Returns the "heap" object at `address` for use as a Cap'n Web stub. */
 	stub(address: number): unknown;
-	/** Waits for the `Promise` at `address`, removing it from the "heap". */
-	resolve(address: number): Promise<unknown>;
-	/** Calls method `key` of the "heap" object at `address`. */
-	call(address: number, key: string, args: unknown[]): Promise<unknown>;
-	/** Removes objects from the "heap", allowing them to be garbage collected. */
-	free(addresses: number[]): void;
-}
-
-// Plain objects with this as their only key encode values Cap'n Web can't
-// serialise itself. The value is a `[type, ...data]` tuple:
-// - `["Handle", address, name, isRpc]`: "heap" object. `isRpc` objects (e.g.
-//   service bindings, Durable Object stubs, `RpcTarget`s and functions) speak
-//   Workers RPC, so are used through Cap'n Web stubs. Clients only send
-//   `["Handle", address]`.
-// - `["Map", entries]`, `["Set", values]`, `["RegExp", source, flags]`
-// - `["Object", entries]`: plain object with keys Cap'n Web would drop to
-//   prevent prototype pollution (e.g. `constructor`)
-// - `["File", blob, name, lastModified]`
-// - `["Stream", stream, length]`: `ReadableStream` with a known length, which
-//   some APIs (e.g. `R2Bucket#put()`) require
-// - `["String", stream]`, `["Bytes", stream, type]`: large values sent as
-//   streams, as `workerd` rejects WebSocket messages over 32 MiB
-export const PROXY_ENCODED_KEY = "__miniflareProxy";
-export type ProxyEncoded = { [PROXY_ENCODED_KEY]: [string, ...unknown[]] };
-
-export function isProxyEncoded(value: unknown): value is ProxyEncoded {
-	if (typeof value !== "object" || value === null) {
-		return false;
-	}
-	const record = value as Partial<ProxyEncoded>;
-	return (
-		Object.hasOwn(record, PROXY_ENCODED_KEY) &&
-		Object.keys(record).length === 1 &&
-		Array.isArray(record[PROXY_ENCODED_KEY])
-	);
 }
 
 // Cap'n Web only revives the names of built-in errors. Other names are sent in
@@ -239,9 +208,8 @@ export function isImagesInput(targetName: string, key: string) {
 	return targetName === "ImagesBindingImpl" && key === "input";
 }
 
-// Durable Object stubs are Workers RPC targets, but `id` and `name` are
-// synchronous properties of the stub itself. The internal names are
-// "DurableObject" and "WorkerRpc".
+// Durable Object stub RPC calls should always be async to avoid blocking the
+// Node.js event loop. The internal names are "DurableObject" and "WorkerRpc".
 // https://github.com/cloudflare/workerd/blob/62b9ceee/src/workerd/api/actor.h#L86
 // https://github.com/cloudflare/workerd/blob/62b9ceee/src/workerd/api/worker-rpc.h#L30
 export function isDurableObjectStub(targetName: string) {

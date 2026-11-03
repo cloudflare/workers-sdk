@@ -3,15 +3,13 @@ import { Buffer } from "node:buffer";
 import { newWorkersWebSocketRpcResponse, RpcTarget } from "capnweb";
 import * as workers from "cloudflare:workers";
 import { parse } from "devalue";
-import { reduceError } from "miniflare:shared";
+import { readPrefix, reduceError } from "miniflare:shared";
 import {
 	CoreBindings,
 	CoreHeaders,
 	isFetcherFetch,
 	isImagesInput,
-	isProxyEncoded,
 	isR2ObjectWriteHttpMetadata,
-	PROXY_ENCODED_KEY,
 	PROXY_ERROR_NAME_KEY,
 	ProxyAddresses,
 	ProxyOps,
@@ -25,7 +23,7 @@ import {
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 } from "./devalue";
-import type { ProxyEncoded, ProxyRpcApi } from "./constants";
+import type { ProxyRpcApi } from "./constants";
 import type { PlatformImpl, ReducersRevivers } from "./devalue";
 
 // Not all of these are declared by `@cloudflare/workers-types`
@@ -35,6 +33,8 @@ const { RpcPromise, RpcProperty, RpcStub, ServiceStub } =
 		abstract new (...args: never[]) => object
 	>;
 
+const ENCODER = new TextEncoder();
+const DECODER = new TextDecoder();
 const ALLOWED_HOSTNAMES = ["127.0.0.1", "[::1]", "localhost"];
 // Errors Cap'n Web revives with their original class, and therefore name
 const BUILT_IN_ERROR_NAMES = new Set([
@@ -75,7 +75,7 @@ const objectProtoNames = Object.getOwnPropertyNames(Object.prototype)
 	.join("\0");
 function isPlainObject(value: unknown) {
 	const proto = Object.getPrototypeOf(value);
-	if (isObject(value) && getClassName(value) === "RpcStub") {
+	if (value?.constructor?.name === "RpcStub") {
 		return false;
 	}
 	if (isObject(value)) {
@@ -140,7 +140,7 @@ function getClassName(value: object): string {
 /**
  * @param value Value about to be stored on the "heap"
  * @returns Whether `value` speaks Workers RPC, so should be used by the client
- * through a Cap'n Web stub rather than as a native "heap" object
+ * through a Cap'n Web stub rather than a native "heap" object proxy
  */
 function isRpc(value: unknown): boolean {
 	if (typeof value === "function") {
@@ -158,52 +158,6 @@ function isRpc(value: unknown): boolean {
 		proto === RpcProperty.prototype
 	);
 }
-
-/**
- * @param value Value returned to the client over Cap'n Web
- * @returns Whether Cap'n Web can serialise `value` itself
- */
-function isCapnWebSerializable(value: object): boolean {
-	return (
-		value instanceof Date ||
-		value instanceof ArrayBuffer ||
-		ArrayBuffer.isView(value) ||
-		value instanceof Error ||
-		value instanceof ReadableStream ||
-		value instanceof WritableStream ||
-		value instanceof URL ||
-		value instanceof Headers ||
-		value instanceof Request ||
-		value instanceof Response ||
-		// Cap'n Web only accepts exact `Blob`s, `File`s are encoded separately
-		(value instanceof Blob && !(value instanceof File))
-	);
-}
-
-function encoded(type: string, ...data: unknown[]): ProxyEncoded {
-	return { [PROXY_ENCODED_KEY]: [type, ...data] };
-}
-
-// Cap'n Web drops keys like `constructor` to prevent prototype pollution
-function hasPrototypeKey(value: object): boolean {
-	return Object.keys(value).some((key) => key in Object.prototype);
-}
-
-const BYTES_CONSTRUCTORS: Record<string, new (buffer: ArrayBuffer) => unknown> =
-	{
-		DataView,
-		Int8Array,
-		Uint8Array,
-		Uint8ClampedArray,
-		Int16Array,
-		Uint16Array,
-		Int32Array,
-		Uint32Array,
-		Float32Array,
-		Float64Array,
-		BigInt64Array,
-		BigUint64Array,
-	};
 
 type Env = Record<string, unknown> & {
 	[CoreBindings.DATA_PROXY_SECRET]: ArrayBuffer;
@@ -236,7 +190,9 @@ export class ProxyServer implements DurableObject {
 					value = (value as { __miniflareWrappedFunction: unknown })
 						.__miniflareWrappedFunction;
 				}
-				return [this.store(value), name, isRpc(value)];
+				const address = this.nextHeapAddress++;
+				this.heap.set(address, value);
+				return [address, name, isRpc(value)];
 			}
 		},
 	};
@@ -250,6 +206,15 @@ export class ProxyServer implements DurableObject {
 			assert(typeof address === "number");
 			const heapValue = this.heap.get(address);
 			assert(heapValue !== undefined);
+			// We should only store `Promise`s on the heap if we attempted to make a
+			// synchronous GET/CALL that then returned a `Promise`. In that case,
+			// we'll immediately make an asynchronous GET to resolve the `Promise`.
+			// Rather than worrying about cleaning up `Promise`s some other way, we
+			// just remove them from the heap immediately, since we should never make
+			// a request to resolve them again.
+			if (heapValue instanceof Promise) {
+				this.heap.delete(address);
+			}
 			return heapValue;
 		},
 	};
@@ -261,155 +226,6 @@ export class ProxyServer implements DurableObject {
 	) {
 		this.heap.set(ProxyAddresses.GLOBAL, globalThis);
 		this.heap.set(ProxyAddresses.ENV, env);
-	}
-
-	store(value: unknown): number {
-		const address = this.nextHeapAddress++;
-		this.heap.set(address, value);
-		return address;
-	}
-
-	/**
-	 * Replaces values in a result Cap'n Web can't serialise with
-	 * {@link ProxyEncoded} values, storing native objects on the "heap".
-	 *
-	 * @param value Result about to be returned over Cap'n Web
-	 * @returns Value Cap'n Web can serialise
-	 */
-	encode(value: unknown): unknown {
-		if (typeof value === "function") {
-			return encoded("Handle", this.store(value), getClassName(value), true);
-		}
-		if (!isObject(value) || isCapnWebSerializable(value)) {
-			return value;
-		}
-		if (value instanceof File) {
-			return encoded(
-				"File",
-				value.slice(0, value.size, value.type),
-				value.name,
-				value.lastModified
-			);
-		}
-		if (value instanceof Map) {
-			return encoded(
-				"Map",
-				Array.from(value, ([k, v]) => [this.encode(k), this.encode(v)])
-			);
-		}
-		if (value instanceof Set) {
-			return encoded(
-				"Set",
-				Array.from(value, (v) => this.encode(v))
-			);
-		}
-		if (value instanceof RegExp) {
-			return encoded("RegExp", value.source, value.flags);
-		}
-		if (Array.isArray(value)) {
-			return value.map((v) => this.encode(v));
-		}
-		if (isPlainObject(value)) {
-			if (hasPrototypeKey(value)) {
-				return encoded(
-					"Object",
-					Object.entries(value).map(([k, v]) => [k, this.encode(v)])
-				);
-			}
-			const result: Record<string, unknown> = {};
-			for (const [k, v] of Object.entries(value)) {
-				result[k] = this.encode(v);
-			}
-			return result;
-		}
-		return encoded(
-			"Handle",
-			this.store(value),
-			getClassName(value),
-			isRpc(value)
-		);
-	}
-
-	/**
-	 * Revives {@link ProxyEncoded} values in arguments sent by the client.
-	 *
-	 * @param value Argument received over Cap'n Web
-	 * @returns Value to pass to the target method
-	 */
-	async decode(value: unknown): Promise<unknown> {
-		if (isProxyEncoded(value)) {
-			const [type, ...data] = value[PROXY_ENCODED_KEY];
-			switch (type) {
-				case "Handle": {
-					const [address] = data;
-					assert(typeof address === "number");
-					assert(this.heap.has(address));
-					return this.heap.get(address);
-				}
-				case "Map":
-					return new Map(
-						await Promise.all(
-							(data[0] as [unknown, unknown][]).map(
-								async ([k, v]): Promise<[unknown, unknown]> => [
-									await this.decode(k),
-									await this.decode(v),
-								]
-							)
-						)
-					);
-				case "Set":
-					return new Set(
-						await Promise.all((data[0] as unknown[]).map((v) => this.decode(v)))
-					);
-				case "Object": {
-					const result = {};
-					for (const [k, v] of data[0] as [string, unknown][]) {
-						// Define rather than assign, so `__proto__` isn't treated specially
-						Object.defineProperty(result, k, {
-							value: await this.decode(v),
-							enumerable: true,
-							writable: true,
-							configurable: true,
-						});
-					}
-					return result;
-				}
-				case "RegExp":
-					return new RegExp(data[0] as string, data[1] as string);
-				case "File": {
-					const [blob, name, lastModified] = data as [Blob, string, number];
-					return new File([blob], name, { type: blob.type, lastModified });
-				}
-				case "Stream": {
-					const [stream, length] = data as [ReadableStream, number];
-					return stream.pipeThrough(new FixedLengthStream(length));
-				}
-				case "String":
-					return new Response(data[0] as ReadableStream).text();
-				case "Bytes": {
-					const [stream, bytesType] = data as [ReadableStream, string];
-					const buffer = await new Response(stream).arrayBuffer();
-					if (bytesType === "ArrayBuffer") {
-						return buffer;
-					}
-					const BytesConstructor = BYTES_CONSTRUCTORS[bytesType];
-					assert(BytesConstructor !== undefined);
-					return new BytesConstructor(buffer);
-				}
-			}
-			assert.fail(`Unexpected encoded value type: ${type}`);
-		}
-		if (Array.isArray(value)) {
-			return Promise.all(value.map((v) => this.decode(v)));
-		}
-		if (isObject(value) && Object.getPrototypeOf(value) === Object.prototype) {
-			const result: Record<string, unknown> = {};
-			for (const [k, v] of Object.entries(value)) {
-				result[k] = await this.decode(v);
-			}
-			return result;
-		}
-		return value;
 	}
 
 	async fetch(request: Request) {
@@ -455,7 +271,7 @@ export class ProxyServer implements DurableObject {
 
 		const opHeader = request.headers.get(CoreHeaders.OP);
 		if (opHeader === ProxyOps.CONNECT) {
-			return newWorkersWebSocketRpcResponse(request, new ProxyRpc(this), {
+			return newWorkersWebSocketRpcResponse(request, new ProxyRpc(this.heap), {
 				onSendError(error) {
 					if (BUILT_IN_ERROR_NAMES.has(error.name)) {
 						return;
@@ -473,16 +289,25 @@ export class ProxyServer implements DurableObject {
 				},
 			});
 		}
-
-		// Every other operation is synchronous: the client is blocking its thread
-		// until we respond, so `Promise`s are returned as "heap" references
-		// rather than awaited
 		const targetHeader = request.headers.get(CoreHeaders.OP_TARGET);
 		const keyHeader = request.headers.get(CoreHeaders.OP_KEY);
+		const allowAsync = request.headers.get(CoreHeaders.OP_SYNC) === null;
+		const argsSizeHeader = request.headers.get(CoreHeaders.OP_STRINGIFIED_SIZE);
+		const contentLengthHeader = request.headers.get("Content-Length");
 
 		// Get target to perform operations on
 		if (targetHeader === null) {
 			return new Response(null, { status: 400 });
+		}
+
+		// If this is a FREE operation, remove the target(s) from the heap
+		if (opHeader === ProxyOps.FREE) {
+			for (const targetValue of targetHeader.split(",")) {
+				const targetAddress = parseInt(targetValue);
+				assert(!Number.isNaN(targetAddress));
+				this.heap.delete(targetAddress);
+			}
+			return new Response(null, { status: 204 });
 		}
 
 		// Revive the target from the heap
@@ -494,11 +319,11 @@ export class ProxyServer implements DurableObject {
 
 		let status = 200;
 		let result: unknown;
+		let unbufferedRest: ReadableStream | undefined;
 		if (opHeader === ProxyOps.GET) {
-			if (keyHeader === null) {
-				return new Response(null, { status: 400 });
-			}
-			result = target[keyHeader];
+			// If no key header is specified, just return the target
+			result = keyHeader === null ? target : target[keyHeader];
+
 			if (typeof result === "function") {
 				// Calling functions-which-return-functions not yet supported
 				return new Response(null, {
@@ -543,23 +368,58 @@ export class ProxyServer implements DurableObject {
 				return func.call(target, request);
 			}
 
-			const args = parseWithReadableStreams(
-				WORKERS_PLATFORM_IMPL,
-				{ value: await request.text() },
-				this.revivers
-			);
+			let args: unknown;
+			if (argsSizeHeader === null || argsSizeHeader === contentLengthHeader) {
+				// No unbuffered `ReadableStream`
+				args = parseWithReadableStreams(
+					WORKERS_PLATFORM_IMPL,
+					{ value: await request.text() },
+					this.revivers
+				);
+			} else {
+				// Unbuffered `ReadableStream` argument
+				const argsSize = parseInt(argsSizeHeader);
+				assert(!Number.isNaN(argsSize));
+				assert(request.body !== null);
+				// If the client sent the stream's length, restore it on the rest of
+				// the request body, as some APIs (e.g. `R2Bucket#put()`) reject
+				// streams without one.
+				const streamSizeHeader = request.headers.get(
+					CoreHeaders.OP_STREAM_SIZE
+				);
+				let restTransform: IdentityTransformStream | undefined;
+				if (streamSizeHeader !== null) {
+					const streamSize = parseInt(streamSizeHeader);
+					assert(!Number.isNaN(streamSize));
+					restTransform = new FixedLengthStream(streamSize);
+				}
+				const [encodedArgs, rest] = await readPrefix(
+					request.body,
+					argsSize,
+					restTransform
+				);
+				unbufferedRest = rest;
+				const stringifiedArgs = DECODER.decode(encodedArgs);
+				args = parseWithReadableStreams(
+					WORKERS_PLATFORM_IMPL,
+					{ value: stringifiedArgs, unbufferedStream: rest },
+					this.revivers
+				);
+			}
 			assert(Array.isArray(args));
 			try {
-				result = func.apply(target, args);
-				// Workers RPC thenables (e.g. `RpcPromise`) can't be stored on the
-				// "heap" as `Promise`s, which the client knows to resolve
-				if (
-					isObject(result) &&
-					!(result instanceof Promise) &&
-					typeof result.then === "function"
-				) {
-					result = Promise.resolve(result);
+				// See #createMediaProxy() for why this is special
+				if (isImagesInput(targetName, keyHeader)) {
+					let transform = func.apply(target, [args[0]]);
+					for (const operation of args[1]) {
+						transform = transform[operation.type](...operation.arguments);
+					}
+					// We intentionally don't await this `output()` call so that it's treated as a regular promise
+					result = transform.output(args[2]);
+				} else {
+					result = func.apply(target, args);
 				}
+
 				// See `isR2ObjectWriteHttpMetadata()` comment for why this special
 				if (isR2ObjectWriteHttpMetadata(targetName, keyHeader)) {
 					result = args[0];
@@ -572,77 +432,86 @@ export class ProxyServer implements DurableObject {
 			return new Response(null, { status: 404 });
 		}
 
-		if (result instanceof ReadableStream) {
-			return new Response(result, {
-				status,
-				headers: { [CoreHeaders.OP_RESULT_TYPE]: "ReadableStream" },
-			});
+		const headers = new Headers();
+		if (allowAsync && result instanceof Promise) {
+			// Note we only resolve `Promise`s if we're allowing async operations.
+			// Otherwise, we'll treat the `Promise` as a native target. This allows
+			// us to use regular HTTP status/headers to indicate whether the `Promise`
+			// resolved/rejected and whether the body should be interpreted as a raw
+			// `ReadableStream`. Otherwise, we'd need to devise an encoding scheme for
+			// this in the body.
+			try {
+				result = await result;
+			} catch (e) {
+				status = 500;
+				result = e;
+			}
+			headers.append(CoreHeaders.OP_RESULT_TYPE, "Promise");
 		}
-		const stringified = await stringifyWithStreams(
-			WORKERS_PLATFORM_IMPL,
-			result,
-			this.reducers,
-			/* allowUnbufferedStream */ false
-		);
-		return new Response(stringified.value, { status });
+		// Make sure we fully-consume the request body if it wasn't used (e.g. key
+		// validation failed). Without this, we'll get a `TypeError: Can't read from
+		// request stream after response has been sent.`
+		// TODO(soon): remove once https://github.com/cloudflare/workerd/issues/918 fixed
+		if (unbufferedRest !== undefined && !unbufferedRest.locked) {
+			try {
+				await unbufferedRest.pipeTo(new WritableStream());
+			} catch {}
+		}
+		if (result instanceof ReadableStream) {
+			// If this was also a resolve `Promise`, the result type header will end
+			// up as "Promise, ReadableStream"
+			headers.append(CoreHeaders.OP_RESULT_TYPE, "ReadableStream");
+			return new Response(result, { status, headers });
+		} else {
+			const stringified = await stringifyWithStreams(
+				WORKERS_PLATFORM_IMPL,
+				result,
+				this.reducers,
+				/* allowUnbufferedStream */ allowAsync
+			);
+			if (stringified.unbufferedStream === undefined) {
+				return new Response(stringified.value, { status, headers });
+			} else {
+				const body = new IdentityTransformStream();
+				const encodedValue = ENCODER.encode(stringified.value);
+				const encodedSize = encodedValue.byteLength.toString();
+				headers.set(CoreHeaders.OP_STRINGIFIED_SIZE, encodedSize);
+				void this.#writeWithUnbufferedStream(
+					body.writable,
+					encodedValue,
+					stringified.unbufferedStream
+				);
+				return new Response(body.readable, { status, headers });
+			}
+		}
+	}
+
+	async #writeWithUnbufferedStream(
+		writable: WritableStream,
+		encodedValue: Uint8Array,
+		unbufferedStream: ReadableStream
+	) {
+		const writer = writable.getWriter();
+		await writer.write(encodedValue);
+		writer.releaseLock();
+		await unbufferedStream.pipeTo(writable);
 	}
 }
 
 /**
- * Cap'n Web main interface for asynchronous operations on "heap" objects.
- * Holds `ProxyServer` in a private field so it isn't exposed over RPC.
+ * Cap'n Web main interface, used to get stubs for "heap" objects that speak
+ * Workers RPC. Calls on these are then forwarded by Cap'n Web.
  */
 class ProxyRpc extends RpcTarget implements ProxyRpcApi {
-	readonly #server: ProxyServer;
+	readonly #heap: Map<number, unknown>;
 
-	constructor(server: ProxyServer) {
+	constructor(heap: Map<number, unknown>) {
 		super();
-		this.#server = server;
+		this.#heap = heap;
 	}
 
 	stub(address: number): unknown {
-		const heap = this.#server.heap;
-		assert(heap.has(address), "Attempted to use freed proxy");
-		return heap.get(address);
-	}
-
-	async resolve(address: number): Promise<unknown> {
-		const heap = this.#server.heap;
-		const promise = heap.get(address);
-		assert(promise instanceof Promise);
-		// Clients only resolve each `Promise` once
-		heap.delete(address);
-		return this.#server.encode(await promise);
-	}
-
-	async call(address: number, key: string, args: unknown[]): Promise<unknown> {
-		const server = this.#server;
-		const target = server.heap.get(address) as Record<string, unknown>;
-		assert(target !== undefined, "Attempted to use freed proxy");
-		const func = target[key];
-		assert(typeof func === "function");
-		const decodedArgs = (await server.decode(args)) as unknown[];
-
-		let result: unknown;
-		// See #createMediaProxy() for why this is special
-		if (isImagesInput(target.constructor.name, key)) {
-			let transform = func.apply(target, [decodedArgs[0]]);
-			for (const operation of decodedArgs[1] as {
-				type: string;
-				arguments: unknown[];
-			}[]) {
-				transform = transform[operation.type](...operation.arguments);
-			}
-			result = transform.output(decodedArgs[2]);
-		} else {
-			result = func.apply(target, decodedArgs);
-		}
-		return server.encode(await result);
-	}
-
-	free(addresses: number[]): void {
-		for (const address of addresses) {
-			this.#server.heap.delete(address);
-		}
+		assert(this.#heap.has(address), "Attempted to use freed proxy");
+		return this.#heap.get(address);
 	}
 }
