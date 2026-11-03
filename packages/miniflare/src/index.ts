@@ -3917,6 +3917,7 @@ export type {
 	V4FetchHandler,
 	V4IdEntry,
 	V4MiniflareOptions,
+	V4IdentityBindingOptions,
 	V4ModuleDefinition,
 	V4ModuleRule,
 	V4ModuleRuleType,

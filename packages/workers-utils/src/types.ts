@@ -69,7 +69,7 @@ export type Json =
 	| { [id: string]: Json };
 
 export type WorkerMetadataBinding =
-	| ({ type: "identity"; name: string } & Omit<
+	| ({ type: "identity"; name: string } & DistributiveOmit<
 			import("./config/oidc").IdentityBindingConfig,
 			"binding"
 	  >)
@@ -469,7 +469,7 @@ type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
 type BindingOmit<T> = DistributiveOmit<T, "binding">;
 type NameOmit<T> = DistributiveOmit<T, "name">;
 export type Binding =
-	| ({ type: "identity" } & Omit<
+	| ({ type: "identity" } & DistributiveOmit<
 			import("./config/oidc").IdentityBindingConfig,
 			"binding"
 	  >)

@@ -844,10 +844,26 @@ Set `MINIFLARE_WORKERD_PATH` to that binary and opt in with
 Regenerate runtime types and the Cap'n Proto schema from the same release
 before publishing the SDK.
 
+Native service-binding facts identify the immediate calling Worker. JWT facts identify the originating binding authority; signed-request facts expose the selected capability URL as `signatureAgent`. Forwarding preserves authority and does not attest the current executor. Keep human identity separate.
+
 Static service bindings expose local immediate callers using account `local`
 and `local:<worker-name>` IDs. These IDs establish no production authority.
-Anonymous requests return `null`; HTTP credential verification is unavailable
-without a managed verifier channel. Sender issuance remains unsupported locally.
+Anonymous requests return `null`. Shared local services issue and verify workload
+JWTs, selected-agent JWTs, WAG assertions and signed requests with purpose-separated
+keys. HTTP caller verification uses the same private verifier channel as the runtime.
+
+Identity bindings also support app/customer saved accounts through a generic local
+broker, authorization server and API fixture. Configure the ordinary binding;
+no application adapter or provisioning harness is needed. Local realms and encrypted
+broker state persist under the Miniflare persistence directory. A new directory
+creates a new realm. Corrupt authority state fails rather than silently rotating keys.
+
+The deterministic fixture uses `https://as.identity.local` and
+`https://api.identity.local`. The callback uses the local server's
+`http://127.0.0.1:<port>/cdn-cgi/local/identity/oauth/callback`. No Cloudflare account
+login or production signing material is used. External provider requests fail
+unless `MINIFLARE_IDENTITY_LIVE_PROVIDER=1` explicitly enables live qualification.
+Keep live provider storage separate from deterministic tests.
 
 Wrangler, cf, Vite and Vitest consume this Miniflare behavior. Add no receiver
 binding or JavaScript verification polyfill. See the [runtime caller contract](https://developers.cloudflare.com/workers/runtime-apis/context/#identitycaller)

@@ -472,14 +472,17 @@ export interface R2Binding extends R2BindingOptions {
 }
 
 /** Configure one workload capability. Receivers independently grant resource access. */
-export type IdentityBindingOptions = Omit<
-	import("@cloudflare/workers-utils/oidc").IdentityBindingConfig,
-	"binding"
+export type IdentityBindingOptions =
+	| Omit<
+			import("@cloudflare/workers-utils/oidc").WorkloadIdentityBindingConfig,
+			"binding"
+	  >
+	| ConnectionBindingOptions;
+type WithoutBinding<T> = T extends unknown ? Omit<T, "binding"> : never;
+type ConnectionBindingOptions = WithoutBinding<
+	import("@cloudflare/workers-utils/oidc").ConnectionBindingConfig
 >;
-
-export interface IdentityBinding extends IdentityBindingOptions {
-	type: "identity";
-}
+export type IdentityBinding = IdentityBindingOptions & { type: "identity" };
 
 export interface RateLimitBindingOptions {
 	/** The namespace ID for this rate limiter. */
@@ -859,7 +862,9 @@ export interface Bindings {
 	 */
 	r2(options?: R2BindingOptions): R2Binding;
 	/** Binding to a rate limiter. */
-	identity(options: IdentityBindingOptions): IdentityBinding;
+	identity<T extends IdentityBindingOptions>(
+		options: T
+	): T & { type: "identity" };
 	rateLimit(options: RateLimitBindingOptions): RateLimitBinding;
 	/**
 	 * Declares a secret that is required by your Worker, exposed on `env` under

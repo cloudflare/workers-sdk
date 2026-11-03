@@ -21,7 +21,6 @@ import { removeDirSync } from "@cloudflare/workers-utils/fs-helpers";
 import SCRIPT_ACCESS_IDENTITY from "worker:access/access-identity";
 import SCRIPT_DEV_CONTROL from "worker:core/dev-control";
 import SCRIPT_ENTRY from "worker:core/entry";
-import SCRIPT_OIDC from "worker:core/oidc";
 import OUTBOUND_WORKER from "worker:core/outbound";
 import { z } from "zod";
 import { kCurrentWorker } from "../../config/schema";
@@ -77,6 +76,14 @@ import {
 	getExplorerServices,
 	wrapDurableObjectModules,
 } from "./explorer";
+import {
+	getLocalIdentityBindings,
+	getLocalIdentityServices,
+	getLocalIdentityVerifier,
+	usesLocalIdentity,
+	LOCAL_IDENTITY_ROUTER,
+	LOCAL_IDENTITY_ENTRY_BINDING,
+} from "./identity";
 import {
 	buildStringScriptPath,
 	convertManifestModule,
@@ -367,18 +374,10 @@ function getServiceBindings(
 }
 
 export const CORE_PLUGIN: Plugin = {
-	getBindings(options, _sharedOptions, workerIndex) {
+	async getBindings(options, sharedOptions, workerIndex) {
 		const { config, legacy, dev } = options;
 		const bindings: Awaitable<Worker_Binding>[] = [];
-		for (const [name] of getEnvBindingsOfType(config, "identity")) {
-			bindings.push({
-				name,
-				service: {
-					name: `core:oidc:${workerIndex}`,
-					entrypoint: "IdentityBinding",
-				},
-			});
-		}
+		bindings.push(...(await getLocalIdentityBindings(options, sharedOptions)));
 
 		for (const [name, binding] of getEnvBindingsOfType(config, "json")) {
 			bindings.push({ name, json: JSON.stringify(binding.value) });
@@ -446,6 +445,8 @@ export const CORE_PLUGIN: Plugin = {
 	async getNodeBindings(options) {
 		const { config, legacy, dev } = options;
 		const bindingEntries: Awaitable<unknown[]>[] = [];
+		for (const [name] of getEnvBindingsOfType(config, "identity"))
+			bindingEntries.push([name, new ProxyNodeBinding()]);
 
 		for (const [name, binding] of getEnvBindingsOfType(config, "json")) {
 			bindingEntries.push([name, JSON.parse(JSON.stringify(binding.value))]);
@@ -490,6 +491,7 @@ export const CORE_PLUGIN: Plugin = {
 		return Object.fromEntries(await Promise.all(bindingEntries));
 	},
 	async getServices({
+		tmpPath,
 		// TODO: check if any of this can be simplified by reading from options in here
 		options,
 		sharedOptions,
@@ -620,20 +622,19 @@ export const CORE_PLUGIN: Plugin = {
 				]
 			: userFlags;
 
-		if (getEnvBindingsOfType(config, "identity").length) {
-			services.push({
-				name: `core:oidc:${workerIndex}`,
-				worker: {
-					modules: [{ name: "oidc.worker.js", esModule: SCRIPT_OIDC() }],
-					compatibilityDate: "2026-10-01",
-				},
-			});
-		}
+		services.push(
+			...(await getLocalIdentityServices(options, sharedOptions, tmpPath))
+		);
+		const workloadIdentityService = await getLocalIdentityVerifier(
+			options,
+			sharedOptions
+		);
 
 		services.push({
 			name: serviceName,
 			worker: {
 				...workerScript,
+				workloadIdentityService,
 				compatibilityDate,
 				compatibilityFlags,
 				bindings: workerBindings,
@@ -733,6 +734,14 @@ export const CORE_PLUGIN: Plugin = {
 					compatibilityDate: "2025-01-01",
 					compatibilityFlags: ["connect_pass_through", "experimental"],
 					bindings: [
+						...(usesLocalIdentity(options)
+							? [
+									{
+										name: LOCAL_IDENTITY_ENTRY_BINDING,
+										service: { name: LOCAL_IDENTITY_ROUTER },
+									},
+								]
+							: []),
 						{
 							name: "CF_WORKER_ZONE",
 							text: cfWorkerValue,
@@ -854,6 +863,12 @@ export function getGlobalServices({
 			service: { name: EMAIL_STORE_SERVICE_NAME },
 		},
 	];
+	if (allWorkerOpts?.some(usesLocalIdentity)) {
+		serviceEntryBindings.push({
+			name: LOCAL_IDENTITY_ENTRY_BINDING,
+			service: { name: LOCAL_IDENTITY_ROUTER },
+		});
+	}
 	if (sharedOptions.unsafeLocalExplorer) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_LOCAL_EXPLORER,

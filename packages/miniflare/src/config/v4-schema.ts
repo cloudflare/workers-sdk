@@ -17,11 +17,14 @@ import type { Json } from "../shared";
 import type { WorkerRegistry } from "../shared/dev-registry-types";
 import type { Awaitable } from "../workers";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
+import type { IdentityBindingConfig } from "@cloudflare/workers-utils/oidc";
 import type * as http from "node:http";
 
 const kUnsafeEphemeralUniqueKey = Symbol.for(
 	"miniflare.kUnsafeEphemeralUniqueKey"
 );
+export type V4IdentityBindingOptions<T = IdentityBindingConfig> =
+	T extends unknown ? Omit<T, "binding"> : never;
 
 export interface V4WorkerdStructuredLog {
 	timestamp: number;
@@ -380,12 +383,7 @@ const V4WorkerOptionsShapeSchema = z.object({
 	identities: z
 		.record(
 			z.string(),
-			z.custom<
-				Omit<
-					import("@cloudflare/workers-utils/oidc").IdentityBindingConfig,
-					"binding"
-				>
-			>((value) =>
+			z.custom<V4IdentityBindingOptions>((value) =>
 				isIdentityBinding({ binding: "IDENTITY", ...(value as object) })
 			)
 		)
@@ -835,13 +833,7 @@ export type V4WorkerOptionsShape = {
 	unsafeInspectorProxy?: boolean;
 	routes?: string[];
 	cronTriggers?: string[];
-	identities?: Record<
-		string,
-		Omit<
-			import("@cloudflare/workers-utils/oidc").IdentityBindingConfig,
-			"binding"
-		>
-	>;
+	identities?: Record<string, V4IdentityBindingOptions>;
 	bindings?: Record<string, Json>;
 	wasmBindings?: Record<string, string | Uint8Array>;
 	textBlobBindings?: Record<string, string>;

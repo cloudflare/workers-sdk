@@ -696,15 +696,17 @@ export function printBindings(
 		);
 	}
 
-	for (const { binding, audience } of extractBindingsOfType(
-		"identity",
-		bindings
-	)) {
+	for (const identity of extractBindingsOfType("identity", bindings)) {
 		output.push({
-			name: binding,
+			name: identity.binding,
 			type: "Identity",
-			value: audience,
-			mode: getMode({ isSimulatedLocally: false }),
+			value:
+				"connector_id" in identity
+					? identity.connector_id
+					: "audience" in identity
+						? identity.audience
+						: "New account connector",
+			mode: getMode({ isSimulatedLocally: true }),
 		});
 	}
 	if (ratelimits.length > 0) {

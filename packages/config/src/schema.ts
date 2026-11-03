@@ -131,6 +131,33 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 	z
 		.strictObject({
 			type: z.literal("identity"),
+			connector_id: z.string().optional(),
+			connector_revision: z.number().int().positive().optional(),
+			selection: z.enum(["app", "customer"]).optional(),
+			connection_management: z.boolean().optional(),
+			scope: z.array(z.string()).optional(),
+			resources: z
+				.array(
+					z.strictObject({
+						url: z.string().optional(),
+						origin: z.string().optional(),
+						methods: z.array(
+							z.enum(["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"])
+						),
+					})
+				)
+				.optional(),
+			inspection_resources: z
+				.array(
+					z.strictObject({
+						url: z.string(),
+						methods: z.array(
+							z.enum(["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"])
+						),
+					})
+				)
+				.optional(),
+			return_urls: z.array(z.string()).optional(),
 			audience: z.string().optional(),
 			subject: z.enum(["worker", "durable-object-namespace"]).optional(),
 			namespace_id: z.string().optional(),
@@ -141,7 +168,20 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 				})
 				.optional(),
 			client_authentication: z.boolean().optional(),
-			oauth: ManagedOAuthSchema.optional(),
+			oauth: z
+				.union([
+					ManagedOAuthSchema,
+					z.custom<
+						import("@cloudflare/workers-utils/oidc").ConnectionOAuthConfig
+					>(
+						(value) =>
+							typeof value === "object" &&
+							value !== null &&
+							"grant" in value &&
+							value.grant === "authorization_code"
+					),
+				])
+				.optional(),
 			request_signing: z
 				.strictObject({
 					allowed_origins: z.array(z.string()),
@@ -156,7 +196,14 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 				message:
 					"Identity requires a valid optional audience, subject, and purpose limits.",
 			}
-		),
+		)
+		.transform(({ type, ...binding }) => {
+			const candidate = { binding: "IDENTITY", ...binding };
+			if (!isIdentityBinding(candidate))
+				throw new Error("Invalid identity binding");
+			const { binding: _name, ...configuration } = candidate;
+			return { type, ...configuration };
+		}),
 	z.strictObject({
 		type: z.literal("agent-memory"),
 		namespace: z.string(),

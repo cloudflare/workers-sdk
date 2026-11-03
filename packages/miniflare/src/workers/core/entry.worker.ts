@@ -17,6 +17,7 @@ import type { WorkerRoute } from "./routing";
 import type { Colorize } from "kleur/colors";
 
 type Env = {
+	MINIFLARE_LOCAL_IDENTITY?: Fetcher;
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
 	[CoreBindings.SERVICE_EMAIL_STORE]: EmailStoreService;
 	[CoreBindings.SERVICE_USER_FALLBACK]: Fetcher;
@@ -541,6 +542,19 @@ export default <ExportedHandler<Env>>{
 				return e.toResponse();
 			}
 			throw e;
+		}
+
+		if (
+			env.MINIFLARE_LOCAL_IDENTITY &&
+			[
+				"/cdn-cgi/local/identity/oauth/callback",
+				"/cdn-cgi/local/identity/authorize",
+			].includes(requestUrl.pathname)
+		) {
+			const original = request.headers.get(CoreHeaders.ORIGINAL_URL);
+			return env.MINIFLARE_LOCAL_IDENTITY.fetch(
+				original ? new Request(original, request) : request
+			);
 		}
 
 		// The magic proxy client (used by getPlatformProxy)

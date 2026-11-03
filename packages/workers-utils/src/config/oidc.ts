@@ -1,3 +1,11 @@
+import {
+	isConnectionBinding,
+	type ConnectionBindingConfig,
+} from "./connections";
+export type {
+	ConnectionBindingConfig,
+	ConnectionResource,
+} from "./connections";
 /** Validate an exact StringOrURI audience without fetching or normalizing it. */
 export function validOidcAudience(value: unknown): value is string {
 	if (
@@ -171,7 +179,7 @@ export type OidcManagedOAuth = OidcRequestSigning & {
 		| { exchange: "workload_authorization"; client_id?: never }
 		| { exchange: "client_credentials"; client_id: string }
 	);
-export interface IdentityBindingConfig {
+export interface WorkloadIdentityBindingConfig {
 	binding: string;
 	audience?: string;
 	subject?: "worker" | "durable-object-namespace";
@@ -181,6 +189,9 @@ export interface IdentityBindingConfig {
 	oauth?: OidcManagedOAuth;
 	client_authentication?: boolean;
 }
+export type IdentityBindingConfig =
+	| WorkloadIdentityBindingConfig
+	| ConnectionBindingConfig;
 function record(value: unknown): value is Record<string, unknown> {
 	return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -231,6 +242,12 @@ export function validOidcOrigin(value: string): boolean {
 export function isIdentityBinding(
 	value: unknown
 ): value is IdentityBindingConfig {
+	if (
+		record(value) &&
+		("connector_id" in value ||
+			(record(value.oauth) && value.oauth.grant === "authorization_code"))
+	)
+		return isConnectionBinding(value);
 	if (
 		!record(value) ||
 		!fields(value, [
@@ -354,3 +371,10 @@ export function isIdentityBinding(
 	}
 	return true;
 }
+
+export type {
+	ConnectionOAuthConfig,
+	ConnectionClientRegistration,
+	ConnectionPermissions,
+	ExactConnectionResource,
+} from "./connections";
