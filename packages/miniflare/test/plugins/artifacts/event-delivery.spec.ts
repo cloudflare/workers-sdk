@@ -1,6 +1,17 @@
-import { Miniflare, Response } from "miniflare";
+import { ARTIFACTS_EVENT_TYPES as CONFIG_EVENT_TYPES } from "@cloudflare/workers-utils";
+import {
+	ARTIFACTS_EVENT_TYPES,
+	LogLevel,
+	Miniflare,
+	Response,
+} from "miniflare";
 import { onTestFinished, test, vi } from "vitest";
-import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
+import {
+	singleModuleManifest,
+	TestLog,
+	useDispose,
+	useTmp,
+} from "../../test-shared";
 import type { ArtifactsEventMessage } from "../../../src/workers/artifacts/events";
 import type { MiniflareOptions, WorkerOptions } from "miniflare";
 
@@ -127,6 +138,105 @@ async function rpc(
 	}
 	return response.json();
 }
+
+test("failed queue delivery leaves the committed repository usable", async ({
+	expect,
+}) => {
+	const warning = vi.fn();
+	const { mf, delivered } = await startMiniflare(consumeQueue, {
+		handleStructuredLogs: warning,
+		artifactsEventSubscriptions: [
+			{ queue: QUEUE, source: { type: "artifacts" } },
+		],
+	});
+	// A real broker rejection, not a mocked publisher: messages exceed 128 KB.
+	const description = "x".repeat(130_000);
+	await rpc(mf, "create", ["oversized", { description }]);
+	await vi.waitFor(() =>
+		expect(warning).toHaveBeenCalledWith(
+			expect.objectContaining({
+				level: "warn",
+				message: expect.stringContaining("Artifacts event delivery failed"),
+			})
+		)
+	);
+	expect(await rpc(mf, "info", [], "oversized")).toMatchObject({ description });
+	expect(delivered).toHaveLength(0);
+});
+
+test("Wrangler and Miniflare support the same event types", ({ expect }) => {
+	expect(ARTIFACTS_EVENT_TYPES).toEqual(CONFIG_EVENT_TYPES);
+});
+
+test("warns when subscriptions have no local namespace", async ({ expect }) => {
+	const log = new TestLog();
+	await startMiniflare(
+		(config) => {
+			delete config.env?.REPOS;
+			addWorkflow(config);
+			config.triggers = [
+				{
+					type: "artifacts-event",
+					eventType: "cf.artifacts.repo.created",
+					targets: [{ type: "workflow", workflowName: "on-repo-event" }],
+				},
+			];
+		},
+		{ log }
+	);
+	expect(log.logsAtLevel(LogLevel.WARN)).toContain(
+		"Artifacts event subscriptions only receive local events, but this instance has no local Artifacts namespace. Set remote: false on an Artifacts binding in wrangler.jsonc (dev: { remote: false } in native config)."
+	);
+});
+
+test("duplicate subscriptions deliver separate copies with distinct IDs", async ({
+	expect,
+}) => {
+	const subscription = { queue: QUEUE, source: { type: "artifacts" as const } };
+	const { mf, delivered } = await startMiniflare(consumeQueue, {
+		artifactsEventSubscriptions: [subscription, subscription],
+	});
+	await rpc(mf, "create", ["demo"]);
+	await vi.waitFor(() => expect(delivered).toHaveLength(2));
+	expect(
+		new Set(
+			delivered.map(({ message }) => message.metadata.eventSubscriptionId)
+		).size
+	).toBe(2);
+});
+
+test("namespace-only triggers exclude another local namespace", async ({
+	expect,
+}) => {
+	const { mf, delivered } = await startMiniflare((config) => {
+		addWorkflow(config);
+		config.env = {
+			...config.env,
+			OTHER: {
+				type: "artifacts",
+				namespace: "other",
+				dev: { remote: false },
+			},
+		};
+		config.triggers = [
+			{
+				type: "artifacts-event",
+				eventType: "cf.artifacts.repo.created",
+				filter: { namespace: "examples" },
+				targets: [{ type: "workflow", workflowName: "on-repo-event" }],
+			},
+		];
+	});
+	const bindings = await mf.getBindings<{
+		OTHER: { create(name: string): Promise<unknown> };
+	}>();
+	await bindings.OTHER.create("excluded");
+	await rpc(mf, "create", ["included"]);
+	await vi.waitFor(() => expect(delivered).toHaveLength(1), { timeout: 5_000 });
+	expect(delivered[0].message.source.namespace).toBe("examples");
+	await new Promise((resolve) => setTimeout(resolve, 200));
+	expect(delivered).toHaveLength(1);
+});
 
 test("Queue subscriptions receive account-level events as documented messages", async ({
 	expect,

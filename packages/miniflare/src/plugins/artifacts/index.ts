@@ -44,7 +44,6 @@ const OBJECT_CLASS = "LocalArtifactsNamespaceObject";
 const LOCAL_NAMESPACE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
 type ArtifactsBinding = Extract<MiniflareBinding, { type: "artifacts" }>;
-type ArtifactsEntry = [name: string, binding: ArtifactsBinding];
 
 // Artifacts routes like every other binding: remote only when `dev.remote` is
 // `true` and the Worker has a remote proxy connection. Its deployed-by-default
@@ -52,8 +51,12 @@ type ArtifactsEntry = [name: string, binding: ArtifactsBinding];
 // `@cloudflare/workers-utils` for Wrangler configs and by
 // `resolveLocalBindings()` for `cloudflare.config.ts`.
 
-function getLocalNamespaceNames(
-	bindings: ArtifactsEntry[],
+/** Returns the namespaces served by the local simulator for these bindings. */
+export function getLocalArtifactsNamespaceNames(
+	bindings: [
+		name: string,
+		binding: Extract<MiniflareBinding, { type: "artifacts" }>,
+	][],
 	dev: ParsedDevConfig | undefined
 ): Set<string> {
 	return new Set(
@@ -135,7 +138,7 @@ export const ARTIFACTS_PLUGIN: Plugin = {
 				worker: remoteProxyClientWorker(),
 			});
 		}
-		const namespaces = getLocalNamespaceNames(bindings, options.dev);
+		const namespaces = getLocalArtifactsNamespaceNames(bindings, options.dev);
 		if (namespaces.size > 0) {
 			await assertGitAvailable();
 		}

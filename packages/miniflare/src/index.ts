@@ -76,6 +76,7 @@ import {
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	WORKFLOWS_PLUGIN_NAME,
 } from "./plugins";
+import { getLocalArtifactsNamespaceNames } from "./plugins/artifacts";
 import { ArtifactsController } from "./plugins/artifacts/controller";
 import { getArtifactsEventSubscriptions } from "./plugins/artifacts/events";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
@@ -2043,6 +2044,20 @@ export class Miniflare {
 			allWorkerOpts,
 			sharedOpts
 		);
+		if (
+			artifactsEventSubscriptions.length > 0 &&
+			!allWorkerOpts.some(
+				({ config, dev }) =>
+					getLocalArtifactsNamespaceNames(
+						getEnvBindingsOfType(config, "artifacts"),
+						dev
+					).size > 0
+			)
+		) {
+			this.#log.warn(
+				"Artifacts event subscriptions only receive local events, but this instance has no local Artifacts namespace. Set remote: false on an Artifacts binding in wrangler.jsonc (dev: { remote: false } in native config)."
+			);
+		}
 		// When the dev registry is enabled, queue brokers bind to the dev-registry
 		// proxy so they can deliver to consumers in other `wrangler dev` processes
 		// (see `ExternalQueueProxy`), so the proxy worker must exist whenever

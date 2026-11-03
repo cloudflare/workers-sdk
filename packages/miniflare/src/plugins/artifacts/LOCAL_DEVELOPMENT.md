@@ -75,7 +75,7 @@ After pushing `hello.txt` to `main`, read it in the Worker with `await repo.read
 
 ## Receive repository events
 
-Local namespaces publish the documented [Artifacts events](https://developers.cloudflare.com/artifacts/guides/event-subscriptions/) when you create, import, fork, or delete a repository, and when you create or revoke a repository token. Push, clone, and fetch events are not yet published locally. Each delivery has the deployed message shape (`type`, `source`, `payload`, and `metadata`). Locally, `metadata.accountId` is `"local"`, and `metadata.eventSubscriptionId` stays the same while the subscription's configuration does.
+Local namespaces publish the documented [Artifacts events](https://developers.cloudflare.com/artifacts/guides/event-subscriptions/) when you create, import, fork, or delete a repository, and when you create or revoke a repository token. Creation, import, and fork also publish a token-created event for the initial repository token. Push, clone, and fetch events are not yet published locally. Local support does not establish which events are available for each deployed subscription destination. Each delivery has the deployed message shape (`type`, `source`, `payload`, and `metadata`). Locally, `metadata.accountId` is `"local"`, and `metadata.eventSubscriptionId` stays the same while the subscription's configuration does. Identical subscriptions deliver separate copies with distinct IDs.
 
 ### Start a Workflow
 
@@ -110,9 +110,13 @@ Use the same `triggers.events` configuration you deploy. Each target must be a W
 
 ```ts
 import { WorkflowEntrypoint } from "cloudflare:workers";
-import type { ArtifactsEventMessage } from "miniflare";
-
-type RepoCreated = ArtifactsEventMessage<"cf.artifacts.repo.created">;
+// Declare the fields this Workflow consumes in your application.
+// No dependency on the development-only Miniflare package is needed.
+export interface RepoCreated {
+	type: "cf.artifacts.repo.created";
+	source: { type: "artifacts"; namespace: string; repoName: string };
+	payload: { repoId: string };
+}
 
 export class OnRepoCreated extends WorkflowEntrypoint<Env, RepoCreated> {
 	async run(event, step) {
@@ -134,7 +138,11 @@ In production, Queues event subscriptions are created for an account (for exampl
 ```ts
 const mf = new Miniflare({
 	artifactsEventSubscriptions: [
-		{ queue: "repo-events", source: { type: "artifacts" } },
+		{
+			queue: "repo-events",
+			source: { type: "artifacts" },
+			events: ["cf.artifacts.repo.created"],
+		},
 		{
 			queue: "repo-events",
 			source: {
@@ -168,7 +176,11 @@ const mf = new Miniflare({
 Consume the messages with an ordinary queue handler. The handler can also start Workflows itself, for example to run several Workflows for one event:
 
 ```ts
-import type { ArtifactsEventMessage } from "miniflare";
+// Reuse the application type above and describe the other subscribed event.
+import type { RepoCreated } from "./on-repo-created";
+
+type SubscribedEvent =
+	RepoCreated | { type: "cf.artifacts.repo.token.revoked" };
 
 export default {
 	async queue(batch, env) {
@@ -180,8 +192,10 @@ export default {
 			message.ack();
 		}
 	},
-} satisfies ExportedHandler<Env, ArtifactsEventMessage>;
+} satisfies ExportedHandler<Env, SubscribedEvent>;
 ```
+
+Local delivery is unordered: events from consecutive operations (including repository creation and its initial token) may arrive in either order. Do not infer production ordering guarantees from the emulator.
 
 Delivery happens after the repository change commits and does not fail the repository operation. A failed delivery is logged and not retried, and the local queue broker keeps queued messages in memory only. The local queue drops messages when no Worker consumes the queue.
 

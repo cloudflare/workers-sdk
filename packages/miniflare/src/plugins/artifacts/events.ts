@@ -51,10 +51,26 @@ export function getArtifactsEventSubscriptions(
 	allWorkerOpts: ParsedWorkerOptions[],
 	sharedOpts: ParsedInstanceOptions
 ): ArtifactsEventSubscriptionRoute[] {
-	return [
+	const routes = [
 		...allWorkerOpts.flatMap(({ config }) => getWorkflowTriggerRoutes(config)),
 		...(sharedOpts.artifactsEventSubscriptions ?? []).map(getQueueRoute),
 	];
+	const occurrences = new Map<string, number>();
+	return routes.map((route) => {
+		const occurrence = occurrences.get(route.id) ?? 0;
+		occurrences.set(route.id, occurrence + 1);
+		if (occurrence === 0) {
+			return route;
+		}
+		// Duplicate subscriptions still deliver separate copies with distinct IDs.
+		return {
+			...route,
+			id: createHash("sha256")
+				.update(`${route.id}:${occurrence}`)
+				.digest("hex")
+				.slice(0, 32),
+		};
+	});
 }
 
 /**

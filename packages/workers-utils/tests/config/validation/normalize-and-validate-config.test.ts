@@ -839,6 +839,31 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 		});
 
+		it.for(["namespace", "repo_name"])(
+			"rejects an empty Artifacts %s filter",
+			(field, { expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						triggers: {
+							events: [
+								{
+									type: "cf.artifacts.repo.created",
+									filter: { [field]: "" },
+									targets: [{ type: "workflow", workflow_name: "on-repo" }],
+								},
+							],
+						},
+					},
+					"wrangler.json",
+					"wrangler.json",
+					{ env: undefined }
+				);
+				expect(diagnostics.renderErrors()).toContain(
+					'Expected "triggers.events[0].filter" to contain only non-empty string'
+				);
+			}
+		);
+
 		it("should accept Artifacts event triggers", ({ expect }) => {
 			const expectedConfig: RawConfig = {
 				triggers: {
