@@ -199,20 +199,25 @@ function getWasmModuleSourceMappingUrl(module: CfModule): string | undefined {
 	if (url !== undefined && /^[a-z][a-z\d+.-]+:/i.test(url)) {
 		return undefined;
 	}
+	if (url === undefined || module.filePath === undefined) {
+		return url;
+	}
 	// Toolchains write the map next to the module. Reading only there stops a
-	// module from naming an unrelated file elsewhere on disk.
-	const normalized = url === undefined ? undefined : path.normalize(url);
+	// module from naming an unrelated file elsewhere on disk. Check the resolved
+	// path, as on Windows a drive-relative path such as `C:..\..\x` still
+	// normalizes to a path that doesn't start with `..`.
+	const moduleDir = path.dirname(module.filePath);
+	const relativePath = path.relative(moduleDir, path.resolve(moduleDir, url));
 	if (
-		normalized !== undefined &&
-		(path.isAbsolute(normalized) ||
-			normalized === ".." ||
-			normalized.startsWith(`..${path.sep}`))
+		relativePath === ".." ||
+		relativePath.startsWith(`..${path.sep}`) ||
+		path.isAbsolute(relativePath)
 	) {
 		throw new Error(
 			`Unsupported source map path in ${module.filePath}: expected a file in the module's directory.`
 		);
 	}
-	return url;
+	return relativePath;
 }
 
 function sourceMapForModule(module: CfModule): CfWorkerSourceMap | undefined {
