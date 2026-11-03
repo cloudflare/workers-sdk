@@ -15,11 +15,25 @@ export interface ConnectionPermissions {
 	inspection_resources?: ExactConnectionResource[];
 	return_urls?: string[];
 }
-export type ConnectionClientRegistration =
+export interface ConnectionProtocolRequirements {
+	dpop_nonce?: "required";
+	token_response_subject?: "required";
+	token_response_scope?: "required";
+	client_assertion_audience?: "issuer" | "token_endpoint";
+}
+export type ConnectionClientRegistration = {
+	dpop_bound_access_tokens?: boolean;
+} & (
 	| {
 			mode: "existing";
 			client_id: string;
-			authentication: "none" | "private_key_jwt";
+			authentication: "none";
+	  }
+	| {
+			mode: "existing";
+			client_id: string;
+			authentication: "private_key_jwt";
+			key_reference?: string;
 	  }
 	| {
 			mode: "existing";
@@ -31,7 +45,8 @@ export type ConnectionClientRegistration =
 			mode: "dynamic";
 			authentication: "none" | "private_key_jwt" | "client_secret_basic";
 			enrollment_credential_reference?: string;
-	  };
+	  }
+);
 export interface ConnectionOAuthConfig {
 	grant: "authorization_code";
 	authorization_server: string;
@@ -40,6 +55,8 @@ export interface ConnectionOAuthConfig {
 	authorization_endpoint?: string;
 	token_endpoint?: string;
 	revocation_endpoint?: string;
+	pushed_authorization_request_endpoint?: string;
+	protocol_requirements?: ConnectionProtocolRequirements;
 	discovery?: boolean;
 	authorization_parameters?: Record<string, string>;
 	permission_ceiling: ConnectionPermissions;
@@ -184,6 +201,8 @@ function oauth(value: unknown): value is ConnectionOAuthConfig {
 			"authorization_endpoint",
 			"token_endpoint",
 			"revocation_endpoint",
+			"pushed_authorization_request_endpoint",
+			"protocol_requirements",
 			"discovery",
 			"authorization_parameters",
 			"permission_ceiling",
@@ -204,6 +223,7 @@ function oauth(value: unknown): value is ConnectionOAuthConfig {
 		"authorization_endpoint",
 		"token_endpoint",
 		"revocation_endpoint",
+		"pushed_authorization_request_endpoint",
 	]) {
 		if (value[name] !== undefined && !url(value[name])) {
 			return false;
@@ -237,6 +257,49 @@ function oauth(value: unknown): value is ConnectionOAuthConfig {
 	) {
 		return false;
 	}
+	if (
+		reg.dpop_bound_access_tokens !== undefined &&
+		typeof reg.dpop_bound_access_tokens !== "boolean"
+	) {
+		return false;
+	}
+	const protocol = value.protocol_requirements;
+	if (protocol !== undefined) {
+		if (
+			!object(protocol) ||
+			!keys(protocol, [
+				"dpop_nonce",
+				"token_response_subject",
+				"token_response_scope",
+				"client_assertion_audience",
+			])
+		) {
+			return false;
+		}
+		for (const field of [
+			"dpop_nonce",
+			"token_response_subject",
+			"token_response_scope",
+		]) {
+			if (protocol[field] !== undefined && protocol[field] !== "required") {
+				return false;
+			}
+		}
+		if (
+			protocol.client_assertion_audience !== undefined &&
+			!["issuer", "token_endpoint"].includes(
+				String(protocol.client_assertion_audience)
+			)
+		) {
+			return false;
+		}
+		if (
+			protocol.dpop_nonce !== undefined &&
+			reg.dpop_bound_access_tokens !== true
+		) {
+			return false;
+		}
+	}
 	if (reg.mode === "existing") {
 		if (
 			!keys(reg, [
@@ -244,10 +307,19 @@ function oauth(value: unknown): value is ConnectionOAuthConfig {
 				"client_id",
 				"authentication",
 				"credential_reference",
+				"key_reference",
+				"dpop_bound_access_tokens",
 			]) ||
 			typeof reg.client_id !== "string" ||
 			!reg.client_id ||
 			reg.client_id.length > 512
+		) {
+			return false;
+		}
+		if (
+			reg.key_reference !== undefined &&
+			(reg.authentication !== "private_key_jwt" ||
+				!reference(reg.key_reference))
 		) {
 			return false;
 		}
@@ -264,6 +336,7 @@ function oauth(value: unknown): value is ConnectionOAuthConfig {
 				"mode",
 				"authentication",
 				"enrollment_credential_reference",
+				"dpop_bound_access_tokens",
 			]) ||
 			(reg.enrollment_credential_reference !== undefined &&
 				!reference(reg.enrollment_credential_reference))
