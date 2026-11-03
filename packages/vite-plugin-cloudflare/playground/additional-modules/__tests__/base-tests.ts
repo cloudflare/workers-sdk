@@ -1,8 +1,13 @@
-import { test } from "vitest";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { getWorkerBundleDir } from "@cloudflare/build-output-utils";
+import { describe, test } from "vitest";
 import {
 	getJsonResponse,
 	getTextResponse,
+	isBuild,
 	page,
+	rootDir,
 	viteTestUrl,
 } from "../../__test-utils__";
 
@@ -67,4 +72,40 @@ test("supports CompiledWasm modules with a '.wasm?init' extension", async ({
 }) => {
 	const result = await getJsonResponse("/wasm-with-init-param");
 	expect(result).toEqual({ result: 15 });
+});
+
+test("supports CompiledWasm modules with a source map", async ({ expect }) => {
+	const result = await getJsonResponse("/wasm-with-source-map");
+	expect(result).toEqual({ result: 19 });
+});
+
+describe.runIf(isBuild)("WebAssembly source maps", () => {
+	test("emits the source map next to its module, naming the module", ({
+		expect,
+	}) => {
+		const bundleDir = getWorkerBundleDir(rootDir);
+		const modulePath = fs
+			.readdirSync(bundleDir, { recursive: true, encoding: "utf8" })
+			.find((file) => /wasm-with-source-map-[\w-]+\.wasm$/.test(file));
+		expect(modulePath).toBeDefined();
+		const moduleName = (modulePath ?? "").split(path.sep).join("/");
+		const sourceMap = JSON.parse(
+			fs.readFileSync(
+				path.join(
+					bundleDir,
+					path.dirname(moduleName),
+					"wasm-with-source-map.wasm.map"
+				),
+				"utf8"
+			)
+		);
+
+		expect(sourceMap).toEqual({
+			version: 3,
+			file: `./${moduleName}`,
+			sources: ["add.c"],
+			names: [],
+			mappings: "",
+		});
+	});
 });

@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
+import { getWasmSourceMappingUrl } from "@cloudflare/workers-utils";
 import MagicString from "magic-string";
 import * as vite from "vite";
 import { cleanUrl, createPlugin } from "../utils";
@@ -101,6 +102,19 @@ export const additionalModulesPlugin = createPlugin(
 							emittedFileName,
 							toModuleType(additionalModuleType)
 						);
+
+						if (
+							additionalModuleType === "CompiledWasm" &&
+							this.environment.config.build.sourcemap
+						) {
+							await emitWasmSourceMap(
+								this,
+								modulePath,
+								source,
+								emittedFileName
+							);
+						}
+
 						const relativePath = vite.normalizePath(
 							path.relative(path.dirname(chunk.fileName), emittedFileName)
 						);
@@ -126,6 +140,74 @@ export const additionalModulesPlugin = createPlugin(
 				},
 			},
 		};
+
+		/**
+		 * Copies the source map named by a WebAssembly module's `sourceMappingURL`
+		 * section next to the emitted module, so the section still finds it, and
+		 * names the module in its `file` as it is uploaded.
+		 */
+		async function emitWasmSourceMap(
+			pluginContext: vite.Rollup.PluginContext & {
+				environment: vite.Environment;
+			},
+			modulePath: string,
+			source: Buffer,
+			emittedFileName: string
+		): Promise<void> {
+			const sourceMapUrl = getWasmSourceMappingUrl(source);
+			if (sourceMapUrl === undefined) {
+				return;
+			}
+
+			const skip = (reason: string) =>
+				pluginContext.warn(
+					`Skipping the source map "${sourceMapUrl}" of "${modulePath}": ${reason}`
+				);
+			const sourceMapFileName = vite.normalizePath(
+				path.join(path.dirname(emittedFileName), sourceMapUrl)
+			);
+			if (
+				sourceMapUrl.startsWith("data:") ||
+				sourceMapFileName.startsWith("../")
+			) {
+				skip("expected a relative file path.");
+				return;
+			}
+			let sourceMap: Record<string, unknown>;
+			try {
+				sourceMap = JSON.parse(
+					await fsp.readFile(
+						path.join(path.dirname(modulePath), sourceMapUrl),
+						"utf8"
+					)
+				);
+			} catch (error) {
+				skip(error instanceof Error ? error.message : String(error));
+				return;
+			}
+
+			const { environment } = pluginContext;
+			const bundleDir = ctx.getWorkerBundleDir(environment.name);
+			assert(
+				bundleDir,
+				`No Worker found for "${environment.name}" environment`
+			);
+			const moduleName = vite.normalizePath(
+				path.relative(
+					bundleDir,
+					path.resolve(
+						environment.config.root,
+						environment.config.build.outDir,
+						emittedFileName
+					)
+				)
+			);
+			pluginContext.emitFile({
+				type: "asset",
+				fileName: sourceMapFileName,
+				source: JSON.stringify({ ...sourceMap, file: `./${moduleName}` }),
+			});
+		}
 	}
 );
 

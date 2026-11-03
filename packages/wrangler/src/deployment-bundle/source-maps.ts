@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { getWasmSourceMappingUrl } from "@cloudflare/workers-utils";
 import { logger } from "../logger";
 import type { CfModule, CfWorkerSourceMap } from "@cloudflare/workers-utils";
 
@@ -180,62 +181,19 @@ function getSourceMappingUrl(module: CfModule): string | undefined {
 
 /**
  * Reads the URL in a WebAssembly module's `sourceMappingURL` custom section,
- * if it has one (https://tc39.es/ecma426/).
+ * if it has one.
  */
-function getWasmSourceMappingUrl(module: CfModule): string | undefined {
-	const bytes = module.content;
-	if (
-		typeof bytes === "string" ||
-		bytes.length < 8 ||
-		bytes.readUInt32LE(0) !== 0x6d736100
-	) {
+function getWasmModuleSourceMappingUrl(module: CfModule): string | undefined {
+	if (typeof module.content === "string") {
 		return undefined;
 	}
-	let pos = 8; // Skip the magic number and version.
-	// Reads an unsigned LEB128 integer, as used for sizes and name lengths.
-	const readU32 = () => {
-		let result = 0;
-		for (let shift = 0; shift < 35; shift += 7) {
-			if (pos >= bytes.length) {
-				return undefined;
-			}
-			const byte = bytes[pos++];
-			result += (byte & 0x7f) * 2 ** shift;
-			if ((byte & 0x80) === 0) {
-				return result;
-			}
-		}
-		return undefined;
-	};
-	const readName = (end: number) => {
-		const length = readU32();
-		if (length === undefined || pos + length > end) {
-			return undefined;
-		}
-		const name = new TextDecoder().decode(bytes.subarray(pos, pos + length));
-		pos += length;
-		return name;
-	};
-	while (pos < bytes.length) {
-		const id = bytes[pos++];
-		const size = readU32();
-		if (size === undefined || pos + size > bytes.length) {
-			return undefined;
-		}
-		const end = pos + size;
-		// Custom sections have id 0 and start with their name.
-		if (id === 0 && readName(end) === "sourceMappingURL") {
-			const url = readName(end);
-			if (url?.startsWith("data:")) {
-				throw new Error(
-					`Unsupported source map path in ${module.filePath}: expected file path but found data URL.`
-				);
-			}
-			return url;
-		}
-		pos = end;
+	const url = getWasmSourceMappingUrl(module.content);
+	if (url?.startsWith("data:")) {
+		throw new Error(
+			`Unsupported source map path in ${module.filePath}: expected file path but found data URL.`
+		);
 	}
-	return undefined;
+	return url;
 }
 
 function sourceMapForModule(module: CfModule): CfWorkerSourceMap | undefined {
@@ -246,7 +204,7 @@ function sourceMapForModule(module: CfModule): CfWorkerSourceMap | undefined {
 
 	const sourceMapUrl =
 		module.type === "compiled-wasm"
-			? getWasmSourceMappingUrl(module)
+			? getWasmModuleSourceMappingUrl(module)
 			: getSourceMappingUrl(module);
 	if (sourceMapUrl === undefined) {
 		return;

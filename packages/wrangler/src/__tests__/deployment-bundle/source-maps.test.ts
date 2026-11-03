@@ -1,4 +1,3 @@
-import { Buffer } from "node:buffer";
 import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -219,23 +218,7 @@ describe("loadSourceMaps for WebAssembly modules", () => {
 		const main = makeModule("index.js", path.join(dir, "index.js"), "");
 		const noSection = makeWasmModule("a.wasm", path.join(dir, "a.wasm"));
 		const virtual = makeWasmModule("b.wasm", undefined, "b.wasm.map");
-		const notWasm: CfModule = {
-			name: "c.wasm",
-			filePath: path.join(dir, "c.wasm"),
-			content: Buffer.from("SOME WASM CONTENT"),
-			type: "compiled-wasm",
-		};
-		const truncated: CfModule = {
-			...notWasm,
-			name: "d.wasm",
-			content: Buffer.from(
-				wasmModuleWithSourceMappingUrl("d.wasm.map").subarray(0, 12)
-			),
-		};
-
-		expect(
-			loadSourceMaps(main, [noSection, virtual, notWasm, truncated], {})
-		).toEqual([]);
+		expect(loadSourceMaps(main, [noSection, virtual], {})).toEqual([]);
 	});
 
 	it("throws when the source map is missing, unless not strict", ({
