@@ -61,6 +61,7 @@ export default defineConfig([
 			"src/sourcemap.ts",
 			"src/zod-format.ts",
 			"src/oidc.ts",
+			"src/identity-connectors.ts",
 		],
 		platform: "node",
 		outputOptions: { keepNames: true },
