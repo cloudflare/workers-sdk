@@ -26,6 +26,10 @@ import {
 	WORKER_NAME_PREFIX,
 } from "./helpers";
 import {
+	defaultNewConfigArtifactsToLocal,
+	defaultWranglerConfigArtifactsToLocal,
+} from "./local-artifacts";
+import {
 	loadNewConfig,
 	mergeCloudflareConfigWorker,
 	NEW_CONFIG_FILENAME,
@@ -634,7 +638,14 @@ async function parseCustomPoolOptions(
 
 	if (newConfig !== undefined) {
 		configPath = path.resolve(rootPath, newConfig.configPath);
-		cloudflareConfig = await loadNewConfig(configPath, mode, envDir);
+		const loadedConfig = await loadNewConfig(configPath, mode, envDir);
+		cloudflareConfig = {
+			...loadedConfig,
+			worker: {
+				...loadedConfig.worker,
+				env: defaultNewConfigArtifactsToLocal(loadedConfig.worker.env),
+			},
+		};
 		const { worker, settings } = cloudflareConfig;
 		options.resolvedConfig = {
 			path: configPath,
@@ -702,10 +713,12 @@ async function parseCustomPoolOptions(
 		// we can pass the parsed config straight into
 		// `unstable_getMiniflareWorkerOptions` without re-parsing it.
 		const wrangler = await import("wrangler");
-		config = wrangler.unstable_readConfig({
-			config: configPath,
-			env: environment,
-		});
+		config = defaultWranglerConfigArtifactsToLocal(
+			wrangler.unstable_readConfig({
+				config: configPath,
+				env: environment,
+			})
+		);
 	}
 
 	if (configPath !== undefined && config !== undefined) {
