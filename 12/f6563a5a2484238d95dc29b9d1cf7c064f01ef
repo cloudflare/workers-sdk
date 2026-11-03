@@ -1,0 +1,18 @@
+.changeset/quiet-v8-coverage.md
+  h_0282ef8cb84129 1-6,7
+packages/vitest-plugin/src/worker/index.ts
+  h_0282ef8cb84129 280-283
+packages/vitest-plugin/test/coverage.test.ts
+  h_0282ef8cb84129 7,28-29,30-31,55-70,75,93-96,98-101,145-146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "12f6563a5a2484238d95dc29b9d1cf7c064f01ef",
+  "prompts": {},
+  "humans": {
+    "h_0282ef8cb84129": {
+      "author": "Matt Johnson-Pint <mjohnson-pint@cloudflare.com>"
+    }
+  }
+}

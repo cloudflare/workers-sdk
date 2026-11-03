@@ -1,0 +1,69 @@
+.changeset/temporary-r2-containers.md
+  s_8376e5e517826f::t_5135af6e917606 1-11
+packages/wrangler/src/__tests__/deploy/core.test.ts
+  s_d4f3a4c84a0158::t_d40301f4f7d18d 876,880-881
+packages/wrangler/src/__tests__/experimental-commands-api.test.ts
+  s_d4f3a4c84a0158::t_2053b55d5199b1 164-173,229-257
+packages/wrangler/src/__tests__/temporary-r2-containers.test.ts
+  s_d4f3a4c84a0158::t_331dc8e81f673c 1-198
+packages/wrangler/src/containers/build.ts
+  s_d4f3a4c84a0158::t_5e1e20d3896f43 21-23,71-73
+packages/wrangler/src/containers/containers.ts
+  s_d4f3a4c84a0158::t_dc5aa7eacd5999 137,180-182
+packages/wrangler/src/containers/images.ts
+  s_d4f3a4c84a0158::t_c04430dfdd621d 37,64
+packages/wrangler/src/containers/instances.ts
+  s_d4f3a4c84a0158::t_770cbd2e357fdf 471
+packages/wrangler/src/containers/list.ts
+  s_d4f3a4c84a0158::t_328c97e42e6811 233
+packages/wrangler/src/containers/registries.ts
+  s_d4f3a4c84a0158::t_b9a7f7e414a01e 804
+packages/wrangler/src/containers/ssh.ts
+  s_d4f3a4c84a0158::t_78f14b39121e07 22
+packages/wrangler/src/core/register-yargs-command.ts
+  s_d4f3a4c84a0158::t_cfb479c55325a6 49-54,83-87,212-216,455-458
+packages/wrangler/src/core/temporary-commands.ts
+  s_d4f3a4c84a0158::t_eae501c5403cbe 1-2,10-88
+packages/wrangler/src/core/types.ts
+  s_d4f3a4c84a0158::t_6f8ad5469715a0 244-248
+packages/wrangler/src/r2/bucket.ts
+  s_d4f3a4c84a0158::t_c410e980f42ee5 42-44,144-146,198,249,297-299
+packages/wrangler/src/r2/cors.ts
+  s_d4f3a4c84a0158::t_4e9228110893e3 30-32,75-77,185-187
+packages/wrangler/src/r2/lifecycle.ts
+  s_d4f3a4c84a0158::t_d3053663df1aab 35-37,81-83,390-392,457-459
+packages/wrangler/src/r2/local-uploads.ts
+  s_d4f3a4c84a0158::t_d0a142ba615cd7 24-26,65-67,112-114
+packages/wrangler/src/r2/lock.ts
+  s_d4f3a4c84a0158::t_16f20681cdba58 30-32,76-78,275-277,343-345
+packages/wrangler/src/r2/notification.ts
+  s_d4f3a4c84a0158::t_bd1165111eeb7a 36-38,81-83,164-166
+packages/wrangler/src/r2/object.ts
+  s_d4f3a4c84a0158::t_faf8ead0bf246a 95,269,496,587
+packages/wrangler/src/r2/public-dev-url.ts
+  s_d4f3a4c84a0158::t_842b8adeeb7002 21-23,64-66,124-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "99f81c2d048144e65655d3176ef138b5eef59c9d",
+  "prompts": {},
+  "sessions": {
+    "s_8376e5e517826f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "44f0c331-636c-4788-814b-305a906e378f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "André Cruz <acruz@cloudflare.com>"
+    },
+    "s_d4f3a4c84a0158": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7ffe5ff4-f058-49a3-bf89-76794e153bd2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "André Cruz <acruz@cloudflare.com>"
+    }
+  }
+}

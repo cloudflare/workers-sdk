@@ -1,0 +1,14 @@
+packages/vitest-plugin/test/coverage.test.ts
+  h_0282ef8cb84129 28,124
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4e61b81d0f0db1354399d8138fcfc3ba67a1ab62",
+  "prompts": {},
+  "humans": {
+    "h_0282ef8cb84129": {
+      "author": "Matt Johnson-Pint <mjohnson-pint@cloudflare.com>"
+    }
+  }
+}

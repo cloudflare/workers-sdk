@@ -1,0 +1,31 @@
+packages/deploy-helpers/package.json
+  s_f8d69673fc7ffa::t_7a1cfe9b5b0f04 56
+packages/deploy-helpers/scripts/deps.ts
+  s_f8d69673fc7ffa::t_71b459cd088f85 22
+packages/deploy-helpers/src/deploy/helpers/parse-bulk-input.ts
+  s_f8d69673fc7ffa::t_78b1a03d45fde3 9,83,85,105,107
+packages/workers-utils/src/local-env.ts
+  s_f8d69673fc7ffa::t_16261ef54890e2 3,91,102-105,131,169-174
+packages/wrangler/src/__tests__/case-insensitive-env.test.ts
+  s_f8d69673fc7ffa::t_35a04ab4f9fa5b 2
+packages/wrangler/src/config/dot-env.ts
+  s_f8d69673fc7ffa::t_5d768519cf8a0a 5
+pnpm-lock.yaml
+  s_f8d69673fc7ffa::t_c9ded6fbeb558c 2052-2054
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4dba732360a366d12f092b9bceef3c4998b95344",
+  "prompts": {},
+  "sessions": {
+    "s_f8d69673fc7ffa": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0eef7-08e9-7700-a926-c58fdf3ee3a5",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Eric Clemmons <eclemmons@cloudflare.com>"
+    }
+  }
+}

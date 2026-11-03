@@ -1,0 +1,21 @@
+packages/autoconfig/src/details/index.ts
+  s_16d941d8f4eaf2::t_1c51cdc6cbfdf2 215
+packages/autoconfig/tests/details/get-details-for-auto-config.test.ts
+  s_16d941d8f4eaf2::t_0d445867a75a0a 4,12,56-69,796-820
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "92c961d339645d1ea9482459e4c30be3fa539341",
+  "prompts": {},
+  "sessions": {
+    "s_16d941d8f4eaf2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dcaa6a8b-1109-4304-81ce-0e4ec9b06c68",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}

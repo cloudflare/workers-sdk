@@ -1,0 +1,60 @@
+packages/workers-auth/src/core/factory.ts
+  s_d4f3a4c84a0158::t_97ea3a5f579fb1 40-43,171,176,198,268-272,613-617
+packages/workers-auth/src/temporary.ts
+  s_d4f3a4c84a0158::t_01241be66773be 13-16,209,266,275,278,371
+  s_d4f3a4c84a0158::t_19a9bb3639c407 404
+packages/wrangler/src/__tests__/deploy/core.test.ts
+  s_d4f3a4c84a0158::t_5706898ddba2a3 859,1100,1187,1189-1192,1244,1320-1322,1417-1418,1492
+packages/wrangler/src/__tests__/versions/versions.upload.test.ts
+  s_d4f3a4c84a0158::t_cece71aee45d1c 284-286
+packages/workers-auth/src/context.ts
+  s_d4f3a4c84a0158::t_b3d609fb5cc553 22-26,52-59
+packages/wrangler/src/__tests__/temporary-output.test.ts
+  s_d4f3a4c84a0158::t_92e7208d2ba393 1-168
+packages/wrangler/src/d1/execute.ts
+  s_1f41e6fcdf1e6b::t_74096f28f37e1f 119,230
+packages/wrangler/src/__tests__/d1/migrate.test.ts
+  s_d4f3a4c84a0158::t_90a8c123257aa2 635-636
+packages/workers-auth/AGENTS.md
+  s_d4f3a4c84a0158::t_8fe6ba4321bfd9 107-109,160-162
+packages/wrangler/src/user/user.ts
+  s_d4f3a4c84a0158::t_4b76791a91b565 53,60-65
+packages/workers-auth/src/core/temporary-terms.ts
+  s_d4f3a4c84a0158::t_4274aaabe91429 2,14
+  s_d4f3a4c84a0158::t_6429a9f3a7ef36 17,23
+packages/workers-auth/src/core/types.ts
+  s_d4f3a4c84a0158::t_3dce49e05ad3e0 1-5,26-33
+packages/workers-auth/tests/core/factory.test.ts
+  s_d4f3a4c84a0158::t_4e10f4ede2b5b3 5,11,14-15,128-187
+.changeset/temporary-notices-stderr.md
+  s_1f41e6fcdf1e6b::t_b621d6ecf08db9 7
+  s_d4f3a4c84a0158::t_8b0d7ee3ef7fef 1-6,8-9
+.changeset/workers-auth-temporary-account-logger.md
+  s_d4f3a4c84a0158::t_e01f90f909fec6 1-7
+packages/workers-auth/tests/temporary-event.test.ts
+  s_d4f3a4c84a0158::t_e4858c24ec78e3 151,171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a2c88aea6fd6e9b670d508c2d31d3e310aa78cd4",
+  "prompts": {},
+  "sessions": {
+    "s_1f41e6fcdf1e6b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a10ce5-ba7c-72e1-9257-8f86df6e6d97",
+        "model": "unknown"
+      },
+      "human_author": "André Cruz <acruz@cloudflare.com>"
+    },
+    "s_d4f3a4c84a0158": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7ffe5ff4-f058-49a3-bf89-76794e153bd2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "André Cruz <acruz@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+.changeset/quiet-r2-signed-encoding.md
+  s_cc68ea0ad3a333::t_9e9dfd66d18f59 1-7
+packages/miniflare/src/workers/core/entry.worker.ts
+  s_cc68ea0ad3a333::t_20537770e20b73 650-654
+packages/miniflare/src/workers/r2/s3/auth.worker.ts
+  s_cc68ea0ad3a333::t_58acf1b1ddaa9e 189-193
+packages/miniflare/test/index.spec.ts
+  s_cc68ea0ad3a333::t_f97e7b39a957bf 792-798
+packages/miniflare/test/plugins/r2/s3.spec.ts
+  s_cc68ea0ad3a333::t_38d80c0e2af06d 2-3,210-320
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e0ae7cc78387072395ee725d3d67cf070cf04892",
+  "prompts": {},
+  "sessions": {
+    "s_cc68ea0ad3a333": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a162f5-49ca-7b11-8787-faf147d85cb3",
+        "model": "unknown"
+      },
+      "human_author": "Pedro Leal <pleal@cloudflare.com>"
+    }
+  }
+}

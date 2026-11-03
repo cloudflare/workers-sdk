@@ -1,0 +1,31 @@
+packages/config/src/__tests__/convert.test.ts
+  s_36aec12077a3fd::t_d34660d6785641 1399-1449
+packages/config/src/__tests__/schema.test.ts
+  s_36aec12077a3fd::t_2c807318f280e6 28-69
+packages/build-output-utils/src/__tests__/read.test.ts
+  s_36aec12077a3fd::t_135e4bf20b278b 137-159
+packages/build-output-utils/src/__tests__/write.test.ts
+  s_36aec12077a3fd::t_98e119d0a3c761 124-151
+packages/deploy-helpers/src/preview/preview.ts
+  s_36aec12077a3fd::t_cbc3563cbddb74 1322,1331
+packages/vite-plugin-cloudflare/src/__tests__/build-output.spec.ts
+  s_36aec12077a3fd::t_668a6256449daf 1-9,12-81
+packages/wrangler/src/__tests__/cf-wrangler/build.test.ts
+  s_36aec12077a3fd::t_64fce01a058926 18-23,28-32,35,38,40,42-68,70-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "72f9b0b227166464d672ec9d1308dcfee235797b",
+  "prompts": {},
+  "sessions": {
+    "s_36aec12077a3fd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a136fb-d042-74d1-a394-13c740f1033f",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Greg Brimble <gbrimble@cloudflare.com>"
+    }
+  }
+}

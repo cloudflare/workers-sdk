@@ -1,0 +1,21 @@
+packages/miniflare/src/shared/index.ts
+  s_f848d6a6da1ed7::t_da4d34bc0aea55 2
+turbo.json
+  s_f848d6a6da1ed7::t_976c2f093e8542 30-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "6f2ac4d4d96fb2a32b5d05812be768550405bd58",
+  "prompts": {},
+  "sessions": {
+    "s_f848d6a6da1ed7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16713-e9f0-7150-b83f-5befba8b0310",
+        "model": "unknown"
+      },
+      "human_author": "Brendan Irvine-Broque <birvine-broque@cloudflare.com>"
+    }
+  }
+}

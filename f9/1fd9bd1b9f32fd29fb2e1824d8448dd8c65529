@@ -1,0 +1,55 @@
+.changeset/cloudflare-durable-objects-module.md
+  s_6aa689848a6f25::t_f8c6794905f37e 1-9
+packages/vite-plugin-cloudflare/package.json
+  s_6aa689848a6f25::t_0c24b8939b8b39 57
+packages/vite-plugin-cloudflare/playground/decorators/__tests__/decorators.spec.ts
+  s_6aa689848a6f25::t_9fbd19b60ce34c 1-28
+packages/vite-plugin-cloudflare/playground/decorators/package.json
+  s_6aa689848a6f25::t_0c8f1a1bdd1c12 1-20
+packages/vite-plugin-cloudflare/playground/decorators/package/index.js
+  s_6aa689848a6f25::t_648298e80e779e 1-13
+packages/vite-plugin-cloudflare/playground/decorators/package/package.json
+  s_6aa689848a6f25::t_1d868660653c83 1-9
+packages/vite-plugin-cloudflare/playground/decorators/src/index.ts
+  s_6aa689848a6f25::t_1b1d3392cc8472 1-65
+packages/vite-plugin-cloudflare/playground/decorators/src/logged.js
+  s_6aa689848a6f25::t_419337c593ae5d 1-15
+packages/vite-plugin-cloudflare/playground/decorators/tsconfig.json
+  s_6aa689848a6f25::t_8d7e388d3c6569 1-7
+packages/vite-plugin-cloudflare/playground/decorators/tsconfig.node.json
+  s_6aa689848a6f25::t_ec12c161469b92 1-4
+packages/vite-plugin-cloudflare/playground/decorators/tsconfig.worker.json
+  s_6aa689848a6f25::t_0af8b71d1de169 1-4
+packages/vite-plugin-cloudflare/playground/decorators/vite.config.ts
+  s_6aa689848a6f25::t_3e683b2cce9608 1-6
+packages/vite-plugin-cloudflare/playground/decorators/wrangler.jsonc
+  s_6aa689848a6f25::t_98dcfdc550a3fe 1-19
+packages/vite-plugin-cloudflare/scripts/deps.ts
+  s_6aa689848a6f25::t_69ddaa277180d6 8-12
+packages/vite-plugin-cloudflare/src/cloudflare-environment.ts
+  s_6aa689848a6f25::t_c56594f7b778ad 189
+packages/vite-plugin-cloudflare/src/index.ts
+  s_6aa689848a6f25::t_d47b6ef8cf6a16 11,124
+packages/vite-plugin-cloudflare/src/plugins/decorators.ts
+  s_6aa689848a6f25::t_6f76a68c3b5759 1-77
+packages/wrangler/src/__tests__/deploy/build.test.ts
+  s_6aa689848a6f25::t_cee7e18dac69ed 95-127
+pnpm-lock.yaml
+  s_6aa689848a6f25::t_b7887681bf585d 2868-2870,3242-3265,8344-8346,20670-20671
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f91fd9bd1b9f32fd29fb2e1824d8448dd8c65529",
+  "prompts": {},
+  "sessions": {
+    "s_6aa689848a6f25": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2861135affeN8CpyDm2tLcoX2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    }
+  }
+}

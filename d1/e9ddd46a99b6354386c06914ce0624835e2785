@@ -1,0 +1,25 @@
+packages/deploy-helpers/tests/preview-build-output.test.ts
+  s_36aec12077a3fd::t_09a098b402224b 200-237
+packages/config/src/__tests__/schema.test.ts
+  s_36aec12077a3fd::t_2c807318f280e6 28-69
+packages/config/src/__tests__/convert.test.ts
+  s_36aec12077a3fd::t_d34660d6785641 1399-1449
+packages/build-output-utils/src/__tests__/read.test.ts
+  s_36aec12077a3fd::t_135e4bf20b278b 137-159
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d1e9ddd46a99b6354386c06914ce0624835e2785",
+  "prompts": {},
+  "sessions": {
+    "s_36aec12077a3fd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a136fb-d042-74d1-a394-13c740f1033f",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Greg Brimble <gbrimble@cloudflare.com>"
+    }
+  }
+}

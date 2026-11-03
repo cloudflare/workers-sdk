@@ -1,0 +1,31 @@
+.changeset/preview-domain-traffic.md
+  s_08d5092eec17af::t_8582e6ec1905e2 3,8
+packages/build-output-utils/src/write.ts
+  s_08d5092eec17af::t_12f5fafdfda30f 96
+packages/config/src/types.ts
+  s_08d5092eec17af::t_ad0e696c0296dc 458
+packages/deploy-helpers/src/preview/preview.ts
+  s_08d5092eec17af::t_b8b80f0a78db94 1352-1353
+packages/deploy-helpers/tests/preview-build-output.test.ts
+  s_08d5092eec17af::t_a1dea6124eab7e 700-730
+packages/wrangler/src/__tests__/cf-wrangler/build.test.ts
+  s_08d5092eec17af::t_f98f490c58a20d 73-80
+packages/wrangler/src/deployment-bundle/build-output.ts
+  s_08d5092eec17af::t_6c28e699029008 50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "afd8cdd8f78fdb3d9c87e89c11bfa0531962a21b",
+  "prompts": {},
+  "sessions": {
+    "s_08d5092eec17af": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a13abc-f3d0-7220-9d6d-f12d3a852bfc",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Greg Brimble <gbrimble@cloudflare.com>"
+    }
+  }
+}

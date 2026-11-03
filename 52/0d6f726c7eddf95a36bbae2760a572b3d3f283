@@ -1,0 +1,19 @@
+packages/vitest-plugin/test/fs-module-cache.test.ts
+  s_09d77d62d4fbe9::t_e9c9b293d86b9a 176-231
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "520d6f726c7eddf95a36bbae2760a572b3d3f283",
+  "prompts": {},
+  "sessions": {
+    "s_09d77d62d4fbe9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ec9822b80ffenibwjT5gJ0A3w4",
+        "model": "unknown"
+      },
+      "human_author": "Matt Johnson-Pint <mjohnson-pint@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+packages/miniflare/src/workers/shared/remote-bindings-utils.ts
+  s_836a1d6d207713::t_e93a1e07c041cb 104-105
+packages/miniflare/test/plugins/shared/remote-bindings-access-warning.spec.ts
+  s_836a1d6d207713::t_87607c4eae05e3 504-508,531,537-552,573-601
+packages/remote-bindings/templates/remoteBindings/ProxyServerWorker.ts
+  s_836a1d6d207713::t_4ddac2ec22a62f 320-323
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "76f5d24d725bc2b8ff27e551a121e3c7d89c7b0b",
+  "prompts": {},
+  "sessions": {
+    "s_836a1d6d207713": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bf762bb4-b88e-434d-b43f-3b3635e9437e",
+        "model": "unknown"
+      },
+      "human_author": "Eric Falcao <efalcao@cloudflare.com>"
+    }
+  }
+}

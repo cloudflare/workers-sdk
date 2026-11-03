@@ -1,0 +1,19 @@
+packages/autoconfig/src/frameworks/next.ts
+  s_16d941d8f4eaf2::t_c17c1bc013a2b1 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5361687545f715ca28f4f2ee6a25e107f49a2ff7",
+  "prompts": {},
+  "sessions": {
+    "s_16d941d8f4eaf2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dcaa6a8b-1109-4304-81ce-0e4ec9b06c68",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Mattietk <matttaylor@cloudflare.com>"
+    }
+  }
+}

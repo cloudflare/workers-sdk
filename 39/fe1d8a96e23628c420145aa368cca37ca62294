@@ -1,0 +1,71 @@
+.changeset/cloudflare-durable-objects-module.md
+  s_f70c3d9c923e90::t_c8b6723ab08c6a 1-9
+packages/vite-plugin-cloudflare/package.json
+  s_f70c3d9c923e90::t_1decf16ada3080 57
+packages/vite-plugin-cloudflare/playground/decorators/vite.config.ts
+  s_6aa689848a6f25::t_04d3b40c71e7a2 1-6
+packages/vite-plugin-cloudflare/playground/decorators/wrangler.jsonc
+  s_6aa689848a6f25::t_d7da98dcddb016 1-19
+packages/vite-plugin-cloudflare/src/plugins/decorators.ts
+  s_f70c3d9c923e90::t_2dd97eff768484 1-78
+packages/vite-plugin-cloudflare/playground/decorators/__tests__/decorators.spec.ts
+  s_f70c3d9c923e90::t_9f4019f0cc28ce 1-28
+packages/vite-plugin-cloudflare/scripts/deps.ts
+  s_f70c3d9c923e90::t_a3c0ffecb6f126 8-12
+packages/vite-plugin-cloudflare/playground/decorators/tsconfig.worker.json
+  s_6aa689848a6f25::t_fd89e84400ee83 1-4
+packages/vite-plugin-cloudflare/playground/decorators/src/logged.js
+  s_6aa689848a6f25::t_cec6dacc536cb0 1-15
+packages/vite-plugin-cloudflare/playground/decorators/tsconfig.json
+  s_6aa689848a6f25::t_29f33fd7f9629f 1-7
+pnpm-lock.yaml
+  s_6aa689848a6f25::t_5bf60c1d6e1c9d 2868-2870,3242-3265,8344-8346,19909
+  s_6aa689848a6f25::t_2a25bfb59aa014 20670-20671
+packages/vite-plugin-cloudflare/playground/decorators/package.json
+  s_6aa689848a6f25::t_031cbc4f42db41 1-20
+packages/vite-plugin-cloudflare/src/index.ts
+  s_6aa689848a6f25::t_1c629c019c0b54 11,124
+packages/vite-plugin-cloudflare/src/__tests__/decorators.spec.ts
+  s_f70c3d9c923e90::t_568ad47277b236 1-81
+packages/vite-plugin-cloudflare/playground/decorators/tsconfig.node.json
+  s_6aa689848a6f25::t_f7bba68710380d 1-4
+packages/vite-plugin-cloudflare/playground/decorators/src/index.ts
+  s_1b9cc9140a7ce9::t_acb68e0a1d24e2 3-65
+  s_6aa689848a6f25::t_6adc69dcb20d00 1-2
+packages/vite-plugin-cloudflare/playground/decorators/package/index.js
+  s_6aa689848a6f25::t_8ec2e6058e276d 1-13
+packages/vite-plugin-cloudflare/playground/decorators/package/package.json
+  s_6aa689848a6f25::t_255bb7b8ad2208 1-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "39fe1d8a96e23628c420145aa368cca37ca62294",
+  "prompts": {},
+  "sessions": {
+    "s_1b9cc9140a7ce9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2799a5e1ffeMztVxnFMybSNiL",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    },
+    "s_6aa689848a6f25": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2861135affeN8CpyDm2tLcoX2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    },
+    "s_f70c3d9c923e90": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2fdf8364ffeOHX8yTIJunIGkw",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    }
+  }
+}

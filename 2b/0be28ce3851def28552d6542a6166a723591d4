@@ -1,0 +1,23 @@
+packages/deploy-helpers/src/deploy/helpers/parse-bulk-input.ts
+  s_f8d69673fc7ffa::t_2386d4d419b732 9,83,85,105,107
+packages/workers-utils/src/local-env.ts
+  s_f8d69673fc7ffa::t_09c0e0c0dd9455 23
+packages/workers-utils/tests/local-env.test.ts
+  s_f8d69673fc7ffa::t_6813f5dbe6e9c5 11,14,17,29-31,39-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2b0be28ce3851def28552d6542a6166a723591d4",
+  "prompts": {},
+  "sessions": {
+    "s_f8d69673fc7ffa": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0eef7-08e9-7700-a926-c58fdf3ee3a5",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Eric Clemmons <eclemmons@cloudflare.com>"
+    }
+  }
+}

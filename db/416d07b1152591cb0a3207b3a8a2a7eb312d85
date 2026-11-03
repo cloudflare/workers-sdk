@@ -1,0 +1,35 @@
+packages/vite-plugin-cloudflare/playground/decorators/package/index.js
+  s_6aa689848a6f25::t_24983fdde06dae 1-13
+packages/vite-plugin-cloudflare/playground/decorators/package/package.json
+  s_6aa689848a6f25::t_3e228b47965393 1-9
+packages/vite-plugin-cloudflare/src/plugins/decorators.ts
+  s_b716b0d48442fc::t_b2b636703e44b0 1-4,20-21
+packages/vitest-plugin/src/pool/plugin.ts
+  s_b716b0d48442fc::t_35bacbe2b2f14d 4-7,166-167
+packages/workers-utils/tests/decorators.test.ts
+  s_b716b0d48442fc::t_64e28916d5ba6e 2,14-19,40-50,52-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "db416d07b1152591cb0a3207b3a8a2a7eb312d85",
+  "prompts": {},
+  "sessions": {
+    "s_6aa689848a6f25": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2861135affeN8CpyDm2tLcoX2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    },
+    "s_b716b0d48442fc": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f27481c64ffejF0PRmNbz1lsxV",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Ashley Peacock <apeacock@cloudflare.com>"
+    }
+  }
+}

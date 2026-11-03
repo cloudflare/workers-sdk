@@ -1,0 +1,81 @@
+.changeset/development-oidc-native.md
+  s_f848d6a6da1ed7::t_6f50ff5948d244 1-12
+packages/miniflare/package.json
+  s_f848d6a6da1ed7::t_694ea9caeca4b0 34
+packages/miniflare/scripts/generate-workerd-config.mjs
+  s_f848d6a6da1ed7::t_3d92c2995c5bc0 1-42
+packages/miniflare/src/config/schema.ts
+  s_f848d6a6da1ed7::t_1c8a7fac793c29 45,601-612
+packages/miniflare/src/config/v4-convert.ts
+  s_f848d6a6da1ed7::t_d5d67a3785dab2 191
+packages/miniflare/src/config/v4-schema.ts
+  s_f848d6a6da1ed7::t_72456111e82eb7 17,389-400,847-848
+packages/miniflare/src/index.ts
+  s_f848d6a6da1ed7::t_deb7440d4915d3 119,909-911,1086,1637-1691,2382,3220-3222,3925
+packages/miniflare/src/plugins/core/index.ts
+  s_f848d6a6da1ed7::t_c48461422ada70 24,494,615-642,661-663
+packages/miniflare/src/plugins/shared/index.ts
+  s_f848d6a6da1ed7::t_4d6dc1523e4a74 77
+packages/miniflare/src/runtime/config/generated/workerd.ts
+  s_f848d6a6da1ed7::t_1537d9dcd6a75d 3432,3497,3594,3960-3981
+packages/miniflare/src/runtime/config/workerd.ts
+  s_f848d6a6da1ed7::t_7d19bbca4494a9 95
+packages/miniflare/src/shared/development-oidc-broker.ts
+  s_f848d6a6da1ed7::t_62cb5d31a594ce 1-123
+packages/miniflare/src/shared/index.ts
+  s_f848d6a6da1ed7::t_22624c070fb6d7 3
+packages/miniflare/src/workers/core/oidc.worker.ts
+  s_f848d6a6da1ed7::t_9cde50a9482036 1-16
+packages/miniflare/test/plugins/core/development-oidc.spec.ts
+  s_f848d6a6da1ed7::t_5f2139c142ce46 1-185
+packages/miniflare/test/shared/development-oidc-broker.spec.ts
+  s_f848d6a6da1ed7::t_d5d298e9fa1800 1-98
+packages/remote-bindings/README.md
+  s_f848d6a6da1ed7::t_69153beeefba74 6,50-132
+packages/remote-bindings/src/development-oidc-api.test.ts
+  s_f848d6a6da1ed7::t_883aab393d5572 1-322
+packages/remote-bindings/src/development-oidc-api.ts
+  s_f848d6a6da1ed7::t_508490ef876439 1-339
+packages/remote-bindings/src/development-oidc-options.ts
+  s_f848d6a6da1ed7::t_2c85c721572514 1-98
+packages/remote-bindings/src/development-oidc.test.ts
+  s_f848d6a6da1ed7::t_74c2167bf88b0c 18,243,423-439
+packages/remote-bindings/src/development-oidc.ts
+  s_f848d6a6da1ed7::t_10053bd05febbc 14-15,47-48,92,123-126,151-166
+packages/remote-bindings/src/index.ts
+  s_f848d6a6da1ed7::t_07b47c04c0cfae 12-13
+packages/vite-plugin-cloudflare/src/__tests__/development-oidc.spec.ts
+  s_f848d6a6da1ed7::t_768d27bed70149 1-59
+packages/vite-plugin-cloudflare/src/miniflare-options.ts
+  s_f848d6a6da1ed7::t_c946a0926ba42e 418,833
+packages/vitest-plugin/src/pool/config.ts
+  s_f848d6a6da1ed7::t_bfb9f4f59b9b49 57-58,455
+packages/vitest-plugin/test/development-oidc.test.ts
+  s_f848d6a6da1ed7::t_bb1c3dea7106ba 1-56
+packages/wrangler/src/__tests__/unstable-get-miniflare-worker-options.test.ts
+  s_f848d6a6da1ed7::t_9abf28fe6bd005 556-592
+packages/wrangler/src/api/integrations/platform/index.ts
+  s_f848d6a6da1ed7::t_9b3664a7e2c221 3,408-409,422-423,437-438,530-532
+packages/wrangler/src/api/startDevWorker/ConfigController.ts
+  s_f848d6a6da1ed7::t_d20b0584eac155 7,149-160
+packages/wrangler/src/api/startDevWorker/LocalRuntimeController.ts
+  s_f848d6a6da1ed7::t_4f3e45433a28ef 429
+packages/wrangler/src/api/startDevWorker/types.ts
+  s_f848d6a6da1ed7::t_2f4a06f703d40f 83-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "db016083ed200e60a2a5b58d8169723050e65d4f",
+  "prompts": {},
+  "sessions": {
+    "s_f848d6a6da1ed7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a16713-e9f0-7150-b83f-5befba8b0310",
+        "model": "unknown"
+      },
+      "human_author": "Brendan Irvine-Broque <birvine-broque@cloudflare.com>"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+packages/vitest-plugin/test/fs-module-cache.test.ts
+  h_0282ef8cb84129 197,199-200,204-205,211,214,227,264,266-267,271-272,278,282
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "972c8eac1c9e934426dfda44868814181adf56c4",
+  "prompts": {},
+  "humans": {
+    "h_0282ef8cb84129": {
+      "author": "Matt Johnson-Pint <mjohnson-pint@cloudflare.com>"
+    }
+  }
+}

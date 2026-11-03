@@ -1,0 +1,14 @@
+.changeset/quiet-v8-coverage.md
+  h_0282ef8cb84129 7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5cbed92af6c051c5b971489326ac7e5b09bca877",
+  "prompts": {},
+  "humans": {
+    "h_0282ef8cb84129": {
+      "author": "Matt Johnson-Pint <mjohnson-pint@cloudflare.com>"
+    }
+  }
+}
