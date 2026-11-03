@@ -75,7 +75,8 @@ export function handleWebSocket(
 				// Leave upgrades that Vite's own `server.proxy` forwards to its
 				// proxy handler. Dispatching them to the Worker would destroy the
 				// socket the proxy is using when the Worker has no WebSocket route.
-				if (isViteProxyWebSocketUpgrade(request.url ?? "", viteProxy)) {
+				const workerRequestUrl = await getWorkerUpgradeUrl(request, viteProxy);
+				if (workerRequestUrl === undefined) {
 					return;
 				}
 
@@ -85,10 +86,13 @@ export function handleWebSocket(
 					headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
 				}
 
-				const response = await miniflare.dispatchFetch(url, {
-					headers: [...headers],
-					method: request.method,
-				});
+				const response = await miniflare.dispatchFetch(
+					new URL(workerRequestUrl, base),
+					{
+						headers: [...headers],
+						method: request.method,
+					}
+				);
 				const workerWebSocket = response.webSocket;
 
 				if (!workerWebSocket) {
@@ -134,28 +138,68 @@ export function handleWebSocket(
 type ViteProxyConfig = Record<string, string | vite.ProxyOptions | undefined>;
 
 /**
- * Returns `true` if Vite's proxy middleware (`server.proxy` or `preview.proxy`)
- * forwards a WebSocket upgrade for `url`. Mirrors the `upgrade` listener in
- * Vite's proxy middleware: entries are checked in order, falsy entries are
- * skipped, and a matching entry handles the upgrade only if it sets `ws` or
- * targets a `ws:`/`wss:` URL.
+ * Returns the URL to dispatch a WebSocket upgrade to the Worker with, or
+ * `undefined` if Vite's proxy middleware (`server.proxy` or `preview.proxy`)
+ * handles the upgrade. Mirrors the `bypass` handling in Vite's proxy `upgrade`
+ * listener: a string result rewrites the URL and leaves the upgrade unproxied,
+ * so the Worker serves it at that URL; `false` makes Vite respond with a 404;
+ * any other result, or an error, leaves the upgrade to Vite.
+ *
+ * @param request The upgrade request
+ * @param viteProxy The resolved `server.proxy` or `preview.proxy` config
+ * @returns The URL to dispatch to the Worker, or `undefined` if Vite owns the upgrade
+ */
+export async function getWorkerUpgradeUrl(
+	request: IncomingMessage,
+	viteProxy?: ViteProxyConfig
+): Promise<string | undefined> {
+	const url = request.url ?? "";
+	const proxyOptions = findViteProxyWebSocketOptions(url, viteProxy);
+	if (!proxyOptions) {
+		return url;
+	}
+	if (!proxyOptions.bypass) {
+		return undefined;
+	}
+	try {
+		const bypassResult = await proxyOptions.bypass(
+			request,
+			undefined,
+			proxyOptions
+		);
+		return typeof bypassResult === "string" ? bypassResult : undefined;
+	} catch {
+		// Vite logs the error and leaves the upgrade unhandled.
+		return undefined;
+	}
+}
+
+/**
+ * Returns the options of the `server.proxy` or `preview.proxy` entry that
+ * Vite's proxy middleware uses for a WebSocket upgrade to `url`, if any.
+ * Mirrors the `upgrade` listener in Vite's proxy middleware: entries are
+ * checked in order, falsy entries are skipped, and the first matching entry
+ * that sets `ws` or targets a `ws:`/`wss:` URL handles the upgrade.
  *
  * @param url The raw request URL (`request.url`), as Vite matches it
  * @param viteProxy The resolved `server.proxy` or `preview.proxy` config
- * @returns Whether Vite's proxy owns the upgrade for `url`
+ * @returns The matching entry's options, or `undefined` if Vite's proxy does not handle the upgrade
  */
-export function isViteProxyWebSocketUpgrade(
+export function findViteProxyWebSocketOptions(
 	url: string,
 	viteProxy: ViteProxyConfig = {}
-): boolean {
-	return Object.entries(viteProxy).some(
-		([context, options]) =>
-			!!options &&
-			doesProxyContextMatchUrl(context, url) &&
-			isWebSocketProxy(
-				typeof options === "string" ? { target: options } : options
-			)
-	);
+): vite.ProxyOptions | undefined {
+	for (const [context, options] of Object.entries(viteProxy)) {
+		if (!options || !doesProxyContextMatchUrl(context, url)) {
+			continue;
+		}
+		const proxyOptions =
+			typeof options === "string" ? { target: options } : options;
+		if (isWebSocketProxy(proxyOptions)) {
+			return proxyOptions;
+		}
+	}
+	return undefined;
 }
 
 /**
