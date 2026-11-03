@@ -206,11 +206,15 @@ function authority(options: ParsedInstanceOptions): Promise<Authority> {
 						await handle.close();
 					}
 					await fs.rename(temporary, file);
-					const parent = await fs.open(path.dirname(file), "r");
-					try {
-						await parent.sync();
-					} finally {
-						await parent.close();
+					// Windows cannot fsync directory handles. The file itself is flushed
+					// before the atomic rename on every platform.
+					if (process.platform !== "win32") {
+						const parent = await fs.open(path.dirname(file), "r");
+						try {
+							await parent.sync();
+						} finally {
+							await parent.close();
+						}
 					}
 				}
 				return fresh;
@@ -370,7 +374,8 @@ export async function getLocalIdentityServices(
 				? {
 						durableObjectNamespaces: classes.map((className) => ({
 							className,
-							uniqueKey: `${local.realm}:${className}`,
+							// Keep existing Unix realm paths; Windows forbids colons.
+							uniqueKey: `${local.realm}${process.platform === "win32" ? "-" : ":"}${className}`,
 							enableSql: true,
 						})),
 						durableObjectStorage: { localDisk: serviceName("storage") },

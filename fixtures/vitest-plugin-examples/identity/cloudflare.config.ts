@@ -1,4 +1,4 @@
-import { bindings, defineConfig } from "cf/config";
+import { bindings, defineConfig } from "@cloudflare/config";
 import * as entrypoint from "./worker.js" with { type: "cf-worker" };
 export default defineConfig({
 	worker: {

@@ -1233,6 +1233,9 @@ importers:
       '@better-auth/stripe':
         specifier: ^1.4.6
         version: 1.5.4(8e618773432433781b6059305e82d895)
+      '@cloudflare/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@cloudflare/containers':
         specifier: ^0.2.2
         version: 0.2.2
