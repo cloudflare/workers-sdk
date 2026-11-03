@@ -15,11 +15,25 @@ export interface ConnectionPermissions {
 	inspection_resources?: ExactConnectionResource[];
 	return_urls?: string[];
 }
-export type ConnectionClientRegistration =
+export interface ConnectionProtocolRequirements {
+	dpop_nonce?: "required";
+	token_response_subject?: "required";
+	token_response_scope?: "required";
+	client_assertion_audience?: "issuer" | "token_endpoint";
+}
+export type ConnectionClientRegistration = {
+	dpop_bound_access_tokens?: boolean;
+} & (
 	| {
 			mode: "existing";
 			client_id: string;
-			authentication: "none" | "private_key_jwt";
+			authentication: "none";
+	  }
+	| {
+			mode: "existing";
+			client_id: string;
+			authentication: "private_key_jwt";
+			key_reference?: string;
 	  }
 	| {
 			mode: "existing";
@@ -31,14 +45,18 @@ export type ConnectionClientRegistration =
 			mode: "dynamic";
 			authentication: "none" | "private_key_jwt" | "client_secret_basic";
 			enrollment_credential_reference?: string;
-	  };
+	  }
+);
 export interface ConnectionOAuthConfig {
 	grant: "authorization_code";
 	authorization_server: string;
-	resource: string;
+	/** Optional RFC 8707 indicator. API authority always comes from resources. */
+	resource?: string;
 	authorization_endpoint?: string;
 	token_endpoint?: string;
 	revocation_endpoint?: string;
+	pushed_authorization_request_endpoint?: string;
+	protocol_requirements?: ConnectionProtocolRequirements;
 	discovery?: boolean;
 	authorization_parameters?: Record<string, string>;
 	permission_ceiling: ConnectionPermissions;
@@ -72,8 +90,9 @@ function url(value: unknown, callback = false): value is string {
 		typeof value !== "string" ||
 		value.length > 2048 ||
 		/[\r\n\t]/.test(value)
-	)
+	) {
 		return false;
+	}
 	try {
 		const u = new URL(value);
 		return (
@@ -100,11 +119,15 @@ function resources(
 			if (
 				!object(r) ||
 				Object.keys(r).some((k) => !["url", "origin", "methods"].includes(k))
-			)
+			) {
 				return false;
-			if ((r.url === undefined) === (r.origin === undefined)) return false;
-			if (r.url !== undefined ? !url(r.url) : exact || !origin(r.origin))
+			}
+			if ((r.url === undefined) === (r.origin === undefined)) {
 				return false;
+			}
+			if (r.url !== undefined ? !url(r.url) : exact || !origin(r.origin)) {
+				return false;
+			}
 			return (
 				Array.isArray(r.methods) &&
 				r.methods.length > 0 &&
@@ -117,7 +140,9 @@ function resources(
 	);
 }
 function origin(value: unknown): value is string {
-	if (!url(value)) return false;
+	if (!url(value)) {
+		return false;
+	}
 	const u = new URL(value);
 	return (
 		!u.search &&
@@ -176,6 +201,8 @@ function oauth(value: unknown): value is ConnectionOAuthConfig {
 			"authorization_endpoint",
 			"token_endpoint",
 			"revocation_endpoint",
+			"pushed_authorization_request_endpoint",
+			"protocol_requirements",
 			"discovery",
 			"authorization_parameters",
 			"permission_ceiling",
@@ -185,22 +212,29 @@ function oauth(value: unknown): value is ConnectionOAuthConfig {
 		]) ||
 		value.grant !== "authorization_code" ||
 		!url(value.authorization_server) ||
-		!url(value.resource)
-	)
+		(value.resource !== undefined && !url(value.resource))
+	) {
 		return false;
-	if (value.discovery !== undefined && typeof value.discovery !== "boolean")
+	}
+	if (value.discovery !== undefined && typeof value.discovery !== "boolean") {
 		return false;
+	}
 	for (const name of [
 		"authorization_endpoint",
 		"token_endpoint",
 		"revocation_endpoint",
-	])
-		if (value[name] !== undefined && !url(value[name])) return false;
+		"pushed_authorization_request_endpoint",
+	]) {
+		if (value[name] !== undefined && !url(value[name])) {
+			return false;
+		}
+	}
 	if (
 		value.discovery !== true &&
 		(!value.authorization_endpoint || !value.token_endpoint)
-	)
+	) {
 		return false;
+	}
 	const ceiling = value.permission_ceiling;
 	if (
 		!object(ceiling) ||
@@ -211,16 +245,61 @@ function oauth(value: unknown): value is ConnectionOAuthConfig {
 			"return_urls",
 		]) ||
 		!permissions(ceiling)
-	)
+	) {
 		return false;
+	}
 	const reg = value.client_registration;
 	if (
 		!object(reg) ||
 		!["none", "private_key_jwt", "client_secret_basic"].includes(
 			String(reg.authentication)
 		)
-	)
+	) {
 		return false;
+	}
+	if (
+		reg.dpop_bound_access_tokens !== undefined &&
+		typeof reg.dpop_bound_access_tokens !== "boolean"
+	) {
+		return false;
+	}
+	const protocol = value.protocol_requirements;
+	if (protocol !== undefined) {
+		if (
+			!object(protocol) ||
+			!keys(protocol, [
+				"dpop_nonce",
+				"token_response_subject",
+				"token_response_scope",
+				"client_assertion_audience",
+			])
+		) {
+			return false;
+		}
+		for (const field of [
+			"dpop_nonce",
+			"token_response_subject",
+			"token_response_scope",
+		]) {
+			if (protocol[field] !== undefined && protocol[field] !== "required") {
+				return false;
+			}
+		}
+		if (
+			protocol.client_assertion_audience !== undefined &&
+			!["issuer", "token_endpoint"].includes(
+				String(protocol.client_assertion_audience)
+			)
+		) {
+			return false;
+		}
+		if (
+			protocol.dpop_nonce !== undefined &&
+			reg.dpop_bound_access_tokens !== true
+		) {
+			return false;
+		}
+	}
 	if (reg.mode === "existing") {
 		if (
 			!keys(reg, [
@@ -228,30 +307,45 @@ function oauth(value: unknown): value is ConnectionOAuthConfig {
 				"client_id",
 				"authentication",
 				"credential_reference",
+				"key_reference",
+				"dpop_bound_access_tokens",
 			]) ||
 			typeof reg.client_id !== "string" ||
 			!reg.client_id ||
 			reg.client_id.length > 512
-		)
+		) {
 			return false;
+		}
+		if (
+			reg.key_reference !== undefined &&
+			(reg.authentication !== "private_key_jwt" ||
+				!reference(reg.key_reference))
+		) {
+			return false;
+		}
 		if (
 			reg.authentication === "client_secret_basic"
 				? !reference(reg.credential_reference)
 				: reg.credential_reference !== undefined
-		)
+		) {
 			return false;
+		}
 	} else if (reg.mode === "dynamic") {
 		if (
 			!keys(reg, [
 				"mode",
 				"authentication",
 				"enrollment_credential_reference",
+				"dpop_bound_access_tokens",
 			]) ||
 			(reg.enrollment_credential_reference !== undefined &&
 				!reference(reg.enrollment_credential_reference))
-		)
+		) {
 			return false;
-	} else return false;
+		}
+	} else {
+		return false;
+	}
 	if (
 		(value.display_name !== undefined &&
 			(typeof value.display_name !== "string" ||
@@ -259,8 +353,9 @@ function oauth(value: unknown): value is ConnectionOAuthConfig {
 		(value.description !== undefined &&
 			(typeof value.description !== "string" ||
 				value.description.length > 2048))
-	)
+	) {
 		return false;
+	}
 	const reserved = new Set([
 		"state",
 		"scope",
@@ -270,6 +365,7 @@ function oauth(value: unknown): value is ConnectionOAuthConfig {
 		"code",
 		"code_challenge",
 		"code_challenge_method",
+		"dpop_jkt",
 		"access_token",
 		"refresh_token",
 		"client_secret",
@@ -318,26 +414,33 @@ export function isConnectionBinding(
 		]) ||
 		typeof value.binding !== "string" ||
 		!/^[A-Za-z0-9_-]{1,128}$/.test(value.binding)
-	)
+	) {
 		return false;
+	}
 	if (
 		value.connector_id !== undefined
 			? !reference(value.connector_id) ||
 				!Number.isSafeInteger(value.connector_revision) ||
 				Number(value.connector_revision) < 1
 			: value.connector_revision !== undefined || value.oauth === undefined
-	)
+	) {
 		return false;
+	}
 	if (
 		(value.selection !== undefined &&
 			!["app", "customer"].includes(String(value.selection))) ||
 		(value.connection_management !== undefined &&
 			typeof value.connection_management !== "boolean")
-	)
+	) {
 		return false;
-	if (!permissions(value)) return false;
+	}
+	if (!permissions(value)) {
+		return false;
+	}
 	if (value.oauth !== undefined) {
-		if (!oauth(value.oauth)) return false;
+		if (!oauth(value.oauth)) {
+			return false;
+		}
 		const ceiling = value.oauth.permission_ceiling;
 		if (
 			!value.scope.every((s) => ceiling.scope.includes(s)) ||
@@ -347,8 +450,9 @@ export function isConnectionBinding(
 				ceiling.inspection_resources ?? []
 			) ||
 			!(value.return_urls ?? []).every((u) => ceiling.return_urls?.includes(u))
-		)
+		) {
 			return false;
+		}
 		const endpoints = [
 			value.oauth.authorization_endpoint,
 			value.oauth.token_endpoint,
@@ -364,8 +468,9 @@ export function isConnectionBinding(
 							new URL(r.url).origin + new URL(r.url).pathname
 					)
 			)
-		)
+		) {
 			return false;
+		}
 	}
 	return true;
 }

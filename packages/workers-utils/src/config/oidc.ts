@@ -373,6 +373,7 @@ export function isIdentityBinding(
 }
 
 export type {
+	ConnectionProtocolRequirements,
 	ConnectionOAuthConfig,
 	ConnectionClientRegistration,
 	ConnectionPermissions,
