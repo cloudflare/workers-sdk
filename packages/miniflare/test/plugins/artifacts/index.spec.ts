@@ -13,6 +13,7 @@ import { Readable, Writable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
+import { deflateSync } from "node:zlib";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
 import { ArtifactsController, Miniflare } from "miniflare";
 import { test } from "vitest";
@@ -28,6 +29,7 @@ import {
 } from "../../../src/plugins/artifacts/git-sidecar";
 import { repositoryPath } from "../../../src/plugins/artifacts/storage";
 import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
+import diffFixture from "./fixtures/diff.json";
 import type { MiniflareOptions } from "miniflare";
 
 const exec = promisify(execFile);
@@ -237,6 +239,7 @@ test("artifacts: real RPC exposes current methods, not metadata or legacy method
 	await rpc(mf, "create", ["Repo"]);
 	const keys = await rpc(mf, "keys", [], "Repo");
 	expect(keys).toContain("readFile");
+	expect(keys).toContain("diff");
 	expect(keys).not.toContain("id");
 	expect(keys).not.toContain("name");
 	expect(keys).not.toContain("file");
@@ -1637,3 +1640,107 @@ test("artifacts: disposing the sidecar closes its private listener", async ({
 	}
 	await expect(fetch(address)).rejects.toThrow();
 });
+
+test("artifacts: diff over real RPC matches native Git, paginates, and reports errors", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	const directory = path.join(await useTmp(), "source");
+	const created = await pushFixture(mf, directory);
+	const kinds = ["", "commit", "tree", "blob", "tag"];
+	for (const object of diffFixture.objects) {
+		const content = Buffer.from(object.content, "base64");
+		const target = path.join(
+			directory,
+			".git/objects",
+			object.hash.slice(0, 2)
+		);
+		await mkdir(target, { recursive: true });
+		await writeFile(
+			path.join(target, object.hash.slice(2)),
+			deflateSync(
+				Buffer.concat([
+					Buffer.from(`${kinds[object.type]} ${content.length}\0`),
+					content,
+				])
+			)
+		);
+	}
+	for (const [ref, hash] of [
+		["refs/heads/main", diffFixture.after],
+		["refs/heads/before", diffFixture.before],
+		["refs/heads/unrelated", diffFixture.unrelated],
+		["refs/tags/v-after", diffFixture.tag],
+	]) {
+		await git(["update-ref", ref, hash], directory);
+	}
+	const auth = [
+		"-c",
+		`http.extraHeader=Authorization: Bearer ${created.token}`,
+	];
+	await git([...auth, "push", "--force", "--all", created.remote], directory);
+	await git([...auth, "push", "--tags", created.remote], directory);
+	expect(
+		await rpc(mf, "diff", ["before", "v-after", { limit: 1000 }], "Repo")
+	).toEqual({
+		from: diffFixture.before,
+		to: diffFixture.after,
+		changes: diffFixture.expected,
+	});
+	expect(
+		(await rpc(mf, "diff", [null, "main", { limit: 1000 }], "Repo")).changes
+	).toEqual(diffFixture.added);
+	expect(
+		(await rpc(mf, "diff", ["unrelated", "main", { limit: 1000 }], "Repo"))
+			.changes
+	).toEqual(diffFixture.expected);
+	expect(await rpc(mf, "diff", ["main", "main"], "Repo")).toEqual({
+		from: diffFixture.after,
+		to: diffFixture.after,
+		changes: [],
+	});
+	const collected = [];
+	let cursor: string | undefined;
+	do {
+		const page = await rpc(
+			mf,
+			"diff",
+			[
+				diffFixture.before,
+				diffFixture.after,
+				{ limit: 7, ...(cursor ? { cursor } : {}) },
+			],
+			"Repo"
+		);
+		collected.push(...page.changes);
+		cursor = page.cursor;
+	} while (cursor);
+	expect(collected).toEqual(diffFixture.expected);
+	const first = await rpc(mf, "diff", [null, "main"], "Repo");
+	expect(first.changes).toHaveLength(100);
+	for (const args of [
+		[null, "main", { limit: 0 }],
+		[null, "main", { limit: 1001 }],
+		[null, "main", { limit: null }],
+		["", "main"],
+		["abc1234", "main"],
+		[diffFixture.tag, "main"],
+		[null, "main", { cursor: "bad" }],
+		["before", "main", { cursor: first.cursor }],
+	]) {
+		expect(await rpcFailure(mf, "diff", args, "Repo")).toMatchObject({
+			code: "INVALID_INPUT",
+			numericCode: 10100,
+		});
+	}
+	expect(
+		await rpcFailure(mf, "diff", ["missing", "main"], "Repo")
+	).toMatchObject({
+		code: "NOT_FOUND",
+		error: expect.stringContaining("from"),
+	});
+	expect(
+		await rpcFailure(mf, "diff", [null, "0".repeat(40)], "Repo")
+	).toMatchObject({ code: "NOT_FOUND", error: expect.stringContaining("to") });
+}, 60_000);

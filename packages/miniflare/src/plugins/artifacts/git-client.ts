@@ -5,10 +5,17 @@ import { lstat, mkdtemp, open, rename, unlink } from "node:fs/promises";
 import { devNull, tmpdir } from "node:os";
 import path from "node:path";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
+import {
+	DIFF_OBJECT_LIMIT,
+	diffSnapshots,
+	type ArtifactsDiffOptions,
+	type ArtifactsDiffResult,
+} from "./repo-diff";
 import type { FileHandle } from "node:fs/promises";
 
 const decoder = new TextDecoder();
 type GitOptions = {
+	maxOutputBytes?: number;
 	allowFailure?: boolean;
 	timeout?: number;
 	httpAuthorization?: { origin: string; value: string };
@@ -164,6 +171,8 @@ export async function runGit(
 		function stop() {
 			stopGitProcess(child);
 		}
+		let outputBytes = 0;
+		let overflow = false;
 		const stdout: Buffer[] = [];
 		const stderr: Buffer[] = [];
 		const timeout = setTimeout(
@@ -171,8 +180,20 @@ export async function runGit(
 			options.timeout ?? 300_000
 		);
 		timeout.unref();
-		child.stdout.on("data", (chunk: Buffer) => stdout.push(chunk));
-		child.stderr.on("data", (chunk: Buffer) => stderr.push(chunk));
+		const collect = (target: Buffer[], chunk: Buffer) => {
+			if (overflow) {
+				return;
+			}
+			outputBytes += chunk.length;
+			if (outputBytes > (options.maxOutputBytes ?? Infinity)) {
+				overflow = true;
+				stopGitProcess(child);
+				return;
+			}
+			target.push(chunk);
+		};
+		child.stdout.on("data", (chunk: Buffer) => collect(stdout, chunk));
+		child.stderr.on("data", (chunk: Buffer) => collect(stderr, chunk));
 		child.once("error", (error) => {
 			// Node emits AbortError before other abort listeners can stop Git's
 			// process group. Keep that listener until the abort finishes.
@@ -185,6 +206,15 @@ export async function runGit(
 		child.once("close", (status) => {
 			options.signal?.removeEventListener("abort", stop);
 			clearTimeout(timeout);
+			if (overflow) {
+				reject(
+					new GitDiffError(
+						"MEMORY_LIMIT",
+						"Diff object exceeds its memory budget"
+					)
+				);
+				return;
+			}
 			const result = {
 				stdout: Buffer.concat(stdout),
 				stderr: Buffer.concat(stderr),
@@ -203,6 +233,16 @@ export async function runGit(
 		});
 		child.stdin.end();
 	});
+}
+
+/** Safe public errors forwarded by the private sidecar for diff reads. */
+export class GitDiffError extends Error {
+	constructor(
+		readonly code: "INVALID_INPUT" | "NOT_FOUND" | "MEMORY_LIMIT",
+		message: string
+	) {
+		super(message);
+	}
 }
 
 export interface RepositoryState {
@@ -476,6 +516,132 @@ export class GitClient {
 		}
 		const object = await this.git(["cat-file", "blob", hash]);
 		return { data: Buffer.from(object.stdout).toString("base64") };
+	}
+
+	/** Compare two snapshots using bounded tree reads and resumable path pages. */
+	async diff(
+		from: string | null,
+		to: string,
+		opts?: ArtifactsDiffOptions
+	): Promise<ArtifactsDiffResult> {
+		const readObject = async (hash: string, type: string): Promise<Buffer> => {
+			const size = await this.git(["cat-file", "-s", hash], {
+				maxOutputBytes: 1024,
+			});
+			if (Number(size.stdout.toString().trim()) > DIFF_OBJECT_LIMIT) {
+				throw new GitDiffError(
+					"MEMORY_LIMIT",
+					"Diff object exceeds its memory budget"
+				);
+			}
+			return (
+				await this.git(["cat-file", type, hash], {
+					maxOutputBytes: DIFF_OBJECT_LIMIT,
+				})
+			).stdout;
+		};
+		return diffSnapshots(
+			{
+				fail: (code, message) => {
+					throw new GitDiffError(code, message);
+				},
+				resolve: async (ref, side) => {
+					const direct = /^[0-9a-fA-F]{40}$/.test(ref);
+					const candidates = direct
+						? [ref.toLowerCase()]
+						: ref.startsWith("refs/heads/") || ref.startsWith("refs/tags/")
+							? [ref]
+							: [`refs/heads/${ref}`, `refs/tags/${ref}`];
+					let hash: string | null = null;
+					for (const candidate of candidates) {
+						const resolved = await this.git(
+							["rev-parse", "--verify", "--quiet", candidate],
+							{ allowFailure: true, maxOutputBytes: 4096 }
+						);
+						if (resolved.status === 0) {
+							hash = resolved.stdout.toString().trim();
+							break;
+						}
+					}
+					if (
+						!hash &&
+						(/^[0-9a-fA-F]{7,}$/.test(ref) ||
+							(ref.length === 40 && !ref.includes("/")))
+					) {
+						throw new GitDiffError(
+							"INVALID_INPUT",
+							`${side} expected a full 40-character commit hash`
+						);
+					}
+					for (let depth = 0; depth <= 8; depth++) {
+						if (!hash) {
+							throw new GitDiffError(
+								"NOT_FOUND",
+								`diff ${side} not found: ${ref}`
+							);
+						}
+						const type = await this.objectType(hash);
+						if (!type) {
+							throw new GitDiffError(
+								"NOT_FOUND",
+								`diff ${side} not found: ${ref}`
+							);
+						}
+						if (
+							type !== "commit" &&
+							(direct || type !== "tag" || depth === 8)
+						) {
+							throw new GitDiffError(
+								"INVALID_INPUT",
+								`${side} must resolve to a commit`
+							);
+						}
+						const data = await readObject(hash, type);
+						if (type === "commit") {
+							const tree = /^tree ([0-9a-f]{40})\n/.exec(data.toString())?.[1];
+							if (!tree) {
+								throw new Error("Invalid commit tree");
+							}
+							return { hash, tree };
+						}
+						hash =
+							/^object ([0-9a-f]{40})\n/.exec(data.toString())?.[1] ?? null;
+					}
+					throw new GitDiffError(
+						"INVALID_INPUT",
+						`${side} tag chain is too deep`
+					);
+				},
+				tree: async (hash) => {
+					const data = await readObject(hash, "tree");
+					const entries = [];
+					let offset = 0;
+					while (offset < data.length) {
+						if (entries.length === 8192) {
+							throw new GitDiffError(
+								"MEMORY_LIMIT",
+								"Diff tree has too many entries"
+							);
+						}
+						const space = data.indexOf(32, offset);
+						const zero = data.indexOf(0, space + 1);
+						if (space < offset || zero < space || zero + 21 > data.length) {
+							throw new Error("Invalid tree");
+						}
+						entries.push({
+							mode: data.subarray(offset, space).toString(),
+							name: data.subarray(space + 1, zero).toString("hex"),
+							hash: data.subarray(zero + 1, zero + 21).toString("hex"),
+						});
+						offset = zero + 21;
+					}
+					return entries;
+				},
+			},
+			from,
+			to,
+			opts
+		);
 	}
 
 	async readTree(hash: string): Promise<GitTreeEntry[] | null> {

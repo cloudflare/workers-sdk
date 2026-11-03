@@ -669,3 +669,25 @@ test("Git log follows the first-parent chain through merges", async ({
 	expect(history.map((commit) => commit.hash)).toEqual(expected);
 	expect(history.map((commit) => commit.hash)).not.toContain(feature);
 });
+
+test("Git diff compares snapshots and bounds native output", async ({
+	expect,
+}) => {
+	const directory = await useTmp();
+	await git(["init", "-q", "-b", "main", directory]);
+	await writeFile(path.join(directory, "file"), "before");
+	await git(["add", "."], directory);
+	await git(["commit", "-qm", "before"], directory);
+	const before = (await git(["rev-parse", "HEAD"], directory)).stdout.trim();
+	await writeFile(path.join(directory, "file"), "after");
+	await git(["commit", "-qam", "after"], directory);
+	const client = new GitClient(directory);
+	const result = await client.diff(before, "main");
+	expect(result.changes).toMatchObject([
+		{ path: "file", status: "modified", oldMode: "100644", newMode: "100644" },
+	]);
+	expect((await client.diff(null, "main")).changes[0].status).toBe("added");
+	await expect(
+		runGit(["--version"], { maxOutputBytes: 1 })
+	).rejects.toMatchObject({ code: "MEMORY_LIMIT" });
+});
