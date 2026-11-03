@@ -228,7 +228,7 @@ describe("ProxyClient", () => {
 						manifest: singleModuleManifest(`
 							import { WorkerEntrypoint } from "cloudflare:workers";
 							export default class extends WorkerEntrypoint {
-								size(bytes) { return bytes.byteLength; }
+								size(value) { return value.length; }
 							}
 						`),
 					},
@@ -238,15 +238,61 @@ describe("ProxyClient", () => {
 		useDispose(mf);
 
 		const { BINDING } = await mf.getBindings<{
-			BINDING: { size(bytes: Uint8Array): Promise<number> };
+			BINDING: { size(value: Uint8Array | number[]): Promise<number> };
 		}>();
 		// Base64 encoded, this is over 32 MiB. Like other values that can't be
 		// sent, this throws when calling.
 		expect(() => BINDING.size(new Uint8Array(25 * 1024 * 1024))).toThrow(
 			RangeError
 		);
+		// Numbers and structure count towards the limit too
+		expect(() => BINDING.size(new Array(5_000_000).fill(123456))).toThrow(
+			RangeError
+		);
 		// Rejected before it was sent, so the session is still usable
 		expect(await BINDING.size(new Uint8Array(1))).toBe(1);
+	});
+
+	test("rejects pending Workers RPC results once poisoned", async ({
+		expect,
+	}) => {
+		const opts: ConstructorParameters<typeof Miniflare>[0] = {
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { BINDING: { type: "worker", worker: "binding" } },
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+				{
+					config: {
+						name: "binding",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`
+							import { WorkerEntrypoint } from "cloudflare:workers";
+							export default class extends WorkerEntrypoint {
+								ping() { return "pong"; }
+							}
+						`),
+					},
+				},
+			],
+		};
+		const mf = new Miniflare(opts);
+		useDispose(mf);
+
+		const { BINDING } = await mf.getBindings<{
+			BINDING: { ping(): Promise<string> };
+		}>();
+		const pending = BINDING.ping();
+		await mf.setOptions(opts);
+		// Use `then()` directly, as `expect().rejects` calls functions, and Workers
+		// RPC results are callable
+		await expect(pending.then()).rejects.toThrow(
+			"Attempted to use poisoned stub"
+		);
 	});
 
 	test("returns Workers RPC stubs from native methods", async ({ expect }) => {
