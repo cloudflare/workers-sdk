@@ -521,14 +521,17 @@ class ProxyClientBridge {
 	}
 
 	#encode(value: unknown, state: { inlineSize: number }): unknown {
+		// Estimate the serialised size of `value`, including a separator
+		state.inlineSize += 1;
 		if (typeof value === "string") {
-			state.inlineSize += Buffer.byteLength(value);
+			state.inlineSize += Buffer.byteLength(value) + 2;
 			return value;
 		}
 		if (
 			(typeof value !== "object" || value === null) &&
 			typeof value !== "function"
 		) {
+			state.inlineSize += String(value).length;
 			return value;
 		}
 		const rpcProxy = this.#rpcProxies.get(value);
@@ -548,11 +551,15 @@ class ProxyClientBridge {
 			return globalHTTPObject;
 		}
 		if (Array.isArray(value)) {
+			// Cap'n Web wraps arrays in another array
+			state.inlineSize += 4;
 			return value.map((v) => this.#encode(v, state));
 		}
 		if (isPlainObject(value)) {
+			state.inlineSize += 2;
 			const result: Record<string, unknown> = {};
 			for (const [k, v] of Object.entries(value)) {
+				state.inlineSize += Buffer.byteLength(k) + 3;
 				result[k] = this.#encode(v, state);
 			}
 			return result;
@@ -661,7 +668,10 @@ class RpcProxyHandler implements ProxyHandler<() => void> {
 	};
 
 	#settle(): Promise<unknown> {
-		return (this.#settled ??= this.#resolve());
+		this.#settled ??= this.#poisoned
+			? Promise.reject(poisonedError())
+			: this.#resolve();
+		return this.#settled;
 	}
 	async #resolve(): Promise<unknown> {
 		try {
@@ -679,8 +689,8 @@ class RpcProxyHandler implements ProxyHandler<() => void> {
 		if (key === util.inspect.custom) {
 			return this.inspect;
 		}
-		this.#assertSafe();
 
+		// Once poisoned, results reject rather than throw, like other promises
 		if (this.isPromise) {
 			if (key === "then") {
 				return (
@@ -696,6 +706,7 @@ class RpcProxyHandler implements ProxyHandler<() => void> {
 				return (onFinally?: () => void) => this.#settle().finally(onFinally);
 			}
 		}
+		this.#assertSafe();
 		if (key === Symbol.dispose) {
 			// Only stubs, and promises for call results, are disposable
 			return this.raw[Symbol.dispose];
