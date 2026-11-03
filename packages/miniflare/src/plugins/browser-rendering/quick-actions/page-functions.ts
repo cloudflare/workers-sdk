@@ -31,9 +31,9 @@ interface PageDocument {
 }
 
 declare const document: PageDocument & {
+	readonly baseURI: string;
 	readonly body: { readonly scrollHeight: number };
 	cloneNode(deep: true): PageDocument;
-	querySelector(selector: string): { readonly href?: string } | null;
 };
 
 declare const XMLSerializer: new () => {
@@ -88,8 +88,8 @@ export function listHrefs(visibleOnly: boolean): (string | null)[] {
 	});
 }
 
-export function baseHref(): string {
-	return document.querySelector("base")?.href || "";
+export function baseUri(): string {
+	return document.baseURI;
 }
 
 export function contentForMarkdown(): string {

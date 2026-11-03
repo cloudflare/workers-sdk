@@ -13,7 +13,7 @@ import { links, linksSchema } from "./links";
 import { markdown } from "./markdown";
 import { withTimeout } from "./page";
 import { pdf, pdfSchema } from "./pdf";
-import { browserSchema, commonOptionsSchema } from "./schemas";
+import { browserSchema, cacheTTLSchema, commonOptionsSchema } from "./schemas";
 import { scrape, scrapeSchema } from "./scrape";
 import { screenshot, screenshotSchema } from "./screenshot";
 import { snapshot, snapshotSchema } from "./snapshot";
@@ -100,13 +100,15 @@ export async function runQuickAction({
 	log: Log;
 }): Promise<Response> {
 	const { schema, run } = QUICK_ACTIONS[action];
-	// Nothing is cached locally, but the strict schemas would reject cacheTTL
-	const { browser, cacheTTL: _cacheTTL, ...pageOptions } = options;
+	const { browser, cacheTTL, ...pageOptions } = options;
 	const parsed = schema.safeParse(pageOptions);
+	const parsedCacheTTL = cacheTTLSchema.safeParse(cacheTTL);
 	const parsedBrowser = browserSchema.safeParse(browser);
-	if (!parsed.success || !parsedBrowser.success) {
+	if (!parsed.success || !parsedCacheTTL.success || !parsedBrowser.success) {
+		// In the order the service reports them
 		const errors = [
 			...(parsed.error?.issues ?? []),
+			...(parsedCacheTTL.error?.issues ?? []),
 			...(parsedBrowser.error?.issues ?? []),
 		];
 		return withBrowserMs(

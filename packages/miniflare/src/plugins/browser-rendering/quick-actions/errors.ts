@@ -53,7 +53,7 @@ const USER_ERRORS: [(string | string[])[], number, string, (string | null)?][] =
 		],
 		[["net::ERR_CONNECTION_REFUSED"], 5008, "Server refused connection.", ""],
 		[
-			["net::ERR_INVALID_URL"],
+			["net::ERR_INVALID_URL", "net::ERR_FILE_NOT_FOUND"],
 			5010,
 			"Invalid Url when attempting to load page",
 		],

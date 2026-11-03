@@ -57,6 +57,7 @@ const USER_ERRORS: { message: string; code: number; detail?: string | null }[] =
 		},
 		{ message: "net::ERR_FAILED at https://example.com/", code: 5009 },
 		{ message: "net::ERR_INVALID_URL at http://exa mple.com/", code: 5010 },
+		{ message: "net::ERR_FILE_NOT_FOUND at blob:https://x/", code: 5010 },
 		{ message: "net::ERR_EMPTY_RESPONSE at http://localhost/", code: 5011 },
 		{
 			message:
