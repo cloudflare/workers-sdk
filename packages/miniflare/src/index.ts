@@ -3587,13 +3587,14 @@ export class Miniflare {
 		bindingName: string,
 		workerName?: string
 	): Promise<() => SecretsStoreSecretAdmin> {
-		return this.#getProxy(
+		return this.#getProxy<Record<string, () => SecretsStoreSecretAdmin>>(
 			SECRET_STORE_PLUGIN_NAME,
 			bindingName,
 			workerName
 		).then((binding) => {
-			// @ts-expect-error We exposed an admin API on this key
-			return binding[ADMIN_API];
+			// We exposed an admin API on this key. Like Workers RPC, the method is a
+			// thenable property, so wrap it rather than returning it to be awaited.
+			return () => binding[ADMIN_API]();
 		});
 	}
 	getSecretsStoreSecret(
@@ -3639,12 +3640,15 @@ export class Miniflare {
 		bindingName: string,
 		workerName?: string
 	): Promise<() => FlagshipAdmin> {
-		return this.#getProxy(FLAGSHIP_PLUGIN_NAME, bindingName, workerName).then(
-			(binding) => {
-				// @ts-expect-error We exposed an admin API on this key
-				return binding[FLAGSHIP_ADMIN_API];
-			}
-		);
+		return this.#getProxy<Record<string, () => FlagshipAdmin>>(
+			FLAGSHIP_PLUGIN_NAME,
+			bindingName,
+			workerName
+		).then((binding) => {
+			// We exposed an admin API on this key. Like Workers RPC, the method is a
+			// thenable property, so wrap it rather than returning it to be awaited.
+			return () => binding[FLAGSHIP_ADMIN_API]();
+		});
 	}
 	getStreamBinding(
 		bindingName: string,
