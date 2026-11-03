@@ -1,14 +1,12 @@
 import assert from "node:assert";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import {
-	DEFAULT_MODULE_RULES,
-	getWasmSourceMappingUrl,
-} from "@cloudflare/workers-utils";
+import { DEFAULT_MODULE_RULES } from "@cloudflare/workers-utils";
 import MagicString from "magic-string";
 import { globsToRegExps } from "miniflare";
 import * as vite from "vite";
 import { cleanUrl, createPlugin } from "../utils";
+import { readWasmSourceMap } from "../wasm-source-map";
 import type { ModuleType } from "@cloudflare/config";
 
 /**
@@ -148,7 +146,8 @@ export const additionalModulesPlugin = createPlugin(
 		/**
 		 * Copies the source map named by a WebAssembly module's `sourceMappingURL`
 		 * section next to the emitted module, so the section still finds it, and
-		 * names the module in its `file` as it is uploaded.
+		 * names the module in its `file` as it is uploaded. Warns if the map
+		 * can't be copied.
 		 */
 		async function emitWasmSourceMap(
 			pluginContext: vite.Rollup.PluginContext & {
@@ -158,35 +157,20 @@ export const additionalModulesPlugin = createPlugin(
 			source: Buffer,
 			emittedFileName: string
 		): Promise<void> {
-			const sourceMapUrl = getWasmSourceMappingUrl(source);
-			if (sourceMapUrl === undefined) {
-				return;
-			}
-
-			const skip = (reason: string) =>
-				pluginContext.warn(
-					`Skipping the source map "${sourceMapUrl}" of "${modulePath}": ${reason}`
-				);
-			const sourceMapFileName = vite.normalizePath(
-				path.join(path.dirname(emittedFileName), sourceMapUrl)
-			);
-			if (
-				sourceMapUrl.startsWith("data:") ||
-				sourceMapFileName.startsWith("../")
-			) {
-				skip("expected a relative file path.");
-				return;
-			}
-			let sourceMap: Record<string, unknown>;
+			let sourceMap: Awaited<ReturnType<typeof readWasmSourceMap>>;
 			try {
-				sourceMap = JSON.parse(
-					await fsp.readFile(
-						path.join(path.dirname(modulePath), sourceMapUrl),
-						"utf8"
-					)
+				sourceMap = await readWasmSourceMap(
+					modulePath,
+					source,
+					emittedFileName
 				);
 			} catch (error) {
-				skip(error instanceof Error ? error.message : String(error));
+				pluginContext.warn(
+					`Skipping the source map of "${modulePath}": ${error instanceof Error ? error.message : String(error)}`
+				);
+				return;
+			}
+			if (sourceMap === undefined) {
 				return;
 			}
 
@@ -208,8 +192,11 @@ export const additionalModulesPlugin = createPlugin(
 			);
 			pluginContext.emitFile({
 				type: "asset",
-				fileName: sourceMapFileName,
-				source: JSON.stringify({ ...sourceMap, file: `./${moduleName}` }),
+				fileName: sourceMap.fileName,
+				source: JSON.stringify({
+					...sourceMap.sourceMap,
+					file: `./${moduleName}`,
+				}),
 			});
 		}
 	}

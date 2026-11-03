@@ -193,6 +193,11 @@ function getWasmModuleSourceMappingUrl(module: CfModule): string | undefined {
 			`Unsupported source map path in ${module.filePath}: expected file path but found data URL.`
 		);
 	}
+	// A URL with a scheme, such as one from Emscripten's `--source-map-base`,
+	// names a map hosted elsewhere rather than a file to upload.
+	if (url !== undefined && /^[a-z][a-z\d+.-]*:/i.test(url)) {
+		return undefined;
+	}
 	return url;
 }
 
