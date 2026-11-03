@@ -149,6 +149,8 @@ export {
 	stripRedundantNodejsCompatFlags,
 } from "./compatibility-date";
 export type { CompatDate } from "./compatibility-date";
+export { getNodeCompat } from "./node-compat";
+export { getFreshSourceMapSupport } from "./sourcemap";
 export { DEFAULT_COMPAT_DATE } from "./default-compat-date";
 
 export { isDockerfile } from "./config/validation";
@@ -225,3 +227,4 @@ export type {
 	D1MigrationFile,
 	GetD1MigrationFilesOptions,
 } from "./d1-migrations";
+export { normalizeSqlLineEndings, splitSqlQuery } from "./d1-splitter";

@@ -76,11 +76,15 @@ type AutoConfigArgs = ReadConfigCommandArgs &
  * prompts for missing config. Returns `{ aborted: true }` if deploy should not
  * proceed (user declined or delegated to open-next), otherwise returns the
  * potentially-updated config and args.
+ *
+ * `options.outputDir` pins the assets directory autoconfig configures for a
+ * static project instead of letting it detect one (used when the caller
+ * already knows which directory the user asked to deploy).
  */
 export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 	args: Args,
 	config: Config,
-	options: { skipConfirmations?: boolean } = {}
+	options: { skipConfirmations?: boolean; outputDir?: string } = {}
 ): Promise<{ config: Config; aborted: boolean }> {
 	const shouldRunAutoConfig =
 		args.autoconfig &&
@@ -114,6 +118,7 @@ export async function maybeRunAutoConfig<Args extends AutoConfigArgs>(
 			const details = await runAutoConfigDetection({
 				command: "wrangler deploy",
 				wranglerConfig: config,
+				outputDir: options.outputDir,
 				context: autoConfigContext,
 			});
 

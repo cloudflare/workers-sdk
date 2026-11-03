@@ -544,13 +544,28 @@ function readDefinition(
 	return undefined;
 }
 
-/**
- * Get the default path for the dev registry.
- * This is used by both Wrangler and the Vite plugin to ensure they use the same path.
- */
+/** Get the default registry path, including the canonical environment override. */
 export function getDefaultDevRegistryPath() {
-	return (
-		process.env.MINIFLARE_REGISTRY_PATH ??
-		path.join(getGlobalConfigPath(), "registry")
+	return resolveDevRegistryPath();
+}
+
+/**
+ * Resolve the canonical environment override, caller path, or default registry.
+ * Registry compatibility is scoped to a Miniflare major version. Resolve lazily
+ * so applications can configure the environment before creating an instance.
+ */
+export function resolveDevRegistryPath(registryPath?: string) {
+	return path.resolve(
+		process.env.CLOUDFLARE_DEV_REGISTRY_PATH ||
+			registryPath ||
+			path.join(
+				getGlobalConfigPath({
+					appName: "cloudflare",
+					leadingDot: false,
+					useLegacyHomeDir: false,
+				}),
+				"dev-registry",
+				"v5"
+			)
 	);
 }

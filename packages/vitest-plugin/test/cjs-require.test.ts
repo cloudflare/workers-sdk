@@ -32,3 +32,48 @@ test(
 		expect(await result.exitCode).toBe(0);
 	}
 );
+
+test(
+	"resolves requires from CJS modules to the require export condition",
+	{ timeout: 45_000 },
+	async ({ expect, seed, vitestRun }) => {
+		await seed({
+			"vitest.config.mts": vitestConfig(),
+			"node_modules/cjs-demo/package.json": JSON.stringify({
+				name: "cjs-demo",
+				version: "1.0.0",
+				main: "index.cjs",
+			}),
+			"node_modules/cjs-demo/index.cjs": dedent`
+				module.exports = require("dual-demo");
+			`,
+			"node_modules/dual-demo/package.json": JSON.stringify({
+				name: "dual-demo",
+				version: "1.0.0",
+				exports: {
+					".": {
+						import: "./index.mjs",
+						require: "./index.cjs",
+					},
+				},
+			}),
+			"node_modules/dual-demo/index.mjs": dedent`
+				export const format = "esm";
+			`,
+			"node_modules/dual-demo/index.cjs": dedent`
+				module.exports = { format: "cjs" };
+			`,
+			"index.test.ts": dedent`
+				import { expect, it } from "vitest";
+				import demo from "cjs-demo";
+
+				it("loads the CJS entry of a dual-format package", () => {
+					expect(demo.format).toBe("cjs");
+				});
+			`,
+		});
+
+		const result = await vitestRun();
+		expect(await result.exitCode).toBe(0);
+	}
+);

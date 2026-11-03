@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { isAbsolute, resolve, sep } from "node:path";
+import { TextDecoder } from "node:util";
 import ignore from "ignore";
 import mime from "mime";
 import {
@@ -62,6 +63,40 @@ export function maybeGetFile(filePath: PathOrFileDescriptor) {
 	}
 }
 
+/** An ignore file whose encoding cannot be used to match asset paths. */
+export class InvalidAssetsIgnoreError extends Error {
+	constructor(filePath: string) {
+		super(
+			`The .assetsignore file at "${filePath}" must be UTF-8 encoded and must not contain null characters. Save the file as UTF-8 and try again.`
+		);
+		this.name = "InvalidAssetsIgnoreError";
+	}
+}
+
+/** Read ignore patterns without silently replacing undecodable characters. */
+function readAssetsIgnoreFile(filePath: string): string | undefined {
+	let contents: Buffer;
+	try {
+		contents = readFileSync(filePath);
+	} catch (error) {
+		if (thrownIsDoesNotExistError(error)) {
+			return;
+		}
+		throw error;
+	}
+
+	try {
+		const text = new TextDecoder("utf-8", { fatal: true }).decode(contents);
+		// BOM-less UTF-16 can be valid UTF-8 bytes but cannot form usable patterns.
+		if (text.includes("\0")) {
+			throw new Error("Ignore patterns contain a null character.");
+		}
+		return text;
+	} catch {
+		throw new InvalidAssetsIgnoreError(filePath);
+	}
+}
+
 /**
  * Create a function for filtering out ignored assets.
  *
@@ -80,7 +115,7 @@ export async function createAssetsIgnoreFunction(dir: string) {
 	];
 
 	let assetsIgnoreFilePresent = false;
-	const assetsIgnore = maybeGetFile(cfAssetIgnorePath);
+	const assetsIgnore = readAssetsIgnoreFile(cfAssetIgnorePath);
 	if (assetsIgnore !== undefined) {
 		assetsIgnoreFilePresent = true;
 		ignorePatterns.push(...assetsIgnore.split("\n"));

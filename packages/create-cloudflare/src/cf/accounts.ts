@@ -40,11 +40,11 @@ export async function isLoggedIn(): Promise<boolean> {
 /**
  * Lists the accounts available to the `cf` CLI's credentials.
  *
- * @returns A map of account names to account IDs.
+ * @returns Every account, preserving duplicate display names.
  */
-export async function listAccounts(): Promise<Record<string, string>> {
+export async function listAccounts(): Promise<{ id: string; name: string }[]> {
 	const { accounts = [] } = await cfWhoami();
-	return Object.fromEntries(accounts.map(({ name, id }) => [name, id]));
+	return accounts;
 }
 
 /**

@@ -2,7 +2,7 @@
 import { writeFileSync } from "node:fs";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, it } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { INVALID_INHERIT_BINDING_CODE } from "../../utils/error-codes";
 import { captureRequestsFrom } from "../helpers/capture-requests-from";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -103,15 +103,17 @@ describe("versions upload secrets", () => {
 			expect(std.out).toContain("Worker Startup Time:");
 		});
 
-		it("should upload secrets from a .env file alongside the Worker version", async ({
+		it("should expand secrets from a .env file alongside the Worker version", async ({
 			expect,
 		}) => {
 			mockGetScript();
 			const secretsFile = ".env.production";
+			vi.stubEnv("CI_SECRET", "process-secret");
+			vi.stubEnv("SECRET3", "");
 			writeFileSync(
 				secretsFile,
-				`SECRET1=value1
-SECRET2=value2
+				`SECRET1=\${CI_SECRET}
+SECRET2=pa\\$word
 # Comment line
 SECRET3=value3`
 			);
@@ -145,17 +147,17 @@ SECRET3=value3`
 					{
 						type: "secret_text",
 						name: "SECRET1",
-						text: "value1",
+						text: "process-secret",
 					},
 					{
 						type: "secret_text",
 						name: "SECRET2",
-						text: "value2",
+						text: "pa$word",
 					},
 					{
 						type: "secret_text",
 						name: "SECRET3",
-						text: "value3",
+						text: "",
 					},
 				])
 			);

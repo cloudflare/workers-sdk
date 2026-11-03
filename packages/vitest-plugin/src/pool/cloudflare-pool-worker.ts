@@ -199,7 +199,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 		const wasLastWorker = poolWorkerStopped();
 
 		// Remote proxy sessions are shared by all pool workers using the same
-		// Wrangler config, and consecutive workers overlap, so only dispose them
+		// config file, and consecutive workers overlap, so only dispose them
 		// once the last worker stops.
 		if (wasLastWorker) {
 			await disposeAllRemoteProxySessions().catch((err) => {

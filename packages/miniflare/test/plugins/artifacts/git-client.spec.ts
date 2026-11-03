@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { getEventListeners } from "node:events";
 import {
 	chmod,
 	mkdir,
@@ -37,6 +38,30 @@ function git(args: string[], cwd?: string, extraEnv: NodeJS.ProcessEnv = {}) {
 		},
 	});
 }
+
+test("failed Git spawns release the sidecar shutdown listener", async ({
+	expect,
+}) => {
+	const emptyPath = await useTmp();
+	const previousPath = process.env.PATH;
+	const shutdown = new AbortController();
+	process.env.PATH = emptyPath;
+	try {
+		await expect(
+			runGit(["--version"], { signal: shutdown.signal })
+		).rejects.toMatchObject({
+			code: "ENOENT",
+		});
+		await new Promise((resolve) => setImmediate(resolve));
+		expect(
+			getEventListeners(shutdown.signal, "abort").filter(
+				(listener) => listener.name === "stop"
+			)
+		).toHaveLength(0);
+	} finally {
+		process.env.PATH = previousPath;
+	}
+});
 
 test("Git subprocesses do not inherit Cloudflare or host credentials", ({
 	expect,

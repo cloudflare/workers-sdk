@@ -30,6 +30,7 @@ export {
  *
  * @param options.command - The Wrangler command that initiated autoconfig
  * @param options.wranglerConfig - The parsed wrangler configuration (if any)
+ * @param options.outputDir - An output directory the caller has already chosen, used instead of detecting one
  * @param options.context - The autoconfig context providing logger, dialogs, etc.
  * @returns The detected project details from {@link getDetailsForAutoConfig}
  * @throws Re-throws any error from {@link getDetailsForAutoConfig} after recording telemetry
@@ -37,10 +38,12 @@ export {
 export async function runAutoConfigDetection({
 	command,
 	wranglerConfig,
+	outputDir,
 	context,
 }: {
 	command: NonNullable<AutoConfigWranglerTriggerCommand>;
 	wranglerConfig: Config;
+	outputDir?: string;
 	context: AutoConfigContext;
 }): Promise<AutoConfigDetails> {
 	sendMetricsEvent(
@@ -53,6 +56,7 @@ export async function runAutoConfigDetection({
 		const details = await getDetailsForAutoConfig({
 			wranglerConfig,
 			target: "wrangler",
+			outputDir,
 			context,
 		});
 

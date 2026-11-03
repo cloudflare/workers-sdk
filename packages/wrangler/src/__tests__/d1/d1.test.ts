@@ -26,7 +26,7 @@ describe("d1", () => {
 			  wrangler d1 export <name>       Export the contents or schema of your database as a .sql file
 			  wrangler d1 time-travel         Use Time Travel to restore, fork or copy a database at a specific point-in-time
 			  wrangler d1 migrations          Interact with D1 migrations
-			  wrangler d1 insights <name>     Get information about the queries run on a D1 database [experimental]
+			  wrangler d1 insights [name]     Get information about the queries run on a D1 database, or on all D1 databases in the account [experimental]
 
 			GLOBAL FLAGS
 			  -c, --config          Path to Wrangler configuration file  [string]
@@ -67,7 +67,7 @@ describe("d1", () => {
 			  wrangler d1 export <name>       Export the contents or schema of your database as a .sql file
 			  wrangler d1 time-travel         Use Time Travel to restore, fork or copy a database at a specific point-in-time
 			  wrangler d1 migrations          Interact with D1 migrations
-			  wrangler d1 insights <name>     Get information about the queries run on a D1 database [experimental]
+			  wrangler d1 insights [name]     Get information about the queries run on a D1 database, or on all D1 databases in the account [experimental]
 
 			GLOBAL FLAGS
 			  -c, --config          Path to Wrangler configuration file  [string]

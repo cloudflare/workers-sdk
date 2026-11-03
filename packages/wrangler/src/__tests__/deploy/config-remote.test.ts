@@ -127,6 +127,21 @@ describe("deploy", () => {
 		it("should present a diff warning to the user when there are differences between the local config (json/jsonc) and the dash config", async ({
 			expect,
 		}) => {
+			let routeRequests = 0;
+			let customDomainRequests = 0;
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/workers/services/:serviceName/environments/:serviceEnvironment/routes",
+					() => {
+						routeRequests++;
+						return HttpResponse.json({}, { status: 403 });
+					}
+				),
+				http.get("*/accounts/:accountId/workers/domains/records", () => {
+					customDomainRequests++;
+					return HttpResponse.json({}, { status: 403 });
+				})
+			);
 			writeWorkerSource();
 			mockGetServiceByName("test-name", "production", "dash");
 			writeWranglerConfig(
@@ -149,8 +164,6 @@ describe("deploy", () => {
 			mockGetServiceBindings("test-name", [
 				{ name: "MY_VAR", text: "abc", type: "plain_text" },
 			]);
-			mockGetServiceRoutes("test-name", []);
-			mockGetServiceCustomDomainRecords([]);
 			mockGetServiceSubDomainData("test-name", {
 				enabled: true,
 				previews_enabled: true,
@@ -174,6 +187,8 @@ describe("deploy", () => {
 			});
 
 			await runWrangler("deploy");
+			expect(routeRequests).toBe(0);
+			expect(customDomainRequests).toBe(0);
 
 			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
 				"▲ [WARNING] The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:

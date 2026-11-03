@@ -342,19 +342,14 @@ jobs:
             .turbo/test-retries.json
             .turbo/ci-logs
 
-  # These names are required by branch protection. Every partition must succeed
-  # before any required test check passes, including when a partition is cancelled.
+  # Keep one stable required check for every test partition. Always run it so
+  # failed, cancelled, or skipped partitions cannot bypass branch protection.
   test:
     needs: test-partitions
     if: always()
     timeout-minutes: 5
-    name: ${{ format('Tests ({0}, {1})', matrix.description, matrix.suite) }}
+    name: "Tests"
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        description: [macOS, Linux, Windows]
-        suite: [packages-and-tools, fixtures]
     steps:
       - name: Require all test partitions to pass
         env:

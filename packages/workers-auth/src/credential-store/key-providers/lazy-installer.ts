@@ -3,7 +3,10 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { UserError } from "@cloudflare/workers-utils";
-import type { SpawnSyncReturns } from "node:child_process";
+import type {
+	SpawnSyncOptionsWithStringEncoding,
+	SpawnSyncReturns,
+} from "node:child_process";
 
 // This module is deliberately synchronous (`spawnSync`, `existsSync`,
 // `writeFileSync`): the `KeyProvider` / `CredentialStore` contract it
@@ -33,34 +36,35 @@ export const PINNED_KEYRING_VERSION = "1.3.0";
 export type NpmRunner = (args: string[]) => SpawnSyncReturns<string>;
 
 function defaultNpmRunner(args: string[]): SpawnSyncReturns<string> {
-	// `shell: true` on Windows so `spawnSync` resolves the `npm.cmd` /
-	// `npm.ps1` shim that ships with Node for Windows.
-	//
-	// This is the *only* way to launch a `.cmd`/`.bat` since Node
-	// 20.12.2 / 21.7.2 / 22.x: CVE-2024-27980 made the runtime refuse to
-	// spawn batch files without an explicit `shell: true`. Spawning
-	// `npm.cmd` directly with `shell: false` (a common pre-CVE pattern)
-	// now throws `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`-style
-	// errors on supported Node versions. See
-	// https://nodejs.org/en/blog/vulnerability/april-2024-security-releases-2
-	//
-	// `shell: true` does pass arguments through `cmd.exe`, which in
-	// principle interprets `&|<>^` etc. as metacharacters. The only
-	// path-shaped argument we pass is the `--prefix` value derived from
-	// the consumer-provided config path, which is built from `HOME` /
-	// `APPDATA` (i.e. the user's own env vars — not attacker-controlled
-	// input). Node's array-form arg handling for shell launches on
-	// Windows also applies the upstream CVE-2024-27980 escaping fix.
-	// Defense-in-depth concern, not a real injection surface; the
-	// alternative (`shell: false`) is incompatible with .cmd files on
-	// modern Node, so we accept the trade-off.
-	//
-	// On POSIX `shell: false` keeps the argv shape simple.
-	return spawnSync("npm", args, {
+	const options: SpawnSyncOptionsWithStringEncoding = {
 		encoding: "utf-8",
 		stdio: ["ignore", "pipe", "pipe"],
-		shell: process.platform === "win32",
-	});
+	};
+	if (process.platform === "win32") {
+		// A shell on Windows so `spawnSync` resolves the `npm.cmd` shim that
+		// ships with Node for Windows.
+		//
+		// This is the *only* way to launch a `.cmd`/`.bat` since Node
+		// 20.12.2 / 21.7.2 / 22.x: CVE-2024-27980 made the runtime refuse to
+		// spawn batch files without an explicit `shell: true`. See
+		// https://nodejs.org/en/blog/vulnerability/april-2024-security-releases-2
+		//
+		// Node joins shell arguments with spaces without quoting them, so
+		// `cmd.exe` would split a path such as `C:\Users\John Smith\...`, and it
+		// expands `%NAME%` even inside quotes. Each argument goes through an env
+		// var referenced as `"%VAR%"` instead: `cmd.exe` expands it in a single
+		// pass, so the value stays literal and the quotes keep spaces and `&|<>^`
+		// intact. A single command string also avoids Node's DEP0190 warning.
+		const env: NodeJS.ProcessEnv = { ...process.env };
+		const quotedArgRefs = args.map((arg, i) => {
+			const name = `WORKERS_AUTH_NPM_ARG_${i}`;
+			env[name] = arg;
+			return `"%${name}%"`;
+		});
+		const command = ["npm", ...quotedArgRefs].join(" ");
+		return spawnSync(command, { ...options, env, shell: true });
+	}
+	return spawnSync("npm", args, options);
 }
 
 let npmRunner: NpmRunner = defaultNpmRunner;

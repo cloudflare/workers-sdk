@@ -24,6 +24,7 @@ const FLAGSHIP_BINDING_SERVICE_NAME = getUserBindingServiceName(
 	"service"
 );
 const FLAGSHIP_BINDING_ENTRYPOINT = "FlagshipBinding";
+const FLAGSHIP_EXPLORER_ENTRYPOINT = "FlagshipExplorer";
 
 // Rollout bucketing is seeded with the account tag. Local flag definitions are
 // their own source of truth and an account tag is not reliably available
@@ -31,7 +32,7 @@ const FLAGSHIP_BINDING_ENTRYPOINT = "FlagshipBinding";
 // not reproduce production buckets.
 const LOCAL_ACCOUNT_TAG = "local";
 
-export function getFlagshipService(
+function getFlagshipService(
 	appId: string,
 	sharedOptions: Pick<
 		ParsedInstanceOptions,
@@ -43,6 +44,23 @@ export function getFlagshipService(
 		{ appId, accountTag: LOCAL_ACCOUNT_TAG },
 		sharedOptions,
 		{ entrypoint: FLAGSHIP_BINDING_ENTRYPOINT }
+	);
+}
+
+/**
+ * The Local Explorer's Flagship binding, which opens any app's store by ID.
+ */
+export function getFlagshipExplorerService(
+	sharedOptions: Pick<
+		ParsedInstanceOptions,
+		"resourcePersistencePath" | "unsafeEnableSharedStorage"
+	>
+) {
+	return getStorageService(
+		FLAGSHIP_BINDING_SERVICE_NAME,
+		{ accountTag: LOCAL_ACCOUNT_TAG },
+		sharedOptions,
+		{ entrypoint: FLAGSHIP_EXPLORER_ENTRYPOINT }
 	);
 }
 
@@ -96,7 +114,9 @@ export const FLAGSHIP_PLUGIN: Plugin = {
 			bindings.some(
 				([, binding]) =>
 					getRemoteProxyConnectionString(binding, options.dev) === undefined
-			) || sharedOptions.unsafeEnableSharedStorage;
+			) ||
+			sharedOptions.unsafeEnableSharedStorage ||
+			sharedOptions.unsafeLocalExplorer;
 		if (!hasLocal) {
 			return services;
 		}

@@ -21,6 +21,7 @@ import {
 	UserError,
 	writeOutput,
 } from "@cloudflare/workers-utils";
+import { parseAndExpandDotEnv } from "@cloudflare/workers-utils/local-env";
 import { Response } from "undici";
 import { fetchPagedListResult, fetchResult, logger } from "../shared/context";
 import { triggersDeploy } from "../triggers/deploy";
@@ -336,7 +337,11 @@ async function deployWorker(
 	}
 
 	if (props.secretsFile) {
-		const secretsResult = await parseBulkInputToObject(props.secretsFile);
+		const secretsResult = await parseBulkInputToObject(
+			props.secretsFile,
+			false,
+			parseAndExpandDotEnv
+		);
 		if (secretsResult) {
 			for (const [secretName, secretValue] of Object.entries(
 				secretsResult.content

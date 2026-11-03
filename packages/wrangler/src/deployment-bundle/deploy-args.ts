@@ -160,7 +160,7 @@ export const sharedDeployVersionsArgs = {
 	},
 	"secrets-file": {
 		describe:
-			"Path to a file containing secrets to upload with the version (JSON or .env format). Applies additively with secrets from previous deployments - omitted secrets will not be deleted.",
+			"Path to a file containing secrets to upload with the version (JSON or .env format). Dotenv values expand $VAR and ${VAR}; process environment values override file values. Only use trusted dotenv secrets files; they can read and upload any process environment value. Escape literal dollar signs with \\$ or use JSON. Applies additively with secrets from previous deployments - omitted secrets will not be deleted.",
 		type: "string",
 		requiresArg: true,
 	},

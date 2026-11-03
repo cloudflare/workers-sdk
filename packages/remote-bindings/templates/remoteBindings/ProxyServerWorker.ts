@@ -25,6 +25,8 @@ class BindingNotFoundError extends Error {
  *  - SendEmail bindings need to take EmailMessage as their first parameter,
  *    which is not serialisable. As such, we reconstruct it before sending it
  *    on to the binding. See packages/miniflare/src/workers/email/email.worker.ts
+ *  - Hyperdrive and Analytics Engine bindings are native objects that capnweb
+ *    can't expose directly, so we wrap their methods in a plain object.
  *  - Dispatch Namespace bindings have a synchronous .get() method. Since we
  *    can't emulate that over an async boundary, we mock it locally and _actually_
  *    perform the .get() remotely at the first appropriate async point. See
@@ -57,6 +59,15 @@ function getExposedJSRPCBinding(request: Request, env: Env) {
 			connect() {
 				const socket = hyperdrive.connect();
 				return { readable: socket.readable, writable: socket.writable };
+			},
+		};
+	}
+
+	if (targetBinding.constructor.name === "AnalyticsEngine") {
+		const dataset = targetBinding as AnalyticsEngineDataset;
+		return {
+			writeDataPoint(event?: AnalyticsEngineDataPoint) {
+				dataset.writeDataPoint(event);
 			},
 		};
 	}
@@ -322,6 +333,30 @@ async function pipeSocketOverWebSocket(
 	await Promise.all([toWebSocket, fromWebSocket]);
 }
 
+/**
+ * Tag a response returned by an exposed binding, so that the local
+ * remote-bindings proxy client can tell it apart from a response generated in
+ * front of this worker (e.g. a Cloudflare Access login redirect or block page),
+ * which never carries the tag. The client only reports Access blocks for
+ * untagged responses and strips the tag before handing the response to the
+ * binding. See `makeFetch` in
+ * packages/miniflare/src/workers/shared/remote-bindings-utils.ts
+ *
+ * Like the `MF-*` request headers this worker reads, the header name is
+ * reserved for remote bindings: a binding's own `MF-Forwarded-Response` header
+ * is overwritten here and then removed by the client.
+ */
+function markForwardedResponse(response: Response): Response {
+	// A WebSocket upgrade response can't be re-wrapped without losing its
+	// socket, and is never mistaken for an Access block anyway.
+	if (response.webSocket) {
+		return response;
+	}
+	const marked = new Response(response.body, response);
+	marked.headers.set("MF-Forwarded-Response", "true");
+	return marked;
+}
+
 export default {
 	async fetch(request, env) {
 		try {
@@ -345,13 +380,14 @@ export default {
 					}
 				}
 
-				return await fetcher.fetch(
+				const response = await fetcher.fetch(
 					request.headers.get("MF-URL") ?? "http://example.com",
 					new Request(request, {
 						redirect: "manual",
 						headers: originalHeaders,
 					})
 				);
+				return markForwardedResponse(response);
 			}
 		} catch (e) {
 			if (e instanceof BindingNotFoundError) {

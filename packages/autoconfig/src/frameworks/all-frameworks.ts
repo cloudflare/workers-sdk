@@ -14,224 +14,241 @@ import { Vike } from "./vike";
 import { Vite } from "./vite";
 import { Waku } from "./waku";
 import type { AutoConfigFrameworkPackageInfo, FrameworkInfo } from ".";
+import type { AutoConfigTarget } from "../context";
 
 /**
- * Information about all the known frameworks, including frameworks that we know about but we don't support.
+ * Information about all the known frameworks for a configuration target, including frameworks that we know
+ * about but we don't support.
  *
  * The "static" framework is not included in this list.
+ *
+ * @param target The configuration target
+ * @returns The known frameworks, with the package requirements for that target.
  */
-export const allKnownFrameworks = [
-	{
-		id: "analog",
-		name: "Analog",
-		class: Analog,
-		frameworkPackageInfo: {
-			name: "@analogjs/platform",
-			// Analog didn't work well before 2.0.0 with Cloudflare
-			// See: https://github.com/cloudflare/workers-sdk/issues/11470
-			minimumVersion: "2.0.0",
-			maximumKnownMajorVersion: "2",
+export function getAllKnownFrameworks(target: AutoConfigTarget) {
+	return [
+		{
+			id: "analog",
+			name: "Analog",
+			class: Analog,
+			frameworkPackageInfo: {
+				name: "@analogjs/platform",
+				// Analog didn't work well before 2.0.0 with Cloudflare
+				// See: https://github.com/cloudflare/workers-sdk/issues/11470
+				minimumVersion: "2.0.0",
+				maximumKnownMajorVersion: "2",
+			},
+			supportsCf: false,
+			supported: true,
 		},
-		supportsCf: false,
-		supported: true,
-	},
-	{
-		id: "angular",
-		name: "Angular",
-		class: Angular,
-		frameworkPackageInfo: {
-			name: "@angular/core",
-			// Angular 19 introduced ssr.experimentalPlatform and AngularAppEngine
-			// which are required for Cloudflare Workers support
-			// See: https://github.com/angular/angular-cli/releases/tag/19.0.0
-			// Angular 22 renamed experimentalPlatform to platform
-			// See: https://github.com/angular/angular-cli/commit/af2c7e9444fba81d3b1fd2d37dc4412f8305b5ed
-			minimumVersion: "19.0.0",
-			maximumKnownMajorVersion: "22",
+		{
+			id: "angular",
+			name: "Angular",
+			class: Angular,
+			frameworkPackageInfo: {
+				name: "@angular/core",
+				// Angular 19 introduced ssr.experimentalPlatform and AngularAppEngine
+				// which are required for Cloudflare Workers support
+				// See: https://github.com/angular/angular-cli/releases/tag/19.0.0
+				// Angular 22 renamed experimentalPlatform to platform
+				// See: https://github.com/angular/angular-cli/commit/af2c7e9444fba81d3b1fd2d37dc4412f8305b5ed
+				minimumVersion: "19.0.0",
+				maximumKnownMajorVersion: "22",
+			},
+			supportsCf: false,
+			supported: true,
 		},
-		supportsCf: false,
-		supported: true,
-	},
-	{
-		id: "astro",
-		name: "Astro",
-		class: Astro,
-		frameworkPackageInfo: {
-			name: "astro",
-			// Version 4 was the earliest version that we manually tested
-			// in https://github.com/cloudflare/workers-sdk/pull/12938
-			// earlier versions might also be supported but we haven't checked them
-			minimumVersion: "4.0.0",
-			maximumKnownMajorVersion: "7",
+		{
+			id: "astro",
+			name: "Astro",
+			class: Astro,
+			frameworkPackageInfo: {
+				name: "astro",
+				// Version 4 was the earliest version that we manually tested
+				// in https://github.com/cloudflare/workers-sdk/pull/12938
+				// earlier versions might also be supported but we haven't checked them
+				minimumVersion: "4.0.0",
+				maximumKnownMajorVersion: "7",
+			},
+			supportsCf: true,
+			supported: true,
 		},
-		supportsCf: true,
-		supported: true,
-	},
-	{
-		id: "hono",
-		name: "Hono",
-		supported: false,
-	},
-	{
-		id: "next",
-		name: "Next.js",
-		class: NextJs,
-		frameworkPackageInfo: {
-			name: "next",
-			// 14.2.35 is the earliest version of Next.js officially supported by open-next
-			// see: https://github.com/cloudflare/workers-sdk/pull/11704#discussion_r2634519440
-			minimumVersion: "14.2.35",
-			maximumKnownMajorVersion: "16",
+		{
+			id: "hono",
+			name: "Hono",
+			supported: false,
 		},
-		supportsCf: true,
-		supported: true,
-	},
-	{
-		id: "nuxt",
-		name: "Nuxt",
-		class: Nuxt,
-		frameworkPackageInfo: {
-			name: "nuxt",
-			// 3.21.0 is the first Nuxt version with Nitro 2.11+ which supports
-			// cloudflare.deployConfig and cloudflare.nodeCompat options
-			// See: https://github.com/nuxt/nuxt/releases/tag/v3.21.0
-			// See: https://github.com/nitrojs/nitro/releases/tag/v2.11.0
-			minimumVersion: "3.21.0",
-			maximumKnownMajorVersion: "4",
+		{
+			id: "next",
+			name: "Next.js",
+			class: NextJs,
+			frameworkPackageInfo: {
+				name: "next",
+				// 14.2.35 is the earliest version of Next.js officially supported by open-next
+				// see: https://github.com/cloudflare/workers-sdk/pull/11704#discussion_r2634519440
+				minimumVersion: "14.2.35",
+				maximumKnownMajorVersion: "16",
+			},
+			supportsCf: true,
+			supported: true,
 		},
-		supportsCf: false,
-		supported: true,
-	},
-	{
-		id: "qwik",
-		name: "Qwik",
-		class: Qwik,
-		frameworkPackageInfo: {
-			name: "@builder.io/qwik",
-			// 1.1.0 added the `platform` option in the qwikCity() Vite plugin
-			// which is required for getPlatformProxy integration
-			// See: https://github.com/QwikDev/qwik/pull/3604
-			minimumVersion: "1.1.0",
-			maximumKnownMajorVersion: "1",
+		{
+			id: "nuxt",
+			name: "Nuxt",
+			class: Nuxt,
+			frameworkPackageInfo: {
+				name: "nuxt",
+				// 3.21.0 is the first Nuxt version with Nitro 2.11+ which supports
+				// cloudflare.deployConfig and cloudflare.nodeCompat options
+				// See: https://github.com/nuxt/nuxt/releases/tag/v3.21.0
+				// See: https://github.com/nitrojs/nitro/releases/tag/v2.11.0
+				minimumVersion: "3.21.0",
+				maximumKnownMajorVersion: "4",
+			},
+			supportsCf: false,
+			supported: true,
 		},
-		supportsCf: false,
-		supported: true,
-	},
-	{
-		id: "react-router",
-		name: "React Router",
-		class: ReactRouter,
-		frameworkPackageInfo: {
-			name: "react-router",
-			// React Router v7 introduced framework mode with Vite integration and
-			// react-router.config.ts which are required for Cloudflare Workers support
-			// See: https://remix.run/blog/react-router-v7
-			minimumVersion: "7.0.0",
-			maximumKnownMajorVersion: "8",
+		{
+			id: "qwik",
+			name: "Qwik",
+			class: Qwik,
+			frameworkPackageInfo: {
+				name: "@builder.io/qwik",
+				// 1.1.0 added the `platform` option in the qwikCity() Vite plugin
+				// which is required for getPlatformProxy integration
+				// See: https://github.com/QwikDev/qwik/pull/3604
+				minimumVersion: "1.1.0",
+				maximumKnownMajorVersion: "1",
+			},
+			supportsCf: false,
+			supported: true,
 		},
-		supportsCf: true,
-		supported: true,
-	},
-	{
-		id: "solid-start",
-		name: "Solid Start",
-		class: SolidStart,
-		frameworkPackageInfo: {
-			name: "@solidjs/start",
-			// 1.0.0 is the first stable release with Nitro/Cloudflare Workers support
-			// See: https://github.com/solidjs/solid-start/releases/tag/v1.0.0
-			minimumVersion: "1.0.0",
-			maximumKnownMajorVersion: "2",
+		{
+			id: "react-router",
+			name: "React Router",
+			class: ReactRouter,
+			frameworkPackageInfo:
+				target === "cf"
+					? {
+							// cf needs `@react-router/dev` to use the resolved Vite environment output
+							// directories and to prerender in post `buildApp` hooks, added in 8.5.1
+							// See: https://github.com/remix-run/react-router/pull/15480 and https://github.com/remix-run/react-router/pull/15481
+							name: "@react-router/dev",
+							minimumVersion: "8.5.1",
+							maximumKnownMajorVersion: "8",
+						}
+					: {
+							name: "react-router",
+							// React Router v7 introduced framework mode with Vite integration and
+							// react-router.config.ts which are required for Cloudflare Workers support
+							// See: https://remix.run/blog/react-router-v7
+							minimumVersion: "7.0.0",
+							maximumKnownMajorVersion: "8",
+						},
+			supportsCf: true,
+			supported: true,
 		},
-		supportsCf: false,
-		supported: true,
-	},
-	{
-		id: "svelte-kit",
-		name: "SvelteKit",
-		class: SvelteKit,
-		frameworkPackageInfo: {
-			name: "@sveltejs/kit",
-			// 2.20.3 is required by @sveltejs/adapter-cloudflare@7.0.0 which first
-			// added Workers Static Assets support (cfTarget:workers option)
-			// See: https://github.com/sveltejs/kit/releases/tag/%40sveltejs%2Fadapter-cloudflare%407.0.0
-			minimumVersion: "2.20.3",
-			maximumKnownMajorVersion: "2",
+		{
+			id: "solid-start",
+			name: "Solid Start",
+			class: SolidStart,
+			frameworkPackageInfo: {
+				name: "@solidjs/start",
+				// 1.0.0 is the first stable release with Nitro/Cloudflare Workers support
+				// See: https://github.com/solidjs/solid-start/releases/tag/v1.0.0
+				minimumVersion: "1.0.0",
+				maximumKnownMajorVersion: "2",
+			},
+			supportsCf: false,
+			supported: true,
 		},
-		supportsCf: false,
-		supported: true,
-	},
-	{
-		id: "tanstack-start",
-		name: "TanStack Start",
-		class: TanstackStart,
-		frameworkPackageInfo: {
-			name: "@tanstack/react-start",
-			// 1.132.0 is the first Release Candidate for TanStack Start that supports Cloudflare
-			// See: https://github.com/TanStack/router/releases/tag/v1.132.0
-			minimumVersion: "1.132.0",
-			maximumKnownMajorVersion: "1",
+		{
+			id: "svelte-kit",
+			name: "SvelteKit",
+			class: SvelteKit,
+			frameworkPackageInfo: {
+				name: "@sveltejs/kit",
+				// 2.20.3 is required by @sveltejs/adapter-cloudflare@7.0.0 which first
+				// added Workers Static Assets support (cfTarget:workers option)
+				// See: https://github.com/sveltejs/kit/releases/tag/%40sveltejs%2Fadapter-cloudflare%407.0.0
+				minimumVersion: "2.20.3",
+				maximumKnownMajorVersion: "2",
+			},
+			supportsCf: false,
+			supported: true,
 		},
-		supportsCf: true,
-		supported: true,
-	},
-	{
-		id: "vite",
-		name: "Vite",
-		class: Vite,
-		frameworkPackageInfo: {
-			name: "vite",
-			// Vite 6 introduced the Environment API which @cloudflare/vite-plugin requires
-			// See: https://vite.dev/blog/announcing-vite6#experimental-environment-api
-			// (6.1.0 is the minimum version supported by the vite plugin:
-			//  https://github.com/cloudflare/workers-sdk/blob/b9b7e9d9fe/packages/vite-plugin-cloudflare/package.json#L80
-			//  we anyways allow for `6.0.x` versions since we bump them to `^6.1.0` in the autoconfig process)
-			minimumVersion: "6.0.0",
-			maximumKnownMajorVersion: "8",
+		{
+			id: "tanstack-start",
+			name: "TanStack Start",
+			class: TanstackStart,
+			frameworkPackageInfo: {
+				name: "@tanstack/react-start",
+				// 1.132.0 is the first Release Candidate for TanStack Start that supports Cloudflare
+				// See: https://github.com/TanStack/router/releases/tag/v1.132.0
+				minimumVersion: "1.132.0",
+				maximumKnownMajorVersion: "1",
+			},
+			supportsCf: true,
+			supported: true,
 		},
-		supportsCf: true,
-		supported: true,
-	},
-	{
-		id: "vike",
-		name: "Vike",
-		class: Vike,
-		frameworkPackageInfo: {
-			name: "vike",
-			minimumVersion: "0.0.0",
-			maximumKnownMajorVersion: "0",
+		{
+			id: "vite",
+			name: "Vite",
+			class: Vite,
+			frameworkPackageInfo: {
+				name: "vite",
+				// Vite 6 introduced the Environment API which @cloudflare/vite-plugin requires
+				// See: https://vite.dev/blog/announcing-vite6#experimental-environment-api
+				// (6.1.0 is the minimum version supported by the vite plugin:
+				//  https://github.com/cloudflare/workers-sdk/blob/b9b7e9d9fe/packages/vite-plugin-cloudflare/package.json#L80
+				//  we anyways allow for `6.0.x` versions since we bump them to `^6.1.0` in the autoconfig process)
+				minimumVersion: "6.0.0",
+				maximumKnownMajorVersion: "8",
+			},
+			supportsCf: true,
+			supported: true,
 		},
-		supportsCf: false,
-		supported: true,
-	},
-	{
-		id: "waku",
-		name: "Waku",
-		class: Waku,
-		frameworkPackageInfo: {
-			name: "waku",
-			// Autoconfig could support Waku before 1.0.0-alpha.4, but different autoconfig logic
-			// would need to be implemented for such versions, so we just decided to only support
-			// version 1.0.0-alpha.4 and up
-			// See: https://github.com/cloudflare/workers-sdk/pull/12657
-			minimumVersion: "1.0.0-alpha.4",
-			maximumKnownMajorVersion: "1",
+		{
+			id: "vike",
+			name: "Vike",
+			class: Vike,
+			frameworkPackageInfo: {
+				name: "vike",
+				minimumVersion: "0.0.0",
+				maximumKnownMajorVersion: "0",
+			},
+			supportsCf: false,
+			supported: true,
 		},
-		supportsCf: false,
-		supported: true,
-	},
-	{
-		id: "cloudflare-pages",
-		name: "Cloudflare Pages",
-		// Autoconfiguring a Pages project into a Workers one is not yet supported
-		supported: false,
-	},
-	{
-		id: "hydrogen",
-		name: "Hydrogen",
-		supported: false,
-	},
-] as const satisfies FrameworkInfo[];
+		{
+			id: "waku",
+			name: "Waku",
+			class: Waku,
+			frameworkPackageInfo: {
+				name: "waku",
+				// Autoconfig could support Waku before 1.0.0-alpha.4, but different autoconfig logic
+				// would need to be implemented for such versions, so we just decided to only support
+				// version 1.0.0-alpha.4 and up
+				// See: https://github.com/cloudflare/workers-sdk/pull/12657
+				minimumVersion: "1.0.0-alpha.4",
+				maximumKnownMajorVersion: "1",
+			},
+			supportsCf: false,
+			supported: true,
+		},
+		{
+			id: "cloudflare-pages",
+			name: "Cloudflare Pages",
+			// Autoconfiguring a Pages project into a Workers one is not yet supported
+			supported: false,
+		},
+		{
+			id: "hydrogen",
+			name: "Hydrogen",
+			supported: false,
+		},
+	] as const satisfies FrameworkInfo[];
+}
 
 /**
  * Type specific for the "static" framework.
@@ -251,11 +268,18 @@ export const staticFramework = {
 	supported: true,
 } as const satisfies StaticFrameworkInfo;
 
-/** Information for all the possible frameworks. This includes the "static" framework */
-export const allFrameworksInfos = [
-	staticFramework,
-	...allKnownFrameworks,
-] as const satisfies (FrameworkInfo | StaticFrameworkInfo)[];
+/**
+ * Information for all the possible frameworks for a configuration target. This includes the "static" framework.
+ *
+ * @param target The configuration target
+ * @returns The frameworks, with the package requirements for that target.
+ */
+export function getAllFrameworksInfos(target: AutoConfigTarget) {
+	return [
+		staticFramework,
+		...getAllKnownFrameworks(target),
+	] as const satisfies (FrameworkInfo | StaticFrameworkInfo)[];
+}
 
 /**
  * Gets the package information for a given framework, erroring if the framework
@@ -264,16 +288,18 @@ export const allFrameworksInfos = [
  * Returns `undefined` for the "static" framework, which has no associated package.
  *
  * @param frameworkId The id of the target framework
+ * @param target The configuration target
  * @returns The framework's target package info, or undefined if the framework is "static"
  */
 export function getFrameworkPackageInfo(
-	frameworkId: FrameworkInfo["id"]
+	frameworkId: FrameworkInfo["id"],
+	target: AutoConfigTarget
 ): AutoConfigFrameworkPackageInfo | undefined {
 	if (frameworkId === staticFramework.id) {
 		// The "static" framework does not have an associated package
 		return undefined;
 	}
-	const targetedFramework = allKnownFrameworks.find(
+	const targetedFramework = getAllKnownFrameworks(target).find(
 		(framework) => framework.id === frameworkId
 	);
 	assert(

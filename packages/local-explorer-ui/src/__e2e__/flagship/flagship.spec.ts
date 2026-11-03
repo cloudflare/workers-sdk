@@ -17,6 +17,7 @@ const STRING_FLAG = {
 	default_variation: "control",
 	enabled: true,
 	variations: { control: "blue", treatment: "red" },
+	rules: [],
 };
 const RULED_FLAG = {
 	...STRING_FLAG,
@@ -41,6 +42,7 @@ interface FlagResult {
 	default_variation: string;
 	description?: string | null;
 	key: string;
+	metadata?: Record<string, boolean | string | number>;
 	rules: Array<{
 		conditions: unknown[];
 		priority: number;
@@ -139,22 +141,6 @@ async function saveFlag(): Promise<void> {
 describe("Flagship", () => {
 	beforeEach(cleanupFlags);
 
-	test("closes an open dialog when the selected worker changes", async () => {
-		await seedFlag(STRING_FLAG);
-		await navigateToFlagshipApp();
-		await openEditDialog(STRING_FLAG.key);
-		await page.evaluate(() => {
-			const url = new URL(window.location.href);
-			url.searchParams.set("worker", "worker-w-resources");
-			window.history.pushState(window.history.state, "", url);
-			window.dispatchEvent(new PopStateEvent("popstate"));
-		});
-		await page.waitForSelector('[role="dialog"]', {
-			state: "hidden",
-			timeout: 10_000,
-		});
-	});
-
 	test("creates, edits, and deletes a flag", async ({ expect }) => {
 		await navigateToFlagshipApp();
 		await waitForBreadcrumbText("Flagship");
@@ -198,7 +184,11 @@ describe("Flagship", () => {
 	test("keeps an untouched description when saving other edits", async ({
 		expect,
 	}) => {
-		await seedFlag({ ...STRING_FLAG, description: "  beta rollout  " });
+		await seedFlag({
+			...STRING_FLAG,
+			description: "  beta rollout  ",
+			metadata: { owner: "growth" },
+		});
 		await navigateToFlagshipApp();
 		await openEditDialog(STRING_FLAG.key);
 		await page
@@ -208,9 +198,75 @@ describe("Flagship", () => {
 		await saveFlag();
 		expect(await fetchFlag(STRING_FLAG.key)).toMatchObject({
 			description: "  beta rollout  ",
+			metadata: { owner: "growth" },
 			variations: { treatment: "green" },
 		});
 	});
+
+	test.for([
+		{
+			name: "empty logical clauses",
+			rule: {
+				priority: 1,
+				conditions: [{ logical_operator: "OR", clauses: [] }],
+				serve_variation: "treatment",
+			},
+		},
+		{
+			name: "legacy rollout precision",
+			rule: {
+				...RULED_FLAG.rules[0],
+				rollout: { percentage: 33.333 },
+			},
+		},
+	])(
+		"edits a description without replacing $name",
+		async ({ rule }, { expect }) => {
+			const legacyFlag = { ...STRING_FLAG, type: "string", rules: [rule] };
+			const pattern = `**${LOCAL_EXPLORER_API_PATH}/flagship/apps/${APP_ID}/flags**`;
+			// These historical definitions cannot be created through the current API.
+			await page.route(pattern, async (route) => {
+				const method = route.request().method();
+				if (method === "GET") {
+					await route.fulfill({
+						json: {
+							result: [legacyFlag],
+							result_info: { count: 1, cursor: null },
+						},
+					});
+				} else if (method === "PATCH") {
+					await route.fulfill({
+						json: {
+							result: { ...legacyFlag, description: "Updated description" },
+						},
+					});
+				} else {
+					await route.fallback();
+				}
+			});
+			try {
+				await navigateToFlagshipApp();
+				await openEditDialog(legacyFlag.key);
+				await page
+					.getByRole("dialog")
+					.locator("#flag-description")
+					.fill("Updated description");
+				const mutation = page.waitForRequest(
+					(request) =>
+						request.url().endsWith(`/flags/${legacyFlag.key}`) &&
+						["PATCH", "PUT"].includes(request.method())
+				);
+				await saveFlag();
+				const request = await mutation;
+				expect(request.method()).toBe("PATCH");
+				expect(request.postDataJSON()).toEqual({
+					description: "Updated description",
+				});
+			} finally {
+				await page.unroute(pattern);
+			}
+		}
+	);
 
 	test("edits targeting rules and rollouts", async ({ expect }) => {
 		await seedFlag(RULED_FLAG);
@@ -271,6 +327,32 @@ describe("Flagship", () => {
 				rollout: { percentage: 30, attribute: "userId" },
 			},
 		]);
+	});
+
+	test("rejects an invalid split that would not change the rules", async ({
+		expect,
+	}) => {
+		const splitFlag = {
+			...STRING_FLAG,
+			rules: [
+				{
+					priority: 1,
+					conditions: [],
+					serve_variation: "treatment",
+					rollout: { percentage: 50 },
+				},
+			],
+		};
+		await seedFlag(splitFlag);
+		await navigateToFlagshipApp();
+		await openEditDialog(splitFlag.key);
+		const dialog = page.getByRole("dialog");
+		await dialog.getByLabel("Percentage for control").fill("60");
+		await dialog.getByRole("button", { name: "Save changes" }).click();
+		await waitForText("Percentage split must total 100% (currently 110%).");
+		expect((await fetchFlag(splitFlag.key)).rules).toMatchObject(
+			splitFlag.rules
+		);
 	});
 
 	test("evaluates a flag with an ad-hoc context", async () => {

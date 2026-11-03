@@ -1,171 +1,41 @@
 import { ADMIN_API as ADMIN_API_KEY } from "../../flagship/constants";
-import { flagNotFoundMessage } from "../../flagship/flags";
-import {
-	aggregateListResults,
-	fetchFromPeer,
-	getPeerUrlsIfAggregating,
-} from "../aggregation";
+import { flagConflictMessage, flagNotFoundMessage } from "../../flagship/flags";
+import { aggregateListResults } from "../aggregation";
 import { errorResponse, wrapResponse } from "../common";
 import type { FlagshipAdmin } from "../../flagship/admin";
-import type { ADMIN_API } from "../../flagship/constants";
+import type { FlagInput } from "../../flagship/flags";
 import type { AppContext } from "../common";
 import type { Env } from "../explorer.worker";
 import type {
 	FlagshipApp,
 	FlagshipCreateFlagData,
+	FlagshipEvaluateFlagPostData,
+	FlagshipListFlagsData,
+	FlagshipPatchFlagData,
 	FlagshipUpdateFlagData,
-	LocalExplorerWorker,
 } from "../generated";
 
 const FLAGSHIP_ERROR_NOT_FOUND = 10801;
 const FLAGSHIP_ERROR_INVALID_FLAG = 10802;
+const FLAGSHIP_ERROR_CONFLICT = 10803;
 
-const APPS_PATH = "/flagship/apps";
+const DEFAULT_FLAGS_PAGE_SIZE = 100;
 
-function getAdmin(env: Env, appId: string): FlagshipAdmin | null {
-	const info = env.LOCAL_EXPLORER_BINDING_MAP.flagship[appId];
-	if (!info) {
-		return null;
-	}
-	const binding = env[info.binding] as
-		| Record<typeof ADMIN_API, () => FlagshipAdmin>
-		| undefined;
-	if (!binding) {
-		return null;
-	}
-	return binding[ADMIN_API_KEY]();
+type EvaluationErrorCode = "FLAG_NOT_FOUND" | "GENERAL";
+
+function getAdmin(env: Env, appId: string): FlagshipAdmin {
+	return env.MINIFLARE_FLAGSHIP[ADMIN_API_KEY](appId);
 }
 
-function notFound(appId: string): Response {
-	return errorResponse(
-		404,
-		FLAGSHIP_ERROR_NOT_FOUND,
-		`Flagship app '${appId}' is not simulated locally.`
-	);
-}
-
-function appPath(appId: string, suffix = ""): string {
-	return `${APPS_PATH}/${encodeURIComponent(appId)}${suffix}`;
-}
-
-function flagPath(appId: string, flagKey: string, suffix = ""): string {
-	return appPath(appId, `/flags/${encodeURIComponent(flagKey)}${suffix}`);
-}
-
-/** Returns the first peer whose list at `path` contains a matching entry. */
-async function findPeer<T>(
-	c: AppContext,
-	path: string,
-	matches: (entry: T) => boolean
-): Promise<string | null> {
-	const peerUrls = await getPeerUrlsIfAggregating(c);
-	const owners = await Promise.all(
-		peerUrls.map(async (url) => {
-			const response = await fetchFromPeer(url, path);
-			if (!response?.ok) {
-				return null;
-			}
-			try {
-				const data = (await response.json()) as { result?: T[] };
-				return data.result?.some(matches) === true ? url : null;
-			} catch {
-				return null;
-			}
-		})
-	);
-	return owners.find((url) => url !== null) ?? null;
-}
-
-function findAppOwner(c: AppContext, appId: string): Promise<string | null> {
-	return findPeer<FlagshipApp>(c, APPS_PATH, (app) => app.id === appId);
-}
-
-function findWorkerOwner(
-	c: AppContext,
-	workerName: string,
-	appId: string
-): Promise<string | null> {
-	return findPeer<LocalExplorerWorker>(
-		c,
-		"/local/workers",
-		(worker) =>
-			worker.name === workerName &&
-			worker.bindings?.flagship?.some((binding) => binding.id === appId) ===
-				true
-	);
-}
-
-function withWorkerQuery(path: string, worker: string): string {
-	const url = new URL(path, "http://localhost");
-	url.searchParams.set("worker", worker);
-	return `${url.pathname}${url.search}`;
-}
-
-async function withApp(
-	c: AppContext,
-	appId: string,
-	peerPath: string,
-	handler: (admin: FlagshipAdmin) => Promise<Response>,
-	init?: RequestInit
-): Promise<Response> {
-	const workerName = c.req.query("worker");
-	if (workerName !== undefined) {
-		const workerOpts = c.env.MINIFLARE_EXPLORER_WORKER_OPTS;
-		const localWorker = Object.hasOwn(workerOpts, workerName)
-			? workerOpts[workerName]
-			: undefined;
-		if (localWorker !== undefined) {
-			const admin = getAdmin(c.env, appId);
-			return localWorker.bindings.flagship.some(
-				(binding) => binding.id === appId
-			) && admin
-				? handler(admin)
-				: notFound(appId);
-		}
-
-		const owner = await findWorkerOwner(c, workerName, appId);
-		if (owner !== null) {
-			const response = await fetchFromPeer(
-				owner,
-				withWorkerQuery(peerPath, workerName),
-				init
-			);
-			if (response !== null) {
-				return response;
-			}
-		}
-		return notFound(appId);
-	}
-
-	// Aggregated apps may belong to another local dev process.
-	const admin = getAdmin(c.env, appId);
-	if (admin !== null) {
-		return handler(admin);
-	}
-	const owner = await findAppOwner(c, appId);
-	if (owner !== null) {
-		const response = await fetchFromPeer(owner, peerPath, init);
-		if (response !== null) {
-			return response;
-		}
-	}
-	return notFound(appId);
-}
-
-function jsonInit(method: string, body: unknown): RequestInit {
-	return {
-		method,
-		body: JSON.stringify(body),
-		headers: { "Content-Type": "application/json" },
-	};
-}
-
+/** Lists the Flagship apps bound by local Workers. */
 export async function listFlagshipApps(c: AppContext): Promise<Response> {
 	const local: FlagshipApp[] = Object.values(
 		c.env.LOCAL_EXPLORER_BINDING_MAP.flagship
 	).map((info) => ({ id: info.appId, bindings: info.bindings }));
 
-	const aggregated = await aggregateListResults(c, local, APPS_PATH);
+	const aggregated = await aggregateListResults(c, local, "/flagship/apps", {
+		sharedStorageOnly: true,
+	});
 
 	const appsById = new Map<string, FlagshipApp>();
 	for (const app of aggregated) {
@@ -183,89 +53,183 @@ export async function listFlagshipApps(c: AppContext): Promise<Response> {
 	});
 }
 
+/** Lists flags ordered by key, paginated by the last key returned. */
 export async function listFlagshipFlags(
 	c: AppContext,
-	appId: string
+	appId: string,
+	{
+		cursor,
+		limit = DEFAULT_FLAGS_PAGE_SIZE,
+	}: NonNullable<FlagshipListFlagsData["query"]>
 ): Promise<Response> {
-	return withApp(c, appId, appPath(appId, "/flags"), async (admin) => {
-		const flags = await admin.listFlags();
-		return c.json({
-			...wrapResponse(flags),
-			result_info: { count: flags.length },
-		});
+	const flags = (await getAdmin(c.env, appId).listFlags()).filter(
+		(flag) => !cursor || flag.key > cursor
+	);
+	const page = flags.slice(0, limit);
+	return c.json({
+		...wrapResponse(page),
+		result_info: {
+			count: page.length,
+			cursor: flags.length > limit ? page[page.length - 1].key : null,
+		},
 	});
 }
 
+/** Creates a flag; fails if the key already exists. */
 export async function createFlagshipFlag(
 	c: AppContext,
 	appId: string,
 	body: FlagshipCreateFlagData["body"]
 ): Promise<Response> {
-	return withApp(
+	return flagResult(
 		c,
-		appId,
-		appPath(appId, "/flags"),
-		(admin) =>
-			flagResult(c, body.key, 400, () =>
-				admin.createFlag({
-					...body,
-					description: body.description ?? undefined,
-					enabled: body.enabled ?? false,
-					rules: body.rules ?? [],
-				})
-			),
-		jsonInit("POST", body)
+		body.key,
+		400,
+		() => getAdmin(c.env, appId).createFlag(toFlagInput(body.key, body)),
+		201
 	);
 }
 
+/** Gets a single flag. */
+export async function getFlagshipFlag(
+	c: AppContext,
+	appId: string,
+	flagKey: string
+): Promise<Response> {
+	return flagResult(c, flagKey, 500, () =>
+		getAdmin(c.env, appId).getFlag(flagKey)
+	);
+}
+
+/** Replaces a flag; omitted optional fields are cleared. */
 export async function updateFlagshipFlag(
 	c: AppContext,
 	appId: string,
 	flagKey: string,
 	body: FlagshipUpdateFlagData["body"]
 ): Promise<Response> {
-	return withApp(
-		c,
-		appId,
-		flagPath(appId, flagKey),
-		(admin) =>
-			flagResult(c, flagKey, 400, () => admin.patchFlag(flagKey, body)),
-		jsonInit("PATCH", body)
+	// The path key identifies the flag, as in production.
+	return flagResult(c, flagKey, 400, () =>
+		getAdmin(c.env, appId).updateFlag(flagKey, toFlagInput(flagKey, body))
 	);
 }
 
+/** Applies a partial update; omitted fields keep their current values. */
+export async function patchFlagshipFlag(
+	c: AppContext,
+	appId: string,
+	flagKey: string,
+	body: FlagshipPatchFlagData["body"]
+): Promise<Response> {
+	return flagResult(c, flagKey, 400, () =>
+		getAdmin(c.env, appId).patchFlag(flagKey, body)
+	);
+}
+
+/** Deletes a flag. */
 export async function deleteFlagshipFlag(
 	c: AppContext,
 	appId: string,
 	flagKey: string
 ): Promise<Response> {
-	return withApp(
-		c,
-		appId,
-		flagPath(appId, flagKey),
-		(admin) =>
-			flagResult(c, flagKey, 400, async () => {
-				await admin.deleteFlag(flagKey);
-				return { success: true };
-			}),
-		{ method: "DELETE" }
-	);
+	return flagResult(c, flagKey, 500, async () => {
+		await getAdmin(c.env, appId).deleteFlag(flagKey);
+		return { key: flagKey };
+	});
 }
 
-export async function evaluateFlagshipFlag(
+/** Coerces a query-string context value as Flagship's evaluate API does. */
+function coerceQueryParam(value: string): string | number | boolean {
+	if (value === "true") {
+		return true;
+	}
+	if (value === "false") {
+		return false;
+	}
+	const number = Number(value);
+	return Number.isFinite(number) &&
+		String(number) === value &&
+		(!Number.isInteger(number) || Number.isSafeInteger(number))
+		? number
+		: value;
+}
+
+/** Evaluates the flag named in the body. */
+export async function evaluateFlagshipApp(
+	c: AppContext,
+	appId: string,
+	body: FlagshipEvaluateFlagPostData["body"]
+): Promise<Response> {
+	return evaluationResult(c, appId, body.flagKey, body.context ?? {});
+}
+
+/** Evaluates a flag using the query string as the context. */
+export async function evaluateFlagshipAppQuery(
+	c: AppContext,
+	appId: string
+): Promise<Response> {
+	const query = c.req.query();
+	const flagKey = query.flagKey;
+	if (!flagKey) {
+		return evaluationError(400, "Missing flagKey query parameter", "GENERAL");
+	}
+	const context = Object.fromEntries(
+		Object.entries(query)
+			.filter(([name]) => name !== "flagKey")
+			.map(([name, value]) => [name, coerceQueryParam(value)])
+	);
+	return evaluationResult(c, appId, flagKey, context);
+}
+
+/** Evaluates a flag, returning the bare result as Flagship's evaluate API does. */
+async function evaluationResult(
 	c: AppContext,
 	appId: string,
 	flagKey: string,
 	context: Record<string, unknown>
 ): Promise<Response> {
-	return withApp(
-		c,
-		appId,
-		flagPath(appId, flagKey, "/evaluate"),
-		(admin) =>
-			flagResult(c, flagKey, 500, () => admin.evaluateFlag(flagKey, context)),
-		jsonInit("POST", { context })
+	try {
+		return c.json(await getAdmin(c.env, appId).evaluateFlag(flagKey, context));
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		return message === flagNotFoundMessage(flagKey)
+			? evaluationError(404, `Flag '${flagKey}' not found.`, "FLAG_NOT_FOUND")
+			: evaluationError(500, message, "GENERAL");
+	}
+}
+
+function evaluationError(
+	status: number,
+	message: string,
+	errorCode: EvaluationErrorCode
+): Response {
+	return Response.json(
+		{
+			success: false,
+			errors: [{ code: 10001, message }],
+			messages: [],
+			result: null,
+			errorCode,
+		},
+		{ status }
 	);
+}
+
+/** Converts a create or replace request body into a store flag. */
+function toFlagInput(
+	key: string,
+	body: FlagshipCreateFlagData["body"]
+): FlagInput {
+	// `type` is omitted: the store infers it from the variations, as in production.
+	return {
+		key,
+		description: body.description,
+		enabled: body.enabled,
+		default_variation: body.default_variation,
+		variations: body.variations,
+		rules: body.rules,
+		metadata: body.metadata,
+	};
 }
 
 /** Runs a flag operation, mapping store errors to API error responses. */
@@ -273,10 +237,11 @@ async function flagResult(
 	c: AppContext,
 	flagKey: string,
 	fallbackStatus: 400 | 500,
-	operation: () => Promise<unknown>
+	operation: () => Promise<unknown>,
+	status: 200 | 201 = 200
 ): Promise<Response> {
 	try {
-		return c.json(wrapResponse(await operation()));
+		return c.json(wrapResponse(await operation()), status);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		if (message === flagNotFoundMessage(flagKey)) {
@@ -285,6 +250,9 @@ async function flagResult(
 				FLAGSHIP_ERROR_NOT_FOUND,
 				`Flag '${flagKey}' not found.`
 			);
+		}
+		if (message === flagConflictMessage(flagKey)) {
+			return errorResponse(409, FLAGSHIP_ERROR_CONFLICT, message);
 		}
 		return errorResponse(
 			fallbackStatus,

@@ -1047,6 +1047,54 @@ describe("wrangler dev", { concurrent: false }, () => {
 			);
 			expect(config.dev.origin?.hostname).toEqual("some-host.com");
 		});
+
+		it("should not infer the origin from routes with --infer-origin-from-routes=false", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				route: "https://4.some-host.com/some/path/*",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig(
+				"dev --infer-origin-from-routes=false"
+			);
+			expect(config.dev.origin?.hostname).toBeUndefined();
+		});
+
+		it("should still respect an explicit host with --infer-origin-from-routes=false", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				route: "https://4.some-host.com/some/path/*",
+				dev: {
+					host: "2.some-host.com",
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig(
+				"dev --infer-origin-from-routes=false"
+			);
+			expect(config.dev.origin?.hostname).toEqual("2.some-host.com");
+		});
+
+		it("should ignore --infer-origin-from-routes=false in remote mode", async ({
+			expect,
+		}) => {
+			mockGetZones(expect, "4.some-host.com", [{ id: "some-zone-id-4" }]);
+			writeWranglerConfig({
+				main: "index.js",
+				route: "https://4.some-host.com/some/path/*",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			// The origin hostname doubles as the remote preview session's
+			// host, so the local-mode opt-out must not remove it.
+			const config = await runWranglerUntilConfig(
+				"dev --remote --infer-origin-from-routes=false"
+			);
+			expect(config.dev.origin?.hostname).toEqual("4.some-host.com");
+		});
 	});
 
 	describe("custom builds", () => {
@@ -3190,6 +3238,34 @@ describe("wrangler dev", { concurrent: false }, () => {
 				expect(generateRuntimeTypesSpy).not.toHaveBeenCalled();
 				expect(std.out).not.toContain("types might be out of date");
 				expect(std.out).not.toContain("types looked out of date");
+			});
+
+			it("should not warn about up to date types with CRLF line endings", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.ts",
+					vars: { EXISTING_VAR: "existing value" },
+				});
+				fs.writeFileSync("index.ts", `export default {};`);
+
+				generateRuntimeTypesSpy.mockRestore();
+
+				await runWrangler("types");
+
+				// Simulate a checkout with `core.autocrlf=true` (the Git for Windows default)
+				const typesContent = fs.readFileSync(
+					DEFAULT_WORKERS_TYPES_FILE_PATH,
+					"utf-8"
+				);
+				fs.writeFileSync(
+					DEFAULT_WORKERS_TYPES_FILE_PATH,
+					typesContent.replace(/\n/g, "\r\n")
+				);
+
+				await runWranglerUntilConfig("dev");
+
+				expect(std.out).not.toContain("types might be out of date");
 			});
 		});
 	});

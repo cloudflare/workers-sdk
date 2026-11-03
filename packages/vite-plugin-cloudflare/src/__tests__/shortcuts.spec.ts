@@ -1,8 +1,16 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { stripVTControlCharacters } from "node:util";
-import { removeDirSync } from "@cloudflare/workers-utils";
-import { afterAll, beforeAll, beforeEach, describe, test, vi } from "vitest";
+import { printBindings, removeDirSync } from "@cloudflare/workers-utils";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	onTestFinished,
+	test,
+	vi,
+} from "vitest";
 import { PluginContext } from "../context";
 import { resolvePluginConfig } from "../plugin-config";
 import { addShortcuts } from "../plugins/shortcuts";
@@ -12,6 +20,11 @@ import type * as vite from "vite";
 
 const mockOpen = vi.hoisted(() => vi.fn(() => ({ on: vi.fn() })));
 vi.mock("open", () => ({ default: mockOpen }));
+vi.mock("@cloudflare/workers-utils", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@cloudflare/workers-utils")>();
+	return { ...actual, printBindings: vi.fn(actual.printBindings) };
+});
 
 /**
  * Creates a mock ViteDevServer with the minimum interface needed for shortcuts tests
@@ -56,7 +69,6 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 	let mockServer: vite.ViteDevServer;
 
 	beforeAll(() => {
-		vi.stubEnv("CI", undefined);
 		process.stdin.isTTY = true;
 	});
 
@@ -66,6 +78,7 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 	});
 
 	beforeEach(() => {
+		vi.stubEnv("CI", undefined);
 		// Create temp directory for test fixtures
 		fs.mkdirSync(FIXTURES_ROOT, { recursive: true });
 		tempDir = fs.realpathSync(
@@ -280,6 +293,51 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 			env.SERVICE (primary-worker)      Worker
 			"
 		`);
+	});
+
+	test("reads service registrations from the canonical registry override", async ({
+		expect,
+	}) => {
+		const registryPath = path.join(tempDir, "registry");
+		vi.stubEnv(
+			"CLOUDFLARE_DEV_REGISTRY_PATH",
+			path.relative(process.cwd(), registryPath)
+		);
+		vi.stubEnv(
+			"MINIFLARE_REGISTRY_PATH",
+			path.join(tempDir, "legacy-registry")
+		);
+		onTestFinished(() => {
+			vi.unstubAllEnvs();
+		});
+		fs.mkdirSync(registryPath);
+		fs.writeFileSync(
+			path.join(registryPath, "primary-worker"),
+			JSON.stringify({ debugPortAddress: "127.0.0.1:1234" })
+		);
+		const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");
+		vi.mocked(printBindings).mockClear();
+		addShortcuts(
+			mockServer,
+			await createMockContext({ auxiliaryWorker: true })
+		);
+
+		const { customShortcuts } = mockBindCLIShortcuts.mock.calls[0]?.[0] ?? {};
+		await customShortcuts
+			?.find((shortcut) => shortcut.key === "b")
+			?.action?.(mockServer);
+
+		expect(printBindings).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				name: "auxiliary-worker",
+				registry: expect.objectContaining({
+					"primary-worker": expect.objectContaining({
+						debugPortAddress: "127.0.0.1:1234",
+					}),
+				}),
+			})
+		);
 	});
 
 	test("registers explorer shortcut with correct URL", async ({ expect }) => {

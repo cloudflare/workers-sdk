@@ -12,6 +12,7 @@ import {
 import {
 	createAssetsIgnoreFunction,
 	getContentType,
+	InvalidAssetsIgnoreError,
 	maybeGetFile,
 	normalizeFilePath,
 } from "@cloudflare/workers-shared/utils/helpers";
@@ -20,6 +21,7 @@ import {
 	FatalError,
 	formatTime,
 	LOGGER_LEVELS,
+	retryOnAPIFailure,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -90,12 +92,15 @@ export const syncAssets = async (
 
 	// 2. fetch buckets w/ hashes
 	logger.info("🌀 Starting asset upload...");
-	const initializeAssetsResponse =
-		await fetchResult<InitializeAssetsResponse | null>(complianceConfig, url, {
-			headers: { "Content-Type": "application/json" },
-			method: "POST",
-			body: JSON.stringify({ manifest: manifest }),
-		});
+	const initializeAssetsResponse = await retryOnAPIFailure(
+		() =>
+			fetchResult<InitializeAssetsResponse | null>(complianceConfig, url, {
+				headers: { "Content-Type": "application/json" },
+				method: "POST",
+				body: JSON.stringify({ manifest: manifest }),
+			}),
+		logger
+	);
 
 	// In the past we've seen the endpoint return that incorrectly doesn't contain
 	// a null response (see: https://github.com/cloudflare/workers-sdk/issues/9465).
@@ -631,7 +636,14 @@ export const buildAssetManifest = async (dir: string) => {
 	const manifest: AssetManifest = {};
 
 	const { assetsIgnoreFunction, assetsIgnoreFilePresent } =
-		await createAssetsIgnoreFunction(dir);
+		await createAssetsIgnoreFunction(dir).catch((error: unknown) => {
+			if (error instanceof InvalidAssetsIgnoreError) {
+				throw new UserError(error.message, {
+					telemetryMessage: "assets ignore invalid encoding",
+				});
+			}
+			throw error;
+		});
 
 	await Promise.all(
 		files.map(async (relativeFilepath) => {

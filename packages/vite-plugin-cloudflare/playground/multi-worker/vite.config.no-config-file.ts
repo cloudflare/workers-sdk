@@ -5,14 +5,18 @@ export default defineConfig({
 	plugins: [
 		cloudflare({
 			types: { includeRuntime: false },
-			config: {
-				name: "worker-c",
-				entrypoint: "./worker-c/index.ts",
-				compatibilityDate: "2024-12-30",
-				env: {
-					WORKER_D: { type: "worker", worker: "worker-d" },
+			config: (loadedConfig) => ({
+				...loadedConfig,
+				worker: {
+					...loadedConfig.worker,
+					name: "worker-c",
+					entrypoint: "./worker-c/index.ts",
+					compatibilityDate: "2024-12-30",
+					env: {
+						WORKER_D: { type: "worker", worker: "worker-d" },
+					},
 				},
-			},
+			}),
 			auxiliaryWorkers: [
 				{
 					config: {

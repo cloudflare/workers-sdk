@@ -28,7 +28,7 @@ const context = createMockContext();
 function createNextJs(nextVersion: string): NextJs {
 	vi.mocked(getInstalledPackageVersion).mockReturnValue(nextVersion);
 	const framework = new NextJs({ id: "next", name: "Next.js" });
-	const packageInfo = getFrameworkPackageInfo("next");
+	const packageInfo = getFrameworkPackageInfo("next", "cf");
 	if (!packageInfo) {
 		throw new Error("Missing Next.js package info");
 	}

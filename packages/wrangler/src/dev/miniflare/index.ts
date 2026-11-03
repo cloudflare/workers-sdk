@@ -955,7 +955,11 @@ export function buildMiniflareBindingOptions(
 		analyticsEngineDatasets: Object.fromEntries(
 			analyticsEngineDatasets.map((binding) => [
 				binding.binding,
-				{ dataset: binding.dataset ?? "dataset" },
+				{
+					dataset: binding.dataset ?? "dataset",
+					...(remoteProxyConnectionString &&
+						binding.remote && { remoteProxyConnectionString }),
+				},
 			])
 		),
 		workflows: Object.fromEntries(

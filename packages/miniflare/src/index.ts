@@ -76,6 +76,7 @@ import {
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	WORKFLOWS_PLUGIN_NAME,
 } from "./plugins";
+import { ArtifactsController } from "./plugins/artifacts/controller";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
 import { BROWSER_VERSION } from "./plugins/browser-rendering/browser-version";
 import { closeBrowserProcess } from "./plugins/browser-rendering/process";
@@ -85,6 +86,7 @@ import {
 	getUserServiceName,
 	handlePrettyErrorRequest,
 	JsonErrorSchema,
+	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
 	reviveError,
 } from "./plugins/core";
 import { ContainerPrivilegesCache } from "./plugins/core/container";
@@ -377,12 +379,19 @@ function getDurableObjectClassNames(
 }
 
 /**
- * Collects all external service bindings from all workers and overrides
- * them to point to the dev registry proxy worker's ExternalServiceProxy
- * entrypoint. Returns a map of external service names to the entrypoints
- * and DO classes that are referenced.
+ * Collects all external service bindings from all workers and returns copies
+ * of the worker options with those bindings pointed at the dev registry proxy
+ * worker's ExternalServiceProxy entrypoint, along with a map of external
+ * service names to the entrypoints and DO classes that are referenced.
+ *
+ * The given options are left untouched: restarting `workerd` after a crash
+ * assembles a new config from the same options, and rerouting an already
+ * rerouted binding would point it at the proxy worker itself.
  */
-function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
+function getExternalServiceEntrypoints(
+	allWorkerOpts: ParsedWorkerOptions[],
+	sharedOpts: ParsedInstanceOptions
+) {
 	const externalServices = new Map<
 		string,
 		{
@@ -391,6 +400,10 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 		}
 	>();
 	const allWorkerNames = allWorkerOpts.map((opts) => opts.config.name);
+	if (sharedOpts.unsafeObservability) {
+		// Core creates this local service outside the user Worker configuration.
+		allWorkerNames.push(OBSERVABILITY_COLLECTOR_SERVICE_NAME);
+	}
 	const getEntrypoints = (name: string) => {
 		let externalService = externalServices.get(name);
 
@@ -405,8 +418,19 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 		return externalService;
 	};
 
+	const reroutedWorkerOpts: ParsedWorkerOptions[] = [];
 	for (const workerOpts of allWorkerOpts) {
-		const { config, dev } = workerOpts;
+		const { config: originalConfig, dev } = workerOpts;
+		const config = {
+			...originalConfig,
+			env:
+				originalConfig.env === undefined
+					? undefined
+					: { ...originalConfig.env },
+			tailConsumers: originalConfig.tailConsumers?.slice(),
+		};
+		const { env, tailConsumers } = config;
+		reroutedWorkerOpts.push({ ...workerOpts, config });
 
 		// Tail consumers targeting a worker outside this instance. Reroute them
 		// through the dev-registry proxy worker (`ExternalServiceProxy`), mirroring
@@ -414,7 +438,6 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 		// binds its tail to a non-existent local service `core:user:<workerName>`
 		// and workerd refuses to start. Handled before the `env` guard since a
 		// worker may declare tail consumers without any `env` bindings.
-		const tailConsumers = config.tailConsumers;
 		if (tailConsumers !== undefined) {
 			for (let i = 0; i < tailConsumers.length; i++) {
 				const consumer = tailConsumers[i];
@@ -437,7 +460,6 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 			}
 		}
 
-		const env = config.env;
 		if (env === undefined) {
 			continue;
 		}
@@ -504,7 +526,7 @@ function getExternalServiceEntrypoints(allWorkerOpts: ParsedWorkerOptions[]) {
 		}
 	}
 
-	return externalServices;
+	return { workerOpts: reroutedWorkerOpts, externalServices };
 }
 
 function getQueueProducers(
@@ -872,13 +894,15 @@ export class Miniflare {
 	#maybeInspectorProxyController?: InspectorProxyController;
 	#previousRuntimeInspectorPort?: number;
 
+	#artifactsController = new ArtifactsController(() => this.#log);
 	#containerPrivilegesCache = new ContainerPrivilegesCache();
 	#hyperdriveProxyController: HyperdriveProxyController =
 		new HyperdriveProxyController(this.#disposeController.signal);
 
 	// Set the first time the remote-bindings proxy CLIENT worker reports a
-	// Cloudflare Access 403 block on a request to the remote-bindings proxy
-	// server. Used to dedupe the user-facing warning to once per session.
+	// Cloudflare Access block (403 or login redirect) on a request to the
+	// remote-bindings proxy server. Used to dedupe the user-facing warning to
+	// once per session.
 	#warnedRemoteBindingsAccessBlock = false;
 
 	constructor(opts: MiniflareOptions) {
@@ -1571,13 +1595,16 @@ export class Miniflare {
 				response = new Response(null, { status: 204 });
 			} else if (url.pathname === "/core/remote-bindings-access-warning") {
 				// Reported by the remote-bindings proxy CLIENT worker when it sees
-				// a 403 + "Cloudflare Access" body from the remote-bindings proxy
-				// server. Surfaced once per Miniflare instance so users with many
-				// remote bindings don't get a wall of repeated warnings.
+				// a 403 + "Cloudflare Access" body, or a redirect to the Access login
+				// page, from the remote-bindings proxy server. Surfaced once per
+				// Miniflare instance so users with many remote bindings don't get a
+				// wall of repeated warnings.
 				if (!this.#warnedRemoteBindingsAccessBlock) {
 					this.#warnedRemoteBindingsAccessBlock = true;
 					const bindingName = request.headers.get("MF-Binding") ?? "<unknown>";
 					const proxyUrl = request.headers.get("MF-Proxy-URL") ?? "<unknown>";
+					const isLoginRedirect =
+						request.headers.get("MF-Access-Block-Reason") === "login-redirect";
 					// Visually striking format so the warning isn't lost in the
 					// noise of binding error stack traces that follow it.
 					const separator = dim("━".repeat(76));
@@ -1588,19 +1615,30 @@ export class Miniflare {
 							)}\n` +
 							`${separator}\n` +
 							`\n` +
-							`Remote binding "${bold(
-								bindingName
-							)}": request to ${proxyUrl} was blocked.\n` +
-							`\n` +
-							`If your Cloudflare account protects workers.dev with Access, set the\n` +
-							`${bold("CLOUDFLARE_ACCESS_CLIENT_ID")} and ${bold(
-								"CLOUDFLARE_ACCESS_CLIENT_SECRET"
-							)}\n` +
-							`environment variables (Service Token credentials), or run\n` +
-							`  ${bold(
-								"cloudflared access login <your-workers.dev-host>"
-							)}\n` +
-							`for interactive authentication.\n` +
+							(isLoginRedirect
+								? `Remote binding "${bold(
+										bindingName
+									)}": request to ${proxyUrl} was redirected to the Cloudflare Access login page.\n` +
+									`\n` +
+									`Restart your dev server to sign in to Access again, and make sure Wrangler\n` +
+									`or the Cloudflare Vite plugin is up to date. In non-interactive environments,\n` +
+									`set the ${bold("CLOUDFLARE_ACCESS_CLIENT_ID")} and ${bold(
+										"CLOUDFLARE_ACCESS_CLIENT_SECRET"
+									)}\n` +
+									`environment variables (Service Token credentials).\n`
+								: `Remote binding "${bold(
+										bindingName
+									)}": request to ${proxyUrl} was blocked.\n` +
+									`\n` +
+									`If your Cloudflare account protects workers.dev with Access, set the\n` +
+									`${bold("CLOUDFLARE_ACCESS_CLIENT_ID")} and ${bold(
+										"CLOUDFLARE_ACCESS_CLIENT_SECRET"
+									)}\n` +
+									`environment variables (Service Token credentials), or run\n` +
+									`  ${bold(
+										"cloudflared access login <your-workers.dev-host>"
+									)}\n` +
+									`for interactive authentication.\n`) +
 							`\n` +
 							`See https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/\n` +
 							separator
@@ -1962,17 +2000,17 @@ export class Miniflare {
 		reusePorts: boolean
 	): Promise<Config> {
 		const allPreviousWorkerOpts = this.#previousWorkerOpts;
-		const allWorkerOpts = this.#workerOpts;
 		const sharedOpts = this.#sharedOpts;
 
-		await this.#loadExternalPlugins(allWorkerOpts);
+		await this.#loadExternalPlugins(this.#workerOpts);
 
 		sharedOpts.cf = await setupCf(this.#log, sharedOpts.cf);
 		this.#cfObject = sharedOpts.cf;
 
-		const externalServices = this.#devRegistry.isEnabled()
-			? getExternalServiceEntrypoints(allWorkerOpts)
-			: null;
+		const { workerOpts: allWorkerOpts, externalServices } =
+			this.#devRegistry.isEnabled()
+				? getExternalServiceEntrypoints(this.#workerOpts, sharedOpts)
+				: { workerOpts: this.#workerOpts, externalServices: null };
 
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const workflowExporters = getWorkflowExporters(allWorkerOpts);
@@ -2136,6 +2174,7 @@ export class Miniflare {
 				queueConsumers,
 				containerPrivilegesCache: this.#containerPrivilegesCache,
 				hyperdriveProxyController: this.#hyperdriveProxyController,
+				artifactsController: this.#artifactsController,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {
 				const pluginServicesExtensions = await plugin.getServices({
@@ -2151,6 +2190,11 @@ export class Miniflare {
 					} else {
 						pluginServices = pluginServicesExtensions.services;
 						extensions.push(...pluginServicesExtensions.extensions);
+						for (const socket of pluginServicesExtensions.sockets ?? []) {
+							if (!sockets.some((existing) => existing.name === socket.name)) {
+								sockets.push(socket);
+							}
+						}
 					}
 
 					for (const service of pluginServices) {
@@ -2482,6 +2526,7 @@ export class Miniflare {
 
 	async #assembleAndUpdateConfig(reusePorts = false) {
 		this.#hyperdriveProxyController.beginUpdate();
+		this.#artifactsController.beginUpdate();
 		try {
 			await this.#assembleAndUpdateConfigInternal(reusePorts);
 		} catch (error) {
@@ -2493,8 +2538,9 @@ export class Miniflare {
 				throw error;
 			}
 		} finally {
-			// If assembly or runtime startup failed, keep the old listeners and
-			// close only the new candidates. A successful update already committed.
+			// A failed update retains listeners used by the previous runtime and
+			// closes only candidates started during this attempt.
+			await this.#artifactsController.abortUpdate();
 			this.#hyperdriveProxyController.abortUpdate();
 		}
 	}
@@ -2618,6 +2664,7 @@ export class Miniflare {
 			}
 		}
 		this.#hyperdriveProxyController.commitUpdate(activeExternalAddresses);
+		await this.#artifactsController.commitUpdate();
 		// Note: `updateConfig()` doesn't resolve until ports for all required
 		// sockets have been recorded. At this point, `maybeSocketPorts` contains
 		// all of `requiredSockets` as keys.
@@ -3709,6 +3756,14 @@ export class Miniflare {
 		}
 
 		const runtimeCleanupOutcome = await runtimeDisposeOutcome;
+		try {
+			await this.#artifactsController.dispose();
+		} catch (error) {
+			if (!independentCleanupFailed) {
+				independentCleanupFailed = true;
+				independentCleanupError = error;
+			}
+		}
 		this.#devRegistry.unregisterWorkers();
 		// Close the undici Pool used for dispatching fetch requests to the
 		// runtime. This must happen after the runtime is disposed, so that
@@ -3733,7 +3788,11 @@ export class Miniflare {
 		// Best-effort cleanup: on Windows, workerd may not release file handles
 		// immediately after disposal, causing EBUSY errors. The temp directory
 		// lives in os.tmpdir() so the OS will clean it up eventually.
-		removeDir(this.#tmpPath, { fireAndForget: true });
+		try {
+			await removeDir(this.#tmpPath);
+		} catch (e) {
+			this.#log.debug(`Unable to remove temporary directory: ${String(e)}`);
+		}
 		// Clean up email session directories in the project temp path. When no
 		// project temp path is supplied, these live inside `#tmpPath` and are
 		// already removed above.
@@ -3801,6 +3860,7 @@ export type {
 	Flag,
 	FlagChanges,
 	FlagInput,
+	FlagMetadata,
 	FlagType,
 	Rule,
 } from "./workers/flagship/flags";
@@ -3833,6 +3893,7 @@ export type {
 export {
 	getDefaultDevRegistryPath,
 	getWorkerRegistry,
+	resolveDevRegistryPath,
 } from "./shared/dev-registry";
 export { parseModuleFallbackRequest } from "./plugins/core/module-fallback";
 export type {
@@ -3856,6 +3917,8 @@ export {
 	V4WorkerOptionsSchema,
 } from "./config/v4-schema";
 export { convertV4MiniflareOptions } from "./config/v4-convert";
+export { resolveLocalBindings } from "./config/local-bindings";
+export type { ResolveLocalBindingsOptions } from "./config/local-bindings";
 export type {
 	MiniflareOptions,
 	WorkerOptions,

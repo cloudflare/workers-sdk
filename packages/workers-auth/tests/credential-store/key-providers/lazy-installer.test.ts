@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { getGlobalConfigPath, UserError } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
-import { afterEach, beforeEach, describe, it } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	findKeyringBinding,
 	getKeyringInstallDir,
@@ -340,6 +340,61 @@ describe("lazy keyring installer", () => {
 			// Next lookup must re-check the filesystem and return the new
 			// binding path (not the cached `null`).
 			expect(findKeyringBinding(installDir())).toBe(bindingDir);
+		});
+
+		it("passes an install dir containing a space or `%` to npm intact", ({
+			expect,
+		}) => {
+			// A stand-in `npm` first on PATH exercises the real spawn (through
+			// cmd.exe on Windows) without network access. It records its
+			// arguments and lands a binding under the `--prefix` it was given.
+			const binDir = path.resolve("fake npm");
+			mkdirSync(binDir, { recursive: true });
+			writeFileSync(
+				path.join(binDir, "fake-npm.cjs"),
+				[
+					'const fs = require("node:fs");',
+					'const path = require("node:path");',
+					"const args = process.argv.slice(2);",
+					'fs.writeFileSync(path.join(__dirname, "invocation.json"), JSON.stringify(args));',
+					'const prefix = args[args.indexOf("--prefix") + 1];',
+					'const binding = path.join(prefix, "node_modules", "@napi-rs", "keyring");',
+					"fs.mkdirSync(binding, { recursive: true });",
+					'fs.writeFileSync(path.join(binding, "index.js"), "module.exports = {};");',
+				].join("\n")
+			);
+			writeFileSync(
+				path.join(binDir, "npm.cmd"),
+				`@"${process.execPath}" "%~dp0fake-npm.cjs" %*\r\n`
+			);
+			writeFileSync(
+				path.join(binDir, "npm"),
+				`#!/bin/sh\nexec "${process.execPath}" "$(dirname "$0")/fake-npm.cjs" "$@"\n`,
+				{ mode: 0o755 }
+			);
+			// eslint-disable-next-line turbo/no-undeclared-env-vars -- prepends the stand-in npm to the test process's own PATH, not a build input
+			vi.stubEnv("PATH", `${binDir}${path.delimiter}${process.env.PATH}`);
+			// `%OS%` is always defined on Windows, so cmd.exe would expand it.
+			const dir = path.resolve("John %OS% Smith", "native", "keyring");
+
+			installKeyringBindingSync(dir);
+
+			expect(
+				JSON.parse(readFileSync(path.join(binDir, "invocation.json"), "utf8"))
+			).toEqual([
+				"install",
+				`@napi-rs/keyring@${PINNED_KEYRING_VERSION}`,
+				"--prefix",
+				dir,
+				"--no-save",
+				"--no-audit",
+				"--no-fund",
+				"--no-package-lock",
+				"--loglevel=error",
+			]);
+			expect(findKeyringBinding(dir)).toBe(
+				path.join(dir, "node_modules", "@napi-rs", "keyring")
+			);
 		});
 	});
 

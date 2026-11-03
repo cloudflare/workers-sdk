@@ -67,16 +67,143 @@ describe("insights", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
 
-	it("should throw if a database name is not provided", async ({ expect }) => {
-		await expect(() => runWrangler("d1 insights")).rejects.toThrow(
-			"Not enough non-option arguments: got 0, need at least 1"
+	it("should return insights across the account when no database name is given", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		const databaseLookups: string[] = [];
+		let graphqlQuery = "";
+		msw.use(
+			...getMswSuccessMembershipHandlers([{ id: "1701", name: "enterprise" }]),
+			http.get("*/accounts/:accountId/d1/database/:id", ({ params }) => {
+				databaseLookups.push(String(params.id));
+				return HttpResponse.json(
+					{ success: false, errors: [{ code: 7404, message: "Not Found" }] },
+					{ status: 404 }
+				);
+			}),
+			http.post("*/graphql", async ({ request }) => {
+				graphqlQuery = ((await request.json()) as { query: string }).query;
+				return HttpResponse.json({
+					data: {
+						viewer: {
+							accounts: [
+								{
+									d1QueriesAdaptiveGroups: [
+										{
+											dimensions: {
+												query: "SELECT * FROM Orders",
+												databaseId: "northwind-uuid",
+											},
+											sum: {
+												queryDurationMs: 300,
+												rowsRead: 3000,
+												rowsWritten: 0,
+												rowsReturned: 30,
+											},
+											avg: {
+												queryDurationMs: 100,
+												rowsRead: 1000,
+												rowsWritten: 0,
+												rowsReturned: 10,
+											},
+											count: 3,
+										},
+										{
+											dimensions: {
+												query: "SELECT * FROM Customers",
+												databaseId: "northwind-uuid",
+											},
+											sum: { rowsRead: 20 },
+											count: 2,
+										},
+										{
+											dimensions: {
+												query: "SELECT 1",
+												databaseId: "other-db-uuid",
+											},
+											sum: { rowsRead: 1 },
+											count: 1,
+										},
+									],
+								},
+							],
+						},
+					},
+					errors: null,
+				});
+			})
 		);
 
-		expect(std.err).toMatchInlineSnapshot(`
-    "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+		await runWrangler("d1 insights --json");
 
-    "
-  `);
+		expect(graphqlQuery).toContain("orderBy: [sum_queryDurationMs_DESC]");
+
+		expect(databaseLookups).toEqual([]);
+		expect(JSON.parse(std.out)).toMatchInlineSnapshot(`
+			[
+			  {
+			    "avgDurationMs": 100,
+			    "avgRowsRead": 1000,
+			    "avgRowsWritten": 0,
+			    "databaseId": "northwind-uuid",
+			    "numberOfTimesRun": 3,
+			    "query": "SELECT * FROM Orders",
+			    "queryEfficiency": 0.01,
+			    "totalDurationMs": 300,
+			    "totalRowsRead": 3000,
+			    "totalRowsWritten": 0,
+			  },
+			  {
+			    "avgDurationMs": 0,
+			    "avgRowsRead": 0,
+			    "avgRowsWritten": 0,
+			    "databaseId": "northwind-uuid",
+			    "numberOfTimesRun": 2,
+			    "query": "SELECT * FROM Customers",
+			    "queryEfficiency": 0,
+			    "totalDurationMs": 0,
+			    "totalRowsRead": 20,
+			    "totalRowsWritten": 0,
+			  },
+			  {
+			    "avgDurationMs": 0,
+			    "avgRowsRead": 0,
+			    "avgRowsWritten": 0,
+			    "databaseId": "other-db-uuid",
+			    "numberOfTimesRun": 1,
+			    "query": "SELECT 1",
+			    "queryEfficiency": 0,
+			    "totalDurationMs": 0,
+			    "totalRowsRead": 1,
+			    "totalRowsWritten": 0,
+			  },
+			]
+		`);
+	});
+
+	it("should report a rate limit returned in the errors array of an HTTP 200 response", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		msw.use(
+			...getMswSuccessMembershipHandlers([{ id: "1701", name: "enterprise" }]),
+			http.post("*/graphql", () =>
+				HttpResponse.json({
+					data: null,
+					errors: [
+						{
+							message:
+								"Rate limiter budget depleted. Please try again after 5 minutes.",
+						},
+					],
+				})
+			)
+		);
+
+		await expect(() => runWrangler("d1 insights --json")).rejects.toThrow(
+			/rate limited the request[\s\S]*The rate limit resets within 5 minutes/
+		);
 	});
 
 	it("should throw if database doesn't exist", async ({ expect }) => {

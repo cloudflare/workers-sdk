@@ -771,8 +771,9 @@ function getDeclaredDOClassNames(config: Config): Set<string> {
  *
  * A binding is not required. A Durable Object reached only through
  * `ctx.exports` is still implemented by this script, so its container belongs
- * to this preview. A class reachable only through a `script_name` binding is
- * implemented by another Worker, which owns its own container application.
+ * to this preview. An explicit `script_name` targets a deployed Worker, even
+ * when it names the preview's parent, so that binding alone does not give the
+ * preview ownership of the class or its container application.
  */
 export function getPreviewOwnedContainerClassNames(
 	config: Config,

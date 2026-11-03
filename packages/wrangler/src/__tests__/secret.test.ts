@@ -1124,6 +1124,56 @@ describe("wrangler secret", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
+		it.for(["file", "stdin"])(
+			"should upload literal dotenv values from %s without process overrides",
+			async (source, { expect }) => {
+				vi.stubEnv("API_TOKEN", "process-token");
+				vi.stubEnv("EMPTY_SECRET", "");
+				const contents =
+					"API_TOKEN=file-token\nEMPTY_SECRET=file-value\nPASSWORD=pa$word";
+				if (source === "file") {
+					writeFileSync("secrets.env", contents);
+				} else {
+					mockReadlineInput(contents);
+				}
+
+				let requestBody: unknown;
+				msw.use(
+					http.patch(
+						"*/accounts/:accountId/workers/scripts/:scriptName/secrets-bulk",
+						async ({ request }) => {
+							requestBody = await request.json();
+							return HttpResponse.json(createFetchResult(null));
+						}
+					)
+				);
+
+				await runWrangler(
+					`secret bulk ${source === "file" ? "secrets.env " : ""}--name script-name`
+				);
+
+				expect(requestBody).toEqual({
+					secrets: {
+						API_TOKEN: {
+							name: "API_TOKEN",
+							text: "file-token",
+							type: "secret_text",
+						},
+						EMPTY_SECRET: {
+							name: "EMPTY_SECRET",
+							text: "file-value",
+							type: "secret_text",
+						},
+						PASSWORD: {
+							name: "PASSWORD",
+							text: "pa$word",
+							type: "secret_text",
+						},
+					},
+				});
+			}
+		);
+
 		it("should fail if file is not valid JSON", async ({ expect }) => {
 			writeFileSync("secret.json", "bad file content");
 

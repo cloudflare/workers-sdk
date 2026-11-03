@@ -206,6 +206,78 @@ SECRET3=value3`
 			`);
 		});
 
+		it("should expand the specified secrets file with Wrangler's environment", async () => {
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "process-token");
+			vi.stubEnv("BANDA_ALERTS_WEBHOOK_URL", "process-webhook");
+			vi.stubEnv("EMPTY_SECRET", "");
+			fs.writeFileSync(
+				".env",
+				"DEFAULT_ONLY=not-uploaded\nWRANGLER_ENV=from-dot-env"
+			);
+			fs.writeFileSync(
+				".env.production",
+				[
+					"CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}",
+					"BANDA_ALERTS_WEBHOOK_URL=${BANDA_ALERTS_WEBHOOK_URL}",
+					"EMPTY_SECRET=file-value",
+					"VERSION=v1",
+					"API_URL=https://api.example.com/$VERSION",
+					"FROM_WRANGLER_ENV=$WRANGLER_ENV",
+					"ESCAPED_SECRET=\\${CLOUDFLARE_API_TOKEN}",
+				].join("\n")
+			);
+
+			mockServiceScriptData({
+				scriptName: workerName,
+				script: { id: workerName },
+			});
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "secret_text",
+						name: "CLOUDFLARE_API_TOKEN",
+						text: "process-token",
+					},
+					{
+						type: "secret_text",
+						name: "BANDA_ALERTS_WEBHOOK_URL",
+						text: "process-webhook",
+					},
+					{
+						type: "secret_text",
+						name: "EMPTY_SECRET",
+						text: "",
+					},
+					{
+						type: "secret_text",
+						name: "VERSION",
+						text: "v1",
+					},
+					{
+						type: "secret_text",
+						name: "API_URL",
+						text: "https://api.example.com/v1",
+					},
+					{
+						type: "secret_text",
+						name: "FROM_WRANGLER_ENV",
+						text: "from-dot-env",
+					},
+					{
+						type: "secret_text",
+						name: "ESCAPED_SECRET",
+						text: "${CLOUDFLARE_API_TOKEN}",
+					},
+				],
+				expectedCompatibilityDate: "2022-01-12",
+				expectedMainModule: "index.js",
+				keepSecrets: true,
+			});
+
+			await runWrangler("deploy --secrets-file .env.production");
+		});
+
 		it("should set keepSecrets to inherit non-provided secrets when providing secrets file", async ({
 			expect,
 		}) => {

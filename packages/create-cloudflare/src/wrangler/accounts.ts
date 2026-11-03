@@ -11,7 +11,8 @@ import { usesCfCli } from "../cf/config";
 import { reporter } from "../metrics";
 import type { C3Context } from "types";
 
-export const chooseAccount = async (ctx: C3Context) => {
+/** Select an account by ID, keeping display names independent of identity. */
+export async function chooseAccount(ctx: C3Context) {
 	// Check if account ID is provided via environment variable (matching wrangler's behavior)
 	const accountIdFromEnv = process.env.CLOUDFLARE_ACCOUNT_ID;
 	if (accountIdFromEnv) {
@@ -26,42 +27,41 @@ export const chooseAccount = async (ctx: C3Context) => {
 		? await cf.listAccounts()
 		: await listAccounts();
 
-	let accountId: string;
-
-	const numAccounts = Object.keys(accounts).length;
-	if (numAccounts === 0) {
+	if (accounts.length === 0) {
 		throw new Error(
 			"Unable to find any accounts to deploy to! Please ensure you're logged in as a user that can deploy Workers."
 		);
-	} else if (numAccounts === 1) {
-		const accountName = Object.keys(accounts)[0];
-		accountId = accounts[accountName];
-		s.stop(`${brandColor("account")} ${dim(accountName)}`);
+	}
+
+	let account: C3Context["account"];
+	if (accounts.length === 1) {
+		account = accounts[0];
+		s.stop(`${brandColor("account")} ${dim(account.name)}`);
 	} else {
 		s.stop(
 			`${brandColor("account")} ${dim("more than one account available")}`
 		);
-		const accountOptions = Object.entries(accounts).map(
-			([accountName, id]) => ({
-				label: accountName,
-				value: id,
-			})
-		);
+		const accountOptions = accounts.map(({ name, id }) => ({
+			label: `${name} (${id})`,
+			value: id,
+		}));
 
-		accountId = await inputPrompt({
+		const accountId = await inputPrompt({
 			type: "select",
 			question: "Which account do you want to use?",
 			options: accountOptions,
 			label: "account",
 			defaultValue: accountOptions[0].value,
 		});
+		const selectedAccount = accounts.find(({ id }) => id === accountId);
+		if (!selectedAccount) {
+			throw new Error("Unable to find the selected Cloudflare account.");
+		}
+		account = selectedAccount;
 	}
-	const accountName = Object.keys(accounts).find(
-		(account) => accounts[account] == accountId
-	) as string;
 
-	ctx.account = { id: accountId, name: accountName };
-};
+	ctx.account = account;
+}
 
 /**
  * Ensures the user is logged in to Cloudflare, prompting a browser login if not.
@@ -127,23 +127,24 @@ export const login = async (ctx: C3Context) => {
 	});
 };
 
-export const listAccounts = async () => {
+/** List every account returned by Wrangler without using display names as keys. */
+export async function listAccounts() {
 	const { npx } = detectPackageManager();
 
 	const output = await runWranglerCommand([npx, "wrangler", "whoami"], {
 		silent: true,
 	});
 
-	const accounts: Record<string, string> = {};
+	const accounts: { id: string; name: string }[] = [];
 	output.split("\n").forEach((line) => {
 		const match = line.match(/│\s+(.+)\s+│\s+(\w{32})\s+│/);
 		if (match) {
-			accounts[match[1].trim()] = match[2].trim();
+			accounts.push({ name: match[1].trim(), id: match[2].trim() });
 		}
 	});
 
 	return accounts;
-};
+}
 
 export const isLoggedIn = async () => {
 	const { npx } = detectPackageManager();

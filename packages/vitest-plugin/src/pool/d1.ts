@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { getD1MigrationFiles } from "@cloudflare/workers-utils";
+import { getD1MigrationFiles, splitSqlQuery } from "@cloudflare/workers-utils";
 import type { D1Migration } from "../shared/d1";
 
 export type ReadD1MigrationsOptions = {
@@ -21,10 +21,9 @@ export async function readD1Migrations(
 	migrationsPathOrOptions: string | ReadD1MigrationsOptions
 ): Promise<D1Migration[]> {
 	const files = listD1MigrationFiles(migrationsPathOrOptions);
-	const { unstable_splitSqlQuery } = await import("wrangler"); // (lazy)
 	return files.map(({ name, filePath }) => {
 		const migration = fs.readFileSync(filePath, "utf8");
-		const queries = unstable_splitSqlQuery(migration);
+		const queries = splitSqlQuery(migration);
 		return { name, queries };
 	});
 }

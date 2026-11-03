@@ -1504,6 +1504,8 @@ export interface EnvironmentNonInheritable {
 		binding: string;
 		/** The name of this dataset to write to. */
 		dataset?: string;
+		/** Whether the dataset should be remote or not in local development */
+		remote?: boolean;
 	}[];
 
 	/**
@@ -1959,6 +1961,16 @@ export type ConfigModuleRuleType =
 	| "Data"
 	| "PythonModule"
 	| "PythonRequirement";
+
+/**
+ * The rules applied after a Worker's own `rules`, so these modules can be
+ * imported without configuring them.
+ */
+export const DEFAULT_MODULE_RULES: Rule[] = [
+	{ type: "Text", globs: ["**/*.txt", "**/*.html", "**/*.sql"] },
+	{ type: "Data", globs: ["**/*.bin"] },
+	{ type: "CompiledWasm", globs: ["**/*.wasm", "**/*.wasm?module"] },
+];
 
 export type TailConsumer = {
 	/** The name of the service tail events will be forwarded to. */
