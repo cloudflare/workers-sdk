@@ -212,6 +212,18 @@ describe("validateBindingRemoteSetting", () => {
 			);
 		});
 
+		it("names `dev: { remote }` for cloudflare.config.ts bindings", ({
+			expect,
+		}) => {
+			validateBindingRemoteSetting("artifacts", undefined, warn, {
+				binding: "REPOS",
+				configFormat: "cloudflare-config",
+			});
+			expect(warn).toHaveBeenCalledWith(
+				"Artifacts binding REPOS uses the deployed resource. Set `dev: { remote: false }` to use the local simulator, or `dev: { remote: true }` to silence this warning."
+			);
+		});
+
 		it("does not warn when remote bindings are disabled", ({ expect }) => {
 			validateBindingRemoteSetting("artifacts", undefined, warn, {
 				binding: "REPOS",

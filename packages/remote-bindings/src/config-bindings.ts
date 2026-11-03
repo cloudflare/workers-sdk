@@ -31,7 +31,11 @@ export function warnForDefaultRemoteBindings(
 				binding.type,
 				"remote" in binding ? binding.remote : undefined,
 				warn,
-				{ binding: name, remoteBindingsDisabled: !remoteBindingsEnabled }
+				{
+					binding: name,
+					remoteBindingsDisabled: !remoteBindingsEnabled,
+					configFormat: "cloudflare-config",
+				}
 			);
 		}
 	}

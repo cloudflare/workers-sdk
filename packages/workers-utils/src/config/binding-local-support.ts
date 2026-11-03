@@ -130,6 +130,9 @@ export function resolveBindingRemote(
  * @param options.binding - Binding name, used to identify the binding in warnings
  * @param options.remoteBindingsDisabled - Whether the dev session runs without
  * remote bindings, as with `wrangler dev --local`
+ * @param options.configFormat - Which config format the binding came from, so
+ * warnings name the setting the user can write: `remote` in a Wrangler config,
+ * `dev: { remote }` in `cloudflare.config.ts`. Defaults to `"wrangler"`.
  */
 export function validateBindingRemoteSetting(
 	type: Binding["type"],
@@ -138,8 +141,17 @@ export function validateBindingRemoteSetting(
 	{
 		binding,
 		remoteBindingsDisabled = false,
-	}: { binding?: string; remoteBindingsDisabled?: boolean } = {}
+		configFormat = "wrangler",
+	}: {
+		binding?: string;
+		remoteBindingsDisabled?: boolean;
+		configFormat?: "wrangler" | "cloudflare-config";
+	} = {}
 ) {
+	const remoteSetting = (value: boolean) =>
+		configFormat === "cloudflare-config"
+			? `\`dev: { remote: ${value} }\``
+			: `\`remote: ${value}\``;
 	const support = getBindingLocalSupport(type);
 	switch (support) {
 		case "local-and-remote":
@@ -152,7 +164,7 @@ export function validateBindingRemoteSetting(
 						? `${getBindingTypeFriendlyName(type)} bindings use`
 						: `${getBindingTypeFriendlyName(type)} binding ${binding} uses`;
 				warn(
-					`${subject} the deployed resource. Set \`remote: false\` to use the local simulator, or \`remote: true\` to silence this warning.`
+					`${subject} the deployed resource. Set ${remoteSetting(false)} to use the local simulator, or ${remoteSetting(true)} to silence this warning.`
 				);
 			}
 			return;

@@ -25,7 +25,7 @@ describe("warnForDefaultRemoteBindings", () => {
 			warnForDefaultRemoteBindings(bindings, enabled, warn);
 			if (warns) {
 				expect(warn).toHaveBeenCalledExactlyOnceWith(
-					"Artifacts binding REPOS uses the deployed resource. Set `remote: false` to use the local simulator, or `remote: true` to silence this warning."
+					"Artifacts binding REPOS uses the deployed resource. Set `dev: { remote: false }` to use the local simulator, or `dev: { remote: true }` to silence this warning."
 				);
 			} else {
 				expect(warn).not.toHaveBeenCalled();
