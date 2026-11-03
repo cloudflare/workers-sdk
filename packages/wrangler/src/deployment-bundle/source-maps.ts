@@ -198,6 +198,19 @@ function getWasmModuleSourceMappingUrl(module: CfModule): string | undefined {
 	if (url !== undefined && /^[a-z][a-z\d+.-]*:/i.test(url)) {
 		return undefined;
 	}
+	// Toolchains write the map next to the module. Reading only there stops a
+	// module from naming an unrelated file elsewhere on disk.
+	const normalized = url === undefined ? undefined : path.normalize(url);
+	if (
+		normalized !== undefined &&
+		(path.isAbsolute(normalized) ||
+			normalized === ".." ||
+			normalized.startsWith(`..${path.sep}`))
+	) {
+		throw new Error(
+			`Unsupported source map path in ${module.filePath}: expected a file in the module's directory.`
+		);
+	}
 	return url;
 }
 
