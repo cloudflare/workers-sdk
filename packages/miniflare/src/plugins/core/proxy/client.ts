@@ -4,7 +4,7 @@ import { ReadableStream } from "node:stream/web";
 import util from "node:util";
 import { newWebSocketRpcSession, RpcPromise, RpcStub } from "capnweb";
 import { stringify } from "devalue";
-import WebSocket from "ws";
+import { Agent, WebSocket } from "undici";
 import { Headers, Request, Response } from "../../../http";
 import {
 	CoreHeaders,
@@ -333,20 +333,27 @@ class ProxyRpcSession {
 	readonly api: ProxyRpcStub;
 	// Resolves once the WebSocket has opened, or failed to
 	readonly ready: Promise<void>;
+	// Use `undici`'s `WebSocket` with our own dispatcher, rather than `ws` or
+	// the global `WebSocket`, so request mocking libraries (e.g. MSW) don't
+	// intercept the connection
+	readonly #dispatcher: Agent;
 	readonly #webSocket: WebSocket;
 	#closed = false;
 
 	constructor(url: URL) {
 		const webSocketUrl = new URL(url);
 		webSocketUrl.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+		this.#dispatcher = new Agent({
+			connect: { rejectUnauthorized: false },
+			// We trust `ProxyServer`, so allow results as large as Node can handle
+			webSocket: { maxPayloadSize: 0 },
+		});
 		this.#webSocket = new WebSocket(webSocketUrl, {
 			headers: {
 				[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
 				[CoreHeaders.OP]: ProxyOps.CONNECT,
 			},
-			rejectUnauthorized: false,
-			// We trust `ProxyServer`, so allow results as large as Node can handle
-			maxPayload: 0,
+			dispatcher: this.#dispatcher,
 		});
 		this.api = newWebSocketRpcSession(
 			this.#webSocket as unknown as globalThis.WebSocket,
@@ -354,12 +361,18 @@ class ProxyRpcSession {
 			{ limits: { maxMessageSize: Infinity } }
 		) as unknown as ProxyRpcStub;
 		this.ready = new Promise((resolve) => {
-			this.#webSocket.once("open", () => resolve());
-			// Cap'n Web listens for "error"s and rejects pending calls
-			this.#webSocket.once("close", () => {
-				this.#closed = true;
-				resolve();
+			this.#webSocket.addEventListener("open", () => resolve(), {
+				once: true,
 			});
+			// Cap'n Web listens for "error"s and rejects pending calls
+			this.#webSocket.addEventListener(
+				"close",
+				() => {
+					this.#closed = true;
+					resolve();
+				},
+				{ once: true }
+			);
 		});
 	}
 
@@ -370,7 +383,7 @@ class ProxyRpcSession {
 	dispose(): void {
 		this.#closed = true;
 		this.api[Symbol.dispose]();
-		this.#webSocket.terminate();
+		void this.#dispatcher.destroy().catch(() => {});
 	}
 }
 
@@ -579,18 +592,12 @@ class ProxyClientBridge {
 				held.stub?.[Symbol.dispose]();
 			}
 		}
-		// If there are no addresses to free, or the runtime has gone away taking
-		// the "heap" with it, there's nothing to do
-		if (
-			addresses.length === 0 ||
-			this.#session === undefined ||
-			this.#session.closed
-		) {
+		if (addresses.length === 0) {
 			return;
 		}
 		// Ignore errors when freeing. If this throws, it's likely the runtime has
 		// shutdown, so the entire "heap" has been destroyed anyway.
-		this.#session.api.free(addresses).then(
+		this.rpc.free(addresses).then(
 			() => {},
 			() => {}
 		);
@@ -736,7 +743,7 @@ class ProxyClientBridge {
 			if (mode === "native" && value.length > STREAMED_VALUE_THRESHOLD) {
 				return encoded("String", toChunkedStream(Buffer.from(value)));
 			}
-			state.inlineSize += value.length;
+			state.inlineSize += Buffer.byteLength(value);
 			return value;
 		}
 		if (!isObject(value)) {
@@ -777,13 +784,22 @@ class ProxyClientBridge {
 		if (globalHTTPObject !== undefined) {
 			return globalHTTPObject;
 		}
+		// Cap'n Web only accepts exact `Blob`s, but Node.js sometimes returns
+		// subclasses (e.g. from `Blob#slice()` in Node.js 22)
+		if (
+			value instanceof Blob &&
+			!(value instanceof File) &&
+			Object.getPrototypeOf(value) !== Blob.prototype
+		) {
+			return new Blob([value], { type: value.type });
+		}
 		// Workers RPC targets will need to handle these types themselves once
 		// Cap'n Web supports them
 		if (mode === "native") {
 			if (value instanceof File) {
 				return encoded(
 					"File",
-					value.slice(0, value.size, value.type),
+					new Blob([value], { type: value.type }),
 					value.name,
 					value.lastModified
 				);
@@ -1065,8 +1081,6 @@ function createMediaProxy(proxy: Record<string, unknown>) {
 // to an underlying Cap'n Web stub, so these never block the main thread.
 class RpcProxyHandler implements ProxyHandler<() => void> {
 	readonly #version: number;
-	// Kept alive while this proxy is, see `ProxyClientBridge#createRpcProxy()`
-	readonly #parent?: object;
 	#settled?: Promise<unknown>;
 	#nativeProxy?: Record<string, unknown>;
 	// Proxy using this handler, the parent of proxies derived from it
@@ -1078,10 +1092,10 @@ class RpcProxyHandler implements ProxyHandler<() => void> {
 		readonly raw: any, // eslint-disable-line @typescript-eslint/no-explicit-any -- Cap'n Web stubs accept any property or call
 		readonly target: NativeTarget | undefined,
 		readonly isPromise: boolean,
-		parent: object | undefined
+		// Kept alive while this proxy is, see `ProxyClientBridge#createRpcProxy()`
+		readonly parent: object | undefined
 	) {
 		this.#version = bridge.version;
-		this.#parent = parent;
 	}
 
 	get #poisoned() {

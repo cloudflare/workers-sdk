@@ -164,10 +164,14 @@ export const PROXY_ENCODED_KEY = "__miniflareProxy";
 export type ProxyEncoded = { [PROXY_ENCODED_KEY]: [string, ...unknown[]] };
 
 export function isProxyEncoded(value: unknown): value is ProxyEncoded {
+	if (typeof value !== "object" || value === null) {
+		return false;
+	}
+	const record = value as Partial<ProxyEncoded>;
 	return (
-		typeof value === "object" &&
-		value !== null &&
-		Array.isArray((value as Partial<ProxyEncoded>)[PROXY_ENCODED_KEY])
+		Object.hasOwn(record, PROXY_ENCODED_KEY) &&
+		Object.keys(record).length === 1 &&
+		Array.isArray(record[PROXY_ENCODED_KEY])
 	);
 }
 
