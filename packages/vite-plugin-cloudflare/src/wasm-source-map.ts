@@ -35,7 +35,8 @@ export async function readWasmSourceMap(
 	if (sourceMapUrl.startsWith("data:")) {
 		throw new Error("expected a file path but found a data URL.");
 	}
-	if (/^[a-z][a-z\d+.-]*:/i.test(sourceMapUrl)) {
+	// A one-letter scheme is a Windows drive letter, so treat it as a path.
+	if (/^[a-z][a-z\d+.-]+:/i.test(sourceMapUrl)) {
 		return undefined;
 	}
 

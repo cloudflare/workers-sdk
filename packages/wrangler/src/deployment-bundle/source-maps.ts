@@ -194,8 +194,9 @@ function getWasmModuleSourceMappingUrl(module: CfModule): string | undefined {
 		);
 	}
 	// A URL with a scheme, such as one from Emscripten's `--source-map-base`,
-	// names a map hosted elsewhere rather than a file to upload.
-	if (url !== undefined && /^[a-z][a-z\d+.-]*:/i.test(url)) {
+	// names a map hosted elsewhere rather than a file to upload. A one-letter
+	// scheme is a Windows drive letter, so treat it as a path.
+	if (url !== undefined && /^[a-z][a-z\d+.-]+:/i.test(url)) {
 		return undefined;
 	}
 	// Toolchains write the map next to the module. Reading only there stops a
