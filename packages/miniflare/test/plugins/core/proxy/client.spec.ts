@@ -291,6 +291,46 @@ describe("ProxyClient", () => {
 		expect(await BINDING.size(new Uint8Array(1))).toBe(1);
 	});
 
+	test("returns Workers RPC stubs from native methods", async ({ expect }) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`
+							import { WorkflowEntrypoint } from "cloudflare:workers";
+							export class MyWorkflow extends WorkflowEntrypoint {
+								async run() { return "done"; }
+							}
+							export default { fetch() { return new Response(null, { status: 404 }); } };
+						`),
+						env: {
+							WORKFLOW: {
+								type: "workflow",
+								name: "WORKFLOW",
+								worker: "",
+								exportName: "MyWorkflow",
+							},
+						},
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const { WORKFLOW } = await mf.getBindings<{
+			WORKFLOW: {
+				unsafeGetInstanceModifier(
+					id: string
+				): Promise<{ disableSleeps(): Promise<void> }>;
+			};
+		}>();
+		// The modifier is an `RpcStub`, which must be returned without calling it
+		const modifier = await WORKFLOW.unsafeGetInstanceModifier("id");
+		await expect(modifier.disableSleeps()).resolves.toBeUndefined();
+	});
+
 	test("rejects poisoned proxies passed as arguments", async ({ expect }) => {
 		const opts: ConstructorParameters<typeof Miniflare>[0] = {
 			workers: [

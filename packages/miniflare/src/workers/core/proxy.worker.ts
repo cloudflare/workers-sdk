@@ -75,7 +75,7 @@ const objectProtoNames = Object.getOwnPropertyNames(Object.prototype)
 	.join("\0");
 function isPlainObject(value: unknown) {
 	const proto = Object.getPrototypeOf(value);
-	if (value?.constructor?.name === "RpcStub") {
+	if (isObject(value) && getClassName(value) === "RpcStub") {
 		return false;
 	}
 	if (isObject(value)) {
@@ -125,6 +125,16 @@ function getType(value: unknown) {
 
 function isInternal(value: unknown) {
 	return isObject(value) && value[Symbol.for("cloudflare:internal-class")];
+}
+
+/**
+ * @param value Object about to be stored on the "heap"
+ * @returns Name of `value`'s class. Read from its prototype, as accessing any
+ * property of a Workers RPC stub (e.g. `name` or `constructor`) calls the
+ * remote object.
+ */
+function getClassName(value: object): string {
+	return Object.getPrototypeOf(value)?.constructor?.name ?? "Object";
 }
 
 /**
@@ -220,7 +230,7 @@ export class ProxyServer implements DurableObject {
 				type === "Promise"
 			) {
 				assert(value !== null);
-				const name = value?.constructor.name;
+				const name = getClassName(value as object);
 				if (value instanceof __MiniflareFunctionWrapper) {
 					// Store the function itself, so it can be used as a Cap'n Web stub
 					value = (value as { __miniflareWrappedFunction: unknown })
@@ -268,7 +278,7 @@ export class ProxyServer implements DurableObject {
 	 */
 	encode(value: unknown): unknown {
 		if (typeof value === "function") {
-			return encoded("Handle", this.store(value), value.name, true);
+			return encoded("Handle", this.store(value), getClassName(value), true);
 		}
 		if (!isObject(value) || isCapnWebSerializable(value)) {
 			return value;
@@ -315,7 +325,7 @@ export class ProxyServer implements DurableObject {
 		return encoded(
 			"Handle",
 			this.store(value),
-			value.constructor?.name,
+			getClassName(value),
 			isRpc(value)
 		);
 	}
