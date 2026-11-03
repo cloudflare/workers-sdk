@@ -252,7 +252,13 @@ describe("loadSourceMaps for WebAssembly modules", () => {
 		expect(loadSourceMaps(main, [wasm], {})).toEqual([]);
 	});
 
-	it.for(["../private.json", "maps/../../private.json", "/private.json"])(
+	it.for([
+		"../private.json",
+		"maps/../../private.json",
+		"/private.json",
+		// A drive-letter path on Windows.
+		path.join(tmpdir(), "private.json"),
+	])(
 		"won't read %s outside the module's directory, unless not strict",
 		(url, { expect }) => {
 			const dir = createTempDir();
