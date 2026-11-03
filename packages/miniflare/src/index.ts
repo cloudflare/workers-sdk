@@ -900,8 +900,9 @@ export class Miniflare {
 		new HyperdriveProxyController(this.#disposeController.signal);
 
 	// Set the first time the remote-bindings proxy CLIENT worker reports a
-	// Cloudflare Access 403 block on a request to the remote-bindings proxy
-	// server. Used to dedupe the user-facing warning to once per session.
+	// Cloudflare Access block (403 or login redirect) on a request to the
+	// remote-bindings proxy server. Used to dedupe the user-facing warning to
+	// once per session.
 	#warnedRemoteBindingsAccessBlock = false;
 
 	constructor(opts: MiniflareOptions) {
@@ -1594,13 +1595,16 @@ export class Miniflare {
 				response = new Response(null, { status: 204 });
 			} else if (url.pathname === "/core/remote-bindings-access-warning") {
 				// Reported by the remote-bindings proxy CLIENT worker when it sees
-				// a 403 + "Cloudflare Access" body from the remote-bindings proxy
-				// server. Surfaced once per Miniflare instance so users with many
-				// remote bindings don't get a wall of repeated warnings.
+				// a 403 + "Cloudflare Access" body, or a redirect to the Access login
+				// page, from the remote-bindings proxy server. Surfaced once per
+				// Miniflare instance so users with many remote bindings don't get a
+				// wall of repeated warnings.
 				if (!this.#warnedRemoteBindingsAccessBlock) {
 					this.#warnedRemoteBindingsAccessBlock = true;
 					const bindingName = request.headers.get("MF-Binding") ?? "<unknown>";
 					const proxyUrl = request.headers.get("MF-Proxy-URL") ?? "<unknown>";
+					const isLoginRedirect =
+						request.headers.get("MF-Access-Block-Reason") === "login-redirect";
 					// Visually striking format so the warning isn't lost in the
 					// noise of binding error stack traces that follow it.
 					const separator = dim("━".repeat(76));
@@ -1611,19 +1615,30 @@ export class Miniflare {
 							)}\n` +
 							`${separator}\n` +
 							`\n` +
-							`Remote binding "${bold(
-								bindingName
-							)}": request to ${proxyUrl} was blocked.\n` +
-							`\n` +
-							`If your Cloudflare account protects workers.dev with Access, set the\n` +
-							`${bold("CLOUDFLARE_ACCESS_CLIENT_ID")} and ${bold(
-								"CLOUDFLARE_ACCESS_CLIENT_SECRET"
-							)}\n` +
-							`environment variables (Service Token credentials), or run\n` +
-							`  ${bold(
-								"cloudflared access login <your-workers.dev-host>"
-							)}\n` +
-							`for interactive authentication.\n` +
+							(isLoginRedirect
+								? `Remote binding "${bold(
+										bindingName
+									)}": request to ${proxyUrl} was redirected to the Cloudflare Access login page.\n` +
+									`\n` +
+									`Restart your dev server to sign in to Access again, and make sure Wrangler\n` +
+									`or the Cloudflare Vite plugin is up to date. In non-interactive environments,\n` +
+									`set the ${bold("CLOUDFLARE_ACCESS_CLIENT_ID")} and ${bold(
+										"CLOUDFLARE_ACCESS_CLIENT_SECRET"
+									)}\n` +
+									`environment variables (Service Token credentials).\n`
+								: `Remote binding "${bold(
+										bindingName
+									)}": request to ${proxyUrl} was blocked.\n` +
+									`\n` +
+									`If your Cloudflare account protects workers.dev with Access, set the\n` +
+									`${bold("CLOUDFLARE_ACCESS_CLIENT_ID")} and ${bold(
+										"CLOUDFLARE_ACCESS_CLIENT_SECRET"
+									)}\n` +
+									`environment variables (Service Token credentials), or run\n` +
+									`  ${bold(
+										"cloudflared access login <your-workers.dev-host>"
+									)}\n` +
+									`for interactive authentication.\n`) +
 							`\n` +
 							`See https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/\n` +
 							separator
