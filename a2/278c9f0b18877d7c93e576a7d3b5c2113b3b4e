@@ -1,0 +1,679 @@
+.changeset/remote-bindings-access-login-redirect.md
+  s_0524ef60273ced::t_80bb4ca1cc8188 1-10
+.changeset/tidy-assets-read-only.md
+  s_0524ef60273ced::t_68e23b0d9ebab6 1-7
+.github/VOUCHED.td
+  s_0524ef60273ced::t_a3925d9a1a88e2 44,51
+fixtures/dev-registry/vite.exported-handler-with-assets.config.ts
+  s_0524ef60273ced::t_957d634a9776a3 10-43,45,47
+fixtures/dev-registry/vite.exported-handler.config.ts
+  s_0524ef60273ced::t_b9422aaed70a75 7-37,40
+fixtures/dev-registry/vite.worker-entrypoint-with-assets.config.ts
+  s_0524ef60273ced::t_612abafa1ca462 10-38,41
+fixtures/dev-registry/vite.worker-entrypoint.config.ts
+  s_0524ef60273ced::t_8ec42406ec4d4c 8-36,38-45,47
+fixtures/pages-functions-app/functions/nested/static/_middleware.ts
+  s_0524ef60273ced::t_f77d8da3486548 1
+fixtures/pages-functions-app/tests/index.test.ts
+  s_0524ef60273ced::t_07e20ffb86ab26 169-177
+fixtures/pages-simple-assets/public-neighbor/message.txt
+  s_0524ef60273ced::t_8450241dfea410 1
+fixtures/pages-simple-assets/public.txt
+  s_0524ef60273ced::t_b814e37d832494 1
+fixtures/pages-simple-assets/public/..notes.txt
+  s_0524ef60273ced::t_084c3c21c646d5 1
+fixtures/pages-simple-assets/tests/index.test.ts
+  s_0524ef60273ced::t_396607d04cfe6a 27-43,45-51
+fixtures/vitest-plugin-examples/new-config/README.md
+  s_0524ef60273ced::t_6f2e34a84b9fc1 3
+fixtures/vitest-plugin-examples/new-config/vitest.config.ts
+  s_0524ef60273ced::t_9bcf33ea8da6db 10-12
+fixtures/vitest-plugin-examples/pages-functions-unit-integration-self/public-neighbor/message.txt
+  s_0524ef60273ced::t_d331b77f31e19b 1
+fixtures/vitest-plugin-examples/pages-functions-unit-integration-self/test/integration-self.test.ts
+  s_0524ef60273ced::t_65943f2a0046cf 50-60
+packages/autoconfig/CHANGELOG.md
+  s_0524ef60273ced::t_8986a928267c52 3-91
+packages/autoconfig/package.json
+  s_0524ef60273ced::t_cbc605684308b2 3,46
+packages/autoconfig/src/details/framework-detection.ts
+  s_0524ef60273ced::t_4ed6e9ebda3ed3 104-105,110-111,308-309,316-317,328
+packages/autoconfig/src/details/index.ts
+  s_0524ef60273ced::t_0b35bc20f31776 16,103-110,125,134-143,173-186,201-203,210-223,249-280,296,299,301-302,309-321,370,375-376,379,430-433
+packages/autoconfig/src/frameworks/all-frameworks.ts
+  s_0524ef60273ced::t_e5b32b578cf818 17,20-21,24-26,28-74,76-79,81-93,95-109,111-124,126-149,151-163,165-178,180-192,194-209,211-221,223-237,239-243,245-251,271-282,291,295-296,302
+packages/autoconfig/src/frameworks/index.ts
+  s_0524ef60273ced::t_c16e83b6f82c5a 3,14,17-21,28,32-33,35,49,53-54,56,81
+packages/autoconfig/src/frameworks/utils/vite-config.ts
+  s_0524ef60273ced::t_ecc892ad98538b 3,69-72,77
+packages/autoconfig/src/run.ts
+  s_0524ef60273ced::t_299a1fc3f008b9 8,25,35-39,84,96,98-99,130-131,169,172-179,304-310,324-337,339-343,345-359,669-685
+packages/autoconfig/src/tsconfig.ts
+  s_0524ef60273ced::t_630e61fb871872 1-145
+packages/autoconfig/tests/details/framework-detection/multiple-frameworks-detected.test.ts
+  s_0524ef60273ced::t_fb2d9b982e802d 18
+packages/autoconfig/tests/details/get-details-for-auto-config.test.ts
+  s_0524ef60273ced::t_475ae55937abb4 4,12,56-69,197,459-571,744-935
+packages/autoconfig/tests/details/vite-plus-commands.test.ts
+  s_0524ef60273ced::t_ffd4c3b7fc5960 1-35
+packages/autoconfig/tests/frameworks/cf-configuration-support.test.ts
+  s_0524ef60273ced::t_2837cf9e8890a8 22,33,49
+packages/autoconfig/tests/frameworks/get-framework-class.test.ts
+  s_0524ef60273ced::t_0630ee19b8e948 11,21,31
+packages/autoconfig/tests/frameworks/is-known-framework.test.ts
+  s_0524ef60273ced::t_3ac8fc54cac2a1 6,12,16,20
+packages/autoconfig/tests/frameworks/next.test.ts
+  s_0524ef60273ced::t_8551a898d655ba 31
+packages/autoconfig/tests/frameworks/validate-framework-version.test.ts
+  s_0524ef60273ced::t_df8798513213ee 141-175,179
+packages/autoconfig/tests/run.test.ts
+  s_0524ef60273ced::t_e2887857fa337c 3-6,42-51,63-139,150,174,210,414-478,579-632
+packages/autoconfig/tests/tsconfig.test.ts
+  s_0524ef60273ced::t_1ae0ae64895c74 1-152
+packages/autoconfig/tests/vite-config.test.ts
+  s_0524ef60273ced::t_1e99e2db36acf7 20-35
+packages/build-output-utils/CHANGELOG.md
+  s_0524ef60273ced::t_12656c2e9ad77b 3-42
+packages/build-output-utils/package.json
+  s_0524ef60273ced::t_a270c1d0c4c350 3
+packages/cli/CHANGELOG.md
+  s_0524ef60273ced::t_0b59ceba842ff3 3-55
+packages/cli/__tests__/gitignore.test.ts
+  s_0524ef60273ced::t_3fd256d495b038 7,336-473
+packages/cli/gitignore.ts
+  s_0524ef60273ced::t_0d2c72f2b9ebbc 7-31,40-48,50-59,105-107,110,123-134
+packages/cli/package.json
+  s_0524ef60273ced::t_ed0a965e02015f 3
+packages/codemods/CHANGELOG.md
+  s_0524ef60273ced::t_d107df05fb3607 3-46
+packages/codemods/package.json
+  s_0524ef60273ced::t_8cf8dcbe136f6b 3
+packages/codemods/src/codemods/wrangler-to-cf/bindings.ts
+  s_0524ef60273ced::t_77c397f05d8d0e 161-162
+packages/config/CHANGELOG.md
+  s_0524ef60273ced::t_3bbc6c98e21e67 3-56
+packages/config/package.json
+  s_0524ef60273ced::t_bb7c45fa45cbbd 3
+packages/config/src/__tests__/config-loader.test.ts
+  s_0524ef60273ced::t_c73d0bdfaeef28 376-418
+packages/config/src/__tests__/convert.test.ts
+  s_0524ef60273ced::t_fa1d962998abb9 772-794
+packages/config/src/__tests__/schema.test.ts
+  s_0524ef60273ced::t_2b6e1586d6c0bb 1490-1587
+packages/config/src/bindings.ts
+  s_0524ef60273ced::t_e2ac67a4342028 97-98
+packages/config/src/convert.ts
+  s_0524ef60273ced::t_4f6525b95251e6 463-467
+packages/config/src/index.ts
+  s_0524ef60273ced::t_2d5d92eb0ee93f 27
+packages/config/src/schema.ts
+  s_0524ef60273ced::t_31d95fc1e5e9cf 92,312,856-919
+packages/containers-shared/CHANGELOG.md
+  s_0524ef60273ced::t_3eaa1809eab1a3 3-64
+packages/containers-shared/package.json
+  s_0524ef60273ced::t_4ca317d0bb7c22 3
+packages/containers-shared/src/build.ts
+  s_0524ef60273ced::t_85da9990d035bb 65-68,72,139-151
+packages/containers-shared/tests/build-and-push.test.ts
+  s_0524ef60273ced::t_2dcec4e51efccc 253-302
+packages/create-cloudflare/CHANGELOG.md
+  s_0524ef60273ced::t_1e96c38abfb93d 3-86
+packages/create-cloudflare/e2e/helpers/global-setup.ts
+  s_0524ef60273ced::t_1162059556d05e 9-13
+packages/create-cloudflare/package.json
+  s_0524ef60273ced::t_151116e0c303be 3
+packages/create-cloudflare/src/cf/__tests__/accounts.test.ts
+  s_0524ef60273ced::t_7933de5df319c3 77-91
+packages/create-cloudflare/src/cf/accounts.ts
+  s_0524ef60273ced::t_c6ac4acb1942ca 43,45,47
+packages/create-cloudflare/src/frameworks/package.json
+  s_0524ef60273ced::t_7f44d9c7bcb029 4,6,11-12,15,17
+packages/create-cloudflare/src/wrangler/__tests__/accounts.test.ts
+  s_0524ef60273ced::t_20a106ca905136 1,58,98-157,277-279
+packages/create-cloudflare/src/wrangler/accounts.ts
+  s_0524ef60273ced::t_e0441b6687ba84 14-15,30,34-39,44-47,49,56-60,63-64,130-131,138,142,147
+packages/create-cloudflare/templates/hello-world-workflows/js/.gitignore
+  s_0524ef60273ced::t_995931d08dc79c 1-167
+packages/create-cloudflare/templates/hello-world-workflows/ts/.gitignore
+  s_0524ef60273ced::t_b6ff197fa32123 1-167
+packages/create-cloudflare/turbo.json
+  s_0524ef60273ced::t_62d3b0ba189b3e 37-41
+packages/deploy-helpers/CHANGELOG.md
+  s_0524ef60273ced::t_7d1aa596e845cd 3-101
+packages/deploy-helpers/package.json
+  s_0524ef60273ced::t_c2ee828c7f58c2 3
+packages/deploy-helpers/src/deploy/helpers/assets.ts
+  s_0524ef60273ced::t_e4b14456efa552 15,24,95-103,639-646
+packages/deploy-helpers/src/deploy/helpers/download-worker-config.ts
+  s_0524ef60273ced::t_0000459e975df1 42,48-50,64-75,113-115,128-130
+packages/deploy-helpers/src/deploy/helpers/durable-object-container-applications.ts
+  s_0524ef60273ced::t_def611097328e3 612
+packages/deploy-helpers/src/deploy/helpers/node-compat.ts
+  s_0524ef60273ced::t_aee34b329d2b6b 2,4
+packages/deploy-helpers/src/deploy/helpers/sourcemap.ts
+  s_0524ef60273ced::t_2dff9acf699f0a 4,115-117,123-124,126,267,279,354-358
+packages/deploy-helpers/src/deploy/helpers/validate-worker-props.ts
+  s_0524ef60273ced::t_3eeaf86720063f 12,235-240,246-248
+packages/deploy-helpers/src/preview/preview.ts
+  s_0524ef60273ced::t_c6ad17b1848363 332-335,363-365,836-838
+packages/deploy-helpers/src/preview/shared.ts
+  s_0524ef60273ced::t_783d18ba6fff0a 774-776
+packages/deploy-helpers/src/shared/partition-routes.ts
+  s_0524ef60273ced::t_b2bb1f42d87ef8 1-30
+packages/deploy-helpers/src/triggers/deploy.ts
+  s_0524ef60273ced::t_95aa045d0a7593 23,70
+packages/deploy-helpers/tests/assets-upload-session.test.ts
+  s_0524ef60273ced::t_3940342a70e60d 1-102
+packages/deploy-helpers/tests/download-worker-config.test.ts
+  s_0524ef60273ced::t_8c971d91069e3b 1-83
+packages/deploy-helpers/tests/durable-object-container-applications.test.ts
+  s_0524ef60273ced::t_5ea862289f935b 84,467-496
+packages/deploy-helpers/tests/partition-routes.test.ts
+  s_0524ef60273ced::t_f3cc697da32fd8 1-25
+packages/deploy-helpers/tests/sourcemap.test.ts
+  s_0524ef60273ced::t_0646c9b2f732a5 2-5,17-55
+packages/devprod-status-bot/CHANGELOG.md
+  s_0524ef60273ced::t_a211a6f6d7b1a8 3-10
+packages/devprod-status-bot/package.json
+  s_0524ef60273ced::t_b22eda5b854ba5 3,6-8,15
+packages/devprod-status-bot/src/__tests__/version-packages-alerts.test.ts
+  s_0524ef60273ced::t_80695b9159b942 1-344
+packages/devprod-status-bot/src/gchat.ts
+  s_0524ef60273ced::t_dd71f61fecc606 1-39
+packages/devprod-status-bot/src/index.ts
+  s_0524ef60273ced::t_938d6d39815a74 2,354-444,885-886,888-894
+packages/devprod-status-bot/tsconfig.tests.json
+  s_0524ef60273ced::t_afa92464d55763 1-8
+packages/devprod-status-bot/vitest.config.mts
+  s_0524ef60273ced::t_3c6317f3e1cb22 1-11
+packages/local-explorer-ui/src/__e2e__/flagship/flagship.spec.ts
+  s_0524ef60273ced::t_a4720fdd2a67ae 20,45,187-191,201,206-270,332-357
+packages/local-explorer-ui/src/__tests__/flagship/flag-helpers.test.ts
+  s_0524ef60273ced::t_7e3d1140d00dc5 17-20,343-381
+packages/local-explorer-ui/src/components/flagship/FlagDialog.tsx
+  s_0524ef60273ced::t_be6dd01783f032 13-17,42-46,282,335-358,369-386,388,392-394,397
+packages/local-explorer-ui/src/components/flagship/FlagTable.tsx
+  s_0524ef60273ced::t_1626f71f5bcdbf 174
+packages/local-explorer-ui/src/components/flagship/TestFlagDialog.tsx
+  s_0524ef60273ced::t_184bb6eebafdd6 4,7-11,25,62,91,104-106,111-112
+packages/local-explorer-ui/src/components/flagship/flag-helpers.ts
+  s_0524ef60273ced::t_26152f5b7ed5f2 3-4,7-18,45,175,177-180,201,716,734,750,765,767
+packages/local-explorer-ui/src/routes/flagship/$appId.tsx
+  s_0524ef60273ced::t_c4553658cfd9d3 26,44-55,57-58,127
+packages/miniflare/CHANGELOG.md
+  s_0524ef60273ced::t_f9b1d7c0116685 3-154
+packages/miniflare/README.md
+  s_0524ef60273ced::t_13099edf4faec1 482-490,696
+packages/miniflare/package.json
+  s_0524ef60273ced::t_c9ecac6f174a8b 3
+packages/miniflare/scripts/check-generate-api.ts
+  s_0524ef60273ced::t_ce5555fe5f5a9f 17
+packages/miniflare/scripts/openapi-filter-config.ts
+  s_0524ef60273ced::t_ba9fd18eaaa2e6 71-84,1991,1997-2019,2021,2023-2034,2063
+packages/miniflare/src/config/local-bindings.ts
+  s_0524ef60273ced::t_b98ecf10b4a46f 1,6-21,27-28,31-32,36-38,77-86
+packages/miniflare/src/config/v4-convert.ts
+  s_0524ef60273ced::t_283ab9d1e38b91 707-711
+packages/miniflare/src/config/v4-schema.ts
+  s_0524ef60273ced::t_adf012cc848668 517-524,957-960
+packages/miniflare/src/index.ts
+  s_0524ef60273ced::t_1edfcadbb47240 382-389,421,423-433,529,903-905,1598-1601,1606-1607,1618-1641,2005,2010-2013,3791-3795,3863,3920-3921
+packages/miniflare/src/plugins/analytics-engine/index.ts
+  s_0524ef60273ced::t_1ef71b1a61fc06 2-9,14,23-43,48,60-76
+packages/miniflare/src/plugins/assets/index.ts
+  s_0524ef60273ced::t_db79c86dc5c20e 29,41,170-171,398-405
+packages/miniflare/src/plugins/core/errors/sourcemap.ts
+  s_0524ef60273ced::t_4c560a183ab262 2
+packages/miniflare/src/plugins/core/explorer.ts
+  s_0524ef60273ced::t_752da41a2967e1 15,124-127
+packages/miniflare/src/plugins/flagship/index.ts
+  s_0524ef60273ced::t_4149b921973353 27,35,50-66,117-119
+packages/miniflare/src/plugins/index.ts
+  s_0524ef60273ced::t_251b6ec58a5cd6 114
+packages/miniflare/src/plugins/kv/sites.ts
+  s_0524ef60273ced::t_48e7fb70577cc1 132-133
+packages/miniflare/src/shared/DEV_REGISTRY.md
+  s_0524ef60273ced::t_3f8540c13fdf82 169-170
+packages/miniflare/src/workers/analytics-engine/analytics-engine.worker.ts
+  s_0524ef60273ced::t_72fafb907a37f3 1-2,5-6,10-25
+packages/miniflare/src/workers/analytics-engine/remote.worker.ts
+  s_0524ef60273ced::t_d0a48480d36997 1-45
+packages/miniflare/src/workers/core/constants.ts
+  s_0524ef60273ced::t_898a8185ffb677 104
+packages/miniflare/src/workers/core/entry.worker.ts
+  s_0524ef60273ced::t_2eeac8e960b7b3 650-654
+packages/miniflare/src/workers/flagship/binding.worker.ts
+  s_0524ef60273ced::t_e001706df4d959 9,39,79-96,98-105,107-120,122-124,128-195,226,228-234,242,330-332,334-340
+packages/miniflare/src/workers/flagship/evaluate.ts
+  s_0524ef60273ced::t_b8e9f2d427049b 1-7,38,335-340,352
+packages/miniflare/src/workers/flagship/flags.ts
+  s_0524ef60273ced::t_39e5540c49b776 50-51,59-60,66-67,76-77,82-90,95-98,332-335,408-446,448,459
+packages/miniflare/src/workers/flagship/object.worker.ts
+  s_0524ef60273ced::t_b2b89d87fac631 124-125
+packages/miniflare/src/workers/local-explorer/explorer.worker.ts
+  s_0524ef60273ced::t_3b23137b9e8694 28-30,54-56,59,103-104,135-138,464-467,476-480,492-494,496,500,504-517
+packages/miniflare/src/workers/local-explorer/generated/index.ts
+  s_0524ef60273ced::t_02a85a192ffa2d 84,88-91,102-103,107-111,114-115,117-124,136-145,209,290
+packages/miniflare/src/workers/local-explorer/generated/types.gen.ts
+  s_0524ef60273ced::t_f435df3689b72c 7-210,257,261-264,491-498,544,548,568-571,574,598-601,622,639,657,662,666-670,1418-1426,1454-1457,1459-1462,1465,1469-1478,1484,1488,1524,1532,1563,2037-2042,2063,2073-2078,2107-2721
+packages/miniflare/src/workers/local-explorer/generated/zod.gen.ts
+  s_0524ef60273ced::t_9c175526f8786d 5-164,205-207,211,405-406,441-444,447,484-487,500,519,531,535-539,542,923-934,964-967,969-972,975,979-987,1037,1307-1313,1323,1335-1341,1353-1594
+packages/miniflare/src/workers/local-explorer/openapi.local.json
+  s_0524ef60273ced::t_d7ed5b25035a46 18-19,25,35,85-86,100,120,172-173,218-219,293-294,342,416,490,570,609-610,635,674-675,1036,1104-1105,1228-1233,1255-1256,1293-1295,1335,1337-1339,1342,1344,1347,1352,1354,1356-1360,1365,1367-1369,1374,1378-1390,1392-1397,1400-1411,1413-1419,1423,1425-1426,1430,1434-1441,1445-1446,1450,1453,1455-1456,1460,1465-1466,1470,1473,1475-1476,1480,1483,1486,1488-1491,1494,1496,1499,1504-1545,1547-1556,1558-1589,1591-1624,1627,1629-1630,1634,1639-1645,1649-1650,1654,1657,1659-1660,1664,1669-1670,1674,1677,1679-1680,1684,1687,1690,1693,1695-1719,1722,1726-1738,1740-1756,1758-1759,1762,1764-1765,1769,1772-1822,1825-1830,1833-1835,1838-1850,1858-1929,1936,1940-1952,1954-1963,1965-1970,1972-1973,1976,1978-1979,1983,1986-2036,2039-2044,2047-2050,2052,2054,2057-2060,2062,2064,2067-2113,2116,2120-2128,2130-2139,2141-2150,2152-2153,2156,2158-2159,2163,2166,2168-2169,2173,2176,2178-2179,2183,2186-2216,2219-2224,2227-2229,2232-2234,2237-2239,2242-2244,2249,2253-2265,2267-2276,2278-2283,2285-2286,2289,2291-2292,2296,2299-2307,2310-2312,2316,2319,2321-2322,2326,2329-2349,2352,2355,2357-2359,2362-2365,2367,2369,2372,2374-2375,2377,2379,2382,2384,2386,2388,2393,2397,2400,2402-2403,2407,2410-2413,2417,2420,2422-2423,2427,2431-2433,2437,2440,2442-2443,2447,2450-2460,2463,2465-2468,2471,2473,2476-2477,2481-2509,2512,2516,2519,2521-2522,2526,2529-2579,2582,2585,2587-2588,2592,2595,2600,2602-2604,2608,2610-2612,2616,2618-2620,2624,2626-2629,2644,2646-2647,2650,2659,2669,2672-2673,2675-2677,2681,2684,2692-2696,2699-2700,2714-2720,2722,2731,2741,2744-2745,2748-2751,2755,2758,2760-2766,2769,2785-2786,2788,2796,2806,2809-2811,2813-2814,2818,2821,2826,2829,2831-2838,2853,2860-2865,2868,2878,2881-2882,2884-2886,2890,2893,2898,2901,2903-2918,2921-2931,2944,2953,2963,2966-2967,2970,2972-2973,2977,2980,2988-2995,2998-2999,3006-3021,3025,3035,3038-3039,3042-3045,3058-3061,3070,3080,3083-3084,3087,3089-3098,3100-3108,3110,3123-3124,3127,3129,3135,3145,3148-3149,3152,3154-3155,3158-3159,3162-3163,3167,3170-3199,3214-3241,3250,3260,3263-3267,3269-3270,3273-3274,3277-3280,3284-3285,3287-3290,3303,3306-3326,3328,3334,3344,3347-3348,3351-3354,3357-3358,3361-3364,3367-3368,3371-3398,3400-3419,3423,3426-3427,3431,3435,3438,3452-3467,3476,3486,3489-3496,3499-3500,3503-3504,3507-3508,3511-3512,3516,3519-3531,3546-3559,3561-3570,3573,3582,3592,3595-3596,3599-3656,3660,3663,3665-3688,3690-3707,3710,3713-3773,3778,3780-3830,3833-4821,4823-4843,4845-4854,4856-4859,4862-4869,4968,4975-4983,5442,5450,5545,5550,5592-5595,5603,5661-5664,5704,5727,5777-5779,5787,5792-5797,7049-7060
+packages/miniflare/src/workers/local-explorer/resources/flagship.ts
+  s_0524ef60273ced::t_d16e34737cd2e2 2-3,6,12-14,20,22,24,26-27,30,36-38,56,59-63,65-74,78,84,86-89,93-104,111-113,117-129,135-179,181,184-185,191-214,218-234,240-241,244,254-256
+packages/miniflare/src/workers/local-explorer/resources/r2.ts
+  s_0524ef60273ced::t_b393b758710efd 185
+packages/miniflare/src/workers/local-explorer/route-names.ts
+  s_0524ef60273ced::t_d98cd963867c7c 39
+packages/miniflare/src/workers/ratelimit/ratelimit-object.worker.ts
+  s_0524ef60273ced::t_95ec5a7c76f8bf 18,90,102-104,108
+packages/miniflare/src/workers/ratelimit/ratelimit.worker.ts
+  s_0524ef60273ced::t_edf1824142d2bf 16,18,32-65,96,105,109
+packages/miniflare/src/workers/shared/remote-bindings-utils.ts
+  s_0524ef60273ced::t_a89ad3e0f8747d 38-48,63-64,66-81,98-172,175-180,182-185,196,199-200,208,211,213-223,265-269
+packages/miniflare/test/config/local-bindings.spec.ts
+  s_0524ef60273ced::t_3467eaa29b4dfb 1-2,4-5,9-10,12-24,27-34,37-43,46-48,52-54,59-60,70-71
+packages/miniflare/test/config/v4-convert.spec.ts
+  s_0524ef60273ced::t_8bdcef941005f4 90-118
+packages/miniflare/test/dev-registry.spec.ts
+  s_0524ef60273ced::t_49d9c5145c45a6 4,1659-1779
+packages/miniflare/test/index.spec.ts
+  s_0524ef60273ced::t_ba7132698c8d2e 792-798
+packages/miniflare/test/plugins/analytics-engine/index.spec.ts
+  s_0524ef60273ced::t_7ea84465876309 1-164
+packages/miniflare/test/plugins/assets/index.spec.ts
+  s_0524ef60273ced::t_194a6d9127fa56 3,5-10,105-129
+packages/miniflare/test/plugins/assets/read-only.spec.ts
+  s_0524ef60273ced::t_e8a0b3f66f919c 1-129
+packages/miniflare/test/plugins/flagship/index.spec.ts
+  s_0524ef60273ced::t_a7443f80a6b909 274-328
+packages/miniflare/test/plugins/local-explorer/aggregation.spec.ts
+  s_0524ef60273ced::t_639484629da092 397,400-402,425,431-435,437-438,441-445,448-449,457-458,460-463,465-467,490
+packages/miniflare/test/plugins/local-explorer/flagship.spec.ts
+  s_0524ef60273ced::t_324d5f4b982d65 8-9,12,15-24,148-149,157-159,165-167,176-188,194-195,198,201,208,218,227,239-252,254-261,263-560
+packages/miniflare/test/plugins/local-explorer/r2.spec.ts
+  s_0524ef60273ced::t_c9304f1673311a 70
+packages/miniflare/test/plugins/r2/s3.spec.ts
+  s_0524ef60273ced::t_cbbf9aeee26f48 2-3,210-310
+packages/miniflare/test/plugins/ratelimit/index.spec.ts
+  s_0524ef60273ced::t_48766002bc6e3c 181-205,221-310
+packages/miniflare/test/plugins/shared/remote-bindings-access-warning.spec.ts
+  s_0524ef60273ced::t_ca1e96d3c87b89 1-2,4,22-25,46-120,291-439,487-602
+packages/miniflare/test/teardown-lifecycle.spec.ts
+  s_0524ef60273ced::t_dd0fe2faec8a6c 2,4,7,9,11,50-107
+packages/mock-npm-registry/README.md
+  s_0524ef60273ced::t_4800e772e50ea9 29-33
+packages/mock-npm-registry/src/index.ts
+  s_0524ef60273ced::t_ec55c4ea6f58ef 11,143,146-152,162-164
+packages/mock-npm-registry/src/publish-package.ts
+  s_0524ef60273ced::t_0e8513e7f75371 1-83
+packages/mock-npm-registry/tests/publish-package.test.ts
+  s_0524ef60273ced::t_d5093edcd070fd 1-146
+packages/pages-functions/CHANGELOG.md
+  s_0524ef60273ced::t_3d5b3f3fd5f6cb 3-30
+packages/pages-functions/package.json
+  s_0524ef60273ced::t_287b48ff4eabba 3
+packages/pages-functions/src/templates/pages-template-worker.ts
+  s_0524ef60273ced::t_7d64c15e93fe27 62-78,81-82,97-101,103-105,110
+packages/pages-shared/CHANGELOG.md
+  s_0524ef60273ced::t_678433a66d2b7e 3-49
+packages/pages-shared/package.json
+  s_0524ef60273ced::t_87064368cb5791 3
+packages/remote-bindings/CHANGELOG.md
+  s_0524ef60273ced::t_e56149f3cf0a52 3-57
+packages/remote-bindings/package.json
+  s_0524ef60273ced::t_089bb2c62b30f1 3,44
+packages/remote-bindings/src/config-bindings.test.ts
+  s_0524ef60273ced::t_2602786fc09e27 2
+packages/remote-bindings/src/config-bindings.ts
+  s_0524ef60273ced::t_e9bc9c7a8d2508 9-11,39-45
+packages/remote-bindings/src/index.ts
+  s_0524ef60273ced::t_6ab211ac4de723 6
+packages/remote-bindings/src/maybe-start-or-update-session.test.ts
+  s_0524ef60273ced::t_2f61e63b363527 23-33,101-220
+packages/remote-bindings/src/maybe-start-or-update-session.ts
+  s_0524ef60273ced::t_23fd1f18ac16e7 4,6,42-65,72,84,88-96,103-107,120,141,162-163
+packages/remote-bindings/templates/remoteBindings/ProxyServerWorker.ts
+  s_0524ef60273ced::t_a4a31be11cf6fb 28-29,66-74,336-359,383,390
+packages/runtime-types/CHANGELOG.md
+  s_0524ef60273ced::t_a9fa9ff460daba 3-53
+packages/runtime-types/package.json
+  s_0524ef60273ced::t_28d9a754c3e1db 3
+packages/runtime-types/src/__tests__/runtime.test.ts
+  s_0524ef60273ced::t_d1b6a1615af1f1 128-145
+packages/runtime-types/src/runtime.ts
+  s_0524ef60273ced::t_6ecb678f28cc5f 62
+packages/vite-plugin-cloudflare/CHANGELOG.md
+  s_0524ef60273ced::t_2b0afabddbe98b 3-122
+packages/vite-plugin-cloudflare/package.json
+  s_0524ef60273ced::t_68ccd8a89bf119 3
+packages/vite-plugin-cloudflare/playground/additional-modules/vite.config.new-module-registry.ts
+  s_0524ef60273ced::t_186cfd84ce7038 11-19
+packages/vite-plugin-cloudflare/playground/assets/vite.config.public-dir-only.ts
+  s_0524ef60273ced::t_93e780919f161c 15-23
+packages/vite-plugin-cloudflare/playground/multi-worker/vite.config.customize-config.ts
+  s_0524ef60273ced::t_c68c51780b4770 8-20,22-23
+packages/vite-plugin-cloudflare/playground/multi-worker/vite.config.no-config-file.ts
+  s_0524ef60273ced::t_a6aa0c3e944d7c 8-17,19
+packages/vite-plugin-cloudflare/playground/node-compat/vite.config.cloudflare-node.ts
+  s_0524ef60273ced::t_1a3518d7ec8bdd 11-20
+packages/vite-plugin-cloudflare/playground/node-compat/vite.config.worker-als.ts
+  s_0524ef60273ced::t_9741f5cf410215 11-20
+packages/vite-plugin-cloudflare/playground/node-compat/vite.config.worker-basic.ts
+  s_0524ef60273ced::t_64d4791a2bf627 11-21,23-33,36
+packages/vite-plugin-cloudflare/playground/node-compat/vite.config.worker-cross-env.ts
+  s_0524ef60273ced::t_46926a02066284 11-20
+packages/vite-plugin-cloudflare/playground/node-compat/vite.config.worker-crypto.ts
+  s_0524ef60273ced::t_76c611688a89ad 11-20
+packages/vite-plugin-cloudflare/playground/node-compat/vite.config.worker-debug.ts
+  s_0524ef60273ced::t_59f8c5c82805db 11-21
+packages/vite-plugin-cloudflare/playground/node-compat/vite.config.worker-https.ts
+  s_0524ef60273ced::t_78b270a38285e6 11-20
+packages/vite-plugin-cloudflare/playground/node-compat/vite.config.worker-postgres.ts
+  s_0524ef60273ced::t_906791c65c5ce8 12,16-29
+packages/vite-plugin-cloudflare/playground/node-compat/vite.config.worker-process-populated-env.ts
+  s_0524ef60273ced::t_ee7558cddbe627 12-26,28
+packages/vite-plugin-cloudflare/playground/node-compat/vite.config.worker-process.ts
+  s_0524ef60273ced::t_529c35beba2a51 11-24
+packages/vite-plugin-cloudflare/playground/node-compat/vite.config.worker-random.ts
+  s_0524ef60273ced::t_c279cbef9d86ad 11-20
+packages/vite-plugin-cloudflare/playground/node-compat/vite.config.worker-resolve-externals.ts
+  s_0524ef60273ced::t_1c48c989583f9b 12-21
+packages/vite-plugin-cloudflare/playground/node-env/vite.config.nodejs-compat.ts
+  s_0524ef60273ced::t_24e7ffb4ddb6ad 10-18
+packages/vite-plugin-cloudflare/playground/spa-with-api/vite.config.run-worker-first.ts
+  s_0524ef60273ced::t_25c9b892dc76ec 10-18
+packages/vite-plugin-cloudflare/playground/spa-with-api/vite.config.static-routing.ts
+  s_0524ef60273ced::t_930084ad1f0a6a 10-21
+packages/vite-plugin-cloudflare/playground/static/vite.config.with-api.ts
+  s_0524ef60273ced::t_2f5aa84885c08d 8-16
+packages/vite-plugin-cloudflare/src/__tests__/auth.spec.ts
+  s_0524ef60273ced::t_2743e97847e504 24-25,27,36-38,41-42
+packages/vite-plugin-cloudflare/src/__tests__/cloudflare-config.spec.ts
+  s_0524ef60273ced::t_27696753a9b3fe 142,151-162
+packages/vite-plugin-cloudflare/src/__tests__/dev-registry.spec.ts
+  s_0524ef60273ced::t_c00b0b68d73dd3 75-84
+packages/vite-plugin-cloudflare/src/__tests__/preview-server.spec.ts
+  s_0524ef60273ced::t_43ef45f75f493f 3,9,46-66,73-87,94-100,104
+packages/vite-plugin-cloudflare/src/__tests__/resolve-plugin-config.spec.ts
+  s_0524ef60273ced::t_b8972cced92d48 10,227-235,261,267-276,284-286,289,292-297,299-339,344-352,354-480,490-495
+packages/vite-plugin-cloudflare/src/__tests__/websockets.spec.ts
+  s_0524ef60273ced::t_601066322b3046 24,37-40,82-111,115,130-133,215-249
+packages/vite-plugin-cloudflare/src/auth.ts
+  s_0524ef60273ced::t_e583a1dfaafac3 10,12,75,80-81,87-90,99-101
+packages/vite-plugin-cloudflare/src/index.ts
+  s_0524ef60273ced::t_83294f85807efa 51-56
+packages/vite-plugin-cloudflare/src/miniflare-options.ts
+  s_0524ef60273ced::t_d28e0ec19a21c1 28,262,516-517,570,812,843-844,877,993-997,1001-1008
+packages/vite-plugin-cloudflare/src/nodejs-compat.ts
+  s_0524ef60273ced::t_bec73fed675472 7
+packages/vite-plugin-cloudflare/src/plugin-config.ts
+  s_0524ef60273ced::t_b0f4a045abee21 10,42-43,47-49,133-139,376-393,702
+packages/vite-plugin-cloudflare/src/plugins/additional-modules.ts
+  s_0524ef60273ced::t_d38a15cb3b528d 4,6,163-172
+packages/vite-plugin-cloudflare/src/plugins/dev.ts
+  s_0524ef60273ced::t_bff085d9875428 161-162
+packages/vite-plugin-cloudflare/src/websockets.ts
+  s_0524ef60273ced::t_0a5e4b242232dc 16-17,67-70
+packages/vitest-plugin/AGENTS.md
+  s_0524ef60273ced::t_15cc07cc4d605f 32,35-58
+packages/vitest-plugin/CHANGELOG.md
+  s_0524ef60273ced::t_900809ec64c274 3-99
+packages/vitest-plugin/package.json
+  s_0524ef60273ced::t_de1e90c407b122 3,60,65
+packages/vitest-plugin/src/pool/auth.ts
+  s_0524ef60273ced::t_0154d77aa97a94 1-93
+packages/vitest-plugin/src/pool/cloudflare-pool-worker.ts
+  s_0524ef60273ced::t_7c125c060ae8e5 202
+packages/vitest-plugin/src/pool/config.ts
+  s_0524ef60273ced::t_5c16542a080686 1,3,6-7,12-13,20,25-26,28-33,39-44,65-66,102-113,154-155,158-163,165-170,255,276-277,281-291,293-297,301,318,330,333-334,337,345-546,550,553-554,556-566,620,624,632-633,637-693,714,716,719,801-807,841,846-848
+packages/vitest-plugin/src/pool/d1.ts
+  s_0524ef60273ced::t_05aff05e4e893d 2,26
+packages/vitest-plugin/src/pool/helpers.ts
+  s_0524ef60273ced::t_87be57ab9a2794 1-2,15-48,63-75
+packages/vitest-plugin/src/pool/index.ts
+  s_0524ef60273ced::t_c2736312cc546d 6-7,33,40,110,118-124,127,130-146,148-158,160-170,181,183,190-192,196-200,210,214-217,219-222,242-245,336-340,359-361,364-370,372-373,378,448-456,479-503,505,507,513-516,525,558-559,583,589,591
+packages/vitest-plugin/src/pool/module-fallback.ts
+  s_0524ef60273ced::t_751cdc50a6eb0c 13,385-390
+packages/vitest-plugin/src/pool/new-config.ts
+  s_0524ef60273ced::t_39482f8b418f21 4,6-13,17-29,31-32,34-38,41-44,48-50,53,76-187,190-265,268-272,275-279
+packages/vitest-plugin/src/pool/plugin.ts
+  s_0524ef60273ced::t_9107e8f1be5221 4,127-151
+packages/vitest-plugin/src/worker/index.ts
+  s_0524ef60273ced::t_e729dd28f01f1e 355-366,374-387
+packages/vitest-plugin/test/console.test.ts
+  s_0524ef60273ced::t_553ae5ecd68a4e 162-214
+packages/vitest-plugin/test/d1.test.ts
+  s_0524ef60273ced::t_b717ab1088b5aa 3
+packages/vitest-plugin/test/durable-object-script-name.test.ts
+  s_0524ef60273ced::t_f7a65ef15cdc78 1-211
+packages/vitest-plugin/test/module-fallback.test.ts
+  s_0524ef60273ced::t_34cb70cb5f0066 9,21,29,49,65,930-996
+packages/vitest-plugin/test/new-config.test.ts
+  s_0524ef60273ced::t_6ca409b3a73feb 1,3,5,7-37,70,93,100,131,168,198-493,495,511-532,544,553,564,583,605-722
+packages/vitest-plugin/test/preserve-symlinks.test.ts
+  s_0524ef60273ced::t_5abbf53792e349 1-91
+packages/vitest-plugin/test/workflow-script-name.test.ts
+  s_0524ef60273ced::t_763f26510bb77b 64-148
+packages/workers-auth/CHANGELOG.md
+  s_0524ef60273ced::t_fb04be3a77be53 3-57
+packages/workers-auth/package.json
+  s_0524ef60273ced::t_eda1b29aafa10c 3
+packages/workers-auth/src/callback-server.ts
+  s_0524ef60273ced::t_867e3c4de24775 6-11,180-186
+packages/workers-auth/src/cf/scopes.ts
+  s_0524ef60273ced::t_40e8778603c2d9 443
+packages/workers-auth/src/errors.ts
+  s_0524ef60273ced::t_105ff46581841d 157,159,162,167-175
+packages/workers-auth/src/token-exchange.ts
+  s_0524ef60273ced::t_f9dd1c6b0d1142 73-82
+packages/workers-auth/tests/callback-server.test.ts
+  s_0524ef60273ced::t_ed0ad51ebb6708 1-220
+packages/workers-auth/tests/cf/scopes.test.ts
+  s_0524ef60273ced::t_b0a482a85022f4 2,32-36,38,45
+packages/workers-shared/utils/helpers.ts
+  s_0524ef60273ced::t_c495fe653ca40c 3,66-99,118
+packages/workers-shared/utils/tests/helpers.test.ts
+  s_0524ef60273ced::t_a7ce261b86dd60 6-10,17-20,62-108
+packages/workers-utils/AGENTS.md
+  s_0524ef60273ced::t_a5dc436b66ae47 29-31
+packages/workers-utils/CHANGELOG.md
+  s_0524ef60273ced::t_4b0931479b5137 3-70
+packages/workers-utils/README.md
+  s_0524ef60273ced::t_101a2b8debf27b 6-20
+packages/workers-utils/package.json
+  s_0524ef60273ced::t_457296489a755a 3,50-57,85
+packages/workers-utils/scripts/deps.ts
+  s_0524ef60273ced::t_34774dd1ef1e52 8-11
+packages/workers-utils/src/config/binding-local-support.ts
+  s_0524ef60273ced::t_ca52353784f3a1 60
+packages/workers-utils/src/config/containers.ts
+  s_0524ef60273ced::t_a92fbe3d7b40b3 220-221,224-227,254-257
+packages/workers-utils/src/config/environment.ts
+  s_0524ef60273ced::t_7aa367f6db0dee 1507-1508,1965-1974
+packages/workers-utils/src/config/validation.ts
+  s_0524ef60273ced::t_b1e51b05ea151e 5721,5724-5727
+packages/workers-utils/src/d1-splitter.ts
+  s_0524ef60273ced::t_9176927c2b7d50 1
+packages/workers-utils/src/d1-trimmer.ts
+  s_0524ef60273ced::t_d5779e89554ede 4
+packages/workers-utils/src/default-compat-date.ts
+  s_0524ef60273ced::t_67d7b8464331b3 22
+packages/workers-utils/src/index.ts
+  s_0524ef60273ced::t_b08cc9930dfa1f 152-153,228
+packages/workers-utils/src/node-compat.ts
+  s_0524ef60273ced::t_cd2edb0abbc83d 1
+packages/workers-utils/src/print-bindings.ts
+  s_0524ef60273ced::t_6d629226138095 545,550-552
+packages/workers-utils/src/sourcemap.ts
+  s_0524ef60273ced::t_bff537a3b9ef42 1-39
+packages/workers-utils/src/types.ts
+  s_0524ef60273ced::t_250cc93673ce1d 16,546
+packages/workers-utils/src/worker.ts
+  s_0524ef60273ced::t_e68a056c74b0e6 377
+packages/workers-utils/tests/config/containers.test.ts
+  s_0524ef60273ced::t_50863b61a4d4a8 9,18-72
+packages/workers-utils/tests/d1-splitter.test.ts
+  s_0524ef60273ced::t_945e270a862cc7 7
+packages/workers-utils/tests/d1-trimmer.test.ts
+  s_0524ef60273ced::t_07bfe28a265417 2
+packages/workers-utils/tests/node-compat.test.ts
+  s_0524ef60273ced::t_5ba75351dffd50 2-3
+packages/workers-utils/tsup.config.ts
+  s_0524ef60273ced::t_3aaca6773c1fe9 38-39
+packages/wrangler/CHANGELOG.md
+  s_0524ef60273ced::t_e7a31768feffc0 3-192
+packages/wrangler/e2e/remote-binding/miniflare-remote-resources.test.ts
+  s_0524ef60273ced::t_b075ae7822bb91 1,5-6,814-893
+packages/wrangler/e2e/remote-binding/workers/analytics-engine.js
+  s_0524ef60273ced::t_80df726ae20e37 1-7
+packages/wrangler/package.json
+  s_0524ef60273ced::t_70de109184d11c 3,87
+packages/wrangler/scripts/deps.ts
+  s_0524ef60273ced::t_19a61a15f6a642 8-11
+packages/wrangler/src/__tests__/autoconfig/run.test.ts
+  s_0524ef60273ced::t_ebe7633dbf4e3a 6,65-78,562,579-580,594-600,605-637,656,672-722,727-973
+packages/wrangler/src/__tests__/containers/config.test.ts
+  s_0524ef60273ced::t_a7d7bad0e62c88 4,178-219
+packages/wrangler/src/__tests__/d1/d1.test.ts
+  s_0524ef60273ced::t_e548e991a6bd09 29,70
+packages/wrangler/src/__tests__/d1/insights.test.ts
+  s_0524ef60273ced::t_0edf8316b69b42 70-135,138-202,204-206
+packages/wrangler/src/__tests__/delete.test.ts
+  s_0524ef60273ced::t_0f948ed3b8c51f 24-36,376-889,1347-1368
+packages/wrangler/src/__tests__/deploy/assets.test.ts
+  s_0524ef60273ced::t_763cba621a400c 4,694-715
+packages/wrangler/src/__tests__/deploy/config-remote.test.ts
+  s_0524ef60273ced::t_31ad9a05aa80d4 130-144,190-191
+packages/wrangler/src/__tests__/dev.test.ts
+  s_0524ef60273ced::t_af8008a08d7af3 3242-3269
+packages/wrangler/src/__tests__/experimental-config/durable-objects.test.ts
+  s_0524ef60273ced::t_7bd744d772a8ae 1-172
+packages/wrangler/src/__tests__/flagship.test.ts
+  s_0524ef60273ced::t_2cdd1605aa1bad 776-797,1821,1841
+packages/wrangler/src/__tests__/helpers/mock-upload-worker.ts
+  s_0524ef60273ced::t_f26c06aceb22cc 53-54,214,225
+packages/wrangler/src/__tests__/pages/delegate-to-workers.test.ts
+  s_0524ef60273ced::t_2e83cf159e50e6 251,310,329,336-337
+packages/wrangler/src/__tests__/pages/delegated-deploy-directory.test.ts
+  s_0524ef60273ced::t_bb4aebc9aeea5c 1-262
+packages/wrangler/src/__tests__/pages/delegated-deploy-ownership.test.ts
+  s_0524ef60273ced::t_926e8de3623824 1-332
+packages/wrangler/src/__tests__/pages/delegation-commands.test.ts
+  s_0524ef60273ced::t_a11297a9c6b70c 63
+packages/wrangler/src/__tests__/pages/run-workers-deploy.test.ts
+  s_0524ef60273ced::t_766afe445fccba 1-2,12,108-249
+packages/wrangler/src/__tests__/preview.test.ts
+  s_0524ef60273ced::t_6096f3e7e3b1a0 5499-5522,5525-5526,5530-5542,5544-5560,5562-5609
+packages/wrangler/src/__tests__/preview/containers.test.ts
+  s_0524ef60273ced::t_e32b8d1043d09d 155-182,184-198
+packages/wrangler/src/__tests__/tail-printing.test.ts
+  s_0524ef60273ced::t_93be24b7cdb02b 1-111
+packages/wrangler/src/__tests__/type-generation.test.ts
+  s_0524ef60273ced::t_d0e90ffb4994f4 11,633-666
+packages/wrangler/src/__tests__/versions/versions.upload.test.ts
+  s_0524ef60273ced::t_dfb622485c4d86 1756-1807
+packages/wrangler/src/api/integrations/platform/index.ts
+  s_0524ef60273ced::t_77e9b39aaf1b5e 5
+packages/wrangler/src/api/test-harness.ts
+  s_0524ef60273ced::t_a349701f01c7a4 9
+packages/wrangler/src/autoconfig/index.ts
+  s_0524ef60273ced::t_c63b6e90499348 33,41,46,59
+packages/wrangler/src/cfetch/index.ts
+  s_0524ef60273ced::t_ec76f7f97a5434 3,70-118
+packages/wrangler/src/cli.ts
+  s_0524ef60273ced::t_45eca507288d14 8,119-126
+packages/wrangler/src/containers/config.ts
+  s_0524ef60273ced::t_16f4f0812601f6 132-135
+packages/wrangler/src/containers/worker-applications.ts
+  s_0524ef60273ced::t_f74d5b8223c6e8 1-74
+packages/wrangler/src/d1/execute.ts
+  s_0524ef60273ced::t_4056fad5d5514b 10,12
+packages/wrangler/src/d1/insights.ts
+  s_0524ef60273ced::t_09b43767bdba62 2-3,64-100,103-104,116-117,166-169,171,180,202,216,225-229,250
+packages/wrangler/src/d1/types.ts
+  s_0524ef60273ced::t_f553079e0d3c0e 143
+packages/wrangler/src/delete.ts
+  s_0524ef60273ced::t_5a744ed000bd6c 2-7,9-13,25,164-171,179-180,182-191,196-288
+packages/wrangler/src/deploy/autoconfig.ts
+  s_0524ef60273ced::t_82bf975c63a77c 79-82,87,121
+packages/wrangler/src/deploy/index.ts
+  s_0524ef60273ced::t_58ebff48095675 8,39-42,146-157,184-185,199,206-224,251-258,264-273,301,327-330
+packages/wrangler/src/deployment-bundle/build-failures.ts
+  s_0524ef60273ced::t_b6ef25c7b2fdda 2
+packages/wrangler/src/deployment-bundle/bundle.ts
+  s_0524ef60273ced::t_459b5354f296ee 37
+packages/wrangler/src/deployment-bundle/esbuild-plugins/log-build-output.ts
+  s_0524ef60273ced::t_069d555efc26f4 2
+packages/wrangler/src/deployment-bundle/esbuild-plugins/nodejs-compat.ts
+  s_0524ef60273ced::t_2cec0afdd7601e 5
+packages/wrangler/src/deployment-bundle/esbuild-plugins/nodejs-plugins.ts
+  s_0524ef60273ced::t_b23b59d384b500 4
+packages/wrangler/src/deployment-bundle/merge-config-args.ts
+  s_0524ef60273ced::t_59c0935d542967 150
+packages/wrangler/src/deployment-bundle/rules.ts
+  s_0524ef60273ced::t_796a77a409a64f 1
+packages/wrangler/src/dev/miniflare/index.ts
+  s_0524ef60273ced::t_5d8a3c39592229 958-962
+packages/wrangler/src/dev/use-esbuild.ts
+  s_0524ef60273ced::t_cde7cc62068918 26
+packages/wrangler/src/flagship/client.ts
+  s_0524ef60273ced::t_d4d19cfc49202b 50-51,60,72,83-84
+packages/wrangler/src/init.ts
+  s_0524ef60273ced::t_218925779f63bc 202-204
+packages/wrangler/src/miniflare-cli/assets.ts
+  s_0524ef60273ced::t_a3061397ea9e52 3,234-240
+packages/wrangler/src/pages/build.ts
+  s_0524ef60273ced::t_38334c3a16587e 38
+packages/wrangler/src/pages/buildFunctions.ts
+  s_0524ef60273ced::t_a930011af3fd6b 20
+packages/wrangler/src/pages/delegate-to-workers.ts
+  s_0524ef60273ced::t_71851b99bd8ff0 89-94,303-305,342-349
+packages/wrangler/src/pages/delegated-deploy-ownership.ts
+  s_0524ef60273ced::t_f9b53ff4b8338d 1-89
+packages/wrangler/src/pages/functions/buildWorker.ts
+  s_0524ef60273ced::t_b3812a1d99c238 17
+packages/wrangler/src/pages/run-workers-deploy.ts
+  s_0524ef60273ced::t_026a2af095b7ff 1,3,100-120,133,136,155-173
+packages/wrangler/src/preview/containers.ts
+  s_0524ef60273ced::t_0b92fe2905ca0a 112-117
+packages/wrangler/src/process-env.ts
+  s_0524ef60273ced::t_1c6f98c439015a 2
+packages/wrangler/src/tail/printing.ts
+  s_0524ef60273ced::t_fc7f581f293687 30,36-39,48,56-58,65,71-72,91-92,102-104,106-108,113,125,137,143-148,157-170
+packages/wrangler/src/type-generation/helpers.ts
+  s_0524ef60273ced::t_73d0f8ab80ca3b 167,305
+packages/wrangler/src/type-generation/index.ts
+  s_0524ef60273ced::t_ce2e17cdf924ca 13
+packages/wrangler/src/utils/download-worker-config.ts
+  s_0524ef60273ced::t_59619a3799c060 11-13,19-21,30-32,39-41
+packages/wrangler/templates/__tests__/pages-template-worker.test.ts
+  s_0524ef60273ced::t_4d5ba0468f5696 1-193
+packages/wrangler/templates/pages-template-worker.ts
+  s_0524ef60273ced::t_6c905d8afa9bac 62-78,81-82,97-101,103-105,110
+pnpm-lock.yaml
+  s_0524ef60273ced::t_344903422c504f 13-14,19-20,58-59,85-86,191,239,266,269,296,317,341,380,395,410,449,476,503,573,591,595,626,654,684,702,735,760,784,823,844,865,883,902,962,983,1139,1145,1151,1178,1202,1217,1235,1244,1265,1342,1397,1409,1457,1481,1502,1523,1544,1565,1577,1598,1604,1625,1643,1696-1698,1729,1824,1906,2120,2130-2132,2144,2168,2195,2198,2325,2352,2389,2589,2598,2626,2660,2684,2719-2721,2727,2754,2895,2973,3000,3021,3042,3063,3084,3105,3126,3147,3168,3189,3210,3231,3252,3273,3294,3315,3336,3369,3390,3411,3432,3453,3474,3495,3516,3540,3567,3579,3612,3633,3685,3706,3725,3761,3782,3806,3825,3855,3876,3904,3937,3958,3979,4000,4024,4045,4066,4087,4116-4118,4131-4133,4139,4391,4397,4430-4432,4536,4542,4564-4566,4584,4642,5763-5764,5793-5794,5823-5824,5853-5854,5883-5884,5900-5901,8155-8156,13869-13870,13874-13875,13879-13880,16059-16060,16963,16974,16976,16987,16989,16991,16993,16995,16997,17001,17003,17006,17008,17012,17014,17019,17021-17022,17028,17030,17638,17644,17664,17679,17694,17709,17724,17737,19368,19370,19628,19631,20103,20108,21738,21740-21746,21759,22588,22590,25111,25113,25276,25278,25280,25282,25284,27998,28000-28004,28006,28017,28024,28035
+pnpm-workspace.yaml
+  s_0524ef60273ced::t_2fa173f7d72481 125-128
+tools/test/__tests__/turbo-cache-inputs.test.ts
+  s_0524ef60273ced::t_6f51c030c4768d 20-21,188-190,200
+turbo.json
+  s_0524ef60273ced::t_49e61faf038be3 22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a2278c9f0b18877d7c93e576a7d3b5c2113b3b4e",
+  "prompts": {},
+  "sessions": {
+    "s_0524ef60273ced": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "73ca244a-336f-4ff1-930e-b0b16dc69de0",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Christopher Little-Savage <clittle-savage@cloudflare.com>"
+    }
+  }
+}
