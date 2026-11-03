@@ -252,7 +252,7 @@ describe(
 			);
 		});
 
-		test("links resolves root-relative links and keeps other hrefs verbatim", async ({
+		test("links resolves relative links and keeps absolute ones verbatim", async ({
 			expect,
 		}) => {
 			const res = await quickAction("links", { url: origin });
@@ -275,12 +275,24 @@ describe(
 			]);
 
 			const html = await quickAction("links", {
-				html: '<base href="https://example.com/dir/"><a href="/a">A</a><a href="b">B</a><a href="/h" style="display:none">H</a>',
+				html: '<base href="https://example.com/dir/"><a href="/a">A</a><a href="b">B</a><a href="https://example.com/dir/b">B</a><a href="HTTPS://EXAMPLE.COM/c">C</a><a href="/h" style="display:none">H</a>',
 				visibleLinksOnly: true,
 			});
 			expect(((await html.json()) as { result: string[] }).result).toEqual([
 				"https://example.com/a",
+				"https://example.com/dir/b",
+				"HTTPS://EXAMPLE.COM/c",
+			]);
+
+			// Without a <base>, there's no host to resolve or compare links against
+			const noBase = await quickAction("links", {
+				html: '<a href="/a">A</a><a href="b">B</a><a href="https://example.com/c">C</a>',
+				excludeExternalLinks: true,
+			});
+			expect(((await noBase.json()) as { result: string[] }).result).toEqual([
+				"/a",
 				"b",
+				"https://example.com/c",
 			]);
 		});
 
@@ -781,10 +793,50 @@ describe(
 			});
 		});
 
-		test("cacheTTL is accepted and ignored", async ({ expect }) => {
-			const res = await quickAction("content", { html: PAGE, cacheTTL: -1 });
+		test("cacheTTL is validated and otherwise ignored", async ({ expect }) => {
+			const res = await quickAction("content", { html: PAGE, cacheTTL: 3600 });
 			expect(res.status).toBe(200);
 			expect(await res.json()).toMatchObject({ success: true });
+
+			const negative = await quickAction("content", {
+				html: PAGE,
+				cacheTTL: -1,
+			});
+			expect(negative.status).toBe(400);
+			expect(await negative.json()).toEqual({
+				success: false,
+				errors: [
+					{
+						origin: "number",
+						code: "too_small",
+						minimum: 0,
+						inclusive: true,
+						path: [],
+						message: "Cache ttl minimum is 0s",
+					},
+				],
+			});
+
+			// Its issues come after the options' and before the browser's
+			const invalid = await quickAction("content", {
+				html: PAGE,
+				bestAttempt: "yes",
+				cacheTTL: 86_401,
+				browser: "chrome",
+			});
+			expect(await invalid.json()).toMatchObject({
+				success: false,
+				errors: [
+					{ code: "invalid_type", path: ["bestAttempt"] },
+					{
+						code: "too_big",
+						maximum: 86_400,
+						path: [],
+						message: "Cache ttl maximum is 24h",
+					},
+					{ code: "invalid_value", path: [] },
+				],
+			});
 		});
 
 		test("unknown actions and missing options reject the call", async ({

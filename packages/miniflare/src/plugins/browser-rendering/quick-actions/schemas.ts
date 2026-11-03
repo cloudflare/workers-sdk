@@ -200,3 +200,10 @@ export const commonOptionsSchema = quickActionOptions({});
 export type CommonOptions = z.output<typeof commonOptionsSchema>;
 
 export const browserSchema = z.literal("kitesurf").optional();
+
+// Nothing is cached locally, but the service still validates the value
+export const cacheTTLSchema = z
+	.number()
+	.min(0, "Cache ttl minimum is 0s")
+	.max(86_400, "Cache ttl maximum is 24h")
+	.optional();
