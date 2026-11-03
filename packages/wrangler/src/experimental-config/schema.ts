@@ -65,7 +65,6 @@ export const WranglerConfigSchema = z.strictObject({
 	jsxFragment: z.string().optional(),
 	pythonModules: PythonModulesSchema.optional(),
 	uploadSourceMaps: z.boolean().optional(),
-	uploadWasmSourceMaps: z.boolean().optional(),
 	build: BuildSchema.optional(),
 	assetsDirectory: z.string().optional(),
 	types: TypesSchema.optional(),

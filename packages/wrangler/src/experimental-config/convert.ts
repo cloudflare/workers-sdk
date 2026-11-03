@@ -71,9 +71,6 @@ export function convertToolingConfig(
 	if (parsed.uploadSourceMaps !== undefined) {
 		result.upload_source_maps = parsed.uploadSourceMaps;
 	}
-	if (parsed.uploadWasmSourceMaps !== undefined) {
-		result.upload_wasm_source_maps = parsed.uploadWasmSourceMaps;
-	}
 	if (parsed.build !== undefined) {
 		result.build = {
 			command: parsed.build.command,

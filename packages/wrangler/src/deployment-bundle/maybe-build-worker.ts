@@ -10,7 +10,7 @@ import {
 	getWrangler1xLegacyModuleReferences,
 } from "./module-collection";
 import { noBundleWorker } from "./no-bundle-worker";
-import { loadSourceMaps, loadWasmSourceMaps } from "./source-maps";
+import { loadSourceMaps } from "./source-maps";
 import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
 import type {
 	CfModule,
@@ -43,8 +43,6 @@ export type BuildProps = {
 	 * `undefined` means source maps are uploaded on a best-effort basis.
 	 */
 	uploadSourceMaps: boolean | undefined;
-	/** From config.upload_wasm_source_maps. Off unless `true`. */
-	uploadWasmSourceMaps: boolean | undefined;
 	/** Merged: --jsx-factory arg || config.jsx_factory. */
 	jsxFactory: string;
 	/** Merged: --jsx-fragment arg || config.jsx_fragment. */
@@ -101,7 +99,6 @@ export async function buildWorker(
 		noBundle,
 		destination,
 		uploadSourceMaps,
-		uploadWasmSourceMaps,
 		jsxFactory,
 		jsxFragment,
 		minify,
@@ -233,15 +230,10 @@ export async function buildWorker(
 					strict: uploadSourceMaps === true,
 					sourceMapDirectory,
 				});
-	const wasmSourceMaps =
-		uploadWasmSourceMaps === true ? loadWasmSourceMaps(modules) : [];
 
 	return {
 		modules,
-		sourceMaps:
-			wasmSourceMaps.length > 0
-				? [...(sourceMaps ?? []), ...wasmSourceMaps]
-				: sourceMaps,
+		sourceMaps,
 		dependencies,
 		resolvedEntryPointPath,
 		bundleType,

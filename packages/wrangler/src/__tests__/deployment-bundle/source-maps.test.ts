@@ -5,7 +5,6 @@ import path from "node:path";
 import { describe, it } from "vitest";
 import {
 	loadSourceMaps,
-	loadWasmSourceMaps,
 	tryAttachSourcemapToModule,
 } from "../../deployment-bundle/source-maps";
 import { wasmModuleWithSourceMappingUrl } from "../helpers/wasm-module";
@@ -160,7 +159,7 @@ describe("loadSourceMaps", () => {
 	});
 });
 
-describe("loadWasmSourceMaps", () => {
+describe("loadSourceMaps for WebAssembly modules", () => {
 	function makeWasmModule(
 		name: string,
 		filePath: string | undefined,
@@ -174,10 +173,11 @@ describe("loadWasmSourceMaps", () => {
 		};
 	}
 
-	it("loads the source map named by the sourceMappingURL section", ({
+	it("loads the source map named by the sourceMappingURL section alongside the bundle's", ({
 		expect,
 	}) => {
 		const dir = createTempDir();
+		writeFileSync(path.join(dir, "index.js.map"), validSourceMap);
 		writeFileSync(
 			path.join(dir, "index_bg.wasm.map"),
 			JSON.stringify({
@@ -188,18 +188,24 @@ describe("loadWasmSourceMaps", () => {
 				mappings: "gBAAA",
 			})
 		);
+		const main = makeModule("index.js", path.join(dir, "index.js"), "");
 		const wasm = makeWasmModule(
 			"./0123abcd-index_bg.wasm",
 			path.join(dir, "index_bg.wasm"),
 			"index_bg.wasm.map"
 		);
+		const bundle: SourceMapBundle = {
+			sourceMapPath: "index.js.map",
+			sourceMapMetadata: { tmpDir: dir, entryDirectory: dir },
+		};
 
-		const result = loadWasmSourceMaps([wasm]);
+		const result = loadSourceMaps(main, [wasm], bundle);
 
 		expect(result.map((sourceMap) => sourceMap.name)).toEqual([
+			"index.js.map",
 			"./0123abcd-index_bg.wasm.map",
 		]);
-		expect(JSON.parse(result[0].content.toString())).toEqual({
+		expect(JSON.parse(result[1].content.toString())).toEqual({
 			version: 3,
 			file: "./0123abcd-index_bg.wasm",
 			sources: ["src/lib.rs", "worker-0.8.0/src/lib.rs"],
@@ -210,12 +216,7 @@ describe("loadWasmSourceMaps", () => {
 
 	it("ignores modules without a WebAssembly source map", ({ expect }) => {
 		const dir = createTempDir();
-		writeFileSync(path.join(dir, "index.js.map"), validSourceMap);
-		const js = makeModule(
-			"index.js",
-			path.join(dir, "index.js"),
-			"//# sourceMappingURL=index.js.map"
-		);
+		const main = makeModule("index.js", path.join(dir, "index.js"), "");
 		const noSection = makeWasmModule("a.wasm", path.join(dir, "a.wasm"));
 		const virtual = makeWasmModule("b.wasm", undefined, "b.wasm.map");
 		const notWasm: CfModule = {
@@ -233,31 +234,37 @@ describe("loadWasmSourceMaps", () => {
 		};
 
 		expect(
-			loadWasmSourceMaps([js, noSection, virtual, notWasm, truncated])
+			loadSourceMaps(main, [noSection, virtual, notWasm, truncated], {})
 		).toEqual([]);
 	});
 
-	it("throws when the source map is missing", ({ expect }) => {
+	it("throws when the source map is missing, unless not strict", ({
+		expect,
+	}) => {
 		const dir = createTempDir();
+		const main = makeModule("index.js", path.join(dir, "index.js"), "");
 		const wasm = makeWasmModule(
 			"index_bg.wasm",
 			path.join(dir, "index_bg.wasm"),
 			"index_bg.wasm.map"
 		);
 
-		expect(() => loadWasmSourceMaps([wasm])).toThrow(
+		expect(() => loadSourceMaps(main, [wasm], {})).toThrow(
 			/Invalid source map path in .*index_bg\.wasm: .*index_bg\.wasm\.map does not exist\./
 		);
+		expect(loadSourceMaps(main, [wasm], {}, { strict: false })).toEqual([]);
 	});
 
 	it("throws on a data URL", ({ expect }) => {
+		const dir = createTempDir();
+		const main = makeModule("index.js", path.join(dir, "index.js"), "");
 		const wasm = makeWasmModule(
 			"index_bg.wasm",
-			path.join(createTempDir(), "index_bg.wasm"),
+			path.join(dir, "index_bg.wasm"),
 			"data:application/json;base64,e30="
 		);
 
-		expect(() => loadWasmSourceMaps([wasm])).toThrow(
+		expect(() => loadSourceMaps(main, [wasm], {})).toThrow(
 			"expected file path but found data URL"
 		);
 	});

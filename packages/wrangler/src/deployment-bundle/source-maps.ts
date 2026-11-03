@@ -20,9 +20,10 @@ export interface SourceMapBundle {
  * @param main The main module of the Worker.
  * @param modules Any additional modules of the Worker.
  * @param bundle Source map location metadata from Wrangler's bundler, if it ran.
- * @param options.strict When `false`, modules whose source map comment can't be
- * resolved are skipped rather than failing. Used when source maps are uploaded
- * by default rather than explicitly requested.
+ * @param options.strict When `false`, modules whose source map comment or
+ * WebAssembly `sourceMappingURL` section can't be resolved are skipped rather
+ * than failing. Used when source maps are uploaded by default rather than
+ * explicitly requested.
  * @param options.sourceMapDirectory The directory the source maps will be written
  * to, each at its `name`. Their `sources` are rewritten relative to that
  * location, as in any source map file. Without it, they are prepared for upload,
@@ -41,13 +42,16 @@ export function loadSourceMaps(
 	const { sourceMapPath, sourceMapMetadata } = bundle;
 	if (sourceMapPath && sourceMapMetadata) {
 		// This worker was bundled by Wrangler, so we already know where
-		// the source map is located.
-		return loadSourceMap(
-			main,
-			sourceMapPath,
-			sourceMapMetadata,
-			sourceMapDirectory
-		);
+		// the source map is located. WebAssembly modules aren't bundled, so
+		// they can still have their own.
+		return [
+			...loadSourceMap(main, sourceMapPath, sourceMapMetadata, sourceMapDirectory),
+			...scanSourceMaps(
+				modules.filter((module) => module.type === "compiled-wasm"),
+				strict,
+				sourceMapDirectory
+			),
+		];
 	} else {
 		// Don't know where source maps are located, so need to find
 		// them by scanning the contents of the user-specified modules.
@@ -140,27 +144,6 @@ function trySourceMapForModule(
 		);
 		return undefined;
 	}
-}
-
-/**
- * Loads the source maps named by the `sourceMappingURL` custom sections of the
- * Worker's WebAssembly modules.
- *
- * @param modules The modules of the Worker. Only `compiled-wasm` modules are read.
- * @returns The source maps to upload alongside the Worker.
- */
-export function loadWasmSourceMaps(modules: CfModule[]): CfWorkerSourceMap[] {
-	const maps: CfWorkerSourceMap[] = [];
-	for (const module of modules) {
-		if (module.type !== "compiled-wasm" || module.filePath === undefined) {
-			continue;
-		}
-		const sourceMapUrl = getWasmSourceMappingUrl(module);
-		if (sourceMapUrl !== undefined) {
-			maps.push(readSourceMap(module, module.filePath, sourceMapUrl));
-		}
-	}
-	return maps;
 }
 
 /**
@@ -285,28 +268,19 @@ function sourceMapForModule(
 		return undefined;
 	}
 
-	const sourceMapUrl = getSourceMappingUrl(module);
+	const sourceMapUrl =
+		module.type === "compiled-wasm"
+			? getWasmSourceMappingUrl(module)
+			: getSourceMappingUrl(module);
 	if (sourceMapUrl === undefined) {
 		return;
 	}
-	return readSourceMap(module, module.filePath, sourceMapUrl, sourceMapDirectory);
-}
 
-/**
- * Reads the source map at `sourceMapUrl`, relative to the module at
- * `filePath`, and names it after the module in the multipart upload.
- */
-function readSourceMap(
-	module: CfModule,
-	filePath: string,
-	sourceMapUrl: string,
-	sourceMapDirectory?: string
-): CfWorkerSourceMap {
 	// Convert source map path to an absolute path that we can read.
-	const sourcemapPath = path.join(path.dirname(filePath), sourceMapUrl);
+	const sourcemapPath = path.join(path.dirname(module.filePath), sourceMapUrl);
 	if (!fs.existsSync(sourcemapPath)) {
 		throw new Error(
-			`Invalid source map path in ${filePath}: ${sourcemapPath} does not exist.`
+			`Invalid source map path in ${module.filePath}: ${sourcemapPath} does not exist.`
 		);
 	}
 	const map = JSON.parse(
