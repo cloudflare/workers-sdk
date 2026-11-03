@@ -31,11 +31,13 @@ export function setWasmSourceMappingUrl(
 	const replacement = [0, ...encodeU32(payload.length), ...payload];
 	const start = section?.start ?? bytes.length;
 	const end = section?.end ?? bytes.length;
-	return new Uint8Array([
-		...bytes.subarray(0, start),
-		...replacement,
-		...bytes.subarray(end),
-	]);
+	const result = new Uint8Array(
+		start + replacement.length + (bytes.length - end)
+	);
+	result.set(bytes.subarray(0, start), 0);
+	result.set(replacement, start);
+	result.set(bytes.subarray(end), start + replacement.length);
+	return result;
 }
 
 /**
