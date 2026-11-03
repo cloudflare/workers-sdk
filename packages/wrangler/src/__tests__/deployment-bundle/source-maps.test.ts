@@ -258,6 +258,11 @@ describe("loadSourceMaps for WebAssembly modules", () => {
 		"/private.json",
 		// A drive-letter path on Windows.
 		path.join(tmpdir(), "private.json"),
+		// A drive-relative path on Windows. Joining it to the module's directory
+		// keeps `C:..` as a segment, so the `..` after it climb out of `pkg`.
+		...(process.platform === "win32"
+			? [`${tmpdir().slice(0, 2)}..\\..\\..\\private.json`]
+			: []),
 	])(
 		"won't read %s outside the module's directory, unless not strict",
 		(url, { expect }) => {
