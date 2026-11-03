@@ -1,5 +1,25 @@
 # @cloudflare/vite-plugin
 
+## 2.0.0-beta.v.11
+
+### Minor Changes
+
+- [#16656](https://github.com/cloudflare/workers-sdk/pull/16656) [`b447229`](https://github.com/cloudflare/workers-sdk/commit/b44722909b70d468b7873a6f84b9cb595da4b56a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Expose `CloudflareConfig` and deprecate `ParsedInputConfigWithWorker` in the beta Vite plugin
+
+  Import `CloudflareConfig` from `@cloudflare/vite-plugin` to annotate configuration customizers. The previous name, `ParsedInputConfigWithWorker`, remains exported as a deprecated alias for compatibility. The configuration shape and required entry Worker remain unchanged.
+
+### Patch Changes
+
+- [#16670](https://github.com/cloudflare/workers-sdk/pull/16670) [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-03
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815), [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815), [`d2eda1c`](https://github.com/cloudflare/workers-sdk/commit/d2eda1cf7446ba4b43c9b87e337614ba67a1b014), [`2750917`](https://github.com/cloudflare/workers-sdk/commit/2750917df4239be111bb2704654dbb99e922dba7)]:
+  - @cloudflare/build-output-utils@0.9.9
+  - @cloudflare/config@0.30.1
+  - @cloudflare/runtime-types@0.1.22
+  - miniflare@5.20261103.0-beta
+
 ## 2.0.0-beta.v.10
 
 ### Patch Changes
