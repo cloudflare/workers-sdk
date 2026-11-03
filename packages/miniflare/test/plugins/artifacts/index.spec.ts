@@ -543,49 +543,59 @@ test("artifacts: a stopped backend is replaced on the next config update", async
 	}
 });
 
-test.for([null, true] as const)(
-	"artifacts: remote=%s with a remote proxy does not need host Git or local storage",
-	async (remote, { expect }) => {
-		const resourcePersistencePath = await useTmp();
-		const emptyPath = await useTmp();
-		const previousPath = process.env.PATH;
-		process.env.PATH = emptyPath;
-		try {
-			const base = options("test", "REPOS", remote);
-			const mf = new Miniflare({
-				...base,
-				resourcePersistencePath,
-				workers: base.workers.map((worker) => ({
-					...worker,
-					dev: {
-						// Never contacted: startup only wires the binding to the proxy.
-						remoteProxyConnectionString: new URL(
-							"http://127.0.0.1:1"
-						) as RemoteProxyConnectionString,
-					},
-				})),
-			});
-			useDispose(mf);
-			await expect(mf.ready).resolves.toBeDefined();
-		} finally {
-			process.env.PATH = previousPath;
-		}
-		await expect(
-			stat(path.join(resourcePersistencePath, "artifacts"))
-		).rejects.toMatchObject({
-			code: "ENOENT",
-		});
-	}
-);
+function withRemoteProxy(base: MiniflareOptions): MiniflareOptions {
+	return {
+		...base,
+		workers: base.workers.map((worker) => ({
+			...worker,
+			dev: {
+				// Never contacted: startup only wires the binding to the proxy.
+				remoteProxyConnectionString: new URL(
+					"http://127.0.0.1:1"
+				) as RemoteProxyConnectionString,
+			},
+		})),
+	};
+}
 
-test("artifacts: omitted remote without a remote proxy uses the local simulator", async ({
+test("artifacts: remote=true with a remote proxy does not need host Git or local storage", async ({
 	expect,
 }) => {
-	// `wrangler dev --local` and Vite `remoteBindings: false` start no proxy.
-	const mf = new Miniflare(options("test", "REPOS", null));
-	useDispose(mf);
-	expect((await rpc(mf, "create", ["offline"])).name).toBe("offline");
+	const resourcePersistencePath = await useTmp();
+	const emptyPath = await useTmp();
+	const previousPath = process.env.PATH;
+	process.env.PATH = emptyPath;
+	try {
+		const mf = new Miniflare({
+			...withRemoteProxy(options("test", "REPOS", true)),
+			resourcePersistencePath,
+		});
+		useDispose(mf);
+		await expect(mf.ready).resolves.toBeDefined();
+	} finally {
+		process.env.PATH = previousPath;
+	}
+	await expect(
+		stat(path.join(resourcePersistencePath, "artifacts"))
+	).rejects.toMatchObject({
+		code: "ENOENT",
+	});
 });
+
+// Like every other binding, only an explicit `dev.remote: true` is routed to
+// the proxy. Consumers resolve the deployed-by-default rule before Miniflare.
+test.for([
+	{ label: "without a remote proxy", proxy: false },
+	{ label: "with a remote proxy", proxy: true },
+])(
+	"artifacts: omitted remote $label uses the local simulator",
+	async ({ proxy }, { expect }) => {
+		const base = options("test", "REPOS", null);
+		const mf = new Miniflare(proxy ? withRemoteProxy(base) : base);
+		useDispose(mf);
+		expect((await rpc(mf, "create", ["offline"])).name).toBe("offline");
+	}
+);
 
 test("artifacts: rejects invalid local namespace before starting services", async ({
 	expect,
