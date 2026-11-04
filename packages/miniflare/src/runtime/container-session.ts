@@ -10,8 +10,12 @@ const SESSION_LABEL = "dev.workerd.session";
 /** Delay before the second removal pass; see `removeSessionResources()`. */
 const SECOND_PASS_DELAY_MS = 250;
 
-/** Time after which a detached removal process gives up. */
-const DETACHED_REMOVAL_TIMEOUT_MS = 30_000;
+/**
+ * Time a Docker request may go without activity. A daemon that accepts a
+ * connection but never responds would otherwise stall removal, and with it
+ * `Miniflare.dispose()`.
+ */
+const DOCKER_REQUEST_TIMEOUT_MS = 30_000;
 
 /**
  * The Docker resources workerd creates for one Container configuration.
@@ -103,10 +107,12 @@ function getContainerConfiguration(
  *
  * @param session Session to remove.
  * @param log Log for the outcome.
+ * @param requestTimeoutMs Time each Docker request may go without activity.
  */
 export async function removeContainerSession(
 	session: ContainerSession,
-	log: Log
+	log: Log,
+	requestTimeoutMs = DOCKER_REQUEST_TIMEOUT_MS
 ): Promise<void> {
 	const label = `${SESSION_LABEL}=${session.id}`;
 	try {
@@ -114,7 +120,8 @@ export async function removeContainerSession(
 			http,
 			getNodeSocketPath(session.socketPath),
 			label,
-			SECOND_PASS_DELAY_MS
+			SECOND_PASS_DELAY_MS,
+			requestTimeoutMs
 		);
 		log.debug(
 			`Removed Container session ${session.id}: ${removed.join(", ") || "nothing to remove"}`
@@ -145,11 +152,9 @@ export function removeContainerSessionDetached(
 		getNodeSocketPath(session.socketPath),
 		`${SESSION_LABEL}=${session.id}`,
 		SECOND_PASS_DELAY_MS,
+		DOCKER_REQUEST_TIMEOUT_MS,
 	]);
-	const script = [
-		`setTimeout(() => process.exit(1), ${DETACHED_REMOVAL_TIMEOUT_MS}).unref();`,
-		`(${removeSessionResources.toString()})(require("node:http"), ...JSON.parse(process.argv[1]))`,
-	].join("\n");
+	const script = `(${removeSessionResources.toString()})(require("node:http"), ...JSON.parse(process.argv[1]))`;
 	childProcess
 		.spawn(process.execPath, ["-e", script, args], {
 			// Inherited debugger flags such as `--inspect-brk` would stop the
@@ -192,13 +197,15 @@ function getNodeSocketPath(socketPath: string): string {
  * @param socketPath Docker Engine socket.
  * @param label Docker label filter selecting the session's resources.
  * @param secondPassDelayMs Delay before the second pass.
+ * @param requestTimeoutMs Time each Docker request may go without activity.
  * @returns Names of the removed containers and volumes.
  */
 async function removeSessionResources(
 	httpModule: typeof http,
 	socketPath: string,
 	label: string,
-	secondPassDelayMs: number
+	secondPassDelayMs: number,
+	requestTimeoutMs: number
 ): Promise<string[]> {
 	interface DockerContainer {
 		Id: string;
@@ -207,25 +214,38 @@ async function removeSessionResources(
 	}
 	function request(method: string, path: string): Promise<string> {
 		return new Promise((resolve, reject) => {
-			const req = httpModule.request({ socketPath, method, path }, (res) => {
-				let body = "";
-				res.setEncoding("utf8");
-				res.on("data", (chunk: string) => (body += chunk));
-				res.on("end", () => {
-					const status = res.statusCode ?? 0;
-					// A resource that is already gone needs no removal.
-					if (
-						(status >= 200 && status < 300) ||
-						(method === "DELETE" && status === 404)
-					) {
-						resolve(body);
-					} else {
-						reject(
-							new Error(`Docker ${method} ${path} failed: [${status}] ${body}`)
-						);
-					}
-				});
-			});
+			const req = httpModule.request(
+				{ socketPath, method, path, timeout: requestTimeoutMs },
+				(res) => {
+					let body = "";
+					res.setEncoding("utf8");
+					res.on("data", (chunk: string) => (body += chunk));
+					res.on("error", reject);
+					res.on("end", () => {
+						const status = res.statusCode ?? 0;
+						// A resource that is already gone needs no removal.
+						if (
+							(status >= 200 && status < 300) ||
+							(method === "DELETE" && status === 404)
+						) {
+							resolve(body);
+						} else {
+							reject(
+								new Error(
+									`Docker ${method} ${path} failed: [${status}] ${body}`
+								)
+							);
+						}
+					});
+				}
+			);
+			req.on("timeout", () =>
+				req.destroy(
+					new Error(
+						`Docker ${method} ${path} did not respond within ${requestTimeoutMs} ms`
+					)
+				)
+			);
 			req.on("error", reject);
 			req.end();
 		});
