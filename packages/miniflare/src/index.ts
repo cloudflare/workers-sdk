@@ -2664,7 +2664,7 @@ export class Miniflare {
 			}
 		}
 		this.#hyperdriveProxyController.commitUpdate(activeExternalAddresses);
-		await this.#artifactsController.commitUpdate();
+		await this.#artifactsController.commitUpdate(maybeSocketPorts);
 		// Note: `updateConfig()` doesn't resolve until ports for all required
 		// sockets have been recorded. At this point, `maybeSocketPorts` contains
 		// all of `requiredSockets` as keys.

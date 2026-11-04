@@ -8,6 +8,7 @@ import {
 	stat,
 	writeFile,
 } from "node:fs/promises";
+import { createServer } from "node:net";
 import path from "node:path";
 import { Readable, Writable } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -27,7 +28,12 @@ import {
 	type GitSidecar,
 } from "../../../src/plugins/artifacts/git-sidecar";
 import { repositoryPath } from "../../../src/plugins/artifacts/storage";
-import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
+import {
+	singleModuleManifest,
+	useDispose,
+	useServer,
+	useTmp,
+} from "../../test-shared";
 import type { MiniflareOptions } from "miniflare";
 
 const exec = promisify(execFile);
@@ -435,6 +441,52 @@ test("artifacts: config update closes retired sidecars but abort preserves activ
 		await controller.commitUpdate();
 		await expect(reachable(first.sidecar.address)).rejects.toThrow();
 		expect((await reachable(next.sidecar.address)).status).toBe(403);
+	} finally {
+		await controller.dispose();
+	}
+});
+
+test("artifacts: Git listener reserves its port and switches targets only on commit", async ({
+	expect,
+}) => {
+	const controller = new ArtifactsController();
+	const root = path.join(await useTmp(), "repos");
+	const first = await useServer((_request, response) => response.end("first"));
+	const second = await useServer((_request, response) =>
+		response.end("second")
+	);
+	try {
+		controller.beginUpdate();
+		const backend = await controller.get(root, "git");
+		const contender = createServer();
+		try {
+			// Reproduces the gap left by get-port without relying on a random collision.
+			await expect(
+				new Promise<void>((resolve, reject) => {
+					contender.once("error", reject);
+					contender.listen(backend.port, "127.0.0.1", resolve);
+				})
+			).rejects.toMatchObject({ code: "EADDRINUSE" });
+		} finally {
+			if (contender.listening) {
+				await new Promise<void>((resolve) => contender.close(() => resolve()));
+			}
+		}
+		const url = `http://127.0.0.1:${backend.port}/`;
+		const read = async () =>
+			(await fetch(url, { headers: { Connection: "close" } })).text();
+		await controller.commitUpdate(new Map([["git", Number(first.http.port)]]));
+		expect(await read()).toBe("first");
+		controller.beginUpdate();
+		expect(await controller.get(root, "git")).toBe(backend);
+		await controller.abortUpdate();
+		expect(await read()).toBe("first");
+		controller.beginUpdate();
+		await controller.get(root, "git");
+		await controller.commitUpdate(new Map([["git", Number(second.http.port)]]));
+		expect(await read()).toBe("second");
+		await controller.dispose();
+		await expect(read()).rejects.toThrow();
 	} finally {
 		await controller.dispose();
 	}
@@ -1006,10 +1058,18 @@ test("artifacts: namespaces and instances are isolated; reload preserves state",
 	const second = new Miniflare(options());
 	useDispose(first);
 	useDispose(second);
-	await rpc(first, "create", ["repo"]);
+	const created = await rpc(first, "create", ["repo"]);
 	expect((await rpc(second, "list")).total).toBe(0);
 	await first.setOptions(options());
 	expect((await rpc(first, "list")).total).toBe(1);
+	const info = await rpc(first, "info", [], "repo");
+	expect(info.remote).toBe(created.remote);
+	const advertisement = await fetch(
+		`${created.remote}/info/refs?service=git-upload-pack`,
+		{ headers: { Authorization: `Bearer ${created.token}` } }
+	);
+	expect(advertisement.status).toBe(200);
+	await advertisement.body?.cancel();
 	await first.setOptions(options("another"));
 	expect((await rpc(first, "list")).total).toBe(0);
 });

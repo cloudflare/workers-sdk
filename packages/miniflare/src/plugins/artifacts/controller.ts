@@ -1,6 +1,6 @@
 import path from "node:path";
 import { Worker } from "node:worker_threads";
-import getPort from "get-port";
+import type { SocketPorts } from "../../runtime";
 import type { Log } from "../../shared";
 import type { GitSidecar } from "./git-sidecar";
 
@@ -16,6 +16,7 @@ export class ArtifactsController {
 	// Keep the old roots alive until workerd accepts the replacement config.
 	#activeRoots = new Set<string>();
 	#pendingRoots?: Set<string>;
+	#pendingSockets = new Map<string, Promise<LocalArtifactsBackend>>();
 
 	constructor(private readonly getLog?: () => Pick<Log, "warn">) {}
 
@@ -26,11 +27,35 @@ export class ArtifactsController {
 		this.#pendingRoots = new Set();
 	}
 
-	async commitUpdate(): Promise<void> {
+	async commitUpdate(socketPorts: SocketPorts = new Map()): Promise<void> {
 		const roots = this.#pendingRoots;
 		if (!roots) {
 			throw new Error("No Artifacts runtime update to commit");
 		}
+		// workerd has bound every required socket before reporting these ports.
+		// Keep the active targets until that startup succeeds, and await the
+		// sidecar's acknowledgment before exposing the replacement runtime.
+		await Promise.all(
+			[...this.#pendingSockets].map(async ([name, backend]) => {
+				const port = socketPorts.get(name);
+				if (port === undefined) {
+					throw new Error(`Missing local Artifacts Git listener: ${name}`);
+				}
+				const { sidecar } = await backend;
+				const response = await fetch(
+					`http://${sidecar.address}/__local_artifacts__/proxy/${port}`,
+					{
+						method: "PUT",
+						headers: { "X-Local-Artifacts-Backend": sidecar.secret },
+					}
+				);
+				if (!response.ok) {
+					await response.body?.cancel();
+					throw new Error("Unable to connect local Artifacts Git listener");
+				}
+			})
+		);
+		this.#pendingSockets.clear();
 		this.#pendingRoots = undefined;
 		this.#activeRoots = roots;
 		await this.#closeExcept(roots);
@@ -41,10 +66,11 @@ export class ArtifactsController {
 			return;
 		}
 		this.#pendingRoots = undefined;
+		this.#pendingSockets.clear();
 		await this.#closeExcept(this.#activeRoots);
 	}
 
-	get(root: string): Promise<LocalArtifactsBackend> {
+	get(root: string, socketName?: string): Promise<LocalArtifactsBackend> {
 		root = path.resolve(root);
 		if (!this.#pendingRoots) {
 			throw new Error("Artifacts backend requested outside runtime update");
@@ -64,6 +90,9 @@ export class ArtifactsController {
 				}
 			});
 		}
+		if (socketName !== undefined) {
+			this.#pendingSockets.set(socketName, backend);
+		}
 		return backend;
 	}
 
@@ -71,7 +100,6 @@ export class ArtifactsController {
 		root: string,
 		onExit: () => void
 	): Promise<LocalArtifactsBackend> {
-		const port = await getPort({ host: "127.0.0.1" });
 		// __dirname is dist/src in the bundled Miniflare entry point.
 		const worker = new Worker(
 			path.join(__dirname, "plugins/artifacts/git-sidecar.js"),
@@ -92,7 +120,7 @@ export class ArtifactsController {
 				}
 			});
 			return {
-				port,
+				port: endpoint.port,
 				sidecar: {
 					...endpoint,
 					async close() {
@@ -143,18 +171,19 @@ export class ArtifactsController {
 
 	async dispose(): Promise<void> {
 		this.#pendingRoots = undefined;
+		this.#pendingSockets.clear();
 		this.#activeRoots.clear();
 		await this.#closeExcept(this.#activeRoots);
 	}
 }
 
 type SidecarStartupMessage =
-	| Pick<GitSidecar, "address" | "secret">
+	| Pick<GitSidecar, "address" | "secret" | "port">
 	| { error: string };
 
 function waitForSidecarReady(
 	worker: Worker
-): Promise<Pick<GitSidecar, "address" | "secret">> {
+): Promise<Pick<GitSidecar, "address" | "secret" | "port">> {
 	return new Promise((resolve, reject) => {
 		function cleanup() {
 			worker.off("message", ready);
