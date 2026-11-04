@@ -42,6 +42,9 @@ const worker = `export default {
 
 type Created = { remote: string; token: string };
 
+// Startup and reloads have taken over 20 seconds on shared Windows runners.
+const READY_TIMEOUT = 45_000;
+
 async function startLocalDev({
 	remote = false,
 	args = "",
@@ -78,7 +81,7 @@ async function startLocalDev({
 				output.out
 					.slice(previousOutput.length)
 					.match(/Ready on (?<url>http:\/\/[^:]+:\d+)/),
-			{ timeout: 15_000 }
+			{ timeout: READY_TIMEOUT }
 		),
 		stopped.then(() => {
 			throw new Error("Wrangler dev exited before ready");
@@ -112,7 +115,7 @@ async function request<T>(url: string, endpoint: string): Promise<T> {
 }
 
 /** Starting dev twice, a reload and real Git can exceed the default timeout on slow runners. */
-const ARTIFACTS_DEV_TEST_TIMEOUT = 90_000;
+const ARTIFACTS_DEV_TEST_TIMEOUT = 150_000;
 
 async function createAndPushDemo(url: string): Promise<Created> {
 	const created = await request<Created>(url, "/create");
@@ -153,7 +156,7 @@ describe("Wrangler dev local Artifacts", { concurrent: false }, () => {
 							"reloaded"
 						);
 					},
-					{ timeout: 15_000 }
+					{ timeout: READY_TIMEOUT }
 				);
 				expect(await (await fetch(dev.url + "/file")).text()).toBe(
 					"hello artifacts\n"
@@ -197,6 +200,7 @@ describe("Wrangler dev local Artifacts", { concurrent: false }, () => {
 
 	it.for([null, true])(
 		"uses the local simulator for remote=%s with --local",
+		{ timeout: ARTIFACTS_DEV_TEST_TIMEOUT },
 		async (remote, { expect }) => {
 			const dev = await startLocalDev({ remote, args: "--local" });
 			try {
