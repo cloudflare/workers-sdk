@@ -50,8 +50,9 @@ it("rejects unsupported profiles, inferred trust and private discovery URLs", ({
 				account_authorization: null,
 			},
 		},
-	])
+	]) {
 		expect(() => parseIdentityReceiver(value)).toThrow();
+	}
 	const detached = parseIdentityReceiver(receiver);
 	detached.delegated_requests.account_authorization = {
 		issuer: "https://other.example",

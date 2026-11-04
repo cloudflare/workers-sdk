@@ -111,20 +111,22 @@ function producer() {
 				session
 			),
 		};
-		if (token)
+		if (token) {
 			headers.Authorization = `${mode === "dpop" ? "DPoP" : "Bearer"} ${token}`;
-		if (mode === "dpop")
+		}
+		if (mode === "dpop") {
 			headers.DPoP = jwt(
 				{ alg: "ES256", typ: "dpop+jwt", jwk: proofJwk },
 				{ iat: now, jti: `proof-${jti}`, htm: "GET", htu, ath },
 				proof
 			);
+		}
 		return headers;
 	};
 	return { identityReceiver, documents, request };
 }
 
-for (const legacy of [false, true])
+for (const legacy of [false, true]) {
 	test(`verifies delegated credentials and shared replay through native caller (${legacy ? "legacy" : "config"})`, async ({
 		expect,
 	}) => {
@@ -196,6 +198,7 @@ for (const legacy of [false, true])
 			});
 		}
 	});
+}
 
 test("tooling proxy bindings preserve HTTP verification without asserting native provenance", async ({
 	expect,

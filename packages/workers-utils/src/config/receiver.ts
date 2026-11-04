@@ -28,9 +28,23 @@ function record(
 		Object.keys(value).some(
 			(key) => !required.includes(key) && !optional.includes(key)
 		)
-	)
+	) {
 		throw new TypeError("Invalid identity receiver configuration.");
+	}
 	return value as Record<string, unknown>;
+}
+
+function hasUnsafeURICharacters(value: string): boolean {
+	if (/[\s\\]/u.test(value)) {
+		return true;
+	}
+	for (const character of value) {
+		const code = character.charCodeAt(0);
+		if (code < 32 || code === 127) {
+			return true;
+		}
+	}
+	return false;
 }
 
 /** Validate URLs before lookup; the public-only outbound network enforces resolved addresses. */
@@ -38,9 +52,10 @@ export function publicIdentityURL(value: unknown): string {
 	if (
 		typeof value !== "string" ||
 		value.length > 2048 ||
-		/[\s\\\u0000-\u001f\u007f]/u.test(value)
-	)
+		hasUnsafeURICharacters(value)
+	) {
 		throw new TypeError("Invalid public identity URL.");
+	}
 	const url = new URL(value);
 	if (
 		url.protocol !== "https:" ||
@@ -54,8 +69,9 @@ export function publicIdentityURL(value: unknown): string {
 		) ||
 		/(?:^|\.)(?:localhost|local|internal|invalid)$/i.test(url.hostname) ||
 		url.hostname.endsWith(".")
-	)
+	) {
 		throw new TypeError("Identity discovery requires a public HTTPS hostname.");
+	}
 	return value;
 }
 
@@ -63,18 +79,20 @@ export function publicIdentityURL(value: unknown): string {
 export function parseIdentityReceiver(
 	value: unknown
 ): IdentityReceiverConfiguration {
-	if (new TextEncoder().encode(JSON.stringify(value)).length > 8192)
+	if (new TextEncoder().encode(JSON.stringify(value)).length > 8192) {
 		throw new TypeError(
 			"Identity receiver configuration exceeds its size limit."
 		);
+	}
 	const root = record(value, ["delegated_requests"]);
 	const delegated = record(
 		root["delegated_requests"],
 		["profile"],
 		["company_id", "account_authorization"]
 	);
-	if (delegated["profile"] !== "poppy-0.3")
+	if (delegated["profile"] !== "poppy-0.3") {
 		throw new TypeError("Unsupported delegated identity profile.");
+	}
 	const company_id = Object.hasOwn(delegated, "company_id")
 		? publicIdentityURL(delegated["company_id"])
 		: undefined;
@@ -96,10 +114,11 @@ export function parseIdentityReceiver(
 			(company_id !== undefined && issuer !== company_id) ||
 			typeof audience !== "string" ||
 			audience.length > 2048 ||
-			/[\s\\\u0000-\u001f\u007f]/u.test(audience) ||
+			hasUnsafeURICharacters(audience) ||
 			new URL(audience).hash
-		)
+		) {
 			throw new TypeError("Invalid account issuer or resource audience.");
+		}
 		const authorization: NonNullable<
 			IdentityReceiverConfiguration["delegated_requests"]["account_authorization"]
 		> = { issuer, audience };
@@ -109,8 +128,9 @@ export function parseIdentityReceiver(
 				[],
 				["profile", "jwks_uri", "algorithms"]
 			);
-			if (Object.hasOwn(tokens, "profile") && tokens["profile"] !== "rfc9068")
+			if (Object.hasOwn(tokens, "profile") && tokens["profile"] !== "rfc9068") {
 				throw new TypeError("Unsupported account access-token profile.");
+			}
 			const algorithms = tokens["algorithms"];
 			if (
 				Object.hasOwn(tokens, "algorithms") &&
@@ -119,8 +139,9 @@ export function parseIdentityReceiver(
 					algorithms.length > 2 ||
 					new Set(algorithms).size !== algorithms.length ||
 					algorithms.some((alg) => alg !== "RS256" && alg !== "ES256"))
-			)
+			) {
 				throw new TypeError("Unsupported account access-token algorithms.");
+			}
 			authorization.access_tokens = {
 				...(Object.hasOwn(tokens, "profile")
 					? { profile: "rfc9068" as const }
