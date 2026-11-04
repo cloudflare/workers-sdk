@@ -330,6 +330,7 @@ const bindingsConfigMock: Omit<
 	"define" | "tail_consumers" | "cloudchamber"
 > &
 	Record<string, unknown> = {
+	identities: [],
 	kv_namespaces: [{ binding: "TEST_KV_NAMESPACE", id: "1234" }],
 	vars: {
 		SOMETHING: "asdasdfasdf",
@@ -597,6 +598,44 @@ describe("generate types - CLI", () => {
 				compilerOptions: { types: ["worker-configuration.d.ts"] },
 			})
 		);
+	});
+
+	it("generates the complete identity capability API", async ({ expect }) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-10-31",
+				identities: [
+					{
+						binding: "IDENTITY",
+						request_signing: {
+							resources: [
+								{ origin: "https://api.example.com", methods: ["GET", "POST"] },
+							],
+						},
+					},
+				],
+			})
+		);
+
+		await runWrangler("types --include-runtime=false");
+		const types = fs.readFileSync("./worker-configuration.d.ts", "utf-8");
+		expect(types).toContain("IDENTITY:");
+		expect(types).toContain(
+			"getIdentity(selection?: string | { agentId?: string })"
+		);
+		expect(types).toContain("Promise<Rpc.Stub<Rpc.RpcTargetBranded &");
+		expect(types).toContain(
+			"fetch(input: Request | string, init?: Omit<RequestInit, 'body' | 'cf' | 'signal'>"
+		);
+		for (const field of ["id", "signatureAgent"]) {
+			expect(types).toContain(`readonly ${field}: Promise<string>`);
+		}
+		expect(types).toContain("getToken(): Promise<string>");
+		expect(types).toContain(
+			"getAuthorizationGrant(options?: { authorizationServer?: string; scope?: string[] }): Promise<string>"
+		);
+		expect(types).not.toContain("fetch(input: Request | string | URL");
 	});
 
 	it("keeps the runtime header stable after trailing whitespace is removed", async ({

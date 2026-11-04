@@ -1024,6 +1024,17 @@ export class ServiceDesignator extends $.Struct {
 	_initProps(): ServiceDesignator_Props {
 		return $.utils.getAs(ServiceDesignator_Props, this);
 	}
+	/**
+	 * Standalone internal ingress routing only. Preserve ordinary HTTP credential semantics.
+	 * Local service graph configuration establishes no production authentication.
+	 *
+	 */
+	get suppressNativeCaller(): boolean {
+		return $.utils.getBit(16, this);
+	}
+	set suppressNativeCaller(value: boolean) {
+		$.utils.setBit(16, value, this);
+	}
 	toString(): string {
 		return "ServiceDesignator_" + super.toString();
 	}
@@ -3549,7 +3560,7 @@ export class Worker_DurableObjectStorage extends $.Struct {
 	static readonly _capnp = {
 		displayName: "durableObjectStorage",
 		id: "cc72b3faa57827d4",
-		size: new $.ObjectSize(8, 16),
+		size: new $.ObjectSize(8, 17),
 	};
 	get _isNone(): boolean {
 		return $.utils.getUint16(2, this) === 0;
@@ -3614,7 +3625,7 @@ export class Worker_ContainerEngine extends $.Struct {
 	static readonly _capnp = {
 		displayName: "containerEngine",
 		id: "82de68f58dc2eb24",
-		size: new $.ObjectSize(8, 16),
+		size: new $.ObjectSize(8, 17),
 	};
 	get _isNone(): boolean {
 		return $.utils.getUint16(4, this) === 0;
@@ -3711,7 +3722,7 @@ export class Worker extends $.Struct {
 	static readonly _capnp = {
 		displayName: "Worker",
 		id: "acfa77e88fd97d1c",
-		size: new $.ObjectSize(8, 16),
+		size: new $.ObjectSize(8, 17),
 		defaultGlobalOutbound: $.readRawPointer(
 			new Uint8Array([
 				16, 7, 80, 1, 3, 0, 0, 17, 9, 74, 0, 1, 255, 105, 110, 116, 101, 114,
@@ -4046,6 +4057,29 @@ export class Worker extends $.Struct {
 	}
 	set accessBlobHeader(value: string) {
 		$.utils.setText(13, value, this);
+	}
+	_adoptWorkloadIdentityService(value: $.Orphan<ServiceDesignator>): void {
+		$.utils.adopt(value, $.utils.getPointer(16, this));
+	}
+	_disownWorkloadIdentityService(): $.Orphan<ServiceDesignator> {
+		return $.utils.disown(this.workloadIdentityService);
+	}
+	/**
+	 * Private workload verifier for development/tests. Receives verify(originalRequest) over RPC.
+	 * Hosted Workers supplies this channel automatically, with protected receiver scope.
+	 *
+	 */
+	get workloadIdentityService(): ServiceDesignator {
+		return $.utils.getStruct(16, ServiceDesignator, this);
+	}
+	_hasWorkloadIdentityService(): boolean {
+		return !$.utils.isNull($.utils.getPointer(16, this));
+	}
+	_initWorkloadIdentityService(): ServiceDesignator {
+		return $.utils.initStructAt(16, ServiceDesignator, this);
+	}
+	set workloadIdentityService(value: ServiceDesignator) {
+		$.utils.copyFrom(value, $.utils.getPointer(16, this));
 	}
 	_adoptAccessBindingService(value: $.Orphan<ServiceDesignator>): void {
 		$.utils.adopt(value, $.utils.getPointer(14, this));

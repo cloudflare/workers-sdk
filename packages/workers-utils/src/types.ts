@@ -13,6 +13,7 @@ import type {
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "./config/environment";
+import type { CallerIdentityConfiguration } from "./config/receiver";
 import type {
 	CfAIBinding,
 	CfAgentMemory,
@@ -69,6 +70,10 @@ export type Json =
 	| { [id: string]: Json };
 
 export type WorkerMetadataBinding =
+	| ({ type: "identity"; name: string } & DistributiveOmit<
+			import("./config/oidc").IdentityBindingConfig,
+			"binding"
+	  >)
 	// If you add any new binding types here, also add it to safeBindings
 	// under validateUnsafeBinding in config/validation.ts
 
@@ -275,6 +280,7 @@ type WorkerMetadataPut = {
 	body_part?: string;
 	compatibility_date?: string;
 	compatibility_flags?: string[];
+	caller_identity?: CallerIdentityConfiguration;
 	usage_model?: "bundled" | "unbound";
 	migrations?: CfDurableObjectMigrations;
 	code_update_strategy?: DurableObjectCodeUpdateStrategy;
@@ -407,6 +413,7 @@ export type ServiceMetadataRes = {
 			};
 			compatibility_date: string;
 			compatibility_flags: string[];
+			caller_identity?: CallerIdentityConfiguration;
 			last_deployed_from?: "wrangler" | "dash" | "api";
 			placement_mode?: "smart";
 			tail_consumers?: TailConsumer[];
@@ -465,6 +472,10 @@ type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
 type BindingOmit<T> = DistributiveOmit<T, "binding">;
 type NameOmit<T> = DistributiveOmit<T, "name">;
 export type Binding =
+	| ({ type: "identity" } & DistributiveOmit<
+			import("./config/oidc").IdentityBindingConfig,
+			"binding"
+	  >)
 	| {
 			type: "plain_text";
 			value: string;

@@ -31,6 +31,7 @@ import type {
 	PipelineBinding,
 	QueueBinding,
 	R2Binding,
+	IdentityBinding,
 	RateLimitBinding,
 	SecretBinding,
 	SecretsStoreSecretBinding,
@@ -125,6 +126,7 @@ type Binding =
 	| PipelineBinding
 	| QueueBinding
 	| R2Binding
+	| IdentityBinding
 	| RateLimitBinding
 	| SecretBinding
 	| SecretsStoreSecretBinding
@@ -402,6 +404,8 @@ export interface WorkerConfig {
 	 * @default []
 	 */
 	compatibilityFlags?: string[];
+	/** Receiver trust expectations for managed delegated request verification. */
+	callerIdentity?: import("@cloudflare/workers-utils/oidc").CallerIdentityConfiguration;
 
 	/**
 	 * The entrypoint module that will be executed.

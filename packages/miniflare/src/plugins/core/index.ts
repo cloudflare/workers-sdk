@@ -76,6 +76,8 @@ import {
 	getExplorerServices,
 	wrapDurableObjectModules,
 } from "./explorer";
+import { usesLocalIdentity, LOCAL_IDENTITY_ENTRY_BINDING } from "./identity";
+import { LOCAL_IDENTITY_ROUTER } from "./local-identity";
 import {
 	buildStringScriptPath,
 	convertManifestModule,
@@ -474,7 +476,10 @@ export const CORE_PLUGIN: Plugin = {
 				)
 			);
 		}
-		for (const [name] of getServiceBindings(config)) {
+		for (const [name] of [
+			...getServiceBindings(config),
+			...getEnvBindingsOfType(config, "identity"),
+		]) {
 			bindingEntries.push([name, new ProxyNodeBinding()]);
 		}
 		return Object.fromEntries(await Promise.all(bindingEntries));
@@ -487,6 +492,7 @@ export const CORE_PLUGIN: Plugin = {
 		workerIndex,
 		durableObjectClassNames,
 		containerPrivilegesCache,
+		localIdentity,
 		additionalModules,
 		loopbackHost,
 		loopbackPort,
@@ -494,6 +500,18 @@ export const CORE_PLUGIN: Plugin = {
 		const { config, dev } = options;
 		// Define regular user worker
 		const workerScript = getWorkerScript(options, workerIndex);
+		if (localIdentity) {
+			workerBindings.push(
+				...(await localIdentity.bindings(options, JSON.stringify(workerScript)))
+			);
+		}
+		if (dev?.unsafeSuppressNativeCaller) {
+			for (const binding of workerBindings) {
+				if ("service" in binding && binding.service) {
+					binding.service.suppressNativeCaller = true;
+				}
+			}
+		}
 		// Add additional modules (e.g. "__STATIC_CONTENT_MANIFEST") if any
 		if ("modules" in workerScript) {
 			const subDirs = new Set(
@@ -591,11 +609,18 @@ export const CORE_PLUGIN: Plugin = {
 		// the shared worker config: the Workflows plugin copies these flags into
 		// its engine worker, which pairs them with an older hardcoded compatibility
 		// date that still needs the flag.
-		const userFlags = config.compatibilityFlags
-			? stripRedundantNodejsCompatFlags(
-					compatibilityDate,
-					config.compatibilityFlags
-				)
+		const configuredFlags =
+			config.callerIdentity === undefined
+				? config.compatibilityFlags
+				: [
+						...new Set([
+							...(config.compatibilityFlags ?? []),
+							"enable_workload_identity_context",
+							"enable_delegated_identity",
+						]),
+					];
+		const userFlags = configuredFlags
+			? stripRedundantNodejsCompatFlags(compatibilityDate, configuredFlags)
 			: undefined;
 		// Only add the flags the worker doesn't already declare. A worker that sets
 		// e.g. `streaming_tail_worker` itself (some do) would otherwise have it
@@ -617,6 +642,11 @@ export const CORE_PLUGIN: Plugin = {
 				compatibilityDate,
 				compatibilityFlags,
 				bindings: workerBindings,
+				workloadIdentityService: compatibilityFlags?.includes(
+					"enable_workload_identity_context"
+				)
+					? localIdentity?.receiver(config.name)
+					: undefined,
 				durableObjectNamespaces: getDurableObjectNamespaces(
 					classNames,
 					config.name,
@@ -721,6 +751,31 @@ export const CORE_PLUGIN: Plugin = {
 							name: "STRIP_CF_CONNECTING_IP",
 							json: JSON.stringify(dev?.stripCfConnectingIp ?? true),
 						},
+						...(localIdentity
+							? [
+									{
+										name: "LOCAL_IDENTITY_ROUTER",
+										service: {
+											name: LOCAL_IDENTITY_ROUTER,
+											entrypoint: "LocalRouter",
+											suppressNativeCaller: true,
+										},
+									},
+									{
+										name: "LOCAL_IDENTITY_ORIGINS",
+										json: JSON.stringify([
+											new URL(localIdentity.metadata.issuer).origin,
+											...Object.values(localIdentity.metadata.workers).flatMap(
+												(w) => w.origins
+											),
+										]),
+									},
+									{
+										name: "LOCAL_IDENTITY_DIRECTORY",
+										text: localIdentity.metadata.directoryDomain,
+									},
+								]
+							: []),
 						WORKER_BINDING_SERVICE_LOOPBACK,
 					],
 					globalOutbound: getGlobalOutbound(workerIndex, config, dev),
@@ -800,11 +855,11 @@ export function getGlobalServices({
 		{ name: CoreBindings.JSON_LOG_LEVEL, json: JSON.stringify(log.level) },
 		{
 			name: CoreBindings.SERVICE_USER_FALLBACK,
-			service: { name: fallbackWorkerName },
+			service: { name: fallbackWorkerName, suppressNativeCaller: true },
 		},
 		...workerNames.map((name) => ({
 			name: CoreBindings.SERVICE_USER_ROUTE_PREFIX + name,
-			service: { name: getUserServiceName(name) },
+			service: { name: getUserServiceName(name), suppressNativeCaller: true },
 		})),
 		{
 			name: CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY,
@@ -834,6 +889,12 @@ export function getGlobalServices({
 			service: { name: EMAIL_STORE_SERVICE_NAME },
 		},
 	];
+	if (allWorkerOpts?.some(usesLocalIdentity)) {
+		serviceEntryBindings.push({
+			name: LOCAL_IDENTITY_ENTRY_BINDING,
+			service: { name: LOCAL_IDENTITY_ROUTER, suppressNativeCaller: true },
+		});
+	}
 	if (sharedOptions.unsafeLocalExplorer) {
 		serviceEntryBindings.push({
 			name: CoreBindings.SERVICE_LOCAL_EXPLORER,

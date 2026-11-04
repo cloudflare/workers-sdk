@@ -1,5 +1,3 @@
-// oxlint-disable typescript/no-explicit-any -- needed in type utilities
-
 import type {
 	JsonBinding,
 	K2Producer,
@@ -9,6 +7,8 @@ import type {
 	TypedPipelineBinding,
 	TypedQueueBinding,
 } from "./bindings";
+// oxlint-disable typescript/no-explicit-any -- needed in type utilities
+import type { InferredConnectionBinding } from "./connection-inference";
 import type { WorkerReference } from "./definition";
 import type { Pipeline } from "cloudflare:pipelines";
 
@@ -108,6 +108,63 @@ interface BindingTypeMap<TBinding> {
 	logfwdr: any;
 	media: MediaBinding;
 	"mtls-certificate": Fetcher;
+	// Replace with ambient IdentityBinding after the matching workers-types release.
+	identity: TBinding extends
+		| { connector_id: string }
+		| { oauth: { grant: "authorization_code" } }
+		? InferredConnectionBinding<TBinding>
+		: {
+				/** A positional string always selects an application-supplied agent ID. */
+				getIdentity(selection?: string | { agentId?: string }): Promise<
+					Rpc.Stub<
+						Rpc.RpcTargetBranded & {
+							getToken(): Promise<string>;
+							getAuthorizationGrant(options?: {
+								authorizationServer?: string;
+								scope?: string[];
+							}): Promise<string>;
+							getClientMetadata(): Promise<{
+								client_id: string;
+								client_name: string;
+								token_endpoint_auth_method: "private_key_jwt";
+								token_endpoint_auth_signing_alg: "Ed25519" | "ES256";
+								jwks: {
+									keys: {
+										kty: string;
+										crv?: string;
+										x?: string;
+										y?: string;
+										kid?: string;
+										alg?: string;
+										use?: string;
+									}[];
+								};
+								grant_types: "client_credentials"[];
+								response_types: never[];
+							}>;
+							getClientAssertion(): Promise<string>;
+							readonly id: Promise<string>;
+							readonly signatureAgent: Promise<string>;
+							fetch(
+								input: Request | string,
+								init?: Omit<RequestInit, "body" | "cf" | "signal"> & {
+									body?:
+										| string
+										| ArrayBuffer
+										| ArrayBufferView
+										| ReadableStream<Uint8Array>
+										| Blob;
+								}
+							): Promise<Response>;
+						}
+					>
+				>;
+				getToken(): Promise<string>;
+				getAuthorizationGrant(options?: {
+					authorizationServer?: string;
+					scope?: string[];
+				}): Promise<string>;
+			};
 	"rate-limit": RateLimit;
 	r2: R2Bucket;
 	secret: string;

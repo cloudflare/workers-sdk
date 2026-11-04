@@ -62,6 +62,14 @@
 		"./zod-format": {
 			"import": "./dist/zod-format.mjs",
 			"types": "./dist/zod-format.d.mts"
+		},
+		"./oidc": {
+			"import": "./dist/oidc.mjs",
+			"types": "./dist/oidc.d.mts"
+		},
+		"./identity-connectors": {
+			"import": "./dist/identity-connectors.mjs",
+			"types": "./dist/identity-connectors.d.mts"
 		}
 	},
 	"scripts": {

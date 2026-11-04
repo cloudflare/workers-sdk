@@ -1,3 +1,7 @@
+import {
+	isIdentityBinding,
+	parseCallerIdentity,
+} from "@cloudflare/workers-utils/oidc";
 import * as z from "zod";
 import { WORKFLOW_JURISDICTIONS } from "./exports";
 import type { SendEmailBinding, VpcNetworkBinding } from "./bindings";
@@ -106,7 +110,128 @@ export const HyperdriveBindingSchema = z.strictObject({
 	}).optional(),
 });
 
+const IdentityResourceSchema = z.strictObject({
+	url: z.string().optional(),
+	origin: z.string().optional(),
+	methods: z.array(z.enum(["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"])),
+});
+const ManagedOAuthBaseSchema = z.strictObject({
+	authorization_server: z.string(),
+	token_endpoint: z.string().optional(),
+	resource: z.string(),
+	scope: z.array(z.string()),
+	resources: z.array(IdentityResourceSchema),
+	http_message_signatures: z.literal("web_bot_auth").optional(),
+});
+const ManagedOAuthSchema = z.union([
+	ManagedOAuthBaseSchema.extend({
+		exchange: z.literal("workload_authorization"),
+		client_id: z.never().optional(),
+	}),
+	ManagedOAuthBaseSchema.extend({
+		exchange: z.literal("client_credentials"),
+		client_id: z.string(),
+	}),
+	ManagedOAuthBaseSchema.extend({
+		exchange: z.literal("client_credentials"),
+		client_id: z.string(),
+		resource: z.string().optional(),
+		scope: z.array(z.string()).min(1).optional(),
+		authentication: z.strictObject({
+			method: z.enum(["client_secret_basic", "client_secret_post"]),
+			secret_reference: z.strictObject({
+				store_id: z.string().regex(/^[a-f0-9]{32}$/),
+				secret_name: z
+					.string()
+					.min(1)
+					.max(1024)
+					.refine((v) => new TextEncoder().encode(v).length <= 1024)
+					.refine((v) => [...v].every((c) => c > " " && c !== "\u007f")),
+			}),
+		}),
+		token_protection: z.enum(["bearer", "dpop"]).optional(),
+	}),
+]);
+
 export const KnownBindingSchema = z.discriminatedUnion("type", [
+	z
+		.strictObject({
+			type: z.literal("identity"),
+			connector_id: z.string().optional(),
+			connector_revision: z.number().int().positive().optional(),
+			selection: z.enum(["app", "customer"]).optional(),
+			connection_management: z.boolean().optional(),
+			scope: z.array(z.string()).optional(),
+			resources: z
+				.array(
+					z.strictObject({
+						url: z.string().optional(),
+						origin: z.string().optional(),
+						methods: z.array(
+							z.enum(["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"])
+						),
+					})
+				)
+				.optional(),
+			inspection_resources: z
+				.array(
+					z.strictObject({
+						url: z.string(),
+						methods: z.array(
+							z.enum(["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"])
+						),
+					})
+				)
+				.optional(),
+			return_urls: z.array(z.string()).optional(),
+			audience: z.string().optional(),
+			subject: z.enum(["worker", "durable-object-namespace"]).optional(),
+			namespace_id: z.string().optional(),
+			authorization_grants: z
+				.strictObject({
+					allowed_authorization_servers: z.array(z.string()),
+					allowed_scopes: z.array(z.string()),
+				})
+				.optional(),
+			client_authentication: z
+				.strictObject({ client_id: z.string(), audience: z.string() })
+				.optional(),
+			oauth: z
+				.union([
+					ManagedOAuthSchema,
+					z.custom<
+						import("@cloudflare/workers-utils/oidc").ConnectionOAuthConfig
+					>(
+						(value) =>
+							typeof value === "object" &&
+							value !== null &&
+							"grant" in value &&
+							value.grant === "authorization_code"
+					),
+				])
+				.optional(),
+			request_signing: z
+				.strictObject({
+					resources: z.array(IdentityResourceSchema),
+				})
+				.optional(),
+		})
+		.refine(
+			({ type: _type, ...binding }) =>
+				isIdentityBinding({ binding: "IDENTITY", ...binding }),
+			{
+				message:
+					"Identity requires a valid optional audience, subject, and purpose limits.",
+			}
+		)
+		.transform(({ type, ...binding }) => {
+			const candidate = { binding: "IDENTITY", ...binding };
+			if (!isIdentityBinding(candidate)) {
+				throw new Error("Invalid identity binding");
+			}
+			const { binding: _name, ...configuration } = candidate;
+			return { type, ...configuration };
+		}),
 	z.strictObject({
 		type: z.literal("agent-memory"),
 		namespace: z.string(),
@@ -811,6 +936,22 @@ const BaseWorkerSchema = z.strictObject({
 	name: z.string(),
 	compatibilityDate: z.string(),
 	compatibilityFlags: z.array(z.string()).optional(),
+	callerIdentity: z
+		.custom<
+			import("@cloudflare/workers-utils/oidc").CallerIdentityConfiguration
+		>()
+		.transform((value, ctx) => {
+			try {
+				return parseCallerIdentity(value);
+			} catch {
+				ctx.addIssue({
+					code: "custom",
+					message: "Invalid callerIdentity configuration.",
+				});
+				return z.NEVER;
+			}
+		})
+		.optional(),
 	assets: AssetsSchema.optional(),
 	domains: z.array(DomainSchema).optional(),
 	triggers: z.array(TriggerSchema).optional(),

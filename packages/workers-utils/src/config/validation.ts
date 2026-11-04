@@ -18,6 +18,7 @@ import {
 } from "./durable-object-exports";
 import { ARTIFACTS_EVENT_TYPES, WORKFLOW_JURISDICTIONS } from "./environment";
 import { partitionExports } from "./exports";
+import { isIdentityBinding, parseCallerIdentity } from "./oidc";
 import {
 	all,
 	appendEnvName,
@@ -120,6 +121,7 @@ export type ConfigBindingFieldName =
 	| "k2"
 	| "secrets_store_secrets"
 	| "artifacts"
+	| "identities"
 	| "ratelimits"
 	| "assets"
 	| "unsafe_hello_world"
@@ -162,6 +164,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	k2: "K2 Stream",
 	secrets_store_secrets: "Secrets Store Secret",
 	artifacts: "Artifacts",
+	identities: "Identity",
 	ratelimits: "Rate Limit",
 	assets: "Assets",
 	unsafe_hello_world: "Hello World",
@@ -213,6 +216,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	logfwdr: "logfwdr",
 	unsafe_hello_world: "Hello World",
 	flagship: "Flagship",
+	identity: "Identity",
 	ratelimit: "Rate Limit",
 	worker_loader: "Worker Loader",
 	vpc_service: "VPC Service",
@@ -1513,6 +1517,11 @@ function normalizeAndValidateEnvironment(
 		experimental(diagnostics, rawEnv, "unsafe");
 	}
 
+	if ("identity_receiver" in rawEnv) {
+		diagnostics.errors.push(
+			"identity_receiver was replaced by caller_identity. Use profile, accountTokens and companyId without delegated_requests."
+		);
+	}
 	const route = normalizeAndValidateRoute(diagnostics, topLevelEnv, rawEnv);
 
 	const account_id = inheritable(
@@ -2089,6 +2098,36 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateWorkerLoaderBinding),
 			[]
 		),
+		caller_identity: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"caller_identity",
+			(_diagnostics, field, value) => {
+				try {
+					parseCallerIdentity(value);
+					return true;
+				} catch {
+					_diagnostics.errors.push(
+						`${field} must be a valid delegated receiver configuration.`
+					);
+					return false;
+				}
+			},
+			undefined
+		),
+		identities: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"identities",
+			validateBindingArray(envName, validateIdentityBinding),
+			[]
+		),
 		ratelimits: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2281,6 +2320,15 @@ function normalizeAndValidateEnvironment(
 			Object.keys(rawEnv),
 			Object.keys(environment)
 		);
+	}
+	if (environment.caller_identity !== undefined) {
+		environment.compatibility_flags = [
+			...new Set([
+				...environment.compatibility_flags,
+				"enable_workload_identity_context",
+				"enable_delegated_identity",
+			]),
+		];
 	}
 	return environment;
 }
@@ -3669,6 +3717,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 	}
 	if (isRequiredProperty(value, "type", "string")) {
 		const safeBindings = [
+			"identity",
 			"plain_text",
 			"secret_text",
 			"json",
@@ -6466,6 +6515,16 @@ const validateWorkerLoaderBinding: ValidatorFn = (
 	return isValid;
 };
 
+const validateIdentityBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (!isIdentityBinding(value)) {
+		diagnostics.errors.push(
+			`"${field}" requires binding, a valid optional audience, a valid subject profile, and valid optional authorization_grants/request_signing limits.`
+		);
+		return false;
+	}
+	return true;
+};
+
 const validateRateLimitBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
@@ -6631,6 +6690,8 @@ const validatePreviewsConfig =
 				"unsafe_hello_world",
 				"flagship",
 				"worker_loaders",
+				"identities",
+				"caller_identity",
 				"ratelimits",
 				"vpc_services",
 				"version_metadata",
@@ -6927,6 +6988,14 @@ const validatePreviewsConfig =
 				diagnostics,
 				`${field}.worker_loaders`,
 				previews.worker_loaders,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateIdentityBinding)(
+				diagnostics,
+				`${field}.identities`,
+				previews.identities,
 				undefined
 			) && isValid;
 

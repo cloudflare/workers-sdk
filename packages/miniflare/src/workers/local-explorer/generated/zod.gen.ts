@@ -553,6 +553,119 @@ export const zWorkersKvApiResponseCollection = zWorkersKvApiResponseCommon.and(
 	})
 );
 
+export const zSecretsStoreMessages = z.array(
+	z.object({
+		code: z.int().gte(1000),
+		documentation_url: z.string().optional(),
+		message: z.string(),
+		source: z
+			.object({
+				pointer: z.string().optional(),
+			})
+			.optional(),
+	})
+);
+
+export const zSecretsStoreApiResponseCommonFailure = z.object({
+	errors: zSecretsStoreMessages,
+	messages: zSecretsStoreMessages,
+	result: z.unknown().nullable(),
+	success: z.literal(false),
+});
+
+/**
+ * Store Identifier.
+ */
+export const zSecretsStoreStoreIdentifier = z.string().max(32).readonly();
+
+export const zSecretsStoreSecretStatus = z.enum([
+	"pending",
+	"active",
+	"deleted",
+]);
+
+/**
+ * The list of services that can use this secret.
+ */
+export const zSecretsStoreScopes = z.array(
+	z.enum(["workers", "ai_gateway", "dex", "access", "containers", "websearch"])
+);
+
+/**
+ * The name of the secret.
+ */
+export const zSecretsStoreSecretName = z.string();
+
+/**
+ * When the secret was modified.
+ */
+export const zSecretsStoreModified = z.iso.datetime().readonly();
+
+/**
+ * Secret identifier tag.
+ */
+export const zSecretsStoreIdentifier = z.string().max(32).readonly();
+
+/**
+ * When the secret was created.
+ */
+export const zSecretsStoreCreated = z.iso.datetime().readonly();
+
+/**
+ * Freeform text describing the secret.
+ */
+export const zSecretsStoreComment = z.string();
+
+export const zSecretsStoreSecretObject = z.object({
+	comment: zSecretsStoreComment.optional(),
+	created: zSecretsStoreCreated,
+	id: zSecretsStoreIdentifier,
+	modified: zSecretsStoreModified,
+	name: zSecretsStoreSecretName,
+	scopes: zSecretsStoreScopes.optional(),
+	status: zSecretsStoreSecretStatus,
+	store_id: zSecretsStoreStoreIdentifier,
+});
+
+export const zSecretsStoreApiResponseCommon = z.object({
+	errors: zSecretsStoreMessages,
+	messages: zSecretsStoreMessages,
+	success: z.literal(true),
+});
+
+export const zSecretsStoreApiResponseCollection =
+	zSecretsStoreApiResponseCommon.and(
+		z.object({
+			result_info: z
+				.object({
+					count: z.number().optional(),
+					page: z.number().optional(),
+					per_page: z.number().optional(),
+					total_count: z.number().optional(),
+					total_pages: z.number().optional(),
+				})
+				.optional(),
+		})
+	);
+
+export const zSecretsStoreSecretsResponseCollection =
+	zSecretsStoreApiResponseCollection.and(
+		z.object({
+			result: z.array(zSecretsStoreSecretObject).optional(),
+		})
+	);
+
+export const zSecretsStoreCreateSecretObject = z.object({
+	comment: zSecretsStoreComment.optional(),
+	name: zSecretsStoreSecretName,
+	scopes: zSecretsStoreScopes,
+});
+
+/**
+ * The value of the secret. Maximum 64 KiB (65,536 bytes). Note that this is 'write only' - the API never returns this value; it exists only to create or modify secrets.
+ */
+export const zSecretsStoreValue = z.string().max(65536);
+
 export const zLocalExplorerScheduledRequest = z.object({
 	cron: z.string().regex(/.*\S.*/),
 	scheduled_time: z.int().gte(-9223372036854).lte(9223372036854).optional(),
@@ -976,6 +1089,27 @@ export const zWorkersKvNamespaceWritable = z.object({
 	title: zWorkersKvNamespaceTitle,
 });
 
+export const zSecretsStoreSecretObjectWritable = z.object({
+	comment: zSecretsStoreComment.optional(),
+	name: zSecretsStoreSecretName,
+	scopes: zSecretsStoreScopes.optional(),
+	status: zSecretsStoreSecretStatus,
+});
+
+export const zSecretsStoreSecretsResponseCollectionWritable =
+	zSecretsStoreApiResponseCollection.and(
+		z.object({
+			result: z.array(zSecretsStoreSecretObjectWritable).optional(),
+		})
+	);
+
+export const zSecretsStoreCreateSecretObjectWritable = z.object({
+	comment: zSecretsStoreComment.optional(),
+	name: zSecretsStoreSecretName,
+	scopes: zSecretsStoreScopes,
+	value: zSecretsStoreValue,
+});
+
 /**
  * Jurisdiction where objects in this bucket are guaranteed to be stored.
  */
@@ -986,6 +1120,31 @@ export const zR2CfR2Jurisdiction = z.enum([
 	"fedramp",
 	"fedramp-high",
 ]);
+
+/**
+ * Store identifier.
+ */
+export const zSecretsStoreStoreId = z.string().max(32);
+
+/**
+ * Account identifier.
+ */
+export const zSecretsStoreAccountId = z.string().max(32);
+
+export const zSecretsStoreSecretCreateData = z.object({
+	body: z.array(zSecretsStoreCreateSecretObjectWritable),
+	path: z.object({
+		account_id: z.string().max(32),
+		store_id: z.string().max(32),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Secret detail.
+ */
+export const zSecretsStoreSecretCreateResponse =
+	zSecretsStoreSecretsResponseCollection;
 
 export const zWorkersKvNamespaceListNamespacesData = z.object({
 	body: z.never().optional(),

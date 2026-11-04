@@ -36,6 +36,8 @@
 	],
 	"ignorePatterns": [
 		"CHANGELOG.md",
+		"packages/miniflare/src/plugins/core/identity-services.generated.ts",
+		"packages/miniflare/test/fixtures/identity-oauth.js",
 		// tsup deletes these generated config bundles while checks run concurrently.
 		"**/tsup.config.bundled_*.{mjs,cjs}",
 		// In the C3 templates, in particular framework templates, we want to be able to

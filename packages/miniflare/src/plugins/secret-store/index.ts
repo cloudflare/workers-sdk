@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import SCRIPT_KV_NAMESPACE_OBJECT from "worker:kv/namespace";
 import SCRIPT_SECRETS_STORE_SECRET from "worker:secrets-store/secret";
 import { SharedBindings } from "../../workers";
+import { SECRET_STORE_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/secrets-store/constants";
 import { KV_NAMESPACE_OBJECT_CLASS_NAME } from "../kv";
 import {
 	buildObjectEntryProps,
@@ -20,7 +21,6 @@ import type { Plugin } from "../shared";
 export const SECRET_STORE_PLUGIN_NAME = "secrets-store";
 // A single entry service shared by every secret store. Each store_id is supplied
 // per-binding via `ctx.props`, so one service serves all of them.
-const SECRET_STORE_LOCAL_ENTRY_SERVICE_NAME = `${SECRET_STORE_PLUGIN_NAME}:ns:entry`;
 
 export const SECRET_STORE_PLUGIN: Plugin = {
 	bindingTypeDescription: "Secrets Store secret",
@@ -53,8 +53,35 @@ export const SECRET_STORE_PLUGIN: Plugin = {
 			options.config,
 			"secrets-store-secret"
 		).map(([, binding]) => binding);
+		for (const [, binding] of getEnvBindingsOfType(
+			options.config,
+			"identity"
+		)) {
+			const auth =
+				binding.oauth && "authentication" in binding.oauth
+					? binding.oauth.authentication
+					: undefined;
+			if (
+				auth &&
+				!configs.some(
+					(c) =>
+						c.storeId === auth.secret_reference.store_id &&
+						c.secretName === auth.secret_reference.secret_name
+				)
+			) {
+				configs.push({
+					type: "secrets-store-secret",
+					storeId: auth.secret_reference.store_id,
+					secretName: auth.secret_reference.secret_name,
+				});
+			}
+		}
 
-		if (configs.length === 0 && !sharedOptions.unsafeEnableSharedStorage) {
+		if (
+			configs.length === 0 &&
+			!sharedOptions.unsafeEnableSharedStorage &&
+			!sharedOptions.unsafeLocalExplorer
+		) {
 			return [];
 		}
 

@@ -12,6 +12,61 @@
 		}
 	],
 	"paths": {
+		"/secrets_store/stores/{store_id}/secrets": {
+			"post": {
+				"operationId": "secrets-store-secret-create",
+				"summary": "Create a secret",
+				"description": "Creates a secret in the account.",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/secrets-store_account_id"
+					},
+					{
+						"$ref": "#/components/parameters/secrets-store_store_id"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "array",
+								"items": {
+									"$ref": "#/components/schemas/secrets-store_createSecretObject"
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Secret detail.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/secrets-store_secrets_response_collection"
+								}
+							}
+						}
+					},
+					"4XX": {
+						"description": "Create secret response failure.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/secrets-store_api-response-common-failure"
+										}
+									]
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Secrets Store"]
+			}
+		},
 		"/storage/kv/namespaces": {
 			"get": {
 				"operationId": "workers-kv-namespace-list-namespaces",
@@ -5821,6 +5876,264 @@
 					}
 				}
 			},
+			"secrets-store_api-response-common-failure": {
+				"type": "object",
+				"properties": {
+					"errors": {
+						"example": [
+							{
+								"code": 7003,
+								"message": "No route for the URI"
+							}
+						],
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/secrets-store_messages"
+							}
+						],
+						"minLength": 1
+					},
+					"messages": {
+						"example": [],
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/secrets-store_messages"
+							}
+						]
+					},
+					"result": {
+						"type": "object",
+						"enum": [null],
+						"nullable": true
+					},
+					"success": {
+						"description": "Whether the API call was successful.",
+						"type": "boolean",
+						"example": false,
+						"enum": [false]
+					}
+				},
+				"required": ["success", "errors", "messages", "result"]
+			},
+			"secrets-store_messages": {
+				"type": "array",
+				"items": {
+					"properties": {
+						"code": {
+							"type": "integer",
+							"minimum": 1000
+						},
+						"documentation_url": {
+							"type": "string"
+						},
+						"message": {
+							"type": "string"
+						},
+						"source": {
+							"type": "object",
+							"properties": {
+								"pointer": {
+									"type": "string"
+								}
+							}
+						}
+					},
+					"required": ["code", "message"],
+					"type": "object",
+					"uniqueItems": true
+				},
+				"example": []
+			},
+			"secrets-store_secrets_response_collection": {
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/secrets-store_api-response-collection"
+					},
+					{
+						"properties": {
+							"result": {
+								"type": "array",
+								"items": {
+									"$ref": "#/components/schemas/secrets-store_secretObject"
+								}
+							}
+						},
+						"type": "object"
+					}
+				]
+			},
+			"secrets-store_secretObject": {
+				"properties": {
+					"comment": {
+						"$ref": "#/components/schemas/secrets-store_comment"
+					},
+					"created": {
+						"$ref": "#/components/schemas/secrets-store_created"
+					},
+					"id": {
+						"$ref": "#/components/schemas/secrets-store_identifier"
+					},
+					"modified": {
+						"$ref": "#/components/schemas/secrets-store_modified"
+					},
+					"name": {
+						"$ref": "#/components/schemas/secrets-store_secret_name"
+					},
+					"scopes": {
+						"$ref": "#/components/schemas/secrets-store_scopes"
+					},
+					"status": {
+						"$ref": "#/components/schemas/secrets-store_SecretStatus"
+					},
+					"store_id": {
+						"$ref": "#/components/schemas/secrets-store_store_identifier"
+					}
+				},
+				"required": ["id", "name", "store_id", "created", "modified", "status"]
+			},
+			"secrets-store_store_identifier": {
+				"description": "Store Identifier.",
+				"type": "string",
+				"example": "023e105f4ecef8ad9ca31a8372d0c353",
+				"maxLength": 32,
+				"readOnly": true
+			},
+			"secrets-store_SecretStatus": {
+				"type": "string",
+				"enum": ["pending", "active", "deleted"]
+			},
+			"secrets-store_scopes": {
+				"description": "The list of services that can use this secret.",
+				"type": "array",
+				"items": {
+					"enum": [
+						"workers",
+						"ai_gateway",
+						"dex",
+						"access",
+						"containers",
+						"websearch"
+					],
+					"type": "string"
+				},
+				"example": ["workers", "ai_gateway", "dex", "access", "websearch"]
+			},
+			"secrets-store_secret_name": {
+				"description": "The name of the secret.",
+				"type": "string",
+				"example": "MY_API_KEY"
+			},
+			"secrets-store_modified": {
+				"description": "When the secret was modified.",
+				"type": "string",
+				"format": "date-time",
+				"example": "2023-09-21T18:56:32.624632Z",
+				"readOnly": true
+			},
+			"secrets-store_identifier": {
+				"description": "Secret identifier tag.",
+				"type": "string",
+				"example": "3fd85f74b32742f1bff64a85009dda07",
+				"maxLength": 32,
+				"readOnly": true
+			},
+			"secrets-store_created": {
+				"description": "When the secret was created.",
+				"type": "string",
+				"format": "date-time",
+				"example": "2023-09-21T18:56:32.624632Z",
+				"readOnly": true
+			},
+			"secrets-store_comment": {
+				"description": "Freeform text describing the secret.",
+				"type": "string",
+				"example": "info about my secret"
+			},
+			"secrets-store_api-response-collection": {
+				"type": "object",
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/secrets-store_api-response-common"
+					},
+					{
+						"properties": {
+							"result_info": {
+								"type": "object",
+								"properties": {
+									"count": {
+										"description": "Total number of results for the requested service.",
+										"type": "number",
+										"example": 1
+									},
+									"page": {
+										"description": "Current page within paginated list of results.",
+										"type": "number",
+										"example": 1
+									},
+									"per_page": {
+										"description": "Number of results per page of results.",
+										"type": "number",
+										"example": 20
+									},
+									"total_count": {
+										"description": "Total results available without any search parameters.",
+										"type": "number",
+										"example": 2000
+									},
+									"total_pages": {
+										"description": "The number of total pages in the entire result set.",
+										"type": "number",
+										"example": 100
+									}
+								}
+							}
+						},
+						"type": "object"
+					}
+				]
+			},
+			"secrets-store_api-response-common": {
+				"type": "object",
+				"properties": {
+					"errors": {
+						"$ref": "#/components/schemas/secrets-store_messages"
+					},
+					"messages": {
+						"$ref": "#/components/schemas/secrets-store_messages"
+					},
+					"success": {
+						"description": "Whether the API call was successful.",
+						"type": "boolean",
+						"example": true,
+						"enum": [true]
+					}
+				},
+				"required": ["success", "errors", "messages"]
+			},
+			"secrets-store_createSecretObject": {
+				"properties": {
+					"comment": {
+						"$ref": "#/components/schemas/secrets-store_comment"
+					},
+					"name": {
+						"$ref": "#/components/schemas/secrets-store_secret_name"
+					},
+					"scopes": {
+						"$ref": "#/components/schemas/secrets-store_scopes"
+					},
+					"value": {
+						"$ref": "#/components/schemas/secrets-store_value"
+					}
+				},
+				"required": ["name", "value", "scopes"]
+			},
+			"secrets-store_value": {
+				"description": "The value of the secret. Maximum 64 KiB (65,536 bytes). Note that this is 'write only' - the API never returns this value; it exists only to create or modify secrets.",
+				"type": "string",
+				"example": "api-token-secret-123",
+				"maxLength": 65536,
+				"writeOnly": true
+			},
 			"local-explorer_scheduled-request": {
 				"type": "object",
 				"required": ["cron"],
@@ -7056,6 +7369,28 @@
 					"type": "string",
 					"default": "default",
 					"enum": ["default", "eu", "us", "fedramp", "fedramp-high"]
+				}
+			},
+			"secrets-store_store_id": {
+				"description": "Store identifier.",
+				"in": "path",
+				"name": "store_id",
+				"required": true,
+				"schema": {
+					"type": "string",
+					"example": "023e105f4ecef8ad9ca31a8372d0c353",
+					"maxLength": 32
+				}
+			},
+			"secrets-store_account_id": {
+				"description": "Account identifier.",
+				"in": "path",
+				"name": "account_id",
+				"required": true,
+				"schema": {
+					"type": "string",
+					"example": "985e105f4ecef8ad9ca31a8372d0c353",
+					"maxLength": 32
 				}
 			}
 		}

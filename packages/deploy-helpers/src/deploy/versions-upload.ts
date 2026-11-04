@@ -265,6 +265,7 @@ async function uploadWorkerVersion(
 		sourceMaps,
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,
+		caller_identity: config.caller_identity,
 		keepVars,
 		// we never delete secret bindings when uploading, even if we are setting secrets from a file
 		// so inherit all unchanged secrets from the previous Worker Version

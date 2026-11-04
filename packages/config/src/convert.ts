@@ -230,6 +230,16 @@ function convertTopLevel(
 	if (config.compatibilityFlags !== undefined) {
 		result.compatibility_flags = config.compatibilityFlags;
 	}
+	if (config.callerIdentity !== undefined) {
+		result.caller_identity = config.callerIdentity;
+		result.compatibility_flags = [
+			...new Set([
+				...(result.compatibility_flags ?? []),
+				"enable_workload_identity_context",
+				"enable_delegated_identity",
+			]),
+		];
+	}
 	if (config.workersDev !== undefined) {
 		result.workers_dev = config.workersDev;
 	}
@@ -421,6 +431,11 @@ function convertBindingsAndAssets(
 		}
 
 		switch (binding.type) {
+			case "identity": {
+				const { type: _type, ...limits } = binding;
+				(result.identities ??= []).push({ binding: name, ...limits });
+				break;
+			}
 			case "agent-memory": {
 				agentMemory.push(
 					omitUndefined({

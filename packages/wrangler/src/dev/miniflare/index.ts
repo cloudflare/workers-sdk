@@ -69,6 +69,7 @@ type Port = SpecificPort | RandomConsistentPort | RandomDifferentPort;
 type R2S3Credentials = { accessKeyId: string; secretAccessKey: string };
 
 export interface ConfigBundle {
+	callerIdentity?: Config["caller_identity"];
 	// TODO(soon): maybe rename some of these options, check proposed API Google Docs
 	name: string | undefined;
 	projectRoot: string;
@@ -506,6 +507,7 @@ type WorkerOptionsBindings = Pick<
 	| "hyperdrives"
 	| "durableObjects"
 	| "serviceBindings"
+	| "identities"
 	| "ratelimits"
 	| "workflows"
 	| "workflowExports"
@@ -1142,6 +1144,11 @@ export function buildMiniflareBindingOptions(
 		),
 		additionalUnboundDurableObjects,
 
+		identities: Object.fromEntries(
+			extractBindingsOfType("identity", bindings).map(
+				({ binding, type: _type, ...x }) => [binding, x]
+			)
+		),
 		ratelimits: Object.fromEntries(ratelimits.map(ratelimitEntry)),
 
 		mtlsCertificates: Object.fromEntries(
@@ -1280,6 +1287,7 @@ export async function buildMiniflareOptions(
 				name: getName(config),
 				compatibilityDate: config.compatibilityDate,
 				compatibilityFlags: config.compatibilityFlags,
+				callerIdentity: config.callerIdentity,
 
 				...sourceOptions,
 				...bindingOptions,

@@ -109,6 +109,9 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					);
 				}
 
+				// Discovery can call auxiliary Workers; initialize their runners before setup.
+				await ctx.miniflare.unsafePrepareIdentityBindings();
+
 				for (const environmentName of ctx.resolvedPluginConfig.environmentNameToWorkerMap.keys()) {
 					const environment = viteDevServer.environments[environmentName];
 					assert(

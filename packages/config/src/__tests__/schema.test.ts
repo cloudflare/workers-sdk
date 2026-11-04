@@ -1,6 +1,7 @@
 import { describe, it } from "vitest";
 import { exports as exportConfig } from "../exports";
 import {
+	KnownBindingSchema,
 	BindingSchema,
 	InputConfigSchema,
 	InputContainerSchema,
@@ -1894,4 +1895,101 @@ describe("ExportSchema", () => {
 
 		expect(typeAssertions).toBeTypeOf("function");
 	});
+});
+
+describe("OIDC capability bindings", () => {
+	it("accepts fixed audiences and separate purpose limits", ({ expect }) => {
+		const limits = {
+			audience: "urn:orders",
+			request_signing: {
+				resources: [{ origin: "https://api.example", methods: ["POST"] }],
+			},
+		};
+		expect(
+			InputWorkerSchema.parse({
+				...baseConfig,
+				env: { IDENTITY: { type: "identity", ...limits } },
+			}).env?.IDENTITY
+		).toEqual({ type: "identity", ...limits });
+	});
+	it.for([
+		{ audience: " " },
+		{ audience: "urn:orders", identity_id: "orders" },
+	])(
+		"rejects invalid limits or caller authority: %j",
+		(binding, { expect }) => {
+			expect(
+				InputWorkerSchema.safeParse({
+					...baseConfig,
+					env: { IDENTITY: { type: "identity", ...binding } },
+				}).success
+			).toBe(false);
+		}
+	);
+});
+
+it("accepts managed signing without a token audience", ({ expect }) => {
+	const binding = {
+		type: "identity",
+		request_signing: {
+			resources: [{ origin: "https://api.example", methods: ["GET"] }],
+		},
+	};
+	expect(KnownBindingSchema.safeParse(binding).success).toBe(true);
+	expect(
+		KnownBindingSchema.safeParse({
+			...binding,
+			request_signing: { ...binding.request_signing, customer_id: "forged" },
+		}).success
+	).toBe(false);
+});
+
+it("preserves managed OAuth and optional explicit client authority", ({
+	expect,
+}) => {
+	const oauth = {
+		exchange: "client_credentials",
+		client_id: "provider-id",
+		authorization_server: "https://auth.example",
+		token_endpoint: "https://auth.example/token",
+		resource: "https://api.example",
+		scope: ["read"],
+		resources: [{ origin: "https://api.example", methods: ["GET"] }],
+	};
+	const value = {
+		type: "identity",
+		oauth,
+		client_authentication: {
+			client_id: "https://app.example.com/client.json",
+			audience: "https://auth.example.com",
+		},
+	};
+	for (const exchange of ["client_credentials", "workload_authorization"]) {
+		const policy = {
+			...oauth,
+			exchange,
+			client_id: exchange === "client_credentials" ? "provider-id" : undefined,
+		};
+		const combined = {
+			type: "identity",
+			oauth: { ...policy, http_message_signatures: "web_bot_auth" },
+		};
+		expect(KnownBindingSchema.parse(combined)).toEqual(combined);
+		for (const profile of [null, "", "other", true]) {
+			expect(() =>
+				KnownBindingSchema.parse({
+					...combined,
+					oauth: { ...policy, http_message_signatures: profile },
+				})
+			).toThrow();
+		}
+	}
+
+	expect(KnownBindingSchema.parse(value)).toEqual(value);
+	expect(() =>
+		KnownBindingSchema.parse({
+			...value,
+			oauth: { ...oauth, require_sender_constraint: false },
+		})
+	).toThrow();
 });

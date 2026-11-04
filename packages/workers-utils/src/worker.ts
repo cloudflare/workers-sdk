@@ -6,6 +6,7 @@ import type {
 	Observability,
 	Route,
 } from "./config/environment";
+import type { CallerIdentityConfiguration } from "./config/receiver";
 import type { INHERIT_SYMBOL } from "./constants";
 import type { Json, WorkerMetadata } from "./types";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
@@ -531,6 +532,7 @@ export interface CfWorkerInit {
 	exports: CfExports | undefined;
 	compatibility_date: string | undefined;
 	compatibility_flags: string[] | undefined;
+	caller_identity?: CallerIdentityConfiguration;
 	keepVars: boolean | undefined;
 	keepSecrets: boolean | undefined;
 	keepBindings?: WorkerMetadata["keep_bindings"];

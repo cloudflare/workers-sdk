@@ -59,6 +59,7 @@ export type Service = {
 );
 
 export interface ServiceDesignator {
+	suppressNativeCaller?: boolean;
 	name?: string;
 	entrypoint?: string;
 	props?: { json: string };
@@ -92,6 +93,8 @@ export type Worker = (
 	containerEngine?: Worker_ContainerEngine;
 	accessBlobHeader?: string;
 	accessBindingService?: ServiceDesignator;
+	/** Private verifier service for runtime integration tests; never a deployment binding. */
+	workloadIdentityService?: ServiceDesignator;
 	workflowsEngine?: WorkflowsEngine;
 };
 

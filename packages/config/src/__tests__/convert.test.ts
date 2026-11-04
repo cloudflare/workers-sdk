@@ -1837,3 +1837,44 @@ describe("convertToWranglerConfig", () => {
 		});
 	});
 });
+
+it("preserves OIDC capability limits when converting cf configuration", ({
+	expect,
+}) => {
+	const limits = {
+		audience: "urn:orders",
+		authorization_grants: {
+			allowed_authorization_servers: ["https://auth.example"],
+			allowed_scopes: ["read"],
+		},
+	};
+	const result = convertToWranglerConfig({
+		worker: { ...baseWorker, env: { ORDERS: { type: "identity", ...limits } } },
+		containers: [],
+	});
+	expect(result.identities).toEqual([{ binding: "ORDERS", ...limits }]);
+});
+
+it.for(["workload_authorization", "client_credentials"] as const)(
+	"preserves combined %s OAuth authority when converting cf configuration",
+	(exchange, { expect }) => {
+		const oauth = {
+			...(exchange === "client_credentials"
+				? { exchange, client_id: "provider-id" }
+				: { exchange }),
+			authorization_server: "https://auth.example.com",
+			token_endpoint: "https://auth.example.com/token",
+			resource: "https://api.example.com",
+			scope: ["read"],
+			resources: [
+				{ origin: "https://api.example.com", methods: ["GET" as const] },
+			],
+			http_message_signatures: "web_bot_auth" as const,
+		};
+		const result = convertToWranglerConfig({
+			worker: { ...baseWorker, env: { API: { type: "identity", oauth } } },
+			containers: [],
+		});
+		expect(result.identities).toEqual([{ binding: "API", oauth }]);
+	}
+);

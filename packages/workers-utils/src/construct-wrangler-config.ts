@@ -7,6 +7,7 @@ import type {
 	TailConsumer,
 	ZoneNameRoute,
 } from "./config/environment";
+import type { CallerIdentityConfiguration } from "./config/receiver";
 import type { WorkerMetadata } from "./types";
 import type { AssetConfig } from "@cloudflare/workers-shared";
 import type { Cloudflare } from "cloudflare";
@@ -25,6 +26,7 @@ interface APIWorkerConfig {
 	tags: string[] | null;
 	compatibility_date: string;
 	compatibility_flags: string[];
+	caller_identity?: CallerIdentityConfiguration;
 	logpush: boolean | undefined;
 	routes: RoutesRes;
 	tail_consumers: TailConsumer[] | undefined | null;
@@ -89,6 +91,9 @@ export function constructWranglerConfig(config: APIWorkerConfig): RawConfig {
 		preview_urls: config.subdomain.previews_enabled,
 		compatibility_date: config.compatibility_date ?? DEFAULT_COMPAT_DATE,
 		compatibility_flags: config.compatibility_flags,
+		...(config.caller_identity === undefined
+			? {}
+			: { caller_identity: config.caller_identity }),
 		...(allRoutes.length ? { routes: allRoutes } : {}),
 		placement:
 			config.placement?.mode === "smart" ? { mode: "smart" } : undefined,

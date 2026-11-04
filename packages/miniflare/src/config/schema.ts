@@ -618,6 +618,8 @@ export const DevConfigSchema = z.strictObject({
 	/** Whether this Worker is 'public' - whether should be advertised in the dev registry
 	 * and whether it should be included in local obs capture. Defaults to `true`. */
 	unsafeRegisterWorker: z.boolean().default(true),
+	// Tooling proxies must not impersonate application callers.
+	unsafeSuppressNativeCaller: z.boolean().optional(),
 	// TODO(soon): remove in favour of per-object `unsafeUniqueKey: kEphemeralUniqueKey`
 	unsafeEphemeralDurableObjects: z.boolean().optional(),
 	// Strip the CF-Connecting-IP header from outbound fetches
@@ -780,6 +782,8 @@ export const InstanceOptionsSchema = z.strictObject({
 	unsafeTriggerHandlers: z.boolean().optional(),
 	unsafeRuntimeEnv: z.record(z.string(), z.string()).optional(),
 	unsafeLocalExplorer: z.boolean().optional(),
+	/** Internal Vite bridge: prepare identity after module runners can serve setup metadata. */
+	unsafeDeferIdentitySetup: z.boolean().optional(),
 	// Turn on local-dev observability: attach the trace collector to the
 	// user's worker(s) so it receives their tail events.
 	unsafeObservability: z.boolean().optional(),

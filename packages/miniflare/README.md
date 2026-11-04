@@ -835,3 +835,42 @@ $ export MINIFLARE_WORKERD_PATH="<WORKERD_REPO_DIR>/bazel-bin/src/workerd/server
 ```
 
 For debugging purposes, you can also set `MINIFLARE_WORKERD_CONFIG_DEBUG=<file_path>` which will dump the workerd config to the specified file path.
+
+## Receive a caller through the runtime
+
+Local receiver support needs the companion runtime from workerd PR #8121.
+Set `MINIFLARE_WORKERD_PATH` to that binary and opt in with
+`enable_workload_identity_context` in the receiver's compatibility flags.
+Regenerate runtime types and the Cap'n Proto schema from the same release
+before publishing the SDK.
+
+Native service-binding facts identify the immediate calling Worker. JWT facts identify the originating binding authority; signed-request facts expose the selected capability URL as `signatureAgent`. Forwarding preserves authority and does not attest the current executor. Keep human identity separate.
+
+Static service bindings expose local immediate callers using account `local`
+and `local:<worker-name>` IDs. These IDs establish no production authority.
+Anonymous requests return `null`. Shared local services issue and verify workload
+JWTs, selected-agent JWTs, WAG assertions and signed requests with purpose-separated
+keys. HTTP caller verification uses the same private verifier channel as the runtime.
+
+Identity bindings also support app/customer saved accounts through a generic local
+broker, authorization server and API fixture. Configure the ordinary binding;
+no application adapter or provisioning harness is needed. Local realms and encrypted
+broker state persist under a project-scoped realm in the Miniflare persistence directory. One runtime owns that state; stop it before starting another. Stale ownership requires explicit recovery after all owners stop. Keep authority keys and replay storage together. A new directory
+creates a new realm. Corrupt authority state fails rather than silently rotating keys.
+
+The deterministic fixture uses `https://as.identity.local` and
+`https://api.identity.local`. The callback uses the local server's
+`http://127.0.0.1:<port>/cdn-cgi/local/identity/oauth/callback`. No Cloudflare account
+login or production signing material is used. External provider requests fail
+unless `MINIFLARE_IDENTITY_LIVE_PROVIDER=1` explicitly enables live qualification.
+Keep live provider storage separate from deterministic tests.
+
+Wrangler, cf, Vite and Vitest consume this Miniflare behavior. Add no receiver
+binding or JavaScript verification polyfill. See the [runtime caller contract](https://developers.cloudflare.com/workers/runtime-apis/context/#identitycaller)
+for caller kinds, body ordering and application authorization.
+
+### Stored-secret identity bindings
+
+The draft machine binding accepts `oauth.authentication: { method: "client_secret_basic" | "client_secret_post", secret_reference: { store_id, secret_name } }`. Seed a test secret in the same persisted local Secrets Store before startup. Miniflare privately connects that reference to the managed signer; it does not add a readable secret to the application's environment. Missing or empty references fail startup with a redacted error.
+
+For this flow only, omitted `scope` and `resource` send no corresponding token parameters. Required `resources` still limits HTTP delivery. Bearer is the default with no DPoP proof; explicit `token_protection: "dpop"` requires a bound response. Key-based/WAG flows retain their existing automatic policy. Secret rotation affects the next acquisition; warm tokens keep their normal reuse window. Missing provider expiry allows at most 60 seconds of reuse, shortened by a safety margin. Local tests prove protocol behavior without claiming production provenance or real-provider qualification.

@@ -101,6 +101,17 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
+	if (
+		config.identities?.length &&
+		(config.compatibility_flags?.includes("legacy_error_serialization") ||
+			(compatibilityDate < "2026-04-21" &&
+				!config.compatibility_flags?.includes("enhanced_error_serialization")))
+	) {
+		throw new UserError(
+			"Identity bindings require enhanced_error_serialization. Use compatibility date 2026-04-21 or later, or enable the flag; remove legacy_error_serialization.",
+			{ telemetryMessage: "identity enhanced error serialization required" }
+		);
+	}
 	validateOwnedWorkflowDeclarations(config, name);
 
 	if (props.command === "deploy") {

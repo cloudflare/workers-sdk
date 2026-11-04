@@ -112,6 +112,33 @@ describe("previewBuildOutput", () => {
 		mocks.syncAssets.mockResolvedValue({ jwt: "asset-token" });
 	});
 
+	it("preserves signing-only identity limits in Preview metadata", async ({
+		expect,
+	}) => {
+		const identity = {
+			type: "identity" as const,
+			subject: "durable-object-namespace" as const,
+			namespace_id: "a".repeat(32),
+			authorization_grants: {
+				allowed_authorization_servers: ["https://auth.example.com"],
+				allowed_scopes: ["items:read"],
+			},
+			request_signing: {
+				resources: [
+					{ origin: "https://api.example.com", methods: ["GET" as const] },
+				],
+			},
+		};
+		await uploadPreview(
+			buildOutputConfig({
+				env: { IDENTITY: identity },
+			})
+		);
+		expect(
+			mocks.createPreviewDeployment.mock.calls[0]?.[4].env.IDENTITY
+		).toEqual(identity);
+	});
+
 	it("uploads only bindings and settings from resolved Build Output", async ({
 		expect,
 	}) => {
