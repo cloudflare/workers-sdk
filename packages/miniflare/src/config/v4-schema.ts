@@ -2,7 +2,11 @@ import {
 	AssetConfigSchema,
 	RouterConfigSchema,
 } from "@cloudflare/workers-shared";
-import { isIdentityBinding } from "@cloudflare/workers-utils/oidc";
+import {
+	isIdentityBinding,
+	parseIdentityReceiver,
+	type IdentityReceiverConfiguration,
+} from "@cloudflare/workers-utils/oidc";
 import { z } from "zod";
 import {
 	HttpOptions_Style,
@@ -377,6 +381,20 @@ const V4WorkerOptionsShapeSchema = z.object({
 	rootPath: z.string().optional(),
 	compatibilityDate: z.string().optional(),
 	compatibilityFlags: z.array(z.string()).optional(),
+	identityReceiver: z
+		.custom<IdentityReceiverConfiguration>()
+		.transform((value, ctx) => {
+			try {
+				return parseIdentityReceiver(value);
+			} catch {
+				ctx.addIssue({
+					code: "custom",
+					message: "Invalid identityReceiver configuration.",
+				});
+				return z.NEVER;
+			}
+		})
+		.optional(),
 	unsafeInspectorProxy: z.boolean().optional(),
 	routes: z.array(z.string()).optional(),
 	cronTriggers: z.array(z.string()).optional(),
@@ -830,6 +848,7 @@ export type V4WorkerOptionsShape = {
 	rootPath?: string;
 	compatibilityDate?: string;
 	compatibilityFlags?: string[];
+	identityReceiver?: IdentityReceiverConfiguration;
 	unsafeInspectorProxy?: boolean;
 	routes?: string[];
 	cronTriggers?: string[];

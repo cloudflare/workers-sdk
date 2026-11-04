@@ -1,3 +1,4 @@
+import type { Json } from "../types";
 /**
  * Wrangler configuration types. The JSDoc on these fields is also the source
  * of truth for the equivalent fields in `@cloudflare/config`
@@ -5,9 +6,8 @@
  * interfaces in `packages/config/src/config.ts`). When editing prose here,
  * mirror the changes there.
  */
-
-import type { Json } from "../types";
 import type { IdentityBindingConfig } from "./oidc";
+import type { IdentityReceiverConfiguration } from "./receiver";
 
 /**
  * The `Environment` interface declares all the configuration fields that
@@ -1058,6 +1058,8 @@ type ConnectHandlerConfig = TcpConnectHandlerConfig | UdpConnectHandlerConfig;
  * for each named environment.
  */
 export interface EnvironmentNonInheritable {
+	/** Receiver configuration is versioned with the Worker and never inferred from credentials. */
+	identity_receiver?: IdentityReceiverConfiguration;
 	/** Platform-derived workload capabilities. An optional audience enables ordinary token issuance.
 	 * @default []
 	 * @nonInheritable

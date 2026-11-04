@@ -505,6 +505,12 @@ export const CORE_PLUGIN: Plugin = {
 				...(await localIdentity.bindings(options, JSON.stringify(workerScript)))
 			);
 		}
+		if (dev?.unsafeSuppressNativeCaller) {
+			for (const binding of workerBindings) {
+				if ("service" in binding && binding.service)
+					binding.service.suppressNativeCaller = true;
+			}
+		}
 		// Add additional modules (e.g. "__STATIC_CONTENT_MANIFEST") if any
 		if ("modules" in workerScript) {
 			const subDirs = new Set(
@@ -602,11 +608,18 @@ export const CORE_PLUGIN: Plugin = {
 		// the shared worker config: the Workflows plugin copies these flags into
 		// its engine worker, which pairs them with an older hardcoded compatibility
 		// date that still needs the flag.
-		const userFlags = config.compatibilityFlags
-			? stripRedundantNodejsCompatFlags(
-					compatibilityDate,
-					config.compatibilityFlags
-				)
+		const configuredFlags =
+			config.identityReceiver === undefined
+				? config.compatibilityFlags
+				: [
+						...new Set([
+							...(config.compatibilityFlags ?? []),
+							"enable_workload_identity_context",
+							"enable_delegated_identity",
+						]),
+					];
+		const userFlags = configuredFlags
+			? stripRedundantNodejsCompatFlags(compatibilityDate, configuredFlags)
 			: undefined;
 		// Only add the flags the worker doesn't already declare. A worker that sets
 		// e.g. `streaming_tail_worker` itself (some do) would otherwise have it

@@ -27,6 +27,7 @@ export const LOCAL_IDENTITY_ENTRY_BINDING = "MINIFLARE_LOCAL_IDENTITY";
 const serviceName = (name: string) => `core:identity:${name}`;
 export function usesLocalIdentity(options: ParsedWorkerOptions): boolean {
 	return (
+		options.config.identityReceiver !== undefined ||
 		getEnvBindingsOfType(options.config, "identity").length > 0 ||
 		(options.config.compatibilityFlags?.includes(
 			"enable_workload_identity_context"
@@ -39,6 +40,7 @@ export async function getLocalIdentityVerifier(
 	shared: ParsedInstanceOptions
 ): Promise<ServiceDesignator | undefined> {
 	if (
+		options.config.identityReceiver === undefined &&
 		!options.config.compatibilityFlags?.includes(
 			"enable_workload_identity_context"
 		)
@@ -52,6 +54,9 @@ export async function getLocalIdentityVerifier(
 		props: {
 			json: JSON.stringify({
 				receiverAccountId: local.accountId,
+				...(options.config.identityReceiver === undefined
+					? {}
+					: { identityReceiver: options.config.identityReceiver }),
 				receiverWorkerId: createHash("sha256")
 					.update(options.config.name)
 					.digest("hex")

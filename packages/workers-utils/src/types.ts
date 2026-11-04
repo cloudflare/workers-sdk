@@ -13,6 +13,7 @@ import type {
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "./config/environment";
+import type { IdentityReceiverConfiguration } from "./config/receiver";
 import type {
 	CfAIBinding,
 	CfAgentMemory,
@@ -279,6 +280,7 @@ type WorkerMetadataPut = {
 	body_part?: string;
 	compatibility_date?: string;
 	compatibility_flags?: string[];
+	identity_receiver?: IdentityReceiverConfiguration;
 	usage_model?: "bundled" | "unbound";
 	migrations?: CfDurableObjectMigrations;
 	code_update_strategy?: DurableObjectCodeUpdateStrategy;
@@ -411,6 +413,7 @@ export type ServiceMetadataRes = {
 			};
 			compatibility_date: string;
 			compatibility_flags: string[];
+			identity_receiver?: IdentityReceiverConfiguration;
 			last_deployed_from?: "wrangler" | "dash" | "api";
 			placement_mode?: "smart";
 			tail_consumers?: TailConsumer[];

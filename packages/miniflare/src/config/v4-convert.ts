@@ -133,6 +133,7 @@ function convertWorkerOptions(
 		name: worker.name ?? "",
 		compatibilityDate: worker.compatibilityDate ?? FALLBACK_COMPATIBILITY_DATE,
 		compatibilityFlags: worker.compatibilityFlags,
+		identityReceiver: worker.identityReceiver,
 		manifest,
 		env,
 		exports,

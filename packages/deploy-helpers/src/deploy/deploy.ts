@@ -389,6 +389,7 @@ async function deployWorker(
 		sourceMaps,
 		compatibility_date: compatibilityDate,
 		compatibility_flags: compatibilityFlags,
+		identity_receiver: config.identity_receiver,
 		keepVars,
 		// Never delete secret bindings when deploying. Inherit unchanged secrets
 		// from the previous Worker Version, including secrets absent from config.

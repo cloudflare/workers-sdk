@@ -18,7 +18,7 @@ import {
 } from "./durable-object-exports";
 import { ARTIFACTS_EVENT_TYPES, WORKFLOW_JURISDICTIONS } from "./environment";
 import { partitionExports } from "./exports";
-import { isIdentityBinding } from "./oidc";
+import { isIdentityBinding, parseIdentityReceiver } from "./oidc";
 import {
 	all,
 	appendEnvName,
@@ -2093,6 +2093,26 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateWorkerLoaderBinding),
 			[]
 		),
+		identity_receiver: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"identity_receiver",
+			(_diagnostics, field, value) => {
+				try {
+					parseIdentityReceiver(value);
+					return true;
+				} catch {
+					_diagnostics.errors.push(
+						`${field} must be a valid delegated receiver configuration.`
+					);
+					return false;
+				}
+			},
+			undefined
+		),
 		identities: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2295,6 +2315,15 @@ function normalizeAndValidateEnvironment(
 			Object.keys(rawEnv),
 			Object.keys(environment)
 		);
+	}
+	if (environment.identity_receiver !== undefined) {
+		environment.compatibility_flags = [
+			...new Set([
+				...environment.compatibility_flags,
+				"enable_workload_identity_context",
+				"enable_delegated_identity",
+			]),
+		];
 	}
 	return environment;
 }
@@ -6657,6 +6686,7 @@ const validatePreviewsConfig =
 				"flagship",
 				"worker_loaders",
 				"identities",
+				"identity_receiver",
 				"ratelimits",
 				"vpc_services",
 				"version_metadata",

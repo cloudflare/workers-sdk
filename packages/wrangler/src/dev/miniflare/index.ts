@@ -69,6 +69,7 @@ type Port = SpecificPort | RandomConsistentPort | RandomDifferentPort;
 type R2S3Credentials = { accessKeyId: string; secretAccessKey: string };
 
 export interface ConfigBundle {
+	identityReceiver?: Config["identity_receiver"];
 	// TODO(soon): maybe rename some of these options, check proposed API Google Docs
 	name: string | undefined;
 	projectRoot: string;
@@ -1286,6 +1287,7 @@ export async function buildMiniflareOptions(
 				name: getName(config),
 				compatibilityDate: config.compatibilityDate,
 				compatibilityFlags: config.compatibilityFlags,
+				identityReceiver: config.identityReceiver,
 
 				...sourceOptions,
 				...bindingOptions,

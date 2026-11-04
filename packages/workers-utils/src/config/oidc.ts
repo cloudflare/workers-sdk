@@ -2,6 +2,10 @@ import {
 	isConnectionBinding,
 	type ConnectionBindingConfig,
 } from "./connections";
+export {
+	parseIdentityReceiver,
+	type IdentityReceiverConfiguration,
+} from "./receiver";
 export type {
 	ConnectionBindingConfig,
 	ConnectionResource,

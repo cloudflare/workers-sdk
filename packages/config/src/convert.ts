@@ -230,6 +230,16 @@ function convertTopLevel(
 	if (config.compatibilityFlags !== undefined) {
 		result.compatibility_flags = config.compatibilityFlags;
 	}
+	if (config.identityReceiver !== undefined) {
+		result.identity_receiver = config.identityReceiver;
+		result.compatibility_flags = [
+			...new Set([
+				...(result.compatibility_flags ?? []),
+				"enable_workload_identity_context",
+				"enable_delegated_identity",
+			]),
+		];
+	}
 	if (config.workersDev !== undefined) {
 		result.workers_dev = config.workersDev;
 	}

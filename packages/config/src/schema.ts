@@ -1,4 +1,7 @@
-import { isIdentityBinding } from "@cloudflare/workers-utils/oidc";
+import {
+	isIdentityBinding,
+	parseIdentityReceiver,
+} from "@cloudflare/workers-utils/oidc";
 import * as z from "zod";
 import { WORKFLOW_JURISDICTIONS } from "./exports";
 import type { SendEmailBinding, VpcNetworkBinding } from "./bindings";
@@ -909,6 +912,22 @@ const BaseWorkerSchema = z.strictObject({
 	name: z.string(),
 	compatibilityDate: z.string(),
 	compatibilityFlags: z.array(z.string()).optional(),
+	identityReceiver: z
+		.custom<
+			import("@cloudflare/workers-utils/oidc").IdentityReceiverConfiguration
+		>()
+		.transform((value, ctx) => {
+			try {
+				return parseIdentityReceiver(value);
+			} catch {
+				ctx.addIssue({
+					code: "custom",
+					message: "Invalid identityReceiver configuration.",
+				});
+				return z.NEVER;
+			}
+		})
+		.optional(),
 	assets: AssetsSchema.optional(),
 	domains: z.array(DomainSchema).optional(),
 	triggers: z.array(TriggerSchema).optional(),

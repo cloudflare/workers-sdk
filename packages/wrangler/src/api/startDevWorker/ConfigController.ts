@@ -496,6 +496,7 @@ async function resolveConfig(
 		config: config.configPath,
 		compatibilityDate: getDevCompatibilityDate(config, input.compatibilityDate),
 		compatibilityFlags: input.compatibilityFlags ?? config.compatibility_flags,
+		identityReceiver: config.identity_receiver,
 		complianceRegion: input.complianceRegion ?? config.compliance_region,
 		pythonModules: {
 			exclude: input.pythonModules?.exclude ?? config.python_modules.exclude,
