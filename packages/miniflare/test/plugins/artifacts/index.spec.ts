@@ -28,7 +28,7 @@ import {
 } from "../../../src/plugins/artifacts/git-sidecar";
 import { repositoryPath } from "../../../src/plugins/artifacts/storage";
 import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
-import type { MiniflareOptions } from "miniflare";
+import type { MiniflareOptions, RemoteProxyConnectionString } from "miniflare";
 
 // Native Git subprocesses can slow down considerably while sharing a Windows
 // runner with Wrangler. Keep the extra budget local to these integration tests.
@@ -543,20 +543,59 @@ test("artifacts: a stopped backend is replaced on the next config update", async
 	}
 });
 
-test("artifacts: omitted remote preserves remote routing without host Git", async ({
+function withRemoteProxy(base: MiniflareOptions): MiniflareOptions {
+	return {
+		...base,
+		workers: base.workers.map((worker) => ({
+			...worker,
+			dev: {
+				// Never contacted: startup only wires the binding to the proxy.
+				remoteProxyConnectionString: new URL(
+					"http://127.0.0.1:1"
+				) as RemoteProxyConnectionString,
+			},
+		})),
+	};
+}
+
+test("artifacts: remote=true with a remote proxy does not need host Git or local storage", async ({
 	expect,
 }) => {
-	const root = await useTmp();
+	const resourcePersistencePath = await useTmp();
+	const emptyPath = await useTmp();
 	const previousPath = process.env.PATH;
-	process.env.PATH = root;
+	process.env.PATH = emptyPath;
 	try {
-		const mf = new Miniflare(options("test", "REPOS", null));
+		const mf = new Miniflare({
+			...withRemoteProxy(options("test", "REPOS", true)),
+			resourcePersistencePath,
+		});
 		useDispose(mf);
 		await expect(mf.ready).resolves.toBeDefined();
 	} finally {
 		process.env.PATH = previousPath;
 	}
+	await expect(
+		stat(path.join(resourcePersistencePath, "artifacts"))
+	).rejects.toMatchObject({
+		code: "ENOENT",
+	});
 });
+
+// Like every other binding, only an explicit `dev.remote: true` is routed to
+// the proxy. Consumers resolve the deployed-by-default rule before Miniflare.
+test.for([
+	{ label: "without a remote proxy", proxy: false },
+	{ label: "with a remote proxy", proxy: true },
+])(
+	"artifacts: omitted remote $label uses the local simulator",
+	async ({ proxy }, { expect }) => {
+		const base = options("test", "REPOS", null);
+		const mf = new Miniflare(proxy ? withRemoteProxy(base) : base);
+		useDispose(mf);
+		expect((await rpc(mf, "create", ["offline"])).name).toBe("offline");
+	}
+);
 
 test("artifacts: rejects invalid local namespace before starting services", async ({
 	expect,
@@ -1339,7 +1378,7 @@ test("artifacts: missing Git gives an actionable error during local startup", as
 	const previousPath = process.env.PATH;
 	process.env.PATH = root;
 	try {
-		const mf = new Miniflare(options());
+		const mf = new Miniflare(options("test", "REPOS", false));
 		await expect(mf.ready).rejects.toThrow(
 			/requires Git 2\.32 or newer on PATH.*Install Git.*restart/i
 		);

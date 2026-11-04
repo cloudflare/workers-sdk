@@ -806,11 +806,13 @@ function addProductBindings(
 		env[name] = {
 			type: "artifacts",
 			namespace: binding.namespace,
-			// At this stage, only explicit V5 dev.remote: false selects local.
-			// Do not reinterpret an omitted legacy setting as that opt-in.
-			...(binding.remoteProxyConnectionString === undefined
-				? {}
-				: { dev: { remote: isRemote(binding.remoteProxyConnectionString) } }),
+			// Without a remote proxy connection (for example `wrangler dev
+			// --local`) the deployed resource is unreachable, so use the simulator.
+			dev: {
+				remote:
+					binding.remote !== false &&
+					isRemote(binding.remoteProxyConnectionString),
+			},
 		};
 	}
 	for (const name of Object.keys(worker.workerLoaders ?? {})) {
