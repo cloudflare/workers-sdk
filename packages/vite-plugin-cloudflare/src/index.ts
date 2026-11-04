@@ -101,7 +101,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 								(plugin) => plugin.name === "vite-plugin-cloudflare:dev"
 							)
 						) {
-							await ctx.disposeMiniflare();
+							try {
+								await ctx.disposeMiniflare();
+							} catch (error) {
+								debuglog("Failed to dispose Miniflare instance:", error);
+							}
 						}
 						debuglog("From server.restart(): Restarted server...");
 					} finally {
