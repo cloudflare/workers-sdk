@@ -15,7 +15,7 @@ import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
 import { ArtifactsController, Miniflare } from "miniflare";
-import { test } from "vitest";
+import { test, vi } from "vitest";
 import {
 	GitClient,
 	gitEnvironment,
@@ -29,6 +29,12 @@ import {
 import { repositoryPath } from "../../../src/plugins/artifacts/storage";
 import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
 import type { MiniflareOptions } from "miniflare";
+
+// Native Git subprocesses can slow down considerably while sharing a Windows
+// runner with Wrangler. Keep the extra budget local to these integration tests.
+if (process.platform === "win32") {
+	vi.setConfig({ testTimeout: 60_000 });
+}
 
 const exec = promisify(execFile);
 const SCRIPT = `
@@ -1178,65 +1184,70 @@ test("artifacts: Git credentials are scoped to the repository and operation", as
 	await wrongRepo.body?.cancel();
 });
 
-test("artifacts: forks an empty repo and selects which branches to copy", async ({
-	expect,
-}) => {
+test("artifacts: forks an empty repo", async ({ expect }) => {
 	const mf = new Miniflare(options());
 	useDispose(mf);
 	await rpc(mf, "create", ["empty"]);
 	const emptyFork = await rpc(mf, "fork", ["empty-fork"], "empty");
 	expect(emptyFork.defaultBranch).toBe("main");
+});
 
-	const directory = path.join(await useTmp(), "source");
-	const created = await pushFixture(mf, directory);
-	await git(["checkout", "-b", "feature"], directory);
-	await writeFile(path.join(directory, "feature.txt"), "feature branch\n");
-	await git(["add", "."], directory);
-	await git(["commit", "-m", "feature"], directory);
-	await git(
-		[
-			"-c",
-			`http.extraHeader=Authorization: Bearer ${created.token}`,
-			"push",
-			created.remote,
-			"feature",
-		],
-		directory
-	);
-	const mainOnly = await rpc(mf, "fork", ["main-only"], "Repo");
-	const all = await rpc(
-		mf,
-		"fork",
-		["all", { defaultBranchOnly: false, description: "all refs" }],
-		"Repo"
-	);
-	expect(mainOnly.defaultBranch).toBe("main");
-	expect((await rpc(mf, "info", [], "all")).description).toBe("all refs");
-	expect(
-		await rpc(mf, "readFile", [{ ref: "feature", path: "feature.txt" }], "all")
-	).toMatchObject({ bytes: [...new TextEncoder().encode("feature branch\n")] });
-	expect(
-		await rpc(
+test.for(["default branch", "all branches"])(
+	"artifacts: forks %s of a populated repo",
+	async (branches, { expect }) => {
+		const mf = new Miniflare(options());
+		useDispose(mf);
+		const directory = path.join(await useTmp(), "source");
+		const created = await pushFixture(mf, directory);
+		await git(["checkout", "-b", "feature"], directory);
+		await writeFile(path.join(directory, "feature.txt"), "feature branch\n");
+		await git(["add", "."], directory);
+		await git(["commit", "-m", "feature"], directory);
+		await git(
+			[
+				"-c",
+				`http.extraHeader=Authorization: Bearer ${created.token}`,
+				"push",
+				created.remote,
+				"feature",
+			],
+			directory
+		);
+		const defaultBranchOnly = branches === "default branch";
+		const fork = await rpc(
+			mf,
+			"fork",
+			defaultBranchOnly
+				? ["fork"]
+				: ["fork", { defaultBranchOnly: false, description: "all refs" }],
+			"Repo"
+		);
+		expect(fork.defaultBranch).toBe("main");
+		expect(fork.token).toEqual(expect.any(String));
+		const featureFile = await rpc(
 			mf,
 			"readFile",
 			[{ ref: "feature", path: "feature.txt" }],
-			"main-only"
-		)
-	).toBeNull();
-	expect(all.token).toEqual(expect.any(String));
-});
+			"fork"
+		);
+		if (defaultBranchOnly) {
+			expect(featureFile).toBeNull();
+		} else {
+			expect(featureFile).toMatchObject({
+				bytes: [...new TextEncoder().encode("feature branch\n")],
+			});
+			expect((await rpc(mf, "info", [], "fork")).description).toBe("all refs");
+		}
+	}
+);
 
-test("artifacts: log pages commits and files resolve only valid paths", async ({
-	expect,
-}) => {
+test("artifacts: log pages commits", async ({ expect }) => {
 	const mf = new Miniflare(options());
 	useDispose(mf);
 	const directory = path.join(await useTmp(), "source");
 	const created = await pushFixture(mf, directory);
 	const firstHash = (await git(["rev-parse", "HEAD"], directory)).stdout.trim();
 	await writeFile(path.join(directory, "second.txt"), "second\n");
-	await mkdir(path.join(directory, "folder"));
-	await writeFile(path.join(directory, "folder", "nested.txt"), "nested\n");
 	await git(["add", "."], directory);
 	await git(["commit", "-m", "second"], directory);
 	await git(
@@ -1262,6 +1273,15 @@ test("artifacts: log pages commits and files resolve only valid paths", async ({
 			(commit: { hash: string }) => commit.hash
 		)
 	).toEqual([firstHash]);
+});
+
+test("artifacts: files resolve only valid paths", async ({ expect }) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	const directory = path.join(await useTmp(), "source");
+	await mkdir(path.join(directory, "folder"), { recursive: true });
+	await writeFile(path.join(directory, "folder", "nested.txt"), "nested\n");
+	await pushFixture(mf, directory);
 	expect(
 		await rpc(mf, "readFile", [{ ref: "main", path: "../hello.txt" }], "Repo")
 	).toBeNull();
