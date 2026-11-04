@@ -102,6 +102,7 @@ overrides:
   brace-expansion@5: ^5.0.12
   concurrently@8>shell-quote: ^1.11.0
   '@aws-sdk/core@3>fast-xml-parser': ^4.5.5
+  lodash@<4.18.1: ^4.18.1
 
 patchedDependencies:
   '@cloudflare/component-listbox@1.10.6':
@@ -5224,10 +5225,6 @@ packages:
 
   '@babel/runtime-corejs3@7.27.0':
     resolution: {integrity: sha512-UWjX6t+v+0ckwZ50Y5ShZLnlk95pP5MyW/pon9tiYzl3+18pkTHTFNTKr7rQbfRXPkowt2QAn30o1b6oswszew==}
-    engines: {node: '>=6.9.0'}
-
-  '@babel/runtime@7.22.5':
-    resolution: {integrity: sha512-ecjvYlnAaZ/KVneE/OdKYBYfgXV3Ptu6zQWmgEF7vwKhQnvVS6bjMD2XYgj+SNvQ1GfK/pjgokfPkC/2CO8CuA==}
     engines: {node: '>=6.9.0'}
 
   '@babel/runtime@7.27.0':
@@ -13058,11 +13055,8 @@ packages:
   lodash.uniqueid@4.0.1:
     resolution: {integrity: sha512-GQQWaIeGlL6DIIr06kj1j6sSmBxyNMwI8kaX9aKpHR/XsMTiaXDVPNPAkiboOTK9OJpTJF/dXT3xYoFQnj386Q==}
 
-  lodash@4.17.21:
-    resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==}
-
-  lodash@4.17.23:
-    resolution: {integrity: sha512-LgVTMpQtIopCi79SJeDiP0TfWi5CNEc/L/aRdTh3yIvmZXTnheWpKjSZhnvMl8iXbC1tFg9gdHHDMLoV7CnG+w==}
+  lodash@4.18.1:
+    resolution: {integrity: sha512-dMInicTPVE8d1e5otfwmmjlxkZoUpiVLwyeTdUsi/Caj/gfzzblBcCE5sRHV/AsjuCmxWrte2TNGSYuCeCq+0Q==}
 
   log-update@5.0.1:
     resolution: {integrity: sha512-5UtUDQ/6edw4ofyljDNcOVJQ4c7OjDro4h3y8e1GQL5iYElYclVHJ3zeWchylvMaKnDbDilC8irOVyexnA/Slw==}
@@ -14578,9 +14572,6 @@ packages:
     resolution: {integrity: sha512-00o4I+DVrefhv+nX0ulyi3biSHCPDe+yLv5o/p6d/UVlirijB8E16FtfwSAi4g3tcqrQ4lRAqQSoFEZJehYEcw==}
     engines: {node: '>= 0.4'}
 
-  regenerator-runtime@0.13.11:
-    resolution: {integrity: sha512-kY1AZVr2Ra+t+piVaJ4gxaFaReZVH40AKNo7UCX6W+dEwBo/2oZJzqfuN1qLq1oL45o56cPaTXELwrTh8Fpggg==}
-
   regenerator-runtime@0.14.1:
     resolution: {integrity: sha512-dYnhHh0nJoMfnkZs6GmmhFknAGRrLznOu5nc9ML+EJxGvrx6H7teuevqVqCuPcPK//3eDrrjQhehXVx9cnkGdw==}
 
@@ -15002,10 +14993,6 @@ packages:
   sort-css-media-queries@1.5.4:
     resolution: {integrity: sha512-YP5W/h4Sid/YP7Lp87ejJ5jP13/Mtqt2vx33XyhO+IAugKlufRPbOrPlIiEUuxmpNBSBd3EeeQpFhdu3RfI2Ag==}
     engines: {node: '>= 6.3.0'}
-
-  source-map-js@1.2.1:
-    resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
-    engines: {node: '>=0.10.0'}
 
   source-map-js@1.2.2:
     resolution: {integrity: sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw==}
@@ -16937,10 +16924,6 @@ snapshots:
       core-js-pure: 3.41.0
       regenerator-runtime: 0.14.1
 
-  '@babel/runtime@7.22.5':
-    dependencies:
-      regenerator-runtime: 0.13.11
-
   '@babel/runtime@7.27.0':
     dependencies:
       regenerator-runtime: 0.14.1
@@ -17021,7 +17004,7 @@ snapshots:
 
   '@base-ui/utils@0.2.6(@types/react@19.2.13)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
     dependencies:
-      '@babel/runtime': 7.29.2
+      '@babel/runtime': 7.29.7
       '@floating-ui/utils': 0.2.11
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
@@ -17491,7 +17474,7 @@ snapshots:
       '@cloudflare/util-markdown': 1.2.15
       '@types/lodash': 4.17.23
       '@types/node-polyglot': 2.4.2
-      lodash: 4.17.23
+      lodash: 4.18.1
       node-polyglot: 2.5.0
       regenerator-runtime: 0.14.1
     transitivePeerDependencies:
@@ -17502,7 +17485,7 @@ snapshots:
       '@cloudflare/intl-core': 1.15.0(react@18.3.1)(regenerator-runtime@0.14.1)
       '@cloudflare/types': 7.0.1(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)
       '@cloudflare/util-markdown': 1.2.15
-      lodash: 4.17.23
+      lodash: 4.18.1
       react: 18.3.1
     transitivePeerDependencies:
       - react-redux
@@ -17588,7 +17571,7 @@ snapshots:
       '@cloudflare/types': 6.23.6(react@18.3.1)
       fela: 11.7.0
       fela-tools: 11.7.0(fela@11.7.0)
-      lodash: 4.17.23
+      lodash: 4.18.1
       prop-types: 15.8.1
       react: 18.3.1
       react-display-name: 0.2.5
@@ -17600,7 +17583,7 @@ snapshots:
       '@cloudflare/types': 6.23.6(react@19.2.4)
       fela: 11.7.0
       fela-tools: 11.7.0(fela@11.7.0)
-      lodash: 4.17.23
+      lodash: 4.18.1
       prop-types: 15.8.1
       react: 19.2.4
       react-display-name: 0.2.5
@@ -18966,7 +18949,7 @@ snapshots:
 
   '@manypkg/find-root@1.1.0':
     dependencies:
-      '@babel/runtime': 7.22.5
+      '@babel/runtime': 7.29.7
       '@types/node': 22.15.17
       find-up: 4.1.0
       fs-extra: 8.1.0
@@ -18979,7 +18962,7 @@ snapshots:
 
   '@manypkg/get-packages@1.1.3':
     dependencies:
-      '@babel/runtime': 7.22.5
+      '@babel/runtime': 7.29.7
       '@changesets/types': 4.1.0
       '@manypkg/find-root': 1.1.0
       fs-extra: 8.1.0
@@ -19036,7 +19019,7 @@ snapshots:
       '@rushstack/rig-package': 0.5.3
       '@rushstack/terminal': 0.13.3(@types/node@22.15.17)
       '@rushstack/ts-command-line': 4.22.3(@types/node@22.15.17)
-      lodash: 4.17.23
+      lodash: 4.18.1
       minimatch: 3.0.8
       resolve: 1.22.8
       semver: 7.5.4
@@ -19054,7 +19037,7 @@ snapshots:
       '@rushstack/rig-package': 0.5.3
       '@rushstack/terminal': 0.15.3(@types/node@22.15.17)
       '@rushstack/ts-command-line': 5.0.1(@types/node@22.15.17)
-      lodash: 4.17.23
+      lodash: 4.18.1
       minimatch: 3.0.8
       resolve: 1.22.8
       semver: 7.5.4
@@ -19628,17 +19611,17 @@ snapshots:
 
   '@radix-ui/number@1.0.1':
     dependencies:
-      '@babel/runtime': 7.28.6
+      '@babel/runtime': 7.29.7
 
   '@radix-ui/primitive@1.0.1':
     dependencies:
-      '@babel/runtime': 7.28.6
+      '@babel/runtime': 7.29.7
 
   '@radix-ui/primitive@1.1.3': {}
 
   '@radix-ui/react-compose-refs@1.0.1(@types/react@18.3.3)(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.28.6
+      '@babel/runtime': 7.29.7
       react: 18.3.1
     optionalDependencies:
       '@types/react': 18.3.3
@@ -19651,21 +19634,21 @@ snapshots:
 
   '@radix-ui/react-context@1.0.1(@types/react@18.3.3)(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.28.6
+      '@babel/runtime': 7.29.7
       react: 18.3.1
     optionalDependencies:
       '@types/react': 18.3.3
 
   '@radix-ui/react-direction@1.0.1(@types/react@18.3.3)(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.28.6
+      '@babel/runtime': 7.29.7
       react: 18.3.1
     optionalDependencies:
       '@types/react': 18.3.3
 
   '@radix-ui/react-presence@1.0.1(@types/react-dom@18.2.0)(@types/react@18.3.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.28.6
+      '@babel/runtime': 7.29.7
       '@radix-ui/react-compose-refs': 1.0.1(@types/react@18.3.3)(react@18.3.1)
       '@radix-ui/react-use-layout-effect': 1.0.1(@types/react@18.3.3)(react@18.3.1)
       react: 18.3.1
@@ -19676,7 +19659,7 @@ snapshots:
 
   '@radix-ui/react-primitive@1.0.3(@types/react-dom@18.2.0)(@types/react@18.3.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.28.6
+      '@babel/runtime': 7.29.7
       '@radix-ui/react-slot': 1.0.2(@types/react@18.3.3)(react@18.3.1)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
@@ -19713,7 +19696,7 @@ snapshots:
 
   '@radix-ui/react-slot@1.0.2(@types/react@18.3.3)(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.28.6
+      '@babel/runtime': 7.29.7
       '@radix-ui/react-compose-refs': 1.0.1(@types/react@18.3.3)(react@18.3.1)
       react: 18.3.1
     optionalDependencies:
@@ -19739,7 +19722,7 @@ snapshots:
 
   '@radix-ui/react-use-callback-ref@1.0.1(@types/react@18.3.3)(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.28.6
+      '@babel/runtime': 7.29.7
       react: 18.3.1
     optionalDependencies:
       '@types/react': 18.3.3
@@ -19761,7 +19744,7 @@ snapshots:
 
   '@radix-ui/react-use-layout-effect@1.0.1(@types/react@18.3.3)(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.28.6
+      '@babel/runtime': 7.29.7
       react: 18.3.1
     optionalDependencies:
       '@types/react': 18.3.3
@@ -20797,7 +20780,7 @@ snapshots:
       jiti: 2.6.1
       lightningcss: 1.32.0
       magic-string: 0.30.21
-      source-map-js: 1.2.1
+      source-map-js: 1.2.2
       tailwindcss: 4.2.2
 
   '@tailwindcss/oxide-android-arm64@4.2.2':
@@ -21290,7 +21273,7 @@ snapshots:
       '@verdaccio/signature': 8.0.0-next-8.1
       '@verdaccio/utils': 8.1.0-next-8.7
       debug: 4.4.0
-      lodash: 4.17.21
+      lodash: 4.18.1
       verdaccio-htpasswd: 13.0.0-next-8.7
     transitivePeerDependencies:
       - supports-color
@@ -21306,7 +21289,7 @@ snapshots:
       '@verdaccio/utils': 8.1.0-next-8.7
       debug: 4.4.0
       js-yaml: 4.1.0
-      lodash: 4.17.21
+      lodash: 4.18.1
       minimatch: 7.4.6
     transitivePeerDependencies:
       - supports-color
@@ -21340,7 +21323,7 @@ snapshots:
   '@verdaccio/loaders@8.0.0-next-8.4':
     dependencies:
       debug: 4.3.7
-      lodash: 4.17.21
+      lodash: 4.18.1
     transitivePeerDependencies:
       - supports-color
 
@@ -21351,7 +21334,7 @@ snapshots:
       '@verdaccio/streams': 10.2.1
       async: 3.2.4
       debug: 4.3.4
-      lodash: 4.17.21
+      lodash: 4.18.1
       lowdb: 1.0.0
       mkdirp: 1.0.4
     transitivePeerDependencies:
@@ -21370,7 +21353,7 @@ snapshots:
     dependencies:
       colorette: 2.0.20
       dayjs: 1.11.13
-      lodash: 4.17.21
+      lodash: 4.18.1
       pino-abstract-transport: 1.2.0
       sonic-boom: 3.8.1
 
@@ -21390,7 +21373,7 @@ snapshots:
       debug: 4.4.0
       express: 4.21.2
       express-rate-limit: 5.5.1
-      lodash: 4.17.21
+      lodash: 4.18.1
       lru-cache: 7.18.3
       mime: 2.6.0
     transitivePeerDependencies:
@@ -21414,7 +21397,7 @@ snapshots:
       '@verdaccio/utils': 8.1.0-next-8.7
       debug: 4.4.0
       gunzip-maybe: 1.4.2
-      lodash: 4.17.21
+      lodash: 4.18.1
       tar-stream: 3.1.7
     transitivePeerDependencies:
       - supports-color
@@ -21427,7 +21410,7 @@ snapshots:
     dependencies:
       '@verdaccio/core': 8.0.0-next-8.7
       debug: 4.4.0
-      lodash: 4.17.21
+      lodash: 4.18.1
       validator: 13.12.0
     transitivePeerDependencies:
       - supports-color
@@ -21435,14 +21418,14 @@ snapshots:
   '@verdaccio/utils@7.0.1-next-8.1':
     dependencies:
       '@verdaccio/core': 8.0.0-next-8.1
-      lodash: 4.17.21
+      lodash: 4.18.1
       minimatch: 7.4.6
       semver: 7.6.3
 
   '@verdaccio/utils@8.1.0-next-8.7':
     dependencies:
       '@verdaccio/core': 8.0.0-next-8.7
-      lodash: 4.17.21
+      lodash: 4.18.1
       minimatch: 7.4.6
       semver: 7.6.3
 
@@ -21553,7 +21536,7 @@ snapshots:
       '@babel/parser': 7.26.3
       '@vue/shared': 3.3.4
       estree-walker: 2.0.2
-      source-map-js: 1.2.1
+      source-map-js: 1.2.2
 
   '@vue/compiler-core@3.4.36':
     dependencies:
@@ -21561,7 +21544,7 @@ snapshots:
       '@vue/shared': 3.4.36
       entities: 5.0.0
       estree-walker: 2.0.2
-      source-map-js: 1.2.1
+      source-map-js: 1.2.2
 
   '@vue/compiler-dom@3.3.4':
     dependencies:
@@ -21584,7 +21567,7 @@ snapshots:
       estree-walker: 2.0.2
       magic-string: 0.30.17
       postcss: 8.4.49
-      source-map-js: 1.2.1
+      source-map-js: 1.2.2
 
   '@vue/compiler-ssr@3.3.4':
     dependencies:
@@ -22310,7 +22293,7 @@ snapshots:
     dependencies:
       chalk: 4.1.2
       date-fns: 2.30.0
-      lodash: 4.17.23
+      lodash: 4.18.1
       rxjs: 7.8.2
       shell-quote: 1.11.0
       spawn-command: 0.0.2
@@ -22432,12 +22415,12 @@ snapshots:
   css-tree@2.2.1:
     dependencies:
       mdn-data: 2.0.28
-      source-map-js: 1.2.1
+      source-map-js: 1.2.2
 
   css-tree@2.3.1:
     dependencies:
       mdn-data: 2.0.30
-      source-map-js: 1.2.1
+      source-map-js: 1.2.2
 
   css-what@6.1.0: {}
 
@@ -22711,7 +22694,7 @@ snapshots:
 
   downshift@6.1.12(react@18.3.1):
     dependencies:
-      '@babel/runtime': 7.22.5
+      '@babel/runtime': 7.29.7
       compute-scroll-into-view: 1.0.20
       prop-types: 15.8.1
       react: 18.3.1
@@ -24203,7 +24186,7 @@ snapshots:
       chalk: 4.1.2
       get-stdin: 5.0.1
       glur: 1.1.2
-      lodash: 4.17.23
+      lodash: 4.18.1
       pixelmatch: 5.3.0
       pngjs: 3.4.0
       ssim.js: 3.5.0
@@ -24522,9 +24505,7 @@ snapshots:
 
   lodash.uniqueid@4.0.1: {}
 
-  lodash@4.17.21: {}
-
-  lodash@4.17.23: {}
+  lodash@4.18.1: {}
 
   log-update@5.0.1:
     dependencies:
@@ -24548,7 +24529,7 @@ snapshots:
     dependencies:
       graceful-fs: 4.2.11
       is-promise: 2.2.2
-      lodash: 4.17.23
+      lodash: 4.18.1
       pify: 3.0.0
       steno: 0.4.4
 
@@ -24592,7 +24573,7 @@ snapshots:
 
   match-sorter@6.3.1:
     dependencies:
-      '@babel/runtime': 7.22.5
+      '@babel/runtime': 7.29.7
       remove-accents: 0.4.2
 
   math-intrinsics@1.1.0: {}
@@ -25626,13 +25607,13 @@ snapshots:
     dependencies:
       nanoid: 3.3.11
       picocolors: 1.1.1
-      source-map-js: 1.2.1
+      source-map-js: 1.2.2
 
   postcss@8.5.23:
     dependencies:
       nanoid: 3.3.16
       picocolors: 1.1.1
-      source-map-js: 1.2.1
+      source-map-js: 1.2.2
 
   postcss@8.5.31:
     dependencies:
@@ -25644,7 +25625,7 @@ snapshots:
     dependencies:
       nanoid: 3.3.16
       picocolors: 1.1.1
-      source-map-js: 1.2.1
+      source-map-js: 1.2.2
 
   postgres-array@2.0.0: {}
 
@@ -26076,8 +26057,6 @@ snapshots:
       get-intrinsic: 1.3.0
       get-proto: 1.0.1
       which-builtin-type: 1.2.1
-
-  regenerator-runtime@0.13.11: {}
 
   regenerator-runtime@0.14.1: {}
 
@@ -26696,8 +26675,6 @@ snapshots:
       atomic-sleep: 1.0.0
 
   sort-css-media-queries@1.5.4: {}
-
-  source-map-js@1.2.1: {}
 
   source-map-js@1.2.2: {}
 
@@ -27713,7 +27690,7 @@ snapshots:
       js-yaml: 4.1.0
       jsonwebtoken: 9.0.2
       kleur: 4.1.5
-      lodash: 4.17.21
+      lodash: 4.18.1
       lru-cache: 7.18.3
       mime: 3.0.0
       mkdirp: 1.0.4

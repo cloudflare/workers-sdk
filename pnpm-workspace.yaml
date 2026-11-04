@@ -97,6 +97,10 @@ overrides:
   # Security fixes for fast-xml-parser (Dependabot alerts). @aws-sdk/core 3.716
   # pins exactly 4.4.1. Remove once @aws-sdk/client-s3 is bumped past it.
   "@aws-sdk/core@3>fast-xml-parser": "^4.5.5"
+  # Security fixes for lodash (Dependabot alerts). @microsoft/api-extractor asks
+  # for ~4.17.15 and verdaccio pins exactly 4.17.21, so neither can reach 4.18.
+  # Remove once no dependency resolves lodash below 4.18.1.
+  "lodash@<4.18.1": "^4.18.1"
 
 peerDependencyRules:
   allowedVersions:
