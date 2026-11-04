@@ -29,6 +29,8 @@ interface DockerContainer {
  * Serves the Docker Engine API endpoints that sessions are removed through.
  * Like Podman, it refuses to remove a container whose network namespace
  * another container joins, and like Docker, a volume that a container mounts.
+ * As workerd does, a container joins another's network namespace by name,
+ * which differs from the container's ID.
  */
 async function startDockerEngine() {
 	const socketPath = path.join(
@@ -53,7 +55,7 @@ async function startDockerEngine() {
 			}: { networkOf?: string; mountedVolumes?: string[] } = {}
 		) {
 			containers.set(name, {
-				Id: name,
+				Id: crypto.createHash("sha256").update(name).digest("hex"),
 				Names: [`/${name}`],
 				Labels: labels,
 				HostConfig: {
@@ -77,12 +79,7 @@ async function startDockerEngine() {
 				.writeHead(status)
 				.end(body === undefined ? undefined : JSON.stringify(body));
 		const [, resource, id = ""] = url.pathname.split("/");
-		const name = decodeURIComponent(id);
-		const users = [...containers.values()].filter(
-			({ HostConfig, mountedVolumes }) =>
-				HostConfig.NetworkMode === `container:${name}` ||
-				mountedVolumes.includes(name)
-		);
+		const ref = decodeURIComponent(id);
 		if (req.method === "GET" && url.pathname === "/containers/json") {
 			engine.listedSessions.push(labelValue ?? "");
 			respond(
@@ -95,17 +92,36 @@ async function startDockerEngine() {
 				.filter(([, labels]) => matches(labels))
 				.map(([Name, Labels]) => ({ Name, Labels }));
 			respond(200, { Volumes });
-		} else if (
-			req.method === "DELETE" &&
-			(resource === "containers" || resource === "volumes")
-		) {
-			const resources = resource === "containers" ? containers : volumes;
-			if (!resources.has(name)) {
+		} else if (req.method === "DELETE" && resource === "containers") {
+			// Docker accepts a container's ID or name.
+			const [name, container] =
+				[...containers].find(([name, { Id }]) => ref === Id || ref === name) ??
+				[];
+			if (name === undefined || container === undefined) {
 				respond(404);
-			} else if (users.length > 0) {
+			} else if (
+				[...containers.values()].some(({ HostConfig }) =>
+					[`container:${name}`, `container:${container.Id}`].includes(
+						HostConfig.NetworkMode
+					)
+				)
+			) {
 				respond(409, { message: `${name} is in use` });
 			} else {
-				resources.delete(name);
+				containers.delete(name);
+				respond(204);
+			}
+		} else if (req.method === "DELETE" && resource === "volumes") {
+			if (!volumes.has(ref)) {
+				respond(404);
+			} else if (
+				[...containers.values()].some(({ mountedVolumes }) =>
+					mountedVolumes.includes(ref)
+				)
+			) {
+				respond(409, { message: `${ref} is in use` });
+			} else {
+				volumes.delete(ref);
 				respond(204);
 			}
 		} else {

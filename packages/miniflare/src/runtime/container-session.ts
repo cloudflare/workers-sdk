@@ -178,12 +178,12 @@ function getNodeSocketPath(socketPath: string): string {
 
 /**
  * Removes the containers and volumes that carry `label`, dependents first:
- * application containers join a sidecar's network namespace, and they and
- * snapshot helper containers mount volumes. Docker refuses to remove a volume
- * in use, and Podman also refuses to remove a container whose network
- * namespace another container joins. A create that Docker accepted before
- * workerd was killed can complete after the first listing, so a second pass
- * runs after `secondPassDelayMs`.
+ * the containers whose network namespace no other container joins, then the
+ * sidecars they join, then the volumes that containers mount. Docker refuses
+ * to remove a volume in use, and Podman also refuses to remove a container
+ * whose network namespace another container joins. A create that Docker
+ * accepted before workerd was killed can complete after the first listing,
+ * so a second pass runs after `secondPassDelayMs`.
  *
  * `removeContainerSessionDetached()` runs this function's source in another
  * process, so it may use only its parameters and globals.
@@ -250,7 +250,8 @@ async function removeSessionResources(
 		const { Volumes: volumes } = JSON.parse(
 			await request("GET", `/volumes?filters=${filters}`)
 		) as { Volumes: { Name: string }[] | null };
-		// Containers whose network namespace another container joins
+		// Containers whose network namespace another container joins. workerd
+		// joins each sidecar by name, so match names as well as IDs.
 		const joined = new Set(
 			containers.flatMap(({ HostConfig }) => {
 				const mode = HostConfig?.NetworkMode ?? "";
@@ -259,13 +260,16 @@ async function removeSessionResources(
 					: [];
 			})
 		);
+		const isJoined = ({ Id, Names }: DockerContainer) =>
+			joined.has(Id) ||
+			Names.some((name) => joined.has(name.replace(/^\//, "")));
 		await Promise.all(
-			containers.filter(({ Id }) => !joined.has(Id)).map(removeContainer)
+			containers
+				.filter((container) => !isJoined(container))
+				.map(removeContainer)
 		);
-		await Promise.all([
-			...containers.filter(({ Id }) => joined.has(Id)).map(removeContainer),
-			...(volumes ?? []).map(({ Name }) => removeVolume(Name)),
-		]);
+		await Promise.all(containers.filter(isJoined).map(removeContainer));
+		await Promise.all((volumes ?? []).map(({ Name }) => removeVolume(Name)));
 	}
 	return removed;
 }
