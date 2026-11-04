@@ -2,7 +2,7 @@
 export const IDENTITY_SERVICE_MANIFEST = {
   "format": 1,
   "repository": "https://gitlab.cfdata.org/birvine-broque/workers-oidc",
-  "baseRevision": "a6c2bef03ff82fdb06b8579247201945e12da9f6",
+  "baseRevision": "301b86de4c475518f7506c8288209b1869fd1907",
   "sources": {
     "apps/connection-broker/src/app-setup.ts": "ab1fc9c555bf1e484a1f2ce507f4c11fd28a70f5e6c3d21059e5dbb80669fbf4",
     "apps/connection-broker/src/config.ts": "d8bc25cd736a5a4d03d4587549f0857656052f210ced05d5b10cca4f3bc82bee",
