@@ -1,4 +1,5 @@
-import { fetchResult } from "../../shared/context";
+import { retryOnAPIFailure, UserError } from "@cloudflare/workers-utils";
+import { fetchResult, logger } from "../../shared/context";
 import type {
 	ApiDeployment,
 	ApiVersion,
@@ -58,13 +59,23 @@ export async function fetchVersions(
 export async function fetchLatestDeployments(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	workerName: string
+	workerName: string,
+	abortSignal?: AbortSignal
 ): Promise<ApiDeployment[]> {
-	const { deployments } = await fetchResult<{
-		deployments: ApiDeployment[];
-	}>(
-		complianceConfig,
-		`/accounts/${accountId}/workers/scripts/${workerName}/deployments`
+	const signal = abortSignal ?? AbortSignal.timeout(95_000);
+	const { deployments } = await retryOnAPIFailure(
+		() =>
+			fetchResult<{ deployments: ApiDeployment[] }>(
+				complianceConfig,
+				`/accounts/${accountId}/workers/scripts/${workerName}/deployments`,
+				{},
+				undefined,
+				AbortSignal.any([signal, AbortSignal.timeout(30_000)])
+			),
+		logger,
+		1000,
+		3,
+		signal
 	);
 
 	return deployments;
@@ -72,12 +83,14 @@ export async function fetchLatestDeployments(
 export async function fetchLatestDeployment(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	workerName: string
+	workerName: string,
+	abortSignal?: AbortSignal
 ): Promise<ApiDeployment | undefined> {
 	const deployments = await fetchLatestDeployments(
 		complianceConfig,
 		accountId,
-		workerName
+		workerName,
+		abortSignal
 	);
 
 	return deployments.at(0);
@@ -136,7 +149,8 @@ export async function createDeployment(
 	versionTraffic: Map<VersionId, Percentage>,
 	message: string | undefined,
 	force: boolean | undefined,
-	codeUpdateStrategy?: unknown
+	codeUpdateStrategy?: unknown,
+	abortSignal?: AbortSignal
 ) {
 	// The generated Cloudflare SDK does not expose code_update_strategy yet.
 	// Keep this request here until the updated deployment schema reaches the SDK.
@@ -157,7 +171,71 @@ export async function createDeployment(
 				},
 				code_update_strategy: codeUpdateStrategy,
 			}),
-		}
+		},
+		undefined,
+		abortSignal
+	);
+}
+
+export async function createDeploymentWithRetry(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	workerName: string,
+	versionTraffic: Map<VersionId, Percentage>,
+	message: string | undefined,
+	previousDeploymentID: string | undefined,
+	codeUpdateStrategy?: unknown
+) {
+	const signal = AbortSignal.timeout(95_000);
+	let attempted = false;
+
+	return retryOnAPIFailure(
+		async () => {
+			if (attempted) {
+				const latest = await fetchLatestDeployment(
+					complianceConfig,
+					accountId,
+					workerName,
+					signal
+				);
+
+				if (latest?.id !== previousDeploymentID) {
+					if (
+						latest?.strategy === "percentage" &&
+						latest.versions.length === versionTraffic.size &&
+						latest.versions.every(
+							({ version_id, percentage }) =>
+								versionTraffic.get(version_id) === percentage
+						) &&
+						latest.annotations?.["workers/message"] === message
+					) {
+						return { id: latest.id };
+					}
+
+					throw new UserError(
+						"The Worker deployment changed while retrying. Refusing to overwrite the newer deployment.",
+						{ telemetryMessage: true }
+					);
+				}
+			}
+
+			attempted = true;
+
+			return createDeployment(
+				complianceConfig,
+				accountId,
+				workerName,
+				versionTraffic,
+				message,
+				undefined,
+				codeUpdateStrategy,
+				AbortSignal.any([signal, AbortSignal.timeout(30_000)])
+			);
+		},
+		logger,
+		1000,
+		3,
+		signal
 	);
 }
 
