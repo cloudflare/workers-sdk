@@ -101,6 +101,7 @@ overrides:
   brace-expansion@2: ^2.1.7
   brace-expansion@5: ^5.0.12
   concurrently@8>shell-quote: ^1.11.0
+  '@aws-sdk/core@3>fast-xml-parser': ^4.5.5
 
 patchedDependencies:
   '@cloudflare/component-listbox@1.10.6':
@@ -2472,8 +2473,8 @@ importers:
         specifier: ^0.15.0
         version: 0.15.0
       fast-xml-parser:
-        specifier: ^4.4.1
-        version: 4.4.1
+        specifier: ^4.5.5
+        version: 4.5.5
       get-port:
         specifier: ^7.1.0
         version: 7.1.0
@@ -11895,8 +11896,8 @@ packages:
   fast-wrap-ansi@0.2.2:
     resolution: {integrity: sha512-7F2Fl+TjRSenLqlU3UjSH0iyqopqoZIu7eZVpEirP2g1GtWa2G/ecEmBdgz31+Mxr+ELclgg6sokpSFIQiZ02Q==}
 
-  fast-xml-parser@4.4.1:
-    resolution: {integrity: sha512-xkjOecfnKGkSsOwtZ5Pz7Us/T6mrbPQrq0nh+aCO5V9nk5NLWmasAHumTKjiPJPWANe+kAZ84Jc8ooJkzZ88Sw==}
+  fast-xml-parser@4.5.5:
+    resolution: {integrity: sha512-cK9c5I/DwIOI7/Q7AlGN3DuTdwN61gwSfL8rvuVPK+0mcCNHHGxRrpiFtaZZRfRMJL3Gl8B2AFlBG6qXf03w9A==}
     hasBin: true
 
   fastq@1.13.0:
@@ -16546,7 +16547,7 @@ snapshots:
       '@smithy/smithy-client': 3.7.0
       '@smithy/types': 3.7.2
       '@smithy/util-middleware': 3.0.11
-      fast-xml-parser: 4.4.1
+      fast-xml-parser: 4.5.5
       tslib: 2.8.1
 
   '@aws-sdk/credential-provider-env@3.716.0':
@@ -23390,7 +23391,7 @@ snapshots:
     dependencies:
       fast-string-width: 3.0.2
 
-  fast-xml-parser@4.4.1:
+  fast-xml-parser@4.5.5:
     dependencies:
       strnum: 1.0.5
 

@@ -94,6 +94,9 @@ overrides:
   # last 8.x release and asks for ^1.8.1, which locks 1.10.0. Remove once
   # nothing depends on concurrently 8.
   "concurrently@8>shell-quote": "^1.11.0"
+  # Security fixes for fast-xml-parser (Dependabot alerts). @aws-sdk/core 3.716
+  # pins exactly 4.4.1. Remove once @aws-sdk/client-s3 is bumped past it.
+  "@aws-sdk/core@3>fast-xml-parser": "^4.5.5"
 
 peerDependencyRules:
   allowedVersions:
