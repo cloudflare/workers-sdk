@@ -17,7 +17,27 @@ it("includes protected receiver expectations in module and service-worker upload
 		const form = createWorkerUploadForm(
 			{
 				name: "receiver",
-				main: { name: "index.js", content: "export default {}", type },
+				modules: undefined,
+				sourceMaps: undefined,
+				containers: undefined,
+				migrations: undefined,
+				exports: undefined,
+				compatibility_date: undefined,
+				keepVars: undefined,
+				keepSecrets: undefined,
+				logpush: undefined,
+				placement: undefined,
+				tail_consumers: undefined,
+				limits: undefined,
+				assets: undefined,
+				observability: undefined,
+				cache: undefined,
+				main: {
+					name: "index.js",
+					filePath: "index.js",
+					content: "export default {}",
+					type,
+				},
 				identity_receiver,
 				compatibility_flags: [
 					"enable_workload_identity_context",
