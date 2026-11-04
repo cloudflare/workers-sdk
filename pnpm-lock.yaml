@@ -2626,6 +2626,15 @@ importers:
         specifier: workspace:*
         version: link:../miniflare
     devDependencies:
+      '@cloudflare/cli-shared-helpers':
+        specifier: workspace:*
+        version: link:../cli
+      '@cloudflare/remote-bindings':
+        specifier: workspace:*
+        version: link:../remote-bindings
+      '@cloudflare/workers-auth':
+        specifier: workspace:*
+        version: link:../workers-auth
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig

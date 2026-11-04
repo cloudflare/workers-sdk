@@ -1,11 +1,18 @@
 import { existsSync } from "node:fs";
+import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import {
 	mockConsoleMethods,
 	runInTempDir,
+	seed,
 } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, describe, it, vi } from "vitest";
 import { startPlatformProxy } from "../platform-proxy";
 import type { ParsedInputWorkerConfig } from "@cloudflare/config";
+
+// Starting a real session needs Cloudflare credentials
+vi.mock("@cloudflare/remote-bindings", () => ({
+	maybeStartOrUpdateRemoteProxySession: vi.fn(),
+}));
 
 /**
  * Creates a Worker configuration with the given bindings.
@@ -33,6 +40,7 @@ describe("startPlatformProxy()", () => {
 	const std = mockConsoleMethods();
 	afterEach(() => {
 		vi.unstubAllEnvs();
+		vi.mocked(maybeStartOrUpdateRemoteProxySession).mockReset();
 	});
 
 	it("emulates the Worker's bindings", async ({ expect }) => {
@@ -104,7 +112,6 @@ describe("startPlatformProxy()", () => {
 		);
 		const { env, dispose } = await startPlatformProxy(
 			createWorker({
-				SECRET: { type: "secret" },
 				ASSETS: { type: "assets" },
 				COUNTER: {
 					type: "durable-object",
@@ -112,7 +119,6 @@ describe("startPlatformProxy()", () => {
 					exportName: "Counter",
 				},
 				API: { type: "worker", worker: "my-worker", exportName: "Api" },
-				REMOTE_KV: { type: "kv", id: "abc", dev: { remote: true } },
 				DB: { type: "hyperdrive", id: "def" },
 				LOCAL_DB: {
 					type: "hyperdrive",
@@ -146,16 +152,76 @@ describe("startPlatformProxy()", () => {
 			expect(database("OVERRIDDEN_DB")).toBe("overridden");
 			expect(database("BOTH_DB")).toBe("from-env");
 			expect(std.warn).toMatchInlineSnapshot(`
-				"The platform proxy leaves out the \`SECRET\` binding: secrets aren't supported yet.
-				The platform proxy leaves out the \`ASSETS\` binding: the assets binding isn't supported yet.
+				"The platform proxy leaves out the \`ASSETS\` binding: the assets binding isn't supported yet.
 				The platform proxy leaves out the \`COUNTER\` binding: it refers to this Worker's own code, which the platform proxy doesn't run.
 				The platform proxy leaves out the \`API\` binding: it refers to this Worker's own code, which the platform proxy doesn't run.
-				The platform proxy leaves out the \`REMOTE_KV\` binding: remote bindings aren't supported yet.
 				The platform proxy leaves out the \`DB\` binding: it needs \`dev.connectionString\` or the \`CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DB\` environment variable for local development."
 			`);
 		} finally {
 			await dispose();
 		}
+	});
+
+	it("reads secrets from .dev.vars, like the Cloudflare Vite plugin", async ({
+		expect,
+	}) => {
+		await seed({ ".dev.vars": "SECRET=from-dev-vars" });
+		const { env, dispose } = await startPlatformProxy<{ SECRET: string }>(
+			createWorker({
+				SECRET: { type: "secret" },
+				MISSING: { type: "secret" },
+			}),
+			process.cwd()
+		);
+
+		try {
+			expect(env).toEqual({ SECRET: "from-dev-vars" });
+			expect(std.warn).toMatchInlineSnapshot(
+				`"Missing required secrets for Worker "my-worker": MISSING. Add them to one of \`.dev.vars.development\`, \`.dev.vars\`, \`.env.development.local\`, \`.env.development\`, \`.env.local\`, or \`.env\`. Alternatively, set them as environment variables."`
+			);
+		} finally {
+			await dispose();
+		}
+	});
+
+	it("connects remote bindings through a remote session", async ({
+		expect,
+	}) => {
+		const session = { dispose: vi.fn() };
+		vi.mocked(maybeStartOrUpdateRemoteProxySession).mockResolvedValue({
+			session,
+		} as unknown as Awaited<
+			ReturnType<typeof maybeStartOrUpdateRemoteProxySession>
+		>);
+		const worker = createWorker({
+			REMOTE_KV: { type: "kv", id: "abc", dev: { remote: true } },
+		});
+
+		const { dispose } = await startPlatformProxy(worker, process.cwd(), {
+			settings: { accountId: "my-account" },
+		});
+		expect(maybeStartOrUpdateRemoteProxySession).toHaveBeenCalledWith(
+			{
+				name: "my-worker",
+				target: "cf",
+				env: worker.env,
+				complianceRegion: undefined,
+			},
+			null,
+			expect.objectContaining({
+				key: JSON.stringify([process.cwd(), "my-account"]),
+			}),
+			expect.objectContaining({ cliDisplayName: "cf" })
+		);
+		await dispose();
+		expect(session.dispose).toHaveBeenCalled();
+
+		vi.mocked(maybeStartOrUpdateRemoteProxySession).mockClear();
+		const local = await startPlatformProxy(worker, process.cwd(), {
+			remoteBindings: false,
+		});
+		await local.dispose();
+		expect(maybeStartOrUpdateRemoteProxySession).not.toHaveBeenCalled();
 	});
 
 	it("provides stand-ins for cf, ctx and caches", async ({ expect }) => {

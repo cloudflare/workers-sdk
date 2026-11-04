@@ -27,6 +27,11 @@ export type GetPlatformProxyOptions =
 			 * same data.
 			 */
 			persist?: boolean | { path: string };
+			/**
+			 * Whether bindings configured with `dev.remote` connect to the real resources on your
+			 * account. Defaults to `true`.
+			 */
+			remoteBindings?: boolean;
 			url?: undefined;
 			secret?: undefined;
 	  }
@@ -88,6 +93,12 @@ export async function getPlatformProxy<
 		path.dirname(configPath),
 		{
 			persist: options.persist,
+			mode: options.mode,
+			settings: {
+				accountId: result.data.accountId,
+				complianceRegion: result.data.complianceRegion,
+			},
+			remoteBindings: options.remoteBindings,
 		}
 	);
 }

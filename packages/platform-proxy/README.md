@@ -14,7 +14,7 @@ await dispose();
 
 Binding data is persisted to `.cloudflare/state`, which the Cloudflare Vite plugin also uses.
 
-Not supported yet: secrets, remote bindings, and the `assets` binding. Bindings to the Worker's own Durable Objects, Workflows or entrypoints are left out, because the proxy doesn't run the Worker's code.
+Secrets are read from `.dev.vars` or `.env` files, as in the Cloudflare Vite plugin, and remote bindings connect to the real resources on your account unless `remoteBindings` is `false`. The `assets` binding isn't supported yet. Bindings to the Worker's own Durable Objects, Workflows or entrypoints are left out, because the proxy doesn't run the Worker's code.
 
 ## Attaching to a running runtime
 
@@ -33,7 +33,7 @@ When the runtime restarts, e.g. after a config change, the proxy connects again.
 - It reads `cloudflare.config.ts` from the current working directory, or from `configPath`. It doesn't search parent directories or read Wrangler configuration files.
 - `mode` selects how `cloudflare.config.ts` is evaluated, in place of Wrangler's `environment`.
 - `persist.path` has `v3` appended, matching the Cloudflare Vite plugin's layout.
-- `envFiles` and `remoteBindings` aren't supported.
+- `envFiles` isn't supported: local values come from the `.dev.vars` or `.env` files for `mode`.
 - `cf` defaults to `Record<string, unknown>` rather than `IncomingRequestCfProperties`, so `@cloudflare/workers-types` isn't required. Pass your own type as the second type argument.
 
 This is not yet stable enough for external use — APIs may change without notice.

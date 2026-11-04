@@ -1,10 +1,24 @@
 import path from "node:path";
+import { getRemoteBindingsAuth } from "./auth";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./execution-context";
-import type { ParsedInputWorkerConfig } from "@cloudflare/config";
-import type { WorkerOptions } from "miniflare";
+import type {
+	ParsedInputSettingsConfig,
+	ParsedInputWorkerConfig,
+} from "@cloudflare/config";
+import type { RemoteBindingsLogger } from "@cloudflare/remote-bindings";
 
-type MiniflareEnv = NonNullable<WorkerOptions["config"]["env"]>;
+const remoteBindingsLogger: RemoteBindingsLogger = {
+	loggerLevel: "log",
+	debug: console.debug,
+	log: console.log,
+	info: console.info,
+	warn: console.warn,
+	error: console.error,
+	console(method, ...args) {
+		Reflect.apply(console[method], console, args);
+	},
+};
 
 /** The platform returned by `getPlatformProxy()` */
 export type PlatformProxy<
@@ -30,8 +44,9 @@ export type PlatformProxy<
  * Emulates a Worker's bindings with Miniflare.
  *
  * @param worker The Worker configuration from `cloudflare.config.ts`
- * @param root The project directory, which persisted data is stored relative to
- * @param options Whether and where to persist the bindings' data
+ * @param root The project directory, which persisted data and local values are read relative to
+ * @param options Whether and where to persist the bindings' data, the mode to read local values
+ * for, the account settings, and whether to connect remote bindings
  * @returns The emulated platform
  */
 export async function startPlatformProxy<
@@ -40,9 +55,39 @@ export async function startPlatformProxy<
 >(
 	worker: ParsedInputWorkerConfig,
 	root: string,
-	options: { persist?: boolean | { path: string } } = {}
+	options: {
+		persist?: boolean | { path: string };
+		mode?: string;
+		settings?: ParsedInputSettingsConfig;
+		remoteBindings?: boolean;
+	} = {}
 ): Promise<PlatformProxy<Env, CfProperties>> {
-	const { Miniflare } = await import("miniflare");
+	const { mode = "development", remoteBindings = true } = options;
+	const [{ Miniflare, resolveLocalBindings }, { loadDevVars, loadEnv }] =
+		await Promise.all([
+			import("miniflare"),
+			import("@cloudflare/workers-utils/local-env"),
+		]);
+	// Secrets come from the same files as in the Cloudflare Vite plugin
+	const [localEnv, devVars] = await Promise.all([
+		loadEnv(root, mode),
+		loadDevVars(root, mode),
+	]);
+	const bindings = resolveLocalBindings(
+		getEmulatedBindings(worker, localEnv.values, remoteBindings),
+		{
+			workerName: worker.name,
+			localEnv: localEnv.values,
+			devVars,
+			mode,
+			remoteBindings,
+			logger: console,
+		}
+	);
+	const remoteProxySession = remoteBindings
+		? await startRemoteBindingsSession(worker, root, options.settings)
+		: null;
+
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -50,7 +95,7 @@ export async function startPlatformProxy<
 					name: worker.name,
 					compatibilityDate: worker.compatibilityDate,
 					compatibilityFlags: worker.compatibilityFlags,
-					env: getEmulatedBindings(worker),
+					env: bindings,
 					// The proxy only provides bindings, so it runs none of the Worker's own code
 					manifest: {
 						mainModule: "index.mjs",
@@ -59,8 +104,12 @@ export async function startPlatformProxy<
 						},
 					},
 				},
-				// Keep the empty Worker out of the dev registry, where it would shadow the real one
-				dev: { unsafeRegisterWorker: false },
+				dev: {
+					// Keep the empty Worker out of the dev registry, where it would shadow the real one
+					unsafeRegisterWorker: false,
+					remoteProxyConnectionString:
+						remoteProxySession?.session.remoteProxyConnectionString,
+				},
 			},
 		],
 		// Matches the Cloudflare Vite plugin's `getPersistenceRoot()`, so both share the same data
@@ -75,6 +124,10 @@ export async function startPlatformProxy<
 						"v3"
 					),
 	});
+	const dispose = async () => {
+		await mf.dispose();
+		await remoteProxySession?.session.dispose();
+	};
 
 	let env: Env;
 	let cf: Record<string, unknown>;
@@ -82,7 +135,7 @@ export async function startPlatformProxy<
 		env = await mf.getBindings<Env>();
 		cf = await mf.getCf();
 	} catch (error) {
-		await mf.dispose();
+		await dispose();
 		throw error;
 	}
 	deepFreeze(cf);
@@ -92,27 +145,60 @@ export async function startPlatformProxy<
 		cf: cf as CfProperties,
 		ctx: new ExecutionContext(),
 		caches: new CacheStorage(),
-		dispose: () => mf.dispose(),
+		dispose,
 	};
+}
+
+/**
+ * Starts a session for the Worker's remote bindings, if it has any, with cf's credentials.
+ *
+ * @param worker The Worker configuration from `cloudflare.config.ts`
+ * @param root The project directory, which the cf auth profile is resolved from
+ * @param settings The account settings from `cloudflare.config.ts`
+ * @returns The session, or `null` if the Worker has no remote bindings
+ */
+async function startRemoteBindingsSession(
+	worker: ParsedInputWorkerConfig,
+	root: string,
+	settings: ParsedInputSettingsConfig | undefined
+) {
+	const { maybeStartOrUpdateRemoteProxySession } =
+		await import("@cloudflare/remote-bindings");
+	return maybeStartOrUpdateRemoteProxySession(
+		{
+			name: worker.name,
+			target: "cf",
+			env: worker.env ?? {},
+			complianceRegion:
+				settings?.complianceRegion === "fedramp-high"
+					? "fedramp_high"
+					: settings?.complianceRegion,
+		},
+		null,
+		getRemoteBindingsAuth(root, settings?.accountId, remoteBindingsLogger),
+		{ cliDisplayName: "cf", logger: remoteBindingsLogger }
+	);
 }
 
 /**
  * Picks the bindings the proxy can emulate, and warns about the ones it leaves out.
  *
  * @param worker The Worker configuration from `cloudflare.config.ts`
+ * @param localEnv Values from `.env` files and the process environment
+ * @param remoteBindings Whether remote bindings connect to the real resources
  * @returns The bindings to emulate
  */
-function getEmulatedBindings(worker: ParsedInputWorkerConfig): MiniflareEnv {
-	const env: MiniflareEnv = {};
+function getEmulatedBindings(
+	worker: ParsedInputWorkerConfig,
+	localEnv: Record<string, string>,
+	remoteBindings: boolean
+): NonNullable<ParsedInputWorkerConfig["env"]> {
+	const env: NonNullable<ParsedInputWorkerConfig["env"]> = {};
 
 	for (const [name, binding] of Object.entries(worker.env ?? {})) {
 		let unsupported: string | undefined;
-		if (binding.type === "secret") {
-			unsupported = "secrets aren't supported yet";
-		} else if (binding.type === "assets") {
+		if (binding.type === "assets") {
 			unsupported = "the assets binding isn't supported yet";
-		} else if (isRemoteBinding(binding)) {
-			unsupported = "remote bindings aren't supported yet";
 		} else if (
 			(binding.type === "durable-object" ||
 				binding.type === "workflow" ||
@@ -121,17 +207,14 @@ function getEmulatedBindings(worker: ParsedInputWorkerConfig): MiniflareEnv {
 		) {
 			unsupported =
 				"it refers to this Worker's own code, which the platform proxy doesn't run";
-		} else if (binding.type === "hyperdrive") {
+		} else if (
+			binding.type === "hyperdrive" &&
+			!(remoteBindings && binding.dev?.remote) &&
 			// The same override the Cloudflare Vite plugin and Wrangler read
-			const connectionString =
-				process.env[`CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_${name}`] ||
-				binding.dev?.connectionString;
-			if (connectionString === undefined) {
-				unsupported = `it needs \`dev.connectionString\` or the \`CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_${name}\` environment variable for local development`;
-			} else {
-				env[name] = { ...binding, dev: { ...binding.dev, connectionString } };
-				continue;
-			}
+			!localEnv[`CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_${name}`] &&
+			binding.dev?.connectionString === undefined
+		) {
+			unsupported = `it needs \`dev.connectionString\` or the \`CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_${name}\` environment variable for local development`;
 		} else {
 			env[name] = binding;
 			continue;
@@ -143,22 +226,6 @@ function getEmulatedBindings(worker: ParsedInputWorkerConfig): MiniflareEnv {
 	}
 
 	return env;
-}
-
-/**
- * Checks whether a binding is configured to use the remote resource in local development.
- *
- * @param binding A binding from `cloudflare.config.ts`
- * @returns Whether the binding sets `dev.remote`
- */
-function isRemoteBinding(binding: object): boolean {
-	return (
-		"dev" in binding &&
-		typeof binding.dev === "object" &&
-		binding.dev !== null &&
-		"remote" in binding.dev &&
-		binding.dev.remote === true
-	);
 }
 
 /**

@@ -35,6 +35,9 @@
 		"miniflare": "workspace:*"
 	},
 	"devDependencies": {
+		"@cloudflare/cli-shared-helpers": "workspace:*",
+		"@cloudflare/remote-bindings": "workspace:*",
+		"@cloudflare/workers-auth": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "workspace:*",
