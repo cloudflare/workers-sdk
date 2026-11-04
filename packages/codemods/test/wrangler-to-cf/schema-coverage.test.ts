@@ -66,6 +66,15 @@ const FIELD_CASES = {
 	flagship: [{ app_id: "app-id", binding: "FLAGSHIP" }],
 	hyperdrive: [{ binding: "HYPERDRIVE", id: "id" }],
 	identities: [{ binding: "IDENTITY", audience: "urn:inventory" }],
+	identity_receiver: {
+		delegated_requests: {
+			profile: "poppy-0.3",
+			account_authorization: {
+				issuer: "https://auth.example.com",
+				audience: "https://api.example.com",
+			},
+		},
+	},
 	images: { binding: "IMAGES" },
 	jsx_factory: "h",
 	jsx_fragment: "Fragment",
@@ -240,4 +249,30 @@ it("migrates managed OAuth and independent assertion authority", ({
 	expect(rendered).toContain("client_credentials");
 	expect(rendered).toContain('http_message_signatures: "web_bot_auth"');
 	expect(rendered).toContain("provider-id");
+});
+
+it("preserves sparse delegated receiver trust without inheriting it into environments", ({
+	expect,
+}) => {
+	const result = convertWranglerConfig(
+		{
+			...BASE_CONFIG,
+			identity_receiver: FIELD_CASES.identity_receiver,
+			env: { staging: { name: "staging" } },
+		} as RawConfig,
+		"wrangler",
+		[]
+	);
+	const rendered = renderCloudflareConfig(result);
+	expect(rendered).toContain("identityReceiver:");
+	expect(rendered).toContain("delegated_requests:");
+	expect(rendered).toContain("account_authorization:");
+	expect(rendered).toContain('issuer: "https://auth.example.com"');
+	expect(rendered).not.toContain("company_id");
+	expect(rendered).not.toContain("jwks_uri");
+	expect(
+		result.environments
+			.get("staging")
+			?.config.properties.some(({ key }) => key === "identityReceiver")
+	).toBe(false);
 });
