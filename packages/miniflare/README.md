@@ -868,3 +868,9 @@ Keep live provider storage separate from deterministic tests.
 Wrangler, cf, Vite and Vitest consume this Miniflare behavior. Add no receiver
 binding or JavaScript verification polyfill. See the [runtime caller contract](https://developers.cloudflare.com/workers/runtime-apis/context/#identitycaller)
 for caller kinds, body ordering and application authorization.
+
+### Stored-secret identity bindings
+
+The draft machine binding accepts `oauth.authentication: { method: "client_secret_basic" | "client_secret_post", secret_reference: { store_id, secret_name } }`. Seed a test secret in the same persisted local Secrets Store before startup. Miniflare privately connects that reference to the managed signer; it does not add a readable secret to the application's environment. Missing or empty references fail startup with a redacted error.
+
+For this flow only, omitted `scope` and `resource` send no corresponding token parameters. Required `resources` still limits HTTP delivery. Bearer is the default with no DPoP proof; explicit `token_protection: "dpop"` requires a bound response. Key-based/WAG flows retain their existing automatic policy. Secret rotation affects the next acquisition; warm tokens keep their normal reuse window. Missing provider expiry allows at most 60 seconds of reuse, shortened by a safety margin. Local tests prove protocol behavior without claiming production provenance or real-provider qualification.

@@ -2785,34 +2785,8 @@ export class Miniflare {
 			this.#proxyClient.setRuntimeEntryURL(this.#runtimeEntryURL);
 		}
 
-		// Resolve and retain local identity setup before advertising readiness. Use a private
-		// dispatcher: the public dispatchFetch intentionally waits for this startup.
-		const setupBindings = this.#workerOpts.flatMap(({ config }) =>
-			getEnvBindingsOfType(config, "identity")
-				.filter(
-					([, binding]) =>
-						"connector_id" in binding ||
-						"resources" in binding ||
-						(binding.oauth &&
-							"exchange" in binding.oauth &&
-							binding.oauth.token_endpoint === undefined)
-				)
-				.map(([name]) => getProxyBindingName("core", config.name, name))
-		);
-		if (setupBindings.length) {
-			const startup = new ProxyClient(this.#runtimeEntryURL, (input, init) =>
-				fetch(input, { ...init, dispatcher: this.#runtimeDispatcher })
-			);
-			try {
-				await startup.warm();
-				for (const name of setupBindings) {
-					await (
-						startup.env[name] as { prepareLocal(): Promise<void> }
-					).prepareLocal();
-				}
-			} finally {
-				await startup.dispose();
-			}
+		if (!this.#sharedOpts.unsafeDeferIdentitySetup) {
+			await this.#prepareIdentityBindings();
 		}
 
 		await this.#registerWorkers();
@@ -2976,6 +2950,43 @@ export class Miniflare {
 		}
 
 		this.#devRegistry.register(Object.fromEntries(entries));
+	}
+
+	/** Internal Vite bridge; configureServer awaits setup before accepting application requests. */
+	async unsafePrepareIdentityBindings(): Promise<void> {
+		await this.ready;
+		// Vite serializes setup. Its module fallback may await ready, so do not hold the runtime mutex.
+		await this.#prepareIdentityBindings();
+	}
+
+	async #prepareIdentityBindings(): Promise<void> {
+		const setupBindings = this.#workerOpts.flatMap(({ config }) =>
+			getEnvBindingsOfType(config, "identity")
+				.filter(
+					([, binding]) =>
+						"connector_id" in binding ||
+						"resources" in binding ||
+						(binding.oauth &&
+							"exchange" in binding.oauth &&
+							(binding.oauth.token_endpoint === undefined ||
+								binding.oauth.authentication !== undefined))
+				)
+				.map(([name]) => getProxyBindingName("core", config.name, name))
+		);
+		if (setupBindings.length) {
+			assert(this.#runtimeEntryURL);
+			const startup = new ProxyClient(this.#runtimeEntryURL, (input, init) =>
+				fetch(input, { ...init, dispatcher: this.#runtimeDispatcher })
+			);
+			try {
+				await startup.warm();
+				for (const name of setupBindings) {
+					await startup.call(startup.env[name], "prepareLocal");
+				}
+			} finally {
+				await startup.dispose();
+			}
+		}
 	}
 
 	get ready(): Promise<URL> {

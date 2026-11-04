@@ -782,6 +782,8 @@ export const InstanceOptionsSchema = z.strictObject({
 	unsafeTriggerHandlers: z.boolean().optional(),
 	unsafeRuntimeEnv: z.record(z.string(), z.string()).optional(),
 	unsafeLocalExplorer: z.boolean().optional(),
+	/** Internal Vite bridge: prepare identity after module runners can serve setup metadata. */
+	unsafeDeferIdentitySetup: z.boolean().optional(),
 	// Turn on local-dev observability: attach the trace collector to the
 	// user's worker(s) so it receives their tail events.
 	unsafeObservability: z.boolean().optional(),

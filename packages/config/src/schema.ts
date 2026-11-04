@@ -123,7 +123,7 @@ const ManagedOAuthBaseSchema = z.strictObject({
 	resources: z.array(IdentityResourceSchema),
 	http_message_signatures: z.literal("web_bot_auth").optional(),
 });
-const ManagedOAuthSchema = z.discriminatedUnion("exchange", [
+const ManagedOAuthSchema = z.union([
 	ManagedOAuthBaseSchema.extend({
 		exchange: z.literal("workload_authorization"),
 		client_id: z.never().optional(),
@@ -131,6 +131,25 @@ const ManagedOAuthSchema = z.discriminatedUnion("exchange", [
 	ManagedOAuthBaseSchema.extend({
 		exchange: z.literal("client_credentials"),
 		client_id: z.string(),
+	}),
+	ManagedOAuthBaseSchema.extend({
+		exchange: z.literal("client_credentials"),
+		client_id: z.string(),
+		resource: z.string().optional(),
+		scope: z.array(z.string()).min(1).optional(),
+		authentication: z.strictObject({
+			method: z.enum(["client_secret_basic", "client_secret_post"]),
+			secret_reference: z.strictObject({
+				store_id: z.string().regex(/^[a-f0-9]{32}$/),
+				secret_name: z
+					.string()
+					.min(1)
+					.max(1024)
+					.refine((v) => new TextEncoder().encode(v).length <= 1024)
+					.refine((v) => [...v].every((c) => c > " " && c !== "\u007f")),
+			}),
+		}),
+		token_protection: z.enum(["bearer", "dpop"]).optional(),
 	}),
 ]);
 

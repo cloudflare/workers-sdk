@@ -19,11 +19,14 @@ it.for([
 	"client_credentials",
 	"workload_authorization+wba",
 	"client_credentials+wba",
+	"client_secret_basic",
+	"client_secret_post",
 ])(
 	"typechecks generated %s identity bindings",
 	{ timeout: 30_000 },
 	async (mode, { expect }) => {
-		const exchange = mode.replace("+wba", "");
+		const secret = mode.startsWith("client_secret_");
+		const exchange = secret ? "client_credentials" : mode.replace("+wba", "");
 		const policy =
 			mode === "signing"
 				? {
@@ -46,7 +49,19 @@ it.for([
 							authorization_server: "https://auth.example.com",
 							token_endpoint: "https://auth.example.com/token",
 							resource: "https://api.example.com",
-							scope: ["read"],
+							scope: secret ? undefined : ["read"],
+							...(secret
+								? {
+										authentication: {
+											method: mode,
+											secret_reference: {
+												store_id: "a".repeat(32),
+												secret_name: "SECRET",
+											},
+										},
+										resource: undefined,
+									}
+								: {}),
 							resources: [
 								{ origin: "https://api.example.com", methods: ["GET", "POST"] },
 							],

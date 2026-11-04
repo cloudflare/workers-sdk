@@ -12,6 +12,7 @@ import { CoreBindings } from "../../workers";
 import { D1_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/d1/constants";
 import { KV_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/kv/constants";
 import { R2_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/r2/constants";
+import { SECRET_STORE_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/secrets-store/constants";
 import { getFlagshipExplorerService } from "../flagship";
 import {
 	getEnvBindingsOfType,
@@ -129,6 +130,14 @@ export function getExplorerServices(
 			name: CoreBindings.SERVICE_KV,
 			service: getStorageService(
 				KV_LOCAL_ENTRY_SERVICE_NAME,
+				{},
+				sharedOptions
+			),
+		},
+		{
+			name: CoreBindings.SERVICE_SECRETS_STORE,
+			service: getStorageService(
+				SECRET_STORE_LOCAL_ENTRY_SERVICE_NAME,
 				{},
 				sharedOptions
 			),

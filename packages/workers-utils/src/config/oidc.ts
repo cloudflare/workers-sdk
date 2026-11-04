@@ -173,16 +173,39 @@ export interface OidcAuthorizationGrants {
 export interface OidcRequestSigning {
 	resources: ConnectionResource[];
 }
+export interface OidcSecretAuthentication {
+	method: "client_secret_basic" | "client_secret_post";
+	secret_reference: { store_id: string; secret_name: string };
+}
 export type OidcManagedOAuth = OidcRequestSigning & {
 	authorization_server: string;
 	token_endpoint?: string;
-	resource: string;
-	scope: string[];
-	/** Sign the final authenticated request; the receiver must verify OAuth, applicable DPoP, and WBA. */
 	http_message_signatures?: "web_bot_auth";
 } & (
-		| { exchange: "workload_authorization"; client_id?: never }
-		| { exchange: "client_credentials"; client_id: string }
+		| {
+				exchange: "workload_authorization";
+				client_id?: never;
+				authentication?: never;
+				token_protection?: never;
+				resource: string;
+				scope: string[];
+		  }
+		| {
+				exchange: "client_credentials";
+				client_id: string;
+				authentication?: never;
+				token_protection?: never;
+				resource: string;
+				scope: string[];
+		  }
+		| {
+				exchange: "client_credentials";
+				client_id: string;
+				authentication: OidcSecretAuthentication;
+				token_protection?: "bearer" | "dpop";
+				resource?: string;
+				scope?: string[];
+		  }
 	);
 export interface WorkloadIdentityBindingConfig {
 	binding: string;
@@ -333,6 +356,8 @@ export function isIdentityBinding(
 				"scope",
 				"resources",
 				"http_message_signatures",
+				"authentication",
+				"token_protection",
 			]) ||
 			!["workload_authorization", "client_credentials"].includes(
 				String(p.exchange)
@@ -350,14 +375,25 @@ export function isIdentityBinding(
 			(p.token_endpoint !== undefined &&
 				(typeof p.token_endpoint !== "string" ||
 					!validOidcAuthorizationServer(p.token_endpoint))) ||
-			typeof p.resource !== "string" ||
-			!validOidcAudience(p.resource) ||
-			!p.resource.includes(":") ||
-			p.resource.includes("#") ||
-			[...p.resource].some(
-				(c) => c.charCodeAt(0) <= 32 || c.charCodeAt(0) === 127
-			) ||
-			!set(p.scope, (s) => /^[\x21\x23-\x5b\x5d-\x7e]+$/.test(s)) ||
+			(p.authentication === undefined &&
+				(p.resource === undefined ||
+					p.scope === undefined ||
+					p.token_protection !== undefined)) ||
+			(p.authentication !== undefined &&
+				(p.exchange !== "client_credentials" ||
+					!validSecretAuthentication(p.authentication))) ||
+			(p.token_protection !== undefined &&
+				!["bearer", "dpop"].includes(String(p.token_protection))) ||
+			(p.resource !== undefined &&
+				(typeof p.resource !== "string" ||
+					!validOidcAudience(p.resource) ||
+					!p.resource.includes(":") ||
+					p.resource.includes("#") ||
+					[...p.resource].some(
+						(c) => c.charCodeAt(0) <= 32 || c.charCodeAt(0) === 127
+					))) ||
+			(p.scope !== undefined &&
+				!set(p.scope, (s) => /^[\x21\x23-\x5b\x5d-\x7e]+$/.test(s))) ||
 			!validIdentityResources(p.resources) ||
 			(p.http_message_signatures !== undefined &&
 				p.http_message_signatures !== "web_bot_auth")
@@ -390,4 +426,28 @@ export type {
 	ExactConnectionResource,
 } from "./connections";
 
-/** Resolve machine OAuth once during local setup; deployments retain the compiler's resolved endpoint. */
+/** Validate a private same-account Secrets Store reference, never secret material. */
+export function validSecretAuthentication(
+	value: unknown
+): value is OidcSecretAuthentication {
+	if (
+		!record(value) ||
+		!fields(value, ["method", "secret_reference"]) ||
+		!["client_secret_basic", "client_secret_post"].includes(
+			String(value.method)
+		)
+	) {
+		return false;
+	}
+	const ref = value.secret_reference;
+	return (
+		record(ref) &&
+		fields(ref, ["store_id", "secret_name"]) &&
+		typeof ref.store_id === "string" &&
+		/^[a-f0-9]{32}$/.test(ref.store_id) &&
+		typeof ref.secret_name === "string" &&
+		ref.secret_name.length > 0 &&
+		new TextEncoder().encode(ref.secret_name).length <= 1024 &&
+		[...ref.secret_name].every((c) => c > " " && c !== "\u007f")
+	);
+}

@@ -14,7 +14,7 @@ import {
 } from "@cloudflare/workers-utils/oidc";
 import SCRIPT_ROUTER from "worker:core/identity-router";
 import { withPersistRootStartupLock } from "../../shared/persist-root-lock";
-import { getEnvBindingsOfType } from "../shared";
+import { getEnvBindingsOfType, getUserBindingServiceName } from "../shared";
 import { IDENTITY_SERVICE_BUNDLES } from "./identity-services.generated";
 import type {
 	ParsedInstanceOptions,
@@ -25,6 +25,12 @@ import type { Service, ServiceDesignator, Worker_Binding } from "../../runtime";
 export const LOCAL_IDENTITY_ROUTER = "core:identity:router";
 export const LOCAL_IDENTITY_ENTRY_BINDING = "MINIFLARE_LOCAL_IDENTITY";
 const serviceName = (name: string) => `core:identity:${name}`;
+function privateSignerName(worker: string, binding: string): string {
+	return `signer:${createHash("sha256")
+		.update(JSON.stringify([worker, binding]))
+		.digest("hex")}`;
+}
+
 export function usesLocalIdentity(options: ParsedWorkerOptions): boolean {
 	return (
 		options.config.callerIdentity !== undefined ||
@@ -297,6 +303,10 @@ export async function getLocalIdentityBindings(
 				execution: "deployed",
 			};
 			const connection = isConnectionBinding(input);
+			const secret =
+				input.oauth && "authentication" in input.oauth
+					? input.oauth.authentication
+					: undefined;
 			const props = connection
 				? {
 						compiled: {
@@ -324,7 +334,12 @@ export async function getLocalIdentityBindings(
 						...origin,
 						...limits,
 						binding: undefined,
-						schemaVersion: 8,
+						schemaVersion:
+							input.oauth &&
+							"authentication" in input.oauth &&
+							input.oauth.authentication
+								? 9
+								: 8,
 						...(input.oauth ? { oauth: input.oauth } : {}),
 						subject: input.subject ?? "worker",
 						namespaceId: input.namespace_id,
@@ -334,10 +349,17 @@ export async function getLocalIdentityBindings(
 			return {
 				name,
 				service: {
-					name: serviceName(connection ? "broker" : "signer"),
+					name: serviceName(
+						connection
+							? "broker"
+							: secret
+								? privateSignerName(options.config.name, name)
+								: "signer"
+					),
 					entrypoint: connection
 						? "LocalConnectionBroker"
-						: input.oauth?.token_endpoint === undefined && input.oauth
+						: (secret || input.oauth?.token_endpoint === undefined) &&
+							  input.oauth
 							? "LocalIdentityBinding"
 							: "IdentityBinding",
 					props: { json: JSON.stringify(props) },
@@ -430,7 +452,7 @@ export async function getLocalIdentityServices(
 				: {}),
 		},
 	});
-	return [
+	const services: Service[] = [
 		{ name: serviceName("storage"), disk: { path: storage, writable: true } },
 		worker(
 			"signer",
@@ -551,4 +573,40 @@ export async function getLocalIdentityServices(
 			},
 		},
 	];
+	const signer = services.find((s) => s.name === serviceName("signer"));
+	if (!signer || !("worker" in signer) || !signer.worker) {
+		throw new Error("Missing private identity signer.");
+	}
+	for (const [name, binding] of getEnvBindingsOfType(
+		options.config,
+		"identity"
+	)) {
+		const auth =
+			binding.oauth && "authentication" in binding.oauth
+				? binding.oauth.authentication
+				: undefined;
+		if (!auth) {
+			continue;
+		}
+		services.push({
+			name: serviceName(privateSignerName(options.config.name, name)),
+			worker: {
+				...signer.worker,
+				bindings: [
+					...(signer.worker.bindings ?? []),
+					{
+						name: "PRIVATE_OAUTH_SECRET",
+						service: {
+							name: getUserBindingServiceName(
+								"secrets-store",
+								`${auth.secret_reference.store_id}:${auth.secret_reference.secret_name}`
+							),
+							entrypoint: "SecretsStoreSecret",
+						},
+					},
+				],
+			},
+		});
+	}
+	return services;
 }
