@@ -17,8 +17,7 @@ import * as recast from "recast";
 import semiver from "semiver";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { Framework } from "./framework-class";
-import { getInstalledPackageVersion } from "./utils/packages";
-import type { AutoConfigContext, AutoConfigTarget } from "../context";
+import type { AutoConfigContext } from "../context";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -27,24 +26,6 @@ import type { PackageManager } from "@cloudflare/workers-utils";
 
 export class Astro extends Framework {
 	override readonly supportsMode = true;
-
-	isConfigured(
-		projectPath: string,
-		{ target = "cf" }: { target?: AutoConfigTarget } = {}
-	): boolean {
-		if (target === "wrangler") {
-			return super.isConfigured(projectPath, { target });
-		}
-
-		const adapterVersion = getInstalledPackageVersion(
-			"@astrojs/cloudflare",
-			projectPath
-		);
-		return (
-			adapterVersion !== undefined &&
-			semiver(adapterVersion, "15.0.0-beta.0") >= 0
-		);
-	}
 
 	async configure({
 		target,
@@ -110,7 +91,7 @@ export class Astro extends Framework {
 			};
 		}
 
-		if (semiver(astroVersion, "7.0.0") < 0) {
+		if (semiver(astroVersion, "7.0.0-0") < 0) {
 			throw new AutoConfigFrameworkConfigurationError(
 				`cf only supports Astro 7 or later, but this project uses Astro ${JSON.stringify(
 					astroVersion
