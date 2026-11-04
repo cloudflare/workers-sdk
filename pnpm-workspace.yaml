@@ -90,6 +90,10 @@ overrides:
   # Remove once no dependency resolves brace-expansion below 2.1.7 or 5.0.12.
   "brace-expansion@2": "^2.1.7"
   "brace-expansion@5": "^5.0.12"
+  # Security fix for shell-quote (Dependabot alert). concurrently 8.2.2 is the
+  # last 8.x release and asks for ^1.8.1, which locks 1.10.0. Remove once
+  # nothing depends on concurrently 8.
+  "concurrently@8>shell-quote": "^1.11.0"
 
 peerDependencyRules:
   allowedVersions:
