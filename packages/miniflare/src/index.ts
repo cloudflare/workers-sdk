@@ -2235,6 +2235,17 @@ export class Miniflare {
 				}
 			}
 
+			// Identity bindings are assembled by core.getServices after the ordinary
+			// plugin binding pass. Expose the same protected targets to Node tooling.
+			for (const [name] of getEnvBindingsOfType(
+				workerOpts.config,
+				"identity"
+			)) {
+				const binding = workerBindings.find((binding) => binding.name === name);
+				assert(binding !== undefined);
+				proxyBindings.push(buildProxyBinding("core", workerName, binding));
+			}
+
 			// Allow additional sockets to be opened directly to specific workers,
 			// bypassing Miniflare's entry worker.
 			const previousDirectSockets =
@@ -2772,6 +2783,36 @@ export class Miniflare {
 			// Update the proxy client with the new runtime URL to send requests to.
 			// Existing proxies will already have been poisoned in `setOptions()`.
 			this.#proxyClient.setRuntimeEntryURL(this.#runtimeEntryURL);
+		}
+
+		// Resolve and retain local identity setup before advertising readiness. Use a private
+		// dispatcher: the public dispatchFetch intentionally waits for this startup.
+		const setupBindings = this.#workerOpts.flatMap(({ config }) =>
+			getEnvBindingsOfType(config, "identity")
+				.filter(
+					([, binding]) =>
+						"connector_id" in binding ||
+						"resources" in binding ||
+						(binding.oauth &&
+							"exchange" in binding.oauth &&
+							binding.oauth.token_endpoint === undefined)
+				)
+				.map(([name]) => getProxyBindingName("core", config.name, name))
+		);
+		if (setupBindings.length) {
+			const startup = new ProxyClient(this.#runtimeEntryURL, (input, init) =>
+				fetch(input, { ...init, dispatcher: this.#runtimeDispatcher })
+			);
+			try {
+				await startup.warm();
+				for (const name of setupBindings) {
+					await (
+						startup.env[name] as { prepareLocal(): Promise<void> }
+					).prepareLocal();
+				}
+			} finally {
+				await startup.dispose();
+			}
 		}
 
 		await this.#registerWorkers();

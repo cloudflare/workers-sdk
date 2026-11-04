@@ -17,8 +17,9 @@ for (const legacy of [false, true]) {
 				allowed_scopes: ["read"],
 			},
 			request_signing: {
-				allowed_origins: ["https://api.identity.local"],
-				allowed_methods: ["GET"],
+				resources: [
+					{ origin: "https://api.identity.local", methods: ["GET" as const] },
+				],
 			},
 		};
 		const script = `export default { async fetch(request, env) {
@@ -183,7 +184,6 @@ for (const selection of ["app", "customer"] as const) {
 					grant: "authorization_code" as const,
 					authorization_server: "https://as.identity.local",
 					resource: "https://api.identity.local",
-					discovery: true,
 					permission_ceiling: {
 						scope,
 						resources,
@@ -228,6 +228,7 @@ for (const selection of ["app", "customer"] as const) {
 				],
 			});
 			useDispose(mf);
+			await mf.ready; // Setup and registration complete before the first application request.
 			const start = (await (
 				await mf.dispatchFetch("http://localhost/start")
 			).json()) as { authorizationUrl: string; flowId: string };

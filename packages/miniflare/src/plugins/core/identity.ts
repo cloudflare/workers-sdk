@@ -47,6 +47,17 @@ export async function getLocalIdentityVerifier(
 	) {
 		return undefined;
 	}
+	if (
+		options.config.compatibilityFlags?.includes("legacy_error_serialization") ||
+		(options.config.compatibilityDate < "2026-04-21" &&
+			!options.config.compatibilityFlags?.includes(
+				"enhanced_error_serialization"
+			))
+	) {
+		throw new Error(
+			"Identity bindings require enhanced_error_serialization; remove legacy_error_serialization."
+		);
+	}
 	const local = await authority(shared);
 	return {
 		name: serviceName("verifier"),
@@ -257,65 +268,85 @@ export async function getLocalIdentityBindings(
 	if (!bindings.length) {
 		return [];
 	}
+	if (
+		options.config.compatibilityFlags?.includes("legacy_error_serialization") ||
+		(options.config.compatibilityDate < "2026-04-21" &&
+			!options.config.compatibilityFlags?.includes(
+				"enhanced_error_serialization"
+			))
+	) {
+		throw new Error(
+			"Identity bindings require enhanced_error_serialization; remove legacy_error_serialization."
+		);
+	}
 	const local = await authority(shared);
-	return bindings.map(([name, binding]) => {
-		const { type: _type, ...limits } = binding;
-		const input = { ...limits, binding: name };
-		if (!isIdentityBinding(input)) {
-			throw new Error(`Invalid identity binding ${name}.`);
-		}
-		const origin = {
-			accountId: local.accountId,
-			workerId: createHash("sha256")
-				.update(options.config.name)
-				.digest("hex")
-				.slice(0, 32),
-			versionId: uuid(JSON.stringify(options.config)),
-			execution: "deployed",
-		};
-		const connection = isConnectionBinding(input);
-		const props = connection
-			? {
-					compiled: {
-						...origin,
-						schemaVersion: 7,
-						selection: input.selection ?? "app",
-						connectorId: input.connector_id ?? uuid(`placeholder:${name}`),
-						connectorRevision: input.connector_revision ?? 1,
-						connectionManagement: input.connection_management ?? false,
-						permissions: {
-							scopes: input.scope,
-							resources: input.resources,
-							inspectionResources: input.inspection_resources ?? [],
-							returnUrls: input.return_urls ?? [],
+	return Promise.all(
+		bindings.map(async ([name, binding]) => {
+			const { type: _type, ...limits } = binding;
+			const input = { ...limits, binding: name };
+			if (!isIdentityBinding(input)) {
+				throw new Error(`Invalid identity binding ${name}.`);
+			}
+			const origin = {
+				accountId: local.accountId,
+				workerId: createHash("sha256")
+					.update(options.config.name)
+					.digest("hex")
+					.slice(0, 32),
+				versionId: uuid(JSON.stringify(options.config)),
+				execution: "deployed",
+			};
+			const connection = isConnectionBinding(input);
+			const props = connection
+				? {
+						compiled: {
+							...origin,
+							schemaVersion: 7,
+							selection: input.selection ?? "app",
+							connectorId: input.connector_id ?? uuid(`placeholder:${name}`),
+							connectorRevision: input.connector_revision ?? 1,
+							connectionManagement: input.connection_management ?? false,
+							permissions: {
+								scopes: input.scope,
+								resources: input.resources,
+								inspectionResources: input.inspection_resources ?? [],
+								returnUrls: input.return_urls ?? [],
+							},
 						},
-					},
-					operationId: uuid(
-						`connector:${name}:${localIdentityCallback(shared)}`
-					),
-					existingId: input.connector_id !== undefined,
-					...(input.oauth ? { oauth: input.oauth } : {}),
-				}
-			: {
-					...origin,
-					...limits,
-					binding: undefined,
-					schemaVersion: input.client_authentication ? 5 : input.oauth ? 4 : 1,
-					subject: input.subject ?? "worker",
-					namespaceId: input.namespace_id,
-					namespace_id: undefined,
-				};
-		// Omit undefined members before strict managed-service validation.
-		return {
-			name,
-			service: {
-				name: serviceName(connection ? "broker" : "signer"),
-				entrypoint: connection ? "LocalConnectionBroker" : "IdentityBinding",
-				props: { json: JSON.stringify(props) },
-			},
-		};
-	});
+						operationId: uuid(
+							`connector:${name}:${localIdentityCallback(shared)}`
+						),
+						existingId: input.connector_id !== undefined,
+						explicitRevision: input.connector_revision !== undefined,
+						...(input.oauth ? { oauth: input.oauth } : {}),
+					}
+				: {
+						...origin,
+						...limits,
+						binding: undefined,
+						schemaVersion: 8,
+						...(input.oauth ? { oauth: input.oauth } : {}),
+						subject: input.subject ?? "worker",
+						namespaceId: input.namespace_id,
+						namespace_id: undefined,
+					};
+			// Omit undefined members before strict managed-service validation.
+			return {
+				name,
+				service: {
+					name: serviceName(connection ? "broker" : "signer"),
+					entrypoint: connection
+						? "LocalConnectionBroker"
+						: input.oauth?.token_endpoint === undefined && input.oauth
+							? "LocalIdentityBinding"
+							: "IdentityBinding",
+					props: { json: JSON.stringify(props) },
+				},
+			};
+		})
+	);
 }
+
 function localIdentityCallback(shared: ParsedInstanceOptions): string {
 	const callbackURL = new URL(
 		process.env.MINIFLARE_IDENTITY_CALLBACK_URL ??
@@ -350,6 +381,17 @@ export async function getLocalIdentityServices(
 ): Promise<Service[]> {
 	if (!usesLocalIdentity(options)) {
 		return [];
+	}
+	if (
+		options.config.compatibilityFlags?.includes("legacy_error_serialization") ||
+		(options.config.compatibilityDate < "2026-04-21" &&
+			!options.config.compatibilityFlags?.includes(
+				"enhanced_error_serialization"
+			))
+	) {
+		throw new Error(
+			"Identity bindings require enhanced_error_serialization; remove legacy_error_serialization."
+		);
 	}
 	const local = await authority(shared);
 	const issuer = `https://oidc.${local.realm}.test`;
@@ -390,25 +432,33 @@ export async function getLocalIdentityServices(
 	});
 	return [
 		{ name: serviceName("storage"), disk: { path: storage, writable: true } },
-		worker("signer", [
-			...common,
-			text("OIDC_ACTIVE_KEY", "A"),
-			text("WAG_ACTIVE_KEY", "A"),
-			text("OIDC_SIGNING_KEY_A", local.oidc.privateKey),
-			text("WAG_SIGNING_KEY_A", local.wag.privateKey),
-			text("WBA_ROOT_A", local.wba[0]),
-			text("WBA_ROOT_B", local.wba[1]),
-			text("WBA_ROOT_EPOCH_A", "1"),
-			text("WBA_ROOT_EPOCH_B", "2"),
-			text("WBA_ACTIVE_ROOT", "A"),
-			text("OAUTH_ENABLED", "true"),
-			text("OAUTH_CLIENT_ROOT_A", local.client[0]),
-			text("OAUTH_CLIENT_ROOT_B", local.client[1]),
-			text("OAUTH_CLIENT_ROOT_EPOCH_A", "1"),
-			text("OAUTH_CLIENT_ROOT_EPOCH_B", "2"),
-			text("OAUTH_CLIENT_ACTIVE_ROOT", "A"),
-			service("WORKLOAD_LIMITER", "router", "Limiter"),
-		]),
+		worker(
+			"signer",
+			[
+				...common,
+				text("OIDC_ACTIVE_KEY", "A"),
+				text("WAG_ACTIVE_KEY", "A"),
+				text("OIDC_SIGNING_KEY_A", local.oidc.privateKey),
+				text("WAG_SIGNING_KEY_A", local.wag.privateKey),
+				text("WBA_ROOT_A", local.wba[0]),
+				text("WBA_ROOT_B", local.wba[1]),
+				text("WBA_ROOT_EPOCH_A", "1"),
+				text("WBA_ROOT_EPOCH_B", "2"),
+				text("WBA_ACTIVE_ROOT", "A"),
+				text("OAUTH_ENABLED", "true"),
+				text("OAUTH_CLIENT_ROOT_A", local.client[0]),
+				text("OAUTH_CLIENT_ROOT_B", local.client[1]),
+				text("OAUTH_CLIENT_ROOT_EPOCH_A", "1"),
+				text("OAUTH_CLIENT_ROOT_EPOCH_B", "2"),
+				text("OAUTH_CLIENT_ACTIVE_ROOT", "A"),
+				service("WORKLOAD_LIMITER", "router", "Limiter"),
+				{
+					name: "LOCAL_OAUTH_SETUP",
+					durableObjectNamespace: { className: "LocalOAuthSetup" },
+				},
+			],
+			["LocalOAuthSetup"]
+		),
 		worker("discovery", [
 			...common,
 			text("OIDC_PUBLIC_KEY_A", local.oidc.publicKey),
@@ -468,13 +518,19 @@ export async function getLocalIdentityServices(
 					["CUSTOMERS", "CustomerConnections"],
 					["CONNECTORS", "AccountConnectors"],
 					["REGISTRATION_CREDENTIALS", "RegistrationCredentials"],
+					["LOCAL_SETUP", "LocalConnectorSetup"],
 				].map(([name, className]) => ({
 					name,
 					durableObjectNamespace: { className },
 				})),
 				service("CALLBACK_LIMITER", "router", "Limiter"),
 			],
-			["CustomerConnections", "AccountConnectors", "RegistrationCredentials"]
+			[
+				"CustomerConnections",
+				"AccountConnectors",
+				"RegistrationCredentials",
+				"LocalConnectorSetup",
+			]
 		),
 		{
 			name: LOCAL_IDENTITY_ROUTER,

@@ -110,13 +110,17 @@ export const HyperdriveBindingSchema = z.strictObject({
 	}).optional(),
 });
 
+const IdentityResourceSchema = z.strictObject({
+	url: z.string().optional(),
+	origin: z.string().optional(),
+	methods: z.array(z.enum(["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"])),
+});
 const ManagedOAuthBaseSchema = z.strictObject({
 	authorization_server: z.string(),
-	token_endpoint: z.string(),
+	token_endpoint: z.string().optional(),
 	resource: z.string(),
 	scope: z.array(z.string()),
-	allowed_origins: z.array(z.string()),
-	allowed_methods: z.array(z.string()),
+	resources: z.array(IdentityResourceSchema),
 	http_message_signatures: z.literal("web_bot_auth").optional(),
 });
 const ManagedOAuthSchema = z.discriminatedUnion("exchange", [
@@ -170,7 +174,9 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 					allowed_scopes: z.array(z.string()),
 				})
 				.optional(),
-			client_authentication: z.boolean().optional(),
+			client_authentication: z
+				.strictObject({ client_id: z.string(), audience: z.string() })
+				.optional(),
 			oauth: z
 				.union([
 					ManagedOAuthSchema,
@@ -187,8 +193,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 				.optional(),
 			request_signing: z
 				.strictObject({
-					allowed_origins: z.array(z.string()),
-					allowed_methods: z.array(z.string()),
+					resources: z.array(IdentityResourceSchema),
 				})
 				.optional(),
 		})

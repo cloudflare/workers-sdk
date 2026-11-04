@@ -609,8 +609,9 @@ describe("generate types - CLI", () => {
 					{
 						binding: "IDENTITY",
 						request_signing: {
-							allowed_origins: ["https://api.example.com"],
-							allowed_methods: ["GET", "POST"],
+							resources: [
+								{ origin: "https://api.example.com", methods: ["GET", "POST"] },
+							],
 						},
 					},
 				],
@@ -627,12 +628,12 @@ describe("generate types - CLI", () => {
 		expect(types).toContain(
 			"fetch(input: Request | string, init?: Omit<RequestInit, 'body' | 'cf' | 'signal'>"
 		);
-		for (const field of ["id", "signatureAgent", "directoryURL"]) {
+		for (const field of ["id", "signatureAgent"]) {
 			expect(types).toContain(`readonly ${field}: Promise<string>`);
 		}
 		expect(types).toContain("getToken(): Promise<string>");
 		expect(types).toContain(
-			"getAuthorizationGrant(options: { authorizationServer: string; scope?: string[] }): Promise<string>"
+			"getAuthorizationGrant(options?: { authorizationServer?: string; scope?: string[] }): Promise<string>"
 		);
 		expect(types).not.toContain("fetch(input: Request | string | URL");
 	});

@@ -1,6 +1,8 @@
 import {
 	isConnectionBinding,
+	validIdentityResources,
 	type ConnectionBindingConfig,
+	type ConnectionResource,
 } from "./connections";
 export {
 	parseIdentityReceiver,
@@ -169,12 +171,11 @@ export interface OidcAuthorizationGrants {
 	allowed_scopes: string[];
 }
 export interface OidcRequestSigning {
-	allowed_origins: string[];
-	allowed_methods: string[];
+	resources: ConnectionResource[];
 }
 export type OidcManagedOAuth = OidcRequestSigning & {
 	authorization_server: string;
-	token_endpoint: string;
+	token_endpoint?: string;
 	resource: string;
 	scope: string[];
 	/** Sign the final authenticated request; the receiver must verify OAuth, applicable DPoP, and WBA. */
@@ -191,7 +192,7 @@ export interface WorkloadIdentityBindingConfig {
 	authorization_grants?: OidcAuthorizationGrants;
 	request_signing?: OidcRequestSigning;
 	oauth?: OidcManagedOAuth;
-	client_authentication?: boolean;
+	client_authentication?: { client_id: string; audience: string };
 }
 export type IdentityBindingConfig =
 	| WorkloadIdentityBindingConfig
@@ -299,21 +300,24 @@ export function isIdentityBinding(
 	if (
 		h !== undefined &&
 		(!record(h) ||
-			!fields(h, ["allowed_origins", "allowed_methods"]) ||
-			!set(h.allowed_origins, validOidcOrigin) ||
-			!set(
-				h.allowed_methods,
-				(s) =>
-					/^[A-Z!#$%&'*+.^_`|~-]+$/.test(s) &&
-					!["CONNECT", "TRACE", "TRACK"].includes(s)
-			))
+			!fields(h, ["resources"]) ||
+			!validIdentityResources(h.resources))
 	) {
 		return false;
 	}
 	const p = value.oauth;
+	const client = value.client_authentication;
 	if (
-		value.client_authentication !== undefined &&
-		typeof value.client_authentication !== "boolean"
+		client !== undefined &&
+		(!record(client) ||
+			!fields(client, ["client_id", "audience"]) ||
+			typeof client.client_id !== "string" ||
+			!client.client_id.trim() ||
+			new TextEncoder().encode(client.client_id).length > 2048 ||
+			Array.from(client.client_id).some(
+				(char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127
+			) ||
+			!validOidcAudience(client.audience))
 	) {
 		return false;
 	}
@@ -327,8 +331,7 @@ export function isIdentityBinding(
 				"token_endpoint",
 				"resource",
 				"scope",
-				"allowed_origins",
-				"allowed_methods",
+				"resources",
 				"http_message_signatures",
 			]) ||
 			!["workload_authorization", "client_credentials"].includes(
@@ -344,8 +347,9 @@ export function isIdentityBinding(
 				: p.client_id !== undefined) ||
 			typeof p.authorization_server !== "string" ||
 			!validOidcAuthorizationServer(p.authorization_server) ||
-			typeof p.token_endpoint !== "string" ||
-			!validOidcAuthorizationServer(p.token_endpoint) ||
+			(p.token_endpoint !== undefined &&
+				(typeof p.token_endpoint !== "string" ||
+					!validOidcAuthorizationServer(p.token_endpoint))) ||
 			typeof p.resource !== "string" ||
 			!validOidcAudience(p.resource) ||
 			!p.resource.includes(":") ||
@@ -354,13 +358,7 @@ export function isIdentityBinding(
 				(c) => c.charCodeAt(0) <= 32 || c.charCodeAt(0) === 127
 			) ||
 			!set(p.scope, (s) => /^[\x21\x23-\x5b\x5d-\x7e]+$/.test(s)) ||
-			!set(p.allowed_origins, validOidcOrigin) ||
-			!set(
-				p.allowed_methods,
-				(s) =>
-					/^[A-Z!#$%&'*+.^_`|~-]+$/.test(s) &&
-					!["CONNECT", "TRACE", "TRACK"].includes(s)
-			) ||
+			!validIdentityResources(p.resources) ||
 			(p.http_message_signatures !== undefined &&
 				p.http_message_signatures !== "web_bot_auth")
 		) {
@@ -368,8 +366,15 @@ export function isIdentityBinding(
 		}
 		if (
 			record(h) &&
-			Array.isArray(h.allowed_origins) &&
-			h.allowed_origins.some((o) => (p.allowed_origins as string[]).includes(o))
+			validIdentityResources(h.resources) &&
+			validIdentityResources(p.resources) &&
+			h.resources.some((a) =>
+				(p.resources as ConnectionResource[]).some(
+					(b) =>
+						new URL(a.url ?? a.origin).origin ===
+						new URL(b.url ?? b.origin).origin
+				)
+			)
 		) {
 			return false;
 		}
@@ -384,3 +389,5 @@ export type {
 	ConnectionPermissions,
 	ExactConnectionResource,
 } from "./connections";
+
+/** Resolve machine OAuth once during local setup; deployments retain the compiler's resolved endpoint. */

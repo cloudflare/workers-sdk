@@ -119,11 +119,11 @@ interface BindingTypeMap<TBinding> {
 					Rpc.Stub<
 						Rpc.RpcTargetBranded & {
 							getToken(): Promise<string>;
-							getAuthorizationGrant(options: {
-								authorizationServer: string;
+							getAuthorizationGrant(options?: {
+								authorizationServer?: string;
 								scope?: string[];
 							}): Promise<string>;
-							getClientMetadata(clientId?: string): Promise<{
+							getClientMetadata(): Promise<{
 								client_id: string;
 								client_name: string;
 								token_endpoint_auth_method: "private_key_jwt";
@@ -142,13 +142,9 @@ interface BindingTypeMap<TBinding> {
 								grant_types: "client_credentials"[];
 								response_types: never[];
 							}>;
-							getClientAssertion(options: {
-								clientId: string;
-								audience: string;
-							}): Promise<string>;
+							getClientAssertion(): Promise<string>;
 							readonly id: Promise<string>;
 							readonly signatureAgent: Promise<string>;
-							readonly directoryURL: Promise<string>;
 							fetch(
 								input: Request | string,
 								init?: Omit<RequestInit, "body" | "cf" | "signal"> & {
@@ -164,8 +160,8 @@ interface BindingTypeMap<TBinding> {
 					>
 				>;
 				getToken(): Promise<string>;
-				getAuthorizationGrant(options: {
-					authorizationServer: string;
+				getAuthorizationGrant(options?: {
+					authorizationServer?: string;
 					scope?: string[];
 				}): Promise<string>;
 			};

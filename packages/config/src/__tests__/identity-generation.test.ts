@@ -28,12 +28,16 @@ it.for([
 			mode === "signing"
 				? {
 						request_signing: {
-							allowed_origins: ["https://api.example.com"],
-							allowed_methods: ["GET", "POST"],
+							resources: [
+								{ origin: "https://api.example.com", methods: ["GET", "POST"] },
+							],
 						},
 					}
 				: {
-						client_authentication: true,
+						client_authentication: {
+							client_id: "https://app.example.com/client.json",
+							audience: "https://auth.example.com",
+						},
 						oauth: {
 							exchange,
 							...(exchange === "client_credentials"
@@ -43,8 +47,9 @@ it.for([
 							token_endpoint: "https://auth.example.com/token",
 							resource: "https://api.example.com",
 							scope: ["read"],
-							allowed_origins: ["https://api.example.com"],
-							allowed_methods: ["GET", "POST"],
+							resources: [
+								{ origin: "https://api.example.com", methods: ["GET", "POST"] },
+							],
 							...(mode.endsWith("+wba")
 								? { http_message_signatures: "web_bot_auth" }
 								: {}),
@@ -71,7 +76,7 @@ it.for([
       });
       const metadata = await selected.getClientMetadata();
       const clientId: string = metadata.client_id;
-      const assertion: string = await selected.getClientAssertion({ clientId: "provider-id", audience: "https://auth.example.com" });
+      const assertion: string = await selected.getClientAssertion();
       void [id, response, clientId, assertion];
       // @ts-expect-error The inferred root requires selecting an identity first.
       env.IDENTITY.fetch("https://api.example.com");

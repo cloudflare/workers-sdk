@@ -1866,8 +1866,9 @@ it.for(["workload_authorization", "client_credentials"] as const)(
 			token_endpoint: "https://auth.example.com/token",
 			resource: "https://api.example.com",
 			scope: ["read"],
-			allowed_origins: ["https://api.example.com"],
-			allowed_methods: ["GET"],
+			resources: [
+				{ origin: "https://api.example.com", methods: ["GET" as const] },
+			],
 			http_message_signatures: "web_bot_auth" as const,
 		};
 		const result = convertToWranglerConfig({

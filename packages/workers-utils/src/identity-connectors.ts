@@ -10,7 +10,7 @@ import {
 
 /** Account/realm-scoped private platform operations; no public API/IAM contract. */
 export interface IdentityConnectorClient {
-	get(id: string, revision: number): Promise<IdentityConnectorResource>;
+	get(id: string, revision?: number): Promise<IdentityConnectorResource>;
 	operation(id: string): Promise<IdentityConnectorResource | undefined>;
 	create(
 		operationId: string,
@@ -151,7 +151,9 @@ export class IdentityConnectorProvisioning {
 		}
 		const retained = state.resources[resourceKey];
 		const connectorId = binding.connector_id ?? retained?.connectorId;
-		const revision = binding.connector_revision ?? retained?.connectorRevision;
+		const revision =
+			binding.connector_revision ??
+			(binding.oauth ? retained?.connectorRevision : undefined);
 		const plan: IdentityConnectorPlan = {
 			action: binding.oauth ? (connectorId ? "reconcile" : "create") : "attach",
 			binding: binding.binding,
@@ -164,13 +166,14 @@ export class IdentityConnectorProvisioning {
 		}
 		let record: IdentityConnectorResource;
 		if (!binding.oauth) {
-			if (!connectorId || !revision) {
-				throw new Error(
-					"ID-only attachment requires retained connector ID and revision."
-				);
+			if (!connectorId) {
+				throw new Error("ID-only attachment requires a connector ID.");
 			}
 			record = await this.options.client.get(connectorId, revision);
-			if (record.id !== connectorId || record.revision !== revision) {
+			if (
+				record.id !== connectorId ||
+				(revision !== undefined && record.revision !== revision)
+			) {
 				throw new Error(
 					"Requested identity connector revision is unavailable."
 				);

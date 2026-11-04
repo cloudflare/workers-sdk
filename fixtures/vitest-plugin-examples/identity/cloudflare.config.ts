@@ -13,8 +13,9 @@ export default defineConfig({
 					allowed_scopes: ["read"],
 				},
 				request_signing: {
-					allowed_origins: ["https://api.identity.local"],
-					allowed_methods: ["GET"],
+					resources: [
+						{ origin: "https://api.identity.local", methods: ["GET"] },
+					],
 				},
 			}),
 			ACCOUNT: bindings.identity({

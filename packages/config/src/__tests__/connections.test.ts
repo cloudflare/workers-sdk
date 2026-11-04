@@ -68,7 +68,7 @@ it("validates inline setup independently from narrowed attachment permissions", 
 	for (const resource of [
 		"",
 		null,
-		"http://api.example",
+		"not-a-resource-uri",
 		"https://api.example/#fragment",
 	]) {
 		expect(isIdentityBinding({ ...input, oauth: { ...oauth, resource } })).toBe(
@@ -84,7 +84,7 @@ it("validates inline setup independently from narrowed attachment permissions", 
 		})
 	).toBe(true);
 	for (const patch of [
-		{ connector_id: attachment.connector_id },
+		{ connector_id: attachment.connector_id, connector_revision: 0 },
 		{ resources: [{ origin: "https://other.example", methods: ["GET"] }] },
 		{
 			inspection_resources: [

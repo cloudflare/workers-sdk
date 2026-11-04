@@ -1902,8 +1902,7 @@ describe("OIDC capability bindings", () => {
 		const limits = {
 			audience: "urn:orders",
 			request_signing: {
-				allowed_origins: ["https://api.example"],
-				allowed_methods: ["POST"],
+				resources: [{ origin: "https://api.example", methods: ["POST"] }],
 			},
 		};
 		expect(
@@ -1933,8 +1932,7 @@ it("accepts managed signing without a token audience", ({ expect }) => {
 	const binding = {
 		type: "identity",
 		request_signing: {
-			allowed_origins: ["https://api.example"],
-			allowed_methods: ["GET"],
+			resources: [{ origin: "https://api.example", methods: ["GET"] }],
 		},
 	};
 	expect(KnownBindingSchema.safeParse(binding).success).toBe(true);
@@ -1956,10 +1954,16 @@ it("preserves managed OAuth and optional explicit client authority", ({
 		token_endpoint: "https://auth.example/token",
 		resource: "https://api.example",
 		scope: ["read"],
-		allowed_origins: ["https://api.example"],
-		allowed_methods: ["GET"],
+		resources: [{ origin: "https://api.example", methods: ["GET"] }],
 	};
-	const value = { type: "identity", oauth, client_authentication: true };
+	const value = {
+		type: "identity",
+		oauth,
+		client_authentication: {
+			client_id: "https://app.example.com/client.json",
+			audience: "https://auth.example.com",
+		},
+	};
 	for (const exchange of ["client_credentials", "workload_authorization"]) {
 		const policy = {
 			...oauth,

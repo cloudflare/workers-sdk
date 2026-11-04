@@ -72,7 +72,7 @@ export type ConnectionBindingConfig = ConnectionPermissions & {
 } & (
 		| {
 				connector_id: string;
-				connector_revision: number;
+				connector_revision?: number;
 				oauth?: ConnectionOAuthConfig;
 		  }
 		| {
@@ -106,7 +106,7 @@ function url(value: unknown, callback = false): value is string {
 		return false;
 	}
 }
-function resources(
+export function validIdentityResources(
 	value: unknown,
 	empty = false,
 	exact = false
@@ -172,9 +172,9 @@ function permissions(
 		value.scope.every(
 			(s) => typeof s === "string" && /^[\x21\x23-\x5b\x5d-\x7e]+$/.test(s)
 		) &&
-		resources(value.resources) &&
+		validIdentityResources(value.resources) &&
 		(value.inspection_resources === undefined ||
-			(resources(value.inspection_resources, true, true) &&
+			(validIdentityResources(value.inspection_resources, true, true) &&
 				subset(value.inspection_resources, value.resources))) &&
 		(value.return_urls === undefined ||
 			(Array.isArray(value.return_urls) &&
@@ -212,7 +212,15 @@ function oauth(value: unknown): value is ConnectionOAuthConfig {
 		]) ||
 		value.grant !== "authorization_code" ||
 		!url(value.authorization_server) ||
-		(value.resource !== undefined && !url(value.resource))
+		(value.resource !== undefined &&
+			(typeof value.resource !== "string" ||
+				!/^[A-Za-z][A-Za-z0-9+.-]*:/.test(value.resource) ||
+				Array.from(value.resource).some(
+					(char) =>
+						char.charCodeAt(0) <= 32 ||
+						char.charCodeAt(0) === 127 ||
+						char === "#"
+				)))
 	) {
 		return false;
 	}
@@ -230,7 +238,7 @@ function oauth(value: unknown): value is ConnectionOAuthConfig {
 		}
 	}
 	if (
-		value.discovery !== true &&
+		value.discovery === false &&
 		(!value.authorization_endpoint || !value.token_endpoint)
 	) {
 		return false;
@@ -420,8 +428,9 @@ export function isConnectionBinding(
 	if (
 		value.connector_id !== undefined
 			? !reference(value.connector_id) ||
-				!Number.isSafeInteger(value.connector_revision) ||
-				Number(value.connector_revision) < 1
+				(value.connector_revision !== undefined &&
+					(!Number.isSafeInteger(value.connector_revision) ||
+						Number(value.connector_revision) < 1))
 			: value.connector_revision !== undefined || value.oauth === undefined
 	) {
 		return false;

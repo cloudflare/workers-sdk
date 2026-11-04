@@ -8,8 +8,9 @@ const config = defineWorker({
 	env: {
 		IDENTITY: bindings.identity({
 			request_signing: {
-				allowed_origins: ["https://api.example.com"],
-				allowed_methods: ["GET", "POST"],
+				resources: [
+					{ origin: "https://api.example.com", methods: ["GET", "POST"] },
+				],
 			},
 		}),
 	},
@@ -55,18 +56,11 @@ void env.IDENTITY.fetch("https://api.example.com");
 
 const metadata = await identity.getClientMetadata();
 const clientId: string = metadata.client_id;
-const assertion: string = await identity.getClientAssertion({
-	clientId: "provider-id",
-	audience: "https://auth.example",
-});
+const assertion: string = await identity.getClientAssertion();
 void [clientId, assertion];
 
 const algorithm: "ES256" | "Ed25519" = metadata.token_endpoint_auth_signing_alg;
 const publicY: string | undefined = metadata.jwks.keys[0]?.y;
 void [algorithm, publicY];
-void identity.getClientAssertion({
-	clientId: "provider-id",
-	audience: "https://auth.example",
-	// @ts-expect-error The service chooses the client signing algorithm.
-	algorithm: "ES256",
-});
+// @ts-expect-error Assertion authority and algorithms come from configuration.
+void identity.getClientAssertion({ algorithm: "ES256" });

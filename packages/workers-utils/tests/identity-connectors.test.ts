@@ -178,3 +178,42 @@ it("persists atomic file state and serializes competing local apply attempts", a
 		await removeDir(dir);
 	}
 });
+
+it("resolves an ID-only attachment without a customer revision and returns an exact pin", async ({
+	expect,
+}) => {
+	let requested: number | undefined = 99;
+	const connector = "a7e6a4e4-6666-4666-8666-123456789abc";
+	const attachmentPermissions = {
+		scope: ["read"],
+		resources: [{ origin: "https://api.example", methods: ["GET" as const] }],
+	};
+	const provisioning = new IdentityConnectorProvisioning({
+		accountId: "account",
+		realm: "test",
+		store: { read: async () => undefined, write: async () => {} },
+		client: {
+			get: async (_id, revision) => {
+				requested = revision;
+				return {
+					id: connector,
+					revision: 3,
+					permissions: attachmentPermissions,
+				};
+			},
+			operation: async () => undefined,
+			create: async () => {
+				throw Error("must not create");
+			},
+			reconcile: async () => {
+				throw Error("must not mutate");
+			},
+		},
+	});
+	const result = await provisioning.apply(
+		{ binding: "ISSUES", connector_id: connector, ...attachmentPermissions },
+		"ISSUES"
+	);
+	expect(requested).toBeUndefined();
+	expect(result.binding.connector_revision).toBe(3);
+});

@@ -53,11 +53,14 @@ for (const exchange of [
 													}
 												: { exchange: "workload_authorization" as const }),
 											authorization_server: base,
-											token_endpoint: base + "/oauth/token",
 											resource: base + "/api",
 											scope: ["items:read", "items:write"],
-											allowed_origins: ["https://provider.local.test"],
-											allowed_methods: ["POST"],
+											resources: [
+												{
+													origin: "https://provider.local.test",
+													methods: ["POST" as const],
+												},
+											],
 											...(combined
 												? { http_message_signatures: "web_bot_auth" as const }
 												: {}),
