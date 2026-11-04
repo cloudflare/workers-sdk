@@ -54,6 +54,6 @@ test("account selection explains how to configure the account", async ({
 		})
 	).resolves.toBe("selected-account");
 	expect(logger.info).toHaveBeenCalledWith(
-		'To use this account automatically in future, configure accountId in cloudflare.config.ts:\n\n  accountId: "selected-account",'
+		'To use this account automatically in future, configure accountId in cloudflare.config.ts:\n\n  accountId: "selected-account",\n\nAlternatively, set the `CLOUDFLARE_ACCOUNT_ID` environment variable.'
 	);
 });
