@@ -2,6 +2,6 @@
 "@cloudflare/platform-proxy": minor
 ---
 
-Add the experimental `@cloudflare/platform-proxy` package
+Bring `getPlatformProxy()` to the new `@cloudflare/platform-proxy` package, with `cloudflare.config.ts` support
 
-`getPlatformProxy()` emulates the bindings declared in a project's `cloudflare.config.ts` from Node.js, so that code running outside the Workers runtime during local development, such as a framework's dev server, can use them as its Worker would. It returns the Worker's bindings together with stand-ins for `cf`, `ctx` and `caches`, and persists binding data to `.cloudflare/state`, like the Cloudflare Vite plugin. Secrets, remote bindings and the `assets` binding aren't supported yet. The package is experimental, and its API may change.
+It can either start its own runtime or connect to one that's already running, such as a Cloudflare Vite plugin dev server. The package is experimental, and its API may change.

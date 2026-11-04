@@ -57,11 +57,9 @@ describe("getPlatformProxy()", () => {
 		);
 	});
 
-	it("explains how to get a cloudflare.config.ts when there is none", async ({
-		expect,
-	}) => {
+	it("throws when there is no cloudflare.config.ts", async ({ expect }) => {
 		await expect(getPlatformProxy()).rejects.toThrow(
-			"run `npx cf migrate` to generate `cloudflare.config.ts`"
+			"Could not find `cloudflare.config.ts`"
 		);
 		expect(loadAndParseConfig).not.toHaveBeenCalled();
 	});

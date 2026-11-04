@@ -1,5 +1,4 @@
 import path from "node:path";
-import { Miniflare } from "miniflare";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./execution-context";
 import type { ParsedInputWorkerConfig } from "@cloudflare/config";
@@ -7,16 +6,7 @@ import type { WorkerOptions } from "miniflare";
 
 type MiniflareEnv = NonNullable<WorkerOptions["config"]["env"]>;
 
-/** Options for how the platform proxy emulates the bindings */
-export type PlatformProxyOptions = {
-	/**
-	 * Whether and where to persist the bindings' data. Defaults to `.cloudflare/state` in the
-	 * project directory, which the Cloudflare Vite plugin also uses, so both see the same data.
-	 */
-	persist?: boolean | { path: string };
-};
-
-/** The emulated platform returned by `getPlatformProxy()` */
+/** The platform returned by `getPlatformProxy()` */
 export type PlatformProxy<
 	Env = Record<string, unknown>,
 	CfProperties extends Record<string, unknown> = Record<string, unknown>,
@@ -27,9 +17,12 @@ export type PlatformProxy<
 	cf: CfProperties;
 	/** Stand-in for the `ctx` object a Worker receives; its methods do nothing */
 	ctx: ExecutionContext;
-	/** Stand-in for the Workers `caches` global; it caches nothing */
+	/**
+	 * The Workers `caches` global. When the proxy starts its own runtime, it's a
+	 * stand-in that caches nothing.
+	 */
 	caches: CacheStorage;
-	/** Stops the process that provides the bindings */
+	/** Stops the runtime the proxy started, or disconnects from the one it attached to */
 	dispose: () => Promise<void>;
 };
 
@@ -38,7 +31,7 @@ export type PlatformProxy<
  *
  * @param worker The Worker configuration from `cloudflare.config.ts`
  * @param root The project directory, which persisted data is stored relative to
- * @param options How to emulate the bindings
+ * @param options Whether and where to persist the bindings' data
  * @returns The emulated platform
  */
 export async function startPlatformProxy<
@@ -47,8 +40,9 @@ export async function startPlatformProxy<
 >(
 	worker: ParsedInputWorkerConfig,
 	root: string,
-	options: PlatformProxyOptions = {}
+	options: { persist?: boolean | { path: string } } = {}
 ): Promise<PlatformProxy<Env, CfProperties>> {
+	const { Miniflare } = await import("miniflare");
 	const mf = new Miniflare({
 		workers: [
 			{

@@ -16,11 +16,24 @@ Binding data is persisted to `.cloudflare/state`, which the Cloudflare Vite plug
 
 Not supported yet: secrets, remote bindings, and the `assets` binding. Bindings to the Worker's own Durable Objects, Workflows or entrypoints are left out, because the proxy doesn't run the Worker's code.
 
+## Attaching to a running runtime
+
+Pass `url` to use a runtime that's already running instead, such as the one behind a Cloudflare Vite plugin dev server. It uses the bindings of the runtime's primary Worker, which behind the Vite plugin is your Worker. Nothing is read from `cloudflare.config.ts`:
+
+```ts
+const { env, cf, ctx, caches, dispose } = await getPlatformProxy({
+	url: "http://localhost:5173",
+});
+```
+
+When the runtime restarts, e.g. after a config change, the proxy connects again. `env`, `cf` and `caches` then reach the new runtime, so they can be kept. Anything taken from them before the restart, such as a binding or a Durable Object stub, can't be used anymore. `dispose()` only disconnects. To attach from another process, start both with the same `MINIFLARE_PLATFORM_PROXY_SECRET`, or pass the runtime's value as `secret`.
+
 ## Differences from Wrangler's `getPlatformProxy()`
 
 - It reads `cloudflare.config.ts` from the current working directory, or from `configPath`. It doesn't search parent directories or read Wrangler configuration files.
 - `mode` selects how `cloudflare.config.ts` is evaluated, in place of Wrangler's `environment`.
 - `persist.path` has `v3` appended, matching the Cloudflare Vite plugin's layout.
 - `envFiles` and `remoteBindings` aren't supported.
+- `cf` defaults to `Record<string, unknown>` rather than `IncomingRequestCfProperties`, so `@cloudflare/workers-types` isn't required. Pass your own type as the second type argument.
 
 This is not yet stable enough for external use — APIs may change without notice.
