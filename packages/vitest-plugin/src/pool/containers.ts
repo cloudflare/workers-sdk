@@ -320,7 +320,9 @@ async function prepareImages(
 
 /**
  * Prepares the local Container environment shared by one Vitest project.
- * Successful preparation remains cached until Vitest closes.
+ * Successful preparation remains cached until Vitest closes, the project's
+ * Container configuration changes, or, in watch mode, a Dockerfile or
+ * build-context file changes.
  *
  * @param project - Vitest project that owns the prepared environment.
  * @param config - Normalized Worker configuration.
