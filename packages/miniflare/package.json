@@ -86,7 +86,7 @@
 		"chokidar": "^4.0.1",
 		"ci-info": "catalog:default",
 		"concurrently": "^8.2.2",
-		"devalue": "^5.6.3",
+		"devalue": "^5.9.3",
 		"devtools-protocol": "^0.0.1182435",
 		"esbuild": "catalog:default",
 		"expect-type": "^0.15.0",
