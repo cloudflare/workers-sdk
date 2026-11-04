@@ -409,14 +409,11 @@ export function createCloudflareAuth(
 
 	function resolveAccountSelection(): Account | undefined {
 		const profile = getActiveProfile();
-		if (accountSelection?.profile !== profile) {
-			clearAccountSelection();
-		}
-		if (accountSelection === undefined) {
+		if (persistAccountSelection) {
 			const account = getAccountFromCache();
-			if (account) {
-				accountSelection = { account, profile };
-			}
+			accountSelection = account ? { account, profile } : undefined;
+		} else if (accountSelection?.profile !== profile) {
+			clearAccountSelection();
 		}
 		return accountSelection?.account;
 	}

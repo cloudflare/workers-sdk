@@ -403,7 +403,7 @@ describe("account selection persistence", () => {
 		expect(auth.getActiveAccountId({})).toBeUndefined();
 	});
 
-	it("preserves Wrangler's persistent account selection", async ({
+	it("keeps Wrangler's account selection in sync with its persistent cache", async ({
 		expect,
 	}) => {
 		expect(WRANGLER_CLI.persistAccountSelection).toBe(true);
@@ -422,6 +422,15 @@ describe("account selection persistence", () => {
 
 		const secondAuth = createCloudflareAuth(WRANGLER_CLI, createTestContext());
 		expect(secondAuth.getActiveAccountId({})).toBe("wrangler-account");
+
+		const externalCache = createConfigCache(createTestContext().logger);
+		externalCache.saveToConfigCache("wrangler-account.json", {
+			account: { id: "external-account", name: "External Account" },
+		});
+		expect(firstAuth.getActiveAccountId({})).toBe("external-account");
+
+		externalCache.purgeConfigCaches();
+		expect(firstAuth.getActiveAccountId({})).toBeUndefined();
 		expect(fetchInternalBase).toHaveBeenCalledTimes(2);
 	});
 });
