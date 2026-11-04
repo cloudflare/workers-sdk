@@ -17,7 +17,7 @@ import * as recast from "recast";
 import semiver from "semiver";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { Framework } from "./framework-class";
-import type { AutoConfigContext, AutoConfigTarget } from "../context";
+import type { AutoConfigContext } from "../context";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -91,7 +91,7 @@ export class Astro extends Framework {
 			};
 		}
 
-		if (semiver(astroVersion, "7.0.0-0") < 0) {
+		if (Number(astroVersion.split(".")[0]) < 7) {
 			throw new AutoConfigFrameworkConfigurationError(
 				`cf only supports Astro 7 or later, but this project uses Astro ${JSON.stringify(
 					astroVersion
@@ -128,12 +128,6 @@ export class Astro extends Framework {
 
 	configurationDescription =
 		'Configuring project for Astro with "astro add cloudflare"';
-
-	override getConfigurationDescription(target: AutoConfigTarget): string {
-		return target === "cf"
-			? 'Configuring project for Astro: installing "astro@beta", then running "astro add @astrojs/cloudflare@beta"'
-			: this.configurationDescription;
-	}
 }
 
 /**
