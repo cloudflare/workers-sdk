@@ -164,10 +164,19 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 		};
 	};
 
+	/**
+	 * Runs all queries in one storage transaction.
+	 *
+	 * @param queries The queries to run in order.
+	 * @param format The format for the result rows.
+	 * @param includeCommitToken Whether to get the current session bookmark.
+	 * @returns The query results, and the session bookmark if requested.
+	 */
 	async #txn(
 		queries: D1Query[],
-		format: D1ResultsFormat
-	): Promise<{ results: D1SuccessResponse[]; commitToken: string }> {
+		format: D1ResultsFormat,
+		includeCommitToken: boolean
+	): Promise<{ results: D1SuccessResponse[]; commitToken?: string }> {
 		// Filter out queries that are just comments
 		queries = queries.filter(
 			(query) => query.sql.replace(/^\s+--.*/gm, "").trim().length > 0
@@ -182,6 +191,12 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 			// D1_ERROR never reports these writes as failed after committing them.
 			return await this.state.storage.transaction(async () => {
 				const results = queries.map(this.#query.bind(this, format));
+				// In local development, workerd stores a new bookmark each time one is
+				// requested. Only sessions use bookmarks, so other requests skip this
+				// write and read-only queries commit nothing, as in production D1.
+				if (!includeCommitToken) {
+					return { results };
+				}
 				let commitToken: string;
 				try {
 					commitToken = await this.state.storage.getCurrentBookmark();
@@ -216,10 +231,21 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 			searchParams.get("resultsFormat")
 		);
 
-		const { results, commitToken } = await this.#txn(queries, resultsFormat);
+		// The binding sends this header only for `withSession()` sessions.
+		const includeCommitToken = Boolean(
+			req.headers.get(D1_SESSION_COMMIT_TOKEN_HTTP_HEADER)?.trim()
+		);
+		const { results, commitToken } = await this.#txn(
+			queries,
+			resultsFormat,
+			includeCommitToken
+		);
 
 		return Response.json(results, {
-			headers: { [D1_SESSION_COMMIT_TOKEN_HTTP_HEADER]: commitToken },
+			headers:
+				commitToken === undefined
+					? undefined
+					: { [D1_SESSION_COMMIT_TOKEN_HTTP_HEADER]: commitToken },
 		});
 	};
 
