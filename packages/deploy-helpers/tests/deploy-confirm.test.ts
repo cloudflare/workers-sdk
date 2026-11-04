@@ -1,9 +1,10 @@
-import { afterEach, describe, it, vi } from "vitest";
+import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getDeployConfirmFunction } from "../src/deploy/helpers/deploy-confirm";
-import { logger } from "../src/shared/context";
+import { confirm as promptConfirm, logger } from "../src/shared/context";
 
 vi.mock("@cloudflare/workers-utils", () => ({
-	isNonInteractiveOrCI: () => true,
+	isNonInteractiveOrCI: vi.fn(),
 }));
 vi.mock("../src/shared/context", () => ({
 	confirm: vi.fn(),
@@ -12,8 +13,12 @@ vi.mock("../src/shared/context", () => ({
 
 const originalExitCode = process.exitCode;
 
+beforeEach(() => {
+	vi.mocked(isNonInteractiveOrCI).mockReturnValue(true);
+	process.exitCode = undefined;
+});
+
 afterEach(() => {
-	vi.mocked(logger.error).mockClear();
 	process.exitCode = originalExitCode;
 });
 
@@ -40,4 +45,36 @@ describe("getDeployConfirmFunction", () => {
 		expect(logger.error).toHaveBeenCalledWith(message);
 		expect(process.exitCode).toBe(1);
 	});
+
+	it.for([undefined, false])(
+		"continues non-interactively when strict mode is %j",
+		async (strictMode, { expect }) => {
+			const confirm = getDeployConfirmFunction({
+				strictMode,
+				strictModeAbortMessage: "Custom abort message",
+			});
+
+			expect(await confirm("Continue?")).toBe(true);
+			expect(logger.error).not.toHaveBeenCalled();
+			expect(promptConfirm).not.toHaveBeenCalled();
+			expect(process.exitCode).toBeUndefined();
+		}
+	);
+
+	it.for([true, false])(
+		"preserves interactive confirmation when strict mode is %j",
+		async (strictMode, { expect }) => {
+			vi.mocked(isNonInteractiveOrCI).mockReturnValue(false);
+			vi.mocked(promptConfirm).mockResolvedValue(false);
+			const confirm = getDeployConfirmFunction({
+				strictMode,
+				strictModeAbortMessage: "Custom abort message",
+			});
+
+			expect(await confirm("Continue?")).toBe(false);
+			expect(promptConfirm).toHaveBeenCalledWith("Continue?");
+			expect(logger.error).not.toHaveBeenCalled();
+			expect(process.exitCode).toBeUndefined();
+		}
+	);
 });
