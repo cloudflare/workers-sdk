@@ -165,6 +165,7 @@ export function convertWorkerConfig(
 		isRecord(value) ? camelObject(value) : undefined
 	);
 	addProperty(properties, source, "access");
+	addProperty(properties, source, "identity_receiver", "identityReceiver");
 
 	const assets = getRecord(source, "assets");
 	if (assets) {
