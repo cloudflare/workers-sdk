@@ -9,10 +9,12 @@ const debug = util.debuglog("vitest-plugin");
  * fails.
  *
  * @param mf - Miniflare instance whose startup should complete.
+ * @param log - Logs a failure to dispose the instance after its startup fails.
  * @returns The ready Miniflare instance.
  */
 export async function waitForMiniflareReady<T extends MiniflareLifecycle>(
-	mf: T
+	mf: T,
+	log: util.DebugLoggerFunction = debug
 ): Promise<T> {
 	try {
 		await mf.ready;
@@ -21,7 +23,7 @@ export async function waitForMiniflareReady<T extends MiniflareLifecycle>(
 		try {
 			await mf.dispose();
 		} catch (disposeError) {
-			debug("miniflare startup cleanup rejected: %O", disposeError);
+			log("miniflare startup cleanup rejected: %O", disposeError);
 		}
 		throw error;
 	}

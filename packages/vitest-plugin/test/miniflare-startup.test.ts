@@ -10,16 +10,35 @@ describe("Miniflare startup lifecycle", () => {
 		expect(dispose).not.toHaveBeenCalled();
 	});
 
-	it("disposes a failed instance without masking its error", async ({
+	it("disposes a failed instance and rethrows its error", async ({
 		expect,
 	}) => {
 		const startupError = new Error("startup failed");
-		const dispose = vi.fn(async () => {
-			throw new Error("cleanup failed");
-		});
+		const dispose = vi.fn(async () => {});
+		const log = vi.fn();
 		const mf = { dispose, ready: Promise.reject(startupError) };
 
-		await expect(waitForMiniflareReady(mf)).rejects.toBe(startupError);
+		await expect(waitForMiniflareReady(mf, log)).rejects.toBe(startupError);
 		expect(dispose).toHaveBeenCalledOnce();
+		expect(log).not.toHaveBeenCalled();
+	});
+
+	it("logs a failed disposal without masking the startup error", async ({
+		expect,
+	}) => {
+		const startupError = new Error("startup failed");
+		const cleanupError = new Error("cleanup failed");
+		const dispose = vi.fn(async () => {
+			throw cleanupError;
+		});
+		const log = vi.fn();
+		const mf = { dispose, ready: Promise.reject(startupError) };
+
+		await expect(waitForMiniflareReady(mf, log)).rejects.toBe(startupError);
+		expect(dispose).toHaveBeenCalledOnce();
+		expect(log).toHaveBeenCalledExactlyOnceWith(
+			"miniflare startup cleanup rejected: %O",
+			cleanupError
+		);
 	});
 });
