@@ -124,8 +124,9 @@ describe("previewBuildOutput", () => {
 				allowed_scopes: ["items:read"],
 			},
 			request_signing: {
-				allowed_origins: ["https://api.example.com"],
-				allowed_methods: ["GET"],
+				resources: [
+					{ origin: "https://api.example.com", methods: ["GET" as const] },
+				],
 			},
 		};
 		await uploadPreview(

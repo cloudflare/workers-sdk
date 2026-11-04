@@ -91,8 +91,7 @@ it("accepts managed signing without a token audience and rejects protocol option
 	const config = {
 		binding: "IDENTITY",
 		request_signing: {
-			allowed_origins: ["https://api.example"],
-			allowed_methods: ["GET"],
+			resources: [{ origin: "https://api.example", methods: ["GET" as const] }],
 		},
 	};
 	expect(isIdentityBinding(config)).toBe(true);
@@ -121,8 +120,7 @@ it.for([
 	{
 		request_signing: {
 			profile: "other",
-			allowed_origins: ["https://api.example"],
-			allowed_methods: ["GET"],
+			resources: [{ origin: "https://api.example", methods: ["GET" as const] }],
 		},
 	},
 	{
@@ -151,10 +149,16 @@ it("validates both managed OAuth profiles and independent public assertion autho
 		token_endpoint: "https://auth.example/token",
 		resource: "https://api.example",
 		scope: ["read"],
-		allowed_origins: ["https://api.example"],
-		allowed_methods: ["GET"],
+		resources: [{ origin: "https://api.example", methods: ["GET" as const] }],
 	};
-	const config = { binding: "API", oauth, client_authentication: true };
+	const config = {
+		binding: "API",
+		oauth,
+		client_authentication: {
+			client_id: "https://app.example.com/client.json",
+			audience: "https://auth.example.com",
+		},
+	};
 	for (const exchange of ["client_credentials", "workload_authorization"]) {
 		const policy = {
 			...oauth,
@@ -207,8 +211,7 @@ it("validates both managed OAuth profiles and independent public assertion autho
 		isIdentityBinding({
 			...config,
 			request_signing: {
-				allowed_origins: oauth.allowed_origins,
-				allowed_methods: ["GET"],
+				resources: oauth.resources,
 			},
 		})
 	).toBe(false);
@@ -224,8 +227,7 @@ it("uses automatic DPoP without public policy fields", ({ expect }) => {
 		token_endpoint: "https://auth.example/token",
 		resource: "https://api.example",
 		scope: ["read"],
-		allowed_origins: ["https://api.example"],
-		allowed_methods: ["GET"],
+		resources: [{ origin: "https://api.example", methods: ["GET" as const] }],
 	};
 	expect(isIdentityBinding({ binding: "API", oauth })).toBe(true);
 	for (const policy of [

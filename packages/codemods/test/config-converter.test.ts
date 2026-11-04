@@ -41,8 +41,12 @@ describe("Wrangler environment and tooling conversion", () => {
 								allowed_scopes: ["items:read"],
 							},
 							request_signing: {
-								allowed_origins: ["https://api.example.com"],
-								allowed_methods: ["GET"],
+								resources: [
+									{
+										origin: "https://api.example.com",
+										methods: ["GET" as const],
+									},
+								],
 							},
 						},
 					],
@@ -69,10 +73,10 @@ describe("Wrangler environment and tooling conversion", () => {
 			expect(result.cloudflareConfig).toContain("allowed_scopes: [");
 			expect(result.cloudflareConfig).toContain('"items:read"');
 			expect(result.cloudflareConfig).not.toContain("profile:");
-			expect(result.cloudflareConfig).toContain("allowed_origins: [");
+			expect(result.cloudflareConfig).toContain("resources: [");
 			expect(result.cloudflareConfig).toContain('"https://api.example.com"');
-			expect(result.cloudflareConfig).toContain("allowed_methods: [");
-			expect(result.cloudflareConfig).toContain('"GET"');
+			expect(result.cloudflareConfig).toContain("methods: [");
+			expect(result.cloudflareConfig).toContain('"GET" as const');
 		}
 	);
 

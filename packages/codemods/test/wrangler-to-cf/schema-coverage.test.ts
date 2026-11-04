@@ -232,20 +232,34 @@ it("migrates managed OAuth and independent assertion authority", ({
 		token_endpoint: "https://auth.example.com/token",
 		resource: "https://api.example.com",
 		scope: ["read"],
-		allowed_origins: ["https://api.example.com"],
-		allowed_methods: ["GET"],
+		resources: [
+			{ origin: "https://api.example.com", methods: ["GET" as const] },
+		],
 		http_message_signatures: "web_bot_auth",
 	};
 	const result = convertWranglerConfig(
 		{
 			...BASE_CONFIG,
-			identities: [{ binding: "API", oauth, client_authentication: true }],
+			identities: [
+				{
+					binding: "API",
+					oauth,
+					client_authentication: {
+						client_id: "https://app.example.com/client.json",
+						audience: "https://auth.example.com",
+					},
+				},
+			],
 		} as RawConfig,
 		"wrangler",
 		[]
 	);
 	const rendered = renderCloudflareConfig(result);
-	expect(rendered).toContain("client_authentication: true");
+	expect(rendered).toContain("client_authentication:");
+	expect(rendered).toContain(
+		'client_id: "https://app.example.com/client.json"'
+	);
+	expect(rendered).toContain('audience: "https://auth.example.com"');
 	expect(rendered).toContain("client_credentials");
 	expect(rendered).toContain('http_message_signatures: "web_bot_auth"');
 	expect(rendered).toContain("provider-id");

@@ -340,11 +340,16 @@ test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
 								type: "identity" as const,
 								audience: "urn:api",
 								request_signing: {
-									allowed_origins: [
-										"https://receiver.local.test",
-										"https://missing.local.test",
+									resources: [
+										{
+											origin: "https://receiver.local.test",
+											methods: ["GET" as const, "POST" as const],
+										},
+										{
+											origin: "https://missing.local.test",
+											methods: ["GET" as const, "POST" as const],
+										},
 									],
-									allowed_methods: ["GET", "POST"],
 								},
 							},
 						},
@@ -511,3 +516,56 @@ mf.getLocalIdentity().then(metadata=>console.log(JSON.stringify(metadata)));`;
 		}
 	}
 );
+
+for (const [compatibilityDate, compatibilityFlags] of [
+	["2026-04-20", []],
+	["2026-10-30", ["legacy_error_serialization"]],
+] as const) {
+	test(`rejects identity error serialization opt-out (${compatibilityDate})`, async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "legacy-errors",
+						compatibilityDate,
+						compatibilityFlags: [...compatibilityFlags],
+						env: { IDENTITY: { type: "identity", audience: "urn:test" } },
+						manifest: singleModuleManifest(
+							"export default { fetch(){return new Response('unexpected')} }"
+						),
+					},
+				},
+			],
+		});
+		try {
+			await expect(mf.ready).rejects.toThrow(/enhanced_error_serialization/);
+		} finally {
+			await mf.dispose().catch(() => {});
+		}
+	});
+}
+test("older identity compatibility dates support explicit enhanced serialization", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "enhanced-errors",
+					compatibilityDate: "2026-04-20",
+					compatibilityFlags: ["enhanced_error_serialization"],
+					env: { IDENTITY: { type: "identity", audience: "urn:test" } },
+					manifest: singleModuleManifest(
+						"export default { async fetch(request,env){using selected=await env.IDENTITY.getIdentity();return new Response(await selected.getToken())} }"
+					),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+	const response = await mf.dispatchFetch("http://localhost/");
+	expect(response.status).toBe(200);
+	await response.text();
+});

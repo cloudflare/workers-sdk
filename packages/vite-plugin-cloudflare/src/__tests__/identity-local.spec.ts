@@ -48,8 +48,12 @@ test("issues and verifies a real local identity through Vite", async ({
 								type: "identity",
 								audience: "urn:vite",
 								request_signing: {
-									allowed_origins: ["https://identity-vite.local.test"],
-									allowed_methods: ["GET"],
+									resources: [
+										{
+											origin: "https://identity-vite.local.test",
+											methods: ["GET"],
+										},
+									],
 								},
 							},
 						},

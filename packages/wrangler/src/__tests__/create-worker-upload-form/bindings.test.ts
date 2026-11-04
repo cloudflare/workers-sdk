@@ -657,18 +657,27 @@ it.for(["workload_authorization", "client_credentials"] as const)(
 			token_endpoint: "https://auth.example.com/token",
 			resource: "https://api.example.com",
 			scope: ["read"],
-			allowed_origins: ["https://api.example.com"],
-			allowed_methods: ["GET"],
+			resources: [{ origin: "https://api.example.com", methods: ["GET"] }],
 			http_message_signatures: "web_bot_auth" as const,
 		};
 		const form = createWorkerUploadForm(createEsmWorker(), {
-			API: { type: "identity", oauth, client_authentication: true },
+			API: {
+				type: "identity",
+				oauth,
+				client_authentication: {
+					client_id: "https://app.example.com/client.json",
+					audience: "https://auth.example.com",
+				},
+			},
 		} as StartDevWorkerInput["bindings"]);
 		expect(getBindings(form)).toContainEqual({
 			name: "API",
 			type: "identity",
 			oauth,
-			client_authentication: true,
+			client_authentication: {
+				client_id: "https://app.example.com/client.json",
+				audience: "https://auth.example.com",
+			},
 		});
 	}
 );
