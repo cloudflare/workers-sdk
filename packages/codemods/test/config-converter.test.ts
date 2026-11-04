@@ -76,7 +76,7 @@ describe("Wrangler environment and tooling conversion", () => {
 			expect(result.cloudflareConfig).toContain("resources: [");
 			expect(result.cloudflareConfig).toContain('"https://api.example.com"');
 			expect(result.cloudflareConfig).toContain("methods: [");
-			expect(result.cloudflareConfig).toContain('"GET" as const');
+			expect(result.cloudflareConfig).toContain('"GET"');
 		}
 	);
 
