@@ -4278,7 +4278,7 @@ importers:
         version: 7.0.17(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
       '@cloudflare/component-code-block':
         specifier: ^4.1.2
-        version: 4.2.8(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(@types/react-dom@18.2.0)(@types/react@18.3.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)
+        version: 4.2.8(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(@types/react-dom@18.2.0)(@types/react@18.3.3)(react-dom@18.3.1(react@18.3.1))(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(regenerator-runtime@0.14.1)
       '@cloudflare/component-heading':
         specifier: ^4.0.6
         version: 4.0.6(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
@@ -4290,10 +4290,10 @@ importers:
         version: 8.1.2(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
       '@cloudflare/component-listbox':
         specifier: ^1.10.6
-        version: 1.10.6(patch_hash=67542a8abb29df36ad2c426409243d1167ca0080d2763f6ae3cce3c731c69107)(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(@cloudflare/style-provider@3.1.1(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)
+        version: 1.10.6(patch_hash=67542a8abb29df36ad2c426409243d1167ca0080d2763f6ae3cce3c731c69107)(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(@cloudflare/style-provider@3.1.1(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(regenerator-runtime@0.14.1)
       '@cloudflare/component-loading':
         specifier: ^6.1.1
-        version: 6.1.1(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)
+        version: 6.1.1(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(regenerator-runtime@0.14.1)
       '@cloudflare/component-textarea':
         specifier: ^4.1.1
         version: 4.1.2(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
@@ -4302,19 +4302,19 @@ importers:
         version: 5.1.2(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
       '@cloudflare/component-toggle':
         specifier: ^9.0.13
-        version: 9.0.16(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)
+        version: 9.0.16(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(regenerator-runtime@0.14.1)
       '@cloudflare/component-tooltip':
         specifier: ^4.3.1
         version: 4.3.2(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@cloudflare/component-visually-hidden':
         specifier: ^1.0.85
-        version: 1.0.86(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)
+        version: 1.0.86(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(regenerator-runtime@0.14.1)
       '@cloudflare/elements':
         specifier: ^3.0.1
         version: 3.0.3(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
       '@cloudflare/intl-react':
-        specifier: ^1.12.2
-        version: 1.12.5(react@18.3.1)(regenerator-runtime@0.14.1)
+        specifier: ^1.13.0
+        version: 1.13.0(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(regenerator-runtime@0.14.1)
       '@cloudflare/style-const':
         specifier: ^5.7.2
         version: 5.7.3(react@18.3.1)
@@ -5599,8 +5599,8 @@ packages:
     peerDependencies:
       regenerator-runtime: 0.x
 
-  '@cloudflare/intl-react@1.12.5':
-    resolution: {integrity: sha512-pKFvUHCR/MGYVyuIHsEnk2IfFK8fJNThC+7XJx7q2acE8BT6cGFmbnxDEr3Ccs2hTzq3RiJ7HQ9dUBWcWgoULg==}
+  '@cloudflare/intl-react@1.13.0':
+    resolution: {integrity: sha512-+DIFB4Wtg4cSjtNj8uK3oZxF6yAHMUJCoVQ2+jdlh2bo2SPmpDt17xk/PaMDgRb8DrrmUZqLPte9lY8YGwhJoA==}
     peerDependencies:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
@@ -5681,6 +5681,13 @@ packages:
     resolution: {integrity: sha512-3AfpWx3G47NWgrkTMMIxcDxl/JpS8K4a5w28+4afK8Eyzd2Mnh7+JRB3C59A6mUjo6e+KTJ/cEvyVIHYO6FQDA==}
     peerDependencies:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
+
+  '@cloudflare/types@7.0.1':
+    resolution: {integrity: sha512-GxrmxKa/h1t6tbjEZaInHbIQlOItW2MlGVljciUgedHnTibyNCBsuiobUkbYtASP3CTVuBfD8Wtj/RjLqudtDQ==}
+    peerDependencies:
+      react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
+      react-redux: ^7.1.0
+      redux: ^4.0.1
 
   '@cloudflare/unenv-preset@2.16.1':
     resolution: {integrity: sha512-ECxObrMfyTl5bhQf/lZCXwo5G6xX9IAUo+nDMKK4SZ8m4Jvvxp52vilxyySSWh2YTZz8+HQ07qGH/2rEom1vDw==}
@@ -9824,6 +9831,11 @@ packages:
   '@types/hast@3.0.4':
     resolution: {integrity: sha512-WPs+bbQw5aCj+x6laNGWLH3wviHtoCv/P3+otBhbOhJgG8qtpdAMlTCxLtsTWA7LH1Oh/bFCHsBn0TPS5m30EQ==}
 
+  '@types/hoist-non-react-statics@3.3.7':
+    resolution: {integrity: sha512-PQTyIulDkIDro8P+IHbKCsw7U2xxBYflVzW/FgWdCAePD9xGSidgA76/GeJ6lBKoblyhf9pBY763gbrN+1dI8g==}
+    peerDependencies:
+      '@types/react': '*'
+
   '@types/http-cache-semantics@4.0.4':
     resolution: {integrity: sha512-1m0bIFVc7eJWyve9S0RnuRgcQqF/Xd5QsUZAZeQFr1Q3/p9JWoQQEqmVy+DPTNpGXwhgIetAoYF8JSc33q29QA==}
 
@@ -9943,6 +9955,9 @@ packages:
     resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
     peerDependencies:
       '@types/react': ^19.2.0
+
+  '@types/react-redux@7.1.34':
+    resolution: {integrity: sha512-GdFaVjEbYv4Fthm2ZLvj1VSCedV7TqE5y1kNwnjSdBOTXuRSgowux6J8TAct15T3CKBr63UMk+2CO7ilRhyrAQ==}
 
   '@types/react@18.3.18':
     resolution: {integrity: sha512-t4yC+vtgnkYjNSKlFx1jkAhH8LgTo2N/7Qvi83kdEaUtMDiwpbLAktKDaAMlRcJ5eSxZkH74eEGt1ky31d7kfQ==}
@@ -10708,10 +10723,6 @@ packages:
     resolution: {integrity: sha512-oKlSFMcMwpUg2ednkhQ454wfWiU/ul3CkJe/PEHcTKuiX6RpbehUiFMXu13HalGZxfUwCQzZG747YXBn1im9ww==}
     engines: {node: '>= 0.4'}
 
-  call-bound@1.0.3:
-    resolution: {integrity: sha512-YTd+6wGlNlPxSuri7Y6X8tY2dmm12UMH66RpKMhiX6rsk5wXXnYgbUcOt8kiS31/AjfoTOvCsE+w8nZQLQnzHA==}
-    engines: {node: '>= 0.4'}
-
   call-bound@1.0.4:
     resolution: {integrity: sha512-+ys997U96po4Kx/ABpBCqhA9EuxJaQWDQg7295H4hBphv3IZg0boBKuwYpt4YXp6MZ5AmZQnU/tyMTlRpaSejg==}
     engines: {node: '>= 0.4'}
@@ -11351,9 +11362,6 @@ packages:
     resolution: {integrity: sha512-cgwlv/1iFQiFnU96XXgROh8xTeetsnJiDsTc7TYCLFd9+/WNkIqPTxiM/8pSd8VIrhXGTf1Ny1q1hquVqDJB5w==}
     engines: {node: '>= 4'}
 
-  dompurify@2.5.8:
-    resolution: {integrity: sha512-o1vSNgrmYMQObbSSvF/1brBYEQPHhV1+gsmrusO7/GXtp1T9rCS8cXFqVxK/9crT1jA6Ccv+5MTSjBNqr7Sovw==}
-
   domutils@3.1.0:
     resolution: {integrity: sha512-H78uMmQtI2AhgDJjWeQmHwJJ2bLPD3GMmO7Zja/ZZh84wkm+4ut+IUnUdRa8uCGX88DiVx1j6FRe1XfxEgjEZA==}
 
@@ -11626,10 +11634,6 @@ packages:
 
   es-module-lexer@2.3.2:
     resolution: {integrity: sha512-poHGpORABojJJucnV9KbOavETW8lBVnphkW77ER5/BQ5Fz7oXSoCNek7IH3vR5nRjdsEz926ibFYX8KtLQmdyw==}
-
-  es-object-atoms@1.0.0:
-    resolution: {integrity: sha512-MZ4iQ6JwHOBQjahnjwaC1ZtIBH+2ohjamzAO3oaHcXYup7qxjF2fixyH+Q71voWHeOkI2q/TnJao/KfXYIZWbw==}
-    engines: {node: '>= 0.4'}
 
   es-object-atoms@1.1.1:
     resolution: {integrity: sha512-FGgH2h8zKNim9ljj7dankFPcICIK9Cp5bm+c2gQSYePhpaG5+esrLODihIorn+Pe6FGJzWhXQotPv73jTaldXA==}
@@ -12271,6 +12275,9 @@ packages:
 
   heap@0.2.7:
     resolution: {integrity: sha512-2bsegYkkHO+h/9MGbn6KWcE45cHZgPANo5LXF7EvWdT0yT2EguSVO1nDgU5c8+ZOPwp2vMNa7YFsJhVcDR9Sdg==}
+
+  hoist-non-react-statics@3.3.2:
+    resolution: {integrity: sha512-/gGivxi8JPKWNm/W0jSmzcMPpfpPLc3dY/6GxhX2hQ9iGj3aDfklV4ET7NjKpSinLpJ5vafa9iiGIEZg10SfBw==}
 
   hono@4.13.11:
     resolution: {integrity: sha512-/SMX/RQNJn7oNmFwH6DtwDqcrzZU2otm1FD6OJe2cWF6cfy/F8hq0XVBv7xW3FTJshRQwuBnXHDq2kNsdZnshg==}
@@ -13552,10 +13559,6 @@ packages:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
     engines: {node: '>=0.10.0'}
 
-  object-inspect@1.13.3:
-    resolution: {integrity: sha512-kDCGIbxkDSXE3euJZZXzc6to7fCrKHNI/hSRQnRuQ+BWjFNzZwiFF8fj/6o2t2G9/jTj8PSIYTfCLelLZEeRpA==}
-    engines: {node: '>= 0.4'}
-
   object-inspect@1.13.4:
     resolution: {integrity: sha512-W67iLl4J2EXEGTbfeHCffrjDfitvLANg0UlX3wFUUSTx92KXRFegMHUVgSqE+wvhAbi4WqjGg9czysTV2Epbew==}
     engines: {node: '>= 0.4'}
@@ -14462,6 +14465,18 @@ packages:
   react-lifecycles-compat@3.0.4:
     resolution: {integrity: sha512-fBASbA6LnOU9dOU2eW7aQ8xmYBSXUIWr+UmF9b1efZBazGNO+rcXT/icdKnYm2pTwcRylVUYwW7H1PHfLekVzA==}
 
+  react-redux@7.2.9:
+    resolution: {integrity: sha512-Gx4L3uM182jEEayZfRbI/G11ZpYdNAnBs70lFVMNdHJI76XYtR+7m0MN+eAs7UHBPhWXcnFPaS+9owSCJQHNpQ==}
+    peerDependencies:
+      react: ^16.8.3 || ^17 || ^18
+      react-dom: '*'
+      react-native: '*'
+    peerDependenciesMeta:
+      react-dom:
+        optional: true
+      react-native:
+        optional: true
+
   react-refresh@0.18.0:
     resolution: {integrity: sha512-QgT5//D3jfjJb6Gsjxv0Slpj23ip+HtOpnNgnb2S5zU3CB26G/IDPGoy4RJB42wzFE46DRsstbW6tKHoKbhAxw==}
     engines: {node: '>=0.10.0'}
@@ -14554,12 +14569,11 @@ packages:
     resolution: {integrity: sha512-YTUo+Flmw4ZXiWfQKGcwwc11KnoRAYgzAE2E7mXKCjSviTKShtxBsN6YUUBB2gtaBzKzeKunxhUwNHQuRryhWA==}
     engines: {node: '>= 4'}
 
+  redux@4.2.1:
+    resolution: {integrity: sha512-LAUYz4lc+Do8/g7aeRa8JkyDErK6ekstQaqWQrNRW//MY1TvCEpMtpTWvlQ+FPbWCx+Xixu/6SHt5N0HR+SB4w==}
+
   reflect.getprototypeof@1.0.10:
     resolution: {integrity: sha512-00o4I+DVrefhv+nX0ulyi3biSHCPDe+yLv5o/p6d/UVlirijB8E16FtfwSAi4g3tcqrQ4lRAqQSoFEZJehYEcw==}
-    engines: {node: '>= 0.4'}
-
-  reflect.getprototypeof@1.0.8:
-    resolution: {integrity: sha512-B5dj6usc5dkk8uFliwjwDHM8To5/QwdKz9JcBZ8Ic4G1f0YmeeJTtE/ZTdgRFPAfxZFiUaPhZ1Jcs4qeagItGQ==}
     engines: {node: '>= 0.4'}
 
   regenerator-runtime@0.13.11:
@@ -15119,10 +15133,6 @@ packages:
 
   string.prototype.trim@1.2.10:
     resolution: {integrity: sha512-Rs66F0P/1kedk5lyYyH9uBzuiI/kNRmwJAR9quK6VOtIpZ2G+hMZd+HQbbv25MgCA6gEffoMZYxlTod4WcdrKA==}
-    engines: {node: '>= 0.4'}
-
-  string.prototype.trim@1.2.9:
-    resolution: {integrity: sha512-klHuCNxiMZ8MlsOihJhJEBJAiMVqU3Z2nEXWfWnIqjN0gEFS9J9+IxKozWWtQGcgoa1WUZzLjKPTr4ZHNFTFxw==}
     engines: {node: '>= 0.4'}
 
   string.prototype.trimend@1.0.9:
@@ -16064,10 +16074,6 @@ packages:
 
   which-boxed-primitive@1.1.1:
     resolution: {integrity: sha512-TbX3mj8n0odCBFVlY8AxkqcHASw3L60jIuF8jFP78az3C2YhmGvqbHBpAjTRH2/xqYunrJ9g1jSyjCjpoWzIAA==}
-    engines: {node: '>= 0.4'}
-
-  which-builtin-type@1.2.0:
-    resolution: {integrity: sha512-I+qLGQ/vucCby4tf5HsLmGueEla4ZhwTBSqaooS+Y0BuxN4Cp+okmGuV+8mXZ84KDI9BA+oklo+RzKg0ONdSUA==}
     engines: {node: '>= 0.4'}
 
   which-builtin-type@1.2.1:
@@ -17324,7 +17330,7 @@ snapshots:
     dependencies:
       '@cloudflare/style-const': 5.7.3(react@18.3.1)
       '@cloudflare/style-container': 7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1)
-      '@cloudflare/types': 6.23.6(react@18.3.1)
+      '@cloudflare/types': 6.29.1(react@18.3.1)
       fela: 11.7.0
       polished: 4.2.2
       prop-types: 15.8.1
@@ -17339,14 +17345,14 @@ snapshots:
       prop-types: 15.8.1
       react: 18.3.1
 
-  '@cloudflare/component-code-block@4.2.8(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(@types/react-dom@18.2.0)(@types/react@18.3.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)':
+  '@cloudflare/component-code-block@4.2.8(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(@types/react-dom@18.2.0)(@types/react@18.3.3)(react-dom@18.3.1(react@18.3.1))(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(regenerator-runtime@0.14.1)':
     dependencies:
       '@cloudflare/component-button': 7.0.17(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
       '@cloudflare/component-icon': 11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
       '@cloudflare/component-tooltip': 4.3.2(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@cloudflare/component-visually-hidden': 1.0.86(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)
+      '@cloudflare/component-visually-hidden': 1.0.86(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(regenerator-runtime@0.14.1)
       '@cloudflare/elements': 3.0.3(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
-      '@cloudflare/intl-react': 1.12.5(react@18.3.1)(regenerator-runtime@0.14.1)
+      '@cloudflare/intl-react': 1.13.0(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(regenerator-runtime@0.14.1)
       '@cloudflare/style-const': 5.7.3(react@18.3.1)
       '@cloudflare/style-container': 7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1)
       '@radix-ui/react-scroll-area': 1.0.4(@types/react-dom@18.2.0)(@types/react@18.3.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -17357,6 +17363,8 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
       - '@types/react-dom'
+      - react-redux
+      - redux
       - regenerator-runtime
 
   '@cloudflare/component-heading@4.0.6(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)':
@@ -17380,11 +17388,11 @@ snapshots:
       prop-types: 15.8.1
       react: 18.3.1
 
-  '@cloudflare/component-listbox@1.10.6(patch_hash=67542a8abb29df36ad2c426409243d1167ca0080d2763f6ae3cce3c731c69107)(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(@cloudflare/style-provider@3.1.1(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)':
+  '@cloudflare/component-listbox@1.10.6(patch_hash=67542a8abb29df36ad2c426409243d1167ca0080d2763f6ae3cce3c731c69107)(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(@cloudflare/style-provider@3.1.1(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(regenerator-runtime@0.14.1)':
     dependencies:
       '@cloudflare/component-icon': 11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
       '@cloudflare/elements': 3.0.3(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
-      '@cloudflare/intl-react': 1.12.5(react@18.3.1)(regenerator-runtime@0.14.1)
+      '@cloudflare/intl-react': 1.13.0(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(regenerator-runtime@0.14.1)
       '@cloudflare/style-const': 5.7.3(react@18.3.1)
       '@cloudflare/style-container': 7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1)
       '@cloudflare/style-provider': 3.1.1(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
@@ -17395,18 +17403,22 @@ snapshots:
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
     transitivePeerDependencies:
+      - react-redux
+      - redux
       - regenerator-runtime
 
-  '@cloudflare/component-loading@6.1.1(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)':
+  '@cloudflare/component-loading@6.1.1(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(regenerator-runtime@0.14.1)':
     dependencies:
-      '@cloudflare/component-visually-hidden': 1.0.86(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)
-      '@cloudflare/intl-react': 1.12.5(react@18.3.1)(regenerator-runtime@0.14.1)
+      '@cloudflare/component-visually-hidden': 1.0.86(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(regenerator-runtime@0.14.1)
+      '@cloudflare/intl-react': 1.13.0(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(regenerator-runtime@0.14.1)
       '@cloudflare/style-const': 5.7.3(react@18.3.1)
       '@cloudflare/style-container': 7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1)
       prop-types: 15.8.1
       raf: 3.4.1
       react: 18.3.1
     transitivePeerDependencies:
+      - react-redux
+      - redux
       - regenerator-runtime
 
   '@cloudflare/component-textarea@4.1.2(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)':
@@ -17424,16 +17436,18 @@ snapshots:
       prop-types: 15.8.1
       react: 18.3.1
 
-  '@cloudflare/component-toggle@9.0.16(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)':
+  '@cloudflare/component-toggle@9.0.16(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(regenerator-runtime@0.14.1)':
     dependencies:
       '@cloudflare/component-icon': 11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
       '@cloudflare/elements': 3.0.3(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
-      '@cloudflare/intl-react': 1.12.5(react@18.3.1)(regenerator-runtime@0.14.1)
+      '@cloudflare/intl-react': 1.13.0(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(regenerator-runtime@0.14.1)
       '@cloudflare/style-const': 5.7.3(react@18.3.1)
       '@cloudflare/style-container': 7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1)
       '@cloudflare/types': 6.23.6(react@18.3.1)
       react: 18.3.1
     transitivePeerDependencies:
+      - react-redux
+      - redux
       - regenerator-runtime
 
   '@cloudflare/component-tooltip@4.3.2(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
@@ -17447,15 +17461,17 @@ snapshots:
       react-dom: 18.3.1(react@18.3.1)
       react-tooltip: 3.11.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
 
-  '@cloudflare/component-visually-hidden@1.0.86(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)':
+  '@cloudflare/component-visually-hidden@1.0.86(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(regenerator-runtime@0.14.1)':
     dependencies:
       '@cloudflare/elements': 3.0.3(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
-      '@cloudflare/intl-react': 1.12.5(react@18.3.1)(regenerator-runtime@0.14.1)
+      '@cloudflare/intl-react': 1.13.0(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(regenerator-runtime@0.14.1)
       '@cloudflare/style-const': 5.7.3(react@18.3.1)
       '@cloudflare/style-container': 7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1)
       prop-types: 15.8.1
       react: 18.3.1
     transitivePeerDependencies:
+      - react-redux
+      - redux
       - regenerator-runtime
 
   '@cloudflare/config@0.26.0':
@@ -17474,7 +17490,7 @@ snapshots:
 
   '@cloudflare/intl-core@1.15.0(react@18.3.1)(regenerator-runtime@0.14.1)':
     dependencies:
-      '@cloudflare/intl-types': 1.5.1(react@18.3.1)
+      '@cloudflare/intl-types': 1.5.7(react@18.3.1)
       '@cloudflare/util-markdown': 1.2.15
       '@types/lodash': 4.17.23
       '@types/node-polyglot': 2.4.2
@@ -17484,24 +17500,25 @@ snapshots:
     transitivePeerDependencies:
       - react
 
-  '@cloudflare/intl-react@1.12.5(react@18.3.1)(regenerator-runtime@0.14.1)':
+  '@cloudflare/intl-react@1.13.0(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)(regenerator-runtime@0.14.1)':
     dependencies:
       '@cloudflare/intl-core': 1.15.0(react@18.3.1)(regenerator-runtime@0.14.1)
-      '@cloudflare/types': 6.23.6(react@18.3.1)
+      '@cloudflare/types': 7.0.1(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)
       '@cloudflare/util-markdown': 1.2.15
-      dompurify: 2.5.8
       lodash: 4.17.23
       react: 18.3.1
     transitivePeerDependencies:
+      - react-redux
+      - redux
       - regenerator-runtime
-
-  '@cloudflare/intl-types@1.5.1(react@18.3.1)':
-    dependencies:
-      react: 18.3.1
 
   '@cloudflare/intl-types@1.5.1(react@19.2.4)':
     dependencies:
       react: 19.2.4
+
+  '@cloudflare/intl-types@1.5.7(react@18.3.1)':
+    dependencies:
+      react: 18.3.1
 
   '@cloudflare/intl-types@1.5.7(react@19.2.4)':
     dependencies:
@@ -17619,21 +17636,36 @@ snapshots:
 
   '@cloudflare/types@6.23.6(react@18.3.1)':
     dependencies:
-      '@cloudflare/intl-types': 1.5.1(react@18.3.1)
-      '@cloudflare/util-en-garde': 8.0.10
+      '@cloudflare/intl-types': 1.5.7(react@18.3.1)
+      '@cloudflare/util-en-garde': 8.0.15
       react: 18.3.1
 
   '@cloudflare/types@6.23.6(react@19.2.4)':
     dependencies:
-      '@cloudflare/intl-types': 1.5.1(react@19.2.4)
-      '@cloudflare/util-en-garde': 8.0.10
+      '@cloudflare/intl-types': 1.5.7(react@19.2.4)
+      '@cloudflare/util-en-garde': 8.0.15
       react: 19.2.4
+
+  '@cloudflare/types@6.29.1(react@18.3.1)':
+    dependencies:
+      '@cloudflare/intl-types': 1.5.7(react@18.3.1)
+      '@cloudflare/util-en-garde': 8.0.15
+      react: 18.3.1
 
   '@cloudflare/types@6.29.1(react@19.2.4)':
     dependencies:
       '@cloudflare/intl-types': 1.5.7(react@19.2.4)
       '@cloudflare/util-en-garde': 8.0.15
       react: 19.2.4
+
+  '@cloudflare/types@7.0.1(react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(redux@4.2.1)':
+    dependencies:
+      '@cloudflare/intl-types': 1.5.7(react@18.3.1)
+      '@cloudflare/util-en-garde': 8.0.15
+      react: 18.3.1
+      react-redux: 7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      redux: 4.2.1
+      zod: 4.6.6
 
   '@cloudflare/unenv-preset@2.16.1(unenv@2.0.0-rc.24)(workerd@1.20260918.1)':
     dependencies:
@@ -21033,6 +21065,11 @@ snapshots:
     dependencies:
       '@types/unist': 3.0.3
 
+  '@types/hoist-non-react-statics@3.3.7(@types/react@18.3.18)':
+    dependencies:
+      '@types/react': 18.3.18
+      hoist-non-react-statics: 3.3.2
+
   '@types/http-cache-semantics@4.0.4': {}
 
   '@types/http-errors@2.0.4': {}
@@ -21148,6 +21185,13 @@ snapshots:
   '@types/react-dom@19.2.3(@types/react@19.2.13)':
     dependencies:
       '@types/react': 19.2.13
+
+  '@types/react-redux@7.1.34':
+    dependencies:
+      '@types/hoist-non-react-statics': 3.3.7(@types/react@18.3.18)
+      '@types/react': 18.3.18
+      hoist-non-react-statics: 3.3.2
+      redux: 4.2.1
 
   '@types/react@18.3.18':
     dependencies:
@@ -22061,11 +22105,6 @@ snapshots:
       get-intrinsic: 1.3.0
       set-function-length: 1.2.2
 
-  call-bound@1.0.3:
-    dependencies:
-      call-bind-apply-helpers: 1.0.2
-      get-intrinsic: 1.3.0
-
   call-bound@1.0.4:
     dependencies:
       call-bind-apply-helpers: 1.0.2
@@ -22641,8 +22680,6 @@ snapshots:
     dependencies:
       domelementtype: 2.3.0
 
-  dompurify@2.5.8: {}
-
   domutils@3.1.0:
     dependencies:
       dom-serializer: 2.0.0
@@ -22870,10 +22907,6 @@ snapshots:
   es-module-lexer@2.3.1: {}
 
   es-module-lexer@2.3.2: {}
-
-  es-object-atoms@1.0.0:
-    dependencies:
-      es-errors: 1.3.0
 
   es-object-atoms@1.1.1:
     dependencies:
@@ -23827,6 +23860,10 @@ snapshots:
   heap-js@2.5.0: {}
 
   heap@0.2.7: {}
+
+  hoist-non-react-statics@3.3.2:
+    dependencies:
+      react-is: 16.13.1
 
   hono@4.13.11: {}
 
@@ -24944,7 +24981,7 @@ snapshots:
       array.prototype.foreach: 1.0.5
       has: 1.0.3
       object.entries: 1.1.6
-      string.prototype.trim: 1.2.9
+      string.prototype.trim: 1.2.10
       warning: 4.0.3
 
   node-releases@2.0.18: {}
@@ -24984,8 +25021,6 @@ snapshots:
       tinyexec: 1.3.1
 
   object-assign@4.1.1: {}
-
-  object-inspect@1.13.3: {}
 
   object-inspect@1.13.4: {}
 
@@ -25919,6 +25954,18 @@ snapshots:
 
   react-lifecycles-compat@3.0.4: {}
 
+  react-redux@7.2.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+    dependencies:
+      '@babel/runtime': 7.29.7
+      '@types/react-redux': 7.1.34
+      hoist-non-react-statics: 3.3.2
+      loose-envify: 1.4.0
+      prop-types: 15.8.1
+      react: 18.3.1
+      react-is: 17.0.2
+    optionalDependencies:
+      react-dom: 18.3.1(react@18.3.1)
+
   react-refresh@0.18.0: {}
 
   react-required-if@1.0.3: {}
@@ -26037,6 +26084,10 @@ snapshots:
       tiny-invariant: 1.3.3
       tslib: 2.8.1
 
+  redux@4.2.1:
+    dependencies:
+      '@babel/runtime': 7.29.7
+
   reflect.getprototypeof@1.0.10:
     dependencies:
       call-bind: 1.0.8
@@ -26047,17 +26098,6 @@ snapshots:
       get-intrinsic: 1.3.0
       get-proto: 1.0.1
       which-builtin-type: 1.2.1
-
-  reflect.getprototypeof@1.0.8:
-    dependencies:
-      call-bind: 1.0.8
-      define-properties: 1.2.1
-      dunder-proto: 1.0.1
-      es-abstract: 1.24.0
-      es-errors: 1.3.0
-      get-intrinsic: 1.3.0
-      gopd: 1.2.0
-      which-builtin-type: 1.2.0
 
   regenerator-runtime@0.13.11: {}
 
@@ -26599,7 +26639,7 @@ snapshots:
     dependencies:
       call-bind: 1.0.8
       get-intrinsic: 1.3.0
-      object-inspect: 1.13.3
+      object-inspect: 1.13.4
 
   side-channel@1.1.0:
     dependencies:
@@ -26816,19 +26856,12 @@ snapshots:
       es-object-atoms: 1.1.1
       has-property-descriptors: 1.0.2
 
-  string.prototype.trim@1.2.9:
-    dependencies:
-      call-bind: 1.0.8
-      define-properties: 1.2.1
-      es-abstract: 1.24.0
-      es-object-atoms: 1.1.1
-
   string.prototype.trimend@1.0.9:
     dependencies:
       call-bind: 1.0.8
-      call-bound: 1.0.3
+      call-bound: 1.0.4
       define-properties: 1.2.1
-      es-object-atoms: 1.0.0
+      es-object-atoms: 1.1.1
 
   string.prototype.trimstart@1.0.8:
     dependencies:
@@ -27471,7 +27504,7 @@ snapshots:
       gopd: 1.2.0
       is-typed-array: 1.1.15
       possible-typed-array-names: 1.0.0
-      reflect.getprototypeof: 1.0.8
+      reflect.getprototypeof: 1.0.10
 
   typescript@5.3.3: {}
 
@@ -28011,22 +28044,6 @@ snapshots:
       is-number-object: 1.1.1
       is-string: 1.1.1
       is-symbol: 1.1.1
-
-  which-builtin-type@1.2.0:
-    dependencies:
-      call-bind: 1.0.8
-      function.prototype.name: 1.1.8
-      has-tostringtag: 1.0.2
-      is-async-function: 2.0.0
-      is-date-object: 1.1.0
-      is-finalizationregistry: 1.1.0
-      is-generator-function: 1.0.10
-      is-regex: 1.2.1
-      is-weakref: 1.1.1
-      isarray: 2.0.5
-      which-boxed-primitive: 1.1.1
-      which-collection: 1.0.2
-      which-typed-array: 1.1.19
 
   which-builtin-type@1.2.1:
     dependencies:
