@@ -1,6 +1,7 @@
 import {
 	createDeferred,
 	type DeferredPromise,
+	isRequestSafeToRetry,
 	isSameUserWorkerOrigin,
 	rewriteUrlInHeaderValue,
 	urlFromParts,
@@ -180,7 +181,7 @@ export class ProxyWorker implements DurableObject {
 			 * synchronously.
 			 *
 			 * A connection-level failure (the `fetch` itself rejects, so no
-			 * response was received) on a same-origin GET/HEAD request is retried
+			 * response was received) on a same-origin safe request is retried
 			 * before being reported — see the rejection handler.
 			 *
 			 * Kept as a `const` arrow function: the handlers re-read
@@ -239,7 +240,7 @@ export class ProxyWorker implements DurableObject {
 									userWorkerUrl,
 									this.proxyData?.userWorkerUrl
 								) &&
-								(request.method === "GET" || request.method === "HEAD") &&
+								isRequestSafeToRetry(request) &&
 								attempt < 2
 							) {
 								setTimeout(
@@ -300,8 +301,8 @@ export class ProxyWorker implements DurableObject {
 							deferredResponse.reject(error);
 						}
 
-						// if the request can be retried (subset of idempotent requests which have no body), requeue it
-						else if (request.method === "GET" || request.method === "HEAD") {
+						// if the request can be retried safely, requeue it
+						else if (isRequestSafeToRetry(request)) {
 							this.requestRetryQueue.set(request, deferredResponse);
 							// we would only end up here if the downstream UserWorker is chang*ing*
 							// i.e. we are in a `pause`d state and expecting a `play` message soon
@@ -319,7 +320,7 @@ export class ProxyWorker implements DurableObject {
 						else {
 							deferredResponse.resolve(
 								new Response(
-									"Your worker restarted mid-request. Please try sending the request again. Only GET or HEAD requests are retried automatically.",
+									"Your worker restarted mid-request. Please try sending the request again. Only GET, HEAD, or bodyless CORS preflight requests are retried automatically.",
 									{
 										status: 503,
 										headers: { "Retry-After": "0" },
