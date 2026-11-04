@@ -1,6 +1,7 @@
 {
   "name": "<WORKER_NAME>",
   "main": "src/index.ts",
+  "upload_source_maps": true,
   "compatibility_date": "<COMPATIBILITY_DATE>",
   "assets": {
     "binding": "ASSETS",
