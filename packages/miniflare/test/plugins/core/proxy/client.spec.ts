@@ -146,6 +146,51 @@ describe("ProxyClient", () => {
 		});
 	});
 
+	test("rethrows errors thrown by Durable Object RPC methods", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "worker",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`
+							import { DurableObject } from "cloudflare:workers";
+							export class Counter extends DurableObject {
+								increment() {
+									throw new Error("Counter is locked");
+								}
+							}
+							export default { fetch() { return new Response(null); } };
+						`),
+						env: {
+							COUNTER: {
+								type: "durable-object",
+								worker: "worker",
+								exportName: "Counter",
+							},
+						},
+						exports: {
+							Counter: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const { COUNTER } = await mf.getBindings<{
+			COUNTER: {
+				idFromName(name: string): unknown;
+				get(id: unknown): { increment(): Promise<number> };
+			};
+		}>();
+		const counter = COUNTER.get(COUNTER.idFromName("a"));
+
+		await expect(counter.increment()).rejects.toThrow("Counter is locked");
+	});
+
 	test("preserves original URL for service binding fetch", async ({
 		expect,
 	}) => {

@@ -250,7 +250,13 @@ export class ProxyServer implements DurableObject {
 
 			// Immediately resolve all RpcProperties
 			if (result?.constructor.name === "RpcProperty") {
-				result = await result;
+				try {
+					result = await result;
+				} catch (e) {
+					// As for calls, return what the other Worker threw
+					status = 500;
+					result = e;
+				}
 			}
 
 			if (typeof result === "function") {
@@ -346,10 +352,11 @@ export class ProxyServer implements DurableObject {
 					// We intentionally don't await this `output()` call so that it's treated as a regular promise
 					result = transform.output(args[2]);
 				} else if (["RpcProperty", "RpcStub"].includes(func.constructor.name)) {
+					// Mark that we're awaiting this RPC call, so we set the Promise header
+					// below, even if it throws
+					rpcAwaited = true;
 					// let's resolve RpcPromise instances right away (to support serialization)
 					result = await func(...args);
-					// Mark that we've awaited this RPC call, so we set the Promise header below
-					rpcAwaited = true;
 				} else {
 					result = func.apply(target, args);
 				}
