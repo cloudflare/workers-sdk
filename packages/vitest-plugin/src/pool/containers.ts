@@ -33,15 +33,22 @@ interface ProjectContainerEnvironment {
  * of the configuration file that defines them.
  */
 export interface ProjectContainerConfiguration {
-	/** Absolute path of the configuration file. */
-	configPath: string;
 	/** Selects the registry domain of Cloudflare-managed images. */
 	complianceConfig: ComplianceConfig;
 	/** Docker engine the configuration selects, if any. */
 	containerEngine?: NonNullable<V4MiniflareOptions["containerEngine"]>;
 	/** Command that configures registry credentials, for error messages. */
 	registryConfigureCommand: string;
-	/** Configuration the plan derives from; images are prepared again when it changes. */
+	/**
+	 * How to run the project's tests without Docker, for the error shown when
+	 * Docker cannot be reached. Absent when the configuration cannot disable
+	 * local Containers.
+	 */
+	dockerUnavailableHint?: string;
+	/**
+	 * Configuration the plan derives from, including the path of the file that
+	 * defines it; images are prepared again when it changes.
+	 */
 	planInputs: unknown;
 	/**
 	 * Plans the images to prepare and the runtime options of each
@@ -103,7 +110,6 @@ function getEnvironmentFingerprint(
 	containerEngine: NonNullable<V4MiniflareOptions["containerEngine"]>
 ): string {
 	return JSON.stringify([
-		containerConfig.configPath,
 		dockerPath,
 		containerEngine,
 		containerConfig.planInputs,
@@ -340,7 +346,7 @@ async function prepareImages(
 		},
 		logger,
 		complianceConfig: containerConfig.complianceConfig,
-		configFileName: path.basename(containerConfig.configPath),
+		dockerUnavailableHint: containerConfig.dockerUnavailableHint,
 		registryConfigureCommand: containerConfig.registryConfigureCommand,
 	});
 
@@ -365,11 +371,16 @@ export function getWranglerContainerConfiguration(
 		return undefined;
 	}
 	return {
-		configPath,
 		complianceConfig: config,
 		containerEngine: config.dev.container_engine,
 		registryConfigureCommand: "wrangler containers registries configure",
-		planInputs: [config.compliance_region, config.containers, config.exports],
+		dockerUnavailableHint: `If your tests do not need Containers, set dev.enable_containers to false in your ${path.basename(configPath)} to run them without Docker.`,
+		planInputs: [
+			configPath,
+			config.compliance_region,
+			config.containers,
+			config.exports,
+		],
 		createPlan: (containerBuildId) =>
 			createContainerDevPlan({
 				containers: config.containers,
@@ -394,12 +405,16 @@ export function getCloudflareConfigContainerConfiguration(
 	configPath: string
 ): ProjectContainerConfiguration {
 	return {
-		configPath,
 		complianceConfig: {
 			compliance_region: toApiComplianceRegion(settings.complianceRegion),
 		},
 		registryConfigureCommand: "cf containers registries create",
-		planInputs: [settings.complianceRegion, containers, worker.exports],
+		planInputs: [
+			configPath,
+			settings.complianceRegion,
+			containers,
+			worker.exports,
+		],
 		createPlan: (containerBuildId) =>
 			createContainerDevPlanForCfConfig({
 				containers,

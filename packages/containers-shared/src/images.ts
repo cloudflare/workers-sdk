@@ -125,7 +125,11 @@ export async function prepareContainerImagesForDev(args: {
 	}) => void;
 	logger: WranglerLogger | ViteLogger;
 	complianceConfig?: ComplianceConfig;
-	configFileName: string;
+	/**
+	 * How to run without Docker, added to the error when Docker cannot be
+	 * reached. Omit it when the configuration cannot disable local Containers.
+	 */
+	dockerUnavailableHint?: string;
 	registryConfigureCommand: string;
 }): Promise<{ aborted: boolean }> {
 	const {
@@ -148,7 +152,7 @@ export async function prepareContainerImagesForDev(args: {
 			containerOptions.length !== 1
 				? "the configured images"
 				: "the configured image",
-		hint: `To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your ${args.configFileName} or pass --enable-containers=false.`,
+		hint: args.dockerUnavailableHint,
 	});
 	for (const options of containerOptions) {
 		if ("dockerfile" in options) {

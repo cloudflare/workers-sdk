@@ -257,7 +257,8 @@ describe("project Container environments", () => {
 			onContainerImagePreparationEnd: expect.any(Function),
 			logger,
 			complianceConfig: config,
-			configFileName: "wrangler.jsonc",
+			dockerUnavailableHint:
+				"If your tests do not need Containers, set dev.enable_containers to false in your wrangler.jsonc to run them without Docker.",
 			registryConfigureCommand: "wrangler containers registries configure",
 		});
 		expect(prepareContainerImagesForDev).toHaveBeenCalledOnce();
@@ -560,7 +561,7 @@ describe("project Container environments", () => {
 						}),
 					],
 					complianceConfig: { compliance_region: "fedramp_high" },
-					configFileName: "cloudflare.config.ts",
+					dockerUnavailableHint: undefined,
 					registryConfigureCommand: "cf containers registries create",
 				})
 			);
