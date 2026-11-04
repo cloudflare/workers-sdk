@@ -252,3 +252,52 @@ it("uses automatic DPoP without public policy fields", ({ expect }) => {
 		).toBe(false);
 	}
 });
+
+it("accepts stored-secret machine configuration without inventing optional parameters", ({
+	expect,
+}) => {
+	const oauth = {
+		exchange: "client_credentials",
+		client_id: "client",
+		authorization_server: "https://auth.example",
+		authentication: {
+			method: "client_secret_basic",
+			secret_reference: { store_id: "a".repeat(32), secret_name: "SECRET" },
+		},
+		resources: [{ origin: "https://api.example", methods: ["GET"] }],
+	};
+	expect(isIdentityBinding({ binding: "API", oauth })).toBe(true);
+	expect(
+		isIdentityBinding({
+			binding: "API",
+			oauth: {
+				...oauth,
+				token_protection: "dpop",
+				scope: ["read"],
+				resource: "urn:orders",
+			},
+		})
+	).toBe(true);
+	for (const extra of [
+		{ scope: [] },
+		{ scope: null },
+		{ resource: "" },
+		{ token_protection: "automatic" },
+		{ authentication: { ...oauth.authentication, secret: "raw" } },
+		{
+			authentication: {
+				...oauth.authentication,
+				secret_reference: {
+					...oauth.authentication.secret_reference,
+					account_id: "other",
+				},
+			},
+		},
+		{ exchange: "workload_authorization" },
+		{ authentication: undefined },
+	]) {
+		expect(
+			isIdentityBinding({ binding: "API", oauth: { ...oauth, ...extra } })
+		).toBe(false);
+	}
+});
