@@ -260,7 +260,7 @@ describe("wrangler setup", () => {
 				    }
 				  }
 
-				✋  Autoconfig process run in dry-run mode, existing now.
+				✋  Autoconfig process run in dry-run mode, exiting now.
 				"
 			`);
 		});
