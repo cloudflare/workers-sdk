@@ -141,6 +141,7 @@ function isRpc(value: unknown): boolean {
 
 type Env = Record<string, unknown> & {
 	[CoreBindings.DATA_PROXY_SECRET]: ArrayBuffer;
+	[CoreBindings.JSON_WORKER_NODE_BINDINGS]: unknown[];
 };
 
 // TODO(someday): extract `ProxyServer` into component that could be used by
@@ -236,12 +237,12 @@ export class ProxyServer implements DurableObject {
 		}
 
 		// Validate secret header to prevent unauthorised access to proxy
-		const secretHex = request.headers.get(CoreHeaders.OP_SECRET);
-		if (secretHex == null) {
+		const secret = request.headers.get(CoreHeaders.OP_SECRET);
+		if (secret == null) {
 			return new Response(null, { status: 401 });
 		}
 		const expectedSecret = this.env[CoreBindings.DATA_PROXY_SECRET];
-		const secretBuffer = Buffer.from(secretHex, "hex");
+		const secretBuffer = Buffer.from(secret);
 		if (
 			secretBuffer.byteLength !== expectedSecret.byteLength ||
 			!crypto.subtle.timingSafeEqual(secretBuffer, expectedSecret)
@@ -250,6 +251,21 @@ export class ProxyServer implements DurableObject {
 		}
 
 		const opHeader = request.headers.get(CoreHeaders.OP);
+		if (opHeader === ProxyOps.CONNECT_PLATFORM_PROXY) {
+			return Response.json({
+				workers: this.env[CoreBindings.JSON_WORKER_NODE_BINDINGS],
+				// `Miniflare#dispatchFetch()`, which dev servers use, sends requests to
+				// the runtime's own socket, so this is the runtime's URL even when the
+				// client connected through a dev server
+				runtimeUrl: new URL(request.url).origin,
+				cf: this.env[CoreBindings.JSON_CF_BLOB],
+			});
+		}
+		if (opHeader === ProxyOps.WATCH_PLATFORM_PROXY) {
+			const [client, server] = Object.values(new WebSocketPair());
+			server.accept();
+			return new Response(null, { status: 101, webSocket: client });
+		}
 		if (opHeader === ProxyOps.CONNECT) {
 			return newWorkersWebSocketRpcResponse(request, new ProxyRpc(this.heap), {
 				onSendError(error) {

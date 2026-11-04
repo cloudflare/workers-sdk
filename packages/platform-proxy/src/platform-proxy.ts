@@ -16,7 +16,7 @@ export type PlatformProxyOptions = {
 	persist?: boolean | { path: string };
 };
 
-/** The emulated platform returned by `getPlatformProxy()` */
+/** The platform returned by `getPlatformProxy()` */
 export type PlatformProxy<
 	Env = Record<string, unknown>,
 	CfProperties extends Record<string, unknown> = Record<string, unknown>,
@@ -27,9 +27,12 @@ export type PlatformProxy<
 	cf: CfProperties;
 	/** Stand-in for the `ctx` object a Worker receives; its methods do nothing */
 	ctx: ExecutionContext;
-	/** Stand-in for the Workers `caches` global; it caches nothing */
+	/**
+	 * The Workers `caches` global. When the proxy starts its own runtime, it's a
+	 * stand-in that caches nothing.
+	 */
 	caches: CacheStorage;
-	/** Stops the process that provides the bindings */
+	/** Stops the runtime the proxy started, or disconnects from the one it attached to */
 	dispose: () => Promise<void>;
 };
 

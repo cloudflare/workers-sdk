@@ -26,6 +26,7 @@ import {
 	stringifyWithStreams,
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
+	viewToBuffer,
 } from "../../../workers";
 import { DECODER, SynchronousFetcher } from "./fetch-sync";
 import { NODE_PLATFORM_IMPL } from "./types";
@@ -96,8 +97,32 @@ const revivers: ReducersRevivers = {
 	// `Native` reviver depends on `ProxyStubHandler` methods
 };
 
-export const PROXY_SECRET = crypto.randomBytes(16);
-const PROXY_SECRET_HEX = PROXY_SECRET.toString("hex");
+// Starting processes with the same `MINIFLARE_PLATFORM_PROXY_SECRET` lets a
+// client attach to a runtime started by another process
+export const PROXY_SECRET =
+	process.env.MINIFLARE_PLATFORM_PROXY_SECRET ||
+	crypto.randomBytes(16).toString("hex");
+
+/**
+ * How a binding appears in Node.js. It's plain JSON, so the runtime can also
+ * describe its bindings to clients in other processes.
+ */
+export type NodeBindingDescriptor =
+	// A binding proxied from `workerd`, with some properties replaced by plain
+	// values (e.g. Hyperdrive's connection details)
+	| { proxy: string; overrides?: Record<string, unknown> }
+	// An `ArrayBuffer`, base64-encoded (legacy data blobs)
+	| { data: string }
+	// A `WebAssembly.Module`'s bytes, base64-encoded (legacy Wasm modules)
+	| { wasm: string }
+	// Any other value computed in Node.js (e.g. text and JSON vars)
+	| { value: unknown };
+
+/** A Worker's bindings, as the runtime describes them to clients */
+export interface WorkerNodeBindings {
+	name: string;
+	bindings: Record<string, NodeBindingDescriptor>;
+}
 
 function isClientError(status: number) {
 	return 400 <= status && status < 500;
@@ -203,7 +228,7 @@ class ProxyRpcSession {
 	readonly #webSocket: WebSocket;
 	#closed = false;
 
-	constructor(url: URL) {
+	constructor(url: URL, secret: string) {
 		const webSocketUrl = new URL(url);
 		webSocketUrl.protocol = url.protocol === "https:" ? "wss:" : "ws:";
 		this.#dispatcher = new Agent({
@@ -213,7 +238,7 @@ class ProxyRpcSession {
 		});
 		this.#webSocket = new WebSocket(webSocketUrl, {
 			headers: {
-				[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
+				[CoreHeaders.OP_SECRET]: secret,
 				[CoreHeaders.OP]: ProxyOps.CONNECT,
 			},
 			dispatcher: this.#dispatcher,
@@ -245,10 +270,21 @@ class ProxyRpcSession {
 export class ProxyClient {
 	#bridge: ProxyClientBridge;
 
-	constructor(runtimeEntryURL: URL, dispatchFetch: DispatchFetch) {
+	/**
+	 * @param runtimeEntryURL URL of the runtime serving the platform proxy.
+	 * @param dispatchFetch Function used to send requests to the runtime.
+	 * @param secret Secret the runtime expects. Defaults to this process's
+	 * secret.
+	 */
+	constructor(
+		runtimeEntryURL: URL,
+		dispatchFetch: DispatchFetch,
+		secret = PROXY_SECRET
+	) {
 		this.#bridge = new ProxyClientBridge(
 			new URL(CorePaths.PLATFORM_PROXY, runtimeEntryURL),
-			dispatchFetch
+			dispatchFetch,
+			secret
 		);
 	}
 
@@ -260,6 +296,43 @@ export class ProxyClient {
 	}
 	get env(): Record<string, unknown> {
 		return (this.#envProxy ??= this.#bridge.getProxy(TARGET_ENV));
+	}
+
+	/**
+	 * Builds a Worker's `env` from the runtime's descriptions of its bindings.
+	 *
+	 * @param descriptors The Worker's bindings, keyed by binding name.
+	 * @returns The Worker's `env`.
+	 */
+	getBindings<Env = Record<string, unknown>>(
+		descriptors: Record<string, NodeBindingDescriptor>
+	): Env {
+		const bindings: Record<string, unknown> = {};
+		for (const [name, descriptor] of Object.entries(descriptors)) {
+			if ("proxy" in descriptor) {
+				const proxy = this.env[descriptor.proxy];
+				assert(proxy !== undefined, `Expected ${descriptor.proxy} to be bound`);
+				const { overrides } = descriptor;
+				bindings[name] =
+					overrides === undefined
+						? proxy
+						: new Proxy(proxy as object, {
+								get: (target, key) =>
+									Object.hasOwn(overrides, key)
+										? overrides[key as string]
+										: Reflect.get(target, key),
+							});
+			} else if ("data" in descriptor) {
+				bindings[name] = viewToBuffer(Buffer.from(descriptor.data, "base64"));
+			} else if ("wasm" in descriptor) {
+				bindings[name] = new WebAssembly.Module(
+					Buffer.from(descriptor.wasm, "base64")
+				);
+			} else {
+				bindings[name] = descriptor.value;
+			}
+		}
+		return bindings as Env;
 	}
 
 	poisonProxies(): void {
@@ -338,7 +411,8 @@ class ProxyClientBridge {
 
 	constructor(
 		public url: URL,
-		readonly dispatchFetch: DispatchFetch
+		readonly dispatchFetch: DispatchFetch,
+		readonly secret: string
 	) {
 		this.#finalizationRegistry = new FinalizationRegistry(this.#finalizeProxy);
 	}
@@ -349,7 +423,7 @@ class ProxyClientBridge {
 
 	get rpc(): ProxyRpcStub {
 		if (this.#session === undefined || this.#session.closed) {
-			this.#session = new ProxyRpcSession(this.url);
+			this.#session = new ProxyRpcSession(this.url, this.secret);
 		}
 		return this.#session.api;
 	}
@@ -414,7 +488,7 @@ class ProxyClientBridge {
 			await this.dispatchFetch(this.url, {
 				method: "DELETE",
 				headers: {
-					[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
+					[CoreHeaders.OP_SECRET]: this.secret,
 					[CoreHeaders.OP]: ProxyOps.FREE,
 					[CoreHeaders.OP_TARGET]: addresses.join(","),
 				},
@@ -788,7 +862,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 				const resPromise = this.bridge.dispatchFetch(this.bridge.url, {
 					method: "POST",
 					headers: {
-						[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
+						[CoreHeaders.OP_SECRET]: this.bridge.secret,
 						[CoreHeaders.OP]: ProxyOps.GET, // GET without key just gets target
 						[CoreHeaders.OP_TARGET]: stringify(target, reducers),
 					},
@@ -998,7 +1072,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 		const syncRes = this.bridge.sync.fetch(this.bridge.url, {
 			method: "POST",
 			headers: {
-				[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
+				[CoreHeaders.OP_SECRET]: this.bridge.secret,
 				[CoreHeaders.OP]: ProxyOps.GET,
 				[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
 				[CoreHeaders.OP_KEY]: key,
@@ -1052,7 +1126,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 		const syncRes = this.bridge.sync.fetch(this.bridge.url, {
 			method: "POST",
 			headers: {
-				[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
+				[CoreHeaders.OP_SECRET]: this.bridge.secret,
 				[CoreHeaders.OP]: ProxyOps.GET_OWN_DESCRIPTOR,
 				[CoreHeaders.OP_KEY]: key,
 				[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
@@ -1079,7 +1153,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 		const syncRes = this.bridge.sync.fetch(this.bridge.url, {
 			method: "POST",
 			headers: {
-				[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
+				[CoreHeaders.OP_SECRET]: this.bridge.secret,
 				[CoreHeaders.OP]: ProxyOps.GET_OWN_KEYS,
 				[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
 			},
@@ -1179,7 +1253,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 		const syncRes = this.bridge.sync.fetch(this.bridge.url, {
 			method: "POST",
 			headers: {
-				[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
+				[CoreHeaders.OP_SECRET]: this.bridge.secret,
 				[CoreHeaders.OP]: ProxyOps.CALL,
 				[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
 				[CoreHeaders.OP_KEY]: key,
@@ -1202,7 +1276,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 			resPromise = this.bridge.dispatchFetch(this.bridge.url, {
 				method: "POST",
 				headers: {
-					[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
+					[CoreHeaders.OP_SECRET]: this.bridge.secret,
 					[CoreHeaders.OP]: ProxyOps.CALL,
 					[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
 					[CoreHeaders.OP_KEY]: key,
@@ -1221,7 +1295,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 			resPromise = this.bridge.dispatchFetch(this.bridge.url, {
 				method: "POST",
 				headers: {
-					[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
+					[CoreHeaders.OP_SECRET]: this.bridge.secret,
 					[CoreHeaders.OP]: ProxyOps.CALL,
 					[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
 					[CoreHeaders.OP_KEY]: key,
@@ -1278,7 +1352,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 		// If adding new headers here, remember to `delete()` them in `ProxyServer`
 		// before calling `fetch()`.
 		request.headers.set(CoreHeaders.OP_ORIGINAL_URL, userRequest.url);
-		request.headers.set(CoreHeaders.OP_SECRET, PROXY_SECRET_HEX);
+		request.headers.set(CoreHeaders.OP_SECRET, this.bridge.secret);
 		request.headers.set(CoreHeaders.OP, ProxyOps.CALL);
 		request.headers.set(CoreHeaders.OP_TARGET, this.#stringifiedTarget);
 		request.headers.set(CoreHeaders.OP_KEY, "fetch");

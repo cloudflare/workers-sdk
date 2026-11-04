@@ -1,31 +1,38 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { loadAndParseConfig } from "@cloudflare/config";
-import { startPlatformProxy } from "./platform-proxy";
+import type { AttachPlatformProxyOptions } from "./attach";
 import type { PlatformProxy, PlatformProxyOptions } from "./platform-proxy";
 
 export type { PlatformProxy } from "./platform-proxy";
 export type { CacheStorage } from "./caches";
 export type { ExecutionContext } from "./execution-context";
 
-/** Options for {@link getPlatformProxy} */
-export type GetPlatformProxyOptions = PlatformProxyOptions & {
-	/**
-	 * The path of the project's `cloudflare.config.ts`.
-	 * Defaults to `cloudflare.config.ts` in the current working directory.
-	 */
-	configPath?: string;
-	/** The mode `cloudflare.config.ts` is evaluated in. Defaults to `development`. */
-	mode?: string;
-};
+/**
+ * Options for {@link getPlatformProxy}: where to find `cloudflare.config.ts` and
+ * how to emulate its bindings, or the `url` of a runtime to attach to
+ */
+export type GetPlatformProxyOptions =
+	| (PlatformProxyOptions & {
+			/**
+			 * The path of the project's `cloudflare.config.ts`.
+			 * Defaults to `cloudflare.config.ts` in the current working directory.
+			 */
+			configPath?: string;
+			/** The mode `cloudflare.config.ts` is evaluated in. Defaults to `development`. */
+			mode?: string;
+			/** Pass a `url` to attach to a running runtime instead */
+			url?: undefined;
+	  })
+	| AttachPlatformProxyOptions;
 
 /**
- * Emulates the bindings declared in a project's `cloudflare.config.ts`, so that code running in
- * Node.js during local development, such as a framework's dev server, can use them as its
- * Worker would.
+ * Gives code running in Node.js during local development, such as a framework's dev server,
+ * the bindings of a Worker. By default, it emulates the bindings declared in the project's
+ * `cloudflare.config.ts`. Pass `url` to use the bindings of a runtime that's already running
+ * instead, such as a Cloudflare Vite plugin dev server.
  *
- * @param options Where to find `cloudflare.config.ts`, and how to emulate its bindings
- * @returns The Worker's bindings, together with stand-ins for `cf`, `ctx` and `caches`
+ * @param options Where to find `cloudflare.config.ts`, or the runtime to attach to
+ * @returns The Worker's bindings, together with `cf`, `ctx` and `caches`
  */
 export async function getPlatformProxy<
 	Env = Record<string, unknown>,
@@ -33,6 +40,12 @@ export async function getPlatformProxy<
 >(
 	options: GetPlatformProxyOptions = {}
 ): Promise<PlatformProxy<Env, CfProperties>> {
+	// Each mode loads only what it needs: attaching never reads a config
+	if (options.url !== undefined) {
+		const { attachPlatformProxy } = await import("./attach");
+		return attachPlatformProxy<Env, CfProperties>(options);
+	}
+
 	const configPath = path.resolve(options.configPath ?? "cloudflare.config.ts");
 	const configFile = path.basename(configPath);
 	if (!existsSync(configPath)) {
@@ -40,6 +53,7 @@ export async function getPlatformProxy<
 			`Could not find \`${configFile}\` at ${configPath}. If the project uses a Wrangler configuration file, run \`npx cf migrate\` to generate \`${configFile}\`.`
 		);
 	}
+	const { loadAndParseConfig } = await import("@cloudflare/config");
 	const { result } = await loadAndParseConfig(configPath, {
 		isPreview: false,
 		mode: options.mode ?? "development",
@@ -57,9 +71,12 @@ export async function getPlatformProxy<
 		);
 	}
 
+	const { startPlatformProxy } = await import("./platform-proxy");
 	return startPlatformProxy<Env, CfProperties>(
 		result.data.worker,
 		path.dirname(configPath),
-		{ persist: options.persist }
+		{
+			persist: options.persist,
+		}
 	);
 }

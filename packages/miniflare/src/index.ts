@@ -73,6 +73,7 @@ import {
 	SOCKET_ENTRY,
 	SOCKET_ENTRY_LOCAL,
 	STREAM_PLUGIN_NAME,
+	WasmNodeBinding,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	WORKFLOWS_PLUGIN_NAME,
 } from "./plugins";
@@ -155,6 +156,10 @@ import type {
 	QueueProducers,
 	ReplaceWorkersTypes,
 } from "./plugins";
+import type {
+	NodeBindingDescriptor,
+	WorkerNodeBindings,
+} from "./plugins/core/proxy";
 import type {
 	Config,
 	Extension,
@@ -2419,6 +2424,7 @@ export class Miniflare {
 			durableObjectClassNames,
 			workflowExporters,
 			allWorkerOpts,
+			workerNodeBindings: await this.#getWorkerNodeBindings(),
 		});
 		for (const service of globalServices) {
 			// Global services should all have unique names
@@ -3272,13 +3278,21 @@ export class Miniflare {
 	async getBindings<Env = Record<string, unknown>>(
 		workerName?: string
 	): Promise<Env> {
-		const bindings: Record<string, unknown> = {};
 		const proxyClient = await this._getProxyClient();
 
 		// Find worker by name, defaulting to entrypoint worker if none specified
 		const workerIndex = this.#findAndAssertWorkerIndex(workerName);
+		return proxyClient.getBindings<Env>(
+			await this.#getNodeBindingDescriptors(workerIndex)
+		);
+	}
+
+	async #getNodeBindingDescriptors(
+		workerIndex: number
+	): Promise<Record<string, NodeBindingDescriptor>> {
+		const descriptors: Record<string, NodeBindingDescriptor> = {};
 		const workerOpts = this.#workerOpts[workerIndex];
-		workerName = workerOpts.config.name;
+		const workerName = workerOpts.config.name;
 
 		// Populate bindings from each plugin
 		for (const [key, plugin] of this.#mergedPluginEntries) {
@@ -3288,23 +3302,42 @@ export class Miniflare {
 			});
 			for (const [name, binding] of Object.entries(pluginBindings)) {
 				if (binding instanceof ProxyNodeBinding) {
-					const proxyBindingName = getProxyBindingName(key, workerName, name);
-					let proxy = proxyClient.env[proxyBindingName];
-					assert(
-						proxy !== undefined,
-						`Expected ${proxyBindingName} to be bound`
-					);
-					if (binding.proxyOverrideHandler) {
-						proxy = new Proxy(proxy, binding.proxyOverrideHandler);
-					}
-					bindings[name] = proxy;
+					descriptors[name] = {
+						proxy: getProxyBindingName(key, workerName, name),
+						overrides: binding.overrides,
+					};
+				} else if (binding instanceof WasmNodeBinding) {
+					descriptors[name] = {
+						wasm: Buffer.from(binding.bytes).toString("base64"),
+					};
+				} else if (binding instanceof ArrayBuffer) {
+					descriptors[name] = { data: Buffer.from(binding).toString("base64") };
 				} else {
-					bindings[name] = binding;
+					descriptors[name] = { value: binding };
 				}
 			}
 		}
 
-		return bindings as Env;
+		return descriptors;
+	}
+
+	async #getWorkerNodeBindings(): Promise<WorkerNodeBindings[]> {
+		const workers: WorkerNodeBindings[] = [];
+		for (const [workerIndex, workerOpts] of this.#workerOpts.entries()) {
+			workers.push({
+				name: workerOpts.config.name,
+				bindings: await this.#getNodeBindingDescriptors(workerIndex),
+			});
+		}
+		// Clients default to the first Worker, so list the primary one first: the
+		// first that isn't internal, like the Vite plugin's router Worker
+		const primary = this.#workerOpts.findIndex(
+			(workerOpts) => workerOpts.dev?.unsafeRegisterWorker !== false
+		);
+		if (primary > 0) {
+			workers.unshift(...workers.splice(primary, 1));
+		}
+		return workers;
 	}
 	async getWorker(workerName?: string): Promise<ReplaceWorkersTypes<Fetcher>> {
 		const proxyClient = await this._getProxyClient();
