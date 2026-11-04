@@ -317,8 +317,8 @@ importers:
         version: 8.22.0
     devDependencies:
       '@cloudflare/containers-shared':
-        specifier: 0.23.6
-        version: 0.23.6(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))
+        specifier: 0.23.8
+        version: 0.23.8(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))
       '@cloudflare/mock-npm-registry':
         specifier: workspace:*
         version: link:../mock-npm-registry
@@ -1924,27 +1924,14 @@ packages:
   '@clack/core@1.2.0':
     resolution: {integrity: sha512-qfxof/3T3t9DPU/Rj3OmcFyZInceqj/NVtO9rwIuJqCUgh32gwPjpFQQp/ben07qKlhpwq7GzfWpST4qdJ5Drg==}
 
-  '@cloudflare/build-output-utils@0.9.7':
-    resolution: {integrity: sha512-bp2uexgnQp4W5w57oBdDfjzgyGvJAiKbfl6/73uiKVPMv0xHI0be98vfYUCKOBlXMNZ1PwWbNza1Ghbg9M6Bpw==}
-
   '@cloudflare/build-output-utils@0.9.9':
     resolution: {integrity: sha512-8bsxwE0sBANpEXHD2SWCfMw82wdacUsr1b0p9a9WbGNeMASmXHUzUfMvRkq9k6aKnC9uPeeYJ/m4ErXsC+cy/Q==}
-
-  '@cloudflare/cli-shared-helpers@0.3.1':
-    resolution: {integrity: sha512-a92bXG7ckYq+zIVKz5oICVz82wh8n2BI0AFwINMxmTfKDIl6ng3SN/rbXX8aQeGqqIwtsSTeI/AEIGsr+YZFJw==}
 
   '@cloudflare/cli-shared-helpers@0.3.3':
     resolution: {integrity: sha512-EpNddk5YQuvxmi8G48Fkm2ruFuOWDO99rdreMT14Wf8LUl1LeDx4gHxdoUZagL5Oj9o0+IQjnetZGfiE+dvueA==}
 
-  '@cloudflare/config@0.29.1':
-    resolution: {integrity: sha512-3wWliifIE9yLDp+56Y5iLT1a6fIjBVjkHpJ5Q48UpJwcGOrQ23cNppLlvjVSjxV4+S5gZEZwElLC1fwQ2hmOEQ==}
-
   '@cloudflare/config@0.30.1':
     resolution: {integrity: sha512-16yO439yuhX1cM1l2IoNDVxJM4cZ9oE+eLtxFAe32EamS/7e4t42CzzyTE+dHQfFcKNvkmiZRxx9JinO4l7ynQ==}
-
-  '@cloudflare/containers-shared@0.23.6':
-    resolution: {integrity: sha512-lkd70hmS1+7DJ/dsrqnDjTgm/uT3oKhZDfS4tuAJEjuqBs08tBV0bFhS/desQwvfwOklc+a9RnPq7ezh0ogF2g==}
-    engines: {node: '>=22.0.0'}
 
   '@cloudflare/containers-shared@0.23.8':
     resolution: {integrity: sha512-7Hdp2intt2/An8F+KU19wSidPq9xwQI89yP+VXfW44YUXjMM7zE0hyNrgLwgmnhx+1G2K5/rl0D4Wm/0A2OxEA==}
@@ -2050,14 +2037,6 @@ packages:
 
   '@cloudflare/workers-types@5.20261103.1':
     resolution: {integrity: sha512-3trekYqEHw3YT8yhMqZaEEW91TZDJXt9XWbwKO+L17rG5iuhdKNY0dk56Rdif+5mABY/8xvu5qIRiyVWMW0OUw==}
-
-  '@cloudflare/workers-utils@0.50.2':
-    resolution: {integrity: sha512-rmXZ0sktlPR2zxscwleD8ja9TOq0WAphaOkVV7ovK8C8lOc1+FlVoufOwrKZfSxfnbYyK/GsOQvWg98wJ4sxUg==}
-    peerDependencies:
-      vitest: ^4.1.0 || ^5.0.0
-    peerDependenciesMeta:
-      vitest:
-        optional: true
 
   '@cloudflare/workers-utils@0.51.1':
     resolution: {integrity: sha512-Zv9HFwEpobd3Yo+TKkFi5RUiPUSTB3lX4JMRNEx74/RH3TKcwV/7UKMU1eTUd6zpJU7s3hAL3NkQ6qMsO30OHQ==}
@@ -8206,24 +8185,9 @@ snapshots:
       fast-wrap-ansi: 0.1.6
       sisteransi: 1.0.5
 
-  '@cloudflare/build-output-utils@0.9.7':
-    dependencies:
-      '@cloudflare/config': 0.29.1
-
   '@cloudflare/build-output-utils@0.9.9':
     dependencies:
       '@cloudflare/config': 0.30.1
-
-  '@cloudflare/cli-shared-helpers@0.3.1(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))':
-    dependencies:
-      '@clack/core': 1.2.0
-      '@cloudflare/workers-utils': 0.50.2(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))
-      chalk: 5.3.0
-      ci-info: 4.4.0
-      cross-spawn: 7.0.6
-      log-update: 5.0.1
-    transitivePeerDependencies:
-      - vitest
 
   '@cloudflare/cli-shared-helpers@0.3.3(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))':
     dependencies:
@@ -8236,22 +8200,9 @@ snapshots:
     transitivePeerDependencies:
       - vitest
 
-  '@cloudflare/config@0.29.1':
-    dependencies:
-      zod: 4.6.6
-
   '@cloudflare/config@0.30.1':
     dependencies:
       zod: 4.6.6
-
-  '@cloudflare/containers-shared@0.23.6(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))':
-    dependencies:
-      '@cloudflare/build-output-utils': 0.9.7
-      '@cloudflare/cli-shared-helpers': 0.3.1(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))
-      '@cloudflare/config': 0.29.1
-      '@cloudflare/workers-utils': 0.50.2(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))
-    transitivePeerDependencies:
-      - vitest
 
   '@cloudflare/containers-shared@0.23.8(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))':
     dependencies:
@@ -8357,14 +8308,6 @@ snapshots:
   '@cloudflare/workers-types@4.20260702.1': {}
 
   '@cloudflare/workers-types@5.20261103.1': {}
-
-  '@cloudflare/workers-utils@0.50.2(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))':
-    dependencies:
-      chalk: 5.3.0
-      dotenv: 16.3.1
-      undici: 7.30.1
-    optionalDependencies:
-      vitest: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
 
   '@cloudflare/workers-utils@0.51.1(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))':
     dependencies:
