@@ -24,10 +24,6 @@ jobs:
           persist-credentials: false
 
       - name: Check pull request author
-        uses: mitchellh/vouch/action/check-pr@d66fa29a64600490892131ad87597c30c91fcac4 # v1
-        with:
-          pr-number: ${{ github.event.pull_request.number }}
-          auto-close: true
-          template-file: .github/vouch-pr-response.md
+        run: node .github/scripts/vouch.mjs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
