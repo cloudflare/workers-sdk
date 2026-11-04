@@ -192,23 +192,15 @@ export const HYPERDRIVE_PLUGIN: Plugin = {
 					// address. workerd's binding carries the values for its own
 					// connection, so leaving any of them un-overridden mixes two sets
 					// of credentials and Hyperdrive rejects the login.
-					const connectionOverrides: Record<string | symbol, string | number> =
-						{
-							connectionString: `${nodeUrl}`,
-							port: Number.parseInt(nodeUrl.port),
-							host: nodeUrl.hostname,
-							user: decodeURIComponent(nodeUrl.username),
-							password: decodeURIComponent(nodeUrl.password),
-							database: decodeURIComponent(nodeUrl.pathname.replace("/", "")),
-						};
-					const proxyNodeBinding = new ProxyNodeBinding({
-						get(target, prop) {
-							return prop in connectionOverrides
-								? connectionOverrides[prop]
-								: target[prop];
-						},
-					});
-					return [name, proxyNodeBinding];
+					const connectionOverrides: Record<string, string | number> = {
+						connectionString: `${nodeUrl}`,
+						port: Number.parseInt(nodeUrl.port),
+						host: nodeUrl.hostname,
+						user: decodeURIComponent(nodeUrl.username),
+						password: decodeURIComponent(nodeUrl.password),
+						database: decodeURIComponent(nodeUrl.pathname.replace("/", "")),
+					};
+					return [name, new ProxyNodeBinding(connectionOverrides)];
 				}
 			)
 		);
