@@ -320,7 +320,13 @@ test("issues real local credentials through cloudflare:test without cloud auth",
 	vitestRun,
 }) => {
 	await seed({
-		"vitest.config.mts": vitestConfig({ experimental: { newConfig: true } }),
+		"vitest.config.mts": vitestConfig({
+			miniflare: {
+				compatibilityDate: "2026-07-01",
+				compatibilityFlags: ["nodejs_compat"],
+			},
+			experimental: { newConfig: true },
+		}),
 		"cloudflare.config.ts": `export default {worker:{name:'identity-vitest',compatibilityDate:'2026-07-01',entrypoint:'./index.ts',env:{IDENTITY:{type:'identity',audience:'urn:vitest'}}}};`,
 		"index.ts":
 			"export default {fetch(){return new Response('identity test')}};",
