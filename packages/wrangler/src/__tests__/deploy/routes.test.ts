@@ -593,6 +593,39 @@ describe("deploy", () => {
 			`);
 		});
 
+		it("explains a route permission denial after uploading the Worker", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({ routes: ["example.com/some-route/*"] });
+			writeWorkerSource();
+			mockUpdateWorkerSubdomain({ enabled: false });
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockGetZones(expect, "example.com", [{ id: "example-com-id" }]);
+			mockGetZoneWorkerRoutes(expect, "example-com-id");
+			msw.use(
+				http.put(
+					"*/accounts/:accountId/workers/scripts/:scriptName/routes",
+					() =>
+						HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									code: null,
+									message: "No access to the specified resource.",
+								},
+							]),
+							{ status: 403 }
+						),
+					{ once: true }
+				)
+			);
+
+			await expect(runWrangler("deploy ./index")).rejects.toThrow(
+				/The Worker was uploaded, but its routes were not updated\. Check that the API token has Workers Scripts: Edit for this Worker and Workers Routes: Edit for every zone in both the configured routes and the routes currently attached to this Worker\./
+			);
+			expect(std.out).toContain("Uploaded test-name");
+			expect(std.info).not.toContain("Falling back");
+		});
+
 		it("should list every conflicting route when routes are assigned to another worker", async ({
 			expect,
 		}) => {
