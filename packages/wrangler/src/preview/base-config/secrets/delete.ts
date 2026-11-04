@@ -6,7 +6,7 @@ import { createCommand } from "../../../core/create-command";
 import { confirm } from "../../../dialogs";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
-import { rejectUnsupportedPreviewArgs } from ".";
+import { rejectUnsupportedPreviewArgs, shouldPatchExistingPreviews } from ".";
 
 export const previewBaseConfigSecretDeleteCommand = createCommand({
 	metadata: {
@@ -34,6 +34,10 @@ export const previewBaseConfigSecretDeleteCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
+		"patch-existing-previews": {
+			describe: "Apply the base config update to existing Previews",
+			type: "boolean",
+		},
 	},
 	behaviour: {
 		suggestSkillsAfterHandler: true,
@@ -56,9 +60,18 @@ export const previewBaseConfigSecretDeleteCommand = createCommand({
 				`🌀 Deleting the secret ${args.key} on the Preview base config for the Worker ${workerName}${args.env ? ` (${args.env})` : ""}`
 			);
 
-			await patchPreviewBaseConfig(config, accountId, workerName, {
-				env: { [args.key]: null },
-			});
+			await patchPreviewBaseConfig(
+				config,
+				accountId,
+				workerName,
+				{
+					env: { [args.key]: null },
+				},
+				await shouldPatchExistingPreviews(
+					args.patchExistingPreviews,
+					args.skipConfirmation
+				)
+			);
 
 			logger.log(
 				`✨ Success! Updated Preview base config for the Worker "${workerName}" with deleted secret ${args.key}.`
