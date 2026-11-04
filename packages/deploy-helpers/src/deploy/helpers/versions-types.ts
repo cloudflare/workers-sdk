@@ -46,6 +46,7 @@ export type ApiVersion = {
 		script_runtime: {
 			compatibility_date?: string;
 			compatibility_flags?: string[];
+			identity_receiver?: CfWorkerInit["identity_receiver"];
 			usage_model: "bundled" | "unbound" | "standard";
 			limits: CfUserLimits;
 			containers?: CfWorkerInit["containers"];

@@ -281,6 +281,7 @@ export async function getDevMiniflareOptions(
 			},
 			dev: {
 				unsafeRegisterWorker: false,
+				unsafeSuppressNativeCaller: true,
 			},
 		},
 		{
@@ -424,6 +425,7 @@ export async function getDevMiniflareOptions(
 			},
 			dev: {
 				unsafeRegisterWorker: false,
+				unsafeSuppressNativeCaller: true,
 			},
 		},
 		{
@@ -448,6 +450,7 @@ export async function getDevMiniflareOptions(
 			},
 			dev: {
 				unsafeRegisterWorker: false,
+				unsafeSuppressNativeCaller: true,
 			},
 		},
 	];
