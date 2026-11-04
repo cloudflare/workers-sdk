@@ -507,8 +507,9 @@ export const CORE_PLUGIN: Plugin = {
 		}
 		if (dev?.unsafeSuppressNativeCaller) {
 			for (const binding of workerBindings) {
-				if ("service" in binding && binding.service)
+				if ("service" in binding && binding.service) {
 					binding.service.suppressNativeCaller = true;
+				}
 			}
 		}
 		// Add additional modules (e.g. "__STATIC_CONTENT_MANIFEST") if any
