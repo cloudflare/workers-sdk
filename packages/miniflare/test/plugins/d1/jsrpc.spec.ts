@@ -311,7 +311,7 @@ test.for([
 	{
 		name: "comment-only",
 		queries: [{ sql: "-- no statement" }],
-		message: "SQL code did not contain a statement.",
+		message: "No SQL statements detected.",
 	},
 ])(
 	"query rejects a $name batch without returning partial results",

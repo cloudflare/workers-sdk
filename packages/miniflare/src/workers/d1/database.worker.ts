@@ -177,9 +177,10 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 		format: D1ResultsFormat,
 		includeCommitToken: boolean
 	): Promise<{ results: D1SuccessResponse[]; commitToken?: string }> {
-		// Filter out queries that are just comments
+		// SQLite rejects statements that are just comments, so filter them out.
+		// Match remote D1, which also filters `--` comments at offset 0.
 		queries = queries.filter(
-			(query) => query.sql.replace(/^\s+--.*/gm, "").trim().length > 0
+			(query) => query.sql.replace(/^\s*--.*/gm, "").trim().length > 0
 		);
 		if (queries.length === 0) {
 			const error = new Error("No SQL statements detected.");
