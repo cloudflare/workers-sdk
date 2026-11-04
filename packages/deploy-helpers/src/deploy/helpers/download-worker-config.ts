@@ -125,7 +125,7 @@ export async function downloadWorkerConfig(
 		entrypoint,
 		compatibility_date: serviceEnvMetadata.script.compatibility_date,
 		compatibility_flags: serviceEnvMetadata.script.compatibility_flags,
-		identity_receiver: serviceEnvMetadata.script.identity_receiver,
+		caller_identity: serviceEnvMetadata.script.caller_identity,
 		tags: serviceEnvMetadata.script.tags,
 		migration_tag: serviceEnvMetadata.script.migration_tag,
 		tail_consumers: serviceEnvMetadata.script.tail_consumers,

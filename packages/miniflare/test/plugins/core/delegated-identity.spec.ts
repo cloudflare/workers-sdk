@@ -31,13 +31,11 @@ function producer() {
 	};
 	const issuer = "https://receiver.local.test",
 		clientId = `${issuer}/client.json`;
-	const identityReceiver = {
-		delegated_requests: {
-			profile: "poppy-0.3" as const,
-			account_authorization: {
-				issuer,
-				audience: "https://api.shop.example",
-			},
+	const callerIdentity = {
+		profile: "poppy-0.3" as const,
+		accountTokens: {
+			issuer,
+			audience: "https://api.shop.example",
 		},
 	};
 	const documents = {
@@ -123,7 +121,7 @@ function producer() {
 		}
 		return headers;
 	};
-	return { identityReceiver, documents, request };
+	return { callerIdentity, documents, request };
 }
 
 for (const legacy of [false, true]) {
@@ -147,7 +145,7 @@ for (const legacy of [false, true]) {
 						host: "127.0.0.1",
 						enableDevRegistry: false,
 						cf: false,
-						identityReceiver: f.identityReceiver,
+						callerIdentity: f.callerIdentity,
 						compatibilityDate: "2026-10-31",
 					})
 				: {
@@ -159,7 +157,7 @@ for (const legacy of [false, true]) {
 								config: {
 									name: "receiver",
 									compatibilityDate: "2026-10-31",
-									identityReceiver: f.identityReceiver,
+									callerIdentity: f.callerIdentity,
 									manifest: singleModuleManifest(script),
 								},
 							},
@@ -225,7 +223,7 @@ test("tooling proxy bindings preserve HTTP verification without asserting native
 				config: {
 					name: "receiver",
 					compatibilityDate: "2026-10-31",
-					identityReceiver: f.identityReceiver,
+					callerIdentity: f.callerIdentity,
 					manifest: singleModuleManifest(receiverScript),
 				},
 			},
@@ -246,4 +244,16 @@ test("tooling proxy bindings preserve HTTP verification without asserting native
 		userId: "pairwise-user",
 		account: { subject: "account-user" },
 	});
+});
+
+test("rejects the previous local receiver key instead of dropping trust", ({
+	expect,
+}) => {
+	expect(() =>
+		convertV4MiniflareOptions({
+			modules: true,
+			script: "export default {}",
+			identityReceiver: producer().callerIdentity,
+		} as never)
+	).toThrow(/callerIdentity/);
 });

@@ -610,7 +610,7 @@ export const CORE_PLUGIN: Plugin = {
 		// its engine worker, which pairs them with an older hardcoded compatibility
 		// date that still needs the flag.
 		const configuredFlags =
-			config.identityReceiver === undefined
+			config.callerIdentity === undefined
 				? config.compatibilityFlags
 				: [
 						...new Set([

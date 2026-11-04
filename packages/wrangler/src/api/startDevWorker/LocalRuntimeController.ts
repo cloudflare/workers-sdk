@@ -173,7 +173,7 @@ export async function convertToConfigBundle(
 		format: event.bundle.entry.format,
 		compatibilityDate: event.config.compatibilityDate,
 		compatibilityFlags: event.config.compatibilityFlags,
-		identityReceiver: event.config.identityReceiver,
+		callerIdentity: event.config.callerIdentity,
 		complianceRegion: event.config.complianceRegion,
 		bindings,
 		migrations: event.config.migrations,

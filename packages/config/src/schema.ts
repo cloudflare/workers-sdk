@@ -1,6 +1,6 @@
 import {
 	isIdentityBinding,
-	parseIdentityReceiver,
+	parseCallerIdentity,
 } from "@cloudflare/workers-utils/oidc";
 import * as z from "zod";
 import { WORKFLOW_JURISDICTIONS } from "./exports";
@@ -917,17 +917,17 @@ const BaseWorkerSchema = z.strictObject({
 	name: z.string(),
 	compatibilityDate: z.string(),
 	compatibilityFlags: z.array(z.string()).optional(),
-	identityReceiver: z
+	callerIdentity: z
 		.custom<
-			import("@cloudflare/workers-utils/oidc").IdentityReceiverConfiguration
+			import("@cloudflare/workers-utils/oidc").CallerIdentityConfiguration
 		>()
 		.transform((value, ctx) => {
 			try {
-				return parseIdentityReceiver(value);
+				return parseCallerIdentity(value);
 			} catch {
 				ctx.addIssue({
 					code: "custom",
-					message: "Invalid identityReceiver configuration.",
+					message: "Invalid callerIdentity configuration.",
 				});
 				return z.NEVER;
 			}

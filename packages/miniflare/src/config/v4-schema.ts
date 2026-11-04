@@ -4,8 +4,8 @@ import {
 } from "@cloudflare/workers-shared";
 import {
 	isIdentityBinding,
-	parseIdentityReceiver,
-	type IdentityReceiverConfiguration,
+	parseCallerIdentity,
+	type CallerIdentityConfiguration,
 } from "@cloudflare/workers-utils/oidc";
 import { z } from "zod";
 import {
@@ -381,15 +381,15 @@ const V4WorkerOptionsShapeSchema = z.object({
 	rootPath: z.string().optional(),
 	compatibilityDate: z.string().optional(),
 	compatibilityFlags: z.array(z.string()).optional(),
-	identityReceiver: z
-		.custom<IdentityReceiverConfiguration>()
+	callerIdentity: z
+		.custom<CallerIdentityConfiguration>()
 		.transform((value, ctx) => {
 			try {
-				return parseIdentityReceiver(value);
+				return parseCallerIdentity(value);
 			} catch {
 				ctx.addIssue({
 					code: "custom",
-					message: "Invalid identityReceiver configuration.",
+					message: "Invalid callerIdentity configuration.",
 				});
 				return z.NEVER;
 			}
@@ -681,9 +681,17 @@ const V4WorkerOptionsShapeSchema = z.object({
 	versionMetadata: z.string().optional(),
 });
 
-export const V4WorkerOptionsSchema = V4SourceOptionsSchema.and(
-	V4WorkerOptionsShapeSchema
-);
+export const V4WorkerOptionsSchema = z.preprocess((value, ctx) => {
+	if (value && typeof value === "object" && "identityReceiver" in value) {
+		ctx.addIssue({
+			code: "custom",
+			path: ["identityReceiver"],
+			message:
+				"identityReceiver was replaced by callerIdentity. Use the flat profile/accountTokens configuration.",
+		});
+	}
+	return value;
+}, V4SourceOptionsSchema.and(V4WorkerOptionsShapeSchema));
 
 export const V4SharedOptionsSchema = z.object({
 	/** Base directory for relative worker path options; may itself be relative to cwd. */
@@ -848,7 +856,7 @@ export type V4WorkerOptionsShape = {
 	rootPath?: string;
 	compatibilityDate?: string;
 	compatibilityFlags?: string[];
-	identityReceiver?: IdentityReceiverConfiguration;
+	callerIdentity?: CallerIdentityConfiguration;
 	unsafeInspectorProxy?: boolean;
 	routes?: string[];
 	cronTriggers?: string[];

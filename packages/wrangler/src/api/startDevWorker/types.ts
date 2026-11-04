@@ -60,7 +60,7 @@ export type StartDevWorkerOptions = Omit<
 	StartDevWorkerInput,
 	"assets" | "config" | "containers" | "dev"
 > & {
-	identityReceiver?: Config["identity_receiver"];
+	callerIdentity?: Config["caller_identity"];
 	/** The configuration path of the worker */
 	config?: string;
 	/** A worker's directory. Usually where the Wrangler configuration file is located */

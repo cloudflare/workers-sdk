@@ -72,7 +72,7 @@ export function createWorkerUploadForm(
 		exports: configuredExports,
 		compatibility_date,
 		compatibility_flags,
-		identity_receiver,
+		caller_identity,
 		keepVars,
 		keepSecrets,
 		keepBindings,
@@ -109,7 +109,7 @@ export function createWorkerUploadForm(
 				},
 				...(annotations && { annotations }),
 				...(compatibility_date && { compatibility_date }),
-				...(identity_receiver && { identity_receiver }),
+				...(caller_identity && { caller_identity }),
 				...(compatibility_flags && { compatibility_flags }),
 			})
 		);
@@ -906,7 +906,7 @@ export function createWorkerUploadForm(
 					})),
 
 		...(compatibility_date && { compatibility_date }),
-		...(identity_receiver && { identity_receiver }),
+		...(caller_identity && { caller_identity }),
 		...(compatibility_flags && {
 			compatibility_flags,
 		}),

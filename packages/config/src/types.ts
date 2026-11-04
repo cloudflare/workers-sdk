@@ -405,7 +405,7 @@ export interface WorkerConfig {
 	 */
 	compatibilityFlags?: string[];
 	/** Receiver trust expectations for managed delegated request verification. */
-	identityReceiver?: import("@cloudflare/workers-utils/oidc").IdentityReceiverConfiguration;
+	callerIdentity?: import("@cloudflare/workers-utils/oidc").CallerIdentityConfiguration;
 
 	/**
 	 * The entrypoint module that will be executed.

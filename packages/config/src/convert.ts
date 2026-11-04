@@ -230,8 +230,8 @@ function convertTopLevel(
 	if (config.compatibilityFlags !== undefined) {
 		result.compatibility_flags = config.compatibilityFlags;
 	}
-	if (config.identityReceiver !== undefined) {
-		result.identity_receiver = config.identityReceiver;
+	if (config.callerIdentity !== undefined) {
+		result.caller_identity = config.callerIdentity;
 		result.compatibility_flags = [
 			...new Set([
 				...(result.compatibility_flags ?? []),

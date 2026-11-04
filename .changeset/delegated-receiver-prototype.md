@@ -16,4 +16,4 @@ Suppress native caller provenance on Vite infrastructure proxy bindings, so HTTP
 
 Use profile, trusted issuer and expected audience for normal receiver configuration. Derive the Session company identifier, discover authorization-server keys and apply documented RFC 9068/RS256/ES256 defaults privately. Retain optional explicit JWKS and tighter algorithm overrides; preserve omitted settings through upload/readback.
 
-Migrate legacy `identity_receiver` configuration to `identityReceiver` without filling omitted defaults or inheriting receiver trust into named environments.
+Migrate legacy `caller_identity` configuration to `callerIdentity` without filling omitted defaults or inheriting receiver trust into named environments.

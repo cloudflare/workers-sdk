@@ -18,7 +18,7 @@ import {
 } from "./durable-object-exports";
 import { ARTIFACTS_EVENT_TYPES, WORKFLOW_JURISDICTIONS } from "./environment";
 import { partitionExports } from "./exports";
-import { isIdentityBinding, parseIdentityReceiver } from "./oidc";
+import { isIdentityBinding, parseCallerIdentity } from "./oidc";
 import {
 	all,
 	appendEnvName,
@@ -1517,6 +1517,11 @@ function normalizeAndValidateEnvironment(
 		experimental(diagnostics, rawEnv, "unsafe");
 	}
 
+	if ("identity_receiver" in rawEnv) {
+		diagnostics.errors.push(
+			"identity_receiver was replaced by caller_identity. Use profile, accountTokens and companyId without delegated_requests."
+		);
+	}
 	const route = normalizeAndValidateRoute(diagnostics, topLevelEnv, rawEnv);
 
 	const account_id = inheritable(
@@ -2093,16 +2098,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateWorkerLoaderBinding),
 			[]
 		),
-		identity_receiver: notInheritable(
+		caller_identity: notInheritable(
 			diagnostics,
 			topLevelEnv,
 			rawConfig,
 			rawEnv,
 			envName,
-			"identity_receiver",
+			"caller_identity",
 			(_diagnostics, field, value) => {
 				try {
-					parseIdentityReceiver(value);
+					parseCallerIdentity(value);
 					return true;
 				} catch {
 					_diagnostics.errors.push(
@@ -2316,7 +2321,7 @@ function normalizeAndValidateEnvironment(
 			Object.keys(environment)
 		);
 	}
-	if (environment.identity_receiver !== undefined) {
+	if (environment.caller_identity !== undefined) {
 		environment.compatibility_flags = [
 			...new Set([
 				...environment.compatibility_flags,
@@ -6686,7 +6691,7 @@ const validatePreviewsConfig =
 				"flagship",
 				"worker_loaders",
 				"identities",
-				"identity_receiver",
+				"caller_identity",
 				"ratelimits",
 				"vpc_services",
 				"version_metadata",
