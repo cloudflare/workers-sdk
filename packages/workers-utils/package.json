@@ -102,7 +102,7 @@
 		"dotenv-expand": "13.0.0",
 		"empathic": "^2.0.0",
 		"jsonc-parser": "catalog:default",
-		"minimatch": "^5.1.0",
+		"minimatch": "^5.1.9",
 		"open": "catalog:default",
 		"signal-exit": "catalog:default",
 		"smol-toml": "catalog:default",
