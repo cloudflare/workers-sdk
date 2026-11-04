@@ -515,13 +515,13 @@ export function createCloudflareAuth(
 						`Failed to automatically retrieve account IDs for the logged in user.
 You may have incorrect permissions on your API token, or an environment variable such as CLOUDFLARE_API_TOKEN, CLOUDFLARE_API_KEY, or CLOUDFLARE_EMAIL may be set to an invalid value.
 Check your environment and unset or correct any Cloudflare credential variables, or run \`${descriptor.commands.login}\` to re-authenticate.
-You can also skip this account check by adding an \`account_id\` in your ${descriptor.getConfigFileLabel()} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
+You can also skip this account check by adding an account ID to your ${descriptor.getConfigFileLabel()} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
 						{ telemetryMessage: "user account fetch permission denied" }
 					);
 				}
 				throw new UserError(
 					`Failed to automatically retrieve account IDs for the logged in user.
-You may have incorrect permissions on your API token, or your authentication may have expired. Try running \`${descriptor.commands.login}\` to re-authenticate. You can also skip this account check by adding an \`account_id\` in your ${descriptor.getConfigFileLabel()} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
+You may have incorrect permissions on your API token, or your authentication may have expired. Try running \`${descriptor.commands.login}\` to re-authenticate. You can also skip this account check by adding an account ID to your ${descriptor.getConfigFileLabel()} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
 					{ telemetryMessage: "user account fetch permission denied" }
 				);
 			} else {
@@ -539,7 +539,7 @@ You may have incorrect permissions on your API token, or your authentication may
 		if (usableAccounts.length === 0 && throwOnEmpty) {
 			throw new UserError(
 				`Failed to automatically retrieve account IDs for the logged in user.
-In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your ${descriptor.getConfigFileLabel()} file.
+In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or in your ${descriptor.getConfigFileLabel()} file.
 Alternatively, try running \`${descriptor.commands.login}\` to re-authenticate.`,
 				{ telemetryMessage: "user account fetch empty" }
 			);
@@ -561,7 +561,7 @@ Alternatively, try running \`${descriptor.commands.login}\` to re-authenticate.`
 		if (config.account_id) {
 			return validateAccountId(
 				config.account_id,
-				`set as \`account_id\` in your ${descriptor.getConfigFileLabel()} file`
+				`set in your ${descriptor.getConfigFileLabel()} file`
 			);
 		}
 		const envAccountId = getAccountIdFromEnv();
@@ -610,7 +610,7 @@ Alternatively, try running \`${descriptor.commands.login}\` to re-authenticate.`
 				const redactAccountName = isCI();
 				throw new UserError(
 					`More than one account available but unable to select one in non-interactive mode.
-Please set the appropriate \`account_id\` in your ${descriptor.getConfigFileLabel()} file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
+Please set the appropriate account ID in your ${descriptor.getConfigFileLabel()} file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 Available accounts are (\`<name>\`: \`<account_id>\`):
 ${accounts
 	.map(
