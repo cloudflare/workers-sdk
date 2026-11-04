@@ -5,8 +5,8 @@ import {
 	type ConnectionResource,
 } from "./connections";
 export {
-	parseIdentityReceiver,
-	type IdentityReceiverConfiguration,
+	parseCallerIdentity,
+	type CallerIdentityConfiguration,
 } from "./receiver";
 export type {
 	ConnectionBindingConfig,

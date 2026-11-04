@@ -1,17 +1,13 @@
-/** Receiver expectations arrive through protected configuration, never a request. */
-export interface IdentityReceiverConfiguration {
-	delegated_requests: {
-		profile: "poppy-0.3";
-		company_id?: string;
-		account_authorization?: {
-			issuer: string;
-			audience: string;
-			access_tokens?: {
-				profile?: "rfc9068";
-				jwks_uri?: string;
-				algorithms?: ("RS256" | "ES256")[];
-			};
-		};
+/** Caller expectations arrive through protected configuration, never a request. */
+export interface CallerIdentityConfiguration {
+	profile: "poppy-0.3";
+	companyId?: string;
+	accountTokens?: {
+		issuer: string;
+		audience: string;
+		profile?: "rfc9068";
+		jwksUri?: string;
+		algorithms?: ("RS256" | "ES256")[];
 	};
 }
 
@@ -29,7 +25,7 @@ function record(
 			(key) => !required.includes(key) && !optional.includes(key)
 		)
 	) {
-		throw new TypeError("Invalid identity receiver configuration.");
+		throw new TypeError("Invalid callerIdentity configuration.");
 	}
 	return value as Record<string, unknown>;
 }
@@ -75,88 +71,70 @@ export function publicIdentityURL(value: unknown): string {
 	return value;
 }
 
-/** Return a detached, strict configuration so later mutations cannot change trust. */
-export function parseIdentityReceiver(
+/** Return detached, strict expectations so later mutations cannot change trust. */
+export function parseCallerIdentity(
 	value: unknown
-): IdentityReceiverConfiguration {
+): CallerIdentityConfiguration {
 	if (new TextEncoder().encode(JSON.stringify(value)).length > 8192) {
-		throw new TypeError(
-			"Identity receiver configuration exceeds its size limit."
-		);
+		throw new TypeError("callerIdentity configuration exceeds its size limit.");
 	}
-	const root = record(value, ["delegated_requests"]);
-	const delegated = record(
-		root["delegated_requests"],
-		["profile"],
-		["company_id", "account_authorization"]
-	);
-	if (delegated["profile"] !== "poppy-0.3") {
-		throw new TypeError("Unsupported delegated identity profile.");
+	const configured = record(value, ["profile"], ["companyId", "accountTokens"]);
+	if (configured["profile"] !== "poppy-0.3") {
+		throw new TypeError("Unsupported caller identity profile.");
 	}
-	const company_id = Object.hasOwn(delegated, "company_id")
-		? publicIdentityURL(delegated["company_id"])
+	const companyId = Object.hasOwn(configured, "companyId")
+		? publicIdentityURL(configured["companyId"])
 		: undefined;
-	const result: IdentityReceiverConfiguration = {
-		delegated_requests: {
-			profile: "poppy-0.3",
-			...(company_id === undefined ? {} : { company_id }),
-		},
+	const result: CallerIdentityConfiguration = {
+		profile: "poppy-0.3",
+		...(companyId === undefined ? {} : { companyId }),
 	};
-	if (Object.hasOwn(delegated, "account_authorization")) {
-		const account = record(
-			delegated["account_authorization"],
+	if (Object.hasOwn(configured, "accountTokens")) {
+		const tokens = record(
+			configured["accountTokens"],
 			["issuer", "audience"],
-			["access_tokens"]
+			["profile", "jwksUri", "algorithms"]
 		);
-		const issuer = publicIdentityURL(account["issuer"]);
-		const audience = account["audience"];
+		const issuer = publicIdentityURL(tokens["issuer"]);
+		const audience = tokens["audience"];
 		if (
-			(company_id !== undefined && issuer !== company_id) ||
+			(companyId !== undefined && issuer !== companyId) ||
 			typeof audience !== "string" ||
 			audience.length > 2048 ||
 			hasUnsafeURICharacters(audience) ||
 			new URL(audience).hash
 		) {
-			throw new TypeError("Invalid account issuer or resource audience.");
+			throw new TypeError("Invalid account token issuer or resource audience.");
 		}
-		const authorization: NonNullable<
-			IdentityReceiverConfiguration["delegated_requests"]["account_authorization"]
-		> = { issuer, audience };
-		if (Object.hasOwn(account, "access_tokens")) {
-			const tokens = record(
-				account["access_tokens"],
-				[],
-				["profile", "jwks_uri", "algorithms"]
-			);
-			if (Object.hasOwn(tokens, "profile") && tokens["profile"] !== "rfc9068") {
-				throw new TypeError("Unsupported account access-token profile.");
-			}
-			const algorithms = tokens["algorithms"];
-			if (
-				Object.hasOwn(tokens, "algorithms") &&
-				(!Array.isArray(algorithms) ||
-					!algorithms.length ||
-					algorithms.length > 2 ||
-					new Set(algorithms).size !== algorithms.length ||
-					algorithms.some((alg) => alg !== "RS256" && alg !== "ES256"))
-			) {
-				throw new TypeError("Unsupported account access-token algorithms.");
-			}
-			authorization.access_tokens = {
-				...(Object.hasOwn(tokens, "profile")
-					? { profile: "rfc9068" as const }
-					: {}),
-				...(Object.hasOwn(tokens, "jwks_uri")
-					? { jwks_uri: publicIdentityURL(tokens["jwks_uri"]) }
-					: {}),
-				...(Array.isArray(algorithms)
-					? { algorithms: [...algorithms] as ("RS256" | "ES256")[] }
-					: {}),
-			};
+		if (Object.hasOwn(tokens, "profile") && tokens["profile"] !== "rfc9068") {
+			throw new TypeError("Unsupported account token profile.");
 		}
-		result.delegated_requests.account_authorization = authorization;
-	} else if (company_id === undefined) {
-		throw new TypeError("Set company_id when account authorization is absent.");
+		const algorithms = tokens["algorithms"];
+		if (
+			Object.hasOwn(tokens, "algorithms") &&
+			(!Array.isArray(algorithms) ||
+				!algorithms.length ||
+				algorithms.length > 2 ||
+				new Set(algorithms).size !== algorithms.length ||
+				algorithms.some((alg) => alg !== "RS256" && alg !== "ES256"))
+		) {
+			throw new TypeError("Unsupported account token algorithms.");
+		}
+		result.accountTokens = {
+			issuer,
+			audience,
+			...(Object.hasOwn(tokens, "profile")
+				? { profile: "rfc9068" as const }
+				: {}),
+			...(Object.hasOwn(tokens, "jwksUri")
+				? { jwksUri: publicIdentityURL(tokens["jwksUri"]) }
+				: {}),
+			...(Array.isArray(algorithms)
+				? { algorithms: [...algorithms] as ("RS256" | "ES256")[] }
+				: {}),
+		};
+	} else if (companyId === undefined) {
+		throw new TypeError("Set companyId when accountTokens is absent.");
 	}
 	return result;
 }

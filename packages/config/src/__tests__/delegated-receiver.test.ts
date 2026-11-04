@@ -1,14 +1,13 @@
-import { parseIdentityReceiver } from "@cloudflare/workers-utils/oidc";
+import { parseCallerIdentity } from "@cloudflare/workers-utils/oidc";
 import { it } from "vitest";
 import { convertToWranglerConfig } from "../convert";
+import { InputWorkerSchema } from "../schema";
 
 const receiver = {
-	delegated_requests: {
-		profile: "poppy-0.3" as const,
-		account_authorization: {
-			issuer: "https://auth.shop.example",
-			audience: "https://api.shop.example",
-		},
+	profile: "poppy-0.3" as const,
+	accountTokens: {
+		issuer: "https://auth.shop.example",
+		audience: "https://api.shop.example",
 	},
 };
 it("projects receiver trust into upload metadata and gates unsupported runtimes", ({
@@ -18,11 +17,11 @@ it("projects receiver trust into upload metadata and gates unsupported runtimes"
 		worker: {
 			name: "receiver",
 			compatibilityDate: "2026-10-31",
-			identityReceiver: receiver,
+			callerIdentity: receiver,
 		},
 		containers: [],
 	});
-	expect(result.identity_receiver).toEqual(receiver);
+	expect(result.caller_identity).toEqual(receiver);
 	expect(result.compatibility_flags).toEqual([
 		"enable_workload_identity_context",
 		"enable_delegated_identity",
@@ -36,29 +35,67 @@ it("rejects unsupported profiles, inferred trust and private discovery URLs", ({
 		{},
 		{ ...receiver, extra: true },
 		{
-			delegated_requests: { ...receiver.delegated_requests, profile: "latest" },
+			...receiver,
+			profile: "latest",
 		},
 		{
-			delegated_requests: {
-				...receiver.delegated_requests,
-				company_id: "http://127.0.0.1",
-			},
+			...receiver,
+			companyId: "http://127.0.0.1",
 		},
 		{
-			delegated_requests: {
-				...receiver.delegated_requests,
-				account_authorization: null,
-			},
+			...receiver,
+			accountTokens: null,
 		},
 	]) {
-		expect(() => parseIdentityReceiver(value)).toThrow();
+		expect(() => parseCallerIdentity(value)).toThrow();
 	}
-	const detached = parseIdentityReceiver(receiver);
-	detached.delegated_requests.account_authorization = {
+	const detached = parseCallerIdentity(receiver);
+	detached.accountTokens = {
 		issuer: "https://other.example",
 		audience: "urn:other",
 	};
-	expect(receiver.delegated_requests.account_authorization.issuer).toBe(
-		"https://auth.shop.example"
+	expect(receiver.accountTokens.issuer).toBe("https://auth.shop.example");
+});
+
+it("round-trips explicit camelCase overrides and rejects the old shape", ({
+	expect,
+}) => {
+	const callerIdentity = {
+		profile: "poppy-0.3" as const,
+		companyId: "https://auth.shop.example",
+		accountTokens: {
+			...receiver.accountTokens,
+			profile: "rfc9068" as const,
+			jwksUri: "https://auth.shop.example/jwks",
+			algorithms: ["ES256" as const],
+		},
+	};
+	const worker = {
+		name: "receiver",
+		compatibilityDate: "2026-10-31",
+		callerIdentity,
+	};
+	expect(InputWorkerSchema.parse(worker).callerIdentity).toEqual(
+		callerIdentity
 	);
+	expect(
+		convertToWranglerConfig({ worker, containers: [] }).caller_identity
+	).toEqual(callerIdentity);
+	expect(
+		InputWorkerSchema.safeParse({ ...worker, identityReceiver: receiver })
+			.success
+	).toBe(false);
+	for (const value of [
+		{ delegated_requests: receiver },
+		{ ...receiver, company_id: "https://auth.shop.example" },
+		{
+			...receiver,
+			accountTokens: {
+				...receiver.accountTokens,
+				access_tokens: { jwks_uri: "https://auth.shop.example/jwks" },
+			},
+		},
+	]) {
+		expect(() => parseCallerIdentity(value)).toThrow();
+	}
 });

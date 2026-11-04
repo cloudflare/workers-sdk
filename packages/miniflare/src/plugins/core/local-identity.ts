@@ -108,7 +108,7 @@ export async function createLocalIdentityGraph(
 ): Promise<LocalIdentityGraph | undefined> {
 	const owningWorker = workers.find(
 		(w) =>
-			w.config.identityReceiver !== undefined ||
+			w.config.callerIdentity !== undefined ||
 			getEnvBindingsOfType(w.config, "identity").length ||
 			w.config.compatibilityFlags?.includes("enable_workload_identity_context")
 	);
@@ -255,16 +255,16 @@ export async function createLocalIdentityGraph(
 				return result;
 			},
 			receiver(worker) {
-				const identityReceiver = workers.find(
+				const callerIdentity = workers.find(
 					(options) => options.config.name === worker
-				)?.config.identityReceiver;
+				)?.config.callerIdentity;
 				return {
 					name: "core:identity:verifier",
 					entrypoint: "WorkloadVerifier",
 					props: {
 						json: JSON.stringify({
 							receiverAccountId: state.accountId,
-							...(identityReceiver === undefined ? {} : { identityReceiver }),
+							...(callerIdentity === undefined ? {} : { callerIdentity }),
 							receiverWorkerId: metadata.workers[worker].subject.slice(7),
 						}),
 					},

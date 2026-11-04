@@ -7,7 +7,7 @@ import type { Json } from "../types";
  * mirror the changes there.
  */
 import type { IdentityBindingConfig } from "./oidc";
-import type { IdentityReceiverConfiguration } from "./receiver";
+import type { CallerIdentityConfiguration } from "./receiver";
 
 /**
  * The `Environment` interface declares all the configuration fields that
@@ -1059,7 +1059,7 @@ type ConnectHandlerConfig = TcpConnectHandlerConfig | UdpConnectHandlerConfig;
  */
 export interface EnvironmentNonInheritable {
 	/** Receiver configuration is versioned with the Worker and never inferred from credentials. */
-	identity_receiver?: IdentityReceiverConfiguration;
+	caller_identity?: CallerIdentityConfiguration;
 	/** Platform-derived workload capabilities. An optional audience enables ordinary token issuance.
 	 * @default []
 	 * @nonInheritable
