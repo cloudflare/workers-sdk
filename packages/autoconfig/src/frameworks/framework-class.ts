@@ -46,6 +46,17 @@ export abstract class Framework {
 	configurationDescription?: string;
 
 	/**
+	 * Describes the framework configuration autoconfig will run for a target. The summary
+	 * shows it before the user confirms the setup.
+	 *
+	 * @param _target The configuration target
+	 * @returns The description, or `undefined` to use the generic one
+	 */
+	getConfigurationDescription(_target: AutoConfigTarget): string | undefined {
+		return this.configurationDescription;
+	}
+
+	/**
 	 * Validates the installed framework version against the supported range and
 	 * stores it for later access via the `frameworkVersion` getter.
 	 * Warns via the context logger if the version exceeds `maximumKnownMajorVersion`.

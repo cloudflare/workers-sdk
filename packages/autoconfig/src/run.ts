@@ -726,7 +726,7 @@ export async function buildOperationsSummary(
 		})
 	) {
 		summary.frameworkConfiguration =
-			autoConfigDetails.framework.configurationDescription ??
+			autoConfigDetails.framework.getConfigurationDescription(target) ??
 			`Configuring project for ${autoConfigDetails.framework.name}`;
 
 		logger.log(`🛠️  ${summary.frameworkConfiguration}`);

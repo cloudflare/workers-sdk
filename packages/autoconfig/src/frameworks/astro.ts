@@ -17,7 +17,7 @@ import * as recast from "recast";
 import semiver from "semiver";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { Framework } from "./framework-class";
-import type { AutoConfigContext } from "../context";
+import type { AutoConfigContext, AutoConfigTarget } from "../context";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -128,6 +128,12 @@ export class Astro extends Framework {
 
 	configurationDescription =
 		'Configuring project for Astro with "astro add cloudflare"';
+
+	override getConfigurationDescription(target: AutoConfigTarget): string {
+		return target === "cf"
+			? 'Configuring project for Astro: installing "astro@beta", then running "astro add @astrojs/cloudflare@beta"'
+			: this.configurationDescription;
+	}
 }
 
 /**

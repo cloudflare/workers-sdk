@@ -311,6 +311,34 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			expect(summary.frameworkId).toBe("astro");
 		});
 
+		test("shows the beta installs Astro's cf configuration runs", async ({
+			expect,
+		}) => {
+			const summary = await buildOperationsSummary(
+				{
+					workerName: "worker-name",
+					projectPath: "<PROJECT_PATH>",
+					framework: new Astro({ id: "astro", name: "Astro" }),
+					configured: false,
+					outputDir: "dist",
+					packageManager: NpmPackageManager,
+				},
+				testWorkerConfig,
+				{ workerConfig: testWorkerConfig },
+				{
+					build: "npm run build",
+					deploy: "npx cf deploy",
+				},
+				false,
+				"cf",
+				context
+			);
+
+			expect(summary.frameworkConfiguration).toBe(
+				'Configuring project for Astro: installing "astro@beta", then running "astro add @astrojs/cloudflare@beta"'
+			);
+		});
+
 		test("doesn't show the framework specific configuration step for the Static framework", async ({
 			expect,
 		}) => {
