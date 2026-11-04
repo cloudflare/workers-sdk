@@ -1051,15 +1051,27 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				expect(std.out).toContain("--dry-run: exiting now");
 			});
 
-			it("--outdir writes bundled output", async ({ expect }) => {
-				writeWranglerConfig();
-				writeWorkerSource();
-				mockUploadWorkerRequest();
-				mockSubDomainRequest();
-				await runWrangler("deploy ./index.js --outdir dist");
-				expect(fs.existsSync("dist")).toBe(true);
-				expect(fs.existsSync(path.join("dist", "README.md"))).toBe(true);
-			});
+			it.for([
+				["0", "1970-01-01T00:00:00.000Z"],
+				[undefined, "2030-01-02T03:04:05.000Z"],
+			] as const)(
+				"--outdir writes bundled output with SOURCE_DATE_EPOCH=%s",
+				async ([sourceDateEpoch, generatedAt], { expect, onTestFinished }) => {
+					vi.stubEnv("SOURCE_DATE_EPOCH", sourceDateEpoch);
+					vi.setSystemTime("2030-01-02T03:04:05.000Z");
+					onTestFinished(() => {
+						vi.useRealTimers();
+					});
+					writeWranglerConfig();
+					writeWorkerSource();
+					mockUploadWorkerRequest();
+					mockSubDomainRequest();
+					await runWrangler("deploy ./index.js --outdir dist");
+					expect(fs.readFileSync("dist/README.md", "utf-8")).toBe(
+						`This folder contains the built output assets for the worker "test-name" generated at ${generatedAt}.`
+					);
+				}
+			);
 
 			it("positional script arg overrides config.main", async ({ expect }) => {
 				writeWranglerConfig({ main: "./nope.js" });

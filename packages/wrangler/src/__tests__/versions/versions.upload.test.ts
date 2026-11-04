@@ -2138,6 +2138,7 @@ describe("versions upload", () => {
 		});
 
 		test("should write bundled output to --outdir", async ({ expect }) => {
+			vi.stubEnv("SOURCE_DATE_EPOCH", "1700000000");
 			mockGetScript();
 			mockUploadVersion(false);
 
@@ -2151,7 +2152,9 @@ describe("versions upload", () => {
 
 			expect(fs.existsSync("dist")).toBe(true);
 			expect(fs.existsSync("dist/README.md")).toBe(true);
-			expect(fs.readFileSync("dist/README.md", "utf-8")).toContain("test-name");
+			expect(fs.readFileSync("dist/README.md", "utf-8")).toBe(
+				'This folder contains the built output assets for the worker "test-name" generated at 2023-11-14T22:13:20.000Z.'
+			);
 		});
 
 		test("should write form data to --outfile", async ({ expect }) => {

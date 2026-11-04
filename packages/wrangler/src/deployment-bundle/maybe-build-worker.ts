@@ -101,9 +101,16 @@ export async function buildWorker(
 		// so let's first ensure it exists
 		mkdirSync(props.outdir, { recursive: true });
 		const readmePath = path.join(props.outdir, "README.md");
+		// Honor reproducible-build timestamps without changing the default build note.
+		const sourceDateEpoch = process.env.SOURCE_DATE_EPOCH;
+		const generatedAt = new Date(
+			sourceDateEpoch === undefined
+				? Date.now()
+				: Number(sourceDateEpoch) * 1000
+		);
 		writeFileSync(
 			readmePath,
-			`This folder contains the built output assets for the worker "${props.name}" generated at ${new Date().toISOString()}.`
+			`This folder contains the built output assets for the worker "${props.name}" generated at ${generatedAt.toISOString()}.`
 		);
 	}
 
