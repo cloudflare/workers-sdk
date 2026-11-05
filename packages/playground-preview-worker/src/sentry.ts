@@ -2,6 +2,20 @@ import { Toucan } from "toucan-js";
 import { ZodError } from "zod";
 import { HttpError, ZodSchemaError } from "./errors";
 
+/**
+ * The part of the preview worker that reported an event: the entry Worker that
+ * receives requests, or the `UserSession` Durable Object behind it.
+ */
+export type SentryHop = "entry" | "session";
+
+/**
+ * The runtime replaces the details of its own internal failures with a random
+ * reference, which makes every message unique. Sentry groups by message when an
+ * event has no stack, so without a fixed fingerprint each failure becomes a new
+ * issue and a new alert.
+ */
+const RUNTIME_INTERNAL_ERROR = /^internal error; reference = (\S+)/;
+
 export function handleException(e: unknown, sentry: Toucan): Response {
 	console.error(e);
 	if (e instanceof ZodError) {
@@ -27,15 +41,30 @@ export function handleException(e: unknown, sentry: Toucan): Response {
 		);
 	}
 }
-export function setupSentry(
-	request: Request,
-	context: ExecutionContext | undefined,
-	dsn: string,
-	clientId: string,
-	clientSecret: string
-): Toucan {
-	return new Toucan({
-		dsn,
+
+/**
+ * Creates the Sentry client for one request, tagged with the hop that handles it.
+ *
+ * @param options.request The request being handled, recorded with an allowlist of headers.
+ * @param options.context The execution context, when the hop has one, so events are sent before the request ends.
+ * @param options.env The Worker environment, which supplies the DSN, Access credentials and version metadata.
+ * @param options.hop The part of the preview worker that handles the request.
+ * @returns A Sentry client scoped to the request.
+ */
+export function setupSentry({
+	request,
+	context,
+	env,
+	hop,
+}: {
+	request: Request;
+	context: ExecutionContext | undefined;
+	env: Env;
+	hop: SentryHop;
+}): Toucan {
+	const sentry = new Toucan({
+		dsn: env.SENTRY_DSN,
+		release: env.CF_VERSION_METADATA.id,
 		request,
 		context,
 		requestDataOptions: {
@@ -47,13 +76,51 @@ export function setupSentry(
 				"content-length",
 				"content-type",
 				"host",
+				// These tell a browser embedding a preview apart from a script calling it.
+				"origin",
+				"referer",
+				"sec-fetch-dest",
+				"sec-fetch-mode",
+				"sec-fetch-site",
 			],
 		},
 		transportOptions: {
 			headers: {
-				"CF-Access-Client-ID": clientId,
-				"CF-Access-Client-Secret": clientSecret,
+				"CF-Access-Client-ID": env.SENTRY_ACCESS_CLIENT_ID,
+				"CF-Access-Client-Secret": env.SENTRY_ACCESS_CLIENT_SECRET,
 			},
 		},
+		beforeSend(event) {
+			const message = event.exception?.values?.[0]?.value;
+			const reference =
+				message === undefined
+					? undefined
+					: RUNTIME_INTERNAL_ERROR.exec(message)?.[1];
+			if (reference !== undefined) {
+				event.fingerprint = ["runtime-internal-error", hop];
+				// Keep each reference searchable, so it can be traced in the runtime's logs.
+				event.tags = { ...event.tags, runtime_reference: reference };
+			}
+			return event;
+		},
 	});
+	sentry.setTag("hop", hop);
+	return sentry;
+}
+
+/**
+ * Derives a stable tag for a preview session. The session ID is also the bearer
+ * token that authorises preview requests, so it must not be sent to Sentry.
+ *
+ * @param sessionId The `UserSession` Durable Object ID.
+ * @returns The first 16 hex characters of the ID's SHA-256 hash.
+ */
+export async function hashSessionId(sessionId: string): Promise<string> {
+	const digest = await crypto.subtle.digest(
+		"SHA-256",
+		new TextEncoder().encode(sessionId)
+	);
+	return [...new Uint8Array(digest).slice(0, 8)]
+		.map((byte) => byte.toString(16).padStart(2, "0"))
+		.join("");
 }
