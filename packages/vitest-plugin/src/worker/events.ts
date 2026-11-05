@@ -1,7 +1,11 @@
-import { exports } from "cloudflare:workers";
+import { exports, waitUntil as nativeWaitUntil } from "cloudflare:workers";
 import { env } from "./env";
 import { getCtxExportsProxy, isCtxExportsEnabled } from "./patch-ctx";
-import { registerGlobalWaitUntil, waitForWaitUntil } from "./wait-until";
+import {
+	handlerContextStore,
+	registerGlobalWaitUntil,
+	waitForWaitUntil,
+} from "./wait-until";
 
 // `workerd` doesn't allow these internal classes to be constructed directly.
 // To replicate this behaviour require this unique symbol to be specified as the
@@ -40,8 +44,36 @@ class ExecutionContext {
 
 	passThroughOnException(): void {}
 }
+
+// A unit test calling `worker.fetch(request, env, ctx)` directly runs the
+// handler outside any handler context, so `waitUntil()` from
+// `cloudflare:workers` can't tell which `ExecutionContext` the work belongs to.
+// Assume the most recently created one, which is right when a test creates a
+// context and passes it straight to the handler.
+let latestExecutionContext: ExecutionContext | undefined;
 export function createExecutionContext(): ExecutionContext {
-	return new ExecutionContext(kConstructFlag);
+	latestExecutionContext = new ExecutionContext(kConstructFlag);
+	return latestExecutionContext;
+}
+
+/**
+ * Replaces `waitUntil()` from `cloudflare:workers` in modules Vitest loads, so
+ * `waitOnExecutionContext()` waits for work passed to it too.
+ */
+export function waitUntil(promise: Promise<unknown>): void {
+	const handlerContext = handlerContextStore.getStore();
+	if (handlerContext !== undefined) {
+		// `patchAndRunWithHandlerContext()` ensures handler `waitUntil()` calls
+		// `registerGlobalWaitUntil()` and workerd's own `waitUntil()`
+		handlerContext.waitUntil(promise);
+		return;
+	}
+	if (latestExecutionContext === undefined) {
+		registerGlobalWaitUntil(promise);
+	} else {
+		latestExecutionContext.waitUntil(promise);
+	}
+	nativeWaitUntil(promise);
 }
 
 function isExecutionContextLike(v: unknown): v is { [kWaitUntil]: unknown[] } {

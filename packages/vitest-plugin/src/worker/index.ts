@@ -7,6 +7,7 @@ import {
 	maybeHandleRunRequest,
 	registerHandlerAndGlobalWaitUntil,
 	runInRunnerObject,
+	waitUntil,
 } from "cloudflare:test-internal";
 import { DurableObject } from "cloudflare:workers";
 import * as devalue from "devalue";
@@ -33,6 +34,7 @@ type RunInlinedModule = (
 
 interface ModuleEvaluator {
 	createRequire?: CreateRequire;
+	runExternalModule?: (id: string) => Promise<unknown>;
 	runInlinedModule?: RunInlinedModule;
 	options?: { moduleExecutionInfo?: Map<string, unknown> };
 }
@@ -496,6 +498,32 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 						__console.warn(
 							"[vitest-plugin] Could not patch module runner createRequire. " +
 								"Relative require() may fail when the project path contains encoded characters."
+						);
+					}
+					if (runner.evaluator?.runExternalModule) {
+						const originalRunExternalModule =
+							runner.evaluator.runExternalModule.bind(runner.evaluator);
+						// `waitUntil()` from `cloudflare:workers` goes straight to workerd,
+						// so `waitOnExecutionContext()` would never see its work. Vitest
+						// externalises `cloudflare:*` imports, so give the modules it loads
+						// a `waitUntil()` that registers its work with the plugin too.
+						runner.evaluator.runExternalModule = async (id) => {
+							const exports = await originalRunExternalModule(id);
+							if (id !== "cloudflare:workers") {
+								return exports;
+							}
+							return new Proxy(exports as object, {
+								get(target, key, receiver) {
+									return key === "waitUntil"
+										? waitUntil
+										: Reflect.get(target, key, receiver);
+								},
+							});
+						};
+					} else {
+						__console.warn(
+							"[vitest-plugin] Could not patch module runner runExternalModule. " +
+								"waitOnExecutionContext() won't wait for waitUntil() from cloudflare:workers."
 						);
 					}
 					if (

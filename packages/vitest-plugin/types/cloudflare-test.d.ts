@@ -142,6 +142,11 @@ declare module "cloudflare:test" {
 	 * Waits for all `ExecutionContext#waitUntil()`ed `Promise`s to settle. Only
 	 * accepts `ExecutionContext`s returned by `createExecutionContext()` or
 	 * `EventContext`s return by `createPagesEventContext()`.
+	 *
+	 * Also waits for `Promise`s passed to `waitUntil()` from `cloudflare:workers`
+	 * outside a handler reached through `exports`/`SELF`, such as while calling
+	 * `worker.fetch(request, env, ctx)` directly. These are attributed to the
+	 * most recently created `ExecutionContext`.
 	 */
 	export function waitOnExecutionContext(
 		ctx: ExecutionContext | EventContext<Cloudflare.Env, string, unknown>
