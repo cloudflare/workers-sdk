@@ -17,9 +17,9 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "0.51.1",
-		"@prisma/adapter-d1": "^7.0.0",
-		"@prisma/client": "^7.0.0",
-		"prisma": "^7.0.0",
+		"@prisma/adapter-d1": "^7.6.0",
+		"@prisma/client": "^7.6.0",
+		"prisma": "^7.6.0",
 		"typescript": "catalog:default",
 		"vite": "catalog:default",
 		"wrangler": "4.151.0"

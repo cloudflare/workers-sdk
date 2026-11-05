@@ -24,6 +24,10 @@ allowBuilds:
 overrides:
   "@types/node": $@types/node
   "@types/node>undici-types": catalog:default
+  # @aws-sdk/core pins 4.4.1 in the retained S3 playground dependencies.
+  "@aws-sdk/core@3>fast-xml-parser": "^4.5.5"
+  # Verdaccio pins 4.17.21 in the retained mock npm registry.
+  "lodash@<4.18.1": "^4.18.1"
 patchedDependencies:
   toucan-js@4.0.0: patches/toucan-js@4.0.0.patch
   youch@4.1.0-beta.10: patches/youch@4.1.0-beta.10.patch
