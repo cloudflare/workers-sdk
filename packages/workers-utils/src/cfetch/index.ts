@@ -59,6 +59,7 @@ export type FetchPagedListResultFetcher = <ResponseType>(
 function logHeaders(headers: Headers, logger: Logger): void {
 	const clone = cloneHeaders(headers);
 	clone.delete("Authorization");
+	clone.delete("X-Auth-Key");
 	logger.debugWithSanitization?.(
 		"HEADERS:",
 		JSON.stringify(redactCustomApiHeaders(clone), null, 2)

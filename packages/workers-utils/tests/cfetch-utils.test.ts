@@ -1,4 +1,4 @@
-import { FormData, Response } from "undici";
+import { FormData, Headers, Response } from "undici";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	extractAccountTag,
@@ -55,6 +55,39 @@ describe("performApiFetchBase", () => {
 		vi.unstubAllEnvs();
 		vi.restoreAllMocks();
 	});
+
+	it.for(["true", "false"])(
+		"omits authentication headers from HEADERS diagnostics with sanitization=%s",
+		async (sanitize, { expect }) => {
+			vi.stubEnv("WRANGLER_LOG_SANITIZE", sanitize);
+			const logger = createLogger();
+			await performApiFetchBase(
+				COMPLIANCE_REGION_CONFIG_UNKNOWN,
+				"/test",
+				{
+					headers: {
+						authorization: "Bearer token",
+						"x-AUTH-key": "global-key",
+					},
+				},
+				"test-agent",
+				logger,
+				undefined,
+				undefined,
+				{ apiToken: "test-token" }
+			);
+			expect(logger.debugWithSanitization).toHaveBeenCalledWith(
+				"HEADERS:",
+				expect.not.stringContaining('"x-auth-key"')
+			);
+			expect(logger.debugWithSanitization).toHaveBeenCalledWith(
+				"HEADERS:",
+				expect.not.stringContaining('"authorization"')
+			);
+			const headers = new Headers(fetchMock.mock.calls[0]?.[1].headers);
+			expect(headers.get("x-auth-key")).toBe("global-key");
+		}
+	);
 
 	it("preserves the sanitized FormData body hint without materializing the body", async ({
 		expect,

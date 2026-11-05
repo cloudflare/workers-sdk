@@ -27,6 +27,7 @@ async function logRequest(request: Request, init?: RequestInit) {
 	logger.debug(`-- START CF API REQUEST: ${request.method} ${request.url}`);
 	const logRequestHeaders = cloneHeaders(request.headers);
 	logRequestHeaders.delete("Authorization");
+	logRequestHeaders.delete("X-Auth-Key");
 	logger.debugWithSanitization(
 		"HEADERS:",
 		JSON.stringify(redactCustomApiHeaders(logRequestHeaders), null, 2)
@@ -60,6 +61,7 @@ async function logResponse(response: Response) {
 	);
 	const logResponseHeaders = cloneHeaders(response.headers);
 	logResponseHeaders.delete("Authorization");
+	logResponseHeaders.delete("X-Auth-Key");
 	logger.debugWithSanitization(
 		"HEADERS:",
 		JSON.stringify(redactCustomApiHeaders(logResponseHeaders), null, 2)

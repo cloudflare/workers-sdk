@@ -27,8 +27,9 @@ describe("custom API headers", () => {
 			vi.stubEnv("WRANGLER_LOG_SANITIZE", sanitize);
 			vi.stubEnv(
 				"CLOUDFLARE_API_HEADERS",
-				'{"X-Custom-Header":"configured-secret","User-Agent":"custom-agent"}'
+				'{"X-Custom-Header":"configured-secret","User-Agent":"custom-agent","X-Auth-Key":"request-auth-key"}'
 			);
+			const diagnostics = vi.spyOn(logger, "debugWithSanitization");
 			let requests = 0;
 			msw.use(
 				http.get("*/accounts", ({ request }) => {
@@ -37,11 +38,20 @@ describe("custom API headers", () => {
 						"configured-secret"
 					);
 					expect(request.headers.get("user-agent")).toBe("custom-agent");
-					return HttpResponse.json({
-						success: true,
-						result: [],
-						result_info: { page: 1, total_pages: 1 },
-					});
+					expect(request.headers.get("x-auth-key")).toBe("request-auth-key");
+					return HttpResponse.json(
+						{
+							success: true,
+							result: [],
+							result_info: { page: 1, total_pages: 1 },
+						},
+						{
+							headers: {
+								"X-AUTH-KEY": "response-auth-key",
+								Authorization: "response-token",
+							},
+						}
+					);
 				})
 			);
 			await fetchResult(COMPLIANCE_REGION_CONFIG_UNKNOWN, "/accounts", {
@@ -51,6 +61,14 @@ describe("custom API headers", () => {
 				COMPLIANCE_REGION_CONFIG_UNKNOWN
 			).accounts.list();
 			expect(requests).toBe(2);
+			const headerDiagnostics = diagnostics.mock.calls.filter(
+				([label]) => label === "HEADERS:"
+			);
+			expect(headerDiagnostics).toHaveLength(4);
+			for (const [, headers] of headerDiagnostics) {
+				expect(headers).not.toContain('"x-auth-key"');
+				expect(headers).not.toContain('"authorization"');
+			}
 			if (sanitize === "false") {
 				expect(std.debug).toContain('"x-custom-header": "configured-secret"');
 			} else {

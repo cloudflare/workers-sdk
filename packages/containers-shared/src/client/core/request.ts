@@ -505,6 +505,7 @@ const debugLogRequest = async (
 	config.LOGGER?.debug(`-- START CF API REQUEST: ${url}`);
 	const logHeaders = new Headers(headers);
 	logHeaders.delete("Authorization");
+	logHeaders.delete("X-Auth-Key");
 	config.LOGGER?.debugWithSanitization(
 		"HEADERS:",
 		JSON.stringify(redactCustomApiHeaders(logHeaders), null, 2)

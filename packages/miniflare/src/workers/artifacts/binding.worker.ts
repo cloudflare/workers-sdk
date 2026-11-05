@@ -647,6 +647,7 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 	): Promise<Response> {
 		const headers = new Headers(request.headers);
 		headers.delete("Authorization");
+		headers.delete("X-Auth-Key");
 		headers.delete("X-Local-Artifacts-Request-Id");
 		headers.set("X-Local-Artifacts-Generation", repository.id);
 		if (requestId) {

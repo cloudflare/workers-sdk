@@ -111,7 +111,7 @@ async function clockedWorker(): Promise<string> {
 const clockedFetch = `
 export default {
   async fetch(request, env) {
-    const { action, name, method, args = [], time, token, scope } = await request.json();
+    const { action, name, method, args = [], time, token, scope, headers = {} } = await request.json();
     const namespace = env.localArtifactsNamespace;
     const state = namespace.get(namespace.idFromName("lifecycle"));
     if (action === "clock") {
@@ -133,7 +133,7 @@ export default {
     if (action === "git") {
       return state.fetch(new Request(
         "http://localhost/git/lifecycle/repo.git/info/refs?service=git-" + scope + "-pack",
-        { headers: { Authorization: "Bearer " + token } }
+        { headers: { ...headers, Authorization: "Bearer " + token } }
       ));
     }
     try {
@@ -188,8 +188,11 @@ function clockOptions(
           let failDelete = false;
           export default {
             async fetch(request) {
-              if (new URL(request.url).pathname !== "/__local_artifacts__")
+              if (new URL(request.url).pathname !== "/__local_artifacts__") {
+                if (request.headers.has("X-Test-Echo-Headers"))
+                  return Response.json(Object.fromEntries(request.headers));
                 return new Response("Git advertisement", { status: 200 });
+              }
               const { action } = await request.json();
               if (action === "status") return Response.json({ deleteCount });
               if (action === "failDelete") { failDelete = true; return Response.json(true); }
@@ -255,6 +258,25 @@ async function gitStatus(
 }
 
 const start = Date.parse("2026-01-01T00:00:00.000Z");
+
+test("artifacts: strips authentication headers before forwarding Git requests", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(clockOptions(await clockedWorker()));
+	useDispose(mf);
+	const created = await clockRpc(mf, "create", ["repo"]);
+	const response = await clockRequest(mf, {
+		action: "git",
+		token: created.token,
+		scope: "upload",
+		headers: { "x-AUTH-key": "global-key", "X-Test-Echo-Headers": "true" },
+	});
+	expect(response.status).toBe(200);
+	const headers = await response.json();
+	expect(headers).not.toHaveProperty("authorization");
+	expect(headers).not.toHaveProperty("x-auth-key");
+	expect(headers).toHaveProperty("x-test-echo-headers", "true");
+});
 
 test("artifacts: a failed metadata write cannot delete Git contents", async ({
 	expect,

@@ -17,7 +17,7 @@ describe("request", () => {
 				"https://api.cloudflare.com/client/v4/accounts/account-id/containers";
 			vi.stubEnv(
 				"CLOUDFLARE_API_HEADERS",
-				'{"X-Custom-Header":"configured-secret"}'
+				'{"X-Custom-Header":"configured-secret","X-Auth-Key":"global-key","Authorization":"Bearer token"}'
 			);
 			vi.stubEnv("WRANGLER_LOG_SANITIZE", sanitize);
 			const debugWithSanitization = vi.fn();
@@ -40,6 +40,14 @@ describe("request", () => {
 					`"x-custom-header": "${sanitize === "false" ? "configured-secret" : "[REDACTED]"}"`
 				)
 			);
+			const headerDiagnostics = debugWithSanitization.mock.calls.filter(
+				([label]) => label === "HEADERS:"
+			);
+			expect(headerDiagnostics).toHaveLength(1);
+			for (const [, headers] of headerDiagnostics) {
+				expect(headers).not.toContain('"x-auth-key"');
+				expect(headers).not.toContain('"authorization"');
+			}
 		}
 	);
 
