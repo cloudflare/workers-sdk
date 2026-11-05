@@ -874,6 +874,11 @@ async function deployWorker(
 
 	// Early exit for WfP since it doesn't need the below code
 	if (props.dispatchNamespace !== undefined) {
+		if (props.triggers?.length) {
+			logger.warn(
+				"Cron triggers are not supported with --dispatch-namespace and will be ignored."
+			);
+		}
 		deployWfpUserWorker(props.dispatchNamespace, versionId);
 		return { versionId, workerTag, assetUploadStats, bundleSize };
 	}
