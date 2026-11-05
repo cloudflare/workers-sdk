@@ -11,7 +11,8 @@ import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { printWranglerBanner } from "../wrangler-banner";
 import { getWorkerForZone } from "../zones";
 import {
-	createTail,
+	connectToTail,
+	createTailSession,
 	jsonPrintLogs,
 	prettyPrintLogs,
 	translateCLICommandToFilterMessage,
@@ -214,16 +215,16 @@ export const tailCommand = createCommand({
 		 *   reconnect attempt instead.
 		 */
 		async function connect(): Promise<void> {
-			const { tail, expiration, deleteTail } = await createTail(
+			const { url, expiration, deleteTail } = await createTailSession(
 				config,
 				accountId,
 				workerName,
-				filters,
-				args.debug
+				filters
 			);
+			const tail = connectToTail(url, args.debug);
 
 			// We may have started shutting down (Ctrl-C / SIGTERM, or a clean
-			// stop) while `createTail()` was in flight. If so, `shutdownHandler`
+			// stop) while `createTailSession()` was in flight. If so, `shutdownHandler`
 			// has already run with `currentTail === undefined` and settled
 			// `done`, so adopting this socket would orphan it — it would never
 			// be terminated and its server-side tail never deleted, keeping the
