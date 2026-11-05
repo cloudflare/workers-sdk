@@ -1,11 +1,10 @@
 import * as path from "node:path";
-import { maybeGetFile } from "@cloudflare/workers-shared";
 import {
 	getCloudflareIncludeProcessEnvFromEnv,
 	getCloudflareLoadDevVarsFromDotEnv,
 } from "@cloudflare/workers-utils";
 import dotenv from "dotenv";
-import { getDefaultEnvFiles, loadDotEnv } from "../config/dot-env";
+import { getDefaultEnvFiles, loadDotEnv, readEnvFile } from "../config/dot-env";
 import { logger } from "../logger";
 import type { Binding } from "../api/startDevWorker/types";
 import type { Config } from "@cloudflare/workers-utils";
@@ -156,8 +155,8 @@ export interface DotDevDotVars {
 }
 
 function tryLoadDotDevDotVars(basePath: string): DotDevDotVars | undefined {
+	const contents = readEnvFile(basePath);
 	try {
-		const contents = maybeGetFile(basePath);
 		if (contents === undefined) {
 			logger.debug(
 				`local dev variables file not found at "${path.relative(".", basePath)}". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/`
