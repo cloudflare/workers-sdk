@@ -723,6 +723,34 @@ describe("generate types - CLI", () => {
 		);
 
 		it.for([
+			{ main: undefined, perEnvironment: false },
+			{ main: undefined, perEnvironment: true },
+			{ main: ".svelte-kit/cloudflare/_worker.js", perEnvironment: false },
+			{ main: ".svelte-kit/cloudflare/_worker.js", perEnvironment: true },
+		])(
+			"preserves Durable Object metadata without a resolvable entrypoint (main: $main, per-environment: $perEnvironment)",
+			async ({ main, perEnvironment }, { expect }) => {
+				fs.writeFileSync(
+					"wrangler.jsonc",
+					JSON.stringify({
+						main,
+						durable_objects: {
+							bindings: [{ name: "COUNTER", class_name: "Counter" }],
+						},
+						migrations: [{ tag: "v1", new_sqlite_classes: ["Counter"] }],
+						env: perEnvironment ? { staging: {} } : undefined,
+					})
+				);
+
+				await runWrangler("types --include-runtime=false");
+				const content = fs.readFileSync("worker-configuration.d.ts", "utf-8");
+				expect(content).toContain('durableNamespaces: "Counter";');
+				expect(content).not.toContain("mainModule:");
+				await runWrangler("types --check");
+			}
+		);
+
+		it.for([
 			"",
 			"--env-file=.env.production",
 			"--env-file=.env.production --env-file=.env.extra",
