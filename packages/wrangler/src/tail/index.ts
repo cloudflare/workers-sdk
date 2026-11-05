@@ -17,7 +17,7 @@ import {
 	prettyPrintLogs,
 	translateCLICommandToFilterMessage,
 } from "./createTail";
-import type { TailCLIFilters } from "./createTail";
+import type { TailCLIFilters, TailSession } from "./createTail";
 import type WebSocket from "ws";
 
 /**
@@ -44,6 +44,30 @@ function sleep(ms: number): Promise<void> {
 	return new Promise<void>((resolve) => {
 		setTimeout(resolve, ms);
 	});
+}
+
+/**
+ * Whether a tail has passed its expiration time.
+ *
+ * @param session the tail to check
+ * @returns `true` if the tail is no longer guaranteed to be valid
+ */
+function isExpired(session: TailSession): boolean {
+	return new Date(session.expiration).getTime() <= Date.now();
+}
+
+/**
+ * Delete a tail on the server. Best-effort: failures are logged and ignored,
+ * since the tail will expire on its own anyway.
+ *
+ * @param session the tail to delete
+ */
+async function deleteTailSession(session: TailSession): Promise<void> {
+	try {
+		await session.deleteTail();
+	} catch (e) {
+		logger.debug("Tail: failed to delete tail on the server:", e);
+	}
 }
 
 export const tailCommand = createCommand({
@@ -180,14 +204,17 @@ export const tailCommand = createCommand({
 		let isShuttingDown = false;
 		let attempt = 0;
 
-		// Per-connection state, replaced on each (re)connect.
+		// The tail registered with the API. It is kept across reconnects so
+		// that a dropped connection rejoins the same tail rather than
+		// deleting it and registering a new one. It is only replaced when it
+		// has expired or the server no longer accepts connections to it.
+		let currentSession: TailSession | undefined;
+
+		// Per-connection state, replaced on each (re)connect. Event handlers
+		// compare their socket against `currentTail` to tell whether it is
+		// still the active connection or has been intentionally torn down.
 		let currentTail: WebSocket | undefined;
-		let currentDeleteTail: (() => Promise<void>) | undefined;
 		let cancelPing: (() => void) | undefined;
-		// Set to `true` while we are intentionally tearing down the current
-		// connection — used to suppress the `close` handler so it doesn't
-		// race with reconnect/shutdown logic that already has things in hand.
-		let intentionalClose = false;
 
 		// The handler returns this promise. It resolves on a clean stop (Ctrl-C
 		// or a normal server close) and rejects when we have given up after
@@ -206,7 +233,8 @@ export const tailCommand = createCommand({
 		const workerName = scriptName;
 
 		/**
-		 * Open a single tail connection.
+		 * Open a single tail connection, reusing the current tail if there is
+		 * one and registering a new tail otherwise.
 		 *
 		 * - Throws on the initial-connect path so first-attempt failures surface
 		 *   through the normal handler-throws pipeline (preserves existing
@@ -215,48 +243,54 @@ export const tailCommand = createCommand({
 		 *   reconnect attempt instead.
 		 */
 		async function connect(): Promise<void> {
-			const { url, expiration, deleteTail } = await createTailSession(
-				config,
-				accountId,
-				workerName,
-				filters
-			);
-			const tail = connectToTail(url, args.debug);
-
-			// We may have started shutting down (Ctrl-C / SIGTERM, or a clean
-			// stop) while `createTailSession()` was in flight. If so, `shutdownHandler`
-			// has already run with `currentTail === undefined` and settled
-			// `done`, so adopting this socket would orphan it — it would never
-			// be terminated and its server-side tail never deleted, keeping the
-			// event loop alive. Tear the just-created connection down and bail.
-			if (isShuttingDown) {
-				try {
-					tail.terminate();
-				} catch {
-					// Ignore: the socket may already be closed/closing.
+			if (currentSession && isExpired(currentSession)) {
+				// Reconnecting to an expired tail can succeed but never deliver
+				// any logs, so start a new one instead.
+				logger.debug("Tail: the current tail has expired, creating a new one");
+				await deleteCurrentTailSession();
+				if (isShuttingDown) {
+					return;
 				}
-				try {
-					await deleteTail();
-				} catch (e) {
-					logger.debug("Tail: failed to delete tail on the server:", e);
-				}
-				return;
 			}
 
+			const reusingSession = currentSession !== undefined;
+			let session = currentSession;
+			if (!session) {
+				session = await createTailSession(
+					config,
+					accountId,
+					workerName,
+					filters
+				);
+
+				// We may have started shutting down (Ctrl-C / SIGTERM, or a
+				// clean stop) while `createTailSession()` was in flight. If so,
+				// `shutdownHandler` has already run without this session and
+				// settled `done`, so adopting it would leave the server-side
+				// tail behind. Delete it and bail.
+				if (isShuttingDown) {
+					await deleteTailSession(session);
+					return;
+				}
+				currentSession = session;
+
+				if (attempt === 0 && args.format === "pretty") {
+					logger.log(
+						`Successfully created tail, expires at ${session.expiration.toLocaleString()}`
+					);
+				}
+			}
+
+			const tail = connectToTail(session.url, args.debug);
 			currentTail = tail;
-			currentDeleteTail = deleteTail;
-			intentionalClose = false;
 			// Tracks whether this connection ever transitioned to OPEN. Used to
 			// distinguish "close before we connected" (which should bubble up
 			// as an error / trigger reconnect via the throw path) from "close
 			// while streaming" (which routes through cleanStop / reconnect).
 			let hasOpened = false;
-
-			if (attempt === 0 && args.format === "pretty") {
-				logger.log(
-					`Successfully created tail, expires at ${expiration.toLocaleString()}`
-				);
-			}
+			// Set when the server answers the WebSocket upgrade with a plain
+			// HTTP response, which means it doesn't recognise this tail.
+			let rejectedStatus: number | undefined;
 
 			// NOTE: The tail backend does not actively close this WebSocket
 			// when the expiration time is reached — log delivery just stops.
@@ -266,6 +300,18 @@ export const tailCommand = createCommand({
 
 			tail.on("message", printLog);
 
+			// `ws` always follows an error with a `close` event, which is
+			// where failures are handled. Without a listener, the error would
+			// be thrown as an uncaught exception.
+			tail.on("error", (err: Error) => {
+				logger.debug("Tail: WebSocket error:", err);
+			});
+
+			tail.on("unexpected-response", (_req, res) => {
+				rejectedStatus = res.statusCode;
+				tail.terminate();
+			});
+
 			// Hooks used by the open-wait promise below. The close listener
 			// rejects the wait if close fires before open; the open listener
 			// resolves it. Both are reset to `undefined` after the wait so
@@ -274,26 +320,27 @@ export const tailCommand = createCommand({
 			let rejectOpenWait: ((err: Error) => void) | undefined;
 
 			tail.on("close", (code: number) => {
+				const isActive = tail === currentTail && !isShuttingDown;
 				// Close fired before this connection ever opened.
 				if (!hasOpened) {
-					if (intentionalClose || isShuttingDown) {
+					if (isActive) {
+						rejectOpenWait?.(
+							new Error(
+								`Connection to ${scriptDisplayName} closed unexpectedly.`
+							)
+						);
+					} else {
 						// Tear-down beat us to the open event (e.g. Ctrl-C
 						// during the initial handshake). Don't reject — unblock
 						// the open-wait so `connect()` can return cleanly via
 						// its `isShuttingDown` check below. `cleanStop` /
 						// `shutdownHandler` have already settled `done`.
 						resolveOpenWait?.();
-					} else {
-						rejectOpenWait?.(
-							new Error(
-								`Connection to ${scriptDisplayName} closed unexpectedly.`
-							)
-						);
 					}
 					return;
 				}
 				// Steady-state path.
-				if (intentionalClose || isShuttingDown) {
+				if (!isActive) {
 					return;
 				}
 				if (code === NORMAL_CLOSURE) {
@@ -305,19 +352,34 @@ export const tailCommand = createCommand({
 
 			// Wait for the connection to actually open. The `open` and `close`
 			// events fire on this WebSocket — whichever happens first wins.
-			if (tail.readyState !== tail.OPEN) {
-				await new Promise<void>((resolve, reject) => {
-					resolveOpenWait = resolve;
-					rejectOpenWait = reject;
-					tail.on("open", () => {
-						resolveOpenWait?.();
+			try {
+				if (tail.readyState !== tail.OPEN) {
+					await new Promise<void>((resolve, reject) => {
+						resolveOpenWait = resolve;
+						rejectOpenWait = reject;
+						tail.on("open", () => {
+							resolveOpenWait?.();
+						});
 					});
-				});
+				}
+			} catch (e) {
+				if (reusingSession && rejectedStatus !== undefined) {
+					// The server no longer recognises the tail we were
+					// reconnecting to, so start over with a new one.
+					logger.debug(
+						`Tail: reconnecting to the current tail was rejected with status ${rejectedStatus}, creating a new one`
+					);
+					currentTail = undefined;
+					await deleteCurrentTailSession();
+					return connect();
+				}
+				throw e;
+			} finally {
+				// Clear the open-wait hooks so the close handler can switch to
+				// its steady-state behaviour.
+				resolveOpenWait = undefined;
+				rejectOpenWait = undefined;
 			}
-			// Clear the open-wait hooks so the close handler can switch to
-			// its steady-state behaviour.
-			resolveOpenWait = undefined;
-			rejectOpenWait = undefined;
 
 			if (isShuttingDown || tail !== currentTail) {
 				return;
@@ -339,48 +401,57 @@ export const tailCommand = createCommand({
 		}
 
 		/**
-		 * Tear down the current connection so we can either reconnect or shut
-		 * down cleanly. This is best-effort: failures deleting the server-side
-		 * tail are logged but don't prevent the next step.
+		 * Close the current WebSocket connection, leaving the server-side tail
+		 * in place so that we can reconnect to it.
 		 */
-		async function teardownCurrentConnection(): Promise<void> {
+		function closeCurrentConnection(): void {
 			cancelPing?.();
 			cancelPing = undefined;
-			intentionalClose = true;
 			const tail = currentTail;
-			const deleteTail = currentDeleteTail;
 			currentTail = undefined;
-			currentDeleteTail = undefined;
 			try {
 				tail?.terminate();
 			} catch {
 				// Ignore: the socket may already be closed/closing.
 			}
-			if (deleteTail) {
-				try {
-					await deleteTail();
-				} catch (e) {
-					logger.debug("Tail: failed to delete tail on the server:", e);
-				}
+		}
+
+		/**
+		 * Delete the current tail on the server so that the next connection
+		 * registers a new one.
+		 */
+		async function deleteCurrentTailSession(): Promise<void> {
+			const session = currentSession;
+			currentSession = undefined;
+			if (session) {
+				await deleteTailSession(session);
 			}
 		}
 
 		/**
+		 * Close the current connection and delete the server-side tail, for
+		 * when we are shutting down or giving up.
+		 */
+		async function teardownCurrentConnection(): Promise<void> {
+			closeCurrentConnection();
+			await deleteCurrentTailSession();
+		}
+
+		/**
 		 * Called when the active connection drops unexpectedly (ping timeout or
-		 * abnormal close). Tears the current connection down, then either
-		 * waits + reconnects or gives up after `MAX_RECONNECT_ATTEMPTS` tries.
+		 * abnormal close). Closes the current connection, then either waits and
+		 * reconnects to the same tail or gives up after
+		 * `MAX_RECONNECT_ATTEMPTS` tries.
 		 */
 		async function scheduleReconnect(): Promise<void> {
 			if (isShuttingDown) {
 				return;
 			}
-			await teardownCurrentConnection();
-			if (isShuttingDown) {
-				return;
-			}
+			closeCurrentConnection();
 
 			attempt++;
 			if (attempt > MAX_RECONNECT_ATTEMPTS) {
+				await deleteCurrentTailSession();
 				// Match every other terminal path (`cleanStop`,
 				// `shutdownHandler`, the initial-connect catch) and remove
 				// the SIGINT/SIGTERM listeners before settling `done`.
