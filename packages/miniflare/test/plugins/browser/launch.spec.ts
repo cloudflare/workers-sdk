@@ -48,17 +48,26 @@ afterEach(async () => {
 });
 
 test.for([
-	{ home: "custom", ci: undefined },
-	{ home: undefined, ci: undefined },
-	{ home: "", ci: "true" },
+	{ home: "custom", ci: undefined, accountMissing: false },
+	{ home: undefined, ci: undefined, accountMissing: false },
+	{ home: "", ci: "true", accountMissing: false },
+	{ home: "custom", ci: undefined, accountMissing: true },
+	{ home: undefined, ci: undefined, accountMissing: true },
+	{ home: "", ci: "true", accountMissing: true },
 ])(
-	"inherits the environment with HOME=$home and CI=$ci",
-	async ({ home, ci }, { expect }) => {
+	"inherits the environment with HOME=$home, CI=$ci and accountMissing=$accountMissing",
+	async ({ home, ci, accountMissing }, { expect }) => {
 		const privateHome = await fs.mkdtemp(path.join(tmpPath, "home-"));
 		vi.stubEnv("HOME", home === "custom" ? privateHome : home);
 		vi.stubEnv("CI", ci);
 		const expectedHome =
 			home === "custom" ? privateHome : os.userInfo().homedir;
+		const userInfo = vi.spyOn(os, "userInfo");
+		if (accountMissing) {
+			userInfo.mockImplementation(() => {
+				throw new Error("No account database entry for this UID");
+			});
+		}
 		const { browserProcess, wsEndpoint } = await launchBrowser({
 			browserVersion: BROWSER_VERSION,
 			log: new Log(),
@@ -72,7 +81,6 @@ test.for([
 				marker?: string;
 				args: string[];
 			};
-			expect(environment.home).toBe(expectedHome);
 			expect(environment.marker).toBe("inherited-by-browser");
 			expect(environment.args.includes("--no-sandbox")).toBe(Boolean(ci));
 			expect(environment.args).toContain("--headless=new");
@@ -83,10 +91,18 @@ test.for([
 			if (profile === undefined) {
 				throw new Error("Missing browser profile directory");
 			}
-			const stat = await fs.stat(profile);
+			expect(environment.home).toBe(
+				accountMissing && home !== "custom" ? profile : expectedHome
+			);
+			if (home === "custom") {
+				expect(userInfo).not.toHaveBeenCalled();
+			}
 			if (process.platform !== "win32") {
-				expect(stat.mode & 0o777).toBe(0o700);
-				expect(stat.uid).toBe(process.getuid?.());
+				for (const directory of [path.dirname(profile), profile]) {
+					const stat = await fs.stat(directory);
+					expect(stat.mode & 0o777).toBe(0o700);
+					expect(stat.uid).toBe(process.getuid?.());
+				}
 			}
 		} finally {
 			browserProcess.kill();

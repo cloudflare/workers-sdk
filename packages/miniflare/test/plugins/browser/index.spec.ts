@@ -2,6 +2,7 @@ import { once } from "node:events";
 import fs from "node:fs/promises";
 import https from "node:https";
 import path from "node:path";
+import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
 import { getGlobalWranglerCachePath } from "@cloudflare/workers-utils/global-wrangler-config-path";
 import { Log, LogLevel, Miniflare } from "miniflare";
 import {
@@ -224,6 +225,7 @@ describe("browser rendering", { concurrent: false, timeout: 20_000 }, () => {
 		BROWSER_RENDERING_RETRY,
 		async ({ expect }) => {
 			const tmp = await useTmp();
+			onTestFinished(() => removeDir(tmp));
 			const home = await fs.mkdtemp(path.join(tmp, "home-"));
 			// Keep the warmed Chrome install when changing HOME for this session.
 			vi.stubEnv("XDG_CACHE_HOME", path.dirname(getGlobalWranglerCachePath()));

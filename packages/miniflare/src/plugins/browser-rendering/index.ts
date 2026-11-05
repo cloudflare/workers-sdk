@@ -220,6 +220,15 @@ export async function launchBrowser({
 			`profile-${sessionId}-${attempt++}`
 		);
 		await fs.promises.mkdir(tempUserData, { recursive: true, mode: 0o700 });
+		let home = process.env.HOME;
+		if (!home) {
+			try {
+				home = os.userInfo().homedir || tempUserData;
+			} catch {
+				// Arbitrary container UIDs may have no account database entry.
+				home = tempUserData;
+			}
+		}
 
 		// Whether Chrome got far enough to announce its DevTools endpoint, which
 		// is the line between "this install might be broken" and "something else
@@ -232,7 +241,7 @@ export async function launchBrowser({
 			args: process.env.CI ? [...launchArgs, "--no-sandbox"] : launchArgs,
 			// @puppeteer/browsers defaults to an empty environment. Chrome needs
 			// a user home for NSS and other configuration outside its profile.
-			env: { ...process.env, HOME: process.env.HOME || os.userInfo().homedir },
+			env: { ...process.env, HOME: home },
 			handleSIGTERM: false,
 			dumpio: false,
 			pipe: false,
