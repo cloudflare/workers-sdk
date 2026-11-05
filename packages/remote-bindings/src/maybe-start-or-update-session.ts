@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { getBindingLocalSupport } from "@cloudflare/workers-utils";
+import { resolveBindingRemote } from "@cloudflare/workers-utils";
 import { getRemoteBindingsAuthHook } from "./auth";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
 import type { RemoteBindingsLogger } from "./logger";
@@ -16,15 +16,12 @@ export function pickRemoteBindings(
 	bindings: Record<string, Binding>
 ): Record<string, Binding> {
 	return Object.fromEntries(
-		Object.entries(bindings ?? {}).filter(([, binding]) => {
-			if (
-				getBindingLocalSupport(binding.type) ===
-				"DO-NOT-USE-this-resource-will-never-have-a-local-simulator"
-			) {
-				return true;
-			}
-			return "remote" in binding && binding.remote;
-		})
+		Object.entries(bindings ?? {}).filter(([, binding]) =>
+			resolveBindingRemote(
+				binding.type,
+				"remote" in binding ? binding.remote : undefined
+			)
+		)
 	);
 }
 

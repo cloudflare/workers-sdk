@@ -35,6 +35,45 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 		}
 	);
 
+	it.for([undefined, false, true])(
+		"starts an Artifacts remote session only for remote=%s or the default",
+		async (remote, { expect }) => {
+			const binding = {
+				type: "artifacts" as const,
+				namespace: "examples",
+				remote,
+			};
+			const session = {
+				ready: Promise.resolve(),
+				dispose: vi.fn(),
+				updateBindings: vi.fn(),
+				remoteProxyConnectionString: new URL(
+					"http://localhost:8787"
+				) as RemoteProxyConnectionString,
+			};
+			const startSession = vi
+				.fn<typeof startRemoteProxySession>()
+				.mockResolvedValue(session);
+			const result = await maybeStartOrUpdateRemoteProxySession(
+				{ bindings: { REPOS: binding } },
+				undefined,
+				undefined,
+				{ cliDisplayName: "Vite", logger: createTestLogger() },
+				startSession
+			);
+			if (remote === false) {
+				expect(result).toBeNull();
+				expect(startSession).not.toHaveBeenCalled();
+			} else {
+				expect(result?.session).toBe(session);
+				expect(startSession).toHaveBeenCalledWith(
+					{ REPOS: binding },
+					expect.anything()
+				);
+			}
+		}
+	);
+
 	it("updates an existing session when all remote bindings are removed", async ({
 		expect,
 	}) => {
