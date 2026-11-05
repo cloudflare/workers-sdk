@@ -1,9 +1,13 @@
 import { execFileSync } from "node:child_process";
+import module from "node:module";
 import path from "node:path";
 import { it } from "vitest";
 
-it("imports the built package without loading the runtime", ({ expect }) => {
-	const script = `
+// Synchronous module hooks were added after the minimum supported Node version.
+it.skipIf(typeof module.registerHooks !== "function")(
+	"imports the built package without loading the runtime",
+	({ expect }) => {
+		const script = `
 		import assert from "node:assert/strict";
 		import { registerHooks } from "node:module";
 		registerHooks({
@@ -20,14 +24,15 @@ it("imports the built package without loading the runtime", ({ expect }) => {
 		await assert.rejects(generateRuntimeTypes({ compatibilityDate: "2024-11-06" }), /Unexpected runtime import: workerd/);
 		console.log("ok");
 	`;
-	const output = execFileSync(
-		process.execPath,
-		["--input-type=module", "--eval", script],
-		{
-			cwd: path.resolve(import.meta.dirname, "../.."),
-			encoding: "utf8",
-			timeout: 10_000,
-		}
-	);
-	expect(output.trim()).toBe("ok");
-});
+		const output = execFileSync(
+			process.execPath,
+			["--input-type=module", "--eval", script],
+			{
+				cwd: path.resolve(import.meta.dirname, "../.."),
+				encoding: "utf8",
+				timeout: 10_000,
+			}
+		);
+		expect(output.trim()).toBe("ok");
+	}
+);
