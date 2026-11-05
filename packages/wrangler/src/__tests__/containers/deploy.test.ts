@@ -1243,6 +1243,34 @@ describe("wrangler deploy with containers", () => {
 
 		await runWrangler("deploy index.js");
 	});
+	it("should keep retrying when the uploaded Worker version takes several seconds to become available", async ({
+		expect,
+	}) => {
+		// The API can take longer than the retry window to make a
+		// just-uploaded Worker version readable, and the deploy should
+		// still succeed once it does.
+		// https://github.com/cloudflare/workers-sdk/issues/16717
+		mockGetVersionNotFoundForDuration("Galaxy-Class", 3000);
+		setupDockerMocks(expect, "my-container", "Galaxy");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [DEFAULT_CONTAINER_FROM_DOCKERFILE],
+		});
+		mockGetApplications([]);
+		fs.writeFileSync("./Dockerfile", "FROM scratch");
+		mockGenerateImageRegistryCredentials(expect);
+
+		mockCreateApplication(expect, {
+			name: "my-container",
+			configuration: {
+				image:
+					getCloudflareContainerRegistry() +
+					"/some-account-id/my-container@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			},
+		});
+
+		await runWrangler("deploy index.js");
+	});
 	it("should be able to deploy a new container from an image uri", async ({
 		expect,
 	}) => {
@@ -5257,6 +5285,49 @@ function mockGetVersionNotFoundOnce(
 			async () => {
 				requestCount++;
 				if (requestCount === 1) {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{
+								code: 100146,
+								message:
+									"The requested Worker version could not be found, please check the ID being passed and try again.",
+							},
+						]),
+						{ status: 404 }
+					);
+				}
+
+				return HttpResponse.json(
+					createFetchResult({
+						id: versionId,
+						metadata: {},
+						number: 2,
+						resources: {
+							bindings,
+						},
+					})
+				);
+			},
+			{ once: false }
+		)
+	);
+}
+
+function mockGetVersionNotFoundForDuration(
+	versionId: string,
+	notFoundDurationMs: number,
+	bindings = [defaultDOBinding]
+) {
+	// Simulates the API taking a while to make a just-uploaded Worker
+	// version readable again: every read within `notFoundDurationMs` of the
+	// first one fails with 100146, later reads succeed.
+	let firstRequestAt: number | undefined;
+	msw.use(
+		http.get(
+			`*/accounts/:accountId/workers/scripts/:scriptName/versions/${versionId}`,
+			async () => {
+				firstRequestAt ??= Date.now();
+				if (Date.now() - firstRequestAt < notFoundDurationMs) {
 					return HttpResponse.json(
 						createFetchResult(null, false, [
 							{
