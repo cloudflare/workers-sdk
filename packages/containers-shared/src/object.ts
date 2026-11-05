@@ -38,7 +38,11 @@ function sortObjectKeys(unordered: Record<string | number, unknown>) {
 export function sortObjectRecursive<T = Record<string | number, unknown>>(
 	object: Record<string | number, unknown> | Record<string | number, unknown>[]
 ): T {
-	if (typeof object !== "object") {
+	// `typeof null === "object"`, so null must be returned here rather than
+	// falling through to the object branch, which would throw in
+	// `Object.entries(null)`. This can happen when null appears inside an
+	// array, since array elements are recursed into directly.
+	if (object === null || typeof object !== "object") {
 		return object;
 	}
 
