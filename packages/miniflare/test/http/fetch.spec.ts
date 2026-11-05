@@ -63,6 +63,61 @@ console.log("fetch rejected safely");
 	expect(result.stdout.trim()).toBe("fetch rejected safely");
 	expect(result.stderr).toBe("");
 });
+test("fetch: keeps unread response bodies readable across garbage collection", async ({
+	expect,
+}) => {
+	const upstream = (await useServer((_req, res) => res.end("upstream"))).http;
+
+	// Undici cancels the body of a fetch Response with "Response object has
+	// been garbage collected" once the Response itself is collected. Miniflare's
+	// `fetch()` wraps the undici Response without keeping it alive, so the
+	// wrapper's shared body could be cancelled while the wrapper is still
+	// reachable. Run in a child so the test can force garbage collection with
+	// `--expose-gc`.
+	const result = await promisify(execFile)(
+		process.execPath,
+		[
+			"--expose-gc",
+			"--input-type=module",
+			"-e",
+			`
+import assert from "node:assert/strict";
+import { setTimeout } from "node:timers/promises";
+const { fetch } = await import(process.argv[2]);
+const upstream = process.argv[1];
+
+const responses = [];
+for (let i = 0; i < 20; i++) {
+  responses.push(await fetch(upstream));
+}
+
+// Give the original undici Responses wrapped by fetch() a chance to be
+// collected while the returned Responses are all still reachable.
+for (let i = 0; i < 10; i++) {
+  globalThis.gc();
+  await setTimeout(10);
+}
+
+let lost = 0;
+for (const [i, response] of responses.entries()) {
+  try {
+    assert.equal(await response.text(), "upstream");
+  } catch (error) {
+    lost++;
+    console.log("body " + i + " unusable: " + error);
+  }
+}
+assert.equal(lost, 0);
+console.log("all bodies readable");
+`,
+			upstream.href,
+			new URL("../../dist/src/index.js", import.meta.url).href,
+		],
+		{ timeout: 10_000 }
+	);
+	expect(result.stdout.trim()).toBe("all bodies readable");
+	expect(result.stderr).toBe("");
+});
 test("fetch: performs http request with form data", async ({ expect }) => {
 	const echoUpstream = (
 		await useServer((req, res) => {
