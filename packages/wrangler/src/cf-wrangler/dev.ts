@@ -32,13 +32,18 @@ export async function runCfWranglerDev(
 	return withCfAuth(profile, async () => {
 		// `startDev` reads experimental flags from async-local storage. This
 		// entrypoint is single-worker and never provisions resources.
+		// cloudflare.config.ts is loaded from cwd, where persistTo is resolved too.
 		const devInstance = await run(
 			{
 				MULTIWORKER: false,
 				RESOURCES_PROVISION: false,
 				AUTOCREATE_RESOURCES: false,
 			},
-			() => startDev(options)
+			() =>
+				startDev({
+					...options,
+					persistTo: options.persistTo ?? ".cloudflare/state",
+				})
 		);
 
 		await events.once(devInstance.devEnv, "teardown");
