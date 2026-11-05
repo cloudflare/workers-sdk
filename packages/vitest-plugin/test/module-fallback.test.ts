@@ -994,3 +994,112 @@ describe("realPackagePath", () => {
 		);
 	});
 });
+
+// `isWithinTypeModuleContext()` caches its answer per directory, and answers
+// for the file's ancestors before reading the *nearest* `package.json`. A
+// nested package's own `package.json` must always win: otherwise a
+// `"type": "module"` project root, cached while classifying some externalized
+// file that has no `package.json` of its own (e.g. an empty pre-bundled
+// chunk), leaks into a `"type": "commonjs"` dependency under `node_modules`,
+// which is then handed to `workerd` as an ES module and crashes on
+// `module`/`exports` not being defined.
+// See https://github.com/cloudflare/workers-sdk/issues/16252
+describe("isWithinTypeModuleContext ancestor cache", () => {
+	let tmp: string;
+
+	beforeEach(() => {
+		tmp = fs.realpathSync(
+			fs.mkdtempSync(path.join(os.tmpdir(), "mf-type-module-"))
+		);
+	});
+
+	afterEach(() => {
+		removeDirSync(tmp);
+	});
+
+	// A `"type": "module"` project root, a pre-bundled chunk with no
+	// `package.json` of its own (so its nearest is the root), and a nested
+	// `"type": "commonjs"` package, mirroring the issue's reproduction.
+	function writeFixture(): void {
+		fs.writeFileSync(
+			path.join(tmp, "package.json"),
+			JSON.stringify({ name: "repro", type: "module" })
+		);
+		const prebuilt = path.join(tmp, "vendor", "node_modules", "prebuilt");
+		fs.mkdirSync(prebuilt, { recursive: true });
+		fs.writeFileSync(path.join(prebuilt, "empty.js"), "");
+		const pkgDir = path.join(tmp, "node_modules", "cjs-pkg");
+		fs.mkdirSync(path.join(pkgDir, "lib"), { recursive: true });
+		fs.writeFileSync(
+			path.join(pkgDir, "package.json"),
+			JSON.stringify({
+				name: "cjs-pkg",
+				type: "commonjs",
+				main: "lib/index.js",
+			})
+		);
+		fs.writeFileSync(
+			path.join(pkgDir, "lib", "index.js"),
+			"module.exports = { kind: 'cjs' };"
+		);
+	}
+
+	async function importModule(
+		filePath: string,
+		expect: (value: unknown) => { toBe: (expected: unknown) => void }
+	): Promise<Record<string, unknown>> {
+		const res = await handleModuleFallbackRequest(
+			fakeVite(),
+			moduleFallbackRequest({
+				method: "import",
+				specifier: toWorkerdSpecifier(filePath),
+				referrer: toWorkerdSpecifier(path.join(tmp, "entry.js")),
+			})
+		);
+		expect(res.status).toBe(200);
+		return (await res.json()) as Record<string, unknown>;
+	}
+
+	it("classifies a nested commonjs package from its own package.json", async ({
+		expect,
+	}) => {
+		writeFixture();
+		const body = await importModule(
+			path.join(tmp, "node_modules", "cjs-pkg", "lib", "index.js"),
+			expect
+		);
+		// An imported CommonJS module is served as an ES module shim that
+		// re-requires the file with the shim disabled — the tell that it was
+		// classified CommonJS rather than served raw as an ES module.
+		expect(String(body.esModule)).toContain("mf_vitest_no_cjs_esm_shim");
+		expect(body.commonJsModule).toBeUndefined();
+	});
+
+	it("classifies a nested commonjs package even after an ancestor cached a type-module answer", async ({
+		expect,
+	}) => {
+		writeFixture();
+
+		// The pre-bundled chunk has no `package.json` of its own, so its
+		// classification falls through to the `"type": "module"` project root,
+		// caching `true` under the root directory — exactly what happens in
+		// the issue when an empty esbuild chunk is externalized first.
+		const emptyBody = await importModule(
+			path.join(tmp, "vendor", "node_modules", "prebuilt", "empty.js"),
+			expect
+		);
+		expect(emptyBody.esModule).toBeDefined();
+		expect(emptyBody.commonJsModule).toBeUndefined();
+
+		// The CommonJS package's own `package.json` is nearer than the cached
+		// root, so it must still win: the module must not be served raw as an
+		// ES module (which crashes in `workerd` on `module`/`exports`).
+		const body = await importModule(
+			path.join(tmp, "node_modules", "cjs-pkg", "lib", "index.js"),
+			expect
+		);
+		expect(String(body.esModule)).toContain("mf_vitest_no_cjs_esm_shim");
+		expect(String(body.esModule)).not.toContain("module.exports");
+		expect(body.commonJsModule).toBeUndefined();
+	});
+});
