@@ -82,6 +82,21 @@ describe("Angular framework configure()", () => {
 			expect(result.workerConfig).not.toHaveProperty("entrypoint");
 		});
 
+		it("sets SPA not-found handling so client-side routes do not 404", async ({
+			expect,
+		}) => {
+			const framework = new Angular({ id: "angular", name: "Angular" });
+			const result = await framework.configure(BASE_OPTIONS);
+
+			// An Angular SPA uses history-based routing, so the generated
+			// wrangler.jsonc must fall back to index.html for unknown routes.
+			expect(result.workerConfig).toEqual({
+				assets: {
+					notFoundHandling: "single-page-application",
+				},
+			});
+		});
+
 		it("does not support Cloudflare modes", ({ expect }) => {
 			const framework = new Angular({ id: "angular", name: "Angular" });
 
