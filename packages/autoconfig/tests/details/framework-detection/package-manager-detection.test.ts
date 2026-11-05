@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import {
 	BunPackageManager,
 	NpmPackageManager,
@@ -79,5 +80,85 @@ describe("detectFramework() / package manager detection", () => {
 		const result = await detectFramework(process.cwd(), context);
 
 		expect(result.packageManager).toStrictEqual(NpmPackageManager);
+	});
+
+	it("detects pnpm from the workspace root's lockfile when the app has none", async ({
+		expect,
+	}) => {
+		await seed({
+			"pnpm-workspace.yaml": "packages:\n  - 'apps/*'\n",
+			"package.json": JSON.stringify({
+				name: "my-workspace",
+				private: true,
+				workspaces: ["apps/*"],
+			}),
+			"pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
+			"apps/worker/package.json": JSON.stringify({
+				name: "worker",
+				private: true,
+				dependencies: { astro: "5" },
+			}),
+		});
+
+		const result = await detectFramework(
+			join(process.cwd(), "apps/worker"),
+			context
+		);
+
+		expect(result.packageManager).toStrictEqual(PnpmPackageManager);
+	});
+
+	it("detects pnpm from the workspace root's packageManager field when the app declares none", async ({
+		expect,
+	}) => {
+		await seed({
+			"pnpm-workspace.yaml": "packages:\n  - 'apps/*'\n",
+			"package.json": JSON.stringify({
+				name: "my-workspace",
+				private: true,
+				workspaces: ["apps/*"],
+				packageManager: "pnpm@12.16.1",
+			}),
+			"apps/worker/package.json": JSON.stringify({
+				name: "worker",
+				private: true,
+				dependencies: { astro: "5" },
+			}),
+		});
+
+		const result = await detectFramework(
+			join(process.cwd(), "apps/worker"),
+			context
+		);
+
+		expect(result.packageManager).toStrictEqual(PnpmPackageManager);
+	});
+
+	it("prefers the app's own packageManager declaration over the workspace root's", async ({
+		expect,
+	}) => {
+		await seed({
+			"pnpm-workspace.yaml": "packages:\n  - 'apps/*'\n",
+			"package.json": JSON.stringify({
+				name: "my-workspace",
+				private: true,
+				workspaces: ["apps/*"],
+				packageManager: "pnpm@12.16.1",
+			}),
+			"pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
+			"apps/worker/package.json": JSON.stringify({
+				name: "worker",
+				private: true,
+				dependencies: { astro: "5" },
+				packageManager: "yarn@1.22.22",
+			}),
+		});
+
+		const result = await detectFramework(
+			join(process.cwd(), "apps/worker"),
+			context
+		);
+
+		expect(result.packageManager).toStrictEqual(YarnPackageManager);
 	});
 });
