@@ -152,4 +152,85 @@ describe("getVarsForDev", () => {
 			MY_VARIABLE_A: { type: "plain_text", value: "100900" },
 		});
 	});
+
+	// Windows PowerShell 5.1's `>` and Out-File write UTF-16LE with a BOM,
+	// which decodes as UTF-8 to replacement characters and null bytes, so no
+	// variables parse. Loading must not silently say the file is being used.
+	// https://github.com/cloudflare/workers-sdk/issues/16718
+	it("warns or errors about a UTF-16 encoded .dev.vars file", ({ expect }) => {
+		fs.writeFileSync(
+			".dev.vars",
+			Buffer.concat([
+				Buffer.from([0xff, 0xfe]),
+				Buffer.from("API_KEY=abc\r\n", "utf16le"),
+			])
+		);
+
+		let thrown: unknown;
+		let result: ReturnType<typeof getVarsForDev> | undefined;
+		try {
+			result = getVarsForDev(
+				path.resolve("wrangler.jsonc"),
+				undefined,
+				{ MY_VARIABLE_A: "config" },
+				undefined,
+				false
+			);
+		} catch (e) {
+			thrown = e;
+		}
+
+		if (thrown === undefined) {
+			// The file's contents loaded no variables.
+			expect(result).toEqual({
+				MY_VARIABLE_A: { type: "plain_text", value: "config" },
+			});
+		}
+		// Either way, the encoding must be called out, as `wrangler` already
+		// does for UTF-16 config files and for `.assetsignore`.
+		const message =
+			thrown instanceof Error ? thrown.message : `${std.warn}${std.err}`;
+		expect(message).toMatch(/UTF-16/);
+	});
+
+	it("warns or errors about a UTF-16 encoded .env file", ({ expect }) => {
+		vi.stubEnv("CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV", "true");
+		try {
+			fs.writeFileSync(
+				".env",
+				Buffer.concat([
+					Buffer.from([0xff, 0xfe]),
+					Buffer.from("ENV_SECRET=moon\r\n", "utf16le"),
+				])
+			);
+
+			let thrown: unknown;
+			let result: ReturnType<typeof getVarsForDev> | undefined;
+			try {
+				result = getVarsForDev(
+					path.resolve("wrangler.jsonc"),
+					undefined,
+					{ MY_VARIABLE_A: "config" },
+					undefined,
+					false
+				);
+			} catch (e) {
+				thrown = e;
+			}
+
+			if (thrown === undefined) {
+				// The file's contents loaded no variables.
+				expect(result).toEqual({
+					MY_VARIABLE_A: { type: "plain_text", value: "config" },
+				});
+			}
+			// Either way, the encoding must be called out, as `wrangler` already
+			// does for UTF-16 config files and for `.assetsignore`.
+			const message =
+				thrown instanceof Error ? thrown.message : `${std.warn}${std.err}`;
+			expect(message).toMatch(/UTF-16/);
+		} finally {
+			vi.unstubAllEnvs();
+		}
+	});
 });
