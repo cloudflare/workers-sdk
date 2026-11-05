@@ -1255,6 +1255,71 @@ describe("convertToWranglerConfig", () => {
 			expect(result.addresses).toBeUndefined();
 		});
 
+		it("maps event triggers to triggers.events with snake_case fields", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					triggers: [
+						{ type: "scheduled", schedule: "0 * * * *" },
+						{
+							type: "event",
+							event: "cf.artifacts.repo.pushed",
+							filter: { namespace: "ci", repoName: "my-repo" },
+							targets: [{ type: "workflow", workflowName: "ci-workflow" }],
+						},
+						{
+							type: "event",
+							event: "cf.artifacts.repo.created",
+							targets: [{ type: "workflow", workflowName: "setup" }],
+						},
+					],
+				},
+				containers: [],
+			});
+			expect(result.triggers).toEqual({
+				crons: ["0 * * * *"],
+				events: [
+					{
+						type: "cf.artifacts.repo.pushed",
+						filter: { namespace: "ci", repo_name: "my-repo" },
+						targets: [{ type: "workflow", workflow_name: "ci-workflow" }],
+					},
+					{
+						type: "cf.artifacts.repo.created",
+						targets: [{ type: "workflow", workflow_name: "setup" }],
+					},
+				],
+			});
+		});
+
+		it("maps event triggers without crons", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					triggers: [
+						{
+							type: "event",
+							event: "cf.artifacts.repo.pushed",
+							filter: { namespace: "ci" },
+							targets: [{ type: "workflow", workflowName: "ci-workflow" }],
+						},
+					],
+				},
+				containers: [],
+			});
+			expect(result.triggers).toEqual({
+				events: [
+					{
+						type: "cf.artifacts.repo.pushed",
+						filter: { namespace: "ci" },
+						targets: [{ type: "workflow", workflow_name: "ci-workflow" }],
+					},
+				],
+			});
+		});
+
 		it("maps fetch trigger with dot-zone to zone_name", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {

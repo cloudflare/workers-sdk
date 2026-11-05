@@ -1,5 +1,6 @@
 import * as z from "zod";
 import { WORKFLOW_JURISDICTIONS } from "./exports";
+import { EVENT_TRIGGER_TYPES } from "./triggers";
 import type { SendEmailBinding, VpcNetworkBinding } from "./bindings";
 import type { Settings } from "./types";
 import type { ContainerConfig, WorkerConfig } from "./types";
@@ -753,6 +754,24 @@ const TriggerSchema = z.discriminatedUnion("type", [
 	z.strictObject({
 		type: z.literal("scheduled"),
 		schedule: z.string(),
+	}),
+	z.strictObject({
+		type: z.literal("event"),
+		event: z.enum(EVENT_TRIGGER_TYPES),
+		filter: z
+			.strictObject({
+				namespace: z.string().optional(),
+				repoName: z.string().optional(),
+			})
+			.optional(),
+		targets: z
+			.array(
+				z.strictObject({
+					type: z.literal("workflow"),
+					workflowName: z.string().min(1),
+				})
+			)
+			.min(1),
 	}),
 	z.discriminatedUnion("protocol", [
 		z.strictObject({

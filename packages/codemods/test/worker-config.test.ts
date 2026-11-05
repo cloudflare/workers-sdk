@@ -27,6 +27,33 @@ function convert(source: Record<string, unknown>): {
 }
 
 describe("Wrangler Worker configuration conversion", () => {
+	it("converts Artifacts event triggers", ({ expect }) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			name: "ci-worker",
+			triggers: {
+				events: [
+					{
+						filter: { namespace: "ci", repo_name: "my-repo" },
+						targets: [{ type: "workflow", workflow_name: "ci-workflow" }],
+						type: "cf.artifacts.repo.pushed",
+					},
+				],
+			},
+			workflows: [
+				{ binding: "CI", class_name: "CIWorkflow", name: "ci-workflow" },
+			],
+		});
+
+		expect(result.followUps.map(({ code }) => code)).not.toContain(
+			"artifact-event-triggers"
+		);
+		expect(result.output).toContain("triggers.event(");
+		expect(result.output).toContain('event: "cf.artifacts.repo.pushed"');
+		expect(result.output).toContain('repoName: "my-repo"');
+		expect(result.output).toContain('workflowName: "ci-workflow"');
+	});
+
 	it("converts core settings, triggers, bindings, and exports", ({
 		expect,
 	}) => {

@@ -1,12 +1,15 @@
 import { bindings } from "../bindings";
 import { defineConfig, defineWorker } from "../definition";
 import { exports as workerExports } from "../exports";
+import { triggers } from "../triggers";
 import type {
 	InferDurableNamespaces,
 	InferEnv,
 	InferMainModule,
 	UnwrapConfig,
 } from "../inference";
+import type { EventTriggerType } from "../triggers";
+import type { ArtifactsEventType } from "@cloudflare/workers-utils";
 
 type Equal<T, U> =
 	(<V>() => V extends T ? 1 : 2) extends <V>() => V extends U ? 1 : 2
@@ -87,3 +90,38 @@ export type InlineConfigWorkerEnvTest = Assert<
 export type InlineConfigContainerNameTest = Assert<
 	Equal<InlineConfig["containers"][0]["name"], "inline-container">
 >;
+
+export type EventTriggerTypesMatchWranglerTest = Assert<
+	Equal<EventTriggerType, ArtifactsEventType>
+>;
+
+defineConfig({
+	worker: {
+		name: "event-trigger-worker",
+		compatibilityDate: "2026-09-25",
+		exports: {
+			CIWorkflow: workerExports.workflow({ name: "ci-workflow" }),
+		},
+		triggers: [
+			triggers.event({
+				event: "cf.artifacts.repo.pushed",
+				filter: { namespace: "ci", repoName: "my-repo" },
+				targets: [{ type: "workflow", workflowName: "ci-workflow" }],
+			}),
+		],
+	},
+});
+
+defineConfig({
+	worker: {
+		name: "invalid-event-trigger-worker",
+		compatibilityDate: "2026-09-25",
+		triggers: [
+			triggers.event({
+				// @ts-expect-error unknown event types are rejected
+				event: "cf.artifacts.repo.renamed",
+				targets: [{ type: "workflow", workflowName: "ci-workflow" }],
+			}),
+		],
+	},
+});

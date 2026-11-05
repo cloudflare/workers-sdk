@@ -125,16 +125,10 @@ export function convertTriggers(
 			);
 		}
 
-		if (
-			Array.isArray(triggerConfig.events) &&
-			triggerConfig.events.length > 0
-		) {
-			report(
-				createFollowUp(
-					"artifact-event-triggers",
-					"Artifact event triggers are not supported by the new config and were not migrated.",
-					{ sourcePath: `${sourcePrefix || "config"}.triggers.events` }
-				)
+		for (const { type, ...event } of getRecords(triggerConfig, "events")) {
+			imports.add("triggers");
+			converted.push(
+				call("triggers.event", camelObject({ event: type, ...event }))
 			);
 		}
 	}

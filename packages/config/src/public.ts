@@ -92,12 +92,17 @@ export type {
 	ConnectTriggerOptionsBase,
 	EmailTrigger,
 	EmailTriggerOptions,
+	EventTrigger,
+	EventTriggerFilter,
+	EventTriggerOptions,
+	EventTriggerType,
 	FetchTrigger,
 	FetchTriggerOptions,
 	QueueConsumerTrigger,
 	QueueConsumerTriggerOptions,
 	ScheduledTrigger,
 	ScheduledTriggerOptions,
+	WorkflowEventTriggerTarget,
 } from "./triggers";
 export { triggers } from "./triggers";
 export type {

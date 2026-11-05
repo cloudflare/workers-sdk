@@ -981,7 +981,7 @@ function convertExports(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TRIGGERS (scheduled + fetch + queue consumer + email + connect)
+// TRIGGERS (scheduled + fetch + queue consumer + email + connect + event)
 // ═══════════════════════════════════════════════════════════════════════════
 
 function convertTriggers(
@@ -994,6 +994,7 @@ function convertTriggers(
 	}
 
 	const crons: string[] = [];
+	const events: NonNullable<NonNullable<RawConfig["triggers"]>["events"]> = [];
 	const routes: NonNullable<RawConfig["routes"]> = result.routes
 		? [...result.routes]
 		: [];
@@ -1014,6 +1015,24 @@ function convertTriggers(
 			}
 			case "scheduled": {
 				crons.push(trigger.schedule);
+				break;
+			}
+			case "event": {
+				events.push(
+					omitUndefined({
+						type: trigger.event,
+						filter: trigger.filter
+							? omitUndefined({
+									namespace: trigger.filter.namespace,
+									repo_name: trigger.filter.repoName,
+								})
+							: undefined,
+						targets: trigger.targets.map((target) => ({
+							type: target.type,
+							workflow_name: target.workflowName,
+						})),
+					})
+				);
 				break;
 			}
 			case "fetch": {
@@ -1060,8 +1079,11 @@ function convertTriggers(
 		}
 	}
 
-	if (crons.length) {
-		result.triggers = { crons };
+	if (crons.length || events.length) {
+		result.triggers = omitUndefined({
+			crons: crons.length ? crons : undefined,
+			events: events.length ? events : undefined,
+		});
 	}
 	if (routes.length) {
 		result.routes = routes;
