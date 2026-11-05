@@ -1914,6 +1914,124 @@ describe("wrangler preview", () => {
 			);
 		});
 
+		test("falls back to the existing preview when a concurrent build creates it first", async ({
+			expect,
+		}) => {
+			// Two builds for the same branch race: this build's lookup misses
+			// (10025), but a sibling build creates the preview before this
+			// build's create POST runs, so the POST conflicts with code 100338.
+			// The command should still update the existing preview and deploy
+			// rather than failing the build.
+			let previewLookups = 0;
+			let createAttempts = 0;
+			const patchRequests: unknown[] = [];
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() => {
+						previewLookups++;
+						if (previewLookups === 1) {
+							return HttpResponse.json(
+								{
+									success: false,
+									result: null,
+									errors: [{ code: 10025, message: "Preview not found" }],
+								},
+								{ status: 404 }
+							);
+						}
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-conflict",
+								name: "race-preview",
+								slug: "race-preview",
+								urls: ["https://race-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() => {
+						createAttempts++;
+						if (createAttempts === 1) {
+							return HttpResponse.json(
+								{
+									success: false,
+									result: null,
+									errors: [
+										{
+											code: 100338,
+											message:
+												"A preview with name 'race-preview' already exists.",
+										},
+									],
+								},
+								{ status: 409 }
+							);
+						}
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-conflict",
+								name: "race-preview",
+								slug: "race-preview",
+								urls: ["https://race-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				),
+				http.patch(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					async ({ request }) => {
+						patchRequests.push(await request.json());
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-conflict",
+								name: "race-preview",
+								slug: "race-preview",
+								urls: ["https://race-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() =>
+						HttpResponse.json(
+							{
+								success: true,
+								result: {
+									id: "deployment-id-conflict",
+									preview_id: "preview-id-conflict",
+									preview_name: "race-preview",
+									urls: ["https://race12345.test-worker.cloudflare.app"],
+									compatibility_date: "2025-01-01",
+									env: {},
+									created_on: new Date().toISOString(),
+								},
+							},
+							{ status: 201 }
+						)
+				)
+			);
+
+			await runWrangler("preview --name race-preview");
+
+			expect(std.out).toContain("Preview: race-preview");
+			expect(std.out).toContain(
+				"Unique Deployment URL: https://race12345.test-worker.cloudflare.app"
+			);
+		});
+
 		describe("when the parent Worker does not exist", () => {
 			const { setIsTTY } = useMockIsTTY();
 
