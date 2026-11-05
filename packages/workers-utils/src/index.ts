@@ -158,6 +158,11 @@ export { isDockerfile } from "./config/validation";
 
 export { isDirectory, removeDir, removeDirSync } from "./fs-helpers";
 
+export {
+	getWasmSourceMappingUrl,
+	setWasmSourceMappingUrl,
+} from "./wasm-source-mapping-url";
+
 export { createConfigCache } from "./config-cache";
 export type { ConfigCache, ConfigCacheOptions } from "./config-cache";
 

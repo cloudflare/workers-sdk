@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { getWasmSourceMappingUrl } from "@cloudflare/workers-utils";
 import { logger } from "../logger";
 import type { CfModule, CfWorkerSourceMap } from "@cloudflare/workers-utils";
 
@@ -20,9 +21,10 @@ export interface SourceMapBundle {
  * @param main The main module of the Worker.
  * @param modules Any additional modules of the Worker.
  * @param bundle Source map location metadata from Wrangler's bundler, if it ran.
- * @param options.strict When `false`, modules whose source map comment can't be
- * resolved are skipped rather than failing. Used when source maps are uploaded
- * by default rather than explicitly requested.
+ * @param options.strict When `false`, modules whose source map comment or
+ * WebAssembly `sourceMappingURL` section can't be resolved are skipped rather
+ * than failing. Used when source maps are uploaded by default rather than
+ * explicitly requested.
  * @returns The source maps to upload alongside the Worker.
  */
 export function loadSourceMaps(
@@ -34,8 +36,15 @@ export function loadSourceMaps(
 	const { sourceMapPath, sourceMapMetadata } = bundle;
 	if (sourceMapPath && sourceMapMetadata) {
 		// This worker was bundled by Wrangler, so we already know where
-		// the source map is located.
-		return loadSourceMap(main, sourceMapPath, sourceMapMetadata);
+		// the source map is located. WebAssembly modules aren't bundled, so
+		// they can still have their own.
+		return [
+			...loadSourceMap(main, sourceMapPath, sourceMapMetadata),
+			...scanSourceMaps(
+				modules.filter((module) => module.type === "compiled-wasm"),
+				strict
+			),
+		];
 	} else {
 		// Don't know where source maps are located, so need to find
 		// them by scanning the contents of the user-specified modules.
@@ -170,13 +179,57 @@ function getSourceMappingUrl(module: CfModule): string | undefined {
 	return undefined;
 }
 
+/**
+ * Reads the URL in a WebAssembly module's `sourceMappingURL` custom section,
+ * if it has one.
+ */
+function getWasmModuleSourceMappingUrl(module: CfModule): string | undefined {
+	if (typeof module.content === "string") {
+		return undefined;
+	}
+	const url = getWasmSourceMappingUrl(module.content);
+	if (url?.startsWith("data:")) {
+		throw new Error(
+			`Unsupported source map path in ${module.filePath}: expected file path but found data URL.`
+		);
+	}
+	// A URL with a scheme, such as one from Emscripten's `--source-map-base`,
+	// names a map hosted elsewhere rather than a file to upload. A one-letter
+	// scheme is a Windows drive letter, so treat it as a path.
+	if (url !== undefined && /^[a-z][a-z\d+.-]+:/i.test(url)) {
+		return undefined;
+	}
+	if (url === undefined || module.filePath === undefined) {
+		return url;
+	}
+	// Toolchains write the map next to the module. Reading only there stops a
+	// module from naming an unrelated file elsewhere on disk. Check the resolved
+	// path, as on Windows a drive-relative path such as `C:..\..\x` still
+	// normalizes to a path that doesn't start with `..`.
+	const moduleDir = path.dirname(module.filePath);
+	const relativePath = path.relative(moduleDir, path.resolve(moduleDir, url));
+	if (
+		relativePath === ".." ||
+		relativePath.startsWith(`..${path.sep}`) ||
+		path.isAbsolute(relativePath)
+	) {
+		throw new Error(
+			`Unsupported source map path in ${module.filePath}: expected a file in the module's directory.`
+		);
+	}
+	return relativePath;
+}
+
 function sourceMapForModule(module: CfModule): CfWorkerSourceMap | undefined {
 	if (module.filePath === undefined) {
 		// virtual modules don't have sourcemaps so we can exit early here
 		return undefined;
 	}
 
-	const sourceMapUrl = getSourceMappingUrl(module);
+	const sourceMapUrl =
+		module.type === "compiled-wasm"
+			? getWasmModuleSourceMappingUrl(module)
+			: getSourceMappingUrl(module);
 	if (sourceMapUrl === undefined) {
 		return;
 	}

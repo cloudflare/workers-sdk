@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { randomFillSync } from "node:crypto";
+import { createHash, randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import { ParseError } from "@cloudflare/workers-utils";
@@ -27,6 +27,7 @@ import { mockSubDomainRequest } from "../helpers/mock-workers-subdomain";
 import { createFetchResult, msw } from "../helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/versions";
 import { runWrangler } from "../helpers/run-wrangler";
+import { wasmModuleWithSourceMappingUrl } from "../helpers/wasm-module";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import {
 	mockDeploymentsListRequest,
@@ -1422,6 +1423,90 @@ export default { fetch() { return new Response(mod); } };`;
 			});
 
 			await runWrangler("deploy");
+		});
+
+		describe("WebAssembly", () => {
+			const wasmSourceMap = (file: string) =>
+				JSON.stringify({
+					version: 3,
+					file,
+					sources: ["src/lib.rs"],
+					names: [],
+					mappings: "gBAAA",
+				});
+
+			/** Writes a Worker importing `hello.wasm`, returning its uploaded name. */
+			function writeWasmWorker({ withMap }: { withMap: boolean }) {
+				fs.writeFileSync(
+					"index.js",
+					`import hello from "./hello.wasm"; export default { fetch() { return new Response(String(hello)); } };`
+				);
+				const wasm = wasmModuleWithSourceMappingUrl("hello.wasm.map");
+				fs.writeFileSync("hello.wasm", wasm);
+				if (withMap) {
+					fs.writeFileSync("hello.wasm.map", wasmSourceMap("hello.wasm"));
+				}
+				const hash = createHash("sha1").update(wasm).digest("hex");
+				return `./${hash}-hello.wasm`;
+			}
+
+			it("should include WebAssembly source maps by default", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({ main: "index.js" });
+				const wasmName = writeWasmWorker({ withMap: true });
+
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedMainModule: "index.js",
+					expectedModules: {
+						"index.js.map": expect.stringContaining('"file":"index.js"'),
+						[`${wasmName}.map`]: wasmSourceMap(wasmName),
+					},
+				});
+
+				await runWrangler("deploy");
+			});
+
+			it("should skip a missing WebAssembly source map by default", async () => {
+				writeWranglerConfig({ main: "index.js" });
+				const wasmName = writeWasmWorker({ withMap: false });
+
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedMainModule: "index.js",
+					expectedModules: { [`${wasmName}.map`]: null },
+				});
+
+				await runWrangler("deploy");
+			});
+
+			it("should fail on a missing WebAssembly source map when upload_source_maps = true", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({ main: "index.js", upload_source_maps: true });
+				writeWasmWorker({ withMap: false });
+
+				await expect(runWrangler("deploy")).rejects.toThrow(
+					/Invalid source map path in .*hello\.wasm: .*hello\.wasm\.map does not exist\./
+				);
+			});
+
+			it("should not include WebAssembly source maps when upload_source_maps = false", async () => {
+				writeWranglerConfig({ main: "index.js", upload_source_maps: false });
+				const wasmName = writeWasmWorker({ withMap: true });
+
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedMainModule: "index.js",
+					expectedModules: {
+						"index.js.map": null,
+						[`${wasmName}.map`]: null,
+					},
+				});
+
+				await runWrangler("deploy");
+			});
 		});
 
 		it("should include source maps emitted by custom build when upload_source_maps = true", async ({

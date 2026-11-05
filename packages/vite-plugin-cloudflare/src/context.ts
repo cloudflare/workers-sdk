@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { getWorkerBundleDir } from "@cloudflare/build-output-utils";
 import { Miniflare } from "miniflare";
 import { getInitialWorkerNameToExportTypesMap } from "./export-types";
 import { debuglog } from "./utils";
@@ -232,6 +233,15 @@ export class PluginContext {
 		environmentName: string
 	): ParsedInputWorkerConfig | undefined {
 		return this.#getWorker(environmentName)?.config;
+	}
+
+	/** The Build Output bundle directory of the Worker an environment belongs to. */
+	getWorkerBundleDir(environmentName: string): string | undefined {
+		const worker = this.#getWorker(environmentName);
+		return (
+			worker &&
+			getWorkerBundleDir(this.resolvedViteConfig.root, worker.directoryName)
+		);
 	}
 
 	/** Clear the additional modules collected for an environment before rebuilding it. */
