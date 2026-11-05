@@ -206,7 +206,7 @@ const defaultConditions = ["workerd", "worker", "module", "browser"];
 const target = isRolldown ? "es2026" : "es2024";
 // `build.cssTarget` defaults to `build.target`, and Vite's lightningcss target
 // conversion has no es2026 entry, so CSS keeps the es2024 target.
-const cssTarget = "es2024";
+const defaultCssTarget = "es2024";
 
 // Syntax newer than es2024 that workerd runs natively, so esbuild should emit
 // it as written. Kept in step with Wrangler's COMMON_ESBUILD_OPTIONS.
@@ -242,6 +242,23 @@ function getWorkerSourcemap(
 		workerConfig.upload_source_maps ??
 		true
 	);
+}
+
+/**
+ * Vite merges the array-valued `build.cssTarget` returned from `configEnvironment`
+ * with the user's value by appending, and Lightning CSS then takes the lowest
+ * version per browser. A plugin default would therefore lower the user's pinned
+ * targets, so only provide the default when the user has not set one.
+ */
+function getWorkerCssTarget(
+	userConfig: vite.UserConfig,
+	environmentName: string
+): vite.BuildEnvironmentOptions["cssTarget"] {
+	const userCssTarget =
+		userConfig.environments?.[environmentName]?.build?.cssTarget ??
+		userConfig.build?.cssTarget;
+
+	return userCssTarget === undefined ? defaultCssTarget : undefined;
 }
 
 export function createCloudflareEnvironmentOptions({
@@ -306,7 +323,7 @@ export function createCloudflareEnvironmentOptions({
 				return new vite.BuildEnvironment(name, config);
 			},
 			target,
-			cssTarget,
+			cssTarget: getWorkerCssTarget(userConfig, environmentName),
 			emitAssets: true,
 			manifest: isEntryWorker,
 			outDir: getOutputDirectory(userConfig, environmentName),
