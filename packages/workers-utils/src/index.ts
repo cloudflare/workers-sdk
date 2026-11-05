@@ -176,6 +176,7 @@ export { resolveNamedTunnel, startTunnel } from "./tunnel";
 export { spawnCloudflared } from "./cloudflared";
 
 export * from "./cfetch";
+export * from "./custom-api-headers";
 
 export { fetchLatestNpmVersion } from "./update-check";
 export type { NpmVersionCheckResult } from "./update-check";
