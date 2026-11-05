@@ -133,6 +133,82 @@ describe("getVarsForDev", () => {
 		});
 	});
 
+	it("does not silently load nothing from a UTF-16LE .dev.vars file", ({
+		expect,
+	}) => {
+		// UTF-16LE with a BOM, as written by Windows PowerShell's `>` and `Out-File`
+		fs.writeFileSync(
+			".dev.vars",
+			Buffer.concat([
+				Buffer.from([0xff, 0xfe]),
+				Buffer.from("API_KEY=abc\n", "utf16le"),
+			])
+		);
+
+		let threw = false;
+		let result: Record<string, unknown> | undefined;
+		try {
+			result = getVarsForDev(
+				path.resolve("wrangler.jsonc"),
+				undefined,
+				{},
+				undefined,
+				false // not silent, so a warning would be visible
+			);
+		} catch {
+			threw = true;
+		}
+
+		const warnedAboutEncoding = /utf-?16|BOM|encoding/i.test(
+			`${std.warn}${std.out}${std.err}`
+		);
+		const loadedSomething = !!result && Object.keys(result).length > 0;
+		expect(
+			threw || warnedAboutEncoding || loadedSomething,
+			"Wrangler should error, warn about the file's encoding, or actually load the variables from a UTF-16 .dev.vars file"
+		).toBe(true);
+	});
+
+	it("does not silently load nothing from a UTF-16LE .env file", ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV", "true");
+		try {
+			fs.writeFileSync(
+				".env",
+				Buffer.concat([
+					Buffer.from([0xff, 0xfe]),
+					Buffer.from("ENV_SECRET=moon\n", "utf16le"),
+				])
+			);
+
+			let threw = false;
+			let result: Record<string, unknown> | undefined;
+			try {
+				result = getVarsForDev(
+					path.resolve("wrangler.jsonc"),
+					undefined,
+					{},
+					undefined,
+					false // not silent, so a warning would be visible
+				);
+			} catch {
+				threw = true;
+			}
+
+			const warnedAboutEncoding = /utf-?16|BOM|encoding/i.test(
+				`${std.warn}${std.out}${std.err}`
+			);
+			const loadedSomething = !!result && Object.keys(result).length > 0;
+			expect(
+				threw || warnedAboutEncoding || loadedSomething,
+				"Wrangler should error, warn about the file's encoding, or actually load the variables from a UTF-16 .env file"
+			).toBe(true);
+		} finally {
+			vi.unstubAllEnvs();
+		}
+	});
+
 	it("handles undefined loadedSecrets gracefully (no dev var files)", ({
 		expect,
 	}) => {
