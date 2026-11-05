@@ -232,6 +232,9 @@ export function createCloudflareAuth(
 	// Non-persistent consumers still reuse a choice for this auth instance so
 	// long-running sessions can refresh without prompting for the account again.
 	let accountSelection: AccountSelection | undefined;
+	// Account lookup and prompting are asynchronous, so concurrent consumers
+	// share the same unresolved selection rather than opening multiple prompts.
+	let accountSelectionPromise: Promise<string> | undefined;
 
 	function clearAccountSelection(): void {
 		accountSelection = undefined;
@@ -571,16 +574,7 @@ Alternatively, try running \`${descriptor.commands.login}\` to re-authenticate.`
 		return resolveAccountSelection()?.id;
 	}
 
-	async function getOrSelectAccountId(
-		config: RequireAuthConfig
-	): Promise<string> {
-		// TODO: v5 we should prioritise the env var instead of the config value here,
-		// for consistency with other env vars.
-		const activeAccountId = getActiveAccountId(config);
-		if (activeAccountId) {
-			return activeAccountId;
-		}
-
+	async function selectAccountId(config: RequireAuthConfig): Promise<string> {
 		const accounts = await fetchAllAccounts(config);
 		if (accounts.length === 1) {
 			retainAccountSelection({ id: accounts[0].id, name: accounts[0].name });
@@ -625,6 +619,22 @@ ${accounts
 			}
 			throw e;
 		}
+	}
+
+	async function getOrSelectAccountId(
+		config: RequireAuthConfig
+	): Promise<string> {
+		// TODO: v5 we should prioritise the env var instead of the config value here,
+		// for consistency with other env vars.
+		const activeAccountId = getActiveAccountId(config);
+		if (activeAccountId) {
+			return activeAccountId;
+		}
+
+		accountSelectionPromise ??= selectAccountId(config).finally(() => {
+			accountSelectionPromise = undefined;
+		});
+		return accountSelectionPromise;
 	}
 
 	async function requireAuth(config: RequireAuthConfig): Promise<string> {

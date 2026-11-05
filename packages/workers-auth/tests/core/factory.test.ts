@@ -1,7 +1,10 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { createConfigCache } from "@cloudflare/workers-utils";
-import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
+import {
+	createDeferred,
+	runInTempDir,
+} from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { CF_CLI } from "../../src/cf";
 import { createCloudflareAuth } from "../../src/core/factory";
@@ -313,6 +316,54 @@ describe("account selection persistence", () => {
 		expect(
 			createCloudflareAuth(CF_CLI, createTestContext()).getActiveAccountId({})
 		).toBeUndefined();
+	});
+
+	it("shares an in-flight cf account selection", async ({ expect }) => {
+		const accounts = [
+			{ id: "account-one", name: "Account One" },
+			{ id: "account-two", name: "Account Two" },
+		];
+		mockAccountResponses(accounts);
+		const selection = createDeferred<string>();
+		const ctx = createTestContext();
+		vi.mocked(ctx.select).mockReturnValue(selection.promise);
+		const auth = createCloudflareAuth(CF_CLI, ctx);
+
+		const first = auth.getOrSelectAccountId(COMPLIANCE_CONFIG);
+		const second = auth.getOrSelectAccountId(COMPLIANCE_CONFIG);
+		await vi.waitFor(() => expect(ctx.select).toHaveBeenCalledOnce());
+		selection.resolve("account-two");
+
+		await expect(Promise.all([first, second])).resolves.toEqual([
+			"account-two",
+			"account-two",
+		]);
+		expect(fetchInternalBase).toHaveBeenCalledTimes(2);
+	});
+
+	it("retries account selection after an in-flight selection fails", async ({
+		expect,
+	}) => {
+		const accounts = [
+			{ id: "account-one", name: "Account One" },
+			{ id: "account-two", name: "Account Two" },
+		];
+		mockAccountResponses(accounts);
+		const ctx = createTestContext();
+		vi.mocked(ctx.select).mockRejectedValueOnce(new Error("selection failed"));
+		const auth = createCloudflareAuth(CF_CLI, ctx);
+
+		await expect(auth.getOrSelectAccountId(COMPLIANCE_CONFIG)).rejects.toThrow(
+			"selection failed"
+		);
+
+		mockAccountResponses(accounts);
+		vi.mocked(ctx.select).mockResolvedValueOnce("account-one");
+		await expect(auth.getOrSelectAccountId(COMPLIANCE_CONFIG)).resolves.toBe(
+			"account-one"
+		);
+		expect(ctx.select).toHaveBeenCalledTimes(2);
+		expect(fetchInternalBase).toHaveBeenCalledTimes(4);
 	});
 
 	it("retains a single cf account only for the auth instance", async ({
