@@ -45,7 +45,10 @@ describe("handleWebSocket", () => {
 	 * `beforeEach` so tests that need a custom Worker script don't have to
 	 * spawn-then-immediately-dispose a throwaway `workerd` process.
 	 */
-	function startMiniflare(script: string = DEFAULT_WORKER_SCRIPT) {
+	function startMiniflare(
+		script: string = DEFAULT_WORKER_SCRIPT,
+		extraConfig: Record<string, unknown> = {}
+	) {
 		miniflare = new Miniflare({
 			workers: [
 				{
@@ -60,6 +63,7 @@ describe("handleWebSocket", () => {
 						},
 						env: {},
 						exports: {},
+						...extraConfig,
 					},
 				},
 			],
@@ -638,6 +642,175 @@ describe("handleWebSocket", () => {
 		expect(raw).toMatch(/^HTTP\/1\.1 200/);
 		expect(raw).toContain("OKHTTP/1.1 101 Switching Protocols");
 		socket.destroy();
+	});
+
+	// https://github.com/cloudflare/workers-sdk/issues/16491
+	test("closes the Worker-side WebSocket when the client disconnects mid-upgrade", async ({
+		expect,
+	}) => {
+		// SQLite-backed hibernating Durable Object, as in the issue: it accepts
+		// WebSocket upgrades into hibernation and reports
+		// `ctx.getWebSockets().length` on `/count`, so a server-side socket
+		// left behind by the proxy shows up as a phantom count.
+		startMiniflare(
+			`
+			import { DurableObject } from "cloudflare:workers";
+
+			export class Room extends DurableObject {
+				async fetch(request) {
+					const url = new URL(request.url);
+					if (url.pathname === "/count") {
+						return new Response(\`\${this.ctx.getWebSockets().length}\`);
+					}
+					const [client, server] = Object.values(new WebSocketPair());
+					this.ctx.acceptWebSocket(server);
+					return new Response(null, { status: 101, webSocket: client });
+				}
+			}
+
+			export default {
+				async fetch(request, env) {
+					const stub = env.ROOM.get(env.ROOM.idFromName("room"));
+					return stub.fetch(request);
+				}
+			}
+		`,
+			{
+				compatibilityDate: "2024-09-01",
+				env: {
+					ROOM: { type: "durable-object", worker: "", exportName: "Room" },
+				},
+				exports: {
+					Room: { type: "durable-object", storage: "sqlite" },
+				},
+			}
+		);
+		const mf = await listen();
+		const realDispatchFetch = mf.dispatchFetch.bind(mf);
+		const count = async () =>
+			Number(
+				await (await realDispatchFetch("http://placeholder/count")).text()
+			);
+
+		// Hold the upgrade's dispatch until the client has dropped its socket:
+		// the exact race from the issue, made deterministic. When the dispatch
+		// resolves, the DO has already accepted the server-side WebSocket into
+		// hibernation, but the client is gone.
+		const resumeDispatch = new DeferredPromise<void>();
+		const upgradeDispatchStarted = new DeferredPromise<void>();
+		const upgradeDispatchSettled = new DeferredPromise<void>();
+		onTestFinished(() => resumeDispatch.resolve());
+		let upgradeStarted = false;
+		vi.spyOn(mf, "dispatchFetch").mockImplementation(async (...args) => {
+			if (!upgradeStarted) {
+				upgradeStarted = true;
+				upgradeDispatchStarted.resolve();
+				await resumeDispatch;
+				const response = await realDispatchFetch(...args);
+				upgradeDispatchSettled.resolve();
+				return response;
+			}
+			return realDispatchFetch(...args);
+		});
+
+		const socket = await connect();
+		socket.write(
+			"GET /ws HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		// The upgrade is now in flight inside the proxy; drop the client.
+		await upgradeDispatchStarted;
+		socket.destroy();
+		resumeDispatch.resolve();
+
+		// The Worker returns its WebSocket while the client socket is dead.
+		await upgradeDispatchSettled;
+		// Give the proxy's `await` continuation (which sees the destroyed
+		// socket) a chance to run before asserting on the DO's state.
+		await new Promise((resolve) => setTimeout(resolve, 100));
+
+		// The Durable Object must be left with no hibernated socket: the
+		// proxy has to close the Worker-side WebSocket when the client is
+		// gone, so the close propagates to the DO's accepted socket. Before
+		// the fix, the proxy dropped the Worker's WebSocket without closing
+		// it, so the phantom stayed in `ctx.getWebSockets()` forever — the
+		// issue's off-by-one count until the dev server restarts.
+		await vi.waitFor(
+			async () => {
+				expect(await count()).toBe(0);
+			},
+			{ timeout: 10_000 }
+		);
+	});
+
+	// Sanity check for the phantom test's observable: a real upgrade through
+	// the proxy is visible in `ctx.getWebSockets()`, and closes cleanly.
+	test("a successful upgrade is visible in the DO's socket count", async ({
+		expect,
+	}) => {
+		startMiniflare(
+			`
+			import { DurableObject } from "cloudflare:workers";
+
+			export class Room extends DurableObject {
+				async fetch(request) {
+					const url = new URL(request.url);
+					if (url.pathname === "/count") {
+						return new Response(\`\${this.ctx.getWebSockets().length}\`);
+					}
+					const [client, server] = Object.values(new WebSocketPair());
+					this.ctx.acceptWebSocket(server);
+					return new Response(null, { status: 101, webSocket: client });
+				}
+			}
+
+			export default {
+				async fetch(request, env) {
+					const stub = env.ROOM.get(env.ROOM.idFromName("room"));
+					return stub.fetch(request);
+				}
+			}
+		`,
+			{
+				compatibilityDate: "2024-09-01",
+				env: {
+					ROOM: { type: "durable-object", worker: "", exportName: "Room" },
+				},
+				exports: {
+					Room: { type: "durable-object", storage: "sqlite" },
+				},
+			}
+		);
+		const mf = await listen();
+
+		const count = async () =>
+			Number(await (await mf.dispatchFetch("http://placeholder/count")).text());
+
+		const socket = await connect();
+		const client = new WebSocket(`ws://127.0.0.1:${port}/ws`, {
+			createConnection: () => socket,
+		});
+		onTestFinished(() => client.terminate());
+		await once(client, "open");
+		await vi.waitFor(
+			async () => {
+				expect(await count()).toBe(1);
+			},
+			{ timeout: 10_000 }
+		);
+
+		client.close();
+		await vi.waitFor(
+			async () => {
+				expect(await count()).toBe(0);
+			},
+			{ timeout: 10_000 }
+		);
 	});
 
 	test("destroys an unclaimed upgrade when the Worker does not route it", async () => {
