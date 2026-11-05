@@ -182,6 +182,55 @@ test(
 );
 
 test(
+	"loads a warm-module snapshot larger than workerd's 32 MiB WebSocket limit",
+	{ timeout: 240_000 },
+	async ({ expect, seed, vitestRun }) => {
+		// workerd closes WebSocket messages over 32 MiB with close code 1009
+		// "Message is too large", so inlining a large import graph into a single
+		// `fetchWarmModules` reply kills the pool worker. See issue #16349: with
+		// 40 modules of 1 MiB each, the second test file crashes at startup.
+		const moduleCount = 40;
+		const moduleSize = 1024 * 1024;
+		const files: Record<string, string> = {
+			"vitest.config.mts": vitestConfig(
+				{},
+				// Run files one at a time, so the second file's worker receives
+				// the warm-module snapshot of the whole graph.
+				{ ...cacheConfig, fileParallelism: false }
+			),
+		};
+		const imports: string[] = [];
+		const lengths: string[] = [];
+		for (let index = 0; index < moduleCount; index++) {
+			const blob = `${index}`.padEnd(moduleSize, "x");
+			files[`graph/part-${index}.ts`] =
+				`export const part${index} = ${JSON.stringify(blob)};\n`;
+			imports.push(`import { part${index} } from "./graph/part-${index}.ts";`);
+			lengths.push(`part${index}.length`);
+		}
+		files["graph.ts"] = `${imports.join("\n")}\n\nexport const totalLength = ${lengths.join(" + ")};\n`;
+		const testFile = dedent`
+			import { it } from "vitest";
+			import { totalLength } from "./graph.ts";
+
+			it("loads the graph", ({ expect }) => {
+				expect(totalLength).toBe(${moduleCount} * ${moduleSize});
+			});
+		`;
+		// The first file transforms the graph into the cache; the second file's
+		// inlined warm-module snapshot exceeds the limit and must not kill the
+		// worker.
+		files["first.test.ts"] = testFile;
+		files["second.test.ts"] = testFile;
+		await seed(files);
+
+		const result = await vitestRun();
+		expect(await result.exitCode, result.stderr + result.stdout).toBe(0);
+		expect(result.stderr).not.toContain("Message is too large");
+	}
+);
+
+test(
 	"keeps cached cloudflare:test modules project-specific",
 	{ timeout: 90_000 },
 	async ({ expect, seed, vitestRun }) => {
