@@ -76,7 +76,7 @@ export async function startQuickActionBrowser(
 			},
 		};
 	} catch (error) {
-		await closeProcess();
+		await closeProcess().catch(() => {});
 		throw error;
 	}
 }
