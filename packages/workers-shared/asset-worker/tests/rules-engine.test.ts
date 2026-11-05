@@ -89,6 +89,45 @@ describe("rules engine", () => {
 			matcher({ request: new Request("https://next.my.pages.dev/magic") })
 		).toEqual(["6/my/"]);
 	});
+
+	test("it should support placeholders sharing a prefix", ({ expect }) => {
+		const matcher = generateRulesMatcher(
+			{ "/p/:id/:id_2": "/dest/:id/:id_2" },
+			(match, replacements) => replacer(match, replacements)
+		);
+		expect(
+			matcher({ request: new Request("https://example.com/p/1/2") })
+		).toEqual(["/dest/1/2"]);
+	});
+
+	test("it should support host placeholders sharing a prefix", ({
+		expect,
+	}) => {
+		const matcher = generateRulesMatcher(
+			{
+				"https://:subdomain.:subdomain_2.example.com/*":
+					"/:subdomain/:subdomain_2/:splat",
+			},
+			(match, replacements) => replacer(match, replacements)
+		);
+		expect(
+			matcher({
+				request: new Request("https://foo.bar.example.com/magic"),
+			})
+		).toEqual(["/foo/bar/magic"]);
+	});
+
+	test("it should support colliding placeholders in header values", ({
+		expect,
+	}) => {
+		const matcher = generateRulesMatcher(
+			{ "/static/:file/:file_2": "X-Cache: :file/:file_2" },
+			(match, replacements) => replacer(match, replacements)
+		);
+		expect(
+			matcher({ request: new Request("https://example.com/static/a/b") })
+		).toEqual(["X-Cache: a/b"]);
+	});
 });
 
 describe("replacer", () => {
@@ -108,6 +147,40 @@ describe("replacer", () => {
 		expect(
 			replacer("/:code/:splat", { splat: "tricycle/images", code: "123" })
 		).toEqual("/123/tricycle/images");
+	});
+
+	test("should not let a placeholder eat a longer one sharing its prefix", ({
+		expect,
+	}) => {
+		expect(replacer("/new/:a/:ab", { a: "X", ab: "Y" })).toEqual("/new/X/Y");
+		expect(replacer("/dest/:id/:id_2", { id: "1", id_2: "2" })).toEqual(
+			"/dest/1/2"
+		);
+	});
+
+	test("should leave placeholders with no replacement alone", ({
+		expect,
+	}) => {
+		expect(replacer("/:code/:missing", { code: "123" })).toEqual(
+			"/123/:missing"
+		);
+	});
+
+	test("should not re-substitute inside an already-replaced value", ({
+		expect,
+	}) => {
+		expect(replacer("/:a/:b", { a: ":b", b: "second" })).toEqual("/:b/second");
+	});
+
+	test("should not substitute placeholders named after object properties", ({
+		expect,
+	}) => {
+		expect(replacer("/:code/:toString", { code: "123" })).toEqual(
+			"/123/:toString"
+		);
+		expect(replacer("X-Cache: :constructor", {})).toEqual(
+			"X-Cache: :constructor"
+		);
 	});
 
 	test("should replace all instances of placeholders", ({ expect }) => {
