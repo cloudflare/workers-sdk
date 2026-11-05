@@ -56,7 +56,7 @@ describe("performApiFetchBase", () => {
 		vi.restoreAllMocks();
 	});
 
-	it("does not materialize sanitized FormData request bodies", async ({
+	it("preserves the sanitized FormData body hint without materializing the body", async ({
 		expect,
 	}) => {
 		vi.stubEnv("WRANGLER_LOG_SANITIZE", "true");
@@ -66,9 +66,9 @@ describe("performApiFetchBase", () => {
 		await performFormDataFetch(logger);
 
 		expect(responseText).not.toHaveBeenCalled();
-		expect(logger.debugWithSanitization).not.toHaveBeenCalledWith(
+		expect(logger.debugWithSanitization).toHaveBeenCalledWith(
 			"BODY:",
-			expect.anything(),
+			"<multipart body>",
 			null,
 			2
 		);

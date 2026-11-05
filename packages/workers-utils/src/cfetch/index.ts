@@ -98,12 +98,13 @@ export async function performApiFetchBase(
 	if (
 		logger.debugWithSanitization !== undefined &&
 		init.body instanceof FormData &&
-		!getSanitizeLogs() &&
 		(logger.loggerLevel === undefined || logger.loggerLevel === "debug")
 	) {
 		logger.debugWithSanitization?.(
 			"BODY:",
-			await new Response(init.body).text(),
+			getSanitizeLogs()
+				? "<multipart body>"
+				: await new Response(init.body).text(),
 			null,
 			2
 		);
