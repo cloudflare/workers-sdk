@@ -927,6 +927,77 @@ describe("deploy", () => {
 			`);
 		});
 
+		it("should warn when _redirects rules are dropped for exceeding the dynamic rule limit", async ({
+			expect,
+		}) => {
+			// 105 dynamic rules followed by a catch-all: only the first 100
+			// dynamic rules are applied, so the remaining 6 rules are dropped.
+			const redirectsContent = [
+				...Array(105)
+					.fill(undefined)
+					.map((_, i) => `/a/${i}/* /b/${i}/:splat`),
+				"/* /not-found",
+			].join("\n");
+			const assets = [
+				{ filePath: "_redirects", content: redirectsContent },
+				{ filePath: "index.html", content: "<html></html>" },
+			];
+			writeAssets(assets);
+			writeWranglerConfig({
+				assets: { directory: "assets" },
+			});
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					// The raw (unparsed, unmodified) _redirects file is still
+					// uploaded as-is -- the deploy-time check is warning-only.
+					config: {
+						_redirects: redirectsContent,
+					},
+				},
+				expectedType: "none",
+			});
+			await runWrangler("deploy");
+			expect(std.warn).toContain("exceeds the maximum of 100 dynamic rules");
+			expect(std.warn).toContain(
+				"6 rules will be skipped, starting from line 101"
+			);
+		});
+
+		it("should not warn when _redirects is within the dynamic rule limit", async ({
+			expect,
+		}) => {
+			const redirectsContent = Array(100)
+				.fill(undefined)
+				.map((_, i) => `/a/${i}/* /b/${i}/:splat`)
+				.join("\n");
+			const assets = [
+				{ filePath: "_redirects", content: redirectsContent },
+				{ filePath: "index.html", content: "<html></html>" },
+			];
+			writeAssets(assets);
+			writeWranglerConfig({
+				assets: { directory: "assets" },
+			});
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {
+						_redirects: redirectsContent,
+					},
+				},
+				expectedType: "none",
+			});
+			await runWrangler("deploy");
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
 		it("should resolve assets directory relative to cwd if using cli", async ({
 			expect,
 		}) => {

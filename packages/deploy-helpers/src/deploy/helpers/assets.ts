@@ -2,6 +2,8 @@ import assert from "node:assert";
 import { createReadStream } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
+import { MAX_DYNAMIC_REDIRECT_RULES } from "@cloudflare/workers-shared/utils/configuration/constants";
+import { parseRedirects } from "@cloudflare/workers-shared/utils/configuration/parseRedirects";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import {
 	CF_ASSETS_IGNORE_FILENAME,
@@ -847,4 +849,56 @@ export function resolveAssetOptions(
 		// raw static routing rules for upload. routerConfig.static_routing contains the rules processed for dev.
 		run_worker_first: config.assets?.run_worker_first,
 	};
+}
+
+/**
+ * Warn about `_redirects` rules that will be dropped because the file
+ * exceeds the maximum number of dynamic rules.
+ *
+ * The raw `_redirects` file is uploaded as-is at deploy time and the asset
+ * worker is the authoritative parser at runtime, so the overflow rules are
+ * dropped server-side. `parseRedirects()` records the overflow as an invalid
+ * rule, but nothing surfaced it during `wrangler deploy`, so authors got no
+ * signal that the remainder of their file — including any catch-all at the
+ * end — would not be applied. This is warning-only and never changes what
+ * gets uploaded.
+ *
+ * This must only be called from the deploy / versions-upload paths: in
+ * `wrangler dev` the same overflow is already reported when the parsed
+ * configuration is constructed, so warning from here as well would report
+ * it twice.
+ */
+export function warnIfRedirectRulesDropped(
+	assetsOptions: AssetsOptions | undefined
+): void {
+	const redirects = assetsOptions?._redirects;
+	if (!redirects) {
+		return;
+	}
+
+	const { invalid } = parseRedirects(redirects, {
+		htmlHandling: assetsOptions.assetConfig.html_handling,
+	});
+	const overflow = invalid.find(({ message }) =>
+		message.startsWith("Maximum number of dynamic rules supported is")
+	);
+	if (!overflow?.lineNumber) {
+		return;
+	}
+
+	// Every rule line from the first dropped rule onwards is skipped,
+	// including any catch-all at the end of the file.
+	const droppedRules = redirects
+		.split("\n")
+		.slice(overflow.lineNumber - 1)
+		.filter((line) => {
+			const trimmed = line.trim();
+			return trimmed.length > 0 && !trimmed.startsWith("#");
+		}).length;
+
+	logger.warn(
+		`The \`_redirects\` file exceeds the maximum of ${MAX_DYNAMIC_REDIRECT_RULES} dynamic rules. ` +
+			`${droppedRules} rule${droppedRules === 1 ? "" : "s"} will be skipped, starting from line ${overflow.lineNumber}, and will not be applied. ` +
+			`Rules are counted as dynamic once the file contains a rule with a splat or placeholder, so moving exact-path rules above those can help stay within the limit.`
+	);
 }

@@ -98,6 +98,8 @@ export function parseRedirects(
 
 			if (dynamicRules > maxDynamicRules) {
 				invalid.push({
+					line,
+					lineNumber: i + 1,
 					message: `Maximum number of dynamic rules supported is ${maxDynamicRules}. Skipping remaining ${
 						lines.length - i
 					} lines of file.`,

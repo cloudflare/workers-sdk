@@ -129,6 +129,8 @@ test("parseRedirects should reject any dynamic rules after the first 100", ({
 			})),
 		invalid: [
 			{
+				line: `/a/100/* /b/100/:splat`,
+				lineNumber: 103,
 				message: `Maximum number of dynamic rules supported is 100. Skipping remaining 52 lines of file.`,
 			},
 		],
@@ -206,10 +208,34 @@ test("parseRedirects should reject a combination of lots of static and dynamic r
 					message: `Maximum number of static rules supported is ${maxStaticRedirectRules}. Skipping line.`,
 				})),
 			{
+				line: `/a/100/* /b/100/:splat`,
+				lineNumber: 2153,
 				message: `Maximum number of dynamic rules supported is ${maxDynamicRedirectRules}. Skipping remaining 52 lines of file.`,
 			},
 		],
 	});
+});
+
+test("parseRedirects should report the first dropped rule when the dynamic limit drops a trailing catch-all", ({
+	expect,
+}) => {
+	const input = [
+		...Array(101)
+			.fill(undefined)
+			.map((_, i) => `/a/${i}/* /b/${i}/:splat`),
+		`/* /not-found`,
+	].join("\n");
+
+	const result = parseRedirects(input);
+
+	expect(result.rules).toHaveLength(100);
+	expect(result.invalid).toEqual([
+		{
+			line: `/a/100/* /b/100/:splat`,
+			lineNumber: 101,
+			message: `Maximum number of dynamic rules supported is 100. Skipping remaining 2 lines of file.`,
+		},
+	]);
 });
 
 test("parseRedirects should reject malformed URLs", ({ expect }) => {

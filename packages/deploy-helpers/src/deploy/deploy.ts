@@ -29,6 +29,7 @@ import {
 	buildAssetManifest,
 	resolveAssetOptions,
 	syncAssets,
+	warnIfRedirectRulesDropped,
 } from "./helpers/assets";
 import {
 	getSize,
@@ -191,6 +192,7 @@ async function deployWorker(
 		props;
 
 	const assetsOptions = resolveAssetOptions(props, config);
+	warnIfRedirectRulesDropped(assetsOptions);
 
 	// Any validation that does not require API calls should go in validateWorkerProps()
 	const { name } = validateWorkerProps({ ...props, assetsOptions }, config);

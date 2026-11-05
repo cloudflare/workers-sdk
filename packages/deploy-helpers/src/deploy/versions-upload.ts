@@ -18,7 +18,11 @@ import { parseAndExpandDotEnv } from "@cloudflare/workers-utils/local-env";
 import { Response } from "undici";
 import { fetchResult, logger } from "../shared/context";
 import { getWorkerSubdomain } from "../triggers/subdomain";
-import { resolveAssetOptions, syncAssets } from "./helpers/assets";
+import {
+	resolveAssetOptions,
+	syncAssets,
+	warnIfRedirectRulesDropped,
+} from "./helpers/assets";
 import { renderBindingDependsOnExportError } from "./helpers/binding-depends-on-export";
 import {
 	getSize,
@@ -133,6 +137,7 @@ async function uploadWorkerVersion(
 		props;
 
 	const assetsOptions = resolveAssetOptions(props, config);
+	warnIfRedirectRulesDropped(assetsOptions);
 
 	// Any validation that does not require API calls should go in validateWorkerProps()
 	const { name } = validateWorkerProps(props, config);
