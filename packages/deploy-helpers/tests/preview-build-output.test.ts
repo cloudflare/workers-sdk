@@ -286,6 +286,74 @@ describe("previewBuildOutput", () => {
 		);
 	});
 
+	it("restores the preview's id and name on the deployment handed to deployPreviewContainers", async ({
+		expect,
+	}) => {
+		// The preview deployment API response carries neither preview_id nor
+		// preview_name, even though DeploymentResource declares both. Without
+		// them, the container deploy callback resolves a Durable Object
+		// namespace by comparing preview ids that are both undefined, and
+		// matches a production namespace instead of the preview's own.
+		// See #16127.
+		mocks.createPreviewDeployment.mockResolvedValue({
+			id: "deployment-id",
+			created_on: "2026-09-17T00:00:00Z",
+		});
+
+		const normalisedContainerConfig = [
+			{
+				name: "preview-worker_feature_ContainerDO",
+				class_name: "ContainerDO",
+			},
+		];
+		const getNormalizedContainerOptions = vi
+			.fn()
+			.mockResolvedValue(normalisedContainerConfig);
+		const deployPreviewContainers = vi.fn().mockResolvedValue(undefined);
+		const options: PreviewOptions = {
+			getNormalizedContainerOptions,
+			deployPreviewContainers,
+		};
+
+		await previewBuildOutput(
+			"account-id",
+			{ name: "feature", json: true },
+			{
+				workerConfig: buildOutputConfig({
+					exports: {
+						ContainerDO: {
+							type: "durable-object",
+							storage: "sqlite",
+							container: "api-container",
+						},
+					},
+				}),
+				rootConfig: validRootConfig,
+				buildResult,
+				containers: [
+					{
+						name: "api-container",
+						image: { reference: "registry.cloudflare.com/api:latest" },
+						maxInstances: 1,
+					},
+				],
+			},
+			options
+		);
+
+		expect(deployPreviewContainers).toHaveBeenCalledWith(
+			expect.anything(),
+			normalisedContainerConfig,
+			expect.objectContaining({
+				id: "deployment-id",
+				preview_id: "preview-id",
+				preview_name: "feature",
+			}),
+			"account-id",
+			{ quiet: true, localImageReferences: new Map() }
+		);
+	});
+
 	it("deploys local Build Output image references through the caller callbacks", async ({
 		expect,
 	}) => {
