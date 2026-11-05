@@ -1015,6 +1015,30 @@ describe("init", () => {
 				`);
 		});
 
+		it("should fail cleanly when the content endpoint returns 204 No Content", async () => {
+			// https://github.com/cloudflare/workers-sdk/issues/16178
+			// A Worker whose production environment has an empty deployment_id
+			// gets a 204 No Content response from the content endpoint; wrangler
+			// should fail with a meaningful error, not leak the raw response
+			// internals ("[ERROR] true null") into its output.
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/services/:fromDashScriptName/environments/:environment/content/v2`,
+					() => {
+						return new HttpResponse(null, { status: 204 });
+					},
+					{ once: true }
+				)
+			);
+			await expect(
+				runWrangler(
+					"init --from-dash isolinear-optical-chip --no-delegate-c3"
+				)
+			).rejects.toThrow();
+
+			expect(std.err).not.toContain("true null");
+		});
+
 		it("should download source script from dashboard w/ out positional <name>", async () => {
 			worker = makeWorker({
 				id: "isolinear-optical-chip",
