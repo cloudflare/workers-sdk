@@ -722,31 +722,65 @@ describe("generate types - CLI", () => {
 			}
 		);
 
-		it("preserves the opt-out across automatic regeneration", async ({
-			expect,
-		}) => {
-			fs.writeFileSync("index.ts", "export default {};");
-			const config = {
-				main: "index.ts",
-				compatibility_date: "2026-01-01",
-				dev: { generate_types: true },
-				vars: { VALUE: "initial" },
-			};
-			fs.writeFileSync("wrangler.jsonc", JSON.stringify(config));
-			await runWrangler("types --include-main-module=false");
-
-			for (const value of ["updated", "updated again"]) {
-				config.vars.VALUE = value;
+		it.for([
+			"",
+			"--env-file=.env.production",
+			"--env-file=.env.production --env-file=.env.extra",
+			"--env=production",
+			"--env=production --env-file=.env.production",
+		])(
+			"preserves generation inputs across automatic regeneration (%s)",
+			async (flags, { expect }) => {
+				spy.mockResolvedValue({
+					runtimeHeader: getRuntimeHeader(workerdVersion, "2026-01-01"),
+					runtimeTypes: "<runtime types go here>",
+				});
+				fs.writeFileSync("index.ts", "export default {};");
+				fs.writeFileSync(".dev.vars", "DEV_SECRET=dev");
+				fs.writeFileSync(".dev.vars.production", "ENV_SECRET=production");
+				fs.writeFileSync(".env.production", "FILE_SECRET=production");
+				fs.writeFileSync(".env.extra", "EXTRA_SECRET=extra");
+				const config = {
+					main: "index.ts",
+					compatibility_date: "2026-01-01",
+					dev: { generate_types: true },
+					vars: { VALUE: "initial" },
+					env: { production: { vars: { VALUE: "initial" } } },
+				};
 				fs.writeFileSync("wrangler.jsonc", JSON.stringify(config));
-				const resolvedConfig = readConfig({ config: "wrangler.jsonc" });
-				const entry = await getEntry({}, resolvedConfig, "types");
-				expect(await checkTypesDiff(resolvedConfig, entry)).toBe(true);
-				const content = fs.readFileSync("worker-configuration.d.ts", "utf-8");
-				expect(content).toContain("--include-main-module=false");
-				expect(content).not.toContain("mainModule:");
-				expect(content).toContain(`VALUE: "${value}";`);
+				await runWrangler(`types --include-main-module=false ${flags}`);
+
+				for (const value of ["updated", "updated again"]) {
+					config.vars.VALUE = value;
+					config.env.production.vars.VALUE = value;
+					fs.writeFileSync("wrangler.jsonc", JSON.stringify(config));
+					const resolvedConfig = readConfig({
+						config: "wrangler.jsonc",
+						env: "production",
+					});
+					const entry = await getEntry({}, resolvedConfig, "types");
+					expect(await checkTypesDiff(resolvedConfig, entry)).toBe(true);
+					const content = fs.readFileSync("worker-configuration.d.ts", "utf-8");
+					expect(content).toContain("--include-main-module=false");
+					expect(content).toContain(flags);
+					expect(content).not.toContain("mainModule:");
+					expect(content).toContain(`VALUE: "${value}";`);
+					if (flags.includes("--env-file")) {
+						expect(content).toContain("FILE_SECRET: string;");
+						expect(content).not.toContain("DEV_SECRET:");
+						expect(content).not.toContain("ENV_SECRET:");
+					}
+					if (flags.includes(".env.extra")) {
+						expect(content).toContain("EXTRA_SECRET: string;");
+					}
+					if (flags === "--env=production") {
+						expect(content).toContain("ENV_SECRET: string;");
+						expect(content).not.toContain("DEV_SECRET:");
+					}
+					await runWrangler("types --check");
+				}
 			}
-		});
+		);
 	});
 
 	it("keeps the runtime header stable after trailing whitespace is removed", async ({

@@ -332,6 +332,10 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 	const previousCommand = existingEnvHeader?.match(
 		/running `(?<command>.*)` \(hash:/
 	)?.groups?.command;
+	const previousArgs = yargs(previousCommand ?? "")
+		.option("env", { type: "string" })
+		.option("env-file", { type: "string", array: true })
+		.parseSync();
 
 	let newEnvHeader: string | undefined;
 	let newEnvTypes: string | undefined;
@@ -341,6 +345,8 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 			{
 				strictVars: previousStrictVars !== "false",
 				includeMainModule: previousIncludeMainModule !== "false",
+				env: previousArgs.env,
+				envFile: previousArgs["env-file"],
 			},
 			previousEnvInterface ?? "Env",
 			DEFAULT_WORKERS_TYPES_FILE_NAME,
