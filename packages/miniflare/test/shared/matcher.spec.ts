@@ -1,6 +1,6 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { globsToRegExps, testRegExps } from "miniflare";
+import { compileModuleRules, globsToRegExps, testRegExps } from "miniflare";
 import { test } from "vitest";
 
 test("globsToRegExps/testRegExps: matches glob patterns", ({ expect }) => {
@@ -59,4 +59,50 @@ test("globsToRegExps/testRegExps: without endAnchor, matches substring patterns"
 	const matcher = globsToRegExps(["b"]);
 	expect(testRegExps(matcher, "b/b.txt")).toBe(true);
 	expect(testRegExps(matcher, "a.txt")).toBe(false);
+});
+
+test("module rules from `**/*.ext` globs stay cheap on non-matching specifiers", ({
+	expect,
+}) => {
+	// Regression test for https://github.com/cloudflare/workers-sdk/issues/16271
+	// Wrangler's default module rules are run against every fetched module
+	// specifier, and almost every specifier is a `.js`/`.ts` module that misses
+	// all of them. Unanchored, the compiled regexes retry from every start
+	// position and backtrack through the globstar, so a miss costs time that
+	// grows with the square of the path length.
+	const rules = compileModuleRules([
+		{ type: "Text", include: ["**/*.txt", "**/*.html", "**/*.sql"] },
+		{ type: "Data", include: ["**/*.bin"] },
+		{ type: "CompiledWasm", include: ["**/*.wasm", "**/*.wasm?module"] },
+	]);
+
+	// Matching itself is unaffected: `**/` already matches any directory prefix
+	expect(rules.find((rule) => testRegExps(rule.include, "data.txt"))?.type).toBe(
+		"Text"
+	);
+	expect(
+		rules.find((rule) => testRegExps(rule.include, "/abs/path/to/data.sql"))
+			?.type
+	).toBe("Text");
+	expect(
+		rules.find((rule) => testRegExps(rule.include, "a/b/c/module.wasm?module"))
+			?.type
+	).toBe("CompiledWasm");
+	expect(
+		rules.find((rule) => testRegExps(rule.include, "src/index.ts"))
+	).toBeUndefined();
+
+	// A miss on a long specifier must stay cheap
+	const longSpecifier =
+		"/home/runner/work/my-app/my-app/node_modules/.pnpm/" +
+		"@example+pkg@1.2.3/node_modules/@example/pkg/dist/esm/client/index.js";
+	// Warm up first
+	rules.find((rule) => testRegExps(rule.include, longSpecifier));
+	const iterations = 100;
+	const start = performance.now();
+	for (let i = 0; i < iterations; i++) {
+		rules.find((rule) => testRegExps(rule.include, longSpecifier));
+	}
+	const perLookupMs = (performance.now() - start) / iterations;
+	expect(perLookupMs).toBeLessThan(0.1);
 });
