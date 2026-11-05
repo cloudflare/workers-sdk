@@ -693,6 +693,58 @@ test("Miniflare: custom service using Content-Encoding header", async ({
 	// await test("deflate, gzip");
 });
 
+test("Miniflare: dispatchFetch drops encoded Content-Length when undici decodes the body", async ({
+	expect,
+}) => {
+	// https://github.com/cloudflare/workers-sdk/issues/16613
+	// A Worker returning a pre-encoded body (e.g. a gzipped R2 object) has a
+	// `Content-Length` matching the *compressed* body. `undici.fetch` inside
+	// `dispatchFetch` decompresses the body, so the stale `Content-Length` no
+	// longer describes the body the response actually carries. Callers that
+	// forward the response (e.g. the Vite plugin) then truncate the body.
+	const raw = "x".repeat(10 * 1024);
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+						export default {
+							async fetch() {
+								const stream = new Blob([${JSON.stringify(raw)}]).stream()
+									.pipeThrough(new CompressionStream("gzip"));
+								const gz = new Uint8Array(await new Response(stream).arrayBuffer());
+								return new Response(gz, {
+									encodeBody: "manual",
+									headers: {
+										"Content-Type": "text/plain",
+										"Content-Encoding": "gzip",
+									},
+								});
+							},
+						};
+					`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost");
+	// Body is decompressed by `undici.fetch`, so the encoding header is moved
+	expect(res.headers.get("Content-Encoding")).toBe(null);
+	expect(res.headers.get("MF-Content-Encoding")).toBe("gzip");
+	const body = new Uint8Array(await res.arrayBuffer());
+	const bodyBytes = body.byteLength;
+	expect(new TextDecoder().decode(body)).toBe(raw);
+	const contentLength = res.headers.get("Content-Length");
+	expect(
+		contentLength === null || Number(contentLength) === bodyBytes,
+		`Expected Content-Length to describe the decoded body, but got ${contentLength} for a ${bodyBytes} byte body`
+	).toBe(true);
+});
+
 test("Miniflare: negotiates acceptable encoding", async ({ expect }) => {
 	const testBody = "x".repeat(100);
 	const mf = new Miniflare({
