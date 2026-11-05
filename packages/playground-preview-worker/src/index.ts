@@ -9,7 +9,12 @@ import {
 	TokenUpdateFailed,
 	UploadFailed,
 } from "./errors";
-import { handleException, hashSessionId, setupSentry } from "./sentry";
+import {
+	handleException,
+	hashSessionId,
+	setPreviewTags,
+	setupSentry,
+} from "./sentry";
 import type { Toucan } from "toucan-js";
 
 declare const ROOT: string;
@@ -302,10 +307,7 @@ app.all(`${previewDomain}/*`, async (c) => {
 	const url = new URL(c.req.url);
 	const sentry = c.get("sentry");
 	const isRawHttp = c.req.raw.headers.has("cf-raw-http");
-	sentry.setTags({
-		preview_host: url.hostname,
-		preview_route: isRawHttp ? "raw-http" : "cookie",
-	});
+	setPreviewTags(sentry, c.req.raw);
 	if (isRawHttp) {
 		return handleRawHttp(c.req.raw, url, c.env, sentry);
 	}

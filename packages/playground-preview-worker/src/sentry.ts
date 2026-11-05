@@ -109,6 +109,20 @@ export function setupSentry({
 }
 
 /**
+ * Tags events with the preview a request is for. Both hops can derive these,
+ * because the entry Worker forwards the preview's URL and headers to the session.
+ *
+ * @param sentry The Sentry client for the request.
+ * @param request A request to run the preview Worker.
+ */
+export function setPreviewTags(sentry: Toucan, request: Request): void {
+	sentry.setTags({
+		preview_host: new URL(request.url).hostname,
+		preview_route: request.headers.has("cf-raw-http") ? "raw-http" : "cookie",
+	});
+}
+
+/**
  * Derives a stable tag for a preview session. The session ID is also the bearer
  * token that authorises preview requests, so it must not be sent to Sentry.
  *

@@ -3,7 +3,12 @@ import { z } from "zod";
 import { BadUpload, ServiceWorkerNotSupported, WorkerTimeout } from "./errors";
 import { constructMiddleware } from "./inject-middleware";
 import { doUpload, setupTokens } from "./realish";
-import { handleException, hashSessionId, setupSentry } from "./sentry";
+import {
+	handleException,
+	hashSessionId,
+	setPreviewTags,
+	setupSentry,
+} from "./sentry";
 import type { RealishPreviewConfig, UploadResult } from "./realish";
 import type { Toucan } from "toucan-js";
 
@@ -110,6 +115,7 @@ export class UserSession {
 	async handleRequest(request: Request, sentry: Toucan) {
 		// This is a request to run the user-worker. Forward, adding the correct authentication headers
 		if (request.headers.has("cf-run-user-worker")) {
+			setPreviewTags(sentry, request);
 			sentry.setTag("worker_name", this.workerName);
 			sentry.addBreadcrumb({
 				category: "preview",
