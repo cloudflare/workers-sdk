@@ -132,6 +132,50 @@ describe("deployPackage", () => {
 		deployPackage("foo", new Map());
 		expect(logs[0]).toMatchInlineSnapshot(`"::error::Failed to deploy "foo"."`);
 	});
+
+	it("should record a child deployment that exits with a nonzero status", ({
+		expect,
+	}) => {
+		(spawnSync as Mock).mockImplementationOnce(() => ({
+			status: 1,
+			signal: null,
+			error: null,
+		}));
+		const logs: string[] = [];
+		vitest.spyOn(console, "error").mockImplementation((v) => logs.push(v));
+		const deploymentErrors = new Map<string, string>();
+		deployPackage("foo", deploymentErrors);
+		expect(logs[0]).toMatchInlineSnapshot(`"::error::Failed to deploy "foo"."`);
+		expect(deploymentErrors.has("foo")).toBe(true);
+	});
+
+	it("should record a child deployment killed by a signal", ({ expect }) => {
+		(spawnSync as Mock).mockImplementationOnce(() => ({
+			status: null,
+			signal: "SIGKILL",
+			error: null,
+		}));
+		const logs: string[] = [];
+		vitest.spyOn(console, "error").mockImplementation((v) => logs.push(v));
+		const deploymentErrors = new Map<string, string>();
+		deployPackage("foo", deploymentErrors);
+		expect(logs[0]).toMatchInlineSnapshot(`"::error::Failed to deploy "foo"."`);
+		expect(deploymentErrors.has("foo")).toBe(true);
+	});
+
+	it("should record a child deployment that failed to spawn", ({ expect }) => {
+		(spawnSync as Mock).mockImplementationOnce(() => ({
+			status: null,
+			signal: null,
+			error: new Error("spawn pnpm ENOENT"),
+		}));
+		const logs: string[] = [];
+		vitest.spyOn(console, "error").mockImplementation((v) => logs.push(v));
+		const deploymentErrors = new Map<string, string>();
+		deployPackage("foo", deploymentErrors);
+		expect(logs[0]).toMatchInlineSnapshot(`"::error::Failed to deploy "foo"."`);
+		expect(deploymentErrors.has("foo")).toBe(true);
+	});
 });
 
 describe("deployNonNpmPackages()", () => {
