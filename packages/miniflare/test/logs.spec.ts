@@ -37,13 +37,16 @@ test("logs are written to the console by default when no `handleStructuredLogs` 
 	const response = await mf.dispatchFetch("http://localhost");
 	await response.text();
 
-	const stdout = logSpy.mock.calls.map((args) => args.join(" ")).join("\n");
-	const stderr = errorSpy.mock.calls.map((args) => args.join(" ")).join("\n");
+	// Completing the response does not wait for workerd's independent log pipes.
+	await vi.waitFor(() => {
+		const stdout = logSpy.mock.calls.map((args) => args.join(" ")).join("\n");
+		const stderr = errorSpy.mock.calls.map((args) => args.join(" ")).join("\n");
 
-	// `log` goes to stdout; `warn`/`error` go to stderr
-	expect(stdout).toContain("__LOG__");
-	expect(stderr).toContain("__WARN__");
-	expect(stderr).toContain("__ERROR__");
+		// `log` goes to stdout; `warn`/`error` go to stderr
+		expect(stdout).toContain("__LOG__");
+		expect(stderr).toContain("__WARN__");
+		expect(stderr).toContain("__ERROR__");
+	});
 });
 
 test("logs are structured and handled via `handleStructuredLogs` when such option is provided", async ({
@@ -84,33 +87,35 @@ test("logs are structured and handled via `handleStructuredLogs` when such optio
 	const response = await mf.dispatchFetch("http://localhost");
 	await response.text();
 
-	expect(collectedLogs).toEqual([
-		{
-			level: "log",
-			message: "__LOG__",
-			timestamp: "<number>",
-		},
-		{
-			level: "warn",
-			message: "__WARN__",
-			timestamp: "<number>",
-		},
-		{
-			level: "error",
-			message: "__ERROR__",
-			timestamp: "<number>",
-		},
-		{
-			level: "info",
-			message: "__INFO__",
-			timestamp: "<number>",
-		},
-		{
-			level: "debug",
-			message: "__DEBUG__",
-			timestamp: "<number>",
-		},
-	]);
+	await vi.waitFor(() => {
+		expect(collectedLogs).toEqual([
+			{
+				level: "log",
+				message: "__LOG__",
+				timestamp: "<number>",
+			},
+			{
+				level: "warn",
+				message: "__WARN__",
+				timestamp: "<number>",
+			},
+			{
+				level: "error",
+				message: "__ERROR__",
+				timestamp: "<number>",
+			},
+			{
+				level: "info",
+				message: "__INFO__",
+				timestamp: "<number>",
+			},
+			{
+				level: "debug",
+				message: "__DEBUG__",
+				timestamp: "<number>",
+			},
+		]);
+	});
 });
 
 test("when using `handleStructuredLogs` some known unhelpful logs are filtered out (e.g. CODE_MOVED warnings)", async ({
@@ -149,16 +154,18 @@ test("when using `handleStructuredLogs` some known unhelpful logs are filtered o
 	const response = await mf.dispatchFetch("http://localhost");
 	await response.text();
 
-	expect(collectedLogs).toEqual([
-		{
-			level: "log",
-			message: "__LOG__",
-			timestamp: "<number>",
-		},
-		{
-			level: "error",
-			message: "__ERROR__",
-			timestamp: "<number>",
-		},
-	]);
+	await vi.waitFor(() => {
+		expect(collectedLogs).toEqual([
+			{
+				level: "log",
+				message: "__LOG__",
+				timestamp: "<number>",
+			},
+			{
+				level: "error",
+				message: "__ERROR__",
+				timestamp: "<number>",
+			},
+		]);
+	});
 });
