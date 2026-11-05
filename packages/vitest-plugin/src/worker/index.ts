@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import * as vm from "node:vm";
 import defines from "__VITEST_POOL_WORKERS_DEFINES";
@@ -55,6 +56,22 @@ globalThis.BroadcastChannel = class {
 	onmessage: ((event: unknown) => void) | null = null;
 	onmessageerror: ((event: unknown) => void) | null = null;
 } as unknown as typeof BroadcastChannel;
+
+// workerd intentionally throws from `AsyncLocalStorage#disable()`. Vitest 5.1+
+// calls it after mock factories finish (to stop a Node.js 22 slowdown), so every
+// `vi.mock()` with a factory would fail with "asyncLocalStorage.disable() is not
+// implemented". Vitest only calls it once no factory is pending, when the store has
+// nothing active to clear, so skipping the call is equivalent. Keep workerd's
+// behaviour when a store is active, since ignoring `disable()` there would
+// silently leave the store in place.
+const originalDisable = AsyncLocalStorage.prototype.disable;
+AsyncLocalStorage.prototype.disable = function disable(
+	this: AsyncLocalStorage<unknown>
+) {
+	if (this.getStore() !== undefined) {
+		originalDisable.call(this);
+	}
+};
 
 let cwd: string | undefined;
 process.cwd = () => {
