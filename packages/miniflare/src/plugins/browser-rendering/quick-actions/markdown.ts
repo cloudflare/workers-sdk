@@ -8,8 +8,6 @@ import type { PageMeta, QuickActionContext } from "./page";
 import type { CommonOptions, commonOptionsSchema } from "./schemas";
 import type { Page } from "@cloudflare/puppeteer";
 
-initSync({ module: Buffer.from(mdreamWasm, "base64") });
-
 const inline = { enter: "", exit: "", isInline: true };
 const MDREAM_OPTIONS = {
 	clean: { emptyLinkText: true, redundantLinks: true, selfLinkHeadings: true },
@@ -30,11 +28,18 @@ const MDREAM_OPTIONS = {
 	},
 };
 
+let mdreamReady = false;
+
 export function toMarkdown(
 	html: string,
 	meta: PageMeta,
 	options: CommonOptions
 ): string {
+	// Compiled on first use so the actions that don't convert to Markdown skip it
+	if (!mdreamReady) {
+		initSync({ module: Buffer.from(mdreamWasm, "base64") });
+		mdreamReady = true;
+	}
 	const url = meta.finalUrl ?? options.url;
 	const origin = url && new URL(url).toString();
 	try {
