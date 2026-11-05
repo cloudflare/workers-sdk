@@ -3007,6 +3007,97 @@ test("Miniflare: blocks non-local Host headers from reaching /cdn-cgi/ routes", 
 	expect(originalUrlStatus).toBe(403);
 });
 
+test("Miniflare: allows same-origin Origin headers from *.localhost subdomains on /cdn-cgi/ routes", async ({
+	expect,
+}) => {
+	// https://github.com/cloudflare/workers-sdk/issues/16423
+	// `*.localhost` is reserved for loopback use (RFC 6761 §6.3), but Vite
+	// accepts such hosts by default, and browsers send an `Origin` header for
+	// same-origin module script requests. The Vite plugin dispatches requests to
+	// Miniflare with Miniflare's own host (so the `Host` check passes), but
+	// preserves the browser's `Origin` header, so the same-origin request below
+	// must be allowed through to the Worker.
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+					export default {
+						fetch() {
+							return new Response("Hello world");
+						}
+					}
+				`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const url = await mf.ready;
+	const originStatus = await new Promise<number>((resolve, reject) => {
+		const req = http.get(
+			`${url.origin}/cdn-cgi/foo`,
+			{
+				headers: {
+					// Same-origin request, as a browser sends for module scripts
+					Origin: "http://my-app.localhost",
+				},
+			},
+			(res) => {
+				res.resume();
+				resolve(res.statusCode ?? 0);
+			}
+		);
+		req.on("error", reject);
+	});
+
+	expect(originStatus).toBe(200);
+});
+
+test("Miniflare: allows *.localhost subdomain Host headers on /cdn-cgi/ routes", async ({
+	expect,
+}) => {
+	// https://github.com/cloudflare/workers-sdk/issues/16423
+	// `*.localhost` names resolve to loopback and can't be DNS-rebound to a
+	// remote server, so they should be treated like `localhost` itself.
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+					export default {
+						fetch() {
+							return new Response("Hello world");
+						}
+					}
+				`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const url = await mf.ready;
+	const hostStatus = await new Promise<number>((resolve, reject) => {
+		const req = http.get(
+			`${url.origin}/cdn-cgi/foo`,
+			{ setHost: false, headers: { Host: "my-app.localhost" } },
+			(res) => {
+				res.resume();
+				resolve(res.statusCode ?? 0);
+			}
+		);
+		req.on("error", reject);
+	});
+
+	expect(hostStatus).toBe(200);
+});
+
 test("Miniflare: listens on ipv6", async ({ expect }) => {
 	const log = new TestLog();
 
