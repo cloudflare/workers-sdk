@@ -1,3 +1,4 @@
+import { validateBindingRemoteSetting } from "@cloudflare/workers-utils";
 import type { WorkerOptions } from "./schema";
 import type { ParsedInputWorkerConfig } from "@cloudflare/config";
 
@@ -17,15 +18,19 @@ export interface ResolveLocalBindingsOptions {
 	mode: string;
 	/** Whether remote binding sessions are enabled. Defaults to `true`. */
 	remoteBindings?: boolean;
-	/** Receives the warning about declared secrets without a local value. */
+	/**
+	 * Receives the warnings about declared secrets without a local value and
+	 * about Artifacts bindings using the local simulator by default.
+	 */
 	logger: { warn(message: string): void };
 }
 
 /**
  * Resolves local binding values from the loaded local env. This replaces
  * declared secret placeholders with text bindings, applies Hyperdrive
- * connection-string overrides, and resolves the Artifacts `dev.remote` default. Missing secrets are omitted, with a warning, so
- * Miniflare doesn't receive an unresolved deployment-only placeholder.
+ * connection-string overrides, and warns when an Artifacts binding omits
+ * `dev.remote`. Missing secrets are omitted, with a warning, so Miniflare
+ * doesn't receive an unresolved deployment-only placeholder.
  *
  * @param configuredBindings The Worker's configured bindings.
  * @param options Where local values come from, and how to report missing ones.
@@ -61,15 +66,14 @@ export function resolveLocalBindings(
 			continue;
 		}
 
-		// Artifacts uses the deployed resource unless `dev.remote` is `false`.
-		// Miniflare routes a binding remotely only for an explicit
-		// `dev.remote: true`, so resolve the default here, where it is known
-		// whether remote bindings are enabled.
 		if (binding.type === "artifacts") {
-			bindings[name] =
-				binding.dev?.remote === undefined
-					? { ...binding, dev: { ...binding.dev, remote: remoteBindings } }
-					: binding;
+			validateBindingRemoteSetting(
+				"artifacts",
+				binding.dev?.remote,
+				(message) => options.logger.warn(message),
+				{ binding: name, configFormat: "cloudflare-config" }
+			);
+			bindings[name] = binding;
 			continue;
 		}
 

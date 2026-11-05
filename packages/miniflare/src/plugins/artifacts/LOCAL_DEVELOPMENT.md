@@ -6,7 +6,7 @@ This first version of the local Artifacts emulator requires Git 2.32 or newer in
 
 Git 2.32 provides `GIT_CONFIG_GLOBAL`, which the emulator uses to isolate host Git settings. Use an up-to-date, security-patched release.
 
-In Wrangler and Vite, a binding with `"remote": true` or an omitted `remote` setting does not start the local emulator and does not need local Git, unless remote bindings are disabled (see below). Workers Vitest uses the local emulator unless `remote` is `true`. Production Artifacts also does not require Git on your machine. We plan to open-source a JavaScript Git engine in the future; it is not part of this initial local release, which uses native Git.
+A binding with `"remote": true` does not start the local emulator and does not need local Git, unless remote bindings are disabled (see below). Production Artifacts also does not require Git on your machine. We plan to open-source a JavaScript Git engine in the future; it is not part of this initial local release, which uses native Git.
 
 ## Configure a binding
 
@@ -17,9 +17,7 @@ For a Wrangler project, add an Artifacts binding to `wrangler.jsonc`:
 	"name": "example-worker",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-09-03",
-	"artifacts": [
-		{ "binding": "REPOS", "namespace": "examples", "remote": false },
-	],
+	"artifacts": [{ "binding": "REPOS", "namespace": "examples" }],
 }
 ```
 
@@ -34,10 +32,7 @@ export default defineConfig({
 		entrypoint: "./src/index.ts",
 		compatibilityDate: "2026-09-03",
 		env: {
-			REPOS: bindings.artifacts({
-				namespace: "examples",
-				dev: { remote: false },
-			}),
+			REPOS: bindings.artifacts({ namespace: "examples" }),
 		},
 	},
 });
@@ -45,9 +40,7 @@ export default defineConfig({
 
 In Workers Vitest, point `cloudflareTest({ wrangler: { configPath: "./wrangler.jsonc" } })` at the Wrangler config above, or `cloudflareTest({ config: true })` at `cloudflare.config.ts`. These paths share the Miniflare implementation.
 
-In Wrangler and Vite, the local emulator is opt-in: set `remote: false` on the binding. If `remote` is omitted or set to `true`, development uses the deployed Artifacts resource and the credentials required by that tool; with `remote` omitted, the dev tool warns that changes affect real repositories. When remote bindings are disabled (`wrangler dev --local`, or Vite's `remoteBindings: false`), every Artifacts binding uses the local emulator.
-
-Workers Vitest defaults the other way, so a test suite does not create, push to or delete real repositories by accident: an omitted `remote` uses the local emulator, and `remote: true` opts into the deployed resource. Do not rely on production repositories being available locally.
+Artifacts bindings use the local emulator by default in Wrangler, Vite and Workers Vitest, like KV, R2 and D1. Set `remote: true` (`dev: { remote: true }` in `cloudflare.config.ts`) to use deployed repos instead, with the credentials required by your tool. While `remote` is omitted, the tools warn that the binding uses the local simulator by default; set `remote: false` to silence the warning. When remote bindings are disabled (`wrangler dev --local`, or Vite's `remoteBindings: false`), every Artifacts binding uses the local emulator. Do not rely on production repositories being available locally.
 
 A Worker can create and inspect a local repository:
 

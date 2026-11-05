@@ -66,6 +66,9 @@ afterEach(() => vi.unstubAllEnvs());
 
 test.for([
 	{ label: "explicit local", remote: false, remoteBindings: true },
+	// Omitted `remote` is local without starting a remote proxy session, so it
+	// works with no Cloudflare credentials.
+	{ label: "omitted remote", remote: undefined, remoteBindings: true },
 	{
 		label: "omitted remote with sessions disabled",
 		remote: undefined,

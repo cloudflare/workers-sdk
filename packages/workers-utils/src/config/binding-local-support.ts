@@ -8,8 +8,9 @@ import type { Binding } from "../types";
  * `pickRemoteBindings()` and `validateBindingRemoteSetting()`.
  *
  * - `local-and-remote`: local simulator; `remote: true` opts into proxying.
- * - `remote-default-with-local-opt-in`: remote by default; `remote: false`
- *   opts into the local simulator.
+ * - `local-default-with-remote-opt-in`: routes like `local-and-remote`, but
+ *   warns when `remote` is omitted. Use it for bindings whose default changed
+ *   from remote to local, so users who relied on the old default find out.
  * - `local-only`: local simulator only; `remote: true` is a config error.
  * - `remote`: no local simulator *yet* — requires explicit `remote: true`.
  *   Move to `local-and-remote` once a simulator lands.
@@ -20,7 +21,7 @@ import type { Binding } from "../types";
  */
 export type BindingLocalSupport =
 	| "local-and-remote"
-	| "remote-default-with-local-opt-in"
+	| "local-default-with-remote-opt-in"
 	| "local-only"
 	| "remote"
 	| "DO-NOT-USE-this-resource-will-never-have-a-local-simulator";
@@ -60,7 +61,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	// TODO: Miniflare currently ignores `remote: true` on queues, tracked in #13727.
 	queue: "local-and-remote",
 	flagship: "local-and-remote",
-	artifacts: "remote-default-with-local-opt-in",
+	artifacts: "local-default-with-remote-opt-in",
 	analytics_engine: "local-and-remote",
 
 	vectorize: "remote",
@@ -79,6 +80,18 @@ const BINDING_LOCAL_SUPPORT: Record<
 	agent_memory: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	analytics: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 };
+
+/**
+ * What the deployed resource is called in remote-setting warnings, for binding
+ * types where a more specific name reads better than "the deployed resource".
+ */
+const DEPLOYED_RESOURCE_NAMES: Partial<Record<Binding["type"], string>> = {
+	artifacts: "deployed repos",
+};
+
+function getDeployedResourceName(type: Binding["type"]): string {
+	return DEPLOYED_RESOURCE_NAMES[type] ?? "the deployed resource";
+}
 
 export function getBindingLocalSupport(
 	type: Binding["type"]
@@ -113,9 +126,8 @@ export function resolveBindingRemote(
 			return true;
 		case "local-only":
 			return false;
-		case "remote-default-with-local-opt-in":
-			return !remoteBindingsDisabled && remote !== false;
 		case "local-and-remote":
+		case "local-default-with-remote-opt-in":
 		case "remote":
 			return !remoteBindingsDisabled && remote === true;
 	}
@@ -128,8 +140,6 @@ export function resolveBindingRemote(
  * valid-but-noteworthy ones.
  *
  * @param options.binding - Binding name, used to identify the binding in warnings
- * @param options.remoteBindingsDisabled - Whether the dev session runs without
- * remote bindings, as with `wrangler dev --local`
  * @param options.configFormat - Which config format the binding came from, so
  * warnings name the setting the user can write: `remote` in a Wrangler config,
  * `dev: { remote }` in `cloudflare.config.ts`. Defaults to `"wrangler"`.
@@ -140,11 +150,9 @@ export function validateBindingRemoteSetting(
 	warn: (message: string) => void,
 	{
 		binding,
-		remoteBindingsDisabled = false,
 		configFormat = "wrangler",
 	}: {
 		binding?: string;
-		remoteBindingsDisabled?: boolean;
 		configFormat?: "wrangler" | "cloudflare-config";
 	} = {}
 ) {
@@ -156,15 +164,16 @@ export function validateBindingRemoteSetting(
 	switch (support) {
 		case "local-and-remote":
 			return;
-		case "remote-default-with-local-opt-in":
-			// Changes made during dev affect real data, so make the default visible.
-			if (remote === undefined && !remoteBindingsDisabled) {
+		case "local-default-with-remote-opt-in":
+			// The default used to be the deployed resource. Say so until the user
+			// picks one, so nobody silently loses access to their real data.
+			if (remote === undefined) {
 				const subject =
 					binding === undefined
 						? `${getBindingTypeFriendlyName(type)} bindings use`
 						: `${getBindingTypeFriendlyName(type)} binding ${binding} uses`;
 				warn(
-					`${subject} the deployed resource. Set ${remoteSetting(false)} to use the local simulator, or ${remoteSetting(true)} to silence this warning.`
+					`${subject} the local simulator by default. Set ${remoteSetting(true)} to use ${getDeployedResourceName(type)}, or ${remoteSetting(false)} to silence this warning.`
 				);
 			}
 			return;

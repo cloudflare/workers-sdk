@@ -12,12 +12,12 @@ describe("resolveBindingRemote", () => {
 		remoteBindingsDisabled: boolean;
 		expected: boolean;
 	}>([
-		// Remote by default with local opt-in.
+		// Local by default with remote opt-in, warning when omitted.
 		{
 			type: "artifacts",
 			remote: undefined,
 			remoteBindingsDisabled: false,
-			expected: true,
+			expected: false,
 		},
 		{
 			type: "artifacts",
@@ -202,13 +202,13 @@ describe("validateBindingRemoteSetting", () => {
 		});
 	});
 
-	describe("remote-default bindings with local opt-in", () => {
+	describe("local-default bindings with remote opt-in", () => {
 		it("warns when `remote` is omitted, naming the binding", ({ expect }) => {
 			validateBindingRemoteSetting("artifacts", undefined, warn, {
 				binding: "REPOS",
 			});
-			expect(warn).toHaveBeenCalledWith(
-				"Artifacts binding REPOS uses the deployed resource. Set `remote: false` to use the local simulator, or `remote: true` to silence this warning."
+			expect(warn).toHaveBeenCalledExactlyOnceWith(
+				"Artifacts binding REPOS uses the local simulator by default. Set `remote: true` to use deployed repos, or `remote: false` to silence this warning."
 			);
 		});
 
@@ -219,17 +219,9 @@ describe("validateBindingRemoteSetting", () => {
 				binding: "REPOS",
 				configFormat: "cloudflare-config",
 			});
-			expect(warn).toHaveBeenCalledWith(
-				"Artifacts binding REPOS uses the deployed resource. Set `dev: { remote: false }` to use the local simulator, or `dev: { remote: true }` to silence this warning."
+			expect(warn).toHaveBeenCalledExactlyOnceWith(
+				"Artifacts binding REPOS uses the local simulator by default. Set `dev: { remote: true }` to use deployed repos, or `dev: { remote: false }` to silence this warning."
 			);
-		});
-
-		it("does not warn when remote bindings are disabled", ({ expect }) => {
-			validateBindingRemoteSetting("artifacts", undefined, warn, {
-				binding: "REPOS",
-				remoteBindingsDisabled: true,
-			});
-			expect(warn).not.toHaveBeenCalled();
 		});
 
 		it("does not throw or warn for an explicit setting", ({ expect }) => {

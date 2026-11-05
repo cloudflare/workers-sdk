@@ -198,11 +198,15 @@ describe("Wrangler dev local Artifacts", { concurrent: false }, () => {
 		}
 	);
 
-	it.for([null, true])(
-		"uses the local simulator for remote=%s with --local",
+	it.for([
+		{ remote: null, args: "" },
+		{ remote: null, args: "--local" },
+		{ remote: true, args: "--local" },
+	])(
+		"uses the local simulator for remote=$remote with args '$args'",
 		{ timeout: ARTIFACTS_DEV_TEST_TIMEOUT },
-		async (remote, { expect }) => {
-			const dev = await startLocalDev({ remote, args: "--local" });
+		async ({ remote, args }, { expect }) => {
+			const dev = await startLocalDev({ remote, args });
 			try {
 				expect(output.out).toMatch(
 					/env\.REPOS \(examples\)\s+Artifacts\s+local/
@@ -210,7 +214,13 @@ describe("Wrangler dev local Artifacts", { concurrent: false }, () => {
 				expect(
 					(await request<{ repos: unknown[] }>(dev.url, "/list")).repos
 				).toEqual([]);
-				expect(output.warn).not.toContain("uses the deployed resource");
+				const defaultWarning =
+					"Artifacts binding REPOS uses the local simulator by default. Set `remote: true` to use deployed repos, or `remote: false` to silence this warning.";
+				if (remote === null) {
+					expect(output.warn).toContain(defaultWarning);
+				} else {
+					expect(output.warn).not.toContain(defaultWarning);
+				}
 			} finally {
 				await stopRunningDev();
 				await dev.stopped;
