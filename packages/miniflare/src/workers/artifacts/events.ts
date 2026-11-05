@@ -233,6 +233,8 @@ export function matchesArtifactsEventRoute(
 ): boolean {
 	return (
 		route.types.includes(event.type) &&
-		(route.repoName === undefined || route.repoName === event.source.repoName)
+		// Match repository lookup identity without changing the published spelling.
+		(route.repoName === undefined ||
+			route.repoName.toLowerCase() === event.source.repoName.toLowerCase())
 	);
 }

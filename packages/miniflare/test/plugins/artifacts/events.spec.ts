@@ -65,6 +65,30 @@ test("messages carry the event and per-subscription metadata", ({ expect }) => {
 	});
 });
 
+test.for([
+	{ published: "Demo", subscribed: "demo" },
+	{ published: "demo", subscribed: "DEMO" },
+	{ published: "Demo", subscribed: "dEmO" },
+])(
+	"routes match repository identity: $published / $subscribed",
+	({ published, subscribed }, { expect }) => {
+		const event = createArtifactsEvent(
+			"cf.artifacts.repo.token.revoked",
+			{
+				...repo,
+				repoName: published,
+			},
+			{ tokenId: "token" }
+		);
+		expect(
+			matchesArtifactsEventRoute(route({ repoName: subscribed }), event)
+		).toBe(true);
+		expect(toArtifactsEventMessage(event, "subscription").source.repoName).toBe(
+			published
+		);
+	}
+);
+
 test("routes match on event type and repository", ({ expect }) => {
 	const event = createArtifactsEvent("cf.artifacts.repo.token.revoked", repo, {
 		tokenId: "token",

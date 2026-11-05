@@ -317,6 +317,51 @@ test("repository subscriptions only receive their repository's selected events",
 	expect(delivered).toHaveLength(1);
 });
 
+test("case-variant repository filters deliver to queues and Workflows without changing source names", async ({
+	expect,
+}) => {
+	const { mf, delivered } = await startMiniflare(
+		(config) => {
+			consumeQueue(config);
+			addWorkflow(config);
+			config.triggers?.push({
+				type: "artifacts-event",
+				eventType: "cf.artifacts.repo.token.revoked",
+				filter: { namespace: "examples", repoName: "dEMo" },
+				targets: [{ type: "workflow", workflowName: "on-repo-event" }],
+			});
+		},
+		{
+			artifactsEventSubscriptions: [
+				{
+					queue: QUEUE,
+					source: {
+						type: "artifacts.repo",
+						namespace: "examples",
+						repoName: "demo",
+					},
+					events: ["cf.artifacts.repo.token.revoked"],
+				},
+			],
+		}
+	);
+
+	await rpc(mf, "create", ["Demo"]);
+	const token = (await rpc(mf, "createToken", ["read"], "demo")) as {
+		id: string;
+	};
+	await rpc(mf, "revokeToken", [token.id], "DEMO");
+	await vi.waitFor(() => expect(delivered).toHaveLength(2), { timeout: 5_000 });
+	expect(delivered.map(({ via }) => via).sort()).toEqual(["queue", "workflow"]);
+	for (const { message } of delivered) {
+		expect(message).toMatchObject({
+			type: "cf.artifacts.repo.token.revoked",
+			source: { namespace: "examples", repoName: "Demo" },
+			payload: { tokenId: token.id },
+		});
+	}
+});
+
 test("Artifacts event triggers start the Worker's Workflow with the event", async ({
 	expect,
 }) => {
