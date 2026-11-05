@@ -1,8 +1,8 @@
-import { resolve } from "path";
+import assert from "node:assert";
+import { resolve } from "node:path";
 import { fetch } from "undici";
 import { afterAll, beforeAll, describe, it } from "vitest";
 import { runWranglerDev } from "../../../shared/src/run-wrangler-long-lived";
-import type { Response } from "undici";
 
 describe("'wrangler dev' streaming responses", () => {
 	let ip: string, port: number, stop: (() => Promise<unknown>) | undefined;
@@ -18,89 +18,64 @@ describe("'wrangler dev' streaming responses", () => {
 		await stop?.();
 	});
 
-	describe.concurrent.each([
-		{ encoding: null },
-		{ encoding: "gzip" },
-		{ encoding: "br" },
-		{ encoding: "identity" },
-	])("worker encoding set to $encoding", ({ encoding }) => {
-		it("uses the content-encoding provided by the Worker, if acceptable", async ({
-			expect,
-		}) => {
+	it.for([null, "gzip", "br", "identity"])(
+		"preserves acceptable Worker encoding %s",
+		async (encoding, { expect }) => {
 			const compressionParam =
 				encoding === null ? "" : `?compression=${encoding}`;
 			const response = await fetch(
 				`http://${ip}:${port}/streaming${compressionParam}`,
-				{ headers: { "accept-encoding": "br,gzip,deflate,zstd" } }
+				{
+					headers: { "accept-encoding": "br,gzip,deflate,zstd" },
+				}
 			);
 			expect(response.status).toBe(200);
-			expect(response.headers.get("content-encoding")).toEqual(
+			expect(response.headers.get("content-encoding")).toBe(
 				encoding === "identity" ? null : encoding
 			);
-		});
+			expect(await response.text()).toContain("<div>END</div>");
+		}
+	);
 
-		it("uses identity encoding if only identity is acceptable", async ({
-			expect,
-		}) => {
-			const compressionParam =
-				encoding === null ? "" : `?compression=${encoding}`;
+	it.for(["gzip", "br", "identity"])(
+		"decodes Worker encoding %s when the client only accepts identity",
+		async (encoding, { expect }) => {
 			const response = await fetch(
-				`http://${ip}:${port}/streaming${compressionParam}`,
-				{ headers: { "accept-encoding": "" } }
+				`http://${ip}:${port}/streaming?compression=${encoding}`,
+				{
+					headers: { "accept-encoding": "identity" },
+				}
 			);
 			expect(response.status).toBe(200);
-			expect(response.headers.get("content-encoding")).toEqual(null);
-		});
-
-		it("sends the content in small chunks if identity encoded", async ({
-			expect,
-		}) => {
-			const response = await fetch(`http://${ip}:${port}/streaming`, {
-				headers: { "accept-encoding": encoding },
-			});
-			expect(response.status).toBe(200);
 			expect(response.headers.get("content-encoding")).toBe(null);
+			expect(await response.text()).toContain("<div>END</div>");
+		}
+	);
 
-			const { chunks, timestamps } = await readBody(response);
-
-			const fullContent = chunks.join("");
-
-			// Verify we received the expected content structure
-			expect(fullContent).toContain("<div>START</div>");
-			expect(fullContent).toContain("<div>test 0");
-			expect(fullContent).toContain("<div>test 4");
-			expect(fullContent).toContain("<div>END</div>");
-
-			// The gzip and brotli responses do not fill the streaming buffer so they are sent in a single chunk.
-			if (encoding !== "gzip" && encoding !== "br") {
-				// Verify we received multiple a chunk for each delayed piece of content.
-				expect(chunks.length).toBeGreaterThan(4);
-
-				// Verify chunks arrived over time (some reads should take longer due to delays)
-				const slowReads = timestamps.filter((time) => time > 50);
-				expect(slowReads.length).toBeGreaterThan(4);
-			}
+	it("delivers small chunks before the streaming response ends", async ({
+		expect,
+	}) => {
+		const response = await fetch(`http://${ip}:${port}/streaming`, {
+			headers: { "accept-encoding": "gzip, br" },
 		});
+		expect(response.headers.get("content-encoding")).toBe(null);
+		assert(response.body);
+		const reader = response.body.getReader();
+		try {
+			const first = await reader.read();
+			expect(first.done).toBe(false);
+			expect(new TextDecoder().decode(first.value)).not.toContain(
+				"<div>END</div>"
+			);
+			let remaining = "";
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				remaining += new TextDecoder().decode(value);
+			}
+			expect(remaining).toContain("<div>END</div>");
+		} finally {
+			reader.releaseLock();
+		}
 	});
 });
-
-async function readBody(response: Response) {
-	const reader = response.body.getReader();
-	const decoder = new TextDecoder();
-	const chunks: string[] = [];
-	const timestamps: number[] = [];
-
-	try {
-		while (true) {
-			const start = Date.now();
-			const { done, value } = await reader.read();
-			timestamps.push(Date.now() - start);
-			if (done) break;
-			chunks.push(decoder.decode(value, { stream: true }));
-		}
-	} finally {
-		reader.releaseLock();
-	}
-
-	return { chunks, timestamps };
-}

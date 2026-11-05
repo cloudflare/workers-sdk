@@ -9,5 +9,9 @@
 		"moduleResolution": "node",
 		"noEmit": true
 	},
-	"include": ["main-worker/tests", "../../node-types.d.ts"]
+	"include": [
+		"main-worker/tests",
+		"client-worker/tests",
+		"../../node-types.d.ts"
+	]
 }

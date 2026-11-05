@@ -19,7 +19,7 @@ export default {
 				<h1>Streaming Example</h1>
 				<p>Use the <code>/streaming</code> endpoint to see streaming responses.</p>
 				<ul>
-					<li><code>compression</code>: Set to <code>gzip</code> for gzip compression, <code>br</code> for no brotli compression, leave empty for no compression.</li>
+					<li><code>compression</code>: Set to <code>gzip</code> for gzip compression, <code>br</code> for Brotli compression, leave empty for no compression.</li>
 					<li><code>iterations</code>: Number of chunks to send (default is 5).</li>
 					<li><code>pause</code>: Time in milliseconds to wait between chunks (default is 500).</li>
 					<li><code>chunksize</code>: Size of each chunk in bytes (default is 500).</li>
@@ -46,16 +46,14 @@ function fixedLengthResponse(request: Request): Response {
 	const compression = url.searchParams.get("compression") ?? "";
 	const body =
 		'<!DOCTYPE html><html><head><meta charset="UTF-8" /></head><body><p>Fixed length response</p></body></html>';
-	const bodyStream = ReadableStreamFromString(body);
+	const bodyStream = readableStreamFromString(body);
 	const response = new Response(bodyStream, {
 		headers: {
 			"content-type": "text/html",
 			...(compression ? { "content-encoding": compression } : {}),
 			"content-length": body.length.toString(),
-			// "transfer-encoding": "gzip",
 		},
 	});
-	console.log(response);
 	return response;
 }
 
@@ -85,7 +83,6 @@ function streamingResponse(request: Request): Response {
 
 			for (let i = 0; i < iterations; i++) {
 				await new Promise((r) => setTimeout(r, pause));
-				console.log("writing chunk", i);
 				const bytes = new Uint8Array(chunksize);
 				const chars = Array.from(crypto.getRandomValues(bytes))
 					.map((n) => n.toString(36))
@@ -110,7 +107,7 @@ function streamingResponse(request: Request): Response {
 	});
 }
 
-function ReadableStreamFromString(str: string): ReadableStream<Uint8Array> {
+function readableStreamFromString(str: string): ReadableStream<Uint8Array> {
 	const encoder = new TextEncoder();
 	return new ReadableStream<Uint8Array>({
 		start(controller) {

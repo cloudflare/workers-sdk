@@ -681,6 +681,8 @@ test("Miniflare: custom service using Content-Encoding header", async ({
 		// Ensure this header has been removed -- undici.fetch has already decoded (decompressed) the response
 		// Expected Content-Encoding header to be removed
 		expect(res.headers.get("Content-Encoding")).toBe(null);
+		expect(res.headers.get("Content-Length")).toBe(null);
+		expect(res.headers.get("Transfer-Encoding")).toBe(null);
 	};
 
 	await testEncoding("gzip");
@@ -851,20 +853,20 @@ test("Miniflare: negotiates acceptable encoding", async ({ expect }) => {
 	expect(res.headers.get("Content-Encoding")).toBe("gzip"); // the Worker marked the response as `gzip` and is allowed so response is `gzip`
 	expect(await res.text()).toBe(testBody);
 
-	// Check empty `Accept-Encoding`
+	// workerd normalizes an empty Accept-Encoding header to an absent header.
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "" } });
-	expect(res.headers.get("Content-Encoding")).toBe(null); // the Worker marked the response as `gzip` but it is not allowed so response is uncompressed
+	expect(res.headers.get("Content-Encoding")).toBe("gzip");
 	expect(await res.text()).toBe(testBody);
 
-	// Check identity encoding
+	// Check identity and wildcard encodings
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "identity" } });
 	expect(res.headers.get("Content-Encoding")).toBe(null);
 	expect(await res.text()).toBe(testBody);
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "*" } });
-	expect(res.headers.get("Content-Encoding")).toBe(null);
+	expect(res.headers.get("Content-Encoding")).toBe("gzip");
 	expect(await res.text()).toBe(testBody);
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "zstd, *" } });
-	expect(res.headers.get("Content-Encoding")).toBe(null);
+	expect(res.headers.get("Content-Encoding")).toBe("gzip");
 	expect(await res.text()).toBe(testBody);
 
 	// Check when identity encoding is not allowed

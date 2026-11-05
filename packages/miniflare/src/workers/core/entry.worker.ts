@@ -1,5 +1,6 @@
 import { blue, bold, green, grey, red, reset, yellow } from "kleur/colors";
 import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
+import { selectResponseEncoding } from "../../shared/encoding";
 import { parseForwardedProto } from "../../shared/forwarded-proto";
 import { isCompressedByCloudflareFL } from "../../shared/mime-types";
 import {
@@ -328,111 +329,40 @@ function maybePrettifyError(request: Request, response: Response, env: Env) {
 	);
 }
 
-const acceptEncodingElement =
-	/^(?<coding>[a-z]+|\*)(?:\s*;\s*q=(?<weight>\d+(?:.\d+)?))?$/;
-interface AcceptedEncoding {
-	coding: string;
-	weight: number;
-}
-
-/**
- * Tries to parse an `Accept-Encoding` element, returning an object with
- * `coding` and `weight` properties, or `undefined` if the element is invalid.
- *
- * The `coding` is set to `"identity"` if the coding is `"*"`, and the `weight`
- * is set to `1` if not specified.
- */
-function maybeParseAcceptEncodingElement(
-	element: string
-): AcceptedEncoding | undefined {
-	const match = acceptEncodingElement.exec(element);
-	if (match?.groups == null) return;
-	return {
-		coding: match.groups.coding === "*" ? "identity" : match.groups.coding,
-		weight:
-			match.groups.weight === undefined ? 1 : parseFloat(match.groups.weight),
-	};
-}
-
-/**
- * Parses the accept-encoding header, returning an array of tuples
- * containing the encoding and its weight, sorted by weight in descending order.
- */
-function parseAcceptEncoding(header: string) {
-	const encodings = new Map([["identity", 1]]);
-	for (const element of header.split(",")) {
-		const maybeEncoding = maybeParseAcceptEncodingElement(element.trim());
-		if (maybeEncoding !== undefined) {
-			encodings.set(maybeEncoding.coding, maybeEncoding.weight);
-		}
-	}
-	// `Array#sort()` is stable, so original ordering preserved for same weights
-	return Array.from(encodings).sort((a, b) => b[1] - a[1]);
-}
-
-/**
- * Ensures that the response has an acceptable `Content-Encoding` header
- * based on the `Accept-Encoding` header from the client.
- *
- * If the client does not accept any of the supported encodings,
- * it returns a 415 Unsupported Media Type response.
- *
- * If the response already has a `Content-Encoding` header that is acceptable,
- * it prefers this over the encoding with the highest weight from the `Accept-Encoding` header.
- */
+/** Negotiates compression without adding buffering when identity is acceptable. */
 function ensureAcceptableEncoding(
 	clientAcceptEncoding: string | null,
 	response: Response
 ): Response {
-	// https://www.rfc-editor.org/rfc/rfc9110#section-12.5.3
-
-	const supportedEncodings = ["gzip", "br", "identity"];
-	const contentEncoding =
-		response.headers.get("Content-Encoding") ?? "identity";
-	const contentType = response.headers.get("Content-Type");
-
-	if (!supportedEncodings.includes(contentEncoding)) {
-		return response; // If the encoding is not supported, return the response as is
-	}
-
-	response = new Response(response.body, response); // Ensure mutable headers
-	response.headers.delete("Content-Encoding"); // Use identity by default
-
-	// if cloudflare's FL does not compress this mime-type, then don't compress locally either
-	if (!isCompressedByCloudflareFL(contentType)) {
+	// Preserve the existing handling of types Cloudflare's front line does not compress.
+	if (!isCompressedByCloudflareFL(response.headers.get("Content-Type"))) {
 		return response;
 	}
 
-	// If the client hasn't specified any acceptable encodings, go with `identity` encoding
-	if (clientAcceptEncoding === null) {
-		return response;
-	}
-
-	const acceptableEncodings = parseAcceptEncoding(clientAcceptEncoding);
-
-	const acceptedEncoding =
-		// If the content encoding from the response is acceptable, use it (this is the case when the Worker has set a `Content-Encoding` header)
-		acceptableEncodings.find(
-			([coding, weight]) => contentEncoding === coding && weight > 0
-		) ??
-		// Otherwise take the first supported acceptable encoding, since they are sorted by weight
-		acceptableEncodings.find(
-			([coding, weight]) => supportedEncodings.includes(coding) && weight > 0
-		);
-
-	if (acceptedEncoding === undefined) {
-		// If the client doesn't accept any of our supported encodings, including blocking identity, return 415
+	const contentEncoding = response.headers.get("Content-Encoding");
+	const desiredEncoding = selectResponseEncoding(
+		clientAcceptEncoding,
+		contentEncoding
+	);
+	if (desiredEncoding === undefined) {
 		return new Response("Unsupported Media Type", {
 			status: 415 /* Unsupported Media Type */,
 			headers: { "Accept-Encoding": "br, gzip" },
 		});
 	}
-
-	const [encoding] = acceptedEncoding;
-	if (encoding !== "identity") {
-		response.headers.set("Content-Encoding", encoding); // Use desired encoding
+	if (
+		desiredEncoding === (contentEncoding ?? "identity") &&
+		contentEncoding !== "identity"
+	) {
+		return response;
 	}
 
+	response = new Response(response.body, response); // Ensure mutable headers
+	if (desiredEncoding === "identity") {
+		response.headers.delete("Content-Encoding");
+	} else {
+		response.headers.set("Content-Encoding", desiredEncoding);
+	}
 	return response;
 }
 

@@ -2,11 +2,8 @@
 "miniflare": patch
 ---
 
-fix: streamed response bodies in Miniflare should not infer compression encoding by default
+Preserve streaming responses by avoiding implicit compression in local development
 
-When serving responses that have not defined `content-encoding` explicitly, Miniflare was attempting to infer a compression algorithm from the `accept-encoding` request header.
-This resulted in streamed responses being compressed with an algorithm (usually gzip) that does not stream as expected:
-The compression buffer is big enough that it rarely flushes giving the impression that the response is not streaming
+Miniflare now keeps a Worker's response encoding when the client accepts it, and otherwise prefers an uncompressed response when identity encoding is allowed. This prevents automatic gzip or Brotli compression from buffering small streamed chunks. Clients that explicitly reject identity still receive a supported compression encoding or a 415 response.
 
-Now Miniflare will prefer to infer the `identity` `content-encoding` response from the `accept-encoding` request header if possible.
-Therefore unless the accept-headers explicitly disallow `identity`, streamed responses will not be compressed by default.
+This shared behavior applies to local HTTP responses served through Miniflare, Wrangler, and the Vite plugin. Vitest service-binding calls continue to use workerd's existing response handling. Miniflare's `dispatchFetch()` also removes stale transfer and content length headers from its decoded responses.

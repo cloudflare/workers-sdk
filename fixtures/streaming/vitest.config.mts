@@ -5,7 +5,8 @@ export default mergeConfig(
 	configShared,
 	defineProject({
 		test: {
-			include: ["main-worker/**/*.test.ts"],
+			include: ["**/*.test.ts"],
+			fileParallelism: false,
 			retry: 0,
 		},
 	})

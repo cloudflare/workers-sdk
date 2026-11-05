@@ -10,5 +10,5 @@
 		"strict": true,
 		"skipLibCheck": true
 	},
-	"include": ["main-worker/src/**/*.ts"]
+	"include": ["main-worker/src/**/*.ts", "client-worker/src/**/*.ts"]
 }
