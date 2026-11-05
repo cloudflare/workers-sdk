@@ -1213,6 +1213,74 @@ describe("WorkflowHandle", () => {
 
 			expect(status.status).toBe("terminated");
 		});
+
+		it("should report a completed rollback after the workflow errors (#16301)", async ({
+			expect,
+		}) => {
+			const id = uniqueId();
+			const binding = createBinding();
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+
+			setTestWorkflowCallback(async (_event, step) => {
+				// @ts-expect-error -- rollback options are not in workers-types yet
+				await step.do("reserve", async () => "reservation-1", {
+					rollback: async () => {},
+				});
+				throw new Error("charge rejected");
+			});
+
+			await binding.create({ id });
+			await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_FAILURE);
+
+			const instance = await binding.get(id);
+			const status = await instance.status();
+
+			expect(status.status).toBe("errored");
+			// Once an instance reaches a terminal state, status() should carry the
+			// rollback outcome, matching a deployed Worker.
+			expect(status).toMatchObject({
+				rollback: { outcome: "complete", error: null },
+			});
+		});
+
+		it("should report a failed rollback after the workflow errors (#16301)", async ({
+			expect,
+		}) => {
+			const id = uniqueId();
+			const binding = createBinding();
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+
+			setTestWorkflowCallback(async (_event, step) => {
+				// @ts-expect-error -- rollback options are not in workers-types yet
+				await step.do("reserve", async () => "reservation-1", {
+					rollback: async () => {
+						throw new Error("rollback failed");
+					},
+					rollbackConfig: {
+						retries: {
+							limit: 0,
+							delay: 0,
+							backoff: "constant",
+						},
+					},
+				});
+				throw new Error("charge rejected");
+			});
+
+			await binding.create({ id });
+			await waitUntilLogEvent(engineStub, InstanceEvent.WORKFLOW_FAILURE);
+
+			const instance = await binding.get(id);
+			const status = await instance.status();
+
+			expect(status.status).toBe("errored");
+			expect(status).toMatchObject({
+				rollback: {
+					outcome: "failed",
+					error: { message: "rollback failed" },
+				},
+			});
+		});
 	});
 
 	describe("subscribe()", () => {
