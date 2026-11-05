@@ -1,3 +1,4 @@
+import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { mockPackageManager, mockSpinner } from "helpers/__tests__/mocks";
 import { runWranglerCommand } from "helpers/command";
 import { hasSparrowSourceKey } from "helpers/sparrow";
@@ -54,6 +55,7 @@ describe("wrangler account helpers", () => {
 	let spinner: ReturnType<typeof mockSpinner>;
 
 	beforeEach(() => {
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "");
 		mockPackageManager("npm");
 		vi.mocked(hasSparrowSourceKey).mockReturnValue(true);
 
@@ -91,6 +93,66 @@ describe("wrangler account helpers", () => {
 			expect(runWranglerCommand).toHaveBeenCalledWith(
 				["npx", "cf", "auth", "whoami"],
 				expect.anything()
+			);
+		});
+
+		test.for([false, true])(
+			"preserves duplicate account names and selects by ID (cf: %s)",
+			async (useCf, { expect }) => {
+				vi.mocked(usesCfCli).mockReturnValue(useCf);
+				const accounts = [
+					{ id: "a".repeat(32), name: "Example account" },
+					{ id: "b".repeat(32), name: "Example account" },
+				];
+
+				for (const available of [accounts, [...accounts].reverse()]) {
+					for (const selected of accounts) {
+						vi.mocked(runWranglerCommand).mockResolvedValueOnce(
+							useCf
+								? JSON.stringify({ accounts: available })
+								: available
+										.map(({ name, id }) => `│ ${name} │ ${id} │`)
+										.join("\n")
+						);
+						vi.mocked(inputPrompt).mockResolvedValueOnce(selected.id);
+						const testCtx = createTestContext();
+
+						await chooseAccount(testCtx);
+
+						expect(inputPrompt).toHaveBeenLastCalledWith(
+							expect.objectContaining({
+								options: available.map(({ name, id }) => ({
+									label: `${name} (${id})`,
+									value: id,
+								})),
+								defaultValue: available[0].id,
+							})
+						);
+						expect(testCtx.account).toEqual(selected);
+					}
+				}
+			}
+		);
+
+		test("selects the only Wrangler account without prompting", async ({
+			expect,
+		}) => {
+			const account = { id: "a".repeat(32), name: "Example account" };
+			vi.mocked(runWranglerCommand).mockResolvedValueOnce(
+				`│ ${account.name} │ ${account.id} │`
+			);
+			const testCtx = createTestContext();
+
+			await chooseAccount(testCtx);
+
+			expect(testCtx.account).toEqual(account);
+			expect(inputPrompt).not.toHaveBeenCalled();
+		});
+
+		test("reports an empty account list", async ({ expect }) => {
+			vi.mocked(runWranglerCommand).mockResolvedValueOnce("");
+			await expect(chooseAccount(createTestContext())).rejects.toThrow(
+				"Unable to find any accounts"
 			);
 		});
 	});
@@ -212,7 +274,9 @@ describe("wrangler account helpers", () => {
 			.mockReturnValueOnce(Promise.resolve(loggedInWhoamiOutput));
 
 		const accounts = await listAccounts();
-		expect(accounts).keys("testacct");
+		expect(accounts).toEqual([
+			{ name: "testacct", id: "g8s9dl23jv90xa0xxxx990ds09xxxxda" },
+		]);
 		expect(mock).toHaveBeenLastCalledWith(
 			["npx", "wrangler", "whoami"],
 			expect.anything()

@@ -51,7 +51,7 @@ export const d1MigrationsListCommand = createCommand({
 	positionalArgs: ["database"],
 	async handler({ database, local, remote, persistTo, preview }, { config }) {
 		if (remote) {
-			await requireAuth({});
+			await requireAuth(config);
 		}
 
 		if (!config.configPath) {

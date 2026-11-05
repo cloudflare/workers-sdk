@@ -1,5 +1,60 @@
 # @cloudflare/autoconfig
 
+## 0.9.2
+
+### Patch Changes
+
+- [#16670](https://github.com/cloudflare/workers-sdk/pull/16670) [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-03
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815)]:
+  - @cloudflare/workers-utils@0.51.1
+  - @cloudflare/cli-shared-helpers@0.3.3
+  - @cloudflare/config@0.30.1
+
+## 0.9.1
+
+### Patch Changes
+
+- [#16642](https://github.com/cloudflare/workers-sdk/pull/16642) [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-02
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72), [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67), [`51bbf8b`](https://github.com/cloudflare/workers-sdk/commit/51bbf8b257dbf5c7a8f26600f5875ba45acbe89c), [`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72), [`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72)]:
+  - @cloudflare/config@0.30.0
+  - @cloudflare/workers-utils@0.51.0
+  - @cloudflare/cli-shared-helpers@0.3.2
+
+## 0.9.0
+
+### Minor Changes
+
+- [#16366](https://github.com/cloudflare/workers-sdk/pull/16366) [`d174de8`](https://github.com/cloudflare/workers-sdk/commit/d174de8818c79ff82293150917fa6da11516e795) Thanks [@MattieTK](https://github.com/MattieTK)! - Add an `outputDir` option to `getDetailsForAutoConfig`
+
+  Callers that already know which directory holds their built static assets can pass it as `outputDir` instead of having autoconfig detect one. Relative paths are resolved against the project path. This selects static-asset configuration for unconfigured projects even when framework dependencies are present, without running framework migrations or builds that could replace the requested assets. Existing Workers and Pages configurations, including deployments configured through the Cloudflare Vite plugin alone, retain their usual detection behavior.
+
+  Checking whether a Vite project already uses the Cloudflare plugin no longer writes the Vite config back to disk, preserving its line endings and trailing newline.
+
+### Patch Changes
+
+- [#16635](https://github.com/cloudflare/workers-sdk/pull/16635) [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-01
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16537](https://github.com/cloudflare/workers-sdk/pull/16537) [`a2d1338`](https://github.com/cloudflare/workers-sdk/commit/a2d1338708fa36881bb265d277a579e64fe59eb7) Thanks [@edmundhung](https://github.com/edmundhung)! - Support React Router on `cf` from version 8.5.1
+
+  React Router 8.5.1 builds into the output directories that the Cloudflare Vite plugin v2 uses, which `cf` needs. Autoconfig now requires React Router 8.5.1 or later when configuring a project for `cf`, and stops with a clear message on earlier versions instead of letting `cf build` fail later. Projects configured for Wrangler keep the existing minimum of React Router 7.0.0.
+
+- [#16588](https://github.com/cloudflare/workers-sdk/pull/16588) [`3f14c76`](https://github.com/cloudflare/workers-sdk/commit/3f14c760aba638b3ef4ade1a1c5b935e64ddcc64) Thanks [@irvinebroque](https://github.com/irvinebroque)! - Run the project-local Vite+ executable for Vite+ projects
+
+  Use `vp dev` and `vp build` when Vite+ is declared. Its Vite alias does not expose a `vite` executable, so invoking `vite` can fail with pnpm or cause npm to fetch a separate Vite. Preserve framework-owned commands and custom scripts.
+
+- Updated dependencies [[`91f0e03`](https://github.com/cloudflare/workers-sdk/commit/91f0e03b28790e349d0bd7371fae7b59d755f79d), [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286)]:
+  - @cloudflare/config@0.29.1
+  - @cloudflare/workers-utils@0.50.2
+  - @cloudflare/cli-shared-helpers@0.3.1
+
 ## 0.8.3
 
 ### Patch Changes

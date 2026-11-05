@@ -1,5 +1,77 @@
 # @cloudflare/vite-plugin
 
+## 2.0.0-beta.v.11
+
+### Minor Changes
+
+- [#16656](https://github.com/cloudflare/workers-sdk/pull/16656) [`b447229`](https://github.com/cloudflare/workers-sdk/commit/b44722909b70d468b7873a6f84b9cb595da4b56a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Expose `CloudflareConfig` and deprecate `ParsedInputConfigWithWorker` in the beta Vite plugin
+
+  Import `CloudflareConfig` from `@cloudflare/vite-plugin` to annotate configuration customizers. The previous name, `ParsedInputConfigWithWorker`, remains exported as a deprecated alias for compatibility. The configuration shape and required entry Worker remain unchanged.
+
+### Patch Changes
+
+- [#16670](https://github.com/cloudflare/workers-sdk/pull/16670) [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-03
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815), [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815), [`d2eda1c`](https://github.com/cloudflare/workers-sdk/commit/d2eda1cf7446ba4b43c9b87e337614ba67a1b014), [`2750917`](https://github.com/cloudflare/workers-sdk/commit/2750917df4239be111bb2704654dbb99e922dba7)]:
+  - @cloudflare/build-output-utils@0.9.9
+  - @cloudflare/config@0.30.1
+  - @cloudflare/runtime-types@0.1.22
+  - miniflare@5.20261103.0-beta
+
+## 2.0.0-beta.v.10
+
+### Patch Changes
+
+- [#16642](https://github.com/cloudflare/workers-sdk/pull/16642) [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-02
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16623](https://github.com/cloudflare/workers-sdk/pull/16623) [`51bbf8b`](https://github.com/cloudflare/workers-sdk/commit/51bbf8b257dbf5c7a8f26600f5875ba45acbe89c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Deprecate shared tooling helper exports from Miniflare
+
+  Miniflare continues to export `getNodeCompat`, `NodeJSCompatMode`, and `getFreshSourceMapSupport` for compatibility. These exports are deprecated and now use the implementations in `@cloudflare/workers-utils`. Add a dependency on that package and replace the Miniflare imports with:
+
+  ```ts
+  import {
+    getNodeCompat,
+    type NodeJSCompatMode,
+  } from "@cloudflare/workers-utils/node-compat";
+  import { getFreshSourceMapSupport } from "@cloudflare/workers-utils/sourcemap";
+  ```
+
+  Wrangler and the Cloudflare Vite and Vitest plugins now use the shared helpers directly. The helpers retain their behavior and can be imported without loading the Workers runtime.
+
+  The deprecated Miniflare exports will be removed in a later release, allowing downstream tools such as cf to migrate and release independently first.
+
+- Updated dependencies [[`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72), [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67), [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67), [`51bbf8b`](https://github.com/cloudflare/workers-sdk/commit/51bbf8b257dbf5c7a8f26600f5875ba45acbe89c)]:
+  - @cloudflare/config@0.30.0
+  - @cloudflare/build-output-utils@0.9.8
+  - @cloudflare/runtime-types@0.1.21
+  - miniflare@5.20261102.0-beta
+
+## 2.0.0-beta.v.9
+
+### Minor Changes
+
+- [#16573](https://github.com/cloudflare/workers-sdk/pull/16573) [`91f0e03`](https://github.com/cloudflare/workers-sdk/commit/91f0e03b28790e349d0bd7371fae7b59d755f79d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Customize the full parsed Cloudflare configuration through the beta Vite plugin's `config` callback
+
+  The `config` option now accepts `(loadedConfig: ParsedInputConfigWithWorker) => ParsedInputConfigWithWorker`, allowing frameworks to customize account settings and Containers alongside the entry Worker. Both the loaded and returned configurations include a Worker, and `ParsedInputConfigWithWorker` is exported for framework authors. The returned configuration is revalidated, including resource relationships, before being used for development and recorded in the build output for preview and deployment.
+
+  This is a breaking change to the beta API: object overrides and callbacks that mutate or return partial Worker configurations must return a complete configuration instead. Copy the loaded configuration and any nested fields to preserve, for example `config: (loadedConfig) => ({ ...loadedConfig, worker: { ...loadedConfig.worker, name: "my-worker", compatibilityDate: "2026-10-01" } })`. Fields and arrays are replaced rather than deep-merged.
+
+### Patch Changes
+
+- [#16635](https://github.com/cloudflare/workers-sdk/pull/16635) [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-01
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`91f0e03`](https://github.com/cloudflare/workers-sdk/commit/91f0e03b28790e349d0bd7371fae7b59d755f79d), [`effe4ed`](https://github.com/cloudflare/workers-sdk/commit/effe4ed13b1677744428cfb0c37e4512ec5d52f7), [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286), [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286), [`009ca6e`](https://github.com/cloudflare/workers-sdk/commit/009ca6e0483fd4a89f44bd02251b0a64491dab14)]:
+  - @cloudflare/config@0.29.1
+  - @cloudflare/runtime-types@0.1.20
+  - @cloudflare/build-output-utils@0.9.7
+  - miniflare@5.20261101.0-beta
+
 ## 2.0.0-beta.v.8
 
 ### Patch Changes

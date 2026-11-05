@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { transformFile } from "@cloudflare/shared-ast-primitives";
+import { parseFile, transformFile } from "@cloudflare/shared-ast-primitives";
 import { UserError } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import dedent from "ts-dedent";
@@ -66,11 +66,15 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 	context?: AutoConfigContext
 ): boolean {
 	const filePath = getViteConfigPath(projectPath);
+	const ast = parseFile(filePath);
+	if (!ast) {
+		return false;
+	}
 
 	let importsCloudflarePlugin = false;
 	let usesCloudflarePlugin = false;
 
-	transformFile(filePath, {
+	recast.visit(ast, {
 		visitProgram(n) {
 			if (
 				n.node.body.some(

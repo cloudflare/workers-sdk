@@ -17,6 +17,22 @@ describe("vite-config utils", () => {
 	const context = createMockContext();
 
 	describe("checkIfViteConfigUsesCloudflarePlugin", () => {
+		it.for(["\n", "\r\n"])(
+			"preserves the config file with %j line endings",
+			async (lineEnding, { expect }) => {
+				const content = [
+					'import { defineConfig } from "vite";',
+					'import { cloudflare } from "@cloudflare/vite-plugin";',
+					"export default defineConfig({ plugins: [cloudflare()] });",
+					"",
+				].join(lineEnding);
+				await writeFile("vite.config.ts", content);
+
+				expect(checkIfViteConfigUsesCloudflarePlugin(".", context)).toBe(true);
+				expect(readFileSync("vite.config.ts", "utf8")).toBe(content);
+			}
+		);
+
 		it("should detect cloudflare plugin in function-based defineConfig", async ({
 			expect,
 		}) => {

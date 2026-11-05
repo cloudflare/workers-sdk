@@ -1,6 +1,6 @@
-import { getNodeCompat } from "miniflare";
 import { describe, test } from "vitest";
-import type { NodeJSCompatMode } from "miniflare";
+import { getNodeCompat } from "../src/node-compat";
+import type { NodeJSCompatMode } from "../src/node-compat";
 
 // `nodejs_compat` and `nodejs_compat_v2` both became enabled by default in
 // workerd on this date.

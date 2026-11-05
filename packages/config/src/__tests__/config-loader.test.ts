@@ -373,6 +373,49 @@ describe("resolveAndParseConfig", () => {
 		}
 	});
 
+	it("validates Container relationships after resolving definitions", async ({
+		expect,
+	}) => {
+		const api = defineContainer(async () => ({
+			name: "api",
+			image: { dockerfile: "./Dockerfile" },
+		}));
+		const result = await resolveAndParseConfig(
+			defineConfig({
+				containers: [
+					api,
+					defineContainer({
+						name: "api",
+						image: { dockerfile: "./OtherDockerfile" },
+					}),
+				],
+				worker: {
+					name: "web",
+					compatibilityDate,
+					exports: {
+						Api: workerExports.durableObject({
+							storage: "sqlite",
+							container: api,
+						}),
+						Other: workerExports.durableObject({
+							storage: "sqlite",
+							container: api,
+						}),
+					},
+				},
+			}),
+			{ isPreview: false, mode: undefined }
+		);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues.map((issue) => issue.path)).toEqual([
+				["containers", 1, "name"],
+				["worker", "exports", "Other", "container"],
+			]);
+		}
+	});
+
 	it("reports project, Worker, and Container validation issues together", async ({
 		expect,
 	}) => {

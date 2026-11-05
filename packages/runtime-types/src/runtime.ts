@@ -59,7 +59,7 @@ export async function generateRuntimeTypes({
 	);
 
 	if (existingContent !== undefined) {
-		const lines = existingContent.split("\n");
+		const lines = existingContent.split(/\r?\n/);
 		const existingHeader = lines.find((line) =>
 			line.startsWith(RUNTIME_HEADER_COMMENT_PREFIX)
 		);

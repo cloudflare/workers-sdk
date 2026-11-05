@@ -3,7 +3,12 @@ import http from "node:http";
 import url from "node:url";
 import { UserError } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
-import { ErrorAccessDenied, ErrorNoAuthCode, ErrorOAuth2 } from "./errors";
+import {
+	ErrorAccessDenied,
+	ErrorInvalidReturnedStateParam,
+	ErrorNoAuthCode,
+	ErrorOAuth2,
+} from "./errors";
 import {
 	exchangeAuthCodeForAccessToken,
 	getAuthURL,
@@ -172,6 +177,13 @@ export async function getOauthToken(
 					try {
 						hasAuthCode = isReturningFromAuthServer(query, state, ctx.logger);
 					} catch (err: unknown) {
+						if (err instanceof ErrorInvalidReturnedStateParam) {
+							renderErrorPage({
+								description:
+									"This callback does not match the pending login. Return to the authorization page to continue.",
+							});
+							return;
+						}
 						if (err instanceof ErrorAccessDenied) {
 							res.writeHead(307, {
 								Location: options.denied.url,
