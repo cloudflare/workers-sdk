@@ -1,5 +1,4 @@
 import { validateHeaderName, validateHeaderValue } from "node:http";
-import { getSanitizeLogs } from "./environment-variables/misc-variables";
 import { UserError } from "./errors";
 
 const protectedHeaders = new Set([
@@ -73,20 +72,4 @@ export function addCustomApiHeaders(headers: {
 	for (const [name, value] of Object.entries(getCustomApiHeaders())) {
 		headers.set(name, value);
 	}
-}
-
-/** Format custom headers using the existing debug-log sanitization setting. */
-export function redactCustomApiHeaders(
-	headers: Iterable<readonly [string, string]>
-): Record<string, string> {
-	const custom = getCustomApiHeaders();
-	const sanitize = getSanitizeLogs();
-	return Object.fromEntries(
-		Array.from(headers, ([name, value]) => [
-			name,
-			sanitize && Object.hasOwn(custom, name.toLowerCase())
-				? "[REDACTED]"
-				: value,
-		])
-	);
 }
