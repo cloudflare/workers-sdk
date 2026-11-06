@@ -1790,6 +1790,28 @@ describe("wrangler dev", { concurrent: false }, () => {
 			const config = await runWranglerUntilConfig("dev");
 			expect(config.dev.containerEngine).toEqual("test.sock");
 		});
+		it("should normalize a bare socket path to a unix:// URL", async ({
+			expect,
+		}) => {
+			// https://github.com/cloudflare/workers-sdk/issues/15394
+			// A bare path like "/var/run/docker.sock" is documented as valid,
+			// but passing it through verbatim makes workerd parse it as a
+			// hostname and fail with a DNS lookup error.
+			writeWranglerConfig({
+				main: "index.js",
+				dev: {
+					port: 8888,
+					container_engine: "/var/run/docker.sock",
+				},
+				...minimalContainerConfig,
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+
+			const config = await runWranglerUntilConfig("dev");
+			expect(config.dev.containerEngine).toEqual(
+				"unix:///var/run/docker.sock"
+			);
+		});
 		it("should be able to be set by env var", async ({ expect }) => {
 			writeWranglerConfig({
 				main: "index.js",
