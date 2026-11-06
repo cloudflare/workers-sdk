@@ -2,7 +2,6 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
-import { CLI_DISPLAY_NAME_ENV_VAR } from "../build-output-env";
 import { resolvePluginConfig } from "../plugin-config";
 import type {
 	AssetsOnlyResolvedConfig,
@@ -122,18 +121,30 @@ describe("resolvePluginConfig", () => {
 		).resolves.toMatchObject({ type: "workers" });
 	});
 
+	test("uses Wrangler for actionable messages", async ({ expect }) => {
+		writeEntryConfig();
+
+		const result = await resolvePluginConfig({}, { root }, buildEnv);
+
+		expect(result.cliDisplayName).toBe("Wrangler");
+	});
+
 	test.for([
-		["Wrangler", undefined],
-		["cf", "cf"],
+		[undefined, true],
+		[true, true],
+		[false, false],
 	] as const)(
-		"uses %s for caller-specific messages",
-		async ([expected, caller], { expect }) => {
-			vi.stubEnv(CLI_DISPLAY_NAME_ENV_VAR, caller);
+		"resolves remoteBindings %s to %s",
+		async ([remoteBindings, expected], { expect }) => {
 			writeEntryConfig();
 
-			const result = await resolvePluginConfig({}, { root }, buildEnv);
+			const result = await resolvePluginConfig(
+				{ remoteBindings },
+				{ root },
+				buildEnv
+			);
 
-			expect(result.cliDisplayName).toBe(expected);
+			expect(result.remoteBindings).toBe(expected);
 		}
 	);
 
@@ -830,13 +841,12 @@ describe("resolvePluginConfig", () => {
 		fs.mkdirSync(envDir);
 		fs.writeFileSync(
 			path.join(envDir, ".env.production"),
-			"CLOUDFLARE_VITE_FORCE_LOCAL=true\nCLOUDFLARE_ACCOUNT_ID=test-account-id"
+			"CLOUDFLARE_ACCOUNT_ID=test-account-id"
 		);
 		fs.writeFileSync(
 			path.join(envDir, ".dev.vars.production"),
 			"CLOUDFLARE_ACCOUNT_ID=from-dev-vars"
 		);
-		vi.stubEnv("CLOUDFLARE_VITE_FORCE_LOCAL", undefined);
 		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
 
 		const result = await resolvePluginConfig(
@@ -845,8 +855,9 @@ describe("resolvePluginConfig", () => {
 			buildEnv
 		);
 
-		expect(result.remoteBindings).toBe(false);
-		expect(result.localEnv.values.CLOUDFLARE_VITE_FORCE_LOCAL).toBe("true");
+		expect(result.localEnv.values.CLOUDFLARE_ACCOUNT_ID).toBe(
+			"test-account-id"
+		);
 		expect(result.devVars?.CLOUDFLARE_ACCOUNT_ID).toBe("from-dev-vars");
 		expect(process.env.CLOUDFLARE_ACCOUNT_ID).toBe("test-account-id");
 	});
@@ -855,9 +866,10 @@ describe("resolvePluginConfig", () => {
 		writeEntryConfig();
 		fs.writeFileSync(
 			path.join(root, ".env.production"),
-			"CLOUDFLARE_VITE_FORCE_LOCAL=true"
+			"CLOUDFLARE_ACCOUNT_ID=test-account-id"
 		);
-		vi.stubEnv("CLOUDFLARE_VITE_FORCE_LOCAL", undefined);
+
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
 
 		const result = await resolvePluginConfig(
 			{ remoteBindings: true },
@@ -865,7 +877,7 @@ describe("resolvePluginConfig", () => {
 			buildEnv
 		);
 
-		expect(result.remoteBindings).toBe(true);
+		expect(result.localEnv.values.CLOUDFLARE_ACCOUNT_ID).toBeUndefined();
 	});
 
 	test("rejects duplicate Vite environment names", async ({ expect }) => {

@@ -24,7 +24,7 @@ import {
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import * as vite from "vite";
 import { PRERENDER_WORKER_DIRECTORY_NAME } from "./build-output";
-import { getCliDisplayName, isPreviewBuild } from "./build-output-env";
+import { isPreviewBuild } from "./build-output-env";
 import { readBuildOutputPreview } from "./build-output-preview";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
 import type { BuildOutputPreviewWorker } from "./build-output-preview";
@@ -313,7 +313,7 @@ export async function resolvePluginConfig(
 	);
 	const types = normalizeTypes(pluginConfig.types);
 	const shared = {
-		cliDisplayName: getCliDisplayName(),
+		cliDisplayName: "Wrangler",
 		persistState: pluginConfig.persistState ?? true,
 		inspectorPort: pluginConfig.inspectorPort,
 		types,
@@ -335,13 +335,7 @@ export async function resolvePluginConfig(
 		devVars,
 	};
 
-	// The `cf-vite` delegate binary's `--local` flag sets this env var to
-	// force remote bindings off, overriding any `remoteBindings` value in the
-	// plugin config (mirrors `wrangler dev --local`).
-	const remoteBindings =
-		localEnv.values.CLOUDFLARE_VITE_FORCE_LOCAL === "true"
-			? false
-			: (pluginConfig.remoteBindings ?? true);
+	const remoteBindings = pluginConfig.remoteBindings ?? true;
 
 	if (preview !== undefined) {
 		const { accountId, complianceRegion } = preview.rootConfig;

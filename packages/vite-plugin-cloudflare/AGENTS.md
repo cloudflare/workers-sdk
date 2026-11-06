@@ -7,8 +7,6 @@ Vite plugin for Cloudflare Workers development. Exports `cloudflare()` plugin fa
 ## STRUCTURE
 
 - `src/index.ts` — Plugin factory
-- `src/cf-vite.ts` — `cf-vite` delegate binary entry (see below)
-- `bin/cf-vite` — shebang shim that dynamic-imports `dist/cf-vite.mjs`
 - `src/workers/` — 4 internal worker entries: `asset-worker`, `router-worker`, `runner-worker`, `vite-proxy-worker`
 - `playground/` — ~47 playground apps, each a workspace member (nested workspace under this package)
 - `e2e/` — E2E tests with Playwright
@@ -18,66 +16,16 @@ Vite plugin for Cloudflare Workers development. Exports `cloudflare()` plugin fa
 
 - Only package using `tsdown` as build tool
 - Outputs ESM (`.mjs`) to `dist/index.mjs`
-- `src/cf-vite.ts` is a second top-level tsdown entry, bundled to `dist/cf-vite.mjs` (no dts)
 - Also bundles 4 internal worker scripts from `src/workers/*/index.ts` as separate neutral-platform outputs to `dist/workers/`
 - Release builds set `SOURCEMAPS=false` to omit the plugin's JavaScript and declaration maps. Normal builds retain maps for debugging; the setting does not change source maps for applications built with the plugin.
 
-## cf-vite DELEGATE BINARY (experimental / internal)
+## CLOUDFLARE TOOLING
 
-`bin/cf-vite` is an experimental, internal delegate binary spawned by
-Cloudflare's "cf-dev" parent process — NOT part of the plugin's public
-API and not meant for direct end-user invocation. It is the sibling of
-`wrangler`'s `cf-wrangler` binary, and the two MUST keep a shared spawn
-contract so the parent can drive either impl interchangeably.
-
-- **Verb dispatch.** `cf-vite <verb> [flags]`. `dev` and `build` are the
-  verbs today; future verbs (`deploy`) follow the same shape.
-  Unknown/missing verbs exit `2` (this doubles as the parent's
-  version-detection signal — no JSON handshake).
-- **Shared flag vocabulary (`dev`).** For `dev`, only `--mode`, `--port`,
-  `--host`, `--local` are accepted, mirroring `cf-wrangler` exactly.
-  Parsed with `node:util.parseArgs` strict mode → unknown flags exit `2`.
-  Do NOT add flags here unless `cf-wrangler` grows them too. (There is no
-  `--config` flag: the wrangler config is discovered by `cloudflare()`
-  itself.)
-- **`build`** `cf-vite build` runs Vite's full multi-environment
-  app build via `createBuilder().buildApp()` (NOT the legacy
-  single-environment `build()` helper, which would skip the plugin's
-  worker/build-output orchestration — mirrors Vite's own `vite build`
-  CLI). It accepts only `--mode` (`--port`/`--host`/`--local` don't apply to
-  a build and exit `2`). Preview build context is supplied through
-  `CLOUDFLARE_PREVIEW_BUILD`, which also works when a framework runs Vite as
-  part of its own build command.
-- **Build Output Specification is the core build pipeline.** Every build emits
-  Build Output; there is no feature flag or legacy output-config path. Preview
-  reads Workers and Containers exclusively from that output. The v2 plugin
-  always installs its build-output plugin, so `cf-vite` does not need the
-  internal force-build-output flag used by v1.
-- **Caller identity.** `main()` sets `CLOUDFLARE_VITE_CLI_DISPLAY_NAME=cf`
-  before Vite loads the user's config. `resolvePluginConfig` reads this through
-  `getCliDisplayName()` so shared services can use `cf` in actionable messages;
-  direct Vite plugin use defaults to `Wrangler`. This is an internal bridge,
-  not a `.env`-file knob.
-- **`dev`** `cf-vite dev` boots Vite via `createServer()`
-  against the user's own `vite.config.ts` (which must include
-  `cloudflare()`). Plugin-owned flags are bridged via env vars the plugin
-  already reads (`--local` → `CLOUDFLARE_VITE_FORCE_LOCAL`); Vite-owned
-  flags go through inline config (`--port`/`--host` → `server.*`,
-  `--mode` → `mode`).
-- **Authentication.** Profiles resolve through `@cloudflare/workers-auth`, including
-  `CLOUDFLARE_AUTH_PROFILE` inherited from the parent. Remote-binding credentials
-  are keyed by the resolved profile as well as project directory and account,
-  so a profile change on restart replaces the session's authentication.
-- **`--local`** forces remote bindings off. There is no plugin env knob
-  for `remoteBindings` other than `CLOUDFLARE_VITE_FORCE_LOCAL`, which
-  `resolvePluginConfig` in `plugin-config.ts` honours by overriding the
-  `remoteBindings` config option. Keep that override in sync if the flag
-  semantics change.
-- **Hotkeys differ by design.** `cf-vite` uses Vite's own
-  `bindCLIShortcuts` (`h`/`r`/`q`/…), not wrangler's hotkey set. The
-  parent process should not assume identical hotkey UX across delegates.
-- **Exit codes.** `0` graceful, `2` unknown verb / argv parse error,
-  `130` SIGINT, `143` SIGTERM.
+- Run development and builds through Vite's CLI or the framework's own commands.
+- Every build emits Build Output; Preview reads Workers and Containers from that output.
+- Preview build context is supplied through `CLOUDFLARE_PREVIEW_BUILD`, including when a framework runs Vite as part of its build command.
+- Configure `cloudflare({ remoteBindings: false })` to disable remote bindings.
+- Authentication profiles resolve through `@cloudflare/workers-auth`, including `CLOUDFLARE_AUTH_PROFILE` inherited from the parent. Remote-binding credentials are keyed by the resolved profile as well as project directory and account, so a profile change on restart replaces the session's authentication.
 
 ## CONVENTIONS
 
