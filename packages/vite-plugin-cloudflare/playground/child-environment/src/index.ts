@@ -17,8 +17,13 @@ export default {
 					)
 				: import(/* @vite-ignore */ childEnvironmentEntry))) as {
 				additionalModule: string;
+				assetUrl: string;
 				getMessage: () => string;
 			};
+
+		if (new URL(request.url).pathname === "/imported-asset") {
+			return new Response(childEnvironmentModule.assetUrl);
+		}
 
 		return new Response(
 			new URL(request.url).pathname === "/additional-module"
