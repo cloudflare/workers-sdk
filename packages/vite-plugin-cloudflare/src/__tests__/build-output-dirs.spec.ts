@@ -43,3 +43,35 @@ test("puts the Build Output directories in the resolved config that other plugin
 		getWorkerBundleDir(fixturesPath)
 	);
 });
+
+test("overrides user directories and nests child environments in their parent's", async ({
+	expect,
+}) => {
+	const config = await resolveConfig(
+		{
+			root: fixturesPath,
+			logLevel: "silent",
+			build: { outDir: "custom" },
+			environments: { client: { build: { outDir: "custom-client" } } },
+			plugins: [
+				cloudflare({
+					inspectorPort: false,
+					persistState: false,
+					viteEnvironment: { childEnvironments: ["child"] },
+				}),
+			],
+		},
+		"serve"
+	);
+	const outDir = (environmentName: string) =>
+		path.resolve(
+			fixturesPath,
+			config.environments[environmentName]?.build.outDir ?? ""
+		);
+
+	expect(outDir("client")).toBe(getWorkerAssetsDir(fixturesPath));
+	expect(outDir("ssr")).toBe(getWorkerBundleDir(fixturesPath));
+	expect(outDir("child")).toBe(
+		path.join(getWorkerBundleDir(fixturesPath), "child")
+	);
+});
