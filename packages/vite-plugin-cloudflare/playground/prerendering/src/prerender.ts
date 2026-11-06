@@ -1,3 +1,5 @@
+import assetUrl from "./prerender-asset.txt?url";
+
 interface Env {
 	AUXILIARY_WORKER: Fetcher;
 }
@@ -22,6 +24,7 @@ export default {
 </head>
 <body>
 	<h1>Pre-rendered HTML ${auxiliaryText}</h1>
+	<a id="prerender-asset" href="${assetUrl}">Prerender asset</a>
 </body>
 </html>`,
 				{
