@@ -11,6 +11,19 @@ import { WebSocket } from "mock-socket";
  */
 export class MockWebSocket extends WebSocket {
 	private pongListener: undefined | ((...args: unknown[]) => void);
+	private unexpectedResponseListener:
+		| undefined
+		| ((...args: unknown[]) => void);
+
+	/**
+	 * Simulate the server answering the WebSocket upgrade with a plain HTTP
+	 * response (as `ws` reports via its `unexpected-response` event).
+	 *
+	 * @param statusCode the HTTP status code of the response
+	 */
+	rejectUpgrade(statusCode: number) {
+		this.unexpectedResponseListener?.({}, { statusCode });
+	}
 
 	on(event: string | symbol, listener: (...args: unknown[]) => void): this {
 		switch (event) {
@@ -33,6 +46,15 @@ export class MockWebSocket extends WebSocket {
 						| undefined;
 					listener(closeEvent?.code, closeEvent?.reason);
 				});
+				break;
+			case "error":
+				this.addEventListener("error", listener);
+				break;
+			case "unexpected-response":
+				// mock-socket can't model an HTTP response to the upgrade
+				// request, so tests trigger this by calling
+				// `rejectUpgrade()` instead.
+				this.unexpectedResponseListener = listener;
 				break;
 			case "pong":
 				this.pongListener = listener;
