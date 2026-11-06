@@ -108,16 +108,15 @@ function getParentPaths(filePath: string): string[] {
 
 const dirPathTypeModuleCache = new Map<string, boolean>();
 function isWithinTypeModuleContext(filePath: string): boolean {
-	const parentPaths = getParentPaths(filePath);
-
-	for (const parentPath of parentPaths) {
+	// Walk from the nearest directory outwards. The nearest `package.json` decides
+	// the answer, so a cached answer for a farther ancestor must not be used until
+	// every nearer directory has been checked for its own `package.json`.
+	for (const parentPath of getParentPaths(filePath)) {
 		const cache = dirPathTypeModuleCache.get(parentPath);
 		if (cache !== undefined) {
 			return cache;
 		}
-	}
 
-	for (const parentPath of parentPaths) {
 		try {
 			const pkgPath = posixPath.join(parentPath, "package.json");
 			const pkgJson = fs.readFileSync(pkgPath, "utf8");
@@ -125,9 +124,10 @@ function isWithinTypeModuleContext(filePath: string): boolean {
 			const maybeModulePath = pkg.module
 				? posixPath.join(parentPath, pkg.module)
 				: "";
-			const cache = pkg.type === "module" || maybeModulePath === filePath;
-			dirPathTypeModuleCache.set(parentPath, cache);
-			return cache;
+			const isTypeModule =
+				pkg.type === "module" || maybeModulePath === filePath;
+			dirPathTypeModuleCache.set(parentPath, isTypeModule);
+			return isTypeModule;
 		} catch (e: unknown) {
 			if (!isFileNotFoundError(e)) {
 				throw e;
