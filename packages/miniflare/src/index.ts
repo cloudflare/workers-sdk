@@ -83,6 +83,7 @@ import { closeBrowserProcess } from "./plugins/browser-rendering/process";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
+	getContainerEngine,
 	getUserServiceName,
 	handlePrettyErrorRequest,
 	JsonErrorSchema,
@@ -2605,6 +2606,8 @@ export class Miniflare {
 		);
 		const containerSession = assignContainerSession(
 			config,
+			getContainerEngine(this.#sharedOpts.containerEngine).localDocker
+				.socketPath,
 			this.#containerSession
 		);
 		const configBuffer = serializeConfig(config);

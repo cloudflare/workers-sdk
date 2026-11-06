@@ -39,22 +39,24 @@ export interface ContainerSession {
  * Container configuration is unchanged; otherwise a new session starts.
  *
  * @param config Assembled workerd configuration, updated in place.
+ * @param socketPath Docker Engine socket that every Worker's Containers use.
  * @param current Session of the running workerd, if any.
  * @returns The session to run `config` in, if it has Containers, and the
  * session it ends, if any.
  */
 export function assignContainerSession(
 	config: Config,
+	socketPath: string,
 	current: ContainerSession | undefined
 ): { session?: ContainerSession; ended?: ContainerSession } {
-	const containers = getContainerConfiguration(config);
-	if (containers === undefined) {
+	const fingerprint = getContainerFingerprint(config);
+	if (fingerprint === undefined) {
 		return { ended: current };
 	}
 	const session =
-		current?.fingerprint === containers.fingerprint
+		current?.fingerprint === fingerprint
 			? current
-			: { id: crypto.randomBytes(8).toString("hex"), ...containers };
+			: { id: crypto.randomBytes(8).toString("hex"), fingerprint, socketPath };
 	for (const service of config.services ?? []) {
 		const docker =
 			"worker" in service
@@ -68,16 +70,15 @@ export function assignContainerSession(
 }
 
 /**
- * Identifies the Container configuration of `config`: every Container-enabled
- * Durable Object namespace, with its service and Docker engine settings.
+ * Fingerprints the Container configuration of `config`: every
+ * Container-enabled Durable Object namespace, with its service and Docker
+ * engine settings.
  *
  * @param config Assembled workerd configuration.
- * @returns `undefined` when no Durable Object namespace has a container.
+ * @returns The fingerprint, or `undefined` when no Durable Object namespace
+ * has a container.
  */
-function getContainerConfiguration(
-	config: Config
-): { fingerprint: string; socketPath: string } | undefined {
-	let socketPath: string | undefined;
+function getContainerFingerprint(config: Config): string | undefined {
 	const namespaces: unknown[] = [];
 	for (const service of config.services ?? []) {
 		const worker = "worker" in service ? service.worker : undefined;
@@ -86,7 +87,6 @@ function getContainerConfiguration(
 			if (namespace.container === undefined || docker === undefined) {
 				continue;
 			}
-			socketPath ??= docker.socketPath;
 			namespaces.push({
 				service: service.name,
 				namespace,
@@ -94,10 +94,7 @@ function getContainerConfiguration(
 			});
 		}
 	}
-	if (socketPath === undefined) {
-		return undefined;
-	}
-	return { fingerprint: JSON.stringify(namespaces), socketPath };
+	return namespaces.length === 0 ? undefined : JSON.stringify(namespaces);
 }
 
 /**
