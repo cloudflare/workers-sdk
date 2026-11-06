@@ -77,6 +77,37 @@ describe("Wrangler binding conversion", () => {
 		}).toMatchSnapshot();
 	});
 
+	it("ignores legacy environment keys in service binding and dispatch outbound targets", ({ expect }) => {
+		const followUps: MigrationFollowUp[] = [];
+		const bindings = convertBindings(
+			{
+				dispatch_namespaces: [
+					{
+						binding: "DISPATCH",
+						namespace: "namespace",
+						outbound: { environment: "staging", service: "outbound" },
+					},
+				],
+				services: [
+					{
+						binding: "SERVICE",
+						environment: "staging",
+						service: "backend",
+					},
+				],
+			},
+			"",
+			new Set(),
+			(followUp) => followUps.push(followUp)
+		);
+
+		const workerNames = [
+			...JSON.stringify(bindings).matchAll(/"key":"worker","value":"([^"]+)"/g),
+		].map(([, worker]) => worker);
+		expect(workerNames).toEqual(["outbound", "backend"]);
+		expect(followUps).toEqual([]);
+	});
+
 	it("reports invalid and duplicate binding names", ({ expect }) => {
 		const followUps: MigrationFollowUp[] = [];
 		convertBindings(

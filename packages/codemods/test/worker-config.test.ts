@@ -440,4 +440,21 @@ describe("Wrangler Worker configuration conversion", () => {
 			{ blocking: true, sourcePath: "config.routes.1" },
 		]);
 	});
+
+	it("ignores a legacy environment key in tail consumer targets", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			name: "example-worker",
+			tail_consumers: [{ environment: "staging", service: "tailer" }],
+		});
+
+		expect(result.output).toContain('worker: "tailer"');
+		expect(result.output).not.toContain("tailer-staging");
+		expect(
+			result.followUps.filter(({ code }) => code === "service-environment")
+		).toEqual([]);
+		expect(result.output).not.toContain("Migration incomplete");
+	});
 });
