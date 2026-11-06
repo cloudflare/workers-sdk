@@ -3165,6 +3165,100 @@ describe("wrangler preview", () => {
 			expect(std.warn).not.toContain("ASSETS");
 		});
 
+		test("should keep --json stdout parseable when the Worker has static assets", async ({
+			expect,
+		}) => {
+			mkdirSync("public", { recursive: true });
+			writeFileSync("public/index.html", "<h1>Hello</h1>");
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					assets: {
+						binding: "ASSETS",
+						directory: "public",
+					},
+					previews: {},
+				})
+			);
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-assets-json",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/scripts/:workerId/assets-upload-session`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: { buckets: [], jwt: "assets-jwt-from-session" },
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-assets-json",
+								preview_id: "preview-id-assets-json",
+								preview_name: "test-preview",
+								urls: ["https://assets-json.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: {},
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.get(`*/accounts/:accountId/workers/workers/:workerId`, () =>
+					HttpResponse.json({
+						success: true,
+						result: {
+							previews_base_config: {},
+						},
+					})
+				)
+			);
+
+			await runWrangler("preview --name test-preview --json");
+
+			// In a real terminal `console.info` writes to stdout alongside
+			// `console.log`, so the payload is only parseable if the asset upload
+			// progress stayed off stdout in JSON mode.
+			const parsed = JSON.parse(std.info + std.out) as {
+				preview: { id: string };
+				deployment: { id: string };
+			};
+			expect(parsed.preview.id).toBe("preview-id-assets-json");
+			expect(parsed.deployment.id).toBe("deployment-id-assets-json");
+		});
+
 		test("should output preview and deployment JSON for wrangler-action when the Preview API omits the Worker name", async ({
 			expect,
 		}) => {
