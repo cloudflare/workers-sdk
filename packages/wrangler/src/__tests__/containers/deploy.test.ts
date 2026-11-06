@@ -1107,7 +1107,25 @@ describe("wrangler deploy with containers", () => {
 			Current Version ID: Galaxy-Class"
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDEPRECATED: Legacy container scheduling[0m
+
+
+			  These Container applications use the deprecated "default" scheduling policy:
+			    - my-container (class: ExampleDurableObject)
+
+			  Wrangler selects this policy automatically when scheduling_policy is omitted.
+
+			  Migrate to the "durable_object" scheduling policy. Existing applications need
+			  code changes and a replacement application; changing the setting alone will
+			  not migrate them.
+
+			  This warning does not block deployment.
+			  Migration guide:
+			  [4mhttps://developers.cloudflare.com/containers/guides/migrate-to-durable-object-scheduling-policy/[0m
+
+			"
+		`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -1292,7 +1310,25 @@ describe("wrangler deploy with containers", () => {
 			Current Version ID: Galaxy-Class"
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDEPRECATED: Legacy container scheduling[0m
+
+
+			  These Container applications use the deprecated "default" scheduling policy:
+			    - my-container (class: ExampleDurableObject)
+
+			  Wrangler selects this policy automatically when scheduling_policy is omitted.
+
+			  Migrate to the "durable_object" scheduling policy. Existing applications need
+			  code changes and a replacement application; changing the setting alone will
+			  not migrate them.
+
+			  This warning does not block deployment.
+			  Migration guide:
+			  [4mhttps://developers.cloudflare.com/containers/guides/migrate-to-durable-object-scheduling-policy/[0m
+
+			"
+		`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -1389,6 +1425,23 @@ describe("wrangler deploy with containers", () => {
 
 			    - "containers.configuration" is deprecated. Use top level "containers" fields instead.
 			  "configuration.image" should be "image", limits should be set via "instance_type".
+
+
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDEPRECATED: Legacy container scheduling[0m
+
+
+			  These Container applications use the deprecated "default" scheduling policy:
+			    - my-container (class: ExampleDurableObject)
+
+			  Wrangler selects this policy automatically when scheduling_policy is omitted.
+
+			  Migrate to the "durable_object" scheduling policy. Existing applications need
+			  code changes and a replacement application; changing the setting alone will
+			  not migrate them.
+
+			  This warning does not block deployment.
+			  Migration guide:
+			  [4mhttps://developers.cloudflare.com/containers/guides/migrate-to-durable-object-scheduling-policy/[0m
 
 			"
 		`);
@@ -1488,7 +1541,25 @@ describe("wrangler deploy with containers", () => {
 			Current Version ID: Galaxy-Class"
 		`);
 		// no deprecation warnings should show up on this run
-		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDEPRECATED: Legacy container scheduling[0m
+
+
+			  These Container applications use the deprecated "default" scheduling policy:
+			    - my-container (class: ExampleDurableObject)
+
+			  Wrangler selects this policy automatically when scheduling_policy is omitted.
+
+			  Migrate to the "durable_object" scheduling policy. Existing applications need
+			  code changes and a replacement application; changing the setting alone will
+			  not migrate them.
+
+			  This warning does not block deployment.
+			  Migration guide:
+			  [4mhttps://developers.cloudflare.com/containers/guides/migrate-to-durable-object-scheduling-policy/[0m
+
+			"
+		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
@@ -1602,7 +1673,25 @@ describe("wrangler deploy with containers", () => {
 			`);
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDEPRECATED: Legacy container scheduling[0m
+
+
+			  These Container applications use the deprecated "default" scheduling policy:
+			    - my-container (class: ExampleDurableObject)
+
+			  Wrangler selects this policy automatically when scheduling_policy is omitted.
+
+			  Migrate to the "durable_object" scheduling policy. Existing applications need
+			  code changes and a replacement application; changing the setting alone will
+			  not migrate them.
+
+			  This warning does not block deployment.
+			  Migration guide:
+			  [4mhttps://developers.cloudflare.com/containers/guides/migrate-to-durable-object-scheduling-policy/[0m
+
+			"
+		`);
 	});
 
 	it("should resolve dockerfile path relative to wrangler config path", async ({
@@ -1671,7 +1760,25 @@ describe("wrangler deploy with containers", () => {
 		`);
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDEPRECATED: Legacy container scheduling[0m
+
+
+			  These Container applications use the deprecated "default" scheduling policy:
+			    - my-container (class: ExampleDurableObject)
+
+			  Wrangler selects this policy automatically when scheduling_policy is omitted.
+
+			  Migrate to the "durable_object" scheduling policy. Existing applications need
+			  code changes and a replacement application; changing the setting alone will
+			  not migrate them.
+
+			  This warning does not block deployment.
+			  Migration guide:
+			  [4mhttps://developers.cloudflare.com/containers/guides/migrate-to-durable-object-scheduling-policy/[0m
+
+			"
+		`);
 	});
 
 	it("should be able to redeploy an existing application ", async ({
@@ -1735,7 +1842,25 @@ describe("wrangler deploy with containers", () => {
 		await runWrangler("deploy index.js");
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDEPRECATED: Legacy container scheduling[0m
+
+
+			  These Container applications use the deprecated "default" scheduling policy:
+			    - my-container (class: ExampleDurableObject)
+
+			  Wrangler selects this policy automatically when scheduling_policy is omitted.
+
+			  Migrate to the "durable_object" scheduling policy. Existing applications need
+			  code changes and a replacement application; changing the setting alone will
+			  not migrate them.
+
+			  This warning does not block deployment.
+			  Migration guide:
+			  [4mhttps://developers.cloudflare.com/containers/guides/migrate-to-durable-object-scheduling-policy/[0m
+
+			"
+		`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -1988,7 +2113,25 @@ describe("wrangler deploy with containers", () => {
 		await runWrangler("deploy index.js");
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDEPRECATED: Legacy container scheduling[0m
+
+
+			  These Container applications use the deprecated "default" scheduling policy:
+			    - my-container (class: ExampleDurableObject)
+
+			  Wrangler selects this policy automatically when scheduling_policy is omitted.
+
+			  Migrate to the "durable_object" scheduling policy. Existing applications need
+			  code changes and a replacement application; changing the setting alone will
+			  not migrate them.
+
+			  This warning does not block deployment.
+			  Migration guide:
+			  [4mhttps://developers.cloudflare.com/containers/guides/migrate-to-durable-object-scheduling-policy/[0m
+
+			"
+		`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
 			│
@@ -3545,7 +3688,25 @@ describe("wrangler deploy with containers", () => {
 			"
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDEPRECATED: Legacy container scheduling[0m
+
+
+			  These Container applications use the deprecated "default" scheduling policy:
+			    - my-container (class: ExampleDurableObject)
+
+			  Wrangler selects this policy automatically when scheduling_policy is omitted.
+
+			  Migrate to the "durable_object" scheduling policy. Existing applications need
+			  code changes and a replacement application; changing the setting alone will
+			  not migrate them.
+
+			  This warning does not block deployment.
+			  Migration guide:
+			  [4mhttps://developers.cloudflare.com/containers/guides/migrate-to-durable-object-scheduling-policy/[0m
+
+			"
+		`);
 	});
 
 	it("should use digest when an existing tagged image already exists remotely", async ({
@@ -3670,7 +3831,25 @@ describe("wrangler deploy with containers", () => {
 			"
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDEPRECATED: Legacy container scheduling[0m
+
+
+			  These Container applications use the deprecated "default" scheduling policy:
+			    - my-container (class: ExampleDurableObject)
+
+			  Wrangler selects this policy automatically when scheduling_policy is omitted.
+
+			  Migrate to the "durable_object" scheduling policy. Existing applications need
+			  code changes and a replacement application; changing the setting alone will
+			  not migrate them.
+
+			  This warning does not block deployment.
+			  Migration guide:
+			  [4mhttps://developers.cloudflare.com/containers/guides/migrate-to-durable-object-scheduling-policy/[0m
+
+			"
+		`);
 	});
 
 	it("should enable ssh when provided for new container", async ({
@@ -3721,7 +3900,25 @@ describe("wrangler deploy with containers", () => {
 
 		await runWrangler("deploy index.js");
 
-		expect(std.warn).toBe("");
+		expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDEPRECATED: Legacy container scheduling[0m
+
+
+			  These Container applications use the deprecated "default" scheduling policy:
+			    - my-container (class: ExampleDurableObject)
+
+			  Wrangler selects this policy automatically when scheduling_policy is omitted.
+
+			  Migrate to the "durable_object" scheduling policy. Existing applications need
+			  code changes and a replacement application; changing the setting alone will
+			  not migrate them.
+
+			  This warning does not block deployment.
+			  Migration guide:
+			  [4mhttps://developers.cloudflare.com/containers/guides/migrate-to-durable-object-scheduling-policy/[0m
+
+			"
+		`);
 		expect(std.err).toBe("");
 
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
@@ -3831,7 +4028,25 @@ describe("wrangler deploy with containers", () => {
 
 		await runWrangler("deploy index.js");
 
-		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDEPRECATED: Legacy container scheduling[0m
+
+
+			  These Container applications use the deprecated "default" scheduling policy:
+			    - my-container (class: ExampleDurableObject)
+
+			  Wrangler selects this policy automatically when scheduling_policy is omitted.
+
+			  Migrate to the "durable_object" scheduling policy. Existing applications need
+			  code changes and a replacement application; changing the setting alone will
+			  not migrate them.
+
+			  This warning does not block deployment.
+			  Migration guide:
+			  [4mhttps://developers.cloudflare.com/containers/guides/migrate-to-durable-object-scheduling-policy/[0m
+
+			"
+		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
@@ -3900,7 +4115,25 @@ describe("wrangler deploy with containers", () => {
 
 		await runWrangler("deploy index.js --config ./wrangler.jsonc");
 
-		expect(std.warn).toBe("");
+		expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDEPRECATED: Legacy container scheduling[0m
+
+
+			  These Container applications use the deprecated "default" scheduling policy:
+			    - my-container (class: ExampleDurableObject)
+
+			  Wrangler selects this policy automatically when scheduling_policy is omitted.
+
+			  Migrate to the "durable_object" scheduling policy. Existing applications need
+			  code changes and a replacement application; changing the setting alone will
+			  not migrate them.
+
+			  This warning does not block deployment.
+			  Migration guide:
+			  [4mhttps://developers.cloudflare.com/containers/guides/migrate-to-durable-object-scheduling-policy/[0m
+
+			"
+		`);
 		expect(std.err).toBe("");
 	});
 
@@ -4032,7 +4265,25 @@ describe("wrangler deploy with containers", () => {
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDEPRECATED: Legacy container scheduling[0m
+
+
+				  These Container applications use the deprecated "default" scheduling policy:
+				    - my-container (class: ExampleDurableObject)
+
+				  Wrangler selects this policy automatically when scheduling_policy is omitted.
+
+				  Migrate to the "durable_object" scheduling policy. Existing applications need
+				  code changes and a replacement application; changing the setting alone will
+				  not migrate them.
+
+				  This warning does not block deployment.
+				  Migration guide:
+				  [4mhttps://developers.cloudflare.com/containers/guides/migrate-to-durable-object-scheduling-policy/[0m
+
+				"
+			`);
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
 				"╭ Deploy a container application deploy changes to your application
 				│
@@ -4198,7 +4449,25 @@ describe("wrangler deploy with containers", () => {
 			await runWrangler("deploy index.js");
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDEPRECATED: Legacy container scheduling[0m
+
+
+				  These Container applications use the deprecated "default" scheduling policy:
+				    - my-container (class: ExampleDurableObject)
+
+				  Wrangler selects this policy automatically when scheduling_policy is omitted.
+
+				  Migrate to the "durable_object" scheduling policy. Existing applications need
+				  code changes and a replacement application; changing the setting alone will
+				  not migrate them.
+
+				  This warning does not block deployment.
+				  Migration guide:
+				  [4mhttps://developers.cloudflare.com/containers/guides/migrate-to-durable-object-scheduling-policy/[0m
+
+				"
+			`);
 			expect(cliStd.stdout).toContain("NEW my-container");
 			expect(cliStd.stdout).toContain(
 				"SUCCESS  Created application my-container"
@@ -4456,7 +4725,25 @@ describe("wrangler deploy with containers", () => {
 			await runWrangler("deploy index.js");
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDEPRECATED: Legacy container scheduling[0m
+
+
+				  These Container applications use the deprecated "default" scheduling policy:
+				    - my-container (class: ExampleDurableObject)
+
+				  Wrangler selects this policy automatically when scheduling_policy is omitted.
+
+				  Migrate to the "durable_object" scheduling policy. Existing applications need
+				  code changes and a replacement application; changing the setting alone will
+				  not migrate them.
+
+				  This warning does not block deployment.
+				  Migration guide:
+				  [4mhttps://developers.cloudflare.com/containers/guides/migrate-to-durable-object-scheduling-policy/[0m
+
+				"
+			`);
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
 				"╭ Deploy a container application deploy changes to your application
 				│
