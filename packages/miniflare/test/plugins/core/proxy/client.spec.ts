@@ -640,6 +640,36 @@ describe("ProxyClient", () => {
 		expect(await text(copy.body)).toBe(value);
 	});
 
+	test("puts Node `Request` body to R2", async ({ expect }) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { BUCKET: { type: "r2", name: "BUCKET" } },
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+			],
+		});
+		useDispose(mf);
+
+		// https://github.com/cloudflare/workers-sdk/issues/6504: in a deployed
+		// worker, `R2Bucket#put()` accepts a `request.body` stream, but through
+		// the platform proxy, streams created in Node have no length to send
+		const request = new globalThis.Request("http://localhost/", {
+			method: "POST",
+			body: "value",
+		});
+		assert(request.body !== null);
+		const bucket = await mf.getR2Bucket("BUCKET");
+		await bucket.put("key", request.body);
+		const object = await bucket.get("key");
+		assert(object != null);
+		expect(await text(object.body)).toBe("value");
+	});
+
 	test("can `JSON.stringify()` proxies", async ({ expect }) => {
 		const mf = new Miniflare({
 			workers: [
