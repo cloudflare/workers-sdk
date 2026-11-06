@@ -16,6 +16,7 @@ describe("Local Browser quick actions", { concurrent: false }, () => {
 
 	beforeAll(async () => {
 		({ ip, port, stop } = await runWranglerDev(resolve(__dirname, ".."), [
+			"--x-new-config",
 			"--local",
 			"--port=0",
 			"--inspector-port=0",
