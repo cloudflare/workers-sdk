@@ -2,7 +2,7 @@ import { stripVTControlCharacters } from "node:util";
 import chalk from "chalk";
 import { extractBindingsOfType, isUnsafeBindingType } from "./binding-utils";
 import { resolveBindingRemote } from "./config/binding-local-support";
-import { getBindingTypeFriendlyName } from "./config/validation";
+import { getBindingTypeFriendlyName } from "./config/binding-type-friendly-names";
 import type { ContainerApp } from "./config/environment";
 import type { Binding } from "./types";
 import type { CfSendEmailBindings, CfTailConsumer } from "./worker";

@@ -9,10 +9,9 @@ available on PATH. Miniflare checks the Git version at local startup and gives
 installation or upgrade instructions if needed. A Node worker thread runs the
 native Git backend. Like every other binding, an Artifacts binding uses the
 remote proxy only when `dev.remote` is `true` and the Worker has a remote proxy
-connection string; otherwise it uses local storage. The tools resolve the
-Artifacts default (deployed unless `remote: false`) before they reach
-Miniflare: Wrangler sets `dev.remote` when converting its config, and
-`resolveLocalBindings()` does it for `cloudflare.config.ts`. We plan to
+connection string; otherwise it uses local storage. An omitted `remote` is
+local, and the tools warn about it so users who relied on the earlier deployed
+default notice the change. We plan to
 open-source a JavaScript Git engine in the future; it is not included in this
 version.
 

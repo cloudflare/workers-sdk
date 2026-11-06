@@ -65,7 +65,6 @@ export {
 	parseByteSize,
 } from "./parse";
 export {
-	getBindingTypeFriendlyName,
 	isPagesConfig,
 	normalizeAndValidateConfig,
 	type NormalizeAndValidateConfigArgs,
@@ -80,6 +79,8 @@ import * as validation from "./config/validation";
  * @deprecated new code should use getBindingTypeFriendlyName() instead
  */
 export const friendlyBindingNames = validation.friendlyBindingNames;
+
+export { getBindingTypeFriendlyName } from "./config/binding-type-friendly-names";
 
 export {
 	type BindingLocalSupport,

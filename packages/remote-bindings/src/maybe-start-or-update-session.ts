@@ -1,10 +1,7 @@
 import assert from "node:assert";
 import { resolveBindingRemote } from "@cloudflare/workers-utils";
 import { getRemoteBindingsAuthHook } from "./auth";
-import {
-	getRemoteBindings,
-	warnForDefaultRemoteBindings,
-} from "./config-bindings";
+import { getRemoteBindings } from "./config-bindings";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
 import type { ConfigBindings } from "./config-bindings";
 import type { RemoteBindingsLogger } from "./logger";
@@ -93,13 +90,6 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		workerConfigObject.target === "cf"
 			? getRemoteBindings({ env: workerConfigObject.env })
 			: workerConfigObject.bindings;
-	if (workerConfigObject.target === "cf") {
-		// Native-config consumers skip this function when remote bindings are
-		// disabled. Wrangler emits its warning when building Miniflare options.
-		warnForDefaultRemoteBindings(bindings, true, (message) =>
-			context.logger.warn(message)
-		);
-	}
 	const remoteBindings = pickRemoteBindings(bindings);
 	if (
 		Object.keys(remoteBindings).length === 0 &&

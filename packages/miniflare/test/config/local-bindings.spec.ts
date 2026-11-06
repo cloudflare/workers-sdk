@@ -73,26 +73,25 @@ describe("resolveLocalBindings", () => {
 		});
 	});
 
-	test.for([
-		{ remote: undefined, remoteBindings: true, resolved: true },
-		{ remote: undefined, remoteBindings: false, resolved: false },
-		{ remote: false, remoteBindings: true, resolved: false },
-		{ remote: true, remoteBindings: true, resolved: true },
-		// Miniflare uses the simulator without a remote proxy connection.
-		{ remote: true, remoteBindings: false, resolved: true },
-	])(
-		"resolves Artifacts dev.remote=$remote with remoteBindings=$remoteBindings",
-		({ remote, remoteBindings, resolved }, { expect }) => {
+	test.for([undefined, false, true])(
+		"passes Artifacts dev.remote=%s through and warns only when omitted",
+		(remote, { expect }) => {
 			const binding = {
 				type: "artifacts" as const,
 				namespace: "examples",
 				...(remote === undefined ? {} : { dev: { remote } }),
 			};
-			expect(
-				resolveLocalBindings({ REPOS: binding }, options({ remoteBindings }))
-			).toEqual({
-				REPOS: { ...binding, dev: { remote: resolved } },
+			const resolveOptions = options();
+			expect(resolveLocalBindings({ REPOS: binding }, resolveOptions)).toEqual({
+				REPOS: binding,
 			});
+			if (remote === undefined) {
+				expect(resolveOptions.logger.warn).toHaveBeenCalledExactlyOnceWith(
+					"Artifacts binding REPOS uses the local simulator by default. Set `dev: { remote: true }` to use deployed repos, or `dev: { remote: false }` to silence this warning."
+				);
+			} else {
+				expect(resolveOptions.logger.warn).not.toHaveBeenCalled();
+			}
 		}
 	);
 });
