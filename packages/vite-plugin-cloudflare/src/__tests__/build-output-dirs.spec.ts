@@ -1,3 +1,4 @@
+import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
 	getWorkerAssetsDir,
@@ -35,6 +36,10 @@ test("puts the Build Output directories in the resolved config that other plugin
 		"serve"
 	);
 
-	expect(clientOutDir).toBe(getWorkerAssetsDir(fixturesPath));
-	expect(workerOutDir).toBe(getWorkerBundleDir(fixturesPath));
+	expect(path.resolve(fixturesPath, clientOutDir ?? "")).toBe(
+		getWorkerAssetsDir(fixturesPath)
+	);
+	expect(path.resolve(fixturesPath, workerOutDir ?? "")).toBe(
+		getWorkerBundleDir(fixturesPath)
+	);
 });
