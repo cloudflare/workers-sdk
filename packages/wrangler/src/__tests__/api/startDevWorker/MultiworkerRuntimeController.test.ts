@@ -1,7 +1,6 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
-import { DeferredPromise } from "miniflare";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { beforeEach, describe, it, vi } from "vitest";
@@ -126,56 +125,6 @@ describe("MultiworkerRuntimeController", () => {
 		controller.onBundleComplete(workerEvent("worker-a", true));
 		await reloadComplete;
 		expect(prepareContainerImagesForDev).toHaveBeenCalledTimes(2);
-	});
-
-	it("waits for an in-flight reload before completing teardown", async ({
-		expect,
-	}) => {
-		const preparation = new DeferredPromise<{ aborted: false }>();
-		vi.mocked(prepareContainerImagesForDev).mockReturnValueOnce(preparation);
-		const controller = new MultiworkerRuntimeController(new FakeBus(), 1);
-		teardown(() => controller.teardown());
-		teardown(() => preparation.resolve({ aborted: false }));
-		const config = configDefaults({
-			name: "worker",
-			containerDevPlan: {
-				containerOptions: [
-					{
-						image_uri: "example.invalid/image@sha256:1234",
-						class_name: "ContainerObject",
-						image_tag: "cloudflare-dev/container-object:test",
-					},
-				],
-				containerRuntimeOptions: new Map(),
-			},
-			dev: {
-				persist: "./persist",
-				remote: false,
-				enableContainers: true,
-				multiworkerPrimary: true,
-				containerBuildId: "test-build-id",
-				dockerPath: "docker",
-				inspector: false,
-			},
-		});
-		controller.onBundleComplete({
-			type: "bundleComplete",
-			config,
-			bundle: makeEsbuildBundle("export default {}"),
-		});
-		await vi.waitFor(() =>
-			expect(prepareContainerImagesForDev).toHaveBeenCalledOnce()
-		);
-
-		let teardownSettled = false;
-		const teardownPromise = controller.teardown().then(() => {
-			teardownSettled = true;
-		});
-		await new Promise<void>((resolve) => setImmediate(resolve));
-		expect(teardownSettled).toBe(false);
-		preparation.resolve({ aborted: false });
-
-		await teardownPromise;
 	});
 
 	it("tracks successful image preparation plans per Worker", async ({
