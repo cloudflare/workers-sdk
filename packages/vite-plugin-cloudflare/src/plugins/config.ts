@@ -26,8 +26,12 @@ import type { EnvironmentOptions, UserConfig } from "vite";
  * Plugin to handle configuration and config file watching
  */
 export const configPlugin = createPlugin("config", (ctx) => {
+	let root: string;
+
 	return {
 		config(userConfig, env) {
+			root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
+
 			if (ctx.resolvedPluginConfig.type === "preview") {
 				return {
 					appType: "custom",
@@ -76,7 +80,8 @@ export const configPlugin = createPlugin("config", (ctx) => {
 		},
 		// Set the Build Output directories while Vite resolves the config, so that plugins reading
 		// `build.outDir` in `configResolved` see them. `post` overrides directories set by the user
-		// or by other plugins' earlier `configEnvironment` hooks.
+		// or by other plugins' earlier `configEnvironment` hooks. The directories are absolute because
+		// many frameworks resolve `build.outDir` against the working directory rather than the root.
 		configEnvironment: {
 			order: "post",
 			handler(environmentName) {
@@ -85,6 +90,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 				}
 				const outDir = getEnvironmentBuildOutputDir(
 					ctx.resolvedPluginConfig,
+					root,
 					environmentName
 				);
 				return outDir ? { build: { outDir } } : undefined;
@@ -190,25 +196,27 @@ function getEnvironmentsConfig(
 }
 
 /**
- * Gets the directory the Build Output Specification mandates for an environment's build,
- * relative to the Vite root. Child environments are nested within their parent environment's directory.
+ * Gets the directory the Build Output Specification mandates for an environment's build.
+ * Child environments are nested within their parent environment's directory.
  *
  * @param resolvedPluginConfig The resolved plugin configuration
+ * @param root The Vite project root
  * @param environmentName The name of the environment
  * @returns The environment's Build Output directory, or `undefined` if it has none
  */
 function getEnvironmentBuildOutputDir(
 	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
+	root: string,
 	environmentName: string
 ): string | undefined {
 	if (environmentName === "client") {
-		return path.relative(".", getWorkerAssetsDir("."));
+		return getWorkerAssetsDir(root);
 	}
 
 	const worker =
 		resolvedPluginConfig.environmentNameToWorkerMap.get(environmentName);
 	if (worker) {
-		return path.relative(".", getWorkerBundleDir(".", worker.directoryName));
+		return getWorkerBundleDir(root, worker.directoryName);
 	}
 
 	for (const [
@@ -218,6 +226,7 @@ function getEnvironmentBuildOutputDir(
 		if (childEnvironmentNames.includes(environmentName)) {
 			const parentDir = getEnvironmentBuildOutputDir(
 				resolvedPluginConfig,
+				root,
 				parentEnvironmentName
 			);
 			return parentDir && path.join(parentDir, environmentName);

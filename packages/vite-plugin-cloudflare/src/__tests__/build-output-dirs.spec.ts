@@ -36,12 +36,8 @@ test("puts the Build Output directories in the resolved config that other plugin
 		"serve"
 	);
 
-	expect(path.resolve(fixturesPath, clientOutDir ?? "")).toBe(
-		getWorkerAssetsDir(fixturesPath)
-	);
-	expect(path.resolve(fixturesPath, workerOutDir ?? "")).toBe(
-		getWorkerBundleDir(fixturesPath)
-	);
+	expect(clientOutDir).toBe(getWorkerAssetsDir(fixturesPath));
+	expect(workerOutDir).toBe(getWorkerBundleDir(fixturesPath));
 });
 
 test("overrides user directories and nests child environments in their parent's", async ({
@@ -63,15 +59,14 @@ test("overrides user directories and nests child environments in their parent's"
 		},
 		"serve"
 	);
-	const outDir = (environmentName: string) =>
-		path.resolve(
-			fixturesPath,
-			config.environments[environmentName]?.build.outDir ?? ""
-		);
 
-	expect(outDir("client")).toBe(getWorkerAssetsDir(fixturesPath));
-	expect(outDir("ssr")).toBe(getWorkerBundleDir(fixturesPath));
-	expect(outDir("child")).toBe(
+	expect(config.environments.client?.build.outDir).toBe(
+		getWorkerAssetsDir(fixturesPath)
+	);
+	expect(config.environments.ssr?.build.outDir).toBe(
+		getWorkerBundleDir(fixturesPath)
+	);
+	expect(config.environments.child?.build.outDir).toBe(
 		path.join(getWorkerBundleDir(fixturesPath), "child")
 	);
 });
