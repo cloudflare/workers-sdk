@@ -439,4 +439,32 @@ describe("Wrangler Worker configuration conversion", () => {
 			{ blocking: true, sourcePath: "config.routes.1" },
 		]);
 	});
+	it("migrates Images URL transformations to the top-level images field", ({
+		expect,
+	}) => {
+		const withBinding = convert({
+			compatibility_date: "2026-09-23",
+			name: "my-worker",
+			images: {
+				binding: "IMAGES",
+				url_transformations: {
+					allowed_origins: ["*.example.com"],
+					enabled: true,
+				},
+			},
+		});
+		expect(withBinding.output).toContain("IMAGES: bindings.images(");
+		expect(withBinding.output).toContain("urlTransformations: {");
+		expect(withBinding.output).toContain('"*.example.com"');
+		expect(withBinding.followUps).toEqual([]);
+
+		const withoutBinding = convert({
+			compatibility_date: "2026-09-23",
+			name: "my-worker",
+			images: { url_transformations: { enabled: false } },
+		});
+		expect(withoutBinding.output).not.toContain("bindings.images");
+		expect(withoutBinding.output).toContain("enabled: false");
+		expect(withoutBinding.followUps).toEqual([]);
+	});
 });

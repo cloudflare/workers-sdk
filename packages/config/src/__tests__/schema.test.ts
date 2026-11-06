@@ -201,6 +201,47 @@ describe("InputWorkerSchema", () => {
 			expect(result.success).toBe(false);
 		});
 
+		it("accepts Images URL transformations configuration", ({ expect }) => {
+			const result = InputWorkerSchema.safeParse({
+				...baseConfig,
+				images: {
+					urlTransformations: {
+						enabled: true,
+						allowedOrigins: ["images.example.com/public", "*.example.org"],
+					},
+				},
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects invalid Images URL transformations configuration", ({
+			expect,
+		}) => {
+			for (const images of [
+				{ urlTransformations: {} },
+				{ urlTransformations: { enabled: true, allowedOrigins: [] } },
+				{ urlTransformations: { enabled: true, allowedOrigins: ["a,b"] } },
+				{ urlTransformations: { enabled: true, allowedOrigins: ["*", "a"] } },
+				{
+					urlTransformations: {
+						enabled: true,
+						allowedOrigins: ["https://images.example.com"],
+					},
+				},
+				{
+					urlTransformations: {
+						enabled: true,
+						allowedOrigins: Array.from({ length: 11 }, (_, i) => `${i}.com`),
+					},
+				},
+				{ urlTransformations: { enabled: true }, binding: "IMAGES" },
+			]) {
+				const result = InputWorkerSchema.safeParse({ ...baseConfig, images });
+				expect(result.success).toBe(false);
+			}
+		});
+
 		it("rejects remote at the binding root", ({ expect }) => {
 			const result = InputWorkerSchema.safeParse({
 				...baseConfig,

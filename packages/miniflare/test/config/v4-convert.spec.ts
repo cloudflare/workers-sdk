@@ -242,6 +242,27 @@ describe("convertV4MiniflareOptions", () => {
 		expect(converted.workers[0].dev).not.toHaveProperty("access");
 	});
 
+	test("nests Images URL transformations in the Worker config", ({
+		expect,
+	}) => {
+		const converted = convertV4MiniflareOptions({
+			name: "worker",
+			script: "export default {};",
+			images: { binding: "IMAGES" },
+			imageUrlTransformations: {
+				enabled: true,
+				allowedOrigins: ["*.example.com"],
+			},
+		});
+
+		expect(converted.workers[0].config.images).toEqual({
+			urlTransformations: { enabled: true, allowedOrigins: ["*.example.com"] },
+		});
+		expect(converted.workers[0].config.env?.IMAGES).toMatchObject({
+			type: "images",
+		});
+	});
+
 	test("converts module source and representative bindings", ({ expect }) => {
 		const converted = convertV4MiniflareOptions({
 			rootPath: __dirname,

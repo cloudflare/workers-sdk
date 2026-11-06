@@ -14,6 +14,7 @@ import { getBindings } from "../../../dev";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../../../dev/class-names-sqlite";
 import {
 	buildAssetOptions,
+	buildImageUrlTransformationsOptions,
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
 	getDefaultProjectTmpPath,
@@ -522,6 +523,9 @@ export function unstable_getMiniflareWorkerOptions(
 		modulesRules,
 		zone: getZoneFromConfig(config),
 		access: config.access?.dev,
+		imageUrlTransformations: buildImageUrlTransformationsOptions(
+			config.images?.url_transformations
+		),
 		connectHandlers: config.connect.map((handler) => ({
 			protocol: handler.protocol,
 			port: handler.port,

@@ -76,6 +76,8 @@ function convertSharedOptions(options: ParsedV4MiniflareOptions) {
 		isolatedResourcePersistencePath: options.isolatedResourcePersistencePath,
 		resourceTmpPath: options.resourceTmpPath,
 		stripDisablePrettyError: options.stripDisablePrettyError,
+		unsafeImageUrlTransformationsPassthrough:
+			options.unsafeImageUrlTransformationsPassthrough,
 		telemetry: options.telemetry,
 		publicUrl: options.publicUrl,
 		containerEngine: options.containerEngine,
@@ -199,6 +201,9 @@ function convertWorkerOptions(
 	dev.zone = worker.zone;
 	if (worker.access !== undefined) {
 		config.access = { dev: worker.access };
+	}
+	if (worker.imageUrlTransformations !== undefined) {
+		config.images = { urlTransformations: worker.imageUrlTransformations };
 	}
 
 	const options: WorkerOptions = { config };

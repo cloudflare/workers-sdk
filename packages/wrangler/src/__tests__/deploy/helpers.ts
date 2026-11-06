@@ -72,6 +72,38 @@ export function mockPublishSchedulesRequest({
 	);
 }
 
+export function mockPutImageTransformationsRequest({
+	expectedBody,
+	env = undefined,
+	status = 200,
+}: {
+	expectedBody: unknown;
+	env?: string | undefined;
+	status?: number;
+}) {
+	msw.use(
+		http.put(
+			`*/accounts/:accountId/settings/transformations/workers/:scriptName`,
+			async ({ request, params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toEqual(
+					env ? `test-name-${env}` : "test-name"
+				);
+				expect(await request.json()).toEqual(expectedBody);
+				return status === 200
+					? HttpResponse.json(createFetchResult(null))
+					: HttpResponse.json(
+							createFetchResult(null, false, [
+								{ code: 10000, message: "Authentication error" },
+							]),
+							{ status }
+						);
+			},
+			{ once: true }
+		)
+	);
+}
+
 export function mockPublishRoutesRequest({
 	routes = [],
 	env = undefined,

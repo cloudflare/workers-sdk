@@ -10,9 +10,11 @@ import {
 } from "./constants";
 import { handleEmail } from "./email";
 import { STATUS_CODES } from "./http";
+import { handleImageTransform, isImageTransformPath } from "./image-transform";
 import { matchRoutes } from "./routing";
 import { handleScheduled } from "./scheduled";
 import type { EmailStoreService } from "../email/storage";
+import type { ImageUrlTransformationsConfig } from "./image-transform";
 import type { WorkerRoute } from "./routing";
 import type { Colorize } from "kleur/colors";
 
@@ -37,6 +39,7 @@ type Env = {
 	[CoreBindings.TRIGGER_HANDLERS]: boolean;
 	[CoreBindings.LOG_REQUESTS]: boolean;
 	[CoreBindings.STRIP_DISABLE_PRETTY_ERROR]: boolean;
+	[CoreBindings.IMAGE_URL_TRANSFORMATIONS_PASSTHROUGH]: boolean;
 } & {
 	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
 		| Fetcher
@@ -45,6 +48,10 @@ type Env = {
 	[K in `${typeof CoreBindings.JSON_ACCESS_BLOB_PREFIX}${string}`]:
 		| { app_aud: string; jwt_claims?: Record<string, unknown> }
 		| undefined;
+} & {
+	[
+		K in `${typeof CoreBindings.JSON_IMAGE_URL_TRANSFORMATIONS_PREFIX}${string}`
+	]: ImageUrlTransformationsConfig | undefined;
 };
 
 const encoder = new TextEncoder();
@@ -653,6 +660,24 @@ export default <ExportedHandler<Env>>{
 					s3Request.headers.set("Accept-Encoding", clientAcceptEncoding);
 				}
 				return await r2S3Service.fetch(s3Request);
+			}
+
+			if (
+				isImageTransformPath(url.pathname) &&
+				!env[CoreBindings.IMAGE_URL_TRANSFORMATIONS_PASSTHROUGH]
+			) {
+				let response = await handleImageTransform(
+					request,
+					url,
+					env[
+						`${CoreBindings.JSON_IMAGE_URL_TRANSFORMATIONS_PREFIX}${routeTarget}`
+					],
+					env
+				);
+				if (env[CoreBindings.LOG_REQUESTS]) {
+					response = maybeLogRequest(request, response, env, ctx, startTime);
+				}
+				return response;
 			}
 
 			// Inject per-worker Cloudflare Access blob header so workerd populates ctx.access

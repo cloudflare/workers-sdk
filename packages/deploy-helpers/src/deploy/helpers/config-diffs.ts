@@ -354,6 +354,15 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 			delete normalizedConfig[singleBindingField].remote;
 		}
 	}
+
+	// `url_transformations` isn't part of the deployed Worker's settings, so it
+	// would always appear as a local-only difference
+	if (normalizedConfig.images) {
+		delete normalizedConfig.images.url_transformations;
+		if (normalizedConfig.images.binding === undefined) {
+			delete normalizedConfig.images;
+		}
+	}
 }
 
 /**

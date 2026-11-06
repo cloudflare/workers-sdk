@@ -59,6 +59,7 @@ import {
 	renderExportsReconciliationSuccess,
 } from "./helpers/exports-reconciliation";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
+import { applyImagesUrlTransformations } from "./helpers/images-url-transformations";
 import { collectPackageDependencies } from "./helpers/package-dependencies";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
@@ -883,6 +884,12 @@ async function deployWorker(
 		return { versionId, workerTag, assetUploadStats, bundleSize };
 	}
 	assert(accountId);
+	await applyImagesUrlTransformations(
+		config,
+		accountId,
+		scriptName,
+		options.deployCommand
+	);
 	// deploy triggers
 	const targets = await triggersDeploy({
 		config,

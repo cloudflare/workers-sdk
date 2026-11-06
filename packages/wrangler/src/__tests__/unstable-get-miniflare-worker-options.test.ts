@@ -231,6 +231,82 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 		});
 	});
 
+	describe("Images URL transformations (`/cdn-cgi/image/`)", () => {
+		it("passes `images.url_transformations` through without a binding", ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2024-10-04",
+					images: {
+						url_transformations: {
+							enabled: true,
+							allowed_origins: ["*.example.com"],
+						},
+					},
+				},
+				"./wrangler.json"
+			);
+			const { workerOptions } =
+				unstable_getMiniflareWorkerOptions("./wrangler.json");
+			expect(workerOptions.imageUrlTransformations).toEqual({
+				enabled: true,
+				allowedOrigins: ["*.example.com"],
+			});
+			expect(workerOptions.images).toBeUndefined();
+		});
+
+		it("does not inherit `url_transformations` in named environments", ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2024-10-04",
+					images: { url_transformations: { enabled: true } },
+					env: { staging: { images: { binding: "IMAGES" } } },
+				},
+				"./wrangler.json"
+			);
+			const { workerOptions } = unstable_getMiniflareWorkerOptions(
+				"./wrangler.json",
+				"staging"
+			);
+			expect(workerOptions.imageUrlTransformations).toBeUndefined();
+			expect(workerOptions.images?.binding).toBe("IMAGES");
+		});
+
+		it("keeps the Images binding alongside `url_transformations`", ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2024-10-04",
+					images: {
+						binding: "IMAGES",
+						url_transformations: { enabled: false },
+					},
+				},
+				"./wrangler.json"
+			);
+			const { workerOptions } =
+				unstable_getMiniflareWorkerOptions("./wrangler.json");
+			expect(workerOptions.imageUrlTransformations).toEqual({
+				enabled: false,
+				allowedOrigins: undefined,
+			});
+			expect(workerOptions.images).toEqual({
+				binding: "IMAGES",
+				remoteProxyConnectionString: undefined,
+			});
+		});
+	});
+
 	describe("cron triggers", () => {
 		it("passes through exact cron strings from the selected environment", ({
 			expect,

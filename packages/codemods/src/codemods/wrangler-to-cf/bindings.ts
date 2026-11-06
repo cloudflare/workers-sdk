@@ -621,7 +621,16 @@ export function convertBindings(
 	convertSingletonBinding("ai", "binding", "bindings.ai", ["staging"]);
 	convertSingletonBinding("analytics", "binding", "bindings.analytics");
 	convertSingletonBinding("browser", "binding", "bindings.browser");
-	convertSingletonBinding("images", "binding", "bindings.images");
+	// `images.url_transformations` is migrated to the top-level `images` field,
+	// so an `images` block without a `binding` has no binding to migrate.
+	const images = getRecord(source, "images");
+	if (
+		!images ||
+		hasOwn(images, "binding") ||
+		!hasOwn(images, "url_transformations")
+	) {
+		convertSingletonBinding("images", "binding", "bindings.images");
+	}
 	convertSingletonBinding("media", "binding", "bindings.media");
 	convertSingletonBinding("stream", "binding", "bindings.stream");
 
