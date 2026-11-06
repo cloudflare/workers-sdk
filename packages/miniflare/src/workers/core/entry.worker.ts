@@ -1,5 +1,6 @@
 import { blue, bold, green, grey, red, reset, yellow } from "kleur/colors";
 import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
+import { selectResponseEncoding } from "../../shared/encoding";
 import { parseForwardedProto } from "../../shared/forwarded-proto";
 import { isCompressedByCloudflareFL } from "../../shared/mime-types";
 import {
@@ -328,108 +329,41 @@ function maybePrettifyError(request: Request, response: Response, env: Env) {
 	);
 }
 
-const acceptEncodingElement =
-	/^(?<coding>[a-z]+|\*)(?:\s*;\s*q=(?<weight>\d+(?:.\d+)?))?$/;
-interface AcceptedEncoding {
-	coding: string;
-	weight: number;
-}
-function maybeParseAcceptEncodingElement(
-	element: string
-): AcceptedEncoding | undefined {
-	const match = acceptEncodingElement.exec(element);
-	if (match?.groups == null) {
-		return;
-	}
-	return {
-		coding: match.groups.coding,
-		weight:
-			match.groups.weight === undefined ? 1 : parseFloat(match.groups.weight),
-	};
-}
-function parseAcceptEncoding(header: string): AcceptedEncoding[] {
-	const encodings: AcceptedEncoding[] = [];
-	for (const element of header.split(",")) {
-		const maybeEncoding = maybeParseAcceptEncodingElement(element.trim());
-		if (maybeEncoding !== undefined) {
-			encodings.push(maybeEncoding);
-		}
-	}
-	// `Array#sort()` is stable, so original ordering preserved for same weights
-	return encodings.sort((a, b) => b.weight - a.weight);
-}
+/** Negotiates compression without adding buffering when identity is acceptable. */
 function ensureAcceptableEncoding(
 	clientAcceptEncoding: string | null,
 	response: Response
 ): Response {
-	// https://www.rfc-editor.org/rfc/rfc9110#section-12.5.3
-
-	// If the client hasn't specified any acceptable encodings, assume anything is
-	if (clientAcceptEncoding === null) {
-		return response;
-	}
-	const encodings = parseAcceptEncoding(clientAcceptEncoding);
-	if (encodings.length === 0) {
+	// Preserve the existing handling of types Cloudflare's front line does not compress.
+	if (!isCompressedByCloudflareFL(response.headers.get("Content-Type"))) {
 		return response;
 	}
 
 	const contentEncoding = response.headers.get("Content-Encoding");
-	const contentType = response.headers.get("Content-Type");
-
-	// if cloudflare's FL does not compress this mime-type, then don't compress locally either
-	if (!isCompressedByCloudflareFL(contentType)) {
-		return response;
+	const desiredEncoding = selectResponseEncoding(
+		clientAcceptEncoding,
+		contentEncoding
+	);
+	if (desiredEncoding === undefined) {
+		return new Response("Unsupported Media Type", {
+			status: 415 /* Unsupported Media Type */,
+			headers: { "Accept-Encoding": "br, gzip" },
+		});
 	}
-
-	// If `Content-Encoding` is defined, but unknown, return the response as is
 	if (
-		contentEncoding !== null &&
-		contentEncoding !== "gzip" &&
-		contentEncoding !== "br"
+		desiredEncoding === (contentEncoding ?? "identity") &&
+		contentEncoding !== "identity"
 	) {
 		return response;
 	}
 
-	let desiredEncoding: "gzip" | "br" | undefined;
-	let identityDisallowed = false;
-
-	for (const encoding of encodings) {
-		if (encoding.weight === 0) {
-			// If we have an `identity;q=0` or `*;q=0` entry, disallow no encoding
-			if (encoding.coding === "identity" || encoding.coding === "*") {
-				identityDisallowed = true;
-			}
-		} else if (encoding.coding === "gzip" || encoding.coding === "br") {
-			// If the client accepts one of our supported encodings, use that
-			desiredEncoding = encoding.coding;
-			break;
-		} else if (encoding.coding === "identity") {
-			// If the client accepts no encoding, use that
-			break;
-		}
-	}
-
-	if (desiredEncoding === undefined) {
-		if (identityDisallowed) {
-			return new Response("Unsupported Media Type", {
-				status: 415 /* Unsupported Media Type */,
-				headers: { "Accept-Encoding": "br, gzip" },
-			});
-		}
-		if (contentEncoding === null) {
-			return response;
-		}
-		response = new Response(response.body, response); // Ensure mutable headers
-		response.headers.delete("Content-Encoding"); // Use identity
-		return response;
+	response = new Response(response.body, response); // Ensure mutable headers
+	if (desiredEncoding === "identity") {
+		response.headers.delete("Content-Encoding");
 	} else {
-		if (contentEncoding === desiredEncoding) {
-			return response;
-		}
-		response = new Response(response.body, response); // Ensure mutable headers
-		response.headers.set("Content-Encoding", desiredEncoding); // Use desired
-		return response;
+		response.headers.set("Content-Encoding", desiredEncoding);
 	}
+	return response;
 }
 
 function colourFromHTTPStatus(status: number): Colorize {
