@@ -1587,9 +1587,9 @@ export interface EnvironmentNonInheritable {
 					/** Whether URL transformations are enabled for this Worker */
 					enabled: boolean;
 					/**
-					 * Hostnames that images may be fetched from, in addition to the Worker's own zone,
-					 * without a protocol (e.g. `"images.example.com"` or `"*.example.com"`).
-					 * Use `["*"]` to allow any origin. At most 10 entries.
+					 * Origins that images may be fetched from, in addition to the Worker's own zone,
+					 * e.g. `"images.example.com"`, `"*.example.com"` or `"example.com/images"`.
+					 * Don't include the protocol. Use `["*"]` to allow any origin. At most 10 entries.
 					 */
 					allowed_origins?: string[];
 				};
@@ -2137,7 +2137,7 @@ export type ContainerEngine =
  */
 export interface PreviewsConfig
 	extends
-		Partial<Omit<EnvironmentNonInheritable, "durable_objects">>,
+		Partial<Omit<EnvironmentNonInheritable, "durable_objects" | "images">>,
 		Partial<
 			Pick<
 				EnvironmentInheritable,
@@ -2145,4 +2145,10 @@ export interface PreviewsConfig
 			>
 		> {
 	durable_objects?: { bindings: DurableObjectBindings };
+	/** Binding to Cloudflare Images. `url_transformations` is not supported in previews. */
+	images?: {
+		binding: string;
+		/** Whether the Images binding should be remote or not in local development */
+		remote?: boolean;
+	};
 }

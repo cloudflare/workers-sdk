@@ -2355,6 +2355,24 @@ describe("generate types - CLI", () => {
 		expect(generated).not.toContain("ImagesBinding");
 	});
 
+	it("should throw for an images block with neither binding nor url_transformations in an inactive environment", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				name: "test-name",
+				vars: { MY_VAR: "a" },
+				env: { staging: { images: {} } },
+			}),
+			"utf-8"
+		);
+
+		await expect(runWrangler("types --include-runtime=false")).rejects.toThrow(
+			'"env.staging.images" bindings should have a string "binding" field but got {}.'
+		);
+	});
+
 	it("should override vars with secrets", async ({ expect }) => {
 		fs.writeFileSync(
 			"./wrangler.jsonc",
