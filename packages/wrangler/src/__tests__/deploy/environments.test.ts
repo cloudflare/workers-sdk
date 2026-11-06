@@ -257,6 +257,97 @@ describe("deploy", () => {
 				Current Version ID: undefined"
 			`);
 		});
+
+		it("should warn when crons are configured alongside --dispatch-namespace", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				triggers: { crons: ["0 0 * * *"] },
+			});
+			const scriptContent = `
+      export default {
+				fetch() {
+					return new Response("Hello, World!");
+				}
+			}
+    `;
+			fs.writeFileSync("index.js", scriptContent);
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedDispatchNamespace: "test-dispatch-namespace",
+			});
+			mockServiceScriptData({
+				script: { id: "test-name" },
+				dispatchNamespace: "test-dispatch-namespace",
+			});
+
+			await runWrangler(
+				"deploy --dispatch-namespace test-dispatch-namespace index.js"
+			);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"\u001b[33m▲ \u001b[43;33m[\u001b[43;30mWARNING\u001b[43;33m]\u001b[0m \u001b[1mCron triggers are not supported with --dispatch-namespace and will be ignored.\u001b[0m
+
+				"
+			`);
+		});
+
+		it("should warn when --triggers flag is used alongside --dispatch-namespace", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			const scriptContent = `
+      export default {
+				fetch() {
+					return new Response("Hello, World!");
+				}
+			}
+    `;
+			fs.writeFileSync("index.js", scriptContent);
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedDispatchNamespace: "test-dispatch-namespace",
+			});
+			mockServiceScriptData({
+				script: { id: "test-name" },
+				dispatchNamespace: "test-dispatch-namespace",
+			});
+
+			await runWrangler(
+				"deploy index.js --dispatch-namespace test-dispatch-namespace --triggers '0 0 * * *'"
+			);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"\u001b[33m▲ \u001b[43;33m[\u001b[43;30mWARNING\u001b[43;33m]\u001b[0m \u001b[1mCron triggers are not supported with --dispatch-namespace and will be ignored.\u001b[0m
+
+				"
+			`);
+		});
+
+		it("should not warn about crons when none are configured alongside --dispatch-namespace", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			const scriptContent = `
+      export default {
+				fetch() {
+					return new Response("Hello, World!");
+				}
+			}
+    `;
+			fs.writeFileSync("index.js", scriptContent);
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedDispatchNamespace: "test-dispatch-namespace",
+			});
+			mockServiceScriptData({
+				script: { id: "test-name" },
+				dispatchNamespace: "test-dispatch-namespace",
+			});
+
+			await runWrangler(
+				"deploy --dispatch-namespace test-dispatch-namespace index.js"
+			);
+			expect(std.warn).not.toContain("Cron triggers");
+		});
 	});
 	describe("[observability]", () => {
 		it("should allow uploading workers with observability", async ({
