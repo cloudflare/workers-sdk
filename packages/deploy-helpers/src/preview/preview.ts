@@ -51,6 +51,7 @@ import type {
 	Binding,
 	CreatePreviewDeploymentRequestParams,
 	DeploymentResource,
+	PreviewBaseConfig,
 	PreviewDeploymentModule,
 	PreviewResource,
 } from "./api";
@@ -1307,21 +1308,25 @@ async function runPreview(
 		const productionBindingsExpectedInPreview =
 			options.productionBindingsExpectedInPreview ?? {};
 		if (Object.keys(productionBindingsExpectedInPreview).length > 0) {
+			let previewBaseConfig: PreviewBaseConfig | undefined;
 			try {
-				const previewBaseConfig = await getPreviewBaseConfig(
+				previewBaseConfig = await getPreviewBaseConfig(
 					config,
 					accountId,
 					workerName
 				);
+			} catch (error) {
+				// This lookup is diagnostic-only; the deployment is already live.
+				logger.debug(error);
+				logger.warn(
+					"The Preview was deployed, but its missing bindings could not be checked because the parent Worker's configuration could not be retrieved."
+				);
+			}
+			if (previewBaseConfig) {
 				logMissingPreviewsBindingsWarning(
 					productionBindingsExpectedInPreview,
 					previewBaseConfig.env,
 					deploymentRequest.env ?? {}
-				);
-			} catch {
-				// This lookup is diagnostic-only; the deployment is already live.
-				logger.warn(
-					"The Preview was deployed, but its missing bindings could not be checked because the parent Worker's configuration could not be retrieved."
 				);
 			}
 		}

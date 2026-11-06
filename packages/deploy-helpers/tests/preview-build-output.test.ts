@@ -316,15 +316,14 @@ describe("previewBuildOutput", () => {
 		expect(std.out).toBe("");
 	});
 
-	it.for([false, true])(
-		"returns a successful deployment when the warning lookup fails (json=%s)",
-		async (json, { expect }) => {
-			mocks.getPreviewBaseConfig.mockRejectedValueOnce(
-				new Error("Base config request failed")
-			);
+	it.for([{}, { log: false }, { log: false, json: true }])(
+		"returns a successful deployment and logs the error when the warning lookup fails %j",
+		async (args, { expect }) => {
+			const error = new Error("Base config request failed");
+			mocks.getPreviewBaseConfig.mockRejectedValueOnce(error);
 			const result = await previewBuildOutput(
 				"account-id",
-				{ name: "feature", log: false, json },
+				{ name: "feature", ...args },
 				{
 					workerConfig: buildOutputConfig(),
 					rootConfig: validRootConfig,
@@ -339,12 +338,46 @@ describe("previewBuildOutput", () => {
 			expect(result.deployment).toEqual(deploymentResource);
 			expect(mocks.createPreviewDeployment).toHaveBeenCalledOnce();
 			expect(mocks.getPreviewBaseConfig).toHaveBeenCalledOnce();
-			expect(std.out).toBe("");
+			expect(console.debug).toHaveBeenCalledExactlyOnceWith(error);
+			if (args.log === false) {
+				expect(std.out).toBe("");
+			} else {
+				expect(std.out).toContain("Preview: feature (updated)");
+			}
 			expect(std.warn).toContain(
 				"The Preview was deployed, but its missing bindings could not be checked"
 			);
 		}
 	);
+
+	it("propagates missing bindings warning failures without reporting a lookup failure", async ({
+		expect,
+	}) => {
+		const error = new Error("Missing bindings warning failed");
+		vi.mocked(console.warn).mockImplementationOnce(() => {
+			throw error;
+		});
+		await expect(
+			previewBuildOutput(
+				"account-id",
+				{ name: "feature", log: false },
+				{
+					workerConfig: buildOutputConfig(),
+					rootConfig: validRootConfig,
+					buildResult,
+				},
+				{
+					productionBindingsExpectedInPreview: { KV: { type: "kv_namespace" } },
+					getNormalizedContainerOptions: undefined,
+					deployPreviewContainers: undefined,
+				}
+			)
+		).rejects.toBe(error);
+		expect(mocks.createPreviewDeployment).toHaveBeenCalledOnce();
+		expect(mocks.getPreviewBaseConfig).toHaveBeenCalledOnce();
+		expect(console.debug).not.toHaveBeenCalled();
+		expect(std.warn).not.toContain("configuration could not be retrieved");
+	});
 
 	it.for([{}, { log: false, json: true }])(
 		"returns the PR metadata used by the summary when annotations are missing %j",
