@@ -22,6 +22,7 @@ import {
 	createPlugin,
 	createRequestHandler,
 	debuglog,
+	resolveRequestTarget,
 	satisfiesMinimumViteVersion,
 } from "../utils";
 import { handleWebSocket } from "../websockets";
@@ -190,10 +191,12 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					});
 
 					viteDevServer.middlewares.use(
-						async function cloudflarePreMiddleware(req, res, next) {
+						function cloudflarePreMiddleware(req, res, next) {
 							assert(req.url, `req.url not defined`);
 							// Only the URL pathname is used to match rules
-							const request = new Request(new URL(req.url, UNKNOWN_HOST));
+							const request = new Request(
+								resolveRequestTarget(req.url, UNKNOWN_HOST)
+							);
 
 							if (req[kRequestType] === "asset") {
 								next();
