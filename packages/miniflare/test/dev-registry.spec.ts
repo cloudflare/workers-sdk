@@ -16,6 +16,31 @@ import type {
 	WorkerRegistry,
 } from "miniflare";
 
+// Simulates a peer process's stale sweep deleting an entry in the window
+// between this process's heartbeat seeing the entry exist and touching it.
+// Armed for one `utimesSync` call on one path only; everything else passes
+// through untouched.
+const midHeartbeatSweep = vi.hoisted(() => ({
+	path: undefined as string | undefined,
+}));
+vi.mock("node:fs", async (importOriginal) => {
+	const fsSync = await importOriginal<typeof import("node:fs")>();
+	return {
+		...fsSync,
+		utimesSync(
+			target: import("node:fs").PathLike,
+			atime: string | number | Date,
+			mtime: string | number | Date
+		) {
+			if (typeof target === "string" && midHeartbeatSweep.path === target) {
+				midHeartbeatSweep.path = undefined;
+				fsSync.unlinkSync(target);
+			}
+			return fsSync.utimesSync(target, atime, mtime);
+		},
+	};
+});
+
 describe("DevRegistry", { concurrent: false }, () => {
 	test("waits for the filesystem watcher to be ready", async ({ expect }) => {
 		const unsafeDevRegistryPath = await useTmp();
@@ -265,6 +290,54 @@ describe("DevRegistry", { concurrent: false }, () => {
 				})
 			);
 		} finally {
+			await registry.dispose();
+			vi.useRealTimers();
+		}
+	});
+
+	test("writes its entry back when the sweep removes it mid-heartbeat", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+		const definitionPath = path.join(unsafeDevRegistryPath, "worker");
+		const definition: WorkerDefinition = {
+			debugPortAddress: "127.0.0.1:1234",
+			defaultEntrypointService: "core:user:worker",
+			userWorkerService: "core:user:worker",
+		};
+
+		const registry = new DevRegistry(
+			unsafeDevRegistryPath,
+			undefined,
+			new TestLog()
+		);
+		vi.useFakeTimers();
+		try {
+			registry.register({ worker: definition });
+			expect(
+				JSON.parse(await fs.readFile(definitionPath, "utf8")).instanceId
+			).toBe(registry.instanceId);
+
+			// A peer process's sweep deletes the entry after this heartbeat saw
+			// it exist, but before the heartbeat touches it.
+			midHeartbeatSweep.path = definitionPath;
+			await vi.advanceTimersByTimeAsync(10_001);
+
+			// The entry is written back, the same as for one already missing at
+			// the start of a tick, and the Worker stays discoverable by peers.
+			expect(JSON.parse(await fs.readFile(definitionPath, "utf8"))).toEqual({
+				...definition,
+				instanceId: registry.instanceId,
+			});
+			expect(getWorkerRegistry(unsafeDevRegistryPath)).toEqual(
+				expect.objectContaining({
+					worker: expect.objectContaining({
+						debugPortAddress: "127.0.0.1:1234",
+					}),
+				})
+			);
+		} finally {
+			midHeartbeatSweep.path = undefined;
 			await registry.dispose();
 			vi.useRealTimers();
 		}
