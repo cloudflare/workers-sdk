@@ -31,7 +31,7 @@ export const replacer = (str: string, replacements: Replacements) => {
 	// `replacements[name]` read would resolve names like `:toString` or
 	// `:constructor` through the prototype chain.
 	return str.replace(PLACEHOLDER_REGEX, (match, name: string) =>
-		Object.hasOwn(replacements, name) ? replacements[name] : match
+		Object.hasOwn(replacements, name) ? (replacements[name] ?? match) : match
 	);
 };
 
