@@ -66,7 +66,6 @@ import {
 	R2_PLUGIN_NAME,
 	RATELIMIT_PLUGIN_NAME,
 	SECRET_STORE_PLUGIN_NAME,
-	SERVICE_BUILTIN_STORAGE,
 	SERVICE_DEV_REGISTRY_PROXY,
 	SERVICE_ENTRY,
 	SOCKET_DEBUG_PORT,
@@ -2444,9 +2443,6 @@ export class Miniflare {
 			// that Miniflare parses and either forwards to a `handleStructuredLogs`
 			// handler or writes to the console by default.
 			structuredLogging: true,
-			builtinStorage: services.has(SERVICE_BUILTIN_STORAGE)
-				? SERVICE_BUILTIN_STORAGE
-				: undefined,
 			autogates: process.env.MINIFLARE_WORKERD_AUTOGATES
 				? process.env.MINIFLARE_WORKERD_AUTOGATES.split(" ")
 				: [],

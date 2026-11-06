@@ -19,14 +19,14 @@ import type {
 } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, ReplaceWorkersTypes } from "miniflare";
 
-// workerd's built-in KV runs on the real clock, in seconds here
+// workerd's KV runs on the real clock, in seconds here
 const TIME_NOW = Math.floor(Date.now() / 1000);
 // Expiration value to signal a key that will expire in the future
 const TIME_FUTURE = TIME_NOW + 3600;
 
 // Runs `f` with workerd's KV expiration clock advanced by `advance(ms)`,
-// then winds the clock back. workerd enables the clock for tests with
-// `WORKERD_KV_TEST_CLOCK`, which `test/setup.mjs` sets.
+// then winds the clock back. Miniflare gives workerd's KV the test clock with
+// `MINIFLARE_KV_TEST_CLOCK`, which `test/setup.mjs` sets.
 async function withClock(
 	f: (advance: (ms: number) => Promise<void>) => Promise<void>
 ) {
@@ -843,9 +843,9 @@ test("persists on file-system", async ({ expect }) => {
 	await kv.put("key", "value");
 	expect(await kv.get("key")).toBe("value");
 
-	// Check workerd's built-in KV keeps its objects under the persist path
-	const names = await fs.readdir(path.join(tmp, "builtin"));
-	expect(names.includes("workerd-KVNamespace")).toBe(true);
+	// Check workerd's KV keeps its objects under the persist path
+	const names = await fs.readdir(path.join(tmp, "kv-workerd"));
+	expect(names.includes("KVNamespace")).toBe(true);
 
 	// Check "restarting" keeps persisted data
 	await mf.dispose();

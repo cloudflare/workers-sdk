@@ -1,5 +1,5 @@
 import { SharedBindings, SharedHeaders } from "../shared/constants";
-import { KVBindings, KV_BUILTIN_SERVICE_NAME } from "./constants";
+import { KVBindings, KV_WORKERD_SERVICE_NAME } from "./constants";
 import type { WorkerdDebugPortConnector } from "../core/dev-registry-proxy-shared.worker";
 
 interface Props {
@@ -9,9 +9,9 @@ interface Env {
 	[KVBindings.DEBUG_PORT]: WorkerdDebugPortConnector;
 }
 
-// Routes KV's HTTP protocol to workerd's built-in KV for a namespace named
-// at runtime, by props or the `MF-Namespace` header, which a `kvNamespaceId`
-// binding cannot do: the local explorer and shared storage call this.
+// Routes KV's HTTP protocol to workerd's KV for a namespace named at
+// runtime, by props or the `MF-Namespace` header, which a binding's fixed
+// props cannot do: the local explorer and shared storage call this.
 export default <ExportedHandler<Env, unknown, unknown, Props>>{
 	fetch(request, env, ctx) {
 		const namespace =
@@ -24,7 +24,7 @@ export default <ExportedHandler<Env, unknown, unknown, Props>>{
 		headers.delete(SharedHeaders.NAMESPACE);
 		const kv = env[KVBindings.DEBUG_PORT]
 			.current()
-			.getEntrypoint(KV_BUILTIN_SERVICE_NAME, undefined, { namespace });
+			.getEntrypoint(KV_WORKERD_SERVICE_NAME, undefined, { namespace });
 		return kv.fetch(new Request(request, { headers }));
 	},
 };

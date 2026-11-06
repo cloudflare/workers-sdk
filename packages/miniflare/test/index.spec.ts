@@ -5026,9 +5026,7 @@ test("Miniflare: respects rootPath for path-valued options", async ({
 	expect(await res.json()).toEqual({
 		text: "three text",
 	});
-	expect(existsSync(path.join(tmp, "builtin", "workerd-KVNamespace"))).toBe(
-		true
-	);
+	expect(existsSync(path.join(tmp, "kv-workerd", "KVNamespace"))).toBe(true);
 
 	// Check persisted KV data survives an options reload
 	await mf.setOptions({

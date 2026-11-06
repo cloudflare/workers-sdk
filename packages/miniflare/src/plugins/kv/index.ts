@@ -1,14 +1,16 @@
+import fs from "node:fs/promises";
 import SCRIPT_KV_ENTRY from "worker:kv/entry";
 import { kVoid } from "../../runtime";
 import {
 	KV_LOCAL_ENTRY_SERVICE_NAME,
+	KV_WORKERD_SERVICE_NAME,
 	KVBindings,
 } from "../../workers/kv/constants";
 import {
 	buildObjectEntryProps,
 	buildRemoteProxyProps,
-	getBuiltinStorageService,
 	getEnvBindingsOfType,
+	getPersistPath,
 	getRemoteProxyConnectionString,
 	getStorageService,
 	ProxyNodeBinding,
@@ -26,6 +28,8 @@ import type { SitesOptions } from "./sites";
 
 // One shared remote-proxy service for all remote namespaces (config via props).
 const KV_REMOTE_SERVICE_NAME = `${KV_PLUGIN_NAME}:ns:remote`;
+// The disk where workerd's KV keeps its objects and large values.
+const KV_WORKERD_STORAGE_SERVICE_NAME = `${KV_WORKERD_SERVICE_NAME}:storage`;
 // The Durable Object class of `worker:kv/namespace`, which the secrets store
 // and images plugins still use.
 export const KV_NAMESPACE_OBJECT_CLASS_NAME = "KVNamespaceObject";
@@ -57,10 +61,14 @@ export const KV_PLUGIN: Plugin = {
 					},
 				};
 			}
-			// Local namespaces are workerd's built-in KV. With shared storage they
-			// go through the storage owner's entry service instead.
+			// Local namespaces are workerd's KV. With shared storage they go
+			// through the storage owner's entry service instead.
 			if (!sharedOptions.unsafeEnableSharedStorage) {
-				return { name, kvNamespaceId: id };
+				const props = { json: JSON.stringify({ namespace: id }) };
+				return {
+					name,
+					kvNamespace: { name: KV_WORKERD_SERVICE_NAME, props },
+				};
 			}
 			return {
 				name,
@@ -102,9 +110,8 @@ export const KV_PLUGIN: Plugin = {
 
 		const services: Service[] = [];
 
-		// The entry service reaches the built-in KV of a namespace named at
-		// runtime, for the local explorer and shared storage. `builtinStorage`
-		// alone makes workerd add the built-in `workerd:kv`.
+		// workerd's KV, and the entry service that reaches a namespace named at
+		// runtime, for the local explorer and shared storage.
 		const hasLocalNamespace =
 			namespaces.some(
 				([, binding]) => !getRemoteProxyConnectionString(binding, options.dev)
@@ -123,10 +130,10 @@ export const KV_PLUGIN: Plugin = {
 						],
 					},
 				},
-				await getBuiltinStorageService(
+				...(await getWorkerdKvServices(
 					tmpPath,
 					sharedOptions.resourcePersistencePath
-				)
+				))
 			);
 		}
 
@@ -150,3 +157,53 @@ export const KV_PLUGIN: Plugin = {
 };
 
 export { KV_PLUGIN_NAME };
+
+// The Worker running workerd's KV module, `/workerd/kv.js`, and its disk,
+// which holds both its objects and its large values. The bindings, class and
+// `uniqueKey` are the interface kv.js documents; the `uniqueKey` and disk are
+// where the namespaces live.
+async function getWorkerdKvServices(
+	tmpPath: string,
+	resourcePersistencePath: string | undefined
+): Promise<Service[]> {
+	const persistPath = getPersistPath(
+		"kv-workerd",
+		tmpPath,
+		resourcePersistencePath
+	);
+	await fs.mkdir(persistPath, { recursive: true });
+	const storage = { name: KV_WORKERD_STORAGE_SERVICE_NAME };
+	const bindings: Worker_Binding[] = [
+		{
+			name: "SHARD",
+			durableObjectNamespace: { className: "KVNamespace" },
+		},
+		{ name: "BLOBS", service: storage },
+	];
+	// Lets tests advance the expiration clock (`test/setup.mjs`)
+	if (process.env.MINIFLARE_KV_TEST_CLOCK) {
+		bindings.push({ name: "TEST_CLOCK", json: "true" });
+	}
+	return [
+		{
+			name: KV_WORKERD_SERVICE_NAME,
+			worker: {
+				compatibilityDate: "2026-01-01",
+				modules: [{ name: "kv.js", builtin: "/workerd/kv.js" }],
+				bindings,
+				durableObjectNamespaces: [
+					{
+						className: "KVNamespace",
+						uniqueKey: "KVNamespace",
+						enableSql: true,
+					},
+				],
+				durableObjectStorage: { localDisk: KV_WORKERD_STORAGE_SERVICE_NAME },
+			},
+		},
+		{
+			name: KV_WORKERD_STORAGE_SERVICE_NAME,
+			disk: { path: persistPath, writable: true },
+		},
+	];
+}

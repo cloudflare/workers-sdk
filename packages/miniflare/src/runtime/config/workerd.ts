@@ -22,7 +22,6 @@ export interface Config {
 	extensions?: Extension[];
 	autogates?: string[];
 	structuredLogging?: boolean;
-	builtinStorage?: string;
 }
 
 export type Socket = {
@@ -116,6 +115,7 @@ export type Worker_Module = {
 	name: string;
 } & (
 	| { esModule?: string }
+	| { builtin?: string }
 	| { commonJsModule?: string }
 	| { text?: string }
 	| { data?: Uint8Array }
@@ -147,7 +147,6 @@ export type Worker_Binding = {
 	| { unsafeEval?: Void }
 	| { workerLoader?: Worker_Binding_WorkerLoader }
 	| { workerdDebugPort?: Void }
-	| { kvNamespaceId?: string }
 );
 
 export interface Worker_Binding_Parameter {

@@ -9,7 +9,7 @@ export class Config extends $.Struct {
 	static readonly _capnp = {
 		displayName: "Config",
 		id: "8794486c76aaa7d6",
-		size: new $.ObjectSize(8, 8),
+		size: new $.ObjectSize(8, 7),
 		defaultStructuredLogging: $.getBitMask(false, 0),
 	};
 	static _Services: $.ListCtor<Service>;
@@ -208,25 +208,6 @@ export class Config extends $.Struct {
 	}
 	set cluster(value: ClusterConfig) {
 		$.utils.copyFrom(value, $.utils.getPointer(6, this));
-	}
-	/**
-	 * The writable disk service (`Service.disk`) where workerd's built-in products keep their
-	 * state, each in directories of its own: built-in KV's Durable Objects, and its values over
-	 * 64 KiB, or in a cluster its cache of those values. Required when a Worker binds a
-	 * `kvNamespaceId`. Experimental: requires `--experimental`.
-	 *
-	 * When set, the config has the built-in service `workerd:kv`. A config may not define a
-	 * service named `workerd:*`, but may name one: a `kvNamespace` (or `service`) designator
-	 * `(name = "workerd:kv", props = (json = "{\"namespace\": \"<id>\"}"))` reaches the
-	 * namespace `<id>`, as a `kvNamespaceId = "<id>"` binding does. That is the supported way to
-	 * reach a namespace chosen at runtime.
-	 *
-	 */
-	get builtinStorage(): string {
-		return $.utils.getText(7, this);
-	}
-	set builtinStorage(value: string) {
-		$.utils.setText(7, value, this);
 	}
 	toString(): string {
 		return "Config_" + super.toString();
@@ -767,6 +748,11 @@ export const Service_Which = {
 	 *
 	 */
 	DISK: 4,
+	/**
+	 * A directory in the cluster's bucket, served over HTTP. Requires `Config.cluster`.
+	 *
+	 */
+	BUCKET: 5,
 } as const;
 export type Service_Which = (typeof Service_Which)[keyof typeof Service_Which];
 /**
@@ -780,6 +766,7 @@ export class Service extends $.Struct {
 	static readonly NETWORK = Service_Which.NETWORK;
 	static readonly EXTERNAL = Service_Which.EXTERNAL;
 	static readonly DISK = Service_Which.DISK;
+	static readonly BUCKET = Service_Which.BUCKET;
 	static readonly _capnp = {
 		displayName: "Service",
 		id: "e5c88e8bb7bcb6b9",
@@ -923,11 +910,68 @@ export class Service extends $.Struct {
 		$.utils.setUint16(0, 4, this);
 		$.utils.copyFrom(value, $.utils.getPointer(1, this));
 	}
+	_adoptBucket(value: $.Orphan<ClusterBucket>): void {
+		$.utils.setUint16(0, 5, this);
+		$.utils.adopt(value, $.utils.getPointer(1, this));
+	}
+	_disownBucket(): $.Orphan<ClusterBucket> {
+		return $.utils.disown(this.bucket);
+	}
+	/**
+	 * A directory in the cluster's bucket, served over HTTP. Requires `Config.cluster`.
+	 *
+	 */
+	get bucket(): ClusterBucket {
+		$.utils.testWhich("bucket", $.utils.getUint16(0, this), 5, this);
+		return $.utils.getStruct(1, ClusterBucket, this);
+	}
+	_hasBucket(): boolean {
+		return !$.utils.isNull($.utils.getPointer(1, this));
+	}
+	_initBucket(): ClusterBucket {
+		$.utils.setUint16(0, 5, this);
+		return $.utils.initStructAt(1, ClusterBucket, this);
+	}
+	get _isBucket(): boolean {
+		return $.utils.getUint16(0, this) === 5;
+	}
+	set bucket(value: ClusterBucket) {
+		$.utils.setUint16(0, 5, this);
+		$.utils.copyFrom(value, $.utils.getPointer(1, this));
+	}
 	toString(): string {
 		return "Service_" + super.toString();
 	}
 	which(): Service_Which {
 		return $.utils.getUint16(0, this) as Service_Which;
+	}
+}
+/**
+ * GET, PUT and DELETE on `/<file>` read, write and remove the object
+ * `<cluster prefix>services/<path>/<file>` in the cluster's bucket (`Config.cluster`), so
+ * that every instance sees the same files. The cluster keeps its own state outside
+ * `services/`, where this service cannot reach it. A binding to this service grants only its
+ * directory, as a writable `disk` does. Experimental: requires `--experimental`.
+ *
+ */
+export class ClusterBucket extends $.Struct {
+	static readonly _capnp = {
+		displayName: "ClusterBucket",
+		id: "e57b0dfad120bb10",
+		size: new $.ObjectSize(0, 1),
+	};
+	/**
+	 * The directory below `services/`: one or more `/`-separated names, none `.` or `..`.
+	 *
+	 */
+	get path(): string {
+		return $.utils.getText(0, this);
+	}
+	set path(value: string) {
+		$.utils.setText(0, value, this);
+	}
+	toString(): string {
+		return "ClusterBucket_" + super.toString();
 	}
 }
 /**
@@ -1224,6 +1268,12 @@ export const Worker_Module_Which = {
 	 *
 	 */
 	OBSOLETE_PYTHON_REQUIREMENT: 8,
+	/**
+	 * An ES module whose source is compiled into workerd, by name: `/workerd/kv.js`, the KV
+	 * Worker (see its header for the bindings it takes). Experimental.
+	 *
+	 */
+	BUILTIN: 9,
 } as const;
 export type Worker_Module_Which =
 	(typeof Worker_Module_Which)[keyof typeof Worker_Module_Which];
@@ -1238,6 +1288,7 @@ export class Worker_Module extends $.Struct {
 	static readonly PYTHON_MODULE = Worker_Module_Which.PYTHON_MODULE;
 	static readonly OBSOLETE_PYTHON_REQUIREMENT =
 		Worker_Module_Which.OBSOLETE_PYTHON_REQUIREMENT;
+	static readonly BUILTIN = Worker_Module_Which.BUILTIN;
 	static readonly _capnp = {
 		displayName: "Module",
 		id: "d9d87a63770a12f3",
@@ -1424,6 +1475,22 @@ export class Worker_Module extends $.Struct {
 	}
 	set obsoletePythonRequirement(value: string) {
 		$.utils.setUint16(0, 8, this);
+		$.utils.setText(1, value, this);
+	}
+	/**
+	 * An ES module whose source is compiled into workerd, by name: `/workerd/kv.js`, the KV
+	 * Worker (see its header for the bindings it takes). Experimental.
+	 *
+	 */
+	get builtin(): string {
+		$.utils.testWhich("builtin", $.utils.getUint16(0, this), 9, this);
+		return $.utils.getText(1, this);
+	}
+	get _isBuiltin(): boolean {
+		return $.utils.getUint16(0, this) === 9;
+	}
+	set builtin(value: string) {
+		$.utils.setUint16(0, 9, this);
 		$.utils.setText(1, value, this);
 	}
 	_adoptNamedExports(value: $.Orphan<$.List<string>>): void {
@@ -2446,15 +2513,6 @@ export const Worker_Binding_Which = {
 	 *
 	 */
 	WORKERD_DEBUG_PORT: 21,
-	/**
-	 * A KV namespace kept by workerd itself, named by its id (wrangler's `id`). Bindings with
-	 * the same id share a namespace. It lives in `Config.builtinStorage`, which it requires;
-	 * in a cluster it replicates as any Durable Object, and its values over 64 KiB live in the
-	 * cluster's bucket. A namespace chosen at runtime is reached through `workerd:kv` instead;
-	 * see `Config.builtinStorage`. Experimental: requires `--experimental`.
-	 *
-	 */
-	KV_NAMESPACE_ID: 22,
 } as const;
 export type Worker_Binding_Which =
 	(typeof Worker_Binding_Which)[keyof typeof Worker_Binding_Which];
@@ -2483,7 +2541,6 @@ export class Worker_Binding extends $.Struct {
 	static readonly MEMORY_CACHE = Worker_Binding_Which.MEMORY_CACHE;
 	static readonly WORKER_LOADER = Worker_Binding_Which.WORKER_LOADER;
 	static readonly WORKERD_DEBUG_PORT = Worker_Binding_Which.WORKERD_DEBUG_PORT;
-	static readonly KV_NAMESPACE_ID = Worker_Binding_Which.KV_NAMESPACE_ID;
 	static readonly Type = Worker_Binding_Type;
 	static readonly DurableObjectNamespaceDesignator =
 		Worker_Binding_DurableObjectNamespaceDesignator;
@@ -3031,25 +3088,6 @@ export class Worker_Binding extends $.Struct {
 	}
 	set workerdDebugPort(_: true) {
 		$.utils.setUint16(0, 21, this);
-	}
-	/**
-	 * A KV namespace kept by workerd itself, named by its id (wrangler's `id`). Bindings with
-	 * the same id share a namespace. It lives in `Config.builtinStorage`, which it requires;
-	 * in a cluster it replicates as any Durable Object, and its values over 64 KiB live in the
-	 * cluster's bucket. A namespace chosen at runtime is reached through `workerd:kv` instead;
-	 * see `Config.builtinStorage`. Experimental: requires `--experimental`.
-	 *
-	 */
-	get kvNamespaceId(): string {
-		$.utils.testWhich("kvNamespaceId", $.utils.getUint16(0, this), 22, this);
-		return $.utils.getText(1, this);
-	}
-	get _isKvNamespaceId(): boolean {
-		return $.utils.getUint16(0, this) === 22;
-	}
-	set kvNamespaceId(value: string) {
-		$.utils.setUint16(0, 22, this);
-		$.utils.setText(1, value, this);
 	}
 	toString(): string {
 		return "Worker_Binding_" + super.toString();

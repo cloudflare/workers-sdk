@@ -37,9 +37,6 @@ export function getConnectSocketName(
 
 // Service looping back to Miniflare's Node.js process (for storage, etc)
 export const SERVICE_LOOPBACK = "loopback";
-// The disk `Config.builtinStorage` names, where workerd's built-ins (KV)
-// keep their state. workerd reserves names starting with `workerd:`.
-export const SERVICE_BUILTIN_STORAGE = "builtin:storage";
 
 // Service for the dev registry proxy worker (routes cross-process service bindings and DO proxies).
 export const SERVICE_DEV_REGISTRY_PROXY = "dev-registry-proxy";
