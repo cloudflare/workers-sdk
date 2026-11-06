@@ -41,7 +41,7 @@ export type GetPlatformProxyOptions =
 			 * as Vite's. The proxy attaches to it instead of reading `cloudflare.config.ts`.
 			 */
 			url: string | URL;
-			/** The runtime's `MINIFLARE_PLATFORM_PROXY_SECRET`, if this process doesn't share it */
+			/** The runtime's `MINIFLARE_PLATFORM_PROXY_SECRET`, if it was started by a different copy of Miniflare */
 			secret?: string;
 	  };
 

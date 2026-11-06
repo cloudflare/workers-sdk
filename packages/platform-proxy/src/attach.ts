@@ -34,7 +34,7 @@ function forwardTo<T extends object>(getTarget: () => T): T {
  * binding or a Durable Object stub, can't be used anymore.
  *
  * @param url URL of the runtime, or of a dev server in front of it.
- * @param secret The runtime's secret, if this process doesn't share it.
+ * @param secret The runtime's secret, if it was started by a different copy of Miniflare.
  * @returns The Worker's platform. Dispose it when done.
  */
 export async function attachPlatformProxy<
@@ -65,7 +65,7 @@ export async function attachPlatformProxy<
 		});
 		if (response.status === 401) {
 			throw new Error(
-				`The runtime at ${url} rejected the connection (status 401). In the same process, @cloudflare/platform-proxy and the Cloudflare Vite plugin must use the same version of Miniflare. From another process, start both with the same MINIFLARE_PLATFORM_PROXY_SECRET, or pass it as \`secret\`.`
+				`The runtime at ${url} rejected the connection with status 401, which usually means the secret doesn't match. Start the runtime's process with MINIFLARE_PLATFORM_PROXY_SECRET set, and pass the same value as the \`secret\` option.`
 			);
 		}
 		if (!response.ok) {

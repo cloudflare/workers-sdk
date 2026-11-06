@@ -26,7 +26,7 @@ const { env, cf, ctx, caches, dispose } = await getPlatformProxy({
 });
 ```
 
-When the runtime restarts, e.g. after a config change, the proxy connects again. `env`, `cf` and `caches` then reach the new runtime, so they can be kept. Anything taken from them before the restart, such as a binding or a Durable Object stub, can't be used anymore. `dispose()` only disconnects. To attach from another process, start both with the same `MINIFLARE_PLATFORM_PROXY_SECRET`, or pass the runtime's value as `secret`.
+When the runtime restarts, e.g. after a config change, the proxy connects again. `env`, `cf` and `caches` then reach the new runtime, so they can be kept. Anything taken from them before the restart, such as a binding or a Durable Object stub, can't be used anymore. `dispose()` only disconnects. If the runtime was started by a different copy of Miniflare, for example in another process, start the runtime's process with `MINIFLARE_PLATFORM_PROXY_SECRET` set, and pass the same value as the `secret` option.
 
 ## Differences from Wrangler's `getPlatformProxy()`
 

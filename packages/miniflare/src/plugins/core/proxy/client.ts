@@ -101,8 +101,9 @@ const revivers: ReducersRevivers = {
 	// `Native` reviver depends on `ProxyStubHandler` methods
 };
 
-// Starting processes with the same `MINIFLARE_PLATFORM_PROXY_SECRET` lets a
-// client attach to a runtime started by another process
+// Each copy of Miniflare has its own secret, unless `MINIFLARE_PLATFORM_PROXY_SECRET`
+// gives them the same one so that a client can attach to a runtime started by
+// another copy, such as one in another process
 export const PROXY_SECRET =
 	process.env.MINIFLARE_PLATFORM_PROXY_SECRET ||
 	crypto.randomBytes(16).toString("hex");
