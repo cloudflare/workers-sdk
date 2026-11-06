@@ -1,0 +1,25 @@
+import { createCommand } from "../../../../../core/create-command";
+import { logger } from "../../../../../logger";
+import { deleteNotificationConsumer } from "../../../../client";
+
+export const queuesConsumerNotificationRemoveCommand = createCommand({
+	metadata: {
+		description: "Remove a Queue Notification Consumer",
+		owner: "Product: Queues",
+		status: "stable",
+	},
+	behaviour: { supportTemporary: true },
+	args: {
+		"queue-name": {
+			type: "string",
+			demandOption: true,
+			description: "Name of the queue for the consumer",
+		},
+	},
+	positionalArgs: ["queue-name"],
+	async handler(args, { config }) {
+		logger.log(`Removing consumer from queue ${args.queueName}.`);
+		await deleteNotificationConsumer(config, args.queueName);
+		logger.log(`Removed consumer from queue ${args.queueName}.`);
+	},
+});
