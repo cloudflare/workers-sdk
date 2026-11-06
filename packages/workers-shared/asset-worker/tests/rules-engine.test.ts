@@ -100,9 +100,7 @@ describe("rules engine", () => {
 		).toEqual(["/dest/1/2"]);
 	});
 
-	test("it should support host placeholders sharing a prefix", ({
-		expect,
-	}) => {
+	test("it should support host placeholders sharing a prefix", ({ expect }) => {
 		const matcher = generateRulesMatcher(
 			{
 				"https://:subdomain.:subdomain_2.example.com/*":
@@ -158,9 +156,7 @@ describe("replacer", () => {
 		);
 	});
 
-	test("should leave placeholders with no replacement alone", ({
-		expect,
-	}) => {
+	test("should leave placeholders with no replacement alone", ({ expect }) => {
 		expect(replacer("/:code/:missing", { code: "123" })).toEqual(
 			"/123/:missing"
 		);
