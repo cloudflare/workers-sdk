@@ -2,7 +2,6 @@
 "@cloudflare/config": minor
 "@cloudflare/workers-utils": minor
 "@cloudflare/deploy-helpers": minor
-"@cloudflare/remote-bindings": minor
 "@cloudflare/codemods": minor
 "wrangler": minor
 "miniflare": patch
