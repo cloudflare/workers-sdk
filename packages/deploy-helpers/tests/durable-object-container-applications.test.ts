@@ -1038,6 +1038,35 @@ describe("unknown Durable Object storage", () => {
 	});
 });
 
+describe("already-applied migration history", () => {
+	// https://github.com/cloudflare/workers-sdk/issues/15741
+	// deployWorker calls prepareDurableObjectContainerApplications for every
+	// Worker, and its validation replays the whole migrations array from an
+	// empty state. A history whose applied tags predate the file (here, v2
+	// deletes a class created before v1) must not block deploys of Workers
+	// with no Durable Object-managed containers.
+	it("accepts a deleted class no earlier tag creates when no containers are configured", async ({
+		expect,
+	}) => {
+		const legacyHistoryConfig = {
+			migrations: [
+				{ tag: "v1", new_classes: ["Room"] },
+				{ tag: "v2", deleted_classes: ["LegacyRoom"] },
+			],
+			durable_objects: { bindings: [{ name: "ROOM", class_name: "Room" }] },
+		} as unknown as Config;
+
+		await expect(
+			prepareDurableObjectContainerApplications(
+				legacyHistoryConfig,
+				[],
+				[],
+				{ ...args, dryRun: true }
+			)
+		).resolves.toEqual({});
+	});
+});
+
 describe("Container namespace resolution", () => {
 	it("does not accept a preview when a versioned production namespace is missing", async ({
 		expect,
