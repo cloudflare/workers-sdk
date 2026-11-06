@@ -20,21 +20,6 @@ function configurationError(message: string): UserError {
 	});
 }
 
-/** Apply custom headers to an API client's native fetch implementation. */
-export function createNativeCustomApiFetch(
-	fetchImpl: typeof globalThis.fetch
-): typeof globalThis.fetch {
-	return (input, init) => {
-		if (!process.env.CLOUDFLARE_API_HEADERS) {
-			return fetchImpl(input, init);
-		}
-		const requestInit = { ...init, duplex: "half" as const };
-		const request = new Request(input, requestInit);
-		addCustomApiHeaders(request.headers);
-		return fetchImpl(request);
-	};
-}
-
 /** Read additional API headers without retaining environment values between calls. */
 export function getCustomApiHeaders(): Record<string, string> {
 	const raw = process.env.CLOUDFLARE_API_HEADERS;
