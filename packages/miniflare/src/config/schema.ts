@@ -33,6 +33,10 @@ import {
 	TlsOptions_Version,
 } from "../runtime/config/workerd";
 import { resolveDevRegistryPath } from "../shared/dev-registry";
+import {
+	ArtifactsEventSubscriptionSchema,
+	type ArtifactsEventSubscription,
+} from "./artifacts-events";
 import { kCurrentWorker } from "./current-worker";
 import type { Request, Response } from "../http";
 import type {
@@ -730,6 +734,12 @@ export const InstanceOptionsSchema = z.strictObject({
 	resourceTmpPath: z.string().optional(),
 
 	unsafeEnableSharedStorage: z.boolean().optional(),
+
+	/** Queues receiving events from local Artifacts namespaces. */
+	artifactsEventSubscriptions: z
+		.custom<ArtifactsEventSubscription[]>()
+		.pipe(z.array(ArtifactsEventSubscriptionSchema))
+		.optional(),
 
 	/** Enable cross-process Worker discovery and shared storage coordination. */
 	enableDevRegistry: z.boolean().default(true),

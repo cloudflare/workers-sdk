@@ -2403,10 +2403,11 @@ const validateTriggers: ValidatorFn = (
 					)) {
 						if (
 							(filterName !== "namespace" && filterName !== "repo_name") ||
-							typeof filterValue !== "string"
+							typeof filterValue !== "string" ||
+							filterValue.length === 0
 						) {
 							diagnostics.errors.push(
-								`Expected "${eventFieldName}.filter" to contain only string "namespace" and "repo_name" fields, but got ${JSON.stringify(event.filter)}.`
+								`Expected "${eventFieldName}.filter" to contain only non-empty string "namespace" and "repo_name" fields, but got ${JSON.stringify(event.filter)}.`
 							);
 							isValid = false;
 							break;

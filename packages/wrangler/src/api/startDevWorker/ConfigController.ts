@@ -354,7 +354,18 @@ async function resolveTriggers(
 				: {}),
 		})) ?? [];
 
-	return [...devRoutes, ...queueConsumers, ...crons, ...connectHandlers];
+	const artifactsEvents =
+		config.triggers.events?.map<Extract<Trigger, { type: "artifacts-event" }>>(
+			(event) => ({ type: "artifacts-event", event })
+		) ?? [];
+
+	return [
+		...devRoutes,
+		...queueConsumers,
+		...crons,
+		...connectHandlers,
+		...artifactsEvents,
+	];
 }
 
 async function resolveConfig(

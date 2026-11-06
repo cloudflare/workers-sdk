@@ -1,18 +1,44 @@
+import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { createServer } from "node:https";
 import path from "node:path";
 import { promisify } from "node:util";
-import { Miniflare } from "miniflare";
-import { test } from "vitest";
+import { Miniflare, Response } from "miniflare";
+import { test, vi } from "vitest";
 import { gitEnvironment } from "../../../src/plugins/artifacts/git-client";
 import { repositoryPath } from "../../../src/plugins/artifacts/storage";
 import { singleModuleManifest, useTmp } from "../../test-shared";
+import type {
+	ArtifactsEventMessage,
+	ArtifactsEventType,
+	Request,
+} from "miniflare";
 
 const exec = promisify(execFile);
+type Delivery = { via: "queue" | "workflow"; message: ArtifactsEventMessage };
 const WORKER = `
+import { WorkflowEntrypoint } from "cloudflare:workers";
+export class OnEvent extends WorkflowEntrypoint {
+  async run(event, step) {
+    await step.do("report", async () => {
+      await this.env.REPORTER.fetch("http://reporter/workflow", {
+        method: "POST", body: JSON.stringify(event.payload),
+      });
+      return "reported";
+    });
+  }
+}
 export default {
+  async queue(batch, env) {
+    for (const message of batch.messages) {
+      await env.REPORTER.fetch("http://reporter/queue", {
+        method: "POST", body: JSON.stringify(message.body),
+      });
+      message.ack();
+    }
+  },
   async fetch(request, env) {
     const { method, name, args = [] } = await request.json();
     try {
@@ -257,7 +283,8 @@ async function withFixture(
 		commits: Awaited<ReturnType<typeof makeSource>>;
 		directory: string;
 	}) => Promise<void>,
-	trust = true
+	trust = true,
+	events?: { repoEvent: ArtifactsEventType; delivered: Delivery[] }
 ) {
 	const directory = await useTmp();
 	const commits = await makeSource(directory);
@@ -275,18 +302,72 @@ async function withFixture(
 		mf = new Miniflare({
 			cf: false,
 			resourcePersistencePath: path.join(directory, "persist"),
+			artifactsEventSubscriptions: events && [
+				{
+					queue: "events",
+					source: { type: "artifacts" },
+					events: [events.repoEvent],
+				},
+				{
+					queue: "events",
+					source: {
+						type: "artifacts.repo",
+						namespace: "https-import",
+						repoName: "target",
+					},
+					events: ["cf.artifacts.repo.token.created"],
+				},
+			],
 			workers: [
 				{
 					config: {
 						name: "",
 						compatibilityDate: "2026-09-03",
 						env: {
+							...(events && {
+								ON_EVENT: {
+									type: "workflow" as const,
+									name: "on-event",
+									worker: "",
+									exportName: "OnEvent",
+								},
+								REPORTER: {
+									type: "fetcher" as const,
+									handler: async (request: Request) => {
+										events.delivered.push({
+											via: new URL(request.url).pathname.slice(
+												1
+											) as Delivery["via"],
+											message: (await request.json()) as ArtifactsEventMessage,
+										});
+										return new Response();
+									},
+								},
+							}),
 							REPOS: {
 								type: "artifacts",
 								namespace: "https-import",
 								dev: { remote: false },
 							},
 						},
+						triggers: events && [
+							{ type: "queue", name: "events", maxBatchTimeout: 0 },
+							...(
+								[events.repoEvent, "cf.artifacts.repo.token.created"] as const
+							).map((eventType) => ({
+								type: "artifacts-event" as const,
+								eventType,
+								filter: {
+									namespace: "https-import",
+									...(eventType === "cf.artifacts.repo.token.created"
+										? { repoName: "target" }
+										: {}),
+								},
+								targets: [
+									{ type: "workflow" as const, workflowName: "on-event" },
+								],
+							})),
+						],
 						manifest: singleModuleManifest(WORKER),
 					},
 				},
@@ -312,6 +393,88 @@ function restoreCA(value: string | undefined): void {
 		process.env.GIT_SSL_CAINFO = value;
 	}
 }
+
+test.for([
+	{ operation: "create", repoEvent: "cf.artifacts.repo.created" },
+	{ operation: "import", repoEvent: "cf.artifacts.repo.imported" },
+	{ operation: "fork", repoEvent: "cf.artifacts.repo.forked" },
+] as const)(
+	"$operation publishes its initial token to queues and Workflows only after success",
+	async ({ operation, repoEvent }, { expect }) => {
+		const delivered: Delivery[] = [];
+		await withFixture(
+			async ({ mf, fixture }) => {
+				if (operation === "fork") {
+					expect((await call(mf, "create", ["source"])).ok).toBe(true);
+				}
+				const args =
+					operation === "import"
+						? [
+								importOptions(
+									fixture.url.replace(
+										"https://",
+										"https://reader:correct-password@"
+									),
+									"target"
+								),
+							]
+						: ["target"];
+				const name = operation === "fork" ? "source" : undefined;
+				const result = await call(mf, operation, args, name);
+				expect(result.ok).toBe(true);
+				const created = result.body as { token: string };
+				const listed = (await call(mf, "listTokens", [], "target")).body as {
+					total: number;
+					tokens: { id: string; scope: string; expiresAt: string }[];
+				};
+				expect(listed.total).toBe(1);
+				const [initialToken] = listed.tokens;
+				await vi.waitFor(() => expect(delivered).toHaveLength(4), {
+					timeout: 5_000,
+				});
+				for (const via of ["queue", "workflow"] as const) {
+					const messages = delivered
+						.filter((delivery) => delivery.via === via)
+						.map(({ message }) => message);
+					expect(messages.map(({ type }) => type).sort()).toEqual(
+						[repoEvent, "cf.artifacts.repo.token.created"].sort()
+					);
+					const token = messages.find(
+						({ type }) => type === "cf.artifacts.repo.token.created"
+					);
+					const repo = messages.find(({ type }) => type === repoEvent);
+					expect(token).toMatchObject({
+						source: { namespace: "https-import", repoName: "target" },
+						payload: {
+							tokenId: initialToken.id,
+							scope: initialToken.scope,
+							expiresAt: initialToken.expiresAt,
+						},
+					});
+					// Publication order is reflected by timestamps, not arrival order.
+					assert(token && repo);
+					expect(
+						Date.parse(token.metadata.eventTimestamp)
+					).toBeGreaterThanOrEqual(Date.parse(repo.metadata.eventTimestamp));
+				}
+				expect(JSON.stringify(delivered)).not.toContain(created.token);
+				// The plaintext returned by the operation identifies the published token.
+				expect(
+					(await call(mf, "revokeToken", [created.token], "target")).body
+				).toBe(true);
+				expect((await call(mf, "listTokens", [], "target")).body).toMatchObject(
+					{ total: 0 }
+				);
+				// A duplicate target fails without creating a token or publishing either event.
+				expect((await call(mf, operation, args, name)).ok).toBe(false);
+				await new Promise((resolve) => setTimeout(resolve, 200));
+				expect(delivered).toHaveLength(4);
+			},
+			true,
+			{ repoEvent, delivered }
+		);
+	}
+);
 
 test("HTTPS import: credentials never follow a Git redirect", async ({
 	expect,

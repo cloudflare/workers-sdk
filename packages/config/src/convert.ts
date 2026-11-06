@@ -995,6 +995,7 @@ function convertTriggers(
 	}
 
 	const crons: string[] = [];
+	const events: NonNullable<NonNullable<RawConfig["triggers"]>["events"]> = [];
 	const routes: NonNullable<RawConfig["routes"]> = result.routes
 		? [...result.routes]
 		: [];
@@ -1008,6 +1009,24 @@ function convertTriggers(
 
 	for (const trigger of triggers) {
 		switch (trigger.type) {
+			case "artifacts-event": {
+				events.push({
+					type: trigger.eventType,
+					...(trigger.filter === undefined
+						? {}
+						: {
+								filter: omitUndefined({
+									namespace: trigger.filter.namespace,
+									repo_name: trigger.filter.repoName,
+								}),
+							}),
+					targets: trigger.targets.map(({ workflowName }) => ({
+						type: "workflow",
+						workflow_name: workflowName,
+					})),
+				});
+				break;
+			}
 			case "email": {
 				addresses ??= [];
 				addresses.push(...trigger.addresses);
@@ -1061,8 +1080,11 @@ function convertTriggers(
 		}
 	}
 
-	if (crons.length) {
-		result.triggers = { crons };
+	if (crons.length || events.length) {
+		result.triggers = {
+			...(crons.length ? { crons } : {}),
+			...(events.length ? { events } : {}),
+		};
 	}
 	if (routes.length) {
 		result.routes = routes;

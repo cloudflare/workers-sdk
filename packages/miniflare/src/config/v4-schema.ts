@@ -1,3 +1,4 @@
+import { ArtifactsEventTriggerSchema } from "@cloudflare/config";
 import {
 	AssetConfigSchema,
 	RouterConfigSchema,
@@ -8,6 +9,7 @@ import {
 	TlsOptions_Version,
 } from "../runtime/config/workerd";
 import { Log } from "../shared";
+import { ArtifactsEventSubscriptionSchema } from "./artifacts-events";
 import { kCurrentWorker } from "./current-worker";
 import type { Request, Response } from "../http";
 import type { Miniflare } from "../index";
@@ -15,6 +17,8 @@ import type { RemoteProxyConnectionString } from "../plugins/shared";
 import type { Json } from "../shared";
 import type { WorkerRegistry } from "../shared/dev-registry-types";
 import type { Awaitable } from "../workers";
+import type { ArtifactsEventSubscription } from "./artifacts-events";
+import type { ArtifactsEventTriggerOptions } from "@cloudflare/config";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 import type * as http from "node:http";
 
@@ -27,6 +31,9 @@ export interface V4WorkerdStructuredLog {
 	level: string;
 	message: string;
 }
+
+/** Starts a Workflow when local Artifacts publishes an event. */
+export type V4ArtifactsEventTrigger = ArtifactsEventTriggerOptions;
 
 export type V4FetchHandler = (
 	request: Request,
@@ -376,6 +383,9 @@ const V4WorkerOptionsShapeSchema = z.object({
 	unsafeInspectorProxy: z.boolean().optional(),
 	routes: z.array(z.string()).optional(),
 	cronTriggers: z.array(z.string()).optional(),
+	artifactsEventTriggers: z
+		.array(ArtifactsEventTriggerSchema.omit({ type: true }))
+		.optional(),
 	bindings: z.record(z.string(), JsonSchema).optional(),
 	/** WASM binding file paths; string values are relative to `rootPath` if not absolute. */
 	wasmBindings: z
@@ -704,6 +714,9 @@ export const V4SharedOptionsSchema = z.object({
 	isolatedResourcePersistencePath: z.string().optional(),
 	/** Project temp directory for plugin files; relative to cwd if not absolute. */
 	resourceTmpPath: z.string().optional(),
+	artifactsEventSubscriptions: z
+		.array(ArtifactsEventSubscriptionSchema)
+		.optional(),
 	stripDisablePrettyError: z.boolean().default(true),
 	telemetry: z
 		.object({
@@ -822,6 +835,7 @@ export type V4WorkerOptionsShape = {
 	unsafeInspectorProxy?: boolean;
 	routes?: string[];
 	cronTriggers?: string[];
+	artifactsEventTriggers?: V4ArtifactsEventTrigger[];
 	bindings?: Record<string, Json>;
 	wasmBindings?: Record<string, string | Uint8Array>;
 	textBlobBindings?: Record<string, string>;
@@ -1026,6 +1040,7 @@ export type V4SharedOptions = {
 	resourcePersistencePath?: string;
 	isolatedResourcePersistencePath?: string;
 	resourceTmpPath?: string;
+	artifactsEventSubscriptions?: ArtifactsEventSubscription[];
 	stripDisablePrettyError?: boolean;
 	telemetry?: { enabled?: boolean; deviceId?: string };
 	publicUrl?: string;

@@ -3,6 +3,34 @@
 // Named types and helper factories for declaring event triggers.
 // ═══════════════════════════════════════════════════════════════════════════
 
+/** Event types Artifacts publishes to subscriptions. */
+export const ARTIFACTS_EVENT_TYPES = [
+	"cf.artifacts.repo.created",
+	"cf.artifacts.repo.deleted",
+	"cf.artifacts.repo.forked",
+	"cf.artifacts.repo.imported",
+	"cf.artifacts.repo.pushed",
+	"cf.artifacts.repo.cloned",
+	"cf.artifacts.repo.fetched",
+	"cf.artifacts.repo.token.created",
+	"cf.artifacts.repo.token.revoked",
+] as const;
+
+/** A published Artifacts event type. */
+export type ArtifactsEventType = (typeof ARTIFACTS_EVENT_TYPES)[number];
+
+/** Options for starting this Worker's Workflows from Artifacts events. */
+export interface ArtifactsEventTriggerOptions {
+	eventType: ArtifactsEventType;
+	filter?: { namespace?: string; repoName?: string };
+	targets: { type: "workflow"; workflowName: string }[];
+}
+
+/** Starts a Workflow owned by this Worker when an Artifacts event matches. */
+export interface ArtifactsEventTrigger extends ArtifactsEventTriggerOptions {
+	type: "artifacts-event";
+}
+
 export interface FetchTriggerOptions {
 	/**
 	 * A route that your Worker should be published to.
@@ -129,11 +157,14 @@ export type ConnectTrigger = ConnectTriggerOptions & { type: "connect" };
  * Event triggers — fetch routes, queue consumers, cron schedules, Email
  * Routing addresses, and raw sockets — that invoke this Worker.
  * Construct entries with `triggers.fetch(...)`, `triggers.queue(...)`,
- * `triggers.scheduled(...)`, `triggers.email(...)`, or `triggers.connect(...)`.
+ * `triggers.scheduled(...)`, `triggers.email(...)`, `triggers.connect(...)`,
+ * or `triggers.artifactsEvent(...)`.
  *
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#triggers
  */
 export interface Triggers {
+	/** Starts this Worker's Workflows from matching Artifacts events. */
+	artifactsEvent(options: ArtifactsEventTriggerOptions): ArtifactsEventTrigger;
 	/**
 	 * Fetch trigger — a route that your Worker should be published to.
 	 *
@@ -190,6 +221,7 @@ export interface Triggers {
  * ```
  */
 export const triggers: Triggers = {
+	artifactsEvent: (options) => ({ type: "artifacts-event", ...options }),
 	fetch: (options) => ({ type: "fetch", ...options }),
 	queue: (options) => ({ type: "queue", ...options }),
 	scheduled: (options) => ({ type: "scheduled", ...options }),

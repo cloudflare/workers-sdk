@@ -76,7 +76,9 @@ import {
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	WORKFLOWS_PLUGIN_NAME,
 } from "./plugins";
+import { getLocalArtifactsNamespaceNames } from "./plugins/artifacts";
 import { ArtifactsController } from "./plugins/artifacts/controller";
+import { getArtifactsEventSubscriptions } from "./plugins/artifacts/events";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
 import { BROWSER_VERSION } from "./plugins/browser-rendering/browser-version";
 import { closeBrowserProcess } from "./plugins/browser-rendering/process";
@@ -2038,11 +2040,34 @@ export class Miniflare {
 		const workflowExporters = getWorkflowExporters(allWorkerOpts);
 		const queueProducers = getQueueProducers(allWorkerOpts);
 		const queueConsumers = getQueueConsumers(allWorkerOpts);
+		const artifactsEventSubscriptions = getArtifactsEventSubscriptions(
+			allWorkerOpts,
+			sharedOpts
+		);
+		if (
+			artifactsEventSubscriptions.length > 0 &&
+			!allWorkerOpts.some(
+				({ config, dev }) =>
+					getLocalArtifactsNamespaceNames(
+						getEnvBindingsOfType(config, "artifacts"),
+						dev
+					).size > 0
+			)
+		) {
+			this.#log.warn(
+				"Artifacts event subscriptions only receive local events, but this instance has no local Artifacts namespace. Set remote: false on an Artifacts binding in wrangler.jsonc (dev: { remote: false } in native config)."
+			);
+		}
 		// When the dev registry is enabled, queue brokers bind to the dev-registry
 		// proxy so they can deliver to consumers in other `wrangler dev` processes
 		// (see `ExternalQueueProxy`), so the proxy worker must exist whenever
 		// there are queues.
-		const hasQueues = queueProducers.size > 0 || queueConsumers.size > 0;
+		const hasQueues =
+			queueProducers.size > 0 ||
+			queueConsumers.size > 0 ||
+			artifactsEventSubscriptions.some(
+				({ destination }) => destination.type === "queue"
+			);
 		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts);
 		const workerNames = [...allWorkerRoutes.keys()];
 
@@ -2197,6 +2222,7 @@ export class Miniflare {
 				containerPrivilegesCache: this.#containerPrivilegesCache,
 				hyperdriveProxyController: this.#hyperdriveProxyController,
 				artifactsController: this.#artifactsController,
+				artifactsEventSubscriptions,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {
 				const pluginServicesExtensions = await plugin.getServices({
@@ -3978,6 +4004,7 @@ export {
 export { convertV4MiniflareOptions } from "./config/v4-convert";
 export { resolveLocalBindings } from "./config/local-bindings";
 export type { ResolveLocalBindingsOptions } from "./config/local-bindings";
+export type { ArtifactsEventSubscription } from "./config/artifacts-events";
 export type {
 	MiniflareOptions,
 	WorkerOptions,
@@ -3987,6 +4014,7 @@ export type {
 	InstanceOptions,
 } from "./config/schema";
 export type {
+	V4ArtifactsEventTrigger,
 	V4DurableObject,
 	V4FetchHandler,
 	V4IdEntry,

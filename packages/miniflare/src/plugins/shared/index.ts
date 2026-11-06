@@ -23,6 +23,7 @@ import type {
 	QueueProducerSchema,
 } from "../../workers";
 import type { ArtifactsController } from "../artifacts/controller";
+import type { ArtifactsEventSubscriptionRoute } from "../artifacts/events";
 import type { ContainerPrivilegesCache } from "../core/container";
 import type { DOContainerOptions } from "../do";
 import type { HyperdriveProxyController } from "../hyperdrive/hyperdrive-proxy";
@@ -91,6 +92,7 @@ export interface PluginServicesOptions {
 	containerPrivilegesCache: ContainerPrivilegesCache;
 	hyperdriveProxyController: HyperdriveProxyController;
 	artifactsController: ArtifactsController;
+	artifactsEventSubscriptions: ArtifactsEventSubscriptionRoute[];
 }
 
 export interface ServicesExtensions {

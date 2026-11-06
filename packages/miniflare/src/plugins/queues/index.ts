@@ -46,6 +46,7 @@ export const QUEUES_PLUGIN: Plugin = {
 	},
 	async getServices({
 		options,
+		sharedOptions,
 		workerNames,
 		queueProducers: allQueueProducers,
 		queueConsumers: allQueueConsumers,
@@ -58,7 +59,11 @@ export const QUEUES_PLUGIN: Plugin = {
 		const consumed = getTriggersOfType(options.config, "queue").map(
 			(trigger) => trigger.name
 		);
-		const queueIds = new Set([...produced, ...consumed]);
+		// Local Artifacts publishes subscribed events into these queues.
+		const subscribed = (sharedOptions.artifactsEventSubscriptions ?? []).map(
+			(subscription) => subscription.queue
+		);
+		const queueIds = new Set([...produced, ...consumed, ...subscribed]);
 		if (queueIds.size === 0) {
 			return [];
 		}
@@ -67,7 +72,6 @@ export const QUEUES_PLUGIN: Plugin = {
 			name: getQueueServiceName(id),
 			worker: objectEntryWorker(QUEUE_BROKER_OBJECT, id),
 		}));
-
 		const uniqueKey = `miniflare-${QUEUE_BROKER_OBJECT_CLASS_NAME}`;
 		const objectService: Service = {
 			name: SERVICE_QUEUE_PREFIX,
