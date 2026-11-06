@@ -1323,6 +1323,8 @@ export interface EnvironmentNonInheritable {
 		database_name?: string;
 		/** The UUID of this D1 database (not required). */
 		database_id?: string;
+		/** The jurisdiction where an automatically provisioned D1 database will be created. */
+		jurisdiction?: string;
 		/** The UUID of this D1 database for Wrangler Dev (if specified). */
 		preview_database_id?: string;
 		/** The name of the migrations table for this D1 database (defaults to 'd1_migrations'). */
@@ -1961,6 +1963,16 @@ export type ConfigModuleRuleType =
 	| "Data"
 	| "PythonModule"
 	| "PythonRequirement";
+
+/**
+ * The rules applied after a Worker's own `rules`, so these modules can be
+ * imported without configuring them.
+ */
+export const DEFAULT_MODULE_RULES: Rule[] = [
+	{ type: "Text", globs: ["**/*.txt", "**/*.html", "**/*.sql"] },
+	{ type: "Data", globs: ["**/*.bin"] },
+	{ type: "CompiledWasm", globs: ["**/*.wasm", "**/*.wasm?module"] },
+];
 
 export type TailConsumer = {
 	/** The name of the service tail events will be forwarded to. */

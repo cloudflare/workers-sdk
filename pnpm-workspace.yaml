@@ -63,6 +63,8 @@ allowBuilds:
   # still pulls in sharp@0.34.x transitively (via published miniflare), which does.
   # Remove once that pin uses a published miniflare built on sharp 0.35+.
   sharp: true
+  # Optional Miniflare peer used for Negotiate/SPNEGO proxy authentication.
+  kerberos: true
   playwright-chromium: true
   prisma: true
   # Explicitly silence warnings for packages whose postinstall scripts are not
@@ -84,6 +86,30 @@ overrides:
   "@cloudflare/elements>@types/react": "^18"
   "@types/node": "$@types/node"
   "@types/node>undici-types": "catalog:default"
+  # Security fixes for brace-expansion (Dependabot alerts). Every parent in the
+  # tree (minimatch 5/7/9 and 10) still asks for ^2.0.1 or ^5.0.5, so a parent
+  # bump would not move it. These are scoped to the existing major lines.
+  # Remove once no dependency resolves brace-expansion below 2.1.7 or 5.0.12.
+  "brace-expansion@2": "^2.1.7"
+  "brace-expansion@5": "^5.0.12"
+  # Security fix for shell-quote (Dependabot alert). concurrently 8.2.2 is the
+  # last 8.x release and asks for ^1.8.1, which locks 1.10.0. Remove once
+  # nothing depends on concurrently 8.
+  "concurrently@8>shell-quote": "^1.11.0"
+  # Security fixes for fast-xml-parser (Dependabot alerts). @aws-sdk/core 3.716
+  # pins exactly 4.4.1. Remove once @aws-sdk/client-s3 is bumped past it.
+  "@aws-sdk/core@3>fast-xml-parser": "^4.5.5"
+  # Security fixes for lodash (Dependabot alerts). @microsoft/api-extractor asks
+  # for ~4.17.15 and verdaccio pins exactly 4.17.21, so neither can reach 4.18.
+  # Remove once no dependency resolves lodash below 4.18.1.
+  "lodash@<4.18.1": "^4.18.1"
+  # Miniflare provides @puppeteer/browsers' optional proxy-agent peer so browser
+  # downloads respect proxy configuration, then bundles that dependency graph into
+  # its published output. Override proxy-agent's socks > ip-address and
+  # pac-proxy-agent > get-uri > basic-ftp paths so the bundled copies include the
+  # upstream security fixes, which consumer dependency audits cannot otherwise see.
+  "get-uri>basic-ftp": "6.2.1"
+  "socks-proxy-agent>socks": "2.8.10"
 
 peerDependencyRules:
   allowedVersions:
@@ -122,10 +148,10 @@ catalog:
   vite: "8.3.4"
   "ws": "8.21.0"
   esbuild: "0.28.2"
-  "@playwright/test": "1.60.0"
-  playwright-chromium: "1.60.0"
-  "@cloudflare/workers-types": "^5.20261023.1"
-  workerd: "1.20261023.1"
+  "@playwright/test": "1.61.0"
+  playwright-chromium: "1.61.0"
+  "@cloudflare/workers-types": "^5.20261106.1"
+  workerd: "1.20261106.1"
   jsonc-parser: "3.2.0"
   smol-toml: "1.9.0"
   msw: "2.14.6"

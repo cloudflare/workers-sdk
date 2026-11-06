@@ -95,6 +95,7 @@ export function addShortcuts(
 					isMultiWorker: workerConfigs.length > 1,
 					name: workerConfig.name ?? "Your Worker",
 					registry: getWorkerRegistry(registryPath),
+					remoteBindingsDisabled: !ctx.resolvedPluginConfig.remoteBindings,
 					log: (message) => viteServer.config.logger.info(message),
 				});
 			}

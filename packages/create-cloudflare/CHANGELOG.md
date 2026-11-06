@@ -1,5 +1,101 @@
 # create-cloudflare
 
+## 2.74.9
+
+### Patch Changes
+
+- [#16700](https://github.com/cloudflare/workers-sdk/pull/16700) [`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195) Thanks [@cjol](https://github.com/cjol)! - Bump bundled `brace-expansion` to pick up security fixes
+
+  These packages bundle `brace-expansion` (a dependency of `minimatch`), and the bundled versions were affected by published advisories. The bundles now include `brace-expansion` 2.1.7 (from 2.0.1) and 5.0.12 (from 5.0.5). Normal glob patterns expand as before; only the pathological patterns targeted by the advisories are handled differently.
+
+- [#16700](https://github.com/cloudflare/workers-sdk/pull/16700) [`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195) Thanks [@cjol](https://github.com/cjol)! - Bump bundled `degit` from 2.8.4 to 2.8.6 to pick up a security fix
+
+  `degit` is bundled into create-cloudflare, which uses it to download remote templates. Version 2.8.4 is affected by a published advisory, and 2.8.6 includes the fix. Template downloads work as before.
+
+- [#16700](https://github.com/cloudflare/workers-sdk/pull/16700) [`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195) Thanks [@cjol](https://github.com/cjol)! - Bump bundled `minimatch` from 5.1.6 to 5.1.9 to pick up security fixes
+
+  These packages bundle `minimatch`, and 5.1.6 is affected by published ReDoS advisories. Version 5.1.9 includes the fixes. 5.1.8 is skipped because it broke recursive `**` matching, which D1's `migrations_pattern` relies on.
+
+- [#16695](https://github.com/cloudflare/workers-sdk/pull/16695) [`b2061f4`](https://github.com/cloudflare/workers-sdk/commit/b2061f40f812d8888b461f68506552b58f8e468b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-04
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+## 2.74.8
+
+### Patch Changes
+
+- [#16670](https://github.com/cloudflare/workers-sdk/pull/16670) [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-03
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+## 2.74.7
+
+### Patch Changes
+
+- [#16616](https://github.com/cloudflare/workers-sdk/pull/16616) [`a9cf9b9`](https://github.com/cloudflare/workers-sdk/commit/a9cf9b962081ee1a15f9e660f4a87d670269c6c6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 9.3.1 | 9.3.3 |
+
+- [#16617](https://github.com/cloudflare/workers-sdk/pull/16617) [`be0570f`](https://github.com/cloudflare/workers-sdk/commit/be0570f8ab1a0d1abd8df87065cc6369dd8458c5) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 8.5.0 | 8.5.1 |
+
+- [#16618](https://github.com/cloudflare/workers-sdk/pull/16618) [`b359dd7`](https://github.com/cloudflare/workers-sdk/commit/b359dd7c3ec3d8eb9c5e126125e51891b8bd7171) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.9.2 | 2.9.3 |
+
+- [#16619](https://github.com/cloudflare/workers-sdk/pull/16619) [`bb3145f`](https://github.com/cloudflare/workers-sdk/commit/bb3145feb6f875e62207cd9862ef2bdeb06dc7ce) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.2.4 | 22.2.5 |
+
+- [#16620](https://github.com/cloudflare/workers-sdk/pull/16620) [`4ecb1b0`](https://github.com/cloudflare/workers-sdk/commit/4ecb1b0a76aa1a8ab46db851188719ae9472b4c7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.687 | 0.0.690 |
+
+- [#16621](https://github.com/cloudflare/workers-sdk/pull/16621) [`a073bdb`](https://github.com/cloudflare/workers-sdk/commit/a073bdb1e0e01ff5631d7c279d0b22d427fa10cd) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.20.2 | 1.20.3 |
+
+- [#16642](https://github.com/cloudflare/workers-sdk/pull/16642) [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-02
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+## 2.74.6
+
+### Patch Changes
+
+- [#16635](https://github.com/cloudflare/workers-sdk/pull/16635) [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-01
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16524](https://github.com/cloudflare/workers-sdk/pull/16524) [`3819800`](https://github.com/cloudflare/workers-sdk/commit/38198002a3ae331d214b2bc78c6574275203f3ed) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Preserve accounts with duplicate display names during account selection
+
+  Create Cloudflare now keeps accounts by their IDs and includes each ID in the selection prompt, so accounts with the same name remain distinct choices. This applies to both Wrangler and cf projects.
+
 ## 2.74.5
 
 ### Patch Changes

@@ -1,20 +1,19 @@
-import { execSync } from "child_process";
-import { randomUUID } from "crypto";
+import { execSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-/* eslint-disable workers-sdk/no-vitest-import-expect -- uses expect in helper functions and beforeAll */
 import {
 	afterAll,
 	assert,
 	beforeAll,
+	beforeEach,
 	describe,
-	expect,
 	test,
 	vi,
 } from "vitest";
-/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { getPlatformProxy } from "wrangler";
 import type { KVNamespace } from "@cloudflare/workers-types/experimental";
 import type { DispatchFetch, Response } from "miniflare";
+import type { ExpectStatic } from "vitest";
 
 type Fetcher = { fetch: DispatchFetch };
 
@@ -47,7 +46,7 @@ if (auth) {
 				await vi.waitFor(
 					async () => {
 						const response = await fetch(deployedUrl);
-						expect(response.status).toBe(200);
+						assert.equal(response.status, 200);
 					},
 					{ timeout: 5000, interval: 500 }
 				);
@@ -64,7 +63,7 @@ if (auth) {
 				await vi.waitFor(
 					async () => {
 						const response = await fetch(stagingDeployedUrl);
-						expect(response.status).toBe(200);
+						assert.equal(response.status, 200);
 					},
 					{ timeout: 5000, interval: 500 }
 				);
@@ -157,7 +156,10 @@ if (auth) {
 				);
 			});
 
-			test("getPlatformProxy works with remote bindings", async () => {
+			test("getPlatformProxy works with remote bindings", async ({
+				expect,
+				onTestFinished,
+			}) => {
 				vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", auth.CLOUDFLARE_ACCOUNT_ID);
 				vi.stubEnv("CLOUDFLARE_API_TOKEN", auth.CLOUDFLARE_API_TOKEN);
 
@@ -167,20 +169,22 @@ if (auth) {
 				}>({
 					configPath: "./.tmp/normal-usage/wrangler.json",
 				});
+				onTestFinished(dispose);
 
-				const response = await fetchFromWorker(env.MY_WORKER, "OK");
-				const workerText = await response?.text();
+				const response = await fetchFromWorker(expect, env.MY_WORKER, "OK");
+				const workerText = await response.text();
 				expect(workerText).toEqual(
 					"Hello from a remote Worker part of the getPlatformProxy remote bindings fixture!"
 				);
 
 				const kvValue = await env.MY_KV.get("test-key");
 				expect(kvValue).toEqual("remote-kv-value");
-
-				await dispose();
 			});
 
-			test("getPlatformProxy works with remote bindings specified in an environment", async () => {
+			test("getPlatformProxy works with remote bindings specified in an environment", async ({
+				expect,
+				onTestFinished,
+			}) => {
 				vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", auth.CLOUDFLARE_ACCOUNT_ID);
 				vi.stubEnv("CLOUDFLARE_API_TOKEN", auth.CLOUDFLARE_API_TOKEN);
 				const { env, dispose } = await getPlatformProxy<{
@@ -190,9 +194,10 @@ if (auth) {
 					configPath: "./.tmp/normal-usage/wrangler.json",
 					environment: "staging",
 				});
+				onTestFinished(dispose);
 
 				const workerText = await (
-					await env.MY_WORKER.fetch("http://example.com")
+					await fetchFromWorker(expect, env.MY_WORKER, "OK")
 				).text();
 				expect(workerText).toEqual(
 					"Hello from a remote Worker, defined for the staging environment, part of the getPlatformProxy remote bindings fixture!"
@@ -200,17 +205,19 @@ if (auth) {
 
 				const kvValue = await env.MY_KV.get("test-key");
 				expect(kvValue).toEqual("remote-kv-value");
-
-				await dispose();
 			});
 		});
 
 		describe("account id taken from the wrangler config", () => {
-			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
-			vi.stubEnv("CLOUDFLARE_API_TOKEN", auth.CLOUDFLARE_API_TOKEN);
+			beforeEach(() => {
+				vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
+				vi.stubEnv("CLOUDFLARE_API_TOKEN", auth.CLOUDFLARE_API_TOKEN);
+			});
 
-			test("usage with a wrangler config file with an invalid account id", async () => {
-				mkdirSync("./.tmp/config-with-invalid-account-id");
+			test("usage with a wrangler config file with an invalid account id", async ({
+				expect,
+			}) => {
+				mkdirSync("./.tmp/config-with-invalid-account-id", { recursive: true });
 
 				writeFileSync(
 					"./.tmp/config-with-invalid-account-id/wrangler.json",
@@ -240,12 +247,15 @@ if (auth) {
 						configPath: "./.tmp/config-with-invalid-account-id/wrangler.json",
 					})
 				).rejects.toMatchInlineSnapshot(
-					`[Error: Failed to start the remote proxy session. Error reloading remote server: Invalid account ID "NOT a valid account id" set as \`account_id\` in your Wrangler configuration file. Account IDs may only contain alphanumeric characters, hyphens, and underscores.]`
+					`[Error: Failed to start the remote proxy session. Error reloading remote server: Invalid account ID "NOT a valid account id" set in your Wrangler configuration file. Account IDs may only contain alphanumeric characters, hyphens, and underscores.]`
 				);
 			});
 
-			test("usage with a wrangler config file with a valid account id", async () => {
-				mkdirSync("./.tmp/config-with-no-account-id");
+			test("usage with a wrangler config file with a valid account id", async ({
+				expect,
+				onTestFinished,
+			}) => {
+				mkdirSync("./.tmp/config-with-no-account-id", { recursive: true });
 
 				writeFileSync(
 					"./.tmp/config-with-no-account-id/wrangler.json",
@@ -273,14 +283,13 @@ if (auth) {
 				}>({
 					configPath: "./.tmp/config-with-no-account-id/wrangler.json",
 				});
+				onTestFinished(dispose);
 
-				const response = await fetchFromWorker(env.MY_WORKER, "OK");
-				const workerText = await response?.text();
+				const response = await fetchFromWorker(expect, env.MY_WORKER, "OK");
+				const workerText = await response.text();
 				expect(workerText).toEqual(
 					"Hello from a remote Worker part of the getPlatformProxy remote bindings fixture!"
 				);
-
-				await dispose();
 			});
 		});
 	});
@@ -289,29 +298,30 @@ if (auth) {
 }
 
 /**
- * Tries to fetch from a worker multiple times until a response is returned which matches a specified
- * statusText. Each fetch has a timeout signal making sure that it can't simply get stuck.
+ * Polls a remote Worker until it responds with the expected status text.
+ * Each request has a timeout so a hung connection cannot block polling indefinitely.
  *
- * This utility is used, instead of directly fetching from the Worker in order to prevent flakiness.
- *
+ * @param expect The test context's assertion function.
  * @param worker The Worker to fetch from.
  * @param expectedStatusText The response's expected statusText.
- * @returns The successful Worker's response or null if no such response was obtained.
+ * @param timeout The maximum time to poll, in milliseconds.
+ * @returns The successful Worker's response.
+ * @throws If no matching response is obtained before the timeout.
  */
 async function fetchFromWorker(
+	expect: ExpectStatic,
 	worker: Fetcher,
 	expectedStatusText: string,
 	timeout = 30_000
-): Promise<Response | undefined> {
+): Promise<Response> {
 	return vi.waitFor(
 		async () => {
-			try {
-				const response = await worker.fetch("http://example.com", {
-					signal: AbortSignal.timeout(5_000),
-				});
-				expect(response.statusText).toEqual(expectedStatusText);
-				return response;
-			} catch {}
+			const response = await worker.fetch("http://example.com", {
+				signal: AbortSignal.timeout(5_000),
+			});
+			// waitFor retries rejected callbacks; swallowing errors ends polling early.
+			expect(response.statusText).toEqual(expectedStatusText);
+			return response;
 		},
 		{ timeout, interval: 500 }
 	);

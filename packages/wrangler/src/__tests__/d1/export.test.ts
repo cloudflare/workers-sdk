@@ -107,6 +107,16 @@ describe("export", () => {
 			)
 		);
 
+		// The default d1 compatibility gives the same local export
+		await runWrangler(
+			"d1 export db --output test-data.sql --no-schema --compatibility d1"
+		);
+		expect(fs.readFileSync("test-data.sql", "utf8")).toBe(
+			["PRAGMA defer_foreign_keys=TRUE;", ...insert_foo, ...insert_bar].join(
+				"\n"
+			)
+		);
+
 		// Foo only
 		await runWrangler("d1 export db --output test-data.sql --table foo");
 		expect(fs.readFileSync("test-data.sql", "utf8")).toBe(
@@ -138,6 +148,77 @@ describe("export", () => {
 
 		await runWrangler("d1 export db --remote --output test-remote.sql");
 		expect(fs.readFileSync("test-remote.sql", "utf8")).toBe(mockSqlContent);
+	});
+
+	it("should send the compatibility dump option to the API", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+		msw.use(
+			...getMswSuccessMembershipHandlers([
+				{ id: "some-account-id", name: "test-account" },
+			])
+		);
+		const requestBodies: Record<string, unknown>[] = [];
+		mockResponses(requestBodies);
+		msw.use(
+			http.get("https://example.com/xxxx-yyyy.sql", async () => {
+				return HttpResponse.text("PRAGMA defer_foreign_keys=TRUE;", {
+					status: 200,
+				});
+			})
+		);
+
+		await runWrangler(
+			"d1 export db --remote --output test-remote.sql --compatibility sqlite3_cli_only"
+		);
+
+		expect(requestBodies[0]?.dump_options).toEqual({
+			no_schema: false,
+			no_data: false,
+			tables: [],
+			compatibility: "sqlite3_cli_only",
+		});
+	});
+
+	it("should throw if compatibility sqlite3_cli_only is used for a local export", async ({
+		expect,
+	}) => {
+		await expect(
+			runWrangler(
+				"d1 export db --local --output test-local.sql --compatibility sqlite3_cli_only"
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: --compatibility sqlite3_cli_only is only supported for remote exports. Add the --remote flag.]`
+		);
+	});
+
+	it.for(["--no-schema", "--no-data"])(
+		"should throw if compatibility sqlite3_cli_only is used with %s",
+		async (flag, { expect }) => {
+			await expect(
+				runWrangler(
+					`d1 export db --remote --output test-remote.sql --compatibility sqlite3_cli_only ${flag}`
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Cannot use --no-schema or --no-data with --compatibility sqlite3_cli_only. The SQLite CLI dump always includes the schema and the data.]`
+			);
+		}
+	);
+
+	it("should throw if compatibility has an unknown value", async ({
+		expect,
+	}) => {
+		await expect(
+			runWrangler(
+				"d1 export db --remote --output test-remote.sql --compatibility foo"
+			)
+		).rejects.toThrow("Invalid values");
 	});
 
 	it("should prompt for confirmation when exporting remotely in interactive mode", async ({
@@ -329,7 +410,7 @@ describe("export", () => {
 	});
 });
 
-function mockResponses() {
+function mockResponses(requestBodies?: Record<string, unknown>[]) {
 	msw.use(
 		http.post(
 			"*/accounts/:accountId/d1/database/:databaseId/export",
@@ -341,6 +422,7 @@ function mockResponses() {
 				await setTimeout(10);
 
 				const body = (await request.json()) as Record<string, unknown>;
+				requestBodies?.push(body);
 
 				// First request, initiates a new task
 				if (!body.current_bookmark) {

@@ -1,5 +1,47 @@
 # @cloudflare/config
 
+## 0.30.2
+
+### Patch Changes
+
+- [#16695](https://github.com/cloudflare/workers-sdk/pull/16695) [`b2061f4`](https://github.com/cloudflare/workers-sdk/commit/b2061f40f812d8888b461f68506552b58f8e468b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-04
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+## 0.30.1
+
+### Patch Changes
+
+- [#16670](https://github.com/cloudflare/workers-sdk/pull/16670) [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-03
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+## 0.30.0
+
+### Minor Changes
+
+- [#16424](https://github.com/cloudflare/workers-sdk/pull/16424) [`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72) Thanks [@edmundhung](https://github.com/edmundhung)! - Export `SINGLETON_BINDING_TYPES`
+
+  These are the binding types a Worker can only have one of, for tools that merge bindings from more than one source.
+
+### Patch Changes
+
+- [#16642](https://github.com/cloudflare/workers-sdk/pull/16642) [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-02
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+## 0.29.1
+
+### Patch Changes
+
+- [#16573](https://github.com/cloudflare/workers-sdk/pull/16573) [`91f0e03`](https://github.com/cloudflare/workers-sdk/commit/91f0e03b28790e349d0bd7371fae7b59d755f79d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Reject duplicate Container names and invalid Container links
+
+  Duplicate Container names, references to missing Containers, and multiple Durable Objects linked to the same Container now produce configuration errors before development starts or build output is generated. This also catches invalid Container links introduced by the Vite plugin's `config` customizer.
+
+- [#16635](https://github.com/cloudflare/workers-sdk/pull/16635) [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-01
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
 ## 0.29.0
 
 ### Minor Changes

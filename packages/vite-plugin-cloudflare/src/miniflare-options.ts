@@ -525,7 +525,11 @@ export async function getDevMiniflareOptions(
 											getRemoteBindingsAuth(
 												resolvedViteConfig.root,
 												settings.accountId,
-												createLogger(viteDevServer.config.logger)
+												() =>
+													ctx.getCloudflareAuth(
+														resolvedViteConfig.root,
+														createLogger(viteDevServer.config.logger)
+													)
 											),
 											{
 												cliDisplayName: resolvedPluginConfig.cliDisplayName,
@@ -852,7 +856,11 @@ export async function getPreviewMiniflareOptions(
 						getRemoteBindingsAuth(
 							resolvedViteConfig.root,
 							resolvedPluginConfig.settings.accountId,
-							createLogger(vitePreviewServer.config.logger)
+							() =>
+								ctx.getCloudflareAuth(
+									resolvedViteConfig.root,
+									createLogger(vitePreviewServer.config.logger)
+								)
 						),
 						{
 							cliDisplayName: resolvedPluginConfig.cliDisplayName,

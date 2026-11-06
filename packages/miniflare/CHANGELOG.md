@@ -1,5 +1,176 @@
 # miniflare
 
+## 5.20261104.0-beta
+
+### Minor Changes
+
+- [#16186](https://github.com/cloudflare/workers-sdk/pull/16186) [`f1d81a2`](https://github.com/cloudflare/workers-sdk/commit/f1d81a20c8e535ec7cb870143283f4a683fec70d) Thanks [@leostera](https://github.com/leostera)! - Support local Artifacts across Wrangler, Vite, and Workers Vitest
+
+  Set `remote: false` on an Artifacts binding to opt into the Miniflare simulator and persistent local repositories during development. Omitted `remote` continues to use the deployed resource, with a warning that changes affect real repositories; `remote: true` explicitly selects it. When remote bindings are disabled (`wrangler dev --local`, or Vite's `remoteBindings: false`), Artifacts bindings use the local simulator. Workers Vitest uses the local simulator when `remote` is omitted, so tests do not change real repositories by accident; set `remote: true` to test against the deployed resource. Local development does not require Cloudflare credentials, but does require Git 2.32 or newer on the host.
+
+  In Miniflare's own options, Artifacts bindings route like every other binding: only `dev.remote: true` with a remote proxy connection uses the deployed resource. Wrangler and Vite resolve the deployed-by-default rule, and Workers Vitest its local default, before passing options to Miniflare.
+
+### Patch Changes
+
+- [#16700](https://github.com/cloudflare/workers-sdk/pull/16700) [`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195) Thanks [@cjol](https://github.com/cjol)! - Bump bundled `brace-expansion` to pick up security fixes
+
+  These packages bundle `brace-expansion` (a dependency of `minimatch`), and the bundled versions were affected by published advisories. The bundles now include `brace-expansion` 2.1.7 (from 2.0.1) and 5.0.12 (from 5.0.5). Normal glob patterns expand as before; only the pathological patterns targeted by the advisories are handled differently.
+
+- [#16700](https://github.com/cloudflare/workers-sdk/pull/16700) [`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195) Thanks [@cjol](https://github.com/cjol)! - Bump bundled `devalue` from 5.6.3 to 5.9.3 to pick up security fixes
+
+  `devalue` is bundled into these packages, which use it to serialise values between Node.js and workerd. Version 5.6.3 is affected by several published advisories, and 5.9.3 includes their fixes. Serialisation behaviour does not change.
+
+- [#16700](https://github.com/cloudflare/workers-sdk/pull/16700) [`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195) Thanks [@cjol](https://github.com/cjol)! - Bump bundled `fast-xml-parser` from 4.4.1 to 4.5.5 to pick up security fixes
+
+  Miniflare bundles `fast-xml-parser` into its local R2 S3 API, and Wrangler bundles it through the AWS SDK used by `wrangler pipelines`. Version 4.4.1 is affected by several published advisories, and 4.5.5 includes their fixes. XML handling does not change.
+
+- [#16700](https://github.com/cloudflare/workers-sdk/pull/16700) [`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195) Thanks [@cjol](https://github.com/cjol)! - Bump bundled `hono` from 4.12.5 to 4.13.11 to pick up security fixes
+
+  `hono` is bundled into Miniflare, and 4.12.5 is affected by several published advisories. Version 4.13.11 includes their fixes. Miniflare's own behaviour does not change.
+
+- [#16700](https://github.com/cloudflare/workers-sdk/pull/16700) [`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195) Thanks [@cjol](https://github.com/cjol)! - Bump bundled `minimatch` from 5.1.6 to 5.1.9 to pick up security fixes
+
+  These packages bundle `minimatch`, and 5.1.6 is affected by published ReDoS advisories. Version 5.1.9 includes the fixes. 5.1.8 is skipped because it broke recursive `**` matching, which D1's `migrations_pattern` relies on.
+
+- [#16686](https://github.com/cloudflare/workers-sdk/pull/16686) [`b8387a5`](https://github.com/cloudflare/workers-sdk/commit/b8387a50d360b97538c051f4db776261507b84b3) Thanks [@FlorentCollin](https://github.com/FlorentCollin)! - Skip D1 comment-only statements that start at offset 0
+
+  Local D1 skipped a comment-only statement only when whitespace came before the `--`. A statement such as `-- comment` at offset 0 failed with "SQL code did not contain a statement." Local D1 now skips these statements, as remote D1 does.
+
+- [#16687](https://github.com/cloudflare/workers-sdk/pull/16687) [`4cde694`](https://github.com/cloudflare/workers-sdk/commit/4cde694bc7ad24d215dcc955501cca1934512658) Thanks [@FlorentCollin](https://github.com/FlorentCollin)! - Stop local D1 reads outside sessions from writing to the database file
+
+  Before, local D1 stored a new session bookmark for each query. Thus, each `SELECT` committed a write transaction with a WAL append and an fsync. Now, local D1 gets a bookmark only when the request has a session bookmark or constraint. Requests from a `withSession()` session and `query()` calls with a `bookmark` have one. Other queries do not get a bookmark. Production D1 operates in the same way.
+
+- [#16695](https://github.com/cloudflare/workers-sdk/pull/16695) [`b2061f4`](https://github.com/cloudflare/workers-sdk/commit/b2061f40f812d8888b461f68506552b58f8e468b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-04
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16695](https://github.com/cloudflare/workers-sdk/pull/16695) [`b2061f4`](https://github.com/cloudflare/workers-sdk/commit/b2061f40f812d8888b461f68506552b58f8e468b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261103.1 | ^5.20261104.1 |
+  | workerd                   | 1.20261103.1  | 1.20261104.1  |
+
+- [#16611](https://github.com/cloudflare/workers-sdk/pull/16611) [`4bb491b`](https://github.com/cloudflare/workers-sdk/commit/4bb491b0d11f3976bc403aa792e08c4df0f86396) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Restrict access to local Secrets Store persistence directories
+
+  On POSIX systems, new and existing local Secrets Store directories are restricted to their owner before storage is opened. Startup fails if the directory cannot be secured, belongs to another user, or is a symbolic link. Windows continues to use inherited filesystem access controls.
+
+- [#16306](https://github.com/cloudflare/workers-sdk/pull/16306) [`36e64f2`](https://github.com/cloudflare/workers-sdk/commit/36e64f20025cf0bd5e99a585ca3427c8d75fd18b) Thanks [@efalcao](https://github.com/efalcao)! - Report Cloudflare Access login redirects on remote bindings instead of looping until "Too many redirects"
+
+  When a remote bindings request reached a `workers.dev` host protected by Access without valid Access credentials (for example, Access was added after the dev server started, the `CF_Authorization` cookie expired, or Access was not detected at startup), the edge redirected it to the Access login page. The binding followed that redirect back through the remote proxy, looping until it failed with `TypeError: Too many redirects` and an error message containing the Access login URL. Miniflare now detects the redirect, returns a readable 401 explaining how to re-authenticate, and logs the existing one-time "Cloudflare Access blocked a remote bindings request" warning.
+
+  The remote proxy server now marks the responses it forwards from a binding, so only Access responses generated in front of it are replaced. An Access login redirect or block page returned by a remote binding itself (for example, a Worker proxying an Access-protected origin) now reaches the caller unchanged.
+
+- [#16607](https://github.com/cloudflare/workers-sdk/pull/16607) [`92c4b97`](https://github.com/cloudflare/workers-sdk/commit/92c4b97af687369bc7653aa1bf0ba1f6b4e4f83c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Prevent Workers from changing local static assets and Workers Sites files during development
+
+  Asset files remain available to serve and can still be updated by editing them on disk.
+
+## 5.20261103.0-beta
+
+### Minor Changes
+
+- [#16651](https://github.com/cloudflare/workers-sdk/pull/16651) [`d2eda1c`](https://github.com/cloudflare/workers-sdk/commit/d2eda1cf7446ba4b43c9b87e337614ba67a1b014) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Remove deprecated shared tooling helper exports from Miniflare v5
+
+  #### Breaking changes
+
+  Miniflare v5 no longer exports `getNodeCompat`, `NodeJSCompatMode`, or `getFreshSourceMapSupport`. Add a dependency on `@cloudflare/workers-utils` and replace the Miniflare imports with:
+
+  ```ts
+  import {
+    getNodeCompat,
+    type NodeJSCompatMode,
+  } from "@cloudflare/workers-utils/node-compat";
+  import { getFreshSourceMapSupport } from "@cloudflare/workers-utils/sourcemap";
+  ```
+
+  These focused entry points support compatibility checks and isolated source-map handling without loading Miniflare or resolving the workerd binary. The helpers retain their behavior, and Miniflare continues to use the shared source-map helper internally.
+
+- [#16650](https://github.com/cloudflare/workers-sdk/pull/16650) [`2750917`](https://github.com/cloudflare/workers-sdk/commit/2750917df4239be111bb2704654dbb99e922dba7) Thanks [@jeffa5](https://github.com/jeffa5)! - Support weighted increments with `delta` in the emulated Ratelimit binding
+
+  `limit()` now accepts an optional `delta`, matching production, so a single call can count for more than one request:
+
+  ```js
+  const { success } = await env.MY_RATE_LIMITER.limit({
+    key: userId,
+    delta: tokens,
+  });
+  ```
+
+  `delta` defaults to `1`. As in production, the decision is based on the count before the call, so a call is allowed while any headroom remains even if its `delta` takes the count past the limit, and a rejected call is not counted. Invalid values (zero, negative, non-numeric or larger than a `uint32`) throw the same errors as production. Previously local development rejected `delta` with `bad rate limit options: [delta]`.
+
+### Patch Changes
+
+- [#16670](https://github.com/cloudflare/workers-sdk/pull/16670) [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-03
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16670](https://github.com/cloudflare/workers-sdk/pull/16670) [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261102.1 | ^5.20261103.1 |
+  | workerd                   | 1.20261102.1  | 1.20261103.1  |
+
+## 5.20261102.0-beta
+
+### Patch Changes
+
+- [#16642](https://github.com/cloudflare/workers-sdk/pull/16642) [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-02
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16642](https://github.com/cloudflare/workers-sdk/pull/16642) [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261101.1 | ^5.20261102.1 |
+  | workerd                   | 1.20261101.1  | 1.20261102.1  |
+
+- [#16623](https://github.com/cloudflare/workers-sdk/pull/16623) [`51bbf8b`](https://github.com/cloudflare/workers-sdk/commit/51bbf8b257dbf5c7a8f26600f5875ba45acbe89c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Deprecate shared tooling helper exports from Miniflare
+
+  Miniflare continues to export `getNodeCompat`, `NodeJSCompatMode`, and `getFreshSourceMapSupport` for compatibility. These exports are deprecated and now use the implementations in `@cloudflare/workers-utils`. Add a dependency on that package and replace the Miniflare imports with:
+
+  ```ts
+  import {
+    getNodeCompat,
+    type NodeJSCompatMode,
+  } from "@cloudflare/workers-utils/node-compat";
+  import { getFreshSourceMapSupport } from "@cloudflare/workers-utils/sourcemap";
+  ```
+
+  Wrangler and the Cloudflare Vite and Vitest plugins now use the shared helpers directly. The helpers retain their behavior and can be imported without loading the Workers runtime.
+
+  The deprecated Miniflare exports will be removed in a later release, allowing downstream tools such as cf to migrate and release independently first.
+
+## 5.20261101.0-beta
+
+### Minor Changes
+
+- [#16514](https://github.com/cloudflare/workers-sdk/pull/16514) [`009ca6e`](https://github.com/cloudflare/workers-sdk/commit/009ca6e0483fd4a89f44bd02251b0a64491dab14) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `resolveLocalBindings()`
+
+  It fills in a Worker's secrets and Hyperdrive connection strings for local development, and warns about secrets that have no local value.
+
+### Patch Changes
+
+- [#16635](https://github.com/cloudflare/workers-sdk/pull/16635) [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-01
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16635](https://github.com/cloudflare/workers-sdk/pull/16635) [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261023.1 | ^5.20261101.1 |
+  | workerd                   | 1.20261023.1  | 1.20261101.1  |
+
 ## 5.20261023.3-beta
 
 ### Patch Changes

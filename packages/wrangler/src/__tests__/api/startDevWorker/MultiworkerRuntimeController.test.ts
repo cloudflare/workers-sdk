@@ -132,11 +132,7 @@ describe("MultiworkerRuntimeController", () => {
 	}) => {
 		const bus = new FakeBus();
 		const controller = new MultiworkerRuntimeController(bus, 2);
-		teardown(async () => {
-			// Image preparation is mocked, but teardown's Container cleanup is not.
-			controller.containerImageTagsSeen.clear();
-			await controller.teardown();
-		});
+		teardown(() => controller.teardown());
 
 		function makeWorkerConfig(
 			name: string,

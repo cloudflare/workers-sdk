@@ -1,5 +1,63 @@
 # @cloudflare/workers-auth
 
+## 0.16.0
+
+### Minor Changes
+
+- [#16528](https://github.com/cloudflare/workers-sdk/pull/16528) [`cff43aa`](https://github.com/cloudflare/workers-sdk/commit/cff43aa3683f40a7244164d5c73ea425116bd281) Thanks [@mtlemilio](https://github.com/mtlemilio)! - Correct and request the PlanetScale setup scope in new cf OAuth logins
+
+  Use the policy-compliant `hyperdrive-planetscale.setup` identifier for the PlanetScale setup scope and request it in new cf OAuth logins by default. OAuth grants remain constrained by the user's permissions, so only users with the corresponding Bach membership permission can exercise it. Existing sessions must authenticate again to receive the scope.
+
+### Patch Changes
+
+- [#16695](https://github.com/cloudflare/workers-sdk/pull/16695) [`b2061f4`](https://github.com/cloudflare/workers-sdk/commit/b2061f40f812d8888b461f68506552b58f8e468b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-04
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195), [`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195), [`b2061f4`](https://github.com/cloudflare/workers-sdk/commit/b2061f40f812d8888b461f68506552b58f8e468b), [`f1d81a2`](https://github.com/cloudflare/workers-sdk/commit/f1d81a20c8e535ec7cb870143283f4a683fec70d)]:
+  - @cloudflare/workers-utils@0.52.0
+
+## 0.15.6
+
+### Patch Changes
+
+- [#16670](https://github.com/cloudflare/workers-sdk/pull/16670) [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-03
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815)]:
+  - @cloudflare/workers-utils@0.51.1
+
+## 0.15.5
+
+### Patch Changes
+
+- [#16642](https://github.com/cloudflare/workers-sdk/pull/16642) [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-02
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67), [`51bbf8b`](https://github.com/cloudflare/workers-sdk/commit/51bbf8b257dbf5c7a8f26600f5875ba45acbe89c), [`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72), [`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72)]:
+  - @cloudflare/workers-utils@0.51.0
+
+## 0.15.4
+
+### Patch Changes
+
+- [#16557](https://github.com/cloudflare/workers-sdk/pull/16557) [`30d9f72`](https://github.com/cloudflare/workers-sdk/commit/30d9f7207938b7091f6c54e12a9e6f69b83bb3ec) Thanks [@Kmschr](https://github.com/Kmschr)! - Request the user API token management scope when logging in with cf
+
+  Include `user-api-tokens.write` in cf's default OAuth scopes so users can list and manage their user API tokens, including when they have reached the token creation limit. Existing OAuth sessions need a new login to request the scope.
+
+- [#16635](https://github.com/cloudflare/workers-sdk/pull/16635) [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-01
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16525](https://github.com/cloudflare/workers-sdk/pull/16525) [`ed7fb41`](https://github.com/cloudflare/workers-sdk/commit/ed7fb4165a0c5de605b57b8f8443ff401b5194c4) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Validate OAuth error callbacks against the pending login
+
+  All authorization callbacks, including ones without a code or error, now require the matching login state. Unrelated callbacks leave the login running so the authorization page can complete it, and control characters in provider error messages are displayed as escaped text.
+
+- Updated dependencies [[`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286)]:
+  - @cloudflare/workers-utils@0.50.2
+
 ## 0.15.3
 
 ### Patch Changes

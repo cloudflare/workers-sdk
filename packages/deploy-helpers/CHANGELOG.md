@@ -1,5 +1,93 @@
 # @cloudflare/deploy-helpers
 
+## 0.26.0
+
+### Minor Changes
+
+- [#16020](https://github.com/cloudflare/workers-sdk/pull/16020) [`37c3c48`](https://github.com/cloudflare/workers-sdk/commit/37c3c489ff37155cfe9e5e26e296ed6211d18330) Thanks [@penalosa](https://github.com/penalosa)! - Allow custom strict-mode conflict abort messages
+
+  Add an optional `strictModeAbortMessage` to deploy-helpers' pre-1.0 deploy and versions-upload APIs so callers can describe their own override flags when strict mode aborts a conflicting upload in a non-interactive session. Wrangler keeps its existing `--strict` guidance when the message is omitted.
+
+### Patch Changes
+
+- [#16695](https://github.com/cloudflare/workers-sdk/pull/16695) [`b2061f4`](https://github.com/cloudflare/workers-sdk/commit/b2061f40f812d8888b461f68506552b58f8e468b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-04
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195), [`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195), [`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195), [`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195), [`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195), [`b8387a5`](https://github.com/cloudflare/workers-sdk/commit/b8387a50d360b97538c051f4db776261507b84b3), [`4cde694`](https://github.com/cloudflare/workers-sdk/commit/4cde694bc7ad24d215dcc955501cca1934512658), [`b2061f4`](https://github.com/cloudflare/workers-sdk/commit/b2061f40f812d8888b461f68506552b58f8e468b), [`b2061f4`](https://github.com/cloudflare/workers-sdk/commit/b2061f40f812d8888b461f68506552b58f8e468b), [`f1d81a2`](https://github.com/cloudflare/workers-sdk/commit/f1d81a20c8e535ec7cb870143283f4a683fec70d), [`4bb491b`](https://github.com/cloudflare/workers-sdk/commit/4bb491b0d11f3976bc403aa792e08c4df0f86396), [`36e64f2`](https://github.com/cloudflare/workers-sdk/commit/36e64f20025cf0bd5e99a585ca3427c8d75fd18b), [`92c4b97`](https://github.com/cloudflare/workers-sdk/commit/92c4b97af687369bc7653aa1bf0ba1f6b4e4f83c)]:
+  - miniflare@5.20261104.0-beta
+  - @cloudflare/workers-utils@0.52.0
+  - @cloudflare/cli-shared-helpers@0.3.4
+  - @cloudflare/config@0.30.2
+  - @cloudflare/containers-shared@0.23.9
+
+## 0.25.0
+
+### Minor Changes
+
+- [#16653](https://github.com/cloudflare/workers-sdk/pull/16653) [`8ac43df`](https://github.com/cloudflare/workers-sdk/commit/8ac43df32667a77cd7e8e267da86e96645e3031b) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Require explicit route metadata flags when downloading Worker configuration
+
+  `fetchWorkerConfig` and `downloadWorkerConfig` now accept separate `fetchRoutes` and `fetchCustomDomains` booleans instead of inferring them from an optional local route list. This clarifies which route metadata callers require without changing Wrangler behavior.
+
+### Patch Changes
+
+- [#16670](https://github.com/cloudflare/workers-sdk/pull/16670) [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-03
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815), [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815), [`d2eda1c`](https://github.com/cloudflare/workers-sdk/commit/d2eda1cf7446ba4b43c9b87e337614ba67a1b014), [`2750917`](https://github.com/cloudflare/workers-sdk/commit/2750917df4239be111bb2704654dbb99e922dba7)]:
+  - @cloudflare/workers-utils@0.51.1
+  - @cloudflare/cli-shared-helpers@0.3.3
+  - @cloudflare/config@0.30.1
+  - @cloudflare/containers-shared@0.23.8
+  - miniflare@5.20261103.0-beta
+
+## 0.24.5
+
+### Patch Changes
+
+- [#16642](https://github.com/cloudflare/workers-sdk/pull/16642) [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-02
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16623](https://github.com/cloudflare/workers-sdk/pull/16623) [`51bbf8b`](https://github.com/cloudflare/workers-sdk/commit/51bbf8b257dbf5c7a8f26600f5875ba45acbe89c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Share compatibility and source-map helpers without loading the Workers runtime
+
+  Move `getNodeCompat`, `NodeJSCompatMode`, and `getFreshSourceMapSupport` into workers-utils, with `/node-compat` and `/sourcemap` entry points. Import the shared helpers directly in deploy-helpers so deployment utilities no longer resolve the platform workerd binary. Startup profiling continues to load the runtime on demand.
+
+- [#16531](https://github.com/cloudflare/workers-sdk/pull/16531) [`e5b1798`](https://github.com/cloudflare/workers-sdk/commit/e5b179899567d35959144b7bc82e3f1a5ed04ca5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Avoid unrelated route permission checks when comparing dashboard configuration
+
+  When a Worker was last updated from the dashboard, `wrangler deploy` and `wrangler versions upload` fetched route and custom-domain metadata even when the command could not change it. Wrangler now fetches only the route categories configured for deployment, allowing Worker-scoped Editor tokens to upload Workers without routes or custom domains.
+
+- Updated dependencies [[`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72), [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67), [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67), [`51bbf8b`](https://github.com/cloudflare/workers-sdk/commit/51bbf8b257dbf5c7a8f26600f5875ba45acbe89c), [`51bbf8b`](https://github.com/cloudflare/workers-sdk/commit/51bbf8b257dbf5c7a8f26600f5875ba45acbe89c), [`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72), [`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72)]:
+  - @cloudflare/config@0.30.0
+  - @cloudflare/workers-utils@0.51.0
+  - @cloudflare/cli-shared-helpers@0.3.2
+  - @cloudflare/containers-shared@0.23.7
+  - miniflare@5.20261102.0-beta
+
+## 0.24.4
+
+### Patch Changes
+
+- [#16635](https://github.com/cloudflare/workers-sdk/pull/16635) [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-01
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16562](https://github.com/cloudflare/workers-sdk/pull/16562) [`aece4df`](https://github.com/cloudflare/workers-sdk/commit/aece4df134bc89ebba4f59ca3f737c049ac09668) Thanks [@audricbizouarn-dashdoc](https://github.com/audricbizouarn-dashdoc)! - Retry transient failures when starting a Workers assets upload session
+
+  Asset manifest registration now uses the same bounded API retry policy as Worker uploads, including support for `Retry-After`. Temporary server errors no longer immediately abort an otherwise valid deployment. Persistent failures still surface the original error after the retry limit; this does not repair server-side issues affecting a specific Worker.
+
+- [#16597](https://github.com/cloudflare/workers-sdk/pull/16597) [`f9dbb22`](https://github.com/cloudflare/workers-sdk/commit/f9dbb2232d5c233a09828fbe0c6272ea0e7cf471) Thanks [@guybedford](https://github.com/guybedford)! - Fix WebAssembly stack frames printing as `at [object Object]` in source-mapped errors
+
+  WebAssembly frames in source-mapped error stack traces now show their original function and location instead of `[object Object]`.
+
+- Updated dependencies [[`91f0e03`](https://github.com/cloudflare/workers-sdk/commit/91f0e03b28790e349d0bd7371fae7b59d755f79d), [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286), [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286), [`009ca6e`](https://github.com/cloudflare/workers-sdk/commit/009ca6e0483fd4a89f44bd02251b0a64491dab14)]:
+  - @cloudflare/config@0.29.1
+  - @cloudflare/workers-utils@0.50.2
+  - @cloudflare/cli-shared-helpers@0.3.1
+  - @cloudflare/containers-shared@0.23.6
+  - miniflare@5.20261101.0-beta
+
 ## 0.24.3
 
 ### Patch Changes

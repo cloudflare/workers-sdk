@@ -7,7 +7,7 @@ import { resolvePluginConfig } from "../plugin-config";
 import type {
 	AssetsOnlyResolvedConfig,
 	PluginConfig,
-	ParsedInputConfigWithWorker,
+	CloudflareConfig,
 	WorkersResolvedConfig,
 } from "../plugin-config";
 import type { InputWorkerConfig } from "@cloudflare/config";
@@ -289,7 +289,7 @@ describe("resolvePluginConfig", () => {
 	test("customizes account settings, Containers, and the entry Worker together", async ({
 		expect,
 	}) => {
-		const originalConfig: ParsedInputConfigWithWorker = {
+		const originalConfig: CloudflareConfig = {
 			accountId: "original-account",
 			worker: {
 				name: "entry-worker",
@@ -309,9 +309,7 @@ describe("resolvePluginConfig", () => {
 			`export default ${JSON.stringify(originalConfig)};`
 		);
 		const customize = vi.fn(
-			(
-				loadedConfig: ParsedInputConfigWithWorker
-			): ParsedInputConfigWithWorker => {
+			(loadedConfig: CloudflareConfig): CloudflareConfig => {
 				return {
 					...loadedConfig,
 					accountId: "customized-account",

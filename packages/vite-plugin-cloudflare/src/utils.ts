@@ -160,6 +160,23 @@ export function createHeadersForIncomingMessage(
 	return headers;
 }
 
+/**
+ * Constructs a URL from an origin-form request target on the selected origin.
+ *
+ * @param target The incoming path and query, including its leading slash
+ * @param origin The origin selected from the connection and request headers
+ * @returns A URL whose origin cannot be overridden by the request target
+ * @throws {TypeError} If the target is not in origin form
+ */
+export function resolveRequestTarget(target: string, origin: string): URL {
+	if (!target.startsWith("/")) {
+		throw new TypeError("Expected an origin-form request target");
+	}
+	// Relative URL resolution treats leading slashes and backslashes as an
+	// authority. Append to an already parsed origin to keep them in the path.
+	return new URL(`${new URL(origin).origin}${target}`);
+}
+
 export function createRequestForIncomingMessage(
 	req: vite.Connect.IncomingMessage,
 	res: http.ServerResponse,
@@ -181,7 +198,7 @@ export function createRequestForIncomingMessage(
 	if (headers.get("Host") !== host) {
 		headers.set("Host", host);
 	}
-	const url = new URL(req.url ?? "/", `${protocol}//${host}`);
+	const url = resolveRequestTarget(req.url ?? "/", `${protocol}//${host}`);
 	const init: RequestInit & { duplex?: "half" } = {
 		method,
 		headers,

@@ -12,6 +12,10 @@ export const EXTERNAL_DEPENDENCIES = [
 	// Native binary with platform-specific builds - cannot be bundled
 	"sharp",
 
+	// Optional native binding loaded by the bundled proxy-agent implementation
+	// when a proxy requests Negotiate/SPNEGO authentication
+	"kerberos",
+
 	// Must be external - dynamically required at runtime in worker threads via
 	// require("undici") for synchronous fetch operations (see fetch-sync.ts)
 	"undici",

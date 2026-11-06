@@ -1221,7 +1221,7 @@ function getContainerEgressInterceptorImage(): string {
  * @param engineOrSocketPath Either a full engine config or a unix socket
  * @returns The container engine, defaulting to the default docker socket located on linux/macOS at `unix:///var/run/docker.sock`
  */
-function getContainerEngine(
+export function getContainerEngine(
 	engineOrSocketPath: Worker_ContainerEngine | string | undefined
 ): Worker_ContainerEngine {
 	if (!engineOrSocketPath) {
@@ -1261,4 +1261,3 @@ export * from "./proxy";
 export * from "./constants";
 export * from "./modules";
 export { kCurrentWorker } from "../../config/schema";
-export * from "./node-compat";

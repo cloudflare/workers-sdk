@@ -1,6 +1,6 @@
 import { builtinModules } from "node:module";
+import type { NodeJSCompatMode } from "@cloudflare/workers-utils/node-compat";
 import type * as esbuild from "esbuild";
-import type { NodeJSCompatMode } from "miniflare";
 
 /**
  * Matches esbuild's BuildFailure shape for errors we construct ourselves.

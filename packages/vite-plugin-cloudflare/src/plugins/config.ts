@@ -21,14 +21,17 @@ import { validateWorkerEnvironmentOptions } from "../vite-config";
 import { getServerWatchConfig } from "./cloudflare-watch-ignore";
 import type { PluginContext } from "../context";
 import type { EnvironmentOptions, UserConfig } from "vite";
-import type * as vite from "vite";
 
 /**
  * Plugin to handle configuration and config file watching
  */
 export const configPlugin = createPlugin("config", (ctx) => {
+	let root: string;
+
 	return {
 		config(userConfig, env) {
+			root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
+
 			if (ctx.resolvedPluginConfig.type === "preview") {
 				return {
 					appType: "custom",
@@ -75,6 +78,24 @@ export const configPlugin = createPlugin("config", (ctx) => {
 				},
 			};
 		},
+		// Set the Build Output directories while Vite resolves the config, so that plugins reading
+		// `build.outDir` in `configResolved` see them. `post` overrides directories set by the user
+		// or by other plugins' earlier `configEnvironment` hooks. The directories are absolute because
+		// many frameworks resolve `build.outDir` against the working directory rather than the root.
+		configEnvironment: {
+			order: "post",
+			handler(environmentName) {
+				if (ctx.resolvedPluginConfig.type === "preview") {
+					return;
+				}
+				const outDir = getEnvironmentBuildOutputDir(
+					ctx.resolvedPluginConfig,
+					root,
+					environmentName
+				);
+				return outDir ? { build: { outDir } } : undefined;
+			},
+		},
 		async configResolved(resolvedViteConfig) {
 			ctx.setResolvedViteConfig(resolvedViteConfig);
 
@@ -98,7 +119,6 @@ export const configPlugin = createPlugin("config", (ctx) => {
 				...[...environmentNameToChildEnvironmentNamesMap.values()].flat(),
 			]);
 
-			forceBuildOutputDirs(ctx.resolvedPluginConfig, ctx.resolvedViteConfig);
 			if (ctx.resolvedViteConfig.command === "build") {
 				await cleanBuildOutputDir(ctx.resolvedViteConfig.root);
 			}
@@ -176,55 +196,44 @@ function getEnvironmentsConfig(
 }
 
 /**
- * When the Build Output Specification is enabled,
- * force Worker and client `build.outDir` values to their spec-mandated
- * locations. Child environments are nested within their parent environment.
+ * Gets the directory the Build Output Specification mandates for an environment's build.
+ * Child environments are nested within their parent environment's directory.
  *
- * Runs after Vite's merge in `configResolved`, so it overrides any
- * user-supplied `build.outDir`
+ * @param resolvedPluginConfig The resolved plugin configuration
+ * @param root The Vite project root
+ * @param environmentName The name of the environment
+ * @returns The environment's Build Output directory, or `undefined` if it has none
  */
-function forceBuildOutputDirs(
+function getEnvironmentBuildOutputDir(
 	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
-	resolvedViteConfig: vite.ResolvedConfig
-): void {
-	const { root } = resolvedViteConfig;
+	root: string,
+	environmentName: string
+): string | undefined {
+	if (environmentName === "client") {
+		return getWorkerAssetsDir(root);
+	}
 
-	for (const [
-		environmentName,
-		worker,
-	] of resolvedPluginConfig.environmentNameToWorkerMap) {
-		const environment = resolvedViteConfig.environments[environmentName];
-		if (environment) {
-			environment.build.outDir = getWorkerBundleDir(root, worker.directoryName);
-		}
+	const worker =
+		resolvedPluginConfig.environmentNameToWorkerMap.get(environmentName);
+	if (worker) {
+		return getWorkerBundleDir(root, worker.directoryName);
 	}
 
 	for (const [
 		parentEnvironmentName,
 		childEnvironmentNames,
 	] of resolvedPluginConfig.environmentNameToChildEnvironmentNamesMap) {
-		const parentEnvironment =
-			resolvedViteConfig.environments[parentEnvironmentName];
-		if (!parentEnvironment) {
-			continue;
-		}
-
-		for (const childEnvironmentName of childEnvironmentNames) {
-			const childEnvironment =
-				resolvedViteConfig.environments[childEnvironmentName];
-			if (childEnvironment) {
-				childEnvironment.build.outDir = path.join(
-					parentEnvironment.build.outDir,
-					childEnvironmentName
-				);
-			}
+		if (childEnvironmentNames.includes(environmentName)) {
+			const parentDir = getEnvironmentBuildOutputDir(
+				resolvedPluginConfig,
+				root,
+				parentEnvironmentName
+			);
+			return parentDir && path.join(parentDir, environmentName);
 		}
 	}
 
-	const clientEnvironment = resolvedViteConfig.environments.client;
-	if (clientEnvironment) {
-		clientEnvironment.build.outDir = getWorkerAssetsDir(root);
-	}
+	return undefined;
 }
 
 function getAllowedHosts(

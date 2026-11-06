@@ -15,7 +15,7 @@ import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
 import { ArtifactsController, Miniflare } from "miniflare";
-import { test } from "vitest";
+import { test, vi } from "vitest";
 import {
 	GitClient,
 	gitEnvironment,
@@ -28,7 +28,13 @@ import {
 } from "../../../src/plugins/artifacts/git-sidecar";
 import { repositoryPath } from "../../../src/plugins/artifacts/storage";
 import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
-import type { MiniflareOptions } from "miniflare";
+import type { MiniflareOptions, RemoteProxyConnectionString } from "miniflare";
+
+// Native Git subprocesses can slow down considerably while sharing a Windows
+// runner with Wrangler. Keep the extra budget local to these integration tests.
+if (process.platform === "win32") {
+	vi.setConfig({ testTimeout: 60_000 });
+}
 
 const exec = promisify(execFile);
 const SCRIPT = `
@@ -537,20 +543,59 @@ test("artifacts: a stopped backend is replaced on the next config update", async
 	}
 });
 
-test("artifacts: omitted remote preserves remote routing without host Git", async ({
+function withRemoteProxy(base: MiniflareOptions): MiniflareOptions {
+	return {
+		...base,
+		workers: base.workers.map((worker) => ({
+			...worker,
+			dev: {
+				// Never contacted: startup only wires the binding to the proxy.
+				remoteProxyConnectionString: new URL(
+					"http://127.0.0.1:1"
+				) as RemoteProxyConnectionString,
+			},
+		})),
+	};
+}
+
+test("artifacts: remote=true with a remote proxy does not need host Git or local storage", async ({
 	expect,
 }) => {
-	const root = await useTmp();
+	const resourcePersistencePath = await useTmp();
+	const emptyPath = await useTmp();
 	const previousPath = process.env.PATH;
-	process.env.PATH = root;
+	process.env.PATH = emptyPath;
 	try {
-		const mf = new Miniflare(options("test", "REPOS", null));
+		const mf = new Miniflare({
+			...withRemoteProxy(options("test", "REPOS", true)),
+			resourcePersistencePath,
+		});
 		useDispose(mf);
 		await expect(mf.ready).resolves.toBeDefined();
 	} finally {
 		process.env.PATH = previousPath;
 	}
+	await expect(
+		stat(path.join(resourcePersistencePath, "artifacts"))
+	).rejects.toMatchObject({
+		code: "ENOENT",
+	});
 });
+
+// Like every other binding, only an explicit `dev.remote: true` is routed to
+// the proxy. Consumers resolve the deployed-by-default rule before Miniflare.
+test.for([
+	{ label: "without a remote proxy", proxy: false },
+	{ label: "with a remote proxy", proxy: true },
+])(
+	"artifacts: omitted remote $label uses the local simulator",
+	async ({ proxy }, { expect }) => {
+		const base = options("test", "REPOS", null);
+		const mf = new Miniflare(proxy ? withRemoteProxy(base) : base);
+		useDispose(mf);
+		expect((await rpc(mf, "create", ["offline"])).name).toBe("offline");
+	}
+);
 
 test("artifacts: rejects invalid local namespace before starting services", async ({
 	expect,
@@ -1178,65 +1223,70 @@ test("artifacts: Git credentials are scoped to the repository and operation", as
 	await wrongRepo.body?.cancel();
 });
 
-test("artifacts: forks an empty repo and selects which branches to copy", async ({
-	expect,
-}) => {
+test("artifacts: forks an empty repo", async ({ expect }) => {
 	const mf = new Miniflare(options());
 	useDispose(mf);
 	await rpc(mf, "create", ["empty"]);
 	const emptyFork = await rpc(mf, "fork", ["empty-fork"], "empty");
 	expect(emptyFork.defaultBranch).toBe("main");
+});
 
-	const directory = path.join(await useTmp(), "source");
-	const created = await pushFixture(mf, directory);
-	await git(["checkout", "-b", "feature"], directory);
-	await writeFile(path.join(directory, "feature.txt"), "feature branch\n");
-	await git(["add", "."], directory);
-	await git(["commit", "-m", "feature"], directory);
-	await git(
-		[
-			"-c",
-			`http.extraHeader=Authorization: Bearer ${created.token}`,
-			"push",
-			created.remote,
-			"feature",
-		],
-		directory
-	);
-	const mainOnly = await rpc(mf, "fork", ["main-only"], "Repo");
-	const all = await rpc(
-		mf,
-		"fork",
-		["all", { defaultBranchOnly: false, description: "all refs" }],
-		"Repo"
-	);
-	expect(mainOnly.defaultBranch).toBe("main");
-	expect((await rpc(mf, "info", [], "all")).description).toBe("all refs");
-	expect(
-		await rpc(mf, "readFile", [{ ref: "feature", path: "feature.txt" }], "all")
-	).toMatchObject({ bytes: [...new TextEncoder().encode("feature branch\n")] });
-	expect(
-		await rpc(
+test.for(["default branch", "all branches"])(
+	"artifacts: forks %s of a populated repo",
+	async (branches, { expect }) => {
+		const mf = new Miniflare(options());
+		useDispose(mf);
+		const directory = path.join(await useTmp(), "source");
+		const created = await pushFixture(mf, directory);
+		await git(["checkout", "-b", "feature"], directory);
+		await writeFile(path.join(directory, "feature.txt"), "feature branch\n");
+		await git(["add", "."], directory);
+		await git(["commit", "-m", "feature"], directory);
+		await git(
+			[
+				"-c",
+				`http.extraHeader=Authorization: Bearer ${created.token}`,
+				"push",
+				created.remote,
+				"feature",
+			],
+			directory
+		);
+		const defaultBranchOnly = branches === "default branch";
+		const fork = await rpc(
+			mf,
+			"fork",
+			defaultBranchOnly
+				? ["fork"]
+				: ["fork", { defaultBranchOnly: false, description: "all refs" }],
+			"Repo"
+		);
+		expect(fork.defaultBranch).toBe("main");
+		expect(fork.token).toEqual(expect.any(String));
+		const featureFile = await rpc(
 			mf,
 			"readFile",
 			[{ ref: "feature", path: "feature.txt" }],
-			"main-only"
-		)
-	).toBeNull();
-	expect(all.token).toEqual(expect.any(String));
-});
+			"fork"
+		);
+		if (defaultBranchOnly) {
+			expect(featureFile).toBeNull();
+		} else {
+			expect(featureFile).toMatchObject({
+				bytes: [...new TextEncoder().encode("feature branch\n")],
+			});
+			expect((await rpc(mf, "info", [], "fork")).description).toBe("all refs");
+		}
+	}
+);
 
-test("artifacts: log pages commits and files resolve only valid paths", async ({
-	expect,
-}) => {
+test("artifacts: log pages commits", async ({ expect }) => {
 	const mf = new Miniflare(options());
 	useDispose(mf);
 	const directory = path.join(await useTmp(), "source");
 	const created = await pushFixture(mf, directory);
 	const firstHash = (await git(["rev-parse", "HEAD"], directory)).stdout.trim();
 	await writeFile(path.join(directory, "second.txt"), "second\n");
-	await mkdir(path.join(directory, "folder"));
-	await writeFile(path.join(directory, "folder", "nested.txt"), "nested\n");
 	await git(["add", "."], directory);
 	await git(["commit", "-m", "second"], directory);
 	await git(
@@ -1262,6 +1312,15 @@ test("artifacts: log pages commits and files resolve only valid paths", async ({
 			(commit: { hash: string }) => commit.hash
 		)
 	).toEqual([firstHash]);
+});
+
+test("artifacts: files resolve only valid paths", async ({ expect }) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	const directory = path.join(await useTmp(), "source");
+	await mkdir(path.join(directory, "folder"), { recursive: true });
+	await writeFile(path.join(directory, "folder", "nested.txt"), "nested\n");
+	await pushFixture(mf, directory);
 	expect(
 		await rpc(mf, "readFile", [{ ref: "main", path: "../hello.txt" }], "Repo")
 	).toBeNull();
@@ -1319,7 +1378,7 @@ test("artifacts: missing Git gives an actionable error during local startup", as
 	const previousPath = process.env.PATH;
 	process.env.PATH = root;
 	try {
-		const mf = new Miniflare(options());
+		const mf = new Miniflare(options("test", "REPOS", false));
 		await expect(mf.ready).rejects.toThrow(
 			/requires Git 2\.32 or newer on PATH.*Install Git.*restart/i
 		);

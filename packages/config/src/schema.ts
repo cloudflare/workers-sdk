@@ -53,6 +53,7 @@ export const D1BindingSchema = z.strictObject({
 	type: z.literal("d1"),
 	name: z.string().optional(),
 	id: z.string().optional(),
+	jurisdiction: z.string().optional(),
 	dev: RemoteBindingDevSchema.optional(),
 });
 
@@ -309,7 +310,7 @@ const CacheSchema = z.strictObject({
 /**
  * Binding types that can only be defined once per worker.
  */
-const SINGLETON_BINDING_TYPES = new Set([
+export const SINGLETON_BINDING_TYPES: ReadonlySet<string> = new Set([
 	"ai",
 	"assets",
 	"browser",

@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-utils",
-	"version": "0.50.1",
+	"version": "0.52.0",
 	"description": "Internal utility package for workers-sdk. Not intended for external use — APIs may change without notice.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/workers-utils#readme",
 	"bugs": {
@@ -47,6 +47,14 @@
 			"import": "./dist/docker-path.mjs",
 			"types": "./dist/docker-path.d.mts"
 		},
+		"./node-compat": {
+			"types": "./dist/node-compat.d.mts",
+			"import": "./dist/node-compat.mjs"
+		},
+		"./sourcemap": {
+			"types": "./dist/sourcemap.d.mts",
+			"import": "./dist/sourcemap.mjs"
+		},
 		"./errors": {
 			"import": "./dist/errors.mjs",
 			"types": "./dist/errors.d.mts"
@@ -74,6 +82,7 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"dependencies": {
+		"@cspotcode/source-map-support": "0.8.1",
 		"chalk": "catalog:default",
 		"dotenv": "catalog:default",
 		"undici": "catalog:default"
@@ -93,7 +102,7 @@
 		"dotenv-expand": "13.0.0",
 		"empathic": "^2.0.0",
 		"jsonc-parser": "catalog:default",
-		"minimatch": "^5.1.0",
+		"minimatch": "^5.1.9",
 		"open": "catalog:default",
 		"signal-exit": "catalog:default",
 		"smol-toml": "catalog:default",

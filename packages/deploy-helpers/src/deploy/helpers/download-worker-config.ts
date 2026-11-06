@@ -39,13 +39,15 @@ type RoutesRes = {
 }[];
 
 /**
- * Downloads all information required to construct a Wrangler config file for a Worker from the API
+ * Downloads the information required to construct a Wrangler config file for a Worker from the API.
  */
 export async function fetchWorkerConfig(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	workerName: string,
-	environment: string
+	environment: string,
+	fetchRoutes: boolean,
+	fetchCustomDomains: boolean
 ) {
 	const [
 		bindings,
@@ -59,14 +61,18 @@ export async function fetchWorkerConfig(
 			complianceConfig,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/bindings`
 		),
-		fetchResult<RoutesRes>(
-			complianceConfig,
-			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/routes?show_zonename=true`
-		),
-		fetchResult<CustomDomainsRes>(
-			complianceConfig,
-			`/accounts/${accountId}/workers/domains/records?page=0&per_page=5&service=${workerName}&environment=${environment}`
-		),
+		fetchRoutes
+			? fetchResult<RoutesRes>(
+					complianceConfig,
+					`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/routes?show_zonename=true`
+				)
+			: Promise.resolve([]),
+		fetchCustomDomains
+			? fetchResult<CustomDomainsRes>(
+					complianceConfig,
+					`/accounts/${accountId}/workers/domains/records?page=0&per_page=5&service=${workerName}&environment=${environment}`
+				)
+			: Promise.resolve([]),
 		fetchResult<WorkerSubdomainRes>(
 			complianceConfig,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/subdomain`
@@ -104,7 +110,9 @@ export async function downloadWorkerConfig(
 	workerName: string,
 	environment: string,
 	entrypoint: string,
-	accountId: string
+	accountId: string,
+	fetchRoutes: boolean,
+	fetchCustomDomains: boolean
 ): Promise<RawConfig> {
 	const {
 		bindings,
@@ -117,7 +125,9 @@ export async function downloadWorkerConfig(
 		complianceConfig,
 		accountId,
 		workerName,
-		environment
+		environment,
+		fetchRoutes,
+		fetchCustomDomains
 	);
 
 	return constructWranglerConfig({

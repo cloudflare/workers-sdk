@@ -8,13 +8,17 @@ export async function fetchWorkerConfig(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	workerName: string,
-	environment: string
+	environment: string,
+	fetchRoutes: boolean,
+	fetchCustomDomains: boolean
 ) {
 	return fetchWorkerConfigBase(
 		complianceConfig,
 		accountId,
 		workerName,
-		environment
+		environment,
+		fetchRoutes,
+		fetchCustomDomains
 	);
 }
 
@@ -23,13 +27,17 @@ export async function downloadWorkerConfig(
 	workerName: string,
 	environment: string,
 	entrypoint: string,
-	accountId: string
+	accountId: string,
+	fetchRoutes: boolean,
+	fetchCustomDomains: boolean
 ): Promise<RawConfig> {
 	return downloadWorkerConfigBase(
 		complianceConfig,
 		workerName,
 		environment,
 		entrypoint,
-		accountId
+		accountId,
+		fetchRoutes,
+		fetchCustomDomains
 	);
 }

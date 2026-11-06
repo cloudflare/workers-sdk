@@ -8,6 +8,8 @@ import type { Binding } from "../types";
  * `pickRemoteBindings()` and `validateBindingRemoteSetting()`.
  *
  * - `local-and-remote`: local simulator; `remote: true` opts into proxying.
+ * - `remote-default-with-local-opt-in`: remote by default; `remote: false`
+ *   opts into the local simulator.
  * - `local-only`: local simulator only; `remote: true` is a config error.
  * - `remote`: no local simulator *yet* — requires explicit `remote: true`.
  *   Move to `local-and-remote` once a simulator lands.
@@ -18,6 +20,7 @@ import type { Binding } from "../types";
  */
 export type BindingLocalSupport =
 	| "local-and-remote"
+	| "remote-default-with-local-opt-in"
 	| "local-only"
 	| "remote"
 	| "DO-NOT-USE-this-resource-will-never-have-a-local-simulator";
@@ -57,6 +60,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	// TODO: Miniflare currently ignores `remote: true` on queues, tracked in #13727.
 	queue: "local-and-remote",
 	flagship: "local-and-remote",
+	artifacts: "remote-default-with-local-opt-in",
 	analytics_engine: "local-and-remote",
 
 	vectorize: "remote",
@@ -70,7 +74,6 @@ const BINDING_LOCAL_SUPPORT: Record<
 	ai_search_namespace:
 		"DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	media: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
-	artifacts: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	vpc_service: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	vpc_network: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	agent_memory: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
@@ -87,19 +90,83 @@ export function getBindingLocalSupport(
 }
 
 /**
+ * Resolves whether a binding uses the deployed resource during local
+ * development. This is the single source of truth for routing a binding to a
+ * remote proxy session and for labelling it in the bindings table.
+ *
+ * @param type - Binding type
+ * @param remote - The binding's configured `remote` setting
+ * @param options.remoteBindingsDisabled - Whether the dev session runs without
+ * remote bindings, as with `wrangler dev --local`
+ * @returns Whether the binding uses the deployed resource. Bindings that will
+ * never have a local simulator always return `true`, even when remote bindings
+ * are disabled and the binding is therefore unavailable.
+ */
+export function resolveBindingRemote(
+	type: Binding["type"],
+	remote: boolean | undefined,
+	{ remoteBindingsDisabled = false }: { remoteBindingsDisabled?: boolean } = {}
+): boolean {
+	const support = getBindingLocalSupport(type);
+	switch (support) {
+		case "DO-NOT-USE-this-resource-will-never-have-a-local-simulator":
+			return true;
+		case "local-only":
+			return false;
+		case "remote-default-with-local-opt-in":
+			return !remoteBindingsDisabled && remote !== false;
+		case "local-and-remote":
+		case "remote":
+			return !remoteBindingsDisabled && remote === true;
+	}
+}
+
+/**
  * Validates the user's `remote` setting for a given binding against the
  * binding type's local-development capabilities. Throws `UserError` for
  * invalid combinations and uses the caller-provided logger for
  * valid-but-noteworthy ones.
+ *
+ * @param options.binding - Binding name, used to identify the binding in warnings
+ * @param options.remoteBindingsDisabled - Whether the dev session runs without
+ * remote bindings, as with `wrangler dev --local`
+ * @param options.configFormat - Which config format the binding came from, so
+ * warnings name the setting the user can write: `remote` in a Wrangler config,
+ * `dev: { remote }` in `cloudflare.config.ts`. Defaults to `"wrangler"`.
  */
 export function validateBindingRemoteSetting(
 	type: Binding["type"],
 	remote: boolean | undefined,
-	warn: (message: string) => void
+	warn: (message: string) => void,
+	{
+		binding,
+		remoteBindingsDisabled = false,
+		configFormat = "wrangler",
+	}: {
+		binding?: string;
+		remoteBindingsDisabled?: boolean;
+		configFormat?: "wrangler" | "cloudflare-config";
+	} = {}
 ) {
+	const remoteSetting = (value: boolean) =>
+		configFormat === "cloudflare-config"
+			? `\`dev: { remote: ${value} }\``
+			: `\`remote: ${value}\``;
 	const support = getBindingLocalSupport(type);
 	switch (support) {
 		case "local-and-remote":
+			return;
+		case "remote-default-with-local-opt-in":
+			// Changes made during dev affect real data, so make the default visible.
+			if (remote === undefined && !remoteBindingsDisabled) {
+				const subject =
+					binding === undefined
+						? `${getBindingTypeFriendlyName(type)} bindings use`
+						: `${getBindingTypeFriendlyName(type)} binding ${binding} uses`;
+				warn(
+					`${subject} the deployed resource. Set ${remoteSetting(false)} to use the local simulator, or ${remoteSetting(true)} to silence this warning.`
+				);
+			}
 			return;
 		case "local-only":
 			if (remote === true) {

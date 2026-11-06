@@ -23,8 +23,8 @@ export interface ResolveLocalBindingsOptions {
 
 /**
  * Resolves local binding values from the loaded local env. This replaces
- * declared secret placeholders with text bindings and applies Hyperdrive
- * connection-string overrides. Missing secrets are omitted, with a warning, so
+ * declared secret placeholders with text bindings, applies Hyperdrive
+ * connection-string overrides, and resolves the Artifacts `dev.remote` default. Missing secrets are omitted, with a warning, so
  * Miniflare doesn't receive an unresolved deployment-only placeholder.
  *
  * @param configuredBindings The Worker's configured bindings.
@@ -58,6 +58,18 @@ export function resolveLocalBindings(
 				...binding,
 				dev: { ...binding.dev, connectionString },
 			};
+			continue;
+		}
+
+		// Artifacts uses the deployed resource unless `dev.remote` is `false`.
+		// Miniflare routes a binding remotely only for an explicit
+		// `dev.remote: true`, so resolve the default here, where it is known
+		// whether remote bindings are enabled.
+		if (binding.type === "artifacts") {
+			bindings[name] =
+				binding.dev?.remote === undefined
+					? { ...binding, dev: { ...binding.dev, remote: remoteBindings } }
+					: binding;
 			continue;
 		}
 
