@@ -1,6 +1,7 @@
 import { EventEmitter } from "node:events";
 import {
 	createContainerDevPlan,
+	createContainerDevPlanForCfConfig,
 	generateContainerBuildId,
 	isCloudflareRegistryImage,
 	prepareContainerImagesForDev,
@@ -11,8 +12,11 @@ import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	beginContainerConfiguration,
 	cancelContainerPreparationOnProcessExit,
+	getCloudflareConfigContainerConfiguration,
+	getWranglerContainerConfiguration,
 	prepareProjectContainers,
 } from "../src/pool/containers";
+import type { LoadedNewConfig } from "../src/pool/new-config";
 import type {
 	ContainerDevOptions,
 	ViteLogger,
@@ -22,6 +26,7 @@ import type { TestProject, Vitest } from "vitest/node";
 
 vi.mock("@cloudflare/containers-shared", () => ({
 	createContainerDevPlan: vi.fn(),
+	createContainerDevPlanForCfConfig: vi.fn(),
 	generateContainerBuildId: vi.fn(),
 	isCloudflareRegistryImage: vi.fn(),
 	prepareContainerImagesForDev: vi.fn(),
@@ -197,7 +202,11 @@ describe("project Container environments", () => {
 	});
 
 	function prepare(workerConfig = config) {
-		return prepareProjectContainers(project, workerConfig, CONFIG_PATH, logger);
+		return prepareProjectContainers(
+			project,
+			getWranglerContainerConfiguration(workerConfig, CONFIG_PATH),
+			logger
+		);
 	}
 
 	it("drops cached environments when Containers are disabled", async ({
@@ -228,6 +237,9 @@ describe("project Container environments", () => {
 		const environment = {
 			containerBuildId: "build-id",
 			containerEngine: "unix:///docker.sock",
+			containerRuntimeOptions: new Map([
+				["Container", { imageName: "cloudflare-dev/container:build-id" }],
+			]),
 		};
 		expect(first).toEqual(environment);
 		expect(second).toEqual(environment);
@@ -245,7 +257,8 @@ describe("project Container environments", () => {
 			onContainerImagePreparationEnd: expect.any(Function),
 			logger,
 			complianceConfig: config,
-			configFileName: "wrangler.jsonc",
+			dockerUnavailableHint:
+				"If your tests do not need Containers, set dev.enable_containers to false in your wrangler.jsonc to run them without Docker.",
 			registryConfigureCommand: "wrangler containers registries configure",
 		});
 		expect(prepareContainerImagesForDev).toHaveBeenCalledOnce();
@@ -262,7 +275,11 @@ describe("project Container environments", () => {
 
 		await Promise.all([
 			prepare(),
-			prepareProjectContainers(otherProject, config, CONFIG_PATH, logger),
+			prepareProjectContainers(
+				otherProject,
+				getWranglerContainerConfiguration(config, CONFIG_PATH),
+				logger
+			),
 		]);
 		expect(prepareContainerImagesForDev).toHaveBeenCalledTimes(2);
 
@@ -403,8 +420,8 @@ describe("project Container environments", () => {
 		await expect(prepare()).rejects.toThrow(
 			"Container image preparation was aborted"
 		);
-		expect(createContainerDevPlan).not.toHaveBeenCalled();
 		expect(getDockerPath).not.toHaveBeenCalled();
+		expect(prepareContainerImagesForDev).not.toHaveBeenCalled();
 	});
 
 	it("prepares after a Vitest config restart", async ({ expect }) => {
@@ -470,5 +487,103 @@ describe("project Container environments", () => {
 			"Container image preparation was aborted"
 		);
 		expect(preparationControl.abort).toHaveBeenCalledOnce();
+	});
+
+	describe("cloudflare.config.ts", () => {
+		const CF_CONFIG_PATH = "/project/config/cloudflare.config.ts";
+
+		beforeEach(async () => {
+			const actual = await vi.importActual<
+				typeof import("@cloudflare/containers-shared")
+			>("@cloudflare/containers-shared");
+			vi.mocked(createContainerDevPlanForCfConfig).mockImplementation(
+				actual.createContainerDevPlanForCfConfig
+			);
+		});
+
+		function prepareCloudflareConfig({
+			settings,
+			containers,
+			exports,
+		}: Pick<LoadedNewConfig, "containers" | "settings"> & {
+			exports: LoadedNewConfig["worker"]["exports"];
+		}) {
+			const cloudflareConfig: LoadedNewConfig = {
+				settings,
+				containers,
+				worker: { name: "worker", compatibilityDate: "2025-12-02", exports },
+				mode: "test",
+				localEnv: {},
+				devVars: undefined,
+			};
+			return prepareProjectContainers(
+				project,
+				getCloudflareConfigContainerConfiguration(
+					cloudflareConfig,
+					CF_CONFIG_PATH
+				),
+				logger
+			);
+		}
+
+		it("prepares images relative to the config's directory", async ({
+			expect,
+		}) => {
+			const environment = await prepareCloudflareConfig({
+				settings: { complianceRegion: "fedramp-high" },
+				containers: [
+					{
+						name: "app",
+						image: { dockerfile: "./Dockerfile" },
+						maxInstances: 1,
+					},
+				],
+				exports: {
+					Container: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "app",
+					},
+				},
+			});
+
+			expect(environment?.containerRuntimeOptions).toEqual(
+				new Map([
+					["Container", { imageName: "cloudflare-dev/container:build-id" }],
+				])
+			);
+			expect(prepareContainerImagesForDev).toHaveBeenCalledWith(
+				expect.objectContaining({
+					containerOptions: [
+						expect.objectContaining({
+							dockerfile: "/project/config/Dockerfile",
+							image_build_context: "/project/config",
+						}),
+					],
+					complianceConfig: { compliance_region: "fedramp_high" },
+					dockerUnavailableHint: undefined,
+					registryConfigureCommand: "cf containers registries create",
+				})
+			);
+		});
+
+		it("does not use Docker without Container-backed Durable Objects", async ({
+			expect,
+		}) => {
+			await expect(
+				prepareCloudflareConfig({
+					settings: {},
+					containers: [
+						{
+							name: "app",
+							image: { dockerfile: "./Dockerfile" },
+							maxInstances: 1,
+						},
+					],
+					exports: { Counter: { type: "durable-object", storage: "sqlite" } },
+				})
+			).resolves.toBeUndefined();
+			expect(getDockerPath).not.toHaveBeenCalled();
+		});
 	});
 });

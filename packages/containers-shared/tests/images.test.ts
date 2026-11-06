@@ -376,14 +376,17 @@ describe("prepareContainerImagesForDev", () => {
 			const result = await prepareContainerImagesForDev({
 				dockerPath: "test-docker",
 				containerOptions: [],
-				configFileName: "test config file",
+				dockerUnavailableHint: "test hint",
 				registryConfigureCommand: "test registry configure",
 				onContainerImagePreparationStart: onStart,
 				onContainerImagePreparationEnd: onEnd,
 				logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 			});
 			expect(verifyDockerInstalled).toHaveBeenCalledWith(
-				expect.objectContaining({ dockerPath: "test-docker" })
+				expect.objectContaining({
+					dockerPath: "test-docker",
+					hint: "test hint",
+				})
 			);
 			expect(startContainerBuild).not.toHaveBeenCalled();
 			expect(runDockerCmd).toHaveBeenCalledExactlyOnceWith("test-docker", [
