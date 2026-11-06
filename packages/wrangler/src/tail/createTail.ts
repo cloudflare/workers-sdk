@@ -125,35 +125,40 @@ export async function createPagesTail({
 }
 
 /**
- * Create and connect to a tail.
+ * A tail registered with the API. The session outlives any single WebSocket
+ * connection: if the connection drops we can reconnect to the same `url`
+ * rather than deleting the tail and registering a new one.
+ */
+export type TailSession = {
+	/** The ID used for identifying the tail. */
+	id: string;
+	/** The WebSocket URL that streams this tail's events. */
+	url: string;
+	/** When the tail is no longer guaranteed to be valid. */
+	expiration: Date;
+	/** Delete the tail on the server. */
+	deleteTail: () => Promise<void>;
+};
+
+/**
+ * Register a new tail for a Worker with the API.
  *
- * Under the hood, this function
- * - Registers a new Tail with the API
- * - Connects to the tail worker
- * - Sends any filters over the connection
- *
+ * @param complianceConfig the compliance region configuration
  * @param accountId the account ID associated with the worker to tail
  * @param workerName the name of the worker to tail
  * @param filters A list of `TailAPIFilters` given to the tail
- * @param debug Flag to run tail in debug mode
- * @returns a websocket connection, an expiration, and a function to call to delete the tail
+ * @returns the tail session, including the URL to connect to
  */
-export async function createTail(
+export async function createTailSession(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	workerName: string,
-	filters: TailFilterMessage,
-	debug: boolean
-): Promise<{
-	tail: WebSocket;
-	expiration: Date;
-	deleteTail: () => Promise<void>;
-}> {
-	// create the tail
+	filters: TailFilterMessage
+): Promise<TailSession> {
 	const createTailUrl = makeCreateTailUrl(accountId, workerName);
 	const {
-		id: tailId,
-		url: websocketUrl,
+		id,
+		url,
 		expires_at: expiration,
 	} = await fetchResult<TailCreationApiResponse>(
 		complianceConfig,
@@ -164,15 +169,28 @@ export async function createTail(
 		}
 	);
 
-	// delete the tail (not yet!)
-	const deleteUrl = makeDeleteTailUrl(accountId, workerName, tailId);
+	const deleteUrl = makeDeleteTailUrl(accountId, workerName, id);
 	async function deleteTail() {
 		await fetchResult(complianceConfig, deleteUrl, { method: "DELETE" });
 	}
 
+	return { id, url, expiration, deleteTail };
+}
+
+/**
+ * Open a WebSocket connection to an existing tail.
+ *
+ * The connection sends the `debug` setting as soon as it opens. Filters are
+ * not sent here: they were attached to the tail when it was registered, so
+ * they still apply when reconnecting to the same tail.
+ *
+ * @param websocketUrl the WebSocket URL from the tail session
+ * @param debug Flag to run tail in debug mode
+ * @returns the (still connecting) WebSocket
+ */
+export function connectToTail(websocketUrl: string, debug: boolean): WebSocket {
 	const p = proxy ? { agent: new HttpsProxyAgent(proxy) } : {};
 
-	// connect to the tail
 	const tail = new WebSocket(websocketUrl, TRACE_VERSION, {
 		headers: {
 			"Sec-WebSocket-Protocol": TRACE_VERSION, // needs to be `trace-v1` to be accepted
@@ -181,7 +199,6 @@ export async function createTail(
 		...p,
 	});
 
-	// send filters when we open up
 	tail.on("open", function () {
 		tail.send(
 			JSON.stringify({ debug: debug }),
@@ -194,7 +211,7 @@ export async function createTail(
 		);
 	});
 
-	return { tail, expiration, deleteTail };
+	return tail;
 }
 
 export type TailEventMessageType =
