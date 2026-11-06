@@ -16,6 +16,22 @@ function captureBindings(
 }
 
 describe("printBindings", () => {
+	test.for([
+		{ remoteBindingsDisabled: false, mode: "remote" },
+		{ remoteBindingsDisabled: true, mode: "not supported" },
+	])(
+		"labels RealtimeKit as $mode when remoteBindingsDisabled=$remoteBindingsDisabled",
+		({ remoteBindingsDisabled, mode }, { expect }) => {
+			const output = captureBindings(
+				{ RTK: { type: "realtimekit", app_id: "app-id", remote: true } },
+				{ local: true, remoteBindingsDisabled }
+			);
+			expect(output).toMatch(
+				new RegExp(`env\\.RTK \\(app-id\\)\\s+RealtimeKit\\s+${mode}`)
+			);
+		}
+	);
+
 	test("prints a bindings table through the caller's logger", ({ expect }) => {
 		const output = captureBindings({
 			KV: { type: "kv_namespace", id: "test-kv-id" },

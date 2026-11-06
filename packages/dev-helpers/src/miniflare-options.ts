@@ -363,6 +363,7 @@ type WorkerOptionsBindings = Pick<
 	| "mtlsCertificates"
 	| "helloWorld"
 	| "flagship"
+	| "realtimekit"
 	| "artifacts"
 	| "workerLoaders"
 	| "unsafeBindings"
@@ -445,6 +446,7 @@ export function buildMiniflareBindingOptions(
 		bindings
 	);
 	const flagshipBindings = extractBindingsOfType("flagship", bindings);
+	const realtimekitBindings = extractBindingsOfType("realtimekit", bindings);
 	const artifactsBindings = extractBindingsOfType("artifacts", bindings);
 	const workerLoaders = extractBindingsOfType("worker_loader", bindings);
 	const sendEmailBindings = extractBindingsOfType("send_email", bindings);
@@ -613,6 +615,14 @@ export function buildMiniflareBindingOptions(
 
 	for (const flagship of flagshipBindings) {
 		validateBindingRemoteSetting("flagship", flagship.remote, logger.warn);
+	}
+
+	for (const realtimekit of realtimekitBindings) {
+		validateBindingRemoteSetting(
+			"realtimekit",
+			realtimekit.remote,
+			logger.warn
+		);
 	}
 
 	const unsafeBindingsWithLocalDev = Object.entries(bindings ?? {}).filter(
@@ -858,6 +868,12 @@ export function buildMiniflareBindingOptions(
 			flagshipBindings.map((binding) =>
 				flagshipEntry(binding, remoteProxyConnectionString)
 			)
+		),
+		realtimekit: Object.fromEntries(
+			realtimekitBindings.map(({ binding, app_id }) => [
+				binding,
+				{ app_id, remoteProxyConnectionString },
+			])
 		),
 		artifacts: Object.fromEntries(
 			artifactsBindings.map((binding) => [

@@ -20,6 +20,7 @@ import type {
 	DispatchNamespaceBinding,
 	DurableObjectBinding,
 	FlagshipBinding,
+	RealtimeKitBinding,
 	HyperdriveBinding,
 	ImagesBinding,
 	JsonBinding,
@@ -114,6 +115,7 @@ type Binding =
 	| DispatchNamespaceBinding
 	| DurableObjectBinding
 	| FlagshipBinding
+	| RealtimeKitBinding
 	| HyperdriveBinding
 	| ImagesBinding
 	| JsonBinding

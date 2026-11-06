@@ -5,6 +5,17 @@ import { createEsmWorker, getBindings } from "./helpers";
 import type { StartDevWorkerInput } from "./helpers";
 
 describe("createWorkerUploadForm — bindings", () => {
+	it("preserves RealtimeKit app IDs and remote opt-in in upload metadata", ({
+		expect,
+	}) => {
+		const form = createWorkerUploadForm(createEsmWorker(), {
+			RTK: { type: "realtimekit", app_id: "app-id", remote: true },
+		});
+		expect(getBindings(form)).toEqual([
+			{ name: "RTK", type: "realtimekit", app_id: "app-id", remote: true },
+		]);
+	});
+
 	describe("plain_text / json / secret_text bindings", () => {
 		it.for([
 			{

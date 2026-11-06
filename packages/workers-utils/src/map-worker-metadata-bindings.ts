@@ -169,6 +169,17 @@ export function mapWorkerMetadataBindings(
 						];
 						break;
 					}
+					case "realtimekit": {
+						configObj.realtimekit = [
+							...(configObj.realtimekit ?? []),
+							{
+								binding: binding.name,
+								app_id: binding.app_id,
+								remote: binding.remote,
+							},
+						];
+						break;
+					}
 					case "service":
 						{
 							configObj.services = [

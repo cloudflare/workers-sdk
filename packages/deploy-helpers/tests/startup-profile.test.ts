@@ -201,6 +201,7 @@ describe("startup profile", () => {
 			"STARTUP_ARTIFACTS",
 			"STARTUP_HELLO_WORLD",
 			"STARTUP_FLAGSHIP",
+			"STARTUP_REALTIMEKIT",
 			"STARTUP_RATELIMIT",
 			"STARTUP_VPC_SERVICE",
 			"STARTUP_VPC_NETWORK",
@@ -287,6 +288,12 @@ describe("startup profile", () => {
 						name: "STARTUP_FLAGSHIP",
 						type: "flagship",
 						app_id: "startup-app",
+					},
+					{
+						name: "STARTUP_REALTIMEKIT",
+						type: "realtimekit",
+						app_id: "startup-realtimekit-app",
+						remote: true,
 					},
 					{
 						name: "STARTUP_RATELIMIT",

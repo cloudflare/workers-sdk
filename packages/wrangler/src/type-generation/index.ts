@@ -2893,6 +2893,27 @@ function collectCoreBindings(
 			addBinding(flagshipBinding.binding, "Flagship", "flagship", envName);
 		}
 
+		for (const [index, realtimekitBinding] of (
+			env.realtimekit ?? []
+		).entries()) {
+			if (!realtimekitBinding.binding) {
+				throwMissingBindingError({
+					binding: realtimekitBinding,
+					bindingType: "realtimekit",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+			addBinding(
+				realtimekitBinding.binding,
+				"RealtimeKitBinding",
+				"realtimekit",
+				envName
+			);
+		}
+
 		for (const [index, ratelimit] of (env.ratelimits ?? []).entries()) {
 			if (!ratelimit.name) {
 				throwMissingBindingError({
@@ -3953,6 +3974,26 @@ function collectCoreBindingsPerEnvironment(
 				bindingCategory: "flagship",
 				name: flagshipBinding.binding,
 				type: "Flagship",
+			});
+		}
+
+		for (const [index, realtimekitBinding] of (
+			env.realtimekit ?? []
+		).entries()) {
+			if (!realtimekitBinding.binding) {
+				throwMissingBindingError({
+					binding: realtimekitBinding,
+					bindingType: "realtimekit",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+			bindings.push({
+				bindingCategory: "realtimekit",
+				name: realtimekitBinding.binding,
+				type: "RealtimeKitBinding",
 			});
 		}
 
