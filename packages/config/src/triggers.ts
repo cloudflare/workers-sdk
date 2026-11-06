@@ -163,7 +163,7 @@ export type ConnectTrigger = ConnectTriggerOptions & { type: "connect" };
  * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#triggers
  */
 export interface Triggers {
-	/** Starts this Worker\'s Workflows from matching Artifacts events. */
+	/** Starts this Worker's Workflows from matching Artifacts events. */
 	artifactsEvent(options: ArtifactsEventTriggerOptions): ArtifactsEventTrigger;
 	/**
 	 * Fetch trigger — a route that your Worker should be published to.
