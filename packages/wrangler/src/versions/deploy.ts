@@ -10,6 +10,7 @@ import {
 import { initContainersSharedContext } from "@cloudflare/containers-shared";
 import {
 	type ApiVersion,
+	applyImagesUrlTransformations,
 	deployVersionedDurableObjectContainerApplications,
 	getVersionedDurableObjectContainerApplications,
 	INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE,
@@ -317,6 +318,12 @@ export const versionsDeployCommand = createCommand({
 		}
 
 		await maybePatchSettings(config, accountId, workerName);
+		await applyImagesUrlTransformations(
+			config,
+			accountId,
+			workerName,
+			"wrangler versions deploy"
+		);
 
 		const elapsedMilliseconds = Date.now() - start;
 		const elapsedSeconds = elapsedMilliseconds / 1000;
