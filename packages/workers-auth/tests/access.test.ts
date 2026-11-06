@@ -201,6 +201,51 @@ describe("access", () => {
 				)
 			).toBeTruthy();
 		});
+
+		it("should not treat a 302 whose Location merely contains cloudflareaccess.com as Access", async ({
+			expect,
+		}) => {
+			// The Location header must be parsed as a URL and its HTTPS
+			// hostname validated against the Access team domains, so a
+			// hostname-suffix lookalike or a query-embedded substring is
+			// not mistaken for a genuine Access redirect (#16755).
+			msw.use(
+				http.get("https://lookalike.evil.test/", () =>
+					HttpResponse.json(null, {
+						status: 302,
+						headers: {
+							location: "https://team.cloudflareaccess.com.evil.test/login",
+						},
+					})
+				),
+				http.get("https://unrelated.test/", () =>
+					HttpResponse.json(null, {
+						status: 302,
+						headers: {
+							location:
+								"https://unrelated.test/next?url=https://team.cloudflareaccess.com/",
+						},
+					})
+				),
+				http.get("https://genuine-redirect.test/", () =>
+					HttpResponse.json(null, {
+						status: 302,
+						headers: {
+							location:
+								"https://team.cloudflareaccess.com/cdn-cgi/access/login/genuine-redirect.test",
+						},
+					})
+				)
+			);
+
+			expect(
+				await domainUsesAccess("lookalike.evil.test", silentLogger)
+			).toBeFalsy();
+			expect(await domainUsesAccess("unrelated.test", silentLogger)).toBeFalsy();
+			expect(
+				await domainUsesAccess("genuine-redirect.test", silentLogger)
+			).toBeTruthy();
+		});
 	});
 
 	describe("getAccessHeaders", () => {
