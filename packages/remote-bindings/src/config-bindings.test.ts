@@ -116,3 +116,29 @@ describe("getRemoteBindings", () => {
 		});
 	});
 });
+
+test("preserves cross-account Worker identity in remote sessions", ({
+	expect,
+}) => {
+	expect(
+		getRemoteBindings({
+			env: {
+				PAYMENTS: {
+					type: "worker",
+					worker: "payments",
+					accountId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+					exportName: "PublicAPI",
+					dev: { remote: true },
+				},
+			},
+		})
+	).toEqual({
+		PAYMENTS: {
+			type: "service",
+			service: "payments",
+			target_account_id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			entrypoint: "PublicAPI",
+			remote: true,
+		},
+	});
+});

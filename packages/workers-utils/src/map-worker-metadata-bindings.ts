@@ -176,6 +176,7 @@ export function mapWorkerMetadataBindings(
 								{
 									binding: binding.name,
 									service: binding.service,
+									target_account_id: binding.target_account_id,
 									environment: binding.environment,
 									entrypoint: binding.entrypoint,
 								},

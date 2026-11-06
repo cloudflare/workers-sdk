@@ -741,6 +741,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						service: binding.worker,
+						target_account_id: binding.accountId,
 						entrypoint: binding.exportName,
 						props: binding.props,
 						remote: binding.dev?.remote,

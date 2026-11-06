@@ -5604,6 +5604,17 @@ const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+	if (
+		hasProperty(value, "target_account_id") &&
+		value.target_account_id !== undefined &&
+		(typeof value.target_account_id !== "string" ||
+			!/^[a-f0-9]{32}$/.test(value.target_account_id))
+	) {
+		diagnostics.errors.push(
+			`"${field}.target_account_id" must be a 32-character public account ID.`
+		);
+		isValid = false;
+	}
 	if (!isOptionalProperty(value, "environment", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "environment" field but got ${JSON.stringify(

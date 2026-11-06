@@ -507,12 +507,14 @@ export function createWorkerUploadForm(
 			entrypoint,
 			props,
 			cross_account_grant,
+			target_account_id,
 		}) => {
 			metadataBindings.push({
 				name: binding,
 				type: "service",
 				service,
 				cross_account_grant,
+				target_account_id,
 				...(environment && { environment }),
 				...(entrypoint && { entrypoint }),
 				...(props && { props }),

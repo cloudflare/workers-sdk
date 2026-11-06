@@ -502,6 +502,7 @@ function extractBindings(
 		env[service.binding] = {
 			type: "service",
 			service: service.service,
+			target_account_id: service.target_account_id,
 			environment,
 			entrypoint: service.entrypoint,
 			props: service.props,

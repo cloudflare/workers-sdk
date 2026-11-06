@@ -372,6 +372,7 @@ export function convertBindings(
 
 			const outboundOptions = optionsFromRecord(outboundTarget, [
 				["service", "worker"],
+				["target_account_id", "accountId"],
 				["parameters", "parameters"],
 			]);
 			options.properties.push({

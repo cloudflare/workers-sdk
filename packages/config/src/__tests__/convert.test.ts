@@ -1847,3 +1847,28 @@ describe("convertToWranglerConfig", () => {
 		});
 	});
 });
+
+it("preserves the public target account on Worker bindings", ({ expect }) => {
+	const result = convertToWranglerConfig({
+		worker: {
+			...baseWorker,
+			env: {
+				PAYMENTS: {
+					type: "worker",
+					worker: "payments",
+					accountId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+					exportName: "PublicAPI",
+				},
+			},
+		},
+		containers: [],
+	});
+	expect(result.services).toEqual([
+		{
+			binding: "PAYMENTS",
+			service: "payments",
+			target_account_id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			entrypoint: "PublicAPI",
+		},
+	]);
+});
