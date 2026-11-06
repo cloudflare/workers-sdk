@@ -5,4 +5,6 @@
 "miniflare": patch
 ---
 
-Like `Authorization`, omit the `X-Auth-Key` header from debug diagnostics regardless of log sanitization settings.
+Redact header values outside a safe diagnostic allowlist, regardless of log sanitization settings.
+
+Apply the same filtering to request, response, and request-options diagnostics. Strip `X-Auth-Key` alongside `Authorization` when forwarding local artifact Git requests.

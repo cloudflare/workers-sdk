@@ -11,13 +11,13 @@ describe("request", () => {
 	});
 
 	it.for([undefined, "true", "false"])(
-		"follows WRANGLER_LOG_SANITIZE=%s for container header diagnostics",
+		"always applies the container header allowlist with sanitization=%s",
 		async (sanitize, { expect }) => {
 			OpenAPI.BASE =
 				"https://api.cloudflare.com/client/v4/accounts/account-id/containers";
 			vi.stubEnv(
 				"CLOUDFLARE_API_HEADERS",
-				'{"X-Custom-Header":"configured-secret","X-Auth-Key":"global-key","Authorization":"Bearer token"}'
+				'{"X-Custom-Header":"configured-secret","X-Auth-Key":"global-key","Authorization":"Bearer token","X-Auth-Email":"user@example.com","X-Session":"session-secret"}'
 			);
 			vi.stubEnv("WRANGLER_LOG_SANITIZE", sanitize);
 			const debugWithSanitization = vi.fn();
@@ -36,17 +36,18 @@ describe("request", () => {
 			await request(OpenAPI, { method: "GET", url: "/instances" });
 			expect(debugWithSanitization).toHaveBeenCalledWith(
 				"HEADERS:",
-				expect.stringContaining(
-					`"x-custom-header": "${sanitize === "false" ? "configured-secret" : "[REDACTED]"}"`
-				)
+				expect.stringContaining('"x-custom-header": "[REDACTED]"')
 			);
 			const headerDiagnostics = debugWithSanitization.mock.calls.filter(
 				([label]) => label === "HEADERS:"
 			);
 			expect(headerDiagnostics).toHaveLength(1);
 			for (const [, headers] of headerDiagnostics) {
-				expect(headers).not.toContain('"x-auth-key"');
-				expect(headers).not.toContain('"authorization"');
+				expect(headers).toContain('"x-auth-key": "[REDACTED]"');
+				expect(headers).toContain('"x-auth-email": "[REDACTED]"');
+				expect(headers).toContain('"x-session": "[REDACTED]"');
+				expect(headers).toContain('"accept": "application/json"');
+				expect(headers).toContain('"authorization": "[REDACTED]"');
 			}
 		}
 	);

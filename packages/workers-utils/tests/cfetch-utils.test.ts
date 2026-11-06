@@ -57,7 +57,7 @@ describe("performApiFetchBase", () => {
 	});
 
 	it.for(["true", "false"])(
-		"omits authentication headers from HEADERS diagnostics with sanitization=%s",
+		"redacts sensitive headers from request diagnostics with sanitization=%s",
 		async (sanitize, { expect }) => {
 			vi.stubEnv("WRANGLER_LOG_SANITIZE", sanitize);
 			const logger = createLogger();
@@ -68,6 +68,9 @@ describe("performApiFetchBase", () => {
 					headers: {
 						authorization: "Bearer token",
 						"x-AUTH-key": "global-key",
+						"X-Auth-Email": "user@example.com",
+						"X-Session": "session-secret",
+						"Content-Type": "application/json",
 					},
 				},
 				"test-agent",
@@ -76,14 +79,17 @@ describe("performApiFetchBase", () => {
 				undefined,
 				{ apiToken: "test-token" }
 			);
-			expect(logger.debugWithSanitization).toHaveBeenCalledWith(
-				"HEADERS:",
-				expect.not.stringContaining('"x-auth-key"')
-			);
-			expect(logger.debugWithSanitization).toHaveBeenCalledWith(
-				"HEADERS:",
-				expect.not.stringContaining('"authorization"')
-			);
+			const diagnostics =
+				vi.mocked(logger.debugWithSanitization)?.mock.calls ?? [];
+			for (const label of ["HEADERS:", "INIT:"]) {
+				const values = diagnostics.find(([name]) => name === label)?.[1];
+				expect(values).toContain('"x-auth-key": "[REDACTED]"');
+				expect(values).toContain('"x-auth-email": "[REDACTED]"');
+				expect(values).toContain('"x-session": "[REDACTED]"');
+				expect(values).toContain('"authorization": "[REDACTED]"');
+				expect(values).toContain('"content-type": "application/json"');
+			}
+
 			const headers = new Headers(fetchMock.mock.calls[0]?.[1].headers);
 			expect(headers.get("x-auth-key")).toBe("global-key");
 		}

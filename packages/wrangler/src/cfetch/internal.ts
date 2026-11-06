@@ -7,7 +7,7 @@ import {
 	getCloudflareApiBaseUrl,
 	parseRetryAfterMs,
 	performApiFetchBase,
-	redactCustomApiHeaders,
+	sanitizeHeaders,
 	UserError,
 } from "@cloudflare/workers-utils";
 import Cloudflare from "cloudflare";
@@ -25,18 +25,15 @@ import type { HeadersInit, RequestInfo, RequestInit } from "undici";
 
 async function logRequest(request: Request, init?: RequestInit) {
 	logger.debug(`-- START CF API REQUEST: ${request.method} ${request.url}`);
-	const logRequestHeaders = cloneHeaders(request.headers);
-	logRequestHeaders.delete("Authorization");
-	logRequestHeaders.delete("X-Auth-Key");
 	logger.debugWithSanitization(
 		"HEADERS:",
-		JSON.stringify(redactCustomApiHeaders(logRequestHeaders), null, 2)
+		JSON.stringify(sanitizeHeaders(request.headers), null, 2)
 	);
 
 	logger.debugWithSanitization(
 		"INIT:",
 		JSON.stringify(
-			{ ...init, headers: redactCustomApiHeaders(new Headers(init?.headers)) },
+			{ ...init, headers: sanitizeHeaders(new Headers(init?.headers)) },
 			null,
 			2
 		)
@@ -59,12 +56,9 @@ async function logResponse(response: Response) {
 		response.statusText,
 		response.status
 	);
-	const logResponseHeaders = cloneHeaders(response.headers);
-	logResponseHeaders.delete("Authorization");
-	logResponseHeaders.delete("X-Auth-Key");
 	logger.debugWithSanitization(
 		"HEADERS:",
-		JSON.stringify(redactCustomApiHeaders(logResponseHeaders), null, 2)
+		JSON.stringify(sanitizeHeaders(response.headers), null, 2)
 	);
 	logger.debugWithSanitization("RESPONSE:", jsonText);
 	logger.debug("-- END CF API RESPONSE");

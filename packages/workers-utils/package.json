@@ -74,6 +74,10 @@
 		"./zod-format": {
 			"import": "./dist/zod-format.mjs",
 			"types": "./dist/zod-format.d.mts"
+		},
+		"./sanitize-headers": {
+			"import": "./dist/sanitize-headers.mjs",
+			"types": "./dist/sanitize-headers.d.mts"
 		}
 	},
 	"scripts": {
