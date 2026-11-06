@@ -156,22 +156,15 @@ export interface DotDevDotVars {
 
 function tryLoadDotDevDotVars(basePath: string): DotDevDotVars | undefined {
 	const contents = readEnvFile(basePath);
-	try {
-		if (contents === undefined) {
-			logger.debug(
-				`local dev variables file not found at "${path.relative(".", basePath)}". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/`
-			);
-			return;
-		}
-
-		const parsed = dotenv.parse(contents);
-		return { path: basePath, parsed };
-	} catch (e) {
-		throw new Error(
-			`Failed to load local dev variables file "${path.relative(".", basePath)}":`,
-			{ cause: e }
+	if (contents === undefined) {
+		logger.debug(
+			`local dev variables file not found at "${path.relative(".", basePath)}". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/`
 		);
+		return;
 	}
+
+	const parsed = dotenv.parse(contents);
+	return { path: basePath, parsed };
 }
 
 /**

@@ -39,7 +39,7 @@ export function readEnvFile(filePath: string): string | undefined {
 	if (text === undefined || text.includes("\0")) {
 		throw new UserError(
 			`The file "${path.relative(process.cwd(), filePath)}" is not UTF-8 encoded, so its variables cannot be read. ` +
-				`Save the file as UTF-8 and try again. (Windows PowerShell 5.1 writes UTF-16 when you use \`>\` or \`Out-File\`.)`,
+				`Make sure to have the file saved as UTF-8 and try again.`,
 			{ telemetryMessage: "env file invalid encoding" }
 		);
 	}
