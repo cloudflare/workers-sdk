@@ -51,7 +51,10 @@ import {
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "./helpers/environments";
-import { EXPORTS_RECONCILIATION_ERROR_CODE } from "./helpers/error-codes";
+import {
+	EXPORTS_RECONCILIATION_ERROR_CODE,
+	WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE,
+} from "./helpers/error-codes";
 import { resolveExportsUploadPayload } from "./helpers/exports";
 import {
 	isExportsReconciliationErrorDetails,
@@ -286,7 +289,11 @@ async function deployWorker(
 			});
 	// Durable Object lifecycle is expressed through either legacy `migrations`
 	// or the declarative `exports` map. Only one is sent on each upload.
-	const { migrations, exports } = await resolveExportsUploadPayload({
+	const {
+		migrations,
+		exports,
+		headers: exportsHeaders,
+	} = await resolveExportsUploadPayload({
 		scriptName,
 		isDryRun,
 		accountId,
@@ -543,9 +550,10 @@ async function deployWorker(
 							{
 								method: "POST",
 								body: workerBundle,
-								headers: props.sendMetrics
-									? { metricsEnabled: "true" }
-									: undefined,
+								headers: {
+									...exportsHeaders,
+									...(props.sendMetrics && { metricsEnabled: "true" }),
+								},
 							},
 							new URLSearchParams({ bindings_inherit: "strict" })
 						),
@@ -614,9 +622,10 @@ async function deployWorker(
 							{
 								method: "PUT",
 								body: workerBundle,
-								headers: props.sendMetrics
-									? { metricsEnabled: "true" }
-									: undefined,
+								headers: {
+									...exportsHeaders,
+									...(props.sendMetrics && { metricsEnabled: "true" }),
+								},
 							},
 							new URLSearchParams({
 								// pass excludeScript so the whole body of the
@@ -709,6 +718,22 @@ async function deployWorker(
 				throw new UserError(
 					renderExportsReconciliationError(err.meta.details),
 					{ telemetryMessage: "deploy do exports reconciliation failed" }
+				);
+			}
+
+			// Workflow exports are provisioned on deploy, so this can come back here
+			// as well as from `triggers deploy`.
+			if (
+				err instanceof APIError &&
+				err.code === WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE
+			) {
+				err.preventReport();
+				throw new UserError(
+					`A Workflow has "schedules" configured, but scheduled Workflows require a paid Workers plan.`,
+					{
+						cause: err,
+						telemetryMessage: "deploy workflow cron requires paid plan",
+					}
 				);
 			}
 
