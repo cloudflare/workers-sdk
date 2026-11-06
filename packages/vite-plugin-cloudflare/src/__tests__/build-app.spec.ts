@@ -188,6 +188,211 @@ test("does not build a fallback client for an entry Worker marked assets-only af
 	).toHaveLength(1);
 });
 
+test.for([
+	{ type: "worker", prebuilt: false },
+	{ type: "assets-only", prebuilt: false },
+	{ type: "dev-only-worker", prebuilt: false },
+	{ type: "worker", prebuilt: true },
+	{ type: "assets-only", prebuilt: true },
+])(
+	"moves prerender assets into the client output for %j",
+	async ({ type, prebuilt }, { expect }) => {
+		createFixture();
+		if (type === "assets-only") {
+			fs.writeFileSync(
+				"cloudflare.config.ts",
+				`export default { worker: { name: "build-app", compatibilityDate: "2024-12-30" } };`
+			);
+		}
+		if (!prebuilt) {
+			fs.unlinkSync("index.html");
+		}
+		fs.writeFileSync("prerender-asset.txt", "Asset imported only by prerender");
+		fs.writeFileSync(
+			"prerender.ts",
+			`import sharedAsset from "./worker-asset.txt?url";
+			import prerenderAsset from "./prerender-asset.txt?url";
+			export default { fetch() { return new Response(sharedAsset + prerenderAsset); } };`
+		);
+		const prerenderBundleDir = getWorkerBundleDir(process.cwd(), "prerender");
+		const { builtEnvironments } = await buildFixture({
+			pluginConfig: {
+				assetsOnly: type === "dev-only-worker",
+				prerenderWorker: {
+					config: {
+						name: "prerender",
+						entrypoint: "./prerender.ts",
+						compatibilityDate: "2024-12-30",
+					},
+					viteEnvironment: { name: "render" },
+				},
+			},
+			viteConfig: {
+				plugins: [
+					{
+						name: "framework-build",
+						async buildApp(builder) {
+							if (!prebuilt) {
+								return;
+							}
+							for (const name of ["client", "render"]) {
+								const environment = builder.environments[name];
+								assert(environment);
+								await builder.build(environment);
+							}
+							fs.unlinkSync(
+								path.join(prerenderBundleDir, ".vite/manifest.json")
+							);
+						},
+					},
+				],
+			},
+		});
+		expect(builtEnvironments.sort()).toEqual(
+			type === "worker" ? ["client", "render", "ssr"] : ["client", "render"]
+		);
+		const clientAssetsDir = path.join(
+			getWorkerAssetsDir(process.cwd()),
+			"assets"
+		);
+		expect(
+			fs
+				.readdirSync(clientAssetsDir)
+				.map((file) =>
+					fs.readFileSync(path.join(clientAssetsDir, file), "utf8")
+				)
+				.sort()
+		).toEqual([
+			"Asset imported by the Worker",
+			"Asset imported only by prerender",
+		]);
+		expect(fs.readdirSync(path.join(prerenderBundleDir, "assets"))).toEqual([]);
+		if (type === "worker") {
+			expect(
+				fs.readdirSync(path.join(getWorkerBundleDir(process.cwd()), "assets"))
+			).toEqual([]);
+		}
+	}
+);
+
+test.for([
+	{
+		parent: "entry",
+		assetsOnly: false,
+		buildChild: true,
+		expectedBuilds: ["child", "client", "ssr"],
+	},
+	{
+		parent: "prerender",
+		assetsOnly: false,
+		buildChild: true,
+		expectedBuilds: ["child", "client", "render", "ssr"],
+	},
+	{
+		parent: "prerender",
+		assetsOnly: true,
+		buildChild: true,
+		expectedBuilds: ["child", "client", "render"],
+	},
+	{
+		parent: "entry",
+		assetsOnly: true,
+		buildChild: true,
+		expectedBuilds: ["child", "ssr"],
+	},
+	{
+		parent: "entry",
+		assetsOnly: false,
+		buildChild: false,
+		expectedBuilds: ["ssr"],
+	},
+])(
+	"handles child environment assets for %j",
+	async ({ parent, assetsOnly, buildChild, expectedBuilds }, { expect }) => {
+		createFixture();
+		fs.unlinkSync("index.html");
+		fs.writeFileSync(
+			"worker.ts",
+			`export default { fetch() { return new Response("Worker"); } };`
+		);
+		fs.writeFileSync("child-asset.txt", "Asset imported only by the child");
+		fs.writeFileSync(
+			"child.ts",
+			`import asset from "./child-asset.txt?url"; export default asset;`
+		);
+		const parentName = parent === "entry" ? "ssr" : "render";
+		const { builder, builtEnvironments } = await buildFixture({
+			pluginConfig: {
+				assetsOnly,
+				viteEnvironment:
+					parent === "entry" ? { childEnvironments: ["child"] } : undefined,
+				prerenderWorker:
+					parent === "prerender"
+						? {
+								config: {
+									name: "prerender",
+									entrypoint: "./worker.ts",
+									compatibilityDate: "2024-12-30",
+								},
+								viteEnvironment: {
+									name: "render",
+									childEnvironments: ["child"],
+								},
+							}
+						: undefined,
+			},
+			viteConfig: {
+				environments: {
+					child: {
+						build: {
+							rollupOptions: { input: path.resolve("child.ts") },
+						},
+					},
+				},
+				builder: {
+					async buildApp(customBuilder) {
+						const parentEnvironment = customBuilder.environments[parentName];
+						assert(parentEnvironment);
+						await customBuilder.build(parentEnvironment);
+						if (buildChild) {
+							const childEnvironment = customBuilder.environments.child;
+							assert(childEnvironment);
+							await customBuilder.build(childEnvironment);
+						}
+					},
+				},
+			},
+		});
+		expect(builtEnvironments.sort()).toEqual(expectedBuilds);
+		const childEnvironment = builder.environments.child;
+		assert(childEnvironment);
+		expect(childEnvironment.isBuilt).toBe(buildChild);
+		if (!buildChild) {
+			return;
+		}
+		const childAssetsDir = path.join(
+			childEnvironment.config.build.outDir,
+			"assets"
+		);
+		if (!expectedBuilds.includes("client")) {
+			expect(fs.readdirSync(childAssetsDir)).toHaveLength(1);
+			return;
+		}
+		expect(fs.readdirSync(childAssetsDir)).toEqual([]);
+		const clientAssetsDir = path.join(
+			getWorkerAssetsDir(process.cwd()),
+			"assets"
+		);
+		expect(
+			fs
+				.readdirSync(clientAssetsDir)
+				.map((file) =>
+					fs.readFileSync(path.join(clientAssetsDir, file), "utf8")
+				)
+		).toEqual(["Asset imported only by the child"]);
+	}
+);
+
 test.for(["imported", "public", "none"])(
 	"builds a fallback client only when needed with %s assets and no index.html",
 	async (assets, { expect }) => {

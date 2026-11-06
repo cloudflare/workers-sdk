@@ -23,25 +23,27 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 	// Frameworks may delete Vite manifests before post `buildApp` hooks run,
 	// so record the main modules and imported assets from the bundles instead.
 	const environmentNameToMainModule = new Map<string, string>();
-	const entryWorkerImportedAssetPaths = new Set<string>();
+	const environmentNameToImportedAssetPaths = new Map<string, Set<string>>();
 
 	return {
 		writeBundle(_options, bundle) {
-			const isEntryWorker =
-				ctx.resolvedPluginConfig.type === "workers" &&
-				this.environment.name ===
-					ctx.resolvedPluginConfig.entryWorkerEnvironmentName;
-			if (isEntryWorker) {
-				entryWorkerImportedAssetPaths.clear();
+			const importedAssetPaths = ctx.getWorkerConfig(this.environment.name)
+				? new Set<string>()
+				: undefined;
+			if (importedAssetPaths) {
+				environmentNameToImportedAssetPaths.set(
+					this.environment.name,
+					importedAssetPaths
+				);
 			}
 
 			for (const output of Object.values(bundle)) {
 				if (output.type !== "chunk") {
 					continue;
 				}
-				if (isEntryWorker) {
+				if (importedAssetPaths) {
 					for (const assetPath of output.viteMetadata?.importedAssets ?? []) {
-						entryWorkerImportedAssetPaths.add(assetPath);
+						importedAssetPaths.add(assetPath);
 					}
 				}
 				if (output.isEntry && output.name === MAIN_ENTRY_NAME) {
@@ -59,7 +61,7 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 				await buildApp(
 					builder,
 					ctx.resolvedPluginConfig,
-					entryWorkerImportedAssetPaths
+					environmentNameToImportedAssetPaths
 				);
 
 				if (ctx.resolvedPluginConfig.type === "assets-only") {
