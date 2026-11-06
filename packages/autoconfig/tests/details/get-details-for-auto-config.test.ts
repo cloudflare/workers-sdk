@@ -150,6 +150,40 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 	});
 
+	// A Worker migrated with `cf migrate --bundler wrangler` (so a
+	// `cloudflare.config.ts` exists) whose `vite` dev dependency is only there for
+	// Vitest, with no `@cloudflare/vite-plugin`, must not have its Wrangler
+	// bundler overridden by a detected Vite build command (issue #16750).
+	it("should defer a configured Worker to the Cloudflare dev server when Vite is only a test dependency", async ({
+		expect,
+	}) => {
+		await seed({
+			"cloudflare.config.ts": "export default {};",
+			"wrangler.config.ts": "export default {};",
+			"package.json": JSON.stringify({
+				name: "migration-repro",
+				type: "module",
+				scripts: { test: "vitest" },
+				devDependencies: {
+					wrangler: "4.143.0",
+					vite: "8.2.2",
+					vitest: "4.0.0",
+				},
+			}),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+			"src/index.ts":
+				"export default { fetch() { return new Response('ok') } };",
+		});
+
+		const result = await details.getDetailsForAutoConfig({ context });
+
+		expect(result.configured).toBe(true);
+		// `cf build` must delegate to the installed Cloudflare dev server
+		// (Wrangler), not to `vite build`.
+		expect(result.buildCommand).toBeUndefined();
+		expect(result.devCommand).toBeUndefined();
+	});
+
 	// Check that Astro is detected. We don't want to duplicate the tests of @netlify/build-info
 	// by exhaustively checking every possible combination
 	it.for(["npm", "pnpm"] as const)(
