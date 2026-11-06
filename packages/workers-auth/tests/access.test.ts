@@ -201,6 +201,74 @@ describe("access", () => {
 				)
 			).toBeTruthy();
 		});
+
+		it("should not treat a 302 to a lookalike host as Cloudflare Access", async ({
+			expect,
+		}) => {
+			// The redirect's hostname is `team.cloudflareaccess.com.evil.test`:
+			// it merely ends with the Access domain as a prefix, but the
+			// substring check matches it anywhere in the Location URL.
+			// See https://github.com/cloudflare/workers-sdk/issues/16755
+			msw.use(
+				http.get("https://lookalike-host.test/", () =>
+					HttpResponse.json(null, {
+						status: 302,
+						headers: {
+							location: "https://team.cloudflareaccess.com.evil.test/login",
+						},
+					})
+				)
+			);
+
+			expect(
+				await domainUsesAccess("lookalike-host.test", silentLogger)
+			).toBeFalsy();
+		});
+
+		it("should not treat a 302 whose query parameter merely mentions cloudflareaccess.com as Cloudflare Access", async ({
+			expect,
+		}) => {
+			// The redirect target is `unrelated.test`; `cloudflareaccess.com`
+			// appears only inside a query parameter, so it is not an Access
+			// login redirect despite the substring check matching it.
+			// See https://github.com/cloudflare/workers-sdk/issues/16755
+			msw.use(
+				http.get("https://query-params.test/", () =>
+					HttpResponse.json(null, {
+						status: 302,
+						headers: {
+							location:
+								"https://unrelated.test/next?url=https://team.cloudflareaccess.com/",
+						},
+					})
+				)
+			);
+
+			expect(
+				await domainUsesAccess("query-params.test", silentLogger)
+			).toBeFalsy();
+		});
+
+		it("should still detect a genuine 302 to an https cloudflareaccess.com login URL", async ({
+			expect,
+		}) => {
+			// Positive control: the login redirect Access actually sends is a
+			// full https URL on a cloudflareaccess.com hostname, and must keep
+			// being recognised once the Location is validated as a URL.
+			msw.use(
+				http.get("https://genuine.test/", () =>
+					HttpResponse.json(null, {
+						status: 302,
+						headers: {
+							location:
+								"https://team.cloudflareaccess.com/cdn-cgi/access/login/genuine.test?kid=1",
+						},
+					})
+				)
+			);
+
+			expect(await domainUsesAccess("genuine.test", silentLogger)).toBeTruthy();
+		});
 	});
 
 	describe("getAccessHeaders", () => {
