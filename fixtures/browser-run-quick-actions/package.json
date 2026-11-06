@@ -2,20 +2,20 @@
 	"name": "@fixture/browser-run-quick-actions",
 	"private": true,
 	"description": "Fixture for the Browser Run binding's `quickAction()` method",
+	"type": "module",
 	"scripts": {
-		"cf-typegen": "wrangler types --no-include-runtime",
-		"check:type": "tsc",
-		"deploy": "wrangler deploy",
-		"dev": "wrangler dev",
-		"start": "wrangler dev",
+		"check:type": "cf workers types --include-runtime=false && tsc --build",
+		"deploy": "cf deploy",
+		"dev": "cf dev",
+		"start": "cf dev",
 		"test": "vitest",
-		"test:ci": "vitest run",
-		"type:tests": "tsc -p ./test/tsconfig.json"
+		"test:ci": "vitest run"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/node": "catalog:default",
+		"cf": "catalog:default",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*"

@@ -221,9 +221,18 @@ importers:
       '@cloudflare/vitest-plugin':
         specifier: workspace:*
         version: link:../../packages/vitest-plugin
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 5.20261106.1
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.17(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -245,6 +254,9 @@ importers:
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.17(@types/node@22.15.17)
       typescript:
         specifier: catalog:default
         version: 5.8.3

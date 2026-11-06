@@ -1,8 +1,9 @@
 // test/index.spec.ts
 import { rm } from "node:fs/promises";
 import { resolve } from "path";
-import { afterAll, beforeAll, describe, it, TestOptions } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
+import type { TestOptions } from "vitest";
 
 const BROWSER_RENDERING_RETRY = {
 	retry: {
@@ -13,10 +14,7 @@ const BROWSER_RENDERING_RETRY = {
 } satisfies TestOptions;
 
 describe("Local Browser", { concurrent: false }, () => {
-	let ip: string,
-		port: number,
-		stop: (() => Promise<unknown>) | undefined,
-		getOutput: () => string;
+	let ip: string, port: number, stop: (() => Promise<unknown>) | undefined;
 
 	beforeAll(async () => {
 		// delete previous run contents because of persistence
@@ -24,10 +22,12 @@ describe("Local Browser", { concurrent: false }, () => {
 			force: true,
 			recursive: true,
 		});
-		({ ip, port, stop, getOutput } = await runWranglerDev(
-			resolve(__dirname, ".."),
-			["--local", "--port=0", "--inspector-port=0"]
-		));
+		({ ip, port, stop } = await runWranglerDev(resolve(__dirname, ".."), [
+			"--x-new-config",
+			"--local",
+			"--port=0",
+			"--inspector-port=0",
+		]));
 	});
 
 	afterAll(async () => {
