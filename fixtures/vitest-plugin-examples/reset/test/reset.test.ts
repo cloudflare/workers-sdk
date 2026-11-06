@@ -84,10 +84,10 @@ it("sees reset ratelimit state after reset", async ({ expect }) => {
 	expect(result.success).toBe(true);
 });
 
-it("shares ratelimit state across bindings with the same namespace_id", async ({
+it("shares ratelimit state across bindings with the same namespace", async ({
 	expect,
 }) => {
-	// RATE_LIMITER and RATE_LIMITER_ALIAS both reference namespace_id "1", so
+	// RATE_LIMITER and RATE_LIMITER_ALIAS both reference namespace "1", so
 	// they increment the same underlying counter for a given key.
 	for (let i = 0; i < 100; i++) {
 		const res = await env.RATE_LIMITER.limit({ key: "shared" });

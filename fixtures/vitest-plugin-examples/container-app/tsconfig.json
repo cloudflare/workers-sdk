@@ -6,5 +6,7 @@
 		// Remove when https://github.com/cloudflare/containers/issues/167 is resolved.
 		"skipLibCheck": true
 	},
-	"include": ["./*.ts"]
+	"include": ["./*.ts"],
+	// Type-checked with the Worker in `src/tsconfig.json`
+	"exclude": ["./cloudflare.config.ts"]
 }
