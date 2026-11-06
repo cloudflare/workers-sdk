@@ -1,5 +1,25 @@
 # @cloudflare/containers-shared
 
+## 0.24.0
+
+### Minor Changes
+
+- [#16413](https://github.com/cloudflare/workers-sdk/pull/16413) [`3ef2afd`](https://github.com/cloudflare/workers-sdk/commit/3ef2afd63431cf8e57f94e47501d6be53adcaccc) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Remove the image-tag Container cleanup helpers
+
+  `cleanupContainers()`, `getContainerIdsByImageTags()`, and `getContainerIdsFromImage()` are removed. They found local containers by image tag, which missed the networking sidecars and snapshot clone volumes that workerd creates. Miniflare now removes those resources itself.
+
+### Patch Changes
+
+- [#16746](https://github.com/cloudflare/workers-sdk/pull/16746) [`abf924e`](https://github.com/cloudflare/workers-sdk/commit/abf924ee1820b4af139f21dffc877eaf6122c056) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-06
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`abf924e`](https://github.com/cloudflare/workers-sdk/commit/abf924ee1820b4af139f21dffc877eaf6122c056), [`cff83d0`](https://github.com/cloudflare/workers-sdk/commit/cff83d0220b51c7cfdf422bcd5091a8fbea76d81), [`c64fdfb`](https://github.com/cloudflare/workers-sdk/commit/c64fdfba7d2531b4f58d7b76474f2ae636b17044)]:
+  - @cloudflare/workers-utils@0.52.1
+  - @cloudflare/build-output-utils@0.9.11
+  - @cloudflare/cli-shared-helpers@0.3.5
+  - @cloudflare/config@0.31.0
+
 ## 0.23.9
 
 ### Patch Changes
