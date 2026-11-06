@@ -587,6 +587,7 @@ function convertOutboundService(
 		return {
 			type: "worker",
 			worker: converted.worker,
+			accountId: converted.accountId,
 			exportName: converted.exportName,
 			props: converted.props,
 			dev: converted.dev,
