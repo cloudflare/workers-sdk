@@ -3,11 +3,12 @@
  *
  * Wraps wrangler's internal `startDev` — the same function `wrangler dev`
  * runs — in the experimental-flags async-local context this entrypoint
- * needs, and blocks until the dev session tears down. Argv parsing and
- * the `StartDevOptions` literal live in `bin/cf-wrangler.js`.
+ * needs, and blocks until the dev session tears down. Argv parsing lives in
+ * `src/cf-wrangler/args.ts`.
  */
 import events from "node:events";
 import { createCfProfileStore } from "@cloudflare/workers-auth/cf";
+import { validateDevArgs } from "../dev/args";
 import { startDev } from "../dev/start-dev";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
@@ -20,12 +21,13 @@ import type { StartDevOptions } from "../dev";
  * handler and installs no signal handlers of its own, so signal handling
  * and exit codes match `wrangler dev` exactly.
  *
- * @param options Fully-built `StartDevOptions` (built in `bin/cf-wrangler.js`).
+ * @param options Parsed development server options.
  * @returns `0` on a clean teardown.
  */
 export async function runCfWranglerDev(
 	options: StartDevOptions
 ): Promise<number> {
+	validateDevArgs(options);
 	const profile = createCfProfileStore({ logger }).resolve({
 		cwd: process.cwd(),
 	});
