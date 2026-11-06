@@ -18,6 +18,7 @@ import {
 } from "miniflare";
 import { z } from "zod";
 import { getRemoteBindingsAuth } from "./auth";
+import { prepareProjectContainers } from "./containers";
 import {
 	getProjectPath,
 	getRelativeProjectConfigPath,
@@ -35,6 +36,7 @@ import {
 	NEW_CONFIG_FILENAME,
 } from "./new-config";
 import type { LoadedNewConfig } from "./new-config";
+import type { ViteLogger } from "@cloudflare/containers-shared";
 import type {
 	RemoteBindingsLogger,
 	RemoteProxySessionData,
@@ -43,6 +45,7 @@ import type { Config } from "@cloudflare/workers-utils";
 import type {
 	LegacyWorkerOptions,
 	RemoteProxyConnectionString,
+	V4MiniflareOptions,
 	V4ModuleRule,
 	WorkerOptions,
 } from "miniflare";
@@ -140,6 +143,8 @@ export type WorkersPoolOptions = z.input<typeof WorkersPoolOptionsSchema> & {
 export type WorkersPoolOptionsWithDefines = WorkersPoolOptions & {
 	defines?: Record<string, string>;
 	moduleRules?: V4ModuleRule[];
+	/** Container engine prepared from the resolved Worker configuration. */
+	containerEngine?: V4MiniflareOptions["containerEngine"];
 	/**
 	 * Details of the configuration file these options were resolved from. Set
 	 * while parsing; not a user-facing option. Undefined when the project
@@ -257,6 +262,18 @@ function parseWorkerOptions(
 
 const log = new Log(LogLevel.WARN, { prefix: "vpw" });
 const debug = util.debuglog("vitest-plugin");
+
+const containerLogger: ViteLogger = {
+	info(message) {
+		log.info(message);
+	},
+	warn(message) {
+		log.warn(message);
+	},
+	error(message) {
+		log.logWithLevel(LogLevel.ERROR, message);
+	},
+};
 
 const remoteBindingsLogger: RemoteBindingsLogger = {
 	loggerLevel: "log",
@@ -728,6 +745,13 @@ async function parseCustomPoolOptions(
 			workerName: config.topLevelName,
 			effectiveWorkerName: config.name,
 		};
+		const containerEnvironment = await prepareProjectContainers(
+			project,
+			config,
+			configPath,
+			containerLogger
+		);
+		options.containerEngine = containerEnvironment?.containerEngine;
 
 		// Already imported above, so the module registry makes this a no-op
 		const wrangler = await import("wrangler");
@@ -761,9 +785,8 @@ async function parseCustomPoolOptions(
 			wrangler.unstable_getMiniflareWorkerOptions(config, environment, {
 				overrides: {
 					assets: options.miniflare.assets,
-					// doesn't work with containers yet so let's just disable it
-					enableContainers: false,
 				},
+				containerBuildId: containerEnvironment?.containerBuildId,
 				remoteProxyConnectionString:
 					remoteProxySessionData?.session?.remoteProxyConnectionString,
 			});

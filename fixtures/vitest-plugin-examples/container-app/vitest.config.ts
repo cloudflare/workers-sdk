@@ -10,5 +10,9 @@ export default mergeConfig(
 				wrangler: { configPath: "./wrangler.jsonc" },
 			}),
 		],
+		test: {
+			include: ["test/container.test.ts"],
+			name: "container-app",
+		},
 	})
 );
