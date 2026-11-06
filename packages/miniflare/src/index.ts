@@ -2484,15 +2484,16 @@ export class Miniflare {
 	/**
 	 * Removes the Docker resources of a session whose workerd processes have
 	 * all exited. Until removal settles, the exit hook removes them instead.
+	 * Removal logs its failures instead of rejecting, so callers need not wait
+	 * for it; `dispose()` waits for removals still in progress.
 	 *
 	 * @param session Session to remove.
 	 */
-	#endContainerSession(session: ContainerSession): Promise<void> {
+	#endContainerSession(session: ContainerSession): void {
 		const removal = removeContainerSession(session, this.#log).finally(() =>
 			this.#endingContainerSessions.delete(session)
 		);
 		this.#endingContainerSessions.set(session, removal);
-		return removal;
 	}
 
 	#handleWorkerdCrash(): void {
@@ -2663,7 +2664,7 @@ export class Miniflare {
 			// Names include the session, so the ended session's resources can be
 			// removed while the next workerd starts.
 			await runtime.dispose();
-			void this.#endContainerSession(containerSession.ended);
+			this.#endContainerSession(containerSession.ended);
 		}
 		// Switch sessions only once the old workerd has stopped, so that a
 		// failure above leaves the running process's session tracked.
@@ -3814,7 +3815,7 @@ export class Miniflare {
 		const containerSession = this.#containerSession;
 		this.#containerSession = undefined;
 		if (containerSession !== undefined) {
-			void this.#endContainerSession(containerSession);
+			this.#endContainerSession(containerSession);
 		}
 		await Promise.all(this.#endingContainerSessions.values());
 		// Remove exit hook, we're cleaning up what they would've cleaned up now
