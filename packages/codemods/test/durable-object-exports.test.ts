@@ -402,7 +402,7 @@ describe("Durable Object export inference", () => {
 		).toEqual([
 			{
 				code: "durable-object-missing-class",
-				sourcePath: "durable_objects.bindings.0",
+				sourcePath: "durable_objects.bindings[0]",
 			},
 			{ code: "durable-object-storage", sourcePath: "exports.Counter" },
 		]);

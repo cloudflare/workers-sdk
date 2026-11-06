@@ -505,7 +505,7 @@ export function convertBindings(
 				worker = `${worker}-${entry.environment}`;
 			}
 
-			const sourcePath = pathFor("durable_objects.bindings", index);
+			const sourcePath = pathFor(`durable_objects.bindings[${index}]`);
 			imports.add("bindings");
 
 			addBinding(
