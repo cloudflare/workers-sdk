@@ -162,6 +162,42 @@ function getConversionSignature(rawConfig: RawConfig): string {
 const BASE_SIGNATURE = getConversionSignature(BASE_CONFIG);
 
 describe("Wrangler schema coverage", () => {
+	it("preserves the account on service bindings without adding it to dispatch outbound bindings", ({
+		expect,
+	}) => {
+		const converted = convertWranglerConfig(
+			{
+				...BASE_CONFIG,
+				services: [
+					{
+						binding: "PAYMENTS",
+						service: "payments",
+						target_account_id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+						entrypoint: "PublicAPI",
+					},
+				],
+				dispatch_namespaces: [
+					{
+						binding: "DISPATCH",
+						namespace: "customers",
+						outbound: { service: "outbound", parameters: ["region"] },
+					},
+				],
+			},
+			"wrangler",
+			[]
+		);
+		const output = renderCloudflareConfig(converted);
+		expect(output).toContain('accountId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"');
+		expect(output).toMatch(
+			/PAYMENTS: bindings\.worker\(\{[^}]*worker: "payments",[^}]*accountId:[^}]*exportName: "PublicAPI"/s
+		);
+		expect(output).toMatch(
+			/outbound: \{\s*worker: "outbound",\s*parameters: \[\s*"region",?\s*\]/
+		);
+		expect(output.match(/accountId:/g)).toHaveLength(1);
+	});
+
 	it("classifies every top-level Wrangler configuration field", async ({
 		expect,
 	}) => {

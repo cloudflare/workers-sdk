@@ -4,6 +4,26 @@ import { convertV4MiniflareOptions } from "../../src/config/v4-convert";
 import type { RemoteProxyConnectionString } from "../../src/plugins/shared";
 
 describe("convertV4MiniflareOptions", () => {
+	test("preserves a cross-account outbound service target", ({ expect }) => {
+		const converted = convertV4MiniflareOptions({
+			script: "export default {};",
+			modules: true,
+			outboundService: {
+				name: "payments",
+				entrypoint: "PublicAPI",
+				targetAccountId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+				props: { region: "eu" },
+			},
+		});
+		expect(converted.workers[0].dev?.outboundService).toMatchObject({
+			type: "worker",
+			worker: "payments",
+			exportName: "PublicAPI",
+			accountId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			props: { region: "eu" },
+		});
+	});
+
 	test("preserves a cross-account service target", ({ expect }) => {
 		const converted = convertV4MiniflareOptions({
 			script: "export default {};",
