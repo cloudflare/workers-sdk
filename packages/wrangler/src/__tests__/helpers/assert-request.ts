@@ -42,6 +42,9 @@ export function makeApiRequestAsserter(
 		}
 
 		const headers = JSON.parse(headersStr);
-		expect(headers).toEqual({ "user-agent": "wrangler/x.x.x" });
+		expect(headers).toEqual({
+			"cloudflare-workers-script-api-date": "2026-10-22",
+			"user-agent": "wrangler/x.x.x",
+		});
 	};
 }

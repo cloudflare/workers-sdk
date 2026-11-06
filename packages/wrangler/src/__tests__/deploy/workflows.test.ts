@@ -1298,8 +1298,13 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
 					expectedExports: {
-						MyWorkflow: { type: "workflow", name: "my-workflow" },
+						MyWorkflow: {
+							type: "workflow",
+							name: "my-workflow",
+							limits: { steps: 10 },
+						},
 					},
+					expectedScriptApiDate: "2026-10-22",
 				});
 
 				await runWrangler("deploy");
@@ -1351,7 +1356,18 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
 					expectedExports: {
-						MyWorkflow: { type: "workflow", name: "my-workflow" },
+						MyWorkflow: {
+							type: "workflow",
+							name: "my-workflow",
+							limits: { steps: 10 },
+							concurrency: { limit: 5 },
+							schedules: ["0 * * * *", "30 * * * *"],
+							default_retention: {
+								success_retention: "3 days",
+								error_retention: 86_400_000,
+							},
+							jurisdiction: "fedramp",
+						},
 					},
 				});
 
@@ -1373,7 +1389,7 @@ describe("deploy", () => {
 				]);
 			});
 
-			it("should provision a workflow declared by both a binding and an export once", async ({
+			it("should error when a workflow is declared by both a binding and an export", async ({
 				expect,
 			}) => {
 				writeWranglerConfig({
@@ -1383,56 +1399,92 @@ describe("deploy", () => {
 							binding: "WORKFLOW",
 							name: "my-workflow",
 							class_name: "MyWorkflow",
-							schedules: "0 * * * *",
 						},
 					],
+					exports: {
+						MyWorkflow: { type: "workflow", name: "my-workflow" },
+					},
+				});
+				await fs.promises.writeFile("index.js", workflowSource);
+
+				await expect(
+					runWrangler("deploy")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: "workflows[0]" and "exports.MyWorkflow" both declare the Workflow "my-workflow". Declare it in only one place: keep the "workflows" entry, or remove it and keep the "exports" entry, using \`ctx.exports.MyWorkflow\` in your code.]`
+				);
+			});
+
+			it("should explain a paid-plan error for scheduled workflow exports returned by the upload", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.js",
 					exports: {
 						MyWorkflow: {
 							type: "workflow",
 							name: "my-workflow",
-							limits: { steps: 10 },
+							schedules: "0 * * * *",
 						},
 					},
 				});
 				await fs.promises.writeFile("index.js", workflowSource);
 
-				const putBodies: unknown[] = [];
 				msw.use(
-					http.put(
-						"*/accounts/:accountId/workflows/:workflowName",
-						async ({ request }) => {
-							putBodies.push(await request.json());
+					http.post(
+						"*/accounts/:accountId/workers/scripts/:scriptName/versions",
+						() =>
+							HttpResponse.json(
+								createFetchResult(null, false, [
+									{
+										code: WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE,
+										message: "workflow.cron_requires_paid_plan",
+									},
+								]),
+								{ status: 403 }
+							)
+					)
+				);
+
+				await expect(runWrangler("deploy")).rejects.toThrow(
+					'Workflow "my-workflow" has "schedules" configured, but scheduled Workflows require a paid Workers plan.'
+				);
+			});
+
+			it("should not retry an upload that deployed the Worker but failed to provision a workflow", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.js",
+					exports: {
+						MyWorkflow: { type: "workflow", name: "my-workflow" },
+					},
+				});
+				await fs.promises.writeFile("index.js", workflowSource);
+
+				let uploads = 0;
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/workers/scripts/:scriptName/versions",
+						() => {
+							uploads++;
 							return HttpResponse.json(
-								createFetchResult({ id: "mock-new-workflow-id" })
+								createFetchResult(null, false, [
+									{
+										code: 100413,
+										message:
+											"Worker deployment committed, but Workflow provisioning failed",
+									},
+								]),
+								{ status: 500 }
 							);
 						}
 					)
 				);
-				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					expectedBindings: [
-						{
-							type: "workflow",
-							name: "WORKFLOW",
-							workflow_name: "my-workflow",
-							class_name: "MyWorkflow",
-						},
-					],
-					expectedExports: {
-						MyWorkflow: { type: "workflow", name: "my-workflow" },
-					},
-				});
 
-				await runWrangler("deploy");
-
-				expect(putBodies).toEqual([
-					{
-						script_name: "test-name",
-						class_name: "MyWorkflow",
-						limits: { steps: 10 },
-						schedules: [{ cron: "0 * * * *" }],
-					},
-				]);
+				await expect(runWrangler("deploy")).rejects.toThrow(
+					/A request to the Cloudflare API .* failed/
+				);
+				expect(uploads).toBe(1);
 			});
 
 			it("should check a binding against an export using the name passed to --name", async ({
@@ -1458,7 +1510,7 @@ describe("deploy", () => {
 				await expect(
 					runWrangler("deploy --name deployed-name")
 				).rejects.toThrow(
-					'"workflows[0]" and "exports.MyWorkflow" both declare the Workflow "my-workflow", but with different classes ("OldWorkflow" and "MyWorkflow").'
+					'"workflows[0]" and "exports.MyWorkflow" both declare the Workflow "my-workflow".'
 				);
 			});
 

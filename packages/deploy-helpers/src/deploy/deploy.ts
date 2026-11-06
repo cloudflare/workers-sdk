@@ -51,14 +51,21 @@ import {
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "./helpers/environments";
-import { EXPORTS_RECONCILIATION_ERROR_CODE } from "./helpers/error-codes";
-import { resolveExportsUploadPayload } from "./helpers/exports";
+import {
+	EXPORTS_RECONCILIATION_ERROR_CODE,
+	WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE,
+} from "./helpers/error-codes";
+import {
+	resolveExportsUploadPayload,
+	WORKER_UPLOAD_SCRIPT_API_DATE,
+} from "./helpers/exports";
 import {
 	isExportsReconciliationErrorDetails,
 	renderExportsReconciliationError,
 	renderExportsReconciliationSuccess,
 } from "./helpers/exports-reconciliation";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
+import { getWorkflowsOwnedByScript } from "./helpers/owned-workflows";
 import { collectPackageDependencies } from "./helpers/package-dependencies";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
@@ -543,9 +550,11 @@ async function deployWorker(
 							{
 								method: "POST",
 								body: workerBundle,
-								headers: props.sendMetrics
-									? { metricsEnabled: "true" }
-									: undefined,
+								headers: {
+									"Cloudflare-Workers-Script-Api-Date":
+										WORKER_UPLOAD_SCRIPT_API_DATE,
+									...(props.sendMetrics && { metricsEnabled: "true" }),
+								},
 							},
 							new URLSearchParams({ bindings_inherit: "strict" })
 						),
@@ -614,9 +623,11 @@ async function deployWorker(
 							{
 								method: "PUT",
 								body: workerBundle,
-								headers: props.sendMetrics
-									? { metricsEnabled: "true" }
-									: undefined,
+								headers: {
+									"Cloudflare-Workers-Script-Api-Date":
+										WORKER_UPLOAD_SCRIPT_API_DATE,
+									...(props.sendMetrics && { metricsEnabled: "true" }),
+								},
 							},
 							new URLSearchParams({
 								// pass excludeScript so the whole body of the
@@ -710,6 +721,27 @@ async function deployWorker(
 					renderExportsReconciliationError(err.meta.details),
 					{ telemetryMessage: "deploy do exports reconciliation failed" }
 				);
+			}
+
+			// EWC provisions Workflow exports on upload, so the Workflows API's
+			// paid-plan error can come back here rather than from `triggers deploy`.
+			if (
+				err instanceof APIError &&
+				err.code === WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE
+			) {
+				const scheduled = getWorkflowsOwnedByScript(config, scriptName)
+					.filter((workflow) => workflow.schedules)
+					.map((workflow) => `"${workflow.name}"`);
+				if (scheduled.length > 0) {
+					err.preventReport();
+					throw new UserError(
+						`${scheduled.length === 1 ? "Workflow" : "Workflows"} ${scheduled.join(", ")} ${scheduled.length === 1 ? "has" : "have"} "schedules" configured, but scheduled Workflows require a paid Workers plan.`,
+						{
+							cause: err,
+							telemetryMessage: "deploy workflow cron requires paid plan",
+						}
+					);
+				}
 			}
 
 			const message = await helpIfErrorIsSizeOrScriptStartup(

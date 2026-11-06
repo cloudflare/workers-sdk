@@ -78,6 +78,7 @@ export function mockUploadWorkerRequest(
 		expectedDeploymentMessage?: string;
 		expectedDurableObjectsCodeUpdateStrategy?: DurableObjectCodeUpdateStrategy;
 		expectedBindingsInherit?: "strict";
+		expectedScriptApiDate?: string;
 	} = {}
 ) {
 	const handleUpload: HttpResponseResolver = async ({ params, request }) => {
@@ -104,6 +105,11 @@ export function mockUploadWorkerRequest(
 		}
 		if (expectedDispatchNamespace) {
 			expect(params.dispatchNamespace).toEqual(expectedDispatchNamespace);
+		}
+		if (options.expectedScriptApiDate !== undefined) {
+			expect(request.headers.get("Cloudflare-Workers-Script-Api-Date")).toEqual(
+				options.expectedScriptApiDate
+			);
 		}
 
 		// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API; only deprecated on undici's server-side types

@@ -37,7 +37,10 @@ import {
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "./helpers/environments";
 import { ACTOR_BINDING_DEPENDS_ON_EXPORT_CODE } from "./helpers/error-codes";
-import { resolveExportsUploadPayload } from "./helpers/exports";
+import {
+	resolveExportsUploadPayload,
+	WORKER_UPLOAD_SCRIPT_API_DATE,
+} from "./helpers/exports";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
 import { collectPackageDependencies } from "./helpers/package-dependencies";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
@@ -359,9 +362,11 @@ async function uploadWorkerVersion(
 						{
 							method: "POST",
 							body: workerBundle,
-							headers: props.sendMetrics
-								? { metricsEnabled: "true" }
-								: undefined,
+							headers: {
+								"Cloudflare-Workers-Script-Api-Date":
+									WORKER_UPLOAD_SCRIPT_API_DATE,
+								...(props.sendMetrics && { metricsEnabled: "true" }),
+							},
 						},
 						new URLSearchParams({ bindings_inherit: "strict" })
 					),
