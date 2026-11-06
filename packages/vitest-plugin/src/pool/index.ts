@@ -28,6 +28,7 @@ import {
 	WORKER_NAME_PREFIX,
 } from "./helpers";
 import { createLoopbackHandler } from "./loopback";
+import { waitForMiniflareReady } from "./miniflare-startup";
 import { handleModuleFallbackRequest } from "./module-fallback";
 import type {
 	ProjectWorkers,
@@ -607,9 +608,7 @@ export async function getProjectMiniflare(
 			`Starting inspector on port ${mfOptions.inspectorPort} for ${getRelativeProjectPath(project)}`
 		);
 	}
-	const mf = new Miniflare(mfOptions);
-	await mf.ready;
-	return mf;
+	return waitForMiniflareReady(new Miniflare(mfOptions));
 }
 
 export function maybeGetResolvedMainPath(
