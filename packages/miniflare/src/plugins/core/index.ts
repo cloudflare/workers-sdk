@@ -191,6 +191,10 @@ function getCustomServiceDesignator(
 			serviceName = `${CORE_PLUGIN_NAME}:remote-proxy-service:${workerIndex}:${name}`;
 			// Remote config travels via props to a generic proxy worker.
 			props = buildRemoteProxyProps(remoteProxyConnectionString, name);
+		} else if (service.accountId !== undefined) {
+			throw new Error(
+				`Cross-account Worker binding "${name}" requires a remote binding session. Set dev.remote to true or supply an explicit local mock.`
+			);
 		} else if (service.worker === kCurrentWorker) {
 			serviceName = getUserServiceName(refererName);
 			entrypoint = service.exportName;

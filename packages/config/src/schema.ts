@@ -38,6 +38,10 @@ export const AnalyticsSqlBindingSchema = z.strictObject({
 export const WorkerBindingSchema = z.strictObject({
 	type: z.literal("worker"),
 	worker: z.string(),
+	accountId: z
+		.string()
+		.regex(/^[a-f0-9]{32}$/)
+		.optional(),
 	exportName: z.string().optional(),
 	props: z.record(z.string(), z.unknown()).optional(),
 	dev: RemoteBindingDevSchema.optional(),
