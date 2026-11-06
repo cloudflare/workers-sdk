@@ -2072,6 +2072,21 @@ describe("wrangler dev", { concurrent: false }, () => {
 				"
 			`);
 		});
+
+		it("should prefer `.dev.vars.<environment>` if `CLOUDFLARE_ENV=<environment>` is set", async ({
+			expect,
+		}) => {
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.writeFileSync(".dev.vars", "DEFAULT_VAR=default");
+			fs.writeFileSync(".dev.vars.custom", "CUSTOM_VAR=custom");
+
+			writeWranglerConfig({ main: "index.js", env: { custom: {} } });
+			await runWranglerUntilConfig("dev", { CLOUDFLARE_ENV: "custom" });
+			const out = std.out;
+			expect(out).toContain("Using secrets defined in .dev.vars.custom");
+			expect(out).not.toContain("DEFAULT_VAR");
+			expect(out).toContain('env.CUSTOM_VAR ("(hidden)")');
+		});
 	});
 
 	describe("secrets config", () => {
@@ -2364,6 +2379,25 @@ describe("wrangler dev", { concurrent: false }, () => {
 				env.__DOT_ENV_LOCAL_DEV_VAR_2 ("(hidden)")          Environment Variable      local
 				env.__DOT_ENV_LOCAL_DEV_VAR_3 ("(hidden)")          Environment Variable      local
 				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL ("(hidden)")      Environment Variable      local"
+			`);
+		});
+
+		it("should get local dev `vars` from appropriate `.env.<environment>` files when CLOUDFLARE_ENV=<environment> is set", async ({
+			expect,
+		}) => {
+			await runWranglerUntilConfig("dev", { CLOUDFLARE_ENV: "custom" });
+			const out = std.out;
+			expect(extractUsingVars(out)).toMatchInlineSnapshot(`
+				"Using secrets defined in .env
+				Using secrets defined in .env.custom
+				Using secrets defined in .env.custom.local
+				Using secrets defined in .env.local"
+			`);
+			expect(extractBindings(out)).toMatchInlineSnapshot(`
+				"env.__DOT_ENV_LOCAL_DEV_VAR_1 (\"(hidden)\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_2 (\"(hidden)\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\"(hidden)\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL (\"(hidden)\")      Environment Variable      local"
 			`);
 		});
 
