@@ -2640,7 +2640,7 @@ importers:
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 5.20261104.1
+        version: 5.20261106.1
       '@cloudflare/workers-utils':
         specifier: workspace:*
         version: link:../workers-utils
