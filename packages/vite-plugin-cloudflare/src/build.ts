@@ -12,122 +12,113 @@ import type * as vite from "vite";
 
 const CLIENT_FALLBACK_ENTRY_NAME = "__cloudflare_fallback_entry__";
 
-export function createBuildApp(
-	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig
-): (builder: vite.ViteBuilder) => Promise<void> {
-	return async (builder) => {
-		const clientEnvironment = builder.environments.client;
-		assert(clientEnvironment, `No "client" environment`);
-		const defaultHtmlPath = path.resolve(builder.config.root, "index.html");
-		const hasClientEntry =
-			/* eslint-disable-next-line @typescript-eslint/no-deprecated --
+/** Build the remaining Worker and client environments and move imported assets. */
+export async function buildApp(
+	builder: vite.ViteBuilder,
+	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
+	importedAssetPaths: ReadonlySet<string>
+): Promise<void> {
+	const clientEnvironment = builder.environments.client;
+	assert(clientEnvironment, `No "client" environment`);
+	const defaultHtmlPath = path.resolve(builder.config.root, "index.html");
+	const hasClientEntry =
+		/* eslint-disable-next-line @typescript-eslint/no-deprecated --
 				We use `rollupOptions` for backward compatibility with Vite 7, where `rolldownOptions` does not exist.
 				In Vite 8, `rollupOptions` is aliased to `rolldownOptions` so this works across all supported versions. */
-			clientEnvironment.config.build.rollupOptions.input ||
-			fs.existsSync(defaultHtmlPath);
+		clientEnvironment.config.build.rollupOptions.input ||
+		fs.existsSync(defaultHtmlPath);
 
-		const workerEnvironments = [
-			...resolvedPluginConfig.environmentNameToWorkerMap.entries(),
-		]
-			.filter(([_, worker]) => !resolveDevOnly(worker.devOnly))
-			.map(([environmentName]) => {
-				const environment = builder.environments[environmentName];
-				assert(environment, `"${environmentName}" environment not found`);
+	const workerEnvironments = [
+		...resolvedPluginConfig.environmentNameToWorkerMap.entries(),
+	]
+		.filter(([_, worker]) => !resolveDevOnly(worker.devOnly))
+		.map(([environmentName]) => {
+			const environment = builder.environments[environmentName];
+			assert(environment, `"${environmentName}" environment not found`);
 
-				return environment;
-			});
+			return environment;
+		});
 
-		await Promise.all(
-			workerEnvironments.map((environment) => builder.build(environment))
+	await Promise.all(
+		workerEnvironments
+			.filter((environment) => !environment.isBuilt)
+			.map((environment) => builder.build(environment))
+	);
+
+	const isAssetsOnly =
+		resolvedPluginConfig.type === "assets-only" ||
+		!workerEnvironments.some(
+			(environment) =>
+				environment.name === resolvedPluginConfig.entryWorkerEnvironmentName
 		);
 
-		const isAssetsOnly =
-			resolvedPluginConfig.type === "assets-only" ||
-			!workerEnvironments.some(
-				(environment) =>
-					environment.name === resolvedPluginConfig.entryWorkerEnvironmentName
-			);
-
-		if (isAssetsOnly) {
-			if (hasClientEntry) {
-				await builder.build(clientEnvironment);
-			} else if (
-				getHasPublicAssets(builder.config) ||
-				resolvedPluginConfig.prerenderWorkerEnvironmentName
-			) {
-				await fallbackBuild(builder, clientEnvironment);
-			}
-
-			return;
-		}
-
-		const { entryWorkerEnvironmentName } = resolvedPluginConfig;
-		const entryWorkerEnvironment =
-			builder.environments[entryWorkerEnvironmentName];
-		assert(
-			entryWorkerEnvironment,
-			`No "${entryWorkerEnvironmentName}" environment`
-		);
-		const entryWorkerBuildDirectory = path.resolve(
-			builder.config.root,
-			entryWorkerEnvironment.config.build.outDir
-		);
-		const entryWorkerManifest = loadViteManifest(entryWorkerBuildDirectory);
-		const importedAssetPaths = getImportedAssetPaths(entryWorkerManifest);
-
+	if (!clientEnvironment.isBuilt) {
 		if (hasClientEntry) {
 			await builder.build(clientEnvironment);
 		} else if (
-			importedAssetPaths.size ||
+			(!isAssetsOnly && importedAssetPaths.size) ||
 			getHasPublicAssets(builder.config) ||
 			resolvedPluginConfig.prerenderWorkerEnvironmentName
 		) {
 			await fallbackBuild(builder, clientEnvironment);
+		}
+	}
+
+	if (isAssetsOnly || !clientEnvironment.isBuilt) {
+		return;
+	}
+
+	const { entryWorkerEnvironmentName } = resolvedPluginConfig;
+	const entryWorkerEnvironment =
+		builder.environments[entryWorkerEnvironmentName];
+	assert(
+		entryWorkerEnvironment,
+		`No "${entryWorkerEnvironmentName}" environment`
+	);
+	const entryWorkerBuildDirectory = path.resolve(
+		builder.config.root,
+		entryWorkerEnvironment.config.build.outDir
+	);
+
+	// TODO: move static assets from the prerender environment to the client environment
+
+	const clientBuildDirectory = path.resolve(
+		builder.config.root,
+		clientEnvironment.config.build.outDir
+	);
+	const movedAssetPaths: string[] = [];
+
+	// Move assets imported in the entry Worker to the client build
+	for (const assetPath of importedAssetPaths) {
+		const src = path.join(entryWorkerBuildDirectory, assetPath);
+		const dest = path.join(clientBuildDirectory, assetPath);
+
+		if (!fs.existsSync(src)) {
+			continue;
+		}
+
+		if (fs.existsSync(dest)) {
+			fs.unlinkSync(src);
 		} else {
-			// Return early as there is no client build
-			return;
+			const destDir = path.dirname(dest);
+			fs.mkdirSync(destDir, { recursive: true });
+			fs.renameSync(src, dest);
+			movedAssetPaths.push(dest);
 		}
+	}
 
-		// TODO: move static assets from the prerender environment to the client environment
-
-		const clientBuildDirectory = path.resolve(
-			builder.config.root,
-			clientEnvironment.config.build.outDir
+	if (movedAssetPaths.length) {
+		builder.config.logger.info(
+			[
+				`${colors.green("✓")} ${movedAssetPaths.length} asset${
+					movedAssetPaths.length > 1 ? "s" : ""
+				} moved from "${entryWorkerEnvironmentName}" to "client" build output.`,
+				...movedAssetPaths.map((assetPath) =>
+					colors.dim(path.relative(builder.config.root, assetPath))
+				),
+			].join("\n")
 		);
-		const movedAssetPaths: string[] = [];
-
-		// Move assets imported in the entry Worker to the client build
-		for (const assetPath of importedAssetPaths) {
-			const src = path.join(entryWorkerBuildDirectory, assetPath);
-			const dest = path.join(clientBuildDirectory, assetPath);
-
-			if (!fs.existsSync(src)) {
-				continue;
-			}
-
-			if (fs.existsSync(dest)) {
-				fs.unlinkSync(src);
-			} else {
-				const destDir = path.dirname(dest);
-				fs.mkdirSync(destDir, { recursive: true });
-				fs.renameSync(src, dest);
-				movedAssetPaths.push(dest);
-			}
-		}
-
-		if (movedAssetPaths.length) {
-			builder.config.logger.info(
-				[
-					`${colors.green("✓")} ${movedAssetPaths.length} asset${
-						movedAssetPaths.length > 1 ? "s" : ""
-					} moved from "${entryWorkerEnvironmentName}" to "client" build output.`,
-					...movedAssetPaths.map((assetPath) =>
-						colors.dim(path.relative(builder.config.root, assetPath))
-					),
-				].join("\n")
-			);
-		}
-	};
+	}
 }
 
 function getHasPublicAssets({ publicDir }: vite.ResolvedConfig): boolean {
@@ -170,22 +161,4 @@ async function fallbackBuild(
 	);
 
 	fs.unlinkSync(fallbackEntryPath);
-}
-
-/** Read the Vite manifest emitted for a completed environment build. */
-export function loadViteManifest(directory: string): vite.Manifest {
-	const contents = fs.readFileSync(
-		path.resolve(directory, ".vite", "manifest.json"),
-		"utf-8"
-	);
-
-	return JSON.parse(contents) as vite.Manifest;
-}
-
-function getImportedAssetPaths(viteManifest: vite.Manifest): Set<string> {
-	const assetPaths = Object.values(viteManifest).flatMap(
-		(chunk) => chunk.assets ?? []
-	);
-
-	return new Set(assetPaths);
 }
