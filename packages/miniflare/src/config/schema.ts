@@ -35,7 +35,6 @@ import {
 import { resolveDevRegistryPath } from "../shared/dev-registry";
 import {
 	ArtifactsEventSubscriptionSchema,
-	ArtifactsEventTriggerSchema,
 	type ArtifactsEventSubscription,
 } from "./artifacts-events";
 import { kCurrentWorker } from "./current-worker";
@@ -459,19 +458,13 @@ export function isMiniflareUnsafeBinding(
 	return binding.type.startsWith("unsafe:");
 }
 
-const OutputTriggerSchema = OutputWorkerSchema.shape.triggers.unwrap().element;
-
 export const MiniflareWorkerConfigBaseSchema = OutputWorkerSchema.omit({
 	manifest: true,
 	env: true,
 	exports: true,
 	assets: true,
 	tailConsumers: true,
-	triggers: true,
 }).extend({
-	triggers: z
-		.array(z.union([OutputTriggerSchema, ArtifactsEventTriggerSchema]))
-		.optional(),
 	manifest: MiniflareManifestSchema.optional(),
 	env: z
 		.record(z.string(), MiniflareBindingSchema)

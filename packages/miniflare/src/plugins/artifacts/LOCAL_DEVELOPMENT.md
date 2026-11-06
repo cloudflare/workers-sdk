@@ -129,7 +129,40 @@ export class OnRepoCreated extends WorkflowEntrypoint<Env, RepoCreated> {
 }
 ```
 
-Wrangler and Workers Vitest read `triggers.events` from `wrangler.jsonc`. The new `cloudflare.config.ts` format does not support Artifacts event triggers yet, so the Vite plugin does not start Workflows from events.
+Wrangler and Workers Vitest read `triggers.events` from `wrangler.jsonc`. For native `cloudflare.config.ts` projects (including `cf`, Vite, and Workers Vitest), use the shared `triggers.artifactsEvent()` helper:
+
+```ts
+import { bindings, defineConfig, triggers } from "@cloudflare/config";
+
+export default defineConfig({
+	worker: {
+		name: "example-worker",
+		entrypoint: "./src/index.ts",
+		compatibilityDate: "2026-09-03",
+		env: {
+			REPOS: bindings.artifacts({
+				namespace: "examples",
+				dev: { remote: false },
+			}),
+			ON_REPO_CREATED: {
+				type: "workflow",
+				name: "on-repo-created",
+				worker: "example-worker",
+				exportName: "OnRepoCreated",
+			},
+		},
+		triggers: [
+			triggers.artifactsEvent({
+				eventType: "cf.artifacts.repo.created",
+				filter: { namespace: "examples" },
+				targets: [{ type: "workflow", workflowName: "on-repo-created" }],
+			}),
+		],
+	},
+});
+```
+
+The same Worker implementation above handles either configuration format. Native config conversion preserves these triggers for deployment as well as local development.
 
 ### Consume events from a queue
 

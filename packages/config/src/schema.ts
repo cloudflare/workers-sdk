@@ -1,5 +1,6 @@
 import * as z from "zod";
 import { WORKFLOW_JURISDICTIONS } from "./exports";
+import { ARTIFACTS_EVENT_TYPES } from "./triggers";
 import type { SendEmailBinding, VpcNetworkBinding } from "./bindings";
 import type { Settings } from "./types";
 import type { ContainerConfig, WorkerConfig } from "./types";
@@ -730,7 +731,33 @@ export const TailConsumerSchema = z.strictObject({
 	streaming: z.boolean().optional(),
 });
 
+export const ArtifactsEventTypeSchema = z.enum(ARTIFACTS_EVENT_TYPES);
+
+/**
+ * Starts the Worker's own Workflows when Artifacts publishes an event, like
+ * Wrangler's `triggers.events`.
+ */
+export const ArtifactsEventTriggerSchema = z.strictObject({
+	type: z.literal("artifacts-event"),
+	eventType: ArtifactsEventTypeSchema,
+	filter: z
+		.strictObject({
+			namespace: z.string().min(1).optional(),
+			repoName: z.string().min(1).optional(),
+		})
+		.optional(),
+	targets: z
+		.array(
+			z.strictObject({
+				type: z.literal("workflow"),
+				workflowName: z.string().min(1),
+			})
+		)
+		.min(1),
+});
+
 const TriggerSchema = z.discriminatedUnion("type", [
+	ArtifactsEventTriggerSchema,
 	z.strictObject({
 		type: z.literal("email"),
 		addresses: z.array(z.string()),

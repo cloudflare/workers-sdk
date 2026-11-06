@@ -58,6 +58,7 @@ import type {
 } from "./exports";
 import type { WorkerModule } from "./inference";
 import type {
+	ArtifactsEventTrigger,
 	ConnectTrigger,
 	EmailTrigger,
 	FetchTrigger,
@@ -144,6 +145,7 @@ type Binding =
  * Union of all trigger definitions accepted in `triggers`.
  */
 type Trigger =
+	| ArtifactsEventTrigger
 	| ConnectTrigger
 	| EmailTrigger
 	| FetchTrigger

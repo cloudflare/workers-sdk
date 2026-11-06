@@ -1,3 +1,4 @@
+import { ArtifactsEventTriggerSchema } from "@cloudflare/config";
 import {
 	AssetConfigSchema,
 	RouterConfigSchema,
@@ -8,10 +9,7 @@ import {
 	TlsOptions_Version,
 } from "../runtime/config/workerd";
 import { Log } from "../shared";
-import {
-	ArtifactsEventSubscriptionSchema,
-	ArtifactsEventTriggerSchema,
-} from "./artifacts-events";
+import { ArtifactsEventSubscriptionSchema } from "./artifacts-events";
 import { kCurrentWorker } from "./current-worker";
 import type { Request, Response } from "../http";
 import type { Miniflare } from "../index";
@@ -19,8 +17,8 @@ import type { RemoteProxyConnectionString } from "../plugins/shared";
 import type { Json } from "../shared";
 import type { WorkerRegistry } from "../shared/dev-registry-types";
 import type { Awaitable } from "../workers";
-import type { ArtifactsEventType } from "../workers/artifacts/events";
 import type { ArtifactsEventSubscription } from "./artifacts-events";
+import type { ArtifactsEventTriggerOptions } from "@cloudflare/config";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 import type * as http from "node:http";
 
@@ -35,11 +33,7 @@ export interface V4WorkerdStructuredLog {
 }
 
 /** Starts a Workflow when local Artifacts publishes an event. */
-export interface V4ArtifactsEventTrigger {
-	eventType: ArtifactsEventType;
-	filter?: { namespace?: string; repoName?: string };
-	targets: { type: "workflow"; workflowName: string }[];
-}
+export type V4ArtifactsEventTrigger = ArtifactsEventTriggerOptions;
 
 export type V4FetchHandler = (
 	request: Request,

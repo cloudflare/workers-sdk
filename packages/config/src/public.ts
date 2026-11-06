@@ -86,6 +86,9 @@ export type {
 export { bindings } from "./bindings";
 export type { Json } from "./utils";
 export type {
+	ArtifactsEventType,
+	ArtifactsEventTrigger,
+	ArtifactsEventTriggerOptions,
 	Triggers,
 	ConnectTrigger,
 	ConnectTriggerOptions,
@@ -99,7 +102,7 @@ export type {
 	ScheduledTrigger,
 	ScheduledTriggerOptions,
 } from "./triggers";
-export { triggers } from "./triggers";
+export { ARTIFACTS_EVENT_TYPES, triggers } from "./triggers";
 export type {
 	Exports,
 	DurableObjectCreatedExport,

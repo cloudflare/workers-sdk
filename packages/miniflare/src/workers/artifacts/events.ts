@@ -1,21 +1,11 @@
 // Public Artifacts event messages, as documented at
 // https://developers.cloudflare.com/artifacts/guides/event-subscriptions/
 
-/** Event types Artifacts publishes to subscriptions. */
-export const ARTIFACTS_EVENT_TYPES = [
-	"cf.artifacts.repo.created",
-	"cf.artifacts.repo.deleted",
-	"cf.artifacts.repo.forked",
-	"cf.artifacts.repo.imported",
-	"cf.artifacts.repo.pushed",
-	"cf.artifacts.repo.cloned",
-	"cf.artifacts.repo.fetched",
-	"cf.artifacts.repo.token.created",
-	"cf.artifacts.repo.token.revoked",
-] as const;
+import { ARTIFACTS_EVENT_TYPES } from "@cloudflare/config/public";
+import type { ArtifactsEventType } from "@cloudflare/config/public";
 
-/** A published Artifacts event type. */
-export type ArtifactsEventType = (typeof ARTIFACTS_EVENT_TYPES)[number];
+export { ARTIFACTS_EVENT_TYPES };
+export type { ArtifactsEventType };
 
 /**
  * Account-level events are published to the `artifacts` source; the remaining

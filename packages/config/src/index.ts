@@ -1,5 +1,7 @@
 export * from "./public";
 export {
+	ArtifactsEventTypeSchema,
+	ArtifactsEventTriggerSchema,
 	AnalyticsEngineDatasetBindingSchema,
 	AnalyticsSQLBindingSchema,
 	AssetsSchema,

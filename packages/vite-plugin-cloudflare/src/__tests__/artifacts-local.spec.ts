@@ -42,7 +42,11 @@ const WORKER = `export default {
   }
 };`;
 
-function createFixture(remote: boolean | undefined): string {
+function createFixture(
+	remote: boolean | undefined,
+	config = CONFIG,
+	worker = WORKER
+): string {
 	fs.mkdirSync(FIXTURES_ROOT, { recursive: true });
 	const root = fs.realpathSync(
 		fs.mkdtempSync(path.join(FIXTURES_ROOT, "case-"))
@@ -53,16 +57,92 @@ function createFixture(remote: boolean | undefined): string {
 	);
 	fs.writeFileSync(
 		path.join(root, "cloudflare.config.ts"),
-		CONFIG.replace(
+		config.replace(
 			"dev: { remote: false },",
 			remote === undefined ? "" : `dev: { remote: ${remote} },`
 		)
 	);
-	fs.writeFileSync(path.join(root, "index.js"), WORKER);
+	fs.writeFileSync(path.join(root, "index.js"), worker);
 	return root;
 }
 
 afterEach(() => vi.unstubAllEnvs());
+
+test("Vite native Artifacts event triggers start a Workflow", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const root = createFixture(
+		false,
+		`
+import { defineConfig, triggers } from "@cloudflare/config";
+export default defineConfig({ worker: {
+	name: "vite-artifacts-local", entrypoint: "./index.js",
+	compatibilityDate: "2026-09-03",
+	env: {
+		REPOS: { type: "artifacts", namespace: "examples", dev: { remote: false } },
+		EVENTS: { type: "kv" },
+		ON_EVENT: { type: "workflow", name: "on-event", worker: "vite-artifacts-local", exportName: "OnEvent" },
+	},
+	triggers: [triggers.artifactsEvent({
+		eventType: "cf.artifacts.repo.created", filter: { namespace: "examples" },
+		targets: [{ type: "workflow", workflowName: "on-event" }],
+	})],
+} });
+`,
+		`
+import { WorkflowEntrypoint } from "cloudflare:workers";
+export class OnEvent extends WorkflowEntrypoint {
+	async run(event, step) {
+		await step.do("record", async () => {
+			await this.env.EVENTS.put("event", JSON.stringify(event.payload));
+			return "recorded";
+		});
+	}
+}
+export default {
+	async fetch(request, env) {
+		if (request.method === "POST") return Response.json(await env.REPOS.create("demo"));
+		return new Response(await env.EVENTS.get("event"));
+	}
+};
+`
+	);
+	onTestFinished(() => removeDirSync(root));
+	const server = await createServer({
+		root,
+		configFile: false,
+		logLevel: "silent",
+		server: { port: 0 },
+		plugins: [
+			cloudflare({
+				inspectorPort: false,
+				persistState: false,
+				remoteBindings: false,
+			}),
+		],
+	});
+	try {
+		await server.listen();
+		const url = server.resolvedUrls?.local[0];
+		if (!url) {
+			throw new Error("Vite server did not provide a local URL");
+		}
+		expect((await fetch(url, { method: "POST" })).ok).toBe(true);
+		await vi.waitFor(
+			async () => {
+				const message = await (await fetch(url)).json();
+				expect(message).toMatchObject({
+					type: "cf.artifacts.repo.created",
+					source: { namespace: "examples", repoName: "demo" },
+				});
+			},
+			{ timeout: 10_000 }
+		);
+	} finally {
+		await server.close();
+	}
+});
 
 test.for([
 	{ label: "explicit local", remote: false, remoteBindings: true },
