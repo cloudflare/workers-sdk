@@ -6,12 +6,13 @@ import {
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { createLogger as createViteLogger } from "vite";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { createLogger, getRemoteBindingsAuth } from "../auth";
+import { createAuth, createLogger, getRemoteBindingsAuth } from "../auth";
 
 describe("remote bindings auth profiles", () => {
 	runInTempDir();
 	const logger = createLogger(createViteLogger("silent"));
 	const accountId = "0123456789abcdef0123456789abcdef";
+	const getAuth = () => createAuth(process.cwd(), logger);
 
 	beforeEach(() => {
 		vi.stubEnv("CLOUDFLARE_API_TOKEN", undefined);
@@ -38,7 +39,7 @@ describe("remote bindings auth profiles", () => {
 		"should change the authentication key when the environment profile changes to %s",
 		async (profile, { expect }) => {
 			vi.stubEnv("CLOUDFLARE_AUTH_PROFILE", "work");
-			const workAuth = getRemoteBindingsAuth(process.cwd(), accountId, logger);
+			const workAuth = getRemoteBindingsAuth(process.cwd(), accountId, getAuth);
 			assert(typeof workAuth.hook === "function");
 			await expect(workAuth.hook()).resolves.toEqual({
 				accountId,
@@ -46,14 +47,14 @@ describe("remote bindings auth profiles", () => {
 			});
 
 			vi.stubEnv("CLOUDFLARE_AUTH_PROFILE", profile);
-			const nextAuth = getRemoteBindingsAuth(process.cwd(), accountId, logger);
+			const nextAuth = getRemoteBindingsAuth(process.cwd(), accountId, getAuth);
 			assert(typeof nextAuth.hook === "function");
 			expect(nextAuth.key).not.toBe(workAuth.key);
 			await expect(nextAuth.hook()).resolves.toEqual({
 				accountId,
 				apiToken: { apiToken: `${profile ?? "personal"}-token` },
 			});
-			expect(getRemoteBindingsAuth(process.cwd(), accountId, logger).key).toBe(
+			expect(getRemoteBindingsAuth(process.cwd(), accountId, getAuth).key).toBe(
 				nextAuth.key
 			);
 		}
@@ -63,12 +64,12 @@ describe("remote bindings auth profiles", () => {
 		expect,
 	}) => {
 		vi.stubEnv("CLOUDFLARE_AUTH_PROFILE", "work");
-		const workAuth = getRemoteBindingsAuth(process.cwd(), accountId, logger);
+		const workAuth = getRemoteBindingsAuth(process.cwd(), accountId, getAuth);
 		vi.stubEnv("CLOUDFLARE_AUTH_PROFILE", "personal");
 		const personalAuth = getRemoteBindingsAuth(
 			process.cwd(),
 			accountId,
-			logger
+			getAuth
 		);
 		assert(
 			typeof workAuth.hook === "function" &&
