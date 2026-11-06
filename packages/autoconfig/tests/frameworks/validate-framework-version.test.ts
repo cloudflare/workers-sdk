@@ -173,6 +173,24 @@ describe("Framework.validateFrameworkVersion()", () => {
 		}
 	);
 
+	it("requires SolidStart 2 for cf", ({ expect }) => {
+		vi.mocked(getInstalledPackageVersion).mockReturnValue("1.3.2");
+		const framework = new TestFramework({
+			id: "solid-start",
+			name: "Solid Start",
+		});
+		const validate = (target: "cf" | "wrangler") => () => {
+			const packageInfo = getFrameworkPackageInfo("solid-start", target);
+			if (packageInfo === undefined) {
+				throw new Error("Expected SolidStart to have package information");
+			}
+			framework.validateFrameworkVersion("/project", packageInfo, context);
+		};
+
+		expect(validate("cf")).toThrow(AutoConfigFrameworkConfigurationError);
+		expect(validate("wrangler")).not.toThrow();
+	});
+
 	it("does not warn for Astro 7", ({ expect }) => {
 		vi.mocked(getInstalledPackageVersion).mockReturnValue("7.3.0");
 		const framework = new TestFramework({ id: "astro", name: "Astro" });

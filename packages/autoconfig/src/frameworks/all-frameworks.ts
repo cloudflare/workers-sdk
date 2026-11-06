@@ -152,14 +152,22 @@ export function getAllKnownFrameworks(target: AutoConfigTarget) {
 			id: "solid-start",
 			name: "Solid Start",
 			class: SolidStart,
-			frameworkPackageInfo: {
-				name: "@solidjs/start",
-				// 1.0.0 is the first stable release with Nitro/Cloudflare Workers support
-				// See: https://github.com/solidjs/solid-start/releases/tag/v1.0.0
-				minimumVersion: "1.0.0",
-				maximumKnownMajorVersion: "2",
-			},
-			supportsCf: false,
+			frameworkPackageInfo:
+				target === "cf"
+					? {
+							name: "@solidjs/start",
+							// SolidStart 2 runs on Vite environments, which cf builds with the Cloudflare Vite plugin
+							minimumVersion: "2.0.0",
+							maximumKnownMajorVersion: "2",
+						}
+					: {
+							name: "@solidjs/start",
+							// 1.0.0 is the first stable release with Nitro/Cloudflare Workers support
+							// See: https://github.com/solidjs/solid-start/releases/tag/v1.0.0
+							minimumVersion: "1.0.0",
+							maximumKnownMajorVersion: "2",
+						},
+			supportsCf: true,
 			supported: true,
 		},
 		{
