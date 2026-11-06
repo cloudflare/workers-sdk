@@ -5687,7 +5687,9 @@ const validateBindingsHaveUniqueNames = (
 			getBindingNames(
 				bindingType === "queues"
 					? config[bindingType]?.producers
-					: config[bindingType]
+					: bindingType === "images" && config.images?.binding === undefined
+						? undefined
+						: config[bindingType]
 			),
 		])
 	);

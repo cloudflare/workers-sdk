@@ -4706,6 +4706,22 @@ describe("normalizeAndValidateConfig()", () => {
 				});
 			});
 
+			it("should not treat url_transformations as a binding name", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						vars: { url_transformations: "a", remote: "b" },
+						images: { remote: true, url_transformations: { enabled: true } },
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
 			it("should error if neither binding nor url_transformations is set", ({
 				expect,
 			}) => {
