@@ -121,6 +121,40 @@ describe("deploy", () => {
 			await runWrangler("deploy ./index");
 		});
 
+		it("should not report a route as a deployed trigger when the API did not create it (#15464)", async ({
+			expect,
+		}) => {
+			// The pattern's host is a Cloudflare for SaaS custom hostname outside
+			// the zone, which is why zone_name is set explicitly on the route.
+			writeWranglerConfig({
+				routes: [{ pattern: "blog.hello.coop/*", zone_name: "aauth.dev" }],
+			});
+			writeWorkerSource();
+			mockUpdateWorkerSubdomain({ enabled: false });
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			// These run during route conflict resolution.
+			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+			mockGetZones(expect, "aauth.dev", [{ id: "aauth-dev-id" }]);
+			mockGetZoneWorkerRoutes(expect, "aauth-dev-id");
+			// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+			// The routes PUT succeeds, but the API did not create the route:
+			// its response does not include the configured pattern.
+			msw.use(
+				http.put(
+					`*/accounts/:accountId/workers/scripts/:scriptName/routes`,
+					() => HttpResponse.json(createFetchResult([])),
+					{ once: true }
+				)
+			);
+			await runWrangler("deploy ./index");
+
+			// The route must not be reported as a deployed trigger, and the
+			// deploy must say loudly that it wasn't created. (Failing the
+			// deploy instead of warning would also fix this.)
+			expect(std.out).not.toContain("blog.hello.coop");
+			expect(`${std.warn}${std.err}`).toContain("blog.hello.coop");
+		});
+
 		it("should deploy with an empty string route", async ({ expect }) => {
 			writeWranglerConfig({
 				route: "",
