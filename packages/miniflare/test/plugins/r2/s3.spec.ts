@@ -1270,6 +1270,25 @@ test("DeleteObjects validates Quiet but ignores it", async ({ expect }) => {
 	await expectError(invalid, 400, "MalformedXML", expect);
 });
 
+test.for([
+	{
+		operation: "DeleteObjects",
+		url: "bucket?delete",
+		body: "<Delete><Object></Delete>",
+	},
+	{
+		operation: "CompleteMultipartUpload",
+		url: "bucket/key?uploadId=unused",
+		body: "<CompleteMultipartUpload><Part></CompleteMultipartUpload>",
+	},
+])(
+	"$operation rejects invalid XML syntax",
+	async ({ url, body }, { expect }) => {
+		const res = await s3Fetch(url, { method: "POST", body });
+		await expectError(res, 400, "MalformedXML", expect);
+	}
+);
+
 test("DeleteObjects rejects malformed XML", async ({ expect }) => {
 	const res = await s3Fetch("bucket?delete", {
 		method: "POST",
