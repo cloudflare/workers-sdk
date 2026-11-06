@@ -531,7 +531,7 @@ async function promptPercentages(
 		const defaultValue = defaultVersionTraffic
 			.get(versionId)
 			?.toFixed(3)
-			.replace(/\.?0+$/, ""); // strip unecessary 0s after the decimal (e.g. 20.000 -> 20, 20.500 -> 20.5)
+			.replace(/\.?0+$/, ""); // strip unnecessary 0s after the decimal (e.g. 20.000 -> 20, 20.500 -> 20.5)
 
 		const question = `What percentage of traffic should Worker Version ${n} receive?`;
 
