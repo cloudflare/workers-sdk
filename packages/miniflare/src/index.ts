@@ -83,6 +83,7 @@ import { closeBrowserProcess } from "./plugins/browser-rendering/process";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
+	getContainerEngine,
 	getUserServiceName,
 	handlePrettyErrorRequest,
 	JsonErrorSchema,
@@ -105,6 +106,11 @@ import {
 	Runtime,
 	serializeConfig,
 } from "./runtime";
+import {
+	assignContainerSession,
+	removeContainerSession,
+	removeContainerSessionDetached,
+} from "./runtime/container-session";
 import {
 	isFileNotFoundError,
 	MiniflareCoreError,
@@ -167,6 +173,7 @@ import type {
 	Worker_DurableObjectNamespace,
 	Worker_Module,
 } from "./runtime";
+import type { ContainerSession } from "./runtime/container-session";
 import type { Log } from "./shared";
 import type {
 	DevControl,
@@ -896,6 +903,13 @@ export class Miniflare {
 
 	#artifactsController = new ArtifactsController(() => this.#log);
 	#containerPrivilegesCache = new ContainerPrivilegesCache();
+	// Session of the running workerd's Containers; see `ContainerSession`.
+	#containerSession?: ContainerSession;
+	// Ended sessions whose Docker resources are still being removed.
+	readonly #endingContainerSessions = new Map<
+		ContainerSession,
+		Promise<void>
+	>();
 	#hyperdriveProxyController: HyperdriveProxyController =
 		new HyperdriveProxyController(this.#disposeController.signal);
 
@@ -1000,6 +1014,14 @@ export class Miniflare {
 		this.#runtime = new Runtime();
 		this.#removeExitHook = exitHook(() => {
 			void this.#runtime?.dispose();
+			for (const session of [
+				this.#containerSession,
+				...this.#endingContainerSessions.keys(),
+			]) {
+				if (session !== undefined) {
+					removeContainerSessionDetached(session);
+				}
+			}
 			// This exit hook is synchronous — the event loop will never run again
 			// after it returns, so any operation that schedules a microtask (like
 			// fs.promises.rm) will never even be executed, let alone completed.
@@ -2460,6 +2482,21 @@ export class Miniflare {
 		};
 	}
 
+	/**
+	 * Removes the Docker resources of a session whose workerd processes have
+	 * all exited. Until removal settles, the exit hook removes them instead.
+	 * Removal logs its failures instead of rejecting, so callers need not wait
+	 * for it; `dispose()` waits for removals still in progress.
+	 *
+	 * @param session Session to remove.
+	 */
+	#endContainerSession(session: ContainerSession): void {
+		const removal = removeContainerSession(session, this.#log).finally(() =>
+			this.#endingContainerSessions.delete(session)
+		);
+		this.#endingContainerSessions.set(session, removal);
+	}
+
 	#handleWorkerdCrash(): void {
 		this.#workerdCrashCount++;
 		// Recovery used to be entirely silent, which made a crash look like an
@@ -2567,6 +2604,12 @@ export class Miniflare {
 			loopbackPort,
 			reusePorts
 		);
+		const containerSession = assignContainerSession(
+			config,
+			getContainerEngine(this.#sharedOpts.containerEngine).localDocker
+				.socketPath,
+			this.#containerSession
+		);
 		const configBuffer = serializeConfig(config);
 
 		// Get all socket names we expect to get ports for
@@ -2620,6 +2663,15 @@ export class Miniflare {
 			this.#previousRuntimeInspectorPort = runtimeInspectorPort;
 		}
 		const loopbackAddress = `${loopbackHost}:${loopbackPort}`;
+		if (containerSession.ended !== undefined) {
+			// Names include the session, so the ended session's resources can be
+			// removed while the next workerd starts.
+			await runtime.dispose();
+			this.#endContainerSession(containerSession.ended);
+		}
+		// Switch sessions only once the old workerd has stopped, so that a
+		// failure above leaves the running process's session tracked.
+		this.#containerSession = containerSession.session;
 		const runtimeOpts: Abortable & RuntimeOptions = {
 			signal: this.#disposeController.signal,
 			entryAddress,
@@ -3746,9 +3798,6 @@ export class Miniflare {
 			// Cleanup as much as possible even if `#init()` threw.
 			await this.#closeBrowserProcesses();
 
-			// Remove exit hook, we're cleaning up what they would've cleaned up now
-			this.#removeExitHook?.();
-
 			await this.#proxyClient?.dispose();
 		} catch (error) {
 			independentCleanupFailed = true;
@@ -3764,6 +3813,16 @@ export class Miniflare {
 				independentCleanupError = error;
 			}
 		}
+		// workerd has exited, so nothing creates resources for its session any
+		// more. The exit hook stays registered until they are removed.
+		const containerSession = this.#containerSession;
+		this.#containerSession = undefined;
+		if (containerSession !== undefined) {
+			this.#endContainerSession(containerSession);
+		}
+		await Promise.all(this.#endingContainerSessions.values());
+		// Remove exit hook, we're cleaning up what they would've cleaned up now
+		this.#removeExitHook?.();
 		this.#devRegistry.unregisterWorkers();
 		// Close the undici Pool used for dispatching fetch requests to the
 		// runtime. This must happen after the runtime is disposed, so that
