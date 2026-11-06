@@ -17,6 +17,8 @@ export function handleWebSocket(
 	viteWebSocketEnabled = false,
 	viteProxy?: ViteProxyConfig
 ) {
+	shareViteProxyBypassResults(viteProxy);
+
 	const nodeWebSocket = new WebSocketServer({ noServer: true });
 
 	// Stash Worker 101-response headers keyed by the upgrade request so a single
@@ -136,6 +138,69 @@ export function handleWebSocket(
 }
 
 type ViteProxyConfig = Record<string, string | vite.ProxyOptions | undefined>;
+type ViteProxyBypass = NonNullable<vite.ProxyOptions["bypass"]>;
+
+const kSharedBypass = Symbol("kSharedBypass");
+
+/**
+ * Wraps the `bypass` of each WebSocket entry in `server.proxy` or
+ * `preview.proxy` so that it runs once per upgrade request. Both the plugin's
+ * `upgrade` listener and Vite's proxy `upgrade` listener call `bypass`, and the
+ * wrapper hands the second caller the result of the first call, so a stateful
+ * or non-deterministic `bypass` gives both listeners the same answer.
+ *
+ * Must run before Vite creates its proxy middleware, which copies each entry's
+ * options, i.e. in the body of `configureServer` or `configurePreviewServer`.
+ *
+ * @param viteProxy The resolved `server.proxy` or `preview.proxy` config
+ */
+export function shareViteProxyBypassResults(viteProxy: ViteProxyConfig = {}) {
+	for (const options of Object.values(viteProxy)) {
+		if (
+			typeof options === "object" &&
+			options.bypass &&
+			!(kSharedBypass in options.bypass) &&
+			isWebSocketProxy(options)
+		) {
+			options.bypass = shareBypassResultPerUpgrade(options.bypass);
+		}
+	}
+}
+
+function shareBypassResultPerUpgrade(bypass: ViteProxyBypass): ViteProxyBypass {
+	const upgradeResults = new WeakMap<
+		IncomingMessage,
+		ReturnType<ViteProxyBypass>
+	>();
+	const sharedBypass: ViteProxyBypass = (request, response, options) => {
+		// Only upgrades are handled by both listeners; HTTP requests reach
+		// `bypass` once, from Vite's proxy middleware.
+		if (response !== undefined) {
+			return bypass(request, response, options);
+		}
+		if (!upgradeResults.has(request)) {
+			upgradeResults.set(request, callBypass(bypass, request, options));
+		}
+		return upgradeResults.get(request);
+	};
+	return Object.assign(sharedBypass, { [kSharedBypass]: true });
+}
+
+/**
+ * Calls `bypass` for an upgrade, turning a synchronous throw into a rejected
+ * promise so that every caller sharing the result sees the error.
+ */
+function callBypass(
+	bypass: ViteProxyBypass,
+	request: IncomingMessage,
+	options: vite.ProxyOptions
+): ReturnType<ViteProxyBypass> {
+	try {
+		return bypass(request, undefined, options);
+	} catch (error) {
+		return Promise.reject(error);
+	}
+}
 
 /**
  * Returns the URL to dispatch a WebSocket upgrade to the Worker with, or

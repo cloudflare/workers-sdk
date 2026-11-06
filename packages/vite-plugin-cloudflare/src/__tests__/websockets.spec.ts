@@ -17,8 +17,9 @@ import {
 	findViteProxyWebSocketOptions,
 	getWorkerUpgradeUrl,
 	handleWebSocket,
+	shareViteProxyBypassResults,
 } from "../websockets";
-import type { IncomingMessage } from "node:http";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import type * as vite from "vite";
 
@@ -738,6 +739,36 @@ describe("handleWebSocket", () => {
 		const url = await dispatchUpgrade(expect, mf, { Host: host }, "/socket");
 		expect(`${url}`).toBe(`http://${host}/worker-socket?from=bypass`);
 	});
+
+	test("calls a `server.proxy` `bypass` once per upgrade and shares its result with Vite's proxy", async ({
+		expect,
+	}) => {
+		let calls = 0;
+		const bypass = vi.fn(() => (++calls === 1 ? "/worker-socket" : false));
+		const options: vite.ProxyOptions = {
+			target: "http://127.0.0.1:1",
+			ws: true,
+			bypass,
+		};
+		const mf = await listen(undefined, { "/socket": options });
+
+		// Stands in for Vite's proxy `upgrade` listener, which copies each
+		// entry's options when Vite creates its proxy middleware.
+		const viteOptions = { ...options };
+		const viteBypassResults: unknown[] = [];
+		httpServer.on("upgrade", async (request: IncomingMessage) => {
+			viteBypassResults.push(
+				await viteOptions.bypass?.(request, undefined, viteOptions)
+			);
+		});
+
+		const host = `127.0.0.1:${port}`;
+		const url = await dispatchUpgrade(expect, mf, { Host: host }, "/socket");
+		expect(`${url}`).toBe(`http://${host}/worker-socket`);
+		await vi.waitFor(() => expect(viteBypassResults).toHaveLength(1));
+		expect(viteBypassResults).toEqual(["/worker-socket"]);
+		expect(bypass).toHaveBeenCalledTimes(1);
+	});
 });
 
 describe("findViteProxyWebSocketOptions", () => {
@@ -902,5 +933,79 @@ describe("getWorkerUpgradeUrl", () => {
 			"/api/ws"
 		);
 		expect(bypass).not.toHaveBeenCalled();
+	});
+});
+
+describe("shareViteProxyBypassResults", () => {
+	function upgradeRequest(url: string) {
+		return { url } as IncomingMessage;
+	}
+
+	function webSocketEntry(bypass: NonNullable<vite.ProxyOptions["bypass"]>) {
+		return { target: "http://localhost:4000", ws: true, bypass };
+	}
+
+	test("calls `bypass` once per upgrade request and shares its result", async ({
+		expect,
+	}) => {
+		const bypass = vi.fn(async (request: IncomingMessage) => request.url);
+		const options = webSocketEntry(bypass);
+		shareViteProxyBypassResults({ "/ws": options });
+
+		const first = upgradeRequest("/ws?first");
+		const second = upgradeRequest("/ws?second");
+		expect(await options.bypass(first, undefined, options)).toBe("/ws?first");
+		expect(await options.bypass(first, undefined, options)).toBe("/ws?first");
+		expect(await options.bypass(second, undefined, options)).toBe("/ws?second");
+		expect(bypass).toHaveBeenCalledTimes(2);
+		expect(bypass).toHaveBeenCalledWith(first, undefined, options);
+	});
+
+	test("shares a synchronous `bypass` error as a rejection", async ({
+		expect,
+	}) => {
+		const bypass = vi.fn(() => {
+			throw new Error("bypass failed");
+		});
+		const options = webSocketEntry(bypass);
+		shareViteProxyBypassResults({ "/ws": options });
+
+		const request = upgradeRequest("/ws");
+		await expect(
+			Promise.resolve(options.bypass(request, undefined, options))
+		).rejects.toThrow("bypass failed");
+		await expect(
+			Promise.resolve(options.bypass(request, undefined, options))
+		).rejects.toThrow("bypass failed");
+		expect(bypass).toHaveBeenCalledTimes(1);
+	});
+
+	test("calls `bypass` for every HTTP request", ({ expect }) => {
+		const bypass = vi.fn(() => undefined);
+		const options = webSocketEntry(bypass);
+		shareViteProxyBypassResults({ "/ws": options });
+
+		const request = upgradeRequest("/ws");
+		const response = {} as ServerResponse;
+		options.bypass(request, response, options);
+		options.bypass(request, response, options);
+		expect(bypass).toHaveBeenCalledTimes(2);
+	});
+
+	test("leaves `bypass` on entries that do not proxy WebSockets", ({
+		expect,
+	}) => {
+		const bypass = () => "/rewritten";
+		const options = { target: "http://localhost:4000", bypass };
+		shareViteProxyBypassResults({ "/api": options, "/ws": undefined });
+		expect(options.bypass).toBe(bypass);
+	});
+
+	test("wraps each `bypass` only once", ({ expect }) => {
+		const options = webSocketEntry(() => "/rewritten");
+		shareViteProxyBypassResults({ "/ws": options });
+		const sharedBypass = options.bypass;
+		shareViteProxyBypassResults({ "/ws": options });
+		expect(options.bypass).toBe(sharedBypass);
 	});
 });
