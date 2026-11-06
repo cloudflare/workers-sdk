@@ -3066,6 +3066,60 @@ describe("versions upload", () => {
 			expect(workflowPuts).toBe(0);
 		});
 
+		test("warns when a Workflow bound by this script does not exist yet, since versions upload does not create it", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			mockUploadVersion(false, 0);
+			msw.use(
+				http.get("*/accounts/:accountId/workflows/:workflowName", () =>
+					HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 10200, message: "Workflow not found" },
+						]),
+						{ status: 404 }
+					)
+				),
+				http.put("*/accounts/:accountId/workflows/:workflowName", () =>
+					HttpResponse.json(createFetchResult({}))
+				)
+			);
+
+			writeWranglerConfig(
+				{
+					name: "test-name",
+					main: "./index.js",
+					workflows: [
+						{
+							binding: "MY_WORKFLOW",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+						},
+					],
+				},
+				"./wrangler.json"
+			);
+			fs.writeFileSync(
+				"index.js",
+				dedent`
+					import { WorkflowEntrypoint } from "cloudflare:workers";
+					export default {};
+					export class MyWorkflow extends WorkflowEntrypoint {}
+				`
+			);
+
+			await runWrangler("versions upload --config ./wrangler.json");
+
+			// The uploaded version binds a Workflow that `versions upload` never
+			// creates, so `create()` at runtime throws
+			// `workflows.api.error.workflow.not_found`. `versions upload` already
+			// learns the Workflow is missing from `checkWorkflowConflicts`, so it
+			// should warn that the Workflow must be created with
+			// `wrangler deploy` / `wrangler triggers deploy`.
+			expect(std.warn).toContain("my-workflow");
+			expect(std.warn).toMatch(/triggers deploy|wrangler deploy/);
+		});
+
 		test("rejects a binding and an export that declare the same Workflow with different classes", async ({
 			expect,
 		}) => {
