@@ -1320,6 +1320,24 @@ test("DeleteObjects rejects malformed XML", async ({ expect }) => {
 	await expectError(tooMany, 400, "MalformedXML", expect);
 });
 
+test.for(["<Extra></Extra>", "<Extra/>"])(
+	"DeleteObjects rejects an additional XML root: %s",
+	async (extraRoot, { expect }) => {
+		const r2 = await bucket();
+		const key = "batch/extra-root.txt";
+		await r2.put(key, "original");
+
+		const res = await s3Fetch("bucket?delete", {
+			method: "POST",
+			body: `<Delete><Object><Key>${key}</Key></Object></Delete>${extraRoot}`,
+		});
+		await expectError(res, 400, "MalformedXML", expect);
+
+		const object = await r2.get(key);
+		expect(await object?.text()).toBe("original");
+	}
+);
+
 test("CopyObject copies an object, preserving metadata", async ({ expect }) => {
 	const r2 = await bucket();
 	await r2.put("copy/src.txt", "copy me", {
@@ -1583,6 +1601,30 @@ test("multipart upload lifecycle", async ({ expect }) => {
 		expect
 	);
 });
+
+test.for(["<Extra></Extra>", "<Extra/>"])(
+	"CompleteMultipartUpload rejects an additional XML root: %s",
+	async (extraRoot, { expect }) => {
+		const r2 = await bucket();
+		const key = "mp/extra-root.bin";
+		await r2.put(key, "original");
+		const upload = await r2.createMultipartUpload(key);
+		const part = await upload.uploadPart(1, "replacement");
+
+		const res = await s3Fetch(
+			`bucket/${key}?uploadId=${encodeURIComponent(upload.uploadId)}`,
+			{
+				method: "POST",
+				body: `<CompleteMultipartUpload><Part><PartNumber>1</PartNumber><ETag>"${part.etag}"</ETag></Part></CompleteMultipartUpload>${extraRoot}`,
+			}
+		);
+		await expectError(res, 400, "MalformedXML", expect);
+
+		const object = await r2.get(key);
+		expect(await object?.text()).toBe("original");
+		await upload.abort();
+	}
+);
 
 test("multipart error cases", async ({ expect }) => {
 	const client = s3();

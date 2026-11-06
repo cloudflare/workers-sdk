@@ -859,7 +859,7 @@ export const MULTIPART_OPERATIONS: Record<
 		async handle({ c, bucket, bucketId, key, uploadId }) {
 			const text = await c.req.raw.text();
 			try {
-				SyntaxValidator.validate(text);
+				SyntaxValidator.validate(text, { multipleRoots: false });
 			} catch {
 				return malformedXml();
 			}
@@ -1037,7 +1037,7 @@ export const BUCKET_OPERATIONS: Record<
 
 			const text = new TextDecoder().decode(body);
 			try {
-				SyntaxValidator.validate(text);
+				SyntaxValidator.validate(text, { multipleRoots: false });
 			} catch {
 				return malformedXml();
 			}
