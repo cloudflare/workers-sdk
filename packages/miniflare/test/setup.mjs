@@ -50,6 +50,8 @@ const bigSeparator = "=".repeat(80);
 const separator = "-".repeat(80);
 
 _enableControlEndpoints();
+// Lets tests advance the expiration clock of workerd's KV
+process.env.MINIFLARE_KV_TEST_CLOCK = "1";
 
 afterAll(() => {
 	if (registry.size === 0) return;
