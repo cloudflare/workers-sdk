@@ -32,6 +32,16 @@ unbuffered after the rest of the arguments. All function calls with
 assumption is required as synchronous operations block the main thread and
 prevent chunks from `ReadableStream`s being read.
 
+Objects that speak Workers RPC (service bindings, Durable Object stubs,
+`RpcTarget`s and functions) are the exception. Instead of proxies, the client
+uses [Cap'n Web](https://github.com/cloudflare/capnweb) stubs to them, over a
+WebSocket session with the `ProxyServer`. Calls, property accesses, promise
+pipelining and callbacks are forwarded by Cap'n Web, so these behave like
+Workers RPC and never block the main thread. Only `fetch()`, which is sent with
+`dispatchFetch()` to support WebSockets, and Durable Object stubs' synchronous
+`id` and `name` properties are handled like native objects. Values follow Cap'n
+Web's rules, which differ slightly from Workers RPC (e.g. `Map`s can't be sent).
+
 If the function call threw, or returned a `Promise` that rejected, the error
 will be serialised and re-thrown/rejected in the client. Note that the stack
 trace will be updated to reflect the calling location in the client, not the
@@ -43,7 +53,8 @@ will remove the corresponding "heap" entry allowing it to be garbage collected
 on the server too.
 
 When `workerd` is restarted with `Miniflare#setOptions()` or stopped with
-`Miniflare#dispose()`, all proxies are _poisoned_. Once a proxy is poisoned, it
+`Miniflare#dispose()`, the Cap'n Web session is closed and all proxies are
+_poisoned_. Once a proxy is poisoned, it
 cannot be used, and must be recreated. Poisoned proxies are unregistered from
 the `FinalizationRegistry` too, as the addresses they point too will be invalid
 and shouldn't be freed again.

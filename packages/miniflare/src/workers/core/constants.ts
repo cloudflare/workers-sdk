@@ -116,6 +116,8 @@ export const CoreBindings = {
 } as const;
 
 export const ProxyOps = {
+	// Open the Cap'n Web WebSocket session used for Workers RPC objects
+	CONNECT: "CONNECT",
 	// Get the target or a property of the target
 	GET: "GET",
 	// Get the descriptor for a property of the target
@@ -133,6 +135,18 @@ export const ProxyAddresses = {
 	ENV: 1, // env
 	USER_START: 2,
 } as const;
+
+/**
+ * Main interface `ProxyServer` exposes over its Cap'n Web session.
+ */
+export interface ProxyRpcApi {
+	/** Returns the "heap" object at `address` for use as a Cap'n Web stub. */
+	stub(address: number): unknown;
+}
+
+// Cap'n Web only revives the names of built-in errors. Other names are sent in
+// this property, then restored by the client.
+export const PROXY_ERROR_NAME_KEY = "__miniflareErrorName";
 
 /**
  * Recovers the serialised error a Worker put in `ERROR_STACK_PAYLOAD`, for the

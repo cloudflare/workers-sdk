@@ -247,14 +247,14 @@ export function isHeadersLike(value: unknown): value is WorkerHeaders {
 		typeof (value as WorkerHeaders).get === "function"
 	);
 }
-function isRequestLike(value: unknown): value is WorkerRequest {
+export function isRequestLike(value: unknown): value is WorkerRequest {
 	return (
 		hasStringTag(value, "Request") &&
 		typeof (value as WorkerRequest).method === "string" &&
 		isHeadersLike((value as WorkerRequest).headers)
 	);
 }
-function isResponseLike(value: unknown): value is WorkerResponse {
+export function isResponseLike(value: unknown): value is WorkerResponse {
 	return (
 		hasStringTag(value, "Response") &&
 		typeof (value as WorkerResponse).status === "number" &&

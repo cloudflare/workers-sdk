@@ -219,7 +219,7 @@ describe("getPlatformProxy()", () => {
 			`);
 		});
 
-		it("creates, deletes and recreates a Workflow through synchronous RPC", async ({
+		it("creates, deletes and recreates a Workflow through RPC", async ({
 			expect,
 		}) => {
 			await seed(worker, {
@@ -251,12 +251,12 @@ describe("getPlatformProxy()", () => {
 				runInNode(
 					/* javascript */ `await (async () => {
 						const { default: assert } = await import("node:assert/strict");
-						const first = env.WORKER.createWorkflow();
+						const first = await env.WORKER.createWorkflow();
 						assert.equal(typeof first, "string");
 						assert.match(first, /^[0-9a-f-]{36}$/);
-						assert.equal(env.WORKER.createWorkflow("explicit-id"), "explicit-id");
-						env.WORKER.deleteWorkflow("explicit-id");
-						assert.equal(env.WORKER.createWorkflow("explicit-id"), "explicit-id");
+						assert.equal(await env.WORKER.createWorkflow("explicit-id"), "explicit-id");
+						await env.WORKER.deleteWorkflow("explicit-id");
+						assert.equal(await env.WORKER.createWorkflow("explicit-id"), "explicit-id");
 						return "Workflow RPC completed";
 					})()`,
 					20_000
@@ -405,39 +405,38 @@ describe("getPlatformProxy()", () => {
 					"
 				`);
 			});
-			it("preserves synchronous RPC methods and arbitrary factories", async ({
+			it("supports RPC pipelining and arbitrary factories", async ({
 				expect,
 			}) => {
 				await expect(
 					runInNode(
 						/* javascript */ `await (async () => {
-						const streamed = await new Response(env.WORKER.stream()).text();
+						const streamed = await new Response(await env.WORKER.stream()).text();
 						const values = [undefined, null, "value", 123, { value: [1, 2] }];
-						const echoes = values.map((value) => {
-							const result = env.WORKER.echo(value);
-							return { isPromise: result instanceof Promise, result };
-						});
-						const errorMessage = (call) => {
-							try { call(); } catch (error) { return error.message; }
+						const echoes = await Promise.all(
+							values.map(async (value) => ({ result: await env.WORKER.echo(value) }))
+						);
+						const errorMessage = async (call) => {
+							try { await call(); } catch (error) { return error.message; }
 						};
 						const firstCounter = env.WORKER.getCounter();
 						const secondCounter = env.WORKER.getCounter();
 						return JSON.stringify({
 							streamed,
 							echoes,
-							sum: env.WORKER.sum([1, 2, 3]),
-							syncError: errorMessage(() => env.WORKER.fail()),
-							rejection: errorMessage(() => env.WORKER.reject()),
-							nestedCallable: env.WORKER.nestedCallable()()(),
-							firstValue: firstCounter.increment(4),
-							secondValue: secondCounter.value,
+							sum: await env.WORKER.sum([1, 2, 3]),
+							error: await errorMessage(() => env.WORKER.fail()),
+							rejection: await errorMessage(() => env.WORKER.reject()),
+							nestedCallable: await env.WORKER.nestedCallable()()(),
+							firstValue: await firstCounter.increment(4),
+							secondValue: await secondCounter.value,
 							distinct: firstCounter !== secondCounter,
 						});
 						})()`,
 						20_000
 					)
 				).resolves.toBe(
-					'{"streamed":"stream body","echoes":[{"isPromise":false},{"isPromise":false,"result":null},{"isPromise":false,"result":"value"},{"isPromise":false,"result":123},{"isPromise":false,"result":{"value":[1,2]}}],"sum":6,"syncError":"rpc failure","rejection":"rpc rejection","nestedCallable":"nested function value","firstValue":4,"secondValue":0,"distinct":true}\n'
+					'{"streamed":"stream body","echoes":[{},{"result":null},{"result":"value"},{"result":123},{"result":{"value":[1,2]}}],"sum":6,"error":"rpc failure","rejection":"rpc rejection","nestedCallable":"nested function value","firstValue":4,"secondValue":0,"distinct":true}\n'
 				);
 			});
 			it("can obtain and interact with returned functions", async ({
@@ -448,7 +447,7 @@ describe("getPlatformProxy()", () => {
 							const helloWorldFn = await env.WORKER.getHelloWorldFn();
 							const helloFn = await env.WORKER.getHelloFn();
 							return JSON.stringify([
-								helloWorldFn(),
+								await helloWorldFn(),
 								await helloFn("hi", "world"),
 								await helloFn("hi", "world", {
 									capitalize: true,
