@@ -1003,16 +1003,40 @@ describe("shareViteProxyBypassResults", () => {
 		expect(bypass).toHaveBeenCalledTimes(1);
 	});
 
-	test("calls `bypass` for every HTTP request", ({ expect }) => {
+	test("calls `bypass` for every HTTP request", async ({ expect }) => {
 		const bypass = vi.fn(() => undefined);
 		const options = webSocketEntry(bypass);
 		shareViteProxyBypassResults({ "/ws": options });
 
 		const request = upgradeRequest("/ws");
 		const response = {} as ServerResponse;
-		options.bypass(request, response, options);
-		options.bypass(request, response, options);
+		await options.bypass(request, response, options);
+		await options.bypass(request, response, options);
 		expect(bypass).toHaveBeenCalledTimes(2);
+	});
+
+	test("calls `bypass` with the options it is called on as `this`", async ({
+		expect,
+	}) => {
+		const options: vite.ProxyOptions = {
+			target: "ws://localhost:5000",
+			bypass(this: vite.ProxyOptions) {
+				return this.target === "ws://localhost:5000" ? "/worker-ws" : false;
+			},
+		};
+		shareViteProxyBypassResults({ "/ws": options });
+
+		const request = upgradeRequest("/ws");
+		expect(await options.bypass?.(request, undefined, options)).toBe(
+			"/worker-ws"
+		);
+		expect(
+			await options.bypass?.(
+				upgradeRequest("/ws"),
+				{} as ServerResponse,
+				options
+			)
+		).toBe("/worker-ws");
 	});
 
 	test("leaves `bypass` on entries that do not proxy WebSockets", ({

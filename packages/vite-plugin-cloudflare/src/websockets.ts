@@ -93,7 +93,7 @@ export function handleWebSocket(
 				}
 
 				const response = await miniflare.dispatchFetch(
-					new URL(workerRequestUrl, base),
+					resolveRequestTarget(workerRequestUrl, base),
 					{
 						headers: [...headers],
 						method: request.method,
@@ -176,14 +176,21 @@ function shareBypassResultPerUpgrade(bypass: ViteProxyBypass): ViteProxyBypass {
 		IncomingMessage,
 		ReturnType<ViteProxyBypass>
 	>();
-	const sharedBypass: ViteProxyBypass = (request, response, options) => {
+	// A function expression keeps the receiver: Vite calls `opts.bypass(...)`,
+	// so a `bypass` declared with `function` can read the options as `this`.
+	const sharedBypass: ViteProxyBypass = function (
+		this: unknown,
+		request,
+		response,
+		options
+	) {
 		// Only upgrades are handled by both listeners; HTTP requests reach
 		// `bypass` once, from Vite's proxy middleware.
 		if (response !== undefined) {
-			return bypass(request, response, options);
+			return bypass.call(this, request, response, options);
 		}
 		if (!upgradeResults.has(request)) {
-			upgradeResults.set(request, callBypass(bypass, request, options));
+			upgradeResults.set(request, callBypass(bypass, this, request, options));
 		}
 		return upgradeResults.get(request);
 	};
@@ -196,11 +203,12 @@ function shareBypassResultPerUpgrade(bypass: ViteProxyBypass): ViteProxyBypass {
  */
 function callBypass(
 	bypass: ViteProxyBypass,
+	receiver: unknown,
 	request: IncomingMessage,
 	options: vite.ProxyOptions
 ): ReturnType<ViteProxyBypass> {
 	try {
-		return bypass(request, undefined, options);
+		return bypass.call(receiver, request, undefined, options);
 	} catch (error) {
 		return Promise.reject(error);
 	}
