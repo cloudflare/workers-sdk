@@ -1,10 +1,11 @@
 import {
+	addCustomApiHeaders,
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	FatalError,
 	getCloudflareApiBaseUrl,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { fetch } from "undici";
+import { fetch, Headers } from "undici";
 import { POW_MAX_ITERATIONS, solveChallenge } from "./pow";
 import type {
 	TemporaryAccountStorage,
@@ -215,9 +216,11 @@ async function requestPowSolution(
 	temporaryAccountLogger: TemporaryAccountLogger,
 	cliDisplayName: string
 ): Promise<PowSolution> {
+	const headers = new Headers({ "Content-Type": "application/json" });
+	addCustomApiHeaders(headers);
 	const response = await fetch(getTemporaryPreviewChallengeUrl(), {
 		method: "POST",
-		headers: { "Content-Type": "application/json" },
+		headers,
 		body: "{}",
 	});
 
@@ -290,9 +293,11 @@ export async function createTemporaryPreviewAccount(
 ): Promise<TemporaryPreviewAccount> {
 	const pow = await requestPowSolution(temporaryAccountLogger, cliDisplayName);
 
+	const headers = new Headers({ "Content-Type": "application/json" });
+	addCustomApiHeaders(headers);
 	const response = await fetch(getTemporaryPreviewUrl(), {
 		method: "POST",
-		headers: { "Content-Type": "application/json" },
+		headers,
 		body: JSON.stringify({
 			termsOfService: TEMPORARY_TERMS_URLS.termsOfService,
 			privacyPolicy: TEMPORARY_TERMS_URLS.privacyPolicy,

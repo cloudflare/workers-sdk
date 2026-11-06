@@ -19,6 +19,8 @@ type VariableNames =
 	| "CLOUDFLARE_EMAIL"
 	/** Custom API base URL. Defaults to https://api.cloudflare.com/client/v4 */
 	| "CLOUDFLARE_API_BASE_URL"
+	/** Additional Cloudflare API headers as a JSON object of string values. */
+	| "CLOUDFLARE_API_HEADERS"
 	/** Set to "fedramp_high" for FedRAMP High compliance region. This will update the API/AUTH URLs used to make requests to Cloudflare. */
 	| "CLOUDFLARE_COMPLIANCE_REGION"
 	/** API token for Basin SQL service. */
