@@ -844,6 +844,252 @@ describe("asset-server handler", () => {
 			vi.useRealTimers();
 		});
 
+		test.for<Record<string, string>>([
+			{ "sec-fetch-mode": "navigate" },
+			{ "sec-fetch-dest": "document" },
+			{ "sec-fetch-dest": "iframe" },
+			{ "sec-fetch-dest": "frame" },
+		])(
+			"deleted documents use the current fallback: %j",
+			async (headers, { expect }) => {
+				const url = `https://navigation.example.com/${Object.values(headers).join("-")}`;
+				const cache = await caches.open("assetPreservationCacheV2");
+				await cache.put(
+					url,
+					new Response("old-document-key", {
+						headers: { "cache-control": "public, s-maxage=604800" },
+					})
+				);
+
+				for (const etag of [
+					undefined,
+					'"old-document-key"',
+					'W/"old-document-key"',
+				]) {
+					const metrics = vi.fn();
+					const { response } = await getTestResponse({
+						request: new Request(url, {
+							headers: {
+								...headers,
+								...(etag ? { "if-none-match": etag } : {}),
+							},
+						}),
+						findAssetEntryForPath: async (path) =>
+							path === "/404.html" ? "current-404" : null,
+						fetchAsset: async () => ({
+							body: new Response("current not found").body,
+							contentType: "text/html",
+						}),
+						setMetrics: metrics,
+					});
+					expect(response.status).toBe(404);
+					expect(await response.text()).toBe("current not found");
+					expect(metrics).toHaveBeenCalledWith({
+						preservationCacheResult: "skipped-navigation",
+					});
+					expect(metrics).toHaveBeenCalledWith({
+						preservationCacheRequestKind: "navigation",
+					});
+				}
+			}
+		);
+
+		test("an open SPA keeps its warmed chunks and fetch data after a deployment", async ({
+			expect,
+		}) => {
+			const bodies = new Map([
+				[
+					"index-v1",
+					{
+						contentType: "text/html",
+						text: '<script src="/app-v1.js"></script>',
+					},
+				],
+				[
+					"index-v2",
+					{
+						contentType: "text/html",
+						text: '<script src="/app-v2.js"></script>',
+					},
+				],
+				[
+					"lazy-v1",
+					{
+						contentType: "application/javascript",
+						text: 'export const message = "old SPA still works"',
+					},
+				],
+				["data-v1", { contentType: "application/json", text: '{"version":1}' }],
+			]);
+			let manifest = new Map([
+				["/index.html", "index-v1"],
+				["/lazy-v1.js", "lazy-v1"],
+				["/data-v1.json", "data-v1"],
+			]);
+			let metadata = createMetadataObject({
+				deploymentId: "spa-v1",
+			}) as Metadata;
+			const serve = async (path: string, headers: Record<string, string>) => {
+				const result = await getTestResponse({
+					request: new Request(`https://spa.example.com${path}`, { headers }),
+					metadata,
+					findAssetEntryForPath: async (pathname) =>
+						manifest.get(pathname) ?? null,
+					fetchAsset: async (key) => {
+						const asset = bodies.get(key);
+
+						if (!asset) {
+							throw new Error(`missing asset ${key}`);
+						}
+
+						return {
+							body: new Response(asset.text).body,
+							contentType: asset.contentType,
+						};
+					},
+				});
+				await Promise.all(result.spies.waitUntil);
+
+				return result.response;
+			};
+			const oldDocument = await serve("/", { "sec-fetch-mode": "navigate" });
+			expect(await oldDocument.text()).toContain("app-v1.js");
+			await (
+				await serve("/lazy-v1.js", {
+					"sec-fetch-dest": "script",
+					"sec-fetch-mode": "cors",
+				})
+			).text();
+			await (
+				await serve("/data-v1.json", {
+					"sec-fetch-dest": "empty",
+					"sec-fetch-mode": "cors",
+				})
+			).text();
+
+			manifest = new Map([["/index.html", "index-v2"]]);
+			metadata = createMetadataObject({ deploymentId: "spa-v2" }) as Metadata;
+
+			const chunk = await serve("/lazy-v1.js", {
+				"sec-fetch-dest": "script",
+				"sec-fetch-mode": "cors",
+			});
+			expect(chunk.status).toBe(200);
+			expect(await chunk.text()).toContain("old SPA still works");
+			const data = await serve("/data-v1.json", {
+				"sec-fetch-dest": "empty",
+				"sec-fetch-mode": "cors",
+			});
+			expect(await data.json()).toEqual({ version: 1 });
+			const revalidatedChunk = await serve("/lazy-v1.js", {
+				"sec-fetch-dest": "script",
+				"if-none-match": '"lazy-v1"',
+			});
+			expect(revalidatedChunk.status).toBe(304);
+			const newNavigation = await serve("/lazy-v1.js", {
+				"sec-fetch-mode": "navigate",
+				"if-none-match": '"lazy-v1"',
+			});
+			expect(newNavigation.status).toBe(200);
+			expect(await newNavigation.text()).toContain("app-v2.js");
+			const currentRevalidation = await serve("/", {
+				"sec-fetch-mode": "navigate",
+				"if-none-match": '"index-v2"',
+			});
+			expect(currentRevalidation.status).toBe(304);
+
+			// Preservation cannot recover a chunk that was never cached before deployment.
+			const coldChunk = await serve("/never-loaded-v1.js", {
+				"sec-fetch-dest": "script",
+			});
+			expect(coldChunk.headers.get("content-type")).toBe("text/html");
+			expect(await coldChunk.text()).toContain("app-v2.js");
+		});
+
+		test.for([
+			[{ "sec-fetch-dest": "script" }, "subresource"],
+			[{ "sec-fetch-dest": "style" }, "subresource"],
+			[{ "sec-fetch-dest": "image" }, "subresource"],
+			[{ "sec-fetch-dest": "font" }, "subresource"],
+			[{ "sec-fetch-dest": "empty" }, "fetch"],
+			[{}, "unknown"],
+		] as const)(
+			"records historical responses for %j",
+			async ([headers, kind], { expect }) => {
+				const url = `https://metrics.example.com/${kind}-${Object.values(headers).join("-") || "absent"}`;
+				const cache = await caches.open("assetPreservationCacheV2");
+				await cache.put(
+					url,
+					new Response("old-key", {
+						headers: { "cache-control": "public, s-maxage=604800" },
+					})
+				);
+				const metrics = vi.fn();
+				const { response } = await getTestResponse({
+					request: new Request(url, { headers }),
+					setMetrics: metrics,
+					fetchAsset: async () => ({
+						body: new Response("old bytes").body,
+						contentType: "text/plain",
+					}),
+				});
+				expect(await response.text()).toBe("old bytes");
+				expect(metrics).toHaveBeenCalledWith({
+					preservationCacheRequestKind: kind,
+				});
+				expect(metrics).toHaveBeenCalledWith({
+					preservationCacheResponse: "body",
+				});
+			}
+		);
+
+		test.for([
+			["172801", "body"],
+			["172801", "not-modified"],
+			["172801", "error"],
+			["invalid", "body"],
+			["", "body"],
+		] as const)(
+			"records entry age and outcome: %j",
+			async ([age, outcome], { expect }) => {
+				const metrics = vi.fn();
+				const { response } = await getTestResponse({
+					request: new Request("https://age.example.com/old.js", {
+						headers:
+							outcome === "not-modified"
+								? { "if-none-match": '"old-key"' }
+								: {},
+					}),
+					caches: {
+						open: async () => ({
+							match: async () => new Response("old-key", { headers: { age } }),
+						}),
+					} as unknown as CacheStorage,
+					fetchAsset: async () => {
+						if (outcome === "error") {
+							throw new Error("historical body unavailable");
+						}
+
+						return {
+							body: new Response("old bytes").body,
+							contentType: "text/plain",
+						};
+					},
+					setMetrics: metrics,
+				});
+				expect(response.status).toBe(
+					outcome === "not-modified" ? 304 : outcome === "error" ? 404 : 200
+				);
+				await response.text();
+				const data = Object.assign(
+					{},
+					...metrics.mock.calls.map(([value]) => value)
+				);
+				expect(data.preservationCacheAge).toBe(age === "172801" ? 172801 : -1);
+				expect(data.preservationCacheResponse).toBe(outcome);
+			}
+		);
+
 		test("preservationCacheV2", async ({ expect }) => {
 			const deploymentId = "deployment-" + Math.random();
 			const metadata = createMetadataObject({ deploymentId }) as Metadata;
@@ -1621,6 +1867,8 @@ async function getTestResponse({
 			spies.waitUntil.push(promise);
 		},
 		caches: options.caches ?? caches,
+		setMetrics: options.setMetrics,
+		generateNotFoundResponse: options.generateNotFoundResponse,
 	});
 
 	return { response, spies };
