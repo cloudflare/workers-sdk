@@ -28,6 +28,7 @@ export default defineConfig(() => [
 			"src/test-helpers/index.ts",
 			// Leaf entry points let consumers bundle individual utilities without
 			// pulling in the broad package barrel and its transitive dependencies.
+			"src/binding-local-support.ts",
 			"src/compliance.ts",
 			"src/compatibility-date.ts",
 			"src/docker-path.ts",

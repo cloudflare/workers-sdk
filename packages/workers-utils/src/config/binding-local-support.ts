@@ -1,6 +1,6 @@
 import { assertNever } from "../assert-never";
 import { UserError } from "../errors";
-import { getBindingTypeFriendlyName } from "./validation";
+import { getBindingTypeFriendlyName } from "./binding-type-friendly-names";
 import type { Binding } from "../types";
 
 /**

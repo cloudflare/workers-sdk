@@ -1,4 +1,4 @@
-import { validateBindingRemoteSetting } from "@cloudflare/workers-utils";
+import { validateBindingRemoteSetting } from "@cloudflare/workers-utils/binding-local-support";
 import type { WorkerOptions } from "./schema";
 import type { ParsedInputWorkerConfig } from "@cloudflare/config";
 
