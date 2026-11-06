@@ -86,6 +86,8 @@ export const WRANGLER_CLI: CliDescriptor = {
 	getConfigPath: getGlobalConfigPath,
 	getTemporaryAccountConfigPath: getTemporaryPreviewAccountConfigPath,
 	fileFormat: "toml",
+	// Preserve Wrangler's cross-invocation account selection.
+	persistAccountSelection: true,
 	accountCachePrefix: "wrangler-account",
 	getConfigFileLabel: () => configFileName(undefined),
 	// A getter so any reassignment of the live `DefaultScopeKeys` binding is

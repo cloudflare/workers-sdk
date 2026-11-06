@@ -114,7 +114,7 @@ Cloudflare CLI built on this package. It lives in `src/core/`:
   `keyringServiceName`,
   `clientId`, `consent`, `redirectUri`, `useDeviceFlowByDefault`,
   `getConfigPath`, `fileFormat`,
-  `accountCachePrefix`, `cacheNamespace`, `getConfigFileLabel`,
+  `persistAccountSelection`, `accountCachePrefix`, `cacheNamespace`, `getConfigFileLabel`,
   `getDefaultScopeKeys`, …).
 - `file-storage.ts` (`createFileStorage(format, getPath)`), `auth-config-file.ts`
   (`createAuthConfigFileHelpers({getConfigPath, format})`), `preferences.ts`

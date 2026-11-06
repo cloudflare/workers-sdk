@@ -335,7 +335,9 @@ async function getMiniflareOptionsFromConfig(args: {
 		rootPath: projectRoot,
 		workers: [
 			{
-				script: "",
+				script:
+					// Asset misses still route to this placeholder Worker, so terminate them instead of letting workerd's default handler forward back to this instance.
+					"export default { fetch() { return new Response(null, { status: 404 }); } };",
 				modules: true,
 				name: config.name,
 				zone: getZoneFromConfig(config),

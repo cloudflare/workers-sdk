@@ -30,11 +30,17 @@ export const USER_AGENT = `vite-plugin/${packageVersion}`;
  * Set up cf authentication using the profile associated with the Vite project.
  */
 export function createAuth(profileDir: string, logger: Logger) {
-	const profile = createCfProfileStore({ logger }).resolve({ cwd: profileDir });
-	return createAuthForProfile(profile, logger);
+	return createAuthForProfile(resolveAuthProfile(profileDir, logger), logger);
 }
 
-function createAuthForProfile(profile: string, logger: Logger): CloudflareAuth {
+export function resolveAuthProfile(profileDir: string, logger: Logger): string {
+	return createCfProfileStore({ logger }).resolve({ cwd: profileDir });
+}
+
+export function createAuthForProfile(
+	profile: string,
+	logger: Logger
+): CloudflareAuth {
 	const context = {
 		logger,
 		userAgent: USER_AGENT,
@@ -56,7 +62,7 @@ function createAuthForProfile(profile: string, logger: Logger): CloudflareAuth {
 			if (isNonInteractiveOrCI()) {
 				throw new AccountSelectionUnavailable();
 			}
-			return inputPrompt<string>({
+			const accountId = await inputPrompt<string>({
 				type: "select",
 				question,
 				label: "Account",
@@ -66,6 +72,16 @@ function createAuthForProfile(profile: string, logger: Logger): CloudflareAuth {
 				})),
 				throwOnError: true,
 			});
+			logger.info(
+				[
+					"To use this account automatically in future, configure accountId in cloudflare.config.ts:",
+					"",
+					`  accountId: ${JSON.stringify(accountId)},`,
+					"",
+					"Alternatively, set the `CLOUDFLARE_ACCOUNT_ID` environment variable.",
+				].join("\n")
+			);
+			return accountId;
 		},
 		isNoDefaultValueProvidedError: (error: unknown) =>
 			error instanceof AccountSelectionUnavailable,
@@ -83,21 +99,18 @@ function createAuthForProfile(profile: string, logger: Logger): CloudflareAuth {
  *
  * @param profileDir - Directory used to resolve the cf auth profile.
  * @param accountId - The configured account ID, if any.
- * @param logger - Logger for the auth flow.
+ * @param getAuth - Returns the auth instance shared by this Vite project.
  * @returns A hook resolving the account ID and API token, with a key
  * identifying those credentials.
  */
 export function getRemoteBindingsAuth(
 	profileDir: string,
 	accountId: string | undefined,
-	logger: Logger
+	getAuth: () => CloudflareAuth
 ): RemoteBindingsAuth {
-	const profile = createCfProfileStore({ logger }).resolve({ cwd: profileDir });
-	let auth: CloudflareAuth | undefined;
+	const auth = getAuth();
 	return {
 		hook: async () => {
-			// Only initialize authentication once a session actually needs credentials
-			auth ??= createAuthForProfile(profile, logger);
 			return {
 				accountId: await auth.requireAuth(
 					accountId ? { account_id: accountId } : {}
@@ -105,7 +118,7 @@ export function getRemoteBindingsAuth(
 				apiToken: auth.requireApiToken(),
 			};
 		},
-		key: JSON.stringify([profileDir, accountId, profile]),
+		key: JSON.stringify([profileDir, accountId, auth.getActiveProfile()]),
 	};
 }
 

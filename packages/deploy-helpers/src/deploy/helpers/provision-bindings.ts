@@ -52,6 +52,7 @@ type ConcreteDatabase = {
 type DatabaseInfo = {
 	uuid: string;
 	name: string;
+	jurisdiction?: string;
 };
 
 type R2BucketInfo = {
@@ -629,7 +630,8 @@ class D1Handler extends ProvisionResourceHandler<
 			this.accountId,
 			name,
 			this.d1ListCommand,
-			this.d1DeleteCommand
+			this.d1DeleteCommand,
+			this.binding.jurisdiction
 		);
 		return db.uuid;
 	}
@@ -650,6 +652,27 @@ class D1Handler extends ProvisionResourceHandler<
 			accountId
 		);
 	}
+	private throwIfJurisdictionMismatch(db: DatabaseInfo): void {
+		const requestedJurisdiction = this.binding.jurisdiction;
+		if (!requestedJurisdiction || requestedJurisdiction === db.jurisdiction) {
+			return;
+		}
+
+		const existingJurisdiction = db.jurisdiction ?? "default";
+		const matchingConfigAction = db.jurisdiction
+			? `set "jurisdiction" to "${db.jurisdiction}"`
+			: `remove "jurisdiction"`;
+		throw new UserError(
+			dedent`
+				D1 database "${db.name}" (${db.uuid}) is in jurisdiction "${existingJurisdiction}", but the "${this.bindingName}" binding specifies jurisdiction "${requestedJurisdiction}".
+
+				A D1 database's jurisdiction cannot be changed after creation. Either:
+				  - ${matchingConfigAction} in your configuration to keep using this database, or
+				  - set a new "database_name" for this binding so a new database is provisioned in "${requestedJurisdiction}" (then migrate your data).
+			`,
+			{ telemetryMessage: "d1 provision jurisdiction mismatch" }
+		);
+	}
 	async canInherit(settings: Settings | undefined): Promise<boolean> {
 		const maybeInherited = settings?.bindings.find(
 			(existing) =>
@@ -657,20 +680,29 @@ class D1Handler extends ProvisionResourceHandler<
 		) as Extract<WorkerMetadataBinding, { type: "d1" }> | undefined;
 		// A D1 binding with the same binding name exists is already present on the worker...
 		if (maybeInherited) {
-			// ...and the user hasn't specified a name in their config, so we don't need to check if the database_name matches.
-			if (!this.binding.database_name) {
+			// ...and the user hasn't specified a name or jurisdiction in their config, so we don't need to check the database metadata.
+			if (!this.binding.database_name && !this.binding.jurisdiction) {
 				return true;
 			}
 
-			// ...and the user HAS specified a name in their config, so we need to check if the database_name they provided
-			// matches the database_name of the existing binding (which isn't present in settings, so we'll need to make an API call to check).
+			// ...and the user HAS specified a name or jurisdiction in their config, so we need to check if the provided values
+			// match the existing binding (which aren't present in settings, so we'll need to make an API call to check).
 			const dbFromId = await getDatabaseInfoFromIdOrName(
 				this.complianceConfig,
 				this.accountId,
 				maybeInherited.id
 			);
-			if (this.binding.database_name === dbFromId.name) {
+			const nameMatches =
+				!this.binding.database_name ||
+				this.binding.database_name === dbFromId.name;
+			const jurisdictionMatches =
+				!this.binding.jurisdiction ||
+				this.binding.jurisdiction === dbFromId.jurisdiction;
+			if (nameMatches && jurisdictionMatches) {
 				return true;
+			}
+			if (nameMatches) {
+				this.throwIfJurisdictionMismatch(dbFromId);
 			}
 		}
 		return false;
@@ -688,6 +720,7 @@ class D1Handler extends ProvisionResourceHandler<
 				this.accountId,
 				this.binding.database_name
 			);
+			this.throwIfJurisdictionMismatch(db);
 
 			// This database_name exists! We don't need to provision it.
 			return db.uuid;
@@ -1628,7 +1661,8 @@ async function createD1Database(
 	accountId: string,
 	name: string,
 	d1ListCommand: string,
-	d1DeleteCommand: string
+	d1DeleteCommand: string,
+	jurisdiction?: string
 ) {
 	try {
 		return await fetchResult<DatabaseCreationResult>(
@@ -1639,7 +1673,10 @@ async function createD1Database(
 				headers: {
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify({ name }),
+				body: JSON.stringify({
+					name,
+					...(jurisdiction && { jurisdiction }),
+				}),
 			}
 		);
 	} catch (e) {

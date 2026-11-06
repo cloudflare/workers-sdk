@@ -3,6 +3,7 @@ import { URLSearchParams } from "node:url";
 import { fetch, FormData, Headers, Response } from "undici";
 import {
 	getCloudflareApiBaseUrl,
+	getSanitizeLogs,
 	getTraceHeader,
 } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
@@ -94,10 +95,16 @@ export async function performApiFetchBase(
 	logHeaders(headers, logger);
 
 	logger.debugWithSanitization?.("INIT:", JSON.stringify({ ...init }, null, 2));
-	if (init.body instanceof FormData) {
+	if (
+		logger.debugWithSanitization !== undefined &&
+		init.body instanceof FormData &&
+		(logger.loggerLevel === undefined || logger.loggerLevel === "debug")
+	) {
 		logger.debugWithSanitization?.(
 			"BODY:",
-			await new Response(init.body).text(),
+			getSanitizeLogs()
+				? "<multipart body>"
+				: await new Response(init.body).text(),
 			null,
 			2
 		);

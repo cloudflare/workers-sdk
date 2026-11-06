@@ -247,7 +247,7 @@ if (auth) {
 						configPath: "./.tmp/config-with-invalid-account-id/wrangler.json",
 					})
 				).rejects.toMatchInlineSnapshot(
-					`[Error: Failed to start the remote proxy session. Error reloading remote server: Invalid account ID "NOT a valid account id" set as \`account_id\` in your Wrangler configuration file. Account IDs may only contain alphanumeric characters, hyphens, and underscores.]`
+					`[Error: Failed to start the remote proxy session. Error reloading remote server: Invalid account ID "NOT a valid account id" set in your Wrangler configuration file. Account IDs may only contain alphanumeric characters, hyphens, and underscores.]`
 				);
 			});
 
