@@ -20,3 +20,14 @@ test.runIf(isBuild)("runs a custom buildApp function", async ({ expect }) => {
 	expect(serverLogs.info.join()).toContain("__before-build__");
 	expect(serverLogs.info.join()).toContain("__after-build__");
 });
+
+test.runIf(isBuild)(
+	"serves a Worker-imported asset after a custom build deletes the manifest",
+	async ({ expect }) => {
+		const assetUrl = await getTextResponse("/imported-asset");
+		expect(assetUrl).toMatch(/^\/assets\//);
+		expect(await getTextResponse(assetUrl)).toBe(
+			"Asset imported by the custom-build Worker\n"
+		);
+	}
+);
