@@ -131,6 +131,71 @@ describe("access", () => {
 			).toBeFalsy();
 		});
 
+		it("should not detect Access for a hostname lookalike of the Access domain", async ({
+			expect,
+		}) => {
+			// A 302 whose Location host merely ends in "cloudflareaccess.com"
+			// (e.g. "team.cloudflareaccess.com.evil.test") is not a Cloudflare
+			// Access redirect and must not be detected as one.
+			msw.use(
+				http.get("https://lookalike-host.com/", () => {
+					return HttpResponse.json(null, {
+						status: 302,
+						headers: {
+							location: "https://team.cloudflareaccess.com.evil.test/login",
+						},
+					});
+				})
+			);
+
+			expect(
+				await domainUsesAccess("lookalike-host.com", silentLogger)
+			).toBeFalsy();
+		});
+
+		it("should not detect Access when the Access domain only appears in the query string", async ({
+			expect,
+		}) => {
+			// A 302 to an unrelated host whose query string merely contains
+			// "cloudflareaccess.com" is not a Cloudflare Access redirect and
+			// must not be detected as one.
+			msw.use(
+				http.get("https://query-embedded.com/", () => {
+					return HttpResponse.json(null, {
+						status: 302,
+						headers: {
+							location:
+								"https://unrelated.test/next?url=https://team.cloudflareaccess.com/",
+						},
+					});
+				})
+			);
+
+			expect(
+				await domainUsesAccess("query-embedded.com", silentLogger)
+			).toBeFalsy();
+		});
+
+		it("should detect Access for a redirect to a real Access team domain", async ({
+			expect,
+		}) => {
+			msw.use(
+				http.get("https://real-redirect.com/", () => {
+					return HttpResponse.json(null, {
+						status: 302,
+						headers: {
+							location:
+								"https://team.cloudflareaccess.com/cdn-cgi/access/login",
+						},
+					});
+				})
+			);
+
+			expect(
+				await domainUsesAccess("real-redirect.com", silentLogger)
+			).toBeTruthy();
+		});
+
 		it("forwards the preview token and caches token-authenticated probes separately", async ({
 			expect,
 		}) => {
