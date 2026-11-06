@@ -726,6 +726,24 @@ export function extractBuildOutputBindings(config: RawConfig): EnvBindings {
 }
 
 /**
+ * Lists the resource bindings that `extractBuildOutputBindings` leaves out
+ * because they have no identifier to upload.
+ *
+ * @param config Wrangler config converted from Build Output.
+ * @returns The bindings left out, keyed by binding name.
+ */
+export function extractIdentifierlessBuildOutputBindings(
+	config: RawConfig
+): EnvBindings {
+	const uploadedBindings = extractBuildOutputBindings(config);
+	return Object.fromEntries(
+		Object.entries(extractBindings(config, config.assets)).filter(
+			([name]) => !Object.hasOwn(uploadedBindings, name)
+		)
+	);
+}
+
+/**
  * Returns the DO `class_name`s this script declares, through `migrations` or
  * through `exports`, resolving them in the same order as wrangler's own
  * `getDurableObjectClassNameToUseSQLiteMap`. Only the resulting names are
