@@ -17,9 +17,32 @@ export interface ServiceArgs {
 	ipv4?: string;
 	ipv6?: string;
 	hostname?: string;
-	tunnelId: string;
+	tunnelId?: string;
+	networkId?: string;
 	resolverIps?: string;
 	certVerificationMode?: string;
+}
+
+type ServiceRouting = { tunnelId: string } | { networkId: string };
+
+function getRouting(args: ServiceArgs): ServiceRouting {
+	if (args.tunnelId && args.networkId) {
+		throw new UserError("Specify only one of --tunnel-id or --network-id", {
+			telemetryMessage: "vpc validation conflicting network routing",
+		});
+	}
+
+	if (args.networkId) {
+		return { networkId: args.networkId };
+	}
+
+	if (args.tunnelId) {
+		return { tunnelId: args.tunnelId };
+	}
+
+	throw new UserError("Must specify either --tunnel-id or --network-id", {
+		telemetryMessage: "vpc validation missing network routing",
+	});
 }
 
 export function validateHostname(hostname: string): void {
@@ -126,7 +149,8 @@ export function toServiceArgs(args: {
 	ipv4?: string;
 	ipv6?: string;
 	hostname?: string;
-	tunnelId: string;
+	tunnelId?: string;
+	networkId?: string;
 	resolverIps?: string;
 	certVerificationMode?: string;
 }): ServiceArgs {
@@ -159,6 +183,7 @@ export function toServiceArgs(args: {
 		ipv6: args.ipv6,
 		hostname,
 		tunnelId: args.tunnelId,
+		networkId: args.networkId,
 		resolverIps: args.resolverIps,
 		certVerificationMode: args.certVerificationMode,
 	};
@@ -207,6 +232,15 @@ export function validateRequest(args: ServiceArgs) {
 		}
 	}
 
+	const routing = getRouting(args);
+
+	if ("networkId" in routing && hasHostname) {
+		throw new UserError(
+			"--network-id cannot be used with --hostname. Use --ipv4 or --ipv6 with --network-id.",
+			{ telemetryMessage: "vpc validation network-id with hostname" }
+		);
+	}
+
 	// Validate TCP services require a port
 	if (args.type === ServiceType.Tcp && !args.tcpPort) {
 		throw new UserError("TCP services require a --tcp-port to be specified", {
@@ -216,6 +250,8 @@ export function validateRequest(args: ServiceArgs) {
 }
 
 export function buildRequest(args: ServiceArgs): ConnectivityServiceRequest {
+	const routing = getRouting(args);
+
 	// Parse resolver IPs if provided
 	let resolverIpsList: string[] | undefined = undefined;
 	if (args.resolverIps) {
@@ -232,14 +268,16 @@ export function buildRequest(args: ServiceArgs): ConnectivityServiceRequest {
 		hostname: args.hostname,
 	};
 
-	if (args.hostname) {
+	if ("networkId" in routing) {
+		host.network = { network_id: routing.networkId };
+	} else if (args.hostname) {
 		host.resolver_network = {
-			tunnel_id: args.tunnelId,
+			tunnel_id: routing.tunnelId,
 			...(resolverIpsList && { resolver_ips: resolverIpsList }),
 		};
 	} else {
 		host.network = {
-			tunnel_id: args.tunnelId,
+			tunnel_id: routing.tunnelId,
 		};
 	}
 
