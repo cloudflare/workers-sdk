@@ -1269,11 +1269,12 @@ export const Worker_Module_Which = {
 	 */
 	OBSOLETE_PYTHON_REQUIREMENT: 8,
 	/**
-	 * An ES module whose source is compiled into workerd, by name: `/workerd/kv.js`, the KV
-	 * Worker (see its header for the bindings it takes). Experimental.
+	 * An ES module whose source is bundled with workerd, by name: `/workerd/kv.js`, the KV
+	 * Worker (see its header for the bindings it takes). Unlike built-in modules such as
+	 * `node:` ones, user code cannot import it; it is a Worker's source. Experimental.
 	 *
 	 */
-	BUILTIN: 9,
+	BUNDLED: 9,
 } as const;
 export type Worker_Module_Which =
 	(typeof Worker_Module_Which)[keyof typeof Worker_Module_Which];
@@ -1288,7 +1289,7 @@ export class Worker_Module extends $.Struct {
 	static readonly PYTHON_MODULE = Worker_Module_Which.PYTHON_MODULE;
 	static readonly OBSOLETE_PYTHON_REQUIREMENT =
 		Worker_Module_Which.OBSOLETE_PYTHON_REQUIREMENT;
-	static readonly BUILTIN = Worker_Module_Which.BUILTIN;
+	static readonly BUNDLED = Worker_Module_Which.BUNDLED;
 	static readonly _capnp = {
 		displayName: "Module",
 		id: "d9d87a63770a12f3",
@@ -1482,14 +1483,14 @@ export class Worker_Module extends $.Struct {
 	 * Worker (see its header for the bindings it takes). Experimental.
 	 *
 	 */
-	get builtin(): string {
-		$.utils.testWhich("builtin", $.utils.getUint16(0, this), 9, this);
+	get bundled(): string {
+		$.utils.testWhich("bundled", $.utils.getUint16(0, this), 9, this);
 		return $.utils.getText(1, this);
 	}
-	get _isBuiltin(): boolean {
+	get _isBundled(): boolean {
 		return $.utils.getUint16(0, this) === 9;
 	}
-	set builtin(value: string) {
+	set bundled(value: string) {
 		$.utils.setUint16(0, 9, this);
 		$.utils.setText(1, value, this);
 	}

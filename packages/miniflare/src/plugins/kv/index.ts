@@ -189,7 +189,7 @@ async function getWorkerdKvServices(
 			name: KV_WORKERD_SERVICE_NAME,
 			worker: {
 				compatibilityDate: "2026-01-01",
-				modules: [{ name: "kv.js", builtin: "/workerd/kv.js" }],
+				modules: [{ name: "kv.js", bundled: "/workerd/kv.js" }],
 				bindings,
 				durableObjectNamespaces: [
 					{
