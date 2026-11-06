@@ -152,6 +152,7 @@ export type WorkerMetadataBinding =
 			environment?: string;
 			entrypoint?: string;
 			cross_account_grant?: string;
+			target_account_id?: string;
 	  }
 	| { type: "analytics_engine"; name: string; dataset?: string }
 	| {

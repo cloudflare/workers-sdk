@@ -708,11 +708,22 @@ export function buildMiniflareBindingOptions(
 		if (remoteProxyConnectionString && service.remote) {
 			serviceBindings[service.binding] = {
 				name: service.service,
+				targetAccountId: service.target_account_id,
 				props: service.props,
 				entrypoint: service.entrypoint,
 				remoteProxyConnectionString,
 			};
 			continue;
+		}
+
+		if (service.target_account_id !== undefined) {
+			throw new UserError(
+				`Cross-account service binding "${service.binding}" requires remote: true and remote bindings enabled, or an explicit dev plugin mock.`,
+				{
+					telemetryMessage:
+						"cross-account service binding requires remote session or mock",
+				}
+			);
 		}
 
 		serviceBindings[service.binding] = {

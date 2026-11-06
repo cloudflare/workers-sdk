@@ -655,6 +655,8 @@ export interface WorkerBindingOptions<
 > {
 	/** The name or config of the bound Worker. */
 	worker: TWorker;
+	/** Public ID of the target account in the same Cloudflare Organization. */
+	accountId?: string;
 	/** The named export to bind to (defaults to the default export). */
 	exportName?: TExportName;
 	/** Optional properties that will be made available to the service via `ctx.props`. */

@@ -33,6 +33,7 @@ export interface Binding {
 	// Props supplied to a Worker service binding.
 	props?: Record<string, unknown>;
 	cross_account_grant?: string;
+	target_account_id?: string;
 	dataset?: string;
 	namespace?: string;
 	outbound?: {

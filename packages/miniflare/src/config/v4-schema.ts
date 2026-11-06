@@ -179,6 +179,10 @@ const V4ServiceDesignatorSchema = z.union([
 			z.custom<typeof kCurrentWorker>((value) => value === kCurrentWorker),
 		]),
 		entrypoint: z.string().optional(),
+		targetAccountId: z
+			.string()
+			.regex(/^[a-f0-9]{32}$/)
+			.optional(),
 		props: z.record(z.string(), z.unknown()).optional(),
 		remoteProxyConnectionString: RemoteProxyConnectionStringSchema.optional(),
 	}),
@@ -772,6 +776,7 @@ export type V4ServiceDesignator =
 	| {
 			name: string | symbol;
 			entrypoint?: string;
+			targetAccountId?: string;
 			props?: Record<string, unknown>;
 			remoteProxyConnectionString?: RemoteProxyConnectionString;
 	  }

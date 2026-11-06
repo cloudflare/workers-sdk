@@ -356,6 +356,7 @@ export interface CfService {
 	props?: Record<string, unknown>;
 	remote?: boolean;
 	cross_account_grant?: string;
+	target_account_id?: string;
 	dev?: CfDevPluginCfg;
 }
 
