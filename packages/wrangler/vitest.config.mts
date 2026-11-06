@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
+import ci from "ci-info";
 import * as esbuild from "esbuild";
 import { dedent } from "ts-dedent";
 import { defineConfig } from "vitest/config";
@@ -62,6 +63,9 @@ export default defineConfig({
 	test: {
 		testTimeout: 50_000,
 		pool: "forks",
+		// Windows CI runs Miniflare alongside Wrangler. Leave capacity for its
+		// workerd instances and native Git processes instead of saturating the runner.
+		maxWorkers: ci.isCI && process.platform === "win32" ? 2 : undefined,
 		shard: getVitestShard(),
 		retry: 0,
 		include: ["**/__tests__/**/*.test.ts", "**/__tests__/**/*.test.tsx"],

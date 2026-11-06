@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
+import { logger } from "../../logger";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockProcess } from "../helpers/mock-process";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -123,32 +124,68 @@ describe("kv", () => {
 			`);
 		});
 
-		it("should list every local key when there are more than 1000", async ({
-			expect,
-		}) => {
-			const keyValues = Array.from({ length: 1500 }, (_, i) => ({
-				key: `key-${String(i).padStart(4, "0")}`,
-				value: "value",
-			}));
-			keyValues.push({ key: "other", value: "value" });
-			writeFileSync("./keys.json", JSON.stringify(keyValues));
-			await runWrangler(
-				`kv bulk put keys.json --namespace-id some-namespace-id`
-			);
-			std.getAndClearOut();
+		it(
+			"should list every local key when there are more than 1000",
+			// Seeding the real namespace requires over 1,000 sequential disk-backed
+			// writes, which can exceed the default budget on Windows CI.
+			{ timeout: process.platform === "win32" ? 90_000 : undefined },
+			async ({ expect, onTestFailed, signal }) => {
+				const timings: string[] = [];
+				let phase = "creating the fixture";
+				let phaseStartedAt = performance.now();
+				onTestFailed(() => {
+					logger.error(
+						[
+							"Local KV pagination timings:",
+							...timings,
+							`Current phase: ${phase} (${Math.round(performance.now() - phaseStartedAt)}ms).`,
+						].join("\n")
+					);
+				});
 
-			await runWrangler(`kv key list --namespace-id some-namespace-id`);
-			const all = JSON.parse(std.getAndClearOut());
-			expect(all).toHaveLength(1501);
-			expect(all.at(-1)).toEqual({ name: "other" });
+				async function runTimedCommand(name: string, command: string) {
+					signal.throwIfAborted();
+					phase = name;
+					phaseStartedAt = performance.now();
+					await runWrangler(command);
+					signal.throwIfAborted();
+					timings.push(
+						`${name}: ${Math.round(performance.now() - phaseStartedAt)}ms`
+					);
+					phase = `${name} assertions`;
+					phaseStartedAt = performance.now();
+				}
 
-			await runWrangler(
-				`kv key list --namespace-id some-namespace-id --prefix key-`
-			);
-			const prefixed = JSON.parse(std.getAndClearOut());
-			expect(prefixed).toHaveLength(1500);
-			expect(prefixed.at(-1)).toEqual({ name: "key-1499" });
-		});
+				// Both the full and prefixed lists must cross the 1,000-key page boundary.
+				const keyValues = Array.from({ length: 1001 }, (_, i) => ({
+					key: `key-${String(i).padStart(4, "0")}`,
+					value: "value",
+				}));
+				keyValues.push({ key: "other", value: "value" });
+				writeFileSync("./keys.json", JSON.stringify(keyValues));
+				await runTimedCommand(
+					"bulk put",
+					`kv bulk put keys.json --namespace-id some-namespace-id`
+				);
+				std.getAndClearOut();
+
+				await runTimedCommand(
+					"list all keys",
+					`kv key list --namespace-id some-namespace-id`
+				);
+				const all = JSON.parse(std.getAndClearOut());
+				expect(all).toEqual(keyValues.map(({ key }) => ({ name: key })));
+
+				await runTimedCommand(
+					"list prefixed keys",
+					`kv key list --namespace-id some-namespace-id --prefix key-`
+				);
+				const prefixed = JSON.parse(std.getAndClearOut());
+				expect(prefixed).toEqual(
+					keyValues.slice(0, -1).map(({ key }) => ({ name: key }))
+				);
+			}
+		);
 
 		it("should delete local kv storage", async ({ expect }) => {
 			await runWrangler(

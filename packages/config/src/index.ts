@@ -24,6 +24,7 @@ export {
 	ModuleTypeSchema,
 	QueueBindingSchema,
 	R2BindingSchema,
+	SINGLETON_BINDING_TYPES,
 	FlagshipBindingSchema,
 	HyperdriveBindingSchema,
 	TailConsumerSchema,

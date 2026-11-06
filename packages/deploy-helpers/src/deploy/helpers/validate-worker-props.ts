@@ -9,6 +9,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { confirm, fetchResult, logger } from "../../shared/context";
+import { partitionRoutes } from "../../shared/partition-routes";
 import {
 	getSubdomainValues,
 	validateEventTriggerTargets,
@@ -172,6 +173,7 @@ export async function preUploadApiChecks(
 
 	const deployConfirm = getDeployConfirmFunction({
 		strictMode: props.strict,
+		strictModeAbortMessage: props.strictModeAbortMessage,
 	});
 
 	// TODO: warn if git/hg has uncommitted changes
@@ -231,12 +233,20 @@ export async function preUploadApiChecks(
 			}
 
 			if (script.last_deployed_from === "dash") {
+				// Trigger configuration is only changed by `deploy`, and only for
+				// route categories present in the local configuration. Avoid requiring
+				// unrelated route permissions just to compare versioned settings.
+				const { routesOnly, customDomainsOnly } = partitionRoutes(
+					props.command === "deploy" ? props.routes : []
+				);
 				const remoteWorkerConfig = await downloadWorkerConfig(
 					config,
 					name,
 					serviceMetaData.default_environment.environment,
 					props.entry.file,
-					accountId
+					accountId,
+					routesOnly.length > 0,
+					customDomainsOnly.length > 0
 				);
 
 				const configForDiff =

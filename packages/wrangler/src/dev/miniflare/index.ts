@@ -8,6 +8,7 @@ import {
 	getWranglerHiddenDirPath,
 	isUnsafeBindingType,
 	partitionExports,
+	resolveBindingRemote,
 	UserError,
 	validateBindingRemoteSetting,
 } from "@cloudflare/workers-utils";
@@ -763,7 +764,11 @@ export function buildMiniflareBindingOptions(
 	}
 
 	for (const artifact of artifactsBindings) {
-		validateBindingRemoteSetting("artifacts", artifact.remote, logger.warn);
+		validateBindingRemoteSetting("artifacts", artifact.remote, logger.warn, {
+			binding: artifact.binding,
+			// Without a remote proxy session the binding uses the local simulator.
+			remoteBindingsDisabled: remoteProxyConnectionString === undefined,
+		});
 	}
 
 	for (const flagship of flagshipBindings) {
@@ -1010,7 +1015,13 @@ export function buildMiniflareBindingOptions(
 				binding.binding,
 				{
 					namespace: binding.namespace,
-					remoteProxyConnectionString,
+					remote: binding.remote,
+					remoteProxyConnectionString: resolveBindingRemote(
+						"artifacts",
+						binding.remote
+					)
+						? remoteProxyConnectionString
+						: undefined,
 				},
 			])
 		),

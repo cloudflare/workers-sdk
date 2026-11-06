@@ -3,8 +3,14 @@ import { z } from "zod";
 import { BadUpload, ServiceWorkerNotSupported, WorkerTimeout } from "./errors";
 import { constructMiddleware } from "./inject-middleware";
 import { doUpload, setupTokens } from "./realish";
-import { handleException, setupSentry } from "./sentry";
+import {
+	handleException,
+	hashSessionId,
+	setPreviewTags,
+	setupSentry,
+} from "./sentry";
 import type { RealishPreviewConfig, UploadResult } from "./realish";
+import type { Toucan } from "toucan-js";
 
 function switchRemote(url: URL, remote: string) {
 	const workerUrl = new URL(url);
@@ -37,6 +43,8 @@ type UploadedMetadata = z.infer<typeof UploadedMetadata>;
 export class UserSession {
 	config: RealishPreviewConfig | undefined;
 	previewToken: string | undefined;
+	// Recorded so error reports show how old the preview was when a request to it failed.
+	previewUploadedAt: number | undefined;
 	tailUrl: string | undefined;
 	workerName!: string;
 	constructor(
@@ -54,6 +62,8 @@ export class UserSession {
 			this.workerName = workerName;
 
 			this.previewToken = await this.state.storage.get<string>("previewToken");
+			this.previewUploadedAt =
+				await this.state.storage.get<number>("previewUploadedAt");
 			this.tailUrl = await this.state.storage.get<string>("tailUrl");
 		});
 	}
@@ -95,29 +105,61 @@ export class UserSession {
 
 		this.previewToken = uploadResult.result.preview_token;
 		this.tailUrl = uploadResult.result.tail_url;
+		this.previewUploadedAt = Date.now();
 
 		await this.state.storage.put("previewToken", this.previewToken);
+		await this.state.storage.put("previewUploadedAt", this.previewUploadedAt);
 		await this.state.storage.put("tailUrl", this.tailUrl);
 	}
 
-	async handleRequest(request: Request) {
+	async handleRequest(request: Request, sentry: Toucan) {
 		// This is a request to run the user-worker. Forward, adding the correct authentication headers
 		if (request.headers.has("cf-run-user-worker")) {
+			setPreviewTags(sentry, request);
+			sentry.setTag("worker_name", this.workerName);
+			sentry.addBreadcrumb({
+				category: "preview",
+				message: "Session state",
+				data: {
+					has_preview_token: this.previewToken !== undefined,
+					preview_age_seconds:
+						this.previewUploadedAt === undefined
+							? "unknown"
+							: Math.round((Date.now() - this.previewUploadedAt) / 1000),
+				},
+			});
 			assert(this.previewToken !== undefined);
 
-			const workerResponse = await fetch(
-				switchRemote(
-					new URL(request.url),
-					`https://${this.workerName}.${this.env.workersDev}`
-				),
-				new Request(request, {
-					headers: {
-						...Object.fromEntries(request.headers),
-						"cf-workers-preview-token": this.previewToken,
-					},
-					redirect: "manual",
-				})
+			const target = switchRemote(
+				new URL(request.url),
+				`https://${this.workerName}.${this.env.workersDev}`
 			);
+			let workerResponse: Response;
+			try {
+				workerResponse = await fetch(
+					target,
+					new Request(request, {
+						headers: {
+							...Object.fromEntries(request.headers),
+							"cf-workers-preview-token": this.previewToken,
+						},
+						redirect: "manual",
+					})
+				);
+			} catch (e) {
+				sentry.addBreadcrumb({
+					category: "preview",
+					level: "error",
+					message: "Request to the preview Worker failed",
+					data: { target_host: target.hostname },
+				});
+				throw e;
+			}
+			sentry.addBreadcrumb({
+				category: "preview",
+				message: "Preview Worker responded",
+				data: { status: workerResponse.status },
+			});
 
 			// Check for expired previews and show a friendlier error page
 			if (workerResponse.status === 400) {
@@ -219,16 +261,16 @@ export class UserSession {
 	async fetch(request: Request) {
 		// We need to construct a new Sentry instance here because throwing
 		// errors across a DO boundary will wipe stack information etc...
-		const sentry = setupSentry(
+		const sentry = setupSentry({
 			request,
-			undefined,
-			this.env.SENTRY_DSN,
-			this.env.SENTRY_ACCESS_CLIENT_ID,
-			this.env.SENTRY_ACCESS_CLIENT_SECRET
-		);
+			context: undefined,
+			env: this.env,
+			hop: "session",
+		});
+		sentry.setTag("session", await hashSessionId(this.state.id.toString()));
 
 		try {
-			return await this.handleRequest(request);
+			return await this.handleRequest(request, sentry);
 		} catch (e) {
 			return handleException(e, sentry);
 		}

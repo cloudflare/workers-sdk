@@ -20,6 +20,7 @@ import {
 	validateOwnedWorkflowDeclarations,
 } from "../deploy/helpers/owned-workflows";
 import { fetchListResult, fetchResult, logger } from "../shared/context";
+import { partitionRoutes } from "../shared/partition-routes";
 import { applyEmailRoutingAddresses } from "./email-routing";
 import {
 	publishCustomDomains,
@@ -33,7 +34,6 @@ import {
 import { getWorkerSubdomain, getWorkersDevSubdomain } from "./subdomain";
 import { getZoneForRoute } from "./zones";
 import type { TriggerDeployment, TriggerProps } from "../shared/types";
-import type { RouteObject } from "./publish-routes";
 import type { Config, Route } from "@cloudflare/workers-utils";
 
 export const PREVIEW_DOMAIN_PROVISIONING_NOTE =
@@ -67,16 +67,7 @@ export async function triggersDeploy(
 		);
 	}
 
-	const routesOnly: Array<Route> = [];
-	const customDomainsOnly: Array<RouteObject> = [];
-
-	for (const route of routes) {
-		if (typeof route !== "string" && route.custom_domain) {
-			customDomainsOnly.push(route);
-		} else {
-			routesOnly.push(route);
-		}
-	}
+	const { routesOnly, customDomainsOnly } = partitionRoutes(routes);
 
 	const start = Date.now();
 

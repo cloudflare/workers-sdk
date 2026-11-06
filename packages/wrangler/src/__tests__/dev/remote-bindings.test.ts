@@ -523,12 +523,14 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 					{
 						binding: "MY_ARTIFACTS",
 						namespace: "default",
+						remote: true,
 					},
 				],
 			},
 			expectedProxyWorkerBindings: {
 				MY_ARTIFACTS: {
 					namespace: "default",
+					remote: true,
 					type: "artifacts",
 				},
 			},
@@ -537,6 +539,7 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 					artifacts: {
 						MY_ARTIFACTS: {
 							namespace: "default",
+							remote: true,
 							remoteProxyConnectionString,
 						},
 					},
@@ -667,6 +670,45 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 			{ timeout: devReadyTimeout }
 		);
 
+		await stopWrangler();
+		await wranglerStopped;
+	});
+
+	it("routes Artifacts remotely when remote is omitted", async ({ expect }) => {
+		await seed({
+			"wrangler.jsonc": JSON.stringify({
+				name: "worker",
+				main: "index.js",
+				compatibility_date: "2025-01-01",
+				artifacts: [{ binding: "MY_ARTIFACTS", namespace: "default" }],
+			}),
+			"index.js": `export default { fetch() { return new Response("hello") } }`,
+		});
+		const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
+		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
+			timeout: devReadyTimeout,
+		});
+		expect(startRemoteProxySessionCallCount).toBe(1);
+		expect(proxyWorkerBindings).toEqual({
+			MY_ARTIFACTS: expect.objectContaining({
+				type: "artifacts",
+				namespace: "default",
+			}),
+		});
+		expect(workerOptions).toEqual([
+			expect.objectContaining({
+				artifacts: {
+					MY_ARTIFACTS: {
+						namespace: "default",
+						remote: undefined,
+						remoteProxyConnectionString,
+					},
+				},
+			}),
+		]);
+		expect(std.warn).toContain(
+			"Artifacts binding MY_ARTIFACTS uses the deployed resource. Set `remote: false` to use the local simulator, or `remote: true` to silence this warning."
+		);
 		await stopWrangler();
 		await wranglerStopped;
 	});

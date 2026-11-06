@@ -102,6 +102,27 @@ test("D1Database: batch", async ({ expect }) => {
 		.all<Pick<ColourRow, "name">>();
 	expect(result.results).toEqual(expectedResults);
 });
+test("D1Database: batch skips comment-only statements", async ({ expect }) => {
+	const { db, tableColours } = ctx;
+
+	// Comment-only statements are skipped with or without leading whitespace
+	const batchResults = await db.batch<Pick<ColourRow, "name">>([
+		db.prepare("-- comment at offset 0"),
+		db.prepare("  -- comment after whitespace"),
+		db.prepare("--comment\n\t-- another comment\n"),
+		db.prepare(
+			`-- leading comment\nSELECT name FROM ${tableColours} WHERE id = 1`
+		),
+	]);
+	expect(batchResults.length).toBe(1);
+	expect(batchResults[0].success).toBe(true);
+	expect(batchResults[0].results).toEqual([{ name: "red" }]);
+
+	// A batch with only comment-only statements has no SQL to run
+	await expect(
+		throwCause(db.batch([db.prepare("-- comment at offset 0")]))
+	).rejects.toThrow("No SQL statements detected.");
+});
 test("D1Database: exec", async ({ expect }) => {
 	const { db, tableColours } = ctx;
 

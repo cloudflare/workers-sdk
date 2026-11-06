@@ -772,6 +772,91 @@ Your database may not be available to serve requests during the migration, conti
 			);
 		});
 
+		describe("with multiple accounts", () => {
+			// The parent `describe` sets `CLOUDFLARE_ACCOUNT_ID`, which hides
+			// the `account_id` that the config file gives.
+			mockAccountId({ accountId: null });
+			mockApiToken();
+
+			function setUpRemoteMigrations(accountId?: string) {
+				writeWranglerConfig({
+					d1_databases: [
+						{
+							binding: "DATABASE",
+							database_name: "db",
+							database_id: "xxxx",
+							migrations_dir: "migrations",
+						},
+					],
+					account_id: accountId,
+				});
+				fs.mkdirSync("./migrations", { recursive: true });
+				fs.writeFileSync("./migrations/0001_init.sql", "-- init");
+
+				const requestedAccountIds: string[] = [];
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/d1/database/:databaseId/query",
+						({ params }) => {
+							requestedAccountIds.push(String(params.accountId));
+							return HttpResponse.json({
+								result: [{ results: [], success: true, meta: {} }],
+								success: true,
+								errors: [],
+								messages: [],
+							});
+						}
+					),
+					http.get(
+						"*/accounts/:accountId/d1/database/:databaseId",
+						({ params }) => {
+							requestedAccountIds.push(String(params.accountId));
+							return HttpResponse.json({
+								result: {
+									file_size: 7421952,
+									name: "db",
+									num_tables: 2,
+									uuid: "xxxx",
+									version: "production",
+								},
+								success: true,
+								errors: [],
+								messages: [],
+							});
+						}
+					),
+					...getMswSuccessMembershipHandlers([
+						{ id: "IG-88", name: "enterprise" },
+						{ id: "R2-D2", name: "enterprise-nx" },
+					])
+				);
+				return requestedAccountIds;
+			}
+
+			it("should throw without an account_id in config", async ({ expect }) => {
+				setIsTTY(false);
+				setUpRemoteMigrations();
+
+				await expect(
+					runWrangler("d1 migrations list db --remote")
+				).rejects.toThrow(
+					"More than one account available but unable to select one in non-interactive mode."
+				);
+			});
+
+			it("should use the account_id in config", async ({ expect }) => {
+				setIsTTY(false);
+				const requestedAccountIds = setUpRemoteMigrations("nx01");
+
+				await runWrangler("d1 migrations list db --remote");
+
+				expect(mockStd.out).toContain("Migrations to be applied:");
+				expect(mockStd.out).toContain("0001_init.sql");
+				expect(requestedAccountIds.length).toBeGreaterThan(0);
+				expect(new Set(requestedAccountIds)).toEqual(new Set(["nx01"]));
+			});
+		});
+
 		it("`list` only shows migrations matching migrations_pattern (nested layout)", async ({
 			expect,
 		}) => {

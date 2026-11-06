@@ -1,5 +1,5 @@
 import { describe, it } from "vitest";
-import { mayContainTransaction, trimSqlQuery } from "../../d1/trimmer";
+import { mayContainTransaction, trimSqlQuery } from "../src/d1-trimmer";
 
 describe("mayContainTransaction()", () => {
 	it("should return false if there for regular queries", ({ expect }) => {

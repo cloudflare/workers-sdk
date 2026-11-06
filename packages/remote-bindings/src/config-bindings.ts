@@ -1,3 +1,7 @@
+import {
+	getBindingLocalSupport,
+	validateBindingRemoteSetting,
+} from "@cloudflare/workers-utils";
 import type {
 	ParsedInputWorkerConfig,
 	ParsedOutputWorkerConfig,
@@ -8,6 +12,34 @@ type WorkerConfig = ParsedInputWorkerConfig | ParsedOutputWorkerConfig;
 
 /** Bindings as declared in `cloudflare.config.ts`. */
 export type ConfigBindings = WorkerConfig["env"];
+
+/**
+ * Warns before native-config development accesses deployed data by default.
+ * Explicit remote settings and sessions with remote bindings disabled are silent.
+ */
+export function warnForDefaultRemoteBindings(
+	bindings: Record<string, Binding>,
+	remoteBindingsEnabled: boolean,
+	warn: (message: string) => void
+): void {
+	for (const [name, binding] of Object.entries(bindings)) {
+		if (
+			getBindingLocalSupport(binding.type) ===
+			"remote-default-with-local-opt-in"
+		) {
+			validateBindingRemoteSetting(
+				binding.type,
+				"remote" in binding ? binding.remote : undefined,
+				warn,
+				{
+					binding: name,
+					remoteBindingsDisabled: !remoteBindingsEnabled,
+					configFormat: "cloudflare-config",
+				}
+			);
+		}
+	}
+}
 
 /**
  * Convert native config bindings to the transport shape consumed by the

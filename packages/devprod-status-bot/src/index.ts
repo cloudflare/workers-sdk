@@ -1,4 +1,5 @@
 import dedent from "ts-dedent";
+import { sendMessage } from "./gchat";
 import type {
 	CheckRunCompletedEvent,
 	IssueCommentEvent,
@@ -227,39 +228,6 @@ async function addPRToProject(apiToken: string, repo: string, number: string) {
 	});
 }
 
-function getThreadID(date?: string | Date, label = "-pull-requests") {
-	// Apply an offset so we rollover days at around 10am UTC
-	return (
-		(date ? new Date(date) : new Date())
-			.toLocaleString("en-GB", { timeZone: "Pacific/Kiritimati" })
-			.split(",")[0] + label
-	);
-}
-
-async function sendMessage(
-	webhookUrl: string,
-	message: Record<string, unknown>,
-	label?: string
-) {
-	const threadId = getThreadID(new Date(), label);
-
-	const url = new URL(webhookUrl);
-
-	url.searchParams.set("threadKey", threadId);
-	url.searchParams.set(
-		"messageReplyOption",
-		"REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD"
-	);
-
-	const response = await fetch(url, {
-		method: "POST",
-		headers: { "Content-Type": "application/json; charset=utf-8" },
-		body: JSON.stringify(message),
-	});
-
-	console.log(await response.json());
-}
-
 function isIssueOrPREvent(
 	message: WebhookEvent
 ): { type: "issue" | "pr"; event: IssuesEvent | IssueCommentEvent } | null {
@@ -381,6 +349,97 @@ function isVersionPackagesPRCheckRun(message: WebhookEvent): {
 		owner: message.repository.owner.login,
 		repo: message.repository.name,
 	};
+}
+
+/**
+ * Summary jobs deliberately fail when a dependency is cancelled to keep branch
+ * protection intact. Only suppress their alerts when all their dependencies
+ * either passed or were cancelled, so genuine failures still get reported.
+ */
+async function isCancelledTestSummary(
+	apiToken: string,
+	{
+		checkRun,
+		owner,
+		repo,
+	}: {
+		checkRun: CheckRunCompletedEvent["check_run"];
+		owner: string;
+		repo: string;
+	}
+): Promise<boolean> {
+	if (
+		checkRun.conclusion !== "failure" ||
+		(checkRun.name !== "Tests" &&
+			!/^C3 E2E \(.+\) - frameworks$/.test(checkRun.name))
+	) {
+		return false;
+	}
+
+	// This webhook endpoint also receives unverified input. Limit the new
+	// PAT-authenticated lookup to this repository and a valid check suite ID.
+	if (
+		owner !== "cloudflare" ||
+		repo !== "workers-sdk" ||
+		!Number.isSafeInteger(checkRun.check_suite.id) ||
+		checkRun.check_suite.id <= 0
+	) {
+		return false;
+	}
+
+	type CheckResult = { name: string; conclusion: string | null };
+	const dependencies: CheckResult[] = [];
+	let fetchedCount = 0;
+
+	try {
+		for (let page = 1; ; page++) {
+			const response = await fetch(
+				`https://api.github.com/repos/cloudflare/workers-sdk/check-suites/${checkRun.check_suite.id}/check-runs?per_page=100&page=${page}`,
+				{
+					headers: {
+						"User-Agent": "Cloudflare ANT Status bot",
+						Authorization: `Bearer ${apiToken}`,
+						Accept: "application/vnd.github+json",
+					},
+				}
+			);
+			if (!response.ok) {
+				throw new Error(`GitHub check runs request failed: ${response.status}`);
+			}
+			const { check_runs, total_count } = await response.json<{
+				check_runs: CheckResult[];
+				total_count: number;
+			}>();
+			// Each C3 summary depends on the entire framework shard matrix,
+			// including the shards for other package managers.
+			dependencies.push(
+				...check_runs.filter((check) =>
+					checkRun.name === "Tests"
+						? check.name.startsWith("Test partition (")
+						: /^C3 E2E \(.+\) - frameworks \d+\/\d+$/.test(check.name)
+				)
+			);
+			fetchedCount += check_runs.length;
+			if (fetchedCount >= total_count) {
+				break;
+			}
+			if (check_runs.length < 100) {
+				return false;
+			}
+		}
+	} catch (error) {
+		// Keep the alert if GitHub cannot confirm this is cancellation-only.
+		console.error("Error checking cancelled test dependencies:", error);
+		return false;
+	}
+
+	return (
+		dependencies.some((check) => check.conclusion === "cancelled") &&
+		dependencies.every(
+			(check) =>
+				check.conclusion === "success" || check.conclusion === "cancelled"
+		)
+	);
 }
 
 async function sendSecurityAlert(
@@ -823,9 +882,16 @@ export default {
 					maybeRepositoryAdvisory
 				);
 			}
-			// Notifies when any CI check fails on the Version Packages PR
+			// Notifies when a CI check fails on the Version Packages PR, except for
+			// summary failures caused only by cancelled prerequisites.
 			const maybeVersionPackagesFailure = isVersionPackagesPRCheckRun(body);
-			if (maybeVersionPackagesFailure) {
+			if (
+				maybeVersionPackagesFailure &&
+				!(await isCancelledTestSummary(
+					env.GITHUB_PAT,
+					maybeVersionPackagesFailure
+				))
+			) {
 				await sendVersionPackagesCIFailureAlert(
 					env.ALERTS_WEBHOOK,
 					maybeVersionPackagesFailure
