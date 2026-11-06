@@ -3020,7 +3020,7 @@ describe("versions upload", () => {
 			setIsTTY(false);
 		});
 
-		test("sends workflow exports by name without provisioning the Workflow", async ({
+		test("sends workflow exports with their settings without provisioning the Workflow", async ({
 			expect,
 		}) => {
 			mockGetScript();
@@ -3059,14 +3059,22 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload --config ./wrangler.json");
 
-			const metadata = await getMetadata(requests[requests.length - 1]);
+			const request = requests[requests.length - 1];
+			expect(request.headers.get("Cloudflare-Workers-Script-Api-Date")).toBe(
+				"2026-10-22"
+			);
+			const metadata = await getMetadata(request);
 			expect(metadata.exports).toEqual({
-				MyWorkflow: { type: "workflow", name: "my-workflow" },
+				MyWorkflow: {
+					type: "workflow",
+					name: "my-workflow",
+					limits: { steps: 10 },
+				},
 			});
 			expect(workflowPuts).toBe(0);
 		});
 
-		test("rejects a binding and an export that declare the same Workflow with different classes", async ({
+		test("rejects a binding and an export that declare the same Workflow", async ({
 			expect,
 		}) => {
 			writeWranglerConfig(
@@ -3099,7 +3107,7 @@ describe("versions upload", () => {
 			await expect(
 				runWrangler("versions upload --config ./wrangler.json")
 			).rejects.toThrow(
-				'"workflows[0]" and "exports.MyWorkflow" both declare the Workflow "my-workflow", but with different classes ("OldWorkflow" and "MyWorkflow").'
+				'"workflows[0]" and "exports.MyWorkflow" both declare the Workflow "my-workflow".'
 			);
 		});
 	});

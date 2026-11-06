@@ -7,6 +7,10 @@ const MAX_ATTEMPTS = 3;
 // Cap how long we'll block on a `Retry-After` header before failing fast.
 const MAX_RETRY_AFTER_MS = 60_000;
 
+// EWC error code for "Worker deployment committed, but Workflow provisioning
+// failed". Retrying would re-upload a Worker that is already deployed.
+const WORKFLOW_PROVISIONING_FAILED_AFTER_DEPLOY_CODE = 100413;
+
 export async function retryOnAPIFailure<T>(
 	action: () => T | Promise<T>,
 	logger: Logger,
@@ -20,7 +24,10 @@ export async function retryOnAPIFailure<T>(
 		if (err instanceof APIError) {
 			// 429 is special-cased here rather than folded into isRetryable(),
 			// since other callers rely on that meaning "5xx".
-			if (!err.isRetryable() && err.status !== 429) {
+			if (
+				(!err.isRetryable() && err.status !== 429) ||
+				err.code === WORKFLOW_PROVISIONING_FAILED_AFTER_DEPLOY_CODE
+			) {
 				throw err;
 			}
 		} else if (err instanceof DOMException && err.name === "TimeoutError") {

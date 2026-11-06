@@ -46,6 +46,7 @@ vi.mock("../src/deploy/helpers/durable-object-container-applications", () => ({
 }));
 
 vi.mock("../src/deploy/helpers/exports", () => ({
+	WORKER_UPLOAD_SCRIPT_API_DATE: "2026-10-22",
 	resolveExportsUploadPayload: async () => ({
 		exports: undefined,
 		migrations: undefined,

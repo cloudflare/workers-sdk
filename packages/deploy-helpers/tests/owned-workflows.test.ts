@@ -5,9 +5,7 @@ import {
 } from "../src/deploy/helpers/owned-workflows";
 
 describe("getWorkflowsOwnedByScript", () => {
-	it("keeps the jurisdiction from either declaration of a Workflow", ({
-		expect,
-	}) => {
+	it("returns owned Workflows from both bindings and exports", ({ expect }) => {
 		expect(
 			getWorkflowsOwnedByScript(
 				{
@@ -18,9 +16,14 @@ describe("getWorkflowsOwnedByScript", () => {
 							class_name: "GreetingWorkflow",
 							jurisdiction: "eu",
 						},
+						{
+							binding: "OTHER",
+							name: "other",
+							class_name: "OtherWorkflow",
+							script_name: "other-worker",
+						},
 					],
 					exports: {
-						GreetingWorkflow: { type: "workflow", name: "greeting" },
 						OrdersWorkflow: {
 							type: "workflow",
 							name: "orders",
@@ -31,14 +34,14 @@ describe("getWorkflowsOwnedByScript", () => {
 				"my-worker"
 			)
 		).toMatchObject([
-			{ name: "greeting", jurisdiction: "eu" },
-			{ name: "orders", jurisdiction: "us" },
+			{ name: "greeting", class_name: "GreetingWorkflow", jurisdiction: "eu" },
+			{ name: "orders", class_name: "OrdersWorkflow", jurisdiction: "us" },
 		]);
 	});
 });
 
 describe("validateOwnedWorkflowDeclarations", () => {
-	it("accepts a binding and an export that configure the same Workflow settings in different forms", ({
+	it("errors when a binding and an export declare the same Workflow", ({
 		expect,
 	}) => {
 		expect(() =>
@@ -49,36 +52,6 @@ describe("validateOwnedWorkflowDeclarations", () => {
 							binding: "GREETING",
 							name: "greeting",
 							class_name: "GreetingWorkflow",
-							limits: { steps: 10 },
-							schedules: "0 * * * *",
-						},
-					],
-					exports: {
-						GreetingWorkflow: {
-							type: "workflow",
-							name: "greeting",
-							limits: { steps: 10 },
-							concurrency: { limit: 1 },
-							schedules: ["0 * * * *"],
-						},
-					},
-				},
-				"my-worker"
-			)
-		).not.toThrow();
-	});
-
-	it("errors when a binding and an export declare the same Workflow with different classes", ({
-		expect,
-	}) => {
-		expect(() =>
-			validateOwnedWorkflowDeclarations(
-				{
-					workflows: [
-						{
-							binding: "GREETING",
-							name: "greeting",
-							class_name: "OtherWorkflow",
 						},
 					],
 					exports: {
@@ -88,49 +61,8 @@ describe("validateOwnedWorkflowDeclarations", () => {
 				"my-worker"
 			)
 		).toThrowErrorMatchingInlineSnapshot(
-			`[Error: "workflows[0]" and "exports.GreetingWorkflow" both declare the Workflow "greeting", but with different classes ("OtherWorkflow" and "GreetingWorkflow").]`
+			`[Error: "workflows[0]" and "exports.GreetingWorkflow" both declare the Workflow "greeting". Declare it in only one place: keep the "workflows" entry, or remove it and keep the "exports" entry, using \`ctx.exports.GreetingWorkflow\` in your code.]`
 		);
-	});
-
-	it("errors when a binding and an export configure the same Workflow with different settings", ({
-		expect,
-	}) => {
-		expect(() =>
-			validateOwnedWorkflowDeclarations(
-				{
-					workflows: [
-						{
-							binding: "GREETING",
-							name: "greeting",
-							class_name: "GreetingWorkflow",
-							limits: { steps: 10 },
-							concurrency: { limit: 1 },
-							schedules: "0 * * * *",
-							default_retention: { success_retention: "1 day" },
-							jurisdiction: "eu",
-						},
-					],
-					exports: {
-						GreetingWorkflow: {
-							type: "workflow",
-							name: "greeting",
-							limits: { steps: 20 },
-							concurrency: { limit: 2 },
-							schedules: ["30 * * * *"],
-							default_retention: { success_retention: "2 days" },
-							jurisdiction: "us",
-						},
-					},
-				},
-				"my-worker"
-			)
-		).toThrowErrorMatchingInlineSnapshot(`
-			[Error: "workflows[0].limits" and "exports.GreetingWorkflow.limits" both configure the Workflow "greeting", but with different values. Set "limits" in only one of them.
-			"workflows[0].concurrency" and "exports.GreetingWorkflow.concurrency" both configure the Workflow "greeting", but with different values. Set "concurrency" in only one of them.
-			"workflows[0].schedules" and "exports.GreetingWorkflow.schedules" both configure the Workflow "greeting", but with different values. Set "schedules" in only one of them.
-			"workflows[0].default_retention" and "exports.GreetingWorkflow.default_retention" both configure the Workflow "greeting", but with different values. Set "default_retention" in only one of them.
-			"workflows[0].jurisdiction" and "exports.GreetingWorkflow.jurisdiction" both configure the Workflow "greeting", but with different values. Set "jurisdiction" in only one of them.]
-		`);
 	});
 
 	it("errors when a binding to another Worker's Workflow shares a name with an export", ({
@@ -202,7 +134,7 @@ describe("validateOwnedWorkflowDeclarations", () => {
 				"deployed-worker"
 			)
 		).toThrow(
-			'"workflows[0]" and "exports.GreetingWorkflow" both declare the Workflow "greeting", but with different classes ("OtherWorkflow" and "GreetingWorkflow").'
+			'"workflows[0]" and "exports.GreetingWorkflow" both declare the Workflow "greeting".'
 		);
 	});
 });
