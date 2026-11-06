@@ -1,5 +1,6 @@
 ---
 "@cloudflare/deploy-helpers": patch
+"wrangler": patch
 ---
 
 Warn when cron triggers are configured alongside `--dispatch-namespace`
