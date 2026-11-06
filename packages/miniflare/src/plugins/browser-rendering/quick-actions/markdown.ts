@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { htmlToMarkdown, initSync } from "mdream/wasm";
-import mdreamWasm from "mdream/wasm/mdream_edge_bg.wasm";
+import mdreamWasmPath from "mdream/wasm/mdream_edge_bg.wasm";
 import { Response } from "../../../http";
 import { HtmlToMarkdownError } from "./errors";
 import { afterNavigation, openPage, pageMeta, withStepTimeout } from "./page";
@@ -37,7 +39,8 @@ export function toMarkdown(
 ): string {
 	// Compiled on first use so the actions that don't convert to Markdown skip it
 	if (!mdreamReady) {
-		initSync({ module: Buffer.from(mdreamWasm, "base64") });
+		// __dirname is dist/src in the bundled Miniflare entry point.
+		initSync({ module: readFileSync(path.join(__dirname, mdreamWasmPath)) });
 		mdreamReady = true;
 	}
 	const url = meta.finalUrl ?? options.url;
