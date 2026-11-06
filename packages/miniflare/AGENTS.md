@@ -15,6 +15,7 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 - `src/workers/core/dev-registry-proxy.worker.ts` — Proxy worker for cross-process service bindings via debug port RPC
 - `src/workers/core/dev-registry-proxy-shared.worker.ts` — Shared proxy logic (registry Map, DO proxy class, tail serializers)
 - `src/shared/dev-registry.ts` — Filesystem-based worker registry (chokidar watch, heartbeat, stale cleanup)
+- `src/plugins/core/proxy/` — Node.js proxy to objects in workerd (`ProxyClient`), behind `getBindings()`. `@cloudflare/platform-proxy` attaches to a running runtime with the `CONNECT_PLATFORM_PROXY` handshake and watches for restarts with `WATCH_PLATFORM_PROXY` (`src/workers/core/proxy.worker.ts`). Keep binding descriptors (`NodeBindingDescriptor`) plain JSON: the runtime sends them to clients in other processes, and `Miniflare#getBindings()` and the package both turn them into `env` with `ProxyClient#getBindings()`
 - `src/shared/persist-root-lock.ts` — Token-safe startup serialisation for shared persistent storage
 - `src/shared/DEV_REGISTRY.md` — Full architecture doc for the dev registry
 - `src/runtime/config/generated/workerd.ts` — Generated workerd Cap'n Proto config types

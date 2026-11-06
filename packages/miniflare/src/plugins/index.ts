@@ -105,13 +105,18 @@ export {
 	CORE_PLUGIN_NAME,
 	SERVICE_ENTRY,
 	getGlobalServices,
+	PROXY_SECRET,
 	ProxyClient,
 	kCurrentWorker,
 	compileModuleRules,
 	WorkerdStructuredLogSchema as workerdStructuredLogSchema,
 	INTROSPECT_SQLITE_METHOD,
 } from "./core";
-export type { CompiledModuleRule, GlobalServicesOptions } from "./core";
+export type {
+	CompiledModuleRule,
+	GlobalServicesOptions,
+	NodeBindingDescriptor,
+} from "./core";
 export type {
 	ContainerPrivileges,
 	ContainerPrivilegesCache,

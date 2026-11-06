@@ -61,6 +61,9 @@ export const CoreHeaders = {
 	OP_TARGET: "MF-Op-Target",
 	OP_KEY: "MF-Op-Key",
 	OP_SYNC: "MF-Op-Sync",
+	// Opt in to reading RPC stub properties as in `workerd`: without contacting
+	// the other Worker until they're called or awaited
+	OP_LAZY_RPC: "MF-Op-Lazy-Rpc",
 	OP_STRINGIFIED_SIZE: "MF-Op-Stringified-Size",
 	OP_STREAM_SIZE: "MF-Op-Stream-Size",
 	OP_RESULT_TYPE: "MF-Op-Result-Type",
@@ -82,6 +85,7 @@ export const CoreBindings = {
 	JSON_LOG_LEVEL: "MINIFLARE_LOG_LEVEL",
 	DURABLE_OBJECT_NAMESPACE_PROXY: "MINIFLARE_PROXY",
 	DATA_PROXY_SECRET: "MINIFLARE_PROXY_SECRET",
+	JSON_NODE_BINDINGS: "MINIFLARE_NODE_BINDINGS",
 	DATA_PROXY_SHARED_SECRET: "MINIFLARE_PROXY_SHARED_SECRET",
 	DATA_DEV_REGISTRY_SECRET: "MINIFLARE_DEV_REGISTRY_SECRET",
 	TRIGGER_HANDLERS: "TRIGGER_HANDLERS",
@@ -127,6 +131,11 @@ export const ProxyOps = {
 	// Remove the strong reference to the target on the "heap", allowing it to be
 	// garbage collected
 	FREE: "FREE",
+	// Describe the runtime's primary Worker to a client attaching to it
+	CONNECT_PLATFORM_PROXY: "CONNECT_PLATFORM_PROXY",
+	// Open a WebSocket that closes when the runtime stops, so an attached
+	// client knows to connect again
+	WATCH_PLATFORM_PROXY: "WATCH_PLATFORM_PROXY",
 } as const;
 export const ProxyAddresses = {
 	GLOBAL: 0, // globalThis

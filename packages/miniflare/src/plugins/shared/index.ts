@@ -163,10 +163,17 @@ export async function loadExternalPlugins(
 }
 
 // When an instance of this class is returned as the binding from `PluginBase#getNodeBindings()`,
-// Miniflare will replace it with a proxy to the binding in `workerd`, alongside applying the
-// specified overrides (if there is any)
+// Miniflare will replace it with a proxy to the binding in `workerd`, with the properties in
+// `overrides` (if any) replaced by their values. These are plain values, so they can also be
+// sent to clients in other processes.
 export class ProxyNodeBinding {
-	constructor(public proxyOverrideHandler?: ProxyHandler<any>) {}
+	constructor(public overrides?: Record<string, unknown>) {}
+}
+
+// When an instance of this class is returned as the binding from `PluginBase#getNodeBindings()`,
+// Miniflare will replace it with a `WebAssembly.Module` compiled from `bytes`
+export class WasmNodeBinding {
+	constructor(public bytes: Uint8Array) {}
 }
 
 export type RemoteProxyConnectionString = URL & {

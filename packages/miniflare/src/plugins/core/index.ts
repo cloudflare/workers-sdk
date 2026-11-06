@@ -45,6 +45,7 @@ import {
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
 	SERVICE_LOOPBACK,
+	WasmNodeBinding,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import {
@@ -449,8 +450,8 @@ export const CORE_PLUGIN: Plugin = {
 					typeof value === "string"
 						? fs
 								.readFile(path.resolve(dev.rootPath, value))
-								.then((buffer) => [name, new WebAssembly.Module(buffer)])
-						: [name, new WebAssembly.Module(value)]
+								.then((buffer) => [name, new WasmNodeBinding(buffer)])
+						: [name, new WasmNodeBinding(value)]
 				)
 			);
 		}
@@ -767,6 +768,12 @@ export interface GlobalServicesOptions {
 	workflowExporters: WorkflowExporters;
 	/** All worker options for building per-worker resource bindings */
 	allWorkerOpts?: ParsedWorkerOptions[];
+	/**
+	 * The primary Worker's bindings, for clients attaching to the runtime.
+	 * Only passed through as JSON, so its shape can change without affecting
+	 * this public type.
+	 */
+	nodeBindings?: Record<string, unknown>;
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -779,6 +786,7 @@ export function getGlobalServices({
 	durableObjectClassNames,
 	workflowExporters,
 	allWorkerOpts,
+	nodeBindings = {},
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
 	const workerNames = [...allWorkerRoutes.keys()];
@@ -812,7 +820,11 @@ export function getGlobalServices({
 		},
 		{
 			name: CoreBindings.DATA_PROXY_SECRET,
-			data: PROXY_SECRET,
+			data: Buffer.from(PROXY_SECRET),
+		},
+		{
+			name: CoreBindings.JSON_NODE_BINDINGS,
+			json: JSON.stringify(nodeBindings),
 		},
 		{
 			name: CoreBindings.STRIP_DISABLE_PRETTY_ERROR,
