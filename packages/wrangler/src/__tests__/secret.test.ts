@@ -295,6 +295,29 @@ describe("wrangler secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
+			it("should error if no secret value is provided on stdin", async ({
+				expect,
+			}) => {
+				// No chunks queued: stdin ends immediately with no data.
+				mockStdIn.send();
+				let putRequestMade = false;
+				msw.use(
+					http.put(
+						"*/accounts/:accountId/workers/scripts/:scriptName/secrets",
+						() => {
+							putRequestMade = true;
+							return HttpResponse.json(createFetchResult(null));
+						}
+					)
+				);
+				await expect(
+					runWrangler("secret put the-key --name script-name")
+				).rejects.toThrow(/stdin/i);
+
+				expect(putRequestMade).toBe(false);
+				expect(std.out).toMatchInlineSnapshot(`""`);
+			});
+
 			it("should error if the piped input fails", async ({ expect }) => {
 				mockPutRequest(expect, { name: "the-key", text: "the-secret" });
 				mockStdIn.throwError(new Error("Error in stdin stream"));
