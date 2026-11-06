@@ -27,7 +27,7 @@ export default defineConfig(() => [
 			//       to be used directly by this package's consumers, and if it were bundled in this package that
 			//       would mean that consumers of this package would get the `recast` code twice significantly
 			"recast",
-			"recast/parsers/esprima",
+			"recast/parsers/babel",
 			"recast/parsers/typescript",
 		],
 	},
