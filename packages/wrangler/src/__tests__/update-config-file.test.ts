@@ -232,6 +232,95 @@ describe("createdResourceConfig()", () => {
 		expect(await readFile("wrangler.json", "utf8")).not.toContain('"remote"');
 	});
 
+	it("interactive: fills in the id of an existing binding to the same database (#10726)", async ({
+		expect,
+	}) => {
+		writeWranglerConfig(
+			{
+				name: "worker",
+				d1_databases: [{ binding: "DB", database_name: "my-db" }],
+			},
+			"wrangler.json"
+		);
+
+		setIsTTY(true);
+		mockConfirm({
+			text: "Would you like Wrangler to add it on your behalf?",
+			result: true,
+		});
+		mockPrompt({
+			text: "What binding name would you like to use?",
+			result: "my_db",
+		});
+		mockConfirm({
+			text: "For local dev, do you want to connect to the remote resource instead of a local resource?",
+			result: false,
+		});
+
+		await createdResourceConfig(
+			"d1_databases",
+			(name) => ({
+				binding: name ?? "my_db",
+				database_name: "my-db",
+				database_id: "c24ad881-6061-4a1b-b83f-d2199ea92a02",
+			}),
+			"wrangler.json",
+			undefined
+		);
+
+		expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(`
+			"{
+				"compatibility_date": "2022-01-12",
+				"name": "worker",
+				"d1_databases": [
+					{
+						"binding": "DB",
+						"database_name": "my-db",
+						"database_id": "c24ad881-6061-4a1b-b83f-d2199ea92a02"
+					}
+				]
+			}"
+		`);
+	});
+
+	it("non interactive: fills in the id of an existing binding to the same database (#10726)", async ({
+		expect,
+	}) => {
+		writeWranglerConfig(
+			{
+				name: "worker",
+				d1_databases: [{ binding: "DB", database_name: "my-db" }],
+			},
+			"wrangler.json"
+		);
+
+		await createdResourceConfig(
+			"d1_databases",
+			(name) => ({
+				binding: name ?? "my_db",
+				database_name: "my-db",
+				database_id: "c24ad881-6061-4a1b-b83f-d2199ea92a02",
+			}),
+			"wrangler.json",
+			undefined,
+			{ binding: "my_db", updateConfig: true }
+		);
+
+		expect(await readFile("wrangler.json", "utf8")).toMatchInlineSnapshot(`
+			"{
+				"compatibility_date": "2022-01-12",
+				"name": "worker",
+				"d1_databases": [
+					{
+						"binding": "DB",
+						"database_name": "my-db",
+						"database_id": "c24ad881-6061-4a1b-b83f-d2199ea92a02"
+					}
+				]
+			}"
+		`);
+	});
+
 	it("interactive: file update in env after answering yes", async ({
 		expect,
 	}) => {
