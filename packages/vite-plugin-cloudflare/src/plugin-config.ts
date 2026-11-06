@@ -324,13 +324,7 @@ export async function resolvePluginConfig(
 		devVars,
 	};
 
-	// The `cf-vite` delegate binary's `--local` flag sets this env var to
-	// force remote bindings off, overriding any `remoteBindings` value in the
-	// plugin config (mirrors `wrangler dev --local`).
-	const remoteBindings =
-		localEnv.values.CLOUDFLARE_VITE_FORCE_LOCAL === "true"
-			? false
-			: (pluginConfig.remoteBindings ?? true);
+	const remoteBindings = pluginConfig.remoteBindings ?? true;
 
 	if (preview !== undefined) {
 		const { accountId, complianceRegion } = preview.rootConfig.settings ?? {};
