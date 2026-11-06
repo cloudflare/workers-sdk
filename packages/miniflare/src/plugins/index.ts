@@ -37,6 +37,7 @@ import { PIPELINE_PLUGIN, PIPELINES_PLUGIN_NAME } from "./pipelines";
 import { QUEUES_PLUGIN, QUEUES_PLUGIN_NAME } from "./queues";
 import { R2_PLUGIN, R2_PLUGIN_NAME } from "./r2";
 import { RATELIMIT_PLUGIN, RATELIMIT_PLUGIN_NAME } from "./ratelimit";
+import { REALTIMEKIT_PLUGIN, REALTIMEKIT_PLUGIN_NAME } from "./realtimekit";
 import { SECRET_STORE_PLUGIN, SECRET_STORE_PLUGIN_NAME } from "./secret-store";
 import { STREAM_PLUGIN, STREAM_PLUGIN_NAME } from "./stream";
 import { VECTORIZE_PLUGIN, VECTORIZE_PLUGIN_NAME } from "./vectorize";
@@ -84,6 +85,7 @@ export const PLUGINS = {
 	[MTLS_PLUGIN_NAME]: MTLS_PLUGIN,
 	[HELLO_WORLD_PLUGIN_NAME]: HELLO_WORLD_PLUGIN,
 	[FLAGSHIP_PLUGIN_NAME]: FLAGSHIP_PLUGIN,
+	[REALTIMEKIT_PLUGIN_NAME]: REALTIMEKIT_PLUGIN,
 	[ARTIFACTS_PLUGIN_NAME]: ARTIFACTS_PLUGIN,
 	[WORKER_LOADER_PLUGIN_NAME]: WORKER_LOADER_PLUGIN,
 	[MEDIA_PLUGIN_NAME]: MEDIA_PLUGIN,
@@ -151,6 +153,7 @@ export * from "./vpc-services";
 export * from "./mtls";
 export * from "./hello-world";
 export * from "./flagship";
+export * from "./realtimekit";
 export * from "./artifacts";
 export * from "./worker-loader";
 export * from "./media";

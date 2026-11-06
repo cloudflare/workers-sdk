@@ -92,6 +92,13 @@ export function getRemoteBindings(
 					remote: binding.dev?.remote,
 				};
 				break;
+			case "realtimekit":
+				bindings[name] = {
+					type: "realtimekit",
+					app_id: binding.id,
+					remote: binding.dev.remote,
+				};
+				break;
 			case "hyperdrive":
 				bindings[name] = {
 					type: "hyperdrive",

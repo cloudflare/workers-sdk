@@ -62,6 +62,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	vectorize: "remote",
 	mtls_certificate: "remote",
 	dispatch_namespace: "remote",
+	realtimekit: "remote",
 
 	// Reach out to the @cloudflare/wrangler team before adding anything here
 	k2: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",

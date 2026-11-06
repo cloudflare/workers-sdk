@@ -4,6 +4,57 @@ import { convertV4MiniflareOptions } from "../../src/config/v4-convert";
 import type { RemoteProxyConnectionString } from "../../src/plugins/shared";
 
 describe("convertV4MiniflareOptions", () => {
+	test.for([undefined, new URL("http://127.0.0.1:8787")])(
+		"keeps RealtimeKit remote-only with proxy session %s",
+		(proxyUrl, { expect }) => {
+			const remoteProxyConnectionString = proxyUrl as
+				| RemoteProxyConnectionString
+				| undefined;
+			const converted = convertV4MiniflareOptions({
+				name: "meetings",
+				script: "export default {};",
+				modules: true,
+				realtimekit: {
+					RTK: { app_id: "app-id", remoteProxyConnectionString },
+				},
+			});
+
+			expect(converted.workers[0].config.env?.RTK).toEqual({
+				type: "realtimekit",
+				id: "app-id",
+				dev: { remote: true },
+			});
+			expect(converted.workers[0].dev?.remoteProxyConnectionString).toEqual(
+				remoteProxyConnectionString
+			);
+		}
+	);
+
+	test("rejects conflicting RealtimeKit remote proxy sessions", ({
+		expect,
+	}) => {
+		expect(() =>
+			convertV4MiniflareOptions({
+				script: "export default {};",
+				modules: true,
+				realtimekit: {
+					FIRST: {
+						app_id: "first-app",
+						remoteProxyConnectionString: new URL(
+							"http://127.0.0.1:8787"
+						) as RemoteProxyConnectionString,
+					},
+					SECOND: {
+						app_id: "second-app",
+						remoteProxyConnectionString: new URL(
+							"http://127.0.0.1:8788"
+						) as RemoteProxyConnectionString,
+					},
+				},
+			})
+		).toThrow("multiple remoteProxyConnectionString values");
+	});
+
 	test.for([undefined, "", "legacy-registry"])(
 		"preserves v4 registry opt-in semantics: %s",
 		(unsafeDevRegistryPath, { expect }) => {

@@ -98,6 +98,14 @@ export const FlagshipBindingSchema = z.strictObject({
 	dev: RemoteBindingDevSchema.optional(),
 });
 
+export const RealtimeKitBindingSchema = z.strictObject({
+	type: z.literal("realtimekit"),
+	id: z.string().refine((id) => id.trim().length > 0, {
+		message: "RealtimeKit app ID must not be empty.",
+	}),
+	dev: RemoteBindingDevSchema.extend({ remote: z.literal(true) }),
+});
+
 export const HyperdriveBindingSchema = z.strictObject({
 	type: z.literal("hyperdrive"),
 	id: z.string(),
@@ -153,6 +161,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		exportName: z.string(),
 	}),
 	FlagshipBindingSchema,
+	RealtimeKitBindingSchema,
 	HyperdriveBindingSchema,
 	z.strictObject({
 		type: z.literal("images"),

@@ -103,6 +103,7 @@ interface BindingTypeMap<TBinding> {
 	"dispatch-namespace": DispatchNamespace;
 	"durable-object": DurableObjectNamespace;
 	flagship: Flagship;
+	realtimekit: RealtimeKitBinding;
 	hyperdrive: Hyperdrive;
 	images: ImagesBinding;
 	logfwdr: any;

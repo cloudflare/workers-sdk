@@ -303,6 +303,12 @@ export interface CfFlagship {
 	remote?: boolean;
 }
 
+export interface CfRealtimeKit {
+	binding: string;
+	app_id: string;
+	remote: true;
+}
+
 export interface CfWorkerLoader {
 	binding: string;
 }

@@ -1,6 +1,31 @@
 import dedent from "ts-dedent";
 import { test, vitestConfig } from "./helpers";
 
+test.for([undefined, false])(
+	"rejects RealtimeKit without explicit remote opt-in: %s",
+	async (remote, { expect, seed, vitestRun }) => {
+		await seed({
+			"vitest.config.mts": vitestConfig({
+				wrangler: { configPath: "./wrangler.jsonc" },
+			}),
+			"wrangler.jsonc": JSON.stringify({
+				name: "test-worker",
+				compatibility_date: "2026-01-01",
+				compatibility_flags: ["nodejs_compat"],
+				realtimekit: [{ binding: "RTK", app_id: "app-id", remote }],
+			}),
+			"index.test.ts": dedent`
+				import { it } from "vitest";
+				it("must not start without remote opt-in", () => {});
+			`,
+		});
+
+		const result = await vitestRun();
+		await expect(result.exitCode).resolves.not.toBe(0);
+		expect(result.stdout + result.stderr).toContain("must have `remote: true`");
+	}
+);
+
 test("hello_world support", async ({ expect, seed, vitestRun }) => {
 	await seed({
 		"vitest.config.mts": vitestConfig({

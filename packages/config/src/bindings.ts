@@ -251,6 +251,18 @@ export interface FlagshipBinding extends FlagshipBindingOptions {
 	type: "flagship";
 }
 
+export interface RealtimeKitBindingOptions {
+	/** The ID of an existing RealtimeKit app. */
+	id: string;
+	/** RealtimeKit has no local simulator; development uses the real app. */
+	dev: BindingDevOptions & { remote: true };
+}
+
+/** Binding to a RealtimeKit app. */
+export interface RealtimeKitBinding extends RealtimeKitBindingOptions {
+	type: "realtimekit";
+}
+
 export interface HyperdriveBindingOptions {
 	/** The ID of the Hyperdrive configuration. */
 	id: string;
@@ -791,6 +803,8 @@ export interface Bindings {
 	): DurableObjectBinding<TWorker, TExportName>;
 	/** Binding to a Flagship feature-flag service. */
 	flagship(options?: FlagshipBindingOptions): FlagshipBinding;
+	/** Binding to an existing RealtimeKit app, including during development. */
+	realtimekit(options: RealtimeKitBindingOptions): RealtimeKitBinding;
 	/**
 	 * Binding to a Hyperdrive configuration.
 	 *
@@ -944,6 +958,7 @@ export const bindings = {
 	}),
 	durableObject: (options) => ({ type: "durable-object", ...options }),
 	flagship: (options) => ({ type: "flagship", ...options }),
+	realtimekit: (options) => ({ type: "realtimekit", ...options }),
 	hyperdrive: (options) => ({ type: "hyperdrive", ...options }),
 	images: (options) => ({ type: "images", ...options }),
 	json: (value) => ({ type: "json", value }),

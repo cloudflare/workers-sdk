@@ -378,6 +378,7 @@ function convertBindingsAndAssets(
 	const pipelines: NonNullable<RawConfig["pipelines"]> = [];
 	const k2: NonNullable<RawConfig["k2"]> = [];
 	const flagship: NonNullable<RawConfig["flagship"]> = [];
+	const realtimekit: NonNullable<RawConfig["realtimekit"]> = [];
 	const aiSearch: NonNullable<RawConfig["ai_search"]> = [];
 	const aiSearchNamespaces: NonNullable<RawConfig["ai_search_namespaces"]> = [];
 	const agentMemory: NonNullable<RawConfig["agent_memory"]> = [];
@@ -540,6 +541,14 @@ function convertBindingsAndAssets(
 						remote: binding.dev?.remote,
 					})
 				);
+				break;
+			}
+			case "realtimekit": {
+				realtimekit.push({
+					binding: name,
+					app_id: binding.id,
+					remote: binding.dev.remote,
+				});
 				break;
 			}
 			case "hyperdrive": {
@@ -790,6 +799,9 @@ function convertBindingsAndAssets(
 	}
 	if (flagship.length) {
 		result.flagship = flagship;
+	}
+	if (realtimekit.length) {
+		result.realtimekit = realtimekit;
 	}
 	if (aiSearch.length) {
 		result.ai_search = aiSearch;

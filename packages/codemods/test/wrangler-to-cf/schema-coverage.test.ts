@@ -92,6 +92,7 @@ const FIELD_CASES = {
 	python_modules: { vendor: "vendor" },
 	queues: { producers: [{ binding: "QUEUE", queue: "queue" }] },
 	r2_buckets: [{ binding: "BUCKET", bucket_name: "bucket" }],
+	realtimekit: [{ binding: "RTK", app_id: "app-id", remote: true }],
 	ratelimits: [
 		{
 			name: "RATE_LIMIT",

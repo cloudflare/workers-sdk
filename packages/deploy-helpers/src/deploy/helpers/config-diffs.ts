@@ -38,6 +38,7 @@ const reorderableBindings = {
 	analytics_engine_datasets: true,
 	unsafe_hello_world: true,
 	flagship: true,
+	realtimekit: true,
 	worker_loaders: true,
 	vpc_services: true,
 	vpc_networks: true,

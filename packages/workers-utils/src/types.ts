@@ -27,6 +27,7 @@ import type {
 	CfExports,
 	CfDurableObjectMigrations,
 	CfFlagship,
+	CfRealtimeKit,
 	CfHelloWorld,
 	CfHyperdrive,
 	CfImagesBinding,
@@ -188,6 +189,12 @@ export type WorkerMetadataBinding =
 			type: "flagship";
 			name: string;
 			app_id: string;
+	  }
+	| {
+			type: "realtimekit";
+			name: string;
+			app_id: string;
+			remote: true;
 	  }
 	| {
 			type: "ratelimit";
@@ -510,6 +517,7 @@ export type Binding =
 	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
 	| ({ type: "unsafe_hello_world" } & BindingOmit<CfHelloWorld>)
 	| ({ type: "flagship" } & BindingOmit<CfFlagship>)
+	| ({ type: "realtimekit" } & BindingOmit<CfRealtimeKit>)
 	| ({ type: "ratelimit" } & NameOmit<CfRateLimit>)
 	| ({ type: "worker_loader" } & BindingOmit<CfWorkerLoader>)
 	| ({ type: "vpc_service" } & BindingOmit<CfVpcService>)

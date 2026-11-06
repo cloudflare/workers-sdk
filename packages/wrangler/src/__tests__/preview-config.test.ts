@@ -32,6 +32,29 @@ function topLevelSettings(
 }
 
 describe("Preview configuration conversion", () => {
+	test.for([false, true])(
+		"converts RealtimeKit bindings with placeholders=%s",
+		(usePlaceholderValue, { expect }) => {
+			expect(
+				convertBinding(
+					"RTK",
+					{ type: "realtimekit", app_id: "production-app", remote: true },
+					usePlaceholderValue
+				)
+			).toEqual({
+				config: {
+					realtimekit: [
+						{
+							binding: "RTK",
+							app_id: usePlaceholderValue ? "<REPLACE_ME>" : "production-app",
+							remote: true,
+						},
+					],
+				},
+			});
+		}
+	);
+
 	test("converts a broad supported configuration without production values", ({
 		expect,
 	}) => {

@@ -148,6 +148,7 @@ export function createWorkerUploadForm(
 		bindings
 	);
 	const flagship = extractBindingsOfType("flagship", bindings);
+	const realtimekit = extractBindingsOfType("realtimekit", bindings);
 	const ratelimits = extractBindingsOfType("ratelimit", bindings);
 	const vpc_services = extractBindingsOfType("vpc_service", bindings);
 	const vpc_networks = extractBindingsOfType("vpc_network", bindings);
@@ -472,6 +473,16 @@ export function createWorkerUploadForm(
 				? { name: binding, type: "inherit" }
 				: { name: binding, type: "flagship", app_id }
 		);
+	});
+
+	realtimekit.forEach(({ binding, app_id, remote }) => {
+		// Unlike most bindings, EWC persists and requires `remote: true`.
+		metadataBindings.push({
+			name: binding,
+			type: "realtimekit",
+			app_id,
+			remote,
+		});
 	});
 
 	ratelimits.forEach(({ name, namespace_id, simple }) => {

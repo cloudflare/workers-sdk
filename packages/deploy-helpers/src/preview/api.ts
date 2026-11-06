@@ -58,6 +58,8 @@ export interface Binding {
 	staging?: boolean;
 	enable_timer?: boolean;
 	app_id?: string;
+	// RealtimeKit requires this in API payloads, not just local dev config.
+	remote?: true;
 	entrypoint?: string;
 	class_name?: string;
 	script_name?: string;

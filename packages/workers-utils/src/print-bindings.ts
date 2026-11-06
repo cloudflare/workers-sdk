@@ -137,6 +137,7 @@ export function printBindings(
 		bindings
 	);
 	const flagship = extractBindingsOfType("flagship", bindings);
+	const realtimekit = extractBindingsOfType("realtimekit", bindings);
 	const media = extractBindingsOfType("media", bindings);
 	const worker_loaders = extractBindingsOfType("worker_loader", bindings);
 
@@ -495,6 +496,17 @@ export function printBindings(
 					}),
 				};
 			})
+		);
+	}
+
+	if (realtimekit.length > 0) {
+		output.push(
+			...realtimekit.map(({ binding, app_id }) => ({
+				name: binding,
+				type: getBindingTypeFriendlyName("realtimekit"),
+				value: app_id,
+				mode: getMode({ isSimulatedLocally: false }),
+			}))
 		);
 	}
 

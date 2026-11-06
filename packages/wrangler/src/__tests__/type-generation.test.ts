@@ -4078,6 +4078,34 @@ describe("generate types - API", () => {
 		expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
 	});
 
+	it("generates RealtimeKit binding types for the top-level and named environments", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				name: "meetings",
+				compatibility_date: "2026-01-01",
+				realtimekit: [{ binding: "RTK", app_id: "app-id", remote: true }],
+				env: {
+					staging: {
+						realtimekit: [
+							{ binding: "STAGING_RTK", app_id: "staging-app", remote: true },
+						],
+					},
+				},
+			})
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+		expect(generated.env).toContain("RTK: RealtimeKitBinding;");
+		expect(generated.env).toContain("STAGING_RTK: RealtimeKitBinding;");
+		expect(generated.env).not.toContain("app-id");
+		expect(generated.env).not.toContain("staging-app");
+	});
+
 	it("includes default module rules without explicit configuration", async ({
 		expect,
 	}) => {

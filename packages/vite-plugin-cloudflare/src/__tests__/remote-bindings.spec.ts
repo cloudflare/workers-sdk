@@ -2,6 +2,24 @@ import { describe, test } from "vitest";
 import { getRemoteBindings } from "../remote-bindings";
 
 describe("getRemoteBindings", () => {
+	test("maps RealtimeKit app bindings and preserves explicit remote opt-in", ({
+		expect,
+	}) => {
+		expect(
+			getRemoteBindings({
+				env: {
+					RTK: {
+						type: "realtimekit",
+						id: "app-id",
+						dev: { remote: true },
+					},
+				},
+			})
+		).toEqual({
+			RTK: { type: "realtimekit", app_id: "app-id", remote: true },
+		});
+	});
+
 	test("maps supported remote bindings", ({ expect }) => {
 		expect(
 			getRemoteBindings({

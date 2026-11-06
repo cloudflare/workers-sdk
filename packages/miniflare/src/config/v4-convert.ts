@@ -802,6 +802,15 @@ function addProductBindings(
 			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
+	for (const [name, binding] of Object.entries(worker.realtimekit ?? {})) {
+		// Register the session without interpreting its absence as local simulation.
+		void isRemote(binding.remoteProxyConnectionString);
+		env[name] = {
+			type: "realtimekit",
+			id: binding.app_id,
+			dev: { remote: true },
+		};
+	}
 	for (const [name, binding] of Object.entries(worker.artifacts ?? {})) {
 		env[name] = {
 			type: "artifacts",

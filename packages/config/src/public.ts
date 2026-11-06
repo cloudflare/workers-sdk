@@ -31,6 +31,8 @@ export type {
 	DurableObjectBindingOptions,
 	FlagshipBinding,
 	FlagshipBindingOptions,
+	RealtimeKitBinding,
+	RealtimeKitBindingOptions,
 	HyperdriveBinding,
 	HyperdriveBindingOptions,
 	ImagesBinding,

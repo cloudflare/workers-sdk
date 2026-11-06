@@ -82,6 +82,7 @@ describe("normalizeAndValidateConfig()", () => {
 			artifacts: [],
 			unsafe_hello_world: [],
 			flagship: [],
+			realtimekit: [],
 			ratelimits: [],
 			vpc_services: [],
 			vpc_networks: [],

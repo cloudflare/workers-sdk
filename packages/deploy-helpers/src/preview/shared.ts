@@ -429,6 +429,8 @@ export function getBindingValue(binding: Binding): string {
 			return String(binding.namespace ?? "");
 		case "flagship":
 			return String(binding.app_id ?? "");
+		case "realtimekit":
+			return String(binding.app_id ?? "");
 		case "ratelimit":
 			return String(binding.namespace_id ?? "");
 		case "vpc_service":
@@ -658,6 +660,14 @@ function extractBindings(
 		env[flagship.binding] = {
 			type: "flagship",
 			app_id: flagship.app_id,
+		};
+	}
+
+	for (const realtimekit of previews?.realtimekit ?? []) {
+		env[realtimekit.binding] = {
+			type: "realtimekit",
+			app_id: realtimekit.app_id,
+			remote: realtimekit.remote,
 		};
 	}
 

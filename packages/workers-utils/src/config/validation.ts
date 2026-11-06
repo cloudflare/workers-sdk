@@ -124,6 +124,7 @@ export type ConfigBindingFieldName =
 	| "assets"
 	| "unsafe_hello_world"
 	| "flagship"
+	| "realtimekit"
 	| "worker_loaders"
 	| "vpc_services"
 	| "vpc_networks";
@@ -166,6 +167,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	assets: "Assets",
 	unsafe_hello_world: "Hello World",
 	flagship: "Flagship",
+	realtimekit: "RealtimeKit",
 	worker_loaders: "Worker Loader",
 	vpc_services: "VPC Service",
 	vpc_networks: "VPC Network",
@@ -213,6 +215,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	logfwdr: "logfwdr",
 	unsafe_hello_world: "Hello World",
 	flagship: "Flagship",
+	realtimekit: "RealtimeKit",
 	ratelimit: "Rate Limit",
 	worker_loader: "Worker Loader",
 	vpc_service: "VPC Service",
@@ -2079,6 +2082,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateFlagshipBinding),
 			[]
 		),
+		realtimekit: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"realtimekit",
+			validateBindingArray(envName, validateRealtimeKitBinding),
+			[]
+		),
 		worker_loaders: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -3693,6 +3706,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"worker_loader",
 			"vpc_service",
 			"flagship",
+			"realtimekit",
 			"vpc_network",
 			"stream",
 			"media",
@@ -6438,6 +6452,45 @@ const validateFlagshipBinding: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
+const validateRealtimeKitBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		diagnostics.errors.push(
+			`"${field}" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(`"${field}" must have a string "binding" field.`);
+		isValid = false;
+	}
+	if (
+		!isRequiredProperty(value, "app_id", "string") ||
+		value.app_id.trim().length === 0
+	) {
+		diagnostics.errors.push(
+			`"${field}" must have a non-empty string "app_id" field.`
+		);
+		isValid = false;
+	}
+	// EWC requires this flag on uploads too, not just for local remote sessions.
+	if (
+		!isRequiredProperty(value, "remote", "boolean") ||
+		value.remote !== true
+	) {
+		diagnostics.errors.push(
+			`"${field}" must have \`remote: true\`. RealtimeKit bindings do not support local simulation.`
+		);
+		isValid = false;
+	}
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"app_id",
+		"remote",
+	]);
+	return isValid;
+};
+
 const validateWorkerLoaderBinding: ValidatorFn = (
 	diagnostics,
 	field,
@@ -6630,6 +6683,7 @@ const validatePreviewsConfig =
 				"artifacts",
 				"unsafe_hello_world",
 				"flagship",
+				"realtimekit",
 				"worker_loaders",
 				"ratelimits",
 				"vpc_services",
@@ -6919,6 +6973,14 @@ const validatePreviewsConfig =
 				diagnostics,
 				`${field}.flagship`,
 				previews.flagship,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateRealtimeKitBinding)(
+				diagnostics,
+				`${field}.realtimekit`,
+				previews.realtimekit,
 				undefined
 			) && isValid;
 

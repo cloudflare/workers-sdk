@@ -194,6 +194,13 @@ export function convertBindings(
 		[["app_id", "id"]],
 		{ remote: true }
 	);
+	convertArrayBindings(
+		"realtimekit",
+		"binding",
+		"bindings.realtimekit",
+		[["app_id", "id"]],
+		{ remote: true }
+	);
 	for (const [index, entry] of getRecords(source, "hyperdrive").entries()) {
 		const options = optionsFromRecord(entry, [["id", "id"]]);
 		const sourcePath = pathFor("hyperdrive", index);
