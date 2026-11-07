@@ -237,6 +237,19 @@ export interface GitTreeEntry {
 
 type GitObjectType = "blob" | "tree" | "commit" | "tag";
 
+/**
+ * Artifacts' documented per-file limit (32 MB). Larger blobs cannot be pushed,
+ * and reads stay below workerd's 32 MiB RPC serialization limit.
+ */
+export const MAX_BLOB_BYTES = 32_000_000;
+
+/** A Git object too large to return through the binding (`MEMORY_LIMIT`). */
+export class GitObjectTooLargeError extends Error {
+	constructor(hash: string) {
+		super(`Git object ${hash} exceeds the ${MAX_BLOB_BYTES} byte limit`);
+	}
+}
+
 export class LocalRepositoryStorageError extends Error {
 	constructor(
 		readonly kind: "creation-lock" | "on-disk-conflict",
@@ -474,12 +487,11 @@ export class GitClient {
 		if ((await this.objectType(hash)) !== "blob") {
 			return null;
 		}
-		const object = await this.git(["cat-file", "blob", hash]);
-		return { data: Buffer.from(object.stdout).toString("base64") };
+		return this.readBlobData(hash);
 	}
 
 	async readTree(hash: string): Promise<GitTreeEntry[] | null> {
-		if ((await this.objectType(hash)) !== "tree") {
+		if (!(await this.expectObjectType(hash, "tree"))) {
 			return null;
 		}
 		const tree = await this.git(["ls-tree", "-z", hash]);
@@ -503,7 +515,7 @@ export class GitClient {
 	}
 
 	async readCommit(hash: string): Promise<CommitMetadata | null> {
-		if ((await this.objectType(hash)) !== "commit") {
+		if (!(await this.expectObjectType(hash, "commit"))) {
 			return null;
 		}
 		const object = await this.git(["cat-file", "commit", hash]);
@@ -533,12 +545,37 @@ export class GitClient {
 			return null;
 		}
 		// Read the matched object, not a revision expression built from a path.
-		const object = await this.git(["cat-file", "blob", match[2]], {
-			allowFailure: true,
-		});
-		return object.status === 0
-			? { data: Buffer.from(object.stdout).toString("base64") }
-			: null;
+		if ((await this.objectType(match[2])) !== "blob") {
+			return null;
+		}
+		return this.readBlobData(match[2]);
+	}
+
+	private async readBlobData(hash: string): Promise<{ data: string }> {
+		const size = await this.git(["cat-file", "-s", hash]);
+		if (Number(decoder.decode(size.stdout).trim()) > MAX_BLOB_BYTES) {
+			throw new GitObjectTooLargeError(hash);
+		}
+		const object = await this.git(["cat-file", "blob", hash]);
+		return { data: Buffer.from(object.stdout).toString("base64") };
+	}
+
+	/**
+	 * `null` for a missing object. An object of another type is an error, as
+	 * the public `readTree()` and `readCommit()` contracts require.
+	 */
+	private async expectObjectType(
+		hash: string,
+		expected: GitObjectType
+	): Promise<boolean> {
+		const type = await this.objectType(hash);
+		if (type === null) {
+			return false;
+		}
+		if (type !== expected) {
+			throw new Error(`Git object ${hash} is a ${type}, not a ${expected}`);
+		}
+		return true;
 	}
 
 	async log(ref?: string, limit = 50, offset = 0): Promise<CommitMetadata[]> {

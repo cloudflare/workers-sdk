@@ -1,12 +1,21 @@
 import { Buffer } from "node:buffer";
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { mkdir, mkdtemp, readdir, rename, stat } from "node:fs/promises";
+import {
+	chmod,
+	mkdir,
+	mkdtemp,
+	readdir,
+	rename,
+	stat,
+	writeFile,
+} from "node:fs/promises";
 import {
 	createServer,
 	type IncomingMessage,
 	type ServerResponse,
 } from "node:http";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { Transform } from "node:stream";
 import { parentPort, workerData } from "node:worker_threads";
@@ -15,7 +24,8 @@ import { z } from "zod";
 import {
 	assertGitAvailable,
 	GitClient,
-	gitArgumentsWithoutHooks,
+	GitObjectTooLargeError,
+	MAX_BLOB_BYTES,
 	gitEnvironment,
 	LocalRepositoryStorageError,
 	stopGitProcess,
@@ -128,6 +138,32 @@ type ForkRequest = Extract<AdminRequest, { action: "fork" }>;
 type ImportRequest = Extract<AdminRequest, { action: "import" }>;
 type NewRepositoryRequest = CreateRequest | ForkRequest | ImportRequest;
 
+// Native Git has no per-file push limit, so a trusted hook enforces the
+// Artifacts one. `--not --all` checks only objects new to this repository.
+const PRE_RECEIVE_HOOK = `#!/bin/sh
+# Installed by Miniflare's local Artifacts simulator.
+zero=0000000000000000000000000000000000000000
+while read -r old new ref; do
+	[ "$new" = "$zero" ] && continue
+	large=$(git rev-list --objects --filter=blob:limit=${MAX_BLOB_BYTES + 1} --filter-print-omitted "$new" --not --all | sed -n 's/^~//p' | head -n 1)
+	if [ -n "$large" ]; then
+		echo "Artifacts does not accept files larger than 32 MB ($ref contains blob $large)." >&2
+		exit 1
+	fi
+done
+`;
+
+/** Hooks for http-backend only. Repository-local hooks never run. */
+async function createPushHooks(): Promise<string> {
+	const hooks = await mkdtemp(
+		path.join(tmpdir(), "miniflare-artifacts-hooks-")
+	);
+	const hook = path.join(hooks, "pre-receive");
+	await writeFile(hook, PRE_RECEIVE_HOOK);
+	await chmod(hook, 0o755);
+	return hooks;
+}
+
 function createGitSecret(): string {
 	return randomBytes(32).toString("hex");
 }
@@ -138,6 +174,21 @@ export async function startGitSidecar(root: string): Promise<GitSidecar> {
 	await assertGitAvailable();
 	await cleanupInterruptedRepositories(root);
 	const secret = createGitSecret();
+	const hooks = await createPushHooks();
+	try {
+		return await startGitServer(root, hooks, secret);
+	} catch (error) {
+		// close() removes the hooks; a failed start never returns a sidecar.
+		await removeDir(hooks);
+		throw error;
+	}
+}
+
+async function startGitServer(
+	root: string,
+	hooks: string,
+	secret: string
+): Promise<GitSidecar> {
 	const shutdown = new AbortController();
 	const repositoryLocks: RepositoryLocks = new Map();
 	const inFlight = new Map<string, InFlightGitRequest>();
@@ -148,6 +199,7 @@ export async function startGitSidecar(root: string): Promise<GitSidecar> {
 		}
 		void handleRequest(
 			root,
+			hooks,
 			repositoryLocks,
 			inFlight,
 			request,
@@ -158,10 +210,14 @@ export async function startGitSidecar(root: string): Promise<GitSidecar> {
 				response.destroy(error instanceof Error ? error : undefined);
 			} else {
 				const storageError = error instanceof LocalRepositoryStorageError;
-				response.writeHead(storageError ? 409 : 500, {
+				const tooLarge = error instanceof GitObjectTooLargeError;
+				response.writeHead(storageError ? 409 : tooLarge ? 413 : 500, {
 					"Content-Type": "text/plain",
 					...(storageError
 						? { "X-Local-Artifacts-Storage-Error": error.kind }
+						: {}),
+					...(tooLarge
+						? { "X-Local-Artifacts-Object-Error": "memory-limit" }
 						: {}),
 				});
 				response.end(
@@ -188,12 +244,13 @@ export async function startGitSidecar(root: string): Promise<GitSidecar> {
 	return {
 		address,
 		secret,
-		close() {
+		async close() {
 			shutdown.abort();
 			server.closeAllConnections();
-			return new Promise<void>((resolve, reject) => {
+			await new Promise<void>((resolve, reject) => {
 				server.close((error) => (error ? reject(error) : resolve()));
 			});
+			await removeDir(hooks);
 		},
 	};
 }
@@ -218,6 +275,7 @@ function parseGitPath(pathname: string): {
 // packfiles on node:http rather than buffering them through a Worker router.
 async function handleRequest(
 	root: string,
+	hooks: string,
 	locks: RepositoryLocks,
 	inFlight: Map<string, InFlightGitRequest>,
 	request: IncomingMessage,
@@ -257,6 +315,7 @@ async function handleRequest(
 		try {
 			await runGitHttpBackend(
 				root,
+				hooks,
 				request,
 				response,
 				`/${repositoryDirectory(namespace, repository)}${suffix}`,
@@ -510,6 +569,7 @@ function parseGitBackendHeaders(headerBytes: Buffer): {
 
 async function runGitHttpBackend(
 	root: string,
+	hooks: string,
 	request: IncomingMessage,
 	response: ServerResponse,
 	pathInfo: string,
@@ -518,27 +578,31 @@ async function runGitHttpBackend(
 	signal?: AbortSignal
 ): Promise<void> {
 	return new Promise((resolve, reject) => {
-		const child = spawn("git", gitArgumentsWithoutHooks(["http-backend"]), {
-			env: {
-				...gitEnvironment(),
-				GIT_PROJECT_ROOT: root,
-				GIT_HTTP_EXPORT_ALL: "1",
-				PATH_INFO: pathInfo,
-				QUERY_STRING: query,
-				REQUEST_METHOD: request.method ?? "GET",
-				CONTENT_TYPE: request.headers["content-type"] ?? "",
-				CONTENT_LENGTH: request.headers["content-length"] ?? "",
-				HTTP_CONTENT_ENCODING: String(
-					request.headers["content-encoding"] ?? ""
-				),
-				HTTP_GIT_PROTOCOL: String(request.headers["git-protocol"] ?? ""),
-				REMOTE_USER: "local-artifacts",
-				REMOTE_ADDR: request.socket.remoteAddress ?? "127.0.0.1",
-			},
-			stdio: ["pipe", "pipe", "pipe"],
-			detached: process.platform !== "win32",
-			signal,
-		});
+		const child = spawn(
+			"git",
+			["-c", `core.hooksPath=${hooks}`, "http-backend"],
+			{
+				env: {
+					...gitEnvironment(),
+					GIT_PROJECT_ROOT: root,
+					GIT_HTTP_EXPORT_ALL: "1",
+					PATH_INFO: pathInfo,
+					QUERY_STRING: query,
+					REQUEST_METHOD: request.method ?? "GET",
+					CONTENT_TYPE: request.headers["content-type"] ?? "",
+					CONTENT_LENGTH: request.headers["content-length"] ?? "",
+					HTTP_CONTENT_ENCODING: String(
+						request.headers["content-encoding"] ?? ""
+					),
+					HTTP_GIT_PROTOCOL: String(request.headers["git-protocol"] ?? ""),
+					REMOTE_USER: "local-artifacts",
+					REMOTE_ADDR: request.socket.remoteAddress ?? "127.0.0.1",
+				},
+				stdio: ["pipe", "pipe", "pipe"],
+				detached: process.platform !== "win32",
+				signal,
+			}
+		);
 		const stop = () => stopGitProcess(child);
 		if (signal?.aborted) {
 			stop();

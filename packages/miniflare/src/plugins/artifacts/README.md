@@ -30,7 +30,7 @@ sequenceDiagram
     Dev->>MF: Configure Artifacts binding
     MF->>Plugin: getBindings()
     Plugin->>Plugin: Select local and validate namespace
-    Plugin-->>MF: Bind to local namespace entrypoint
+    Plugin-->>MF: Wrapped binding around the local namespace entrypoint
     MF->>Plugin: getServices()
     Plugin->>Plugin: Verify host Git is available on PATH
     Plugin->>Controller: get(Git storage path)
@@ -41,10 +41,18 @@ sequenceDiagram
     MF->>Workerd: Start configured services and socket
 ```
 
-`getBindings()` routes each local binding to a namespace-scoped service.
+`getBindings()` routes each local binding to a namespace-scoped service through
+a wrapped binding (`wrapped-binding.worker.ts`) that runs in the caller's
+isolate. The binding Worker and Durable Object return `{ ok, value | error }`
+outcomes, and the wrapper throws `ArtifactsError` there: an exception thrown
+across a workerd RPC boundary is logged as uncaught under `--verbose`, which
+Workers Vitest enables, even when the caller catches it.
 `getServices()` creates the binding Worker, namespace Durable Object, persistent
 metadata disk, internal Git backend service, and Git socket. The controller
 reuses a sidecar per Git storage path and closes it when Miniflare is disposed.
+It records the Git socket's port in `git-port` next to the namespace's storage
+and reuses it on the next start while it is free, so clones keep their
+`origin`.
 The socket used by Git clients and the sidecar's private HTTP listener are
 **different endpoints**. If the sidecar exits after startup, the controller
 forgets its endpoint and warns; an explicit Miniflare configuration reload
@@ -141,7 +149,10 @@ secret; the client's `Authorization` header is removed before that hop. For a
 successful push, the Durable Object refreshes repository metadata before
 returning the response. The sidecar uses native `git http-backend` for Git smart
 HTTP rather than reproducing Git's pack protocol. All native Git commands
-(including the HTTP backend) override repository-local hook configuration.
+override repository-local hook configuration. The HTTP backend instead points
+`core.hooksPath` at a private directory with one `pre-receive` hook, which
+rejects pushes containing a blob over the 32 MB per-file limit; reads of a
+larger blob written outside the binding fail with `MEMORY_LIMIT`.
 A failed deletion leaves an inaccessible, persisted tombstone, so retrying
 `delete()` or creating the same name can finish native Git cleanup even after a
 process restart.

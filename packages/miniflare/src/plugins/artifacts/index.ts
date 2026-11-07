@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import SCRIPT from "worker:artifacts/binding";
+import SCRIPT_WRAPPED_BINDING from "worker:artifacts/wrapped-binding";
 import {
 	buildRemoteProxyProps,
 	getEnvBindingsOfType,
@@ -16,13 +17,18 @@ import type { Service, Socket } from "../../runtime";
 import type { MiniflareBinding, ParsedDevConfig, Plugin } from "../shared";
 import type { ArtifactsController } from "./controller";
 
-export { ArtifactsController, type LocalArtifactsBackend } from "./controller";
+export {
+	ArtifactsController,
+	type LocalArtifactsBackend,
+	type LocalArtifactsBackendOptions,
+} from "./controller";
 export type { GitSidecar } from "./git-sidecar";
 
 export const ARTIFACTS_PLUGIN_NAME = "artifacts";
 const ARTIFACTS_REMOTE_SERVICE_NAME = `${ARTIFACTS_PLUGIN_NAME}:remote`;
 const ENTRYPOINT = "LocalArtifactsNamespace";
 const OBJECT_CLASS = "LocalArtifactsNamespaceObject";
+const WRAPPED_BINDING_MODULE = `${ARTIFACTS_PLUGIN_NAME}:local-binding`;
 const LOCAL_NAMESPACE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
 type ArtifactsBinding = Extract<MiniflareBinding, { type: "artifacts" }>;
@@ -73,9 +79,17 @@ export const ARTIFACTS_PLUGIN: Plugin = {
 					validateLocalNamespace(binding.namespace);
 					return {
 						name,
-						service: {
-							name: localServiceName(binding.namespace),
-							entrypoint: ENTRYPOINT,
+						wrapped: {
+							moduleName: WRAPPED_BINDING_MODULE,
+							innerBindings: [
+								{
+									name: "namespace",
+									service: {
+										name: localServiceName(binding.namespace),
+										entrypoint: ENTRYPOINT,
+									},
+								},
+							],
 						},
 					};
 				}
@@ -132,6 +146,27 @@ export const ARTIFACTS_PLUGIN: Plugin = {
 		}
 		return { services, extensions: [], sockets };
 	},
+	getExtensions({ options }) {
+		const hasLocalBinding = options.some((worker) =>
+			getEnvBindingsOfType(worker.config, "artifacts").some(
+				([, binding]) => !getRemoteProxyConnectionString(binding, worker.dev)
+			)
+		);
+		if (!hasLocalBinding) {
+			return [];
+		}
+		return [
+			{
+				modules: [
+					{
+						name: WRAPPED_BINDING_MODULE,
+						esModule: SCRIPT_WRAPPED_BINDING(),
+						internal: true,
+					},
+				],
+			},
+		];
+	},
 };
 
 async function createLocalNamespaceRuntime(
@@ -146,7 +181,8 @@ async function createLocalNamespaceRuntime(
 	await mkdir(metadataPath, { recursive: true });
 	await assertSupportedGitLayout(metadataPath);
 	const { sidecar, port } = await artifactsController.get(
-		path.join(persistPath, "git")
+		path.join(persistPath, "git"),
+		{ namespace, portFile: path.join(persistPath, "git-port") }
 	);
 	const serviceName = localServiceName(namespace);
 	const storageName = `${serviceName}-storage`;

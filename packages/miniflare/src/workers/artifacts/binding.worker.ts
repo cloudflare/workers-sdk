@@ -1,6 +1,7 @@
 import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
 
 const repoName = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const MAX_LOG_LIMIT = 1000;
 
 type TokenScope = "read" | "write";
 
@@ -95,7 +96,10 @@ interface RepositoryListOptions {
 
 type RepositoryListResult = {
 	repos: Array<
-		RepositoryMetadata & { status: "ready"; jurisdiction: "unrestricted" }
+		Omit<RepositoryMetadata, "remote"> & {
+			status: "ready";
+			jurisdiction: "unrestricted";
+		}
 	>;
 	total: number;
 	cursor?: string;
@@ -148,17 +152,24 @@ interface CommitMetadata {
 	committedAt: number;
 }
 
+/** Repository handle as sent over RPC; the wrapped binding unwraps each outcome. */
 interface LocalArtifactsRepo {
-	info(): Promise<RepositoryMetadata>;
-	createToken(scope?: TokenScope, ttl?: number): Promise<CreateTokenResult>;
-	listTokens(): Promise<{ total: number; tokens: TokenInfo[] }>;
-	revokeToken(tokenOrId: string): Promise<boolean>;
-	readBlob(hash: string): Promise<Blob | null>;
-	readTree(hash: string): Promise<TreeEntry[] | null>;
-	readCommit(hash: string): Promise<CommitMetadata | null>;
-	readFile(args: { ref: string; path: string }): Promise<Blob | null>;
-	log(options?: RepositoryLogOptions): Promise<CommitMetadata[]>;
-	fork(name: string, options?: ForkOptions): Promise<CreateRepositoryResult>;
+	info(): Promise<Outcome<RepositoryMetadata>>;
+	createToken(
+		scope?: TokenScope,
+		ttl?: number
+	): Promise<Outcome<CreateTokenResult>>;
+	listTokens(): Promise<Outcome<{ total: number; tokens: TokenInfo[] }>>;
+	revokeToken(tokenOrId: string): Promise<Outcome<boolean>>;
+	readBlob(hash: string): Promise<Outcome<Blob | null>>;
+	readTree(hash: string): Promise<Outcome<TreeEntry[] | null>>;
+	readCommit(hash: string): Promise<Outcome<CommitMetadata | null>>;
+	readFile(args: { ref: string; path: string }): Promise<Outcome<Blob | null>>;
+	log(options?: RepositoryLogOptions): Promise<Outcome<CommitMetadata[]>>;
+	fork(
+		name: string,
+		options?: ForkOptions
+	): Promise<Outcome<CreateRepositoryResult>>;
 }
 
 interface BackendBlob {
@@ -202,6 +213,19 @@ class ArtifactsError extends Error {
 	}
 }
 
+/**
+ * Exceptions that cross a workerd RPC boundary are logged as uncaught when
+ * workerd runs with `--verbose`, as Workers Vitest does by default. Every RPC
+ * method here returns an outcome instead, and the wrapped binding in
+ * `wrapped-binding.worker.ts` rethrows failures inside the caller's isolate.
+ */
+export type Outcome<T> =
+	| { ok: true; value: T }
+	| {
+			ok: false;
+			error: { code: ArtifactsErrorCode; numericCode: number; message: string };
+	  };
+
 interface LocalArtifactsEnvironment {
 	config: { namespace: string; origin: string };
 	localArtifactsNamespace: DurableObjectNamespace<LocalArtifactsNamespaceObject>;
@@ -214,29 +238,33 @@ export class LocalArtifactsNamespace extends WorkerEntrypoint<LocalArtifactsEnvi
 	async create(
 		name: string,
 		options: RepositoryOptions = {}
-	): Promise<CreateRepositoryResult> {
-		return publicCall(() => this.#namespace().create(name, options));
+	): Promise<Outcome<CreateRepositoryResult>> {
+		return forward(() => this.#namespace().create(name, options));
 	}
 
-	async get(name: string): Promise<LocalArtifactsRepo> {
-		const repository = await publicCall(() => this.#namespace().get(name));
-		return repository as unknown as LocalArtifactsRepo;
+	async get(name: string): Promise<Outcome<LocalArtifactsRepo>> {
+		return forward(
+			() =>
+				this.#namespace().get(name) as unknown as Promise<
+					Outcome<LocalArtifactsRepo>
+				>
+		);
 	}
 
 	async import(
 		options: ImportRepositoryOptions
-	): Promise<CreateRepositoryResult> {
-		return publicCall(() => this.#namespace().import(options));
+	): Promise<Outcome<CreateRepositoryResult>> {
+		return forward(() => this.#namespace().import(options));
 	}
 
 	async list(
 		options: RepositoryListOptions = {}
-	): Promise<RepositoryListResult> {
-		return publicCall(() => this.#namespace().list(options));
+	): Promise<Outcome<RepositoryListResult>> {
+		return forward(() => this.#namespace().list(options));
 	}
 
-	async delete(name: string): Promise<boolean> {
-		return publicCall(() => this.#namespace().delete(name));
+	async delete(name: string): Promise<Outcome<boolean>> {
+		return forward(() => this.#namespace().delete(name));
 	}
 
 	override async fetch(request: Request): Promise<Response> {
@@ -259,6 +287,37 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 	async create(
 		name: string,
 		options: RepositoryOptions = {}
+	): Promise<Outcome<CreateRepositoryResult>> {
+		return outcome(() => this.#create(name, options));
+	}
+
+	async get(name: string): Promise<Outcome<LocalArtifactsRepo>> {
+		return outcome(async () => {
+			validateName(name);
+			const repository = await this.getRepo(name);
+			return createRepoHandle(this, repository.name, repository.id);
+		});
+	}
+
+	async import(
+		options: ImportRepositoryOptions
+	): Promise<Outcome<CreateRepositoryResult>> {
+		return outcome(() => this.#import(options));
+	}
+
+	async list(
+		options: RepositoryListOptions = {}
+	): Promise<Outcome<RepositoryListResult>> {
+		return outcome(() => this.#list(options));
+	}
+
+	async delete(name: string): Promise<Outcome<boolean>> {
+		return outcome(() => this.#delete(name));
+	}
+
+	#create(
+		name: string,
+		options: RepositoryOptions
 	): Promise<CreateRepositoryResult> {
 		return this.exclusive(async () => {
 			validateName(name);
@@ -308,15 +367,7 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		});
 	}
 
-	async get(name: string): Promise<LocalArtifactsRepo> {
-		validateName(name);
-		const repository = await this.getRepo(name);
-		return createRepoHandle(this, repository.name, repository.id);
-	}
-
-	async import(
-		options: ImportRepositoryOptions
-	): Promise<CreateRepositoryResult> {
+	#import(options: ImportRepositoryOptions): Promise<CreateRepositoryResult> {
 		return this.exclusive(async () => {
 			const { source, target, sourceUrl } = parseImportRequest(options);
 			const repositories = await this.repos();
@@ -365,9 +416,7 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		});
 	}
 
-	async list(
-		options: RepositoryListOptions = {}
-	): Promise<RepositoryListResult> {
+	async #list(options: RepositoryListOptions): Promise<RepositoryListResult> {
 		const limit = options.limit ?? 50;
 		if (!Number.isInteger(limit) || limit < 1 || limit > 200) {
 			throw new ArtifactsError(
@@ -381,12 +430,16 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 			.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 		const page = repositories
 			.slice(offset, offset + limit)
-			.map((repository) => ({
-				...repoMetadata(repository),
-				status: "ready" as const,
-				// Local storage has no placement jurisdiction; this is the public default.
-				jurisdiction: "unrestricted" as const,
-			}));
+			.map((repository) => {
+				// List items have no `remote`; use info() for the Git URL.
+				const { remote: _remote, ...metadata } = repoMetadata(repository);
+				return {
+					...metadata,
+					status: "ready" as const,
+					// Local storage has no placement jurisdiction; this is the public default.
+					jurisdiction: "unrestricted" as const,
+				};
+			});
 		const cursor =
 			offset + page.length < repositories.length
 				? encodeCursor(offset + page.length)
@@ -398,7 +451,7 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		};
 	}
 
-	async delete(name: string): Promise<boolean> {
+	#delete(name: string): Promise<boolean> {
 		return this.exclusive(async () => {
 			validateName(name);
 			const repositories = await this.repos();
@@ -439,17 +492,22 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		expectedId?: string
 	): Promise<{ total: number; tokens: TokenInfo[] }> {
 		const repository = await this.getRepo(name, expectedId);
-		const active = repository.tokens.filter(
-			(token) => !token.revokedAt && isActive(token)
-		);
-		const tokens = active
-			.toReversed()
+		// Active tokens come first so retained history cannot push a token that
+		// still authenticates off the 30-item page. Each group is newest first.
+		const newestFirst = repository.tokens.toReversed();
+		const tokens = [
+			...newestFirst.filter((token) => tokenState(token) === "active"),
+			...newestFirst.filter((token) => tokenState(token) !== "active"),
+		]
 			.slice(0, 30)
-			.map(({ tokenHash: _tokenHash, revokedAt: _revokedAt, ...token }) => ({
-				...token,
-				state: "active" as const,
+			.map((token) => ({
+				id: token.id,
+				scope: token.scope,
+				createdAt: token.createdAt,
+				expiresAt: token.expiresAt,
+				state: tokenState(token),
 			}));
-		return { total: active.length, tokens };
+		return { total: repository.tokens.length, tokens };
 	}
 
 	async revokeToken(
@@ -475,7 +533,8 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 					(tokenHash !== undefined &&
 						constantTimeEqual(candidate.tokenHash, tokenHash))
 			);
-			if (!token || token.revokedAt) {
+			// Only an active token can be revoked; an expired one stays "expired".
+			if (!token || tokenState(token) !== "active") {
 				return false;
 			}
 			token.revokedAt = new Date().toISOString();
@@ -563,9 +622,7 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 
 	saveRepos(repositories: RepositoryMap): Promise<void> {
 		for (const repository of Object.values(repositories)) {
-			repository.tokens = repository.tokens.filter(
-				(token) => !token.revokedAt && isActive(token)
-			);
+			repository.tokens = retainTokens(repository.tokens);
 		}
 		return this.ctx.storage.put("repos", repositories);
 	}
@@ -623,6 +680,16 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 			) {
 				// Only the sidecar's typed local-storage failures carry safe diagnostics.
 				throw new ArtifactsError("INTERNAL_ERROR", message);
+			}
+			if (
+				response.status === 413 &&
+				response.headers.get("X-Local-Artifacts-Object-Error") ===
+					"memory-limit"
+			) {
+				throw new ArtifactsError(
+					"MEMORY_LIMIT",
+					"The object is too large to read through the binding."
+				);
 			}
 			if (request.action === "import") {
 				throw classifyImportError(message);
@@ -702,10 +769,8 @@ function createRepoHandle(
 	name: string,
 	id: string
 ): LocalArtifactsRepo {
-	const read = <T>(request: BackendRequest): Promise<T> =>
-		publicCall(async () =>
-			namespace.backend<T>(await namespace.getRepo(name, id), request)
-		);
+	const read = async <T>(request: BackendRequest): Promise<T> =>
+		namespace.backend<T>(await namespace.getRepo(name, id), request);
 	const readFile = async (args: {
 		ref: string;
 		path: string;
@@ -734,40 +799,51 @@ function createRepoHandle(
 
 	return {
 		info: () =>
-			publicCall(async () => repoMetadata(await namespace.getRepo(name, id))),
+			outcome(async () => repoMetadata(await namespace.getRepo(name, id))),
 		createToken: (scope: TokenScope = "write", ttl?: number) =>
-			publicCall(() => namespace.createToken(name, scope, ttl, id)),
-		listTokens: () => publicCall(() => namespace.listTokens(name, id)),
+			outcome(() => namespace.createToken(name, scope, ttl, id)),
+		listTokens: () => outcome(() => namespace.listTokens(name, id)),
 		revokeToken: (tokenOrId: string) =>
-			publicCall(() => namespace.revokeToken(name, tokenOrId, id)),
-		readBlob: async (hash: string) => {
-			validateHash(hash);
-			const result = await read<BackendBlob | null>({
-				action: "readBlob",
-				hash,
-			});
-			return result === null ? null : new Blob([decodeBase64(result.data)]);
-		},
-		readTree: async (hash: string) => {
-			validateHash(hash);
-			return await read({ action: "readTree", hash });
-		},
-		readCommit: async (hash: string) => {
-			validateHash(hash);
-			return await read({ action: "readCommit", hash });
-		},
-		readFile,
-		log: (options: RepositoryLogOptions = {}) => {
-			validateLogOptions(options);
-			return read({
-				action: "log",
-				...(options.ref === undefined ? {} : { ref: options.ref }),
-				...(options.limit === undefined ? {} : { limit: options.limit }),
-				...(options.offset === undefined ? {} : { offset: options.offset }),
-			});
-		},
+			outcome(() => namespace.revokeToken(name, tokenOrId, id)),
+		readBlob: (hash: string) =>
+			outcome(async () => {
+				validateHash(hash);
+				const result = await read<BackendBlob | null>({
+					action: "readBlob",
+					hash,
+				});
+				return result === null ? null : new Blob([decodeBase64(result.data)]);
+			}),
+		readTree: (hash: string) =>
+			outcome(async () => {
+				validateHash(hash);
+				return await read<TreeEntry[] | null>({ action: "readTree", hash });
+			}),
+		readCommit: (hash: string) =>
+			outcome(async () => {
+				validateHash(hash);
+				return await read<CommitMetadata | null>({
+					action: "readCommit",
+					hash,
+				});
+			}),
+		readFile: (args: { ref: string; path: string }) =>
+			outcome(() => readFile(args)),
+		log: (options: RepositoryLogOptions = {}) =>
+			outcome(async () => {
+				validateLogOptions(options);
+				return await read<CommitMetadata[]>({
+					action: "log",
+					...(options.ref === undefined ? {} : { ref: options.ref }),
+					// The public API caps the page size rather than rejecting it.
+					...(options.limit === undefined
+						? {}
+						: { limit: Math.min(options.limit, MAX_LOG_LIMIT) }),
+					...(options.offset === undefined ? {} : { offset: options.offset }),
+				});
+			}),
 		fork: (targetName: string, options: ForkOptions = {}) =>
-			publicCall(() => namespace.fork(name, targetName, options, id)),
+			outcome(() => namespace.fork(name, targetName, options, id)),
 	};
 }
 
@@ -1152,13 +1228,10 @@ function validateLogOptions(
 	if (ref !== undefined && typeof ref !== "string") {
 		throw new ArtifactsError("INVALID_INPUT", "Invalid ref: must be a string.");
 	}
-	if (
-		limit !== undefined &&
-		(!Number.isInteger(limit) || limit < 1 || limit > 1000)
-	) {
+	if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) {
 		throw new ArtifactsError(
 			"INVALID_INPUT",
-			"Invalid limit: must be between 1 and 1000."
+			"Invalid limit: must be a positive integer."
 		);
 	}
 	if (offset !== undefined && (!Number.isInteger(offset) || offset < 0)) {
@@ -1202,6 +1275,32 @@ async function createToken(
 
 function isActive(token: Pick<RepositoryToken, "expiresAt">): boolean {
 	return Date.parse(token.expiresAt) > Date.now();
+}
+
+function tokenState(
+	token: Pick<RepositoryToken, "expiresAt" | "revokedAt">
+): TokenInfo["state"] {
+	if (token.revokedAt) {
+		return "revoked";
+	}
+	return isActive(token) ? "active" : "expired";
+}
+
+// listTokens() reports revoked and expired tokens, so keep a bounded history
+// of them rather than letting a long-lived repository grow without limit.
+const MAX_INACTIVE_TOKENS = 100;
+
+function retainTokens(tokens: RepositoryToken[]): RepositoryToken[] {
+	let inactive = tokens.filter(
+		(token) => tokenState(token) !== "active"
+	).length;
+	return tokens.filter((token) => {
+		if (tokenState(token) === "active" || inactive <= MAX_INACTIVE_TOKENS) {
+			return true;
+		}
+		inactive--;
+		return false;
+	});
 }
 
 function randomHex(bytes: number): string {
@@ -1327,14 +1426,34 @@ function decodeCursor(cursor: string | undefined): number {
 	}
 }
 
-async function publicCall<T>(action: () => Promise<T>): Promise<T> {
+async function outcome<T>(action: () => Promise<T>): Promise<Outcome<T>> {
 	try {
-		return await action();
+		return { ok: true, value: await action() };
 	} catch (error) {
-		if (isArtifactsError(error)) {
-			throw error;
-		}
-		throw new ArtifactsError("INTERNAL_ERROR", "An internal error occurred.");
+		const failure = isArtifactsError(error)
+			? error
+			: new ArtifactsError("INTERNAL_ERROR", "An internal error occurred.");
+		return {
+			ok: false,
+			error: {
+				code: failure.code,
+				numericCode: failure.numericCode,
+				message: failure.message,
+			},
+		};
+	}
+}
+
+/** Forward an outcome from the namespace object, including a failed call to it. */
+async function forward<T>(
+	call: () => Promise<Outcome<T>>
+): Promise<Outcome<T>> {
+	try {
+		return await call();
+	} catch {
+		return outcome(() => {
+			throw new ArtifactsError("INTERNAL_ERROR", "An internal error occurred.");
+		});
 	}
 }
 

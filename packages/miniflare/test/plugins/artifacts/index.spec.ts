@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import {
 	chmod,
 	mkdir,
+	readdir,
 	readFile,
 	rename,
 	stat,
@@ -14,7 +15,7 @@ import { pipeline } from "node:stream/promises";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
-import { ArtifactsController, Miniflare } from "miniflare";
+import { ArtifactsController, LogLevel, Miniflare } from "miniflare";
 import { test, vi } from "vitest";
 import {
 	GitClient,
@@ -27,7 +28,12 @@ import {
 	type GitSidecar,
 } from "../../../src/plugins/artifacts/git-sidecar";
 import { repositoryPath } from "../../../src/plugins/artifacts/storage";
-import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
+import {
+	singleModuleManifest,
+	TestLog,
+	useDispose,
+	useTmp,
+} from "../../test-shared";
 import type { MiniflareOptions, RemoteProxyConnectionString } from "miniflare";
 
 // Native Git subprocesses can slow down considerably while sharing a Windows
@@ -1119,7 +1125,13 @@ test("artifacts: token metadata, revocation and validation", async ({
 		true
 	);
 	expect(await rpc(mf, "revokeToken", [readToken.id], "repo")).toBe(false);
-	expect((await rpc(mf, "listTokens", [], "repo")).total).toBe(1);
+	const afterRevoke = await rpc(mf, "listTokens", [], "repo");
+	expect(afterRevoke.total).toBe(2);
+	expect(
+		afterRevoke.tokens.find(
+			(token: { id: string }) => token.id === readToken.id
+		)
+	).toMatchObject({ state: "revoked" });
 	expect(
 		await rpcFailure(mf, "createToken", ["write", 59], "repo")
 	).toMatchObject({
@@ -1695,4 +1707,175 @@ test("artifacts: disposing the sidecar closes its private listener", async ({
 		await sidecar.close();
 	}
 	await expect(fetch(address)).rejects.toThrow();
+});
+
+test("artifacts: caught binding errors are not logged as uncaught by verbose workerd", async ({
+	expect,
+}) => {
+	const logs: string[] = [];
+	const mf = new Miniflare({
+		...options(),
+		verbose: true,
+		handleStructuredLogs: ({ message }) => logs.push(message),
+	});
+	useDispose(mf);
+	await rpc(mf, "create", ["repo"]);
+	const failures = [
+		await rpcFailure(mf, "get", ["missing"]),
+		await rpcFailure(mf, "create", ["-bad"]),
+		await rpcFailure(mf, "readFile", [{ ref: "", path: "x" }], "repo"),
+		await rpcFailure(mf, "createToken", ["write", 1], "repo"),
+	];
+	expect(failures.map(({ name, code }) => [name, code])).toEqual([
+		["ArtifactsError", "NOT_FOUND"],
+		["ArtifactsError", "INVALID_REPO_NAME"],
+		["ArtifactsError", "INVALID_INPUT"],
+		["ArtifactsError", "INVALID_TTL"],
+	]);
+	expect(failures[0]).toMatchObject({ numericCode: 10200 });
+	expect(
+		logs.filter((message) => message.includes("uncaught exception"))
+	).toEqual([]);
+});
+
+test("artifacts: the Git port survives a restart with the same persistence", async ({
+	expect,
+}) => {
+	const root = await useTmp();
+	const log = new TestLog();
+	const first = new Miniflare({
+		...options(),
+		log,
+		resourcePersistencePath: root,
+	});
+	useDispose(first);
+	const created = await rpc(first, "create", ["repo"]);
+	const port = new URL(created.remote).port;
+	expect(log.logsAtLevel(LogLevel.INFO)).toContain(
+		`Local Artifacts Git remotes for namespace "test": http://127.0.0.1:${port}/git/test/<repo>.git`
+	);
+	await first.dispose();
+
+	const second = new Miniflare({ ...options(), resourcePersistencePath: root });
+	useDispose(second);
+	const info = await rpc(second, "info", [], "repo");
+	expect(info.remote).toBe(created.remote);
+	const response = await fetch(
+		`${info.remote}/info/refs?service=git-upload-pack`,
+		{ headers: { Authorization: `Bearer ${created.token}` } }
+	);
+	expect(response.status).toBe(200);
+	await response.body?.cancel();
+});
+
+test("artifacts: pushes reject files over 32 MB and reads report MEMORY_LIMIT", async ({
+	expect,
+}) => {
+	const root = await useTmp();
+	const mf = new Miniflare({ ...options(), resourcePersistencePath: root });
+	useDispose(mf);
+	const created = await rpc(mf, "create", ["repo"]);
+	const source = await useTmp();
+	await git(["init", "--initial-branch=main", source]);
+	// Zeros keep the pack small; the limit applies to the blob's size.
+	await writeFile(path.join(source, "large.bin"), new Uint8Array(32_000_001));
+	await writeFile(path.join(source, "limit.bin"), new Uint8Array(32_000_000));
+	await git(["add", "limit.bin"], source);
+	await git(["commit", "-m", "at the limit"], source);
+	const push = (ref: string) =>
+		git(
+			[
+				"-c",
+				`http.extraHeader=Authorization: Bearer ${created.token}`,
+				"push",
+				created.remote,
+				ref,
+			],
+			source
+		);
+	await push("main");
+	await git(["add", "large.bin"], source);
+	await git(["commit", "-m", "over the limit"], source);
+	await expect(push("HEAD:refs/heads/large")).rejects.toThrow(
+		/larger than 32 MB/
+	);
+	expect(
+		(await rpc(mf, "log", [{ ref: "main" }], "repo")).map(
+			(commit: { message: string }) => commit.message
+		)
+	).toEqual(["at the limit"]);
+	expect(await rpc(mf, "readFile", [{ ref: "large", path: "x" }], "repo")).toBe(
+		null
+	);
+
+	// Repositories written outside the binding can still hold a larger blob.
+	const [namespaceDirectory] = await readdir(path.join(root, "artifacts"));
+	const repository = repositoryPath(
+		path.join(root, "artifacts", namespaceDirectory, "git"),
+		"test",
+		"repo"
+	);
+	await git(["push", repository, "HEAD:refs/heads/large"], source);
+	expect(
+		await rpcFailure(
+			mf,
+			"readFile",
+			[{ ref: "large", path: "large.bin" }],
+			"repo"
+		)
+	).toMatchObject({ code: "MEMORY_LIMIT", numericCode: 10402 });
+	const blob = (
+		await git(["rev-parse", "HEAD:large.bin"], source)
+	).stdout.trim();
+	expect(await rpcFailure(mf, "readBlob", [blob], "repo")).toMatchObject({
+		code: "MEMORY_LIMIT",
+	});
+});
+
+test("artifacts: list omits remote and log caps its page size", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	await pushFixture(mf, path.join(await useTmp(), "source"));
+	const { repos } = await rpc(mf, "list");
+	expect(repos).toHaveLength(1);
+	expect(repos[0]).not.toHaveProperty("remote");
+	expect(await rpc(mf, "log", [{ limit: 5000 }], "Repo")).toHaveLength(1);
+	expect(await rpcFailure(mf, "log", [{ limit: 0 }], "Repo")).toMatchObject({
+		code: "INVALID_INPUT",
+	});
+});
+
+test("artifacts: disposing a repository handle releases its RPC stubs", async ({
+	expect,
+}) => {
+	const script = `
+export default {
+  async fetch(request, env) {
+    await env.REPOS.create("repo");
+    const repo = await env.REPOS.get("repo");
+    const before = (await repo.info()).name;
+    repo[Symbol.dispose]();
+    const after = await repo.info().then(() => "callable", (error) => error.message);
+    return Response.json({ before, after });
+  }
+};`;
+	const base = options();
+	const mf = new Miniflare({
+		...base,
+		workers: [
+			{
+				config: {
+					...base.workers[0].config,
+					manifest: singleModuleManifest(script),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+	expect(await (await mf.dispatchFetch("http://localhost")).json()).toEqual({
+		before: "repo",
+		after: expect.stringContaining("disposed"),
+	});
 });

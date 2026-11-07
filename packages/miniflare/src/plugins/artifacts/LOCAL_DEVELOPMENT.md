@@ -71,7 +71,7 @@ GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.extraHeader \
 unset REPO_TOKEN
 ```
 
-After pushing `hello.txt` to `main`, read it in the Worker with `await repo.readFile({ ref: "main", path: "hello.txt" })` (a `Blob`, or `null` when absent). The initial create token permits writes. Its plaintext is returned only once; if you lose it, use `repo.createToken("read")` for cloning or `repo.createToken("write")` for pushing and save the returned `plaintext` securely. Revoke tokens that are no longer needed. Avoid printing tokens or committing them to config. A plain request without a token cannot clone a private local repository. Git's URL uses an ephemeral loopback port; obtain the current URL after restarting the dev server instead of hardcoding it.
+After pushing `hello.txt` to `main`, read it in the Worker with `await repo.readFile({ ref: "main", path: "hello.txt" })` (a `Blob`, or `null` when absent). The initial create token permits writes. Its plaintext is returned only once; if you lose it, use `repo.createToken("read")` for cloning or `repo.createToken("write")` for pushing and save the returned `plaintext` securely. Revoke tokens that are no longer needed. Avoid printing tokens or committing them to config. A plain request without a token cannot clone a private local repository. The dev tool prints the Git remote prefix for each namespace at startup. Its loopback port is recorded with the persisted state, so clones keep working across restarts; if another process has taken that port, a new one is chosen and printed, and `info()` returns the new URL.
 
 ## Storage and network boundaries
 
@@ -86,5 +86,7 @@ A local binding does not contact Cloudflare for repository operations. **Explici
 - If startup says local Artifacts requires Git, install Git globally, check `git --version` in the dev tool's environment, and restart the tool with `git` on PATH.
 - If Git asks for a username and password, use any username and the repository token as the password. If Git reports unauthorized, check the repository, scope, expiry, and revocation; do not use a Cloudflare or GitHub account password.
 - If startup reports `Address already in use`, the dev or inspector port may be occupied. Pass `--port=0 --inspector-port=0` and use the printed `Ready on` URL.
-- If a Git URL stops responding after restart, get the new `remote` from the binding; the loopback listener is tied to the dev process.
+- If a Git URL stops responding after restart, another process probably holds its port. Get the new `remote` from the binding or the startup log, and update your clone with `git remote set-url origin <remote>`.
+- As in production, a push that contains a file larger than 32 MB is rejected, and reading such a file throws an `ArtifactsError` with code `MEMORY_LIMIT`.
+- `listTokens()` lists active tokens first, then revoked and expired tokens with their `state`. Each repository keeps its 100 most recent inactive tokens. `revokeToken()` returns `false` for an expired token.
 - Local development is not a replica of production placement or infrastructure. The local Git endpoint is HTTP on loopback only, and local state and tokens do not transfer to a remote namespace.
