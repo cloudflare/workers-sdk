@@ -64,7 +64,13 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 					}
 				});
 			}
-			handleWebSocket(vitePreviewServer.httpServer, ctx.miniflare);
+			handleWebSocket(
+				vitePreviewServer.httpServer,
+				ctx.miniflare,
+				undefined,
+				undefined,
+				vitePreviewServer.config.preview.proxy
+			);
 
 			// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
 			vitePreviewServer.middlewares.use(
