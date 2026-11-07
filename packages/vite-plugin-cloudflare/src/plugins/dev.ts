@@ -8,7 +8,6 @@ import {
 	kRequestType,
 	ROUTER_WORKER_NAME,
 } from "../constants";
-import { getDevContainerCleanup } from "../container-cleanup";
 import { getDockerPath, prepareContainerImagesForVite } from "../containers";
 import { assertIsNotPreview } from "../context";
 import {
@@ -35,8 +34,6 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 	return {
 		async configureServer(viteDevServer) {
 			assertIsNotPreview(ctx);
-
-			const containerCleanup = getDevContainerCleanup(viteDevServer);
 
 			const initialOptions = await getDevMiniflareOptions(ctx, viteDevServer);
 			let containerOptionsByWorker = initialOptions.containerOptionsByWorker;
@@ -228,12 +225,6 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						viteConfigFile: viteDevServer.config.configFile,
 					});
 
-					containerCleanup.track(
-						getDockerPath(),
-						[...containerOptionsByWorker.values()].flatMap((options) =>
-							options.map(({ image_tag }) => image_tag)
-						)
-					);
 					viteDevServer.config.logger.info(
 						colors.dim(
 							colors.yellow(
