@@ -550,7 +550,7 @@ async function uploadWorkerVersion(
 			// command that runs the trigger deploy does.
 			logger.warn(
 				"This version has no preview URL, although `preview_urls` is enabled in your configuration, because Preview URLs are disabled for this Worker. " +
-					"`wrangler versions upload` does not apply that setting; run `wrangler triggers deploy` or `wrangler deploy` to turn them on."
+					`\`${options.versionsUploadCommand}\` does not apply that setting; run \`${options.triggersDeployCommand}\` or \`${options.deployCommand}\` to turn them on.`
 			);
 		}
 	} else if (versionId && config.preview_urls === true) {
