@@ -401,9 +401,13 @@ export async function bundleWorker(
 		target: COMMON_ESBUILD_OPTIONS.target,
 		supported: COMMON_ESBUILD_OPTIONS.supported,
 		sourcemap: sourcemap ?? true,
-		// Include a reference to the output folder in the sourcemap.
+		// In local dev, include a reference to the output folder in the sourcemap.
 		// This is omitted by default, but we need it to properly resolve source paths in error output.
-		sourceRoot: destination,
+		// Elsewhere, `destination` is whatever was passed to `--outdir`, which may be relative to the
+		// working directory. The source map spec resolves `sourceRoot` relative to the map itself, so a
+		// relative value sends consumers to the wrong files. esbuild already writes `sources` relative
+		// to the map, so omit it.
+		...(targetConsumer === "dev" ? { sourceRoot: destination } : {}),
 		minify,
 		metafile: true,
 		conditions: getBuildConditions(),
