@@ -2458,6 +2458,98 @@ describe("wrangler preview", () => {
 			expect(std.warn).not.toContain("FLAGS");
 		});
 
+		test("should not send a kv_namespace binding without a namespace_id (#16775)", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"wrangler.json",
+				JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2025-01-01",
+					// Mirrors what `@astrojs/cloudflare` generates: a top-level
+					// SESSION binding with a namespace id, plus a `previews` block
+					// whose SESSION binding has no id (injected so that
+					// `wrangler deploy` auto-provisions a namespace for it).
+					kv_namespaces: [
+						{ binding: "SESSION", id: "production-session-kv-id" },
+					],
+					previews: {
+						kv_namespaces: [{ binding: "SESSION" }],
+					},
+				})
+			);
+
+			let deploymentRequestBody:
+				| {
+						env?: Record<string, { type: string; namespace_id?: string }>;
+				  }
+				| undefined;
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId`,
+					() =>
+						HttpResponse.json(
+							{
+								success: false,
+								result: null,
+								errors: [{ code: 10025, message: "Preview not found" }],
+							},
+							{ status: 404 }
+						)
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews`,
+					() =>
+						HttpResponse.json({
+							success: true,
+							result: {
+								id: "preview-id-kv-without-id",
+								name: "test-preview",
+								slug: "test-preview",
+								urls: ["https://test-preview.test-worker.cloudflare.app"],
+								worker_name: "test-worker",
+								created_on: new Date().toISOString(),
+							},
+						})
+				),
+				http.post(
+					`*/accounts/:accountId/workers/workers/:workerId/previews/:previewId/deployments`,
+					async ({ request }) => {
+						deploymentRequestBody = (await readPreviewDeploymentRequest(
+							request
+						)) as typeof deploymentRequestBody;
+						return HttpResponse.json({
+							success: true,
+							result: {
+								id: "deployment-id-kv-without-id",
+								preview_id: "preview-id-kv-without-id",
+								preview_name: "test-preview",
+								urls: ["https://kv123.test-worker.cloudflare.app"],
+								compatibility_date: "2025-01-01",
+								env: deploymentRequestBody?.env ?? {},
+								created_on: new Date().toISOString(),
+							},
+						});
+					}
+				)
+			);
+
+			await runWrangler("preview --name test-preview");
+
+			// The API rejects identifier-less KV bindings ("binding SESSION of
+			// type kv_namespace must have a namespace_id specified", error
+			// 10021), so the deployment request must never carry one: the
+			// binding must be resolved to a namespace id (or rejected with a
+			// clear configuration error before any request is made).
+			const sessionBinding = deploymentRequestBody?.env?.SESSION;
+			expect(
+				sessionBinding === undefined ||
+					typeof sessionBinding.namespace_id === "string"
+			).toBe(true);
+		});
+
 		test("should use ai_search bindings from local previews config", async ({
 			expect,
 		}) => {
