@@ -2523,3 +2523,105 @@ test("MessageBuilder writes files to system temp when resourceTmpPath is unset",
 		"This should appear in system temp only"
 	);
 });
+
+const MESSAGE_BUILDER_ERROR_REPORTING_WORKER = dedent /* javascript */ `
+	export default {
+		async fetch(request, env) {
+			const builder = await request.json();
+			try {
+				const result = await env.SEND_EMAIL.send(builder);
+				return Response.json({ ok: true, result });
+			} catch (e) {
+				return Response.json({ ok: false, name: e.name, message: String(e) });
+			}
+		},
+	};
+`;
+
+test("MessageBuilder send() rejects an EmailAddress `to` without `name`", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+	const mf = useMessageBuilderMiniflare({
+		log,
+		workerScript: MESSAGE_BUILDER_ERROR_REPORTING_WORKER,
+	});
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			to: { email: "user@example.com" },
+			subject: "Name-less recipient",
+			text: "Hello",
+		}),
+	});
+
+	const outcome = (await res.json()) as {
+		ok: boolean;
+		name?: string;
+		result?: { messageId?: string };
+	};
+	expect(outcome.ok).toBe(false);
+	expect(outcome.name).toBe("TypeError");
+});
+
+test("MessageBuilder send() rejects an EmailAddress `from` without `name`", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+	const mf = useMessageBuilderMiniflare({
+		log,
+		workerScript: MESSAGE_BUILDER_ERROR_REPORTING_WORKER,
+	});
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: { email: "sender@example.com" },
+			to: { name: "User", email: "user@example.com" },
+			subject: "Name-less sender",
+			text: "Hello",
+		}),
+	});
+
+	const outcome = (await res.json()) as {
+		ok: boolean;
+		name?: string;
+		result?: { messageId?: string };
+	};
+	expect(outcome.ok).toBe(false);
+	expect(outcome.name).toBe("TypeError");
+});
+
+test("MessageBuilder send() still accepts named EmailAddress objects", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+	const mf = useMessageBuilderMiniflare({
+		log,
+		workerScript: MESSAGE_BUILDER_ERROR_REPORTING_WORKER,
+	});
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: { name: "Sender", email: "sender@example.com" },
+			to: { name: "User", email: "user@example.com" },
+			subject: "Named control",
+			text: "Hello",
+		}),
+	});
+
+	const outcome = (await res.json()) as {
+		ok: boolean;
+		name?: string;
+		result?: { messageId?: string };
+	};
+	expect(outcome.ok).toBe(true);
+	expect(outcome.result?.messageId).toMatch(/@/);
+
+	const message = await waitForMessageBuilderLog(log);
+	expect(message).toContain('From: "Sender" <sender@example.com>');
+	expect(message).toContain('To: "User" <user@example.com>');
+});
