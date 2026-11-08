@@ -501,6 +501,7 @@ function convertBindingsAndAssets(
 						database_id: binding.id,
 						database_name: binding.name,
 						jurisdiction: binding.jurisdiction,
+						target_account_id: binding.accountId,
 						remote: binding.dev?.remote,
 					})
 				);
@@ -568,6 +569,7 @@ function convertBindingsAndAssets(
 					omitUndefined({
 						binding: name,
 						id: binding.id,
+						target_account_id: binding.accountId,
 						remote: binding.dev?.remote,
 					})
 				);
@@ -641,6 +643,7 @@ function convertBindingsAndAssets(
 						binding: name,
 						bucket_name: binding.name,
 						jurisdiction: binding.jurisdiction,
+						target_account_id: binding.accountId,
 						remote: binding.dev?.remote,
 						local_dev:
 							experimentalS3Credentials === undefined
