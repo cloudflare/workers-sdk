@@ -6,7 +6,6 @@
 "@cloudflare/config": minor
 "@cloudflare/workers-utils": minor
 "@cloudflare/deploy-helpers": minor
-"@cloudflare/remote-bindings": minor
 ---
 
 Preserve explicit owner accounts for experimental cross-account D1, KV, and R2 binding configuration

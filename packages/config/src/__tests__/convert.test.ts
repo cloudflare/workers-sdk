@@ -1938,8 +1938,8 @@ it("preserves explicit storage owners in Wrangler configuration", ({
 		},
 		containers: [],
 	});
-	expect(config.d1_databases?.[0].target_account_id).toBe(accountId);
-	expect(config.kv_namespaces?.[0].target_account_id).toBe(accountId);
+	expect(config.d1_databases?.[0]?.target_account_id).toBe(accountId);
+	expect(config.kv_namespaces?.[0]?.target_account_id).toBe(accountId);
 	expect(config.r2_buckets?.[0]).toMatchObject({
 		target_account_id: accountId,
 		jurisdiction: "eu",

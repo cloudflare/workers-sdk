@@ -1,4 +1,4 @@
-import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
+import { normalizeAndValidateConfig } from "@cloudflare/workers-utils/config";
 import { test, vi } from "vitest";
 import { provisionBindings } from "../src/deploy/helpers/provision-bindings";
 import type { StartDevWorkerInput } from "@cloudflare/workers-utils";
