@@ -2523,3 +2523,61 @@ test("MessageBuilder writes files to system temp when resourceTmpPath is unset",
 		"This should appear in system temp only"
 	);
 });
+
+test("email handler message exposes canBeForwarded", async ({ expect }) => {
+	const mf = new Miniflare({
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(dedent /* javascript */ `
+						export default {
+							async fetch() {
+								return Response.json(globalThis.__messageShape ?? null);
+							},
+							async email(message) {
+								globalThis.__messageShape = {
+									canBeForwarded: message.canBeForwarded,
+									inMessage: "canBeForwarded" in message,
+									rawSize: message.rawSize,
+								};
+							},
+						};
+					`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const delivered = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/local/email?format=json&from=sender@example.com&to=worker@example.com",
+		{
+			body: dedent`
+				From: Sender <sender@example.com>
+				To: Worker <worker@example.com>
+				Message-ID: <can-be-forwarded@example.com>
+				MIME-Version: 1.0
+				Content-Type: text/plain
+
+				Forward check body.`,
+			method: "POST",
+		}
+	);
+	await delivered.arrayBuffer();
+
+	const res = await mf.dispatchFetch("http://localhost/");
+	const shape = (await res.json()) as {
+		canBeForwarded: unknown;
+		inMessage: boolean;
+		rawSize: number;
+	};
+
+	// Production exposes `canBeForwarded` as a read-only boolean on every
+	// inbound message, so local dev must expose the property too (#16790).
+	expect(shape.inMessage).toBe(true);
+	expect(typeof shape.canBeForwarded).toBe("boolean");
+	expect(shape.rawSize).toBeGreaterThan(0);
+});
