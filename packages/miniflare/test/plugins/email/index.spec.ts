@@ -1840,6 +1840,83 @@ test("MessageBuilder with multiple recipients", async ({ expect }) => {
 	expect(message).toContain("Bcc: bcc1@example.com, bcc2@example.com");
 });
 
+test("MessageBuilder with cc only", async ({ expect }) => {
+	const log = new TestLog();
+	const mf = useMessageBuilderMiniflare({
+		log,
+		workerScript: MESSAGE_BUILDER_RETURNS_RESULT_WORKER,
+	});
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			cc: "cc@example.com",
+			subject: "Cc Only",
+			text: "Hello",
+		}),
+	});
+
+	const responseText = await res.text();
+	expect(res.status).toBe(200);
+	expect(JSON.parse(responseText)).toEqual({
+		messageId: synthesizedMessageId(expect, "example.com"),
+	});
+
+	const message = await waitForMessageBuilderLog(log);
+	expect(message).toContain("Cc: cc@example.com");
+	expect(message).not.toContain("To: ");
+	expect(message).toContain("Subject: Cc Only");
+});
+
+test("MessageBuilder with bcc only", async ({ expect }) => {
+	const log = new TestLog();
+	const mf = useMessageBuilderMiniflare({
+		log,
+		workerScript: MESSAGE_BUILDER_RETURNS_RESULT_WORKER,
+	});
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			bcc: ["bcc1@example.com", "bcc2@example.com"],
+			subject: "Bcc Only",
+			text: "Hello",
+		}),
+	});
+
+	const responseText = await res.text();
+	expect(res.status).toBe(200);
+	expect(JSON.parse(responseText)).toEqual({
+		messageId: synthesizedMessageId(expect, "example.com"),
+	});
+
+	const message = await waitForMessageBuilderLog(log);
+	expect(message).toContain("Bcc: bcc1@example.com, bcc2@example.com");
+	expect(message).not.toContain("To: ");
+	expect(message).toContain("Subject: Bcc Only");
+});
+
+test("MessageBuilder with no recipients is rejected", async ({ expect }) => {
+	const mf = useMessageBuilderMiniflare({
+		workerScript: MESSAGE_BUILDER_RETURNS_RESULT_WORKER,
+	});
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			subject: "No Recipients",
+			text: "Hello",
+		}),
+	});
+
+	expect(res.status).toBe(500);
+	const error = await res.text();
+	expect(error).not.toContain("Cannot read properties of undefined");
+});
+
 test("MessageBuilder with custom headers", async ({ expect }) => {
 	const mf = useMessageBuilderMiniflare();
 
