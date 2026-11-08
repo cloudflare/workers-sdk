@@ -116,6 +116,7 @@ export type Worker_Module = {
 	name: string;
 } & (
 	| { esModule?: string }
+	| { bundled?: string }
 	| { commonJsModule?: string }
 	| { text?: string }
 	| { data?: Uint8Array }

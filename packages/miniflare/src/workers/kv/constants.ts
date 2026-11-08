@@ -28,6 +28,13 @@ export const KVHeaders = {
 } as const;
 
 export const KV_LOCAL_ENTRY_SERVICE_NAME = "kv:ns:entry";
+// The Worker running workerd's KV (the built-in module `/workerd/kv.js`),
+// reached with props `{ namespace }`.
+export const KV_WORKERD_SERVICE_NAME = "kv:workerd";
+
+export const KVBindings = {
+	DEBUG_PORT: "MINIFLARE_DEBUG_PORT",
+} as const;
 
 export const SiteBindings = {
 	KV_NAMESPACE_SITE: "__STATIC_CONTENT",
