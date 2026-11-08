@@ -2,10 +2,6 @@
 "create-cloudflare": patch
 ---
 
-Update dependencies of "create-cloudflare"
+Use TanStack CLI 0.72.16 when creating TanStack Start projects
 
-The following dependency versions have been updated:
-
-| Dependency    | From   | To      |
-| ------------- | ------ | ------- |
-| @tanstack/cli | 0.72.0 | 0.72.16 |
+New TanStack Start projects use the updated generator. C3 now checks its Node.js requirement before running it, so users on unsupported Node.js versions see a clear upgrade message.
