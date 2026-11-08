@@ -1070,6 +1070,62 @@ test("reply: supports EmailReplyMessageBuilder", async ({ expect }) => {
 	).toBe("hi");
 });
 
+test("inbound email() handler message exposes canBeForwarded", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(dedent /* javascript */ `
+						export default {
+							fetch() {},
+							async email(message) {
+								const inMessage = "canBeForwarded" in message;
+								const type = typeof message.canBeForwarded;
+								if (!inMessage || type !== "boolean") {
+									message.setReject(
+										"canBeForwarded in message: " +
+											inMessage +
+											", typeof: " +
+											type
+									);
+								}
+							},
+						};
+					`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/local/email?format=json&from=sender@example.com&to=worker@example.com",
+		{
+			body: dedent`
+				From: sender@example.com
+				To: worker@example.com
+				Message-ID: <incoming@example.com>
+				MIME-Version: 1.0
+				Content-Type: text/plain
+
+				Incoming body.`,
+			method: "POST",
+		}
+	);
+
+	// The handler above rejects unless `canBeForwarded` is present and a
+	// boolean, as production's `ForwardableEmailMessage` exposes it.
+	expect(res.status).toBe(200);
+	const result = (await res.json()) as { outcome: string; rejectReason?: string };
+	expect(result.outcome).toBe("ok");
+	expect(result.rejectReason).toBeUndefined();
+});
+
 test("reply: rejects invalid custom header names", async ({ expect }) => {
 	const mf = new Miniflare({
 		unsafeTriggerHandlers: true,
