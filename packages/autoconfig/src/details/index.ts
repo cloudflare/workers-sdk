@@ -115,6 +115,10 @@ function normalizeOutputDir(projectPath: string, outputDir: string): string {
  * exists. Passing `target: "wrangler"` opts into Wrangler configuration
  * detection instead.
  *
+ * For the cf target, build and dev commands may use bare framework executables.
+ * Callers must resolve these from the application's and ancestor directories'
+ * `node_modules/.bin`, including for standalone applications.
+ *
  * @param options - Detection options including project path, wrangler config, and context.
  * @returns The detected project details.
  */
@@ -212,14 +216,16 @@ export async function getDetailsForAutoConfig({
 			: getProjectCommand(
 					detectedFramework.devCommand,
 					packageManager,
-					packageJson
+					packageJson,
+					target
 				),
 		buildCommand: useStaticAssets
 			? undefined
 			: getProjectCommand(
 					detectedFramework.buildCommand,
 					packageManager,
-					packageJson
+					packageJson,
+					target
 				),
 		env: framework.env,
 		workerName: getWorkerName(packageJson?.name, projectPath),
@@ -287,25 +293,28 @@ export async function getDetailsForAutoConfig({
 }
 
 /**
- * Converts a detected project command into one that can be run in the terminal
- * (such as `npm run build` or `npx astro dev`). If no command is detected
- * `undefined` is returned instead.
+ * Converts a detected project command for the target's command runner. The cf
+ * runner must resolve local executables, while Wrangler commands include
+ * package-manager prefixes. Returns `undefined` if no command is detected.
  *
  * @param command The detected project command
  * @param packageManager The package manager to use for command prefixes
  * @param packageJson The optional project manifest used to detect Vite+
+ * @param target The consumer, defaults to cf and requires local executable lookup
  * @returns A runnable project command if detected, undefined otherwise
  */
 export function getProjectCommand(
 	command: string | undefined,
 	packageManager: PackageManager,
-	packageJson?: PackageJSON
+	packageJson?: PackageJSON,
+	target: AutoConfigTarget = "cf"
 ): string | undefined {
 	if (!command) {
 		return undefined;
 	}
 
 	const { type, dlx, npx } = packageManager;
+	const executablePrefix = target === "cf" ? "" : `${npx} `;
 	if (
 		packageJson?.dependencies?.["vite-plus"] ||
 		packageJson?.devDependencies?.["vite-plus"]
@@ -313,11 +322,14 @@ export function getProjectCommand(
 		if (
 			["vite", "vite dev", `${npx} vite`, `${npx} vite dev`].includes(command)
 		) {
-			return `${npx} vp dev`;
+			return `${executablePrefix}vp dev`;
 		}
 		if (command === "vite build" || command === `${npx} vite build`) {
-			return `${npx} vp build`;
+			return `${executablePrefix}vp build`;
 		}
+	}
+	if (target === "cf") {
+		return command;
 	}
 
 	for (const packageManagerCommandPrefix of [type, dlx.join(" "), npx]) {
