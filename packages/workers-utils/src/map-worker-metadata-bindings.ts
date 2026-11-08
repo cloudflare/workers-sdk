@@ -42,7 +42,11 @@ export function mapWorkerMetadataBindings(
 						{
 							configObj.kv_namespaces = [
 								...(configObj.kv_namespaces ?? []),
-								{ id: binding.namespace_id, binding: binding.name },
+								{
+									id: binding.namespace_id,
+									binding: binding.name,
+									target_account_id: binding.target_account_id,
+								},
 							];
 						}
 						break;
@@ -68,6 +72,7 @@ export function mapWorkerMetadataBindings(
 								{
 									binding: binding.name,
 									database_id: binding.id,
+									target_account_id: binding.target_account_id,
 								},
 							];
 						}
@@ -121,6 +126,7 @@ export function mapWorkerMetadataBindings(
 								{
 									binding: binding.name,
 									bucket_name: binding.bucket_name,
+									target_account_id: binding.target_account_id,
 									jurisdiction: binding.jurisdiction,
 								},
 							];

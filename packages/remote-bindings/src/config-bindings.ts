@@ -104,6 +104,7 @@ export function getRemoteBindings(
 					type: "d1",
 					database_id: binding.id,
 					database_name: binding.name,
+					target_account_id: binding.accountId,
 					remote: binding.dev?.remote,
 				};
 				break;
@@ -141,6 +142,7 @@ export function getRemoteBindings(
 				bindings[name] = {
 					type: "kv_namespace",
 					id: binding.id,
+					target_account_id: binding.accountId,
 					remote: binding.dev?.remote,
 				};
 				break;
@@ -181,6 +183,7 @@ export function getRemoteBindings(
 					type: "r2_bucket",
 					bucket_name: binding.name,
 					jurisdiction: binding.jurisdiction,
+					target_account_id: binding.accountId,
 					remote: binding.dev?.remote,
 				};
 				break;

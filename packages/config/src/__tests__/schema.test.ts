@@ -1906,3 +1906,18 @@ describe("ExportSchema", () => {
 		expect(typeAssertions).toBeTypeOf("function");
 	});
 });
+
+describe.each(["d1", "kv", "r2"])("%s target account", (type) => {
+	it("accepts an explicit account and rejects malformed IDs", ({ expect }) => {
+		const accountId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+		expect(BindingSchema.parse({ type, accountId })).toMatchObject({
+			type,
+			accountId,
+		});
+		for (const invalid of ["", "b".repeat(31), "B".repeat(32), 123]) {
+			expect(
+				BindingSchema.safeParse({ type, accountId: invalid }).success
+			).toBe(false);
+		}
+	});
+});

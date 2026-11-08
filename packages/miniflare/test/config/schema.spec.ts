@@ -408,3 +408,21 @@ describe("MiniflareOptionsSchema", () => {
 		expect(parsed.isolatedResourcePersistencePath).toBeUndefined();
 	});
 });
+
+test.for(["d1", "kv", "r2"] as const)(
+	"requires an active remote session for explicit %s owners",
+	(type, { expect }) => {
+		const config = {
+			name: "api",
+			compatibilityDate: "2026-01-01",
+			env: {
+				DATA: {
+					type,
+					accountId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+					dev: { remote: true },
+				},
+			},
+		};
+		expect(WorkerOptionsSchema.safeParse({ config }).success).toBe(false);
+	}
+);

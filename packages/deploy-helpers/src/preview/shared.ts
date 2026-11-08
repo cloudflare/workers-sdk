@@ -467,7 +467,11 @@ function extractBindings(
 		if (omitIdentifierlessBindings && kv.id === undefined) {
 			continue;
 		}
-		env[kv.binding] = { type: "kv_namespace", namespace_id: kv.id };
+		env[kv.binding] = {
+			type: "kv_namespace",
+			namespace_id: kv.id,
+			target_account_id: kv.target_account_id,
+		};
 	}
 
 	for (const d1 of previews?.d1_databases ?? []) {
@@ -477,6 +481,7 @@ function extractBindings(
 		env[d1.binding] = {
 			type: "d1",
 			database_id: d1.database_id,
+			target_account_id: d1.target_account_id,
 			database_name: d1.database_name,
 		};
 	}
@@ -488,6 +493,7 @@ function extractBindings(
 		env[r2.binding] = {
 			type: "r2_bucket",
 			bucket_name: r2.bucket_name,
+			target_account_id: r2.target_account_id,
 			jurisdiction: r2.jurisdiction,
 		};
 	}

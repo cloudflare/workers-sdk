@@ -21,6 +21,32 @@ describe("resolveLocalBindings", () => {
 		};
 	}
 
+	test.for(["d1", "kv", "r2"] as const)(
+		"requires explicit remote access for cross-account %s",
+		(type, { expect }) => {
+			const binding = {
+				type,
+				accountId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+				dev: { remote: true },
+			};
+			expect(resolveLocalBindings({ DATA: binding }, options()).DATA).toEqual(
+				binding
+			);
+			expect(() =>
+				resolveLocalBindings(
+					{ DATA: { ...binding, dev: { remote: false } } },
+					options()
+				)
+			).toThrow("requires dev.remote: true");
+			expect(() =>
+				resolveLocalBindings(
+					{ DATA: binding },
+					options({ remoteBindings: false })
+				)
+			).toThrow("requires dev.remote: true");
+		}
+	);
+
 	test("replaces only declared secrets and warns about missing ones", ({
 		expect,
 	}) => {

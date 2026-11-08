@@ -570,6 +570,17 @@ export function buildMiniflareBindingOptions(
 	const kvNamespaces = extractBindingsOfType("kv_namespace", bindings);
 	const r2Buckets = extractBindingsOfType("r2_bucket", bindings);
 	const d1Databases = extractBindingsOfType("d1", bindings);
+	for (const resource of [...kvNamespaces, ...r2Buckets, ...d1Databases]) {
+		if (
+			resource.target_account_id !== undefined &&
+			!(remoteProxyConnectionString && resource.remote)
+		) {
+			throw new UserError(
+				`Cross-account storage binding "${resource.binding}" requires remote: true and remote bindings enabled.`,
+				{ telemetryMessage: "cross-account storage requires remote bindings" }
+			);
+		}
+	}
 	const queues = extractBindingsOfType("queue", bindings);
 	const pipelines = extractBindingsOfType("pipeline", bindings);
 	const k2 = extractBindingsOfType("k2", bindings);

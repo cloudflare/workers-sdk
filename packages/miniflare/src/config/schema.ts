@@ -661,11 +661,30 @@ export type LegacyConfig = z.input<typeof LegacyConfigSchema>;
 // Per-worker options
 // ---------------------------------------------------------------------------
 
-export const WorkerOptionsSchema = z.strictObject({
-	config: MiniflareWorkerConfigSchema,
-	legacy: LegacyConfigSchema.optional(),
-	dev: DevConfigSchema.default(() => DevConfigSchema.parse({})),
-});
+export const WorkerOptionsSchema = z
+	.strictObject({
+		config: MiniflareWorkerConfigSchema,
+		legacy: LegacyConfigSchema.optional(),
+		dev: DevConfigSchema.default(() => DevConfigSchema.parse({})),
+	})
+	.superRefine((options, ctx) => {
+		for (const [name, binding] of Object.entries(options.config.env ?? {})) {
+			if (
+				(binding.type === "d1" ||
+					binding.type === "kv" ||
+					binding.type === "r2") &&
+				binding.accountId !== undefined &&
+				!getRemoteProxyConnectionString(binding, options.dev)
+			) {
+				ctx.addIssue({
+					code: "custom",
+					path: ["config", "env", name],
+					message:
+						"Cross-account storage requires dev.remote: true and an active remote binding session.",
+				});
+			}
+		}
+	});
 
 export type WorkerOptions = z.input<typeof WorkerOptionsSchema>;
 

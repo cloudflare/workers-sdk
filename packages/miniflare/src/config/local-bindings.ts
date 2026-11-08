@@ -41,6 +41,18 @@ export function resolveLocalBindings(
 	const localValues = devVars ?? localEnv;
 
 	for (const [name, binding] of Object.entries(configuredBindings ?? {})) {
+		if (
+			(binding.type === "d1" ||
+				binding.type === "kv" ||
+				binding.type === "r2") &&
+			binding.accountId !== undefined &&
+			!(remoteBindings && binding.dev?.remote)
+		) {
+			throw new Error(
+				`Cross-account storage binding "${name}" requires dev.remote: true and remote bindings enabled.`
+			);
+		}
+
 		if (binding.type === "hyperdrive") {
 			if (binding.dev?.remote && remoteBindings) {
 				bindings[name] = { ...binding, dev: binding.dev };
