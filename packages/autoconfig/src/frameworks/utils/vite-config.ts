@@ -103,7 +103,7 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 				return this.traverse(n);
 			}
 
-			const pluginsProp = configObject.properties.find((prop) =>
+			const pluginsProp = configObject.properties.findLast((prop) =>
 				isPluginsProp(prop)
 			);
 			if (!pluginsProp || !t.ArrayExpression.check(pluginsProp.value)) {
@@ -300,7 +300,7 @@ export function transformViteConfig(
 				);
 			}
 
-			const pluginsProp = configObject.properties.find((prop) =>
+			const pluginsProp = configObject.properties.findLast((prop) =>
 				isPluginsProp(prop)
 			);
 			if (!pluginsProp || !t.ArrayExpression.check(pluginsProp.value)) {
@@ -390,8 +390,11 @@ function isPluginsProp(
 ): prop is types.namedTypes.ObjectProperty | types.namedTypes.Property {
 	return (
 		(t.Property.check(prop) || t.ObjectProperty.check(prop)) &&
-		t.Identifier.check(prop.key) &&
-		prop.key.name === "plugins"
+		((!prop.computed &&
+			t.Identifier.check(prop.key) &&
+			prop.key.name === "plugins") ||
+			((t.StringLiteral.check(prop.key) || t.Literal.check(prop.key)) &&
+				prop.key.value === "plugins"))
 	);
 }
 
