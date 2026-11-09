@@ -177,7 +177,33 @@ describe("Preview Worker", () => {
 		);
 	});
 
+	// `suffix` is documented as a pathname + search on the preview worker, so it
+	// must never redirect the browser to a different origin.
 	it.for([
+		"https://evil.example",
+		"//evil.example",
+		"/\\evil.example",
+		"\\\\evil.example",
+		"javascript:alert(1)",
+	])(
+		"should not redirect off-origin for suffix %s",
+		async (suffix, { expect }) => {
+			const resp = await exports.default.fetch(
+				`https://random-data.preview.cloudflarepreviews.com/.update-preview-token?token=TEST_TOKEN&remote=${encodeURIComponent(
+					MOCK_REMOTE_URL
+				)}&suffix=${encodeURIComponent(suffix)}`,
+				{
+					method: "GET",
+					redirect: "manual",
+				}
+			);
+			expect(resp.status).toBe(307);
+			expect(resp.headers.get("location")).toBe("/");
+		}
+	);
+
+	it.for([
+		"preview.cloudflarepreviews.com",
 		"preview.cloudflarepreviews.com",
 		"random-datapreview.cloudflarepreviews.com",
 	])("should reject token updates on %s", async (hostname, { expect }) => {
