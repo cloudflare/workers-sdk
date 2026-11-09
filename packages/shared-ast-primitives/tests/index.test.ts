@@ -27,9 +27,10 @@ describe("Svelte configuration parsing", () => {
 	] as const)(
 		"preserves a %s configuration containing object spread",
 		([, parse], { expect }) => {
-			expect(recast.print(parse(svelteConfigWithSpread)).code).toBe(
-				svelteConfigWithSpread
-			);
+			expect(
+				recast.print(parse(svelteConfigWithSpread), { lineTerminator: "\n" })
+					.code
+			).toBe(svelteConfigWithSpread);
 		}
 	);
 });

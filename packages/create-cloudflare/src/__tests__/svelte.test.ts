@@ -36,7 +36,9 @@ export default defineConfig({
 				);
 			}
 			await configure(ctx);
-			expect(readFileSync("vite.config.js", "utf8")).toBe(
+			expect(
+				readFileSync("vite.config.js", "utf8").replaceAll("\r\n", "\n")
+			).toBe(
 				source
 					.replace("@sveltejs/adapter-auto", "@sveltejs/adapter-cloudflare")
 					.trimEnd()
