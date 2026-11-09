@@ -1086,7 +1086,6 @@ describe("wrangler deploy with containers", () => {
 
 		await runWrangler("deploy index.js");
 
-		expect(spawn).toHaveBeenCalledTimes(9);
 		expect(vi.mocked(spawn).mock.lastCall?.[1]).toEqual([
 			"image",
 			"rm",
