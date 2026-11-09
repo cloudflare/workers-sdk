@@ -278,6 +278,14 @@ describe("createTestHarness()", () => {
 			expect.objectContaining({ hook: expect.any(Function) }),
 			expect.objectContaining({ cliDisplayName: "cf" })
 		);
+		// update() updates the session rather than starting another
+		await harness.update((options) => options);
+		expect(maybeStartOrUpdateRemoteProxySession).toHaveBeenLastCalledWith(
+			expect.objectContaining({ name: "app" }),
+			{ session },
+			expect.anything(),
+			expect.anything()
+		);
 		await harness.close();
 		expect(session.dispose).toHaveBeenCalled();
 	});
@@ -389,6 +397,53 @@ describe("createTestHarness()", () => {
 		await expect(relativeWorkerResponse.text()).resolves.toBe(
 			new URL("/url", url).href
 		);
+	});
+
+	it("can be configured after creation", async ({ expect }) => {
+		await writeBuild(".", {
+			default: {
+				config: {
+					name: "delayed-config-worker",
+					env: { GREETING: { type: "text", value: "initial" } },
+				},
+				script: `
+					export default {
+						fetch(_request, env) {
+							return new Response(env.GREETING);
+						}
+					};
+				`,
+			},
+		});
+
+		const server = createTestHarness();
+		onTestFinished(server.close);
+
+		await expect(server.listen()).rejects.toThrow(
+			"Test harness options have not been configured."
+		);
+
+		await server.update({ workers: [{ buildOutput: "." }] });
+		await server.listen();
+
+		const initialResponse = await server.fetch("/");
+		await expect(initialResponse.text()).resolves.toBe("initial");
+
+		await server.update((options) => ({
+			...options,
+			workers: options.workers.map((worker) => ({
+				...worker,
+				vars: { GREETING: "updated" },
+			})),
+		}));
+
+		const updatedResponse = await server.fetch("/");
+		await expect(updatedResponse.text()).resolves.toBe("updated");
+
+		await server.reset();
+
+		const resetResponse = await server.fetch("/");
+		await expect(resetResponse.text()).resolves.toBe("initial");
 	});
 
 	it("support fetching different workers from the same session", async ({
@@ -658,6 +713,81 @@ describe("createTestHarness()", () => {
 		);
 	});
 
+	it("supports binding overrides for first-party bindings", async ({
+		expect,
+	}) => {
+		await writeBuild(".", {
+			default: {
+				config: { name: "app-worker", env: { AI: { type: "ai" } } },
+				script: `
+					export default {
+						async fetch(_request, env) {
+							return Response.json(await env.AI.run("@cf/test/model", {
+								prompt: "What should the test return?"
+							}));
+						}
+					};
+				`,
+			},
+			"mock-ai": {
+				config: { name: "mock-ai" },
+				script: `
+					import { WorkerEntrypoint } from "cloudflare:workers";
+
+					let calls = 0;
+					export default class MockAi extends WorkerEntrypoint {
+						run(model, options) {
+							calls += 1;
+							return {
+								model,
+								response: "mock-ai:" + calls,
+								prompt: options.prompt,
+							};
+						}
+					}
+				`,
+			},
+		});
+
+		const server = createTestHarness({
+			workers: [
+				{
+					buildOutput: ".",
+					bindingOverrides: {
+						AI: "mock-ai",
+					},
+				},
+				{ buildOutput: ".", name: "mock-ai" },
+			],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const appResponse = await server.getWorker("app-worker").fetch("/");
+		await expect(appResponse.json()).resolves.toEqual({
+			model: "@cf/test/model",
+			prompt: "What should the test return?",
+			response: "mock-ai:1",
+		});
+
+		const secondAppResponse = await server.getWorker("app-worker").fetch("/");
+		await expect(secondAppResponse.json()).resolves.toEqual({
+			model: "@cf/test/model",
+			prompt: "What should the test return?",
+			response: "mock-ai:2",
+		});
+
+		await server.reset();
+
+		const resetAppResponse = await server.getWorker("app-worker").fetch("/");
+		await expect(resetAppResponse.json()).resolves.toEqual({
+			model: "@cf/test/model",
+			prompt: "What should the test return?",
+			response: "mock-ai:1",
+		});
+	});
+
 	it("returns the default worker export", async ({ expect }) => {
 		await writeBuild(".", {
 			default: {
@@ -716,6 +846,158 @@ describe("createTestHarness()", () => {
 		onTestFinished(server.close);
 
 		await expect(server.listen()).rejects.toThrow("core:user:missing-ai");
+	});
+
+	it("routes fetches based on worker routes", async ({ expect }) => {
+		const routesTo = (pattern: string) => [{ type: "fetch", pattern }];
+		const respondWithName = (name: string) => `
+			export default {
+				fetch(request) {
+					return Response.json({ name: ${JSON.stringify(name)}, url: request.url });
+				}
+			};
+		`;
+		await writeBuild(".", {
+			default: {
+				config: {
+					name: "primary-worker",
+					triggers: routesTo("primary.example.com/*"),
+				},
+				script: respondWithName("primary"),
+			},
+			"auxiliary-worker": {
+				config: {
+					name: "auxiliary-worker",
+					triggers: routesTo("auxiliary.example.com/*"),
+				},
+				script: respondWithName("auxiliary"),
+			},
+		});
+
+		const server = createTestHarness({
+			workers: [
+				{ buildOutput: "." },
+				{ buildOutput: ".", name: "auxiliary-worker" },
+			],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const primaryResponse = await server.fetch(
+			"http://primary.example.com/path?value=1"
+		);
+		await expect(primaryResponse.json()).resolves.toEqual({
+			name: "primary",
+			url: "http://primary.example.com/path?value=1",
+		});
+
+		const auxiliaryResponse = await server.fetch(
+			"http://auxiliary.example.com/path?value=2"
+		);
+		await expect(auxiliaryResponse.json()).resolves.toEqual({
+			name: "auxiliary",
+			url: "http://auxiliary.example.com/path?value=2",
+		});
+
+		// update() reads the Build Output again
+		await writeBuild(".", {
+			default: {
+				config: {
+					name: "primary-worker",
+					triggers: routesTo("primary.example.com/*"),
+				},
+				script: respondWithName("primary"),
+			},
+			"auxiliary-worker": {
+				config: {
+					name: "auxiliary-worker",
+					triggers: routesTo("updated-auxiliary.example.com/*"),
+				},
+				script: respondWithName("auxiliary"),
+			},
+		});
+		await server.update((options) => options);
+
+		const updatedAuxiliaryResponse = await server.fetch(
+			"http://updated-auxiliary.example.com/path?value=3"
+		);
+		await expect(updatedAuxiliaryResponse.json()).resolves.toEqual({
+			name: "auxiliary",
+			url: "http://updated-auxiliary.example.com/path?value=3",
+		});
+	});
+
+	it("rejects updates that change the number of workers without committing them", async ({
+		expect,
+	}) => {
+		await writeBuild(".", {
+			default: {
+				config: { name: "primary-worker" },
+				script: `
+					export default {
+						fetch() {
+							return new Response("primary");
+						}
+					};
+				`,
+			},
+		});
+
+		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		await expect(
+			server.update((options) => ({
+				...options,
+				workers: [
+					...options.workers,
+					{ buildOutput: ".", name: "auxiliary-worker" },
+				],
+			}))
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Updating the number of workers running in the server is not supported.]`
+		);
+
+		let workerCountAfterRejectedUpdate = 0;
+		await server.update((options) => {
+			workerCountAfterRejectedUpdate = options.workers.length;
+			return options;
+		});
+
+		expect(workerCountAfterRejectedUpdate).toBe(1);
+	});
+
+	it("rejects update when a worker's Build Output can't be read", async ({
+		expect,
+	}) => {
+		await writeBuild(".", {
+			default: {
+				config: { name: "primary-worker" },
+				script: `
+					export default {
+						fetch() {
+							return new Response("Hello from Primary Worker");
+						}
+					};
+				`,
+			},
+		});
+
+		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		await seed({
+			".cloudflare/output/v0/workers/default/worker.config.json": "{",
+		});
+
+		await expect(server.update((options) => options)).rejects.toThrow(
+			"could not parse JSON"
+		);
 	});
 
 	it("rejects calls on unknown worker handles", async ({ expect }) => {
@@ -831,6 +1113,92 @@ describe("createTestHarness()", () => {
 		});
 	});
 
+	it("overrides vars and secrets for build output workers", async ({
+		expect,
+	}) => {
+		await writeBuild(".", {
+			default: {
+				config: {
+					name: "var-overrides-worker",
+					env: {
+						CONFIG_VAR: { type: "text", value: "from-config" },
+						API_TOKEN: { type: "secret" },
+						SECRET_FROM_FILE: { type: "secret" },
+					},
+				},
+				script: `
+					export default {
+						fetch(request, env) {
+							return Response.json({
+								CONFIG_VAR: env.CONFIG_VAR,
+								API_TOKEN: env.API_TOKEN,
+								SECRET_FROM_FILE: env.SECRET_FROM_FILE,
+								ADDED_VAR: env.ADDED_VAR,
+								NULL_VAR: env.NULL_VAR,
+							});
+						}
+					};
+				`,
+			},
+		});
+		await seed({
+			".dev.vars": "API_TOKEN=from-dev-vars\nSECRET_FROM_FILE=from-dev-vars",
+		});
+
+		const server = createTestHarness({
+			workers: [
+				{
+					buildOutput: ".",
+					vars: {
+						CONFIG_VAR: "from-override",
+						ADDED_VAR: "from-override",
+						NULL_VAR: null,
+					},
+					secrets: {
+						API_TOKEN: "from-override",
+					},
+				},
+			],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const response = await server.fetch("/");
+		await expect(response.json()).resolves.toEqual({
+			CONFIG_VAR: "from-override",
+			API_TOKEN: "from-override",
+			SECRET_FROM_FILE: "from-dev-vars",
+			ADDED_VAR: "from-override",
+			NULL_VAR: null,
+		});
+
+		await server.update({
+			workers: [
+				{
+					buildOutput: ".",
+					vars: {
+						CONFIG_VAR: "from-updated-override",
+						ADDED_VAR: "from-updated-override",
+						NULL_VAR: null,
+					},
+					secrets: {
+						API_TOKEN: "from-updated-override",
+					},
+				},
+			],
+		});
+
+		const updatedResponse = await server.fetch("/");
+		await expect(updatedResponse.json()).resolves.toEqual({
+			CONFIG_VAR: "from-updated-override",
+			API_TOKEN: "from-updated-override",
+			SECRET_FROM_FILE: "from-dev-vars",
+			ADDED_VAR: "from-updated-override",
+			NULL_VAR: null,
+		});
+	});
+
 	it(`supports "nodejs_compat" flag`, async ({ expect }) => {
 		await writeBuild(".", {
 			default: {
@@ -900,6 +1268,48 @@ describe("createTestHarness()", () => {
 		await secondServer.listen();
 
 		const resetResponse = await secondServer.fetch("/");
+		await expect(resetResponse.text()).resolves.toBe("missing");
+	});
+
+	it("resets server options and restarts the session", async ({ expect }) => {
+		await writeBuild(".", {
+			default: {
+				config: {
+					name: "storage-worker",
+					env: { STORE: { type: "kv", id: "test-store" } },
+				},
+				script: `
+					export default {
+						async fetch(request, env) {
+							const url = new URL(request.url);
+							if (url.pathname === "/set") {
+								await env.STORE.put("key", "value");
+								return new Response("stored");
+							}
+							return new Response((await env.STORE.get("key")) ?? "missing");
+						}
+					};
+				`,
+			},
+		});
+
+		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		onTestFinished(server.close);
+
+		await expect(server.reset()).rejects.toThrow(
+			"Server has not been started. Start it with server.listen() before calling this method."
+		);
+
+		await server.listen();
+
+		const setResponse = await server.fetch("/set");
+		await expect(setResponse.text()).resolves.toBe("stored");
+		const storedResponse = await server.fetch("/");
+		await expect(storedResponse.text()).resolves.toBe("value");
+
+		await server.reset();
+
+		const resetResponse = await server.fetch("/");
 		await expect(resetResponse.text()).resolves.toBe("missing");
 	});
 
@@ -1169,5 +1579,137 @@ describe("createTestHarness()", () => {
 
 		const response3 = await server.fetch("/");
 		await expect(response3.text()).resolves.toBe("Hello World");
+	});
+
+	it("captures runtime logs and prints debug timelines", async ({ expect }) => {
+		await writeBuild(".", {
+			default: {
+				config: { name: "primary-worker" },
+				script: `
+					export default {
+						fetch() {
+							console.info("primary log");
+							return new Response("primary ok");
+						}
+					};
+				`,
+			},
+			"auxiliary-worker": {
+				config: { name: "auxiliary-worker" },
+				script: `
+					export default {
+						fetch() {
+							console.warn("auxiliary warning");
+							throw new Error("auxiliary failed");
+						}
+					};
+				`,
+			},
+		});
+
+		const server = createTestHarness({
+			workers: [
+				{ buildOutput: "." },
+				{ buildOutput: ".", name: "auxiliary-worker" },
+			],
+		});
+		onTestFinished(server.close);
+
+		server.debug();
+
+		expect(std.getAndClearOut()).toMatchInlineSnapshot(
+			`"-------------- No debug log --------------"`
+		);
+
+		await server.listen();
+		expect(server.getLogs()).toEqual([]);
+
+		server.clearLogs();
+
+		const primaryResponse = await server.getWorker("primary-worker").fetch("/");
+
+		await expect(primaryResponse.text()).resolves.toBe("primary ok");
+		// Without Wrangler's error middleware in the bundle, an uncaught error is
+		// a 500 response rather than a rejection
+		const auxiliaryResponse = await server
+			.getWorker("auxiliary-worker")
+			.fetch("https://example.com/greet", { method: "post" });
+		expect(auxiliaryResponse.status).toBe(500);
+		expect(server.getLogs()).toEqual([
+			{ timestamp: expect.any(Number), level: "info", message: "primary log" },
+			{
+				timestamp: expect.any(Number),
+				level: "warn",
+				message: "auxiliary warning",
+			},
+		]);
+
+		server.debug();
+		expect(normalizeDebugOutput(std.getAndClearOut())).toMatchInlineSnapshot(`
+			"--------------- debug logs ---------------
+			<timestamp> [server] startup - started
+			<timestamp> [server] startup - completed
+			<timestamp> [server] [primary-worker] fetch - GET / - started
+			<timestamp> [runtime] info: primary log
+			<timestamp> [server] [primary-worker] fetch - GET / - 200
+			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - started
+			<timestamp> [runtime] warn: auxiliary warning
+			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - 500"
+		`);
+
+		server.clearLogs();
+		expect(server.getLogs()).toEqual([]);
+
+		server.debug();
+		expect(normalizeDebugOutput(std.getAndClearOut())).toMatchInlineSnapshot(`
+			"--------------- debug logs ---------------
+			<timestamp> [server] startup - started
+			<timestamp> [server] startup - completed
+			<timestamp> [server] [primary-worker] fetch - GET / - started
+			<timestamp> [runtime] info: primary log
+			<timestamp> [server] [primary-worker] fetch - GET / - 200
+			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - started
+			<timestamp> [runtime] warn: auxiliary warning
+			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - 500"
+		`);
+
+		await server.reset();
+		expect(server.getLogs()).toEqual([]);
+
+		server.debug();
+		expect(normalizeDebugOutput(std.getAndClearOut())).toMatchInlineSnapshot(`
+			"--------------- debug logs ---------------
+			<timestamp> [server] startup - started
+			<timestamp> [server] startup - completed"
+		`);
+
+		await server.update((options) => ({
+			...options,
+			workers: [...options.workers],
+		}));
+		expect(server.getLogs()).toEqual([]);
+
+		server.debug();
+		expect(normalizeDebugOutput(std.getAndClearOut())).toMatchInlineSnapshot(`
+			"--------------- debug logs ---------------
+			<timestamp> [server] startup - started
+			<timestamp> [server] startup - completed
+			<timestamp> [server] update - started
+			<timestamp> [server] update - completed"
+		`);
+
+		// Make sure debug logs are still visible after server is closed
+		await server.close();
+
+		server.debug();
+		expect(normalizeDebugOutput(std.getAndClearOut())).toMatchInlineSnapshot(`
+			"--------------- debug logs ---------------
+			<timestamp> [server] startup - started
+			<timestamp> [server] startup - completed
+			<timestamp> [server] update - started
+			<timestamp> [server] update - completed
+			<timestamp> [server] teardown - started
+			<timestamp> [server] teardown - completed"
+		`);
 	});
 });

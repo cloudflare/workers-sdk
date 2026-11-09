@@ -130,7 +130,10 @@ export type TestHarness = {
 	/**
 	 * Starts the server and returns its current URL.
 	 * Calling this more than once returns the same running server session until
-	 * the server is closed.
+	 * the server is closed or reset.
+	 *
+	 * If no options were passed to `createTestHarness()`, call `update(options)`
+	 * before starting the server.
 	 */
 	listen(): Promise<{
 		url: URL;
@@ -200,6 +203,22 @@ export type TestHarness = {
 	 */
 	debug(): void;
 	/**
+	 * Updates the server configuration and reloads the running Workers.
+	 *
+	 * If the server has not started yet, this configures the options that will be
+	 * used by `listen()`.
+	 */
+	update(
+		options:
+			| TestHarnessOptions
+			| ((currentOptions: TestHarnessOptions) => TestHarnessOptions)
+	): Promise<void>;
+	/**
+	 * Restores the server to the options used when the current session first
+	 * started. Storage is recreated, and the server URL may change after reset.
+	 */
+	reset(): Promise<void>;
+	/**
 	 * Stops the server and releases all runtime resources.
 	 */
 	close(): Promise<void>;
@@ -259,7 +278,9 @@ type DebugLog = {
  * await server.close();
  * ```
  */
-export function createTestHarness(options: TestHarnessOptions): TestHarness {
+export function createTestHarness(options?: TestHarnessOptions): TestHarness {
+	let initialOptions = options;
+	let currentOptions = options;
 	let serverSession: ServerSession | undefined;
 	let startPromise: Promise<ServerSession> | undefined;
 	let workerdLogs: WorkerdStructuredLog[] = [];
@@ -321,6 +342,15 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
 		}
 	}
 
+	async function updateConfig(
+		session: ServerSession,
+		serverOptions: TestHarnessOptions
+	) {
+		const miniflare = await getRuntimeMiniflare(session);
+		session.workers = await resolveWorkerInputs(serverOptions, session.workers);
+		await miniflare.setOptions(getMiniflareOptions(session.workers));
+	}
+
 	async function resolveSession() {
 		if (startPromise) {
 			return await startPromise;
@@ -379,9 +409,16 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
 
 	async function startServerSession() {
 		if (!startPromise) {
+			if (currentOptions === undefined) {
+				throw new Error(
+					"Test harness options have not been configured. Pass options to createTestHarness() or call server.update(options) before server.listen()."
+				);
+			}
+
 			workerdLogs = [];
 			debugLogs = [];
-			startPromise = createSession(options)
+			initialOptions = currentOptions;
+			startPromise = createSession(initialOptions)
 				.then((session) => {
 					serverSession = session;
 					return session;
@@ -604,6 +641,58 @@ export function createTestHarness(options: TestHarnessOptions): TestHarness {
 
 			// oxlint-disable-next-line no-console -- Use console.log() directly as the logger is disabled
 			console.log(message);
+		},
+		async update(updateInput) {
+			let nextOptions: TestHarnessOptions;
+
+			if (typeof updateInput === "function") {
+				assert(
+					currentOptions,
+					"Cannot update test harness options with a function before options have been configured. Pass options to createTestHarness() or call server.update(options) first."
+				);
+				nextOptions = updateInput(currentOptions);
+			} else {
+				nextOptions = updateInput;
+			}
+
+			// If listen() is still starting, wait until serverSession is available so the update is applied to the running Workers.
+			if (startPromise) {
+				await startPromise;
+			}
+
+			if (serverSession) {
+				debugLog("update - started");
+
+				if (nextOptions.workers.length !== serverSession.workers.length) {
+					throw new Error(
+						`Updating the number of workers running in the server is not supported.`
+					);
+				}
+
+				try {
+					await updateConfig(serverSession, nextOptions);
+					debugLog("update - completed");
+				} catch (error) {
+					debugLog("update - failed");
+					await teardownSession(serverSession);
+					throw error;
+				}
+			}
+
+			currentOptions = nextOptions;
+		},
+		async reset() {
+			const session = await resolveSession();
+
+			assert(
+				initialOptions,
+				"Server has not been started. Start it with server.listen() before calling this method."
+			);
+
+			await teardownSession(session);
+			currentOptions = initialOptions;
+
+			await startServerSession();
 		},
 		async close() {
 			if (startPromise) {

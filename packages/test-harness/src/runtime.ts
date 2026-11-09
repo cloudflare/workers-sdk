@@ -44,12 +44,14 @@ export type ResolvedWorker = {
  *
  * @param options The Workers to run, primary Worker first, and the directory
  * that relative `buildOutput` paths resolve from
+ * @param previousWorkers The Workers these replace, whose remote sessions
+ * are updated rather than started again
  * @returns The resolved Workers
  */
-export async function resolveWorkerInputs({
-	root = process.cwd(),
-	workers: inputs,
-}: TestHarnessOptions): Promise<ResolvedWorker[]> {
+export async function resolveWorkerInputs(
+	{ root = process.cwd(), workers: inputs }: TestHarnessOptions,
+	previousWorkers: ResolvedWorker[] = []
+): Promise<ResolvedWorker[]> {
 	if (inputs.length === 0) {
 		throw new Error("Test harness requires at least one worker.");
 	}
@@ -57,8 +59,14 @@ export async function resolveWorkerInputs({
 	const workers: ResolvedWorker[] = [];
 	try {
 		// One at a time, so a failure leaves no remote session still starting
-		for (const input of inputs) {
-			workers.push(await resolveWorker(toPath(root), input));
+		for (const [index, input] of inputs.entries()) {
+			workers.push(
+				await resolveWorker(
+					toPath(root),
+					input,
+					previousWorkers[index]?.remoteProxySessionData ?? null
+				)
+			);
 		}
 		return workers;
 	} catch (error) {
@@ -87,11 +95,14 @@ export async function disposeRemoteProxySessions(
  *
  * @param root The directory that a relative `buildOutput` path resolves from
  * @param input The Worker to run, and its test values
+ * @param preExistingRemoteProxySessionData The remote session of the Worker
+ * this replaces, if any
  * @returns The Worker's Miniflare options and remote bindings session
  */
 async function resolveWorker(
 	root: string,
-	input: WorkerInput
+	input: WorkerInput,
+	preExistingRemoteProxySessionData: RemoteProxySessionData | null
 ): Promise<ResolvedWorker> {
 	const projectDir = path.resolve(root, toPath(input.buildOutput));
 	const buildOutput = await readBuildOutput(projectDir);
@@ -160,7 +171,7 @@ async function resolveWorker(
 			account_id: rootConfig.accountId,
 			profileDir: projectDir,
 		},
-		null,
+		preExistingRemoteProxySessionData,
 		getRemoteBindingsAuth(
 			projectDir,
 			rootConfig.accountId,
