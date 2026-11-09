@@ -23,6 +23,7 @@ import type {
 	AutoConfigDetails,
 	AutoConfigDetailsForNonConfiguredProject,
 } from "../types";
+import type { DetectedFramework } from "./framework-detection";
 import type { PackageManager } from "@cloudflare/workers-utils";
 import type { Config, PackageJSON } from "@cloudflare/workers-utils";
 
@@ -208,57 +209,25 @@ export async function getDetailsForAutoConfig({
 			? normalizeOutputDir(projectPath, requestedOutputDir)
 			: (detectedFramework.dist ?? (await findAssetsDir(projectPath)));
 
-	// Check the detected project's assets before a native Vite fallback can
-	// replace its framework and default output directory.
-	// A `functions` directory next to static files in the project root usually
-	// means a Cloudflare Pages project using Pages Functions. Interactively the
-	// user is asked whether it is a Pages project; non-interactive runs assume it
-	// is not and continue as a static site, which would deploy the project root
-	// as assets and silently drop the Functions (the API routes). Stop instead.
-	// This checks the framework class rather than the detected id, because
-	// detected frameworks missing from `allFrameworksInfos` are also configured as
-	// static sites and would deploy the project root the same way.
-	if (
-		!configured &&
-		framework.id === staticFramework.id &&
-		(context.isNonInteractiveOrCI?.() ?? false) &&
-		outputDir !== undefined &&
-		resolve(projectPath, outputDir) === resolve(projectPath) &&
-		(await getPathStats(join(projectPath, "functions")))?.isDirectory()
-	) {
-		const configFile =
-			target === "cf"
-				? `a \`${CLOUDFLARE_CONFIG_FILE}\` file`
-				: "a Wrangler configuration file";
-		throw new AutoConfigDetectionError(
-			"This project has a `functions` directory and static files in its root, which looks like a Cloudflare Pages project using Pages Functions. " +
-				"Automatic configuration cannot migrate Pages Functions to Workers yet, and deploying the project root as static assets would leave the Functions undeployed.\n" +
-				"If `functions` contains Pages Functions, move the static files into a subdirectory (for example `public/`) and deploy with `wrangler pages deploy public --project-name <name>`, " +
-				"or migrate the Functions to a Worker: https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/\n" +
-				`If \`functions\` is not Pages Functions, move the static files into a subdirectory or add ${configFile} for the Worker.`,
-			{
-				telemetryMessage: "autoconfig details pages functions with root assets",
-				frameworkId: framework.id,
-				configured,
-			}
+	// Unknown frameworks also use the static class. Validate its assets before
+	// a native Vite fallback can replace the framework and output directory.
+	if (!configured && framework.id === staticFramework.id) {
+		await assertNoPagesFunctionsWithRootAssets(
+			projectPath,
+			outputDir,
+			target,
+			context
 		);
 	}
 
-	// Native execution must not turn an unsupported project's setup into a
-	// supported Vite migration. An existing configuration can opt into execution.
-	const frameworkInfo = getAllFrameworksInfos(target).find(
-		({ id }) => id === detectedFramework.framework.id
-	);
-	const canConfigureWithCf =
-		frameworkInfo?.supported === true && frameworkInfo.supportsCf;
-	const fallbackCommands =
-		target === "cf" &&
-		!useStaticAssets &&
-		detectedFramework.framework.id !== "cloudflare-pages" &&
-		(configured || canConfigureWithCf) &&
-		(!detectedFramework.devCommand || !detectedFramework.buildCommand)
-			? getViteFallbackCommands(projectPath, packageJson)
-			: undefined;
+	const fallbackCommands = canUseViteFallbackCommands({
+		target,
+		useStaticAssets,
+		configured,
+		detectedFramework,
+	})
+		? getViteFallbackCommands(projectPath, packageJson)
+		: undefined;
 	if (
 		fallbackCommands &&
 		!detectedFramework.devCommand &&
@@ -323,6 +292,77 @@ export async function getDetailsForAutoConfig({
 		configured: false,
 		isWorkspaceRoot,
 	};
+}
+
+/**
+ * Rejects unconfigured static sites whose root assets would silently omit Pages
+ * Functions. Interactive detection can ask the user whether this is a Pages
+ * project, but non-interactive detection assumes it is a static site.
+ */
+async function assertNoPagesFunctionsWithRootAssets(
+	projectPath: string,
+	outputDir: string | undefined,
+	target: AutoConfigTarget,
+	context: AutoConfigContext
+): Promise<void> {
+	if (
+		!(context.isNonInteractiveOrCI?.() ?? false) ||
+		outputDir === undefined ||
+		resolve(projectPath, outputDir) !== resolve(projectPath) ||
+		!(await getPathStats(join(projectPath, "functions")))?.isDirectory()
+	) {
+		return;
+	}
+
+	const configFile =
+		target === "cf"
+			? `a \`${CLOUDFLARE_CONFIG_FILE}\` file`
+			: "a Wrangler configuration file";
+	throw new AutoConfigDetectionError(
+		"This project has a `functions` directory and static files in its root, which looks like a Cloudflare Pages project using Pages Functions. " +
+			"Automatic configuration cannot migrate Pages Functions to Workers yet, and deploying the project root as static assets would leave the Functions undeployed.\n" +
+			"If `functions` contains Pages Functions, move the static files into a subdirectory (for example `public/`) and deploy with `wrangler pages deploy public --project-name <name>`, " +
+			"or migrate the Functions to a Worker: https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/\n" +
+			`If \`functions\` is not Pages Functions, move the static files into a subdirectory or add ${configFile} for the Worker.`,
+		{
+			telemetryMessage: "autoconfig details pages functions with root assets",
+			frameworkId: staticFramework.id,
+			configured: false,
+		}
+	);
+}
+
+/**
+ * Keeps native execution from bypassing Pages detection or unsupported setup.
+ * An existing configuration can opt an otherwise unsupported project into execution.
+ */
+function canUseViteFallbackCommands({
+	target,
+	useStaticAssets,
+	configured,
+	detectedFramework,
+}: {
+	target: AutoConfigTarget;
+	useStaticAssets: boolean;
+	configured: boolean;
+	detectedFramework: DetectedFramework;
+}): boolean {
+	if (
+		target !== "cf" ||
+		useStaticAssets ||
+		detectedFramework.framework.id === "cloudflare-pages" ||
+		(detectedFramework.devCommand && detectedFramework.buildCommand)
+	) {
+		return false;
+	}
+	if (configured) {
+		return true;
+	}
+
+	const frameworkInfo = getAllFrameworksInfos(target).find(
+		({ id }) => id === detectedFramework.framework.id
+	);
+	return frameworkInfo?.supported === true && frameworkInfo.supportsCf;
 }
 
 /**

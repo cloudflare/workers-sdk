@@ -305,7 +305,8 @@ function throwMultipleFrameworksNonInteractiveError(
 	);
 }
 
-type DetectedFramework = {
+/** Framework metadata, commands, and output directory found during detection. */
+export type DetectedFramework = {
 	baseDirectory?: string;
 	framework: {
 		name: string;
