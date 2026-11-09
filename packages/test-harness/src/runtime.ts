@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { readBuildOutput } from "@cloudflare/build-output-utils";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
-import { Miniflare, resolveLocalBindings } from "miniflare";
+import { resolveLocalBindings } from "miniflare";
 import { getRemoteBindingsAuth } from "./auth";
 import type { TestHarnessOptions, WorkerInput } from "./index";
 import type { BuildOutputWorker } from "@cloudflare/build-output-utils";
@@ -30,77 +30,69 @@ const remoteBindingsLogger: RemoteBindingsLogger = {
 	},
 };
 
-/** A running runtime for the harness's Workers */
-export type Runtime = {
-	mf: Miniflare;
-	url: URL;
-	dispose(): Promise<void>;
+/** A Worker from a project's Build Output, resolved for Miniflare */
+export type ResolvedWorker = {
+	/** The Worker's Miniflare options */
+	options: WorkerOptions;
+	/** The Worker's remote bindings session, if it has remote bindings */
+	remoteProxySessionData: RemoteProxySessionData | null;
 };
 
 /**
- * Starts a runtime for Workers from their projects' Build Output, as
- * `vite preview` runs a build.
+ * Resolves Workers from their projects' Build Output, as `vite preview` runs
+ * a build.
  *
  * @param options The Workers to run, primary Worker first, and the directory
  * that relative `buildOutput` paths resolve from
- * @returns The running runtime
+ * @returns The resolved Workers
  */
-export async function startRuntime({
+export async function resolveWorkerInputs({
 	root = process.cwd(),
 	workers: inputs,
-}: TestHarnessOptions): Promise<Runtime> {
+}: TestHarnessOptions): Promise<ResolvedWorker[]> {
 	if (inputs.length === 0) {
-		throw new Error("The test harness needs at least one Worker in `workers`.");
+		throw new Error("Test harness requires at least one worker.");
 	}
 
-	const sessions: RemoteProxySessionData[] = [];
-	const disposeSessions = () =>
-		Promise.all(sessions.map(({ session }) => session.dispose()));
-	let mf: Miniflare | undefined;
+	const workers: ResolvedWorker[] = [];
 	try {
-		const workers: WorkerOptions[] = [];
 		// One at a time, so a failure leaves no remote session still starting
 		for (const input of inputs) {
-			workers.push(await getWorkerOptions(toPath(root), input, sessions));
+			workers.push(await resolveWorker(toPath(root), input));
 		}
-		mf = new Miniflare({ unsafeTriggerHandlers: true, workers });
-		const url = await mf.ready;
-		const runtime = mf;
-		return {
-			mf: runtime,
-			url,
-			async dispose() {
-				try {
-					await runtime.dispose();
-				} finally {
-					await disposeSessions();
-				}
-			},
-		};
+		return workers;
 	} catch (error) {
-		try {
-			// Rethrows a failed start's error
-			await mf?.dispose();
-		} finally {
-			await disposeSessions();
-		}
+		await disposeRemoteProxySessions(workers);
 		throw error;
 	}
 }
 
 /**
- * Builds the Miniflare options for one Worker in a project's Build Output.
+ * Disposes the remote bindings sessions of resolved Workers.
+ *
+ * @param workers The resolved Workers
+ */
+export async function disposeRemoteProxySessions(
+	workers: ResolvedWorker[]
+): Promise<void> {
+	await Promise.all(
+		workers.map(({ remoteProxySessionData }) =>
+			remoteProxySessionData?.session.dispose()
+		)
+	);
+}
+
+/**
+ * Resolves one Worker in a project's Build Output for Miniflare.
  *
  * @param root The directory that a relative `buildOutput` path resolves from
  * @param input The Worker to run, and its test values
- * @param sessions Collects the remote binding sessions started for the Worker
- * @returns The Worker's Miniflare options
+ * @returns The Worker's Miniflare options and remote bindings session
  */
-async function getWorkerOptions(
+async function resolveWorker(
 	root: string,
-	input: WorkerInput,
-	sessions: RemoteProxySessionData[]
-): Promise<WorkerOptions> {
+	input: WorkerInput
+): Promise<ResolvedWorker> {
 	const projectDir = path.resolve(root, toPath(input.buildOutput));
 	const buildOutput = await readBuildOutput(projectDir);
 	const builtWorkers = Object.values(buildOutput.workers);
@@ -152,6 +144,9 @@ async function getWorkerOptions(
 		mode,
 		logger: console,
 	});
+	// Before starting a remote session, so a failure here can't leave it running
+	const exports = getExports(worker);
+	const manifest = await getManifest(worker);
 
 	const session = await maybeStartOrUpdateRemoteProxySession(
 		{
@@ -173,27 +168,28 @@ async function getWorkerOptions(
 		),
 		{ cliDisplayName: "cf", logger: remoteBindingsLogger }
 	);
-	if (session !== null) {
-		sessions.push(session);
-	}
 
 	return {
-		config: {
-			...config,
-			env,
-			exports: getExports(worker),
-			manifest: await getManifest(worker),
-			assets: worker.assetsDir
-				? {
-						...assets,
-						directory: worker.assetsDir,
-						hasUserWorker: worker.bundleDir !== undefined,
-					}
-				: undefined,
+		options: {
+			config: {
+				...config,
+				env,
+				exports,
+				manifest,
+				assets: worker.assetsDir
+					? {
+							...assets,
+							directory: worker.assetsDir,
+							hasUserWorker: worker.bundleDir !== undefined,
+						}
+					: undefined,
+			},
+			dev: {
+				remoteProxyConnectionString:
+					session?.session.remoteProxyConnectionString,
+			},
 		},
-		dev: {
-			remoteProxyConnectionString: session?.session.remoteProxyConnectionString,
-		},
+		remoteProxySessionData: session,
 	};
 }
 

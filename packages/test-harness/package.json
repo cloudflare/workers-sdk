@@ -45,6 +45,14 @@
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
 	},
+	"peerDependencies": {
+		"@cloudflare/workers-types": "catalog:default"
+	},
+	"peerDependenciesMeta": {
+		"@cloudflare/workers-types": {
+			"optional": true
+		}
+	},
 	"workers-sdk": {
 		"prerelease": true
 	}

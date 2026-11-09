@@ -1,3 +1,4 @@
+import { setTimeout } from "node:timers/promises";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import {
 	mockConsoleMethods,
@@ -7,6 +8,13 @@ import {
 import { beforeEach, describe, it, onTestFinished, vi } from "vitest";
 import { createTestHarness } from "../index";
 import type { TestHarnessOptions } from "../index";
+import type {
+	CloudflareWorkersModule,
+	D1Database,
+	DurableObjectNamespace,
+	KVNamespace,
+	R2Bucket,
+} from "@cloudflare/workers-types";
 
 // Starting a real session needs Cloudflare credentials
 vi.mock("@cloudflare/remote-bindings", () => ({
@@ -76,6 +84,12 @@ describe("createTestHarness()", () => {
 		vi.mocked(maybeStartOrUpdateRemoteProxySession).mockResolvedValue(null);
 	});
 
+	function normalizeDebugOutput(output: string) {
+		return String(output)
+			.replace(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/gm, "<timestamp>")
+			.replace(/http:\/\/127\.0\.0\.1:\d+/g, "http://127.0.0.1:<port>");
+	}
+
 	it("runs a build's default Worker and its assets", async ({ expect }) => {
 		await writeBuild("app", {
 			default: {
@@ -112,6 +126,7 @@ describe("createTestHarness()", () => {
 		});
 		const harness = useTestHarness({ workers: [{ buildOutput: "app" }] });
 
+		await harness.listen();
 		expect(await (await harness.fetch("/")).text()).toBe("<h1>Hello</h1>");
 	});
 
@@ -178,6 +193,7 @@ describe("createTestHarness()", () => {
 			],
 		});
 
+		await harness.listen();
 		expect(await (await harness.fetch("/")).json()).toEqual({
 			TOKEN: "staging",
 			API_KEY: "from-test",
@@ -215,6 +231,7 @@ describe("createTestHarness()", () => {
 		const harness = useTestHarness({
 			workers: [{ buildOutput: "frontend" }, { buildOutput: "backend" }],
 		});
+		await harness.listen();
 		expect(await (await harness.fetch("/")).text()).toBe("frontend -> api");
 
 		const overridden = useTestHarness({
@@ -223,6 +240,7 @@ describe("createTestHarness()", () => {
 				{ buildOutput: "backend", name: "Admin" },
 			],
 		});
+		await overridden.listen();
 		expect(await (await overridden.fetch("/")).text()).toBe(
 			"frontend -> admin"
 		);
@@ -314,6 +332,7 @@ describe("createTestHarness()", () => {
 			],
 		});
 
+		await harness.listen();
 		expect(await (await harness.fetch("/")).json()).toEqual({
 			model: "@cf/test/model",
 			response: "mock-ai",
@@ -327,5 +346,828 @@ describe("createTestHarness()", () => {
 			expect.anything(),
 			expect.anything()
 		);
+	});
+
+	// Ported from Wrangler's e2e/createTestHarness.test.ts
+
+	it("starts with default server options", async ({ expect, onTestFailed }) => {
+		await writeBuild(".", {
+			default: {
+				config: { name: "hello-worker" },
+				script: `
+					export default {
+						fetch(request) {
+							if (new URL(request.url).pathname === "/url") {
+								return new Response(request.url);
+							}
+							return new Response("Hello World");
+						}
+					};
+				`,
+			},
+		});
+
+		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		onTestFinished(server.close);
+		onTestFailed(server.debug);
+
+		const { url } = await server.listen();
+
+		expect(url.protocol).toBe("http:");
+		expect(url.hostname).toBe("127.0.0.1");
+		expect(Number(url.port)).toBeGreaterThan(0);
+
+		const response = await fetch(url);
+		await expect(response.text()).resolves.toBe("Hello World");
+
+		const relativeServerResponse = await server.fetch("/url");
+		await expect(relativeServerResponse.text()).resolves.toBe(
+			new URL("/url", url).href
+		);
+
+		const relativeWorkerResponse = await server.getWorker().fetch("/url");
+		await expect(relativeWorkerResponse.text()).resolves.toBe(
+			new URL("/url", url).href
+		);
+	});
+
+	it("support fetching different workers from the same session", async ({
+		expect,
+	}) => {
+		await writeBuild(".", {
+			default: {
+				config: { name: "primary-worker" },
+				script: `
+					export default {
+						fetch() {
+							return new Response("Hello from Primary Worker");
+						}
+					};
+				`,
+			},
+			"auxiliary-worker": {
+				config: { name: "auxiliary-worker" },
+				script: `
+					export default {
+						fetch() {
+							return new Response("Hello from Auxiliary Worker");
+						}
+					};
+				`,
+			},
+		});
+
+		const server = createTestHarness({
+			workers: [
+				{ buildOutput: "." },
+				{ buildOutput: ".", name: "auxiliary-worker" },
+			],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const defaultServerResponse = await server.fetch("/");
+		await expect(defaultServerResponse.text()).resolves.toBe(
+			"Hello from Primary Worker"
+		);
+
+		const defaultWorkerResponse = await server.getWorker().fetch("/");
+		await expect(defaultWorkerResponse.text()).resolves.toBe(
+			"Hello from Primary Worker"
+		);
+
+		const primaryResponse = await server.getWorker("primary-worker").fetch("/");
+		await expect(primaryResponse.text()).resolves.toBe(
+			"Hello from Primary Worker"
+		);
+
+		const auxiliaryResponse = await server
+			.getWorker("auxiliary-worker")
+			.fetch("/");
+		await expect(auxiliaryResponse.text()).resolves.toBe(
+			"Hello from Auxiliary Worker"
+		);
+	});
+
+	it("exposes resource bindings scoped to each worker environment", async ({
+		expect,
+	}) => {
+		await writeBuild(".", {
+			default: {
+				config: {
+					name: "api-worker",
+					env: {
+						GREETING: { type: "text", value: "api" },
+						STORE: { type: "kv", id: "api-store" },
+						BUCKET: { type: "r2", name: "api-bucket" },
+					},
+				},
+				script: `
+					export default {
+						async fetch(request, env) {
+							const url = new URL(request.url);
+							if (url.pathname === "/write-storage") {
+								await env.STORE.put("key", "api");
+								await env.BUCKET.put("key", "api");
+								return new Response("written");
+							}
+
+							return new Response("ok");
+						}
+					};
+				`,
+			},
+			"admin-worker": {
+				config: {
+					name: "admin-worker",
+					env: {
+						GREETING: { type: "text", value: "admin" },
+						DATABASE: {
+							type: "d1",
+							id: "00000000-0000-0000-0000-000000000002",
+						},
+						OBJECT: {
+							type: "durable-object",
+							worker: "admin-worker",
+							exportName: "Counter",
+						},
+					},
+					exports: { Counter: { type: "durable-object", storage: "sqlite" } },
+				},
+				script: `
+					import { DurableObject } from "cloudflare:workers";
+
+					export class Counter extends DurableObject {
+						async fetch() {
+							const value = (await this.ctx.storage.get("value")) ?? 0;
+							const next = value + 1;
+							await this.ctx.storage.put("value", next);
+							return new Response(String(next));
+						}
+					}
+
+					export default {
+						async fetch(request, env) {
+							const url = new URL(request.url);
+							if (url.pathname === "/write-storage") {
+								await env.DATABASE.exec("CREATE TABLE entries (value TEXT);");
+								await env.DATABASE.prepare("INSERT INTO entries (value) VALUES (?);")
+									.bind("admin")
+									.run();
+
+								const id = env.OBJECT.idFromName("shared");
+								const stub = env.OBJECT.get(id);
+								return stub.fetch("http://example.com/");
+							}
+
+							return new Response("ok");
+						}
+					};
+				`,
+			},
+		});
+
+		const server = createTestHarness({
+			workers: [
+				{
+					buildOutput: ".",
+					secrets: { SECRET: "api-secret" },
+				},
+				{
+					buildOutput: ".",
+					name: "admin-worker",
+					secrets: { SECRET: "admin-secret" },
+				},
+			],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const api = server.getWorker<{
+			GREETING: string;
+			SECRET: string;
+			STORE: KVNamespace;
+			BUCKET: R2Bucket;
+		}>("api-worker");
+		const admin = server.getWorker<{
+			GREETING: string;
+			SECRET: string;
+			DATABASE: D1Database;
+			OBJECT: DurableObjectNamespace;
+		}>("admin-worker");
+		const apiWriteResponse = await api.fetch("/write-storage");
+		expect(await apiWriteResponse.text()).toBe("written");
+		const adminWriteResponse = await admin.fetch("/write-storage");
+		expect(await adminWriteResponse.text()).toBe("1");
+
+		const apiEnv = await api.getEnv();
+		const adminEnv = await admin.getEnv();
+
+		expect(apiEnv.GREETING).toBe("api");
+		expect(apiEnv.SECRET).toBe("api-secret");
+		expect(adminEnv.GREETING).toBe("admin");
+		expect(adminEnv.SECRET).toBe("admin-secret");
+
+		// KV Namespace
+		await expect(apiEnv.STORE.get("key")).resolves.toBe("api");
+
+		// R2 Bucket
+		const object = await apiEnv.BUCKET.get("key");
+
+		if (object === null) {
+			expect.fail("Expected R2 object to exist");
+		} else {
+			await expect(object.text()).resolves.toBe("api");
+		}
+
+		// D1 Database
+		await expect(
+			adminEnv.DATABASE.prepare("SELECT value FROM entries").first("value")
+		).resolves.toBe("admin");
+
+		// Durable Object Namespace
+		const adminStub = adminEnv.OBJECT.get(adminEnv.OBJECT.idFromName("shared"));
+		const adminResponse = await adminStub.fetch("http://example.com/");
+		await expect(adminResponse.text()).resolves.toBe("2");
+	});
+
+	it("supports service bindings between workers", async ({ expect }) => {
+		await writeBuild(".", {
+			default: {
+				config: {
+					name: "primary-worker",
+					env: { AUXILIARY: { type: "worker", worker: "auxiliary-worker" } },
+				},
+				script: `
+					export default {
+						async fetch(request, env) {
+							const url = new URL(request.url);
+							if (url.pathname === "/call-auxiliary") {
+								return env.AUXILIARY.fetch("http://auxiliary.example.com/from-primary");
+							}
+
+							return new Response("primary:" + url.pathname);
+						}
+					};
+				`,
+			},
+			"auxiliary-worker": {
+				config: {
+					name: "auxiliary-worker",
+					env: { PRIMARY: { type: "worker", worker: "primary-worker" } },
+				},
+				script: `
+					export default {
+						async fetch(request, env) {
+							const url = new URL(request.url);
+							if (url.pathname === "/call-primary") {
+								return env.PRIMARY.fetch("http://primary.example.com/from-auxiliary");
+							}
+
+							return new Response("auxiliary:" + url.pathname);
+						}
+					};
+				`,
+			},
+		});
+
+		const server = createTestHarness({
+			workers: [
+				{ buildOutput: "." },
+				{ buildOutput: ".", name: "auxiliary-worker" },
+			],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const auxiliaryResponse = await server
+			.getWorker("primary-worker")
+			.fetch("/call-auxiliary");
+		await expect(auxiliaryResponse.text()).resolves.toBe(
+			"auxiliary:/from-primary"
+		);
+
+		const primaryResponse = await server
+			.getWorker("auxiliary-worker")
+			.fetch("/call-primary");
+		await expect(primaryResponse.text()).resolves.toBe(
+			"primary:/from-auxiliary"
+		);
+	});
+
+	it("returns the default worker export", async ({ expect }) => {
+		await writeBuild(".", {
+			default: {
+				config: { name: "rpc-worker" },
+				script: `
+					import { WorkerEntrypoint } from "cloudflare:workers";
+
+					export default class RpcWorker extends WorkerEntrypoint {
+						getMessage(name) {
+							return "Hello " + name;
+						}
+					}
+				`,
+			},
+		});
+
+		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		interface RpcWorker extends CloudflareWorkersModule.WorkerEntrypoint {
+			getMessage(name: string): string;
+		}
+		type RpcWorkerConstructor = new (
+			...args: ConstructorParameters<
+				typeof CloudflareWorkersModule.WorkerEntrypoint
+			>
+		) => RpcWorker;
+		type RpcWorkerModule = { default: RpcWorkerConstructor };
+		const rpcWorker = server.getWorker<unknown, RpcWorkerModule>("rpc-worker");
+		const rpcExport = await rpcWorker.getExport();
+
+		expect(await rpcExport.getMessage("World")).toBe("Hello World");
+	});
+
+	it("uses runtime errors for missing binding override targets", async ({
+		expect,
+	}) => {
+		await writeBuild(".", {
+			default: {
+				config: { name: "app-worker", env: { AI: { type: "ai" } } },
+				script: `
+					export default {
+						async fetch(_request, env) {
+							return Response.json(await env.AI.run("@cf/test/model", {}));
+						}
+					};
+				`,
+			},
+		});
+
+		const server = createTestHarness({
+			workers: [{ buildOutput: ".", bindingOverrides: { AI: "missing-ai" } }],
+		});
+		onTestFinished(server.close);
+
+		await expect(server.listen()).rejects.toThrow("core:user:missing-ai");
+	});
+
+	it("rejects calls on unknown worker handles", async ({ expect }) => {
+		await writeBuild(".", {
+			default: {
+				config: { name: "primary-worker" },
+				script: `
+					export default {
+						fetch() {
+							return new Response("primary");
+						}
+					};
+				`,
+			},
+		});
+
+		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		await expect(
+			server.getWorker("unknown-worker").fetch("/")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[TypeError: Worker "unknown-worker" does not exist in this server.]`
+		);
+
+		await expect(
+			server.getWorker("unknown-worker").scheduled({
+				cron: "0 0 * * *",
+			})
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[TypeError: Worker "unknown-worker" does not exist in this server.]`
+		);
+	});
+
+	it("loads default .env files for build output workers", async ({
+		expect,
+	}) => {
+		await writeBuild(".", {
+			default: {
+				config: {
+					name: "env-worker",
+					env: {
+						CONFIG_VAR: { type: "text", value: "from-config" },
+						ENV_SECRET: { type: "secret" },
+					},
+				},
+				script: `
+					export default {
+						fetch(request, env) {
+							return Response.json({
+								CONFIG_VAR: env.CONFIG_VAR,
+								ENV_SECRET: env.ENV_SECRET,
+							});
+						}
+					};
+				`,
+			},
+		});
+		await seed({ ".env": "ENV_SECRET=from-env" });
+
+		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const response = await server.fetch("/");
+		await expect(response.json()).resolves.toEqual({
+			CONFIG_VAR: "from-config",
+			ENV_SECRET: "from-env",
+		});
+	});
+
+	it("loads default .dev.vars files for build output workers", async ({
+		expect,
+	}) => {
+		await writeBuild(".", {
+			default: {
+				config: {
+					name: "dev-vars-worker",
+					env: {
+						CONFIG_VAR: { type: "text", value: "from-config" },
+						SECRET: { type: "secret" },
+					},
+				},
+				script: `
+					export default {
+						fetch(request, env) {
+							return Response.json({
+								CONFIG_VAR: env.CONFIG_VAR,
+								SECRET: env.SECRET,
+							});
+						}
+					};
+				`,
+			},
+		});
+		await seed({
+			".env": "SECRET=from-env",
+			".dev.vars": "SECRET=from-dev-vars",
+		});
+
+		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const response = await server.fetch("/");
+		await expect(response.json()).resolves.toEqual({
+			CONFIG_VAR: "from-config",
+			SECRET: "from-dev-vars",
+		});
+	});
+
+	it(`supports "nodejs_compat" flag`, async ({ expect }) => {
+		await writeBuild(".", {
+			default: {
+				config: {
+					name: "nodejs-compat-worker",
+					compatibilityFlags: ["nodejs_compat"],
+				},
+				script: `
+					import { Stream } from "node:stream";
+
+					export default {
+						fetch() {
+							return new Response(String(typeof Stream));
+						}
+					};
+				`,
+			},
+		});
+
+		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const response = await server.fetch("/");
+		await expect(response.text()).resolves.toBe("function");
+	});
+
+	it("uses ephemeral storage by default", async ({ expect }) => {
+		await writeBuild(".", {
+			default: {
+				config: {
+					name: "ephemeral-storage-worker",
+					env: { STORE: { type: "kv", id: "test-store" } },
+				},
+				script: `
+					export default {
+						async fetch(request, env) {
+							const url = new URL(request.url);
+							if (url.pathname === "/set") {
+								await env.STORE.put("key", "value");
+								return new Response("stored");
+							}
+							return new Response((await env.STORE.get("key")) ?? "missing");
+						}
+					};
+				`,
+			},
+		});
+
+		const firstServer = createTestHarness({ workers: [{ buildOutput: "." }] });
+		onTestFinished(firstServer.close);
+
+		await firstServer.listen();
+
+		const setResponse = await firstServer.fetch("/set");
+		await expect(setResponse.text()).resolves.toBe("stored");
+
+		const storedResponse = await firstServer.fetch("/");
+		await expect(storedResponse.text()).resolves.toBe("value");
+
+		await firstServer.close();
+
+		const secondServer = createTestHarness({ workers: [{ buildOutput: "." }] });
+		onTestFinished(secondServer.close);
+
+		await secondServer.listen();
+
+		const resetResponse = await secondServer.fetch("/");
+		await expect(resetResponse.text()).resolves.toBe("missing");
+	});
+
+	it("triggers scheduled handlers", async ({ expect }) => {
+		await writeBuild(".", {
+			default: {
+				config: { name: "scheduled-worker" },
+				script: `
+					let lastCron = "missing";
+
+					export default {
+						fetch() {
+							return new Response(lastCron);
+						},
+						scheduled(event) {
+							lastCron = event.cron;
+						}
+					};
+				`,
+			},
+		});
+
+		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const beforeScheduled = await server.fetch("/");
+		await expect(beforeScheduled.text()).resolves.toBe("missing");
+
+		await expect(
+			server.getWorker().scheduled({
+				cron: "* * * * *",
+				scheduledTime: new Date(1_700_000_100_000),
+			})
+		).resolves.toEqual({ outcome: "ok", noRetry: false });
+
+		const afterScheduled = await server.fetch("/");
+		await expect(afterScheduled.text()).resolves.toBe("* * * * *");
+
+		server.debug();
+		expect(normalizeDebugOutput(std.getAndClearOut())).toMatchInlineSnapshot(`
+			"--------------- debug logs ---------------
+			<timestamp> [server] startup - started
+			<timestamp> [server] startup - completed
+			<timestamp> [server] fetch - GET / - started
+			<timestamp> [server] fetch - GET / - 200
+			<timestamp> [server] [scheduled-worker] scheduled - GET /cdn-cgi/local/scheduled?format=json&cron=*+*+*+*+*&time=1700000100000 - started
+			<timestamp> [server] [scheduled-worker] scheduled - GET /cdn-cgi/local/scheduled?format=json&cron=*+*+*+*+*&time=1700000100000 - 200
+			<timestamp> [server] fetch - GET / - started
+			<timestamp> [server] fetch - GET / - 200"
+		`);
+	});
+
+	it("triggers email handlers", async ({ expect }) => {
+		await writeBuild(".", {
+			default: {
+				config: { name: "email-worker" },
+				script: `
+					import { EmailMessage } from "cloudflare:email";
+
+					export default {
+						async email(message) {
+							const mode = message.to.split("@")[0];
+							if (mode === "rejected") {
+								message.setReject("blocked sender");
+								return;
+							}
+
+							await message.forward(
+								"archive@example.com",
+								new Headers({ "X-Test": mode })
+							);
+							await message.reply(new EmailMessage(
+								\`reply-\${mode}@example.com\`,
+								message.from,
+								\`From: reply-\${mode}@example.com\r\nTo: \${message.from}\r\nIn-Reply-To: <\${mode}@example.com>\r\nMessage-ID: <reply-\${mode}@example.com>\r\nContent-Type: text/plain\r\n\r\nReply for \${mode}\r\n\`
+							));
+
+							if (mode === "exception") {
+								message.setReject("triggered exception");
+								throw new Error("sensitive handler error");
+							}
+						}
+					};
+				`,
+			},
+		});
+
+		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		onTestFinished(server.close);
+		await server.listen();
+		const worker = server.getWorker();
+
+		function createRawEmail(mode: string) {
+			return `From: sender <sender@example.com>\r\nTo: ${mode} <${mode}@example.com>\r\nMessage-ID: <${mode}@example.com>\r\nContent-Type: text/plain\r\n\r\nMessage for ${mode}\r\n`;
+		}
+
+		await expect(
+			worker.email({
+				from: "sender@example.com",
+				to: "ok@example.com",
+				raw: createRawEmail("ok"),
+			})
+		).resolves.toEqual({
+			outcome: "ok",
+			forwards: [
+				{
+					recipient: "archive@example.com",
+					headers: [["x-test", "ok"]],
+					messageId: expect.any(String),
+				},
+			],
+			replies: [
+				{
+					messageId: expect.any(String),
+					sender: "reply-ok@example.com",
+					raw: expect.stringContaining("Reply for ok"),
+				},
+			],
+			events: [
+				{
+					type: "received",
+					timestamp: expect.any(String),
+				},
+				{
+					type: "forward",
+					timestamp: expect.any(String),
+					messageId: expect.any(String),
+				},
+				{
+					type: "reply",
+					timestamp: expect.any(String),
+					messageId: expect.any(String),
+				},
+			],
+		});
+
+		await expect(
+			worker.email({
+				from: "sender@example.com",
+				to: "rejected@example.com",
+				raw: createRawEmail("rejected"),
+			})
+		).resolves.toEqual({
+			outcome: "ok",
+			rejectReason: "blocked sender",
+			forwards: [],
+			replies: [],
+			events: [
+				{ type: "received", timestamp: expect.any(String) },
+				{ type: "reject", timestamp: expect.any(String) },
+			],
+		});
+
+		await expect(
+			worker.email({
+				from: "sender@example.com",
+				to: "exception@example.com",
+				raw: createRawEmail("exception"),
+			})
+		).resolves.toEqual({
+			outcome: "exception",
+			rejectReason: "triggered exception",
+			forwards: [
+				{
+					recipient: "archive@example.com",
+					headers: [["x-test", "exception"]],
+					messageId: expect.any(String),
+				},
+			],
+			replies: [
+				{
+					messageId: expect.any(String),
+					sender: "reply-exception@example.com",
+					raw: expect.stringContaining("Reply for exception"),
+				},
+			],
+			events: [
+				{
+					type: "received",
+					timestamp: expect.any(String),
+				},
+				{
+					type: "forward",
+					timestamp: expect.any(String),
+					messageId: expect.any(String),
+				},
+				{
+					type: "reply",
+					timestamp: expect.any(String),
+					messageId: expect.any(String),
+				},
+				{ type: "reject", timestamp: expect.any(String) },
+			],
+		});
+
+		await expect(
+			worker.email({
+				from: "sender@example.com",
+				to: "invalid@example.com",
+				raw: "From: sender@example.com\r\nTo: invalid@example.com\r\n\r\nInvalid",
+			})
+		).rejects.toThrow(
+			"Failed to dispatch email event: Email could not be parsed: invalid or no message id provided"
+		);
+
+		await expect(
+			worker.email({
+				from: "sender@example.com",
+				to: "stream@example.com",
+				raw: new ReadableStream<Uint8Array>({
+					start(controller) {
+						const streamRaw = createRawEmail("stream");
+						controller.enqueue(new TextEncoder().encode(streamRaw));
+						controller.close();
+					},
+				}),
+			})
+		).resolves.toMatchObject({ outcome: "ok" });
+	});
+
+	it("does not reload when the Build Output changes", async ({ expect }) => {
+		const respondWith = (text: string) => `
+			export default {
+				fetch() {
+					return new Response(${JSON.stringify(text)});
+				}
+			};
+		`;
+		await writeBuild(".", {
+			default: {
+				config: { name: "create-server-test" },
+				script: respondWith("Hello World"),
+			},
+		});
+
+		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const response1 = await server.fetch("/");
+		await expect(response1.text()).resolves.toBe("Hello World");
+
+		await writeBuild(".", {
+			default: {
+				config: { name: "create-server-test" },
+				script: respondWith("Greeting"),
+			},
+		});
+
+		// Wait a moment to ensure that if the server were going to reload, it would have done so by now
+		await setTimeout(1000);
+
+		const response2 = await server.fetch("/");
+		await expect(response2.text()).resolves.toBe("Hello World");
+
+		await writeBuild(".", {
+			default: {
+				config: { name: "create-server-test" },
+				script: respondWith("Bonjour"),
+			},
+		});
+
+		await setTimeout(1000);
+
+		const response3 = await server.fetch("/");
+		await expect(response3.text()).resolves.toBe("Hello World");
 	});
 });
