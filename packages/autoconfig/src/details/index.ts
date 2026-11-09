@@ -202,9 +202,60 @@ export async function getDetailsForAutoConfig({
 		logger.debug("No package.json found when running autoconfig");
 	}
 
+	let outputDir = configured
+		? undefined
+		: requestedOutputDir !== undefined && framework.id === staticFramework.id
+			? normalizeOutputDir(projectPath, requestedOutputDir)
+			: (detectedFramework.dist ?? (await findAssetsDir(projectPath)));
+
+	// Check the detected project's assets before a native Vite fallback can
+	// replace its framework and default output directory.
+	// A `functions` directory next to static files in the project root usually
+	// means a Cloudflare Pages project using Pages Functions. Interactively the
+	// user is asked whether it is a Pages project; non-interactive runs assume it
+	// is not and continue as a static site, which would deploy the project root
+	// as assets and silently drop the Functions (the API routes). Stop instead.
+	// This checks the framework class rather than the detected id, because
+	// detected frameworks missing from `allFrameworksInfos` are also configured as
+	// static sites and would deploy the project root the same way.
+	if (
+		!configured &&
+		framework.id === staticFramework.id &&
+		(context.isNonInteractiveOrCI?.() ?? false) &&
+		outputDir !== undefined &&
+		resolve(projectPath, outputDir) === resolve(projectPath) &&
+		(await getPathStats(join(projectPath, "functions")))?.isDirectory()
+	) {
+		const configFile =
+			target === "cf"
+				? `a \`${CLOUDFLARE_CONFIG_FILE}\` file`
+				: "a Wrangler configuration file";
+		throw new AutoConfigDetectionError(
+			"This project has a `functions` directory and static files in its root, which looks like a Cloudflare Pages project using Pages Functions. " +
+				"Automatic configuration cannot migrate Pages Functions to Workers yet, and deploying the project root as static assets would leave the Functions undeployed.\n" +
+				"If `functions` contains Pages Functions, move the static files into a subdirectory (for example `public/`) and deploy with `wrangler pages deploy public --project-name <name>`, " +
+				"or migrate the Functions to a Worker: https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/\n" +
+				`If \`functions\` is not Pages Functions, move the static files into a subdirectory or add ${configFile} for the Worker.`,
+			{
+				telemetryMessage: "autoconfig details pages functions with root assets",
+				frameworkId: framework.id,
+				configured,
+			}
+		);
+	}
+
+	// Native execution must not turn an unsupported project's setup into a
+	// supported Vite migration. An existing configuration can opt into execution.
+	const frameworkInfo = getAllFrameworksInfos(target).find(
+		({ id }) => id === detectedFramework.framework.id
+	);
+	const canConfigureWithCf =
+		frameworkInfo?.supported === true && frameworkInfo.supportsCf;
 	const fallbackCommands =
 		target === "cf" &&
 		!useStaticAssets &&
+		detectedFramework.framework.id !== "cloudflare-pages" &&
+		(configured || canConfigureWithCf) &&
 		(!detectedFramework.devCommand || !detectedFramework.buildCommand)
 			? getViteFallbackCommands(projectPath, packageJson)
 			: undefined;
@@ -216,11 +267,9 @@ export async function getDetailsForAutoConfig({
 		framework = getFrameworkClassInstance("vite", target);
 	}
 
-	const outputDir =
-		requestedOutputDir !== undefined && framework.id === staticFramework.id
-			? normalizeOutputDir(projectPath, requestedOutputDir)
-			: (detectedFramework?.dist ??
-				(fallbackCommands ? "dist" : await findAssetsDir(projectPath)));
+	if (fallbackCommands && detectedFramework.dist === undefined) {
+		outputDir = "dist";
+	}
 
 	const baseDetails = {
 		projectPath,
@@ -266,38 +315,6 @@ export async function getDetailsForAutoConfig({
 			frameworkId: framework.id,
 			configured,
 		});
-	}
-
-	// A `functions` directory next to static files in the project root usually
-	// means a Cloudflare Pages project using Pages Functions. Interactively the
-	// user is asked whether it is a Pages project; non-interactive runs assume it
-	// is not and continue as a static site, which would deploy the project root
-	// as assets and silently drop the Functions (the API routes). Stop instead.
-	// This checks the framework class rather than the detected id, because
-	// detected frameworks missing from `allFrameworksInfos` are also configured as
-	// static sites and would deploy the project root the same way.
-	if (
-		framework.id === staticFramework.id &&
-		(context.isNonInteractiveOrCI?.() ?? false) &&
-		resolve(projectPath, outputDir) === resolve(projectPath) &&
-		(await getPathStats(join(projectPath, "functions")))?.isDirectory()
-	) {
-		const configFile =
-			target === "cf"
-				? `a \`${CLOUDFLARE_CONFIG_FILE}\` file`
-				: "a Wrangler configuration file";
-		throw new AutoConfigDetectionError(
-			"This project has a `functions` directory and static files in its root, which looks like a Cloudflare Pages project using Pages Functions. " +
-				"Automatic configuration cannot migrate Pages Functions to Workers yet, and deploying the project root as static assets would leave the Functions undeployed.\n" +
-				"If `functions` contains Pages Functions, move the static files into a subdirectory (for example `public/`) and deploy with `wrangler pages deploy public --project-name <name>`, " +
-				"or migrate the Functions to a Worker: https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/\n" +
-				`If \`functions\` is not Pages Functions, move the static files into a subdirectory or add ${configFile} for the Worker.`,
-			{
-				telemetryMessage: "autoconfig details pages functions with root assets",
-				frameworkId: framework.id,
-				configured,
-			}
-		);
 	}
 
 	return {
