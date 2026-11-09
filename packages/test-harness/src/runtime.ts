@@ -356,14 +356,26 @@ async function prepareContainers(
 		return undefined;
 	}
 
-	await prepareContainerImages({
+	const preparation = {
 		dockerPath: getDockerPath(),
 		containerOptions: plan.containerOptions,
 		settings,
-		logger: remoteBindingsLogger,
-	});
+	};
+	// As Wrangler skips an unchanged preparation, so listen(), reset() and
+	// update() don't pull the same images again
+	const preparationKey = JSON.stringify(preparation);
+	if (!preparedContainerImages.has(preparationKey)) {
+		await prepareContainerImages({
+			...preparation,
+			logger: remoteBindingsLogger,
+		});
+		preparedContainerImages.add(preparationKey);
+	}
 	return plan.containerRuntimeOptions;
 }
+
+/** The container image preparations done in this process */
+const preparedContainerImages = new Set<string>();
 
 /**
  * Maps a Worker's exports to Miniflare's, adding the local runtime options of

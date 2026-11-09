@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import net from "node:net";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { isDockerRunning } from "@cloudflare/containers-shared";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import {
@@ -28,6 +29,10 @@ import type { AddressInfo } from "node:net";
 vi.mock("@cloudflare/remote-bindings", () => ({
 	maybeStartOrUpdateRemoteProxySession: vi.fn(),
 }));
+
+// CI always has Docker; local runs without it skip the container test
+const isDockerAvailable =
+	process.env.CI === "true" || (await isDockerRunning(getDockerPath()));
 
 type BuildWorker = {
 	config: Record<string, unknown>;
@@ -150,10 +155,11 @@ describe("createTestHarness()", () => {
 	});
 
 	// As the Vite plugin's container tests: images are linux/amd64, which CI
-	// runs on Linux only, and local runs need Docker
+	// runs on Linux only, and local runs without Docker skip
 	it.skipIf(
 		(process.platform !== "linux" && process.env.CI === "true") ||
-			process.env.LOCAL_TESTS_WITHOUT_DOCKER === "true"
+			process.env.LOCAL_TESTS_WITHOUT_DOCKER === "true" ||
+			!isDockerAvailable
 	)(
 		"runs a Container-backed Durable Object from a locally built image",
 		{ timeout: 180_000 },
@@ -438,7 +444,7 @@ describe("createTestHarness()", () => {
 		);
 	});
 
-	it("connects a Hyperdrive binding to its local connection string", async ({
+	it("connects a Hyperdrive binding to its local connection string from .env", async ({
 		expect,
 	}) => {
 		// Stands in for the database: with `sslmode=disable`, workerd connects
@@ -457,15 +463,7 @@ describe("createTestHarness()", () => {
 			default: {
 				config: {
 					name: "hyperdrive-worker",
-					env: {
-						HYPERDRIVE: {
-							type: "hyperdrive",
-							id: "hyperdrive-id",
-							dev: {
-								connectionString: `postgres://user:password@127.0.0.1:${port}/app?sslmode=disable`,
-							},
-						},
-					},
+					env: { HYPERDRIVE: { type: "hyperdrive", id: "hyperdrive-id" } },
 				},
 				script: `export default {
 					async fetch(request, env) {
@@ -475,6 +473,9 @@ describe("createTestHarness()", () => {
 					},
 				};`,
 			},
+		});
+		await seed({
+			".env": `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE=postgres://user:password@127.0.0.1:${port}/app?sslmode=disable`,
 		});
 		const harness = useTestHarness({ workers: [{ buildOutput: "." }] });
 
@@ -1295,8 +1296,10 @@ describe("createTestHarness()", () => {
 				INSERT INTO settings (key, value) VALUES ('greeting', 'Hello D1');
 			`,
 		});
-		// Wrangler's test sets these as migrations_pattern and migrations_table
+		// Wrangler's test sets these as migrations_dir, migrations_pattern and
+		// migrations_table
 		const migrationsOptions = {
+			dir: "migrations",
 			pattern: "migrations/*/migration.sql",
 			table: "custom_migrations",
 		};
@@ -1369,6 +1372,54 @@ describe("createTestHarness()", () => {
 		await expect(
 			env.DATABASE.prepare("SELECT name FROM d1_migrations").first("name")
 		).resolves.toBe("0001_settings.sql");
+	});
+
+	it("checks D1 migration options as `cf d1 migrations apply` does", async ({
+		expect,
+	}) => {
+		await writeBuild("app", {
+			default: {
+				config: { name: "d1-worker", env: { DATABASE: { type: "d1" } } },
+				script: `export default {};`,
+			},
+		});
+		await seed({
+			"app/migrations/0001_init/migration.sql":
+				"CREATE TABLE settings (key TEXT);",
+		});
+
+		const server = createTestHarness({ workers: [{ buildOutput: "app" }] });
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const worker = server.getWorker<{ DATABASE: D1Database }>();
+		await expect(
+			worker.applyD1Migrations("DATABASE", {
+				pattern: "migrations/*/migration.sql",
+			})
+		).rejects.toThrow(
+			'You have set `pattern: "migrations/*/migration.sql"` but have not set `dir`.'
+		);
+		await expect(
+			worker.applyD1Migrations("DATABASE", {
+				dir: "db",
+				pattern: "migrations/*/migration.sql",
+			})
+		).rejects.toThrow('must start with "db/" to match `dir: "db"`');
+		// Neither got as far as creating the migrations table
+		const env = await worker.getEnv();
+		await expect(
+			env.DATABASE.prepare(
+				"SELECT name FROM sqlite_master WHERE name = 'd1_migrations'"
+			).first()
+		).resolves.toBeNull();
+
+		// The default pattern doesn't match Drizzle's nested layout
+		await worker.applyD1Migrations("DATABASE");
+		expect(std.warn).toContain(
+			'set `dir: "migrations"` and `pattern: "migrations/*/migration.sql"`'
+		);
 	});
 
 	it("supports service bindings between workers", async ({ expect }) => {

@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import fs from "node:fs";
-import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
 import {
 	getD1MigrationFiles,
@@ -15,11 +14,11 @@ import {
 import { CorePaths, Headers, Miniflare, Request } from "miniflare";
 import {
 	buildMigrationQuery,
-	DEFAULT_MIGRATION_PATH,
-	DEFAULT_MIGRATION_TABLE,
+	findDrizzleLayoutHint,
 	getCreateMigrationsTableQuery,
 	getListAppliedMigrationsQuery,
 	getUnappliedMigrationNames,
+	resolveMigrationsConfig,
 } from "./d1-migrations";
 import { BUN_UNSUPPORTED_MESSAGE, isBun } from "./is-bun";
 import { disposeRemoteProxySessions, resolveWorkerInputs } from "./runtime";
@@ -266,9 +265,10 @@ export type WorkerHandle<
 			 */
 			dir?: string;
 			/**
-			 * Glob for the migration files, relative to the same project directory.
-			 * It must start with `dir`. Defaults to `<dir>/*.sql`; Drizzle's nested
-			 * layout uses `<dir>/*\/migration.sql`.
+			 * Glob for the migration files. It starts with `dir`, so it's relative
+			 * to the same project directory, or absolute when `dir` is. Defaults to
+			 * `<dir>/*.sql`. Set `dir` with it, as for nested layouts such as
+			 * Drizzle's.
 			 */
 			pattern?: string;
 			/**
@@ -564,8 +564,8 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 	}
 
 	function getMiniflareOptions(workers: ResolvedWorker[]): MiniflareOptions {
-		const hasContainers = workers.some(({ options }) =>
-			Object.values(options.config.exports ?? {}).some(
+		const hasContainers = workers.some((worker) =>
+			Object.values(worker.options.config.exports ?? {}).some(
 				(workerExport) =>
 					"container" in workerExport && workerExport.container !== undefined
 			)
@@ -1028,14 +1028,11 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					);
 					// Build Output has no migrations config, so these are options, as in
 					// `cf d1 migrations apply --dir --pattern --table`
-					const migrationsDir =
-						migrationsOptions?.dir ?? DEFAULT_MIGRATION_PATH;
-					const migrationsTableName =
-						migrationsOptions?.table ?? DEFAULT_MIGRATION_TABLE;
-					const resolvedMigrationsPath = path.resolve(
-						projectDir,
-						migrationsDir
-					);
+					const migrationConfig = resolveMigrationsConfig({
+						...migrationsOptions,
+						cwd: projectDir,
+					});
+					const resolvedMigrationsPath = migrationConfig.migrationsPath;
 
 					debugLog(`d1 migrations - ${bindingName} - started`, workerName);
 
@@ -1051,16 +1048,33 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 						}
 
 						await database
-							.prepare(getCreateMigrationsTableQuery(migrationsTableName))
+							.prepare(
+								getCreateMigrationsTableQuery(
+									migrationConfig.migrationsTableName
+								)
+							)
 							.run();
 						const appliedMigrationNamesResult = await database
-							.prepare(getListAppliedMigrationsQuery(migrationsTableName))
+							.prepare(
+								getListAppliedMigrationsQuery(
+									migrationConfig.migrationsTableName
+								)
+							)
 							.all<{ name: string }>();
 						const migrationNames = getD1MigrationFiles({
 							projectPath: projectDir,
-							migrationsDir,
-							migrationsPattern: migrationsOptions?.pattern,
+							migrationsDir: migrationConfig.migrationsDir,
+							migrationsPattern: migrationConfig.migrationsPattern,
 						}).map((file) => file.name);
+						if (migrationNames.length === 0) {
+							const hint = findDrizzleLayoutHint(migrationConfig, projectDir);
+							if (hint !== undefined) {
+								console.warn(
+									`No files matched the pattern "${migrationConfig.migrationsPattern}", but "${hint}" does match. ` +
+										`If an ORM such as drizzle manages your migrations, set \`dir: "${migrationConfig.migrationsDir}"\` and \`pattern: "${hint}"\`.`
+								);
+							}
+						}
 						const unappliedMigrationNames = getUnappliedMigrationNames(
 							migrationNames,
 							appliedMigrationNamesResult.results.map((item) => item.name)
@@ -1069,7 +1083,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 							const query = buildMigrationQuery({
 								migrationName,
 								migrationsPath: resolvedMigrationsPath,
-								migrationsTableName,
+								migrationsTableName: migrationConfig.migrationsTableName,
 							});
 							await database.batch(
 								splitSqlQuery(query).map((part) => database.prepare(part))

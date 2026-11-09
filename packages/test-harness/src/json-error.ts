@@ -14,7 +14,7 @@ type Manifest = NonNullable<WorkerOptions["config"]["manifest"]>;
  */
 export function withJsonErrors(manifest: Manifest): Manifest {
 	if (manifest.modules[manifest.mainModule]?.type !== "esm") {
-		// Only an ES module can import the main module and re-export it
+		// Only an ES main module can be re-exported by the wrapper
 		return manifest;
 	}
 
