@@ -592,11 +592,12 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 							/**
 							 * Miniflare passes its own undici-based Request here. Pass the URL as
 							 * RequestInfo and the request as RequestInit so method, headers, body,
-							 * and duplex are preserved by global fetch.
+							 * and duplex are preserved by global fetch. Make that a global Request
+							 * first: MSW's fetch interceptor spreads `init`, which drops the
+							 * headers of a Request passed as `init`.
 							 */
 							return globalThis.fetch(
-								request.url,
-								request
+								new globalThis.Request(request.url, request)
 								// Miniflare takes Node's Response too, but its type only names its own
 							) as Promise<unknown> as Promise<Response>;
 						},

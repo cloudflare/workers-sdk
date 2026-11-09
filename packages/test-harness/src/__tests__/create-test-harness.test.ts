@@ -561,6 +561,42 @@ describe("createTestHarness()", () => {
 		expect(await (await harness.fetch("/")).text()).toBe("Hello from Python");
 	});
 
+	it("keeps the headers of a Worker's outgoing requests under MSW", async ({
+		expect,
+	}) => {
+		const network = setupServer(
+			http.post("http://upstream.example/", async ({ request }) => {
+				return HttpResponse.json({
+					header: request.headers.get("X-From-Worker"),
+					body: await request.text(),
+				});
+			})
+		);
+		network.listen({ onUnhandledRequest: "error" });
+		onTestFinished(() => network.close());
+		await writeBuild(".", {
+			default: {
+				config: { name: "outbound-worker" },
+				script: `export default {
+					fetch() {
+						return fetch("http://upstream.example/", {
+							method: "POST",
+							headers: { "X-From-Worker": "yes" },
+							body: "hello",
+						});
+					},
+				};`,
+			},
+		});
+		const harness = useTestHarness({ workers: [{ buildOutput: "." }] });
+
+		await harness.listen();
+		expect(await (await harness.fetch("/")).json()).toEqual({
+			header: "yes",
+			body: "hello",
+		});
+	});
+
 	// Ported from Wrangler's e2e/createTestHarness.test.ts
 
 	it("starts with default server options", async ({ expect, onTestFailed }) => {
