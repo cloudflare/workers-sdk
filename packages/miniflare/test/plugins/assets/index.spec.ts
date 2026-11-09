@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { Miniflare, MiniflareCoreError } from "miniflare";
 import { test } from "vitest";
@@ -75,6 +76,38 @@ test("starts without error when assets directory does not exist", async ({
 	const res = await mf.dispatchFetch("http://example.com/test.txt");
 	expect(res.status).toBe(404);
 	await res.arrayBuffer(); // consume body to avoid leaks
+});
+
+test("removes the placeholder directory for a missing assets directory on dispose", async ({
+	expect,
+	onTestFinished,
+}) => {
+	// Use a private TMPDIR so we only see the temporary directories this
+	// instance creates, and can check they are all cleaned up.
+	const privateTmp = await fs.mkdtemp(
+		path.join(os.tmpdir(), "miniflare-assets-cleanup-")
+	);
+	const osModule = os as typeof os & { tmpdir: () => string };
+	const realTmpdir = osModule.tmpdir;
+	osModule.tmpdir = () => privateTmp;
+	onTestFinished(async () => {
+		osModule.tmpdir = realTmpdir;
+		await fs.rm(privateTmp, { recursive: true, force: true });
+	});
+
+	const tmp = await useTmp();
+	// Create a path that does not exist on disk
+	const nonExistentDir = path.join(tmp, "does-not-exist");
+
+	const mf = new Miniflare(makeOptions(nonExistentDir));
+	await mf.ready;
+	await disposeWithRetry(mf);
+
+	// `dispose()` should clean up the `miniflare-<hex>` instance root *and*
+	// the `miniflare-assets-<hex>` placeholder created for the missing
+	// assets directory (https://github.com/cloudflare/workers-sdk/issues/16805).
+	const entries = await fs.readdir(privateTmp);
+	expect(entries.filter((entry) => entry.startsWith("miniflare-"))).toEqual([]);
 });
 
 test("starts without error when assets directory is empty", async ({
