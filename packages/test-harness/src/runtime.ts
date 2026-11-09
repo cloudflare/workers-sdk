@@ -1,10 +1,7 @@
 import * as fsp from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-	DEFAULT_WORKER_DIRECTORY_NAME,
-	readBuildOutput,
-} from "@cloudflare/build-output-utils";
+import { readBuildOutput } from "@cloudflare/build-output-utils";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import { Miniflare, resolveLocalBindings } from "miniflare";
@@ -105,11 +102,14 @@ async function getWorkerOptions(
 ): Promise<WorkerOptions> {
 	const projectDir = path.resolve(root, toPath(input.buildOutput));
 	const buildOutput = await readBuildOutput(projectDir);
-	const directoryName = input.name ?? DEFAULT_WORKER_DIRECTORY_NAME;
-	const worker = buildOutput.workers[directoryName];
+	const builtWorkers = Object.values(buildOutput.workers);
+	const worker =
+		input.name === undefined
+			? buildOutput.workers.default
+			: builtWorkers.find(({ config }) => config.name === input.name);
 	if (worker === undefined) {
 		throw new Error(
-			`No Worker named "${directoryName}" in the Build Output at ${projectDir}. It has: ${Object.keys(buildOutput.workers).join(", ")}.`
+			`No Worker named "${input.name}" in the Build Output at ${projectDir}. It has: ${builtWorkers.map(({ config }) => config.name).join(", ")}.`
 		);
 	}
 

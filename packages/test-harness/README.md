@@ -19,7 +19,7 @@ await harness.close();
 
 Test your production build: the harness runs the Build Output as it is, and never builds. Use `vars`, `secrets` and `bindingOverrides` for test values.
 
-- **Several Workers:** add one entry per Worker. The first is the primary Worker. Builds may come from different tools. Use `name` to pick a non-default Worker in a build, from `workers/<name>/` in its Build Output.
+- **Several Workers:** add one entry per Worker. The first is the primary Worker. Builds may come from different tools. Use `name` to pick a build's non-default Worker by its name.
 - **Secrets** are read from `.dev.vars` or `.env` files in the build's project folder, for the mode the build ran in, as in `vite preview`. `secrets` overrides them.
 - **Remote bindings** connect to the real resources on your account.
 

@@ -21,8 +21,8 @@ export type WorkerInput = {
 	 */
 	buildOutput: string | URL;
 	/**
-	 * The Worker to run from that build, from `workers/<name>/` in its Build
-	 * Output. Defaults to the build's default Worker.
+	 * The name of the Worker to run from that build. Defaults to the build's
+	 * default Worker.
 	 */
 	name?: string;
 	/**

@@ -172,7 +172,8 @@ describe("createTestHarness()", () => {
 			`export default { fetch() { return new Response(${JSON.stringify(text)}); } };`;
 		await writeBuild("backend", {
 			default: { config: { name: "api" }, script: respondWith("api") },
-			admin: { config: { name: "admin" }, script: respondWith("admin") },
+			// Build tools lowercase the folder name
+			admin: { config: { name: "Admin" }, script: respondWith("admin") },
 		});
 
 		const harness = useTestHarness({
@@ -182,8 +183,8 @@ describe("createTestHarness()", () => {
 
 		const overridden = useTestHarness({
 			workers: [
-				{ buildOutput: "frontend", bindingOverrides: { API: "admin" } },
-				{ buildOutput: "backend", name: "admin" },
+				{ buildOutput: "frontend", bindingOverrides: { API: "Admin" } },
+				{ buildOutput: "backend", name: "Admin" },
 			],
 		});
 		expect(await (await overridden.fetch("/")).text()).toBe(
