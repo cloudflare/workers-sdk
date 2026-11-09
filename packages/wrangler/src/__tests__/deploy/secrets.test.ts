@@ -514,6 +514,37 @@ See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-
 			);
 		});
 
+		it("should error when a required secret in a dotenv --secrets-file expands to an empty value", async ({
+			expect,
+		}) => {
+			vi.stubEnv("SET_SECRET", "value1");
+			vi.stubEnv("UNSET_SECRET", undefined);
+			writeWranglerConfig({
+				name: workerName,
+				main: "./index.js",
+				secrets: { required: ["SECRET1", "SECRET2"] },
+			});
+
+			const secretsFile = ".env.production";
+			fs.writeFileSync(
+				secretsFile,
+				"SECRET1=${SET_SECRET}\nSECRET2=${UNSET_SECRET}\nOPTIONAL=\n"
+			);
+
+			mockServiceScriptData({
+				scriptName: workerName,
+				script: { id: workerName },
+			});
+			mockSubDomainRequest();
+
+			await expect(runWrangler(`deploy --secrets-file ${secretsFile}`)).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The following required secrets have empty values in the secrets file: SECRET2
+				Required secrets must not be empty. Note that \`\${VAR}\` references to unset environment variables expand to empty strings.
+				Set a non-empty value for each, or remove them from the secrets file to keep the value already set on the Worker.]
+			`);
+		});
+
 		it("should use inherit bindings only for required secrets not provided by --secrets-file", async () => {
 			writeWranglerConfig({
 				name: workerName,

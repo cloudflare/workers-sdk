@@ -26,6 +26,8 @@ type MissingSecretsOptions =
  * the Worker doesn't exist (versions upload cannot create new Workers).
  * Secrets already provided (e.g. via --secrets-file) are excluded since
  * they are part of the upload and don't need to be inherited.
+ * Required secrets provided with an empty value are rejected, since they would
+ * otherwise overwrite the deployed secret with an empty string.
  */
 export function addRequiredSecretsInheritBindings(
 	config: Config,
@@ -34,6 +36,20 @@ export function addRequiredSecretsInheritBindings(
 ): void {
 	if (!config.secrets?.required?.length) {
 		return;
+	}
+
+	const emptySecrets = config.secrets.required.filter((secretName) => {
+		const binding = bindings[secretName];
+		return binding?.type === "secret_text" && binding.value === "";
+	});
+
+	if (emptySecrets.length > 0) {
+		throw new UserError(
+			`The following required secrets have empty values in the secrets file: ${emptySecrets.join(", ")}\n` +
+				`Required secrets must not be empty. Note that \`\${VAR}\` references to unset environment variables expand to empty strings.\n` +
+				`Set a non-empty value for each, or remove them from the secrets file to keep the value already set on the Worker.`,
+			{ telemetryMessage: "required secrets empty in secrets file" }
+		);
 	}
 
 	const inheritedSecrets = config.secrets.required.filter(
