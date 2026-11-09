@@ -1,3 +1,4 @@
+import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import {
@@ -1050,6 +1051,111 @@ describe("createTestHarness()", () => {
 		await expect(streamInstance?.getOutput()).resolves.toEqual({
 			streamResult: "mock stream",
 		});
+	});
+
+	it("applies D1 migrations to a worker binding", async ({ expect }) => {
+		await writeBuild(".", {
+			default: {
+				config: {
+					name: "d1-worker",
+					env: {
+						DATABASE: {
+							type: "d1",
+							id: "00000000-0000-0000-0000-000000000001",
+						},
+					},
+				},
+				script: `
+					export default {
+						async fetch(request, env) {
+							const key = new URL(request.url).pathname.slice(1);
+							const row = await env.DATABASE.prepare("SELECT value FROM settings WHERE key = ?")
+								.bind(key)
+								.first();
+
+							if (row === null) {
+								return new Response("missing", { status: 404 });
+							}
+
+							return new Response(row.value);
+						}
+					};
+				`,
+			},
+		});
+		await seed({
+			"migrations/0001_settings.sql": `
+				CREATE TABLE settings (
+					key TEXT PRIMARY KEY,
+					value TEXT NOT NULL
+				);
+			`,
+			"migrations/0002_seed.sql": `
+				INSERT INTO settings (key, value) VALUES ('greeting', 'Hello D1');
+			`,
+		});
+
+		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const worker = server.getWorker<{ DATABASE: D1Database }>();
+		await worker.applyD1Migrations("DATABASE");
+
+		const response = await worker.fetch("/greeting");
+		await expect(response.text()).resolves.toBe("Hello D1");
+
+		await worker.applyD1Migrations("DATABASE");
+		const secondResponse = await worker.fetch("/greeting");
+		await expect(secondResponse.text()).resolves.toBe("Hello D1");
+
+		server.debug();
+		const debugOutput = normalizeDebugOutput(std.getAndClearOut());
+		expect(debugOutput).toContain(
+			"[server] [d1-worker] d1 migrations - DATABASE - applied 0001_settings.sql"
+		);
+		expect(debugOutput).toContain(
+			"[server] [d1-worker] d1 migrations - DATABASE - applied 0002_seed.sql"
+		);
+		expect(debugOutput).toContain(
+			"[server] [d1-worker] d1 migrations - DATABASE - completed (2 applied)"
+		);
+		expect(debugOutput).toContain(
+			"[server] [d1-worker] d1 migrations - DATABASE - completed (no migrations to apply)"
+		);
+	});
+
+	it("applies D1 migrations from the `dir` option", async ({ expect }) => {
+		await writeBuild("app", {
+			default: {
+				config: {
+					name: "d1-worker",
+					env: { DATABASE: { type: "d1" } },
+				},
+				script: `export default {};`,
+			},
+		});
+		await seed({
+			"app/db/0001_settings.sql": "CREATE TABLE settings (key TEXT);",
+		});
+
+		const server = createTestHarness({ workers: [{ buildOutput: "app" }] });
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const worker = server.getWorker<{ DATABASE: D1Database }>();
+		await expect(worker.applyD1Migrations("DATABASE")).rejects.toThrow(
+			`No migrations present at ${path.resolve("app/migrations")}.`
+		);
+		// Relative to the Worker's project directory
+		await worker.applyD1Migrations("DATABASE", { dir: "db" });
+
+		const env = await worker.getEnv();
+		await expect(
+			env.DATABASE.prepare("SELECT name FROM d1_migrations").first("name")
+		).resolves.toBe("0001_settings.sql");
 	});
 
 	it("supports service bindings between workers", async ({ expect }) => {

@@ -1,14 +1,29 @@
 import assert from "node:assert";
-import { UserError } from "@cloudflare/workers-utils";
+import fs from "node:fs";
+import path from "node:path";
+import {
+	getD1MigrationFiles,
+	splitSqlQuery,
+	UserError,
+} from "@cloudflare/workers-utils";
 import {
 	WorkflowInstanceIntrospectorHandle,
 	WorkflowIntrospectorHandle,
 } from "@cloudflare/workflows-shared/src/introspection";
 import { CorePaths, Headers, Miniflare, Request } from "miniflare";
+import {
+	buildMigrationQuery,
+	DEFAULT_MIGRATION_PATH,
+	DEFAULT_MIGRATION_TABLE,
+	getCreateMigrationsTableQuery,
+	getListAppliedMigrationsQuery,
+	getUnappliedMigrationNames,
+} from "./d1-migrations";
 import { BUN_UNSUPPORTED_MESSAGE, isBun } from "./is-bun";
 import { disposeRemoteProxySessions, resolveWorkerInputs } from "./runtime";
 import type { ResolvedWorker } from "./runtime";
 import type {
+	D1Database,
 	DurableObjectNamespace,
 	ExportedHandler,
 	Rpc,
@@ -183,6 +198,27 @@ export type WorkerHandle<
 			| BindingName<Env, DurableObjectNamespace>,
 		options: DurableObjectIdentifier & {
 			webSockets?: "close" | "hibernate";
+		}
+	): Promise<void>;
+	/**
+	 * Applies D1 migration files that have not already run to a D1 binding on this Worker.
+	 *
+	 * @example
+	 * ```ts
+	 * beforeEach(async () => {
+	 *   await worker.applyD1Migrations("DATABASE");
+	 * });
+	 * ```
+	 */
+	applyD1Migrations(
+		bindingName: BindingName<Env, D1Database>,
+		options?: {
+			/**
+			 * Directory of the migration files. Relative paths resolve from the
+			 * project directory containing the Worker's Build Output. Defaults to
+			 * `./migrations`.
+			 */
+			dir?: string;
 		}
 	): Promise<void>;
 	/**
@@ -831,6 +867,92 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 							`durable object ids - ${classNameOrBindingName} - failed`,
 							workerName
 						);
+						throw error;
+					}
+				},
+				async applyD1Migrations(bindingName, migrationsOptions) {
+					const session = await resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
+					const projectDir = session.workers.find(
+						(worker) => worker.config.name === workerName
+					)?.projectDir;
+
+					assert(
+						projectDir,
+						`Worker ${JSON.stringify(workerName)} project directory is not available.`
+					);
+
+					const database = await miniflare.getD1Database(
+						bindingName,
+						workerName
+					);
+					// Build Output has no migrations config, so the directory is an option
+					const resolvedMigrationsPath = path.resolve(
+						projectDir,
+						migrationsOptions?.dir ?? DEFAULT_MIGRATION_PATH
+					);
+
+					debugLog(`d1 migrations - ${bindingName} - started`, workerName);
+
+					try {
+						if (!fs.existsSync(resolvedMigrationsPath)) {
+							throw new UserError(
+								`No migrations present at ${resolvedMigrationsPath}.`,
+								{
+									telemetryMessage:
+										"d1 migrations missing migrations directory",
+								}
+							);
+						}
+
+						await database
+							.prepare(getCreateMigrationsTableQuery(DEFAULT_MIGRATION_TABLE))
+							.run();
+						const appliedMigrationNamesResult = await database
+							.prepare(getListAppliedMigrationsQuery(DEFAULT_MIGRATION_TABLE))
+							.all<{ name: string }>();
+						const migrationNames = getD1MigrationFiles({
+							projectPath: resolvedMigrationsPath,
+							migrationsDir: ".",
+						}).map((file) => file.name);
+						const unappliedMigrationNames = getUnappliedMigrationNames(
+							migrationNames,
+							appliedMigrationNamesResult.results.map((item) => item.name)
+						);
+						for (const migrationName of unappliedMigrationNames) {
+							const query = buildMigrationQuery({
+								migrationName,
+								migrationsPath: resolvedMigrationsPath,
+								migrationsTableName: DEFAULT_MIGRATION_TABLE,
+							});
+							await database.batch(
+								splitSqlQuery(query).map((part) => database.prepare(part))
+							);
+							debugLog(
+								`d1 migrations - ${bindingName} - applied ${migrationName}`,
+								workerName
+							);
+						}
+
+						if (migrationNames.length === 0) {
+							debugLog(
+								`d1 migrations - ${bindingName} - completed (no migrations found)`,
+								workerName
+							);
+						} else if (unappliedMigrationNames.length === 0) {
+							debugLog(
+								`d1 migrations - ${bindingName} - completed (no migrations to apply)`,
+								workerName
+							);
+						} else {
+							debugLog(
+								`d1 migrations - ${bindingName} - completed (${unappliedMigrationNames.length} applied)`,
+								workerName
+							);
+						}
+					} catch (error) {
+						debugLog(`d1 migrations - ${bindingName} - failed`, workerName);
 						throw error;
 					}
 				},
