@@ -1,3 +1,4 @@
+import net from "node:net";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
@@ -19,6 +20,7 @@ import type {
 	KVNamespace,
 	R2Bucket,
 } from "@cloudflare/workers-types";
+import type { AddressInfo } from "node:net";
 
 // Starting a real session needs Cloudflare credentials
 vi.mock("@cloudflare/remote-bindings", () => ({
@@ -369,6 +371,128 @@ describe("createTestHarness()", () => {
 			expect.anything(),
 			expect.anything()
 		);
+	});
+
+	it("connects a Hyperdrive binding to its local connection string", async ({
+		expect,
+	}) => {
+		// Stands in for the database: with `sslmode=disable`, workerd connects
+		// straight to the connection string's host
+		const database = net.createServer((socket) => {
+			socket.end("hello from the database");
+		});
+		await new Promise<void>((resolve) => {
+			database.listen(0, "127.0.0.1", resolve);
+		});
+		onTestFinished(() => {
+			database.close();
+		});
+		const { port } = database.address() as AddressInfo;
+		await writeBuild(".", {
+			default: {
+				config: {
+					name: "hyperdrive-worker",
+					env: {
+						HYPERDRIVE: {
+							type: "hyperdrive",
+							id: "hyperdrive-id",
+							dev: {
+								connectionString: `postgres://user:password@127.0.0.1:${port}/app?sslmode=disable`,
+							},
+						},
+					},
+				},
+				script: `export default {
+					async fetch(request, env) {
+						const socket = env.HYPERDRIVE.connect();
+						const reply = await new Response(socket.readable).text();
+						return new Response(env.HYPERDRIVE.database + ": " + reply);
+					},
+				};`,
+			},
+		});
+		const harness = useTestHarness({ workers: [{ buildOutput: "." }] });
+
+		await harness.listen();
+		expect(await (await harness.fetch("/")).text()).toBe(
+			"app: hello from the database"
+		);
+	});
+
+	it("runs Build Output with a complete manifest and a source map, as Wrangler writes it", async ({
+		expect,
+	}) => {
+		const workerDir = ".cloudflare/output/v0/workers/default";
+		await seed({
+			".cloudflare/output/v0/config.json": JSON.stringify({
+				buildContext: { isPreview: false, mode: "production" },
+			}),
+			[`${workerDir}/worker.config.json`]: JSON.stringify({
+				name: "wrangler-built-worker",
+				compatibilityDate: "2026-06-01",
+				manifest: {
+					type: "complete",
+					mainModule: "index.js",
+					modules: {
+						"index.js": { type: "esm" },
+						"index.js.map": { type: "sourcemap" },
+					},
+				},
+			}),
+			[`${workerDir}/bundle/index.js`]: [
+				`export default { fetch() { return new Response("Hello from Wrangler's build"); } };`,
+				"//# sourceMappingURL=index.js.map",
+			].join("\n"),
+			[`${workerDir}/bundle/index.js.map`]: JSON.stringify({
+				version: 3,
+				sources: ["../src/index.ts"],
+				mappings: "AAAA",
+			}),
+		});
+		const harness = useTestHarness({ workers: [{ buildOutput: "." }] });
+
+		await harness.listen();
+		expect(await (await harness.fetch("/")).text()).toBe(
+			"Hello from Wrangler's build"
+		);
+	});
+
+	it("runs a Python Worker", async ({ expect }) => {
+		const workerDir = ".cloudflare/output/v0/workers/default";
+		await seed({
+			".cloudflare/output/v0/config.json": JSON.stringify({
+				buildContext: { isPreview: false, mode: "production" },
+			}),
+			[`${workerDir}/worker.config.json`]: JSON.stringify({
+				name: "python-worker",
+				compatibilityDate: "2025-05-01",
+				compatibilityFlags: ["python_workers", "python_no_global_handlers"],
+				manifest: {
+					type: "complete",
+					mainModule: "index.py",
+					modules: {
+						"index.py": { type: "python" },
+						"greeting.py": { type: "python" },
+					},
+				},
+			}),
+			[`${workerDir}/bundle/index.py`]: [
+				"from greeting import greet",
+				"from workers import Response, WorkerEntrypoint",
+				"",
+				"class Default(WorkerEntrypoint):",
+				"  def fetch(self, request):",
+				"    return Response(greet('Python'))",
+			].join("\n"),
+			[`${workerDir}/bundle/greeting.py`]: [
+				"def greet(name):",
+				"  return 'Hello from ' + name",
+			].join("\n"),
+		});
+		const harness = useTestHarness({ workers: [{ buildOutput: "." }] });
+
+		await harness.listen();
+		expect(await (await harness.fetch("/")).text()).toBe("Hello from Python");
 	});
 
 	// Ported from Wrangler's e2e/createTestHarness.test.ts

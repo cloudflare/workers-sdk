@@ -371,8 +371,8 @@ export type TestHarness = {
 	 * Under Bun, this method and `server.getWorker()`'s `fetch()`, `email()` and
 	 * `scheduled()` cannot reach the Worker, because Bun's `fetch()` ignores the
 	 * undici `dispatcher` that Miniflare routes requests through. The methods
-	 * throw a `UserError`. `server.getWorker().getEnv()` and `getExport()` keep
-	 * working under Bun.
+	 * throw a `UserError`. The URL returned by `listen()`, and
+	 * `server.getWorker().getEnv()` and `getExport()`, keep working under Bun.
 	 */
 	fetch: DispatchFetch;
 	/**
