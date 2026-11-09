@@ -225,7 +225,6 @@ describe("Preview Worker", () => {
 
 	it.for([
 		"preview.cloudflarepreviews.com",
-		"preview.cloudflarepreviews.com",
 		"random-datapreview.cloudflarepreviews.com",
 	])("should reject token updates on %s", async (hostname, { expect }) => {
 		vi.spyOn(console, "error").mockImplementation(() => {});
