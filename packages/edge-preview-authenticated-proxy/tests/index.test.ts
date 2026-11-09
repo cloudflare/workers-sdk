@@ -177,6 +177,52 @@ describe("Preview Worker", () => {
 		);
 	});
 
+	// `suffix` is documented as a pathname + search on the preview worker, so it
+	// must never redirect the browser to a different origin.
+	it.for([
+		"https://evil.example",
+		"//evil.example",
+		"/\\evil.example",
+		"\\\\evil.example",
+		"/\t/evil.example",
+		"/.//evil.example",
+		"https://random-data.preview.cloudflarepreviews.com//evil.example",
+		"javascript:alert(1)",
+	])(
+		"should not redirect off-origin for suffix %s",
+		async (suffix, { expect }) => {
+			const resp = await exports.default.fetch(
+				`https://random-data.preview.cloudflarepreviews.com/.update-preview-token?token=TEST_TOKEN&remote=${encodeURIComponent(
+					MOCK_REMOTE_URL
+				)}&suffix=${encodeURIComponent(suffix)}`,
+				{
+					method: "GET",
+					redirect: "manual",
+				}
+			);
+			expect(resp.status).toBe(307);
+			expect(resp.headers.get("location")).toBe("/");
+		}
+	);
+
+	it("should keep a same-origin absolute suffix as a path", async ({
+		expect,
+	}) => {
+		const resp = await exports.default.fetch(
+			`https://random-data.preview.cloudflarepreviews.com/.update-preview-token?token=TEST_TOKEN&remote=${encodeURIComponent(
+				MOCK_REMOTE_URL
+			)}&suffix=${encodeURIComponent(
+				"https://random-data.preview.cloudflarepreviews.com/hello?world#section"
+			)}`,
+			{
+				method: "GET",
+				redirect: "manual",
+			}
+		);
+		expect(resp.status).toBe(307);
+		expect(resp.headers.get("location")).toBe("/hello?world#section");
+	});
+
 	it.for([
 		"preview.cloudflarepreviews.com",
 		"random-datapreview.cloudflarepreviews.com",
