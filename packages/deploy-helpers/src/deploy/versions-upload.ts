@@ -177,6 +177,28 @@ async function uploadWorkerVersion(
 		};
 	}
 
+	// Validate required secrets before any remote side effects (container
+	// images, assets) so a rejected secrets file does not leave partial uploads.
+	if (props.secretsFile) {
+		const secretsResult = await parseBulkInputToObject(
+			props.secretsFile,
+			false,
+			parseAndExpandDotEnv
+		);
+		if (secretsResult) {
+			for (const [secretName, secretValue] of Object.entries(
+				secretsResult.content
+			)) {
+				bindings[secretName] = {
+					type: "secret_text",
+					value: secretValue,
+				};
+			}
+		}
+	}
+
+	addRequiredSecretsInheritBindings(config, bindings, { type: "upload" });
+
 	// Resolve which Durable Object lifecycle payload to forward — either
 	// the legacy `migrations` steps or the declarative `exports` map. The
 	// server's versions POST controller persists `exports` on the new
@@ -221,26 +243,6 @@ async function uploadWorkerVersion(
 			? await syncAssets(config, accountId, assetsOptions.directory, scriptName)
 			: undefined;
 	const assetsJwt = assetsUploadResult?.jwt;
-
-	if (props.secretsFile) {
-		const secretsResult = await parseBulkInputToObject(
-			props.secretsFile,
-			false,
-			parseAndExpandDotEnv
-		);
-		if (secretsResult) {
-			for (const [secretName, secretValue] of Object.entries(
-				secretsResult.content
-			)) {
-				bindings[secretName] = {
-					type: "secret_text",
-					value: secretValue,
-				};
-			}
-		}
-	}
-
-	addRequiredSecretsInheritBindings(config, bindings, { type: "upload" });
 
 	const placement = parseConfigPlacement(config.placement);
 

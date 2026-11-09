@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-deprecated -- formData() is the standard Web API for parsing multipart bodies; only deprecated on undici's server-side types */
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, it, vi } from "vitest";
@@ -392,6 +392,40 @@ See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-
 					{ type: "inherit", name: "SECRET3" },
 				])
 			);
+		});
+
+		it("should reject empty required secrets before uploading assets", async ({
+			expect,
+		}) => {
+			vi.stubEnv("UNSET_SECRET", undefined);
+			writeWranglerConfig({
+				name: workerName,
+				main: "./index.js",
+				assets: { directory: "assets" },
+				secrets: { required: ["SECRET1"] },
+			});
+			mkdirSync("assets");
+			writeFileSync("assets/index.html", "<h1>hello</h1>");
+
+			const secretsFile = ".env.production";
+			writeFileSync(secretsFile, "SECRET1=${UNSET_SECRET}\n");
+
+			mockGetScript();
+			const assetsUploadSession = captureRequestsFrom(
+				http.post(
+					"*/accounts/:accountId/workers/scripts/:scriptName/assets-upload-session",
+					() => HttpResponse.json(createFetchResult({ jwt: "jwt" }))
+				)
+			)();
+
+			await expect(
+				runWrangler(
+					`versions upload --name ${workerName} --secrets-file ${secretsFile}`
+				)
+			).rejects.toThrow(
+				"The following required secrets have empty values in the secrets file: SECRET1"
+			);
+			expect(assetsUploadSession.requests).toHaveLength(0);
 		});
 	});
 });

@@ -24,6 +24,7 @@ import {
 	mockLastDeploymentRequest,
 	mockPatchScriptSettings,
 	mockServiceScriptData,
+	writeAssets,
 } from "./helpers";
 
 vi.mock("command-exists");
@@ -543,6 +544,45 @@ See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-
 				Required secrets must not be empty. Note that \`\${VAR}\` references to unset environment variables expand to empty strings.
 				Set a non-empty value for each, or remove them from the secrets file to keep the value already set on the Worker.]
 			`);
+		});
+
+		it("should reject empty required secrets before uploading assets", async ({
+			expect,
+		}) => {
+			vi.stubEnv("UNSET_SECRET", undefined);
+			writeWranglerConfig({
+				name: workerName,
+				main: "./index.js",
+				assets: { directory: "assets" },
+				secrets: { required: ["SECRET1"] },
+			});
+			writeAssets([{ filePath: "index.html", content: "<h1>hello</h1>" }]);
+
+			const secretsFile = ".env.production";
+			fs.writeFileSync(secretsFile, "SECRET1=${UNSET_SECRET}\n");
+
+			mockServiceScriptData({
+				scriptName: workerName,
+				script: { id: workerName },
+			});
+			mockSubDomainRequest();
+			let assetsUploadSessionRequests = 0;
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/workers/scripts/:scriptName/assets-upload-session",
+					() => {
+						assetsUploadSessionRequests++;
+						return HttpResponse.json(createFetchResult({ jwt: "jwt" }));
+					}
+				)
+			);
+
+			await expect(
+				runWrangler(`deploy --secrets-file ${secretsFile}`)
+			).rejects.toThrow(
+				"The following required secrets have empty values in the secrets file: SECRET1"
+			);
+			expect(assetsUploadSessionRequests).toBe(0);
 		});
 
 		it("should use inherit bindings only for required secrets not provided by --secrets-file", async () => {

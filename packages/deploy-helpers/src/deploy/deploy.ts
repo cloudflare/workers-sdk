@@ -206,6 +206,45 @@ async function deployWorker(
 		return { versionId: null, workerTag };
 	}
 
+	// Resolve bindings and validate required secrets before any remote side
+	// effects (container images, assets, Workers Sites) so a rejected secrets
+	// file does not leave partial uploads behind.
+	const bindings = getBindings(config);
+
+	// Vars from the CLI (--var) are hidden so their values aren't logged to the terminal
+	for (const [bindingName, value] of Object.entries(props.cliVars)) {
+		bindings[bindingName] = {
+			type: "plain_text",
+			value,
+			hidden: true,
+		};
+	}
+
+	if (props.secretsFile) {
+		const secretsResult = await parseBulkInputToObject(
+			props.secretsFile,
+			false,
+			parseAndExpandDotEnv
+		);
+		if (secretsResult) {
+			for (const [secretName, secretValue] of Object.entries(
+				secretsResult.content
+			)) {
+				bindings[secretName] = {
+					type: "secret_text",
+					value: secretValue,
+				};
+			}
+		}
+	}
+
+	addRequiredSecretsInheritBindings(config, bindings, {
+		type: "deploy",
+		workerExists,
+		secretPutCommand: options.secretPutCommand,
+		uploadCommand: options.deployCommand,
+	});
+
 	let versionId: string | null = null;
 	const scriptName = name;
 
@@ -324,42 +363,6 @@ async function deployWorker(
 				props.oldAssetTtl
 			)
 		: { manifest: undefined, namespace: undefined };
-
-	const bindings = getBindings(config);
-
-	// Vars from the CLI (--var) are hidden so their values aren't logged to the terminal
-	for (const [bindingName, value] of Object.entries(props.cliVars)) {
-		bindings[bindingName] = {
-			type: "plain_text",
-			value,
-			hidden: true,
-		};
-	}
-
-	if (props.secretsFile) {
-		const secretsResult = await parseBulkInputToObject(
-			props.secretsFile,
-			false,
-			parseAndExpandDotEnv
-		);
-		if (secretsResult) {
-			for (const [secretName, secretValue] of Object.entries(
-				secretsResult.content
-			)) {
-				bindings[secretName] = {
-					type: "secret_text",
-					value: secretValue,
-				};
-			}
-		}
-	}
-
-	addRequiredSecretsInheritBindings(config, bindings, {
-		type: "deploy",
-		workerExists,
-		secretPutCommand: options.secretPutCommand,
-		uploadCommand: options.deployCommand,
-	});
 
 	if (workersSitesAssets.manifest) {
 		modules.push({
