@@ -22,7 +22,7 @@
 		"check:pinned-deps": "node -r esbuild-register tools/deployments/validate-pinned-dependencies.ts",
 		"check:private-packages": "node -r esbuild-register tools/deployments/validate-private-packages.ts",
 		"check:type": "dotenv -- turbo check:type type:tests",
-		"check:workflows": "node -r esbuild-register tools/github-workflow-helpers/validate-action-pinning.ts",
+		"check:workflows": "node -r esbuild-register tools/github-workflow-helpers/validate-action-pinning.ts && node --test .github/scripts/vouch.test.mjs",
 		"dev": "dotenv -- turbo dev",
 		"fix": "oxlint --fix --type-aware && pnpm run prettify",
 		"prettify": "oxfmt",
