@@ -160,6 +160,9 @@ describe("cf-wrangler parseArgs", () => {
 		["--https-key-path=a", "--https-key-path=b"],
 		["--local-protocol=http", "--local-protocol=https"],
 		["--inspector-port=9229", "--inspector-port=9230"],
+		["--node-compat"],
+		["--tunnel-name", "named", "--tunnel-allowed-mail", "user@example.com"],
+		["--tunnel-name=named", "--tunnel-allowed-mail=user@example.com"],
 	])("rejects invalid or unsupported arguments: %j", (argv, { expect }) => {
 		expect(() => parseArgs(argv)).toThrow(ArgParseError);
 	});

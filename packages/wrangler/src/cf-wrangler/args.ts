@@ -5,7 +5,7 @@
 import { parseArgs as nodeParseArgs } from "node:util";
 import yargs from "yargs/yargs";
 import { demandSingleValue } from "../core/helpers";
-import { devArgs } from "../dev/args";
+import { devArgs, validateDevArgs } from "../dev/args";
 import type { StartDevOptions } from "../dev";
 
 export interface BuildArgs {
@@ -76,7 +76,7 @@ export function parseDevArgs(argv: string[]): StartDevOptions {
 			throw new ArgParseError("--no-local and --local=false are not supported");
 		}
 
-		return {
+		const devOptions: StartDevOptions = {
 			...parsed,
 			env: mode,
 			remote: false,
@@ -90,6 +90,8 @@ export function parseDevArgs(argv: string[]): StartDevOptions {
 			v: undefined,
 			envFile: undefined,
 		};
+		validateDevArgs(devOptions);
+		return devOptions;
 	} catch (err) {
 		throw new ArgParseError(err instanceof Error ? err.message : String(err));
 	}

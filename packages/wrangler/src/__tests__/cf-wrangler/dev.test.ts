@@ -148,29 +148,6 @@ describe("cf-wrangler dev", () => {
 		}
 	);
 
-	it("validates Wrangler's dev option combinations before starting the runtime", async ({
-		expect,
-	}) => {
-		const { result } = runBin([
-			"--tunnel-name",
-			"named",
-			"--tunnel-allowed-mail",
-			"user@example.com",
-		]);
-		await expect(result).rejects.toThrow("cannot be used with --tunnel-name");
-		expect(mocks.startDev).not.toHaveBeenCalled();
-	});
-
-	it("rejects the removed node compatibility flag before starting the runtime", async ({
-		expect,
-	}) => {
-		const { result } = runBin(["--node-compat"]);
-		await expect(result).rejects.toThrow(
-			"--node-compat flag is no longer supported"
-		);
-		expect(mocks.startDev).not.toHaveBeenCalled();
-	});
-
 	it("should preserve Wrangler authentication when startup fails", async ({
 		expect,
 	}) => {
@@ -190,6 +167,39 @@ describe("cf-wrangler dev", () => {
 });
 
 describe("cf-wrangler binary dispatch", () => {
+	it.for([
+		{
+			argv: ["--node-compat"],
+			message: "--node-compat flag is no longer supported",
+		},
+		{
+			argv: [
+				"--tunnel-name",
+				"named",
+				"--tunnel-allowed-mail",
+				"user@example.com",
+			],
+			message: "cannot be used with --tunnel-name",
+		},
+		{
+			argv: ["--tunnel-name=named", "--tunnel-allowed-mail=user@example.com"],
+			message: "cannot be used with --tunnel-name",
+		},
+	])(
+		"reports usage errors without a stack trace: $argv",
+		({ argv, message }, { expect }) => {
+			const runDev = vi.fn(runCfWranglerDev);
+			const { exit, stderr } = invokeBin(["dev", ...argv], runDev);
+			expect(exit).toHaveBeenCalledExactlyOnceWith(2);
+			expect(stderr).toHaveBeenCalledExactlyOnceWith(
+				expect.stringContaining(message)
+			);
+			expect(stderr.mock.calls[0]?.[0]).toMatch(/^Error: [^\n]+\n$/);
+			expect(runDev).not.toHaveBeenCalled();
+			expect(mocks.startDev).not.toHaveBeenCalled();
+		}
+	);
+
 	it.for([
 		["dev", "--inspector-port=65536"],
 		["dev", "--inspector-port"],

@@ -40,8 +40,9 @@ The delegate intentionally differs from `wrangler dev` in these ways:
 - Types are not generated unless `--types` is passed. State defaults to
   `.cloudflare/state`; `--persist-to` overrides it.
 
-Unknown options and malformed arguments fail with exit code 2. Runtime errors,
-including incompatible dev option combinations, fail with exit code 1. Options
-specific to another server (such as Vite) are not accepted by this delegate.
+Unknown options, malformed arguments, and incompatible dev option combinations
+print a single-line error and fail with exit code 2. Runtime errors fail with
+exit code 1. Options specific to another server (such as Vite) are not accepted
+by this delegate.
 
 `build` continues to accept only `--mode`; these server options apply to `dev`.
