@@ -8,6 +8,7 @@ import {
 	writeAuthConfigFile,
 } from "@cloudflare/workers-auth/cf";
 import { writeAuthConfigFile as writeWranglerAuthConfigFile } from "@cloudflare/workers-auth/wrangler";
+import { UserError } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import {
@@ -145,6 +146,34 @@ describe("cf-wrangler dev", () => {
 			await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(0));
 			expect(teardownSecondary).toHaveBeenCalledOnce();
 			expect(unregisterHotKeys).toHaveBeenCalledOnce();
+		}
+	);
+
+	it.for([
+		{
+			options: { nodeCompat: true },
+			message: "--node-compat flag is no longer supported",
+		},
+		{
+			options: { tunnelName: "named", tunnelAllowedMail: ["user@example.com"] },
+			message: "cannot be used with --tunnel-name",
+		},
+		{
+			options: { liveReload: true, remote: true },
+			message: "--live-reload is only supported in local mode",
+		},
+		{
+			options: { tunnel: true, remote: true },
+			message: "--tunnel cannot be used with --remote",
+		},
+	])(
+		"validates direct runner calls before starting the runtime: $options",
+		async ({ options, message }, { expect }) => {
+			mocks.startDev.mockRejectedValue(new Error("Unexpected runtime startup"));
+			const result = runCfWranglerDev({ ...parseArgs([]), ...options });
+			await expect(result).rejects.toThrow(UserError);
+			await expect(result).rejects.toThrow(message);
+			expect(mocks.startDev).not.toHaveBeenCalled();
 		}
 	);
 

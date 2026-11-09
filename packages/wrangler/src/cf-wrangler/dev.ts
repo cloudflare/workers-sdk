@@ -8,6 +8,7 @@
  */
 import events from "node:events";
 import { createCfProfileStore } from "@cloudflare/workers-auth/cf";
+import { validateDevArgs } from "../dev/args";
 import { startDev } from "../dev/start-dev";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
@@ -26,6 +27,8 @@ import type { StartDevOptions } from "../dev";
 export async function runCfWranglerDev(
 	options: StartDevOptions
 ): Promise<number> {
+	// Direct callers can bypass the argv parser.
+	validateDevArgs(options);
 	const profile = createCfProfileStore({ logger }).resolve({
 		cwd: process.cwd(),
 	});
