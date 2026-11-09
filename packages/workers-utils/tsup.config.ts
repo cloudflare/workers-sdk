@@ -5,8 +5,9 @@ export default defineConfig(() => [
 	{
 		treeshake: true,
 		keepNames: true,
-		// Keep the browser export free of the Node-only banner used below.
-		entry: ["src/browser.ts"],
+		// Keep these exports free of the Node-only banner used below: the browser
+		// export, and the metrics registry bundled into Workers without nodejs_compat.
+		entry: ["src/browser.ts", "src/prometheus-metrics.ts"],
 		platform: "node",
 		format: "esm",
 		dts: true,
@@ -24,7 +25,6 @@ export default defineConfig(() => [
 		keepNames: true,
 		entry: [
 			"src/index.ts",
-			"src/prometheus-metrics.ts",
 			"src/test-helpers/index.ts",
 			// Leaf entry points let consumers bundle individual utilities without
 			// pulling in the broad package barrel and its transitive dependencies.
