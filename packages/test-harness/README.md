@@ -27,7 +27,7 @@ Test your production build: the harness runs the Build Output as it is, and neve
 - **Test-only Workers**, such as mocks for `bindingOverrides`, can be inline: `{ config }` takes config in the shape of a Build Output `worker.config.json`, whose `manifest` includes each module's code.
 - **Types:** `server.getWorker<typeof import("./cloudflare.config")>()` infers a Worker's `Env` and module from its config.
 
-See [`fixtures/test-harness-example`](../../fixtures/test-harness-example) for a complete example with Vitest and Playwright.
+See [`fixtures/test-harness-example`](https://github.com/cloudflare/workers-sdk/tree/main/fixtures/test-harness-example) for a complete example with Vitest and Playwright.
 
 Not supported yet: Containers.
 

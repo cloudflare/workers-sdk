@@ -134,24 +134,27 @@ type WorkerConfigOf<ConfigModule extends WorkerConfigModule> =
 /**
  * A Worker's `Env`: the given type, or the one inferred from a config module.
  */
-export type WorkerEnv<EnvOrConfigModule> = [EnvOrConfigModule] extends [
-	WorkerConfigModule,
-]
-	? InferEnv<WorkerConfigOf<EnvOrConfigModule>>
-	: EnvOrConfigModule;
+export type WorkerEnv<EnvOrConfigModule> =
+	// `any` stays `any`, as in Wrangler
+	0 extends 1 & EnvOrConfigModule
+		? EnvOrConfigModule
+		: [EnvOrConfigModule] extends [WorkerConfigModule]
+			? InferEnv<WorkerConfigOf<EnvOrConfigModule>>
+			: EnvOrConfigModule;
 
 /**
  * A Worker's main module: the one inferred from a config module, or any.
  */
-export type WorkerMainModule<EnvOrConfigModule> = [EnvOrConfigModule] extends [
-	WorkerConfigModule,
-]
-	? InferMainModule<
-			WorkerConfigOf<EnvOrConfigModule>
-		> extends infer Module extends WorkerModule
-		? Module
-		: { default: AnyExportedHandler }
-	: { default: AnyExportedHandler };
+export type WorkerMainModule<EnvOrConfigModule> = 0 extends 1 &
+	EnvOrConfigModule
+	? { default: AnyExportedHandler }
+	: [EnvOrConfigModule] extends [WorkerConfigModule]
+		? InferMainModule<
+				WorkerConfigOf<EnvOrConfigModule>
+			> extends infer Module extends WorkerModule
+			? Module
+			: { default: AnyExportedHandler }
+		: { default: AnyExportedHandler };
 
 export type WorkerHandle<
 	Env = AnyEnv,
@@ -471,7 +474,8 @@ export type WorkerInput =
  */
 export type InlineWorkerConfig = Omit<
 	ResolvedOutputWorkerConfig,
-	"manifest"
+	// Inline Workers have no assets directory
+	"manifest" | "assets"
 > & {
 	manifest: {
 		mainModule: string;

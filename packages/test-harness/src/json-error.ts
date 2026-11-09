@@ -14,7 +14,7 @@ type Manifest = NonNullable<WorkerOptions["config"]["manifest"]>;
  */
 export function withJsonErrors(manifest: Manifest): Manifest {
 	if (manifest.modules[manifest.mainModule]?.type !== "esm") {
-		// Python Workers can't import an ES module wrapper
+		// Only an ES module can import the main module and re-export it
 		return manifest;
 	}
 
@@ -79,7 +79,8 @@ async function jsonError(next) {
 }
 
 // Wraps the default export as Wrangler's templates/middleware/loader-modules.ts does
-const ENTRY = worker.default;
+// A module without a default export behaves as a Vite build of it does
+const ENTRY = worker.default ?? {};
 let WRAPPED_ENTRY = ENTRY;
 if (typeof ENTRY === "object" && ENTRY !== null) {
 	WRAPPED_ENTRY = {

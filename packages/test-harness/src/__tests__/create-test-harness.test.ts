@@ -1676,6 +1676,35 @@ describe("createTestHarness()", () => {
 		await expect(response.text()).resolves.toBe("Hello from inline config");
 	});
 
+	it("starts a Worker without a default export", async ({ expect }) => {
+		const server = createTestHarness({
+			workers: [
+				{
+					config: {
+						name: "objects-worker",
+						compatibilityDate: "2026-05-20",
+						exports: {
+							Counter: { type: "durable-object", storage: "sqlite" },
+						},
+						manifest: singleModuleManifest(`
+							import { DurableObject } from "cloudflare:workers";
+
+							export class Counter extends DurableObject {}
+						`),
+					},
+				},
+			],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		// As a Vite build of the same Worker, which exports an empty default
+		await expect(server.fetch("/")).rejects.toThrow(
+			"Handler does not export a fetch() function."
+		);
+	});
+
 	it("loads default .env files for build output workers", async ({
 		expect,
 	}) => {
