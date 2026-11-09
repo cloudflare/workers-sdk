@@ -2856,6 +2856,43 @@ importers:
 
   packages/solarflare-theme: {}
 
+  packages/test-harness:
+    dependencies:
+      '@cloudflare/build-output-utils':
+        specifier: workspace:*
+        version: link:../build-output-utils
+      miniflare:
+        specifier: workspace:*
+        version: link:../miniflare
+    devDependencies:
+      '@cloudflare/cli-shared-helpers':
+        specifier: workspace:*
+        version: link:../cli
+      '@cloudflare/remote-bindings':
+        specifier: workspace:*
+        version: link:../remote-bindings
+      '@cloudflare/workers-auth':
+        specifier: workspace:*
+        version: link:../workers-auth
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 5.20261109.1
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
+      tsdown:
+        specifier: 0.16.3
+        version: 0.16.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(ms@2.1.3)(synckit@0.11.12)(typescript@5.8.3)
+      typescript:
+        specifier: catalog:default
+        version: 5.8.3
+      vitest:
+        specifier: catalog:default
+        version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
+
   packages/turbo-r2-archive:
     dependencies:
       '@hono/zod-validator':
@@ -27391,7 +27428,7 @@ snapshots:
       rolldown: 1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)
       rolldown-plugin-dts: 0.17.6(ms@2.1.3)(rolldown@1.0.0-beta.49(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3))(typescript@5.8.3)
       semver: 7.8.5
-      tinyexec: 1.2.4
+      tinyexec: 1.3.1
       tinyglobby: 0.2.17
       tree-kill: 1.2.2
       unconfig-core: 7.5.0

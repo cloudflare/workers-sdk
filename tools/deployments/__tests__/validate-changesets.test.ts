@@ -42,6 +42,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/quick-edit",
 				"@cloudflare/runtime-types",
 				"@cloudflare/shared-ast-primitives",
+				"@cloudflare/test-harness",
 				"@cloudflare/turbo-r2-archive",
 				"@cloudflare/unenv-preset",
 				"@cloudflare/vite-plugin",
