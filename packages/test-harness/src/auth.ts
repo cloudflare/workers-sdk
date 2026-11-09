@@ -15,14 +15,14 @@ class AccountSelectionUnavailable extends Error {
 	}
 }
 
+// Workers and harnesses share each resolved profile's auth for the life of the
+// process.
+const authByProfileKey = new Map<string, CloudflareAuth>();
+
 /**
- * Set up cf authentication using the profile associated with `profileDir`.
- *
- * @param profileDir Directory used to resolve the cf auth profile.
- * @param logger Logger for the auth flow.
- * @returns The cf authentication.
+ * Set up cf authentication using an already-resolved profile.
  */
-function createAuth(profileDir: string, logger: Logger): CloudflareAuth {
+function createAuthForProfile(profile: string, logger: Logger): CloudflareAuth {
 	const context = {
 		logger,
 		userAgent: `test-harness/${packageVersion}`,
@@ -44,7 +44,7 @@ function createAuth(profileDir: string, logger: Logger): CloudflareAuth {
 			if (isNonInteractiveOrCI()) {
 				throw new AccountSelectionUnavailable();
 			}
-			return inputPrompt<string>({
+			const accountId = await inputPrompt<string>({
 				type: "select",
 				question,
 				label: "Account",
@@ -54,13 +54,36 @@ function createAuth(profileDir: string, logger: Logger): CloudflareAuth {
 				})),
 				throwOnError: true,
 			});
+			logger.info(
+				[
+					"To use this account automatically in future, configure accountId in cloudflare.config.ts:",
+					"",
+					`  accountId: ${JSON.stringify(accountId)},`,
+					"",
+					"Alternatively, set the `CLOUDFLARE_ACCOUNT_ID` environment variable.",
+				].join("\n")
+			);
+			return accountId;
 		},
 		isNoDefaultValueProvidedError: (error: unknown) =>
 			error instanceof AccountSelectionUnavailable,
 	};
 	const auth = createCfAuth(context);
-	const profileStore = createCfProfileStore({ logger });
-	auth.setProfile(profileStore.resolve({ cwd: profileDir }));
+	auth.setProfile(profile);
+	return auth;
+}
+
+function getAuth(
+	profileDir: string,
+	profile: string,
+	logger: Logger
+): CloudflareAuth {
+	const key = JSON.stringify([profileDir, profile]);
+	let auth = authByProfileKey.get(key);
+	if (!auth) {
+		auth = createAuthForProfile(profile, logger);
+		authByProfileKey.set(key, auth);
+	}
 	return auth;
 }
 
@@ -78,11 +101,10 @@ export function getRemoteBindingsAuth(
 	accountId: string | undefined,
 	logger: Logger
 ): RemoteBindingsAuth {
-	let auth: CloudflareAuth | undefined;
+	const profile = createCfProfileStore({ logger }).resolve({ cwd: profileDir });
 	return {
 		hook: async () => {
-			// Only resolve the profile once a session actually needs credentials
-			auth ??= createAuth(profileDir, logger);
+			const auth = getAuth(profileDir, profile, logger);
 			return {
 				accountId: await auth.requireAuth(
 					accountId ? { account_id: accountId } : {}
@@ -90,6 +112,6 @@ export function getRemoteBindingsAuth(
 				apiToken: auth.requireApiToken(),
 			};
 		},
-		key: JSON.stringify([profileDir, accountId]),
+		key: JSON.stringify([profileDir, accountId, profile]),
 	};
 }
