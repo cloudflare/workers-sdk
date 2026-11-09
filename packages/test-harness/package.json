@@ -41,6 +41,7 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "workspace:*",
+		"@cloudflare/workflows-shared": "workspace:*",
 		"tsdown": "0.16.3",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"

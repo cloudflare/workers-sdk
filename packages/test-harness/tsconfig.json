@@ -1,7 +1,12 @@
 {
 	"extends": "@cloudflare/workers-tsconfig/base.json",
 	"compilerOptions": {
-		"types": ["@types/node"]
+		"types": ["@types/node"],
+		// A private package: resolving its sources by path puts its types in
+		// this package's declarations
+		"paths": {
+			"@cloudflare/workflows-shared/src/*": ["../workflows-shared/src/*"]
+		}
 	},
 	"include": ["src"]
 }

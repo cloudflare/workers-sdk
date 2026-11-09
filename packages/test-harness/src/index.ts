@@ -1,5 +1,9 @@
 import assert from "node:assert";
 import { UserError } from "@cloudflare/workers-utils";
+import {
+	WorkflowInstanceIntrospectorHandle,
+	WorkflowIntrospectorHandle,
+} from "@cloudflare/workflows-shared/src/introspection";
 import { CorePaths, Headers, Miniflare, Request } from "miniflare";
 import { BUN_UNSUPPORTED_MESSAGE, isBun } from "./is-bun";
 import { disposeRemoteProxySessions, resolveWorkerInputs } from "./runtime";
@@ -9,11 +13,17 @@ import type {
 	ExportedHandler,
 	Rpc,
 	Service,
+	Workflow,
 } from "@cloudflare/workers-types";
 import type {
 	FetcherScheduledOptions,
 	FetcherScheduledResult,
 } from "@cloudflare/workers-types/experimental";
+import type {
+	WorkflowBinding,
+	WorkflowInstanceIntrospector,
+	WorkflowIntrospector,
+} from "@cloudflare/workflows-shared/src/types";
 import type {
 	DurableObjectStorageHandle,
 	DurableObjectStorageOptions,
@@ -199,6 +209,19 @@ export type WorkerHandle<
 			| BindingName<Env, DurableObjectNamespace>,
 		options: DurableObjectStorageOptions
 	): Promise<DurableObjectStorageHandle>;
+	/**
+	 * Creates an introspector for a specific Workflow instance.
+	 */
+	introspectWorkflowInstance(
+		bindingName: BindingName<Env, Workflow>,
+		instanceId: string
+	): Promise<WorkflowInstanceIntrospector>;
+	/**
+	 * Creates an introspector for Workflow instances created after this method is called.
+	 */
+	introspectWorkflow(
+		bindingName: BindingName<Env, Workflow>
+	): Promise<WorkflowIntrospector>;
 	/**
 	 * Returns the default Worker export, including JSRPC methods.
 	 *
@@ -670,7 +693,46 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			Env = AnyEnv,
 			Module extends WorkerModule = { default: AnyExportedHandler },
 		>(name?: string): WorkerHandle<Env, Module> {
+			async function getWorkflowBinding(bindingName: string) {
+				const session = await resolveSession();
+				const miniflare = await getRuntimeMiniflare(session);
+				const workerName = resolveWorkerName(session, name);
+				const bindingConfig = getWorkerConfig(session, workerName).env?.[
+					bindingName
+				];
+
+				if (bindingConfig?.type !== "workflow") {
+					throw new TypeError(
+						`No Workflow binding named ${JSON.stringify(bindingName)} found in ${JSON.stringify(workerName)} worker.`
+					);
+				}
+
+				const bindings =
+					await miniflare.getBindings<Record<string, unknown>>(workerName);
+				const workflow = bindings[bindingName] as WorkflowBinding | undefined;
+
+				if (!workflow) {
+					throw new TypeError(
+						`Workflow binding ${JSON.stringify(bindingName)} is not available in ${JSON.stringify(workerName)} worker.`
+					);
+				}
+
+				return workflow;
+			}
+
 			return {
+				async introspectWorkflow(bindingName) {
+					const workflow = await getWorkflowBinding(bindingName);
+
+					const introspector = new WorkflowIntrospectorHandle(workflow);
+					await introspector.start();
+					return introspector;
+				},
+				async introspectWorkflowInstance(bindingName, instanceId) {
+					const workflow = await getWorkflowBinding(bindingName);
+
+					return new WorkflowInstanceIntrospectorHandle(workflow, instanceId);
+				},
 				async fetch(input, init) {
 					const session = await resolveSession();
 					const miniflare = await getRuntimeMiniflare(session);
