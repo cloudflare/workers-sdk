@@ -169,6 +169,36 @@ function isPreviewTokenRecord(value: unknown): value is PreviewTokenRecord {
 	);
 }
 
+/**
+ * Resolve the `suffix` redirect target so that it can only point at the
+ * current origin.
+ *
+ * The value is resolved with the WHATWG URL parser, as a browser would, so that
+ * inputs such as `//host`, `/\host` or paths containing tabs and newlines cannot
+ * escape to another origin. A same-origin URL can still have a pathname that
+ * starts with `//` (e.g. `/.//host`), which a browser would read as a
+ * protocol-relative URL in `Location`, so those are rejected too.
+ *
+ * @param suffix The raw `suffix` query parameter, if provided
+ * @param url The URL of the incoming request
+ * @returns A same-origin pathname + search + hash, or `/` if `suffix` is missing or would leave the origin
+ */
+function getSameOriginRedirect(suffix: string | null, url: URL): string {
+	if (suffix === null) {
+		return "/";
+	}
+	let target: URL;
+	try {
+		target = new URL(suffix, url);
+	} catch {
+		return "/";
+	}
+	if (target.origin !== url.origin || target.pathname.startsWith("//")) {
+		return "/";
+	}
+	return `${target.pathname}${target.search}${target.hash}`;
+}
+
 function isRawHttpRequest(url: URL, env: Env) {
 	return url.hostname.endsWith(env.RAW_HTTP);
 }
@@ -377,7 +407,7 @@ async function updatePreviewToken(url: URL, env: Env) {
 	return new Response(null, {
 		status: 307,
 		headers: {
-			Location: url.searchParams.get("suffix") ?? "/",
+			Location: getSameOriginRedirect(url.searchParams.get("suffix"), url),
 			"Set-Cookie": cookie.serialize(PREVIEW_COOKIE_NAME, tokenId, {
 				secure: true,
 				sameSite: "none",

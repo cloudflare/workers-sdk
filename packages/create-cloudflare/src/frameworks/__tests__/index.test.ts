@@ -5,6 +5,7 @@ import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { mockPackageManager } from "helpers/__tests__/mocks";
 import astro from "templates/astro/c3";
 import nuxt from "templates/nuxt/c3";
+import tanstackStart from "templates/tanstack-start/c3";
 import { afterEach, describe, test, vi } from "vitest";
 import { getFrameworkCli, runFrameworkGenerator } from "..";
 import { createTestContext } from "../../__tests__/helpers";
@@ -162,6 +163,47 @@ describe("framework CLI Node.js requirements", () => {
 			});
 		}
 	);
+
+	describe("TanStack Start", () => {
+		test.for(["22.0.0", "22.8.99"])(
+			"rejects Node.js %s before running @tanstack/cli",
+			async (nodeVersion, { expect }) => {
+				vi.stubGlobal("process", {
+					...process,
+					versions: { ...process.versions, node: nodeVersion },
+				});
+				const ctx = createTestContext();
+				ctx.template = tanstackStart;
+
+				await expect(
+					runFrameworkGenerator(ctx, ["create", ctx.project.name])
+				).rejects.toThrow(
+					`TanStack Start requires Node.js ^20.17.0 || >=22.9.0. You are using Node.js ${nodeVersion}. Please upgrade Node.js and try again.`
+				);
+				expect(runCommand).not.toHaveBeenCalled();
+			}
+		);
+
+		test.for(["22.9.0", "24.0.0"])(
+			"runs @tanstack/cli on Node.js %s",
+			async (nodeVersion, { expect }) => {
+				vi.stubGlobal("process", {
+					...process,
+					versions: { ...process.versions, node: nodeVersion },
+				});
+				mockPackageManager("pnpm");
+				const ctx = createTestContext();
+				ctx.template = tanstackStart;
+
+				await runFrameworkGenerator(ctx, ["create", ctx.project.name]);
+
+				expect(runCommand).toHaveBeenCalledWith(
+					["pnpx", getFrameworkCli(ctx), "create", ctx.project.name],
+					{ env: {} }
+				);
+			}
+		);
+	});
 
 	test("runs other framework CLIs on C3-supported Node.js versions", async ({
 		expect,

@@ -699,6 +699,20 @@ describe("email routing commands", () => {
 			);
 			expect(std.out).toContain("verification email has been sent");
 		});
+
+		it("should not mention a verification email for an already-verified address", async ({
+			expect,
+		}) => {
+			mockCreateAddress("2024-01-01T12:00:00Z");
+
+			await runWrangler("email routing addresses create owner@example.com");
+
+			expect(std.out).toContain(
+				"Created destination address: owner@example.com"
+			);
+			expect(std.out).toContain("Verified: 2024-01-01T12:00:00Z");
+			expect(std.out).not.toContain("verification email has been sent");
+		});
 	});
 
 	// --- addresses delete ---
@@ -1451,7 +1465,7 @@ function mockGetAddress(address: typeof mockAddress) {
 	);
 }
 
-function mockCreateAddress() {
+function mockCreateAddress(verified = "") {
 	msw.use(
 		http.post(
 			"*/accounts/:accountId/email/routing/addresses",
@@ -1465,7 +1479,7 @@ function mockCreateAddress() {
 							created: "2024-01-01T00:00:00Z",
 							modified: "2024-01-01T00:00:00Z",
 							tag: "new-tag",
-							verified: "",
+							verified,
 						},
 						true
 					)
