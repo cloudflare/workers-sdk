@@ -63,7 +63,7 @@ export async function startRuntime({
 		for (const input of inputs) {
 			workers.push(await getWorkerOptions(toPath(root), input, sessions));
 		}
-		mf = new Miniflare({ workers });
+		mf = new Miniflare({ unsafeTriggerHandlers: true, workers });
 		const url = await mf.ready;
 		const runtime = mf;
 		return {
