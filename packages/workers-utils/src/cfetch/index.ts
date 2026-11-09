@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { URLSearchParams } from "node:url";
 import { fetch, FormData, Headers, Response } from "undici";
+import { addCustomApiHeaders } from "../custom-api-headers";
 import {
 	getCloudflareApiBaseUrl,
 	getSanitizeLogs,
@@ -8,6 +9,7 @@ import {
 } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { APIError, parseJSON } from "../parse";
+import { sanitizeHeaders } from "../sanitize-headers";
 import { type FetchError, maybeThrowFriendlyError } from "./errors";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Logger } from "../logger";
@@ -53,11 +55,9 @@ export type FetchPagedListResultFetcher = <ResponseType>(
 ) => Promise<ResponseType[]>;
 
 function logHeaders(headers: Headers, logger: Logger): void {
-	const clone = cloneHeaders(headers);
-	clone.delete("Authorization");
 	logger.debugWithSanitization?.(
 		"HEADERS:",
-		JSON.stringify(Object.fromEntries(clone), null, 2)
+		JSON.stringify(sanitizeHeaders(headers), null, 2)
 	);
 }
 
@@ -86,6 +86,7 @@ export async function performApiFetchBase(
 	addAuthorizationHeader(headers, credentials);
 	headers.set("User-Agent", userAgent);
 	maybeAddTraceHeader(headers);
+	addCustomApiHeaders(headers);
 
 	const queryString = queryParams ? `?${queryParams.toString()}` : "";
 	logger.debug(
@@ -94,7 +95,14 @@ export async function performApiFetchBase(
 	logger.debugWithSanitization?.("QUERY STRING:", queryString);
 	logHeaders(headers, logger);
 
-	logger.debugWithSanitization?.("INIT:", JSON.stringify({ ...init }, null, 2));
+	logger.debugWithSanitization?.(
+		"INIT:",
+		JSON.stringify(
+			{ ...init, headers: sanitizeHeaders(new Headers(init.headers)) },
+			null,
+			2
+		)
+	);
 	if (
 		logger.debugWithSanitization !== undefined &&
 		init.body instanceof FormData &&
@@ -564,6 +572,7 @@ export async function fetchKVGetValueBase(
 	addAuthorizationHeader(headers, credentials);
 	headers.set("User-Agent", userAgent);
 	maybeAddTraceHeader(headers);
+	addCustomApiHeaders(headers);
 
 	const resource = `${getCloudflareApiBaseUrl(complianceConfig)}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
 

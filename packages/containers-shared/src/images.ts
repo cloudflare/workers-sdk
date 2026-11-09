@@ -131,6 +131,11 @@ export async function prepareContainerImagesForDev(args: {
 	 */
 	dockerUnavailableHint?: string;
 	registryConfigureCommand: string;
+	/**
+	 * Operation named when Docker cannot be launched, e.g. `"running tests"`.
+	 * Defaults to `"running dev"`.
+	 */
+	operation?: string;
 }): Promise<{ aborted: boolean }> {
 	const {
 		dockerPath,
@@ -147,7 +152,7 @@ export async function prepareContainerImagesForDev(args: {
 	}
 	await verifyDockerInstalled({
 		dockerPath,
-		operation: "running dev",
+		operation: args.operation ?? "running dev",
 		imageNoun:
 			containerOptions.length !== 1
 				? "the configured images"

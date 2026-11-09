@@ -44,6 +44,8 @@ minimumReleaseAgeExclude:
   # the day it is published.
   - "cf"
   - "workerd"
+  # capnp-es is maintained by a workers-sdk maintainer.
+  - "capnp-es"
   # The below is to install the rosie-skills package and remove the problematic
   # wasm module it brings as soon as possible
   # TODO(dario): remove in a few days
@@ -63,6 +65,8 @@ allowBuilds:
   # still pulls in sharp@0.34.x transitively (via published miniflare), which does.
   # Remove once that pin uses a published miniflare built on sharp 0.35+.
   sharp: true
+  # Optional Miniflare peer used for Negotiate/SPNEGO proxy authentication.
+  kerberos: true
   playwright-chromium: true
   prisma: true
   # Explicitly silence warnings for packages whose postinstall scripts are not
@@ -101,6 +105,13 @@ overrides:
   # for ~4.17.15 and verdaccio pins exactly 4.17.21, so neither can reach 4.18.
   # Remove once no dependency resolves lodash below 4.18.1.
   "lodash@<4.18.1": "^4.18.1"
+  # Miniflare provides @puppeteer/browsers' optional proxy-agent peer so browser
+  # downloads respect proxy configuration, then bundles that dependency graph into
+  # its published output. Override proxy-agent's socks > ip-address and
+  # pac-proxy-agent > get-uri > basic-ftp paths so the bundled copies include the
+  # upstream security fixes, which consumer dependency audits cannot otherwise see.
+  "get-uri>basic-ftp": "6.2.1"
+  "socks-proxy-agent>socks": "2.8.10"
 
 peerDependencyRules:
   allowedVersions:
@@ -141,14 +152,14 @@ catalog:
   esbuild: "0.28.2"
   "@playwright/test": "1.61.0"
   playwright-chromium: "1.61.0"
-  "@cloudflare/workers-types": "^5.20261106.1"
-  workerd: "1.20261106.1"
+  "@cloudflare/workers-types": "^5.20261109.1"
+  workerd: "1.20261109.1"
   jsonc-parser: "3.2.0"
   smol-toml: "1.9.0"
   msw: "2.14.6"
   tinyglobby: "0.2.16"
   "tree-kill": "1.2.2"
-  "capnp-es": "0.0.16"
+  "capnp-es": "0.0.17"
   "capnweb": "0.12.0"
   zod: "4.6.6"
   "ci-info": "4.4.0"

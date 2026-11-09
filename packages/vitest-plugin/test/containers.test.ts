@@ -258,8 +258,9 @@ describe("project Container environments", () => {
 			logger,
 			complianceConfig: config,
 			dockerUnavailableHint:
-				"If your tests do not need Containers, set dev.enable_containers to false in your wrangler.jsonc to run them without Docker.",
+				"To run these tests without Docker, set dev.enable_containers to false in your wrangler.jsonc. This also disables Containers in `wrangler dev`.",
 			registryConfigureCommand: "wrangler containers registries configure",
+			operation: "running tests",
 		});
 		expect(prepareContainerImagesForDev).toHaveBeenCalledOnce();
 	});

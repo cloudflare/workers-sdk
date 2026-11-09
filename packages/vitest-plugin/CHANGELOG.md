@@ -1,5 +1,45 @@
 # @cloudflare/vitest-plugin
 
+## 1.6.1
+
+### Patch Changes
+
+- [#16793](https://github.com/cloudflare/workers-sdk/pull/16793) [`fea323a`](https://github.com/cloudflare/workers-sdk/commit/fea323a7d419fc60ac7bb2ca616bde54da684c4d) Thanks [@vicb](https://github.com/vicb)! - Bump `capnp-es` to 0.0.17
+
+  This release fixes 3 issues. See the [release notes](https://github.com/unjs/capnp-es/releases/tag/v0.0.17) for details.
+
+- [#16683](https://github.com/cloudflare/workers-sdk/pull/16683) [`6f29f97`](https://github.com/cloudflare/workers-sdk/commit/6f29f974de4b321ff5c13796b58c934747dd439e) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Stop persisting account selections made by `cf` and the Cloudflare Vite and Vitest plugins
+
+  Profiles continue to select credentials rather than accounts. If the active credentials can access one account, it is selected automatically. If they can access multiple accounts, `cf` and the Vite and Vitest plugins reuse the selection while running but ask again the next time they start. Configure `accountId` in `cloudflare.config.ts` or set the `CLOUDFLARE_ACCOUNT_ID` environment variable to avoid repeated prompts.
+
+  Wrangler's existing persistent account selection remains unchanged.
+
+- [#16648](https://github.com/cloudflare/workers-sdk/pull/16648) [`56459a5`](https://github.com/cloudflare/workers-sdk/commit/56459a561b7b133a9152b993336e1e5470b1d290) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update bundled third-party dependencies with known security fixes
+
+  Local development and Workers Vitest tests now include security fixes for their bundled dependencies. Local browser rendering also includes security fixes for browser downloads, archive extraction, and proxy support.
+
+  Miniflare and Wrangler now require Node.js 22.12.0 or later, matching the supported runtime range of the new browser installer.
+
+- [#16746](https://github.com/cloudflare/workers-sdk/pull/16746) [`abf924e`](https://github.com/cloudflare/workers-sdk/commit/abf924ee1820b4af139f21dffc877eaf6122c056) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-06
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16792](https://github.com/cloudflare/workers-sdk/pull/16792) [`de10016`](https://github.com/cloudflare/workers-sdk/commit/de100160f243451355480e8f815d0f7d4b3ec8b9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-09
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#15693](https://github.com/cloudflare/workers-sdk/pull/15693) [`307a69a`](https://github.com/cloudflare/workers-sdk/commit/307a69a35f607b619a7218631a968a734a764393) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Dispose Miniflare when a Vitest runtime fails to start
+
+  Previously, a Miniflare instance whose startup failed was never disposed, so anything it had already started kept running. If disposal also fails, the original startup error is still reported.
+
+- [#16699](https://github.com/cloudflare/workers-sdk/pull/16699) [`cd24b27`](https://github.com/cloudflare/workers-sdk/commit/cd24b27915cce9493b73f3e3a884629c948f56da) Thanks [@matingathani](https://github.com/matingathani)! - Fix `vi.mock()` factories failing under Vitest 5.1
+
+  Mock factories in `vi.mock()` now work when running tests with Vitest 5.1 and later. Previously, any test file that used a mock factory failed during import with `asyncLocalStorage.disable() is not implemented`.
+
+- Updated dependencies [[`fea323a`](https://github.com/cloudflare/workers-sdk/commit/fea323a7d419fc60ac7bb2ca616bde54da684c4d), [`a589d23`](https://github.com/cloudflare/workers-sdk/commit/a589d23703e7bcd707adee0443169a1a59d43651), [`56459a5`](https://github.com/cloudflare/workers-sdk/commit/56459a561b7b133a9152b993336e1e5470b1d290), [`fe69809`](https://github.com/cloudflare/workers-sdk/commit/fe69809c970e721e0d25935c37eb6c6b6ecb0593), [`abf924e`](https://github.com/cloudflare/workers-sdk/commit/abf924ee1820b4af139f21dffc877eaf6122c056), [`de10016`](https://github.com/cloudflare/workers-sdk/commit/de100160f243451355480e8f815d0f7d4b3ec8b9), [`abf924e`](https://github.com/cloudflare/workers-sdk/commit/abf924ee1820b4af139f21dffc877eaf6122c056), [`de10016`](https://github.com/cloudflare/workers-sdk/commit/de100160f243451355480e8f815d0f7d4b3ec8b9), [`2fb01e7`](https://github.com/cloudflare/workers-sdk/commit/2fb01e769fac296c27172e4e4f6bedffcb24b2c0), [`dee7a1d`](https://github.com/cloudflare/workers-sdk/commit/dee7a1d7e9b5641cb077e5a91c7f36ea98f1e9a1), [`dc4e093`](https://github.com/cloudflare/workers-sdk/commit/dc4e0935c6dc0293b633ea5176ca2b1740ba65f3), [`cff83d0`](https://github.com/cloudflare/workers-sdk/commit/cff83d0220b51c7cfdf422bcd5091a8fbea76d81), [`3ef2afd`](https://github.com/cloudflare/workers-sdk/commit/3ef2afd63431cf8e57f94e47501d6be53adcaccc), [`4112820`](https://github.com/cloudflare/workers-sdk/commit/41128206d0158bce2243bec7bd59fa7efc563aaf), [`66bc0d6`](https://github.com/cloudflare/workers-sdk/commit/66bc0d6f353904f8a203bcea9298d9f45fbd234a), [`cff83d0`](https://github.com/cloudflare/workers-sdk/commit/cff83d0220b51c7cfdf422bcd5091a8fbea76d81), [`9b6582c`](https://github.com/cloudflare/workers-sdk/commit/9b6582cc911b04de667d0055eabd513813d8b634), [`c64fdfb`](https://github.com/cloudflare/workers-sdk/commit/c64fdfba7d2531b4f58d7b76474f2ae636b17044), [`4112820`](https://github.com/cloudflare/workers-sdk/commit/41128206d0158bce2243bec7bd59fa7efc563aaf)]:
+  - miniflare@5.20261109.0-beta
+  - wrangler@4.159.0
+
 ## 1.6.0
 
 ### Minor Changes

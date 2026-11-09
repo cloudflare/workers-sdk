@@ -348,6 +348,7 @@ async function prepareImages(
 		complianceConfig: containerConfig.complianceConfig,
 		dockerUnavailableHint: containerConfig.dockerUnavailableHint,
 		registryConfigureCommand: containerConfig.registryConfigureCommand,
+		operation: "running tests",
 	});
 
 	if (state.cancelled || result.aborted) {
@@ -374,7 +375,7 @@ export function getWranglerContainerConfiguration(
 		complianceConfig: config,
 		containerEngine: config.dev.container_engine,
 		registryConfigureCommand: "wrangler containers registries configure",
-		dockerUnavailableHint: `If your tests do not need Containers, set dev.enable_containers to false in your ${path.basename(configPath)} to run them without Docker.`,
+		dockerUnavailableHint: `To run these tests without Docker, set dev.enable_containers to false in your ${path.basename(configPath)}. This also disables Containers in \`wrangler dev\`.`,
 		planInputs: [
 			configPath,
 			config.compliance_region,

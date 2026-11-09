@@ -17,6 +17,48 @@ describe("vite-config utils", () => {
 	const context = createMockContext();
 
 	describe("checkIfViteConfigUsesCloudflarePlugin", () => {
+		it.for(["plugins", '"plugins"', '["plugins"]'])(
+			"detects the final %s array after a spread in JavaScript config",
+			async (key, { expect }) => {
+				await writeFile(
+					"vite.config.js",
+					`import { defineConfig } from "vite";
+import { cloudflare } from "@cloudflare/vite-plugin";
+
+const shared = { plugins: [] };
+export default defineConfig({
+  plugins: [],
+  ...shared,
+  ${key}: [cloudflare()]
+});
+`
+				);
+
+				expect(checkIfViteConfigUsesCloudflarePlugin(".", context)).toBe(true);
+			}
+		);
+
+		it.for(["js", "ts"])(
+			"does not detect a plugin that a later spread can override in %s config",
+			async (extension, { expect }) => {
+				const filePath = `vite.config.${extension}`;
+				const content = `import { defineConfig } from "vite";
+import { cloudflare } from "@cloudflare/vite-plugin";
+import react from "@vitejs/plugin-react";
+
+const shared = { plugins: [react()] };
+export default defineConfig({
+  plugins: [cloudflare()],
+  ...shared
+});
+`;
+				await writeFile(filePath, content);
+
+				expect(checkIfViteConfigUsesCloudflarePlugin(".", context)).toBe(false);
+				expect(readFileSync(filePath, "utf8")).toBe(content);
+			}
+		);
+
 		it.for(["\n", "\r\n"])(
 			"preserves the config file with %j line endings",
 			async (lineEnding, { expect }) => {
@@ -110,6 +152,124 @@ export default defineConfig({
 	});
 
 	describe("transformViteConfig", () => {
+		it.for([
+			"[overrideKey]: shared.plugins",
+			"get plugins() { return shared.plugins; }",
+		])("rejects a later plugins override: %s", async (override, { expect }) => {
+			const content = `import { defineConfig } from "vite";
+import { cloudflare } from "@cloudflare/vite-plugin";
+
+const overrideKey = "plugins";
+const shared = { plugins: [] };
+export default defineConfig({
+  "plugins": [cloudflare()],
+  ${override}
+});
+`;
+			await writeFile("vite.config.js", content);
+
+			expect(checkIfViteConfigUsesCloudflarePlugin(".", context)).toBe(false);
+			expect(() => transformViteConfig(".")).toThrow(
+				/Cannot modify Vite config: a later property may override the plugins array/
+			);
+			expect(readFileSync("vite.config.js", "utf8")).toBe(content);
+		});
+
+		it.for(["1", '"server"', '["server"]'])(
+			"allows an unrelated static %s property after plugins",
+			async (key, { expect }) => {
+				await writeFile(
+					"vite.config.js",
+					`import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [],
+  ${key}: {}
+});
+`
+				);
+
+				transformViteConfig(".");
+
+				expect(readFileSync("vite.config.js", "utf8")).toContain(
+					"plugins: [cloudflare()]"
+				);
+			}
+		);
+
+		it.for(["plugins", '"plugins"', '["plugins"]'])(
+			"updates the final %s array after a spread in JavaScript config",
+			async (key, { expect }) => {
+				await writeFile(
+					"vite.config.js",
+					`import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+
+const shared = { plugins: [] };
+export default defineConfig({
+  plugins: [],
+  ...shared,
+  ${key}: [react()]
+});
+`
+				);
+
+				transformViteConfig(".");
+
+				const result = readFileSync("vite.config.js", "utf8");
+				expect(result).toContain(`${key}: [react(), cloudflare()]`);
+				expect(checkIfViteConfigUsesCloudflarePlugin(".", context)).toBe(true);
+			}
+		);
+
+		it.for(["js", "ts"])(
+			"leaves %s config unchanged when a later spread can override plugins",
+			async (extension, { expect }) => {
+				const filePath = `vite.config.${extension}`;
+				const content = `import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+
+const shared = { plugins: [react()] };
+export default defineConfig({
+  plugins: [],
+  ...shared
+});
+`;
+				await writeFile(filePath, content);
+
+				expect(() => transformViteConfig(".")).toThrow(
+					/Cannot modify Vite config: a later property may override the plugins array/
+				);
+				expect(readFileSync(filePath, "utf8")).toBe(content);
+			}
+		);
+
+		it.for(["js", "ts"])(
+			"adds the plugin to %s config when the plugins array follows object spreads",
+			async (extension, { expect }) => {
+				const filePath = `vite.config.${extension}`;
+				await writeFile(
+					filePath,
+					`import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+
+const shared = { plugins: [] };
+export default defineConfig({
+  ...shared,
+  plugins: [react()]
+});
+`
+				);
+
+				transformViteConfig(".");
+
+				expect(readFileSync(filePath, "utf8")).toMatch(
+					/\.\.\.shared,\s+plugins: \[react\(\), cloudflare\(\)\]/
+				);
+				expect(checkIfViteConfigUsesCloudflarePlugin(".", context)).toBe(true);
+			}
+		);
+
 		it("should successfully transform function-based defineConfig with arrow expression body", async ({
 			expect,
 		}) => {
