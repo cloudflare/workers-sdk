@@ -2248,12 +2248,11 @@ describe("createTestHarness()", () => {
 		const primaryResponse = await server.getWorker("primary-worker").fetch("/");
 
 		await expect(primaryResponse.text()).resolves.toBe("primary ok");
-		// Without Wrangler's error middleware in the bundle, an uncaught error is
-		// a 500 response rather than a rejection
-		const auxiliaryResponse = await server
-			.getWorker("auxiliary-worker")
-			.fetch("https://example.com/greet", { method: "post" });
-		expect(auxiliaryResponse.status).toBe(500);
+		await expect(
+			server
+				.getWorker("auxiliary-worker")
+				.fetch("https://example.com/greet", { method: "post" })
+		).rejects.toThrow("auxiliary failed");
 		expect(server.getLogs()).toEqual([
 			{ timestamp: expect.any(Number), level: "info", message: "primary log" },
 			{
@@ -2273,7 +2272,7 @@ describe("createTestHarness()", () => {
 			<timestamp> [server] [primary-worker] fetch - GET / - 200
 			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - started
 			<timestamp> [runtime] warn: auxiliary warning
-			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - 500"
+			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - failed"
 		`);
 
 		server.clearLogs();
@@ -2289,7 +2288,7 @@ describe("createTestHarness()", () => {
 			<timestamp> [server] [primary-worker] fetch - GET / - 200
 			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - started
 			<timestamp> [runtime] warn: auxiliary warning
-			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - 500"
+			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - failed"
 		`);
 
 		await server.reset();

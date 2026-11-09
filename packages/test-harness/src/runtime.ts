@@ -6,6 +6,7 @@ import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-binding
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import { resolveLocalBindings } from "miniflare";
 import { getRemoteBindingsAuth } from "./auth";
+import { withJsonErrors } from "./json-error";
 import type { TestHarnessOptions, WorkerInput } from "./index";
 import type { BuildOutputWorker } from "@cloudflare/build-output-utils";
 import type {
@@ -242,7 +243,11 @@ async function getManifest(worker: BuildOutputWorker): Promise<Manifest> {
 			};
 		})
 	);
-	return { mainModule: manifest.mainModule, modulesRoot: bundleDir, modules };
+	return withJsonErrors({
+		mainModule: manifest.mainModule,
+		modulesRoot: bundleDir,
+		modules,
+	});
 }
 
 /**
