@@ -78,15 +78,18 @@ test("starts without error when assets directory does not exist", async ({
 	await res.arrayBuffer(); // consume body to avoid leaks
 });
 
-async function listAssetsPlaceholders(): Promise<string[]> {
+// Matches both the per-instance `miniflare-<hex>` root that holds the
+// placeholder and the standalone `miniflare-assets-*` dirs an older layout
+// created, so a leak of either shape fails the test.
+async function listMiniflareTempDirs(): Promise<string[]> {
 	const entries = await fs.readdir(os.tmpdir());
-	return entries.filter((entry) => entry.startsWith("miniflare-assets-"));
+	return entries.filter((entry) => entry.startsWith("miniflare-"));
 }
 
 test("removes the placeholder for a missing assets directory on dispose", async ({
 	expect,
 }) => {
-	const before = await listAssetsPlaceholders();
+	const before = await listMiniflareTempDirs();
 	const tmp = await useTmp();
 	const nonExistentDir = path.join(tmp, "does-not-exist");
 
@@ -101,7 +104,7 @@ test("removes the placeholder for a missing assets directory on dispose", async 
 		await disposeWithRetry(mf);
 	}
 
-	const after = await listAssetsPlaceholders();
+	const after = await listMiniflareTempDirs();
 	expect(after.filter((entry) => !before.includes(entry))).toEqual([]);
 });
 
