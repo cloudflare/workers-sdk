@@ -23,7 +23,7 @@ Test your production build: the harness runs the Build Output as it is, and neve
 - **Several Workers:** add one entry per Worker. The first is the primary Worker. Builds may come from different tools. Use `name` to pick a build's non-default Worker by its name.
 - **Secrets** are read from `.dev.vars` or `.env` files in the build's project folder, for the mode the build ran in, as in `vite preview`. `secrets` overrides them.
 - **Remote bindings** connect to the real resources on your account.
-- **D1 migrations:** `getWorker().applyD1Migrations(binding, { dir })` applies the `.sql` files in `dir`, which defaults to `./migrations` in the build's project folder.
+- **D1 migrations:** `getWorker().applyD1Migrations(binding, { dir, pattern, table })` takes the options of `cf d1 migrations apply`. `dir` defaults to `./migrations` in the build's project folder.
 - **Test-only Workers**, such as mocks for `bindingOverrides`, can be inline: `{ config }` takes config in the shape of a Build Output `worker.config.json`, whose `manifest` includes each module's code.
 - **Types:** `server.getWorker<typeof import("./cloudflare.config")>()` infers a Worker's `Env` and module from its config.
 

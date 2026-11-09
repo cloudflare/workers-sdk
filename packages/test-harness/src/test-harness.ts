@@ -263,6 +263,16 @@ export type WorkerHandle<
 			 * `./migrations`.
 			 */
 			dir?: string;
+			/**
+			 * Glob for the migration files, relative to the same project directory.
+			 * It must start with `dir`. Defaults to `<dir>/*.sql`; Drizzle's nested
+			 * layout uses `<dir>/*\/migration.sql`.
+			 */
+			pattern?: string;
+			/**
+			 * Table that records the applied migrations. Defaults to `d1_migrations`.
+			 */
+			table?: string;
 		}
 	): Promise<void>;
 	/**
@@ -1004,10 +1014,15 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 						bindingName,
 						workerName
 					);
-					// Build Output has no migrations config, so the directory is an option
+					// Build Output has no migrations config, so these are options, as in
+					// `cf d1 migrations apply --dir --pattern --table`
+					const migrationsDir =
+						migrationsOptions?.dir ?? DEFAULT_MIGRATION_PATH;
+					const migrationsTableName =
+						migrationsOptions?.table ?? DEFAULT_MIGRATION_TABLE;
 					const resolvedMigrationsPath = path.resolve(
 						projectDir,
-						migrationsOptions?.dir ?? DEFAULT_MIGRATION_PATH
+						migrationsDir
 					);
 
 					debugLog(`d1 migrations - ${bindingName} - started`, workerName);
@@ -1024,14 +1039,15 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 						}
 
 						await database
-							.prepare(getCreateMigrationsTableQuery(DEFAULT_MIGRATION_TABLE))
+							.prepare(getCreateMigrationsTableQuery(migrationsTableName))
 							.run();
 						const appliedMigrationNamesResult = await database
-							.prepare(getListAppliedMigrationsQuery(DEFAULT_MIGRATION_TABLE))
+							.prepare(getListAppliedMigrationsQuery(migrationsTableName))
 							.all<{ name: string }>();
 						const migrationNames = getD1MigrationFiles({
-							projectPath: resolvedMigrationsPath,
-							migrationsDir: ".",
+							projectPath: projectDir,
+							migrationsDir,
+							migrationsPattern: migrationsOptions?.pattern,
 						}).map((file) => file.name);
 						const unappliedMigrationNames = getUnappliedMigrationNames(
 							migrationNames,
@@ -1041,7 +1057,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 							const query = buildMigrationQuery({
 								migrationName,
 								migrationsPath: resolvedMigrationsPath,
-								migrationsTableName: DEFAULT_MIGRATION_TABLE,
+								migrationsTableName,
 							});
 							await database.batch(
 								splitSqlQuery(query).map((part) => database.prepare(part))

@@ -1096,16 +1096,21 @@ describe("createTestHarness()", () => {
 			},
 		});
 		await seed({
-			"migrations/0001_settings.sql": `
+			"migrations/0001_settings/migration.sql": `
 				CREATE TABLE settings (
 					key TEXT PRIMARY KEY,
 					value TEXT NOT NULL
 				);
 			`,
-			"migrations/0002_seed.sql": `
+			"migrations/0002_seed/migration.sql": `
 				INSERT INTO settings (key, value) VALUES ('greeting', 'Hello D1');
 			`,
 		});
+		// Wrangler's test sets these as migrations_pattern and migrations_table
+		const migrationsOptions = {
+			pattern: "migrations/*/migration.sql",
+			table: "custom_migrations",
+		};
 
 		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
 		onTestFinished(server.close);
@@ -1113,22 +1118,29 @@ describe("createTestHarness()", () => {
 		await server.listen();
 
 		const worker = server.getWorker<{ DATABASE: D1Database }>();
-		await worker.applyD1Migrations("DATABASE");
+		await worker.applyD1Migrations("DATABASE", migrationsOptions);
 
 		const response = await worker.fetch("/greeting");
 		await expect(response.text()).resolves.toBe("Hello D1");
 
-		await worker.applyD1Migrations("DATABASE");
+		await worker.applyD1Migrations("DATABASE", migrationsOptions);
 		const secondResponse = await worker.fetch("/greeting");
 		await expect(secondResponse.text()).resolves.toBe("Hello D1");
+
+		const env = await worker.getEnv();
+		await expect(
+			env.DATABASE.prepare(
+				"SELECT COUNT(*) AS count FROM custom_migrations"
+			).first("count")
+		).resolves.toBe(2);
 
 		server.debug();
 		const debugOutput = normalizeDebugOutput(std.getAndClearOut());
 		expect(debugOutput).toContain(
-			"[server] [d1-worker] d1 migrations - DATABASE - applied 0001_settings.sql"
+			"[server] [d1-worker] d1 migrations - DATABASE - applied 0001_settings/migration.sql"
 		);
 		expect(debugOutput).toContain(
-			"[server] [d1-worker] d1 migrations - DATABASE - applied 0002_seed.sql"
+			"[server] [d1-worker] d1 migrations - DATABASE - applied 0002_seed/migration.sql"
 		);
 		expect(debugOutput).toContain(
 			"[server] [d1-worker] d1 migrations - DATABASE - completed (2 applied)"
