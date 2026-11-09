@@ -92,7 +92,13 @@ export const syncAssets = async (
 	assert(accountId, "Missing accountId");
 	// Keep progress suppression local to this upload, including concurrent callers.
 	const assetLogger: Logger = options.quiet
-		? { debug() {}, info() {}, log() {}, warn: (...args) => logger.warn(...args), error: (...args) => logger.error(...args) }
+		? {
+				debug() {},
+				info() {},
+				log() {},
+				warn: (...args) => logger.warn(...args),
+				error: (...args) => logger.error(...args),
+			}
 		: logger;
 
 	// 1. generate asset manifest

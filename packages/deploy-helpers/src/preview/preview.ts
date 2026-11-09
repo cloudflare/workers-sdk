@@ -1333,17 +1333,17 @@ async function runPreview(
 		}
 
 		if (args.log !== false) {
-		logger.log(
-			formatPreviewDeploymentSummary(
-				config,
-				previewResource,
-				deployment,
-				isNewPreview,
-				resolvedPullRequest,
-				options.deployCommand,
-				options.previewCommand
-			)
-		);
+			logger.log(
+				formatPreviewDeploymentSummary(
+					config,
+					previewResource,
+					deployment,
+					isNewPreview,
+					resolvedPullRequest,
+					options.deployCommand,
+					options.previewCommand
+				)
+			);
 		}
 		logMissingCustomDomainPreviewUrlsWarning(
 			config,
@@ -1407,7 +1407,10 @@ export async function preview(
  */
 export async function previewBuildOutput(
 	accountId: string,
-	args: Pick<PreviewArgs, "name" | "tag" | "message" | "json" | "secretsFile" | "log">,
+	args: Pick<
+		PreviewArgs,
+		"name" | "tag" | "message" | "json" | "secretsFile" | "log"
+	>,
 	buildOutput: PreviewBuildOutput,
 	options?: PreviewOptions
 ): Promise<PreviewResult> {

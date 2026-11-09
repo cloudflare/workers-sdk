@@ -14,7 +14,7 @@ vi.mock("../src/shared/context", () => ({
 }));
 
 vi.mock("../src/deploy/helpers/hash", () => ({
-	hashFile: () => "asset-hash",
+	createFileHasher: async () => () => "asset-hash",
 }));
 
 describe("asset upload output", () => {

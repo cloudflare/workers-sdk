@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
 	editPreview: vi.fn(),
 	getPreview: vi.fn(),
 	getPreviewDeployment: vi.fn(),
+	getPreviewBaseConfig: vi.fn(),
 	confirm: vi.fn(),
 	getPullRequestMetadata: vi.fn(),
 	syncAssets: vi.fn(),
@@ -37,6 +38,7 @@ vi.mock("../src/preview/api", async (importOriginal) => ({
 	editPreview: mocks.editPreview,
 	getPreview: mocks.getPreview,
 	getPreviewDeployment: mocks.getPreviewDeployment,
+	getPreviewBaseConfig: mocks.getPreviewBaseConfig,
 }));
 
 vi.mock("../src/deploy/helpers/assets", () => ({
@@ -116,6 +118,7 @@ describe("previewBuildOutput", () => {
 		vi.clearAllMocks();
 		mocks.getPreview.mockResolvedValue(previewResource);
 		mocks.getPreviewDeployment.mockResolvedValue(deploymentResource);
+		mocks.getPreviewBaseConfig.mockResolvedValue({});
 		mocks.confirm.mockResolvedValue(true);
 		mocks.getPullRequestMetadata.mockReturnValue(undefined);
 		mocks.editPreview.mockResolvedValue(previewResource);
