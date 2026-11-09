@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { Miniflare, MiniflareCoreError } from "miniflare";
 import { test } from "vitest";
@@ -75,6 +76,54 @@ test("starts without error when assets directory does not exist", async ({
 	const res = await mf.dispatchFetch("http://example.com/test.txt");
 	expect(res.status).toBe(404);
 	await res.arrayBuffer(); // consume body to avoid leaks
+});
+
+async function listAssetsPlaceholders(): Promise<string[]> {
+	const entries = await fs.readdir(os.tmpdir());
+	return entries.filter((entry) => entry.startsWith("miniflare-assets-"));
+}
+
+test("removes the placeholder for a missing assets directory on dispose", async ({
+	expect,
+}) => {
+	const before = await listAssetsPlaceholders();
+	const tmp = await useTmp();
+	const nonExistentDir = path.join(tmp, "does-not-exist");
+
+	const mf = new Miniflare(makeOptions(nonExistentDir));
+	try {
+		const res = await mf.dispatchFetch("http://example.com/test.txt");
+		expect(res.status).toBe(404);
+		await res.arrayBuffer();
+		// setOptions() re-runs getServices(), which must reuse the placeholder
+		await mf.setOptions(makeOptions(nonExistentDir));
+	} finally {
+		await disposeWithRetry(mf);
+	}
+
+	const after = await listAssetsPlaceholders();
+	expect(after.filter((entry) => !before.includes(entry))).toEqual([]);
+});
+
+test("disposing one instance keeps another instance's missing assets directory working", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const nonExistentDir = path.join(tmp, "does-not-exist");
+
+	const mf1 = new Miniflare(makeOptions(nonExistentDir));
+	const mf2 = new Miniflare(makeOptions(nonExistentDir));
+	useDispose(mf2);
+	try {
+		await Promise.all([mf1.ready, mf2.ready]);
+	} finally {
+		await disposeWithRetry(mf1);
+	}
+
+	await mf2.setOptions(makeOptions(nonExistentDir));
+	const res = await mf2.dispatchFetch("http://example.com/test.txt");
+	expect(res.status).toBe(404);
+	await res.arrayBuffer();
 });
 
 test("starts without error when assets directory is empty", async ({
