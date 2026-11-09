@@ -395,4 +395,50 @@ describe("prepareContainerImagesForDev", () => {
 			expect(result).toEqual({ aborted: false });
 		}
 	);
+
+	it.skipIf(process.platform === "win32")(
+		"defaults the Docker error to Wrangler dev advice",
+		async ({ expect }) => {
+			vi.mocked(verifyDockerInstalled).mockClear();
+			await prepareContainerImagesForDev({
+				dockerPath: "test-docker",
+				containerOptions: [],
+				configFileName: "wrangler.jsonc",
+				registryConfigureCommand: "test registry configure",
+				onContainerImagePreparationStart: vi.fn(),
+				onContainerImagePreparationEnd: vi.fn(),
+				logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+			});
+			expect(verifyDockerInstalled).toHaveBeenCalledWith(
+				expect.objectContaining({
+					operation: "running dev",
+					hint: "To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your wrangler.jsonc or pass --enable-containers=false.",
+				})
+			);
+		}
+	);
+
+	it.skipIf(process.platform === "win32")(
+		"lets callers describe the operation and how to disable Containers",
+		async ({ expect }) => {
+			vi.mocked(verifyDockerInstalled).mockClear();
+			await prepareContainerImagesForDev({
+				dockerPath: "test-docker",
+				containerOptions: [],
+				configFileName: "wrangler.jsonc",
+				registryConfigureCommand: "test registry configure",
+				onContainerImagePreparationStart: vi.fn(),
+				onContainerImagePreparationEnd: vi.fn(),
+				logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+				operation: "running tests",
+				disableContainersHint: "Disable Containers in the test config.",
+			});
+			expect(verifyDockerInstalled).toHaveBeenCalledWith(
+				expect.objectContaining({
+					operation: "running tests",
+					hint: "Disable Containers in the test config.",
+				})
+			);
+		}
+	);
 });
