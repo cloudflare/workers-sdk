@@ -129,5 +129,10 @@ export async function prepareContainerImages(options: {
 		complianceConfig,
 		configFileName: "cloudflare.config.ts",
 		registryConfigureCommand: "cf containers registries create",
+		// Wrangler's default hint is to disable Containers, which Build Output
+		// can't do
+		operation: "running tests",
+		disableContainersHint:
+			"The test harness runs the Containers in the Build Output, so testing a Worker with Containers needs Docker.",
 	});
 }
