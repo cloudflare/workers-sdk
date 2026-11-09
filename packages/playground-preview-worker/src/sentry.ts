@@ -62,8 +62,17 @@ export function setupSentry({
 	env: Env;
 	hop: SentryHop;
 }): Toucan {
+	// The testing environment has no Access credentials for Sentry. Without a
+	// DSN, Toucan drops events instead of sending requests that Access rejects.
+	const accessHeaders =
+		env.SENTRY_ACCESS_CLIENT_ID && env.SENTRY_ACCESS_CLIENT_SECRET
+			? {
+					"CF-Access-Client-ID": env.SENTRY_ACCESS_CLIENT_ID,
+					"CF-Access-Client-Secret": env.SENTRY_ACCESS_CLIENT_SECRET,
+				}
+			: undefined;
 	const sentry = new Toucan({
-		dsn: env.SENTRY_DSN,
+		dsn: accessHeaders ? env.SENTRY_DSN : undefined,
 		release: env.CF_VERSION_METADATA.id,
 		request,
 		context,
@@ -84,12 +93,7 @@ export function setupSentry({
 				"sec-fetch-site",
 			],
 		},
-		transportOptions: {
-			headers: {
-				"CF-Access-Client-ID": env.SENTRY_ACCESS_CLIENT_ID,
-				"CF-Access-Client-Secret": env.SENTRY_ACCESS_CLIENT_SECRET,
-			},
-		},
+		transportOptions: { headers: accessHeaders },
 		beforeSend(event) {
 			const message = event.exception?.values?.[0]?.value;
 			const reference =

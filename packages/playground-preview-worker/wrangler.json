@@ -75,12 +75,7 @@
 				"workersDev": "workers-playground-users.workers.dev"
 			},
 			"secrets": {
-				"required": [
-					"API_TOKEN",
-					"PROMETHEUS_TOKEN",
-					"SENTRY_ACCESS_CLIENT_SECRET",
-					"SENTRY_ACCESS_CLIENT_ID"
-				]
+				"required": ["API_TOKEN"]
 			},
 
 			"define": {
