@@ -1,5 +1,13 @@
 # edge-preview-authenticated-proxy
 
+## 0.3.5
+
+### Patch Changes
+
+- [#16797](https://github.com/cloudflare/workers-sdk/pull/16797) [`1e1752e`](https://github.com/cloudflare/workers-sdk/commit/1e1752e462b517280d537c2ed2c95911d2d387cb) Thanks [@lokeshramchand-ctrl](https://github.com/lokeshramchand-ctrl)! - Restrict the `/.update-preview-token` redirect to same-origin paths
+
+  Previously, the `suffix` query parameter was copied into the `Location` header unchanged, so the endpoint could redirect the browser to any other site (for example `https://…`, `//…` or `/\…`). The `suffix` is now resolved against the request URL, and anything that would leave the current origin falls back to `/`.
+
 ## 0.3.4
 
 ### Patch Changes

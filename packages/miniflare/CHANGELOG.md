@@ -1,5 +1,49 @@
 # miniflare
 
+## 5.20261109.0-beta
+
+### Patch Changes
+
+- [#16793](https://github.com/cloudflare/workers-sdk/pull/16793) [`fea323a`](https://github.com/cloudflare/workers-sdk/commit/fea323a7d419fc60ac7bb2ca616bde54da684c4d) Thanks [@vicb](https://github.com/vicb)! - Bump `capnp-es` to 0.0.17
+
+  This release fixes 3 issues. See the [release notes](https://github.com/unjs/capnp-es/releases/tag/v0.0.17) for details.
+
+- [#16648](https://github.com/cloudflare/workers-sdk/pull/16648) [`56459a5`](https://github.com/cloudflare/workers-sdk/commit/56459a561b7b133a9152b993336e1e5470b1d290) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update bundled third-party dependencies with known security fixes
+
+  Local development and Workers Vitest tests now include security fixes for their bundled dependencies. Local browser rendering also includes security fixes for browser downloads, archive extraction, and proxy support.
+
+  Miniflare and Wrangler now require Node.js 22.12.0 or later, matching the supported runtime range of the new browser installer.
+
+- [#16746](https://github.com/cloudflare/workers-sdk/pull/16746) [`abf924e`](https://github.com/cloudflare/workers-sdk/commit/abf924ee1820b4af139f21dffc877eaf6122c056) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-06
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16792](https://github.com/cloudflare/workers-sdk/pull/16792) [`de10016`](https://github.com/cloudflare/workers-sdk/commit/de100160f243451355480e8f815d0f7d4b3ec8b9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-09
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16746](https://github.com/cloudflare/workers-sdk/pull/16746) [`abf924e`](https://github.com/cloudflare/workers-sdk/commit/abf924ee1820b4af139f21dffc877eaf6122c056) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261104.1 | ^5.20261106.1 |
+  | workerd                   | 1.20261104.1  | 1.20261106.1  |
+
+- [#16792](https://github.com/cloudflare/workers-sdk/pull/16792) [`de10016`](https://github.com/cloudflare/workers-sdk/commit/de100160f243451355480e8f815d0f7d4b3ec8b9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261106.1 | ^5.20261109.1 |
+  | workerd                   | 1.20261106.1  | 1.20261109.1  |
+
+- [#16442](https://github.com/cloudflare/workers-sdk/pull/16442) [`66bc0d6`](https://github.com/cloudflare/workers-sdk/commit/66bc0d6f353904f8a203bcea9298d9f45fbd234a) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Remove local Containers once Miniflare stops using them
+
+  Miniflare now removes the application containers, networking sidecars, and snapshot clone volumes that workerd creates for Container-enabled Durable Objects when a reload changes the Container configuration, when Miniflare is disposed, and when its process exits. Previously, workerd left them behind when it stopped, and the next workerd recovered running containers even if the Container configuration had changed. Containers keep running across reloads that leave the Container configuration unchanged, and directory snapshots are kept.
+
 ## 5.20261104.0-beta
 
 ### Minor Changes
