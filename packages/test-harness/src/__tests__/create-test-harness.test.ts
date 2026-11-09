@@ -106,27 +106,31 @@ describe("createTestHarness()", () => {
 	it("reads secrets for the build's mode, which the test can override", async ({
 		expect,
 	}) => {
-		await writeBuild("app", {
-			default: {
-				config: {
-					name: "app",
-					env: {
-						TOKEN: { type: "secret" },
-						API_KEY: { type: "secret" },
-						GREETING: { type: "text", value: "Hello" },
+		await writeBuild(
+			"app",
+			{
+				default: {
+					config: {
+						name: "app",
+						env: {
+							TOKEN: { type: "secret" },
+							API_KEY: { type: "secret" },
+							GREETING: { type: "text", value: "Hello" },
+						},
 					},
+					script: `export default {
+						fetch(request, env) {
+							const { TOKEN, API_KEY, GREETING, EXTRA } = env;
+							return Response.json({ TOKEN, API_KEY, GREETING, EXTRA });
+						},
+					};`,
 				},
-				script: `export default {
-					fetch(request, env) {
-						const { TOKEN, API_KEY, GREETING, EXTRA } = env;
-						return Response.json({ TOKEN, API_KEY, GREETING, EXTRA });
-					},
-				};`,
 			},
-		});
+			"staging"
+		);
 		await seed({
-			"app/.dev.vars.production": "TOKEN=production",
-			"app/.dev.vars.staging": "TOKEN=staging\nAPI_KEY=staging",
+			"app/.dev.vars.production": "TOKEN=production\nAPI_KEY=production",
+			"app/.dev.vars.staging": "TOKEN=staging",
 		});
 		const harness = useTestHarness({
 			workers: [
@@ -139,12 +143,12 @@ describe("createTestHarness()", () => {
 		});
 
 		expect(await (await harness.fetch("/")).json()).toEqual({
-			TOKEN: "production",
+			TOKEN: "staging",
 			API_KEY: "from-test",
 			GREETING: "Hi",
 			EXTRA: { nested: true },
 		});
-		// API_KEY isn't in the files, but the test provides it
+		// API_KEY isn't in the staging file, but the test provides it
 		expect(std.warn).toBe("");
 	});
 
@@ -221,5 +225,49 @@ describe("createTestHarness()", () => {
 		);
 		await harness.close();
 		expect(session.dispose).toHaveBeenCalled();
+	});
+
+	it("doesn't send a binding the test overrides to the remote session", async ({
+		expect,
+	}) => {
+		await writeBuild("app", {
+			default: {
+				config: { name: "app", env: { AI: { type: "ai" } } },
+				script: `export default {
+					async fetch(request, env) {
+						return Response.json(await env.AI.run("@cf/test/model", {}));
+					},
+				};`,
+			},
+			"mock-ai": {
+				config: { name: "mock-ai" },
+				script: `import { WorkerEntrypoint } from "cloudflare:workers";
+					export default class MockAi extends WorkerEntrypoint {
+						run(model) {
+							return { model, response: "mock-ai" };
+						}
+					}`,
+			},
+		});
+		const harness = useTestHarness({
+			workers: [
+				{ buildOutput: "app", bindingOverrides: { AI: "mock-ai" } },
+				{ buildOutput: "app", name: "mock-ai" },
+			],
+		});
+
+		expect(await (await harness.fetch("/")).json()).toEqual({
+			model: "@cf/test/model",
+			response: "mock-ai",
+		});
+		expect(maybeStartOrUpdateRemoteProxySession).toHaveBeenCalledWith(
+			expect.objectContaining({
+				name: "app",
+				env: { AI: { type: "worker", worker: "mock-ai" } },
+			}),
+			null,
+			expect.anything(),
+			expect.anything()
+		);
 	});
 });

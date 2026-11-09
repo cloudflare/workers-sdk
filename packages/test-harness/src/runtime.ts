@@ -120,34 +120,36 @@ async function getWorkerOptions(
 		exports: _exports,
 		...config
 	} = worker.config;
-	const env = resolveLocalBindings(configuredEnv, {
-		workerName: config.name,
-		localEnv: localEnv.values,
-		// So secrets the test provides aren't reported as missing
-		devVars: { ...(devVars ?? localEnv.values), ...input.secrets },
-		mode,
-		logger: console,
-	});
+	// Test values replace configured bindings before anything uses them, so an
+	// overridden remote binding doesn't start a remote session
+	const testEnv = { ...configuredEnv };
 	for (const [name, value] of Object.entries(input.vars ?? {})) {
-		env[name] =
+		testEnv[name] =
 			typeof value === "string"
 				? { type: "text", value }
 				: { type: "json", value };
 	}
 	for (const [name, value] of Object.entries(input.secrets ?? {})) {
-		env[name] = { type: "text", value };
+		testEnv[name] = { type: "text", value };
 	}
 	for (const [name, workerName] of Object.entries(
 		input.bindingOverrides ?? {}
 	)) {
-		env[name] = { type: "worker", worker: workerName };
+		testEnv[name] = { type: "worker", worker: workerName };
 	}
+	const env = resolveLocalBindings(testEnv, {
+		workerName: config.name,
+		localEnv: localEnv.values,
+		devVars,
+		mode,
+		logger: console,
+	});
 
 	const session = await maybeStartOrUpdateRemoteProxySession(
 		{
 			name: config.name,
 			target: "cf",
-			env: configuredEnv ?? {},
+			env: testEnv,
 			complianceRegion:
 				rootConfig.complianceRegion === "fedramp-high"
 					? "fedramp_high"
