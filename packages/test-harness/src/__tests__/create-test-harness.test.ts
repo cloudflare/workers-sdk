@@ -6,6 +6,8 @@ import {
 	runInTempDir,
 	seed,
 } from "@cloudflare/workers-utils/test-helpers";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { beforeEach, describe, it, onTestFinished, vi } from "vitest";
 import { createTestHarness } from "../index";
 import type { TestHarnessOptions } from "../index";
@@ -1542,6 +1544,39 @@ describe("createTestHarness()", () => {
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[TypeError: Worker "unknown-worker" does not exist in this server.]`
 		);
+	});
+
+	it("uses the current Node process fetch for outbound requests by default", async ({
+		expect,
+	}) => {
+		const mockServer = setupServer(
+			http.get("http://example.com/", () => {
+				return HttpResponse.text("Mocked by MSW");
+			})
+		);
+		mockServer.listen({ onUnhandledRequest: "error" });
+		onTestFinished(() => mockServer.close());
+
+		await writeBuild(".", {
+			default: {
+				config: { name: "default-outbound-worker" },
+				script: `
+					export default {
+						fetch() {
+							return fetch("http://example.com");
+						}
+					};
+				`,
+			},
+		});
+
+		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const response = await server.fetch("/");
+		await expect(response.text()).resolves.toBe("Mocked by MSW");
 	});
 
 	it("loads default .env files for build output workers", async ({

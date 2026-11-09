@@ -47,6 +47,7 @@ import type {
 	Json,
 	MiniflareOptions,
 	RequestInfo,
+	Response,
 	WorkerdStructuredLog,
 } from "miniflare";
 
@@ -468,7 +469,27 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			unsafeInspectDurableObjects: true,
 			handleStructuredLogs: (log: WorkerdStructuredLog) =>
 				captureStructuredLog(log),
-			workers: workers.map((worker) => worker.options),
+			workers: workers.map((worker) => ({
+				...worker.options,
+				dev: {
+					...worker.options.dev,
+					outboundService: {
+						type: "fetcher",
+						handler: (request) => {
+							/**
+							 * Miniflare passes its own undici-based Request here. Pass the URL as
+							 * RequestInfo and the request as RequestInit so method, headers, body,
+							 * and duplex are preserved by global fetch.
+							 */
+							return globalThis.fetch(
+								request.url,
+								request
+								// Miniflare takes Node's Response too, but its type only names its own
+							) as Promise<unknown> as Promise<Response>;
+						},
+					},
+				},
+			})),
 		};
 	}
 

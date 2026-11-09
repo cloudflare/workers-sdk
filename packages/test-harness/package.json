@@ -42,6 +42,7 @@
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "workspace:*",
 		"@cloudflare/workflows-shared": "workspace:*",
+		"msw": "catalog:default",
 		"tsdown": "0.16.3",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
