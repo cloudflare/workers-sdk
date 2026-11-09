@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { brandColor, dim, red } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
@@ -16,6 +15,7 @@ import {
 	remoteProxyClientWorker,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
+import { getBrowserEnvironment } from "./environment";
 import { ensureBrowserInstalled } from "./install";
 import { BrowserStartupError, waitForExit } from "./process";
 import type { Service } from "../../runtime";
@@ -220,15 +220,6 @@ export async function launchBrowser({
 			`profile-${sessionId}-${attempt++}`
 		);
 		await fs.promises.mkdir(tempUserData, { recursive: true, mode: 0o700 });
-		let home = process.env.HOME;
-		if (!home) {
-			try {
-				home = os.userInfo().homedir || tempUserData;
-			} catch {
-				// Arbitrary container UIDs may have no account database entry.
-				home = tempUserData;
-			}
-		}
 
 		// Whether Chrome got far enough to announce its DevTools endpoint, which
 		// is the line between "this install might be broken" and "something else
@@ -241,7 +232,7 @@ export async function launchBrowser({
 			args: process.env.CI ? [...launchArgs, "--no-sandbox"] : launchArgs,
 			// @puppeteer/browsers defaults to an empty environment. Chrome needs
 			// a user home for NSS and other configuration outside its profile.
-			env: { ...process.env, HOME: home },
+			env: getBrowserEnvironment(tempUserData),
 			handleSIGTERM: false,
 			dumpio: false,
 			pipe: false,
