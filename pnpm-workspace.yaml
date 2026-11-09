@@ -44,6 +44,8 @@ minimumReleaseAgeExclude:
   # the day it is published.
   - "cf"
   - "workerd"
+  # capnp-es is maintained by a workers-sdk maintainer.
+  - "capnp-es"
   # The below is to install the rosie-skills package and remove the problematic
   # wasm module it brings as soon as possible
   # TODO(dario): remove in a few days
@@ -157,7 +159,7 @@ catalog:
   msw: "2.14.6"
   tinyglobby: "0.2.16"
   "tree-kill": "1.2.2"
-  "capnp-es": "0.0.16"
+  "capnp-es": "0.0.17"
   "capnweb": "0.12.0"
   zod: "4.6.6"
   "ci-info": "4.4.0"
