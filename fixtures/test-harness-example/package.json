@@ -1,0 +1,32 @@
+{
+	"name": "@fixture/test-harness-example",
+	"private": true,
+	"description": "Integration tests of Build Output with @cloudflare/test-harness",
+	"type": "module",
+	"scripts": {
+		"build": "vite build workers/api && vite build workers/web",
+		"check:type": "tsc && tsc -p ./tests/tsconfig.json",
+		"playwright:install": "pnpm playwright install chromium",
+		"pretest:ci": "pnpm playwright:install",
+		"pretest:playwright": "pnpm playwright:install",
+		"test:ci": "vitest run && playwright test",
+		"test:playwright": "playwright test",
+		"test:vitest": "vitest run"
+	},
+	"devDependencies": {
+		"@cloudflare/test-harness": "workspace:*",
+		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"@playwright/test": "catalog:default",
+		"@types/node": "catalog:default",
+		"cf": "catalog:default",
+		"msw": "catalog:default",
+		"typescript": "catalog:default",
+		"vite": "catalog:default",
+		"vitest": "catalog:default"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}
