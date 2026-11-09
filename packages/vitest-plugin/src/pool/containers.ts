@@ -294,6 +294,7 @@ async function prepareImages(
 		);
 	}
 
+	const configFileName = path.basename(configPath);
 	const result = await prepareContainerImagesForDev({
 		dockerPath,
 		containerOptions,
@@ -309,8 +310,10 @@ async function prepareImages(
 		},
 		logger,
 		complianceConfig: config,
-		configFileName: path.basename(configPath),
+		configFileName,
 		registryConfigureCommand: "wrangler containers registries configure",
+		operation: "running tests",
+		disableContainersHint: `To run these tests without Docker, set dev.enable_containers to false in your ${configFileName}. This also disables Containers in \`wrangler dev\`.`,
 	});
 
 	if (state.cancelled || result.aborted) {

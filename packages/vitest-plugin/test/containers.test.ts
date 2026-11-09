@@ -247,6 +247,9 @@ describe("project Container environments", () => {
 			complianceConfig: config,
 			configFileName: "wrangler.jsonc",
 			registryConfigureCommand: "wrangler containers registries configure",
+			operation: "running tests",
+			disableContainersHint:
+				"To run these tests without Docker, set dev.enable_containers to false in your wrangler.jsonc. This also disables Containers in `wrangler dev`.",
 		});
 		expect(prepareContainerImagesForDev).toHaveBeenCalledOnce();
 	});

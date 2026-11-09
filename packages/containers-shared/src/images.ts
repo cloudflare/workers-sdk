@@ -127,6 +127,16 @@ export async function prepareContainerImagesForDev(args: {
 	complianceConfig?: ComplianceConfig;
 	configFileName: string;
 	registryConfigureCommand: string;
+	/**
+	 * Operation named when Docker cannot be launched, e.g. `"running tests"`.
+	 * Defaults to `"running dev"`.
+	 */
+	operation?: string;
+	/**
+	 * How to disable Containers, shown when Docker cannot be launched.
+	 * Defaults to Wrangler's `dev.enable_containers` and `--enable-containers` advice.
+	 */
+	disableContainersHint?: string;
 }): Promise<{ aborted: boolean }> {
 	const {
 		dockerPath,
@@ -143,12 +153,14 @@ export async function prepareContainerImagesForDev(args: {
 	}
 	await verifyDockerInstalled({
 		dockerPath,
-		operation: "running dev",
+		operation: args.operation ?? "running dev",
 		imageNoun:
 			containerOptions.length !== 1
 				? "the configured images"
 				: "the configured image",
-		hint: `To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your ${args.configFileName} or pass --enable-containers=false.`,
+		hint:
+			args.disableContainersHint ??
+			`To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your ${args.configFileName} or pass --enable-containers=false.`,
 	});
 	for (const options of containerOptions) {
 		if ("dockerfile" in options) {
