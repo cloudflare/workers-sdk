@@ -105,15 +105,15 @@ export async function detectFramework(
 		workspaceProject?.workspace?.rootDir
 	);
 
-	const lockFileExists = [
-		projectPath,
-		workspaceProject?.workspace?.rootDir,
-	].some(
-		(directory) =>
-			directory !== undefined &&
-			packageManager.lockFiles.some((lockFile) =>
-				existsSync(join(directory, lockFile))
-			)
+  const workspaceRoot = workspaceProject?.workspace?.rootDir;
+	const lockFileExists =
+		packageManager.lockFiles.some((lockFile) =>
+				existsSync(join(projectPath, lockFile))
+		) ||
+		workspaceRoot !== undefined &&
+		packageManager.lockFiles.some((lockFile) =>
+				existsSync(join(workspaceRoot, lockFile))
+		);
 	);
 
 	const maybeDetectedFramework = maybeFindDetectedFramework(
