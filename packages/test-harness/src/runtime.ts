@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { readBuildOutput } from "@cloudflare/build-output-utils";
 import { createContainerPreviewPlanForCfConfig } from "@cloudflare/containers-shared";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
+import { getZoneFromRoute } from "@cloudflare/workers-utils";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import { resolveLocalBindings } from "miniflare";
@@ -234,6 +235,7 @@ async function resolveWorker(
 					: undefined,
 			},
 			dev: {
+				zone: getWorkerZone(worker.config),
 				remoteProxyConnectionString:
 					session?.session.remoteProxyConnectionString,
 			},
@@ -292,6 +294,40 @@ function getInlineWorker(
 		manifest: config.manifest,
 		containers: [],
 	};
+}
+
+/**
+ * The zone in the `CF-Worker` header of a Worker's outgoing requests: its
+ * first domain or route, as in production. Copied from the Vite plugin's
+ * getWorkerZone(), which `vite preview` uses.
+ *
+ * @param config The Worker's config
+ * @returns The zone, or `undefined` for Miniflare's default
+ */
+function getWorkerZone(
+	config: Pick<WorkerSource["worker"]["config"], "domains" | "triggers">
+): string | undefined {
+	// Domains are converted to routes before fetch triggers, so this mirrors the
+	// first-route selection used by Wrangler's Miniflare options.
+	const domain = config.domains?.[0];
+	if (domain !== undefined) {
+		return getZoneFromRoute(
+			typeof domain === "string" ? domain : domain.hostname
+		);
+	}
+
+	const fetchTrigger = config.triggers?.find(
+		(trigger) => trigger.type === "fetch"
+	);
+	if (fetchTrigger?.type !== "fetch") {
+		return undefined;
+	}
+
+	return getZoneFromRoute(
+		fetchTrigger.zone?.includes(".")
+			? { pattern: fetchTrigger.pattern, zone_name: fetchTrigger.zone }
+			: fetchTrigger.pattern
+	);
 }
 
 /**

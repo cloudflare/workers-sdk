@@ -597,6 +597,35 @@ describe("createTestHarness()", () => {
 		});
 	});
 
+	it("names the Worker's route zone in CF-Worker on outgoing requests, as in production", async ({
+		expect,
+	}) => {
+		const network = setupServer(
+			http.get("http://upstream.example/", ({ request }) => {
+				return HttpResponse.text(request.headers.get("CF-Worker") ?? "none");
+			})
+		);
+		network.listen({ onUnhandledRequest: "error" });
+		onTestFinished(() => network.close());
+		await writeBuild(".", {
+			default: {
+				config: {
+					name: "zone-worker",
+					triggers: [{ type: "fetch", pattern: "shop.example.com/*" }],
+				},
+				script: `export default {
+					fetch() {
+						return fetch("http://upstream.example/");
+					},
+				};`,
+			},
+		});
+		const harness = useTestHarness({ workers: [{ buildOutput: "." }] });
+
+		await harness.listen();
+		expect(await (await harness.fetch("/")).text()).toBe("shop.example.com");
+	});
+
 	// Ported from Wrangler's e2e/createTestHarness.test.ts
 
 	it("starts with default server options", async ({ expect, onTestFailed }) => {
