@@ -177,6 +177,7 @@ export { spawnCloudflared } from "./cloudflared";
 
 export * from "./cfetch";
 export * from "./custom-api-headers";
+export * from "./sanitize-headers";
 
 export { fetchLatestNpmVersion } from "./update-check";
 export type { NpmVersionCheckResult } from "./update-check";

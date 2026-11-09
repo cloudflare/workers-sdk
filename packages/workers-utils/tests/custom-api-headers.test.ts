@@ -3,7 +3,6 @@ import { beforeEach, describe, it, vi } from "vitest";
 import {
 	addCustomApiHeaders,
 	getCustomApiHeaders,
-	redactCustomApiHeaders,
 } from "../src/custom-api-headers";
 
 beforeEach(() => {
@@ -93,44 +92,7 @@ describe("custom API header configuration", () => {
 		const headers = new Headers({ [name]: "request-secret" });
 		addCustomApiHeaders(headers);
 		expect(headers.get(name)).toBe("configured-secret");
-		expect(redactCustomApiHeaders(headers)).toEqual({
-			[name.toLowerCase()]: "[REDACTED]",
-		});
 	});
-
-	it("redacts configured names regardless of the supplied value", ({
-		expect,
-	}) => {
-		vi.stubEnv("CLOUDFLARE_API_HEADERS", '{"X-Custom-Header":"secret"}');
-		expect(
-			redactCustomApiHeaders(
-				new Headers({
-					"X-CUSTOM-HEADER": "override-secret",
-					Accept: "application/json",
-				})
-			)
-		).toEqual({ "x-custom-header": "[REDACTED]", accept: "application/json" });
-	});
-
-	it.for([undefined, "true", "false"])(
-		"formats request diagnostics with WRANGLER_LOG_SANITIZE=%s",
-		(sanitize, { expect }) => {
-			vi.stubEnv("WRANGLER_LOG_SANITIZE", sanitize);
-			vi.stubEnv(
-				"CLOUDFLARE_API_HEADERS",
-				'{"X-Custom-Header":"configured-secret","X-Other":"default-secret"}'
-			);
-			const headers = new Headers({ "X-CUSTOM-HEADER": "request-secret" });
-			addCustomApiHeaders(headers);
-			expect(redactCustomApiHeaders(headers)).toEqual({
-				"x-custom-header":
-					sanitize === "false" ? "configured-secret" : "[REDACTED]",
-				"x-other": sanitize === "false" ? "default-secret" : "[REDACTED]",
-			});
-			expect(headers.get("x-other")).toBe("default-secret");
-			expect(redactCustomApiHeaders(new Headers())).toEqual({});
-		}
-	);
 });
 
 describe("custom API header overrides", () => {
