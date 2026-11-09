@@ -204,7 +204,10 @@ async function detectEnclosingWorkspace(
 	fs.logger = context.logger;
 	const repositoryPath = find.up(".git", { cwd: projectPath });
 	const last = repositoryPath ? dirname(repositoryPath) : undefined;
-	for (const directory of walk.up(projectPath, { last }).slice(1)) {
+	// walk.up() starts with the application directory, we skip it (via `slice(1)`)
+	// so that we only consider workspace roots that contain the application
+	const ancestorDirectories = walk.up(projectPath, { last }).slice(1);
+	for (const directory of ancestorDirectories) {
 		const packageJsonPath = join(directory, "package.json");
 		const packageJson = existsSync(packageJsonPath)
 			? await fs.readJSON<{ workspaces?: unknown }>(packageJsonPath)
