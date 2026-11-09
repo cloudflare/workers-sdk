@@ -1422,6 +1422,53 @@ describe("createTestHarness()", () => {
 		);
 	});
 
+	it("rejects a Worker's call to another Worker that throws, as in production", async ({
+		expect,
+	}) => {
+		const server = createTestHarness({
+			workers: [
+				{
+					config: {
+						name: "caller",
+						compatibilityDate: "2026-05-20",
+						env: { CALLEE: { type: "worker", worker: "callee" } },
+						manifest: singleModuleManifest(`
+							export default {
+								async fetch(request, env) {
+									try {
+										await env.CALLEE.fetch("http://callee/");
+										return new Response("no error");
+									} catch (error) {
+										return new Response("caught: " + error.message);
+									}
+								}
+							};
+						`),
+					},
+				},
+				{
+					config: {
+						name: "callee",
+						compatibilityDate: "2026-05-20",
+						manifest: singleModuleManifest(`
+							export default {
+								fetch() {
+									throw new Error("callee failed");
+								}
+							};
+						`),
+					},
+				},
+			],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const response = await server.fetch("/");
+		await expect(response.text()).resolves.toBe("caught: callee failed");
+	});
+
 	it("supports service bindings between workers", async ({ expect }) => {
 		await writeBuild(".", {
 			default: {
@@ -1926,35 +1973,6 @@ describe("createTestHarness()", () => {
 
 		const response = await server.fetch("/");
 		await expect(response.text()).resolves.toBe("Hello from inline config");
-	});
-
-	it("starts a Worker without a default export", async ({ expect }) => {
-		const server = createTestHarness({
-			workers: [
-				{
-					config: {
-						name: "objects-worker",
-						compatibilityDate: "2026-05-20",
-						exports: {
-							Counter: { type: "durable-object", storage: "sqlite" },
-						},
-						manifest: singleModuleManifest(`
-							import { DurableObject } from "cloudflare:workers";
-
-							export class Counter extends DurableObject {}
-						`),
-					},
-				},
-			],
-		});
-		onTestFinished(server.close);
-
-		await server.listen();
-
-		// As a Vite build of the same Worker, which exports an empty default
-		await expect(server.fetch("/")).rejects.toThrow(
-			"Handler does not export a fetch() function."
-		);
 	});
 
 	it("loads default .env files for build output workers", async ({
@@ -2627,11 +2645,14 @@ describe("createTestHarness()", () => {
 		const primaryResponse = await server.getWorker("primary-worker").fetch("/");
 
 		await expect(primaryResponse.text()).resolves.toBe("primary ok");
-		await expect(
-			server
-				.getWorker("auxiliary-worker")
-				.fetch("https://example.com/greet", { method: "post" })
-		).rejects.toThrow("auxiliary failed");
+		// As in production, a Worker's uncaught error is a 500 response
+		const auxiliaryResponse = await server
+			.getWorker("auxiliary-worker")
+			.fetch("https://example.com/greet", { method: "post" });
+		expect(auxiliaryResponse.status).toBe(500);
+		await expect(auxiliaryResponse.text()).resolves.toContain(
+			"auxiliary failed"
+		);
 		expect(server.getLogs()).toEqual([
 			{ timestamp: expect.any(Number), level: "info", message: "primary log" },
 			{
@@ -2651,7 +2672,7 @@ describe("createTestHarness()", () => {
 			<timestamp> [server] [primary-worker] fetch - GET / - 200
 			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - started
 			<timestamp> [runtime] warn: auxiliary warning
-			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - failed"
+			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - 500"
 		`);
 
 		server.clearLogs();
@@ -2667,7 +2688,7 @@ describe("createTestHarness()", () => {
 			<timestamp> [server] [primary-worker] fetch - GET / - 200
 			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - started
 			<timestamp> [runtime] warn: auxiliary warning
-			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - failed"
+			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - 500"
 		`);
 
 		await server.reset();

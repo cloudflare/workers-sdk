@@ -10,7 +10,6 @@ import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import { resolveLocalBindings } from "miniflare";
 import { getRemoteBindingsAuth } from "./auth";
 import { prepareContainerImages } from "./containers";
-import { withJsonErrors } from "./json-error";
 import type {
 	InlineWorkerConfig,
 	TestHarnessOptions,
@@ -290,7 +289,7 @@ function getInlineWorker(
 		projectDir: root,
 		rootConfig: { buildContext: {} },
 		worker: { config, bundleDir: undefined, assetsDir: undefined },
-		manifest: withJsonErrors(config.manifest),
+		manifest: config.manifest,
 		containers: [],
 	};
 }
@@ -327,11 +326,7 @@ async function getManifest(worker: BuildOutputWorker): Promise<Manifest> {
 			};
 		})
 	);
-	return withJsonErrors({
-		mainModule: manifest.mainModule,
-		modulesRoot: bundleDir,
-		modules,
-	});
+	return { mainModule: manifest.mainModule, modulesRoot: bundleDir, modules };
 }
 
 /**
