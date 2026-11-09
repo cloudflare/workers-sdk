@@ -4,4 +4,4 @@
 
 Name the binding used in Workflow introspection errors
 
-When a Workflow was declared in `exports`, every binding to it shared one binding service, so introspection errors such as "already has an active introspection session" named the Workflow's class instead of the binding. Each binding now passes its own name to that service.
+All bindings to one Workflow share its binding service, so introspection errors such as "already has an active introspection session" named whatever that service was created for: the Workflow's class when it was declared in `exports`, or one of its bindings otherwise. Each binding now passes its own name to that service.
