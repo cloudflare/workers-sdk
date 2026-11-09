@@ -1,7 +1,9 @@
+import { execFileSync } from "node:child_process";
 import net from "node:net";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
+import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import {
 	mockConsoleMethods,
 	runInTempDir,
@@ -147,29 +149,92 @@ describe("createTestHarness()", () => {
 		expect(await (await harness.fetch("/")).text()).toBe("<h1>Hello</h1>");
 	});
 
-	it("rejects Workers that use Containers", async ({ expect }) => {
-		await writeBuild("app", {
-			default: {
-				config: {
-					name: "app",
-					exports: {
-						Sandbox: {
-							type: "durable-object",
-							storage: "sqlite",
-							container: "sandbox",
+	// As the Vite plugin's container tests: images are linux/amd64, which CI
+	// runs on Linux only, and local runs need Docker
+	it.skipIf(
+		(process.platform !== "linux" && process.env.CI === "true") ||
+			process.env.LOCAL_TESTS_WITHOUT_DOCKER === "true"
+	)(
+		"runs a Container-backed Durable Object from a locally built image",
+		{ timeout: 180_000 },
+		async ({ expect }) => {
+			// Stands in for the image a build tool builds for the Build Output
+			const image = "test-harness-container:test";
+			await seed({
+				"image/Dockerfile": [
+					"FROM node:22-alpine",
+					`RUN echo 'require("http").createServer((req, res) => res.end("Hello from the container")).listen(8080)' > app.js`,
+					'CMD ["node", "app.js"]',
+				].join("\n"),
+			});
+			execFileSync(
+				getDockerPath(),
+				["build", "--platform", "linux/amd64", "--tag", image, "image"],
+				{ stdio: "ignore" }
+			);
+			onTestFinished(() => {
+				execFileSync(getDockerPath(), ["image", "rm", "--force", image], {
+					stdio: "ignore",
+				});
+			});
+
+			await writeBuild(".", {
+				default: {
+					config: {
+						name: "container-worker",
+						exports: {
+							Sandbox: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: "sandbox",
+							},
+						},
+						env: {
+							SANDBOX: {
+								type: "durable-object",
+								worker: "container-worker",
+								exportName: "Sandbox",
+							},
 						},
 					},
-				},
-				script: `export class Sandbox {}
-					export default {};`,
-			},
-		});
-		const harness = useTestHarness({ workers: [{ buildOutput: "app" }] });
+					script: `
+						import { DurableObject } from "cloudflare:workers";
 
-		await expect(harness.listen()).rejects.toThrow(
-			`The test harness doesn't support Containers yet, which the "Sandbox" export of Worker "app" uses.`
-		);
-	});
+						export class Sandbox extends DurableObject {
+							fetch() {
+								if (!this.ctx.container.running) {
+									this.ctx.container.start({ enableInternet: false });
+								}
+								return this.ctx.container.getTcpPort(8080).fetch("http://container/");
+							}
+						}
+
+						export default {
+							fetch(request, env) {
+								return env.SANDBOX.get(env.SANDBOX.idFromName("test")).fetch(request);
+							}
+						};
+					`,
+				},
+			});
+			await seed({
+				".cloudflare/output/v0/containers/sandbox/container.config.json":
+					JSON.stringify({ name: "sandbox", image: { localReference: image } }),
+			});
+			const harness = useTestHarness({ workers: [{ buildOutput: "." }] });
+
+			await harness.listen();
+			// The container takes a moment to start listening
+			await vi.waitFor(
+				async () => {
+					expect(await (await harness.fetch("/")).text()).toBe(
+						"Hello from the container"
+					);
+				},
+				{ timeout: 60_000, interval: 500 }
+			);
+		}
+	);
 
 	it("reads secrets for the build's mode, which the test can override", async ({
 		expect,

@@ -26,9 +26,8 @@ Test your production build: the harness runs the Build Output as it is, and neve
 - **D1 migrations:** `getWorker().applyD1Migrations(binding, { dir, pattern, table })` takes the options of `cf d1 migrations apply`. `dir` defaults to `./migrations` in the build's project folder.
 - **Test-only Workers**, such as mocks for `bindingOverrides`, can be inline: `{ config }` takes config in the shape of a Build Output `worker.config.json`, whose `manifest` includes each module's code.
 - **Types:** `server.getWorker<typeof import("./cloudflare.config")>()` infers a Worker's `Env` and module from its config.
+- **Containers** run from the images in the Build Output, as in `vite preview`. Docker must be running.
 
 See [`fixtures/test-harness-example`](https://github.com/cloudflare/workers-sdk/tree/main/fixtures/test-harness-example) for a complete example with Vitest and Playwright.
-
-Not supported yet: Containers.
 
 This is not yet stable enough for external use — APIs may change without notice.

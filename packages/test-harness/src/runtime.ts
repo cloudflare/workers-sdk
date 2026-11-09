@@ -1,11 +1,15 @@
+import assert from "node:assert";
 import * as fsp from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readBuildOutput } from "@cloudflare/build-output-utils";
+import { createContainerPreviewPlanForCfConfig } from "@cloudflare/containers-shared";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
+import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import { resolveLocalBindings } from "miniflare";
 import { getRemoteBindingsAuth } from "./auth";
+import { prepareContainerImages } from "./containers";
 import { withJsonErrors } from "./json-error";
 import type {
 	InlineWorkerConfig,
@@ -16,6 +20,7 @@ import type {
 	BuildOutput,
 	BuildOutputWorker,
 } from "@cloudflare/build-output-utils";
+import type { ContainerDevRuntimeOptions } from "@cloudflare/containers-shared";
 import type {
 	RemoteBindingsLogger,
 	RemoteProxySessionData,
@@ -44,6 +49,8 @@ type WorkerSource = {
 		config: Omit<BuildOutputWorker["config"], "manifest">;
 	};
 	manifest: Manifest;
+	/** The Containers in the Worker's Build Output */
+	containers: BuildOutput["containers"];
 };
 
 const remoteBindingsLogger: RemoteBindingsLogger = {
@@ -137,7 +144,7 @@ async function resolveWorker(
 	input: WorkerInput,
 	preExistingRemoteProxySessionData: RemoteProxySessionData | null
 ): Promise<ResolvedWorker> {
-	const { projectDir, rootConfig, worker, manifest } =
+	const { projectDir, rootConfig, worker, manifest, containers } =
 		"config" in input
 			? getInlineWorker(root, input.config)
 			: await readWorker(root, input);
@@ -180,7 +187,14 @@ async function resolveWorker(
 		logger: console,
 	});
 	// Before starting a remote session, so a failure here can't leave it running
-	const exports = getExports(worker);
+	const exports = createMiniflareExports({
+		exports: worker.config.exports,
+		containerRuntimeOptions: await prepareContainers(
+			containers,
+			worker.config.exports,
+			rootConfig
+		),
+	});
 
 	const session = await maybeStartOrUpdateRemoteProxySession(
 		{
@@ -258,6 +272,7 @@ async function readWorker(
 		rootConfig: buildOutput.rootConfig,
 		worker,
 		manifest: await getManifest(worker),
+		containers: buildOutput.containers,
 	};
 }
 
@@ -276,6 +291,7 @@ function getInlineWorker(
 		rootConfig: { buildContext: {} },
 		worker: { config, bundleDir: undefined, assetsDir: undefined },
 		manifest: withJsonErrors(config.manifest),
+		containers: [],
 	};
 }
 
@@ -319,25 +335,67 @@ async function getManifest(worker: BuildOutputWorker): Promise<Manifest> {
 }
 
 /**
- * Takes a Worker's exports from its Build Output.
+ * Plans a Worker's Containers as `vite preview` does, and pulls the images
+ * the build didn't build locally.
  *
- * @param worker The Worker in the Build Output
- * @returns The Worker's exports
+ * @param containers The Containers in the Worker's Build Output
+ * @param exports The Worker's exports
+ * @param settings The build's account and compliance region
+ * @returns The local runtime options of each Container-backed export
  */
-function getExports(worker: WorkerSource["worker"]): Exports {
-	const exports: Exports = {};
-	for (const [name, workerExport] of Object.entries(
-		worker.config.exports ?? {}
-	)) {
-		if ("container" in workerExport && workerExport.container !== undefined) {
-			throw new Error(
-				`The test harness doesn't support Containers yet, which the "${name}" export of Worker "${worker.config.name}" uses.`
-			);
-		}
-		// Without a Container, an export has the same shape in both
-		exports[name] = workerExport as Exports[string];
+async function prepareContainers(
+	containers: WorkerSource["containers"],
+	exports: WorkerSource["worker"]["config"]["exports"],
+	settings: WorkerSource["rootConfig"]
+): Promise<Map<string, ContainerDevRuntimeOptions> | undefined> {
+	const plan = createContainerPreviewPlanForCfConfig({
+		containers: containers.map(({ config }) => config),
+		exports,
+	});
+	if (plan === undefined) {
+		return undefined;
 	}
-	return exports;
+
+	await prepareContainerImages({
+		dockerPath: getDockerPath(),
+		containerOptions: plan.containerOptions,
+		settings,
+		logger: remoteBindingsLogger,
+	});
+	return plan.containerRuntimeOptions;
+}
+
+/**
+ * Maps a Worker's exports to Miniflare's, adding the local runtime options of
+ * Container-backed Durable Objects. Copied from the Vite plugin's
+ * createMiniflareExports().
+ *
+ * @param options - Worker exports and their planned local Container metadata.
+ * @returns Exports accepted by Miniflare's native Worker config schema.
+ */
+function createMiniflareExports(options: {
+	exports: WorkerSource["worker"]["config"]["exports"];
+	containerRuntimeOptions: Map<string, ContainerDevRuntimeOptions> | undefined;
+}): Exports {
+	const workerExports: Exports = {};
+	for (const [name, workerExport] of Object.entries(options.exports ?? {})) {
+		if (workerExport.type === "durable-object" && "storage" in workerExport) {
+			const containerName =
+				"container" in workerExport ? workerExport.container : undefined;
+			const container =
+				containerName === undefined
+					? undefined
+					: options.containerRuntimeOptions?.get(name);
+			assert(
+				containerName === undefined || container !== undefined,
+				`Expected runtime options for Container-backed Durable Object export "${name}".`
+			);
+			workerExports[name] = { ...workerExport, container };
+		} else {
+			workerExports[name] = workerExport;
+		}
+	}
+	return workerExports;
 }
 
 /**

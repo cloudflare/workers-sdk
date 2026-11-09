@@ -2907,6 +2907,9 @@ importers:
       '@cloudflare/cli-shared-helpers':
         specifier: workspace:*
         version: link:../cli
+      '@cloudflare/containers-shared':
+        specifier: workspace:*
+        version: link:../containers-shared
       '@cloudflare/remote-bindings':
         specifier: workspace:*
         version: link:../remote-bindings

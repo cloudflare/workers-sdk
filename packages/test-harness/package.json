@@ -37,6 +37,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",
+		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/remote-bindings": "workspace:*",
 		"@cloudflare/workers-auth": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",

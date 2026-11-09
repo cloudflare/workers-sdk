@@ -1,11 +1,13 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
+import { resolveDockerHost } from "@cloudflare/containers-shared";
 import {
 	getD1MigrationFiles,
 	splitSqlQuery,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import {
 	WorkflowInstanceIntrospectorHandle,
 	WorkflowIntrospectorHandle,
@@ -562,12 +564,22 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 	}
 
 	function getMiniflareOptions(workers: ResolvedWorker[]): MiniflareOptions {
+		const hasContainers = workers.some(({ options }) =>
+			Object.values(options.config.exports ?? {}).some(
+				(workerExport) =>
+					"container" in workerExport && workerExport.container !== undefined
+			)
+		);
 		return {
 			host: "127.0.0.1",
 			port: 0,
 			enableDevRegistry: false,
 			unsafeTriggerHandlers: true,
 			unsafeInspectDurableObjects: true,
+			// As in `vite preview`
+			containerEngine: hasContainers
+				? resolveDockerHost(getDockerPath())
+				: undefined,
 			handleStructuredLogs: (log: WorkerdStructuredLog) =>
 				captureStructuredLog(log),
 			workers: workers.map((worker) => ({
