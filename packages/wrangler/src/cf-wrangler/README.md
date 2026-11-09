@@ -16,7 +16,7 @@ cf dev --inspector-port 9229 --port=8788
 cf dev --mode staging -- --local --persist-to "custom state" --var "MESSAGE:hello world"
 ```
 
-cf PR [#286](https://github.com/cloudflare/cf/pull/286) forwards server arguments,
+cf forwards server arguments,
 including tokens after `--`. cf consumes its own global options before that
 separator. In particular, `cf dev --local` and `cf dev --persist-to ...` are
 rejected by cf itself; put those server options after `--`. cf's `--mode` is
