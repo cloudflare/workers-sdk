@@ -175,7 +175,9 @@ function isPreviewTokenRecord(value: unknown): value is PreviewTokenRecord {
  *
  * The value is resolved with the WHATWG URL parser, as a browser would, so that
  * inputs such as `//host`, `/\host` or paths containing tabs and newlines cannot
- * escape to another origin.
+ * escape to another origin. A same-origin URL can still have a pathname that
+ * starts with `//` (e.g. `/.//host`), which a browser would read as a
+ * protocol-relative URL in `Location`, so those are rejected too.
  *
  * @param suffix The raw `suffix` query parameter, if provided
  * @param url The URL of the incoming request
@@ -191,7 +193,7 @@ function getSameOriginRedirect(suffix: string | null, url: URL): string {
 	} catch {
 		return "/";
 	}
-	if (target.origin !== url.origin) {
+	if (target.origin !== url.origin || target.pathname.startsWith("//")) {
 		return "/";
 	}
 	return `${target.pathname}${target.search}${target.hash}`;
