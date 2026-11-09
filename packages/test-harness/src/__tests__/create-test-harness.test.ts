@@ -227,6 +227,27 @@ describe("createTestHarness()", () => {
 		expect(session.dispose).toHaveBeenCalled();
 	});
 
+	it("disposes the remote session when the runtime fails to start", async ({
+		expect,
+	}) => {
+		const session = { dispose: vi.fn() };
+		vi.mocked(maybeStartOrUpdateRemoteProxySession).mockResolvedValue({
+			session,
+		} as unknown as Awaited<
+			ReturnType<typeof maybeStartOrUpdateRemoteProxySession>
+		>);
+		await writeBuild("app", {
+			default: {
+				config: { name: "app" },
+				script: `export default {`,
+			},
+		});
+		const harness = useTestHarness({ workers: [{ buildOutput: "app" }] });
+
+		await expect(harness.listen()).rejects.toThrow();
+		expect(session.dispose).toHaveBeenCalled();
+	});
+
 	it("doesn't send a binding the test overrides to the remote session", async ({
 		expect,
 	}) => {

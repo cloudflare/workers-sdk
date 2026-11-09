@@ -72,13 +72,20 @@ export async function startRuntime({
 			mf: runtime,
 			url,
 			async dispose() {
-				await runtime.dispose();
-				await disposeSessions();
+				try {
+					await runtime.dispose();
+				} finally {
+					await disposeSessions();
+				}
 			},
 		};
 	} catch (error) {
-		await mf?.dispose();
-		await disposeSessions();
+		try {
+			// Rethrows a failed start's error
+			await mf?.dispose();
+		} finally {
+			await disposeSessions();
+		}
 		throw error;
 	}
 }
