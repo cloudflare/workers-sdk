@@ -103,6 +103,42 @@ describe("createTestHarness()", () => {
 		);
 	});
 
+	it("runs an assets-only Worker", async ({ expect }) => {
+		await writeBuild("app", {
+			default: {
+				config: { name: "app" },
+				assets: { "index.html": "<h1>Hello</h1>" },
+			},
+		});
+		const harness = useTestHarness({ workers: [{ buildOutput: "app" }] });
+
+		expect(await (await harness.fetch("/")).text()).toBe("<h1>Hello</h1>");
+	});
+
+	it("rejects Workers that use Containers", async ({ expect }) => {
+		await writeBuild("app", {
+			default: {
+				config: {
+					name: "app",
+					exports: {
+						Sandbox: {
+							type: "durable-object",
+							storage: "sqlite",
+							container: "sandbox",
+						},
+					},
+				},
+				script: `export class Sandbox {}
+					export default {};`,
+			},
+		});
+		const harness = useTestHarness({ workers: [{ buildOutput: "app" }] });
+
+		await expect(harness.listen()).rejects.toThrow(
+			`The test harness doesn't support Containers yet, which the "Sandbox" export of Worker "app" uses.`
+		);
+	});
+
 	it("reads secrets for the build's mode, which the test can override", async ({
 		expect,
 	}) => {
