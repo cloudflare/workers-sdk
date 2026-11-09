@@ -312,6 +312,38 @@ describe("Workflows on ctx.exports", () => {
 		).toMatchObject({ output: ["step-0"] });
 	});
 
+	test("introspects through each env binding by its own name", async ({
+		expect,
+	}) => {
+		const binding = {
+			type: "workflow",
+			name: "my-workflow",
+			worker: "exporter",
+			exportName: "MyWorkflow",
+		} as const;
+		const mf = new Miniflare({
+			workers: [
+				worker("exporter", {
+					exports: MY_WORKFLOW_EXPORT,
+					env: { FIRST: binding, SECOND: binding },
+				}),
+			],
+		});
+		useDispose(mf);
+		type IntrospectableWorkflow = {
+			unsafeGetBindingName(): Promise<string>;
+			unsafeStartIntrospection(): Promise<string>;
+		};
+		const env = await mf.getBindings<Record<string, IntrospectableWorkflow>>();
+
+		expect(await env.FIRST?.unsafeGetBindingName()).toBe("FIRST");
+		expect(await env.SECOND?.unsafeGetBindingName()).toBe("SECOND");
+		await env.FIRST?.unsafeStartIntrospection();
+		await expect(env.FIRST?.unsafeStartIntrospection()).rejects.toThrow(
+			'Workflow "my-workflow" already has an active introspection session for binding "FIRST".'
+		);
+	});
+
 	test("shares instances with env bindings of other Workers", async ({
 		expect,
 	}) => {

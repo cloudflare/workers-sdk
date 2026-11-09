@@ -971,9 +971,8 @@ describe("createTestHarness()", () => {
 
 		const workflow = await worker.introspectWorkflow("MODERATOR");
 		onTestFinished(workflow.dispose);
-		// Miniflare names an exported Workflow's binding service after its class
 		await expect(worker.introspectWorkflow("MODERATOR")).rejects.toThrow(
-			`Workflow "moderator-workflow" already has an active introspection session for binding "ModeratorWorkflow".`
+			`Workflow "moderator-workflow" already has an active introspection session for binding "MODERATOR".`
 		);
 		await workflow.modifyAll(async (modifier) => {
 			await modifier.disableSleeps();
