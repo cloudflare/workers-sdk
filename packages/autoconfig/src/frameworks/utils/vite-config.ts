@@ -113,6 +113,13 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 				return this.traverse(n);
 			}
 
+			if (hasFollowingSpread(configObject, pluginsProp)) {
+				context?.logger.debug(
+					`Vite config has a spread after its plugins array. Skipping Cloudflare plugin check.`
+				);
+				return this.traverse(n);
+			}
+
 			if (
 				pluginsProp.value.elements.some(
 					(el) =>
@@ -313,6 +320,19 @@ export function transformViteConfig(
 				);
 			}
 
+			if (hasFollowingSpread(configObject, pluginsProp)) {
+				throw new UserError(
+					dedent`
+					Cannot modify Vite config: a spread after the plugins array may override it.
+
+					Move the plugins array after all object spreads, or manually add the Cloudflare plugin to the effective plugins array.
+				`,
+					{
+						telemetryMessage: "autoconfig vite plugins array overridden",
+					}
+				);
+			}
+
 			// Only add the Cloudflare plugin if it's not already present
 			if (
 				!pluginsProp.value.elements.some(
@@ -373,4 +393,15 @@ function isPluginsProp(
 		t.Identifier.check(prop.key) &&
 		prop.key.name === "plugins"
 	);
+}
+
+function hasFollowingSpread(
+	configObject: types.namedTypes.ObjectExpression,
+	pluginsProp: types.namedTypes.ObjectProperty | types.namedTypes.Property
+): boolean {
+	return configObject.properties
+		.slice(configObject.properties.indexOf(pluginsProp) + 1)
+		.some(
+			(prop) => t.SpreadElement.check(prop) || t.SpreadProperty.check(prop)
+		);
 }
