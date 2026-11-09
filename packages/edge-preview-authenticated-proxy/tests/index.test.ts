@@ -184,6 +184,7 @@ describe("Preview Worker", () => {
 		"//evil.example",
 		"/\\evil.example",
 		"\\\\evil.example",
+		"/\t/evil.example",
 		"javascript:alert(1)",
 	])(
 		"should not redirect off-origin for suffix %s",
