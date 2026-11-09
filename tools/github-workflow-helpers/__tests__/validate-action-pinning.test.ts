@@ -129,6 +129,39 @@ describe("validateActionPinning()", () => {
 		expect(validateActionPinning(tmpDir)).toEqual([]);
 	});
 
+	it("should skip Cloudflare's Bonk action regardless of pinning", ({
+		expect,
+	}) => {
+		writeWorkflow(
+			"test.yml",
+			dedent`
+				jobs:
+				  review:
+				    steps:
+				      - uses: Cloudflare-Studio/ask-bonk/github@main
+				      - uses: Cloudflare-Studio/other-action@main
+			`
+		);
+		const errors = validateActionPinning(tmpDir);
+		expect(errors).toHaveLength(1);
+		expect(errors[0]).toContain("Cloudflare-Studio/other-action@main");
+	});
+
+	it("should still require a ref for trusted actions", ({ expect }) => {
+		writeWorkflow(
+			"test.yml",
+			dedent`
+				jobs:
+				  review:
+				    steps:
+				      - uses: Cloudflare-Studio/ask-bonk/github
+			`
+		);
+		const errors = validateActionPinning(tmpDir);
+		expect(errors).toHaveLength(1);
+		expect(errors[0]).toContain("has no version reference at all");
+	});
+
 	it("should skip local actions", ({ expect }) => {
 		writeWorkflow(
 			"test.yml",
