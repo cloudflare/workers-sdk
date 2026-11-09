@@ -171,3 +171,23 @@ test.for(["run", "batch"] as const)(
 		expect(session.getBookmark()).not.toBe(bookmark);
 	}
 );
+
+// Regression test for https://github.com/cloudflare/workers-sdk/issues/16786.
+test("resolves statements referencing one CTE hundreds of times", async ({
+	expect,
+}) => {
+	const { db } = await createPersistedDatabase();
+	// The references sit in a flat IN() list, so the statement is never nested
+	// more than two levels deep. Each reference re-expands the CTE body while
+	// the engine counts expanded FROM items against its expression-depth
+	// limit, so a statement that is valid SQL can still be rejected.
+	const reference = "(SELECT x FROM q)";
+	const references = Array.from({ length: 110 }, () => reference).join(",");
+	const { results } = await db
+		.prepare(
+			`WITH q AS (SELECT 1 x) SELECT count(*) AS v FROM (SELECT 1) ` +
+				`WHERE 1 IN (${references})`
+		)
+		.all();
+	expect(results).toEqual([{ v: 1 }]);
+});

@@ -153,7 +153,11 @@ catalog:
   "@playwright/test": "1.61.0"
   playwright-chromium: "1.61.0"
   "@cloudflare/workers-types": "^5.20261109.1"
-  workerd: "1.20261109.1"
+  # Pinned to the last release before the SQLite 3.54.1 upgrade that landed in
+  # workerd 1.20261108.1 and broke D1 statements referencing a CTE many times
+  # (https://github.com/cloudflare/workers-sdk/issues/16786). Bump once workerd
+  # ships an engine fix; the miniflare D1 regression test guards the behaviour.
+  workerd: "1.20261104.1"
   jsonc-parser: "3.2.0"
   smol-toml: "1.9.0"
   msw: "2.14.6"
