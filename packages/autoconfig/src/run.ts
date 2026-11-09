@@ -174,7 +174,8 @@ export async function runAutoConfig(
 		buildCommand = getProjectCommand(
 			buildCommand,
 			packageManager,
-			autoConfigDetails.packageJson
+			autoConfigDetails.packageJson,
+			target
 		);
 	}
 
