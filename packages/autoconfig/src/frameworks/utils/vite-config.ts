@@ -113,9 +113,9 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 				return this.traverse(n);
 			}
 
-			if (hasFollowingSpread(configObject, pluginsProp)) {
+			if (hasFollowingOverride(configObject, pluginsProp)) {
 				context?.logger.debug(
-					`Vite config has a spread after its plugins array. Skipping Cloudflare plugin check.`
+					`Vite config has a later property that may override its plugins array. Skipping Cloudflare plugin check.`
 				);
 				return this.traverse(n);
 			}
@@ -320,12 +320,12 @@ export function transformViteConfig(
 				);
 			}
 
-			if (hasFollowingSpread(configObject, pluginsProp)) {
+			if (hasFollowingOverride(configObject, pluginsProp)) {
 				throw new UserError(
 					dedent`
-					Cannot modify Vite config: a spread after the plugins array may override it.
+					Cannot modify Vite config: a later property may override the plugins array.
 
-					Move the plugins array after all object spreads, or manually add the Cloudflare plugin to the effective plugins array.
+					Define the effective plugins array after all spreads, computed properties, and plugins accessors, then retry autoconfiguration.
 				`,
 					{
 						telemetryMessage: "autoconfig vite plugins array overridden",
@@ -390,21 +390,40 @@ function isPluginsProp(
 ): prop is types.namedTypes.ObjectProperty | types.namedTypes.Property {
 	return (
 		(t.Property.check(prop) || t.ObjectProperty.check(prop)) &&
-		((!prop.computed &&
-			t.Identifier.check(prop.key) &&
-			prop.key.name === "plugins") ||
-			((t.StringLiteral.check(prop.key) || t.Literal.check(prop.key)) &&
-				prop.key.value === "plugins"))
+		getStaticPropertyName(prop) === "plugins"
 	);
 }
 
-function hasFollowingSpread(
+function getStaticPropertyName(prop: unknown): string | undefined {
+	if (
+		!t.Property.check(prop) &&
+		!t.ObjectProperty.check(prop) &&
+		!t.ObjectMethod.check(prop)
+	) {
+		return undefined;
+	}
+	if (!prop.computed && t.Identifier.check(prop.key)) {
+		return prop.key.name;
+	}
+	if (
+		t.StringLiteral.check(prop.key) ||
+		t.NumericLiteral.check(prop.key) ||
+		t.BigIntLiteral.check(prop.key) ||
+		t.Literal.check(prop.key)
+	) {
+		return String(prop.key.value);
+	}
+	return undefined;
+}
+
+function hasFollowingOverride(
 	configObject: types.namedTypes.ObjectExpression,
 	pluginsProp: types.namedTypes.ObjectProperty | types.namedTypes.Property
 ): boolean {
 	return configObject.properties
 		.slice(configObject.properties.indexOf(pluginsProp) + 1)
-		.some(
-			(prop) => t.SpreadElement.check(prop) || t.SpreadProperty.check(prop)
-		);
+		.some((prop) => {
+			const name = getStaticPropertyName(prop);
+			return name === undefined || name === "plugins";
+		});
 }

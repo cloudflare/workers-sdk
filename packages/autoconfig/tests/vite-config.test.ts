@@ -152,6 +152,51 @@ export default defineConfig({
 	});
 
 	describe("transformViteConfig", () => {
+		it.for([
+			"[overrideKey]: shared.plugins",
+			"get plugins() { return shared.plugins; }",
+		])("rejects a later plugins override: %s", async (override, { expect }) => {
+			const content = `import { defineConfig } from "vite";
+import { cloudflare } from "@cloudflare/vite-plugin";
+
+const overrideKey = "plugins";
+const shared = { plugins: [] };
+export default defineConfig({
+  "plugins": [cloudflare()],
+  ${override}
+});
+`;
+			await writeFile("vite.config.js", content);
+
+			expect(checkIfViteConfigUsesCloudflarePlugin(".", context)).toBe(false);
+			expect(() => transformViteConfig(".")).toThrow(
+				/Cannot modify Vite config: a later property may override the plugins array/
+			);
+			expect(readFileSync("vite.config.js", "utf8")).toBe(content);
+		});
+
+		it.for(["1", '"server"', '["server"]'])(
+			"allows an unrelated static %s property after plugins",
+			async (key, { expect }) => {
+				await writeFile(
+					"vite.config.js",
+					`import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [],
+  ${key}: {}
+});
+`
+				);
+
+				transformViteConfig(".");
+
+				expect(readFileSync("vite.config.js", "utf8")).toContain(
+					"plugins: [cloudflare()]"
+				);
+			}
+		);
+
 		it.for(["plugins", '"plugins"', '["plugins"]'])(
 			"updates the final %s array after a spread in JavaScript config",
 			async (key, { expect }) => {
@@ -193,7 +238,7 @@ export default defineConfig({
 				await writeFile(filePath, content);
 
 				expect(() => transformViteConfig(".")).toThrow(
-					/Cannot modify Vite config: a spread after the plugins array may override it/
+					/Cannot modify Vite config: a later property may override the plugins array/
 				);
 				expect(readFileSync(filePath, "utf8")).toBe(content);
 			}
