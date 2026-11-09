@@ -32,6 +32,7 @@ export default defineConfig(() => [
 			"src/compatibility-date.ts",
 			"src/docker-path.ts",
 			"src/errors.ts",
+			"src/custom-api-headers.ts",
 			"src/fs-helpers.ts",
 			"src/global-wrangler-config-path.ts",
 			"src/local-env.ts",
