@@ -17,6 +17,7 @@ import {
 	staticFramework,
 } from "../frameworks/all-frameworks";
 import { detectFramework } from "./framework-detection";
+import { getViteFallbackCommands, usesVitePlus } from "./vite-commands";
 import type { AutoConfigContext, AutoConfigTarget } from "../context";
 import type {
 	AutoConfigDetails,
@@ -185,7 +186,7 @@ export async function getDetailsForAutoConfig({
 		!configured &&
 		requestedOutputDir !== undefined &&
 		detectedFramework.framework.id !== "cloudflare-pages";
-	const framework = useStaticAssets
+	let framework = useStaticAssets
 		? getFrameworkClassInstance(staticFramework.id, target)
 		: detectedFrameworkInstance;
 	const packageJsonPath = resolve(projectPath, "package.json");
@@ -201,10 +202,25 @@ export async function getDetailsForAutoConfig({
 		logger.debug("No package.json found when running autoconfig");
 	}
 
+	const fallbackCommands =
+		target === "cf" &&
+		!useStaticAssets &&
+		(!detectedFramework.devCommand || !detectedFramework.buildCommand)
+			? getViteFallbackCommands(projectPath, packageJson)
+			: undefined;
+	if (
+		fallbackCommands &&
+		!detectedFramework.devCommand &&
+		!detectedFramework.buildCommand
+	) {
+		framework = getFrameworkClassInstance("vite", target);
+	}
+
 	const outputDir =
 		requestedOutputDir !== undefined && framework.id === staticFramework.id
 			? normalizeOutputDir(projectPath, requestedOutputDir)
-			: (detectedFramework?.dist ?? (await findAssetsDir(projectPath)));
+			: (detectedFramework?.dist ??
+				(fallbackCommands ? "dist" : await findAssetsDir(projectPath)));
 
 	const baseDetails = {
 		projectPath,
@@ -214,7 +230,7 @@ export async function getDetailsForAutoConfig({
 		devCommand: useStaticAssets
 			? undefined
 			: getProjectCommand(
-					detectedFramework.devCommand,
+					detectedFramework.devCommand ?? fallbackCommands?.devCommand,
 					packageManager,
 					packageJson,
 					target
@@ -222,7 +238,7 @@ export async function getDetailsForAutoConfig({
 		buildCommand: useStaticAssets
 			? undefined
 			: getProjectCommand(
-					detectedFramework.buildCommand,
+					detectedFramework.buildCommand ?? fallbackCommands?.buildCommand,
 					packageManager,
 					packageJson,
 					target
@@ -315,10 +331,7 @@ export function getProjectCommand(
 
 	const { type, dlx, npx } = packageManager;
 	const executablePrefix = target === "cf" ? "" : `${npx} `;
-	if (
-		packageJson?.dependencies?.["vite-plus"] ||
-		packageJson?.devDependencies?.["vite-plus"]
-	) {
+	if (usesVitePlus(packageJson)) {
 		if (
 			["vite", "vite dev", `${npx} vite`, `${npx} vite dev`].includes(command)
 		) {
