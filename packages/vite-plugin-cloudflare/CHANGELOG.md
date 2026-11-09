@@ -1,5 +1,31 @@
 # @cloudflare/vite-plugin
 
+## 1.68.0
+
+### Minor Changes
+
+- [#16677](https://github.com/cloudflare/workers-sdk/pull/16677) [`42151ba`](https://github.com/cloudflare/workers-sdk/commit/42151baf5e47993603913c4ccc116542bc8bf291) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Support opting into zstd compression for local Container image builds in v1
+
+  Update the container build helper so `WRANGLER_CONTAINER_IMAGE_COMPRESSION=zstd` applies when the Vite plugin prepares Dockerfile-based Container images. Docker must use the containerd image store; the default build behavior is unchanged.
+
+### Patch Changes
+
+- [#16676](https://github.com/cloudflare/workers-sdk/pull/16676) [`90cdb9d`](https://github.com/cloudflare/workers-sdk/commit/90cdb9d9a60ff8c93218b4bc51e848f1d67456cc) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update the v1 development runtime to Miniflare 5.20261103.0-beta
+
+  Use the November 3 workerd runtime with matching Wrangler 4.157.0 and default compatibility date. Local rate-limit bindings now support weighted calls using `delta`. Load the Node.js compatibility helper from workers-utils so v1 continues to build and run after Miniflare removes its deprecated export.
+
+- [#16580](https://github.com/cloudflare/workers-sdk/pull/16580) [`0ba4ded`](https://github.com/cloudflare/workers-sdk/commit/0ba4ded8232548493319b0082a59b8cda1c9d328) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix signed Accept-Encoding headers on the experimental local R2 S3 endpoint
+
+  Preserve the original S3 request header in the Vite request adapter so clients that sign `Accept-Encoding: identity` can use the endpoint exposed by Vite development and preview without `SignatureDoesNotMatch` errors. The runtime verifies the exact value signed by the client.
+
+- [#16601](https://github.com/cloudflare/workers-sdk/pull/16601) [`d338c29`](https://github.com/cloudflare/workers-sdk/commit/d338c2939de9cc22448c938e2f2188a048ed765b) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Validate OAuth callbacks during remote binding login in Vite development
+
+  Unrelated browser callbacks no longer interrupt remote binding login, and provider error messages no longer print terminal control characters.
+
+- [#16703](https://github.com/cloudflare/workers-sdk/pull/16703) [`3272ca5`](https://github.com/cloudflare/workers-sdk/commit/3272ca530d6b745a82cca982c6946fb7d1353bb7) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Respect the user's `build.cssTarget` in Worker environments
+
+  Only apply the `es2024` CSS default when neither the top-level nor the Worker environment's `build.cssTarget` is set. This prevents Vite's array merging from lowering explicit browser targets and adding unwanted CSS polyfills.
+
 ## 1.67.0
 
 ### Minor Changes
