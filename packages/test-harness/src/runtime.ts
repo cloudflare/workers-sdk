@@ -11,7 +11,7 @@ import type {
 	InlineWorkerConfig,
 	TestHarnessOptions,
 	WorkerInput,
-} from "./index";
+} from "./test-harness";
 import type {
 	BuildOutput,
 	BuildOutputWorker,
@@ -95,7 +95,7 @@ export async function resolveWorkerInputs(
 		for (const [index, input] of inputs.entries()) {
 			workers.push(
 				await resolveWorker(
-					toPath(root),
+					root,
 					input,
 					previousWorkers[index]?.remoteProxySessionData ?? null
 				)

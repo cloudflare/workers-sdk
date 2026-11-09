@@ -1521,9 +1521,7 @@ describe("createTestHarness()", () => {
 		expect(workerCountAfterRejectedUpdate).toBe(1);
 	});
 
-	it("rejects update when a worker's Build Output can't be read", async ({
-		expect,
-	}) => {
+	it("rejects update when a worker fails to start", async ({ expect }) => {
 		await writeBuild(".", {
 			default: {
 				config: { name: "primary-worker" },
@@ -1535,20 +1533,54 @@ describe("createTestHarness()", () => {
 					};
 				`,
 			},
+			"auxiliary-worker": {
+				config: { name: "auxiliary-worker" },
+				script: `
+					export default {
+						fetch() {
+							return new Response("Hello from Auxiliary Worker");
+						}
+					};
+				`,
+			},
 		});
 
-		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		const server = createTestHarness({
+			workers: [
+				{ buildOutput: "." },
+				{ buildOutput: ".", name: "auxiliary-worker" },
+			],
+		});
 		onTestFinished(server.close);
 
 		await server.listen();
 
+		// Either of these changes should cause a startup failure
 		await seed({
-			".cloudflare/output/v0/workers/default/worker.config.json": "{",
+			".cloudflare/output/v0/workers/default/bundle/index.js": `
+				export default {
+					fetch() {
+						return new Response("broken);
+					}
+				};
+			`,
+			".cloudflare/output/v0/workers/auxiliary-worker/bundle/index.js": `
+				export default {
+					fetch() {
+						return new Response("broken too";
+					}
+				};
+			`,
 		});
 
-		await expect(server.update((options) => options)).rejects.toThrow(
-			"could not parse JSON"
-		);
+		await expect(
+			Promise.race([
+				server.update((options) => options),
+				setTimeout(5_000).then(() => {
+					throw new Error("server.update() timed out");
+				}),
+			])
+		).rejects.toThrow("The Workers runtime failed to start");
 	});
 
 	it("rejects calls on unknown worker handles", async ({ expect }) => {

@@ -1,7 +1,7 @@
 import { bindings, defineConfig } from "@cloudflare/config";
 import { describe, expectTypeOf, it } from "vitest";
 import { createTestHarness } from "../index";
-import type { AnyEnv } from "../index";
+import type { AnyEnv } from "../test-harness";
 
 const config = defineConfig({
 	worker: {
