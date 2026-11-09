@@ -4,12 +4,19 @@ import { CorePaths, Headers, Miniflare, Request } from "miniflare";
 import { BUN_UNSUPPORTED_MESSAGE, isBun } from "./is-bun";
 import { disposeRemoteProxySessions, resolveWorkerInputs } from "./runtime";
 import type { ResolvedWorker } from "./runtime";
-import type { ExportedHandler, Rpc, Service } from "@cloudflare/workers-types";
+import type {
+	DurableObjectNamespace,
+	ExportedHandler,
+	Rpc,
+	Service,
+} from "@cloudflare/workers-types";
 import type {
 	FetcherScheduledOptions,
 	FetcherScheduledResult,
 } from "@cloudflare/workers-types/experimental";
 import type {
+	DurableObjectStorageHandle,
+	DurableObjectStorageOptions,
 	DispatchFetch,
 	EmailHandlerResult,
 	Json,
@@ -29,6 +36,32 @@ export type TestHarnessOptions = {
 	 */
 	workers: WorkerInput[];
 };
+
+export type ExportName<Module, Type> = string extends keyof Module
+	? string
+	: Extract<
+			{
+				[K in keyof Module]-?: NonNullable<Module[K]> extends
+					| Type
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match runtime class exports by instance type.
+					| (abstract new (...args: any[]) => Type)
+					? K
+					: never;
+			}[keyof Module],
+			string
+		>;
+
+export type BindingName<Env, Type> = string extends keyof Env
+	? string
+	: Extract<
+			{
+				[K in keyof Env]-?: NonNullable<Env[K]> extends Type ? K : never;
+			}[keyof Env],
+			string
+		>;
+export type DurableObjectIdentifier =
+	| { name: string; id?: never }
+	| { id: string; name?: never };
 
 export type FetcherEmailOptions = {
 	from: string;
@@ -111,6 +144,61 @@ export type WorkerHandle<
 	 * ```
 	 */
 	getEnv(): Promise<Env>;
+	/**
+	 * Lists the string IDs of Durable Object instances with persisted storage.
+	 * Pass an exported Durable Object class name, or a Durable Object binding name.
+	 */
+	listDurableObjectIds(
+		classNameOrBindingName:
+			| ExportName<Module, Rpc.DurableObjectBranded>
+			| BindingName<Env, DurableObjectNamespace>
+	): Promise<string[]>;
+	/**
+	 * Evicts a currently running Durable Object instance while preserving its durable storage.
+	 * In-memory state is reset the next time the object starts.
+	 * Pass an exported Durable Object class name, or a Durable Object binding name.
+	 * Class names are resolved before binding names.
+	 *
+	 * @example
+	 * ```ts
+	 * await worker.evictDurableObject("Counter", {
+	 *   name: "user-123",
+	 *   webSockets: "hibernate",
+	 * });
+	 * ```
+	 */
+	evictDurableObject(
+		classNameOrBindingName:
+			| ExportName<Module, Rpc.DurableObjectBranded>
+			| BindingName<Env, DurableObjectNamespace>,
+		options: DurableObjectIdentifier & {
+			webSockets?: "close" | "hibernate";
+		}
+	): Promise<void>;
+	/**
+	 * Returns remote storage access for a Durable Object instance.
+	 * Pass an exported Durable Object class name, or a Durable Object binding name.
+	 * Class names are resolved before binding names.
+	 *
+	 * Use this to seed state before sending requests to the object, or to inspect
+	 * state after awaited requests. Calling `exec()` runs SQL inside the target
+	 * Durable Object and returns all rows. It may start the object if it is not
+	 * already active.
+	 *
+	 * @example
+	 * ```ts
+	 * const sql = await worker.getDurableObjectStorage("COUNTER", {
+	 *   name: "user-123"
+	 * });
+	 * const rows = await sql.exec("SELECT count FROM counters WHERE id = ?", "user-123");
+	 * ```
+	 */
+	getDurableObjectStorage(
+		classNameOrBindingName:
+			| ExportName<Module, Rpc.DurableObjectBranded>
+			| BindingName<Env, DurableObjectNamespace>,
+		options: DurableObjectStorageOptions
+	): Promise<DurableObjectStorageHandle>;
 	/**
 	 * Returns the default Worker export, including JSRPC methods.
 	 *
@@ -318,6 +406,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			port: 0,
 			enableDevRegistry: false,
 			unsafeTriggerHandlers: true,
+			unsafeInspectDurableObjects: true,
 			handleStructuredLogs: (log: WorkerdStructuredLog) =>
 				captureStructuredLog(log),
 			workers: workers.map((worker) => worker.options),
@@ -385,6 +474,65 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		}
 
 		return workerName;
+	}
+
+	function getWorkerConfig(session: ServerSession, workerName: string) {
+		const workerConfig = session.workers.find(
+			(worker) => worker.config.name === workerName
+		)?.config;
+		assert(
+			workerConfig,
+			`Worker ${JSON.stringify(workerName)} config is not available.`
+		);
+		return workerConfig;
+	}
+
+	function resolveDurableObjectTarget(
+		session: ServerSession,
+		workerName: string,
+		classNameOrBindingName: string
+	) {
+		const workerConfig = getWorkerConfig(session, workerName);
+		const localDurableObjectBinding = Object.values(
+			workerConfig.env ?? {}
+		).find((binding) => {
+			return (
+				binding.type === "durable-object" &&
+				binding.exportName === classNameOrBindingName &&
+				binding.worker === workerName
+			);
+		});
+		if (localDurableObjectBinding !== undefined) {
+			return {
+				scriptName: workerName,
+				className: classNameOrBindingName,
+			};
+		}
+
+		// Build Output declares Durable Object classes in `exports`, rather than
+		// in migrations. Exports with `storage` are the live classes.
+		const durableObjectClass = workerConfig.exports?.[classNameOrBindingName];
+		if (
+			durableObjectClass?.type === "durable-object" &&
+			"storage" in durableObjectClass
+		) {
+			return {
+				scriptName: workerName,
+				className: classNameOrBindingName,
+			};
+		}
+
+		const durableObject = workerConfig.env?.[classNameOrBindingName];
+		if (durableObject?.type === "durable-object") {
+			return {
+				scriptName: durableObject.worker,
+				className: durableObject.exportName,
+			};
+		}
+
+		throw new TypeError(
+			`No Durable Object class or namespace binding named ${JSON.stringify(classNameOrBindingName)} found in ${JSON.stringify(workerName)} worker.`
+		);
 	}
 
 	async function teardownSession(session: ServerSession) {
@@ -595,6 +743,66 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					const result = await response.json();
 
 					return result as FetcherScheduledResult;
+				},
+				async listDurableObjectIds(classNameOrBindingName) {
+					const session = await resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
+
+					debugLog(
+						`durable object ids - ${classNameOrBindingName} - started`,
+						workerName
+					);
+
+					try {
+						const ids = await miniflare.listDurableObjectIds(
+							classNameOrBindingName,
+							workerName
+						);
+						debugLog(
+							`durable object ids - ${classNameOrBindingName} - completed (${ids.length} found)`,
+							workerName
+						);
+						return ids;
+					} catch (error) {
+						debugLog(
+							`durable object ids - ${classNameOrBindingName} - failed`,
+							workerName
+						);
+						throw error;
+					}
+				},
+				async evictDurableObject(classNameOrBindingName, evictionOptions) {
+					const session = await resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
+					const { scriptName, className } = resolveDurableObjectTarget(
+						session,
+						workerName,
+						classNameOrBindingName
+					);
+
+					await miniflare.unsafeEvictDurableObject(
+						scriptName,
+						className,
+						evictionOptions
+					);
+				},
+				async getDurableObjectStorage(classNameOrBindingName, storageOptions) {
+					const session = await resolveSession();
+					const miniflare = await getRuntimeMiniflare(session);
+					const workerName = resolveWorkerName(session, name);
+					const { scriptName, className } = resolveDurableObjectTarget(
+						session,
+						workerName,
+						classNameOrBindingName
+					);
+
+					return miniflare.unsafeGetDurableObjectStorage(
+						scriptName,
+						className,
+						storageOptions
+					);
 				},
 				async getEnv() {
 					const session = await resolveSession();

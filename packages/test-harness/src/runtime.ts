@@ -32,6 +32,8 @@ const remoteBindingsLogger: RemoteBindingsLogger = {
 
 /** A Worker from a project's Build Output, resolved for Miniflare */
 export type ResolvedWorker = {
+	/** The Worker's config from its Build Output */
+	config: BuildOutputWorker["config"];
 	/** The Worker's Miniflare options */
 	options: WorkerOptions;
 	/** The Worker's remote bindings session, if it has remote bindings */
@@ -181,6 +183,7 @@ async function resolveWorker(
 	);
 
 	return {
+		config: worker.config,
 		options: {
 			config: {
 				...config,
