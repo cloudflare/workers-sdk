@@ -19,11 +19,12 @@ type Exports = NonNullable<WorkerOptions["config"]["exports"]>;
 
 const remoteBindingsLogger: RemoteBindingsLogger = {
 	loggerLevel: "log",
-	debug: console.debug,
-	log: console.log,
-	info: console.info,
-	warn: console.warn,
-	error: console.error,
+	// Look up console methods when called, so console spies see them
+	debug: (...args) => console.debug(...args),
+	log: (...args) => console.log(...args),
+	info: (...args) => console.info(...args),
+	warn: (...args) => console.warn(...args),
+	error: (...args) => console.error(...args),
 	console(method, ...args) {
 		Reflect.apply(console[method], console, args);
 	},
