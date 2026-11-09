@@ -2,8 +2,8 @@
 "@cloudflare/vite-plugin": patch
 ---
 
-Avoid rebuilding environments already built by another plugin
+Avoid rebuilding environments already built in a pre `buildApp` hook
 
-Use the `buildApp` hook to build only Worker and client environments that have not already been built. This prevents duplicate builds when framework plugins build environments first.
+When another plugin builds a Worker or client environment in a `buildApp` hook with `order: "pre"`, the Cloudflare plugin now skips rebuilding that environment.
 
-After a custom `builder.buildApp`, the plugin now also builds the client environment when needed and moves assets imported by the entry Worker into the client output. Previously, custom builders skipped these steps.
+When using a custom `builder.buildApp`, the plugin now completes any required client build and makes assets imported by the entry Worker available to serve. Previously, custom builders skipped these steps.
