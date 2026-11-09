@@ -23,7 +23,12 @@ import { BUN_UNSUPPORTED_MESSAGE, isBun } from "./is-bun";
 import { disposeRemoteProxySessions, resolveWorkerInputs } from "./runtime";
 import type { ResolvedWorker } from "./runtime";
 import type { ResolvedOutputWorkerConfig } from "@cloudflare/build-output-utils";
-import type { ModuleType } from "@cloudflare/config";
+import type {
+	InferEnv,
+	InferMainModule,
+	ModuleType,
+	UnwrapConfig,
+} from "@cloudflare/config";
 import type {
 	D1Database,
 	DurableObjectNamespace,
@@ -114,6 +119,39 @@ export type AnyExportedHandler = ExportedHandler<any, any, any, any>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped test code should be able to use env bindings without casting every property
 export type AnyEnv = Record<string, any>;
+
+/**
+ * A Worker's config module, as `typeof import("./cloudflare.config")`
+ */
+export type WorkerConfigModule = { default: unknown };
+
+/** The Worker config in a config module, read as `cf workers types` reads it */
+type WorkerConfigOf<ConfigModule extends WorkerConfigModule> =
+	UnwrapConfig<ConfigModule["default"]> extends { worker: infer WorkerConfig }
+		? UnwrapConfig<WorkerConfig>
+		: never;
+
+/**
+ * A Worker's `Env`: the given type, or the one inferred from a config module.
+ */
+export type WorkerEnv<EnvOrConfigModule> = [EnvOrConfigModule] extends [
+	WorkerConfigModule,
+]
+	? InferEnv<WorkerConfigOf<EnvOrConfigModule>>
+	: EnvOrConfigModule;
+
+/**
+ * A Worker's main module: the one inferred from a config module, or any.
+ */
+export type WorkerMainModule<EnvOrConfigModule> = [EnvOrConfigModule] extends [
+	WorkerConfigModule,
+]
+	? InferMainModule<
+			WorkerConfigOf<EnvOrConfigModule>
+		> extends infer Module extends WorkerModule
+		? Module
+		: { default: AnyExportedHandler }
+	: { default: AnyExportedHandler };
 
 export type WorkerHandle<
 	Env = AnyEnv,
@@ -328,13 +366,18 @@ export type TestHarness = {
 	 * Returns a handle for dispatching events directly to a Worker.
 	 * When no name is provided, this returns the primary Worker, which is the first
 	 * Worker in the server's `workers` options.
+	 *
+	 * Type the handle with the Worker's `Env` and module types, or with its
+	 * config module, from which both are inferred as `cf workers types` does.
+	 *
+	 * @example
+	 * ```ts
+	 * const api = server.getWorker<typeof import("../api/cloudflare.config")>("api");
+	 * ```
 	 */
-	getWorker<
-		Env = AnyEnv,
-		Module extends WorkerModule = { default: AnyExportedHandler },
-	>(
+	getWorker<Env = AnyEnv, Module extends WorkerModule = WorkerMainModule<Env>>(
 		name?: string
-	): WorkerHandle<Env, Module>;
+	): WorkerHandle<WorkerEnv<Env>, Module>;
 	/**
 	 * Returns captured Workers runtime logs since the current server session
 	 * started or `clearLogs()` was last called.
@@ -792,8 +835,8 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		},
 		getWorker<
 			Env = AnyEnv,
-			Module extends WorkerModule = { default: AnyExportedHandler },
-		>(name?: string): WorkerHandle<Env, Module> {
+			Module extends WorkerModule = WorkerMainModule<Env>,
+		>(name?: string): WorkerHandle<WorkerEnv<Env>, Module> {
 			async function getWorkflowBinding(bindingName: string) {
 				const session = await resolveSession();
 				const miniflare = await getRuntimeMiniflare(session);
@@ -1058,7 +1101,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					const miniflare = await getRuntimeMiniflare(session);
 					const workerName = resolveWorkerName(session, name);
 
-					return miniflare.getBindings<Env>(workerName);
+					return miniflare.getBindings<WorkerEnv<Env>>(workerName);
 				},
 				async getExport() {
 					const session = await resolveSession();
