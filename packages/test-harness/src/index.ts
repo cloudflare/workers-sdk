@@ -22,6 +22,8 @@ import {
 import { BUN_UNSUPPORTED_MESSAGE, isBun } from "./is-bun";
 import { disposeRemoteProxySessions, resolveWorkerInputs } from "./runtime";
 import type { ResolvedWorker } from "./runtime";
+import type { ResolvedOutputWorkerConfig } from "@cloudflare/build-output-utils";
+import type { ModuleType } from "@cloudflare/config";
 import type {
 	D1Database,
 	DurableObjectNamespace,
@@ -372,30 +374,72 @@ export type TestHarness = {
 	close(): Promise<void>;
 };
 
-export type WorkerInput = {
-	/**
-	 * The project directory containing the build's `.cloudflare/output`.
-	 * Relative paths resolve from the harness's `root`.
-	 */
-	buildOutput: string | URL;
-	/**
-	 * The name of the Worker to run from that build. Defaults to the build's
-	 * default Worker.
-	 */
-	name?: string;
-	/**
-	 * Test-only vars that override vars from the Worker's config.
-	 */
-	vars?: Record<string, Json>;
-	/**
-	 * Test-only secrets that override values loaded from `.dev.vars` and `.env` files.
-	 */
-	secrets?: Record<string, string>;
-	/**
-	 * Test-only service binding overrides. Keys are binding names in this
-	 * Worker's environment, and values are Worker names in this test harness.
-	 */
-	bindingOverrides?: Record<string, string>;
+export type WorkerInput =
+	| {
+			/**
+			 * The project directory containing the build's `.cloudflare/output`.
+			 * Relative paths resolve from the harness's `root`.
+			 */
+			buildOutput: string | URL;
+			/**
+			 * The name of the Worker to run from that build. Defaults to the build's
+			 * default Worker.
+			 */
+			name?: string;
+			/**
+			 * Test-only vars that override vars from the Worker's config.
+			 */
+			vars?: Record<string, Json>;
+			/**
+			 * Test-only secrets that override values loaded from `.dev.vars` and `.env` files.
+			 */
+			secrets?: Record<string, string>;
+			/**
+			 * Test-only service binding overrides. Keys are binding names in this
+			 * Worker's environment, and values are Worker names in this test harness.
+			 */
+			bindingOverrides?: Record<string, string>;
+	  }
+	| {
+			/**
+			 * Inline config for a test-only Worker, such as a mock for
+			 * `bindingOverrides`. Its files resolve from the harness's `root`.
+			 */
+			config: InlineWorkerConfig;
+	  };
+
+/**
+ * A Worker config in the shape of a Build Output's `worker.config.json`, whose
+ * `manifest` includes the code of each module. Inline modules aren't bundled.
+ *
+ * @example
+ * ```ts
+ * {
+ *   name: "mock-ai",
+ *   compatibilityDate: "2026-06-01",
+ *   manifest: {
+ *     mainModule: "index.js",
+ *     modules: {
+ *       "index.js": { type: "esm", contents: "export default { ... }" },
+ *     },
+ *   },
+ * }
+ * ```
+ */
+export type InlineWorkerConfig = Omit<
+	ResolvedOutputWorkerConfig,
+	"manifest"
+> & {
+	manifest: {
+		mainModule: string;
+		modules: Record<
+			string,
+			{
+				type: ModuleType;
+				contents: string | Uint8Array;
+			}
+		>;
+	};
 };
 
 type ServerSession = {

@@ -7,8 +7,15 @@ import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import { resolveLocalBindings } from "miniflare";
 import { getRemoteBindingsAuth } from "./auth";
 import { withJsonErrors } from "./json-error";
-import type { TestHarnessOptions, WorkerInput } from "./index";
-import type { BuildOutputWorker } from "@cloudflare/build-output-utils";
+import type {
+	InlineWorkerConfig,
+	TestHarnessOptions,
+	WorkerInput,
+} from "./index";
+import type {
+	BuildOutput,
+	BuildOutputWorker,
+} from "@cloudflare/build-output-utils";
 import type {
 	RemoteBindingsLogger,
 	RemoteProxySessionData,
@@ -17,6 +24,27 @@ import type { WorkerOptions } from "miniflare";
 
 type Manifest = NonNullable<WorkerOptions["config"]["manifest"]>;
 type Exports = NonNullable<WorkerOptions["config"]["exports"]>;
+type BuildOutputInput = Exclude<WorkerInput, { config: InlineWorkerConfig }>;
+type TestValues = Pick<
+	BuildOutputInput,
+	"vars" | "secrets" | "bindingOverrides"
+>;
+
+/** A Worker read from Build Output or inline config */
+type WorkerSource = {
+	/** The directory containing the Worker's `.dev.vars`, `.env` and migrations */
+	projectDir: string;
+	rootConfig: Pick<
+		BuildOutput["rootConfig"],
+		"accountId" | "complianceRegion"
+	> & {
+		buildContext: { mode?: string };
+	};
+	worker: Pick<BuildOutputWorker, "bundleDir" | "assetsDir"> & {
+		config: Omit<BuildOutputWorker["config"], "manifest">;
+	};
+	manifest: Manifest;
+};
 
 const remoteBindingsLogger: RemoteBindingsLogger = {
 	loggerLevel: "log",
@@ -34,7 +62,7 @@ const remoteBindingsLogger: RemoteBindingsLogger = {
 /** A Worker from a project's Build Output, resolved for Miniflare */
 export type ResolvedWorker = {
 	/** The Worker's config from its Build Output */
-	config: BuildOutputWorker["config"];
+	config: WorkerSource["worker"]["config"];
 	/** The project directory containing the Worker's Build Output */
 	projectDir: string;
 	/** The Worker's Miniflare options */
@@ -109,20 +137,12 @@ async function resolveWorker(
 	input: WorkerInput,
 	preExistingRemoteProxySessionData: RemoteProxySessionData | null
 ): Promise<ResolvedWorker> {
-	const projectDir = path.resolve(root, toPath(input.buildOutput));
-	const buildOutput = await readBuildOutput(projectDir);
-	const builtWorkers = Object.values(buildOutput.workers);
-	const worker =
-		input.name === undefined
-			? buildOutput.workers.default
-			: builtWorkers.find(({ config }) => config.name === input.name);
-	if (worker === undefined) {
-		throw new Error(
-			`No Worker named "${input.name}" in the Build Output at ${projectDir}. It has: ${builtWorkers.map(({ config }) => config.name).join(", ")}.`
-		);
-	}
+	const { projectDir, rootConfig, worker, manifest } =
+		"config" in input
+			? getInlineWorker(root, input.config)
+			: await readWorker(root, input);
+	const testValues: TestValues = "config" in input ? {} : input;
 
-	const { rootConfig } = buildOutput;
 	// Secrets come from the files for the build's mode, as in `vite preview`
 	const mode = rootConfig.buildContext.mode ?? "production";
 	const [localEnv, devVars] = await Promise.all([
@@ -130,7 +150,6 @@ async function resolveWorker(
 		loadDevVars(projectDir, mode),
 	]);
 	const {
-		manifest: _manifest,
 		assets,
 		env: configuredEnv,
 		exports: _exports,
@@ -139,17 +158,17 @@ async function resolveWorker(
 	// Test values replace configured bindings before anything uses them, so an
 	// overridden remote binding doesn't start a remote session
 	const testEnv = { ...configuredEnv };
-	for (const [name, value] of Object.entries(input.vars ?? {})) {
+	for (const [name, value] of Object.entries(testValues.vars ?? {})) {
 		testEnv[name] =
 			typeof value === "string"
 				? { type: "text", value }
 				: { type: "json", value };
 	}
-	for (const [name, value] of Object.entries(input.secrets ?? {})) {
+	for (const [name, value] of Object.entries(testValues.secrets ?? {})) {
 		testEnv[name] = { type: "text", value };
 	}
 	for (const [name, workerName] of Object.entries(
-		input.bindingOverrides ?? {}
+		testValues.bindingOverrides ?? {}
 	)) {
 		testEnv[name] = { type: "worker", worker: workerName };
 	}
@@ -162,7 +181,6 @@ async function resolveWorker(
 	});
 	// Before starting a remote session, so a failure here can't leave it running
 	const exports = getExports(worker);
-	const manifest = await getManifest(worker);
 
 	const session = await maybeStartOrUpdateRemoteProxySession(
 		{
@@ -212,6 +230,56 @@ async function resolveWorker(
 }
 
 /**
+ * Reads a Worker from a project's Build Output.
+ *
+ * @param root The directory that a relative `buildOutput` path resolves from
+ * @param input The Worker to read
+ * @returns The Worker and where it came from
+ */
+async function readWorker(
+	root: string,
+	input: BuildOutputInput
+): Promise<WorkerSource> {
+	const projectDir = path.resolve(root, toPath(input.buildOutput));
+	const buildOutput = await readBuildOutput(projectDir);
+	const builtWorkers = Object.values(buildOutput.workers);
+	const worker =
+		input.name === undefined
+			? buildOutput.workers.default
+			: builtWorkers.find(({ config }) => config.name === input.name);
+	if (worker === undefined) {
+		throw new Error(
+			`No Worker named "${input.name}" in the Build Output at ${projectDir}. It has: ${builtWorkers.map(({ config }) => config.name).join(", ")}.`
+		);
+	}
+
+	return {
+		projectDir,
+		rootConfig: buildOutput.rootConfig,
+		worker,
+		manifest: await getManifest(worker),
+	};
+}
+
+/**
+ * @param root The harness's `root`
+ * @param config The inline Worker config
+ * @returns The inline Worker
+ */
+function getInlineWorker(
+	root: string,
+	config: InlineWorkerConfig
+): WorkerSource {
+	return {
+		// Wrangler's harness also resolves an inline Worker's files from `root`
+		projectDir: root,
+		rootConfig: { buildContext: {} },
+		worker: { config, bundleDir: undefined, assetsDir: undefined },
+		manifest: withJsonErrors(config.manifest),
+	};
+}
+
+/**
  * Reads a Worker's modules from its Build Output bundle.
  *
  * @param worker The Worker in the Build Output
@@ -256,7 +324,7 @@ async function getManifest(worker: BuildOutputWorker): Promise<Manifest> {
  * @param worker The Worker in the Build Output
  * @returns The Worker's exports
  */
-function getExports(worker: BuildOutputWorker): Exports {
+function getExports(worker: WorkerSource["worker"]): Exports {
 	const exports: Exports = {};
 	for (const [name, workerExport] of Object.entries(
 		worker.config.exports ?? {}

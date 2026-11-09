@@ -32,6 +32,7 @@
 	},
 	"dependencies": {
 		"@cloudflare/build-output-utils": "workspace:*",
+		"@cloudflare/config": "workspace:*",
 		"miniflare": "workspace:*"
 	},
 	"devDependencies": {

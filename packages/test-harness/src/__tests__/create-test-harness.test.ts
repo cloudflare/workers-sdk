@@ -70,6 +70,17 @@ async function writeBuild(
 }
 
 /**
+ * @param contents The code of an inline Worker's only module
+ * @returns The Worker's manifest
+ */
+function singleModuleManifest(contents: string) {
+	return {
+		mainModule: "index.js",
+		modules: { "index.js": { type: "esm", contents } },
+	} as const;
+}
+
+/**
  * Creates a test harness that's closed when the test finishes.
  *
  * @param options The harness's options
@@ -1240,24 +1251,6 @@ describe("createTestHarness()", () => {
 					};
 				`,
 			},
-			"mock-ai": {
-				config: { name: "mock-ai" },
-				script: `
-					import { WorkerEntrypoint } from "cloudflare:workers";
-
-					let calls = 0;
-					export default class MockAi extends WorkerEntrypoint {
-						run(model, options) {
-							calls += 1;
-							return {
-								model,
-								response: "mock-ai:" + calls,
-								prompt: options.prompt,
-							};
-						}
-					}
-				`,
-			},
 		});
 
 		const server = createTestHarness({
@@ -1268,7 +1261,27 @@ describe("createTestHarness()", () => {
 						AI: "mock-ai",
 					},
 				},
-				{ buildOutput: ".", name: "mock-ai" },
+				{
+					config: {
+						name: "mock-ai",
+						compatibilityDate: "2026-05-20",
+						manifest: singleModuleManifest(`
+							import { WorkerEntrypoint } from "cloudflare:workers";
+
+							let calls = 0;
+							export default class MockAi extends WorkerEntrypoint {
+								run(model, options) {
+									calls += 1;
+									return {
+										model,
+										response: "mock-ai:" + calls,
+										prompt: options.prompt,
+									};
+								}
+							}
+						`),
+					},
+				},
 			],
 		});
 		onTestFinished(server.close);
@@ -1360,35 +1373,40 @@ describe("createTestHarness()", () => {
 	});
 
 	it("routes fetches based on worker routes", async ({ expect }) => {
-		const routesTo = (pattern: string) => [{ type: "fetch", pattern }];
-		const respondWithName = (name: string) => `
-			export default {
-				fetch(request) {
-					return Response.json({ name: ${JSON.stringify(name)}, url: request.url });
-				}
-			};
-		`;
 		await writeBuild(".", {
 			default: {
 				config: {
 					name: "primary-worker",
-					triggers: routesTo("primary.example.com/*"),
+					triggers: [{ type: "fetch", pattern: "primary.example.com/*" }],
 				},
-				script: respondWithName("primary"),
-			},
-			"auxiliary-worker": {
-				config: {
-					name: "auxiliary-worker",
-					triggers: routesTo("auxiliary.example.com/*"),
-				},
-				script: respondWithName("auxiliary"),
+				script: `
+					export default {
+						fetch(request) {
+							return Response.json({ name: "primary", url: request.url });
+						}
+					};
+				`,
 			},
 		});
+		const auxiliaryScript = `
+			export default {
+				fetch(request) {
+					return Response.json({ name: "auxiliary", url: request.url });
+				}
+			};
+		`;
 
 		const server = createTestHarness({
 			workers: [
 				{ buildOutput: "." },
-				{ buildOutput: ".", name: "auxiliary-worker" },
+				{
+					config: {
+						name: "auxiliary-worker",
+						compatibilityDate: "2026-05-20",
+						triggers: [{ type: "fetch", pattern: "auxiliary.example.com/*" }],
+						manifest: singleModuleManifest(auxiliaryScript),
+					},
+				},
 			],
 		});
 		onTestFinished(server.close);
@@ -1411,24 +1429,21 @@ describe("createTestHarness()", () => {
 			url: "http://auxiliary.example.com/path?value=2",
 		});
 
-		// update() reads the Build Output again
-		await writeBuild(".", {
-			default: {
-				config: {
-					name: "primary-worker",
-					triggers: routesTo("primary.example.com/*"),
+		await server.update({
+			workers: [
+				{ buildOutput: "." },
+				{
+					config: {
+						name: "auxiliary-worker",
+						compatibilityDate: "2026-05-20",
+						triggers: [
+							{ type: "fetch", pattern: "updated-auxiliary.example.com/*" },
+						],
+						manifest: singleModuleManifest(auxiliaryScript),
+					},
 				},
-				script: respondWithName("primary"),
-			},
-			"auxiliary-worker": {
-				config: {
-					name: "auxiliary-worker",
-					triggers: routesTo("updated-auxiliary.example.com/*"),
-				},
-				script: respondWithName("auxiliary"),
-			},
+			],
 		});
-		await server.update((options) => options);
 
 		const updatedAuxiliaryResponse = await server.fetch(
 			"http://updated-auxiliary.example.com/path?value=3"
@@ -1437,25 +1452,38 @@ describe("createTestHarness()", () => {
 			name: "auxiliary",
 			url: "http://updated-auxiliary.example.com/path?value=3",
 		});
+
+		await server.reset();
+
+		const resetAuxiliaryResponse = await server.fetch(
+			"http://auxiliary.example.com/path?value=4"
+		);
+		await expect(resetAuxiliaryResponse.json()).resolves.toEqual({
+			name: "auxiliary",
+			url: "http://auxiliary.example.com/path?value=4",
+		});
 	});
 
 	it("rejects updates that change the number of workers without committing them", async ({
 		expect,
 	}) => {
-		await writeBuild(".", {
-			default: {
-				config: { name: "primary-worker" },
-				script: `
-					export default {
-						fetch() {
-							return new Response("primary");
-						}
-					};
-				`,
-			},
+		const server = createTestHarness({
+			workers: [
+				{
+					config: {
+						name: "primary-worker",
+						compatibilityDate: "2026-05-20",
+						manifest: singleModuleManifest(`
+							export default {
+								fetch() {
+									return new Response("primary");
+								}
+							};
+						`),
+					},
+				},
+			],
 		});
-
-		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
 		onTestFinished(server.close);
 
 		await server.listen();
@@ -1465,7 +1493,19 @@ describe("createTestHarness()", () => {
 				...options,
 				workers: [
 					...options.workers,
-					{ buildOutput: ".", name: "auxiliary-worker" },
+					{
+						config: {
+							name: "auxiliary-worker",
+							compatibilityDate: "2026-05-20",
+							manifest: singleModuleManifest(`
+								export default {
+									fetch() {
+										return new Response("auxiliary");
+									}
+								};
+							`),
+						},
+					},
 				],
 			}))
 		).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -1576,6 +1616,32 @@ describe("createTestHarness()", () => {
 
 		const response = await server.fetch("/");
 		await expect(response.text()).resolves.toBe("Mocked by MSW");
+	});
+
+	it("starts workers from inline config", async ({ expect }) => {
+		const server = createTestHarness({
+			workers: [
+				{
+					config: {
+						name: "inline-worker",
+						compatibilityDate: "2026-05-20",
+						manifest: singleModuleManifest(`
+							export default {
+								fetch() {
+									return new Response("Hello from inline config");
+								}
+							};
+						`),
+					},
+				},
+			],
+		});
+		onTestFinished(server.close);
+
+		await server.listen();
+
+		const response = await server.fetch("/");
+		await expect(response.text()).resolves.toBe("Hello from inline config");
 	});
 
 	it("loads default .env files for build output workers", async ({

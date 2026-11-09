@@ -2861,6 +2861,9 @@ importers:
       '@cloudflare/build-output-utils':
         specifier: workspace:*
         version: link:../build-output-utils
+      '@cloudflare/config':
+        specifier: workspace:*
+        version: link:../config
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
