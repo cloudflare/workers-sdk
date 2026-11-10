@@ -129,6 +129,7 @@ export async function prepareContainerImagesForVite(args: {
 				: args.viteConfigFile
 					? path.basename(args.viteConfigFile)
 					: "Vite plugin configuration",
+			disableContainersHint: `To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your ${workerConfig.configPath ? path.basename(workerConfig.configPath) : "Wrangler configuration"}.`,
 			registryConfigureCommand: "wrangler containers registries configure",
 		});
 	}
