@@ -38,15 +38,16 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 			}
 
 			for (const output of Object.values(bundle)) {
-				if (output.type !== "chunk") {
-					continue;
-				}
 				if (importedAssetPaths) {
 					for (const assetPath of output.viteMetadata?.importedAssets ?? []) {
 						importedAssetPaths.add(assetPath);
 					}
 				}
-				if (output.isEntry && output.name === MAIN_ENTRY_NAME) {
+				if (
+					output.type === "chunk" &&
+					output.isEntry &&
+					output.name === MAIN_ENTRY_NAME
+				) {
 					environmentNameToMainModule.set(
 						this.environment.name,
 						output.fileName

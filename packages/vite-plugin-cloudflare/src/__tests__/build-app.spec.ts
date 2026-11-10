@@ -146,7 +146,10 @@ test.for([
 			);
 		}
 		const { builder, builtEnvironments } = await buildFixture({
-			viteConfig: { builder: { buildApp: customBuildApp } },
+			viteConfig: {
+				environments: { ssr: { build: { manifest: true } } },
+				builder: { buildApp: customBuildApp },
+			},
 		});
 		expect(builder.config.builder?.buildApp).toBe(customBuildApp);
 		expect(builtEnvironments).toEqual(expectedBuilds);
@@ -228,6 +231,7 @@ test.for([
 				},
 			},
 			viteConfig: {
+				environments: { render: { build: { manifest: prebuilt } } },
 				plugins: [
 					{
 						name: "framework-build",
@@ -274,6 +278,43 @@ test.for([
 		}
 	}
 );
+
+test("moves assets imported by a CSS entry in the entry Worker into the client output", async ({
+	expect,
+}) => {
+	createFixture();
+	fs.writeFileSync(
+		"css-asset.svg",
+		`<svg xmlns="http://www.w3.org/2000/svg"></svg>`
+	);
+	fs.writeFileSync(
+		"styles.css",
+		`body { background: url("./css-asset.svg"); }`
+	);
+	await buildFixture({
+		viteConfig: {
+			plugins: [
+				{
+					name: "emit-css-entry",
+					buildStart() {
+						if (this.environment.name === "ssr") {
+							this.emitFile({ type: "chunk", id: path.resolve("styles.css") });
+						}
+					},
+				},
+			],
+		},
+	});
+	const clientAssets = fs.readdirSync(
+		path.join(getWorkerAssetsDir(process.cwd()), "assets")
+	);
+	expect(clientAssets.filter((file) => file.endsWith(".svg"))).toHaveLength(1);
+	const workerAssets = fs.readdirSync(
+		path.join(getWorkerBundleDir(process.cwd()), "assets")
+	);
+	expect(workerAssets.filter((file) => file.endsWith(".svg"))).toEqual([]);
+	expect(workerAssets.filter((file) => file.endsWith(".css"))).toHaveLength(1);
+});
 
 test.for([
 	{

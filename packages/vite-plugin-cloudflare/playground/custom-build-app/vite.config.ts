@@ -6,6 +6,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
 	build: { assetsInlineLimit: 0 },
+	environments: { ssr: { build: { manifest: true } } },
 	builder: {
 		async buildApp(builder) {
 			const workerEnvironment = builder.environments.ssr;
