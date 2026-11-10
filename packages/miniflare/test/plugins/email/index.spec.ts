@@ -2297,6 +2297,95 @@ test("send() on a MessageBuilder returns a synthesized messageId", async ({
 	});
 });
 
+test("send() on a MessageBuilder with only a cc recipient succeeds", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+	const mf = useMessageBuilderMiniflare({
+		log,
+		workerScript: MESSAGE_BUILDER_RETURNS_RESULT_WORKER,
+	});
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@sender.domain",
+			cc: "cc-recipient@example.com",
+			subject: "Cc Only",
+			text: "Hello",
+		}),
+	});
+
+	const body = await res.text();
+	expect(res.status).toBe(200);
+	expect(JSON.parse(body)).toEqual({
+		messageId: synthesizedMessageId(expect, "sender.domain"),
+	});
+
+	const message = await waitForMessageBuilderLog(log);
+	expect(message).toContain("Cc: cc-recipient@example.com");
+	expect(message).toContain("Subject: Cc Only");
+	expect(message).not.toMatch(/^To: /m);
+	expect(log.logsAtLevel(LogLevel.WARN)).not.toEqual(
+		expect.arrayContaining([expect.stringContaining("Failed to capture")])
+	);
+});
+
+test("send() on a MessageBuilder with only a bcc recipient succeeds", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+	const mf = useMessageBuilderMiniflare({
+		log,
+		workerScript: MESSAGE_BUILDER_RETURNS_RESULT_WORKER,
+	});
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@sender.domain",
+			bcc: "bcc-recipient@example.com",
+			subject: "Bcc Only",
+			text: "Hello",
+		}),
+	});
+
+	const body = await res.text();
+	expect(res.status).toBe(200);
+	expect(JSON.parse(body)).toEqual({
+		messageId: synthesizedMessageId(expect, "sender.domain"),
+	});
+
+	const message = await waitForMessageBuilderLog(log);
+	expect(message).toContain("Bcc: bcc-recipient@example.com");
+	expect(message).toContain("Subject: Bcc Only");
+	expect(message).not.toMatch(/^To: /m);
+	expect(log.logsAtLevel(LogLevel.WARN)).not.toEqual(
+		expect.arrayContaining([expect.stringContaining("Failed to capture")])
+	);
+});
+
+test("send() on a MessageBuilder with no recipients is rejected", async ({
+	expect,
+}) => {
+	const mf = useMessageBuilderMiniflare({
+		workerScript: MESSAGE_BUILDER_RETURNS_RESULT_WORKER,
+	});
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@sender.domain",
+			subject: "No Recipients",
+			text: "Hello",
+		}),
+	});
+
+	const body = await res.text();
+	expect(res.status).toBe(500);
+	expect(body).toContain("at least one recipient");
+});
+
 test("send() on a MessageBuilder larger than 1 MiB is captured without the local explorer", async ({
 	expect,
 }) => {
