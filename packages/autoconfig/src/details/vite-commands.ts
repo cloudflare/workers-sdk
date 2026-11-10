@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
 import {
-	checkIfViteConfigUsesCloudflarePlugin,
+	checkIfExportedViteConfigUsesCloudflarePlugin,
 	hasViteConfig,
 } from "../frameworks/utils/vite-config";
 import type { AutoConfigCommandError } from "../types";
@@ -153,7 +153,7 @@ function usesCloudflarePlugin(projectPath: string): boolean {
 	try {
 		return (
 			hasViteConfig(projectPath) &&
-			checkIfViteConfigUsesCloudflarePlugin(projectPath)
+			checkIfExportedViteConfigUsesCloudflarePlugin(projectPath)
 		);
 	} catch {
 		return false;

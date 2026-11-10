@@ -39,6 +39,22 @@ describe("Vite framework", () => {
 			expect(framework.isConfigured(".")).toBe(false);
 		});
 
+		it.for([
+			"export default mergeConfig(base, defineConfig({ plugins: [cloudflare()] }));",
+			"export default () => defineConfig({ plugins: [cloudflare()] });",
+			"const config = defineConfig({ plugins: [cloudflare()] }); export { config as default };",
+		])(
+			"preserves Wrangler detection of wrapped and indirect exports: %s",
+			async (config, { expect }) => {
+				await writeFile(
+					"vite.config.ts",
+					`import { cloudflare } from '@cloudflare/vite-plugin'; import { defineConfig, mergeConfig } from 'vite'; ${config}`
+				);
+				const framework = new Vite({ id: "vite", name: "Vite" });
+				expect(framework.isConfigured(".", { target: "wrangler" })).toBe(true);
+			}
+		);
+
 		it("only treats the Cloudflare plugin as configured in legacy Wrangler mode", async ({
 			expect,
 		}) => {

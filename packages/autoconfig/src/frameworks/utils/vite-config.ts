@@ -80,9 +80,25 @@ function getMemberPropertyName(
 	return undefined;
 }
 
-/** Checks the effective plugins array without executing the project's configuration. */
+/** Recognizes existing plugin setup without reconfiguring legacy Wrangler projects. */
 export function checkIfViteConfigUsesCloudflarePlugin(
 	projectPath: string,
+	context?: AutoConfigContext
+): boolean {
+	return checkViteConfigForCloudflarePlugin(projectPath, false, context);
+}
+
+/** Confirms the exported plugins array before executing native cf commands. */
+export function checkIfExportedViteConfigUsesCloudflarePlugin(
+	projectPath: string,
+	context?: AutoConfigContext
+): boolean {
+	return checkViteConfigForCloudflarePlugin(projectPath, true, context);
+}
+
+function checkViteConfigForCloudflarePlugin(
+	projectPath: string,
+	requireExportedConfig: boolean,
 	context?: AutoConfigContext
 ): boolean {
 	const ast = parseFile(getViteConfigPath(projectPath));
@@ -266,26 +282,44 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 			});
 			return this.traverse(n);
 		},
+		visitCallExpression(n) {
+			if (
+				!requireExportedConfig &&
+				t.Identifier.check(n.node.callee) &&
+				n.node.callee.name === "defineConfig" &&
+				checkConfigObject(resolveConfigObject(n.node.arguments[0]))
+			) {
+				// Wrangler historically recognizes setup inside wrappers and named exports.
+				usesCloudflarePlugin = true;
+			}
+			return this.traverse(n);
+		},
 		visitExportDefaultDeclaration(n) {
 			const config = resolveConfigObject(n.node.declaration);
-			usesCloudflarePlugin =
+			const exportedConfigUsesPlugin =
 				config !== null &&
 				!mutatedConfigs.has(config) &&
 				checkConfigObject(config);
-			return false;
+			if (requireExportedConfig) {
+				usesCloudflarePlugin = exportedConfigUsesPlugin;
+				return false;
+			}
+			usesCloudflarePlugin ||= exportedConfigUsesPlugin;
+			return this.traverse(n);
 		},
 	});
 
 	return usesCloudflarePlugin;
 }
 
+// Match Vite's DEFAULT_CONFIG_FILES order so inspection and execution use the same file.
 const VITE_CONFIG_FILES = [
-	"vite.config.ts",
 	"vite.config.js",
-	"vite.config.mts",
 	"vite.config.mjs",
-	"vite.config.cts",
+	"vite.config.ts",
 	"vite.config.cjs",
+	"vite.config.mts",
+	"vite.config.cts",
 ];
 
 /** Returns whether the project has a Vite configuration file. */
@@ -351,6 +385,12 @@ export function transformViteConfig(
 	} = {}
 ) {
 	const filePath = getViteConfigPath(projectPath);
+	if ([".cjs", ".cts"].includes(path.extname(filePath))) {
+		throw new UserError(
+			"Cannot automatically modify a CommonJS Vite configuration. Add the Cloudflare plugin to your Vite configuration manually.",
+			{ telemetryMessage: "autoconfig CommonJS vite config unsupported" }
+		);
+	}
 	const removedIncompatiblePlugins = new Set<string>();
 
 	transformFile(filePath, {
