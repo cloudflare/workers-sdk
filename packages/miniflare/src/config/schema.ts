@@ -222,7 +222,13 @@ const HelloWorldBindingSchema = z.strictObject({
 });
 
 const MiniflareWorkflowBindingSchema = WorkflowBindingSchema.extend({
-	limits: z.strictObject({ steps: z.number().optional() }).optional(),
+	// Wrangler's legacy config puts Workflow settings on bindings. New config
+	// should declare them on exports instead.
+	unsafeConfig: z
+		.strictObject({
+			limits: z.strictObject({ steps: z.number().optional() }).optional(),
+		})
+		.optional(),
 });
 
 // The miniflare-extended schemas below replace these base `@cloudflare/config`

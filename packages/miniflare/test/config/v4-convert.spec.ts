@@ -318,7 +318,7 @@ describe("convertV4MiniflareOptions", () => {
 					name: "workflow",
 					worker: "worker",
 					exportName: "Workflow",
-					limits: { steps: 5 },
+					unsafeConfig: { limits: { steps: 5 } },
 				},
 				SELF_EXPLICIT_WORKFLOW: {
 					type: "workflow",

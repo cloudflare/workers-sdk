@@ -837,10 +837,10 @@ function addProductBindings(
 			name: workflow.name,
 			worker: targetWorkerName,
 			exportName: workflow.className,
-			limits:
+			unsafeConfig:
 				workflow.stepLimit === undefined
 					? undefined
-					: { steps: workflow.stepLimit },
+					: { limits: { steps: workflow.stepLimit } },
 		};
 	}
 }
