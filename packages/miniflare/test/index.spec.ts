@@ -2521,6 +2521,70 @@ This is a random email body.
 	expect(await res.text()).toBe("true");
 });
 
+test("Miniflare: manually triggered email handler - exposes canBeForwarded on ForwardableEmailMessage", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+
+	const mf = new Miniflare({
+		log,
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+			let messageDetails = null;
+			export default {
+				fetch() {
+					return Response.json(messageDetails);
+				},
+				async email(emailMessage) {
+					messageDetails = {
+						canBeForwarded: emailMessage.canBeForwarded,
+						hasCanBeForwarded: "canBeForwarded" in emailMessage,
+						rawSize: emailMessage.rawSize,
+					};
+				}
+			}`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	let res = await mf.dispatchFetch("http://localhost");
+	expect(await res.json()).toBe(null);
+
+	res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/local/email?from=someone@example.com&to=someone-else@example.com",
+		{
+			body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
+Message-ID: <im-a-random-message-id@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+This is a random email body.
+`,
+			method: "POST",
+		}
+	);
+	expect(await res.text()).toBe("Worker successfully processed email");
+	expect(res.status).toBe(200);
+
+	res = await mf.dispatchFetch("http://localhost");
+	const details = (await res.json()) as {
+		canBeForwarded: boolean;
+		hasCanBeForwarded: boolean;
+		rawSize: number;
+	};
+	expect(details.canBeForwarded).toBe(true);
+	expect(details.hasCanBeForwarded).toBe(true);
+	expect(details.rawSize).toBeGreaterThan(0);
+});
+
 test("Miniflare: manually triggered email handler - invalid email, no message id", async ({
 	expect,
 }) => {

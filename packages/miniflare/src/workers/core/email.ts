@@ -259,6 +259,7 @@ export async function handleEmail(
 				raw: deliveredEmailBody,
 				rawSize: deliveredEmailRaw.byteLength,
 				headers: incomingEmailHeaders,
+				canBeForwarded: true,
 				setReject: (reason: string): void => {
 					ctx.waitUntil(
 						logEmailToLoopback(
@@ -379,7 +380,7 @@ export async function handleEmail(
 					});
 					return result;
 				},
-			} satisfies ForwardableEmailMessage
+			} satisfies ForwardableEmailMessage & { canBeForwarded: boolean }
 		);
 
 		if (params.get("format") !== "json") {
