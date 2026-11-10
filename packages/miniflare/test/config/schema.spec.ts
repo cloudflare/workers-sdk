@@ -223,31 +223,37 @@ describe("MiniflareWorkerConfigSchema", () => {
 		});
 	});
 
-	test("rejects dev options on Workflow bindings", ({ expect }) => {
-		const result = MiniflareWorkerConfigSchema.safeParse({
-			name: "api",
-			compatibilityDate: "2026-01-01",
-			env: {
-				WORKFLOW: {
-					type: "workflow",
-					name: "workflow",
-					worker: "api",
-					exportName: "Workflow",
-					dev: { remote: true },
+	test.for([
+		{ key: "dev", value: { remote: true } },
+		{ key: "limits", value: { steps: 10 } },
+	])(
+		"rejects top-level $key options on Workflow bindings",
+		({ key, value }, { expect }) => {
+			const result = MiniflareWorkerConfigSchema.safeParse({
+				name: "api",
+				compatibilityDate: "2026-01-01",
+				env: {
+					WORKFLOW: {
+						type: "workflow",
+						name: "workflow",
+						worker: "api",
+						exportName: "Workflow",
+						[key]: value,
+					},
 				},
-			},
-		});
+			});
 
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			expect(result.error.issues).toEqual([
-				expect.objectContaining({
-					path: ["env", "WORKFLOW"],
-					message: 'Unrecognized key: "dev"',
-				}),
-			]);
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(result.error.issues).toEqual([
+					expect.objectContaining({
+						path: ["env", "WORKFLOW"],
+						message: `Unrecognized key: "${key}"`,
+					}),
+				]);
+			}
 		}
-	});
+	);
 
 	test("allows a remote Hyperdrive binding without dev.connectionString", ({
 		expect,

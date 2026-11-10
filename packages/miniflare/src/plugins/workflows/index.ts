@@ -96,9 +96,9 @@ export function getWorkflowExporters(
 			// with the binding taking precedence.
 			if (
 				binding.worker === config.name &&
-				binding.limits?.steps !== undefined
+				binding.unsafeConfig?.limits?.steps !== undefined
 			) {
-				exporter.stepLimit = binding.limits.steps;
+				exporter.stepLimit = binding.unsafeConfig.limits.steps;
 			}
 		}
 	}
@@ -224,7 +224,7 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 		// this creates one miniflare service per workflow that the user's script has. we should dedupe engine definition later
 		const services = workflows.map<Service>(([bindingName, binding]) => {
 			const external = !workerNames.includes(binding.worker);
-			const stepLimit = binding.limits?.steps;
+			const stepLimit = binding.unsafeConfig?.limits?.steps;
 
 			const workflowsBinding: Service = {
 				name: getWorkflowBindingServiceName(binding.name),
