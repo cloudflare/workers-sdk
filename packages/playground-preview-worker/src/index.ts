@@ -26,6 +26,10 @@ const previewHostname = PREVIEW;
 const previewDomain = `:any/${previewHostname.replaceAll(".", "/")}`;
 
 async function pushMetrics(env: Env, metrics: string) {
+	// The testing environment has no Prometheus token, so it doesn't report metrics.
+	if (!env.PROMETHEUS_TOKEN) {
+		return;
+	}
 	try {
 		const response = await env.WSHIM_SOCKET.fetch(
 			"https://workers-logging.cfdata.org/prometheus",
