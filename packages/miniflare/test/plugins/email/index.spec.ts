@@ -10,6 +10,7 @@ import {
 import PostalMime from "postal-mime";
 import dedent from "ts-dedent";
 import { describe, type ExpectStatic, test, vi } from "vitest";
+import { CorePaths } from "../../../src/workers/core/constants";
 import {
 	singleModuleManifest,
 	TestLog,
@@ -1453,6 +1454,7 @@ interface MessageBuilderMiniflareOptions {
 	workerScript?: string;
 	allowedDestinationAddresses?: string[];
 	allowedSenderAddresses?: string[];
+	unsafeLocalExplorer?: boolean;
 }
 
 function useMessageBuilderMiniflare({
@@ -1461,6 +1463,7 @@ function useMessageBuilderMiniflare({
 	workerScript = MESSAGE_BUILDER_WORKER,
 	allowedDestinationAddresses,
 	allowedSenderAddresses,
+	unsafeLocalExplorer,
 }: MessageBuilderMiniflareOptions = {}): Miniflare {
 	const mf = new Miniflare({
 		...(log === undefined
@@ -1472,6 +1475,7 @@ function useMessageBuilderMiniflare({
 					},
 				}),
 		resourceTmpPath,
+		unsafeLocalExplorer,
 		workers: [
 			{
 				config: {
@@ -2295,6 +2299,88 @@ test("send() on a MessageBuilder returns a synthesized messageId", async ({
 	expect(await res.json()).toEqual({
 		messageId: synthesizedMessageId(expect, "sender.domain"),
 	});
+});
+
+/** Lists the `messageId`s the Local Explorer reports as sent. */
+async function listSentMessageIds(
+	mf: Miniflare,
+	expect: ExpectStatic
+): Promise<string[]> {
+	const res = await mf.dispatchFetch(
+		`http://localhost${CorePaths.EXPLORER}/api/local/email/sending`
+	);
+	expect(res.status).toBe(200);
+	const body = (await res.json()) as {
+		result?: { messageId: string }[];
+	};
+	return (body.result ?? []).map((email) => email.messageId);
+}
+
+/**
+ * Sends `builder` and asserts the email is not silently dropped: either
+ * `send()` rejects the message (as production does for a name-less
+ * `EmailAddress`), or it resolves with a `messageId` and the email is listed by
+ * the Local Explorer.
+ */
+async function expectEmailNotSilentlyDropped(
+	mf: Miniflare,
+	builder: Record<string, unknown>,
+	expect: ExpectStatic
+): Promise<void> {
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify(builder),
+	});
+
+	if (res.status !== 200) {
+		// The send was rejected before returning a `messageId`, so there is
+		// nothing to capture and nothing to lose.
+		expect(await res.text()).toContain("TypeError");
+		return;
+	}
+
+	const { messageId } = (await res.json()) as { messageId: string };
+	expect(await listSentMessageIds(mf, expect)).toContain(messageId);
+}
+
+test("send() on a MessageBuilder with a name-less `to` is not silently dropped", async ({
+	expect,
+}) => {
+	const mf = useMessageBuilderMiniflare({
+		workerScript: MESSAGE_BUILDER_RETURNS_RESULT_WORKER,
+		unsafeLocalExplorer: true,
+	});
+
+	await expectEmailNotSilentlyDropped(
+		mf,
+		{
+			from: "sender@sender.domain",
+			to: { email: "recipient@example.com" },
+			subject: "s",
+			text: "t",
+		},
+		expect
+	);
+});
+
+test("send() on a MessageBuilder with a name-less `from` is not silently dropped", async ({
+	expect,
+}) => {
+	const mf = useMessageBuilderMiniflare({
+		workerScript: MESSAGE_BUILDER_RETURNS_RESULT_WORKER,
+		unsafeLocalExplorer: true,
+	});
+
+	await expectEmailNotSilentlyDropped(
+		mf,
+		{
+			from: { email: "sender@sender.domain" },
+			to: "recipient@example.com",
+			subject: "s",
+			text: "t",
+		},
+		expect
+	);
 });
 
 test("send() on a MessageBuilder larger than 1 MiB is captured without the local explorer", async ({
