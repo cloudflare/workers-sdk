@@ -64,6 +64,67 @@ function extractFromBlockStatement(
 	return null;
 }
 
+function collectConfigBindings(
+	program: types.namedTypes.Program
+): Map<string, recast.types.ASTNode> {
+	const bindings = new Map<string, recast.types.ASTNode>();
+	for (const statement of program.body) {
+		const declaration = t.ExportNamedDeclaration.check(statement)
+			? statement.declaration
+			: statement;
+		if (t.VariableDeclaration.check(declaration)) {
+			for (const binding of declaration.declarations) {
+				if (
+					t.VariableDeclarator.check(binding) &&
+					t.Identifier.check(binding.id) &&
+					binding.init
+				) {
+					bindings.set(binding.id.name, binding.init);
+				}
+			}
+		}
+	}
+	return bindings;
+}
+
+// Follow the exported value rather than unrelated defineConfig() calls.
+function resolveConfigObject(
+	node: recast.types.ASTNode | undefined,
+	configBindings: ReadonlyMap<string, recast.types.ASTNode>,
+	seen = new Set<string>()
+): types.namedTypes.ObjectExpression | null {
+	if (!node) {
+		return null;
+	}
+	if (
+		t.TSAsExpression.check(node) ||
+		t.TSSatisfiesExpression.check(node) ||
+		t.TSTypeAssertion.check(node) ||
+		t.ParenthesizedExpression.check(node)
+	) {
+		return resolveConfigObject(node.expression, configBindings, seen);
+	}
+	if (t.Identifier.check(node)) {
+		if (seen.has(node.name)) {
+			return null;
+		}
+		seen.add(node.name);
+		return resolveConfigObject(
+			configBindings.get(node.name),
+			configBindings,
+			seen
+		);
+	}
+	if (
+		t.CallExpression.check(node) &&
+		t.Identifier.check(node.callee) &&
+		node.callee.name === "defineConfig"
+	) {
+		return resolveConfigObject(node.arguments[0], configBindings, seen);
+	}
+	return extractConfigObject(node);
+}
+
 function getMemberPropertyName(
 	member: types.namedTypes.MemberExpression
 ): string | undefined {
@@ -108,7 +169,7 @@ function checkViteConfigForCloudflarePlugin(
 
 	const pluginBindings = new Set<string>();
 	const namespaceBindings = new Set<string>();
-	const configBindings = new Map<string, recast.types.ASTNode>();
+	let configBindings = new Map<string, recast.types.ASTNode>();
 	const mutatedConfigs = new Set<types.namedTypes.ObjectExpression>();
 	let usesCloudflarePlugin = false;
 	function checkConfigObject(
@@ -143,39 +204,6 @@ function checkViteConfigForCloudflarePlugin(
 		});
 	}
 
-	// Follow the exported value rather than unrelated defineConfig() calls.
-	function resolveConfigObject(
-		node: recast.types.ASTNode | undefined,
-		seen = new Set<string>()
-	): types.namedTypes.ObjectExpression | null {
-		if (!node) {
-			return null;
-		}
-		if (
-			t.TSAsExpression.check(node) ||
-			t.TSSatisfiesExpression.check(node) ||
-			t.TSTypeAssertion.check(node) ||
-			t.ParenthesizedExpression.check(node)
-		) {
-			return resolveConfigObject(node.expression, seen);
-		}
-		if (t.Identifier.check(node)) {
-			if (seen.has(node.name)) {
-				return null;
-			}
-			seen.add(node.name);
-			return resolveConfigObject(configBindings.get(node.name), seen);
-		}
-		if (
-			t.CallExpression.check(node) &&
-			t.Identifier.check(node.callee) &&
-			node.callee.name === "defineConfig"
-		) {
-			return resolveConfigObject(node.arguments[0], seen);
-		}
-		return extractConfigObject(node);
-	}
-
 	function recordMutation(
 		target: recast.types.ASTNode,
 		isGlobalBinding: (name: string) => boolean
@@ -192,7 +220,7 @@ function checkViteConfigForCloudflarePlugin(
 		) {
 			return;
 		}
-		const config = resolveConfigObject(target);
+		const config = resolveConfigObject(target, configBindings);
 		if (config) {
 			// Object identity also catches writes through another binding to this config.
 			mutatedConfigs.add(config);
@@ -201,21 +229,8 @@ function checkViteConfigForCloudflarePlugin(
 
 	recast.visit(ast, {
 		visitProgram(n) {
+			configBindings = collectConfigBindings(n.node);
 			for (const statement of n.node.body) {
-				const declaration = t.ExportNamedDeclaration.check(statement)
-					? statement.declaration
-					: statement;
-				if (t.VariableDeclaration.check(declaration)) {
-					for (const binding of declaration.declarations) {
-						if (
-							t.VariableDeclarator.check(binding) &&
-							t.Identifier.check(binding.id) &&
-							binding.init
-						) {
-							configBindings.set(binding.id.name, binding.init);
-						}
-					}
-				}
 				if (
 					statement.type !== "ImportDeclaration" ||
 					statement.source.value !== "@cloudflare/vite-plugin"
@@ -287,7 +302,9 @@ function checkViteConfigForCloudflarePlugin(
 				!requireExportedConfig &&
 				t.Identifier.check(n.node.callee) &&
 				n.node.callee.name === "defineConfig" &&
-				checkConfigObject(resolveConfigObject(n.node.arguments[0]))
+				checkConfigObject(
+					resolveConfigObject(n.node.arguments[0], configBindings)
+				)
 			) {
 				// Wrangler historically recognizes setup inside wrappers and named exports.
 				usesCloudflarePlugin = true;
@@ -295,7 +312,7 @@ function checkViteConfigForCloudflarePlugin(
 			return this.traverse(n);
 		},
 		visitExportDefaultDeclaration(n) {
-			const config = resolveConfigObject(n.node.declaration);
+			const config = resolveConfigObject(n.node.declaration, configBindings);
 			const exportedConfigUsesPlugin =
 				config !== null &&
 				!mutatedConfigs.has(config) &&
@@ -384,17 +401,62 @@ export function assertViteConfigCanBeTransformed(projectPath: string): void {
 		return;
 	}
 	const ast = path.extname(filePath) === ".cts" ? parseFile(filePath) : null;
+	let configBindings = new Map<string, recast.types.ASTNode>();
+	let exportedConfig: types.namedTypes.ObjectExpression | null = null;
+	const transformableConfigs = new Set<types.namedTypes.ObjectExpression>();
+	let hasUnsupportedCall = false;
 	let hasModuleExport = false;
 	let hasCommonJSExport = false;
 	if (ast) {
 		recast.visit(ast, {
-			visitExportDefaultDeclaration() {
-				hasModuleExport = true;
-				return false;
+			visitProgram(n) {
+				configBindings = collectConfigBindings(n.node);
+				return this.traverse(n);
 			},
-			visitExportNamedDeclaration() {
+			visitExportDefaultDeclaration(n) {
 				hasModuleExport = true;
-				return false;
+				exportedConfig = resolveConfigObject(
+					n.node.declaration,
+					configBindings
+				);
+				return this.traverse(n);
+			},
+			visitExportNamedDeclaration(n) {
+				hasModuleExport = true;
+				for (const specifier of n.node.specifiers ?? []) {
+					if (
+						t.ExportSpecifier.check(specifier) &&
+						t.Identifier.check(specifier.local) &&
+						t.Identifier.check(specifier.exported) &&
+						specifier.exported.name === "default"
+					) {
+						exportedConfig = resolveConfigObject(
+							specifier.local,
+							configBindings
+						);
+					}
+				}
+				return this.traverse(n);
+			},
+			visitCallExpression(n) {
+				if (
+					t.Identifier.check(n.node.callee) &&
+					n.node.callee.name === "defineConfig"
+				) {
+					const config = extractConfigObject(n.node.arguments[0]);
+					const plugins = config?.properties.findLast(isPluginsProp);
+					if (
+						config &&
+						plugins &&
+						t.ArrayExpression.check(plugins.value) &&
+						!hasFollowingOverride(config, plugins)
+					) {
+						transformableConfigs.add(config);
+					} else {
+						hasUnsupportedCall = true;
+					}
+				}
+				return this.traverse(n);
 			},
 			visitAssignmentExpression(n) {
 				let target: recast.types.ASTNode = n.node.left;
@@ -417,6 +479,16 @@ export function assertViteConfigCanBeTransformed(projectPath: string): void {
 		throw new UserError(
 			"Cannot automatically modify a CommonJS Vite configuration. Add the Cloudflare plugin to your Vite configuration manually.",
 			{ telemetryMessage: "autoconfig CommonJS vite config unsupported" }
+		);
+	}
+	if (
+		!exportedConfig ||
+		!transformableConfigs.has(exportedConfig) ||
+		hasUnsupportedCall
+	) {
+		throw new UserError(
+			"Cannot automatically modify this Vite configuration. Use defineConfig({ plugins: [...] }) or add the Cloudflare plugin manually.",
+			{ telemetryMessage: "autoconfig vite config export unsupported" }
 		);
 	}
 }
