@@ -1,4 +1,4 @@
-From 261ba678389218354cb8f9dce78483cf4f09716f Mon Sep 17 00:00:00 2001
+From 69fdc50c3b8828a0e7cd719e0216993dbd5f624c Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Oct 2024 14:15:43 +0100
 Subject: [PATCH 1/8] Expand Browser support (make it work in Firefox & Safari)
@@ -16,30 +16,17 @@ If updating the commit of devtools upon which these patches are based, make sure
 * Allows devtools to load in Safari (loading with _any_ UI is sufficent to check whether this has worked)
 * Supports viewing a list of requests in the network panel in Firefox (without the patches here this goes very obviously wrong)
 ---
- front_end/core/dom_extension/DOMExtension.ts  |  2 +-
- front_end/entrypoint_template.html            | 38 ++++++++++++++++++-
+ front_end/entrypoint_template.html            | 39 ++++++++++++++++++-
  front_end/entrypoints/js_app/js_app.ts        |  3 ++
+ front_end/ui/dom_extension/DOMExtension.ts    |  2 +-
  .../legacy/components/data_grid/DataGrid.ts   |  5 +++
- 4 files changed, 46 insertions(+), 2 deletions(-)
+ 4 files changed, 47 insertions(+), 2 deletions(-)
 
-diff --git a/front_end/core/dom_extension/DOMExtension.ts b/front_end/core/dom_extension/DOMExtension.ts
-index 202c680a30..a639437998 100644
---- a/front_end/core/dom_extension/DOMExtension.ts
-+++ b/front_end/core/dom_extension/DOMExtension.ts
-@@ -133,7 +133,7 @@ Node.prototype.getComponentSelection = function(): Selection|null {
-   while (parent && parent.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) {
-     parent = parent.parentNode;
-   }
--  return parent instanceof ShadowRoot ? parent.getSelection() : this.window().getSelection();
-+  return parent instanceof ShadowRoot ? (parent?.getSelection?.() ?? this.window().getSelection()) : this.window().getSelection();
- };
- 
- Node.prototype.hasSelection = function(): boolean {
 diff --git a/front_end/entrypoint_template.html b/front_end/entrypoint_template.html
-index 64d55d4c14..07972be81f 100644
+index e778aefef2..cdf7049337 100644
 --- a/front_end/entrypoint_template.html
 +++ b/front_end/entrypoint_template.html
-@@ -13,9 +13,45 @@
+@@ -13,12 +13,49 @@
        background-color: rgb(41 42 45);
      }
    }
@@ -71,11 +58,15 @@ index 64d55d4c14..07972be81f 100644
 +  }
 +
 +  .cm-editor + .cm-editor {
-+    display: 'none',
++    display: none;
 +  }
  </style>
--<meta http-equiv="Content-Security-Policy" content="object-src 'none'; script-src 'self' https://chrome-devtools-frontend.appspot.com">
-+<meta http-equiv="Content-Security-Policy" content="object-src 'none'; script-src 'sha256-AIRkz8wOl/LgmUJduw9AsUnrb94PlBpePfk0Rowm+Vo=' 'self' https://chrome-devtools-frontend.appspot.com">
+ <meta
+   http-equiv="Content-Security-Policy"
+   content="default-src 'self' devtools: data:; style-src 'self' 'unsafe-inline' devtools:; object-src 'none'; script-src
+-  'self' https://chrome-devtools-frontend.appspot.com; img-src 'self' data: blob:; frame-src * data:; connect-src data: https://chromeuxreport.googleapis.com 'self' devtools: ws://127.0.0.1:*;">
++  'sha256-AIRkz8wOl/LgmUJduw9AsUnrb94PlBpePfk0Rowm+Vo=' 'self' https://chrome-devtools-frontend.appspot.com; img-src 'self' data: blob:; frame-src * data:; connect-src data: https://chromeuxreport.googleapis.com 'self' devtools: ws://127.0.0.1:*;">
++
  <meta name="referrer" content="no-referrer">
 +<script>
 +// Vendored from https://unpkg.com/@ungap/custom-elements@1.3.0/min.js
@@ -87,7 +78,7 @@ index 64d55d4c14..07972be81f 100644
  <link href="./application_tokens.css" rel="stylesheet">
  <link href="./design_system_tokens.css" rel="stylesheet">
 diff --git a/front_end/entrypoints/js_app/js_app.ts b/front_end/entrypoints/js_app/js_app.ts
-index a7f4827d68..2dbb4eca42 100644
+index c4b4593b3d..d5021969c1 100644
 --- a/front_end/entrypoints/js_app/js_app.ts
 +++ b/front_end/entrypoints/js_app/js_app.ts
 @@ -44,6 +44,9 @@ async function loadSourcesModule(): Promise<typeof Sources> {
@@ -100,12 +91,25 @@ index a7f4827d68..2dbb4eca42 100644
  export class JsMainImpl implements Common.Runnable.Runnable {
    static instance(opts: {forceNew: boolean|null} = {forceNew: null}): JsMainImpl {
      const {forceNew} = opts;
+diff --git a/front_end/ui/dom_extension/DOMExtension.ts b/front_end/ui/dom_extension/DOMExtension.ts
+index e3aaae75eb..1bdd11511f 100644
+--- a/front_end/ui/dom_extension/DOMExtension.ts
++++ b/front_end/ui/dom_extension/DOMExtension.ts
+@@ -134,7 +134,7 @@ Node.prototype.getComponentSelection = function(): Selection|null {
+   while (parent && parent.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) {
+     parent = parent.parentNode;
+   }
+-  return parent instanceof ShadowRoot ? parent.getSelection() : this.window().getSelection();
++  return parent instanceof ShadowRoot ? (parent?.getSelection?.() ?? this.window().getSelection()) : this.window().getSelection();
+ };
+ 
+ Node.prototype.hasSelection = function(): boolean {
 diff --git a/front_end/ui/legacy/components/data_grid/DataGrid.ts b/front_end/ui/legacy/components/data_grid/DataGrid.ts
-index 70820e38a1..5c9e25c522 100644
+index 2c6baeb448..d8e9e81763 100644
 --- a/front_end/ui/legacy/components/data_grid/DataGrid.ts
 +++ b/front_end/ui/legacy/components/data_grid/DataGrid.ts
-@@ -223,6 +223,8 @@ export class DataGridImpl<T> extends Common.ObjectWrapper.ObjectWrapper<EventTyp
-     this.headerRow = this.dataTableHeadInternal.createChild('tr');
+@@ -222,6 +222,8 @@ export class DataGridImpl<T> extends Common.ObjectWrapper.ObjectWrapper<EventTyp
+     this.headerRow = this.#dataTableHead.createChild('tr');
  
      this.dataTableBody = this.dataTable.createChild('tbody');
 +    // This is required for Firefox, else Firefox will position the <tbody/> *under* the <thead/>
@@ -124,5 +128,5 @@ index 70820e38a1..5c9e25c522 100644
        return;
      }
 -- 
-2.39.5 (Apple Git-154)
+2.50.1 (Apple Git-155)
 
