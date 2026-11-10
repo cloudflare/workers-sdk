@@ -114,6 +114,37 @@ export default defineConfig({
 			}
 		);
 
+		it.for([
+			"const config = { plugins: [cloudflare()] }; config.plugins = []; export default config;",
+			"let config = defineConfig({ plugins: [cloudflare()] }); config = defineConfig({ plugins: [] }); export default config;",
+			"const config = defineConfig({ plugins: [cloudflare()] }); const alias = config; alias.plugins = []; export default config;",
+			"const base = { plugins: [cloudflare()] }; const config = defineConfig(base); base.plugins = []; export default config;",
+			"const config = { plugins: [cloudflare()] }; config.plugins.splice(0); export default config;",
+			"const config = { plugins: [cloudflare()] }; config.plugins['splice'](0); export default config;",
+			"const config = { plugins: [cloudflare()] }; config.plugins.length--; export default config;",
+			"const config = { plugins: [cloudflare()] }; delete config.plugins; export default config;",
+			"const config = { plugins: [cloudflare()] }; config[key] = []; export default config;",
+		])(
+			"does not confirm a plugin after the config is mutated: %s",
+			async (config, { expect }) => {
+				await writeFile(
+					"vite.config.ts",
+					`import { cloudflare } from '@cloudflare/vite-plugin'; import { defineConfig } from 'vite'; ${config}`
+				);
+				expect(checkIfViteConfigUsesCloudflarePlugin(".", context)).toBe(false);
+			}
+		);
+
+		it("allows unrelated property writes and shadowed config bindings", async ({
+			expect,
+		}) => {
+			await writeFile(
+				"vite.config.ts",
+				`import { cloudflare } from '@cloudflare/vite-plugin'; const config = { plugins: [cloudflare()] }; config.server = {}; function other(config) { config.plugins = []; } export default config;`
+			);
+			expect(checkIfViteConfigUsesCloudflarePlugin(".", context)).toBe(true);
+		});
+
 		it("ignores unused config objects", async ({ expect }) => {
 			await writeFile(
 				"vite.config.ts",

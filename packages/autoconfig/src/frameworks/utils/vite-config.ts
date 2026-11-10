@@ -64,6 +64,22 @@ function extractFromBlockStatement(
 	return null;
 }
 
+function getMemberPropertyName(
+	member: types.namedTypes.MemberExpression
+): string | undefined {
+	if (!member.computed && t.Identifier.check(member.property)) {
+		return member.property.name;
+	}
+	if (
+		(t.Literal.check(member.property) ||
+			t.StringLiteral.check(member.property)) &&
+		typeof member.property.value === "string"
+	) {
+		return member.property.value;
+	}
+	return undefined;
+}
+
 /** Checks the effective plugins array without executing the project's configuration. */
 export function checkIfViteConfigUsesCloudflarePlugin(
 	projectPath: string,
@@ -77,6 +93,7 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 	const pluginBindings = new Set<string>();
 	const namespaceBindings = new Set<string>();
 	const configBindings = new Map<string, recast.types.ASTNode>();
+	const mutatedConfigs = new Set<types.namedTypes.ObjectExpression>();
 	let usesCloudflarePlugin = false;
 	function checkConfigObject(
 		configObject: types.namedTypes.ObjectExpression | null
@@ -143,6 +160,29 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 		return extractConfigObject(node);
 	}
 
+	function recordMutation(
+		target: recast.types.ASTNode,
+		isGlobalBinding: (name: string) => boolean
+	): void {
+		let property: string | undefined;
+		while (t.MemberExpression.check(target)) {
+			property = getMemberPropertyName(target);
+			target = target.object;
+		}
+		if (
+			!t.Identifier.check(target) ||
+			!isGlobalBinding(target.name) ||
+			(property !== undefined && property !== "plugins")
+		) {
+			return;
+		}
+		const config = resolveConfigObject(target);
+		if (config) {
+			// Object identity also catches writes through another binding to this config.
+			mutatedConfigs.add(config);
+		}
+	}
+
 	recast.visit(ast, {
 		visitProgram(n) {
 			for (const statement of n.node.body) {
@@ -184,12 +224,54 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 					}
 				}
 			}
+			recast.visit(n.node, {
+				visitAssignmentExpression(p) {
+					recordMutation(
+						p.node.left,
+						(name) => p.scope.lookup(name)?.isGlobal === true
+					);
+					return this.traverse(p);
+				},
+				visitUpdateExpression(p) {
+					recordMutation(
+						p.node.argument,
+						(name) => p.scope.lookup(name)?.isGlobal === true
+					);
+					return this.traverse(p);
+				},
+				visitUnaryExpression(p) {
+					if (p.node.operator === "delete") {
+						recordMutation(
+							p.node.argument,
+							(name) => p.scope.lookup(name)?.isGlobal === true
+						);
+					}
+					return this.traverse(p);
+				},
+				visitCallExpression(p) {
+					const callee = p.node.callee;
+					if (
+						t.MemberExpression.check(callee) &&
+						["pop", "shift", "splice", "fill", "copyWithin"].includes(
+							getMemberPropertyName(callee) ?? ""
+						)
+					) {
+						recordMutation(
+							callee.object,
+							(name) => p.scope.lookup(name)?.isGlobal === true
+						);
+					}
+					return this.traverse(p);
+				},
+			});
 			return this.traverse(n);
 		},
 		visitExportDefaultDeclaration(n) {
-			usesCloudflarePlugin = checkConfigObject(
-				resolveConfigObject(n.node.declaration)
-			);
+			const config = resolveConfigObject(n.node.declaration);
+			usesCloudflarePlugin =
+				config !== null &&
+				!mutatedConfigs.has(config) &&
+				checkConfigObject(config);
 			return false;
 		},
 	});
