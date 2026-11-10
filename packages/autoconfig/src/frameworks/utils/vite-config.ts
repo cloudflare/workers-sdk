@@ -377,6 +377,50 @@ function hasIdentifierOutsideImport(
 	return hasIdentifier;
 }
 
+/** Checks unsupported CommonJS source before setup installs or changes any files. */
+export function assertViteConfigCanBeTransformed(projectPath: string): void {
+	const filePath = getViteConfigPath(projectPath);
+	if (![".cjs", ".cts"].includes(path.extname(filePath))) {
+		return;
+	}
+	const ast = parseFile(filePath);
+	let hasModuleExport = false;
+	let hasCommonJSExport = false;
+	if (ast) {
+		recast.visit(ast, {
+			visitExportDefaultDeclaration() {
+				hasModuleExport = true;
+				return false;
+			},
+			visitExportNamedDeclaration() {
+				hasModuleExport = true;
+				return false;
+			},
+			visitAssignmentExpression(n) {
+				let target: recast.types.ASTNode = n.node.left;
+				while (t.MemberExpression.check(target)) {
+					if (
+						t.Identifier.check(target.object) &&
+						(target.object.name === "exports" ||
+							(target.object.name === "module" &&
+								getMemberPropertyName(target) === "exports"))
+					) {
+						hasCommonJSExport = true;
+					}
+					target = target.object;
+				}
+				return this.traverse(n);
+			},
+		});
+	}
+	if (!hasModuleExport || hasCommonJSExport) {
+		throw new UserError(
+			"Cannot automatically modify a CommonJS Vite configuration. Add the Cloudflare plugin to your Vite configuration manually.",
+			{ telemetryMessage: "autoconfig CommonJS vite config unsupported" }
+		);
+	}
+}
+
 export function transformViteConfig(
 	projectPath: string,
 	options: {
@@ -385,12 +429,7 @@ export function transformViteConfig(
 	} = {}
 ) {
 	const filePath = getViteConfigPath(projectPath);
-	if ([".cjs", ".cts"].includes(path.extname(filePath))) {
-		throw new UserError(
-			"Cannot automatically modify a CommonJS Vite configuration. Add the Cloudflare plugin to your Vite configuration manually.",
-			{ telemetryMessage: "autoconfig CommonJS vite config unsupported" }
-		);
-	}
+	assertViteConfigCanBeTransformed(projectPath);
 	const removedIncompatiblePlugins = new Set<string>();
 
 	transformFile(filePath, {

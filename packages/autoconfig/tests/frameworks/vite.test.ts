@@ -72,6 +72,44 @@ describe("Vite framework", () => {
 	});
 
 	describe("configure()", () => {
+		it.for([
+			{ extension: "cjs", dryRun: false },
+			{ extension: "cjs", dryRun: true },
+			{ extension: "cts", dryRun: false },
+			{ extension: "cts", dryRun: true },
+		])(
+			"rejects CommonJS source before installing (.%s)",
+			async ({ extension, dryRun }, { expect }) => {
+				const filePath = `vite.config.${extension}`;
+				const content =
+					"const { defineConfig } = require('vite'); module.exports = defineConfig({ plugins: [] });";
+				await writeFile(filePath, content);
+				const framework = new Vite({ id: "vite", name: "Vite" });
+				await expect(
+					framework.configure({ ...BASE_OPTIONS, dryRun })
+				).rejects.toThrow(
+					"Cannot automatically modify a CommonJS Vite configuration"
+				);
+				expect(cliPackages.installPackages).not.toHaveBeenCalled();
+				expect(readFileSync(filePath, "utf8")).toBe(content);
+			}
+		);
+
+		it.for(["cts", "cjs"])(
+			"configures ESM source in a .%s file",
+			async (extension, { expect }) => {
+				const filePath = `vite.config.${extension}`;
+				await writeFile(
+					filePath,
+					"import { defineConfig } from 'vite'; export default defineConfig({ plugins: [] });"
+				);
+				const framework = new Vite({ id: "vite", name: "Vite" });
+				await framework.configure(BASE_OPTIONS);
+				expect(cliPackages.installPackages).toHaveBeenCalled();
+				expect(readFileSync(filePath, "utf8")).toContain("cloudflare()");
+			}
+		);
+
 		it("creates a vite config with the cloudflare plugin when no config file exists", async ({
 			expect,
 		}) => {

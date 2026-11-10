@@ -303,6 +303,18 @@ export default defineConfig({
 	});
 
 	describe("transformViteConfig", () => {
+		it.for(["export type Config = {};", "export const helper = true;"])(
+			"rejects CommonJS exports alongside TypeScript exports: %s",
+			async (namedExport, { expect }) => {
+				const content = `${namedExport} const { defineConfig } = require('vite'); module.exports = defineConfig({ plugins: [] });`;
+				await writeFile("vite.config.cts", content);
+				expect(() => transformViteConfig(".")).toThrow(
+					"Cannot automatically modify a CommonJS Vite configuration"
+				);
+				expect(readFileSync("vite.config.cts", "utf8")).toBe(content);
+			}
+		);
+
 		it.for(["cjs", "cts"])(
 			"detects .%s configurations without rewriting CommonJS",
 			async (extension, { expect }) => {
