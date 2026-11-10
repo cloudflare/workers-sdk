@@ -76,6 +76,7 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 
 	const pluginBindings = new Set<string>();
 	const namespaceBindings = new Set<string>();
+	const configBindings = new Map<string, recast.types.ASTNode>();
 	let usesCloudflarePlugin = false;
 	function checkConfigObject(
 		configObject: types.namedTypes.ObjectExpression | null
@@ -109,9 +110,56 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 		});
 	}
 
+	// Follow the exported value rather than unrelated defineConfig() calls.
+	function resolveConfigObject(
+		node: recast.types.ASTNode | undefined,
+		seen = new Set<string>()
+	): types.namedTypes.ObjectExpression | null {
+		if (!node) {
+			return null;
+		}
+		if (
+			t.TSAsExpression.check(node) ||
+			t.TSSatisfiesExpression.check(node) ||
+			t.TSTypeAssertion.check(node) ||
+			t.ParenthesizedExpression.check(node)
+		) {
+			return resolveConfigObject(node.expression, seen);
+		}
+		if (t.Identifier.check(node)) {
+			if (seen.has(node.name)) {
+				return null;
+			}
+			seen.add(node.name);
+			return resolveConfigObject(configBindings.get(node.name), seen);
+		}
+		if (
+			t.CallExpression.check(node) &&
+			t.Identifier.check(node.callee) &&
+			node.callee.name === "defineConfig"
+		) {
+			return resolveConfigObject(node.arguments[0], seen);
+		}
+		return extractConfigObject(node);
+	}
+
 	recast.visit(ast, {
 		visitProgram(n) {
 			for (const statement of n.node.body) {
+				const declaration = t.ExportNamedDeclaration.check(statement)
+					? statement.declaration
+					: statement;
+				if (t.VariableDeclaration.check(declaration)) {
+					for (const binding of declaration.declarations) {
+						if (
+							t.VariableDeclarator.check(binding) &&
+							t.Identifier.check(binding.id) &&
+							binding.init
+						) {
+							configBindings.set(binding.id.name, binding.init);
+						}
+					}
+				}
 				if (
 					statement.type !== "ImportDeclaration" ||
 					statement.source.value !== "@cloudflare/vite-plugin"
@@ -139,16 +187,9 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 			return this.traverse(n);
 		},
 		visitExportDefaultDeclaration(n) {
-			const declaration = n.node.declaration;
-			const config =
-				t.CallExpression.check(declaration) &&
-				t.Identifier.check(declaration.callee) &&
-				declaration.callee.name === "defineConfig"
-					? declaration.arguments[0]
-					: declaration;
-			if (config) {
-				usesCloudflarePlugin = checkConfigObject(extractConfigObject(config));
-			}
+			usesCloudflarePlugin = checkConfigObject(
+				resolveConfigObject(n.node.declaration)
+			);
 			return false;
 		},
 	});

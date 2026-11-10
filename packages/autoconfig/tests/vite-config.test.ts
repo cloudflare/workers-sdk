@@ -94,6 +94,26 @@ export default defineConfig({
 			expect(checkIfViteConfigUsesCloudflarePlugin(".", context)).toBe(true);
 		});
 
+		it.for([
+			"const config = defineConfig({ plugins: [cloudflare()] }); export default config;",
+			"const config = { plugins: [cloudflare()] }; export default config;",
+			"const base = { plugins: [cloudflare()] }; const config = defineConfig(base); export default config;",
+			"export const config = defineConfig({ plugins: [cloudflare()] }); export default config;",
+			"export default defineConfig({ plugins: [cloudflare()] }) satisfies UserConfig;",
+			"export default ({ plugins: [cloudflare()] } satisfies UserConfig);",
+			"export default ({ plugins: [cloudflare()] } as UserConfig);",
+			"const config = defineConfig({ plugins: [cloudflare()] }) as UserConfig; export default config;",
+		])(
+			"recognizes exported bindings and TypeScript wrappers: %s",
+			async (config, { expect }) => {
+				await writeFile(
+					"vite.config.ts",
+					`import { cloudflare } from '@cloudflare/vite-plugin'; import { defineConfig, type UserConfig } from 'vite'; ${config}`
+				);
+				expect(checkIfViteConfigUsesCloudflarePlugin(".", context)).toBe(true);
+			}
+		);
+
 		it("ignores unused config objects", async ({ expect }) => {
 			await writeFile(
 				"vite.config.ts",

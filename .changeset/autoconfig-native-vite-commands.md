@@ -3,6 +3,8 @@
 "wrangler": patch
 ---
 
-Return native Vite commands for experimental cf projects without detected framework commands
+Run experimental cf projects with their installed Vite or Vite+ commands
 
-Autoconfig now resolves the project's installed Vite or Vite+ executable when a project declares the Cloudflare Vite plugin and no framework dev or build command is available. The existing command fields include the native executable and subcommand, letting cf execute them without a plugin-owned delegate. Resolve tools from the application through its detected workspace root, while excluding unrelated parent installs. Report command readiness in `commandError` so callers can inspect projects before installing dependencies and raise errors only at execution. Validate plugin v2 compatibility for all eligible cf Vite-plugin projects and require native Vite configurations to activate `cloudflare()`. Generate shell-compatible Node invocations on Windows, and preserve partial framework command pairs without filling in a command with different framework metadata. Pages detection, Pages Functions migration guards, and unsupported framework configuration retain their existing behavior; already-configured custom Vite projects can use the fallback. Wrangler's command selection is unchanged.
+`cf dev`, `cf build`, and deployments that build your project can use Vite or Vite+ even when no framework command is detected. This removes the need for the internal `cf-vite` delegate and supports dependencies hoisted within a workspace. Existing framework commands keep their priority.
+
+Project inspection can recognize an existing Cloudflare configuration before dependencies are installed. Running a command provides guidance when the required tools are missing, the plugin version is incompatible, or the Vite configuration does not enable the Cloudflare plugin. Native builds also work with the Windows shell. Pages migration safeguards, unsupported-framework setup checks, and Wrangler command selection retain their existing behavior.
