@@ -198,7 +198,7 @@ test.for([
 	{ type: "worker", prebuilt: true },
 	{ type: "assets-only", prebuilt: true },
 ])(
-	"moves prerender assets into the client output for %j",
+	"includes prerender assets in the client output for %j",
 	async ({ type, prebuilt }, { expect }) => {
 		createFixture();
 		if (type === "assets-only") {
@@ -270,7 +270,9 @@ test.for([
 			"Asset imported by the Worker",
 			"Asset imported only by prerender",
 		]);
-		expect(fs.readdirSync(path.join(prerenderBundleDir, "assets"))).toEqual([]);
+		expect(
+			fs.readdirSync(path.join(prerenderBundleDir, "assets"))
+		).toHaveLength(2);
 		if (type === "worker") {
 			expect(
 				fs.readdirSync(path.join(getWorkerBundleDir(process.cwd()), "assets"))
@@ -419,7 +421,9 @@ test.for([
 			expect(fs.readdirSync(childAssetsDir)).toHaveLength(1);
 			return;
 		}
-		expect(fs.readdirSync(childAssetsDir)).toEqual([]);
+		expect(fs.readdirSync(childAssetsDir)).toHaveLength(
+			parent === "prerender" ? 1 : 0
+		);
 		const clientAssetsDir = path.join(
 			getWorkerAssetsDir(process.cwd()),
 			"assets"

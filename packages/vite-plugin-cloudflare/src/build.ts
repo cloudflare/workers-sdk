@@ -12,7 +12,7 @@ import type * as vite from "vite";
 
 const CLIENT_FALLBACK_ENTRY_NAME = "__cloudflare_fallback_entry__";
 
-/** Build the remaining Worker and client environments and move imported assets. */
+/** Build the remaining Worker and client environments and transfer imported assets. */
 export async function buildApp(
 	builder: vite.ViteBuilder,
 	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig,
@@ -65,7 +65,14 @@ export async function buildApp(
 					return childEnvironment;
 				})
 				.filter((childEnvironment) => childEnvironment.isBuilt);
-			return [environment, ...childEnvironments];
+			return [environment, ...childEnvironments].map((assetEnvironment) => ({
+				environment: assetEnvironment,
+				// TODO: Move all assets again once upstream Astro changes no longer
+				// require the originals in prerender build output.
+				preserveOriginalAssets:
+					environment.name ===
+					resolvedPluginConfig.prerenderWorkerEnvironmentName,
+			}));
 		});
 
 	if (!clientEnvironment.isBuilt) {
@@ -73,7 +80,7 @@ export async function buildApp(
 			await builder.build(clientEnvironment);
 		} else if (
 			assetEnvironments.some(
-				(environment) =>
+				({ environment }) =>
 					environmentNameToImportedAssetPaths.get(environment.name)?.size
 			) ||
 			getHasPublicAssets(builder.config) ||
@@ -92,7 +99,7 @@ export async function buildApp(
 		clientEnvironment.config.build.outDir
 	);
 
-	for (const environment of assetEnvironments) {
+	for (const { environment, preserveOriginalAssets } of assetEnvironments) {
 		const importedAssetPaths = environmentNameToImportedAssetPaths.get(
 			environment.name
 		);
@@ -103,7 +110,7 @@ export async function buildApp(
 			builder.config.root,
 			environment.config.build.outDir
 		);
-		const movedAssetPaths: string[] = [];
+		const transferredAssetPaths: string[] = [];
 
 		for (const assetPath of importedAssetPaths) {
 			const src = path.join(workerBuildDirectory, assetPath);
@@ -114,22 +121,28 @@ export async function buildApp(
 			}
 
 			if (fs.existsSync(dest)) {
-				fs.unlinkSync(src);
+				if (!preserveOriginalAssets) {
+					fs.unlinkSync(src);
+				}
 			} else {
 				const destDir = path.dirname(dest);
 				fs.mkdirSync(destDir, { recursive: true });
-				fs.renameSync(src, dest);
-				movedAssetPaths.push(dest);
+				if (preserveOriginalAssets) {
+					fs.copyFileSync(src, dest);
+				} else {
+					fs.renameSync(src, dest);
+				}
+				transferredAssetPaths.push(dest);
 			}
 		}
 
-		if (movedAssetPaths.length) {
+		if (transferredAssetPaths.length) {
 			builder.config.logger.info(
 				[
-					`${colors.green("✓")} ${movedAssetPaths.length} asset${
-						movedAssetPaths.length > 1 ? "s" : ""
-					} moved from "${environment.name}" to "client" build output.`,
-					...movedAssetPaths.map((assetPath) =>
+					`${colors.green("✓")} ${transferredAssetPaths.length} asset${
+						transferredAssetPaths.length > 1 ? "s" : ""
+					} ${preserveOriginalAssets ? "copied" : "moved"} from "${environment.name}" to "client" build output.`,
+					...transferredAssetPaths.map((assetPath) =>
 						colors.dim(path.relative(builder.config.root, assetPath))
 					),
 				].join("\n")
