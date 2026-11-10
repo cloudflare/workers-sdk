@@ -1,7 +1,11 @@
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
-import { AutoConfigFrameworkConfigurationError } from "../errors";
+import {
+	checkIfViteConfigUsesCloudflarePlugin,
+	hasViteConfig,
+} from "../frameworks/utils/vite-config";
+import type { AutoConfigCommandError } from "../types";
 import type { PackageJSON } from "@cloudflare/workers-utils";
 
 type ProjectPackageJSON = PackageJSON & {
@@ -18,14 +22,27 @@ export function usesVitePlus(packageJson?: PackageJSON): boolean {
 }
 
 /**
- * Resolve native commands for a cf Vite-plugin project without framework commands.
- * Resolve package binaries locally so neither cf's dependencies nor an unrelated
- * parent installation can supply a missing project tool.
+ * Inspect plugin readiness for cf projects, resolving native commands when no
+ * framework commands exist. Report failures as data so detection remains useful
+ * before dependencies have been installed or framework setup has been applied.
  */
-export function getViteFallbackCommands(
-	projectPath: string,
-	packageJson?: ProjectPackageJSON
-): { devCommand: string; buildCommand: string } | undefined {
+export function getViteProjectCommands({
+	projectPath,
+	packageJson,
+	nodeModulesPaths,
+	resolveCommands,
+}: {
+	projectPath: string;
+	packageJson?: ProjectPackageJSON;
+	nodeModulesPaths: readonly string[];
+	resolveCommands: boolean;
+}):
+	| {
+			devCommand?: string;
+			buildCommand?: string;
+			error?: AutoConfigCommandError;
+	  }
+	| undefined {
 	const dependencies = {
 		...packageJson?.dependencies,
 		...packageJson?.devDependencies,
@@ -36,59 +53,109 @@ export function getViteFallbackCommands(
 		return;
 	}
 
-	const plugin = readLocalPackage(projectPath, "@cloudflare/vite-plugin");
+	const plugin = readProjectPackage(
+		nodeModulesPaths,
+		"@cloudflare/vite-plugin"
+	);
 	const requirement =
 		"cf requires @cloudflare/vite-plugin v2 beta for cf dev, cf build, cf deploy, and cf previews deploy.";
 	const install = usesVitePlus(packageJson)
 		? "npm install --save-dev @cloudflare/vite-plugin@beta vite-plus"
 		: "npm install --save-dev @cloudflare/vite-plugin@beta vite";
 	if (!plugin) {
-		throw commandError(
-			`@cloudflare/vite-plugin is declared in package.json but is not installed. ${requirement} Run ${install}.`
-		);
+		return {
+			error: {
+				code: "vite-plugin-not-installed",
+				message: `@cloudflare/vite-plugin is declared in package.json but is not installed. ${requirement} Run ${install}.`,
+			},
+		};
 	}
-	if (!plugin.version?.match(/^2\.\d+\.\d+(?:[-+].+)?$/)) {
-		throw commandError(
-			`@cloudflare/vite-plugin@${plugin.version ?? "unknown"} is installed, but it is not compatible with cf's local runtime. ${requirement} Run ${install}.`
-		);
+	if (!plugin.packageJson.version?.match(/^2\.\d+\.\d+(?:[-+].+)?$/)) {
+		return {
+			error: {
+				code: "vite-plugin-incompatible",
+				message: `@cloudflare/vite-plugin@${plugin.packageJson.version ?? "unknown"} is installed, but it is not compatible with cf's local runtime. ${requirement} Run ${install}.`,
+			},
+		};
+	}
+	if (!resolveCommands) {
+		return {};
 	}
 
 	const packageName = usesVitePlus(packageJson) ? "vite-plus" : "vite";
 	const commandName = packageName === "vite-plus" ? "vp" : "vite";
-	const tool = readLocalPackage(projectPath, packageName);
-	const bin = tool?.bin;
+	const tool = readProjectPackage(nodeModulesPaths, packageName);
+	const bin = tool?.packageJson.bin;
 	const relativeBinary = typeof bin === "string" ? bin : bin?.[commandName];
-	const binary = relativeBinary
-		? resolve(projectPath, "node_modules", packageName, relativeBinary)
-		: undefined;
+	const binary =
+		tool && relativeBinary
+			? resolve(tool.directory, relativeBinary)
+			: undefined;
 	if (!binary || !existsSync(binary)) {
-		throw commandError(
-			`@cloudflare/vite-plugin is installed, but the project's ${commandName} executable could not be found. ${requirement} Run ${install}.`
-		);
+		return {
+			error: {
+				code: "vite-tool-not-installed",
+				message: `@cloudflare/vite-plugin is installed, but the project's ${commandName} executable could not be found. ${requirement} Run ${install}.`,
+			},
+		};
 	}
 
-	// Commands are parsed into argv by cf, including quoted paths with spaces.
-	const quotedBinary = `'${binary.replaceAll("'", "'\\''")}'`;
+	if (!usesCloudflarePlugin(projectPath)) {
+		return {
+			error: {
+				code: "vite-plugin-not-configured",
+				message:
+					"Could not confirm that the Vite configuration enables @cloudflare/vite-plugin. Add cloudflare() to the plugins array in your Vite configuration before running cf dev or cf build.",
+			},
+		};
+	}
+
+	// The same command can be parsed into argv by cf or passed to a shell by
+	// runAutoConfig. cmd.exe needs Node explicitly and does not accept POSIX quotes.
+	const executable =
+		process.platform === "win32"
+			? `"${process.execPath}" "${binary}"`
+			: `'${binary.replaceAll("'", "'\\''")}'`;
 	return {
-		devCommand: `${quotedBinary} dev`,
-		buildCommand: `${quotedBinary} build`,
+		devCommand: `${executable} dev`,
+		buildCommand: `${executable} build`,
 	};
 }
 
-function readLocalPackage(
-	projectPath: string,
+function readProjectPackage(
+	nodeModulesPaths: readonly string[],
 	packageName: string
-): (PackageJSON & { bin?: string | Record<string, string> }) | undefined {
-	const path = join(projectPath, "node_modules", packageName, "package.json");
-	try {
-		return parsePackageJSON(readFileSync(path), path);
-	} catch {
-		return;
+):
+	| {
+			directory: string;
+			packageJson: PackageJSON & { bin?: string | Record<string, string> };
+	  }
+	| undefined {
+	for (const nodeModules of nodeModulesPaths) {
+		const directory = join(nodeModules, packageName);
+		const path = join(directory, "package.json");
+		if (!existsSync(path)) {
+			continue;
+		}
+		try {
+			return {
+				directory,
+				packageJson: parsePackageJSON(readFileSync(path), path),
+			};
+		} catch {
+			// A broken nearer install must not silently select another version.
+			return;
+		}
 	}
 }
 
-function commandError(message: string): AutoConfigFrameworkConfigurationError {
-	return new AutoConfigFrameworkConfigurationError(message, {
-		telemetryMessage: "autoconfig vite command unavailable",
-	});
+function usesCloudflarePlugin(projectPath: string): boolean {
+	try {
+		return (
+			hasViteConfig(projectPath) &&
+			checkIfViteConfigUsesCloudflarePlugin(projectPath)
+		);
+	} catch {
+		return false;
+	}
 }

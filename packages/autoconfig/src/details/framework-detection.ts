@@ -60,6 +60,7 @@ export async function detectFramework(
 	detectedFramework: DetectedFramework;
 	packageManager: PackageManager;
 	isWorkspaceRoot?: boolean;
+	workspaceRoot?: string;
 }> {
 	const fs = new NodeFS();
 
@@ -157,6 +158,7 @@ export async function detectFramework(
 				dist: wranglerConfig?.pages_build_output_dir,
 			},
 			packageManager,
+			workspaceRoot,
 		};
 	}
 
@@ -184,6 +186,7 @@ export async function detectFramework(
 		detectedFramework,
 		packageManager,
 		isWorkspaceRoot,
+		workspaceRoot,
 	};
 }
 

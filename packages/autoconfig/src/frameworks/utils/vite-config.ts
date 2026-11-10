@@ -64,92 +64,111 @@ function extractFromBlockStatement(
 	return null;
 }
 
+/** Checks the effective plugins array without executing the project's configuration. */
 export function checkIfViteConfigUsesCloudflarePlugin(
 	projectPath: string,
 	context?: AutoConfigContext
 ): boolean {
-	const filePath = getViteConfigPath(projectPath);
-	const ast = parseFile(filePath);
+	const ast = parseFile(getViteConfigPath(projectPath));
 	if (!ast) {
 		return false;
 	}
 
-	let importsCloudflarePlugin = false;
+	const pluginBindings = new Set<string>();
+	const namespaceBindings = new Set<string>();
 	let usesCloudflarePlugin = false;
+	function checkConfigObject(
+		configObject: types.namedTypes.ObjectExpression | null
+	): boolean {
+		if (!configObject) {
+			return false;
+		}
+		const pluginsProp = configObject.properties.findLast(isPluginsProp);
+		if (
+			!pluginsProp ||
+			!t.ArrayExpression.check(pluginsProp.value) ||
+			hasFollowingOverride(configObject, pluginsProp)
+		) {
+			context?.logger.debug("Vite config does not have a valid plugins array");
+			return false;
+		}
+		return pluginsProp.value.elements.some((element) => {
+			if (!t.CallExpression.check(element)) {
+				return false;
+			}
+			const callee = element.callee;
+			return (
+				(t.Identifier.check(callee) && pluginBindings.has(callee.name)) ||
+				(t.MemberExpression.check(callee) &&
+					!callee.computed &&
+					t.Identifier.check(callee.object) &&
+					namespaceBindings.has(callee.object.name) &&
+					t.Identifier.check(callee.property) &&
+					callee.property.name === "cloudflare")
+			);
+		});
+	}
 
 	recast.visit(ast, {
 		visitProgram(n) {
-			if (
-				n.node.body.some(
-					(s) =>
-						s.type === "ImportDeclaration" &&
-						s.source.value === "@cloudflare/vite-plugin"
-				)
-			) {
-				importsCloudflarePlugin = true;
-				return this.traverse(n);
+			for (const statement of n.node.body) {
+				if (
+					statement.type !== "ImportDeclaration" ||
+					statement.source.value !== "@cloudflare/vite-plugin"
+				) {
+					continue;
+				}
+				for (const specifier of statement.specifiers ?? []) {
+					if (
+						specifier.type === "ImportSpecifier" &&
+						specifier.imported.type === "Identifier" &&
+						specifier.imported.name === "cloudflare" &&
+						specifier.local &&
+						typeof specifier.local.name === "string"
+					) {
+						pluginBindings.add(specifier.local.name);
+					} else if (
+						specifier.type === "ImportNamespaceSpecifier" &&
+						specifier.local &&
+						typeof specifier.local.name === "string"
+					) {
+						namespaceBindings.add(specifier.local.name);
+					}
+				}
 			}
-
-			this.traverse(n);
+			return this.traverse(n);
 		},
-		visitCallExpression: function (n) {
-			const callee = n.node.callee as types.namedTypes.Identifier;
-			if (callee.name !== "defineConfig") {
-				return this.traverse(n);
+		visitExportDefaultDeclaration(n) {
+			const declaration = n.node.declaration;
+			const config =
+				t.CallExpression.check(declaration) &&
+				t.Identifier.check(declaration.callee) &&
+				declaration.callee.name === "defineConfig"
+					? declaration.arguments[0]
+					: declaration;
+			if (config) {
+				usesCloudflarePlugin = checkConfigObject(extractConfigObject(config));
 			}
-
-			const configObject = extractConfigObject(n.node.arguments[0]);
-			if (!configObject) {
-				context?.logger.debug(
-					`Vite config uses an unsupported expression type. Skipping Cloudflare plugin check.`
-				);
-				return this.traverse(n);
-			}
-
-			const pluginsProp = configObject.properties.findLast((prop) =>
-				isPluginsProp(prop)
-			);
-			if (!pluginsProp || !t.ArrayExpression.check(pluginsProp.value)) {
-				context?.logger.debug(
-					`Vite config does not have a valid plugins array. Skipping Cloudflare plugin check.`
-				);
-				return this.traverse(n);
-			}
-
-			if (hasFollowingOverride(configObject, pluginsProp)) {
-				context?.logger.debug(
-					`Vite config has a later property that may override its plugins array. Skipping Cloudflare plugin check.`
-				);
-				return this.traverse(n);
-			}
-
-			if (
-				pluginsProp.value.elements.some(
-					(el) =>
-						el?.type === "CallExpression" &&
-						el.callee.type === "Identifier" &&
-						el.callee.name === "cloudflare"
-				)
-			) {
-				usesCloudflarePlugin = true;
-				return this.traverse(n);
-			}
-
-			this.traverse(n);
+			return false;
 		},
 	});
 
-	return importsCloudflarePlugin && usesCloudflarePlugin;
+	return usesCloudflarePlugin;
 }
 
-/**
- * Returns whether a Vite config file (`vite.config.ts` or `vite.config.js`)
- * exists in the given project directory.
- */
+const VITE_CONFIG_FILES = [
+	"vite.config.ts",
+	"vite.config.js",
+	"vite.config.mts",
+	"vite.config.mjs",
+	"vite.config.cts",
+	"vite.config.cjs",
+];
+
+/** Returns whether the project has a Vite configuration file. */
 export function hasViteConfig(projectPath: string): boolean {
-	return (
-		existsSync(path.join(projectPath, "vite.config.ts")) ||
-		existsSync(path.join(projectPath, "vite.config.js"))
+	return VITE_CONFIG_FILES.some((name) =>
+		existsSync(path.join(projectPath, name))
 	);
 }
 
@@ -157,24 +176,17 @@ export function hasViteConfig(projectPath: string): boolean {
  * Finds the project's Vite config file.
  *
  * @param projectPath The path of the project
- * @returns The path of `vite.config.ts`, or of `vite.config.js` if there is no TypeScript config
- * @throws If the project has neither
+ * @returns The first existing file in Vite's default configuration-file order
+ * @throws If the project has no Vite config file
  */
 export function getViteConfigPath(projectPath: string): string {
-	const filePathTS = path.join(projectPath, `vite.config.ts`);
-	const filePathJS = path.join(projectPath, `vite.config.js`);
-
-	let filePath: string;
-
-	if (existsSync(filePathTS)) {
-		filePath = filePathTS;
-	} else if (existsSync(filePathJS)) {
-		filePath = filePathJS;
-	} else {
+	const file = VITE_CONFIG_FILES.map((name) =>
+		path.join(projectPath, name)
+	).find((filePath) => existsSync(filePath));
+	if (!file) {
 		throw new Error("Could not find Vite config file to modify");
 	}
-
-	return filePath;
+	return file;
 }
 
 /**

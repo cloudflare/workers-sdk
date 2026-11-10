@@ -75,6 +75,33 @@ export default defineConfig({
 			}
 		);
 
+		it.for(["ts", "js", "mts", "mjs", "cts", "cjs"])(
+			"detects an aliased plugin in a plain .%s config",
+			async (extension, { expect }) => {
+				await writeFile(
+					`vite.config.${extension}`,
+					`import { cloudflare as workers } from '@cloudflare/vite-plugin'; export default { plugins: [workers()] };`
+				);
+				expect(checkIfViteConfigUsesCloudflarePlugin(".", context)).toBe(true);
+			}
+		);
+
+		it("detects a namespace plugin import", async ({ expect }) => {
+			await writeFile(
+				"vite.config.ts",
+				`import * as workers from '@cloudflare/vite-plugin'; export default { plugins: [workers.cloudflare()] };`
+			);
+			expect(checkIfViteConfigUsesCloudflarePlugin(".", context)).toBe(true);
+		});
+
+		it("ignores unused config objects", async ({ expect }) => {
+			await writeFile(
+				"vite.config.ts",
+				`import { cloudflare } from '@cloudflare/vite-plugin'; import { defineConfig } from 'vite'; const unused = defineConfig({ plugins: [cloudflare()] }); export default defineConfig({ plugins: [] });`
+			);
+			expect(checkIfViteConfigUsesCloudflarePlugin(".", context)).toBe(false);
+		});
+
 		it("should detect cloudflare plugin in function-based defineConfig", async ({
 			expect,
 		}) => {

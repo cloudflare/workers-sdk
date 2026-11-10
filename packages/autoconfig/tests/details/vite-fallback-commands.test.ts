@@ -1,4 +1,5 @@
-import { rm } from "node:fs/promises";
+import { execSync } from "node:child_process";
+import { chmod, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { removeDir } from "@cloudflare/workers-utils";
 import {
@@ -6,11 +7,21 @@ import {
 	runInTempDir,
 	seed,
 } from "@cloudflare/workers-utils/test-helpers";
-import { describe, it } from "vitest";
-import { getDetailsForAutoConfig } from "../../src/details";
+import { describe, it, vi } from "vitest";
+import {
+	assertProjectCommandsAvailable,
+	getDetailsForAutoConfig,
+} from "../../src/details";
+import * as frameworkDetection from "../../src/details/framework-detection";
 import { runAutoConfig } from "../../src/run";
 import { createMockContext } from "../helpers/mock-context";
 import type { Config } from "@cloudflare/workers-utils";
+
+function invocation(binary: string): string {
+	return process.platform === "win32"
+		? `"${process.execPath}" "${binary}"`
+		: `'${binary.replaceAll("'", "'\\''")}'`;
+}
 
 describe("Vite-plugin fallback commands", () => {
 	runInTempDir();
@@ -29,6 +40,8 @@ describe("Vite-plugin fallback commands", () => {
 				},
 			}),
 			"cloudflare.config.ts": "export default {};",
+			"vite.config.ts": `import { cloudflare } from '@cloudflare/vite-plugin';
+export default { plugins: [cloudflare()] };`,
 			"node_modules/@cloudflare/vite-plugin/package.json": JSON.stringify({
 				name: "@cloudflare/vite-plugin",
 				version,
@@ -51,8 +64,8 @@ describe("Vite-plugin fallback commands", () => {
 
 			expect(details).toMatchObject({
 				configured: true,
-				devCommand: `'${binary}' dev`,
-				buildCommand: `'${binary}' build`,
+				devCommand: `${invocation(binary)} dev`,
+				buildCommand: `${invocation(binary)} build`,
 				framework: { id: "vite", supportsMode: true },
 				env: { CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT: "true" },
 			});
@@ -87,23 +100,25 @@ describe("Vite-plugin fallback commands", () => {
 		});
 		const details = await getDetailsForAutoConfig({ context });
 
-		expect(details.devCommand).toBe(`'${binary}' dev`);
-		expect(details.buildCommand).toBe(`'${binary}' build`);
+		expect(details.devCommand).toBe(`${invocation(binary)} dev`);
+		expect(details.buildCommand).toBe(`${invocation(binary)} build`);
 	});
 
-	it("can configure an otherwise undetected Vite-plugin project", async ({
+	it("can plan setup for an undetected project before the plugin is configured", async ({
 		expect,
 	}) => {
-		const binary = await seedProject();
+		await seedProject();
 		await rm("cloudflare.config.ts");
+		await rm("vite.config.ts");
 		const details = await getDetailsForAutoConfig({ context });
 
 		expect(details).toMatchObject({
 			configured: false,
 			framework: { id: "vite" },
-			devCommand: `'${binary}' dev`,
-			buildCommand: `'${binary}' build`,
+			devCommand: undefined,
+			buildCommand: undefined,
 			outputDir: "dist",
+			commandError: { code: "vite-plugin-not-configured" },
 		});
 	});
 
@@ -112,6 +127,7 @@ describe("Vite-plugin fallback commands", () => {
 		async (detection, { expect }) => {
 			await seedProject();
 			await rm("cloudflare.config.ts");
+			await rm("vite.config.ts");
 			const cacheFolder = resolve(".cache");
 			await seed({
 				"public/index.html": "<h1>Pages</h1>",
@@ -180,6 +196,7 @@ describe("Vite-plugin fallback commands", () => {
 	}) => {
 		await seedProject();
 		await rm("cloudflare.config.ts");
+		await rm("vite.config.ts");
 		await seed({
 			"index.html": "<h1>Pages</h1>",
 			"functions/hello.js": "export function onRequest() {}",
@@ -267,10 +284,12 @@ describe("Vite-plugin fallback commands", () => {
 	});
 
 	it.for(["1.61.0", "3.0.0-beta.1", "invalid"])(
-		"rejects an incompatible plugin %s",
+		"reports an incompatible plugin %s without failing detection",
 		async (version, { expect }) => {
 			await seedProject(false, version);
-			await expect(getDetailsForAutoConfig({ context })).rejects.toThrow(
+			const details = await getDetailsForAutoConfig({ context });
+			expect(details.commandError?.code).toBe("vite-plugin-incompatible");
+			expect(() => assertProjectCommandsAvailable(details)).toThrow(
 				"cf requires @cloudflare/vite-plugin v2 beta"
 			);
 		}
@@ -293,9 +312,12 @@ describe("Vite-plugin fallback commands", () => {
 			),
 		});
 
-		await expect(
-			getDetailsForAutoConfig({ projectPath: resolve("child"), context })
-		).rejects.toThrow("project's vite executable could not be found");
+		const details = await getDetailsForAutoConfig({
+			projectPath: resolve("child"),
+			context,
+		});
+		expect(details.commandError?.code).toBe("vite-tool-not-installed");
+		expect(details.nodeModulesPaths).toEqual([resolve("child/node_modules")]);
 	});
 
 	it("does not take the plugin from a parent project", async ({ expect }) => {
@@ -307,11 +329,13 @@ describe("Vite-plugin fallback commands", () => {
 			"child/cloudflare.config.ts": "export default {};",
 		});
 
-		await expect(
-			getDetailsForAutoConfig({ projectPath: resolve("child"), context })
-		).rejects.toThrow(
-			"@cloudflare/vite-plugin is declared in package.json but is not installed"
-		);
+		const details = await getDetailsForAutoConfig({
+			projectPath: resolve("child"),
+			context,
+		});
+		expect(details.commandError?.code).toBe("vite-plugin-not-installed");
+		expect(details.configured).toBe(true);
+		expect(details.devCommand).toBeUndefined();
 	});
 
 	it("reports which Vite+ tool needs installing", async ({ expect }) => {
@@ -327,15 +351,187 @@ describe("Vite-plugin fallback commands", () => {
 			}),
 		});
 
-		await expect(getDetailsForAutoConfig({ context })).rejects.toThrow(
+		const details = await getDetailsForAutoConfig({ context });
+		expect(details.commandError?.message).toContain(
 			"npm install --save-dev @cloudflare/vite-plugin@beta vite-plus"
 		);
 	});
+
+	it.for([false, true])(
+		"resolves hoisted workspace tools (Vite+: %s)",
+		async (vitePlus, { expect }) => {
+			const binary = await seedProject(vitePlus);
+			await seed({
+				"package.json": JSON.stringify({ workspaces: ["apps/*"] }),
+				"apps/site/package.json": JSON.stringify({
+					name: "site",
+					devDependencies: {
+						"@cloudflare/vite-plugin": "beta",
+						...(vitePlus ? { "vite-plus": "1.5.0" } : {}),
+					},
+				}),
+				"apps/site/cloudflare.config.ts": "export default {};",
+				"apps/site/vite.config.ts": `import { cloudflare } from '@cloudflare/vite-plugin'; export default { plugins: [cloudflare()] };`,
+			});
+			const details = await getDetailsForAutoConfig({
+				projectPath: resolve("apps/site"),
+				context,
+			});
+			expect(details.commandError).toBeUndefined();
+			expect(details.buildCommand).toBe(`${invocation(binary)} build`);
+			expect(details.nodeModulesPaths).toEqual([
+				resolve("apps/site/node_modules"),
+				resolve("apps/node_modules"),
+				resolve("node_modules"),
+			]);
+		}
+	);
+
+	it("does not use a workspace that excludes the application", async ({
+		expect,
+	}) => {
+		await seedProject();
+		await seed({
+			"package.json": JSON.stringify({ workspaces: ["other/*"] }),
+			"apps/site/package.json": JSON.stringify({
+				devDependencies: { "@cloudflare/vite-plugin": "beta" },
+			}),
+			"apps/site/cloudflare.config.ts": "export default {};",
+		});
+		const details = await getDetailsForAutoConfig({
+			projectPath: resolve("apps/site"),
+			context,
+		});
+		expect(details.commandError?.code).toBe("vite-plugin-not-installed");
+		expect(details.nodeModulesPaths).toEqual([
+			resolve("apps/site/node_modules"),
+		]);
+	});
+
+	it("prefers the application's tool over a hoisted tool", async ({
+		expect,
+	}) => {
+		await seedProject();
+		await seed({
+			"package.json": JSON.stringify({ workspaces: ["apps/*"] }),
+			"apps/site/package.json": JSON.stringify({
+				devDependencies: { "@cloudflare/vite-plugin": "beta" },
+			}),
+			"apps/site/cloudflare.config.ts": "export default {};",
+			"apps/site/vite.config.ts": `import { cloudflare } from '@cloudflare/vite-plugin'; export default { plugins: [cloudflare()] };`,
+			"apps/site/node_modules/vite/package.json": JSON.stringify({
+				bin: { vite: "local.js" },
+			}),
+			"apps/site/node_modules/vite/local.js": "#!/usr/bin/env node\n",
+		});
+		const details = await getDetailsForAutoConfig({
+			projectPath: resolve("apps/site"),
+			context,
+		});
+		expect(details.buildCommand).toBe(
+			`${invocation(resolve("apps/site/node_modules/vite/local.js"))} build`
+		);
+	});
+
+	it("checks plugin compatibility for canonical framework commands too", async ({
+		expect,
+	}) => {
+		await seedProject(false, "1.0.0");
+		await seed({
+			"package.json": JSON.stringify({
+				dependencies: { astro: "6", "@cloudflare/vite-plugin": "beta" },
+			}),
+		});
+		const details = await getDetailsForAutoConfig({ context });
+		expect(details.framework?.id).toBe("astro");
+		expect(() => assertProjectCommandsAvailable(details)).toThrow(
+			"cf requires @cloudflare/vite-plugin v2 beta"
+		);
+	});
+
+	it.for(["missing", "unused"])(
+		"reports a plugin that is %s from Vite configuration",
+		async (config, { expect }) => {
+			await seedProject();
+			if (config === "missing") {
+				await rm("vite.config.ts");
+			} else {
+				await seed({ "vite.config.ts": "export default { plugins: [] };" });
+			}
+			const details = await getDetailsForAutoConfig({ context });
+			expect(details.commandError?.code).toBe("vite-plugin-not-configured");
+			expect(details.buildCommand).toBeUndefined();
+		}
+	);
+
+	it("retains configured project details before dependencies are installed", async ({
+		expect,
+	}) => {
+		await seedProject();
+		await removeDir("node_modules");
+		const details = await getDetailsForAutoConfig({ context });
+		expect(details.configured).toBe(true);
+		expect(details.commandError?.code).toBe("vite-plugin-not-installed");
+		expect(details.devCommand).toBeUndefined();
+		expect(details.buildCommand).toBeUndefined();
+	});
+
+	it.for(["devCommand", "buildCommand"] as const)(
+		"preserves partial framework commands when %s is absent",
+		async (missing, { expect }) => {
+			await seedProject();
+			await seed({
+				"package.json": JSON.stringify({
+					dependencies: { astro: "6", "@cloudflare/vite-plugin": "beta" },
+				}),
+			});
+			const detected = await frameworkDetection.detectFramework(
+				process.cwd(),
+				context,
+				{ target: "cf" }
+			);
+			vi.spyOn(frameworkDetection, "detectFramework").mockResolvedValue({
+				...detected,
+				detectedFramework: {
+					...detected.detectedFramework,
+					[missing]: undefined,
+				},
+			});
+			const details = await getDetailsForAutoConfig({ context });
+			expect(details.framework?.id).toBe("astro");
+			expect(details.env).toEqual(detected.detectedFramework.framework.env);
+			expect(details[missing]).toBeUndefined();
+			expect(
+				details[missing === "devCommand" ? "buildCommand" : "devCommand"]
+			).toBe(missing === "devCommand" ? "astro build" : "astro dev");
+		}
+	);
+
+	it.for([false, true])(
+		"executes native commands through the platform shell (Vite+: %s)",
+		async (vitePlus, { expect }) => {
+			const binary = await seedProject(vitePlus);
+			await seed({
+				[binary]:
+					"#!/usr/bin/env node\nprocess.stdout.write(JSON.stringify(process.argv.slice(2)));",
+			});
+			await chmod(binary, 0o755);
+			const details = await getDetailsForAutoConfig({ context });
+			if (!details.buildCommand) {
+				throw new Error("Expected a runnable build command");
+			}
+			// Exercise the shell contract used by Wrangler's runCommand, including cmd.exe on Windows.
+			expect(execSync(details.buildCommand, { encoding: "utf8" })).toBe(
+				'["build"]'
+			);
+		}
+	);
 
 	it("does not add commands for Wrangler static projects", async ({
 		expect,
 	}) => {
 		await seedProject();
+		await rm("vite.config.ts");
 		await seed({ "public/index.html": "<h1>Static</h1>" });
 		const details = await getDetailsForAutoConfig({
 			target: "wrangler",

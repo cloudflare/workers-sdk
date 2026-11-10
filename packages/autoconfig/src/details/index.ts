@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { existsSync, statSync, type Stats } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
-import { join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	checkWorkerNameValidity,
@@ -10,14 +10,17 @@ import {
 	parsePackageJSON,
 	readFileSync,
 } from "@cloudflare/workers-utils";
-import { AutoConfigDetectionError } from "../errors";
+import {
+	AutoConfigDetectionError,
+	AutoConfigFrameworkConfigurationError,
+} from "../errors";
 import { getFrameworkClassInstance } from "../frameworks";
 import {
 	getAllFrameworksInfos,
 	staticFramework,
 } from "../frameworks/all-frameworks";
 import { detectFramework } from "./framework-detection";
-import { getViteFallbackCommands, usesVitePlus } from "./vite-commands";
+import { getViteProjectCommands, usesVitePlus } from "./vite-commands";
 import type { AutoConfigContext, AutoConfigTarget } from "../context";
 import type {
 	AutoConfigDetails,
@@ -118,8 +121,10 @@ function normalizeOutputDir(projectPath: string, outputDir: string): string {
  * detection instead.
  *
  * For the cf target, build and dev commands may use bare framework executables.
- * Callers must resolve these from the application's and ancestor directories'
- * `node_modules/.bin`, including for standalone applications.
+ * Callers must resolve these from `nodeModulesPaths`, which includes the
+ * application and its detected workspace, excluding unrelated parent installs.
+ * Command readiness problems are reported in `commandError` without preventing
+ * inspection of the project's configuration.
  *
  * @param options - Detection options including project path, wrangler config, and context.
  * @returns The detected project details.
@@ -173,8 +178,9 @@ export async function getDetailsForAutoConfig({
 		};
 	}
 
-	const { detectedFramework, packageManager, isWorkspaceRoot } =
+	const { detectedFramework, packageManager, isWorkspaceRoot, workspaceRoot } =
 		await detectFramework(projectPath, context, { wranglerConfig, target });
+	const nodeModulesPaths = getNodeModulesPaths(projectPath, workspaceRoot);
 
 	const detectedFrameworkInstance = getFrameworkClassInstance(
 		detectedFramework.framework.id,
@@ -220,19 +226,24 @@ export async function getDetailsForAutoConfig({
 		);
 	}
 
-	const fallbackCommands = canUseViteFallbackCommands({
+	const inspectViteProject = canInspectViteProject({
 		target,
 		useStaticAssets,
 		configured,
 		detectedFramework,
-	})
-		? getViteFallbackCommands(projectPath, packageJson)
+	});
+	const useNativeCommands =
+		!detectedFramework.devCommand && !detectedFramework.buildCommand;
+	const viteCommands = inspectViteProject
+		? getViteProjectCommands({
+				projectPath,
+				packageJson,
+				nodeModulesPaths,
+				resolveCommands: useNativeCommands || framework.id === "vite",
+			})
 		: undefined;
-	if (
-		fallbackCommands &&
-		!detectedFramework.devCommand &&
-		!detectedFramework.buildCommand
-	) {
+	const fallbackCommands = useNativeCommands ? viteCommands : undefined;
+	if (fallbackCommands) {
 		framework = getFrameworkClassInstance("vite", target);
 	}
 
@@ -245,6 +256,8 @@ export async function getDetailsForAutoConfig({
 		framework,
 		packageJson,
 		packageManager,
+		nodeModulesPaths,
+		commandError: viteCommands?.error,
 		devCommand: useStaticAssets
 			? undefined
 			: getProjectCommand(
@@ -336,7 +349,7 @@ async function assertNoPagesFunctionsWithRootAssets(
  * Keeps native execution from bypassing Pages detection or unsupported setup.
  * An existing configuration can opt an otherwise unsupported project into execution.
  */
-function canUseViteFallbackCommands({
+function canInspectViteProject({
 	target,
 	useStaticAssets,
 	configured,
@@ -350,8 +363,7 @@ function canUseViteFallbackCommands({
 	if (
 		target !== "cf" ||
 		useStaticAssets ||
-		detectedFramework.framework.id === "cloudflare-pages" ||
-		(detectedFramework.devCommand && detectedFramework.buildCommand)
+		detectedFramework.framework.id === "cloudflare-pages"
 	) {
 		return false;
 	}
@@ -363,6 +375,43 @@ function canUseViteFallbackCommands({
 		({ id }) => id === detectedFramework.framework.id
 	);
 	return frameworkInfo?.supported === true && frameworkInfo.supportsCf;
+}
+
+/**
+ * Requires runnable project commands at an execution boundary. Read-only callers
+ * can inspect detection results, including missing installs, without throwing.
+ *
+ * @param details The detected project details
+ * @throws {AutoConfigFrameworkConfigurationError} If project commands are unavailable
+ */
+export function assertProjectCommandsAvailable(
+	details: AutoConfigDetails
+): void {
+	if (details.commandError) {
+		throw new AutoConfigFrameworkConfigurationError(
+			details.commandError.message,
+			{
+				telemetryMessage: "autoconfig vite command unavailable",
+			}
+		);
+	}
+}
+
+/** Restricts package lookup to the application and its validated workspace. */
+function getNodeModulesPaths(
+	projectPath: string,
+	workspaceRoot?: string
+): string[] {
+	const directories: string[] = [];
+	const root = resolve(workspaceRoot ?? projectPath);
+	let directory = resolve(projectPath);
+	while (true) {
+		directories.push(join(directory, "node_modules"));
+		if (directory === root || dirname(directory) === directory) {
+			return directories;
+		}
+		directory = dirname(directory);
+	}
 }
 
 /**

@@ -15,6 +15,7 @@ import { getDetailsForAutoConfig } from "../src/details";
 import { getFrameworkClassInstance } from "../src/frameworks";
 import { Framework } from "../src/frameworks/framework-class";
 import { Static } from "../src/frameworks/static";
+import { Vite } from "../src/frameworks/vite";
 import { runAutoConfig } from "../src/run";
 import { createMockContext } from "./helpers/mock-context";
 import type {
@@ -63,6 +64,62 @@ class BuildCommandOverrideFramework extends Static {
 describe("runAutoConfig()", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
+
+	it.for([
+		{ activate: true, runBuild: true },
+		{ activate: false, runBuild: true },
+		{ activate: false, runBuild: false },
+	])(
+		"checks readiness after setup only when building (activate=$activate, runBuild=$runBuild)",
+		async ({ activate, runBuild }, { expect }) => {
+			await seed({
+				"package.json": JSON.stringify({
+					name: "vite-app",
+					devDependencies: { vite: "8.1.0", "@cloudflare/vite-plugin": "beta" },
+				}),
+				"vite.config.ts": "export default { plugins: [] };",
+				"node_modules/@cloudflare/vite-plugin/package.json": JSON.stringify({
+					version: "2.0.0-beta.v.13",
+				}),
+				"node_modules/vite/package.json": JSON.stringify({
+					version: "8.1.0",
+					bin: { vite: "cli.js" },
+				}),
+				"node_modules/vite/cli.js": "",
+			});
+			vi.spyOn(Vite.prototype, "configure").mockImplementation(
+				async ({ dryRun }) => {
+					if (!dryRun && activate) {
+						await seed({
+							"vite.config.ts": `import { cloudflare } from '@cloudflare/vite-plugin'; export default { plugins: [cloudflare()] };`,
+						});
+					}
+					return { buildTool: "vite", workerConfig: {} };
+				}
+			);
+			const context = createMockContext();
+			const details = await getDetailsForAutoConfig({ context });
+			expect(details.commandError?.code).toBe("vite-plugin-not-configured");
+			const setup = runAutoConfig(details, {
+				context,
+				skipConfirmations: true,
+				enableTargetCliInstallation: false,
+				runBuild,
+			});
+			if (runBuild && !activate) {
+				await expect(setup).rejects.toThrow(
+					"Add cloudflare() to the plugins array"
+				);
+			} else {
+				await expect(setup).resolves.toMatchObject({
+					buildCommand: "vite build",
+				});
+			}
+			expect(context.runCommand).toHaveBeenCalledTimes(
+				runBuild && activate ? 1 : 0
+			);
+		}
+	);
 
 	it("updates the application manifest, not its enclosing workspace", async ({
 		expect,

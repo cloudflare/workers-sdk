@@ -8,6 +8,16 @@ import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
 /** Makes the specified keys of T optional. */
 type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
+/** Why detected project commands cannot currently be executed. */
+export type AutoConfigCommandError = {
+	code:
+		| "vite-plugin-not-installed"
+		| "vite-plugin-incompatible"
+		| "vite-tool-not-installed"
+		| "vite-plugin-not-configured";
+	message: string;
+};
+
 type AutoConfigDetailsBase = {
 	/** The name of the worker */
 	workerName: string;
@@ -23,6 +33,10 @@ type AutoConfigDetailsBase = {
 	devCommand?: string;
 	/** The build command used to build the project (if any) */
 	buildCommand?: string;
+	/** Command readiness failure. Detection succeeds; execution must validate this field. */
+	commandError?: AutoConfigCommandError;
+	/** Application and enclosing workspace node_modules directories, nearest first. */
+	nodeModulesPaths?: readonly string[];
 	/** Environment required when running the detected dev or build commands. */
 	env?: Readonly<Record<string, string>>;
 	/** The output directory (if no framework is used, points to the raw asset files) */

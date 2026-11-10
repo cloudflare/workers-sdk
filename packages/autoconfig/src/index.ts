@@ -5,7 +5,10 @@ export type {
 	AutoConfigDialogs,
 } from "./context";
 
-export { getDetailsForAutoConfig } from "./details";
+export {
+	getDetailsForAutoConfig,
+	assertProjectCommandsAvailable,
+} from "./details";
 export { runAutoConfig, buildOperationsSummary } from "./run";
 
 export { Framework } from "./frameworks/framework-class";
@@ -27,6 +30,7 @@ export { displayAutoConfigDetails, confirmAutoConfigDetails } from "./details";
 
 export type {
 	AutoConfigDetails,
+	AutoConfigCommandError,
 	AutoConfigDetailsForConfiguredProject,
 	AutoConfigDetailsForNonConfiguredProject,
 	AutoConfigOptions,

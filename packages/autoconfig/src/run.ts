@@ -20,9 +20,11 @@ import {
 } from "@cloudflare/workers-utils";
 import {
 	assertNonConfigured,
+	assertProjectCommandsAvailable,
 	confirmAutoConfigDetails,
 	displayAutoConfigDetails,
 	getProjectCommand,
+	getDetailsForAutoConfig,
 } from "./details";
 import {
 	isFrameworkSupported,
@@ -168,7 +170,10 @@ export async function runAutoConfig(
 	const { npx } = packageManager;
 	let buildCommand =
 		dryRunConfigurationResults.buildCommandOverride ??
-		autoConfigDetails.buildCommand;
+		autoConfigDetails.buildCommand ??
+		(autoConfigDetails.commandError && autoConfigDetails.framework.id === "vite"
+			? "vite build"
+			: undefined);
 	// Preserve shell commands while normalizing Vite selected by framework overrides.
 	if (buildCommand === "vite build" || buildCommand === `${npx} vite build`) {
 		buildCommand = getProjectCommand(
@@ -360,6 +365,29 @@ export async function runAutoConfig(
 		}
 	}
 
+	// Setup can install missing packages or activate the plugin. Recheck command
+	// readiness after those changes, only when a build will actually be executed.
+	if (target === "cf" && runBuild && autoConfigDetails.commandError) {
+		const configuredDetails = await getDetailsForAutoConfig({
+			projectPath: autoConfigDetails.projectPath,
+			target,
+			context,
+		});
+		assertProjectCommandsAvailable(configuredDetails);
+		buildCommand =
+			configurationResults.buildCommandOverride ??
+			configuredDetails.buildCommand ??
+			buildCommand;
+		if (buildCommand === "vite build" || buildCommand === `${npx} vite build`) {
+			buildCommand = getProjectCommand(
+				buildCommand,
+				packageManager,
+				configuredDetails.packageJson,
+				target
+			);
+		}
+		autoConfigSummary.buildCommand = buildCommand;
+	}
 	if (buildCommand && runBuild) {
 		await context.runCommand(
 			buildCommand,
