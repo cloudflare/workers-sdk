@@ -67,6 +67,41 @@ describe.each([
 	});
 });
 
+describe.each([
+	["input", InputWorkerSchema],
+	["output", OutputWorkerSchema],
+] as const)("%s Worker tail consumers", (_name, schema) => {
+	it("accepts tail and experimental streaming tail consumers", ({ expect }) => {
+		const result = schema.parse({
+			...baseConfig,
+			tailConsumers: [{ worker: "tail-worker" }],
+			experimental: {
+				streamingTailConsumers: [{ worker: "stream-worker" }],
+			},
+		});
+		expect(result.tailConsumers).toEqual([{ worker: "tail-worker" }]);
+		expect(result.experimental).toEqual({
+			streamingTailConsumers: [{ worker: "stream-worker" }],
+		});
+	});
+
+	it("rejects the removed `streaming` flag on tailConsumers", ({ expect }) => {
+		const result = schema.safeParse({
+			...baseConfig,
+			tailConsumers: [{ worker: "stream-worker", streaming: true }],
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects unknown experimental fields", ({ expect }) => {
+		const result = schema.safeParse({
+			...baseConfig,
+			experimental: { unknownFeature: true },
+		});
+		expect(result.success).toBe(false);
+	});
+});
+
 describe("InputWorkerSchema", () => {
 	describe("env singleton bindings", () => {
 		it("accepts undefined env", ({ expect }) => {

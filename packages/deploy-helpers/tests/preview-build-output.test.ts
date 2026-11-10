@@ -732,7 +732,11 @@ describe("previewBuildOutput", () => {
 		["triggers", { triggers: [{ type: "scheduled", schedule: "0 * * * *" }] }],
 		[
 			"streaming tail consumers",
-			{ tailConsumers: [{ worker: "tail-worker", streaming: true }] },
+			{
+				experimental: {
+					streamingTailConsumers: [{ worker: "tail-worker" }],
+				},
+			},
 		],
 		["unsafe metadata", { unsafe: { metadata: { custom: true } } }],
 		[

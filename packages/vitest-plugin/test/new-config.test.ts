@@ -347,6 +347,75 @@ test("wraps Workflows bound to the config's own Worker and connects tail consume
 	);
 });
 
+test("connects the config's experimental streaming tail consumers", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
+	await seed({
+		"vitest.config.mts": vitestConfig({
+			config: true,
+			miniflare: {
+				workers: [
+					{
+						name: "streaming-tail-worker",
+						compatibilityDate: "2025-12-02",
+						modules: [
+							{
+								type: "ESModule",
+								path: "index.mjs",
+								contents:
+									"export default { tailStream() { console.log('streaming tail received'); } };",
+							},
+						],
+					},
+				],
+			},
+		}),
+		"cloudflare.config.ts": dedent`
+			export default {
+				worker: {
+					name: "test-worker",
+					compatibilityDate: "2025-12-02",
+					entrypoint: "./index.ts",
+					experimental: {
+						streamingTailConsumers: [
+							{ worker: "streaming-tail-worker" },
+							{ worker: "missing-worker" },
+						],
+					},
+				},
+			};
+		`,
+		"index.ts": dedent`
+			export default {
+				fetch() {
+					return new Response("ok");
+				},
+			};
+		`,
+		"index.test.ts": dedent`
+			import { SELF } from "cloudflare:test";
+			import { it } from "vitest";
+
+			it("handles a request", async ({ expect }) => {
+				const response = await SELF.fetch("http://example.com");
+				expect(await response.text()).toBe("ok");
+			});
+		`,
+	});
+
+	const result = await vitestRun();
+
+	await expect(result.exitCode).resolves.toBe(0);
+	expect(result.stdout).toMatch("1 passed");
+	const output = `${result.stdout}${result.stderr}`;
+	expect(output).toMatch("streaming tail received");
+	expect(output).toMatch(
+		'Tail consumer "missing-worker" was not found in `miniflare.workers`.'
+	);
+});
+
 test("merges `miniflare` options over the config's Worker", async ({
 	expect,
 	seed,

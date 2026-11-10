@@ -9,6 +9,7 @@ import {
 	DurableObjectExpectingTransferExportSchema,
 	DurableObjectRenamedExportSchema,
 	DurableObjectTransferredExportSchema,
+	ExperimentalSchema,
 	FlagshipBindingSchema,
 	HyperdriveBindingSchema,
 	KnownBindingSchema,
@@ -444,6 +445,14 @@ const MiniflareTailConsumerSchema = TailConsumerSchema.extend({
 	props: z.record(z.string(), z.unknown()).optional(),
 });
 
+/**
+ * Extends the config `experimental` table so streaming tail consumers accept
+ * the same miniflare-internal fields as regular tail consumers.
+ */
+const MiniflareExperimentalSchema = ExperimentalSchema.extend({
+	streamingTailConsumers: z.array(MiniflareTailConsumerSchema).optional(),
+});
+
 // ---------------------------------------------------------------------------
 // Worker config schema (extends OutputWorkerSchema)
 // ---------------------------------------------------------------------------
@@ -466,6 +475,7 @@ export const MiniflareWorkerConfigBaseSchema = OutputWorkerSchema.omit({
 	exports: true,
 	assets: true,
 	tailConsumers: true,
+	experimental: true,
 }).extend({
 	manifest: MiniflareManifestSchema.optional(),
 	env: z
@@ -475,6 +485,7 @@ export const MiniflareWorkerConfigBaseSchema = OutputWorkerSchema.omit({
 	exports: MiniflareExportsSchema.optional(),
 	assets: MiniflareAssetsSchema.optional(),
 	tailConsumers: z.array(MiniflareTailConsumerSchema).optional(),
+	experimental: MiniflareExperimentalSchema.optional(),
 });
 
 export type ParsedMiniflareWorkerConfig = Omit<

@@ -1358,7 +1358,7 @@ export async function previewBuildOutput(
 			}
 		);
 	}
-	if (workerConfig.tailConsumers?.some((consumer) => consumer.streaming)) {
+	if ((workerConfig.experimental?.streamingTailConsumers?.length ?? 0) > 0) {
 		throw new UserError(
 			"Preview uploads from Build Output don't support streaming tail consumers.",
 			{

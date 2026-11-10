@@ -310,12 +310,7 @@ function filterTails(
 	const seen = new Set<string>();
 	return tails?.filter((tail) => {
 		// The configuration file and `miniflare` options may name the same tail consumer
-		const key = JSON.stringify([
-			tail.worker,
-			tail.streaming ?? false,
-			tail.entrypoint,
-			tail.props,
-		]);
+		const key = JSON.stringify([tail.worker, tail.entrypoint, tail.props]);
 		if (seen.has(key)) {
 			return false;
 		}
@@ -504,10 +499,13 @@ function pointStreamingTailsAtRunner(
 	configWorkerName: string,
 	runnerName: string
 ): void {
-	worker.config.tailConsumers = worker.config.tailConsumers?.map((tail) =>
-		tail.streaming && tail.worker === configWorkerName
-			? { ...tail, worker: runnerName }
-			: tail
+	const experimental = worker.config.experimental;
+	if (experimental?.streamingTailConsumers === undefined) {
+		return;
+	}
+	experimental.streamingTailConsumers = experimental.streamingTailConsumers.map(
+		(tail) =>
+			tail.worker === configWorkerName ? { ...tail, worker: runnerName } : tail
 	);
 }
 
@@ -554,6 +552,12 @@ function resolveProjectWorkers(
 		worker.config.tailConsumers,
 		auxiliaryWorkers
 	);
+	if (worker.config.experimental !== undefined) {
+		worker.config.experimental.streamingTailConsumers = filterTails(
+			worker.config.experimental.streamingTailConsumers,
+			auxiliaryWorkers
+		);
+	}
 
 	// The runner replaces the Worker under test, so it takes the runner's name
 	worker.config.name = runnerName;

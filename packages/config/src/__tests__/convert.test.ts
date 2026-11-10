@@ -1583,7 +1583,7 @@ describe("convertToWranglerConfig", () => {
 	});
 
 	describe("tail consumers", () => {
-		it("maps non-streaming consumers to tail_consumers", ({ expect }) => {
+		it("maps tailConsumers to tail_consumers", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
 					...baseWorker,
@@ -1595,11 +1595,15 @@ describe("convertToWranglerConfig", () => {
 			expect(result.streaming_tail_consumers).toBeUndefined();
 		});
 
-		it("maps streaming consumers to streaming_tail_consumers", ({ expect }) => {
+		it("maps experimental.streamingTailConsumers to streaming_tail_consumers", ({
+			expect,
+		}) => {
 			const result = convertToWranglerConfig({
 				worker: {
 					...baseWorker,
-					tailConsumers: [{ worker: "stream-worker", streaming: true }],
+					experimental: {
+						streamingTailConsumers: [{ worker: "stream-worker" }],
+					},
 				},
 				containers: [],
 			});
@@ -1609,15 +1613,14 @@ describe("convertToWranglerConfig", () => {
 			expect(result.tail_consumers).toBeUndefined();
 		});
 
-		it("splits a mixed list of consumers into the two arrays", ({ expect }) => {
+		it("maps both kinds of consumer side by side", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
 					...baseWorker,
-					tailConsumers: [
-						{ worker: "a" },
-						{ worker: "b", streaming: true },
-						{ worker: "c", streaming: false },
-					],
+					tailConsumers: [{ worker: "a" }, { worker: "c" }],
+					experimental: {
+						streamingTailConsumers: [{ worker: "b" }, { worker: "a" }],
+					},
 				},
 				containers: [],
 			});
@@ -1625,7 +1628,23 @@ describe("convertToWranglerConfig", () => {
 				{ service: "a" },
 				{ service: "c" },
 			]);
-			expect(result.streaming_tail_consumers).toEqual([{ service: "b" }]);
+			expect(result.streaming_tail_consumers).toEqual([
+				{ service: "b" },
+				{ service: "a" },
+			]);
+		});
+
+		it("omits both fields when the lists are empty", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					tailConsumers: [],
+					experimental: { streamingTailConsumers: [] },
+				},
+				containers: [],
+			});
+			expect(result).not.toHaveProperty("tail_consumers");
+			expect(result).not.toHaveProperty("streaming_tail_consumers");
 		});
 	});
 

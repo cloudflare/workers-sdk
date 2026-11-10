@@ -684,6 +684,37 @@ describe("convertV4MiniflareOptions", () => {
 		);
 	});
 
+	test("converts tails and streaming tails to separate tail consumer lists", ({
+		expect,
+	}) => {
+		const converted = convertV4MiniflareOptions({
+			script: "export default {};",
+			tails: [
+				"tail-worker",
+				{ name: "named-tail-worker", entrypoint: "Tail", props: { id: 1 } },
+			],
+			streamingTails: ["streaming-tail-worker"],
+		});
+
+		expect(converted.workers[0].config.tailConsumers).toEqual([
+			{ worker: "tail-worker" },
+			{ worker: "named-tail-worker", entrypoint: "Tail", props: { id: 1 } },
+		]);
+		expect(converted.workers[0].config.experimental).toEqual({
+			streamingTailConsumers: [{ worker: "streaming-tail-worker" }],
+		});
+	});
+
+	test("omits tail consumer lists without tails", ({ expect }) => {
+		const converted = convertV4MiniflareOptions({
+			script: "export default {};",
+			tails: [],
+		});
+
+		expect(converted.workers[0].config).not.toHaveProperty("tailConsumers");
+		expect(converted.workers[0].config).not.toHaveProperty("experimental");
+	});
+
 	test("preserves supported asset options", ({ expect }) => {
 		const converted = convertV4MiniflareOptions({
 			script: "export default {};",

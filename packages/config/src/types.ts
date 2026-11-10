@@ -473,18 +473,16 @@ export interface WorkerConfig {
 	triggers?: Trigger[];
 
 	/**
-	 * A list of Tail Workers that are bound to this Worker.
+	 * A list of Tail Workers that are bound to this Worker. Each consumer
+	 * receives this Worker's tail events through its `tail()` handler.
 	 *
-	 * `@cloudflare/config` unifies regular and streaming tail consumers under
-	 * a single field; pass `streaming: true` to forward streaming tail events.
+	 * For reference, see https://developers.cloudflare.com/workers/observability/logs/tail-workers/
 	 *
 	 * @default []
 	 */
 	tailConsumers?: Array<{
 		/** The name of the service tail events will be forwarded to. */
 		worker: string;
-		/** Whether to stream tail events in real time. */
-		streaming?: boolean;
 	}>;
 
 	/**
@@ -627,6 +625,26 @@ export interface WorkerConfig {
 	 * @internal
 	 */
 	firstPartyWorker?: boolean;
+
+	/**
+	 * Experimental features. Fields here may change or be removed without a
+	 * major version bump.
+	 *
+	 * @default {}
+	 */
+	experimental?: {
+		/**
+		 * A list of Streaming Tail Workers that are bound to this Worker. Each
+		 * consumer receives this Worker's tail events through its
+		 * `tailStream()` handler.
+		 *
+		 * @default []
+		 */
+		streamingTailConsumers?: Array<{
+			/** The name of the service streaming tail events will be forwarded to. */
+			worker: string;
+		}>;
+	};
 
 	/**
 	 * "Unsafe" tables for runtime features that aren't directly supported by

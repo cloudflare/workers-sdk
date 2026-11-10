@@ -727,7 +727,10 @@ const PlacementSchema = z.union([
 
 export const TailConsumerSchema = z.strictObject({
 	worker: z.string(),
-	streaming: z.boolean().optional(),
+});
+
+export const ExperimentalSchema = z.strictObject({
+	streamingTailConsumers: z.array(TailConsumerSchema).optional(),
 });
 
 const TriggerSchema = z.discriminatedUnion("type", [
@@ -825,6 +828,7 @@ const BaseWorkerSchema = z.strictObject({
 	workersDev: z.boolean().optional(),
 	previewUrls: z.boolean().optional(),
 	firstPartyWorker: z.boolean().optional(),
+	experimental: ExperimentalSchema.optional(),
 	unsafe: UnsafeSchema.optional(),
 	// TODO: support previews
 	env: EnvSchema,
