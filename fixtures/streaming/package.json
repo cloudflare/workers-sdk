@@ -1,0 +1,21 @@
+{
+	"name": "@fixture/streaming",
+	"private": true,
+	"scripts": {
+		"start": "wrangler dev -c client-worker/wrangler.jsonc -c main-worker/wrangler.jsonc",
+		"test:ci": "vitest run",
+		"check:type": "tsc -p tsconfig.worker.json",
+		"type:tests": "tsc -p tsconfig.node.json"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:^",
+		"@cloudflare/workers-types": "catalog:default",
+		"typescript": "catalog:default",
+		"undici": "catalog:default",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}
