@@ -1,5 +1,32 @@
 # @cloudflare/autoconfig
 
+## 0.11.0
+
+### Minor Changes
+
+- [#16787](https://github.com/cloudflare/workers-sdk/pull/16787) [`0d4741a`](https://github.com/cloudflare/workers-sdk/commit/0d4741ad6345009b39a6a0b1ccca3bcc8485a062) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Detect cf applications inside package-manager workspaces without requiring an application-local lockfile.
+
+  Use the enclosing workspace's package manager while keeping framework commands, output directories, and package.json updates local to the application. Wrangler's detection and command behavior are unchanged.
+
+  This changes the pre-1.0 cf integration contract: framework commands are returned without package-manager prefixes for all cf projects, including standalone applications. Before upgrading, cf consumers must resolve executables from the application's and ancestor directories' `node_modules/.bin` for build, dev, and the autoconfig `runCommand` callback. Older cf runners without local executable resolution must be updated first.
+
+### Patch Changes
+
+- [#16810](https://github.com/cloudflare/workers-sdk/pull/16810) [`cdc970b`](https://github.com/cloudflare/workers-sdk/commit/cdc970b7bd39dcd42af65bdadab7c38ce0b409fb) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-10
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16758](https://github.com/cloudflare/workers-sdk/pull/16758) [`325dc69`](https://github.com/cloudflare/workers-sdk/commit/325dc69bb06a78ef237322b89ac9aeafc7060534) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix JavaScript configuration parsing for Svelte projects using object spread
+
+  Use a parser that supports object spread when updating JavaScript configuration files. This prevents configuration failures for Svelte projects using Drizzle or Better Auth and other framework configurations containing modern JavaScript syntax.
+
+  Vite autoconfiguration reports a configuration error when an object spread, computed property, or accessor after the plugins array could override the Cloudflare plugin. Place the effective plugins array after these properties before retrying autoconfiguration.
+
+- Updated dependencies [[`6af492e`](https://github.com/cloudflare/workers-sdk/commit/6af492e92394c3e638bda4cf6d560698cef1c715), [`cdc970b`](https://github.com/cloudflare/workers-sdk/commit/cdc970b7bd39dcd42af65bdadab7c38ce0b409fb), [`44b39b0`](https://github.com/cloudflare/workers-sdk/commit/44b39b02765d246479f49b690f9e9b3d8645a303)]:
+  - @cloudflare/workers-utils@0.53.0
+  - @cloudflare/cli-shared-helpers@0.3.6
+  - @cloudflare/config@0.31.1
+
 ## 0.10.0
 
 ### Minor Changes

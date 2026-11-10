@@ -1,5 +1,34 @@
 # miniflare
 
+## 5.20261110.0-beta
+
+### Patch Changes
+
+- [#16810](https://github.com/cloudflare/workers-sdk/pull/16810) [`cdc970b`](https://github.com/cloudflare/workers-sdk/commit/cdc970b7bd39dcd42af65bdadab7c38ce0b409fb) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-10
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16810](https://github.com/cloudflare/workers-sdk/pull/16810) [`cdc970b`](https://github.com/cloudflare/workers-sdk/commit/cdc970b7bd39dcd42af65bdadab7c38ce0b409fb) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261109.1 | ^5.20261110.1 |
+  | workerd                   | 1.20261109.1  | 1.20261110.1  |
+
+- [#16807](https://github.com/cloudflare/workers-sdk/pull/16807) [`4e7e9f1`](https://github.com/cloudflare/workers-sdk/commit/4e7e9f12b7996415fb63ae72a6d2c2f6ac3640ed) Thanks [@brady-eaiti](https://github.com/brady-eaiti)! - Remove the empty placeholder directory Miniflare creates when `assets.directory` doesn't exist yet
+
+  Previously each process left an empty `miniflare-assets-*` directory in the system temp directory, which built up over many runs from fresh checkouts or before a first build. The placeholder now lives inside the instance's own temporary directory, so `dispose()` and process exit remove it.
+
+- [#16612](https://github.com/cloudflare/workers-sdk/pull/16612) [`267dadb`](https://github.com/cloudflare/workers-sdk/commit/267dadbe69ac8221febef059382cec68eaec1b19) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Limit the environment passed to local Browser Rendering and ensure a usable home directory
+
+  Chrome now receives only the host configuration needed for browser operation, keeping unrelated application credentials out of its environment. It uses the operating system account's home directory when `HOME` is missing or empty. If the account cannot be looked up, Chrome uses its temporary profile directory as its home. Temporary browser profiles are created with owner-only permissions on POSIX platforms.
+
+- [#16740](https://github.com/cloudflare/workers-sdk/pull/16740) [`44b39b0`](https://github.com/cloudflare/workers-sdk/commit/44b39b02765d246479f49b690f9e9b3d8645a303) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Redact header values outside a safe diagnostic allowlist, regardless of log sanitization settings.
+
+  Apply the same filtering to request, response, and request-options diagnostics. Strip `X-Auth-Key` alongside `Authorization` when forwarding local artifact Git requests.
+
 ## 5.20261109.0-beta
 
 ### Patch Changes
