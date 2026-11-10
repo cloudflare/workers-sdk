@@ -334,7 +334,7 @@ export class LocalRuntimeController extends RuntimeController {
 			complianceConfig: {
 				compliance_region: nextState.complianceRegion,
 			},
-			configFileName: nextState.configFileName,
+			dockerUnavailableHint: `To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your ${nextState.configFileName} or pass --enable-containers=false.`,
 			registryConfigureCommand: "wrangler containers registries configure",
 		});
 		if (this.containerBeingBuilt) {

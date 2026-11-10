@@ -376,14 +376,17 @@ describe("prepareContainerImagesForDev", () => {
 			const result = await prepareContainerImagesForDev({
 				dockerPath: "test-docker",
 				containerOptions: [],
-				configFileName: "test config file",
+				dockerUnavailableHint: "test hint",
 				registryConfigureCommand: "test registry configure",
 				onContainerImagePreparationStart: onStart,
 				onContainerImagePreparationEnd: onEnd,
 				logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 			});
 			expect(verifyDockerInstalled).toHaveBeenCalledWith(
-				expect.objectContaining({ dockerPath: "test-docker" })
+				expect.objectContaining({
+					dockerPath: "test-docker",
+					hint: "test hint",
+				})
 			);
 			expect(startContainerBuild).not.toHaveBeenCalled();
 			expect(runDockerCmd).toHaveBeenCalledExactlyOnceWith("test-docker", [
@@ -397,13 +400,12 @@ describe("prepareContainerImagesForDev", () => {
 	);
 
 	it.skipIf(process.platform === "win32")(
-		"defaults the Docker error to Wrangler dev advice",
+		"defaults the Docker error to running dev with no hint",
 		async ({ expect }) => {
 			vi.mocked(verifyDockerInstalled).mockClear();
 			await prepareContainerImagesForDev({
 				dockerPath: "test-docker",
 				containerOptions: [],
-				configFileName: "wrangler.jsonc",
 				registryConfigureCommand: "test registry configure",
 				onContainerImagePreparationStart: vi.fn(),
 				onContainerImagePreparationEnd: vi.fn(),
@@ -412,7 +414,7 @@ describe("prepareContainerImagesForDev", () => {
 			expect(verifyDockerInstalled).toHaveBeenCalledWith(
 				expect.objectContaining({
 					operation: "running dev",
-					hint: "To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your wrangler.jsonc or pass --enable-containers=false.",
+					hint: undefined,
 				})
 			);
 		}
@@ -425,13 +427,12 @@ describe("prepareContainerImagesForDev", () => {
 			await prepareContainerImagesForDev({
 				dockerPath: "test-docker",
 				containerOptions: [],
-				configFileName: "wrangler.jsonc",
 				registryConfigureCommand: "test registry configure",
 				onContainerImagePreparationStart: vi.fn(),
 				onContainerImagePreparationEnd: vi.fn(),
 				logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 				operation: "running tests",
-				disableContainersHint: "Disable Containers in the test config.",
+				dockerUnavailableHint: "Disable Containers in the test config.",
 			});
 			expect(verifyDockerInstalled).toHaveBeenCalledWith(
 				expect.objectContaining({
