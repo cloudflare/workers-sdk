@@ -5,7 +5,6 @@ import {
 	getWorkerBundleDir,
 } from "@cloudflare/build-output-utils";
 import { normalizePath } from "vite";
-import { createBuildApp } from "../build";
 import {
 	applyWorkerEsbuildSupported,
 	cloudflareBuiltInModules,
@@ -71,11 +70,8 @@ export const configPlugin = createPlugin("config", (ctx) => {
 					},
 				},
 				environments: getEnvironmentsConfig(ctx, userConfig, env.mode),
-				builder: {
-					buildApp:
-						userConfig.builder?.buildApp ??
-						createBuildApp(ctx.resolvedPluginConfig),
-				},
+				// Opt in to Vite's environment builder when running `vite build`.
+				builder: {},
 			};
 		},
 		// Set the Build Output directories while Vite resolves the config, so that plugins reading

@@ -6,6 +6,7 @@ import { defineConfig, preview } from "vite";
 
 export function createConfig(assetsOnly: boolean) {
 	return defineConfig({
+		build: { assetsInlineLimit: 0 },
 		plugins: [
 			cloudflare({
 				types: { includeRuntime: false },
