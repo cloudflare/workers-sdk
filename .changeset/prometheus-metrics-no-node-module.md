@@ -1,6 +1,7 @@
 ---
 "@cloudflare/workers-utils": patch
 "@cloudflare/edge-preview-authenticated-proxy": patch
+"@cloudflare/format-errors": patch
 ---
 
 Build the `prometheus-metrics` export without the Node.js `createRequire` banner
