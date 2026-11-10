@@ -76,9 +76,12 @@ export async function buildApp(
 			}));
 		});
 
-	if (!clientEnvironment.isBuilt) {
+	// Vite 6 does not set `isBuilt`, so also track the client build done here
+	let isClientBuilt = clientEnvironment.isBuilt;
+	if (!isClientBuilt) {
 		if (hasClientEntry) {
 			await builder.build(clientEnvironment);
+			isClientBuilt = true;
 		} else if (
 			assetEnvironments.some(
 				({ environment }) =>
@@ -88,10 +91,11 @@ export async function buildApp(
 			resolvedPluginConfig.prerenderWorkerEnvironmentName
 		) {
 			await fallbackBuild(builder, clientEnvironment);
+			isClientBuilt = true;
 		}
 	}
 
-	if (!clientEnvironment.isBuilt) {
+	if (!isClientBuilt) {
 		if (
 			resolvedPluginConfig.type === "workers" &&
 			workerEnvironments.some(
