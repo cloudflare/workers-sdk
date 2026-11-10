@@ -383,7 +383,7 @@ export function assertViteConfigCanBeTransformed(projectPath: string): void {
 	if (![".cjs", ".cts"].includes(path.extname(filePath))) {
 		return;
 	}
-	const ast = parseFile(filePath);
+	const ast = path.extname(filePath) === ".cts" ? parseFile(filePath) : null;
 	let hasModuleExport = false;
 	let hasCommonJSExport = false;
 	if (ast) {

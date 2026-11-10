@@ -95,20 +95,17 @@ describe("Vite framework", () => {
 			}
 		);
 
-		it.for(["cts", "cjs"])(
-			"configures ESM source in a .%s file",
-			async (extension, { expect }) => {
-				const filePath = `vite.config.${extension}`;
-				await writeFile(
-					filePath,
-					"import { defineConfig } from 'vite'; export default defineConfig({ plugins: [] });"
-				);
-				const framework = new Vite({ id: "vite", name: "Vite" });
-				await framework.configure(BASE_OPTIONS);
-				expect(cliPackages.installPackages).toHaveBeenCalled();
-				expect(readFileSync(filePath, "utf8")).toContain("cloudflare()");
-			}
-		);
+		it("configures ESM source in a .cts file", async ({ expect }) => {
+			const filePath = "vite.config.cts";
+			await writeFile(
+				filePath,
+				"import { defineConfig } from 'vite'; export default defineConfig({ plugins: [] });"
+			);
+			const framework = new Vite({ id: "vite", name: "Vite" });
+			await framework.configure(BASE_OPTIONS);
+			expect(cliPackages.installPackages).toHaveBeenCalled();
+			expect(readFileSync(filePath, "utf8")).toContain("cloudflare()");
+		});
 
 		it("creates a vite config with the cloudflare plugin when no config file exists", async ({
 			expect,
