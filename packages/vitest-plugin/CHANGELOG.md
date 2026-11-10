@@ -1,5 +1,23 @@
 # @cloudflare/vitest-plugin
 
+## 1.7.0
+
+### Minor Changes
+
+- [#15695](https://github.com/cloudflare/workers-sdk/pull/15695) [`d437be3`](https://github.com/cloudflare/workers-sdk/commit/d437be397b9e36d76f1a0cd44fe56e77c70a077d) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Run the Containers that the Wrangler configuration attaches to Durable Objects
+
+  Previously, the plugin disabled Containers, so those Durable Objects ran without `ctx.container`. The plugin now builds or pulls the Containers' images before each project's tests run and gives the Durable Objects a real `ctx.container`, so these projects now need Docker. To keep running their tests without Docker, set `dev.enable_containers` to `false` in the Wrangler configuration, which disables the Containers. Cloudflare-managed registry images are not supported yet.
+
+### Patch Changes
+
+- [#16810](https://github.com/cloudflare/workers-sdk/pull/16810) [`cdc970b`](https://github.com/cloudflare/workers-sdk/commit/cdc970b7bd39dcd42af65bdadab7c38ce0b409fb) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-10
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`cb9534f`](https://github.com/cloudflare/workers-sdk/commit/cb9534f17b40f4b327cdaf12ae1dd22a381f6800), [`6af492e`](https://github.com/cloudflare/workers-sdk/commit/6af492e92394c3e638bda4cf6d560698cef1c715), [`cdc970b`](https://github.com/cloudflare/workers-sdk/commit/cdc970b7bd39dcd42af65bdadab7c38ce0b409fb), [`cdc970b`](https://github.com/cloudflare/workers-sdk/commit/cdc970b7bd39dcd42af65bdadab7c38ce0b409fb), [`4e7e9f1`](https://github.com/cloudflare/workers-sdk/commit/4e7e9f12b7996415fb63ae72a6d2c2f6ac3640ed), [`267dadb`](https://github.com/cloudflare/workers-sdk/commit/267dadbe69ac8221febef059382cec68eaec1b19), [`022ee9d`](https://github.com/cloudflare/workers-sdk/commit/022ee9dd5b13d811b439332ee0f8ca9affb6a403), [`44b39b0`](https://github.com/cloudflare/workers-sdk/commit/44b39b02765d246479f49b690f9e9b3d8645a303), [`325dc69`](https://github.com/cloudflare/workers-sdk/commit/325dc69bb06a78ef237322b89ac9aeafc7060534)]:
+  - wrangler@4.160.0
+  - miniflare@5.20261110.0-beta
+
 ## 1.6.1
 
 ### Patch Changes
