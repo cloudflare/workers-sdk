@@ -1170,7 +1170,7 @@ export default{
 				Content-Disposition: form-data; name="index.js.map"; filename="index.js.map"
 				Content-Type: application/source-map
 
-				{"version":3,"sources":["index.js"],"sourceRoot":"","sourcesContent":["\\nimport txt from './textfile.txt';\\nimport hello from './hello.wasm';\\nexport default{\\n  async fetch(){\\n\\t\\tconst module = await WebAssembly.instantiate(hello);\\n    return new Response(txt + module.exports.hello);\\n  }\\n}\\n"],"mappings":";AACA,OAAO,SAAS;AAChB,OAAO,WAAW;AAClB,IAAO,gBAAO;AAAA,EACZ,MAAM,QAAO;AACb,UAAM,SAAS,MAAM,YAAY,YAAY,KAAK;AAChD,WAAO,IAAI,SAAS,MAAM,OAAO,QAAQ,KAAK;AAAA,EAChD;AACF;","names":[],"file":"index.js"}
+				{"version":3,"sources":["index.js"],"sourcesContent":["\\nimport txt from './textfile.txt';\\nimport hello from './hello.wasm';\\nexport default{\\n  async fetch(){\\n\\t\\tconst module = await WebAssembly.instantiate(hello);\\n    return new Response(txt + module.exports.hello);\\n  }\\n}\\n"],"mappings":";AACA,OAAO,SAAS;AAChB,OAAO,WAAW;AAClB,IAAO,gBAAO;AAAA,EACZ,MAAM,QAAO;AACb,UAAM,SAAS,MAAM,YAAY,YAAY,KAAK;AAChD,WAAO,IAAI,SAAS,MAAM,OAAO,QAAQ,KAAK;AAAA,EAChD;AACF;","names":[],"file":"index.js"}
 				------formdata-undici-0.test--
 				"
 			`);
@@ -1320,7 +1320,7 @@ export default{
 				Content-Disposition: form-data; name="index.js.map"; filename="index.js.map"
 				Content-Type: application/source-map
 
-				{"version":3,"sources":["index.js"],"sourceRoot":"","sourcesContent":["\\nimport txt from './textfile.txt';\\nimport hello from './hello.wasm';\\nexport default{\\n  async fetch(){\\n\\t\\tconst module = await WebAssembly.instantiate(hello);\\n    return new Response(txt + module.exports.hello);\\n  }\\n}\\n"],"mappings":";AACA,OAAO,SAAS;AAChB,OAAO,WAAW;AAClB,IAAO,gBAAO;AAAA,EACZ,MAAM,QAAO;AACb,UAAM,SAAS,MAAM,YAAY,YAAY,KAAK;AAChD,WAAO,IAAI,SAAS,MAAM,OAAO,QAAQ,KAAK;AAAA,EAChD;AACF;","names":[],"file":"index.js"}
+				{"version":3,"sources":["index.js"],"sourcesContent":["\\nimport txt from './textfile.txt';\\nimport hello from './hello.wasm';\\nexport default{\\n  async fetch(){\\n\\t\\tconst module = await WebAssembly.instantiate(hello);\\n    return new Response(txt + module.exports.hello);\\n  }\\n}\\n"],"mappings":";AACA,OAAO,SAAS;AAChB,OAAO,WAAW;AAClB,IAAO,gBAAO;AAAA,EACZ,MAAM,QAAO;AACb,UAAM,SAAS,MAAM,YAAY,YAAY,KAAK;AAChD,WAAO,IAAI,SAAS,MAAM,OAAO,QAAQ,KAAK;AAAA,EAChD;AACF;","names":[],"file":"index.js"}
 				------formdata-undici-0.test--
 				"
 			`);
