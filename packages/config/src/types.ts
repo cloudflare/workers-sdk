@@ -198,7 +198,7 @@ type DurableObjectContainerImage = ContainerImage & {
 	 * `frm.registry.cloudflare.com`. Only one jurisdiction is supported for now.
 	 * Without `jurisdictions`, the image uses the default managed registry.
 	 */
-	jurisdictions?: "fedramp"[];
+	jurisdictions?: ["fedramp"];
 };
 
 /** Application-wide observability settings shared by all Containers. */
