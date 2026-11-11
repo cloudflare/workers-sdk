@@ -1,4 +1,4 @@
-import { once } from "node:events";
+import { EventEmitter, once } from "node:events";
 import http from "node:http";
 import net from "node:net";
 import { DeferredPromise, Headers, Miniflare, Response } from "miniflare";
@@ -683,5 +683,37 @@ describe("handleWebSocket", () => {
 		);
 
 		await closed;
+	});
+});
+
+describe("handleWebSocket upgrade request headers", () => {
+	test("does not forward Accept-Encoding to dispatchFetch (#15199)", async ({
+		expect,
+	}) => {
+		const dispatchFetch = vi.fn().mockResolvedValue({
+			webSocket: null,
+			headers: new Headers(),
+		});
+		const httpServer = new http.Server();
+		handleWebSocket(httpServer, { dispatchFetch } as unknown as Miniflare);
+
+		const socket = Object.assign(new EventEmitter(), {
+			destroy: vi.fn(),
+			destroyed: false,
+		});
+		const request = {
+			url: "/ws",
+			method: "GET",
+			headers: {
+				host: "localhost:5173",
+				upgrade: "websocket",
+				"accept-encoding": "gzip, deflate, br",
+			},
+		};
+		httpServer.emit("upgrade", request, socket, Buffer.alloc(0));
+		await vi.waitFor(() => expect(dispatchFetch).toHaveBeenCalled());
+
+		const init = dispatchFetch.mock.calls[0][1];
+		expect(new Headers(init.headers).has("accept-encoding")).toBe(false);
 	});
 });
