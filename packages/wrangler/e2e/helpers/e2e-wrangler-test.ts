@@ -95,21 +95,20 @@ export class WranglerE2ETestHelper {
 	/**
 	 * Run a Wrangler command as best-effort cleanup.
 	 *
-	 * Uses a short timeout (default 5s) and swallows errors, so that flaky or
-	 * slow backend responses during resource deletion don't cause test hooks to
-	 * time out and mask real test failures.
+	 * Uses a short timeout (default 5s), captures output without logging it, and
+	 * swallows errors so cleanup cannot obscure the original test failure.
 	 */
 	async bestEffortRun(
 		wranglerCommand: string,
 		{ timeout = 5_000, ...options }: WranglerCommandOptions = {}
 	) {
 		try {
-			return await this.run(wranglerCommand, { timeout, ...options });
-		} catch (e) {
-			console.warn(
-				`Best-effort cleanup "${wranglerCommand}" failed:`,
-				e instanceof Error ? e.message : e
-			);
+			return await this.run(wranglerCommand, {
+				timeout,
+				...options,
+				silent: true,
+			});
+		} catch {
 			return undefined;
 		}
 	}
