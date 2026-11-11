@@ -16,7 +16,7 @@ import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, describe, it, vi } from "vitest";
 import { writeFileAtomically } from "../src/core/atomic-write";
 import { createFileStorage } from "../src/core/file-storage";
-import { createProcessOwner } from "../src/core/process-owner";
+import { ProcessOwnerChecker } from "../src/core/process-owner";
 import { EncryptedFileCredentialStore } from "../src/credential-store/encrypted-file-store";
 import { FileCredentialStore } from "../src/credential-store/file-store";
 import { getRefreshLockPath } from "../src/refresh-lock";
@@ -67,7 +67,10 @@ describe("atomic credential writes", () => {
 				storage.path(),
 				`owner-999999999-${randomUUID()}`
 			);
-			const live = temporaryCopy(storage.path(), createProcessOwner());
+			const live = temporaryCopy(
+				storage.path(),
+				new ProcessOwnerChecker().createOwner()
+			);
 			const unrelated = temporaryCopy(
 				storage.path() + ".other",
 				`owner-999999999-${randomUUID()}`

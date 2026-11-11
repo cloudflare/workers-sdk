@@ -3,10 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import { afterEach, describe, it, vi } from "vitest";
-import {
-	createProcessOwner,
-	isProcessOwnerAlive,
-} from "../src/core/process-owner";
+import { ProcessOwnerChecker } from "../src/core/process-owner";
 
 function mockProcessStartIdentity() {
 	const probe = vi.fn(() => "1");
@@ -42,12 +39,14 @@ describe("credential process ownership", () => {
 	});
 
 	it("recognizes its own process start identity", ({ expect }) => {
-		expect(isProcessOwnerAlive(createProcessOwner())).toBe(true);
+		const owners = new ProcessOwnerChecker();
+		expect(owners.isAlive(owners.createOwner())).toBe(true);
 	});
 
 	it("reclaims a reused PID only when its process-start identity changed", ({
 		expect,
 	}) => {
+		const owners = new ProcessOwnerChecker();
 		const owner = `owner-${process.pid}-${"0".repeat(16)}-${randomUUID()}`;
 		if (process.platform === "linux") {
 			const read = fs.readFileSync;
@@ -63,13 +62,14 @@ describe("credential process ownership", () => {
 			);
 		}
 		syncBuiltinESMExports();
-		expect(isProcessOwnerAlive(owner)).toBe(false);
+		expect(owners.isAlive(owner)).toBe(false);
 	});
 
 	it("keeps ownership when process-start identity cannot be inspected", ({
 		expect,
 	}) => {
-		const owner = createProcessOwner();
+		const owners = new ProcessOwnerChecker();
+		const owner = owners.createOwner();
 		vi.spyOn(childProcess, "execFileSync").mockImplementation(() => {
 			throw new Error("denied");
 		});
@@ -77,27 +77,28 @@ describe("credential process ownership", () => {
 			throw new Error("denied");
 		});
 		syncBuiltinESMExports();
-		expect(isProcessOwnerAlive(owner)).toBe(true);
+		expect(owners.isAlive(owner)).toBe(true);
 	});
 
 	it("caches identity probes for five seconds but checks PID liveness on every poll", ({
 		expect,
 	}) => {
+		const owners = new ProcessOwnerChecker();
 		const { probe, owner } = mockProcessStartIdentity();
 		const kill = vi.spyOn(process, "kill").mockReturnValue(true);
 		const now = vi.spyOn(performance, "now").mockReturnValue(0);
 
-		expect(isProcessOwnerAlive(owner)).toBe(true);
+		expect(owners.isAlive(owner)).toBe(true);
 		now.mockReturnValue(100);
-		expect(isProcessOwnerAlive(owner)).toBe(true);
+		expect(owners.isAlive(owner)).toBe(true);
 		now.mockReturnValue(4_999);
-		expect(isProcessOwnerAlive(owner)).toBe(true);
+		expect(owners.isAlive(owner)).toBe(true);
 		expect(probe).toHaveBeenCalledOnce();
 		expect(kill).toHaveBeenCalledTimes(3);
 
 		probe.mockReturnValue("2");
 		now.mockReturnValue(5_000);
-		expect(isProcessOwnerAlive(owner)).toBe(false);
+		expect(owners.isAlive(owner)).toBe(false);
 		expect(probe).toHaveBeenCalledTimes(2);
 		expect(kill).toHaveBeenCalledTimes(4);
 	});
@@ -105,63 +106,86 @@ describe("credential process ownership", () => {
 	it("detects process exit immediately despite a cached identity", ({
 		expect,
 	}) => {
+		const owners = new ProcessOwnerChecker();
 		const { probe, owner } = mockProcessStartIdentity();
 		const kill = vi.spyOn(process, "kill").mockReturnValue(true);
 		vi.spyOn(performance, "now").mockReturnValue(0);
-		expect(isProcessOwnerAlive(owner)).toBe(true);
+		expect(owners.isAlive(owner)).toBe(true);
 
 		kill.mockImplementationOnce(() => {
 			throw Object.assign(new Error("exited"), { code: "ESRCH" });
 		});
-		expect(isProcessOwnerAlive(owner)).toBe(false);
+		expect(owners.isAlive(owner)).toBe(false);
 		expect(probe).toHaveBeenCalledOnce();
 
 		probe.mockReturnValue("2");
-		expect(isProcessOwnerAlive(owner)).toBe(false);
+		expect(owners.isAlive(owner)).toBe(false);
 		expect(probe).toHaveBeenCalledTimes(2);
 	});
 
 	it("throttles failed identity probes without evicting uncertain owners", ({
 		expect,
 	}) => {
+		const owners = new ProcessOwnerChecker();
 		const { probe, owner } = mockProcessStartIdentity();
 		const now = vi.spyOn(performance, "now").mockReturnValue(0);
 		probe.mockImplementationOnce(() => {
 			throw new Error("denied");
 		});
-		expect(isProcessOwnerAlive(owner)).toBe(true);
+		expect(owners.isAlive(owner)).toBe(true);
 		now.mockReturnValue(100);
-		expect(isProcessOwnerAlive(owner)).toBe(true);
+		expect(owners.isAlive(owner)).toBe(true);
 		expect(probe).toHaveBeenCalledOnce();
 
 		probe.mockReturnValue("2");
 		now.mockReturnValue(5_000);
-		expect(isProcessOwnerAlive(owner)).toBe(false);
+		expect(owners.isAlive(owner)).toBe(false);
 		expect(probe).toHaveBeenCalledTimes(2);
 	});
 
 	it("does not share cached checks between different ownership records", ({
 		expect,
 	}) => {
+		const owners = new ProcessOwnerChecker();
 		const { probe, owner } = mockProcessStartIdentity();
 		vi.spyOn(performance, "now").mockReturnValue(0);
-		expect(isProcessOwnerAlive(owner)).toBe(true);
-		expect(isProcessOwnerAlive(owner.slice(0, -36) + randomUUID())).toBe(true);
+		expect(owners.isAlive(owner)).toBe(true);
+		expect(owners.isAlive(owner.slice(0, -36) + randomUUID())).toBe(true);
 		expect(probe).toHaveBeenCalledTimes(2);
 	});
 
 	it("bounds cached ownership checks instead of retaining every prior owner", ({
 		expect,
 	}) => {
+		const owners = new ProcessOwnerChecker();
 		const { probe, owner } = mockProcessStartIdentity();
 		vi.spyOn(performance, "now").mockReturnValue(0);
-		expect(isProcessOwnerAlive(owner)).toBe(true);
+		expect(owners.isAlive(owner)).toBe(true);
 		for (let index = 0; index < 128; index++) {
-			expect(isProcessOwnerAlive(owner.slice(0, -36) + randomUUID())).toBe(
-				true
-			);
+			expect(owners.isAlive(owner.slice(0, -36) + randomUUID())).toBe(true);
 		}
-		expect(isProcessOwnerAlive(owner)).toBe(true);
+		expect(owners.isAlive(owner)).toBe(true);
 		expect(probe).toHaveBeenCalledTimes(130);
+	});
+
+	it("keeps cached ownership checks private to each checker", ({ expect }) => {
+		const { probe, owner } = mockProcessStartIdentity();
+		const first = new ProcessOwnerChecker();
+		const second = new ProcessOwnerChecker();
+		expect(first.isAlive(owner)).toBe(true);
+		expect(first.isAlive(owner)).toBe(true);
+		expect(probe).toHaveBeenCalledOnce();
+		expect(second.isAlive(owner)).toBe(true);
+		expect(probe).toHaveBeenCalledTimes(2);
+	});
+
+	it("caches its own process identity only within a checker", ({ expect }) => {
+		const { probe } = mockProcessStartIdentity();
+		const first = new ProcessOwnerChecker();
+		const second = new ProcessOwnerChecker();
+		expect(first.createOwner()).not.toBe(first.createOwner());
+		expect(probe).toHaveBeenCalledOnce();
+		second.createOwner();
+		expect(probe).toHaveBeenCalledTimes(2);
 	});
 });

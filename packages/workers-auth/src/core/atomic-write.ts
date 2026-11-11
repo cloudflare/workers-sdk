@@ -10,17 +10,16 @@ import {
 import path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { resolveFilePath } from "./file-path";
-import {
-	createProcessOwner,
-	isProcessOwner,
-	isProcessOwnerAlive,
-} from "./process-owner";
+import { isProcessOwner, ProcessOwnerChecker } from "./process-owner";
 
 function temporaryPrefix(filePath: string): string {
 	return `.auth-${createHash("sha256").update(filePath).digest("hex").slice(0, 16)}-`;
 }
 
-function removeAbandonedWrites(filePath: string): void {
+function removeAbandonedWrites(
+	filePath: string,
+	owners: ProcessOwnerChecker
+): void {
 	const directory = path.dirname(filePath);
 	if (!existsSync(directory)) {
 		return;
@@ -31,7 +30,7 @@ function removeAbandonedWrites(filePath: string): void {
 			continue;
 		}
 		const owner = entry.slice(prefix.length);
-		if (isProcessOwner(owner) && !isProcessOwnerAlive(owner)) {
+		if (isProcessOwner(owner) && !owners.isAlive(owner)) {
 			removeDirSync(path.join(directory, entry));
 		}
 	}
@@ -40,7 +39,7 @@ function removeAbandonedWrites(filePath: string): void {
 /** Clear the actual destination and abandoned copies without removing symlinks. */
 export function clearFile(filePath: string): boolean {
 	const destination = resolveFilePath(filePath);
-	removeAbandonedWrites(destination);
+	removeAbandonedWrites(destination, new ProcessOwnerChecker());
 	const existed = existsSync(destination);
 	rmSync(destination, { force: true });
 	return existed;
@@ -55,10 +54,11 @@ export function writeFileAtomically(filePath: string, contents: string): void {
 	const destination = resolveFilePath(filePath);
 	const directory = path.dirname(destination);
 	mkdirSync(directory, { recursive: true });
-	removeAbandonedWrites(destination);
+	const owners = new ProcessOwnerChecker();
+	removeAbandonedWrites(destination, owners);
 	const temporaryDirectory = path.join(
 		directory,
-		temporaryPrefix(destination) + createProcessOwner()
+		temporaryPrefix(destination) + owners.createOwner()
 	);
 	mkdirSync(temporaryDirectory, { mode: 0o700 });
 	try {

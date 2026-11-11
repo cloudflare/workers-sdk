@@ -182,9 +182,14 @@ Each CLI is a thin **descriptor + entrypoint**:
   (`withRefreshLock` / `tryWithRefreshLock`). The resolver's `getForTransaction()` pins
   the selected backend until the transaction finishes.
 - Lock acquisition fails closed; live owners are never evicted on a timer.
-- Refreshes share an in-flight result across flow instances. Lock release errors
-  must not replace transaction results; OAuth requests are time-bounded, and the
-  lock wait budget includes room for a retried token exchange and persistence.
+- Each flow deduplicates in-flight refreshes by canonical backend file path.
+  Separate flows serialize exchanges with the profile lock and re-read their
+  own storage after acquiring it, so one backend's result cannot refresh another.
+- Lock release marks ownership as completed before deleting it, so a later
+  transaction can reclaim a completed live owner's lock after cleanup fails.
+  Release errors must not replace transaction results; OAuth requests are
+  time-bounded, and the lock wait budget includes room for a retried token
+  exchange and persistence.
 - Plaintext-to-encrypted migration acquires the same lock, or defers migration
   and returns a read-only snapshot when another transaction holds it.
 - Credential writes replace the file atomically with mode `0o600`.
@@ -195,8 +200,9 @@ Each CLI is a thin **descriptor + entrypoint**:
 - Ownership includes process-start identity when available, so PID reuse does
   not strand locks. If identity cannot be checked, fail closed rather than
   evicting a potentially live transaction.
-- Cache process-start probes briefly in a bounded per-owner cache, but check PID
-  liveness on every poll so exited owners can be reclaimed immediately.
+- Each lock acquisition or file operation owns its `ProcessOwnerChecker` and its
+  bounded, short-lived process-start cache. Check PID liveness on every poll so
+  exited owners can be reclaimed immediately; do not share mutable module state.
 
 ## BUILD
 

@@ -2,6 +2,7 @@ import {
 	mkdirSync,
 	mkdtempSync,
 	lstatSync,
+	readFileSync,
 	readdirSync,
 	renameSync,
 	rmdirSync,
@@ -11,11 +12,7 @@ import {
 import path from "node:path";
 import { removeDirSync, UserError } from "@cloudflare/workers-utils";
 import { resolveFilePath } from "./core/file-path";
-import {
-	createProcessOwner,
-	isProcessOwner,
-	isProcessOwnerAlive,
-} from "./core/process-owner";
+import { isProcessOwner, ProcessOwnerChecker } from "./core/process-owner";
 import { AUTH_REQUEST_TIMEOUT_MS } from "./core/timeouts";
 import type { OAuthFlowLogger } from "./context";
 
@@ -58,9 +55,7 @@ function releaseSafely(
 	try {
 		release();
 	} catch {
-		logger?.debug(
-			"Could not release the credential lock; a later process will reclaim it."
-		);
+		logger?.debug("Could not remove the credential lock.");
 	}
 }
 
@@ -88,7 +83,7 @@ function removeOwner(lockDir: string, owner?: string): void {
 	}
 }
 
-function removeDeadOwner(lockDir: string): void {
+function removeDeadOwner(lockDir: string, owners: ProcessOwnerChecker): void {
 	let entries: string[];
 	try {
 		entries = readdirSync(lockDir);
@@ -102,10 +97,35 @@ function removeDeadOwner(lockDir: string): void {
 		removeOwner(lockDir);
 	} else if (entries.length === 1) {
 		const owner = entries[0];
-		if (isProcessOwner(owner) && !isProcessOwnerAlive(owner)) {
+		if (
+			isProcessOwner(owner) &&
+			(!owners.isAlive(owner) || isOwnerReleased(lockDir, owner))
+		) {
 			removeOwner(lockDir, owner);
 		}
 	}
+}
+
+function isOwnerReleased(lockDir: string, owner: string): boolean {
+	try {
+		return readFileSync(path.join(lockDir, owner), "utf8") === "released";
+	} catch (error) {
+		if (hasCode(error, "ENOENT")) {
+			return true;
+		}
+		throw error;
+	}
+}
+
+/** Record completion without requiring permission to rename directory entries. */
+function releaseOwner(lockDir: string, owner: string): void {
+	try {
+		writeFileSync(path.join(lockDir, owner), "released", { flag: "r+" });
+	} catch {
+		removeOwner(lockDir, owner);
+		return;
+	}
+	removeOwner(lockDir, owner);
 }
 
 /**
@@ -113,22 +133,25 @@ function removeDeadOwner(lockDir: string): void {
  * missing or partially written at the lock path, even if the acquirer crashes.
  * Unknown owners and PIDs whose liveness cannot be established fail closed.
  */
-function tryAcquire(lockDir: string): (() => void) | undefined {
+function tryAcquire(
+	lockDir: string,
+	owners: ProcessOwnerChecker
+): (() => void) | undefined {
 	mkdirSync(path.dirname(lockDir), { recursive: true });
 	const candidate = mkdtempSync(lockDir + ".");
-	const owner = createProcessOwner();
+	const owner = owners.createOwner();
 	try {
 		writeFileSync(path.join(candidate, owner), "", { mode: 0o600, flag: "wx" });
 		for (let attempt = 0; attempt < 2; attempt++) {
 			try {
 				renameSync(candidate, lockDir);
-				return () => removeOwner(lockDir, owner);
+				return () => releaseOwner(lockDir, owner);
 			} catch (error) {
 				if (!hasCode(error, "EEXIST", "ENOTEMPTY", "EPERM")) {
 					throw error;
 				}
 				if (attempt === 0) {
-					removeDeadOwner(lockDir);
+					removeDeadOwner(lockDir, owners);
 				}
 			}
 		}
@@ -147,7 +170,7 @@ export function tryWithRefreshLock<T>(
 	fn: () => T,
 	logger?: Pick<OAuthFlowLogger, "debug">
 ): { acquired: true; value: T } | { acquired: false } {
-	const release = tryAcquire(lockDir);
+	const release = tryAcquire(lockDir, new ProcessOwnerChecker());
 	if (!release) {
 		return { acquired: false };
 	}
@@ -180,9 +203,10 @@ export async function withRefreshLock<T>(
 	const maxRetries = options?.maxRetries ?? Infinity;
 	const retryDelayMs = options?.retryDelayMs ?? RETRY_DELAY_MS;
 	const deadline = performance.now() + (options?.timeoutMs ?? LOCK_TIMEOUT_MS);
+	const owners = new ProcessOwnerChecker();
 
 	for (let attempt = 0; attempt < maxRetries; attempt++) {
-		const release = tryAcquire(lockDir);
+		const release = tryAcquire(lockDir, owners);
 		if (release) {
 			try {
 				return await fn();

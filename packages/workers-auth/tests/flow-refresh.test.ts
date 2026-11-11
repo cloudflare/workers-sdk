@@ -222,6 +222,49 @@ describe("refreshToken (via loginOrRefreshIfRequired)", () => {
 		clearAccessCaches();
 	});
 
+	it.for([false, true])(
+		"refreshes different backends of one profile independently across separate flows: %s",
+		async (separateFlows, { expect }) => {
+			const plaintext = createTestContext();
+			const encrypted = createTestContext();
+			const profilePath = plaintext.storage.path();
+			vi.spyOn(plaintext.storage, "path").mockReturnValue(
+				`${profilePath}.toml`
+			);
+			vi.spyOn(encrypted.storage, "path").mockReturnValue(`${profilePath}.enc`);
+			for (const { storage } of [plaintext, encrypted]) {
+				storage.write({
+					oauth_token: "expired-access",
+					refresh_token: "RT_A",
+					expiration_time: PAST_DATE,
+				});
+			}
+			const exchange = vi.fn(() =>
+				HttpResponse.json({
+					access_token: "fresh-access-token",
+					refresh_token: "RT_NEXT",
+					expires_in: 3600,
+					scope: "account:read",
+				})
+			);
+			msw.use(mockAccessProbe(), http.post("*/oauth2/token", exchange));
+			let activeStorage = plaintext.storage;
+			plaintext.ctx.storageFactory = () => activeStorage;
+			const flow = createOAuthFlow(plaintext.ctx);
+			const first = flow.getOAuthTokenFromLocalState();
+			activeStorage = encrypted.storage;
+			const secondFlow = separateFlows ? createOAuthFlow(encrypted.ctx) : flow;
+			const second = secondFlow.getOAuthTokenFromLocalState();
+			expect(await Promise.all([first, second])).toEqual([
+				"fresh-access-token",
+				"fresh-access-token",
+			]);
+			expect(plaintext.storage.read()?.oauth_token).toBe("fresh-access-token");
+			expect(encrypted.storage.read()?.oauth_token).toBe("fresh-access-token");
+			expect(exchange).toHaveBeenCalledTimes(2);
+		}
+	);
+
 	it("pins the selected backend until a refresh commits", async ({
 		expect,
 	}) => {

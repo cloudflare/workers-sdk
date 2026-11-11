@@ -6,9 +6,6 @@ const OWNER_PATTERN =
 	/^owner-([1-9]\d*)-(?:([\da-f]{16}|unknown)-)?[\da-f-]{36}$/;
 const IDENTITY_CACHE_TTL_MS = 5_000;
 const MAX_CACHED_OWNERS = 128;
-const checkedOwners = new Map<string, number>();
-let ownIdentity: string | undefined;
-let checkedOwnIdentity = false;
 
 function processIdentity(pid: number): string | undefined {
 	try {
@@ -56,60 +53,67 @@ function processIdentity(pid: number): string | undefined {
 	}
 }
 
-/** Identify an owner by PID and process start, without putting secrets on disk. */
-export function createProcessOwner(): string {
-	if (!checkedOwnIdentity) {
-		ownIdentity = processIdentity(process.pid);
-		checkedOwnIdentity = true;
-	}
-	return `owner-${process.pid}-${ownIdentity ?? "unknown"}-${randomUUID()}`;
-}
-
 /** Recognize both current and older lock ownership records. */
 export function isProcessOwner(owner: string): boolean {
 	return OWNER_PATTERN.test(owner);
 }
 
-/** Treat uncertain liveness as alive; only reclaim a proven abandoned owner. */
-export function isProcessOwnerAlive(owner: string): boolean {
-	const match = OWNER_PATTERN.exec(owner);
-	if (!match) {
-		return true;
-	}
-	const pid = Number(match[1]);
-	try {
-		process.kill(pid, 0);
-	} catch (error) {
-		const exited =
-			error instanceof Error && "code" in error && error.code === "ESRCH";
-		if (exited) {
-			checkedOwners.delete(owner);
+/** Cache process-start probes for one lock acquisition or file operation. */
+export class ProcessOwnerChecker {
+	private readonly checkedOwners = new Map<string, number>();
+	private ownIdentity: string | undefined;
+	private checkedOwnIdentity = false;
+
+	/** Identify an owner by PID and process start, without storing secrets. */
+	createOwner(): string {
+		if (!this.checkedOwnIdentity) {
+			this.ownIdentity = processIdentity(process.pid);
+			this.checkedOwnIdentity = true;
 		}
-		return !exited;
+		return `owner-${process.pid}-${this.ownIdentity ?? "unknown"}-${randomUUID()}`;
 	}
-	const recordedIdentity = match[2];
-	if (!recordedIdentity || recordedIdentity === "unknown") {
-		return true;
-	}
-	const checkedAt = checkedOwners.get(owner);
-	if (
-		checkedAt !== undefined &&
-		performance.now() - checkedAt < IDENTITY_CACHE_TTL_MS
-	) {
-		return true;
-	}
-	const currentIdentity = processIdentity(pid);
-	if (currentIdentity !== undefined && currentIdentity !== recordedIdentity) {
-		checkedOwners.delete(owner);
-		return false;
-	}
-	checkedOwners.delete(owner);
-	if (checkedOwners.size >= MAX_CACHED_OWNERS) {
-		const oldestOwner = checkedOwners.keys().next().value;
-		if (oldestOwner !== undefined) {
-			checkedOwners.delete(oldestOwner);
+
+	/** Treat uncertain liveness as alive; reclaim only proven abandoned owners. */
+	isAlive(owner: string): boolean {
+		const match = OWNER_PATTERN.exec(owner);
+		if (!match) {
+			return true;
 		}
+		const pid = Number(match[1]);
+		try {
+			process.kill(pid, 0);
+		} catch (error) {
+			const exited =
+				error instanceof Error && "code" in error && error.code === "ESRCH";
+			if (exited) {
+				this.checkedOwners.delete(owner);
+			}
+			return !exited;
+		}
+		const recordedIdentity = match[2];
+		if (!recordedIdentity || recordedIdentity === "unknown") {
+			return true;
+		}
+		const checkedAt = this.checkedOwners.get(owner);
+		if (
+			checkedAt !== undefined &&
+			performance.now() - checkedAt < IDENTITY_CACHE_TTL_MS
+		) {
+			return true;
+		}
+		const currentIdentity = processIdentity(pid);
+		if (currentIdentity !== undefined && currentIdentity !== recordedIdentity) {
+			this.checkedOwners.delete(owner);
+			return false;
+		}
+		this.checkedOwners.delete(owner);
+		if (this.checkedOwners.size >= MAX_CACHED_OWNERS) {
+			const oldestOwner = this.checkedOwners.keys().next().value;
+			if (oldestOwner !== undefined) {
+				this.checkedOwners.delete(oldestOwner);
+			}
+		}
+		this.checkedOwners.set(owner, performance.now());
+		return true;
 	}
-	checkedOwners.set(owner, performance.now());
-	return true;
 }

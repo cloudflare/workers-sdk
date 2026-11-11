@@ -162,6 +162,45 @@ describe("withRefreshLock", () => {
 		expect(existsSync(lockDir())).toBe(false);
 	});
 
+	it.for(["unlinkSync", "rmdirSync"] as const)(
+		"reclaims a completed live owner's lock after %s fails during release",
+		async (operation, { expect }) => {
+			for (const synchronous of [false, true]) {
+				const complete = () => {
+					vi.spyOn(fs, operation).mockImplementationOnce(() => {
+						throw Object.assign(new Error("cleanup denied"), {
+							code: "EACCES",
+						});
+					});
+					syncBuiltinESMExports();
+					return 42;
+				};
+				if (synchronous) {
+					expect(tryWithRefreshLock(lockDir(), complete)).toEqual({
+						acquired: true,
+						value: 42,
+					});
+				} else {
+					expect(await withRefreshLock(lockDir(), async () => complete())).toBe(
+						42
+					);
+				}
+				if (operation === "unlinkSync") {
+					const [owner] = readdirSync(lockDir());
+					expect(fs.readFileSync(path.join(lockDir(), owner), "utf8")).toBe(
+						"released"
+					);
+				}
+				vi.restoreAllMocks();
+				syncBuiltinESMExports();
+				await expect(
+					withRefreshLock(lockDir(), async () => 43, FAST_RETRIES)
+				).resolves.toBe(43);
+				expect(existsSync(lockDir())).toBe(false);
+			}
+		}
+	);
+
 	it("fails closed for a live owner even when the lock is old", async ({
 		expect,
 	}) => {
@@ -211,6 +250,68 @@ describe("withRefreshLock", () => {
 		).rejects.toThrow("Another process");
 		expect(callback).not.toHaveBeenCalled();
 		expect(readdirSync(lockDir())).toEqual([replacement]);
+	});
+
+	it("does not delete a successor when completed-owner cleanup is delayed", async ({
+		expect,
+	}) => {
+		const unlink = fs.unlinkSync;
+		let replacement: string | undefined;
+		expect(
+			await withRefreshLock(lockDir(), async () => {
+				const [owner] = readdirSync(lockDir());
+				vi.spyOn(fs, "unlinkSync").mockImplementation((filePath) => {
+					if (filePath === path.join(lockDir(), owner)) {
+						removeDirSync(lockDir());
+						replacement = seedOwner(process.pid);
+					}
+					unlink(filePath);
+				});
+				syncBuiltinESMExports();
+				return 42;
+			})
+		).toBe(42);
+		expect(replacement).toBeDefined();
+		expect(readdirSync(lockDir())).toEqual([replacement]);
+	});
+
+	it("still releases ownership when marking it completed fails", async ({
+		expect,
+	}) => {
+		expect(
+			await withRefreshLock(lockDir(), async () => {
+				vi.spyOn(fs, "writeFileSync").mockImplementationOnce(() => {
+					throw Object.assign(new Error("write denied"), { code: "EACCES" });
+				});
+				syncBuiltinESMExports();
+				return 42;
+			})
+		).toBe(42);
+		expect(existsSync(lockDir())).toBe(false);
+	});
+
+	it("records completion when directory entries cannot be renamed or removed", async ({
+		expect,
+	}) => {
+		expect(
+			await withRefreshLock(lockDir(), async () => {
+				for (const operation of ["renameSync", "unlinkSync"] as const) {
+					vi.spyOn(fs, operation).mockImplementation(() => {
+						throw Object.assign(new Error("directory is read only"), {
+							code: "EACCES",
+						});
+					});
+				}
+				syncBuiltinESMExports();
+				return 42;
+			})
+		).toBe(42);
+		vi.restoreAllMocks();
+		syncBuiltinESMExports();
+		expect(await withRefreshLock(lockDir(), async () => 43, FAST_RETRIES)).toBe(
+			43
+		);
+		expect(existsSync(lockDir())).toBe(false);
 	});
 
 	it("fails closed for malformed ownership metadata", async ({ expect }) => {

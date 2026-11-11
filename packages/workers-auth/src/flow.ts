@@ -5,6 +5,7 @@ import {
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { getOauthToken } from "./callback-server";
+import { resolveFilePath } from "./core/file-path";
 import { AUTH_REQUEST_TIMEOUT_MS } from "./core/timeouts";
 import { getAPIToken, requireApiToken } from "./credentials";
 import { getOauthTokenViaDeviceFlow } from "./device-flow";
@@ -25,7 +26,6 @@ import type {
 } from "@cloudflare/workers-utils";
 
 type RefreshTokenResult = "refreshed" | "rejected" | "unreachable";
-const inflightRefreshes = new Map<string, Promise<RefreshTokenResult>>();
 
 /**
  * Reason why {@link OAuthFlowAPI.loginOrRefreshIfRequired} could not
@@ -222,6 +222,7 @@ export interface OAuthFlowAPI {
  */
 export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 	const oauthFlowState: OAuthFlowState = {};
+	const inflightRefreshes = new Map<string, Promise<RefreshTokenResult>>();
 	const generators = {
 		generateAuthUrl: ctx.generateAuthUrl ?? defaultGenerateAuthUrl,
 		generateRandomState: ctx.generateRandomState ?? defaultGenerateRandomState,
@@ -349,21 +350,23 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 	 * `"unreachable"` means no response arrived from the token endpoint, so the
 	 * refresh token may well still be valid: callers must not ask for a new login.
 	 */
-	async function refreshToken(profile?: string): Promise<RefreshTokenResult> {
-		const storage = getTransactionStorage(profile);
+	async function refreshToken(
+		storage: AuthConfigStorage
+	): Promise<RefreshTokenResult> {
 		const lockDir = getRefreshLockPath(storage.path());
+		const storagePath = resolveFilePath(storage.path());
 
-		const existing = inflightRefreshes.get(lockDir);
+		const existing = inflightRefreshes.get(storagePath);
 		if (existing) {
 			return existing;
 		}
 
 		const promise = doRefreshToken(storage, lockDir);
-		inflightRefreshes.set(lockDir, promise);
+		inflightRefreshes.set(storagePath, promise);
 		try {
 			return await promise;
 		} finally {
-			inflightRefreshes.delete(lockDir);
+			inflightRefreshes.delete(storagePath);
 		}
 	}
 
@@ -603,7 +606,9 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		} else if (isRefreshNeeded(props.profile)) {
 			// We're logged in, but the refresh token seems to have expired,
 			// so let's try to refresh it
-			const refreshed = await refreshToken(props.profile);
+			const refreshed = await refreshToken(
+				getTransactionStorage(props.profile)
+			);
 			if (refreshed === "refreshed") {
 				// The token was refreshed, so we're done here
 				return { loggedIn: true };
@@ -687,10 +692,11 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 	}
 
 	async function getOAuthTokenFromLocalState(): Promise<string | undefined> {
+		const storage = getTransactionStorage();
 		// Check if we have an OAuth token
 		let stored = readStoredAuthState({
 			warningLogger: ctx.logger,
-			storage: getStorage(),
+			storage,
 		});
 		if (!stored.accessToken) {
 			return undefined;
@@ -704,13 +710,13 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		const expired =
 			stored.accessToken && new Date() >= new Date(stored.accessToken.expiry);
 		if (expired) {
-			if ((await refreshToken()) !== "refreshed") {
+			if ((await refreshToken(storage)) !== "refreshed") {
 				return undefined;
 			}
 			// Re-read after the refresh has persisted the new token to disk.
 			stored = readStoredAuthState({
 				warningLogger: ctx.logger,
-				storage: getStorage(),
+				storage,
 			});
 		}
 
