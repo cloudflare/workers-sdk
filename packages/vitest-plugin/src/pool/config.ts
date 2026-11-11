@@ -848,14 +848,6 @@ async function parseCustomPoolOptions(
 		options.defines = define;
 	}
 
-	// Some assets plumbing that should be hidden from the end user
-	if (options.miniflare?.assets) {
-		options.miniflare.assets.routerConfig ??= {};
-		options.miniflare.assets.routerConfig.has_user_worker = Boolean(
-			options.main
-		);
-	}
-
 	options.projectWorkers = resolveProjectWorkers(
 		project,
 		options,

@@ -115,7 +115,6 @@ const MODULE_RUNNER_PATH = "./workers/runner-worker/module-runner.js";
 const MODULE_RUNNER_LEGACY_PATH =
 	"./workers/runner-worker/module-runner-legacy.js";
 const WRAPPER_PATH = "__VITE_WORKER_ENTRY__";
-const ASSETS_ONLY_MODULE = "__VITE_ASSETS_ONLY__.js";
 type MiniflareEnv = NonNullable<WorkerOptions["config"]["env"]>;
 type MiniflareExports = NonNullable<WorkerOptions["config"]["exports"]>;
 
@@ -164,21 +163,6 @@ async function getUserWorkerManifest(
 			[moduleRunner]: {
 				type: "esm",
 				contents: moduleRunnerContents,
-			},
-		},
-	};
-}
-
-function getAssetsOnlyManifest(
-	rootPath: string
-): NonNullable<WorkerOptions["config"]["manifest"]> {
-	return {
-		mainModule: ASSETS_ONLY_MODULE,
-		modulesRoot: rootPath,
-		modules: {
-			[ASSETS_ONLY_MODULE]: {
-				type: "esm",
-				contents: "export default {};",
 			},
 		},
 	};
@@ -895,17 +879,12 @@ export async function getPreviewMiniflareOptions(
 					...config,
 					exports: workerExports,
 					env,
+					// Without a bundle, the Worker is assets-only
 					manifest: previewWorker.bundle
 						? await getMiniflareManifest(previewWorker.bundle)
-						: previewWorker.assetsDir
-							? getAssetsOnlyManifest(resolvedViteConfig.root)
-							: undefined,
+						: undefined,
 					assets: previewWorker.assetsDir
-						? {
-								...assets,
-								directory: previewWorker.assetsDir,
-								hasUserWorker: previewWorker.bundle !== undefined,
-							}
+						? { ...assets, directory: previewWorker.assetsDir }
 						: undefined,
 				},
 				dev: {

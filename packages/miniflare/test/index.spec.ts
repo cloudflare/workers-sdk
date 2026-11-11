@@ -2353,9 +2353,8 @@ test("Miniflare: manually triggered scheduled events with assets", async ({
 				config: {
 					name: "",
 					compatibilityDate: "2025-05-01",
-					// Unmatched requests (e.g. `/`) fall back to the user worker below,
-					// so the asset router must know a user worker is present.
-					assets: { directory: tmp, hasUserWorker: true },
+					// Unmatched requests (e.g. `/`) fall back to the user worker below
+					assets: { directory: tmp },
 					manifest: singleModuleManifest(`
 				let scheduledRun = false;
 				let cron;
