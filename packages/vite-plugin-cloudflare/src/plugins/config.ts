@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { normalizePath } from "vite";
 import { hasAssetsConfigChanged } from "../asset-config";
-import { createBuildApp, removeAssetsField } from "../build";
+import { buildApp, removeAssetsField } from "../build";
 import {
 	applyWorkerEsbuildSupported,
 	cloudflareBuiltInModules,
@@ -25,6 +25,7 @@ import type { Unstable_RawConfig } from "wrangler";
  * Plugin to handle configuration and config file watching
  */
 export const configPlugin = createPlugin("config", (ctx) => {
+	const environmentNameToImportedAssetPaths = new Map<string, Set<string>>();
 	return {
 		config(userConfig, env) {
 			if (ctx.resolvedPluginConfig.type === "preview") {
@@ -78,7 +79,14 @@ export const configPlugin = createPlugin("config", (ctx) => {
 				builder: {
 					buildApp:
 						userConfig.builder?.buildApp ??
-						createBuildApp(ctx.resolvedPluginConfig),
+						((builder) => {
+							assertIsNotPreview(ctx);
+							return buildApp(
+								builder,
+								ctx.resolvedPluginConfig,
+								environmentNameToImportedAssetPaths
+							);
+						}),
 				},
 			};
 		},
@@ -150,10 +158,31 @@ export const configPlugin = createPlugin("config", (ctx) => {
 
 			viteDevServer.watcher.on("change", configChangedHandler);
 		},
+		writeBundle(_options, bundle) {
+			if (!ctx.getWorkerConfig(this.environment.name)) {
+				return;
+			}
+			const importedAssetPaths = new Set<string>();
+			for (const output of Object.values(bundle)) {
+				for (const assetPath of output.viteMetadata?.importedAssets ?? []) {
+					importedAssetPaths.add(assetPath);
+				}
+			}
+			environmentNameToImportedAssetPaths.set(
+				this.environment.name,
+				importedAssetPaths
+			);
+		},
 		// This hook is not supported in Vite 6
 		buildApp: {
 			order: "post",
 			async handler(builder) {
+				assertIsNotPreview(ctx);
+				await buildApp(
+					builder,
+					ctx.resolvedPluginConfig,
+					environmentNameToImportedAssetPaths
+				);
 				if (ctx.resolvedPluginConfig.type !== "workers") {
 					return;
 				}

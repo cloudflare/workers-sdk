@@ -266,7 +266,6 @@ export function createCloudflareEnvironmentOptions({
 	userConfig,
 	mode,
 	environmentName,
-	isEntryWorker,
 	isParentEnvironment,
 	hasNodeJsCompat,
 }: {
@@ -325,7 +324,6 @@ export function createCloudflareEnvironmentOptions({
 			target,
 			cssTarget: getWorkerCssTarget(userConfig, environmentName),
 			emitAssets: true,
-			manifest: isEntryWorker,
 			outDir: getOutputDirectory(userConfig, environmentName),
 			sourcemap: getWorkerSourcemap(userConfig, environmentName, workerConfig),
 			copyPublicDir: false,
