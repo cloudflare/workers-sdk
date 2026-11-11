@@ -252,13 +252,13 @@ function relocateSourceMap(
 	sourceMapDirectory: string
 ): CfWorkerSourceMap {
 	const { sourceRoot = "", ...rest } = map;
-	if (hasUrlScheme(sourceRoot)) {
+	if (isUrl(sourceRoot)) {
 		return { name, content: JSON.stringify(map) };
 	}
 	const fromDirectory = path.dirname(sourceMapPath);
 	const toDirectory = path.dirname(path.join(sourceMapDirectory, name));
 	const sources = map.sources.map((source) =>
-		hasUrlScheme(source)
+		isUrl(source)
 			? source
 			: path
 					.relative(
@@ -271,11 +271,12 @@ function relocateSourceMap(
 	return { name, content: JSON.stringify({ ...rest, sources }) };
 }
 
-// Two or more characters, so a Windows drive letter is not a scheme.
-const URL_SCHEME = /^[a-z][a-z\d+.-]+:/i;
+// A scheme of two or more characters, so a Windows drive letter is not one, or
+// a protocol-relative `//` URL.
+const URL_PATTERN = /^(?:[a-z][a-z\d+.-]+:|\/\/)/i;
 
-function hasUrlScheme(value: string): boolean {
-	return URL_SCHEME.test(value);
+function isUrl(value: string): boolean {
+	return URL_PATTERN.test(value);
 }
 
 /**

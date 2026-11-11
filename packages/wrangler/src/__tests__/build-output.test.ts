@@ -185,6 +185,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 					"../../src/index.ts",
 					"../lib/greet.ts",
 					"webpack://app/./src/virtual.ts",
+					"//cdn.example.com/src/remote.ts",
 				],
 				names: [],
 				mappings: "AAAA",
@@ -202,7 +203,44 @@ describe("wrangler build --experimental-cf-build-output", () => {
 			"../../../../../../src/index.ts",
 			"../../../../../../dist/lib/greet.ts",
 			"webpack://app/./src/virtual.ts",
+			"//cdn.example.com/src/remote.ts",
 		]);
+	});
+
+	it("keeps an unbundled Worker's source map with a protocol-relative `sourceRoot` as written", async ({
+		expect,
+	}) => {
+		const sourceMap = {
+			version: 3,
+			file: "index.js",
+			sourceRoot: "//cdn.example.com/src/",
+			sources: ["index.ts"],
+			names: [],
+			mappings: "AAAA",
+		};
+		await seed({
+			"cloudflare.config.ts": `export default { worker: {
+				name: "${WORKER_NAME}",
+				compatibilityDate: "2026-05-18",
+				entrypoint: "./dist/index.js",
+			} };`,
+			"wrangler.config.ts": `export default {
+				noBundle: true,
+			};`,
+			"dist/index.js": `export default {
+				async fetch() { return new Response("hello"); }
+			};
+			//# sourceMappingURL=index.js.map`,
+			"dist/index.js.map": JSON.stringify(sourceMap),
+		});
+
+		await runWrangler(
+			"build --experimental-new-config --experimental-cf-build-output"
+		);
+
+		expect(
+			JSON.parse(fs.readFileSync(bundlePath("index.js.map"), "utf8"))
+		).toEqual(sourceMap);
 	});
 
 	it("applies the `sourceRoot` of an unbundled Worker's source map and keeps sources outside the project", async ({
