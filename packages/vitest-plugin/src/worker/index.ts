@@ -175,15 +175,6 @@ function isDifferentIOContextError(e: unknown) {
 	);
 }
 
-function isUserConsoleLogResponse(response: unknown): boolean {
-	return (
-		typeof response === "object" &&
-		response !== null &&
-		"m" in response &&
-		response.m === "onUserConsoleLog"
-	);
-}
-
 // Module runners whose transport, `createRequire` and `createImportMeta` are
 // patched already (see `onModuleRunner` below). Module scope, as a reused
 // worker's runner outlives the pool connection of the file that patched it.
@@ -371,41 +362,42 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 		poolSocket.accept();
 		// Sending over the runner's WebSocket from another I/O context (a handler
 		// reached through `SELF`, a user Durable Object, a queue consumer, ...)
-		// fails. Buffer console messages and flush them from the runner's context
+		// fails. Buffer those messages and flush them from the runner's context
 		// instead: on the next successful post, and on a timer created here, in the
 		// runner's own context, because Vitest awaits every RPC call it made
-		// (`rpcDone()`) before it posts a file's result and a buffered log's call
-		// only settles once the message is sent — a log with nothing from the
+		// (`rpcDone()`) before it posts a file's result and a buffered call
+		// only settles once the message is sent — a message with nothing from the
 		// runner following it (a queue batch consumed as the file ends, a
 		// `waitUntil()` callback) would otherwise leave the run waiting on itself.
 		// The other context cannot resend from the runner reliably: an object
 		// whose input gate broke never completes that request (#14180), and
-		// neither does a handler that already answered.
-		const pendingConsoleLogs: unknown[] = [];
-		const sendPendingConsoleLogs = () => {
-			while (pendingConsoleLogs.length > 0) {
-				poolSocket.send(structuredSerializableStringify(pendingConsoleLogs[0]));
-				pendingConsoleLogs.shift();
+		// neither does a handler that already answered, such as one whose socket
+		// read rejects as its request ends (#16829).
+		const pendingMessages: unknown[] = [];
+		const sendPendingMessages = () => {
+			while (pendingMessages.length > 0) {
+				poolSocket.send(structuredSerializableStringify(pendingMessages[0]));
+				pendingMessages.shift();
 			}
 		};
-		const pendingConsoleLogsFlushInterval = setInterval(() => {
-			if (pendingConsoleLogs.length === 0) {
+		const pendingMessagesFlushInterval = setInterval(() => {
+			if (pendingMessages.length === 0) {
 				return;
 			}
 			try {
-				sendPendingConsoleLogs();
+				sendPendingMessages();
 			} catch (error) {
-				clearInterval(pendingConsoleLogsFlushInterval);
-				__console.error("Error flushing console logs from the runner:", error);
+				clearInterval(pendingMessagesFlushInterval);
+				__console.error("Error flushing messages from the runner:", error);
 			}
 		}, 50);
 		poolSocket.addEventListener("close", () => {
-			clearInterval(pendingConsoleLogsFlushInterval);
+			clearInterval(pendingMessagesFlushInterval);
 		});
 		init({
 			post: (response) => {
 				try {
-					sendPendingConsoleLogs();
+					sendPendingMessages();
 					poolSocket.send(structuredSerializableStringify(response));
 				} catch (error) {
 					// If the user called `console.log()` or similar from inside an
@@ -413,24 +405,11 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 					// from inside their own Durable Object, Vitest will try to send an
 					// RPC message from a non-`RunnerObject` I/O context. We'd still like
 					// to send the message, so if we detect a cross-DO I/O error we
-					// resend from the runner object.
+					// buffer it for the runner object to send.
 					// (Dynamic `import()` cross-DO errors are handled separately by the
 					// onModuleRunner transport patch below — see #12924.)
 					if (isDifferentIOContextError(error)) {
-						if (isUserConsoleLogResponse(response)) {
-							pendingConsoleLogs.push(response);
-							return;
-						}
-						const promise = runInRunnerObject(() => {
-							poolSocket.send(structuredSerializableStringify(response));
-						}).catch((e) => {
-							__console.error(
-								"Error sending to pool inside runner:",
-								e,
-								response
-							);
-						});
-						registerHandlerAndGlobalWaitUntil(promise);
+						pendingMessages.push(response);
 					} else {
 						__console.error("Error sending to pool:", error, response);
 					}
