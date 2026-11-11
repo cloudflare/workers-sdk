@@ -1,9 +1,9 @@
+import path from "node:path";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
 import { mockConsoleMethods } from "@cloudflare/workers-utils/test-helpers";
 import { afterAll, beforeAll, it } from "vitest";
 import { LongLivedCommand, runCommand } from "./command";
 import { makeRoot, seed } from "./setup";
-import { waitFor } from "./wait-for";
 
 const std = mockConsoleMethods();
 const cwd = makeRoot();
@@ -114,27 +114,39 @@ it("streams readiness output and stops a running command", async ({
 	expect(std.err).toBe("");
 });
 
-it("stops quietly after a command times out while preserving the timeout error", async ({
-	expect,
-	onTestFinished,
-}) => {
-	const command = new LongLivedCommand("node timeout.cjs", {
-		cwd,
-		silent: true,
-		timeout: 100,
-	});
-	onTestFinished(() => command.stop());
+it.for([false, true])(
+	"stops quietly after a command times out while preserving the timeout error (silent: %j)",
+	async (silent, { expect, onTestFinished }) => {
+		const command = new LongLivedCommand("node timeout.cjs", {
+			cwd,
+			silent,
+			timeout: 100,
+		});
+		onTestFinished(() => command.stop());
 
-	await expect(command.exitCode).rejects.toMatchObject({ name: "AbortError" });
-	await expect(command.output).rejects.toMatchObject({ name: "AbortError" });
-	// Wait for termination before exercising cleanup of an already exited command.
-	await waitFor(async () => {
-		expect(await command.signal("SIGTERM")).toBe(false);
-	});
-	await expect(command.stop()).resolves.toBeUndefined();
-	expect(std.out).toBe("");
-	expect(std.err).toBe("");
-});
+		await expect(command.exitCode).rejects.toMatchObject({
+			name: "AbortError",
+		});
+		await expect(command.output).rejects.toMatchObject({ name: "AbortError" });
+		await expect(command.stop()).resolves.toBeUndefined();
+		expect(std.out).toBe("");
+		expect(std.err).toBe("");
+	}
+);
+
+it(
+	"preserves spawn failures without waiting for a process that never started",
+	{ timeout: 5_000 },
+	async ({ expect }) => {
+		const command = new LongLivedCommand("node timeout.cjs", {
+			cwd: path.join(cwd, "missing"),
+			silent: true,
+		});
+
+		await expect(command.exitCode).rejects.toMatchObject({ code: "ENOENT" });
+		await expect(command.output).rejects.toMatchObject({ code: "ENOENT" });
+	}
+);
 
 it(
 	"finishes when a background child keeps the exited command's output pipes open",

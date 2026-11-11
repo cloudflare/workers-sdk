@@ -98,9 +98,22 @@ export class LongLivedCommand {
 			signal,
 		});
 
-		const exitPromise = events.once(this.commandProcess, "exit") as Promise<
-			[number | null, NodeJS.Signals | null]
-		>;
+		// An AbortError can arrive before Windows reports process termination.
+		// Keep listening for exit so callers cannot race teardown against it.
+		const processExited = new Promise<void>((resolve) => {
+			this.commandProcess.once("exit", () => resolve());
+		});
+		const exitPromise = (
+			events.once(this.commandProcess, "exit") as Promise<
+				[number | null, NodeJS.Signals | null]
+			>
+		).catch(async (error: unknown) => {
+			// Spawn failures have no process to wait for.
+			if (signal?.aborted && this.commandProcess.pid !== undefined) {
+				await processExited;
+			}
+			throw error;
+		});
 
 		// Read each pipe independently so closing stdout cannot discard later stderr.
 		const lineInterfaces = [
