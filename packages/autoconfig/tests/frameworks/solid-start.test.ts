@@ -76,7 +76,6 @@ describe("SolidStart", () => {
 
 			  environments: {
 			    ssr: {
-			      // Load SolidStart once in dev, so server functions work with the Cloudflare Vite plugin
 			      optimizeDeps: {
 			        exclude: ["@solidjs/start"]
 			      }

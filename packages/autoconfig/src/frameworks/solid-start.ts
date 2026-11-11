@@ -123,13 +123,6 @@ function excludeSolidStartFromServerPrebundling(
 						),
 					])
 				);
-				optimizeDeps.comments = [
-					b.commentLine(
-						" Load SolidStart once in dev, so server functions work with the Cloudflare Vite plugin",
-						true,
-						false
-					),
-				];
 				configObject.properties.push(
 					b.objectProperty(
 						b.identifier("environments"),
