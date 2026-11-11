@@ -6,6 +6,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { clearFile, writeFileAtomically } from "../core/atomic-write";
 import { parseFile, stringifyFile } from "../core/file-format";
+import { ProcessOwnerChecker } from "../core/process-owner";
 import { validateProfileName } from "../profiles";
 import type { UserAuthConfig } from "../config-file/auth";
 import type { FileFormat } from "../core/file-format";
@@ -85,12 +86,24 @@ export class FileCredentialStore implements CredentialStore {
 	 * default profile).
 	 * @param format on-disk file format (defaults to TOML for wrangler's
 	 * historical layout; cf and other CLIs pass JSON).
+	 * @param owners process-identity cache shared with the owning auth flow or resolver.
 	 */
 	constructor(
 		private readonly configPath: string,
 		private readonly profile?: string,
-		private readonly format: FileFormat = "toml"
+		private readonly format: FileFormat = "toml",
+		private readonly owners = new ProcessOwnerChecker()
 	) {}
+
+	/** Bind credential writes to the transaction's process-identity cache. */
+	getForTransaction(owners = this.owners): FileCredentialStore {
+		return new FileCredentialStore(
+			this.configPath,
+			this.profile,
+			this.format,
+			owners
+		);
+	}
 
 	private filePath(): string {
 		return getAuthConfigFilePath(this.configPath, this.profile, this.format);
@@ -108,11 +121,15 @@ export class FileCredentialStore implements CredentialStore {
 
 	write(config: UserAuthConfig): void {
 		const filePath = this.filePath();
-		writeFileAtomically(filePath, stringifyFile(this.format, config));
+		writeFileAtomically(
+			filePath,
+			stringifyFile(this.format, config),
+			this.owners
+		);
 	}
 
 	clear(): boolean {
-		return clearFile(this.filePath());
+		return clearFile(this.filePath(), this.owners);
 	}
 
 	path(): string {

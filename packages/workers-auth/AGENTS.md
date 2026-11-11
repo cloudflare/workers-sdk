@@ -200,9 +200,12 @@ Each CLI is a thin **descriptor + entrypoint**:
 - Ownership includes process-start identity when available, so PID reuse does
   not strand locks. If identity cannot be checked, fail closed rather than
   evicting a potentially live transaction.
-- Each lock acquisition or file operation owns its `ProcessOwnerChecker` and its
-  bounded, short-lived process-start cache. Check PID liveness on every poll so
-  exited owners can be reclaimed immediately; do not share mutable module state.
+- Each flow, resolver, or standalone storage instance owns a `ProcessOwnerChecker`.
+  Transactions pass the flow's checker through `getForTransaction(owners)` to
+  share it between locks and credential writes. The current process's identity
+  is probed lazily once per owning instance, not once per operation. Other owners'
+  probes use a bounded, short-lived cache; check PID liveness on every poll so
+  exited owners can be reclaimed immediately. Do not share mutable module state.
 
 ## BUILD
 

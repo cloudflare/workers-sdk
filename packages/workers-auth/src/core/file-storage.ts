@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { readFileSync } from "@cloudflare/workers-utils";
 import { clearFile, writeFileAtomically } from "./atomic-write";
 import { parseFile, stringifyFile } from "./file-format";
+import { ProcessOwnerChecker } from "./process-owner";
 import type { ConfigStorage } from "../config-file";
 import type { FileFormat } from "./file-format";
 
@@ -10,6 +11,7 @@ export function createFileStorage<T extends object>(
 	format: FileFormat,
 	getPath: () => string
 ): ConfigStorage<T> {
+	const owners = new ProcessOwnerChecker();
 	return {
 		read: () => {
 			const filePath = getPath();
@@ -31,10 +33,10 @@ export function createFileStorage<T extends object>(
 		},
 		write(config) {
 			const configPath = getPath();
-			writeFileAtomically(configPath, stringifyFile(format, config));
+			writeFileAtomically(configPath, stringifyFile(format, config), owners);
 		},
 		clear() {
-			return clearFile(getPath());
+			return clearFile(getPath(), owners);
 		},
 		path: getPath,
 	};

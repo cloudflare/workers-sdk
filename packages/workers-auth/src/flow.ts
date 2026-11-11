@@ -6,6 +6,7 @@ import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { getOauthToken } from "./callback-server";
 import { resolveFilePath } from "./core/file-path";
+import { ProcessOwnerChecker } from "./core/process-owner";
 import { AUTH_REQUEST_TIMEOUT_MS } from "./core/timeouts";
 import { getAPIToken, requireApiToken } from "./credentials";
 import { getOauthTokenViaDeviceFlow } from "./device-flow";
@@ -223,6 +224,7 @@ export interface OAuthFlowAPI {
 export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 	const oauthFlowState: OAuthFlowState = {};
 	const inflightRefreshes = new Map<string, Promise<RefreshTokenResult>>();
+	const owners = new ProcessOwnerChecker();
 	const generators = {
 		generateAuthUrl: ctx.generateAuthUrl ?? defaultGenerateAuthUrl,
 		generateRandomState: ctx.generateRandomState ?? defaultGenerateRandomState,
@@ -236,7 +238,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 
 	function getTransactionStorage(profile?: string): AuthConfigStorage {
 		const storage = getStorage(profile);
-		return storage.getForTransaction?.() ?? storage;
+		return storage.getForTransaction?.(owners) ?? storage;
 	}
 
 	const getClientId = () =>
@@ -324,7 +326,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 					scopes: oauth.scopes,
 				});
 			},
-			{ logger: ctx.logger }
+			{ logger: ctx.logger, owners }
 		);
 
 		ctx.logger.log(`Successfully logged in.`);
@@ -419,7 +421,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 					return getRefreshFailureResult(e);
 				}
 			},
-			{ logger: ctx.logger }
+			{ logger: ctx.logger, owners }
 		);
 	}
 
@@ -687,7 +689,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				ctx.logger.log(`Successfully logged out.`);
 				ctx.purgeOnLoginOrLogout?.();
 			},
-			{ logger: ctx.logger }
+			{ logger: ctx.logger, owners }
 		);
 	}
 

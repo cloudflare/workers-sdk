@@ -3,6 +3,7 @@ import path from "node:path";
 import { readFileSync } from "@cloudflare/workers-utils";
 import { clearFile, writeFileAtomically } from "../core/atomic-write";
 import { parseFile, stringifyFile } from "../core/file-format";
+import { ProcessOwnerChecker } from "../core/process-owner";
 import { getRefreshLockPath, tryWithRefreshLock } from "../refresh-lock";
 import {
 	decryptString,
@@ -92,14 +93,28 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 	 * default profile).
 	 * @param format on-disk format of the plaintext sibling file and the
 	 * encrypted payload (defaults to TOML for wrangler).
+	 * @param owners process-identity cache shared with the owning auth flow or resolver.
 	 */
 	constructor(
 		private readonly configPath: string,
 		private readonly keyProvider: KeyProvider,
 		private readonly onPlaintextMigration?: OnPlaintextMigration,
 		private readonly profile?: string,
-		private readonly format: FileFormat = "toml"
+		private readonly format: FileFormat = "toml",
+		private readonly owners = new ProcessOwnerChecker()
 	) {}
+
+	/** Bind migration and credential writes to the transaction's identity cache. */
+	getForTransaction(owners = this.owners): EncryptedFileCredentialStore {
+		return new EncryptedFileCredentialStore(
+			this.configPath,
+			this.keyProvider,
+			this.onPlaintextMigration,
+			this.profile,
+			this.format,
+			owners
+		);
+	}
 
 	private plaintextPath(): string {
 		return getAuthConfigFilePath(this.configPath, this.profile, this.format);
@@ -124,7 +139,9 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 				() =>
 					existsSync(encryptedPath)
 						? this.readEncryptedFile(encryptedPath)
-						: this.readPlaintext(plaintextPath, encryptedPath, true)
+						: this.readPlaintext(plaintextPath, encryptedPath, true),
+				undefined,
+				this.owners
 			);
 			return migration.acquired
 				? migration.value
@@ -141,13 +158,17 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 			this.configPath,
 			this.profile
 		);
-		writeFileAtomically(encryptedPath, JSON.stringify(envelope, null, "\t"));
+		writeFileAtomically(
+			encryptedPath,
+			JSON.stringify(envelope, null, "\t"),
+			this.owners
+		);
 		// Defensively scrub any plaintext file once we've written
 		// the encrypted version. Skipping this would leave plaintext
 		// credentials on disk indefinitely after the very first
 		// `--use-keyring` login.
 		const plaintextPath = this.plaintextPath();
-		clearFile(plaintextPath);
+		clearFile(plaintextPath, this.owners);
 	}
 
 	clear(): boolean {
@@ -156,10 +177,10 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 			this.profile
 		);
 		const plaintextPath = this.plaintextPath();
-		const encryptedExisted = clearFile(encryptedPath);
+		const encryptedExisted = clearFile(encryptedPath, this.owners);
 		// Also scrub any plaintext file, in case the user toggled
 		// backends in a previous session and the plaintext file lingered.
-		const plaintextExisted = clearFile(plaintextPath);
+		const plaintextExisted = clearFile(plaintextPath, this.owners);
 		try {
 			this.keyProvider.deleteKey();
 		} catch {

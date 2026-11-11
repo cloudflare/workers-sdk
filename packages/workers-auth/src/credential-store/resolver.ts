@@ -1,5 +1,6 @@
 import { existsSync, rmSync } from "node:fs";
 import { UserError } from "@cloudflare/workers-utils";
+import { ProcessOwnerChecker } from "../core/process-owner";
 import { getCloudflareAuthUseKeyringFromEnv } from "../env-vars";
 import {
 	EncryptedFileCredentialStore,
@@ -124,6 +125,7 @@ export function createCredentialStorageContext(
 		...context,
 		loginCommand: context.loginCommand ?? "your CLI login",
 		format: context.format ?? "toml",
+		owners: new ProcessOwnerChecker(),
 	};
 
 	function getActiveStore(profile?: string): CredentialStore {
@@ -139,14 +141,19 @@ export function createCredentialStorageContext(
 			write: (value) => getActiveStore(profile).write(value),
 			clear: () => getActiveStore(profile).clear(),
 			path: () => getActiveStore(profile).path(),
-			getForTransaction: () => getActiveStore(profile),
+			getForTransaction(owners) {
+				const store = getActiveStore(profile);
+				return store.getForTransaction?.(owners) ?? store;
+			},
 		};
 	}
 
 	return { storageFactory, getActiveStore };
 }
 
-type ResolvedConfig = Required<CredentialStorageContext>;
+type ResolvedConfig = Required<CredentialStorageContext> & {
+	owners: ProcessOwnerChecker;
+};
 
 function resolveActiveCredentialStore(
 	config: ResolvedConfig,
@@ -156,14 +163,24 @@ function resolveActiveCredentialStore(
 	const configPath = config.getConfigPath();
 
 	if (envOverride === false) {
-		return new FileCredentialStore(configPath, profile, config.format);
+		return new FileCredentialStore(
+			configPath,
+			profile,
+			config.format,
+			config.owners
+		);
 	}
 
 	const forcedByEnvVar = envOverride === true;
 	const wantsKeyring = envOverride ?? config.isKeyringEnabled() ?? false;
 
 	if (!wantsKeyring) {
-		return new FileCredentialStore(configPath, profile, config.format);
+		return new FileCredentialStore(
+			configPath,
+			profile,
+			config.format,
+			config.owners
+		);
 	}
 
 	const resolution = resolveKeyProvider(
@@ -179,7 +196,8 @@ function resolveActiveCredentialStore(
 				resolution.provider,
 				buildMigrationLogger(config),
 				profile,
-				config.format
+				config.format,
+				config.owners
 			);
 
 		case "needs-install":
@@ -264,7 +282,8 @@ function handleNeedsInstall(
 		resolution.afterInstall(),
 		buildMigrationLogger(config),
 		profile,
-		config.format
+		config.format,
+		config.owners
 	);
 }
 
@@ -313,7 +332,8 @@ function handleUnsupported(
 		return new FileCredentialStore(
 			config.getConfigPath(),
 			profile,
-			config.format
+			config.format,
+			config.owners
 		);
 	}
 
@@ -333,7 +353,8 @@ function fallbackToFileWithWarning(
 	return new FileCredentialStore(
 		config.getConfigPath(),
 		profile,
-		config.format
+		config.format,
+		config.owners
 	);
 }
 

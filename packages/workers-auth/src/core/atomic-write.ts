@@ -37,9 +37,12 @@ function removeAbandonedWrites(
 }
 
 /** Clear the actual destination and abandoned copies without removing symlinks. */
-export function clearFile(filePath: string): boolean {
+export function clearFile(
+	filePath: string,
+	owners = new ProcessOwnerChecker()
+): boolean {
 	const destination = resolveFilePath(filePath);
-	removeAbandonedWrites(destination, new ProcessOwnerChecker());
+	removeAbandonedWrites(destination, owners);
 	const existed = existsSync(destination);
 	rmSync(destination, { force: true });
 	return existed;
@@ -50,11 +53,14 @@ export function clearFile(filePath: string): boolean {
  * A failed write or process crash leaves the previous file intact rather than
  * exposing a truncated token to readers that do not hold the credential lock.
  */
-export function writeFileAtomically(filePath: string, contents: string): void {
+export function writeFileAtomically(
+	filePath: string,
+	contents: string,
+	owners = new ProcessOwnerChecker()
+): void {
 	const destination = resolveFilePath(filePath);
 	const directory = path.dirname(destination);
 	mkdirSync(directory, { recursive: true });
-	const owners = new ProcessOwnerChecker();
 	removeAbandonedWrites(destination, owners);
 	const temporaryDirectory = path.join(
 		directory,

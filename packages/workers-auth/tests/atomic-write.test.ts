@@ -58,6 +58,35 @@ describe("atomic credential writes", () => {
 		return directory;
 	}
 
+	it("reuses a storage-owned checker across atomic replacements", ({
+		expect,
+	}) => {
+		for (const storage of stores()) {
+			const createOwner = vi.spyOn(
+				ProcessOwnerChecker.prototype,
+				"createOwner"
+			);
+			storage.write({ refresh_token: "first" });
+			storage.write({ refresh_token: "second" });
+			storage.clear();
+			expect(createOwner).toHaveBeenCalledTimes(2);
+			expect(new Set(createOwner.mock.contexts).size).toBe(1);
+			createOwner.mockRestore();
+		}
+	});
+
+	it("shares the encrypted store's checker between migration and atomic writes", ({
+		expect,
+	}) => {
+		new FileCredentialStore(process.cwd()).write({ refresh_token: "migrate" });
+		const encrypted = stores()[2];
+		const createOwner = vi.spyOn(ProcessOwnerChecker.prototype, "createOwner");
+		expect(encrypted.read()?.refresh_token).toBe("migrate");
+		encrypted.write({ refresh_token: "replacement" });
+		expect(createOwner).toHaveBeenCalledTimes(3);
+		expect(new Set(createOwner.mock.contexts).size).toBe(1);
+	});
+
 	it("removes abandoned copies on replacement and clear, but preserves live writers and other destinations", ({
 		expect,
 	}) => {

@@ -3,6 +3,7 @@ import path from "node:path";
 import { getGlobalConfigPath } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { ProcessOwnerChecker } from "../../src/core/process-owner";
 import { setKeyProviderFactoryForTesting } from "../../src/credential-store/key-providers/factory";
 import {
 	getKeyringInstallDir,
@@ -104,6 +105,7 @@ describe("createCredentialStorageContext — resolver", () => {
 	});
 
 	afterEach(() => {
+		vi.restoreAllMocks();
 		setKeyProviderFactoryForTesting(undefined);
 		setMacSecurityCommandRunner(undefined);
 		setLinuxSecretToolRunner(undefined);
@@ -113,6 +115,40 @@ describe("createCredentialStorageContext — resolver", () => {
 	});
 
 	describe("precedence", () => {
+		it.for([false, true])(
+			"reuses an owned identity cache across resolved stores (keyring: %s)",
+			(keyring, { expect }) => {
+				const provider = new InMemoryKeyProvider();
+				setKeyProviderFactoryForTesting(() => provider);
+				const context = {
+					serviceName: "test",
+					getConfigPath: () => process.cwd(),
+					isKeyringEnabled: () => keyring,
+					logger: silentLogger,
+					isNonInteractiveOrCI: () => true,
+				};
+				const first = createCredentialStorageContext(context);
+				const second = createCredentialStorageContext(context);
+				const createOwner = vi.spyOn(
+					ProcessOwnerChecker.prototype,
+					"createOwner"
+				);
+				first.getActiveStore().path();
+				second.getActiveStore().path();
+				expect(createOwner).not.toHaveBeenCalled();
+
+				first.storageFactory().write({ refresh_token: "first" });
+				first.getActiveStore().write({ refresh_token: "replacement" });
+				first.storageFactory("other").write({ refresh_token: "other" });
+				expect(createOwner).toHaveBeenCalledTimes(3);
+				expect(new Set(createOwner.mock.contexts).size).toBe(1);
+
+				second.storageFactory().write({ refresh_token: "independent" });
+				expect(createOwner).toHaveBeenCalledTimes(4);
+				expect(new Set(createOwner.mock.contexts).size).toBe(2);
+			}
+		);
+
 		it("pins a transaction without preventing later backend selection", ({
 			expect,
 		}) => {

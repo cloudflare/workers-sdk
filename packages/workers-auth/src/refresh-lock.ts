@@ -168,9 +168,10 @@ function tryAcquire(
 export function tryWithRefreshLock<T>(
 	lockDir: string,
 	fn: () => T,
-	logger?: Pick<OAuthFlowLogger, "debug">
+	logger?: Pick<OAuthFlowLogger, "debug">,
+	owners = new ProcessOwnerChecker()
 ): { acquired: true; value: T } | { acquired: false } {
-	const release = tryAcquire(lockDir, new ProcessOwnerChecker());
+	const release = tryAcquire(lockDir, owners);
 	if (!release) {
 		return { acquired: false };
 	}
@@ -187,7 +188,7 @@ export function tryWithRefreshLock<T>(
  *
  * @param lockDir - Canonical profile-level lock path.
  * @param fn - Transaction to execute while holding the lock.
- * @param options - Optional lock acquisition retry settings.
+ * @param options - Retry settings, logger, and an optional owned identity cache.
  * @returns The transaction's result.
  */
 export async function withRefreshLock<T>(
@@ -198,12 +199,13 @@ export async function withRefreshLock<T>(
 		retryDelayMs?: number;
 		timeoutMs?: number;
 		logger?: Pick<OAuthFlowLogger, "debug">;
+		owners?: ProcessOwnerChecker;
 	}
 ): Promise<T> {
 	const maxRetries = options?.maxRetries ?? Infinity;
 	const retryDelayMs = options?.retryDelayMs ?? RETRY_DELAY_MS;
 	const deadline = performance.now() + (options?.timeoutMs ?? LOCK_TIMEOUT_MS);
-	const owners = new ProcessOwnerChecker();
+	const owners = options?.owners ?? new ProcessOwnerChecker();
 
 	for (let attempt = 0; attempt < maxRetries; attempt++) {
 		const release = tryAcquire(lockDir, owners);

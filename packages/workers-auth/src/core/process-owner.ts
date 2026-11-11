@@ -58,7 +58,7 @@ export function isProcessOwner(owner: string): boolean {
 	return OWNER_PATTERN.test(owner);
 }
 
-/** Cache process-start probes for one lock acquisition or file operation. */
+/** Lazily cache process-start probes for an owning flow or storage instance. */
 export class ProcessOwnerChecker {
 	private readonly checkedOwners = new Map<string, number>();
 	private ownIdentity: string | undefined;

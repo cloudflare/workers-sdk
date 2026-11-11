@@ -16,7 +16,11 @@ import {
 } from "vitest";
 import { clearAccessCaches } from "../src/access";
 import * as callbackServer from "../src/callback-server";
+import { ProcessOwnerChecker } from "../src/core/process-owner";
+import { EncryptedFileCredentialStore } from "../src/credential-store/encrypted-file-store";
 import { FileCredentialStore } from "../src/credential-store/file-store";
+import { setKeyProviderFactoryForTesting } from "../src/credential-store/key-providers/factory";
+import { createCredentialStorageContext } from "../src/credential-store/resolver";
 import { createOAuthFlow } from "../src/flow";
 import type {
 	AuthConfigStorage,
@@ -214,6 +218,67 @@ describe.each(["toml", "json"] as const)(
 			]);
 			expect(ctx.purgeOnLoginOrLogout).not.toHaveBeenCalled();
 		});
+	}
+);
+
+describe.each([false, true])(
+	"process-identity reuse (keyring: %s)",
+	(keyring) => {
+		runInTempDir();
+
+		afterEach(() => setKeyProviderFactoryForTesting(undefined));
+
+		it.for([false, true])(
+			"shares one checker across repeated refreshes, writes and logout (resolver: %s)",
+			async (resolver, { expect }) => {
+				const { ctx } = createTestContext();
+				const provider = {
+					getKey: () => new Uint8Array(32),
+					setKey: () => {},
+					deleteKey: () => {},
+					describe: () => "test key",
+				};
+				setKeyProviderFactoryForTesting(() => provider);
+				const bundle = createCredentialStorageContext({
+					serviceName: "test",
+					getConfigPath: () => process.cwd(),
+					isKeyringEnabled: () => keyring,
+					logger: ctx.logger,
+					isNonInteractiveOrCI: () => true,
+				});
+				const storage = keyring
+					? new EncryptedFileCredentialStore(process.cwd(), provider)
+					: new FileCredentialStore(process.cwd());
+				ctx.storageFactory = resolver ? bundle.storageFactory : () => storage;
+				storage.write({
+					oauth_token: "expired-access",
+					refresh_token: "RT_A",
+					expiration_time: PAST_DATE,
+				});
+				const flow = createOAuthFlow(ctx);
+				const createOwner = vi.spyOn(
+					ProcessOwnerChecker.prototype,
+					"createOwner"
+				);
+				msw.use(
+					mockAccessProbe(),
+					mockTokenSuccess({ expires_in: -1 }),
+					http.post("*/oauth2/revoke", () => new HttpResponse(null))
+				);
+
+				expect(await flow.loginOrRefreshIfRequired(COMPLIANCE_CONFIG)).toEqual({
+					loggedIn: true,
+				});
+				expect(await flow.loginOrRefreshIfRequired(COMPLIANCE_CONFIG)).toEqual({
+					loggedIn: true,
+				});
+				await flow.logout();
+
+				expect(createOwner).toHaveBeenCalledTimes(5);
+				expect(new Set(createOwner.mock.contexts).size).toBe(1);
+				expect(storage.read()).toBeUndefined();
+			}
+		);
 	}
 );
 
