@@ -48,7 +48,7 @@ PR opened/updated/reviewed
 | Multiple teams on a path | **OR** — any one team can approve | **AND** via `&` prefix — all listed teams must approve                          |
 | Path matching for `*.js` | Matches anywhere in repo          | Matches only in the `.codeowners` file's directory; use `**/*.js` for recursive |
 | Per-directory config     | Single file only                  | `.codeowners` file in any directory (rules are relative to that directory)      |
-| Stale review dismissal   | All-or-nothing                    | Smart — only dismisses when reviewer's owned files change                       |
+| Stale review dismissal   | All-or-nothing                    | Smart — only dismisses when reviewer's owned files change (disabled here)       |
 | Optional reviewers       | Not supported                     | `?` prefix — CC without blocking                                                |
 
 ## Configuration Files
@@ -162,9 +162,11 @@ R2, Queues, AI, Hyperdrive, Vectorize, Pipelines, SSL/Secrets Store, WVPC.
 
 ## Stale Review Handling
 
-Codeowners Plus uses **smart dismissal**: when new commits are pushed to a PR, it only dismisses an approval if the files owned by that reviewer were changed. This avoids the frustration of GitHub's all-or-nothing stale review dismissal.
+Codeowners Plus supports **smart dismissal** (only dismissing an approval when files owned by that reviewer change), but this repo disables it with `disable_smart_dismissal = true` in `codeowners.toml`. Human approvals are therefore never dismissed when new commits are pushed.
 
-For this to work, the branch protection setting **"Dismiss stale pull request approvals when new commits are pushed"** must be **disabled**. Codeowners Plus handles dismissal itself.
+The branch protection setting **"Dismiss stale pull request approvals when new commits are pushed"** must also stay **disabled**, otherwise GitHub would dismiss every approval on each push.
+
+With smart dismissal disabled, Codeowners Plus also never withdraws its own approval. To stop an earlier bot approval (for example, one given while the PR briefly had no diff) from letting a PR merge after changes that need codeowner review are pushed, the **"Dismiss Stale Bot Approval"** step in `.github/workflows/codeowners.yml` runs after every check. If Codeowners Plus reports that reviews are no longer satisfied, the step dismisses any approvals from the `@workers-devprod` account with the message "Codeowners reviews no longer satisfied". The bot approves again once the required codeowner reviews are in.
 
 ## Troubleshooting
 
