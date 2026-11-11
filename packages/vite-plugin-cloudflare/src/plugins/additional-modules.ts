@@ -1,11 +1,16 @@
 import assert from "node:assert";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { DEFAULT_MODULE_RULES } from "@cloudflare/workers-utils";
+import {
+	DEFAULT_MODULE_RULES,
+	setWasmSourceMappingUrl,
+} from "@cloudflare/workers-utils";
 import MagicString from "magic-string";
 import { globsToRegExps } from "miniflare";
 import * as vite from "vite";
 import { cleanUrl, createPlugin } from "../utils";
+import { readWasmSourceMap } from "../wasm-source-map";
+import type { WasmSourceMap } from "../wasm-source-map";
 import type { ModuleType } from "@cloudflare/config";
 
 /**
@@ -90,6 +95,18 @@ export const additionalModulesPlugin = createPlugin(
 							);
 						}
 
+						const sourceMap =
+							additionalModuleType === "CompiledWasm" &&
+							this.environment.config.build.sourcemap
+								? await tryReadWasmSourceMap(this, modulePath, source)
+								: undefined;
+						if (sourceMap) {
+							// Point the module at the name its map is emitted under.
+							source = Buffer.from(
+								setWasmSourceMappingUrl(source, sourceMap.fileName)
+							);
+						}
+
 						const referenceId = this.emitFile({
 							type: "asset",
 							name: path.basename(modulePath),
@@ -103,6 +120,11 @@ export const additionalModulesPlugin = createPlugin(
 							emittedFileName,
 							toModuleType(additionalModuleType)
 						);
+
+						if (sourceMap) {
+							emitWasmSourceMap(this, sourceMap, emittedFileName);
+						}
+
 						const relativePath = vite.normalizePath(
 							path.relative(path.dirname(chunk.fileName), emittedFileName)
 						);
@@ -128,6 +150,58 @@ export const additionalModulesPlugin = createPlugin(
 				},
 			},
 		};
+
+		/** Reads a WebAssembly module's source map, warning if it can't be copied. */
+		async function tryReadWasmSourceMap(
+			pluginContext: vite.Rollup.PluginContext,
+			modulePath: string,
+			source: Buffer
+		): Promise<WasmSourceMap | undefined> {
+			try {
+				return await readWasmSourceMap(modulePath, source);
+			} catch (error) {
+				pluginContext.warn(
+					`Skipping the source map of "${modulePath}": ${error instanceof Error ? error.message : String(error)}`
+				);
+				return undefined;
+			}
+		}
+
+		/**
+		 * Emits a WebAssembly module's source map next to the module, naming the
+		 * module in its `file` as it is uploaded.
+		 */
+		function emitWasmSourceMap(
+			pluginContext: vite.Rollup.PluginContext & {
+				environment: vite.Environment;
+			},
+			{ fileName, sourceMap }: WasmSourceMap,
+			emittedFileName: string
+		): void {
+			const { environment } = pluginContext;
+			const bundleDir = ctx.getWorkerBundleDir(environment.name);
+			assert(
+				bundleDir,
+				`No Worker found for "${environment.name}" environment`
+			);
+			const moduleName = vite.normalizePath(
+				path.relative(
+					bundleDir,
+					path.resolve(
+						environment.config.root,
+						environment.config.build.outDir,
+						emittedFileName
+					)
+				)
+			);
+			pluginContext.emitFile({
+				type: "asset",
+				fileName: vite.normalizePath(
+					path.join(path.dirname(emittedFileName), fileName)
+				),
+				source: JSON.stringify({ ...sourceMap, file: `./${moduleName}` }),
+			});
+		}
 	}
 );
 

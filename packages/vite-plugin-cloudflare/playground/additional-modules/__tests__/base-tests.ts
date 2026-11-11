@@ -1,8 +1,14 @@
-import { test } from "vitest";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { getWorkerBundleDir } from "@cloudflare/build-output-utils";
+import { getWasmSourceMappingUrl } from "@cloudflare/workers-utils";
+import { describe, test } from "vitest";
 import {
 	getJsonResponse,
 	getTextResponse,
+	isBuild,
 	page,
+	rootDir,
 	viteTestUrl,
 } from "../../__test-utils__";
 
@@ -67,4 +73,47 @@ test("supports CompiledWasm modules with a '.wasm?init' extension", async ({
 }) => {
 	const result = await getJsonResponse("/wasm-with-init-param");
 	expect(result).toEqual({ result: 15 });
+});
+
+test("supports CompiledWasm modules with a source map", async ({ expect }) => {
+	const result = await getJsonResponse("/wasm-with-source-map");
+	expect(result).toEqual({ result: 19 });
+});
+
+test("supports CompiledWasm modules whose source maps share a name", async ({
+	expect,
+}) => {
+	const result = await getJsonResponse("/other-wasm-with-source-map");
+	expect(result).toEqual({ result: 23 });
+});
+
+describe.runIf(isBuild)("WebAssembly source maps", () => {
+	test("emits each module's source map next to it, naming the module", ({
+		expect,
+	}) => {
+		const bundleDir = getWorkerBundleDir(rootDir);
+		const moduleNames = fs
+			.readdirSync(bundleDir, { recursive: true, encoding: "utf8" })
+			.filter((file) => /wasm-with-source-map-[\w-]+\.wasm$/.test(file))
+			.map((file) => file.split(path.sep).join("/"));
+		expect(moduleNames).toHaveLength(2);
+
+		const sources = moduleNames.map((moduleName) => {
+			const sourceMapUrl = getWasmSourceMappingUrl(
+				fs.readFileSync(path.join(bundleDir, moduleName))
+			);
+			expect(sourceMapUrl).toMatch(
+				/^wasm-with-source-map-[\da-f]{8}\.wasm\.map$/
+			);
+			const sourceMap = JSON.parse(
+				fs.readFileSync(
+					path.join(bundleDir, path.dirname(moduleName), sourceMapUrl ?? ""),
+					"utf8"
+				)
+			);
+			expect(sourceMap.file).toBe(`./${moduleName}`);
+			return sourceMap.sources;
+		});
+		expect(sources.sort()).toEqual([["add.c"], ["other.c"]]);
+	});
 });
