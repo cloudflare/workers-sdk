@@ -177,7 +177,11 @@ export const configPlugin = createPlugin("config", (ctx) => {
 		buildApp: {
 			order: "post",
 			async handler(builder) {
-				assertIsNotPreview(ctx);
+				// Waku starts a preview server with this plugin instance during the build,
+				// which replaces the build's config
+				if (ctx.resolvedPluginConfig.type === "preview") {
+					return;
+				}
 				await buildApp(
 					builder,
 					ctx.resolvedPluginConfig,
