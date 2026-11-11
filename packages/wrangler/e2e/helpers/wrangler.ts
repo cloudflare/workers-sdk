@@ -22,12 +22,23 @@ export type WranglerCommandOptions = CommandOptions & { debug?: boolean };
 
 export async function runWrangler(
 	wranglerCommand: string,
-	{ cwd, env = process.env, debug, timeout }: WranglerCommandOptions = {}
+	{
+		cwd,
+		env = process.env,
+		debug,
+		timeout,
+		silent,
+	}: WranglerCommandOptions = {}
 ) {
 	if (debug) {
 		env = { ...env, WRANGLER_LOG: "debug" };
 	}
-	return runCommand(getWranglerCommand(wranglerCommand), { cwd, env, timeout });
+	return runCommand(getWranglerCommand(wranglerCommand), {
+		cwd,
+		env,
+		timeout,
+		silent,
+	});
 }
 
 export class WranglerLongLivedCommand extends LongLivedCommand {
@@ -83,6 +94,7 @@ function getOptions({
 	env = process.env,
 	debug,
 	timeout,
+	silent,
 }: WranglerCommandOptions): CommandOptions {
 	if (debug) {
 		env = { ...env, WRANGLER_LOG: "debug" };
@@ -91,5 +103,6 @@ function getOptions({
 		cwd,
 		env,
 		timeout,
+		silent,
 	};
 }

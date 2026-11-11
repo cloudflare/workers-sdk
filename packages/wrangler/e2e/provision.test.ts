@@ -21,9 +21,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	{ timeout: TIMEOUT },
 	() => {
 		let deployedUrl: string;
-		let kvId: string;
-		let kvId2: string;
-		let d1Id: string;
+		let kvId: string | undefined;
+		let kvId2: string | undefined;
+		let d1Id: string | undefined;
 		const helper = new WranglerE2ETestHelper();
 
 		it("can run dev without resource ids", async ({ expect }) => {
@@ -76,8 +76,14 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 		it("can provision resources and deploy worker", async ({ expect }) => {
 			const worker = helper.runLongLived(`wrangler deploy`);
-			await worker.exitCode;
 			const output = await worker.output;
+			// Save IDs before asserting so cleanup still works when deployment or a snapshot fails.
+			kvId = output.match(/env.KV \((?<kv>[0-9a-f]{32})/)?.groups?.kv;
+			d1Id = output.match(/env.D1 \((?<d1>\w{8}-\w{4}-\w{4}-\w{4}-\w{12})/)
+				?.groups?.d1;
+			expect(await worker.exitCode, `wrangler deploy failed:\n${output}`).toBe(
+				0
+			);
 			expect(normalize(output)).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				The following bindings need to be provisioned:
@@ -112,15 +118,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			assert(urlMatch?.groups);
 			deployedUrl = urlMatch.groups.url;
 
-			const kvMatch = output.match(/env.KV \((?<kv>[0-9a-f]{32})/);
-			assert(kvMatch?.groups);
-			kvId = kvMatch.groups.kv;
-
-			const d1Match = output.match(
-				/env.D1 \((?<d1>\w{8}-\w{4}-\w{4}-\w{4}-\w{12})/
-			);
-			assert(d1Match?.groups);
-			d1Id = d1Match.groups.d1;
+			assert(kvId);
+			assert(d1Id);
 
 			const response = await waitForWorkersDev(
 				deployedUrl,
@@ -133,8 +132,10 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			expect,
 		}) => {
 			const worker = helper.runLongLived(`wrangler deploy`);
-			await worker.exitCode;
 			const output = await worker.output;
+			expect(await worker.exitCode, `wrangler deploy failed:\n${output}`).toBe(
+				0
+			);
 			expect(normalize(output)).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Your Worker has access to the following bindings:
@@ -200,8 +201,12 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 						`,
 			});
 			const worker = helper.runLongLived(`wrangler versions upload`);
-			await worker.exitCode;
 			const output = await worker.output;
+			kvId2 = output.match(/env.KV2 \((?<kv>[0-9a-f]{32})/)?.groups?.kv;
+			expect(
+				await worker.exitCode,
+				`wrangler versions upload failed:\n${output}`
+			).toBe(0);
 			expect(normalize(output)).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				The following bindings need to be provisioned:
@@ -223,17 +228,16 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
 				Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
 			`);
-			const kvMatch = output.match(/env.KV2 \((?<kv>[0-9a-f]{32})/);
-			assert(kvMatch?.groups);
-			kvId2 = kvMatch.groups.kv;
+			assert(kvId2);
 		});
 
 		afterAll(async () => {
 			// we need to add d1 back into the config because otherwise wrangler will
 			// call the api for all 5000 or so db's the e2e test account has
 			// :(
-			await helper.seed({
-				"wrangler.toml": dedent`
+			if (d1Id) {
+				await helper.seed({
+					"wrangler.toml": dedent`
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
@@ -243,14 +247,21 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 						database_name = "${workerName}-d1"
 						database_id = "${d1Id}"
 						`,
-			});
+				});
+			}
 
 			await Promise.allSettled([
-				helper.run(`wrangler r2 bucket delete ${workerName}-r2`),
-				helper.run(`wrangler d1 delete ${workerName}-d1 -y`),
+				helper.bestEffortRun(`wrangler r2 bucket delete ${workerName}-r2`),
+				d1Id && helper.bestEffortRun(`wrangler d1 delete ${workerName}-d1 -y`),
 				helper.bestEffortRun(`wrangler delete`),
-				helper.run(`wrangler kv namespace delete --namespace-id ${kvId}`),
-				helper.run(`wrangler kv namespace delete --namespace-id ${kvId2}`),
+				kvId &&
+					helper.bestEffortRun(
+						`wrangler kv namespace delete --namespace-id ${kvId}`
+					),
+				kvId2 &&
+					helper.bestEffortRun(
+						`wrangler kv namespace delete --namespace-id ${kvId2}`
+					),
 			]);
 		}, TIMEOUT);
 	}

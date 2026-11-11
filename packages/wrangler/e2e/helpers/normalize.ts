@@ -23,6 +23,7 @@ export function normalizeOutput(
 		normalizeTempDirs,
 		stripTimings,
 		stripVTControlCharacters,
+		removeTelemetryBanner,
 		removeTimestamp,
 		stripDevTimings,
 		stripEmptyNewlines,
@@ -41,6 +42,14 @@ export function normalizeOutput(
 		}
 	}
 	return stdout.trim();
+}
+
+function removeTelemetryBanner(stdout: string): string {
+	// This notice depends on the global metrics config and earlier CLI invocations.
+	return stdout.replace(
+		/^Cloudflare collects anonymous telemetry about your usage of Wrangler\. Learn more at https:\/\/github\.com\/cloudflare\/workers-sdk\/tree\/main\/packages\/wrangler\/telemetry\.md\r?$/gm,
+		""
+	);
 }
 
 function stripEmptyNewlines(stdout: string): string {

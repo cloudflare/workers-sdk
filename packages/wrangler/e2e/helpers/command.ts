@@ -3,7 +3,6 @@ import { spawn, spawnSync } from "node:child_process";
 import events from "node:events";
 import path from "node:path";
 import rl from "node:readline";
-import { PassThrough } from "node:stream";
 import { ReadableStream } from "node:stream/web";
 import { setTimeout } from "node:timers/promises";
 import treeKill from "tree-kill";
@@ -12,11 +11,14 @@ import { readUntil } from "./read-until";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 
 const DEFAULT_TIMEOUT = 50_000;
+const OUTPUT_DRAIN_TIMEOUT = 1_000;
 
 export type CommandOptions = {
 	cwd?: string;
 	env?: typeof process.env;
 	timeout?: number;
+	/** Capture output without logging it, for best-effort cleanup commands. */
+	silent?: boolean;
 };
 
 /**
@@ -30,10 +32,12 @@ export type CommandOptions = {
  */
 export function runCommand(
 	command: string,
-	{ cwd, env, timeout = DEFAULT_TIMEOUT }: CommandOptions = {}
+	{ cwd, env, timeout = DEFAULT_TIMEOUT, silent = false }: CommandOptions = {}
 ) {
 	try {
-		console.log(`Running command: ${command}`);
+		if (!silent) {
+			console.log(`Running command: ${command}`);
+		}
 		const { status, stdout, stderr, output } = spawnSync(command, [], {
 			shell: true,
 			cwd,
@@ -42,10 +46,10 @@ export function runCommand(
 			encoding: "utf8",
 			timeout,
 		});
-		if (stdout.length) {
+		if (!silent && stdout.length) {
 			console.log(`[${path.basename(cwd ?? "/unknown")}]`, stdout);
 		}
-		if (stderr.length) {
+		if (!silent && stderr.length) {
 			console.error(`[${path.basename(cwd ?? "/unknown")}]`, stderr);
 		}
 
@@ -78,12 +82,12 @@ export function runCommand(
 export class LongLivedCommand {
 	private lines: string[] = [];
 	private stream: ReadableStream;
-	private exitPromise: Promise<[number, unknown]>;
+	private exitPromise: Promise<[number | null, NodeJS.Signals | null]>;
 	private commandProcess: ChildProcessWithoutNullStreams;
 
 	constructor(
 		private command: string,
-		{ cwd, env, timeout }: CommandOptions
+		{ cwd, env, timeout, silent = false }: CommandOptions
 	) {
 		const signal = createTimeoutSignal(timeout);
 		this.commandProcess = spawn(command, [], {
@@ -94,28 +98,69 @@ export class LongLivedCommand {
 			signal,
 		});
 
-		this.exitPromise = events.once(this.commandProcess, "exit") as Promise<
-			[number, unknown]
-		>;
+		// An AbortError can arrive before Windows reports process termination.
+		// Keep listening for exit so callers cannot race teardown against it.
+		const processExited = new Promise<void>((resolve) => {
+			this.commandProcess.once("exit", () => resolve());
+		});
+		const exitPromise = (
+			events.once(this.commandProcess, "exit") as Promise<
+				[number | null, NodeJS.Signals | null]
+			>
+		).catch(async (error: unknown) => {
+			// Spawn failures have no process to wait for.
+			if (signal?.aborted && this.commandProcess.pid !== undefined) {
+				await processExited;
+			}
+			throw error;
+		});
 
-		// Merge the stdout and stderr into a single output stream
-		const output = new PassThrough();
-		this.commandProcess.stdout.pipe(output);
-		this.commandProcess.stderr.pipe(output);
+		// Read each pipe independently so closing stdout cannot discard later stderr.
+		const lineInterfaces = [
+			rl.createInterface(this.commandProcess.stdout),
+			rl.createInterface(this.commandProcess.stderr),
+		];
+		const outputClosed = Promise.all(
+			lineInterfaces.map((lineInterface) => events.once(lineInterface, "close"))
+		);
+		// Drain buffered output after exit, but don't wait indefinitely for pipes
+		// inherited by a background child that outlives the command.
+		const drainController = new AbortController();
+		const drainTimeout = exitPromise.then(() =>
+			setTimeout(OUTPUT_DRAIN_TIMEOUT, undefined, {
+				signal: drainController.signal,
+			})
+		);
+		this.exitPromise = Promise.all([
+			exitPromise,
+			Promise.race([outputClosed, drainTimeout]),
+		])
+			.then(([status]) => status)
+			.finally(() => {
+				drainController.abort();
+				for (const lineInterface of lineInterfaces) {
+					lineInterface.close();
+				}
+				this.commandProcess.stdout.destroy();
+				this.commandProcess.stderr.destroy();
+			});
 
-		const lineInterface = rl.createInterface(output);
 		this.stream = new ReadableStream<string>({
 			start: (controller) => {
-				lineInterface.on("line", (line) => {
-					console.log(`[${path.basename(cwd ?? "/unknown")}]`, line);
-					this.lines.push(line);
-					try {
-						controller.enqueue(line);
-					} catch {
-						// occasionally the enqueue can throw if the stream has already been closed
-						// but we don't care and can just move on.
-					}
-				});
+				for (const lineInterface of lineInterfaces) {
+					lineInterface.on("line", (line) => {
+						if (!silent) {
+							console.log(`[${path.basename(cwd ?? "/unknown")}]`, line);
+						}
+						this.lines.push(line);
+						try {
+							controller.enqueue(line);
+						} catch {
+							// occasionally the enqueue can throw if the stream has already been closed
+							// but we don't care and can just move on.
+						}
+					});
+				}
 				void this.exitPromise
 					.catch(() =>
 						this.lines.unshift(`Failed to run ${JSON.stringify(command)}:`)
@@ -123,7 +168,9 @@ export class LongLivedCommand {
 					.finally(() => controller.close());
 			},
 			cancel() {
-				lineInterface.close();
+				for (const lineInterface of lineInterfaces) {
+					lineInterface.close();
+				}
 			},
 		});
 	}
@@ -150,6 +197,13 @@ export class LongLivedCommand {
 	}
 
 	async stop() {
+		if (
+			this.commandProcess.exitCode !== null ||
+			this.commandProcess.signalCode !== null
+		) {
+			await this.exitPromise.catch(() => {});
+			return;
+		}
 		await new Promise<void>((resolve) => {
 			assert(
 				this.commandProcess.pid,
