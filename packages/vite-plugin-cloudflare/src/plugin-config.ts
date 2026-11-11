@@ -24,7 +24,7 @@ import {
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import * as vite from "vite";
 import { PRERENDER_WORKER_DIRECTORY_NAME } from "./build-output";
-import { getCliDisplayName, isPreviewBuild } from "./build-output-env";
+import { isPreviewBuild } from "./build-output-env";
 import { readBuildOutputPreview } from "./build-output-preview";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
 import type { BuildOutputPreviewWorker } from "./build-output-preview";
@@ -172,7 +172,6 @@ export interface Worker {
 }
 
 interface BaseResolvedConfig {
-	cliDisplayName: string;
 	persistState: PersistState;
 	inspectorPort: number | false | undefined;
 	types: ResolvedTypeGenerationOptions;
@@ -313,7 +312,6 @@ export async function resolvePluginConfig(
 	);
 	const types = normalizeTypes(pluginConfig.types);
 	const shared = {
-		cliDisplayName: getCliDisplayName(),
 		persistState: pluginConfig.persistState ?? true,
 		inspectorPort: pluginConfig.inspectorPort,
 		types,

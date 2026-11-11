@@ -41,7 +41,6 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 					containerOptions,
 					settings: ctx.resolvedPluginConfig.settings,
 					logger: vitePreviewServer.config.logger,
-					cliDisplayName: ctx.resolvedPluginConfig.cliDisplayName,
 				});
 			}
 
