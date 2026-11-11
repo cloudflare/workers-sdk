@@ -1,5 +1,13 @@
 # @cloudflare/workers-utils
 
+## 0.53.1
+
+### Patch Changes
+
+- [#16800](https://github.com/cloudflare/workers-sdk/pull/16800) [`8d2bb3d`](https://github.com/cloudflare/workers-sdk/commit/8d2bb3dccf55ba8ac3fdf8ac12cca7cd52a5bad0) Thanks [@cjol](https://github.com/cjol)! - Fix deployments of Workers using Prometheus metrics without `nodejs_compat`
+
+  The banner imports `node:module`, so Workers that bundle `@cloudflare/workers-utils/prometheus-metrics` without `nodejs_compat` failed to upload with `No such module "node:module"`. This blocked the `edge-preview-authenticated-proxy@0.3.5` deploy. The export has no CommonJS dependencies, so it is now built alongside the browser export, which already omits the banner.
+
 ## 0.53.0
 
 ### Minor Changes
