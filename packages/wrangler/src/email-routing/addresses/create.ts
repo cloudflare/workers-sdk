@@ -21,8 +21,14 @@ export const emailRoutingAddressesCreateCommand = createCommand({
 
 		logger.log(`Created destination address: ${address.email}`);
 		logger.log(`  ID: ${address.id}`);
-		logger.log(
-			`  A verification email has been sent. The address must be verified before it can be used.`
-		);
+		// The API does not send a verification email for addresses that are
+		// already verified on the account (e.g. the account owner's email).
+		if (address.verified) {
+			logger.log(`  Verified: ${address.verified}`);
+		} else {
+			logger.log(
+				`  A verification email has been sent. The address must be verified before it can be used.`
+			);
+		}
 	},
 });

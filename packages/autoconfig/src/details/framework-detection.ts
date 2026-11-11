@@ -1,5 +1,5 @@
 import { existsSync, statSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import {
 	BunPackageManager,
 	FatalError,
@@ -12,6 +12,8 @@ import {
 import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import chalk from "chalk";
+import * as find from "empathic/find";
+import * as walk from "empathic/walk";
 import dedent from "ts-dedent";
 import { isFrameworkSupported, isKnownFramework } from "../frameworks";
 import { staticFramework } from "../frameworks/all-frameworks";
@@ -66,6 +68,13 @@ export async function detectFramework(
 	const project = new Project(fs, projectPath, projectPath)
 		.setEnvironment(process.env)
 		.setNodeVersion(process.version);
+	const workspaceProject =
+		target === "cf"
+			? await detectEnclosingWorkspace(projectPath, context)
+			: undefined;
+	if (workspaceProject) {
+		project.packageManager = workspaceProject.packageManager;
+	}
 
 	const buildSettings = await project.getBuildSettings();
 
@@ -92,12 +101,19 @@ export async function detectFramework(
 	// This is populated after getBuildSettings() runs, which triggers the full detection chain.
 	const packageManager = convertDetectedPackageManager(
 		project.packageManager,
-		projectPath
+		projectPath,
+		workspaceProject?.workspace?.rootDir
 	);
 
-	const lockFileExists = packageManager.lockFiles.some((lockFile) =>
-		existsSync(join(projectPath, lockFile))
-	);
+	const workspaceRoot = workspaceProject?.workspace?.rootDir;
+	const lockFileExists =
+		packageManager.lockFiles.some((lockFile) =>
+			existsSync(join(projectPath, lockFile))
+		) ||
+		(workspaceRoot !== undefined &&
+			packageManager.lockFiles.some((lockFile) =>
+				existsSync(join(workspaceRoot, lockFile))
+			));
 
 	const maybeDetectedFramework = maybeFindDetectedFramework(
 		buildSettings,
@@ -172,21 +188,68 @@ export async function detectFramework(
 }
 
 /**
+ * Finds workspace metadata without applying workspace-root-relative framework
+ * commands or output directories to an application. Stops at a repository
+ * boundary and only accepts workspaces that include the application.
+ *
+ * @param projectPath Path to the application
+ * @param context Autoconfig logging context
+ * @returns The enclosing workspace project, if one includes the application
+ */
+async function detectEnclosingWorkspace(
+	projectPath: string,
+	context: AutoConfigContext
+): Promise<Project | undefined> {
+	const fs = new NodeFS();
+	fs.logger = context.logger;
+	const repositoryPath = find.up(".git", { cwd: projectPath });
+	const last = repositoryPath ? dirname(repositoryPath) : undefined;
+	// walk.up() starts with the application directory, we skip it (via `slice(1)`)
+	// so that we only consider workspace roots that contain the application
+	const ancestorDirectories = walk.up(projectPath, { last }).slice(1);
+	for (const directory of ancestorDirectories) {
+		const packageJsonPath = join(directory, "package.json");
+		const packageJson = existsSync(packageJsonPath)
+			? await fs.readJSON<{ workspaces?: unknown }>(packageJsonPath)
+			: undefined;
+		if (
+			!packageJson?.workspaces &&
+			!existsSync(join(directory, "pnpm-workspace.yaml"))
+		) {
+			continue;
+		}
+		const project = new Project(fs, projectPath, directory)
+			.setEnvironment(process.env)
+			.setNodeVersion(process.version);
+		const workspace = await project.detectWorkspaces();
+		if (workspace && !workspace.isRoot) {
+			return project;
+		}
+	}
+	return undefined;
+}
+
+/**
  * Converts the package manager detected by @netlify/build-info to our PackageManager type.
  * Falls back to npm if no package manager was detected.
  *
  * @param pkgManager The package manager detected by @netlify/build-info (from project.packageManager)
  * @param projectPath Path to the project root, used to detect nub via its lock file
+ * @param workspaceRoot Path to the enclosing workspace, if detected
  * @returns A PackageManager object compatible with wrangler's package manager utilities
  */
 function convertDetectedPackageManager(
 	pkgManager: { name: string } | null,
-	projectPath: string
+	projectPath: string,
+	workspaceRoot?: string
 ): PackageManager {
 	// TODO: Remove this nub.lock check once netlify/build#7124 is merged and
 	// released, after which @netlify/build-info recognises nub directly.
 	// https://github.com/netlify/build/pull/7124
-	if (existsSync(join(projectPath, "nub.lock"))) {
+	if (
+		existsSync(join(projectPath, "nub.lock")) ||
+		(workspaceRoot && existsSync(join(workspaceRoot, "nub.lock")))
+	) {
 		return NubPackageManager;
 	}
 

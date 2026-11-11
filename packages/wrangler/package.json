@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.157.0",
+	"version": "4.160.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"assembly",
@@ -208,7 +208,7 @@
 		"fsevents": "2.3.3"
 	},
 	"engines": {
-		"node": ">=22.0.0"
+		"node": ">=22.12.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

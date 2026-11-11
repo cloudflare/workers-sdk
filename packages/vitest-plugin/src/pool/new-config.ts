@@ -3,13 +3,17 @@ import {
 	loadAndParseConfig,
 	SINGLETON_BINDING_TYPES,
 } from "@cloudflare/config";
+import { createMiniflareExports } from "@cloudflare/containers-shared";
 import { formatZodError, getZoneFromRoute } from "@cloudflare/workers-utils";
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import { Log, LogLevel, resolveLocalBindings } from "miniflare";
 import type {
 	ParsedInputConfig,
+	ParsedInputContainerConfig,
 	ParsedInputWorkerConfig,
 } from "@cloudflare/config";
+import type { ContainerDevRuntimeOptions } from "@cloudflare/containers-shared";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";
 
 export const NEW_CONFIG_FILENAME = "cloudflare.config.ts";
@@ -19,12 +23,27 @@ const log = new Log(LogLevel.INFO, { prefix: "vpw" });
 export interface LoadedNewConfig {
 	settings: Pick<ParsedInputConfig, "accountId" | "complianceRegion">;
 	worker: ParsedInputWorkerConfig;
+	/** Containers the config defines; Durable Object exports reference them by name. */
+	containers: ParsedInputContainerConfig[];
 	/** The mode config functions were called with. */
 	mode: string;
 	/** Values resolved from `.env` files and the process environment. */
 	localEnv: Record<string, string>;
 	/** Values from the selected `.dev.vars` file, if there is one. */
 	devVars: Record<string, string> | undefined;
+}
+
+/**
+ * Converts the compliance region of a `cloudflare.config.ts` to the form that
+ * Cloudflare's API and the Containers tooling take.
+ *
+ * @param region The config's `complianceRegion`.
+ * @returns The same region in `ComplianceConfig` form.
+ */
+export function toApiComplianceRegion(
+	region: LoadedNewConfig["settings"]["complianceRegion"]
+): ComplianceConfig["compliance_region"] {
+	return region === "fedramp-high" ? "fedramp_high" : region;
 }
 
 /**
@@ -83,6 +102,7 @@ export async function loadNewConfig(
 			complianceRegion: result.data.complianceRegion,
 		},
 		worker,
+		containers: result.data.containers,
 		mode,
 		localEnv: localEnv.values,
 		devVars,
@@ -102,12 +122,14 @@ export async function loadNewConfig(
  *
  * The config's remaining secrets and Hyperdrive bindings are then resolved
  * locally. Its assets binding and settings are dropped, unless `miniflare.assets`
- * provides a directory.
+ * provides a directory. Durable Object exports that reference a Container get
+ * that Container's local runtime options.
  *
  * @param userWorker The Worker under test, converted from `miniflare` options.
  * @param cloudflareConfig The loaded `cloudflare.config.ts`.
- * @param customOptions Whether remote bindings are enabled, and the config's
- *   remote proxy session, if any.
+ * @param customOptions Whether remote bindings are enabled, the config's remote
+ *   proxy session, if any, and the runtime options of its Container-backed
+ *   Durable Object classes, if any.
  * @returns The merged Worker under test.
  */
 export function mergeCloudflareConfigWorker(
@@ -116,6 +138,7 @@ export function mergeCloudflareConfigWorker(
 	customOptions: {
 		remoteBindings?: boolean;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		containerRuntimeOptions?: Map<string, ContainerDevRuntimeOptions>;
 	}
 ): WorkerOptions {
 	const {
@@ -158,14 +181,11 @@ export function mergeCloudflareConfigWorker(
 		logger: log,
 	});
 
-	const workerExports: NonNullable<WorkerOptions["config"]["exports"]> = {};
-	for (const [name, exported] of Object.entries(configExports ?? {})) {
-		// Containers aren't supported by the pool, as for Wrangler configs
-		const { container: _container, ...rest } = exported as typeof exported & {
-			container?: string;
-		};
-		workerExports[name] = rest;
-	}
+	const workerExports: NonNullable<WorkerOptions["config"]["exports"]> =
+		createMiniflareExports({
+			exports: configExports,
+			containerRuntimeOptions: customOptions.containerRuntimeOptions,
+		});
 	// Binding a Durable Object in `miniflare` options also declares its class,
 	// with `legacy-kv` storage unless `useSQLite` is set, so keep the config's
 	// declaration of that class

@@ -1,7 +1,39 @@
 import * as recast from "recast";
 import parser from "recast/parsers/babel";
 import { describe, test } from "vitest";
-import { mergeObjectProperties } from "../src/index";
+import { mergeObjectProperties, parseJs, parseTs } from "../src/index";
+
+const svelteConfigWithSpread = `import adapter from "@sveltejs/adapter-auto";
+
+const config = {
+	kit: {
+		adapter: adapter(),
+		typescript: {
+			config: (config) => ({
+				...config,
+				include: [...config.include, "../drizzle.config.ts"]
+			})
+		}
+	}
+};
+
+export default config;
+`;
+
+describe("Svelte configuration parsing", () => {
+	test.for([
+		["JavaScript", parseJs],
+		["TypeScript", parseTs],
+	] as const)(
+		"preserves a %s configuration containing object spread",
+		([, parse], { expect }) => {
+			expect(
+				recast.print(parse(svelteConfigWithSpread), { lineTerminator: "\n" })
+					.code
+			).toBe(svelteConfigWithSpread);
+		}
+	);
+});
 
 describe("mergeObjectProperties", () => {
 	const tests = [

@@ -7,6 +7,7 @@ import { format } from "node:util";
 import {
 	createContainerDevPlanForCfConfig,
 	createContainerPreviewPlanForCfConfig,
+	createMiniflareExports,
 	generateContainerBuildId,
 	resolveDockerHost,
 } from "@cloudflare/containers-shared";
@@ -62,7 +63,6 @@ import type {
 import type {
 	ContainerDevOptions,
 	ContainerDevPlan,
-	ContainerDevRuntimeOptions,
 } from "@cloudflare/containers-shared";
 import type {
 	RemoteBindingsLogger,
@@ -525,7 +525,11 @@ export async function getDevMiniflareOptions(
 											getRemoteBindingsAuth(
 												resolvedViteConfig.root,
 												settings.accountId,
-												createLogger(viteDevServer.config.logger)
+												() =>
+													ctx.getCloudflareAuth(
+														resolvedViteConfig.root,
+														createLogger(viteDevServer.config.logger)
+													)
 											),
 											{
 												cliDisplayName: resolvedPluginConfig.cliDisplayName,
@@ -607,7 +611,7 @@ export async function getDevMiniflareOptions(
 								worker: worker.config.name,
 								exportName: "__VITE_RUNNER_OBJECT__",
 							};
-							const workerExports = createMiniflareExports({
+							const workerExports: MiniflareExports = createMiniflareExports({
 								exports: config.exports,
 								containerRuntimeOptions: containerPlansByWorkerName.get(
 									worker.config.name
@@ -852,7 +856,11 @@ export async function getPreviewMiniflareOptions(
 						getRemoteBindingsAuth(
 							resolvedViteConfig.root,
 							resolvedPluginConfig.settings.accountId,
-							createLogger(vitePreviewServer.config.logger)
+							() =>
+								ctx.getCloudflareAuth(
+									resolvedViteConfig.root,
+									createLogger(vitePreviewServer.config.logger)
+								)
 						),
 						{
 							cliDisplayName: resolvedPluginConfig.cliDisplayName,
@@ -875,7 +883,7 @@ export async function getPreviewMiniflareOptions(
 			);
 			assert(resolvedLocalBindings);
 			const env = { ...resolvedLocalBindings };
-			const workerExports = createMiniflareExports({
+			const workerExports: MiniflareExports = createMiniflareExports({
 				exports,
 				containerRuntimeOptions: containerPlansByWorkerName.get(
 					workerConfig.name
@@ -950,40 +958,6 @@ export async function getPreviewMiniflareOptions(
 		containerOptions:
 			containerPlansByWorkerName.size === 0 ? undefined : containerOptions,
 	};
-}
-
-/**
- * Replaces authored Container names on Durable Object exports with workerd's
- * local Container runtime metadata.
- *
- * @param options - Worker exports and their planned local Container metadata.
- * @returns Exports accepted by Miniflare's native Worker config schema.
- */
-export function createMiniflareExports(options: {
-	exports:
-		| ParsedInputWorkerConfig["exports"]
-		| ParsedOutputWorkerConfig["exports"];
-	containerRuntimeOptions: Map<string, ContainerDevRuntimeOptions> | undefined;
-}): MiniflareExports {
-	const workerExports: MiniflareExports = {};
-	for (const [name, workerExport] of Object.entries(options.exports ?? {})) {
-		if (workerExport.type === "durable-object" && "storage" in workerExport) {
-			const containerName =
-				"container" in workerExport ? workerExport.container : undefined;
-			const container =
-				containerName === undefined
-					? undefined
-					: options.containerRuntimeOptions?.get(name);
-			assert(
-				containerName === undefined || container !== undefined,
-				`Expected runtime options for Container-backed Durable Object export "${name}".`
-			);
-			workerExports[name] = { ...workerExport, container };
-		} else {
-			workerExports[name] = workerExport;
-		}
-	}
-	return workerExports;
 }
 
 function resolveLocalBindingsByWorkerName(

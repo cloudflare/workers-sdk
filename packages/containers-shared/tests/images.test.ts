@@ -376,14 +376,17 @@ describe("prepareContainerImagesForDev", () => {
 			const result = await prepareContainerImagesForDev({
 				dockerPath: "test-docker",
 				containerOptions: [],
-				configFileName: "test config file",
+				dockerUnavailableHint: "test hint",
 				registryConfigureCommand: "test registry configure",
 				onContainerImagePreparationStart: onStart,
 				onContainerImagePreparationEnd: onEnd,
 				logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 			});
 			expect(verifyDockerInstalled).toHaveBeenCalledWith(
-				expect.objectContaining({ dockerPath: "test-docker" })
+				expect.objectContaining({
+					dockerPath: "test-docker",
+					hint: "test hint",
+				})
 			);
 			expect(startContainerBuild).not.toHaveBeenCalled();
 			expect(runDockerCmd).toHaveBeenCalledExactlyOnceWith("test-docker", [
@@ -393,6 +396,50 @@ describe("prepareContainerImagesForDev", () => {
 			expect(onStart).not.toHaveBeenCalled();
 			expect(onEnd).not.toHaveBeenCalled();
 			expect(result).toEqual({ aborted: false });
+		}
+	);
+
+	it.skipIf(process.platform === "win32")(
+		"defaults the Docker error to running dev with no hint",
+		async ({ expect }) => {
+			vi.mocked(verifyDockerInstalled).mockClear();
+			await prepareContainerImagesForDev({
+				dockerPath: "test-docker",
+				containerOptions: [],
+				registryConfigureCommand: "test registry configure",
+				onContainerImagePreparationStart: vi.fn(),
+				onContainerImagePreparationEnd: vi.fn(),
+				logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+			});
+			expect(verifyDockerInstalled).toHaveBeenCalledWith(
+				expect.objectContaining({
+					operation: "running dev",
+					hint: undefined,
+				})
+			);
+		}
+	);
+
+	it.skipIf(process.platform === "win32")(
+		"lets callers describe the operation and how to disable Containers",
+		async ({ expect }) => {
+			vi.mocked(verifyDockerInstalled).mockClear();
+			await prepareContainerImagesForDev({
+				dockerPath: "test-docker",
+				containerOptions: [],
+				registryConfigureCommand: "test registry configure",
+				onContainerImagePreparationStart: vi.fn(),
+				onContainerImagePreparationEnd: vi.fn(),
+				logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+				operation: "running tests",
+				dockerUnavailableHint: "Disable Containers in the test config.",
+			});
+			expect(verifyDockerInstalled).toHaveBeenCalledWith(
+				expect.objectContaining({
+					operation: "running tests",
+					hint: "Disable Containers in the test config.",
+				})
+			);
 		}
 	);
 });

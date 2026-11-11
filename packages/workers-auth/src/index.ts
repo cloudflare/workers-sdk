@@ -31,6 +31,7 @@ export type {
 export {
 	getAuthUrlFromEnv,
 	getCloudflareAccountIdFromEnv,
+	getCloudflareAuthProfileFromEnv,
 	getCloudflareAuthUseKeyringFromEnv,
 } from "./env-vars";
 

@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-utils",
-	"version": "0.51.1",
+	"version": "0.53.0",
 	"description": "Internal utility package for workers-sdk. Not intended for external use — APIs may change without notice.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/workers-utils#readme",
 	"bugs": {
@@ -59,6 +59,10 @@
 			"import": "./dist/errors.mjs",
 			"types": "./dist/errors.d.mts"
 		},
+		"./custom-api-headers": {
+			"import": "./dist/custom-api-headers.mjs",
+			"types": "./dist/custom-api-headers.d.mts"
+		},
 		"./global-wrangler-config-path": {
 			"import": "./dist/global-wrangler-config-path.mjs",
 			"types": "./dist/global-wrangler-config-path.d.mts"
@@ -70,6 +74,10 @@
 		"./zod-format": {
 			"import": "./dist/zod-format.mjs",
 			"types": "./dist/zod-format.d.mts"
+		},
+		"./sanitize-headers": {
+			"import": "./dist/sanitize-headers.mjs",
+			"types": "./dist/sanitize-headers.d.mts"
 		}
 	},
 	"scripts": {

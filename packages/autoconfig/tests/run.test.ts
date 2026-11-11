@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import {
 	NpmPackageManager,
@@ -10,6 +11,7 @@ import {
 	seed,
 } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
+import { getDetailsForAutoConfig } from "../src/details";
 import { getFrameworkClassInstance } from "../src/frameworks";
 import { Framework } from "../src/frameworks/framework-class";
 import { Static } from "../src/frameworks/static";
@@ -61,6 +63,41 @@ class BuildCommandOverrideFramework extends Static {
 describe("runAutoConfig()", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
+
+	it("updates the application manifest, not its enclosing workspace", async ({
+		expect,
+	}) => {
+		vi.spyOn(cliPackages, "installWrangler").mockResolvedValue();
+		const rootManifest = JSON.stringify({
+			name: "workspace-root",
+			packageManager: "pnpm@10.0.0",
+		});
+		await seed({
+			"package.json": rootManifest,
+			"pnpm-workspace.yaml": "packages: ['packages/*']\n",
+			"pnpm-lock.yaml": "",
+			"packages/app/package.json": JSON.stringify({ name: "static-app" }),
+			"packages/app/public/index.html": "<h1>Application</h1>",
+		});
+		const context = createMockContext();
+		const projectPath = join(process.cwd(), "packages/app");
+		const details = await getDetailsForAutoConfig({ projectPath, context });
+		expect(details.packageManager.type).toBe("pnpm");
+
+		await runAutoConfig(details, {
+			context,
+			skipConfirmations: true,
+			enableTargetCliInstallation: false,
+			runBuild: false,
+		});
+
+		expect(readFileSync("package.json", "utf8")).toBe(rootManifest);
+		expect(
+			JSON.parse(readFileSync(join(projectPath, "package.json"), "utf8"))
+		).toMatchObject({ name: "static-app", scripts: { deploy: "cf deploy" } });
+		expect(existsSync("cloudflare.config.ts")).toBe(false);
+		expect(existsSync(join(projectPath, "cloudflare.config.ts"))).toBe(true);
+	});
 
 	it.for([
 		{ vitePlus: false, override: false },
@@ -133,7 +170,7 @@ describe("runAutoConfig()", () => {
 				{ context: createMockContext(), dryRun: true }
 			);
 			expect(summary.buildCommand).toBe(
-				`${packageManager.npx} ${vitePlus ? "vp" : "vite"} build`
+				vitePlus ? "vp build" : `${packageManager.npx} vite build`
 			);
 		}
 	);

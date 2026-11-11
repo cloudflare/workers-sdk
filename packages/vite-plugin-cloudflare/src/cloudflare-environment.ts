@@ -323,7 +323,6 @@ export function createCloudflareEnvironmentOptions({
 			target,
 			cssTarget: getWorkerCssTarget(userConfig, environmentName),
 			emitAssets: true,
-			manifest: isParentEnvironment,
 			outDir: getOutputDirectory(userConfig, environmentName),
 			sourcemap: getWorkerSourcemap(userConfig, environmentName),
 			copyPublicDir: false,

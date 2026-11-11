@@ -9,7 +9,12 @@ import {
 	TokenUpdateFailed,
 	UploadFailed,
 } from "./errors";
-import { handleException, setupSentry } from "./sentry";
+import {
+	handleException,
+	hashSessionId,
+	setPreviewTags,
+	setupSentry,
+} from "./sentry";
 import type { Toucan } from "toucan-js";
 
 declare const ROOT: string;
@@ -21,6 +26,10 @@ const previewHostname = PREVIEW;
 const previewDomain = `:any/${previewHostname.replaceAll(".", "/")}`;
 
 async function pushMetrics(env: Env, metrics: string) {
+	// The testing environment has no Prometheus token, so it doesn't report metrics.
+	if (!env.PROMETHEUS_TOKEN) {
+		return;
+	}
 	try {
 		const response = await env.WSHIM_SOCKET.fetch(
 			"https://workers-logging.cfdata.org/prometheus",
@@ -73,7 +82,12 @@ const app = new Hono<{
  * It requires one parameter, passed as a header:
  *  - `X-CF-Token`  A preview token, as in /.update-preview-token
  */
-async function handleRawHttp(request: Request, url: URL, env: Env) {
+async function handleRawHttp(
+	request: Request,
+	url: URL,
+	env: Env,
+	sentry: Toucan
+) {
 	const token = request.headers.get("X-CF-Token");
 	if (!token) {
 		throw new RawHttpFailed();
@@ -85,6 +99,7 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 		throw new RawHttpFailed();
 	}
 	const userObject = env.UserSession.get(userObjectId);
+	sentry.setTag("session", await hashSessionId(token));
 
 	// Delete these consumed headers so as not to bloat the request.
 	// Some tokens can be quite large and may cause nginx to reject the
@@ -109,6 +124,11 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 
 	headers.append("cf-run-user-worker", "true");
 
+	sentry.addBreadcrumb({
+		category: "preview",
+		message: "Forwarding raw HTTP request to the session",
+		data: { method },
+	});
 	const workerResponse = await userObject.fetch(url, {
 		method,
 		headers,
@@ -164,13 +184,12 @@ app.use("*", async (c, next) => {
 app.use("*", async (c, next) => {
 	c.set(
 		"sentry",
-		setupSentry(
-			c.req.raw,
-			c.executionCtx as ExecutionContext, // TODO: fix hono's types?
-			c.env.SENTRY_DSN,
-			c.env.SENTRY_ACCESS_CLIENT_ID,
-			c.env.SENTRY_ACCESS_CLIENT_SECRET
-		)
+		setupSentry({
+			request: c.req.raw,
+			context: c.executionCtx as ExecutionContext, // TODO: fix hono's types?
+			env: c.env,
+			hop: "entry",
+		})
 	);
 	return await next();
 });
@@ -290,8 +309,11 @@ app.all(`${previewDomain}/*`, async (c) => {
 		});
 	}
 	const url = new URL(c.req.url);
-	if (c.req.raw.headers.has("cf-raw-http")) {
-		return handleRawHttp(c.req.raw, url, c.env);
+	const sentry = c.get("sentry");
+	const isRawHttp = c.req.raw.headers.has("cf-raw-http");
+	setPreviewTags(sentry, c.req.raw);
+	if (isRawHttp) {
+		return handleRawHttp(c.req.raw, url, c.env, sentry);
 	}
 	const token = getCookie(c, PREVIEW_COOKIE_NAME);
 	if (!token) {
@@ -304,7 +326,13 @@ app.all(`${previewDomain}/*`, async (c) => {
 		throw new PreviewRequestFailed(token, false);
 	}
 	const userObject = c.env.UserSession.get(userObjectId);
+	sentry.setTag("session", await hashSessionId(token));
 
+	sentry.addBreadcrumb({
+		category: "preview",
+		message: "Forwarding request to the session",
+		data: { method: c.req.method },
+	});
 	const original = await userObject.fetch(
 		url,
 		new Request(c.req.raw, {

@@ -9,6 +9,7 @@ import {
 import { buildAndWriteContainerOutput } from "@cloudflare/containers-shared";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import * as vite from "vite";
+import { buildApp } from "../build";
 import { isPreviewBuild } from "../build-output-env";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { assertIsNotPreview } from "../context";
@@ -19,13 +20,29 @@ import type { ModuleType } from "@cloudflare/config";
 
 /** Emits Workers using the Build Output Specification after every environment has built. */
 export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
-	// Frameworks may delete the Vite manifests they enable before post
-	// `buildApp` hooks run, so record the main module from the bundle instead.
+	// Frameworks may delete Vite manifests before post `buildApp` hooks run,
+	// so record the main modules and imported assets from the bundles instead.
 	const environmentNameToMainModule = new Map<string, string>();
+	const environmentNameToImportedAssetPaths = new Map<string, Set<string>>();
 
 	return {
 		writeBundle(_options, bundle) {
+			const importedAssetPaths = ctx.getWorkerConfig(this.environment.name)
+				? new Set<string>()
+				: undefined;
+			if (importedAssetPaths) {
+				environmentNameToImportedAssetPaths.set(
+					this.environment.name,
+					importedAssetPaths
+				);
+			}
+
 			for (const output of Object.values(bundle)) {
+				if (importedAssetPaths) {
+					for (const assetPath of output.viteMetadata?.importedAssets ?? []) {
+						importedAssetPaths.add(assetPath);
+					}
+				}
 				if (
 					output.type === "chunk" &&
 					output.isEntry &&
@@ -42,7 +59,11 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 			order: "post",
 			async handler(builder) {
 				assertIsNotPreview(ctx);
-				await buildUnbuiltWorkerEnvironments(builder);
+				await buildApp(
+					builder,
+					ctx.resolvedPluginConfig,
+					environmentNameToImportedAssetPaths
+				);
 
 				if (ctx.resolvedPluginConfig.type === "assets-only") {
 					await writeBuildOutputWorkerConfig({
@@ -76,31 +97,6 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 			},
 		},
 	};
-
-	async function buildUnbuiltWorkerEnvironments(
-		builder: vite.ViteBuilder
-	): Promise<void> {
-		if (ctx.resolvedPluginConfig.type === "preview") {
-			return;
-		}
-
-		const workerEnvironments = [
-			...ctx.resolvedPluginConfig.environmentNameToWorkerMap.entries(),
-		]
-			.filter(([_, worker]) => !resolveDevOnly(worker.devOnly))
-			.map(([environmentName]) => {
-				const environment = builder.environments[environmentName];
-				assert(environment, `"${environmentName}" environment not found`);
-
-				return environment;
-			});
-
-		await Promise.all(
-			workerEnvironments
-				.filter((environment) => !environment.isBuilt)
-				.map((environment) => builder.build(environment))
-		);
-	}
 
 	async function writeWorkerConfig(
 		builder: vite.ViteBuilder,

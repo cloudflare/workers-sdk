@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { test, describe } from "vitest";
@@ -42,6 +43,20 @@ describe("pre-rendering", () => {
 					path.join(workerDir, "bundle", config.manifest.mainModule)
 				)
 			).toBe(true);
+		}
+	);
+
+	test.runIf(isBuild)(
+		"serves an asset imported by the prerender Worker after the build",
+		async ({ expect }) => {
+			await page.goto(`${viteTestUrl}/prerendered`);
+			const assetUrl = await page
+				.locator("#prerender-asset")
+				.getAttribute("href");
+			assert(assetUrl);
+			expect(await getTextResponse(assetUrl)).toBe(
+				"Asset imported by the prerender Worker\n"
+			);
 		}
 	);
 

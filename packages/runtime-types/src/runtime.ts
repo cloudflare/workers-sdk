@@ -1,8 +1,6 @@
 import * as fsp from "node:fs/promises";
 import { createRequire } from "node:module";
-import { isNodejsCompatDefaultOn } from "@cloudflare/workers-utils";
-import { convertV4MiniflareOptions, Miniflare } from "miniflare";
-import { version } from "workerd";
+import { isNodejsCompatDefaultOn } from "@cloudflare/workers-utils/compatibility-date";
 import {
 	getRuntimeHeader,
 	RUNTIME_HEADER_COMMENT_PREFIX,
@@ -52,6 +50,7 @@ export async function generateRuntimeTypes({
 	runtimeTypes: string;
 	isCached: boolean;
 }> {
+	const { version } = await import("workerd");
 	const header = getRuntimeHeader(
 		version,
 		compatibilityDate,
@@ -104,6 +103,7 @@ async function generate({
 	compatibilityDate: string;
 	compatibilityFlags?: string[];
 }) {
+	const { convertV4MiniflareOptions, Miniflare } = await import("miniflare");
 	const worker = (
 		await fsp.readFile(require.resolve("workerd/worker.mjs"))
 	).toString();

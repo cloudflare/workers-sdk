@@ -1569,7 +1569,7 @@ describe("deploy", () => {
 				await expect(runWrangler("deploy index.js")).rejects
 					.toMatchInlineSnapshot(`
 					[Error: More than one account available but unable to select one in non-interactive mode.
-					Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
+					Please set the appropriate account ID in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 					Available accounts are (\`<name>\`: \`<account_id>\`):
 					  \`enterprise\`: \`1701\`
 					  \`enterprise-nx\`: \`nx01\`]
@@ -1600,7 +1600,7 @@ describe("deploy", () => {
 				await expect(runWrangler("deploy index.js")).rejects
 					.toMatchInlineSnapshot(`
 					[Error: More than one account available but unable to select one in non-interactive mode.
-					Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
+					Please set the appropriate account ID in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 					Available accounts are (\`<name>\`: \`<account_id>\`):
 					  \`(redacted)\`: \`1701\`
 					  \`(redacted)\`: \`nx01\`]
@@ -1716,7 +1716,7 @@ describe("deploy", () => {
 					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to automatically retrieve account IDs for the logged in user.[0m
 
 					  In a non-interactive environment, it is mandatory to specify an account ID, either by assigning
-					  its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your Wrangler configuration file.
+					  its value to CLOUDFLARE_ACCOUNT_ID, or in your Wrangler configuration file.
 					  Alternatively, try running \`wrangler login\` to re-authenticate.
 
 					"

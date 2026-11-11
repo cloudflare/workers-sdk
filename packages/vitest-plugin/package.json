@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vitest-plugin",
-	"version": "1.5.1",
+	"version": "1.7.0",
 	"description": "Workers Vitest integration for writing Vitest unit and integration tests that run inside the Workers runtime",
 	"keywords": [
 		"cloudflare",
@@ -59,6 +59,7 @@
 	"devDependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/config": "workspace:*",
+		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/remote-bindings": "workspace:*",
 		"@cloudflare/runtime-types": "workspace:*",
@@ -72,7 +73,7 @@
 		"@vitest/ui": "catalog:default",
 		"birpc": "0.2.14",
 		"capnp-es": "catalog:default",
-		"devalue": "^5.9.3",
+		"devalue": "^5.9.4",
 		"es-module-lexer": "2.3.1",
 		"get-port": "^7.1.0",
 		"semver": "^7.7.1",

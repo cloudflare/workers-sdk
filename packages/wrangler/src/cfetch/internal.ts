@@ -1,11 +1,13 @@
 import {
 	addAuthorizationHeader,
+	addCustomApiHeaders,
 	APIError,
 	fetchInternalBase,
 	fetchKVGetValueBase,
 	getCloudflareApiBaseUrl,
 	parseRetryAfterMs,
 	performApiFetchBase,
+	sanitizeHeaders,
 	UserError,
 } from "@cloudflare/workers-utils";
 import Cloudflare from "cloudflare";
@@ -23,14 +25,19 @@ import type { HeadersInit, RequestInfo, RequestInit } from "undici";
 
 async function logRequest(request: Request, init?: RequestInit) {
 	logger.debug(`-- START CF API REQUEST: ${request.method} ${request.url}`);
-	const logRequestHeaders = cloneHeaders(request.headers);
-	logRequestHeaders.delete("Authorization");
 	logger.debugWithSanitization(
 		"HEADERS:",
-		JSON.stringify(logRequestHeaders, null, 2)
+		JSON.stringify(sanitizeHeaders(request.headers), null, 2)
 	);
 
-	logger.debugWithSanitization("INIT:", JSON.stringify({ ...init }, null, 2));
+	logger.debugWithSanitization(
+		"INIT:",
+		JSON.stringify(
+			{ ...init, headers: sanitizeHeaders(new Headers(init?.headers)) },
+			null,
+			2
+		)
+	);
 	if (request.body instanceof FormData) {
 		logger.debugWithSanitization(
 			"BODY:",
@@ -49,11 +56,9 @@ async function logResponse(response: Response) {
 		response.statusText,
 		response.status
 	);
-	const logResponseHeaders = cloneHeaders(response.headers);
-	logResponseHeaders.delete("Authorization");
 	logger.debugWithSanitization(
 		"HEADERS:",
-		JSON.stringify(logResponseHeaders, null, 2)
+		JSON.stringify(sanitizeHeaders(response.headers), null, 2)
 	);
 	logger.debugWithSanitization("RESPONSE:", jsonText);
 	logger.debug("-- END CF API RESPONSE");
@@ -75,10 +80,11 @@ export function createCloudflareClient(complianceConfig: ComplianceConfig) {
 				/* The CF SDK will inject `Bearer dummy` */ true
 			);
 			addUserAgent(request.headers);
+			addCustomApiHeaders(request.headers);
 
 			await logRequest(request, init);
 
-			const response = await fetch(request.url, request);
+			const response = await fetch(request);
 			await logResponse(response);
 			return response;
 		},
@@ -257,6 +263,7 @@ export async function fetchR2Objects(
 	const headers = cloneHeaders(bodyInit.headers);
 	addAuthorizationHeader(headers, auth);
 	addUserAgent(headers);
+	addCustomApiHeaders(headers);
 
 	const response = await fetch(
 		`${getCloudflareApiBaseUrl(complianceConfig)}${resource}`,
@@ -317,6 +324,7 @@ export async function fetchWorkerDefinitionFromDash(
 	const headers = cloneHeaders(bodyInit.headers);
 	addAuthorizationHeader(headers, auth);
 	addUserAgent(headers);
+	addCustomApiHeaders(headers);
 
 	let response = await fetch(
 		`${getCloudflareApiBaseUrl(complianceConfig)}${resource}`,
