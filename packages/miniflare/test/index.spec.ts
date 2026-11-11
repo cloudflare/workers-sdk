@@ -5478,3 +5478,43 @@ test("Miniflare: dispatchFetch() replays a known-length body after HTTP 421", as
 	expect(res.headers.get("location")).toBeNull();
 	expect(await res.text()).toBe("body={}");
 });
+
+test("Miniflare: dispatchFetch revives Worker exceptions when Accept-Encoding: gzip is forwarded", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2026-09-04",
+					manifest: singleModuleManifest(
+						`export default {
+							fetch() {
+								const error = { name: "Error", message: "gzip-boom", stack: "Error: gzip-boom" };
+								const body = new Blob([JSON.stringify(error)])
+									.stream()
+									.pipeThrough(new CompressionStream("gzip"));
+								return new Response(body, {
+									status: 500,
+									headers: {
+										"MF-Experimental-Error-Stack": "true",
+										"Content-Type": "application/json",
+										"Content-Encoding": "gzip",
+									},
+								});
+							},
+						}`
+					),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	await expect(
+		mf.dispatchFetch("http://localhost/", {
+			headers: { "Accept-Encoding": "gzip" },
+		})
+	).rejects.toThrow("gzip-boom");
+});
