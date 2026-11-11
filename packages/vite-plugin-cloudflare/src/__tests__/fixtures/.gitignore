@@ -1,0 +1,5 @@
+# Written by artifacts-local.spec.ts; removed after each test.
+/artifacts-local/
+
+# Written by request-origin.spec.ts; removed after each test.
+/request-origin-*/
