@@ -12,4 +12,7 @@ export interface UserAuthConfig {
 	api_token?: string;
 }
 
-export type AuthConfigStorage = ConfigStorage<UserAuthConfig>;
+export interface AuthConfigStorage extends ConfigStorage<UserAuthConfig> {
+	/** Pin a dynamically selected backend for the duration of a transaction. */
+	getForTransaction?(): AuthConfigStorage;
+}

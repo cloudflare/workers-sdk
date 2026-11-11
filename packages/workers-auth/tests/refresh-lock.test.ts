@@ -1,26 +1,59 @@
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
-import { existsSync, mkdirSync, utimesSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	utimesSync,
+	writeFileSync,
+} from "node:fs";
+import { syncBuiltinESMExports } from "node:module";
 import path from "node:path";
+import { removeDirSync } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
-import { describe, it, vi } from "vitest";
-import { withRefreshLock, _TEST_CONSTANTS } from "../src/refresh-lock";
+import { afterEach, describe, it, vi } from "vitest";
+import {
+	getRefreshLockPath,
+	tryWithRefreshLock,
+	withRefreshLock,
+} from "../src/refresh-lock";
 
 const FAST_RETRIES = { maxRetries: 3, retryDelayMs: 10 };
 
 describe("withRefreshLock", () => {
 	runInTempDir();
+	afterEach(() => {
+		vi.restoreAllMocks();
+		syncBuiltinESMExports();
+	});
 
 	function lockDir(): string {
 		return path.join(process.cwd(), "test.lock");
 	}
 
-	it("acquires and releases the lock around fn", async ({ expect }) => {
+	function seedOwner(pid: number): string {
+		mkdirSync(lockDir(), { recursive: true });
+		const owner = `owner-${pid}-${randomUUID()}`;
+		writeFileSync(path.join(lockDir(), owner), "");
+		return owner;
+	}
+
+	it("publishes complete ownership and releases the lock around fn", async ({
+		expect,
+	}) => {
 		const result = await withRefreshLock(lockDir(), async () => {
-			expect(existsSync(lockDir())).toBe(true);
+			expect(readdirSync(lockDir())).toEqual([
+				expect.stringMatching(new RegExp(`^owner-${process.pid}-`)),
+			]);
 			return 42;
 		});
 		expect(result).toBe(42);
 		expect(existsSync(lockDir())).toBe(false);
+		expect(
+			readdirSync(process.cwd()).filter((entry) =>
+				entry.startsWith("test.lock")
+			)
+		).toEqual([]);
 	});
 
 	it("releases the lock when fn throws", async ({ expect }) => {
@@ -32,149 +65,151 @@ describe("withRefreshLock", () => {
 		expect(existsSync(lockDir())).toBe(false);
 	});
 
-	it("breaks a lock held by a dead process", async ({ expect }) => {
-		const dir = lockDir();
-		mkdirSync(dir);
-		writeFileSync(
-			path.join(dir, _TEST_CONSTANTS.LOCK_INFO_FILE),
-			JSON.stringify({ pid: 999999999 }),
-			"utf-8"
+	it("recovers a lock held by a dead process", async ({ expect }) => {
+		seedOwner(999999999);
+		expect(await withRefreshLock(lockDir(), async () => "acquired")).toBe(
+			"acquired"
 		);
-
-		const result = await withRefreshLock(dir, async () => "acquired");
-		expect(result).toBe("acquired");
-		expect(existsSync(dir)).toBe(false);
+		expect(existsSync(lockDir())).toBe(false);
 	});
 
-	it("does not evict an alive process", async ({ expect }) => {
-		const dir = lockDir();
-		mkdirSync(dir);
-		writeFileSync(
-			path.join(dir, _TEST_CONSTANTS.LOCK_INFO_FILE),
-			JSON.stringify({ pid: process.pid }),
-			"utf-8"
-		);
-
-		// Lock held by a live process — should NOT be broken, so fn runs
-		// without the lock after retries exhaust.
-		const result = await withRefreshLock(
-			dir,
-			async () => "ran-unlocked",
-			FAST_RETRIES
-		);
-		expect(result).toBe("ran-unlocked");
-	});
-
-	it("proceeds without the lock when acquisition fails after retries", async ({
+	it("fails closed for a live owner even when the lock is old", async ({
 		expect,
 	}) => {
-		const dir = lockDir();
-		mkdirSync(dir);
-		// Lock held by the current process — not stale, so all retry
-		// attempts will fail.
-		writeFileSync(
-			path.join(dir, _TEST_CONSTANTS.LOCK_INFO_FILE),
-			JSON.stringify({ pid: process.pid }),
-			"utf-8"
-		);
-
-		const result = await withRefreshLock(
-			dir,
-			async () => "ran-unlocked",
-			FAST_RETRIES
-		);
-		expect(result).toBe("ran-unlocked");
+		const owner = seedOwner(process.pid);
+		const past = new Date(0);
+		utimesSync(lockDir(), past, past);
+		const callback = vi.fn();
+		await expect(
+			withRefreshLock(lockDir(), callback, FAST_RETRIES)
+		).rejects.toThrow("Another process");
+		expect(callback).not.toHaveBeenCalled();
+		expect(readdirSync(lockDir())).toEqual([owner]);
 	});
 
-	it("serializes two sequential callers on the same lock", async ({
+	it("does not mistake an unprobeable PID for a dead owner", async ({
 		expect,
 	}) => {
-		const order: string[] = [];
-		await withRefreshLock(lockDir(), async () => {
-			order.push("first");
+		const owner = seedOwner(process.pid);
+		vi.spyOn(process, "kill").mockImplementation(() => {
+			throw Object.assign(new Error("denied"), { code: "EPERM" });
 		});
-		await withRefreshLock(lockDir(), async () => {
-			order.push("second");
-		});
-		expect(order).toEqual(["first", "second"]);
+		const callback = vi.fn();
+		await expect(
+			withRefreshLock(lockDir(), callback, FAST_RETRIES)
+		).rejects.toThrow("Another process");
+		expect(callback).not.toHaveBeenCalled();
+		expect(readdirSync(lockDir())).toEqual([owner]);
 	});
 
-	it("breaks a lock directory with no info file after grace period", async ({
+	it("does not delete a new owner when a stale reaper is delayed", async ({
 		expect,
 	}) => {
-		const dir = lockDir();
-		mkdirSync(dir);
-		// Backdate the directory mtime past the grace period so it's treated
-		// as stale (the acquirer had enough time to write info.json but didn't).
-		const past = new Date(Date.now() - _TEST_CONSTANTS.LOCK_GRACE_MS - 1000);
-		utimesSync(dir, past, past);
-
-		const result = await withRefreshLock(dir, async () => "acquired");
-		expect(result).toBe("acquired");
-	});
-
-	it("proceeds without the lock on non-EEXIST filesystem errors", async ({
-		expect,
-	}) => {
-		// Use a lock path under a non-existent parent to trigger ENOENT from
-		// mkdirSync. The function should degrade gracefully (run fn without
-		// the lock) rather than propagating the error, and should return
-		// immediately without burning through the full retry budget.
-		const badLockDir = path.join(
-			process.cwd(),
-			"non-existent-parent",
-			"test.lock"
-		);
-
-		const start = Date.now();
-		const result = await withRefreshLock(
-			badLockDir,
-			async () => "ran-unlocked"
-		);
-		const elapsed = Date.now() - start;
-
-		expect(result).toBe("ran-unlocked");
-		// Should complete nearly instantly — well under the default 2s retry delay.
-		expect(elapsed).toBeLessThan(1_000);
-	});
-
-	it("does not break a fresh lock directory with no info file", async ({
-		expect,
-	}) => {
-		const dir = lockDir();
-		mkdirSync(dir);
-		// No info file and the directory was just created — within the grace
-		// period, so the lock is treated as held by a sibling mid-acquisition.
-
-		const result = await withRefreshLock(
-			dir,
-			async () => "ran-unlocked",
-			FAST_RETRIES
-		);
-		expect(result).toBe("ran-unlocked");
-	});
-
-	it("cleans up the lock directory when writeLockInfo fails after mkdirSync succeeds", async ({
-		expect,
-	}) => {
-		const dir = lockDir();
-		// Make writeFileSync throw only for the lock info file, simulating
-		// a disk-full or permission error after the directory was created.
-		const spy = vi.spyOn(fs, "writeFileSync").mockImplementation((p) => {
-			if (typeof p === "string" && p.includes(_TEST_CONSTANTS.LOCK_INFO_FILE)) {
-				throw Object.assign(new Error("ENOSPC: no space left"), {
-					code: "ENOSPC",
-				});
+		seedOwner(999999999);
+		const kill = process.kill.bind(process);
+		let replacement: string | undefined;
+		vi.spyOn(process, "kill").mockImplementation((pid, signal) => {
+			if (pid === 999999999) {
+				removeDirSync(lockDir());
+				replacement = seedOwner(process.pid);
+				throw Object.assign(new Error("dead"), { code: "ESRCH" });
 			}
+			return kill(pid, signal);
 		});
+		const callback = vi.fn();
+		await expect(
+			withRefreshLock(lockDir(), callback, FAST_RETRIES)
+		).rejects.toThrow("Another process");
+		expect(callback).not.toHaveBeenCalled();
+		expect(readdirSync(lockDir())).toEqual([replacement]);
+	});
 
-		try {
-			const result = await withRefreshLock(dir, async () => "ran-unlocked");
-			expect(result).toBe("ran-unlocked");
-			// The lock directory should have been cleaned up, not left behind.
-			expect(existsSync(dir)).toBe(false);
-		} finally {
-			spy.mockRestore();
+	it("fails closed for malformed ownership metadata", async ({ expect }) => {
+		mkdirSync(lockDir());
+		writeFileSync(path.join(lockDir(), "info.json"), '{"pid":');
+		const callback = vi.fn();
+		await expect(
+			withRefreshLock(lockDir(), callback, FAST_RETRIES)
+		).rejects.toThrow("Another process");
+		expect(callback).not.toHaveBeenCalled();
+	});
+
+	it("recovers an empty directory left during release", async ({ expect }) => {
+		mkdirSync(lockDir());
+		expect(await withRefreshLock(lockDir(), async () => 42)).toBe(42);
+	});
+
+	it("fails closed on filesystem errors without retrying", async ({
+		expect,
+	}) => {
+		writeFileSync(lockDir(), "not a directory");
+		const callback = vi.fn();
+		await expect(
+			withRefreshLock(path.join(lockDir(), "nested"), callback)
+		).rejects.toThrow();
+		expect(callback).not.toHaveBeenCalled();
+	});
+
+	it("cleans up a candidate when metadata preparation fails", async ({
+		expect,
+	}) => {
+		vi.spyOn(fs, "writeFileSync").mockImplementation(() => {
+			throw Object.assign(new Error("disk full"), { code: "ENOSPC" });
+		});
+		syncBuiltinESMExports();
+		const callback = vi.fn();
+		await expect(withRefreshLock(lockDir(), callback)).rejects.toThrow(
+			"disk full"
+		);
+		expect(callback).not.toHaveBeenCalled();
+		expect(
+			readdirSync(process.cwd()).filter((entry) =>
+				entry.startsWith("test.lock")
+			)
+		).toEqual([]);
+	});
+
+	it("never publishes an owner when rename fails", async ({ expect }) => {
+		vi.spyOn(fs, "renameSync").mockImplementation(() => {
+			throw Object.assign(new Error("read only"), { code: "EROFS" });
+		});
+		syncBuiltinESMExports();
+		const callback = vi.fn();
+		await expect(withRefreshLock(lockDir(), callback)).rejects.toThrow(
+			"read only"
+		);
+		expect(callback).not.toHaveBeenCalled();
+		expect(
+			readdirSync(process.cwd()).filter((entry) =>
+				entry.startsWith("test.lock")
+			)
+		).toEqual([]);
+	});
+
+	it("defers synchronous migration when a transaction holds the lock", async ({
+		expect,
+	}) => {
+		await withRefreshLock(lockDir(), async () => {
+			const callback = vi.fn();
+			expect(tryWithRefreshLock(lockDir(), callback)).toEqual({
+				acquired: false,
+			});
+			expect(callback).not.toHaveBeenCalled();
+		});
+		expect(tryWithRefreshLock(lockDir(), () => 42)).toEqual({
+			acquired: true,
+			value: 42,
+		});
+	});
+
+	it("uses one canonical lock for every backend of a profile", ({ expect }) => {
+		for (const extension of ["toml", "json", "enc"]) {
+			expect(getRefreshLockPath(`/config/team.${extension}`)).toBe(
+				"/config/team.refresh-lock"
+			);
 		}
+		expect(getRefreshLockPath("/config/other.toml")).not.toBe(
+			getRefreshLockPath("/config/team.enc")
+		);
 	});
 });

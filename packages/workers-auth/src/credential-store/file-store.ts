@@ -1,15 +1,10 @@
-import {
-	chmodSync,
-	existsSync,
-	mkdirSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import path from "node:path";
 import {
 	getCloudflareApiEnvironmentFromEnv,
 	readFileSync,
 } from "@cloudflare/workers-utils";
+import { writeFileAtomically } from "../core/atomic-write";
 import { parseFile, stringifyFile } from "../core/file-format";
 import { validateProfileName } from "../profiles";
 import type { UserAuthConfig } from "../config-file/auth";
@@ -113,15 +108,7 @@ export class FileCredentialStore implements CredentialStore {
 
 	write(config: UserAuthConfig): void {
 		const filePath = this.filePath();
-		mkdirSync(path.dirname(filePath), { recursive: true });
-		// Mode `0o600` only applies on file creation, so we also re-chmod
-		// every write to tighten any pre-existing file left behind by an
-		// older Wrangler version that wrote with the process umask.
-		writeFileSync(filePath, stringifyFile(this.format, config), {
-			encoding: "utf-8",
-			mode: 0o600,
-		});
-		chmodSync(filePath, 0o600);
+		writeFileAtomically(filePath, stringifyFile(this.format, config));
 	}
 
 	clear(): boolean {

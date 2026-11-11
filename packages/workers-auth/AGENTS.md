@@ -174,6 +174,16 @@ Each CLI is a thin **descriptor + entrypoint**:
   required `ctx.redirectUri`; override the bind address per-call via
   `LoginProps.callbackHost` / `callbackPort`.
 
+## CREDENTIAL TRANSACTIONS
+
+- Refresh, login commits, and logout use a canonical profile-level lock shared
+  by plaintext and encrypted backends. The resolver's `getForTransaction()` pins
+  the selected backend until the transaction finishes.
+- Lock acquisition fails closed; live owners are never evicted on a timer.
+- Plaintext-to-encrypted migration acquires the same lock, or defers migration
+  and returns a read-only snapshot when another transaction holds it.
+- Credential writes replace the file atomically with mode `0o600`.
+
 ## BUILD
 
 - tsup: two entry points — `src/index.ts` and `src/test-helpers/index.ts`

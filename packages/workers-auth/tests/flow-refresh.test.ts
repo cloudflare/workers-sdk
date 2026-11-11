@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { http, HttpResponse } from "msw";
@@ -9,8 +10,10 @@ import {
 	beforeEach,
 	describe,
 	it,
+	vi,
 } from "vitest";
 import { clearAccessCaches } from "../src/access";
+import * as callbackServer from "../src/callback-server";
 import { createOAuthFlow } from "../src/flow";
 import type {
 	AuthConfigStorage,
@@ -23,6 +26,7 @@ const msw = setupServer();
 
 beforeAll(() => msw.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
+	vi.restoreAllMocks();
 	msw.restoreHandlers();
 	msw.resetHandlers();
 });
@@ -46,6 +50,10 @@ function createTestContext(): {
 } {
 	const logs: { level: string; message: string }[] = [];
 	let stored: UserAuthConfig | undefined;
+	const storagePath = path.join(
+		os.tmpdir(),
+		`workers-auth-test-${randomUUID()}`
+	);
 
 	const storage: AuthConfigStorage = {
 		read: () => stored,
@@ -57,7 +65,7 @@ function createTestContext(): {
 			stored = undefined;
 			return existed;
 		},
-		path: () => path.join(os.tmpdir(), "workers-auth-test-config"),
+		path: () => storagePath,
 	};
 
 	const logger: OAuthFlowContext["logger"] = {
@@ -134,6 +142,142 @@ function mockTokenSuccess(overrides: Record<string, unknown> = {}) {
 describe("refreshToken (via loginOrRefreshIfRequired)", () => {
 	beforeEach(() => {
 		clearAccessCaches();
+	});
+
+	it("pins the selected backend until a refresh commits", async ({
+		expect,
+	}) => {
+		const { ctx, storage } = createTestContext();
+		const other = createTestContext().storage;
+		let active = storage;
+		ctx.storageFactory = () => ({
+			read: () => active.read(),
+			write: (value) => active.write(value),
+			clear: () => active.clear(),
+			path: () => active.path(),
+			getForTransaction: () => active,
+		});
+		storage.write({
+			oauth_token: "expired",
+			refresh_token: "RT_A",
+			expiration_time: PAST_DATE,
+		});
+		other.write({
+			oauth_token: "other",
+			refresh_token: "OTHER",
+			expiration_time: FUTURE_DATE,
+		});
+		msw.use(
+			mockAccessProbe(),
+			http.post("*/oauth2/token", () => {
+				active = other;
+				return HttpResponse.json({
+					access_token: "fresh",
+					refresh_token: "RT_B",
+					expires_in: 3600,
+					scope: "account:read",
+				});
+			})
+		);
+		expect(
+			await createOAuthFlow(ctx).loginOrRefreshIfRequired({
+				complianceConfig: COMPLIANCE_CONFIG,
+				scopes: [],
+			})
+		).toEqual({ loggedIn: true });
+		expect(storage.read()?.refresh_token).toBe("RT_B");
+		expect(other.read()?.refresh_token).toBe("OTHER");
+	});
+
+	it("does not let a delayed refresh overwrite a new login", async ({
+		expect,
+	}) => {
+		const { ctx, storage } = createTestContext();
+		storage.write({
+			oauth_token: "expired",
+			refresh_token: "RT_A",
+			expiration_time: PAST_DATE,
+		});
+		let finishRefresh = () => {};
+		let received = false;
+		const responseReady = new Promise<void>((resolve) => {
+			finishRefresh = resolve;
+		});
+		msw.use(
+			mockAccessProbe(),
+			http.post("*/oauth2/token", async () => {
+				received = true;
+				await responseReady;
+				return HttpResponse.json({
+					access_token: "refreshed",
+					refresh_token: "RT_B",
+					expires_in: 3600,
+					scope: "account:read",
+				});
+			})
+		);
+		const flow = createOAuthFlow(ctx);
+		const refresh = flow.getOAuthTokenFromLocalState();
+		await vi.waitFor(() => expect(received).toBe(true));
+		vi.spyOn(callbackServer, "getOauthToken").mockResolvedValue({
+			token: { value: "new-login", expiry: FUTURE_DATE },
+			refreshToken: { value: "NEW_LOGIN" },
+		});
+		const login = flow.login({
+			complianceConfig: COMPLIANCE_CONFIG,
+			scopes: [],
+		});
+		await vi.waitFor(() =>
+			expect(callbackServer.getOauthToken).toHaveBeenCalled()
+		);
+		expect(storage.read()?.refresh_token).toBe("RT_A");
+		finishRefresh();
+		await refresh;
+		expect(await login).toBe(true);
+		expect(storage.read()?.refresh_token).toBe("NEW_LOGIN");
+	});
+
+	it("does not exchange or recreate credentials after a pending logout", async ({
+		expect,
+	}) => {
+		const { ctx, storage } = createTestContext();
+		storage.write({
+			oauth_token: "expired",
+			refresh_token: "RT_A",
+			expiration_time: PAST_DATE,
+		});
+		let finishLogout = () => {};
+		let revoking = false;
+		let exchangeCount = 0;
+		const responseReady = new Promise<void>((resolve) => {
+			finishLogout = resolve;
+		});
+		msw.use(
+			mockAccessProbe(),
+			http.post("*/oauth2/token", () => {
+				exchangeCount++;
+				return HttpResponse.json({
+					access_token: "must-not-be-written",
+					refresh_token: "must-not-be-written",
+					expires_in: 3600,
+					scope: "account:read",
+				});
+			}),
+			http.post("*/oauth2/revoke", async () => {
+				revoking = true;
+				await responseReady;
+				return new HttpResponse(null);
+			})
+		);
+		const flow = createOAuthFlow(ctx);
+		const logout = flow.logout();
+		await vi.waitFor(() => expect(revoking).toBe(true));
+		const refresh = flow.getOAuthTokenFromLocalState();
+		finishLogout();
+		await logout;
+		expect(await refresh).toBeUndefined();
+		expect(exchangeCount).toBe(0);
+		expect(storage.read()).toBeUndefined();
 	});
 
 	it("refreshes an expired token and persists the result", async ({

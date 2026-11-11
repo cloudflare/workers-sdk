@@ -11,7 +11,7 @@ import { getRevokeUrlFromEnv } from "./env-vars";
 import { ErrorAuthServerUnreachable, ErrorInvalidGrant } from "./errors";
 import { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
-import { withRefreshLock } from "./refresh-lock";
+import { getRefreshLockPath, withRefreshLock } from "./refresh-lock";
 import { readStoredAuthState, type OAuthFlowState } from "./state";
 import { getOrCreateTemporaryPreviewAccount } from "./temporary";
 import { exchangeRefreshTokenForAccessToken } from "./token-exchange";
@@ -228,7 +228,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 	let activeProfile = "default";
 
 	/**
-	 * In-flight refresh promises keyed by storage path, used to deduplicate
+	 * In-flight refresh promises keyed by profile lock, used to deduplicate
 	 * concurrent `refreshToken` calls within the same process. Without this,
 	 * two parallel API requests that both see an expired token would each try
 	 * to acquire the file lock — and because the lock is held by the same PID,
@@ -239,6 +239,11 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 
 	function getStorage(profile?: string): AuthConfigStorage {
 		return ctx.storageFactory(profile ?? activeProfile);
+	}
+
+	function getTransactionStorage(profile?: string): AuthConfigStorage {
+		const storage = getStorage(profile);
+		return storage.getForTransaction?.() ?? storage;
 	}
 
 	const getClientId = () =>
@@ -253,6 +258,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 	const defaultCallbackPort = Number(redirectUrl.port);
 
 	async function login(props: LoginProps): Promise<boolean> {
+		const profile = props.profile ?? activeProfile;
 		if (ctx.hasEnvCredentials()) {
 			// Env credentials override any login details, so no point in allowing
 			// the user to login.
@@ -314,11 +320,14 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			);
 		}
 
-		getStorage(props.profile).write({
-			oauth_token: oauth.token?.value ?? "",
-			expiration_time: oauth.token?.expiry,
-			refresh_token: oauth.refreshToken?.value,
-			scopes: oauth.scopes,
+		const storage = getTransactionStorage(profile);
+		await withRefreshLock(getRefreshLockPath(storage.path()), async () => {
+			storage.write({
+				oauth_token: oauth.token?.value ?? "",
+				expiration_time: oauth.token?.expiry,
+				refresh_token: oauth.refreshToken?.value,
+				scopes: oauth.scopes,
+			});
 		});
 
 		ctx.logger.log(`Successfully logged in.`);
@@ -345,20 +354,20 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 	 * refresh token may well still be valid: callers must not ask for a new login.
 	 */
 	async function refreshToken(profile?: string): Promise<RefreshTokenResult> {
-		const storage = getStorage(profile);
-		const storagePath = storage.path();
+		const storage = getTransactionStorage(profile);
+		const lockDir = getRefreshLockPath(storage.path());
 
-		const existing = inflightRefreshes.get(storagePath);
+		const existing = inflightRefreshes.get(lockDir);
 		if (existing) {
 			return existing;
 		}
 
-		const promise = doRefreshToken(storage);
-		inflightRefreshes.set(storagePath, promise);
+		const promise = doRefreshToken(storage, lockDir);
+		inflightRefreshes.set(lockDir, promise);
 		try {
 			return await promise;
 		} finally {
-			inflightRefreshes.delete(storagePath);
+			inflightRefreshes.delete(lockDir);
 		}
 	}
 
@@ -369,13 +378,13 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 	 * concurrent in-process calls.
 	 *
 	 * @param storage - The auth config storage to refresh against.
+	 * @param lockDir - The canonical lock for this profile.
 	 * @returns Whether the refresh succeeded, was rejected, or could not reach the server.
 	 */
 	async function doRefreshToken(
-		storage: AuthConfigStorage
+		storage: AuthConfigStorage,
+		lockDir: string
 	): Promise<RefreshTokenResult> {
-		const lockDir = storage.path() + ".refresh-lock";
-
 		return withRefreshLock(lockDir, async () => {
 			// After acquiring the lock, re-read the auth state — a sibling
 			// process may have already completed the refresh while we waited.
@@ -395,6 +404,9 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			// race where a sibling rotates the on-disk value between this read
 			// and the exchange function's independent read.
 			const sentRefreshToken = postLockState.refreshToken?.value;
+			if (!sentRefreshToken) {
+				return "rejected";
+			}
 
 			try {
 				return await doExchange(storage, sentRefreshToken);
@@ -629,35 +641,38 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 			return;
 		}
 
-		const storedRefreshToken = readStoredAuthState({
-			warningLogger: ctx.logger,
-			storage: getStorage(profile),
-		}).refreshToken;
-		if (!storedRefreshToken) {
-			ctx.logger.log(
-				clearedTemporary
-					? "Cleared temporary preview account."
-					: "Not logged in, exiting..."
-			);
-			return;
-		}
+		const storage = getTransactionStorage(profile);
+		await withRefreshLock(getRefreshLockPath(storage.path()), async () => {
+			const storedRefreshToken = readStoredAuthState({
+				warningLogger: ctx.logger,
+				storage,
+			}).refreshToken;
+			if (!storedRefreshToken) {
+				ctx.logger.log(
+					clearedTemporary
+						? "Cleared temporary preview account."
+						: "Not logged in, exiting..."
+				);
+				return;
+			}
 
-		const body =
-			`client_id=${encodeURIComponent(getClientId())}&` +
-			`token_type_hint=refresh_token&` +
-			`token=${encodeURIComponent(storedRefreshToken.value || "")}`;
+			const body =
+				`client_id=${encodeURIComponent(getClientId())}&` +
+				`token_type_hint=refresh_token&` +
+				`token=${encodeURIComponent(storedRefreshToken.value || "")}`;
 
-		const response = await fetch(getRevokeUrlFromEnv(), {
-			method: "POST",
-			body,
-			headers: {
-				"Content-Type": "application/x-www-form-urlencoded",
-			},
+			const response = await fetch(getRevokeUrlFromEnv(), {
+				method: "POST",
+				body,
+				headers: {
+					"Content-Type": "application/x-www-form-urlencoded",
+				},
+			});
+			await response.text();
+			storage.clear();
+			ctx.logger.log(`Successfully logged out.`);
+			ctx.purgeOnLoginOrLogout?.();
 		});
-		await response.text(); // blank text? would be nice if it was something meaningful
-		getStorage(profile).clear();
-		ctx.logger.log(`Successfully logged out.`);
-		ctx.purgeOnLoginOrLogout?.();
 	}
 
 	async function getOAuthTokenFromLocalState(): Promise<string | undefined> {

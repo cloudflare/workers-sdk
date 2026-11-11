@@ -90,6 +90,8 @@ export interface CredentialStorageContext {
  * flip (e.g. `wrangler login --no-use-keyring`) is observable through both
  * on the very next call. The profile argument selects which profile's files
  * / keyring entry the resolved store reads and writes.
+ * `storageFactory(profile).getForTransaction()` captures one concrete store so
+ * asynchronous credential transactions cannot switch backend between methods.
  */
 export interface CredentialStorageBundle {
 	storageFactory: (profile?: string) => AuthConfigStorage;
@@ -137,6 +139,7 @@ export function createCredentialStorageContext(
 			write: (value) => getActiveStore(profile).write(value),
 			clear: () => getActiveStore(profile).clear(),
 			path: () => getActiveStore(profile).path(),
+			getForTransaction: () => getActiveStore(profile),
 		};
 	}
 

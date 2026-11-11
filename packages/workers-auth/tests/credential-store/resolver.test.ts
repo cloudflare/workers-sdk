@@ -113,6 +113,29 @@ describe("createCredentialStorageContext — resolver", () => {
 	});
 
 	describe("precedence", () => {
+		it("pins a transaction without preventing later backend selection", ({
+			expect,
+		}) => {
+			const provider = new InMemoryKeyProvider();
+			setKeyProviderFactoryForTesting(() => provider);
+			let keyringEnabled = false;
+			const { storageFactory } = createCredentialStorageContext({
+				serviceName: "wrangler",
+				getConfigPath: () => getGlobalConfigPath(),
+				isKeyringEnabled: () => keyringEnabled,
+				logger: silentLogger,
+				isNonInteractiveOrCI: () => false,
+			});
+			const dynamic = storageFactory();
+			const pinned = dynamic.getForTransaction?.();
+			keyringEnabled = true;
+			expect(pinned?.path()).toMatch(/\.toml$/);
+			expect(dynamic.path()).toMatch(/\.enc$/);
+			pinned?.write({ refresh_token: "pinned" });
+			expect(pinned?.read()?.refresh_token).toBe("pinned");
+			expect(existsSync(dynamic.path())).toBe(false);
+		});
+
 		it("defaults to FileCredentialStore when keyring is disabled in preferences", ({
 			expect,
 		}) => {
