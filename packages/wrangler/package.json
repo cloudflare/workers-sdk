@@ -114,7 +114,7 @@
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "workspace:*",
 		"@cloudflare/workflows-shared": "workspace:*",
-		"@netlify/build-info": "10.5.1",
+		"@netlify/build-info": "11.3.1",
 		"@sentry/node": "^7.86.0",
 		"@sentry/types": "^7.86.0",
 		"@sentry/utils": "^7.86.0",
