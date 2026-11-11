@@ -374,10 +374,10 @@ export class LocalRuntimeController extends RuntimeController {
 							bindings: remoteBindings,
 						},
 						this.#remoteProxySessionData ?? null,
-						Object.keys(remoteBindings).length === 0
-							? // If there are no remote bindings (this is a local only session) there's no need to get auth data
-								undefined
-							: data.config.dev.auth
+						// The hook only runs when a session starts. Pass it even without remote
+						// bindings, so removing the last one doesn't restart the session with
+						// Wrangler's default credentials.
+						data.config.dev.auth
 					);
 			}
 

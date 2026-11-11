@@ -34,7 +34,7 @@ file:
 - `wrangler: { configPath, environment }` — a Wrangler configuration file, via
   `wrangler.unstable_readConfig()`, then `unstable_getMiniflareWorkerOptions()` (remote
   proxy session, `main`, defines, module rules, tails) merged into the V4 `miniflare`
-  options
+  options. Remote bindings use Wrangler credentials (`src/pool/auth.ts`)
 - `config: true | "<path>"` — a `cloudflare.config.ts`, via `src/pool/new-config.ts`
   (`@cloudflare/config`'s `loadAndParseConfig()`), never through Wrangler. `miniflare`
   options are merged over the config's Worker. Secrets and Hyperdrive values are resolved

@@ -2707,9 +2707,6 @@ importers:
 
   packages/remote-bindings:
     dependencies:
-      '@cloudflare/cli-shared-helpers':
-        specifier: workspace:*
-        version: link:../cli
       '@cloudflare/deploy-helpers':
         specifier: workspace:*
         version: link:../deploy-helpers

@@ -4,7 +4,6 @@ import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { DeferredPromise } from "miniflare";
 import remoteBindingsWorkerSource from "worker:remoteBindings/ProxyServerWorker";
-import { getRemoteBindingsAuthHook } from "./auth";
 import { initLogger } from "./logger";
 import { DevEnv } from "./startDevWorker/DevEnv";
 import { CLI_COMMANDS, RemoteSessionAuthenticationError } from "./utils/remote";
@@ -26,7 +25,8 @@ type ErrorEvent = {
 
 export type StartRemoteProxySessionOptions = {
 	workerName?: string;
-	auth?: AsyncHook<CfAccount>;
+	/** Resolves the account ID and API token for the session. */
+	auth: AsyncHook<CfAccount>;
 	/** If running in a non-public compliance region, set this here. */
 	complianceRegion?: Config["compliance_region"];
 	/** Consumer name used in actionable error messages. */
@@ -131,12 +131,7 @@ export async function startRemoteProxySession(
 		compatibilityFlags: ["enhanced_error_serialization"],
 		complianceRegion: options.complianceRegion,
 		bindings: rawBindings,
-		auth: getRemoteBindingsAuthHook(
-			options.auth,
-			undefined,
-			undefined,
-			options.logger
-		),
+		auth: options.auth,
 		server: { port: 0, secure: false },
 	};
 

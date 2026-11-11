@@ -519,8 +519,6 @@ export async function getDevMiniflareOptions(
 												complianceRegion: toApiComplianceRegion(
 													settings.complianceRegion
 												),
-												account_id: settings.accountId,
-												profileDir: resolvedViteConfig.root,
 											},
 											preExistingRemoteProxySession ?? null,
 											getRemoteBindingsAuth(
@@ -850,8 +848,6 @@ export async function getPreviewMiniflareOptions(
 							complianceRegion: toApiComplianceRegion(
 								resolvedPluginConfig.settings.complianceRegion
 							),
-							account_id: resolvedPluginConfig.settings.accountId,
-							profileDir: resolvedViteConfig.root,
 						},
 						preExistingRemoteProxySessionData ?? null,
 						getRemoteBindingsAuth(

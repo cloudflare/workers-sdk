@@ -23,6 +23,11 @@ function createTestLogger(): RemoteBindingsLogger {
 	};
 }
 
+const testAuth = async () => ({
+	accountId: "account",
+	apiToken: { apiToken: "token" },
+});
+
 function createTestSession() {
 	return {
 		ready: Promise.resolve(),
@@ -94,7 +99,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 					},
 				},
 				undefined,
-				undefined,
+				testAuth,
 				{ cliDisplayName: "Wrangler", logger },
 				startSession
 			);
@@ -139,12 +144,13 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 					remote: true,
 				},
 			},
+			auth: testAuth,
 		};
 
 		const result = await maybeStartOrUpdateRemoteProxySession(
 			{ bindings: {} },
 			existingSession,
-			undefined,
+			testAuth,
 			{ cliDisplayName: "Wrangler", logger: createTestLogger() },
 			startSession
 		);
@@ -161,7 +167,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 		const result = await maybeStartOrUpdateRemoteProxySession(
 			{ bindings: {} },
 			undefined,
-			undefined,
+			testAuth,
 			{ cliDisplayName: "Wrangler", logger: createTestLogger() },
 			startSession
 		);

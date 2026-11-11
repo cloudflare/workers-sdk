@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { createCfAuth } from "@cloudflare/workers-auth/cf";
+import { createWranglerAuth } from "@cloudflare/workers-auth/wrangler";
 import { test, vi } from "vitest";
 import { getRemoteBindingsAuth } from "../src/pool/auth";
 import type { AuthContext } from "@cloudflare/workers-auth/cf";
@@ -12,8 +13,14 @@ const mocks = vi.hoisted(() => ({
 		requireAuth: vi.fn().mockResolvedValue("cf-account-id"),
 		requireApiToken: vi.fn().mockReturnValue({ apiToken: "cf-token" }),
 	},
+	wranglerAuth: {
+		setProfile: vi.fn(),
+		requireAuth: vi.fn().mockResolvedValue("wrangler-account-id"),
+		requireApiToken: vi.fn().mockReturnValue({ apiToken: "wrangler-token" }),
+	},
 	inputPrompt: vi.fn(),
 	resolveProfile: vi.fn().mockReturnValue("cf-profile"),
+	resolveWranglerProfile: vi.fn().mockReturnValue("wrangler-profile"),
 }));
 
 vi.mock("@cloudflare/cli-shared-helpers/interactive", () => ({
@@ -26,6 +33,16 @@ vi.mock("@cloudflare/workers-auth/cf", () => ({
 		return mocks.cfAuth;
 	}),
 	createCfProfileStore: () => ({ resolve: mocks.resolveProfile }),
+}));
+
+vi.mock("@cloudflare/workers-auth/wrangler", () => ({
+	createWranglerAuth: vi.fn((context: AuthContext) => {
+		mocks.authContext = context;
+		return mocks.wranglerAuth;
+	}),
+	createWranglerProfileStore: () => ({
+		resolve: mocks.resolveWranglerProfile,
+	}),
 }));
 
 vi.mock("@cloudflare/workers-utils", async (importOriginal) => ({
@@ -44,8 +61,18 @@ test("remote bindings sessions share auth by profile directory and profile", asy
 		warn: vi.fn(),
 		error: vi.fn(),
 	};
-	const first = getRemoteBindingsAuth("/shared-project", undefined, logger);
-	const second = getRemoteBindingsAuth("/shared-project", undefined, logger);
+	const first = getRemoteBindingsAuth(
+		"cf",
+		"/shared-project",
+		undefined,
+		logger
+	);
+	const second = getRemoteBindingsAuth(
+		"cf",
+		"/shared-project",
+		undefined,
+		logger
+	);
 	assert(typeof first.hook === "function");
 	assert(typeof second.hook === "function");
 
@@ -53,7 +80,12 @@ test("remote bindings sessions share auth by profile directory and profile", asy
 	await Promise.all([first.hook(), second.hook()]);
 	expect(createCfAuth).toHaveBeenCalledOnce();
 
-	const other = getRemoteBindingsAuth("/other-project", undefined, logger);
+	const other = getRemoteBindingsAuth(
+		"cf",
+		"/other-project",
+		undefined,
+		logger
+	);
 	assert(typeof other.hook === "function");
 	await other.hook();
 	expect(createCfAuth).toHaveBeenCalledTimes(2);
@@ -72,9 +104,19 @@ test("remote bindings sessions track the resolved profile", async ({
 		error: vi.fn(),
 	};
 	mocks.resolveProfile.mockReturnValueOnce("work");
-	const work = getRemoteBindingsAuth("/profile-project", undefined, logger);
+	const work = getRemoteBindingsAuth(
+		"cf",
+		"/profile-project",
+		undefined,
+		logger
+	);
 	mocks.resolveProfile.mockReturnValueOnce("personal");
-	const personal = getRemoteBindingsAuth("/profile-project", undefined, logger);
+	const personal = getRemoteBindingsAuth(
+		"cf",
+		"/profile-project",
+		undefined,
+		logger
+	);
 	assert(typeof work.hook === "function");
 	assert(typeof personal.hook === "function");
 
@@ -87,6 +129,7 @@ test("remote bindings sessions track the resolved profile", async ({
 
 	mocks.resolveProfile.mockReturnValueOnce("work");
 	const workAgain = getRemoteBindingsAuth(
+		"cf",
 		"/profile-project",
 		undefined,
 		logger
@@ -108,7 +151,7 @@ test("account selection explains how to configure the account", async ({
 		warn: vi.fn(),
 		error: vi.fn(),
 	};
-	const auth = getRemoteBindingsAuth("/project", undefined, logger);
+	const auth = getRemoteBindingsAuth("cf", "/project", undefined, logger);
 	assert(typeof auth.hook === "function");
 	await auth.hook();
 	assert(mocks.authContext !== undefined);
@@ -121,4 +164,46 @@ test("account selection explains how to configure the account", async ({
 	expect(logger.info).toHaveBeenCalledWith(
 		'To use this account automatically in future, configure accountId in cloudflare.config.ts:\n\n  accountId: "selected-account",\n\nAlternatively, set the `CLOUDFLARE_ACCOUNT_ID` environment variable.'
 	);
+});
+
+test("Wrangler configs use Wrangler credentials", async ({ expect }) => {
+	vi.mocked(createCfAuth).mockClear();
+	mocks.inputPrompt.mockResolvedValueOnce("selected-account");
+	const logger: Logger = {
+		debug: vi.fn(),
+		log: vi.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+	};
+	const auth = getRemoteBindingsAuth(
+		"wrangler",
+		"/wrangler-project",
+		"configured-account",
+		logger
+	);
+	assert(typeof auth.hook === "function");
+
+	await expect(auth.hook()).resolves.toEqual({
+		accountId: "wrangler-account-id",
+		apiToken: { apiToken: "wrangler-token" },
+	});
+	expect(mocks.resolveWranglerProfile).toHaveBeenCalledWith({
+		cwd: "/wrangler-project",
+	});
+	expect(createWranglerAuth).toHaveBeenCalledOnce();
+	expect(createCfAuth).not.toHaveBeenCalled();
+	expect(mocks.wranglerAuth.setProfile).toHaveBeenCalledWith(
+		"wrangler-profile"
+	);
+	expect(mocks.wranglerAuth.requireAuth).toHaveBeenCalledWith({
+		account_id: "configured-account",
+	});
+
+	// The hint about `cloudflare.config.ts` only applies to cf credentials
+	assert(mocks.authContext !== undefined);
+	await mocks.authContext.select("Select an account", {
+		choices: [{ title: "Account", value: "selected-account" }],
+	});
+	expect(logger.info).not.toHaveBeenCalled();
 });

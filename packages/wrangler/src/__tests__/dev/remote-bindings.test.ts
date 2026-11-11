@@ -751,6 +751,34 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 		expect(secondResult?.session).toBe(firstResult?.session);
 	});
 
+	it("should not recreate the remote proxy session on reload without auth", async () => {
+		const { maybeStartOrUpdateRemoteProxySession } =
+			await import("../../api/remoteBindings");
+
+		const remoteBindings: Record<string, Binding> = {
+			REMOTE_WORKER: {
+				type: "service",
+				service: "remote-service-binding-worker",
+				remote: true,
+			},
+		};
+
+		// Each call creates Wrangler's default credentials, which stay the same
+		const firstResult = await maybeStartOrUpdateRemoteProxySession(
+			{ name: "worker", bindings: remoteBindings },
+			null
+		);
+		expect(startRemoteProxySessionCallCount).toBe(1);
+		expect(sessionOptions?.auth).toEqual(expect.any(Function));
+
+		const secondResult = await maybeStartOrUpdateRemoteProxySession(
+			{ name: "worker", bindings: remoteBindings },
+			firstResult
+		);
+		expect(startRemoteProxySessionCallCount).toBe(1);
+		expect(secondResult?.session).toBe(firstResult?.session);
+	});
+
 	it("should allow both local and remote KV bindings to the same namespace in a single dev session", async () => {
 		await seed({
 			"wrangler.jsonc": JSON.stringify(
