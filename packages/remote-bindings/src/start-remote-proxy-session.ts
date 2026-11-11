@@ -7,8 +7,9 @@ import remoteBindingsWorkerSource from "worker:remoteBindings/ProxyServerWorker"
 import { getRemoteBindingsAuthHook } from "./auth";
 import { initLogger } from "./logger";
 import { DevEnv } from "./startDevWorker/DevEnv";
-import { RemoteSessionAuthenticationError } from "./utils/remote";
+import { CLI_COMMANDS, RemoteSessionAuthenticationError } from "./utils/remote";
 import type { RemoteBindingsLogger } from "./logger";
+import type { RemoteBindingsCliDisplayName } from "./utils/remote";
 import type {
 	AsyncHook,
 	CfAccount,
@@ -29,7 +30,7 @@ export type StartRemoteProxySessionOptions = {
 	/** If running in a non-public compliance region, set this here. */
 	complianceRegion?: Config["compliance_region"];
 	/** Consumer name used in actionable error messages. */
-	cliDisplayName: string;
+	cliDisplayName: RemoteBindingsCliDisplayName;
 	logger: RemoteBindingsLogger;
 };
 
@@ -97,8 +98,11 @@ export async function startRemoteProxySession(
 ): Promise<RemoteProxySession> {
 	for (const [name, binding] of Object.entries(bindings ?? {})) {
 		if (binding.type === "flagship" && binding.app_id === undefined) {
+			// cf reads `cloudflare.config.ts`, where the app ID setting is `id`
+			const setting = options.cliDisplayName === "cf" ? "id" : "app_id";
+			const { createFlagshipApp } = CLI_COMMANDS[options.cliDisplayName];
 			throw new UserError(
-				`Flagship binding "${name}" has no \`app_id\` and has not been created, but needs to run remotely. Run \`wrangler flagship apps create\` to create an app.`,
+				`Flagship binding "${name}" has no \`${setting}\` and has not been created, but needs to run remotely. Run \`${createFlagshipApp}\` to create an app.`,
 				{ telemetryMessage: "flagship remote binding missing app_id" }
 			);
 		}

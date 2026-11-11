@@ -4,7 +4,10 @@ import {
 	pickRemoteBindings,
 } from "./maybe-start-or-update-session";
 import type { RemoteBindingsLogger } from "./logger";
-import type { RemoteProxySessionData } from "./maybe-start-or-update-session";
+import type {
+	RemoteBindingsContext,
+	RemoteProxySessionData,
+} from "./maybe-start-or-update-session";
 import type { startRemoteProxySession } from "./start-remote-proxy-session";
 import type { RemoteProxyConnectionString } from "miniflare";
 
@@ -92,7 +95,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 				},
 				undefined,
 				undefined,
-				{ cliDisplayName: "Test CLI", logger },
+				{ cliDisplayName: "Wrangler", logger },
 				startSession
 			);
 			if (remote === false) {
@@ -142,7 +145,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 			{ bindings: {} },
 			existingSession,
 			undefined,
-			{ cliDisplayName: "Test CLI", logger: createTestLogger() },
+			{ cliDisplayName: "Wrangler", logger: createTestLogger() },
 			startSession
 		);
 
@@ -159,7 +162,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 			{ bindings: {} },
 			undefined,
 			undefined,
-			{ cliDisplayName: "Test CLI", logger: createTestLogger() },
+			{ cliDisplayName: "Wrangler", logger: createTestLogger() },
 			startSession
 		);
 
@@ -189,7 +192,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 					apiToken: { apiToken: "token" },
 				}),
 			},
-			{ cliDisplayName: "Test CLI", logger: createTestLogger() },
+			{ cliDisplayName: "Wrangler", logger: createTestLogger() },
 			startSession
 		);
 
@@ -209,7 +212,10 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 			target: "cf" as const,
 			env: { AI: { type: "ai" as const, dev: { remote: true } } },
 		};
-		const context = { cliDisplayName: "Test CLI", logger: createTestLogger() };
+		const context: RemoteBindingsContext = {
+			cliDisplayName: "Wrangler",
+			logger: createTestLogger(),
+		};
 		const newHook = () => async () => ({
 			accountId: "account",
 			apiToken: { apiToken: "token" },
@@ -254,7 +260,10 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 		const workerConfig = {
 			bindings: { AI: { type: "ai" as const, remote: true } },
 		};
-		const context = { cliDisplayName: "Test CLI", logger: createTestLogger() };
+		const context: RemoteBindingsContext = {
+			cliDisplayName: "Wrangler",
+			logger: createTestLogger(),
+		};
 		const hook = async () => ({
 			accountId: "account",
 			apiToken: { apiToken: "token" },

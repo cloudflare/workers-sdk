@@ -71,6 +71,33 @@ function makeErrorEvent(cause: ErrorEvent["cause"]): ErrorEvent {
 	};
 }
 
+describe("startRemoteProxySession Flagship validation", () => {
+	it.for([
+		{
+			cliDisplayName: "Wrangler",
+			setting: "app_id",
+			command: "wrangler flagship apps create",
+		},
+		{
+			cliDisplayName: "cf",
+			setting: "id",
+			command: "cf flagship apps create",
+		},
+	] as const)(
+		"names the $setting setting and $cliDisplayName's command for an uncreated app",
+		async ({ cliDisplayName, setting, command }, { expect }) => {
+			await expect(
+				startRemoteProxySession(
+					{ FLAGS: { type: "flagship" } },
+					{ cliDisplayName, logger: createTestLogger() }
+				)
+			).rejects.toThrow(
+				`Flagship binding "FLAGS" has no \`${setting}\` and has not been created, but needs to run remotely. Run \`${command}\` to create an app.`
+			);
+		}
+	);
+});
+
 describe("startRemoteProxySession error handling", () => {
 	it("throws a UserError under Bun before starting the session", async ({
 		expect,
@@ -84,7 +111,7 @@ describe("startRemoteProxySession error handling", () => {
 
 		const thrown = await startRemoteProxySession(
 			{},
-			{ cliDisplayName: "Test CLI", logger: createTestLogger() }
+			{ cliDisplayName: "Wrangler", logger: createTestLogger() }
 		).catch((error: unknown) => error);
 
 		expect(thrown).toBeInstanceOf(UserError);
@@ -108,7 +135,7 @@ describe("startRemoteProxySession error handling", () => {
 		mockDevEnv.teardown.mockRejectedValueOnce(error);
 		const session = await startRemoteProxySession(
 			{},
-			{ cliDisplayName: "Test CLI", logger: createTestLogger() }
+			{ cliDisplayName: "Wrangler", logger: createTestLogger() }
 		);
 		const first = session.dispose();
 		const second = session.dispose();
@@ -133,7 +160,7 @@ describe("startRemoteProxySession error handling", () => {
 			await expect(
 				startRemoteProxySession(
 					{},
-					{ cliDisplayName: "Test CLI", logger: createTestLogger() }
+					{ cliDisplayName: "Wrangler", logger: createTestLogger() }
 				)
 			).rejects.toBe(original);
 			expect(mockDevEnv.teardown).toHaveBeenCalledOnce();
@@ -155,7 +182,7 @@ describe("startRemoteProxySession error handling", () => {
 		await expect(
 			startRemoteProxySession(
 				{},
-				{ cliDisplayName: "Test CLI", logger: createTestLogger() }
+				{ cliDisplayName: "Wrangler", logger: createTestLogger() }
 			)
 		).rejects.toBe(userError);
 	});
@@ -163,12 +190,15 @@ describe("startRemoteProxySession error handling", () => {
 	it("unwraps a UserError nested in an error event's cause", async ({
 		expect,
 	}) => {
-		const authError = new RemoteSessionAuthenticationError(new Error("401"));
+		const authError = new RemoteSessionAuthenticationError(
+			new Error("401"),
+			"Wrangler"
+		);
 		mockDevEnv.error = makeErrorEvent(authError);
 
 		const thrown = await startRemoteProxySession(
 			{},
-			{ cliDisplayName: "Test CLI", logger: createTestLogger() }
+			{ cliDisplayName: "Wrangler", logger: createTestLogger() }
 		).catch((error: unknown) => error);
 
 		expect(thrown).toBe(authError);
@@ -182,7 +212,7 @@ describe("startRemoteProxySession error handling", () => {
 
 		const thrown = await startRemoteProxySession(
 			{},
-			{ cliDisplayName: "Test CLI", logger: createTestLogger() }
+			{ cliDisplayName: "Wrangler", logger: createTestLogger() }
 		).catch((error: unknown) => error);
 
 		expect(thrown).toBeInstanceOf(Error);
@@ -210,7 +240,7 @@ describe("startRemoteProxySession error handling", () => {
 
 		const thrown = await startRemoteProxySession(
 			{},
-			{ cliDisplayName: "Test CLI", logger: createTestLogger() }
+			{ cliDisplayName: "Wrangler", logger: createTestLogger() }
 		).catch((error: unknown) => error);
 
 		expect(thrown).not.toBeInstanceOf(APIError);

@@ -27,6 +27,7 @@ import type {
 	CfPreviewSession,
 	CfPreviewToken,
 } from "../utils/create-worker-preview";
+import type { RemoteBindingsCliDisplayName } from "../utils/remote";
 import type {
 	BundleCompleteEvent,
 	ErrorEvent,
@@ -66,7 +67,7 @@ export class RemoteRuntimeController {
 		props: CfAccount & {
 			complianceConfig: ComplianceConfig;
 			name: string;
-			cliDisplayName: string;
+			cliDisplayName: RemoteBindingsCliDisplayName;
 		}
 	): Promise<CfPreviewSession | undefined> {
 		try {
@@ -93,7 +94,11 @@ export class RemoteRuntimeController {
 				return; // ignore
 			}
 
-			handlePreviewSessionCreationError(err, props.accountId);
+			handlePreviewSessionCreationError(
+				err,
+				props.accountId,
+				props.cliDisplayName
+			);
 
 			throw err;
 		}
@@ -103,7 +108,7 @@ export class RemoteRuntimeController {
 		props: CreateRemoteWorkerInitProps &
 			CfAccount & {
 				complianceConfig: ComplianceConfig;
-				cliDisplayName: string;
+				cliDisplayName: RemoteBindingsCliDisplayName;
 				bundleId: number;
 			}
 	): Promise<CfPreviewToken | undefined> {
@@ -182,7 +187,8 @@ export class RemoteRuntimeController {
 
 			const shouldRestartSession = handlePreviewSessionUploadError(
 				err,
-				props.accountId
+				props.accountId,
+				props.cliDisplayName
 			);
 			if (shouldRestartSession) {
 				this.#session = await this.#previewSession(props);
