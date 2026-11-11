@@ -674,6 +674,59 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 		await wranglerStopped;
 	});
 
+	it("keeps the remote proxy session when config changes remove the last remote binding", async () => {
+		const writeConfig = (config: RawConfig) =>
+			seed({
+				"wrangler.jsonc": JSON.stringify({
+					name: "worker",
+					main: "index.js",
+					compatibility_date: "2025-01-01",
+					...config,
+				}),
+			});
+		await writeConfig({
+			services: [
+				{
+					binding: "REMOTE_WORKER",
+					service: "remote-service-binding-worker",
+					remote: true,
+				},
+			],
+		});
+		await seed({
+			"index.js": `export default { fetch() { return new Response("hello") } }`,
+		});
+		const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0", {
+			// Config changes only reload when config watching is enabled
+			WRANGLER_CI_DISABLE_CONFIG_WATCHING: "false",
+		});
+		const match = await vi.waitUntil(
+			() => std.out.match(/Ready on (?<url>http:\/\/[^:]+:\d{4}.+)/),
+			{ timeout: devReadyTimeout }
+		);
+		// Give the config file watching time to settle
+		const url = match?.groups?.url;
+		assert(url);
+		expect((await fetch(url)).ok).toBe(true);
+		expect(startRemoteProxySessionCallCount).toBe(1);
+
+		// Each config change gives `wrangler dev` a new auth hook
+		for (const edit of ["1", "2"]) {
+			await writeConfig({ vars: { EDIT: edit } });
+			await vi.waitFor(
+				() =>
+					expect(workerOptions[0]).toMatchObject({
+						bindings: { EDIT: edit },
+					}),
+				{ timeout: devReadyTimeout }
+			);
+		}
+		expect(startRemoteProxySessionCallCount).toBe(1);
+
+		await stopWrangler();
+		await wranglerStopped;
+	});
+
 	it("routes Artifacts remotely when remote is omitted", async ({ expect }) => {
 		await seed({
 			"wrangler.jsonc": JSON.stringify({
