@@ -835,6 +835,42 @@ describe("resolvePluginConfig", () => {
 		expect(process.env.CLOUDFLARE_ACCOUNT_ID).toBe("test-account-id");
 	});
 
+	test("reflects edits to file-derived Cloudflare settings on repeated resolution", async ({
+		expect,
+	}) => {
+		writeEntryConfig();
+		const envFile = path.join(root, ".env.production");
+		fs.writeFileSync(envFile, "CLOUDFLARE_VITE_FORCE_LOCAL=true");
+		vi.stubEnv("CLOUDFLARE_VITE_FORCE_LOCAL", undefined);
+		try {
+			const first = await resolvePluginConfig(
+				{ remoteBindings: true },
+				{ root },
+				buildEnv
+			);
+			expect(first.remoteBindings).toBe(false);
+
+			fs.writeFileSync(envFile, "CLOUDFLARE_VITE_FORCE_LOCAL=false");
+			const second = await resolvePluginConfig(
+				{ remoteBindings: true },
+				{ root },
+				buildEnv
+			);
+			expect(second.remoteBindings).toBe(true);
+
+			fs.rmSync(envFile);
+			const third = await resolvePluginConfig(
+				{ remoteBindings: true },
+				{ root },
+				buildEnv
+			);
+			expect(third.remoteBindings).toBe(true);
+		} finally {
+			// Clean up anything the plugin injected into process.env
+			delete process.env.CLOUDFLARE_VITE_FORCE_LOCAL;
+		}
+	});
+
 	test("honours Vite's envDir false option", async ({ expect }) => {
 		writeEntryConfig();
 		fs.writeFileSync(
