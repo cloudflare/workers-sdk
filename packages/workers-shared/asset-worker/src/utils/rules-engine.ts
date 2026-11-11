@@ -159,7 +159,8 @@ export function normalizeRedirectTarget(
 	replacements: Replacements
 ): string {
 	// Captured slashes must not turn a relative target into an external redirect.
-	const isExternal = /^(?:\w+:)?\/\//.test(value.trim());
+	// Scheme-less targets need a host immediately after the two slashes.
+	const isExternal = /^(?:\w+:\/\/|\/\/[^/\\\s?#])/.test(value.trim());
 	const target = replacer(value, replacements).trim();
 	if (isExternal) {
 		return target;

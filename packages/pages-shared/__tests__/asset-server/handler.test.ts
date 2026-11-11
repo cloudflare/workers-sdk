@@ -1251,6 +1251,8 @@ describe("asset-server handler", () => {
 		test.for([
 			["/old/*", "/old//images/logo.png", "/:splat", "/images/logo.png"],
 			["/old*", "/old/images/logo.png", "/:splat", "/images/logo.png"],
+			["/old/*", "/old/evil.example", "///:splat", "/evil.example"],
+			["/old/*", "/old/evil.example", "//\\:splat", "/evil.example"],
 			[
 				"/old/*",
 				"/old///images/logo.png?keep=1",

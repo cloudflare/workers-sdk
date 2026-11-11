@@ -12,6 +12,9 @@ describe("rules engine", () => {
 		["/:splat", "//images//logo.png", "/images/logo.png"],
 		["/:splat", "\\images\\logo.png", "/images/logo.png"],
 		["/:splat", "%2Fimages/logo.png", "/%2Fimages/logo.png"],
+		["///:splat", "evil.example", "/evil.example"],
+		["////:splat", "evil.example", "/evil.example"],
+		["//\\:splat", "evil.example", "/evil.example"],
 		[
 			"/:splat?next=https://example.com/a//b#section//one",
 			"images//logo.png",

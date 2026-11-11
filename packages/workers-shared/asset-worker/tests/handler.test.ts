@@ -1065,49 +1065,46 @@ describe("[Asset Worker] `handleRequest`", () => {
 			}
 		);
 
-		it("should prevent external redirects via double slash", async ({
-			expect,
-		}) => {
-			const configuration: AssetConfig = normalizeConfiguration({
-				html_handling: "none",
-				not_found_handling: "none",
-				redirects: {
-					version: 1,
-					staticRules: {},
-					rules: {
-						"/foo/*": {
-							status: 302,
-							to: "/:splat",
+		it.for(["/:splat", "///:splat", "//\\:splat"])(
+			"should prevent unintended external redirects for %s",
+			async (to, { expect }) => {
+				const configuration: AssetConfig = normalizeConfiguration({
+					html_handling: "none",
+					not_found_handling: "none",
+					redirects: {
+						version: 1,
+						staticRules: {},
+						rules: {
+							"/foo/*": {
+								status: 302,
+								to,
+							},
 						},
 					},
-				},
-			});
-			const exists = vi.fn().mockReturnValue(null);
-			const getByETag = vi.fn().mockReturnValue({
-				readableStream: new ReadableStream(),
-				contentType: "text/html",
-			});
+				});
+				const exists = vi.fn().mockReturnValue(null);
+				const getByETag = vi.fn().mockReturnValue({
+					readableStream: new ReadableStream(),
+					contentType: "text/html",
+				});
 
-			// Test the vulnerability: double slash should not create external redirect
-			const response = await handleRequest(
-				new Request("https://example.com/foo//google.com"),
-				// @ts-expect-error Empty config default to using mocked jaeger
-				mockEnv,
-				configuration,
-				exists,
-				getByETag,
-				analytics
-			);
+				const response = await handleRequest(
+					new Request("https://example.com/foo//google.com"),
+					// @ts-expect-error Empty config default to using mocked jaeger
+					mockEnv,
+					configuration,
+					exists,
+					getByETag,
+					analytics
+				);
 
-			expect(response.status).toBe(302);
-			const location = response.headers.get("Location");
+				expect(response.status).toBe(302);
+				const location = response.headers.get("Location");
 
-			// SECURITY: Location should be relative, not absolute
-			// The vulnerability would cause: location to be "https://google.com"
-			// The fix should make: location be ".//google.com" (relative)
-			expect(location).toBe("/google.com");
-			expect(location).not.toMatch(/^https?:\/\//);
-		});
+				expect(location).toBe("/google.com");
+				expect(location).not.toMatch(/^https?:\/\//);
+			}
+		);
 	});
 });
 
