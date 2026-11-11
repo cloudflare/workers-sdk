@@ -35,6 +35,8 @@ beforeAll(async () => {
 		"inherited-pipes.cjs": `
 			const { spawn } = require("node:child_process");
 			const child = spawn(process.execPath, ["timeout.cjs"], {
+				// Windows requires detaching for the child to outlive its parent.
+				detached: true,
 				stdio: ["ignore", "inherit", "inherit"],
 				env: { ...process.env, KEEP_PIPES_OPEN: "true" },
 			});
