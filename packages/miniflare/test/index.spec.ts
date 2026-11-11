@@ -988,7 +988,7 @@ test("Miniflare: web socket kitchen sink", async ({
 		headers.push("Set-Cookie: key=value");
 	});
 	const port = await new Promise<number>((resolve) => {
-		server.listen(0, () => {
+		server.listen(0, "127.0.0.1", () => {
 			onTestFinished(() => {
 				server.close();
 			});
@@ -1015,7 +1015,7 @@ test("Miniflare: web socket kitchen sink", async ({
 								expect(request.cf?.regionCode).toBe("TX");
 								expect(request.headers.get("MF-Custom-Service")).toBe(null);
 								// Testing WebSocket-upgrading fetch
-								return fetch(`http://localhost:${port}`, request);
+								return fetch(`http://127.0.0.1:${port}`, request);
 							},
 						},
 					},
