@@ -684,4 +684,31 @@ describe("handleWebSocket", () => {
 
 		await closed;
 	});
+
+	test("delivers a non-101 Worker response to the client", async () => {
+		const mf = await listen();
+		vi.spyOn(mf, "dispatchFetch").mockResolvedValue(
+			new Response("unauthorized\n", { status: 401 })
+		);
+
+		const socket = await connect();
+		const chunks: Buffer[] = [];
+		socket.on("data", (chunk) => chunks.push(chunk));
+		const closed = new Promise<void>((resolve) =>
+			socket.on("close", () => resolve())
+		);
+		socket.write(
+			"GET /ws HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		await closed;
+		const raw = Buffer.concat(chunks).toString("utf8");
+		assert.match(raw, /^HTTP\/1\.1 401/);
+		assert.include(raw, "unauthorized");
+	});
 });
