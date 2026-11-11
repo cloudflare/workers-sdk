@@ -248,3 +248,22 @@ describe("trimSqlQuery()", () => {
 	`);
 	});
 });
+
+describe("BEGIN TRANSACTION inside string literals (#5085)", () => {
+	it("should not treat BEGIN TRANSACTION inside a string value as a transaction", ({
+		expect,
+	}) => {
+		expect(
+			mayContainTransaction(
+				`UPDATE Nodes SET text='remove \`BEGIN TRANSACTION\` and \`COMMIT\` from your SQL' WHERE id=537;`
+			)
+		).toBe(false);
+	});
+
+	it("should leave a statement with BEGIN TRANSACTION in a string value untouched", ({
+		expect,
+	}) => {
+		const sql = `UPDATE Nodes SET text='remove \`BEGIN TRANSACTION\` and \`COMMIT\` from your SQL' WHERE id=537;`;
+		expect(trimSqlQuery(sql)).toBe(sql);
+	});
+});
