@@ -1,11 +1,9 @@
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import {
-	cleanupContainers,
-	prepareContainerImagesForDev,
-} from "@cloudflare/containers-shared";
+import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
+import { Miniflare } from "miniflare";
 import { createBuilder, createServer, preview } from "vite";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { cloudflare } from "../index";
@@ -43,7 +41,6 @@ vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
 	return {
 		...original,
 		prepareContainerImagesForDev: vi.fn(async () => ({ aborted: false })),
-		cleanupContainers: vi.fn(),
 	};
 });
 
@@ -62,7 +59,6 @@ describe.each(["dev", "preview"] as const)(
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", undefined);
 			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
 			vi.mocked(prepareContainerImagesForDev).mockClear();
-			vi.mocked(cleanupContainers).mockReset().mockReturnValue(true);
 		});
 
 		afterEach(() => {
@@ -70,51 +66,52 @@ describe.each(["dev", "preview"] as const)(
 		});
 
 		if (mode === "dev") {
-			test.for(["single", "concurrent"] as const)(
-				"retries pending cleanup once on close after %s restart removes the Cloudflare plugin",
-				async (restartMode, { expect, onTestFinished }) => {
-					fs.writeFileSync(
-						"index.js",
-						`import { DurableObject } from "cloudflare:workers";
+			test("disposes Miniflare once when overlapping restarts remove the Cloudflare plugin", async ({
+				expect,
+				onTestFinished,
+			}) => {
+				fs.writeFileSync(
+					"index.js",
+					`import { DurableObject } from "cloudflare:workers";
 export class Probe extends DurableObject {}
 export default { fetch() { return new Response("ready"); } };`
-					);
-					fs.writeFileSync("Dockerfile", "FROM alpine:3.19\n");
-					fs.writeFileSync("package.json", JSON.stringify({ type: "module" }));
-					fs.writeFileSync(
-						"wrangler.jsonc",
-						JSON.stringify({
-							name: "container-cleanup-plugin-removal-test",
-							main: "index.js",
-							compatibility_date: "2026-09-21",
-							containers: [
-								{
-									class_name: "Probe",
-									scheduling_policy: "durable_object",
-									images: { app: { dockerfile: "./Dockerfile" } },
-								},
-							],
-							durable_objects: {
-								bindings: [{ name: "PROBE", class_name: "Probe" }],
+				);
+				fs.writeFileSync("Dockerfile", "FROM alpine:3.19\n");
+				fs.writeFileSync("package.json", JSON.stringify({ type: "module" }));
+				fs.writeFileSync(
+					"wrangler.jsonc",
+					JSON.stringify({
+						name: "container-cleanup-plugin-removal-test",
+						main: "index.js",
+						compatibility_date: "2026-09-21",
+						containers: [
+							{
+								class_name: "Probe",
+								scheduling_policy: "durable_object",
+								images: { app: { dockerfile: "./Dockerfile" } },
 							},
-							migrations: [{ tag: "v1", new_sqlite_classes: ["Probe"] }],
-						})
-					);
-					const require = createRequire(import.meta.url);
-					const bridgePath = path.resolve("factory.cjs");
-					fs.writeFileSync(bridgePath, "module.exports = {};\n");
-					const bridge = require(bridgePath) as {
-						cloudflare: typeof cloudflare;
-						includeCloudflare: boolean;
-					};
-					bridge.cloudflare = cloudflare;
-					bridge.includeCloudflare = true;
-					onTestFinished(() => {
-						delete require.cache[bridgePath];
-					});
-					fs.writeFileSync(
-						"vite.config.mjs",
-						`
+						],
+						durable_objects: {
+							bindings: [{ name: "PROBE", class_name: "Probe" }],
+						},
+						migrations: [{ tag: "v1", new_sqlite_classes: ["Probe"] }],
+					})
+				);
+				const require = createRequire(import.meta.url);
+				const bridgePath = path.resolve("factory.cjs");
+				fs.writeFileSync(bridgePath, "module.exports = {};\n");
+				const bridge = require(bridgePath) as {
+					cloudflare: typeof cloudflare;
+					includeCloudflare: boolean;
+				};
+				bridge.cloudflare = cloudflare;
+				bridge.includeCloudflare = true;
+				onTestFinished(() => {
+					delete require.cache[bridgePath];
+				});
+				fs.writeFileSync(
+					"vite.config.mjs",
+					`
 import { createRequire } from "node:module";
 const bridge = createRequire(import.meta.url)("./factory.cjs");
 export default {
@@ -123,57 +120,24 @@ export default {
     : [],
 };
 `
-					);
-					const initialExitListeners = new Set(process.listeners("exit"));
-					const server = await createServer({
-						configFile: path.resolve("vite.config.mjs"),
-						logLevel: "silent",
-						server: { port: 0 },
-					});
-					onTestFinished(async () => {
-						await server.close();
-						vi.mocked(cleanupContainers).mockReturnValue(true);
-						for (const listener of process.listeners("exit")) {
-							if (
-								!initialExitListeners.has(listener) &&
-								listener.name === "cleanupContainerImages"
-							) {
-								listener(0);
-							}
-						}
-					});
-					await server.listen();
-					const pendingTags = new Set(
-						vi
-							.mocked(prepareContainerImagesForDev)
-							.mock.calls[0]?.[0].containerOptions.map(
-								({ image_tag }) => image_tag
-							)
-					);
-					expect(pendingTags.size).toBeGreaterThan(0);
-					if (restartMode === "concurrent") {
-						vi.mocked(cleanupContainers).mockReturnValue(false);
-					} else {
-						vi.mocked(cleanupContainers).mockReturnValueOnce(false);
-					}
-					bridge.includeCloudflare = false;
-					if (restartMode === "concurrent") {
-						await Promise.all([server.restart(), server.restart()]);
-					} else {
-						await server.restart();
-					}
-					expect(cleanupContainers).toHaveBeenCalledExactlyOnceWith(
-						expect.any(String),
-						pendingTags
-					);
-					await server.close();
-					expect(cleanupContainers).toHaveBeenCalledTimes(2);
-					expect(cleanupContainers).toHaveBeenLastCalledWith(
-						expect.any(String),
-						pendingTags
-					);
-				}
-			);
+				);
+				const dispose = vi.spyOn(Miniflare.prototype, "dispose");
+				onTestFinished(() => dispose.mockRestore());
+				const server = await createServer({
+					configFile: path.resolve("vite.config.mjs"),
+					logLevel: "silent",
+					server: { port: 0, watch: null },
+				});
+				onTestFinished(() => server.close());
+				await server.listen();
+				await server.restart();
+				expect(dispose).not.toHaveBeenCalled();
+				bridge.includeCloudflare = false;
+				await Promise.all([server.restart(), server.restart()]);
+				expect(dispose).toHaveBeenCalledOnce();
+				await server.close();
+				expect(dispose).toHaveBeenCalledOnce();
+			});
 			test.for(["configured", "absent"] as const)(
 				"keeps dependency optimizer hashes stable on the first restart with Containers %s",
 				async (scenario, { expect, onTestFinished }) => {
@@ -246,158 +210,6 @@ export default { plugins: [cloudflare({ inspectorPort: false, persistState: fals
 					expect(Object.keys(initialHashes)).toContain("client");
 					await server.restart();
 					expect(configHashes()).toEqual(initialHashes);
-				}
-			);
-			test.for(["inline", "config-file"] as const)(
-				"retries failed cleanup across %s restarts without mixing servers",
-				async (configuration, { expect, onTestFinished }) => {
-					fs.writeFileSync(
-						"index.js",
-						`
-					import { DurableObject } from "cloudflare:workers";
-					export class Probe extends DurableObject {}
-					export default { fetch() { return new Response("ready"); } };
-				`
-					);
-					fs.writeFileSync("Dockerfile", "FROM alpine:3.19\n");
-					fs.writeFileSync("package.json", JSON.stringify({ type: "module" }));
-					fs.writeFileSync(
-						"wrangler.jsonc",
-						JSON.stringify({
-							name: "container-restart-test",
-							main: "index.js",
-							compatibility_date: "2026-09-21",
-							containers: [
-								{
-									class_name: "Probe",
-									scheduling_policy: "durable_object",
-									images: { app: { dockerfile: "./Dockerfile" } },
-								},
-							],
-							durable_objects: {
-								bindings: [{ name: "PROBE", class_name: "Probe" }],
-							},
-							migrations: [{ tag: "v1", new_sqlite_classes: ["Probe"] }],
-						})
-					);
-					// Vite evaluates config files outside Vitest's module runner. This
-					// bridge gives the real config loader our factory with mocked Docker
-					// calls, while every reload still calls cloudflare() afresh.
-					if (configuration === "config-file") {
-						const require = createRequire(import.meta.url);
-						const bridgePath = path.resolve("factory.cjs");
-						fs.writeFileSync(bridgePath, "module.exports = {};\n");
-						const bridge = require(bridgePath) as {
-							cloudflare: typeof cloudflare;
-						};
-						bridge.cloudflare = cloudflare;
-						onTestFinished(() => {
-							delete require.cache[bridgePath];
-						});
-						fs.writeFileSync(
-							"vite.config.mjs",
-							`
-						import { createRequire } from "node:module";
-						const { cloudflare } = createRequire(import.meta.url)("./factory.cjs");
-						export default { plugins: [cloudflare({ inspectorPort: false, persistState: false, remoteBindings: false })] };
-					`
-						);
-					}
-					const initialExitListeners = new Set(process.listeners("exit"));
-					const options = {
-						configFile:
-							configuration === "inline"
-								? (false as const)
-								: path.resolve("vite.config.mjs"),
-						logLevel: "silent" as const,
-						server: { port: 0 },
-						plugins:
-							configuration === "inline"
-								? [
-										cloudflare({
-											inspectorPort: false,
-											persistState: false,
-											remoteBindings: false,
-										}),
-									]
-								: [],
-					};
-					const server = await createServer(options);
-					onTestFinished(() => server.close());
-					const containerExitListeners = () =>
-						process
-							.listeners("exit")
-							.filter(
-								(listener) =>
-									!initialExitListeners.has(listener) &&
-									listener.name === "cleanupContainerImages"
-							);
-					const latestTags = () =>
-						new Set(
-							vi
-								.mocked(prepareContainerImagesForDev)
-								.mock.calls.at(-1)?.[0]
-								.containerOptions.map(({ image_tag }) => image_tag)
-						);
-					let pendingTags = latestTags();
-					const exitListener = containerExitListeners()[0];
-					expect(exitListener).toBeDefined();
-					// Even servers constructed with the same options must not share cleanup.
-					const secondServer = await createServer(options);
-					onTestFinished(() => secondServer.close());
-					const secondTags = latestTags();
-					const listeners = containerExitListeners();
-					expect(listeners).toHaveLength(2);
-					await server.listen();
-					for (let restart = 0; restart < 2; restart++) {
-						const previousPlugin = server.config.plugins.find(
-							(plugin) => plugin.name === "vite-plugin-cloudflare:dev"
-						);
-						vi.mocked(cleanupContainers).mockReturnValueOnce(false);
-						await server.restart();
-						expect(cleanupContainers).toHaveBeenLastCalledWith(
-							expect.any(String),
-							pendingTags
-						);
-						expect(prepareContainerImagesForDev).toHaveBeenCalledTimes(
-							restart + 3
-						);
-						const currentPlugin = server.config.plugins.find(
-							(plugin) => plugin.name === "vite-plugin-cloudflare:dev"
-						);
-						if (configuration === "config-file") {
-							expect(currentPlugin).not.toBe(previousPlugin);
-						} else {
-							expect(currentPlugin).toBe(previousPlugin);
-						}
-						pendingTags = new Set([...pendingTags, ...latestTags()]);
-						expect(pendingTags.size).toBe(restart + 2);
-						expect(new Set(containerExitListeners())).toEqual(
-							new Set(listeners)
-						);
-					}
-					await server.restart();
-					expect(cleanupContainers).toHaveBeenLastCalledWith(
-						expect.any(String),
-						pendingTags
-					);
-					expect(new Set(containerExitListeners())).toEqual(new Set(listeners));
-					const currentTags = latestTags();
-					exitListener?.(0);
-					expect(cleanupContainers).toHaveBeenLastCalledWith(
-						expect.any(String),
-						currentTags
-					);
-					expect(containerExitListeners()).toHaveLength(1);
-					await server.close();
-					expect(cleanupContainers).toHaveBeenCalledTimes(4);
-					await secondServer.close();
-					expect(cleanupContainers).toHaveBeenLastCalledWith(
-						expect.any(String),
-						secondTags
-					);
-					expect(cleanupContainers).toHaveBeenCalledTimes(5);
-					expect(containerExitListeners()).toHaveLength(0);
 				}
 			);
 		}
@@ -532,16 +344,7 @@ export default { fetch() { return new Response("ready"); } };`
 					onTestFinished(() => server.close());
 					return server;
 				}
-				const initialExitListeners = new Set(process.listeners("exit"));
 				const server = await startServer();
-				const containerExitListeners = () =>
-					process
-						.listeners("exit")
-						.filter(
-							(listener) =>
-								!initialExitListeners.has(listener) &&
-								listener.name === "cleanupContainerImages"
-						);
 
 				if (scenario === "disabled" || scenario === "absent") {
 					expect(prepareContainerImagesForDev).not.toHaveBeenCalled();
@@ -560,55 +363,10 @@ export default { fetch() { return new Response("ready"); } };`
 					expect(options).toHaveLength(scenario === "configured" ? 1 : 0);
 				}
 
-				if (scenario !== "configured") {
-					expect(containerExitListeners()).toHaveLength(0);
-					await server.close();
-					expect(cleanupContainers).not.toHaveBeenCalled();
-					return;
-				}
-
-				// Two servers must retain independent cleanup callbacks. Closing one
-				// must not remove the other's process-exit fallback.
-				expect(containerExitListeners()).toHaveLength(1);
-				const firstExitListener = containerExitListeners()[0];
-				const secondServer = await startServer();
-				expect(containerExitListeners()).toHaveLength(2);
-				const plannedImages = vi
-					.mocked(prepareContainerImagesForDev)
-					.mock.calls.map(
-						([args]) =>
-							new Set(args.containerOptions.map(({ image_tag }) => image_tag))
-					);
-				vi.mocked(cleanupContainers).mockReturnValueOnce(false);
+				const dispose = vi.spyOn(Miniflare.prototype, "dispose");
+				onTestFinished(() => dispose.mockRestore());
 				await server.close();
-				expect(cleanupContainers).toHaveBeenCalledExactlyOnceWith(
-					expect.any(String),
-					plannedImages[0]
-				);
-				// Failed graceful cleanup must leave the exit fallback and tags intact.
-				expect(containerExitListeners()).toHaveLength(2);
-				expect(containerExitListeners()).toContain(firstExitListener);
-				firstExitListener?.(0);
-				expect(cleanupContainers).toHaveBeenNthCalledWith(
-					2,
-					expect.any(String),
-					plannedImages[0]
-				);
-				expect(containerExitListeners()).toHaveLength(1);
-				expect(containerExitListeners()).not.toContain(firstExitListener);
-
-				// Exercise only this server's listener, without emitting process.exit.
-				const secondExitListener = containerExitListeners()[0];
-				expect(secondExitListener).toBeDefined();
-				secondExitListener?.(0);
-				expect(cleanupContainers).toHaveBeenNthCalledWith(
-					3,
-					expect.any(String),
-					plannedImages[1]
-				);
-				await secondServer.close();
-				expect(cleanupContainers).toHaveBeenCalledTimes(3);
-				expect(containerExitListeners()).toHaveLength(0);
+				expect(dispose).toHaveBeenCalledOnce();
 			}
 		);
 	}

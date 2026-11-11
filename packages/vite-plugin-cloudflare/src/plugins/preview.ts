@@ -1,6 +1,5 @@
 import { buildPublicUrl, Request as MiniflareRequest } from "miniflare";
 import colors from "picocolors";
-import { createContainerCleanup } from "../container-cleanup";
 import { getDockerPath, prepareContainerImagesForVite } from "../containers";
 import { assertIsPreview } from "../context";
 import { getPreviewMiniflareOptions } from "../miniflare-options";
@@ -17,17 +16,11 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 			assertIsPreview(ctx);
 
 			const dockerPath = getDockerPath();
-			const containerCleanup = createContainerCleanup();
-
 			// Ensure Miniflare is disposed when the preview server is closed during prerendering
 			const closePreviewServer =
 				vitePreviewServer.close.bind(vitePreviewServer);
 			vitePreviewServer.close = async () => {
-				try {
-					await Promise.all([ctx.disposeMiniflare(), closePreviewServer()]);
-				} finally {
-					containerCleanup.cleanup();
-				}
+				await Promise.all([ctx.disposeMiniflare(), closePreviewServer()]);
 			};
 
 			const { miniflareOptions, containerOptionsByWorker } =
@@ -69,12 +62,6 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 					viteConfigFile: vitePreviewServer.config.configFile,
 				});
 
-				containerCleanup.track(
-					dockerPath,
-					[...containerOptionsByWorker.values()].flatMap((options) =>
-						options.map(({ image_tag }) => image_tag)
-					)
-				);
 				vitePreviewServer.config.logger.info(
 					colors.dim(colors.yellow("\n⚡️ Containers successfully built.\n"))
 				);
