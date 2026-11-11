@@ -1,5 +1,8 @@
+import childProcess from "node:child_process";
 import { randomUUID } from "node:crypto";
+import fs from "node:fs";
 import { existsSync } from "node:fs";
+import { syncBuiltinESMExports } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
@@ -35,6 +38,7 @@ beforeAll(() => msw.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
 	vi.useRealTimers();
 	vi.restoreAllMocks();
+	syncBuiltinESMExports();
 	msw.restoreHandlers();
 	msw.resetHandlers();
 });
@@ -229,7 +233,7 @@ describe.each([false, true])(
 		afterEach(() => setKeyProviderFactoryForTesting(undefined));
 
 		it.for([false, true])(
-			"shares one checker across repeated refreshes, writes and logout (resolver: %s)",
+			"probes its process identity once across repeated refreshes, writes and logout (resolver: %s)",
 			async (resolver, { expect }) => {
 				const { ctx } = createTestContext();
 				const provider = {
@@ -255,7 +259,21 @@ describe.each([false, true])(
 					refresh_token: "RT_A",
 					expiration_time: PAST_DATE,
 				});
+				const reads = vi.spyOn(fs, "readFileSync");
+				const commands = vi.spyOn(childProcess, "execFileSync");
+				syncBuiltinESMExports();
+				function identityProbeCount(): number {
+					return process.platform === "linux"
+						? reads.mock.calls.filter(
+								([file]) => String(file) === `/proc/${process.pid}/stat`
+							).length
+						: commands.mock.calls.filter(
+								([command]) =>
+									command === "/bin/ps" || command === "powershell.exe"
+							).length;
+				}
 				const flow = createOAuthFlow(ctx);
+				expect(identityProbeCount()).toBe(0);
 				const createOwner = vi.spyOn(
 					ProcessOwnerChecker.prototype,
 					"createOwner"
@@ -266,16 +284,23 @@ describe.each([false, true])(
 					http.post("*/oauth2/revoke", () => new HttpResponse(null))
 				);
 
-				expect(await flow.loginOrRefreshIfRequired(COMPLIANCE_CONFIG)).toEqual({
-					loggedIn: true,
-				});
-				expect(await flow.loginOrRefreshIfRequired(COMPLIANCE_CONFIG)).toEqual({
-					loggedIn: true,
-				});
+				expect(
+					await flow.loginOrRefreshIfRequired({
+						complianceConfig: COMPLIANCE_CONFIG,
+						scopes: [],
+					})
+				).toEqual({ loggedIn: true });
+				expect(
+					await flow.loginOrRefreshIfRequired({
+						complianceConfig: COMPLIANCE_CONFIG,
+						scopes: [],
+					})
+				).toEqual({ loggedIn: true });
 				await flow.logout();
 
 				expect(createOwner).toHaveBeenCalledTimes(5);
 				expect(new Set(createOwner.mock.contexts).size).toBe(1);
+				expect(identityProbeCount()).toBe(1);
 				expect(storage.read()).toBeUndefined();
 			}
 		);

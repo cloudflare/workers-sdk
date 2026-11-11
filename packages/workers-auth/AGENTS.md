@@ -206,6 +206,11 @@ Each CLI is a thin **descriptor + entrypoint**:
   is probed lazily once per owning instance, not once per operation. Other owners'
   probes use a bounded, short-lived cache; check PID liveness on every poll so
   exited owners can be reclaimed immediately. Do not share mutable module state.
+- Default checker arguments in lock/write helpers are fallbacks for standalone
+  callers, not additional probes within a flow's transaction. Independent auth
+  contexts intentionally do not share a process-wide singleton, following the
+  repository's no-global-state guidance. Keep identity probing lazy so importing
+  the package or creating a context does not launch `ps` or PowerShell.
 
 ## BUILD
 
