@@ -95,6 +95,33 @@ describe("pages project list", () => {
 		expect(requests.count).toBe(1);
 	});
 
+	it("should not use a cached accountId that the current API token cannot access (#8363)", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "");
+		delete process.env.CLOUDFLARE_ACCOUNT_ID;
+		saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+			account_id: "old-account-id",
+			project_name: "an-existing-project",
+		});
+		msw.use(
+			http.get("*/accounts", () =>
+				HttpResponse.json(
+					{
+						success: true,
+						errors: [],
+						messages: [],
+						result: [{ id: "new-account-id", name: "New Account" }],
+					},
+					{ status: 200 }
+				)
+			)
+		);
+		const requests = mockProjectListRequest(expect, [], "new-account-id");
+		await runWrangler("pages project list");
+		expect(requests.count).toBe(1);
+	});
+
 	it("should error before making a request when CLOUDFLARE_ACCOUNT_ID contains characters that are invalid in a URL", async ({
 		expect,
 	}) => {
