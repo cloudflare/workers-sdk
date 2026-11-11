@@ -1,5 +1,6 @@
 import { afterEach, describe, it, vi } from "vitest";
 import {
+	getCloudflareContainerRegistries,
 	getCloudflareContainerRegistry,
 	getContainerImageRegistryConfigs,
 	isCloudflareContainerRegistry,
@@ -106,6 +107,34 @@ describe("getContainerImageRegistryConfigs", () => {
 			]);
 		}
 	);
+});
+
+describe("getCloudflareContainerRegistries", () => {
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
+	it("should list the default and FedRAMP Moderate registries", ({
+		expect,
+	}) => {
+		expect(getCloudflareContainerRegistries()).toEqual([
+			"registry.cloudflare.com",
+			"frm.registry.cloudflare.com",
+		]);
+	});
+
+	it("should list only the FedRAMP High registry", ({ expect }) => {
+		expect(
+			getCloudflareContainerRegistries({ compliance_region: "fedramp_high" })
+		).toEqual(["registry.fed.cloudflare.com"]);
+	});
+
+	it("should list an explicit registry override once", ({ expect }) => {
+		vi.stubEnv("CLOUDFLARE_CONTAINER_REGISTRY", "registry.example.com");
+		expect(getCloudflareContainerRegistries()).toEqual([
+			"registry.example.com",
+		]);
+	});
 });
 
 describe("isCloudflareContainerRegistry", () => {

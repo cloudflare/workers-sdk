@@ -2,6 +2,7 @@ export {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getCloudflareApiBaseUrl,
+	getCloudflareContainerRegistries,
 	getCloudflareContainerRegistry,
 	getCloudflareComplianceRegion,
 	getComplianceRegionSubdomain,

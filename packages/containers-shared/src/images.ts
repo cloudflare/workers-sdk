@@ -2,6 +2,7 @@ import { UserError } from "@cloudflare/workers-utils/errors";
 import { startContainerBuild } from "./build";
 import { ExternalRegistryKind } from "./client/models/ExternalRegistryKind";
 import {
+	getCloudflareContainerRegistries,
 	getCloudflareContainerRegistry,
 	isCloudflareContainerRegistry,
 } from "./knobs";
@@ -367,7 +368,9 @@ export const getAndValidateRegistryType = (
 		{
 			type: "cloudflare",
 			pattern: new RegExp(
-				`^${getCloudflareContainerRegistry(complianceConfig).replace(/[\\.]/g, "\\$&")}$`
+				`^(?:${getCloudflareContainerRegistries(complianceConfig)
+					.map((registry) => registry.replace(/[\\.]/g, "\\$&"))
+					.join("|")})$`
 			),
 			name: "Cloudflare Containers Managed Registry",
 		},

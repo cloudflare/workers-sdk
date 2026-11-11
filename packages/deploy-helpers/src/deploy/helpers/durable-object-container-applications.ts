@@ -15,6 +15,7 @@ import {
 } from "@cloudflare/containers-shared";
 import {
 	configFileName,
+	getCloudflareContainerRegistry,
 	getContainerImageRegistryConfigs,
 	getResolvedDurableObjectContainerApps,
 	getDockerPath,
@@ -694,9 +695,15 @@ export async function prepareDurableObjectContainerApplications(
 		for (const [imageName, imageConfig] of Object.entries(
 			container.images ?? {}
 		)) {
-			const source = isRegistryImage(imageConfig)
-				? `image:${imageConfig.image}`
-				: `built:${getBuiltImage(container, imageName, builtImages).localTag}`;
+			// One local tag or reference can be bound for different registries.
+			const source = JSON.stringify([
+				isRegistryImage(imageConfig)
+					? `image:${imageConfig.image}`
+					: `built:${getBuiltImage(container, imageName, builtImages).localTag}`,
+				getContainerImageRegistryConfigs(config, imageConfig.jurisdictions).map(
+					(registryConfig) => getCloudflareContainerRegistry(registryConfig)
+				),
+			]);
 			let image = preparedImages.get(source);
 			if (image === undefined) {
 				const images = await pushOrResolveImage(

@@ -223,6 +223,27 @@ describe("getAndValidateRegistryType - Cloudflare managed registry", () => {
 			}).type
 		).toBe("cloudflare");
 	});
+
+	it.for(["registry.cloudflare.com", "frm.registry.cloudflare.com"])(
+		"recognizes the managed registry %s",
+		(domain, { expect }) => {
+			expect(getAndValidateRegistryType(domain).type).toBe("cloudflare");
+		}
+	);
+
+	it("rejects the FedRAMP Moderate registry in FedRAMP High", ({ expect }) => {
+		expect(() =>
+			getAndValidateRegistryType("frm.registry.cloudflare.com", {
+				compliance_region: "fedramp_high",
+			})
+		).toThrow("is not a supported image registry");
+	});
+
+	it("does not treat registry hostnames as patterns", ({ expect }) => {
+		expect(() =>
+			getAndValidateRegistryType("frmXregistry.cloudflare.com")
+		).toThrow("is not a supported image registry");
+	});
 });
 
 describe("validateAndEncodeGarKey", () => {

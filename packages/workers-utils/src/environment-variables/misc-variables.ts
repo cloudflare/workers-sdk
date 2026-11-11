@@ -238,6 +238,25 @@ export function getContainerImageRegistryConfigs(
 }
 
 /**
+ * Returns the account's Cloudflare-managed container registries, including the
+ * FedRAMP Moderate registry used by `fedramp` images.
+ *
+ * @param complianceConfig - Compliance configuration used to select the managed registries.
+ * @returns The distinct managed registry hostnames, default registry first.
+ */
+export function getCloudflareContainerRegistries(
+	complianceConfig: ComplianceConfig = COMPLIANCE_REGION_CONFIG_UNKNOWN
+): string[] {
+	const registries = [undefined, "fedramp"].map((jurisdiction) =>
+		getCloudflareContainerRegistry({
+			compliance_region: complianceConfig.compliance_region,
+			jurisdiction,
+		})
+	);
+	return [...new Set(registries)];
+}
+
+/**
  * Whether a hostname is one of the account's Cloudflare-managed container
  * registries, including the FedRAMP Moderate registry used by `fedramp` images.
  *
@@ -249,14 +268,7 @@ export function isCloudflareContainerRegistry(
 	hostname: string,
 	complianceConfig: ComplianceConfig = COMPLIANCE_REGION_CONFIG_UNKNOWN
 ): boolean {
-	return [undefined, "fedramp"].some(
-		(jurisdiction) =>
-			hostname ===
-			getCloudflareContainerRegistry({
-				compliance_region: complianceConfig.compliance_region,
-				jurisdiction,
-			})
-	);
+	return getCloudflareContainerRegistries(complianceConfig).includes(hostname);
 }
 
 /**

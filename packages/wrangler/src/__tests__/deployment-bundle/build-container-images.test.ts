@@ -244,7 +244,7 @@ describe("buildDurableObjectContainerImages", () => {
 		}
 	);
 
-	it("builds the same Dockerfile separately for images that push to different registries", async ({
+	it("builds the same Dockerfile once for images that push to different registries", async ({
 		expect,
 	}) => {
 		const result = await buildDurableObjectContainerImages(
@@ -275,12 +275,12 @@ describe("buildDurableObjectContainerImages", () => {
 			config
 		);
 
-		expect(buildAndMaybePush).toHaveBeenCalledTimes(2);
+		expect(buildAndMaybePush).toHaveBeenCalledOnce();
 		const [publicImage, fedrampImage, aliasImage] = result.map(
 			({ localTag }) => localTag
 		);
-		expect(fedrampImage).not.toBe(publicImage);
-		expect(aliasImage).toBe(fedrampImage);
+		expect(fedrampImage).toBe(publicImage);
+		expect(aliasImage).toBe(publicImage);
 	});
 
 	it("skips deploy builds when container rollout is disabled", async ({

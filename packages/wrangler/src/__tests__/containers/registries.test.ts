@@ -189,6 +189,15 @@ describe("containers registries configure", () => {
 		`);
 	});
 
+	it("should no-op on the FedRAMP Moderate registry", async ({ expect }) => {
+		await runWrangler(
+			`containers registries configure frm.registry.cloudflare.com`
+		);
+		expect(cliStd.stdout).toContain(
+			"You do not need to configure credentials for Cloudflare managed registries."
+		);
+	});
+
 	describe("FedRAMP compliance region", () => {
 		beforeEach(() => {
 			vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "fedramp_high");
@@ -1404,8 +1413,27 @@ describe("containers registries credentials", () => {
 		await expect(
 			runWrangler("containers registries credentials example.com --push")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: The credentials command only accepts the Cloudflare managed registry (registry.cloudflare.com).]`
+			`[Error: The credentials command only accepts Cloudflare managed registries: registry.cloudflare.com, frm.registry.cloudflare.com.]`
 		);
+	});
+
+	it("should generate credentials for the FedRAMP Moderate registry", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		mockGenerateCredentials(
+			expect,
+			"frm.registry.cloudflare.com",
+			"test-password",
+			15,
+			["push"]
+		);
+
+		await runWrangler(
+			"containers registries credentials frm.registry.cloudflare.com --push"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`"test-password"`);
 	});
 
 	it("should default to Cloudflare registry when DOMAIN is omitted", async ({

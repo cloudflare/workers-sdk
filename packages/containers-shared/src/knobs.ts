@@ -1,6 +1,7 @@
 import { MF_DEV_CONTAINER_PREFIX } from "./registry";
 
 export {
+	getCloudflareContainerRegistries,
 	getCloudflareContainerRegistry,
 	getContainerImageRegistryConfigs,
 	isCloudflareContainerRegistry,

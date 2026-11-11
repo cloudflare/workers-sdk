@@ -3,8 +3,6 @@ import {
 	buildContainerImages,
 	buildAndMaybePush,
 	cleanupBuiltImages,
-	getCloudflareContainerRegistry,
-	getContainerImageRegistryConfigs,
 	isDockerfileContainerConfig,
 	verifyDockerInstalled,
 } from "@cloudflare/containers-shared";
@@ -99,15 +97,11 @@ function getImageBuildOptions(
 }
 
 function getImageBuildKey(
-	build: Pick<BuildArgs, "pathToDockerfile" | "buildContext" | "args">,
-	registries: string[]
+	build: Pick<BuildArgs, "pathToDockerfile" | "buildContext" | "args">
 ): string {
 	const vars = build.args ?? {};
 	// Reuse only equivalent builds; variable declaration order has no effect.
-	// Deployment reuses one pushed reference per local tag, so images bound for
-	// different registries need their own tags.
 	return JSON.stringify([
-		registries,
 		build.pathToDockerfile,
 		build.buildContext,
 		Object.keys(vars)
@@ -172,12 +166,7 @@ export async function buildDurableObjectContainerImages(
 	try {
 		for (const { container, imageName, image } of imagesToBuild) {
 			const build = getImageBuildOptions(config, image);
-			const source = getImageBuildKey(
-				build,
-				getContainerImageRegistryConfigs(config, image.jurisdictions).map(
-					(registryConfig) => getCloudflareContainerRegistry(registryConfig)
-				)
-			);
+			const source = getImageBuildKey(build);
 			let localTag = tagsByBuild.get(source);
 			if (localTag === undefined) {
 				localTag = buildDurableObjectImageTag(

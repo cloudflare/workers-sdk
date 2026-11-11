@@ -816,6 +816,68 @@ describe("Container image preparation", () => {
 		expect(prepare).toHaveBeenCalledWith({ image: frmImage });
 		expect(builtImage.localTagCleaned).toBeUndefined();
 	});
+	it("pushes a shared local tag to each image's registry", async ({
+		expect,
+	}) => {
+		const frmImage = `frm.registry.cloudflare.com/account/tools@sha256:${"a".repeat(64)}`;
+		const prepare = vi
+			.spyOn(ContainerImagePreparationsService, "prepareContainerImage")
+			.mockResolvedValue({
+				image,
+				status: ContainerImagePreparationStatus.READY,
+			});
+		const push = vi
+			.mocked(pushImageIfChanged)
+			.mockResolvedValueOnce({ remoteDigest: image })
+			.mockResolvedValueOnce({ remoteDigest: frmImage });
+		const localTag = "worker-sandbox-tools:wrangler-test";
+		const builtImages: BuiltDurableObjectContainerImage[] = [
+			{ className: "Sandbox", imageName: "tools", localTag },
+			{ className: "Sandbox", imageName: "fedramp", localTag },
+			{ className: "Sandbox", imageName: "alias", localTag },
+		];
+
+		const result = await prepareDurableObjectContainerApplications(
+			{ ...config, compliance_region: "public" },
+			[
+				{
+					...durableObjectContainerConfig[0],
+					images: {
+						tools: { dockerfile: "./Dockerfile" },
+						fedramp: { dockerfile: "./Dockerfile", jurisdictions: ["fedramp"] },
+						alias: { dockerfile: "./Dockerfile", jurisdictions: ["fedramp"] },
+					},
+				},
+			],
+			builtImages,
+			args
+		);
+
+		expect(result).toEqual({
+			Sandbox: { tools: image, fedramp: frmImage, alias: frmImage },
+		});
+		expect(push).toHaveBeenCalledTimes(2);
+		expect(push).toHaveBeenNthCalledWith(
+			1,
+			expect.objectContaining({
+				sourceTag: localTag,
+				complianceConfig: { compliance_region: "public" },
+			})
+		);
+		expect(push).toHaveBeenNthCalledWith(
+			2,
+			expect.objectContaining({
+				sourceTag: localTag,
+				complianceConfig: {
+					compliance_region: "public",
+					jurisdiction: "fedramp",
+				},
+			})
+		);
+		expect(prepare).toHaveBeenNthCalledWith(1, { image });
+		expect(prepare).toHaveBeenNthCalledWith(2, { image: frmImage });
+		expect(prepare).toHaveBeenCalledTimes(2);
+	});
 	it("prepares a prebuilt image from the FedRAMP Moderate registry", async ({
 		expect,
 	}) => {
