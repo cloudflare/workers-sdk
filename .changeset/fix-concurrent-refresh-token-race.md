@@ -1,5 +1,8 @@
 ---
 "@cloudflare/workers-auth": patch
+"wrangler": patch
+"@cloudflare/vite-plugin": patch
+"@cloudflare/vitest-plugin": patch
 ---
 
 Fix concurrent process race on single-use refresh tokens

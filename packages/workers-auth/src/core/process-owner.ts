@@ -4,6 +4,9 @@ import { readFileSync } from "node:fs";
 
 const OWNER_PATTERN =
 	/^owner-([1-9]\d*)-(?:([\da-f]{16}|unknown)-)?[\da-f-]{36}$/;
+const IDENTITY_CACHE_TTL_MS = 5_000;
+const MAX_CACHED_OWNERS = 128;
+const checkedOwners = new Map<string, number>();
 let ownIdentity: string | undefined;
 let checkedOwnIdentity = false;
 
@@ -77,16 +80,36 @@ export function isProcessOwnerAlive(owner: string): boolean {
 	try {
 		process.kill(pid, 0);
 	} catch (error) {
-		return !(
-			error instanceof Error &&
-			"code" in error &&
-			error.code === "ESRCH"
-		);
+		const exited =
+			error instanceof Error && "code" in error && error.code === "ESRCH";
+		if (exited) {
+			checkedOwners.delete(owner);
+		}
+		return !exited;
 	}
 	const recordedIdentity = match[2];
 	if (!recordedIdentity || recordedIdentity === "unknown") {
 		return true;
 	}
+	const checkedAt = checkedOwners.get(owner);
+	if (
+		checkedAt !== undefined &&
+		performance.now() - checkedAt < IDENTITY_CACHE_TTL_MS
+	) {
+		return true;
+	}
 	const currentIdentity = processIdentity(pid);
-	return currentIdentity === undefined || currentIdentity === recordedIdentity;
+	if (currentIdentity !== undefined && currentIdentity !== recordedIdentity) {
+		checkedOwners.delete(owner);
+		return false;
+	}
+	checkedOwners.delete(owner);
+	if (checkedOwners.size >= MAX_CACHED_OWNERS) {
+		const oldestOwner = checkedOwners.keys().next().value;
+		if (oldestOwner !== undefined) {
+			checkedOwners.delete(oldestOwner);
+		}
+	}
+	checkedOwners.set(owner, performance.now());
+	return true;
 }

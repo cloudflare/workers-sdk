@@ -195,6 +195,8 @@ Each CLI is a thin **descriptor + entrypoint**:
 - Ownership includes process-start identity when available, so PID reuse does
   not strand locks. If identity cannot be checked, fail closed rather than
   evicting a potentially live transaction.
+- Cache process-start probes briefly in a bounded per-owner cache, but check PID
+  liveness on every poll so exited owners can be reclaimed immediately.
 
 ## BUILD
 
