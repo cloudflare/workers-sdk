@@ -47,6 +47,27 @@ describe("detectFramework() / basic framework detection", () => {
 		expect(result.detectedFramework?.buildCommand).toContain("astro build");
 	});
 
+	it("does not use the removed `--prod` flag for Angular's build command when targeting cf", async ({
+		expect,
+	}) => {
+		await seed({
+			"package.json": JSON.stringify({
+				dependencies: { "@angular/core": "22.2.2" },
+				devDependencies: { "@angular/cli": "22.2.2" },
+			}),
+			"angular.json": JSON.stringify({ projects: {} }),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
+
+		const result = await detectFramework(process.cwd(), context, {
+			target: "cf",
+		});
+
+		expect(result.detectedFramework?.framework.id).toBe("angular");
+		expect(result.detectedFramework?.buildCommand).toBeDefined();
+		expect(result.detectedFramework?.buildCommand).not.toMatch(/--prod\b/);
+	});
+
 	it("clears commands for an unknown framework when targeting cf", async ({
 		expect,
 	}) => {
