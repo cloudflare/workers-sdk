@@ -1,12 +1,24 @@
 import { existsSync } from "node:fs";
+import { cp } from "node:fs/promises";
 import { join } from "node:path";
-import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
+import {
+	inputPrompt,
+	spinner,
+} from "@cloudflare/cli-shared-helpers/interactive";
 import degit from "degit";
 import { mockSpinner } from "helpers/__tests__/mocks";
-import { readFile, readJSON, writeFile, writeJSON } from "helpers/files";
+import {
+	hasTsConfig,
+	readFile,
+	readJSON,
+	writeFile,
+	writeJSON,
+} from "helpers/files";
 import { beforeEach, describe, test, vi } from "vitest";
 import { getAgentsMd } from "../agents-md";
 import {
+	copyTemplateFiles,
+	createContext,
 	deriveCorrelatedArgs,
 	downloadRemoteTemplate,
 	filterTemplatesByLanguage,
@@ -21,6 +33,12 @@ import type { C3Args, C3Context } from "types";
 import type { Mock } from "vitest";
 
 vi.mock("degit");
+vi.mock("node:fs/promises", async (importOriginal) => ({
+	...(await importOriginal<typeof import("node:fs/promises")>()),
+	cp: vi.fn(),
+	rename: vi.fn(),
+}));
+vi.mock("../git", () => ({ isInsideGitRepo: async () => false }));
 vi.mock("fs");
 vi.mock("helpers/files");
 vi.mock("@cloudflare/cli-shared-helpers/interactive");
@@ -550,5 +568,39 @@ describe("writeAgentsMd", () => {
 		writeAgentsMd(projectPath);
 
 		expect(writeFileMock).not.toHaveBeenCalled();
+	});
+});
+
+describe("web framework language detection (#7495)", () => {
+	test("uses the typescript variant when the framework's generate step creates a tsconfig", async ({
+		expect,
+	}) => {
+		// Accept every prompt's default (i.e. the value passed in args)
+		vi.mocked(inputPrompt).mockImplementation(
+			async (config) => config.defaultValue as never
+		);
+
+		mockSpinner();
+
+		// No tsconfig exists yet when the context is created, before `generate` runs
+		vi.mocked(hasTsConfig).mockReturnValue(false);
+
+		const ctx = await createContext({
+			category: "web-framework",
+			type: "react",
+			framework: "react",
+			platform: "workers",
+			projectName: "my-react-app",
+		});
+		expect(ctx.template.generate).toBeDefined();
+
+		// The framework's `generate` step has now created a tsconfig.json
+		vi.mocked(hasTsConfig).mockReturnValue(true);
+		vi.mocked(existsSync).mockReturnValue(false);
+
+		await copyTemplateFiles(ctx);
+
+		const srcdir = vi.mocked(cp).mock.calls[0][0] as string;
+		expect(srcdir.replaceAll("\\", "/")).toMatch(/\/ts$/);
 	});
 });
