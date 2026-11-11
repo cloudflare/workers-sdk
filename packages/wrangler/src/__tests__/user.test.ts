@@ -510,6 +510,36 @@ describe("User", () => {
 			}
 		});
 
+		it("should always request `user:read` even when `--scopes` omits it (#4648)", async ({
+			expect,
+		}) => {
+			mockOAuthServerCallback("success");
+			msw.use(
+				http.post(
+					"*/oauth2/token",
+					async () =>
+						HttpResponse.json({
+							access_token: "test-access-token",
+							expires_in: 100000,
+							refresh_token: "test-refresh-token",
+							scope: "account:read",
+						}),
+					{ once: true }
+				)
+			);
+
+			await runWrangler("login --scopes account:read");
+
+			const url = /Opening a link in your default browser: (\S+)/.exec(
+				std.out
+			)?.[1];
+			expect(url).toBeDefined();
+			const requested = new URL(url as string).searchParams
+				.get("scope")
+				?.split(" ");
+			expect(requested).toContain("user:read");
+		});
+
 		it("--use-keyring stores credentials in an encrypted file with a key in the OS keyring", async ({
 			expect,
 		}) => {
