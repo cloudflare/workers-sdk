@@ -375,8 +375,9 @@ export class LocalRuntimeController extends RuntimeController {
 						},
 						this.#remoteProxySessionData ?? null,
 						Object.keys(remoteBindings).length === 0
-							? // If there are no remote bindings (this is a local only session) there's no need to get auth data
-								undefined
+							? // Without remote bindings, keep the session's own hook. A new one,
+								// or none, would restart the session with no remote bindings.
+								this.#remoteProxySessionData?.auth
 							: data.config.dev.auth
 					);
 			}

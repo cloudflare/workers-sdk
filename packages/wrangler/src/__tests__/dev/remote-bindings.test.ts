@@ -56,6 +56,7 @@ const remoteProxyConnectionString = new URL(
 let proxyWorkerBindings: Record<string, Binding> | undefined;
 let sessionOptions: StartRemoteProxySessionOptions | undefined;
 let startRemoteProxySessionCallCount = 0;
+let disposeRemoteProxySessionCallCount = 0;
 vi.mock("../../api/remoteBindings/start-remote-proxy-session", async () => {
 	const actual = await vi.importActual<
 		typeof import("../../api/remoteBindings/start-remote-proxy-session")
@@ -71,7 +72,9 @@ vi.mock("../../api/remoteBindings/start-remote-proxy-session", async () => {
 			startRemoteProxySessionCallCount++;
 			return {
 				ready: Promise.resolve(),
-				async dispose() {},
+				async dispose() {
+					disposeRemoteProxySessionCallCount++;
+				},
 				async updateBindings() {},
 				remoteProxyConnectionString,
 			};
@@ -122,6 +125,7 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 		sessionOptions = undefined;
 		proxyWorkerBindings = undefined;
 		startRemoteProxySessionCallCount = 0;
+		disposeRemoteProxySessionCallCount = 0;
 		workerOptions = [];
 	});
 
@@ -684,7 +688,7 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 					...config,
 				}),
 			});
-		await writeConfig({
+		const remoteServiceConfig: RawConfig = {
 			services: [
 				{
 					binding: "REMOTE_WORKER",
@@ -692,7 +696,8 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 					remote: true,
 				},
 			],
-		});
+		};
+		await writeConfig(remoteServiceConfig);
 		await seed({
 			"index.js": `export default { fetch() { return new Response("hello") } }`,
 		});
@@ -722,6 +727,14 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 			);
 		}
 		expect(startRemoteProxySessionCallCount).toBe(1);
+		expect(disposeRemoteProxySessionCallCount).toBe(0);
+
+		// Adding a remote binding back restarts the session with the current hook
+		await writeConfig(remoteServiceConfig);
+		await vi.waitFor(() => expect(startRemoteProxySessionCallCount).toBe(2), {
+			timeout: devReadyTimeout,
+		});
+		expect(disposeRemoteProxySessionCallCount).toBe(1);
 
 		await stopWrangler();
 		await wranglerStopped;

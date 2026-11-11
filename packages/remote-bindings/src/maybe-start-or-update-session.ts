@@ -97,25 +97,11 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		);
 	}
 	const remoteBindings = pickRemoteBindings(bindings);
-	if (Object.keys(remoteBindings).length === 0) {
-		if (!preExistingRemoteProxySessionData?.session) {
-			return null;
-		}
-		// A session without remote bindings uses no credentials, so don't restart
-		// it when the auth changes. Keep the auth it was started with, so adding a
-		// remote binding later restarts it if the credentials have changed.
-		if (
-			!deepStrictEqual(
-				remoteBindings,
-				preExistingRemoteProxySessionData.remoteBindings
-			)
-		) {
-			await preExistingRemoteProxySessionData.session.updateBindings(
-				remoteBindings
-			);
-		}
-		await preExistingRemoteProxySessionData.session.ready;
-		return { ...preExistingRemoteProxySessionData, remoteBindings };
+	if (
+		Object.keys(remoteBindings).length === 0 &&
+		!preExistingRemoteProxySessionData?.session
+	) {
+		return null;
 	}
 	const authSameAsBefore =
 		key !== undefined ||
