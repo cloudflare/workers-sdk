@@ -66,12 +66,12 @@ describe("runAutoConfig()", () => {
 	const std = mockConsoleMethods();
 
 	it.for([
-		{ activate: true, runBuild: true },
-		{ activate: false, runBuild: true },
-		{ activate: false, runBuild: false },
+		{ installTool: true, runBuild: true },
+		{ installTool: false, runBuild: true },
+		{ installTool: false, runBuild: false },
 	])(
-		"checks readiness after setup only when building (activate=$activate, runBuild=$runBuild)",
-		async ({ activate, runBuild }, { expect }) => {
+		"checks installed tools after setup only when building (installTool=$installTool, runBuild=$runBuild)",
+		async ({ installTool, runBuild }, { expect }) => {
 			await seed({
 				"package.json": JSON.stringify({
 					name: "vite-app",
@@ -81,17 +81,16 @@ describe("runAutoConfig()", () => {
 				"node_modules/@cloudflare/vite-plugin/package.json": JSON.stringify({
 					version: "2.0.0-beta.v.13",
 				}),
-				"node_modules/vite/package.json": JSON.stringify({
-					version: "8.1.0",
-					bin: { vite: "cli.js" },
-				}),
-				"node_modules/vite/cli.js": "",
 			});
 			vi.spyOn(Vite.prototype, "configure").mockImplementation(
 				async ({ dryRun }) => {
-					if (!dryRun && activate) {
+					if (!dryRun && installTool) {
 						await seed({
-							"vite.config.ts": `import { cloudflare } from '@cloudflare/vite-plugin'; export default { plugins: [cloudflare()] };`,
+							"node_modules/vite/package.json": JSON.stringify({
+								version: "8.1.0",
+								bin: { vite: "cli.js" },
+							}),
+							"node_modules/vite/cli.js": "",
 						});
 					}
 					return { buildTool: "vite", workerConfig: {} };
@@ -99,16 +98,16 @@ describe("runAutoConfig()", () => {
 			);
 			const context = createMockContext();
 			const details = await getDetailsForAutoConfig({ context });
-			expect(details.commandError?.code).toBe("vite-plugin-not-configured");
+			expect(details.commandError?.code).toBe("vite-tool-not-installed");
 			const setup = runAutoConfig(details, {
 				context,
 				skipConfirmations: true,
 				enableTargetCliInstallation: false,
 				runBuild,
 			});
-			if (runBuild && !activate) {
+			if (runBuild && !installTool) {
 				await expect(setup).rejects.toThrow(
-					"Add cloudflare() to the plugins array"
+					"project's vite executable could not be found"
 				);
 			} else {
 				await expect(setup).resolves.toMatchObject({
@@ -116,7 +115,7 @@ describe("runAutoConfig()", () => {
 				});
 			}
 			expect(context.runCommand).toHaveBeenCalledTimes(
-				runBuild && activate ? 1 : 0
+				runBuild && installTool ? 1 : 0
 			);
 		}
 	);

@@ -28,7 +28,7 @@ describe("Vite-plugin fallback commands", () => {
 	mockConsoleMethods();
 	const context = createMockContext();
 
-	async function seedProject(vitePlus = false, version = "2.0.0-beta.1") {
+	async function seedProject(vitePlus = false, version = "2.0.0-beta.v.13") {
 		const packageName = vitePlus ? "vite-plus" : "vite";
 		const command = vitePlus ? "vp" : "vite";
 		await seed({
@@ -107,7 +107,7 @@ export default { plugins: [cloudflare()] };`,
 	it("can plan setup for an undetected project before the plugin is configured", async ({
 		expect,
 	}) => {
-		await seedProject();
+		const binary = await seedProject();
 		await rm("cloudflare.config.ts");
 		await rm("vite.config.ts");
 		const details = await getDetailsForAutoConfig({ context });
@@ -115,10 +115,10 @@ export default { plugins: [cloudflare()] };`,
 		expect(details).toMatchObject({
 			configured: false,
 			framework: { id: "vite" },
-			devCommand: undefined,
-			buildCommand: undefined,
+			devCommand: `${invocation(binary)} dev`,
+			buildCommand: `${invocation(binary)} build`,
 			outputDir: "dist",
-			commandError: { code: "vite-plugin-not-configured" },
+			commandError: undefined,
 		});
 	});
 
@@ -283,14 +283,21 @@ export default { plugins: [cloudflare()] };`,
 		});
 	});
 
-	it.for(["1.61.0", "3.0.0-beta.1", "invalid"])(
+	it.for([
+		"1.61.0",
+		"2.0.0-beta.1",
+		"2.0.0-beta.v.12",
+		"2.0.0-beta.v.12+build.100",
+		"3.0.0-beta.1",
+		"invalid",
+	])(
 		"reports an incompatible plugin %s without failing detection",
 		async (version, { expect }) => {
 			await seedProject(false, version);
 			const details = await getDetailsForAutoConfig({ context });
 			expect(details.commandError?.code).toBe("vite-plugin-incompatible");
 			expect(() => assertProjectCommandsAvailable(details)).toThrow(
-				"cf requires @cloudflare/vite-plugin v2 beta"
+				"cf requires @cloudflare/vite-plugin >=2.0.0-beta.v.13 <3"
 			);
 		}
 	);
@@ -307,7 +314,7 @@ export default { plugins: [cloudflare()] };`,
 			"child/node_modules/@cloudflare/vite-plugin/package.json": JSON.stringify(
 				{
 					name: "@cloudflare/vite-plugin",
-					version: "2.0.0-beta.1",
+					version: "2.0.0-beta.v.13",
 				}
 			),
 		});
@@ -347,7 +354,7 @@ export default { plugins: [cloudflare()] };`,
 				},
 			}),
 			"node_modules/@cloudflare/vite-plugin/package.json": JSON.stringify({
-				version: "2.0.0-beta.1",
+				version: "2.0.0-beta.v.13",
 			}),
 		});
 
@@ -445,22 +452,61 @@ export default { plugins: [cloudflare()] };`,
 		const details = await getDetailsForAutoConfig({ context });
 		expect(details.framework?.id).toBe("astro");
 		expect(() => assertProjectCommandsAvailable(details)).toThrow(
-			"cf requires @cloudflare/vite-plugin v2 beta"
+			"cf requires @cloudflare/vite-plugin >=2.0.0-beta.v.13 <3"
 		);
 	});
 
-	it.for(["missing", "unused"])(
-		"reports a plugin that is %s from Vite configuration",
-		async (config, { expect }) => {
-			await seedProject();
-			if (config === "missing") {
-				await rm("vite.config.ts");
-			} else {
-				await seed({ "vite.config.ts": "export default { plugins: [] };" });
-			}
+	it.for([
+		undefined,
+		"export default { plugins: [] };",
+		"export default { plugins: [cloudflare()].filter(Boolean) };",
+		"const plugins = [cloudflare()]; export default { plugins };",
+		"export default mergeConfig(base, { plugins: [cloudflare()] });",
+		"export default vite.defineConfig({ plugins: [cloudflare()] });",
+		"throw new Error('Config must not be executed during detection');",
+		"invalid config syntax {{",
+	])("leaves config evaluation to Vite: %s", async (config, { expect }) => {
+		const binary = await seedProject();
+		if (config === undefined) {
+			await rm("vite.config.ts");
+		} else {
+			await seed({ "vite.config.ts": config });
+		}
+		const details = await getDetailsForAutoConfig({ context });
+		expect(details.commandError).toBeUndefined();
+		expect(details.devCommand).toBe(`${invocation(binary)} dev`);
+		expect(details.buildCommand).toBe(`${invocation(binary)} build`);
+	});
+
+	it("preserves canonical Vite commands with a dynamic config", async ({
+		expect,
+	}) => {
+		await seedProject();
+		await seed({
+			"package.json": JSON.stringify({
+				devDependencies: { vite: "8.1.0", "@cloudflare/vite-plugin": "beta" },
+			}),
+			"vite.config.ts":
+				"export default vite.defineConfig({ plugins: [cloudflare()].filter(Boolean) });",
+		});
+		const details = await getDetailsForAutoConfig({ context });
+		expect(details.commandError).toBeUndefined();
+		expect(details.devCommand).toBe("vite");
+		expect(details.buildCommand).toBe("vite build");
+	});
+
+	it.for([
+		"2.0.0-beta.v.13",
+		"2.0.0-beta.v.14",
+		"2.0.0-beta.v.100+build.1",
+		"2.0.0",
+		"2.1.0-alpha.1",
+	])(
+		"accepts plugin %s with cf profile support",
+		async (version, { expect }) => {
+			await seedProject(false, version);
 			const details = await getDetailsForAutoConfig({ context });
-			expect(details.commandError?.code).toBe("vite-plugin-not-configured");
-			expect(details.buildCommand).toBeUndefined();
+			expect(details.commandError).toBeUndefined();
 		}
 	);
 

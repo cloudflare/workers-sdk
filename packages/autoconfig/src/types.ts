@@ -13,8 +13,7 @@ export type AutoConfigCommandError = {
 	code:
 		| "vite-plugin-not-installed"
 		| "vite-plugin-incompatible"
-		| "vite-tool-not-installed"
-		| "vite-plugin-not-configured";
+		| "vite-tool-not-installed";
 	message: string;
 };
 

@@ -1,10 +1,7 @@
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
-import {
-	checkIfExportedViteConfigUsesCloudflarePlugin,
-	hasViteConfig,
-} from "../frameworks/utils/vite-config";
+import semiver from "semiver";
 import type { AutoConfigCommandError } from "../types";
 import type { PackageJSON } from "@cloudflare/workers-utils";
 
@@ -27,12 +24,10 @@ export function usesVitePlus(packageJson?: PackageJSON): boolean {
  * before dependencies have been installed or framework setup has been applied.
  */
 export function getViteProjectCommands({
-	projectPath,
 	packageJson,
 	nodeModulesPaths,
 	resolveCommands,
 }: {
-	projectPath: string;
 	packageJson?: ProjectPackageJSON;
 	nodeModulesPaths: readonly string[];
 	resolveCommands: boolean;
@@ -58,7 +53,7 @@ export function getViteProjectCommands({
 		"@cloudflare/vite-plugin"
 	);
 	const requirement =
-		"cf requires @cloudflare/vite-plugin v2 beta for cf dev, cf build, cf deploy, and cf previews deploy.";
+		"cf requires @cloudflare/vite-plugin >=2.0.0-beta.v.13 <3 for cf dev, cf build, cf deploy, and cf previews deploy.";
 	const install = usesVitePlus(packageJson)
 		? "npm install --save-dev @cloudflare/vite-plugin@beta vite-plus"
 		: "npm install --save-dev @cloudflare/vite-plugin@beta vite";
@@ -70,7 +65,11 @@ export function getViteProjectCommands({
 			},
 		};
 	}
-	if (!plugin.packageJson.version?.match(/^2\.\d+\.\d+(?:[-+].+)?$/)) {
+	const version = plugin.packageJson.version;
+	if (
+		!version?.match(/^2\.\d+\.\d+(?:[-+].+)?$/) ||
+		semiver(version.split("+")[0], "2.0.0-beta.v.13") < 0
+	) {
 		return {
 			error: {
 				code: "vite-plugin-incompatible",
@@ -96,16 +95,6 @@ export function getViteProjectCommands({
 			error: {
 				code: "vite-tool-not-installed",
 				message: `@cloudflare/vite-plugin is installed, but the project's ${commandName} executable could not be found. ${requirement} Run ${install}.`,
-			},
-		};
-	}
-
-	if (!usesCloudflarePlugin(projectPath)) {
-		return {
-			error: {
-				code: "vite-plugin-not-configured",
-				message:
-					"Could not confirm that the Vite configuration enables @cloudflare/vite-plugin. Add cloudflare() to the plugins array in your Vite configuration before running cf dev or cf build.",
 			},
 		};
 	}
@@ -146,16 +135,5 @@ function readProjectPackage(
 			// A broken nearer install must not silently select another version.
 			return;
 		}
-	}
-}
-
-function usesCloudflarePlugin(projectPath: string): boolean {
-	try {
-		return (
-			hasViteConfig(projectPath) &&
-			checkIfExportedViteConfigUsesCloudflarePlugin(projectPath)
-		);
-	} catch {
-		return false;
 	}
 }

@@ -236,7 +236,6 @@ export async function getDetailsForAutoConfig({
 		!detectedFramework.devCommand && !detectedFramework.buildCommand;
 	const viteCommands = inspectViteProject
 		? getViteProjectCommands({
-				projectPath,
 				packageJson,
 				nodeModulesPaths,
 				resolveCommands: useNativeCommands || framework.id === "vite",

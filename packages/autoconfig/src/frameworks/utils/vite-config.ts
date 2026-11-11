@@ -146,187 +146,78 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 	projectPath: string,
 	context?: AutoConfigContext
 ): boolean {
-	return checkViteConfigForCloudflarePlugin(projectPath, false, context);
-}
-
-/** Confirms the exported plugins array before executing native cf commands. */
-export function checkIfExportedViteConfigUsesCloudflarePlugin(
-	projectPath: string,
-	context?: AutoConfigContext
-): boolean {
-	return checkViteConfigForCloudflarePlugin(projectPath, true, context);
-}
-
-function checkViteConfigForCloudflarePlugin(
-	projectPath: string,
-	requireExportedConfig: boolean,
-	context?: AutoConfigContext
-): boolean {
-	const ast = parseFile(getViteConfigPath(projectPath));
+	const filePath = getViteConfigPath(projectPath);
+	const ast = parseFile(filePath);
 	if (!ast) {
 		return false;
 	}
 
-	const pluginBindings = new Set<string>();
-	const namespaceBindings = new Set<string>();
-	let configBindings = new Map<string, recast.types.ASTNode>();
-	const mutatedConfigs = new Set<types.namedTypes.ObjectExpression>();
+	let importsCloudflarePlugin = false;
 	let usesCloudflarePlugin = false;
-	function checkConfigObject(
-		configObject: types.namedTypes.ObjectExpression | null
-	): boolean {
-		if (!configObject) {
-			return false;
-		}
-		const pluginsProp = configObject.properties.findLast(isPluginsProp);
-		if (
-			!pluginsProp ||
-			!t.ArrayExpression.check(pluginsProp.value) ||
-			hasFollowingOverride(configObject, pluginsProp)
-		) {
-			context?.logger.debug("Vite config does not have a valid plugins array");
-			return false;
-		}
-		return pluginsProp.value.elements.some((element) => {
-			if (!t.CallExpression.check(element)) {
-				return false;
-			}
-			const callee = element.callee;
-			return (
-				(t.Identifier.check(callee) && pluginBindings.has(callee.name)) ||
-				(t.MemberExpression.check(callee) &&
-					!callee.computed &&
-					t.Identifier.check(callee.object) &&
-					namespaceBindings.has(callee.object.name) &&
-					t.Identifier.check(callee.property) &&
-					callee.property.name === "cloudflare")
-			);
-		});
-	}
-
-	function recordMutation(
-		target: recast.types.ASTNode,
-		isGlobalBinding: (name: string) => boolean
-	): void {
-		let property: string | undefined;
-		while (t.MemberExpression.check(target)) {
-			property = getMemberPropertyName(target);
-			target = target.object;
-		}
-		if (
-			!t.Identifier.check(target) ||
-			!isGlobalBinding(target.name) ||
-			(property !== undefined && property !== "plugins")
-		) {
-			return;
-		}
-		const config = resolveConfigObject(target, configBindings);
-		if (config) {
-			// Object identity also catches writes through another binding to this config.
-			mutatedConfigs.add(config);
-		}
-	}
 
 	recast.visit(ast, {
 		visitProgram(n) {
-			configBindings = collectConfigBindings(n.node);
-			for (const statement of n.node.body) {
-				if (
-					statement.type !== "ImportDeclaration" ||
-					statement.source.value !== "@cloudflare/vite-plugin"
-				) {
-					continue;
-				}
-				for (const specifier of statement.specifiers ?? []) {
-					if (
-						specifier.type === "ImportSpecifier" &&
-						specifier.imported.type === "Identifier" &&
-						specifier.imported.name === "cloudflare" &&
-						specifier.local &&
-						typeof specifier.local.name === "string"
-					) {
-						pluginBindings.add(specifier.local.name);
-					} else if (
-						specifier.type === "ImportNamespaceSpecifier" &&
-						specifier.local &&
-						typeof specifier.local.name === "string"
-					) {
-						namespaceBindings.add(specifier.local.name);
-					}
-				}
-			}
-			recast.visit(n.node, {
-				visitAssignmentExpression(p) {
-					recordMutation(
-						p.node.left,
-						(name) => p.scope.lookup(name)?.isGlobal === true
-					);
-					return this.traverse(p);
-				},
-				visitUpdateExpression(p) {
-					recordMutation(
-						p.node.argument,
-						(name) => p.scope.lookup(name)?.isGlobal === true
-					);
-					return this.traverse(p);
-				},
-				visitUnaryExpression(p) {
-					if (p.node.operator === "delete") {
-						recordMutation(
-							p.node.argument,
-							(name) => p.scope.lookup(name)?.isGlobal === true
-						);
-					}
-					return this.traverse(p);
-				},
-				visitCallExpression(p) {
-					const callee = p.node.callee;
-					if (
-						t.MemberExpression.check(callee) &&
-						["pop", "shift", "splice", "fill", "copyWithin"].includes(
-							getMemberPropertyName(callee) ?? ""
-						)
-					) {
-						recordMutation(
-							callee.object,
-							(name) => p.scope.lookup(name)?.isGlobal === true
-						);
-					}
-					return this.traverse(p);
-				},
-			});
-			return this.traverse(n);
-		},
-		visitCallExpression(n) {
 			if (
-				!requireExportedConfig &&
-				t.Identifier.check(n.node.callee) &&
-				n.node.callee.name === "defineConfig" &&
-				checkConfigObject(
-					resolveConfigObject(n.node.arguments[0], configBindings)
+				n.node.body.some(
+					(s) =>
+						s.type === "ImportDeclaration" &&
+						s.source.value === "@cloudflare/vite-plugin"
 				)
 			) {
-				// Wrangler historically recognizes setup inside wrappers and named exports.
-				usesCloudflarePlugin = true;
+				importsCloudflarePlugin = true;
+				return this.traverse(n);
 			}
-			return this.traverse(n);
+
+			this.traverse(n);
 		},
-		visitExportDefaultDeclaration(n) {
-			const config = resolveConfigObject(n.node.declaration, configBindings);
-			const exportedConfigUsesPlugin =
-				config !== null &&
-				!mutatedConfigs.has(config) &&
-				checkConfigObject(config);
-			if (requireExportedConfig) {
-				usesCloudflarePlugin = exportedConfigUsesPlugin;
-				return false;
+		visitCallExpression: function (n) {
+			const callee = n.node.callee as types.namedTypes.Identifier;
+			if (callee.name !== "defineConfig") {
+				return this.traverse(n);
 			}
-			usesCloudflarePlugin ||= exportedConfigUsesPlugin;
-			return this.traverse(n);
+
+			const configObject = extractConfigObject(n.node.arguments[0]);
+			if (!configObject) {
+				context?.logger.debug(
+					`Vite config uses an unsupported expression type. Skipping Cloudflare plugin check.`
+				);
+				return this.traverse(n);
+			}
+
+			const pluginsProp = configObject.properties.findLast((prop) =>
+				isPluginsProp(prop)
+			);
+			if (!pluginsProp || !t.ArrayExpression.check(pluginsProp.value)) {
+				context?.logger.debug(
+					`Vite config does not have a valid plugins array. Skipping Cloudflare plugin check.`
+				);
+				return this.traverse(n);
+			}
+
+			if (hasFollowingOverride(configObject, pluginsProp)) {
+				context?.logger.debug(
+					`Vite config has a later property that may override its plugins array. Skipping Cloudflare plugin check.`
+				);
+				return this.traverse(n);
+			}
+
+			if (
+				pluginsProp.value.elements.some(
+					(el) =>
+						el?.type === "CallExpression" &&
+						el.callee.type === "Identifier" &&
+						el.callee.name === "cloudflare"
+				)
+			) {
+				usesCloudflarePlugin = true;
+				return this.traverse(n);
+			}
+
+			this.traverse(n);
 		},
 	});
 
-	return usesCloudflarePlugin;
+	return importsCloudflarePlugin && usesCloudflarePlugin;
 }
 
 // Match Vite's DEFAULT_CONFIG_FILES order so inspection and execution use the same file.
