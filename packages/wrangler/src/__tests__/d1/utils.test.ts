@@ -139,6 +139,38 @@ describe("getDatabaseByNameOrBinding", () => {
 		);
 	});
 
+	it("should look up the id by database_name rather than trusting a stale database_id in config (#6256)", async ({
+		expect,
+	}) => {
+		const realUuid = "7b0c1d24-ec57-4179-8663-9b82dafe9277";
+		msw.use(
+			...getMswSuccessMembershipHandlers([{ id: "IG-88", name: "enterprise" }]),
+			http.get("*/accounts/:accountId/d1/database/:name", async () => {
+				return HttpResponse.json({
+					result: { uuid: realUuid, name: "renamed-db" },
+					success: true,
+					errors: [],
+					messages: [],
+				});
+			})
+		);
+		const config = {
+			d1_databases: [
+				{
+					binding: "DB",
+					database_name: "renamed-db",
+					database_id: "00000000-0000-0000-0000-000000000000",
+				},
+			],
+		} as unknown as Config;
+		const result = await getDatabaseByNameOrBinding(
+			config,
+			"123",
+			"renamed-db"
+		);
+		expect(result.uuid).toBe(realUuid);
+	});
+
 	it("should resolve a database by name via the D1 API", async ({ expect }) => {
 		const uuid = "7b0c1d24-ec57-4179-8663-9b82dafe9277";
 		msw.use(
