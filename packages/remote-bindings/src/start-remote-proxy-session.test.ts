@@ -3,6 +3,7 @@ import { afterEach, describe, it, vi } from "vitest";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
 import { RemoteSessionAuthenticationError } from "./utils/remote";
 import type { RemoteBindingsLogger } from "./logger";
+import type { StartRemoteProxySessionOptions } from "./start-remote-proxy-session";
 import type { ErrorEvent } from "./startDevWorker/events";
 
 // The error that the mocked `DevEnv` emits asynchronously from `start()`.
@@ -61,6 +62,14 @@ function createTestLogger(): RemoteBindingsLogger {
 	};
 }
 
+function createTestOptions(): StartRemoteProxySessionOptions {
+	return {
+		cliDisplayName: "Wrangler",
+		logger: createTestLogger(),
+		auth: { accountId: "account", apiToken: { apiToken: "token" } },
+	};
+}
+
 function makeErrorEvent(cause: ErrorEvent["cause"]): ErrorEvent {
 	return {
 		type: "error",
@@ -89,7 +98,7 @@ describe("startRemoteProxySession Flagship validation", () => {
 			await expect(
 				startRemoteProxySession(
 					{ FLAGS: { type: "flagship" } },
-					{ cliDisplayName, logger: createTestLogger() }
+					{ ...createTestOptions(), cliDisplayName }
 				)
 			).rejects.toThrow(
 				`Flagship binding "FLAGS" has no \`${setting}\` and has not been created, but needs to run remotely. Run \`${command}\` to create an app.`
@@ -109,10 +118,9 @@ describe("startRemoteProxySession error handling", () => {
 			process.versions.bun = originalBunVersion;
 		});
 
-		const thrown = await startRemoteProxySession(
-			{},
-			{ cliDisplayName: "Wrangler", logger: createTestLogger() }
-		).catch((error: unknown) => error);
+		const thrown = await startRemoteProxySession({}, createTestOptions()).catch(
+			(error: unknown) => error
+		);
 
 		expect(thrown).toBeInstanceOf(UserError);
 		expect(thrown).toMatchObject({
@@ -133,10 +141,7 @@ describe("startRemoteProxySession error handling", () => {
 	it("disposes only once even when teardown rejects", async ({ expect }) => {
 		const error = new Error("cleanup failure");
 		mockDevEnv.teardown.mockRejectedValueOnce(error);
-		const session = await startRemoteProxySession(
-			{},
-			{ cliDisplayName: "Wrangler", logger: createTestLogger() }
-		);
+		const session = await startRemoteProxySession({}, createTestOptions());
 		const first = session.dispose();
 		const second = session.dispose();
 		expect(second).toBe(first);
@@ -158,10 +163,7 @@ describe("startRemoteProxySession error handling", () => {
 			}
 			mockDevEnv.teardown.mockRejectedValueOnce(new Error("cleanup failure"));
 			await expect(
-				startRemoteProxySession(
-					{},
-					{ cliDisplayName: "Wrangler", logger: createTestLogger() }
-				)
+				startRemoteProxySession({}, createTestOptions())
 			).rejects.toBe(original);
 			expect(mockDevEnv.teardown).toHaveBeenCalledOnce();
 		}
@@ -179,12 +181,9 @@ describe("startRemoteProxySession error handling", () => {
 		});
 		mockDevEnv.error = userError;
 
-		await expect(
-			startRemoteProxySession(
-				{},
-				{ cliDisplayName: "Wrangler", logger: createTestLogger() }
-			)
-		).rejects.toBe(userError);
+		await expect(startRemoteProxySession({}, createTestOptions())).rejects.toBe(
+			userError
+		);
 	});
 
 	it("unwraps a UserError nested in an error event's cause", async ({
@@ -196,10 +195,9 @@ describe("startRemoteProxySession error handling", () => {
 		);
 		mockDevEnv.error = makeErrorEvent(authError);
 
-		const thrown = await startRemoteProxySession(
-			{},
-			{ cliDisplayName: "Wrangler", logger: createTestLogger() }
-		).catch((error: unknown) => error);
+		const thrown = await startRemoteProxySession({}, createTestOptions()).catch(
+			(error: unknown) => error
+		);
 
 		expect(thrown).toBe(authError);
 		expect(thrown).toBeInstanceOf(UserError);
@@ -210,10 +208,9 @@ describe("startRemoteProxySession error handling", () => {
 	}) => {
 		mockDevEnv.error = makeErrorEvent(new Error("boom"));
 
-		const thrown = await startRemoteProxySession(
-			{},
-			{ cliDisplayName: "Wrangler", logger: createTestLogger() }
-		).catch((error: unknown) => error);
+		const thrown = await startRemoteProxySession({}, createTestOptions()).catch(
+			(error: unknown) => error
+		);
 
 		expect(thrown).toBeInstanceOf(Error);
 		expect(thrown).not.toBeInstanceOf(UserError);
@@ -238,10 +235,9 @@ describe("startRemoteProxySession error handling", () => {
 			})
 		);
 
-		const thrown = await startRemoteProxySession(
-			{},
-			{ cliDisplayName: "Wrangler", logger: createTestLogger() }
-		).catch((error: unknown) => error);
+		const thrown = await startRemoteProxySession({}, createTestOptions()).catch(
+			(error: unknown) => error
+		);
 
 		expect(thrown).not.toBeInstanceOf(APIError);
 		expect((thrown as Error).message).toContain(

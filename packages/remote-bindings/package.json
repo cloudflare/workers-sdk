@@ -31,7 +31,6 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
-		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/deploy-helpers": "workspace:*",
 		"@cloudflare/workers-auth": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*",

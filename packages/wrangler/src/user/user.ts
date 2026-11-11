@@ -107,6 +107,19 @@ export function isCfAuthActive(): boolean {
 }
 
 /**
+ * Create Wrangler authentication for one profile, separate from the active
+ * profile.
+ *
+ * @param profile - The Wrangler profile to authenticate with.
+ * @returns Authentication that only uses `profile`.
+ */
+export function createAuthForProfile(profile: string): CloudflareAuth {
+	const profileAuth = createWranglerAuth(authContext);
+	profileAuth.setProfile(profile);
+	return profileAuth;
+}
+
+/**
  * Set the active auth profile for all subsequent credential lookups.
  */
 export function setProfile(profile: string): void {

@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import { resolveBindingRemote } from "@cloudflare/workers-utils";
-import { getRemoteBindingsAuthHook } from "./auth";
 import {
 	getRemoteBindings,
 	warnForDefaultRemoteBindings,
@@ -36,10 +35,6 @@ export type WorkerConfigObject = {
 	name?: string;
 	/** If running in a non-public compliance region, set this here. */
 	complianceRegion?: Config["compliance_region"];
-	/** ID of the account owning the worker. */
-	account_id?: Config["account_id"];
-	/** Directory used to resolve the auth profile from directory bindings. */
-	profileDir?: string;
 } & (
 	| {
 			/** The format of the Worker's bindings. Defaults to Wrangler's. */
@@ -82,13 +77,13 @@ export type RemoteBindingsContext = {
 export async function maybeStartOrUpdateRemoteProxySession(
 	workerConfigObject: WorkerConfigObject,
 	preExistingRemoteProxySessionData: RemoteProxySessionData | null | undefined,
-	auth: RemoteBindingsAuth | AsyncHook<CfAccount> | undefined,
+	auth: RemoteBindingsAuth | AsyncHook<CfAccount>,
 	context: RemoteBindingsContext,
 	startSession: typeof startRemoteProxySession = startRemoteProxySession
 ): Promise<RemoteProxySessionData | null> {
 	// Wrangler passes its hook alone
-	const { hook, key }: Partial<RemoteBindingsAuth> =
-		auth !== undefined && "hook" in auth ? auth : { hook: auth };
+	const { hook, key }: RemoteBindingsAuth =
+		"hook" in auth ? auth : { hook: auth };
 	// The remote proxy Worker takes bindings in Wrangler's format.
 	const bindings =
 		workerConfigObject.target === "cf"
@@ -124,12 +119,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 			workerName: workerConfigObject.name,
 			complianceRegion: workerConfigObject.complianceRegion,
 			cliDisplayName: context.cliDisplayName,
-			auth: getRemoteBindingsAuthHook(
-				hook,
-				workerConfigObject.account_id,
-				workerConfigObject.profileDir,
-				context.logger
-			),
+			auth: hook,
 			logger: context.logger,
 		});
 	} else {
@@ -145,12 +135,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 						workerName: workerConfigObject.name,
 						complianceRegion: workerConfigObject.complianceRegion,
 						cliDisplayName: context.cliDisplayName,
-						auth: getRemoteBindingsAuthHook(
-							hook,
-							workerConfigObject.account_id,
-							workerConfigObject.profileDir,
-							context.logger
-						),
+						auth: hook,
 						logger: context.logger,
 					});
 				}

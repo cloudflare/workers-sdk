@@ -710,6 +710,7 @@ async function parseCustomPoolOptions(
 					preExistingRemoteProxySessionData ?? null,
 					// `cloudflare.config.ts` belongs to cf, so use cf's credentials
 					getRemoteBindingsAuth(
+						"cf",
 						path.dirname(configPath),
 						settings.accountId,
 						remoteBindingsLogger
@@ -790,11 +791,14 @@ async function parseCustomPoolOptions(
 								config
 							) ?? {},
 						complianceRegion: getCloudflareComplianceRegion(config),
-						account_id: config.account_id,
-						profileDir: path.dirname(configPath),
 					},
 					preExistingRemoteProxySessionData ?? null,
-					undefined,
+					getRemoteBindingsAuth(
+						"wrangler",
+						path.dirname(configPath),
+						config.account_id,
+						remoteBindingsLogger
+					),
 					{ cliDisplayName: "Wrangler", logger: remoteBindingsLogger }
 				)
 			: null;
