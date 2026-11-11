@@ -1,5 +1,37 @@
 # @cloudflare/vite-plugin
 
+## 2.0.0-beta.v.15
+
+### Patch Changes
+
+- [#16761](https://github.com/cloudflare/workers-sdk/pull/16761) [`4d157fb`](https://github.com/cloudflare/workers-sdk/commit/4d157fb4bc470239ca1892dfda6d292adbeb5932) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Serve assets imported by prerender Workers and child environments
+
+  The client output now includes assets imported by the dedicated prerender Worker and by built child environments of the production entry or prerender Workers.
+
+- [#16761](https://github.com/cloudflare/workers-sdk/pull/16761) [`4d157fb`](https://github.com/cloudflare/workers-sdk/commit/4d157fb4bc470239ca1892dfda6d292adbeb5932) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Avoid rebuilding environments already built in a pre `buildApp` hook
+
+  When another plugin builds a Worker or client environment in a `buildApp` hook with `order: "pre"`, the Cloudflare plugin now skips rebuilding that environment.
+
+  When using a custom `builder.buildApp`, the plugin now completes any required client build and makes assets imported by the entry Worker available to serve. Previously, custom builders skipped these steps.
+
+- [#16761](https://github.com/cloudflare/workers-sdk/pull/16761) [`4d157fb`](https://github.com/cloudflare/workers-sdk/commit/4d157fb4bc470239ca1892dfda6d292adbeb5932) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Stop emitting Vite manifests for Worker environments by default
+
+  Enable `build.manifest` explicitly if your tooling requires these manifests.
+
+- [#16830](https://github.com/cloudflare/workers-sdk/pull/16830) [`88c774b`](https://github.com/cloudflare/workers-sdk/commit/88c774b505c9e859564d860299908bef7bff267b) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Always name `cf` in actionable messages
+
+  Vite plugin v2 is only compatible with `cf`, so messages that tell you which CLI or command to use now always name `cf`. Previously they named Wrangler unless Vite was started by `cf`.
+
+- [#16682](https://github.com/cloudflare/workers-sdk/pull/16682) [`5966749`](https://github.com/cloudflare/workers-sdk/commit/5966749c35ba6ce6ea1fe3f2df6e55ec8031e3b1) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Stop suggesting settings that do not exist when Docker is unavailable
+
+  When Docker could not be reached, the error suggested setting `dev.enable_containers` to false in `cloudflare.config.ts` or passing `--enable-containers=false`. `cloudflare.config.ts` has no such setting and the Vite plugin has no such flag, so the error no longer suggests them.
+
+- Updated dependencies [[`877b249`](https://github.com/cloudflare/workers-sdk/commit/877b249292307ae4dd282080e68b1d88c0fd0bb0), [`69e650c`](https://github.com/cloudflare/workers-sdk/commit/69e650cc8a2823c053139ffdce10285526cf1da1)]:
+  - @cloudflare/config@0.32.0
+  - miniflare@5.20261110.1-beta
+  - @cloudflare/build-output-utils@0.9.13
+  - @cloudflare/runtime-types@0.1.26
+
 ## 2.0.0-beta.v.14
 
 ### Patch Changes

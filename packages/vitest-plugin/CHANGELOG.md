@@ -1,5 +1,42 @@
 # @cloudflare/vitest-plugin
 
+## 1.8.0
+
+### Minor Changes
+
+- [#16682](https://github.com/cloudflare/workers-sdk/pull/16682) [`5966749`](https://github.com/cloudflare/workers-sdk/commit/5966749c35ba6ce6ea1fe3f2df6e55ec8031e3b1) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Run the Containers that `cloudflare.config.ts` attaches to Durable Objects
+
+  Previously, projects that load `cloudflare.config.ts` through the `config` option ran those Durable Objects without their Containers. The plugin now prepares the Containers' images and runs them, as it does for Wrangler configuration files. Dockerfile and build context paths are relative to the directory that contains `cloudflare.config.ts`.
+
+  `cloudflare.config.ts` has no setting that disables local Containers, so, as with the Vite plugin, projects with Container-backed Durable Objects need Docker to run their tests.
+
+### Patch Changes
+
+- [#16824](https://github.com/cloudflare/workers-sdk/pull/16824) [`877b249`](https://github.com/cloudflare/workers-sdk/commit/877b249292307ae4dd282080e68b1d88c0fd0bb0) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Move streaming tail consumers to `experimental.streamingTailConsumers` in `cloudflare.config.ts`
+
+  Streaming Tail Workers are now declared in a separate, experimental list instead of with `streaming: true` on a `tailConsumers` entry. `tailConsumers` now only lists Tail Workers with a `tail()` handler. This is a breaking change to the experimental config API: move each entry that set `streaming: true` to `experimental.streamingTailConsumers`, without the `streaming` field.
+
+  ```ts
+  export default defineConfig({
+    worker: {
+      tailConsumers: [{ worker: "tail-worker" }],
+      experimental: {
+        streamingTailConsumers: [{ worker: "streaming-tail-worker" }],
+      },
+    },
+  });
+  ```
+
+  Fields under `experimental` may change or be removed without a major version bump. The `wrangler-to-cf` codemod now converts `streaming_tail_consumers` to `experimental.streamingTailConsumers`.
+
+- [#16734](https://github.com/cloudflare/workers-sdk/pull/16734) [`c47cca7`](https://github.com/cloudflare/workers-sdk/commit/c47cca7bc649aaf3a6479b9d377122a65d9d6183) Thanks [@matingathani](https://github.com/matingathani)! - Fix CommonJS dependencies being loaded as ES modules under Vitest 5 inline projects
+
+  A dependency with its own `"type": "commonjs"` `package.json` was treated as an ES module when an earlier `.js` file elsewhere in the project had been classified by the project's `"type": "module"` `package.json`. The dependency then failed at import with errors such as `Cannot set properties of undefined` or `exports is not defined`. The nearest `package.json` now always decides how a `.js` file is loaded.
+
+- Updated dependencies [[`877b249`](https://github.com/cloudflare/workers-sdk/commit/877b249292307ae4dd282080e68b1d88c0fd0bb0), [`69e650c`](https://github.com/cloudflare/workers-sdk/commit/69e650cc8a2823c053139ffdce10285526cf1da1)]:
+  - miniflare@5.20261110.1-beta
+  - wrangler@4.160.1
+
 ## 1.7.0
 
 ### Minor Changes

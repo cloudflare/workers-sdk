@@ -1,5 +1,25 @@
 # @cloudflare/containers-shared
 
+## 0.26.0
+
+### Minor Changes
+
+- [#16682](https://github.com/cloudflare/workers-sdk/pull/16682) [`5966749`](https://github.com/cloudflare/workers-sdk/commit/5966749c35ba6ce6ea1fe3f2df6e55ec8031e3b1) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Let callers word the hint in the Docker error of `prepareContainerImagesForDev()`
+
+  `prepareContainerImagesForDev()` now takes `dockerUnavailableHint`, the text to add to the error when Docker cannot be reached, instead of `configFileName` and the `disableContainersHint` argument added in 0.25.0. Omit it to show no hint. The hint it built from `configFileName` named a Wrangler setting and a Wrangler flag, which do not apply to every caller.
+
+- [#16682](https://github.com/cloudflare/workers-sdk/pull/16682) [`5966749`](https://github.com/cloudflare/workers-sdk/commit/5966749c35ba6ce6ea1fe3f2df6e55ec8031e3b1) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Export `createMiniflareExports()` for native Cloudflare configuration
+
+  Internal consumers can now give Miniflare the Durable Object exports of parsed `cloudflare.config.ts` and Build Output configuration, with each Container name replaced by the runtime options of the Container's prepared images.
+
+### Patch Changes
+
+- Updated dependencies [[`877b249`](https://github.com/cloudflare/workers-sdk/commit/877b249292307ae4dd282080e68b1d88c0fd0bb0), [`8d2bb3d`](https://github.com/cloudflare/workers-sdk/commit/8d2bb3dccf55ba8ac3fdf8ac12cca7cd52a5bad0)]:
+  - @cloudflare/config@0.32.0
+  - @cloudflare/workers-utils@0.53.1
+  - @cloudflare/build-output-utils@0.9.13
+  - @cloudflare/cli-shared-helpers@0.3.7
+
 ## 0.25.0
 
 ### Minor Changes
