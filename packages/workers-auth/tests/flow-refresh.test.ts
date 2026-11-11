@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import {
@@ -14,6 +16,7 @@ import {
 } from "vitest";
 import { clearAccessCaches } from "../src/access";
 import * as callbackServer from "../src/callback-server";
+import { FileCredentialStore } from "../src/credential-store/file-store";
 import { createOAuthFlow } from "../src/flow";
 import type {
 	AuthConfigStorage,
@@ -139,6 +142,80 @@ function mockTokenSuccess(overrides: Record<string, unknown> = {}) {
 		})
 	);
 }
+
+describe.each(["toml", "json"] as const)(
+	"logout without a refresh token (%s)",
+	(format) => {
+		runInTempDir();
+
+		it.for([
+			{
+				name: "access-token-only",
+				credentials: {
+					oauth_token: "access-token",
+					expiration_time: FUTURE_DATE,
+				},
+			},
+			{
+				name: "empty-refresh-token",
+				credentials: {
+					oauth_token: "access-token",
+					refresh_token: "",
+					expiration_time: FUTURE_DATE,
+				},
+			},
+			{
+				name: "legacy-api-token",
+				credentials: { api_token: "legacy-api-token" },
+			},
+		])(
+			"clears $name credentials without revocation and invalidates cached auth",
+			async ({ credentials }, { expect }) => {
+				const { ctx, logs } = createTestContext();
+				const storage = new FileCredentialStore(
+					process.cwd(),
+					undefined,
+					format
+				);
+				storage.write(credentials);
+				ctx.storageFactory = () => storage;
+				ctx.purgeOnLoginOrLogout = vi.fn();
+				const revoke = vi.fn(() => new HttpResponse(null));
+				msw.use(http.post("*/oauth2/revoke", revoke));
+
+				await createOAuthFlow(ctx).logout();
+
+				expect(existsSync(storage.path())).toBe(false);
+				expect(storage.read()).toBeUndefined();
+				expect(revoke).not.toHaveBeenCalled();
+				expect(logs.filter(({ level }) => level === "log")).toEqual([
+					{ level: "log", message: "Cleared stored credentials." },
+				]);
+				expect(ctx.purgeOnLoginOrLogout).toHaveBeenCalledOnce();
+			}
+		);
+
+		it("keeps the not-logged-in message when no credentials exist", async ({
+			expect,
+		}) => {
+			const { ctx, logs } = createTestContext();
+			const storage = new FileCredentialStore(process.cwd(), undefined, format);
+			ctx.storageFactory = () => storage;
+			ctx.purgeOnLoginOrLogout = vi.fn();
+			const revoke = vi.fn(() => new HttpResponse(null));
+			msw.use(http.post("*/oauth2/revoke", revoke));
+
+			await createOAuthFlow(ctx).logout();
+
+			expect(existsSync(storage.path())).toBe(false);
+			expect(revoke).not.toHaveBeenCalled();
+			expect(logs).toEqual([
+				{ level: "log", message: "Not logged in, exiting..." },
+			]);
+			expect(ctx.purgeOnLoginOrLogout).not.toHaveBeenCalled();
+		});
+	}
+);
 
 describe("refreshToken (via loginOrRefreshIfRequired)", () => {
 	beforeEach(() => {

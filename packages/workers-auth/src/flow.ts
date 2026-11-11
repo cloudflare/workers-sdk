@@ -649,20 +649,25 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 					warningLogger: ctx.logger,
 					storage,
 				}).refreshToken;
-				if (!storedRefreshToken) {
-					storage.clear();
+				if (!storedRefreshToken?.value) {
+					const clearedCredentials = storage.clear();
 					ctx.logger.log(
-						clearedTemporary
-							? "Cleared temporary preview account."
-							: "Not logged in, exiting..."
+						clearedCredentials
+							? "Cleared stored credentials."
+							: clearedTemporary
+								? "Cleared temporary preview account."
+								: "Not logged in, exiting..."
 					);
+					if (clearedCredentials) {
+						ctx.purgeOnLoginOrLogout?.();
+					}
 					return;
 				}
 
 				const body =
 					`client_id=${encodeURIComponent(getClientId())}&` +
 					`token_type_hint=refresh_token&` +
-					`token=${encodeURIComponent(storedRefreshToken.value || "")}`;
+					`token=${encodeURIComponent(storedRefreshToken.value)}`;
 
 				const response = await fetch(getRevokeUrlFromEnv(), {
 					method: "POST",

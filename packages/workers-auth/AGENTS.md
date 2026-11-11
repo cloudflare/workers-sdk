@@ -190,6 +190,8 @@ Each CLI is a thin **descriptor + entrypoint**:
 - Credential writes replace the file atomically with mode `0o600`.
 - File symlinks are preserved; aliases use the target's lock. Abandoned temporary
   writes are removed on the next write, migration, or clear for that destination.
+- Logout clears stored credentials even without a usable refresh token, reports
+  the cleanup, and invalidates consumer caches without calling revocation.
 - Ownership includes process-start identity when available, so PID reuse does
   not strand locks. If identity cannot be checked, fail closed rather than
   evicting a potentially live transaction.
