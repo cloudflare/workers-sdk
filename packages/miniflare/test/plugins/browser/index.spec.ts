@@ -154,6 +154,23 @@ export default {
  * means the tests only ever see a complete install.
  */
 async function warmChromeInstall(): Promise<void> {
+	// The first launch of a fresh install is the slowest, and on a loaded
+	// runner it can outlast Chrome's readiness probe. Retry the same failures,
+	// as many times, as the tests below do.
+	const { condition, count, delay } = BROWSER_RENDERING_RETRY.retry;
+	for (let attempt = 0; ; attempt++) {
+		try {
+			return await launchWarmupBrowser();
+		} catch (e) {
+			if (attempt >= count || !condition.test(String(e))) {
+				throw e;
+			}
+			await new Promise((resolve) => setTimeout(resolve, delay));
+		}
+	}
+}
+
+async function launchWarmupBrowser(): Promise<void> {
 	const mf = new Miniflare({
 		// Miniflare logs to a no-op by default, which makes a failure here
 		// (a bad cached install, a download that will not complete) impossible
