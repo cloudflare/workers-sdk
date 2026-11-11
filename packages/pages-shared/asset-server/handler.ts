@@ -227,7 +227,7 @@ export async function generateHandler<
 				: {},
 			({ status, to }, replacements) => ({
 				status,
-				to: normalizeRedirectTarget(replacer(to, replacements)),
+				to: normalizeRedirectTarget(to, replacements),
 			})
 		);
 

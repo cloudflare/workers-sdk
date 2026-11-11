@@ -8,22 +8,34 @@ import {
 
 describe("rules engine", () => {
 	test.for([
-		["//images/logo.png", "/images/logo.png"],
-		["///images//logo.png", "/images/logo.png"],
-		["/\\images\\logo.png", "/images/logo.png"],
-		["/%2Fimages/logo.png", "/%2Fimages/logo.png"],
+		["/:splat", "/images/logo.png", "/images/logo.png"],
+		["/:splat", "//images//logo.png", "/images/logo.png"],
+		["/:splat", "\\images\\logo.png", "/images/logo.png"],
+		["/:splat", "%2Fimages/logo.png", "/%2Fimages/logo.png"],
 		[
-			"/images//logo.png?next=https://example.com/a//b#section//one",
+			"/:splat?next=https://example.com/a//b#section//one",
+			"images//logo.png",
 			"/images/logo.png?next=https://example.com/a//b#section//one",
 		],
 		[
-			"https://other.example//images/logo.png",
+			"https://other.example/:splat",
+			"/images/logo.png",
 			"https://other.example//images/logo.png",
 		],
+		[
+			"//other.example/:splat",
+			"/images/logo.png",
+			"//other.example//images/logo.png",
+		],
+		[
+			"  //other.example/:splat  ",
+			"images/logo.png",
+			"//other.example/images/logo.png",
+		],
 	])(
-		"normalizes relative redirect target %s",
-		([target, expected], { expect }) => {
-			expect(normalizeRedirectTarget(target)).toBe(expected);
+		"normalizes redirect target %s with splat %s",
+		([target, splat, expected], { expect }) => {
+			expect(normalizeRedirectTarget(target, { splat })).toBe(expected);
 		}
 	);
 

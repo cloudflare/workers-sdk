@@ -1033,6 +1033,38 @@ describe("[Asset Worker] `handleRequest`", () => {
 			expect(response.status).toBe(200);
 		});
 
+		it.for(["http", "https"])(
+			"should preserve scheme-less redirect targets on %s requests",
+			async (protocol, { expect }) => {
+				const configuration = normalizeConfiguration({
+					redirects: {
+						version: 1,
+						staticRules: {},
+						rules: {
+							"/old/*": {
+								status: 302,
+								to: "//other.example/:splat?next=https://example.com/a//b#section//one",
+							},
+						},
+					},
+				});
+				const response = await handleRequest(
+					new Request(`${protocol}://example.com/old//images/logo.png`),
+					// @ts-expect-error Empty config default to using mocked jaeger
+					mockEnv,
+					configuration,
+					vi.fn().mockReturnValue(null),
+					vi.fn(),
+					analytics
+				);
+
+				expect(response.status).toBe(302);
+				expect(response.headers.get("Location")).toBe(
+					`${protocol}://other.example//images/logo.png?next=https://example.com/a//b#section//one`
+				);
+			}
+		);
+
 		it("should prevent external redirects via double slash", async ({
 			expect,
 		}) => {

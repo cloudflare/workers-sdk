@@ -1227,6 +1227,27 @@ describe("asset-server handler", () => {
 	});
 
 	describe("redirects", () => {
+		test.for(["http", "https"])(
+			"preserves scheme-less redirect targets on %s requests",
+			async (protocol, { expect }) => {
+				const { response } = await getTestResponse({
+					request: `${protocol}://foo.com/old//images/logo.png`,
+					metadata: createMetadataObjectWithRedirects([
+						{
+							from: "/old/*",
+							to: "//other.example/:splat?next=https://example.com/a//b#section//one",
+							status: 302,
+						},
+					]),
+				});
+
+				expect(response.status).toBe(302);
+				expect(response.headers.get("Location")).toBe(
+					`${protocol}://other.example//images/logo.png?next=https://example.com/a//b#section//one`
+				);
+			}
+		);
+
 		test.for([
 			["/old/*", "/old//images/logo.png", "/:splat", "/images/logo.png"],
 			["/old*", "/old/images/logo.png", "/:splat", "/images/logo.png"],

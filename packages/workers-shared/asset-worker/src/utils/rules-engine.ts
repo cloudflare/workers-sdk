@@ -142,20 +142,26 @@ export const generateRedirectsMatcher = (
 			: {},
 		({ status, to }, replacements) => ({
 			status,
-			to: normalizeRedirectTarget(replacer(to, replacements)),
+			to: normalizeRedirectTarget(to, replacements),
 		})
 	);
 
 /**
- * Normalize a substituted redirect pathname without changing query values,
- * fragments or explicitly configured external URLs.
+ * Replace redirect placeholders and normalize relative pathnames without changing
+ * query values, fragments or explicitly configured external URLs.
  *
- * @param value The redirect target after placeholder replacement.
- * @returns A target with one slash per pathname separator.
+ * @param value The configured redirect target before placeholder replacement.
+ * @param replacements Placeholder values captured from the request.
+ * @returns A substituted target with repeated relative pathname separators collapsed.
  */
-export function normalizeRedirectTarget(value: string): string {
-	const target = value.trim();
-	if (/^\w+:\/\//.test(target)) {
+export function normalizeRedirectTarget(
+	value: string,
+	replacements: Replacements
+): string {
+	// Captured slashes must not turn a relative target into an external redirect.
+	const isExternal = /^(?:\w+:)?\/\//.test(value.trim());
+	const target = replacer(value, replacements).trim();
+	if (isExternal) {
 		return target;
 	}
 
