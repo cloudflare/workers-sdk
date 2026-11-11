@@ -9,6 +9,9 @@ export default defineConfig({
     tailwindcss(),
     reactRouter(),
   ],
+  environments: {
+    ssr: { build: { sourcemap: true } },
+  },
   resolve: {
     tsconfigPaths: true,
   },
