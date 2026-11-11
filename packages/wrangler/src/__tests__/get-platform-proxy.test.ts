@@ -64,4 +64,31 @@ describe("getPlatformProxy", () => {
 			await platform.dispose();
 		}
 	});
+
+	it("throws an illegal invocation error when a binding method is detached (#6200)", async ({
+		expect,
+	}) => {
+		writeWranglerConfig(
+			{
+				name: "test-worker",
+				main: "./index.js",
+				compatibility_date: "2026-11-02",
+				kv_namespaces: [{ binding: "MY_KV", id: "xxx" }],
+			},
+			"./wrangler.json"
+		);
+
+		const platform = await getPlatformProxy<{ MY_KV: KVNamespace }>({
+			configPath: "./wrangler.json",
+			persist: false,
+			remoteBindings: false,
+		});
+
+		try {
+			const { get } = platform.env.MY_KV;
+			await expect(get("key")).rejects.toThrow(/illegal invocation/i);
+		} finally {
+			await platform.dispose();
+		}
+	});
 });
