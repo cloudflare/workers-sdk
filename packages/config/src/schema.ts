@@ -381,8 +381,7 @@ const OutputContainerImageSchema = z.union([
 
 // Only one jurisdiction is supported for now.
 const DurableObjectContainerImageJurisdictionsSchema = z
-	.array(z.enum(["fedramp"]))
-	.length(1)
+	.tuple([z.enum(["fedramp"])])
 	.optional();
 
 const InputDurableObjectContainerImageSchema = z.union([
