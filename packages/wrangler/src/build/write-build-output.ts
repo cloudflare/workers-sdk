@@ -1,5 +1,6 @@
 import {
 	cleanBuildOutputDir,
+	getWorkerBundleDir,
 	writeRootConfig,
 } from "@cloudflare/build-output-utils";
 import {
@@ -44,7 +45,9 @@ export async function writeBuildOutput({
 	let buildResult: WorkerBuildResult | undefined;
 	try {
 		if (buildProps) {
-			buildResult = await buildWorker(buildProps, config);
+			buildResult = await buildWorker(buildProps, config, {
+				sourceMapDirectory: getWorkerBundleDir(root),
+			});
 		}
 
 		await cleanBuildOutputDir(root);
