@@ -163,52 +163,64 @@ describe("credential process ownership", () => {
 		expect(probe).toHaveBeenCalledTimes(2);
 	});
 
-	it("lazily shares its own process identity across checker instances", async ({
+	it("lazily caches its own process identity within its checker", ({
 		expect,
 	}) => {
-		vi.resetModules();
 		const { probe, owner } = mockProcessStartIdentity(process.pid);
-		const { ProcessOwnerChecker: FreshProcessOwnerChecker } =
-			await import("../src/core/process-owner");
-		const first = new FreshProcessOwnerChecker();
-		const second = new FreshProcessOwnerChecker();
+		const owners = new ProcessOwnerChecker();
 		const now = vi.spyOn(performance, "now").mockReturnValue(0);
 		expect(probe).not.toHaveBeenCalled();
-		const firstOwner = first.createOwner();
-		const secondOwner = second.createOwner();
+		const firstOwner = owners.createOwner();
+		const secondOwner = owners.createOwner();
 		expect(firstOwner.slice(0, -36)).toBe(owner.slice(0, -36));
 		expect(secondOwner.slice(0, -36)).toBe(owner.slice(0, -36));
 		expect(firstOwner).not.toBe(secondOwner);
-		expect(firstOwner).not.toBe(first.createOwner());
-		expect(first.isAlive(secondOwner)).toBe(true);
-		expect(second.isAlive(firstOwner)).toBe(true);
+		expect(firstOwner).not.toBe(owners.createOwner());
+		expect(owners.isAlive(secondOwner)).toBe(true);
+		expect(owners.isAlive(firstOwner)).toBe(true);
 		now.mockReturnValue(5_000);
-		expect(first.isAlive(secondOwner)).toBe(true);
+		expect(owners.isAlive(secondOwner)).toBe(true);
 		expect(
-			first.isAlive(`owner-${process.pid}-${"0".repeat(16)}-${randomUUID()}`)
+			owners.isAlive(`owner-${process.pid}-${"0".repeat(16)}-${randomUUID()}`)
 		).toBe(false);
 		expect(probe).toHaveBeenCalledOnce();
 	});
 
-	it("shares an unknown identity after a failed own-process probe without retrying", async ({
+	it("keeps its own process identity private to each checker", ({ expect }) => {
+		const { probe } = mockProcessStartIdentity(process.pid);
+		const first = new ProcessOwnerChecker();
+		const second = new ProcessOwnerChecker();
+		const firstOwner = first.createOwner();
+		probe.mockReturnValue("2");
+		const secondOwner = second.createOwner();
+		expect(firstOwner.slice(0, -36)).not.toBe(secondOwner.slice(0, -36));
+		expect(first.createOwner().slice(0, -36)).toBe(firstOwner.slice(0, -36));
+		expect(second.createOwner().slice(0, -36)).toBe(secondOwner.slice(0, -36));
+		expect(first.isAlive(secondOwner)).toBe(false);
+		expect(second.isAlive(firstOwner)).toBe(false);
+		expect(probe).toHaveBeenCalledTimes(2);
+	});
+
+	it("caches a failed own-process probe only within its owning checker", ({
 		expect,
 	}) => {
-		vi.resetModules();
 		const { probe, owner } = mockProcessStartIdentity(process.pid);
-		const { ProcessOwnerChecker: FreshProcessOwnerChecker } =
-			await import("../src/core/process-owner");
 		probe.mockImplementationOnce(() => {
 			throw new Error("denied");
 		});
-		const first = new FreshProcessOwnerChecker();
-		const second = new FreshProcessOwnerChecker();
-		const firstOwner = first.createOwner();
-		const secondOwner = second.createOwner();
+		const owners = new ProcessOwnerChecker();
+		const firstOwner = owners.createOwner();
+		const secondOwner = owners.createOwner();
 		expect(firstOwner).toContain(`owner-${process.pid}-unknown-`);
 		expect(secondOwner).toContain(`owner-${process.pid}-unknown-`);
 		expect(firstOwner).not.toBe(secondOwner);
-		expect(first.isAlive(owner)).toBe(true);
-		expect(second.isAlive(owner)).toBe(true);
+		expect(owners.isAlive(owner)).toBe(true);
+		expect(owners.isAlive(owner)).toBe(true);
 		expect(probe).toHaveBeenCalledOnce();
+		const separateOwners = new ProcessOwnerChecker();
+		expect(separateOwners.createOwner().slice(0, -36)).toBe(
+			owner.slice(0, -36)
+		);
+		expect(probe).toHaveBeenCalledTimes(2);
 	});
 });

@@ -220,11 +220,16 @@ export interface OAuthFlowAPI {
  * The returned object owns module-private state (the transient OAuth flow
  * state and the deprecated-v1 warning latch). In practice consumers create
  * exactly one instance per process.
+ *
+ * @param ctx Consumer-specific OAuth dependencies.
+ * @param owners Instance-owned identity cache shared with related storage or flows.
  */
-export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
+export function createOAuthFlow(
+	ctx: OAuthFlowContext,
+	owners = new ProcessOwnerChecker()
+): OAuthFlowAPI {
 	const oauthFlowState: OAuthFlowState = {};
 	const inflightRefreshes = new Map<string, Promise<RefreshTokenResult>>();
-	const owners = new ProcessOwnerChecker();
 	const generators = {
 		generateAuthUrl: ctx.generateAuthUrl ?? defaultGenerateAuthUrl,
 		generateRandomState: ctx.generateRandomState ?? defaultGenerateRandomState,

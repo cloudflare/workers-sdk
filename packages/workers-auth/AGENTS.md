@@ -200,19 +200,21 @@ Each CLI is a thin **descriptor + entrypoint**:
 - Ownership includes process-start identity when available, so PID reuse does
   not strand locks. If identity cannot be checked, fail closed rather than
   evicting a potentially live transaction.
-- Each flow, resolver, or standalone storage instance owns a `ProcessOwnerChecker`.
-  Transactions pass the flow's checker through `getForTransaction(owners)` to
-  share it between locks and credential writes. The current process's immutable
-  start identity is probed lazily once and cached at module scope across all
-  checkers, including failed probes. This cache is a narrow exception to the
-  no-global-state guidance; other owners' probes remain in bounded, short-lived,
+- Each auth context owns a `ProcessOwnerChecker`. `createCloudflareAuth` passes
+  one checker to `createOAuthFlow(ctx, owners)` and
+  `createCredentialStorageContext(ctx, owners)` so locks, migrations, and writes
+  reuse its identity cache. Standalone flows, resolvers, and storage instances
+  default to their own checker; related callers can explicitly pass one to share.
+  Transactions pass the flow's checker through `getForTransaction(owners)`.
+  The current process's immutable start identity is probed lazily once per checker,
+  including failed probes. Other owners' probes remain in bounded, short-lived,
   instance-local caches. Check PID liveness on every poll so exited owners can
   be reclaimed immediately.
 - Default checker arguments in lock/write helpers are fallbacks for standalone
-  callers; they reuse the shared current-process identity without additional
-  probes. Keep identity probing lazy so importing the package or creating a
-  context does not launch `ps` or PowerShell. Do not share credentials, auth-flow
-  state, or other-owner caches at module scope.
+  callers; pass an existing checker to avoid repeated identity probes across
+  related operations. Keep identity probing lazy so importing the package or
+  creating a context does not launch `ps` or PowerShell. Do not share identity
+  caches, credentials, auth-flow state, or other-owner caches at module scope.
 
 ## BUILD
 

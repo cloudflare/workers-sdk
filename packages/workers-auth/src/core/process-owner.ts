@@ -7,20 +7,6 @@ const OWNER_PATTERN =
 const IDENTITY_CACHE_TTL_MS = 5_000;
 const MAX_CACHED_OWNERS = 128;
 
-let ownIdentity: string | undefined;
-let checkedOwnIdentity = false;
-
-function processIdentity(pid: number): string | undefined {
-	if (pid !== process.pid) {
-		return probeProcessIdentity(pid);
-	}
-	if (!checkedOwnIdentity) {
-		ownIdentity = probeProcessIdentity(pid);
-		checkedOwnIdentity = true;
-	}
-	return ownIdentity;
-}
-
 function probeProcessIdentity(pid: number): string | undefined {
 	try {
 		let identity: string;
@@ -72,13 +58,26 @@ export function isProcessOwner(owner: string): boolean {
 	return OWNER_PATTERN.test(owner);
 }
 
-/** Share the current process identity while caching other owners per instance. */
+/** Own process-identity caches for an auth context. */
 export class ProcessOwnerChecker {
+	private ownIdentity: string | undefined;
+	private checkedOwnIdentity = false;
 	private readonly checkedOwners = new Map<string, number>();
+
+	private processIdentity(pid: number): string | undefined {
+		if (pid !== process.pid) {
+			return probeProcessIdentity(pid);
+		}
+		if (!this.checkedOwnIdentity) {
+			this.ownIdentity = probeProcessIdentity(pid);
+			this.checkedOwnIdentity = true;
+		}
+		return this.ownIdentity;
+	}
 
 	/** Identify an owner by PID and process start, without storing secrets. */
 	createOwner(): string {
-		return `owner-${process.pid}-${processIdentity(process.pid) ?? "unknown"}-${randomUUID()}`;
+		return `owner-${process.pid}-${this.processIdentity(process.pid) ?? "unknown"}-${randomUUID()}`;
 	}
 
 	/** Treat uncertain liveness as alive; reclaim only proven abandoned owners. */
@@ -109,7 +108,7 @@ export class ProcessOwnerChecker {
 		) {
 			return true;
 		}
-		const currentIdentity = processIdentity(pid);
+		const currentIdentity = this.processIdentity(pid);
 		if (currentIdentity !== undefined && currentIdentity !== recordedIdentity) {
 			this.checkedOwners.delete(owner);
 			return false;

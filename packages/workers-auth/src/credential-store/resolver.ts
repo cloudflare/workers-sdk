@@ -117,15 +117,19 @@ export interface CredentialStorageBundle {
  * The env var and the `isKeyringEnabled` callback are re-read on every
  * call so runtime preference changes take effect without rebuilding the
  * storage layer.
+ *
+ * @param context Consumer-specific credential-storage dependencies.
+ * @param owners Instance-owned identity cache shared with the consumer's OAuth flow.
  */
 export function createCredentialStorageContext(
-	context: CredentialStorageContext
+	context: CredentialStorageContext,
+	owners = new ProcessOwnerChecker()
 ): CredentialStorageBundle {
 	const config = {
 		...context,
 		loginCommand: context.loginCommand ?? "your CLI login",
 		format: context.format ?? "toml",
-		owners: new ProcessOwnerChecker(),
+		owners,
 	};
 
 	function getActiveStore(profile?: string): CredentialStore {
@@ -141,9 +145,9 @@ export function createCredentialStorageContext(
 			write: (value) => getActiveStore(profile).write(value),
 			clear: () => getActiveStore(profile).clear(),
 			path: () => getActiveStore(profile).path(),
-			getForTransaction(owners) {
+			getForTransaction(transactionOwners) {
 				const store = getActiveStore(profile);
-				return store.getForTransaction?.(owners) ?? store;
+				return store.getForTransaction?.(transactionOwners) ?? store;
 			},
 		};
 	}

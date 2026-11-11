@@ -233,9 +233,10 @@ describe.each([false, true])(
 		afterEach(() => setKeyProviderFactoryForTesting(undefined));
 
 		it.for([false, true])(
-			"reuses its cached process identity across repeated refreshes, writes and logout (resolver: %s)",
+			"reuses an injected identity cache across flows, refreshes, writes and logout (resolver: %s)",
 			async (resolver, { expect }) => {
 				const { ctx } = createTestContext();
+				const owners = new ProcessOwnerChecker();
 				const provider = {
 					getKey: () => new Uint8Array(32),
 					setKey: () => {},
@@ -243,22 +244,22 @@ describe.each([false, true])(
 					describe: () => "test key",
 				};
 				setKeyProviderFactoryForTesting(() => provider);
-				const bundle = createCredentialStorageContext({
-					serviceName: "test",
-					getConfigPath: () => process.cwd(),
-					isKeyringEnabled: () => keyring,
-					logger: ctx.logger,
-					isNonInteractiveOrCI: () => true,
-				});
-				const storage = keyring
-					? new EncryptedFileCredentialStore(process.cwd(), provider)
-					: new FileCredentialStore(process.cwd());
+				const bundle = createCredentialStorageContext(
+					{
+						serviceName: "test",
+						getConfigPath: () => process.cwd(),
+						isKeyringEnabled: () => keyring,
+						logger: ctx.logger,
+						isNonInteractiveOrCI: () => true,
+					},
+					owners
+				);
+				const storage = (
+					keyring
+						? new EncryptedFileCredentialStore(process.cwd(), provider)
+						: new FileCredentialStore(process.cwd())
+				).getForTransaction(owners);
 				ctx.storageFactory = resolver ? bundle.storageFactory : () => storage;
-				storage.write({
-					oauth_token: "expired-access",
-					refresh_token: "RT_A",
-					expiration_time: PAST_DATE,
-				});
 				const reads = vi.spyOn(fs, "readFileSync");
 				const commands = vi.spyOn(childProcess, "execFileSync");
 				syncBuiltinESMExports();
@@ -272,8 +273,14 @@ describe.each([false, true])(
 									command === "/bin/ps" || command === "powershell.exe"
 							).length;
 				}
-				const flow = createOAuthFlow(ctx);
+				const flow = createOAuthFlow(ctx, owners);
 				expect(identityProbeCount()).toBe(0);
+				storage.write({
+					oauth_token: "expired-access",
+					refresh_token: "RT_A",
+					expiration_time: PAST_DATE,
+				});
+				expect(identityProbeCount()).toBe(1);
 				const createOwner = vi.spyOn(
 					ProcessOwnerChecker.prototype,
 					"createOwner"
@@ -285,7 +292,7 @@ describe.each([false, true])(
 				);
 
 				expect(
-					await flow.loginOrRefreshIfRequired({
+					await createOAuthFlow(ctx, owners).loginOrRefreshIfRequired({
 						complianceConfig: COMPLIANCE_CONFIG,
 						scopes: [],
 					})
@@ -300,7 +307,7 @@ describe.each([false, true])(
 
 				expect(createOwner).toHaveBeenCalledTimes(5);
 				expect(new Set(createOwner.mock.contexts).size).toBe(1);
-				expect(identityProbeCount()).toBe(0);
+				expect(identityProbeCount()).toBe(1);
 				expect(storage.read()).toBeUndefined();
 			}
 		);
