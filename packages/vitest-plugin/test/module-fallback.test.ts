@@ -1047,3 +1047,62 @@ describe("realPackagePath", () => {
 		);
 	});
 });
+
+describe("dual-format packages without a `type` field", () => {
+	let tmp: string;
+	beforeEach(() => {
+		tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "mf-dual-")));
+	});
+	afterEach(() => {
+		removeDirSync(tmp);
+	});
+
+	function setup(name: string) {
+		const pkgDir = path.join(tmp, "node_modules", name);
+		fs.mkdirSync(path.join(pkgDir, "dist"), { recursive: true });
+		fs.writeFileSync(
+			path.join(pkgDir, "package.json"),
+			JSON.stringify({
+				name,
+				main: "dist/index.cjs.js",
+				module: "dist/index.esm.js",
+			})
+		);
+		fs.writeFileSync(
+			path.join(pkgDir, "dist", "index.esm.js"),
+			"export const value = 1;"
+		);
+		fs.writeFileSync(
+			path.join(pkgDir, "dist", "index.cjs.js"),
+			"module.exports = { value: 1 };"
+		);
+		const referrer = toWorkerdSpecifier(path.join(tmp, "entry.js"));
+		return async (fileName: string) =>
+			await (
+				await handleModuleFallbackRequest(
+					fakeVite(),
+					moduleFallbackRequest({
+						method: "require",
+						specifier: toWorkerdSpecifier(path.join(pkgDir, "dist", fileName)),
+						referrer,
+					})
+				)
+			).json();
+	}
+
+	it("classifies the CommonJS entry correctly after the ES module entry", async ({
+		expect,
+	}) => {
+		const load = setup("dual-pkg-esm-first");
+		expect(await load("index.esm.js")).toHaveProperty("esModule");
+		expect(await load("index.cjs.js")).toHaveProperty("commonJsModule");
+	});
+
+	it("classifies the ES module entry correctly after the CommonJS entry", async ({
+		expect,
+	}) => {
+		const load = setup("dual-pkg-cjs-first");
+		expect(await load("index.cjs.js")).toHaveProperty("commonJsModule");
+		expect(await load("index.esm.js")).toHaveProperty("esModule");
+	});
+});
