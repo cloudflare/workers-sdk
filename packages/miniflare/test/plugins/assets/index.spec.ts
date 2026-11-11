@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
 import { Miniflare, MiniflareCoreError } from "miniflare";
-import { onTestFinished, test } from "vitest";
+import { onTestFinished, test, vi } from "vitest";
 import {
 	disposeWithRetry,
 	singleModuleManifest,
@@ -85,19 +85,11 @@ test("starts without error when assets directory does not exist", async ({
 // reads TMPDIR on POSIX and TEMP or TMP on Windows.
 async function useIsolatedTmpdir(): Promise<void> {
 	const dir = await fs.mkdtemp(path.join(os.tmpdir(), "mf-assets-"));
-	const names = ["TMPDIR", "TEMP", "TMP"];
-	const previous = names.map((name) => process.env[name]);
-	for (const name of names) {
-		process.env[name] = dir;
+	for (const name of ["TMPDIR", "TEMP", "TMP"]) {
+		vi.stubEnv(name, dir);
 	}
 	onTestFinished(async () => {
-		names.forEach((name, i) => {
-			if (previous[i] === undefined) {
-				delete process.env[name];
-			} else {
-				process.env[name] = previous[i];
-			}
-		});
+		vi.unstubAllEnvs();
 		await removeDir(dir);
 	});
 }
