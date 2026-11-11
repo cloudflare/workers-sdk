@@ -33,6 +33,7 @@ import { getAssetsConfig } from "./asset-config";
 import { createLogger, getRemoteBindingsAuth } from "./auth";
 import {
 	ASSET_WORKER_NAME,
+	CLI_DISPLAY_NAME,
 	kRequestType,
 	PROXY_SHARED_SECRET,
 	ROUTER_WORKER_NAME,
@@ -532,7 +533,7 @@ export async function getDevMiniflareOptions(
 													)
 											),
 											{
-												cliDisplayName: resolvedPluginConfig.cliDisplayName,
+												cliDisplayName: CLI_DISPLAY_NAME,
 												logger: createRemoteBindingsLogger(
 													viteDevServer.config.logger
 												),
@@ -863,7 +864,7 @@ export async function getPreviewMiniflareOptions(
 								)
 						),
 						{
-							cliDisplayName: resolvedPluginConfig.cliDisplayName,
+							cliDisplayName: CLI_DISPLAY_NAME,
 							logger: createRemoteBindingsLogger(
 								vitePreviewServer.config.logger
 							),

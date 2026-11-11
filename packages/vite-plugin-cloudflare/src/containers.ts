@@ -79,7 +79,6 @@ export async function prepareContainerImagesForVite(options: {
 	containerOptions: ContainerDevOptions[];
 	settings: ParsedInputSettingsConfig;
 	logger: ViteLogger;
-	cliDisplayName: string;
 }): Promise<void> {
 	const complianceRegion = toApiComplianceRegion(
 		options.settings.complianceRegion
@@ -127,9 +126,6 @@ export async function prepareContainerImagesForVite(options: {
 		complianceConfig,
 		// TODO: The Vite plugin should not own this `cf` command. Remove the
 		// hardcoded value once `cf` can provide it directly.
-		registryConfigureCommand:
-			options.cliDisplayName === "cf"
-				? "cf containers registries create"
-				: "wrangler containers registries configure",
+		registryConfigureCommand: "cf containers registries create",
 	});
 }
