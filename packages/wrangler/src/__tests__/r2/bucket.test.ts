@@ -247,6 +247,27 @@ describe("r2", () => {
 				const json = JSON.parse(std.out);
 				expect(json.name).toBe(bucketName);
 			});
+
+			it("should output valid JSON on stdout when the bucket does not exist and --json is used", async () => {
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/r2/buckets/:bucketName",
+						async () =>
+							HttpResponse.json(
+								createFetchResult(null, false, [
+									{
+										code: 10006,
+										message: "The specified bucket does not exist.",
+									},
+								]),
+								{ status: 404 }
+							),
+						{ once: true }
+					)
+				);
+				await runWrangler("r2 bucket info no-bucket --json").catch(() => {});
+				expect(() => JSON.parse(std.out)).not.toThrow();
+			});
 		});
 
 		describe("create", () => {
