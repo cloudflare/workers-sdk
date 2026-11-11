@@ -140,4 +140,59 @@ describe("remote-bindings proxy client", () => {
 		expect(await response.text()).toBe("hello");
 		expect(webSocketConnections).toBe(1);
 	});
+
+	test("does not open an RPC WebSocket for a fetch-only dispatch namespace get()", async ({
+		expect,
+	}) => {
+		let fetchRequests = 0;
+		let webSocketConnections = 0;
+		const { http: proxyUrl } = await useServer(
+			(req, res) => {
+				fetchRequests++;
+				res.statusCode = 200;
+				res.end("ok");
+			},
+			(socket) => {
+				webSocketConnections++;
+				socket.close();
+			}
+		);
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(`
+							export default {
+								async fetch(request, env) {
+									const res = await env.NS.get("some-worker").fetch("http://example.com/");
+									return new Response(await res.text());
+								},
+							};
+						`),
+						env: {
+							NS: {
+								type: "dispatch-namespace",
+								namespace: "some-namespace",
+								dev: { remote: true },
+							},
+						},
+					},
+					dev: {
+						remoteProxyConnectionString:
+							proxyUrl as RemoteProxyConnectionString,
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const response = await mf.dispatchFetch("http://localhost/");
+		expect(await response.text()).toBe("ok");
+		await new Promise((resolve) => setTimeout(resolve, 100));
+
+		expect(fetchRequests).toBe(1);
+		expect(webSocketConnections).toBe(0);
+	});
 });
