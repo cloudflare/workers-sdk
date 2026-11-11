@@ -435,8 +435,16 @@ function getExternalServiceEntrypoints(
 					? undefined
 					: { ...originalConfig.env },
 			tailConsumers: originalConfig.tailConsumers?.slice(),
+			experimental:
+				originalConfig.experimental === undefined
+					? undefined
+					: {
+							...originalConfig.experimental,
+							streamingTailConsumers:
+								originalConfig.experimental.streamingTailConsumers?.slice(),
+						},
 		};
-		const { env, tailConsumers } = config;
+		const { env } = config;
 		reroutedWorkerOpts.push({ ...workerOpts, config });
 
 		// Tail consumers targeting a worker outside this instance. Reroute them
@@ -445,7 +453,13 @@ function getExternalServiceEntrypoints(
 		// binds its tail to a non-existent local service `core:user:<workerName>`
 		// and workerd refuses to start. Handled before the `env` guard since a
 		// worker may declare tail consumers without any `env` bindings.
-		if (tailConsumers !== undefined) {
+		for (const tailConsumers of [
+			config.tailConsumers,
+			config.experimental?.streamingTailConsumers,
+		]) {
+			if (tailConsumers === undefined) {
+				continue;
+			}
 			for (let i = 0; i < tailConsumers.length; i++) {
 				const consumer = tailConsumers[i];
 				const serviceName = consumer.worker;
@@ -453,7 +467,6 @@ function getExternalServiceEntrypoints(
 					getEntrypoints(serviceName).entrypoints.add(consumer.entrypoint);
 					tailConsumers[i] = {
 						worker: SERVICE_DEV_REGISTRY_PROXY,
-						streaming: consumer.streaming,
 						entrypoint: "ExternalServiceProxy",
 						// User-supplied `props` are preserved in `userProps` so the proxy
 						// can forward them to the remote entrypoint via the debug port.

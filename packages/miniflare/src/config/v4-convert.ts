@@ -25,6 +25,7 @@ type Manifest = NonNullable<MiniflareWorkerConfig["manifest"]>;
 type ManifestModule = Manifest["modules"][string];
 type Assets = NonNullable<MiniflareWorkerConfig["assets"]>;
 type ServiceBinding = Extract<Env[string], { type: "worker" }>;
+type TailConsumer = NonNullable<MiniflareWorkerConfig["tailConsumers"]>[number];
 
 export function convertV4MiniflareOptions(
 	options: V4MiniflareOptions
@@ -167,8 +168,17 @@ function convertWorkerOptions(
 		isRemote
 	);
 	addServiceBindings(env, worker.serviceBindings, isRemote);
-	addServiceBindingArray(config, worker.tails, false);
-	addServiceBindingArray(config, worker.streamingTails, true);
+	const tailConsumers = convertTailConsumers(worker.tails, "tails");
+	if (tailConsumers !== undefined) {
+		config.tailConsumers = tailConsumers;
+	}
+	const streamingTailConsumers = convertTailConsumers(
+		worker.streamingTails,
+		"streamingTails"
+	);
+	if (streamingTailConsumers !== undefined) {
+		config.experimental = { streamingTailConsumers };
+	}
 	addProductBindings(env, exports, config, worker, isRemote);
 
 	legacy.wasmBindings = worker.wasmBindings;
@@ -537,13 +547,14 @@ function addServiceBindings(
 	}
 }
 
-function addServiceBindingArray(
-	config: MiniflareWorkerConfig,
+function convertTailConsumers(
 	bindings: ParsedV4WorkerOptions["tails"],
-	streaming: boolean
-) {
-	const option = streaming ? "streamingTails" : "tails";
-	for (const binding of bindings ?? []) {
+	option: "tails" | "streamingTails"
+): TailConsumer[] | undefined {
+	if (bindings === undefined || bindings.length === 0) {
+		return undefined;
+	}
+	return bindings.map((binding) => {
 		if (hasRemoteProxyConnectionString(binding)) {
 			throwUnsupportedOption(`${option}[].remoteProxyConnectionString`);
 		}
@@ -551,14 +562,12 @@ function addServiceBindingArray(
 		if (converted.type !== "worker" || typeof converted.worker !== "string") {
 			throwUnsupportedOption(option);
 		}
-		config.tailConsumers ??= [];
-		config.tailConsumers.push({
+		return {
 			worker: converted.worker,
 			entrypoint: converted.exportName,
 			props: converted.props,
-			streaming,
-		});
-	}
+		};
+	});
 }
 
 function hasRemoteProxyConnectionString(

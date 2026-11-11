@@ -571,20 +571,19 @@ export const CORE_PLUGIN: Plugin = {
 		const observabilityEnabled =
 			sharedOptions.unsafeObservability === true &&
 			dev?.unsafeRegisterWorker !== false;
-		const tailConsumers = observabilityEnabled
+		const streamingTailConsumers = observabilityEnabled
 			? [
-					...(config.tailConsumers ?? []),
+					...(config.experimental?.streamingTailConsumers ?? []),
 					// Pass the worker's name to the collector via binding props. workerd
 					// doesn't populate the tail onset's `scriptName` locally, so this is
 					// how the collector attributes each captured invocation to its worker
 					// (each worker streams to the collector with its own props).
 					{
 						worker: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
-						streaming: true,
 						props: { worker: config.name },
 					},
 				]
-			: (config.tailConsumers ?? []);
+			: (config.experimental?.streamingTailConsumers ?? []);
 		// workerd rejects a compatibility flag that the compatibility date already
 		// enables by default ("does not need to be specified anymore"), which
 		// would stop the worker starting up. Strip them per service rather than on
@@ -635,12 +634,12 @@ export const CORE_PLUGIN: Plugin = {
 					sharedOptions.unsafeModuleFallbackService !== undefined
 						? `${loopbackHost}:${loopbackPort}`
 						: undefined,
-				tails: tailConsumers
-					.filter((consumer) => !consumer.streaming)
-					.map<ServiceDesignator>(getTailServiceDesignator),
-				streamingTails: tailConsumers
-					.filter((consumer) => consumer.streaming)
-					.map<ServiceDesignator>(getTailServiceDesignator),
+				tails: (config.tailConsumers ?? []).map<ServiceDesignator>(
+					getTailServiceDesignator
+				),
+				streamingTails: streamingTailConsumers.map<ServiceDesignator>(
+					getTailServiceDesignator
+				),
 				containerEngine,
 				...(config.access?.dev
 					? {

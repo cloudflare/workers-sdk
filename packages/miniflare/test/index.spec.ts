@@ -1484,6 +1484,69 @@ test("Miniflare: tail consumer called", async ({ expect }) => {
 	).toEqual(["Tail: log event"]);
 });
 
+test("Miniflare: experimental streaming tail consumer called", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		handleStructuredLogs: () => {},
+		workers: [
+			{
+				config: {
+					name: "a",
+					experimental: { streamingTailConsumers: [{ worker: "b" }] },
+					compatibilityDate: "2025-12-02",
+					env: {
+						B: { type: "worker", worker: "b" },
+					},
+					manifest: singleModuleManifest(`
+				export default {
+					async fetch(request, env) {
+						if (request.url.includes("b")) { return env.B.fetch(request) }
+						console.log("Tail: log event");
+						return new Response("hello from a");
+					}
+				}
+				`),
+				},
+			},
+			{
+				config: {
+					name: "b",
+					compatibilityDate: "2025-12-02",
+					manifest: singleModuleManifest(`
+				import { WorkerEntrypoint } from "cloudflare:workers";
+				const events = [];
+				export default class extends WorkerEntrypoint {
+					fetch() { return Response.json(events) }
+					tailStream(onset) {
+						events.push(onset.event.type);
+						return {
+							log(event) { events.push(event.event.type) },
+							outcome(event) { events.push(event.event.type) },
+						};
+					}
+				}
+				`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://placeholder");
+	expect(await res.text()).toEqual("hello from a");
+	// Each poll is routed through "a" too, which streams another onset/outcome
+	// pair, so only check the events from the first invocation.
+	await expect
+		.poll(async () => {
+			const events = (await (
+				await mf.dispatchFetch("http://placeholder/b")
+			).json()) as string[];
+			return events.slice(0, 3);
+		})
+		.toEqual(["onset", "log", "outcome"]);
+});
+
 test("Miniflare: custom outbound service", async ({ expect }) => {
 	const mf = new Miniflare({
 		workers: [

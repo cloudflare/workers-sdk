@@ -230,28 +230,39 @@ export function convertWorkerConfig(
 			});
 		}
 	}
+	if (tailConsumers.length > 0) {
+		properties.push({
+			key: "tailConsumers",
+			value: tailConsumers,
+		});
+	}
 
+	const streamingTailConsumers: OutputValue[] = [];
 	for (const entry of getRecords(source, "streaming_tail_consumers")) {
 		if (typeof entry.service === "string") {
-			tailConsumers.push({
+			streamingTailConsumers.push({
 				kind: "object",
 				properties: [
 					{
 						key: "worker",
 						value: entry.service,
 					},
-					{
-						key: "streaming",
-						value: true,
-					},
 				],
 			});
 		}
 	}
-	if (tailConsumers.length > 0) {
+	if (streamingTailConsumers.length > 0) {
 		properties.push({
-			key: "tailConsumers",
-			value: tailConsumers,
+			key: "experimental",
+			value: {
+				kind: "object",
+				properties: [
+					{
+						key: "streamingTailConsumers",
+						value: streamingTailConsumers,
+					},
+				],
+			},
 		});
 	}
 

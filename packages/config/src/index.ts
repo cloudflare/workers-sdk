@@ -12,6 +12,7 @@ export {
 	DurableObjectRenamedExportSchema,
 	DurableObjectTransferredExportSchema,
 	ExportSchema,
+	ExperimentalSchema,
 	InputConfigSchema,
 	InputContainerSchema,
 	InputSettingsSchema,

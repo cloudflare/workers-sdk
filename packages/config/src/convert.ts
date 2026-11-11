@@ -1116,24 +1116,18 @@ function convertTailConsumers(
 	config: ParsedInputWorkerConfig,
 	result: RawConfig
 ): void {
-	const consumers = config.tailConsumers;
-	if (!consumers || consumers.length === 0) {
-		return;
+	const tailConsumers = config.tailConsumers ?? [];
+	if (tailConsumers.length > 0) {
+		result.tail_consumers = tailConsumers.map((consumer) => ({
+			service: consumer.worker,
+		}));
 	}
-	const tail: NonNullable<RawConfig["tail_consumers"]> = [];
-	const streaming: NonNullable<RawConfig["streaming_tail_consumers"]> = [];
-	for (const consumer of consumers) {
-		if (consumer.streaming) {
-			streaming.push({ service: consumer.worker });
-		} else {
-			tail.push({ service: consumer.worker });
-		}
-	}
-	if (tail.length) {
-		result.tail_consumers = tail;
-	}
-	if (streaming.length) {
-		result.streaming_tail_consumers = streaming;
+	const streamingTailConsumers =
+		config.experimental?.streamingTailConsumers ?? [];
+	if (streamingTailConsumers.length > 0) {
+		result.streaming_tail_consumers = streamingTailConsumers.map(
+			(consumer) => ({ service: consumer.worker })
+		);
 	}
 }
 

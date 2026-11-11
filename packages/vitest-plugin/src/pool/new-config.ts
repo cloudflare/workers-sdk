@@ -147,6 +147,7 @@ export function mergeCloudflareConfigWorker(
 		entrypoint: _entrypoint,
 		env: configEnv,
 		exports: configExports,
+		experimental: configExperimental,
 		tailConsumers: configTailConsumers,
 		triggers: configTriggers,
 		...config
@@ -241,6 +242,14 @@ export function mergeCloudflareConfigWorker(
 				...(configTailConsumers ?? []),
 				...(userConfig.tailConsumers ?? []),
 			],
+			experimental: {
+				...configExperimental,
+				...withoutUndefined(userConfig.experimental ?? {}),
+				streamingTailConsumers: [
+					...(configExperimental?.streamingTailConsumers ?? []),
+					...(userConfig.experimental?.streamingTailConsumers ?? []),
+				],
+			},
 			assets:
 				userConfig.assets === undefined
 					? undefined
