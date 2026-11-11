@@ -336,3 +336,18 @@ test("serves new assets after setOptions() once the directory is created", async
 	expect(res2.status).toBe(200);
 	expect(await res2.text()).toContain("<h1>Hello!</h1>");
 });
+
+test("serves text assets without a charset in Content-Type, matching deployed Workers (#9599)", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	await fs.writeFile(path.join(tmp, "robots.txt"), "User-agent: *\n");
+
+	const mf = new Miniflare(makeOptions(tmp));
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://example.com/robots.txt");
+	await res.arrayBuffer();
+	expect(res.status).toBe(200);
+	expect(res.headers.get("Content-Type")).toBe("text/plain");
+});
