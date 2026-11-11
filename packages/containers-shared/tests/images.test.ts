@@ -92,6 +92,34 @@ describe("pullEgressInterceptorImage", () => {
 			"linux/arm64",
 		]);
 	});
+
+	it("does not pull a name:tag@digest reference, which docker stores without its tag", async ({
+		expect,
+	}) => {
+		vi.stubEnv(
+			"MINIFLARE_CONTAINER_EGRESS_IMAGE",
+			"proxy-everything:abc123@sha256:" + "a".repeat(64)
+		);
+
+		await pullEgressInterceptorImage("docker");
+
+		const pulled = vi
+			.mocked(runDockerCmd)
+			.mock.calls.filter(([, args]) => args[0] === "pull")
+			.map(([, args]) => args[1]);
+		// docker drops the tag of a composite reference, so workerd's later lookup of
+		// name:tag@digest fails. The image must be pulled by tag or by digest alone...
+		for (const ref of pulled) {
+			expect(ref).not.toMatch(/:[^@/]+@sha256:/);
+		}
+		// ...and if pulled by digest alone, it must then be tagged.
+		if (pulled.some((ref) => !ref.includes(":abc123"))) {
+			expect(runDockerCmd).toHaveBeenCalledWith(
+				"docker",
+				expect.arrayContaining(["tag"])
+			);
+		}
+	});
 });
 
 describe("pullImage", () => {
