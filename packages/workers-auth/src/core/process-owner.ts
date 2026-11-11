@@ -7,7 +7,21 @@ const OWNER_PATTERN =
 const IDENTITY_CACHE_TTL_MS = 5_000;
 const MAX_CACHED_OWNERS = 128;
 
+let ownIdentity: string | undefined;
+let checkedOwnIdentity = false;
+
 function processIdentity(pid: number): string | undefined {
+	if (pid !== process.pid) {
+		return probeProcessIdentity(pid);
+	}
+	if (!checkedOwnIdentity) {
+		ownIdentity = probeProcessIdentity(pid);
+		checkedOwnIdentity = true;
+	}
+	return ownIdentity;
+}
+
+function probeProcessIdentity(pid: number): string | undefined {
 	try {
 		let identity: string;
 		if (process.platform === "linux") {
@@ -58,19 +72,13 @@ export function isProcessOwner(owner: string): boolean {
 	return OWNER_PATTERN.test(owner);
 }
 
-/** Lazily cache process-start probes for an owning flow or storage instance. */
+/** Share the current process identity while caching other owners per instance. */
 export class ProcessOwnerChecker {
 	private readonly checkedOwners = new Map<string, number>();
-	private ownIdentity: string | undefined;
-	private checkedOwnIdentity = false;
 
 	/** Identify an owner by PID and process start, without storing secrets. */
 	createOwner(): string {
-		if (!this.checkedOwnIdentity) {
-			this.ownIdentity = processIdentity(process.pid);
-			this.checkedOwnIdentity = true;
-		}
-		return `owner-${process.pid}-${this.ownIdentity ?? "unknown"}-${randomUUID()}`;
+		return `owner-${process.pid}-${processIdentity(process.pid) ?? "unknown"}-${randomUUID()}`;
 	}
 
 	/** Treat uncertain liveness as alive; reclaim only proven abandoned owners. */

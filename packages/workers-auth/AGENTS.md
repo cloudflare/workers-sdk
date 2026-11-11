@@ -202,15 +202,17 @@ Each CLI is a thin **descriptor + entrypoint**:
   evicting a potentially live transaction.
 - Each flow, resolver, or standalone storage instance owns a `ProcessOwnerChecker`.
   Transactions pass the flow's checker through `getForTransaction(owners)` to
-  share it between locks and credential writes. The current process's identity
-  is probed lazily once per owning instance, not once per operation. Other owners'
-  probes use a bounded, short-lived cache; check PID liveness on every poll so
-  exited owners can be reclaimed immediately. Do not share mutable module state.
+  share it between locks and credential writes. The current process's immutable
+  start identity is probed lazily once and cached at module scope across all
+  checkers, including failed probes. This cache is a narrow exception to the
+  no-global-state guidance; other owners' probes remain in bounded, short-lived,
+  instance-local caches. Check PID liveness on every poll so exited owners can
+  be reclaimed immediately.
 - Default checker arguments in lock/write helpers are fallbacks for standalone
-  callers, not additional probes within a flow's transaction. Independent auth
-  contexts intentionally do not share a process-wide singleton, following the
-  repository's no-global-state guidance. Keep identity probing lazy so importing
-  the package or creating a context does not launch `ps` or PowerShell.
+  callers; they reuse the shared current-process identity without additional
+  probes. Keep identity probing lazy so importing the package or creating a
+  context does not launch `ps` or PowerShell. Do not share credentials, auth-flow
+  state, or other-owner caches at module scope.
 
 ## BUILD
 

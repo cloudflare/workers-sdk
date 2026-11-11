@@ -233,7 +233,7 @@ describe.each([false, true])(
 		afterEach(() => setKeyProviderFactoryForTesting(undefined));
 
 		it.for([false, true])(
-			"probes its process identity once across repeated refreshes, writes and logout (resolver: %s)",
+			"reuses its cached process identity across repeated refreshes, writes and logout (resolver: %s)",
 			async (resolver, { expect }) => {
 				const { ctx } = createTestContext();
 				const provider = {
@@ -300,7 +300,7 @@ describe.each([false, true])(
 
 				expect(createOwner).toHaveBeenCalledTimes(5);
 				expect(new Set(createOwner.mock.contexts).size).toBe(1);
-				expect(identityProbeCount()).toBe(1);
+				expect(identityProbeCount()).toBe(0);
 				expect(storage.read()).toBeUndefined();
 			}
 		);

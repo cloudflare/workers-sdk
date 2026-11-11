@@ -5,13 +5,14 @@ import { syncBuiltinESMExports } from "node:module";
 import { afterEach, describe, it, vi } from "vitest";
 import { ProcessOwnerChecker } from "../src/core/process-owner";
 
-function mockProcessStartIdentity() {
+function mockProcessStartIdentity(pid = process.pid + 1) {
 	const probe = vi.fn(() => "1");
+	vi.spyOn(process, "kill").mockReturnValue(true);
 	if (process.platform === "linux") {
 		const read = fs.readFileSync;
 		vi.spyOn(fs, "readFileSync").mockImplementation((...args) => {
-			if (String(args[0]) === `/proc/${process.pid}/stat`) {
-				return `1 (process) ${Array.from({ length: 19 }, () => "1").join(" ")} ${probe()}`;
+			if (String(args[0]) === `/proc/${pid}/stat`) {
+				return `${pid} (process name) ${Array.from({ length: 19 }, () => "1").join(" ")} ${probe()}`;
 			}
 			if (String(args[0]) === "/proc/sys/kernel/random/boot_id") {
 				return "boot-id";
@@ -28,7 +29,7 @@ function mockProcessStartIdentity() {
 		.slice(0, 16);
 	return {
 		probe,
-		owner: `owner-${process.pid}-${identity}-${randomUUID()}`,
+		owner: `owner-${pid}-${identity}-${randomUUID()}`,
 	};
 }
 
@@ -47,21 +48,8 @@ describe("credential process ownership", () => {
 		expect,
 	}) => {
 		const owners = new ProcessOwnerChecker();
-		const owner = `owner-${process.pid}-${"0".repeat(16)}-${randomUUID()}`;
-		if (process.platform === "linux") {
-			const read = fs.readFileSync;
-			vi.spyOn(fs, "readFileSync").mockImplementation((...args) => {
-				if (String(args[0]) === `/proc/${process.pid}/stat`) {
-					return `1 (other process) ${Array.from({ length: 20 }, () => "1").join(" ")}`;
-				}
-				return read(...args);
-			});
-		} else {
-			vi.spyOn(childProcess, "execFileSync").mockReturnValue(
-				"different start time"
-			);
-		}
-		syncBuiltinESMExports();
+		const { probe, owner } = mockProcessStartIdentity();
+		probe.mockReturnValue("2");
 		expect(owners.isAlive(owner)).toBe(false);
 	});
 
@@ -69,14 +57,10 @@ describe("credential process ownership", () => {
 		expect,
 	}) => {
 		const owners = new ProcessOwnerChecker();
-		const owner = owners.createOwner();
-		vi.spyOn(childProcess, "execFileSync").mockImplementation(() => {
+		const { probe, owner } = mockProcessStartIdentity();
+		probe.mockImplementation(() => {
 			throw new Error("denied");
 		});
-		vi.spyOn(fs, "readFileSync").mockImplementation(() => {
-			throw new Error("denied");
-		});
-		syncBuiltinESMExports();
 		expect(owners.isAlive(owner)).toBe(true);
 	});
 
@@ -179,13 +163,52 @@ describe("credential process ownership", () => {
 		expect(probe).toHaveBeenCalledTimes(2);
 	});
 
-	it("caches its own process identity only within a checker", ({ expect }) => {
-		const { probe } = mockProcessStartIdentity();
-		const first = new ProcessOwnerChecker();
-		const second = new ProcessOwnerChecker();
-		expect(first.createOwner()).not.toBe(first.createOwner());
+	it("lazily shares its own process identity across checker instances", async ({
+		expect,
+	}) => {
+		vi.resetModules();
+		const { probe, owner } = mockProcessStartIdentity(process.pid);
+		const { ProcessOwnerChecker: FreshProcessOwnerChecker } =
+			await import("../src/core/process-owner");
+		const first = new FreshProcessOwnerChecker();
+		const second = new FreshProcessOwnerChecker();
+		const now = vi.spyOn(performance, "now").mockReturnValue(0);
+		expect(probe).not.toHaveBeenCalled();
+		const firstOwner = first.createOwner();
+		const secondOwner = second.createOwner();
+		expect(firstOwner.slice(0, -36)).toBe(owner.slice(0, -36));
+		expect(secondOwner.slice(0, -36)).toBe(owner.slice(0, -36));
+		expect(firstOwner).not.toBe(secondOwner);
+		expect(firstOwner).not.toBe(first.createOwner());
+		expect(first.isAlive(secondOwner)).toBe(true);
+		expect(second.isAlive(firstOwner)).toBe(true);
+		now.mockReturnValue(5_000);
+		expect(first.isAlive(secondOwner)).toBe(true);
+		expect(
+			first.isAlive(`owner-${process.pid}-${"0".repeat(16)}-${randomUUID()}`)
+		).toBe(false);
 		expect(probe).toHaveBeenCalledOnce();
-		second.createOwner();
-		expect(probe).toHaveBeenCalledTimes(2);
+	});
+
+	it("shares an unknown identity after a failed own-process probe without retrying", async ({
+		expect,
+	}) => {
+		vi.resetModules();
+		const { probe, owner } = mockProcessStartIdentity(process.pid);
+		const { ProcessOwnerChecker: FreshProcessOwnerChecker } =
+			await import("../src/core/process-owner");
+		probe.mockImplementationOnce(() => {
+			throw new Error("denied");
+		});
+		const first = new FreshProcessOwnerChecker();
+		const second = new FreshProcessOwnerChecker();
+		const firstOwner = first.createOwner();
+		const secondOwner = second.createOwner();
+		expect(firstOwner).toContain(`owner-${process.pid}-unknown-`);
+		expect(secondOwner).toContain(`owner-${process.pid}-unknown-`);
+		expect(firstOwner).not.toBe(secondOwner);
+		expect(first.isAlive(owner)).toBe(true);
+		expect(second.isAlive(owner)).toBe(true);
+		expect(probe).toHaveBeenCalledOnce();
 	});
 });
