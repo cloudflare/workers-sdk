@@ -858,7 +858,12 @@ const localTestConfigs: TestConfig[] = [
 // startups and test executions (84 configs → 58 unique wrangler instances).
 const groupedLocalConfigs = groupByWranglerConfig(localTestConfigs);
 
-describe.each(groupedLocalConfigs)(
+// Almost all of the time goes on starting `wrangler dev`, so run the groups
+// concurrently. Vitest caps concurrent sibling suites at `maxConcurrency`
+// (5 by default), which bounds the number of live instances. Each instance
+// gets OS-assigned worker and inspector ports (`--port 0` and
+// `--inspector-port 0`, added by `runLongLived()`), so they cannot collide.
+describe.concurrent.each(groupedLocalConfigs)(
 	`Local preset test: $name`,
 	({ compatibilityDate, compatibilityFlags, expectRuntimeFlags }) => {
 		let url: string;

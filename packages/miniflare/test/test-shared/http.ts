@@ -17,8 +17,10 @@ export async function useServer(
 			const wss = new WebSocketServer({ server });
 			wss.on("connection", webSocketListener);
 		}
-		// 0 binds to random unused port
-		server.listen(0, () => {
+		// 0 binds to a random unused port. Bind IPv4 loopback explicitly: macOS
+		// lets another process bind 127.0.0.1 on a port this server holds as
+		// [::], which would then receive this server's IPv4 connections.
+		server.listen(0, "127.0.0.1", () => {
 			onTestFinished(() => {
 				return new Promise((resolve, reject) =>
 					server.stop((err) => (err ? reject(err) : resolve()))
@@ -26,8 +28,8 @@ export async function useServer(
 			});
 			const port = (server.address() as AddressInfo).port;
 			resolve({
-				http: new URL(`http://localhost:${port}`),
-				ws: new URL(`ws://localhost:${port}`),
+				http: new URL(`http://127.0.0.1:${port}`),
+				ws: new URL(`ws://127.0.0.1:${port}`),
 			});
 		});
 	});

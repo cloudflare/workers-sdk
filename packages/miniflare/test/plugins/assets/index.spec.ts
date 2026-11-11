@@ -1,8 +1,9 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
 import { Miniflare, MiniflareCoreError } from "miniflare";
-import { test } from "vitest";
+import { onTestFinished, test, vi } from "vitest";
 import {
 	disposeWithRetry,
 	singleModuleManifest,
@@ -78,6 +79,21 @@ test("starts without error when assets directory does not exist", async ({
 	await res.arrayBuffer(); // consume body to avoid leaks
 });
 
+// Test files run in parallel and create their own `miniflare-*` directories in
+// the shared temporary directory. Point os.tmpdir() at a directory of this
+// test's own, so the leak check below only sees this test's instance. Node
+// reads TMPDIR on POSIX and TEMP or TMP on Windows.
+async function useIsolatedTmpdir(): Promise<void> {
+	const dir = await fs.mkdtemp(path.join(os.tmpdir(), "mf-assets-"));
+	for (const name of ["TMPDIR", "TEMP", "TMP"]) {
+		vi.stubEnv(name, dir);
+	}
+	onTestFinished(async () => {
+		vi.unstubAllEnvs();
+		await removeDir(dir);
+	});
+}
+
 // Matches both the per-instance `miniflare-<hex>` root that holds the
 // placeholder and the standalone `miniflare-assets-*` dirs an older layout
 // created, so a leak of either shape fails the test.
@@ -89,6 +105,7 @@ async function listMiniflareTempDirs(): Promise<string[]> {
 test("removes the placeholder for a missing assets directory on dispose", async ({
 	expect,
 }) => {
+	await useIsolatedTmpdir();
 	const before = await listMiniflareTempDirs();
 	const tmp = await useTmp();
 	const nonExistentDir = path.join(tmp, "does-not-exist");

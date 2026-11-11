@@ -139,6 +139,21 @@ export default {
 `;
 
 /**
+ * Dispatches a request to `mf` and parses the response as JSON. A Worker that
+ * throws, for example because Chrome failed to launch, responds with the error
+ * as text, so put that text in the failure where the retry condition can see
+ * it rather than failing with a truncated JSON parse error.
+ */
+async function dispatchJson(mf: Miniflare, url: string): Promise<any> {
+	const res = await mf.dispatchFetch(url);
+	const text = await res.text();
+	if (!res.ok) {
+		throw new Error(`Worker responded with ${res.status}: ${text}`);
+	}
+	return JSON.parse(text);
+}
+
+/**
  * Download and launch Chrome once, before any of the timed tests run.
  *
  * The tests below allow 20s each, which is nowhere near enough to fetch
@@ -154,6 +169,23 @@ export default {
  * means the tests only ever see a complete install.
  */
 async function warmChromeInstall(): Promise<void> {
+	// The first launch of a fresh install is the slowest, and on a loaded
+	// runner it can outlast Chrome's readiness probe. Retry the same failures,
+	// as many times, as the tests below do.
+	const { condition, count, delay } = BROWSER_RENDERING_RETRY.retry;
+	for (let attempt = 0; ; attempt++) {
+		try {
+			return await launchWarmupBrowser();
+		} catch (e) {
+			if (attempt >= count || !condition.test(String(e))) {
+				throw e;
+			}
+			await new Promise((resolve) => setTimeout(resolve, delay));
+		}
+	}
+}
+
+async function launchWarmupBrowser(): Promise<void> {
 	const mf = new Miniflare({
 		// Miniflare logs to a no-op by default, which makes a failure here
 		// (a bad cached install, a download that will not complete) impossible
@@ -644,9 +676,8 @@ export default {
 			const mf = new Miniflare(opts);
 			useDispose(mf);
 
-			const { emptySessions, acquiredSessions, afterClosedSessions } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((res) => res.json())) as any;
+			const { emptySessions, acquiredSessions, afterClosedSessions } =
+				await dispatchJson(mf, "https://localhost");
 			expect(emptySessions.length).toBe(0);
 			expect(acquiredSessions.length).toBe(1);
 			expect(
@@ -703,9 +734,10 @@ export default {
 			const mf = new Miniflare(opts);
 			useDispose(mf);
 
-			const { connectedSession, disconnectedSession } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((res) => res.json())) as any;
+			const { connectedSession, disconnectedSession } = await dispatchJson(
+				mf,
+				"https://localhost"
+			);
 			expect(connectedSession.sessionId).toBe(disconnectedSession.sessionId);
 			expect(
 				typeof connectedSession.connectionId === "string" &&
@@ -801,9 +833,10 @@ export default {
 			});
 			useDispose(mf);
 
-			const { emptyList, list, detail, missingStatus } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((r) => r.json())) as any;
+			const { emptyList, list, detail, missingStatus } = await dispatchJson(
+				mf,
+				"https://localhost"
+			);
 
 			expect(emptyList).toEqual([]);
 			expect(list.length).toBe(1);
@@ -853,9 +886,10 @@ export default {
 			});
 			useDispose(mf);
 
-			const { version, list, listAlias } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((r) => r.json())) as any;
+			const { version, list, listAlias } = await dispatchJson(
+				mf,
+				"https://localhost"
+			);
 
 			expect(typeof version.Browser).toBe("string");
 			expect(typeof version["Protocol-Version"]).toBe("string");
@@ -918,9 +952,8 @@ export default {
 			});
 			useDispose(mf);
 
-			const { deleteStatus, deleteBody, sessionGone, wsClosed } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((r) => r.json())) as any;
+			const { deleteStatus, deleteBody, sessionGone, wsClosed } =
+				await dispatchJson(mf, "https://localhost");
 
 			expect(deleteStatus).toBe(200);
 			expect(deleteBody.status).toBe("closed");
@@ -987,9 +1020,7 @@ export default {
 				getStatus,
 				sessionIdFromGet,
 				browserProduct,
-			} = (await mf
-				.dispatchFetch("https://localhost")
-				.then((r) => r.json())) as any;
+			} = await dispatchJson(mf, "https://localhost");
 
 			expect(postStatus).toBe(200);
 			expect(typeof sessionId).toBe("string");
@@ -1035,9 +1066,10 @@ export default {
 			});
 			useDispose(mf);
 
-			const { status, sessionId, browserProduct } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((r) => r.json())) as any;
+			const { status, sessionId, browserProduct } = await dispatchJson(
+				mf,
+				"https://localhost"
+			);
 
 			expect(status).toBe(101);
 			expect(typeof sessionId).toBe("string");
@@ -1076,9 +1108,7 @@ export default {
 			});
 			useDispose(mf);
 
-			const { hasDomains } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((r) => r.json())) as any;
+			const { hasDomains } = await dispatchJson(mf, "https://localhost");
 
 			expect(hasDomains).toBe(true);
 		}
@@ -1127,9 +1157,10 @@ export default {
 			});
 			useDispose(mf);
 
-			const { targetType, activateStatus, closeStatus } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((r) => r.json())) as any;
+			const { targetType, activateStatus, closeStatus } = await dispatchJson(
+				mf,
+				"https://localhost"
+			);
 
 			expect(targetType).toBe("page");
 			expect(activateStatus).toBe(200);
@@ -1226,9 +1257,10 @@ export default {
 			});
 			useDispose(mf);
 
-			const { deleteStatus, deleteBody, sessionGone } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((r) => r.json())) as any;
+			const { deleteStatus, deleteBody, sessionGone } = await dispatchJson(
+				mf,
+				"https://localhost"
+			);
 
 			expect(deleteStatus).toBe(200);
 			expect(deleteBody.status).toBe("closed");
@@ -1301,9 +1333,7 @@ export default {
 			useDispose(mf);
 
 			const { deleteStatus, deleteBody, browserWsClosed, pageWsClosed } =
-				(await mf
-					.dispatchFetch("https://localhost")
-					.then((r) => r.json())) as any;
+				await dispatchJson(mf, "https://localhost");
 
 			expect(deleteStatus).toBe(200);
 			expect(deleteBody.status).toBe("closed");
@@ -1368,9 +1398,10 @@ export default {
 			});
 			useDispose(mf);
 
-			const { product1, product2 } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((r) => r.json())) as any;
+			const { product1, product2 } = await dispatchJson(
+				mf,
+				"https://localhost"
+			);
 
 			expect(typeof product1).toBe("string");
 			expect(product1).toContain("Chrome");
