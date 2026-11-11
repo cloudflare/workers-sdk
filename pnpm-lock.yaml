@@ -228,7 +228,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 5.20261106.1
+        version: 5.20261110.1
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
@@ -252,7 +252,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 5.20261106.1
+        version: 5.20261110.1
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
