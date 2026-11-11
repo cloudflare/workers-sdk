@@ -251,6 +251,26 @@ To continue without logging in, rerun this command with \`--temporary\`. Wrangle
 		expect(parsed[0].results[0].name).toBeNull();
 	});
 
+	it("should not drop columns that share a name when joining tables (#3160)", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+
+		await runWrangler(
+			"d1 execute db --local --json --command 'CREATE TABLE users (id INTEGER); CREATE TABLE posts (id INTEGER, owner INTEGER); INSERT INTO users VALUES (1); INSERT INTO posts VALUES (10, 1); SELECT users.id, posts.id FROM users LEFT JOIN posts ON posts.owner = users.id;'"
+		);
+		const parsed = JSON.parse(std.out);
+		// Both `id` columns (1 and 10) should be present in the output
+		const row = JSON.stringify(parsed[parsed.length - 1].results[0]);
+		expect(row).toContain("10");
+		expect(row.match(/\d+/g)).toHaveLength(2);
+	});
+
 	describe("duration formatting", () => {
 		mockAccountId({ accountId: "some-account-id" });
 		mockApiToken();
