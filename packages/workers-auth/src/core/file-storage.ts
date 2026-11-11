@@ -1,6 +1,6 @@
-import { existsSync, rmSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { readFileSync } from "@cloudflare/workers-utils";
-import { writeFileAtomically } from "./atomic-write";
+import { clearFile, writeFileAtomically } from "./atomic-write";
 import { parseFile, stringifyFile } from "./file-format";
 import type { ConfigStorage } from "../config-file";
 import type { FileFormat } from "./file-format";
@@ -34,10 +34,7 @@ export function createFileStorage<T extends object>(
 			writeFileAtomically(configPath, stringifyFile(format, config));
 		},
 		clear() {
-			const configPath = getPath();
-			const existed = existsSync(configPath);
-			rmSync(configPath, { force: true });
-			return existed;
+			return clearFile(getPath());
 		},
 		path: getPath,
 	};

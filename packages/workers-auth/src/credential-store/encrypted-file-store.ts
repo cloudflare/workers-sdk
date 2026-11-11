@@ -1,7 +1,7 @@
-import { existsSync, rmSync } from "node:fs";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { readFileSync } from "@cloudflare/workers-utils";
-import { writeFileAtomically } from "../core/atomic-write";
+import { clearFile, writeFileAtomically } from "../core/atomic-write";
 import { parseFile, stringifyFile } from "../core/file-format";
 import { getRefreshLockPath, tryWithRefreshLock } from "../refresh-lock";
 import {
@@ -147,9 +147,7 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 		// credentials on disk indefinitely after the very first
 		// `--use-keyring` login.
 		const plaintextPath = this.plaintextPath();
-		if (existsSync(plaintextPath)) {
-			rmSync(plaintextPath);
-		}
+		clearFile(plaintextPath);
 	}
 
 	clear(): boolean {
@@ -158,17 +156,10 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 			this.profile
 		);
 		const plaintextPath = this.plaintextPath();
-		let existed = false;
-		if (existsSync(encryptedPath)) {
-			rmSync(encryptedPath);
-			existed = true;
-		}
+		const encryptedExisted = clearFile(encryptedPath);
 		// Also scrub any plaintext file, in case the user toggled
 		// backends in a previous session and the plaintext file lingered.
-		if (existsSync(plaintextPath)) {
-			rmSync(plaintextPath);
-			existed = true;
-		}
+		const plaintextExisted = clearFile(plaintextPath);
 		try {
 			this.keyProvider.deleteKey();
 		} catch {
@@ -179,7 +170,7 @@ export class EncryptedFileCredentialStore implements CredentialStore {
 			// above, so a lingering bare key is useless without it. `clear()`
 			// still reports whether the credential *files* existed.
 		}
-		return existed;
+		return encryptedExisted || plaintextExisted;
 	}
 
 	path(): string {

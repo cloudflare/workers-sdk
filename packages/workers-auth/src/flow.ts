@@ -5,6 +5,7 @@ import {
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { getOauthToken } from "./callback-server";
+import { AUTH_REQUEST_TIMEOUT_MS } from "./core/timeouts";
 import { getAPIToken, requireApiToken } from "./credentials";
 import { getOauthTokenViaDeviceFlow } from "./device-flow";
 import { getRevokeUrlFromEnv } from "./env-vars";
@@ -24,6 +25,7 @@ import type {
 } from "@cloudflare/workers-utils";
 
 type RefreshTokenResult = "refreshed" | "rejected" | "unreachable";
+const inflightRefreshes = new Map<string, Promise<RefreshTokenResult>>();
 
 /**
  * Reason why {@link OAuthFlowAPI.loginOrRefreshIfRequired} could not
@@ -227,16 +229,6 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 
 	let activeProfile = "default";
 
-	/**
-	 * In-flight refresh promises keyed by profile lock, used to deduplicate
-	 * concurrent `refreshToken` calls within the same process. Without this,
-	 * two parallel API requests that both see an expired token would each try
-	 * to acquire the file lock — and because the lock is held by the same PID,
-	 * the second caller would wait out the full retry budget (~30 s) before
-	 * proceeding.
-	 */
-	const inflightRefreshes = new Map<string, Promise<RefreshTokenResult>>();
-
 	function getStorage(profile?: string): AuthConfigStorage {
 		return ctx.storageFactory(profile ?? activeProfile);
 	}
@@ -321,14 +313,18 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		}
 
 		const storage = getTransactionStorage(profile);
-		await withRefreshLock(getRefreshLockPath(storage.path()), async () => {
-			storage.write({
-				oauth_token: oauth.token?.value ?? "",
-				expiration_time: oauth.token?.expiry,
-				refresh_token: oauth.refreshToken?.value,
-				scopes: oauth.scopes,
-			});
-		});
+		await withRefreshLock(
+			getRefreshLockPath(storage.path()),
+			async () => {
+				storage.write({
+					oauth_token: oauth.token?.value ?? "",
+					expiration_time: oauth.token?.expiry,
+					refresh_token: oauth.refreshToken?.value,
+					scopes: oauth.scopes,
+				});
+			},
+			{ logger: ctx.logger }
+		);
 
 		ctx.logger.log(`Successfully logged in.`);
 
@@ -385,39 +381,43 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		storage: AuthConfigStorage,
 		lockDir: string
 	): Promise<RefreshTokenResult> {
-		return withRefreshLock(lockDir, async () => {
-			// After acquiring the lock, re-read the auth state — a sibling
-			// process may have already completed the refresh while we waited.
-			const postLockState = readStoredAuthState({
-				warningLogger: ctx.logger,
-				storage,
-			});
-			if (
-				postLockState.accessToken &&
-				new Date() < new Date(postLockState.accessToken.expiry)
-			) {
-				return "refreshed";
-			}
-
-			// Use the refresh token we just read so the same value is both sent
-			// to the server and compared in the retry logic — avoids a TOCTOU
-			// race where a sibling rotates the on-disk value between this read
-			// and the exchange function's independent read.
-			const sentRefreshToken = postLockState.refreshToken?.value;
-			if (!sentRefreshToken) {
-				return "rejected";
-			}
-
-			try {
-				return await doExchange(storage, sentRefreshToken);
-			} catch (e) {
-				if (isInvalidGrantError(e)) {
-					return handleInvalidGrant(storage, sentRefreshToken, e);
+		return withRefreshLock(
+			lockDir,
+			async () => {
+				// After acquiring the lock, re-read the auth state — a sibling
+				// process may have already completed the refresh while we waited.
+				const postLockState = readStoredAuthState({
+					warningLogger: ctx.logger,
+					storage,
+				});
+				if (
+					postLockState.accessToken &&
+					new Date() < new Date(postLockState.accessToken.expiry)
+				) {
+					return "refreshed";
 				}
-				ctx.logger.warn(`Token refresh failed: ${describeError(e)}`);
-				return getRefreshFailureResult(e);
-			}
-		});
+
+				// Use the refresh token we just read so the same value is both sent
+				// to the server and compared in the retry logic — avoids a TOCTOU
+				// race where a sibling rotates the on-disk value between this read
+				// and the exchange function's independent read.
+				const sentRefreshToken = postLockState.refreshToken?.value;
+				if (!sentRefreshToken) {
+					return "rejected";
+				}
+
+				try {
+					return await doExchange(storage, sentRefreshToken);
+				} catch (e) {
+					if (isInvalidGrantError(e)) {
+						return handleInvalidGrant(storage, sentRefreshToken, e);
+					}
+					ctx.logger.warn(`Token refresh failed: ${describeError(e)}`);
+					return getRefreshFailureResult(e);
+				}
+			},
+			{ logger: ctx.logger }
+		);
 	}
 
 	/**
@@ -642,37 +642,43 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		}
 
 		const storage = getTransactionStorage(profile);
-		await withRefreshLock(getRefreshLockPath(storage.path()), async () => {
-			const storedRefreshToken = readStoredAuthState({
-				warningLogger: ctx.logger,
-				storage,
-			}).refreshToken;
-			if (!storedRefreshToken) {
-				ctx.logger.log(
-					clearedTemporary
-						? "Cleared temporary preview account."
-						: "Not logged in, exiting..."
-				);
-				return;
-			}
+		await withRefreshLock(
+			getRefreshLockPath(storage.path()),
+			async () => {
+				const storedRefreshToken = readStoredAuthState({
+					warningLogger: ctx.logger,
+					storage,
+				}).refreshToken;
+				if (!storedRefreshToken) {
+					storage.clear();
+					ctx.logger.log(
+						clearedTemporary
+							? "Cleared temporary preview account."
+							: "Not logged in, exiting..."
+					);
+					return;
+				}
 
-			const body =
-				`client_id=${encodeURIComponent(getClientId())}&` +
-				`token_type_hint=refresh_token&` +
-				`token=${encodeURIComponent(storedRefreshToken.value || "")}`;
+				const body =
+					`client_id=${encodeURIComponent(getClientId())}&` +
+					`token_type_hint=refresh_token&` +
+					`token=${encodeURIComponent(storedRefreshToken.value || "")}`;
 
-			const response = await fetch(getRevokeUrlFromEnv(), {
-				method: "POST",
-				body,
-				headers: {
-					"Content-Type": "application/x-www-form-urlencoded",
-				},
-			});
-			await response.text();
-			storage.clear();
-			ctx.logger.log(`Successfully logged out.`);
-			ctx.purgeOnLoginOrLogout?.();
-		});
+				const response = await fetch(getRevokeUrlFromEnv(), {
+					method: "POST",
+					signal: AbortSignal.timeout(AUTH_REQUEST_TIMEOUT_MS),
+					body,
+					headers: {
+						"Content-Type": "application/x-www-form-urlencoded",
+					},
+				});
+				await response.text();
+				storage.clear();
+				ctx.logger.log(`Successfully logged out.`);
+				ctx.purgeOnLoginOrLogout?.();
+			},
+			{ logger: ctx.logger }
+		);
 	}
 
 	async function getOAuthTokenFromLocalState(): Promise<string | undefined> {

@@ -23,6 +23,7 @@ const FAST_RETRIES = { maxRetries: 3, retryDelayMs: 10 };
 describe("withRefreshLock", () => {
 	runInTempDir();
 	afterEach(() => {
+		vi.useRealTimers();
 		vi.restoreAllMocks();
 		syncBuiltinESMExports();
 	});
@@ -63,6 +64,94 @@ describe("withRefreshLock", () => {
 			})
 		).rejects.toThrow("boom");
 		expect(existsSync(lockDir())).toBe(false);
+	});
+
+	it("waits beyond two request timeouts with short initial retries", async ({
+		expect,
+	}) => {
+		vi.useFakeTimers();
+		const owner = seedOwner(process.pid);
+		const callback = vi.fn(async () => 42);
+		const result = withRefreshLock(lockDir(), callback);
+		await vi.advanceTimersByTimeAsync(59_000);
+		expect(callback).not.toHaveBeenCalled();
+		expect(readdirSync(lockDir())).toEqual([owner]);
+		removeDirSync(lockDir());
+		await vi.advanceTimersByTimeAsync(1_000);
+		await expect(result).resolves.toBe(42);
+	});
+
+	it("retries promptly when a short-lived holder releases", async ({
+		expect,
+	}) => {
+		vi.useFakeTimers();
+		seedOwner(process.pid);
+		const result = withRefreshLock(lockDir(), async () => 42);
+		removeDirSync(lockDir());
+		await vi.advanceTimersByTimeAsync(100);
+		await expect(result).resolves.toBe(42);
+	});
+
+	it.for(["unlinkSync", "rmdirSync"] as const)(
+		"does not mask async results or errors when %s fails during release",
+		async (operation, { expect }) => {
+			const logger = { debug: vi.fn() };
+			const failure = new Error("transaction failed");
+			for (const throws of [false, true]) {
+				removeDirSync(lockDir());
+				const result = withRefreshLock(
+					lockDir(),
+					async () => {
+						vi.spyOn(fs, operation).mockImplementation(() => {
+							throw Object.assign(new Error("cleanup denied"), {
+								code: "EACCES",
+							});
+						});
+						syncBuiltinESMExports();
+						if (throws) {
+							throw failure;
+						}
+						return 42;
+					},
+					{ logger }
+				);
+				if (throws) {
+					await expect(result).rejects.toBe(failure);
+				} else {
+					await expect(result).resolves.toBe(42);
+				}
+				vi.restoreAllMocks();
+				syncBuiltinESMExports();
+			}
+			expect(logger.debug).toHaveBeenCalledTimes(2);
+		}
+	);
+
+	it("does not mask synchronous migration results or errors during release", ({
+		expect,
+	}) => {
+		const failure = new Error("migration failed");
+		for (const throws of [false, true]) {
+			removeDirSync(lockDir());
+			const run = () =>
+				tryWithRefreshLock(lockDir(), () => {
+					vi.spyOn(fs, "unlinkSync").mockImplementation(() => {
+						throw new Error("cleanup denied");
+					});
+					syncBuiltinESMExports();
+					if (throws) {
+						throw failure;
+					}
+					return 42;
+				});
+			if (throws) {
+				expect(run).toThrow(failure);
+			} else {
+				expect(run()).toEqual({ acquired: true, value: 42 });
+			}
+			vi.restoreAllMocks();
+			syncBuiltinESMExports();
+		}
 	});
 
 	it("recovers a lock held by a dead process", async ({ expect }) => {
@@ -203,13 +292,14 @@ describe("withRefreshLock", () => {
 	});
 
 	it("uses one canonical lock for every backend of a profile", ({ expect }) => {
+		const profilePath = path.join(process.cwd(), "config", "team");
 		for (const extension of ["toml", "json", "enc"]) {
-			expect(getRefreshLockPath(`/config/team.${extension}`)).toBe(
-				"/config/team.refresh-lock"
+			expect(getRefreshLockPath(`${profilePath}.${extension}`)).toBe(
+				`${profilePath}.refresh-lock`
 			);
 		}
-		expect(getRefreshLockPath("/config/other.toml")).not.toBe(
-			getRefreshLockPath("/config/team.enc")
-		);
+		expect(
+			getRefreshLockPath(path.join(process.cwd(), "config", "other.toml"))
+		).not.toBe(getRefreshLockPath(`${profilePath}.enc`));
 	});
 });

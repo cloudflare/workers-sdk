@@ -1,10 +1,10 @@
-import { existsSync, rmSync } from "node:fs";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import {
 	getCloudflareApiEnvironmentFromEnv,
 	readFileSync,
 } from "@cloudflare/workers-utils";
-import { writeFileAtomically } from "../core/atomic-write";
+import { clearFile, writeFileAtomically } from "../core/atomic-write";
 import { parseFile, stringifyFile } from "../core/file-format";
 import { validateProfileName } from "../profiles";
 import type { UserAuthConfig } from "../config-file/auth";
@@ -112,12 +112,7 @@ export class FileCredentialStore implements CredentialStore {
 	}
 
 	clear(): boolean {
-		const filePath = this.filePath();
-		const existed = existsSync(filePath);
-		if (existed) {
-			rmSync(filePath);
-		}
-		return existed;
+		return clearFile(this.filePath());
 	}
 
 	path(): string {

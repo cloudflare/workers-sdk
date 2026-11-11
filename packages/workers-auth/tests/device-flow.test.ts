@@ -1,3 +1,5 @@
+import path from "node:path";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import {
@@ -15,6 +17,7 @@ import type { OAuthFlowContext } from "../src/context";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 const msw = setupServer();
+runInTempDir();
 
 beforeAll(() => msw.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
@@ -90,7 +93,7 @@ function createTestContext(): {
 					stored = undefined;
 					return existed;
 				},
-				path: () => "<in-memory>",
+				path: () => path.join(process.cwd(), "auth.json"),
 			}),
 			allowGlobalAuthKey: true,
 			temporary: undefined,

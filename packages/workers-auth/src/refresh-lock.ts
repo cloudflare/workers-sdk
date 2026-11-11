@@ -1,7 +1,7 @@
-import { randomUUID } from "node:crypto";
 import {
 	mkdirSync,
 	mkdtempSync,
+	lstatSync,
 	readdirSync,
 	renameSync,
 	rmdirSync,
@@ -10,14 +10,35 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { removeDirSync, UserError } from "@cloudflare/workers-utils";
+import { resolveFilePath } from "./core/file-path";
+import {
+	createProcessOwner,
+	isProcessOwner,
+	isProcessOwnerAlive,
+} from "./core/process-owner";
+import { AUTH_REQUEST_TIMEOUT_MS } from "./core/timeouts";
+import type { OAuthFlowLogger } from "./context";
 
-const MAX_RETRIES = 15;
-const RETRY_DELAY_MS = 2_000;
-const OWNER_PATTERN = /^owner-([1-9]\d*)-[\da-f-]{36}$/;
+const LOCK_TIMEOUT_MS = AUTH_REQUEST_TIMEOUT_MS * 3;
+const RETRY_DELAY_MS = 100;
+const MAX_RETRY_DELAY_MS = 1_000;
 
 /** Return the same profile-level lock for plaintext and encrypted credentials. */
 export function getRefreshLockPath(storagePath: string): string {
-	return storagePath.replace(/\.(?:toml|json|enc)$/, "") + ".refresh-lock";
+	const profilePath = storagePath.replace(/\.(?:toml|json|enc)$/, "");
+	for (const extension of ["toml", "json", "enc"]) {
+		const sibling = `${profilePath}.${extension}`;
+		if (lstatSync(sibling, { throwIfNoEntry: false })?.isSymbolicLink()) {
+			return (
+				resolveFilePath(sibling).replace(/\.(?:toml|json|enc)$/, "") +
+				".refresh-lock"
+			);
+		}
+	}
+	return (
+		resolveFilePath(storagePath).replace(/\.(?:toml|json|enc)$/, "") +
+		".refresh-lock"
+	);
 }
 
 function hasCode(error: unknown, ...codes: string[]): boolean {
@@ -30,12 +51,16 @@ function hasCode(error: unknown, ...codes: string[]): boolean {
 	);
 }
 
-function isProcessAlive(pid: number): boolean {
+function releaseSafely(
+	release: () => void,
+	logger?: Pick<OAuthFlowLogger, "debug">
+): void {
 	try {
-		process.kill(pid, 0);
-		return true;
-	} catch (error) {
-		return !hasCode(error, "ESRCH");
+		release();
+	} catch {
+		logger?.debug(
+			"Could not release the credential lock; a later process will reclaim it."
+		);
 	}
 }
 
@@ -77,8 +102,7 @@ function removeDeadOwner(lockDir: string): void {
 		removeOwner(lockDir);
 	} else if (entries.length === 1) {
 		const owner = entries[0];
-		const match = OWNER_PATTERN.exec(owner);
-		if (match && !isProcessAlive(Number(match[1]))) {
+		if (isProcessOwner(owner) && !isProcessOwnerAlive(owner)) {
 			removeOwner(lockDir, owner);
 		}
 	}
@@ -92,7 +116,7 @@ function removeDeadOwner(lockDir: string): void {
 function tryAcquire(lockDir: string): (() => void) | undefined {
 	mkdirSync(path.dirname(lockDir), { recursive: true });
 	const candidate = mkdtempSync(lockDir + ".");
-	const owner = `owner-${process.pid}-${randomUUID()}`;
+	const owner = createProcessOwner();
 	try {
 		writeFileSync(path.join(candidate, owner), "", { mode: 0o600, flag: "wx" });
 		for (let attempt = 0; attempt < 2; attempt++) {
@@ -120,7 +144,8 @@ function tryAcquire(lockDir: string): (() => void) | undefined {
  */
 export function tryWithRefreshLock<T>(
 	lockDir: string,
-	fn: () => T
+	fn: () => T,
+	logger?: Pick<OAuthFlowLogger, "debug">
 ): { acquired: true; value: T } | { acquired: false } {
 	const release = tryAcquire(lockDir);
 	if (!release) {
@@ -129,7 +154,7 @@ export function tryWithRefreshLock<T>(
 	try {
 		return { acquired: true, value: fn() };
 	} finally {
-		release();
+		releaseSafely(release, logger);
 	}
 }
 
@@ -145,10 +170,16 @@ export function tryWithRefreshLock<T>(
 export async function withRefreshLock<T>(
 	lockDir: string,
 	fn: () => Promise<T>,
-	options?: { maxRetries?: number; retryDelayMs?: number }
+	options?: {
+		maxRetries?: number;
+		retryDelayMs?: number;
+		timeoutMs?: number;
+		logger?: Pick<OAuthFlowLogger, "debug">;
+	}
 ): Promise<T> {
-	const maxRetries = options?.maxRetries ?? MAX_RETRIES;
+	const maxRetries = options?.maxRetries ?? Infinity;
 	const retryDelayMs = options?.retryDelayMs ?? RETRY_DELAY_MS;
+	const deadline = performance.now() + (options?.timeoutMs ?? LOCK_TIMEOUT_MS);
 
 	for (let attempt = 0; attempt < maxRetries; attempt++) {
 		const release = tryAcquire(lockDir);
@@ -156,11 +187,21 @@ export async function withRefreshLock<T>(
 			try {
 				return await fn();
 			} finally {
-				release();
+				releaseSafely(release, options?.logger);
 			}
 		}
+		const remaining = deadline - performance.now();
+		if (remaining <= 0) {
+			break;
+		}
 		if (attempt < maxRetries - 1) {
-			await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+			const delay =
+				options?.retryDelayMs ??
+				Math.min(MAX_RETRY_DELAY_MS, retryDelayMs * 2 ** Math.min(attempt, 4)) *
+					(0.5 + Math.random() / 2);
+			await new Promise((resolve) =>
+				setTimeout(resolve, Math.min(delay, remaining))
+			);
 		}
 	}
 	throw new UserError(

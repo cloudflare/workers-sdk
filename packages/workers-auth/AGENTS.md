@@ -19,6 +19,7 @@ CLIs. Internal-only — published as `prerelease: true`.
 - `src/config-file/index.ts` — generic `ConfigStorage<T>` interface shared by the auth and temporary-account contracts
 - `src/state.ts` — `readStoredAuthState()` + `StoredAuthState` shape
 - `src/token-exchange.ts` — auth-code → token + refresh-token rotation + `fetchAuthToken`
+- `src/refresh-lock.ts` — cross-process credential transactions with shared-profile locking, bounded contention backoff, and process-start-aware stale-owner recovery
 - `src/callback-server.ts` — local HTTP server for the OAuth callback (listens on the host/port from the consumer's `redirectUri`)
 - `src/device-flow.ts` — `getOauthTokenViaDeviceFlow(options, ctx)`: the OAuth 2.0 Device Authorization Grant (RFC 8628) used by `login({device: true})` when the browser cannot reach the local callback URL. No callback server; prints the verification URL + user code and polls `/oauth2/token`. Every user-facing string is parameterised by `ctx.cliDisplayName` / `ctx.deviceLoginCommand` so the module carries no per-CLI branding. Both endpoints' bodies are narrowed before use (`asDeviceAuthorizationResponse`, `pollDeviceToken`'s `DevicePollResult`) rather than cast — an intermediary's envelope or a 2xx without a grant must produce a reportable `unexpected`/unusable-response error, never `undefined` arithmetic. `slow_down` / 5xx / 429 / unparseable bodies keep the loop alive; the last such failure is reported in place of the generic timeout if the deadline passes
 - `src/generate-device-auth-url.ts` — `generateVerificationUrl` (fallback `verification_uri_complete` builder for servers that omit it, RFC 8628 §3.3.1) + `assertTrustedVerificationUrl`, which rejects any server-supplied verification URL that is not `https:` on exactly the resolved auth domain (with no embedded credentials) before it is printed or handed to `openInBrowser` — the device flow is the only place this package opens a URL it did not build itself (RFC 8628 §5.4, remote phishing)
@@ -177,12 +178,21 @@ Each CLI is a thin **descriptor + entrypoint**:
 ## CREDENTIAL TRANSACTIONS
 
 - Refresh, login commits, and logout use a canonical profile-level lock shared
-  by plaintext and encrypted backends. The resolver's `getForTransaction()` pins
+  by plaintext and encrypted backends, implemented in `src/refresh-lock.ts`
+  (`withRefreshLock` / `tryWithRefreshLock`). The resolver's `getForTransaction()` pins
   the selected backend until the transaction finishes.
 - Lock acquisition fails closed; live owners are never evicted on a timer.
+- Refreshes share an in-flight result across flow instances. Lock release errors
+  must not replace transaction results; OAuth requests are time-bounded, and the
+  lock wait budget includes room for a retried token exchange and persistence.
 - Plaintext-to-encrypted migration acquires the same lock, or defers migration
   and returns a read-only snapshot when another transaction holds it.
 - Credential writes replace the file atomically with mode `0o600`.
+- File symlinks are preserved; aliases use the target's lock. Abandoned temporary
+  writes are removed on the next write, migration, or clear for that destination.
+- Ownership includes process-start identity when available, so PID reuse does
+  not strand locks. If identity cannot be checked, fail closed rather than
+  evicting a potentially live transaction.
 
 ## BUILD
 

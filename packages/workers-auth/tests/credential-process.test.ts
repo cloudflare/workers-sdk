@@ -1,7 +1,13 @@
 import assert from "node:assert";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdtempSync,
+	readFileSync,
+	readdirSync,
+	writeFileSync,
+} from "node:fs";
 import { createServer } from "node:http";
 import os from "node:os";
 import path from "node:path";
@@ -47,12 +53,17 @@ describe("credential transactions across processes", () => {
 				{
 					name: "resolve-external-packages",
 					setup(builder) {
-						builder.onResolve({ filter: /^[^./]/ }, (args) => ({
-							path: args.path.startsWith("node:")
-								? args.path
-								: import.meta.resolve(args.path),
-							external: true,
-						}));
+						builder.onResolve({ filter: /^[^./]/ }, (args) => {
+							if (args.kind === "entry-point" || path.isAbsolute(args.path)) {
+								return;
+							}
+							return {
+								path: args.path.startsWith("node:")
+									? args.path
+									: import.meta.resolve(args.path),
+								external: true,
+							};
+						});
 					},
 				},
 			],
@@ -245,15 +256,51 @@ describe("credential transactions across processes", () => {
 		expect(auth.requests).toEqual([{ route: "/token", token: "RT_A" }]);
 	});
 
-	it("preserves complete credentials if a process crashes before replacement", async ({
+	it.for(["write", "logout", "migrate"])(
+		"removes crashed temporary credentials on the next %s",
+		async (operation, { expect }) => {
+			const storage = seedCredentials();
+			const original = readFileSync(storage.path(), "utf8");
+			const child = startChild("crash-before-write");
+			expect((await child.exited).code).toBe(79);
+			expect(readFileSync(storage.path(), "utf8")).toBe(original);
+			expect(storage.read()?.refresh_token).toBe("RT_A");
+			const directory = path.dirname(storage.path());
+			expect(
+				readdirSync(directory).filter((entry) => entry.startsWith(".auth-"))
+			).toHaveLength(1);
+			if (operation === "write") {
+				storage.write({ refresh_token: "new login" });
+			} else if (operation === "migrate") {
+				const migration = startChild("migrate", "encrypted");
+				expect(await migration.exited).toEqual({ code: 0, errors: "" });
+			} else {
+				const auth = await startAuthServer();
+				const logout = startChild("logout", "file", auth.endpoint);
+				expect(await logout.exited).toEqual({ code: 0, errors: "" });
+			}
+			expect(
+				readdirSync(directory).filter((entry) => entry.startsWith(".auth-"))
+			).toEqual([]);
+		}
+	);
+
+	it("cleans a crashed first write on logout even when no credentials were published", async ({
 		expect,
 	}) => {
-		const storage = seedCredentials();
-		const original = readFileSync(storage.path(), "utf8");
-		const child = startChild("crash-before-write");
-		expect((await child.exited).code).toBe(79);
-		expect(readFileSync(storage.path(), "utf8")).toBe(original);
-		expect(storage.read()?.refresh_token).toBe("RT_A");
+		const storage = new FileCredentialStore(process.cwd());
+		const writer = startChild("crash-before-write");
+		expect((await writer.exited).code).toBe(79);
+		expect(storage.read()).toBeUndefined();
+		const directory = path.dirname(storage.path());
+		expect(
+			readdirSync(directory).filter((entry) => entry.startsWith(".auth-"))
+		).toHaveLength(1);
+		const logout = startChild("logout");
+		expect(await logout.exited).toEqual({ code: 0, errors: "" });
+		expect(
+			readdirSync(directory).filter((entry) => entry.startsWith(".auth-"))
+		).toEqual([]);
 	});
 
 	it("does not migrate stale plaintext while a sibling is refreshing", async ({

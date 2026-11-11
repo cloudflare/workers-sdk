@@ -26,6 +26,7 @@ const msw = setupServer();
 
 beforeAll(() => msw.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
+	vi.useRealTimers();
 	vi.restoreAllMocks();
 	msw.restoreHandlers();
 	msw.resetHandlers();
@@ -305,6 +306,42 @@ describe("refreshToken (via loginOrRefreshIfRequired)", () => {
 		expect(written?.refresh_token).toBe("RT_NEXT");
 	});
 
+	it("releases the lock when logout revocation times out", async ({
+		expect,
+	}) => {
+		const { ctx, storage } = createTestContext();
+		storage.write({
+			oauth_token: "expired",
+			refresh_token: "RT_A",
+			expiration_time: PAST_DATE,
+		});
+		const controller = new AbortController();
+		vi.spyOn(AbortSignal, "timeout").mockReturnValue(controller.signal);
+		let revoking = false;
+		msw.use(
+			mockAccessProbe(),
+			mockTokenSuccess(),
+			http.post("*/oauth2/revoke", async ({ request }) => {
+				revoking = true;
+				await new Promise<void>((resolve) =>
+					request.signal.addEventListener("abort", () => resolve(), {
+						once: true,
+					})
+				);
+				return new HttpResponse(null);
+			})
+		);
+		const flow = createOAuthFlow(ctx);
+		const logout = flow.logout();
+		const rejected = expect(logout).rejects.toThrow("revoke timed out");
+		await vi.waitFor(() => expect(revoking).toBe(true));
+		expect(AbortSignal.timeout).toHaveBeenCalledWith(30_000);
+		controller.abort(new Error("revoke timed out"));
+		await rejected;
+		vi.restoreAllMocks();
+		expect(await flow.getOAuthTokenFromLocalState()).toBe("fresh-access-token");
+	});
+
 	it("skips the exchange when the token is already fresh after lock acquisition", async ({
 		expect,
 	}) => {
@@ -582,47 +619,49 @@ describe("refreshToken (via loginOrRefreshIfRequired)", () => {
 		expect(sentTokens).toEqual(["RT_A"]);
 	});
 
-	it("deduplicates concurrent in-process refreshes (single-flight)", async ({
-		expect,
-	}) => {
-		const { ctx, storage } = createTestContext();
-		storage.write({
-			oauth_token: "expired-access",
-			refresh_token: "RT_A",
-			expiration_time: PAST_DATE,
-			scopes: ["account:read"],
-		});
-
-		let callCount = 0;
-		msw.use(
-			mockAccessProbe(),
-			http.post("*/oauth2/token", async () => {
-				callCount++;
-				return HttpResponse.json({
-					access_token: "fresh-access-token",
-					expires_in: 3600,
-					refresh_token: "RT_NEXT",
-					scope: "account:read",
-					token_type: "bearer",
-				});
-			})
-		);
-
-		const flow = createOAuthFlow(ctx);
-		const [r1, r2] = await Promise.all([
-			flow.loginOrRefreshIfRequired({
-				complianceConfig: COMPLIANCE_CONFIG,
+	it.for([false, true])(
+		"deduplicates concurrent refreshes across separate flows: %s",
+		async (separateFlows, { expect }) => {
+			const { ctx, storage } = createTestContext();
+			storage.write({
+				oauth_token: "expired-access",
+				refresh_token: "RT_A",
+				expiration_time: PAST_DATE,
 				scopes: ["account:read"],
-			}),
-			flow.loginOrRefreshIfRequired({
-				complianceConfig: COMPLIANCE_CONFIG,
-				scopes: ["account:read"],
-			}),
-		]);
+			});
 
-		expect(r1).toEqual({ loggedIn: true });
-		expect(r2).toEqual({ loggedIn: true });
-		// Only one token exchange should have been made.
-		expect(callCount).toBe(1);
-	});
+			let callCount = 0;
+			msw.use(
+				mockAccessProbe(),
+				http.post("*/oauth2/token", async () => {
+					callCount++;
+					return HttpResponse.json({
+						access_token: "fresh-access-token",
+						expires_in: 3600,
+						refresh_token: "RT_NEXT",
+						scope: "account:read",
+						token_type: "bearer",
+					});
+				})
+			);
+
+			const flow = createOAuthFlow(ctx);
+			const secondFlow = separateFlows ? createOAuthFlow(ctx) : flow;
+			const [r1, r2] = await Promise.all([
+				secondFlow.loginOrRefreshIfRequired({
+					complianceConfig: COMPLIANCE_CONFIG,
+					scopes: ["account:read"],
+				}),
+				flow.loginOrRefreshIfRequired({
+					complianceConfig: COMPLIANCE_CONFIG,
+					scopes: ["account:read"],
+				}),
+			]);
+
+			expect(r1).toEqual({ loggedIn: true });
+			expect(r2).toEqual({ loggedIn: true });
+			// Only one token exchange should have been made.
+			expect(callCount).toBe(1);
+		}
+	);
 });
