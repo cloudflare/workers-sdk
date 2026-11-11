@@ -99,6 +99,14 @@ function getAuth(): CloudflareAuth {
 }
 
 /**
+ * Whether the current asynchronous context runs under {@link withCfAuth}, as
+ * the `cf-wrangler` delegate does, so messages can name cf's commands.
+ */
+export function isCfAuthActive(): boolean {
+	return authStorage.getStore() !== undefined;
+}
+
+/**
  * Set the active auth profile for all subsequent credential lookups.
  */
 export function setProfile(profile: string): void {

@@ -1,5 +1,6 @@
 import { startRemoteProxySession as startRemoteProxySessionFromPackage } from "@cloudflare/remote-bindings";
 import { logger } from "../../logger";
+import { isCfAuthActive } from "../../user";
 import type {
 	StartRemoteProxySessionOptions as PackageStartRemoteProxySessionOptions,
 	RemoteProxySession,
@@ -17,7 +18,8 @@ export function startRemoteProxySession(
 ): Promise<RemoteProxySession> {
 	return startRemoteProxySessionFromPackage(bindings, {
 		...options,
-		cliDisplayName: "Wrangler",
+		// `cf-wrangler` runs under cf's auth, so name cf's commands
+		cliDisplayName: isCfAuthActive() ? "cf" : "Wrangler",
 		logger,
 	});
 }

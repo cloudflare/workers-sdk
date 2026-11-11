@@ -1,3 +1,4 @@
+import type { RemoteBindingsCliDisplayName } from "../utils/remote";
 import type {
 	AsyncHook,
 	CfAccount,
@@ -9,7 +10,7 @@ import type {
 
 export type StartDevWorkerOptions = {
 	name: string;
-	cliDisplayName: string;
+	cliDisplayName: RemoteBindingsCliDisplayName;
 	entrypointSource: string;
 	bindings: NonNullable<StartDevWorkerInput["bindings"]>;
 	compatibilityDate: StartDevWorkerInput["compatibilityDate"];

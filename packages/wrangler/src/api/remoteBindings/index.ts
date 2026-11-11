@@ -2,6 +2,7 @@ import { maybeStartOrUpdateRemoteProxySession as maybeStartOrUpdateRemoteProxySe
 import { getCloudflareComplianceRegion } from "@cloudflare/workers-utils";
 import { readConfig } from "../../config";
 import { logger } from "../../logger";
+import { isCfAuthActive } from "../../user";
 import { convertConfigBindingsToStartWorkerBindings } from "../startDevWorker";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
 import type {
@@ -41,7 +42,7 @@ export function maybeStartOrUpdateRemoteProxySession(
 		wranglerOrWorkerConfigObject,
 		preExistingRemoteProxySessionData,
 		auth,
-		{ cliDisplayName: "Wrangler", logger },
+		{ cliDisplayName: isCfAuthActive() ? "cf" : "Wrangler", logger },
 		startRemoteProxySession
 	);
 }

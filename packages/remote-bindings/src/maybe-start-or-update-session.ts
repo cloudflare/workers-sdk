@@ -9,6 +9,7 @@ import { startRemoteProxySession } from "./start-remote-proxy-session";
 import type { ConfigBindings } from "./config-bindings";
 import type { RemoteBindingsLogger } from "./logger";
 import type { RemoteProxySession } from "./start-remote-proxy-session";
+import type { RemoteBindingsCliDisplayName } from "./utils/remote";
 import type {
 	AsyncHook,
 	Binding,
@@ -73,7 +74,7 @@ export type RemoteProxySessionData = {
 };
 
 export type RemoteBindingsContext = {
-	cliDisplayName: string;
+	cliDisplayName: RemoteBindingsCliDisplayName;
 	logger: RemoteBindingsLogger;
 };
 

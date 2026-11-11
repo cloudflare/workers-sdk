@@ -10,6 +10,25 @@ import type {
 	StartDevWorkerInput,
 } from "@cloudflare/workers-utils";
 
+/** The CLIs that remote bindings errors can name. */
+export type RemoteBindingsCliDisplayName = "Wrangler" | "cf";
+
+/** The commands each CLI accepts, named in actionable error messages. */
+export const CLI_COMMANDS = {
+	Wrangler: {
+		whoami: "wrangler whoami",
+		login: "wrangler login",
+		logout: "wrangler logout",
+		createFlagshipApp: "wrangler flagship apps create",
+	},
+	cf: {
+		whoami: "cf auth whoami",
+		login: "cf auth login",
+		logout: "cf auth logout",
+		createFlagshipApp: "cf flagship apps create",
+	},
+} satisfies Record<RemoteBindingsCliDisplayName, Record<string, string>>;
+
 /**
  * Error thrown when a remote dev session fails due to an authentication
  * problem.  The error message is a user-friendly description with actionable
@@ -24,9 +43,11 @@ export class RemoteSessionAuthenticationError extends UserError {
 	/**
 	 * @param cause - The original error that triggered the authentication
 	 *   failure (e.g. an {@link APIError} with code 9106, 10000, or 10405).
+	 * @param cliDisplayName - The CLI whose commands the guidance names.
 	 */
-	constructor(cause: unknown) {
+	constructor(cause: unknown, cliDisplayName: RemoteBindingsCliDisplayName) {
 		const envAuth = getAuthFromEnv();
+		const { whoami, login, logout } = CLI_COMMANDS[cliDisplayName];
 
 		let errorMessage =
 			"This Worker uses bindings that need to run remotely, even when developing locally, but the remote session could not be authenticated.\n";
@@ -41,14 +62,14 @@ export class RemoteSessionAuthenticationError extends UserError {
 				`It looks like you are authenticating via ${method} set in an environment variable.\n` +
 				"The token may be invalid or lack the required permissions for this operation.\n\n" +
 				"To fix this, verify that your token is valid and has the correct permissions.\n" +
-				"You can also run `wrangler whoami` to check your current authentication status.";
+				`You can also run \`${whoami}\` to check your current authentication status.`;
 		} else {
-			// The user is authenticating via OAuth (wrangler login)
+			// The user is authenticating via OAuth
 			errorMessage +=
 				"Your credentials may have expired or been revoked.\n\n" +
 				"To fix this, try to:\n" +
-				"  - Run `wrangler whoami` to check your current authentication status.\n" +
-				"  - Run `wrangler logout` and then `wrangler login` to re-authenticate.";
+				`  - Run \`${whoami}\` to check your current authentication status.\n` +
+				`  - Run \`${logout}\` and then \`${login}\` to re-authenticate.`;
 		}
 
 		super(errorMessage, {
@@ -60,7 +81,8 @@ export class RemoteSessionAuthenticationError extends UserError {
 
 export function handlePreviewSessionUploadError(
 	err: unknown,
-	accountId: string
+	accountId: string,
+	cliDisplayName: RemoteBindingsCliDisplayName
 ): boolean {
 	assert(err && typeof err === "object");
 	// we want to log the error, but not end the process
@@ -76,7 +98,7 @@ export function handlePreviewSessionUploadError(
 			// lets increment the counter, and trigger a rerun of
 			// the useEffect above
 			return true;
-		} else if (!handleUserFriendlyError(err, accountId)) {
+		} else if (!handleUserFriendlyError(err, cliDisplayName, accountId)) {
 			logger.error("Error on remote worker:", err);
 		}
 	}
@@ -85,10 +107,11 @@ export function handlePreviewSessionUploadError(
 
 export function handlePreviewSessionCreationError(
 	err: unknown,
-	accountId: string
+	accountId: string,
+	cliDisplayName: RemoteBindingsCliDisplayName
 ) {
 	assert(err && typeof err === "object");
-	if (handleUserFriendlyError(err, accountId)) {
+	if (handleUserFriendlyError(err, cliDisplayName, accountId)) {
 		return;
 	}
 	if (
@@ -162,14 +185,18 @@ export function createRemoteWorkerInit(props: {
  * messages, does not perform any logic other than logging errors.
  * @returns if the error was handled or not
  */
-function handleUserFriendlyError(error: unknown, accountId?: string) {
+function handleUserFriendlyError(
+	error: unknown,
+	cliDisplayName: RemoteBindingsCliDisplayName,
+	accountId?: string
+) {
 	if (error instanceof APIError) {
 		switch (error.code) {
 			// codes 9106, 10000, and 10405 are authentication errors
 			case 9106:
 			case 10000:
 			case 10405: {
-				throw new RemoteSessionAuthenticationError(error);
+				throw new RemoteSessionAuthenticationError(error, cliDisplayName);
 			}
 
 			// for error 10063 (workers.dev subdomain required)
