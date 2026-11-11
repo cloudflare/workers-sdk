@@ -163,3 +163,30 @@ test.for([
 		});
 	}
 );
+
+test("does not let Puppeteer install per-browser SIGINT handlers that exit the process", async ({
+	expect,
+}) => {
+	// @puppeteer/browsers' SIGINT handler kills one browser and then calls
+	// `process.exit(130)`, so with several sessions the others are orphaned.
+	// Miniflare must own shutdown for every tracked browser instead.
+	const before = process.listenerCount("SIGINT");
+	const launched = [];
+	try {
+		for (let i = 0; i < 2; i++) {
+			launched.push(
+				await launchBrowser({
+					browserVersion: BROWSER_VERSION,
+					log: new Log(),
+					tmpPath,
+				})
+			);
+		}
+		expect(process.listenerCount("SIGINT")).toBe(before);
+	} finally {
+		for (const { browserProcess } of launched) {
+			browserProcess.kill();
+			await browserProcess.hasClosed();
+		}
+	}
+});
