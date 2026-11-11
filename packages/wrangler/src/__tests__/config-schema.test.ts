@@ -35,6 +35,9 @@ type WranglerSchema = {
 				};
 			};
 		};
+		PreviewsConfig?: {
+			properties?: Record<string, { $ref?: string }>;
+		};
 		DurableObjectContainerImage?: {
 			anyOf?: {
 				properties?: Record<string, unknown>;
@@ -133,5 +136,20 @@ describe("config schema", () => {
 		});
 		expect(registry?.properties).not.toHaveProperty("build_context");
 		expect(registry?.properties).not.toHaveProperty("build_vars");
+	});
+
+	it("references the real types for inheritable properties under previews", ({
+		expect,
+	}) => {
+		const schema = readSchema();
+		const properties = schema.definitions?.PreviewsConfig?.properties ?? {};
+
+		// Picking properties off `EnvironmentInheritable` must not resolve them to
+		// the whole top-level config, which makes editors report every top-level
+		// property as missing from `previews.observability`.
+		expect(properties.observability?.$ref).toBe("#/definitions/Observability");
+		for (const key of ["logpush", "limits", "placement", "cache"]) {
+			expect(properties[key]?.$ref ?? "").not.toMatch(/^#\/definitions\/interface-/);
+		}
 	});
 });
