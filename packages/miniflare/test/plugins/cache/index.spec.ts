@@ -340,6 +340,21 @@ test("put does not cache with private Cache-Control", async ({ expect }) => {
 		cached: false,
 	});
 });
+test("put caches 201 responses with public Cache-Control (#9040)", async ({
+	expect,
+}) => {
+	const key = "http://localhost/cache-201";
+	await ctx.caches.default.put(
+		key,
+		new Response("OK", {
+			status: 201,
+			headers: { "Cache-Control": "public" },
+		})
+	);
+	const res = await ctx.caches.default.match(key);
+	expect(res?.status).toBe(201);
+});
+
 test("put does not cache with no-store Cache-Control", async ({ expect }) => {
 	await testIsCached(expect, {
 		headers: { "Cache-Control": "no-store" },
