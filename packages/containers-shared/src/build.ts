@@ -18,7 +18,10 @@ import type {
 	ContainerNormalizedConfig,
 	ImageURIConfig,
 } from "./types";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type {
+	ComplianceConfig,
+	ContainerRegistryConfig,
+} from "@cloudflare/workers-utils";
 
 export type DockerfileContainerConfig = Exclude<
 	ContainerNormalizedConfig,
@@ -168,7 +171,7 @@ const TAG_SUFFIX_REGEXP = /:[\w][\w.-]{0,127}$/;
 function getRepositoryOnly(
 	externalAccountId: string,
 	imageTag: string,
-	complianceConfig?: ComplianceConfig
+	complianceConfig?: ContainerRegistryConfig
 ): string {
 	return resolveImageName(externalAccountId, imageTag, complianceConfig)
 		.replace(DIGEST_SUFFIX_REGEXP, "")
@@ -179,7 +182,7 @@ function imageRefWithDigest(
 	externalAccountId: string,
 	imageTag: string,
 	digest: string,
-	complianceConfig?: ComplianceConfig
+	complianceConfig?: ContainerRegistryConfig
 ): string {
 	if (!DIGEST_VALUE_REGEXP.test(digest)) {
 		throw new Error(
@@ -204,7 +207,7 @@ function findRemoteDigest(
 	repoDigestsJson: string,
 	externalAccountId: string,
 	imageTag: string,
-	complianceConfig?: ComplianceConfig
+	complianceConfig?: ContainerRegistryConfig
 ): string {
 	const parsedDigests = JSON.parse(repoDigestsJson);
 	if (!Array.isArray(parsedDigests)) {
@@ -267,7 +270,7 @@ async function tagAndPushImage({
 	sourceTag: string;
 	targetTag: string;
 	externalAccountId: string;
-	complianceConfig?: ComplianceConfig;
+	complianceConfig?: ContainerRegistryConfig;
 	cleanupSourceTag?: boolean;
 }): Promise<string> {
 	const namespacedImageTag = resolveImageName(
@@ -285,7 +288,8 @@ async function tagAndPushImage({
 }
 
 /**
- * Checks the remote manifest to see if there are changes, and only push if there are
+ * Checks the remote manifest to see if there are changes, and only push if there are.
+ * `complianceConfig.jurisdiction` selects the registry for `fedramp` images.
  */
 export async function pushImageIfChanged({
 	pathToDocker,
@@ -301,7 +305,7 @@ export async function pushImageIfChanged({
 	targetTag: string;
 	containerConfig?: ContainerNormalizedConfig;
 	accountId?: string;
-	complianceConfig?: ComplianceConfig;
+	complianceConfig?: ContainerRegistryConfig;
 	cleanupSourceTag?: boolean;
 }): Promise<ImageRef> {
 	/**

@@ -152,7 +152,11 @@ function convertDurableObjectContainerImage(
 	image: DurableObjectInputImage
 ): DurableObjectContainerImage {
 	if ("reference" in image) {
-		return { image: image.reference };
+		const converted: DurableObjectContainerImage = { image: image.reference };
+		if (image.jurisdictions !== undefined) {
+			converted.jurisdictions = image.jurisdictions;
+		}
+		return converted;
 	}
 
 	const converted: DurableObjectContainerImage = {
@@ -163,6 +167,9 @@ function convertDurableObjectContainerImage(
 	}
 	if (image.buildVars !== undefined) {
 		converted.build_vars = image.buildVars;
+	}
+	if (image.jurisdictions !== undefined) {
+		converted.jurisdictions = image.jurisdictions;
 	}
 	return converted;
 }

@@ -15,6 +15,7 @@ import {
 } from "@cloudflare/containers-shared";
 import {
 	configFileName,
+	getContainerImageRegistryConfigs,
 	getResolvedDurableObjectContainerApps,
 	getDockerPath,
 	getDurableObjectClassNameToUseSQLiteMap,
@@ -503,6 +504,12 @@ function getBuiltImage(
 	return builtImage;
 }
 
+/**
+ * Push a built image to, or resolve a prebuilt image in, the registry of each
+ * of the image's `jurisdictions`.
+ *
+ * @returns One image reference per registry.
+ */
 async function pushOrResolveImage(
 	config: ContainerlessConfig,
 	container: ResolvedDurableObjectContainerApp,
@@ -511,32 +518,44 @@ async function pushOrResolveImage(
 	builtImages: BuiltDurableObjectContainerImage[],
 	dryRun: boolean,
 	accountId: string | undefined
-): Promise<string> {
+): Promise<string[]> {
+	const registryConfigs = getContainerImageRegistryConfigs(
+		config,
+		imageConfig.jurisdictions
+	);
 	if (isRegistryImage(imageConfig)) {
 		if (dryRun) {
-			return imageConfig.image;
+			return [imageConfig.image];
 		}
 		assert(accountId, "Expected accountId to resolve container image name");
-		return resolveImageName(accountId, imageConfig.image, config);
+		return registryConfigs.map((registryConfig) =>
+			resolveImageName(accountId, imageConfig.image, registryConfig)
+		);
 	}
 
 	const builtImage = getBuiltImage(container, imageName, builtImages);
 	if (dryRun) {
-		return builtImage.localTag;
+		return [builtImage.localTag];
 	}
 
 	try {
-		const imageRef = await pushImageIfChanged({
-			pathToDocker: getDockerPath(),
-			sourceTag: builtImage.localTag,
-			targetTag: builtImage.localTag,
-			accountId,
-			complianceConfig: config,
-			// Leave cleanup to the caller's complete upload workflow.
-			cleanupSourceTag: false,
-		});
+		const imageRefs: string[] = [];
+		for (const registryConfig of registryConfigs) {
+			const imageRef = await pushImageIfChanged({
+				pathToDocker: getDockerPath(),
+				sourceTag: builtImage.localTag,
+				targetTag: builtImage.localTag,
+				accountId,
+				complianceConfig: registryConfig,
+				// Leave cleanup to the caller's complete upload workflow.
+				cleanupSourceTag: false,
+			});
+			imageRefs.push(
+				"remoteDigest" in imageRef ? imageRef.remoteDigest : imageRef.newTag
+			);
+		}
 
-		return "remoteDigest" in imageRef ? imageRef.remoteDigest : imageRef.newTag;
+		return imageRefs;
 	} catch (error) {
 		if (error instanceof Error) {
 			throw new UserError(error.message, {
@@ -680,7 +699,7 @@ export async function prepareDurableObjectContainerApplications(
 				: `built:${getBuiltImage(container, imageName, builtImages).localTag}`;
 			let image = preparedImages.get(source);
 			if (image === undefined) {
-				image = await pushOrResolveImage(
+				const images = await pushOrResolveImage(
 					config,
 					container,
 					imageName,
@@ -691,13 +710,19 @@ export async function prepareDurableObjectContainerApplications(
 				);
 
 				if (!dryRun) {
-					const imageLine = `  ${image}`;
-					updateStatus(
-						`Preparing ${imageName} for Cloudflare Containers\n${imageLine}`
-					);
-					await waitForImagePreparation(image);
-					updateStatus(`${imageName} is ready to run\n${imageLine}`);
+					for (const registryImage of images) {
+						const imageLine = `  ${registryImage}`;
+						updateStatus(
+							`Preparing ${imageName} for Cloudflare Containers\n${imageLine}`
+						);
+						await waitForImagePreparation(registryImage);
+						updateStatus(`${imageName} is ready to run\n${imageLine}`);
+					}
 				}
+				// The Worker upload names a single reference per image, and validation
+				// allows at most one jurisdiction.
+				image = images[0];
+				assert(image, `Expected an image reference for ${imageName}`);
 				preparedImages.set(source, image);
 			}
 

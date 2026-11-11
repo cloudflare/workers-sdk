@@ -97,6 +97,14 @@ type UnsafeBinding = {
 	[key: string]: unknown;
 };
 
+/** Jurisdictions a Durable Object-managed Container image can be stored in. */
+export const DURABLE_OBJECT_CONTAINER_IMAGE_JURISDICTIONS = [
+	"fedramp",
+] as const;
+
+export type DurableObjectContainerImageJurisdiction =
+	(typeof DURABLE_OBJECT_CONTAINER_IMAGE_JURISDICTIONS)[number];
+
 /**
  * An image Wrangler prepares for a Durable Object-managed container.
  */
@@ -113,13 +121,27 @@ export type DurableObjectContainerImage =
 			build_context?: string;
 			/** Variables available to the image only while it is being built. */
 			build_vars?: Record<string, string>;
+			/**
+			 * Jurisdictions whose managed registries Wrangler pushes this image to.
+			 * `fedramp` uses the FedRAMP Moderate registry,
+			 * `frm.registry.cloudflare.com`. Only one jurisdiction is supported for
+			 * now. Without `jurisdictions`, the default managed registry is used.
+			 */
+			jurisdictions?: DurableObjectContainerImageJurisdiction[];
 			image?: never;
 	  }
 	| {
 			/**
-			 * Digest-pinned image in the account's managed registry.
+			 * Digest-pinned image in the managed registry of the image's
+			 * `jurisdictions`, or in the default managed registry without them.
 			 */
 			image: string;
+			/**
+			 * Jurisdictions whose managed registries store this image. `fedramp`
+			 * uses the FedRAMP Moderate registry, `frm.registry.cloudflare.com`.
+			 * Only one jurisdiction is supported for now.
+			 */
+			jurisdictions?: DurableObjectContainerImageJurisdiction[];
 			dockerfile?: never;
 			build_context?: never;
 			build_vars?: never;

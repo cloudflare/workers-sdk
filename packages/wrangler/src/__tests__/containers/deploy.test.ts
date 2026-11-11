@@ -4211,11 +4211,10 @@ describe("wrangler deploy with containers", () => {
 			);
 		});
 
-		it.for(["populated", "empty"] as const)(
+		it.for(["populated", "fedramp", "empty"] as const)(
 			"deploys a name-only managed Container export with %s images",
 			async (imageMap, { expect }) => {
-				const image =
-					"registry.cloudflare.com/some-account-id/app@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+				const image = `${imageMap === "fedramp" ? "frm." : ""}registry.cloudflare.com/some-account-id/app@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb`;
 				const imageRefs: Record<string, string> =
 					imageMap === "empty" ? {} : { app: image };
 				const namespaceId = "14758f1afd44c09b7992073ccf00b43d";
@@ -4237,7 +4236,16 @@ describe("wrangler deploy with containers", () => {
 								{ name: "laptop", public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1" },
 							],
 							unsafe: { configuration: { experimental_flags: ["test-flag"] } },
-							...(imageMap === "populated" && { images: { app: { image } } }),
+							...(imageMap !== "empty" && {
+								images: {
+									app: {
+										image,
+										...(imageMap === "fedramp" && {
+											jurisdictions: ["fedramp" as const],
+										}),
+									},
+								},
+							}),
 						},
 					],
 					exports,
@@ -4253,7 +4261,7 @@ describe("wrangler deploy with containers", () => {
 						{
 							name: "managed-app",
 							class_name: "Sandbox",
-							...(imageMap === "populated" && { images: imageRefs }),
+							...(imageMap !== "empty" && { images: imageRefs }),
 						},
 					],
 					expectedExports: exports,

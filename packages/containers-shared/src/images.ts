@@ -1,7 +1,10 @@
 import { UserError } from "@cloudflare/workers-utils/errors";
 import { startContainerBuild } from "./build";
 import { ExternalRegistryKind } from "./client/models/ExternalRegistryKind";
-import { getCloudflareContainerRegistry } from "./knobs";
+import {
+	getCloudflareContainerRegistry,
+	isCloudflareContainerRegistry,
+} from "./knobs";
 import { dockerLoginImageRegistry } from "./login";
 import { getCloudflareRegistryWithAccountNamespace } from "./registry";
 import { runDockerCmd, verifyDockerInstalled } from "./utils";
@@ -11,7 +14,10 @@ import type {
 	ViteLogger,
 	WranglerLogger,
 } from "./types";
-import type { ComplianceConfig } from "@cloudflare/workers-utils/compliance";
+import type {
+	ComplianceConfig,
+	ContainerRegistryConfig,
+} from "@cloudflare/workers-utils/compliance";
 
 export const DEFAULT_CONTAINER_EGRESS_INTERCEPTOR_IMAGE =
 	"cloudflare/proxy-everything:3cb1195@sha256:0ef6716c52430096900b150d84a3302057d6cd2319dae7987128c85d0733e3c8";
@@ -57,8 +63,10 @@ export async function pullImage(
 ): Promise<{ abort: () => void; ready: Promise<{ aborted: boolean }> }> {
 	const domain = new URL(`http://${options.image_uri}`).hostname;
 
-	const isExternalRegistry =
-		domain !== getCloudflareContainerRegistry(complianceConfig);
+	const isExternalRegistry = !isCloudflareContainerRegistry(
+		domain,
+		complianceConfig
+	);
 	try {
 		await dockerLoginImageRegistry(dockerPath, domain);
 	} catch (e) {
@@ -220,8 +228,9 @@ export async function prepareContainerImagesForDev(args: {
 }
 
 /**
- * Determines whether an image reference belongs to the Cloudflare-managed
- * registry, including shorthand references that omit the registry hostname.
+ * Determines whether an image reference belongs to a Cloudflare-managed
+ * registry, including shorthand references that omit the registry hostname
+ * and the FedRAMP Moderate registry used by `fedramp` images.
  *
  * @param image - Image reference to classify.
  * @param complianceConfig - Compliance configuration used to select the managed registry.
@@ -239,7 +248,7 @@ export function isCloudflareRegistryImage(
 	return (
 		url === undefined ||
 		(!url.host.match(/[:.]/) && url.hostname !== "localhost") ||
-		url.hostname === getCloudflareContainerRegistry(complianceConfig)
+		isCloudflareContainerRegistry(url.hostname, complianceConfig)
 	);
 }
 
@@ -253,13 +262,13 @@ export function isCloudflareRegistryImage(
  *
  * @param accountId - Cloudflare account ID that owns managed-registry images.
  * @param image - Image reference to normalize.
- * @param complianceConfig - Compliance configuration used to select the managed registry.
+ * @param complianceConfig - Compliance region and image jurisdiction used to select the managed registry.
  * @returns The normalized image reference.
  */
 export function resolveImageName(
 	accountId: string,
 	image: string,
-	complianceConfig?: ComplianceConfig
+	complianceConfig?: ContainerRegistryConfig
 ): string {
 	let url: URL | undefined;
 	try {

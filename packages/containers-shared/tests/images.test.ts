@@ -10,6 +10,7 @@ import {
 	prepareContainerImagesForDev,
 	validateAndEncodeGarKey,
 } from "../src/images";
+import { dockerLoginImageRegistry } from "../src/login";
 import { runDockerCmd, verifyDockerInstalled } from "../src/utils";
 
 vi.mock("../src/build", () => ({ startContainerBuild: vi.fn() }));
@@ -34,6 +35,7 @@ describe("isCloudflareRegistryImage", () => {
 		for (const [image, isManaged] of [
 			["image:tag", true],
 			["registry.cloudflare.com/image:tag", true],
+			["frm.registry.cloudflare.com/account/image:tag", true],
 			["docker.io/example/image:tag", false],
 			["localhost:5000/image:tag", false],
 		] as const) {
@@ -120,6 +122,31 @@ describe("pullImage", () => {
 			"--platform",
 			"linux/amd64",
 		]);
+	});
+
+	it("fails when FedRAMP Moderate registry credentials are unavailable", async ({
+		expect,
+	}) => {
+		vi.mocked(dockerLoginImageRegistry).mockRejectedValueOnce(
+			new Error("no credentials")
+		);
+		const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+		const image = `frm.registry.cloudflare.com/account/image@sha256:${"a".repeat(64)}`;
+
+		await expect(
+			pullImage(
+				"docker",
+				{ class_name: "Container", image_uri: image, image_tag: image },
+				logger,
+				undefined,
+				"test registry configure"
+			)
+		).rejects.toThrow("no credentials");
+		expect(dockerLoginImageRegistry).toHaveBeenCalledWith(
+			"docker",
+			"frm.registry.cloudflare.com"
+		);
+		expect(logger.warn).not.toHaveBeenCalled();
 	});
 });
 

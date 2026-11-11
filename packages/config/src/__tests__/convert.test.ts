@@ -1805,6 +1805,37 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
+		it("converts Durable Object-managed Container image jurisdictions", ({
+			expect,
+		}) => {
+			const registryImage =
+				"frm.registry.cloudflare.com/account/base@sha256:" + "a".repeat(64);
+			const result = convertToWranglerConfig({
+				worker: baseWorker,
+				containers: [
+					{
+						name: "managed-container",
+						schedulingPolicy: "durable-object",
+						images: {
+							app: { dockerfile: "./Dockerfile", jurisdictions: ["fedramp"] },
+							base: { reference: registryImage, jurisdictions: ["fedramp"] },
+						},
+					},
+				],
+			});
+
+			expect(result.containers).toEqual([
+				{
+					name: "managed-container",
+					scheduling_policy: "durable_object",
+					images: {
+						app: { dockerfile: "./Dockerfile", jurisdictions: ["fedramp"] },
+						base: { image: registryImage, jurisdictions: ["fedramp"] },
+					},
+				},
+			]);
+		});
+
 		it("omits images for a Durable Object-managed Container without them", ({
 			expect,
 		}) => {

@@ -5,5 +5,10 @@ export {
 	getCloudflareContainerRegistry,
 	getCloudflareComplianceRegion,
 	getComplianceRegionSubdomain,
+	getContainerImageRegistryConfigs,
+	isCloudflareContainerRegistry,
 } from "./environment-variables/misc-variables";
-export type { ComplianceConfig } from "./environment-variables/misc-variables";
+export type {
+	ComplianceConfig,
+	ContainerRegistryConfig,
+} from "./environment-variables/misc-variables";

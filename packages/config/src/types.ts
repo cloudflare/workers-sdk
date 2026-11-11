@@ -189,6 +189,18 @@ type ContainerImage =
 			reference: string;
 	  };
 
+/** An image source accepted for a Durable Object-managed Container. */
+type DurableObjectContainerImage = ContainerImage & {
+	/**
+	 * Jurisdictions whose managed registries store this image. A Dockerfile
+	 * image is pushed to each jurisdiction's registry, and a `reference` must
+	 * already be in it. `fedramp` uses the FedRAMP Moderate registry,
+	 * `frm.registry.cloudflare.com`. Only one jurisdiction is supported for now.
+	 * Without `jurisdictions`, the image uses the default managed registry.
+	 */
+	jurisdictions?: "fedramp"[];
+};
+
 /** Application-wide observability settings shared by all Containers. */
 export interface ContainerObservabilityConfig {
 	/** Whether observability is enabled. */
@@ -361,7 +373,7 @@ export interface DurableObjectContainerConfig extends BaseContainerConfig {
 	 */
 	observability?: ContainerObservabilityConfig;
 	/** Named images that the Durable Object can start. */
-	images?: Record<string, ContainerImage>;
+	images?: Record<string, DurableObjectContainerImage>;
 }
 
 /**
