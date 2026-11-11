@@ -3,6 +3,7 @@ import { mockConsoleMethods } from "@cloudflare/workers-utils/test-helpers";
 import { afterAll, beforeAll, it } from "vitest";
 import { LongLivedCommand, runCommand } from "./command";
 import { makeRoot, seed } from "./setup";
+import { waitFor } from "./wait-for";
 
 const std = mockConsoleMethods();
 const cwd = makeRoot();
@@ -27,6 +28,18 @@ beforeAll(async () => {
 		"running.cjs": `
 			process.stdout.write("ready\\n");
 			setInterval(() => {}, 1000);
+		`,
+		"timeout.cjs": `
+			setTimeout(() => {}, process.env.KEEP_PIPES_OPEN ? 20_000 : 1000);
+		`,
+		"inherited-pipes.cjs": `
+			const { spawn } = require("node:child_process");
+			const child = spawn(process.execPath, ["timeout.cjs"], {
+				stdio: ["ignore", "inherit", "inherit"],
+				env: { ...process.env, KEEP_PIPES_OPEN: "true" },
+			});
+			child.unref();
+			process.stdout.write("background child: " + child.pid + "\\n");
 		`,
 	});
 });
@@ -100,3 +113,57 @@ it("streams readiness output and stops a running command", async ({
 	expect(await command.output).toBe("ready");
 	expect(std.err).toBe("");
 });
+
+it("stops quietly after a command times out while preserving the timeout error", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const command = new LongLivedCommand("node timeout.cjs", {
+		cwd,
+		silent: true,
+		timeout: 100,
+	});
+	onTestFinished(() => command.stop());
+
+	await expect(command.exitCode).rejects.toMatchObject({ name: "AbortError" });
+	await expect(command.output).rejects.toMatchObject({ name: "AbortError" });
+	// Wait for termination before exercising cleanup of an already exited command.
+	await waitFor(async () => {
+		expect(await command.signal("SIGTERM")).toBe(false);
+	});
+	await expect(command.stop()).resolves.toBeUndefined();
+	expect(std.out).toBe("");
+	expect(std.err).toBe("");
+});
+
+it(
+	"finishes when a background child keeps the exited command's output pipes open",
+	{ timeout: 5_000 },
+	async ({ expect, onTestFinished }) => {
+		const command = new LongLivedCommand("node inherited-pipes.cjs", {
+			cwd,
+			silent: true,
+		});
+		let backgroundPid: number | undefined = undefined;
+		onTestFinished(async () => {
+			if (backgroundPid !== undefined) {
+				try {
+					process.kill(backgroundPid, "SIGKILL");
+				} catch {
+					// The background child may have exited during a test failure.
+				}
+			}
+			await command.stop();
+		});
+		const match = await command.readUntil(/background child: (\d+)/);
+		const childPid = Number(match[1]);
+		backgroundPid = childPid;
+
+		expect(await command.exitCode).toBe(0);
+		expect(await command.output).toBe(`background child: ${childPid}`);
+		expect(() => process.kill(childPid, 0)).not.toThrow();
+		await command.stop();
+		expect(std.out).toBe("");
+		expect(std.err).toBe("");
+	}
+);

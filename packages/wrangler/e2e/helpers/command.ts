@@ -11,6 +11,7 @@ import { readUntil } from "./read-until";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 
 const DEFAULT_TIMEOUT = 50_000;
+const OUTPUT_DRAIN_TIMEOUT = 1_000;
 
 export type CommandOptions = {
 	cwd?: string;
@@ -97,8 +98,7 @@ export class LongLivedCommand {
 			signal,
 		});
 
-		// "exit" can fire before the final stdout/stderr chunks have been read.
-		const exitPromise = events.once(this.commandProcess, "close") as Promise<
+		const exitPromise = events.once(this.commandProcess, "exit") as Promise<
 			[number | null, NodeJS.Signals | null]
 		>;
 
@@ -110,9 +110,27 @@ export class LongLivedCommand {
 		const outputClosed = Promise.all(
 			lineInterfaces.map((lineInterface) => events.once(lineInterface, "close"))
 		);
-		this.exitPromise = Promise.all([exitPromise, outputClosed]).then(
-			([status]) => status
+		// Drain buffered output after exit, but don't wait indefinitely for pipes
+		// inherited by a background child that outlives the command.
+		const drainController = new AbortController();
+		const drainTimeout = exitPromise.then(() =>
+			setTimeout(OUTPUT_DRAIN_TIMEOUT, undefined, {
+				signal: drainController.signal,
+			})
 		);
+		this.exitPromise = Promise.all([
+			exitPromise,
+			Promise.race([outputClosed, drainTimeout]),
+		])
+			.then(([status]) => status)
+			.finally(() => {
+				drainController.abort();
+				for (const lineInterface of lineInterfaces) {
+					lineInterface.close();
+				}
+				this.commandProcess.stdout.destroy();
+				this.commandProcess.stderr.destroy();
+			});
 
 		this.stream = new ReadableStream<string>({
 			start: (controller) => {
@@ -170,7 +188,7 @@ export class LongLivedCommand {
 			this.commandProcess.exitCode !== null ||
 			this.commandProcess.signalCode !== null
 		) {
-			await this.exitPromise;
+			await this.exitPromise.catch(() => {});
 			return;
 		}
 		await new Promise<void>((resolve) => {
