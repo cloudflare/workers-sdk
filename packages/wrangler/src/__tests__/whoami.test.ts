@@ -2,7 +2,7 @@ import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, it, vi } from "vitest";
-import { writeAuthCredentials } from "../user";
+import { fetchAllAccounts, writeAuthCredentials } from "../user";
 import { getUserInfo } from "../user/whoami";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -607,5 +607,37 @@ describe("whoami", () => {
 		await expect(runWrangler(`whoami --account "account-2"`)).rejects.toThrow(
 			/A request to the Cloudflare API \(\/memberships\) failed/
 		);
+	});
+});
+
+describe("fetchAllAccounts() with an Account API Token (#8230)", () => {
+	runInTempDir();
+	mockConsoleMethods();
+	const { setIsTTY } = useMockIsTTY();
+
+	beforeEach(() => {
+		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
+		setIsTTY(false);
+	});
+
+	it("should fall back to /accounts when /memberships fails with 10001 (Unable to authenticate request)", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_API_TOKEN", "account-owned-token");
+		msw.use(
+			http.get("*/memberships", () =>
+				HttpResponse.json(
+					createFetchResult(undefined, false, [
+						{ code: 10001, message: "Unable to authenticate request" },
+					])
+				)
+			)
+		);
+		const accounts = await fetchAllAccounts(COMPLIANCE_REGION_CONFIG_UNKNOWN);
+		expect(accounts.map((a) => a.id)).toEqual([
+			"account-1",
+			"account-2",
+			"account-3",
+		]);
 	});
 });
