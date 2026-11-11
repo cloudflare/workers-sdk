@@ -1554,6 +1554,20 @@ interface HandlerSpies {
 	waitUntil: Promise<unknown>[];
 }
 
+describe("asset-server handler conditional requests (#3554)", () => {
+	test("304 responses include the ETag header", async ({ expect }) => {
+		const { response } = await getTestResponse({
+			request: new Request("https://example.com/foo", {
+				headers: { "if-none-match": '"asset-key-foo.html"' },
+			}),
+			findAssetEntryForPath: async (path: string) =>
+				path === "/foo.html" ? "asset-key-foo.html" : null,
+		});
+		expect(response.status).toBe(304);
+		expect(response.headers.get("etag")).toBe('"asset-key-foo.html"');
+	});
+});
+
 async function getTestResponse({
 	request,
 	metadata = createMetadataObject({
