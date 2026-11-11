@@ -1227,6 +1227,66 @@ describe("asset-server handler", () => {
 	});
 
 	describe("redirects", () => {
+		test.for(["http", "https"])(
+			"preserves scheme-less redirect targets on %s requests",
+			async (protocol, { expect }) => {
+				const { response } = await getTestResponse({
+					request: `${protocol}://foo.com/old//images/logo.png`,
+					metadata: createMetadataObjectWithRedirects([
+						{
+							from: "/old/*",
+							to: "//other.example/:splat?next=https://example.com/a//b#section//one",
+							status: 302,
+						},
+					]),
+				});
+
+				expect(response.status).toBe(302);
+				expect(response.headers.get("Location")).toBe(
+					`${protocol}://other.example//images/logo.png?next=https://example.com/a//b#section//one`
+				);
+			}
+		);
+
+		test.for([
+			["/old/*", "/old//images/logo.png", "/:splat", "/images/logo.png"],
+			["/old*", "/old/images/logo.png", "/:splat", "/images/logo.png"],
+			["/old/*", "/old/evil.example", "///:splat", "/evil.example"],
+			["/old/*", "/old/evil.example", "//\\:splat", "/evil.example"],
+			[
+				"/old/*",
+				"/old///images/logo.png?keep=1",
+				"/:splat",
+				"/images/logo.png?keep=1",
+			],
+			["/old/*", "/old/%2Fimages/logo.png", "/:splat", "/%2Fimages/logo.png"],
+			[
+				"/old/*",
+				"/old//images/logo.png",
+				"/:splat?next=https://example.com/a//b#section//one",
+				"/images/logo.png?next=https://example.com/a//b#section//one",
+			],
+			[
+				"/old/*",
+				"/old//images/logo.png",
+				"https://other.example/:splat",
+				"https://other.example//images/logo.png",
+			],
+		])(
+			"normalizes the pathname of %s -> %s (%s)",
+			async ([from, path, to, location], { expect }) => {
+				const { response } = await getTestResponse({
+					request: `https://foo.com${path}`,
+					metadata: createMetadataObjectWithRedirects([
+						{ from, to, status: 302 },
+					]),
+				});
+
+				expect(response.status).toBe(302);
+				expect(response.headers.get("Location")).toBe(location);
+			}
+		);
+
 		test("it should redirect uri-encoded paths", async ({ expect }) => {
 			const { response, spies } = await getTestResponse({
 				request: "https://foo.com/some%20page",
