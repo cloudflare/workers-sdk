@@ -674,21 +674,6 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 	) {
 		// The bindings the Worker runs with, after the test's `env`
 		const workerConfig = getResolvedWorker(session, workerName).options.config;
-		const localDurableObjectBinding = Object.values(
-			workerConfig.env ?? {}
-		).find((binding) => {
-			return (
-				binding.type === "durable-object" &&
-				binding.exportName === classNameOrBindingName &&
-				binding.worker === workerName
-			);
-		});
-		if (localDurableObjectBinding !== undefined) {
-			return {
-				scriptName: workerName,
-				className: classNameOrBindingName,
-			};
-		}
 
 		// Build Output declares Durable Object classes in `exports`, rather than
 		// in migrations. Exports with `storage` are the live classes.
@@ -811,19 +796,8 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		let resolvedInput = input;
 
 		if (typeof input === "string" && !URL.canParse(input)) {
-			const url = await miniflare.ready;
-			const baseUrl = new URL(url);
-
-			if (
-				baseUrl.hostname === "0.0.0.0" ||
-				baseUrl.hostname === "::" ||
-				baseUrl.hostname === "[::]" ||
-				baseUrl.hostname === "*"
-			) {
-				baseUrl.hostname = "localhost";
-			}
-
-			resolvedInput = new URL(input, baseUrl);
+			// The host is 127.0.0.1, so the URL is never a wildcard address
+			resolvedInput = new URL(input, await miniflare.ready);
 		}
 
 		const request = new Request(resolvedInput, init);
