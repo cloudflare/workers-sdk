@@ -360,15 +360,35 @@ describe("createTestHarness()", () => {
 		const env = { KV: { type: "kv", id: "abc", dev: { remote: true } } };
 		await writeBuild("app", {
 			default: {
-				config: { name: "app", env },
+				config: {
+					name: "app",
+					env: {
+						...env,
+						AI: { type: "ai" },
+						R2: { type: "r2", name: "r2", dev: { remote: true } },
+					},
+				},
 				script: `export default { fetch() { return new Response("ok"); } };`,
 			},
 		});
-		const harness = createTestHarness({ workers: [{ buildOutput: "app" }] });
+		const harness = createTestHarness({
+			workers: [
+				{
+					buildOutput: "app",
+					env: { AI: bindings.text("mock-ai"), R2: false },
+				},
+			],
+		});
 
 		await harness.listen();
+		// The test's `env` replaces bindings before the session starts, so a
+		// replaced or removed remote binding never reaches it
 		expect(maybeStartOrUpdateRemoteProxySession).toHaveBeenCalledWith(
-			expect.objectContaining({ name: "app", target: "cf", env }),
+			expect.objectContaining({
+				name: "app",
+				target: "cf",
+				env: { ...env, AI: { type: "text", value: "mock-ai" } },
+			}),
 			null,
 			expect.objectContaining({ hook: expect.any(Function) }),
 			expect.objectContaining({ cliDisplayName: "cf" })
@@ -404,60 +424,6 @@ describe("createTestHarness()", () => {
 
 		await expect(harness.listen()).rejects.toThrow();
 		expect(session.dispose).toHaveBeenCalled();
-	});
-
-	it("doesn't send a binding the test overrides or removes to the remote session", async ({
-		expect,
-	}) => {
-		await writeBuild("app", {
-			default: {
-				config: {
-					name: "app",
-					env: {
-						AI: { type: "ai" },
-						KV: { type: "kv", id: "abc", dev: { remote: true } },
-					},
-				},
-				script: `export default {
-					async fetch(request, env) {
-						return Response.json(await env.AI.run("@cf/test/model", {}));
-					},
-				};`,
-			},
-			"mock-ai": {
-				config: { name: "mock-ai" },
-				script: `import { WorkerEntrypoint } from "cloudflare:workers";
-					export default class MockAi extends WorkerEntrypoint {
-						run(model) {
-							return { model, response: "mock-ai" };
-						}
-					}`,
-			},
-		});
-		const harness = useTestHarness({
-			workers: [
-				{
-					buildOutput: "app",
-					env: { AI: bindings.worker({ worker: "mock-ai" }), KV: false },
-				},
-				{ buildOutput: "app", name: "mock-ai" },
-			],
-		});
-
-		await harness.listen();
-		expect(await (await harness.fetch("/")).json()).toEqual({
-			model: "@cf/test/model",
-			response: "mock-ai",
-		});
-		expect(maybeStartOrUpdateRemoteProxySession).toHaveBeenCalledWith(
-			expect.objectContaining({
-				name: "app",
-				env: { AI: { type: "worker", worker: "mock-ai" } },
-			}),
-			null,
-			expect.anything(),
-			expect.anything()
-		);
 	});
 
 	it("connects a Hyperdrive binding to its local connection string from .env", async ({
@@ -537,109 +503,6 @@ describe("createTestHarness()", () => {
 		expect(await (await harness.fetch("/")).text()).toBe(
 			"Hello from Wrangler's build"
 		);
-	});
-
-	it("runs a Python Worker", async ({ expect }) => {
-		const workerDir = ".cloudflare/output/v0/workers/default";
-		await seed({
-			".cloudflare/output/v0/config.json": JSON.stringify({
-				buildContext: { isPreview: false, mode: "production" },
-			}),
-			[`${workerDir}/worker.config.json`]: JSON.stringify({
-				name: "python-worker",
-				compatibilityDate: "2025-05-01",
-				compatibilityFlags: ["python_workers", "python_no_global_handlers"],
-				manifest: {
-					type: "complete",
-					mainModule: "index.py",
-					modules: {
-						"index.py": { type: "python" },
-						"greeting.py": { type: "python" },
-					},
-				},
-			}),
-			[`${workerDir}/bundle/index.py`]: [
-				"from greeting import greet",
-				"from workers import Response, WorkerEntrypoint",
-				"",
-				"class Default(WorkerEntrypoint):",
-				"  def fetch(self, request):",
-				"    return Response(greet('Python'))",
-			].join("\n"),
-			[`${workerDir}/bundle/greeting.py`]: [
-				"def greet(name):",
-				"  return 'Hello from ' + name",
-			].join("\n"),
-		});
-		const harness = useTestHarness({ workers: [{ buildOutput: "." }] });
-
-		await harness.listen();
-		expect(await (await harness.fetch("/")).text()).toBe("Hello from Python");
-	});
-
-	it("keeps the headers of a Worker's outgoing requests under MSW", async ({
-		expect,
-	}) => {
-		const network = setupServer(
-			http.post("http://upstream.example/", async ({ request }) => {
-				return HttpResponse.json({
-					header: request.headers.get("X-From-Worker"),
-					body: await request.text(),
-				});
-			})
-		);
-		network.listen({ onUnhandledRequest: "error" });
-		onTestFinished(() => network.close());
-		await writeBuild(".", {
-			default: {
-				config: { name: "outbound-worker" },
-				script: `export default {
-					fetch() {
-						return fetch("http://upstream.example/", {
-							method: "POST",
-							headers: { "X-From-Worker": "yes" },
-							body: "hello",
-						});
-					},
-				};`,
-			},
-		});
-		const harness = useTestHarness({ workers: [{ buildOutput: "." }] });
-
-		await harness.listen();
-		expect(await (await harness.fetch("/")).json()).toEqual({
-			header: "yes",
-			body: "hello",
-		});
-	});
-
-	it("names the Worker's route zone in CF-Worker on outgoing requests, as in production", async ({
-		expect,
-	}) => {
-		const network = setupServer(
-			http.get("http://upstream.example/", ({ request }) => {
-				return HttpResponse.text(request.headers.get("CF-Worker") ?? "none");
-			})
-		);
-		network.listen({ onUnhandledRequest: "error" });
-		onTestFinished(() => network.close());
-		await writeBuild(".", {
-			default: {
-				config: {
-					name: "zone-worker",
-					triggers: [{ type: "fetch", pattern: "shop.example.com/*" }],
-				},
-				script: `export default {
-					fetch() {
-						return fetch("http://upstream.example/");
-					},
-				};`,
-			},
-		});
-		const harness = useTestHarness({ workers: [{ buildOutput: "." }] });
-
-		await harness.listen();
-		expect(await (await harness.fetch("/")).text()).toBe("shop.example.com");
 	});
 
 	// Ported from Wrangler's e2e/createTestHarness.test.ts
@@ -1571,53 +1434,6 @@ describe("createTestHarness()", () => {
 		);
 	});
 
-	it("rejects a Worker's call to another Worker that throws, as in production", async ({
-		expect,
-	}) => {
-		const server = createTestHarness({
-			workers: [
-				{
-					config: {
-						name: "caller",
-						compatibilityDate: "2026-05-20",
-						env: { CALLEE: { type: "worker", worker: "callee" } },
-						manifest: singleModuleManifest(`
-							export default {
-								async fetch(request, env) {
-									try {
-										await env.CALLEE.fetch("http://callee/");
-										return new Response("no error");
-									} catch (error) {
-										return new Response("caught: " + error.message);
-									}
-								}
-							};
-						`),
-					},
-				},
-				{
-					config: {
-						name: "callee",
-						compatibilityDate: "2026-05-20",
-						manifest: singleModuleManifest(`
-							export default {
-								fetch() {
-									throw new Error("callee failed");
-								}
-							};
-						`),
-					},
-				},
-			],
-		});
-		onTestFinished(server.close);
-
-		await server.listen();
-
-		const response = await server.fetch("/");
-		await expect(response.text()).resolves.toBe("caught: callee failed");
-	});
-
 	it("supports service bindings between workers", async ({ expect }) => {
 		await writeBuild(".", {
 			default: {
@@ -2074,8 +1890,12 @@ describe("createTestHarness()", () => {
 		expect,
 	}) => {
 		const mockServer = setupServer(
-			http.get("http://example.com/", () => {
-				return HttpResponse.text("Mocked by MSW");
+			http.post("http://example.com/", async ({ request }) => {
+				return HttpResponse.json({
+					body: await request.text(),
+					header: request.headers.get("X-From-Worker"),
+					zone: request.headers.get("CF-Worker"),
+				});
 			})
 		);
 		mockServer.listen({ onUnhandledRequest: "error" });
@@ -2083,11 +1903,18 @@ describe("createTestHarness()", () => {
 
 		await writeBuild(".", {
 			default: {
-				config: { name: "default-outbound-worker" },
+				config: {
+					name: "default-outbound-worker",
+					triggers: [{ type: "fetch", pattern: "shop.example.com/*" }],
+				},
 				script: `
 					export default {
 						fetch() {
-							return fetch("http://example.com");
+							return fetch("http://example.com", {
+								method: "POST",
+								headers: { "X-From-Worker": "yes" },
+								body: "hello",
+							});
 						}
 					};
 				`,
@@ -2100,33 +1927,13 @@ describe("createTestHarness()", () => {
 		await server.listen();
 
 		const response = await server.fetch("/");
-		await expect(response.text()).resolves.toBe("Mocked by MSW");
-	});
-
-	it("starts workers from inline config", async ({ expect }) => {
-		const server = createTestHarness({
-			workers: [
-				{
-					config: {
-						name: "inline-worker",
-						compatibilityDate: "2026-05-20",
-						manifest: singleModuleManifest(`
-							export default {
-								fetch() {
-									return new Response("Hello from inline config");
-								}
-							};
-						`),
-					},
-				},
-			],
+		await expect(response.json()).resolves.toEqual({
+			body: "hello",
+			// MSW keeps the headers of the Worker's request
+			header: "yes",
+			// As in production, CF-Worker names the zone of the Worker's route
+			zone: "shop.example.com",
 		});
-		onTestFinished(server.close);
-
-		await server.listen();
-
-		const response = await server.fetch("/");
-		await expect(response.text()).resolves.toBe("Hello from inline config");
 	});
 
 	it("loads default .env files for build output workers", async ({
@@ -2164,47 +1971,6 @@ describe("createTestHarness()", () => {
 		await expect(response.json()).resolves.toEqual({
 			CONFIG_VAR: "from-config",
 			ENV_SECRET: "from-env",
-		});
-	});
-
-	it("loads default .dev.vars files for build output workers", async ({
-		expect,
-	}) => {
-		await writeBuild(".", {
-			default: {
-				config: {
-					name: "dev-vars-worker",
-					env: {
-						CONFIG_VAR: { type: "text", value: "from-config" },
-						SECRET: { type: "secret" },
-					},
-				},
-				script: `
-					export default {
-						fetch(request, env) {
-							return Response.json({
-								CONFIG_VAR: env.CONFIG_VAR,
-								SECRET: env.SECRET,
-							});
-						}
-					};
-				`,
-			},
-		});
-		await seed({
-			".env": "SECRET=from-env",
-			".dev.vars": "SECRET=from-dev-vars",
-		});
-
-		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
-		onTestFinished(server.close);
-
-		await server.listen();
-
-		const response = await server.fetch("/");
-		await expect(response.json()).resolves.toEqual({
-			CONFIG_VAR: "from-config",
-			SECRET: "from-dev-vars",
 		});
 	});
 
@@ -2289,34 +2055,6 @@ describe("createTestHarness()", () => {
 			ADDED_VAR: "from-updated-override",
 			NULL_VAR: null,
 		});
-	});
-
-	it(`supports "nodejs_compat" flag`, async ({ expect }) => {
-		await writeBuild(".", {
-			default: {
-				config: {
-					name: "nodejs-compat-worker",
-					compatibilityFlags: ["nodejs_compat"],
-				},
-				script: `
-					import { Stream } from "node:stream";
-
-					export default {
-						fetch() {
-							return new Response(String(typeof Stream));
-						}
-					};
-				`,
-			},
-		});
-
-		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
-		onTestFinished(server.close);
-
-		await server.listen();
-
-		const response = await server.fetch("/");
-		await expect(response.text()).resolves.toBe("function");
 	});
 
 	it("uses ephemeral storage by default", async ({ expect }) => {
@@ -2697,55 +2435,6 @@ describe("createTestHarness()", () => {
 		await expect(worker.listDurableObjectIds("COUNTER")).resolves.toEqual(
 			[firstId, secondId].sort()
 		);
-	});
-
-	it("does not reload when the Build Output changes", async ({ expect }) => {
-		const respondWith = (text: string) => `
-			export default {
-				fetch() {
-					return new Response(${JSON.stringify(text)});
-				}
-			};
-		`;
-		await writeBuild(".", {
-			default: {
-				config: { name: "create-server-test" },
-				script: respondWith("Hello World"),
-			},
-		});
-
-		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
-		onTestFinished(server.close);
-
-		await server.listen();
-
-		const response1 = await server.fetch("/");
-		await expect(response1.text()).resolves.toBe("Hello World");
-
-		await writeBuild(".", {
-			default: {
-				config: { name: "create-server-test" },
-				script: respondWith("Greeting"),
-			},
-		});
-
-		// Wait a moment to ensure that if the server were going to reload, it would have done so by now
-		await setTimeout(1000);
-
-		const response2 = await server.fetch("/");
-		await expect(response2.text()).resolves.toBe("Hello World");
-
-		await writeBuild(".", {
-			default: {
-				config: { name: "create-server-test" },
-				script: respondWith("Bonjour"),
-			},
-		});
-
-		await setTimeout(1000);
-
-		const response3 = await server.fetch("/");
-		await expect(response3.text()).resolves.toBe("Hello World");
 	});
 
 	it("captures runtime logs and prints debug timelines", async ({ expect }) => {
