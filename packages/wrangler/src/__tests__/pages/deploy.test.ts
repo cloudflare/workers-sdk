@@ -1394,6 +1394,201 @@ describe("pages deploy", () => {
 		`);
 	});
 
+	// https://github.com/cloudflare/workers-sdk/issues/4919
+	it("should refetch an expired JWT for a bucket even after other buckets needed retries", async ({
+		expect,
+		onTestFinished,
+	}) => {
+		// Two files, so they are uploaded in two separate buckets
+		writeFileSync("a.txt", "aaaaaa");
+		writeFileSync("b.txt", "bbbbbb");
+		const aValue = Buffer.from("aaaaaa").toString("base64");
+		const bValue = Buffer.from("bbbbbb").toString("base64");
+
+		// Real (unsigned) JWTs, so that Wrangler can tell when the first one has expired
+		const start = Date.now();
+		vi.setSystemTime(start);
+		onTestFinished(() => {
+			vi.useRealTimers();
+		});
+		const makeJwt = (exp: number) =>
+			`header.${Buffer.from(JSON.stringify({ exp })).toString("base64")}.signature`;
+		const expiringJwt = makeJwt(Math.floor(start / 1000) + 5 * 60);
+		const freshJwt = makeJwt(Math.floor(start / 1000) + 60 * 60);
+		let jwtHasExpired = false;
+
+		msw.use(
+			http.get(`*/accounts/:accountId/pages/projects/foo/upload-token`, () => {
+				return HttpResponse.json(
+					{
+						success: true,
+						errors: [],
+						messages: [],
+						result: { jwt: jwtHasExpired ? freshJwt : expiringJwt },
+					},
+					{ status: 200 }
+				);
+			})
+		);
+
+		let resolveBucketAUploaded: () => void = () => {};
+		const bucketAUploaded = new Promise<void>((resolve) => {
+			resolveBucketAUploaded = resolve;
+		});
+		const uploadRequests = {
+			a: [] as (string | null)[],
+			b: [] as (string | null)[],
+		};
+		const retryableError = () =>
+			HttpResponse.json(
+				{
+					success: false,
+					errors: [
+						{
+							code: ApiErrorCodes.UNKNOWN_ERROR,
+							message: "Something exploded, please retry",
+						},
+					],
+					messages: [],
+					result: null,
+				},
+				{ status: 200 }
+			);
+		const uploaded = () =>
+			HttpResponse.json(
+				{ success: true, errors: [], messages: [], result: null },
+				{ status: 200 }
+			);
+
+		msw.use(
+			http.post<never, { hashes: string[] }>(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = await request.json();
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: body.hashes,
+						},
+						{ status: 200 }
+					);
+				}
+			),
+			http.post<never, UploadPayloadFile[]>(
+				"*/pages/assets/upload",
+				async ({ request }) => {
+					const authorization = request.headers.get("Authorization");
+					const body = await request.json();
+					const values = body.map((file) => file.value);
+
+					if (values.includes(aValue)) {
+						// Bucket A: a flaky connection fails it 3 times (well within its
+						// 5 upload attempts), then it uploads.
+						uploadRequests.a.push(authorization);
+						if (uploadRequests.a.length <= 3) {
+							return retryableError();
+						}
+						resolveBucketAUploaded();
+						return uploaded();
+					}
+
+					expect(values).toEqual([bValue]);
+					// Bucket B: starts once bucket A is done, fails twice (also well
+					// within its 5 attempts), and then the upload JWT expires while it
+					// is still uploading, as on a slow connection.
+					await bucketAUploaded;
+					uploadRequests.b.push(authorization);
+					if (uploadRequests.b.length <= 2) {
+						return retryableError();
+					}
+					if (authorization === `Bearer ${expiringJwt}`) {
+						jwtHasExpired = true;
+						vi.setSystemTime(start + 10 * 60 * 1000);
+						return HttpResponse.text("Expired JWT", { status: 403 });
+					}
+					return uploaded();
+				}
+			),
+			http.post<never, { hashes: string[] }>(
+				"*/pages/assets/upsert-hashes",
+				() => uploaded()
+			),
+			http.post(
+				"*/accounts/:accountId/pages/projects/foo/deployments",
+				async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "123-456-789",
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+				return HttpResponse.json(
+					{
+						success: true,
+						errors: [],
+						messages: [],
+						result: { deployment_configs: { production: {}, preview: {} } },
+					},
+					{ status: 200 }
+				);
+			})
+		);
+
+		// The expired JWT should be refreshed, rather than failing the deployment with
+		// `Failed to upload files. Please try again. Error: {"text":"Received a malformed
+		// response from the API","notes":[{"text":"Expired JWT"},...]}`
+		await runWrangler("pages deploy . --project-name=foo");
+
+		expect(uploadRequests.a).toEqual(Array(4).fill(`Bearer ${expiringJwt}`));
+		expect(uploadRequests.b).toEqual([
+			`Bearer ${expiringJwt}`,
+			`Bearer ${expiringJwt}`,
+			`Bearer ${expiringJwt}`,
+			`Bearer ${freshJwt}`,
+		]);
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			✨ Success! Uploaded 2 files (TIMINGS)
+
+			🌎 Deploying...
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		`);
+	});
+
 	it("should try to use multiple buckets (up to the max concurrency)", async ({
 		expect,
 	}) => {
