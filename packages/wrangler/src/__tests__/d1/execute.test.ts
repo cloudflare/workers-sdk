@@ -251,6 +251,53 @@ To continue without logging in, rerun this command with \`--temporary\`. Wrangle
 		expect(parsed[0].results[0].name).toBeNull();
 	});
 
+	// https://github.com/cloudflare/workers-sdk/issues/3278
+	it("should execute a local SQL file larger than the maximum JavaScript string length", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+
+		// V8 cannot create a string longer than 0x1fffffe8 characters (~512 MiB),
+		// but a SQL dump of a large database (D1 allows up to 10 GB) easily
+		// exceeds that. Write a dump just over that size, made of INSERT
+		// statements that are each well under D1's SQL statement length limit.
+		const maxStringLength = 0x1fffffe8;
+		const rowsPerStatement = 50;
+		const value = "x".repeat(1000);
+		const statement = `INSERT INTO t (v) VALUES ${Array(rowsPerStatement)
+			.fill(`('${value}')`)
+			.join(",")};\n`;
+		const statementsPerChunk = 200;
+		const chunk = statement.repeat(statementsPerChunk);
+		const fd = fs.openSync("big.sql", "w");
+		let size = fs.writeSync(
+			fd,
+			"CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT);\n"
+		);
+		let statements = 0;
+		while (size <= maxStringLength) {
+			size += fs.writeSync(fd, chunk);
+			statements += statementsPerChunk;
+		}
+		fs.closeSync(fd);
+		expect(fs.statSync("big.sql").size).toBeGreaterThan(maxStringLength);
+
+		await runWrangler("d1 execute db --file big.sql --local");
+
+		std.getAndClearOut();
+		await runWrangler(
+			`d1 execute db --command "SELECT count(*) AS n FROM t" --local --json`
+		);
+		expect(JSON.parse(std.out)).toMatchObject([
+			{ results: [{ n: statements * rowsPerStatement }], success: true },
+		]);
+	}, 600_000);
+
 	describe("duration formatting", () => {
 		mockAccountId({ accountId: "some-account-id" });
 		mockApiToken();
