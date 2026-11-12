@@ -19,8 +19,11 @@ const t = recast.types.namedTypes;
  *   - defineConfig(({ isSsrBuild }) => ({ ... }))
  *   - defineConfig(() => { return { ... }; })
  *   - defineConfig(function() { return { ... }; })
+ *
+ * @param node The first argument of defineConfig()
+ * @returns The config object, or null if it can't be found
  */
-function extractConfigObject(
+export function extractConfigObject(
 	node: recast.types.ASTNode
 ): types.namedTypes.ObjectExpression | null {
 	// Direct object: defineConfig({ ... })
@@ -150,7 +153,14 @@ export function hasViteConfig(projectPath: string): boolean {
 	);
 }
 
-function getViteConfigPath(projectPath: string): string {
+/**
+ * Finds the project's Vite config file.
+ *
+ * @param projectPath The path of the project
+ * @returns The path of `vite.config.ts`, or of `vite.config.js` if there is no TypeScript config
+ * @throws If the project has neither
+ */
+export function getViteConfigPath(projectPath: string): string {
 	const filePathTS = path.join(projectPath, `vite.config.ts`);
 	const filePathJS = path.join(projectPath, `vite.config.js`);
 
@@ -394,7 +404,13 @@ function isPluginsProp(
 	);
 }
 
-function getStaticPropertyName(prop: unknown): string | undefined {
+/**
+ * Gets the name of an object property whose key is known without evaluating code.
+ *
+ * @param prop A member of an object expression
+ * @returns The property name, or undefined for spreads and computed keys
+ */
+export function getStaticPropertyName(prop: unknown): string | undefined {
 	if (
 		!t.Property.check(prop) &&
 		!t.ObjectProperty.check(prop) &&

@@ -110,9 +110,6 @@ patchedDependencies:
   '@cloudflare/component-listbox@1.10.6':
     hash: 67542a8abb29df36ad2c426409243d1167ca0080d2763f6ae3cce3c731c69107
     path: patches/@cloudflare__component-listbox@1.10.6.patch
-  '@netlify/build-info@10.5.1':
-    hash: d4dab4e515b41a301041eaf8700001b612ab00616fa5837c8a65bcb3ce2df039
-    path: patches/@netlify__build-info@10.5.1.patch
   buffer-equal-constant-time@1.0.1:
     hash: cc16d31ed54afc06e628965b2acc54f0dbcc6d079da331da5f14040ce4d62024
     path: patches/buffer-equal-constant-time@1.0.1.patch
@@ -1677,8 +1674,8 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@netlify/build-info':
-        specifier: 10.5.1
-        version: 10.5.1(patch_hash=d4dab4e515b41a301041eaf8700001b612ab00616fa5837c8a65bcb3ce2df039)
+        specifier: 11.3.1
+        version: 11.3.1
       '@types/esprima':
         specifier: ^4.0.3
         version: 4.0.3
@@ -4663,8 +4660,8 @@ importers:
         specifier: workspace:*
         version: link:../workflows-shared
       '@netlify/build-info':
-        specifier: 10.5.1
-        version: 10.5.1(patch_hash=d4dab4e515b41a301041eaf8700001b612ab00616fa5837c8a65bcb3ce2df039)
+        specifier: 11.3.1
+        version: 11.3.1
       '@sentry/node':
         specifier: ^7.86.0
         version: 7.87.0(supports-color@9.2.2)
@@ -5134,10 +5131,6 @@ packages:
     resolution: {integrity: sha512-2GPCwlNxeHspoK/Mc8nbk9cBOkSpp3j2SJUQmFnyQK6V/pR6II2oPRyZkMomug1Rc10hqlBHByMecq4zhV2uUw==}
     engines: {node: '>=16.0.0'}
 
-  '@babel/code-frame@7.26.2':
-    resolution: {integrity: sha512-RJlIHRueQgwWitWgF8OdFYGZX328Ax5BCemNGlqHfplnRT9ESi8JkFlvaVYbS+UubVY6dpv87Fs2u5M29iNFVQ==}
-    engines: {node: '>=6.9.0'}
-
   '@babel/code-frame@7.29.0':
     resolution: {integrity: sha512-9NhCeYjq9+3uxgdtp20LSiJXJvN0FeCtNGpJxuMFZ1Kv3cWUNb6DOhJwUvcVCzKGR66cw4njwM6hrJLqgOwbcw==}
     engines: {node: '>=6.9.0'}
@@ -5399,20 +5392,20 @@ packages:
       commander:
         optional: true
 
-  '@bugsnag/browser@8.6.0':
-    resolution: {integrity: sha512-7UGqTGnQqXUQ09gOlWbDTFUSbeLIIrP+hML3kTOq8Zdc8nP/iuOEflXGLV2TxWBWW8xIUPc928caFPr9EcaDuw==}
+  '@bugsnag/browser@9.1.0':
+    resolution: {integrity: sha512-/E0tirRq32QMGtl7bELWkDlNlJkY9GjKWoT5uUrsd1IcreUJj8k/eIqTYwuPRkveL/Mmm2qBKI+OMn2SnC7ifw==}
 
-  '@bugsnag/core@8.6.0':
-    resolution: {integrity: sha512-94Jo443JegaiKV8z8NXMFdyTGubiUnwppWhq3kG2ldlYKtEvrmIaO5+JA58B6oveySvoRu3cCe2W9ysY7G7mDw==}
+  '@bugsnag/core@9.1.0':
+    resolution: {integrity: sha512-AxuzyLoZgTbEYZybQ0hsbIlQl6uFuFhh+AIbwBX6mTLDwbLriPbtzbzeF1KQce8WuJFp6iESPXHBYUbUxIvcsw==}
 
   '@bugsnag/cuid@3.2.1':
     resolution: {integrity: sha512-zpvN8xQ5rdRWakMd/BcVkdn2F8HKlDSbM3l7duueK590WmI1T0ObTLc1V/1e55r14WNjPd5AJTYX4yPEAFVi+Q==}
 
-  '@bugsnag/js@8.6.0':
-    resolution: {integrity: sha512-U+ofNTTMA2Z6tCrOhK/QhHBhLoQHoalk8Y82WWc7FAcVSoJZYadND/QuXUriNRZpC4YgJ/s/AxPeQ2y+WvMxzw==}
+  '@bugsnag/js@9.1.0':
+    resolution: {integrity: sha512-4y0LIbnF/ej5tniAXptWNc73fGbuq0L8KV73vWcEu1IS+WZizmVmBNsU1f+I0p4OrdJPetenLlUy8/X6Bj9hRQ==}
 
-  '@bugsnag/node@8.6.0':
-    resolution: {integrity: sha512-O91sELo6zBjflVeP3roRC9l68iYaafVs5lz2N0FDkrT08mP2UljtNWpjjoR/0h1so5Ny1OxHgnZ1IrsXhz5SMQ==}
+  '@bugsnag/node@9.1.0':
+    resolution: {integrity: sha512-U3StZegse1RtmdOBZ4JH8UXNLQBwJ5uG1vjlVUiLY2SWBaBiodvhUtb7k0STHkMt8RqR32HN6i7XzEtTk87Apw==}
 
   '@bugsnag/safe-json-stringify@6.1.0':
     resolution: {integrity: sha512-ImA35rnM7bGr+J30R979FQ95BhRB4UO1KfJA0J2sVqc8nwnrS9hhE5mkTmQWMs8Vh1Da+hkLKs5jJB4JjNZp4A==}
@@ -7019,9 +7012,6 @@ packages:
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
 
-  '@iarna/toml@2.2.5':
-    resolution: {integrity: sha512-trnsAYxU3xnS1gPHPyU961coFyLkh4gAD/0zQ5mymY4yOZ+CYvsPqUbOFSw0aDM4y0tV7tiFxL/1XfXPNC6IPg==}
-
   '@img/colour@1.1.0':
     resolution: {integrity: sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ==}
     engines: {node: '>=18'}
@@ -7508,9 +7498,9 @@ packages:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
 
-  '@netlify/build-info@10.5.1':
-    resolution: {integrity: sha512-AQqI6S7bMazA/wYnsuE8Lp95ldeKO5RsYvQEboKAjGV2NiwDqw44Z1n7cKj8OALdp8coTvIKLcbAounx6ERbiA==}
-    engines: {node: '>=18.14.0'}
+  '@netlify/build-info@11.3.1':
+    resolution: {integrity: sha512-VM6QtIRSuaZjz4+LbxoP65GUFzmhY26+P3OeBLOjEMysaCB1gCcGpAzqB5Y5+NuTNvyxQoG93rSpvdOu5Z0WFg==}
+    engines: {node: '>=22.12.0'}
     hasBin: true
 
   '@noble/ciphers@2.1.1':
@@ -12927,6 +12917,9 @@ packages:
   lockfile@1.0.4:
     resolution: {integrity: sha512-cvbTwETRfsFh4nHsL1eGWapU1XFi5Ot9E85sWAwia7Y7EgB7vfqcZhTKZ+l7hCGxSPoushMv5GKhT5PdLv03WA==}
 
+  lockparse@0.5.2:
+    resolution: {integrity: sha512-iu19W86kvrT2MLpvyXoIn/351Rb3PO7v7ljgFRQYj8tGpBRvNO9cZEI8x/7GGN+WN6BbrWpXc5CPrgPUjgX6Iw==}
+
   lodash.debounce@4.0.8:
     resolution: {integrity: sha512-FT1yDzDYEoYWhnSGnpE/4Kj1fLZkDFyqRb7fNt6FdYOSxlUWAtp42Eh6Wb0rGIv/m9Bgo7x4GhQbm5Ys4SG5ow==}
 
@@ -16791,13 +16784,6 @@ snapshots:
       '@smithy/types': 3.7.2
       tslib: 2.8.1
 
-  '@babel/code-frame@7.26.2':
-    dependencies:
-      '@babel/helper-validator-identifier': 7.28.5
-      js-tokens: 4.0.0
-      picocolors: 1.1.1
-    optional: true
-
   '@babel/code-frame@7.29.0':
     dependencies:
       '@babel/helper-validator-identifier': 7.28.5
@@ -17079,11 +17065,11 @@ snapshots:
       cac: 6.7.14
       citty: 0.1.6
 
-  '@bugsnag/browser@8.6.0':
+  '@bugsnag/browser@9.1.0':
     dependencies:
-      '@bugsnag/core': 8.6.0
+      '@bugsnag/core': 9.1.0
 
-  '@bugsnag/core@8.6.0':
+  '@bugsnag/core@9.1.0':
     dependencies:
       '@bugsnag/cuid': 3.2.1
       '@bugsnag/safe-json-stringify': 6.1.0
@@ -17093,14 +17079,14 @@ snapshots:
 
   '@bugsnag/cuid@3.2.1': {}
 
-  '@bugsnag/js@8.6.0':
+  '@bugsnag/js@9.1.0':
     dependencies:
-      '@bugsnag/browser': 8.6.0
-      '@bugsnag/node': 8.6.0
+      '@bugsnag/browser': 9.1.0
+      '@bugsnag/node': 9.1.0
 
-  '@bugsnag/node@8.6.0':
+  '@bugsnag/node@9.1.0':
     dependencies:
-      '@bugsnag/core': 8.6.0
+      '@bugsnag/core': 9.1.0
       byline: 5.0.0
       error-stack-parser: 2.1.4
       iserror: 0.0.2
@@ -18527,8 +18513,6 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@iarna/toml@2.2.5': {}
-
   '@img/colour@1.1.0': {}
 
   '@img/sharp-darwin-arm64@0.35.4':
@@ -18986,15 +18970,16 @@ snapshots:
       '@tybys/wasm-util': 0.10.3
     optional: true
 
-  '@netlify/build-info@10.5.1(patch_hash=d4dab4e515b41a301041eaf8700001b612ab00616fa5837c8a65bcb3ce2df039)':
+  '@netlify/build-info@11.3.1':
     dependencies:
-      '@bugsnag/js': 8.6.0
-      '@iarna/toml': 2.2.5
+      '@bugsnag/js': 9.1.0
       dot-prop: 9.0.0
       find-up: 7.0.0
+      lockparse: 0.5.2
       minimatch: 10.2.5
       read-pkg: 9.0.1
       semver: 7.8.5
+      smol-toml: 1.9.0
       yaml: 2.9.0
       yargs: 17.7.2
 
@@ -24434,6 +24419,8 @@ snapshots:
     dependencies:
       signal-exit: 3.0.7
 
+  lockparse@0.5.2: {}
+
   lodash.debounce@4.0.8: {}
 
   lodash.defaults@4.2.0: {}
@@ -26254,7 +26241,7 @@ snapshots:
       rollup: 4.30.1
       typescript: 5.8.3
     optionalDependencies:
-      '@babel/code-frame': 7.26.2
+      '@babel/code-frame': 7.29.0
 
   rollup@4.30.1:
     dependencies:
