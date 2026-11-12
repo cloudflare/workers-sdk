@@ -9,7 +9,7 @@ import {
 	getCloudflareApiBaseUrl,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { toApiComplianceRegion } from "./utils";
+import { toApiComplianceRegion } from "@cloudflare/workers-utils/compliance";
 import type { ParsedInputSettingsConfig } from "@cloudflare/config";
 import type {
 	ContainerDevOptions,

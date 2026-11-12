@@ -5,6 +5,7 @@ import {
 	type DurableObjectContainerImage,
 	type Exports,
 } from "@cloudflare/workers-utils";
+import { toApiComplianceRegion } from "@cloudflare/workers-utils/compliance";
 import { isParsedUnsafeBinding } from "./schema";
 import type {
 	ParsedInputConfig,
@@ -205,8 +206,7 @@ function convertSettings(
 		result.account_id = settings.accountId;
 	}
 	if (settings.complianceRegion !== undefined) {
-		result.compliance_region =
-			settings.complianceRegion === "fedramp-high" ? "fedramp_high" : "public";
+		result.compliance_region = toApiComplianceRegion(settings.complianceRegion);
 	}
 }
 

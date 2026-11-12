@@ -16,9 +16,10 @@ import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
 	getLocalObservabilityEnabledFromEnv,
-	getZoneFromRoute,
+	getWorkerZone,
 } from "@cloudflare/workers-utils";
 import { createArtifactsLocalDefaultWarner } from "@cloudflare/workers-utils";
+import { toApiComplianceRegion } from "@cloudflare/workers-utils/compliance";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import {
 	buildPublicUrl,
@@ -47,7 +48,6 @@ import { checkForNpmUpdate } from "./update-check";
 import {
 	debuglog,
 	satisfiesMinimumViteVersion,
-	toApiComplianceRegion,
 	withTrailingSlash,
 } from "./utils";
 import type { Bundle } from "./build-output-preview";
@@ -214,32 +214,6 @@ function createRemoteBindingsLogger(logger: vite.Logger): RemoteBindingsLogger {
 			}
 		},
 	};
-}
-
-function getWorkerZone(
-	config: Pick<ParsedInputWorkerConfig, "domains" | "triggers">
-): string | undefined {
-	// Domains are converted to routes before fetch triggers, so this mirrors the
-	// first-route selection used by Wrangler's Miniflare options.
-	const domain = config.domains?.[0];
-	if (domain !== undefined) {
-		return getZoneFromRoute(
-			typeof domain === "string" ? domain : domain.hostname
-		);
-	}
-
-	const fetchTrigger = config.triggers?.find(
-		(trigger) => trigger.type === "fetch"
-	);
-	if (fetchTrigger?.type !== "fetch") {
-		return undefined;
-	}
-
-	return getZoneFromRoute(
-		fetchTrigger.zone?.includes(".")
-			? { pattern: fetchTrigger.pattern, zone_name: fetchTrigger.zone }
-			: fetchTrigger.pattern
-	);
 }
 
 export async function getDevMiniflareOptions(

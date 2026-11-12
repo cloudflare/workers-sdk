@@ -1,12 +1,13 @@
 import { isDeepStrictEqual } from "node:util";
 import { resolveNamedTunnel, startTunnel } from "@cloudflare/workers-utils";
+import { toApiComplianceRegion } from "@cloudflare/workers-utils/compliance";
 import getPort from "get-port";
 import { buildPublicUrl } from "miniflare";
 import colors from "picocolors";
 import encodeQR from "qr";
 import { createLogger, USER_AGENT } from "../auth";
 import { assertIsNotPreview, assertIsPreview } from "../context";
-import { createPlugin, debuglog, toApiComplianceRegion } from "../utils";
+import { createPlugin, debuglog } from "../utils";
 import type { PluginContext } from "../context";
 import type { CloudflareAuth } from "@cloudflare/workers-auth/cf";
 import type { Config, Tunnel } from "@cloudflare/workers-utils";

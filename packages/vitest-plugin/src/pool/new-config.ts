@@ -4,7 +4,7 @@ import {
 	SINGLETON_BINDING_TYPES,
 } from "@cloudflare/config";
 import { createMiniflareExports } from "@cloudflare/containers-shared";
-import { formatZodError, getZoneFromRoute } from "@cloudflare/workers-utils";
+import { formatZodError, getWorkerZone } from "@cloudflare/workers-utils";
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import { Log, LogLevel, resolveLocalBindings } from "miniflare";
 import type {
@@ -13,7 +13,6 @@ import type {
 	ParsedInputWorkerConfig,
 } from "@cloudflare/config";
 import type { ContainerDevRuntimeOptions } from "@cloudflare/containers-shared";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";
 
 export const NEW_CONFIG_FILENAME = "cloudflare.config.ts";
@@ -31,19 +30,6 @@ export interface LoadedNewConfig {
 	localEnv: Record<string, string>;
 	/** Values from the selected `.dev.vars` file, if there is one. */
 	devVars: Record<string, string> | undefined;
-}
-
-/**
- * Converts the compliance region of a `cloudflare.config.ts` to the form that
- * Cloudflare's API and the Containers tooling take.
- *
- * @param region The config's `complianceRegion`.
- * @returns The same region in `ComplianceConfig` form.
- */
-export function toApiComplianceRegion(
-	region: LoadedNewConfig["settings"]["complianceRegion"]
-): ComplianceConfig["compliance_region"] {
-	return region === "fedramp-high" ? "fedramp_high" : region;
 }
 
 /**
@@ -272,38 +258,4 @@ function withoutUndefined<T extends object>(value: T): Partial<T> {
 	return Object.fromEntries(
 		Object.entries(value).filter(([, entry]) => entry !== undefined)
 	) as Partial<T>;
-}
-
-/**
- * Gets the zone of the Worker's first route, as Wrangler configs get it. Copied
- * from `@cloudflare/vite-plugin` (`src/miniflare-options.ts`); keep the two in
- * sync.
- *
- * @param config The Worker's domains and triggers.
- * @returns The zone, if the Worker has a route.
- */
-function getWorkerZone(
-	config: Pick<LoadedNewConfig["worker"], "domains" | "triggers">
-): string | undefined {
-	// Domains are converted to routes before fetch triggers, so this mirrors the
-	// first-route selection used by Wrangler's Miniflare options.
-	const domain = config.domains?.[0];
-	if (domain !== undefined) {
-		return getZoneFromRoute(
-			typeof domain === "string" ? domain : domain.hostname
-		);
-	}
-
-	const fetchTrigger = config.triggers?.find(
-		(trigger) => trigger.type === "fetch"
-	);
-	if (fetchTrigger?.type !== "fetch") {
-		return undefined;
-	}
-
-	return getZoneFromRoute(
-		fetchTrigger.zone?.includes(".")
-			? { pattern: fetchTrigger.pattern, zone_name: fetchTrigger.zone }
-			: fetchTrigger.pattern
-	);
 }
