@@ -561,6 +561,56 @@ describe("metrics", () => {
 				expect(std.debug).toContain('argsCombination":"search"');
 			});
 
+			// See https://github.com/cloudflare/workers-sdk/issues/12193
+			describe("args sanitization corner cases", () => {
+				it("should include args provided with the `--arg=value` syntax", async ({
+					expect,
+				}) => {
+					mockMetricRequest();
+
+					await runWrangler("docs arg --env=staging");
+
+					const started = getCommandStartedProperties(std.debug);
+					expect(started.argsUsed).toEqual(["env"]);
+					expect(started.argsCombination).toEqual("env");
+				});
+
+				it("should not include default args whose name merely starts with the letter of a short alias", async ({
+					expect,
+				}) => {
+					mockMetricRequest();
+
+					// `-e` is the alias for `--env`, but `--experimental-provision` and
+					// `--experimental-auto-create` (which have default values) also
+					// start with "e" and so are wrongly reported as provided.
+					await runWrangler("docs arg -e staging");
+
+					const started = getCommandStartedProperties(std.debug);
+					expect(started.argsUsed).toContain("env");
+					expect(started.argsUsed).not.toContain("xProvision");
+					expect(started.argsUsed).not.toContain("xAutoCreate");
+				});
+
+				it("should include args provided via a short alias that is not the arg's first letter", async ({
+					expect,
+				}) => {
+					vi.stubEnv("CLOUDFLARE_API_TOKEN", "some-api-token");
+					vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "some-account-id");
+					mockMetricRequest();
+
+					// `-y` is the alias for `--skip-confirmation` on `d1 delete`.
+					// The command itself fails as there is no D1 API mocked, but the
+					// "wrangler command started" event is sent before the handler runs.
+					await runWrangler("d1 delete my-db -y").catch(() => {});
+
+					const started = getCommandStartedProperties(std.debug);
+					expect(started.sanitizedCommand).toEqual("d1 delete");
+					expect(started.argsUsed).toContain("skipConfirmation");
+					// `skipConfirmation` is in the global allow-list so its value is kept.
+					expect(started.sanitizedArgs).toEqual({ skipConfirmation: true });
+				});
+			});
+
 			it("should mark as non-interactive if running in non-interactive environment", async ({
 				expect,
 			}) => {
@@ -1136,6 +1186,24 @@ function mockSkillsApiRequest() {
 	);
 
 	return requests;
+}
+
+/**
+ * Finds the properties of the "wrangler command started" event in the debug log.
+ */
+function getCommandStartedProperties(output: string): Record<string, unknown> {
+	const prefix = "Metrics dispatcher: Posting data ";
+	const line = output
+		.split("\n")
+		.find(
+			(l) => l.startsWith(prefix) && l.includes('"wrangler command started"')
+		);
+	if (line === undefined) {
+		throw new Error(
+			`No "wrangler command started" event found in output:\n${output}`
+		);
+	}
+	return JSON.parse(line.slice(prefix.length)).properties;
 }
 
 /**
