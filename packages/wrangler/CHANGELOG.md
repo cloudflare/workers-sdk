@@ -1,5 +1,32 @@
 # wrangler
 
+## 4.161.0
+
+### Minor Changes
+
+- [#16840](https://github.com/cloudflare/workers-sdk/pull/16840) [`8b2a363`](https://github.com/cloudflare/workers-sdk/commit/8b2a363327c06b6dc821066879b708764eb97bfa) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Write source maps in Build Output with `sources` relative to each source map file
+
+  This changes the experimental Build Output that `wrangler build --experimental-cf-build-output` and `cf-wrangler build` write. Their source maps were prepared as if for upload, with `sources` relative to the project root. For Workers that Wrangler does not bundle, leading `../` segments were also removed, which lost the location of some files. They now point from each source map's location in `bundle/` to the original files, like the source maps the Vite plugin writes.
+
+### Patch Changes
+
+- [#16833](https://github.com/cloudflare/workers-sdk/pull/16833) [`5f539b5`](https://github.com/cloudflare/workers-sdk/commit/5f539b5cbe73272db7e287a8b119dad1aa991c9c) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Name `cf` commands and `cloudflare.config.ts` settings in remote bindings errors from `cf-wrangler`
+
+  When `cf` runs development through the `cf-wrangler` delegate and remote bindings cannot be authenticated, the error now tells you to run `cf auth whoami`, `cf auth logout` and `cf auth login` instead of the Wrangler commands, and the Cloudflare Access hint names cf. The Flagship error for a binding whose app has not been created now names the binding's `id` setting instead of `app_id`, and suggests `cf flagship apps create`. `wrangler dev` still names Wrangler's commands and settings.
+
+- [#16527](https://github.com/cloudflare/workers-sdk/pull/16527) [`dc47e6d`](https://github.com/cloudflare/workers-sdk/commit/dc47e6d2a061748f47dc9cfba66ed3cffe944754) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Normalize relative redirect pathnames consistently across Pages and Workers assets
+
+  Relative `_redirects` targets now use shared pathname normalization after placeholder replacement, keeping repeated separators within the site's path. Explicit external targets (including scheme-less URLs such as `//example.com/path`), query values and fragments retain their contents.
+
+- [#16559](https://github.com/cloudflare/workers-sdk/pull/16559) [`575d136`](https://github.com/cloudflare/workers-sdk/commit/575d1366aa4c3a83cca69253bc5247e7fa1ab002) Thanks [@edmundhung](https://github.com/edmundhung)! - Update `@netlify/build-info` to 11.3.1
+
+- [#16838](https://github.com/cloudflare/workers-sdk/pull/16838) [`3626ee8`](https://github.com/cloudflare/workers-sdk/commit/3626ee899522161513ff130e3ab2ad0897d5b2c1) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Keep the remote bindings session when you remove the last remote binding
+
+  When you removed the last remote binding while `wrangler dev` was running, Wrangler restarted the remote bindings session with credentials that ignored `--profile` and the `account_id` in your Wrangler config. So it could use a different account or ask you to choose one. Wrangler now keeps the existing session, and starts a new one with your current credentials when you add a remote binding again.
+
+- Updated dependencies [[`dc47e6d`](https://github.com/cloudflare/workers-sdk/commit/dc47e6d2a061748f47dc9cfba66ed3cffe944754)]:
+  - miniflare@5.20261110.2-beta
+
 ## 4.160.1
 
 ### Patch Changes

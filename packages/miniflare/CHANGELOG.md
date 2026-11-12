@@ -1,5 +1,13 @@
 # miniflare
 
+## 5.20261110.2-beta
+
+### Patch Changes
+
+- [#16527](https://github.com/cloudflare/workers-sdk/pull/16527) [`dc47e6d`](https://github.com/cloudflare/workers-sdk/commit/dc47e6d2a061748f47dc9cfba66ed3cffe944754) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Normalize relative redirect pathnames consistently across Pages and Workers assets
+
+  Relative `_redirects` targets now use shared pathname normalization after placeholder replacement, keeping repeated separators within the site's path. Explicit external targets (including scheme-less URLs such as `//example.com/path`), query values and fragments retain their contents.
+
 ## 5.20261110.1-beta
 
 ### Minor Changes

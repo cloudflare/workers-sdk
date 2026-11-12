@@ -1,5 +1,20 @@
 # @cloudflare/autoconfig
 
+## 0.12.0
+
+### Minor Changes
+
+- [#16559](https://github.com/cloudflare/workers-sdk/pull/16559) [`575d136`](https://github.com/cloudflare/workers-sdk/commit/575d1366aa4c3a83cca69253bc5247e7fa1ab002) Thanks [@edmundhung](https://github.com/edmundhung)! - Support SolidStart on `cf` from version 2.0.0
+
+  Autoconfig now sets up SolidStart 2 projects for `cf` with the Cloudflare Vite plugin. Projects configured for Wrangler keep using Nitro.
+
+### Patch Changes
+
+- [#16559](https://github.com/cloudflare/workers-sdk/pull/16559) [`575d136`](https://github.com/cloudflare/workers-sdk/commit/575d1366aa4c3a83cca69253bc5247e7fa1ab002) Thanks [@edmundhung](https://github.com/edmundhung)! - Update `@netlify/build-info` to 11.3.1
+
+- Updated dependencies []:
+  - @cloudflare/workers-utils@0.53.1
+
 ## 0.11.1
 
 ### Patch Changes

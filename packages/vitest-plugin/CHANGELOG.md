@@ -1,5 +1,23 @@
 # @cloudflare/vitest-plugin
 
+## 1.8.1
+
+### Patch Changes
+
+- [#16833](https://github.com/cloudflare/workers-sdk/pull/16833) [`5f539b5`](https://github.com/cloudflare/workers-sdk/commit/5f539b5cbe73272db7e287a8b119dad1aa991c9c) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Name `cf` commands and settings in remote bindings errors
+
+  When remote bindings could not authenticate, the error told you to run `wrangler whoami`, `wrangler logout` and `wrangler login`. It now names `cf auth whoami`, `cf auth logout` and `cf auth login`. When a Flagship binding without an `id` needed to run remotely, the error named Wrangler's `app_id` setting and suggested `wrangler flagship apps create`. It now names `id` and suggests `cf flagship apps create`.
+
+  For the Vitest plugin, this applies to projects that load `cloudflare.config.ts`. Projects that use a Wrangler configuration file still see the Wrangler commands.
+
+- [#16834](https://github.com/cloudflare/workers-sdk/pull/16834) [`8e57331`](https://github.com/cloudflare/workers-sdk/commit/8e5733149463960e596d3de1c394b4cc7728e0cc) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix test files never finishing when a socket read rejects after a Worker handler has answered
+
+  Previously, if a handler finished while a socket was still being read, for example a database client's connection, the read's rejection could leave `vitest run` waiting forever after the tests passed. Vitest now reports the unhandled error and the run ends.
+
+- Updated dependencies [[`8b2a363`](https://github.com/cloudflare/workers-sdk/commit/8b2a363327c06b6dc821066879b708764eb97bfa), [`5f539b5`](https://github.com/cloudflare/workers-sdk/commit/5f539b5cbe73272db7e287a8b119dad1aa991c9c), [`dc47e6d`](https://github.com/cloudflare/workers-sdk/commit/dc47e6d2a061748f47dc9cfba66ed3cffe944754), [`575d136`](https://github.com/cloudflare/workers-sdk/commit/575d1366aa4c3a83cca69253bc5247e7fa1ab002), [`3626ee8`](https://github.com/cloudflare/workers-sdk/commit/3626ee899522161513ff130e3ab2ad0897d5b2c1)]:
+  - wrangler@4.161.0
+  - miniflare@5.20261110.2-beta
+
 ## 1.8.0
 
 ### Minor Changes
