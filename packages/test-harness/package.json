@@ -1,7 +1,7 @@
 {
 	"name": "@cloudflare/test-harness",
 	"version": "0.0.0",
-	"description": "Run a project's Build Output in tests, with Wrangler's createTestHarness API. This is not yet stable enough for external use — APIs may change without notice.",
+	"description": "Run a project's production build in tests. This is not yet stable enough for external use — APIs may change without notice.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/test-harness#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"

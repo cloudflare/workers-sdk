@@ -17,7 +17,7 @@ import type {
 	InlineWorkerConfig,
 	TestHarnessOptions,
 	WorkerInput,
-} from "./test-harness";
+} from "./types";
 import type {
 	BuildOutput,
 	BuildOutputWorker,
@@ -274,7 +274,6 @@ function getInlineWorker(
 	config: InlineWorkerConfig
 ): WorkerSource {
 	return {
-		// Wrangler's harness also resolves an inline Worker's files from `root`
 		projectDir: root,
 		rootConfig: { buildContext: {} },
 		worker: { config, bundleDir: undefined, assetsDir: undefined },
@@ -294,8 +293,8 @@ function getInlineWorker(
 function getWorkerZone(
 	config: Pick<WorkerSource["worker"]["config"], "domains" | "triggers">
 ): string | undefined {
-	// Domains are converted to routes before fetch triggers, so this mirrors the
-	// first-route selection used by Wrangler's Miniflare options.
+	// Domains are converted to routes before fetch triggers, so the first
+	// domain takes precedence
 	const domain = config.domains?.[0];
 	if (domain !== undefined) {
 		return getZoneFromRoute(
@@ -379,8 +378,8 @@ async function prepareContainers(
 		containerOptions: plan.containerOptions,
 		settings,
 	};
-	// As Wrangler skips an unchanged preparation, so listen(), reset() and
-	// update() don't pull the same images again
+	// Skip an unchanged preparation, so listen(), reset() and update() don't
+	// pull the same images again
 	const preparationKey = JSON.stringify(preparation);
 	if (!preparedContainerImages.has(preparationKey)) {
 		await prepareContainerImages({

@@ -482,7 +482,7 @@ describe("createTestHarness()", () => {
 		);
 	});
 
-	it("runs Build Output with a complete manifest and a source map, as Wrangler writes it", async ({
+	it("runs Build Output with a complete manifest and a source map", async ({
 		expect,
 	}) => {
 		await writeRootConfig(".", undefined, {
@@ -492,7 +492,7 @@ describe("createTestHarness()", () => {
 		await writeWorkerConfig({
 			root: ".",
 			config: {
-				name: "wrangler-built-worker",
+				name: "complete-manifest-worker",
 				compatibilityDate: "2026-06-01",
 			},
 			manifest: {
@@ -507,7 +507,7 @@ describe("createTestHarness()", () => {
 		const bundleDir = getWorkerBundleDir(".");
 		await seed({
 			[path.join(bundleDir, "index.js")]: [
-				`export default { fetch() { return new Response("Hello from Wrangler's build"); } };`,
+				`export default { fetch() { return new Response("Hello from a complete manifest"); } };`,
 				"//# sourceMappingURL=index.js.map",
 			].join("\n"),
 			[path.join(bundleDir, "index.js.map")]: JSON.stringify({
@@ -520,11 +520,9 @@ describe("createTestHarness()", () => {
 
 		await harness.listen();
 		expect(await (await harness.fetch("/")).text()).toBe(
-			"Hello from Wrangler's build"
+			"Hello from a complete manifest"
 		);
 	});
-
-	// Ported from Wrangler's e2e/createTestHarness.test.ts
 
 	it("starts with default server options", async ({ expect, onTestFailed }) => {
 		await writeBuild(".", {
@@ -1327,8 +1325,7 @@ describe("createTestHarness()", () => {
 				INSERT INTO settings (key, value) VALUES ('greeting', 'Hello D1');
 			`,
 		});
-		// Wrangler's test sets these as migrations_dir, migrations_pattern and
-		// migrations_table
+		// A nested layout, such as Drizzle's
 		const migrationsOptions = {
 			dir: "migrations",
 			pattern: "migrations/*/migration.sql",

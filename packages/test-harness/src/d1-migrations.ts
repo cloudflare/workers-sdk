@@ -1,4 +1,3 @@
-// Copied from Wrangler's src/d1/constants.ts and src/d1/migrations/helpers.ts
 import fs from "node:fs";
 import path from "node:path";
 import {

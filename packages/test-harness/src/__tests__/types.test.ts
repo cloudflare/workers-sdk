@@ -1,7 +1,7 @@
 import { bindings, defineConfig } from "@cloudflare/config";
 import { describe, expectTypeOf, it } from "vitest";
 import { createTestHarness } from "../index";
-import type { AnyEnv } from "../test-harness";
+import type { AnyEnv } from "../types";
 import type { CloudflareWorkersModule } from "@cloudflare/workers-types";
 
 interface RpcWorker extends CloudflareWorkersModule.WorkerEntrypoint {
@@ -40,7 +40,7 @@ describe("getWorker() types", () => {
 		expectTypeOf<Export>().toHaveProperty("getMessage");
 	});
 
-	it("keeps Wrangler's Env and untyped handles", () => {
+	it("keeps a given Env and untyped handles", () => {
 		const server = createTestHarness();
 
 		const typed = server.getWorker<{ GREETING: string }>();
@@ -51,7 +51,7 @@ describe("getWorker() types", () => {
 		expectTypeOf<
 			Awaited<ReturnType<typeof untyped.getEnv>>
 		>().toEqualTypeOf<AnyEnv>();
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Wrangler's harness takes `any` too
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Untyped tests may pass `any`
 		const anyWorker = server.getWorker<any>();
 		expectTypeOf<Awaited<ReturnType<typeof anyWorker.getEnv>>>().toBeAny();
 	});

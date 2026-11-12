@@ -1,6 +1,6 @@
 # `@cloudflare/test-harness`
 
-Runs a project's Build Output in tests, with the API of Wrangler's `createTestHarness`.
+Runs a project's Build Output in tests.
 
 ```ts
 import { createTestHarness } from "@cloudflare/test-harness";
