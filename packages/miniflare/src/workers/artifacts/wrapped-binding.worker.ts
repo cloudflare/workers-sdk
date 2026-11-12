@@ -3,7 +3,11 @@
  * isolate, so an `ArtifactsError` is thrown there and never crosses an RPC
  * boundary, where workerd would log it as an uncaught exception.
  */
-import type { LocalArtifactsNamespace, Outcome } from "./binding.worker";
+import type {
+	LocalArtifactsNamespace,
+	Outcome,
+	RepoFile,
+} from "./binding.worker";
 
 interface Env {
 	namespace: Pick<
@@ -21,7 +25,17 @@ type RepoHandle = Extract<
 	{ ok: true }
 >["value"];
 
-type Repo = { [K in keyof RepoHandle]: Unwrapped<RepoHandle[K]> } & Disposable;
+type FileReader<F> = F extends (
+	...args: infer A
+) => Promise<Outcome<RepoFile | null>>
+	? (...args: A) => Promise<Blob | null>
+	: never;
+
+type Repo = {
+	[K in keyof RepoHandle]: K extends "readBlob" | "readFile"
+		? FileReader<RepoHandle[K]>
+		: Unwrapped<RepoHandle[K]>;
+} & Disposable;
 
 type Failure = Extract<Outcome<unknown>, { ok: false }>["error"];
 
@@ -45,6 +59,15 @@ function unwrap<T>(result: Outcome<T>): T {
 	throw new ArtifactsError(result.error);
 }
 
+/** Buffers a streamed file into the `Blob` the public binding returns. */
+async function toBlob(file: RepoFile | null): Promise<Blob | null> {
+	if (file === null) {
+		return null;
+	}
+	const bytes = await new Response(file.body).arrayBuffer();
+	return new Blob([bytes], { type: file.type });
+}
+
 function wrapRepo(handle: RepoHandle, dispose: (() => void) | undefined): Repo {
 	// A plain object keeps the methods enumerable, like the RPC stub it replaces.
 	return {
@@ -54,10 +77,10 @@ function wrapRepo(handle: RepoHandle, dispose: (() => void) | undefined): Repo {
 		listTokens: async () => unwrap(await handle.listTokens()),
 		revokeToken: async (tokenOrId) =>
 			unwrap(await handle.revokeToken(tokenOrId)),
-		readBlob: async (hash) => unwrap(await handle.readBlob(hash)),
+		readBlob: async (hash) => toBlob(unwrap(await handle.readBlob(hash))),
 		readTree: async (hash) => unwrap(await handle.readTree(hash)),
 		readCommit: async (hash) => unwrap(await handle.readCommit(hash)),
-		readFile: async (args) => unwrap(await handle.readFile(args)),
+		readFile: async (args) => toBlob(unwrap(await handle.readFile(args))),
 		log: async (options) => unwrap(await handle.log(options)),
 		fork: async (name, options) => unwrap(await handle.fork(name, options)),
 		[Symbol.dispose]() {

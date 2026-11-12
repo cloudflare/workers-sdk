@@ -151,7 +151,7 @@ returning the response. The sidecar uses native `git http-backend` for Git smart
 HTTP rather than reproducing Git's pack protocol. All native Git commands
 override repository-local hook configuration. The HTTP backend instead points
 `core.hooksPath` at a private directory with one `pre-receive` hook, which
-rejects pushes containing a blob over the 32 MB per-file limit; reads of a
+rejects pushes containing a blob over the 32 MiB per-file limit; reads of a
 larger blob written outside the binding fail with `MEMORY_LIMIT`.
 A failed deletion leaves an inaccessible, persisted tombstone, so retrying
 `delete()` or creating the same name can finish native Git cleanup even after a

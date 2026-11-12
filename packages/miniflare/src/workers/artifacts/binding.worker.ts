@@ -161,10 +161,13 @@ interface LocalArtifactsRepo {
 	): Promise<Outcome<CreateTokenResult>>;
 	listTokens(): Promise<Outcome<{ total: number; tokens: TokenInfo[] }>>;
 	revokeToken(tokenOrId: string): Promise<Outcome<boolean>>;
-	readBlob(hash: string): Promise<Outcome<Blob | null>>;
+	readBlob(hash: string): Promise<Outcome<RepoFile | null>>;
 	readTree(hash: string): Promise<Outcome<TreeEntry[] | null>>;
 	readCommit(hash: string): Promise<Outcome<CommitMetadata | null>>;
-	readFile(args: { ref: string; path: string }): Promise<Outcome<Blob | null>>;
+	readFile(args: {
+		ref: string;
+		path: string;
+	}): Promise<Outcome<RepoFile | null>>;
 	log(options?: RepositoryLogOptions): Promise<Outcome<CommitMetadata[]>>;
 	fork(
 		name: string,
@@ -174,6 +177,22 @@ interface LocalArtifactsRepo {
 
 interface BackendBlob {
 	data: string;
+}
+
+/**
+ * File contents as sent over RPC. A `Blob` is serialized whole, and workerd
+ * caps a serialized RPC value at 32 MiB, so a file at Artifacts' 32 MiB limit
+ * would not fit. A stream is not subject to that cap; the wrapped binding turns
+ * it back into a `Blob` in the caller's isolate.
+ */
+export interface RepoFile {
+	body: ReadableStream<Uint8Array>;
+	/** The `Blob` type; empty for `readBlob()`, as for a typeless `Blob`. */
+	type: string;
+}
+
+function repoFile(bytes: Uint8Array<ArrayBuffer>, type = ""): RepoFile {
+	return { body: new Blob([bytes]).stream(), type };
 }
 
 type ArtifactsErrorCode =
@@ -774,7 +793,7 @@ function createRepoHandle(
 	const readFile = async (args: {
 		ref: string;
 		path: string;
-	}): Promise<Blob | null> => {
+	}): Promise<RepoFile | null> => {
 		if (!args?.ref) {
 			throw new ArtifactsError("INVALID_INPUT", "Invalid ref: ref required.");
 		}
@@ -794,7 +813,7 @@ function createRepoHandle(
 			return null;
 		}
 		const bytes = decodeBase64(result.data);
-		return new Blob([bytes], { type: contentType(args.path, bytes) });
+		return repoFile(bytes, contentType(args.path, bytes));
 	};
 
 	return {
@@ -812,7 +831,7 @@ function createRepoHandle(
 					action: "readBlob",
 					hash,
 				});
-				return result === null ? null : new Blob([decodeBase64(result.data)]);
+				return result === null ? null : repoFile(decodeBase64(result.data));
 			}),
 		readTree: (hash: string) =>
 			outcome(async () => {
@@ -1402,8 +1421,15 @@ function contentType(path: string, bytes: Uint8Array): string {
 	}
 }
 
+/** workerd implements `Uint8Array.fromBase64()`; TypeScript's lib doesn't declare it yet. */
+const Base64Bytes = Uint8Array as unknown as {
+	fromBase64(value: string): Uint8Array<ArrayBuffer>;
+};
+
 function decodeBase64(value: string): Uint8Array<ArrayBuffer> {
-	return Uint8Array.from(atob(value), (character) => character.charCodeAt(0));
+	// Native decoding takes milliseconds for a 32 MiB file, where mapping each
+	// `atob()` character takes seconds.
+	return Base64Bytes.fromBase64(value);
 }
 
 function encodeCursor(offset: number): string {

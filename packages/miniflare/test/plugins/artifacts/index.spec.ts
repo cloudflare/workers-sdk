@@ -20,6 +20,7 @@ import { test, vi } from "vitest";
 import {
 	GitClient,
 	gitEnvironment,
+	MAX_BLOB_BYTES,
 	withRepositoryCreationLock,
 } from "../../../src/plugins/artifacts/git-client";
 import {
@@ -46,11 +47,14 @@ const exec = promisify(execFile);
 const SCRIPT = `
 export default {
   async fetch(request, env) {
-    const { method, name, args = [] } = await request.json();
+    const { method, name, args = [], sizeOnly } = await request.json();
     try {
       const target = name === undefined ? env.REPOS : await env.REPOS.get(name);
       if (method === "keys") return Response.json(Object.keys(target));
       const result = await target[method](...args);
+      if (result instanceof Blob && sizeOnly) {
+        return Response.json({ size: result.size });
+      }
       if (result instanceof Blob) {
         return Response.json({ bytes: [...new Uint8Array(await result.arrayBuffer())], type: result.type });
       }
@@ -92,12 +96,28 @@ function rpcRequest(
 	mf: Miniflare,
 	method: string,
 	args: unknown[] = [],
-	name?: string
+	name?: string,
+	sizeOnly = false
 ): Promise<Response> {
 	return mf.dispatchFetch("http://localhost", {
 		method: "POST",
-		body: JSON.stringify({ method, args, name }),
+		body: JSON.stringify({ method, args, name, sizeOnly }),
 	});
+}
+
+/** Reads a Blob through the binding and returns only its size. */
+async function rpcBlobSize(
+	mf: Miniflare,
+	method: string,
+	args: unknown[],
+	name: string
+): Promise<number> {
+	const response = await rpcRequest(mf, method, args, name, true);
+	const result = (await response.json()) as { size: number; error?: string };
+	if (!response.ok) {
+		throw new Error(result.error);
+	}
+	return result.size;
 }
 
 async function rpc(
@@ -1768,7 +1788,7 @@ test("artifacts: the Git port survives a restart with the same persistence", asy
 	await response.body?.cancel();
 });
 
-test("artifacts: pushes reject files over 32 MB and reads report MEMORY_LIMIT", async ({
+test("artifacts: pushes reject files over 32 MiB and reads report MEMORY_LIMIT", async ({
 	expect,
 }) => {
 	const root = await useTmp();
@@ -1778,8 +1798,14 @@ test("artifacts: pushes reject files over 32 MB and reads report MEMORY_LIMIT", 
 	const source = await useTmp();
 	await git(["init", "--initial-branch=main", source]);
 	// Zeros keep the pack small; the limit applies to the blob's size.
-	await writeFile(path.join(source, "large.bin"), new Uint8Array(32_000_001));
-	await writeFile(path.join(source, "limit.bin"), new Uint8Array(32_000_000));
+	await writeFile(
+		path.join(source, "large.bin"),
+		new Uint8Array(MAX_BLOB_BYTES + 1)
+	);
+	await writeFile(
+		path.join(source, "limit.bin"),
+		new Uint8Array(MAX_BLOB_BYTES)
+	);
 	await git(["add", "limit.bin"], source);
 	await git(["commit", "-m", "at the limit"], source);
 	const push = (ref: string) =>
@@ -1797,13 +1823,22 @@ test("artifacts: pushes reject files over 32 MB and reads report MEMORY_LIMIT", 
 	await git(["add", "large.bin"], source);
 	await git(["commit", "-m", "over the limit"], source);
 	await expect(push("HEAD:refs/heads/large")).rejects.toThrow(
-		/larger than 32 MB/
+		/larger than 32 MiB/
 	);
 	expect(
 		(await rpc(mf, "log", [{ ref: "main" }], "repo")).map(
 			(commit: { message: string }) => commit.message
 		)
 	).toEqual(["at the limit"]);
+	// A file at the limit still fits through the binding's RPC.
+	expect(
+		await rpcBlobSize(
+			mf,
+			"readFile",
+			[{ ref: "main", path: "limit.bin" }],
+			"repo"
+		)
+	).toBe(MAX_BLOB_BYTES);
 	expect(await rpc(mf, "readFile", [{ ref: "large", path: "x" }], "repo")).toBe(
 		null
 	);

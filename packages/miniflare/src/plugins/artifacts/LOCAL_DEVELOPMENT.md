@@ -87,6 +87,6 @@ A local binding does not contact Cloudflare for repository operations. **Explici
 - If Git asks for a username and password, use any username and the repository token as the password. If Git reports unauthorized, check the repository, scope, expiry, and revocation; do not use a Cloudflare or GitHub account password.
 - If startup reports `Address already in use`, the dev or inspector port may be occupied. Pass `--port=0 --inspector-port=0` and use the printed `Ready on` URL.
 - If a Git URL stops responding after restart, another process probably holds its port. Get the new `remote` from the binding or the startup log, and update your clone with `git remote set-url origin <remote>`.
-- As in production, a push that contains a file larger than 32 MB is rejected, and reading such a file throws an `ArtifactsError` with code `MEMORY_LIMIT`.
+- As in production, a push that contains a file larger than 32 MiB is rejected, and reading such a file throws an `ArtifactsError` with code `MEMORY_LIMIT`.
 - `listTokens()` lists active tokens first, then revoked and expired tokens with their `state`. Each repository keeps its 100 most recent inactive tokens. `revokeToken()` returns `false` for an expired token.
 - Local development is not a replica of production placement or infrastructure. The local Git endpoint is HTTP on loopback only, and local state and tokens do not transfer to a remote namespace.

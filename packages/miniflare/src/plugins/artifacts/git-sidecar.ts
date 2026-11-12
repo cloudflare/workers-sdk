@@ -147,7 +147,7 @@ while read -r old new ref; do
 	[ "$new" = "$zero" ] && continue
 	large=$(git rev-list --objects --filter=blob:limit=${MAX_BLOB_BYTES + 1} --filter-print-omitted "$new" --not --all | sed -n 's/^~//p' | head -n 1)
 	if [ -n "$large" ]; then
-		echo "Artifacts does not accept files larger than 32 MB ($ref contains blob $large)." >&2
+		echo "Artifacts does not accept files larger than 32 MiB ($ref contains blob $large)." >&2
 		exit 1
 	fi
 done

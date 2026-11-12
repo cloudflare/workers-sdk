@@ -238,10 +238,10 @@ export interface GitTreeEntry {
 type GitObjectType = "blob" | "tree" | "commit" | "tag";
 
 /**
- * Artifacts' documented per-file limit (32 MB). Larger blobs cannot be pushed,
- * and reads stay below workerd's 32 MiB RPC serialization limit.
+ * Artifacts' documented per-file limit (32 MiB). Larger blobs cannot be
+ * pushed, and reading one reports `MEMORY_LIMIT`.
  */
-export const MAX_BLOB_BYTES = 32_000_000;
+export const MAX_BLOB_BYTES = 32 * 1024 * 1024;
 
 /** A Git object too large to return through the binding (`MEMORY_LIMIT`). */
 export class GitObjectTooLargeError extends Error {
