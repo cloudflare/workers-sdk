@@ -1,4 +1,38 @@
-import type { D1Migration } from "../shared/d1";
+// No Node.js imports here: this module also runs inside workerd.
+import type { D1Database } from "@cloudflare/workers-types/experimental";
+
+// Can't use an `interface` here as we expect this type to be passed via
+// Miniflare's `bindings` option, which requires all values to be JSON-typed.
+export type D1Migration = {
+	name: string;
+	queries: string[];
+};
+
+/**
+ * Default name of the table that records applied migrations. Wrangler and cf
+ * use the same table, so a project can switch between tools.
+ */
+export const DEFAULT_D1_MIGRATIONS_TABLE = "d1_migrations";
+
+function escapeId(id: string): string {
+	return `"${id.replace(/"/g, '""')}"`;
+}
+
+/**
+ * Returns the query that creates the migrations table if it doesn't exist.
+ *
+ * @param migrationsTableName Name of the migrations table.
+ * @returns The `CREATE TABLE IF NOT EXISTS` query.
+ */
+export function getCreateD1MigrationsTableQuery(
+	migrationsTableName: string
+): string {
+	return `CREATE TABLE IF NOT EXISTS ${escapeId(migrationsTableName)} (
+		id         INTEGER PRIMARY KEY AUTOINCREMENT,
+		name       TEXT UNIQUE,
+		applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+	);`;
+}
 
 function isD1Database(v: unknown): v is D1Database {
 	return (
@@ -29,10 +63,20 @@ function isD1Migrations(v: unknown): v is D1Migration[] {
 	return Array.isArray(v) && v.every(isD1Migration);
 }
 
+/**
+ * Applies the `migrations` that haven't been applied to `db` yet, recording
+ * each one in the migrations table.
+ *
+ * @param db Database to apply the migrations to.
+ * @param migrations Migrations in the order to apply them, for example from
+ * `readD1Migrations()`.
+ * @param migrationsTableName Table that records applied migrations. Defaults
+ * to {@link DEFAULT_D1_MIGRATIONS_TABLE}.
+ */
 export async function applyD1Migrations(
 	db: D1Database,
 	migrations: D1Migration[],
-	migrationsTableName = "d1_migrations"
+	migrationsTableName = DEFAULT_D1_MIGRATIONS_TABLE
 ) {
 	if (!isD1Database(db)) {
 		throw new TypeError(
@@ -51,16 +95,9 @@ export async function applyD1Migrations(
 		);
 	}
 
-	const escapeId = (id: string) => `"${id.replace(/"/g, '""')}"`;
 	const escapedTableName = escapeId(migrationsTableName);
 
-	// Create migrations table if it doesn't exist
-	const schema = `CREATE TABLE IF NOT EXISTS ${escapedTableName} (
-		id         INTEGER PRIMARY KEY AUTOINCREMENT,
-		name       TEXT UNIQUE,
-		applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
-	);`;
-	await db.prepare(schema).run();
+	await db.prepare(getCreateD1MigrationsTableQuery(migrationsTableName)).run();
 
 	// Find applied migrations
 	const appliedMigrationNamesResult = await db

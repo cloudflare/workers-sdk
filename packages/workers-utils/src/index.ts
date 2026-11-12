@@ -223,9 +223,12 @@ export {
 	compareMigrationPaths,
 	getD1MigrationFiles,
 	normalizeRelativePath,
+	readD1Migrations,
 } from "./d1-migrations";
 export type {
 	D1MigrationFile,
 	GetD1MigrationFilesOptions,
+	ReadD1MigrationsOptions,
 } from "./d1-migrations";
+export type { D1Migration } from "./apply-d1-migrations";
 export { normalizeSqlLineEndings, splitSqlQuery } from "./d1-splitter";

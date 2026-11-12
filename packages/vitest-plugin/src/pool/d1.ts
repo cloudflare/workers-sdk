@@ -1,7 +1,9 @@
-import fs from "node:fs";
-import { getD1MigrationFiles, splitSqlQuery } from "@cloudflare/workers-utils";
+import { readD1Migrations as readD1MigrationsShared } from "@cloudflare/workers-utils";
 import type { D1Migration } from "../shared/d1";
 
+// The public types are declared here, rather than re-exported, because the
+// published declarations can't import from `@cloudflare/workers-utils`, which
+// is bundled. Passing them to the shared function keeps them in sync.
 export type ReadD1MigrationsOptions = {
 	projectPath?: string;
 	migrationsDir?: string;
@@ -17,44 +19,10 @@ export type ReadD1MigrationsOptions = {
  * Wrangler does, including nested layouts such as
  * `0001_init/migration.sql` via `migrationsPattern`.
  */
-export async function readD1Migrations(
+export function readD1Migrations(
 	migrationsPathOrOptions: string | ReadD1MigrationsOptions
 ): Promise<D1Migration[]> {
-	const files = listD1MigrationFiles(migrationsPathOrOptions);
-	return files.map(({ name, filePath }) => {
-		const migration = fs.readFileSync(filePath, "utf8");
-		const queries = splitSqlQuery(migration);
-		return { name, queries };
-	});
-}
-
-function listD1MigrationFiles(
-	migrationsPathOrOptions: string | ReadD1MigrationsOptions
-) {
-	if (typeof migrationsPathOrOptions === "string") {
-		// Preserve the historical error when the path is missing or not a directory.
-		fs.readdirSync(migrationsPathOrOptions);
-		return getD1MigrationFiles({
-			projectPath: migrationsPathOrOptions,
-			migrationsDir: ".",
-			migrationsPattern: "*.sql",
-		});
-	}
-
-	if (
-		migrationsPathOrOptions !== null &&
-		typeof migrationsPathOrOptions === "object"
-	) {
-		return getD1MigrationFiles({
-			projectPath: migrationsPathOrOptions.projectPath ?? process.cwd(),
-			migrationsDir: migrationsPathOrOptions.migrationsDir,
-			migrationsPattern: migrationsPathOrOptions.migrationsPattern,
-		});
-	}
-
-	throw new TypeError(
-		"Failed to execute 'readD1Migrations': parameter 1 is not of type 'string' or 'object'."
-	);
+	return readD1MigrationsShared(migrationsPathOrOptions);
 }
 
 export type { D1Migration };

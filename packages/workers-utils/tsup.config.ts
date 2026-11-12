@@ -6,8 +6,12 @@ export default defineConfig(() => [
 		treeshake: true,
 		keepNames: true,
 		// Keep these exports free of the Node-only banner used below: the browser
-		// export, and the metrics registry bundled into Workers without nodejs_compat.
-		entry: ["src/browser.ts", "src/prometheus-metrics.ts"],
+		// export, and the modules bundled into Workers without nodejs_compat.
+		entry: [
+			"src/browser.ts",
+			"src/prometheus-metrics.ts",
+			"src/apply-d1-migrations.ts",
+		],
 		platform: "node",
 		format: "esm",
 		dts: true,
