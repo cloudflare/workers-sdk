@@ -4,8 +4,12 @@ import { EXTERNAL_DEPENDENCIES } from "./scripts/deps.ts";
 export default defineConfig([
 	{
 		// Keep these exports free of Node.js shims: the browser
-		// export, and the metrics registry bundled into Workers without nodejs_compat.
-		entry: ["src/browser.ts", "src/prometheus-metrics.ts"],
+		// export, and the modules bundled into Workers without nodejs_compat.
+		entry: [
+			"src/browser.ts",
+			"src/prometheus-metrics.ts",
+			"src/apply-d1-migrations.ts",
+		],
 		clean: true,
 		platform: "node",
 		outputOptions: { keepNames: true },
