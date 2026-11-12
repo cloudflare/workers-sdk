@@ -17,7 +17,7 @@ Each Worker is a project with its own `cloudflare.config.ts`, built by the Cloud
 ## What this fixture covers
 
 - Running Workers from several projects' Build Output in one harness.
-- A test-only Worker that replaces a platform binding through `env`.
+- A test-only Worker that replaces a platform binding through `envOverrides`.
 - Typing each Worker from its config module with `server.getWorker<typeof import("./cloudflare.config")>()`.
 - Setup with [Vitest](https://vitest.dev/) and with [Playwright](https://playwright.dev/).
 - Route dispatch across multiple Workers.

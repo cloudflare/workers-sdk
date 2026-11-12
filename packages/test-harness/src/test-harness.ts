@@ -450,12 +450,12 @@ export type WorkerInput =
 			 * harness. As in `cloudflare.config.ts`, entries set to `false`, `null`,
 			 * or `undefined` are omitted, so they remove the Worker's binding.
 			 */
-			env?: Record<string, WorkerBinding | false | null | undefined>;
+			envOverrides?: Record<string, WorkerBinding | false | null | undefined>;
 	  }
 	| {
 			/**
 			 * Inline config for a test-only Worker, such as a mock for a binding in
-			 * `env`. Its files resolve from the harness's `root`.
+			 * `envOverrides`. Its files resolve from the harness's `root`.
 			 */
 			config: InlineWorkerConfig;
 	  };
@@ -672,7 +672,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		workerName: string,
 		classNameOrBindingName: string
 	) {
-		// The bindings the Worker runs with, after the test's `env`
+		// The bindings the Worker runs with, after `envOverrides`
 		const workerConfig = getResolvedWorker(session, workerName).options.config;
 
 		// Build Output declares Durable Object classes in `exports`, rather than

@@ -143,7 +143,7 @@ async function resolveWorker(
 		"config" in input
 			? getInlineWorker(root, input.config)
 			: await readWorker(root, input);
-	const testBindings = "config" in input ? undefined : input.env;
+	const testBindings = "config" in input ? undefined : input.envOverrides;
 
 	// Secrets come from the files for the build's mode, as in `vite preview`
 	const mode = rootConfig.buildContext.mode ?? "production";

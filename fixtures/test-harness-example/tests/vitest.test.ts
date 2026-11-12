@@ -16,7 +16,7 @@ const server = createTestHarness({
 	workers: [
 		{
 			buildOutput: "./workers/web",
-			env: { BROWSER: bindings.worker({ worker: "mock-browser" }) },
+			envOverrides: { BROWSER: bindings.worker({ worker: "mock-browser" }) },
 		},
 		{ buildOutput: "./workers/api" },
 		{ buildOutput: "./workers/mock-browser" },

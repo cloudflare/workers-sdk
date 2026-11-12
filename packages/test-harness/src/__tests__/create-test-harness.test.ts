@@ -276,7 +276,7 @@ describe("createTestHarness()", () => {
 			workers: [
 				{
 					buildOutput: "app",
-					env: {
+					envOverrides: {
 						API_KEY: bindings.text("from-test"),
 						GREETING: bindings.text("Hi"),
 						EXTRA: bindings.json({ nested: true }),
@@ -330,7 +330,7 @@ describe("createTestHarness()", () => {
 			workers: [
 				{
 					buildOutput: "frontend",
-					env: { API: bindings.worker({ worker: "Admin" }) },
+					envOverrides: { API: bindings.worker({ worker: "Admin" }) },
 				},
 				{ buildOutput: "backend", name: "Admin" },
 			],
@@ -375,13 +375,13 @@ describe("createTestHarness()", () => {
 			workers: [
 				{
 					buildOutput: "app",
-					env: { AI: bindings.text("mock-ai"), R2: false },
+					envOverrides: { AI: bindings.text("mock-ai"), R2: false },
 				},
 			],
 		});
 
 		await harness.listen();
-		// The test's `env` replaces bindings before the session starts, so a
+		// `envOverrides` replaces bindings before the session starts, so a
 		// replaced or removed remote binding never reaches it
 		expect(maybeStartOrUpdateRemoteProxySession).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -582,7 +582,7 @@ describe("createTestHarness()", () => {
 			...options,
 			workers: options.workers.map((worker) => ({
 				...worker,
-				env: { GREETING: bindings.text("updated") },
+				envOverrides: { GREETING: bindings.text("updated") },
 			})),
 		}));
 
@@ -736,12 +736,12 @@ describe("createTestHarness()", () => {
 			workers: [
 				{
 					buildOutput: ".",
-					env: { SECRET: bindings.text("api-secret") },
+					envOverrides: { SECRET: bindings.text("api-secret") },
 				},
 				{
 					buildOutput: ".",
 					name: "admin-worker",
-					env: { SECRET: bindings.text("admin-secret") },
+					envOverrides: { SECRET: bindings.text("admin-secret") },
 				},
 			],
 		});
@@ -988,7 +988,7 @@ describe("createTestHarness()", () => {
 		expect(rows).toEqual([{ value: "app" }]);
 	});
 
-	it("exposes the storage of the Durable Object that the test's env binds", async ({
+	it("exposes the storage of the Durable Object that envOverrides binds", async ({
 		expect,
 	}) => {
 		const durableObject = (className: string) => `
@@ -1034,7 +1034,7 @@ describe("createTestHarness()", () => {
 			workers: [
 				{
 					buildOutput: "app",
-					env: {
+					envOverrides: {
 						COUNTER: bindings.durableObject({
 							worker: "mock",
 							exportName: "Mock",
@@ -1521,7 +1521,7 @@ describe("createTestHarness()", () => {
 			workers: [
 				{
 					buildOutput: ".",
-					env: {
+					envOverrides: {
 						AI: bindings.worker({ worker: "mock-ai" }),
 					},
 				},
@@ -1632,7 +1632,7 @@ describe("createTestHarness()", () => {
 			workers: [
 				{
 					buildOutput: ".",
-					env: { AI: bindings.worker({ worker: "missing-ai" }) },
+					envOverrides: { AI: bindings.worker({ worker: "missing-ai" }) },
 				},
 			],
 		});
@@ -2010,7 +2010,7 @@ describe("createTestHarness()", () => {
 			workers: [
 				{
 					buildOutput: ".",
-					env: {
+					envOverrides: {
 						CONFIG_VAR: bindings.text("from-override"),
 						ADDED_VAR: bindings.text("from-override"),
 						NULL_VAR: bindings.json(null),
@@ -2036,7 +2036,7 @@ describe("createTestHarness()", () => {
 			workers: [
 				{
 					buildOutput: ".",
-					env: {
+					envOverrides: {
 						CONFIG_VAR: bindings.text("from-updated-override"),
 						ADDED_VAR: bindings.text("from-updated-override"),
 						NULL_VAR: bindings.json(null),
