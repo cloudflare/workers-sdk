@@ -79,14 +79,20 @@ if (auth) {
 			assert(maybeRemoteKvId, `Failed to create remote kv ${remoteKvName}`);
 			remoteKvId = maybeRemoteKvId;
 
-			execSync(
-				`pnpm wrangler kv key put test-key remote-kv-value --namespace-id=${remoteKvId} --remote`,
-				execOptions
+			// Newly created namespaces may not be available to the KV write API yet.
+			await vi.waitFor(
+				() => {
+					execSync(
+						`pnpm wrangler kv key put test-key remote-kv-value --namespace-id=${remoteKvId} --remote`,
+						{ ...execOptions, timeout: 10_000 }
+					);
+				},
+				{ timeout: 15_000, interval: 1_000 }
 			);
 
 			rmSync("./.tmp", { recursive: true, force: true });
 			mkdirSync("./.tmp");
-		}, 35_000);
+		}, 50_000);
 
 		afterAll(() => {
 			try {
