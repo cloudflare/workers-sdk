@@ -2,7 +2,11 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { isDeepStrictEqual } from "node:util";
 import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
-import { configFileName, getDockerPath } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	createArtifactsLocalDefaultWarner,
+	getDockerPath,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import {
 	buildPublicUrl,
@@ -266,6 +270,9 @@ export class LocalRuntimeController extends RuntimeController {
 
 	#containerImagePreparationState?: ContainerImagePreparationState;
 
+	// Warns once per dev session, not on every config reload.
+	#warnForArtifactsLocalDefault = createArtifactsLocalDefaultWarner("wrangler");
+
 	// Used to store the information and abort handle for the
 	// current container that is being built
 	containerBeingBuilt?: {
@@ -359,6 +366,19 @@ export class LocalRuntimeController extends RuntimeController {
 			const configBundle = await convertToConfigBundle(data);
 
 			if (data.config.dev?.remote !== false) {
+				this.#warnForArtifactsLocalDefault(
+					{
+						id: data.config.config ?? data.config.name ?? "",
+						bindings: Object.entries(configBundle.bindings ?? {}).flatMap(
+							([name, binding]) =>
+								binding.type === "artifacts"
+									? [{ name, remote: binding.remote }]
+									: []
+						),
+					},
+					(message) => logger.warn(message)
+				);
+
 				// note: remote bindings use (transitively) LocalRuntimeController, so we need to import
 				// from the module lazily in order to avoid circular dependency issues
 				const { maybeStartOrUpdateRemoteProxySession, pickRemoteBindings } =

@@ -12,12 +12,12 @@ describe("resolveBindingRemote", () => {
 		remoteBindingsDisabled: boolean;
 		expected: boolean;
 	}>([
-		// Remote by default with local opt-in.
+		// Artifacts is local by default, like every local-and-remote binding.
 		{
 			type: "artifacts",
 			remote: undefined,
 			remoteBindingsDisabled: false,
-			expected: true,
+			expected: false,
 		},
 		{
 			type: "artifacts",
@@ -198,46 +198,9 @@ describe("validateBindingRemoteSetting", () => {
 			expect(() =>
 				validateBindingRemoteSetting("flagship", undefined, warn)
 			).not.toThrow();
-			expect(warn).not.toHaveBeenCalled();
-		});
-	});
-
-	describe("remote-default bindings with local opt-in", () => {
-		it("warns when `remote` is omitted, naming the binding", ({ expect }) => {
-			validateBindingRemoteSetting("artifacts", undefined, warn, {
-				binding: "REPOS",
-			});
-			expect(warn).toHaveBeenCalledWith(
-				"Artifacts binding REPOS uses the deployed resource. Set `remote: false` to use the local simulator, or `remote: true` to silence this warning."
-			);
-		});
-
-		it("names `dev: { remote }` for cloudflare.config.ts bindings", ({
-			expect,
-		}) => {
-			validateBindingRemoteSetting("artifacts", undefined, warn, {
-				binding: "REPOS",
-				configFormat: "cloudflare-config",
-			});
-			expect(warn).toHaveBeenCalledWith(
-				"Artifacts binding REPOS uses the deployed resource. Set `dev: { remote: false }` to use the local simulator, or `dev: { remote: true }` to silence this warning."
-			);
-		});
-
-		it("does not warn when remote bindings are disabled", ({ expect }) => {
-			validateBindingRemoteSetting("artifacts", undefined, warn, {
-				binding: "REPOS",
-				remoteBindingsDisabled: true,
-			});
-			expect(warn).not.toHaveBeenCalled();
-		});
-
-		it("does not throw or warn for an explicit setting", ({ expect }) => {
-			for (const remote of [true, false]) {
-				expect(() =>
-					validateBindingRemoteSetting("artifacts", remote, warn)
-				).not.toThrow();
-			}
+			expect(() =>
+				validateBindingRemoteSetting("artifacts", undefined, warn)
+			).not.toThrow();
 			expect(warn).not.toHaveBeenCalled();
 		});
 	});

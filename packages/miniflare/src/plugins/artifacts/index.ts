@@ -29,10 +29,7 @@ type ArtifactsBinding = Extract<MiniflareBinding, { type: "artifacts" }>;
 type ArtifactsEntry = [name: string, binding: ArtifactsBinding];
 
 // Artifacts routes like every other binding: remote only when `dev.remote` is
-// `true` and the Worker has a remote proxy connection. Its deployed-by-default
-// rule is resolved before Miniflare, by `resolveBindingRemote()` in
-// `@cloudflare/workers-utils` for Wrangler configs and by
-// `resolveLocalBindings()` for `cloudflare.config.ts`.
+// `true` and the Worker has a remote proxy connection.
 
 function getLocalNamespaceNames(
 	bindings: ArtifactsEntry[],

@@ -74,25 +74,25 @@ describe("resolveLocalBindings", () => {
 	});
 
 	test.for([
-		{ remote: undefined, remoteBindings: true, resolved: true },
-		{ remote: undefined, remoteBindings: false, resolved: false },
-		{ remote: false, remoteBindings: true, resolved: false },
-		{ remote: true, remoteBindings: true, resolved: true },
-		// Miniflare uses the simulator without a remote proxy connection.
-		{ remote: true, remoteBindings: false, resolved: true },
+		{ remote: undefined, remoteBindings: true },
+		{ remote: undefined, remoteBindings: false },
+		{ remote: false, remoteBindings: true },
+		{ remote: true, remoteBindings: true },
 	])(
-		"resolves Artifacts dev.remote=$remote with remoteBindings=$remoteBindings",
-		({ remote, remoteBindings, resolved }, { expect }) => {
+		"passes Artifacts dev.remote=$remote through with remoteBindings=$remoteBindings",
+		({ remote, remoteBindings }, { expect }) => {
 			const binding = {
 				type: "artifacts" as const,
 				namespace: "examples",
 				...(remote === undefined ? {} : { dev: { remote } }),
 			};
-			expect(
-				resolveLocalBindings({ REPOS: binding }, options({ remoteBindings }))
-			).toEqual({
-				REPOS: { ...binding, dev: { remote: resolved } },
+			// Miniflare routes remotely only for `dev.remote: true`, so an omitted
+			// `remote` uses the local simulator.
+			const resolveOptions = options({ remoteBindings });
+			expect(resolveLocalBindings({ REPOS: binding }, resolveOptions)).toEqual({
+				REPOS: binding,
 			});
+			expect(resolveOptions.logger.warn).not.toHaveBeenCalled();
 		}
 	);
 });

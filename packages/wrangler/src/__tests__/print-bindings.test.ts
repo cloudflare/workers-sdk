@@ -177,7 +177,7 @@ describe("printBindings -- Flagship bindings", () => {
 
 describe("printBindings -- Artifacts bindings", () => {
 	it.for([
-		{ label: "default", remote: undefined, mode: "remote" },
+		{ label: "default", remote: undefined, mode: "local" },
 		{ label: "explicit local", remote: false, mode: "local" },
 		{ label: "explicit remote", remote: true, mode: "remote" },
 	])(

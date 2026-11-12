@@ -41,7 +41,7 @@ describe("convertV4MiniflareOptions", () => {
 		}
 	);
 
-	test("Artifacts uses a connected remote proxy unless local is selected", ({
+	test("Artifacts uses a remote proxy only when given a connection string", ({
 		expect,
 	}) => {
 		const remoteProxyConnectionString = new URL(
@@ -51,30 +51,20 @@ describe("convertV4MiniflareOptions", () => {
 			name: "worker",
 			script: "export default {};",
 			artifacts: {
-				DEFAULT: { namespace: "default", remoteProxyConnectionString },
-				LOCAL: {
-					namespace: "local",
-					remote: false,
-					remoteProxyConnectionString,
-				},
-				// `wrangler dev --local` passes no connection string.
-				OFFLINE: { namespace: "offline" },
+				// Wrangler passes a connection string only for `remote: true`.
+				REMOTE: { namespace: "remote", remoteProxyConnectionString },
+				LOCAL: { namespace: "local" },
 			},
 		});
 		const env = converted.workers[0].config.env;
-		expect(env?.DEFAULT).toEqual({
+		expect(env?.REMOTE).toEqual({
 			type: "artifacts",
-			namespace: "default",
+			namespace: "remote",
 			dev: { remote: true },
 		});
 		expect(env?.LOCAL).toEqual({
 			type: "artifacts",
 			namespace: "local",
-			dev: { remote: false },
-		});
-		expect(env?.OFFLINE).toEqual({
-			type: "artifacts",
-			namespace: "offline",
 			dev: { remote: false },
 		});
 		expect(converted.workers[0].dev?.remoteProxyConnectionString).toBe(

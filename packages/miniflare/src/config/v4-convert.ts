@@ -815,13 +815,7 @@ function addProductBindings(
 		env[name] = {
 			type: "artifacts",
 			namespace: binding.namespace,
-			// Without a remote proxy connection (for example `wrangler dev
-			// --local`) the deployed resource is unreachable, so use the simulator.
-			dev: {
-				remote:
-					binding.remote !== false &&
-					isRemote(binding.remoteProxyConnectionString),
-			},
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const name of Object.keys(worker.workerLoaders ?? {})) {
