@@ -31,10 +31,6 @@ import type { WorkerOptions } from "miniflare";
 
 type Manifest = NonNullable<WorkerOptions["config"]["manifest"]>;
 type BuildOutputInput = Exclude<WorkerInput, { config: InlineWorkerConfig }>;
-type TestValues = Pick<
-	BuildOutputInput,
-	"vars" | "secrets" | "bindingOverrides"
->;
 
 /** A Worker read from Build Output or inline config */
 type WorkerSource = {
@@ -149,7 +145,7 @@ async function resolveWorker(
 		"config" in input
 			? getInlineWorker(root, input.config)
 			: await readWorker(root, input);
-	const testValues: TestValues = "config" in input ? {} : input;
+	const testBindings = "config" in input ? undefined : input.env;
 
 	// Secrets come from the files for the build's mode, as in `vite preview`
 	const mode = rootConfig.buildContext.mode ?? "production";
@@ -163,22 +159,17 @@ async function resolveWorker(
 		exports: _exports,
 		...config
 	} = worker.config;
-	// Test values replace configured bindings before anything uses them, so an
+	// Test bindings replace configured ones before anything uses them, so an
 	// overridden remote binding doesn't start a remote session
-	const testEnv = { ...configuredEnv };
-	for (const [name, value] of Object.entries(testValues.vars ?? {})) {
-		testEnv[name] =
-			typeof value === "string"
-				? { type: "text", value }
-				: { type: "json", value };
-	}
-	for (const [name, value] of Object.entries(testValues.secrets ?? {})) {
-		testEnv[name] = { type: "text", value };
-	}
-	for (const [name, workerName] of Object.entries(
-		testValues.bindingOverrides ?? {}
-	)) {
-		testEnv[name] = { type: "worker", worker: workerName };
+	const testEnv: NonNullable<typeof configuredEnv> = {};
+	for (const [name, binding] of Object.entries({
+		...configuredEnv,
+		...testBindings,
+	})) {
+		// As in `cloudflare.config.ts`, these omit the binding
+		if (binding !== false && binding !== null && binding !== undefined) {
+			testEnv[name] = binding;
+		}
 	}
 	const env = resolveLocalBindings(testEnv, {
 		workerName: config.name,

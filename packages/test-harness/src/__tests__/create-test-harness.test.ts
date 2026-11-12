@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import net from "node:net";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { bindings } from "@cloudflare/config";
 import { isDockerRunning } from "@cloudflare/containers-shared";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
@@ -275,8 +276,11 @@ describe("createTestHarness()", () => {
 			workers: [
 				{
 					buildOutput: "app",
-					secrets: { API_KEY: "from-test" },
-					vars: { GREETING: "Hi", EXTRA: { nested: true } },
+					env: {
+						API_KEY: bindings.text("from-test"),
+						GREETING: bindings.text("Hi"),
+						EXTRA: bindings.json({ nested: true }),
+					},
 				},
 			],
 		});
@@ -324,7 +328,10 @@ describe("createTestHarness()", () => {
 
 		const overridden = useTestHarness({
 			workers: [
-				{ buildOutput: "frontend", bindingOverrides: { API: "Admin" } },
+				{
+					buildOutput: "frontend",
+					env: { API: bindings.worker({ worker: "Admin" }) },
+				},
 				{ buildOutput: "backend", name: "Admin" },
 			],
 		});
@@ -423,7 +430,10 @@ describe("createTestHarness()", () => {
 		});
 		const harness = useTestHarness({
 			workers: [
-				{ buildOutput: "app", bindingOverrides: { AI: "mock-ai" } },
+				{
+					buildOutput: "app",
+					env: { AI: bindings.worker({ worker: "mock-ai" }) },
+				},
 				{ buildOutput: "app", name: "mock-ai" },
 			],
 		});
@@ -703,7 +713,7 @@ describe("createTestHarness()", () => {
 			...options,
 			workers: options.workers.map((worker) => ({
 				...worker,
-				vars: { GREETING: "updated" },
+				env: { GREETING: bindings.text("updated") },
 			})),
 		}));
 
@@ -857,12 +867,12 @@ describe("createTestHarness()", () => {
 			workers: [
 				{
 					buildOutput: ".",
-					secrets: { SECRET: "api-secret" },
+					env: { SECRET: bindings.text("api-secret") },
 				},
 				{
 					buildOutput: ".",
 					name: "admin-worker",
-					secrets: { SECRET: "admin-secret" },
+					env: { SECRET: bindings.text("admin-secret") },
 				},
 			],
 		});
@@ -1621,8 +1631,8 @@ describe("createTestHarness()", () => {
 			workers: [
 				{
 					buildOutput: ".",
-					bindingOverrides: {
-						AI: "mock-ai",
+					env: {
+						AI: bindings.worker({ worker: "mock-ai" }),
 					},
 				},
 				{
@@ -1729,7 +1739,12 @@ describe("createTestHarness()", () => {
 		});
 
 		const server = createTestHarness({
-			workers: [{ buildOutput: ".", bindingOverrides: { AI: "missing-ai" } }],
+			workers: [
+				{
+					buildOutput: ".",
+					env: { AI: bindings.worker({ worker: "missing-ai" }) },
+				},
+			],
 		});
 		onTestFinished(server.close);
 
@@ -2119,7 +2134,7 @@ describe("createTestHarness()", () => {
 		});
 	});
 
-	it("overrides vars and secrets for build output workers", async ({
+	it("overrides and removes bindings for build output workers", async ({
 		expect,
 	}) => {
 		await writeBuild(".", {
@@ -2155,13 +2170,11 @@ describe("createTestHarness()", () => {
 			workers: [
 				{
 					buildOutput: ".",
-					vars: {
-						CONFIG_VAR: "from-override",
-						ADDED_VAR: "from-override",
-						NULL_VAR: null,
-					},
-					secrets: {
-						API_TOKEN: "from-override",
+					env: {
+						CONFIG_VAR: bindings.text("from-override"),
+						ADDED_VAR: bindings.text("from-override"),
+						NULL_VAR: bindings.json(null),
+						API_TOKEN: bindings.text("from-override"),
 					},
 				},
 			],
@@ -2183,23 +2196,22 @@ describe("createTestHarness()", () => {
 			workers: [
 				{
 					buildOutput: ".",
-					vars: {
-						CONFIG_VAR: "from-updated-override",
-						ADDED_VAR: "from-updated-override",
-						NULL_VAR: null,
-					},
-					secrets: {
-						API_TOKEN: "from-updated-override",
+					env: {
+						CONFIG_VAR: bindings.text("from-updated-override"),
+						ADDED_VAR: bindings.text("from-updated-override"),
+						NULL_VAR: bindings.json(null),
+						API_TOKEN: bindings.text("from-updated-override"),
+						// As in `cloudflare.config.ts`, removes the binding
+						SECRET_FROM_FILE: false,
 					},
 				},
 			],
 		});
 
 		const updatedResponse = await server.fetch("/");
-		await expect(updatedResponse.json()).resolves.toEqual({
+		await expect(updatedResponse.json()).resolves.toStrictEqual({
 			CONFIG_VAR: "from-updated-override",
 			API_TOKEN: "from-updated-override",
-			SECRET_FROM_FILE: "from-dev-vars",
 			ADDED_VAR: "from-updated-override",
 			NULL_VAR: null,
 		});

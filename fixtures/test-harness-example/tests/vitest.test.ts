@@ -1,4 +1,5 @@
 import { createTestHarness } from "@cloudflare/test-harness";
+import { bindings } from "cf/config";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import {
@@ -17,7 +18,7 @@ const server = createTestHarness({
 	workers: [
 		{
 			buildOutput: "./workers/web",
-			bindingOverrides: { BROWSER: "mock-browser" },
+			env: { BROWSER: bindings.worker({ worker: "mock-browser" }) },
 		},
 		{ buildOutput: "./workers/api" },
 		mockBrowser,

@@ -52,7 +52,6 @@ import type {
 	DurableObjectStorageOptions,
 	DispatchFetch,
 	EmailHandlerResult,
-	Json,
 	MiniflareOptions,
 	RequestInfo,
 	Response,
@@ -445,26 +444,24 @@ export type WorkerInput =
 			 */
 			name?: string;
 			/**
-			 * Test-only vars that override vars from the Worker's config.
+			 * Test-only bindings that replace the Worker's bindings of the same
+			 * name, such as `bindings.text("test")` for a secret, or
+			 * `bindings.worker({ worker: "mock-ai" })` for a Worker in this test
+			 * harness. As in `cloudflare.config.ts`, entries set to `false`, `null`,
+			 * or `undefined` are omitted, so they remove the Worker's binding.
 			 */
-			vars?: Record<string, Json>;
-			/**
-			 * Test-only secrets that override values loaded from `.dev.vars` and `.env` files.
-			 */
-			secrets?: Record<string, string>;
-			/**
-			 * Test-only service binding overrides. Keys are binding names in this
-			 * Worker's environment, and values are Worker names in this test harness.
-			 */
-			bindingOverrides?: Record<string, string>;
+			env?: Record<string, WorkerBinding | false | null | undefined>;
 	  }
 	| {
 			/**
-			 * Inline config for a test-only Worker, such as a mock for
-			 * `bindingOverrides`. Its files resolve from the harness's `root`.
+			 * Inline config for a test-only Worker, such as a mock for a binding in
+			 * `env`. Its files resolve from the harness's `root`.
 			 */
 			config: InlineWorkerConfig;
 	  };
+
+/** A binding in the shape of `env` in a Build Output's `worker.config.json` */
+type WorkerBinding = NonNullable<ResolvedOutputWorkerConfig["env"]>[string];
 
 /**
  * A Worker config in the shape of a Build Output's `worker.config.json`, whose
