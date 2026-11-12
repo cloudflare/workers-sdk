@@ -27,11 +27,10 @@ import {
 	toErrorClass,
 } from "./errors";
 import { generatePKCECodes, RECOMMENDED_STATE_LENGTH } from "./pkce";
-import { readStoredAuthState, type OAuthFlowState } from "./state";
-import type { AuthConfigStorage } from "./config-file/auth";
 import type { OAuthFlowContext } from "./context";
 import type { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import type { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
+import type { OAuthFlowState } from "./state";
 import type { AccessToken, RefreshToken } from "./state";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
@@ -143,7 +142,7 @@ export async function getAuthURL(
  * @param logger Logger used for token-exchange diagnostics.
  * @param isNonInteractiveOrCI Whether interactive Access login is unavailable.
  * @param clientId OAuth client identifier for the consuming CLI.
- * @param storage Storage containing the current refresh token.
+ * @param storedRefreshToken Refresh token from the caller's latest credential snapshot.
  * @param cliDisplayName Consumer name used in actionable Access errors.
  * @returns The refreshed OAuth access context.
  */
@@ -151,15 +150,9 @@ export async function exchangeRefreshTokenForAccessToken(
 	logger: OAuthFlowContext["logger"],
 	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"],
 	clientId: string,
-	storage: AuthConfigStorage,
+	storedRefreshToken: RefreshToken | undefined,
 	cliDisplayName: string
 ): Promise<AccessContext> {
-	// Read the refresh token fresh from disk on every call so we always pick up
-	// the latest rotation written by a sibling Wrangler process.
-	const storedRefreshToken = readStoredAuthState({
-		warningLogger: logger,
-		storage,
-	}).refreshToken;
 	if (!storedRefreshToken) {
 		logger.warn("No refresh token is present.");
 	}
