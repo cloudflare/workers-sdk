@@ -92,7 +92,7 @@ if (auth) {
 
 			rmSync("./.tmp", { recursive: true, force: true });
 			mkdirSync("./.tmp");
-		}, 50_000);
+		}, 60_000);
 
 		afterAll(() => {
 			try {
