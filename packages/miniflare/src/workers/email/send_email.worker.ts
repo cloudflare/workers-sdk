@@ -343,9 +343,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			const messageId = synthesizeMessageId(extractEmailAddress(builder.from));
 			const id = messageIdToStorageId(messageId);
 
-			function toDisplay(
-				addrs: (string | EmailAddress)[]
-			): string[] {
+			function toDisplay(addrs: (string | EmailAddress)[]): string[] {
 				return addrs.map(formatEmailAddress);
 			}
 
@@ -369,14 +367,9 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 						worker: this.env.SEND_EMAIL_OWNER_WORKER,
 						from: formatEmailAddress(builder.from),
 						to: toDisplay(toRecipients),
-						cc:
-							ccRecipients.length > 0
-								? toDisplay(ccRecipients)
-								: undefined,
+						cc: ccRecipients.length > 0 ? toDisplay(ccRecipients) : undefined,
 						bcc:
-							bccRecipients.length > 0
-								? toDisplay(bccRecipients)
-								: undefined,
+							bccRecipients.length > 0 ? toDisplay(bccRecipients) : undefined,
 						replyTo: builder.replyTo
 							? formatEmailAddress(builder.replyTo)
 							: undefined,
