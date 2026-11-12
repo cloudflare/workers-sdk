@@ -783,5 +783,7 @@ function ensureFeature(
 
 export { cloudflarePool } from "./pool";
 export { cloudflareTest } from "./plugin";
-export * from "./d1";
+export { readD1Migrations } from "@cloudflare/workers-utils/d1-migrations";
+export type { ReadD1MigrationsOptions } from "@cloudflare/workers-utils/d1-migrations";
+export type { D1Migration } from "@cloudflare/workers-utils/apply-d1-migrations";
 export * from "./pages";

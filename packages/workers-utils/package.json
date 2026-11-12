@@ -59,6 +59,10 @@
 			"types": "./dist/sourcemap.d.mts",
 			"import": "./dist/sourcemap.mjs"
 		},
+		"./d1-migrations": {
+			"import": "./dist/d1-migrations.mjs",
+			"types": "./dist/d1-migrations.d.mts"
+		},
 		"./errors": {
 			"import": "./dist/errors.mjs",
 			"types": "./dist/errors.d.mts"

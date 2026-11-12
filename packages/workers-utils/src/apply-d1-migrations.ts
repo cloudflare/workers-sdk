@@ -34,11 +34,12 @@ export function getCreateD1MigrationsTableQuery(
 	);`;
 }
 
+// Checks methods, not `constructor.name`, so Miniflare's Node.js proxy for a
+// D1 binding (from `getD1Database()`) is accepted too.
 function isD1Database(v: unknown): v is D1Database {
 	return (
 		typeof v === "object" &&
 		v !== null &&
-		v.constructor.name === "D1Database" &&
 		"prepare" in v &&
 		typeof v.prepare === "function" &&
 		"batch" in v &&
