@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { Minimatch } from "minimatch";
 import { splitSqlQuery } from "./d1-splitter";
+import { UserError } from "./errors";
 import type { D1Migration } from "./apply-d1-migrations";
 
 const DEFAULT_MIGRATIONS_DIR = "./migrations";
@@ -53,58 +54,38 @@ export function getD1MigrationFiles(
 }
 
 export type ReadD1MigrationsOptions = {
+	/** Defaults to the current working directory. */
 	projectPath?: string;
 	migrationsDir?: string;
 	migrationsPattern?: string;
 };
 
 /**
- * Reads D1 migration files, ordered by migration number. Each migration has
- * its contents split into an array of SQL queries.
+ * Reads the D1 migration files found by {@link getD1MigrationFiles}, splitting
+ * each one into SQL queries.
  *
- * Pass a directory path to keep the historical behaviour of reading top-level
- * `*.sql` files in that directory. Pass options to discover files the same way
- * Wrangler does, including nested layouts such as
- * `0001_init/migration.sql` via `migrationsPattern`.
+ * Throws when the migrations directory doesn't exist, so a typo in
+ * `migrationsDir` doesn't silently apply no migrations.
  */
 export async function readD1Migrations(
-	migrationsPathOrOptions: string | ReadD1MigrationsOptions
+	options: ReadD1MigrationsOptions
 ): Promise<D1Migration[]> {
-	const files = listD1MigrationFiles(migrationsPathOrOptions);
+	const projectPath = options.projectPath ?? process.cwd();
+	const migrationsPath = path.resolve(
+		projectPath,
+		options.migrationsDir ?? DEFAULT_MIGRATIONS_DIR
+	);
+	if (!fs.statSync(migrationsPath, { throwIfNoEntry: false })?.isDirectory()) {
+		throw new UserError(`No migrations present at ${migrationsPath}.`, {
+			telemetryMessage: "d1 migrations missing migrations directory",
+		});
+	}
+	const files = getD1MigrationFiles({ ...options, projectPath });
 	return files.map(({ name, filePath }) => {
 		const migration = fs.readFileSync(filePath, "utf8");
 		const queries = splitSqlQuery(migration);
 		return { name, queries };
 	});
-}
-
-function listD1MigrationFiles(
-	migrationsPathOrOptions: string | ReadD1MigrationsOptions
-) {
-	if (typeof migrationsPathOrOptions === "string") {
-		// Preserve the historical error when the path is missing or not a directory.
-		fs.readdirSync(migrationsPathOrOptions);
-		return getD1MigrationFiles({
-			projectPath: migrationsPathOrOptions,
-			migrationsDir: ".",
-			migrationsPattern: "*.sql",
-		});
-	}
-
-	if (
-		migrationsPathOrOptions !== null &&
-		typeof migrationsPathOrOptions === "object"
-	) {
-		return getD1MigrationFiles({
-			projectPath: migrationsPathOrOptions.projectPath ?? process.cwd(),
-			migrationsDir: migrationsPathOrOptions.migrationsDir,
-			migrationsPattern: migrationsPathOrOptions.migrationsPattern,
-		});
-	}
-
-	throw new TypeError(
-		"Failed to execute 'readD1Migrations': parameter 1 is not of type 'string' or 'object'."
-	);
 }
 
 /**
