@@ -484,3 +484,106 @@ test.for(["assets-only", "dev-only-worker"])(
 		).toBeUndefined();
 	}
 );
+
+// Frameworks such as TanStack Start set `builder.sharedPlugins` and build the
+// client before the Worker. A module that both environments import, such as a
+// component, starts a web worker that is only ever run in the browser.
+function createClientWebWorkerFixture() {
+	createFixture();
+	fs.writeFileSync(
+		"codec.wasm",
+		Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00])
+	);
+	fs.writeFileSync(
+		"image.worker.ts",
+		`const wasmUrl = new URL("./codec.wasm", import.meta.url);
+		self.onmessage = async () => {
+			const response = await fetch(wasmUrl);
+			self.postMessage(response.status);
+		};`
+	);
+	fs.writeFileSync(
+		"image-tools.ts",
+		`export function renderImageTools() {
+			return "<h1>Image tools</h1>";
+		}
+		export function startImageWorker() {
+			return new Worker(new URL("./image.worker.ts", import.meta.url), {
+				type: "module",
+			});
+		}`
+	);
+	fs.writeFileSync(
+		"client.ts",
+		`import { renderImageTools, startImageWorker } from "./image-tools";
+		document.body.innerHTML = renderImageTools();
+		startImageWorker();`
+	);
+	fs.writeFileSync(
+		"index.html",
+		`<script type="module" src="/client.ts"></script>`
+	);
+	fs.writeFileSync(
+		"worker.ts",
+		`import { renderImageTools } from "./image-tools";
+		export default {
+			fetch() {
+				return new Response(renderImageTools(), {
+					headers: { "content-type": "text/html" },
+				});
+			},
+		};`
+	);
+}
+
+async function buildClientWebWorkerFixture() {
+	createClientWebWorkerFixture();
+	await buildFixture({
+		viteConfig: {
+			builder: {
+				sharedPlugins: true,
+				async buildApp(builder) {
+					for (const name of ["client", "ssr"]) {
+						const environment = builder.environments[name];
+						assert(environment);
+						await builder.build(environment);
+					}
+				},
+			},
+		},
+	});
+	const clientFiles = fs.readdirSync(getWorkerAssetsDir(process.cwd()), {
+		recursive: true,
+		encoding: "utf8",
+	});
+	// The web worker and its WebAssembly belong to the client
+	assert(clientFiles.some((file) => /image\.worker-.*\.js$/.test(file)));
+	assert(clientFiles.some((file) => /codec-.*\.wasm$/.test(file)));
+}
+
+test("does not upload a client-only web worker as a module of the Worker when plugins are shared", async ({
+	expect,
+}) => {
+	await buildClientWebWorkerFixture();
+	const { config } = (await readBuildOutput(process.cwd())).workers.default;
+	assert(config.manifest);
+	expect(Object.keys(config.manifest.modules).sort()).toEqual([
+		"index.mjs",
+		"index.mjs.map",
+	]);
+});
+
+test("leaves no client-only web worker files in the Worker bundle when plugins are shared", async ({
+	expect,
+}) => {
+	await buildClientWebWorkerFixture();
+	const bundleFiles = fs.readdirSync(getWorkerBundleDir(process.cwd()), {
+		recursive: true,
+		encoding: "utf8",
+	});
+	expect(
+		bundleFiles.filter(
+			(file) => file.endsWith(".wasm") || file.includes("image.worker")
+		)
+	).toEqual([]);
+});
