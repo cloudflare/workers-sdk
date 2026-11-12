@@ -57,6 +57,48 @@ function createEsmOnlyPackage(name: string, version: string): void {
 	);
 }
 
+/**
+ * Creates a dual-format package in `node_modules/` under the current directory,
+ * laid out like `hono` or `stripe`: the exports map has no `"./package.json"`
+ * entry, the `require` entry point lives in a subdirectory, and that
+ * subdirectory contains a nested `package.json` marker with only a `type`
+ * field (no `name` or `version`).
+ *
+ * @param name - Package name (supports scoped like `@scope/pkg`)
+ * @param version - Version string to write into the root `package.json`
+ */
+function createPackageWithNestedTypeManifest(
+	name: string,
+	version: string
+): void {
+	const pkgDir = path.join(process.cwd(), "node_modules", name);
+	const cjsDir = path.join(pkgDir, "dist", "cjs");
+	fs.mkdirSync(cjsDir, { recursive: true });
+	fs.writeFileSync(path.join(cjsDir, "index.js"), "module.exports = {}");
+	fs.writeFileSync(
+		path.join(cjsDir, "package.json"),
+		JSON.stringify({ type: "commonjs" }, null, 2)
+	);
+	fs.writeFileSync(
+		path.join(pkgDir, "package.json"),
+		JSON.stringify(
+			{
+				name,
+				version,
+				type: "module",
+				exports: {
+					".": {
+						import: "./dist/index.js",
+						require: "./dist/cjs/index.js",
+					},
+				},
+			},
+			null,
+			2
+		)
+	);
+}
+
 describe("getPackagePath", () => {
 	runInTempDir();
 
@@ -125,6 +167,38 @@ describe("getInstalledPackageVersion", () => {
 		const result = getInstalledPackageVersion("@scope/esm-pkg", process.cwd());
 
 		expect(result).toBe("0.3.0");
+	});
+
+	it("should skip a nested package.json without a name and return the root version", ({
+		expect,
+	}) => {
+		createPackageWithNestedTypeManifest("dual-pkg", "4.13.18");
+
+		const result = getInstalledPackageVersion("dual-pkg", process.cwd());
+
+		expect(result).toBe("4.13.18");
+	});
+
+	it("should skip a nested package.json without a name for a scoped package", ({
+		expect,
+	}) => {
+		createPackageWithNestedTypeManifest("@scope/dual-pkg", "1.32.2");
+
+		const result = getInstalledPackageVersion("@scope/dual-pkg", process.cwd());
+
+		expect(result).toBe("1.32.2");
+	});
+
+	it("should skip a nested package.json without a name when stopping at the project path", ({
+		expect,
+	}) => {
+		createPackageWithNestedTypeManifest("dual-pkg", "2.0.0");
+
+		const result = getInstalledPackageVersion("dual-pkg", process.cwd(), {
+			stopAtProjectPath: true,
+		});
+
+		expect(result).toBe("2.0.0");
 	});
 
 	it("should return undefined for a non-existent package", ({ expect }) => {

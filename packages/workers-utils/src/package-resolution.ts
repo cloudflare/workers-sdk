@@ -94,16 +94,12 @@ export function getInstalledPackageVersion(
 		}
 
 		const lastDir = opts.stopAtProjectPath === true ? projectPath : undefined;
-		const packageJsonPath = findFileUp("package.json", packagePath, lastDir);
+		const packageJson = findPackageRootManifest(packagePath, lastDir);
 
-		if (!packageJsonPath) {
+		if (!packageJson) {
 			return undefined;
 		}
 
-		const packageJson = parsePackageJSON(
-			readFileSync(packageJsonPath),
-			packageJsonPath
-		);
 		// The requested package may be installed under an alias (e.g. vite+
 		// installs `@voidzero-dev/vite-plus-core` under the `vite` alias). In that
 		// case the resolved package.json belongs to the aliased package, so its
@@ -122,6 +118,50 @@ export function getInstalledPackageVersion(
 		}
 		return packageJson.version;
 	} catch {}
+}
+
+/**
+ * Walks up from `startDir` to find and parse a package's root `package.json`.
+ *
+ * Dual-format packages (e.g. `hono`, `stripe`) often ship nested `package.json`
+ * files such as `dist/cjs/package.json` containing only `{"type": "commonjs"}`.
+ * These tell Node how to load the files in that directory but carry no `name`
+ * or `version`. When the package is resolved through its entry point, the
+ * nearest `package.json` is one of these markers, so any manifest without a
+ * `name` is skipped and the search continues from its parent directory. npm
+ * requires a `name` in every published package's root manifest.
+ *
+ * @param startDir - The directory to start searching from
+ * @param lastDir - If provided, stop searching after reaching this directory
+ * @returns The parsed root `package.json`, or `undefined` if none is found
+ */
+function findPackageRootManifest(
+	startDir: string,
+	lastDir?: string
+): ReturnType<typeof parsePackageJSON> | undefined {
+	let searchDir = startDir;
+
+	while (true) {
+		const packageJsonPath = findFileUp("package.json", searchDir, lastDir);
+		if (!packageJsonPath) {
+			return undefined;
+		}
+
+		const packageJson = parsePackageJSON(
+			readFileSync(packageJsonPath),
+			packageJsonPath
+		);
+		if (packageJson.name !== undefined) {
+			return packageJson;
+		}
+
+		const manifestDir = path.dirname(packageJsonPath);
+		const parentDir = path.dirname(manifestDir);
+		if (manifestDir === lastDir || parentDir === manifestDir) {
+			return undefined;
+		}
+		searchDir = parentDir;
+	}
 }
 
 /**
