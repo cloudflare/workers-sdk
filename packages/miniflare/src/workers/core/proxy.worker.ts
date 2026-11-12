@@ -107,6 +107,7 @@ function isInternal(value: unknown) {
 
 type Env = Record<string, unknown> & {
 	[CoreBindings.DATA_PROXY_SECRET]: ArrayBuffer;
+	[CoreBindings.JSON_NODE_BINDINGS]: Record<string, unknown>;
 };
 
 // TODO(someday): extract `ProxyServer` into component that could be used by
@@ -198,12 +199,12 @@ export class ProxyServer implements DurableObject {
 		}
 
 		// Validate secret header to prevent unauthorised access to proxy
-		const secretHex = request.headers.get(CoreHeaders.OP_SECRET);
-		if (secretHex == null) {
+		const secret = request.headers.get(CoreHeaders.OP_SECRET);
+		if (secret == null) {
 			return new Response(null, { status: 401 });
 		}
 		const expectedSecret = this.env[CoreBindings.DATA_PROXY_SECRET];
-		const secretBuffer = Buffer.from(secretHex, "hex");
+		const secretBuffer = Buffer.from(secret);
 		if (
 			secretBuffer.byteLength !== expectedSecret.byteLength ||
 			!crypto.subtle.timingSafeEqual(secretBuffer, expectedSecret)
@@ -212,6 +213,21 @@ export class ProxyServer implements DurableObject {
 		}
 
 		const opHeader = request.headers.get(CoreHeaders.OP);
+		if (opHeader === ProxyOps.CONNECT_PLATFORM_PROXY) {
+			return Response.json({
+				bindings: this.env[CoreBindings.JSON_NODE_BINDINGS],
+				// `Miniflare#dispatchFetch()`, which dev servers use, sends requests to
+				// the runtime's own socket, so this is the runtime's URL even when the
+				// client connected through a dev server
+				runtimeUrl: new URL(request.url).origin,
+				cf: this.env[CoreBindings.JSON_CF_BLOB],
+			});
+		}
+		if (opHeader === ProxyOps.WATCH_PLATFORM_PROXY) {
+			const [client, server] = Object.values(new WebSocketPair());
+			server.accept();
+			return new Response(null, { status: 101, webSocket: client });
+		}
 		const targetHeader = request.headers.get(CoreHeaders.OP_TARGET);
 		const keyHeader = request.headers.get(CoreHeaders.OP_KEY);
 		const allowAsync = request.headers.get(CoreHeaders.OP_SYNC) === null;
@@ -248,9 +264,25 @@ export class ProxyServer implements DurableObject {
 			// If no key header is specified, just return the target
 			result = keyHeader === null ? target : target[keyHeader];
 
-			// Immediately resolve all RpcProperties
 			if (result?.constructor.name === "RpcProperty") {
-				result = await result;
+				// As in `workerd`, reading a property of an RPC stub needn't contact
+				// the other Worker; awaiting it (an async `GET`) does. Doing that for
+				// a synchronous `GET` can deadlock: the other Worker's code may need
+				// the blocked client's thread, e.g. for Vite's module runner.
+				if (!allowAsync && request.headers.has(CoreHeaders.OP_LAZY_RPC)) {
+					return new Response(null, {
+						status: 204,
+						headers: { [CoreHeaders.OP_RESULT_TYPE]: "RpcProperty" },
+					});
+				}
+				rpcAwaited = true;
+				try {
+					result = await result;
+				} catch (e) {
+					// As for calls, return what the other Worker threw
+					status = 500;
+					result = e;
+				}
 			}
 
 			if (typeof result === "function") {
@@ -346,10 +378,11 @@ export class ProxyServer implements DurableObject {
 					// We intentionally don't await this `output()` call so that it's treated as a regular promise
 					result = transform.output(args[2]);
 				} else if (["RpcProperty", "RpcStub"].includes(func.constructor.name)) {
+					// Mark that we're awaiting this RPC call, so we set the Promise header
+					// below, even if it throws
+					rpcAwaited = true;
 					// let's resolve RpcPromise instances right away (to support serialization)
 					result = await func(...args);
-					// Mark that we've awaited this RPC call, so we set the Promise header below
-					rpcAwaited = true;
 				} else {
 					result = func.apply(target, args);
 				}
