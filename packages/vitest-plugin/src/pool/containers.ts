@@ -7,9 +7,9 @@ import {
 	prepareContainerImagesForDev,
 	resolveDockerHost,
 } from "@cloudflare/containers-shared";
+import { toApiComplianceRegion } from "@cloudflare/workers-utils/compliance";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { UserError } from "@cloudflare/workers-utils/errors";
-import { toApiComplianceRegion } from "./new-config";
 import type { LoadedNewConfig } from "./new-config";
 import type {
 	ContainerDevOptions,
