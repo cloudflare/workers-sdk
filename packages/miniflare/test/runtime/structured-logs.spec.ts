@@ -232,6 +232,42 @@ test("parseAddressInUse() finds the socket or address in use", ({ expect }) => {
 	).toBeUndefined();
 });
 
+/**
+ * What workerd logs when a Worker's `fetch()` fails its TLS handshake, such as
+ * for a certificate a VPN or proxy re-signed. The Worker only sees
+ * `internal error; reference = <wdErrId>`, so this log is the one place that
+ * says why (https://github.com/cloudflare/workers-sdk/issues/9356).
+ *
+ * kj writes the exception's `stack:` as `<path>@<offset>` frames on Linux,
+ * where workerd's executable is mapped high, and as raw hex addresses on macOS
+ * (and on Windows, which has no `dladdr()`).
+ */
+function tlsHandshakeFailure(stack: string) {
+	return structured(
+		"error",
+		`e = rust/worker/ffi.rs:110: failed: TLS handshake failed: invalid peer certificate: UnknownIssuer\nstack: ${stack}; sentryErrorContext = jsgInternalError; wdErrId = j1mkn3la492n92gkmm3q6mua`
+	);
+}
+
+test.for([
+	[
+		"Linux",
+		"/project/node_modules/@cloudflare/workerd-linux-64/bin/workerd@2ab2070 /project/node_modules/@cloudflare/workerd-linux-64/bin/workerd@3ed9780 /project/node_modules/@cloudflare/workerd-linux-64/bin/workerd@3a86610",
+	],
+	["macOS", "1048a2b3c 1048a5f10 104c1e2d8"],
+	["Windows", "7ff6a1b2c3d4 7ff6a1b2c3d5 7ff6a1b2c3d6"],
+])(
+	"the cause of a Worker's internal error is surfaced with a %s stack trace",
+	async ([, stack], { expect }) => {
+		expect(await collect([tlsHandshakeFailure(stack)])).toContainEqual({
+			level: "error",
+			message: expect.stringContaining(
+				"TLS handshake failed: invalid peer certificate: UnknownIssuer"
+			),
+		});
+	}
+);
+
 test("access violations still get their Windows-specific explanation", async ({
 	expect,
 }) => {
