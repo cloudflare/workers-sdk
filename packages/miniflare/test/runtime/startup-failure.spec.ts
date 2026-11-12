@@ -1,7 +1,10 @@
 import childProcess from "node:child_process";
-import { PassThrough } from "node:stream";
-import { Runtime } from "miniflare";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { PassThrough, Writable } from "node:stream";
+import { Miniflare, MiniflareCoreError, Runtime } from "miniflare";
 import { test, vi } from "vitest";
+import { useTmp } from "../test-shared";
 
 /** Simulates workerd exiting after emitting the given stderr chunks. */
 function mockRuntimeFailure(chunks: string[]) {
@@ -130,3 +133,92 @@ test("preserves stderr for other startup failures", async ({
 		message: expect.stringContaining(`Runtime stderr:\n${stderr}`),
 	});
 });
+
+/**
+ * Simulates workerd exiting before it reads its config from stdin, as when it
+ * crashes at startup on Windows. Writing the config then fails the way it does
+ * on Windows, with `write EOF`.
+ */
+function mockRuntimeExitBeforeConfig(stderrOutput: string) {
+	return vi.spyOn(childProcess, "spawn").mockImplementation(() => {
+		const stdout = new PassThrough();
+		const stderr = new PassThrough();
+		const control = new PassThrough();
+		const process = Object.assign(new childProcess.ChildProcess(), {
+			stdout,
+			stderr,
+			kill: () => true,
+		});
+		const stdin = new Writable({
+			write(_chunk, _encoding, callback) {
+				// workerd has already exited: its end of the pipe is closed.
+				setImmediate(() =>
+					callback(
+						Object.assign(new Error("write EOF"), {
+							errno: -4095,
+							code: "EOF",
+							syscall: "write",
+						})
+					)
+				);
+			},
+		});
+		Object.assign(process, { stdin, stdio: [stdin, stdout, stderr, control] });
+		stderr.end(stderrOutput);
+		control.end();
+		setImmediate(() => process.emit("exit", 1, null));
+		return process;
+	});
+}
+
+// https://github.com/cloudflare/workers-sdk/issues/16441
+test("reports a startup failure when workerd exits before reading its config", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const stderr =
+		"*** Received structured exception #0xe06d7363: (unknown exception code); stack: 7ffe46bd2bdb";
+	const spawn = mockRuntimeExitBeforeConfig(`${stderr}\n`);
+	onTestFinished(() => spawn.mockRestore());
+	const runtime = new Runtime();
+	onTestFinished(() => runtime.dispose());
+
+	await expect(startRuntime(runtime)).rejects.toMatchObject({
+		code: "ERR_RUNTIME_FAILURE",
+		message: expect.stringContaining(`Runtime stderr:\n${stderr}`),
+	});
+});
+
+// The same, end to end through `new Miniflare()`, with a real process standing
+// in for a workerd binary that exits before reading its config. Unix only: the
+// stand-in is a shell script.
+test.skipIf(process.platform === "win32")(
+	"Miniflare: throws ERR_RUNTIME_FAILURE when workerd exits before reading its config",
+	{ concurrent: false },
+	async ({ expect, onTestFinished }) => {
+		const tmp = await useTmp();
+		const workerdPath = path.join(tmp, "exiting-workerd.sh");
+		await fs.writeFile(
+			workerdPath,
+			'#!/bin/sh\necho "workerd failed to load" >&2\nexit 1\n',
+			{ mode: 0o755 }
+		);
+		vi.stubEnv("MINIFLARE_WORKERD_PATH", workerdPath);
+		onTestFinished(() => {
+			vi.unstubAllEnvs();
+		});
+
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: { name: "", compatibilityDate: "2025-05-01" },
+					legacy: { serviceWorkerScript: "" },
+				},
+			],
+		});
+		onTestFinished(() => mf.dispose().catch(() => {}));
+
+		await expect(mf.ready).rejects.toThrow(MiniflareCoreError);
+		await expect(mf.ready).rejects.toThrow(/Workers runtime failed to start/);
+	}
+);
