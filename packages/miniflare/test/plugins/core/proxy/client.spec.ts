@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { Blob } from "node:buffer";
 import http from "node:http";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { text } from "node:stream/consumers";
 import { ReadableStream, WritableStream } from "node:stream/web";
@@ -32,6 +33,32 @@ import type {
 
 const nullScript =
 	'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));';
+
+// Loads a fresh copy of undici, separate from the one Miniflare uses
+// internally, and returns its `Request` class
+function loadSeparateUndiciRequest(): typeof globalThis.Request {
+	const require = createRequire(import.meta.url);
+	const undiciRoot = path.dirname(require.resolve("undici"));
+	const isUndiciModule = (id: string) => id.startsWith(undiciRoot + path.sep);
+	const saved = new Map(
+		Object.entries(require.cache).filter(([id]) => isUndiciModule(id))
+	);
+	for (const id of saved.keys()) {
+		delete require.cache[id];
+	}
+	try {
+		return require("undici").Request;
+	} finally {
+		for (const id of Object.keys(require.cache)) {
+			if (isUndiciModule(id)) {
+				delete require.cache[id];
+			}
+		}
+		for (const [id, module] of saved) {
+			require.cache[id] = module;
+		}
+	}
+}
 
 describe("ProxyClient", () => {
 	test("supports service bindings with WebSockets", async ({ expect }) => {
@@ -823,6 +850,91 @@ describe("ProxyClient", () => {
 		);
 		expect(cfResponse.headers.get("X-Cf-Colo")).toBe("GLOBAL_REQUEST");
 		await cfResponse.text();
+	});
+
+	// https://github.com/cloudflare/workers-sdk/issues/5947
+	test("Durable Object stub.fetch accepts a Request from another copy of undici", async ({
+		expect,
+	}) => {
+		// Frameworks such as Next.js run user code in a sandbox (e.g. the edge
+		// runtime used by `next dev` with `@cloudflare/next-on-pages`) with its
+		// own bundled copy of undici. Requests created there (e.g. `NextRequest`)
+		// are neither Miniflare's `Request` nor Node's global `Request`. Simulate
+		// that by loading a separate copy of undici.
+		const ForeignRequest = loadSeparateUndiciRequest();
+
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "entry",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(
+							"export default { fetch() { return new Response(null, { status: 404 }); } }"
+						),
+						env: {
+							OBJECT: {
+								type: "durable-object",
+								worker: "do-worker",
+								exportName: "TestObject",
+							},
+						},
+					},
+				},
+				{
+					config: {
+						name: "do-worker",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`export class TestObject {
+  async fetch(request) {
+    return Response.json({
+      url: request.url,
+      method: request.method,
+      header: request.headers.get("X-Test"),
+      body: await request.text(),
+    });
+  }
+}`),
+						exports: {
+							TestObject: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const ns = await mf.getDurableObjectNamespace("OBJECT", "entry");
+		const stub = ns.get(ns.idFromName("test"));
+		const proxyFetch = stub.fetch as unknown as (
+			input: globalThis.Request
+		) => Promise<Response>;
+
+		const getRequest = new ForeignRequest("http://localhost/ws");
+		expect(getRequest).not.toBeInstanceOf(Request);
+		expect(getRequest).not.toBeInstanceOf(globalThis.Request);
+		const getResponse = await proxyFetch(getRequest);
+		expect(getResponse.status).toBe(200);
+		expect(await getResponse.json()).toEqual({
+			url: "http://localhost/ws",
+			method: "GET",
+			header: null,
+			body: "",
+		});
+
+		const putRequest = new ForeignRequest("http://foo/path", {
+			method: "PUT",
+			headers: { "X-Test": "put" },
+			body: JSON.stringify({ value: 1 }),
+		});
+		const putResponse = await proxyFetch(putRequest);
+		expect(putResponse.status).toBe(200);
+		expect(await putResponse.json()).toEqual({
+			url: "http://foo/path",
+			method: "PUT",
+			header: "put",
+			body: '{"value":1}',
+		});
 	});
 
 	test("ProxyServer: prevents unauthorised access", async ({ expect }) => {
