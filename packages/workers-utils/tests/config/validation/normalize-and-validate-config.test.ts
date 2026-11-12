@@ -5865,6 +5865,126 @@ describe("normalizeAndValidateConfig()", () => {
 				});
 			});
 
+			describe("Durable Object-managed image jurisdictions", () => {
+				const digest = "a".repeat(64);
+				function validateImage(image: Record<string, unknown>) {
+					return normalizeAndValidateConfig(
+						{
+							containers: [
+								{
+									name: "sandbox",
+									class_name: "Sandbox",
+									scheduling_policy: "durable_object",
+									images: { app: image },
+								},
+							],
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+				}
+
+				it.for([
+					{ dockerfile: "./Dockerfile", jurisdictions: ["fedramp"] },
+					{
+						image: `frm.registry.cloudflare.com/account/app@sha256:${digest}`,
+						jurisdictions: ["fedramp"],
+					},
+				])("accepts %j", (image, { expect }) => {
+					const { config, diagnostics } = validateImage(image);
+					expect(diagnostics.hasErrors()).toBe(false);
+					expect(config.containers?.[0].images?.app).toEqual(image);
+				});
+
+				it.for([
+					{ jurisdictions: [] },
+					{ jurisdictions: "fedramp" },
+					{ jurisdictions: ["eu"] },
+					{ jurisdictions: ["FEDRAMP"] },
+					{ jurisdictions: [null] },
+					{ jurisdictions: {} },
+				])(
+					"rejects invalid jurisdictions $jurisdictions",
+					({ jurisdictions }, { expect }) => {
+						const { diagnostics } = validateImage({
+							dockerfile: "./Dockerfile",
+							jurisdictions,
+						});
+						expect(diagnostics.renderErrors()).toContain(
+							'"containers.images.app.jurisdictions" must be a non-empty array of jurisdictions. Supported jurisdictions: "fedramp".'
+						);
+					}
+				);
+
+				it("rejects more than one jurisdiction", ({ expect }) => {
+					const { diagnostics } = validateImage({
+						dockerfile: "./Dockerfile",
+						jurisdictions: ["fedramp", "fedramp"],
+					});
+					expect(diagnostics.renderErrors()).toContain(
+						'"containers.images.app.jurisdictions" currently supports only one jurisdiction.'
+					);
+				});
+
+				it("requires a fedramp image to be in the FedRAMP Moderate registry", ({
+					expect,
+				}) => {
+					const { diagnostics } = validateImage({
+						image: `registry.cloudflare.com/account/app@sha256:${digest}`,
+						jurisdictions: ["fedramp"],
+					});
+					expect(diagnostics.renderErrors()).toContain(
+						'"containers.images.app.image" must be a digest-pinned image in the managed registry, in the form "frm.registry.cloudflare.com/<account-id>/<repository>@sha256:<64 lowercase hex characters>". Images in the "fedramp" jurisdiction use the frm.registry.cloudflare.com registry.'
+					);
+				});
+
+				it("rejects a FedRAMP Moderate image without jurisdictions", ({
+					expect,
+				}) => {
+					const { diagnostics } = validateImage({
+						image: `frm.registry.cloudflare.com/account/app@sha256:${digest}`,
+					});
+					expect(diagnostics.renderErrors()).toContain(
+						'"containers.images.app.image" must be a digest-pinned image in the managed registry, in the form "registry.cloudflare.com/<account-id>/<repository>@sha256:<64 lowercase hex characters>".'
+					);
+				});
+
+				it("keeps the FedRAMP High registry for fedramp images", ({
+					expect,
+				}) => {
+					vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "fedramp_high");
+					const { diagnostics } = validateImage({
+						image: `registry.fed.cloudflare.com/account/app@sha256:${digest}`,
+						jurisdictions: ["fedramp"],
+					});
+					expect(diagnostics.hasErrors()).toBe(false);
+				});
+
+				it("rejects constraints on a Durable Object-managed container", ({
+					expect,
+				}) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							containers: [
+								{
+									name: "sandbox",
+									class_name: "Sandbox",
+									scheduling_policy: "durable_object",
+									constraints: { jurisdiction: "fedramp" },
+								},
+							],
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+					expect(diagnostics.renderErrors()).toContain(
+						'Unsupported fields for Durable Object-managed Containers in containers: "constraints".'
+					);
+				});
+			});
+
 			it("should reject named images on a scheduler-backed container", ({
 				expect,
 			}) => {

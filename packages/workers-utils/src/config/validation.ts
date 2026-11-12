@@ -5,6 +5,7 @@ import { isValidWorkflowName } from "@cloudflare/workflows-shared/src/lib/valida
 import { dedent } from "ts-dedent";
 import {
 	getCloudflareContainerRegistry,
+	getContainerImageRegistryConfigs,
 	getCloudflareEnv,
 } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
@@ -16,7 +17,11 @@ import {
 	getDurableObjectExports,
 	isLiveDurableObjectExport,
 } from "./durable-object-exports";
-import { ARTIFACTS_EVENT_TYPES, WORKFLOW_JURISDICTIONS } from "./environment";
+import {
+	ARTIFACTS_EVENT_TYPES,
+	DURABLE_OBJECT_CONTAINER_IMAGE_JURISDICTIONS,
+	WORKFLOW_JURISDICTIONS,
+} from "./environment";
 import { partitionExports } from "./exports";
 import {
 	all,
@@ -4000,22 +4005,44 @@ function validateDurableObjectContainerImages(
 			);
 			valid = false;
 		}
-		if (typeof image.image === "string" && image.image.length > 0) {
-			const registry = getCloudflareContainerRegistry(complianceConfig);
-			const prefix = `${registry}/`;
-			const reference = image.image.slice(prefix.length);
-			// Require an account/repository path and an immutable SHA-256 digest.
-			const digestReference = reference.match(
-				/^[a-z0-9]+(?:(?:[._]|__|-+)[a-z0-9]+)*(?:\/[a-z0-9]+(?:(?:[._]|__|-+)[a-z0-9]+)*)+@sha256:[a-f0-9]{64}$/
-			);
-			if (
-				!image.image.startsWith(prefix) ||
-				digestReference?.[0] !== reference
-			) {
-				diagnostics.errors.push(
-					`"${imageField}.image" must be a digest-pinned image in the managed registry, in the form "${registry}/<account-id>/<repository>@sha256:<64 lowercase hex characters>".`
+		const jurisdictions = validateDurableObjectContainerImageJurisdictions(
+			diagnostics,
+			`${imageField}.jurisdictions`,
+			image.jurisdictions
+		);
+		if (jurisdictions === false) {
+			valid = false;
+		}
+		if (
+			typeof image.image === "string" &&
+			image.image.length > 0 &&
+			jurisdictions !== false
+		) {
+			const defaultRegistry = getCloudflareContainerRegistry(complianceConfig);
+			for (const registryConfig of getContainerImageRegistryConfigs(
+				complianceConfig ?? {},
+				jurisdictions
+			)) {
+				const registry = getCloudflareContainerRegistry(registryConfig);
+				const prefix = `${registry}/`;
+				const reference = image.image.slice(prefix.length);
+				// Require an account/repository path and an immutable SHA-256 digest.
+				const digestReference = reference.match(
+					/^[a-z0-9]+(?:(?:[._]|__|-+)[a-z0-9]+)*(?:\/[a-z0-9]+(?:(?:[._]|__|-+)[a-z0-9]+)*)+@sha256:[a-f0-9]{64}$/
 				);
-				valid = false;
+				if (
+					!image.image.startsWith(prefix) ||
+					digestReference?.[0] !== reference
+				) {
+					const registryReason =
+						registry === defaultRegistry
+							? ""
+							: ` Images in the "${registryConfig.jurisdiction}" jurisdiction use the ${registry} registry.`;
+					diagnostics.errors.push(
+						`"${imageField}.image" must be a digest-pinned image in the managed registry, in the form "${registry}/<account-id>/<repository>@sha256:<64 lowercase hex characters>".${registryReason}`
+					);
+					valid = false;
+				}
 			}
 		}
 
@@ -4051,6 +4078,7 @@ function validateDurableObjectContainerImages(
 			(property) =>
 				property !== "dockerfile" &&
 				property !== "image" &&
+				property !== "jurisdictions" &&
 				!(
 					isDockerfileBuild &&
 					(property === "build_context" || property === "build_vars")
@@ -4067,6 +4095,43 @@ function validateDurableObjectContainerImages(
 	}
 
 	return valid;
+}
+
+/**
+ * Check a Durable Object-managed Container image's optional `jurisdictions`.
+ *
+ * @returns The valid jurisdictions (or `undefined` when omitted), or `false`
+ * after reporting an error.
+ */
+function validateDurableObjectContainerImageJurisdictions(
+	diagnostics: Diagnostics,
+	field: string,
+	value: unknown
+): string[] | undefined | false {
+	if (value === undefined) {
+		return undefined;
+	}
+	if (
+		!Array.isArray(value) ||
+		value.length === 0 ||
+		!value.every((jurisdiction) =>
+			DURABLE_OBJECT_CONTAINER_IMAGE_JURISDICTIONS.some(
+				(valid) => valid === jurisdiction
+			)
+		)
+	) {
+		diagnostics.errors.push(
+			`"${field}" must be a non-empty array of jurisdictions. Supported jurisdictions: ${DURABLE_OBJECT_CONTAINER_IMAGE_JURISDICTIONS.map((jurisdiction) => `"${jurisdiction}"`).join(", ")}.`
+		);
+		return false;
+	}
+	if (value.length > 1) {
+		diagnostics.errors.push(
+			`"${field}" currently supports only one jurisdiction.`
+		);
+		return false;
+	}
+	return value;
 }
 
 function validateDurableObjectContainerUnsafe(

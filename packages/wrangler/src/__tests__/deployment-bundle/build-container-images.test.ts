@@ -244,6 +244,45 @@ describe("buildDurableObjectContainerImages", () => {
 		}
 	);
 
+	it("builds the same Dockerfile once for images that push to different registries", async ({
+		expect,
+	}) => {
+		const result = await buildDurableObjectContainerImages(
+			{
+				command: "deploy",
+				containersRollout: "gradual",
+				dryRun: false,
+				name: "worker",
+				containers: containerConfig([
+					{
+						name: "sandbox",
+						class_name: "Sandbox",
+						scheduling_policy: "durable_object",
+						images: {
+							public: { dockerfile: "./Dockerfile" },
+							fedramp: {
+								dockerfile: "./Dockerfile",
+								jurisdictions: ["fedramp"],
+							},
+							alias: {
+								dockerfile: "./Dockerfile",
+								jurisdictions: ["fedramp"],
+							},
+						},
+					},
+				]),
+			},
+			config
+		);
+
+		expect(buildAndMaybePush).toHaveBeenCalledOnce();
+		const [publicImage, fedrampImage, aliasImage] = result.map(
+			({ localTag }) => localTag
+		);
+		expect(fedrampImage).toBe(publicImage);
+		expect(aliasImage).toBe(publicImage);
+	});
+
 	it("skips deploy builds when container rollout is disabled", async ({
 		expect,
 	}) => {

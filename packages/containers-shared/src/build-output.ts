@@ -133,8 +133,10 @@ async function buildContainerOutputConfig(options: {
 				{ schedulingPolicy: "durable-object" }
 			>["images"]
 		> = {};
-		for (const [imageName, image] of Object.entries(options.config.images)) {
-			images[imageName] = await buildContainerImage({
+		for (const [imageName, { jurisdictions, ...image }] of Object.entries(
+			options.config.images
+		)) {
+			const builtImage = await buildContainerImage({
 				image,
 				repositoryName: `${options.config.name}-${imageName}`,
 				root: options.root,
@@ -142,6 +144,11 @@ async function buildContainerOutputConfig(options: {
 				buildId: options.buildId,
 				localTags: options.localTags,
 			});
+			// Deploy pushes the built image to each jurisdiction's registry.
+			images[imageName] =
+				jurisdictions === undefined
+					? builtImage
+					: { ...builtImage, jurisdictions };
 		}
 		return { ...options.config, images };
 	}

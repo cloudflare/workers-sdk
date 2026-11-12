@@ -249,6 +249,43 @@ describe("buildAndWriteContainerOutput", () => {
 		});
 	});
 
+	it("preserves Durable Object image jurisdictions", async ({ expect }) => {
+		const reference = `frm.registry.cloudflare.com/account/fallback@sha256:${"a".repeat(64)}`;
+		const config = InputContainerSchema.parse({
+			name: "sandbox",
+			schedulingPolicy: "durable-object",
+			images: {
+				app: { dockerfile: "./Dockerfile", jurisdictions: ["fedramp"] },
+				fallback: { reference, jurisdictions: ["fedramp"] },
+			},
+		});
+
+		await buildAndWriteContainerOutput({
+			containers: [config],
+			root,
+			pathToDocker: "docker",
+		});
+
+		expect(
+			JSON.parse(
+				fs.readFileSync(getContainerConfigPath(root, "sandbox"), "utf8")
+			)
+		).toEqual({
+			...config,
+			images: {
+				app: {
+					localReference: expectedBuildOutputTag(
+						root,
+						"sandbox-app",
+						BUILD_IDS[0]
+					),
+					jurisdictions: ["fedramp"],
+				},
+				fallback: { reference, jurisdictions: ["fedramp"] },
+			},
+		});
+	});
+
 	it("preserves a Durable Object Container with no images", async ({
 		expect,
 	}) => {

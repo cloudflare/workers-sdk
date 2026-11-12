@@ -765,10 +765,143 @@ describe("Container image preparation", () => {
 			sourceTag: builtImage.localTag,
 			targetTag: builtImage.localTag,
 			accountId: "account",
-			complianceConfig: config,
+			complianceConfig: { compliance_region: undefined },
 			cleanupSourceTag: false,
 		});
 		expect(builtImage.localTagCleaned).toBeUndefined();
+	});
+	it("pushes a fedramp Dockerfile image to the FedRAMP Moderate registry", async ({
+		expect,
+	}) => {
+		const frmImage = `frm.registry.cloudflare.com/account/tools@sha256:${"a".repeat(64)}`;
+		const prepare = vi
+			.spyOn(ContainerImagePreparationsService, "prepareContainerImage")
+			.mockResolvedValue({
+				image: frmImage,
+				status: ContainerImagePreparationStatus.READY,
+			});
+		const push = vi.mocked(pushImageIfChanged).mockResolvedValue({
+			remoteDigest: frmImage,
+		});
+		const builtImage: BuiltDurableObjectContainerImage = {
+			className: "Sandbox",
+			imageName: "tools",
+			localTag: "worker-sandbox-tools:wrangler-test",
+		};
+		const result = await prepareDurableObjectContainerApplications(
+			{ ...config, compliance_region: "public" },
+			[
+				{
+					...durableObjectContainerConfig[0],
+					images: {
+						tools: { dockerfile: "./Dockerfile", jurisdictions: ["fedramp"] },
+					},
+				},
+			],
+			[builtImage],
+			args
+		);
+		expect(result).toEqual({ Sandbox: { tools: frmImage } });
+		expect(push).toHaveBeenCalledOnce();
+		expect(push).toHaveBeenCalledWith(
+			expect.objectContaining({
+				sourceTag: builtImage.localTag,
+				complianceConfig: {
+					compliance_region: "public",
+					jurisdiction: "fedramp",
+				},
+				cleanupSourceTag: false,
+			})
+		);
+		expect(prepare).toHaveBeenCalledWith({ image: frmImage });
+		expect(builtImage.localTagCleaned).toBeUndefined();
+	});
+	it("pushes a shared local tag to each image's registry", async ({
+		expect,
+	}) => {
+		const frmImage = `frm.registry.cloudflare.com/account/tools@sha256:${"a".repeat(64)}`;
+		const prepare = vi
+			.spyOn(ContainerImagePreparationsService, "prepareContainerImage")
+			.mockResolvedValue({
+				image,
+				status: ContainerImagePreparationStatus.READY,
+			});
+		const push = vi
+			.mocked(pushImageIfChanged)
+			.mockResolvedValueOnce({ remoteDigest: image })
+			.mockResolvedValueOnce({ remoteDigest: frmImage });
+		const localTag = "worker-sandbox-tools:wrangler-test";
+		const builtImages: BuiltDurableObjectContainerImage[] = [
+			{ className: "Sandbox", imageName: "tools", localTag },
+			{ className: "Sandbox", imageName: "fedramp", localTag },
+			{ className: "Sandbox", imageName: "alias", localTag },
+		];
+
+		const result = await prepareDurableObjectContainerApplications(
+			{ ...config, compliance_region: "public" },
+			[
+				{
+					...durableObjectContainerConfig[0],
+					images: {
+						tools: { dockerfile: "./Dockerfile" },
+						fedramp: { dockerfile: "./Dockerfile", jurisdictions: ["fedramp"] },
+						alias: { dockerfile: "./Dockerfile", jurisdictions: ["fedramp"] },
+					},
+				},
+			],
+			builtImages,
+			args
+		);
+
+		expect(result).toEqual({
+			Sandbox: { tools: image, fedramp: frmImage, alias: frmImage },
+		});
+		expect(push).toHaveBeenCalledTimes(2);
+		expect(push).toHaveBeenNthCalledWith(
+			1,
+			expect.objectContaining({
+				sourceTag: localTag,
+				complianceConfig: { compliance_region: "public" },
+			})
+		);
+		expect(push).toHaveBeenNthCalledWith(
+			2,
+			expect.objectContaining({
+				sourceTag: localTag,
+				complianceConfig: {
+					compliance_region: "public",
+					jurisdiction: "fedramp",
+				},
+			})
+		);
+		expect(prepare).toHaveBeenNthCalledWith(1, { image });
+		expect(prepare).toHaveBeenNthCalledWith(2, { image: frmImage });
+		expect(prepare).toHaveBeenCalledTimes(2);
+	});
+	it("prepares a prebuilt image from the FedRAMP Moderate registry", async ({
+		expect,
+	}) => {
+		const frmImage = `frm.registry.cloudflare.com/account/tools@sha256:${"a".repeat(64)}`;
+		const prepare = vi
+			.spyOn(ContainerImagePreparationsService, "prepareContainerImage")
+			.mockResolvedValue({
+				image: frmImage,
+				status: ContainerImagePreparationStatus.READY,
+			});
+		const result = await prepareDurableObjectContainerApplications(
+			config,
+			[
+				{
+					...durableObjectContainerConfig[0],
+					images: { tools: { image: frmImage, jurisdictions: ["fedramp"] } },
+				},
+			],
+			[],
+			args
+		);
+		expect(result).toEqual({ Sandbox: { tools: frmImage } });
+		expect(prepare).toHaveBeenCalledWith({ image: frmImage });
+		expect(pushImageIfChanged).not.toHaveBeenCalled();
 	});
 	it("pushes a shared local tag once and retains every image and class alias", async ({
 		expect,

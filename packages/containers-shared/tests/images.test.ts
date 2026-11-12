@@ -10,6 +10,7 @@ import {
 	prepareContainerImagesForDev,
 	validateAndEncodeGarKey,
 } from "../src/images";
+import { dockerLoginImageRegistry } from "../src/login";
 import { runDockerCmd, verifyDockerInstalled } from "../src/utils";
 
 vi.mock("../src/build", () => ({ startContainerBuild: vi.fn() }));
@@ -34,6 +35,7 @@ describe("isCloudflareRegistryImage", () => {
 		for (const [image, isManaged] of [
 			["image:tag", true],
 			["registry.cloudflare.com/image:tag", true],
+			["frm.registry.cloudflare.com/account/image:tag", true],
 			["docker.io/example/image:tag", false],
 			["localhost:5000/image:tag", false],
 		] as const) {
@@ -121,6 +123,31 @@ describe("pullImage", () => {
 			"linux/amd64",
 		]);
 	});
+
+	it("fails when FedRAMP Moderate registry credentials are unavailable", async ({
+		expect,
+	}) => {
+		vi.mocked(dockerLoginImageRegistry).mockRejectedValueOnce(
+			new Error("no credentials")
+		);
+		const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+		const image = `frm.registry.cloudflare.com/account/image@sha256:${"a".repeat(64)}`;
+
+		await expect(
+			pullImage(
+				"docker",
+				{ class_name: "Container", image_uri: image, image_tag: image },
+				logger,
+				undefined,
+				"test registry configure"
+			)
+		).rejects.toThrow("no credentials");
+		expect(dockerLoginImageRegistry).toHaveBeenCalledWith(
+			"docker",
+			"frm.registry.cloudflare.com"
+		);
+		expect(logger.warn).not.toHaveBeenCalled();
+	});
 });
 
 const garDomain = "us-central1-docker.pkg.dev";
@@ -195,6 +222,27 @@ describe("getAndValidateRegistryType - Cloudflare managed registry", () => {
 				compliance_region: "fedramp_high",
 			}).type
 		).toBe("cloudflare");
+	});
+
+	it.for(["registry.cloudflare.com", "frm.registry.cloudflare.com"])(
+		"recognizes the managed registry %s",
+		(domain, { expect }) => {
+			expect(getAndValidateRegistryType(domain).type).toBe("cloudflare");
+		}
+	);
+
+	it("rejects the FedRAMP Moderate registry in FedRAMP High", ({ expect }) => {
+		expect(() =>
+			getAndValidateRegistryType("frm.registry.cloudflare.com", {
+				compliance_region: "fedramp_high",
+			})
+		).toThrow("is not a supported image registry");
+	});
+
+	it("does not treat registry hostnames as patterns", ({ expect }) => {
+		expect(() =>
+			getAndValidateRegistryType("frmXregistry.cloudflare.com")
+		).toThrow("is not a supported image registry");
 	});
 });
 

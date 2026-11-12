@@ -379,6 +379,29 @@ const OutputContainerImageSchema = z.union([
 	ContainerImageLocalReferenceSchema,
 ]);
 
+// Only one jurisdiction is supported for now.
+const DurableObjectContainerImageJurisdictionsSchema = z
+	.tuple([z.enum(["fedramp"])])
+	.optional();
+
+const InputDurableObjectContainerImageSchema = z.union([
+	ContainerImageDockerfileSchema.extend({
+		jurisdictions: DurableObjectContainerImageJurisdictionsSchema,
+	}),
+	ContainerImageReferenceSchema.extend({
+		jurisdictions: DurableObjectContainerImageJurisdictionsSchema,
+	}),
+]);
+
+const OutputDurableObjectContainerImageSchema = z.union([
+	ContainerImageReferenceSchema.extend({
+		jurisdictions: DurableObjectContainerImageJurisdictionsSchema,
+	}),
+	ContainerImageLocalReferenceSchema.extend({
+		jurisdictions: DurableObjectContainerImageJurisdictionsSchema,
+	}),
+]);
+
 const VALID_ROLLOUT_STEP_PERCENTAGES = new Set([5, 10, 20, 25, 50, 100]);
 
 const ContainerRolloutStepPercentageSchema = z
@@ -545,7 +568,9 @@ export const InputContainerSchema = z.union([
 		image: InputContainerImageSchema,
 	}).superRefine(validateContainerRelationships),
 	DurableObjectContainerBaseSchema.extend({
-		images: z.record(z.string(), InputContainerImageSchema).optional(),
+		images: z
+			.record(z.string(), InputDurableObjectContainerImageSchema)
+			.optional(),
 	}),
 ]);
 
@@ -560,7 +585,9 @@ export const OutputContainerSchema = z.union([
 		image: OutputContainerImageSchema,
 	}).superRefine(validateContainerRelationships),
 	DurableObjectContainerBaseSchema.extend({
-		images: z.record(z.string(), OutputContainerImageSchema).optional(),
+		images: z
+			.record(z.string(), OutputDurableObjectContainerImageSchema)
+			.optional(),
 	}),
 ]);
 
