@@ -82,7 +82,8 @@ async function writeBundle({
 	// Source maps. `buildResult.sourceMaps` is already gated by
 	// `uploadSourceMaps` inside `buildWorker` (undefined when explicitly off) and
 	// contains the main module's map plus any module maps, each named
-	// `<module>.map` (e.g. `index.js.map`).
+	// `<module>.map` (e.g. `index.js.map`). `buildWorker` makes their `sources`
+	// relative to their location in the bundle directory.
 	for (const sourceMap of buildResult.sourceMaps ?? []) {
 		const key = stripLeadingDotSlash(sourceMap.name);
 		await writeBundleFile(bundleDir, key, sourceMap.content);
