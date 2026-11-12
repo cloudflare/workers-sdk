@@ -258,6 +258,37 @@ describe("validateChangesets()", () => {
 		`);
 	});
 
+	it("should report errors for major bumps to @cloudflare/vitest-plugin now that v1 has been released", ({
+		expect,
+	}) => {
+		// The `@cloudflare/vitest-plugin` exemption was a one-off for its v1
+		// rename from `@cloudflare/vitest-pool-workers`. Once v1 is published,
+		// it should be protected from major bumps like any other public package.
+		const packages = findPackages();
+		const vitestPlugin = packages.get("@cloudflare/vitest-plugin");
+		expect(vitestPlugin).toBeDefined();
+		expect(vitestPlugin?.private).not.toBe(true);
+		expect(
+			vitestPlugin?.["workers-sdk"]?.npmPrerelease,
+			"@cloudflare/vitest-plugin is not in prerelease mode"
+		).toBeUndefined();
+
+		const errors = validateChangesets(packages, [
+			{
+				file: "major-vitest-plugin.md",
+				contents: dedent`
+					---
+					"@cloudflare/vitest-plugin": major
+					---
+
+					breaking change!`,
+			},
+		]);
+		expect(errors).toEqual([
+			'Major version bumps are not allowed for package "@cloudflare/vitest-plugin" in changeset at "major-vitest-plugin.md".',
+		]);
+	});
+
 	it("should validate npm prerelease configuration", ({ expect }) => {
 		const errors = validateChangesets(
 			new Map<string, PackageJSON>([
