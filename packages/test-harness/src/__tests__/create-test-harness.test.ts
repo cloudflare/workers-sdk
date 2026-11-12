@@ -2,6 +2,13 @@ import { execFileSync } from "node:child_process";
 import net from "node:net";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import {
+	getWorkerAssetsDir,
+	getWorkerBundleDir,
+	writeContainerConfig,
+	writeRootConfig,
+	writeWorkerConfig,
+} from "@cloudflare/build-output-utils";
 import { bindings } from "@cloudflare/config";
 import { isDockerRunning } from "@cloudflare/containers-shared";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
@@ -16,6 +23,7 @@ import { setupServer } from "msw/node";
 import { beforeEach, describe, it, onTestFinished, vi } from "vitest";
 import { createTestHarness } from "../index";
 import type { TestHarnessOptions } from "../index";
+import type { ParsedInputWorkerConfig } from "@cloudflare/config";
 import type {
 	CloudflareWorkersModule,
 	D1Database,
@@ -36,13 +44,15 @@ const isDockerAvailable =
 	process.env.CI === "true" || (await isDockerRunning(getDockerPath()));
 
 type BuildWorker = {
-	config: Record<string, unknown>;
+	config: Omit<ParsedInputWorkerConfig, "compatibilityDate"> & {
+		compatibilityDate?: string;
+	};
 	script?: string;
 	assets?: Record<string, string>;
 };
 
 /**
- * Writes a project's Build Output, as a build tool would.
+ * Writes a project's Build Output with the writers that build tools use.
  *
  * @param projectDir The project directory
  * @param workers The Workers, keyed by their directory under `workers/`
@@ -53,30 +63,28 @@ async function writeBuild(
 	workers: Record<string, BuildWorker>,
 	mode = "production"
 ) {
-	const outputDir = `${projectDir}/.cloudflare/output/v0`;
-	const files: Record<string, string> = {
-		[`${outputDir}/config.json`]: JSON.stringify({
-			buildContext: { isPreview: false, mode },
-		}),
-	};
+	await writeRootConfig(projectDir, undefined, { isPreview: false, mode });
 	for (const [directoryName, worker] of Object.entries(workers)) {
-		const workerDir = `${outputDir}/workers/${directoryName}`;
-		files[`${workerDir}/worker.config.json`] = JSON.stringify({
-			compatibilityDate: "2026-10-01",
-			...worker.config,
+		await writeWorkerConfig({
+			root: projectDir,
+			directoryName,
+			config: { compatibilityDate: "2026-10-01", ...worker.config },
 			manifest:
 				worker.script === undefined
 					? undefined
 					: { type: "partial", mainModule: "index.js", modules: {} },
 		});
+		const files: Record<string, string> = {};
 		if (worker.script !== undefined) {
-			files[`${workerDir}/bundle/index.js`] = worker.script;
+			const bundleDir = getWorkerBundleDir(projectDir, directoryName);
+			files[path.join(bundleDir, "index.js")] = worker.script;
 		}
+		const assetsDir = getWorkerAssetsDir(projectDir, directoryName);
 		for (const [name, contents] of Object.entries(worker.assets ?? {})) {
-			files[`${workerDir}/assets/${name}`] = contents;
+			files[path.join(assetsDir, name)] = contents;
 		}
+		await seed(files);
 	}
-	await seed(files);
 }
 
 /**
@@ -224,9 +232,14 @@ describe("createTestHarness()", () => {
 					`,
 				},
 			});
-			await seed({
-				".cloudflare/output/v0/containers/sandbox/container.config.json":
-					JSON.stringify({ name: "sandbox", image: { localReference: image } }),
+			await writeContainerConfig({
+				root: ".",
+				directoryName: "sandbox",
+				config: {
+					name: "sandbox",
+					maxInstances: 20,
+					image: { localReference: image },
+				},
 			});
 			const harness = useTestHarness({ workers: [{ buildOutput: "." }] });
 
@@ -357,7 +370,9 @@ describe("createTestHarness()", () => {
 		} as unknown as Awaited<
 			ReturnType<typeof maybeStartOrUpdateRemoteProxySession>
 		>);
-		const env = { KV: { type: "kv", id: "abc", dev: { remote: true } } };
+		const env = {
+			KV: { type: "kv" as const, id: "abc", dev: { remote: true } },
+		};
 		await writeBuild("app", {
 			default: {
 				config: {
@@ -470,28 +485,32 @@ describe("createTestHarness()", () => {
 	it("runs Build Output with a complete manifest and a source map, as Wrangler writes it", async ({
 		expect,
 	}) => {
-		const workerDir = ".cloudflare/output/v0/workers/default";
-		await seed({
-			".cloudflare/output/v0/config.json": JSON.stringify({
-				buildContext: { isPreview: false, mode: "production" },
-			}),
-			[`${workerDir}/worker.config.json`]: JSON.stringify({
+		await writeRootConfig(".", undefined, {
+			isPreview: false,
+			mode: "production",
+		});
+		await writeWorkerConfig({
+			root: ".",
+			config: {
 				name: "wrangler-built-worker",
 				compatibilityDate: "2026-06-01",
-				manifest: {
-					type: "complete",
-					mainModule: "index.js",
-					modules: {
-						"index.js": { type: "esm" },
-						"index.js.map": { type: "sourcemap" },
-					},
+			},
+			manifest: {
+				type: "complete",
+				mainModule: "index.js",
+				modules: {
+					"index.js": { type: "esm" },
+					"index.js.map": { type: "sourcemap" },
 				},
-			}),
-			[`${workerDir}/bundle/index.js`]: [
+			},
+		});
+		const bundleDir = getWorkerBundleDir(".");
+		await seed({
+			[path.join(bundleDir, "index.js")]: [
 				`export default { fetch() { return new Response("Hello from Wrangler's build"); } };`,
 				"//# sourceMappingURL=index.js.map",
 			].join("\n"),
-			[`${workerDir}/bundle/index.js.map`]: JSON.stringify({
+			[path.join(bundleDir, "index.js.map")]: JSON.stringify({
 				version: 3,
 				sources: ["../src/index.ts"],
 				mappings: "AAAA",
@@ -1826,14 +1845,14 @@ describe("createTestHarness()", () => {
 
 		// Either of these changes should cause a startup failure
 		await seed({
-			".cloudflare/output/v0/workers/default/bundle/index.js": `
+			[path.join(getWorkerBundleDir("."), "index.js")]: `
 				export default {
 					fetch() {
 						return new Response("broken);
 					}
 				};
 			`,
-			".cloudflare/output/v0/workers/auxiliary-worker/bundle/index.js": `
+			[path.join(getWorkerBundleDir(".", "auxiliary-worker"), "index.js")]: `
 				export default {
 					fetch() {
 						return new Response("broken too";
