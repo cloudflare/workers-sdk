@@ -117,6 +117,12 @@ export async function prepareContainerImagesForVite(args: {
 			);
 		}
 
+		const configFileName = workerConfig.configPath
+			? path.basename(workerConfig.configPath)
+			: args.viteConfigFile
+				? path.basename(args.viteConfigFile)
+				: "Vite plugin configuration";
+
 		await prepareContainerImagesForDev({
 			dockerPath: args.dockerPath,
 			containerOptions,
@@ -124,11 +130,8 @@ export async function prepareContainerImagesForVite(args: {
 			onContainerImagePreparationEnd: () => {},
 			logger: args.logger,
 			complianceConfig: workerConfig,
-			configFileName: workerConfig.configPath
-				? path.basename(workerConfig.configPath)
-				: args.viteConfigFile
-					? path.basename(args.viteConfigFile)
-					: "Vite plugin configuration",
+			configFileName,
+			disableContainersHint: `To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your ${configFileName}.`,
 			registryConfigureCommand: "wrangler containers registries configure",
 		});
 	}

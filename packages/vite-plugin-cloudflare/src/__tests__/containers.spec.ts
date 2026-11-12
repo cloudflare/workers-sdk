@@ -359,8 +359,31 @@ test.for([
 		expect(prepareContainerImagesForDev).toHaveBeenCalledExactlyOnceWith(
 			expect.objectContaining({
 				configFileName,
+				disableContainersHint: `To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your ${configFileName}.`,
 				registryConfigureCommand: "wrangler containers registries configure",
 			})
 		);
 	}
 );
+
+test("Docker errors suggest only the supported v1 configuration setting", async ({
+	expect,
+}) => {
+	const original = await vi.importActual<
+		typeof import("@cloudflare/containers-shared")
+	>("@cloudflare/containers-shared");
+	vi.mocked(prepareContainerImagesForDev).mockImplementation(
+		original.prepareContainerImagesForDev
+	);
+	const result = prepareContainerImagesForVite({
+		dockerPath: path.resolve("missing-docker-executable"),
+		containerOptionsByWorker: new Map([
+			[{ configPath: path.resolve("wrangler.jsonc") }, []],
+		]),
+		logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+	});
+	await expect(result).rejects.toThrow(
+		"set dev.enable_containers to false in your wrangler.jsonc"
+	);
+	await expect(result).rejects.not.toThrow("--enable-containers");
+});
