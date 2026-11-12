@@ -1,9 +1,12 @@
+import assert from "node:assert";
+import events from "node:events";
 import { setTimeout as sleep } from "node:timers/promises";
 import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { beforeEach, describe, it, vi } from "vitest";
+import WebSocket from "ws";
 import { MultiworkerRuntimeController } from "../../../api/startDevWorker/MultiworkerRuntimeController";
 import { urlFromParts } from "../../../api/startDevWorker/utils";
 import { FakeBus } from "../../helpers/fake-bus";
@@ -11,6 +14,7 @@ import { mockConsoleMethods } from "../../helpers/mock-console";
 import { useTeardown } from "../../helpers/teardown";
 import { unusable } from "../../helpers/unusable";
 import type { Bundle, StartDevWorkerOptions } from "../../../api";
+import type { ReloadCompleteEvent } from "../../../api/startDevWorker/events";
 
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
 	const original =
@@ -249,6 +253,137 @@ describe("MultiworkerRuntimeController", () => {
 		});
 		await reloadComplete;
 		expect(prepareContainerImagesForDev).toHaveBeenCalledTimes(5);
+	});
+
+	// https://github.com/cloudflare/workers-sdk/issues/11769
+	// With `wrangler dev -c primary -c secondary`, DevTools connects to the
+	// inspector URL in the `reloadComplete` event. It should debug the primary
+	// Worker (the first `-c`), whose ProxyController it is, rather than whichever
+	// Worker happened to bundle or reload last.
+	describe("inspector", () => {
+		function makeWorkerConfig(name: string, primary: boolean) {
+			return configDefaults({
+				name,
+				dev: {
+					persist: "./persist",
+					remote: false,
+					multiworkerPrimary: primary,
+				},
+			});
+		}
+
+		function makeWorkerBundle(name: string): Bundle {
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
+				export default {
+					fetch(request, env, ctx) {
+						return new Response("hello from ${name}");
+					}
+				}
+			`);
+			return {
+				...bundle,
+				path: `/virtual/${name}/index.mjs`,
+				entry: {
+					...bundle.entry,
+					projectRoot: `/virtual/${name}/`,
+					moduleRoot: `/virtual/${name}`,
+				},
+			};
+		}
+
+		function bundleComplete(name: string, primary: boolean) {
+			return {
+				type: "bundleComplete" as const,
+				config: makeWorkerConfig(name, primary),
+				bundle: makeWorkerBundle(name),
+			};
+		}
+
+		/**
+		 * Connects to the inspector URL a `reloadComplete` event hands to the
+		 * ProxyController (and so to DevTools), enables the `Debugger` domain,
+		 * and returns the URLs of the scripts DevTools would show as sources.
+		 */
+		async function getDebuggableScriptUrls(
+			event: ReloadCompleteEvent
+		): Promise<string[]> {
+			const inspectorUrl = event.proxyData.userWorkerInspectorUrl;
+			assert(inspectorUrl);
+			const ws = new WebSocket(
+				`ws://${inspectorUrl.hostname}:${inspectorUrl.port}${inspectorUrl.pathname}`
+			);
+			teardown(() => ws.terminate());
+			const urls: string[] = [];
+			const enabled = new Promise<void>((resolve) => {
+				ws.on("message", (data) => {
+					const message = JSON.parse(data.toString()) as {
+						id?: number;
+						method?: string;
+						params?: { url?: string };
+					};
+					if (message.method === "Debugger.scriptParsed") {
+						urls.push(message.params?.url ?? "");
+					}
+					// `Debugger.scriptParsed` is sent for every existing script
+					// before the response to `Debugger.enable`
+					if (message.id === 0) {
+						resolve();
+					}
+				});
+			});
+			await events.once(ws, "open");
+			ws.send(JSON.stringify({ id: 0, method: "Debugger.enable" }));
+			await enabled;
+			return urls;
+		}
+
+		it("debugs the primary Worker when a secondary Worker bundles last", async ({
+			expect,
+		}) => {
+			const bus = new FakeBus();
+			const controller = new MultiworkerRuntimeController(bus, 2);
+			teardown(() => controller.teardown());
+
+			const reloadComplete = bus.waitFor("reloadComplete");
+			controller.onBundleComplete(bundleComplete("worker-a", true));
+			controller.onBundleComplete(bundleComplete("worker-b", false));
+			const event = await reloadComplete;
+
+			const urls = await getDebuggableScriptUrls(event);
+			expect(urls).toContainEqual(
+				expect.stringMatching(/\/virtual\/worker-a\/index\.mjs$/)
+			);
+			expect(urls).not.toContainEqual(
+				expect.stringMatching(/\/virtual\/worker-b\/index\.mjs$/)
+			);
+		});
+
+		it("keeps debugging the primary Worker when only a secondary Worker reloads", async ({
+			expect,
+		}) => {
+			const bus = new FakeBus();
+			const controller = new MultiworkerRuntimeController(bus, 2);
+			teardown(() => controller.teardown());
+
+			// Start with the primary Worker bundling last
+			let reloadComplete = bus.waitFor("reloadComplete");
+			controller.onBundleComplete(bundleComplete("worker-b", false));
+			controller.onBundleComplete(bundleComplete("worker-a", true));
+			await reloadComplete;
+
+			// Then change only the secondary Worker, as saving its source does
+			reloadComplete = bus.waitFor("reloadComplete");
+			controller.onBundleComplete(bundleComplete("worker-b", false));
+			const event = await reloadComplete;
+
+			const urls = await getDebuggableScriptUrls(event);
+			expect(urls).toContainEqual(
+				expect.stringMatching(/\/virtual\/worker-a\/index\.mjs$/)
+			);
+			expect(urls).not.toContainEqual(
+				expect.stringMatching(/\/virtual\/worker-b\/index\.mjs$/)
+			);
+		});
 	});
 
 	describe("stale bundle bail-out", () => {
