@@ -406,12 +406,18 @@ describe("createTestHarness()", () => {
 		expect(session.dispose).toHaveBeenCalled();
 	});
 
-	it("doesn't send a binding the test overrides to the remote session", async ({
+	it("doesn't send a binding the test overrides or removes to the remote session", async ({
 		expect,
 	}) => {
 		await writeBuild("app", {
 			default: {
-				config: { name: "app", env: { AI: { type: "ai" } } },
+				config: {
+					name: "app",
+					env: {
+						AI: { type: "ai" },
+						KV: { type: "kv", id: "abc", dev: { remote: true } },
+					},
+				},
 				script: `export default {
 					async fetch(request, env) {
 						return Response.json(await env.AI.run("@cf/test/model", {}));
@@ -432,7 +438,7 @@ describe("createTestHarness()", () => {
 			workers: [
 				{
 					buildOutput: "app",
-					env: { AI: bindings.worker({ worker: "mock-ai" }) },
+					env: { AI: bindings.worker({ worker: "mock-ai" }), KV: false },
 				},
 				{ buildOutput: "app", name: "mock-ai" },
 			],
@@ -1117,6 +1123,73 @@ describe("createTestHarness()", () => {
 			"SELECT value FROM entries WHERE id = 'key'"
 		);
 		expect(rows).toEqual([{ value: "app" }]);
+	});
+
+	it("exposes the storage of the Durable Object that the test's env binds", async ({
+		expect,
+	}) => {
+		const durableObject = (className: string) => `
+			import { DurableObject } from "cloudflare:workers";
+
+			export class ${className} extends DurableObject {
+				fetch() {
+					const row = this.ctx.storage.sql.exec("SELECT value FROM entries").one();
+					return new Response(row.value);
+				}
+			}
+
+			export default {
+				fetch(request, env) {
+					return env.COUNTER.get(env.COUNTER.idFromName("a")).fetch(request);
+				}
+			}
+		`;
+		await writeBuild("app", {
+			default: {
+				config: {
+					name: "app",
+					exports: { Real: { type: "durable-object", storage: "sqlite" } },
+					env: {
+						COUNTER: {
+							type: "durable-object",
+							worker: "app",
+							exportName: "Real",
+						},
+					},
+				},
+				script: durableObject("Real"),
+			},
+			mock: {
+				config: {
+					name: "mock",
+					exports: { Mock: { type: "durable-object", storage: "sqlite" } },
+				},
+				script: durableObject("Mock"),
+			},
+		});
+		const harness = useTestHarness({
+			workers: [
+				{
+					buildOutput: "app",
+					env: {
+						COUNTER: bindings.durableObject({
+							worker: "mock",
+							exportName: "Mock",
+						}),
+					},
+				},
+				{ buildOutput: "app", name: "mock" },
+			],
+		});
+
+		await harness.listen();
+		const storage = await harness
+			.getWorker()
+			.getDurableObjectStorage("COUNTER", { name: "a" });
+		await storage.exec("CREATE TABLE entries (value TEXT)");
+		await storage.exec("INSERT INTO entries (value) VALUES ('seeded')");
+
+		expect(await (await harness.fetch("/")).text()).toBe("seeded");
 	});
 
 	it("introspects Workflow instances by binding name", async ({ expect }) => {
@@ -2209,7 +2282,7 @@ describe("createTestHarness()", () => {
 		});
 
 		const updatedResponse = await server.fetch("/");
-		await expect(updatedResponse.json()).resolves.toStrictEqual({
+		await expect(updatedResponse.json()).resolves.toEqual({
 			CONFIG_VAR: "from-updated-override",
 			API_TOKEN: "from-updated-override",
 			ADDED_VAR: "from-updated-override",

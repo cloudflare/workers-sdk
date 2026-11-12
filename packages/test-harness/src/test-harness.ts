@@ -667,23 +667,13 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		return workerName;
 	}
 
-	function getWorkerConfig(session: ServerSession, workerName: string) {
-		const workerConfig = session.workers.find(
-			(worker) => worker.config.name === workerName
-		)?.config;
-		assert(
-			workerConfig,
-			`Worker ${JSON.stringify(workerName)} config is not available.`
-		);
-		return workerConfig;
-	}
-
 	function resolveDurableObjectTarget(
 		session: ServerSession,
 		workerName: string,
 		classNameOrBindingName: string
 	) {
-		const workerConfig = getWorkerConfig(session, workerName);
+		// The bindings the Worker runs with, after the test's `env`
+		const workerConfig = getResolvedWorker(session, workerName).options.config;
 		const localDurableObjectBinding = Object.values(
 			workerConfig.env ?? {}
 		).find((binding) => {
