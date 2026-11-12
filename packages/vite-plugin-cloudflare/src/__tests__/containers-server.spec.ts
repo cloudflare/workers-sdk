@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
+import { prepareContainerImagesForCfConfig } from "@cloudflare/containers-shared";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { Miniflare } from "miniflare";
 import { createBuilder, createServer, preview } from "vite";
@@ -62,7 +62,7 @@ vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
 		await importOriginal<typeof import("@cloudflare/containers-shared")>();
 	return {
 		...original,
-		prepareContainerImagesForDev: vi.fn(async () => ({ aborted: false })),
+		prepareContainerImagesForCfConfig: vi.fn(async () => {}),
 	};
 });
 
@@ -176,7 +176,7 @@ describe.each(["dev", "preview"] as const)(
 			vi.stubEnv("WRANGLER_DOCKER_HOST", "unix:///test/docker.sock");
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", undefined);
 			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
-			vi.mocked(prepareContainerImagesForDev).mockClear();
+			vi.mocked(prepareContainerImagesForCfConfig).mockClear();
 		});
 
 		afterEach(() => {
@@ -259,7 +259,7 @@ describe.each(["dev", "preview"] as const)(
 				});
 				onTestFinished(() => server.close());
 
-				const options = vi.mocked(prepareContainerImagesForDev).mock
+				const options = vi.mocked(prepareContainerImagesForCfConfig).mock
 					.calls[0]?.[0].containerOptions;
 				expect(options).toHaveLength(2);
 				expect(options?.map(({ class_name }) => class_name)).toEqual([
@@ -307,10 +307,10 @@ describe.each(["dev", "preview"] as const)(
 				onTestFinished(() => server.close());
 
 				if (scenario === "unlinked" || scenario === "absent") {
-					expect(prepareContainerImagesForDev).not.toHaveBeenCalled();
+					expect(prepareContainerImagesForCfConfig).not.toHaveBeenCalled();
 				} else {
-					expect(prepareContainerImagesForDev).toHaveBeenCalledTimes(1);
-					const options = vi.mocked(prepareContainerImagesForDev).mock
+					expect(prepareContainerImagesForCfConfig).toHaveBeenCalledTimes(1);
+					const options = vi.mocked(prepareContainerImagesForCfConfig).mock
 						.calls[0]?.[0].containerOptions;
 					expect(options).toHaveLength(scenario === "configured" ? 1 : 0);
 				}
