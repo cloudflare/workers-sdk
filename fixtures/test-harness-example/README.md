@@ -1,6 +1,6 @@
-# Integration testing Build Output with `@cloudflare/test-harness`
+# Testing production build with `@cloudflare/test-harness`
 
-This fixture tests a realistic multi-Worker app's production build with `@cloudflare/test-harness`, from different test runners. It's [`create-test-harness-example`](../create-test-harness-example), which uses Wrangler's `createTestHarness()`, ported to Build Output.
+This example tests the production build of a multi-Worker app with `@cloudflare/test-harness`, from Vitest and from Playwright.
 
 ## Example app
 

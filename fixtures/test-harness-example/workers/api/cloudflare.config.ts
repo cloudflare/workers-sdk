@@ -1,4 +1,4 @@
-import { bindings, defineConfig } from "cf/config";
+import { bindings, defineConfig, triggers } from "cf/config";
 import * as entrypoint from "./index.ts" with { type: "cf-worker" };
 
 export default defineConfig({
@@ -6,7 +6,7 @@ export default defineConfig({
 		name: "api-worker",
 		entrypoint,
 		compatibilityDate: "2026-06-01",
-		triggers: [{ type: "fetch", pattern: "api.example.com/v1/*" }],
+		triggers: [triggers.fetch({ pattern: "api.example.com/v1/*" })],
 		env: {
 			STORE: bindings.kv({ id: "shared-store" }),
 			DATABASE: bindings.d1({ id: "fake-database-id" }),
