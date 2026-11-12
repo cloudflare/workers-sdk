@@ -10,8 +10,6 @@ import {
 	describe,
 	test,
 } from "vitest";
-import { mockBrowser } from "./mock-browser";
-import type { MockBrowserModule } from "./mock-browser";
 
 // Point each worker to the project containing its build output.
 const server = createTestHarness({
@@ -21,7 +19,7 @@ const server = createTestHarness({
 			env: { BROWSER: bindings.worker({ worker: "mock-browser" }) },
 		},
 		{ buildOutput: "./workers/api" },
-		mockBrowser,
+		{ buildOutput: "./workers/mock-browser" },
 	],
 });
 
@@ -35,9 +33,10 @@ const apiWorker =
 	server.getWorker<typeof import("../workers/api/cloudflare.config")>(
 		"api-worker"
 	);
-const mockBrowserWorker = server.getWorker<unknown, MockBrowserModule>(
-	"mock-browser"
-);
+const mockBrowserWorker =
+	server.getWorker<typeof import("../workers/mock-browser/cloudflare.config")>(
+		"mock-browser"
+	);
 
 // Workers started by createTestHarness route outbound fetches to globalThis.fetch().
 // You can use libraries like MSW to intercept those requests.
