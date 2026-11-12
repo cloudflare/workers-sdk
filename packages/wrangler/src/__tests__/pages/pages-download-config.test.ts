@@ -884,6 +884,53 @@ describe("pages download config", () => {
 		await runWrangler(`pages download config ${MOCK_PROJECT_NAME}`);
 	});
 
+	// https://github.com/cloudflare/workers-sdk/issues/5983
+	describe("build output directory with a leading slash", () => {
+		function mockProjectWithDestinationDir(
+			expect: ExpectStatic,
+			destinationDir: string
+		) {
+			const project = makePagesProject();
+			project.result.build_config.destination_dir = destinationDir;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/pages/projects/:projectName`,
+					({ params }) => {
+						expect(params.accountId).toEqual(MOCK_ACCOUNT_ID);
+						return HttpResponse.json(project, { status: 200 });
+					},
+					{ once: true }
+				)
+			);
+		}
+
+		it("should write a `./`-relative pages_build_output_dir when the project's build output directory is `/dist`", async ({
+			expect,
+		}) => {
+			// Pages CI treats a build output directory of `/dist` as `dist` within the project root
+			mockProjectWithDestinationDir(expect, "/dist");
+
+			await runWrangler(`pages download config ${MOCK_PROJECT_NAME}`);
+
+			expect(await readNormalizedWranglerToml()).toContain(
+				`pages_build_output_dir = "./dist"`
+			);
+		});
+
+		it("should download a config whose pages_build_output_dir resolves within the project", async ({
+			expect,
+		}) => {
+			mockProjectWithDestinationDir(expect, "/dist");
+
+			await runWrangler(`pages download config ${MOCK_PROJECT_NAME}`);
+			vi.stubEnv("PAGES_ENVIRONMENT", "production");
+			await runWrangler("pages functions build-env . --outfile data.json");
+
+			const buildEnv = JSON.parse(await readFile("data.json", "utf8"));
+			expect(buildEnv.pages_build_output_dir).toEqual("dist");
+		});
+	});
+
 	it("should fail if not given a project name", async ({ expect }) => {
 		await expect(
 			runWrangler(`pages download config`)
