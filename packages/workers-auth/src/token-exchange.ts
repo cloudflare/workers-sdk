@@ -30,8 +30,7 @@ import { generatePKCECodes, RECOMMENDED_STATE_LENGTH } from "./pkce";
 import type { OAuthFlowContext } from "./context";
 import type { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import type { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
-import type { OAuthFlowState } from "./state";
-import type { AccessToken, RefreshToken } from "./state";
+import type { AccessToken, OAuthFlowState, RefreshToken } from "./state";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
 
