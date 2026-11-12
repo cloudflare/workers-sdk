@@ -1,5 +1,57 @@
 # @cloudflare/vite-plugin
 
+## 1.69.1
+
+### Patch Changes
+
+- [#16841](https://github.com/cloudflare/workers-sdk/pull/16841) [`3eaeb02`](https://github.com/cloudflare/workers-sdk/commit/3eaeb0230826ed05604121d0806efce22818d4cd) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix builds failing with `Expected "assets-only" or "workers" plugin config` when a framework starts a preview server during the build
+
+  Frameworks such as Waku start a Vite preview server with the same plugin instances to generate static files during `vite build`. Since 1.69.0 this made the build fail after static generation; builds now complete again, as they did in 1.68.0.
+
+## 1.69.0
+
+### Minor Changes
+
+- [#16757](https://github.com/cloudflare/workers-sdk/pull/16757) [`110539e`](https://github.com/cloudflare/workers-sdk/commit/110539e81ba7c70e39f6f57d0bc8188ce3df46c1) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Support auth profile selection for experimental cf-authenticated remote bindings
+
+  Remote binding sessions can select an authentication profile with `CLOUDFLARE_AUTH_PROFILE`. Experimental cf authentication keeps account choices within the session instead of persisting them across invocations. Wrangler authentication retains its existing account persistence.
+
+- [#16801](https://github.com/cloudflare/workers-sdk/pull/16801) [`a1f9218`](https://github.com/cloudflare/workers-sdk/commit/a1f92180d26b84f76b666097c263415a6b749b9e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Support custom Cloudflare API headers in Vite development
+
+  Use `CLOUDFLARE_API_HEADERS` to supply additional headers for remote-binding preview uploads, experimental authentication, and Container API requests. Upgrade Wrangler and the shared API helpers together; request diagnostics redact sensitive headers even when log sanitization is disabled.
+
+- [#16730](https://github.com/cloudflare/workers-sdk/pull/16730) [`9792d4f`](https://github.com/cloudflare/workers-sdk/commit/9792d4f8539e66e1df2d38420d01ab50efcb394d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Support local Artifacts bindings in Vite plugin v1
+
+  Set `remote: false` on an Artifacts binding in Wrangler configuration to use local repositories. With `remoteBindings: false`, Artifacts also uses the local simulator. Omitted `remote` continues to use deployed repositories when remote bindings are enabled. Local Artifacts requires Git 2.32 or newer.
+
+### Patch Changes
+
+- [#16730](https://github.com/cloudflare/workers-sdk/pull/16730) [`9792d4f`](https://github.com/cloudflare/workers-sdk/commit/9792d4f8539e66e1df2d38420d01ab50efcb394d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Preserve the server origin when constructing Worker request URLs
+
+  HTTP requests, WebSocket upgrades, and static routing now consistently treat incoming paths as paths on the selected server origin in dev and preview. Encoded paths and query strings are preserved, and non-origin-form request targets are rejected.
+
+- [#16801](https://github.com/cloudflare/workers-sdk/pull/16801) [`a1f9218`](https://github.com/cloudflare/workers-sdk/commit/a1f92180d26b84f76b666097c263415a6b749b9e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update Miniflare to protect local Browser Rendering and Artifacts credentials
+
+  Local Browser Rendering receives browser configuration and a usable home directory without unrelated host credentials. Local Artifacts Git forwarding also strips `X-Auth-Key` before passing requests to the repository.
+
+- [#16817](https://github.com/cloudflare/workers-sdk/pull/16817) [`cdde2c8`](https://github.com/cloudflare/workers-sdk/commit/cdde2c8770fa8f1f3b9cddc8992ddffa4f54485d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Complete v1 builds without rebuilding environments or relying on Vite manifests
+
+  Preserve assets imported by entry, child, and prerender Workers when framework plugins build environments first or delete their Vite manifests. Keep the Vite 6 builder callback and Wrangler output configuration used by v1.
+
+- [#16770](https://github.com/cloudflare/workers-sdk/pull/16770) [`7bb9993`](https://github.com/cloudflare/workers-sdk/commit/7bb99930171cf103c48798dfb7154719c952fb3f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Delegate local Container cleanup to Miniflare
+
+  Local development and preview now let Miniflare remove application containers, networking sidecars and snapshot clone volumes. Dispose the runtime when a dev-server restart removes the Cloudflare plugin, including overlapping restarts.
+
+- [#16704](https://github.com/cloudflare/workers-sdk/pull/16704) [`73e4659`](https://github.com/cloudflare/workers-sdk/commit/73e4659c7b152e71e312cf3f120d30eb16429aa4) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update the v1 local runtime and remote binding authentication
+
+  Use the November 4 runtime and default compatibility date. Local D1 reads outside sessions no longer write bookmarks, local static assets are read-only during preview, and local Secrets Store persistence is restricted to its owner. Remote binding Access login redirects produce an actionable authentication error while responses returned by bindings are preserved. New opt-in cf OAuth logins request the corrected PlanetScale setup scope.
+
+- [#16757](https://github.com/cloudflare/workers-sdk/pull/16757) [`110539e`](https://github.com/cloudflare/workers-sdk/commit/110539e81ba7c70e39f6f57d0bc8188ce3df46c1) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update the local development runtime to the November 9 release
+
+  Update Miniflare and the coupled Wrangler and shared dependencies, keeping the Workers types aligned with the runtime. Remote binding preview uploads avoid materializing unused multipart request bodies, reducing memory use during session creation.
+
+  The runtime includes session-scoped cleanup of local Container resources and security fixes for bundled dependencies. Node.js 22.12.0 or later is required by the updated runtime.
+
 ## 1.68.0
 
 ### Minor Changes
