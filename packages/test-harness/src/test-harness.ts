@@ -20,7 +20,6 @@ import {
 	getUnappliedMigrationNames,
 	resolveMigrationsConfig,
 } from "./d1-migrations";
-import { BUN_UNSUPPORTED_MESSAGE, isBun } from "./is-bun";
 import { disposeRemoteProxySessions, resolveWorkerInputs } from "./runtime";
 import type { ResolvedWorker } from "./runtime";
 import type { ResolvedOutputWorkerConfig } from "@cloudflare/build-output-utils";
@@ -368,12 +367,6 @@ export type TestHarness = {
 	 * await server.fetch("http://example.com/api/data");
 	 * // Dispatches a request to the API Worker with URL "http://example.com/api/data"
 	 * ```
-	 *
-	 * Under Bun, this method and `server.getWorker()`'s `fetch()`, `email()` and
-	 * `scheduled()` cannot reach the Worker, because Bun's `fetch()` ignores the
-	 * undici `dispatcher` that Miniflare routes requests through. The methods
-	 * throw a `UserError`. The URL returned by `listen()`, and
-	 * `server.getWorker().getEnv()` and `getExport()`, keep working under Bun.
 	 */
 	fetch: DispatchFetch;
 	/**
@@ -783,16 +776,6 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		worker?: string,
 		event = "fetch"
 	) {
-		// Miniflare's `dispatchFetch()` routes every request, `getWorker()` ones
-		// included, through an undici dispatcher that Bun's `fetch()` ignores, so
-		// a request can leave for the network. Refuse before sending anything.
-		if (isBun()) {
-			throw new UserError(
-				`${BUN_UNSUPPORTED_MESSAGE} \`server.getWorker().getEnv()\` and \`getExport()\` still work under Bun.`,
-				{ telemetryMessage: "test harness dispatch under bun" }
-			);
-		}
-
 		let resolvedInput = input;
 
 		if (typeof input === "string" && !URL.canParse(input)) {
