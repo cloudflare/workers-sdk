@@ -41,11 +41,6 @@ type Env = {
 	WORKFLOW_STORAGE?: Fetcher;
 };
 
-// Bindings to one Workflow share its binding service, so each passes its name
-type WorkflowBindingProps = {
-	bindingName?: string;
-};
-
 const STORAGE_DELETE_RETRY_INTERVAL_MS = 50;
 const STORAGE_DELETE_RETRY_BUDGET_MS = 2_000;
 const STORAGE_DELETE_MAX_RETRIES =
@@ -416,11 +411,8 @@ const workflowInstanceCreateOptionsSchema = z.object({
 });
 
 // this.env.WORKFLOW is WorkflowBinding
-export class WorkflowBinding extends WorkerEntrypoint<
-	Env,
-	WorkflowBindingProps
-> {
-	constructor(ctx: ExecutionContext<WorkflowBindingProps>, env: Env) {
+export class WorkflowBinding extends WorkerEntrypoint<Env> {
+	constructor(ctx: ExecutionContext, env: Env) {
 		super(ctx, env);
 	}
 
@@ -876,13 +868,13 @@ export class WorkflowBinding extends WorkerEntrypoint<
 
 	public async unsafeGetBindingName(): Promise<string> {
 		// async because of rpc
-		return this.ctx.props.bindingName ?? this.env.BINDING_NAME;
+		return this.env.BINDING_NAME;
 	}
 
 	public async unsafeStartIntrospection(): Promise<string> {
 		if (workflowIntrospectionSessions.has(this.env.WORKFLOW_NAME)) {
 			throw new Error(
-				`Workflow ${JSON.stringify(this.env.WORKFLOW_NAME)} already has an active introspection session for binding ${JSON.stringify(this.ctx.props.bindingName ?? this.env.BINDING_NAME)}.`
+				`Workflow ${JSON.stringify(this.env.WORKFLOW_NAME)} already has an active introspection session for binding ${JSON.stringify(this.env.BINDING_NAME)}.`
 			);
 		}
 

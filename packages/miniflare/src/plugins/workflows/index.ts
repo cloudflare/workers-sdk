@@ -120,9 +120,6 @@ export const WORKFLOWS_PLUGIN: Plugin = {
 							service: {
 								name: getWorkflowBindingServiceName(binding.name),
 								entrypoint: "WorkflowBinding",
-								// Bindings to one Workflow share its service, so each tells it
-								// which binding it is
-								props: { json: JSON.stringify({ bindingName }) },
 							},
 						},
 					],
