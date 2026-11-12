@@ -17,7 +17,7 @@ export type EmailAttachment =
 	  };
 
 export interface EmailAddress {
-	name: string;
+	name?: string;
 	email: string;
 }
 

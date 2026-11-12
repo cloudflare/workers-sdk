@@ -32,7 +32,11 @@ export function extractEmailAddress(address: string | EmailAddress): string {
 }
 
 export function formatEmailAddress(address: string | EmailAddress): string {
-	return typeof address === "string"
-		? address
+	if (typeof address === "string") {
+		return address;
+	}
+	// Same as formatParsedAddress: bare email when name is missing/empty.
+	return address.name === undefined || address.name === ""
+		? address.email
 		: `${quoteDisplayName(address.name)} <${address.email}>`;
 }

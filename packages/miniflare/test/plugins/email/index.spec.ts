@@ -1070,6 +1070,62 @@ test("reply: supports EmailReplyMessageBuilder", async ({ expect }) => {
 	).toBe("hi");
 });
 
+test("reply: supports EmailAddress without name", async ({ expect }) => {
+	const mf = new Miniflare({
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(dedent /* javascript */ `
+						export default {
+							fetch() {},
+							async email(message) {
+								await message.reply({
+									from: { email: message.to },
+									subject: "Re: hi",
+									text: "reply body",
+								});
+							},
+						};
+					`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/local/email?format=json&from=sender@example.com&to=worker@example.com",
+		{
+			body: dedent`
+				From: Sender <sender@example.com>
+				To: Worker <worker@example.com>
+				Message-ID: <incoming@example.com>
+				MIME-Version: 1.0
+				Content-Type: text/plain
+
+				Incoming body.`,
+			method: "POST",
+		}
+	);
+	const result = (await res.json()) as {
+		replies: Array<{ messageId: string; sender: string; raw: string }>;
+	};
+
+	expect(res.status).toBe(200);
+	expect(result.replies).toHaveLength(1);
+	expect(result.replies[0]?.sender).toBe("worker@example.com");
+
+	const parsed = await PostalMime.parse(result.replies[0]?.raw ?? "");
+	expect(parsed.from).toMatchObject({
+		address: "worker@example.com",
+	});
+	expect(parsed.subject).toBe("Re: hi");
+	expect(parsed.text).toContain("reply body");
+});
+
 test("reply: rejects invalid custom header names", async ({ expect }) => {
 	const mf = new Miniflare({
 		unsafeTriggerHandlers: true,
@@ -1733,6 +1789,46 @@ test("MessageBuilder with EmailAddress objects", async ({ expect }) => {
 	expect(message).toContain('"John Doe" <john@example.com>');
 	expect(message).toContain('"Jane Smith" <jane@example.com>');
 	expect(message).toContain("Subject: Named Address Test");
+});
+
+test("MessageBuilder with EmailAddress objects without name", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+	const mf = useMessageBuilderMiniflare({
+		log,
+	});
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: { email: "sender@example.com" },
+			to: { email: "user@example.com" },
+			cc: [{ email: "cc@example.com" }],
+			bcc: { email: "bcc@example.com" },
+			replyTo: { email: "reply@example.com" },
+			subject: "Nameless Address Test",
+			text: "Hello",
+		}),
+	});
+
+	expect(await res.text()).toBe("ok");
+	expect(res.status).toBe(200);
+
+	const message = await waitForMessageBuilderLog(log);
+	expect(message).toContain("From: sender@example.com");
+	expect(message).toContain("To: user@example.com");
+	expect(message).toContain("Cc: cc@example.com");
+	expect(message).toContain("Bcc: bcc@example.com");
+	expect(message).toContain("Subject: Nameless Address Test");
+	expect(log.logs.some(([, msg]) => msg.includes("Failed to persist"))).toBe(
+		false
+	);
+	expect(
+		log.logs.some(([, msg]) =>
+			msg.includes("Failed to capture sent email for the Local Explorer")
+		)
+	).toBe(false);
 });
 
 test("MessageBuilder with named recipient arrays", async ({ expect }) => {
