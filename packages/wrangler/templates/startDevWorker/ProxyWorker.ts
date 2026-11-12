@@ -303,12 +303,10 @@ export class ProxyWorker implements DurableObject {
 						// if the request can be retried (subset of idempotent requests which have no body), requeue it
 						else if (request.method === "GET" || request.method === "HEAD") {
 							this.requestRetryQueue.set(request, deferredResponse);
-							// we would only end up here if the downstream UserWorker is chang*ing*
-							// i.e. we are in a `pause`d state and expecting a `play` message soon
-							// this request will be processed (retried) when the `play` message arrives
-							// for that reason, we do not need to call `this.processQueue` here
-							// (but, also, it can't hurt to call it since it bails when
-							// in a `pause`d state i.e. `this.proxyData` is undefined)
+							// `play` for the replacement UserWorker may have arrived before
+							// this fetch rejected. Drain now so the retry cannot be stranded;
+							// if still paused, `processQueue` waits for the next `play`.
+							this.processQueue();
 						}
 
 						// if the request cannot be retried, respond with 503 Service Unavailable
