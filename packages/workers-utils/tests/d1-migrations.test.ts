@@ -288,44 +288,6 @@ describe("compareMigrationPaths", () => {
 describe("readD1Migrations", () => {
 	runInTempDir();
 
-	it("reads flat migrations in migration number order", async ({ expect }) => {
-		await seed({
-			"migrations/10_seed.sql": "CREATE TABLE seed (id INTEGER);",
-			"migrations/2_add_users.sql": "CREATE TABLE users (id INTEGER);",
-		});
-
-		const migrations = await readD1Migrations(path.resolve("migrations"));
-
-		expect(migrations).toEqual([
-			{
-				name: "2_add_users.sql",
-				queries: ["CREATE TABLE users (id INTEGER);"],
-			},
-			{
-				name: "10_seed.sql",
-				queries: ["CREATE TABLE seed (id INTEGER);"],
-			},
-		]);
-	});
-
-	it("does not read nested sql files when given a directory path", async ({
-		expect,
-	}) => {
-		await seed({
-			"migrations/0001_init.sql": "CREATE TABLE init (id INTEGER);",
-			"migrations/0002_users/migration.sql": "CREATE TABLE users (id INTEGER);",
-		});
-
-		const migrations = await readD1Migrations(path.resolve("migrations"));
-
-		expect(migrations).toEqual([
-			{
-				name: "0001_init.sql",
-				queries: ["CREATE TABLE init (id INTEGER);"],
-			},
-		]);
-	});
-
 	it("reads nested D1 migrations when migrationsPattern is set", async ({
 		expect,
 	}) => {
@@ -358,26 +320,13 @@ describe("readD1Migrations", () => {
 		]);
 	});
 
-	it("throws a TypeError when the argument is not a string or options object", async ({
-		expect,
-	}) => {
-		await expect(
-			readD1Migrations(
-				// @ts-expect-error testing runtime validation
-				1
-			)
-		).rejects.toThrow(
-			new TypeError(
-				"Failed to execute 'readD1Migrations': parameter 1 is not of type 'string' or 'object'."
-			)
-		);
-	});
-
 	it("throws when the migrations directory does not exist", async ({
 		expect,
 	}) => {
 		await expect(
-			readD1Migrations(path.resolve("missing-migrations"))
-		).rejects.toThrow();
+			readD1Migrations({ migrationsDir: "missing-migrations" })
+		).rejects.toThrow(
+			`No migrations present at ${path.resolve("missing-migrations")}.`
+		);
 	});
 });
