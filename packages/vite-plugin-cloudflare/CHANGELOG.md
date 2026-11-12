@@ -1,5 +1,13 @@
 # @cloudflare/vite-plugin
 
+## 1.69.1
+
+### Patch Changes
+
+- [#16841](https://github.com/cloudflare/workers-sdk/pull/16841) [`3eaeb02`](https://github.com/cloudflare/workers-sdk/commit/3eaeb0230826ed05604121d0806efce22818d4cd) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix builds failing with `Expected "assets-only" or "workers" plugin config` when a framework starts a preview server during the build
+
+  Frameworks such as Waku start a Vite preview server with the same plugin instances to generate static files during `vite build`. Since 1.69.0 this made the build fail after static generation; builds now complete again, as they did in 1.68.0.
+
 ## 1.69.0
 
 ### Minor Changes
