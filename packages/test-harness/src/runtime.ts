@@ -1,9 +1,11 @@
-import assert from "node:assert";
 import * as fsp from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readBuildOutput } from "@cloudflare/build-output-utils";
-import { createContainerPreviewPlanForCfConfig } from "@cloudflare/containers-shared";
+import {
+	createContainerPreviewPlanForCfConfig,
+	createMiniflareExports,
+} from "@cloudflare/containers-shared";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import { getZoneFromRoute } from "@cloudflare/workers-utils";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
@@ -28,7 +30,6 @@ import type {
 import type { WorkerOptions } from "miniflare";
 
 type Manifest = NonNullable<WorkerOptions["config"]["manifest"]>;
-type Exports = NonNullable<WorkerOptions["config"]["exports"]>;
 type BuildOutputInput = Exclude<WorkerInput, { config: InlineWorkerConfig }>;
 type TestValues = Pick<
 	BuildOutputInput,
@@ -205,8 +206,6 @@ async function resolveWorker(
 				rootConfig.complianceRegion === "fedramp-high"
 					? "fedramp_high"
 					: rootConfig.complianceRegion,
-			account_id: rootConfig.accountId,
-			profileDir: projectDir,
 		},
 		preExistingRemoteProxySessionData,
 		getRemoteBindingsAuth(
@@ -407,39 +406,6 @@ async function prepareContainers(
 
 /** The container image preparations done in this process */
 const preparedContainerImages = new Set<string>();
-
-/**
- * Maps a Worker's exports to Miniflare's, adding the local runtime options of
- * Container-backed Durable Objects. Copied from the Vite plugin's
- * createMiniflareExports().
- *
- * @param options - Worker exports and their planned local Container metadata.
- * @returns Exports accepted by Miniflare's native Worker config schema.
- */
-function createMiniflareExports(options: {
-	exports: WorkerSource["worker"]["config"]["exports"];
-	containerRuntimeOptions: Map<string, ContainerDevRuntimeOptions> | undefined;
-}): Exports {
-	const workerExports: Exports = {};
-	for (const [name, workerExport] of Object.entries(options.exports ?? {})) {
-		if (workerExport.type === "durable-object" && "storage" in workerExport) {
-			const containerName =
-				"container" in workerExport ? workerExport.container : undefined;
-			const container =
-				containerName === undefined
-					? undefined
-					: options.containerRuntimeOptions?.get(name);
-			assert(
-				containerName === undefined || container !== undefined,
-				`Expected runtime options for Container-backed Durable Object export "${name}".`
-			);
-			workerExports[name] = { ...workerExport, container };
-		} else {
-			workerExports[name] = workerExport;
-		}
-	}
-	return workerExports;
-}
 
 /**
  * @param value A path, or a `file:` URL

@@ -1242,7 +1242,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 5.20261109.1
+        version: 5.20261110.1
       '@playwright/test':
         specifier: catalog:default
         version: 1.61.0
@@ -2921,7 +2921,7 @@ importers:
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 5.20261109.1
+        version: 5.20261110.1
       '@cloudflare/workers-utils':
         specifier: workspace:*
         version: link:../workers-utils
