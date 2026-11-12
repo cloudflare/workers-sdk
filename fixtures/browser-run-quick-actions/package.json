@@ -1,0 +1,23 @@
+{
+	"name": "@fixture/browser-run-quick-actions",
+	"private": true,
+	"description": "Fixture for the Browser Run binding's `quickAction()` method",
+	"type": "module",
+	"scripts": {
+		"check:type": "cf workers types --include-runtime=false && tsc --build",
+		"deploy": "cf deploy",
+		"dev": "cf dev",
+		"start": "cf dev",
+		"test": "vitest",
+		"test:ci": "vitest run"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"@types/node": "catalog:default",
+		"cf": "catalog:default",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	}
+}

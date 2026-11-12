@@ -1,19 +1,23 @@
 {
 	"name": "@fixture/browser-run",
 	"private": true,
+	"type": "module",
 	"scripts": {
-		"cf-typegen": "wrangler types --no-include-runtime",
-		"deploy": "wrangler deploy",
-		"dev": "wrangler dev",
-		"start": "wrangler dev",
+		"check:type": "cf workers types --include-runtime=false && tsc --build",
+		"deploy": "cf deploy",
+		"dev": "cf dev",
+		"start": "cf dev",
 		"test": "vitest",
 		"test:ci": "vitest run"
 	},
 	"devDependencies": {
-		"@cloudflare/playwright": "^1.0.0",
-		"@cloudflare/puppeteer": "^1.0.4",
+		"@cloudflare/playwright": "^1.3.6",
+		"@cloudflare/puppeteer": "^1.4.0",
 		"@cloudflare/vitest-plugin": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
 		"@types/node": "catalog:default",
+		"cf": "catalog:default",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*"

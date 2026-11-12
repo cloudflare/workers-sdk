@@ -43,6 +43,9 @@ export default {
 						.then((sessions) =>
 							sessions.find((s) => s.sessionId === sessionId)
 						);
+					if (!sessionInfo) {
+						throw new Error(`Browser session ${sessionId} not found`);
+					}
 					return new Response(
 						sessionInfo.connectionId
 							? "Browser not disconnected"
