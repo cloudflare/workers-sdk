@@ -1791,6 +1791,105 @@ describe("pages deploy", () => {
 		`);
 	});
 
+	it("should deploy a static `functions` directory inside a build output directory that isn't the project root (#2240)", async ({
+		expect,
+	}) => {
+		// A static site, such as one built with Hugo, whose `public` build output
+		// directory has a section called `functions`. `public/functions` is not the
+		// project's Pages Functions directory (that would be `./functions`), so its
+		// files are ordinary static assets.
+		mkdirSync("public/functions", { recursive: true });
+		writeFileSync("public/index.html", "<h1>Home</h1>");
+		writeFileSync("public/functions/index.html", "<h1>Functions</h1>");
+
+		mockGetUploadTokenRequest(
+			expect,
+			"<<funfetti-auth-jwt>>",
+			"some-account-id",
+			"foo"
+		);
+
+		let deployedManifest: { [path: string]: string } | undefined;
+
+		msw.use(
+			http.post(
+				"*/pages/assets/check-missing",
+				async () =>
+					HttpResponse.json(
+						{ success: true, errors: [], messages: [], result: [] },
+						{ status: 200 }
+					),
+				{ once: true }
+			),
+			http.post(
+				"*/pages/assets/upsert-hashes",
+				async () =>
+					HttpResponse.json(
+						{ success: true, errors: [], messages: [], result: true },
+						{ status: 200 }
+					),
+				{ once: true }
+			),
+			http.post(
+				"*/accounts/:accountId/pages/projects/foo/deployments",
+				async ({ request }) => {
+					const body = await request.formData();
+					deployedManifest = JSON.parse(await toString(body.get("manifest")));
+
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "abc-def-ghi",
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async () =>
+					HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								latest_stage: { name: "deploy", status: "success" },
+							},
+						},
+						{ status: 200 }
+					),
+				{ once: true }
+			),
+			http.get("*/accounts/:accountId/pages/projects/foo", async () =>
+				HttpResponse.json(
+					{
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							deployment_configs: { production: {}, preview: {} },
+						},
+					},
+					{ status: 200 }
+				)
+			)
+		);
+
+		await runWrangler(`pages deploy public --project-name=foo`);
+
+		expect(Object.keys(deployedManifest ?? {}).sort()).toEqual([
+			"/functions/index.html",
+			"/index.html",
+		]);
+	});
+
 	it("should resolve the current directory correctly", async ({ expect }) => {
 		mkdirSync("public");
 		mkdirSync("public/imgs");
