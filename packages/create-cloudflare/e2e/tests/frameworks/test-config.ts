@@ -1242,10 +1242,6 @@ function getExperimentalFrameworkTestConfig(
 		},
 		{
 			name: "waku",
-			// TODO: Unquarantine once a fixed `@cloudflare/vite-plugin` v1 release is
-			// published. 1.69.0 fails `waku build` after static generation.
-			// https://github.com/cloudflare/workers-sdk/pull/16841
-			quarantine: true,
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
