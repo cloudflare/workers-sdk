@@ -74,19 +74,38 @@ describe("createRemoteBindingsAuth", () => {
 	it("uses Wrangler auth by default", ({ expect }) => {
 		const result = createRemoteBindingsAuth(createTestLogger());
 
-		expect(result).toEqual({ auth: mocks.wranglerAuth, useCfAuth: false });
+		expect(result).toEqual({ auth: mocks.wranglerAuth });
 		expect(mocks.createWranglerAuth).toHaveBeenCalledOnce();
 		expect(mocks.createCfAuth).not.toHaveBeenCalled();
 	});
 
-	it("uses CF auth when CLOUDFLARE_CF_AUTH is present", ({ expect }) => {
+	it("keeps Wrangler auth and project profiles when CLOUDFLARE_CF_AUTH is present", async ({
+		expect,
+	}) => {
 		process.env.CLOUDFLARE_CF_AUTH = "";
 
 		const result = createRemoteBindingsAuth(createTestLogger());
 
-		expect(result).toEqual({ auth: mocks.cfAuth, useCfAuth: true });
-		expect(mocks.createCfAuth).toHaveBeenCalledOnce();
-		expect(mocks.createWranglerAuth).not.toHaveBeenCalled();
+		expect(result).toEqual({ auth: mocks.wranglerAuth });
+		expect(mocks.createWranglerAuth).toHaveBeenCalledOnce();
+		expect(mocks.createCfAuth).not.toHaveBeenCalled();
+		const hook = getRemoteBindingsAuthHook(
+			undefined,
+			"configured-account-id",
+			"/project",
+			createTestLogger()
+		);
+		assert(typeof hook === "function");
+		await expect(hook()).resolves.toMatchObject({
+			accountId: "selected-account-id",
+		});
+		expect(mocks.wranglerAuth.requireAuth).toHaveBeenCalledWith({
+			account_id: "configured-account-id",
+		});
+		expect(mocks.wranglerProfileStore.resolve).toHaveBeenCalledWith({
+			cwd: "/project",
+		});
+		expect(mocks.createCfProfileStore).not.toHaveBeenCalled();
 	});
 });
 
