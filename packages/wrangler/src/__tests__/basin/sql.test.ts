@@ -30,6 +30,10 @@ describe("basin sql", () => {
 			expect(std.out).toContain("Basin Catalog warehouse name");
 			expect(std.out).toContain("query");
 			expect(std.out).toContain("The SQL query to execute");
+			expect(std.out).toContain("-J, --jurisdiction");
+			expect(std.out).toContain(
+				"The jurisdiction of the warehouse's R2 bucket"
+			);
 		});
 
 		it("should show help through the legacy r2 sql alias", async ({
@@ -388,6 +392,78 @@ describe("basin sql", () => {
 
 			await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
 			expect(std.out).toContain("Query executed successfully with no results");
+		});
+
+		describe("jurisdiction", () => {
+			const fedrampUrl =
+				"https://api.fedramp.sql.cloudflarestorage.com/api/v1/accounts/:accountId/basin-sql/query/:bucketName";
+			const noRows = {
+				success: true,
+				errors: [],
+				messages: [],
+				result: { schema: [], rows: [] },
+			};
+
+			it("should send queries for the fedramp jurisdiction to the FedRAMP host", async ({
+				expect,
+			}) => {
+				msw.use(
+					http.post(
+						fedrampUrl,
+						async ({ request, params }) => {
+							expect(params).toEqual({
+								accountId: "account123",
+								bucketName: "mybucket",
+							});
+							expect(await request.json()).toEqual({
+								warehouse: mockWarehouse,
+								query: mockQuery,
+							});
+							expect(request.headers.get("Authorization")).toEqual(
+								`Bearer ${mockToken}`
+							);
+
+							return HttpResponse.json(noRows);
+						},
+						{ once: true }
+					)
+				);
+
+				await runWrangler(
+					`basin sql query --jurisdiction fedramp ${mockWarehouse} "${mockQuery}"`
+				);
+				expect(std.out).toContain(
+					"Query executed successfully with no results"
+				);
+			});
+
+			it("should accept -J through the legacy r2 sql alias", async ({
+				expect,
+			}) => {
+				msw.use(
+					http.post(fedrampUrl, () => HttpResponse.json(noRows), {
+						once: true,
+					})
+				);
+
+				await runWrangler(
+					`r2 sql query -J fedramp ${mockWarehouse} "${mockQuery}"`
+				);
+				expect(std.out).toContain(
+					"Query executed successfully with no results"
+				);
+			});
+
+			it("should reject unsupported jurisdictions", async ({ expect }) => {
+				await expect(
+					runWrangler(
+						`basin sql query --jurisdiction eu ${mockWarehouse} "${mockQuery}"`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(`
+					[Error: Invalid values:
+					  Argument: jurisdiction, Given: "eu", Choices: "fedramp"]
+				`);
+			});
 		});
 	});
 });
