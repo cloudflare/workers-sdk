@@ -31,7 +31,7 @@ import type {
 
 export type TestHarnessOptions = {
 	/**
-	 * Base directory that relative `buildOutput` paths resolve from.
+	 * Base directory that relative `project` paths resolve from.
 	 * Defaults to `process.cwd()`.
 	 */
 	root?: string | undefined;
@@ -324,9 +324,9 @@ export type TestHarness = {
 	 * ```ts
 	 * const server = createTestHarness({
 	 *   workers: [
-	 *     { buildOutput: "./dashboard" }, // No route pattern
-	 *     { buildOutput: "./api" }, // Route pattern: "example.com/api/*"
-	 *     { buildOutput: "./admin" }, // Route pattern: "admin.example.com/*"
+	 *     { project: "./dashboard" }, // No route pattern
+	 *     { project: "./api" }, // Route pattern: "example.com/api/*"
+	 *     { project: "./admin" }, // Route pattern: "admin.example.com/*"
 	 *   ]
 	 * });
 	 *
@@ -402,7 +402,7 @@ export type WorkerInput =
 			 * The project directory containing the build's `.cloudflare/output`.
 			 * Relative paths resolve from the harness's `root`.
 			 */
-			buildOutput: string | URL;
+			project: string | URL;
 			/**
 			 * The name of the Worker to run from that build. Defaults to the build's
 			 * default Worker.

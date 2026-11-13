@@ -9,7 +9,7 @@ import { bindings } from "cf/config";
 const harness = createTestHarness({
 	workers: [
 		// The project directory containing the build's `.cloudflare/output`
-		{ buildOutput: "./", envOverrides: { API_TOKEN: bindings.text("test") } },
+		{ project: "./", envOverrides: { API_TOKEN: bindings.text("test") } },
 	],
 });
 

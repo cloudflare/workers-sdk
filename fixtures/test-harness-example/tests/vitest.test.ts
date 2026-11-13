@@ -15,11 +15,11 @@ import {
 const server = createTestHarness({
 	workers: [
 		{
-			buildOutput: "./workers/web",
+			project: "./workers/web",
 			envOverrides: { BROWSER: bindings.worker({ worker: "mock-browser" }) },
 		},
-		{ buildOutput: "./workers/api" },
-		{ buildOutput: "./workers/mock-browser" },
+		{ project: "./workers/api" },
+		{ project: "./workers/mock-browser" },
 	],
 });
 

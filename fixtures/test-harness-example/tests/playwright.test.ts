@@ -31,8 +31,8 @@ const test = base.extend<TestFixtures, WorkerFixtures>({
 			const server = createTestHarness({
 				workers: [
 					// Playwright tests run against the same build output as Vitest.
-					{ buildOutput: "./workers/web" },
-					{ buildOutput: "./workers/api" },
+					{ project: "./workers/web" },
+					{ project: "./workers/api" },
 				],
 			});
 

@@ -138,7 +138,7 @@ describe("createTestHarness()", () => {
 				assets: { "style.css": "body { color: red; }" },
 			},
 		});
-		const harness = useTestHarness({ workers: [{ buildOutput: "app" }] });
+		const harness = useTestHarness({ workers: [{ project: "app" }] });
 
 		const { url } = await harness.listen();
 		expect(url.protocol).toBe("http:");
@@ -157,7 +157,7 @@ describe("createTestHarness()", () => {
 				assets: { "index.html": "<h1>Hello</h1>" },
 			},
 		});
-		const harness = useTestHarness({ workers: [{ buildOutput: "app" }] });
+		const harness = useTestHarness({ workers: [{ project: "app" }] });
 
 		await harness.listen();
 		expect(await (await harness.fetch("/")).text()).toBe("<h1>Hello</h1>");
@@ -241,7 +241,7 @@ describe("createTestHarness()", () => {
 					image: { localReference: image },
 				},
 			});
-			const harness = useTestHarness({ workers: [{ buildOutput: "." }] });
+			const harness = useTestHarness({ workers: [{ project: "." }] });
 
 			await harness.listen();
 			// The container takes a moment to start listening
@@ -288,7 +288,7 @@ describe("createTestHarness()", () => {
 		const harness = useTestHarness({
 			workers: [
 				{
-					buildOutput: "app",
+					project: "app",
 					envOverrides: {
 						API_KEY: bindings.text("from-test"),
 						GREETING: bindings.text("Hi"),
@@ -334,7 +334,7 @@ describe("createTestHarness()", () => {
 		});
 
 		const harness = useTestHarness({
-			workers: [{ buildOutput: "frontend" }, { buildOutput: "backend" }],
+			workers: [{ project: "frontend" }, { project: "backend" }],
 		});
 		await harness.listen();
 		expect(await (await harness.fetch("/")).text()).toBe("frontend -> api");
@@ -342,10 +342,10 @@ describe("createTestHarness()", () => {
 		const overridden = useTestHarness({
 			workers: [
 				{
-					buildOutput: "frontend",
+					project: "frontend",
 					envOverrides: { API: bindings.worker({ worker: "Admin" }) },
 				},
-				{ buildOutput: "backend", name: "Admin" },
+				{ project: "backend", name: "Admin" },
 			],
 		});
 		await overridden.listen();
@@ -354,7 +354,7 @@ describe("createTestHarness()", () => {
 		);
 
 		const missing = useTestHarness({
-			workers: [{ buildOutput: "backend", name: "missing" }],
+			workers: [{ project: "backend", name: "missing" }],
 		});
 		await expect(missing.listen()).rejects.toThrow(
 			'No Worker named "missing" in the Build Output'
@@ -389,7 +389,7 @@ describe("createTestHarness()", () => {
 		const harness = createTestHarness({
 			workers: [
 				{
-					buildOutput: "app",
+					project: "app",
 					envOverrides: { AI: bindings.text("mock-ai"), R2: false },
 				},
 			],
@@ -435,7 +435,7 @@ describe("createTestHarness()", () => {
 				script: `export default {`,
 			},
 		});
-		const harness = useTestHarness({ workers: [{ buildOutput: "app" }] });
+		const harness = useTestHarness({ workers: [{ project: "app" }] });
 
 		await expect(harness.listen()).rejects.toThrow();
 		expect(session.dispose).toHaveBeenCalled();
@@ -474,7 +474,7 @@ describe("createTestHarness()", () => {
 		await seed({
 			".env": `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE=postgres://user:password@127.0.0.1:${port}/app?sslmode=disable`,
 		});
-		const harness = useTestHarness({ workers: [{ buildOutput: "." }] });
+		const harness = useTestHarness({ workers: [{ project: "." }] });
 
 		await harness.listen();
 		expect(await (await harness.fetch("/")).text()).toBe(
@@ -516,7 +516,7 @@ describe("createTestHarness()", () => {
 				mappings: "AAAA",
 			}),
 		});
-		const harness = useTestHarness({ workers: [{ buildOutput: "." }] });
+		const harness = useTestHarness({ workers: [{ project: "." }] });
 
 		await harness.listen();
 		expect(await (await harness.fetch("/")).text()).toBe(
@@ -541,7 +541,7 @@ describe("createTestHarness()", () => {
 			},
 		});
 
-		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		const server = createTestHarness({ workers: [{ project: "." }] });
 		onTestFinished(server.close);
 		onTestFailed(server.debug);
 
@@ -589,7 +589,7 @@ describe("createTestHarness()", () => {
 			"Test harness options have not been configured."
 		);
 
-		await server.update({ workers: [{ buildOutput: "." }] });
+		await server.update({ workers: [{ project: "." }] });
 		await server.listen();
 
 		const initialResponse = await server.fetch("/");
@@ -639,10 +639,7 @@ describe("createTestHarness()", () => {
 		});
 
 		const server = createTestHarness({
-			workers: [
-				{ buildOutput: "." },
-				{ buildOutput: ".", name: "auxiliary-worker" },
-			],
+			workers: [{ project: "." }, { project: ".", name: "auxiliary-worker" }],
 		});
 		onTestFinished(server.close);
 
@@ -752,11 +749,11 @@ describe("createTestHarness()", () => {
 		const server = createTestHarness({
 			workers: [
 				{
-					buildOutput: ".",
+					project: ".",
 					envOverrides: { SECRET: bindings.text("api-secret") },
 				},
 				{
-					buildOutput: ".",
+					project: ".",
 					name: "admin-worker",
 					envOverrides: { SECRET: bindings.text("admin-secret") },
 				},
@@ -857,7 +854,7 @@ describe("createTestHarness()", () => {
 			},
 		});
 
-		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		const server = createTestHarness({ workers: [{ project: "." }] });
 		onTestFinished(server.close);
 
 		await server.listen();
@@ -951,7 +948,7 @@ describe("createTestHarness()", () => {
 			},
 		});
 
-		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		const server = createTestHarness({ workers: [{ project: "." }] });
 		onTestFinished(server.close);
 		onTestFailed(server.debug);
 
@@ -1050,7 +1047,7 @@ describe("createTestHarness()", () => {
 		const harness = useTestHarness({
 			workers: [
 				{
-					buildOutput: "app",
+					project: "app",
 					envOverrides: {
 						COUNTER: bindings.durableObject({
 							worker: "mock",
@@ -1058,7 +1055,7 @@ describe("createTestHarness()", () => {
 						}),
 					},
 				},
-				{ buildOutput: "app", name: "mock" },
+				{ project: "app", name: "mock" },
 			],
 		});
 
@@ -1166,7 +1163,7 @@ describe("createTestHarness()", () => {
 			},
 		});
 
-		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		const server = createTestHarness({ workers: [{ project: "." }] });
 		onTestFinished(server.close);
 
 		await server.listen();
@@ -1332,7 +1329,7 @@ describe("createTestHarness()", () => {
 			table: "custom_migrations",
 		};
 
-		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		const server = createTestHarness({ workers: [{ project: "." }] });
 		onTestFinished(server.close);
 
 		await server.listen();
@@ -1384,7 +1381,7 @@ describe("createTestHarness()", () => {
 			"app/db/0001_settings.sql": "CREATE TABLE settings (key TEXT);",
 		});
 
-		const server = createTestHarness({ workers: [{ buildOutput: "app" }] });
+		const server = createTestHarness({ workers: [{ project: "app" }] });
 		onTestFinished(server.close);
 
 		await server.listen();
@@ -1416,7 +1413,7 @@ describe("createTestHarness()", () => {
 				"CREATE TABLE settings (key TEXT);",
 		});
 
-		const server = createTestHarness({ workers: [{ buildOutput: "app" }] });
+		const server = createTestHarness({ workers: [{ project: "app" }] });
 		onTestFinished(server.close);
 
 		await server.listen();
@@ -1491,10 +1488,7 @@ describe("createTestHarness()", () => {
 		});
 
 		const server = createTestHarness({
-			workers: [
-				{ buildOutput: "." },
-				{ buildOutput: ".", name: "auxiliary-worker" },
-			],
+			workers: [{ project: "." }, { project: ".", name: "auxiliary-worker" }],
 		});
 		onTestFinished(server.close);
 
@@ -1536,7 +1530,7 @@ describe("createTestHarness()", () => {
 		const server = createTestHarness({
 			workers: [
 				{
-					buildOutput: ".",
+					project: ".",
 					envOverrides: {
 						AI: bindings.worker({ worker: "mock-ai" }),
 					},
@@ -1608,7 +1602,7 @@ describe("createTestHarness()", () => {
 			},
 		});
 
-		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		const server = createTestHarness({ workers: [{ project: "." }] });
 		onTestFinished(server.close);
 
 		await server.listen();
@@ -1647,7 +1641,7 @@ describe("createTestHarness()", () => {
 		const server = createTestHarness({
 			workers: [
 				{
-					buildOutput: ".",
+					project: ".",
 					envOverrides: { AI: bindings.worker({ worker: "missing-ai" }) },
 				},
 			],
@@ -1683,7 +1677,7 @@ describe("createTestHarness()", () => {
 
 		const server = createTestHarness({
 			workers: [
-				{ buildOutput: "." },
+				{ project: "." },
 				{
 					config: {
 						name: "auxiliary-worker",
@@ -1716,7 +1710,7 @@ describe("createTestHarness()", () => {
 
 		await server.update({
 			workers: [
-				{ buildOutput: "." },
+				{ project: "." },
 				{
 					config: {
 						name: "auxiliary-worker",
@@ -1831,10 +1825,7 @@ describe("createTestHarness()", () => {
 		});
 
 		const server = createTestHarness({
-			workers: [
-				{ buildOutput: "." },
-				{ buildOutput: ".", name: "auxiliary-worker" },
-			],
+			workers: [{ project: "." }, { project: ".", name: "auxiliary-worker" }],
 		});
 		onTestFinished(server.close);
 
@@ -1882,7 +1873,7 @@ describe("createTestHarness()", () => {
 			},
 		});
 
-		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		const server = createTestHarness({ workers: [{ project: "." }] });
 		onTestFinished(server.close);
 
 		await server.listen();
@@ -1937,7 +1928,7 @@ describe("createTestHarness()", () => {
 			},
 		});
 
-		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		const server = createTestHarness({ workers: [{ project: "." }] });
 		onTestFinished(server.close);
 
 		await server.listen();
@@ -1978,7 +1969,7 @@ describe("createTestHarness()", () => {
 		});
 		await seed({ ".env": "ENV_SECRET=from-env" });
 
-		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		const server = createTestHarness({ workers: [{ project: "." }] });
 		onTestFinished(server.close);
 
 		await server.listen();
@@ -2025,7 +2016,7 @@ describe("createTestHarness()", () => {
 		const server = createTestHarness({
 			workers: [
 				{
-					buildOutput: ".",
+					project: ".",
 					envOverrides: {
 						CONFIG_VAR: bindings.text("from-override"),
 						ADDED_VAR: bindings.text("from-override"),
@@ -2051,7 +2042,7 @@ describe("createTestHarness()", () => {
 		await server.update({
 			workers: [
 				{
-					buildOutput: ".",
+					project: ".",
 					envOverrides: {
 						CONFIG_VAR: bindings.text("from-updated-override"),
 						ADDED_VAR: bindings.text("from-updated-override"),
@@ -2095,7 +2086,7 @@ describe("createTestHarness()", () => {
 			},
 		});
 
-		const firstServer = createTestHarness({ workers: [{ buildOutput: "." }] });
+		const firstServer = createTestHarness({ workers: [{ project: "." }] });
 		onTestFinished(firstServer.close);
 
 		await firstServer.listen();
@@ -2108,7 +2099,7 @@ describe("createTestHarness()", () => {
 
 		await firstServer.close();
 
-		const secondServer = createTestHarness({ workers: [{ buildOutput: "." }] });
+		const secondServer = createTestHarness({ workers: [{ project: "." }] });
 		onTestFinished(secondServer.close);
 
 		await secondServer.listen();
@@ -2139,7 +2130,7 @@ describe("createTestHarness()", () => {
 			},
 		});
 
-		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		const server = createTestHarness({ workers: [{ project: "." }] });
 		onTestFinished(server.close);
 
 		await expect(server.reset()).rejects.toThrow(
@@ -2178,7 +2169,7 @@ describe("createTestHarness()", () => {
 			},
 		});
 
-		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		const server = createTestHarness({ workers: [{ project: "." }] });
 		onTestFinished(server.close);
 
 		await server.listen();
@@ -2245,7 +2236,7 @@ describe("createTestHarness()", () => {
 			},
 		});
 
-		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		const server = createTestHarness({ workers: [{ project: "." }] });
 		onTestFinished(server.close);
 		await server.listen();
 		const worker = server.getWorker();
@@ -2417,7 +2408,7 @@ describe("createTestHarness()", () => {
 			},
 		});
 
-		const server = createTestHarness({ workers: [{ buildOutput: "." }] });
+		const server = createTestHarness({ workers: [{ project: "." }] });
 		onTestFinished(server.close);
 
 		await server.listen();
@@ -2480,10 +2471,7 @@ describe("createTestHarness()", () => {
 		});
 
 		const server = createTestHarness({
-			workers: [
-				{ buildOutput: "." },
-				{ buildOutput: ".", name: "auxiliary-worker" },
-			],
+			workers: [{ project: "." }, { project: ".", name: "auxiliary-worker" }],
 		});
 		onTestFinished(server.close);
 

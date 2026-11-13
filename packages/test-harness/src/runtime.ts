@@ -78,7 +78,7 @@ export type ResolvedWorker = {
  * a build.
  *
  * @param options The Workers to run, primary Worker first, and the directory
- * that relative `buildOutput` paths resolve from
+ * that relative `project` paths resolve from
  * @param previousWorkers The Workers these replace, whose remote sessions
  * are updated rather than started again
  * @returns The resolved Workers
@@ -128,7 +128,7 @@ export async function disposeRemoteProxySessions(
 /**
  * Resolves one Worker in a project's Build Output for Miniflare.
  *
- * @param root The directory that a relative `buildOutput` path resolves from
+ * @param root The directory that a relative `project` path resolves from
  * @param input The Worker to run, and its test values
  * @param preExistingRemoteProxySessionData The remote session of the Worker
  * this replaces, if any
@@ -234,7 +234,7 @@ async function resolveWorker(
 /**
  * Reads a Worker from a project's Build Output.
  *
- * @param root The directory that a relative `buildOutput` path resolves from
+ * @param root The directory that a relative `project` path resolves from
  * @param input The Worker to read
  * @returns The Worker and where it came from
  */
@@ -242,7 +242,7 @@ async function readWorker(
 	root: string,
 	input: BuildOutputInput
 ): Promise<WorkerSource> {
-	const projectDir = path.resolve(root, toPath(input.buildOutput));
+	const projectDir = path.resolve(root, toPath(input.project));
 	const buildOutput = await readBuildOutput(projectDir);
 	const builtWorkers = Object.values(buildOutput.workers);
 	const worker =

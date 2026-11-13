@@ -63,7 +63,7 @@ type DebugLog = {
  * @example
  * ```ts
  * const server = createTestHarness({
- *   workers: [{ buildOutput: "./" }],
+ *   workers: [{ project: "./" }],
  * });
  * await server.listen();
  * const response = await server.fetch("/api/users");
