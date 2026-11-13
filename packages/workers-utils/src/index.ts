@@ -87,6 +87,11 @@ export {
 	resolveBindingRemote,
 	validateBindingRemoteSetting,
 } from "./config/binding-local-support";
+export {
+	type ArtifactsDevBinding,
+	type ArtifactsLocalDefaultWarner,
+	createArtifactsLocalDefaultWarner,
+} from "./config/artifacts-local-default";
 
 export { validatePagesConfig } from "./config/validation-pages";
 

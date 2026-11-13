@@ -18,6 +18,7 @@ import {
 	getLocalObservabilityEnabledFromEnv,
 	getZoneFromRoute,
 } from "@cloudflare/workers-utils";
+import { createArtifactsLocalDefaultWarner } from "@cloudflare/workers-utils";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import {
 	buildPublicUrl,
@@ -262,6 +263,7 @@ export async function getDevMiniflareOptions(
 		resolvedPluginConfig.devVars,
 		resolvedPluginConfig.remoteBindings,
 		resolvedViteConfig.mode,
+		resolvedViteConfig.root,
 		viteDevServer.config.logger
 	);
 	const [routerWorkerManifest, assetWorkerManifest, viteProxyWorkerManifest] =
@@ -814,6 +816,7 @@ export async function getPreviewMiniflareOptions(
 		resolvedPluginConfig.devVars,
 		resolvedPluginConfig.remoteBindings,
 		resolvedViteConfig.mode,
+		resolvedViteConfig.root,
 		vitePreviewServer.config.logger
 	);
 	const containerPlansByWorkerName = new Map<string, ContainerDevPlan>();
@@ -957,16 +960,44 @@ export async function getPreviewMiniflareOptions(
 	};
 }
 
+// Remembers warnings per project root, so restarting the dev server after a
+// config change doesn't repeat them.
+const warnForArtifactsLocalDefault =
+	createArtifactsLocalDefaultWarner("cloudflare-config");
+
 function resolveLocalBindingsByWorkerName(
 	workerConfigs: Array<ParsedInputWorkerConfig | ParsedOutputWorkerConfig>,
 	localEnv: LoadedEnv,
 	devVars: Record<string, string> | undefined,
 	remoteBindings: boolean,
 	mode: string,
+	projectRoot: string,
 	logger: vite.Logger
 ): Map<string, MiniflareEnv> {
 	const resolvedLocalBindingsByWorkerName = new Map<string, MiniflareEnv>();
 	for (const config of workerConfigs) {
+		if (remoteBindings) {
+			warnForArtifactsLocalDefault(
+				{
+					id: projectRoot,
+					bindings: Object.entries(config.env ?? {}).flatMap(
+						([name, binding]) =>
+							binding.type === "artifacts"
+								? [
+										{
+											name,
+											remote: binding.dev?.remote,
+											// Name the Worker when several could declare the binding.
+											worker:
+												workerConfigs.length > 1 ? config.name : undefined,
+										},
+									]
+								: []
+					),
+				},
+				(message) => logger.warn(message)
+			);
+		}
 		resolvedLocalBindingsByWorkerName.set(
 			config.name,
 			resolveLocalBindings(config.env, {

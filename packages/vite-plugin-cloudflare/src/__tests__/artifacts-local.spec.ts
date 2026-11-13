@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { pushGitFixture } from "@cloudflare/workers-utils/test-helpers";
-import { createServer } from "vite";
+import { createLogger, createServer } from "vite";
 import { afterEach, test, vi } from "vitest";
 
 // Excluded from type checking, so a crashed run cannot leave a stray
@@ -66,6 +66,9 @@ afterEach(() => vi.unstubAllEnvs());
 
 test.for([
 	{ label: "explicit local", remote: false, remoteBindings: true },
+	// Omitted `remote` is local without starting a remote proxy session, so it
+	// works with no Cloudflare credentials.
+	{ label: "omitted remote", remote: undefined, remoteBindings: true },
 	{
 		label: "omitted remote with sessions disabled",
 		remote: undefined,
@@ -83,10 +86,13 @@ test.for([
 		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
 		const root = createFixture(remote);
 		onTestFinished(() => removeDirSync(root));
+		const warnings: string[] = [];
+		const customLogger = createLogger("silent");
+		customLogger.warn = (message) => void warnings.push(message);
 		const server = await createServer({
 			root,
 			configFile: false,
-			logLevel: "silent",
+			customLogger,
 			server: { port: 0 },
 			plugins: [
 				cloudflare({
@@ -126,6 +132,14 @@ test.for([
 				name: string;
 			};
 			expect(info.name).toBe("demo");
+			// The default changed only where remote bindings are enabled.
+			const defaultWarning =
+				"Artifacts binding REPOS uses the local simulator by default. Set `dev: { remote: true }` to use deployed repos, or `dev: { remote: false }` to silence this warning.";
+			if (remote === undefined && remoteBindings) {
+				expect(warnings).toContain(defaultWarning);
+			} else {
+				expect(warnings).not.toContain(defaultWarning);
+			}
 		} finally {
 			await server.close();
 		}

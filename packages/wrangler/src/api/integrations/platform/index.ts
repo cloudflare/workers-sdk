@@ -1,6 +1,7 @@
 import path from "node:path";
 import { createContainerDevPlan } from "@cloudflare/containers-shared";
 import {
+	createArtifactsLocalDefaultWarner,
 	DEFAULT_COMPAT_DATE,
 	DEFAULT_MODULE_RULES,
 	extractBindingsOfType,
@@ -130,6 +131,11 @@ export type GetPlatformProxyOptions = {
 	remoteBindings?: boolean;
 };
 
+// Remembers warnings per config file, so a framework that calls
+// `getPlatformProxy()` again after a config change doesn't repeat them.
+const warnForArtifactsLocalDefault =
+	createArtifactsLocalDefaultWarner("wrangler");
+
 /**
  * Result of the `getPlatformProxy` utility
  */
@@ -179,6 +185,20 @@ export async function getPlatformProxy<
 		config: options.configPath,
 		env,
 	});
+
+	if (options.remoteBindings !== false) {
+		warnForArtifactsLocalDefault(
+			{
+				// A relative path names a different file after a directory change.
+				id: config.configPath ? path.resolve(config.configPath) : process.cwd(),
+				bindings: config.artifacts.map(({ binding, remote }) => ({
+					name: binding,
+					remote,
+				})),
+			},
+			(message) => logger.warn(message)
+		);
+	}
 
 	let remoteProxySession: RemoteProxySession | undefined = undefined;
 	if (config.configPath && options.remoteBindings !== false) {
