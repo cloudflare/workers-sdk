@@ -23,8 +23,10 @@ import { getDurableObjectClassNameToUseSQLiteMap } from "../class-names-sqlite";
 import type { StartDevWorkerInput } from "../../api/startDevWorker/types";
 import type { LoggerLevel } from "../../logger";
 import type { EsbuildBundle } from "../use-esbuild";
+import type { WorkflowEvent } from "@cloudflare/config";
 import type { ContainerDevRuntimeOptions } from "@cloudflare/containers-shared";
 import type {
+	ArtifactsEventTrigger,
 	AssetsOptions,
 	Binding,
 	CfD1Database,
@@ -94,6 +96,7 @@ export interface ConfigBundle {
 	routes: string[] | undefined;
 	queueConsumers: Config["queues"]["consumers"];
 	connectHandlers: ConnectHandler[];
+	artifactsEvents: ArtifactsEventTrigger[];
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
 	upstreamProtocol: "http" | "https";
@@ -402,18 +405,22 @@ function hyperdriveEntry(
 
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
 }
-function workflowEntry({
-	binding,
-	name,
-	class_name: className,
-	script_name: scriptName,
-	limits,
-}: CfWorkflow): [
+function workflowEntry(
+	{
+		binding,
+		name,
+		class_name: className,
+		script_name: scriptName,
+		limits,
+	}: CfWorkflow,
+	events: WorkflowEvent[] | undefined
+): [
 	string,
 	{
 		name: string;
 		className: string;
 		scriptName?: string;
+		events?: WorkflowEvent[];
 		stepLimit?: number;
 	},
 ] {
@@ -425,6 +432,7 @@ function workflowEntry({
 			name,
 			className,
 			scriptName,
+			events,
 			...(stepLimit !== undefined && { stepLimit }),
 		},
 	];
@@ -547,7 +555,10 @@ type MiniflareBindingsConfig = Pick<
 	| "enableContainers"
 > &
 	Partial<
-		Pick<ConfigBundle, "format" | "bundle" | "assets" | "compatibilityFlags">
+		Pick<
+			ConfigBundle,
+			"format" | "bundle" | "assets" | "compatibilityFlags" | "artifactsEvents"
+		>
 	>;
 
 // TODO(someday): would be nice to type these methods more, can we export types for
@@ -842,19 +853,25 @@ export function buildMiniflareBindingOptions(
 	// Workflows declared under `exports` (accessible via `ctx.exports`) are
 	// carried to Miniflare separately from `workflows[]` env bindings, keyed by
 	// the exported class name.
+	const exportedWorkflows = partitionExports(config.exports).workflow;
+	const workflowEvents = assignWorkflowEvents(
+		config.artifactsEvents,
+		config.name,
+		exportedWorkflows,
+		workflows
+	);
 	const workflowExports: NonNullable<WorkerOptionsBindings["workflowExports"]> =
 		Object.fromEntries(
-			Object.entries(partitionExports(config.exports).workflow).map(
-				([className, workflow]) => [
-					className,
-					{
-						name: workflow.name,
-						...(workflow.limits?.steps !== undefined && {
-							stepLimit: workflow.limits.steps,
-						}),
-					},
-				]
-			)
+			Object.entries(exportedWorkflows).map(([className, workflow]) => [
+				className,
+				{
+					name: workflow.name,
+					events: workflowEvents.exports.get(className),
+					...(workflow.limits?.steps !== undefined && {
+						stepLimit: workflow.limits.steps,
+					}),
+				},
+			])
 		);
 
 	const bindingOptions: WorkerOptionsBindings = {
@@ -991,7 +1008,10 @@ export function buildMiniflareBindingOptions(
 						);
 					}
 				}
-				return workflowEntry(workflow);
+				return workflowEntry(
+					workflow,
+					workflowEvents.bindings.get(workflow.binding)
+				);
 			})
 		),
 		workflowExports,
@@ -1302,6 +1322,76 @@ export async function buildMiniflareOptions(
 		],
 	};
 	return options;
+}
+
+/** Workflow-owned events, keyed by export class name or binding name. */
+interface WorkflowEventAssignment {
+	exports: Map<string, WorkflowEvent[]>;
+	bindings: Map<string, WorkflowEvent[]>;
+}
+
+/**
+ * Gives each `triggers.events` target to the one local declaration of its
+ * Workflow: the export when there is one, otherwise the first local binding.
+ * Miniflare starts a subscription for every declaration it receives, so a
+ * Workflow declared both ways must not receive its events twice.
+ *
+ * @throws {UserError} If a target is not a Workflow this Worker defines,
+ * matching the check `wrangler deploy` makes.
+ */
+function assignWorkflowEvents(
+	triggers: ArtifactsEventTrigger[] | undefined,
+	scriptName: string | undefined,
+	exportedWorkflows: Record<string, { name: string }>,
+	workflowBindings: CfWorkflow[]
+): WorkflowEventAssignment {
+	const assignment: WorkflowEventAssignment = {
+		exports: new Map(),
+		bindings: new Map(),
+	};
+	if (!triggers?.length) {
+		return assignment;
+	}
+	const owners = new Map<string, WorkflowEvent[]>();
+	for (const [className, { name }] of Object.entries(exportedWorkflows)) {
+		if (!owners.has(name)) {
+			const events: WorkflowEvent[] = [];
+			owners.set(name, events);
+			assignment.exports.set(className, events);
+		}
+	}
+	for (const workflow of workflowBindings) {
+		const local =
+			workflow.script_name === undefined || workflow.script_name === scriptName;
+		if (local && !owners.has(workflow.name)) {
+			const events: WorkflowEvent[] = [];
+			owners.set(workflow.name, events);
+			assignment.bindings.set(workflow.binding, events);
+		}
+	}
+	for (const trigger of triggers) {
+		for (const target of trigger.targets) {
+			const events = owners.get(target.workflow_name);
+			if (events === undefined) {
+				throw new UserError(
+					`Event trigger "${trigger.type}" targets Workflow "${target.workflow_name}", but that Workflow is not defined by this Worker.\n\nAdd it to the "workflows" configuration or remove the event trigger target.`,
+					{ telemetryMessage: "dev event target workflow not defined" }
+				);
+			}
+			events.push({
+				type: trigger.type,
+				...(trigger.filter === undefined
+					? {}
+					: {
+							filter: {
+								namespace: trigger.filter.namespace,
+								repoName: trigger.filter.repo_name,
+							},
+						}),
+			});
+		}
+	}
+	return assignment;
 }
 
 /**

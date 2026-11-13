@@ -1,4 +1,12 @@
 import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
+import {
+	createArtifactsEvent,
+	matchesArtifactsEventRoute,
+	toArtifactsEventMessage,
+	type ArtifactsEvent,
+	type ArtifactsEventRoute,
+	type RepoPayload,
+} from "./events";
 
 const repoName = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const MAX_LOG_LIMIT = 1000;
@@ -249,6 +257,20 @@ interface LocalArtifactsEnvironment {
 	config: { namespace: string; origin: string };
 	localArtifactsNamespace: DurableObjectNamespace<LocalArtifactsNamespaceObject>;
 	gitBackend: Fetcher;
+	/**
+	 * Subscriptions receiving this namespace's events. Miniflare generates these
+	 * routes and their target bindings together, so each target binding exists
+	 * and matches its route's target type.
+	 */
+	eventRoutes?: ArtifactsEventRoute[];
+	[target: `ARTIFACTS_EVENT_TARGET_${number}`]:
+		| WorkflowCreateTarget
+		| undefined;
+}
+
+/** The parts of a Workflow binding service used to start an instance. */
+interface WorkflowCreateTarget {
+	create(options: { params: unknown }): Promise<unknown>;
 }
 
 type RepositoryMap = Record<string, Repository>;
@@ -373,6 +395,14 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 						"Unable to persist Artifacts repository"
 					);
 				}
+				this.publish(
+					createArtifactsEvent(
+						"cf.artifacts.repo.created",
+						eventRepo(repository),
+						repoPayload(repository)
+					)
+				);
+				this.publish(tokenCreatedEvent(repository, token.record));
 				return createRepoResult(repository, token);
 			} catch (error) {
 				if (error instanceof ArtifactsError) {
@@ -431,6 +461,18 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 					"Unable to persist imported Artifacts repository"
 				);
 			}
+			this.publish(
+				createArtifactsEvent(
+					"cf.artifacts.repo.imported",
+					eventRepo(repository),
+					{
+						...repoPayload(repository),
+						sourceUrl: publicSourceUrl.href,
+						branch: source.branch ?? repository.defaultBranch,
+					}
+				)
+			);
+			this.publish(tokenCreatedEvent(repository, token.record));
 			return createRepoResult(repository, token);
 		});
 	}
@@ -502,6 +544,7 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 			const repository = getRepo(repositories, name, expectedId);
 			const token = await createToken(repository, scope, ttl);
 			await this.saveRepos(repositories);
+			this.publish(tokenCreatedEvent(repository, token.record));
 			return tokenResult(token);
 		});
 	}
@@ -558,6 +601,13 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 			}
 			token.revokedAt = new Date().toISOString();
 			await this.saveRepos(repositories);
+			this.publish(
+				createArtifactsEvent(
+					"cf.artifacts.repo.token.revoked",
+					eventRepo(repository),
+					{ tokenId: token.id }
+				)
+			);
 			return true;
 		});
 	}
@@ -615,6 +665,15 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 					"Unable to persist forked Artifacts repository"
 				);
 			}
+			// Fork events are published from the source repository.
+			this.publish(
+				createArtifactsEvent("cf.artifacts.repo.forked", eventRepo(source), {
+					...repoPayload(fork),
+					namespace: fork.namespace,
+					repoName: fork.name,
+				})
+			);
+			this.publish(tokenCreatedEvent(fork, token.record));
 			return createRepoResult(fork, token);
 		});
 	}
@@ -661,6 +720,13 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		await this.backend(repository, { action: "delete" });
 		delete repositories[key];
 		await this.saveRepos(repositories);
+		this.publish(
+			createArtifactsEvent(
+				"cf.artifacts.repo.deleted",
+				eventRepo(repository),
+				repoPayload(repository)
+			)
+		);
 	}
 
 	async getRepo(name: string, expectedId?: string): Promise<Repository> {
@@ -768,6 +834,37 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		});
 	}
 
+	private publish(event: ArtifactsEvent): void {
+		for (const route of this.env.eventRoutes ?? []) {
+			if (matchesArtifactsEventRoute(route, event)) {
+				// Committed mutations must not fail because event delivery failed.
+				this.ctx.waitUntil(
+					this.deliver(route, event).catch((error: unknown) => {
+						// Name the subscription, never the payload: it may identify tokens.
+						console.warn(
+							`Artifacts event delivery failed (event=${event.type} subscription=${route.id} target=${route.target.type}): ${String(error)}`
+						);
+					})
+				);
+			}
+		}
+	}
+
+	private async deliver(
+		route: ArtifactsEventRoute,
+		event: ArtifactsEvent
+	): Promise<void> {
+		const message = toArtifactsEventMessage(event, route.id);
+		const target =
+			this.env[route.target.binding as `ARTIFACTS_EVENT_TARGET_${number}`];
+		if (target === undefined) {
+			throw new Error(`Missing event target binding ${route.target.binding}`);
+		}
+		// The instance handle is an RPC stub; release it straight away.
+		const instance = await target.create({ params: message });
+		(instance as Partial<Disposable> | undefined)?.[Symbol.dispose]?.();
+	}
+
 	private async exclusive<T>(action: () => Promise<T>): Promise<T> {
 		const previous = this.operations;
 		let release!: () => void;
@@ -781,6 +878,36 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 			release();
 		}
 	}
+}
+
+function eventRepo(repository: Repository): {
+	namespace: string;
+	repoName: string;
+} {
+	return { namespace: repository.namespace, repoName: repository.name };
+}
+
+function repoPayload(repository: Repository): RepoPayload {
+	return {
+		repoId: repository.id,
+		defaultBranch: repository.defaultBranch,
+		description: repository.description ?? null,
+		readOnly: repository.readOnly,
+		createdAt: repository.createdAt,
+		updatedAt: repository.updatedAt,
+		lastPushAt: repository.lastPushAt ?? null,
+	};
+}
+
+function tokenCreatedEvent(
+	repository: Repository,
+	token: RepositoryToken
+): ArtifactsEvent<"cf.artifacts.repo.token.created"> {
+	return createArtifactsEvent(
+		"cf.artifacts.repo.token.created",
+		eventRepo(repository),
+		{ tokenId: token.id, scope: token.scope, expiresAt: token.expiresAt }
+	);
 }
 
 function createRepoHandle(

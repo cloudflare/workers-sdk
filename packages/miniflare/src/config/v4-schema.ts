@@ -1,3 +1,4 @@
+import { WorkflowEventSchema } from "@cloudflare/config";
 import {
 	AssetConfigSchema,
 	RouterConfigSchema,
@@ -15,6 +16,7 @@ import type { RemoteProxyConnectionString } from "../plugins/shared";
 import type { Json } from "../shared";
 import type { WorkerRegistry } from "../shared/dev-registry-types";
 import type { Awaitable } from "../workers";
+import type { WorkflowEvent } from "@cloudflare/config";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 import type * as http from "node:http";
 
@@ -476,6 +478,7 @@ const V4WorkerOptionsShapeSchema = z.object({
 			z.object({
 				name: z.string(),
 				className: z.string(),
+				events: z.array(WorkflowEventSchema).optional(),
 				scriptName: z.string().optional(),
 				external: z.boolean().optional(),
 				stepLimit: z.number().int().min(1).optional(),
@@ -487,6 +490,7 @@ const V4WorkerOptionsShapeSchema = z.object({
 			z.string(),
 			z.object({
 				name: z.string(),
+				events: z.array(WorkflowEventSchema).optional(),
 				stepLimit: z.number().int().min(1).optional(),
 			})
 		)
@@ -913,6 +917,7 @@ export type V4WorkerOptionsShape = {
 			className: string;
 			scriptName?: string;
 			external?: boolean;
+			events?: WorkflowEvent[];
 			stepLimit?: number;
 		}
 	>;
@@ -920,6 +925,7 @@ export type V4WorkerOptionsShape = {
 		string,
 		{
 			name: string;
+			events?: WorkflowEvent[];
 			stepLimit?: number;
 		}
 	>;

@@ -896,7 +896,25 @@ function convertExports(
 			continue;
 		}
 		if (value.type === "workflow") {
-			const { defaultRetention, ...workflow } = value;
+			const { defaultRetention, events, ...workflow } = value;
+			if (events?.length) {
+				result.triggers ??= {};
+				result.triggers.events ??= [];
+				result.triggers.events.push(
+					...events.map((event) => ({
+						type: event.type,
+						...(event.filter === undefined
+							? {}
+							: {
+									filter: omitUndefined({
+										namespace: event.filter.namespace,
+										repo_name: event.filter.repoName,
+									}),
+								}),
+						targets: [{ type: "workflow" as const, workflow_name: value.name }],
+					}))
+				);
+			}
 			converted[exportName] = {
 				...workflow,
 				...(defaultRetention !== undefined && {
@@ -1062,7 +1080,7 @@ function convertTriggers(
 	}
 
 	if (crons.length) {
-		result.triggers = { crons };
+		result.triggers = { ...result.triggers, crons };
 	}
 	if (routes.length) {
 		result.routes = routes;

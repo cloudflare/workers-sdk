@@ -480,6 +480,7 @@ function addWorkflowExports(exports: Exports, worker: ParsedV4WorkerOptions) {
 		exports[className] = {
 			type: "workflow",
 			name: workflow.name,
+			events: workflow.events,
 			limits:
 				workflow.stepLimit === undefined
 					? undefined
@@ -841,9 +842,14 @@ function addProductBindings(
 			worker: targetWorkerName,
 			exportName: workflow.className,
 			unsafeConfig:
-				workflow.stepLimit === undefined
+				workflow.events === undefined && workflow.stepLimit === undefined
 					? undefined
-					: { limits: { steps: workflow.stepLimit } },
+					: {
+							events: workflow.events,
+							...(workflow.stepLimit === undefined
+								? {}
+								: { limits: { steps: workflow.stepLimit } }),
+						},
 		};
 	}
 }

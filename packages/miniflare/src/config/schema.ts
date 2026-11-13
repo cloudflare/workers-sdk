@@ -23,6 +23,7 @@ import {
 	WorkerEntrypointExportSchema,
 	WorkflowBindingSchema,
 	WorkflowExportSchema,
+	WorkflowEventSchema,
 	TailConsumerSchema,
 	validateSingletonBindings,
 } from "@cloudflare/config";
@@ -228,6 +229,7 @@ const MiniflareWorkflowBindingSchema = WorkflowBindingSchema.extend({
 	unsafeConfig: z
 		.strictObject({
 			limits: z.strictObject({ steps: z.number().optional() }).optional(),
+			events: z.array(WorkflowEventSchema).optional(),
 		})
 		.optional(),
 });

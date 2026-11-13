@@ -71,6 +71,40 @@ describe("convertV4MiniflareOptions", () => {
 			remoteProxyConnectionString
 		);
 	});
+	test("carries events on Workflow exports and legacy bindings", ({
+		expect,
+	}) => {
+		const events = [
+			{
+				type: "cf.artifacts.repo.created" as const,
+				filter: { repoName: "demo" },
+			},
+		];
+		const converted = convertV4MiniflareOptions({
+			name: "worker",
+			script: "export default {};",
+			workflowExports: {
+				OnCreate: { name: "on-create", events, stepLimit: 2 },
+			},
+			workflows: {
+				LEGACY: { name: "legacy", className: "Legacy", events, stepLimit: 3 },
+			},
+		});
+		expect(converted.workers[0].config.exports).toMatchObject({
+			OnCreate: {
+				type: "workflow",
+				name: "on-create",
+				events,
+				limits: { steps: 2 },
+			},
+		});
+		expect(converted.workers[0].config.env).toMatchObject({
+			LEGACY: {
+				type: "workflow",
+				unsafeConfig: { events, limits: { steps: 3 } },
+			},
+		});
+	});
 	test("preserves opaque K2 stream IDs through v4 parsing and conversion", ({
 		expect,
 	}) => {

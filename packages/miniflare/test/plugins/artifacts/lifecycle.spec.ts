@@ -3,7 +3,7 @@ import { once } from "node:events";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { transform } from "esbuild";
+import { build } from "esbuild";
 import { Miniflare } from "miniflare";
 import { test } from "vitest";
 import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
@@ -105,7 +105,19 @@ async function clockedWorker(): Promise<string> {
 		source = source.replace(original, replacement);
 	}
 	source = `let testClock = 0;\n${source}\n${clockedFetch}`;
-	return (await transform(source, { loader: "ts", format: "esm" })).code;
+	const result = await build({
+		stdin: {
+			contents: source,
+			resolveDir: path.dirname(workerSource),
+			sourcefile: workerSource,
+			loader: "ts",
+		},
+		bundle: true,
+		format: "esm",
+		write: false,
+		external: ["cloudflare:workers"],
+	});
+	return result.outputFiles[0].text;
 }
 
 const clockedFetch = `

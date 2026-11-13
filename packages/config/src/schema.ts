@@ -1,5 +1,6 @@
 import * as z from "zod";
 import { WORKFLOW_JURISDICTIONS } from "./exports";
+import { ARTIFACTS_EVENT_TYPES } from "./workflow-events";
 import type { SendEmailBinding, VpcNetworkBinding } from "./bindings";
 import type { Settings } from "./types";
 import type { ContainerConfig, WorkerConfig } from "./types";
@@ -613,8 +614,20 @@ const WorkflowRetentionSchema = z.union([
 	z.string().min(1),
 ]);
 
+export const ArtifactsEventTypeSchema = z.enum(ARTIFACTS_EVENT_TYPES);
+export const WorkflowEventSchema = z.strictObject({
+	type: ArtifactsEventTypeSchema,
+	filter: z
+		.strictObject({
+			namespace: z.string().min(1).optional(),
+			repoName: z.string().min(1).optional(),
+		})
+		.optional(),
+});
+
 export const WorkflowExportSchema = z.strictObject({
 	type: z.literal("workflow"),
+	events: z.array(WorkflowEventSchema).optional(),
 	name: z.string(),
 	limits: z
 		.strictObject({ steps: z.number().int().min(1).optional() })
