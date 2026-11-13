@@ -96,16 +96,26 @@ export function getAllKnownFrameworks(target: AutoConfigTarget) {
 			id: "nuxt",
 			name: "Nuxt",
 			class: Nuxt,
-			frameworkPackageInfo: {
-				name: "nuxt",
-				// 3.21.0 is the first Nuxt version with Nitro 2.11+ which supports
-				// cloudflare.deployConfig and cloudflare.nodeCompat options
-				// See: https://github.com/nuxt/nuxt/releases/tag/v3.21.0
-				// See: https://github.com/nitrojs/nitro/releases/tag/v2.11.0
-				minimumVersion: "3.21.0",
-				maximumKnownMajorVersion: "4",
-			},
-			supportsCf: false,
+			frameworkPackageInfo:
+				target === "cf"
+					? {
+							name: "nuxt",
+							// 4.7.0 lets a deploy target such as the Cloudflare Vite plugin build the
+							// `ssr` environment of Nuxt's Vite server builder
+							// See: https://github.com/nuxt/nuxt/pull/36879
+							minimumVersion: "4.7.0",
+							maximumKnownMajorVersion: "4",
+						}
+					: {
+							name: "nuxt",
+							// 3.21.0 is the first Nuxt version with Nitro 2.11+ which supports
+							// cloudflare.deployConfig and cloudflare.nodeCompat options
+							// See: https://github.com/nuxt/nuxt/releases/tag/v3.21.0
+							// See: https://github.com/nitrojs/nitro/releases/tag/v2.11.0
+							minimumVersion: "3.21.0",
+							maximumKnownMajorVersion: "4",
+						},
+			supportsCf: true,
 			supported: true,
 		},
 		{
