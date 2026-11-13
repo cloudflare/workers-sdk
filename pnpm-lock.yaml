@@ -197,8 +197,8 @@ importers:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
       wrangler:
-        specifier: 4.160.0
-        version: 4.160.0(@cloudflare/workers-types@5.20261110.1)(@types/node@22.15.17)
+        specifier: 4.161.0
+        version: 4.161.0(@cloudflare/workers-types@5.20261110.1)(@types/node@22.15.17)
 
   fixtures/shared:
     devDependencies:
@@ -206,8 +206,8 @@ importers:
         specifier: 0.53.0
         version: 0.53.0(vitest@5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)))
       wrangler:
-        specifier: 4.160.0
-        version: 4.160.0(@cloudflare/workers-types@5.20261110.1)(@types/node@22.15.17)
+        specifier: 4.161.0
+        version: 4.161.0(@cloudflare/workers-types@5.20261110.1)(@types/node@22.15.17)
 
   packages/lint-config-shared:
     devDependencies:
@@ -266,8 +266,8 @@ importers:
         specifier: catalog:default
         version: 5.3.0
       miniflare:
-        specifier: 5.20261110.0-beta
-        version: 5.20261110.0-beta(@types/node@22.15.17)
+        specifier: 5.20261110.2-beta
+        version: 5.20261110.2-beta(@types/node@22.15.17)
       undici:
         specifier: catalog:default
         version: 7.30.1
@@ -306,14 +306,14 @@ importers:
         specifier: 2.16.2
         version: 2.16.2(unenv@2.0.0-rc.24)(workerd@1.20261110.1)
       miniflare:
-        specifier: 5.20261110.0-beta
-        version: 5.20261110.0-beta(@types/node@22.15.17)
+        specifier: 5.20261110.2-beta
+        version: 5.20261110.2-beta(@types/node@22.15.17)
       unenv:
         specifier: 2.0.0-rc.24
         version: 2.0.0-rc.24
       wrangler:
-        specifier: 4.160.0
-        version: 4.160.0(@cloudflare/workers-types@5.20261110.1)(@types/node@22.15.17)
+        specifier: 4.161.0
+        version: 4.161.0(@cloudflare/workers-types@5.20261110.1)(@types/node@22.15.17)
       ws:
         specifier: 8.22.0
         version: 8.22.0
@@ -6042,6 +6042,15 @@ packages:
       kerberos:
         optional: true
 
+  miniflare@5.20261110.2-beta:
+    resolution: {integrity: sha512-vzUwcal5OtR/1nr5cmjCbZSrsR3QRA1cDnRUDVgET17HeDkdpQNG2QxeIkuHFLyszjdBqme59w8Nrrj4FkuFsQ==}
+    engines: {node: '>=22.12.0'}
+    peerDependencies:
+      kerberos: ^2.0.0
+    peerDependenciesMeta:
+      kerberos:
+        optional: true
+
   minimatch@10.2.6:
     resolution: {integrity: sha512-vpLQEs+VLCr1nU0BXS07maYoFwlDAH0gngQuuttxIwutDFEMHq2blX+8vpgxDdK3J1PwjCJiep77OitTZ4Ll1A==}
     engines: {node: 18 || 20 || >=22}
@@ -7477,8 +7486,8 @@ packages:
       '@cloudflare/workers-types':
         optional: true
 
-  wrangler@4.160.0:
-    resolution: {integrity: sha512-nwzmpu7Hd5Csax02twpCNRAloC+kduXKw9rjfq+oEuo8RnjWRaahSV+qk+p0w88EgafMcDE0XnZRSfOM3lKEKg==}
+  wrangler@4.161.0:
+    resolution: {integrity: sha512-yOHZUYEq9AP7vutWmkCADzCKAH9ynfvZdoKJRIGTzkiailf9/L+jhT7WRb+9p6jRDtuBXVFtCzLo7kGAcGw+pA==}
     engines: {node: '>=22.12.0'}
     hasBin: true
     peerDependencies:
@@ -12210,6 +12219,19 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
+  miniflare@5.20261110.2-beta(@types/node@22.15.17):
+    dependencies:
+      '@cspotcode/source-map-support': 0.8.1
+      sharp: 0.35.5(@types/node@22.15.17)
+      undici: 7.30.1
+      workerd: 1.20261110.1
+      ws: 8.21.0
+      youch: 4.1.0-beta.10(patch_hash=3e73fc48581841f22ea1d2cf5a3560bde280fdba04940253073fb121a70a9269)
+    transitivePeerDependencies:
+      - '@types/node'
+      - bufferutil
+      - utf-8-validate
+
   minimatch@10.2.6:
     dependencies:
       brace-expansion: 5.0.12
@@ -13657,14 +13679,14 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  wrangler@4.160.0(@cloudflare/workers-types@5.20261110.1)(@types/node@22.15.17):
+  wrangler@4.161.0(@cloudflare/workers-types@5.20261110.1)(@types/node@22.15.17):
     dependencies:
       '@cloudflare/kv-asset-handler': 0.5.0
       '@cloudflare/unenv-preset': 2.16.2(unenv@2.0.0-rc.24)(workerd@1.20261110.1)
       '@cspotcode/source-map-support': 0.8.1
       blake3-wasm: 2.1.5
       esbuild: 0.28.2
-      miniflare: 5.20261110.0-beta(@types/node@22.15.17)
+      miniflare: 5.20261110.2-beta(@types/node@22.15.17)
       path-to-regexp: 6.3.0
       unenv: 2.0.0-rc.24
       workerd: 1.20261110.1
