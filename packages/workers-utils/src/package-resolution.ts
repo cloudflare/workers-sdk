@@ -128,10 +128,11 @@ export function getInstalledPackageVersion(
  * files such as `dist/cjs/package.json` containing only `{"type": "commonjs"}`.
  * These tell Node how to load the files in that directory but carry no `name`
  * or `version`. When the package is resolved through its entry point, the
- * nearest `package.json` may be one of these markers. Only accept manifests
- * with both a `name` and a `version`, and stop at the installed package's
- * `node_modules` boundary so an incomplete manifest cannot inherit an
- * ancestor's version.
+ * nearest `package.json` may be one of these markers. Skip nameless manifests
+ * and stop at the first named manifest, returning `undefined` if it has no
+ * version. This also protects symlinked workspace packages resolved outside
+ * `node_modules` from inheriting an ancestor's version. Stop at the installed
+ * package's `node_modules` boundary if no named manifest is found.
  *
  * @param startDir - The directory to start searching from
  * @param lastDir - If provided, stop searching after reaching this directory
@@ -150,8 +151,8 @@ function findPackageRootManifest(
 				readFileSync(packageJsonPath),
 				packageJsonPath
 			);
-			if (packageJson.name !== undefined && packageJson.version !== undefined) {
-				return packageJson;
+			if (packageJson.name !== undefined) {
+				return packageJson.version !== undefined ? packageJson : undefined;
 			}
 		}
 
