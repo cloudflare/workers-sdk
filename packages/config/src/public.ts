@@ -100,6 +100,7 @@ export type {
 	ScheduledTriggerOptions,
 } from "./triggers";
 export { triggers } from "./triggers";
+export type { ArtifactsEventType, WorkflowEvent } from "./workflow-events";
 export type {
 	Exports,
 	DurableObjectCreatedExport,

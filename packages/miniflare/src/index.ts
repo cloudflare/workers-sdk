@@ -76,7 +76,9 @@ import {
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	WORKFLOWS_PLUGIN_NAME,
 } from "./plugins";
+import { getLocalArtifactsNamespaceNames } from "./plugins/artifacts";
 import { ArtifactsController } from "./plugins/artifacts/controller";
+import { getArtifactsEventSubscriptions } from "./plugins/artifacts/events";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
 import { BROWSER_VERSION } from "./plugins/browser-rendering/browser-version";
 import { closeBrowserProcess } from "./plugins/browser-rendering/process";
@@ -937,6 +939,11 @@ export class Miniflare {
 	// remote-bindings proxy server. Used to dedupe the user-facing warning to
 	// once per session.
 	#warnedRemoteBindingsAccessBlock = false;
+
+	// Set the first time Workflow events are declared without a local
+	// Artifacts namespace, so the warning appears once per instance rather
+	// than on every `setOptions()`.
+	#warnedArtifactsEventsWithoutLocalNamespace = false;
 
 	constructor(opts: MiniflareOptions) {
 		// Split and validate options
@@ -2092,6 +2099,24 @@ export class Miniflare {
 		const workflowExporters = getWorkflowExporters(allWorkerOpts);
 		const queueProducers = getQueueProducers(allWorkerOpts);
 		const queueConsumers = getQueueConsumers(allWorkerOpts);
+		const artifactsEventSubscriptions =
+			getArtifactsEventSubscriptions(allWorkerOpts);
+		if (
+			!this.#warnedArtifactsEventsWithoutLocalNamespace &&
+			artifactsEventSubscriptions.length > 0 &&
+			!allWorkerOpts.some(
+				({ config, dev }) =>
+					getLocalArtifactsNamespaceNames(
+						getEnvBindingsOfType(config, "artifacts"),
+						dev
+					).size > 0
+			)
+		) {
+			this.#warnedArtifactsEventsWithoutLocalNamespace = true;
+			this.#log.warn(
+				"Workflow events are only published by local Artifacts namespaces, and this instance has none."
+			);
+		}
 		// When the dev registry is enabled, queue brokers bind to the dev-registry
 		// proxy so they can deliver to consumers in other `wrangler dev` processes
 		// (see `ExternalQueueProxy`), so the proxy worker must exist whenever
@@ -2251,6 +2276,7 @@ export class Miniflare {
 				containerPrivilegesCache: this.#containerPrivilegesCache,
 				hyperdriveProxyController: this.#hyperdriveProxyController,
 				artifactsController: this.#artifactsController,
+				artifactsEventSubscriptions,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {
 				const pluginServicesExtensions = await plugin.getServices({

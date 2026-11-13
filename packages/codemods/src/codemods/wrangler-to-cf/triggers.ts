@@ -124,19 +124,6 @@ export function convertTriggers(
 				})
 			);
 		}
-
-		if (
-			Array.isArray(triggerConfig.events) &&
-			triggerConfig.events.length > 0
-		) {
-			report(
-				createFollowUp(
-					"artifact-event-triggers",
-					"Artifact event triggers are not supported by the new config and were not migrated.",
-					{ sourcePath: `${sourcePrefix || "config"}.triggers.events` }
-				)
-			);
-		}
 	}
 
 	const queues = getRecord(source, "queues");

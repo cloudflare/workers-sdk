@@ -54,6 +54,10 @@ function workflowExportOptions(record: UnknownRecord): OutputObject {
 			properties.push({ key, value: camelObject(value) });
 		}
 	}
+	const events = getRecords(record, "events");
+	if (events.length > 0) {
+		properties.push({ key: "events", value: events.map(camelObject) });
+	}
 	const schedules = toOutputValue(record.schedules);
 	if (schedules !== undefined) {
 		properties.push({ key: "schedules", value: schedules });
@@ -67,6 +71,67 @@ function workflowExportOptions(record: UnknownRecord): OutputObject {
 		properties.push({ key: "jurisdiction", value: jurisdiction });
 	}
 	return { kind: "object", properties };
+}
+
+/** Attaches legacy targets to the exports that actually own the Workflows. */
+function attachWorkflowEvents(
+	source: UnknownRecord,
+	sourcePrefix: string,
+	exports: Map<string, UnknownRecord>,
+	report: (followUp: MigrationFollowUp) => void
+): void {
+	const events = getRecord(source, "triggers")?.events;
+	if (!Array.isArray(events)) {
+		return;
+	}
+	for (const [index, event] of events.entries()) {
+		const sourcePath = `${sourcePrefix ? sourcePrefix + "." : ""}triggers.events.${index}`;
+		if (
+			!isRecord(event) ||
+			typeof event.type !== "string" ||
+			!Array.isArray(event.targets) ||
+			event.targets.length === 0 ||
+			(event.filter !== undefined && !isRecord(event.filter))
+		) {
+			report(
+				createFollowUp(
+					"invalid-workflow-event",
+					"This event subscription could not be migrated. Review its type, filter, and Workflow targets.",
+					{ sourcePath }
+				)
+			);
+			continue;
+		}
+		for (const [targetIndex, target] of event.targets.entries()) {
+			const owned =
+				isRecord(target) && target.type === "workflow"
+					? [...exports.values()].filter(
+							(workflow) => workflow.name === target.workflow_name
+						)
+					: [];
+			if (owned.length !== 1) {
+				report(
+					createFollowUp(
+						"workflow-event-target",
+						"This event target does not identify one Workflow export owned by this Worker. Its subscription was not migrated.",
+						{
+							sourcePath: `${sourcePath}.targets.${targetIndex}`,
+						}
+					)
+				);
+				continue;
+			}
+			const workflow = owned[0];
+			const previous = getRecords(workflow, "events");
+			workflow.events = [
+				...previous,
+				{
+					type: event.type,
+					...(event.filter === undefined ? {} : { filter: event.filter }),
+				},
+			];
+		}
+	}
 }
 
 export function convertExports(
@@ -197,6 +262,7 @@ export function convertExports(
 			);
 		}
 	}
+	attachWorkflowEvents(source, sourcePrefix, workflowExports, report);
 	for (const [property, record] of pendingWorkflows) {
 		property.value = call("exports.workflow", workflowExportOptions(record));
 	}

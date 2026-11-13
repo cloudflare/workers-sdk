@@ -26,6 +26,126 @@ function convert(source: Record<string, unknown>): {
 	};
 }
 
+describe("Workflow event migration", () => {
+	it("attaches each event to every matching owned export, preserving crons and filters", ({
+		expect,
+	}) => {
+		const result = convert({
+			name: "app",
+			compatibility_date: "2026-09-23",
+			exports: { First: { type: "workflow", name: "first" } },
+			workflows: [{ binding: "SECOND", name: "second", class_name: "Second" }],
+			triggers: {
+				crons: ["0 * * * *"],
+				events: [
+					{
+						type: "cf.artifacts.repo.pushed",
+						filter: { namespace: "ci", repo_name: "app" },
+						targets: [
+							{ type: "workflow", workflow_name: "first" },
+							{ type: "workflow", workflow_name: "second" },
+						],
+					},
+				],
+			},
+		});
+		expect(result.followUps).toEqual([]);
+		expect(
+			result.output.match(/type: "cf.artifacts.repo.pushed"/g)
+		).toHaveLength(2);
+		expect(result.output.match(/events: \[/g)).toHaveLength(2);
+		expect(result.output).toContain('repoName: "app"');
+		expect(result.output).toContain('namespace: "ci"');
+		expect(result.output).toContain("First: exports.workflow({");
+		expect(result.output).toContain("Second: exports.workflow({");
+		expect(result.output).toContain("triggers.scheduled({");
+		expect(result.output).not.toContain("targets:");
+		expect(result.output).not.toContain("triggers.event");
+	});
+
+	it("does not duplicate events when a binding and export declare the same Workflow", ({
+		expect,
+	}) => {
+		const result = convert({
+			name: "app-staging",
+			compatibility_date: "2026-09-23",
+			exports: { Jobs: { type: "workflow", name: "jobs" } },
+			workflows: [
+				{
+					binding: "JOBS",
+					name: "jobs",
+					class_name: "Jobs",
+					script_name: "app-staging",
+				},
+			],
+			triggers: {
+				events: [
+					{
+						type: "cf.artifacts.repo.created",
+						targets: [{ type: "workflow", workflow_name: "jobs" }],
+					},
+				],
+			},
+		});
+		expect(result.followUps).toEqual([]);
+		expect(result.output.match(/events: \[/g)).toHaveLength(1);
+		expect(result.output).not.toContain("filter:");
+	});
+
+	it("reports an external or missing target instead of silently dropping it", ({
+		expect,
+	}) => {
+		const result = convert({
+			name: "app",
+			workflows: [
+				{
+					binding: "REMOTE",
+					name: "remote",
+					class_name: "Remote",
+					script_name: "another-worker",
+				},
+			],
+			triggers: {
+				events: [
+					{
+						type: "cf.artifacts.repo.created",
+						targets: [
+							{ type: "workflow", workflow_name: "remote" },
+							{ type: "workflow", workflow_name: "missing" },
+						],
+					},
+				],
+			},
+		});
+		expect(
+			result.followUps.filter(({ code }) => code === "workflow-event-target")
+		).toMatchObject([
+			{ blocking: true, sourcePath: "triggers.events.0.targets.0" },
+			{ blocking: true, sourcePath: "triggers.events.0.targets.1" },
+		]);
+		expect(result.output).not.toContain("events:");
+	});
+
+	it.for([
+		null,
+		{ type: "cf.artifacts.repo.created", targets: [] },
+		{ type: "cf.artifacts.repo.created", targets: [{}], filter: "invalid" },
+	])("reports malformed subscriptions %j", (event, { expect }) => {
+		const result = convert({
+			name: "app",
+			compatibility_date: "2026-09-23",
+			triggers: { events: [event] },
+		});
+		expect(result.followUps).toMatchObject([
+			{
+				code: "invalid-workflow-event",
+				blocking: true,
+				sourcePath: "triggers.events.0",
+			},
+		]);
+	});
+});
+
 describe("Wrangler Worker configuration conversion", () => {
 	it("converts core settings, triggers, bindings, and exports", ({
 		expect,

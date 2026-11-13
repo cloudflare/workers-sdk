@@ -499,6 +499,7 @@ export function unstable_getMiniflareWorkerOptions(
 			complianceRegion: config.compliance_region,
 			bindings,
 			queueConsumers: config.queues.consumers,
+			artifactsEvents: config.triggers.events,
 			migrations: config.migrations,
 			exports: config.exports,
 			tails: config.tail_consumers,
