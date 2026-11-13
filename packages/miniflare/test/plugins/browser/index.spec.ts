@@ -12,11 +12,15 @@ import {
 	onTestFinished,
 	describe,
 	test,
-	type TestOptions,
 	vi,
 } from "vitest";
 import { CERT, KEY } from "../../../src/http/cert";
 import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
+import {
+	BROWSER_RENDERING_RETRY,
+	CHROME_INSTALL_TIMEOUT,
+	retryBrowserStartup,
+} from "../../test-shared/browser";
 import type { MiniflareOptions } from "miniflare";
 
 async function sendMessage(ws: WebSocket, message: unknown) {
@@ -110,23 +114,6 @@ export default {
 	expect(JSON.parse(responseText)).toEqual({ closingState: 2, closedState: 3 });
 });
 
-const BROWSER_RENDERING_RETRY = {
-	retry: {
-		condition:
-			/Chrome readiness probe .* timed out|Test timed out|Failed to launch (the browser process|local browser)/i,
-		count: 3,
-		delay: 1_000,
-	},
-} satisfies TestOptions;
-
-/**
- * Budget for the one-off Chrome download in {@link warmChromeInstall}.
- *
- * Generous on purpose: a cold CI runner fetches ~150 MB before the first
- * browser can start.
- */
-const CHROME_INSTALL_TIMEOUT = 10 * 60 * 1_000;
-
 const BROWSER_WORKER_SCRIPT = () => `
 export default {
 	async fetch(request, env) {
@@ -169,20 +156,7 @@ async function dispatchJson(mf: Miniflare, url: string): Promise<any> {
  * means the tests only ever see a complete install.
  */
 async function warmChromeInstall(): Promise<void> {
-	// The first launch of a fresh install is the slowest, and on a loaded
-	// runner it can outlast Chrome's readiness probe. Retry the same failures,
-	// as many times, as the tests below do.
-	const { condition, count, delay } = BROWSER_RENDERING_RETRY.retry;
-	for (let attempt = 0; ; attempt++) {
-		try {
-			return await launchWarmupBrowser();
-		} catch (e) {
-			if (attempt >= count || !condition.test(String(e))) {
-				throw e;
-			}
-			await new Promise((resolve) => setTimeout(resolve, delay));
-		}
-	}
+	await retryBrowserStartup(launchWarmupBrowser);
 }
 
 async function launchWarmupBrowser(): Promise<void> {
@@ -214,7 +188,7 @@ async function launchWarmupBrowser(): Promise<void> {
 	}
 }
 
-// We need to run browser rendering tests in a serial manner to avoid a race condition installing the browser.
+// Keep browser session lifecycle tests serial within this file.
 describe("browser rendering", { concurrent: false, timeout: 20_000 }, () => {
 	beforeAll(warmChromeInstall, CHROME_INSTALL_TIMEOUT);
 
