@@ -927,6 +927,77 @@ describe("deploy", () => {
 			`);
 		});
 
+		it("should warn when _redirects has more dynamic rules than the limit", async ({
+			expect,
+		}) => {
+			// 150 dynamic rules: the last 50 are dropped by the 100 dynamic-rule limit
+			const redirectsContent = Array.from(
+				{ length: 150 },
+				(_, i) => `/a/${i}/* /b/${i}/:splat`
+			).join("\n");
+			const assets = [
+				{ filePath: "_redirects", content: redirectsContent },
+				{ filePath: "index.html", content: "<html></html>" },
+			];
+			writeAssets(assets);
+			writeWranglerConfig({
+				assets: { directory: "assets" },
+			});
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {
+						_redirects: redirectsContent,
+					},
+				},
+				expectedType: "none",
+			});
+			await runWrangler("deploy");
+			expect(std.warn).toContain(
+				"Maximum number of dynamic rules supported is 100"
+			);
+		});
+
+		it("should warn when exact-path rules after a splat push _redirects over the dynamic-rule limit", async ({
+			expect,
+		}) => {
+			// Every rule after the first splat counts as dynamic, so the rules past
+			// the 100th, including the trailing catch-all, are dropped
+			const redirectsContent = [
+				"/blog/* /posts/:splat 301",
+				...Array.from({ length: 150 }, (_, i) => `/old/${i} /new/${i} 301`),
+				"/* /404.html 404",
+			].join("\n");
+			const assets = [
+				{ filePath: "_redirects", content: redirectsContent },
+				{ filePath: "index.html", content: "<html></html>" },
+				{ filePath: "404.html", content: "<html>Not found</html>" },
+			];
+			writeAssets(assets);
+			writeWranglerConfig({
+				assets: { directory: "assets" },
+			});
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {
+						_redirects: redirectsContent,
+					},
+				},
+				expectedType: "none",
+			});
+			await runWrangler("deploy");
+			expect(std.warn).toContain(
+				"Maximum number of dynamic rules supported is 100"
+			);
+		});
+
 		it("should resolve assets directory relative to cwd if using cli", async ({
 			expect,
 		}) => {
