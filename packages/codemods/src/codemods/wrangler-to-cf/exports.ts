@@ -159,8 +159,8 @@ export function convertExports(
 	}
 	// A `workflows` binding to a Workflow this Worker defines becomes an export
 	// here, carrying the Workflow's settings. When the Wrangler `exports` table
-	// already declares the same Workflow, the two merge the way Wrangler merges
-	// them (`getWorkflowsOwnedByScript`), with the binding's settings winning.
+	// already declares the same Workflow, the two merge, with the binding's
+	// settings winning.
 	for (const [index, entry] of getRecords(source, "workflows").entries()) {
 		if (
 			!isLocalWorkflow(entry, source) ||

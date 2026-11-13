@@ -3020,7 +3020,7 @@ describe("versions upload", () => {
 			setIsTTY(false);
 		});
 
-		test("sends workflow exports by name without provisioning the Workflow", async ({
+		test("sends workflow exports with their settings without provisioning the Workflow", async ({
 			expect,
 		}) => {
 			mockGetScript();
@@ -3059,9 +3059,17 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload --config ./wrangler.json");
 
-			const metadata = await getMetadata(requests[requests.length - 1]);
+			const request = requests[requests.length - 1];
+			expect(request.headers.get("Cloudflare-Workers-Script-Api-Date")).toBe(
+				"2026-11-09"
+			);
+			const metadata = await getMetadata(request);
 			expect(metadata.exports).toEqual({
-				MyWorkflow: { type: "workflow", name: "my-workflow" },
+				MyWorkflow: {
+					type: "workflow",
+					name: "my-workflow",
+					limits: { steps: 10 },
+				},
 			});
 			expect(workflowPuts).toBe(0);
 		});

@@ -2,6 +2,9 @@ import { partitionExports } from "@cloudflare/workers-utils";
 import { resolveDoLifecyclePayload } from "./durable";
 import type { CfWorkerInit } from "@cloudflare/workers-utils";
 
+// Tells the upload API that `workflow` exports carry their settings.
+const WORKFLOW_EXPORTS_SCRIPT_API_DATE = "2026-11-09";
+
 type ResolveExportsUploadPayloadProps = Parameters<
 	typeof resolveDoLifecyclePayload
 >[0];
@@ -11,6 +14,7 @@ export async function resolveExportsUploadPayload(
 ): Promise<{
 	migrations: CfWorkerInit["migrations"];
 	exports: CfWorkerInit["exports"];
+	headers: Record<string, string> | undefined;
 }> {
 	const partitionedExports = partitionExports(props.config.exports);
 	const { migrations, exports: durableObjectExports } =
@@ -20,18 +24,18 @@ export async function resolveExportsUploadPayload(
 	const exports: NonNullable<CfWorkerInit["exports"]> = {
 		...partitionedExports.worker,
 		...(durableObjectExports ?? {}),
-		// Workflow settings are applied when `triggers deploy` provisions the
-		// Workflow; the upload API only accepts the type and name.
-		...Object.fromEntries(
-			Object.entries(partitionedExports.workflow).map(
-				([className, { name }]) =>
-					[className, { type: "workflow", name }] as const
-			)
-		),
+		...partitionedExports.workflow,
 	};
 
 	return {
 		migrations,
 		exports: Object.keys(exports).length > 0 ? exports : undefined,
+		headers:
+			Object.keys(partitionedExports.workflow).length > 0
+				? {
+						"Cloudflare-Workers-Script-Api-Date":
+							WORKFLOW_EXPORTS_SCRIPT_API_DATE,
+					}
+				: undefined,
 	};
 }

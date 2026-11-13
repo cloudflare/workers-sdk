@@ -145,6 +145,7 @@ describe("deploy", () => {
 			mockDeployWorkflow(expect, "my-workflow");
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
+				expectedScriptApiDate: null,
 				expectedBindings: [
 					{
 						type: "workflow",
@@ -1298,8 +1299,13 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
 					expectedExports: {
-						MyWorkflow: { type: "workflow", name: "my-workflow" },
+						MyWorkflow: {
+							type: "workflow",
+							name: "my-workflow",
+							limits: { steps: 10 },
+						},
 					},
+					expectedScriptApiDate: "2026-11-09",
 				});
 
 				await runWrangler("deploy");
@@ -1351,7 +1357,18 @@ describe("deploy", () => {
 				mockSubDomainRequest();
 				mockUploadWorkerRequest({
 					expectedExports: {
-						MyWorkflow: { type: "workflow", name: "my-workflow" },
+						MyWorkflow: {
+							type: "workflow",
+							name: "my-workflow",
+							limits: { steps: 10 },
+							concurrency: { limit: 5 },
+							schedules: ["0 * * * *", "30 * * * *"],
+							default_retention: {
+								success_retention: "3 days",
+								error_retention: 86_400_000,
+							},
+							jurisdiction: "fedramp",
+						},
 					},
 				});
 
@@ -1383,7 +1400,6 @@ describe("deploy", () => {
 							binding: "WORKFLOW",
 							name: "my-workflow",
 							class_name: "MyWorkflow",
-							schedules: "0 * * * *",
 						},
 					],
 					exports: {
@@ -1419,7 +1435,11 @@ describe("deploy", () => {
 						},
 					],
 					expectedExports: {
-						MyWorkflow: { type: "workflow", name: "my-workflow" },
+						MyWorkflow: {
+							type: "workflow",
+							name: "my-workflow",
+							limits: { steps: 10 },
+						},
 					},
 				});
 
@@ -1430,9 +1450,45 @@ describe("deploy", () => {
 						script_name: "test-name",
 						class_name: "MyWorkflow",
 						limits: { steps: 10 },
-						schedules: [{ cron: "0 * * * *" }],
 					},
 				]);
+			});
+
+			it("should explain a paid-plan error for scheduled workflow exports returned by the deploy", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.js",
+					exports: {
+						MyWorkflow: {
+							type: "workflow",
+							name: "my-workflow",
+							schedules: "0 * * * *",
+						},
+					},
+				});
+				await fs.promises.writeFile("index.js", workflowSource);
+
+				mockUploadWorkerRequest();
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
+						() =>
+							HttpResponse.json(
+								createFetchResult(null, false, [
+									{
+										code: WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE,
+										message: "workflow.cron_requires_paid_plan",
+									},
+								]),
+								{ status: 403 }
+							)
+					)
+				);
+
+				await expect(runWrangler("deploy")).rejects.toThrow(
+					'A Workflow has "schedules" configured, but scheduled Workflows require a paid Workers plan.'
+				);
 			});
 
 			it("should check a binding against an export using the name passed to --name", async ({
