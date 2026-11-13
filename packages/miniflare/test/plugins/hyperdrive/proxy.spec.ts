@@ -1,4 +1,4 @@
-import childProcess from "node:child_process";
+import crypto from "node:crypto";
 import { once } from "node:events";
 import fs from "node:fs";
 import net from "node:net";
@@ -38,74 +38,111 @@ interface TestCerts {
 	caPath: string;
 }
 
+// Certificates are built in-process with node:crypto instead of by spawning
+// `openssl`: seven synchronous spawns per suite could exceed the 30s hook
+// timeout on loaded Windows runners. `der` encodes just enough ASN.1 for an
+// X.509 v3 certificate; no value here needs a length over 64 KiB.
+function der(tag: number, ...parts: Buffer[]): Buffer {
+	const body = Buffer.concat(parts);
+	const n = body.length;
+	const length =
+		n < 0x80 ? [n] : n < 0x100 ? [0x81, n] : [0x82, n >> 8, n & 0xff];
+	return Buffer.concat([Buffer.from([tag, ...length]), body]);
+}
+const seq = (...parts: Buffer[]) => der(0x30, ...parts);
+const oid = (hex: string) => der(0x06, Buffer.from(hex, "hex"));
+const OID_COMMON_NAME = "550403"; // 2.5.4.3
+const OID_ECDSA_WITH_SHA256 = "2a8648ce3d040302"; // 1.2.840.10045.4.3.2
+const OID_SUBJECT_ALT_NAME = "551d11"; // 2.5.29.17
+const OID_BASIC_CONSTRAINTS = "551d13"; // 2.5.29.19
+
+interface IssuedCert extends CertPair {
+	privateKey: crypto.KeyObject;
+}
+
+/**
+ * Issues a P-256 certificate valid for a day. Without `issuer`, it is a
+ * self-signed CA named `subject`; with `issuer`, it is a leaf certificate
+ * whose CN and DNS subjectAltName are `subject`.
+ */
+function issueCert(
+	subject: string,
+	issuer?: { name: string; privateKey: crypto.KeyObject }
+): IssuedCert {
+	const { privateKey, publicKey } = crypto.generateKeyPairSync("ec", {
+		namedCurve: "prime256v1",
+	});
+	const serial = crypto.randomBytes(16);
+	serial[0] = (serial[0] & 0x7f) | 0x40; // positive, minimally encoded
+	const name = (cn: string) =>
+		seq(der(0x31, seq(oid(OID_COMMON_NAME), der(0x0c, Buffer.from(cn)))));
+	const utcTime = (ms: number) =>
+		der(
+			0x17,
+			Buffer.from(
+				`${new Date(ms).toISOString().replace(/\D/g, "").slice(2, 14)}Z`
+			)
+		);
+	const basicConstraints = (isCa: boolean) =>
+		seq(
+			oid(OID_BASIC_CONSTRAINTS),
+			der(0x04, seq(...(isCa ? [der(0x01, Buffer.from([0xff]))] : [])))
+		);
+	const extensions = issuer
+		? [
+				basicConstraints(false),
+				seq(
+					oid(OID_SUBJECT_ALT_NAME),
+					der(0x04, seq(der(0x82, Buffer.from(subject))))
+				),
+			]
+		: [basicConstraints(true)];
+	const signatureAlgorithm = seq(oid(OID_ECDSA_WITH_SHA256));
+	const now = Date.now();
+	const tbsCertificate = seq(
+		der(0xa0, der(0x02, Buffer.from([2]))), // X.509 v3
+		der(0x02, serial),
+		signatureAlgorithm,
+		name(issuer?.name ?? subject),
+		seq(utcTime(now - 60 * 60 * 1000), utcTime(now + 24 * 60 * 60 * 1000)),
+		name(subject),
+		publicKey.export({ type: "spki", format: "der" }),
+		der(0xa3, seq(...extensions))
+	);
+	// node:crypto DER-encodes ECDSA signatures, which is what X.509 expects
+	const signature = crypto.sign(
+		"sha256",
+		tbsCertificate,
+		issuer?.privateKey ?? privateKey
+	);
+	const certificate = seq(
+		tbsCertificate,
+		signatureAlgorithm,
+		der(0x03, Buffer.from([0]), signature)
+	);
+	const base64 = certificate.toString("base64").replace(/.{64}/g, "$&\n");
+	return {
+		key: privateKey.export({ type: "pkcs8", format: "pem" }) as string,
+		cert: `-----BEGIN CERTIFICATE-----\n${base64.trimEnd()}\n-----END CERTIFICATE-----\n`,
+		privateKey,
+	};
+}
+
 /**
  * Generates a self-signed CA and two server certs (one for localhost, one for
- * other.host) using openssl. All files are written to a temp directory that is
- * cleaned up in afterAll.
+ * other.host). Only the CA cert is written to `tmpDir`, because `sslrootcert`
+ * takes a file path; afterAll removes it.
  */
 function generateCerts(tmpDir: string): TestCerts {
-	const caKeyPath = path.join(tmpDir, "ca.key");
-	const caCertPath = path.join(tmpDir, "ca.crt");
-
-	// Generate CA key + self-signed cert
-	childProcess.execSync(
-		[
-			"openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1",
-			"-nodes -days 1",
-			`-keyout ${caKeyPath} -out ${caCertPath}`,
-			'-subj "/CN=Test CA"',
-		].join(" "),
-		{ stdio: "pipe" }
-	);
-
-	function issueServerCert(name: string, san: string): CertPair {
-		const keyPath = path.join(tmpDir, `${name}.key`);
-		const csrPath = path.join(tmpDir, `${name}.csr`);
-		const certPath = path.join(tmpDir, `${name}.crt`);
-		const extPath = path.join(tmpDir, `${name}.ext`);
-
-		// Write SAN extension file
-		fs.writeFileSync(
-			extPath,
-			`subjectAltName=DNS:${san}\nbasicConstraints=CA:FALSE\n`
-		);
-
-		// Generate key + CSR
-		childProcess.execSync(
-			[
-				"openssl req -newkey ec -pkeyopt ec_paramgen_curve:prime256v1",
-				"-nodes",
-				`-keyout ${keyPath} -out ${csrPath}`,
-				`-subj "/CN=${san}"`,
-			].join(" "),
-			{ stdio: "pipe" }
-		);
-
-		// Sign with CA
-		childProcess.execSync(
-			[
-				`openssl x509 -req -in ${csrPath}`,
-				`-CA ${caCertPath} -CAkey ${caKeyPath} -CAcreateserial`,
-				`-days 1 -extfile ${extPath}`,
-				`-out ${certPath}`,
-			].join(" "),
-			{ stdio: "pipe" }
-		);
-
-		return {
-			key: fs.readFileSync(keyPath, "utf-8"),
-			cert: fs.readFileSync(certPath, "utf-8"),
-		};
-	}
-
+	const ca = issueCert("Test CA");
+	const caPath = path.join(tmpDir, "ca.crt");
+	fs.writeFileSync(caPath, ca.cert);
+	const issuer = { name: "Test CA", privateKey: ca.privateKey };
 	return {
-		ca: {
-			key: fs.readFileSync(caKeyPath, "utf-8"),
-			cert: fs.readFileSync(caCertPath, "utf-8"),
-		},
-		localhost: issueServerCert("localhost", "localhost"),
-		otherHost: issueServerCert("other", "other.host"),
-		caPath: caCertPath,
+		ca,
+		localhost: issueCert("localhost", issuer),
+		otherHost: issueCert("other.host", issuer),
+		caPath,
 	};
 }
 
@@ -451,18 +488,8 @@ describe("HyperdriveProxyController TLS modes", () => {
 		const wrongCaTmpDir = fs.mkdtempSync(
 			path.join(os.tmpdir(), "hyperdrive-wrong-ca-")
 		);
-		const wrongCaKeyPath = path.join(wrongCaTmpDir, "wrong-ca.key");
 		const wrongCaCertPath = path.join(wrongCaTmpDir, "wrong-ca.crt");
-
-		childProcess.execSync(
-			[
-				"openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1",
-				"-nodes -days 1",
-				`-keyout ${wrongCaKeyPath} -out ${wrongCaCertPath}`,
-				'-subj "/CN=Wrong CA"',
-			].join(" "),
-			{ stdio: "pipe" }
-		);
+		fs.writeFileSync(wrongCaCertPath, issueCert("Wrong CA").cert);
 
 		const { server, port: dbPort } = await createMockPostgresServer(
 			certs.localhost,
