@@ -1,5 +1,4 @@
 import { execSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import {
 	afterAll,
@@ -27,7 +26,13 @@ const execOptions = {
 } as const;
 const remoteWorkerName = `preserve-e2e-get-platform-proxy-remote`;
 const remoteStagingWorkerName = `preserve-e2e-get-platform-proxy-remote-staging`;
-const remoteKvName = `tmp-e2e-kv${Date.now()}-test-remote-bindings-${randomUUID().split("-")[0]}`;
+// Shared across runs like the Workers above, and kept out of the scheduled
+// cleanup by its `preserve-e2e-` prefix. A brand-new namespace can reject
+// writes with "namespace not found" for longer than setup can wait, so reusing
+// one means only the very first run ever has to wait for that.
+const remoteKvName = "preserve-e2e-get-platform-proxy-kv";
+const remoteKvKey = "test-key";
+const remoteKvValue = "remote-kv-value";
 
 if (auth) {
 	describe("getPlatformProxy - remote bindings", { timeout: 50_000 }, () => {
@@ -69,39 +74,27 @@ if (auth) {
 				);
 			}
 
-			const kvAddOut = execSync(
-				`pnpm wrangler kv namespace create ${remoteKvName}`,
-				execOptions
-			);
+			remoteKvId = ensureKvNamespace(remoteKvName);
 
-			const createdKvRegexMatch = kvAddOut.match(/"id": "(?<id>[^"]*?)"/);
-			const maybeRemoteKvId = createdKvRegexMatch?.groups?.["id"];
-			assert(maybeRemoteKvId, `Failed to create remote kv ${remoteKvName}`);
-			remoteKvId = maybeRemoteKvId;
-
-			// Newly created namespaces may not be available to the KV write API yet.
-			await vi.waitFor(
-				() => {
-					execSync(
-						`pnpm wrangler kv key put test-key remote-kv-value --namespace-id=${remoteKvId} --remote`,
-						{ ...execOptions, timeout: 10_000 }
-					);
-				},
-				{ timeout: 15_000, interval: 1_000 }
-			);
+			// Only a newly created (or emptied) namespace needs the write. Brand-new
+			// namespaces may not be available to the KV write API yet.
+			if (readKvValue(remoteKvId, remoteKvKey) !== remoteKvValue) {
+				await vi.waitFor(
+					() => {
+						execSync(
+							`pnpm wrangler kv key put ${remoteKvKey} ${remoteKvValue} --namespace-id=${remoteKvId} --remote`,
+							{ ...execOptions, timeout: 10_000 }
+						);
+					},
+					{ timeout: 45_000, interval: 2_000 }
+				);
+			}
 
 			rmSync("./.tmp", { recursive: true, force: true });
 			mkdirSync("./.tmp");
-		}, 60_000);
+		}, 90_000);
 
 		afterAll(() => {
-			try {
-				execSync(
-					`pnpm wrangler kv namespace delete --namespace-id=${remoteKvId}`,
-					execOptions
-				);
-			} catch {}
-
 			try {
 				rmSync("./.tmp", {
 					recursive: true,
@@ -354,4 +347,53 @@ function getAuthenticatedEnv() {
 	console.warn(
 		"Skipping vitest-plugin remote bindings tests because the environment is not authenticated with Cloudflare."
 	);
+}
+
+/**
+ * Lists the account's KV namespaces through Wrangler.
+ */
+function listKvNamespaces(): { id: string; title: string }[] {
+	const out = execSync("pnpm wrangler kv namespace list", execOptions);
+	return JSON.parse(out.slice(out.search(/^\[/m)));
+}
+
+/**
+ * Returns the ID of the KV namespace with the given title, creating it if it
+ * doesn't exist yet.
+ */
+function ensureKvNamespace(title: string): string {
+	const existing = listKvNamespaces().find((ns) => ns.title === title);
+	if (existing) {
+		return existing.id;
+	}
+	try {
+		const out = execSync(
+			`pnpm wrangler kv namespace create ${title}`,
+			execOptions
+		);
+		const id = out.match(/"id": "(?<id>[^"]*?)"/)?.groups?.["id"];
+		if (id) {
+			return id;
+		}
+	} catch {
+		// Another CI job may have created it at the same time; look it up below.
+	}
+	const created = listKvNamespaces().find((ns) => ns.title === title);
+	assert(created, `Failed to find or create KV namespace ${title}`);
+	return created.id;
+}
+
+/**
+ * Reads a KV value as text, or returns `undefined` if the read fails. A missing
+ * key reads as Wrangler's "Value not found" message.
+ */
+function readKvValue(namespaceId: string, key: string): string | undefined {
+	try {
+		return execSync(
+			`pnpm wrangler kv key get ${key} --namespace-id=${namespaceId} --remote --text`,
+			{ ...execOptions, timeout: 10_000, stdio: ["ignore", "pipe", "ignore"] }
+		).trim();
+	} catch {
+		return undefined;
+	}
 }
