@@ -126,7 +126,7 @@ describe("Vite framework", () => {
 			const result = await framework.configure(BASE_OPTIONS);
 			expect(cliPackages.installPackages).toHaveBeenCalledWith(
 				"npm",
-				["@cloudflare/vite-plugin@^2.0.0-beta.v.0"],
+				["@cloudflare/vite-plugin@^2.0.0-rc.0"],
 				expect.anything()
 			);
 

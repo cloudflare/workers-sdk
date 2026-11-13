@@ -1828,9 +1828,15 @@ importers:
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
+      '@types/semver':
+        specifier: ^7.5.1
+        version: 7.7.1
       esbuild:
         specifier: catalog:default
         version: 0.28.2
+      semver:
+        specifier: ^7.7.1
+        version: 7.8.5
       tinyglobby:
         specifier: catalog:default
         version: 0.2.16

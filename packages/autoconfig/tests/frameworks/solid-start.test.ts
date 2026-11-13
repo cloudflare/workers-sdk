@@ -61,7 +61,7 @@ describe("SolidStart", () => {
 		});
 		// `cloudflare()` relies on plugin v2 defaulting to the `ssr` environment
 		expect(installCloudflareVitePlugin).toHaveBeenCalledWith(
-			expect.objectContaining({ version: "^2.0.0-beta.v.0" })
+			expect.objectContaining({ version: "^2.0.0-rc.0" })
 		);
 		expect(readFileSync("vite.config.ts", "utf8")).toMatchInlineSnapshot(`
 			"import { defineConfig } from "vite";

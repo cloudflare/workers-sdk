@@ -46,9 +46,6 @@ export type CloudflareConfig = Omit<ParsedCloudflareConfig, "worker"> & {
 /** Parsed Worker configuration, as used by auxiliary and prerender Worker `config`. */
 export type WorkerConfig = CloudflareConfig["worker"];
 
-/** @deprecated Use `CloudflareConfig` instead. */
-export type ParsedInputConfigWithWorker = CloudflareConfig;
-
 export type PersistState = boolean | { path: string };
 export type TunnelConfig = {
 	autoStart?: boolean;

@@ -49,8 +49,6 @@ export function getLocalWorkerdCompatibilityDate(_options?: {
 
 export type {
 	CloudflareConfig,
-	// eslint-disable-next-line @typescript-eslint/no-deprecated -- Preserve the deprecated public type for compatibility.
-	ParsedInputConfigWithWorker,
 	PluginConfig,
 	WorkerConfig,
 } from "./plugin-config";
