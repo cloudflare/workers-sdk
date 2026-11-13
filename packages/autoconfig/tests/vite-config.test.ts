@@ -174,15 +174,19 @@ export default defineConfig({
 	});
 
 	describe("transformViteConfig", () => {
-		it("does not insert ESM imports into a .cjs file", async ({ expect }) => {
-			const content =
-				"import { defineConfig } from 'vite'; export default defineConfig({ plugins: [] });";
-			await writeFile("vite.config.cjs", content);
-			expect(() => transformViteConfig(".")).toThrow(
-				"Cannot automatically modify a CommonJS Vite configuration"
-			);
-			expect(readFileSync("vite.config.cjs", "utf8")).toBe(content);
-		});
+		it.for(["cjs", "cts"])(
+			"does not insert ESM imports into a .%s file even with ESM syntax",
+			async (extension, { expect }) => {
+				const filePath = `vite.config.${extension}`;
+				const content =
+					"import { defineConfig } from 'vite'; export default defineConfig({ plugins: [] });";
+				await writeFile(filePath, content);
+				expect(() => transformViteConfig(".")).toThrow(
+					"Cannot automatically modify a CommonJS Vite configuration"
+				);
+				expect(readFileSync(filePath, "utf8")).toBe(content);
+			}
+		);
 
 		it.for(["export type Config = {};", "export const helper = true;"])(
 			"rejects CommonJS exports alongside TypeScript exports: %s",

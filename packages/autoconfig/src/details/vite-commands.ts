@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
 import semiver from "semiver";
 import type { AutoConfigCommandError } from "../types";
-import type { PackageJSON } from "@cloudflare/workers-utils";
+import type { PackageJSON, PackageManager } from "@cloudflare/workers-utils";
 
 type ProjectPackageJSON = PackageJSON & {
 	peerDependencies?: Record<string, unknown>;
@@ -25,10 +25,17 @@ export function usesVitePlus(packageJson?: PackageJSON): boolean {
  */
 export function getViteProjectCommands({
 	packageJson,
+	workspaceRoot,
+	packageManager,
+	isWorkspaceRoot,
 	nodeModulesPaths,
 	resolveCommands,
 }: {
 	packageJson?: ProjectPackageJSON;
+	/** Only provided for configured applications inside a validated workspace. */
+	workspaceRoot?: string;
+	packageManager: PackageManager;
+	isWorkspaceRoot?: boolean;
 	nodeModulesPaths: readonly string[];
 	resolveCommands: boolean;
 }):
@@ -38,11 +45,13 @@ export function getViteProjectCommands({
 			error?: AutoConfigCommandError;
 	  }
 	| undefined {
+	const projectDependencies = getDeclaredDependencies(packageJson);
+	const workspacePackageJson = workspaceRoot
+		? readPackage(join(workspaceRoot, "package.json"))
+		: undefined;
 	const dependencies = {
-		...packageJson?.dependencies,
-		...packageJson?.devDependencies,
-		...packageJson?.peerDependencies,
-		...packageJson?.optionalDependencies,
+		...getDeclaredDependencies(workspacePackageJson),
+		...projectDependencies,
 	};
 	if (!("@cloudflare/vite-plugin" in dependencies)) {
 		return;
@@ -54,9 +63,17 @@ export function getViteProjectCommands({
 	);
 	const requirement =
 		"cf requires @cloudflare/vite-plugin >=2.0.0-beta.v.13 <3 for cf dev, cf build, cf deploy, and cf previews deploy.";
-	const install = usesVitePlus(packageJson)
-		? "npm install --save-dev @cloudflare/vite-plugin@beta vite-plus"
-		: "npm install --save-dev @cloudflare/vite-plugin@beta vite";
+	// An application's explicit runner takes priority over workspace defaults.
+	const packageName =
+		"vite-plus" in projectDependencies ||
+		(!("vite" in projectDependencies) && "vite-plus" in dependencies)
+			? "vite-plus"
+			: "vite";
+	const install = getInstallCommand(
+		packageManager.type,
+		packageName,
+		isWorkspaceRoot
+	);
 	if (!plugin) {
 		return {
 			error: {
@@ -81,7 +98,6 @@ export function getViteProjectCommands({
 		return {};
 	}
 
-	const packageName = usesVitePlus(packageJson) ? "vite-plus" : "vite";
 	const commandName = packageName === "vite-plus" ? "vp" : "vite";
 	const tool = readProjectPackage(nodeModulesPaths, packageName);
 	const bin = tool?.packageJson.bin;
@@ -111,6 +127,23 @@ export function getViteProjectCommands({
 	};
 }
 
+function getDeclaredDependencies(packageJson?: ProjectPackageJSON) {
+	return {
+		...packageJson?.dependencies,
+		...packageJson?.devDependencies,
+		...packageJson?.peerDependencies,
+		...packageJson?.optionalDependencies,
+	};
+}
+
+function readPackage(path: string): ProjectPackageJSON | undefined {
+	try {
+		return parsePackageJSON(readFileSync(path), path);
+	} catch {
+		return;
+	}
+}
+
 function readProjectPackage(
 	nodeModulesPaths: readonly string[],
 	packageName: string
@@ -136,4 +169,21 @@ function readProjectPackage(
 			return;
 		}
 	}
+}
+
+/** Suggests a repair command using the project's package manager and workspace flags. */
+function getInstallCommand(
+	packageManager: PackageManager["type"],
+	packageName: string,
+	isWorkspaceRoot = false
+): string {
+	const command =
+		packageManager === "yarn" || packageManager === "bun"
+			? "add --dev"
+			: "install --save-dev";
+	const workspaceFlag =
+		isWorkspaceRoot && (packageManager === "pnpm" || packageManager === "nub")
+			? " --workspace-root"
+			: "";
+	return `${packageManager} ${command} @cloudflare/vite-plugin@beta ${packageName}${workspaceFlag}`;
 }

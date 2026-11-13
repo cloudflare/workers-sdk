@@ -64,83 +64,6 @@ function extractFromBlockStatement(
 	return null;
 }
 
-function collectConfigBindings(
-	program: types.namedTypes.Program
-): Map<string, recast.types.ASTNode> {
-	const bindings = new Map<string, recast.types.ASTNode>();
-	for (const statement of program.body) {
-		const declaration = t.ExportNamedDeclaration.check(statement)
-			? statement.declaration
-			: statement;
-		if (t.VariableDeclaration.check(declaration)) {
-			for (const binding of declaration.declarations) {
-				if (
-					t.VariableDeclarator.check(binding) &&
-					t.Identifier.check(binding.id) &&
-					binding.init
-				) {
-					bindings.set(binding.id.name, binding.init);
-				}
-			}
-		}
-	}
-	return bindings;
-}
-
-// Follow the exported value rather than unrelated defineConfig() calls.
-function resolveConfigObject(
-	node: recast.types.ASTNode | undefined,
-	configBindings: ReadonlyMap<string, recast.types.ASTNode>,
-	seen = new Set<string>()
-): types.namedTypes.ObjectExpression | null {
-	if (!node) {
-		return null;
-	}
-	if (
-		t.TSAsExpression.check(node) ||
-		t.TSSatisfiesExpression.check(node) ||
-		t.TSTypeAssertion.check(node) ||
-		t.ParenthesizedExpression.check(node)
-	) {
-		return resolveConfigObject(node.expression, configBindings, seen);
-	}
-	if (t.Identifier.check(node)) {
-		if (seen.has(node.name)) {
-			return null;
-		}
-		seen.add(node.name);
-		return resolveConfigObject(
-			configBindings.get(node.name),
-			configBindings,
-			seen
-		);
-	}
-	if (
-		t.CallExpression.check(node) &&
-		t.Identifier.check(node.callee) &&
-		node.callee.name === "defineConfig"
-	) {
-		return resolveConfigObject(node.arguments[0], configBindings, seen);
-	}
-	return extractConfigObject(node);
-}
-
-function getMemberPropertyName(
-	member: types.namedTypes.MemberExpression
-): string | undefined {
-	if (!member.computed && t.Identifier.check(member.property)) {
-		return member.property.name;
-	}
-	if (
-		(t.Literal.check(member.property) ||
-			t.StringLiteral.check(member.property)) &&
-		typeof member.property.value === "string"
-	) {
-		return member.property.value;
-	}
-	return undefined;
-}
-
 /** Recognizes existing plugin setup without reconfiguring legacy Wrangler projects. */
 export function checkIfViteConfigUsesCloudflarePlugin(
 	projectPath: string,
@@ -285,101 +208,15 @@ function hasIdentifierOutsideImport(
 	return hasIdentifier;
 }
 
-/** Checks unsupported CommonJS source before setup installs or changes any files. */
+/** Checks unsupported CommonJS files before setup installs or changes any files. */
 export function assertViteConfigCanBeTransformed(projectPath: string): void {
 	const filePath = getViteConfigPath(projectPath);
-	if (![".cjs", ".cts"].includes(path.extname(filePath))) {
-		return;
-	}
-	const ast = path.extname(filePath) === ".cts" ? parseFile(filePath) : null;
-	let configBindings = new Map<string, recast.types.ASTNode>();
-	let exportedConfig: types.namedTypes.ObjectExpression | null = null;
-	const transformableConfigs = new Set<types.namedTypes.ObjectExpression>();
-	let hasUnsupportedCall = false;
-	let hasModuleExport = false;
-	let hasCommonJSExport = false;
-	if (ast) {
-		recast.visit(ast, {
-			visitProgram(n) {
-				configBindings = collectConfigBindings(n.node);
-				return this.traverse(n);
-			},
-			visitExportDefaultDeclaration(n) {
-				hasModuleExport = true;
-				exportedConfig = resolveConfigObject(
-					n.node.declaration,
-					configBindings
-				);
-				return this.traverse(n);
-			},
-			visitExportNamedDeclaration(n) {
-				hasModuleExport = true;
-				for (const specifier of n.node.specifiers ?? []) {
-					if (
-						t.ExportSpecifier.check(specifier) &&
-						t.Identifier.check(specifier.local) &&
-						t.Identifier.check(specifier.exported) &&
-						specifier.exported.name === "default"
-					) {
-						exportedConfig = resolveConfigObject(
-							specifier.local,
-							configBindings
-						);
-					}
-				}
-				return this.traverse(n);
-			},
-			visitCallExpression(n) {
-				if (
-					t.Identifier.check(n.node.callee) &&
-					n.node.callee.name === "defineConfig"
-				) {
-					const config = extractConfigObject(n.node.arguments[0]);
-					const plugins = config?.properties.findLast(isPluginsProp);
-					if (
-						config &&
-						plugins &&
-						t.ArrayExpression.check(plugins.value) &&
-						!hasFollowingOverride(config, plugins)
-					) {
-						transformableConfigs.add(config);
-					} else {
-						hasUnsupportedCall = true;
-					}
-				}
-				return this.traverse(n);
-			},
-			visitAssignmentExpression(n) {
-				let target: recast.types.ASTNode = n.node.left;
-				while (t.MemberExpression.check(target)) {
-					if (
-						t.Identifier.check(target.object) &&
-						(target.object.name === "exports" ||
-							(target.object.name === "module" &&
-								getMemberPropertyName(target) === "exports"))
-					) {
-						hasCommonJSExport = true;
-					}
-					target = target.object;
-				}
-				return this.traverse(n);
-			},
-		});
-	}
-	if (!hasModuleExport || hasCommonJSExport) {
+	if ([".cjs", ".cts"].includes(path.extname(filePath))) {
+		// Vite bundles these extensions as CommonJS even when they use ESM syntax.
+		// The Cloudflare plugin only exposes an ESM import entry point.
 		throw new UserError(
-			"Cannot automatically modify a CommonJS Vite configuration. Add the Cloudflare plugin to your Vite configuration manually.",
+			"Cannot automatically modify a CommonJS Vite configuration. Rename the configuration to vite.config.mjs or vite.config.mts before adding the Cloudflare plugin.",
 			{ telemetryMessage: "autoconfig CommonJS vite config unsupported" }
-		);
-	}
-	if (
-		!exportedConfig ||
-		!transformableConfigs.has(exportedConfig) ||
-		hasUnsupportedCall
-	) {
-		throw new UserError(
-			"Cannot automatically modify this Vite configuration. Use defineConfig({ plugins: [...] }) or add the Cloudflare plugin manually.",
-			{ telemetryMessage: "autoconfig vite config export unsupported" }
 		);
 	}
 }

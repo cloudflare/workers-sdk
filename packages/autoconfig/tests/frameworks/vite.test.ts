@@ -96,70 +96,28 @@ describe("Vite framework", () => {
 		);
 
 		it.for([
-			{ extension: "cts", source: "export default { plugins: [] };" },
-			{
-				extension: "cts",
-				source: "const config = { plugins: [] }; export default config;",
-			},
-			{
-				extension: "cts",
-				source:
-					"const unused = defineConfig({ plugins: [] }); const config = { plugins: [] }; export default config;",
-			},
-			{
-				extension: "cts",
-				source:
-					"const config = { plugins: [] }; export default defineConfig(config);",
-			},
-			{ extension: "cjs", source: "export default { plugins: [] };" },
+			"export default defineConfig({ plugins: [] });",
+			"const config = defineConfig({ plugins: [] }); export default config;",
+			"const config = defineConfig({ plugins: [] }); export { config as default };",
+			"export default defineConfig({ plugins: [] }) as UserConfig;",
 		])(
-			"rejects exports the transformer cannot edit before installing: %j",
-			async ({ extension, source }, { expect }) => {
-				const filePath = `vite.config.${extension}`;
-				const content = `import { defineConfig } from 'vite'; ${source}`;
+			"rejects ESM syntax in .cts before installing: %s",
+			async (source, { expect }) => {
+				const filePath = "vite.config.cts";
+				const content = `import { defineConfig, type UserConfig } from 'vite'; ${source}`;
 				await writeFile(filePath, content);
 				const framework = new Vite({ id: "vite", name: "Vite" });
 				for (const dryRun of [true, false]) {
 					await expect(
 						framework.configure({ ...BASE_OPTIONS, dryRun })
-					).rejects.toThrow(/Cannot automatically modify/);
+					).rejects.toThrow(
+						"Rename the configuration to vite.config.mjs or vite.config.mts"
+					);
 					expect(cliPackages.installPackages).not.toHaveBeenCalled();
 					expect(readFileSync(filePath, "utf8")).toBe(content);
 				}
 			}
 		);
-
-		it.for([
-			"const config = defineConfig({ plugins: [] }); export default config;",
-			"const config = defineConfig({ plugins: [] }); export { config as default };",
-			"export default defineConfig({ plugins: [] }) as UserConfig;",
-		])(
-			"configures transformable .cts exports: %s",
-			async (source, { expect }) => {
-				await writeFile(
-					"vite.config.cts",
-					`import { defineConfig, type UserConfig } from 'vite'; ${source}`
-				);
-				const framework = new Vite({ id: "vite", name: "Vite" });
-				await framework.configure(BASE_OPTIONS);
-				expect(cliPackages.installPackages).toHaveBeenCalled();
-				expect(readFileSync("vite.config.cts", "utf8")).toContain(
-					"cloudflare()"
-				);
-			}
-		);
-
-		it("configures ESM source in a .cts file", async ({ expect }) => {
-			const filePath = "vite.config.cts";
-			await writeFile(
-				filePath,
-				"import { defineConfig } from 'vite'; export default defineConfig({ plugins: [] });"
-			);
-			const framework = new Vite({ id: "vite", name: "Vite" });
-			await framework.configure(BASE_OPTIONS);
-			expect(cliPackages.installPackages).toHaveBeenCalled();
-			expect(readFileSync(filePath, "utf8")).toContain("cloudflare()");
-		});
 
 		it("creates a vite config with the cloudflare plugin when no config file exists", async ({
 			expect,
