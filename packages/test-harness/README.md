@@ -29,4 +29,6 @@ Test your production build: the harness runs the Build Output as it is, and neve
 - **Types:** `server.getWorker<typeof import("./cloudflare.config")>()` infers a Worker's `Env` and module from its config.
 - **Containers** run from the images in the Build Output, as in `vite preview`. Docker must be running.
 
+See [`fixtures/test-harness-example`](https://github.com/cloudflare/workers-sdk/tree/main/fixtures/test-harness-example) for a complete example with Vitest and Playwright.
+
 This is not yet stable enough for external use — APIs may change without notice.

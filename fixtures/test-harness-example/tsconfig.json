@@ -1,0 +1,19 @@
+{
+	"compilerOptions": {
+		"isolatedModules": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"module": "preserve",
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"resolveJsonModule": true,
+		"target": "esnext",
+		"strict": true,
+		"noEmit": true,
+		"types": ["@cloudflare/workers-types", "node"],
+		"lib": ["esnext"],
+		"skipLibCheck": true
+	},
+	"include": ["**/*.ts"],
+	"exclude": ["tests"]
+}
