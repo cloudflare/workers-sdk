@@ -7,12 +7,12 @@ describe("getRemoteBindings", () => {
 			getRemoteBindings({
 				env: {
 					ANALYTICS: {
-						type: "analytics",
+						type: "analytics-sql",
 						dev: { remote: true },
 					},
 					K2: {
 						type: "k2",
-						stream: "stream-id",
+						id: "0123456789abcdef0123456789abcdef",
 					},
 					HYPERDRIVE: {
 						type: "hyperdrive",
@@ -28,7 +28,7 @@ describe("getRemoteBindings", () => {
 			},
 			K2: {
 				type: "k2",
-				stream: "stream-id",
+				stream: "0123456789abcdef0123456789abcdef",
 				remote: undefined,
 			},
 			HYPERDRIVE: {

@@ -16,8 +16,8 @@ export type {
 	AiSearchNamespaceBindingOptions,
 	AnalyticsEngineDatasetBinding,
 	AnalyticsEngineDatasetBindingOptions,
-	AnalyticsSQLBinding,
-	AnalyticsSQLBindingOptions,
+	AnalyticsSqlBinding,
+	AnalyticsSqlBindingOptions,
 	ArtifactsBinding,
 	ArtifactsBindingOptions,
 	AssetsBinding,
@@ -89,7 +89,6 @@ export type {
 	Triggers,
 	ConnectTrigger,
 	ConnectTriggerOptions,
-	ConnectTriggerOptionsBase,
 	EmailTrigger,
 	EmailTriggerOptions,
 	FetchTrigger,
@@ -100,7 +99,10 @@ export type {
 	ScheduledTriggerOptions,
 } from "./triggers";
 export { triggers } from "./triggers";
-export type { ArtifactsEventType, WorkflowEvent } from "./workflow-events";
+export type {
+	ArtifactsEventType,
+	ArtifactsEventSubscription,
+} from "./workflow-events";
 export type {
 	Exports,
 	DurableObjectCreatedExport,

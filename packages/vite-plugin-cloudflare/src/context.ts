@@ -16,8 +16,8 @@ import type {
 } from "./plugin-config";
 import type {
 	ModuleType,
-	ParsedInputWorkerConfig,
-	ParsedOutputWorkerConfig,
+	ParsedWorkerConfig,
+	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
 import type { CloudflareAuth } from "@cloudflare/workers-auth/cf";
 import type { Logger } from "@cloudflare/workers-utils";
@@ -245,9 +245,7 @@ export class PluginContext {
 		return this.#getWorker(environmentName)?.config;
 	}
 
-	getWorkerNewConfig(
-		environmentName: string
-	): ParsedInputWorkerConfig | undefined {
+	getWorkerNewConfig(environmentName: string): ParsedWorkerConfig | undefined {
 		return this.#getWorker(environmentName)?.config;
 	}
 
@@ -299,7 +297,7 @@ export class PluginContext {
 	}
 
 	get allWorkerConfigs(): Array<
-		ParsedInputWorkerConfig | ParsedOutputWorkerConfig
+		ParsedWorkerConfig | ParsedBuildOutputWorkerConfig
 	> {
 		if (this.resolvedPluginConfig.type === "preview") {
 			return this.resolvedPluginConfig.workers.map((worker) => worker.config);

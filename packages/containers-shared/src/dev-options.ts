@@ -16,10 +16,10 @@ import type {
 	ContainerDevRuntimeOptions,
 } from "./types";
 import type {
-	ParsedInputContainerConfig,
-	ParsedInputWorkerConfig,
-	ParsedOutputContainerConfig,
-	ParsedOutputWorkerConfig,
+	ParsedContainerConfig,
+	ParsedWorkerConfig,
+	ParsedBuildOutputContainerConfig,
+	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -33,8 +33,8 @@ type CreateContainerDevPlanOptions = {
 type NamedContainerDevOptions = ContainerDevOptions & { image_name: string };
 
 type ContainerPlanExports =
-	| ParsedInputWorkerConfig["exports"]
-	| ParsedOutputWorkerConfig["exports"];
+	| ParsedWorkerConfig["exports"]
+	| ParsedBuildOutputWorkerConfig["exports"];
 
 /**
  * A Worker export of parsed `cloudflare.config.ts` or Build Output
@@ -237,8 +237,8 @@ export function createContainerDevPlan(
  * @throws If a linked Container is missing or image preparation has no build ID.
  */
 export function createContainerDevPlanForCfConfig(options: {
-	containers: ParsedInputContainerConfig[];
-	exports: ParsedInputWorkerConfig["exports"];
+	containers: ParsedContainerConfig[];
+	exports: ParsedWorkerConfig["exports"];
 	root: string;
 	containerBuildId?: string;
 }): ContainerDevPlan | undefined {
@@ -290,8 +290,8 @@ export function createContainerDevPlanForCfConfig(options: {
  * @throws If Build Output omits a Container referenced by a Worker export.
  */
 export function createContainerPreviewPlanForCfConfig(options: {
-	containers: ParsedOutputContainerConfig[];
-	exports: ParsedOutputWorkerConfig["exports"];
+	containers: ParsedBuildOutputContainerConfig[];
+	exports: ParsedBuildOutputWorkerConfig["exports"];
 }): ContainerDevPlan | undefined {
 	return createContainerPlanForCfConfig({
 		containers: options.containers,

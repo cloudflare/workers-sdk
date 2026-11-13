@@ -4,7 +4,7 @@ import { describe, test } from "vitest";
 function workerOptions(bindings = true) {
 	return {
 		config: {
-			env: bindings ? { ANALYTICS: { type: "analytics" } } : {},
+			env: bindings ? { ANALYTICS: { type: "analytics-sql" } } : {},
 		},
 	} as unknown as Parameters<typeof ANALYTICS_SQL_PLUGIN.getBindings>[0];
 }

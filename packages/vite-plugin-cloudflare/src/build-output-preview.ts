@@ -6,9 +6,9 @@ import { PRERENDER_WORKER_DIRECTORY_NAME } from "./build-output";
 import type { BuildOutputWorker } from "@cloudflare/build-output-utils";
 import type {
 	ModuleType,
-	ParsedOutputContainerConfig,
-	ParsedOutputRootConfig,
-	ParsedOutputWorkerConfig,
+	ParsedBuildOutputContainerConfig,
+	ParsedBuildOutputRootConfig,
+	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
 
 export interface Bundle {
@@ -18,14 +18,14 @@ export interface Bundle {
 }
 
 export interface BuildOutputPreviewWorker {
-	config: ParsedOutputWorkerConfig;
+	config: ParsedBuildOutputWorkerConfig;
 	assetsDir: string | undefined;
 	bundle: Bundle | undefined;
 }
 
 export interface BuildOutputPreview {
-	rootConfig: ParsedOutputRootConfig;
-	containers: ParsedOutputContainerConfig[];
+	rootConfig: ParsedBuildOutputRootConfig;
+	containers: ParsedBuildOutputContainerConfig[];
 	workers: BuildOutputPreviewWorker[];
 }
 

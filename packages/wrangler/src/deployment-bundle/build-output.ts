@@ -8,15 +8,15 @@ import {
 import { UserError } from "@cloudflare/workers-utils";
 import type {
 	ModuleType,
-	ParsedInputWorkerConfig,
-	ParsedOutputWorkerConfig,
+	ParsedWorkerConfig,
+	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
 import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
 import type { AssetsOptions, CfModuleType } from "@cloudflare/workers-utils";
 
 interface WriteWorkerOutputArgs {
 	root: string;
-	workerConfig: ParsedInputWorkerConfig;
+	workerConfig: ParsedWorkerConfig;
 	buildResult: WorkerBuildResult | undefined;
 	assetsOptions: AssetsOptions | undefined;
 }
@@ -56,12 +56,13 @@ async function writeBundle({
 }: {
 	root: string;
 	buildResult: WorkerBuildResult;
-}): Promise<ParsedOutputWorkerConfig["manifest"]> {
+}): Promise<ParsedBuildOutputWorkerConfig["manifest"]> {
 	const bundleDir = getWorkerBundleDir(root);
 	await fsp.mkdir(bundleDir, { recursive: true });
 
-	const modules: NonNullable<ParsedOutputWorkerConfig["manifest"]>["modules"] =
-		{};
+	const modules: NonNullable<
+		ParsedBuildOutputWorkerConfig["manifest"]
+	>["modules"] = {};
 
 	// Entry module
 	const entryKey = stripLeadingDotSlash(

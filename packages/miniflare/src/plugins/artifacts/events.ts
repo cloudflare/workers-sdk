@@ -8,7 +8,7 @@ import type {
 	ArtifactsEventRoute,
 	ArtifactsEventType,
 } from "../../workers/artifacts/events";
-import type { WorkflowEvent } from "@cloudflare/config";
+import type { ArtifactsEventSubscription } from "@cloudflare/config";
 
 /** An event subscription declared by a Workflow in this instance. */
 export interface ArtifactsEventSubscriptionRoute {
@@ -105,7 +105,7 @@ export function getArtifactsNamespaceEventBindings(
 function workflowRoutes(
 	owner: string,
 	workflowName: string,
-	events: WorkflowEvent[] = []
+	events: ArtifactsEventSubscription[] = []
 ): ArtifactsEventSubscriptionRoute[] {
 	return events.map((event) => {
 		const route = { types: [event.type], ...event.filter, workflowName };

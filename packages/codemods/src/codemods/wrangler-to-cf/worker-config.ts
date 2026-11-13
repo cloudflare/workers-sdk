@@ -96,9 +96,16 @@ export function convertWorkerConfig(
 ): OutputObject {
 	const properties: OutputProperty[] = [];
 	const comments: OutputComment[] = [];
-	const report = (followUp: MigrationFollowUp) => {
+	// `inline` follow-ups are already attached as a comment to the generated
+	// value they concern, so they aren't repeated at the end of the Worker.
+	const report = (
+		followUp: MigrationFollowUp,
+		options: { inline?: boolean } = {}
+	) => {
 		followUps.push(followUp);
-		comments.push(followUpToComment(followUp));
+		if (!options.inline) {
+			comments.push(followUpToComment(followUp));
+		}
 	};
 
 	if (typeof source.name === "string") {
@@ -144,7 +151,6 @@ export function convertWorkerConfig(
 	addProperty(properties, source, "main", "entrypoint");
 	addProperty(properties, source, "workers_dev", "workersDev");
 	addProperty(properties, source, "preview_urls", "previewUrls");
-	addProperty(properties, source, "first_party_worker", "firstPartyWorker");
 	addProperty(properties, source, "logpush");
 	addProperty(properties, source, "placement", "placement", (value) =>
 		isRecord(value) ? camelObject(value) : undefined
@@ -251,18 +257,18 @@ export function convertWorkerConfig(
 			});
 		}
 	}
+	const experimental: OutputProperty[] = [];
 	if (streamingTailConsumers.length > 0) {
+		experimental.push({
+			key: "streamingTailConsumers",
+			value: streamingTailConsumers,
+		});
+	}
+	addProperty(experimental, source, "first_party_worker", "firstPartyWorker");
+	if (experimental.length > 0) {
 		properties.push({
 			key: "experimental",
-			value: {
-				kind: "object",
-				properties: [
-					{
-						key: "streamingTailConsumers",
-						value: streamingTailConsumers,
-					},
-				],
-			},
+			value: { kind: "object", properties: experimental },
 		});
 	}
 

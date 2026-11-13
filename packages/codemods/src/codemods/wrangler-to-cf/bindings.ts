@@ -10,8 +10,15 @@ import {
 	type UnknownRecord,
 } from "./converter-helpers";
 import { WORKFLOW_SETTINGS, isLocalWorkflow } from "./exports";
-import { DURABLE_OBJECT_EXPORTS_DOCS_URL, createFollowUp } from "./follow-ups";
+import {
+	DURABLE_OBJECT_EXPORTS_DOCS_URL,
+	createFollowUp,
+	followUpToComment,
+} from "./follow-ups";
 import type { MigrationFollowUp, OutputObject, OutputValue } from "./types";
+
+/** Written in place of a legacy pipeline name, which isn't a stream ID. */
+const LEGACY_PIPELINE_STREAM_ID_PLACEHOLDER = "STREAM_ID";
 
 function addBinding(
 	bindings: Map<string, OutputValue>,
@@ -69,7 +76,7 @@ export function convertBindings(
 	source: UnknownRecord,
 	sourcePrefix: string,
 	imports: Set<string>,
-	report: (followUp: MigrationFollowUp) => void
+	report: (followUp: MigrationFollowUp, options?: { inline?: boolean }) => void
 ): OutputObject | undefined {
 	const bindings = new Map<string, OutputValue>();
 	const pathFor = (field: string, index?: number) =>
@@ -221,7 +228,7 @@ export function convertBindings(
 			report
 		);
 	}
-	convertArrayBindings("k2", "binding", "bindings.k2", [["stream", "stream"]], {
+	convertArrayBindings("k2", "binding", "bindings.k2", [["stream", "id"]], {
 		remote: true,
 	});
 	convertArrayBindings(
@@ -239,17 +246,41 @@ export function convertBindings(
 		{ remote: true }
 	);
 	for (const [index, entry] of getRecords(source, "pipelines").entries()) {
+		const sourcePath = pathFor("pipelines", index);
+		// The deprecated `pipeline` field names a legacy pipeline, which
+		// `@cloudflare/config` doesn't support. It isn't a stream ID, so write a
+		// placeholder for the user to replace instead of copying it.
+		const isLegacy = entry.stream === undefined && entry.pipeline !== undefined;
 		const options = optionsFromRecord(
-			{ ...entry, name: entry.stream ?? entry.pipeline },
-			[["name", "name"]],
+			{
+				...entry,
+				streamId: isLegacy
+					? LEGACY_PIPELINE_STREAM_ID_PLACEHOLDER
+					: entry.stream,
+			},
+			[["streamId", "streamId"]],
 			true
 		);
+		if (isLegacy) {
+			const followUp = createFollowUp(
+				"legacy-pipeline-binding",
+				`The Pipelines binding at \`${sourcePath}\` used the deprecated \`pipeline\` field, which names a legacy pipeline. Set \`streamId\` to the ID of the stream to write to.`,
+				{ sourcePath }
+			);
+			report(followUp, { inline: true });
+			const streamId = options.properties.find(
+				(property) => property.key === "streamId"
+			);
+			if (streamId) {
+				streamId.comments = [followUpToComment(followUp)];
+			}
+		}
 		imports.add("bindings");
 		addBinding(
 			bindings,
 			entry.binding,
 			call("bindings.pipeline", options),
-			pathFor("pipelines", index),
+			sourcePath,
 			report
 		);
 	}
@@ -619,7 +650,7 @@ export function convertBindings(
 	}
 
 	convertSingletonBinding("ai", "binding", "bindings.ai", ["staging"]);
-	convertSingletonBinding("analytics", "binding", "bindings.analytics");
+	convertSingletonBinding("analytics", "binding", "bindings.analyticsSql");
 	convertSingletonBinding("browser", "binding", "bindings.browser");
 	convertSingletonBinding("images", "binding", "bindings.images");
 	convertSingletonBinding("media", "binding", "bindings.media");
