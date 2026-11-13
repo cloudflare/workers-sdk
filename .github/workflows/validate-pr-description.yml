@@ -38,6 +38,8 @@ jobs:
       - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: changes
         with:
+          # Detect changes with local git: a single transient GitHub API error would fail the job
+          token: ""
           filters: |
             everything_but_markdown:
               - '!**/*.md'
