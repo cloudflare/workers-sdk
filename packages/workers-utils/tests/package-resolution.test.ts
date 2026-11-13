@@ -57,6 +57,48 @@ function createEsmOnlyPackage(name: string, version: string): void {
 	);
 }
 
+/**
+ * Creates a dual-format package in `node_modules/` under the current directory,
+ * laid out like `hono` or `stripe`: the exports map has no `"./package.json"`
+ * entry, the `require` entry point lives in a subdirectory, and that
+ * subdirectory contains a nested `package.json` marker with only a `type`
+ * field (no `name` or `version`).
+ *
+ * @param name - Package name (supports scoped like `@scope/pkg`)
+ * @param version - Version string to write into the root `package.json`
+ */
+function createPackageWithNestedTypeManifest(
+	name: string,
+	version: string
+): void {
+	const pkgDir = path.join(process.cwd(), "node_modules", name);
+	const cjsDir = path.join(pkgDir, "dist", "cjs");
+	fs.mkdirSync(cjsDir, { recursive: true });
+	fs.writeFileSync(path.join(cjsDir, "index.js"), "module.exports = {}");
+	fs.writeFileSync(
+		path.join(cjsDir, "package.json"),
+		JSON.stringify({ type: "commonjs" }, null, 2)
+	);
+	fs.writeFileSync(
+		path.join(pkgDir, "package.json"),
+		JSON.stringify(
+			{
+				name,
+				version,
+				type: "module",
+				exports: {
+					".": {
+						import: "./dist/index.js",
+						require: "./dist/cjs/index.js",
+					},
+				},
+			},
+			null,
+			2
+		)
+	);
+}
+
 describe("getPackagePath", () => {
 	runInTempDir();
 
@@ -125,6 +167,183 @@ describe("getInstalledPackageVersion", () => {
 		const result = getInstalledPackageVersion("@scope/esm-pkg", process.cwd());
 
 		expect(result).toBe("0.3.0");
+	});
+
+	it.for(["nameless-pkg", "@scope/nameless-pkg"])(
+		"should return undefined for %s when its manifest has no name",
+		(packageName, { expect }) => {
+			createCjsPackage(packageName, "1.2.3");
+			fs.writeFileSync(
+				path.join("node_modules", packageName, "package.json"),
+				JSON.stringify({ version: "1.2.3", exports: "./index.js" })
+			);
+			fs.writeFileSync(
+				"package.json",
+				JSON.stringify({ name: "test-project", version: "9.0.0" })
+			);
+
+			expect(
+				getInstalledPackageVersion(packageName, process.cwd())
+			).toBeUndefined();
+		}
+	);
+
+	it.for(["versionless-pkg", "@scope/versionless-pkg"])(
+		"should return undefined for %s when its manifest has no version",
+		(packageName, { expect }) => {
+			createCjsPackage(packageName, "1.2.3");
+			fs.writeFileSync(
+				path.join("node_modules", packageName, "package.json"),
+				JSON.stringify({ name: packageName, exports: "./index.js" })
+			);
+			fs.writeFileSync(
+				"package.json",
+				JSON.stringify({ name: "test-project", version: "9.0.0" })
+			);
+
+			expect(
+				getInstalledPackageVersion(packageName, process.cwd())
+			).toBeUndefined();
+		}
+	);
+
+	it.for([
+		{ packageName: "workspace-pkg", version: undefined },
+		{ packageName: "@scope/workspace-pkg", version: undefined },
+		{ packageName: "versioned-workspace-pkg", version: "1.2.3" },
+	])(
+		"should use the workspace manifest for a symlinked package (%j)",
+		({ packageName, version }, { expect }) => {
+			const workspaceDir = path.join(process.cwd(), "packages", "foo");
+			const cjsDir = path.join(workspaceDir, "dist", "cjs");
+			fs.mkdirSync(cjsDir, { recursive: true });
+			fs.writeFileSync(path.join(cjsDir, "index.js"), "module.exports = {}");
+			fs.writeFileSync(
+				path.join(cjsDir, "package.json"),
+				JSON.stringify({ type: "commonjs" })
+			);
+			fs.writeFileSync(
+				path.join(workspaceDir, "package.json"),
+				JSON.stringify({
+					name: packageName,
+					version,
+					private: true,
+					exports: "./dist/cjs/index.js",
+				})
+			);
+			fs.writeFileSync(
+				"package.json",
+				JSON.stringify({ name: "monorepo", version: "9.0.0" })
+			);
+			const linkPath = path.join(process.cwd(), "node_modules", packageName);
+			fs.mkdirSync(path.dirname(linkPath), { recursive: true });
+			fs.symlinkSync(workspaceDir, linkPath, "junction");
+
+			expect(getPackagePath(packageName, process.cwd())).toBe(cjsDir);
+			expect(getInstalledPackageVersion(packageName, process.cwd())).toBe(
+				version
+			);
+		}
+	);
+
+	it.for(["anonymous-pkg", "@scope/anonymous-pkg"])(
+		"should not inherit an ancestor version when %s has no name or version",
+		(packageName, { expect }) => {
+			createPackageWithNestedTypeManifest(packageName, "1.2.3");
+			fs.writeFileSync(
+				path.join("node_modules", packageName, "package.json"),
+				JSON.stringify({ exports: "./dist/cjs/index.js" })
+			);
+			fs.writeFileSync(
+				"package.json",
+				JSON.stringify({ name: "test-project", version: "9.0.0" })
+			);
+			if (packageName.startsWith("@")) {
+				fs.writeFileSync(
+					path.join("node_modules", "@scope", "package.json"),
+					JSON.stringify({ name: "scope-parent", version: "8.0.0" })
+				);
+			}
+
+			expect(
+				getInstalledPackageVersion(packageName, process.cwd())
+			).toBeUndefined();
+		}
+	);
+
+	it("should preserve bundled versions for an alias with nested type markers", ({
+		expect,
+	}) => {
+		createPackageWithNestedTypeManifest("vite", "0.1.0");
+		fs.writeFileSync(
+			path.join("node_modules", "vite", "package.json"),
+			JSON.stringify({
+				name: "@voidzero-dev/vite-plus-core",
+				version: "0.1.0",
+				bundledVersions: { vite: "7.3.0" },
+				exports: "./dist/cjs/index.js",
+			})
+		);
+
+		expect(getInstalledPackageVersion("vite", process.cwd())).toBe("7.3.0");
+	});
+
+	it("should skip a nested manifest with only a version and return the root version", ({
+		expect,
+	}) => {
+		createPackageWithNestedTypeManifest("dual-pkg", "4.0.0");
+		fs.writeFileSync(
+			path.join("node_modules", "dual-pkg", "dist", "cjs", "package.json"),
+			JSON.stringify({ type: "commonjs", version: "1.0.0" })
+		);
+
+		expect(getInstalledPackageVersion("dual-pkg", process.cwd())).toBe("4.0.0");
+	});
+
+	it("should stop at a named nested manifest without a version", ({
+		expect,
+	}) => {
+		createPackageWithNestedTypeManifest("dual-pkg", "4.0.0");
+		fs.writeFileSync(
+			path.join("node_modules", "dual-pkg", "dist", "cjs", "package.json"),
+			JSON.stringify({ type: "commonjs", name: "nested-marker" })
+		);
+
+		expect(
+			getInstalledPackageVersion("dual-pkg", process.cwd())
+		).toBeUndefined();
+	});
+
+	it("should skip a nested package.json without a name and return the root version", ({
+		expect,
+	}) => {
+		createPackageWithNestedTypeManifest("dual-pkg", "4.13.18");
+
+		const result = getInstalledPackageVersion("dual-pkg", process.cwd());
+
+		expect(result).toBe("4.13.18");
+	});
+
+	it("should skip a nested package.json without a name for a scoped package", ({
+		expect,
+	}) => {
+		createPackageWithNestedTypeManifest("@scope/dual-pkg", "1.32.2");
+
+		const result = getInstalledPackageVersion("@scope/dual-pkg", process.cwd());
+
+		expect(result).toBe("1.32.2");
+	});
+
+	it("should skip a nested package.json without a name when stopping at the project path", ({
+		expect,
+	}) => {
+		createPackageWithNestedTypeManifest("dual-pkg", "2.0.0");
+
+		const result = getInstalledPackageVersion("dual-pkg", process.cwd(), {
+			stopAtProjectPath: true,
+		});
+
+		expect(result).toBe("2.0.0");
 	});
 
 	it("should return undefined for a non-existent package", ({ expect }) => {
