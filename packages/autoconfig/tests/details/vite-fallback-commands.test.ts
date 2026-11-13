@@ -56,10 +56,29 @@ export default { plugins: [cloudflare()] };`,
 		return resolve("node_modules", packageName, "custom cli.js");
 	}
 
+	async function omitFrameworkCommands(projectPath = process.cwd()) {
+		const detected = await frameworkDetection.detectFramework(
+			projectPath,
+			context,
+			{
+				target: "cf",
+			}
+		);
+		vi.spyOn(frameworkDetection, "detectFramework").mockResolvedValue({
+			...detected,
+			detectedFramework: {
+				...detected.detectedFramework,
+				devCommand: undefined,
+				buildCommand: undefined,
+			},
+		});
+	}
+
 	it.for([false, true])(
-		"returns the installed native commands without a detected framework (Vite+: %s)",
+		"returns the installed native commands without detected framework commands (Vite+: %s)",
 		async (vitePlus, { expect }) => {
 			const binary = await seedProject(vitePlus);
+			await omitFrameworkCommands();
 			const details = await getDetailsForAutoConfig({ context });
 
 			expect(details).toMatchObject({
@@ -380,6 +399,7 @@ export default { plugins: [cloudflare()] };`,
 				"apps/site/cloudflare.config.ts": "export default {};",
 				"apps/site/vite.config.ts": `import { cloudflare } from '@cloudflare/vite-plugin'; export default { plugins: [cloudflare()] };`,
 			});
+			await omitFrameworkCommands(resolve("apps/site"));
 			const details = await getDetailsForAutoConfig({
 				projectPath: resolve("apps/site"),
 				context,
@@ -478,22 +498,26 @@ export default { plugins: [cloudflare()] };`,
 		expect(details.buildCommand).toBe(`${invocation(binary)} build`);
 	});
 
-	it("preserves canonical Vite commands with a dynamic config", async ({
-		expect,
-	}) => {
-		await seedProject();
-		await seed({
-			"package.json": JSON.stringify({
-				devDependencies: { vite: "8.1.0", "@cloudflare/vite-plugin": "beta" },
-			}),
-			"vite.config.ts":
-				"export default vite.defineConfig({ plugins: [cloudflare()].filter(Boolean) });",
-		});
-		const details = await getDetailsForAutoConfig({ context });
-		expect(details.commandError).toBeUndefined();
-		expect(details.devCommand).toBe("vite");
-		expect(details.buildCommand).toBe("vite build");
-	});
+	it.for([false, true])(
+		"preserves canonical commands with a dynamic config (Vite+: %s)",
+		async (vitePlus, { expect }) => {
+			await seedProject(vitePlus);
+			await seed({
+				"package.json": JSON.stringify({
+					devDependencies: {
+						[vitePlus ? "vite-plus" : "vite"]: vitePlus ? "1.5.0" : "8.1.0",
+						"@cloudflare/vite-plugin": "beta",
+					},
+				}),
+				"vite.config.ts":
+					"export default vite.defineConfig({ plugins: [cloudflare()].filter(Boolean) });",
+			});
+			const details = await getDetailsForAutoConfig({ context });
+			expect(details.commandError).toBeUndefined();
+			expect(details.devCommand).toBe(vitePlus ? "vp dev" : "vite");
+			expect(details.buildCommand).toBe(vitePlus ? "vp build" : "vite build");
+		}
+	);
 
 	it.for([
 		"2.0.0-beta.v.13",
@@ -562,6 +586,7 @@ export default { plugins: [cloudflare()] };`,
 					"#!/usr/bin/env node\nprocess.stdout.write(JSON.stringify(process.argv.slice(2)));",
 			});
 			await chmod(binary, 0o755);
+			await omitFrameworkCommands();
 			const details = await getDetailsForAutoConfig({ context });
 			if (!details.buildCommand) {
 				throw new Error("Expected a runnable build command");
