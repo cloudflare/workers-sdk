@@ -421,17 +421,15 @@ const MiniflareExportsSchema = z
 // ---------------------------------------------------------------------------
 
 /**
- * Extends the config `assets` block with:
- * - `directory` — directory to serve, resolved against `dev.rootPath` if relative.
- * - `hasUserWorker` — whether the worker has a user-authored script the asset
- *   router should fall back to for unmatched requests. Cannot be inferred from
- *   manifest presence: wrangler injects a placeholder script for assets-only
- *   workers, so this must be supplied explicitly (defaults to `false`).
+ * Extends the config `assets` block with `directory`, the directory to serve.
+ *
+ * As in `@cloudflare/config`, a Worker with `assets` and no code (no `manifest`
+ * or `legacy.serviceWorkerScript`) is assets-only: the asset router never falls
+ * back to a user Worker.
  */
 const MiniflareAssetsSchema = RawAssetsConfigSchema.extend({
 	/** Assets directory to serve; relative to `dev.rootPath` if not absolute. */
 	directory: z.string(),
-	hasUserWorker: z.boolean().default(false),
 });
 
 /**

@@ -230,6 +230,12 @@ function addSourceOptions(
 	if ("modulesRules" in worker && worker.modulesRules !== undefined) {
 		throwUnsupportedOption("modulesRules");
 	}
+	// V4 options always include a script, so tools give assets-only Workers a
+	// placeholder one and set `has_user_worker: false`. In native config an
+	// assets-only Worker has no code, which is how Miniflare recognises it.
+	if (worker.assets?.routerConfig?.has_user_worker === false) {
+		return undefined;
+	}
 	if (Array.isArray(worker.modules)) {
 		const modulesRoot = path.resolve(rootPath, worker.modulesRoot ?? ".");
 		return createManifestFromModules(worker.modules, rootPath, modulesRoot);
@@ -893,7 +899,6 @@ function configAssets(
 	}
 	config.assets = {
 		directory: assets.directory,
-		hasUserWorker: getBooleanProperty(assets.routerConfig, "has_user_worker"),
 		basePath: getStringProperty(assets.assetConfig, "base_path"),
 		htmlHandling: getHtmlHandling(
 			getStringProperty(assets.assetConfig, "html_handling")

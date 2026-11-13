@@ -2,7 +2,11 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
-import { Miniflare, MiniflareCoreError } from "miniflare";
+import {
+	convertV4MiniflareOptions,
+	Miniflare,
+	MiniflareCoreError,
+} from "miniflare";
 import { onTestFinished, test, vi } from "vitest";
 import {
 	disposeWithRetry,
@@ -10,18 +14,16 @@ import {
 	useDispose,
 	useTmp,
 } from "../../test-shared";
-import type { MiniflareOptions } from "miniflare";
+import type { MiniflareOptions, WorkerOptions } from "miniflare";
 
-// Minimal worker script. When assets are configured, all incoming `dispatchFetch`
-// requests are automatically routed through the assets router service, which
-// either serves a matched asset (200) or returns 404 (because `has_user_worker`
-// defaults to false, so unmatched paths go straight to the asset worker's 404).
 const WORKER_SCRIPT = `export default {
 	async fetch(request, env) {
 		return new Response("from user worker");
 	}
 }`;
 
+// An assets-only Worker (no code), so the asset router either serves a matched
+// asset (200) or returns the asset Worker's 404 for unmatched paths
 function makeOptions(
 	directory: string,
 	{ rootPath, basePath }: { rootPath?: string; basePath?: string } = {}
@@ -32,7 +34,6 @@ function makeOptions(
 				config: {
 					name: "",
 					compatibilityDate: "2026-04-29",
-					manifest: singleModuleManifest(WORKER_SCRIPT),
 					assets: { directory, basePath },
 				},
 				dev: rootPath === undefined ? undefined : { rootPath },
@@ -40,6 +41,119 @@ function makeOptions(
 		],
 	};
 }
+
+async function writeNotFoundAssets(directory: string) {
+	await fs.writeFile(path.join(directory, "test.txt"), "hello from asset");
+	await fs.writeFile(path.join(directory, "404.html"), "asset 404 page");
+}
+
+test("serves an assets-only Worker without code", async ({ expect }) => {
+	const tmp = await useTmp();
+	await writeNotFoundAssets(tmp);
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "assets-only",
+					compatibilityDate: "2026-04-29",
+					assets: { directory: tmp, notFoundHandling: "404-page" },
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	let res = await mf.dispatchFetch("http://example.com/test.txt");
+	expect(res.status).toBe(200);
+	expect(await res.text()).toBe("hello from asset");
+
+	// Unmatched requests get the asset Worker's not-found handling
+	res = await mf.dispatchFetch("http://example.com/missing");
+	expect(res.status).toBe(404);
+	expect(await res.text()).toBe("asset 404 page");
+});
+
+test("falls back to a Worker's code for requests without a matching asset", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	await writeNotFoundAssets(tmp);
+	const config = {
+		name: "",
+		compatibilityDate: "2026-04-29",
+		assets: { directory: tmp, notFoundHandling: "404-page" as const },
+	};
+	const workers: WorkerOptions[] = [
+		{ config: { ...config, manifest: singleModuleManifest(WORKER_SCRIPT) } },
+		{
+			config,
+			legacy: {
+				serviceWorkerScript: `addEventListener("fetch", (event) => {
+					event.respondWith(new Response("from user worker"));
+				});`,
+			},
+		},
+	];
+
+	for (const worker of workers) {
+		const mf = new Miniflare({ workers: [worker] });
+		useDispose(mf);
+		const res = await mf.dispatchFetch("http://example.com/missing");
+		expect(res.status).toBe(200);
+		expect(await res.text()).toBe("from user worker");
+	}
+});
+
+test("serves assets-only Workers converted from v4 options without their placeholder script", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	await writeNotFoundAssets(tmp);
+	const options = (hasUserWorker: boolean) =>
+		convertV4MiniflareOptions({
+			compatibilityDate: "2026-04-29",
+			modules: true,
+			script: WORKER_SCRIPT,
+			assets: {
+				directory: tmp,
+				routerConfig: { has_user_worker: hasUserWorker },
+				assetConfig: { not_found_handling: "404-page" },
+			},
+		});
+
+	const mf = new Miniflare(options(false));
+	useDispose(mf);
+	let res = await mf.dispatchFetch("http://example.com/missing");
+	expect(res.status).toBe(404);
+	expect(await res.text()).toBe("asset 404 page");
+
+	await mf.setOptions(options(true));
+	res = await mf.dispatchFetch("http://example.com/missing");
+	expect(res.status).toBe(200);
+	expect(await res.text()).toBe("from user worker");
+});
+
+test("rejects a Worker with neither code nor assets", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const mf = new Miniflare({
+		workers: [{ config: { name: "empty", compatibilityDate: "2026-04-29" } }],
+	});
+	// Disposing an instance whose startup failed rethrows the startup error.
+	onTestFinished(() =>
+		disposeWithRetry(mf).catch((error: unknown) => {
+			expect(error).toMatchObject({ code: "ERR_VALIDATION" });
+		})
+	);
+	const ready = mf.ready;
+	await expect(ready).rejects.toBeInstanceOf(MiniflareCoreError);
+	await expect(ready).rejects.toMatchObject({
+		code: "ERR_VALIDATION",
+		message:
+			'Worker "empty" has no code. Provide a `config.manifest` or `legacy.serviceWorkerScript`, or `config.assets` for an assets-only Worker.',
+	});
+});
 
 test("omits Sentry from the embedded asset service Workers", async ({
 	expect,

@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import path from "node:path";
 import { describe, test } from "vitest";
 import { convertV4MiniflareOptions } from "../../src/config/v4-convert";
@@ -725,7 +726,6 @@ describe("convertV4MiniflareOptions", () => {
 
 		expect(converted.workers[0].config.assets).toEqual({
 			directory: "./public",
-			hasUserWorker: true,
 			basePath: "/subpath",
 			htmlHandling: "auto-trailing-slash",
 			notFoundHandling: "single-page-application",
@@ -753,5 +753,80 @@ describe("convertV4MiniflareOptions", () => {
 			"/api/*",
 			"!/api/asset",
 		]);
+	});
+
+	test("drops the placeholder script of an assets-only Worker", ({
+		expect,
+	}) => {
+		const converted = convertV4MiniflareOptions({
+			workers: [
+				{
+					name: "modules",
+					modules: true,
+					script: "export default {};",
+					assets: {
+						directory: "./public",
+						routerConfig: { has_user_worker: false },
+					},
+				},
+				{
+					name: "service-worker",
+					script: "addEventListener('fetch', () => {});",
+					assets: {
+						directory: "./public",
+						routerConfig: { has_user_worker: false },
+					},
+				},
+				{
+					// The placeholder isn't read
+					name: "script-path",
+					scriptPath: "./does-not-exist.mjs",
+					modules: true,
+					assets: {
+						directory: "./public",
+						routerConfig: { has_user_worker: false },
+					},
+				},
+			],
+		});
+
+		for (const worker of converted.workers) {
+			expect(worker.config.manifest).toBeUndefined();
+			expect(worker.legacy?.serviceWorkerScript).toBeUndefined();
+			expect(worker.config.assets).toEqual({ directory: "./public" });
+		}
+	});
+
+	test("keeps the script of a Worker with assets unless has_user_worker is false", ({
+		expect,
+	}) => {
+		const converted = convertV4MiniflareOptions({
+			workers: [
+				{
+					name: "unset",
+					modules: true,
+					script: "export default {};",
+					assets: { directory: "./public" },
+				},
+				{
+					name: "user-worker",
+					modules: true,
+					script: "export default {};",
+					assets: {
+						directory: "./public",
+						routerConfig: { has_user_worker: true },
+					},
+				},
+			],
+		});
+
+		for (const worker of converted.workers) {
+			const manifest = worker.config.manifest;
+			assert(manifest !== undefined);
+			expect(manifest.modules[manifest.mainModule]).toEqual({
+				type: "esm",
+				contents: "export default {};",
+			});
+		}
 	});
 });

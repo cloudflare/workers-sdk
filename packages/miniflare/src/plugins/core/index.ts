@@ -1152,6 +1152,36 @@ function copyDirectorySync(sourcePath: string, destinationPath: string) {
 	}
 }
 
+/**
+ * Returns whether a Worker has code of its own: a module `manifest` or a
+ * service-worker format script. A Worker with `assets` and no code is
+ * assets-only.
+ *
+ * @param options The Worker's parsed options.
+ * @returns `true` if the Worker has code.
+ */
+export function hasWorkerCode(
+	options: Pick<ParsedWorkerOptions, "config" | "legacy">
+): boolean {
+	return (
+		options.config.manifest !== undefined ||
+		options.legacy?.serviceWorkerScript !== undefined
+	);
+}
+
+// workerd needs code for every Worker. An assets-only Worker still gets a user
+// service, so that bindings, sockets and the inspector that target it keep
+// working, but the asset router never calls it.
+const ASSETS_ONLY_WORKER_MODULE_NAME = "assets-only-worker.mjs";
+const SCRIPT_ASSETS_ONLY_WORKER = `export default {
+	fetch() {
+		return new Response("Not found", {
+			status: 404,
+			headers: { "Content-Type": "text/html" },
+		});
+	},
+};`;
+
 function getWorkerScript(
 	options: ParsedWorkerOptions,
 	workerIndex: number
@@ -1169,9 +1199,25 @@ function getWorkerScript(
 		};
 	}
 
-	// Otherwise, build modules from the manifest (contents are provided inline).
 	const manifest = config.manifest;
-	assert(manifest !== undefined, "Unreachable: Workers must have code");
+	if (manifest === undefined) {
+		if (config.assets === undefined) {
+			throw new MiniflareCoreError(
+				"ERR_VALIDATION",
+				`Worker ${JSON.stringify(config.name)} has no code. Provide a \`config.manifest\` or \`legacy.serviceWorkerScript\`, or \`config.assets\` for an assets-only Worker.`
+			);
+		}
+		return {
+			modules: [
+				{
+					name: ASSETS_ONLY_WORKER_MODULE_NAME,
+					esModule: SCRIPT_ASSETS_ONLY_WORKER,
+				},
+			],
+		};
+	}
+
+	// Otherwise, build modules from the manifest (contents are provided inline).
 	const modulesRoot = path.resolve(options.dev.rootPath, manifest.modulesRoot);
 	const entry = manifest.modules[manifest.mainModule];
 	assert(
