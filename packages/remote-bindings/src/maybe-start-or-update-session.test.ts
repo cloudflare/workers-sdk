@@ -36,7 +36,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 	);
 
 	it.for([undefined, false, true])(
-		"starts an Artifacts remote session only for remote=%s or the default",
+		"starts an Artifacts remote session only when remote=%s is true",
 		async (remote, { expect }) => {
 			const binding = {
 				type: "artifacts" as const,
@@ -61,7 +61,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 				{ cliDisplayName: "Vite", logger: createTestLogger() },
 				startSession
 			);
-			if (remote === false) {
+			if (remote !== true) {
 				expect(result).toBeNull();
 				expect(startSession).not.toHaveBeenCalled();
 			} else {

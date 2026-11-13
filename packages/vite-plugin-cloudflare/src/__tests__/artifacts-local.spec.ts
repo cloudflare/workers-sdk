@@ -3,13 +3,14 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { removeDirSync } from "@cloudflare/workers-utils";
-import { createServer } from "vite";
+import { createLogger, createServer } from "vite";
 import { test, vi } from "vitest";
 
 const FIXTURES_ROOT = path.resolve(__dirname, "fixtures", "artifacts-local");
 
 test.for([
 	{ remote: false, remoteBindings: true },
+	{ remote: undefined, remoteBindings: true },
 	{ remote: undefined, remoteBindings: false },
 	{ remote: true, remoteBindings: false },
 ])(
@@ -49,10 +50,13 @@ test.for([
 		}
 	};`
 		);
+		const warnings: string[] = [];
+		const customLogger = createLogger("silent");
+		customLogger.warn = (message) => void warnings.push(message);
 		const server = await createServer({
 			root,
 			configFile: false,
-			logLevel: "silent",
+			customLogger,
 			server: { port: 0 },
 			plugins: [
 				cloudflare({
@@ -72,6 +76,15 @@ test.for([
 			expect(new URL(created.remote).hostname).toBe("127.0.0.1");
 			const listed = (await (await fetch(url)).json()) as { repos: unknown[] };
 			expect(listed.repos).toHaveLength(1);
+			const defaultWarning =
+				"Artifacts binding REPOS uses the local simulator by default. Set `remote: true` to use deployed repos, or `remote: false` to silence this warning.";
+			if (options.remote === undefined && options.remoteBindings) {
+				expect(
+					warnings.filter((message) => message === defaultWarning)
+				).toHaveLength(1);
+			} else {
+				expect(warnings).not.toContain(defaultWarning);
+			}
 		} finally {
 			await server.close();
 		}

@@ -34,9 +34,9 @@
 		"@cloudflare/cli-shared-helpers": "0.3.3",
 		"@cloudflare/deploy-helpers": "0.26.2",
 		"@cloudflare/workers-auth": "0.18.0",
-		"@cloudflare/workers-utils": "0.53.0",
+		"@cloudflare/workers-utils": "0.54.0",
 		"chalk": "catalog:default",
-		"miniflare": "5.20261110.2-beta",
+		"miniflare": "5.20261113.0-beta",
 		"undici": "catalog:default",
 		"ws": "catalog:default"
 	},
