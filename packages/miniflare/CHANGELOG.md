@@ -1,5 +1,61 @@
 # miniflare
 
+## 5.20261113.0-beta
+
+### Minor Changes
+
+- [#16735](https://github.com/cloudflare/workers-sdk/pull/16735) [`f005593`](https://github.com/cloudflare/workers-sdk/commit/f005593c1ed0d1f429dafc6919c4335f4d5070c7) Thanks [@leostera](https://github.com/leostera)! - Use the local simulator for Artifacts bindings that omit `remote`
+
+  **Behavior change:** Artifacts bindings now default to the local simulator during development, like KV, R2 and D1. Previously, an omitted `remote` in Wrangler and the Vite plugin used the deployed Artifacts resource. If you want deployed repos in `wrangler dev` or `vite dev`, set `"remote": true` on the binding (`dev: { remote: true }` in `cloudflare.config.ts`). Artifacts is in beta, so this ships as a minor release.
+
+  While `remote` is omitted, `wrangler dev`, `getPlatformProxy()` and the Vite plugin warn when remote bindings are enabled, once for each binding rather than on every config reload: "Artifacts binding REPOS uses the local simulator by default. Set `remote: true` to use deployed repos, or `remote: false` to silence this warning." Workers Vitest and `wrangler dev --local` already used the simulator, so they don't warn. Local Artifacts needs no Cloudflare credentials, but requires Git 2.32 or newer on the host.
+
+- [#16589](https://github.com/cloudflare/workers-sdk/pull/16589) [`856842e`](https://github.com/cloudflare/workers-sdk/commit/856842ec973ddd530dd385d389d68408f8ce58e2) Thanks [@mkuritsu](https://github.com/mkuritsu)! - Support Browser Run quick actions in local development
+
+  `env.BROWSER.quickAction(action, options)` now works with a local browser binding instead of failing with `The RPC receiver does not implement the method "quickAction"`. The `screenshot`, `pdf`, `content`, `markdown`, `snapshot`, `scrape`, `links` and `accessibilityTree` actions run in a local Chrome and return the same responses and errors as Browser Run.
+
+  Workers AI isn't available locally, so the `json` action returns placeholder data shaped like `response_format.json_schema` and logs a warning. The `kitesurf` browser isn't supported locally either. Set `"remote": true` on the browser binding to use Browser Run for these.
+
+### Patch Changes
+
+- [#16771](https://github.com/cloudflare/workers-sdk/pull/16771) [`61eacca`](https://github.com/cloudflare/workers-sdk/commit/61eacca214a9533f41fac98d732f1cfdd905ddf6) Thanks [@leostera](https://github.com/leostera)! - Fix several local Artifacts emulator issues found while testing it as a customer
+
+  - The local Git remote keeps its port across dev server restarts, so existing clones keep working, and Wrangler prints each namespace's Git remote prefix at startup. If another process holds the port, a new one is chosen and printed.
+  - Workers Vitest no longer logs a caught `ArtifactsError` as an uncaught exception. Local bindings now throw errors in the caller's isolate, so they never cross a workerd RPC boundary.
+  - A push containing a file larger than 32 MiB is rejected, as in production, and a file at that limit can still be read. Reading a larger file throws `ArtifactsError` with code `MEMORY_LIMIT` instead of a raw RPC serialization error.
+  - `listTokens()` includes revoked and expired tokens with `state: "revoked"` or `state: "expired"`, listed after all active tokens. An expired token can no longer be revoked: `revokeToken()` returns `false` and its state stays `"expired"`.
+  - Results now follow the published binding types: `list()` items have no `remote`, `log()` caps `limit` at 1000 instead of rejecting it, and `readTree()` and `readCommit()` throw `INTERNAL_ERROR` for an object of another type instead of returning `null`.
+
+- [#16589](https://github.com/cloudflare/workers-sdk/pull/16589) [`856842e`](https://github.com/cloudflare/workers-sdk/commit/856842ec973ddd530dd385d389d68408f8ce58e2) Thanks [@mkuritsu](https://github.com/mkuritsu)! - Clear a local Browser Run session's `connectionId` when its client disconnects
+
+  Sessions connected through `/v1/devtools/browser/:sessionId`, which current versions of `@cloudflare/puppeteer` and `@cloudflare/playwright` use, kept reporting a `connectionId` after the client closed its WebSocket. Reusing a session by picking one without a `connectionId` therefore never found a free session in local development.
+
+- [#16849](https://github.com/cloudflare/workers-sdk/pull/16849) [`3cea40b`](https://github.com/cloudflare/workers-sdk/commit/3cea40b078519222db432b5edf827ddc3e629a2a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-12
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16886](https://github.com/cloudflare/workers-sdk/pull/16886) [`63eb6da`](https://github.com/cloudflare/workers-sdk/commit/63eb6daa0eda348e1f9e86a506cfd80d104a1e28) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-13
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16849](https://github.com/cloudflare/workers-sdk/pull/16849) [`3cea40b`](https://github.com/cloudflare/workers-sdk/commit/3cea40b078519222db432b5edf827ddc3e629a2a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261110.1 | ^5.20261112.1 |
+  | workerd                   | 1.20261110.1  | 1.20261112.1  |
+
+- [#16886](https://github.com/cloudflare/workers-sdk/pull/16886) [`63eb6da`](https://github.com/cloudflare/workers-sdk/commit/63eb6daa0eda348e1f9e86a506cfd80d104a1e28) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261112.1 | ^5.20261113.1 |
+  | workerd                   | 1.20261112.1  | 1.20261113.1  |
+
 ## 5.20261110.2-beta
 
 ### Patch Changes
