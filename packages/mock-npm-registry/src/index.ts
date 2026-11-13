@@ -8,7 +8,9 @@ import getPort from "get-port";
 import treeKill from "tree-kill";
 import { dedent } from "ts-dedent";
 import { ConfigBuilder } from "verdaccio";
+import { getLocalVersion } from "./local-versions.js";
 import { publishPackage, restoreLatestTag } from "./publish-package.js";
+import type { LocalVersion } from "./local-versions.js";
 
 export { overrideConfigEnv } from "./config-env.js";
 
@@ -27,6 +29,12 @@ const EXIT_TIMEOUT = 10_000;
  * The `targetPackages` will be published to the local npm repository along with any of their local dependencies.
  * Any non-local dependencies will continue to be pulled from the public npm registry.
  *
+ * The target packages keep their real versions, so tests can install them by version or dist-tag.
+ * Their local dependencies are published under `0.0.0-local.<version>` versions (see `getLocalVersion()`),
+ * which the local packages depend on exactly. A public package that depends on the same version as
+ * a local package, such as a published `cf` pinning `@cloudflare/config`, therefore gets the public
+ * copy rather than unreleased local changes.
+ *
  * @param targetPackages a list of primary packages to publish to the local registry.
  * @returns a function that stops and deletes the registry
  */
@@ -41,6 +49,7 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 
 	// The packages to publish to the local npm repository.
 	const pkgs = await getPackagesToPublish(targetPackages);
+	const localVersions = await getLocalVersions(pkgs, new Set(targetPackages));
 
 	const configPath = await writeVerdaccioConfig(
 		registryPath,
@@ -54,7 +63,10 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 	);
 
 	for (const [pkg, pkgPath] of pkgs.entries()) {
-		console.log(` - ${pkg} (${pkgPath})`);
+		const localVersion = localVersions.get(pkg);
+		console.log(
+			` - ${pkg}${localVersion ? `@${localVersion.to}` : ""} (${pkgPath})`
+		);
 	}
 
 	let stopServer = await startVerdaccioServer(configPath);
@@ -140,15 +152,18 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 		debugLog(execSync("pnpm config list", { encoding: "utf8" }));
 	}
 
-	const prereleasePackages: string[] = [];
+	// Packages published under a dist-tag other than `latest`. Verdaccio would
+	// otherwise point their `latest` tag at the local version (see
+	// `restoreLatestTag()`).
+	const nonLatestPackages: string[] = [];
 	for (const [pkgName, pkgPath] of pkgs) {
 		debugLog("Publishing package " + pkgName);
-		const tag = await publishPackage(
-			path.join(repoRoot, pkgPath),
-			debugLog.enabled ? "inherit" : "ignore"
-		);
+		const { tag } = await publishPackage(path.join(repoRoot, pkgPath), {
+			stdio: debugLog.enabled ? "inherit" : "ignore",
+			localVersions,
+		});
 		if (tag !== "latest") {
-			prereleasePackages.push(pkgName);
+			nonLatestPackages.push(pkgName);
 		}
 	}
 
@@ -159,7 +174,7 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 	});
 	await stopServer();
 	stopServer = await startVerdaccioServer(configPath);
-	for (const name of prereleasePackages) {
+	for (const name of nonLatestPackages) {
 		await restoreLatestTag(name, `http://localhost:${registryPort}/`);
 	}
 
@@ -180,6 +195,36 @@ export async function startMockNpmRegistry(...targetPackages: string[]) {
 }
 
 type PackageInfo = { name: string; path: string };
+
+/**
+ * Work out the versions to publish local dependency packages under.
+ *
+ * Target packages keep their real versions. Every other package gets a local
+ * version, so that it can't be mistaken for the public npm release.
+ *
+ * @param pkgs A map (name => path) of the packages to publish.
+ * @param targetPackages The names of the entry-point packages.
+ * @returns A map (name => versions) of the packages to rename.
+ */
+async function getLocalVersions(
+	pkgs: Map<string, string>,
+	targetPackages: Set<string>
+) {
+	const localVersions = new Map<string, LocalVersion>();
+	for (const [name, pkgPath] of pkgs) {
+		if (targetPackages.has(name)) {
+			continue;
+		}
+		const { version } = JSON.parse(
+			await fs.readFile(path.join(repoRoot, pkgPath, "package.json"), "utf8")
+		) as { version: string };
+		localVersions.set(name, {
+			from: version,
+			to: getLocalVersion(version),
+		});
+	}
+	return localVersions;
+}
 
 /**
  * Generate a map (name => path) of local packages that need to be published to the mock npm registry
