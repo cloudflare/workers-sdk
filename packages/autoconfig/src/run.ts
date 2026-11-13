@@ -35,6 +35,7 @@ import {
 } from "./frameworks";
 import { getFrameworkPackageInfo } from "./frameworks/all-frameworks";
 import { Static } from "./frameworks/static";
+import { CF_VITE_PLUGIN_VERSION_RANGE } from "./frameworks/utils/vite-plugin-version";
 import {
 	CLOUDFLARE_TYPES_INCLUDE,
 	getCloudflareTypesTsconfigUpdate,
@@ -613,7 +614,7 @@ export async function buildOperationsSummary(
 		if (configurationResults.buildTool === "vite") {
 			packagesToInstall.add(
 				target === "cf"
-					? "@cloudflare/vite-plugin@^2.0.0-beta.v.0"
+					? `@cloudflare/vite-plugin@${CF_VITE_PLUGIN_VERSION_RANGE}`
 					: "@cloudflare/vite-plugin"
 			);
 		} else if (

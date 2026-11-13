@@ -182,28 +182,30 @@ it.for(
 	}
 );
 
-it("versions Vite plugin v2 betas after its SHA prereleases", ({ expect }) => {
+it("versions Vite plugin v2 release candidates after its betas", ({
+	expect,
+}) => {
 	const config = getNpmPrereleaseConfig({
 		name: "@cloudflare/vite-plugin",
-		version: "1.63.1",
+		version: "2.0.0-beta.v.17",
 		"workers-sdk": {
-			npmPrerelease: { tag: "beta", numbered: true },
+			npmPrerelease: { tag: "rc", numbered: true },
 		},
 	});
 	assert(config !== undefined);
 
 	const firstVersion = getNextNpmPrereleaseVersion({
-		previousVersion: "1.63.1",
+		previousVersion: "2.0.0-beta.v.17",
 		versionAfterChangesets: "2.0.0",
 		config,
 	});
-	expect(firstVersion).toBe("2.0.0-beta.v.0");
-	expect(gt(firstVersion, "2.0.0-beta.sha-fffffffff")).toBe(true);
+	expect(firstVersion).toBe("2.0.0-rc.0");
+	expect(gt(firstVersion, "2.0.0-beta.v.17")).toBe(true);
 	expect(
 		getNextNpmPrereleaseVersion({
 			previousVersion: firstVersion,
 			versionAfterChangesets: "2.0.0",
 			config,
 		})
-	).toBe("2.0.0-beta.v.1");
+	).toBe("2.0.0-rc.1");
 });
