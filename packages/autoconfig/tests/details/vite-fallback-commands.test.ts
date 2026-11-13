@@ -466,6 +466,43 @@ export default { plugins: [cloudflare()] };`,
 		}
 	);
 
+	it.for([false, true])(
+		"uses a custom config with an app plugin declaration and root tooling (Vite+: %s)",
+		async (vitePlus, { expect }) => {
+			const binary = await seedProject(vitePlus);
+			await seed({
+				"package.json": JSON.stringify({
+					workspaces: ["apps/*"],
+					devDependencies: {
+						"@cloudflare/vite-plugin": "beta",
+						[vitePlus ? "vite-plus" : "vite"]: "*",
+					},
+				}),
+				"apps/site/package.json": JSON.stringify({ name: "site" }),
+				"apps/site/cloudflare.config.ts": "export default {};",
+				"apps/site/site.vite.config.ts":
+					"import { cloudflare } from '@cloudflare/vite-plugin'; export default { plugins: [cloudflare()] };",
+			});
+			const projectPath = resolve("apps/site");
+			// No application-level Vite signal distinguishes this from a non-Vite
+			// sibling. Custom paths passed later via --config cannot be inferred.
+			const ambiguous = await getDetailsForAutoConfig({ projectPath, context });
+			expect(ambiguous.devCommand).toBeUndefined();
+			expect(ambiguous.buildCommand).toBeUndefined();
+
+			await seed({
+				"apps/site/package.json": JSON.stringify({
+					name: "site",
+					devDependencies: { "@cloudflare/vite-plugin": "beta" },
+				}),
+			});
+			const details = await getDetailsForAutoConfig({ projectPath, context });
+			expect(details.commandError).toBeUndefined();
+			expect(details.devCommand).toBe(`${invocation(binary)} dev`);
+			expect(details.buildCommand).toBe(`${invocation(binary)} build`);
+		}
+	);
+
 	it("does not select shared Vite tools for a configured non-Vite sibling", async ({
 		expect,
 	}) => {

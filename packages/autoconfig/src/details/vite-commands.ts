@@ -23,6 +23,11 @@ export function usesVitePlus(packageJson?: PackageJSON): boolean {
  * Inspect plugin readiness for cf projects, resolving native commands when no
  * framework commands exist. Report failures as data so detection remains useful
  * before dependencies have been installed or framework setup has been applied.
+ *
+ * Shared workspace tools require an application-level signal: a plugin or
+ * runner declaration, or a default-named Vite config. An application using a
+ * custom config must declare the plugin or runner itself; arbitrary config
+ * paths forwarded at execution time are not available during detection.
  */
 export function getViteProjectCommands({
 	projectPath,
@@ -49,15 +54,19 @@ export function getViteProjectCommands({
 	  }
 	| undefined {
 	const projectRunner = getViteRunner(packageJson);
+	const projectDependencies = getDeclaredDependencies(packageJson);
 	// A sibling's shared tools do not make this a Vite application. A local
-	// runner declaration or Vite config opts it in without evaluating the config.
+	// plugin/runner declaration or Vite config opts it in without evaluating it.
 	const workspacePackageJson =
-		workspaceRoot && (projectRunner || hasViteConfig(projectPath))
+		workspaceRoot &&
+		("@cloudflare/vite-plugin" in projectDependencies ||
+			projectRunner ||
+			hasViteConfig(projectPath))
 			? readPackage(join(workspaceRoot, "package.json"))
 			: undefined;
 	const dependencies = {
 		...getDeclaredDependencies(workspacePackageJson),
-		...getDeclaredDependencies(packageJson),
+		...projectDependencies,
 	};
 	if (!("@cloudflare/vite-plugin" in dependencies)) {
 		return;

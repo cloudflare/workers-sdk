@@ -125,6 +125,11 @@ function normalizeOutputDir(projectPath: string, outputDir: string): string {
  * application and its detected workspace, excluding unrelated parent installs.
  * Command readiness problems are reported in `commandError` without preventing
  * inspection of the project's configuration.
+ * Workspace applications with custom-named Vite configs must identify their
+ * tooling in their own manifest: declare the Cloudflare plugin, or Vite/Vite+
+ * as a dependency or dev dependency. Config paths forwarded to the eventual
+ * command are not available during detection; root tools alone do not identify
+ * which sibling applications use Vite.
  *
  * @param options - Detection options including project path, wrangler config, and context.
  * @returns The detected project details.
