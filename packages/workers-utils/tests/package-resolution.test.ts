@@ -169,6 +169,67 @@ describe("getInstalledPackageVersion", () => {
 		expect(result).toBe("0.3.0");
 	});
 
+	it.for(["nameless-pkg", "@scope/nameless-pkg"])(
+		"should preserve the version of %s when its manifest has no name",
+		(packageName, { expect }) => {
+			createCjsPackage(packageName, "1.2.3");
+			fs.writeFileSync(
+				path.join("node_modules", packageName, "package.json"),
+				JSON.stringify({ version: "1.2.3", exports: "./index.js" })
+			);
+			fs.writeFileSync(
+				"package.json",
+				JSON.stringify({ name: "test-project", version: "9.0.0" })
+			);
+
+			expect(getInstalledPackageVersion(packageName, process.cwd())).toBe(
+				"1.2.3"
+			);
+		}
+	);
+
+	it.for(["anonymous-pkg", "@scope/anonymous-pkg"])(
+		"should not inherit an ancestor version when %s has no name or version",
+		(packageName, { expect }) => {
+			createPackageWithNestedTypeManifest(packageName, "1.2.3");
+			fs.writeFileSync(
+				path.join("node_modules", packageName, "package.json"),
+				JSON.stringify({ exports: "./dist/cjs/index.js" })
+			);
+			fs.writeFileSync(
+				"package.json",
+				JSON.stringify({ name: "test-project", version: "9.0.0" })
+			);
+			if (packageName.startsWith("@")) {
+				fs.writeFileSync(
+					path.join("node_modules", "@scope", "package.json"),
+					JSON.stringify({ name: "scope-parent", version: "8.0.0" })
+				);
+			}
+
+			expect(
+				getInstalledPackageVersion(packageName, process.cwd())
+			).toBeUndefined();
+		}
+	);
+
+	it("should preserve bundled versions for an alias with nested type markers", ({
+		expect,
+	}) => {
+		createPackageWithNestedTypeManifest("vite", "0.1.0");
+		fs.writeFileSync(
+			path.join("node_modules", "vite", "package.json"),
+			JSON.stringify({
+				name: "@voidzero-dev/vite-plus-core",
+				version: "0.1.0",
+				bundledVersions: { vite: "7.3.0" },
+				exports: "./dist/cjs/index.js",
+			})
+		);
+
+		expect(getInstalledPackageVersion("vite", process.cwd())).toBe("7.3.0");
+	});
+
 	it("should skip a nested package.json without a name and return the root version", ({
 		expect,
 	}) => {

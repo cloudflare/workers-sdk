@@ -127,9 +127,9 @@ export function getInstalledPackageVersion(
  * files such as `dist/cjs/package.json` containing only `{"type": "commonjs"}`.
  * These tell Node how to load the files in that directory but carry no `name`
  * or `version`. When the package is resolved through its entry point, the
- * nearest `package.json` is one of these markers, so any manifest without a
- * `name` is skipped and the search continues from its parent directory. npm
- * requires a `name` in every published package's root manifest.
+ * nearest `package.json` may be one of these markers. Skip manifests without
+ * either field, but stop at the installed package's `node_modules` boundary
+ * so a package without metadata cannot inherit an ancestor's version.
  *
  * @param startDir - The directory to start searching from
  * @param lastDir - If provided, stop searching after reaching this directory
@@ -139,66 +139,32 @@ function findPackageRootManifest(
 	startDir: string,
 	lastDir?: string
 ): ReturnType<typeof parsePackageJSON> | undefined {
-	let searchDir = startDir;
-
-	while (true) {
-		const packageJsonPath = findFileUp("package.json", searchDir, lastDir);
-		if (!packageJsonPath) {
-			return undefined;
-		}
-
-		const packageJson = parsePackageJSON(
-			readFileSync(packageJsonPath),
-			packageJsonPath
-		);
-		if (packageJson.name !== undefined) {
-			return packageJson;
-		}
-
-		const manifestDir = path.dirname(packageJsonPath);
-		const parentDir = path.dirname(manifestDir);
-		if (manifestDir === lastDir || parentDir === manifestDir) {
-			return undefined;
-		}
-		searchDir = parentDir;
-	}
-}
-
-/**
- * Walks up from `startDir` looking for a file named `name`.
- * Stops at `lastDir` (inclusive) if provided, otherwise walks to the filesystem root.
- *
- * @param name - The filename to search for
- * @param startDir - The directory to start searching from
- * @param lastDir - If provided, stop searching after reaching this directory
- * @returns The full path to the found file, or `undefined`
- */
-function findFileUp(
-	name: string,
-	startDir: string,
-	lastDir?: string
-): string | undefined {
 	let dir = startDir;
-	const root = path.parse(dir).root;
 
 	while (true) {
-		const candidate = path.join(dir, name);
-		try {
-			if (statSync(candidate).isFile()) {
-				return candidate;
+		const packageJsonPath = path.join(dir, "package.json");
+		if (statSync(packageJsonPath, { throwIfNoEntry: false })?.isFile()) {
+			const packageJson = parsePackageJSON(
+				readFileSync(packageJsonPath),
+				packageJsonPath
+			);
+			if (packageJson.name !== undefined || packageJson.version !== undefined) {
+				return packageJson;
 			}
-		} catch {}
-
-		if (lastDir !== undefined && dir === lastDir) {
-			break;
 		}
 
 		const parent = path.dirname(dir);
-		if (parent === dir || dir === root) {
-			break;
+		// Use the installed directory rather than the manifest's name, which may
+		// be missing or differ from the requested name for npm aliases.
+		if (
+			dir === lastDir ||
+			parent === dir ||
+			path.basename(parent) === "node_modules" ||
+			(path.basename(parent).startsWith("@") &&
+				path.basename(path.dirname(parent)) === "node_modules")
+		) {
+			return undefined;
 		}
 		dir = parent;
 	}
-
-	return undefined;
 }
