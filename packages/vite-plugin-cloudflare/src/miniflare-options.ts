@@ -12,6 +12,7 @@ import {
 } from "@cloudflare/containers-shared";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import {
+	createArtifactsLocalDefaultWarner,
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
 	getLocalObservabilityEnabledFromEnv,
@@ -67,6 +68,10 @@ import type {
 } from "miniflare";
 import type * as vite from "vite";
 import type { SourcelessWorkerOptions } from "wrangler";
+
+// Remember warnings across config reloads, separately for each project and Worker.
+const warnForArtifactsLocalDefault =
+	createArtifactsLocalDefaultWarner("wrangler");
 
 const INTERNAL_WORKERS_COMPATIBILITY_DATE = "2024-10-04";
 // Used to mark HTML assets as being in the public directory so that they can be resolved from their root relative paths
@@ -344,6 +349,26 @@ export async function getDevMiniflareOptions(
 			? await Promise.all(
 					[...resolvedPluginConfig.environmentNameToWorkerMap].map(
 						async ([environmentName, worker]) => {
+							if (resolvedPluginConfig.remoteBindings) {
+								warnForArtifactsLocalDefault(
+									{
+										id: resolvedViteConfig.root,
+										bindings: worker.config.artifacts.map(
+											({ binding, remote }) => ({
+												name: binding,
+												remote,
+												worker:
+													resolvedPluginConfig.environmentNameToWorkerMap.size >
+													1
+														? worker.config.name
+														: undefined,
+											})
+										),
+									},
+									(message) => viteDevServer.config.logger.warn(message)
+								);
+							}
+
 							const bindings =
 								wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
 									worker.config
@@ -699,6 +724,23 @@ export async function getPreviewMiniflareOptions(
 	const workers: Array<V4WorkerOptions> = (
 		await Promise.all(
 			resolvedPluginConfig.workers.map(async (workerConfig) => {
+				if (resolvedPluginConfig.remoteBindings) {
+					warnForArtifactsLocalDefault(
+						{
+							id: resolvedViteConfig.root,
+							bindings: workerConfig.artifacts.map(({ binding, remote }) => ({
+								name: binding,
+								remote,
+								worker:
+									resolvedPluginConfig.workers.length > 1
+										? workerConfig.name
+										: undefined,
+							})),
+						},
+						(message) => vitePreviewServer.config.logger.warn(message)
+					);
+				}
+
 				const bindings =
 					wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
 						workerConfig
