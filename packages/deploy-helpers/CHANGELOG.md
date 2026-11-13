@@ -1,5 +1,36 @@
 # @cloudflare/deploy-helpers
 
+## 0.27.0
+
+### Minor Changes
+
+- [#16749](https://github.com/cloudflare/workers-sdk/pull/16749) [`032f8c2`](https://github.com/cloudflare/workers-sdk/commit/032f8c2b4a9b83970fc4b54de70790b48e3ba373) Thanks [@vaishnav-mk](https://github.com/vaishnav-mk)! - Reject settings on a `workflows` binding to a Workflow declared in `exports`
+
+  A `workflows` binding can still bind a Workflow that the Worker declares in `exports`, but it can no longer set `limits`, `concurrency`, `schedules`, `default_retention`, or `jurisdiction` for it. Set them on the export instead. Previously the binding and the export could both set them as long as they agreed, so configurations that set them on the binding now stop with an error that says which setting to move.
+
+- [#16749](https://github.com/cloudflare/workers-sdk/pull/16749) [`032f8c2`](https://github.com/cloudflare/workers-sdk/commit/032f8c2b4a9b83970fc4b54de70790b48e3ba373) Thanks [@vaishnav-mk](https://github.com/vaishnav-mk)! - Upload Workflow export settings with the Worker
+
+  `wrangler deploy` and `wrangler versions upload` now include the settings of each `workflow` export (`limits`, `concurrency`, `schedules`, `default_retention`, and `jurisdiction`) in the upload, instead of sending only its type and name. Uploads of a Worker with `workflow` exports also send a `Cloudflare-Workers-Script-Api-Date` header, which lets the Workers API provision Workflow exports from these settings as part of the upload. `wrangler deploy` and `wrangler triggers deploy` still create or update each Workflow through the Workflows API afterwards, as before.
+
+  If provisioning a scheduled Workflow fails because the account is on the free plan, `wrangler deploy` now explains that scheduled Workflows require a paid Workers plan.
+
+### Patch Changes
+
+- [#16849](https://github.com/cloudflare/workers-sdk/pull/16849) [`3cea40b`](https://github.com/cloudflare/workers-sdk/commit/3cea40b078519222db432b5edf827ddc3e629a2a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-12
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16886](https://github.com/cloudflare/workers-sdk/pull/16886) [`63eb6da`](https://github.com/cloudflare/workers-sdk/commit/63eb6daa0eda348e1f9e86a506cfd80d104a1e28) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-13
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`f005593`](https://github.com/cloudflare/workers-sdk/commit/f005593c1ed0d1f429dafc6919c4335f4d5070c7), [`61eacca`](https://github.com/cloudflare/workers-sdk/commit/61eacca214a9533f41fac98d732f1cfdd905ddf6), [`856842e`](https://github.com/cloudflare/workers-sdk/commit/856842ec973ddd530dd385d389d68408f8ce58e2), [`856842e`](https://github.com/cloudflare/workers-sdk/commit/856842ec973ddd530dd385d389d68408f8ce58e2), [`3cea40b`](https://github.com/cloudflare/workers-sdk/commit/3cea40b078519222db432b5edf827ddc3e629a2a), [`63eb6da`](https://github.com/cloudflare/workers-sdk/commit/63eb6daa0eda348e1f9e86a506cfd80d104a1e28), [`3cea40b`](https://github.com/cloudflare/workers-sdk/commit/3cea40b078519222db432b5edf827ddc3e629a2a), [`63eb6da`](https://github.com/cloudflare/workers-sdk/commit/63eb6daa0eda348e1f9e86a506cfd80d104a1e28), [`3b1b408`](https://github.com/cloudflare/workers-sdk/commit/3b1b40832ac323de709001d9cc3823517b988985)]:
+  - miniflare@5.20261113.0-beta
+  - @cloudflare/workers-utils@0.54.0
+  - @cloudflare/cli-shared-helpers@0.3.8
+  - @cloudflare/config@0.32.1
+  - @cloudflare/containers-shared@0.26.1
+
 ## 0.26.4
 
 ### Patch Changes
