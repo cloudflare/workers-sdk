@@ -41,6 +41,7 @@ import {
 	mockPublishRoutesFallbackRequest,
 	mockPublishRoutesRequest,
 	mockPublishSchedulesRequest,
+	mockPutImageTransformationsRequest,
 	mockServiceScriptData,
 	mockUnauthorizedPublishRoutesRequest,
 	writeAssets,
@@ -1832,6 +1833,82 @@ Update them to point to this script instead?`,
 		});
 		it.todo("should error if it's a workers.dev route");
 	});
+	describe("images url_transformations", () => {
+		it("should apply url_transformations after deploying", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				images: {
+					url_transformations: {
+						enabled: true,
+						allowed_origins: ["cdn.example.com"],
+					},
+				},
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockPutImageTransformationsRequest({
+				expectedBody: { enabled: true, allowed_origins: ["cdn.example.com"] },
+			});
+
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toContain(
+				"Images URL transformations: enabled (cdn.example.com)"
+			);
+		});
+
+		it("should apply a named environment's own url_transformations", async () => {
+			writeWranglerConfig({
+				images: { url_transformations: { enabled: true } },
+				env: {
+					staging: { images: { url_transformations: { enabled: false } } },
+				},
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm", env: "staging" });
+			mockPutImageTransformationsRequest({
+				expectedBody: { enabled: false },
+				env: "staging",
+			});
+
+			await runWrangler("deploy ./index --env staging");
+		});
+
+		it("should not apply top-level url_transformations to a named environment", async () => {
+			writeWranglerConfig({
+				images: { url_transformations: { enabled: true } },
+				env: { staging: {} },
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm", env: "staging" });
+
+			await runWrangler("deploy ./index --env staging");
+		});
+
+		it("should error if url_transformations could not be applied", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				images: { url_transformations: { enabled: true } },
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockPutImageTransformationsRequest({
+				expectedBody: { enabled: true },
+				status: 500,
+			});
+
+			await expect(runWrangler("deploy ./index")).rejects.toThrow(
+				"The Worker was deployed, but its Images URL transformations setting could not be applied. Re-run the same `wrangler deploy` command to retry."
+			);
+		});
+	});
+
 	describe("triggers", () => {
 		it("should deploy the worker with a scheduled trigger", async () => {
 			const crons = ["*/5 * * * *", "0 18 * * 6L"];
