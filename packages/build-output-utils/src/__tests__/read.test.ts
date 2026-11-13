@@ -1,9 +1,9 @@
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import {
-	InputSettingsSchema,
-	InputWorkerSchema,
-	OutputContainerSchema,
+	SettingsSchema,
+	WorkerConfigSchema,
+	BuildOutputContainerConfigSchema,
 } from "@cloudflare/config";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it } from "vitest";
@@ -25,34 +25,35 @@ import {
 	writeWorkerConfig,
 } from "../write";
 import type { BuildOutputWorker, BuildOutputWorkers } from "../read";
-import type { ParsedOutputWorkerConfig } from "@cloudflare/config";
+import type { ParsedBuildOutputWorkerConfig } from "@cloudflare/config";
 
-const completeManifest: ParsedOutputWorkerConfig["manifest"] = {
+const completeManifest: ParsedBuildOutputWorkerConfig["manifest"] = {
 	type: "complete",
 	mainModule: "index.js",
 	modules: { "index.js": { type: "esm" } },
 };
 
-const parsedSettingsConfig = InputSettingsSchema.parse({
+const parsedSettingsConfig = SettingsSchema.parse({
 	accountId: "1234567890",
 	complianceRegion: "public",
 });
 
-const parsedStandardContainerConfig = OutputContainerSchema.parse({
+const parsedStandardContainerConfig = BuildOutputContainerConfigSchema.parse({
 	name: "api-container",
 	image: { reference: "registry.example.com/api:latest" },
 });
 
-const parsedDurableObjectContainerConfig = OutputContainerSchema.parse({
-	name: "session-container",
-	schedulingPolicy: "durable-object",
-	images: {
-		default: { localReference: "session-container:latest" },
-	},
-});
+const parsedDurableObjectContainerConfig =
+	BuildOutputContainerConfigSchema.parse({
+		name: "session-container",
+		schedulingPolicy: "durable-object",
+		images: {
+			default: { localReference: "session-container:latest" },
+		},
+	});
 
 function inputWorkerConfig(name: string) {
-	return InputWorkerSchema.parse({
+	return WorkerConfigSchema.parse({
 		name,
 		compatibilityDate: "2026-06-01",
 		entrypoint: "index.js",

@@ -2,14 +2,14 @@ import { ARTIFACTS_EVENT_TYPES as WRANGLER_EVENT_TYPES } from "@cloudflare/worke
 import { describe, it } from "vitest";
 import { convertToWranglerConfig } from "../convert";
 import { exports, triggers } from "../public";
-import { InputWorkerSchema, OutputWorkerSchema } from "../schema";
+import { WorkerConfigSchema, BuildOutputWorkerConfigSchema } from "../schema";
 import { ARTIFACTS_EVENT_TYPES } from "../workflow-events";
-import type { WorkerConfig, WorkflowEvent } from "../public";
+import type { WorkerConfig, ArtifactsEventSubscription } from "../public";
 
 const event = {
 	type: "cf.artifacts.repo.created",
 	filter: { namespace: "examples", repoName: "demo" },
-} satisfies WorkflowEvent;
+} satisfies ArtifactsEventSubscription;
 const worker = {
 	name: "example",
 	compatibilityDate: "2026-09-03",
@@ -22,8 +22,8 @@ it("supports the same event types as Wrangler", ({ expect }) => {
 });
 
 describe.each([
-	["input", InputWorkerSchema],
-	["output", OutputWorkerSchema],
+	["input", WorkerConfigSchema],
+	["output", BuildOutputWorkerConfigSchema],
 ] as const)("%s Workflow events", (_name, schema) => {
 	it.for(ARTIFACTS_EVENT_TYPES)(
 		"accepts %s on a Workflow export",
@@ -77,7 +77,7 @@ it("converts Workflow-owned events to Wrangler subscriptions without losing cron
 	expect,
 }) => {
 	const result = convertToWranglerConfig({
-		worker: InputWorkerSchema.parse(worker),
+		worker: WorkerConfigSchema.parse(worker),
 		containers: [],
 	});
 	expect(result.triggers).toEqual({
@@ -110,7 +110,7 @@ it("derives each target from its owner and omits absent filters", ({
 		},
 	};
 	const result = convertToWranglerConfig({
-		worker: InputWorkerSchema.parse(config),
+		worker: WorkerConfigSchema.parse(config),
 		containers: [],
 	});
 	expect(result.triggers?.events).toEqual(

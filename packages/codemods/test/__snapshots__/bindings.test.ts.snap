@@ -238,7 +238,7 @@ exports[`Wrangler binding conversion > converts supported bindings and reports m
               "properties": [],
             },
           ],
-          "callee": "bindings.analytics",
+          "callee": "bindings.analyticsSql",
           "kind": "call",
         },
       },

@@ -72,7 +72,7 @@ export async function writeBuildOutput({
 		});
 		const pathToDocker = getDockerPath();
 		await buildAndWriteContainerOutput({
-			containers: parsedConfig.containers,
+			containers: parsedConfig.containers ?? [],
 			root,
 			pathToDocker,
 		});

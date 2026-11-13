@@ -1,10 +1,10 @@
 import type {
-	ParsedInputWorkerConfig,
-	ParsedOutputWorkerConfig,
+	ParsedWorkerConfig,
+	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
 import type { Binding } from "@cloudflare/workers-utils";
 
-type WorkerConfig = ParsedInputWorkerConfig | ParsedOutputWorkerConfig;
+type WorkerConfig = ParsedWorkerConfig | ParsedBuildOutputWorkerConfig;
 
 /** Bindings as declared in `cloudflare.config.ts`. */
 export type ConfigBindings = WorkerConfig["env"];
@@ -30,7 +30,7 @@ export function getRemoteBindings(
 			case "ai":
 				bindings[name] = { type: "ai", remote: binding.dev?.remote };
 				break;
-			case "analytics":
+			case "analytics-sql":
 				bindings[name] = {
 					type: "analytics",
 					remote: binding.dev?.remote,
@@ -125,14 +125,14 @@ export function getRemoteBindings(
 			case "pipeline":
 				bindings[name] = {
 					type: "pipeline",
-					stream: binding.name,
+					stream: binding.streamId,
 					remote: binding.dev?.remote,
 				};
 				break;
 			case "k2":
 				bindings[name] = {
 					type: "k2",
-					stream: binding.stream,
+					stream: binding.id,
 					remote: binding.dev?.remote,
 				};
 				break;

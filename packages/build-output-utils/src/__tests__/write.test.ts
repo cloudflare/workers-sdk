@@ -1,10 +1,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import {
-	InputSettingsSchema,
-	InputWorkerSchema,
-	OutputContainerSchema,
-	OutputWorkerSchema,
+	SettingsSchema,
+	WorkerConfigSchema,
+	BuildOutputContainerConfigSchema,
+	BuildOutputWorkerConfigSchema,
 } from "@cloudflare/config";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
@@ -24,29 +24,30 @@ import {
 	writeWorkerConfig,
 } from "../write";
 
-const parsedWorkerConfig = InputWorkerSchema.parse({
+const parsedWorkerConfig = WorkerConfigSchema.parse({
 	name: "my-worker",
 	compatibilityDate: "2026-06-01",
 	entrypoint: "index.js",
 });
 
-const parsedSettingsConfig = InputSettingsSchema.parse({
+const parsedSettingsConfig = SettingsSchema.parse({
 	accountId: "1234567890",
 	complianceRegion: "public",
 });
 
-const parsedStandardContainerConfig = OutputContainerSchema.parse({
+const parsedStandardContainerConfig = BuildOutputContainerConfigSchema.parse({
 	name: "api-container",
 	image: { reference: "registry.example.com/api:latest" },
 });
 
-const parsedDurableObjectContainerConfig = OutputContainerSchema.parse({
-	name: "session-container",
-	schedulingPolicy: "durable-object",
-	images: {
-		default: { localReference: "session-container:latest" },
-	},
-});
+const parsedDurableObjectContainerConfig =
+	BuildOutputContainerConfigSchema.parse({
+		name: "session-container",
+		schedulingPolicy: "durable-object",
+		images: {
+			default: { localReference: "session-container:latest" },
+		},
+	});
 
 describe("writeRootConfig", () => {
 	runInTempDir();
@@ -139,7 +140,7 @@ describe("writeWorkerConfig", () => {
 		expect(contents).not.toHaveProperty("entrypoint");
 		expect(contents.manifest).toEqual(manifest);
 		// The written file is a valid Build Output Specification Worker config.
-		expect(OutputWorkerSchema.parse(contents)).toEqual(contents);
+		expect(BuildOutputWorkerConfigSchema.parse(contents)).toEqual(contents);
 	});
 
 	it("omits the manifest field when no manifest is provided", async ({
@@ -188,7 +189,7 @@ describe("writeContainerConfig", () => {
 			fs.readFileSync(getContainerConfigPath(root, "api-container"), "utf-8")
 		);
 		expect(contents).toEqual(parsedStandardContainerConfig);
-		expect(OutputContainerSchema.parse(contents)).toEqual(contents);
+		expect(BuildOutputContainerConfigSchema.parse(contents)).toEqual(contents);
 	});
 
 	it("writes a Durable Object Container config with a local image reference", async ({
@@ -208,7 +209,7 @@ describe("writeContainerConfig", () => {
 			)
 		);
 		expect(contents).toEqual(parsedDurableObjectContainerConfig);
-		expect(OutputContainerSchema.parse(contents)).toEqual(contents);
+		expect(BuildOutputContainerConfigSchema.parse(contents)).toEqual(contents);
 	});
 });
 

@@ -8,9 +8,9 @@ import { formatZodError, getZoneFromRoute } from "@cloudflare/workers-utils";
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import { Log, LogLevel, resolveLocalBindings } from "miniflare";
 import type {
-	ParsedInputConfig,
-	ParsedInputContainerConfig,
-	ParsedInputWorkerConfig,
+	ParsedCloudflareConfig,
+	ParsedContainerConfig,
+	ParsedWorkerConfig,
 } from "@cloudflare/config";
 import type { ContainerDevRuntimeOptions } from "@cloudflare/containers-shared";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
@@ -21,10 +21,10 @@ export const NEW_CONFIG_FILENAME = "cloudflare.config.ts";
 const log = new Log(LogLevel.INFO, { prefix: "vpw" });
 
 export interface LoadedNewConfig {
-	settings: Pick<ParsedInputConfig, "accountId" | "complianceRegion">;
-	worker: ParsedInputWorkerConfig;
+	settings: Pick<ParsedCloudflareConfig, "accountId" | "complianceRegion">;
+	worker: ParsedWorkerConfig;
 	/** Containers the config defines; Durable Object exports reference them by name. */
-	containers: ParsedInputContainerConfig[];
+	containers: ParsedContainerConfig[];
 	/** The mode config functions were called with. */
 	mode: string;
 	/** Values resolved from `.env` files and the process environment. */
@@ -102,7 +102,7 @@ export async function loadNewConfig(
 			complianceRegion: result.data.complianceRegion,
 		},
 		worker,
-		containers: result.data.containers,
+		containers: result.data.containers ?? [],
 		mode,
 		localEnv: localEnv.values,
 		devVars,

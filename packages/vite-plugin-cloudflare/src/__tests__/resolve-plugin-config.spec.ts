@@ -7,9 +7,9 @@ import type {
 	AssetsOnlyResolvedConfig,
 	PluginConfig,
 	CloudflareConfig,
+	WorkerConfig,
 	WorkersResolvedConfig,
 } from "../plugin-config";
-import type { InputWorkerConfig } from "@cloudflare/config";
 
 const { readBuildOutputPreviewMock } = vi.hoisted(() => ({
 	readBuildOutputPreviewMock: vi.fn(),
@@ -76,8 +76,8 @@ describe("resolvePluginConfig", () => {
 
 	function createAuxiliaryWorkerConfig(
 		name: string,
-		overrides: Partial<InputWorkerConfig> = {}
-	): InputWorkerConfig {
+		overrides: Partial<WorkerConfig> = {}
+	): WorkerConfig {
 		return {
 			name,
 			entrypoint: "./src/aux.ts",
@@ -299,7 +299,7 @@ describe("resolvePluginConfig", () => {
 					accountId: "customized-account",
 					complianceRegion: "fedramp-high",
 					containers: [
-						...loadedConfig.containers,
+						...(loadedConfig.containers ?? []),
 						{
 							name: "customized-container",
 							image: { reference: "docker.io/cloudflare/hello-world:latest" },
@@ -372,8 +372,8 @@ describe("resolvePluginConfig", () => {
 					config: (loadedConfig) => ({
 						...loadedConfig,
 						containers: [
-							...loadedConfig.containers,
-							...loadedConfig.containers,
+							...(loadedConfig.containers ?? []),
+							...(loadedConfig.containers ?? []),
 						],
 					}),
 					error: /Container names must be unique/,
@@ -387,7 +387,7 @@ describe("resolvePluginConfig", () => {
 					name: "renaming a linked Container without updating its reference",
 					config: (loadedConfig) => ({
 						...loadedConfig,
-						containers: loadedConfig.containers.map((container) => ({
+						containers: (loadedConfig.containers ?? []).map((container) => ({
 							...container,
 							name: "renamed-api",
 						})),

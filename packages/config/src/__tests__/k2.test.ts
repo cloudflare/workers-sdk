@@ -9,7 +9,7 @@ describe("K2 producer bindings", () => {
 	it.for([stream, "stream-v2:orders", ""])(
 		"preserves the stream identifier when converting shared configuration: %j",
 		(streamId, { expect }) => {
-			const binding = bindings.k2({ stream: streamId });
+			const binding = bindings.k2({ id: streamId });
 			expect(BindingSchema.parse(binding)).toEqual(binding);
 			expect(
 				convertToWranglerConfig({
@@ -31,9 +31,7 @@ describe("K2 producer bindings", () => {
 	it.for([undefined, null, 42, {}])(
 		"requires a string stream identifier: %j",
 		(id, { expect }) => {
-			expect(BindingSchema.safeParse({ type: "k2", stream: id }).success).toBe(
-				false
-			);
+			expect(BindingSchema.safeParse({ type: "k2", id }).success).toBe(false);
 		}
 	);
 
@@ -44,7 +42,20 @@ describe("K2 producer bindings", () => {
 			BindingSchema.safeParse({ type: "k2", pipeline: stream }).success
 		).toBe(false);
 		expect(
-			BindingSchema.safeParse({ type: "k2", stream, staging: true }).success
+			BindingSchema.safeParse({ type: "k2", id: stream, staging: true }).success
 		).toBe(false);
+	});
+
+	it.for([
+		{ type: "k2", stream },
+		{ type: "k2", stream, id: stream },
+	])("explains that `stream` was renamed: %j", (binding, { expect }) => {
+		const result = BindingSchema.safeParse(binding);
+		expect(result.success).toBe(false);
+		expect(result.error?.issues[0]).toMatchObject({
+			path: ["stream"],
+			message:
+				'"stream" was renamed to "id". Set "id" to the ID of the K2 stream.',
+		});
 	});
 });
