@@ -307,7 +307,9 @@ describe("flagship plugin", () => {
 			[{ owner: { team: "growth" } }, "must be a boolean, string, or number"],
 			[{ "": "empty" }, "invalid metadata key ''"],
 			[{ ["k".repeat(65)]: 1 }, "invalid metadata key"],
-			[{ constructor: 1 }, "invalid metadata key 'constructor'"],
+			// `{ constructor: 1 }` is covered by the Local Explorer tests: Cap'n Web
+			// drops `Object.prototype` keys before RPC calls from Node reach the
+			// binding
 			[
 				Object.fromEntries(Array.from({ length: 33 }, (_, i) => [`k${i}`, i])),
 				"32 or fewer entries",

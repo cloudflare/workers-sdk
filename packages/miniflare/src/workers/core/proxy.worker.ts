@@ -1,5 +1,7 @@
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
+import { newWorkersWebSocketRpcResponse, RpcTarget } from "capnweb";
+import * as workers from "cloudflare:workers";
 import { parse } from "devalue";
 import { readPrefix, reduceError } from "miniflare:shared";
 import {
@@ -8,6 +10,7 @@ import {
 	isFetcherFetch,
 	isImagesInput,
 	isR2ObjectWriteHttpMetadata,
+	PROXY_ERROR_NAME_KEY,
 	ProxyAddresses,
 	ProxyOps,
 } from "./constants";
@@ -20,11 +23,28 @@ import {
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 } from "./devalue";
+import type { ProxyRpcApi } from "./constants";
 import type { PlatformImpl, ReducersRevivers } from "./devalue";
+
+// Not declared by `@cloudflare/workers-types`
+const { ServiceStub } = workers as unknown as {
+	ServiceStub: abstract new (...args: never[]) => object;
+};
 
 const ENCODER = new TextEncoder();
 const DECODER = new TextDecoder();
 const ALLOWED_HOSTNAMES = ["127.0.0.1", "[::1]", "localhost"];
+// Errors Cap'n Web revives with their original class, and therefore name
+const BUILT_IN_ERROR_NAMES = new Set([
+	"Error",
+	"EvalError",
+	"RangeError",
+	"ReferenceError",
+	"SyntaxError",
+	"TypeError",
+	"URIError",
+	"AggregateError",
+]);
 
 const WORKERS_PLATFORM_IMPL: PlatformImpl<ReadableStream> = {
 	Blob,
@@ -105,6 +125,20 @@ function isInternal(value: unknown) {
 	return isObject(value) && value[Symbol.for("cloudflare:internal-class")];
 }
 
+/**
+ * @param value Value about to be stored on the "heap"
+ * @returns Whether `value` speaks Workers RPC, so should be used by the client
+ * through a Cap'n Web stub rather than a native "heap" object proxy
+ */
+function isRpc(value: unknown): boolean {
+	// Workers RPC stubs and promises are functions too
+	return (
+		typeof value === "function" ||
+		value instanceof ServiceStub ||
+		value instanceof RpcTarget
+	);
+}
+
 type Env = Record<string, unknown> & {
 	[CoreBindings.DATA_PROXY_SECRET]: ArrayBuffer;
 };
@@ -129,12 +163,16 @@ export class ProxyServer implements DurableObject {
 				((type === "Object" || isInternal(value)) && !isPlainObject(value)) ||
 				type === "Promise"
 			) {
+				if (value instanceof __MiniflareFunctionWrapper) {
+					// Store the function itself, so it can be used as a Cap'n Web stub
+					value = (value as { __miniflareWrappedFunction: unknown })
+						.__miniflareWrappedFunction;
+				}
 				const address = this.nextHeapAddress++;
 				this.heap.set(address, value);
 				assert(value !== null);
 				const name = value?.constructor.name;
-				const isFunction = value instanceof __MiniflareFunctionWrapper;
-				return [address, name, isFunction];
+				return [address, name, isRpc(value)];
 			}
 		},
 	};
@@ -212,6 +250,25 @@ export class ProxyServer implements DurableObject {
 		}
 
 		const opHeader = request.headers.get(CoreHeaders.OP);
+		if (opHeader === ProxyOps.CONNECT) {
+			return newWorkersWebSocketRpcResponse(request, new ProxyRpc(this.heap), {
+				onSendError(error) {
+					if (BUILT_IN_ERROR_NAMES.has(error.name)) {
+						return;
+					}
+					// Copy the error rather than mutating it, as it may be sent again
+					const copy = Object.assign(new Error(error.message), error, {
+						[PROXY_ERROR_NAME_KEY]: error.name,
+					});
+					if ("cause" in error) {
+						copy.cause = error.cause;
+					}
+					// Omit our stack, the client replaces it with the caller's
+					copy.stack = undefined;
+					return copy;
+				},
+			});
+		}
 		const targetHeader = request.headers.get(CoreHeaders.OP_TARGET);
 		const keyHeader = request.headers.get(CoreHeaders.OP_KEY);
 		const allowAsync = request.headers.get(CoreHeaders.OP_SYNC) === null;
@@ -243,15 +300,9 @@ export class ProxyServer implements DurableObject {
 		let status = 200;
 		let result: unknown;
 		let unbufferedRest: ReadableStream | undefined;
-		let rpcAwaited = false;
 		if (opHeader === ProxyOps.GET) {
 			// If no key header is specified, just return the target
 			result = keyHeader === null ? target : target[keyHeader];
-
-			// Immediately resolve all RpcProperties
-			if (result?.constructor.name === "RpcProperty") {
-				result = await result;
-			}
 
 			if (typeof result === "function") {
 				// Calling functions-which-return-functions not yet supported
@@ -345,11 +396,6 @@ export class ProxyServer implements DurableObject {
 					}
 					// We intentionally don't await this `output()` call so that it's treated as a regular promise
 					result = transform.output(args[2]);
-				} else if (["RpcProperty", "RpcStub"].includes(func.constructor.name)) {
-					// let's resolve RpcPromise instances right away (to support serialization)
-					result = await func(...args);
-					// Mark that we've awaited this RPC call, so we set the Promise header below
-					rpcAwaited = true;
 				} else {
 					result = func.apply(target, args);
 				}
@@ -367,7 +413,7 @@ export class ProxyServer implements DurableObject {
 		}
 
 		const headers = new Headers();
-		if (allowAsync && (result instanceof Promise || rpcAwaited)) {
+		if (allowAsync && result instanceof Promise) {
 			// Note we only resolve `Promise`s if we're allowing async operations.
 			// Otherwise, we'll treat the `Promise` as a native target. This allows
 			// us to use regular HTTP status/headers to indicate whether the `Promise`
@@ -429,5 +475,23 @@ export class ProxyServer implements DurableObject {
 		await writer.write(encodedValue);
 		writer.releaseLock();
 		await unbufferedStream.pipeTo(writable);
+	}
+}
+
+/**
+ * Cap'n Web main interface, used to get stubs for "heap" objects that speak
+ * Workers RPC. Calls on these are then forwarded by Cap'n Web.
+ */
+class ProxyRpc extends RpcTarget implements ProxyRpcApi {
+	readonly #heap: Map<number, unknown>;
+
+	constructor(heap: Map<number, unknown>) {
+		super();
+		this.#heap = heap;
+	}
+
+	stub(address: number): unknown {
+		assert(this.#heap.has(address), "Attempted to use freed proxy");
+		return this.#heap.get(address);
 	}
 }
