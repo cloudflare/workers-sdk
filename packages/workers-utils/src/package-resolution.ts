@@ -78,7 +78,8 @@ export function isPackageInstalled(
  * @param projectPath - The path of the project to check
  * @param opts - Options
  * @param opts.stopAtProjectPath - If `true`, stop walking up at the project's path
- * @returns The installed version string, or `undefined` if the package is not installed
+ * @returns The installed version string, or `undefined` if the package is not
+ * installed or its manifest lacks a name or version
  */
 export function getInstalledPackageVersion(
 	packageName: string,
@@ -127,9 +128,10 @@ export function getInstalledPackageVersion(
  * files such as `dist/cjs/package.json` containing only `{"type": "commonjs"}`.
  * These tell Node how to load the files in that directory but carry no `name`
  * or `version`. When the package is resolved through its entry point, the
- * nearest `package.json` may be one of these markers. Skip manifests without
- * either field, but stop at the installed package's `node_modules` boundary
- * so a package without metadata cannot inherit an ancestor's version.
+ * nearest `package.json` may be one of these markers. Only accept manifests
+ * with both a `name` and a `version`, and stop at the installed package's
+ * `node_modules` boundary so an incomplete manifest cannot inherit an
+ * ancestor's version.
  *
  * @param startDir - The directory to start searching from
  * @param lastDir - If provided, stop searching after reaching this directory
@@ -148,7 +150,7 @@ function findPackageRootManifest(
 				readFileSync(packageJsonPath),
 				packageJsonPath
 			);
-			if (packageJson.name !== undefined || packageJson.version !== undefined) {
+			if (packageJson.name !== undefined && packageJson.version !== undefined) {
 				return packageJson;
 			}
 		}

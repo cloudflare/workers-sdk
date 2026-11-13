@@ -170,7 +170,7 @@ describe("getInstalledPackageVersion", () => {
 	});
 
 	it.for(["nameless-pkg", "@scope/nameless-pkg"])(
-		"should preserve the version of %s when its manifest has no name",
+		"should return undefined for %s when its manifest has no name",
 		(packageName, { expect }) => {
 			createCjsPackage(packageName, "1.2.3");
 			fs.writeFileSync(
@@ -182,9 +182,28 @@ describe("getInstalledPackageVersion", () => {
 				JSON.stringify({ name: "test-project", version: "9.0.0" })
 			);
 
-			expect(getInstalledPackageVersion(packageName, process.cwd())).toBe(
-				"1.2.3"
+			expect(
+				getInstalledPackageVersion(packageName, process.cwd())
+			).toBeUndefined();
+		}
+	);
+
+	it.for(["versionless-pkg", "@scope/versionless-pkg"])(
+		"should return undefined for %s when its manifest has no version",
+		(packageName, { expect }) => {
+			createCjsPackage(packageName, "1.2.3");
+			fs.writeFileSync(
+				path.join("node_modules", packageName, "package.json"),
+				JSON.stringify({ name: packageName, exports: "./index.js" })
 			);
+			fs.writeFileSync(
+				"package.json",
+				JSON.stringify({ name: "test-project", version: "9.0.0" })
+			);
+
+			expect(
+				getInstalledPackageVersion(packageName, process.cwd())
+			).toBeUndefined();
 		}
 	);
 
@@ -229,6 +248,21 @@ describe("getInstalledPackageVersion", () => {
 
 		expect(getInstalledPackageVersion("vite", process.cwd())).toBe("7.3.0");
 	});
+
+	it.for([{ version: "1.0.0" }, { name: "nested-marker" }])(
+		"should skip an incomplete nested manifest (%j) and return the root version",
+		(manifest, { expect }) => {
+			createPackageWithNestedTypeManifest("dual-pkg", "4.0.0");
+			fs.writeFileSync(
+				path.join("node_modules", "dual-pkg", "dist", "cjs", "package.json"),
+				JSON.stringify({ type: "commonjs", ...manifest })
+			);
+
+			expect(getInstalledPackageVersion("dual-pkg", process.cwd())).toBe(
+				"4.0.0"
+			);
+		}
+	);
 
 	it("should skip a nested package.json without a name and return the root version", ({
 		expect,
