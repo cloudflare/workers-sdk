@@ -5,14 +5,15 @@ import { readBuildOutput } from "@cloudflare/build-output-utils";
 import {
 	createContainerPreviewPlanForCfConfig,
 	createMiniflareExports,
+	prepareContainerImagesForCfConfig,
 } from "@cloudflare/containers-shared";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
-import { getZoneFromRoute } from "@cloudflare/workers-utils";
+import { getWorkerZone } from "@cloudflare/workers-utils";
+import { toApiComplianceRegion } from "@cloudflare/workers-utils/compliance";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import { resolveLocalBindings } from "miniflare";
 import { getRemoteBindingsAuth } from "./auth";
-import { prepareContainerImages } from "./containers";
 import type {
 	InlineWorkerConfig,
 	TestHarnessOptions,
@@ -191,10 +192,7 @@ async function resolveWorker(
 			name: config.name,
 			target: "cf",
 			env: testEnv,
-			complianceRegion:
-				rootConfig.complianceRegion === "fedramp-high"
-					? "fedramp_high"
-					: rootConfig.complianceRegion,
+			complianceRegion: toApiComplianceRegion(rootConfig.complianceRegion),
 		},
 		preExistingRemoteProxySessionData,
 		getRemoteBindingsAuth(
@@ -283,40 +281,6 @@ function getInlineWorker(
 }
 
 /**
- * The zone in the `CF-Worker` header of a Worker's outgoing requests: its
- * first domain or route, as in production. Copied from the Vite plugin's
- * getWorkerZone(), which `vite preview` uses.
- *
- * @param config The Worker's config
- * @returns The zone, or `undefined` for Miniflare's default
- */
-function getWorkerZone(
-	config: Pick<WorkerSource["worker"]["config"], "domains" | "triggers">
-): string | undefined {
-	// Domains are converted to routes before fetch triggers, so the first
-	// domain takes precedence
-	const domain = config.domains?.[0];
-	if (domain !== undefined) {
-		return getZoneFromRoute(
-			typeof domain === "string" ? domain : domain.hostname
-		);
-	}
-
-	const fetchTrigger = config.triggers?.find(
-		(trigger) => trigger.type === "fetch"
-	);
-	if (fetchTrigger?.type !== "fetch") {
-		return undefined;
-	}
-
-	return getZoneFromRoute(
-		fetchTrigger.zone?.includes(".")
-			? { pattern: fetchTrigger.pattern, zone_name: fetchTrigger.zone }
-			: fetchTrigger.pattern
-	);
-}
-
-/**
  * Reads a Worker's modules from its Build Output bundle.
  *
  * @param worker The Worker in the Build Output
@@ -382,9 +346,10 @@ async function prepareContainers(
 	// pull the same images again
 	const preparationKey = JSON.stringify(preparation);
 	if (!preparedContainerImages.has(preparationKey)) {
-		await prepareContainerImages({
+		await prepareContainerImagesForCfConfig({
 			...preparation,
 			logger: remoteBindingsLogger,
+			operation: "running tests",
 		});
 		preparedContainerImages.add(preparationKey);
 	}
