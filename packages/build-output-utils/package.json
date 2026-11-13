@@ -1,7 +1,7 @@
 {
 	"name": "@cloudflare/build-output-utils",
 	"version": "0.9.14",
-	"description": "Utilities for reading and writing the Build Output Specification directory. This is not yet stable enough for external use — APIs may change without notice.",
+	"description": "Utilities for reading and writing the Build Output Specification directory.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/build-output-utils#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
@@ -42,6 +42,10 @@
 		"vitest": "catalog:default"
 	},
 	"workers-sdk": {
-		"prerelease": true
+		"prerelease": true,
+		"npmPrerelease": {
+			"tag": "rc",
+			"numbered": true
+		}
 	}
 }

@@ -1,3 +1,4 @@
+import { BuildOutputError } from "@cloudflare/build-output-utils";
 import { beforeEach, describe, test, vi } from "vitest";
 import { readBuildOutputPreview } from "../build-output-preview";
 import type { BuildOutputWorker } from "@cloudflare/build-output-utils";
@@ -112,4 +113,51 @@ describe("readBuildOutputPreview", () => {
 
 		expect(result.containers).toEqual([container]);
 	});
+
+	test.for([
+		{
+			code: "not-found",
+			foundVersions: [],
+			message:
+				"No Build Output was found to preview. Build the project, then preview it again.",
+		},
+		{
+			code: "older-version",
+			foundVersions: ["v0"],
+			message:
+				"The Build Output uses the older v0 format. Build the project, then preview it again.",
+		},
+		{
+			code: "multiple-versions",
+			foundVersions: ["v0", "v1"],
+			message:
+				"Build Output was found in more than one format (v0, v1). Build the project, then preview it again.",
+		},
+	] as const)(
+		"asks for a rebuild when the Build Output is $code",
+		async ({ code, foundVersions, message }, { expect }) => {
+			const cause = new BuildOutputError("original", {
+				code,
+				foundVersions: [...foundVersions],
+				supportedVersions: ["v1"],
+			});
+			readBuildOutputMock.mockRejectedValue(cause);
+
+			await expect(readBuildOutputPreview("/project", false)).rejects.toThrow(
+				expect.objectContaining({ message, cause })
+			);
+		}
+	);
+
+	test.for(["newer-version", "unknown-fields", "invalid"] as const)(
+		"passes %s errors through unchanged",
+		async (code, { expect }) => {
+			const error = new BuildOutputError("original", { code });
+			readBuildOutputMock.mockRejectedValue(error);
+
+			await expect(readBuildOutputPreview("/project", false)).rejects.toBe(
+				error
+			);
+		}
+	);
 });

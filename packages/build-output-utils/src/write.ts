@@ -16,6 +16,7 @@ import type {
 	ParsedSettings,
 	ParsedWorkerConfig,
 	ParsedBuildOutputContainerConfig,
+	ParsedBuildOutputProducer,
 	ParsedBuildOutputRootConfig,
 	ParsedBuildOutputWorkerConfig,
 	ConfigContext,
@@ -128,22 +129,54 @@ export async function writeContainerConfig({
 	);
 }
 
+export interface WriteRootConfigOptions {
+	root: string;
+	/**
+	 * Settings declared at the top level of `cloudflare.config.ts`. Omitted
+	 * from the file when not given or when none of them is set.
+	 */
+	settings?: ParsedSettings;
+	/** Build context supplied at build time. */
+	buildContext: ConfigContext;
+	/**
+	 * The tool writing the tree, such as a framework adapter or build plugin.
+	 * Readers use it only in error messages and diagnostics. Omitted from the
+	 * file when not given.
+	 */
+	producer?: ParsedBuildOutputProducer;
+}
+
 /**
  * Write the root `config.json` to the Build Output Specification tree.
  *
- * Holds the settings declared at the top level of `cloudflare.config.ts` and
- * build context supplied at build time.
+ * Holds the tool that wrote the tree, the settings declared at the top level
+ * of `cloudflare.config.ts` and the build context supplied at build time.
  */
-export async function writeRootConfig(
-	root: string,
-	settings: ParsedSettings | undefined,
-	buildContext: ConfigContext
-): Promise<void> {
+export async function writeRootConfig({
+	root,
+	settings,
+	buildContext,
+	producer,
+}: WriteRootConfigOptions): Promise<void> {
 	const outputConfig: ParsedBuildOutputRootConfig = {
-		...settings,
+		...(producer === undefined ? {} : { producer }),
+		...(hasSettings(settings) ? { settings } : {}),
 		buildContext,
 	};
 	const configPath = getRootConfigPath(root);
 	await fsp.mkdir(path.dirname(configPath), { recursive: true });
 	await fsp.writeFile(configPath, JSON.stringify(outputConfig));
+}
+
+/**
+ * Whether any setting is set. Writers emit a key only when it is used, so an
+ * object whose settings are all `undefined` is left out like a missing one.
+ */
+function hasSettings(
+	settings: ParsedSettings | undefined
+): settings is ParsedSettings {
+	return (
+		settings !== undefined &&
+		Object.values(settings).some((value) => value !== undefined)
+	);
 }

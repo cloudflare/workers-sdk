@@ -1,9 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import {
-	BUILD_OUTPUT_ROOT,
-	getRootConfigPath,
-} from "@cloudflare/build-output-utils";
+import { BUILD_OUTPUT_ROOT } from "@cloudflare/build-output-utils";
 import { UserError } from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -54,26 +51,42 @@ function getProjectRoots({
 }
 
 /**
+ * Matches Build Output version directory names such as `v0`, `v1` and `v12`.
+ * The `.cloudflare/output/v<N>/` convention is the only part of the Build
+ * Output Specification that never changes between versions.
+ */
+const VERSION_DIRECTORY_PATTERN = /^v(0|[1-9]\d*)$/;
+
+/**
  * Find a Cloudflare Build Output Specification directory in `projectRoot`.
  *
- * Requires the versioned root config rather than the directory name, so the
- * `.cloudflare/types` directory Wrangler generates itself, or an unrelated
- * `output` folder, is not mistaken for Build Output.
+ * Requires a version directory such as `v1` rather than just the `output`
+ * directory, so the `.cloudflare/types` directory Wrangler generates itself,
+ * or an unrelated `output` folder, is not mistaken for Build Output. Any
+ * version counts, so output left by an older or newer `cf` is still found.
  */
 export function findCloudflareBuildOutput(
 	projectRoot: string
 ): string | undefined {
+	const buildOutputDir = path.resolve(projectRoot, BUILD_OUTPUT_ROOT);
+	let entries: fs.Dirent[];
 	try {
-		if (!fs.statSync(getRootConfigPath(projectRoot)).isFile()) {
-			return undefined;
-		}
+		entries = fs.readdirSync(buildOutputDir, { withFileTypes: true });
 	} catch {
 		// Usually just absent. An unreadable path is treated the same way, so a
 		// filesystem error cannot block a deployment.
 		return undefined;
 	}
 
-	return path.resolve(projectRoot, BUILD_OUTPUT_ROOT);
+	// A symlink counts too, matching the Build Output reader, so linked output
+	// still stops the deployment.
+	return entries.some(
+		(entry) =>
+			(entry.isDirectory() || entry.isSymbolicLink()) &&
+			VERSION_DIRECTORY_PATTERN.test(entry.name)
+	)
+		? buildOutputDir
+		: undefined;
 }
 
 /**

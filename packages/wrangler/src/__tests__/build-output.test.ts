@@ -23,7 +23,7 @@ const WORKER_NAME = "build-output-test-worker";
 // directory. Resolve at call time — `runInTempDir` changes the cwd after this
 // module is imported.
 function workerDir(): string {
-	return path.resolve(".cloudflare/output/v0/workers", "default");
+	return path.resolve(".cloudflare/output/v1/workers", "default");
 }
 
 function readOutputConfig() {
@@ -35,7 +35,7 @@ function readOutputConfig() {
 }
 
 function rootConfigPath(): string {
-	return path.resolve(".cloudflare/output/v0", "config.json");
+	return path.resolve(".cloudflare/output/v1", "config.json");
 }
 
 function readRootConfig() {
@@ -573,6 +573,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 
 			expect(fs.existsSync(rootConfigPath())).toBe(true);
 			expect(readRootConfig()).toEqual({
+				producer: { name: "wrangler", version: "x.x.x" },
 				buildContext: { isPreview: false },
 			});
 		});
@@ -625,8 +626,8 @@ describe("wrangler build --experimental-cf-build-output", () => {
 			);
 
 			expect(readRootConfig()).toEqual({
-				accountId: "acc-123",
-				complianceRegion: "public",
+				producer: { name: "wrangler", version: "x.x.x" },
+				settings: { accountId: "acc-123", complianceRegion: "public" },
 				buildContext: { isPreview: false, mode: "staging" },
 			});
 		});

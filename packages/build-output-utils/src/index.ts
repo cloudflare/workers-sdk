@@ -26,9 +26,15 @@ export {
 export type {
 	WriteAssetsOptions,
 	WriteContainerConfigOptions,
+	WriteRootConfigOptions,
 	WriteWorkerConfigOptions,
 } from "./write";
 export { BuildOutputError } from "./errors";
+export type {
+	BuildOutputErrorCode,
+	BuildOutputErrorOptions,
+	BuildOutputUnknownField,
+} from "./errors";
 export { readBuildOutput } from "./read";
 export type {
 	BuildOutput,

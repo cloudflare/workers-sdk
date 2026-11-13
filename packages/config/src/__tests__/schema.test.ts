@@ -1665,22 +1665,53 @@ describe("SettingsSchema", () => {
 });
 
 describe("BuildOutputRootConfigSchema", () => {
-	it("accepts build context alongside the settings fields", ({ expect }) => {
+	it("accepts settings, build context and a producer", ({ expect }) => {
 		const result = BuildOutputRootConfigSchema.safeParse({
-			accountId: "acc-123",
-			complianceRegion: "public",
+			producer: { name: "@cloudflare/vite-plugin", version: "2.3.0" },
+			settings: { accountId: "acc-123", complianceRegion: "public" },
 			buildContext: { isPreview: false, mode: "staging" },
 		});
 
 		expect(result.success).toBe(true);
 	});
 
-	it("accepts a build context without a mode", ({ expect }) => {
+	it("accepts no settings, no producer and no mode", ({ expect }) => {
 		const result = BuildOutputRootConfigSchema.safeParse({
 			buildContext: { isPreview: false },
 		});
 
 		expect(result.success).toBe(true);
+	});
+
+	it("rejects settings at the top level", ({ expect }) => {
+		const result = BuildOutputRootConfigSchema.safeParse({
+			accountId: "acc-123",
+			buildContext: { isPreview: false },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects unknown settings", ({ expect }) => {
+		const result = BuildOutputRootConfigSchema.safeParse({
+			settings: { name: "my-worker" },
+			buildContext: { isPreview: false },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it.for([
+		{ name: "@cloudflare/vite-plugin" },
+		{ name: "@cloudflare/vite-plugin", version: 2 },
+		{ name: "@cloudflare/vite-plugin", version: "2.3.0", url: "x" },
+	])("rejects an invalid producer %o", (producer, { expect }) => {
+		const result = BuildOutputRootConfigSchema.safeParse({
+			producer,
+			buildContext: { isPreview: false },
+		});
+
+		expect(result.success).toBe(false);
 	});
 
 	it("requires build context", ({ expect }) => {
@@ -1690,7 +1721,9 @@ describe("BuildOutputRootConfigSchema", () => {
 	});
 
 	it("requires Preview intent", ({ expect }) => {
-		const result = BuildOutputRootConfigSchema.safeParse({ buildContext: {} });
+		const result = BuildOutputRootConfigSchema.safeParse({
+			buildContext: {},
+		});
 
 		expect(result.success).toBe(false);
 	});
