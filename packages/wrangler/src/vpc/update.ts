@@ -1,9 +1,9 @@
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
-import { updateService } from "./client";
+import { getService, updateService } from "./client";
 import { displayServiceDetails } from "./shared";
 import { buildRequest, toServiceArgs, validateRequest } from "./validation";
-import { serviceOptions } from "./index";
+import { serviceOptions, tlsUpdateOptions } from "./index";
 
 export const vpcServiceUpdateCommand = createCommand({
 	metadata: {
@@ -18,6 +18,7 @@ export const vpcServiceUpdateCommand = createCommand({
 			description: "The ID of the VPC service to update",
 		},
 		...serviceOptions,
+		...tlsUpdateOptions,
 	},
 	positionalArgs: ["service-id"],
 	validateArgs: (args) => {
@@ -27,7 +28,8 @@ export const vpcServiceUpdateCommand = createCommand({
 		logger.log(`🚧 Updating VPC service '${args.serviceId}'`);
 
 		const serviceArgs = toServiceArgs(args);
-		const request = buildRequest(serviceArgs);
+		const existing = await getService(config, args.serviceId);
+		const request = buildRequest(serviceArgs, existing);
 		const service = await updateService(config, args.serviceId, request);
 
 		logger.log(`✅ Updated VPC service: ${service.service_id}`);
