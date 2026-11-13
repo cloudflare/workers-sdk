@@ -1,4 +1,5 @@
 import Heap from "heap-js";
+import { DEFAULT_RETRY_DELAY_MS } from "./delay";
 import type {
 	InstanceMetadata,
 	WakerPriorityEntry,
@@ -78,20 +79,10 @@ export class TimePriorityQueue {
 	 */
 	async add(entry: WakerPriorityEntry) {
 		await this.#ctx.storage.transaction(async () => {
-			// TODO: Handle this
-			// const waker = this.#env.WAKERS.idFromName(
-			// 	this.#instanceMetadata.instance.id
-			// );
-			// const wakerStub = this.#env.WAKERS.get(waker);
-			// We can optimise this by only calling it if time is sooner than any other
-			// await wakerStub.wake(
-			// 	new Date(entry.targetTimestamp),
-			// 	this.#instanceMetadata
-			// );
-
 			this.#heap.add(entry);
 			this.addEntryDB(entry);
 		});
+		await this.handleNextAlarm();
 	}
 
 	/**
@@ -143,17 +134,20 @@ export class TimePriorityQueue {
 	async handleNextAlarm() {
 		const nextWakeCall = this.#heap.peek();
 		if (nextWakeCall === undefined) {
+			await this.#ctx.storage.deleteAlarm();
 			return;
 		}
-		// TODO: Handle this
-		// const waker = this.#env.WAKERS.idFromName(
-		// 	this.#instanceMetadata.instance.id
-		// );
-		// const wakerStub = this.#env.WAKERS.get(waker);
-		// await wakerStub.wake(
-		// 	new Date(nextWakeCall.targetTimestamp),
-		// 	this.#instanceMetadata
-		// );
+		// The engine's own alarm wakes it for the next entry, so a sleep, retry or
+		// timeout still runs after the engine is evicted or aborted. An entry that is
+		// already due can still be waited on by the running engine (a dynamic retry
+		// delay outlasts its placeholder), so its alarm is set a little later instead
+		// of firing again straight away.
+		const now = Date.now();
+		await this.#ctx.storage.setAlarm(
+			nextWakeCall.targetTimestamp > now
+				? nextWakeCall.targetTimestamp
+				: now + DEFAULT_RETRY_DELAY_MS
+		);
 	}
 
 	getFirst(
