@@ -140,7 +140,8 @@ jobs:
             shard: 3
             runtime-shards: 3
 
-    runs-on: ${{ matrix.os }}
+    # Fixture suites install pinned Playwright's Chromium, unsupported on Ubuntu 26.04.
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && matrix.suite == 'fixtures' && 'ubuntu-24.04' || matrix.os }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6

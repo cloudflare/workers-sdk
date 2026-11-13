@@ -30,7 +30,8 @@ jobs:
         include:
           - os: ubuntu-latest
             vite: "vite-7"
-    runs-on: ${{ matrix.os }}
+    # Playwright's pinned Chromium build does not support Ubuntu 26.04 yet.
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && 'ubuntu-24.04' || matrix.os }}
     env:
       # Miniflare build outputs contain platform-specific paths. Include the OS
       # in both the build cache key and the exported plugin build hash.
