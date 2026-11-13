@@ -87,6 +87,8 @@ const ignoreMessages = [
 	"disconnected: peer disconnected without gracefully ending TLS session",
 	"CODE_MOVED for unknown code block",
 	"broken.outputGateBroken; jsg.Error: Instance dispose",
+	// Every ABORT_REASONS entry in workflows-shared is a deliberate engine abort
+	"broken.outputGateBroken; jsg.Error: Aborting engine",
 ];
 function handleStructuredLogs({ level, message }: WorkerdStructuredLog): void {
 	if (ignoreMessages.some((ignore) => message.includes(ignore))) {
