@@ -1,6 +1,7 @@
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getCloudflareApiBaseUrl,
+	toApiComplianceRegion,
 } from "@cloudflare/workers-utils/compliance";
 import { UserError } from "@cloudflare/workers-utils/errors";
 import {
@@ -79,10 +80,9 @@ export async function prepareContainerImagesForCfConfig(options: {
 	logger: ViteLogger;
 	operation?: string;
 }): Promise<void> {
-	const complianceRegion: ComplianceConfig["compliance_region"] =
-		options.settings.complianceRegion === "fedramp-high"
-			? "fedramp_high"
-			: options.settings.complianceRegion;
+	const complianceRegion = toApiComplianceRegion(
+		options.settings.complianceRegion
+	);
 	const complianceConfig =
 		complianceRegion === undefined
 			? undefined
