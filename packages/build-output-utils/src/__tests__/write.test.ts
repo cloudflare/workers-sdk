@@ -4,6 +4,7 @@ import {
 	SettingsSchema,
 	WorkerConfigSchema,
 	BuildOutputContainerConfigSchema,
+	BuildOutputRootConfigSchema,
 	BuildOutputWorkerConfigSchema,
 } from "@cloudflare/config";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
@@ -52,21 +53,21 @@ const parsedDurableObjectContainerConfig =
 describe("writeRootConfig", () => {
 	runInTempDir();
 
-	it("writes the root config.json with the shared settings", async ({
-		expect,
-	}) => {
+	function readRootConfigFile(root: string): unknown {
+		return JSON.parse(fs.readFileSync(getRootConfigPath(root), "utf-8"));
+	}
+
+	it("writes the shared settings under settings", async ({ expect }) => {
 		const root = process.cwd();
-		await writeRootConfig(root, parsedSettingsConfig, {
-			isPreview: false,
-			mode: undefined,
+		await writeRootConfig({
+			root,
+			settings: parsedSettingsConfig,
+			buildContext: { isPreview: false, mode: undefined },
 		});
 
-		const contents = JSON.parse(
-			fs.readFileSync(getRootConfigPath(root), "utf-8")
-		);
-		expect(contents).toEqual({
-			...parsedSettingsConfig,
-			buildContext: { isPreview: false },
+		expect(readRootConfigFile(root)).toEqual({
+			settings: parsedSettingsConfig,
+			buildContext: { isPreview: false, mode: undefined },
 		});
 	});
 
@@ -74,48 +75,94 @@ describe("writeRootConfig", () => {
 		expect,
 	}) => {
 		const root = process.cwd();
-		await writeRootConfig(root, parsedSettingsConfig, {
-			isPreview: false,
-			mode: "staging",
+		await writeRootConfig({
+			root,
+			settings: parsedSettingsConfig,
+			buildContext: { isPreview: false, mode: "staging" },
 		});
 
-		const contents = JSON.parse(
-			fs.readFileSync(getRootConfigPath(root), "utf-8")
-		);
-		expect(contents).toEqual({
-			...parsedSettingsConfig,
+		expect(readRootConfigFile(root)).toEqual({
+			settings: parsedSettingsConfig,
 			buildContext: { isPreview: false, mode: "staging" },
 		});
 	});
 
-	it("writes only build context when there are no settings or mode", async ({
-		expect,
-	}) => {
+	it.for([
+		["not given", undefined],
+		["empty", {}],
+		["all undefined", { accountId: undefined, complianceRegion: undefined }],
+	] as const)(
+		"omits settings when they are %s",
+		async ([, settings], { expect }) => {
+			const root = process.cwd();
+			await writeRootConfig({
+				root,
+				settings,
+				buildContext: { isPreview: true, mode: "production" },
+			});
+
+			const contents = readRootConfigFile(root);
+			expect(contents).toEqual({
+				buildContext: { isPreview: true, mode: "production" },
+			});
+			expect(contents).not.toHaveProperty("settings");
+			expect(BuildOutputRootConfigSchema.parse(contents)).toEqual(contents);
+		}
+	);
+
+	it("writes settings when only some are set", async ({ expect }) => {
 		const root = process.cwd();
-		await writeRootConfig(root, undefined, {
-			isPreview: false,
-			mode: undefined,
+		await writeRootConfig({
+			root,
+			settings: { accountId: "1234567890", complianceRegion: undefined },
+			buildContext: { isPreview: false, mode: undefined },
 		});
 
-		const contents = JSON.parse(
-			fs.readFileSync(getRootConfigPath(root), "utf-8")
-		);
-		expect(contents).toEqual({ buildContext: { isPreview: false } });
+		expect(readRootConfigFile(root)).toEqual({
+			settings: { accountId: "1234567890" },
+			buildContext: { isPreview: false },
+		});
 	});
 
-	it("writes build context when there are no settings", async ({ expect }) => {
+	it("writes the producer when given", async ({ expect }) => {
 		const root = process.cwd();
-		await writeRootConfig(root, undefined, {
-			isPreview: true,
-			mode: "production",
+		const producer = { name: "@cloudflare/vite-plugin", version: "2.3.0" };
+		await writeRootConfig({
+			root,
+			settings: parsedSettingsConfig,
+			buildContext: { isPreview: false, mode: undefined },
+			producer,
 		});
 
-		const contents = JSON.parse(
-			fs.readFileSync(getRootConfigPath(root), "utf-8")
-		);
+		const contents = readRootConfigFile(root);
 		expect(contents).toEqual({
-			buildContext: { isPreview: true, mode: "production" },
+			producer,
+			settings: parsedSettingsConfig,
+			buildContext: { isPreview: false, mode: undefined },
 		});
+		expect(BuildOutputRootConfigSchema.parse(contents)).toEqual(contents);
+	});
+
+	it("omits the producer when not given", async ({ expect }) => {
+		const root = process.cwd();
+		await writeRootConfig({
+			root,
+			buildContext: { isPreview: false, mode: undefined },
+		});
+
+		expect(readRootConfigFile(root)).not.toHaveProperty("producer");
+	});
+
+	it("writes under the v1 directory", async ({ expect }) => {
+		const root = process.cwd();
+		await writeRootConfig({
+			root,
+			buildContext: { isPreview: false, mode: undefined },
+		});
+
+		expect(
+			fs.existsSync(path.join(root, ".cloudflare/output/v1/config.json"))
+		).toBe(true);
 	});
 });
 
@@ -218,15 +265,31 @@ describe("cleanBuildOutputDir", () => {
 
 	it("removes the build output directory", async ({ expect }) => {
 		const root = process.cwd();
-		await writeRootConfig(root, parsedSettingsConfig, {
-			isPreview: false,
-			mode: undefined,
+		await writeRootConfig({
+			root,
+			settings: parsedSettingsConfig,
+			buildContext: { isPreview: false, mode: undefined },
 		});
 		const outputDir = path.join(root, BUILD_OUTPUT_ROOT);
 		expect(fs.existsSync(outputDir)).toBe(true);
 
 		await cleanBuildOutputDir(root);
 		expect(fs.existsSync(outputDir)).toBe(false);
+	});
+
+	it("removes every version directory", async ({ expect }) => {
+		const root = process.cwd();
+		const staleVersionDir = path.join(root, BUILD_OUTPUT_ROOT, "v0");
+		fs.mkdirSync(staleVersionDir, { recursive: true });
+		await writeRootConfig({
+			root,
+			buildContext: { isPreview: false, mode: undefined },
+		});
+
+		await cleanBuildOutputDir(root);
+
+		expect(fs.existsSync(staleVersionDir)).toBe(false);
+		expect(fs.existsSync(getRootConfigPath(root))).toBe(false);
 	});
 });
 
@@ -258,9 +321,10 @@ describe("writeAssets", () => {
 		);
 		fs.symlinkSync("nested", path.join(sourceDirectory, "linked"), "dir");
 
-		await writeRootConfig(root, parsedSettingsConfig, {
-			isPreview: false,
-			mode: undefined,
+		await writeRootConfig({
+			root,
+			settings: parsedSettingsConfig,
+			buildContext: { isPreview: false, mode: undefined },
 		});
 		await writeWorkerConfig({ root, config: parsedWorkerConfig });
 		await writeAssets({ root, sourceDirectory });
@@ -287,9 +351,10 @@ describe("writeAssets", () => {
 		fs.mkdirSync(path.join(root, "nested"));
 		fs.writeFileSync(path.join(root, "nested/linked.html"), "linked");
 		fs.symlinkSync("nested", path.join(root, "linked"), "dir");
-		await writeRootConfig(root, parsedSettingsConfig, {
-			isPreview: false,
-			mode: undefined,
+		await writeRootConfig({
+			root,
+			settings: parsedSettingsConfig,
+			buildContext: { isPreview: false, mode: undefined },
 		});
 
 		await writeAssets({ root, sourceDirectory: root });

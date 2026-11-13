@@ -76,8 +76,11 @@ describe("preview server", () => {
 			await builder.buildApp();
 			const output = await readBuildOutput(fixturesPath);
 			expect(output.rootConfig).toMatchObject({
-				accountId: "customized-account",
-				complianceRegion: "fedramp-high",
+				producer: { name: "@cloudflare/vite-plugin" },
+				settings: {
+					accountId: "customized-account",
+					complianceRegion: "fedramp-high",
+				},
 			});
 			expect(output.containers.map(({ config }) => config)).toEqual([
 				expect.objectContaining({

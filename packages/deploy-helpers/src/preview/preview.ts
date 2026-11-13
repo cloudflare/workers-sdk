@@ -1380,10 +1380,9 @@ export async function previewBuildOutput(
 			}
 		);
 	}
-	const { buildContext: _buildContext, ...settings } = rootConfig;
 	const { manifest: _manifest, ...worker } = workerConfig;
 	const convertedConfig = convertToWranglerConfig({
-		...settings,
+		...rootConfig.settings,
 		worker,
 		containers: [],
 	});

@@ -4,11 +4,11 @@ import { describe, test } from "vitest";
 import { getTextResponse, isBuild, rootDir } from "../../__test-utils__";
 
 function getBuildOutputDir() {
-	return path.join(rootDir, ".cloudflare/output/v0/workers", "default");
+	return path.join(rootDir, ".cloudflare/output/v1/workers", "default");
 }
 
 function getRootConfigPath() {
-	return path.join(rootDir, ".cloudflare/output/v0", "config.json");
+	return path.join(rootDir, ".cloudflare/output/v1", "config.json");
 }
 
 describe("Build Output Specification", () => {
@@ -133,12 +133,18 @@ describe.runIf(isBuild)("Build Output Specification files", () => {
 		expect(fs.existsSync(wranglerJson)).toBe(false);
 	});
 
-	test("emits a root config.json recording the build context", ({ expect }) => {
+	test("emits a root config.json recording the producer and build context", ({
+		expect,
+	}) => {
 		const contents = JSON.parse(
 			fs.readFileSync(getRootConfigPath(), "utf-8")
 		) as Record<string, unknown>;
 
 		expect(contents).toEqual({
+			producer: {
+				name: "@cloudflare/vite-plugin",
+				version: expect.any(String),
+			},
 			buildContext: { isPreview: false, mode: "production" },
 		});
 	});
