@@ -19,6 +19,10 @@ import {
 	singleModuleManifest,
 	TestLog,
 } from "../../test-shared";
+import {
+	CHROME_INSTALL_TIMEOUT,
+	retryBrowserStartup,
+} from "../../test-shared/browser";
 import type { Browser } from "@cloudflare/puppeteer";
 import type { AddressInfo } from "node:net";
 
@@ -63,8 +67,6 @@ const PAGE = `<!DOCTYPE html>
 	<a href="mailto:hi@example.com">Mail</a>
 	<a href="#top">Top</a>
 </body></html>`;
-
-const CHROME_INSTALL_TIMEOUT = 10 * 60 * 1_000;
 
 let mf: Miniflare;
 let log: TestLog;
@@ -125,8 +127,10 @@ describe(
 				],
 			});
 			// Launches (and on a cold machine downloads) Chrome before timed tests
-			const warm = await quickAction("content", { html: "<p>warm</p>" });
-			assert.strictEqual(warm.status, 200, await warm.text());
+			await retryBrowserStartup(async () => {
+				const warm = await quickAction("content", { html: "<p>warm</p>" });
+				assert.strictEqual(warm.status, 200, await warm.text());
+			});
 		}, CHROME_INSTALL_TIMEOUT);
 
 		afterAll(async () => {

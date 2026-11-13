@@ -46,7 +46,7 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 ## Testing
 
 - Test files use `.spec.ts` (NOT `.test.ts`)
-- `pool: "forks"`, `maxWorkers: 1` (limits test files to one worker)
+- `vitest.config.mts` is authoritative for the pool, worker count, and timeouts. Test files run in parallel; `concurrent: false` only serializes tests within a file.
 - Does NOT extend `vitest.shared.ts` — own full vitest config
 - Timeouts: 30s test, 30s hook
 - `globals: true`
@@ -54,6 +54,12 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 - `useDispose(mf)` / `disposeWithRetry()` — exponential backoff for Windows EPERM file locking
 - `useServer()` — temp HTTP server with auto-cleanup
 - `TestLog` — captures log entries by level
+
+### Browser tests
+
+- Tests that launch real Chrome should warm it in `beforeAll`, using `CHROME_INSTALL_TIMEOUT` and `retryBrowserStartup()` from `test/test-shared/browser.ts`. The first launch may download Chrome, and even a cached install can exceed Chrome's readiness deadline on a loaded runner. Increasing the hook timeout does not extend that deadline.
+- Check the warm-up response inside the retry callback and include its body in the failure message. Quick actions return launch failures as error responses, so checking only the status hides the error needed to recognize a transient startup failure.
+- Keep retries limited to recognized startup failures. Unrelated warm-up failures and functional assertions must still fail immediately. Dispose any Miniflare instances created for individual warm-up attempts before retrying.
 
 ## Generated Files
 
