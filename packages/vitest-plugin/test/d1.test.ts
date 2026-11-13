@@ -44,38 +44,6 @@ describe("readD1Migrations", () => {
 		]);
 	});
 
-	it("reads nested D1 migrations when migrationsPattern is set", async ({
-		expect,
-	}) => {
-		await seed({
-			"drizzle/10_seed/migration.sql": "CREATE TABLE seed (id INTEGER);",
-			"drizzle/2_add_users/migration.sql": "CREATE TABLE users (id INTEGER);",
-			"drizzle/init/migration.sql": "CREATE TABLE init (id INTEGER);",
-			"drizzle/3_ignored/snapshot.json": "{}",
-		});
-
-		const migrations = await readD1Migrations({
-			projectPath: process.cwd(),
-			migrationsDir: "drizzle",
-			migrationsPattern: "drizzle/*/migration.sql",
-		});
-
-		expect(migrations).toEqual([
-			{
-				name: "2_add_users/migration.sql",
-				queries: ["CREATE TABLE users (id INTEGER);"],
-			},
-			{
-				name: "10_seed/migration.sql",
-				queries: ["CREATE TABLE seed (id INTEGER);"],
-			},
-			{
-				name: "init/migration.sql",
-				queries: ["CREATE TABLE init (id INTEGER);"],
-			},
-		]);
-	});
-
 	it("throws a TypeError when the argument is not a string or options object", async ({
 		expect,
 	}) => {

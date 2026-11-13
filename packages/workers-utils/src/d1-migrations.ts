@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { Minimatch } from "minimatch";
+import { splitSqlQuery } from "./d1-splitter";
+import { UserError } from "./errors";
+import type { D1Migration } from "./apply-d1-migrations";
 
 const DEFAULT_MIGRATIONS_DIR = "./migrations";
 
@@ -48,6 +51,41 @@ export function getD1MigrationFiles(
 		name,
 		filePath: path.join(walkRoot, ...name.split("/")),
 	}));
+}
+
+export type ReadD1MigrationsOptions = {
+	/** Defaults to the current working directory. */
+	projectPath?: string;
+	migrationsDir?: string;
+	migrationsPattern?: string;
+};
+
+/**
+ * Reads the D1 migration files found by {@link getD1MigrationFiles}, splitting
+ * each one into SQL queries.
+ *
+ * Throws when the migrations directory doesn't exist, so a typo in
+ * `migrationsDir` doesn't silently apply no migrations.
+ */
+export async function readD1Migrations(
+	options: ReadD1MigrationsOptions
+): Promise<D1Migration[]> {
+	const projectPath = options.projectPath ?? process.cwd();
+	const migrationsPath = path.resolve(
+		projectPath,
+		options.migrationsDir ?? DEFAULT_MIGRATIONS_DIR
+	);
+	if (!fs.statSync(migrationsPath, { throwIfNoEntry: false })?.isDirectory()) {
+		throw new UserError(`No migrations present at ${migrationsPath}.`, {
+			telemetryMessage: "d1 migrations missing migrations directory",
+		});
+	}
+	const files = getD1MigrationFiles({ ...options, projectPath });
+	return files.map(({ name, filePath }) => {
+		const migration = fs.readFileSync(filePath, "utf8");
+		const queries = splitSqlQuery(migration);
+		return { name, queries };
+	});
 }
 
 /**

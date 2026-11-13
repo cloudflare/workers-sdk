@@ -27,6 +27,10 @@
 			"import": "./dist/prometheus-metrics.mjs",
 			"types": "./dist/prometheus-metrics.d.mts"
 		},
+		"./apply-d1-migrations": {
+			"import": "./dist/apply-d1-migrations.mjs",
+			"types": "./dist/apply-d1-migrations.d.mts"
+		},
 		"./compliance": {
 			"import": "./dist/compliance.mjs",
 			"types": "./dist/compliance.d.mts"
@@ -54,6 +58,10 @@
 		"./sourcemap": {
 			"types": "./dist/sourcemap.d.mts",
 			"import": "./dist/sourcemap.mjs"
+		},
+		"./d1-migrations": {
+			"import": "./dist/d1-migrations.mjs",
+			"types": "./dist/d1-migrations.d.mts"
 		},
 		"./errors": {
 			"import": "./dist/errors.mjs",
@@ -98,6 +106,7 @@
 	"devDependencies": {
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@types/command-exists": "^1.2.0",
 		"@types/minimatch": "^5.1.2",

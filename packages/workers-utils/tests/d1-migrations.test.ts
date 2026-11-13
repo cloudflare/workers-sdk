@@ -4,6 +4,7 @@ import { describe, it } from "vitest";
 import {
 	compareMigrationPaths,
 	getD1MigrationFiles,
+	readD1Migrations,
 } from "../src/d1-migrations";
 import { runInTempDir, seed } from "../src/test-helpers";
 
@@ -281,5 +282,51 @@ describe("compareMigrationPaths", () => {
 			"0001_posts/9_b.sql",
 			"0001_posts/10_c.sql",
 		]);
+	});
+});
+
+describe("readD1Migrations", () => {
+	runInTempDir();
+
+	it("reads nested D1 migrations when migrationsPattern is set", async ({
+		expect,
+	}) => {
+		await seed({
+			"drizzle/10_seed/migration.sql": "CREATE TABLE seed (id INTEGER);",
+			"drizzle/2_add_users/migration.sql": "CREATE TABLE users (id INTEGER);",
+			"drizzle/init/migration.sql": "CREATE TABLE init (id INTEGER);",
+			"drizzle/3_ignored/snapshot.json": "{}",
+		});
+
+		const migrations = await readD1Migrations({
+			projectPath: process.cwd(),
+			migrationsDir: "drizzle",
+			migrationsPattern: "drizzle/*/migration.sql",
+		});
+
+		expect(migrations).toEqual([
+			{
+				name: "2_add_users/migration.sql",
+				queries: ["CREATE TABLE users (id INTEGER);"],
+			},
+			{
+				name: "10_seed/migration.sql",
+				queries: ["CREATE TABLE seed (id INTEGER);"],
+			},
+			{
+				name: "init/migration.sql",
+				queries: ["CREATE TABLE init (id INTEGER);"],
+			},
+		]);
+	});
+
+	it("throws when the migrations directory does not exist", async ({
+		expect,
+	}) => {
+		await expect(
+			readD1Migrations({ migrationsDir: "missing-migrations" })
+		).rejects.toThrow(
+			`No migrations present at ${path.resolve("missing-migrations")}.`
+		);
 	});
 });

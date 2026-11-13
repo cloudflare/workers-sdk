@@ -4498,6 +4498,9 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 5.20261112.1
       '@cloudflare/workflows-shared':
         specifier: workspace:*
         version: link:../workflows-shared

@@ -23,6 +23,7 @@ Shared utility package used across wrangler, miniflare, and others. Two main are
 ### D1 migrations
 
 - `getD1MigrationFiles({ projectPath, migrationsDir, migrationsPattern })` — shared glob-based discovery used by Wrangler and the Vitest plugin. Honour `migrations_pattern` rather than recursively collecting every `.sql` file.
+- `readD1Migrations()` (also through `/d1-migrations`) reads those files into `D1Migration`s, and `applyD1Migrations()` (through `/apply-d1-migrations`) applies them and records them in the `d1_migrations` table that Wrangler and cf also use. `/apply-d1-migrations` runs inside workerd, so keep it free of Node.js imports.
 
 ### Shared runtime utilities
 
