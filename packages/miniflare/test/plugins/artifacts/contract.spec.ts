@@ -119,9 +119,17 @@ test("shared Artifacts contract runs against the local RPC binding and cleans up
 			outcome: "value",
 			value: null,
 		});
+	}
+	// Per the binding types, readBlob() returns null for a non-blob, while
+	// readTree() and readCommit() reject an object of another type.
+	expect(find("blob wrong type")).toMatchObject({
+		outcome: "value",
+		value: null,
+	});
+	for (const kind of ["tree", "commit"]) {
 		expect(find(`${kind} wrong type`)).toMatchObject({
-			outcome: "value",
-			value: null,
+			outcome: "error",
+			value: { code: "INTERNAL_ERROR" },
 		});
 	}
 	expect(find("file missing ref")).toMatchObject({
