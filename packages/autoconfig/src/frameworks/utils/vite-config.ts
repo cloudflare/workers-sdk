@@ -215,7 +215,7 @@ export function assertViteConfigCanBeTransformed(projectPath: string): void {
 		// Vite bundles these extensions as CommonJS even when they use ESM syntax.
 		// The Cloudflare plugin only exposes an ESM import entry point.
 		throw new UserError(
-			"Cannot automatically modify a CommonJS Vite configuration. Rename the configuration to vite.config.mjs or vite.config.mts before adding the Cloudflare plugin.",
+			"Cannot automatically modify a CommonJS Vite configuration. Convert it to ESM (import/export) in vite.config.mjs or vite.config.mts before adding the Cloudflare plugin.",
 			{ telemetryMessage: "autoconfig CommonJS vite config unsupported" }
 		);
 	}

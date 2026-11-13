@@ -111,7 +111,7 @@ describe("Vite framework", () => {
 					await expect(
 						framework.configure({ ...BASE_OPTIONS, dryRun })
 					).rejects.toThrow(
-						"Rename the configuration to vite.config.mjs or vite.config.mts"
+						"Convert it to ESM (import/export) in vite.config.mjs or vite.config.mts"
 					);
 					expect(cliPackages.installPackages).not.toHaveBeenCalled();
 					expect(readFileSync(filePath, "utf8")).toBe(content);

@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
 import semiver from "semiver";
+import { hasViteConfig } from "../frameworks/utils/vite-config";
 import type { AutoConfigCommandError } from "../types";
 import type { PackageJSON, PackageManager } from "@cloudflare/workers-utils";
 
@@ -24,6 +25,7 @@ export function usesVitePlus(packageJson?: PackageJSON): boolean {
  * before dependencies have been installed or framework setup has been applied.
  */
 export function getViteProjectCommands({
+	projectPath,
 	packageJson,
 	workspaceRoot,
 	packageManager,
@@ -31,6 +33,7 @@ export function getViteProjectCommands({
 	nodeModulesPaths,
 	resolveCommands,
 }: {
+	projectPath: string;
 	packageJson?: ProjectPackageJSON;
 	/** Only provided for configured applications inside a validated workspace. */
 	workspaceRoot?: string;
@@ -45,13 +48,16 @@ export function getViteProjectCommands({
 			error?: AutoConfigCommandError;
 	  }
 	| undefined {
-	const projectDependencies = getDeclaredDependencies(packageJson);
-	const workspacePackageJson = workspaceRoot
-		? readPackage(join(workspaceRoot, "package.json"))
-		: undefined;
+	const projectRunner = getViteRunner(packageJson);
+	// A sibling's shared tools do not make this a Vite application. A local
+	// runner declaration or Vite config opts it in without evaluating the config.
+	const workspacePackageJson =
+		workspaceRoot && (projectRunner || hasViteConfig(projectPath))
+			? readPackage(join(workspaceRoot, "package.json"))
+			: undefined;
 	const dependencies = {
 		...getDeclaredDependencies(workspacePackageJson),
-		...projectDependencies,
+		...getDeclaredDependencies(packageJson),
 	};
 	if (!("@cloudflare/vite-plugin" in dependencies)) {
 		return;
@@ -65,10 +71,7 @@ export function getViteProjectCommands({
 		"cf requires @cloudflare/vite-plugin >=2.0.0-beta.v.13 <3 for cf dev, cf build, cf deploy, and cf previews deploy.";
 	// An application's explicit runner takes priority over workspace defaults.
 	const packageName =
-		"vite-plus" in projectDependencies ||
-		(!("vite" in projectDependencies) && "vite-plus" in dependencies)
-			? "vite-plus"
-			: "vite";
+		projectRunner ?? getViteRunner(workspacePackageJson) ?? "vite";
 	const install = getInstallCommand(
 		packageManager.type,
 		packageName,
@@ -127,6 +130,18 @@ export function getViteProjectCommands({
 	};
 }
 
+/** Peer and optional declarations alone do not select a project's command runner. */
+function getViteRunner(
+	packageJson?: PackageJSON
+): "vite" | "vite-plus" | undefined {
+	if (usesVitePlus(packageJson)) {
+		return "vite-plus";
+	}
+	if (packageJson?.dependencies?.vite || packageJson?.devDependencies?.vite) {
+		return "vite";
+	}
+}
+
 function getDeclaredDependencies(packageJson?: ProjectPackageJSON) {
 	return {
 		...packageJson?.dependencies,
@@ -181,9 +196,13 @@ function getInstallCommand(
 		packageManager === "yarn" || packageManager === "bun"
 			? "add --dev"
 			: "install --save-dev";
-	const workspaceFlag =
-		isWorkspaceRoot && (packageManager === "pnpm" || packageManager === "nub")
-			? " --workspace-root"
-			: "";
+	const workspaceFlags = {
+		npm: "",
+		pnpm: " --workspace-root",
+		yarn: " -W",
+		bun: "",
+		nub: " --workspace-root",
+	};
+	const workspaceFlag = isWorkspaceRoot ? workspaceFlags[packageManager] : "";
 	return `${packageManager} ${command} @cloudflare/vite-plugin@beta ${packageName}${workspaceFlag}`;
 }

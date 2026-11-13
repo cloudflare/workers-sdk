@@ -403,6 +403,35 @@ export default { plugins: [cloudflare()] };`,
 		}
 	);
 
+	it.for([
+		["pnpm", "pnpm-lock.yaml", "install --save-dev", "--workspace-root"],
+		["yarn", "yarn.lock", "add --dev", "-W"],
+		["nub", "nub.lock", "install --save-dev", "--workspace-root"],
+	])(
+		"includes the %s workspace-root flag in repair guidance",
+		async ([manager, lockFile, command, flag], { expect }) => {
+			await seedProject();
+			await seed({
+				[lockFile]: "",
+				"package.json": JSON.stringify({
+					workspaces: ["apps/*", "."],
+					devDependencies: { "@cloudflare/vite-plugin": "beta", vite: "*" },
+				}),
+				...(manager === "yarn"
+					? {}
+					: { "pnpm-workspace.yaml": "packages: ['apps/*', '.']\n" }),
+				"apps/site/package.json": JSON.stringify({ name: "site" }),
+			});
+			await removeDir("node_modules/@cloudflare/vite-plugin");
+			const details = await getDetailsForAutoConfig({ context });
+			expect(details.isWorkspaceRoot).toBe(true);
+			expect(details.packageManager.type).toBe(manager);
+			expect(details.commandError?.message).toContain(
+				`Run ${manager} ${command} @cloudflare/vite-plugin@beta vite ${flag}.`
+			);
+		}
+	);
+
 	it.for([false, true])(
 		"uses tools declared only at the validated workspace root (Vite+: %s)",
 		async (vitePlus, { expect }) => {
@@ -434,6 +463,54 @@ export default { plugins: [cloudflare()] };`,
 				context,
 			});
 			expect(missing.commandError?.code).toBe("vite-plugin-not-installed");
+		}
+	);
+
+	it("does not select shared Vite tools for a configured non-Vite sibling", async ({
+		expect,
+	}) => {
+		await seedProject();
+		await seed({
+			"package.json": JSON.stringify({
+				workspaces: ["apps/*"],
+				devDependencies: { "@cloudflare/vite-plugin": "beta", vite: "*" },
+			}),
+			"apps/site/package.json": JSON.stringify({ name: "site" }),
+			"apps/site/vite.config.ts": "export default {};",
+			"apps/api/package.json": JSON.stringify({
+				name: "api",
+				main: "src/index.ts",
+			}),
+			"apps/api/cloudflare.config.ts": "export default {};",
+			"apps/api/src/index.ts":
+				"export default { fetch() { return new Response('API'); } };",
+		});
+		const details = await getDetailsForAutoConfig({
+			projectPath: resolve("apps/api"),
+			context,
+		});
+		expect(details.configured).toBe(true);
+		expect(details.commandError).toBeUndefined();
+		expect(details.devCommand).toBeUndefined();
+		expect(details.buildCommand).toBeUndefined();
+	});
+
+	it.for(["peerDependencies", "optionalDependencies"])(
+		"prefers a concrete Vite dependency over Vite+ in %s",
+		async (dependencyType, { expect }) => {
+			const binary = await seedProject();
+			await seed({
+				"package.json": JSON.stringify({
+					devDependencies: { "@cloudflare/vite-plugin": "beta", vite: "*" },
+					[dependencyType]: { "vite-plus": "*" },
+					peerDependenciesMeta: { "vite-plus": { optional: true } },
+				}),
+			});
+			await omitFrameworkCommands();
+			const details = await getDetailsForAutoConfig({ context });
+			expect(details.commandError).toBeUndefined();
+			expect(details.devCommand).toBe(`${invocation(binary)} dev`);
+			expect(details.buildCommand).toBe(`${invocation(binary)} build`);
 		}
 	);
 
