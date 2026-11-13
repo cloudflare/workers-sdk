@@ -379,7 +379,7 @@ export async function handleEmail(
 					});
 					return result;
 				},
-			} satisfies ForwardableEmailMessage
+			} satisfies Omit<ForwardableEmailMessage, "canBeForwarded">
 		);
 
 		if (params.get("format") !== "json") {
