@@ -334,14 +334,23 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 	async function refreshToken(
 		profile?: string
 	): Promise<"refreshed" | "rejected" | "unreachable"> {
-		// `exchangeRefreshTokenForAccessToken` reads the refresh token fresh from
-		// disk on every call, so we always pick up the latest rotation written by a
-		// sibling Wrangler process. Refresh tokens are single-use, so a long-lived
-		// process such as `wrangler dev` would otherwise send a stale value and get
-		// a 401 from the token endpoint.
 		const storage = getStorage(profile);
 
 		try {
+			// A sibling may have refreshed since the caller checked expiry. Use
+			// one fresh snapshot for both the expiry decision and the exchange.
+			const stored = readStoredAuthState({
+				warningLogger: ctx.logger,
+				storage,
+			});
+			if (
+				stored.accessToken &&
+				new Date() < new Date(stored.accessToken.expiry)
+			) {
+				// Reusing credentials must not write an older snapshot back to disk.
+				return "refreshed";
+			}
+
 			const {
 				token: { value: oauth_token, expiry: expiration_time } = {
 					value: "",
@@ -353,7 +362,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				ctx.logger,
 				ctx.isNonInteractiveOrCI,
 				getClientId(),
-				storage,
+				stored.refreshToken,
 				ctx.cliDisplayName
 			);
 			storage.write({
