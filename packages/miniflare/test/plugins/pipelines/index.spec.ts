@@ -15,7 +15,7 @@ test("supports declaring pipelines", async () => {
             return new Response(null, { status: 204 });
         },
     }`),
-					env: { PIPELINE: { type: "pipeline", name: "PIPELINE" } },
+					env: { PIPELINE: { type: "pipeline", streamId: "PIPELINE" } },
 				},
 			},
 		],

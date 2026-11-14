@@ -11,7 +11,10 @@ import {
 	installPackages,
 	installWrangler,
 } from "@cloudflare/cli-shared-helpers/packages";
-import { convertToWranglerConfig, InputConfigSchema } from "@cloudflare/config";
+import {
+	convertToWranglerConfig,
+	CloudflareConfigSchema,
+} from "@cloudflare/config";
 import {
 	DEFAULT_COMPAT_DATE,
 	FatalError,
@@ -430,7 +433,7 @@ function getWranglerConfig(
 		return null;
 	}
 
-	const parsedConfig = InputConfigSchema.parse({ worker: workerConfig });
+	const parsedConfig = CloudflareConfigSchema.parse({ worker: workerConfig });
 	const convertedWranglerConfig = convertToWranglerConfig(parsedConfig);
 	const wranglerConfig = ensureNodejsCompatIsEnabled({
 		$schema: "node_modules/wrangler/config-schema.json",

@@ -18,7 +18,7 @@ export const PIPELINE_PLUGIN: Plugin = {
 	getBindings(options) {
 		return getEnvBindingsOfType(options.config, "pipeline").map<Worker_Binding>(
 			([name, binding]) => {
-				const id = binding.name;
+				const id = binding.streamId;
 				const remoteProxyConnectionString = getRemoteProxyConnectionString(
 					binding,
 					options.dev
@@ -54,7 +54,7 @@ export const PIPELINE_PLUGIN: Plugin = {
 				continue;
 			}
 			services.push({
-				name: `${SERVICE_PIPELINE_PREFIX}:${binding.name}`,
+				name: `${SERVICE_PIPELINE_PREFIX}:${binding.streamId}`,
 				worker: {
 					compatibilityDate: "2024-12-30",
 					modules: [

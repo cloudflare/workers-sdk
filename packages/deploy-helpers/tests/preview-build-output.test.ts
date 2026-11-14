@@ -9,8 +9,8 @@ import type {
 	PreviewOptions,
 } from "../src/preview/preview";
 import type {
-	ParsedOutputRootConfig,
-	ParsedOutputWorkerConfig,
+	ParsedBuildOutputRootConfig,
+	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
 
 const mocks = vi.hoisted(() => ({
@@ -78,8 +78,8 @@ const buildResult: PreviewBuildOutput["buildResult"] = {
 const validRootConfig = { buildContext: { isPreview: true } } as const;
 
 function buildOutputConfig(
-	overrides: Partial<ParsedOutputWorkerConfig> = {}
-): ParsedOutputWorkerConfig {
+	overrides: Partial<ParsedBuildOutputWorkerConfig> = {}
+): ParsedBuildOutputWorkerConfig {
 	return {
 		name: "preview-worker",
 		compatibilityDate: "2026-09-17",
@@ -88,7 +88,7 @@ function buildOutputConfig(
 }
 
 function uploadPreview(
-	config: ParsedOutputWorkerConfig,
+	config: ParsedBuildOutputWorkerConfig,
 	assets?: PreviewBuildOutput["assets"]
 ) {
 	return previewBuildOutput(
@@ -678,7 +678,7 @@ describe("previewBuildOutput", () => {
 		expect(mocks.createPreviewDeployment).not.toHaveBeenCalled();
 	});
 
-	it.for<[string, ParsedOutputRootConfig | undefined]>([
+	it.for<[string, ParsedBuildOutputRootConfig | undefined]>([
 		["missing", undefined],
 		["non-Preview", { buildContext: { isPreview: false } }],
 	])("rejects $0 Preview intent", async ([, rootConfig], { expect }) => {
@@ -697,7 +697,7 @@ describe("previewBuildOutput", () => {
 		expect(mocks.getPreview).not.toHaveBeenCalled();
 	});
 
-	it.for<NonNullable<ParsedOutputWorkerConfig["domains"]>>([
+	it.for<NonNullable<ParsedBuildOutputWorkerConfig["domains"]>>([
 		["example.com"],
 		[{ hostname: "example.com", production: true, previews: false }],
 		[{ hostname: "previews.example.com", production: false, previews: true }],
@@ -728,7 +728,7 @@ describe("previewBuildOutput", () => {
 		expect(config.domains).toEqual(domains);
 	});
 
-	it.for<[string, Partial<ParsedOutputWorkerConfig>]>([
+	it.for<[string, Partial<ParsedBuildOutputWorkerConfig>]>([
 		["triggers", { triggers: [{ type: "scheduled", schedule: "0 * * * *" }] }],
 		[
 			"streaming tail consumers",

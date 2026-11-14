@@ -2,9 +2,9 @@ import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import {
-	OutputContainerSchema,
-	OutputRootConfigSchema,
-	OutputWorkerSchema,
+	BuildOutputContainerConfigSchema,
+	BuildOutputRootConfigSchema,
+	BuildOutputWorkerConfigSchema,
 } from "@cloudflare/config";
 import { BuildOutputError } from "./errors";
 import {
@@ -22,23 +22,23 @@ import {
 } from "./paths";
 import type {
 	ModuleType,
-	ParsedOutputContainerConfig,
-	ParsedOutputRootConfig,
-	ParsedOutputWorkerConfig,
+	ParsedBuildOutputContainerConfig,
+	ParsedBuildOutputRootConfig,
+	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
 
 type ManifestModules = NonNullable<
-	ParsedOutputWorkerConfig["manifest"]
+	ParsedBuildOutputWorkerConfig["manifest"]
 >["modules"];
 
 type CompleteManifest = Omit<
-	NonNullable<ParsedOutputWorkerConfig["manifest"]>,
+	NonNullable<ParsedBuildOutputWorkerConfig["manifest"]>,
 	"type"
 > & { type: "complete" };
 
 /** A parsed Worker config whose manifest has been fully resolved. */
 export type ResolvedOutputWorkerConfig = Omit<
-	ParsedOutputWorkerConfig,
+	ParsedBuildOutputWorkerConfig,
 	"manifest"
 > & {
 	manifest?: CompleteManifest;
@@ -86,7 +86,7 @@ export interface BuildOutputContainer {
 	/** Absolute path to the Container's `container.config.json`. */
 	configPath: string;
 	/** The parsed Container config. */
-	config: ParsedOutputContainerConfig;
+	config: ParsedBuildOutputContainerConfig;
 }
 
 /** Containers found in the Build Output Specification tree. */
@@ -103,7 +103,7 @@ export interface BuildOutput {
 	/**
 	 * The parsed root `config.json`.
 	 */
-	rootConfig: ParsedOutputRootConfig;
+	rootConfig: ParsedBuildOutputRootConfig;
 	/**
 	 * The deployable Workers found under
 	 * `<root>/.cloudflare/output/v0/workers/`, keyed by their directory names.
@@ -256,7 +256,7 @@ async function readContainer(
 	}
 
 	const contents = await fsp.readFile(configPath, "utf-8");
-	const result = OutputContainerSchema.safeParse(
+	const result = BuildOutputContainerConfigSchema.safeParse(
 		parseJson(contents, configPath)
 	);
 	if (!result.success) {
@@ -288,7 +288,9 @@ async function readWorker(
 	}
 
 	const contents = await fsp.readFile(configPath, "utf-8");
-	const result = OutputWorkerSchema.safeParse(parseJson(contents, configPath));
+	const result = BuildOutputWorkerConfigSchema.safeParse(
+		parseJson(contents, configPath)
+	);
 	if (!result.success) {
 		throw new BuildOutputError(
 			`invalid Worker config at ${configPath}.\n${result.error.message}`
@@ -325,7 +327,7 @@ async function readWorker(
 
 /** Resolve the manifest against the bundle contents. */
 async function resolveManifest(
-	config: ParsedOutputWorkerConfig,
+	config: ParsedBuildOutputWorkerConfig,
 	configPath: string,
 	bundleDir: string
 ): Promise<ResolvedOutputWorkerConfig> {
@@ -402,7 +404,9 @@ function inferModuleType(modulePath: string): ModuleType | undefined {
  * @throws {BuildOutputError} if the file is missing, is not valid JSON, or
  * does not match its schema.
  */
-async function readRootConfig(root: string): Promise<ParsedOutputRootConfig> {
+async function readRootConfig(
+	root: string
+): Promise<ParsedBuildOutputRootConfig> {
 	const configPath = getRootConfigPath(root);
 
 	if (!fs.existsSync(configPath)) {
@@ -410,7 +414,7 @@ async function readRootConfig(root: string): Promise<ParsedOutputRootConfig> {
 	}
 
 	const contents = await fsp.readFile(configPath, "utf-8");
-	const result = OutputRootConfigSchema.safeParse(
+	const result = BuildOutputRootConfigSchema.safeParse(
 		parseJson(contents, configPath)
 	);
 	if (!result.success) {

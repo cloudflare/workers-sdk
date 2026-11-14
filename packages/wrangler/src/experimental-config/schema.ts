@@ -105,7 +105,7 @@ export const WORKER_CONFIG_FIELD_HINTS = new Set<string>([
 	"workersDev",
 	"previewUrls",
 	"complianceRegion",
-	"firstPartyWorker",
+	"experimental",
 	"unsafe",
 	"env",
 	"exports",

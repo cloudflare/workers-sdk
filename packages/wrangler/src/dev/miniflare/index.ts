@@ -23,7 +23,7 @@ import { getDurableObjectClassNameToUseSQLiteMap } from "../class-names-sqlite";
 import type { StartDevWorkerInput } from "../../api/startDevWorker/types";
 import type { LoggerLevel } from "../../logger";
 import type { EsbuildBundle } from "../use-esbuild";
-import type { WorkflowEvent } from "@cloudflare/config";
+import type { ArtifactsEventSubscription } from "@cloudflare/config";
 import type { ContainerDevRuntimeOptions } from "@cloudflare/containers-shared";
 import type {
 	ArtifactsEventTrigger,
@@ -413,14 +413,14 @@ function workflowEntry(
 		script_name: scriptName,
 		limits,
 	}: CfWorkflow,
-	events: WorkflowEvent[] | undefined
+	events: ArtifactsEventSubscription[] | undefined
 ): [
 	string,
 	{
 		name: string;
 		className: string;
 		scriptName?: string;
-		events?: WorkflowEvent[];
+		events?: ArtifactsEventSubscription[];
 		stepLimit?: number;
 	},
 ] {
@@ -1326,8 +1326,8 @@ export async function buildMiniflareOptions(
 
 /** Workflow-owned events, keyed by export class name or binding name. */
 interface WorkflowEventAssignment {
-	exports: Map<string, WorkflowEvent[]>;
-	bindings: Map<string, WorkflowEvent[]>;
+	exports: Map<string, ArtifactsEventSubscription[]>;
+	bindings: Map<string, ArtifactsEventSubscription[]>;
 }
 
 /**
@@ -1352,10 +1352,10 @@ function assignWorkflowEvents(
 	if (!triggers?.length) {
 		return assignment;
 	}
-	const owners = new Map<string, WorkflowEvent[]>();
+	const owners = new Map<string, ArtifactsEventSubscription[]>();
 	for (const [className, { name }] of Object.entries(exportedWorkflows)) {
 		if (!owners.has(name)) {
-			const events: WorkflowEvent[] = [];
+			const events: ArtifactsEventSubscription[] = [];
 			owners.set(name, events);
 			assignment.exports.set(className, events);
 		}
@@ -1364,7 +1364,7 @@ function assignWorkflowEvents(
 		const local =
 			workflow.script_name === undefined || workflow.script_name === scriptName;
 		if (local && !owners.has(workflow.name)) {
-			const events: WorkflowEvent[] = [];
+			const events: ArtifactsEventSubscription[] = [];
 			owners.set(workflow.name, events);
 			assignment.bindings.set(workflow.binding, events);
 		}

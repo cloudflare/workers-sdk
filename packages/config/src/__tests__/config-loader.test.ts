@@ -130,9 +130,7 @@ describe("resolveAndParseConfig", () => {
 		}
 	});
 
-	it("accepts an inline Worker and defaults containers to an empty array", async ({
-		expect,
-	}) => {
+	it("accepts an inline Worker without containers", async ({ expect }) => {
 		const result = await resolveAndParseConfig(
 			{
 				worker: { name: "web", compatibilityDate },
@@ -143,7 +141,7 @@ describe("resolveAndParseConfig", () => {
 		expect(result.success).toBe(true);
 		if (result.success) {
 			expect(result.data.worker?.name).toBe("web");
-			expect(result.data.containers).toEqual([]);
+			expect(result.data.containers).toBeUndefined();
 		}
 	});
 
@@ -178,7 +176,6 @@ describe("resolveAndParseConfig", () => {
 			data: {
 				accountId: "account-id",
 				complianceRegion: "public",
-				containers: [],
 			},
 		});
 	});

@@ -680,7 +680,7 @@ function addProductBindings(
 	}
 	if (worker.analyticsSql !== undefined) {
 		env[worker.analyticsSql.binding] = {
-			type: "analytics",
+			type: "analytics-sql",
 			dev: {
 				remote: isRemote(worker.analyticsSql.remoteProxyConnectionString),
 			},
@@ -741,7 +741,7 @@ function addProductBindings(
 	for (const [name, binding] of Object.entries(worker.k2 ?? {})) {
 		env[name] = {
 			type: "k2",
-			stream: binding.stream,
+			id: binding.stream,
 			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
@@ -864,14 +864,14 @@ function addPipelineBindings(
 	}
 	if (Array.isArray(pipelines)) {
 		for (const name of pipelines) {
-			env[name] = { type: "pipeline", name };
+			env[name] = { type: "pipeline", streamId: name };
 		}
 		return;
 	}
 	for (const [name, binding] of Object.entries(pipelines)) {
 		env[name] = {
 			type: "pipeline",
-			name:
+			streamId:
 				typeof binding === "string"
 					? binding
 					: "stream" in binding

@@ -14,8 +14,8 @@ export const ARTIFACTS_EVENT_TYPES = [
 /** A published Artifacts event type. */
 export type ArtifactsEventType = (typeof ARTIFACTS_EVENT_TYPES)[number];
 
-/** An Artifacts event that starts the Workflow declaring it. */
-export interface WorkflowEvent {
+/** A subscription to an Artifacts event that starts the Workflow declaring it. */
+export interface ArtifactsEventSubscription {
 	type: ArtifactsEventType;
 	filter?: { namespace?: string; repoName?: string };
 }

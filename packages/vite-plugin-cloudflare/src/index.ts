@@ -52,8 +52,8 @@ export type {
 	// eslint-disable-next-line @typescript-eslint/no-deprecated -- Preserve the deprecated public type for compatibility.
 	ParsedInputConfigWithWorker,
 	PluginConfig,
+	WorkerConfig,
 } from "./plugin-config";
-export type { WorkerConfig } from "@cloudflare/config";
 
 const sharedContext: SharedContext = {
 	configChangeCoordinator: new ConfigChangeCoordinator(),

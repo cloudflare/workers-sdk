@@ -47,6 +47,10 @@
 		"vitest": "catalog:default"
 	},
 	"workers-sdk": {
-		"prerelease": true
+		"prerelease": true,
+		"npmPrerelease": {
+			"tag": "rc",
+			"numbered": true
+		}
 	}
 }

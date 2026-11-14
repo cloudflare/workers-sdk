@@ -1,8 +1,8 @@
 import * as z from "zod";
 import { loadConfig } from "./load";
-import { InputConfigSchema, InputSettingsSchema } from "./schema";
+import { CloudflareConfigSchema, SettingsSchema } from "./schema";
 import type { ConfigContext } from "./definition";
-import type { ParsedInputConfig, ParsedInputSettingsConfig } from "./schema";
+import type { ParsedCloudflareConfig, ParsedSettings } from "./schema";
 
 const CROSS_WORKER_BINDING_TYPES = new Set([
 	"durable-object",
@@ -18,11 +18,11 @@ interface NormalizeWorkerResult {
 }
 
 export type ConfigParseResult =
-	| z.ZodSafeParseSuccess<ParsedInputConfig>
+	| z.ZodSafeParseSuccess<ParsedCloudflareConfig>
 	| z.ZodSafeParseError<unknown>;
 
 export type ConfigSettingsParseResult =
-	| z.ZodSafeParseSuccess<ParsedInputSettingsConfig>
+	| z.ZodSafeParseSuccess<ParsedSettings>
 	| z.ZodSafeParseError<unknown>;
 
 export interface LoadAndParseConfigResult {
@@ -211,7 +211,7 @@ export async function resolveAndParseConfig(
 	const resolveDefinition = createDefinitionResolver(ctx);
 	const resolved = await resolveDefinition(input);
 	if (!isRecord(resolved)) {
-		return InputConfigSchema.safeParse(resolved);
+		return CloudflareConfigSchema.safeParse(resolved);
 	}
 
 	const containerInputs = Array.isArray(resolved.containers)
@@ -235,7 +235,7 @@ export async function resolveAndParseConfig(
 			: { worker: normalizedWorker.value }),
 		...(Array.isArray(resolved.containers) ? { containers } : {}),
 	};
-	const result = InputConfigSchema.safeParse(candidate);
+	const result = CloudflareConfigSchema.safeParse(candidate);
 	const issues = [...prefixIssues(normalizedWorker.issues, "worker")];
 
 	if (!result.success) {
@@ -253,7 +253,7 @@ export async function resolveAndParseConfigSettings(
 	ctx: ConfigContext
 ): Promise<ConfigSettingsParseResult> {
 	const resolved = await createDefinitionResolver(ctx)(input);
-	return InputSettingsSchema.safeParse(resolved);
+	return SettingsSchema.safeParse(resolved);
 }
 
 /** Load and parse `cloudflare.config.ts`'s default export. */

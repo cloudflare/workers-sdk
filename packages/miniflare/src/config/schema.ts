@@ -13,9 +13,9 @@ import {
 	FlagshipBindingSchema,
 	HyperdriveBindingSchema,
 	KnownBindingSchema,
-	KVBindingSchema,
+	KvBindingSchema,
 	ModuleTypeSchema,
-	OutputWorkerSchema,
+	BuildOutputWorkerConfigSchema,
 	QueueBindingSchema,
 	R2BindingSchema,
 	UnsafeBindingSchema,
@@ -23,7 +23,7 @@ import {
 	WorkerEntrypointExportSchema,
 	WorkflowBindingSchema,
 	WorkflowExportSchema,
-	WorkflowEventSchema,
+	ArtifactsEventSubscriptionSchema,
 	TailConsumerSchema,
 	validateSingletonBindings,
 } from "@cloudflare/config";
@@ -229,7 +229,7 @@ const MiniflareWorkflowBindingSchema = WorkflowBindingSchema.extend({
 	unsafeConfig: z
 		.strictObject({
 			limits: z.strictObject({ steps: z.number().optional() }).optional(),
-			events: z.array(WorkflowEventSchema).optional(),
+			events: z.array(ArtifactsEventSubscriptionSchema).optional(),
 		})
 		.optional(),
 });
@@ -269,7 +269,7 @@ const MiniflareKnownBindingSchema = z.discriminatedUnion("type", [
 	...PassthroughBindingSchemas,
 ]);
 
-const ParsedMiniflareKVBindingSchema = KVBindingSchema.omit({
+const ParsedMiniflareKvBindingSchema = KvBindingSchema.omit({
 	id: true,
 }).extend({
 	id: z.string(),
@@ -307,7 +307,7 @@ const ParsedMiniflareQueueBindingSchema = QueueBindingSchema.omit({
 });
 
 const OVERRIDDEN_PARSED_BINDING_SCHEMAS = [
-	KVBindingSchema,
+	KvBindingSchema,
 	D1BindingSchema,
 	FlagshipBindingSchema,
 	R2BindingSchema,
@@ -327,7 +327,7 @@ const ParsedPassthroughBindingSchemas =
 	>[];
 
 export const ParsedMiniflareKnownBindingSchema = z.discriminatedUnion("type", [
-	ParsedMiniflareKVBindingSchema,
+	ParsedMiniflareKvBindingSchema,
 	ParsedMiniflareD1BindingSchema,
 	ParsedMiniflareFlagshipBindingSchema,
 	ParsedMiniflareR2BindingSchema,
@@ -456,7 +456,7 @@ const MiniflareExperimentalSchema = ExperimentalSchema.extend({
 });
 
 // ---------------------------------------------------------------------------
-// Worker config schema (extends OutputWorkerSchema)
+// Worker config schema (extends BuildOutputWorkerConfigSchema)
 // ---------------------------------------------------------------------------
 
 /** A single parsed `config.env` binding (known, miniflare-extended, or unsafe). */
@@ -471,24 +471,25 @@ export function isMiniflareUnsafeBinding(
 	return binding.type.startsWith("unsafe:");
 }
 
-export const MiniflareWorkerConfigBaseSchema = OutputWorkerSchema.omit({
-	manifest: true,
-	env: true,
-	exports: true,
-	assets: true,
-	tailConsumers: true,
-	experimental: true,
-}).extend({
-	manifest: MiniflareManifestSchema.optional(),
-	env: z
-		.record(z.string(), MiniflareBindingSchema)
-		.superRefine(validateSingletonBindings)
-		.optional(),
-	exports: MiniflareExportsSchema.optional(),
-	assets: MiniflareAssetsSchema.optional(),
-	tailConsumers: z.array(MiniflareTailConsumerSchema).optional(),
-	experimental: MiniflareExperimentalSchema.optional(),
-});
+export const MiniflareWorkerConfigBaseSchema =
+	BuildOutputWorkerConfigSchema.omit({
+		manifest: true,
+		env: true,
+		exports: true,
+		assets: true,
+		tailConsumers: true,
+		experimental: true,
+	}).extend({
+		manifest: MiniflareManifestSchema.optional(),
+		env: z
+			.record(z.string(), MiniflareBindingSchema)
+			.superRefine(validateSingletonBindings)
+			.optional(),
+		exports: MiniflareExportsSchema.optional(),
+		assets: MiniflareAssetsSchema.optional(),
+		tailConsumers: z.array(MiniflareTailConsumerSchema).optional(),
+		experimental: MiniflareExperimentalSchema.optional(),
+	});
 
 export type ParsedMiniflareWorkerConfig = Omit<
 	z.output<typeof MiniflareWorkerConfigBaseSchema>,
