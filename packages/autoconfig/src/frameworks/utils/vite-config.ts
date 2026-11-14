@@ -226,6 +226,7 @@ export function transformViteConfig(
 	options: {
 		viteEnvironmentName?: string;
 		incompatibleVitePlugins?: string[];
+		remoteBindings?: boolean;
 	} = {}
 ) {
 	const filePath = getViteConfigPath(projectPath);
@@ -366,24 +367,33 @@ export function transformViteConfig(
 						el.callee.name === "cloudflare"
 				)
 			) {
+				const pluginOptions: types.namedTypes.ObjectProperty[] = [];
+				if (options.remoteBindings !== undefined) {
+					pluginOptions.push(
+						b.objectProperty(
+							b.identifier("remoteBindings"),
+							b.booleanLiteral(options.remoteBindings)
+						)
+					);
+				}
+				if (options.viteEnvironmentName) {
+					pluginOptions.push(
+						b.objectProperty(
+							b.identifier("viteEnvironment"),
+							b.objectExpression([
+								b.objectProperty(
+									b.identifier("name"),
+									b.stringLiteral(options.viteEnvironmentName)
+								),
+							])
+						)
+					);
+				}
 				pluginsProp.value.elements.push(
-					b.callExpression(b.identifier("cloudflare"), [
-						...(options.viteEnvironmentName
-							? [
-									b.objectExpression([
-										b.objectProperty(
-											b.identifier("viteEnvironment"),
-											b.objectExpression([
-												b.objectProperty(
-													b.identifier("name"),
-													b.stringLiteral(options.viteEnvironmentName)
-												),
-											])
-										),
-									]),
-								]
-							: []),
-					])
+					b.callExpression(
+						b.identifier("cloudflare"),
+						pluginOptions.length ? [b.objectExpression(pluginOptions)] : []
+					)
 				);
 			}
 

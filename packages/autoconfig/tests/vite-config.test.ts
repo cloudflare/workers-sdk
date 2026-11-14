@@ -174,6 +174,40 @@ export default defineConfig({
 	});
 
 	describe("transformViteConfig", () => {
+		it.for([false, true])(
+			"configures remoteBindings=%s alongside the Vite environment",
+			async (remoteBindings, { expect }) => {
+				await writeFile(
+					"vite.config.ts",
+					`import { defineConfig } from "vite";
+export default defineConfig({ plugins: [] });`
+				);
+
+				transformViteConfig(".", {
+					remoteBindings,
+					viteEnvironmentName: "ssr",
+				});
+
+				const content = readFileSync("vite.config.ts", "utf8");
+				expect(content).toContain(`remoteBindings: ${remoteBindings}`);
+				expect(content).toContain('name: "ssr"');
+			}
+		);
+
+		it.for(["cloudflare({ remoteBindings: true })", "cloudflare(options)"])(
+			"preserves existing user-supplied plugin options: %s",
+			async (plugin, { expect }) => {
+				const content = `import { defineConfig } from "vite";
+import { cloudflare } from "@cloudflare/vite-plugin";
+export default defineConfig({ plugins: [${plugin}] });`;
+				await writeFile("vite.config.ts", content);
+
+				transformViteConfig(".", { remoteBindings: false });
+
+				expect(readFileSync("vite.config.ts", "utf8")).toBe(content);
+			}
+		);
+
 		it.for(["cjs", "cts"])(
 			"does not insert ESM imports into a .%s file even with ESM syntax",
 			async (extension, { expect }) => {

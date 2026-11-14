@@ -509,6 +509,7 @@ export class ReactRouter extends Framework {
 			transformViteConfig(projectPath, {
 				viteEnvironmentName: "ssr",
 				incompatibleVitePlugins: ["netlifyReactRouter"],
+				remoteBindings: target === "cf" ? false : undefined,
 			});
 
 			if (needsViteEnvAPIFutureFlag(this.frameworkVersion)) {

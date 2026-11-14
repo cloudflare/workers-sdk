@@ -54,9 +54,11 @@ export class Vite extends Framework {
 			});
 
 			if (hasViteConfig(projectPath)) {
-				transformViteConfig(projectPath);
+				transformViteConfig(projectPath, {
+					remoteBindings: target === "cf" ? false : undefined,
+				});
 			} else {
-				createViteConfig(projectPath);
+				createViteConfig(projectPath, target);
 			}
 		}
 
@@ -79,14 +81,14 @@ export class Vite extends Framework {
  * The file extension (`.ts` or `.js`) is chosen based on whether the project
  * has a `tsconfig.json`.
  */
-function createViteConfig(projectPath: string): void {
+function createViteConfig(projectPath: string, target: AutoConfigTarget): void {
 	const ext = usesTypescript(projectPath) ? "ts" : "js";
 	const filePath = join(projectPath, `vite.config.${ext}`);
 	const content = `import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-\tplugins: [cloudflare()],
+\tplugins: [cloudflare(${target === "cf" ? "{ remoteBindings: false }" : ""})],
 });
 `;
 	writeFileSync(filePath, content);
