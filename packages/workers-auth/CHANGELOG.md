@@ -1,5 +1,16 @@
 # @cloudflare/workers-auth
 
+## 0.18.3
+
+### Patch Changes
+
+- [#16874](https://github.com/cloudflare/workers-sdk/pull/16874) [`4335eac`](https://github.com/cloudflare/workers-sdk/commit/4335eacef350c98722418fbb58b012a6964e26d7) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Avoid redundant OAuth refreshes after a sibling process updates credentials
+
+  Check access-token expiry and select the refresh token from the same fresh credential snapshot. When a sibling has already saved a valid access token, reuse it without another exchange or write. This prevents an unnecessary rotation that can let an older response overwrite a newer refresh token.
+
+- Updated dependencies [[`349fc4e`](https://github.com/cloudflare/workers-sdk/commit/349fc4e7443aa744cbe129f84f28571bf8625155)]:
+  - @cloudflare/workers-utils@0.54.1
+
 ## 0.18.2
 
 ### Patch Changes
