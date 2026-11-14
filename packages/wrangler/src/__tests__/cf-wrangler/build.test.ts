@@ -35,24 +35,24 @@ describe("cf-wrangler build", () => {
 		expect(exitCode).toBe(0);
 		expect(
 			fs.existsSync(
-				path.resolve(".cloudflare/output/v0/workers/default/worker.config.json")
+				path.resolve(".cloudflare/output/v1/workers/default/worker.config.json")
 			)
 		).toBe(true);
 		expect(
 			fs.existsSync(
-				path.resolve(".cloudflare/output/v0/workers/default/bundle/index.js")
+				path.resolve(".cloudflare/output/v1/workers/default/bundle/index.js")
 			)
 		).toBe(true);
 		const worker = JSON.parse(
 			fs.readFileSync(
 				path.resolve(
-					".cloudflare/output/v0/workers/default/worker.config.json"
+					".cloudflare/output/v1/workers/default/worker.config.json"
 				),
 				"utf8"
 			)
 		);
 		const rootConfig = JSON.parse(
-			fs.readFileSync(path.resolve(".cloudflare/output/v0/config.json"), "utf8")
+			fs.readFileSync(path.resolve(".cloudflare/output/v1/config.json"), "utf8")
 		);
 
 		expect(worker).toMatchObject({ name: "preview-worker" });
@@ -80,7 +80,7 @@ describe("cf-wrangler build", () => {
 
 		const exitCode = await runCfWranglerBuild({});
 		const assetsDir = path.resolve(
-			".cloudflare/output/v0/workers/default/assets"
+			".cloudflare/output/v1/workers/default/assets"
 		);
 
 		expect(exitCode).toBe(0);

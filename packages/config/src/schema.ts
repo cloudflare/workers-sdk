@@ -967,12 +967,28 @@ const BuildContextSchema = z.strictObject({
 });
 
 /**
+ * The tool that wrote a Build Output Specification tree, such as a framework
+ * adapter or build plugin. Used only in diagnostics, never for deploy
+ * behaviour.
+ */
+export const BuildOutputProducerSchema = z.strictObject({
+	name: z.string(),
+	version: z.string(),
+});
+
+export type ParsedBuildOutputProducer = z.output<
+	typeof BuildOutputProducerSchema
+>;
+
+/**
  * The shape of the root `config.json` in the Build Output Specification.
- * Account settings remain at the top level while build context is grouped
- * under `buildContext`.
+ * Account settings are grouped under `settings` and build context under
+ * `buildContext`. `settings` is omitted when there are none. `producer` is
+ * optional because it doesn't affect what gets deployed.
  */
 export const BuildOutputRootConfigSchema = z.strictObject({
-	...SettingsSchema.shape,
+	producer: BuildOutputProducerSchema.optional(),
+	settings: z.strictObject(SettingsSchema.shape).optional(),
 	buildContext: BuildContextSchema,
 });
 

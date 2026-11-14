@@ -141,7 +141,7 @@ describe("findCloudflareBuildOutput", () => {
 		expect(findCloudflareBuildOutput(process.cwd())).toBeUndefined();
 	});
 
-	it("ignores a `.cloudflare/output` directory with no versioned root config", async ({
+	it("ignores a `.cloudflare/output` directory with no version directory", async ({
 		expect,
 	}) => {
 		await seed({ ".cloudflare/output/notes.md": "an unrelated output folder" });
@@ -149,8 +149,50 @@ describe("findCloudflareBuildOutput", () => {
 		expect(findCloudflareBuildOutput(process.cwd())).toBeUndefined();
 	});
 
-	it("ignores a root config path that is a directory", async ({ expect }) => {
-		fs.mkdirSync(getRootConfigPath(process.cwd()), { recursive: true });
+	it.for(["v0", "v2", "v10"])(
+		"detects Build Output in a %s directory",
+		async (version, { expect }) => {
+			await seed({
+				[`.cloudflare/output/${version}/config.json`]: JSON.stringify({}),
+			});
+
+			expect(findCloudflareBuildOutput(process.cwd())).toBe(
+				path.resolve(".cloudflare/output")
+			);
+		}
+	);
+
+	it("detects a symlinked version directory", async ({ expect }) => {
+		await seed({ "linked-output/config.json": JSON.stringify({}) });
+		fs.mkdirSync(".cloudflare/output", { recursive: true });
+		fs.symlinkSync(
+			path.resolve("linked-output"),
+			path.resolve(".cloudflare/output/v1"),
+			"dir"
+		);
+
+		expect(findCloudflareBuildOutput(process.cwd())).toBe(
+			path.resolve(".cloudflare/output")
+		);
+	});
+
+	it("ignores `.cloudflare/output` entries that aren't version directories", async ({
+		expect,
+	}) => {
+		await seed({
+			".cloudflare/output/v1": "a file, not a directory",
+			".cloudflare/output/v1-old/config.json": JSON.stringify({}),
+			".cloudflare/output/v01/config.json": JSON.stringify({}),
+			".cloudflare/output/latest/config.json": JSON.stringify({}),
+		});
+
+		expect(findCloudflareBuildOutput(process.cwd())).toBeUndefined();
+	});
+
+	it("ignores a `.cloudflare/output` path that is a file", async ({
+		expect,
+	}) => {
+		await seed({ ".cloudflare/output": "not a directory" });
 
 		expect(findCloudflareBuildOutput(process.cwd())).toBeUndefined();
 	});

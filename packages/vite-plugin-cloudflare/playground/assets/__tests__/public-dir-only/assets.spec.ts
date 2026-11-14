@@ -21,7 +21,7 @@ test.runIf(isBuild)(
 			testDir,
 			".cloudflare",
 			"output",
-			"v0",
+			"v1",
 			"workers",
 			"default",
 			"assets",

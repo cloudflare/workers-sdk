@@ -5,7 +5,7 @@ import { test } from "vitest";
 import { getJsonResponse, isBuild, page, rootDir } from "../../__test-utils__";
 
 function getWorkerOutput() {
-	const workerDir = path.join(rootDir, ".cloudflare/output/v0/workers/default");
+	const workerDir = path.join(rootDir, ".cloudflare/output/v1/workers/default");
 	const config = JSON.parse(
 		fs.readFileSync(path.join(workerDir, "worker.config.json"), "utf-8")
 	) as { manifest: { mainModule: string } };
@@ -41,7 +41,7 @@ test.runIf(isBuild)(
 	async ({ expect }) => {
 		const clientDir = path.join(
 			rootDir,
-			".cloudflare/output/v0/workers/default/assets"
+			".cloudflare/output/v1/workers/default/assets"
 		);
 		const html = fs.readFileSync(path.join(clientDir, "index.html"), "utf-8");
 		const entry = html.match(/src="\/(assets\/[^"]+\.js)"/)?.[1];
