@@ -5478,3 +5478,38 @@ test("Miniflare: dispatchFetch() replays a known-length body after HTTP 421", as
 	expect(res.headers.get("location")).toBeNull();
 	expect(await res.text()).toBe("body={}");
 });
+
+test("Miniflare: cross-account bindings cannot resolve to a local namesake", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "source",
+					compatibilityDate: "2026-11-01",
+					manifest: singleModuleManifest("export default {};"),
+					env: {
+						PAYMENTS: {
+							type: "worker",
+							worker: "payments",
+							accountId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+						},
+					},
+				},
+			},
+			{
+				config: {
+					name: "payments",
+					compatibilityDate: "2026-11-01",
+					manifest: singleModuleManifest(
+						"export default {fetch() {return new Response('local namesake');}};"
+					),
+				},
+			},
+		],
+	});
+	onTestFinished(() => mf.dispose().catch(() => {}));
+	await expect(mf.ready).rejects.toThrow(/requires a remote binding session/);
+});

@@ -38,6 +38,10 @@ export const AnalyticsSQLBindingSchema = z.strictObject({
 export const WorkerBindingSchema = z.strictObject({
 	type: z.literal("worker"),
 	worker: z.string(),
+	accountId: z
+		.string()
+		.regex(/^[a-f0-9]{32}$/)
+		.optional(),
 	exportName: z.string().optional(),
 	props: z.record(z.string(), z.unknown()).optional(),
 	dev: RemoteBindingDevSchema.optional(),
@@ -51,6 +55,10 @@ export const WorkflowBindingSchema = z.strictObject({
 });
 
 export const D1BindingSchema = z.strictObject({
+	accountId: z
+		.string()
+		.regex(/^[a-f0-9]{32}$/)
+		.optional(),
 	type: z.literal("d1"),
 	name: z.string().optional(),
 	id: z.string().optional(),
@@ -59,6 +67,10 @@ export const D1BindingSchema = z.strictObject({
 });
 
 export const KVBindingSchema = z.strictObject({
+	accountId: z
+		.string()
+		.regex(/^[a-f0-9]{32}$/)
+		.optional(),
 	type: z.literal("kv"),
 	id: z.string().optional(),
 	// TODO: name support not yet implemented
@@ -74,6 +86,10 @@ export const QueueBindingSchema = z.strictObject({
 });
 
 export const R2BindingSchema = z.strictObject({
+	accountId: z
+		.string()
+		.regex(/^[a-f0-9]{32}$/)
+		.optional(),
 	type: z.literal("r2"),
 	name: z.string().optional(),
 	jurisdiction: z.string().optional(),

@@ -4757,6 +4757,28 @@ const validateCloudchamberConfig: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
+const validateTargetAccountID = (
+	diagnostics: Diagnostics,
+	field: string,
+	value: object
+): boolean => {
+	if (typeof value !== "object" || value === null) {
+		return false;
+	}
+	if (
+		hasProperty(value, "target_account_id") &&
+		value.target_account_id !== undefined &&
+		(typeof value.target_account_id !== "string" ||
+			!/^[a-f0-9]{32}$/.test(value.target_account_id))
+	) {
+		diagnostics.errors.push(
+			`"${field}.target_account_id" must be a 32-character public account ID.`
+		);
+		return false;
+	}
+	return true;
+};
+
 const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
@@ -4766,7 +4788,7 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		return false;
 	}
-	let isValid = true;
+	let isValid = validateTargetAccountID(diagnostics, field, value);
 	// KV bindings must have a binding and id.
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
@@ -4800,6 +4822,7 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"target_account_id",
 		"binding",
 		"id",
 		"preview_id",
@@ -4963,7 +4986,7 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		return false;
 	}
-	let isValid = true;
+	let isValid = validateTargetAccountID(diagnostics, field, value);
 	// R2 bindings must have a binding and bucket_name.
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
@@ -5070,6 +5093,7 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"target_account_id",
 		"binding",
 		"bucket_name",
 		"preview_bucket_name",
@@ -5090,7 +5114,7 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		return false;
 	}
-	let isValid = true;
+	let isValid = validateTargetAccountID(diagnostics, field, value);
 
 	// D1 databases must have a binding and either a database_name or database_id.
 	if (!isRequiredProperty(value, "binding", "string")) {
@@ -5177,6 +5201,7 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"target_account_id",
 		"binding",
 		"database_id",
 		"database_internal_env",
@@ -5603,6 +5628,9 @@ const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 				value
 			)}.`
 		);
+		isValid = false;
+	}
+	if (!validateTargetAccountID(diagnostics, field, value)) {
 		isValid = false;
 	}
 	if (!isOptionalProperty(value, "environment", "string")) {

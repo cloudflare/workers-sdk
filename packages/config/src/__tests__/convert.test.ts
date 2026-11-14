@@ -1866,3 +1866,55 @@ describe("convertToWranglerConfig", () => {
 		});
 	});
 });
+
+it("preserves the public target account on Worker bindings", ({ expect }) => {
+	const result = convertToWranglerConfig({
+		worker: {
+			...baseWorker,
+			env: {
+				PAYMENTS: {
+					type: "worker",
+					worker: "payments",
+					accountId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+					exportName: "PublicAPI",
+				},
+			},
+		},
+		containers: [],
+	});
+	expect(result.services).toEqual([
+		{
+			binding: "PAYMENTS",
+			service: "payments",
+			target_account_id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			entrypoint: "PublicAPI",
+		},
+	]);
+});
+
+it("preserves explicit storage owners in Wrangler configuration", ({
+	expect,
+}) => {
+	const accountId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+	const config = convertToWranglerConfig({
+		worker: {
+			...baseWorker,
+			env: {
+				DB: {
+					type: "d1",
+					id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+					accountId,
+				},
+				KV: { type: "kv", id: "cccccccccccccccccccccccccccccccc", accountId },
+				BUCKET: { type: "r2", name: "existing", jurisdiction: "eu", accountId },
+			},
+		},
+		containers: [],
+	});
+	expect(config.d1_databases?.[0].target_account_id).toBe(accountId);
+	expect(config.kv_namespaces?.[0].target_account_id).toBe(accountId);
+	expect(config.r2_buckets?.[0]).toMatchObject({
+		target_account_id: accountId,
+		jurisdiction: "eu",
+	});
+});

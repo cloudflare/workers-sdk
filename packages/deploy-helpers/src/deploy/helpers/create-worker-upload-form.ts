@@ -195,7 +195,7 @@ export function createWorkerUploadForm(
 		metadataBindings.push({ name: binding, type: "secret_text", text: value });
 	});
 
-	kv_namespaces.forEach(({ id, binding, raw }) => {
+	kv_namespaces.forEach(({ id, binding, raw, target_account_id }) => {
 		// If we're doing a dry run there's no way to know whether or not a KV namespace
 		// is inheritable or requires provisioning (since that would require hitting the API).
 		// As such, _assume_ any undefined IDs are inheritable when doing a dry run.
@@ -220,6 +220,7 @@ export function createWorkerUploadForm(
 				name: binding,
 				type: "kv_namespace",
 				namespace_id: id,
+				target_account_id,
 				raw,
 			});
 		}
@@ -294,35 +295,44 @@ export function createWorkerUploadForm(
 		}
 	});
 
-	r2_buckets.forEach(({ binding, bucket_name, jurisdiction, raw }) => {
-		if (options?.dryRun) {
-			bucket_name ??= INHERIT_SYMBOL;
-		}
-		if (bucket_name === undefined) {
-			throw new UserError(
-				`${binding} bindings must have a "bucket_name" field. Add a "bucket_name" field to the binding in your Worker configuration specifying the name of the R2 bucket to bind to.`,
-				{ telemetryMessage: "r2 bucket binding missing bucket_name" }
-			);
-		}
+	r2_buckets.forEach(
+		({ binding, bucket_name, jurisdiction, raw, target_account_id }) => {
+			if (options?.dryRun) {
+				bucket_name ??= INHERIT_SYMBOL;
+			}
+			if (bucket_name === undefined) {
+				throw new UserError(
+					`${binding} bindings must have a "bucket_name" field. Add a "bucket_name" field to the binding in your Worker configuration specifying the name of the R2 bucket to bind to.`,
+					{ telemetryMessage: "r2 bucket binding missing bucket_name" }
+				);
+			}
 
-		if (bucket_name === INHERIT_SYMBOL) {
-			metadataBindings.push({
-				name: binding,
-				type: "inherit",
-			});
-		} else {
-			metadataBindings.push({
-				name: binding,
-				type: "r2_bucket",
-				bucket_name,
-				jurisdiction,
-				raw,
-			});
+			if (bucket_name === INHERIT_SYMBOL) {
+				metadataBindings.push({
+					name: binding,
+					type: "inherit",
+				});
+			} else {
+				metadataBindings.push({
+					name: binding,
+					type: "r2_bucket",
+					target_account_id,
+					bucket_name,
+					jurisdiction,
+					raw,
+				});
+			}
 		}
-	});
+	);
 
 	d1_databases.forEach(
-		({ binding, database_id, database_internal_env, raw }) => {
+		({
+			binding,
+			database_id,
+			database_internal_env,
+			raw,
+			target_account_id,
+		}) => {
 			if (options?.dryRun) {
 				database_id ??= INHERIT_SYMBOL;
 			}
@@ -343,6 +353,7 @@ export function createWorkerUploadForm(
 					name: binding,
 					type: "d1",
 					id: database_id,
+					target_account_id,
 					internalEnv: database_internal_env,
 					raw,
 				});
@@ -507,12 +518,14 @@ export function createWorkerUploadForm(
 			entrypoint,
 			props,
 			cross_account_grant,
+			target_account_id,
 		}) => {
 			metadataBindings.push({
 				name: binding,
 				type: "service",
 				service,
 				cross_account_grant,
+				target_account_id,
 				...(environment && { environment }),
 				...(entrypoint && { entrypoint }),
 				...(props && { props }),

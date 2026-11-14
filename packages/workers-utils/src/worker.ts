@@ -83,6 +83,8 @@ export interface CfVars {
  * A KV namespace.
  */
 export interface CfKvNamespace {
+	/** Public account ID of the existing resource owner. */
+	target_account_id?: string;
 	binding: string;
 	id?: string | typeof INHERIT_SYMBOL;
 	remote?: boolean;
@@ -229,6 +231,8 @@ export interface CfQueue {
 }
 
 export interface CfR2Bucket {
+	/** Public account ID of the existing resource owner. */
+	target_account_id?: string;
 	binding: string;
 	bucket_name?: string | typeof INHERIT_SYMBOL;
 	jurisdiction?: string;
@@ -243,6 +247,8 @@ export interface CfR2Bucket {
 
 // TODO: figure out if this is duplicated in packages/wrangler/src/config/environment.ts
 export interface CfD1Database {
+	/** Public account ID of the existing resource owner. */
+	target_account_id?: string;
 	binding: string;
 	database_id?: string | typeof INHERIT_SYMBOL;
 	database_name?: string;
@@ -356,6 +362,7 @@ export interface CfService {
 	props?: Record<string, unknown>;
 	remote?: boolean;
 	cross_account_grant?: string;
+	target_account_id?: string;
 	dev?: CfDevPluginCfg;
 }
 

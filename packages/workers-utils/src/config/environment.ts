@@ -1165,6 +1165,8 @@ export interface EnvironmentNonInheritable {
 	 * @nonInheritable
 	 */
 	kv_namespaces: {
+		/** Public account ID of the existing resource owner. */
+		target_account_id?: string;
 		/** The binding name used to refer to the KV Namespace */
 		binding: string;
 		/** The ID of the KV namespace */
@@ -1283,6 +1285,8 @@ export interface EnvironmentNonInheritable {
 	 * @nonInheritable
 	 */
 	r2_buckets: {
+		/** Public account ID of the existing resource owner. */
+		target_account_id?: string;
 		/** The binding name used to refer to the R2 bucket in the Worker. */
 		binding: string;
 		/** The name of this R2 bucket at the edge. */
@@ -1317,6 +1321,8 @@ export interface EnvironmentNonInheritable {
 	 * @nonInheritable
 	 */
 	d1_databases: {
+		/** Public account ID of the existing resource owner. */
+		target_account_id?: string;
 		/** The binding name used to refer to the D1 database in the Worker. */
 		binding: string;
 		/** The name of this D1 database. */
@@ -1481,6 +1487,8 @@ export interface EnvironmentNonInheritable {
 				 * The environment of the service (e.g. production, staging, etc).
 				 */
 				environment?: string;
+				/** Public ID of the target account in the same Cloudflare Organization. */
+				target_account_id?: string;
 				/** Optionally, the entrypoint (named export) of the service to bind to. */
 				entrypoint?: string;
 				/** Optional properties that will be made available to the service via ctx.props. */

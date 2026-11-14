@@ -1274,6 +1274,32 @@ async function collectPendingResources(
 			continue;
 		}
 
+		if (
+			"target_account_id" in binding &&
+			binding.target_account_id !== undefined &&
+			binding.target_account_id !== accountId
+		) {
+			const identifier =
+				binding.type === "kv_namespace"
+					? binding.id
+					: binding.type === "d1"
+						? binding.database_id
+						: binding.type === "r2_bucket"
+							? binding.bucket_name
+							: undefined;
+			if (typeof identifier !== "string" || identifier.length === 0) {
+				throw new UserError(
+					`Cross-account binding "${bindingName}" requires an existing resource ID or bucket name. Automatic provisioning and name resolution are not supported.`,
+					{
+						telemetryMessage:
+							"cross-account resource requires existing identifier",
+					}
+				);
+			}
+			// EWC authorizes and resolves the existing target under its owner. Never provision or query it under the source account.
+			continue;
+		}
+
 		const handler = createHandler(
 			bindingName,
 			binding,
