@@ -33,7 +33,7 @@
 	"dependencies": {
 		"@cloudflare/cli-shared-helpers": "0.3.3",
 		"@cloudflare/deploy-helpers": "0.27.1",
-		"@cloudflare/workers-auth": "0.18.0",
+		"@cloudflare/workers-auth": "0.18.3",
 		"@cloudflare/workers-utils": "0.54.1",
 		"chalk": "catalog:default",
 		"miniflare": "5.20261113.1-beta",
