@@ -106,7 +106,15 @@ export type HandlerMetrics = {
 	preservationCacheResult?:
 		| CacheResult<"checked">
 		| "not-modified"
+		| "skipped-navigation"
 		| "disabled";
+	preservationCacheRequestKind?:
+		| "navigation"
+		| "subresource"
+		| "fetch"
+		| "unknown";
+	preservationCacheAge?: number;
+	preservationCacheResponse?: "body" | "not-modified" | "error";
 	earlyHintsResult?: CacheResult<"used" | "notused"> | "disabled";
 };
 
@@ -188,6 +196,22 @@ export async function generateHandler<
 	caches,
 	waitUntil,
 }: HandlerContext<AssetEntry, ContentNegotiation, Asset>) {
+	const fetchDestination = request.headers.get("sec-fetch-dest");
+	const isNavigation =
+		request.headers.get("sec-fetch-mode") === "navigate" ||
+		fetchDestination === "document" ||
+		fetchDestination === "frame" ||
+		fetchDestination === "iframe";
+	setMetrics?.({
+		preservationCacheRequestKind: isNavigation
+			? "navigation"
+			: fetchDestination === "empty"
+				? "fetch"
+				: fetchDestination
+					? "subresource"
+					: "unknown",
+	});
+
 	const url = new URL(request.url);
 	const { protocol, host, search } = url;
 	let { pathname } = url;
@@ -694,7 +718,11 @@ export async function generateHandler<
 	}
 
 	async function notFound(): Promise<Response> {
-		if (caches) {
+		// A new document visit must use the current deployment's fallback. Keep
+		// old subresources and fetch() data available to already-open applications.
+		if (isNavigation) {
+			setMetrics?.({ preservationCacheResult: "skipped-navigation" });
+		} else if (caches) {
 			try {
 				const assetPreservationCache = await caches.open(
 					ASSET_PRESERVATION_CACHE
@@ -705,6 +733,15 @@ export async function generateHandler<
 
 				// V2 cache only contains the asset key, rather than the asset body:
 				if (preservedResponse) {
+					const age = preservedResponse.headers.get("age");
+					setMetrics?.({
+						preservationCacheAge:
+							age && /^\d+$/.test(age) && Number.isFinite(Number(age))
+								? Number(age)
+								: -1,
+						// Overwritten only after a historical response is selected.
+						preservationCacheResponse: "error",
+					});
 					if (setMetrics) {
 						setMetrics({ preservationCacheResult: "checked-hit" });
 					}
@@ -712,6 +749,8 @@ export async function generateHandler<
 					const assetKey = await preservedResponse.text();
 					if (isNullBodyStatus(preservedResponse.status)) {
 						// We know the asset hasn't changed, so use the cached headers.
+						setMetrics?.({ preservationCacheResponse: "not-modified" });
+
 						return new Response(null, preservedResponse);
 					}
 					if (assetKey) {
@@ -725,6 +764,8 @@ export async function generateHandler<
 							if (setMetrics) {
 								setMetrics({ preservationCacheResult: "not-modified" });
 							}
+							setMetrics?.({ preservationCacheResponse: "not-modified" });
+
 							return new NotModifiedResponse();
 						}
 
@@ -732,6 +773,8 @@ export async function generateHandler<
 
 						if (asset) {
 							// We know the asset hasn't changed, so use the cached headers.
+							setMetrics?.({ preservationCacheResponse: "body" });
+
 							return new Response(asset.body, preservedResponse);
 						} else {
 							logError(
@@ -751,6 +794,7 @@ export async function generateHandler<
 			} catch (err) {
 				// Don't throw an error because preservation cache is best effort.
 				// But log it because we should be able to fetch the asset here.
+				setMetrics?.({ preservationCacheResponse: "error" });
 				logError(err as Error);
 			}
 		} else {
