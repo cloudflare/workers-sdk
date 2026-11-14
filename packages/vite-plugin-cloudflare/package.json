@@ -93,7 +93,7 @@
 	"workers-sdk": {
 		"prerelease": true,
 		"npmPrerelease": {
-			"tag": "beta",
+			"tag": "rc",
 			"numbered": true
 		}
 	}

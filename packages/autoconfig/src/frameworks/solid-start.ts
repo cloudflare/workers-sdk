@@ -16,6 +16,7 @@ import {
 	transformViteConfig,
 } from "./utils/vite-config";
 import { installCloudflareVitePlugin } from "./utils/vite-plugin";
+import { CF_VITE_PLUGIN_VERSION_RANGE } from "./utils/vite-plugin-version";
 import type { AutoConfigContext } from "../context";
 import type {
 	ConfigurationOptions,
@@ -39,7 +40,7 @@ export class SolidStart extends Framework {
 					packageManager: packageManager.type,
 					isWorkspaceRoot,
 					projectPath,
-					version: "^2.0.0-beta.v.0",
+					version: CF_VITE_PLUGIN_VERSION_RANGE,
 				});
 				transformViteConfig(projectPath);
 				excludeSolidStartFromServerPrebundling(projectPath, context);

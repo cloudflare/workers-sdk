@@ -20,7 +20,6 @@ const DEPENDENCY_FIELDS = [
 interface NpmPrereleaseConfig {
 	tag: string;
 	numbered: boolean;
-	numberPrefix?: "v";
 }
 
 interface PackageJSON {
@@ -96,18 +95,7 @@ export function getNpmPrereleaseConfig(
 		typeof numbered === "boolean",
 		`Invalid ${pkg.name} npmPrerelease numbered value`
 	);
-	// Vite plugin v2 betas were previously published as `2.0.0-beta.sha-*`.
-	// Temporarily start its Changesets releases at `2.0.0-beta.v.0`; `v` sorts
-	// after `sha-*`. Remove this special case once v2 is stable.
-	const numberPrefix =
-		pkg.name === "@cloudflare/vite-plugin" && tag === "beta" && numbered
-			? "v"
-			: undefined;
-	return {
-		tag,
-		numbered,
-		...(numberPrefix === undefined ? {} : { numberPrefix }),
-	};
+	return { tag, numbered };
 }
 
 function appendPrerelease(
@@ -115,9 +103,7 @@ function appendPrerelease(
 	config: NpmPrereleaseConfig,
 	number: number
 ): string {
-	const prefix =
-		config.numberPrefix === undefined ? "" : `.${config.numberPrefix}`;
-	const suffix = config.numbered ? `${prefix}.${number}` : "";
+	const suffix = config.numbered ? `.${number}` : "";
 	return `${coreVersion}-${config.tag}${suffix}`;
 }
 
@@ -127,8 +113,7 @@ function appendPrerelease(
  * but it does not preserve either of the prerelease policies we support:
  *
  * - Numbered prereleases keep their original core version and increment the
- *   suffix: `2.0.0-beta.0` -> `2.0.0-beta.1`. Vite plugin v2 temporarily uses
- *   `2.0.0-beta.v.0` -> `2.0.0-beta.v.1` instead.
+ *   suffix: `2.0.0-beta.0` -> `2.0.0-beta.1`.
  * - Unnumbered prereleases increment the patch instead:
  *   `5.20261006.1-beta` -> `5.20261006.2-beta`.
  *
