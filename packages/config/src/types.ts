@@ -602,6 +602,28 @@ export interface WorkerConfig {
 	};
 
 	/**
+	 * Cloudflare Images configuration for this Worker. The Images binding
+	 * itself is declared in `env`.
+	 */
+	images?: {
+		/** Configures `/cdn-cgi/image/...` URL transformations for this Worker. */
+		urlTransformations?: {
+			/**
+			 * Whether URL transformations are enabled. Set to `false` to disable
+			 * them, overriding any zone-level setting.
+			 */
+			enabled: boolean;
+			/**
+			 * Hostnames that images may be fetched from, in addition to the
+			 * Worker's own zone, without a protocol (e.g. `"images.example.com"`
+			 * or `"*.example.com"`). Use `["*"]` to allow any origin. At most 10
+			 * entries.
+			 */
+			allowedOrigins?: string[];
+		};
+	};
+
+	/**
 	 * Whether we use `<name>.<subdomain>.workers.dev` to
 	 * test and deploy your Worker.
 	 *

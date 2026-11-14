@@ -560,6 +560,8 @@ async function resolveConfig(
 		experimental: {},
 		streamingTailConsumers: config.streaming_tail_consumers ?? [],
 		access: input.access ?? config.access,
+		imageUrlTransformations:
+			input.imageUrlTransformations ?? config.images?.url_transformations,
 	} satisfies StartDevWorkerOptions;
 
 	if (

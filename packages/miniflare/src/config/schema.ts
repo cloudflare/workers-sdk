@@ -726,6 +726,12 @@ export const InstanceOptionsSchema = z.strictObject({
 	// Logging
 	logRequests: z.boolean().default(true),
 	stripDisablePrettyError: z.boolean().default(true),
+	/**
+	 * Pass `/cdn-cgi/image/` requests through to the routed Worker rather than
+	 * handling them in Miniflare. For instances that only proxy to another
+	 * Miniflare instance or to the edge, which handles them instead.
+	 */
+	unsafeImageUrlTransformationsPassthrough: z.boolean().optional(),
 
 	// Persistence
 	/**
