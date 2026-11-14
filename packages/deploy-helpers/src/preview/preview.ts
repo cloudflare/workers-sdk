@@ -1338,12 +1338,12 @@ export async function preview(
  * Upload a Preview from resolved Build Output configuration.
  *
  * @param accountId Account that owns the parent Worker.
- * @param args Preview name and deployment annotations.
+ * @param args Preview name, deployment annotations, and secrets file.
  * @param buildOutput Exact configuration and artifacts emitted by the build.
  */
 export async function previewBuildOutput(
 	accountId: string,
-	args: Pick<PreviewArgs, "name" | "tag" | "message" | "json">,
+	args: Pick<PreviewArgs, "name" | "tag" | "message" | "json" | "secretsFile">,
 	buildOutput: PreviewBuildOutput,
 	options?: PreviewOptions
 ): Promise<PreviewResult> {
