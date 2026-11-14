@@ -4,7 +4,10 @@ import { createBuilder, preview } from "vite";
 import { afterEach, describe, test, vi } from "vitest";
 import { cloudflare } from "../index";
 
-vi.mock("@cloudflare/workers-utils");
+vi.mock("@cloudflare/workers-utils", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@cloudflare/workers-utils")>()),
+	fetchLatestNpmVersion: vi.fn().mockResolvedValue({ status: "failed" }),
+}));
 
 const fixturesPath = fileURLToPath(new URL("./fixtures", import.meta.url));
 
