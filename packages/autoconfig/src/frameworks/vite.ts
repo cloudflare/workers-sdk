@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { usesTypescript } from "../uses-typescript";
 import { Framework } from "./framework-class";
 import {
+	assertViteConfigCanBeTransformed,
 	checkIfViteConfigUsesCloudflarePlugin,
 	hasViteConfig,
 	transformViteConfig,
@@ -41,6 +42,9 @@ export class Vite extends Framework {
 		isWorkspaceRoot,
 		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		if (hasViteConfig(projectPath)) {
+			assertViteConfigCanBeTransformed(projectPath);
+		}
 		if (!dryRun) {
 			await installCloudflareVitePlugin({
 				packageManager: packageManager.type,

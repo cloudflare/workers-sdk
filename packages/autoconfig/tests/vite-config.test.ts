@@ -7,6 +7,7 @@ import {
 import { describe, it } from "vitest";
 import {
 	checkIfViteConfigUsesCloudflarePlugin,
+	hasViteConfig,
 	transformViteConfig,
 } from "../src/frameworks/utils/vite-config";
 import { createMockContext } from "./helpers/mock-context";
@@ -72,6 +73,27 @@ export default defineConfig({
 
 				expect(checkIfViteConfigUsesCloudflarePlugin(".", context)).toBe(true);
 				expect(readFileSync("vite.config.ts", "utf8")).toBe(content);
+			}
+		);
+
+		it.for([
+			["js", "mjs"],
+			["mjs", "ts"],
+			["ts", "cjs"],
+			["cjs", "mts"],
+			["mts", "cts"],
+		])(
+			"uses Vite's file precedence for .%s before .%s",
+			async ([first, second], { expect }) => {
+				const enabled =
+					"import { defineConfig } from 'vite'; import { cloudflare } from '@cloudflare/vite-plugin'; export default defineConfig({ plugins: [cloudflare()] });";
+				const disabled = "export default { plugins: [] };";
+				await writeFile(`vite.config.${first}`, enabled);
+				await writeFile(`vite.config.${second}`, disabled);
+				expect(checkIfViteConfigUsesCloudflarePlugin(".", context)).toBe(true);
+				await writeFile(`vite.config.${first}`, disabled);
+				await writeFile(`vite.config.${second}`, enabled);
+				expect(checkIfViteConfigUsesCloudflarePlugin(".", context)).toBe(false);
 			}
 		);
 
@@ -152,6 +174,47 @@ export default defineConfig({
 	});
 
 	describe("transformViteConfig", () => {
+		it.for(["cjs", "cts"])(
+			"does not insert ESM imports into a .%s file even with ESM syntax",
+			async (extension, { expect }) => {
+				const filePath = `vite.config.${extension}`;
+				const content =
+					"import { defineConfig } from 'vite'; export default defineConfig({ plugins: [] });";
+				await writeFile(filePath, content);
+				expect(() => transformViteConfig(".")).toThrow(
+					"Cannot automatically modify a CommonJS Vite configuration"
+				);
+				expect(readFileSync(filePath, "utf8")).toBe(content);
+			}
+		);
+
+		it.for(["export type Config = {};", "export const helper = true;"])(
+			"rejects CommonJS exports alongside TypeScript exports: %s",
+			async (namedExport, { expect }) => {
+				const content = `${namedExport} const { defineConfig } = require('vite'); module.exports = defineConfig({ plugins: [] });`;
+				await writeFile("vite.config.cts", content);
+				expect(() => transformViteConfig(".")).toThrow(
+					"Cannot automatically modify a CommonJS Vite configuration"
+				);
+				expect(readFileSync("vite.config.cts", "utf8")).toBe(content);
+			}
+		);
+
+		it.for(["cjs", "cts"])(
+			"detects .%s configurations without rewriting CommonJS",
+			async (extension, { expect }) => {
+				const filePath = `vite.config.${extension}`;
+				const content =
+					"const { defineConfig } = require('vite'); module.exports = defineConfig({ plugins: [] });";
+				await writeFile(filePath, content);
+				expect(hasViteConfig(".")).toBe(true);
+				expect(() => transformViteConfig(".")).toThrow(
+					"Cannot automatically modify a CommonJS Vite configuration"
+				);
+				expect(readFileSync(filePath, "utf8")).toBe(content);
+			}
+		);
+
 		it.for([
 			"[overrideKey]: shared.plugins",
 			"get plugins() { return shared.plugins; }",

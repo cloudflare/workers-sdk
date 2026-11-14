@@ -64,6 +64,7 @@ function extractFromBlockStatement(
 	return null;
 }
 
+/** Recognizes existing plugin setup without reconfiguring legacy Wrangler projects. */
 export function checkIfViteConfigUsesCloudflarePlugin(
 	projectPath: string,
 	context?: AutoConfigContext
@@ -142,14 +143,20 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 	return importsCloudflarePlugin && usesCloudflarePlugin;
 }
 
-/**
- * Returns whether a Vite config file (`vite.config.ts` or `vite.config.js`)
- * exists in the given project directory.
- */
+// Match Vite's DEFAULT_CONFIG_FILES order so inspection and execution use the same file.
+const VITE_CONFIG_FILES = [
+	"vite.config.js",
+	"vite.config.mjs",
+	"vite.config.ts",
+	"vite.config.cjs",
+	"vite.config.mts",
+	"vite.config.cts",
+];
+
+/** Returns whether the project has a Vite configuration file. */
 export function hasViteConfig(projectPath: string): boolean {
-	return (
-		existsSync(path.join(projectPath, "vite.config.ts")) ||
-		existsSync(path.join(projectPath, "vite.config.js"))
+	return VITE_CONFIG_FILES.some((name) =>
+		existsSync(path.join(projectPath, name))
 	);
 }
 
@@ -157,24 +164,17 @@ export function hasViteConfig(projectPath: string): boolean {
  * Finds the project's Vite config file.
  *
  * @param projectPath The path of the project
- * @returns The path of `vite.config.ts`, or of `vite.config.js` if there is no TypeScript config
- * @throws If the project has neither
+ * @returns The first existing file in Vite's default configuration-file order
+ * @throws If the project has no Vite config file
  */
 export function getViteConfigPath(projectPath: string): string {
-	const filePathTS = path.join(projectPath, `vite.config.ts`);
-	const filePathJS = path.join(projectPath, `vite.config.js`);
-
-	let filePath: string;
-
-	if (existsSync(filePathTS)) {
-		filePath = filePathTS;
-	} else if (existsSync(filePathJS)) {
-		filePath = filePathJS;
-	} else {
+	const file = VITE_CONFIG_FILES.map((name) =>
+		path.join(projectPath, name)
+	).find((filePath) => existsSync(filePath));
+	if (!file) {
 		throw new Error("Could not find Vite config file to modify");
 	}
-
-	return filePath;
+	return file;
 }
 
 /**
@@ -208,6 +208,19 @@ function hasIdentifierOutsideImport(
 	return hasIdentifier;
 }
 
+/** Checks unsupported CommonJS files before setup installs or changes any files. */
+export function assertViteConfigCanBeTransformed(projectPath: string): void {
+	const filePath = getViteConfigPath(projectPath);
+	if ([".cjs", ".cts"].includes(path.extname(filePath))) {
+		// Vite bundles these extensions as CommonJS even when they use ESM syntax.
+		// The Cloudflare plugin only exposes an ESM import entry point.
+		throw new UserError(
+			"Cannot automatically modify a CommonJS Vite configuration. Convert it to ESM (import/export) in vite.config.mjs or vite.config.mts before adding the Cloudflare plugin.",
+			{ telemetryMessage: "autoconfig CommonJS vite config unsupported" }
+		);
+	}
+}
+
 export function transformViteConfig(
 	projectPath: string,
 	options: {
@@ -216,6 +229,7 @@ export function transformViteConfig(
 	} = {}
 ) {
 	const filePath = getViteConfigPath(projectPath);
+	assertViteConfigCanBeTransformed(projectPath);
 	const removedIncompatiblePlugins = new Set<string>();
 
 	transformFile(filePath, {
