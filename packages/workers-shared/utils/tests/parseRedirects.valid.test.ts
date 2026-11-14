@@ -257,6 +257,40 @@ test("parseRedirects should accept going to absolute URLs with ports", ({
 	});
 });
 
+test("parseRedirects should not append a slash after the querystring or fragment of absolute URLs without a path", ({
+	expect,
+}) => {
+	const input = `
+	/a https://example.com?utm=1
+	/b https://example.com#section
+	/c https://example.com?utm=1#section 301
+	`;
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [
+			{
+				from: "/a",
+				status: 302,
+				to: "https://example.com/?utm=1",
+				lineNumber: 2,
+			},
+			{
+				from: "/b",
+				status: 302,
+				to: "https://example.com/#section",
+				lineNumber: 3,
+			},
+			{
+				from: "/c",
+				status: 301,
+				to: "https://example.com/?utm=1#section",
+				lineNumber: 4,
+			},
+		],
+		invalid: [],
+	});
+});
+
 test("parseRedirects should accept relative URLs that don't point to .html files", ({
 	expect,
 }) => {
