@@ -34,6 +34,7 @@ import {
 import {
 	assemblePreviewScriptSettings,
 	extractBuildOutputBindings,
+	extractIdentifierlessBuildOutputBindings,
 	extractConfigBindings,
 	getBranchName,
 	getCommitSha,
@@ -51,6 +52,8 @@ import type {
 	Binding,
 	CreatePreviewDeploymentRequestParams,
 	DeploymentResource,
+	EnvBindings,
+	PreviewBaseConfig,
 	PreviewDeploymentModule,
 	PreviewResource,
 } from "./api";
@@ -1000,6 +1003,15 @@ function logMissingCustomDomainPreviewUrlsWarning(
 	);
 }
 
+function formatBindingList(bindings: Record<string, { type: string }>) {
+	return Object.entries(bindings)
+		.map(
+			([name, binding]) =>
+				`  ${chalk.cyan(name)}  ${chalk.dim(getBindingTypeFriendlyName(binding.type as Parameters<typeof getBindingTypeFriendlyName>[0]))}`
+		)
+		.join("\n");
+}
+
 function logMissingPreviewsBindingsWarning(
 	productionBindingsExpectedInPreview: Record<string, { type: string }>,
 	remotePreviewDefaultBindings: Record<string, Binding> | undefined,
@@ -1021,14 +1033,66 @@ function logMissingPreviewsBindingsWarning(
 
 	logger.warn(`These bindings are configured for your production Worker but not for Previews:
 
-${Object.entries(missingPreviewBindings)
-	.map(
-		([name, binding]) =>
-			`  ${chalk.cyan(name)}  ${chalk.dim(getBindingTypeFriendlyName(binding.type as Parameters<typeof getBindingTypeFriendlyName>[0]))}`
-	)
-	.join("\n")}
+${formatBindingList(missingPreviewBindings)}
 
 Parts of your Worker that depend on these bindings may not work correctly in the Preview. If this is not intentional, add Preview-safe values to the ${chalk.cyan("previews")} field.
+
+Configuration: https://developers.cloudflare.com/workers/previews/configuration/
+Resources: https://developers.cloudflare.com/workers/previews/resources/`);
+}
+
+/**
+ * Warns about Build Output bindings that were left out of a Preview for having
+ * no resource identifier and that the Preview base config doesn't define
+ * either, so they are missing from the Preview.
+ *
+ * @param config The Preview config used for API requests.
+ * @param accountId Account that owns the parent Worker.
+ * @param workerName The parent Worker name.
+ * @param identifierlessBindings Bindings left out of the Preview deployment.
+ */
+async function logMissingIdentifierlessBindingsWarning(
+	config: Config,
+	accountId: string,
+	workerName: string,
+	identifierlessBindings: EnvBindings
+): Promise<void> {
+	if (Object.keys(identifierlessBindings).length === 0) {
+		return;
+	}
+
+	let previewBaseConfig: PreviewBaseConfig;
+	try {
+		previewBaseConfig = await getPreviewBaseConfig(
+			config,
+			accountId,
+			workerName
+		);
+	} catch {
+		// The deployment is already live, so a failed lookup for a warning
+		// shouldn't fail the command.
+		logger.warn(`These bindings have no resource ID, so they were left out of this Preview. The Preview base config could not be retrieved to check whether it defines them:
+
+${formatBindingList(identifierlessBindings)}`);
+		return;
+	}
+	const missingBindings = Object.fromEntries(
+		Object.entries(identifierlessBindings).filter(
+			([name]) => !Object.hasOwn(previewBaseConfig.env ?? {}, name)
+		)
+	);
+
+	if (Object.keys(missingBindings).length === 0) {
+		return;
+	}
+
+	// Logged even with `--json`: the warning goes to stderr, so it can't corrupt
+	// the payload, and CI runs that parse the payload would otherwise never see it.
+	logger.warn(`These bindings have no resource ID, so they were left out of this Preview, and the Preview base config doesn't define them either:
+
+${formatBindingList(missingBindings)}
+
+Code that uses these bindings will fail in the Preview. Set a resource ID on these bindings for Previews, or add them to the Preview base config.
 
 Configuration: https://developers.cloudflare.com/workers/previews/configuration/
 Resources: https://developers.cloudflare.com/workers/previews/resources/`);
@@ -1453,7 +1517,7 @@ export async function previewBuildOutput(
 		},
 		run_worker_first: convertedConfig.assets?.run_worker_first,
 	};
-	return runPreview(
+	const result = await runPreview(
 		accountId,
 		{ ...args, ignoreBaseConfig: false },
 		previewConfig,
@@ -1467,6 +1531,13 @@ export async function previewBuildOutput(
 		true,
 		localImageReferences
 	);
+	await logMissingIdentifierlessBindingsWarning(
+		previewConfig,
+		accountId,
+		workerConfig.name,
+		extractIdentifierlessBuildOutputBindings(convertedConfig)
+	);
+	return result;
 }
 
 /**
