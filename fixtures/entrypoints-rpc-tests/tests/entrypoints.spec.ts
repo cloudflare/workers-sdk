@@ -43,6 +43,29 @@ function waitFor<T>(
 	return vi.waitFor(callback, { timeout, interval: 250 });
 }
 
+/**
+ * Waits until Wrangler reports that the user Worker is ready.
+ *
+ * `runWranglerDev()` resolves once Wrangler's proxy is listening, which can be
+ * before the user Worker has started and registered itself in the dev
+ * registry. Until then, requests queue in the proxy (and hit the 2s agent
+ * timeouts above) and other sessions can't find the Worker. Miniflare only
+ * logs "Ready on" (or "Updated and ready on") after it has registered the
+ * Worker, so waiting for that line removes the race on slow CI machines.
+ */
+async function waitForUserWorker(session: WranglerDevSession) {
+	await vi.waitFor(
+		() => {
+			if (!/ready on/i.test(session.getOutput())) {
+				throw new Error(
+					`Wrangler did not report the user Worker as ready:\n${session.getOutput()}`
+				);
+			}
+		},
+		{ timeout: 20_000, interval: 100 }
+	);
+}
+
 const test = baseTest.extend<{
 	tmpPath: string;
 	isolatedDevRegistryPath: string;
@@ -87,6 +110,7 @@ const test = baseTest.extend<{
 			}
 
 			cleanups.push(session.stop);
+			await waitForUserWorker(session);
 			// noinspection HttpUrlsUsage
 			const url = new URL(`http://${session.ip}:${session.port}`);
 			return { url, session };
@@ -800,8 +824,9 @@ describe("entrypoints", () => {
 		// Wait for error to be thrown
 		await waitFor(async () => {
 			let response = await fetch(url);
-			expect(await response.text()).toBe(
-				'Worker "bound" not found. Make sure it is running locally.'
+			expect(response.status).toBe(500);
+			expect(await response.text()).toContain(
+				'Worker does not export an entrypoint named "ThingEntrypoint"'
 			);
 		});
 	});
