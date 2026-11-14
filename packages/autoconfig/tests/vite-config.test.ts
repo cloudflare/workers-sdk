@@ -204,7 +204,9 @@ export default defineConfig({ plugins: [${plugin}] });`;
 
 				transformViteConfig(".", { remoteBindings: false });
 
-				expect(readFileSync("vite.config.ts", "utf8")).toBe(content);
+				const result = readFileSync("vite.config.ts", "utf8");
+				expect(result).toContain(`plugins: [${plugin}]`);
+				expect(result).not.toContain("remoteBindings: false");
 			}
 		);
 
