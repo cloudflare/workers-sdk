@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type -- Type augmentation interfaces intentionally left empty */
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { APIError, FatalError } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 /* eslint-disable-next-line no-restricted-imports --
@@ -315,6 +315,30 @@ describe("writeOutput()", () => {
 			code: 10211,
 		});
 		expect(entries[1].retry_after_ms).toBeUndefined();
+	});
+
+	// https://github.com/cloudflare/workers-sdk/issues/16925
+	it("should report a log file under the WRANGLER_LOG_PATH set in a .env file", async () => {
+		mockWhoami.mockResolvedValue(undefined);
+		writeFileSync(".env", "WRANGLER_LOG_PATH=dotenv-logs\n");
+
+		const WRANGLER_OUTPUT_FILE_PATH = "output.json";
+		vi.stubEnv("WRANGLER_OUTPUT_FILE_DIRECTORY", "");
+		vi.stubEnv("WRANGLER_OUTPUT_FILE_PATH", WRANGLER_OUTPUT_FILE_PATH);
+
+		await runWrangler("whoami");
+
+		// Wrangler has loaded `.env` into the process environment...
+		expect(process.env.WRANGLER_LOG_PATH).toBe("dotenv-logs");
+
+		const outputFile = readFileSync(WRANGLER_OUTPUT_FILE_PATH, "utf8");
+		const entries = outputFile
+			.split("\n")
+			.filter(Boolean)
+			.map((e) => JSON.parse(e));
+		expect(entries[0].type).toBe("wrangler-session");
+		// ...so the session's log file should be in the directory it names
+		expect(dirname(entries[0].log_file_path)).toBe(resolve("dotenv-logs"));
 	});
 
 	it.each([

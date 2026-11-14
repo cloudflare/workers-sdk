@@ -132,6 +132,33 @@ describe("appendToDebugLogFile", () => {
 	});
 });
 
+// https://github.com/cloudflare/workers-sdk/issues/16925
+describe("WRANGLER_LOG_PATH set after Wrangler is imported", () => {
+	runInTempDir();
+
+	it("should write the debug log under the WRANGLER_LOG_PATH in effect when logging", async ({
+		expect,
+	}) => {
+		// Wrangler is imported (as `@cloudflare/vite-plugin` does, before a
+		// `vite.config.ts` body runs) while WRANGLER_LOG_PATH is something else...
+		vi.stubEnv("WRANGLER_LOG_PATH", "import-time-logs");
+		vi.resetModules();
+		const logFile = await import("../../utils/log-file");
+
+		// ...and only then is WRANGLER_LOG_PATH set, before anything is logged
+		vi.stubEnv("WRANGLER_LOG_PATH", "late-logs");
+		await logFile.appendToDebugLogFile("info", "hello from after the import");
+
+		expect(existsSync("import-time-logs")).toBe(false);
+		expect(existsSync("late-logs")).toBe(true);
+		const [logFileName] = readdirSync("late-logs");
+		expect(logFileName).toMatch(/^wrangler-.*\.log$/);
+		expect(readFileSync(join("late-logs", logFileName), "utf8")).toContain(
+			"hello from after the import"
+		);
+	});
+});
+
 describe("cleanupOldLogFiles", () => {
 	runInTempDir();
 
