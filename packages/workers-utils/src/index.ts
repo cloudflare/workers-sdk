@@ -18,6 +18,7 @@ export type { LiveDurableObjectExport } from "./config/durable-object-exports";
 export {
 	getContainerDurableObjectClassNames,
 	getContainerNameToClassNameMap,
+	getDefaultDurableObjectContainerAppName,
 	getDurableObjectClassNameToUseSQLiteMap,
 	getDurableObjectContainerApps,
 	getResolvedDurableObjectContainerApps,
