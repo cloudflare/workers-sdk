@@ -41,7 +41,7 @@ export class SolidStart extends Framework {
 					projectPath,
 					version: "^2.0.0-beta.v.0",
 				});
-				transformViteConfig(projectPath);
+				transformViteConfig(projectPath, { remoteBindings: false });
 				excludeSolidStartFromServerPrebundling(projectPath, context);
 			}
 

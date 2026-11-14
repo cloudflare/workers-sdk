@@ -71,7 +71,9 @@ describe("SolidStart", () => {
 
 			export default defineConfig({
 			  plugins: [solidStart(),
-			    cloudflare()
+			    cloudflare({
+			      remoteBindings: false
+			    })
 			  ],
 
 			  environments: {

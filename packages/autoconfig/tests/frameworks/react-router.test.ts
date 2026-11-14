@@ -10,6 +10,7 @@ import {
 	ReactRouter,
 } from "../../src/frameworks/react-router";
 import * as packagesUtils from "../../src/frameworks/utils/packages";
+import { transformViteConfig } from "../../src/frameworks/utils/vite-config";
 import { createMockContext } from "../helpers/mock-context";
 
 function fixture(name: string): string {
@@ -142,6 +143,26 @@ describe("React Router framework configure()", () => {
 		await mkdir(resolve("app"), { recursive: true });
 		await writeFile(resolve("vite.config.ts"), fixture("vite-config-basic.ts"));
 	});
+
+	it.for(["cf", "wrangler"] as const)(
+		"configures Vite binding defaults for %s",
+		async (target, { expect }) => {
+			await writeFile(
+				resolve("react-router.config.ts"),
+				fixture("config-no-future.ts")
+			);
+			await createFramework("7.16.0").configure({
+				...getBaseOptions(),
+				target,
+			});
+
+			expect(transformViteConfig).toHaveBeenCalledWith(process.cwd(), {
+				viteEnvironmentName: "ssr",
+				incompatibleVitePlugins: ["netlifyReactRouter"],
+				remoteBindings: target === "cf" ? false : undefined,
+			});
+		}
+	);
 
 	describe("workers/app.ts generation — without v8_middleware", () => {
 		beforeEach(async () => {

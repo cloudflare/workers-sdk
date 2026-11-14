@@ -135,7 +135,9 @@ describe("Vite framework", () => {
 			expect(content).toContain(
 				'import { cloudflare } from "@cloudflare/vite-plugin"'
 			);
-			expect(content).toContain("plugins: [cloudflare()]");
+			expect(content).toContain(
+				"plugins: [cloudflare({ remoteBindings: false })]"
+			);
 
 			expect(result.workerConfig).toEqual({
 				assets: {
@@ -154,6 +156,9 @@ describe("Vite framework", () => {
 				["@cloudflare/vite-plugin"],
 				expect.anything()
 			);
+			expect(readFileSync("vite.config.js", "utf8")).toContain(
+				"plugins: [cloudflare()]"
+			);
 		});
 
 		it("uses .ts extension when the project has a tsconfig.json", async ({
@@ -166,14 +171,17 @@ describe("Vite framework", () => {
 
 			expect(existsSync("vite.config.ts")).toBe(true);
 			expect(existsSync("vite.config.js")).toBe(false);
+			expect(readFileSync("vite.config.ts", "utf8")).toContain(
+				"plugins: [cloudflare({ remoteBindings: false })]"
+			);
 		});
 
-		it("transforms existing vite config instead of creating a new one", async ({
-			expect,
-		}) => {
-			await writeFile(
-				"vite.config.ts",
-				`
+		it.for(["cf", "wrangler"] as const)(
+			"transforms existing vite config for %s",
+			async (target, { expect }) => {
+				await writeFile(
+					"vite.config.ts",
+					`
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -181,16 +189,23 @@ export default defineConfig({
   plugins: [react()]
 });
 `
-			);
+				);
 
-			const framework = new Vite({ id: "vite", name: "Vite" });
-			await framework.configure(BASE_OPTIONS);
+				const framework = new Vite({ id: "vite", name: "Vite" });
+				await framework.configure({ ...BASE_OPTIONS, target });
 
-			const content = readFileSync("vite.config.ts", "utf-8");
-			expect(content).toContain("cloudflare()");
-			// Existing plugins should be preserved
-			expect(content).toContain("react()");
-		});
+				const content = readFileSync("vite.config.ts", "utf-8");
+				if (target === "cf") {
+					expect(content).toMatch(
+						/cloudflare\(\{\s*remoteBindings: false\s*\}\)/
+					);
+				} else {
+					expect(content).toContain("cloudflare()");
+				}
+				// Existing plugins should be preserved
+				expect(content).toContain("react()");
+			}
+		);
 
 		it("does not create or modify files in dry-run mode", async ({
 			expect,
