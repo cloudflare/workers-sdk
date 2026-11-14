@@ -1,21 +1,19 @@
 import {
-	configureOpenAPIForContainerPull,
+	COMPLIANCE_REGION_CONFIG_UNKNOWN,
+	getCloudflareApiBaseUrl,
+	toApiComplianceRegion,
+} from "@cloudflare/workers-utils/compliance";
+import { UserError } from "@cloudflare/workers-utils/errors";
+import {
 	isCloudflareRegistryImage,
 	prepareContainerImagesForDev,
 	resolveImageName,
-} from "@cloudflare/containers-shared";
-import {
-	COMPLIANCE_REGION_CONFIG_UNKNOWN,
-	getCloudflareApiBaseUrl,
-	UserError,
-} from "@cloudflare/workers-utils";
-import { toApiComplianceRegion } from "@cloudflare/workers-utils/compliance";
+} from "./images";
+import { configureOpenAPIForContainerPull } from "./login";
+import type { ContainerDevOptions, ViteLogger } from "./types";
 import type { ParsedInputSettingsConfig } from "@cloudflare/config";
-import type {
-	ContainerDevOptions,
-	ViteLogger,
-} from "@cloudflare/containers-shared";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils/compliance";
+
 /**
  * Configures the Containers API client used to retrieve image pull credentials.
  *
@@ -71,14 +69,16 @@ export function normalizeContainerImageUris(options: {
 /**
  * Builds or pulls the images in a Cloudflare config Container development plan.
  *
- * @param options - Planned images, project settings, Docker executable, and Vite logger.
+ * @param options - Planned images, project settings, Docker executable, logger,
+ *   and the operation named when Docker is unavailable (defaults to `"running dev"`).
  * @returns A promise that resolves when every image is ready.
  */
-export async function prepareContainerImagesForVite(options: {
+export async function prepareContainerImagesForCfConfig(options: {
 	dockerPath: string;
 	containerOptions: ContainerDevOptions[];
 	settings: ParsedInputSettingsConfig;
 	logger: ViteLogger;
+	operation?: string;
 }): Promise<void> {
 	const complianceRegion = toApiComplianceRegion(
 		options.settings.complianceRegion
@@ -101,7 +101,7 @@ export async function prepareContainerImagesForVite(options: {
 
 		if (!apiToken || !accountId) {
 			throw new UserError(
-				"To use images from the Cloudflare-managed registry with the Vite plugin, " +
+				"To use images from the Cloudflare-managed registry, " +
 					"set the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID environment variables.\n" +
 					"The API token requires Containers:Edit and Workers Scripts:Edit permissions.\n" +
 					"Alternatively, use a Dockerfile that references the image via FROM.",
@@ -124,8 +124,9 @@ export async function prepareContainerImagesForVite(options: {
 		onContainerImagePreparationEnd: () => {},
 		logger: options.logger,
 		complianceConfig,
-		// TODO: The Vite plugin should not own this `cf` command. Remove the
+		// TODO: containers-shared should not own this `cf` command. Remove the
 		// hardcoded value once `cf` can provide it directly.
 		registryConfigureCommand: "cf containers registries create",
+		operation: options.operation,
 	});
 }
