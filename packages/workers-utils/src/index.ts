@@ -200,6 +200,7 @@ export { formatTime } from "./format-time";
 export {
 	getHostFromRoute,
 	getHostFromUrl,
+	getWorkerZone,
 	getZoneFromRoute,
 } from "./route-utils";
 
