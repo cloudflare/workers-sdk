@@ -229,12 +229,12 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			);
 		}
 
-		// Check "to" recipients are allowed (same as EmailMessage - only validate "to")
-		// Extract email addresses from potential EmailAddress objects
-		if (toArray.length > 0) {
-			const toEmails = toArray.map((addr) => extractEmailAddress(addr));
-			this.validateRecipients(toEmails);
-		}
+		// Destination limits apply to every recipient field (to/cc/bcc), including
+		// cc-only and bcc-only MessageBuilders that omit `to`.
+		const destinationEmails = [...toArray, ...ccArray, ...bccArray].map(
+			(addr) => extractEmailAddress(addr)
+		);
+		this.validateRecipients(destinationEmails);
 	}
 
 	async send(

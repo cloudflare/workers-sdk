@@ -1970,6 +1970,70 @@ test("MessageBuilder respects allowed_destination_addresses", async ({
 	expect(error).toContain("not allowed");
 });
 
+test("MessageBuilder allowed_destination_addresses applies to cc-only sends", async ({
+	expect,
+}) => {
+	const mf = useMessageBuilderMiniflare({
+		allowedDestinationAddresses: ["allowed@example.com"],
+	});
+
+	const resDisallowed = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			cc: "notallowed@example.com",
+			subject: "CC only blocked",
+			text: "Test",
+		}),
+	});
+	expect(resDisallowed.status).toBe(500);
+	expect(await resDisallowed.text()).toContain("not allowed");
+
+	const resAllowed = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			cc: "allowed@example.com",
+			subject: "CC only allowed",
+			text: "Test",
+		}),
+	});
+	expect(resAllowed.status).toBe(200);
+	expect(await resAllowed.text()).toBe("ok");
+});
+
+test("MessageBuilder allowed_destination_addresses applies to bcc-only sends", async ({
+	expect,
+}) => {
+	const mf = useMessageBuilderMiniflare({
+		allowedDestinationAddresses: ["allowed@example.com"],
+	});
+
+	const resDisallowed = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			bcc: "notallowed@example.com",
+			subject: "BCC only blocked",
+			text: "Test",
+		}),
+	});
+	expect(resDisallowed.status).toBe(500);
+	expect(await resDisallowed.text()).toContain("not allowed");
+
+	const resAllowed = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			bcc: "allowed@example.com",
+			subject: "BCC only allowed",
+			text: "Test",
+		}),
+	});
+	expect(resAllowed.status).toBe(200);
+	expect(await resAllowed.text()).toBe("ok");
+});
+
 test("MessageBuilder respects allowed_sender_addresses", async ({ expect }) => {
 	const mf = useMessageBuilderMiniflare({
 		allowedSenderAddresses: ["allowed@example.com"],
