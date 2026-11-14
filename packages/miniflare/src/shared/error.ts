@@ -20,6 +20,7 @@ export const USER_ERROR_CODES = new Set([
 
 export const SYSTEM_ERROR_CODES = new Set([
 	"ERR_RUNTIME_FAILURE", // Runtime failed to start
+	"WORKERD_SPAWN_FAILED", // Runtime process could not be spawned
 	"ERR_PLUGIN_LOADING_FAILED",
 ] as const);
 
