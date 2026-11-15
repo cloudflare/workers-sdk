@@ -99,19 +99,6 @@ const localExplorerWorkerPath = path.join(
 	"local-explorer",
 	"explorer.worker.ts"
 );
-const assetWorkerPaths = new Set([
-	path.join(workersRoot, "assets", "assets.worker.ts"),
-	path.join(workersRoot, "assets", "router.worker.ts"),
-]);
-const workersSharedSentryPath = path.join(
-	pkgRoot,
-	"..",
-	"workers-shared",
-	"utils",
-	"sentry.ts"
-);
-const noopSentryPath = path.join(workersRoot, "assets", "sentry-noop.ts");
-
 /**
  * Test fixtures that need to be transpiled by esbuild as part of the build.
  * These are loaded dynamically by tests and must be pre-compiled.
@@ -137,28 +124,6 @@ const rewriteNodeToInternalPlugin = {
 		build.onResolve({ filter: /^node:(assert|buffer)$/ }, async (args) => {
 			const module = args.path.substring("node:".length);
 			return { path: `node-internal:internal_${module}`, external: true };
-		});
-	},
-};
-
-/**
- * Replaces the production Sentry setup used by the asset and router Workers.
- * Miniflare never binds the required Sentry credentials, so the production
- * implementation always returns before initialising Toucan.
- *
- * @type {esbuild.Plugin}
- */
-const noopSentryPlugin = {
-	name: "noop-sentry",
-	setup(build) {
-		build.onResolve({ filter: /sentry(?:\.ts)?$/ }, (args) => {
-			const importPath = path.resolve(args.resolveDir, args.path);
-			if (
-				importPath === workersSharedSentryPath ||
-				`${importPath}.ts` === workersSharedSentryPath
-			) {
-				return { path: noopSentryPath };
-			}
 		});
 	},
 };
@@ -259,7 +224,6 @@ const embedWorkersPlugin = {
 						args.path === miniflareZodExtensionPath
 							? [rewriteNodeToInternalPlugin]
 							: []),
-						...(assetWorkerPaths.has(args.path) ? [noopSentryPlugin] : []),
 						// The Zod extension must bundle the real package, while all other
 						// workers import that single shared copy.
 						...(args.path === miniflareZodExtensionPath
