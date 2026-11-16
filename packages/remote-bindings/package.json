@@ -36,7 +36,7 @@
 		"@cloudflare/workers-auth": "0.18.0",
 		"@cloudflare/workers-utils": "0.54.1",
 		"chalk": "catalog:default",
-		"miniflare": "5.20261113.1-beta",
+		"miniflare": "5.20261116.0-beta",
 		"undici": "catalog:default",
 		"ws": "catalog:default"
 	},
