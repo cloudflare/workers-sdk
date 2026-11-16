@@ -685,22 +685,59 @@ export class ConfigController extends Controller {
 	#printCurrentBindings?: (registry: WorkerRegistry | null) => void;
 
 	#configWatcher?: ReturnType<typeof watch>;
+	// Sorted, so that the same set of paths always compares equal.
+	#configWatcherPaths: string[] = [];
+	#configWatcherReady?: Promise<void>;
 	#abortController?: AbortController;
 
-	async #ensureWatchingConfig(configPaths: string | string[] | undefined) {
-		await this.#configWatcher?.close();
-		if (configPaths === undefined) {
-			return;
+	// Resolves once every path in `configPaths` is being watched, so that any
+	// change made afterwards emits a `change` event. A change made before a
+	// path's watcher is ready goes unnoticed, which is why an unchanged set of
+	// paths keeps its existing watcher rather than getting a new one.
+	async #ensureWatchingConfig(configPaths: string[], signal: AbortSignal) {
+		const paths = [...configPaths].sort();
+		const unchanged =
+			paths.length === this.#configWatcherPaths.length &&
+			paths.every((p, i) => p === this.#configWatcherPaths[i]);
+		if (!unchanged) {
+			// Update all the state before awaiting anything, so that a concurrent
+			// update sees the new watcher rather than creating another one.
+			const previousWatcher = this.#configWatcher;
+			this.#configWatcher = undefined;
+			this.#configWatcherReady = undefined;
+			this.#configWatcherPaths = paths;
+			if (paths.length > 0) {
+				const watcher = this.#watchConfig(paths);
+				this.#configWatcher = watcher;
+				this.#configWatcherReady = new Promise((resolve) =>
+					watcher.once("ready", () => resolve())
+				);
+			}
+			await previousWatcher?.close();
 		}
-		const paths = typeof configPaths === "string" ? [configPaths] : configPaths;
-		if (paths.length === 0) {
-			return;
+		const ready = this.#configWatcherReady;
+		if (ready !== undefined && !signal.aborted) {
+			// A superseding update or teardown aborts `signal`, possibly by closing
+			// the watcher before it is ready, so stop waiting then.
+			await new Promise<void>((resolve) => {
+				signal.addEventListener("abort", () => resolve());
+				void ready.then(resolve);
+			});
 		}
-		this.#configWatcher = watch(paths, {
+	}
+
+	#watchConfig(paths: string[]) {
+		const watcher = watch(paths, {
 			persistent: true,
 			ignoreInitial: true,
-		}).on("change", async (changedPath) => {
-			if (this.#configWatcher?.closed) {
+			// Without this, chokidar drops a path's `change` event if it comes
+			// within 50 ms of the previous one, losing a write made just after a
+			// reload. Waiting for writes to finish skips that throttle, and also
+			// avoids reading a partly written file.
+			awaitWriteFinish: { stabilityThreshold: 50, pollInterval: 10 },
+		});
+		return watcher.on("change", async (changedPath) => {
+			if (watcher.closed) {
 				return;
 			}
 			logger.debug(`${path.basename(changedPath)} changed...`);
@@ -793,19 +830,19 @@ export class ConfigController extends Controller {
 				}
 			}
 
+			let watchPaths: string[] = [];
 			if (!getDisableConfigWatching() && input.dev?.watch !== false) {
 				// Under `--experimental-new-config`, watch the transitive deps of both
 				// `cloudflare.config.ts` and `wrangler.config.ts` (deduped, with
 				// `node_modules` excluded by `@cloudflare/config`'s loader).
 				// Otherwise fall back to the legacy single-file watch.
-				const watchPaths = newConfig
-					? Array.from(newConfig.dependencies)
-					: fileConfig.configPath;
-				await this.#ensureWatchingConfig(watchPaths);
-			} else {
-				await this.#configWatcher?.close();
-				this.#configWatcher = undefined;
+				if (newConfig) {
+					watchPaths = Array.from(newConfig.dependencies);
+				} else if (fileConfig.configPath !== undefined) {
+					watchPaths = [fileConfig.configPath];
+				}
 			}
+			await this.#ensureWatchingConfig(watchPaths, signal);
 
 			// Under `--experimental-new-config`, run the new-config type-gen path
 			// instead of the legacy `checkTypesDiff`.
@@ -872,6 +909,9 @@ export class ConfigController extends Controller {
 		await super.teardown();
 		this.#abortController?.abort();
 		await this.#configWatcher?.close();
+		this.#configWatcher = undefined;
+		this.#configWatcherReady = undefined;
+		this.#configWatcherPaths = [];
 		logger.debug("ConfigController teardown complete");
 	}
 

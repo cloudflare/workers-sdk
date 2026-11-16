@@ -643,7 +643,6 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 		expect(proxyWorkerBindings).toEqual(undefined);
 
 		// Let's make a fetch to the worker to prove it's running before we update the config to add the bindings
-		// This also should give the config file watching time to settle.
 		const url = match?.groups?.url;
 		if (url === undefined) {
 			throw new Error("No URL found in output");
@@ -708,7 +707,8 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 			() => std.out.match(/Ready on (?<url>http:\/\/[^:]+:\d{4}.+)/),
 			{ timeout: devReadyTimeout }
 		);
-		// Give the config file watching time to settle
+		// By the time `wrangler dev` is ready it is watching the config file, so
+		// the edits below need no delay before them.
 		const url = match?.groups?.url;
 		assert(url);
 		expect((await fetch(url)).ok).toBe(true);
