@@ -2,8 +2,13 @@ const http = require("node:http");
 
 // An inert stand-in for Chrome: announce a DevTools endpoint and report only
 // the environment values the launcher test deliberately supplies.
-const server = http.createServer((_request, response) => {
+const server = http.createServer((request, response) => {
 	response.setHeader("Content-Type", "application/json");
+	// Miniflare waits for Chrome's initial page before using the browser.
+	if (request.url === "/json/list") {
+		response.end(JSON.stringify([{ type: "page", url: "about:blank" }]));
+		return;
+	}
 	response.end(
 		JSON.stringify({
 			home: process.env.HOME,

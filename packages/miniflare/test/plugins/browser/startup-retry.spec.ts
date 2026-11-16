@@ -23,7 +23,7 @@ test("retries a Chrome readiness failure returned by a quick-action warm-up", as
 						{
 							code: 6002,
 							detail:
-								"Chrome readiness probe at http://127.0.0.1:51397/json/version timed out after 5000ms",
+								"Chrome readiness probe at http://127.0.0.1:51397/json/list timed out after 5000ms",
 						},
 					],
 				},
