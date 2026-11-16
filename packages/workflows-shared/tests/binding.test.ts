@@ -1110,6 +1110,94 @@ describe("WorkflowHandle", () => {
 			await instance.terminate();
 		});
 
+		// https://github.com/cloudflare/workers-sdk/issues/16963
+		// The Workers API docs describe `waiting` as "instance is hibernating
+		// and waiting for sleep or event to finish".
+		it("should return waiting status while a workflow sleeps", async ({
+			expect,
+		}) => {
+			const id = uniqueId();
+			const binding = createBinding();
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+
+			setTestWorkflowCallback(async (_event, step) => {
+				await step.sleep("nap", "3 seconds");
+				return "completed";
+			});
+
+			await binding.create({ id });
+			await waitUntilLogEvent(engineStub, InstanceEvent.SLEEP_START);
+
+			const instance = await binding.get(id);
+			const status = await instance.status();
+
+			try {
+				expect(status.status).toBe("waiting");
+			} finally {
+				await instance.terminate();
+			}
+		});
+
+		it("should return waiting status while a workflow waits for an event", async ({
+			expect,
+		}) => {
+			const id = uniqueId();
+			const binding = createBinding();
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+
+			setTestWorkflowCallback(async (_event, step) => {
+				await step.waitForEvent("wait-for-event", {
+					type: "some-event",
+					timeout: "3 seconds",
+				});
+				return "completed";
+			});
+
+			await binding.create({ id });
+			await waitUntilLogEvent(engineStub, InstanceEvent.WAIT_START);
+
+			const instance = await binding.get(id);
+			const status = await instance.status();
+
+			try {
+				expect(status.status).toBe("waiting");
+			} finally {
+				await instance.terminate();
+			}
+		});
+
+		it("should return running status again once a sleep has finished", async ({
+			expect,
+		}) => {
+			const id = uniqueId();
+			const binding = createBinding();
+			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
+
+			setTestWorkflowCallback(async (_event, step) => {
+				await step.sleep("nap", "500 millis");
+				await step.do("after-sleep", async () => {
+					await scheduler.wait(3000);
+					return "done";
+				});
+				return "completed";
+			});
+
+			await binding.create({ id });
+			await waitUntilLogEvent(engineStub, InstanceEvent.SLEEP_START);
+
+			const instance = await binding.get(id);
+			try {
+				const statusWhileSleeping = await instance.status();
+				expect(statusWhileSleeping.status).toBe("waiting");
+
+				await waitUntilLogEvent(engineStub, InstanceEvent.STEP_START);
+				const statusAfterSleep = await instance.status();
+				expect(statusAfterSleep.status).toBe("running");
+			} finally {
+				await instance.terminate();
+			}
+		});
+
 		it("should return complete status and output for a successful workflow", async ({
 			expect,
 		}) => {
