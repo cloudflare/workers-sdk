@@ -70,10 +70,11 @@ export async function openPage(
 		await page.emulateMediaType(options.emulateMediaType);
 	}
 	if (options.cookies?.length) {
+		// oxlint-disable-next-line typescript-eslint/no-deprecated -- only the page-level API accepts cookies with a `url` and no `domain`.
 		await page.setCookie(...options.cookies);
 	}
 	await page.setViewport(options.viewport);
-	await page.setUserAgent(options.userAgent);
+	await page.setUserAgent({ userAgent: options.userAgent });
 	if (options.authenticate) {
 		await page.authenticate(options.authenticate);
 	}

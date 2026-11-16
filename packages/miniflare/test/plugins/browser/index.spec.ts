@@ -237,6 +237,7 @@ describe("browser rendering", { concurrent: false, timeout: 20_000 }, () => {
 			vi.stubEnv("XDG_CACHE_HOME", path.dirname(getGlobalWranglerCachePath()));
 			vi.stubEnv("HOME", home);
 			vi.stubEnv("XDG_CONFIG_HOME", path.join(home, ".config"));
+			vi.stubEnv("XDG_DATA_HOME", path.join(home, ".local", "share"));
 
 			const server = https.createServer(
 				{ key: KEY, cert: CERT },
@@ -302,7 +303,7 @@ export default {
 			if (process.platform !== "linux") {
 				return;
 			}
-			const nss = path.join(home, ".pki", "nssdb");
+			const nss = path.join(home, ".local", "share", "pki", "nssdb");
 			for (const directory of [home, path.dirname(nss), nss]) {
 				const stat = await fs.stat(directory);
 				expect(stat.uid).toBe(process.getuid?.());
