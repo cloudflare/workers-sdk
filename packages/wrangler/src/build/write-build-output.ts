@@ -1,5 +1,6 @@
 import {
 	cleanBuildOutputDir,
+	getWorkerBundleDir,
 	writeRootConfig,
 } from "@cloudflare/build-output-utils";
 import {
@@ -7,6 +8,7 @@ import {
 	initContainersSharedContext,
 } from "@cloudflare/containers-shared";
 import { getDockerPath } from "@cloudflare/workers-utils";
+import { version as wranglerVersion } from "../../package.json";
 import { fetchResult } from "../cfetch";
 import { readNewConfig } from "../config";
 import { writeWorkerOutput } from "../deployment-bundle/build-output";
@@ -22,7 +24,7 @@ import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
 /**
  * Write the standalone Build Output Specification for `wrangler build`.
  *
- * The output is a self-contained `.cloudflare/output/v0/` directory.
+ * The output is a self-contained `.cloudflare/output/v1/` directory.
  */
 export async function writeBuildOutput({
 	env,
@@ -44,18 +46,21 @@ export async function writeBuildOutput({
 	let buildResult: WorkerBuildResult | undefined;
 	try {
 		if (buildProps) {
-			buildResult = await buildWorker(buildProps, config);
+			buildResult = await buildWorker(buildProps, config, {
+				sourceMapDirectory: getWorkerBundleDir(root),
+			});
 		}
 
 		await cleanBuildOutputDir(root);
-		await writeRootConfig(
+		await writeRootConfig({
 			root,
-			{
+			settings: {
 				accountId: parsedConfig.accountId,
 				complianceRegion: parsedConfig.complianceRegion,
 			},
-			{ isPreview, mode }
-		);
+			buildContext: { isPreview, mode },
+			producer: { name: "wrangler", version: wranglerVersion },
+		});
 		await writeWorkerOutput({
 			root,
 			workerConfig: parsedConfig.worker,
@@ -69,7 +74,7 @@ export async function writeBuildOutput({
 		});
 		const pathToDocker = getDockerPath();
 		await buildAndWriteContainerOutput({
-			containers: parsedConfig.containers,
+			containers: parsedConfig.containers ?? [],
 			root,
 			pathToDocker,
 		});

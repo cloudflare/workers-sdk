@@ -87,6 +87,11 @@ export {
 	resolveBindingRemote,
 	validateBindingRemoteSetting,
 } from "./config/binding-local-support";
+export {
+	type ArtifactsDevBinding,
+	type ArtifactsLocalDefaultWarner,
+	createArtifactsLocalDefaultWarner,
+} from "./config/artifacts-local-default";
 
 export { validatePagesConfig } from "./config/validation-pages";
 
@@ -176,6 +181,8 @@ export { resolveNamedTunnel, startTunnel } from "./tunnel";
 export { spawnCloudflared } from "./cloudflared";
 
 export * from "./cfetch";
+export * from "./custom-api-headers";
+export * from "./sanitize-headers";
 
 export { fetchLatestNpmVersion } from "./update-check";
 export type { NpmVersionCheckResult } from "./update-check";

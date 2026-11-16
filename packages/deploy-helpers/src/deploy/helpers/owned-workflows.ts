@@ -1,4 +1,3 @@
-import { isDeepStrictEqual } from "node:util";
 import { partitionExports, UserError } from "@cloudflare/workers-utils";
 import type { Config, WorkflowBinding } from "@cloudflare/workers-utils";
 
@@ -16,9 +15,8 @@ export function isWorkflowDefinedInThisScript(
 /**
  * Collects the Workflows this script defines, from both `workflows` bindings
  * and `exports` entries of type `workflow`. A Workflow declared in both places
- * is returned once, with the settings of both declarations merged;
- * {@link validateOwnedWorkflowDeclarations} guarantees the two declarations
- * agree.
+ * is returned once, with the export's settings;
+ * {@link validateOwnedWorkflowDeclarations} guarantees the binding sets none.
  *
  * @param config - The Worker config
  * @param scriptName - The name of the script being deployed
@@ -37,26 +35,25 @@ export function getWorkflowsOwnedByScript(
 	for (const [className, workflowExport] of Object.entries(
 		partitionExports(config.exports).workflow
 	)) {
-		const binding = owned.get(workflowExport.name);
 		owned.set(workflowExport.name, {
 			name: workflowExport.name,
 			class_name: className,
-			limits: binding?.limits ?? workflowExport.limits,
-			concurrency: binding?.concurrency ?? workflowExport.concurrency,
-			schedules: binding?.schedules ?? workflowExport.schedules,
-			default_retention:
-				binding?.default_retention ?? workflowExport.default_retention,
-			jurisdiction: binding?.jurisdiction ?? workflowExport.jurisdiction,
+			limits: workflowExport.limits,
+			concurrency: workflowExport.concurrency,
+			schedules: workflowExport.schedules,
+			default_retention: workflowExport.default_retention,
+			jurisdiction: workflowExport.jurisdiction,
 		});
 	}
 	return [...owned.values()];
 }
 
 /**
- * Checks that each `workflows` binding owned by this script agrees with the
- * `workflow` export of the same name, so {@link getWorkflowsOwnedByScript} can
- * merge them, and that no binding to another script's Workflow shares a name
- * with an export, since the export makes this script the Workflow's owner.
+ * Checks that each `workflows` binding owned by this script only binds the
+ * `workflow` export of the same name: same class, and no settings, since the
+ * export holds them. Also checks that no binding to another script's Workflow
+ * shares a name with an export, since the export makes this script the
+ * Workflow's owner.
  * This can't run during config validation: ownership depends on the name the
  * script is deployed under, which `--name` or a CI override can change after
  * the config is validated.
@@ -64,8 +61,8 @@ export function getWorkflowsOwnedByScript(
  * @param config - The Worker config
  * @param scriptName - The name of the script being deployed
  * @throws {UserError} If a binding and an export for the same Workflow use
- * different classes, set the same setting to different values, or disagree
- * about which script owns the Workflow
+ * different classes, the binding sets a setting, or they disagree about which
+ * script owns the Workflow
  */
 export function validateOwnedWorkflowDeclarations(
 	config: Pick<Config, "workflows" | "exports">,
@@ -73,19 +70,15 @@ export function validateOwnedWorkflowDeclarations(
 ): void {
 	const exportsByWorkflowName = new Map(
 		Object.entries(partitionExports(config.exports).workflow).map(
-			([className, workflowExport]) => [
-				workflowExport.name,
-				{ className, workflowExport },
-			]
+			([className, workflowExport]) => [workflowExport.name, className]
 		)
 	);
 	const errors: string[] = [];
 	for (const [index, workflow] of (config.workflows ?? []).entries()) {
-		const match = exportsByWorkflowName.get(workflow.name);
-		if (match === undefined) {
+		const className = exportsByWorkflowName.get(workflow.name);
+		if (className === undefined) {
 			continue;
 		}
-		const { className, workflowExport } = match;
 		if (!isWorkflowDefinedInThisScript(workflow, scriptName)) {
 			errors.push(
 				`"workflows[${index}]" binds the Workflow "${workflow.name}" of the Worker "${workflow.script_name}", but "exports.${className}" declares it in this Worker. Workflow names are unique per account, so remove "script_name" from the binding or give the export a different name.`
@@ -104,16 +97,9 @@ export function validateOwnedWorkflowDeclarations(
 			"default_retention",
 			"jurisdiction",
 		] as const) {
-			const bindingValue = workflow[key];
-			const exportValue = workflowExport[key];
-			// `schedules` accepts a string or an array; compare both as arrays.
-			if (
-				bindingValue !== undefined &&
-				exportValue !== undefined &&
-				!isDeepStrictEqual([bindingValue].flat(), [exportValue].flat())
-			) {
+			if (workflow[key] !== undefined) {
 				errors.push(
-					`"workflows[${index}].${key}" and "exports.${className}.${key}" both configure the Workflow "${workflow.name}", but with different values. Set "${key}" in only one of them.`
+					`"workflows[${index}].${key}" configures the Workflow "${workflow.name}", which "exports.${className}" declares. Set "${key}" on the export instead.`
 				);
 			}
 		}

@@ -592,6 +592,59 @@ describe("handleModuleFallbackRequest new module registry", () => {
 		});
 	});
 
+	it("reads a nested package's type even after an ancestor's type was cached", async ({
+		expect,
+	}) => {
+		// The project root is `"type": "module"`
+		fs.writeFileSync(
+			path.join(tmp, "package.json"),
+			JSON.stringify({ type: "module" })
+		);
+		// A `.js` file with no `package.json` of its own, as emitted by a bundler,
+		// is classified by the project root, which caches that answer
+		fs.mkdirSync(path.join(tmp, "vendor"));
+		const vendorPath = path.join(tmp, "vendor", "empty.js");
+		fs.writeFileSync(vendorPath, "");
+		// A dependency with its own `"type": "commonjs"` package.json
+		const depDir = path.join(tmp, "node_modules", "cjs-dep");
+		fs.mkdirSync(path.join(depDir, "lib"), { recursive: true });
+		fs.writeFileSync(
+			path.join(depDir, "package.json"),
+			JSON.stringify({ name: "cjs-dep", type: "commonjs" })
+		);
+		const depPath = path.join(depDir, "lib", "index.js");
+		const depContents = "exports.value = 42;";
+		fs.writeFileSync(depPath, depContents);
+		const referrer = pathToFileURL(path.join(tmp, "entry.mjs")).href;
+
+		const vendorResponse = await handleModuleFallbackRequest(
+			fakeVite(),
+			v2ModuleFallbackRequest({
+				type: "import",
+				specifier: pathToFileURL(vendorPath).href,
+				rawSpecifier: "./vendor/empty.js",
+				referrer,
+			})
+		);
+		expect(await vendorResponse.json()).toMatchObject({ esModule: "" });
+
+		const depSpecifier = pathToFileURL(depPath).href;
+		const depResponse = await handleModuleFallbackRequest(
+			fakeVite(),
+			v2ModuleFallbackRequest({
+				type: "import",
+				specifier: depSpecifier,
+				rawSpecifier: "cjs-dep",
+				referrer,
+			})
+		);
+		expect(await depResponse.json()).toEqual({
+			name: depSpecifier,
+			commonJsModule: depContents,
+			namedExports: ["value"],
+		});
+	});
+
 	it("preserves forced module types encoded in URL queries", async ({
 		expect,
 	}) => {

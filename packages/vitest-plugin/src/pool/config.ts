@@ -19,6 +19,11 @@ import {
 import { z } from "zod";
 import { getRemoteBindingsAuth } from "./auth";
 import {
+	getCloudflareConfigContainerConfiguration,
+	getWranglerContainerConfiguration,
+	prepareProjectContainers,
+} from "./containers";
+import {
 	getProjectPath,
 	getRelativeProjectConfigPath,
 	getRelativeProjectPath,
@@ -26,15 +31,16 @@ import {
 	WORKER_NAME_PREFIX,
 } from "./helpers";
 import {
-	defaultNewConfigArtifactsToLocal,
-	defaultWranglerConfigArtifactsToLocal,
-} from "./local-artifacts";
-import {
 	loadNewConfig,
 	mergeCloudflareConfigWorker,
 	NEW_CONFIG_FILENAME,
+	toApiComplianceRegion,
 } from "./new-config";
 import type { LoadedNewConfig } from "./new-config";
+import type {
+	ContainerDevRuntimeOptions,
+	ViteLogger,
+} from "@cloudflare/containers-shared";
 import type {
 	RemoteBindingsLogger,
 	RemoteProxySessionData,
@@ -43,6 +49,7 @@ import type { Config } from "@cloudflare/workers-utils";
 import type {
 	LegacyWorkerOptions,
 	RemoteProxyConnectionString,
+	V4MiniflareOptions,
 	V4ModuleRule,
 	WorkerOptions,
 } from "miniflare";
@@ -140,6 +147,8 @@ export type WorkersPoolOptions = z.input<typeof WorkersPoolOptionsSchema> & {
 export type WorkersPoolOptionsWithDefines = WorkersPoolOptions & {
 	defines?: Record<string, string>;
 	moduleRules?: V4ModuleRule[];
+	/** Container engine prepared from the resolved Worker configuration. */
+	containerEngine?: V4MiniflareOptions["containerEngine"];
 	/**
 	 * Details of the configuration file these options were resolved from. Set
 	 * while parsing; not a user-facing option. Undefined when the project
@@ -258,6 +267,18 @@ function parseWorkerOptions(
 const log = new Log(LogLevel.WARN, { prefix: "vpw" });
 const debug = util.debuglog("vitest-plugin");
 
+const containerLogger: ViteLogger = {
+	info(message) {
+		log.info(message);
+	},
+	warn(message) {
+		log.warn(message);
+	},
+	error(message) {
+		log.logWithLevel(LogLevel.ERROR, message);
+	},
+};
+
 const remoteBindingsLogger: RemoteBindingsLogger = {
 	loggerLevel: "log",
 	debug: console.debug,
@@ -285,12 +306,7 @@ function filterTails(
 	const seen = new Set<string>();
 	return tails?.filter((tail) => {
 		// The configuration file and `miniflare` options may name the same tail consumer
-		const key = JSON.stringify([
-			tail.worker,
-			tail.streaming ?? false,
-			tail.entrypoint,
-			tail.props,
-		]);
+		const key = JSON.stringify([tail.worker, tail.entrypoint, tail.props]);
 		if (seen.has(key)) {
 			return false;
 		}
@@ -479,10 +495,13 @@ function pointStreamingTailsAtRunner(
 	configWorkerName: string,
 	runnerName: string
 ): void {
-	worker.config.tailConsumers = worker.config.tailConsumers?.map((tail) =>
-		tail.streaming && tail.worker === configWorkerName
-			? { ...tail, worker: runnerName }
-			: tail
+	const experimental = worker.config.experimental;
+	if (experimental?.streamingTailConsumers === undefined) {
+		return;
+	}
+	experimental.streamingTailConsumers = experimental.streamingTailConsumers.map(
+		(tail) =>
+			tail.worker === configWorkerName ? { ...tail, worker: runnerName } : tail
 	);
 }
 
@@ -496,13 +515,16 @@ function pointStreamingTailsAtRunner(
  * @param options The project's parsed pool options.
  * @param cloudflareConfig The `cloudflare.config.ts` loaded for `config`, if any.
  * @param remoteProxyConnectionString The config's remote proxy session, if any.
+ * @param containerRuntimeOptions The runtime options of the config's
+ *   Container-backed Durable Object classes, if any.
  * @returns The Worker under test, followed by the auxiliary Workers.
  */
 function resolveProjectWorkers(
 	project: TestProject,
 	options: WorkersPoolOptionsWithDefines,
 	cloudflareConfig: LoadedNewConfig | undefined,
-	remoteProxyConnectionString: RemoteProxyConnectionString | undefined
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
+	containerRuntimeOptions: Map<string, ContainerDevRuntimeOptions> | undefined
 ): ProjectWorkers {
 	const runnerName = getRunnerName(project);
 	const configWorkerName = options.resolvedConfig?.workerName;
@@ -519,12 +541,19 @@ function resolveProjectWorkers(
 			: mergeCloudflareConfigWorker(convertedWorker, cloudflareConfig, {
 					remoteBindings: options.remoteBindings,
 					remoteProxyConnectionString,
+					containerRuntimeOptions,
 				});
 
 	worker.config.tailConsumers = filterTails(
 		worker.config.tailConsumers,
 		auxiliaryWorkers
 	);
+	if (worker.config.experimental !== undefined) {
+		worker.config.experimental.streamingTailConsumers = filterTails(
+			worker.config.experimental.streamingTailConsumers,
+			auxiliaryWorkers
+		);
+	}
 
 	// The runner replaces the Worker under test, so it takes the runner's name
 	worker.config.name = runnerName;
@@ -635,17 +664,13 @@ async function parseCustomPoolOptions(
 	let environment: string | undefined;
 	let cloudflareConfig: LoadedNewConfig | undefined;
 	let remoteProxyConnectionString: RemoteProxyConnectionString | undefined;
+	let containerRuntimeOptions:
+		| Map<string, ContainerDevRuntimeOptions>
+		| undefined;
 
 	if (newConfig !== undefined) {
 		configPath = path.resolve(rootPath, newConfig.configPath);
-		const loadedConfig = await loadNewConfig(configPath, mode, envDir);
-		cloudflareConfig = {
-			...loadedConfig,
-			worker: {
-				...loadedConfig.worker,
-				env: defaultNewConfigArtifactsToLocal(loadedConfig.worker.env),
-			},
-		};
+		cloudflareConfig = await loadNewConfig(configPath, mode, envDir);
 		const { worker, settings } = cloudflareConfig;
 		options.resolvedConfig = {
 			path: configPath,
@@ -653,6 +678,13 @@ async function parseCustomPoolOptions(
 			workerName: worker.name,
 			effectiveWorkerName: worker.name,
 		};
+		const containerEnvironment = await prepareProjectContainers(
+			project,
+			getCloudflareConfigContainerConfiguration(cloudflareConfig, configPath),
+			containerLogger
+		);
+		options.containerEngine = containerEnvironment?.containerEngine;
+		containerRuntimeOptions = containerEnvironment?.containerRuntimeOptions;
 
 		const preExistingRemoteProxySessionData =
 			remoteProxySessionsDataMap.get(configPath);
@@ -662,14 +694,12 @@ async function parseCustomPoolOptions(
 						name: worker.name,
 						target: "cf",
 						env: worker.env,
-						complianceRegion:
-							settings.complianceRegion === "fedramp-high"
-								? "fedramp_high"
-								: settings.complianceRegion,
+						complianceRegion: toApiComplianceRegion(settings.complianceRegion),
 					},
 					preExistingRemoteProxySessionData ?? null,
 					// `cloudflare.config.ts` belongs to cf, so use cf's credentials
 					getRemoteBindingsAuth(
+						"cf",
 						path.dirname(configPath),
 						settings.accountId,
 						remoteBindingsLogger
@@ -713,12 +743,10 @@ async function parseCustomPoolOptions(
 		// we can pass the parsed config straight into
 		// `unstable_getMiniflareWorkerOptions` without re-parsing it.
 		const wrangler = await import("wrangler");
-		config = defaultWranglerConfigArtifactsToLocal(
-			wrangler.unstable_readConfig({
-				config: configPath,
-				env: environment,
-			})
-		);
+		config = wrangler.unstable_readConfig({
+			config: configPath,
+			env: environment,
+		});
 	}
 
 	if (configPath !== undefined && config !== undefined) {
@@ -728,6 +756,12 @@ async function parseCustomPoolOptions(
 			workerName: config.topLevelName,
 			effectiveWorkerName: config.name,
 		};
+		const containerEnvironment = await prepareProjectContainers(
+			project,
+			getWranglerContainerConfiguration(config, configPath),
+			containerLogger
+		);
+		options.containerEngine = containerEnvironment?.containerEngine;
 
 		// Already imported above, so the module registry makes this a no-op
 		const wrangler = await import("wrangler");
@@ -744,11 +778,14 @@ async function parseCustomPoolOptions(
 								config
 							) ?? {},
 						complianceRegion: getCloudflareComplianceRegion(config),
-						account_id: config.account_id,
-						profileDir: path.dirname(configPath),
 					},
 					preExistingRemoteProxySessionData ?? null,
-					undefined,
+					getRemoteBindingsAuth(
+						"wrangler",
+						path.dirname(configPath),
+						config.account_id,
+						remoteBindingsLogger
+					),
 					{ cliDisplayName: "Wrangler", logger: remoteBindingsLogger }
 				)
 			: null;
@@ -761,9 +798,8 @@ async function parseCustomPoolOptions(
 			wrangler.unstable_getMiniflareWorkerOptions(config, environment, {
 				overrides: {
 					assets: options.miniflare.assets,
-					// doesn't work with containers yet so let's just disable it
-					enableContainers: false,
 				},
+				containerBuildId: containerEnvironment?.containerBuildId,
 				remoteProxyConnectionString:
 					remoteProxySessionData?.session?.remoteProxyConnectionString,
 			});
@@ -815,7 +851,8 @@ async function parseCustomPoolOptions(
 		project,
 		options,
 		cloudflareConfig,
-		remoteProxyConnectionString
+		remoteProxyConnectionString,
+		containerRuntimeOptions
 	);
 
 	return options;

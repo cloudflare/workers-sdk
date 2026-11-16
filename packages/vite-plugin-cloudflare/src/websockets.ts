@@ -1,7 +1,11 @@
 import { CoreHeaders, coupleWebSocket } from "miniflare";
 import { WebSocketServer } from "ws";
 import { UNKNOWN_HOST } from "./shared";
-import { createHeadersForIncomingMessage, getForwardedProto } from "./utils";
+import {
+	createHeadersForIncomingMessage,
+	getForwardedProto,
+	resolveRequestTarget,
+} from "./utils";
 import type { Headers, Miniflare } from "miniflare";
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
@@ -54,7 +58,7 @@ export function handleWebSocket(
 				const base = /^https?:\/\//i.test(rawHost)
 					? rawHost
 					: `${protocol}//${rawHost}`;
-				const url = new URL(request.url ?? "", base);
+				const url = resolveRequestTarget(request.url ?? "/", base);
 
 				const isViteRequest =
 					request.headers["sec-websocket-protocol"]?.startsWith("vite");

@@ -53,7 +53,10 @@ export function getFixtureShard(
 			};
 			return (
 				manifest.scripts?.["test:ci"] !== undefined &&
-				!(platform === "linux" && name === "browser-run")
+				!(
+					platform === "linux" &&
+					(name === "browser-run" || name === "browser-run-quick-actions")
+				)
 			);
 		})
 		.filter((name) =>

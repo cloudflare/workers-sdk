@@ -1086,6 +1086,12 @@ describe("wrangler deploy with containers", () => {
 
 		await runWrangler("deploy index.js");
 
+		expect(vi.mocked(spawn).mock.lastCall?.[1]).toEqual([
+			"image",
+			"rm",
+			`my-container:${TEST_CONTAINER_BUILD_TAG}`,
+		]);
+
 		expect(std.out).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x
@@ -5066,13 +5072,13 @@ function createDockerMockChain(
 			localTag,
 			tag
 		),
-		mockDockerImageDelete(expect, containerName, localTag),
 		mockDockerPush(expect, "some-account-id/" + containerName, tag),
 		mockDockerImageInspectDigestsForImage(
 			expect,
 			`${getCloudflareContainerRegistry()}/some-account-id/${containerName}:${tag}`,
 			`${getCloudflareContainerRegistry()}/some-account-id/${containerName}@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`
 		),
+		mockDockerImageDelete(expect, containerName, localTag),
 	];
 
 	return mocks;

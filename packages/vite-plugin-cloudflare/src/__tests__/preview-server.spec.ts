@@ -8,7 +8,11 @@ import { afterEach, describe, test, vi } from "vitest";
 import { cloudflare } from "../index";
 import type { CloudflareConfig } from "../index";
 
-vi.mock("@cloudflare/workers-utils");
+vi.mock("@cloudflare/workers-utils", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@cloudflare/workers-utils")>();
+	return { ...actual, getZoneFromRoute: vi.fn() };
+});
 
 const fixturesPath = fileURLToPath(new URL("./fixtures", import.meta.url));
 
@@ -49,7 +53,7 @@ describe("preview server", () => {
 								accountId: "customized-account",
 								complianceRegion: "fedramp-high",
 								containers: [
-									...loadedConfig.containers,
+									...(loadedConfig.containers ?? []),
 									{
 										name: "customized-container",
 										image: {
@@ -72,8 +76,11 @@ describe("preview server", () => {
 			await builder.buildApp();
 			const output = await readBuildOutput(fixturesPath);
 			expect(output.rootConfig).toMatchObject({
-				accountId: "customized-account",
-				complianceRegion: "fedramp-high",
+				producer: { name: "@cloudflare/vite-plugin" },
+				settings: {
+					accountId: "customized-account",
+					complianceRegion: "fedramp-high",
+				},
 			});
 			expect(output.containers.map(({ config }) => config)).toEqual([
 				expect.objectContaining({

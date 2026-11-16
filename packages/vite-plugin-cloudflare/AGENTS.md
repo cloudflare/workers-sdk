@@ -53,17 +53,19 @@ contract so the parent can drive either impl interchangeably.
   reads Workers and Containers exclusively from that output. The v2 plugin
   always installs its build-output plugin, so `cf-vite` does not need the
   internal force-build-output flag used by v1.
-- **Caller identity.** `main()` sets `CLOUDFLARE_VITE_CLI_DISPLAY_NAME=cf`
-  before Vite loads the user's config. `resolvePluginConfig` reads this through
-  `getCliDisplayName()` so shared services can use `cf` in actionable messages;
-  direct Vite plugin use defaults to `Wrangler`. This is an internal bridge,
-  not a `.env`-file knob.
+- **Caller identity.** The plugin is only compatible with `cf`, so actionable
+  messages always name `cf` (`CLI_DISPLAY_NAME` in `src/constants.ts`), whether
+  or not Vite was started by `cf-vite`. Do not fall back to Wrangler.
 - **`dev`** `cf-vite dev` boots Vite via `createServer()`
   against the user's own `vite.config.ts` (which must include
   `cloudflare()`). Plugin-owned flags are bridged via env vars the plugin
   already reads (`--local` → `CLOUDFLARE_VITE_FORCE_LOCAL`); Vite-owned
   flags go through inline config (`--port`/`--host` → `server.*`,
   `--mode` → `mode`).
+- **Authentication.** Profiles resolve through `@cloudflare/workers-auth`, including
+  `CLOUDFLARE_AUTH_PROFILE` inherited from the parent. Remote-binding credentials
+  are keyed by the resolved profile as well as project directory and account,
+  so a profile change on restart replaces the session's authentication.
 - **`--local`** forces remote bindings off. There is no plugin env knob
   for `remoteBindings` other than `CLOUDFLARE_VITE_FORCE_LOCAL`, which
   `resolvePluginConfig` in `plugin-config.ts` honours by overriding the

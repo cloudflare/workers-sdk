@@ -1,6 +1,5 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
-import os from "node:os";
 import path, { join } from "node:path";
 import {
 	CONTENT_HASH_OFFSET,
@@ -54,11 +53,6 @@ import type { Service } from "../../runtime";
 import type { Plugin } from "../shared";
 import type { Logger, RouterConfig } from "@cloudflare/workers-shared";
 import type { AssetConfig } from "@cloudflare/workers-shared/utils/types";
-
-// Cache of temp directories created for missing asset directories, keyed by
-// the Worker's name followed by the assets directory path. Prevents accumulating
-// orphaned temp directories when getServices is called repeatedly
-const tempDirCache = new Map<string, string>();
 
 function resolveAssetDirectory(
 	rootPath: string | undefined,
@@ -125,7 +119,7 @@ export const ASSETS_PLUGIN: Plugin = {
 		};
 	},
 
-	async getServices({ options, log }) {
+	async getServices({ options, log, tmpPath }) {
 		const assets = options.config.assets;
 		if (!assets) {
 			return [];
@@ -143,23 +137,13 @@ export const ASSETS_PLUGIN: Plugin = {
 		});
 		if (!directoryStats) {
 			// If the assets directory doesn't exist yet (e.g. the build output
-			// hasn't been generated), create an empty temp directory so that the
-			// asset services can still start up with zero assets.
-			// Reuse a previously created temp directory for this path to avoid
-			// accumulating orphaned temp directories on repeated calls.
-			const cacheKey = `${options.config.name}:${assetDirectory}`;
-			const cached = tempDirCache.get(cacheKey);
-			const cachedExists = cached
-				? await fs.stat(cached).catch(() => undefined)
-				: undefined;
-			if (cached && cachedExists) {
-				assetDirectory = cached;
-			} else {
-				assetDirectory = await fs.mkdtemp(
-					path.join(os.tmpdir(), "miniflare-assets-")
-				);
-				tempDirCache.set(cacheKey, assetDirectory);
-			}
+			// hasn't been generated), serve zero assets from an empty directory.
+			// It lives inside this instance's temporary directory so `dispose()`
+			// and the exit hook remove it, and its fixed path lets repeated
+			// `getServices()` calls reuse it. Workers can share it because it is
+			// always empty and the disk service is read-only.
+			assetDirectory = path.join(tmpPath, ASSETS_PLUGIN_NAME, "empty");
+			await fs.mkdir(assetDirectory, { recursive: true });
 		}
 
 		const storageServiceName = `${ASSETS_PLUGIN_NAME}:storage:${options.config.name}`;

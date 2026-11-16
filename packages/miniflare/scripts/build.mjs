@@ -443,6 +443,8 @@ async function buildPackage() {
 			"esbuild",
 		],
 		plugins: [embedWorkersPlugin],
+		loader: { ".wasm": "file" },
+		assetNames: "src/[name]",
 		logLevel: watch ? "info" : "warning",
 		outdir: outPath,
 		outbase: pkgRoot,

@@ -532,13 +532,9 @@ async function pushOrResolveImage(
 			targetTag: builtImage.localTag,
 			accountId,
 			complianceConfig: config,
-			cleanupSourceTag: true,
+			// Leave cleanup to the caller's complete upload workflow.
+			cleanupSourceTag: false,
 		});
-		for (const image of builtImages) {
-			if (image.localTag === builtImage.localTag) {
-				image.localTagCleaned = true;
-			}
-		}
 
 		return "remoteDigest" in imageRef ? imageRef.remoteDigest : imageRef.newTag;
 	} catch (error) {

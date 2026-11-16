@@ -96,7 +96,7 @@ function createBuildArgs() {
 	};
 }
 
-function createFakeChildProcess(args: string[]): ChildProcess {
+function createFakeChildProcess(args: string[], exitCode = 0): ChildProcess {
 	const child = new EventEmitter() as ChildProcess;
 	const stdout = new EventEmitter();
 	const stderr = new EventEmitter();
@@ -119,8 +119,8 @@ function createFakeChildProcess(args: string[]): ChildProcess {
 		if (args[0] === "image" && args[1] === "inspect") {
 			stdout.emit("data", inspectOutputs.shift() ?? "");
 		}
-		child.emit("exit", 0);
-		child.emit("close", 0);
+		child.emit("exit", exitCode);
+		child.emit("close", exitCode);
 	});
 
 	return child;
@@ -345,6 +345,42 @@ describe("buildCommand", () => {
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 		]);
 	});
+
+	it.for([0, 1])(
+		"only cleans the source tag after a successful push (exit code %s)",
+		async (exitCode, { expect }) => {
+			vi.mocked(spawn).mockImplementation((_dockerPath, args) =>
+				createFakeChildProcess(
+					Array.from(args ?? []),
+					args?.[0] === "push" ? exitCode : 0
+				)
+			);
+			const push = pushImageIfChanged({
+				pathToDocker: "docker",
+				sourceTag: "test-app:tag",
+				targetTag: "test-app:tag",
+				accountId: "some-account-id",
+				containerConfig: dockerfileContainer,
+				cleanupSourceTag: true,
+			});
+
+			if (exitCode === 0) {
+				await expect(push).resolves.toHaveProperty("remoteDigest");
+				expectSpawnWith(["image", "rm", "test-app:tag"]);
+				const commands = vi.mocked(spawn).mock.calls.map(([, args]) => args);
+				expect(commands.findIndex((args) => args?.[0] === "push")).toBeLessThan(
+					commands.findIndex(
+						(args) => args?.[0] === "image" && args[1] === "rm"
+					)
+				);
+			} else {
+				await expect(push).rejects.toThrow(
+					"Docker command exited with code: 1"
+				);
+				expectNoSpawnWith(["image", "rm", "test-app:tag"]);
+			}
+		}
+	);
 
 	it("skips pushing when the remote digest already exists", async ({
 		expect,
@@ -650,7 +686,7 @@ describe("deploy container image build and push", () => {
 			TEST_LOCAL_TAG,
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:Galaxy`,
 		]);
-		expectSpawnWith(["image", "rm", TEST_LOCAL_TAG]);
+		expectNoSpawnWith(["image", "rm", TEST_LOCAL_TAG]);
 		expectSpawnWith([
 			"push",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:Galaxy`,
@@ -666,13 +702,6 @@ describe("deploy container image build and push", () => {
 						`${getCloudflareContainerRegistry()}/some-account-id/test-app:Galaxy`,
 					])
 			);
-		const cleanupCallIndex = vi
-			.mocked(spawn)
-			.mock.calls.findIndex(
-				([, args]) =>
-					JSON.stringify(args) ===
-					JSON.stringify(["image", "rm", TEST_LOCAL_TAG])
-			);
 		const pushCallIndex = vi
 			.mocked(spawn)
 			.mock.calls.findIndex(
@@ -683,9 +712,42 @@ describe("deploy container image build and push", () => {
 						`${getCloudflareContainerRegistry()}/some-account-id/test-app:Galaxy`,
 					])
 			);
-		expect(tagCallIndex).toBeLessThan(cleanupCallIndex);
-		expect(cleanupCallIndex).toBeLessThan(pushCallIndex);
+		expect(tagCallIndex).toBeLessThan(pushCallIndex);
+		expect(builtImage.localTagCleaned).toBeUndefined();
+
+		await cleanupBuiltImages([builtImage], "docker");
+		expectSpawnWith(["image", "rm", TEST_LOCAL_TAG]);
 		expect(builtImage.localTagCleaned).toBe(true);
+	});
+
+	it("retains a built image when its remote digest already exists", async ({
+		expect,
+	}) => {
+		const builtImage: BuiltContainerImage = {
+			container: dockerfileContainer,
+			localTag: TEST_LOCAL_TAG,
+		};
+		const digest = `${getCloudflareContainerRegistry()}/some-account-id/test-app@sha256:${"a".repeat(64)}`;
+		inspectOutputs = [JSON.stringify([digest]), "53387881 2"];
+		vi.mocked(execFileSync).mockReturnValue(
+			JSON.stringify({ Descriptor: { digest: `sha256:${"a".repeat(64)}` } })
+		);
+
+		await expect(
+			pushBuiltContainerImage(
+				builtImage,
+				"Galaxy-Class",
+				"docker",
+				"some-account-id"
+			)
+		).resolves.toEqual({ remoteDigest: digest });
+
+		expectNoSpawnWith(["image", "rm", TEST_LOCAL_TAG]);
+		expectNoSpawnWith([
+			"push",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:Galaxy`,
+		]);
+		expect(builtImage.localTagCleaned).toBeUndefined();
 	});
 
 	it("cleans up built deployment images that were not pushed", async ({

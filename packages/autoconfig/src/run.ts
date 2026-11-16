@@ -11,7 +11,10 @@ import {
 	installPackages,
 	installWrangler,
 } from "@cloudflare/cli-shared-helpers/packages";
-import { convertToWranglerConfig, InputConfigSchema } from "@cloudflare/config";
+import {
+	convertToWranglerConfig,
+	CloudflareConfigSchema,
+} from "@cloudflare/config";
 import {
 	DEFAULT_COMPAT_DATE,
 	FatalError,
@@ -20,9 +23,11 @@ import {
 } from "@cloudflare/workers-utils";
 import {
 	assertNonConfigured,
+	assertProjectCommandsAvailable,
 	confirmAutoConfigDetails,
 	displayAutoConfigDetails,
 	getProjectCommand,
+	getDetailsForAutoConfig,
 } from "./details";
 import {
 	isFrameworkSupported,
@@ -32,6 +37,7 @@ import {
 } from "./frameworks";
 import { getFrameworkPackageInfo } from "./frameworks/all-frameworks";
 import { Static } from "./frameworks/static";
+import { CF_VITE_PLUGIN_VERSION_RANGE } from "./frameworks/utils/vite-plugin-version";
 import { writePnpmBuildApprovals } from "./pnpm-build-approvals";
 import {
 	CLOUDFLARE_TYPES_INCLUDE,
@@ -169,13 +175,17 @@ export async function runAutoConfig(
 	const { npx } = packageManager;
 	let buildCommand =
 		dryRunConfigurationResults.buildCommandOverride ??
-		autoConfigDetails.buildCommand;
+		autoConfigDetails.buildCommand ??
+		(autoConfigDetails.commandError && autoConfigDetails.framework.id === "vite"
+			? "vite build"
+			: undefined);
 	// Preserve shell commands while normalizing Vite selected by framework overrides.
 	if (buildCommand === "vite build" || buildCommand === `${npx} vite build`) {
 		buildCommand = getProjectCommand(
 			buildCommand,
 			packageManager,
-			autoConfigDetails.packageJson
+			autoConfigDetails.packageJson,
+			target
 		);
 	}
 
@@ -364,6 +374,29 @@ export async function runAutoConfig(
 		}
 	}
 
+	// Setup can install missing packages or activate the plugin. Recheck command
+	// readiness after those changes, only when a build will actually be executed.
+	if (target === "cf" && runBuild && autoConfigDetails.commandError) {
+		const configuredDetails = await getDetailsForAutoConfig({
+			projectPath: autoConfigDetails.projectPath,
+			target,
+			context,
+		});
+		assertProjectCommandsAvailable(configuredDetails);
+		buildCommand =
+			configurationResults.buildCommandOverride ??
+			configuredDetails.buildCommand ??
+			buildCommand;
+		if (buildCommand === "vite build" || buildCommand === `${npx} vite build`) {
+			buildCommand = getProjectCommand(
+				buildCommand,
+				packageManager,
+				configuredDetails.packageJson,
+				target
+			);
+		}
+		autoConfigSummary.buildCommand = buildCommand;
+	}
 	if (buildCommand && runBuild) {
 		await context.runCommand(
 			buildCommand,
@@ -406,7 +439,7 @@ function getWranglerConfig(
 		return null;
 	}
 
-	const parsedConfig = InputConfigSchema.parse({ worker: workerConfig });
+	const parsedConfig = CloudflareConfigSchema.parse({ worker: workerConfig });
 	const convertedWranglerConfig = convertToWranglerConfig(parsedConfig);
 	const wranglerConfig = ensureNodejsCompatIsEnabled({
 		$schema: "node_modules/wrangler/config-schema.json",
@@ -614,7 +647,7 @@ export async function buildOperationsSummary(
 		if (configurationResults.buildTool === "vite") {
 			packagesToInstall.add(
 				target === "cf"
-					? "@cloudflare/vite-plugin@^2.0.0-beta.v.0"
+					? `@cloudflare/vite-plugin@${CF_VITE_PLUGIN_VERSION_RANGE}`
 					: "@cloudflare/vite-plugin"
 			);
 		} else if (

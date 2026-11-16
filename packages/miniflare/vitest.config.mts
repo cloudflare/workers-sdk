@@ -8,7 +8,10 @@ export default defineConfig({
 		testTimeout: 30_000,
 		hookTimeout: 30_000,
 		pool: "forks",
-		maxWorkers: 1,
+		// workerd's CI runs this suite against its own builds with this same
+		// setting, so keep the worker count fixed rather than scaling it with
+		// the runner's cores.
+		maxWorkers: 4,
 		shard: getVitestShard(),
 		include: ["test/**/*.spec.ts"],
 		setupFiles: [path.resolve(import.meta.dirname, "test/setup.mjs")],

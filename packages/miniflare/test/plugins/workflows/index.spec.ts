@@ -606,6 +606,29 @@ function updateLocalExplorerWorkflowInstanceStatus(
 }
 
 describe("workflow instance lifecycle methods", () => {
+	test("enforces binding-only Workflow step limits from unsafeConfig", async ({
+		expect,
+	}) => {
+		const options = lifecycleMiniflareOpts(await useTmp());
+		const binding = options.workers[0].config.env?.LIFECYCLE_WORKFLOW;
+		assert(binding?.type === "workflow");
+		binding.unsafeConfig = { limits: { steps: 1 } };
+		const mf = new Miniflare(options);
+		useDispose(mf);
+
+		const response = await mf.dispatchFetch(
+			"http://localhost/create?id=limited"
+		);
+		expect(await response.json()).toMatchObject({ id: "limited" });
+		expect(await waitForStatus(mf, "limited", "errored")).toMatchObject({
+			error: {
+				message: expect.stringContaining(
+					"The limit of 1 steps has been reached"
+				),
+			},
+		});
+	});
+
 	test("pause and resume a running workflow", async ({ expect }) => {
 		const tmp = await useTmp();
 		const mf = new Miniflare(lifecycleMiniflareOpts(tmp));

@@ -3,6 +3,10 @@ import {
 	createCfAuth,
 	createCfProfileStore,
 } from "@cloudflare/workers-auth/cf";
+import {
+	createWranglerAuth,
+	createWranglerProfileStore,
+} from "@cloudflare/workers-auth/wrangler";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { version as packageVersion } from "../../package.json";
 import type { RemoteBindingsAuth } from "@cloudflare/remote-bindings";
@@ -17,10 +21,21 @@ class AccountSelectionUnavailable extends Error {
 	}
 }
 
+/** Which CLI's credentials a config uses: cf's or Wrangler's. */
+type AuthTarget = "cf" | "wrangler";
+
+// Pool workers and watch-mode reruns share each resolved profile's auth for the
+// life of the process.
+const authByProfileKey = new Map<string, CloudflareAuth>();
+
 /**
- * Set up cf authentication using the profile associated with `profileDir`.
+ * Set up cf or Wrangler authentication using an already-resolved profile.
  */
-function createAuth(profileDir: string, logger: Logger): CloudflareAuth {
+function createAuthForProfile(
+	target: AuthTarget,
+	profile: string,
+	logger: Logger
+): CloudflareAuth {
 	const context = {
 		logger,
 		userAgent: `vitest-plugin/${packageVersion}`,
@@ -42,7 +57,7 @@ function createAuth(profileDir: string, logger: Logger): CloudflareAuth {
 			if (isNonInteractiveOrCI()) {
 				throw new AccountSelectionUnavailable();
 			}
-			return inputPrompt<string>({
+			const accountId = await inputPrompt<string>({
 				type: "select",
 				question,
 				label: "Account",
@@ -52,35 +67,68 @@ function createAuth(profileDir: string, logger: Logger): CloudflareAuth {
 				})),
 				throwOnError: true,
 			});
+			if (target === "cf") {
+				logger.info(
+					[
+						"To use this account automatically in future, configure accountId in cloudflare.config.ts:",
+						"",
+						`  accountId: ${JSON.stringify(accountId)},`,
+						"",
+						"Alternatively, set the `CLOUDFLARE_ACCOUNT_ID` environment variable.",
+					].join("\n")
+				);
+			}
+			return accountId;
 		},
 		isNoDefaultValueProvidedError: (error: unknown) =>
 			error instanceof AccountSelectionUnavailable,
 	};
-	const auth = createCfAuth(context);
-	const profileStore = createCfProfileStore({ logger });
-	auth.setProfile(profileStore.resolve({ cwd: profileDir }));
+	const auth =
+		target === "cf" ? createCfAuth(context) : createWranglerAuth(context);
+	auth.setProfile(profile);
+	return auth;
+}
+
+function getAuth(
+	target: AuthTarget,
+	profileDir: string,
+	profile: string,
+	logger: Logger
+): CloudflareAuth {
+	const key = JSON.stringify([target, profileDir, profile]);
+	let auth = authByProfileKey.get(key);
+	if (!auth) {
+		auth = createAuthForProfile(target, profile, logger);
+		authByProfileKey.set(key, auth);
+	}
 	return auth;
 }
 
 /**
- * Get the cf credentials for a `cloudflare.config.ts` remote bindings session.
+ * Get the credentials for a remote bindings session: cf's for a
+ * `cloudflare.config.ts`, Wrangler's for a Wrangler config.
  *
- * @param profileDir Directory used to resolve the cf auth profile.
+ * @param target Which CLI's credentials the config uses.
+ * @param profileDir Directory used to resolve the auth profile.
  * @param accountId The configured account ID, if any.
  * @param logger Logger for the auth flow.
  * @returns A hook resolving the account ID and API token, with a key
  * identifying those credentials.
  */
 export function getRemoteBindingsAuth(
+	target: AuthTarget,
 	profileDir: string,
 	accountId: string | undefined,
 	logger: Logger
 ): RemoteBindingsAuth {
-	let auth: CloudflareAuth | undefined;
+	const profileStore =
+		target === "cf"
+			? createCfProfileStore({ logger })
+			: createWranglerProfileStore({ logger });
+	const profile = profileStore.resolve({ cwd: profileDir });
 	return {
 		hook: async () => {
-			// Only resolve the profile once a session actually needs credentials
-			auth ??= createAuth(profileDir, logger);
+			const auth = getAuth(target, profileDir, profile, logger);
 			return {
 				accountId: await auth.requireAuth(
 					accountId ? { account_id: accountId } : {}
@@ -88,6 +136,6 @@ export function getRemoteBindingsAuth(
 				apiToken: auth.requireApiToken(),
 			};
 		},
-		key: JSON.stringify([profileDir, accountId]),
+		key: JSON.stringify([profileDir, accountId, profile]),
 	};
 }

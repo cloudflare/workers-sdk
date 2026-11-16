@@ -1,3 +1,5 @@
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createServer } from "node:net";
 import path from "node:path";
 import { Worker } from "node:worker_threads";
 import getPort from "get-port";
@@ -9,6 +11,11 @@ export interface LocalArtifactsBackend {
 	port: number;
 }
 
+export interface LocalArtifactsBackendOptions {
+	namespace?: string;
+	portFile?: string;
+}
+
 // Node binding proxies make synchronous calls. The Git backend must run on
 // another thread, otherwise those calls prevent it from answering workerd.
 export class ArtifactsController {
@@ -17,7 +24,7 @@ export class ArtifactsController {
 	#activeRoots = new Set<string>();
 	#pendingRoots?: Set<string>;
 
-	constructor(private readonly getLog?: () => Pick<Log, "warn">) {}
+	constructor(private readonly getLog?: () => Pick<Log, "info" | "warn">) {}
 
 	beginUpdate(): void {
 		if (this.#pendingRoots) {
@@ -44,7 +51,15 @@ export class ArtifactsController {
 		await this.#closeExcept(this.#activeRoots);
 	}
 
-	get(root: string): Promise<LocalArtifactsBackend> {
+	/**
+	 * @param root Git storage directory for one namespace.
+	 * @param options.namespace Prints the namespace's Git remote prefix.
+	 * @param options.portFile Reuses the Git port recorded here, if it's free.
+	 */
+	get(
+		root: string,
+		options: LocalArtifactsBackendOptions = {}
+	): Promise<LocalArtifactsBackend> {
 		root = path.resolve(root);
 		if (!this.#pendingRoots) {
 			throw new Error("Artifacts backend requested outside runtime update");
@@ -52,7 +67,7 @@ export class ArtifactsController {
 		this.#pendingRoots.add(root);
 		let backend = this.#backends.get(root);
 		if (!backend) {
-			backend = this.#start(root, () => {
+			backend = this.#start(root, options, () => {
 				if (this.#backends.get(root) === backend) {
 					this.#backends.delete(root);
 				}
@@ -69,9 +84,15 @@ export class ArtifactsController {
 
 	async #start(
 		root: string,
+		{ namespace, portFile }: LocalArtifactsBackendOptions,
 		onExit: () => void
 	): Promise<LocalArtifactsBackend> {
-		const port = await getPort({ host: "127.0.0.1" });
+		const port = await reserveGitPort(portFile);
+		if (namespace !== undefined) {
+			this.getLog?.().info(
+				`Local Artifacts Git remotes for namespace "${namespace}": http://127.0.0.1:${port}/git/${namespace}/<repo>.git`
+			);
+		}
 		// __dirname is dist/src in the bundled Miniflare entry point.
 		const worker = new Worker(
 			path.join(__dirname, "plugins/artifacts/git-sidecar.js"),
@@ -146,6 +167,44 @@ export class ArtifactsController {
 		this.#activeRoots.clear();
 		await this.#closeExcept(this.#activeRoots);
 	}
+}
+
+/**
+ * Clones keep their `origin` URL, so reuse the port this storage directory had
+ * last time. Fall back to any free port if another process now holds it.
+ */
+async function reserveGitPort(portFile: string | undefined): Promise<number> {
+	if (portFile === undefined) {
+		return getPort({ host: "127.0.0.1" });
+	}
+	const previous = Number.parseInt(
+		await readFile(portFile, "utf8").catch(() => ""),
+		10
+	);
+	// get-port refuses ports it returned in this process during the last
+	// 15 seconds, which would move the port when Vite restarts its server.
+	const port =
+		Number.isInteger(previous) &&
+		previous > 0 &&
+		previous < 65536 &&
+		(await isLoopbackPortFree(previous))
+			? previous
+			: await getPort({ host: "127.0.0.1" });
+	if (port !== previous) {
+		await mkdir(path.dirname(portFile), { recursive: true });
+		await writeFile(portFile, `${port}\n`);
+	}
+	return port;
+}
+
+function isLoopbackPortFree(port: number): Promise<boolean> {
+	return new Promise((resolve) => {
+		const server = createServer();
+		server.once("error", () => resolve(false));
+		server.listen({ host: "127.0.0.1", port, exclusive: true }, () => {
+			server.close(() => resolve(true));
+		});
+	});
 }
 
 type SidecarStartupMessage =

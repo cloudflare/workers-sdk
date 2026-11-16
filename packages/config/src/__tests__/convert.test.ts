@@ -1,6 +1,6 @@
 import { describe, it } from "vitest";
 import { convertToWranglerConfig } from "../convert";
-import type { ParsedInputConfig } from "../schema";
+import type { ParsedCloudflareConfig } from "../schema";
 
 const baseWorker = {
 	name: "my-worker",
@@ -19,7 +19,7 @@ describe("convertToWranglerConfig", () => {
 					workersDev: true,
 					previewUrls: false,
 					logpush: true,
-					firstPartyWorker: false,
+					experimental: { firstPartyWorker: false },
 				},
 				containers: [],
 			});
@@ -210,7 +210,7 @@ describe("convertToWranglerConfig", () => {
 					env: {
 						MY_AI: { type: "ai" },
 						MY_BROWSER: { type: "browser" },
-						MY_ANALYTICS: { type: "analytics" },
+						MY_ANALYTICS: { type: "analytics-sql" },
 						MY_IMAGES: { type: "images" },
 						MY_MEDIA: { type: "media" },
 						MY_STREAM: { type: "stream" },
@@ -293,18 +293,28 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
-		it("maps d1 with id and name", ({ expect }) => {
+		it("maps d1 with id, name, and jurisdiction", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
 					...baseWorker,
 					env: {
-						MY_DB: { type: "d1", id: "db-id", name: "db-name" },
+						MY_DB: {
+							type: "d1",
+							id: "db-id",
+							name: "db-name",
+							jurisdiction: "eu",
+						},
 					},
 				},
 				containers: [],
 			});
 			expect(result.d1_databases).toEqual([
-				{ binding: "MY_DB", database_id: "db-id", database_name: "db-name" },
+				{
+					binding: "MY_DB",
+					database_id: "db-id",
+					database_name: "db-name",
+					jurisdiction: "eu",
+				},
 			]);
 		});
 
@@ -411,16 +421,17 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
-		it("maps pipeline.name to stream", ({ expect }) => {
+		it("maps pipeline.streamId to stream", ({ expect }) => {
+			const streamId = "0123456789abcdef0123456789abcdef";
 			const result = convertToWranglerConfig({
 				worker: {
 					...baseWorker,
-					env: { MY_PIPE: { type: "pipeline", name: "pipe-1" } },
+					env: { MY_PIPE: { type: "pipeline", streamId } },
 				},
 				containers: [],
 			});
 			expect(result.pipelines).toEqual([
-				{ binding: "MY_PIPE", stream: "pipe-1" },
+				{ binding: "MY_PIPE", stream: streamId },
 			]);
 		});
 
@@ -1199,7 +1210,7 @@ describe("convertToWranglerConfig", () => {
 				exports: {
 					FutureExport: { type: "future" },
 				},
-			} as unknown as NonNullable<ParsedInputConfig["worker"]>;
+			} as unknown as NonNullable<ParsedCloudflareConfig["worker"]>;
 
 			expect(() =>
 				convertToWranglerConfig({ worker: config, containers: [] })
@@ -1573,7 +1584,7 @@ describe("convertToWranglerConfig", () => {
 	});
 
 	describe("tail consumers", () => {
-		it("maps non-streaming consumers to tail_consumers", ({ expect }) => {
+		it("maps tailConsumers to tail_consumers", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
 					...baseWorker,
@@ -1585,11 +1596,15 @@ describe("convertToWranglerConfig", () => {
 			expect(result.streaming_tail_consumers).toBeUndefined();
 		});
 
-		it("maps streaming consumers to streaming_tail_consumers", ({ expect }) => {
+		it("maps experimental.streamingTailConsumers to streaming_tail_consumers", ({
+			expect,
+		}) => {
 			const result = convertToWranglerConfig({
 				worker: {
 					...baseWorker,
-					tailConsumers: [{ worker: "stream-worker", streaming: true }],
+					experimental: {
+						streamingTailConsumers: [{ worker: "stream-worker" }],
+					},
 				},
 				containers: [],
 			});
@@ -1599,15 +1614,14 @@ describe("convertToWranglerConfig", () => {
 			expect(result.tail_consumers).toBeUndefined();
 		});
 
-		it("splits a mixed list of consumers into the two arrays", ({ expect }) => {
+		it("maps both kinds of consumer side by side", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
 					...baseWorker,
-					tailConsumers: [
-						{ worker: "a" },
-						{ worker: "b", streaming: true },
-						{ worker: "c", streaming: false },
-					],
+					tailConsumers: [{ worker: "a" }, { worker: "c" }],
+					experimental: {
+						streamingTailConsumers: [{ worker: "b" }, { worker: "a" }],
+					},
 				},
 				containers: [],
 			});
@@ -1615,7 +1629,23 @@ describe("convertToWranglerConfig", () => {
 				{ service: "a" },
 				{ service: "c" },
 			]);
-			expect(result.streaming_tail_consumers).toEqual([{ service: "b" }]);
+			expect(result.streaming_tail_consumers).toEqual([
+				{ service: "b" },
+				{ service: "a" },
+			]);
+		});
+
+		it("omits both fields when the lists are empty", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					tailConsumers: [],
+					experimental: { streamingTailConsumers: [] },
+				},
+				containers: [],
+			});
+			expect(result).not.toHaveProperty("tail_consumers");
+			expect(result).not.toHaveProperty("streaming_tail_consumers");
 		});
 	});
 
@@ -1629,6 +1659,32 @@ describe("convertToWranglerConfig", () => {
 			});
 
 			expect(result).not.toHaveProperty("containers");
+		});
+
+		it("omits containers when the config has no containers", ({ expect }) => {
+			const result = convertToWranglerConfig({ worker: baseWorker });
+
+			expect(result).not.toHaveProperty("containers");
+		});
+
+		it("omits max_instances when maxInstances isn't set", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				worker: baseWorker,
+				containers: [
+					{
+						name: "default-capacity",
+						image: { reference: "registry.example.com/image:tag" },
+					},
+				],
+			});
+
+			expect(result.containers).toEqual([
+				{
+					name: "default-capacity",
+					image: "registry.example.com/image:tag",
+				},
+			]);
+			expect(result.containers?.[0]).not.toHaveProperty("max_instances");
 		});
 
 		it("converts standard Container exports to Wrangler containers", ({
@@ -1665,7 +1721,7 @@ describe("convertToWranglerConfig", () => {
 					targetInstancePercentage: 50,
 				},
 				unsafe: { experimental: true },
-			} satisfies ParsedInputConfig["containers"][number];
+			} satisfies NonNullable<ParsedCloudflareConfig["containers"]>[number];
 			const referencedContainer = {
 				name: "referenced-container",
 				image: { reference: "registry.example.com/image:tag" },
@@ -1674,7 +1730,7 @@ describe("convertToWranglerConfig", () => {
 					enabled: true,
 					targetInstanceCount: 2,
 				},
-			} satisfies ParsedInputConfig["containers"][number];
+			} satisfies NonNullable<ParsedCloudflareConfig["containers"]>[number];
 			const result = convertToWranglerConfig({
 				worker: baseWorker,
 				containers: [dockerfileContainer, referencedContainer],

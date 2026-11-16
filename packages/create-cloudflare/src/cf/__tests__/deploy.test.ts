@@ -9,10 +9,11 @@ import { getDeploymentUrl } from "../deploy";
 vi.mock("helpers/command");
 vi.mock("which-pm-runs");
 
-function writeDefaultWorkerConfig(name: string) {
-	mkdirSync(".cloudflare/output/v0/workers/default", { recursive: true });
+function writeDefaultWorkerConfig(name: string, version = "v1") {
+	const workerDir = `.cloudflare/output/${version}/workers/default`;
+	mkdirSync(workerDir, { recursive: true });
 	writeFileSync(
-		".cloudflare/output/v0/workers/default/worker.config.json",
+		`${workerDir}/worker.config.json`,
 		JSON.stringify({ name, compatibilityDate: "2026-01-01" })
 	);
 }
@@ -51,6 +52,42 @@ describe("getDeploymentUrl", () => {
 		);
 	});
 
+	test("reads the Worker name from Build Output v0", async ({ expect }) => {
+		writeDefaultWorkerConfig("legacy-worker", "v0");
+		vi.mocked(runWranglerCommand).mockResolvedValueOnce(
+			cfWorkersGetOutput({
+				enabled: true,
+				url: "https://legacy-worker.example.workers.dev",
+			})
+		);
+
+		await expect(getDeploymentUrl(".", "test1234")).resolves.toBe(
+			"https://legacy-worker.example.workers.dev"
+		);
+		expect(runWranglerCommand).toHaveBeenCalledWith(
+			["npx", "cf", "workers", "get", "legacy-worker"],
+			expect.anything()
+		);
+	});
+
+	test("prefers Build Output v1 over v0", async ({ expect }) => {
+		writeDefaultWorkerConfig("legacy-worker", "v0");
+		writeDefaultWorkerConfig("my-worker");
+		vi.mocked(runWranglerCommand).mockResolvedValueOnce(
+			cfWorkersGetOutput({
+				enabled: true,
+				url: "https://my-worker.example.workers.dev",
+			})
+		);
+
+		await getDeploymentUrl(".", "test1234");
+
+		expect(runWranglerCommand).toHaveBeenCalledWith(
+			["npx", "cf", "workers", "get", "my-worker"],
+			expect.anything()
+		);
+	});
+
 	test("workers.dev disabled", async ({ expect }) => {
 		writeDefaultWorkerConfig("my-worker");
 		vi.mocked(runWranglerCommand).mockResolvedValueOnce(
@@ -67,7 +104,7 @@ describe("getDeploymentUrl", () => {
 
 	test("no Build Output", async ({ expect }) => {
 		await expect(getDeploymentUrl(".", "test1234")).rejects.toThrow(
-			"Failed to find deployment url: could not read the Worker's name from `.cloudflare/output/v0/workers/default/worker.config.json`."
+			"Failed to find deployment url: could not read the Worker's name from `.cloudflare/output/v1/workers/default/worker.config.json`."
 		);
 		expect(runWranglerCommand).not.toHaveBeenCalled();
 	});

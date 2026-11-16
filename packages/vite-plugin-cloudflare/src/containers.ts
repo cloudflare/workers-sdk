@@ -10,7 +10,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { toApiComplianceRegion } from "./utils";
-import type { ParsedInputSettingsConfig } from "@cloudflare/config";
+import type { ParsedSettings } from "@cloudflare/config";
 import type {
 	ContainerDevOptions,
 	ViteLogger,
@@ -77,9 +77,8 @@ export function normalizeContainerImageUris(options: {
 export async function prepareContainerImagesForVite(options: {
 	dockerPath: string;
 	containerOptions: ContainerDevOptions[];
-	settings: ParsedInputSettingsConfig;
+	settings: ParsedSettings;
 	logger: ViteLogger;
-	cliDisplayName: string;
 }): Promise<void> {
 	const complianceRegion = toApiComplianceRegion(
 		options.settings.complianceRegion
@@ -125,12 +124,8 @@ export async function prepareContainerImagesForVite(options: {
 		onContainerImagePreparationEnd: () => {},
 		logger: options.logger,
 		complianceConfig,
-		configFileName: "cloudflare.config.ts",
 		// TODO: The Vite plugin should not own this `cf` command. Remove the
 		// hardcoded value once `cf` can provide it directly.
-		registryConfigureCommand:
-			options.cliDisplayName === "cf"
-				? "cf containers registries create"
-				: "wrangler containers registries configure",
+		registryConfigureCommand: "cf containers registries create",
 	});
 }

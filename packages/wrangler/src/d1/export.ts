@@ -20,6 +20,13 @@ import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
 import type { Database, ExportPollingResponse, PollingFailure } from "./types";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
+/**
+ * Dump formats that the D1 export API accepts as `dump_options.compatibility`.
+ * `d1` is the default. `sqlite3_cli_only` includes virtual tables, but D1 cannot import it.
+ */
+const DUMP_COMPATIBILITY_CHOICES = ["d1", "sqlite3_cli_only"] as const;
+type DumpCompatibility = (typeof DUMP_COMPATIBILITY_CHOICES)[number];
+
 export const d1ExportCommand = createCommand({
 	metadata: {
 		description:
@@ -74,6 +81,13 @@ export const d1ExportCommand = createCommand({
 				"Only output table schema, not the contents of the DBs themselves",
 			conflicts: "no-schema",
 		},
+		compatibility: {
+			type: "string",
+			choices: DUMP_COMPATIBILITY_CHOICES,
+			description:
+				"Dump format. sqlite3_cli_only matches the output of the sqlite3 .dump command, including virtual tables, but cannot be imported into D1",
+			requiresArg: true,
+		},
 		// For --no-schema and --no-data to work, we need their positive versions
 		// to be defined. But keep them hidden as they default to true
 		schema: {
@@ -89,14 +103,39 @@ export const d1ExportCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
-		const { remote, name, output, schema, data, table, skipConfirmation } =
-			args;
+		const {
+			remote,
+			name,
+			output,
+			schema,
+			data,
+			table,
+			skipConfirmation,
+			compatibility,
+		} = args;
 
 		if (!schema && !data) {
 			throw new UserError(
 				`Cannot use --no-schema and --no-data together. At least one of schema or data must be included in the export. Remove one of the flags.`,
 				{
 					telemetryMessage: "d1 export conflicting no-schema and no-data flags",
+				}
+			);
+		}
+
+		if (compatibility === "sqlite3_cli_only" && !remote) {
+			throw new UserError(
+				`--compatibility sqlite3_cli_only is only supported for remote exports. Add the --remote flag.`,
+				{ telemetryMessage: "d1 export sqlite3 cli compatibility used locally" }
+			);
+		}
+
+		if (compatibility === "sqlite3_cli_only" && (!schema || !data)) {
+			throw new UserError(
+				`Cannot use --no-schema or --no-data with --compatibility sqlite3_cli_only. The SQLite CLI dump always includes the schema and the data.`,
+				{
+					telemetryMessage:
+						"d1 export sqlite3 cli compatibility with no-schema or no-data",
 				}
 			);
 		}
@@ -123,7 +162,15 @@ export const d1ExportCommand = createCommand({
 				}
 			}
 
-			return await exportRemotely(config, name, output, tables, !schema, !data);
+			return await exportRemotely(
+				config,
+				name,
+				output,
+				tables,
+				!schema,
+				!data,
+				compatibility
+			);
 		} else {
 			return await exportLocal(config, name, output, tables, !schema, !data);
 		}
@@ -199,7 +246,8 @@ async function exportRemotely(
 	output: string,
 	tables: string[],
 	noSchema: boolean,
-	noData: boolean
+	noData: boolean,
+	compatibility: DumpCompatibility | undefined
 ) {
 	const accountId = await requireAuth(config);
 	const db: Database = await getDatabaseByNameOrBinding(
@@ -213,6 +261,7 @@ async function exportRemotely(
 		no_schema: noSchema,
 		no_data: noData,
 		tables,
+		compatibility,
 	};
 
 	const s = spinner();
@@ -259,6 +308,7 @@ async function pollExport(
 		tables: string[];
 		no_schema?: boolean;
 		no_data?: boolean;
+		compatibility?: DumpCompatibility;
 	},
 	currentBookmark: string | undefined,
 	num_parts_uploaded = 0

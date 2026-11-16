@@ -8,7 +8,7 @@ test.runIf(isBuild)(
 	({ expect }) => {
 		const workerDir = path.join(
 			rootDir,
-			".cloudflare/output/v0/workers/default"
+			".cloudflare/output/v1/workers/default"
 		);
 		const config = JSON.parse(
 			fs.readFileSync(path.join(workerDir, "worker.config.json"), "utf-8")

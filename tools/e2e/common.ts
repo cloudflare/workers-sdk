@@ -293,9 +293,10 @@ export const listTmpKVNamespaces = async () => {
 		(kv) => {
 			const isTempE2E =
 				kv.title.includes("tmp-e2e") || kv.title.includes("tmp_e2e");
-			// Since KV namespaces don't have creation date metadata, we encode the date-time in the title
+			// Since KV namespaces don't have creation date metadata, we encode the date-time in the title,
+			// e.g. `tmp_e2e_kv<ms>_<uuid>` (Wrangler E2E) or `tmp-e2e-kv<ms>-<suffix>` (fixtures)
 			const creationDate = new Date(
-				Number(kv.title.match(/tmp[-_]e2e[-_]kv(\d+)-$/)?.[1] ?? 0)
+				Number(kv.title.match(/tmp[-_]e2e[-_]kv(\d+)[-_]/)?.[1] ?? 0)
 			);
 			// Temp KV namespaces that are more than an hour old (or any age if no date is found)
 			return isTempE2E && Date.now() - creationDate.valueOf() > 1000 * 60 * 60;

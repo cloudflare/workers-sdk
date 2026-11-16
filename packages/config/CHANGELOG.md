@@ -1,5 +1,120 @@
 # @cloudflare/config
 
+## 1.0.0-rc.0
+
+### Major Changes
+
+- [#16907](https://github.com/cloudflare/workers-sdk/pull/16907) [`0bf81ac`](https://github.com/cloudflare/workers-sdk/commit/0bf81ac16041a1f47f5474f7d6f5b0da6160f76b) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Release the 1.0 release candidate
+
+  This release finalises the binding and Worker field names, and includes breaking changes:
+
+  - `firstPartyWorker` moves from the Worker's top level to `experimental.firstPartyWorker`.
+  - `bindings.pipeline()` takes `streamId` in place of `name`. Set it to the ID of the Pipelines stream, not its name. Legacy pipelines aren't supported.
+  - `bindings.k2()` takes `id` in place of `stream`. Set it to the ID of the K2 stream.
+  - `bindings.analytics()` is renamed to `bindings.analyticsSql()`. Its binding type changes from `"analytics"` to `"analytics-sql"`. The `AnalyticsSQLBinding`, `AnalyticsSQLBindingOptions` and `AnalyticsSQLBindingSchema` exports are renamed to `AnalyticsSqlBinding`, `AnalyticsSqlBindingOptions` and `AnalyticsSqlBindingSchema`.
+  - The `KVBindingSchema` export is renamed to `KvBindingSchema`.
+  - The `ConnectTriggerOptionsBase` type is no longer exported. Use `ConnectTriggerOptions` instead.
+  - The `InputWorkerConfig` type is no longer exported. Use `z.input<typeof WorkerConfigSchema>` if you need it.
+  - The config schemas and their parsed types are renamed after what they describe. The `Input` and `Output` prefixes are replaced by the public type names and `BuildOutput`:
+    - `InputConfigSchema` → `CloudflareConfigSchema`, `ParsedInputConfig` → `ParsedCloudflareConfig`
+    - `InputSettingsSchema` → `SettingsSchema`, `ParsedInputSettingsConfig` → `ParsedSettings`
+    - `InputWorkerSchema` → `WorkerConfigSchema`, `ParsedInputWorkerConfig` → `ParsedWorkerConfig`
+    - `InputContainerSchema` → `ContainerConfigSchema`, `ParsedInputContainerConfig` → `ParsedContainerConfig`
+    - `OutputRootConfigSchema` → `BuildOutputRootConfigSchema`, `ParsedOutputRootConfig` → `ParsedBuildOutputRootConfig`
+    - `OutputWorkerSchema` → `BuildOutputWorkerConfigSchema`, `ParsedOutputWorkerConfig` → `ParsedBuildOutputWorkerConfig`
+    - `OutputContainerSchema` → `BuildOutputContainerConfigSchema`, `ParsedOutputContainerConfig` → `ParsedBuildOutputContainerConfig`
+
+  Setting the old `name` or `stream` field fails with an error that names the replacement field. Editors also show both fields as deprecated.
+
+  The schema no longer fills in defaults. A parsed config without Containers leaves `containers` undefined instead of setting it to `[]`, and a Container without `maxInstances` leaves it undefined instead of setting it to `20`. Deploying still uses 20 instances when `maxInstances` isn't set.
+
+  Queue consumer `maxConcurrency` no longer accepts `null`. Wrangler already rejected it.
+
+### Minor Changes
+
+- [#16917](https://github.com/cloudflare/workers-sdk/pull/16917) [`d36b39d`](https://github.com/cloudflare/workers-sdk/commit/d36b39d440a8f408f41dcf4925a81f2f8a58f73b) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Nest settings under an optional `settings` and add an optional `producer` in `BuildOutputRootConfigSchema`
+
+  The root `config.json` in Build Output v1 has the shape `{ producer?, settings?, buildContext }`. `settings` holds the account settings from `cloudflare.config.ts`, is validated strictly, and is left out when none are set. `producer` is `{ name, version }` for the tool that wrote the output and is used only in diagnostics. The new `BuildOutputProducerSchema` and `ParsedBuildOutputProducer` are also exported.
+
+- [#16246](https://github.com/cloudflare/workers-sdk/pull/16246) [`349fc4e`](https://github.com/cloudflare/workers-sdk/commit/349fc4e7443aa744cbe129f84f28571bf8625155) Thanks [@leostera](https://github.com/leostera)! - Start local Workflows from Artifacts events
+
+  Declare Artifacts events on `exports.workflow({ name, events })` in `cloudflare.config.ts` to start the owning Workflow locally in `cf`, Vite, and Workers Vitest. Wrangler configurations continue to use `triggers.events`. Native config conversion derives those targets from the Workflow export, and `cf migrate` attaches existing event subscriptions to their matching Workflow exports.
+
+  Local Artifacts namespaces publish the documented `cf.artifacts.*` messages for repository create, import, fork, and delete operations and token creation and revocation. Successful create, import, and fork operations also publish the initial token-created event. Delivery follows the committed mutation, is unordered, and does not fail the repository operation if a destination rejects it. Push, clone, and fetch events are not yet published locally. This feature does not provide local Artifacts-to-queue subscriptions.
+
+### Patch Changes
+
+- [#16946](https://github.com/cloudflare/workers-sdk/pull/16946) [`e97c9f8`](https://github.com/cloudflare/workers-sdk/commit/e97c9f8bd2cdbd15faf402b146582e49d65dd1a7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-16
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+## 0.32.1
+
+### Patch Changes
+
+- [#16849](https://github.com/cloudflare/workers-sdk/pull/16849) [`3cea40b`](https://github.com/cloudflare/workers-sdk/commit/3cea40b078519222db432b5edf827ddc3e629a2a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-12
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16886](https://github.com/cloudflare/workers-sdk/pull/16886) [`63eb6da`](https://github.com/cloudflare/workers-sdk/commit/63eb6daa0eda348e1f9e86a506cfd80d104a1e28) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-13
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+## 0.32.0
+
+### Minor Changes
+
+- [#16824](https://github.com/cloudflare/workers-sdk/pull/16824) [`877b249`](https://github.com/cloudflare/workers-sdk/commit/877b249292307ae4dd282080e68b1d88c0fd0bb0) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Move streaming tail consumers to `experimental.streamingTailConsumers` in `cloudflare.config.ts`
+
+  Streaming Tail Workers are now declared in a separate, experimental list instead of with `streaming: true` on a `tailConsumers` entry. `tailConsumers` now only lists Tail Workers with a `tail()` handler. This is a breaking change to the experimental config API: move each entry that set `streaming: true` to `experimental.streamingTailConsumers`, without the `streaming` field.
+
+  ```ts
+  export default defineConfig({
+    worker: {
+      tailConsumers: [{ worker: "tail-worker" }],
+      experimental: {
+        streamingTailConsumers: [{ worker: "streaming-tail-worker" }],
+      },
+    },
+  });
+  ```
+
+  Fields under `experimental` may change or be removed without a major version bump. The `wrangler-to-cf` codemod now converts `streaming_tail_consumers` to `experimental.streamingTailConsumers`.
+
+## 0.31.1
+
+### Patch Changes
+
+- [#16810](https://github.com/cloudflare/workers-sdk/pull/16810) [`cdc970b`](https://github.com/cloudflare/workers-sdk/commit/cdc970b7bd39dcd42af65bdadab7c38ce0b409fb) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-10
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+## 0.31.0
+
+### Minor Changes
+
+- [#15615](https://github.com/cloudflare/workers-sdk/pull/15615) [`c64fdfb`](https://github.com/cloudflare/workers-sdk/commit/c64fdfba7d2531b4f58d7b76474f2ae636b17044) Thanks [@svetch](https://github.com/svetch)! - Support jurisdiction when automatically provisioning D1 databases
+
+  Set `jurisdiction` on a D1 binding without a `database_id` to create the database in that jurisdiction during deployment. For example, `{"d1_databases":[{"binding":"DB","jurisdiction":"eu"}]}` creates an EU-jurisdiction database.
+
+### Patch Changes
+
+- [#16746](https://github.com/cloudflare/workers-sdk/pull/16746) [`abf924e`](https://github.com/cloudflare/workers-sdk/commit/abf924ee1820b4af139f21dffc877eaf6122c056) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-06
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16792](https://github.com/cloudflare/workers-sdk/pull/16792) [`de10016`](https://github.com/cloudflare/workers-sdk/commit/de100160f243451355480e8f815d0f7d4b3ec8b9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-09
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+## 0.30.2
+
+### Patch Changes
+
+- [#16695](https://github.com/cloudflare/workers-sdk/pull/16695) [`b2061f4`](https://github.com/cloudflare/workers-sdk/commit/b2061f40f812d8888b461f68506552b58f8e468b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-04
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
 ## 0.30.1
 
 ### Patch Changes

@@ -2261,7 +2261,7 @@ describe("User", () => {
 			expect(() =>
 				getActiveAccountId({ account_id: "ваш-идентификатор-аккаунта" })
 			).toThrowErrorMatchingInlineSnapshot(
-				`[Error: Invalid account ID "ваш-идентификатор-аккаунта" set as \`account_id\` in your Wrangler configuration file. Account IDs may only contain alphanumeric characters, hyphens, and underscores.]`
+				`[Error: Invalid account ID "ваш-идентификатор-аккаунта" set in your Wrangler configuration file. Account IDs may only contain alphanumeric characters, hyphens, and underscores.]`
 			);
 		});
 

@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import {
 	NpmPackageManager,
@@ -10,9 +11,11 @@ import {
 	seed,
 } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
+import { getDetailsForAutoConfig } from "../src/details";
 import { getFrameworkClassInstance } from "../src/frameworks";
 import { Framework } from "../src/frameworks/framework-class";
 import { Static } from "../src/frameworks/static";
+import { Vite } from "../src/frameworks/vite";
 import { runAutoConfig } from "../src/run";
 import { createMockContext } from "./helpers/mock-context";
 import type {
@@ -61,6 +64,96 @@ class BuildCommandOverrideFramework extends Static {
 describe("runAutoConfig()", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
+
+	it.for([
+		{ installTool: true, runBuild: true },
+		{ installTool: false, runBuild: true },
+		{ installTool: false, runBuild: false },
+	])(
+		"checks installed tools after setup only when building (installTool=$installTool, runBuild=$runBuild)",
+		async ({ installTool, runBuild }, { expect }) => {
+			await seed({
+				"package.json": JSON.stringify({
+					name: "vite-app",
+					devDependencies: { vite: "8.1.0", "@cloudflare/vite-plugin": "beta" },
+				}),
+				"vite.config.ts": "export default { plugins: [] };",
+				"node_modules/@cloudflare/vite-plugin/package.json": JSON.stringify({
+					version: "2.0.0-beta.v.13",
+				}),
+			});
+			vi.spyOn(Vite.prototype, "configure").mockImplementation(
+				async ({ dryRun }) => {
+					if (!dryRun && installTool) {
+						await seed({
+							"node_modules/vite/package.json": JSON.stringify({
+								version: "8.1.0",
+								bin: { vite: "cli.js" },
+							}),
+							"node_modules/vite/cli.js": "",
+						});
+					}
+					return { buildTool: "vite", workerConfig: {} };
+				}
+			);
+			const context = createMockContext();
+			const details = await getDetailsForAutoConfig({ context });
+			expect(details.commandError?.code).toBe("vite-tool-not-installed");
+			const setup = runAutoConfig(details, {
+				context,
+				skipConfirmations: true,
+				enableTargetCliInstallation: false,
+				runBuild,
+			});
+			if (runBuild && !installTool) {
+				await expect(setup).rejects.toThrow(
+					"project's vite executable could not be found"
+				);
+			} else {
+				await expect(setup).resolves.toMatchObject({
+					buildCommand: "vite build",
+				});
+			}
+			expect(context.runCommand).toHaveBeenCalledTimes(
+				runBuild && installTool ? 1 : 0
+			);
+		}
+	);
+
+	it("updates the application manifest, not its enclosing workspace", async ({
+		expect,
+	}) => {
+		vi.spyOn(cliPackages, "installWrangler").mockResolvedValue();
+		const rootManifest = JSON.stringify({
+			name: "workspace-root",
+			packageManager: "pnpm@10.0.0",
+		});
+		await seed({
+			"package.json": rootManifest,
+			"pnpm-workspace.yaml": "packages: ['packages/*']\n",
+			"pnpm-lock.yaml": "",
+			"packages/app/package.json": JSON.stringify({ name: "static-app" }),
+			"packages/app/public/index.html": "<h1>Application</h1>",
+		});
+		const context = createMockContext();
+		const projectPath = join(process.cwd(), "packages/app");
+		const details = await getDetailsForAutoConfig({ projectPath, context });
+		expect(details.packageManager.type).toBe("pnpm");
+
+		await runAutoConfig(details, {
+			context,
+			skipConfirmations: true,
+			enableTargetCliInstallation: false,
+			runBuild: false,
+		});
+
+		expect(readFileSync("package.json", "utf8")).toBe(rootManifest);
+		expect(
+			JSON.parse(readFileSync(join(projectPath, "package.json"), "utf8"))
+		).toMatchObject({ name: "static-app", scripts: { deploy: "cf deploy" } });
+		expect(existsSync("cloudflare.config.ts")).toBe(false);
+		expect(existsSync(join(projectPath, "cloudflare.config.ts"))).toBe(true);
+	});
 
 	it.for([
 		{ vitePlus: false, override: false },
@@ -133,7 +226,7 @@ describe("runAutoConfig()", () => {
 				{ context: createMockContext(), dryRun: true }
 			);
 			expect(summary.buildCommand).toBe(
-				`${packageManager.npx} ${vitePlus ? "vp" : "vite"} build`
+				vitePlus ? "vp build" : `${packageManager.npx} vite build`
 			);
 		}
 	);
@@ -576,25 +669,34 @@ describe("runAutoConfig()", () => {
 			existingBuildConfig
 		);
 	});
-	it.for(["pnpm", "npm"] as const)(
-		"sets up pnpm approvals before installing with %s",
-		async (manager, { expect }) => {
+	it.for([
+		{ manager: "pnpm", target: "cf" },
+		{ manager: "npm", target: "cf" },
+		{ manager: "pnpm", target: "wrangler" },
+		{ manager: "npm", target: "wrangler" },
+	] as const)(
+		"sets up pnpm approvals before installing $target with $manager",
+		async ({ manager, target }, { expect }) => {
 			const packageJson = { name: "build-approval-app" };
 			await seed({ "package.json": JSON.stringify(packageJson) });
-			const install = vi
-				.spyOn(cliPackages, "installPackages")
-				.mockImplementation(async () => {
-					expect(existsSync("pnpm-workspace.yaml")).toBe(manager === "pnpm");
-					if (manager === "pnpm") {
-						expect(readFileSync("pnpm-workspace.yaml", "utf8"))
-							.toMatchInlineSnapshot(`
+			const checkBuildApprovals = async () => {
+				expect(existsSync("pnpm-workspace.yaml")).toBe(manager === "pnpm");
+				if (manager === "pnpm") {
+					expect(readFileSync("pnpm-workspace.yaml", "utf8"))
+						.toMatchInlineSnapshot(`
 								"allowBuilds:
 								  esbuild: true
 								  workerd: true
 								"
 							`);
-					}
-				});
+				}
+			};
+			const install = vi
+				.spyOn(cliPackages, "installPackages")
+				.mockImplementation(checkBuildApprovals);
+			const installWrangler = vi
+				.spyOn(cliPackages, "installWrangler")
+				.mockImplementation(checkBuildApprovals);
 			await runAutoConfig(
 				{
 					configured: false,
@@ -610,12 +712,16 @@ describe("runAutoConfig()", () => {
 						manager === "pnpm" ? PnpmPackageManager : NpmPackageManager,
 				},
 				{
+					target,
 					context: createMockContext(),
 					skipConfirmations: true,
 					runBuild: false,
 				}
 			);
-			expect(install).toHaveBeenCalledTimes(1);
+			expect(install).toHaveBeenCalledTimes(target === "cf" ? 1 : 0);
+			expect(installWrangler).toHaveBeenCalledTimes(
+				target === "wrangler" ? 1 : 0
+			);
 			expect(existsSync("pnpm-workspace.yaml")).toBe(manager === "pnpm");
 		}
 	);

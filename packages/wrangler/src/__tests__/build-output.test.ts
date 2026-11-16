@@ -23,7 +23,7 @@ const WORKER_NAME = "build-output-test-worker";
 // directory. Resolve at call time — `runInTempDir` changes the cwd after this
 // module is imported.
 function workerDir(): string {
-	return path.resolve(".cloudflare/output/v0/workers", "default");
+	return path.resolve(".cloudflare/output/v1/workers", "default");
 }
 
 function readOutputConfig() {
@@ -35,7 +35,7 @@ function readOutputConfig() {
 }
 
 function rootConfigPath(): string {
-	return path.resolve(".cloudflare/output/v0", "config.json");
+	return path.resolve(".cloudflare/output/v1", "config.json");
 }
 
 function readRootConfig() {
@@ -101,6 +101,187 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		);
 		expect(generatedTypes).toContain('import("cf/config")');
 		expect(generatedTypes).toContain("declare type BuildRuntimeType = true;");
+	});
+
+	it("writes source map sources relative to the source map file", async ({
+		expect,
+	}) => {
+		await seed({
+			"cloudflare.config.ts": `export default { worker: {
+				name: "${WORKER_NAME}",
+				compatibilityDate: "2026-05-18",
+				entrypoint: "./src/index.ts",
+			} };`,
+			"src/index.ts": `import { greet } from "./lib/greet";
+			export default {
+				async fetch(): Promise<Response> { return new Response(greet()); }
+			};`,
+			"src/lib/greet.ts": `export function greet(): string { return "hello"; }`,
+		});
+
+		await runWrangler(
+			"build --experimental-new-config --experimental-cf-build-output"
+		);
+
+		const map = JSON.parse(
+			fs.readFileSync(bundlePath("index.js.map"), "utf8")
+		) as { sourceRoot?: string; sources: string[] };
+		expect(map.sources).toEqual(
+			expect.arrayContaining([
+				"../../../../../../src/index.ts",
+				"../../../../../../src/lib/greet.ts",
+			])
+		);
+		expect(map.sourceRoot).toBeUndefined();
+	});
+
+	it("writes source map sources outside the project relative to the source map file", async ({
+		expect,
+	}) => {
+		await seed({
+			"shared/greet.js": `export function greet() { return "hello"; }`,
+			"app/cloudflare.config.ts": `export default { worker: {
+				name: "${WORKER_NAME}",
+				compatibilityDate: "2026-05-18",
+				entrypoint: "./src/index.js",
+			} };`,
+			"app/src/index.js": `import { greet } from "../../shared/greet.js";
+			export default {
+				async fetch() { return new Response(greet()); }
+			};`,
+		});
+		process.chdir("app");
+
+		await runWrangler(
+			"build --experimental-new-config --experimental-cf-build-output"
+		);
+
+		const map = JSON.parse(
+			fs.readFileSync(bundlePath("index.js.map"), "utf8")
+		) as { sources: string[] };
+		expect(map.sources).toContain("../../../../../../../shared/greet.js");
+	});
+
+	it("writes the sources of an unbundled Worker's source map relative to where the map is written", async ({
+		expect,
+	}) => {
+		await seed({
+			"cloudflare.config.ts": `export default { worker: {
+				name: "${WORKER_NAME}",
+				compatibilityDate: "2026-05-18",
+				entrypoint: "./dist/worker/index.js",
+			} };`,
+			"wrangler.config.ts": `export default {
+				noBundle: true,
+			};`,
+			"dist/worker/index.js": `export default {
+				async fetch() { return new Response("hello"); }
+			};
+			//# sourceMappingURL=index.js.map`,
+			"dist/worker/index.js.map": JSON.stringify({
+				version: 3,
+				file: "index.js",
+				sources: [
+					"../../src/index.ts",
+					"../lib/greet.ts",
+					"webpack://app/./src/virtual.ts",
+					"//cdn.example.com/src/remote.ts",
+				],
+				names: [],
+				mappings: "AAAA",
+			}),
+		});
+
+		await runWrangler(
+			"build --experimental-new-config --experimental-cf-build-output"
+		);
+
+		const map = JSON.parse(
+			fs.readFileSync(bundlePath("index.js.map"), "utf8")
+		) as { sources: string[] };
+		expect(map.sources).toEqual([
+			"../../../../../../src/index.ts",
+			"../../../../../../dist/lib/greet.ts",
+			"webpack://app/./src/virtual.ts",
+			"//cdn.example.com/src/remote.ts",
+		]);
+	});
+
+	it("keeps an unbundled Worker's source map with a protocol-relative `sourceRoot` as written", async ({
+		expect,
+	}) => {
+		const sourceMap = {
+			version: 3,
+			file: "index.js",
+			sourceRoot: "//cdn.example.com/src/",
+			sources: ["index.ts"],
+			names: [],
+			mappings: "AAAA",
+		};
+		await seed({
+			"cloudflare.config.ts": `export default { worker: {
+				name: "${WORKER_NAME}",
+				compatibilityDate: "2026-05-18",
+				entrypoint: "./dist/index.js",
+			} };`,
+			"wrangler.config.ts": `export default {
+				noBundle: true,
+			};`,
+			"dist/index.js": `export default {
+				async fetch() { return new Response("hello"); }
+			};
+			//# sourceMappingURL=index.js.map`,
+			"dist/index.js.map": JSON.stringify(sourceMap),
+		});
+
+		await runWrangler(
+			"build --experimental-new-config --experimental-cf-build-output"
+		);
+
+		expect(
+			JSON.parse(fs.readFileSync(bundlePath("index.js.map"), "utf8"))
+		).toEqual(sourceMap);
+	});
+
+	it("applies the `sourceRoot` of an unbundled Worker's source map and keeps sources outside the project", async ({
+		expect,
+	}) => {
+		await seed({
+			"app/cloudflare.config.ts": `export default { worker: {
+				name: "${WORKER_NAME}",
+				compatibilityDate: "2026-05-18",
+				entrypoint: "./dist/index.js",
+			} };`,
+			"app/wrangler.config.ts": `export default {
+				noBundle: true,
+			};`,
+			"app/dist/index.js": `export default {
+				async fetch() { return new Response("hello"); }
+			};
+			//# sourceMappingURL=index.js.map`,
+			"app/dist/index.js.map": JSON.stringify({
+				version: 3,
+				file: "index.js",
+				sourceRoot: "..",
+				sources: ["src/index.ts", "../shared/greet.ts"],
+				names: [],
+				mappings: "AAAA",
+			}),
+		});
+		process.chdir("app");
+
+		await runWrangler(
+			"build --experimental-new-config --experimental-cf-build-output"
+		);
+
+		const map = JSON.parse(
+			fs.readFileSync(bundlePath("index.js.map"), "utf8")
+		) as { sourceRoot?: string; sources: string[] };
+		expect(map.sources).toEqual([
+			"../../../../../../src/index.ts",
+			"../../../../../../../shared/greet.ts",
+		]);
+		expect(map.sourceRoot).toBeUndefined();
 	});
 
 	it("uses the .js extension for the manifest key even when the entrypoint is .ts", async ({
@@ -392,6 +573,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 
 			expect(fs.existsSync(rootConfigPath())).toBe(true);
 			expect(readRootConfig()).toEqual({
+				producer: { name: "wrangler", version: "x.x.x" },
 				buildContext: { isPreview: false },
 			});
 		});
@@ -444,8 +626,8 @@ describe("wrangler build --experimental-cf-build-output", () => {
 			);
 
 			expect(readRootConfig()).toEqual({
-				accountId: "acc-123",
-				complianceRegion: "public",
+				producer: { name: "wrangler", version: "x.x.x" },
+				settings: { accountId: "acc-123", complianceRegion: "public" },
 				buildContext: { isPreview: false, mode: "staging" },
 			});
 		});

@@ -244,7 +244,7 @@ describe("Workflows on ctx.exports", () => {
 							name: "overridden",
 							worker: "exporter",
 							exportName: "OtherWorkflow",
-							limits: { steps: 2 },
+							unsafeConfig: { limits: { steps: 2 } },
 						},
 					},
 				}),

@@ -1,5 +1,113 @@
 # @cloudflare/codemods
 
+## 0.8.0
+
+### Minor Changes
+
+- [#16246](https://github.com/cloudflare/workers-sdk/pull/16246) [`349fc4e`](https://github.com/cloudflare/workers-sdk/commit/349fc4e7443aa744cbe129f84f28571bf8625155) Thanks [@leostera](https://github.com/leostera)! - Start local Workflows from Artifacts events
+
+  Declare Artifacts events on `exports.workflow({ name, events })` in `cloudflare.config.ts` to start the owning Workflow locally in `cf`, Vite, and Workers Vitest. Wrangler configurations continue to use `triggers.events`. Native config conversion derives those targets from the Workflow export, and `cf migrate` attaches existing event subscriptions to their matching Workflow exports.
+
+  Local Artifacts namespaces publish the documented `cf.artifacts.*` messages for repository create, import, fork, and delete operations and token creation and revocation. Successful create, import, and fork operations also publish the initial token-created event. Delivery follows the committed mutation, is unordered, and does not fail the repository operation if a destination rejects it. Push, clone, and fetch events are not yet published locally. This feature does not provide local Artifacts-to-queue subscriptions.
+
+### Patch Changes
+
+- [#16907](https://github.com/cloudflare/workers-sdk/pull/16907) [`0bf81ac`](https://github.com/cloudflare/workers-sdk/commit/0bf81ac16041a1f47f5474f7d6f5b0da6160f76b) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Generate the release candidate `@cloudflare/config` field names in `wrangler-to-cf`
+
+  The codemod now writes:
+
+  - `first_party_worker` as `experimental.firstPartyWorker`
+  - Pipelines bindings as `bindings.pipeline({ streamId })`
+  - K2 bindings as `bindings.k2({ id })`
+  - the Analytics SQL binding as `bindings.analyticsSql()`
+
+  A Pipelines binding that uses the deprecated `pipeline` field gets a `STREAM_ID` placeholder and a follow-up asking for the stream ID, because that field names a legacy pipeline, which `@cloudflare/config` doesn't support.
+
+- [#16921](https://github.com/cloudflare/workers-sdk/pull/16921) [`6785363`](https://github.com/cloudflare/workers-sdk/commit/6785363bc2d9b7cda463d8cc71765c4780f8d64d) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Install the Vite plugin release candidate in `wrangler-to-cf`
+
+  The Wrangler-to-cf migration now installs `@cloudflare/vite-plugin@^2.0.0-rc.0` instead of the `beta` dist tag, which no longer receives new releases. It upgrades projects whose plugin is declared as a dist tag or resolves to a version older than the release candidate, since earlier betas don't support the generated configuration. The range also covers the stable v2 releases, so the migration no longer rewrites `package.json` to a dist tag after installing.
+
+- [#16946](https://github.com/cloudflare/workers-sdk/pull/16946) [`e97c9f8`](https://github.com/cloudflare/workers-sdk/commit/e97c9f8bd2cdbd15faf402b146582e49d65dd1a7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-16
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+## 0.7.8
+
+### Patch Changes
+
+- [#16849](https://github.com/cloudflare/workers-sdk/pull/16849) [`3cea40b`](https://github.com/cloudflare/workers-sdk/commit/3cea40b078519222db432b5edf827ddc3e629a2a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-12
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16886](https://github.com/cloudflare/workers-sdk/pull/16886) [`63eb6da`](https://github.com/cloudflare/workers-sdk/commit/63eb6daa0eda348e1f9e86a506cfd80d104a1e28) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-13
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16864](https://github.com/cloudflare/workers-sdk/pull/16864) [`3b1b408`](https://github.com/cloudflare/workers-sdk/commit/3b1b40832ac323de709001d9cc3823517b988985) Thanks [@MattieTK](https://github.com/MattieTK)! - Fix packages with nested `package.json` files missing from deploy metadata
+
+  Packages such as `hono`, `stripe` and `@modelcontextprotocol/sdk` were silently omitted from the package dependency metadata reported during `wrangler deploy` and `wrangler versions upload`. These packages are now included with their installed versions. Autoconfig and codemods also detect their installed versions correctly.
+
+## 0.7.7
+
+### Patch Changes
+
+- [#16824](https://github.com/cloudflare/workers-sdk/pull/16824) [`877b249`](https://github.com/cloudflare/workers-sdk/commit/877b249292307ae4dd282080e68b1d88c0fd0bb0) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Move streaming tail consumers to `experimental.streamingTailConsumers` in `cloudflare.config.ts`
+
+  Streaming Tail Workers are now declared in a separate, experimental list instead of with `streaming: true` on a `tailConsumers` entry. `tailConsumers` now only lists Tail Workers with a `tail()` handler. This is a breaking change to the experimental config API: move each entry that set `streaming: true` to `experimental.streamingTailConsumers`, without the `streaming` field.
+
+  ```ts
+  export default defineConfig({
+    worker: {
+      tailConsumers: [{ worker: "tail-worker" }],
+      experimental: {
+        streamingTailConsumers: [{ worker: "streaming-tail-worker" }],
+      },
+    },
+  });
+  ```
+
+  Fields under `experimental` may change or be removed without a major version bump. The `wrangler-to-cf` codemod now converts `streaming_tail_consumers` to `experimental.streamingTailConsumers`.
+
+## 0.7.6
+
+### Patch Changes
+
+- [#16810](https://github.com/cloudflare/workers-sdk/pull/16810) [`cdc970b`](https://github.com/cloudflare/workers-sdk/commit/cdc970b7bd39dcd42af65bdadab7c38ce0b409fb) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-10
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+## 0.7.5
+
+### Patch Changes
+
+- [#16746](https://github.com/cloudflare/workers-sdk/pull/16746) [`abf924e`](https://github.com/cloudflare/workers-sdk/commit/abf924ee1820b4af139f21dffc877eaf6122c056) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-06
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16792](https://github.com/cloudflare/workers-sdk/pull/16792) [`de10016`](https://github.com/cloudflare/workers-sdk/commit/de100160f243451355480e8f815d0f7d4b3ec8b9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-09
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16037](https://github.com/cloudflare/workers-sdk/pull/16037) [`34ba494`](https://github.com/cloudflare/workers-sdk/commit/34ba49426cbc0ae39fb6c62f62659e7898bf9112) Thanks [@NuroDev](https://github.com/NuroDev)! - Infer Durable Object exports from Wrangler migration history in `cf migrate`
+
+  The codemod now preserves SQLite and legacy KV storage, renames, and deletions as export lifecycle declarations, including combined operations within a single migration. Supported Durable Object bindings and explicit exports no longer require manual review. Follow-ups identify local classes without a live export and classes whose storage cannot be determined from migration history. Transfers retain their source and destination details in a blocking follow-up that distinguishes completed transfers from pending transfers requiring coordination with the source Worker.
+
+## 0.7.4
+
+### Patch Changes
+
+- [#16700](https://github.com/cloudflare/workers-sdk/pull/16700) [`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195) Thanks [@cjol](https://github.com/cjol)! - Bump bundled `brace-expansion` to pick up security fixes
+
+  These packages bundle `brace-expansion` (a dependency of `minimatch`), and the bundled versions were affected by published advisories. The bundles now include `brace-expansion` 2.1.7 (from 2.0.1) and 5.0.12 (from 5.0.5). Normal glob patterns expand as before; only the pathological patterns targeted by the advisories are handled differently.
+
+- [#16700](https://github.com/cloudflare/workers-sdk/pull/16700) [`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195) Thanks [@cjol](https://github.com/cjol)! - Bump bundled `minimatch` from 5.1.6 to 5.1.9 to pick up security fixes
+
+  These packages bundle `minimatch`, and 5.1.6 is affected by published ReDoS advisories. Version 5.1.9 includes the fixes. 5.1.8 is skipped because it broke recursive `**` matching, which D1's `migrations_pattern` relies on.
+
+- [#16695](https://github.com/cloudflare/workers-sdk/pull/16695) [`b2061f4`](https://github.com/cloudflare/workers-sdk/commit/b2061f40f812d8888b461f68506552b58f8e468b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-04
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
 ## 0.7.3
 
 ### Patch Changes

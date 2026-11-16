@@ -276,11 +276,11 @@ async function tagAndPushImage({
 		complianceConfig
 	);
 	await runDockerCmd(pathToDocker, ["tag", sourceTag, namespacedImageTag]);
+	await runDockerCmd(pathToDocker, ["push", namespacedImageTag]);
 	if (cleanupSourceTag) {
 		logger.debug(`Untagging built image: ${sourceTag}.`);
 		await runDockerCmd(pathToDocker, ["image", "rm", sourceTag]);
 	}
-	await runDockerCmd(pathToDocker, ["push", namespacedImageTag]);
 	return namespacedImageTag;
 }
 
@@ -675,6 +675,7 @@ export async function buildContainerImages(
 
 /**
  * Pushes a configured, already-built container image to the managed registry.
+ * The caller owns local image cleanup after the complete upload workflow.
  *
  * @param builtImage - Built Dockerfile-based container image metadata.
  * @param versionId - Version ID used to derive the pushed image tag.
@@ -698,9 +699,8 @@ export async function pushBuiltContainerImage(
 			containerConfig: builtImage.container,
 			accountId,
 			complianceConfig,
-			cleanupSourceTag: true,
+			cleanupSourceTag: false,
 		});
-		builtImage.localTagCleaned = true;
 		return imageRef;
 	} catch (error) {
 		if (error instanceof Error) {

@@ -1,8 +1,8 @@
 import path from "node:path";
-import type { ParsedInputContainerConfig } from "@cloudflare/config";
+import type { ParsedContainerConfig } from "@cloudflare/config";
 
 export type InputContainerImage = Extract<
-	ParsedInputContainerConfig,
+	ParsedContainerConfig,
 	{ image: unknown }
 >["image"];
 

@@ -145,14 +145,14 @@ test("fetch: includes headers from web socket upgrade response", async ({
 		headers.push("Set-Cookie: key=value");
 	});
 	const port = await new Promise<number>((resolve) => {
-		server.listen(0, () => {
+		server.listen(0, "127.0.0.1", () => {
 			onTestFinished(() => {
 				server.close();
 			});
 			resolve((server.address() as AddressInfo).port);
 		});
 	});
-	const res = await fetch(`http://localhost:${port}`, {
+	const res = await fetch(`http://127.0.0.1:${port}`, {
 		headers: { upgrade: "websocket" },
 	});
 	expect(res.webSocket).toBeDefined();
@@ -302,7 +302,7 @@ test.for(["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH"])(
 		const server = http.createServer((req, res) => res.end("ok"));
 		server.on("connection", () => connectionCount++);
 		const port = await new Promise<number>((resolve) => {
-			server.listen(0, () => {
+			server.listen(0, "127.0.0.1", () => {
 				onTestFinished(
 					() =>
 						new Promise<void>((resolve, reject) => {

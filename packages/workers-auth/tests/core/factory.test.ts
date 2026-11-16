@@ -1,8 +1,15 @@
-import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { createConfigCache } from "@cloudflare/workers-utils";
+import {
+	createDeferred,
+	runInTempDir,
+} from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { CF_CLI } from "../../src/cf";
 import { createCloudflareAuth } from "../../src/core/factory";
 import { createOAuthFlow } from "../../src/flow";
+import { WRANGLER_CLI } from "../../src/wrangler";
 import type { AuthContext } from "../../src/core/types";
 import type { LoginOrRefreshResult } from "../../src/flow";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
@@ -18,7 +25,9 @@ const flow = vi.hoisted(() => ({
 	loginOrRefreshIfRequired: vi.fn(async (): Promise<LoginOrRefreshResult> => ({
 		loggedIn: true,
 	})),
+	logout: vi.fn(async () => undefined),
 	requireApiToken: vi.fn(() => ({ apiToken: "test-token" })),
+	setProfile: vi.fn(),
 }));
 
 vi.mock("@cloudflare/workers-utils", async (importOriginal) => ({
@@ -46,6 +55,26 @@ function createTestContext(): AuthContext {
 		select: vi.fn(async () => ""),
 		isNoDefaultValueProvidedError: () => false,
 	};
+}
+
+function mockAccountResponses(accounts: { id: string; name: string }[]): void {
+	fetchInternalBase
+		.mockResolvedValueOnce({
+			response: {
+				success: true,
+				result: accounts,
+				result_info: { page: 1, total_pages: 1 },
+			},
+			status: 200,
+		})
+		.mockResolvedValueOnce({
+			response: {
+				success: true,
+				result: accounts.map((account) => ({ account })),
+				result_info: { page: 1, total_pages: 1 },
+			},
+			status: 200,
+		});
 }
 
 describe("per-CLI login defaults", () => {
@@ -227,5 +256,232 @@ describe("consumer auth guidance", () => {
 			reason: "no-credentials-non-interactive",
 			telemetryMessage: "cfetch auth login required",
 		});
+	});
+});
+
+describe("account selection persistence", () => {
+	runInTempDir();
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		flow.getActiveProfile.mockReturnValue("default");
+		flow.getActiveTemporaryAccount.mockReturnValue(undefined);
+		flow.loginOrRefreshIfRequired.mockResolvedValue({ loggedIn: true });
+		flow.requireApiToken.mockReturnValue({ apiToken: "test-token" });
+	});
+
+	it("ignores an existing cf account cache", ({ expect }) => {
+		const ctx = createTestContext();
+		createConfigCache(ctx.logger, {
+			namespace: "cloudflare",
+		}).saveToConfigCache("cloudflare-account.json", {
+			account: { id: "cached-account", name: "Cached Account" },
+		});
+		const auth = createCloudflareAuth(CF_CLI, ctx);
+
+		expect(auth.getActiveAccountId({})).toBeUndefined();
+		expect(auth.getAccountFromCache()).toBeUndefined();
+	});
+
+	it("retains an interactive cf selection only for the auth instance", async ({
+		expect,
+	}) => {
+		const accounts = [
+			{ id: "account-one", name: "Account One" },
+			{ id: "account-two", name: "Account Two" },
+		];
+		mockAccountResponses(accounts);
+		const ctx = createTestContext();
+		vi.mocked(ctx.select).mockResolvedValue("account-two");
+		const auth = createCloudflareAuth(CF_CLI, ctx);
+		const cacheFile = join(
+			createConfigCache(ctx.logger, {
+				namespace: "cloudflare",
+			}).getCacheFolder(),
+			"cloudflare-account.json"
+		);
+
+		await expect(auth.getOrSelectAccountId(COMPLIANCE_CONFIG)).resolves.toBe(
+			"account-two"
+		);
+		await expect(auth.getOrSelectAccountId(COMPLIANCE_CONFIG)).resolves.toBe(
+			"account-two"
+		);
+
+		expect(ctx.select).toHaveBeenCalledOnce();
+		expect(fetchInternalBase).toHaveBeenCalledTimes(2);
+		expect(auth.getActiveAccountId({})).toBe("account-two");
+		expect(auth.getAccountFromCache()).toBeUndefined();
+		expect(existsSync(cacheFile)).toBe(false);
+		expect(
+			createCloudflareAuth(CF_CLI, createTestContext()).getActiveAccountId({})
+		).toBeUndefined();
+	});
+
+	it("shares an in-flight cf account selection", async ({ expect }) => {
+		const accounts = [
+			{ id: "account-one", name: "Account One" },
+			{ id: "account-two", name: "Account Two" },
+		];
+		mockAccountResponses(accounts);
+		const selection = createDeferred<string>();
+		const ctx = createTestContext();
+		vi.mocked(ctx.select).mockReturnValue(selection.promise);
+		const auth = createCloudflareAuth(CF_CLI, ctx);
+
+		const first = auth.getOrSelectAccountId(COMPLIANCE_CONFIG);
+		const second = auth.getOrSelectAccountId(COMPLIANCE_CONFIG);
+		await vi.waitFor(() => expect(ctx.select).toHaveBeenCalledOnce());
+		selection.resolve("account-two");
+
+		await expect(Promise.all([first, second])).resolves.toEqual([
+			"account-two",
+			"account-two",
+		]);
+		expect(fetchInternalBase).toHaveBeenCalledTimes(2);
+	});
+
+	it("retries account selection after an in-flight selection fails", async ({
+		expect,
+	}) => {
+		const accounts = [
+			{ id: "account-one", name: "Account One" },
+			{ id: "account-two", name: "Account Two" },
+		];
+		mockAccountResponses(accounts);
+		const ctx = createTestContext();
+		vi.mocked(ctx.select).mockRejectedValueOnce(new Error("selection failed"));
+		const auth = createCloudflareAuth(CF_CLI, ctx);
+
+		await expect(auth.getOrSelectAccountId(COMPLIANCE_CONFIG)).rejects.toThrow(
+			"selection failed"
+		);
+
+		mockAccountResponses(accounts);
+		vi.mocked(ctx.select).mockResolvedValueOnce("account-one");
+		await expect(auth.getOrSelectAccountId(COMPLIANCE_CONFIG)).resolves.toBe(
+			"account-one"
+		);
+		expect(ctx.select).toHaveBeenCalledTimes(2);
+		expect(fetchInternalBase).toHaveBeenCalledTimes(4);
+	});
+
+	it("retains a single cf account only for the auth instance", async ({
+		expect,
+	}) => {
+		mockAccountResponses([{ id: "only-account", name: "Only Account" }]);
+		const ctx = createTestContext();
+		const auth = createCloudflareAuth(CF_CLI, ctx);
+
+		await expect(auth.getOrSelectAccountId(COMPLIANCE_CONFIG)).resolves.toBe(
+			"only-account"
+		);
+		await expect(auth.getOrSelectAccountId(COMPLIANCE_CONFIG)).resolves.toBe(
+			"only-account"
+		);
+
+		expect(ctx.select).not.toHaveBeenCalled();
+		expect(fetchInternalBase).toHaveBeenCalledTimes(2);
+		expect(auth.getActiveAccountId({})).toBe("only-account");
+		expect(auth.getAccountFromCache()).toBeUndefined();
+	});
+
+	it("clears the cf selection when the active profile changes", async ({
+		expect,
+	}) => {
+		mockAccountResponses([{ id: "account-one", name: "Account One" }]);
+		const auth = createCloudflareAuth(CF_CLI, createTestContext());
+
+		await auth.getOrSelectAccountId(COMPLIANCE_CONFIG);
+		expect(auth.getActiveAccountId({})).toBe("account-one");
+
+		flow.getActiveProfile.mockReturnValue("other");
+		auth.setProfile("other");
+
+		expect(auth.getActiveAccountId({})).toBeUndefined();
+		expect(flow.setProfile).toHaveBeenCalledWith("other");
+	});
+
+	it("temporarily overrides the cf selection with a configured account ID", async ({
+		expect,
+	}) => {
+		mockAccountResponses([{ id: "account-one", name: "Account One" }]);
+		const auth = createCloudflareAuth(CF_CLI, createTestContext());
+
+		await auth.getOrSelectAccountId(COMPLIANCE_CONFIG);
+		expect(auth.getActiveAccountId({ account_id: "configured-account" })).toBe(
+			"configured-account"
+		);
+
+		expect(auth.getActiveAccountId({})).toBe("account-one");
+	});
+
+	it("temporarily overrides the cf selection with an environment account ID", async ({
+		expect,
+	}) => {
+		mockAccountResponses([{ id: "account-one", name: "Account One" }]);
+		const auth = createCloudflareAuth(CF_CLI, createTestContext());
+
+		await auth.getOrSelectAccountId(COMPLIANCE_CONFIG);
+		try {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "environment-account");
+			expect(auth.getActiveAccountId({})).toBe("environment-account");
+		} finally {
+			vi.unstubAllEnvs();
+		}
+
+		expect(auth.getActiveAccountId({})).toBe("account-one");
+	});
+
+	it("clears the cf selection after successful login and logout", async ({
+		expect,
+	}) => {
+		mockAccountResponses([{ id: "account-one", name: "Account One" }]);
+		const auth = createCloudflareAuth(CF_CLI, createTestContext());
+		const purgeOnLoginOrLogout = vi
+			.mocked(createOAuthFlow)
+			.mock.calls.at(-1)?.[0].purgeOnLoginOrLogout;
+
+		await auth.getOrSelectAccountId(COMPLIANCE_CONFIG);
+		await auth.login(COMPLIANCE_CONFIG);
+		purgeOnLoginOrLogout?.();
+		expect(auth.getActiveAccountId({})).toBeUndefined();
+
+		mockAccountResponses([{ id: "account-two", name: "Account Two" }]);
+		await auth.getOrSelectAccountId(COMPLIANCE_CONFIG);
+		await auth.logout();
+		purgeOnLoginOrLogout?.();
+		expect(auth.getActiveAccountId({})).toBeUndefined();
+	});
+
+	it("keeps Wrangler's account selection in sync with its persistent cache", async ({
+		expect,
+	}) => {
+		expect(WRANGLER_CLI.persistAccountSelection).toBe(true);
+		mockAccountResponses([
+			{ id: "wrangler-account", name: "Wrangler Account" },
+		]);
+		const firstAuth = createCloudflareAuth(WRANGLER_CLI, createTestContext());
+
+		await expect(
+			firstAuth.getOrSelectAccountId(COMPLIANCE_CONFIG)
+		).resolves.toBe("wrangler-account");
+		expect(firstAuth.getAccountFromCache()).toEqual({
+			id: "wrangler-account",
+			name: "Wrangler Account",
+		});
+
+		const secondAuth = createCloudflareAuth(WRANGLER_CLI, createTestContext());
+		expect(secondAuth.getActiveAccountId({})).toBe("wrangler-account");
+
+		const externalCache = createConfigCache(createTestContext().logger);
+		externalCache.saveToConfigCache("wrangler-account.json", {
+			account: { id: "external-account", name: "External Account" },
+		});
+		expect(firstAuth.getActiveAccountId({})).toBe("external-account");
+
+		externalCache.purgeConfigCaches();
+		expect(firstAuth.getActiveAccountId({})).toBeUndefined();
+		expect(fetchInternalBase).toHaveBeenCalledTimes(2);
 	});
 });

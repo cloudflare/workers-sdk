@@ -145,14 +145,18 @@ export interface BrowserBinding extends BrowserBindingOptions {
 	type: "browser";
 }
 
-export interface AnalyticsSQLBindingOptions {
+export interface AnalyticsSqlBindingOptions {
 	/** Options that only apply during local development. */
 	dev?: BindingDevOptions;
 }
 
-/** An Analytics SQL binding. */
-export interface AnalyticsSQLBinding extends AnalyticsSQLBindingOptions {
-	type: "analytics";
+/**
+ * An Analytics SQL binding.
+ *
+ * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#analytics-sql
+ */
+export interface AnalyticsSqlBinding extends AnalyticsSqlBindingOptions {
+	type: "analytics-sql";
 }
 
 export interface D1BindingOptions {
@@ -160,6 +164,8 @@ export interface D1BindingOptions {
 	id?: string;
 	/** The name of this D1 database. */
 	name?: string;
+	/** The jurisdiction where an automatically provisioned D1 database will be created. */
+	jurisdiction?: string;
 	/** Options that only apply during local development. */
 	dev?: BindingDevOptions;
 }
@@ -361,15 +367,23 @@ export interface MtlsCertificateBinding extends MtlsCertificateBindingOptions {
 }
 
 export interface PipelineBindingOptions {
-	/** Name of the Pipeline to bind. */
-	name: string;
+	/**
+	 * The ID of the Pipelines stream to write to
+	 */
+	streamId: string;
+	/** @deprecated Renamed to `streamId`, which takes the stream's ID rather than its name. */
+	name?: never;
 	/** Options that only apply during local development. */
 	dev?: BindingDevOptions;
 }
 
 export interface K2BindingOptions {
-	/** The ID of the K2 stream. */
-	stream: string;
+	/**
+	 * The ID of the K2 stream to write to
+	 */
+	id: string;
+	/** @deprecated Renamed to `id`. */
+	stream?: never;
 	/** Always uses the real stream in development. Set remote to true to suppress the usage warning; false is unsupported. */
 	dev?: BindingDevOptions;
 }
@@ -761,8 +775,12 @@ export interface Bindings {
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#browser-rendering
 	 */
 	browser(options?: BrowserBindingOptions): BrowserBinding;
-	/** An Analytics binding. */
-	analytics(options?: AnalyticsSQLBindingOptions): AnalyticsSQLBinding;
+	/**
+	 * Binding to Analytics SQL.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#analytics-sql
+	 */
+	analyticsSql(options?: AnalyticsSqlBindingOptions): AnalyticsSqlBinding;
 	/**
 	 * Binding to a D1 database.
 	 *
@@ -936,7 +954,7 @@ export const bindings = {
 	artifacts: (options) => ({ type: "artifacts", ...options }),
 	assets: () => ({ type: "assets" }),
 	browser: (options) => ({ type: "browser", ...options }),
-	analytics: (options) => ({ type: "analytics", ...options }),
+	analyticsSql: (options) => ({ type: "analytics-sql", ...options }),
 	d1: (options) => ({ type: "d1", ...options }),
 	dispatchNamespace: (options) => ({
 		type: "dispatch-namespace",

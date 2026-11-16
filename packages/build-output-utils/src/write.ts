@@ -13,11 +13,12 @@ import {
 	getWorkerDir,
 } from "./paths";
 import type {
-	ParsedInputSettingsConfig,
-	ParsedInputWorkerConfig,
-	ParsedOutputContainerConfig,
-	ParsedOutputRootConfig,
-	ParsedOutputWorkerConfig,
+	ParsedSettings,
+	ParsedWorkerConfig,
+	ParsedBuildOutputContainerConfig,
+	ParsedBuildOutputProducer,
+	ParsedBuildOutputRootConfig,
+	ParsedBuildOutputWorkerConfig,
 	ConfigContext,
 } from "@cloudflare/config";
 
@@ -74,8 +75,8 @@ export async function writeAssets({
 
 export interface WriteWorkerConfigOptions {
 	root: string;
-	config: ParsedInputWorkerConfig;
-	manifest?: ParsedOutputWorkerConfig["manifest"];
+	config: ParsedWorkerConfig;
+	manifest?: ParsedBuildOutputWorkerConfig["manifest"];
 	directoryName?: string;
 }
 
@@ -93,7 +94,7 @@ export async function writeWorkerConfig({
 	directoryName = DEFAULT_WORKER_DIRECTORY_NAME,
 }: WriteWorkerConfigOptions): Promise<void> {
 	const { entrypoint: _entrypoint, ...rest } = config;
-	const outputConfig: ParsedOutputWorkerConfig = { ...rest, manifest };
+	const outputConfig: ParsedBuildOutputWorkerConfig = { ...rest, manifest };
 	await fsp.mkdir(getWorkerDir(root, directoryName), { recursive: true });
 	await fsp.writeFile(
 		getWorkerConfigPath(root, directoryName),
@@ -103,7 +104,7 @@ export async function writeWorkerConfig({
 
 export interface WriteContainerConfigOptions {
 	root: string;
-	config: ParsedOutputContainerConfig;
+	config: ParsedBuildOutputContainerConfig;
 	directoryName: string;
 }
 
@@ -128,22 +129,54 @@ export async function writeContainerConfig({
 	);
 }
 
+export interface WriteRootConfigOptions {
+	root: string;
+	/**
+	 * Settings declared at the top level of `cloudflare.config.ts`. Omitted
+	 * from the file when not given or when none of them is set.
+	 */
+	settings?: ParsedSettings;
+	/** Build context supplied at build time. */
+	buildContext: ConfigContext;
+	/**
+	 * The tool writing the tree, such as a framework adapter or build plugin.
+	 * Readers use it only in error messages and diagnostics. Omitted from the
+	 * file when not given.
+	 */
+	producer?: ParsedBuildOutputProducer;
+}
+
 /**
  * Write the root `config.json` to the Build Output Specification tree.
  *
- * Holds the settings declared at the top level of `cloudflare.config.ts` and
- * build context supplied at build time.
+ * Holds the tool that wrote the tree, the settings declared at the top level
+ * of `cloudflare.config.ts` and the build context supplied at build time.
  */
-export async function writeRootConfig(
-	root: string,
-	settings: ParsedInputSettingsConfig | undefined,
-	buildContext: ConfigContext
-): Promise<void> {
-	const outputConfig: ParsedOutputRootConfig = {
-		...settings,
+export async function writeRootConfig({
+	root,
+	settings,
+	buildContext,
+	producer,
+}: WriteRootConfigOptions): Promise<void> {
+	const outputConfig: ParsedBuildOutputRootConfig = {
+		...(producer === undefined ? {} : { producer }),
+		...(hasSettings(settings) ? { settings } : {}),
 		buildContext,
 	};
 	const configPath = getRootConfigPath(root);
 	await fsp.mkdir(path.dirname(configPath), { recursive: true });
 	await fsp.writeFile(configPath, JSON.stringify(outputConfig));
+}
+
+/**
+ * Whether any setting is set. Writers emit a key only when it is used, so an
+ * object whose settings are all `undefined` is left out like a missing one.
+ */
+function hasSettings(
+	settings: ParsedSettings | undefined
+): settings is ParsedSettings {
+	return (
+		settings !== undefined &&
+		Object.values(settings).some((value) => value !== undefined)
+	);
 }
