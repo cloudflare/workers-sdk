@@ -82,6 +82,44 @@ const config = {
 			path: "/accounts/{account_id}/flagship/apps/{app_id}/evaluate",
 			methods: ["get", "post"],
 		},
+
+		// Artifacts endpoints
+		{
+			path: "/accounts/{account_id}/artifacts/namespaces",
+			methods: ["get"],
+		},
+		{
+			path: "/accounts/{account_id}/artifacts/namespaces/{namespace}",
+			methods: ["get"],
+		},
+		{
+			path: "/accounts/{account_id}/artifacts/namespaces/{namespace}/repos",
+			methods: ["get", "post"],
+		},
+		{
+			path: "/accounts/{account_id}/artifacts/namespaces/{namespace}/repos/{name}",
+			methods: ["get", "delete"],
+		},
+		{
+			path: "/accounts/{account_id}/artifacts/namespaces/{namespace}/repos/{name}/fork",
+			methods: ["post"],
+		},
+		{
+			path: "/accounts/{account_id}/artifacts/namespaces/{namespace}/repos/{name}/import",
+			methods: ["post"],
+		},
+		{
+			path: "/accounts/{account_id}/artifacts/namespaces/{namespace}/repos/{name}/tokens",
+			methods: ["get"],
+		},
+		{
+			path: "/accounts/{account_id}/artifacts/namespaces/{namespace}/tokens",
+			methods: ["post"],
+		},
+		{
+			path: "/accounts/{account_id}/artifacts/namespaces/{namespace}/tokens/{id}",
+			methods: ["delete"],
+		},
 	],
 
 	// Ignored features (not implemented in local explorer)
@@ -174,6 +212,17 @@ const config = {
 				path: "/accounts/{account_id}/r2/buckets/{bucket_name}",
 				method: "get",
 				name: "cf-r2-jurisdiction",
+			},
+			// List Artifacts namespaces - pagination not implemented (returns all local namespaces)
+			{
+				path: "/accounts/{account_id}/artifacts/namespaces",
+				method: "get",
+				name: "limit",
+			},
+			{
+				path: "/accounts/{account_id}/artifacts/namespaces",
+				method: "get",
+				name: "cursor",
 			},
 		],
 

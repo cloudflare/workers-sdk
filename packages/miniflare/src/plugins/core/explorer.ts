@@ -12,6 +12,11 @@ import { CoreBindings } from "../../workers";
 import { D1_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/d1/constants";
 import { KV_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/kv/constants";
 import { R2_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/r2/constants";
+import {
+	getArtifactsExplorerBindingName,
+	getArtifactsExplorerService,
+	getLocalArtifactsNamespaceNames,
+} from "../artifacts";
 import { getFlagshipExplorerService } from "../flagship";
 import {
 	getEnvBindingsOfType,
@@ -33,6 +38,7 @@ import {
 	OBSERVABILITY_COLLECTOR_SERVICE_NAME,
 	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
+import type { LocalArtifactsExplorerNamespaces } from "../artifacts";
 import type {
 	DurableObjectClassNames,
 	ParsedInstanceOptions,
@@ -241,6 +247,14 @@ export function getExplorerServices(
 		}
 	}
 
+	// Each local Artifacts namespace is its own service.
+	for (const info of Object.values(bindingIdMap.artifacts.namespaces)) {
+		explorerBindings.push({
+			name: info.binding,
+			service: getArtifactsExplorerService(info.namespace),
+		});
+	}
+
 	return [
 		// Disk service for serving explorer UI assets
 		{
@@ -274,7 +288,11 @@ export function constructExplorerBindingMap(
 	proxyBindings: Worker_Binding[],
 	durableObjectClassNames: DurableObjectClassNames,
 	workflowExporters: WorkflowExporters,
-	workflowOptions?: Map<string, WorkflowOption>
+	workflowOptions?: Map<string, WorkflowOption>,
+	artifactsNamespaces: LocalArtifactsExplorerNamespaces = {
+		namespaces: [],
+		unbound: [],
+	}
 ): BindingIdMap {
 	const IDToBindingName: BindingIdMap = {
 		d1: {},
@@ -283,7 +301,34 @@ export function constructExplorerBindingMap(
 		r2: {},
 		workflows: {},
 		flagship: Object.create(null) as BindingIdMap["flagship"],
+		artifacts: {
+			namespaces: Object.create(
+				null
+			) as BindingIdMap["artifacts"]["namespaces"],
+			...(artifactsNamespaces.unavailableReason === undefined
+				? {}
+				: { unavailableReason: artifactsNamespaces.unavailableReason }),
+		},
 	};
+
+	for (const namespace of artifactsNamespaces.namespaces) {
+		IDToBindingName.artifacts.namespaces[namespace] = {
+			namespace,
+			binding: getArtifactsExplorerBindingName(namespace),
+			bindings: [],
+		};
+	}
+	for (const workerOpts of allWorkerOpts) {
+		const bindings = getEnvBindingsOfType(workerOpts.config, "artifacts");
+		const local = getLocalArtifactsNamespaceNames(bindings, workerOpts.dev);
+		for (const [bindingName, binding] of bindings) {
+			if (local.has(binding.namespace)) {
+				IDToBindingName.artifacts.namespaces[binding.namespace]?.bindings.push(
+					bindingName
+				);
+			}
+		}
+	}
 
 	for (const workerOpts of allWorkerOpts) {
 		for (const { id: appId, bindingName } of getLocalFlagshipBindings(

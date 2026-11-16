@@ -92,6 +92,7 @@ import type {
 	Worker_Module,
 } from "../../runtime";
 import type { Awaitable } from "../../workers";
+import type { LocalArtifactsExplorerNamespaces } from "../artifacts";
 import type {
 	DurableObjectClassNames,
 	MiniflareServiceBinding,
@@ -766,6 +767,8 @@ export interface GlobalServicesOptions {
 	workflowExporters: WorkflowExporters;
 	/** All worker options for building per-worker resource bindings */
 	allWorkerOpts?: ParsedWorkerOptions[];
+	/** Local Artifacts namespaces the explorer can manage */
+	artifactsExplorerNamespaces?: LocalArtifactsExplorerNamespaces;
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -778,6 +781,7 @@ export function getGlobalServices({
 	durableObjectClassNames,
 	workflowExporters,
 	allWorkerOpts,
+	artifactsExplorerNamespaces,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
 	const workerNames = [...allWorkerRoutes.keys()];
@@ -1028,7 +1032,8 @@ export function getGlobalServices({
 			proxyBindings,
 			durableObjectClassNames,
 			workflowExporters,
-			workflowOptions
+			workflowOptions,
+			artifactsExplorerNamespaces
 		);
 		const hasDurableObjects = Object.keys(IDToBindingMap.do).length > 0;
 

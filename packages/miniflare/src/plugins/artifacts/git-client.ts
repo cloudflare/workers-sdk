@@ -457,6 +457,17 @@ export class GitClient {
 		return result.status === 0 ? decoder.decode(result.stdout).trim() : null;
 	}
 
+	/** Counts the objects reachable from every ref, as a fork reports them. */
+	async objectCount(): Promise<number> {
+		const result = await this.git([
+			"rev-list",
+			"--objects",
+			"--all",
+			"--count",
+		]);
+		return Number.parseInt(decoder.decode(result.stdout).trim(), 10) || 0;
+	}
+
 	async state(): Promise<RepositoryState> {
 		const refsOutput = await this.git([
 			"for-each-ref",

@@ -10,6 +10,12 @@ import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import { wrapResponse } from "./common";
 import { EXPLORER_REFRESH_HEADER } from "./explorer-refresh";
 import {
+	zArtifactsRepoTokensListData,
+	zArtifactsReposCreateData,
+	zArtifactsReposForkData,
+	zArtifactsReposImportData,
+	zArtifactsReposListData,
+	zArtifactsTokensCreateData,
 	zD1ListDatabasesData,
 	zD1RawDatabaseQueryData,
 	zDurableObjectsNamespaceListObjectsData,
@@ -36,6 +42,23 @@ import {
 	zWorkflowsListInstancesData,
 } from "./generated/zod.gen";
 import openApiSpec from "./openapi.local.json";
+import {
+	createArtifactsRepo,
+	createArtifactsToken,
+	deleteArtifactsRepo,
+	describeImportBodyIssue,
+	describeRepoBodyIssue,
+	describeTokenBodyIssue,
+	forkArtifactsRepo,
+	getArtifactsNamespace,
+	getArtifactsRepo,
+	importArtifactsRepo,
+	listArtifactsNamespaces,
+	listArtifactsRepos,
+	listArtifactsRepoTokens,
+	revokeArtifactsToken,
+	validateArtifactsBody,
+} from "./resources/artifacts";
 import { listD1Databases, rawD1Database } from "./resources/d1";
 import { listDONamespaces, listDOObjects, queryDOSqlite } from "./resources/do";
 import {
@@ -513,6 +536,94 @@ app.post(
 	"/api/flagship/apps/:app_id/evaluate",
 	validateRequestBody(zFlagshipEvaluateFlagPostData.shape.body),
 	(c) => evaluateFlagshipApp(c, c.req.param("app_id"), c.req.valid("json"))
+);
+
+// ============================================================================
+// Artifacts Endpoints
+// ============================================================================
+
+app.get("/api/artifacts/namespaces", (c) => listArtifactsNamespaces(c));
+
+app.get("/api/artifacts/namespaces/:namespace", (c) =>
+	getArtifactsNamespace(c, c.req.param("namespace"))
+);
+
+app.get(
+	"/api/artifacts/namespaces/:namespace/repos",
+	validateQuery(zArtifactsReposListData.shape.query.unwrap()),
+	(c) => listArtifactsRepos(c, c.req.param("namespace"), c.req.valid("query"))
+);
+
+app.post(
+	"/api/artifacts/namespaces/:namespace/repos",
+	validateArtifactsBody(
+		zArtifactsReposCreateData.shape.body,
+		describeRepoBodyIssue
+	),
+	(c) => createArtifactsRepo(c, c.req.param("namespace"), c.req.valid("json"))
+);
+
+app.get("/api/artifacts/namespaces/:namespace/repos/:name", (c) =>
+	getArtifactsRepo(c, c.req.param("namespace"), c.req.param("name"))
+);
+
+app.delete("/api/artifacts/namespaces/:namespace/repos/:name", (c) =>
+	deleteArtifactsRepo(c, c.req.param("namespace"), c.req.param("name"))
+);
+
+app.post(
+	"/api/artifacts/namespaces/:namespace/repos/:name/fork",
+	validateArtifactsBody(
+		zArtifactsReposForkData.shape.body,
+		describeRepoBodyIssue
+	),
+	(c) =>
+		forkArtifactsRepo(
+			c,
+			c.req.param("namespace"),
+			c.req.param("name"),
+			c.req.valid("json")
+		)
+);
+
+app.post(
+	"/api/artifacts/namespaces/:namespace/repos/:name/import",
+	validateArtifactsBody(
+		zArtifactsReposImportData.shape.body,
+		describeImportBodyIssue
+	),
+	(c) =>
+		importArtifactsRepo(
+			c,
+			c.req.param("namespace"),
+			c.req.param("name"),
+			c.req.valid("json")
+		)
+);
+
+app.get(
+	"/api/artifacts/namespaces/:namespace/repos/:name/tokens",
+	validateQuery(zArtifactsRepoTokensListData.shape.query.unwrap()),
+	(c) =>
+		listArtifactsRepoTokens(
+			c,
+			c.req.param("namespace"),
+			c.req.param("name"),
+			c.req.valid("query")
+		)
+);
+
+app.post(
+	"/api/artifacts/namespaces/:namespace/tokens",
+	validateArtifactsBody(
+		zArtifactsTokensCreateData.shape.body,
+		describeTokenBodyIssue
+	),
+	(c) => createArtifactsToken(c, c.req.param("namespace"), c.req.valid("json"))
+);
+
+app.delete("/api/artifacts/namespaces/:namespace/tokens/:id", (c) =>
+	revokeArtifactsToken(c, c.req.param("namespace"), c.req.param("id"))
 );
 
 // ============================================================================

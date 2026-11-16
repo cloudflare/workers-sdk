@@ -9,11 +9,19 @@ import type { GitSidecar } from "./git-sidecar";
 export interface LocalArtifactsBackend {
 	sidecar: GitSidecar;
 	port: number;
+	/** The port returned in Git remote URLs. */
+	advertisedPort: number;
 }
 
 export interface LocalArtifactsBackendOptions {
 	namespace?: string;
 	portFile?: string;
+	/**
+	 * Keep the recorded port when another process holds it. Remote URLs then
+	 * name the process serving this storage, such as `wrangler dev`, rather
+	 * than a short-lived instance's fallback port.
+	 */
+	keepRecordedPort?: boolean;
 }
 
 // Node binding proxies make synchronous calls. The Git backend must run on
@@ -55,6 +63,7 @@ export class ArtifactsController {
 	 * @param root Git storage directory for one namespace.
 	 * @param options.namespace Prints the namespace's Git remote prefix.
 	 * @param options.portFile Reuses the Git port recorded here, if it's free.
+	 * @param options.keepRecordedPort Advertises the recorded port even if it's taken.
 	 */
 	get(
 		root: string,
@@ -84,10 +93,13 @@ export class ArtifactsController {
 
 	async #start(
 		root: string,
-		{ namespace, portFile }: LocalArtifactsBackendOptions,
+		{ namespace, portFile, keepRecordedPort }: LocalArtifactsBackendOptions,
 		onExit: () => void
 	): Promise<LocalArtifactsBackend> {
-		const port = await reserveGitPort(portFile);
+		const { port, advertisedPort } = await reserveGitPort(
+			portFile,
+			keepRecordedPort ?? false
+		);
 		if (namespace !== undefined) {
 			this.getLog?.().info(
 				`Local Artifacts Git remotes for namespace "${namespace}": http://127.0.0.1:${port}/git/${namespace}/<repo>.git`
@@ -114,6 +126,7 @@ export class ArtifactsController {
 			});
 			return {
 				port,
+				advertisedPort,
 				sidecar: {
 					...endpoint,
 					async close() {
@@ -173,9 +186,13 @@ export class ArtifactsController {
  * Clones keep their `origin` URL, so reuse the port this storage directory had
  * last time. Fall back to any free port if another process now holds it.
  */
-async function reserveGitPort(portFile: string | undefined): Promise<number> {
+async function reserveGitPort(
+	portFile: string | undefined,
+	keepRecordedPort: boolean
+): Promise<{ port: number; advertisedPort: number }> {
 	if (portFile === undefined) {
-		return getPort({ host: "127.0.0.1" });
+		const port = await getPort({ host: "127.0.0.1" });
+		return { port, advertisedPort: port };
 	}
 	const previous = Number.parseInt(
 		await readFile(portFile, "utf8").catch(() => ""),
@@ -183,18 +200,20 @@ async function reserveGitPort(portFile: string | undefined): Promise<number> {
 	);
 	// get-port refuses ports it returned in this process during the last
 	// 15 seconds, which would move the port when Vite restarts its server.
+	const recorded =
+		Number.isInteger(previous) && previous > 0 && previous < 65536;
 	const port =
-		Number.isInteger(previous) &&
-		previous > 0 &&
-		previous < 65536 &&
-		(await isLoopbackPortFree(previous))
+		recorded && (await isLoopbackPortFree(previous))
 			? previous
 			: await getPort({ host: "127.0.0.1" });
+	if (recorded && keepRecordedPort) {
+		return { port, advertisedPort: previous };
+	}
 	if (port !== previous) {
 		await mkdir(path.dirname(portFile), { recursive: true });
 		await writeFile(portFile, `${port}\n`);
 	}
-	return port;
+	return { port, advertisedPort: port };
 }
 
 function isLoopbackPortFree(port: number): Promise<boolean> {

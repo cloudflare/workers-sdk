@@ -76,7 +76,10 @@ import {
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	WORKFLOWS_PLUGIN_NAME,
 } from "./plugins";
-import { getLocalArtifactsNamespaceNames } from "./plugins/artifacts";
+import {
+	getLocalArtifactsExplorerNamespaces,
+	getLocalArtifactsNamespaceNames,
+} from "./plugins/artifacts";
 import { ArtifactsController } from "./plugins/artifacts/controller";
 import { getArtifactsEventSubscriptions } from "./plugins/artifacts/events";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
@@ -2117,6 +2120,12 @@ export class Miniflare {
 				"Workflow events are only published by local Artifacts namespaces, and this instance has none."
 			);
 		}
+		const artifactsExplorerNamespaces =
+			await getLocalArtifactsExplorerNamespaces(
+				allWorkerOpts,
+				sharedOpts,
+				this.#tmpPath
+			);
 		// When the dev registry is enabled, queue brokers bind to the dev-registry
 		// proxy so they can deliver to consumers in other `wrangler dev` processes
 		// (see `ExternalQueueProxy`), so the proxy worker must exist whenever
@@ -2277,6 +2286,7 @@ export class Miniflare {
 				hyperdriveProxyController: this.#hyperdriveProxyController,
 				artifactsController: this.#artifactsController,
 				artifactsEventSubscriptions,
+				artifactsExplorerNamespaces,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {
 				const pluginServicesExtensions = await plugin.getServices({
@@ -2536,6 +2546,7 @@ export class Miniflare {
 			durableObjectClassNames,
 			workflowExporters,
 			allWorkerOpts,
+			artifactsExplorerNamespaces,
 		});
 		for (const service of globalServices) {
 			// Global services should all have unique names
