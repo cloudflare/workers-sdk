@@ -274,6 +274,21 @@ describe("VPC TLS configuration", () => {
 		}
 	);
 
+	it.for([
+		["disabled", "None"],
+		["verify_ca", "None (system trust store)"],
+		["verify_full", "None (system trust store)"],
+	] as const)(
+		"reports the default certificate authority for %s verification",
+		async ([mode, authority], { expect }) => {
+			const service = fixture();
+			service.tls_settings = { cert_verification_mode: mode };
+			savedService(service);
+			await runWrangler("vpc service get service-uuid");
+			expect(std.out).toContain(`Certificate Authority: ${authority}\n`);
+		}
+	);
+
 	it.for(["create", "update"] as const)(
 		"surfaces certificate API errors on %s without reporting success",
 		async (operation, { expect }) => {

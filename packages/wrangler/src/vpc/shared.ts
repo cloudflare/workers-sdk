@@ -24,11 +24,15 @@ export function displayServiceDetails(service: ConnectivityService) {
 	}
 
 	if (service.tls_settings) {
+		const defaultCertificateAuthority =
+			service.tls_settings.cert_verification_mode === "disabled"
+				? "None"
+				: "None (system trust store)";
 		logger.log(
 			`   Cert Verification Mode: ${service.tls_settings.cert_verification_mode}`
 		);
 		logger.log(
-			`   Certificate Authority: ${service.tls_settings.certificate_authority ?? "None (system trust store)"}`
+			`   Certificate Authority: ${service.tls_settings.certificate_authority ?? defaultCertificateAuthority}`
 		);
 		logger.log(
 			`   Client Certificate: ${service.tls_settings.client_certificate ?? "None"}`
