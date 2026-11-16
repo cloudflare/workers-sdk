@@ -151,14 +151,13 @@ export class ProxyWorker implements DurableObject {
 					// to catch only network errors, use the 2nd param of the fetch.then()
 
 					// we have crossed an async boundary, so proxyData may have changed
-					// if proxyData.userWorkerUrl has changed, it means there is a new downstream UserWorker
-					// and that this error is stale since it was for a request to the old UserWorker
-					// so here we construct a newUserWorkerUrl so we can compare it to the (old) userWorkerUrl
-					const newUserWorkerUrl =
-						this.proxyData && urlFromParts(this.proxyData.userWorkerUrl);
+					// if a `pause` or `play` arrived since this request was sent, the error is stale
+					// since it was for a request to the old preview.
+					// Compare proxyData itself rather than URLs: each `play` sets a new object,
+					// while remote previews keep the same host and only change the preview token.
 
 					// only report errors if the downstream proxy has NOT changed
-					if (userWorkerUrl.href === newUserWorkerUrl?.href) {
+					if (this.proxyData === proxyData) {
 						void sendMessageToProxyController(this.env, {
 							type: "error",
 							error: {
