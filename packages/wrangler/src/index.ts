@@ -515,7 +515,7 @@ import {
 } from "./user/profiles";
 import { noProxy, proxy } from "./utils/constants";
 import { logDidYouMean } from "./utils/did-you-mean";
-import { debugLogFilepath } from "./utils/log-file";
+import { getDebugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
 import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
 import { vectorizeDeleteCommand } from "./vectorize/delete";
@@ -715,7 +715,7 @@ export function createCLIParser(argv: string[]) {
 				version: 1,
 				wrangler_version: wranglerVersion,
 				command_line_args: redactEventCode(argv),
-				log_file_path: debugLogFilepath,
+				log_file_path: getDebugLogFilepath(),
 			});
 
 			return true;
