@@ -1,5 +1,39 @@
 # @cloudflare/build-output-utils
 
+## 1.0.0-rc.0
+
+### Major Changes
+
+- [#16917](https://github.com/cloudflare/workers-sdk/pull/16917) [`d36b39d`](https://github.com/cloudflare/workers-sdk/commit/d36b39d440a8f408f41dcf4925a81f2f8a58f73b) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Release the first `1.0.0` release candidate, which reads and writes Build Output v1
+
+  Build Output now lives in `.cloudflare/output/v1/`. Only the `.cloudflare/output/v<N>/` naming convention is permanent: a future breaking change to the format would use a new version directory. `readBuildOutput()` lists the version directories first and throws a `BuildOutputError` unless it finds exactly one `v1` directory. This means output written by an older or newer tool, or a stale `v0` tree left next to a fresh one, fails with a clear error instead of being misread or deployed.
+
+  `BuildOutputError` now has a `code` (`not-found`, `newer-version`, `older-version`, `multiple-versions`, `unknown-fields` or `invalid`) plus `foundVersions`, `supportedVersions`, `producer` and `unknownFields`. Consumers can use these to show their own advice instead of parsing the message. When a config contains fields the reader doesn't support, the error lists each field and names the tool that wrote the output.
+
+  The root `config.json` now nests account settings under `settings`, which is left out when none are set, and can record the tool that wrote the output in an optional `producer` field. `writeRootConfig()` takes an options object, matching the other `write*` functions:
+
+  ```ts
+  // Before
+  await writeRootConfig(root, settings, buildContext);
+
+  // After
+  await writeRootConfig({
+    root,
+    settings,
+    buildContext,
+    producer: { name: "my-framework-adapter", version: "1.2.3" },
+  });
+  ```
+
+### Patch Changes
+
+- [#16946](https://github.com/cloudflare/workers-sdk/pull/16946) [`e97c9f8`](https://github.com/cloudflare/workers-sdk/commit/e97c9f8bd2cdbd15faf402b146582e49d65dd1a7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-16
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`d36b39d`](https://github.com/cloudflare/workers-sdk/commit/d36b39d440a8f408f41dcf4925a81f2f8a58f73b), [`0bf81ac`](https://github.com/cloudflare/workers-sdk/commit/0bf81ac16041a1f47f5474f7d6f5b0da6160f76b), [`e97c9f8`](https://github.com/cloudflare/workers-sdk/commit/e97c9f8bd2cdbd15faf402b146582e49d65dd1a7), [`349fc4e`](https://github.com/cloudflare/workers-sdk/commit/349fc4e7443aa744cbe129f84f28571bf8625155)]:
+  - @cloudflare/config@1.0.0-rc.0
+
 ## 0.9.14
 
 ### Patch Changes

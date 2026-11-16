@@ -1,5 +1,30 @@
 # @cloudflare/autoconfig
 
+## 0.13.0
+
+### Minor Changes
+
+- [#16803](https://github.com/cloudflare/workers-sdk/pull/16803) [`b219078`](https://github.com/cloudflare/workers-sdk/commit/b219078a4c1b008485ce022f01ad7292d613d9f0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Run experimental cf projects with their installed Vite or Vite+ commands
+
+  `cf dev`, `cf build`, and deployments that build your project can use Vite or Vite+ even when no framework command is detected. This removes the need for the internal `cf-vite` delegate and supports dependencies declared and hoisted at the root of a configured workspace. A workspace application using a custom-named Vite config should declare `@cloudflare/vite-plugin` in its own manifest, or add `vite` or `vite-plus` as a dependency or dev dependency to identify its tooling; this keeps shared root tools from selecting Vite for non-Vite siblings. Configs passed later via `--config` are evaluated by Vite when the command runs. Existing framework commands keep their priority. Consumers resolve bare executables using the detected `nodeModulesPaths` in order, adding `.bin` to each directory. Lookup stops at the validated workspace root; standalone applications use only their own `node_modules/.bin`.
+
+  Project inspection can recognize an existing Cloudflare configuration before dependencies are installed. Running a command provides guidance when the required tools are missing or the plugin version does not support cf profiles (`>=2.0.0-beta.v.13 <3`). Vite evaluates the project configuration when the command runs, including dynamic configs and custom config files. Repair guidance uses the project’s detected package manager. Automatic setup asks users to convert CommonJS `.cjs` and `.cts` Vite configs to ESM imports and exports in `.mjs` or `.mts` before adding the ESM-only Cloudflare plugin. Native builds also work with the Windows shell. Pages migration safeguards, unsupported-framework setup checks, and Wrangler command selection retain their existing behavior.
+
+### Patch Changes
+
+- [#16921](https://github.com/cloudflare/workers-sdk/pull/16921) [`6785363`](https://github.com/cloudflare/workers-sdk/commit/6785363bc2d9b7cda463d8cc71765c4780f8d64d) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Install the Vite plugin release candidate when configuring projects for `cf`
+
+  Configuring a Vite project for `cf` now installs `@cloudflare/vite-plugin@^2.0.0-rc.0` instead of `^2.0.0-beta.v.0`, so an existing lockfile can't keep a beta that doesn't support the generated configuration.
+
+- [#16946](https://github.com/cloudflare/workers-sdk/pull/16946) [`e97c9f8`](https://github.com/cloudflare/workers-sdk/commit/e97c9f8bd2cdbd15faf402b146582e49d65dd1a7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-16
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`d36b39d`](https://github.com/cloudflare/workers-sdk/commit/d36b39d440a8f408f41dcf4925a81f2f8a58f73b), [`0bf81ac`](https://github.com/cloudflare/workers-sdk/commit/0bf81ac16041a1f47f5474f7d6f5b0da6160f76b), [`e97c9f8`](https://github.com/cloudflare/workers-sdk/commit/e97c9f8bd2cdbd15faf402b146582e49d65dd1a7), [`349fc4e`](https://github.com/cloudflare/workers-sdk/commit/349fc4e7443aa744cbe129f84f28571bf8625155)]:
+  - @cloudflare/config@1.0.0-rc.0
+  - @cloudflare/workers-utils@0.54.1
+  - @cloudflare/cli-shared-helpers@0.3.9
+
 ## 0.12.1
 
 ### Patch Changes

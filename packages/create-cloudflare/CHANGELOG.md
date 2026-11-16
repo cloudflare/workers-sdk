@@ -1,5 +1,65 @@
 # create-cloudflare
 
+## 2.74.13
+
+### Patch Changes
+
+- [#16917](https://github.com/cloudflare/workers-sdk/pull/16917) [`d36b39d`](https://github.com/cloudflare/workers-sdk/commit/d36b39d440a8f408f41dcf4925a81f2f8a58f73b) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Find the deployed Worker's name in Build Output v1
+
+  After `cf deploy`, C3 reads the Worker's name from the Build Output to look up its workers.dev URL. It now reads `.cloudflare/output/v1/`, falling back to `.cloudflare/output/v0/` because C3 installs `cf@latest`, which may still write v0.
+
+- [#16933](https://github.com/cloudflare/workers-sdk/pull/16933) [`80f0e5b`](https://github.com/cloudflare/workers-sdk/commit/80f0e5b35001b714468cb45bb192dbad2608d57e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.2.6 | 22.2.7 |
+
+- [#16934](https://github.com/cloudflare/workers-sdk/pull/16934) [`6a6f10f`](https://github.com/cloudflare/workers-sdk/commit/6a6f10f6a07a898d9454de40d65c089bab8b8c01) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.20.3 | 1.20.4 |
+
+- [#16935](https://github.com/cloudflare/workers-sdk/pull/16935) [`819ed90`](https://github.com/cloudflare/workers-sdk/commit/819ed9035175741c3ff48395ee3e9d257ef50184) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.692 | 0.0.694 |
+
+- [#16936](https://github.com/cloudflare/workers-sdk/pull/16936) [`f518803`](https://github.com/cloudflare/workers-sdk/commit/f51880365dea6fa40903046e648ce77cfa73b189) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-astro | 5.3.1 | 5.3.2 |
+
+- [#16937](https://github.com/cloudflare/workers-sdk/pull/16937) [`4bca70b`](https://github.com/cloudflare/workers-sdk/commit/4bca70b301302b018ca28c53af0813de430bedd6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.9.6 | 2.9.7 |
+
+- [#16938](https://github.com/cloudflare/workers-sdk/pull/16938) [`c46d179`](https://github.com/cloudflare/workers-sdk/commit/c46d179e95fcf979ecc6fbea1b1d60ac4e2c6119) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 16.4.5 | 16.4.6 |
+
+- [#16946](https://github.com/cloudflare/workers-sdk/pull/16946) [`e97c9f8`](https://github.com/cloudflare/workers-sdk/commit/e97c9f8bd2cdbd15faf402b146582e49d65dd1a7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-16
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
 ## 2.74.12
 
 ### Patch Changes
