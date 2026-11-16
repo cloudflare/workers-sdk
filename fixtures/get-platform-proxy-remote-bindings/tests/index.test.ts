@@ -384,8 +384,8 @@ function ensureKvNamespace(title: string): string {
 }
 
 /**
- * Reads a KV value as text, or returns `undefined` if the read fails. A missing
- * key reads as Wrangler's "Value not found" message.
+ * Reads a KV value as text, or returns `undefined` if the key is missing or the
+ * read fails.
  */
 function readKvValue(namespaceId: string, key: string): string | undefined {
 	try {
