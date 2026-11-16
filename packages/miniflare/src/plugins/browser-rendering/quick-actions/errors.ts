@@ -116,6 +116,17 @@ const USER_ERRORS: [(string | string[])[], number, string, (string | null)?][] =
 		[[["Protocol error", "Target closed"]], 6001, TARGET_CLOSED],
 	];
 
+// Puppeteer wraps some errors, such as a `waitForSelector` timeout, and keeps
+// the original as `cause`, so include the causes' messages.
+function errorMessage(error: unknown): string {
+	if (!(error instanceof Error)) {
+		return String(error);
+	}
+	return error.cause === undefined
+		? error.message
+		: `${error.message}: ${errorMessage(error.cause)}`;
+}
+
 export function quickActionErrorResponse(error: unknown): Response {
 	if (error instanceof HtmlToMarkdownError) {
 		return Response.json(
@@ -123,7 +134,7 @@ export function quickActionErrorResponse(error: unknown): Response {
 			{ status: 422 }
 		);
 	}
-	const raw = error instanceof Error ? error.message : String(error);
+	const raw = errorMessage(error);
 	const userError = USER_ERRORS.find(([entries]) =>
 		entries.some((entry) =>
 			typeof entry === "string"

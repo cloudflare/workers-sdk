@@ -11,4 +11,4 @@
  * Bumping this value also invalidates the Chrome binary cache in
  * `.github/workflows/test-and-check.yml` (which uses `hashFiles()` on this file).
  */
-export const BROWSER_VERSION = "126.0.6478.182";
+export const BROWSER_VERSION = "152.0.7977.64";

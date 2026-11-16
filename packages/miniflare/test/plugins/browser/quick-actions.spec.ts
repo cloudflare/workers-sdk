@@ -252,7 +252,7 @@ describe(
 			});
 			expect(res.status).toBe(200);
 			expect(((await res.json()) as { result: string }).result).toBe(
-				"```\na()\n```"
+				"```js\na()\n```"
 			);
 		});
 
