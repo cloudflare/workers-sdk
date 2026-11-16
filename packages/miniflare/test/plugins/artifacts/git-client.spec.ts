@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { execFile } from "node:child_process";
 import { getEventListeners } from "node:events";
 import {
@@ -18,6 +19,7 @@ import {
 	assertGitAvailable,
 	assertSupportedGitVersion,
 	GitClient,
+	parseCatFileBatch,
 	gitEnvironment,
 	runGit,
 } from "../../../src/plugins/artifacts/git-client";
@@ -670,4 +672,25 @@ test("Git log follows the first-parent chain through merges", async ({
 	const history = await new GitClient(repository).log();
 	expect(history.map((commit) => commit.hash)).toEqual(expected);
 	expect(history.map((commit) => commit.hash)).not.toContain(feature);
+});
+
+test("parseCatFileBatch reads objects byte-exactly, including missing ones", ({
+	expect,
+}) => {
+	const commit = "tree t\nauthor a\n\nLine one\n\nLine \u00e9\n";
+	const bytes = Buffer.from(commit);
+	const objects = parseCatFileBatch(
+		Buffer.concat([
+			Buffer.from(`${"a".repeat(40)} commit ${bytes.length}\n`),
+			bytes,
+			Buffer.from(`\n${"b".repeat(40)} missing\n`),
+		])
+	);
+	expect(objects).toHaveLength(2);
+	expect(objects[0]).toMatchObject({ hash: "a".repeat(40), type: "commit" });
+	expect(Buffer.from(objects[0]?.content ?? []).toString()).toBe(commit);
+	expect(objects[1]).toMatchObject({ hash: "b".repeat(40), type: "missing" });
+	expect(() =>
+		parseCatFileBatch(Buffer.from(`${"a".repeat(40)} commit 99\nshort\n`))
+	).toThrow("Truncated");
 });

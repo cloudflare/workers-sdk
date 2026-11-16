@@ -46,7 +46,7 @@ type Created = { remote: string; token: string };
 const READY_TIMEOUT = 45_000;
 
 const eventsWorker = `import { WorkflowEntrypoint } from "cloudflare:workers";
-export class OnRepoCreated extends WorkflowEntrypoint {
+export class RecordRepoEvent extends WorkflowEntrypoint {
   async run(event, step) {
     await step.do("record", async () => {
       await this.env.EVENTS.put(event.payload.source.repoName, JSON.stringify(event.payload));
@@ -269,13 +269,13 @@ describe("Wrangler dev local Artifacts", { concurrent: false }, () => {
 										{
 											binding: "ON_REPO_CREATED",
 											name: "on-repo-created",
-											class_name: "OnRepoCreated",
+											class_name: "RecordRepoEvent",
 										},
 									],
 								}
 							: {
 									exports: {
-										OnRepoCreated: {
+										RecordRepoEvent: {
 											type: "workflow",
 											name: "on-repo-created",
 										},
@@ -310,6 +310,84 @@ describe("Wrangler dev local Artifacts", { concurrent: false }, () => {
 									repoName: "demo",
 								},
 								payload: { defaultBranch: "main" },
+							}
+						);
+					},
+					{ timeout: 15_000 }
+				);
+				expect(await (await fetch(dev.url + "/ignored")).text()).toBe("");
+			} finally {
+				await stopRunningDev();
+				await dev.stopped;
+			}
+		}
+	);
+	it(
+		"starts a Workflow from Artifacts repo.pushed when Git pushes",
+		{ timeout: ARTIFACTS_DEV_TEST_TIMEOUT },
+		async ({ expect }) => {
+			const dev = await startLocalDev({
+				files: {
+					"wrangler.jsonc": JSON.stringify({
+						name: "artifacts-local-push-events",
+						main: "index.js",
+						compatibility_date: "2026-09-03",
+						artifacts: [
+							{ binding: "REPOS", namespace: "examples", remote: false },
+						],
+						kv_namespaces: [{ binding: "EVENTS", id: "events" }],
+						workflows: [
+							{
+								binding: "RECORD_PUSHES",
+								name: "record-pushes",
+								class_name: "RecordRepoEvent",
+							},
+						],
+						triggers: {
+							events: [
+								{
+									type: "cf.artifacts.repo.pushed",
+									filter: { namespace: "examples", repo_name: "demo" },
+									targets: [
+										{ type: "workflow", workflow_name: "record-pushes" },
+									],
+								},
+							],
+						},
+					}),
+					"index.js": eventsWorker,
+				},
+			});
+			try {
+				for (const name of ["ignored", "demo"]) {
+					const created = (await (
+						await fetch(`${dev.url}/${name}`, { method: "POST" })
+					).json()) as Created;
+					await pushGitFixture({
+						directory: path.resolve(`git-${name}`),
+						remote: created.remote,
+						token: created.token,
+						files: { "hello.txt": "hello artifacts\n" },
+					});
+				}
+				await vi.waitFor(
+					async () => {
+						expect(await (await fetch(dev.url + "/demo")).json()).toMatchObject(
+							{
+								type: "cf.artifacts.repo.pushed",
+								source: {
+									type: "artifacts.repo",
+									namespace: "examples",
+									repoName: "demo",
+								},
+								payload: {
+									ref: "refs/heads/main",
+									before: "0".repeat(40),
+									after: expect.stringMatching(/^[0-9a-f]{40}$/),
+									commits: [{ message: "fixture", parents: [] }],
+									totalCommitsCount: 1,
+									commitsTruncated: false,
+								},
 							}
 						);
 					},
