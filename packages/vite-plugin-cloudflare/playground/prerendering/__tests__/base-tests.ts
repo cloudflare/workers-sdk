@@ -32,7 +32,7 @@ describe("pre-rendering", () => {
 		({ expect }) => {
 			const workerDir = path.join(
 				rootDir,
-				".cloudflare/output/v0/workers/prerender"
+				".cloudflare/output/v1/workers/prerender"
 			);
 			const config = JSON.parse(
 				fs.readFileSync(path.join(workerDir, "worker.config.json"), "utf-8")
@@ -65,7 +65,7 @@ describe("pre-rendering", () => {
 		async ({ expect }) => {
 			const workerDir = path.join(
 				rootDir,
-				".cloudflare/output/v0/workers/prerender"
+				".cloudflare/output/v1/workers/prerender"
 			);
 			const config = JSON.parse(
 				fs.readFileSync(path.join(workerDir, "worker.config.json"), "utf-8")

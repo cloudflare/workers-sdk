@@ -1,4 +1,3 @@
-import { createRequire } from "node:module";
 import { format } from "node:util";
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import {
@@ -6,6 +5,7 @@ import {
 	createCfProfileStore,
 } from "@cloudflare/workers-auth/cf";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
+import { PACKAGE_INFO } from "./package-info";
 import { debuglog } from "./utils";
 import type { RemoteBindingsAuth } from "@cloudflare/remote-bindings";
 import type { CloudflareAuth } from "@cloudflare/workers-auth/cf";
@@ -20,11 +20,7 @@ class AccountSelectionUnavailable extends Error {
 	}
 }
 
-const { version: packageVersion } = createRequire(import.meta.url)(
-	"../package.json"
-) as { version: string };
-
-export const USER_AGENT = `vite-plugin/${packageVersion}`;
+export const USER_AGENT = `vite-plugin/${PACKAGE_INFO.version}`;
 
 /**
  * Set up cf authentication using the profile associated with the Vite project.

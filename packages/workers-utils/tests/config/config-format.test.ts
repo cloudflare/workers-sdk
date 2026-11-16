@@ -48,7 +48,7 @@ describe("configFileName", () => {
 	it("prefers the user-authored configuration path", ({ expect }) => {
 		expect(
 			configFileName(
-				"/project/.cloudflare/output/v0/workers/default/config.json",
+				"/project/.cloudflare/output/v1/workers/default/config.json",
 				"/project/cloudflare.config.ts"
 			)
 		).toBe("cloudflare.config.ts");

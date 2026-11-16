@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { CancelError } from "@cloudflare/cli-shared-helpers/error";
 import { runWranglerCommand } from "helpers/command";
@@ -9,6 +10,19 @@ import { detectPackageManager } from "helpers/packageManagers";
  * passed `--worker`.
  */
 const DEFAULT_WORKER_CONFIG_PATH =
+	".cloudflare/output/v1/workers/default/worker.config.json";
+
+/**
+ * Where `cf` versions that write Build Output v0 put the same config.
+ *
+ * C3 installs `cf@latest`, which may still write v0 when this version of C3
+ * runs. Remove this once the `latest` release of `cf` writes v1.
+ *
+ * Only one of the two paths can exist. C3 deploys a project it has just
+ * created, and every build removes all of `.cloudflare/output` before
+ * writing, so checking v1 first can't pick up stale output.
+ */
+const LEGACY_DEFAULT_WORKER_CONFIG_PATH =
 	".cloudflare/output/v0/workers/default/worker.config.json";
 
 /** The subset of the JSON printed by `cf workers get` that C3 relies on. */
@@ -32,14 +46,20 @@ export async function getDeploymentUrl(
 	projectPath: string,
 	accountId: string
 ): Promise<string> {
+	const configPath = [
+		DEFAULT_WORKER_CONFIG_PATH,
+		LEGACY_DEFAULT_WORKER_CONFIG_PATH,
+	].find((candidate) => existsSync(join(projectPath, candidate)));
 	let name: string;
 	try {
-		({ name } = readJSON(join(projectPath, DEFAULT_WORKER_CONFIG_PATH)) as {
+		({ name } = readJSON(
+			join(projectPath, configPath ?? DEFAULT_WORKER_CONFIG_PATH)
+		) as {
 			name: string;
 		});
 	} catch {
 		throw new Error(
-			`Failed to find deployment url: could not read the Worker's name from \`${DEFAULT_WORKER_CONFIG_PATH}\`.`
+			`Failed to find deployment url: could not read the Worker's name from \`${configPath ?? DEFAULT_WORKER_CONFIG_PATH}\`.`
 		);
 	}
 

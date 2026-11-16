@@ -13,6 +13,7 @@ import { buildApp } from "../build";
 import { isPreviewBuild } from "../build-output-env";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { assertIsNotPreview } from "../context";
+import { PACKAGE_INFO } from "../package-info";
 import { resolveDevOnly } from "../plugin-config";
 import { createPlugin } from "../utils";
 import type { AdditionalModuleMetadata } from "../context";
@@ -209,13 +210,14 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 			return;
 		}
 
-		await writeBuildOutputRootConfig(
-			ctx.resolvedViteConfig.root,
-			ctx.resolvedPluginConfig.settings,
-			{
+		await writeBuildOutputRootConfig({
+			root: ctx.resolvedViteConfig.root,
+			settings: ctx.resolvedPluginConfig.settings,
+			buildContext: {
 				isPreview: isPreviewBuild(),
 				mode: ctx.resolvedViteConfig.mode,
-			}
-		);
+			},
+			producer: { name: PACKAGE_INFO.name, version: PACKAGE_INFO.version },
+		});
 	}
 });

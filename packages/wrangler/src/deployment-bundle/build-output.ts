@@ -22,7 +22,7 @@ interface WriteWorkerOutputArgs {
 }
 
 /**
- * Write the Worker's `.cloudflare/output/v0/workers/default/` directory
+ * Write the Worker's `.cloudflare/output/v1/workers/default/` directory
  * tree from an in-memory `WorkerBuildResult` and `AssetsOptions`.
  */
 export async function writeWorkerOutput({

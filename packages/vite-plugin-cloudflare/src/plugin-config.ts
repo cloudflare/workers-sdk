@@ -336,7 +336,7 @@ export async function resolvePluginConfig(
 			: (pluginConfig.remoteBindings ?? true);
 
 	if (preview !== undefined) {
-		const { accountId, complianceRegion } = preview.rootConfig;
+		const { accountId, complianceRegion } = preview.rootConfig.settings ?? {};
 		return {
 			...shared,
 			remoteBindings,
