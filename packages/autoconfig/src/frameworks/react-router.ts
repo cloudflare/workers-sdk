@@ -10,6 +10,7 @@ import dedent from "ts-dedent";
 import { Framework } from "./framework-class";
 import { transformViteConfig } from "./utils/vite-config";
 import { installCloudflareVitePlugin } from "./utils/vite-plugin";
+import { CF_VITE_PLUGIN_VERSION_RANGE } from "./utils/vite-plugin-version";
 import type { AutoConfigContext } from "../context";
 import type {
 	ConfigurationOptions,
@@ -490,7 +491,7 @@ export class ReactRouter extends Framework {
 				packageManager: packageManager.type,
 				projectPath,
 				isWorkspaceRoot,
-				version: target === "cf" ? "^2.0.0-beta.v.0" : undefined,
+				version: target === "cf" ? CF_VITE_PLUGIN_VERSION_RANGE : undefined,
 			});
 
 			mkdirSync("workers");
