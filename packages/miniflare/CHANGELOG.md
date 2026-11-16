@@ -1,5 +1,38 @@
 # miniflare
 
+## 5.20261116.0-beta
+
+### Minor Changes
+
+- [#16246](https://github.com/cloudflare/workers-sdk/pull/16246) [`349fc4e`](https://github.com/cloudflare/workers-sdk/commit/349fc4e7443aa744cbe129f84f28571bf8625155) Thanks [@leostera](https://github.com/leostera)! - Start local Workflows from Artifacts events
+
+  Declare Artifacts events on `exports.workflow({ name, events })` in `cloudflare.config.ts` to start the owning Workflow locally in `cf`, Vite, and Workers Vitest. Wrangler configurations continue to use `triggers.events`. Native config conversion derives those targets from the Workflow export, and `cf migrate` attaches existing event subscriptions to their matching Workflow exports.
+
+  Local Artifacts namespaces publish the documented `cf.artifacts.*` messages for repository create, import, fork, and delete operations and token creation and revocation. Successful create, import, and fork operations also publish the initial token-created event. Delivery follows the committed mutation, is unordered, and does not fail the repository operation if a destination rejects it. Push, clone, and fetch events are not yet published locally. This feature does not provide local Artifacts-to-queue subscriptions.
+
+- [#16907](https://github.com/cloudflare/workers-sdk/pull/16907) [`0bf81ac`](https://github.com/cloudflare/workers-sdk/commit/0bf81ac16041a1f47f5474f7d6f5b0da6160f76b) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Rename the Pipelines, K2 and Analytics SQL `env` binding fields to match `@cloudflare/config`
+
+  Config-style `env` bindings now use these shapes:
+
+  - `{ type: "pipeline", streamId }` instead of `{ type: "pipeline", name }`
+  - `{ type: "k2", id }` instead of `{ type: "k2", stream }`
+  - `{ type: "analytics-sql" }` instead of `{ type: "analytics" }`
+
+### Patch Changes
+
+- [#16946](https://github.com/cloudflare/workers-sdk/pull/16946) [`e97c9f8`](https://github.com/cloudflare/workers-sdk/commit/e97c9f8bd2cdbd15faf402b146582e49d65dd1a7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-16
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16946](https://github.com/cloudflare/workers-sdk/pull/16946) [`e97c9f8`](https://github.com/cloudflare/workers-sdk/commit/e97c9f8bd2cdbd15faf402b146582e49d65dd1a7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261113.1 | ^5.20261116.1 |
+  | workerd                   | 1.20261113.1  | 1.20261116.1  |
+
 ## 5.20261113.0-beta
 
 ### Minor Changes

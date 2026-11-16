@@ -1,5 +1,36 @@
 # @cloudflare/codemods
 
+## 0.8.0
+
+### Minor Changes
+
+- [#16246](https://github.com/cloudflare/workers-sdk/pull/16246) [`349fc4e`](https://github.com/cloudflare/workers-sdk/commit/349fc4e7443aa744cbe129f84f28571bf8625155) Thanks [@leostera](https://github.com/leostera)! - Start local Workflows from Artifacts events
+
+  Declare Artifacts events on `exports.workflow({ name, events })` in `cloudflare.config.ts` to start the owning Workflow locally in `cf`, Vite, and Workers Vitest. Wrangler configurations continue to use `triggers.events`. Native config conversion derives those targets from the Workflow export, and `cf migrate` attaches existing event subscriptions to their matching Workflow exports.
+
+  Local Artifacts namespaces publish the documented `cf.artifacts.*` messages for repository create, import, fork, and delete operations and token creation and revocation. Successful create, import, and fork operations also publish the initial token-created event. Delivery follows the committed mutation, is unordered, and does not fail the repository operation if a destination rejects it. Push, clone, and fetch events are not yet published locally. This feature does not provide local Artifacts-to-queue subscriptions.
+
+### Patch Changes
+
+- [#16907](https://github.com/cloudflare/workers-sdk/pull/16907) [`0bf81ac`](https://github.com/cloudflare/workers-sdk/commit/0bf81ac16041a1f47f5474f7d6f5b0da6160f76b) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Generate the release candidate `@cloudflare/config` field names in `wrangler-to-cf`
+
+  The codemod now writes:
+
+  - `first_party_worker` as `experimental.firstPartyWorker`
+  - Pipelines bindings as `bindings.pipeline({ streamId })`
+  - K2 bindings as `bindings.k2({ id })`
+  - the Analytics SQL binding as `bindings.analyticsSql()`
+
+  A Pipelines binding that uses the deprecated `pipeline` field gets a `STREAM_ID` placeholder and a follow-up asking for the stream ID, because that field names a legacy pipeline, which `@cloudflare/config` doesn't support.
+
+- [#16921](https://github.com/cloudflare/workers-sdk/pull/16921) [`6785363`](https://github.com/cloudflare/workers-sdk/commit/6785363bc2d9b7cda463d8cc71765c4780f8d64d) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Install the Vite plugin release candidate in `wrangler-to-cf`
+
+  The Wrangler-to-cf migration now installs `@cloudflare/vite-plugin@^2.0.0-rc.0` instead of the `beta` dist tag, which no longer receives new releases. It upgrades projects whose plugin is declared as a dist tag or resolves to a version older than the release candidate, since earlier betas don't support the generated configuration. The range also covers the stable v2 releases, so the migration no longer rewrites `package.json` to a dist tag after installing.
+
+- [#16946](https://github.com/cloudflare/workers-sdk/pull/16946) [`e97c9f8`](https://github.com/cloudflare/workers-sdk/commit/e97c9f8bd2cdbd15faf402b146582e49d65dd1a7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-16
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
 ## 0.7.8
 
 ### Patch Changes

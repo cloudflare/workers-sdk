@@ -1,5 +1,53 @@
 # @cloudflare/config
 
+## 1.0.0-rc.0
+
+### Major Changes
+
+- [#16907](https://github.com/cloudflare/workers-sdk/pull/16907) [`0bf81ac`](https://github.com/cloudflare/workers-sdk/commit/0bf81ac16041a1f47f5474f7d6f5b0da6160f76b) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Release the 1.0 release candidate
+
+  This release finalises the binding and Worker field names, and includes breaking changes:
+
+  - `firstPartyWorker` moves from the Worker's top level to `experimental.firstPartyWorker`.
+  - `bindings.pipeline()` takes `streamId` in place of `name`. Set it to the ID of the Pipelines stream, not its name. Legacy pipelines aren't supported.
+  - `bindings.k2()` takes `id` in place of `stream`. Set it to the ID of the K2 stream.
+  - `bindings.analytics()` is renamed to `bindings.analyticsSql()`. Its binding type changes from `"analytics"` to `"analytics-sql"`. The `AnalyticsSQLBinding`, `AnalyticsSQLBindingOptions` and `AnalyticsSQLBindingSchema` exports are renamed to `AnalyticsSqlBinding`, `AnalyticsSqlBindingOptions` and `AnalyticsSqlBindingSchema`.
+  - The `KVBindingSchema` export is renamed to `KvBindingSchema`.
+  - The `ConnectTriggerOptionsBase` type is no longer exported. Use `ConnectTriggerOptions` instead.
+  - The `InputWorkerConfig` type is no longer exported. Use `z.input<typeof WorkerConfigSchema>` if you need it.
+  - The config schemas and their parsed types are renamed after what they describe. The `Input` and `Output` prefixes are replaced by the public type names and `BuildOutput`:
+    - `InputConfigSchema` → `CloudflareConfigSchema`, `ParsedInputConfig` → `ParsedCloudflareConfig`
+    - `InputSettingsSchema` → `SettingsSchema`, `ParsedInputSettingsConfig` → `ParsedSettings`
+    - `InputWorkerSchema` → `WorkerConfigSchema`, `ParsedInputWorkerConfig` → `ParsedWorkerConfig`
+    - `InputContainerSchema` → `ContainerConfigSchema`, `ParsedInputContainerConfig` → `ParsedContainerConfig`
+    - `OutputRootConfigSchema` → `BuildOutputRootConfigSchema`, `ParsedOutputRootConfig` → `ParsedBuildOutputRootConfig`
+    - `OutputWorkerSchema` → `BuildOutputWorkerConfigSchema`, `ParsedOutputWorkerConfig` → `ParsedBuildOutputWorkerConfig`
+    - `OutputContainerSchema` → `BuildOutputContainerConfigSchema`, `ParsedOutputContainerConfig` → `ParsedBuildOutputContainerConfig`
+
+  Setting the old `name` or `stream` field fails with an error that names the replacement field. Editors also show both fields as deprecated.
+
+  The schema no longer fills in defaults. A parsed config without Containers leaves `containers` undefined instead of setting it to `[]`, and a Container without `maxInstances` leaves it undefined instead of setting it to `20`. Deploying still uses 20 instances when `maxInstances` isn't set.
+
+  Queue consumer `maxConcurrency` no longer accepts `null`. Wrangler already rejected it.
+
+### Minor Changes
+
+- [#16917](https://github.com/cloudflare/workers-sdk/pull/16917) [`d36b39d`](https://github.com/cloudflare/workers-sdk/commit/d36b39d440a8f408f41dcf4925a81f2f8a58f73b) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Nest settings under an optional `settings` and add an optional `producer` in `BuildOutputRootConfigSchema`
+
+  The root `config.json` in Build Output v1 has the shape `{ producer?, settings?, buildContext }`. `settings` holds the account settings from `cloudflare.config.ts`, is validated strictly, and is left out when none are set. `producer` is `{ name, version }` for the tool that wrote the output and is used only in diagnostics. The new `BuildOutputProducerSchema` and `ParsedBuildOutputProducer` are also exported.
+
+- [#16246](https://github.com/cloudflare/workers-sdk/pull/16246) [`349fc4e`](https://github.com/cloudflare/workers-sdk/commit/349fc4e7443aa744cbe129f84f28571bf8625155) Thanks [@leostera](https://github.com/leostera)! - Start local Workflows from Artifacts events
+
+  Declare Artifacts events on `exports.workflow({ name, events })` in `cloudflare.config.ts` to start the owning Workflow locally in `cf`, Vite, and Workers Vitest. Wrangler configurations continue to use `triggers.events`. Native config conversion derives those targets from the Workflow export, and `cf migrate` attaches existing event subscriptions to their matching Workflow exports.
+
+  Local Artifacts namespaces publish the documented `cf.artifacts.*` messages for repository create, import, fork, and delete operations and token creation and revocation. Successful create, import, and fork operations also publish the initial token-created event. Delivery follows the committed mutation, is unordered, and does not fail the repository operation if a destination rejects it. Push, clone, and fetch events are not yet published locally. This feature does not provide local Artifacts-to-queue subscriptions.
+
+### Patch Changes
+
+- [#16946](https://github.com/cloudflare/workers-sdk/pull/16946) [`e97c9f8`](https://github.com/cloudflare/workers-sdk/commit/e97c9f8bd2cdbd15faf402b146582e49d65dd1a7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-16
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
 ## 0.32.1
 
 ### Patch Changes

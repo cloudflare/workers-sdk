@@ -1,5 +1,17 @@
 # @cloudflare/vitest-plugin
 
+## 1.8.3
+
+### Patch Changes
+
+- [#16946](https://github.com/cloudflare/workers-sdk/pull/16946) [`e97c9f8`](https://github.com/cloudflare/workers-sdk/commit/e97c9f8bd2cdbd15faf402b146582e49d65dd1a7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-16
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`b219078`](https://github.com/cloudflare/workers-sdk/commit/b219078a4c1b008485ce022f01ad7292d613d9f0), [`d36b39d`](https://github.com/cloudflare/workers-sdk/commit/d36b39d440a8f408f41dcf4925a81f2f8a58f73b), [`db3c071`](https://github.com/cloudflare/workers-sdk/commit/db3c071619a64e0cf267fbadd4be12708c02df2d), [`81e56dd`](https://github.com/cloudflare/workers-sdk/commit/81e56ddf3e1ba28ea2320388fac86011a68f7be4), [`e97c9f8`](https://github.com/cloudflare/workers-sdk/commit/e97c9f8bd2cdbd15faf402b146582e49d65dd1a7), [`e97c9f8`](https://github.com/cloudflare/workers-sdk/commit/e97c9f8bd2cdbd15faf402b146582e49d65dd1a7), [`349fc4e`](https://github.com/cloudflare/workers-sdk/commit/349fc4e7443aa744cbe129f84f28571bf8625155), [`0bf81ac`](https://github.com/cloudflare/workers-sdk/commit/0bf81ac16041a1f47f5474f7d6f5b0da6160f76b), [`4335eac`](https://github.com/cloudflare/workers-sdk/commit/4335eacef350c98722418fbb58b012a6964e26d7), [`d36b39d`](https://github.com/cloudflare/workers-sdk/commit/d36b39d440a8f408f41dcf4925a81f2f8a58f73b)]:
+  - wrangler@4.163.0
+  - miniflare@5.20261116.0-beta
+
 ## 1.8.2
 
 ### Patch Changes
