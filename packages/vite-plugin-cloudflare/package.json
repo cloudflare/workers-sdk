@@ -46,7 +46,7 @@
 	},
 	"dependencies": {
 		"@cloudflare/unenv-preset": "2.16.2",
-		"miniflare": "5.20261116.0-beta",
+		"miniflare": "5.20261116.1-beta",
 		"unenv": "2.0.0-rc.24",
 		"wrangler": "4.163.0",
 		"ws": "8.22.0"
