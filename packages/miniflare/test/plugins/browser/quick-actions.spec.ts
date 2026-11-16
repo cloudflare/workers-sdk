@@ -98,6 +98,9 @@ describe(
 				} else if (req.url === "/redirect") {
 					res.writeHead(302, { location: "/" });
 					res.end();
+				} else if (req.url === "/cookies") {
+					res.writeHead(200, { "content-type": "text/plain" });
+					res.end(req.headers.cookie ?? "");
 				} else if (req.url === "/") {
 					res.writeHead(200, {
 						"content-type": "text/html",
@@ -191,6 +194,43 @@ describe(
 			expect(meta.redirectChain).toMatchObject([
 				{ url: `${origin}/redirect`, status: 302 },
 			]);
+		});
+
+		test("content sends cookies given by url or by domain", async ({
+			expect,
+		}) => {
+			const res = await quickAction("content", {
+				url: `${origin}/cookies`,
+				cookies: [
+					{ name: "byUrl", value: "1", url: origin },
+					{ name: "byDomain", value: "2", domain: "localhost" },
+					{ name: "elsewhere", value: "3", url: "https://example.com/" },
+				],
+			});
+			expect(res.status).toBe(200);
+			const { result } = (await res.json()) as { result: string };
+			expect(result).toContain("byUrl=1; byDomain=2");
+			expect(result).not.toContain("elsewhere");
+		});
+
+		test("a cookie without a url or a domain fails the request", async ({
+			expect,
+		}) => {
+			const res = await quickAction("content", {
+				html: PAGE,
+				cookies: [{ name: "a", value: "1" }],
+			});
+			expect(res.status).toBe(500);
+			expect(await res.json()).toEqual({
+				success: false,
+				errors: [
+					{
+						message:
+							'At least one of the url and domain needs to be specified for cookie "a"',
+						code: 2000,
+					},
+				],
+			});
 		});
 
 		test("markdown converts the page, resolving links against the url", async ({

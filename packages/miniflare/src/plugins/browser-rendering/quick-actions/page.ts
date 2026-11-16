@@ -2,7 +2,13 @@ import { setTimeout as sleep } from "node:timers/promises";
 import type { Response } from "../../../http";
 import type { Log } from "../../../shared";
 import type { CommonOptions } from "./schemas";
-import type { BrowserContext, HTTPResponse, Page } from "@cloudflare/puppeteer";
+import type {
+	BrowserContext,
+	CookieData,
+	CookieParam,
+	HTTPResponse,
+	Page,
+} from "@cloudflare/puppeteer";
 import type { z } from "zod";
 
 export interface QuickActionContext<Schema extends z.ZodType> {
@@ -60,6 +66,26 @@ const swallowIf =
 		throw error;
 	};
 
+// `BrowserContext.setCookie` needs a `domain`, but the API also accepts a
+// cookie with only a `url`. Take the domain from the URL, and make the cookie
+// secure for an `https` URL, as Chrome does when it gets the URL itself.
+function toCookieData({ url, ...cookie }: CookieParam): CookieData {
+	if (url === undefined) {
+		if (cookie.domain === undefined) {
+			throw new Error(
+				`At least one of the url and domain needs to be specified for cookie "${cookie.name}"`
+			);
+		}
+		return { ...cookie, domain: cookie.domain };
+	}
+	const { hostname, protocol } = new URL(url);
+	return {
+		...cookie,
+		domain: cookie.domain ?? hostname,
+		secure: cookie.secure || protocol === "https:",
+	};
+}
+
 export async function openPage(
 	context: BrowserContext,
 	options: CommonOptions
@@ -70,8 +96,7 @@ export async function openPage(
 		await page.emulateMediaType(options.emulateMediaType);
 	}
 	if (options.cookies?.length) {
-		// oxlint-disable-next-line typescript-eslint/no-deprecated -- only the page-level API accepts cookies with a `url` and no `domain`.
-		await page.setCookie(...options.cookies);
+		await context.setCookie(...options.cookies.map(toCookieData));
 	}
 	await page.setViewport(options.viewport);
 	await page.setUserAgent({ userAgent: options.userAgent });

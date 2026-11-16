@@ -257,7 +257,7 @@ export async function launchBrowser({
 			started = true;
 			// On Windows in particular, Chrome may print the DevTools URL slightly
 			// before its listening socket is fully ready to accept connections.
-			// Probe the HTTP /json/version endpoint (served on the same port as the
+			// Probe the HTTP /json/list endpoint (served on the same port as the
 			// WS endpoint) with retry/backoff before declaring the browser ready, so
 			// that subsequent fetches from workerd don't race the OS and surface as
 			// `ConnectEx (#1225) connection refused` errors.
