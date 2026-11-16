@@ -188,6 +188,7 @@ export async function generateHandler<
 	caches,
 	waitUntil,
 }: HandlerContext<AssetEntry, ContentNegotiation, Asset>) {
+	request = collapseRepeatedPathSlashes(request);
 	const url = new URL(request.url);
 	const { protocol, host, search } = url;
 	let { pathname } = url;
@@ -807,6 +808,26 @@ export function parseQualityWeightedList(list = "") {
 		});
 
 	return items;
+}
+
+/**
+ * Collapse repeated slashes in the request pathname.
+ *
+ * The original Workers URL parser collapsed them, so Pages has always matched
+ * `_redirects`, `_headers` and assets against the collapsed path. The WHATWG
+ * parser keeps them, so `//secure/page` would otherwise skip `/secure/*` rules.
+ *
+ * @param request The incoming request.
+ * @returns The same request, or a copy whose pathname has no repeated slashes.
+ */
+function collapseRepeatedPathSlashes(request: Request): Request {
+	const url = new URL(request.url);
+	if (!url.pathname.includes("//")) {
+		return request;
+	}
+
+	url.pathname = url.pathname.replace(/\/{2,}/g, "/");
+	return new Request(url, request);
 }
 
 function isCacheable(request: Request) {
