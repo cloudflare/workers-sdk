@@ -227,11 +227,11 @@ describe("loadNewConfig", () => {
 
 			const result = await loadNewConfig({ cwd: process.cwd(), args: {} });
 
-			expect(result.parsedConfig.containers.map(({ name }) => name)).toEqual([
+			expect(result.parsedConfig.containers?.map(({ name }) => name)).toEqual([
 				"api",
 				"sessions",
 			]);
-			expect(result.parsedConfig.containers[0]).toMatchObject({
+			expect(result.parsedConfig.containers?.[0]).toMatchObject({
 				name: "api",
 				image: { reference: "registry.example.com/api:latest" },
 			});
@@ -269,7 +269,6 @@ describe("loadNewConfig", () => {
 				{
 					name: "api",
 					image: "registry.example.com/api:latest",
-					max_instances: 20,
 				},
 			]);
 		});

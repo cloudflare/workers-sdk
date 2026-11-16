@@ -1,5 +1,5 @@
 import type { WorkerOptions } from "./schema";
-import type { ParsedInputWorkerConfig } from "@cloudflare/config";
+import type { ParsedWorkerConfig } from "@cloudflare/config";
 
 type MiniflareEnv = NonNullable<WorkerOptions["config"]["env"]>;
 
@@ -32,7 +32,7 @@ export interface ResolveLocalBindingsOptions {
  * @returns The complete bindings.
  */
 export function resolveLocalBindings(
-	configuredBindings: ParsedInputWorkerConfig["env"],
+	configuredBindings: ParsedWorkerConfig["env"],
 	options: ResolveLocalBindingsOptions
 ): NonNullable<WorkerOptions["config"]["env"]> {
 	const { localEnv, devVars, mode, remoteBindings = true } = options;

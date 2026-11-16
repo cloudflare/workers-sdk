@@ -56,10 +56,10 @@ import type {
 } from "./api";
 import type { PullRequestMetadata } from "./shared";
 import type {
-	ParsedInputContainerConfig,
-	ParsedOutputContainerConfig,
-	ParsedOutputRootConfig,
-	ParsedOutputWorkerConfig,
+	ParsedContainerConfig,
+	ParsedBuildOutputContainerConfig,
+	ParsedBuildOutputRootConfig,
+	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
 import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
@@ -111,13 +111,15 @@ export type PreviewResult = {
 	isNewPreview: boolean;
 };
 
-export type PreviewBuildOutputRootConfig = ParsedOutputRootConfig & {
-	buildContext: ParsedOutputRootConfig["buildContext"] & { isPreview: true };
+export type PreviewBuildOutputRootConfig = ParsedBuildOutputRootConfig & {
+	buildContext: ParsedBuildOutputRootConfig["buildContext"] & {
+		isPreview: true;
+	};
 };
 
 export type PreviewBuildOutput = {
 	// Authoritative Worker settings and bindings from Build Output.
-	workerConfig: ParsedOutputWorkerConfig;
+	workerConfig: ParsedBuildOutputWorkerConfig;
 	// Account settings and build context from the root Build Output config.
 	rootConfig: PreviewBuildOutputRootConfig;
 	// Compiled Worker code and modules, if this is not an assets-only build.
@@ -126,7 +128,7 @@ export type PreviewBuildOutput = {
 	assets?: Pick<PreviewAssetsOptions, "directory" | "_headers" | "_redirects">;
 	// Container definitions are emitted separately from the Worker config because
 	// Build Output records resolved image references rather than source config.
-	containers?: ParsedOutputContainerConfig[];
+	containers?: ParsedBuildOutputContainerConfig[];
 };
 
 type PreviewWorkerBuildResult = WorkerBuildResult & {
@@ -135,7 +137,7 @@ type PreviewWorkerBuildResult = WorkerBuildResult & {
 
 /** Verify that Build Output was produced with Preview configuration. */
 export function assertPreviewBuildOutputRootConfig(
-	rootConfig: ParsedOutputRootConfig | undefined
+	rootConfig: ParsedBuildOutputRootConfig | undefined
 ): asserts rootConfig is PreviewBuildOutputRootConfig {
 	if (rootConfig?.buildContext.isPreview !== true) {
 		throw new UserError("Build Output was not created by a Preview build.", {
@@ -191,8 +193,8 @@ export type PreviewOptions = {
 };
 
 function convertBuildOutputContainerToInput(
-	container: ParsedOutputContainerConfig
-): ParsedInputContainerConfig {
+	container: ParsedBuildOutputContainerConfig
+): ParsedContainerConfig {
 	if ("image" in container) {
 		const { image, ...config } = container;
 		return {
@@ -214,7 +216,7 @@ function convertBuildOutputContainerToInput(
 }
 
 function getLocalContainerImageReferences(
-	containers: ParsedOutputContainerConfig[] | undefined,
+	containers: ParsedBuildOutputContainerConfig[] | undefined,
 	previewContainers: ContainerApp[]
 ): Map<string, string> {
 	const localReferences = new Map<string, string>();
@@ -241,7 +243,7 @@ function getLocalContainerImageReferences(
  * Converts resolved Build Output containers into preview application configs.
  */
 function convertBuildOutputContainers(
-	containers: ParsedOutputContainerConfig[] | undefined,
+	containers: ParsedBuildOutputContainerConfig[] | undefined,
 	exports: Exports | undefined
 ): ContainerApp[] {
 	const containerClassNames = new Map<string, string>();

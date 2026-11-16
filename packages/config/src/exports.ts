@@ -13,7 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import type { ContainerDefinition } from "./definition";
-import type { WorkflowEvent } from "./workflow-events";
+import type { ArtifactsEventSubscription } from "./workflow-events";
 
 /**
  * Storage backend for the Durable Object.
@@ -165,8 +165,8 @@ export interface WorkerEntrypointExport extends WorkerEntrypointExportOptions {
 export const WORKFLOW_JURISDICTIONS = ["eu", "fedramp", "us"] as const;
 
 export interface WorkflowExportOptions {
-	/** Artifacts events that automatically start this Workflow. */
-	events?: WorkflowEvent[];
+	/** Events that automatically start this Workflow. Only Artifacts events are currently supported. */
+	events?: ArtifactsEventSubscription[];
 	/**
 	 * The name of the Workflow. It identifies the Workflow's instances and must
 	 * be unique within the account.

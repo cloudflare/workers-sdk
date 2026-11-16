@@ -16,12 +16,12 @@ import { runDockerCmdWithOutput, verifyDockerInstalled } from "./utils";
 import type { InputContainerImage } from "./input-container-image";
 import type { WriteContainerConfigOptions } from "@cloudflare/build-output-utils";
 import type {
-	ParsedInputContainerConfig,
-	ParsedOutputContainerConfig,
+	ParsedContainerConfig,
+	ParsedBuildOutputContainerConfig,
 } from "@cloudflare/config";
 
 type OutputContainerImage = Extract<
-	ParsedOutputContainerConfig,
+	ParsedBuildOutputContainerConfig,
 	{ image: unknown }
 >["image"];
 
@@ -37,7 +37,7 @@ const DOCKER_REPOSITORY_NAME_LENGTH = 255;
  * @param options - The validated Container configs and Docker build environment.
  */
 export async function buildAndWriteContainerOutput(options: {
-	containers: ParsedInputContainerConfig[];
+	containers: ParsedContainerConfig[];
 	root: string;
 	pathToDocker: string;
 }): Promise<void> {
@@ -96,8 +96,8 @@ export async function buildAndWriteContainerOutput(options: {
 }
 
 function resolveContainerDirectories(
-	containers: ParsedInputContainerConfig[]
-): Array<{ config: ParsedInputContainerConfig; directoryName: string }> {
+	containers: ParsedContainerConfig[]
+): Array<{ config: ParsedContainerConfig; directoryName: string }> {
 	const containerNameByDirectory = new Map<string, string>();
 
 	return containers.map((config) => {
@@ -116,12 +116,12 @@ function resolveContainerDirectories(
 }
 
 async function buildContainerOutputConfig(options: {
-	config: ParsedInputContainerConfig;
+	config: ParsedContainerConfig;
 	root: string;
 	pathToDocker: string;
 	buildId: string;
 	localTags: Set<string>;
-}): Promise<ParsedOutputContainerConfig> {
+}): Promise<ParsedBuildOutputContainerConfig> {
 	if (options.config.schedulingPolicy === "durable-object") {
 		if (options.config.images === undefined) {
 			return { ...options.config, images: undefined };
@@ -129,7 +129,7 @@ async function buildContainerOutputConfig(options: {
 
 		const images: NonNullable<
 			Extract<
-				ParsedOutputContainerConfig,
+				ParsedBuildOutputContainerConfig,
 				{ schedulingPolicy: "durable-object" }
 			>["images"]
 		> = {};
@@ -258,7 +258,7 @@ function createBuildId(): string {
 	return crypto.randomUUID().replaceAll("-", "").slice(0, 12);
 }
 
-function countDockerfiles(containers: ParsedInputContainerConfig[]): number {
+function countDockerfiles(containers: ParsedContainerConfig[]): number {
 	let count = 0;
 	for (const config of containers) {
 		if (config.schedulingPolicy === "durable-object") {

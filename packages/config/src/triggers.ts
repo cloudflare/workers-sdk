@@ -40,7 +40,7 @@ export interface QueueConsumerTriggerOptions {
 	 * Leaving this unset will allow your consumer to scale to the
 	 * maximum concurrency needed to keep up with the message backlog.
 	 */
-	maxConcurrency?: number | null;
+	maxConcurrency?: number;
 	/** The maximum number of retries for each message. */
 	maxRetries?: number;
 	/** The number of seconds to wait before retrying a message. */
@@ -97,7 +97,7 @@ export interface EmailTrigger extends EmailTriggerOptions {
 	type: "email";
 }
 
-export interface ConnectTriggerOptionsBase {
+interface ConnectTriggerOptionsBase {
 	/** The port to listen on. */
 	port: number;
 	/** The address to bind to. Defaults to `127.0.0.1`. */

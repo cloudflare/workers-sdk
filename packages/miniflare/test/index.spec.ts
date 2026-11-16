@@ -246,8 +246,8 @@ test("Miniflare: accepts mixed pipelines record", () => {
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(""),
 					env: {
-						LOCAL_PIPELINE: { type: "pipeline", name: "local-pipeline" },
-						REMOTE_PIPELINE: { type: "pipeline", name: "remote-pipeline" },
+						LOCAL_PIPELINE: { type: "pipeline", streamId: "local-pipeline" },
+						REMOTE_PIPELINE: { type: "pipeline", streamId: "remote-pipeline" },
 					},
 				},
 			},

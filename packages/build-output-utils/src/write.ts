@@ -13,11 +13,11 @@ import {
 	getWorkerDir,
 } from "./paths";
 import type {
-	ParsedInputSettingsConfig,
-	ParsedInputWorkerConfig,
-	ParsedOutputContainerConfig,
-	ParsedOutputRootConfig,
-	ParsedOutputWorkerConfig,
+	ParsedSettings,
+	ParsedWorkerConfig,
+	ParsedBuildOutputContainerConfig,
+	ParsedBuildOutputRootConfig,
+	ParsedBuildOutputWorkerConfig,
 	ConfigContext,
 } from "@cloudflare/config";
 
@@ -74,8 +74,8 @@ export async function writeAssets({
 
 export interface WriteWorkerConfigOptions {
 	root: string;
-	config: ParsedInputWorkerConfig;
-	manifest?: ParsedOutputWorkerConfig["manifest"];
+	config: ParsedWorkerConfig;
+	manifest?: ParsedBuildOutputWorkerConfig["manifest"];
 	directoryName?: string;
 }
 
@@ -93,7 +93,7 @@ export async function writeWorkerConfig({
 	directoryName = DEFAULT_WORKER_DIRECTORY_NAME,
 }: WriteWorkerConfigOptions): Promise<void> {
 	const { entrypoint: _entrypoint, ...rest } = config;
-	const outputConfig: ParsedOutputWorkerConfig = { ...rest, manifest };
+	const outputConfig: ParsedBuildOutputWorkerConfig = { ...rest, manifest };
 	await fsp.mkdir(getWorkerDir(root, directoryName), { recursive: true });
 	await fsp.writeFile(
 		getWorkerConfigPath(root, directoryName),
@@ -103,7 +103,7 @@ export async function writeWorkerConfig({
 
 export interface WriteContainerConfigOptions {
 	root: string;
-	config: ParsedOutputContainerConfig;
+	config: ParsedBuildOutputContainerConfig;
 	directoryName: string;
 }
 
@@ -136,10 +136,10 @@ export async function writeContainerConfig({
  */
 export async function writeRootConfig(
 	root: string,
-	settings: ParsedInputSettingsConfig | undefined,
+	settings: ParsedSettings | undefined,
 	buildContext: ConfigContext
 ): Promise<void> {
-	const outputConfig: ParsedOutputRootConfig = {
+	const outputConfig: ParsedBuildOutputRootConfig = {
 		...settings,
 		buildContext,
 	};

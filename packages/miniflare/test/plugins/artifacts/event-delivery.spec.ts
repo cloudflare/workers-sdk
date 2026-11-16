@@ -7,7 +7,7 @@ import {
 	useTmp,
 } from "../../test-shared";
 import type { ArtifactsEventMessage } from "../../../src/workers/artifacts/events";
-import type { WorkflowEvent } from "@cloudflare/config";
+import type { ArtifactsEventSubscription } from "@cloudflare/config";
 import type { MiniflareOptions, WorkerOptions } from "miniflare";
 
 const WORKER_NAME = "artifacts-events";
@@ -30,7 +30,7 @@ export default {
 `;
 
 async function createMiniflare(
-	events: WorkflowEvent[],
+	events: ArtifactsEventSubscription[],
 	configure: (config: WorkerOptions["config"]) => void = () => {},
 	shared: Partial<MiniflareOptions> = {}
 ) {
@@ -91,7 +91,9 @@ async function rpc(
 	return response.json();
 }
 
-const CREATED: WorkflowEvent = { type: "cf.artifacts.repo.created" };
+const CREATED: ArtifactsEventSubscription = {
+	type: "cf.artifacts.repo.created",
+};
 
 test("warns once when Workflow events have no local namespace", async ({
 	expect,

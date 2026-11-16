@@ -15,10 +15,10 @@ import { createPlugin, satisfiesMinimumViteVersion } from "../utils";
 import { extendTunnelExpiry, isTunnelOpen, toggleTunnel } from "./tunnel";
 import type { PluginContext } from "../context";
 import type {
-	ParsedInputContainerConfig,
-	ParsedInputWorkerConfig,
-	ParsedOutputContainerConfig,
-	ParsedOutputWorkerConfig,
+	ParsedContainerConfig,
+	ParsedWorkerConfig,
+	ParsedBuildOutputContainerConfig,
+	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
 import type { ContainerApp } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
@@ -191,8 +191,8 @@ export function addShortcuts(
  * from input Container definitions and Worker export links.
  */
 export function getWorkerContainersForDisplay(options: {
-	workerConfig: ParsedInputWorkerConfig | ParsedOutputWorkerConfig;
-	containers: Array<ParsedInputContainerConfig | ParsedOutputContainerConfig>;
+	workerConfig: ParsedWorkerConfig | ParsedBuildOutputWorkerConfig;
+	containers: Array<ParsedContainerConfig | ParsedBuildOutputContainerConfig>;
 }): ContainerApp[] {
 	const containersByName = new Map(
 		options.containers.map((container) => [container.name, container])

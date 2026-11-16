@@ -12,7 +12,7 @@ import type {
 	AiSearchBinding,
 	AiSearchNamespaceBinding,
 	AnalyticsEngineDatasetBinding,
-	AnalyticsSQLBinding,
+	AnalyticsSqlBinding,
 	ArtifactsBinding,
 	AssetsBinding,
 	BrowserBinding,
@@ -106,7 +106,7 @@ type Binding =
 	| AiSearchBinding
 	| AiSearchNamespaceBinding
 	| AnalyticsEngineDatasetBinding
-	| AnalyticsSQLBinding
+	| AnalyticsSqlBinding
 	| ArtifactsBinding
 	| AssetsBinding
 	| BrowserBinding
@@ -366,7 +366,7 @@ export interface DurableObjectContainerConfig extends BaseContainerConfig {
 
 /**
  * Container application configuration. This is the input shape passed to
- * `defineContainer` and parsed at runtime by `InputContainerSchema`.
+ * `defineContainer` and parsed at runtime by `ContainerConfigSchema`.
  */
 export type ContainerConfig =
 	| DurableObjectContainerConfig
@@ -376,7 +376,7 @@ export type ContainerConfig =
  * Worker configuration. This is the input shape passed to
  * [`defineWorker`](https://developers.cloudflare.com/workers/wrangler/configuration/).
  *
- * Fields are parsed and normalised at runtime by `InputWorkerSchema` before
+ * Fields are parsed and normalised at runtime by `WorkerConfigSchema` before
  * being passed to downstream tooling.
  */
 export interface WorkerConfig {
@@ -620,13 +620,6 @@ export interface WorkerConfig {
 	previewUrls?: boolean;
 
 	/**
-	 * Designates this Worker as an internal-only "first-party" Worker.
-	 *
-	 * @internal
-	 */
-	firstPartyWorker?: boolean;
-
-	/**
 	 * Experimental features. Fields here may change or be removed without a
 	 * major version bump.
 	 *
@@ -644,6 +637,12 @@ export interface WorkerConfig {
 			/** The name of the service streaming tail events will be forwarded to. */
 			worker: string;
 		}>;
+		/**
+		 * Designates this Worker as an internal-only "first-party" Worker.
+		 *
+		 * @internal
+		 */
+		firstPartyWorker?: boolean;
 	};
 
 	/**

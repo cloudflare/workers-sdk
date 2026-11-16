@@ -59,8 +59,8 @@ import type {
 } from "./context";
 import type { PersistState } from "./plugin-config";
 import type {
-	ParsedInputWorkerConfig,
-	ParsedOutputWorkerConfig,
+	ParsedWorkerConfig,
+	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
 import type {
 	ContainerDevOptions,
@@ -217,7 +217,7 @@ function createRemoteBindingsLogger(logger: vite.Logger): RemoteBindingsLogger {
 }
 
 function getWorkerZone(
-	config: Pick<ParsedInputWorkerConfig, "domains" | "triggers">
+	config: Pick<ParsedWorkerConfig, "domains" | "triggers">
 ): string | undefined {
 	// Domains are converted to routes before fetch triggers, so this mirrors the
 	// first-route selection used by Wrangler's Miniflare options.
@@ -966,7 +966,7 @@ const warnForArtifactsLocalDefault =
 	createArtifactsLocalDefaultWarner("cloudflare-config");
 
 function resolveLocalBindingsByWorkerName(
-	workerConfigs: Array<ParsedInputWorkerConfig | ParsedOutputWorkerConfig>,
+	workerConfigs: Array<ParsedWorkerConfig | ParsedBuildOutputWorkerConfig>,
 	localEnv: LoadedEnv,
 	devVars: Record<string, string> | undefined,
 	remoteBindings: boolean,

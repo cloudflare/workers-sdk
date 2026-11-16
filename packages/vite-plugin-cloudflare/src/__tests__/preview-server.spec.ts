@@ -53,7 +53,7 @@ describe("preview server", () => {
 								accountId: "customized-account",
 								complianceRegion: "fedramp-high",
 								containers: [
-									...loadedConfig.containers,
+									...(loadedConfig.containers ?? []),
 									{
 										name: "customized-container",
 										image: {

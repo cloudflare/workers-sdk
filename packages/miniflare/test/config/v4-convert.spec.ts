@@ -121,7 +121,7 @@ describe("convertV4MiniflareOptions", () => {
 
 		expect(converted.workers[0].config.env?.ORDERS).toEqual({
 			type: "k2",
-			stream,
+			id: stream,
 			dev: { remote: true },
 		});
 		expect(converted.workers[0].dev?.remoteProxyConnectionString).toEqual(
@@ -334,7 +334,7 @@ describe("convertV4MiniflareOptions", () => {
 				},
 				QUEUE: { type: "queue", name: "queue" },
 				SERVICE: { type: "worker", worker: "other-worker" },
-				ANALYTICS: { type: "analytics", dev: { remote: false } },
+				ANALYTICS: { type: "analytics-sql", dev: { remote: false } },
 				ASSETS: { type: "assets" },
 				BROWSER: { type: "browser", headful: true },
 				WORKFLOW: {
@@ -479,7 +479,7 @@ describe("convertV4MiniflareOptions", () => {
 
 		expect(converted.workers[0].config.env?.PIPELINE).toEqual({
 			type: "pipeline",
-			name: "PIPELINE",
+			streamId: "PIPELINE",
 		});
 	});
 

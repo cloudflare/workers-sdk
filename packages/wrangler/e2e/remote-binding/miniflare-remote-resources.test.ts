@@ -531,7 +531,7 @@ const testCases: TestCase[] = [
 			miniflareConfig: (connection) => ({
 				PIPELINE: {
 					type: "pipeline",
-					name: "preserve-e2e-pipelines",
+					streamId: "preserve-e2e-pipelines",
 					dev: { remote: remote(connection) },
 				},
 			}),

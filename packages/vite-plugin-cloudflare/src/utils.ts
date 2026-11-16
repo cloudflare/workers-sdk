@@ -13,7 +13,7 @@ import * as vite from "vite";
 import { PROXY_SHARED_SECRET } from "./constants";
 import { warnIfQuickTunnelSseResponse } from "./plugins/tunnel";
 import type { PluginContext } from "./context";
-import type { ParsedInputSettingsConfig } from "@cloudflare/config";
+import type { ParsedSettings } from "@cloudflare/config";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type * as http from "node:http";
 
@@ -60,7 +60,7 @@ export type MaybePromise<T> = Promise<T> | T;
 export type Defined<T> = Exclude<T, undefined>;
 
 export function toApiComplianceRegion(
-	region: ParsedInputSettingsConfig["complianceRegion"]
+	region: ParsedSettings["complianceRegion"]
 ): ComplianceConfig["compliance_region"] {
 	return region === "fedramp-high" ? "fedramp_high" : region;
 }
