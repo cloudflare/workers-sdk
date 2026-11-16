@@ -49,8 +49,44 @@ export async function triggersDeploy(
 		validateOwnedWorkflowDeclarations(config, scriptName);
 	}
 
+	const { routesOnly, customDomainsOnly } = partitionRoutes(routes);
+	const ownedWorkflows = getWorkflowsOwnedByScript(config, scriptName);
+
 	if (props.dryRun) {
-		logger.log(`--dry-run: exiting now.`);
+		const { workers_dev: wantWorkersDev } = getSubdomainValues(
+			config.workers_dev,
+			config.preview_urls,
+			routes
+		);
+		const eventTriggers = config.triggers?.events;
+		const targets = [
+			...(wantWorkersDev ? ["workers.dev (enabled)"] : []),
+			...routesOnly.map(renderRoute),
+			...customDomainsOnly.map(renderRoute),
+			...(crons ?? []).map((cron) => `schedule: ${cron}`),
+			...(config.queues.producers ?? []).map(
+				(producer) => `Producer for ${producer.queue ?? producer.binding}`
+			),
+			...(config.queues.consumers ?? []).map(
+				(consumer) => `Consumer for ${consumer.queue}`
+			),
+			...ownedWorkflows.map((workflow) => `workflow: ${workflow.name}`),
+			...(eventTriggers !== undefined
+				? [`event triggers: ${eventTriggers.length}`]
+				: []),
+		];
+		if (targets.length > 0) {
+			logger.log(
+				`--dry-run: no changes will be made. Would deploy ${scriptName} triggers:`
+			);
+			for (const target of targets) {
+				logger.log(" ", target);
+			}
+		} else {
+			logger.log(
+				`--dry-run: no changes will be made. No targets to deploy for ${scriptName}.`
+			);
+		}
 		return;
 	}
 
@@ -67,8 +103,6 @@ export async function triggersDeploy(
 		);
 	}
 
-	const { routesOnly, customDomainsOnly } = partitionRoutes(routes);
-
 	const start = Date.now();
 
 	const workerUrl = `/accounts/${accountId}/workers/scripts/${scriptName}`;
@@ -79,8 +113,6 @@ export async function triggersDeploy(
 		name: string;
 		deployment: Promise<TriggerDeployment>;
 	}[] = [];
-	const ownedWorkflows = getWorkflowsOwnedByScript(config, scriptName);
-
 	const { wantWorkersDev, workersDevInSync } = await subdomainDeploy(
 		props,
 		accountId,
