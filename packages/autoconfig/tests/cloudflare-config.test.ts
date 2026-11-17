@@ -1,22 +1,22 @@
 import { describe, it } from "vitest";
 import { mergeCloudflareConfig } from "../src/cloudflare-config";
 
+const frameworkWorkerConfig = {
+	entrypoint: "./workers/app.ts",
+	assets: {
+		htmlHandling: "auto-trailing-slash" as const,
+		notFoundHandling: "single-page-application" as const,
+	},
+};
 const workerConfig = {
 	name: "generated-name",
 	compatibilityDate: "2026-11-01",
 	observability: { enabled: true },
-	entrypoint: "./workers/app.ts",
-	assets: { notFoundHandling: "single-page-application" as const },
-	compatibilityFlags: ["nodejs_compat"],
-};
-const frameworkWorkerConfig = {
-	entrypoint: workerConfig.entrypoint,
-	assets: workerConfig.assets,
-	compatibilityFlags: workerConfig.compatibilityFlags,
+	...frameworkWorkerConfig,
 };
 
 describe("mergeCloudflareConfig()", () => {
-	it("keeps existing values and sets the framework's values", ({ expect }) => {
+	it("keeps existing values, replacing only the entrypoint", ({ expect }) => {
 		const source = `import { bindings, defineConfig } from "cf/config";
 
 throw new Error("Migration incomplete.");
@@ -25,7 +25,6 @@ export default defineConfig({
 	worker: {
 		name: "migrated-name",
 		compatibilityDate: "2026-07-01",
-		compatibilityFlags: ["nodejs_compat", "global_fetch_strictly_public"],
 		entrypoint: "worker/index.ts",
 		assets: {
 			notFoundHandling: "404-page",
@@ -46,24 +45,18 @@ export default defineConfig({
 
 			export default defineConfig({
 				worker: {
-			        name: "migrated-name",
-			        compatibilityDate: "2026-07-01",
-			        compatibilityFlags: ["nodejs_compat", "global_fetch_strictly_public"],
-			        entrypoint: "./workers/app.ts",
-
-			        assets: {
-						notFoundHandling: "single-page-application",
-						runWorkerFirst: true,
-					},
-
-			        env: {
+					name: "migrated-name",
+					compatibilityDate: "2026-07-01",
+					entrypoint: "./workers/app.ts",
+					assets: {
+			            notFoundHandling: "404-page",
+			            runWorkerFirst: true,
+			            htmlHandling: "auto-trailing-slash"
+			        },
+					env: {
 						KV: bindings.kv({ id: "abc" }),
 					},
-
-			        observability: {
-			            enabled: true
-			        }
-			    },
+				},
 			});
 			"
 		`);
@@ -122,18 +115,49 @@ export default defineConfig((ctx) => {
 		`);
 	});
 
-	it("rejects a Worker configuration it cannot update", ({ expect }) => {
-		const source = `import { defineConfig, defineWorker } from "cf/config";
+	it("adds the generated Worker to a config without one", ({ expect }) => {
+		const source = `import { defineConfig } from "cf/config";
 
-const worker = defineWorker({ name: "app" });
-
-export default defineConfig({ worker });
+export default defineConfig({ accountId: "abc" });
 `;
 
+		expect(
+			mergeCloudflareConfig(
+				source,
+				{ name: "generated-name", entrypoint: "./workers/app.ts" },
+				{ entrypoint: "./workers/app.ts" }
+			)
+		).toMatchInlineSnapshot(`
+			"import { defineConfig } from "cf/config";
+
+			export default defineConfig({
+			  accountId: "abc",
+
+			  worker: {
+			    name: "generated-name",
+			    entrypoint: "./workers/app.ts"
+			  }
+			});
+			"
+		`);
+	});
+
+	it.for([
+		{
+			name: "a Worker",
+			source: `const worker = defineWorker({ name: "app" });
+export default defineConfig({ worker });`,
+		},
+		{
+			name: "a nested value",
+			source: `const assets = { runWorkerFirst: true };
+export default defineConfig({ worker: { name: "app", assets } });`,
+		},
+	])("rejects $name it cannot update", ({ source }, { expect }) => {
 		expect(() =>
 			mergeCloudflareConfig(source, workerConfig, frameworkWorkerConfig)
 		).toThrow(
-			"Cannot automatically update cloudflare.config.ts because its `worker` configuration is not an object literal in `defineConfig()`."
+			"Cannot automatically update cloudflare.config.ts because its Worker configuration is not written as object literals in `defineConfig()`."
 		);
 	});
 });
