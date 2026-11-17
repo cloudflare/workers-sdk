@@ -4,4 +4,4 @@
 
 Export `getWorkerZone()` and `toApiComplianceRegion()`
 
-`getWorkerZone()` returns the zone of a Worker's first domain or fetch trigger, which Miniflare names in the `CF-Worker` header of the Worker's outgoing requests. `toApiComplianceRegion()` converts a `cloudflare.config.ts` compliance region to the form Cloudflare's API takes.
+`getWorkerZone()` returns the zone of a Worker's first route, taken from its domains or fetch triggers. `toApiComplianceRegion()` converts a `cloudflare.config.ts` compliance region to the form Cloudflare's API takes.
