@@ -12,7 +12,7 @@ import type {
 const VINEXT_MINIMUM_NEXT_VERSION = "16.0.0";
 
 // `--name` requires vinext 1.2.0 or later
-const VINEXT_PACKAGE = "vinext@^1.3.0";
+const VINEXT_PACKAGE = "vinext@^1.4.6";
 
 const OPENNEXT_CONFIGURATION_DESCRIPTION =
 	"Configuring project for Next.js with OpenNext by running `@opennextjs/cloudflare migrate`";
