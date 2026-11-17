@@ -73,7 +73,7 @@ export async function readD1Migrations(
 	const projectPath = options.projectPath ?? process.cwd();
 	const migrationsPath = path.resolve(
 		projectPath,
-		options.migrationsDir ?? DEFAULT_MIGRATIONS_DIR
+		normalizeRelativePath(options.migrationsDir ?? DEFAULT_MIGRATIONS_DIR)
 	);
 	if (!fs.statSync(migrationsPath, { throwIfNoEntry: false })?.isDirectory()) {
 		throw new UserError(`No migrations present at ${migrationsPath}.`, {

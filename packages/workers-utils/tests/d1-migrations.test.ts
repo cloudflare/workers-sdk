@@ -320,6 +320,22 @@ describe("readD1Migrations", () => {
 		]);
 	});
 
+	it("accepts backslashes in migrationsDir, as getD1MigrationFiles does", async ({
+		expect,
+	}) => {
+		await seed({
+			"db/migrations/0001_init.sql": "CREATE TABLE init (id INTEGER);",
+		});
+
+		const migrations = await readD1Migrations({
+			migrationsDir: "db\\migrations",
+		});
+
+		expect(migrations).toEqual([
+			{ name: "0001_init.sql", queries: ["CREATE TABLE init (id INTEGER);"] },
+		]);
+	});
+
 	it("throws when the migrations directory does not exist", async ({
 		expect,
 	}) => {
