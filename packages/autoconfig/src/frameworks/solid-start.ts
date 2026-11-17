@@ -10,7 +10,7 @@ import semiver from "semiver";
 import { usesTypescript } from "../uses-typescript";
 import { Framework } from "./framework-class";
 import {
-	checkIfViteConfigUsesCloudflarePlugin,
+	importsCloudflareVitePlugin,
 	extractConfigObject,
 	getStaticPropertyName,
 	getViteConfigPath,
@@ -29,9 +29,7 @@ export class SolidStart extends Framework {
 		projectPath: string,
 		{ target = "cf" }: { target?: AutoConfigTarget } = {}
 	): boolean {
-		return (
-			target === "cf" && checkIfViteConfigUsesCloudflarePlugin(projectPath)
-		);
+		return target === "cf" && importsCloudflareVitePlugin(projectPath);
 	}
 
 	async configure({

@@ -41,8 +41,7 @@ describe("Vite-plugin fallback commands", () => {
 			}),
 			"cloudflare.config.ts": "export default {};",
 			"vite.config.ts": `import { cloudflare } from '@cloudflare/vite-plugin';
-import { defineConfig } from 'vite';
-export default defineConfig({ plugins: [cloudflare()] });`,
+export default { plugins: [cloudflare()] };`,
 			"node_modules/@cloudflare/vite-plugin/package.json": JSON.stringify({
 				name: "@cloudflare/vite-plugin",
 				version,
@@ -595,8 +594,7 @@ export default defineConfig({ plugins: [cloudflare()] });`,
 			}),
 			"apps/site/cloudflare.config.ts": "export default {};",
 			"apps/site/vite.config.ts": `import { cloudflare } from '@cloudflare/vite-plugin';
-import { defineConfig } from 'vite';
-export default defineConfig({ plugins: [cloudflare()] });`,
+export default { plugins: [cloudflare()] };`,
 			"apps/site/node_modules/vite/package.json": JSON.stringify({
 				bin: { vite: "local.js" },
 			}),

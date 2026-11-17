@@ -6,10 +6,12 @@ import {
 	assertViteConfigCanBeTransformed,
 	checkIfViteConfigUsesCloudflarePlugin,
 	hasViteConfig,
+	importsCloudflareVitePlugin,
 	transformViteConfig,
 } from "./utils/vite-config";
 import { installCloudflareVitePlugin } from "./utils/vite-plugin";
 import { CF_VITE_PLUGIN_VERSION_RANGE } from "./utils/vite-plugin-version";
+import type { AutoConfigTarget } from "../context";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -22,7 +24,16 @@ export class Vite extends Framework {
 		CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT: "true",
 	} as const;
 
-	isConfigured(projectPath: string): boolean {
+	isConfigured(
+		projectPath: string,
+		{ target = "cf" }: { target?: AutoConfigTarget } = {}
+	): boolean {
+		if (target !== "wrangler") {
+			return importsCloudflareVitePlugin(projectPath);
+		}
+		if (!hasViteConfig(projectPath)) {
+			return false;
+		}
 		return checkIfViteConfigUsesCloudflarePlugin(projectPath);
 	}
 

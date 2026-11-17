@@ -4,6 +4,7 @@ import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import { NpmPackageManager } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
+import { getFrameworkClassInstance } from "../../src/frameworks";
 import { Vite } from "../../src/frameworks/vite";
 import { createMockContext } from "../helpers/mock-context";
 
@@ -67,6 +68,23 @@ describe("Vite framework", () => {
 				const framework = new Vite({ id: "vite", name: "Vite" });
 
 				expect(framework.isConfigured(".", { target })).toBe(true);
+			}
+		);
+
+		it.for(["react-router", "solid-start", "tanstack-start", "vite"])(
+			"treats an imported Cloudflare plugin as set up for cf, whatever the config shape (%s)",
+			async (frameworkId, { expect }) => {
+				const framework = getFrameworkClassInstance(frameworkId, "cf");
+				await writeFile(
+					"vite.config.ts",
+					`import { cloudflare as cf } from "@cloudflare/vite-plugin";
+				 const plugins = [cf()];
+				 export default { plugins };`
+				);
+				expect(framework.isConfigured(".")).toBe(true);
+
+				await writeFile("vite.config.ts", "export default { plugins: [] };");
+				expect(framework.isConfigured(".")).toBe(false);
 			}
 		);
 	});

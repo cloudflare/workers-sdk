@@ -69,9 +69,6 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 	projectPath: string,
 	context?: AutoConfigContext
 ): boolean {
-	if (!hasViteConfig(projectPath)) {
-		return false;
-	}
 	const filePath = getViteConfigPath(projectPath);
 	const ast = parseFile(filePath);
 	if (!ast) {
@@ -144,6 +141,27 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 	});
 
 	return importsCloudflarePlugin && usesCloudflarePlugin;
+}
+
+/**
+ * Checks whether the project's Vite config imports the Cloudflare plugin, which cf
+ * treats as the framework being set up. Projects migrated by `cf migrate` don't
+ * import it until autoconfig sets them up, whatever shape their config has.
+ *
+ * @param projectPath The path of the project
+ * @returns Whether the Vite config imports `@cloudflare/vite-plugin`
+ */
+export function importsCloudflareVitePlugin(projectPath: string): boolean {
+	if (!hasViteConfig(projectPath)) {
+		return false;
+	}
+	return (
+		parseFile(getViteConfigPath(projectPath))?.body.some(
+			(statement) =>
+				statement.type === "ImportDeclaration" &&
+				statement.source.value === "@cloudflare/vite-plugin"
+		) ?? false
+	);
 }
 
 // Match Vite's DEFAULT_CONFIG_FILES order so inspection and execution use the same file.

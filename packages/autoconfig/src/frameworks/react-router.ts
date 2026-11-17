@@ -9,7 +9,7 @@ import semiver from "semiver";
 import dedent from "ts-dedent";
 import { Framework } from "./framework-class";
 import {
-	checkIfViteConfigUsesCloudflarePlugin,
+	importsCloudflareVitePlugin,
 	transformViteConfig,
 } from "./utils/vite-config";
 import { installCloudflareVitePlugin } from "./utils/vite-plugin";
@@ -481,9 +481,7 @@ export class ReactRouter extends Framework {
 		projectPath: string,
 		{ target = "cf" }: { target?: AutoConfigTarget } = {}
 	): boolean {
-		return (
-			target === "cf" && checkIfViteConfigUsesCloudflarePlugin(projectPath)
-		);
+		return target === "cf" && importsCloudflareVitePlugin(projectPath);
 	}
 
 	async configure({
