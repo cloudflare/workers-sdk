@@ -813,9 +813,13 @@ export function parseQualityWeightedList(list = "") {
 /**
  * Collapse repeated slashes in the request pathname.
  *
- * The original Workers URL parser collapsed them, so Pages has always matched
- * `_redirects`, `_headers` and assets against the collapsed path. The WHATWG
- * parser keeps them, so `//secure/page` would otherwise skip `/secure/*` rules.
+ * Pages' production asset server ran on the original Workers URL parser
+ * (`url_original`), which collapses repeated slashes. Customers' `//old` and
+ * `//secure/page` links have therefore always matched `/old` redirects,
+ * `/secure/*` headers and `/secure/page` assets. The WHATWG parser
+ * (`url_standard`) keeps the slashes, so switching to it would make those
+ * requests 404 and skip their `_headers` rules. Collapsing here keeps that
+ * behavior regardless of which parser the runtime uses.
  *
  * @param request The incoming request.
  * @returns The same request, or a copy whose pathname has no repeated slashes.
