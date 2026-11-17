@@ -1,5 +1,20 @@
 # @cloudflare/deploy-helpers
 
+## 0.27.2
+
+### Patch Changes
+
+- [#16974](https://github.com/cloudflare/workers-sdk/pull/16974) [`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-17
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666), [`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666), [`51064e6`](https://github.com/cloudflare/workers-sdk/commit/51064e6d4fa630d950fb0544fda07efd877dd2fb)]:
+  - @cloudflare/workers-utils@0.54.2
+  - @cloudflare/cli-shared-helpers@0.3.10
+  - @cloudflare/config@1.0.0-rc.1
+  - @cloudflare/containers-shared@0.26.3
+  - miniflare@5.20261117.0-beta
+
 ## 0.27.1
 
 ### Patch Changes

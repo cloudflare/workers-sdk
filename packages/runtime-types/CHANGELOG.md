@@ -1,5 +1,16 @@
 # @cloudflare/runtime-types
 
+## 0.1.30
+
+### Patch Changes
+
+- [#16974](https://github.com/cloudflare/workers-sdk/pull/16974) [`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-17
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666), [`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666), [`51064e6`](https://github.com/cloudflare/workers-sdk/commit/51064e6d4fa630d950fb0544fda07efd877dd2fb)]:
+  - miniflare@5.20261117.0-beta
+
 ## 0.1.29
 
 ### Patch Changes

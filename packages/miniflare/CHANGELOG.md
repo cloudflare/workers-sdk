@@ -1,5 +1,26 @@
 # miniflare
 
+## 5.20261117.0-beta
+
+### Patch Changes
+
+- [#16974](https://github.com/cloudflare/workers-sdk/pull/16974) [`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-17
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16974](https://github.com/cloudflare/workers-sdk/pull/16974) [`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261116.1 | ^5.20261117.1 |
+  | workerd                   | 1.20261116.1  | 1.20261117.1  |
+
+- [#16811](https://github.com/cloudflare/workers-sdk/pull/16811) [`51064e6`](https://github.com/cloudflare/workers-sdk/commit/51064e6d4fa630d950fb0544fda07efd877dd2fb) Thanks [@mindulle](https://github.com/mindulle)! - Expose `canBeForwarded` boolean property on `ForwardableEmailMessage` in email handler
+
+  Previously, in `wrangler dev`, the `ForwardableEmailMessage` passed to a Worker's `email()` handler did not expose the documented `canBeForwarded` property, causing it to read as `undefined` locally while production exposes it as a read-only boolean. `canBeForwarded: true` is now set on the incoming message object in Miniflare, matching production behavior.
+
 ## 5.20261116.0-beta
 
 ### Minor Changes

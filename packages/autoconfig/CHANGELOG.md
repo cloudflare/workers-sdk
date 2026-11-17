@@ -1,5 +1,22 @@
 # @cloudflare/autoconfig
 
+## 0.13.1
+
+### Patch Changes
+
+- [#16967](https://github.com/cloudflare/workers-sdk/pull/16967) [`092ac28`](https://github.com/cloudflare/workers-sdk/commit/092ac28e1f4097d09d012cabf589a185b3b7a032) Thanks [@james-elicx](https://github.com/james-elicx)! - Use vinext 1.4.6 or later when configuring Next.js projects
+
+  Autoconfig now runs `vinext init` with `vinext@^1.4.6` (previously `^1.3.0`), so newly configured Next.js projects pick up the latest vinext fixes.
+
+- [#16974](https://github.com/cloudflare/workers-sdk/pull/16974) [`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-17
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666)]:
+  - @cloudflare/workers-utils@0.54.2
+  - @cloudflare/cli-shared-helpers@0.3.10
+  - @cloudflare/config@1.0.0-rc.1
+
 ## 0.13.0
 
 ### Minor Changes
