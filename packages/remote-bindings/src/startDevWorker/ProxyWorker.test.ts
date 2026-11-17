@@ -82,35 +82,39 @@ it("fails remote binding requests whose connection to the current preview fails"
 	);
 	await play("current-preview");
 
-	const response = proxyWorker.dispatchFetch("http://localhost/?MF-Binding=KV");
+	const response = await proxyWorker.dispatchFetch(
+		"http://localhost/?MF-Binding=KV"
+	);
 
+	expect(response.status).toBe(500);
 	await vi.waitFor(() =>
 		expect(onError).toHaveBeenCalledWith(
 			expect.objectContaining({ reason: "Error inside ProxyWorker" })
 		)
 	);
-	expect((await response).status).toBe(500);
 });
 
-it("treats failures from a replaced preview on the same host as a reload", async ({
+it("retries requests that fail after a reload against the new preview", async ({
 	expect,
 }) => {
-	const received = createDeferred<IncomingMessage>();
-	const { proxyWorker, onError, play } = await startProxy((request) =>
-		received.resolve(request)
+	const oldPreviewRequest = createDeferred<IncomingMessage>();
+	const { proxyWorker, onError, play } = await startProxy(
+		(request, response) => {
+			const token = request.headers["cf-workers-preview-token"];
+			if (token === "old-preview") {
+				oldPreviewRequest.resolve(request);
+			} else {
+				response.end(`served by ${token}`);
+			}
+		}
 	);
 	await play("old-preview");
-	// The proxy doesn't retry POSTs, so it answers as soon as it sees the failure.
-	const response = proxyWorker.dispatchFetch(
-		"http://localhost/?MF-Binding=KV",
-		{ method: "POST", body: "value" }
-	);
-	const request = await received.promise;
+	const response = proxyWorker.dispatchFetch("http://localhost/");
+	const request = await oldPreviewRequest.promise;
+	// The reload completes before the old preview's connection fails.
 	await play("new-preview");
 	request.socket.destroy();
 
-	expect(await (await response).text()).toContain(
-		"Your worker restarted mid-request"
-	);
+	expect(await (await response).text()).toBe("served by new-preview");
 	expect(onError).not.toHaveBeenCalled();
 });
