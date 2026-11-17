@@ -336,13 +336,23 @@ describe("readD1Migrations", () => {
 		]);
 	});
 
+	it("returns no migrations for an empty migrations directory", async ({
+		expect,
+	}) => {
+		fs.mkdirSync("migrations");
+
+		expect(await readD1Migrations({})).toEqual([]);
+	});
+
 	it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
 		"throws when the migrations directory can't be read",
 		async ({ expect }) => {
 			fs.mkdirSync("migrations");
 			fs.chmodSync("migrations", 0o311);
 			try {
-				await expect(readD1Migrations({})).rejects.toThrow("EACCES");
+				await expect(readD1Migrations({})).rejects.toThrow(
+					`Can't read migrations at ${path.resolve("migrations")}.`
+				);
 			} finally {
 				fs.chmodSync("migrations", 0o755);
 			}

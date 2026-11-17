@@ -64,8 +64,9 @@ export type ReadD1MigrationsOptions = {
  * Reads the D1 migration files found by {@link getD1MigrationFiles}, splitting
  * each one into SQL queries.
  *
- * Throws when the migrations directory doesn't exist, so a typo in
- * `migrationsDir` doesn't silently apply no migrations.
+ * An empty migrations directory gives no migrations. A directory that doesn't
+ * exist or can't be read throws, so a typo in `migrationsDir` doesn't silently
+ * apply no migrations.
  */
 export async function readD1Migrations(
 	options: ReadD1MigrationsOptions
@@ -80,8 +81,18 @@ export async function readD1Migrations(
 			telemetryMessage: "d1 migrations missing migrations directory",
 		});
 	}
-	// Throw read errors such as `EACCES`, which getD1MigrationFiles() skips
-	fs.readdirSync(migrationsPath);
+	// getD1MigrationFiles() skips directories it can't read, so check here
+	try {
+		fs.readdirSync(migrationsPath);
+	} catch (cause) {
+		throw new UserError(
+			`Can't read migrations at ${migrationsPath}. Check that the directory is readable.`,
+			{
+				cause,
+				telemetryMessage: "d1 migrations unreadable migrations directory",
+			}
+		);
+	}
 	const files = getD1MigrationFiles({ ...options, projectPath });
 	return files.map(({ name, filePath }) => {
 		const migration = fs.readFileSync(filePath, "utf8");
