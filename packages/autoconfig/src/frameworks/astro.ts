@@ -91,9 +91,11 @@ export class Astro extends Framework {
 			};
 		}
 
-		if (Number(astroVersion.split(".")[0]) < 7) {
+		// The Cloudflare adapter beta requires `astro@^7.4.4-beta.0`. Compare the release
+		// version only: semiver ranks 7.4.3 above 7.4.4-beta.0
+		if (semiver(astroVersion.split("-")[0], "7.4.4") < 0) {
 			throw new AutoConfigFrameworkConfigurationError(
-				`cf only supports Astro 7 or later, but this project uses Astro ${JSON.stringify(
+				`cf only supports Astro 7.4.4 or later, but this project uses Astro ${JSON.stringify(
 					astroVersion
 				)}. Please update Astro and try again, or continue using Wrangler if you are not ready to upgrade.`,
 				{ telemetryMessage: "autoconfig framework version unsupported" }
@@ -101,23 +103,23 @@ export class Astro extends Framework {
 		}
 
 		if (!dryRun) {
-			await installPackages(packageManager.type, ["astro@beta"], {
+			// Only the Astro beta's `astro add` writes `cloudflare.config.ts`, so run it
+			// without installing it: the project's stable Astro works with the adapter beta
+			const addCommand = [
+				...packageManager.dlx,
+				"astro@beta",
+				"add",
+				"@astrojs/cloudflare@beta",
+				"-y",
+			];
+			await runCommand(addCommand, {
 				cwd: projectPath,
-				startText: "Installing the Astro beta version",
-				doneText: `${brandColor("installed")} ${dim("Astro")}`,
-				isWorkspaceRoot,
+				silent: true,
+				startText: "Installing the Cloudflare adapter beta version",
+				doneText: `${brandColor("installed")} ${dim(
+					`via \`${addCommand.slice(0, -1).join(" ")}\``
+				)}`,
 			});
-			await runCommand(
-				[packageManager.npx, "astro", "add", "@astrojs/cloudflare@beta", "-y"],
-				{
-					cwd: projectPath,
-					silent: true,
-					startText: "Installing the Cloudflare adapter beta version",
-					doneText: `${brandColor("installed")} ${dim(
-						`via \`${packageManager.npx} astro add @astrojs/cloudflare@beta\``
-					)}`,
-				}
-			);
 		}
 
 		return {

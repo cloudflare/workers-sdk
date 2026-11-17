@@ -44,7 +44,7 @@ describe("Astro framework", () => {
 		vi.spyOn(cliPackages, "installPackages").mockImplementation(async () => {});
 	});
 
-	it.for(["7.3.5", "7.0.0-beta.2"])(
+	it.for(["7.4.12", "7.4.4-beta.0"])(
 		"configures Astro %s for cf",
 		async (version, { expect }) => {
 			const projectPath = process.cwd();
@@ -53,13 +53,9 @@ describe("Astro framework", () => {
 				getOptions(projectPath)
 			);
 
-			expect(cliPackages.installPackages).toHaveBeenCalledWith(
-				"npm",
-				["astro@beta"],
-				expect.objectContaining({ cwd: projectPath })
-			);
+			expect(cliPackages.installPackages).not.toHaveBeenCalled();
 			expect(cliCommand.runCommand).toHaveBeenCalledWith(
-				["npx", "astro", "add", "@astrojs/cloudflare@beta", "-y"],
+				["npx", "astro@beta", "add", "@astrojs/cloudflare@beta", "-y"],
 				expect.objectContaining({ cwd: projectPath })
 			);
 			expect(existsSync(join(projectPath, "public", ".assetsignore"))).toBe(
@@ -70,7 +66,7 @@ describe("Astro framework", () => {
 	);
 
 	it("installs nothing in a dry run for cf", async ({ expect }) => {
-		const result = await createFramework("7.3.5").configure(
+		const result = await createFramework("7.4.12").configure(
 			getOptions(process.cwd(), { dryRun: true })
 		);
 
@@ -114,9 +110,9 @@ describe("Astro framework", () => {
 		});
 	});
 
-	it("requires Astro 7 before configuring for cf", async ({ expect }) => {
+	it("requires Astro 7.4.4 before configuring for cf", async ({ expect }) => {
 		const projectPath = process.cwd();
-		const configuration = createFramework("6.0.0").configure(
+		const configuration = createFramework("7.4.3").configure(
 			getOptions(projectPath)
 		);
 
@@ -124,7 +120,7 @@ describe("Astro framework", () => {
 			AutoConfigFrameworkConfigurationError
 		);
 		await expect(configuration).rejects.toThrow(
-			'cf only supports Astro 7 or later, but this project uses Astro "6.0.0". Please update Astro and try again, or continue using Wrangler if you are not ready to upgrade.'
+			'cf only supports Astro 7.4.4 or later, but this project uses Astro "7.4.3". Please update Astro and try again, or continue using Wrangler if you are not ready to upgrade.'
 		);
 		expect(cliPackages.installPackages).not.toHaveBeenCalled();
 	});
