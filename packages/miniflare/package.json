@@ -114,6 +114,7 @@
 		"zod": "catalog:default"
 	},
 	"peerDependencies": {
+		"@cloudflare/workers-types": "catalog:default",
 		"kerberos": "^2.0.0"
 	},
 	"peerDependenciesMeta": {
