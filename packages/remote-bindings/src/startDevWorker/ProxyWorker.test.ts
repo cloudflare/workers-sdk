@@ -1,137 +1,116 @@
-import { createRequire } from "node:module";
-import { fileURLToPath } from "node:url";
-import { runInNewContext } from "node:vm";
-import { buildSync } from "esbuild";
-import { it, vi } from "vitest";
+import { once } from "node:events";
+import { createServer } from "node:http";
+import { it, onTestFinished, vi } from "vitest";
+import { initLogger } from "../logger";
+import { ProxyController } from "./ProxyController";
 import { createDeferred } from "./utils";
-import type { ProxyWorkerIncomingRequestBody } from "./events";
+import type { ErrorEvent } from "./events";
+import type { StartDevWorkerOptions } from "./types";
+import type { IncomingMessage, RequestListener } from "node:http";
+import type { AddressInfo } from "node:net";
 
-const bundled = buildSync({
-	entryPoints: [
-		fileURLToPath(
-			new URL("../../templates/startDevWorker/ProxyWorker.ts", import.meta.url)
-		),
-	],
-	bundle: true,
-	platform: "node",
-	format: "cjs",
-	write: false,
-}).outputFiles[0]?.text;
+initLogger({
+	loggerLevel: "none",
+	debug: vi.fn(),
+	log: vi.fn(),
+	info: vi.fn(),
+	warn: vi.fn(),
+	error: vi.fn(),
+	console: vi.fn(),
+});
 
-type ProxyModule = {
-	ProxyWorker: new (
-		state: object,
-		env: {
-			PROXY_CONTROLLER: { fetch: typeof fetch };
-			PROXY_CONTROLLER_AUTH_SECRET: string;
-		}
-	) => {
-		fetch(request: Request): Response | Promise<Response>;
-		requestRetryQueue: Map<Request, unknown>;
-	};
+const config: StartDevWorkerOptions = {
+	name: "remote-bindings-proxy",
+	cliDisplayName: "Wrangler",
+	entrypointSource: "export default {};",
+	bindings: {},
+	compatibilityDate: "2026-07-17",
+	compatibilityFlags: [],
+	complianceRegion: undefined,
+	auth: () => ({
+		accountId: "account-id",
+		apiToken: { apiToken: "api-token" },
+	}),
+	server: { hostname: "127.0.0.1", port: 0, secure: false },
 };
 
-function startProxy(upstream: typeof fetch) {
-	const module = { exports: {} };
-	runInNewContext(bundled ?? "", {
-		module,
-		require: createRequire(import.meta.url),
-		exports: module.exports,
-		fetch: upstream,
-		Request,
-		Response: class extends Response {
-			constructor(...args: ConstructorParameters<typeof Response>) {
-				super(...args);
-				Object.assign(this.headers, {
-					getAll: () => this.headers.getSetCookie(),
-				});
-			}
-		},
-		Headers: class extends Headers {
-			override getAll() {
-				return this.getSetCookie();
-			}
-		},
-		URL,
+/**
+ * Starts the ProxyWorker in front of a local server that stands in for the
+ * remote preview.
+ *
+ * @param onPreviewRequest Handles requests that reach the preview.
+ * @returns The proxy, its error listener, and a function to point it at a preview.
+ */
+async function startProxy(onPreviewRequest: RequestListener) {
+	const preview = createServer(onPreviewRequest);
+	preview.listen(0, "127.0.0.1");
+	await once(preview, "listening");
+	onTestFinished(() => {
+		preview.closeAllConnections();
+		preview.close();
 	});
-	const { ProxyWorker } = module.exports as ProxyModule;
-	const secret = "test-controller";
-	const controller = vi
-		.fn<typeof fetch>()
-		.mockResolvedValue(new Response(null));
-	const proxy = new ProxyWorker(
-		{},
-		{
-			PROXY_CONTROLLER: { fetch: controller },
-			PROXY_CONTROLLER_AUTH_SECRET: secret,
-		}
-	);
-	function control(event: ProxyWorkerIncomingRequestBody) {
-		return proxy.fetch(
-			Object.assign(
-				new Request("https://controller", {
-					headers: { Authorization: secret },
-				}),
-				{ cf: { hostMetadata: event } }
-			)
-		);
-	}
+	const { port } = preview.address() as AddressInfo;
+
+	const onError = vi.fn<(event: ErrorEvent) => void>();
+	const controller = new ProxyController(onError, vi.fn());
+	onTestFinished(() => controller.teardown());
+	controller.start(config);
+	const { proxyWorker } = await controller.ready.promise;
+
 	// Remote previews keep the same host across reloads; only the token changes.
 	function play(previewToken: string) {
-		return control({
+		return controller.sendMessageToProxyWorker({
 			type: "play",
 			proxyData: {
 				userWorkerUrl: {
-					protocol: "https:",
-					hostname: "my-worker.my-subdomain.workers.dev",
-					port: "443",
+					protocol: "http:",
+					hostname: "127.0.0.1",
+					port: String(port),
 				},
 				headers: { "cf-workers-preview-token": previewToken },
 			},
 		});
 	}
-	return { proxy, controller, control, play };
+	return { proxyWorker, onError, play };
 }
 
-it("retries remote-binding requests that fail while the proxy is paused", async ({
+it("fails remote binding requests whose connection to the current preview fails", async ({
 	expect,
 }) => {
-	const pending = createDeferred<Response>();
-	const upstream = vi
-		.fn<typeof fetch>()
-		.mockReturnValueOnce(pending.promise)
-		.mockResolvedValue(new Response("new remote binding"));
-	expect(bundled).toBeDefined();
-	const { proxy, control, play } = startProxy(upstream);
-	await play("old-preview");
-	const request = proxy.fetch(
-		new Request("https://binding.example/?MF-Binding=KV")
+	const { proxyWorker, onError, play } = await startProxy((request) =>
+		request.socket.destroy()
 	);
-	await control({ type: "pause" });
-	pending.reject(new TypeError("Preview connection closed"));
-	await vi.waitFor(() => expect(proxy.requestRetryQueue.size).toBe(1));
-	await play("new-preview");
-
-	expect(await (await request).text()).toBe("new remote binding");
-	expect(upstream).toHaveBeenCalledTimes(2);
-	expect(proxy.requestRetryQueue.size).toBe(0);
-});
-
-it("reports failures from the current preview instead of retrying them", async ({
-	expect,
-}) => {
-	const upstream = vi
-		.fn<typeof fetch>()
-		.mockRejectedValueOnce(new TypeError("Preview connection closed"))
-		.mockResolvedValue(new Response("unexpected retry"));
-	expect(bundled).toBeDefined();
-	const { proxy, controller, play } = startProxy(upstream);
 	await play("current-preview");
 
-	await expect(
-		proxy.fetch(new Request("https://binding.example/?MF-Binding=KV"))
-	).rejects.toThrow("Preview connection closed");
-	expect(upstream).toHaveBeenCalledOnce();
-	expect(controller).toHaveBeenCalledOnce();
-	expect(proxy.requestRetryQueue.size).toBe(0);
+	const response = proxyWorker.dispatchFetch("http://localhost/?MF-Binding=KV");
+
+	await vi.waitFor(() =>
+		expect(onError).toHaveBeenCalledWith(
+			expect.objectContaining({ reason: "Error inside ProxyWorker" })
+		)
+	);
+	expect((await response).status).toBe(500);
+});
+
+it("treats failures from a replaced preview on the same host as a reload", async ({
+	expect,
+}) => {
+	const received = createDeferred<IncomingMessage>();
+	const { proxyWorker, onError, play } = await startProxy((request) =>
+		received.resolve(request)
+	);
+	await play("old-preview");
+	// The proxy doesn't retry POSTs, so it answers as soon as it sees the failure.
+	const response = proxyWorker.dispatchFetch(
+		"http://localhost/?MF-Binding=KV",
+		{ method: "POST", body: "value" }
+	);
+	const request = await received.promise;
+	await play("new-preview");
+	request.socket.destroy();
+
+	expect(await (await response).text()).toContain(
+		"Your worker restarted mid-request"
+	);
+	expect(onError).not.toHaveBeenCalled();
 });
