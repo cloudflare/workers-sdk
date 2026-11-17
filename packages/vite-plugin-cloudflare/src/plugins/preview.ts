@@ -1,7 +1,7 @@
+import { prepareContainerImagesForCfConfig } from "@cloudflare/containers-shared";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { buildPublicUrl } from "miniflare";
 import colors from "picocolors";
-import { prepareContainerImagesForVite } from "../containers";
 import { assertIsPreview } from "../context";
 import { getPreviewMiniflareOptions } from "../miniflare-options";
 import { createPlugin, createRequestHandler } from "../utils";
@@ -36,7 +36,7 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 				// referenced directly from Build Output. Remote references are pulled
 				// here so managed registry authentication can be applied. The
 				// Miniflare Container sidecar is always prepared as well.
-				await prepareContainerImagesForVite({
+				await prepareContainerImagesForCfConfig({
 					dockerPath: getDockerPath(),
 					containerOptions,
 					settings: ctx.resolvedPluginConfig.settings,

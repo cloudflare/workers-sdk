@@ -1,16 +1,14 @@
-import {
-	OpenAPI,
-	prepareContainerImagesForDev,
-} from "@cloudflare/containers-shared";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import {
 	configureContainerPull,
 	normalizeContainerImageUris,
-	prepareContainerImagesForVite,
-} from "../containers";
+	prepareContainerImagesForCfConfig,
+} from "../src/cf-config-images";
+import { OpenAPI } from "../src/client";
+import { prepareContainerImagesForDev } from "../src/images";
 
-vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
-	...(await importOriginal<typeof import("@cloudflare/containers-shared")>()),
+vi.mock("../src/images", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../src/images")>()),
 	prepareContainerImagesForDev: vi.fn(async () => ({ aborted: false })),
 }));
 
@@ -103,7 +101,7 @@ describe("configureContainerPull", () => {
 	});
 });
 
-describe("prepareContainerImagesForVite", () => {
+describe("prepareContainerImagesForCfConfig", () => {
 	beforeEach(() => {
 		vi.mocked(prepareContainerImagesForDev)
 			.mockReset()
@@ -122,7 +120,7 @@ describe("prepareContainerImagesForVite", () => {
 	test("prepares a managed-registry Build Output reference for preview", async ({
 		expect,
 	}) => {
-		await prepareContainerImagesForVite({
+		await prepareContainerImagesForCfConfig({
 			dockerPath: "docker",
 			containerOptions: [
 				{
@@ -172,7 +170,7 @@ describe("prepareContainerImagesForVite", () => {
 			}
 		);
 
-		await prepareContainerImagesForVite({
+		await prepareContainerImagesForCfConfig({
 			dockerPath: "docker",
 			containerOptions: [
 				{
@@ -184,7 +182,7 @@ describe("prepareContainerImagesForVite", () => {
 			settings: { accountId: "standard-account" },
 			logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 		});
-		await prepareContainerImagesForVite({
+		await prepareContainerImagesForCfConfig({
 			dockerPath: "docker",
 			containerOptions: [
 				{
@@ -222,7 +220,7 @@ describe("prepareContainerImagesForVite", () => {
 		vi.stubEnv("CLOUDFLARE_API_TOKEN", undefined);
 		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
 
-		await prepareContainerImagesForVite({
+		await prepareContainerImagesForCfConfig({
 			dockerPath: "test-docker",
 			containerOptions: [],
 			settings: {},
@@ -239,7 +237,7 @@ describe("prepareContainerImagesForVite", () => {
 	});
 
 	test("uses the cf registry configuration command", async ({ expect }) => {
-		await prepareContainerImagesForVite({
+		await prepareContainerImagesForCfConfig({
 			dockerPath: "test-docker",
 			containerOptions: [],
 			settings: {},
