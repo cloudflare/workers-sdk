@@ -127,7 +127,8 @@ describe("r2", () => {
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(`
 					[Error: Error: Wrangler only supports uploading files up to 300 MiB in size
-					wormhole-img.png is 301 MiB in size]
+					wormhole-img.png is 301 MiB in size
+					Use --remote --multipart --file <file> to upload larger files.]
 				`);
 				}
 			);

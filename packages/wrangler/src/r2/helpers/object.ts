@@ -58,7 +58,7 @@ export function validateUploadSize(key: string, sizeBytes: number): void {
 				{ binary: true }
 			)} in size\n${key} is ${prettyBytes(sizeBytes, {
 				binary: true,
-			})} in size`,
+			})} in size\nUse --remote --multipart --file <file> to upload larger files.`,
 			{ code: 1, telemetryMessage: "r2 object upload too large" }
 		);
 	}

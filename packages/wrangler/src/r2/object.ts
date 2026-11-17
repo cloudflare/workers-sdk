@@ -18,6 +18,8 @@ import { requireAuth } from "../user";
 import { isLocal } from "../utils/is-local";
 import { logBulkProgress, validateBulkPutFile } from "./helpers/bulk";
 import { isDataCatalogConflict } from "./helpers/misc";
+import { uploadMultipartFile } from "./helpers/multipart";
+import { createRemoteMultipartTransport } from "./helpers/multipart-transport";
 import {
 	deleteR2Object,
 	getR2Object,
@@ -250,6 +252,12 @@ export const r2ObjectPutCommand = createCommand({
 			demandOption: true,
 		},
 		...commonPutArguments,
+		multipart: {
+			describe:
+				"Upload a file in parts and verify its size and SHA-256 (requires --remote and --file, plus Workers preview permissions)",
+			type: "boolean",
+			conflicts: ["local", "pipe"],
+		},
 		file: {
 			describe: "The path of the file to upload",
 			alias: "f",
@@ -281,6 +289,86 @@ export const r2ObjectPutCommand = createCommand({
 		}
 
 		const { bucket, key } = validateAndReturnBucketAndKey(yArgs.objectPath);
+		if (yArgs.multipart) {
+			if (yArgs.remote !== true || !file) {
+				throw new CommandLineArgsError(
+					"--multipart requires --remote and --file.",
+					{
+						telemetryMessage: "r2 multipart arguments invalid",
+					}
+				);
+			}
+			let cacheExpiry: Date | undefined;
+			if (yArgs.expires !== undefined) {
+				cacheExpiry = new Date(yArgs.expires);
+				if (Number.isNaN(cacheExpiry.getTime())) {
+					throw new CommandLineArgsError(
+						"--expires must be a valid HTTP date for multipart uploads.",
+						{ telemetryMessage: "r2 multipart expires invalid" }
+					);
+				}
+			}
+			const controller = new AbortController();
+			function interrupt() {
+				controller.abort(
+					new UserError("Multipart upload interrupted.", {
+						telemetryMessage: "r2 multipart interrupted",
+					})
+				);
+			}
+			process.once("SIGINT", interrupt);
+			process.once("SIGTERM", interrupt);
+			try {
+				const result = await uploadMultipartFile(
+					file,
+					async () => {
+						if (!yArgs.force) {
+							const confirmed = await confirm(
+								"Multipart upload may overwrite an existing object. If this bucket has Basin Catalog enabled, this operation could leave the catalog in an invalid state. Continue?",
+								{ defaultValue: false, fallbackValue: false }
+							);
+							if (!confirmed) {
+								throw new UserError(
+									"Multipart upload cancelled. Use --force to acknowledge this warning in non-interactive environments.",
+									{ telemetryMessage: "r2 multipart confirmation declined" }
+								);
+							}
+						}
+						controller.signal.throwIfAborted();
+						logger.log(
+							`Creating multipart object "${key}" in bucket "${bucket}".`
+						);
+						return createRemoteMultipartTransport(
+							config,
+							bucket,
+							key,
+							{
+								httpMetadata: {
+									contentType: yArgs.contentType,
+									contentDisposition: yArgs.contentDisposition,
+									contentEncoding: yArgs.contentEncoding,
+									contentLanguage: yArgs.contentLanguage,
+									cacheControl: yArgs.cacheControl,
+									cacheExpiry,
+								},
+								storageClass: yArgs.storageClass,
+							},
+							yArgs.jurisdiction
+						);
+					},
+					controller.signal
+				);
+				if (result !== undefined) {
+					logger.log(
+						`Upload complete. Verified ${result.size} bytes, SHA-256: ${result.sha256}`
+					);
+				}
+			} finally {
+				process.removeListener("SIGINT", interrupt);
+				process.removeListener("SIGTERM", interrupt);
+			}
+			return;
+		}
 
 		let objectStream: ReadableStream;
 		let sizeBytes: number;
