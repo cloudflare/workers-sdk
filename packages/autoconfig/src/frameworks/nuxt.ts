@@ -4,18 +4,21 @@ import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import {
 	mergeObjectProperties,
+	parseFile,
 	transformFile,
 } from "@cloudflare/shared-ast-primitives";
 import { parseJSONC } from "@cloudflare/workers-utils";
 import { applyEdits, modify } from "jsonc-parser";
 import * as recast from "recast";
 import { Framework } from "./framework-class";
+import { getStaticPropertyName } from "./utils/vite-config";
 import { installCloudflareVitePlugin } from "./utils/vite-plugin";
 import { CF_VITE_PLUGIN_VERSION_RANGE } from "./utils/vite-plugin-version";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
 } from "./framework-class";
+import type { Program } from "esprima";
 
 const updateNuxtConfig = (projectPath: string) => {
 	const configFile = path.join(projectPath, "nuxt.config.ts");
@@ -160,6 +163,49 @@ function removeServerTsconfigReference(projectPath: string): void {
 	}
 }
 
+/**
+ * Checks whether nuxt.config.ts turns off server-side rendering with a literal `ssr: false`,
+ * in which case Nuxt builds a static single-page app and no server.
+ *
+ * @param projectPath The path of the project
+ * @returns Whether the `defineNuxtConfig()` object sets `ssr: false`
+ */
+function disablesSsr(projectPath: string): boolean {
+	let ast: Program | null = null;
+	try {
+		ast = parseFile(path.join(projectPath, "nuxt.config.ts"));
+	} catch {}
+
+	if (!ast) {
+		return false;
+	}
+
+	let ssrDisabled = false;
+	recast.visit(ast, {
+		visitCallExpression(n) {
+			const callee = n.node.callee as recast.types.namedTypes.Identifier;
+			const config = n.node.arguments[0];
+			if (
+				callee.name !== "defineNuxtConfig" ||
+				config?.type !== "ObjectExpression"
+			) {
+				return this.traverse(n);
+			}
+
+			ssrDisabled = config.properties.some(
+				(prop) =>
+					prop.type === "ObjectProperty" &&
+					getStaticPropertyName(prop) === "ssr" &&
+					prop.value.type === "BooleanLiteral" &&
+					prop.value.value === false
+			);
+			return false;
+		},
+	});
+
+	return ssrDisabled;
+}
+
 export class Nuxt extends Framework {
 	async configure({
 		dryRun,
@@ -178,6 +224,17 @@ export class Nuxt extends Framework {
 				});
 				updateNuxtConfigForCf(projectPath);
 				removeServerTsconfigReference(projectPath);
+			}
+
+			if (disablesSsr(projectPath)) {
+				return {
+					buildTool: "vite",
+					workerConfig: {
+						assets: {
+							notFoundHandling: "single-page-application",
+						},
+					},
+				};
 			}
 
 			return {
