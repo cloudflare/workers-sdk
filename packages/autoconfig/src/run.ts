@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
@@ -21,6 +21,7 @@ import {
 	isNodejsCompatDefaultOn,
 	parseJSONC,
 } from "@cloudflare/workers-utils";
+import { mergeCloudflareConfig } from "./cloudflare-config";
 import {
 	assertNonConfigured,
 	assertProjectCommandsAvailable,
@@ -309,7 +310,11 @@ export async function runAutoConfig(
 
 	if (target === "cf") {
 		if (workerConfig !== null) {
-			await saveCloudflareConfig(autoConfigDetails.projectPath, workerConfig);
+			await saveCloudflareConfig(
+				autoConfigDetails.projectPath,
+				workerConfig,
+				configurationResults.workerConfig ?? {}
+			);
 		}
 		// Only projects with Worker code (an entrypoint) use the types that `cf-typegen` generates
 		if (workerConfig?.entrypoint) {
@@ -520,19 +525,45 @@ export async function saveWranglerJsonc(
 }
 
 /**
- * Writes the Worker configuration used by `cf`.
+ * Writes the Worker configuration used by `cf`, merging it into an existing
+ * `cloudflare.config.ts` instead of replacing it.
  *
  * @param projectPath The project directory
  * @param workerConfig The Worker configuration to write
+ * @param frameworkWorkerConfig The part of `workerConfig` set by the framework
  */
 async function saveCloudflareConfig(
 	projectPath: string,
-	workerConfig: WorkerConfig
+	workerConfig: WorkerConfig,
+	frameworkWorkerConfig: Partial<WorkerConfig>
 ): Promise<void> {
 	await writeFile(
 		resolve(projectPath, "cloudflare.config.ts"),
-		renderCloudflareConfig(workerConfig)
+		getCloudflareConfigContent(projectPath, workerConfig, frameworkWorkerConfig)
 	);
+}
+
+/**
+ * Renders the `cloudflare.config.ts` that autoconfig writes.
+ *
+ * @param projectPath The project directory
+ * @param workerConfig The Worker configuration to write
+ * @param frameworkWorkerConfig The part of `workerConfig` set by the framework
+ * @returns A new configuration module, or the existing one with the configuration merged into it
+ */
+function getCloudflareConfigContent(
+	projectPath: string,
+	workerConfig: WorkerConfig,
+	frameworkWorkerConfig: Partial<WorkerConfig>
+): string {
+	const configPath = resolve(projectPath, "cloudflare.config.ts");
+	return existsSync(configPath)
+		? mergeCloudflareConfig(
+				readFileSync(configPath, "utf8"),
+				workerConfig,
+				frameworkWorkerConfig
+			)
+		: renderCloudflareConfig(workerConfig);
 }
 
 /**
@@ -717,8 +748,23 @@ export async function buildOperationsSummary(
 	}
 
 	if (target === "cf" && workerConfig) {
-		logger.log("📄 Create cloudflare.config.ts:");
-		logger.log(indentFileContent(renderCloudflareConfig(workerConfig)));
+		const configExists = existsSync(
+			resolve(autoConfigDetails.projectPath, "cloudflare.config.ts")
+		);
+		logger.log(
+			configExists
+				? "📄 Update cloudflare.config.ts:"
+				: "📄 Create cloudflare.config.ts:"
+		);
+		logger.log(
+			indentFileContent(
+				getCloudflareConfigContent(
+					autoConfigDetails.projectPath,
+					workerConfig,
+					configurationResults.workerConfig ?? {}
+				)
+			)
+		);
 		logger.log("");
 	}
 
