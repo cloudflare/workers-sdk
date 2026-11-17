@@ -72,43 +72,8 @@ describe("SolidStart", () => {
 			export default defineConfig({
 			  plugins: [solidStart(),
 			    cloudflare()
-			  ],
-
-			  environments: {
-			    ssr: {
-			      optimizeDeps: {
-			        exclude: ["@solidjs/start"]
-			      }
-			    }
-			  }
+			  ]
 			});"
 		`);
-	});
-
-	it("asks for the exclude by hand when the Vite config already has environments", async ({
-		expect,
-	}) => {
-		await seed({
-			"vite.config.js": dedent`
-				import { defineConfig } from "vite";
-				import { nitro } from "nitro/vite";
-				import { solidStart } from "@solidjs/start/config";
-
-				export default defineConfig({
-				  plugins: [solidStart(), nitro()],
-				  environments: { ssr: { optimizeDeps: { exclude: ["foo"] } } },
-				});
-			`,
-		});
-		const context = createMockContext();
-
-		await configureForCf(context);
-
-		expect(context.logger.warn).toHaveBeenCalledWith(
-			expect.stringContaining("`environments.ssr.optimizeDeps.exclude`")
-		);
-		const viteConfig = readFileSync("vite.config.js", "utf8");
-		expect(viteConfig.match(/environments/g)).toHaveLength(1);
-		expect(viteConfig).toContain('exclude: ["foo"]');
 	});
 });

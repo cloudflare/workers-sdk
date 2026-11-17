@@ -174,8 +174,8 @@ describe("Framework.validateFrameworkVersion()", () => {
 	);
 
 	it.for([
-		{ target: "cf", version: "2.0.0", throws: false },
-		{ target: "cf", version: "1.3.2", throws: true },
+		{ target: "cf", version: "2.2.3", throws: false },
+		{ target: "cf", version: "2.2.2", throws: true },
 		{ target: "wrangler", version: "1.3.2", throws: false },
 	] as const)(
 		"checks the SolidStart version for $target ($version)",

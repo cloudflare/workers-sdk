@@ -156,9 +156,10 @@ export function getAllKnownFrameworks(target: AutoConfigTarget) {
 				target === "cf"
 					? {
 							name: "@solidjs/start",
-							// SolidStart 2 runs on Vite environments, which cf builds with the Cloudflare Vite plugin
-							// See: https://docs.solidjs.com/solid-start/v2/guides/deployment-plugins
-							minimumVersion: "2.0.0",
+							// 2.2.3 keeps `@solidjs/start` out of server pre-bundling, which the Cloudflare
+							// Vite plugin enables, so that server functions work in dev
+							// See: https://github.com/solidjs/solid-start/pull/2380
+							minimumVersion: "2.2.3",
 							maximumKnownMajorVersion: "2",
 						}
 					: {
