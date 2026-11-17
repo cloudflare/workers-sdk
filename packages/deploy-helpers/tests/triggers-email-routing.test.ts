@@ -382,7 +382,7 @@ describe("triggersDeploy preflight", () => {
 
 	it.for([
 		{ addresses: undefined, targets: [] },
-		{ addresses: [], targets: ["  email routing addresses: 0"] },
+		{ addresses: [], targets: ["  email routing addresses: remove all"] },
 		{
 			addresses: ["support@example.com", "hello@example.com"],
 			targets: ["  email routing addresses: 2"],

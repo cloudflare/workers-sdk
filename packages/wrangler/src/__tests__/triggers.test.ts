@@ -76,17 +76,27 @@ describe("triggers deploy", () => {
 		expect(std.out).not.toContain("No targets to deploy");
 	});
 
-	it("previews Email Routing addresses", async ({ expect }) => {
-		writeWranglerConfig({
-			name: "configured-worker",
-			workers_dev: false,
+	it.for([
+		{ addresses: [], target: "  email routing addresses: remove all" },
+		{
 			addresses: ["support@example.com"],
-		});
+			target: "  email routing addresses: 1",
+		},
+	])(
+		"previews Email Routing addresses=$addresses",
+		async ({ addresses, target }, { expect }) => {
+			writeWranglerConfig({
+				name: "configured-worker",
+				workers_dev: false,
+				addresses,
+			});
 
-		await runWrangler("triggers deploy --dry-run");
+			await runWrangler("triggers deploy --dry-run");
 
-		expect(std.out).toContain("  email routing addresses: 1");
-	});
+			expect(std.out).toContain(target);
+			expect(std.out).not.toContain("No targets to deploy");
+		}
+	);
 
 	it("rejects external Workflow settings during a dry run", async ({
 		expect,

@@ -132,9 +132,11 @@ export async function triggersDeploy(
 			...(eventTriggers !== undefined
 				? [`event triggers: ${eventTriggers.length}`]
 				: []),
-			...(config.addresses !== undefined
-				? [`email routing addresses: ${config.addresses.length}`]
-				: []),
+			...(config.addresses === undefined
+				? []
+				: config.addresses.length === 0
+					? ["email routing addresses: remove all"]
+					: [`email routing addresses: ${config.addresses.length}`]),
 		];
 		if (targets.length > 0) {
 			logger.log(
