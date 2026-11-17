@@ -1,6 +1,7 @@
 import { ImageRegistriesService, ImageRegistryPermissions } from "./client";
 import { getCloudflareContainerRegistry } from "./knobs";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { ContainerRegistryConfig } from "@cloudflare/workers-utils/compliance";
+
 export interface DeleteContainerImageResult {
 	digest: string;
 	/** Present when deletion succeeded but the garbage-collection request failed. */
@@ -14,7 +15,7 @@ export interface ContainerImageRepository {
 
 interface RegistryOptions {
 	accountId: string;
-	complianceConfig?: ComplianceConfig;
+	complianceConfig?: ContainerRegistryConfig;
 }
 
 const MAX_REPOSITORY_LENGTH = 255;
@@ -128,7 +129,7 @@ interface CatalogWithTagsResponse {
 
 async function listReposWithTags(
 	creds: string,
-	complianceConfig?: ComplianceConfig
+	complianceConfig?: ContainerRegistryConfig
 ): Promise<Record<string, string[]>> {
 	const url = new URL(
 		`https://${getCloudflareContainerRegistry(complianceConfig)}`
@@ -254,7 +255,7 @@ async function deleteTag(
 
 async function getCreds(
 	permissions: ImageRegistryPermissions[],
-	complianceConfig?: ComplianceConfig
+	complianceConfig?: ContainerRegistryConfig
 ): Promise<string> {
 	const credentials =
 		await ImageRegistriesService.generateImageRegistryCredentials(

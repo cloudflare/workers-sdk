@@ -346,6 +346,31 @@ describe("buildCommand", () => {
 		]);
 	});
 
+	it("pushes a built image to a jurisdiction's managed registry", async ({
+		expect,
+	}) => {
+		const { dir, args } = createBuildArgs();
+		tempDirs.push(dir);
+		inspectOutputs = [
+			"[]",
+			"53387881 2",
+			`["frm.registry.cloudflare.com/some-account-id/test-app@sha256:${"a".repeat(64)}"]`,
+		];
+
+		await buildCommand(
+			{ PATH: dir, tag: args.tag, pathToDocker: "docker", push: true },
+			{ compliance_region: "public", jurisdiction: "fedramp" }
+		);
+
+		expect(
+			ImageRegistriesService.generateImageRegistryCredentials
+		).toHaveBeenCalledWith("frm.registry.cloudflare.com", expect.anything());
+		expectSpawnWith([
+			"push",
+			"frm.registry.cloudflare.com/some-account-id/test-app:tag",
+		]);
+	});
+
 	it.for([0, 1])(
 		"only cleans the source tag after a successful push (exit code %s)",
 		async (exitCode, { expect }) => {
@@ -720,6 +745,69 @@ describe("deploy container image build and push", () => {
 		expect(builtImage.localTagCleaned).toBe(true);
 	});
 
+	it.for([
+		{ jurisdiction: "eu", registry: "eu.registry.cloudflare.com" },
+		{ jurisdiction: "fedramp", registry: "frm.registry.cloudflare.com" },
+		{ jurisdiction: "us", registry: "us.registry.cloudflare.com" },
+	])(
+		"pushes a built image to the $registry registry for the $jurisdiction jurisdiction",
+		async ({ jurisdiction, registry }, { expect }) => {
+			const digest = `${registry}/some-account-id/test-app@sha256:${"a".repeat(64)}`;
+			inspectOutputs = ["[]", "53387881 2", JSON.stringify([digest])];
+			const builtImage: BuiltContainerImage = {
+				container: { ...dockerfileContainer, constraints: { jurisdiction } },
+				localTag: TEST_LOCAL_TAG,
+			};
+
+			await expect(
+				pushBuiltContainerImage(
+					builtImage,
+					"Galaxy-Class",
+					"docker",
+					"some-account-id",
+					{ compliance_region: "public" }
+				)
+			).resolves.toStrictEqual({ remoteDigest: digest });
+			expect(
+				ImageRegistriesService.generateImageRegistryCredentials
+			).toHaveBeenCalledWith(registry, expect.anything());
+			expectSpawnWith([
+				"tag",
+				TEST_LOCAL_TAG,
+				`${registry}/some-account-id/test-app:Galaxy`,
+			]);
+			expectSpawnWith(["push", `${registry}/some-account-id/test-app:Galaxy`]);
+		}
+	);
+
+	it("keeps the FedRAMP High registry for a jurisdiction", async ({
+		expect,
+	}) => {
+		const digest = `registry.fed.cloudflare.com/some-account-id/test-app@sha256:${"a".repeat(64)}`;
+		inspectOutputs = ["[]", "53387881 2", JSON.stringify([digest])];
+		const builtImage: BuiltContainerImage = {
+			container: {
+				...dockerfileContainer,
+				constraints: { jurisdiction: "us" },
+			},
+			localTag: TEST_LOCAL_TAG,
+		};
+
+		await expect(
+			pushBuiltContainerImage(
+				builtImage,
+				"Galaxy-Class",
+				"docker",
+				"some-account-id",
+				{ compliance_region: "fedramp_high" }
+			)
+		).resolves.toStrictEqual({ remoteDigest: digest });
+		expectSpawnWith([
+			"push",
+			"registry.fed.cloudflare.com/some-account-id/test-app:Galaxy",
+		]);
+	});
+
 	it("retains a built image when its remote digest already exists", async ({
 		expect,
 	}) => {
@@ -1046,6 +1134,27 @@ describe("pushCommand", () => {
 		expectSpawnWith([
 			"push",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+	});
+
+	it("pushes to a jurisdiction's managed registry", async ({ expect }) => {
+		await pushCommand(
+			{ TAG: "test-app:tag", pathToDocker: "docker" },
+			"some-account-id",
+			{ compliance_region: "public", jurisdiction: "eu" }
+		);
+
+		expect(
+			ImageRegistriesService.generateImageRegistryCredentials
+		).toHaveBeenCalledWith("eu.registry.cloudflare.com", expect.anything());
+		expectSpawnWith([
+			"tag",
+			"test-app:tag",
+			"eu.registry.cloudflare.com/some-account-id/test-app:tag",
+		]);
+		expectSpawnWith([
+			"push",
+			"eu.registry.cloudflare.com/some-account-id/test-app:tag",
 		]);
 	});
 

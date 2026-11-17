@@ -52,8 +52,9 @@ describe("containers images list", () => {
 			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
-			      --filter  Regex to filter results  [string]
-			      --json    Format output as JSON  [boolean] [default: false]"
+			      --filter        Regex to filter results  [string]
+			      --json          Format output as JSON  [boolean] [default: false]
+			      --jurisdiction  Use the managed registry for this jurisdiction instead of the default registry. Ignored in the FedRAMP High compliance region, which has a single registry.  [string] [choices: "eu", "fedramp", "us"]"
 		`);
 	});
 
@@ -142,6 +143,35 @@ describe("containers images list", () => {
 			"REPOSITORY  TAG
 			two         thousand
 			two         twenty"
+		`);
+	});
+
+	it("should list images in a jurisdiction's registry", async ({ expect }) => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		msw.use(
+			http.post("*/registries/:domain/credentials", async ({ params }) => {
+				expect(params.domain).toEqual("eu.registry.cloudflare.com");
+				return HttpResponse.json(
+					wrapV4Response({
+						account_id: "1234",
+						registry_host: "eu.registry.cloudflare.com",
+						username: "foo",
+						password: "bar",
+					})
+				);
+			}),
+			http.get("*/v2/_catalog", async ({ request }) => {
+				expect(new URL(request.url).host).toEqual("eu.registry.cloudflare.com");
+				return HttpResponse.json({ repositories: { one: ["hundred"] } });
+			})
+		);
+
+		await runWrangler("containers images list --jurisdiction eu");
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"REPOSITORY  TAG
+			one         hundred"
 		`);
 	});
 
@@ -248,7 +278,8 @@ describe("containers images delete", () => {
 			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
-			  -y, --skip-confirmation  Skip confirmation prompt for deleting an image  [boolean] [default: false]"
+			  -y, --skip-confirmation  Skip confirmation prompt for deleting an image  [boolean] [default: false]
+			      --jurisdiction       Use the managed registry for this jurisdiction instead of the default registry. Ignored in the FedRAMP High compliance region, which has a single registry.  [string] [choices: "eu", "fedramp", "us"]"
 		`);
 	});
 
@@ -263,6 +294,19 @@ describe("containers images delete", () => {
 			🤖 Using fallback value in non-interactive context: yes
 			Deleted one:hundred (some-digest)"
 		`);
+	});
+
+	it("should delete images from a jurisdiction's registry", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		mockDeleteImage(expect, "us.registry.cloudflare.com");
+		await runWrangler(
+			"containers images delete one:hundred -y --jurisdiction us"
+		);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+		expect(std.out).toContain("Deleted one:hundred (some-digest)");
 	});
 
 	it("reports deletion success with a warning when the GC request fails", async ({
@@ -390,21 +434,29 @@ function mockDeleteImage(expect: ExpectStatic, registry: string) {
 				);
 			}
 		),
-		http.head("*/v2/:accountId/:image/manifests/:tag", async ({ params }) => {
-			expect(params.accountId).toEqual("some-account-id");
-			expect(params.image).toEqual("one");
-			expect(params.tag).toEqual("hundred");
-			return new HttpResponse("", {
-				status: 200,
-				headers: { "Docker-Content-Digest": "some-digest" },
-			});
-		}),
-		http.delete("*/v2/:accountId/:image/manifests/:tag", async ({ params }) => {
-			expect(params.accountId).toEqual("some-account-id");
-			expect(params.image).toEqual("one");
-			expect(params.tag).toEqual("hundred");
-			return new HttpResponse("", { status: 200 });
-		}),
+		http.head(
+			"*/v2/:accountId/:image/manifests/:tag",
+			async ({ params, request }) => {
+				expect(new URL(request.url).host).toEqual(registry);
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.image).toEqual("one");
+				expect(params.tag).toEqual("hundred");
+				return new HttpResponse("", {
+					status: 200,
+					headers: { "Docker-Content-Digest": "some-digest" },
+				});
+			}
+		),
+		http.delete(
+			"*/v2/:accountId/:image/manifests/:tag",
+			async ({ params, request }) => {
+				expect(new URL(request.url).host).toEqual(registry);
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.image).toEqual("one");
+				expect(params.tag).toEqual("hundred");
+				return new HttpResponse("", { status: 200 });
+			}
+		),
 		http.put("*/v2/gc/layers", async () => {
 			return new HttpResponse("", { status: 200 });
 		})

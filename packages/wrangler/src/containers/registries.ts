@@ -10,6 +10,7 @@ import {
 	ApiError,
 	ExternalRegistryKind,
 	getAndValidateRegistryType,
+	getCloudflareContainerRegistries,
 	getCloudflareContainerRegistry,
 	formatError,
 	validateAndEncodeGarKey,
@@ -684,11 +685,12 @@ async function registryCredentialsCommand(
 	},
 	config: Config
 ) {
-	const cloudflareRegistry = getCloudflareContainerRegistry(config);
-	const domain = credentialsArgs.DOMAIN || cloudflareRegistry;
-	if (domain !== cloudflareRegistry) {
+	const cloudflareRegistries = getCloudflareContainerRegistries(config);
+	const domain =
+		credentialsArgs.DOMAIN || getCloudflareContainerRegistry(config);
+	if (!cloudflareRegistries.includes(domain)) {
 		throw new UserError(
-			`The credentials command only accepts the Cloudflare managed registry (${cloudflareRegistry}).`,
+			`The credentials command only accepts Cloudflare managed registries: ${cloudflareRegistries.join(", ")}.`,
 			{
 				telemetryMessage:
 					"containers registries credentials unsupported registry",
