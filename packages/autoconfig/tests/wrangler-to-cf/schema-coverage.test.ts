@@ -4,11 +4,11 @@ import { describe, it } from "vitest";
 import {
 	KNOWN_FIELDS,
 	convertWranglerConfig,
-} from "../../src/codemods/wrangler-to-cf/config-converter";
+} from "../../src/wrangler-to-cf/config-converter";
 import {
 	renderCloudflareConfig,
 	renderWranglerConfig,
-} from "../../src/codemods/wrangler-to-cf/config-renderer";
+} from "../../src/wrangler-to-cf/config-renderer";
 import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 const BASE_CONFIG = {

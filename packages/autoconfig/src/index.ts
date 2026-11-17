@@ -43,3 +43,10 @@ export {
 } from "./errors";
 
 export { getInstalledPackageVersion } from "@cloudflare/workers-utils";
+
+export { migrateWranglerToCf } from "./wrangler-to-cf";
+export type {
+	MigrationFollowUp,
+	WranglerToCfMigrationOptions,
+	WranglerToCfMigrationResult,
+} from "./wrangler-to-cf";

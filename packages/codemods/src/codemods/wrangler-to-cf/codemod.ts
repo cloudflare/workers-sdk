@@ -1,6 +1,6 @@
 import path from "node:path";
 import { fileExists, filterByFileRestrictions } from "../../files";
-import { migrateWranglerToCf } from ".";
+import { migrateWranglerToCf } from "./migrate";
 import type { Codemod, CodemodContext } from "../../types";
 
 const DEFAULT_CONFIG_FILES = [

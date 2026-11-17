@@ -289,7 +289,6 @@ describe("the real workspace", () => {
 		expect(tierNames(tiers)).toMatchInlineSnapshot(`
 			[
 			  [
-			    "@cloudflare/codemods",
 			    "@cloudflare/config",
 			    "@cloudflare/kv-asset-handler",
 			    "@cloudflare/pages-functions",
@@ -315,6 +314,7 @@ describe("the real workspace", () => {
 			    "@cloudflare/vite-plugin",
 			  ],
 			  [
+			    "@cloudflare/codemods",
 			    "@cloudflare/deploy-helpers",
 			  ],
 			]

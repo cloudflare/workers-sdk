@@ -42,15 +42,16 @@
 		"test:ci": "vitest run",
 		"type:tests": "tsc -p ./test/tsconfig.json"
 	},
+	"dependencies": {
+		"@cloudflare/autoconfig": "workspace:*"
+	},
 	"devDependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/shared-ast-primitives": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*",
 		"@types/node": "catalog:default",
-		"@types/semver": "^7.5.1",
 		"esbuild": "catalog:default",
-		"semver": "^7.7.1",
 		"tinyglobby": "catalog:default",
 		"tsdown": "catalog:default",
 		"typescript": "catalog:default",

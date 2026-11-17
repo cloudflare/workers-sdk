@@ -2,8 +2,8 @@ import { describe, it } from "vitest";
 import {
 	renderCloudflareConfig,
 	renderWranglerConfig,
-} from "../src/codemods/wrangler-to-cf/config-renderer";
-import type { ConvertedWranglerConfig } from "../src/codemods/wrangler-to-cf/types";
+} from "../../src/wrangler-to-cf/config-renderer";
+import type { ConvertedWranglerConfig } from "../../src/wrangler-to-cf/types";
 
 function createConvertedConfig(): ConvertedWranglerConfig {
 	return {
