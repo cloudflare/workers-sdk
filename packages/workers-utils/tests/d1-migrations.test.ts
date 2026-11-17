@@ -336,6 +336,19 @@ describe("readD1Migrations", () => {
 		]);
 	});
 
+	it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+		"throws when the migrations directory can't be read",
+		async ({ expect }) => {
+			fs.mkdirSync("migrations");
+			fs.chmodSync("migrations", 0o311);
+			try {
+				await expect(readD1Migrations({})).rejects.toThrow("EACCES");
+			} finally {
+				fs.chmodSync("migrations", 0o755);
+			}
+		}
+	);
+
 	it("throws when the migrations directory does not exist", async ({
 		expect,
 	}) => {

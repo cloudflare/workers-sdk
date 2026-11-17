@@ -80,6 +80,8 @@ export async function readD1Migrations(
 			telemetryMessage: "d1 migrations missing migrations directory",
 		});
 	}
+	// Throw read errors such as `EACCES`, which getD1MigrationFiles() skips
+	fs.readdirSync(migrationsPath);
 	const files = getD1MigrationFiles({ ...options, projectPath });
 	return files.map(({ name, filePath }) => {
 		const migration = fs.readFileSync(filePath, "utf8");
