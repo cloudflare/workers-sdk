@@ -11,6 +11,24 @@ vi.mock("../../src/frameworks/utils/vite-plugin", () => ({
 	installCloudflareVitePlugin: vi.fn(),
 }));
 
+/**
+ * Configures the project in the current directory for cf.
+ *
+ * @returns The configuration results
+ */
+function configureForCf() {
+	return new Nuxt({ id: "nuxt", name: "Nuxt" }).configure({
+		target: "cf",
+		projectPath: process.cwd(),
+		outputDir: "dist",
+		workerName: "my-nuxt-app",
+		dryRun: false,
+		packageManager: NpmPackageManager,
+		isWorkspaceRoot: false,
+		context: createMockContext(),
+	});
+}
+
 describe("Nuxt", () => {
 	runInTempDir();
 
@@ -48,16 +66,7 @@ describe("Nuxt", () => {
 			`,
 		});
 
-		const result = await new Nuxt({ id: "nuxt", name: "Nuxt" }).configure({
-			target: "cf",
-			projectPath: process.cwd(),
-			outputDir: "dist",
-			workerName: "my-nuxt-app",
-			dryRun: false,
-			packageManager: NpmPackageManager,
-			isWorkspaceRoot: false,
-			context: createMockContext(),
-		});
+		const result = await configureForCf();
 
 		expect(result).toEqual({
 			buildTool: "vite",
@@ -99,5 +108,26 @@ describe("Nuxt", () => {
 			  }
 			})"
 		`);
+	});
+
+	it("serves the app from static assets when nuxt.config.ts sets ssr: false", async ({
+		expect,
+	}) => {
+		await seed({
+			"nuxt.config.ts": dedent`
+				export default defineNuxtConfig({
+				  ssr: false,
+				})
+			`,
+		});
+
+		const result = await configureForCf();
+
+		expect(result).toEqual({
+			buildTool: "vite",
+			workerConfig: {
+				assets: { notFoundHandling: "single-page-application" },
+			},
+		});
 	});
 });
