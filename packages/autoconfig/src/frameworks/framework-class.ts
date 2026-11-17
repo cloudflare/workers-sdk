@@ -13,6 +13,11 @@ export abstract class Framework {
 	declare readonly env?: Readonly<Record<string, string>>;
 	/** Whether this framework's build and development commands accept `--mode`. */
 	readonly supportsMode: boolean = false;
+	/**
+	 * The commands that develop and build this framework. Without them, detection uses the
+	 * commands `@netlify/build-info` reports for the framework.
+	 */
+	declare readonly commands?: { dev: string; build: string };
 
 	#frameworkVersion: string | undefined;
 	get frameworkVersion(): string {

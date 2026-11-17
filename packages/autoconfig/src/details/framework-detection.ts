@@ -15,7 +15,11 @@ import chalk from "chalk";
 import * as find from "empathic/find";
 import * as walk from "empathic/walk";
 import dedent from "ts-dedent";
-import { isFrameworkSupported, isKnownFramework } from "../frameworks";
+import {
+	getFrameworkClassInstance,
+	isFrameworkSupported,
+	isKnownFramework,
+} from "../frameworks";
 import { staticFramework } from "../frameworks/all-frameworks";
 import type { AutoConfigContext, AutoConfigTarget } from "../context";
 import type { PackageManager } from "@cloudflare/workers-utils";
@@ -131,14 +135,19 @@ export async function detectFramework(
 		// built-in commands. cf needs direct commands for supported frameworks, but
 		// delegates unsupported frameworks to an installed Cloudflare dev server and
 		// must not execute their generic package scripts.
-		const detectedFrameworkSettings = frameworkIsSupported
-			? project.frameworks
-					.get(maybeDetectedFramework.baseDirectory ?? "")
-					?.find(({ id }) => id === frameworkId)
+		const commands = frameworkIsSupported
+			? getFrameworkClassInstance(frameworkId, target).commands
 			: undefined;
-		maybeDetectedFramework.devCommand = detectedFrameworkSettings?.dev?.command;
+		const detectedFrameworkSettings =
+			frameworkIsSupported && !commands
+				? project.frameworks
+						.get(maybeDetectedFramework.baseDirectory ?? "")
+						?.find(({ id }) => id === frameworkId)
+				: undefined;
+		maybeDetectedFramework.devCommand =
+			commands?.dev ?? detectedFrameworkSettings?.dev?.command;
 		maybeDetectedFramework.buildCommand =
-			detectedFrameworkSettings?.build?.command;
+			commands?.build ?? detectedFrameworkSettings?.build?.command;
 	}
 
 	if (

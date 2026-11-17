@@ -470,6 +470,11 @@ function writeEntryServerTsx(
 }
 
 export class ReactRouter extends Framework {
+	readonly commands = {
+		dev: "react-router dev",
+		build: "react-router build",
+	};
+
 	readonly env = {
 		CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT: "true",
 	} as const;

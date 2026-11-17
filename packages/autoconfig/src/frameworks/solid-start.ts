@@ -24,6 +24,8 @@ import type {
 } from "./framework-class";
 
 export class SolidStart extends Framework {
+	readonly commands = { dev: "vite dev", build: "vite build" };
+
 	async configure({
 		projectPath,
 		dryRun,

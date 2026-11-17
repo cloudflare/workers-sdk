@@ -20,6 +20,8 @@ const VINEXT_CONFIGURATION_DESCRIPTION =
 	"Configuring project for Next.js with vinext by running `vinext init`";
 
 export class NextJs extends Framework {
+	readonly commands = { dev: "next", build: "next build" };
+
 	async configure(
 		options: ConfigurationOptions
 	): Promise<ConfigurationResults> {

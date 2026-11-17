@@ -141,6 +141,10 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "buildCommand": "npm run build",
 				  "configured": false,
 				  "framework": Astro {
+				    "commands": {
+				      "build": "astro build",
+				      "dev": "astro dev",
+				    },
 				    "configurationDescription": "Configuring project for Astro with "astro add cloudflare"",
 				    "id": "astro",
 				    "name": "Astro",
