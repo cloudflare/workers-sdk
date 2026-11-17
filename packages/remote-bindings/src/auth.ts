@@ -1,9 +1,5 @@
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import {
-	createCfAuth,
-	createCfProfileStore,
-} from "@cloudflare/workers-auth/cf";
-import {
 	createWranglerAuth,
 	createWranglerProfileStore,
 } from "@cloudflare/workers-auth/wrangler";
@@ -20,6 +16,7 @@ class NoDefaultValueProvided extends UserError {
 	}
 }
 
+/** Create authentication for v1 remote sessions using Wrangler profiles. */
 export function createRemoteBindingsAuth(logger: RemoteBindingsLogger) {
 	const context = {
 		logger,
@@ -56,13 +53,12 @@ export function createRemoteBindingsAuth(logger: RemoteBindingsLogger) {
 		isNoDefaultValueProvidedError: (error: unknown) =>
 			error instanceof NoDefaultValueProvided,
 	};
-	const useCfAuth = "CLOUDFLARE_CF_AUTH" in process.env;
 	return {
-		auth: useCfAuth ? createCfAuth(context) : createWranglerAuth(context),
-		useCfAuth,
+		auth: createWranglerAuth(context),
 	};
 }
 
+/** Resolve the supplied credentials or authenticate using the project's Wrangler profile. */
 export function getRemoteBindingsAuthHook(
 	auth: AsyncHook<CfAccount> | undefined,
 	accountId: Config["account_id"] | undefined,
@@ -73,11 +69,8 @@ export function getRemoteBindingsAuthHook(
 		return auth;
 	}
 
-	const { auth: remoteBindingsAuth, useCfAuth } =
-		createRemoteBindingsAuth(logger);
-	const profileStore = useCfAuth
-		? createCfProfileStore({ logger })
-		: createWranglerProfileStore({ logger });
+	const { auth: remoteBindingsAuth } = createRemoteBindingsAuth(logger);
+	const profileStore = createWranglerProfileStore({ logger });
 	const profile = profileStore.resolve({
 		cwd: profileDir ?? process.cwd(),
 	});
