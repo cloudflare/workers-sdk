@@ -654,6 +654,35 @@ describe("previewBuildOutput", () => {
 		expect(request.env).toEqual({ API_KEY: { type: "inherit" } });
 	});
 
+	it("uploads secrets from a secrets file", async ({ expect }) => {
+		writeFileSync(".env.preview", "API_KEY=new-key\nTOKEN=token\n");
+		mocks.getPreviewDeployment.mockResolvedValue({
+			...deploymentResource,
+			env: { API_KEY: { type: "secret_text" } },
+		});
+		mocks.createPreviewDeployment.mockResolvedValue({
+			...deploymentResource,
+			env: { TOKEN: { type: "secret_text", text: "token" } },
+		});
+
+		const result = await previewBuildOutput(
+			"account-id",
+			{ name: "feature", json: true, secretsFile: ".env.preview" },
+			{
+				workerConfig: buildOutputConfig(),
+				rootConfig: validRootConfig,
+				buildResult,
+			}
+		);
+
+		const request = mocks.createPreviewDeployment.mock.calls[0]?.[4];
+		expect(request.env).toEqual({
+			API_KEY: { type: "secret_text", text: "new-key" },
+			TOKEN: { type: "secret_text", text: "token" },
+		});
+		expect(result.deployment.env).toEqual({ TOKEN: { type: "secret_text" } });
+	});
+
 	it("does not look up the latest deployment of a new Preview", async ({
 		expect,
 	}) => {
