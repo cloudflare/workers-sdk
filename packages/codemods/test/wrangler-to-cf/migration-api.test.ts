@@ -492,6 +492,65 @@ describe("migrateWranglerToCf", () => {
 		);
 	});
 
+	it("leaves an undeclared Vite plugin and the assets directory to the caller", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				devDependencies: { cf: "1.0.0-beta.5" },
+			}),
+			"wrangler.json": JSON.stringify({
+				assets: { binding: "ASSETS", directory: "./dist" },
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
+			skipViteSetup: true,
+		});
+
+		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
+		expect(result).toMatchObject({
+			followUps: [],
+			requiresInstall: false,
+			status: "complete",
+		});
+		const cloudflareConfig = await readFile(
+			path.join(cwd, "cloudflare.config.ts"),
+			"utf8"
+		);
+		expect(cloudflareConfig).not.toContain("TODO");
+		expect(cloudflareConfig).toContain("ASSETS: bindings.assets()");
+	});
+
+	it("still upgrades a declared Vite plugin when the caller sets up Vite", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				devDependencies: {
+					"@cloudflare/vite-plugin": "^1.60.2",
+					cf: "1.0.0-beta.5",
+				},
+			}),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+
+		await migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
+			skipViteSetup: true,
+		});
+
+		expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
+			"npm",
+			["@cloudflare/vite-plugin@^2.0.0-rc.0"],
+			{ cwd, dev: true, isWorkspaceRoot: false }
+		);
+	});
+
 	it("preserves a production Vite plugin dependency", async ({ expect }) => {
 		const cwd = await createProject({
 			"package.json": JSON.stringify({

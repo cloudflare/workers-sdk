@@ -577,11 +577,13 @@ export async function planCfDependencyInstallation(
  *
  * @param projectDirectory Directory containing the migrated Worker.
  * @param bundler Bundler selected for the migrated project.
+ * @param skipViteSetup Whether the caller installs the plugin when the project does not declare it.
  * @returns The required plugin dependency action.
  */
 export async function planVitePluginDependencyUpgrade(
 	projectDirectory: string,
-	bundler: MigrationBundler
+	bundler: MigrationBundler,
+	skipViteSetup = false
 ): Promise<VitePluginDependencyUpgradePlan> {
 	if (bundler !== "vite") {
 		return { action: "none" };
@@ -598,13 +600,16 @@ export async function planVitePluginDependencyUpgrade(
 	} catch {
 		return { action: "none" };
 	}
-	if (!needsVitePluginUpgrade(packageJson, projectDirectory)) {
-		return { action: "none" };
-	}
-
 	const declaredVersion =
 		packageJson.dependencies?.[VITE_PLUGIN] ??
 		packageJson.devDependencies?.[VITE_PLUGIN];
+	if (
+		(skipViteSetup && declaredVersion === undefined) ||
+		!needsVitePluginUpgrade(packageJson, projectDirectory)
+	) {
+		return { action: "none" };
+	}
+
 	if (
 		typeof declaredVersion === "string" &&
 		MANAGED_VITE_PLUGIN_SPECIFIER.test(declaredVersion)

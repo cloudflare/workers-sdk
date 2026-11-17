@@ -72,6 +72,7 @@ export async function migrateWranglerToCf(
 		dryRun = false,
 		force = false,
 		installDependencies = true,
+		skipViteSetup = false,
 	} = options;
 	if (bundler !== "vite" && bundler !== "wrangler") {
 		throw new Error(
@@ -98,13 +99,14 @@ export async function migrateWranglerToCf(
 	const convertedConfig = convertWranglerConfig(
 		rawConfig,
 		bundler,
-		secretFiles
+		secretFiles,
+		skipViteSetup
 	);
 	const wranglerConfig = renderWranglerConfig(convertedConfig);
 	const [cfDepPlan, wranglerDepPlan, vitePluginDepPlan] = await Promise.all([
 		planCfDependencyInstallation(projectDirectory),
 		planWranglerDependencyUpgrade(projectDirectory, wranglerConfig !== null),
-		planVitePluginDependencyUpgrade(projectDirectory, bundler),
+		planVitePluginDependencyUpgrade(projectDirectory, bundler, skipViteSetup),
 	]);
 	const missingManifestPackages = formatDependencies([
 		"cf@latest",

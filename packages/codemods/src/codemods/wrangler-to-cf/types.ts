@@ -6,6 +6,11 @@ export interface WranglerToCfMigrationOptions {
 	force?: boolean;
 	/** Whether to install cf and install or upgrade Vite plugin and Wrangler dependencies when needed. Required dependency changes become blocking follow-ups when false. */
 	installDependencies?: boolean;
+	/**
+	 * Whether the caller sets up the Vite project, as autoconfig's framework setup does, when the Vite bundler is selected.
+	 * The Cloudflare Vite plugin is then not installed unless the project already declares it, and the Wrangler assets directory is dropped without a follow-up because the Vite project configures its static assets.
+	 */
+	skipViteSetup?: boolean;
 }
 
 export interface MigrationFollowUp {

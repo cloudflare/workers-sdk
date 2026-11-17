@@ -91,6 +91,7 @@ export function convertWorkerConfig(
 	source: UnknownRecord,
 	sourcePrefix: string,
 	bundler: MigrationBundler,
+	skipViteSetup: boolean,
 	imports: Set<string>,
 	followUps: MigrationFollowUp[]
 ): OutputObject {
@@ -176,7 +177,7 @@ export function convertWorkerConfig(
 		if (runtimeAssets.properties.length > 0) {
 			properties.push({ key: "assets", value: runtimeAssets });
 		}
-		if (bundler === "vite" && hasOwn(assets, "directory")) {
+		if (bundler === "vite" && !skipViteSetup && hasOwn(assets, "directory")) {
 			report(
 				createFollowUp(
 					"vite-assets-directory",
@@ -371,6 +372,7 @@ export function convertRootConfig(
 	source: UnknownRecord,
 	sourcePrefix: string,
 	bundler: MigrationBundler,
+	skipViteSetup: boolean,
 	imports: Set<string>,
 	followUps: MigrationFollowUp[]
 ): OutputObject {
@@ -391,6 +393,7 @@ export function convertRootConfig(
 			source,
 			sourcePrefix,
 			bundler,
+			skipViteSetup,
 			imports,
 			followUps
 		),
