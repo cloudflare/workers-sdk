@@ -1,5 +1,39 @@
 # @cloudflare/vite-plugin
 
+## 1.70.0
+
+### Minor Changes
+
+- [#16898](https://github.com/cloudflare/workers-sdk/pull/16898) [`e1d4554`](https://github.com/cloudflare/workers-sdk/commit/e1d4554986cb656246f1fe834e39941c63ad4514) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Use the local simulator for Artifacts bindings that omit `remote`
+
+  Artifacts now works locally without Cloudflare credentials by default. Set `remote: true` to use deployed repositories, or `remote: false` to silence the migration warning. The updated Miniflare runtime also supplies Browser Run quick actions and local Artifacts fixes.
+
+- [#16929](https://github.com/cloudflare/workers-sdk/pull/16929) [`319aec4`](https://github.com/cloudflare/workers-sdk/commit/319aec42aa82884d572bf36a45cbc1b5f7a84688) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Start local Workflows from Artifacts events
+
+  Configure `triggers.events` in your Wrangler configuration to deliver local Artifacts repository and token events to a Workflow defined by the same Worker. Miniflare 5.20261116.0-beta and Wrangler 4.163.0 support this beta feature through Vite plugin v1. Local push, clone, fetch, and queue subscriptions remain unsupported.
+
+### Patch Changes
+
+- [#16818](https://github.com/cloudflare/workers-sdk/pull/16818) [`befc1ad`](https://github.com/cloudflare/workers-sdk/commit/befc1ad21b7d7b7f5f53e88d291d895dd969588c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Remove unsupported CLI flag advice from v1 Container Docker errors
+
+  When Docker is unavailable, suggest disabling local Containers through `dev.enable_containers` in the Wrangler configuration. The Vite plugin does not accept the `--enable-containers` CLI flag.
+
+- [#16859](https://github.com/cloudflare/workers-sdk/pull/16859) [`9dd3468`](https://github.com/cloudflare/workers-sdk/commit/9dd3468083d52a509ca64c630e92d2f6131edf23) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update the v1 development runtime to Miniflare 5.20261110.2-beta
+
+  Update Wrangler to 4.161.0 to keep its public Miniflare types aligned with the runtime. Use the latest compatible runtime, including relative asset redirect normalization, while retaining Wrangler configuration through the Miniflare v4 compatibility adapter.
+
+- [#16860](https://github.com/cloudflare/workers-sdk/pull/16860) [`b1b66cd`](https://github.com/cloudflare/workers-sdk/commit/b1b66cd97d4023d28a796fe0229d63e5e3845c5b) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Normalize relative asset redirect pathnames without changing query values or fragments
+
+  Keep repeated separators captured by redirect placeholders within the site's path. Preserve explicitly configured external targets, including scheme-less URLs, when serving assets during development.
+
+- [#16930](https://github.com/cloudflare/workers-sdk/pull/16930) [`6fa6b99`](https://github.com/cloudflare/workers-sdk/commit/6fa6b996ec26c07e2ea447d4d0023fc7ad9c1c12) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Reuse Wrangler credentials refreshed by another process during remote development
+
+  Update authentication for retained remote bindings so a running Vite server can reuse a valid token saved by another process without another exchange or an older credential write.
+
+- [#16861](https://github.com/cloudflare/workers-sdk/pull/16861) [`2906560`](https://github.com/cloudflare/workers-sdk/commit/2906560dd9a8b83f741479295e769118552059c9) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Keep v1 remote bindings on Wrangler authentication
+
+  Ignore the obsolete CLOUDFLARE_CF_AUTH environment flag so development and preview sessions continue using the project's Wrangler profile and configured account.
+
 ## 1.69.1
 
 ### Patch Changes
