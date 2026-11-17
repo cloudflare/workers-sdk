@@ -28,7 +28,10 @@ describe("triggers deploy", () => {
 		await runWrangler("triggers deploy --dry-run --name overridden-worker");
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"--dry-run: no changes will be made. Would deploy overridden-worker triggers:
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			--dry-run: no changes will be made. Would deploy overridden-worker triggers:
 			  custom.example.com (custom domain)
 			  schedule: 0 * * * *
 			  Consumer for my-queue
@@ -51,10 +54,59 @@ describe("triggers deploy", () => {
 		);
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"--dry-run: no changes will be made. Would deploy configured-worker triggers:
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			--dry-run: no changes will be made. Would deploy configured-worker triggers:
 			  overridden.example.com/*
 			  schedule: 30 * * * *"
 		`);
+	});
+
+	it("previews removing all cron schedules", async ({ expect }) => {
+		writeWranglerConfig({
+			name: "configured-worker",
+			workers_dev: false,
+			triggers: { crons: [] },
+		});
+
+		await runWrangler("triggers deploy --dry-run");
+
+		expect(std.out).toContain("  schedule: remove all");
+		expect(std.out).not.toContain("No targets to deploy");
+	});
+
+	it("previews Email Routing addresses", async ({ expect }) => {
+		writeWranglerConfig({
+			name: "configured-worker",
+			workers_dev: false,
+			addresses: ["support@example.com"],
+		});
+
+		await runWrangler("triggers deploy --dry-run");
+
+		expect(std.out).toContain("  email routing addresses: 1");
+	});
+
+	it("rejects external Workflow settings during a dry run", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			name: "configured-worker",
+			workflows: [
+				{
+					binding: "EXTERNAL_WORKFLOW",
+					name: "external-workflow",
+					class_name: "ExternalWorkflow",
+					script_name: "other-worker",
+					limits: { steps: 5000 },
+				},
+			],
+		});
+
+		await expect(runWrangler("triggers deploy --dry-run")).rejects.toThrow(
+			'Workflow "external-workflow" has "limits" configured but references external script "other-worker"'
+		);
 	});
 
 	it("uses a redirected deploy configuration", async ({ expect }) => {

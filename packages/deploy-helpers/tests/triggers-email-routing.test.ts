@@ -247,6 +247,7 @@ describe("triggersDeploy preflight", () => {
 		await triggersDeploy({
 			...TEST_TRIGGER_GUIDANCE,
 			config: baseConfig({
+				addresses: ["support@example.com"],
 				queues: {
 					producers: [
 						{ binding: "QUEUE", queue: "producer-queue" },
@@ -308,6 +309,7 @@ describe("triggersDeploy preflight", () => {
 			"  workflow: same-worker-workflow",
 			"  workflow: exported-workflow",
 			"  event triggers: 1",
+			"  email routing addresses: 1",
 		]);
 		expect(fetchResultRequests).toEqual([]);
 		expect(fetchListRequests).toEqual([]);
@@ -347,7 +349,74 @@ describe("triggersDeploy preflight", () => {
 		}
 	);
 
-	it("dry-run includes explicitly empty event triggers", async ({ expect }) => {
+	it.for([
+		{ crons: undefined, targets: [] },
+		{ crons: [], targets: ["  schedule: remove all"] },
+		{ crons: ["0 * * * *"], targets: ["  schedule: 0 * * * *"] },
+	])(
+		"dry-run previews schedules for crons=$crons",
+		async ({ crons, targets }, { expect }) => {
+			await triggersDeploy({
+				...TEST_TRIGGER_GUIDANCE,
+				config: baseConfig(),
+				scriptName: WORKER_NAME,
+				crons,
+				routes: [],
+				firstDeploy: false,
+				dryRun: true,
+				accountId: undefined,
+				validated: false,
+			});
+
+			expect(logs).toEqual([
+				targets.length > 0
+					? "--dry-run: no changes will be made. Would deploy test-name triggers:"
+					: "--dry-run: no changes will be made. No targets to deploy for test-name.",
+				...targets,
+			]);
+			expect(fetchResultRequests).toEqual([]);
+			expect(fetchListRequests).toEqual([]);
+			expect(fetchPagedListRequests).toEqual([]);
+		}
+	);
+
+	it.for([
+		{ addresses: undefined, targets: [] },
+		{ addresses: [], targets: ["  email routing addresses: 0"] },
+		{
+			addresses: ["support@example.com", "hello@example.com"],
+			targets: ["  email routing addresses: 2"],
+		},
+	])(
+		"dry-run previews Email Routing for addresses=$addresses",
+		async ({ addresses, targets }, { expect }) => {
+			await triggersDeploy({
+				...TEST_TRIGGER_GUIDANCE,
+				config: baseConfig({ addresses }),
+				scriptName: WORKER_NAME,
+				crons: undefined,
+				routes: [],
+				firstDeploy: false,
+				dryRun: true,
+				accountId: undefined,
+				validated: false,
+			});
+
+			expect(logs).toEqual([
+				targets.length > 0
+					? "--dry-run: no changes will be made. Would deploy test-name triggers:"
+					: "--dry-run: no changes will be made. No targets to deploy for test-name.",
+				...targets,
+			]);
+			expect(fetchResultRequests).toEqual([]);
+			expect(fetchListRequests).toEqual([]);
+			expect(fetchPagedListRequests).toEqual([]);
+		}
+	);
+
+	it("dry-run includes explicitly empty schedules and event triggers", async ({
+		expect,
+	}) => {
 		await triggersDeploy({
 			...TEST_TRIGGER_GUIDANCE,
 			config: baseConfig({ triggers: { events: [] } }),
@@ -362,6 +431,7 @@ describe("triggersDeploy preflight", () => {
 
 		expect(logs).toEqual([
 			"--dry-run: no changes will be made. Would deploy test-name triggers:",
+			"  schedule: remove all",
 			"  event triggers: 0",
 		]);
 		expect(fetchResultRequests).toEqual([]);
@@ -432,6 +502,58 @@ describe("triggersDeploy preflight", () => {
 		expect(fetchResultRequests).toEqual([]);
 		expect(fetchPagedListRequests).toEqual([]);
 	});
+
+	it.for(
+		[
+			{ field: "limits", settings: { limits: { steps: 5000 } } },
+			{ field: "concurrency", settings: { concurrency: { limit: 10 } } },
+			{ field: "schedules", settings: { schedules: "0 * * * *" } },
+			{
+				field: "default_retention",
+				settings: { default_retention: { success_retention: "3 days" } },
+			},
+			{ field: "jurisdiction", settings: { jurisdiction: "eu" as const } },
+		].flatMap((testCase) =>
+			[true, false].flatMap((dryRun) =>
+				[true, false].map((validated) => ({ ...testCase, dryRun, validated }))
+			)
+		)
+	)(
+		"rejects external Workflow $field before API calls (dryRun=$dryRun, validated=$validated)",
+		async ({ field, settings, dryRun, validated }, { expect }) => {
+			await expect(
+				triggersDeploy({
+					...TEST_TRIGGER_GUIDANCE,
+					config: baseConfig({
+						workers_dev: true,
+						workflows: [
+							{
+								binding: "EXTERNAL_WORKFLOW",
+								name: "external-workflow",
+								class_name: "ExternalWorkflow",
+								script_name: "other-worker",
+								...settings,
+							},
+						],
+					}),
+					scriptName: WORKER_NAME,
+					crons: undefined,
+					routes: ["example.com/*"],
+					firstDeploy: false,
+					dryRun,
+					accountId: dryRun ? undefined : ACCOUNT_ID,
+					validated,
+				})
+			).rejects.toThrow(
+				`Workflow "external-workflow" has "${field}" configured but references external script "other-worker"`
+			);
+
+			expect(logs).toEqual([]);
+			expect(fetchResultRequests).toEqual([]);
+			expect(fetchListRequests).toEqual([]);
+			expect(fetchPagedListRequests).toEqual([]);
+		}
+	);
 
 	it("runs queue preflight before standalone trigger deployment", async ({
 		expect,
