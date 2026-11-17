@@ -1,6 +1,13 @@
-import { readD1Migrations as readD1MigrationsFromOptions } from "@cloudflare/workers-utils/d1-migrations";
-import type { D1Migration } from "@cloudflare/workers-utils/apply-d1-migrations";
-import type { ReadD1MigrationsOptions } from "@cloudflare/workers-utils/d1-migrations";
+import { readD1Migrations as readD1MigrationsFromOptions } from "@cloudflare/workers-utils";
+import type { D1Migration } from "../shared/d1";
+
+// Declared here so the plugin's public types don't depend on workers-utils,
+// which is bundled. Passing them to the shared function keeps them in sync.
+export type ReadD1MigrationsOptions = {
+	projectPath?: string;
+	migrationsDir?: string;
+	migrationsPattern?: string;
+};
 
 /**
  * Reads D1 migration files, ordered by migration number. Each migration has
@@ -34,4 +41,4 @@ export async function readD1Migrations(
 	);
 }
 
-export type { D1Migration, ReadD1MigrationsOptions };
+export type { D1Migration };

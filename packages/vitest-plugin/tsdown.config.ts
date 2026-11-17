@@ -74,18 +74,7 @@ export default defineConfig(async () => {
 			...commonOptions,
 			entry: path.join(pkgRoot, "src", "pool", "index.ts"),
 			outDir: path.join(pkgRoot, "dist", "pool"),
-			// Users don't install workers-utils (it's bundled), so inline the types the
-			// pool re-exports from it, such as `readD1Migrations()`. Read them from
-			// source: tsdown can't follow the shared type chunks in its build output.
-			dts: {
-				resolve: [/^@cloudflare\/workers-utils\//],
-				resolver: "tsc" as const,
-				compilerOptions: {
-					paths: {
-						"@cloudflare/workers-utils/*": ["../workers-utils/src/*.ts"],
-					},
-				},
-			},
+			dts: true,
 			define: {
 				VITEST_POOL_WORKERS_DEFINE_BUILTIN_MODULES:
 					JSON.stringify(builtinModules),
