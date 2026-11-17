@@ -359,6 +359,7 @@ test.for([
 		expect(prepareContainerImagesForDev).toHaveBeenCalledExactlyOnceWith(
 			expect.objectContaining({
 				configFileName,
+				disableContainersHint: `To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your ${configFileName}.`,
 				registryConfigureCommand: "wrangler containers registries configure",
 			})
 		);
