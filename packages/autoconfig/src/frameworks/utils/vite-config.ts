@@ -69,6 +69,9 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 	projectPath: string,
 	context?: AutoConfigContext
 ): boolean {
+	if (!hasViteConfig(projectPath)) {
+		return false;
+	}
 	const filePath = getViteConfigPath(projectPath);
 	const ast = parseFile(filePath);
 	if (!ast) {

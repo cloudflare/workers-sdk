@@ -42,6 +42,14 @@ describe("workspace applications", () => {
 				scripts: { build: "cf build", dev: "cf dev" },
 			}),
 			"packages/app/cloudflare.config.ts": "export default {};",
+			"packages/app/astro.config.mjs": `import cloudflare from "@astrojs/cloudflare";
+import { defineConfig } from "astro/config";
+export default defineConfig({ adapter: cloudflare() });`,
+			"packages/app/node_modules/@astrojs/cloudflare/package.json":
+				JSON.stringify({
+					name: "@astrojs/cloudflare",
+					version: "15.0.0-beta.6",
+				}),
 			"packages/other/package.json": JSON.stringify({
 				name: "other-app",
 				dependencies: { next: "15" },

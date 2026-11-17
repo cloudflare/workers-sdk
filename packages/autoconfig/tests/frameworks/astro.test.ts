@@ -3,7 +3,7 @@ import { join } from "node:path";
 import * as cliCommand from "@cloudflare/cli-shared-helpers/command";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import { NpmPackageManager } from "@cloudflare/workers-utils";
-import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
+import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { AutoConfigFrameworkConfigurationError } from "../../src/errors";
 import { Astro } from "../../src/frameworks/astro";
@@ -128,4 +128,32 @@ describe("Astro framework", () => {
 		);
 		expect(cliPackages.installPackages).not.toHaveBeenCalled();
 	});
+
+	it.for([
+		{ adapterVersion: "15.0.0-beta.6", usesAdapter: true, expected: true },
+		{ adapterVersion: "14.4.8", usesAdapter: true, expected: false },
+		{ adapterVersion: "15.0.0-beta.6", usesAdapter: false, expected: false },
+	])(
+		"is configured for cf with adapter $adapterVersion (in config: $usesAdapter) → $expected",
+		async ({ adapterVersion, usesAdapter, expected }, { expect }) => {
+			await seed({
+				"astro.config.mjs": usesAdapter
+					? `import cloudflare from "@astrojs/cloudflare";
+import { defineConfig } from "astro/config";
+export default defineConfig({ adapter: cloudflare() });`
+					: `import { defineConfig } from "astro/config";
+export default defineConfig({});`,
+				"node_modules/@astrojs/cloudflare/package.json": JSON.stringify({
+					name: "@astrojs/cloudflare",
+					version: adapterVersion,
+				}),
+			});
+			const framework = new Astro({ id: "astro", name: "Astro" });
+
+			expect(framework.isConfigured(process.cwd())).toBe(expected);
+			expect(
+				framework.isConfigured(process.cwd(), { target: "wrangler" })
+			).toBe(false);
+		}
+	);
 });

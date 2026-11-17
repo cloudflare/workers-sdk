@@ -55,20 +55,20 @@ describe("Vite framework", () => {
 			}
 		);
 
-		it("only treats the Cloudflare plugin as configured in legacy Wrangler mode", async ({
-			expect,
-		}) => {
-			await writeFile(
-				"vite.config.ts",
-				`import { cloudflare } from "@cloudflare/vite-plugin";
+		it.for(["cf", "wrangler"] as const)(
+			"treats the Cloudflare plugin as configured (target: %s)",
+			async (target, { expect }) => {
+				await writeFile(
+					"vite.config.ts",
+					`import { cloudflare } from "@cloudflare/vite-plugin";
 				 import { defineConfig } from "vite";
 				 export default defineConfig({ plugins: [cloudflare()] });`
-			);
-			const framework = new Vite({ id: "vite", name: "Vite" });
+				);
+				const framework = new Vite({ id: "vite", name: "Vite" });
 
-			expect(framework.isConfigured(".")).toBe(false);
-			expect(framework.isConfigured(".", { target: "wrangler" })).toBe(true);
-		});
+				expect(framework.isConfigured(".", { target })).toBe(true);
+			}
+		);
 	});
 
 	describe("configure()", () => {

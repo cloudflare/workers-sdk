@@ -10,6 +10,7 @@ import semiver from "semiver";
 import { usesTypescript } from "../uses-typescript";
 import { Framework } from "./framework-class";
 import {
+	checkIfViteConfigUsesCloudflarePlugin,
 	extractConfigObject,
 	getStaticPropertyName,
 	getViteConfigPath,
@@ -17,13 +18,22 @@ import {
 } from "./utils/vite-config";
 import { installCloudflareVitePlugin } from "./utils/vite-plugin";
 import { CF_VITE_PLUGIN_VERSION_RANGE } from "./utils/vite-plugin-version";
-import type { AutoConfigContext } from "../context";
+import type { AutoConfigContext, AutoConfigTarget } from "../context";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
 } from "./framework-class";
 
 export class SolidStart extends Framework {
+	isConfigured(
+		projectPath: string,
+		{ target = "cf" }: { target?: AutoConfigTarget } = {}
+	): boolean {
+		return (
+			target === "cf" && checkIfViteConfigUsesCloudflarePlugin(projectPath)
+		);
+	}
+
 	async configure({
 		projectPath,
 		dryRun,

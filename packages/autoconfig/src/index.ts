@@ -19,7 +19,7 @@ export type {
 	PackageJsonScriptsOverrides,
 } from "./frameworks/framework-class";
 
-export { isFrameworkSupported } from "./frameworks";
+export { isFrameworkSupported, requiresFrameworkSetup } from "./frameworks";
 
 export type {
 	FrameworkInfo,
