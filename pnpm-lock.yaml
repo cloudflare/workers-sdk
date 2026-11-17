@@ -31,8 +31,8 @@ catalogs:
       specifier: 1.0.0-beta.17
       version: 1.0.0-beta.17
     chalk:
-      specifier: 5.3.0
-      version: 5.3.0
+      specifier: 6.0.1
+      version: 6.0.1
     ci-info:
       specifier: 4.4.0
       version: 4.4.0
@@ -1717,7 +1717,7 @@ importers:
         version: 22.15.17
       chalk:
         specifier: catalog:default
-        version: 5.3.0
+        version: 6.0.1
       empathic:
         specifier: ^2.0.0
         version: 2.0.1
@@ -1790,7 +1790,7 @@ importers:
         version: link:../workers-utils
       chalk:
         specifier: catalog:default
-        version: 5.3.0
+        version: 6.0.1
       ci-info:
         specifier: catalog:default
         version: 4.4.0
@@ -2078,7 +2078,7 @@ importers:
         version: 2.1.5
       chalk:
         specifier: catalog:default
-        version: 5.3.0
+        version: 6.0.1
       command-exists:
         specifier: catalog:default
         version: 1.2.9
@@ -2754,7 +2754,7 @@ importers:
         version: link:../workers-utils
       chalk:
         specifier: catalog:default
-        version: 5.3.0
+        version: 6.0.1
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
@@ -4484,7 +4484,7 @@ importers:
         version: 0.8.1
       chalk:
         specifier: catalog:default
-        version: 5.3.0
+        version: 6.0.1
       dotenv:
         specifier: catalog:default
         version: 16.3.1
@@ -4769,7 +4769,7 @@ importers:
         version: 0.12.0
       chalk:
         specifier: catalog:default
-        version: 5.3.0
+        version: 6.0.1
       chokidar:
         specifier: ^4.0.1
         version: 4.0.1
@@ -10771,9 +10771,9 @@ packages:
     resolution: {integrity: sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA==}
     engines: {node: '>=10'}
 
-  chalk@5.3.0:
-    resolution: {integrity: sha512-dLitG79d+GV1Nb/VYcCDFivJeK1hiukt9QjRNVOsUtTy1rR1YJsmpGGTZ3qJos+uw7WmWF4wUwBd9jxjocFC2w==}
-    engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
+  chalk@6.0.1:
+    resolution: {integrity: sha512-/Ce6KNm3vIbWdMlNna6RVIZ/ICQxnJxCicet5LBKK9ZffBkqzDw0xh9EiKSljdRtiIQ1S1z4YgcscUUGzNCWrA==}
+    engines: {node: '>=22'}
 
   character-entities-html4@2.1.0:
     resolution: {integrity: sha512-1v7fgQRj6hnSwFpq1Eu0ynr/CDEw0rXo2B61qXrLNdHZmPKgb7fqS1a2JwF0rISo9q77jDI8VMEHoApn8qDoZA==}
@@ -22209,7 +22209,7 @@ snapshots:
       ansi-styles: 4.3.0
       supports-color: 7.2.0
 
-  chalk@5.3.0: {}
+  chalk@6.0.1: {}
 
   character-entities-html4@2.1.0: {}
 
