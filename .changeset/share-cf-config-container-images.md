@@ -1,5 +1,6 @@
 ---
 "@cloudflare/containers-shared": minor
+"@cloudflare/vite-plugin": patch
 ---
 
 Add `prepareContainerImagesForCfConfig` for building or pulling the Container images of a `cloudflare.config.ts` project
