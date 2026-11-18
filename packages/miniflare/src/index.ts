@@ -2090,10 +2090,11 @@ export class Miniflare {
 		sharedOpts.cf = await setupCf(this.#log, sharedOpts.cf);
 		this.#cfObject = sharedOpts.cf;
 
+		// Bindings to Workers outside this instance go through the dev registry
+		// proxy, with or without the dev registry, so they fail when called
+		// rather than stopping workerd from starting
 		const { workerOpts: allWorkerOpts, externalServices } =
-			this.#devRegistry.isEnabled()
-				? getExternalServiceEntrypoints(this.#workerOpts, sharedOpts)
-				: { workerOpts: this.#workerOpts, externalServices: null };
+			getExternalServiceEntrypoints(this.#workerOpts, sharedOpts);
 
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const workflowExporters = getWorkflowExporters(allWorkerOpts);
@@ -2412,19 +2413,20 @@ export class Miniflare {
 			}
 		}
 
+		const devRegistryEnabled = this.#devRegistry.isEnabled();
 		if (
-			this.#devRegistry.isEnabled() &&
-			externalServices !== null &&
-			(externalServices.size > 0 ||
-				hasQueues ||
-				sharedOpts.unsafeEnableSharedStorage)
+			externalServices.size > 0 ||
+			(devRegistryEnabled &&
+				(hasQueues || sharedOpts.unsafeEnableSharedStorage))
 		) {
-			await this.#devRegistry.watch(
-				externalServices,
-				hasQueues,
-				sharedOpts.unsafeEnableSharedStorage === true &&
-					sharedOpts.resourcePersistencePath !== undefined
-			);
+			if (devRegistryEnabled) {
+				await this.#devRegistry.watch(
+					externalServices,
+					hasQueues,
+					sharedOpts.unsafeEnableSharedStorage === true &&
+						sharedOpts.resourcePersistencePath !== undefined
+				);
+			}
 
 			const externalObjects = Array.from(externalServices).flatMap(
 				([scriptName, { classNames }]) =>
