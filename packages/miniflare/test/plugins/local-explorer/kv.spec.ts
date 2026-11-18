@@ -933,6 +933,98 @@ describe("KV API", () => {
 			});
 		});
 
+		// https://github.com/cloudflare/workers-sdk/issues/17026
+		test("parses values as JSON when type is json", async ({ expect }) => {
+			const kv = await mf.getKVNamespace("TEST_KV");
+			await kv.put("bulk-json-key", JSON.stringify({ n: 7 }), {
+				metadata: { label: "one" },
+			});
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk/get`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ keys: ["bulk-json-key"], type: "json" }),
+				}
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({
+				success: true,
+				result: { values: { "bulk-json-key": { n: 7 } } },
+			});
+		});
+
+		// https://github.com/cloudflare/workers-sdk/issues/17026
+		test("includes metadata when withMetadata is true", async ({ expect }) => {
+			const kv = await mf.getKVNamespace("TEST_KV");
+			await kv.put("bulk-metadata-key", JSON.stringify({ n: 7 }), {
+				metadata: { label: "one" },
+			});
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk/get`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						keys: ["bulk-metadata-key"],
+						withMetadata: true,
+					}),
+				}
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({
+				success: true,
+				result: {
+					values: {
+						"bulk-metadata-key": {
+							value: '{"n":7}',
+							metadata: { label: "one" },
+						},
+					},
+				},
+			});
+		});
+
+		// https://github.com/cloudflare/workers-sdk/issues/17026
+		test("parses values and includes metadata when both options are set", async ({
+			expect,
+		}) => {
+			const kv = await mf.getKVNamespace("TEST_KV");
+			await kv.put("bulk-json-metadata-key", JSON.stringify({ n: 7 }), {
+				metadata: { label: "one" },
+			});
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk/get`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						keys: ["bulk-json-metadata-key"],
+						type: "json",
+						withMetadata: true,
+					}),
+				}
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({
+				success: true,
+				result: {
+					values: {
+						"bulk-json-metadata-key": {
+							value: { n: 7 },
+							metadata: { label: "one" },
+						},
+					},
+				},
+			});
+		});
+
 		test("reads from an unlisted namespace", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/NON_EXISTENT/bulk/get`,
