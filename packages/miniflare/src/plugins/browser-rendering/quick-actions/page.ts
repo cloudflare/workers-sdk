@@ -2,7 +2,13 @@ import { setTimeout as sleep } from "node:timers/promises";
 import type { Response } from "../../../http";
 import type { Log } from "../../../shared";
 import type { CommonOptions } from "./schemas";
-import type { BrowserContext, HTTPResponse, Page } from "@cloudflare/puppeteer";
+import type {
+	BrowserContext,
+	CookieData,
+	CookieParam,
+	HTTPResponse,
+	Page,
+} from "@cloudflare/puppeteer";
 import type { z } from "zod";
 
 export interface QuickActionContext<Schema extends z.ZodType> {
@@ -60,6 +66,26 @@ const swallowIf =
 		throw error;
 	};
 
+// `BrowserContext.setCookie` needs a `domain`, but the API also accepts a
+// cookie with only a `url`. Take the domain from the URL, and make the cookie
+// secure for an `https` URL, as Chrome does when it gets the URL itself.
+function toCookieData({ url, ...cookie }: CookieParam): CookieData {
+	if (url === undefined) {
+		if (cookie.domain === undefined) {
+			throw new Error(
+				`At least one of the url and domain needs to be specified for cookie "${cookie.name}"`
+			);
+		}
+		return { ...cookie, domain: cookie.domain };
+	}
+	const { hostname, protocol } = new URL(url);
+	return {
+		...cookie,
+		domain: cookie.domain ?? hostname,
+		secure: cookie.secure || protocol === "https:",
+	};
+}
+
 export async function openPage(
 	context: BrowserContext,
 	options: CommonOptions
@@ -70,10 +96,10 @@ export async function openPage(
 		await page.emulateMediaType(options.emulateMediaType);
 	}
 	if (options.cookies?.length) {
-		await page.setCookie(...options.cookies);
+		await context.setCookie(...options.cookies.map(toCookieData));
 	}
 	await page.setViewport(options.viewport);
-	await page.setUserAgent(options.userAgent);
+	await page.setUserAgent({ userAgent: options.userAgent });
 	if (options.authenticate) {
 		await page.authenticate(options.authenticate);
 	}
@@ -129,6 +155,18 @@ export async function afterNavigation(page: Page, options: CommonOptions) {
 		const { selector, hidden, visible, timeout } = options.waitForSelector;
 		await page
 			.waitForSelector(selector, { hidden, visible, timeout })
+			.catch((error: unknown) => {
+				if (error instanceof Error) {
+					let cause = error.cause;
+					while (cause instanceof Error) {
+						if (cause.message) {
+							error.message += `: ${cause.message}`;
+						}
+						cause = cause.cause;
+					}
+				}
+				throw error;
+			})
 			.catch(swallowIf(options.bestAttempt));
 	}
 	if (options.waitForTimeout) {

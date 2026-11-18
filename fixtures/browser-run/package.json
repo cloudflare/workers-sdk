@@ -11,8 +11,8 @@
 		"test:ci": "vitest run"
 	},
 	"devDependencies": {
-		"@cloudflare/playwright": "^1.3.6",
-		"@cloudflare/puppeteer": "^1.4.0",
+		"@cloudflare/playwright": "^1.4.0",
+		"@cloudflare/puppeteer": "^2.0.1",
 		"@cloudflare/vitest-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
