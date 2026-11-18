@@ -1,5 +1,6 @@
 ---
 "@cloudflare/autoconfig": patch
+"wrangler": patch
 ---
 
 Correct the dry-run setup message to say "exiting now" instead of "existing now".
