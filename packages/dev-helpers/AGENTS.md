@@ -2,6 +2,7 @@
 
 Shared development integrations used by Wrangler and the Vitest plugin.
 
+- This package is private and bundled into its consumers. Keep its build for the Vitest plugin, and include changesets for affected consumers when changing user-facing behavior.
 - Import through the focused `/miniflare-options`, `/dev-vars` and `/pages-assets` entry points.
 - Wrangler configuration compatibility belongs here so its removal does not require a breaking change to Miniflare's runtime API.
 - Pass loggers explicitly. Never introduce a logger singleton or a context setter; different Vitest pools need independent logging and warning deduplication.

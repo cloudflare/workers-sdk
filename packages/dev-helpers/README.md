@@ -1,6 +1,6 @@
 # `@cloudflare/dev-helpers`
 
-Internal shared development integrations for Workers SDK tools. APIs may change without notice.
+Private shared development integrations bundled into Wrangler and the Vitest plugin. This package is not published or deployed separately. Keep its build because the Vitest plugin bundles the built entry points. User-facing changes need changesets for the affected consumers.
 
 Use the focused entry points:
 

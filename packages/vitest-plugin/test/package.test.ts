@@ -5,7 +5,9 @@ import { inject, it } from "vitest";
 
 const execFileAsync = promisify(execFile);
 
-it("loads without Wrangler or deploy helpers installed", async ({ expect }) => {
+it("loads without Wrangler, deploy helpers or dev helpers installed", async ({
+	expect,
+}) => {
 	const result = execFileAsync(
 		process.execPath,
 		[
@@ -17,6 +19,8 @@ it("loads without Wrangler or deploy helpers installed", async ({ expect }) => {
                 const require = createRequire(import.meta.resolve("@cloudflare/vitest-plugin"));
                 assert.throws(() => require.resolve("wrangler"), { code: "MODULE_NOT_FOUND" });
                 assert.throws(() => require.resolve("@cloudflare/deploy-helpers"), { code: "MODULE_NOT_FOUND" });
+                assert.throws(() => require.resolve("@cloudflare/dev-helpers/miniflare-options"), { code: "MODULE_NOT_FOUND" });
+                assert.throws(() => require.resolve("@cloudflare/dev-helpers/pages-assets"), { code: "MODULE_NOT_FOUND" });
                 const { cloudflareTest } = await import("@cloudflare/vitest-plugin");
                 assert.equal(typeof cloudflareTest, "function");
             `,
