@@ -9,6 +9,7 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { createFetchResult, msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { RawConfig } from "@cloudflare/workers-utils";
 
 describe("triggers deploy", () => {
 	runInTempDir();
@@ -201,9 +202,45 @@ describe("triggers deploy", () => {
 		it("reports an unchanged configuration", async ({ expect }) => {
 			await runWrangler("triggers deploy --dry-run --show-diff");
 
-			expect(std.out).toContain("No trigger changes detected.");
+			expect(std.out).toContain(
+				"No changes detected to routes, custom domains, cron schedules, workers.dev, or Preview URLs."
+			);
 			expect(std.out).toContain("--dry-run: exiting now.");
 		});
+
+		it.for<RawConfig>([
+			{ queues: { consumers: [{ queue: "test-queue" }] } },
+			{
+				workflows: [
+					{ binding: "WORKFLOW", name: "workflow", class_name: "Workflow" },
+				],
+				triggers: {
+					events: [
+						{
+							type: "cf.artifacts.repo.pushed",
+							targets: [{ type: "workflow", workflow_name: "workflow" }],
+						},
+					],
+				},
+			},
+		])(
+			"names the compared settings when other triggers change (%j)",
+			async (config, { expect }) => {
+				writeWranglerConfig({
+					name: "test-worker",
+					workers_dev: false,
+					preview_urls: false,
+					...config,
+				});
+
+				await runWrangler("triggers deploy --dry-run --show-diff");
+
+				expect(std.out).toContain(
+					"No changes detected to routes, custom domains, cron schedules, workers.dev, or Preview URLs."
+				);
+				expect(std.out).not.toContain("No trigger changes detected.");
+			}
+		);
 
 		it.for([7, 6])(
 			"compares all pages of custom domains with %i local domains",
@@ -248,7 +285,9 @@ describe("triggers deploy", () => {
 
 				expect(pages).toEqual([1, 2]);
 				if (localCount === domains.length) {
-					expect(std.out).toContain("No trigger changes detected.");
+					expect(std.out).toContain(
+						"No changes detected to routes, custom domains, cron schedules, workers.dev, or Preview URLs."
+					);
 				} else {
 					expect(std.out).toContain("Trigger changes (remote → local):");
 					expect(std.out).toContain("domain6.example.com");

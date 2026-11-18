@@ -50,7 +50,8 @@ export const triggersDeployCommand = createCommand({
 			default: false,
 		},
 		"show-diff": {
-			describe: "Show the diff between remote and local trigger configuration",
+			describe:
+				"Show changes to routes, custom domains, cron schedules, workers.dev, and Preview URLs",
 			type: "boolean",
 			default: false,
 		},
