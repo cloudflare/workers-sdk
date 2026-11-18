@@ -44,7 +44,7 @@ describe("Astro framework", () => {
 		vi.spyOn(cliPackages, "installPackages").mockImplementation(async () => {});
 	});
 
-	it.for(["7.4.12", "7.4.4-beta.0"])(
+	it.for(["7.3.5", "7.0.0-beta.2"])(
 		"configures Astro %s for cf",
 		async (version, { expect }) => {
 			const projectPath = process.cwd();
@@ -66,7 +66,7 @@ describe("Astro framework", () => {
 	);
 
 	it("installs nothing in a dry run for cf", async ({ expect }) => {
-		const result = await createFramework("7.4.12").configure(
+		const result = await createFramework("7.3.5").configure(
 			getOptions(process.cwd(), { dryRun: true })
 		);
 
@@ -110,9 +110,9 @@ describe("Astro framework", () => {
 		});
 	});
 
-	it("requires Astro 7.4.4 before configuring for cf", async ({ expect }) => {
+	it("requires Astro 7 before configuring for cf", async ({ expect }) => {
 		const projectPath = process.cwd();
-		const configuration = createFramework("7.4.3").configure(
+		const configuration = createFramework("6.0.0").configure(
 			getOptions(projectPath)
 		);
 
@@ -120,7 +120,7 @@ describe("Astro framework", () => {
 			AutoConfigFrameworkConfigurationError
 		);
 		await expect(configuration).rejects.toThrow(
-			'cf only supports Astro 7.4.4 or later, but this project uses Astro "7.4.3". Please update Astro and try again, or continue using Wrangler if you are not ready to upgrade.'
+			'cf only supports Astro 7 or later, but this project uses Astro "6.0.0". Please update Astro and try again, or continue using Wrangler if you are not ready to upgrade.'
 		);
 		expect(cliPackages.installPackages).not.toHaveBeenCalled();
 	});

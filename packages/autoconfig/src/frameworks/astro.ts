@@ -91,11 +91,9 @@ export class Astro extends Framework {
 			};
 		}
 
-		// The Cloudflare adapter beta requires `astro@^7.4.4-beta.0`. Compare the release
-		// version only: semiver ranks 7.4.3 above 7.4.4-beta.0
-		if (semiver(astroVersion.split("-")[0], "7.4.4") < 0) {
+		if (Number(astroVersion.split(".")[0]) < 7) {
 			throw new AutoConfigFrameworkConfigurationError(
-				`cf only supports Astro 7.4.4 or later, but this project uses Astro ${JSON.stringify(
+				`cf only supports Astro 7 or later, but this project uses Astro ${JSON.stringify(
 					astroVersion
 				)}. Please update Astro and try again, or continue using Wrangler if you are not ready to upgrade.`,
 				{ telemetryMessage: "autoconfig framework version unsupported" }
