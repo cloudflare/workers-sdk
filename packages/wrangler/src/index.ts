@@ -1,10 +1,6 @@
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli-shared-helpers";
-import {
-	getDefaultEnvFiles,
-	loadDotEnv,
-} from "@cloudflare/deploy-helpers/dev-vars";
 import { CommandLineArgsError } from "@cloudflare/workers-utils";
 import { experimental_readRawConfig } from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
@@ -156,6 +152,7 @@ import { d1TimeTravelRestoreCommand } from "./d1/timeTravel/restore";
 import { deleteCommand } from "./delete";
 import { deployCommand } from "./deploy";
 import { dev } from "./dev";
+import { getDefaultEnvFiles, loadDotEnv } from "./dev/dev-vars";
 import {
 	dispatchNamespaceCreateCommand,
 	dispatchNamespaceDeleteCommand,

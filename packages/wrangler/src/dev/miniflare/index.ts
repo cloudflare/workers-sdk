@@ -1,11 +1,5 @@
 import path from "node:path";
 import {
-	buildAssetOptions,
-	buildMiniflareBindingOptions,
-	buildSitesOptions,
-	getDefaultProjectTmpPath,
-} from "@cloudflare/deploy-helpers/miniflare-options";
-import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
 	getLocalObservabilityEnabledFromEnv,
@@ -17,6 +11,12 @@ import { logger } from "../../logger";
 import { getMetricsConfig } from "../../metrics";
 import { getSourceMappedString } from "../../sourcemap";
 import { updateCheck } from "../../update-check";
+import {
+	buildAssetOptions,
+	buildMiniflareBindingOptions,
+	buildSitesOptions,
+	getDefaultProjectTmpPath,
+} from "../miniflare-options";
 import type { StartDevWorkerInput } from "../../api/startDevWorker/types";
 import type { LoggerLevel } from "../../logger";
 import type { EsbuildBundle } from "../use-esbuild";
@@ -48,7 +48,7 @@ export {
 	buildMiniflareBindingOptions,
 	getDefaultProjectTmpPath,
 	getIdentifier,
-} from "@cloudflare/deploy-helpers/miniflare-options";
+} from "../miniflare-options";
 
 // This worker proxies all external Durable Objects to the Wrangler session
 // where they're defined, and receives all requests from other Wrangler sessions

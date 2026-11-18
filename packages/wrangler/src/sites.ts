@@ -24,7 +24,7 @@ import type {
 } from "@cloudflare/workers-utils";
 import type { XXHashAPI } from "xxhash-wasm";
 
-export { getSiteAssetPaths } from "@cloudflare/deploy-helpers/miniflare-options";
+export { getSiteAssetPaths } from "./dev/miniflare-options";
 
 /** Paths to always ignore. */
 const ALWAYS_IGNORE = new Set(["node_modules"]);

@@ -31,7 +31,7 @@ import type {
 import type { EventName } from "chokidar/handler.js";
 import type { Json } from "miniflare";
 
-export { getBindings } from "@cloudflare/deploy-helpers/miniflare-options";
+export { getBindings } from "./dev/miniflare-options";
 
 export const dev = createCommand({
 	behaviour: {

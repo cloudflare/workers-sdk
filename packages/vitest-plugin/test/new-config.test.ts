@@ -681,7 +681,7 @@ describe("remote bindings", () => {
 		// Records whether Wrangler config helpers were imported. Registered after
 		// `vi.resetModules()`, so it runs again on each test's first import.
 		vi.resetModules();
-		vi.doMock("@cloudflare/deploy-helpers/miniflare-options", () => {
+		vi.doMock("@cloudflare/dev-helpers/miniflare-options", () => {
 			state.wranglerHelpersImported = true;
 			return {};
 		});

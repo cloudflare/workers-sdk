@@ -8,7 +8,16 @@ import { expectTypeOf, test } from "vitest";
 
 test("published config entry points share runtime values", ({ expect }) => {
 	for (const [name, value] of Object.entries(config)) {
-		if (name === "readConfig") {
+		if (
+			[
+				"readConfig",
+				"getAssetsOptions",
+				"resolveAssetOptions",
+				"validateAssetsOptions",
+				"NonDirectoryAssetsDirError",
+				"NonExistentAssetsDirError",
+			].includes(name)
+		) {
 			expect(value).toBeTypeOf("function");
 			expect(legacy).not.toHaveProperty(name);
 			continue;

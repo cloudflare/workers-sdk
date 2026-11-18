@@ -135,7 +135,7 @@ async function generatePagesASSETSBinding(
 	options: Unstable_ASSETSBindingsOptions
 ) {
 	const { generateASSETSBinding } =
-		await import("@cloudflare/deploy-helpers/pages-assets");
+		await import("@cloudflare/dev-helpers/pages-assets");
 	return generateASSETSBinding(options);
 }
 

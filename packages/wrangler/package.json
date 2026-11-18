@@ -106,6 +106,7 @@
 		"@cloudflare/config": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/deploy-helpers": "workspace:*",
+		"@cloudflare/dev-helpers": "workspace:*",
 		"@cloudflare/pages-functions": "workspace:*",
 		"@cloudflare/remote-bindings": "workspace:*",
 		"@cloudflare/runtime-types": "workspace:*",

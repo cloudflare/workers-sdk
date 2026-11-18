@@ -14,6 +14,18 @@ const TEMPLATES_DIR = path.join(rootDir, "templates");
 const OUT_DIR = "wrangler-dist";
 const MONOREPO_PACKAGE_ALIASES = {
 	"@cloudflare/autoconfig": path.join(rootDir, "../autoconfig/src/index.ts"),
+	"@cloudflare/dev-helpers/dev-vars": path.join(
+		rootDir,
+		"../dev-helpers/src/dev-vars.ts"
+	),
+	"@cloudflare/dev-helpers/miniflare-options": path.join(
+		rootDir,
+		"../dev-helpers/src/miniflare-options.ts"
+	),
+	"@cloudflare/dev-helpers/pages-assets": path.join(
+		rootDir,
+		"../dev-helpers/src/pages-assets.ts"
+	),
 	"@cloudflare/deploy-helpers/context": path.join(
 		rootDir,
 		"../deploy-helpers/src/shared/context.ts"
@@ -37,6 +49,10 @@ const MONOREPO_PACKAGE_ALIASES = {
 	"@cloudflare/runtime-types": path.join(
 		rootDir,
 		"../runtime-types/src/index.ts"
+	),
+	"@cloudflare/workers-utils/config": path.join(
+		rootDir,
+		"../workers-utils/src/config/public.ts"
 	),
 	"@cloudflare/workers-utils": path.join(rootDir, "../workers-utils/src"),
 };

@@ -1,6 +1,6 @@
-import { loadDotEnv } from "@cloudflare/deploy-helpers/dev-vars";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { loadDotEnv } from "../../dev/dev-vars";
 import { logger } from "../../logger";
 import { mockConsoleMethods } from "../helpers/mock-console";
 const isWindows = process.platform === "win32";
@@ -70,7 +70,7 @@ describe("loadDotEnv()", () => {
 	it("uses an injected logger before shared context initialization", ({
 		expect,
 	}) => {
-		const earlyLogger = { debug: vi.fn(), log: vi.fn() };
+		const earlyLogger = { debug: vi.fn(), log: vi.fn(), warn: vi.fn() };
 		loadDotEnv(["./.env.missing"], {
 			includeProcessEnv: false,
 			silent: true,

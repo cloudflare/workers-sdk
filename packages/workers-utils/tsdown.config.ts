@@ -43,6 +43,8 @@ export default defineConfig([
 		clean: false,
 		entry: [
 			"src/index.ts",
+			"src/config/public.ts",
+			"src/asset-hash.ts",
 			"src/test-helpers/index.ts",
 			// Leaf entry points let consumers bundle individual utilities without
 			// pulling in the broad package barrel and its transitive dependencies.
@@ -64,6 +66,8 @@ export default defineConfig([
 		shims: true,
 		format: "esm",
 		deps: {
+			// Asset configuration uses private workspace utilities at runtime.
+			alwaysBundle: [/^@cloudflare\/workers-shared(\/.*)?$/],
 			neverBundle: ["vitest", ...EXTERNAL_DEPENDENCIES],
 			dts: {
 				alwaysBundle: [

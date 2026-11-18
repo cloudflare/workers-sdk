@@ -4,11 +4,11 @@ import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { createMetadataObject } from "@cloudflare/pages-shared/metadata-generator/createMetadataObject";
 import { parseHeaders } from "@cloudflare/workers-shared/utils/configuration/parseHeaders";
 import { parseRedirects } from "@cloudflare/workers-shared/utils/configuration/parseRedirects";
+import { createFileHasher } from "@cloudflare/workers-utils/asset-hash";
 import { watch } from "chokidar";
 import { getType } from "mime";
 import { fetch, Request, Response } from "miniflare";
 import { Dispatcher, getGlobalDispatcher } from "undici";
-import { createFileHasher } from "../deploy/helpers/hash";
 import type { Options } from "./pages-assets-types";
 import type { Metadata } from "@cloudflare/pages-shared/asset-server/metadata";
 import type {

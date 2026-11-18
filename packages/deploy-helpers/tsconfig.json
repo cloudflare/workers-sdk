@@ -6,12 +6,5 @@
 		"tsBuildInfoFile": ".tsbuildinfo"
 	},
 	"include": ["**/*.ts", "**/*.js"],
-	"exclude": [
-		"dist",
-		"node_modules",
-		"**/__tests__/**",
-		"**/*.test.ts",
-		"src/dev/pages-assets.ts",
-		"type-tests"
-	]
+	"exclude": ["dist", "node_modules", "**/__tests__/**", "**/*.test.ts"]
 }

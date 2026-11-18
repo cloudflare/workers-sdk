@@ -1,4 +1,4 @@
-// `@cloudflare/deploy-helpers/pages-assets` dynamically imports
+// `@cloudflare/dev-helpers/pages-assets` dynamically imports
 // `@cloudflare/pages-shared/environment-polyfills`.
 // `@cloudflare/pages-shared/environment-polyfills/types.ts` defines `global`
 // augmentations that pollute the `import`-site's typing environment.

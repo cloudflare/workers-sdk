@@ -1,9 +1,4 @@
 import path from "node:path";
-import { getVarsForDev } from "@cloudflare/deploy-helpers/dev-vars";
-import {
-	getMiniflareWorkerOptions,
-	getZoneFromConfig,
-} from "@cloudflare/deploy-helpers/miniflare-options";
 import {
 	DEFAULT_COMPAT_DATE,
 	getRegistryPath,
@@ -18,11 +13,16 @@ import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
 import { getBindings } from "../../../dev";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../../../dev/class-names-sqlite";
+import { getVarsForDev } from "../../../dev/dev-vars";
 import {
 	buildAssetOptions,
 	buildMiniflareBindingOptions,
 	getDefaultProjectTmpPath,
 } from "../../../dev/miniflare";
+import {
+	getMiniflareWorkerOptions,
+	getZoneFromConfig,
+} from "../../../dev/miniflare-options";
 import { logger } from "../../../logger";
 import { dedent } from "../../../utils/dedent";
 import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
@@ -31,7 +31,11 @@ import { ExecutionContext } from "./executionContext";
 import type { RemoteProxySession } from "../../remoteBindings";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type { AssetsOptions, Binding } from "@cloudflare/workers-utils";
-import type { Config, RawConfig, RawEnvironment } from "@cloudflare/workers-utils/config";
+import type {
+	Config,
+	RawConfig,
+	RawEnvironment,
+} from "@cloudflare/workers-utils/config";
 import type {
 	RemoteProxyConnectionString,
 	V4MiniflareOptions,

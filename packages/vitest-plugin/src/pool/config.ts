@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
 import util from "node:util";
-import { setDeployHelpersLogger } from "@cloudflare/deploy-helpers/context";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import {
 	DEFAULT_COMPAT_DATE,
@@ -798,10 +797,10 @@ async function parseCustomPoolOptions(
 		}
 
 		const { getMiniflareWorkerOptions } =
-			await import("@cloudflare/deploy-helpers/miniflare-options");
-		setDeployHelpersLogger(developmentLogger);
+			await import("@cloudflare/dev-helpers/miniflare-options");
 		const { workerOptions, externalWorkers, define, main } =
 			getMiniflareWorkerOptions(config, environment, {
+				logger: developmentLogger,
 				overrides: {
 					assets: options.miniflare.assets,
 				},

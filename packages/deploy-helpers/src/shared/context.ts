@@ -10,7 +10,7 @@ import type {
 /**
  * Module-level context globals for deploy-helpers.
  *
- * Except for the default console logger, these are typed as non-nullable but are
+ * These are typed as non-nullable but are
  * undefined until initDeployHelpersContext() is called. Consumers must import the live binding directly (e.g. `import { logger }`)
  * and NOT destructure or cache the value at module-load time, otherwise they will
  * capture `undefined` before init runs.
@@ -19,9 +19,7 @@ import type {
  *   import { logger } from "./context";  // correct: live binding
  *   const { logger } = await import("./context");  // WRONG: captures undefined
  */
-// Defaults to the console (hiding debug logs) so that the local development
-// helpers can be used by consumers that never initialise the context.
-export let logger: Logger = { ...console, debug() {} };
+export let logger: Logger;
 export let fetchResult: FetchResultFetcher;
 export let fetchListResult: FetchListResultFetcher;
 export let fetchPagedListResult: FetchPagedListResultFetcher;
@@ -29,15 +27,6 @@ export let fetchKVGetValue: FetchKVGetValueFetcher;
 export let confirm: DeployHelpersContext["confirm"];
 export let prompt: DeployHelpersContext["prompt"];
 export let select: DeployHelpersContext["select"];
-
-/**
- * Configure logging for consumers that only use local development helpers.
- *
- * @param value The consumer's logger, including any level filtering and deduplication.
- */
-export function setDeployHelpersLogger(value: Logger): void {
-	logger = value;
-}
 
 /**
  * Set the global context for deploy-helpers. Must be called once at

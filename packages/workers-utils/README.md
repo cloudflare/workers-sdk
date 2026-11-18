@@ -52,3 +52,10 @@ removing the aliases would require a future breaking change. The new `readConfig
 API is available only from `/config`. General utilities such as logging, file
 operations and the generic config cache keep their existing entry points. The
 browser root export of `constructWranglerConfig` also remains available.
+
+Asset directory validation and routing options are shared by development and
+deployment through `getAssetsOptions()`, `validateAssetsOptions()` and
+`resolveAssetOptions()` in `/config`. Pass a logger when resolving options so
+warnings follow the caller's logging policy. The focused `/asset-hash` entry point
+exports `createFileHasher()` to initialize a reusable hasher for asset uploads
+and local Pages serving.

@@ -2,9 +2,8 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { UserError } from "@cloudflare/workers-utils";
 import { caseInsensitiveEnv } from "@cloudflare/workers-utils/local-env";
-import dotenv from "dotenv";
+import { parse, type DotenvParseOutput } from "dotenv";
 import dotenvExpand from "dotenv-expand";
-import { logger as contextLogger } from "../shared/context";
 import type { Logger } from "@cloudflare/workers-utils";
 
 const isWindows = process.platform === "win32";
@@ -77,7 +76,7 @@ export function getDefaultEnvFiles(env: string | undefined): string[] {
  * @param envPaths - An array of absolute paths to .env files to load.
  * @param options.includeProcessEnv - If true, will include the current process environment variables in the merged result.
  * @param options.silent - If true, will not log any messages about the loaded .env files.
- * @param options.logger - The logger to use before the shared context has been initialized.
+ * @param options.logger - The caller's logger for file-loading diagnostics.
  * @returns An object containing the merged and expanded environment variables.
  */
 export function loadDotEnv(
@@ -85,13 +84,13 @@ export function loadDotEnv(
 	{
 		includeProcessEnv,
 		silent,
-		logger = contextLogger,
+		logger,
 	}: {
 		includeProcessEnv: boolean;
 		silent: boolean;
-		logger?: Pick<Logger, "debug" | "log">;
+		logger: Pick<Logger, "debug" | "log" | "warn" | "once">;
 	}
-): dotenv.DotenvParseOutput {
+): DotenvParseOutput {
 	// The `parsedEnv` object will be mutated to contain the merged values.
 	const parsedEnv = isWindows ? caseInsensitiveEnv() : {};
 	for (const envPath of envPaths) {
@@ -101,7 +100,7 @@ export function loadDotEnv(
 		} catch (error) {
 			if (error instanceof UserError) {
 				// .env files are loaded for every command, so warn rather than fail.
-				logger.once.warn(`${error.message} Ignoring this file.`);
+				(logger.once ?? logger).warn(`${error.message} Ignoring this file.`);
 			} else {
 				logger.debug(`Failed to load .env file "${envPath}":`, error);
 			}
@@ -113,7 +112,7 @@ export function loadDotEnv(
 			);
 			continue;
 		}
-		Object.assign(parsedEnv, dotenv.parse(contents));
+		Object.assign(parsedEnv, parse(contents));
 		if (!silent) {
 			const relativePath = path.relative(process.cwd(), envPath);
 			logger.log(`Using secrets defined in ${relativePath}`);

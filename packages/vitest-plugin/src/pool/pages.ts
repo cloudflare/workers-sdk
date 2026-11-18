@@ -42,7 +42,7 @@ export async function buildPagesASSETSBinding(
 	}
 
 	const { generateASSETSBinding } =
-		await import("@cloudflare/deploy-helpers/pages-assets"); // (lazy)
+		await import("@cloudflare/dev-helpers/pages-assets"); // (lazy)
 
 	// Create the AbortController after the import succeeds so we don't leak
 	// a registered controller if the import throws.

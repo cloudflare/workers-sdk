@@ -317,7 +317,7 @@ async function getPagesAssetsFetcher(
 ): Promise<StartDevWorkerInput["bindings"] | undefined> {
 	if (options !== undefined) {
 		const { generateASSETSBinding } =
-			await import("@cloudflare/deploy-helpers/pages-assets");
+			await import("@cloudflare/dev-helpers/pages-assets");
 		return {
 			ASSETS: {
 				type: "fetcher",

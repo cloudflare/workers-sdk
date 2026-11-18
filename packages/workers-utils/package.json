@@ -82,6 +82,10 @@
 		"./sanitize-headers": {
 			"import": "./dist/sanitize-headers.mjs",
 			"types": "./dist/sanitize-headers.d.mts"
+		},
+		"./asset-hash": {
+			"types": "./dist/asset-hash.d.mts",
+			"import": "./dist/asset-hash.mjs"
 		}
 	},
 	"scripts": {
@@ -113,6 +117,7 @@
 		"concurrently": "^8.2.2",
 		"dotenv-expand": "13.0.0",
 		"empathic": "^2.0.0",
+		"hash-wasm": "4.13.0",
 		"jsonc-parser": "catalog:default",
 		"minimatch": "^5.1.9",
 		"open": "catalog:default",

@@ -9,6 +9,7 @@ import {
 import {
 	convertConfigToBindings,
 	DEFAULT_MODULE_RULES,
+	getAssetsOptions,
 	resolveBindingRemote,
 	extractBindingsOfType,
 	getDurableObjectClassNameToUseSQLiteMap,
@@ -17,8 +18,6 @@ import {
 	readConfig,
 	validateBindingRemoteSetting,
 } from "@cloudflare/workers-utils/config";
-import { getAssetsOptions } from "../deploy/helpers/assets";
-import { logger } from "../shared/context";
 import { getVarsForDev } from "./dev-vars";
 import type { ArtifactsEventSubscription } from "@cloudflare/config";
 import type { ContainerDevRuntimeOptions } from "@cloudflare/containers-shared";
@@ -37,6 +36,7 @@ import type {
 	CfScriptFormat,
 	CfWorkflow,
 	LegacyAssetPaths,
+	Logger,
 	StartDevWorkerInput,
 } from "@cloudflare/workers-utils";
 import type {
@@ -192,7 +192,8 @@ function pipelineEntry(
 }
 function hyperdriveEntry(
 	hyperdrive: CfHyperdrive,
-	remoteProxyConnectionString?: RemoteProxyConnectionString
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
+	logger: Logger
 ):
 	| [string, string]
 	| [
@@ -396,7 +397,8 @@ type MiniflareBindingsConfig = {
  */
 export function buildMiniflareBindingOptions(
 	config: MiniflareBindingsConfig,
-	remoteProxyConnectionString: RemoteProxyConnectionString | undefined
+	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
+	logger: Logger
 ): {
 	bindingOptions: WorkerOptionsBindings;
 	externalWorkers: V4WorkerOptions[];
@@ -798,7 +800,7 @@ export function buildMiniflareBindingOptions(
 		),
 		hyperdrives: Object.fromEntries(
 			hyperdrives.map((hyperdrive) =>
-				hyperdriveEntry(hyperdrive, remoteProxyConnectionString)
+				hyperdriveEntry(hyperdrive, remoteProxyConnectionString, logger)
 			)
 		),
 		analyticsEngineDatasets: Object.fromEntries(
@@ -1090,7 +1092,11 @@ export function isUnsafeServiceBindingWithDevCfg(
  * Checks for CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_* env vars
  * and applies them to the config's hyperdrive bindings.
  */
-function applyHyperdriveEnvVars(config: Config, local: boolean): void {
+function applyHyperdriveEnvVars(
+	config: Config,
+	local: boolean,
+	logger: Logger
+): void {
 	for (const hyperdrive of config.hyperdrive ?? []) {
 		const prefix = `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_`;
 		const deprecatedPrefix = `WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_`;
@@ -1151,9 +1157,10 @@ export function getBindings(
 	envFiles: string[] | undefined,
 	local: boolean,
 	inputBindings: StartDevWorkerInput["bindings"],
-	defaultBindings: StartDevWorkerInput["bindings"]
+	defaultBindings: StartDevWorkerInput["bindings"],
+	logger: Logger
 ): StartDevWorkerInput["bindings"] {
-	applyHyperdriveEnvVars(configParam, local);
+	applyHyperdriveEnvVars(configParam, local, logger);
 
 	const bindings = convertConfigToBindings(configParam, {
 		usePreviewIds: true,
@@ -1178,8 +1185,7 @@ export function getBindings(
 		envFiles,
 		configParam.vars,
 		env,
-		false,
-		secrets
+		{ silent: false, secrets, logger }
 	);
 	for (const [name, binding] of Object.entries(vars)) {
 		// Only override plain_text/json/secret_text vars, not other binding types like kv_namespace
@@ -1267,51 +1273,32 @@ export interface MiniflareWorkerOptions {
 	externalWorkers: V4WorkerOptions[];
 }
 
+/** Caller-owned logging and local development overrides. */
+export interface MiniflareWorkerOptionsOptions {
+	logger: Logger;
+	envFiles?: string[];
+	remoteProxyConnectionString?: RemoteProxyConnectionString;
+	overrides?: {
+		assets?: Partial<AssetsOptions>;
+		enableContainers?: boolean;
+	};
+	containerBuildId?: string;
+}
+
 /**
  * Resolve a Wrangler configuration into the options needed to run it in Miniflare.
  *
- * @param configPath Path to the Wrangler configuration file.
+ * @param configOrConfigPath The loaded configuration or path to its file.
  * @param env Optional named Wrangler environment.
- * @param options Local binding, container and asset overrides.
+ * @param options The caller's logger, local bindings, container and asset overrides.
  * @returns Worker options, auxiliary Workers, defines and the entrypoint.
  */
 export function getMiniflareWorkerOptions(
-	configPath: string,
-	env?: string,
-	options?: {
-		remoteProxyConnectionString?: RemoteProxyConnectionString;
-		overrides?: {
-			assets?: Partial<AssetsOptions>;
-			enableContainers?: boolean;
-		};
-		containerBuildId?: string;
-	}
-): MiniflareWorkerOptions;
-export function getMiniflareWorkerOptions(
-	config: Config,
-	env?: string,
-	options?: {
-		remoteProxyConnectionString?: RemoteProxyConnectionString;
-		overrides?: {
-			assets?: Partial<AssetsOptions>;
-			enableContainers?: boolean;
-		};
-		containerBuildId?: string;
-	}
-): MiniflareWorkerOptions;
-export function getMiniflareWorkerOptions(
 	configOrConfigPath: string | Config,
-	env?: string,
-	options?: {
-		envFiles?: string[];
-		remoteProxyConnectionString?: RemoteProxyConnectionString;
-		overrides?: {
-			assets?: Partial<AssetsOptions>;
-			enableContainers?: boolean;
-		};
-		containerBuildId?: string;
-	}
+	env: string | undefined,
+	options: MiniflareWorkerOptionsOptions
 ): MiniflareWorkerOptions {
+	const { logger } = options;
 	const config =
 		typeof configOrConfigPath === "string"
 			? readConfig({ config: configOrConfigPath, env }, { logger })
@@ -1343,7 +1330,8 @@ export function getMiniflareWorkerOptions(
 		options?.envFiles,
 		true,
 		undefined,
-		undefined
+		undefined,
+		logger
 	);
 
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
@@ -1360,7 +1348,8 @@ export function getMiniflareWorkerOptions(
 			containerRuntimeOptions: containerPlan?.containerRuntimeOptions,
 			enableContainers,
 		},
-		options?.remoteProxyConnectionString
+		options?.remoteProxyConnectionString,
+		logger
 	);
 
 	const sitesAssetPaths = getSiteAssetPaths(config);
@@ -1375,15 +1364,18 @@ export function getMiniflareWorkerOptions(
 	const hasAssetsDirectory =
 		config.assets?.directory || options?.overrides?.assets?.directory;
 	const processedAssetOptions = hasAssetsDirectory
-		? getAssetsOptions({
-				args: {
-					assets: undefined,
+		? getAssetsOptions(
+				{
+					args: {
+						assets: undefined,
+					},
+					config,
+					// For getPlatformProxy we don't need to validate the directory's existence
+					validateDirectoryExistence: false,
+					overrides: options?.overrides?.assets,
 				},
-				config,
-				// For getPlatformProxy we don't need to validate the directory's existence
-				validateDirectoryExistence: false,
-				overrides: options?.overrides?.assets,
-			})
+				logger
+			)
 		: undefined;
 	const assetOptions = processedAssetOptions
 		? buildAssetOptions({ assets: processedAssetOptions })

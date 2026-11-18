@@ -17,11 +17,8 @@ export const EXTERNAL_DEPENDENCIES = [
 	// These are externalized to avoid duplication in wrangler's bundle,
 	// which already bundles these packages itself.
 	"chalk",
-	"chokidar",
 	"command-exists",
 	"dotenv",
-	"dotenv-expand",
-	"mime",
 	"p-queue",
 	"pretty-bytes",
 	"undici",

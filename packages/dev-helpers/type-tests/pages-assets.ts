@@ -1,5 +1,5 @@
-import type { generateASSETSBinding as implementation } from "../src/dev/pages-assets";
-import type { generateASSETSBinding as declaration } from "../src/dev/pages-assets-types";
+import type { generateASSETSBinding as implementation } from "../src/pages-assets";
+import type { generateASSETSBinding as declaration } from "../src/pages-assets-types";
 
 type Assert<T extends true> = T;
 

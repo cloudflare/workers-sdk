@@ -83,3 +83,11 @@ export type { ConvertBindingsOptions } from "../binding-utils";
 export { isDockerfile } from "./validation";
 export type { DevConfig, ReadConfigCommandArgs, ReadConfigOptions } from ".";
 export { friendlyBindingNames } from "./validation";
+
+export {
+	getAssetsOptions,
+	resolveAssetOptions,
+	validateAssetsOptions,
+	NonDirectoryAssetsDirError,
+	NonExistentAssetsDirError,
+} from "./assets";

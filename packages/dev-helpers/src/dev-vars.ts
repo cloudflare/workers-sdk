@@ -4,9 +4,8 @@ import {
 	getCloudflareLoadDevVarsFromDotEnv,
 } from "@cloudflare/workers-utils";
 import { parse, type DotenvParseOutput } from "dotenv";
-import { logger } from "../shared/context";
 import { getDefaultEnvFiles, loadDotEnv, readEnvFile } from "./dot-env";
-import type { Binding } from "@cloudflare/workers-utils";
+import type { Binding, Logger } from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils/config";
 import type { Json } from "miniflare";
 
@@ -53,8 +52,9 @@ export type VarBinding = Extract<
  * The `envFiles` paths are resolved against the directory of the Wrangler configuration file, if there is one, otherwise against the current working directory.
  * @param vars - The existing `vars` bindings from the Wrangler configuration.
  * @param env - The specific environment name (e.g., "staging") or `undefined` if no specific environment is set.
- * @param silent - If true, will not log any messages about the loaded .dev.vars files or .env files.
- * @param secrets - If defined, only the declared secret keys are loaded from `.dev.vars` or `.env`/`process.env`.
+ * @param options.silent - If true, will not log any messages about the loaded .dev.vars files or .env files.
+ * @param options.secrets - If defined, only the declared secret keys are loaded from `.dev.vars` or `.env`/`process.env`.
+ * @param options.logger - The caller's logger for file-loading diagnostics and missing-secret warnings.
  * @returns The merged `vars` as typed bindings. Config vars are `plain_text`/`json`, while `.dev.vars`/`.env` vars are `secret_text`.
  */
 export function getVarsForDev(
@@ -62,8 +62,11 @@ export function getVarsForDev(
 	envFiles: string[] | undefined,
 	vars: Config["vars"],
 	env: string | undefined,
-	silent = false,
-	secrets?: Config["secrets"]
+	{
+		silent = false,
+		secrets,
+		logger,
+	}: { silent?: boolean; secrets?: Config["secrets"]; logger: Logger }
 ): Record<string, VarBinding> {
 	// Start with config vars (plain_text or json, not secret)
 	const result: Record<string, VarBinding> = {};
@@ -79,7 +82,7 @@ export function getVarsForDev(
 	// If envFiles are not explicitly provided, try to load from .dev.vars first
 	if (!envFiles?.length) {
 		const devVarsPath = path.resolve(configDir, ".dev.vars");
-		const loaded = loadDotDevDotVars(devVarsPath, env);
+		const loaded = loadDotDevDotVars(devVarsPath, env, logger);
 		if (loaded !== undefined) {
 			const devVarsRelativePath = path.relative(process.cwd(), loaded.path);
 			if (!silent) {
@@ -99,6 +102,7 @@ export function getVarsForDev(
 			// Otherwise, respect the CLOUDFLARE_INCLUDE_PROCESS_ENV env var.
 			includeProcessEnv: !!secrets || getCloudflareIncludeProcessEnvFromEnv(),
 			silent,
+			logger,
 		});
 	}
 
@@ -156,7 +160,10 @@ export interface DotDevDotVars {
 	parsed: DotenvParseOutput;
 }
 
-function tryLoadDotDevDotVars(basePath: string): DotDevDotVars | undefined {
+function tryLoadDotDevDotVars(
+	basePath: string,
+	logger: Pick<Logger, "debug">
+): DotDevDotVars | undefined {
 	const contents = readEnvFile(basePath);
 	if (contents === undefined) {
 		logger.debug(
@@ -175,10 +182,11 @@ function tryLoadDotDevDotVars(basePath: string): DotDevDotVars | undefined {
  */
 export function loadDotDevDotVars(
 	envPath: string,
-	env?: string
+	env: string | undefined,
+	logger: Pick<Logger, "debug">
 ): DotDevDotVars | undefined {
 	return (
-		(env !== undefined && tryLoadDotDevDotVars(`${envPath}.${env}`)) ||
-		tryLoadDotDevDotVars(envPath)
+		(env !== undefined && tryLoadDotDevDotVars(`${envPath}.${env}`, logger)) ||
+		tryLoadDotDevDotVars(envPath, logger)
 	);
 }
