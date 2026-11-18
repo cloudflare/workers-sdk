@@ -344,11 +344,11 @@ test("coupleWebSocket: closes worker socket with invalid client close code", asy
 		ws.close();
 	});
 	const port = await new Promise<number>((resolve) => {
-		server.listen(0, () => {
+		server.listen(0, "127.0.0.1", () => {
 			resolve((server.address() as AddressInfo).port);
 		});
 	});
-	const ws = new NodeWebSocket(`ws://localhost:${port}`);
+	const ws = new NodeWebSocket(`ws://127.0.0.1:${port}`);
 	const [client, worker] = Object.values(new WebSocketPair());
 
 	const eventPromise = new DeferredPromise<CloseEvent>();

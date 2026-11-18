@@ -14,7 +14,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const OPENAPI_COMMIT = "45402b29f339d77551c8cdfd269378d7b36c4775";
+const OPENAPI_COMMIT = "2d3b9ab6825d7087ebe00a4b03c2ff219f08e4b4";
 const OPENAPI_RAW_URL = `https://raw.githubusercontent.com/cloudflare/api-schemas/${OPENAPI_COMMIT}/openapi.json`;
 
 const GENERATED_PATHS = [

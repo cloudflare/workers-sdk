@@ -2,6 +2,8 @@ import { EventEmitter } from "node:events";
 import http from "node:http";
 import net from "node:net";
 import * as path from "node:path";
+import { json } from "node:stream/consumers";
+import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import { Response as MiniflareResponse } from "miniflare";
 import { afterEach, beforeEach, describe, test } from "vitest";
 import {
@@ -11,6 +13,7 @@ import {
 	getForwardedProto,
 	getOutputDirectory,
 	getScheme,
+	resolveRequestTarget,
 	toMiniflareRequest,
 } from "../utils";
 import type { AddressInfo } from "node:net";
@@ -50,6 +53,45 @@ describe("getOutputDirectory", () => {
 	}) => {
 		expect(getOutputDirectory({}, "environment-name")).toBe(
 			path.join("dist", "environment-name")
+		);
+	});
+});
+
+describe("resolveRequestTarget", () => {
+	test.for([
+		"http://localhost:5173",
+		"https://localhost:4173",
+		"https://[::1]:5173",
+	])("preserves the selected origin %s", (origin, { expect }) => {
+		const target = "//attacker.example:8000/%2f%5C?x=+&x=%20&empty=&flag";
+		expect(resolveRequestTarget(target, origin).href).toBe(origin + target);
+	});
+
+	test.for([
+		"",
+		"note",
+		"?query=1",
+		String.raw`\\attacker.example/note`,
+		"http://attacker.example/note",
+		"https://attacker.example/note",
+		"*",
+	])("rejects non-origin-form target %s", (target, { expect }) => {
+		expect(() => resolveRequestTarget(target, "http://localhost:5173")).toThrow(
+			"Expected an origin-form request target"
+		);
+	});
+
+	test("matches static routing rules against the complete pathname", ({
+		expect,
+	}) => {
+		const request = new Request(
+			resolveRequestTarget("//attacker.example/note?x=1", "http://localhost")
+		);
+		expect(
+			generateStaticRoutingRuleMatcher(["//attacker.example/*"])({ request })
+		).toBe(true);
+		expect(generateStaticRoutingRuleMatcher(["/note"])({ request })).toBe(
+			false
 		);
 	});
 });
@@ -329,11 +371,15 @@ describe("createRequestHandler", () => {
 		);
 	});
 
-	function startServer() {
-		const handler = createRequestHandler(async (request) => {
+	function startServer(
+		fetchHandler: Parameters<typeof createRequestHandler>[0] = async (
+			request
+		) => {
 			capturedUrls.push(request.url);
 			return new MiniflareResponse("OK");
-		});
+		}
+	) {
+		const handler = createRequestHandler(fetchHandler);
 
 		httpServer = http.createServer((req, res) => {
 			void handler(
@@ -352,6 +398,71 @@ describe("createRequestHandler", () => {
 			})
 		);
 	}
+
+	test("preserves repeated request Set-Cookie headers", async ({ expect }) => {
+		await startServer(async (request) =>
+			MiniflareResponse.json({
+				setCookie: request.headers.getSetCookie(),
+				cookie: request.headers.get("cookie"),
+				tags: request.headers.get("x-tag"),
+			})
+		);
+
+		const response = await new Promise<http.IncomingMessage>(
+			(resolve, reject) => {
+				http
+					.get(
+						`http://127.0.0.1:${port}/`,
+						{
+							headers: {
+								"set-cookie": [
+									"a=1; Expires=Wed, 21 Oct 2037 07:28:00 GMT",
+									"b=2; Path=/",
+								],
+								cookie: ["session=abc", "theme=dark"],
+								"x-tag": ["one", "two"],
+							},
+						},
+						resolve
+					)
+					.on("error", reject);
+			}
+		);
+
+		expect(response.statusCode).toBe(200);
+		expect(await json(response)).toEqual({
+			setCookie: ["a=1; Expires=Wed, 21 Oct 2037 07:28:00 GMT", "b=2; Path=/"],
+			cookie: "session=abc; theme=dark",
+			tags: "one, two",
+		});
+	});
+
+	test.for([
+		["/path", "/path"],
+		["//attacker.example/path?x=%2F&x=+", "//attacker.example/path?x=%2F&x=+"],
+		["///attacker.example/path", "///attacker.example/path"],
+		[String.raw`/\attacker.example/path`, "//attacker.example/path"],
+		[
+			"/%2f%5C/%E2%9C%93?next=//attacker.example&empty=&flag",
+			"/%2f%5C/%E2%9C%93?next=//attacker.example&empty=&flag",
+		],
+	])(
+		"keeps request target %s on the server origin",
+		async ([target, expected], { expect }) => {
+			await startServer();
+			// Send the raw target: Fetch would normalize literal backslashes first.
+			const response = await new Promise<http.IncomingMessage>(
+				(resolve, reject) => {
+					http
+						.get({ host: "127.0.0.1", port, path: target }, resolve)
+						.on("error", reject);
+				}
+			);
+			response.resume();
+			expect(response.statusCode).toBe(200);
+			expect(capturedUrls).toEqual([`http://127.0.0.1:${port}${expected}`]);
+		}
+	);
 
 	test("falls back to `http://` when no `X-Forwarded-Proto` header is set", async ({
 		expect,
@@ -399,6 +510,54 @@ describe("createRequestHandler", () => {
 			headers: { "x-forwarded-proto": "ws" },
 		});
 		expect(capturedUrls[0]).toBe(`http://127.0.0.1:${port}/path`);
+	});
+
+	test.for([
+		{
+			name: "preserves a custom status text",
+			init: { status: 231, statusText: "global-before" },
+			expected: { status: 231, statusText: "global-before" },
+		},
+		{
+			name: "preserves an empty status text",
+			init: { status: 231, statusText: "" },
+			expected: { status: 231, statusText: "" },
+		},
+		{
+			name: "preserves the default empty status text when none is set",
+			init: { status: 404 },
+			expected: { status: 404, statusText: "" },
+		},
+	])("$name", async ({ init, expected }, { expect }) => {
+		const handler = createRequestHandler(
+			async () => new MiniflareResponse("body", init)
+		);
+
+		httpServer = http.createServer((req, res) => {
+			void handler(
+				req as unknown as Parameters<typeof handler>[0],
+				res,
+				(error: unknown) => {
+					res.statusCode = 500;
+					res.end(error instanceof Error ? error.message : String(error));
+				}
+			);
+		});
+
+		await new Promise<void>((r) =>
+			httpServer.listen(0, "127.0.0.1", () => {
+				port = (httpServer.address() as AddressInfo).port;
+				r();
+			})
+		);
+
+		const response = await fetch(`http://127.0.0.1:${port}/`);
+
+		expect({
+			status: response.status,
+			statusText: response.statusText,
+		}).toEqual(expected);
+		expect(await response.text()).toBe("body");
 	});
 
 	test("returns the Worker response when the Worker cancels an oversized body", async ({

@@ -90,6 +90,8 @@ export type TemplateConfig = {
 	 * (which gets managed and bumped by dependabot)
 	 */
 	frameworkCliPinnedVersion?: string;
+	/** The semver range of Node.js versions supported by the framework CLI. */
+	frameworkCliNodeVersion?: string;
 	/** When set to true, hides this template from the selection menu */
 	hidden?: boolean;
 	/** Specifies a set of files that will be copied to the project directory during creation.

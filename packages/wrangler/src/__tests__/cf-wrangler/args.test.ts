@@ -6,151 +6,165 @@ import {
 } from "../../cf-wrangler/args";
 
 describe("cf-wrangler parseArgs", () => {
-	describe("happy paths", () => {
-		it("parses all flags in --flag value form", ({ expect }) => {
-			const out = parseArgs([
+	it.for([
+		[
+			"--mode",
+			"production",
+			"--port",
+			"8788",
+			"--host",
+			"example.com",
+			"--local",
+			"--inspector-port",
+			"9229",
+		],
+		[
+			"--mode=production",
+			"--port=8788",
+			"--host=example.com",
+			"--local",
+			"--inspector-port=9229",
+		],
+	])("parses separate and equals forms: %j", (argv, { expect }) => {
+		expect(parseArgs(argv)).toMatchObject({
+			env: "production",
+			port: 8788,
+			host: "example.com",
+			local: true,
+			inspectorPort: 9229,
+		});
+	});
+
+	it("preserves the delegate defaults", ({ expect }) => {
+		expect(parseArgs([])).toMatchObject({
+			remote: false,
+			latest: true,
+			noBundle: false,
+			testScheduled: false,
+			experimentalAutoCreate: false,
+			experimentalProvision: false,
+			experimentalNewConfig: true,
+			types: false,
+		});
+		expect(parseArgs([]).env).toBeUndefined();
+		expect(parseArgs([]).config).toBeUndefined();
+		expect(parseArgs([]).local).toBeUndefined();
+	});
+
+	it("uses Wrangler aliases, repeated string options, and boolean negation", ({
+		expect,
+	}) => {
+		expect(
+			parseArgs([
+				"--compatibility-flag",
+				"nodejs_compat",
+				"--compatibility-flags=some_other_flag",
+				"--route",
+				"example.com/*",
+				"--route=example.org/*",
+				"-l",
+				"--no-live-reload",
+				"--no-infer-origin-from-routes",
+				"--test-scheduled",
+			])
+		).toMatchObject({
+			compatibilityFlags: ["nodejs_compat", "some_other_flag"],
+			routes: ["example.com/*", "example.org/*"],
+			local: true,
+			liveReload: false,
+			inferOriginFromRoutes: false,
+			testScheduled: true,
+		});
+	});
+
+	it("preserves string values and argument boundaries", ({ expect }) => {
+		expect(
+			parseArgs([
 				"--mode",
-				"production",
-				"--port",
-				"8788",
+				"001",
+				"--var",
+				"ID:000123",
+				"--var=TEXT:hello world",
+				"--define",
+				'TEXT:"a=b c"',
+				"--tsconfig",
+				"configs with spaces/001.json",
+				"--assets=001",
 				"--host",
-				"example.com",
-				"--local",
-			]);
-			expect(out).toEqual({
-				mode: "production",
-				port: 8788,
-				host: "example.com",
-				local: true,
-			});
-		});
-
-		it("parses all flags in --flag=value form", ({ expect }) => {
-			const out = parseArgs([
-				"--mode=production",
-				"--port=8788",
-				"--host=example.com",
-				"--local",
-			]);
-			expect(out).toEqual({
-				mode: "production",
-				port: 8788,
-				host: "example.com",
-				local: true,
-			});
-		});
-
-		it("returns an empty object for no flags", ({ expect }) => {
-			expect(parseArgs([])).toEqual({});
-		});
-
-		it("omits unset flags from the output", ({ expect }) => {
-			const out = parseArgs(["--port", "8788"]);
-			expect(out).toEqual({ port: 8788 });
-			expect(out.mode).toBeUndefined();
-			expect(out.local).toBeUndefined();
-		});
-
-		it("accepts port 0 (OS-assigned)", ({ expect }) => {
-			expect(parseArgs(["--port", "0"])).toEqual({ port: 0 });
-		});
-
-		it("accepts port 65535 (max)", ({ expect }) => {
-			expect(parseArgs(["--port", "65535"])).toEqual({ port: 65535 });
+				"000123",
+				"--persist-to",
+				"C:\\my state\\001",
+			])
+		).toMatchObject({
+			env: "001",
+			var: ["ID:000123", "TEXT:hello world"],
+			define: ['TEXT:"a=b c"'],
+			tsconfig: "configs with spaces/001.json",
+			assets: "001",
+			host: "000123",
+			persistTo: "C:\\my state\\001",
 		});
 	});
 
-	describe("port validation", () => {
-		// `--port -1` is rejected by `node:util.parseArgs` itself
-		// (it reads `-1` as a flag, not a value). Negative ports
-		// pass through to our coercion only via `--port=-N`.
-		it("rejects negative ports (--port=-1 form)", ({ expect }) => {
-			expect(() => parseArgs(["--port=-1"])).toThrow(ArgParseError);
-			expect(() => parseArgs(["--port=-1"])).toThrow(
-				/integer between 0 and 65535/
-			);
-		});
-
-		it("rejects ports above 65535", ({ expect }) => {
-			expect(() => parseArgs(["--port", "99999"])).toThrow(
-				/integer between 0 and 65535/
-			);
-		});
-
-		it("rejects fractional ports", ({ expect }) => {
-			expect(() => parseArgs(["--port", "1.5"])).toThrow(
-				/integer between 0 and 65535/
-			);
-		});
-
-		it("rejects non-numeric ports", ({ expect }) => {
-			expect(() => parseArgs(["--port", "abc"])).toThrow(
-				/integer between 0 and 65535/
-			);
-		});
-	});
-
-	describe("rejected flags (allowNegative disabled)", () => {
-		it("rejects --no-local with an unknown-flag error", ({ expect }) => {
-			expect(() => parseArgs(["--no-local"])).toThrow(ArgParseError);
-			expect(() => parseArgs(["--no-local"])).toThrow(/Unknown option/);
-		});
-
-		it("rejects --remote (whole-worker remote dev is out of scope)", ({
-			expect,
-		}) => {
-			expect(() => parseArgs(["--remote"])).toThrow(/Unknown option/);
-		});
-
-		it("rejects other wrangler dev flags we don't support", ({ expect }) => {
-			expect(() => parseArgs(["--var", "FOO:bar"])).toThrow(/Unknown option/);
-			expect(() => parseArgs(["--define", "X=1"])).toThrow(/Unknown option/);
-			expect(() => parseArgs(["--tsconfig", "tsconfig.json"])).toThrow(
-				/Unknown option/
-			);
-			expect(() => parseArgs(["--assets", "./public"])).toThrow(
-				/Unknown option/
-			);
-		});
-
-		it("rejects --env (must use --mode)", ({ expect }) => {
-			expect(() => parseArgs(["--env", "production"])).toThrow(
-				/Unknown option/
-			);
-		});
-
-		it("rejects --config (config comes from wrangler's discovery)", ({
-			expect,
-		}) => {
-			expect(() => parseArgs(["--config", "wrangler.jsonc"])).toThrow(
-				/Unknown option/
-			);
-		});
-	});
-
-	describe("structural rejections", () => {
-		it("rejects positional arguments", ({ expect }) => {
-			expect(() => parseArgs(["./worker.ts"])).toThrow(ArgParseError);
-			expect(() => parseArgs(["./worker.ts"])).toThrow(/positional/);
-		});
-
-		it("rejects unknown flags", ({ expect }) => {
-			expect(() => parseArgs(["--definitely-not-a-flag"])).toThrow(
-				/Unknown option/
-			);
-		});
-	});
-
-	describe("ArgParseError", () => {
-		it("wraps node:util.parseArgs errors", ({ expect }) => {
-			try {
-				parseArgs(["--remote"]);
-				expect.fail("should have thrown");
-			} catch (err) {
-				expect(err).toBeInstanceOf(ArgParseError);
-				expect((err as Error).name).toBe("ArgParseError");
+	it.for(["port", "inspector-port"])(
+		"accepts the limits of --%s",
+		(flag, { expect }) => {
+			for (const value of [0, 65535]) {
+				expect(parseArgs([`--${flag}`, String(value)])).toHaveProperty(
+					flag === "port" ? "port" : "inspectorPort",
+					value
+				);
 			}
-		});
+		}
+	);
+
+	it.for(["port", "inspector-port"])(
+		"rejects invalid --%s values",
+		(flag, { expect }) => {
+			for (const value of ["-1", "65536", "1.5", "abc", "NaN", "Infinity"]) {
+				for (const argv of [[`--${flag}=${value}`], [`--${flag}`, value]]) {
+					expect(() => parseArgs(argv)).toThrow(ArgParseError);
+				}
+			}
+		}
+	);
+
+	it.for([
+		["--no-local"],
+		["--local=false"],
+		["--remote"],
+		["-r"],
+		["--env", "production"],
+		["-e", "production"],
+		["--config", "wrangler.jsonc"],
+		["-c", "wrangler.jsonc"],
+		["--cwd", "elsewhere"],
+		["--experimental-new-config=false"],
+		["--x-new-config=false"],
+		["--experimental-provision"],
+		["--experimental-auto-create"],
+		["--profile", "work"],
+		["./worker.ts"],
+		["--script", "./worker.ts"],
+		["--definitely-not-a-flag"],
+		["--my-vite-flag"],
+		["--id", "001"],
+		["--mode"],
+		["--port"],
+		["--inspector-port"],
+		["--var"],
+		["--local-protocol", "ftp"],
+		["--log-level", "verbose"],
+		["--port", "8787", "--port", "8788"],
+		["--mode=a", "--mode=b"],
+		["--https-key-path=a", "--https-key-path=b"],
+		["--local-protocol=http", "--local-protocol=https"],
+		["--inspector-port=9229", "--inspector-port=9230"],
+		["--node-compat"],
+		["--tunnel-name", "named", "--tunnel-allowed-mail", "user@example.com"],
+		["--tunnel-name=named", "--tunnel-allowed-mail=user@example.com"],
+	])("rejects invalid or unsupported arguments: %j", (argv, { expect }) => {
+		expect(() => parseArgs(argv)).toThrow(ArgParseError);
 	});
 });
 

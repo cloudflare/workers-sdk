@@ -186,18 +186,12 @@ export default defineWranglerConfig((ctx) => {
 		case "staging": {
 			if (ctx.isPreview) {
 				return {
-					types: {
-						generate: false,
-					},
 					assetsDirectory: "public",
 				};
 			}
 			return {
 				define: {
 					PRODUCTION_ONLY: "\\"production\\"",
-				},
-				types: {
-					generate: false,
 				},
 				assetsDirectory: "public",
 			};
@@ -208,18 +202,12 @@ export default defineWranglerConfig((ctx) => {
 					define: {
 						PREVIEW_ONLY: "\\"preview\\"",
 					},
-					types: {
-						generate: false,
-					},
 					assetsDirectory: "public",
 				};
 			}
 			return {
 				define: {
 					BASE_ONLY: "\\"base\\"",
-				},
-				types: {
-					generate: false,
 				},
 				assetsDirectory: "public",
 			};
@@ -349,6 +337,60 @@ export default defineConfig((ctx) => {
     "preview-review",
     "preview-review",
     "preview-review",
+    "environments-migrated",
+  ],
+  "wranglerConfig": null,
+}
+`;
+
+exports[`Wrangler environment and tooling conversion > treats a Workflow whose script_name names the environment's Worker as local 1`] = `
+{
+  "cloudflareConfig": "import { bindings, defineConfig, exports } from "cf/config";
+
+/**
+ * Wrangler environments are selected through ctx.mode and the cf --mode flag.
+ * @see https://developers.cloudflare.com/workers/wrangler/environments/
+ */
+
+export default defineConfig((ctx) => {
+	switch (ctx.mode) {
+		case "staging": {
+			return {
+				worker: {
+					name: "app-staging",
+					compatibilityDate: "2026-09-23",
+					entrypoint: "src/index.ts",
+					env: {
+						JOBS: bindings.workflow({
+							name: "jobs-staging",
+							worker: "app-staging",
+							exportName: "Jobs",
+						}),
+					},
+					exports: {
+						Jobs: exports.workflow({
+							name: "jobs-staging",
+							limits: {
+								steps: 20,
+							},
+						}),
+					},
+				},
+			};
+		}
+		default: {
+			return {
+				worker: {
+					name: "app",
+					compatibilityDate: "2026-09-23",
+					entrypoint: "src/index.ts",
+				},
+			};
+		}
+	}
+});
+",
+  "codes": [
     "environments-migrated",
   ],
   "wranglerConfig": null,

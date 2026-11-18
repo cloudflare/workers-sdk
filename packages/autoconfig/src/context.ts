@@ -86,6 +86,11 @@ export interface AutoConfigContext {
 	/**
 	 * Runs a shell command in the given directory.
 	 *
+	 * For the cf target, commands may use bare framework executables. Implementations
+	 * must resolve executables from the detected details' `nodeModulesPaths`, adding
+	 * `.bin` to each directory. These paths stop at the detected workspace root;
+	 * standalone applications must not use unrelated parent installations.
+	 *
 	 * @param command - The shell command string to execute
 	 * @param cwd - The working directory for the command
 	 * @param label - A short label for logging (e.g., "[build]")

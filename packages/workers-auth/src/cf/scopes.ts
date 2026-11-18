@@ -1,7 +1,7 @@
 // The production cf OAuth client's registered scope catalog. Registration alone
 // does not make a scope requestable: the consent service must also be able to
-// resolve its Bach mapping. The known exceptions are filtered below before the
-// catalog is used for defaults, types, or validation.
+// resolve its Bach mapping. Known exceptions are filtered below before the
+// catalog is used for types, validation, and login defaults.
 //
 // Refresh the registration from `GET /accounts/{account}/oauth_clients/{id}`
 // and compare modern scope IDs with `GET /oauth/scopes`. Retain separately
@@ -309,6 +309,7 @@ export const CF_CLIENT_REGISTERED_SCOPES = [
 	"fraud-feedback.write",
 	"healthcheck.read",
 	"healthcheck.write",
+	"hyperdrive-planetscale.setup",
 	"http-applications.read",
 	"http-applications.write",
 	"http-ddos-managed-ruleset.read",
@@ -325,6 +326,10 @@ export const CF_CLIENT_REGISTERED_SCOPES = [
 	"ip-prefix-bgp-on-demand.write",
 	"ip-prefix.read",
 	"ip-prefix.write",
+	"k2.consume",
+	"k2.produce",
+	"k2.read",
+	"k2.write",
 	"l4-ddos-managed-ruleset.read",
 	"l4-ddos-managed-ruleset.write",
 	"load-balancers-account.read",
@@ -435,6 +440,7 @@ export const CF_CLIENT_REGISTERED_SCOPES = [
 	"trust-and-safety.write",
 	"url-scanner.read",
 	"url-scanner.write",
+	"user-api-tokens.write",
 	"user-details.read",
 	"user-details.write",
 	"vectorize.read",
@@ -478,6 +484,8 @@ export const CF_CLIENT_REGISTERED_SCOPES = [
 	"zone-disable-esc.write",
 	"zone-dns-settings.read",
 	"zone-dns-settings.write",
+	"zone-observability.read",
+	"zone-observability.write",
 	"zone-security-center-insights.read",
 	"zone-security-center-insights.write",
 	"zone-settings.read",
@@ -509,7 +517,7 @@ const CF_REGISTERED_BUT_UNGRANTABLE_SCOPES = [
 type UngrantableScope = (typeof CF_REGISTERED_BUT_UNGRANTABLE_SCOPES)[number];
 
 /**
- * The possible explicitly requestable keys for a cf Scope.
+ * The possible requestable keys for a cf Scope.
  *
  * "offline_access" is automatically included.
  */

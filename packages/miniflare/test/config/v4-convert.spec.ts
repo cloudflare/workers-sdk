@@ -4,6 +4,107 @@ import { convertV4MiniflareOptions } from "../../src/config/v4-convert";
 import type { RemoteProxyConnectionString } from "../../src/plugins/shared";
 
 describe("convertV4MiniflareOptions", () => {
+	test.for([undefined, "", "legacy-registry"])(
+		"preserves v4 registry opt-in semantics: %s",
+		(unsafeDevRegistryPath, { expect }) => {
+			const converted = convertV4MiniflareOptions({
+				script: "export default {};",
+				modules: true,
+				unsafeDevRegistryPath,
+			});
+
+			expect(converted.enableDevRegistry).toBe(Boolean(unsafeDevRegistryPath));
+			expect(converted.unsafeDevRegistryPath).toBe(unsafeDevRegistryPath);
+		}
+	);
+
+	test.for([undefined, "database-id"])(
+		"preserves remote Hyperdrive IDs, falling back to the binding name when absent: %s",
+		(id, { expect }) => {
+			const converted = convertV4MiniflareOptions({
+				script: "export default {};",
+				modules: true,
+				hyperdrives: {
+					DB: {
+						id,
+						remoteProxyConnectionString: new URL(
+							"http://127.0.0.1:8787"
+						) as RemoteProxyConnectionString,
+					},
+				},
+			});
+			expect(converted.workers[0].config.env?.DB).toEqual({
+				type: "hyperdrive",
+				id: id ?? "DB",
+				dev: { remote: true },
+			});
+		}
+	);
+
+	test("Artifacts uses a remote proxy only when given a connection string", ({
+		expect,
+	}) => {
+		const remoteProxyConnectionString = new URL(
+			"http://127.0.0.1:8787"
+		) as RemoteProxyConnectionString;
+		const converted = convertV4MiniflareOptions({
+			name: "worker",
+			script: "export default {};",
+			artifacts: {
+				// Wrangler passes a connection string only for `remote: true`.
+				REMOTE: { namespace: "remote", remoteProxyConnectionString },
+				LOCAL: { namespace: "local" },
+			},
+		});
+		const env = converted.workers[0].config.env;
+		expect(env?.REMOTE).toEqual({
+			type: "artifacts",
+			namespace: "remote",
+			dev: { remote: true },
+		});
+		expect(env?.LOCAL).toEqual({
+			type: "artifacts",
+			namespace: "local",
+			dev: { remote: false },
+		});
+		expect(converted.workers[0].dev?.remoteProxyConnectionString).toBe(
+			remoteProxyConnectionString
+		);
+	});
+	test("carries events on Workflow exports and legacy bindings", ({
+		expect,
+	}) => {
+		const events = [
+			{
+				type: "cf.artifacts.repo.created" as const,
+				filter: { repoName: "demo" },
+			},
+		];
+		const converted = convertV4MiniflareOptions({
+			name: "worker",
+			script: "export default {};",
+			workflowExports: {
+				OnCreate: { name: "on-create", events, stepLimit: 2 },
+			},
+			workflows: {
+				LEGACY: { name: "legacy", className: "Legacy", events, stepLimit: 3 },
+			},
+		});
+		expect(converted.workers[0].config.exports).toMatchObject({
+			OnCreate: {
+				type: "workflow",
+				name: "on-create",
+				events,
+				limits: { steps: 2 },
+			},
+		});
+		expect(converted.workers[0].config.env).toMatchObject({
+			LEGACY: {
+				type: "workflow",
+				unsafeConfig: { events, limits: { steps: 3 } },
+			},
+		});
+	});
 	test("preserves opaque K2 stream IDs through v4 parsing and conversion", ({
 		expect,
 	}) => {
@@ -20,7 +121,36 @@ describe("convertV4MiniflareOptions", () => {
 
 		expect(converted.workers[0].config.env?.ORDERS).toEqual({
 			type: "k2",
-			stream,
+			id: stream,
+			dev: { remote: true },
+		});
+		expect(converted.workers[0].dev?.remoteProxyConnectionString).toEqual(
+			remoteProxyConnectionString
+		);
+	});
+
+	test("converts local and remote Analytics Engine datasets", ({ expect }) => {
+		const remoteProxyConnectionString = new URL(
+			"http://127.0.0.1:8787"
+		) as RemoteProxyConnectionString;
+		const converted = convertV4MiniflareOptions({
+			name: "writer",
+			script: "export default {};",
+			modules: true,
+			analyticsEngineDatasets: {
+				LOCAL: { dataset: "local" },
+				REMOTE: { dataset: "remote", remoteProxyConnectionString },
+			},
+		});
+
+		expect(converted.workers[0].config.env?.LOCAL).toEqual({
+			type: "analytics-engine-dataset",
+			name: "local",
+			dev: { remote: false },
+		});
+		expect(converted.workers[0].config.env?.REMOTE).toEqual({
+			type: "analytics-engine-dataset",
+			name: "remote",
 			dev: { remote: true },
 		});
 		expect(converted.workers[0].dev?.remoteProxyConnectionString).toEqual(
@@ -115,6 +245,27 @@ describe("convertV4MiniflareOptions", () => {
 		});
 	});
 
+	test("nests Access local development configuration in the Worker config", ({
+		expect,
+	}) => {
+		const converted = convertV4MiniflareOptions({
+			name: "worker",
+			script: "export default {};",
+			access: {
+				aud: "my-app-aud-tag",
+				identity: { email: "user@example.com" },
+			},
+		});
+
+		expect(converted.workers[0].config.access).toEqual({
+			dev: {
+				aud: "my-app-aud-tag",
+				identity: { email: "user@example.com" },
+			},
+		});
+		expect(converted.workers[0].dev).not.toHaveProperty("access");
+	});
+
 	test("converts module source and representative bindings", ({ expect }) => {
 		const converted = convertV4MiniflareOptions({
 			rootPath: __dirname,
@@ -183,7 +334,7 @@ describe("convertV4MiniflareOptions", () => {
 				},
 				QUEUE: { type: "queue", name: "queue" },
 				SERVICE: { type: "worker", worker: "other-worker" },
-				ANALYTICS: { type: "analytics", dev: { remote: false } },
+				ANALYTICS: { type: "analytics-sql", dev: { remote: false } },
 				ASSETS: { type: "assets" },
 				BROWSER: { type: "browser", headful: true },
 				WORKFLOW: {
@@ -191,7 +342,7 @@ describe("convertV4MiniflareOptions", () => {
 					name: "workflow",
 					worker: "worker",
 					exportName: "Workflow",
-					limits: { steps: 5 },
+					unsafeConfig: { limits: { steps: 5 } },
 				},
 				SELF_EXPLICIT_WORKFLOW: {
 					type: "workflow",
@@ -328,7 +479,7 @@ describe("convertV4MiniflareOptions", () => {
 
 		expect(converted.workers[0].config.env?.PIPELINE).toEqual({
 			type: "pipeline",
-			name: "PIPELINE",
+			streamId: "PIPELINE",
 		});
 	});
 
@@ -557,6 +708,37 @@ describe("convertV4MiniflareOptions", () => {
 		);
 	});
 
+	test("converts tails and streaming tails to separate tail consumer lists", ({
+		expect,
+	}) => {
+		const converted = convertV4MiniflareOptions({
+			script: "export default {};",
+			tails: [
+				"tail-worker",
+				{ name: "named-tail-worker", entrypoint: "Tail", props: { id: 1 } },
+			],
+			streamingTails: ["streaming-tail-worker"],
+		});
+
+		expect(converted.workers[0].config.tailConsumers).toEqual([
+			{ worker: "tail-worker" },
+			{ worker: "named-tail-worker", entrypoint: "Tail", props: { id: 1 } },
+		]);
+		expect(converted.workers[0].config.experimental).toEqual({
+			streamingTailConsumers: [{ worker: "streaming-tail-worker" }],
+		});
+	});
+
+	test("omits tail consumer lists without tails", ({ expect }) => {
+		const converted = convertV4MiniflareOptions({
+			script: "export default {};",
+			tails: [],
+		});
+
+		expect(converted.workers[0].config).not.toHaveProperty("tailConsumers");
+		expect(converted.workers[0].config).not.toHaveProperty("experimental");
+	});
+
 	test("preserves supported asset options", ({ expect }) => {
 		const converted = convertV4MiniflareOptions({
 			script: "export default {};",
@@ -570,6 +752,7 @@ describe("convertV4MiniflareOptions", () => {
 				assetConfig: {
 					html_handling: "auto-trailing-slash",
 					not_found_handling: "single-page-application",
+					base_path: "/subpath",
 				},
 			},
 		});
@@ -577,6 +760,7 @@ describe("convertV4MiniflareOptions", () => {
 		expect(converted.workers[0].config.assets).toEqual({
 			directory: "./public",
 			hasUserWorker: true,
+			basePath: "/subpath",
 			htmlHandling: "auto-trailing-slash",
 			notFoundHandling: "single-page-application",
 			runWorkerFirst: true,

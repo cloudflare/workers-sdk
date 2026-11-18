@@ -2016,6 +2016,21 @@ describe("User", () => {
 			});
 		});
 
+		it("should output JSON with --json even when WRANGLER_LOG hides log messages", async ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "env-api-token");
+			vi.stubEnv("WRANGLER_LOG", "error");
+
+			await runWrangler("auth token --json");
+
+			const output = JSON.parse(std.out);
+			expect(output).toEqual({
+				type: "api_token",
+				token: "env-api-token",
+			});
+		});
+
 		it("should error when token refresh fails and user is not logged in", async ({
 			expect,
 		}) => {
@@ -2246,7 +2261,7 @@ describe("User", () => {
 			expect(() =>
 				getActiveAccountId({ account_id: "ваш-идентификатор-аккаунта" })
 			).toThrowErrorMatchingInlineSnapshot(
-				`[Error: Invalid account ID "ваш-идентификатор-аккаунта" set as \`account_id\` in your Wrangler configuration file. Account IDs may only contain alphanumeric characters, hyphens, and underscores.]`
+				`[Error: Invalid account ID "ваш-идентификатор-аккаунта" set in your Wrangler configuration file. Account IDs may only contain alphanumeric characters, hyphens, and underscores.]`
 			);
 		});
 

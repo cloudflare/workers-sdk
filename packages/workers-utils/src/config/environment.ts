@@ -341,7 +341,7 @@ export type ContainerApp = {
 		/**
 		 * Restrict containers to compliance boundaries.
 		 */
-		jurisdiction?: "eu" | "fedramp";
+		jurisdiction?: "eu" | "fedramp" | "us";
 		/**
 		 * @hidden
 		 */
@@ -526,7 +526,7 @@ export interface WorkerEntrypointExport {
  */
 export interface WorkflowExport extends Pick<
 	WorkflowBinding,
-	"limits" | "concurrency" | "schedules" | "default_retention"
+	"limits" | "concurrency" | "schedules" | "default_retention" | "jurisdiction"
 > {
 	type: "workflow";
 	name: string;
@@ -830,6 +830,11 @@ interface EnvironmentInheritable {
 	/**
 	 * Include source maps when uploading this worker.
 	 *
+	 * Defaults to `true` for `wrangler deploy`, `wrangler versions upload`,
+	 * `wrangler preview` and `wrangler build --experimental-cf-build-output`,
+	 * where source maps that can't be resolved are skipped rather than failing
+	 * the upload.
+	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#source-maps
 	 *
 	 * @inheritable
@@ -982,6 +987,10 @@ export type ArtifactsEventTrigger = {
 	}[];
 };
 
+export const WORKFLOW_JURISDICTIONS = ["eu", "fedramp", "us"] as const;
+
+export type WorkflowJurisdiction = (typeof WORKFLOW_JURISDICTIONS)[number];
+
 export type WorkflowBinding = {
 	/** The name of the binding used to refer to the Workflow */
 	binding: string;
@@ -1014,6 +1023,11 @@ export type WorkflowBinding = {
 		/** How long to retain errored instances */
 		error_retention?: number | string;
 	};
+	/**
+	 * Optional jurisdiction that the Workflow's instances run and store their data in. It is set
+	 * when the Workflow is created and cannot be changed afterwards.
+	 */
+	jurisdiction?: WorkflowJurisdiction;
 };
 
 type ConnectHandlerConfigBase = {
@@ -1309,6 +1323,8 @@ export interface EnvironmentNonInheritable {
 		database_name?: string;
 		/** The UUID of this D1 database (not required). */
 		database_id?: string;
+		/** The jurisdiction where an automatically provisioned D1 database will be created. */
+		jurisdiction?: string;
 		/** The UUID of this D1 database for Wrangler Dev (if specified). */
 		preview_database_id?: string;
 		/** The name of the migrations table for this D1 database (defaults to 'd1_migrations'). */
@@ -1430,6 +1446,11 @@ export interface EnvironmentNonInheritable {
 		id: string;
 		/** The local database connection string for `wrangler dev` */
 		localConnectionString?: string;
+		/**
+		 * Connect to the deployed Hyperdrive configuration during local development
+		 * instead of a local database.
+		 */
+		remote?: boolean;
 	}[];
 
 	/**
@@ -1485,6 +1506,8 @@ export interface EnvironmentNonInheritable {
 		binding: string;
 		/** The name of this dataset to write to. */
 		dataset?: string;
+		/** Whether the dataset should be remote or not in local development */
+		remote?: boolean;
 	}[];
 
 	/**
@@ -1941,6 +1964,16 @@ export type ConfigModuleRuleType =
 	| "PythonModule"
 	| "PythonRequirement";
 
+/**
+ * The rules applied after a Worker's own `rules`, so these modules can be
+ * imported without configuring them.
+ */
+export const DEFAULT_MODULE_RULES: Rule[] = [
+	{ type: "Text", globs: ["**/*.txt", "**/*.html", "**/*.sql"] },
+	{ type: "Data", globs: ["**/*.bin"] },
+	{ type: "CompiledWasm", globs: ["**/*.wasm", "**/*.wasm?module"] },
+];
+
 export type TailConsumer = {
 	/** The name of the service tail events will be forwarded to. */
 	service: string;
@@ -1982,6 +2015,10 @@ export type Assets = {
 		| "none";
 	/** How to handle requests that do not match an asset. */
 	not_found_handling?: "single-page-application" | "404-page" | "none";
+	/**
+	 * The public URL prefix under which the application is served, e.g. `/subpath/`.
+	 */
+	base_path?: string;
 	/**
 	 * Matches will be routed to the User Worker, and matches to negative rules will go to the Asset Worker.
 	 *

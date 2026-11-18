@@ -58,10 +58,21 @@ export const vitestConfig = (
 	};
 `;
 
-export function waitFor<T>(callback: Parameters<typeof vi.waitFor<T>>[0]) {
+/**
+ * Poll an assertion until it passes, allowing time for child Worker processes.
+ *
+ * @param callback - The assertion to retry.
+ * @param timeout - The polling budget in milliseconds; startup checks may need
+ * a longer budget on busy CI runners.
+ * @returns The value returned by the successful assertion.
+ */
+export function waitFor<T>(
+	callback: Parameters<typeof vi.waitFor<T>>[0],
+	timeout = 10_000
+) {
 	// The default timeout of `vi.waitFor()` is only 1s, which is a little
 	// short for some of these tests, especially on Windows.
-	return vi.waitFor(callback, { timeout: 10_000, interval: 500 });
+	return vi.waitFor(callback, { timeout, interval: 500 });
 }
 
 async function seed(root: string, files: Record<string, string>) {

@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { XMLValidator } from "fast-xml-parser";
+import { SyntaxValidator } from "fast-xml-validator";
 import { CorePaths } from "../../core/constants";
 import { R2S3Bindings } from "../constants";
 import { parseRangeHeader, serveR2Object } from "../serve.worker";
@@ -858,7 +858,9 @@ export const MULTIPART_OPERATIONS: Record<
 		unsupportedHeaders: BUCKET_OWNER,
 		async handle({ c, bucket, bucketId, key, uploadId }) {
 			const text = await c.req.raw.text();
-			if (XMLValidator.validate(text) !== true) {
+			try {
+				SyntaxValidator.validate(text, { multipleRoots: false });
+			} catch {
 				return malformedXml();
 			}
 
@@ -1034,7 +1036,9 @@ export const BUCKET_OPERATIONS: Record<
 			}
 
 			const text = new TextDecoder().decode(body);
-			if (XMLValidator.validate(text) !== true) {
+			try {
+				SyntaxValidator.validate(text, { multipleRoots: false });
+			} catch {
 				return malformedXml();
 			}
 

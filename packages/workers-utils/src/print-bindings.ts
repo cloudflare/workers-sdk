@@ -1,6 +1,7 @@
 import { stripVTControlCharacters } from "node:util";
 import chalk from "chalk";
 import { extractBindingsOfType, isUnsafeBindingType } from "./binding-utils";
+import { resolveBindingRemote } from "./config/binding-local-support";
 import { getBindingTypeFriendlyName } from "./config/validation";
 import type { ContainerApp } from "./config/environment";
 import type { Binding } from "./types";
@@ -364,12 +365,14 @@ export function printBindings(
 
 	if (hyperdrive.length > 0) {
 		output.push(
-			...hyperdrive.map(({ binding, id }) => {
+			...hyperdrive.map(({ binding, id, remote }) => {
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("hyperdrive"),
 					value: id,
-					mode: getMode({ isSimulatedLocally: true }),
+					mode: getMode({
+						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+					}),
 				};
 			})
 		);
@@ -457,12 +460,16 @@ export function printBindings(
 
 	if (artifacts.length > 0) {
 		output.push(
-			...artifacts.map(({ binding, namespace }) => {
+			...artifacts.map(({ binding, namespace, remote }) => {
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("artifacts"),
 					value: namespace,
-					mode: getMode({ isSimulatedLocally: false }),
+					mode: getMode({
+						isSimulatedLocally: !resolveBindingRemote("artifacts", remote, {
+							remoteBindingsDisabled: context.remoteBindingsDisabled,
+						}),
+					}),
 				};
 			})
 		);
@@ -540,12 +547,14 @@ export function printBindings(
 
 	if (analytics_engine_datasets.length > 0) {
 		output.push(
-			...analytics_engine_datasets.map(({ binding, dataset }) => {
+			...analytics_engine_datasets.map(({ binding, dataset, remote }) => {
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("analytics_engine"),
 					value: dataset ?? binding,
-					mode: getMode({ isSimulatedLocally: true }),
+					mode: getMode({
+						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+					}),
 				};
 			})
 		);

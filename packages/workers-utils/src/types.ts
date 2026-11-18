@@ -1,6 +1,7 @@
 import type { ApiCredentials } from "./cfetch";
 import type { Config } from "./config";
 import type {
+	ArtifactsEventTrigger,
 	CustomDomainRoute,
 	ContainerApp,
 	ContainerEngine,
@@ -13,6 +14,7 @@ import type {
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "./config/environment";
+import type { NodeJSCompatMode } from "./node-compat";
 import type {
 	CfAIBinding,
 	CfAgentMemory,
@@ -216,6 +218,7 @@ export type WorkerMetadataBinding =
 export type AssetConfigMetadata = {
 	html_handling?: AssetConfig["html_handling"];
 	not_found_handling?: AssetConfig["not_found_handling"];
+	base_path?: AssetConfig["base_path"];
 	run_worker_first?: boolean | string[];
 	_redirects?: string;
 	_headers?: string;
@@ -456,7 +459,8 @@ export type Trigger =
 	| ({ type: "route" } & CustomDomainRoute)
 	| { type: "cron"; cron: string }
 	| ({ type: "queue-consumer" } & Omit<QueueConsumer, "type">)
-	| ({ type: "connect" } & ConnectHandler);
+	| ({ type: "connect" } & ConnectHandler)
+	| { type: "artifacts-event"; event: ArtifactsEventTrigger };
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
 	? Omit<T, K>
@@ -541,8 +545,7 @@ export type AsyncHook<T extends HookValues, Args extends unknown[] = []> =
 
 export type LogLevel = "debug" | "info" | "log" | "warn" | "error" | "none";
 
-// Duplicate of Miniflare's NodeJSCompatMode to keep workers-utils from depending on Miniflare.
-export type NodeJSCompatMode = "als" | "v1" | "v2" | null;
+export type { NodeJSCompatMode } from "./node-compat";
 
 export interface StartDevWorkerInput {
 	/** The name of the worker. */
@@ -709,6 +712,8 @@ export interface StartDevWorkerInput {
 		tunnel?: {
 			enabled: boolean;
 			name?: string;
+			/** Email addresses or domain patterns allowed to authenticate to a Quick Tunnel. */
+			allowedMail?: string[];
 		};
 	};
 	legacy?: {

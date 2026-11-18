@@ -3,9 +3,10 @@
 	"remoteCache": {
 		"signature": true
 	},
-	"globalEnv": ["CI_OS", "NODE_VERSION"],
+	"globalEnv": ["CI_OS", "NODE_VERSION", "X_LOCAL_OBSERVABILITY_BATCH_SIZE"],
 	"globalPassThroughEnv": [
 		"CI",
+		"CI_TEST_SHARD",
 		"CLOUDFLARE_CONTAINER_REGISTRY",
 		"E2E_SHARD",
 		"E2E_SHARD_COUNT",
@@ -18,6 +19,7 @@
 		"VSCODE_INSPECTOR_OPTIONS",
 		"WRANGLER_API_ENVIRONMENT",
 		"WRANGLER_CACHE_DIR",
+		"WRANGLER_CONTAINER_IMAGE_COMPRESSION",
 		"CLOUDFLARED_PATH",
 		"MINIFLARE_CONTAINER_EGRESS_IMAGE",
 		"MINIFLARE_CONTAINER_EGRESS_IMAGE_PLATFORM",
@@ -25,6 +27,7 @@
 		"WRANGLER_LOG_PATH",
 		"WRANGLER_LOG",
 		"CLOUDFLARE_API_TOKEN",
+		"CLOUDFLARE_API_HEADERS",
 		"CLOUDFLARE_ACCOUNT_ID",
 		"WRANGLER_WRITE_LOGS",
 		"X_LOCAL_OBSERVABILITY",
@@ -83,6 +86,12 @@
 		},
 		"test:ci": {
 			"dependsOn": ["build"],
+			"inputs": [
+				"$TURBO_DEFAULT$",
+				"$TURBO_ROOT$/vitest.shared.ts",
+				"$TURBO_ROOT$/fixtures/shared/src/**",
+				"$TURBO_ROOT$/fixtures/shared/package.json"
+			],
 			"outputLogs": "new-only"
 		},
 		"test:e2e": {

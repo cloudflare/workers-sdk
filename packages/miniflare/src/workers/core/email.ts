@@ -259,6 +259,7 @@ export async function handleEmail(
 				raw: deliveredEmailBody,
 				rawSize: deliveredEmailRaw.byteLength,
 				headers: incomingEmailHeaders,
+				canBeForwarded: true,
 				setReject: (reason: string): void => {
 					ctx.waitUntil(
 						logEmailToLoopback(

@@ -14,7 +14,6 @@ import {
 import { convertExports } from "./exports";
 import {
 	CONFIGURATION_DOCS_URL,
-	DURABLE_OBJECT_EXPORTS_DOCS_URL,
 	createFollowUp,
 	followUpToComment,
 } from "./follow-ups";
@@ -28,6 +27,66 @@ import type {
 	OutputValue,
 } from "./types";
 
+const DEPENDENCIES_INSTRUMENTATION_ENV_VAR =
+	"CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION";
+
+function isDependenciesInstrumentationConfig(
+	value: unknown
+): value is { enabled?: boolean; exclude_packages?: string[] } {
+	if (!isRecord(value)) {
+		return false;
+	}
+
+	return (
+		(value.enabled === undefined || typeof value.enabled === "boolean") &&
+		(value.exclude_packages === undefined ||
+			(Array.isArray(value.exclude_packages) &&
+				value.exclude_packages.every(
+					(packageName) => typeof packageName === "string"
+				)))
+	);
+}
+
+function createDependenciesInstrumentationFollowUp(
+	source: UnknownRecord,
+	sourcePrefix: string
+): MigrationFollowUp | undefined {
+	if (!hasOwn(source, "dependencies_instrumentation")) {
+		return;
+	}
+
+	const sourcePath = `${sourcePrefix ? `${sourcePrefix}.` : ""}dependencies_instrumentation`;
+	const instrumentation = source.dependencies_instrumentation;
+	if (!isDependenciesInstrumentationConfig(instrumentation)) {
+		return createFollowUp(
+			"unsupported-field",
+			"The dependency instrumentation configuration is invalid and was not migrated.",
+			{ sourcePath }
+		);
+	}
+
+	const hasExcludedPackages =
+		(instrumentation.exclude_packages?.length ?? 0) > 0;
+
+	if (instrumentation.enabled === false) {
+		return createFollowUp(
+			"dependencies-instrumentation-opt-out",
+			`Set ${DEPENDENCIES_INSTRUMENTATION_ENV_VAR}=false before deploying to keep package dependency metadata disabled.${hasExcludedPackages ? " The package exclusion list was not migrated; if dependency metadata is later enabled, those packages will be included." : ""}`,
+			{ sourcePath }
+		);
+	}
+
+	if (hasExcludedPackages) {
+		return createFollowUp(
+			"dependencies-instrumentation-exclusions",
+			`Package dependency exclusions cannot be migrated. ${DEPENDENCIES_INSTRUMENTATION_ENV_VAR} only enables or disables dependency metadata as a whole.`,
+			{ sourcePath }
+		);
+	}
+
+	return;
+}
+
 export function convertWorkerConfig(
 	source: UnknownRecord,
 	sourcePrefix: string,
@@ -37,9 +96,16 @@ export function convertWorkerConfig(
 ): OutputObject {
 	const properties: OutputProperty[] = [];
 	const comments: OutputComment[] = [];
-	const report = (followUp: MigrationFollowUp) => {
+	// `inline` follow-ups are already attached as a comment to the generated
+	// value they concern, so they aren't repeated at the end of the Worker.
+	const report = (
+		followUp: MigrationFollowUp,
+		options: { inline?: boolean } = {}
+	) => {
 		followUps.push(followUp);
-		comments.push(followUpToComment(followUp));
+		if (!options.inline) {
+			comments.push(followUpToComment(followUp));
+		}
 	};
 
 	if (typeof source.name === "string") {
@@ -85,7 +151,6 @@ export function convertWorkerConfig(
 	addProperty(properties, source, "main", "entrypoint");
 	addProperty(properties, source, "workers_dev", "workersDev");
 	addProperty(properties, source, "preview_urls", "previewUrls");
-	addProperty(properties, source, "first_party_worker", "firstPartyWorker");
 	addProperty(properties, source, "logpush");
 	addProperty(properties, source, "placement", "placement", (value) =>
 		isRecord(value) ? camelObject(value) : undefined
@@ -99,6 +164,7 @@ export function convertWorkerConfig(
 	addProperty(properties, source, "observability", "observability", (value) =>
 		isRecord(value) ? camelObject(value) : undefined
 	);
+	addProperty(properties, source, "access");
 
 	const assets = getRecord(source, "assets");
 	if (assets) {
@@ -170,28 +236,39 @@ export function convertWorkerConfig(
 			});
 		}
 	}
+	if (tailConsumers.length > 0) {
+		properties.push({
+			key: "tailConsumers",
+			value: tailConsumers,
+		});
+	}
 
+	const streamingTailConsumers: OutputValue[] = [];
 	for (const entry of getRecords(source, "streaming_tail_consumers")) {
 		if (typeof entry.service === "string") {
-			tailConsumers.push({
+			streamingTailConsumers.push({
 				kind: "object",
 				properties: [
 					{
 						key: "worker",
 						value: entry.service,
 					},
-					{
-						key: "streaming",
-						value: true,
-					},
 				],
 			});
 		}
 	}
-	if (tailConsumers.length > 0) {
+	const experimental: OutputProperty[] = [];
+	if (streamingTailConsumers.length > 0) {
+		experimental.push({
+			key: "streamingTailConsumers",
+			value: streamingTailConsumers,
+		});
+	}
+	addProperty(experimental, source, "first_party_worker", "firstPartyWorker");
+	if (experimental.length > 0) {
 		properties.push({
-			key: "tailConsumers",
-			value: tailConsumers,
+			key: "experimental",
+			value: { kind: "object", properties: experimental },
 		});
 	}
 
@@ -246,18 +323,6 @@ export function convertWorkerConfig(
 		}
 	}
 
-	if (Array.isArray(source.migrations) && source.migrations.length > 0) {
-		report(
-			createFollowUp(
-				"durable-object-migrations",
-				'Wrangler Durable Object migrations are unsupported. Replace them with an exports lifecycle declaration, for example `exports: { MyDurableObject: exports.durableObject({ storage: "sqlite" }) }`.',
-				{
-					docsUrl: DURABLE_OBJECT_EXPORTS_DOCS_URL,
-					sourcePath: `${sourcePrefix ? `${sourcePrefix}.` : ""}migrations`,
-				}
-			)
-		);
-	}
 	if (Array.isArray(source.containers) && source.containers.length > 0) {
 		report(
 			createFollowUp(
@@ -267,11 +332,14 @@ export function convertWorkerConfig(
 			)
 		);
 	}
+	const dependenciesInstrumentationFollowUp =
+		createDependenciesInstrumentationFollowUp(source, sourcePrefix);
+	if (dependenciesInstrumentationFollowUp) {
+		report(dependenciesInstrumentationFollowUp);
+	}
 
 	const unsupportedFields: Array<[string, string]> = [
-		["access", "Cloudflare Access configuration"],
 		["cloudchamber", "Cloudchamber configuration"],
-		["dependencies_instrumentation", "dependency instrumentation"],
 		["keep_vars", "keep_vars"],
 		["pages_build_output_dir", "Pages configuration"],
 		["site", "Workers Sites configuration"],

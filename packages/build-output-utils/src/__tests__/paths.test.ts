@@ -20,7 +20,7 @@ import {
 
 describe("path constants", () => {
 	it("expose the spec's version and root", ({ expect }) => {
-		expect(BUILD_OUTPUT_VERSION).toBe("v0");
+		expect(BUILD_OUTPUT_VERSION).toBe("v1");
 		expect(BUILD_OUTPUT_ROOT).toBe(".cloudflare/output");
 		expect(ROOT_CONFIG_FILENAME).toBe("config.json");
 		expect(WORKER_CONFIG_FILENAME).toBe("worker.config.json");
@@ -31,7 +31,7 @@ describe("path constants", () => {
 
 describe("path resolvers", () => {
 	const root = path.resolve("/project");
-	const outputDir = path.join(root, ".cloudflare", "output", "v0");
+	const outputDir = path.join(root, ".cloudflare", "output", "v1");
 
 	it("resolves the root config path", ({ expect }) => {
 		expect(getRootConfigPath(root)).toBe(path.join(outputDir, "config.json"));

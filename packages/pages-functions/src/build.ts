@@ -169,7 +169,9 @@ export async function buildPagesFunctions(
 			bundle: true,
 			format: "esm",
 			target: "es2024",
-			supported: { "import-source": true },
+			// Kept in step with Wrangler's COMMON_ESBUILD_OPTIONS: syntax newer than
+			// es2024 that workerd runs natively, emitted as written.
+			supported: { "import-source": true, using: true },
 			loader: { ".js": "jsx", ".mjs": "jsx", ".cjs": "jsx" },
 			conditions: ["workerd", "worker", "browser"],
 			inject: [routesModulePath],

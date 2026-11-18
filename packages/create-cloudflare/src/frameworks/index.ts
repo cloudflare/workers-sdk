@@ -5,6 +5,7 @@ import {
 	runCommand,
 } from "@cloudflare/cli-shared-helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
+import semver from "semver";
 import frameworksPackageJson from "./package.json";
 import type { C3Context } from "types";
 
@@ -30,6 +31,17 @@ export const getFrameworkCli = (ctx: C3Context, withVersion = true) => {
  */
 export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 	const cli = getFrameworkCli(ctx, true);
+	const nodeVersion = process.versions.node;
+	const requiredNodeVersion = ctx.template.frameworkCliNodeVersion;
+	if (
+		requiredNodeVersion &&
+		!semver.satisfies(nodeVersion, requiredNodeVersion)
+	) {
+		throw new Error(
+			`${ctx.template.displayName} requires Node.js ${requiredNodeVersion}. You are using Node.js ${nodeVersion}. Please upgrade Node.js and try again.`
+		);
+	}
+
 	const { npm, dlx } = detectPackageManager();
 	// yarn cannot `yarn create@some-version` and doesn't have an npx equivalent
 	// So to retain the ability to lock versions we run it with `npx` and spoof

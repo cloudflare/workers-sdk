@@ -5,12 +5,16 @@ import { resolve } from "node:path";
 import {
 	maybeAppendWranglerToGitIgnoreLikeFile,
 	maybeAppendWranglerToGitIgnore,
+	PROJECT_ROOT_ASSETS_IGNORE_ENTRIES,
 } from "@cloudflare/cli-shared-helpers/gitignore";
 import {
 	installPackages,
 	installWrangler,
 } from "@cloudflare/cli-shared-helpers/packages";
-import { convertToWranglerConfig, InputConfigSchema } from "@cloudflare/config";
+import {
+	convertToWranglerConfig,
+	CloudflareConfigSchema,
+} from "@cloudflare/config";
 import {
 	DEFAULT_COMPAT_DATE,
 	FatalError,
@@ -19,8 +23,11 @@ import {
 } from "@cloudflare/workers-utils";
 import {
 	assertNonConfigured,
+	assertProjectCommandsAvailable,
 	confirmAutoConfigDetails,
 	displayAutoConfigDetails,
+	getProjectCommand,
+	getDetailsForAutoConfig,
 } from "./details";
 import {
 	isFrameworkSupported,
@@ -30,6 +37,12 @@ import {
 } from "./frameworks";
 import { getFrameworkPackageInfo } from "./frameworks/all-frameworks";
 import { Static } from "./frameworks/static";
+import { CF_VITE_PLUGIN_VERSION_RANGE } from "./frameworks/utils/vite-plugin-version";
+import {
+	CLOUDFLARE_TYPES_INCLUDE,
+	getCloudflareTypesTsconfigUpdate,
+	saveCloudflareTypesTsconfigUpdate,
+} from "./tsconfig";
 import { usesTypescript } from "./uses-typescript";
 import type { AutoConfigContext, AutoConfigTarget } from "./context";
 import type {
@@ -74,7 +87,7 @@ export async function runAutoConfig(
 
 	const updatedAutoConfigDetails = skipConfirmations
 		? autoConfigDetails
-		: await confirmAutoConfigDetails(autoConfigDetails, context);
+		: await confirmAutoConfigDetails(autoConfigDetails, context, target);
 
 	if (autoConfigDetails !== updatedAutoConfigDetails) {
 		displayAutoConfigDetails(updatedAutoConfigDetails, context, {
@@ -86,9 +99,10 @@ export async function runAutoConfig(
 	assertNonConfigured(autoConfigDetails);
 	validateFrameworkTargetSupport(autoConfigDetails.framework, target);
 
-	if (isKnownFramework(autoConfigDetails.framework.id)) {
+	if (isKnownFramework(autoConfigDetails.framework.id, target)) {
 		const frameworkIsSupported = isFrameworkSupported(
-			autoConfigDetails.framework.id
+			autoConfigDetails.framework.id,
+			target
 		);
 		if (!frameworkIsSupported) {
 			throw new FatalError(
@@ -119,7 +133,8 @@ export async function runAutoConfig(
 	const isWorkspaceRoot = autoConfigDetails.isWorkspaceRoot ?? false;
 
 	const frameworkPackageInfo = getFrameworkPackageInfo(
-		autoConfigDetails.framework.id
+		autoConfigDetails.framework.id,
+		target
 	);
 	if (frameworkPackageInfo) {
 		autoConfigDetails.framework.validateFrameworkVersion(
@@ -157,9 +172,21 @@ export async function runAutoConfig(
 	}
 
 	const { npx } = packageManager;
-	const buildCommand =
+	let buildCommand =
 		dryRunConfigurationResults.buildCommandOverride ??
-		autoConfigDetails.buildCommand;
+		autoConfigDetails.buildCommand ??
+		(autoConfigDetails.commandError && autoConfigDetails.framework.id === "vite"
+			? "vite build"
+			: undefined);
+	// Preserve shell commands while normalizing Vite selected by framework overrides.
+	if (buildCommand === "vite build" || buildCommand === `${npx} vite build`) {
+		buildCommand = getProjectCommand(
+			buildCommand,
+			packageManager,
+			autoConfigDetails.packageJson,
+			target
+		);
+	}
 
 	const autoConfigSummary = await buildOperationsSummary(
 		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
@@ -282,6 +309,13 @@ export async function runAutoConfig(
 		if (workerConfig !== null) {
 			await saveCloudflareConfig(autoConfigDetails.projectPath, workerConfig);
 		}
+		// Only projects with Worker code (an entrypoint) use the types that `cf-typegen` generates
+		if (workerConfig?.entrypoint) {
+			await saveCloudflareTypesTsconfigUpdate(
+				autoConfigDetails.projectPath,
+				context
+			);
+		}
 		if (
 			configurationResults.buildTool === "wrangler" &&
 			configurationResults.buildConfig
@@ -295,13 +329,67 @@ export async function runAutoConfig(
 
 	maybeAppendWranglerToGitIgnore(autoConfigDetails.projectPath);
 
-	// If we're uploading the project path as the output directory, make sure we don't accidentally upload any sensitive Wrangler files
-	if (autoConfigDetails.outputDir === autoConfigDetails.projectPath) {
+	// If the project root is the assets directory, make sure we don't
+	// accidentally upload sensitive files or anything a Cloudflare Pages upload
+	// would have skipped. Compare the assets directory the generated config uses
+	// rather than the detected output directory: frameworks such as Nuxt
+	// configure their own build output, and the uploader only reads the
+	// `.assetsignore` inside the assets directory. Paths are resolved because the
+	// configured directory is relative (e.g. ".") while projectPath is usually
+	// absolute.
+	const assetsDirectory = configurationResults.buildConfig?.assetsDirectory;
+	if (
+		assetsDirectory !== undefined &&
+		resolve(autoConfigDetails.projectPath, assetsDirectory) ===
+			resolve(autoConfigDetails.projectPath)
+	) {
 		maybeAppendWranglerToGitIgnoreLikeFile(
-			`${autoConfigDetails.projectPath}/.assetsignore`
+			`${autoConfigDetails.projectPath}/.assetsignore`,
+			{
+				additionalEntries: PROJECT_ROOT_ASSETS_IGNORE_ENTRIES,
+				requireEnvWildcard: true,
+			}
 		);
+
+		// In an assets-only project, Pages server code at the root is now excluded
+		// from the assets rather than published, but it is not deployed as a
+		// Worker either, so say so. With a Worker entrypoint, a root `_worker.js`
+		// may be the framework's own build output.
+		const pagesServerCode = workerConfig?.entrypoint
+			? []
+			: ["functions", "_worker.js"].filter((name) =>
+					existsSync(resolve(autoConfigDetails.projectPath, name))
+				);
+		if (pagesServerCode.length > 0) {
+			context.logger.warn(
+				`${pagesServerCode.map((name) => `\`${name}\``).join(" and ")} in the project root will not be deployed: the project is configured as static assets, so Pages server code is excluded from the upload (via .assetsignore) and is not run. To keep it, migrate it to a Worker: https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/`
+			);
+		}
 	}
 
+	// Setup can install missing packages or activate the plugin. Recheck command
+	// readiness after those changes, only when a build will actually be executed.
+	if (target === "cf" && runBuild && autoConfigDetails.commandError) {
+		const configuredDetails = await getDetailsForAutoConfig({
+			projectPath: autoConfigDetails.projectPath,
+			target,
+			context,
+		});
+		assertProjectCommandsAvailable(configuredDetails);
+		buildCommand =
+			configurationResults.buildCommandOverride ??
+			configuredDetails.buildCommand ??
+			buildCommand;
+		if (buildCommand === "vite build" || buildCommand === `${npx} vite build`) {
+			buildCommand = getProjectCommand(
+				buildCommand,
+				packageManager,
+				configuredDetails.packageJson,
+				target
+			);
+		}
+		autoConfigSummary.buildCommand = buildCommand;
+	}
 	if (buildCommand && runBuild) {
 		await context.runCommand(
 			buildCommand,
@@ -344,7 +432,7 @@ function getWranglerConfig(
 		return null;
 	}
 
-	const parsedConfig = InputConfigSchema.parse({ worker: workerConfig });
+	const parsedConfig = CloudflareConfigSchema.parse({ worker: workerConfig });
 	const convertedWranglerConfig = convertToWranglerConfig(parsedConfig);
 	const wranglerConfig = ensureNodejsCompatIsEnabled({
 		$schema: "node_modules/wrangler/config-schema.json",
@@ -552,7 +640,7 @@ export async function buildOperationsSummary(
 		if (configurationResults.buildTool === "vite") {
 			packagesToInstall.add(
 				target === "cf"
-					? "@cloudflare/vite-plugin@beta"
+					? `@cloudflare/vite-plugin@${CF_VITE_PLUGIN_VERSION_RANGE}`
 					: "@cloudflare/vite-plugin"
 			);
 		} else if (
@@ -606,6 +694,23 @@ export async function buildOperationsSummary(
 		for (const [name, script] of Object.entries(summary.scripts)) {
 			logger.log(` - "${name}": "${script}"`);
 		}
+		logger.log("");
+	}
+
+	// Projects with Worker code (an entrypoint) get the `cf-typegen` script. Its output in
+	// `.cloudflare/types` needs its own `include` entry, since patterns like `**/*` skip dot-directories
+	const tsconfigUpdate =
+		target === "cf" && workerConfig?.entrypoint
+			? getCloudflareTypesTsconfigUpdate(autoConfigDetails.projectPath)
+			: undefined;
+	if (tsconfigUpdate?.type === "update") {
+		logger.log("📝 Update tsconfig.json:");
+		logger.log(
+			` - Add ${JSON.stringify(CLOUDFLARE_TYPES_INCLUDE)} to "include"`
+		);
+		logger.log("");
+	} else if (tsconfigUpdate?.type === "manual") {
+		logger.warn(tsconfigUpdate.message);
 		logger.log("");
 	}
 

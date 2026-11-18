@@ -79,6 +79,24 @@ describe("queues subscription", () => {
 		events: ["message.delivered"],
 	};
 
+	const mockSubscriptionArtifactsRepo: EventSubscription = {
+		id: "sub-artifacts-repo",
+		created_at: "2024-01-01T00:00:00Z",
+		modified_at: "2024-01-01T00:00:00Z",
+		name: "Test Subscription Artifacts Repo",
+		enabled: true,
+		source: {
+			type: EventSourceType.ARTIFACTS_REPO,
+			namespace: "my-namespace",
+			repo_name: "my-repo",
+		},
+		destination: {
+			type: "queues.queue",
+			queue_id: expectedQueueId,
+		},
+		events: ["pushed"],
+	};
+
 	describe("create", () => {
 		it("should show the correct help text", async ({ expect }) => {
 			await runWrangler("queues subscription create --help");
@@ -102,15 +120,17 @@ describe("queues subscription", () => {
 				  -v, --version         Show version number  [boolean]
 
 				OPTIONS
-				      --source         The event source type  [string] [required] [choices: "artifacts", "artifacts.repo", "browserRun", "email.sending", "images", "kv", "r2", "superSlurper", "vectorize", "workersAi.model", "workersBuilds.worker", "workflows.workflow"]
-				      --events         Comma-separated list of event types to subscribe to  [string] [required]
-				      --name           Name for the subscription (auto-generated if not provided)  [string]
-				      --enabled        Whether the subscription should be active  [boolean] [default: true]
-				      --model-name     Workers AI model name (required for workersAi.model source)  [string]
-				      --worker-name    Worker name (required for workersBuilds.worker source)  [string]
-				      --workflow-name  Workflow name (required for workflows.workflow source)  [string]
-				      --zone-id        Zone ID (required for email.sending source)  [string]
-				      --domain         Sending domain — zone apex or verified subdomain (required for email.sending source)  [string]"
+				      --source            The event source type  [string] [required] [choices: "artifacts", "artifacts.repo", "browserRun", "email.sending", "images", "kv", "r2", "superSlurper", "vectorize", "workersAi.model", "workersBuilds.worker", "workflows.workflow"]
+				      --events            Comma-separated list of event types to subscribe to (for artifacts.repo, use pushed, not cf.artifacts.repo.pushed)  [string] [required]
+				      --name              Name for the subscription (auto-generated if not provided)  [string]
+				      --enabled           Whether the subscription should be active  [boolean] [default: true]
+				      --model-name        Workers AI model name (required for workersAi.model source)  [string]
+				      --worker-name       Worker name (required for workersBuilds.worker source)  [string]
+				      --workflow-name     Workflow name (required for workflows.workflow source)  [string]
+				      --zone-id           Zone ID (required for email.sending source)  [string]
+				      --domain            Sending domain — zone apex or verified subdomain (required for email.sending source)  [string]
+				      --source-namespace  Artifacts namespace (required for artifacts.repo source)  [string]
+				      --source-repo-name  Artifacts repository name (required for artifacts.repo source)  [string]"
 			`);
 		});
 
@@ -263,18 +283,46 @@ describe("queues subscription", () => {
 				{
 					name: "testQueue artifacts.repo",
 					enabled: true,
-					source: { type: EventSourceType.ARTIFACTS_REPO },
+					source: {
+						type: EventSourceType.ARTIFACTS_REPO,
+						namespace: "my-namespace",
+						repo_name: "my-repo",
+					},
 					events: ["pushed"],
 				},
 				expectedQueueId
 			);
 
 			await runWrangler(
-				"queues subscription create testQueue --source artifacts.repo --events pushed"
+				"queues subscription create testQueue --source artifacts.repo --events pushed --source-namespace my-namespace --source-repo-name my-repo"
 			);
 
 			expect(queueNameResolveRequest.count).toEqual(1);
 			expect(createRequest.count).toEqual(1);
+		});
+
+		it("should show error when namespace is missing for artifacts.repo source", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler(
+					"queues subscription create testQueue --source artifacts.repo --events pushed --source-repo-name my-repo"
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: --source-namespace is required when using source 'artifacts.repo']`
+			);
+		});
+
+		it("should show error when repo-name is missing for artifacts.repo source", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler(
+					"queues subscription create testQueue --source artifacts.repo --events pushed --source-namespace my-namespace"
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: --source-repo-name is required when using source 'artifacts.repo']`
+			);
 		});
 
 		it("should create a subscription for the Browser Run account source", async ({
@@ -758,6 +806,46 @@ describe("queues subscription", () => {
 				Resource:     example.com
 				Queue ID:     queueId
 				Events:       message.delivered
+				Enabled:      Yes
+				Created At:   1/1/2024, 12:00:00 AM
+				Modified At:  1/1/2024, 12:00:00 AM"
+			`);
+		});
+
+		it("should render the namespace and repository as the resource for artifacts.repo source", async ({
+			expect,
+		}) => {
+			mockGetQueueByNameRequest("testQueue", {
+				queue_id: expectedQueueId,
+				queue_name: "testQueue",
+				created_on: "",
+				modified_on: "",
+				producers: [],
+				consumers: [],
+				producers_total_count: 0,
+				consumers_total_count: 0,
+			});
+			const getRequest = mockGetSubscriptionRequest(
+				"sub-artifacts-repo",
+				mockSubscriptionArtifactsRepo
+			);
+
+			await runWrangler(
+				"queues subscription get testQueue --id sub-artifacts-repo"
+			);
+
+			expect(getRequest.count).toEqual(1);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				ID:           sub-artifacts-repo
+				Name:         Test Subscription Artifacts Repo
+				Source:       artifacts.repo
+				Resource:     my-namespace/my-repo
+				Queue ID:     queueId
+				Events:       pushed
 				Enabled:      Yes
 				Created At:   1/1/2024, 12:00:00 AM
 				Modified At:  1/1/2024, 12:00:00 AM"

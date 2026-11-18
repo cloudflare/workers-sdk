@@ -59,7 +59,7 @@ export async function getMigrationsToUpload(
 			);
 			if (foundIndex === -1) {
 				logger.warn(
-					`The published script ${scriptName} has a migration tag "${script.migration_tag}, which was not found in your ${configFileName(config.configPath)} file. You may have already deleted it. Applying all available migrations to the script...`
+					`The published script ${scriptName} has a migration tag "${script.migration_tag}, which was not found in your ${configFileName(config.configPath, config.userConfigPath)} file. You may have already deleted it. Applying all available migrations to the script...`
 				);
 				migrations = {
 					old_tag: script.migration_tag,

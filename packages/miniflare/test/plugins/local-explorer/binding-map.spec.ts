@@ -44,6 +44,12 @@ describe("Local Explorer remote binding skipping", () => {
 							LOCAL_D1: { type: "d1", id: "d1-local" },
 							REMOTE_D1_A: { type: "d1", id: "d1-a", dev: { remote: true } },
 							REMOTE_D1_B: { type: "d1", id: "d1-b", dev: { remote: true } },
+							LOCAL_FLAGS: { type: "flagship", id: "flags-local" },
+							REMOTE_FLAGS: {
+								type: "flagship",
+								id: "flags-remote",
+								dev: { remote: true },
+							},
 						},
 					},
 					dev: { remoteProxyConnectionString },
@@ -92,6 +98,17 @@ describe("Local Explorer remote binding skipping", () => {
 		};
 		const uuids = body.result.map((db) => db.uuid).sort();
 		expect(uuids).toEqual(["d1-local"]);
+	});
+
+	test("skips remote Flagship apps, surfacing only local ones", async ({
+		expect,
+	}) => {
+		const response = await mf.dispatchFetch(`${BASE_URL}/flagship/apps`);
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as {
+			result: Array<{ id: string }>;
+		};
+		expect(body.result.map(({ id }) => id)).toEqual(["flags-local"]);
 	});
 });
 

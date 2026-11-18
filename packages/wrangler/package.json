@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.145.0",
+	"version": "4.164.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"assembly",
@@ -84,6 +84,7 @@
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/unenv-preset": "workspace:*",
+		"@cspotcode/source-map-support": "0.8.1",
 		"blake3-wasm": "2.1.5",
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
@@ -113,8 +114,7 @@
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "workspace:*",
 		"@cloudflare/workflows-shared": "workspace:*",
-		"@cspotcode/source-map-support": "0.8.1",
-		"@netlify/build-info": "10.5.1",
+		"@netlify/build-info": "11.3.1",
 		"@sentry/node": "^7.86.0",
 		"@sentry/types": "^7.86.0",
 		"@sentry/utils": "^7.86.0",
@@ -126,6 +126,7 @@
 		"@types/minimatch": "^5.1.2",
 		"@types/node": "catalog:default",
 		"@types/node-forge": "^1.3.11",
+		"@types/pg": "8.15.4",
 		"@types/prompts": "^2.0.14",
 		"@types/resolve": "^1.20.6",
 		"@types/shell-quote": "^1.7.2",
@@ -158,13 +159,15 @@
 		"jsonc-parser": "catalog:default",
 		"md5-file": "5.0.0",
 		"mime": "^3.0.0",
-		"minimatch": "^5.1.0",
+		"minimatch": "^5.1.9",
 		"mock-socket": "^9.3.1",
 		"msw": "catalog:default",
+		"mysql2": "^3.15.3",
 		"node-forge": "^1.3.2",
 		"open": "catalog:default",
 		"p-queue": "^9.0.0",
 		"patch-console": "^1.0.0",
+		"pg": "8.16.3",
 		"pretty-bytes": "^6.0.0",
 		"prompts": "^2.4.2",
 		"qr": "^0.6.0",
@@ -172,7 +175,7 @@
 		"resolve": "^1.22.8",
 		"rosie-skills": "^0.8.1",
 		"semiver": "^1.1.0",
-		"shell-quote": "^1.9.0",
+		"shell-quote": "^1.11.0",
 		"signal-exit": "catalog:default",
 		"smol-toml": "catalog:default",
 		"supports-color": "^9.2.2",
@@ -189,7 +192,7 @@
 		"vitest-websocket-mock": "^0.4.0",
 		"ws": "catalog:default",
 		"xxhash-wasm": "^1.0.1",
-		"yaml": "^2.8.1",
+		"yaml": "^2.8.3",
 		"yargs": "^17.7.2",
 		"zod": "catalog:default"
 	},
@@ -205,7 +208,7 @@
 		"fsevents": "2.3.3"
 	},
 	"engines": {
-		"node": ">=22.0.0"
+		"node": ">=22.12.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

@@ -1,5 +1,11 @@
 # @cloudflare/local-explorer-ui
 
+## 0.17.1
+
+### Patch Changes
+
+- [#16831](https://github.com/cloudflare/workers-sdk/pull/16831) [`20f1424`](https://github.com/cloudflare/workers-sdk/commit/20f1424c2c490ad786351f04b74baa9e32f1ca8f) Thanks [@thejus-r](https://github.com/thejus-r)! - fix: prevent New Query button from wrapping and overlapping tab labels in Studio
+
 ## 0.17.0
 
 ### Minor Changes

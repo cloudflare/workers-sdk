@@ -10,7 +10,7 @@ describe("unresolved main entry file", () => {
 		const proc = await runLongLived("pnpm", "dev", projectPath);
 		expect(await proc.exitCode).not.toBe(0);
 		expect(proc.stderr).toContain(
-			'Failed to resolve main entry file "nonexistent-bare-module"'
+			'Failed to resolve Worker entrypoint "nonexistent-bare-module"'
 		);
 	});
 });

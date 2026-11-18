@@ -3,7 +3,7 @@
 	"extends": ["//"],
 	"tasks": {
 		"build": {
-			"outputs": ["dist/**"],
+			"outputs": [".cloudflare/output/**", ".cloudflare/types/**"],
 			"env": [
 				"NODE_ENV",
 				"VITE_PLAYGROUND_PREVIEW" // used to determine the URL where the preview of the Worker being edited in the playground is hosted.

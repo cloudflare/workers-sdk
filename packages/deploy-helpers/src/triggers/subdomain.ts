@@ -262,7 +262,7 @@ async function registerSubdomain(
 				} else if (subdomainAvailabilityCheckError.code === 10031) {
 					if (automaticSubdomain) {
 						throw new UserError(
-							`Wrangler could not automatically register "${potentialName}" as your workers.dev subdomain because the name is unavailable. Register a different subdomain at https://dash.cloudflare.com/${accountId}/workers/onboarding.`,
+							`Could not automatically register "${potentialName}" as your workers.dev subdomain because the name is unavailable. Register a different subdomain at https://dash.cloudflare.com/${accountId}/workers/onboarding.`,
 							{
 								telemetryMessage:
 									"workers dev automatic registration name unavailable",
@@ -276,7 +276,7 @@ async function registerSubdomain(
 				} else {
 					if (automaticSubdomain) {
 						throw new UserError(
-							`Wrangler could not verify whether "${potentialName}" is available as your \`workers.dev\` subdomain. Register a subdomain at https://dash.cloudflare.com/${accountId}/workers/onboarding.`,
+							`Could not verify whether "${potentialName}" is available as your \`workers.dev\` subdomain. Register a subdomain at https://dash.cloudflare.com/${accountId}/workers/onboarding.`,
 							{
 								telemetryMessage:
 									"workers dev automatic registration availability check failed",
@@ -320,7 +320,7 @@ async function registerSubdomain(
 			const subdomainCreationError = err as { code?: number };
 			if (automaticSubdomain) {
 				throw new UserError(
-					`Wrangler could not automatically register "${potentialName}" as your \`workers.dev\` subdomain. Register a subdomain at https://dash.cloudflare.com/${accountId}/workers/onboarding.`,
+					`Could not automatically register "${potentialName}" as your \`workers.dev\` subdomain. Register a subdomain at https://dash.cloudflare.com/${accountId}/workers/onboarding.`,
 					{
 						telemetryMessage:
 							"workers dev automatic registration creation failed",

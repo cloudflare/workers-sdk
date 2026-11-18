@@ -119,7 +119,7 @@ const config: TemplateConfig = {
 		if (usesTypescript(ctx)) {
 			scripts = {
 				...scripts,
-				"cf-typegen": `wrangler types ${typesPath}`,
+				"cf-typegen": `wrangler types --include-main-module=false ${typesPath}`,
 			};
 		}
 

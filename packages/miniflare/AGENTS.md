@@ -8,9 +8,13 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 
 - `src/index.ts` — Main `Miniflare` class, server setup, plugin orchestration, all exports
 - `src/workers/` — ~30 embedded worker scripts (D1, KV, R2, caches, etc.), built via `worker:` virtual import scheme
+- `src/workers/d1/entry.worker.ts` — D1-specific HTTP/RPC entrypoint; selects a database using binding props and adapts RPC queries to the database worker's HTTP protocol
+- `src/workers/d1/database.worker.ts` — local D1 SQLite execution, transactions, metadata, and export; protocol schemas shared with the entrypoint live in `src/workers/d1/schemas.ts`
+- `src/workers/d1/export.ts` — shared local export pragma recognition and dedicated RPC export adaptation; keeps the legacy export response separate from ordinary query contracts
 - `src/workers/shared/` — Shared utilities across embedded workers
 - `src/workers/core/dev-registry-proxy.worker.ts` — Proxy worker for cross-process service bindings via debug port RPC
 - `src/workers/core/dev-registry-proxy-shared.worker.ts` — Shared proxy logic (registry Map, DO proxy class, tail serializers)
+- `src/plugins/browser-rendering/quick-actions/` — Browser Run `quickAction()` support; the binding Worker forwards calls to the loopback, where puppeteer drives a dedicated Chrome from Node.js
 - `src/shared/dev-registry.ts` — Filesystem-based worker registry (chokidar watch, heartbeat, stale cleanup)
 - `src/shared/persist-root-lock.ts` — Token-safe startup serialisation for shared persistent storage
 - `src/shared/DEV_REGISTRY.md` — Full architecture doc for the dev registry
@@ -24,6 +28,7 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 - Custom `scripts/build.mjs` bundles `src/index.ts` as CJS → `dist/src/index.js`
 - Also compiles ~30 embedded worker scripts via `worker:...` virtual import scheme — each triggers a nested esbuild sub-build producing standalone ESM worker scripts
 - Build outputs: `dist/`, `worker-metafiles/`
+- Release builds set `SOURCEMAPS=false` to omit package source maps; ordinary builds keep them for debugging. Non-watch builds clean `dist/` before compiling so maps from an earlier build cannot leak into a release. This does not disable user Worker source maps.
 
 ## Lint Status (Transitional)
 
@@ -41,7 +46,7 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 ## Testing
 
 - Test files use `.spec.ts` (NOT `.test.ts`)
-- `pool: "forks"`, `maxWorkers: 1` (Vitest 4 equivalent of the old `singleFork: true`)
+- `vitest.config.mts` is authoritative for the pool, worker count, and timeouts. Test files run in parallel; `concurrent: false` only serializes tests within a file.
 - Does NOT extend `vitest.shared.ts` — own full vitest config
 - Timeouts: 30s test, 30s hook
 - `globals: true`
@@ -49,6 +54,12 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 - `useDispose(mf)` / `disposeWithRetry()` — exponential backoff for Windows EPERM file locking
 - `useServer()` — temp HTTP server with auto-cleanup
 - `TestLog` — captures log entries by level
+
+### Browser tests
+
+- Tests that launch real Chrome should warm it in `beforeAll`, using `CHROME_INSTALL_TIMEOUT` and `retryBrowserStartup()` from `test/test-shared/browser.ts`. The first launch may download Chrome, and even a cached install can exceed Chrome's readiness deadline on a loaded runner. Increasing the hook timeout does not extend that deadline.
+- Check the warm-up response inside the retry callback and include its body in the failure message. Quick actions return launch failures as error responses, so checking only the status hides the error needed to recognize a transient startup failure.
+- Keep retries limited to recognized startup failures. Unrelated warm-up failures and functional assertions must still fail immediately. Dispose any Miniflare instances created for individual warm-up attempts before retrying.
 
 ## Generated Files
 
@@ -58,4 +69,4 @@ Local dev simulator for Cloudflare Workers, powered by workerd runtime. Main cla
 ## Version Pinning
 
 - Miniflare minor version must match workerd minor version
-- `.github/changeset-version.js` enforces this: if changeset bumps miniflare minor beyond workerd's, it converts to patch
+- `tools/deployments/changeset-version.ts` enforces this: if changeset bumps miniflare minor beyond workerd's, it converts to patch

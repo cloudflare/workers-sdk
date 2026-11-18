@@ -34,6 +34,7 @@ export const containersImagesListCommand = createCommand({
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
 	},
 	args: {
@@ -60,6 +61,7 @@ export const containersImagesDeleteCommand = createCommand({
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: () => !isNonInteractiveOrCI(),
 	},
 	args: {

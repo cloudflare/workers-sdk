@@ -12,6 +12,7 @@ import {
 	isLiveDurableObjectExport,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { parseAndExpandDotEnv } from "@cloudflare/workers-utils/local-env";
 import chalk from "chalk";
 import { syncAssets } from "../deploy/helpers/assets";
 import { moduleTypeMimeType } from "../deploy/helpers/create-worker-upload-form";
@@ -55,10 +56,10 @@ import type {
 } from "./api";
 import type { PullRequestMetadata } from "./shared";
 import type {
-	ParsedInputContainerConfig,
-	ParsedOutputContainerConfig,
-	ParsedOutputRootConfig,
-	ParsedOutputWorkerConfig,
+	ParsedContainerConfig,
+	ParsedBuildOutputContainerConfig,
+	ParsedBuildOutputRootConfig,
+	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
 import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
@@ -90,6 +91,7 @@ export type PreviewAssetsOptions = {
 	assetConfig: {
 		html_handling?: string;
 		not_found_handling?: string;
+		base_path?: string;
 	};
 	run_worker_first?: string[] | boolean;
 	_headers?: string;
@@ -109,13 +111,15 @@ export type PreviewResult = {
 	isNewPreview: boolean;
 };
 
-export type PreviewBuildOutputRootConfig = ParsedOutputRootConfig & {
-	buildContext: ParsedOutputRootConfig["buildContext"] & { isPreview: true };
+export type PreviewBuildOutputRootConfig = ParsedBuildOutputRootConfig & {
+	buildContext: ParsedBuildOutputRootConfig["buildContext"] & {
+		isPreview: true;
+	};
 };
 
 export type PreviewBuildOutput = {
 	// Authoritative Worker settings and bindings from Build Output.
-	workerConfig: ParsedOutputWorkerConfig;
+	workerConfig: ParsedBuildOutputWorkerConfig;
 	// Account settings and build context from the root Build Output config.
 	rootConfig: PreviewBuildOutputRootConfig;
 	// Compiled Worker code and modules, if this is not an assets-only build.
@@ -124,7 +128,7 @@ export type PreviewBuildOutput = {
 	assets?: Pick<PreviewAssetsOptions, "directory" | "_headers" | "_redirects">;
 	// Container definitions are emitted separately from the Worker config because
 	// Build Output records resolved image references rather than source config.
-	containers?: ParsedOutputContainerConfig[];
+	containers?: ParsedBuildOutputContainerConfig[];
 };
 
 type PreviewWorkerBuildResult = WorkerBuildResult & {
@@ -133,7 +137,7 @@ type PreviewWorkerBuildResult = WorkerBuildResult & {
 
 /** Verify that Build Output was produced with Preview configuration. */
 export function assertPreviewBuildOutputRootConfig(
-	rootConfig: ParsedOutputRootConfig | undefined
+	rootConfig: ParsedBuildOutputRootConfig | undefined
 ): asserts rootConfig is PreviewBuildOutputRootConfig {
 	if (rootConfig?.buildContext.isPreview !== true) {
 		throw new UserError("Build Output was not created by a Preview build.", {
@@ -142,10 +146,10 @@ export function assertPreviewBuildOutputRootConfig(
 	}
 }
 
-// Building and applying a container to Cloudchamber requires wrangler-only
+// Building and applying a container to Cloudchamber requires consumer-owned
 // dependencies (Docker, the containers API client) that deploy-helpers has
-// no direct dependency on. As with `DeployCallbacks` (see ../deploy/deploy.ts),
-// the wrangler-specific implementation is injected by the caller.
+// no direct dependency on. As with `DeployOptions` (see ../deploy/deploy.ts),
+// implementations that are injected by the caller.
 //
 // `getNormalizedContainerOptions` validates and normalises container config
 // without needing the preview deployment to exist yet, so `preview()` runs it
@@ -154,7 +158,9 @@ export function assertPreviewBuildOutputRootConfig(
 // running that advertises containers nothing ever built. `deployPreviewContainers`
 // does need the deployment, since that's what resolves each container's DO
 // namespace_id, so it still runs after.
-export type PreviewCallbacks = {
+export type PreviewOptions = {
+	deployCommand?: string;
+	previewCommand?: string;
 	productionBindingsExpectedInPreview?: Record<string, { type: string }>;
 	getNormalizedContainerOptions:
 		| ((
@@ -187,8 +193,8 @@ export type PreviewCallbacks = {
 };
 
 function convertBuildOutputContainerToInput(
-	container: ParsedOutputContainerConfig
-): ParsedInputContainerConfig {
+	container: ParsedBuildOutputContainerConfig
+): ParsedContainerConfig {
 	if ("image" in container) {
 		const { image, ...config } = container;
 		return {
@@ -210,7 +216,7 @@ function convertBuildOutputContainerToInput(
 }
 
 function getLocalContainerImageReferences(
-	containers: ParsedOutputContainerConfig[] | undefined,
+	containers: ParsedBuildOutputContainerConfig[] | undefined,
 	previewContainers: ContainerApp[]
 ): Map<string, string> {
 	const localReferences = new Map<string, string>();
@@ -237,7 +243,7 @@ function getLocalContainerImageReferences(
  * Converts resolved Build Output containers into preview application configs.
  */
 function convertBuildOutputContainers(
-	containers: ParsedOutputContainerConfig[] | undefined,
+	containers: ParsedBuildOutputContainerConfig[] | undefined,
 	exports: Exports | undefined
 ): ContainerApp[] {
 	const containerClassNames = new Map<string, string>();
@@ -325,9 +331,10 @@ function buildPreviewContainerConfig(
 	// hand back a preview with no container and no explanation, so reject it
 	// here, before the preview deployment is created.
 	//
-	// A class that does match a binding carrying `script_name` is excluded
-	// rather than rejected: that DO is implemented by another Worker, which owns
-	// its own container application.
+	// A class reached only through a binding carrying `script_name` is excluded
+	// rather than rejected: the named Worker owns its container application.
+	// This includes the parent Worker's deployed namespace, which is separate
+	// from the preview's namespace even though the Worker name is the same.
 	for (const { className } of linkedContainers) {
 		if (
 			ownedDOClasses.has(className) ||
@@ -336,7 +343,7 @@ function buildPreviewContainerConfig(
 			continue;
 		}
 		throw new UserError(
-			`The container class_name "${className}" in "previews.containers" does not match any Durable Object class in your ${configFileName(config.configPath)} file. Declare the class in "migrations" or "exports", or bind it under "previews.durable_objects".`,
+			`The container class_name "${className}" in "previews.containers" does not match any Durable Object class in your ${configFileName(config.configPath, config.userConfigPath)} file. Declare the class in "migrations" or "exports", or bind it under "previews.durable_objects".`,
 			{
 				telemetryMessage: "no preview DO class matches container class_name",
 			}
@@ -355,11 +362,9 @@ function buildPreviewContainerConfig(
 	}
 
 	// `getNormalizedContainerOptions` resolves a container's Durable Object with
-	// `find()` on `class_name`, and rejects the container outright if that first
-	// match carries `script_name`. A class bound both locally and cross-script
-	// would then fail as though another Worker owned it, purely because of
-	// binding order. Put the locally implemented bindings first so the lookup
-	// lands on the one this preview owns.
+	// `find()` on `class_name`. Put preview-local bindings first so validation
+	// selects the preview's binding even when another binding to the same class
+	// names a deployed Worker, including the parent.
 	const localBindingsFirst = [
 		...previewDOBindings.filter((b) => b.script_name === undefined),
 		...previewDOBindings.filter((b) => b.script_name !== undefined),
@@ -407,7 +412,7 @@ async function prepareContainersForPreview(
 	config: Config,
 	workerName: string,
 	previewSlug: string,
-	callbacks: PreviewCallbacks,
+	options: PreviewOptions,
 	localImageReferences: Map<string, string>
 ): Promise<{
 	scopedContainerConfig: Config | undefined;
@@ -417,7 +422,7 @@ async function prepareContainersForPreview(
 		(config.previews as PreviewsConfig | undefined)?.containers ?? [];
 	if (
 		previewContainers.length === 0 ||
-		!callbacks.getNormalizedContainerOptions
+		!options.getNormalizedContainerOptions
 	) {
 		return { scopedContainerConfig: undefined, normalisedContainerConfig: [] };
 	}
@@ -432,10 +437,12 @@ async function prepareContainersForPreview(
 		return { scopedContainerConfig: undefined, normalisedContainerConfig: [] };
 	}
 
-	const normalisedContainerConfig =
-		await callbacks.getNormalizedContainerOptions(scopedContainerConfig, {
+	const normalisedContainerConfig = await options.getNormalizedContainerOptions(
+		scopedContainerConfig,
+		{
 			dryRun: false,
-		});
+		}
+	);
 
 	const containersNeedingDocker = normalisedContainerConfig.filter(
 		(container) => "dockerfile" in container
@@ -455,8 +462,8 @@ async function prepareContainersForPreview(
 	// Applying containers checks the token's scope as well, but only after the
 	// deployment exists. Checking it here stops a badly scoped token from
 	// leaving a live preview that advertises containers nothing ever built.
-	if (callbacks.verifyContainersScope) {
-		await callbacks.verifyContainersScope(scopedContainerConfig);
+	if (options.verifyContainersScope) {
+		await options.verifyContainersScope(scopedContainerConfig);
 	}
 
 	return { scopedContainerConfig, normalisedContainerConfig };
@@ -484,7 +491,11 @@ function formatPreviewConfigUpdate(
 	).trimEnd();
 }
 
-export function formatNoActivePreviewUrlsMessage(config: Config): string {
+export function formatNoActivePreviewUrlsMessage(
+	config: Config,
+	deployCommand = "your deploy command",
+	previewCommand = "the preview command"
+): string {
 	const customDomainRouteEntries = (config.routes ?? [])
 		.filter(isCustomDomainRoute)
 		.map((route) => ({ route, singular: false }));
@@ -540,8 +551,8 @@ export function formatNoActivePreviewUrlsMessage(config: Config): string {
 		customDomainRoute?.previews_enabled === true;
 	const cautionText =
 		workersDevAlreadyConfigured && customDomainAlreadyConfigured
-			? "Caution: `wrangler deploy` publishes the code in your current checkout to the deployed Worker. If you have already made this change, confirm it was applied by running `wrangler deploy` from a clean checkout of your production branch. Then return to your feature branch and run `wrangler preview` again."
-			: "Caution: `wrangler deploy` publishes the code in your current checkout to the deployed Worker, not only these settings. If you use Git, commit the configuration change and run `wrangler deploy` from a clean checkout of your production branch. Then return to your feature branch and run `wrangler preview` again.";
+			? `Caution: \`${deployCommand}\` publishes the code in your current checkout to the deployed Worker. If you have already made this change, confirm it was applied by running \`${deployCommand}\` from a clean checkout of your production branch. Then return to your feature branch and run \`${previewCommand}\` again.`
+			: `Caution: \`${deployCommand}\` publishes the code in your current checkout to the deployed Worker, not only these settings. If you use Git, commit the configuration change and run \`${deployCommand}\` from a clean checkout of your production branch. Then return to your feature branch and run \`${previewCommand}\` again.`;
 	let workersDevInstruction = `Add this to your ${configName}:`;
 	if (config.preview_urls === true) {
 		workersDevInstruction = `Your ${configName} already contains:`;
@@ -593,7 +604,8 @@ function getPreviewMigrationsToUpload(
 		if (foundIndex === -1) {
 			logger.warn(
 				`The published preview for ${workerName} has a migration tag "${currentMigrationTag}", which was not found in your ${configFileName(
-					config.configPath
+					config.configPath,
+					config.userConfigPath
 				)} file. You may have already deleted it. Applying all available migrations to the preview...`
 			);
 			return {
@@ -693,6 +705,7 @@ async function assemblePreviewDeploymentSettings(
 		assetsOptions?: PreviewAssetsOptions;
 		secrets?: Record<string, string>;
 		cliVars?: Record<string, string>;
+		isNewPreview: boolean;
 	}
 ): Promise<CreatePreviewDeploymentRequestParams> {
 	const previews = config.previews as PreviewsConfig | undefined;
@@ -721,6 +734,7 @@ async function assemblePreviewDeploymentSettings(
 				html_handling: options.assetsOptions.assetConfig.html_handling,
 				not_found_handling:
 					options.assetsOptions.assetConfig.not_found_handling,
+				base_path: options.assetsOptions.assetConfig.base_path,
 				run_worker_first: options.assetsOptions.run_worker_first,
 			},
 		};
@@ -759,17 +773,18 @@ async function assemblePreviewDeploymentSettings(
 			...(options.tag && { "workers/tag": options.tag }),
 		};
 	}
-	if (config.migrations.length > 0) {
-		let latestDeploymentMigrationTag: string | undefined;
+	// The latest deployment holds the migration tag and the secrets that were
+	// set on the Preview. A new Preview has no deployment to take secrets from.
+	let latestDeployment: DeploymentResource | undefined;
+	if (config.migrations.length > 0 || !options.isNewPreview) {
 		try {
-			const latestDeployment = await getPreviewDeployment(
+			latestDeployment = await getPreviewDeployment(
 				config,
 				accountId,
 				workerName,
 				previewIdentifier,
 				"latest"
 			);
-			latestDeploymentMigrationTag = latestDeployment.migration_tag;
 		} catch (error) {
 			if (
 				!(
@@ -782,10 +797,12 @@ async function assemblePreviewDeploymentSettings(
 				throw error;
 			}
 		}
+	}
+	if (config.migrations.length > 0) {
 		const migrations = getPreviewMigrationsToUpload(
 			workerName,
 			config,
-			latestDeploymentMigrationTag
+			latestDeployment?.migration_tag
 		);
 		if (migrations) {
 			request.migrations = migrations;
@@ -818,9 +835,9 @@ async function assemblePreviewDeploymentSettings(
 	//
 	// We only emit `class_name`s where the DO is implemented by THIS script,
 	// whether it is declared through `migrations`, through `exports`, or bound
-	// under `previews.durable_objects` without a `script_name`. A binding
-	// carrying `script_name` references a DO implemented by another worker,
-	// which owns its own container application.
+	// under `previews.durable_objects` without a `script_name`. An explicit
+	// `script_name`, including the parent Worker's name, targets a deployed
+	// namespace rather than this preview's isolated namespace.
 	//
 	// A container that names no class is rejected by
 	// `buildPreviewContainerConfig` before we get here, so it is dropped rather
@@ -851,6 +868,15 @@ async function assemblePreviewDeploymentSettings(
 		env[secretName] = { type: "secret_text", text: secretValue };
 	}
 
+	// A new deployment replaces the whole environment, so secrets set on the
+	// Preview (e.g. with `wrangler preview secret put`) have to be inherited
+	// explicitly, otherwise this deployment would drop them.
+	for (const [name, binding] of Object.entries(latestDeployment?.env ?? {})) {
+		if (binding.type === "secret_text" && !Object.hasOwn(env, name)) {
+			env[name] = { type: "inherit" };
+		}
+	}
+
 	if (Object.keys(env).length > 0) {
 		request.env = env;
 	}
@@ -879,7 +905,9 @@ function formatPreviewDeploymentSummary(
 	previewResource: PreviewResource,
 	deployment: DeploymentResource,
 	isNew: boolean,
-	pullRequest?: PullRequestMetadata
+	pullRequest: PullRequestMetadata | undefined,
+	deployCommand: string | undefined,
+	previewCommand: string | undefined
 ): string {
 	const statusLabel = isNew ? chalk.green("(new)") : chalk.dim("(updated)");
 	const pullRequestUrl =
@@ -902,7 +930,15 @@ function formatPreviewDeploymentSummary(
 				]
 			: []),
 		...formatUrlLines("Unique Deployment", deployment.urls),
-		...(hasActiveUrls ? [] : [formatNoActivePreviewUrlsMessage(config)]),
+		...(hasActiveUrls
+			? []
+			: [
+					formatNoActivePreviewUrlsMessage(
+						config,
+						deployCommand,
+						previewCommand
+					),
+				]),
 	].join("\n");
 }
 
@@ -946,7 +982,9 @@ function previewUrlMatchesCustomDomain(url: string, customDomains: string[]) {
 function logMissingCustomDomainPreviewUrlsWarning(
 	config: Config,
 	previewResource: PreviewResource,
-	deployment: DeploymentResource
+	deployment: DeploymentResource,
+	deployCommand = "your deploy command",
+	previewCommand = "the preview command"
 ) {
 	const customDomains = getPreviewCustomDomainHostnames(config);
 	const urls = [...(previewResource.urls ?? []), ...(deployment.urls ?? [])];
@@ -960,7 +998,7 @@ function logMissingCustomDomainPreviewUrlsWarning(
 
 	logger.log("");
 	logger.warn(
-		"Custom domain Preview URLs are configured, but none are active for this Preview. If you added `previews_enabled = true` after your last deployment, run `wrangler deploy` once to publish the custom domain Preview route, then run `wrangler preview` again. If you already deployed with that setting, the custom domain may still be provisioning."
+		`Custom domain Preview URLs are configured, but none are active for this Preview. If you enabled Preview URLs after your last deployment, run \`${deployCommand}\` once to publish the custom domain Preview route, then run \`${previewCommand}\` again. If you already deployed with that setting, the custom domain may still be provisioning.`
 	);
 }
 
@@ -1055,7 +1093,7 @@ async function runPreview(
 	config: Config,
 	buildResult: PreviewWorkerBuildResult | undefined,
 	assetsOptions: PreviewAssetsOptions | undefined,
-	callbacks: PreviewCallbacks,
+	options: PreviewOptions,
 	workerName: string,
 	replaceTailConsumersAfterCreate = false,
 	localImageReferences = new Map<string, string>()
@@ -1064,7 +1102,13 @@ async function runPreview(
 	// fails before the preview is created and assets are uploaded.
 	let secrets: Record<string, string> | undefined;
 	if (args.secretsFile) {
-		secrets = (await parseBulkInputToObject(args.secretsFile))?.content;
+		secrets = (
+			await parseBulkInputToObject(
+				args.secretsFile,
+				false,
+				parseAndExpandDotEnv
+			)
+		)?.content;
 	}
 
 	let previewName = args.name;
@@ -1154,7 +1198,7 @@ async function runPreview(
 			config,
 			workerName,
 			previewResource.slug,
-			callbacks,
+			options,
 			localImageReferences
 		);
 
@@ -1173,6 +1217,7 @@ async function runPreview(
 			assetsOptions,
 			secrets,
 			cliVars: args.cliVars,
+			isNewPreview,
 		}
 	);
 	const deployment = await createPreviewDeployment(
@@ -1195,10 +1240,10 @@ async function runPreview(
 	if (
 		normalisedContainerConfig.length > 0 &&
 		scopedContainerConfig &&
-		callbacks.deployPreviewContainers
+		options.deployPreviewContainers
 	) {
 		try {
-			await callbacks.deployPreviewContainers(
+			await options.deployPreviewContainers(
 				scopedContainerConfig,
 				normalisedContainerConfig,
 				deployment,
@@ -1222,7 +1267,7 @@ async function runPreview(
 		);
 	} else {
 		const productionBindingsExpectedInPreview =
-			callbacks.productionBindingsExpectedInPreview ?? {};
+			options.productionBindingsExpectedInPreview ?? {};
 		if (Object.keys(productionBindingsExpectedInPreview).length > 0) {
 			const previewBaseConfig = await getPreviewBaseConfig(
 				config,
@@ -1242,13 +1287,17 @@ async function runPreview(
 				previewResource,
 				deployment,
 				isNewPreview,
-				pullRequest
+				pullRequest,
+				options.deployCommand,
+				options.previewCommand
 			)
 		);
 		logMissingCustomDomainPreviewUrlsWarning(
 			config,
 			previewResource,
-			deployment
+			deployment,
+			options.deployCommand,
+			options.previewCommand
 		);
 	}
 
@@ -1266,7 +1315,7 @@ async function runPreview(
  * @param config Resolved Wrangler configuration.
  * @param buildResult Compiled Worker code and modules.
  * @param assetsOptions Static asset configuration and artifacts.
- * @param callbacks Wrangler container integrations.
+ * @param options Consumer-specific command paths and Container integrations.
  */
 export async function preview(
 	accountId: string,
@@ -1274,7 +1323,7 @@ export async function preview(
 	config: Config,
 	buildResult: WorkerBuildResult,
 	assetsOptions: PreviewAssetsOptions | undefined,
-	callbacks: PreviewCallbacks
+	options: PreviewOptions
 ): Promise<PreviewResult> {
 	return runPreview(
 		accountId,
@@ -1282,7 +1331,7 @@ export async function preview(
 		config,
 		buildResult,
 		assetsOptions,
-		callbacks,
+		options,
 		resolveWorkerName(args, config)
 	);
 }
@@ -1291,27 +1340,18 @@ export async function preview(
  * Upload a Preview from resolved Build Output configuration.
  *
  * @param accountId Account that owns the parent Worker.
- * @param args Preview name and deployment annotations.
+ * @param args Preview name, deployment annotations, and secrets file.
  * @param buildOutput Exact configuration and artifacts emitted by the build.
  */
 export async function previewBuildOutput(
 	accountId: string,
-	args: Pick<PreviewArgs, "name" | "tag" | "message" | "json">,
+	args: Pick<PreviewArgs, "name" | "tag" | "message" | "json" | "secretsFile">,
 	buildOutput: PreviewBuildOutput,
-	callbacks?: PreviewCallbacks
+	options?: PreviewOptions
 ): Promise<PreviewResult> {
 	const { workerConfig, rootConfig, buildResult, assets } = buildOutput;
 	assertPreviewBuildOutputRootConfig(rootConfig);
-	// TODO: Upload domains and triggers when Preview deployments support them.
-	// Wrangler can't configure them today, so reject them instead of ignoring them.
-	if (workerConfig.domains?.length) {
-		throw new UserError(
-			"Preview uploads from Build Output don't support the `domains` field.",
-			{
-				telemetryMessage: "preview build output custom domains not supported",
-			}
-		);
-	}
+	// TODO: Upload triggers when Preview deployments support them.
 	if (workerConfig.triggers?.length) {
 		throw new UserError(
 			"Preview uploads from Build Output don't support the `triggers` field.",
@@ -1320,7 +1360,7 @@ export async function previewBuildOutput(
 			}
 		);
 	}
-	if (workerConfig.tailConsumers?.some((consumer) => consumer.streaming)) {
+	if ((workerConfig.experimental?.streamingTailConsumers?.length ?? 0) > 0) {
 		throw new UserError(
 			"Preview uploads from Build Output don't support streaming tail consumers.",
 			{
@@ -1340,10 +1380,9 @@ export async function previewBuildOutput(
 			}
 		);
 	}
-	const { buildContext: _buildContext, ...settings } = rootConfig;
 	const { manifest: _manifest, ...worker } = workerConfig;
 	const convertedConfig = convertToWranglerConfig({
-		...settings,
+		...rootConfig.settings,
 		worker,
 		containers: [],
 	});
@@ -1357,8 +1396,8 @@ export async function previewBuildOutput(
 	);
 	if (
 		previewContainers.length > 0 &&
-		(callbacks?.getNormalizedContainerOptions === undefined ||
-			callbacks.deployPreviewContainers === undefined)
+		(options?.getNormalizedContainerOptions === undefined ||
+			options.deployPreviewContainers === undefined)
 	) {
 		throw new UserError(
 			"Preview uploads from Build Output with Containers require container deployment callbacks.",
@@ -1411,6 +1450,7 @@ export async function previewBuildOutput(
 		assetConfig: {
 			html_handling: convertedConfig.assets?.html_handling,
 			not_found_handling: convertedConfig.assets?.not_found_handling,
+			base_path: convertedConfig.assets?.base_path,
 		},
 		run_worker_first: convertedConfig.assets?.run_worker_first,
 	};
@@ -1420,7 +1460,7 @@ export async function previewBuildOutput(
 		previewConfig,
 		previewBuildResult,
 		assetsOptions,
-		callbacks ?? {
+		options ?? {
 			getNormalizedContainerOptions: undefined,
 			deployPreviewContainers: undefined,
 		},

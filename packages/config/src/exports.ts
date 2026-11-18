@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import type { ContainerDefinition } from "./definition";
+import type { ArtifactsEventSubscription } from "./workflow-events";
 
 /**
  * Storage backend for the Durable Object.
@@ -161,7 +162,11 @@ export interface WorkerEntrypointExport extends WorkerEntrypointExportOptions {
 	type: "worker";
 }
 
+export const WORKFLOW_JURISDICTIONS = ["eu", "fedramp", "us"] as const;
+
 export interface WorkflowExportOptions {
+	/** Events that automatically start this Workflow. Only Artifacts events are currently supported. */
+	events?: ArtifactsEventSubscription[];
 	/**
 	 * The name of the Workflow. It identifies the Workflow's instances and must
 	 * be unique within the account.
@@ -188,6 +193,11 @@ export interface WorkflowExportOptions {
 		/** How long to retain errored instances. */
 		errorRetention?: number | string;
 	};
+	/**
+	 * Jurisdiction that the Workflow's instances run and store their data in.
+	 * It is set when the Workflow is created and cannot be changed afterwards.
+	 */
+	jurisdiction?: (typeof WORKFLOW_JURISDICTIONS)[number];
 }
 
 export interface WorkflowExport extends WorkflowExportOptions {

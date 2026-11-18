@@ -4,7 +4,7 @@ import path from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
 import { beforeEach, describe, it, vi } from "vitest";
-import { startWorker } from "../api/startDevWorker";
+import { DevEnv, startWorker } from "../api/startDevWorker";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runWrangler } from "./helpers/run-wrangler";
 
@@ -35,6 +35,50 @@ describe("middleware", () => {
 		});
 
 		describe("module workers", () => {
+			it("should start a Worker with only named entrypoints", async () => {
+				const scriptContent = `
+			import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
+
+			class Counter extends RpcTarget {
+				increment() {
+					return 1;
+				}
+			}
+
+			export class CounterService extends WorkerEntrypoint {
+				async newCounter() {
+					return new Counter();
+				}
+			}
+			`;
+				fs.writeFileSync("index.js", scriptContent);
+
+				const devEnv = new DevEnv();
+				// `worker.ready` only waits for the proxy server, which stays available
+				// after recoverable build failures. Wait for the Worker runtime to reload
+				// so the test verifies that the user module was bundled successfully.
+				const buildFinished = new Promise<void>((resolve, reject) => {
+					devEnv.once("reloadComplete", () => resolve());
+					devEnv.once("buildFailed", () => {
+						reject(new Error("Worker build failed"));
+					});
+				});
+				const worker = await devEnv.startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
+					},
+				});
+
+				try {
+					await buildFinished;
+					await worker.ready;
+				} finally {
+					await worker.dispose();
+				}
+			});
+
 			it("should register a middleware and intercept", async ({ expect }) => {
 				const scriptContent = `
 			const middleware = async (request, env, _ctx, middlewareCtx) => {

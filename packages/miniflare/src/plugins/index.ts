@@ -106,18 +106,12 @@ export {
 	SERVICE_ENTRY,
 	getGlobalServices,
 	ProxyClient,
-	getFreshSourceMapSupport,
 	kCurrentWorker,
-	getNodeCompat,
 	compileModuleRules,
 	WorkerdStructuredLogSchema as workerdStructuredLogSchema,
 	INTROSPECT_SQLITE_METHOD,
 } from "./core";
-export type {
-	CompiledModuleRule,
-	GlobalServicesOptions,
-	NodeJSCompatMode,
-} from "./core";
+export type { CompiledModuleRule, GlobalServicesOptions } from "./core";
 export type {
 	ContainerPrivileges,
 	ContainerPrivilegesCache,

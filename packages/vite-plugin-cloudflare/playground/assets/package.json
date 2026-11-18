@@ -21,7 +21,6 @@
 		"@cloudflare/workers-types": "catalog:default",
 		"cf": "catalog:default",
 		"typescript": "catalog:default",
-		"vite": "catalog:default",
-		"wrangler": "workspace:*"
+		"vite": "catalog:default"
 	}
 }

@@ -3,11 +3,13 @@ import { join } from "node:path";
 import { usesTypescript } from "../uses-typescript";
 import { Framework } from "./framework-class";
 import {
+	assertViteConfigCanBeTransformed,
 	checkIfViteConfigUsesCloudflarePlugin,
 	hasViteConfig,
 	transformViteConfig,
 } from "./utils/vite-config";
 import { installCloudflareVitePlugin } from "./utils/vite-plugin";
+import { CF_VITE_PLUGIN_VERSION_RANGE } from "./utils/vite-plugin-version";
 import type { AutoConfigTarget } from "../context";
 import type {
 	ConfigurationOptions,
@@ -41,12 +43,15 @@ export class Vite extends Framework {
 		isWorkspaceRoot,
 		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		if (hasViteConfig(projectPath)) {
+			assertViteConfigCanBeTransformed(projectPath);
+		}
 		if (!dryRun) {
 			await installCloudflareVitePlugin({
 				packageManager: packageManager.type,
 				isWorkspaceRoot,
 				projectPath,
-				version: target === "cf" ? "beta" : undefined,
+				version: target === "cf" ? CF_VITE_PLUGIN_VERSION_RANGE : undefined,
 			});
 
 			if (hasViteConfig(projectPath)) {

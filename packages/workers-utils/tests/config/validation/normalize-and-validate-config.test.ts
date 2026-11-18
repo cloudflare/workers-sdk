@@ -1,6 +1,7 @@
 import path from "node:path";
 import * as TOML from "smol-toml";
 import { assert, describe, it, test, vi } from "vitest";
+import { WORKFLOW_JURISDICTIONS } from "../../../src/config/environment";
 import { normalizeAndValidateConfig } from "../../../src/config/validation";
 import { normalizeString } from "../../../src/test-helpers";
 import type {
@@ -837,6 +838,31 @@ describe("normalizeAndValidateConfig()", () => {
 					  - Unexpected fields found in triggers field: "someOtherfield""
 				`);
 		});
+
+		it.for(["namespace", "repo_name"])(
+			"rejects an empty Artifacts %s filter",
+			(field, { expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						triggers: {
+							events: [
+								{
+									type: "cf.artifacts.repo.created",
+									filter: { [field]: "" },
+									targets: [{ type: "workflow", workflow_name: "on-repo" }],
+								},
+							],
+						},
+					},
+					"wrangler.json",
+					"wrangler.json",
+					{ env: undefined }
+				);
+				expect(diagnostics.renderErrors()).toContain(
+					'Expected "triggers.events[0].filter" to contain only non-empty string'
+				);
+			}
+		);
 
 		it("should accept Artifacts event triggers", ({ expect }) => {
 			const expectedConfig: RawConfig = {
@@ -2486,6 +2512,55 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
+			it("accepts workflow jurisdictions", ({ expect }) => {
+				const expectedConfig: RawConfig = {
+					exports: {
+						EuWorkflow: { type: "workflow", name: "eu", jurisdiction: "eu" },
+						FedrampWorkflow: {
+							type: "workflow",
+							name: "fedramp",
+							jurisdiction: "fedramp",
+						},
+						UsWorkflow: { type: "workflow", name: "us", jurisdiction: "us" },
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					expectedConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config).toEqual(expect.objectContaining(expectedConfig));
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("errors when a workflow jurisdiction is not supported", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						exports: {
+							GreetingWorkflow: {
+								type: "workflow",
+								name: "greeting",
+								jurisdiction: "EU",
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "exports.GreetingWorkflow" export "jurisdiction" field must be one of "eu", "fedramp", or "us", but got "EU"."
+				`);
+			});
+
 			it("warns when a workflow step limit exceeds the production maximum", ({
 				expect,
 			}) => {
@@ -3870,6 +3945,111 @@ describe("normalizeAndValidateConfig()", () => {
 					  - Unexpected fields found in assets field: "invalid_field_1","invalid_field_2""
 				`);
 				expect(diagnostics.hasErrors()).toBeFalsy();
+			});
+
+			describe("[assets.base_path]", () => {
+				it.for(["/", "/subpath", "/subpath/", "/a/../b"])(
+					"accepts the string value %s for downstream normalization",
+					(basePath, { expect }) => {
+						const { config, diagnostics } = normalizeAndValidateConfig(
+							{ assets: { directory: "./public", base_path: basePath } },
+							undefined,
+							undefined,
+							{ env: undefined }
+						);
+
+						expect(config.assets?.base_path).toBe(basePath);
+						expect(diagnostics.hasErrors()).toBe(false);
+						expect(diagnostics.hasWarnings()).toBe(false);
+					}
+				);
+
+				it.for([
+					{ value: null, rendered: "null" },
+					{ value: 123, rendered: "123" },
+				])(
+					"errors when base_path is $rendered",
+					({ value, rendered }, { expect }) => {
+						const { diagnostics } = normalizeAndValidateConfig(
+							{
+								assets: { directory: "./public", base_path: value },
+							} as unknown as RawConfig,
+							undefined,
+							undefined,
+							{ env: undefined }
+						);
+
+						expect(diagnostics.hasErrors()).toBe(true);
+						expect(diagnostics.renderErrors()).toBe(
+							`Processing wrangler configuration:\n  - Expected "assets.base_path" to be of type string but got ${rendered}.`
+						);
+					}
+				);
+
+				it("inherits base_path into a named environment", ({ expect }) => {
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						{
+							assets: { directory: "./public", base_path: "/subpath/" },
+							env: { staging: {} },
+						},
+						undefined,
+						undefined,
+						{ env: "staging" }
+					);
+
+					expect(config.assets?.base_path).toBe("/subpath/");
+					expect(diagnostics.hasErrors()).toBe(false);
+				});
+
+				it("preserves base_path in a named environment", ({ expect }) => {
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						{
+							env: {
+								staging: {
+									assets: {
+										directory: "./public",
+										base_path: "/subpath/",
+									},
+								},
+							},
+						},
+						undefined,
+						undefined,
+						{ env: "staging" }
+					);
+
+					expect(config.assets?.base_path).toBe("/subpath/");
+					expect(diagnostics.hasErrors()).toBe(false);
+				});
+
+				it("drops top-level asset fields when a named environment replaces the object", ({
+					expect,
+				}) => {
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						{
+							assets: {
+								directory: "./public",
+								base_path: "/subpath",
+								run_worker_first: ["/*"],
+							},
+							env: {
+								staging: {
+									assets: {
+										directory: "./staging-public",
+									},
+								},
+							},
+						},
+						undefined,
+						undefined,
+						{ env: "staging" }
+					);
+
+					expect(config.assets?.directory).toBe("./staging-public");
+					expect(config.assets?.base_path).toBeUndefined();
+					expect(config.assets?.run_worker_first).toBeUndefined();
+					expect(diagnostics.hasWarnings()).toBe(false);
+				});
 			});
 		});
 
@@ -6727,7 +6907,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - containers.constraints.jurisdiction must be one of: "eu", "fedramp""
+					  - containers.constraints.jurisdiction must be one of: "eu", "fedramp", "us""
 				`);
 			});
 
@@ -6759,31 +6939,32 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should allow valid constraints.regions and constraints.jurisdiction", ({
-				expect,
-			}) => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						name: "test-worker",
-						containers: [
-							{
-								class_name: "TestClass",
-								image: "registry.cloudflare.com/test:latest",
-								constraints: {
-									regions: ["ENAM", "WNAM"],
-									jurisdiction: "fedramp",
+			it.for(["eu", "fedramp", "us"] as const)(
+				"should allow valid constraints.regions and constraints.jurisdiction %s",
+				(jurisdiction, { expect }) => {
+					const { diagnostics } = normalizeAndValidateConfig(
+						{
+							name: "test-worker",
+							containers: [
+								{
+									class_name: "TestClass",
+									image: "registry.cloudflare.com/test:latest",
+									constraints: {
+										regions: ["ENAM", "WNAM"],
+										jurisdiction,
+									},
 								},
-							},
-						],
-					} as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
+							],
+						} as unknown as RawConfig,
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
 
-				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.hasErrors()).toBe(false);
-			});
+					expect(diagnostics.hasWarnings()).toBe(false);
+					expect(diagnostics.hasErrors()).toBe(false);
+				}
+			);
 		});
 
 		describe("[kv_namespaces]", () => {
@@ -7027,12 +7208,12 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it("should allow the database_id field to be omitted (resource provisioning)", ({
+			it("should allow provisioning options without a database_id", ({
 				expect,
 			}) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
-						d1_databases: [{ binding: "VALID" }],
+						d1_databases: [{ binding: "VALID", jurisdiction: "eu" }],
 					} as unknown as RawConfig,
 					undefined,
 					undefined,
@@ -7041,6 +7222,31 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if D1 database jurisdiction has incorrect type", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						d1_databases: [
+							{
+								binding: "DB",
+								jurisdiction: true,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "d1_databases[0]" bindings should, optionally, have a string "jurisdiction" field but got {"binding":"DB","jurisdiction":true}."
+				`);
 			});
 
 			it("should error if D1 database database_name has incorrect type", ({
@@ -9801,6 +10007,57 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - Unexpected fields found in workflows[0].default_retention field: "retention""
+				`);
+			});
+
+			it.for(WORKFLOW_JURISDICTIONS)(
+				"should accept the jurisdiction %s",
+				(jurisdiction, { expect }) => {
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						{
+							workflows: [
+								{
+									binding: "MY_WORKFLOW",
+									name: "my-workflow",
+									class_name: "MyWorkflow",
+									jurisdiction,
+								},
+							],
+						},
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(config.workflows[0]?.jurisdiction).toBe(jurisdiction);
+					expect(diagnostics.hasErrors()).toBe(false);
+					expect(diagnostics.hasWarnings()).toBe(false);
+				}
+			);
+
+			it("should error if jurisdiction is not a supported value", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						workflows: [
+							{
+								binding: "MY_WORKFLOW",
+								name: "my-workflow",
+								class_name: "MyWorkflow",
+								jurisdiction: "fedramp-high",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "workflows[0]" bindings "jurisdiction" field must be one of "eu", "fedramp", or "us", but got "fedramp-high"."
 				`);
 			});
 

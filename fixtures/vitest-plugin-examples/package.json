@@ -36,7 +36,6 @@
 	},
 	"devDependencies": {
 		"@better-auth/stripe": "^1.4.6",
-		"@cloudflare/containers": "^0.2.2",
 		"@cloudflare/vitest-plugin": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@microlabs/otel-cf-workers": "1.0.0-rc.45",
@@ -44,6 +43,7 @@
 		"@types/mime-types": "^3.0.1",
 		"@types/node": "catalog:default",
 		"@types/nunjucks": "^3.2.6",
+		"@vitest/ui": "catalog:default",
 		"better-auth": "^1.4.6",
 		"cf": "catalog:default",
 		"cjs-wasm-module-dep": "file:./module-resolution/vendor/cjs-wasm-module-dep",

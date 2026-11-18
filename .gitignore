@@ -239,3 +239,7 @@ AGENTS.local.md
 .opencode/plans/
 .agents/skills
 .opencode/package-lock.json
+
+# Temporary config bundles generated and removed by tsup while builds run.
+**/tsup.config.bundled_*.mjs
+**/tsup.config.bundled_*.cjs

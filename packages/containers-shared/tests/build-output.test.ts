@@ -8,7 +8,7 @@ import {
 	getWorkerDir,
 	writeContainerConfig,
 } from "@cloudflare/build-output-utils";
-import { InputContainerSchema } from "@cloudflare/config";
+import { ContainerConfigSchema } from "@cloudflare/config";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
@@ -69,7 +69,7 @@ describe("buildAndWriteContainerOutput", () => {
 	it("preserves remote references without invoking Docker", async ({
 		expect,
 	}) => {
-		const config = InputContainerSchema.parse({
+		const config = ContainerConfigSchema.parse({
 			name: "remote-container",
 			image: { reference: "registry.example.com/app:latest" },
 		});
@@ -95,7 +95,7 @@ describe("buildAndWriteContainerOutput", () => {
 	it("builds a standard Container with resolved paths and build variables", async ({
 		expect,
 	}) => {
-		const config = InputContainerSchema.parse({
+		const config = ContainerConfigSchema.parse({
 			name: "My_Container",
 			image: {
 				dockerfile: "./container/Dockerfile",
@@ -136,7 +136,7 @@ describe("buildAndWriteContainerOutput", () => {
 	it("uses a valid fallback when a Container name has no repository characters", async ({
 		expect,
 	}) => {
-		const config = InputContainerSchema.parse({
+		const config = ContainerConfigSchema.parse({
 			name: "🔥",
 			image: { dockerfile: "./container/Dockerfile" },
 		});
@@ -159,7 +159,7 @@ describe("buildAndWriteContainerOutput", () => {
 	it("trims project-scoped repository names to Docker's length limit", async ({
 		expect,
 	}) => {
-		const config = InputContainerSchema.parse({
+		const config = ContainerConfigSchema.parse({
 			name: "a".repeat(240),
 			image: { dockerfile: "./container/Dockerfile" },
 		});
@@ -178,7 +178,7 @@ describe("buildAndWriteContainerOutput", () => {
 	it("builds Durable Object named images and preserves remote images", async ({
 		expect,
 	}) => {
-		const config = InputContainerSchema.parse({
+		const config = ContainerConfigSchema.parse({
 			name: "Session_Container",
 			schedulingPolicy: "durable-object",
 			images: {
@@ -252,7 +252,7 @@ describe("buildAndWriteContainerOutput", () => {
 	it("preserves a Durable Object Container with no images", async ({
 		expect,
 	}) => {
-		const config = InputContainerSchema.parse({
+		const config = ContainerConfigSchema.parse({
 			name: "Session_Container",
 			schedulingPolicy: "durable-object",
 		});
@@ -275,11 +275,11 @@ describe("buildAndWriteContainerOutput", () => {
 	});
 
 	it("cleans images built before a later build fails", async ({ expect }) => {
-		const first = InputContainerSchema.parse({
+		const first = ContainerConfigSchema.parse({
 			name: "first",
 			image: { dockerfile: "./first/Dockerfile" },
 		});
-		const second = InputContainerSchema.parse({
+		const second = ContainerConfigSchema.parse({
 			name: "second",
 			image: { dockerfile: "./second/Dockerfile" },
 		});
@@ -310,7 +310,7 @@ describe("buildAndWriteContainerOutput", () => {
 	});
 
 	it("normalizes Container directory names", async ({ expect }) => {
-		const config = InputContainerSchema.parse({
+		const config = ContainerConfigSchema.parse({
 			name: "API Container",
 			image: { reference: "registry.example.com/app:latest" },
 		});
@@ -331,11 +331,11 @@ describe("buildAndWriteContainerOutput", () => {
 	it("removes partial output and current build tags when writing fails", async ({
 		expect,
 	}) => {
-		const first = InputContainerSchema.parse({
+		const first = ContainerConfigSchema.parse({
 			name: "first",
 			image: { dockerfile: "./first/Dockerfile" },
 		});
-		const second = InputContainerSchema.parse({
+		const second = ContainerConfigSchema.parse({
 			name: "second",
 			image: { dockerfile: "./second/Dockerfile" },
 		});
@@ -368,11 +368,11 @@ describe("buildAndWriteContainerOutput", () => {
 	it("rejects Container names with colliding directory names", async ({
 		expect,
 	}) => {
-		const first = InputContainerSchema.parse({
+		const first = ContainerConfigSchema.parse({
 			name: "API:prod",
 			image: { reference: "registry.example.com/api:latest" },
 		});
-		const second = InputContainerSchema.parse({
+		const second = ContainerConfigSchema.parse({
 			name: "api-prod",
 			image: { reference: "registry.example.com/api-2:latest" },
 		});
@@ -395,7 +395,7 @@ describe("buildAndWriteContainerOutput", () => {
 	it("removes complete output when Docker verification fails", async ({
 		expect,
 	}) => {
-		const config = InputContainerSchema.parse({
+		const config = ContainerConfigSchema.parse({
 			name: "app",
 			image: { dockerfile: "./Dockerfile" },
 		});
@@ -418,7 +418,7 @@ describe("buildAndWriteContainerOutput", () => {
 	it("removes the previous tag before rebuilding deleted output", async ({
 		expect,
 	}) => {
-		const config = InputContainerSchema.parse({
+		const config = ContainerConfigSchema.parse({
 			name: "api",
 			image: { dockerfile: "./Dockerfile" },
 		});
@@ -479,11 +479,11 @@ describe("buildAndWriteContainerOutput", () => {
 	it("rejects image names that normalize to the same repository", async ({
 		expect,
 	}) => {
-		const first = InputContainerSchema.parse({
+		const first = ContainerConfigSchema.parse({
 			name: "My_-API",
 			image: { dockerfile: "./first/Dockerfile" },
 		});
-		const second = InputContainerSchema.parse({
+		const second = ContainerConfigSchema.parse({
 			name: "my-api",
 			image: { dockerfile: "./second/Dockerfile" },
 		});
@@ -509,7 +509,7 @@ describe("buildAndWriteContainerOutput", () => {
 	it("does not require Docker to clean a registry-only build", async ({
 		expect,
 	}) => {
-		const config = InputContainerSchema.parse({
+		const config = ContainerConfigSchema.parse({
 			name: "remote-container",
 			image: { reference: "registry.example.com/app:latest" },
 		});

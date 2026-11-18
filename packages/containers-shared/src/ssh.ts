@@ -113,7 +113,7 @@ export const containersSshOptions = {
  * with the account API base URL and authentication, and call
  * initContainersSharedContext to supply the CLI's logger.
  */
-export async function sshCommand(sshArgs: ContainerSshArgs) {
+export async function sshCommand(sshArgs: ContainerSshArgs, userAgent: string) {
 	const useStdio = shouldUseStdio(sshArgs);
 
 	// Check that ssh is enabled
@@ -143,7 +143,7 @@ export async function sshCommand(sshArgs: ContainerSshArgs) {
 	const ws = new WebSocket(sshResponse.url, {
 		headers: {
 			authorization: `Bearer ${sshResponse.token}`,
-			"user-agent": "wrangler",
+			"user-agent": userAgent,
 		},
 	});
 

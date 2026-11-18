@@ -129,7 +129,10 @@ export const getNormalizedContainerOptions = async (
 		const maybeBoundDO = config.durable_objects.bindings.find(
 			(durableObject) => durableObject.class_name === className
 		);
-		if (maybeBoundDO && maybeBoundDO.script_name !== undefined) {
+		if (
+			maybeBoundDO?.script_name !== undefined &&
+			maybeBoundDO.script_name !== config.name
+		) {
 			throw new UserError(
 				`The container ${container.name} is referencing the durable object ${className}, which appears to be defined on the ${maybeBoundDO.script_name} Worker instead (via the 'script_name' field). You cannot configure a container on a Durable Object that is defined in another Worker.`,
 				{
@@ -139,8 +142,8 @@ export const getNormalizedContainerOptions = async (
 			);
 		}
 
-		const rolloutStepPercentageFallback =
-			(container.max_instances ?? 0) < 2 ? 100 : [10, 100];
+		const maxInstances = container.max_instances ?? 20;
+		const rolloutStepPercentageFallback = maxInstances < 2 ? 100 : [10, 100];
 
 		// tiers will take precedence over tier
 		// if unset, wrangler will default to [1, 2]
@@ -172,7 +175,7 @@ export const getNormalizedContainerOptions = async (
 		const shared: Omit<SharedContainerConfig, "disk_size" | "instance_type"> = {
 			name: container.name,
 			class_name: className,
-			max_instances: container.max_instances ?? 20,
+			max_instances: maxInstances,
 			scheduling_policy: (container.scheduling_policy ??
 				SchedulingPolicy.DEFAULT) as SchedulingPolicy,
 			constraints: {

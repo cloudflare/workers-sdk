@@ -446,6 +446,22 @@ describe("tail", () => {
 			await tailPromise;
 		});
 
+		it("keeps colons in header filter queries", async ({ expect }) => {
+			api = mockWebsocketAPIs(expect);
+			const { tailPromise } = await startTail(
+				"tail test-worker --header Origin:https://app.example.com:8443"
+			);
+			expect(api.requests.creation[0]).toEqual({
+				filters: [
+					{
+						header: { key: "Origin", query: "https://app.example.com:8443" },
+					},
+				],
+			});
+			await api.closeHelper();
+			await tailPromise;
+		});
+
 		it("sends single IP filters", async ({ expect }) => {
 			api = mockWebsocketAPIs(expect);
 			const fakeIp = "192.0.2.1";

@@ -27,14 +27,16 @@ export function realishPrintLogs(data: WebSocket.RawData): void {
 
 	if (eventMessage.logs.length > 0) {
 		eventMessage.logs.forEach(({ level, message }) => {
-			logger.console(level, ...message);
+			logger.console(level, ...message.map(escapeTailValue));
 		});
 	}
 
 	if (eventMessage.exceptions.length > 0) {
 		eventMessage.exceptions.forEach(({ name, message, stack }) => {
-			const errorLine = `${name}: ${typeof message === "string" ? message : inspect(message)}`;
-			logger.error(`${errorLine}${stack ? `\n${stack}` : ""}`);
+			const errorLine = escapeTailText(
+				`${name}: ${typeof message === "string" ? message : inspect(message)}`
+			);
+			logger.error(`${errorLine}${stack ? `\n${escapeTailText(stack)}` : ""}`);
 		});
 	}
 }
@@ -43,7 +45,7 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 	const eventMessage: TailEventMessage = JSON.parse(data.toString());
 
 	if (isScheduledEvent(eventMessage.event)) {
-		const cronPattern = eventMessage.event.cron;
+		const cronPattern = escapeTailText(eventMessage.event.cron);
 		const datetime = new Date(
 			eventMessage.event.scheduledTime
 		).toLocaleString();
@@ -51,21 +53,23 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 
 		logger.log(`"${cronPattern}" @ ${datetime} - ${outcome}`);
 	} else if (isRequestEvent(eventMessage.event)) {
-		const requestMethod = eventMessage.event?.request.method.toUpperCase();
+		const requestMethod = escapeTailText(
+			eventMessage.event.request.method.toUpperCase()
+		);
 		const url = eventMessage.event?.request.url;
 		const outcome = prettifyOutcome(eventMessage.outcome);
 		const datetime = new Date(eventMessage.eventTimestamp).toLocaleString();
 
 		logger.log(
 			url
-				? `${requestMethod} ${url} - ${outcome} @ ${datetime}`
+				? `${requestMethod} ${escapeTailText(url)} - ${outcome} @ ${datetime}`
 				: `[missing request] - ${outcome} @ ${datetime}`
 		);
 	} else if (isEmailEvent(eventMessage.event)) {
 		const outcome = prettifyOutcome(eventMessage.outcome);
 		const datetime = new Date(eventMessage.eventTimestamp).toLocaleString();
-		const mailFrom = eventMessage.event.mailFrom;
-		const rcptTo = eventMessage.event.rcptTo;
+		const mailFrom = escapeTailText(eventMessage.event.mailFrom);
+		const rcptTo = escapeTailText(eventMessage.event.rcptTo);
 		const rawSize = eventMessage.event.rawSize;
 
 		logger.log(
@@ -84,7 +88,8 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 		const tailedScripts = new Set(
 			eventMessage.event.consumedEvents
 				.map((consumedEvent) => consumedEvent.scriptName)
-				.filter((scriptName) => !!scriptName)
+				.filter((scriptName): scriptName is string => !!scriptName)
+				.map(escapeTailText)
 		);
 
 		logger.log(
@@ -94,14 +99,18 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 		);
 	} else if (isTailInfo(eventMessage.event)) {
 		if (eventMessage.event.type === "overload") {
-			logger.log(`${chalk.red.bold(eventMessage.event.message)}`);
+			logger.log(
+				`${chalk.red.bold(escapeTailText(eventMessage.event.message))}`
+			);
 		} else if (eventMessage.event.type === "overload-stop") {
-			logger.log(`${chalk.yellow.bold(eventMessage.event.message)}`);
+			logger.log(
+				`${chalk.yellow.bold(escapeTailText(eventMessage.event.message))}`
+			);
 		}
 	} else if (isQueueEvent(eventMessage.event)) {
 		const outcome = prettifyOutcome(eventMessage.outcome);
 		const datetime = new Date(eventMessage.eventTimestamp).toLocaleString();
-		const queueName = eventMessage.event.queue;
+		const queueName = escapeTailText(eventMessage.event.queue);
 		const batchSize = eventMessage.event.batchSize;
 		const batchSizeMsg = `${batchSize} message${batchSize !== 1 ? "s" : ""}`;
 
@@ -113,7 +122,7 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 		const datetime = new Date(eventMessage.eventTimestamp).toLocaleString();
 
 		logger.log(
-			`${eventMessage.entrypoint}.${eventMessage.event.rpcMethod} - ${outcome} @ ${datetime}`
+			`${escapeTailText(String(eventMessage.entrypoint))}.${escapeTailText(eventMessage.event.rpcMethod)} - ${outcome} @ ${datetime}`
 		);
 	} else {
 		// Unknown event type
@@ -125,20 +134,38 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 
 	if (eventMessage.logs.length > 0) {
 		eventMessage.logs.forEach(({ level, message }) => {
-			logger.log(`  (${level})`, ...message);
+			logger.log(`  (${level})`, ...message.map(escapeTailValue));
 		});
 	}
 
 	if (eventMessage.exceptions.length > 0) {
 		eventMessage.exceptions.forEach((err) => {
-			const errorLine = `${err.name}: ${typeof err.message === "string" ? err.message : inspect(err.message)}`;
-			logger.error(`${errorLine}${err.stack ? `\n${err.stack}` : ""}`);
+			const errorLine = escapeTailText(
+				`${err.name}: ${typeof err.message === "string" ? err.message : inspect(err.message)}`
+			);
+			logger.error(
+				`${errorLine}${err.stack ? `\n${escapeTailText(err.stack)}` : ""}`
+			);
 		});
 	}
 }
 
 export function jsonPrintLogs(data: WebSocket.RawData): void {
 	logger.json(JSON.parse(data.toString()));
+}
+
+/** Escape terminal controls while retaining readable multiline log output. */
+function escapeTailText(value: string): string {
+	return value.replace(
+		// eslint-disable-next-line no-control-regex -- Preserve tabs and line feeds, but render other terminal controls as text.
+		/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g,
+		(character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`
+	);
+}
+
+/** Non-string JSON values already receive escaped object formatting. */
+function escapeTailValue(value: unknown): unknown {
+	return typeof value === "string" ? escapeTailText(value) : value;
 }
 
 function isRequestEvent(

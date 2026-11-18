@@ -17,7 +17,13 @@ describe("confirmLatestDeploymentOverwrite public API", () => {
 	}) => {
 		vi.mocked(fetchLatestDeployment).mockResolvedValue(undefined);
 		expect(
-			await confirmLatestDeploymentOverwrite({} as Config, "account", "worker")
+			await confirmLatestDeploymentOverwrite(
+				{} as Config,
+				"account",
+				"worker",
+				"test-cli deploy",
+				"test-cli versions deploy"
+			)
 		).toBe(true);
 	});
 	it.for([true, false])(
@@ -40,7 +46,9 @@ describe("confirmLatestDeploymentOverwrite public API", () => {
 				await confirmLatestDeploymentOverwrite(
 					{} as Config,
 					"account",
-					"worker"
+					"worker",
+					"test-cli deploy",
+					"test-cli versions deploy"
 				)
 			).toBe(confirmed);
 		}

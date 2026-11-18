@@ -68,6 +68,20 @@ const config = {
 			path: "/accounts/{account_id}/r2/buckets/{bucket_name}",
 			methods: ["get"],
 		},
+
+		// Flagship endpoints
+		{
+			path: "/accounts/{account_id}/flagship/apps/{app_id}/flags",
+			methods: ["get", "post"],
+		},
+		{
+			path: "/accounts/{account_id}/flagship/apps/{app_id}/flags/{flag_key}",
+			methods: ["get", "put", "patch", "delete"],
+		},
+		{
+			path: "/accounts/{account_id}/flagship/apps/{app_id}/evaluate",
+			methods: ["get", "post"],
+		},
 	],
 
 	// Ignored features (not implemented in local explorer)
@@ -387,6 +401,61 @@ const config = {
 				},
 			},
 			"/r2/buckets/{bucket_name}/objects/{object_key}": {
+				delete: {
+					description: "Delete an object from an R2 bucket.",
+					operationId: "r2-bucket-delete-object",
+					parameters: [
+						{
+							in: "path",
+							name: "bucket_name",
+							required: true,
+							schema: { type: "string" },
+						},
+						{
+							in: "path",
+							name: "object_key",
+							required: true,
+							schema: { type: "string" },
+						},
+					],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												type: "object",
+												properties: {
+													result: {
+														type: "object",
+														properties: { key: { type: "string" } },
+													},
+												},
+											},
+										],
+									},
+								},
+							},
+							description: "Delete object response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "Delete object failure.",
+						},
+					},
+					summary: "Delete Object from R2 Bucket",
+					tags: ["R2 Bucket"],
+				},
 				get: {
 					description:
 						"Get an object from an R2 bucket. Use cf-metadata-only header for HEAD-like behavior.",
@@ -1919,6 +1988,53 @@ const config = {
 					tags: ["Observability"],
 				},
 			},
+			// Flagship endpoints (local-only)
+			"/flagship/apps": {
+				get: {
+					description: "Returns the Flagship apps bound for local development.",
+					operationId: "flagship-list-apps",
+					parameters: [],
+					responses: {
+						"200": {
+							content: {
+								"application/json": {
+									schema: {
+										allOf: [
+											{
+												$ref: "#/components/schemas/workers_api-response-common",
+											},
+											{
+												properties: {
+													result: {
+														items: {
+															$ref: "#/components/schemas/flagship_app",
+														},
+														type: "array",
+													},
+												},
+												type: "object",
+											},
+										],
+									},
+								},
+							},
+							description: "List Flagship Apps response.",
+						},
+						"4XX": {
+							content: {
+								"application/json": {
+									schema: {
+										$ref: "#/components/schemas/workers_api-response-common-failure",
+									},
+								},
+							},
+							description: "List Flagship Apps response failure.",
+						},
+					},
+					summary: "List Flagship Apps",
+					tags: ["Flagship"],
+				},
+			},
 		},
 		schemas: {
 			"local-explorer_scheduled-request": {
@@ -1942,6 +2058,22 @@ const config = {
 				properties: {
 					outcome: { type: "string" },
 					noRetry: { type: "boolean" },
+				},
+			},
+			// Flagship schemas
+			flagship_app: {
+				type: "object",
+				required: ["id", "bindings"],
+				properties: {
+					id: {
+						type: "string",
+						description: "The Flagship app id the bindings point at",
+					},
+					bindings: {
+						type: "array",
+						items: { type: "string" },
+						description: "Binding names in this instance using the app",
+					},
 				},
 			},
 			// R2 schemas - matches stratus dashboard API shapes
@@ -2210,6 +2342,13 @@ const config = {
 							$ref: "#/components/schemas/local-explorer_named-binding",
 						},
 						description: "Send Email bindings",
+					},
+					flagship: {
+						type: "array",
+						items: {
+							$ref: "#/components/schemas/local-explorer_resource-binding",
+						},
+						description: "Flagship app bindings",
 					},
 				},
 			},

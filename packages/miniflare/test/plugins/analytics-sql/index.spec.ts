@@ -4,7 +4,7 @@ import { describe, test } from "vitest";
 function workerOptions(bindings = true) {
 	return {
 		config: {
-			env: bindings ? { ANALYTICS: { type: "analytics" } } : {},
+			env: bindings ? { ANALYTICS: { type: "analytics-sql" } } : {},
 		},
 	} as unknown as Parameters<typeof ANALYTICS_SQL_PLUGIN.getBindings>[0];
 }
@@ -28,8 +28,10 @@ describe("Analytics SQL plugin", () => {
 	});
 
 	test("creates Node proxy bindings", async ({ expect }) => {
-		const bindings =
-			await ANALYTICS_SQL_PLUGIN.getNodeBindings(workerOptions());
+		const bindings = await ANALYTICS_SQL_PLUGIN.getNodeBindings(
+			workerOptions(),
+			{} as Parameters<typeof ANALYTICS_SQL_PLUGIN.getNodeBindings>[1]
+		);
 
 		expect(Object.keys(bindings)).toEqual(["ANALYTICS"]);
 		expect(bindings.ANALYTICS).toBeInstanceOf(ProxyNodeBinding);

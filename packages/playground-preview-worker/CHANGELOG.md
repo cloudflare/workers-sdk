@@ -1,5 +1,23 @@
 # playground-preview-worker
 
+## 0.3.6
+
+### Patch Changes
+
+- [#16731](https://github.com/cloudflare/workers-sdk/pull/16731) [`2667783`](https://github.com/cloudflare/workers-sdk/commit/26677832dd2df4646ed906f65b21ec24d6380d19) Thanks [@cjol](https://github.com/cjol)! - Report preview failures to Sentry with enough context to find their cause
+
+  Runtime internal errors raised while forwarding a request to a user's preview had no stack, tags or release, and their random reference made every event a new Sentry issue and a new alert. They are now grouped into one issue for each part of the preview worker, with each runtime reference kept as a searchable tag.
+
+  Events now record which part of the preview worker reported them, the preview host, a hash of the session ID, the deployed version, and breadcrumbs for the session state, the preview's age and the outcome of the request to the preview Worker. The session ID is hashed because it also authorises preview requests.
+
+## 0.3.5
+
+### Patch Changes
+
+- [#16490](https://github.com/cloudflare/workers-sdk/pull/16490) [`bcd618d`](https://github.com/cloudflare/workers-sdk/commit/bcd618d0e622a020fd2cb658df0620a5e3ec2206) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update Zod to 4.6.6 to address GHSA-mrhx-c7xc-m3w5
+
+  The updated shared dependency fixes excessive memory consumption when validating oversized collections. This updates both the published Zod dependencies and the copies bundled into development tools and Workers.
+
 ## 0.3.4
 
 ### Patch Changes

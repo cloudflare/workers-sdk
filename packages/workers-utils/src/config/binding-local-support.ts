@@ -38,9 +38,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	assets: "local-only",
 	unsafe_hello_world: "local-only",
 	durable_object_namespace: "local-only",
-	hyperdrive: "local-only",
 	fetcher: "local-only",
-	analytics_engine: "local-only",
 	secrets_store_secret: "local-only",
 	ratelimit: "local-only",
 	worker_loader: "local-only",
@@ -48,6 +46,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	kv_namespace: "local-and-remote",
 	r2_bucket: "local-and-remote",
 	d1: "local-and-remote",
+	hyperdrive: "local-and-remote",
 	workflow: "local-only",
 	browser: "local-and-remote",
 	images: "local-and-remote",
@@ -58,6 +57,8 @@ const BINDING_LOCAL_SUPPORT: Record<
 	// TODO: Miniflare currently ignores `remote: true` on queues, tracked in #13727.
 	queue: "local-and-remote",
 	flagship: "local-and-remote",
+	artifacts: "local-and-remote",
+	analytics_engine: "local-and-remote",
 
 	vectorize: "remote",
 	mtls_certificate: "remote",
@@ -70,7 +71,6 @@ const BINDING_LOCAL_SUPPORT: Record<
 	ai_search_namespace:
 		"DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	media: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
-	artifacts: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	vpc_service: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	vpc_network: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
 	agent_memory: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",
@@ -84,6 +84,36 @@ export function getBindingLocalSupport(
 		return BINDING_LOCAL_SUPPORT[type as keyof typeof BINDING_LOCAL_SUPPORT];
 	}
 	return "local-only";
+}
+
+/**
+ * Resolves whether a binding uses the deployed resource during local
+ * development. This is the single source of truth for routing a binding to a
+ * remote proxy session and for labelling it in the bindings table.
+ *
+ * @param type - Binding type
+ * @param remote - The binding's configured `remote` setting
+ * @param options.remoteBindingsDisabled - Whether the dev session runs without
+ * remote bindings, as with `wrangler dev --local`
+ * @returns Whether the binding uses the deployed resource. Bindings that will
+ * never have a local simulator always return `true`, even when remote bindings
+ * are disabled and the binding is therefore unavailable.
+ */
+export function resolveBindingRemote(
+	type: Binding["type"],
+	remote: boolean | undefined,
+	{ remoteBindingsDisabled = false }: { remoteBindingsDisabled?: boolean } = {}
+): boolean {
+	const support = getBindingLocalSupport(type);
+	switch (support) {
+		case "DO-NOT-USE-this-resource-will-never-have-a-local-simulator":
+			return true;
+		case "local-only":
+			return false;
+		case "local-and-remote":
+		case "remote":
+			return !remoteBindingsDisabled && remote === true;
+	}
 }
 
 /**

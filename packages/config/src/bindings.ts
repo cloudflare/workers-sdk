@@ -20,7 +20,7 @@ export interface BindingDevOptions {
 	remote?: boolean;
 }
 
-interface AgentMemoryBindingOptions {
+export interface AgentMemoryBindingOptions {
 	/** The user-chosen namespace name. Must exist in Cloudflare at deploy time. */
 	namespace: string;
 	/** Options that only apply during local development. */
@@ -35,7 +35,7 @@ export interface AgentMemoryBinding extends AgentMemoryBindingOptions {
 	type: "agent-memory";
 }
 
-interface AiBindingOptions {
+export interface AiBindingOptions {
 	/** Options that only apply during local development. */
 	dev?: BindingDevOptions;
 }
@@ -61,7 +61,7 @@ export interface TypedAiBinding<
 	__typeParams: [TAiModelList];
 }
 
-interface AiSearchBindingOptions {
+export interface AiSearchBindingOptions {
 	/** The user-chosen instance name. Must exist in Cloudflare at deploy time. */
 	name: string;
 	/** Options that only apply during local development. */
@@ -76,7 +76,7 @@ export interface AiSearchBinding extends AiSearchBindingOptions {
 	type: "ai-search";
 }
 
-interface AiSearchNamespaceBindingOptions {
+export interface AiSearchNamespaceBindingOptions {
 	/** The user-chosen namespace name. Must exist in Cloudflare at deploy time. */
 	namespace: string;
 	/** Options that only apply during local development. */
@@ -91,9 +91,11 @@ export interface AiSearchNamespaceBinding extends AiSearchNamespaceBindingOption
 	type: "ai-search-namespace";
 }
 
-interface AnalyticsEngineDatasetBindingOptions {
+export interface AnalyticsEngineDatasetBindingOptions {
 	/** The name of this dataset to write to. */
 	name?: string;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /**
@@ -105,7 +107,7 @@ export interface AnalyticsEngineDatasetBinding extends AnalyticsEngineDatasetBin
 	type: "analytics-engine-dataset";
 }
 
-interface ArtifactsBindingOptions {
+export interface ArtifactsBindingOptions {
 	/** The namespace to use. */
 	namespace: string;
 	/** Options that only apply during local development. */
@@ -129,7 +131,7 @@ export interface AssetsBinding {
 	type: "assets";
 }
 
-interface BrowserBindingOptions {
+export interface BrowserBindingOptions {
 	/** Options that only apply during local development. */
 	dev?: BindingDevOptions;
 }
@@ -143,21 +145,27 @@ export interface BrowserBinding extends BrowserBindingOptions {
 	type: "browser";
 }
 
-interface AnalyticsSQLBindingOptions {
+export interface AnalyticsSqlBindingOptions {
 	/** Options that only apply during local development. */
 	dev?: BindingDevOptions;
 }
 
-/** An Analytics SQL binding. */
-export interface AnalyticsSQLBinding extends AnalyticsSQLBindingOptions {
-	type: "analytics";
+/**
+ * An Analytics SQL binding.
+ *
+ * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#analytics-sql
+ */
+export interface AnalyticsSqlBinding extends AnalyticsSqlBindingOptions {
+	type: "analytics-sql";
 }
 
-interface D1BindingOptions {
+export interface D1BindingOptions {
 	/** The UUID of this D1 database (not required). */
 	id?: string;
 	/** The name of this D1 database. */
 	name?: string;
+	/** The jurisdiction where an automatically provisioned D1 database will be created. */
+	jurisdiction?: string;
 	/** Options that only apply during local development. */
 	dev?: BindingDevOptions;
 }
@@ -171,7 +179,7 @@ export interface D1Binding extends D1BindingOptions {
 	type: "d1";
 }
 
-interface DispatchNamespaceBindingOptions {
+export interface DispatchNamespaceBindingOptions {
 	/** The namespace to bind to. */
 	namespace?: string;
 	/** Details about the outbound Worker which will handle outbound requests from your namespace. */
@@ -212,7 +220,7 @@ type WorkflowExportName<TWorker extends WorkerReference> =
 		? string
 		: InferExportsByType<ReferencedWorkerConfig<TWorker>, "workflow">;
 
-interface DurableObjectBindingOptions<
+export interface DurableObjectBindingOptions<
 	TWorker extends WorkerReference = WorkerReference,
 	TExportName extends DurableObjectExportName<TWorker> =
 		DurableObjectExportName<TWorker>,
@@ -237,7 +245,7 @@ export interface DurableObjectBinding<
 	type: "durable-object";
 }
 
-interface FlagshipBindingOptions {
+export interface FlagshipBindingOptions {
 	/** The Flagship app ID to bind to. */
 	id?: string;
 	/** Options that only apply during local development. */
@@ -249,11 +257,11 @@ export interface FlagshipBinding extends FlagshipBindingOptions {
 	type: "flagship";
 }
 
-interface HyperdriveBindingOptions {
+export interface HyperdriveBindingOptions {
 	/** The ID of the Hyperdrive configuration. */
 	id: string;
 	/** Options that only apply during local development. */
-	dev?: {
+	dev?: BindingDevOptions & {
 		/** The database connection string used during local development. */
 		connectionString?: string;
 	};
@@ -268,7 +276,7 @@ export interface HyperdriveBinding extends HyperdriveBindingOptions {
 	type: "hyperdrive";
 }
 
-interface ImagesBindingOptions {
+export interface ImagesBindingOptions {
 	/** Options that only apply during local development. */
 	dev?: BindingDevOptions;
 }
@@ -292,7 +300,7 @@ export interface JsonBinding<T extends Json = Json> {
 	value: T;
 }
 
-interface KvBindingOptions {
+export interface KvBindingOptions {
 	/** The ID of the KV namespace. */
 	id?: string;
 	// TODO: name support not yet implemented
@@ -322,7 +330,7 @@ export interface TypedKvBinding<
 	__typeParams: [TKey];
 }
 
-interface LogfwdrBindingOptions {
+export interface LogfwdrBindingOptions {
 	/** The destination for this logged message. */
 	destination: string;
 }
@@ -332,7 +340,7 @@ export interface LogfwdrBinding extends LogfwdrBindingOptions {
 	type: "logfwdr";
 }
 
-interface MediaBindingOptions {
+export interface MediaBindingOptions {
 	/** Options that only apply during local development. */
 	dev?: BindingDevOptions;
 }
@@ -342,7 +350,7 @@ export interface MediaBinding extends MediaBindingOptions {
 	type: "media";
 }
 
-interface MtlsCertificateBindingOptions {
+export interface MtlsCertificateBindingOptions {
 	/** The UUID of the uploaded mTLS certificate. */
 	id: string;
 	/** Options that only apply during local development. */
@@ -358,16 +366,24 @@ export interface MtlsCertificateBinding extends MtlsCertificateBindingOptions {
 	type: "mtls-certificate";
 }
 
-interface PipelineBindingOptions {
-	/** Name of the Pipeline to bind. */
-	name: string;
+export interface PipelineBindingOptions {
+	/**
+	 * The ID of the Pipelines stream to write to
+	 */
+	streamId: string;
+	/** @deprecated Renamed to `streamId`, which takes the stream's ID rather than its name. */
+	name?: never;
 	/** Options that only apply during local development. */
 	dev?: BindingDevOptions;
 }
 
-interface K2BindingOptions {
-	/** The ID of the K2 stream. */
-	stream: string;
+export interface K2BindingOptions {
+	/**
+	 * The ID of the K2 stream to write to
+	 */
+	id: string;
+	/** @deprecated Renamed to `id`. */
+	stream?: never;
 	/** Always uses the real stream in development. Set remote to true to suppress the usage warning; false is unsupported. */
 	dev?: BindingDevOptions;
 }
@@ -417,7 +433,7 @@ export interface TypedPipelineBinding<
 	__typeParams: [TRecord];
 }
 
-interface QueueBindingOptions {
+export interface QueueBindingOptions {
 	/** The name of this Queue. */
 	name?: string;
 	/** The number of seconds to wait before delivering a message. */
@@ -445,7 +461,7 @@ export interface TypedQueueBinding<TBody = unknown> extends QueueBinding {
 	__typeParams: [TBody];
 }
 
-interface R2BindingOptions {
+export interface R2BindingOptions {
 	/** The name of this R2 bucket at the edge. */
 	name?: string;
 	/** The jurisdiction that the bucket exists in. Default if not present. */
@@ -469,7 +485,7 @@ export interface R2Binding extends R2BindingOptions {
 	type: "r2";
 }
 
-interface RateLimitBindingOptions {
+export interface RateLimitBindingOptions {
 	/** The namespace ID for this rate limiter. */
 	namespace: string;
 	/** Simple rate limiting configuration. */
@@ -500,7 +516,7 @@ export interface SecretBinding {
 	type: "secret";
 }
 
-interface SecretsStoreSecretBindingOptions {
+export interface SecretsStoreSecretBindingOptions {
 	/** ID of the secret store. */
 	storeId: string;
 	/** Name of the secret. */
@@ -528,7 +544,7 @@ type SendEmailDestinationOptions =
 			allowedDestinationAddresses?: never;
 	  };
 
-type SendEmailBindingOptions = SendEmailDestinationOptions & {
+export type SendEmailBindingOptions = SendEmailDestinationOptions & {
 	/** If this binding should be restricted to a set of sender addresses. */
 	allowedSenderAddresses?: string[];
 	/** Options that only apply during local development. */
@@ -544,7 +560,7 @@ export type SendEmailBinding = SendEmailBindingOptions & {
 	type: "send-email";
 };
 
-interface StreamBindingOptions {
+export interface StreamBindingOptions {
 	/** Options that only apply during local development. */
 	dev?: BindingDevOptions;
 }
@@ -589,7 +605,7 @@ export interface UnsafeBinding extends UnsafeBindingOptions {
 	type: `unsafe:${string}`;
 }
 
-interface VectorizeBindingOptions {
+export interface VectorizeBindingOptions {
 	/** The name of the Vectorize index. */
 	name: string;
 	/** Options that only apply during local development. */
@@ -610,7 +626,7 @@ export interface VersionMetadataBinding {
 	type: "version-metadata";
 }
 
-type VpcNetworkBindingOptions =
+export type VpcNetworkBindingOptions =
 	| {
 			/** The tunnel ID of the Cloudflare Tunnel to route traffic through. Mutually exclusive with `networkId`. */
 			tunnelId: string;
@@ -631,7 +647,7 @@ export type VpcNetworkBinding = VpcNetworkBindingOptions & {
 	type: "vpc-network";
 };
 
-interface VpcServiceBindingOptions {
+export interface VpcServiceBindingOptions {
 	/** The service ID of the VPC connectivity service. */
 	id: string;
 	/** Options that only apply during local development. */
@@ -643,7 +659,7 @@ export interface VpcServiceBinding extends VpcServiceBindingOptions {
 	type: "vpc-service";
 }
 
-interface WorkerBindingOptions<
+export interface WorkerBindingOptions<
 	TWorker extends WorkerReference = WorkerReference,
 	TExportName extends WorkerEntrypointExportName<TWorker> | undefined =
 		| WorkerEntrypointExportName<TWorker>
@@ -680,7 +696,7 @@ export interface WorkerLoaderBinding {
 	type: "worker-loader";
 }
 
-interface WorkflowBindingOptions<
+export interface WorkflowBindingOptions<
 	TWorker extends WorkerReference = WorkerReference,
 	TExportName extends WorkflowExportName<TWorker> = WorkflowExportName<TWorker>,
 > {
@@ -759,8 +775,12 @@ export interface Bindings {
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#browser-rendering
 	 */
 	browser(options?: BrowserBindingOptions): BrowserBinding;
-	/** An Analytics SQL binding. */
-	analyticsSQL(options?: AnalyticsSQLBindingOptions): AnalyticsSQLBinding;
+	/**
+	 * Binding to Analytics SQL.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#analytics-sql
+	 */
+	analyticsSql(options?: AnalyticsSqlBindingOptions): AnalyticsSqlBinding;
 	/**
 	 * Binding to a D1 database.
 	 *
@@ -934,6 +954,7 @@ export const bindings = {
 	artifacts: (options) => ({ type: "artifacts", ...options }),
 	assets: () => ({ type: "assets" }),
 	browser: (options) => ({ type: "browser", ...options }),
+	analyticsSql: (options) => ({ type: "analytics-sql", ...options }),
 	d1: (options) => ({ type: "d1", ...options }),
 	dispatchNamespace: (options) => ({
 		type: "dispatch-namespace",
@@ -963,7 +984,6 @@ export const bindings = {
 	text: (value) => ({ type: "text", value }),
 	vectorize: (options) => ({ type: "vectorize", ...options }),
 	versionMetadata: () => ({ type: "version-metadata" }),
-	analyticsSQL: (options) => ({ type: "analytics", ...options }),
 	vpcService: (options) => ({ type: "vpc-service", ...options }),
 	vpcNetwork: (options) => ({ type: "vpc-network", ...options }),
 	worker: (options) => ({ type: "worker", ...options }),

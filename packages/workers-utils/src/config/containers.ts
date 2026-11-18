@@ -217,14 +217,20 @@ export function getDurableObjectClassNameToUseSQLiteMap(
 
 /**
  * Validate that every Durable Object-managed container belongs to this Worker.
+ *
+ * @param config Worker configuration with `name` set to the effective Worker name.
  */
 export function validateDurableObjectContainerApplications(
-	config: Pick<Config, "migrations" | "exports" | "durable_objects"> & {
+	config: Pick<
+		Config,
+		"name" | "migrations" | "exports" | "durable_objects"
+	> & {
 		containers?: ContainerApp[];
 	},
 	containers: DurableObjectContainerApp[] = getDurableObjectContainerApps(
 		config.containers
-	)
+	),
+	configFileName = "Wrangler config file"
 ): void {
 	const allDOs = getDurableObjectClassNameToUseSQLiteMap(
 		config.migrations,
@@ -241,11 +247,14 @@ export function validateDurableObjectContainerApplications(
 		const useSQLite = allDOs.get(container.class_name);
 		if (useSQLite === undefined && maybeBoundDO === undefined) {
 			throw new UserError(
-				`The container class_name ${container.class_name} does not match any durable object class_name defined in your Wrangler config file. Note that the durable object must be defined in the same script as the container.`,
+				`The container class_name ${container.class_name} does not match any durable object class_name defined in your ${configFileName}. Note that the durable object must be defined in the same script as the container.`,
 				{ telemetryMessage: "no DO defined that matches container class_name" }
 			);
 		}
-		if (maybeBoundDO?.script_name !== undefined) {
+		if (
+			maybeBoundDO?.script_name !== undefined &&
+			maybeBoundDO.script_name !== config.name
+		) {
 			throw new UserError(
 				`The container ${container.name} is referencing the durable object ${container.class_name}, which appears to be defined on the ${maybeBoundDO.script_name} Worker instead (via the 'script_name' field). You cannot configure a container on a Durable Object that is defined in another Worker.`,
 				{

@@ -1,6 +1,5 @@
 import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
-import { assertWranglerVersion } from "./assert-wrangler-version";
-import { isForcedBuildOutput } from "./build-output-env";
+import { ConfigChangeCoordinator } from "./config-change-coordinator";
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
 import { additionalModulesPlugin } from "./plugins/additional-modules";
@@ -14,7 +13,6 @@ import {
 	nodeJsCompatPlugin,
 	nodeJsCompatWarningsPlugin,
 } from "./plugins/nodejs-compat";
-import { outputConfigPlugin } from "./plugins/output-config";
 import { previewPlugin } from "./plugins/preview";
 import { rscPlugin } from "./plugins/rsc";
 import { shortcutsPlugin } from "./plugins/shortcuts";
@@ -49,16 +47,17 @@ export function getLocalWorkerdCompatibilityDate(_options?: {
 	return { date: DEFAULT_COMPAT_DATE, source: "workerd" };
 }
 
-export type { PluginConfig } from "./plugin-config";
-export type { WorkerConfig } from "./workers-configs";
+export type {
+	CloudflareConfig,
+	PluginConfig,
+	WorkerConfig,
+} from "./plugin-config";
 
 const sharedContext: SharedContext = {
-	hasShownWorkerConfigWarnings: false,
+	configChangeCoordinator: new ConfigChangeCoordinator(),
 	restartingDevServerCount: 0,
 	tunnelHostnames: new Set(),
 };
-
-await assertWranglerVersion();
 
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
@@ -69,14 +68,6 @@ await assertWranglerVersion();
  */
 export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	const ctx = new PluginContext(sharedContext);
-
-	const newConfig = pluginConfig.experimental?.newConfig;
-	const cfBuildOutput =
-		isForcedBuildOutput() ||
-		(typeof newConfig === "object" && newConfig?.cfBuildOutput === true);
-	const outputPlugin = cfBuildOutput
-		? buildOutputPlugin(ctx)
-		: outputConfigPlugin(ctx);
 
 	return [
 		{
@@ -92,16 +83,32 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 			},
 			async configureServer(viteDevServer) {
+				ctx.configChangeCoordinator.registerServer(ctx, viteDevServer);
+
 				// Patch the `server.restart` method to track whether the server is restarting or not.
+				// The dev plugin keeps the Miniflare instance across a restart for the restarted
+				// server to reuse, so dispose it if the restarted config drops the dev plugin.
 				const restartServer = viteDevServer.restart.bind(viteDevServer);
 				viteDevServer.restart = async () => {
 					try {
 						ctx.beginRestartingDevServer();
 						debuglog("From server.restart(): Restarting server...");
 						await restartServer();
+						if (
+							!viteDevServer.config.plugins.some(
+								(plugin) => plugin.name === "vite-plugin-cloudflare:dev"
+							)
+						) {
+							try {
+								await ctx.disposeMiniflare();
+							} catch (error) {
+								debuglog("Failed to dispose Miniflare instance:", error);
+							}
+						}
 						debuglog("From server.restart(): Restarted server...");
 					} finally {
 						ctx.endRestartingDevServer();
+						ctx.configChangeCoordinator.restartCompleted();
 					}
 				};
 			},
@@ -117,7 +124,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		triggerHandlersPlugin(ctx),
 		virtualModulesPlugin(ctx),
 		virtualClientFallbackPlugin(ctx),
-		outputPlugin,
+		buildOutputPlugin(ctx),
 		wasmHelperPlugin(ctx),
 		additionalModulesPlugin(ctx),
 		nodeJsAlsPlugin(ctx),

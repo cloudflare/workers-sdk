@@ -3,8 +3,21 @@ import { INVALID_INHERIT_BINDING_CODE } from "./error-codes";
 import type { Binding, Config } from "@cloudflare/workers-utils";
 
 type SecretsValidationOptions =
-	| { type: "deploy"; workerExists: boolean }
+	| {
+			type: "deploy";
+			workerExists: boolean;
+			secretPutCommand: string;
+			uploadCommand: string;
+	  }
 	| { type: "upload" };
+
+type MissingSecretsOptions =
+	| Exclude<SecretsValidationOptions, { type: "upload" }>
+	| {
+			type: "upload";
+			secretPutCommand: string;
+			uploadCommand: string;
+	  };
 
 /**
  * When `secrets.required` is defined in config, validate the secrets exist on the Worker.
@@ -34,9 +47,9 @@ export function addRequiredSecretsInheritBindings(
 	if (options.type === "deploy" && !options.workerExists) {
 		throw new UserError(
 			`The following required secrets have not been set: ${inheritedSecrets.join(", ")}\n` +
-				`This Worker does not exist yet, so secrets cannot be set in advance with \`wrangler secret put\`.\n` +
+				`This Worker does not exist yet, so secrets cannot be set in advance with \`${options.secretPutCommand}\`.\n` +
 				`To deploy a new Worker with secrets, supply them via a secrets file:\n` +
-				`  wrangler deploy --secrets-file <path-to-file>\n` +
+				`  ${options.uploadCommand} --secrets-file <path-to-file>\n` +
 				`where the file contains lines in the format \`SECRET_NAME=value\` (or JSON).\n` +
 				`See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.`,
 			{ telemetryMessage: "required secrets missing before first deploy" }
@@ -57,7 +70,7 @@ export function addRequiredSecretsInheritBindings(
 export function handleMissingSecretsError(
 	err: unknown,
 	config: Config,
-	options: SecretsValidationOptions
+	options: MissingSecretsOptions
 ): void {
 	if (!(err instanceof APIError) || err.code !== INVALID_INHERIT_BINDING_CODE) {
 		return;
@@ -71,12 +84,11 @@ export function handleMissingSecretsError(
 
 	if (missingSecretNames.length > 0) {
 		err.preventReport();
-		const secretPutCommand = `wrangler ${options.type === "deploy" ? "" : "versions "}secret put`;
-		const secretsFileCommand = `wrangler ${options.type === "deploy" ? "deploy" : "versions upload"} --secrets-file <path-to-file>`;
+		const secretsFileCommand = `${options.uploadCommand} --secrets-file <path-to-file>`;
 		const action = options.type === "deploy" ? "deploying" : "uploading";
 		throw new UserError(
 			`The following required secrets have not been set: ${missingSecretNames.join(", ")}\n` +
-				`Use \`${secretPutCommand} <NAME>\` to set secrets before ${action},\n` +
+				`Use \`${options.secretPutCommand} <NAME>\` to set secrets before ${action},\n` +
 				`or supply them when ${action} with \`${secretsFileCommand}\`.\n` +
 				`See https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers for more information.`,
 			{ telemetryMessage: "required secrets missing during upload or deploy" }

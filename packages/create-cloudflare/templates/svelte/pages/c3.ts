@@ -126,7 +126,7 @@ const updateTypeDefinitions = (ctx: C3Context) => {
 	});
 };
 
-const typesPath = "src/worker-configuration.d.ts";
+const typesPath = "./src/worker-configuration.d.ts";
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "svelte",

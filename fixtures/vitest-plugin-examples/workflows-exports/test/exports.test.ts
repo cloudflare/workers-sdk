@@ -14,12 +14,16 @@ it("runs a Workflow declared in `exports` through `ctx.exports`", async ({
 	const { id } = await response.json<{ id: string }>();
 
 	await expect
-		.poll(async () => {
-			const response = await exports.default.fetch(
-				`https://example.com/?id=${id}`
-			);
-			return response.json();
-		})
+		// Workflow completion can exceed the default one-second poll on Windows.
+		.poll(
+			async () => {
+				const response = await exports.default.fetch(
+					`https://example.com/?id=${id}`
+				);
+				return response.json();
+			},
+			{ timeout: 10_000 }
+		)
 		.toMatchObject({ status: "complete", output: "Hello, Workers!" });
 });
 

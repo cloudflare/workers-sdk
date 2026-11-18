@@ -26,6 +26,126 @@ function convert(source: Record<string, unknown>): {
 	};
 }
 
+describe("Workflow event migration", () => {
+	it("attaches each event to every matching owned export, preserving crons and filters", ({
+		expect,
+	}) => {
+		const result = convert({
+			name: "app",
+			compatibility_date: "2026-09-23",
+			exports: { First: { type: "workflow", name: "first" } },
+			workflows: [{ binding: "SECOND", name: "second", class_name: "Second" }],
+			triggers: {
+				crons: ["0 * * * *"],
+				events: [
+					{
+						type: "cf.artifacts.repo.pushed",
+						filter: { namespace: "ci", repo_name: "app" },
+						targets: [
+							{ type: "workflow", workflow_name: "first" },
+							{ type: "workflow", workflow_name: "second" },
+						],
+					},
+				],
+			},
+		});
+		expect(result.followUps).toEqual([]);
+		expect(
+			result.output.match(/type: "cf.artifacts.repo.pushed"/g)
+		).toHaveLength(2);
+		expect(result.output.match(/events: \[/g)).toHaveLength(2);
+		expect(result.output).toContain('repoName: "app"');
+		expect(result.output).toContain('namespace: "ci"');
+		expect(result.output).toContain("First: exports.workflow({");
+		expect(result.output).toContain("Second: exports.workflow({");
+		expect(result.output).toContain("triggers.scheduled({");
+		expect(result.output).not.toContain("targets:");
+		expect(result.output).not.toContain("triggers.event");
+	});
+
+	it("does not duplicate events when a binding and export declare the same Workflow", ({
+		expect,
+	}) => {
+		const result = convert({
+			name: "app-staging",
+			compatibility_date: "2026-09-23",
+			exports: { Jobs: { type: "workflow", name: "jobs" } },
+			workflows: [
+				{
+					binding: "JOBS",
+					name: "jobs",
+					class_name: "Jobs",
+					script_name: "app-staging",
+				},
+			],
+			triggers: {
+				events: [
+					{
+						type: "cf.artifacts.repo.created",
+						targets: [{ type: "workflow", workflow_name: "jobs" }],
+					},
+				],
+			},
+		});
+		expect(result.followUps).toEqual([]);
+		expect(result.output.match(/events: \[/g)).toHaveLength(1);
+		expect(result.output).not.toContain("filter:");
+	});
+
+	it("reports an external or missing target instead of silently dropping it", ({
+		expect,
+	}) => {
+		const result = convert({
+			name: "app",
+			workflows: [
+				{
+					binding: "REMOTE",
+					name: "remote",
+					class_name: "Remote",
+					script_name: "another-worker",
+				},
+			],
+			triggers: {
+				events: [
+					{
+						type: "cf.artifacts.repo.created",
+						targets: [
+							{ type: "workflow", workflow_name: "remote" },
+							{ type: "workflow", workflow_name: "missing" },
+						],
+					},
+				],
+			},
+		});
+		expect(
+			result.followUps.filter(({ code }) => code === "workflow-event-target")
+		).toMatchObject([
+			{ blocking: true, sourcePath: "triggers.events.0.targets.0" },
+			{ blocking: true, sourcePath: "triggers.events.0.targets.1" },
+		]);
+		expect(result.output).not.toContain("events:");
+	});
+
+	it.for([
+		null,
+		{ type: "cf.artifacts.repo.created", targets: [] },
+		{ type: "cf.artifacts.repo.created", targets: [{}], filter: "invalid" },
+	])("reports malformed subscriptions %j", (event, { expect }) => {
+		const result = convert({
+			name: "app",
+			compatibility_date: "2026-09-23",
+			triggers: { events: [event] },
+		});
+		expect(result.followUps).toMatchObject([
+			{
+				code: "invalid-workflow-event",
+				blocking: true,
+				sourcePath: "triggers.events.0",
+			},
+		]);
+	});
+});
+
 describe("Wrangler Worker configuration conversion", () => {
 	it("converts core settings, triggers, bindings, and exports", ({
 		expect,
@@ -56,6 +176,7 @@ describe("Wrangler Worker configuration conversion", () => {
 						error_retention: 86_400_000,
 						success_retention: "3 days",
 					},
+					jurisdiction: "fedramp",
 					limits: { steps: 10 },
 					name: "example-workflow",
 					schedules: ["0 * * * *", "30 * * * *"],
@@ -78,6 +199,7 @@ describe("Wrangler Worker configuration conversion", () => {
 		});
 
 		expect(result).toMatchSnapshot();
+		expect(result.output).toContain('jurisdiction: "fedramp"');
 		expect(result.output).toContain("idleTimeoutMs: 5000");
 		expect(result.output).toContain("addresses: []");
 	});
@@ -97,7 +219,6 @@ describe("Wrangler Worker configuration conversion", () => {
 		expect(result.followUps.map(({ code }) => code)).toEqual(
 			expect.arrayContaining([
 				"container-review",
-				"durable-object-migrations",
 				"missing-compatibility-date",
 				"missing-name",
 				"unsupported-field",
@@ -105,6 +226,309 @@ describe("Wrangler Worker configuration conversion", () => {
 			])
 		);
 		expect(result.output).toContain("Migration incomplete");
+		expect(result).toMatchSnapshot();
+	});
+
+	it("reports invalid dependency instrumentation configuration", ({
+		expect,
+	}) => {
+		for (const dependenciesInstrumentation of [
+			{ enabled: "false" },
+			{ enabled: true, exclude_packages: "@internal/*" },
+			{ enabled: true, exclude_packages: [123] },
+		]) {
+			const result = convert({
+				compatibility_date: "2026-09-23",
+				dependencies_instrumentation: dependenciesInstrumentation,
+				name: "example-worker",
+			});
+
+			expect(result.followUps).toEqual([
+				expect.objectContaining({
+					blocking: true,
+					code: "unsupported-field",
+					message:
+						"The dependency instrumentation configuration is invalid and was not migrated.",
+					sourcePath: "dependencies_instrumentation",
+				}),
+			]);
+		}
+	});
+
+	it("preserves recognized guidance when unknown fields are present", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			dependencies_instrumentation: {
+				enabled: false,
+				unknown_field: true,
+			},
+			name: "example-worker",
+		});
+
+		expect(result.followUps).toEqual([
+			expect.objectContaining({
+				code: "dependencies-instrumentation-opt-out",
+				sourcePath: "dependencies_instrumentation",
+			}),
+		]);
+		expect(result.output).toContain(
+			"CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION=false"
+		);
+	});
+
+	it("reports how to preserve disabled dependency instrumentation", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			dependencies_instrumentation: { enabled: false },
+			name: "example-worker",
+		});
+
+		expect(result.followUps).toEqual([
+			expect.objectContaining({
+				blocking: true,
+				code: "dependencies-instrumentation-opt-out",
+				message:
+					"Set CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION=false before deploying to keep package dependency metadata disabled.",
+				sourcePath: "dependencies_instrumentation",
+			}),
+		]);
+		expect(result.output).toContain(
+			"CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION=false"
+		);
+		expect(result.output).toContain("Migration incomplete");
+	});
+
+	it("reports exclusions when dependency instrumentation is disabled", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			dependencies_instrumentation: {
+				enabled: false,
+				exclude_packages: ["@internal/*"],
+			},
+			name: "example-worker",
+		});
+
+		expect(result.followUps).toEqual([
+			expect.objectContaining({
+				blocking: true,
+				code: "dependencies-instrumentation-opt-out",
+				message: expect.stringContaining(
+					"The package exclusion list was not migrated"
+				),
+				sourcePath: "dependencies_instrumentation",
+			}),
+		]);
+		expect(result.output).toContain(
+			"if dependency metadata is later enabled, those packages will be included"
+		);
+	});
+
+	it("drops enabled dependency instrumentation without follow-up work", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			dependencies_instrumentation: { enabled: true },
+			name: "example-worker",
+		});
+
+		expect(result.followUps).toEqual([]);
+		expect(result.output).not.toContain(
+			"CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION"
+		);
+		expect(result.output).not.toContain("Migration incomplete");
+	});
+
+	it("reports dependency package exclusions that cannot be preserved", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			dependencies_instrumentation: {
+				enabled: true,
+				exclude_packages: ["@internal/*"],
+			},
+			name: "example-worker",
+		});
+
+		expect(result.followUps).toEqual([
+			expect.objectContaining({
+				blocking: true,
+				code: "dependencies-instrumentation-exclusions",
+				message: expect.stringContaining(
+					"only enables or disables dependency metadata as a whole"
+				),
+				sourcePath: "dependencies_instrumentation",
+			}),
+		]);
+	});
+
+	it("converts Workflow bindings and exports the Workflows the Worker defines", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			exports: {
+				DeclaredWorkflow: { name: "declared-workflow", type: "workflow" },
+			},
+			main: "src/index.ts",
+			name: "example-worker",
+			workflows: [
+				{
+					binding: "LOCAL",
+					class_name: "LocalWorkflow",
+					concurrency: { limit: 2 },
+					default_retention: {
+						error_retention: 86_400_000,
+						success_retention: "3 days",
+					},
+					jurisdiction: "eu",
+					limits: { steps: 10 },
+					name: "local-workflow",
+					schedules: "0 * * * *",
+				},
+				{
+					binding: "DECLARED",
+					class_name: "DeclaredWorkflow",
+					name: "declared-workflow",
+				},
+				{
+					binding: "REMOTE",
+					class_name: "RemoteWorkflow",
+					jurisdiction: "us",
+					limits: { steps: 5 },
+					name: "remote-workflow",
+					script_name: "other-worker",
+				},
+			],
+		});
+
+		expect(result.output).toContain("bindings.workflow({");
+		expect(result.output).toContain('worker: "other-worker"');
+		expect(result.output).toContain("LocalWorkflow: exports.workflow({");
+		expect(result.output).toContain("defaultRetention: {");
+		expect(result.output).toContain('jurisdiction: "eu"');
+		expect(result.output).not.toContain('jurisdiction: "us"');
+		expect(result.output).not.toContain("RemoteWorkflow: exports.workflow(");
+		expect(
+			result.output.match(/DeclaredWorkflow: exports\.workflow\(/g)
+		).toHaveLength(1);
+		expect(
+			result.followUps
+				.filter(({ sourcePath }) => sourcePath?.includes("workflows"))
+				.map(({ code, sourcePath }) => ({ code, sourcePath }))
+		).toEqual([
+			{ code: "unsupported-binding-options", sourcePath: "workflows.2" },
+		]);
+		expect(result).toMatchSnapshot();
+	});
+
+	it("treats a Workflow whose script_name names this Worker as local", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			main: "src/index.ts",
+			name: "app",
+			workflows: [
+				{
+					binding: "JOBS",
+					class_name: "Jobs",
+					limits: { steps: 10 },
+					name: "jobs",
+					script_name: "app",
+				},
+			],
+		});
+
+		expect(result.output).toContain('worker: "app"');
+		expect(result.output).toContain("Jobs: exports.workflow({");
+		expect(result.output).toContain("steps: 10");
+		expect(
+			result.followUps.filter(({ sourcePath }) =>
+				sourcePath?.includes("workflows")
+			)
+		).toEqual([]);
+		expect(result).toMatchSnapshot();
+	});
+
+	it("reports the settings of a second Workflow on an already exported class", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			main: "src/index.ts",
+			name: "app",
+			workflows: [
+				{
+					binding: "FIRST",
+					class_name: "Runner",
+					limits: { steps: 10 },
+					name: "first",
+				},
+				{
+					binding: "SECOND",
+					class_name: "Runner",
+					limits: { steps: 20 },
+					name: "second",
+				},
+			],
+		});
+
+		expect(result.output).toContain("steps: 10");
+		expect(result.output).not.toContain("steps: 20");
+		expect(
+			result.followUps
+				.filter(({ sourcePath }) => sourcePath?.includes("workflows"))
+				.map(({ blocking, code, sourcePath }) => ({
+					blocking,
+					code,
+					sourcePath,
+				}))
+		).toEqual([
+			{
+				blocking: true,
+				code: "workflow-shared-class",
+				sourcePath: "workflows.1",
+			},
+		]);
+		expect(result).toMatchSnapshot();
+	});
+
+	it("merges a Workflow binding's settings into the export declaring the same Workflow", ({
+		expect,
+	}) => {
+		const result = convert({
+			compatibility_date: "2026-09-23",
+			exports: {
+				Jobs: { name: "jobs", schedules: "0 * * * *", type: "workflow" },
+			},
+			main: "src/index.ts",
+			name: "app",
+			workflows: [
+				{
+					binding: "JOBS",
+					class_name: "Jobs",
+					limits: { steps: 10 },
+					name: "jobs",
+				},
+			],
+		});
+
+		expect(result.output.match(/Jobs: exports\.workflow\(/g)).toHaveLength(1);
+		expect(result.output).toContain("steps: 10");
+		expect(result.output).toContain('schedules: "0 * * * *"');
+		expect(
+			result.followUps.filter(({ sourcePath }) =>
+				sourcePath?.includes("workflows")
+			)
+		).toEqual([]);
 		expect(result).toMatchSnapshot();
 	});
 

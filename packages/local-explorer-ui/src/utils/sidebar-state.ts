@@ -10,6 +10,7 @@ export const SIDEBAR_GROUP_IDS = [
 	"workflows",
 	"email",
 	"cron-triggers",
+	"flagship",
 ] as const;
 
 export type SidebarGroupId = (typeof SIDEBAR_GROUP_IDS)[number];
@@ -25,6 +26,7 @@ export const DEFAULT_GROUP_STATE: SidebarGroupState = {
 	workflows: true,
 	email: true,
 	"cron-triggers": true,
+	flagship: true,
 };
 
 /**

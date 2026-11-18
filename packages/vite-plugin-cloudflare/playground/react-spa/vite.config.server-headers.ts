@@ -10,5 +10,12 @@ export default defineConfig({
 			"custom-number": 123,
 		},
 	},
-	plugins: [react(), cloudflare({ inspectorPort: false, persistState: false })],
+	plugins: [
+		react(),
+		cloudflare({
+			types: { includeRuntime: false },
+			inspectorPort: false,
+			persistState: false,
+		}),
+	],
 });

@@ -193,6 +193,59 @@ describe("listTmpKVNamespaces()", () => {
 
 		expect(result.map((p) => p.id)).toMatchInlineSnapshot(`[]`);
 	});
+
+	it("keeps temp kv namespaces whose encoded creation time is under an hour old", async ({
+		expect,
+	}) => {
+		const recent = Date.now() - 1000 * 60 * 10;
+		const old = Date.now() - 1000 * 60 * 100;
+		agent
+			.get("https://api.cloudflare.com")
+			.intercept({
+				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces`,
+				method: "GET",
+				query: {
+					page: 1,
+				},
+			})
+			.reply(
+				200,
+				JSON.stringify({
+					result: [
+						// Wrangler E2E format: `generateResourceName("kv" + Date.now())` with `_`
+						{ id: "wrangler-recent", title: `tmp_e2e_kv${recent}_0a1b2c3d` },
+						{ id: "wrangler-old", title: `tmp_e2e_kv${old}_0a1b2c3d` },
+						// Fixture format
+						{
+							id: "fixture-recent",
+							title: `tmp-e2e-kv${recent}-test-remote-bindings-0a1b2c3d`,
+						},
+						{
+							id: "fixture-old",
+							title: `tmp-e2e-kv${old}-test-remote-bindings-0a1b2c3d`,
+						},
+						// No encoded creation time, so treated as old
+						{ id: "undated", title: "tmp-e2e-kv-0a1b2c3d" },
+						{ id: "preserved", title: "preserve-e2e-get-platform-proxy-kv" },
+					],
+					result_info: {
+						page: 1,
+						per_page: 100,
+						count: 6,
+						total_count: 6,
+						total_pages: 1,
+					},
+				})
+			);
+
+		const result = await listTmpKVNamespaces();
+
+		expect(result.map((p) => p.id)).toEqual([
+			"wrangler-old",
+			"fixture-old",
+			"undated",
+		]);
+	});
 });
 
 describe("deleteKVNamespace()", () => {

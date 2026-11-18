@@ -246,6 +246,7 @@ export interface CfD1Database {
 	binding: string;
 	database_id?: string | typeof INHERIT_SYMBOL;
 	database_name?: string;
+	jurisdiction?: string;
 	preview_database_id?: string;
 	database_internal_env?: string;
 	migrations_table?: string;
@@ -320,6 +321,11 @@ export interface CfHyperdrive {
 	binding: string;
 	id: string;
 	localConnectionString?: string;
+	/**
+	 * Connect to the deployed Hyperdrive configuration during local development
+	 * instead of a local database.
+	 */
+	remote?: boolean;
 }
 
 export interface CfDevPluginCfg {
@@ -369,6 +375,7 @@ export interface CfVpcNetwork {
 export interface CfAnalyticsEngineDataset {
 	binding: string;
 	dataset?: string;
+	remote?: boolean;
 }
 
 export interface CfDispatchNamespace {

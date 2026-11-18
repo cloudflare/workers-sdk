@@ -15,6 +15,7 @@ import {
 	remoteProxyClientWorker,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
+import { getBrowserEnvironment } from "./environment";
 import { ensureBrowserInstalled } from "./install";
 import { BrowserStartupError, waitForExit } from "./process";
 import type { Service } from "../../runtime";
@@ -218,7 +219,7 @@ export async function launchBrowser({
 			"browser-rendering",
 			`profile-${sessionId}-${attempt++}`
 		);
-		await fs.promises.mkdir(tempUserData, { recursive: true });
+		await fs.promises.mkdir(tempUserData, { recursive: true, mode: 0o700 });
 
 		// Whether Chrome got far enough to announce its DevTools endpoint, which
 		// is the line between "this install might be broken" and "something else
@@ -229,6 +230,9 @@ export async function launchBrowser({
 		const browserProcess = launch({
 			executablePath: installed.executablePath,
 			args: process.env.CI ? [...launchArgs, "--no-sandbox"] : launchArgs,
+			// @puppeteer/browsers defaults to an empty environment. Chrome needs
+			// a user home for NSS and other configuration outside its profile.
+			env: getBrowserEnvironment(tempUserData),
 			handleSIGTERM: false,
 			dumpio: false,
 			pipe: false,

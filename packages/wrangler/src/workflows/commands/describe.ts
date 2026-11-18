@@ -97,6 +97,7 @@ export const workflowsDescribeCommand = createCommand({
 					Id: workflow.id,
 					"Script Name": workflow.script_name,
 					"Class Name": workflow.class_name,
+					...(workflow.jurisdiction && { Jurisdiction: workflow.jurisdiction }),
 					"Created On": workflow.created_on,
 					"Modified On": workflow.modified_on,
 				})

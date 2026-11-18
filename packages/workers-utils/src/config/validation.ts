@@ -16,7 +16,7 @@ import {
 	getDurableObjectExports,
 	isLiveDurableObjectExport,
 } from "./durable-object-exports";
-import { ARTIFACTS_EVENT_TYPES } from "./environment";
+import { ARTIFACTS_EVENT_TYPES, WORKFLOW_JURISDICTIONS } from "./environment";
 import { partitionExports } from "./exports";
 import {
 	all,
@@ -2403,10 +2403,11 @@ const validateTriggers: ValidatorFn = (
 					)) {
 						if (
 							(filterName !== "namespace" && filterName !== "repo_name") ||
-							typeof filterValue !== "string"
+							typeof filterValue !== "string" ||
+							filterValue.length === 0
 						) {
 							diagnostics.errors.push(
-								`Expected "${eventFieldName}.filter" to contain only string "namespace" and "repo_name" fields, but got ${JSON.stringify(event.filter)}.`
+								`Expected "${eventFieldName}.filter" to contain only non-empty string "namespace" and "repo_name" fields, but got ${JSON.stringify(event.filter)}.`
 							);
 							isValid = false;
 							break;
@@ -3282,6 +3283,33 @@ function validateWorkflowConcurrency(
 }
 
 /**
+ * Check the optional `jurisdiction` setting of a Workflow binding or export.
+ */
+function validateWorkflowJurisdiction(
+	diagnostics: Diagnostics,
+	field: string,
+	kind: string,
+	value: Record<string, unknown>
+): boolean {
+	const { jurisdiction } = value;
+	if (
+		jurisdiction === undefined ||
+		WORKFLOW_JURISDICTIONS.some((valid) => valid === jurisdiction)
+	) {
+		return true;
+	}
+	const validJurisdictions = new Intl.ListFormat("en-US", {
+		type: "disjunction",
+	}).format(WORKFLOW_JURISDICTIONS.map((valid) => JSON.stringify(valid)));
+	diagnostics.errors.push(
+		`"${field}" ${kind} "jurisdiction" field must be one of ${validJurisdictions}, but got ${JSON.stringify(
+			jurisdiction
+		)}.`
+	);
+	return false;
+}
+
+/**
  * Check that the given field is a valid "workflow" binding object.
  */
 const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
@@ -3351,6 +3379,9 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 	isValid =
 		validateWorkflowConcurrency(diagnostics, field, "bindings", settings) &&
 		isValid;
+	isValid =
+		validateWorkflowJurisdiction(diagnostics, field, "bindings", settings) &&
+		isValid;
 
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
@@ -3361,6 +3392,7 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		"concurrency",
 		"schedules",
 		"default_retention",
+		"jurisdiction",
 	]);
 
 	return isValid;
@@ -3483,6 +3515,15 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			["single-page-application", "404-page", "none"]
 		) && isValid;
 
+	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"base_path",
+			(value as Assets).base_path,
+			"string"
+		) && isValid;
+
 	if ((value as Assets).run_worker_first !== undefined) {
 		if (typeof (value as Assets).run_worker_first === "boolean") {
 			isValid =
@@ -3516,6 +3557,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			"binding",
 			"html_handling",
 			"not_found_handling",
+			"base_path",
 			"run_worker_first",
 		]) && isValid;
 
@@ -4555,10 +4597,10 @@ function validateContainerApp(
 				);
 				if (
 					constraints.jurisdiction &&
-					!["eu", "fedramp"].includes(constraints.jurisdiction)
+					!["eu", "fedramp", "us"].includes(constraints.jurisdiction)
 				) {
 					diagnostics.errors.push(
-						`${field}.constraints.jurisdiction must be one of: "eu", "fedramp"`
+						`${field}.constraints.jurisdiction must be one of: "eu", "fedramp", "us"`
 					);
 				}
 				if (
@@ -5098,6 +5140,15 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (!isOptionalProperty(value, "jurisdiction", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "jurisdiction" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
 	if (!isOptionalProperty(value, "migrations_dir", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should, optionally, have a string "migrations_dir" field but got ${JSON.stringify(
@@ -5130,6 +5181,7 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		"database_id",
 		"database_internal_env",
 		"database_name",
+		"jurisdiction",
 		"migrations_dir",
 		"migrations_pattern",
 		"migrations_table",
@@ -5312,10 +5364,18 @@ const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	// `remote: true` opts the binding into connecting to the deployed Hyperdrive
+	// configuration at the edge during local dev (via the remote-bindings proxy).
+	// When set, a `localConnectionString` is optional.
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"id",
 		"localConnectionString",
+		"remote",
 	]);
 
 	return isValid;
@@ -5669,7 +5729,12 @@ const validateAnalyticsEngineBinding: ValidatorFn = (
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"dataset",
+		"remote",
 	]);
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
 
 	return isValid;
 };
@@ -7405,6 +7470,13 @@ function validateWorkflowExport(
 	valid =
 		validateWorkflowConcurrency(diagnostics, field, "export", workflowExport) &&
 		valid;
+	valid =
+		validateWorkflowJurisdiction(
+			diagnostics,
+			field,
+			"export",
+			workflowExport
+		) && valid;
 
 	valid =
 		validateAdditionalProperties(
@@ -7418,6 +7490,7 @@ function validateWorkflowExport(
 				"concurrency",
 				"schedules",
 				"default_retention",
+				"jurisdiction",
 			]
 		) && valid;
 

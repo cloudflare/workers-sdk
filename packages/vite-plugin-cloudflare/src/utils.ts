@@ -3,6 +3,7 @@ import * as util from "node:util";
 import { createHeaders, sendResponse } from "@remix-run/node-fetch-server";
 import {
 	CoreHeaders,
+	parseForwardedProto,
 	Request as MiniflareRequest,
 	Response as MiniflareResponse,
 } from "miniflare";
@@ -130,6 +131,44 @@ export function satisfiesMinimumViteVersion(minVersion: string): boolean {
 	return semverGte(viteVersion, minVersion);
 }
 
+/**
+ * Converts incoming request headers while preserving separate `Set-Cookie` values.
+ *
+ * @param req The incoming HTTP request
+ * @returns Fetch headers with the original cookie boundaries
+ */
+export function createHeadersForIncomingMessage(
+	req: http.IncomingMessage
+): Headers {
+	const headers = createHeaders(req);
+	const cookies = req.headers["set-cookie"];
+	if (cookies) {
+		// Upstream joins array entries with commas, which can also appear in Expires.
+		headers.delete("set-cookie");
+		for (const cookie of cookies) {
+			headers.append("set-cookie", cookie);
+		}
+	}
+	return headers;
+}
+
+/**
+ * Constructs a URL from an origin-form request target on the selected origin.
+ *
+ * @param target The incoming path and query, including its leading slash
+ * @param origin The origin selected from the connection and request headers
+ * @returns A URL whose origin cannot be overridden by the request target
+ * @throws {TypeError} If the target is not in origin form
+ */
+export function resolveRequestTarget(target: string, origin: string): URL {
+	if (!target.startsWith("/")) {
+		throw new TypeError("Expected an origin-form request target");
+	}
+	// Relative URL resolution treats leading slashes and backslashes as an
+	// authority. Append to an already parsed origin to keep them in the path.
+	return new URL(`${new URL(origin).origin}${target}`);
+}
+
 export function createRequestForIncomingMessage(
 	req: vite.Connect.IncomingMessage,
 	res: http.ServerResponse,
@@ -141,7 +180,7 @@ export function createRequestForIncomingMessage(
 	});
 
 	const method = req.method ?? "GET";
-	const headers = createHeaders(req);
+	const headers = createHeadersForIncomingMessage(req);
 	const protocol =
 		options?.protocol ??
 		getScheme(req) ??
@@ -151,7 +190,7 @@ export function createRequestForIncomingMessage(
 	if (headers.get("Host") !== host) {
 		headers.set("Host", host);
 	}
-	const url = new URL(req.url ?? "/", `${protocol}//${host}`);
+	const url = resolveRequestTarget(req.url ?? "/", `${protocol}//${host}`);
 	const init: RequestInit & { duplex?: "half" } = {
 		method,
 		headers,
@@ -259,15 +298,7 @@ export function getForwardedProto(req: {
 	headers: http.IncomingHttpHeaders;
 }): "http:" | "https:" | undefined {
 	const raw = req.headers["x-forwarded-proto"];
-	const value = Array.isArray(raw) ? raw[0] : raw;
-	if (!value) {
-		return undefined;
-	}
-	const first = value.split(",")[0]?.trim().toLowerCase();
-	if (first === "http" || first === "https") {
-		return `${first}:`;
-	}
-	return undefined;
+	return parseForwardedProto(Array.isArray(raw) ? raw[0] : raw);
 }
 
 /**

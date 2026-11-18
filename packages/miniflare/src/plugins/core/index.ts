@@ -571,20 +571,19 @@ export const CORE_PLUGIN: Plugin = {
 		const observabilityEnabled =
 			sharedOptions.unsafeObservability === true &&
 			dev?.unsafeRegisterWorker !== false;
-		const tailConsumers = observabilityEnabled
+		const streamingTailConsumers = observabilityEnabled
 			? [
-					...(config.tailConsumers ?? []),
+					...(config.experimental?.streamingTailConsumers ?? []),
 					// Pass the worker's name to the collector via binding props. workerd
 					// doesn't populate the tail onset's `scriptName` locally, so this is
 					// how the collector attributes each captured invocation to its worker
 					// (each worker streams to the collector with its own props).
 					{
 						worker: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
-						streaming: true,
 						props: { worker: config.name },
 					},
 				]
-			: (config.tailConsumers ?? []);
+			: (config.experimental?.streamingTailConsumers ?? []);
 		// workerd rejects a compatibility flag that the compatibility date already
 		// enables by default ("does not need to be specified anymore"), which
 		// would stop the worker starting up. Strip them per service rather than on
@@ -635,14 +634,14 @@ export const CORE_PLUGIN: Plugin = {
 					sharedOptions.unsafeModuleFallbackService !== undefined
 						? `${loopbackHost}:${loopbackPort}`
 						: undefined,
-				tails: tailConsumers
-					.filter((consumer) => !consumer.streaming)
-					.map<ServiceDesignator>(getTailServiceDesignator),
-				streamingTails: tailConsumers
-					.filter((consumer) => consumer.streaming)
-					.map<ServiceDesignator>(getTailServiceDesignator),
+				tails: (config.tailConsumers ?? []).map<ServiceDesignator>(
+					getTailServiceDesignator
+				),
+				streamingTails: streamingTailConsumers.map<ServiceDesignator>(
+					getTailServiceDesignator
+				),
 				containerEngine,
-				...(dev?.access
+				...(config.access?.dev
 					? {
 							accessBlobHeader: CoreHeaders.ACCESS_BLOB,
 							accessBindingService: {
@@ -729,7 +728,7 @@ export const CORE_PLUGIN: Plugin = {
 		}
 
 		// Access identity binding worker for ctx.access.getIdentity()
-		if (dev?.access) {
+		if (config.access?.dev) {
 			services.push({
 				name: getAccessIdentityServiceName(workerIndex),
 				worker: {
@@ -754,6 +753,8 @@ export const CORE_PLUGIN: Plugin = {
 
 export interface GlobalServicesOptions {
 	sharedOptions: ParsedInstanceOptions;
+	/** Per-instance credential for internal loopback requests. */
+	loopbackSecret: string;
 	allWorkerRoutes: Map<string, string[]>;
 	fallbackWorkerName: string | undefined;
 	tmpPath: string;
@@ -768,6 +769,7 @@ export interface GlobalServicesOptions {
 }
 export function getGlobalServices({
 	sharedOptions,
+	loopbackSecret,
 	allWorkerRoutes,
 	fallbackWorkerName,
 	tmpPath,
@@ -902,10 +904,10 @@ export function getGlobalServices({
 		});
 	}
 	// Inject per-worker Cloudflare Access blob bindings into the entry worker.
-	// Each worker with dev.access gets its own blob keyed by worker name so the
-	// entry worker can pick the correct one after routing.
+	// Each worker with config.access.dev gets its own blob keyed by worker name so
+	// the entry worker can pick the correct one after routing.
 	for (const workerOpt of allWorkerOpts ?? []) {
-		const accessOpts = workerOpt.dev?.access;
+		const accessOpts = workerOpt.config.access?.dev;
 		if (accessOpts) {
 			const accessBlob: {
 				app_aud: string;
@@ -929,14 +931,27 @@ export function getGlobalServices({
 	const services: Service[] = [
 		{
 			name: SERVICE_LOOPBACK,
-			external: { http: { cfBlobHeader: CoreHeaders.CF_BLOB } },
+			external: {
+				http: {
+					cfBlobHeader: CoreHeaders.CF_BLOB,
+					injectRequestHeaders: [
+						{ name: CoreHeaders.LOOPBACK_SECRET, value: loopbackSecret },
+					],
+				},
+			},
 		},
 		{
 			name: SERVICE_ENTRY,
 			worker: {
 				modules: [{ name: "entry.worker.js", esModule: SCRIPT_ENTRY() }],
 				compatibilityDate: "2025-03-17",
-				compatibilityFlags: ["nodejs_compat", "service_binding_extra_handlers"],
+				compatibilityFlags: [
+					"nodejs_compat",
+					"service_binding_extra_handlers",
+					// Keep custom error names and properties (for example Artifacts
+					// `code`) when binding errors reach `ProxyServer` for Node callers.
+					"enhanced_error_serialization",
+				],
 				bindings: serviceEntryBindings,
 				durableObjectNamespaces: [
 					{
@@ -1043,7 +1058,8 @@ export function getGlobalServices({
 		services.push(
 			...getObservabilityServices(
 				tmpPath,
-				sharedOptions.isolatedResourcePersistencePath
+				sharedOptions.isolatedResourcePersistencePath,
+				sharedOptions.unsafeRuntimeEnv
 			)
 		);
 	}
@@ -1204,7 +1220,7 @@ function getContainerEgressInterceptorImage(): string {
  * @param engineOrSocketPath Either a full engine config or a unix socket
  * @returns The container engine, defaulting to the default docker socket located on linux/macOS at `unix:///var/run/docker.sock`
  */
-function getContainerEngine(
+export function getContainerEngine(
 	engineOrSocketPath: Worker_ContainerEngine | string | undefined
 ): Worker_ContainerEngine {
 	if (!engineOrSocketPath) {
@@ -1244,4 +1260,3 @@ export * from "./proxy";
 export * from "./constants";
 export * from "./modules";
 export { kCurrentWorker } from "../../config/schema";
-export * from "./node-compat";

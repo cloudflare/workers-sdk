@@ -62,10 +62,14 @@ export function isDockerfileContainerConfig(
 }
 
 async function constructBuildCommand(options: BuildArgs) {
+	const imageOutput =
+		process.env.WRANGLER_CONTAINER_IMAGE_COMPRESSION === "zstd"
+			? "type=docker,oci-mediatypes=true,compression=zstd,compression-level=3,force-compression=true"
+			: undefined;
 	const platform = options.platform ?? "linux/amd64";
 	const buildCmd = [
 		"build",
-		"--load",
+		...(imageOutput ? ["--output", imageOutput] : ["--load"]),
 		"-t",
 		options.tag,
 		"--platform",
@@ -132,6 +136,19 @@ export async function startContainerBuild({
 	pathToDocker: string;
 	verifyDockerIsRunning?: boolean;
 }): Promise<StartedContainerBuild> {
+	if (process.env.WRANGLER_CONTAINER_IMAGE_COMPRESSION === "zstd") {
+		const driverStatus = runDockerCmdWithOutput(pathToDocker, [
+			"info",
+			"--format",
+			"{{json .DriverStatus}}",
+		]);
+		if (!driverStatus.includes("io.containerd.snapshotter.v1")) {
+			throw new UserError(
+				"Zstd compression requires Docker's containerd image store. Enable the containerd image store or unset WRANGLER_CONTAINER_IMAGE_COMPRESSION.",
+				{ telemetryMessage: false }
+			);
+		}
+	}
 	const { buildCmd, dockerfile } = await constructBuildCommand(build);
 	return await dockerBuild(pathToDocker, {
 		buildCmd,
@@ -259,11 +276,11 @@ async function tagAndPushImage({
 		complianceConfig
 	);
 	await runDockerCmd(pathToDocker, ["tag", sourceTag, namespacedImageTag]);
+	await runDockerCmd(pathToDocker, ["push", namespacedImageTag]);
 	if (cleanupSourceTag) {
 		logger.debug(`Untagging built image: ${sourceTag}.`);
 		await runDockerCmd(pathToDocker, ["image", "rm", sourceTag]);
 	}
-	await runDockerCmd(pathToDocker, ["push", namespacedImageTag]);
 	return namespacedImageTag;
 }
 
@@ -658,6 +675,7 @@ export async function buildContainerImages(
 
 /**
  * Pushes a configured, already-built container image to the managed registry.
+ * The caller owns local image cleanup after the complete upload workflow.
  *
  * @param builtImage - Built Dockerfile-based container image metadata.
  * @param versionId - Version ID used to derive the pushed image tag.
@@ -681,9 +699,8 @@ export async function pushBuiltContainerImage(
 			containerConfig: builtImage.container,
 			accountId,
 			complianceConfig,
-			cleanupSourceTag: true,
+			cleanupSourceTag: false,
 		});
-		builtImage.localTagCleaned = true;
 		return imageRef;
 	} catch (error) {
 		if (error instanceof Error) {

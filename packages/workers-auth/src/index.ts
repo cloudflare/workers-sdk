@@ -31,6 +31,7 @@ export type {
 export {
 	getAuthUrlFromEnv,
 	getCloudflareAccountIdFromEnv,
+	getCloudflareAuthProfileFromEnv,
 	getCloudflareAuthUseKeyringFromEnv,
 } from "./env-vars";
 
@@ -111,3 +112,5 @@ export type {
 	NpmRunner,
 	ScrubEncryptedCredentialsResult,
 } from "./credential-store";
+
+export { AuthenticationError } from "./core/authentication-error";

@@ -2,6 +2,7 @@ import { defineConfig } from "tsdown";
 import type { UserConfig } from "tsdown";
 
 const ignoreWatch = ["dist", "playground", "e2e"];
+const sourcemap = process.env.SOURCEMAPS !== "false";
 
 export default defineConfig([
 	{
@@ -9,9 +10,11 @@ export default defineConfig([
 			index: "src/index.ts",
 		},
 		platform: "node",
+		sourcemap,
 		outDir: "dist",
 		tsconfig: "tsconfig.plugin.json",
 		dts: {
+			sourcemap,
 			compilerOptions: {
 				// workaround for https://github.com/rolldown/tsdown/issues/345
 				paths: {
@@ -21,20 +24,6 @@ export default defineConfig([
 				},
 			},
 		},
-		ignoreWatch,
-	},
-	{
-		// `cf-vite` delegate-binary entry. Bundled separately from the
-		// plugin itself so the bin shim (`bin/cf-vite`) can
-		// dynamic-import it without dragging the plugin's type-export
-		// overhead. The entry exposes a small subcommand-based CLI
-		// (currently just `dev`) that any parent process can spawn
-		// (see `src/cf-vite.ts` for the protocol).
-		entry: "src/cf-vite.ts",
-		platform: "node",
-		outDir: "dist",
-		tsconfig: "tsconfig.plugin.json",
-		dts: false,
 		ignoreWatch,
 	},
 	worker("asset-worker"),
@@ -58,6 +47,7 @@ function worker(name: string, options: UserConfig = {}): UserConfig {
 		entry: { index: `src/workers/${name}/index.ts` },
 		outDir: `dist/workers/${name}`,
 		platform: "neutral",
+		sourcemap,
 		inputOptions: {
 			resolve: {
 				mainFields: ["module", "main"],

@@ -1,14 +1,11 @@
+import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { mockPackageManager, mockSpinner } from "helpers/__tests__/mocks";
 import { runWranglerCommand } from "helpers/command";
 import { hasSparrowSourceKey } from "helpers/sparrow";
 import { beforeEach, describe, test, vi } from "vitest";
 import { createTestContext } from "../../__tests__/helpers";
-import {
-	chooseAccount,
-	isLoggedIn,
-	listAccounts,
-	wranglerLogin,
-} from "../accounts";
+import { usesCfCli } from "../../cf/config";
+import { chooseAccount, isLoggedIn, listAccounts, login } from "../accounts";
 
 const loggedInWhoamiOutput = `
 -------------------------------------------------------
@@ -35,8 +32,20 @@ const loginSuccessOutput = `
 Successfully logged in.
 `;
 
+const cfLoggedInWhoamiOutput = JSON.stringify({
+	authenticated: true,
+	tokenValid: true,
+	accounts: [{ id: "g8s9dl23jv90xa0xxxx990ds09xxxxda", name: "testacct" }],
+});
+
+const cfLoggedOutWhoamiOutput = JSON.stringify({
+	authenticated: false,
+	error: "Not logged in",
+});
+
 vi.mock("helpers/command");
 vi.mock("helpers/sparrow");
+vi.mock("../../cf/config");
 vi.mock("which-pm-runs");
 vi.mock("@cloudflare/cli-shared-helpers/interactive");
 
@@ -46,6 +55,7 @@ describe("wrangler account helpers", () => {
 	let spinner: ReturnType<typeof mockSpinner>;
 
 	beforeEach(() => {
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "");
 		mockPackageManager("npm");
 		vi.mocked(hasSparrowSourceKey).mockReturnValue(true);
 
@@ -65,15 +75,95 @@ describe("wrangler account helpers", () => {
 			// Should not call wrangler whoami when env var is set
 			expect(runWranglerCommand).not.toHaveBeenCalled();
 		});
+
+		test("lists accounts with cf for cf projects", async ({ expect }) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "");
+			vi.mocked(usesCfCli).mockReturnValue(true);
+			vi.mocked(runWranglerCommand).mockResolvedValueOnce(
+				cfLoggedInWhoamiOutput
+			);
+
+			const testCtx = createTestContext();
+			await chooseAccount(testCtx);
+
+			expect(testCtx.account).toEqual({
+				id: "g8s9dl23jv90xa0xxxx990ds09xxxxda",
+				name: "testacct",
+			});
+			expect(runWranglerCommand).toHaveBeenCalledWith(
+				["npx", "cf", "auth", "whoami"],
+				expect.anything()
+			);
+		});
+
+		test.for([false, true])(
+			"preserves duplicate account names and selects by ID (cf: %s)",
+			async (useCf, { expect }) => {
+				vi.mocked(usesCfCli).mockReturnValue(useCf);
+				const accounts = [
+					{ id: "a".repeat(32), name: "Example account" },
+					{ id: "b".repeat(32), name: "Example account" },
+				];
+
+				for (const available of [accounts, [...accounts].reverse()]) {
+					for (const selected of accounts) {
+						vi.mocked(runWranglerCommand).mockResolvedValueOnce(
+							useCf
+								? JSON.stringify({ accounts: available })
+								: available
+										.map(({ name, id }) => `│ ${name} │ ${id} │`)
+										.join("\n")
+						);
+						vi.mocked(inputPrompt).mockResolvedValueOnce(selected.id);
+						const testCtx = createTestContext();
+
+						await chooseAccount(testCtx);
+
+						expect(inputPrompt).toHaveBeenLastCalledWith(
+							expect.objectContaining({
+								options: available.map(({ name, id }) => ({
+									label: `${name} (${id})`,
+									value: id,
+								})),
+								defaultValue: available[0].id,
+							})
+						);
+						expect(testCtx.account).toEqual(selected);
+					}
+				}
+			}
+		);
+
+		test("selects the only Wrangler account without prompting", async ({
+			expect,
+		}) => {
+			const account = { id: "a".repeat(32), name: "Example account" };
+			vi.mocked(runWranglerCommand).mockResolvedValueOnce(
+				`│ ${account.name} │ ${account.id} │`
+			);
+			const testCtx = createTestContext();
+
+			await chooseAccount(testCtx);
+
+			expect(testCtx.account).toEqual(account);
+			expect(inputPrompt).not.toHaveBeenCalled();
+		});
+
+		test("reports an empty account list", async ({ expect }) => {
+			vi.mocked(runWranglerCommand).mockResolvedValueOnce("");
+			await expect(chooseAccount(createTestContext())).rejects.toThrow(
+				"Unable to find any accounts"
+			);
+		});
 	});
 
-	describe("wranglerLogin", async () => {
+	describe("login", async () => {
 		test("logged in", async ({ expect }) => {
 			const mock = vi
 				.mocked(runWranglerCommand)
 				.mockReturnValueOnce(Promise.resolve(loggedInWhoamiOutput));
 
-			const loggedIn = await wranglerLogin(ctx);
+			const loggedIn = await login(ctx);
 
 			expect(loggedIn).toBe(true);
 			expect(mock).toHaveBeenCalledWith(
@@ -94,7 +184,7 @@ describe("wrangler account helpers", () => {
 				.mockReturnValueOnce(Promise.resolve(loggedOutWhoamiOutput))
 				.mockReturnValueOnce(Promise.resolve(loginSuccessOutput));
 
-			const loggedIn = await wranglerLogin(ctx);
+			const loggedIn = await login(ctx);
 
 			expect(loggedIn).toBe(true);
 			expect(mock).toHaveBeenCalledWith(
@@ -115,7 +205,7 @@ describe("wrangler account helpers", () => {
 				.mockReturnValueOnce(Promise.resolve(loggedOutWhoamiOutput))
 				.mockReturnValueOnce(Promise.resolve(loginDeniedOutput));
 
-			const loggedIn = await wranglerLogin(ctx);
+			const loggedIn = await login(ctx);
 
 			expect(loggedIn).toBe(false);
 			expect(mock).toHaveBeenCalledWith(
@@ -131,13 +221,62 @@ describe("wrangler account helpers", () => {
 		});
 	});
 
+	describe("login (cf)", () => {
+		beforeEach(() => {
+			vi.mocked(usesCfCli).mockReturnValue(true);
+		});
+
+		test("logged in", async ({ expect }) => {
+			vi.mocked(runWranglerCommand).mockResolvedValueOnce(
+				cfLoggedInWhoamiOutput
+			);
+
+			await expect(login(ctx)).resolves.toBe(true);
+			expect(runWranglerCommand).toHaveBeenCalledOnce();
+			expect(runWranglerCommand).toHaveBeenCalledWith(
+				["npx", "cf", "auth", "whoami"],
+				expect.anything()
+			);
+		});
+
+		test("logged out (successful login)", async ({ expect }) => {
+			vi.mocked(runWranglerCommand)
+				.mockResolvedValueOnce(cfLoggedOutWhoamiOutput)
+				.mockResolvedValueOnce("")
+				.mockResolvedValueOnce(cfLoggedInWhoamiOutput);
+
+			await expect(login(ctx)).resolves.toBe(true);
+			expect(runWranglerCommand).toHaveBeenCalledWith([
+				"npx",
+				"cf",
+				"auth",
+				"login",
+				"--force",
+			]);
+			expect(runWranglerCommand).not.toHaveBeenCalledWith(
+				["npx", "wrangler", "login"],
+				expect.anything()
+			);
+		});
+
+		test("logged out (login failed)", async ({ expect }) => {
+			vi.mocked(runWranglerCommand)
+				.mockResolvedValueOnce(cfLoggedOutWhoamiOutput)
+				.mockRejectedValueOnce(new Error("fail!"));
+
+			await expect(login(ctx)).resolves.toBe(false);
+		});
+	});
+
 	test("listAccounts", async ({ expect }) => {
 		const mock = vi
 			.mocked(runWranglerCommand)
 			.mockReturnValueOnce(Promise.resolve(loggedInWhoamiOutput));
 
 		const accounts = await listAccounts();
-		expect(accounts).keys("testacct");
+		expect(accounts).toEqual([
+			{ name: "testacct", id: "g8s9dl23jv90xa0xxxx990ds09xxxxda" },
+		]);
 		expect(mock).toHaveBeenLastCalledWith(
 			["npx", "wrangler", "whoami"],
 			expect.anything()

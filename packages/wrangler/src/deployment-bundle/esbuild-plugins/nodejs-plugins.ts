@@ -1,8 +1,8 @@
 import { asyncLocalStoragePlugin } from "./als-external";
 import { nodejsHybridPlugin } from "./hybrid-nodejs-compat";
 import { nodejsCompatPlugin } from "./nodejs-compat";
+import type { NodeJSCompatMode } from "@cloudflare/workers-utils/node-compat";
 import type { Plugin } from "esbuild";
-import type { NodeJSCompatMode } from "miniflare";
 
 /**
  * Returns the list of ESBuild plugins to use for a given compat mode.

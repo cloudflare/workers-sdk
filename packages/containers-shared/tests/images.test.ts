@@ -5,6 +5,7 @@ import {
 	getAndValidateRegistryType,
 	getEgressInterceptorPlatform,
 	isCloudflareRegistryImage,
+	pullImage,
 	pullEgressInterceptorImage,
 	prepareContainerImagesForDev,
 	validateAndEncodeGarKey,
@@ -12,6 +13,10 @@ import {
 import { runDockerCmd, verifyDockerInstalled } from "../src/utils";
 
 vi.mock("../src/build", () => ({ startContainerBuild: vi.fn() }));
+
+vi.mock("../src/login", () => ({
+	dockerLoginImageRegistry: vi.fn(),
+}));
 
 vi.mock("../src/utils", () => ({
 	verifyDockerInstalled: vi.fn(),
@@ -85,6 +90,35 @@ describe("pullEgressInterceptorImage", () => {
 			"proxy-everything:test",
 			"--platform",
 			"linux/arm64",
+		]);
+	});
+});
+
+describe("pullImage", () => {
+	it("does not retag a Build Output reference pulled under its final name", async ({
+		expect,
+	}) => {
+		vi.mocked(runDockerCmd).mockClear();
+		const image = "registry.example.com/project/image@sha256:abc";
+
+		const pull = await pullImage(
+			"docker",
+			{
+				class_name: "Container",
+				image_uri: image,
+				image_tag: image,
+			},
+			{ info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+			undefined,
+			"test registry configure"
+		);
+		await pull.ready;
+
+		expect(runDockerCmd).toHaveBeenCalledExactlyOnceWith("docker", [
+			"pull",
+			image,
+			"--platform",
+			"linux/amd64",
 		]);
 	});
 });
@@ -342,12 +376,17 @@ describe("prepareContainerImagesForDev", () => {
 			const result = await prepareContainerImagesForDev({
 				dockerPath: "test-docker",
 				containerOptions: [],
+				dockerUnavailableHint: "test hint",
+				registryConfigureCommand: "test registry configure",
 				onContainerImagePreparationStart: onStart,
 				onContainerImagePreparationEnd: onEnd,
 				logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 			});
 			expect(verifyDockerInstalled).toHaveBeenCalledWith(
-				expect.objectContaining({ dockerPath: "test-docker" })
+				expect.objectContaining({
+					dockerPath: "test-docker",
+					hint: "test hint",
+				})
 			);
 			expect(startContainerBuild).not.toHaveBeenCalled();
 			expect(runDockerCmd).toHaveBeenCalledExactlyOnceWith("test-docker", [
@@ -357,6 +396,50 @@ describe("prepareContainerImagesForDev", () => {
 			expect(onStart).not.toHaveBeenCalled();
 			expect(onEnd).not.toHaveBeenCalled();
 			expect(result).toEqual({ aborted: false });
+		}
+	);
+
+	it.skipIf(process.platform === "win32")(
+		"defaults the Docker error to running dev with no hint",
+		async ({ expect }) => {
+			vi.mocked(verifyDockerInstalled).mockClear();
+			await prepareContainerImagesForDev({
+				dockerPath: "test-docker",
+				containerOptions: [],
+				registryConfigureCommand: "test registry configure",
+				onContainerImagePreparationStart: vi.fn(),
+				onContainerImagePreparationEnd: vi.fn(),
+				logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+			});
+			expect(verifyDockerInstalled).toHaveBeenCalledWith(
+				expect.objectContaining({
+					operation: "running dev",
+					hint: undefined,
+				})
+			);
+		}
+	);
+
+	it.skipIf(process.platform === "win32")(
+		"lets callers describe the operation and how to disable Containers",
+		async ({ expect }) => {
+			vi.mocked(verifyDockerInstalled).mockClear();
+			await prepareContainerImagesForDev({
+				dockerPath: "test-docker",
+				containerOptions: [],
+				registryConfigureCommand: "test registry configure",
+				onContainerImagePreparationStart: vi.fn(),
+				onContainerImagePreparationEnd: vi.fn(),
+				logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+				operation: "running tests",
+				dockerUnavailableHint: "Disable Containers in the test config.",
+			});
+			expect(verifyDockerInstalled).toHaveBeenCalledWith(
+				expect.objectContaining({
+					operation: "running tests",
+					hint: "Disable Containers in the test config.",
+				})
+			);
 		}
 	);
 });

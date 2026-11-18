@@ -36,7 +36,10 @@ export type BuildProps = {
 	compatibilityDate: string | undefined;
 	/** Merged: --compatibility-flags arg ?? config.compatibility_flags. */
 	compatibilityFlags: string[];
-	/** Merged: --upload-source-maps arg ?? config.upload_source_maps. */
+	/**
+	 * Merged: --upload-source-maps arg ?? config.upload_source_maps.
+	 * `undefined` means source maps are uploaded on a best-effort basis.
+	 */
 	uploadSourceMaps: boolean | undefined;
 	/** Merged: --jsx-factory arg || config.jsx_factory. */
 	jsxFactory: string;
@@ -66,9 +69,17 @@ export type BuildProps = {
 	metafile: string | boolean | undefined;
 };
 
+/**
+ * Build (bundle) a Worker.
+ *
+ * @param options.sourceMapDirectory The directory the Worker's source maps will
+ * be written to. Without it, they are prepared for upload. See
+ * {@link loadSourceMaps}.
+ */
 export async function buildWorker(
 	props: BuildProps,
-	config: Config
+	config: Config,
+	{ sourceMapDirectory }: { sourceMapDirectory?: string } = {}
 ): Promise<WorkerBuildResult> {
 	const nodejsCompatMode = validateNodeCompatMode(
 		props.compatibilityDate,
@@ -158,7 +169,7 @@ export async function buildWorker(
 					tsconfig: props.tsconfig,
 					minify,
 					keepNames: config.keep_names ?? true,
-					sourcemap: uploadSourceMaps,
+					sourcemap: uploadSourceMaps ?? true,
 					nodejsCompatMode,
 					compatibilityDate,
 					compatibilityFlags,
@@ -210,9 +221,13 @@ export async function buildWorker(
 		content,
 		type: bundleType,
 	};
-	const sourceMaps = uploadSourceMaps
-		? loadSourceMaps(main, modules, bundle)
-		: undefined;
+	const sourceMaps =
+		uploadSourceMaps === false
+			? undefined
+			: loadSourceMaps(main, modules, bundle, {
+					strict: uploadSourceMaps === true,
+					sourceMapDirectory,
+				});
 
 	return {
 		modules,

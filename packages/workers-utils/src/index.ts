@@ -84,8 +84,14 @@ export const friendlyBindingNames = validation.friendlyBindingNames;
 export {
 	type BindingLocalSupport,
 	getBindingLocalSupport,
+	resolveBindingRemote,
 	validateBindingRemoteSetting,
 } from "./config/binding-local-support";
+export {
+	type ArtifactsDevBinding,
+	type ArtifactsLocalDefaultWarner,
+	createArtifactsLocalDefaultWarner,
+} from "./config/artifacts-local-default";
 
 export { validatePagesConfig } from "./config/validation-pages";
 
@@ -149,6 +155,8 @@ export {
 	stripRedundantNodejsCompatFlags,
 } from "./compatibility-date";
 export type { CompatDate } from "./compatibility-date";
+export { getNodeCompat } from "./node-compat";
+export { getFreshSourceMapSupport } from "./sourcemap";
 export { DEFAULT_COMPAT_DATE } from "./default-compat-date";
 
 export { isDockerfile } from "./config/validation";
@@ -173,6 +181,8 @@ export { resolveNamedTunnel, startTunnel } from "./tunnel";
 export { spawnCloudflared } from "./cloudflared";
 
 export * from "./cfetch";
+export * from "./custom-api-headers";
+export * from "./sanitize-headers";
 
 export { fetchLatestNpmVersion } from "./update-check";
 export type { NpmVersionCheckResult } from "./update-check";
@@ -190,6 +200,7 @@ export { formatTime } from "./format-time";
 export {
 	getHostFromRoute,
 	getHostFromUrl,
+	getWorkerZone,
 	getZoneFromRoute,
 } from "./route-utils";
 
@@ -223,3 +234,4 @@ export type {
 	D1MigrationFile,
 	GetD1MigrationFilesOptions,
 } from "./d1-migrations";
+export { normalizeSqlLineEndings, splitSqlQuery } from "./d1-splitter";

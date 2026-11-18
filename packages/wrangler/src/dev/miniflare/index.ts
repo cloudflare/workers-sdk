@@ -8,6 +8,7 @@ import {
 	getWranglerHiddenDirPath,
 	isUnsafeBindingType,
 	partitionExports,
+	resolveBindingRemote,
 	UserError,
 	validateBindingRemoteSetting,
 } from "@cloudflare/workers-utils";
@@ -22,8 +23,10 @@ import { getDurableObjectClassNameToUseSQLiteMap } from "../class-names-sqlite";
 import type { StartDevWorkerInput } from "../../api/startDevWorker/types";
 import type { LoggerLevel } from "../../logger";
 import type { EsbuildBundle } from "../use-esbuild";
+import type { ArtifactsEventSubscription } from "@cloudflare/config";
 import type { ContainerDevRuntimeOptions } from "@cloudflare/containers-shared";
 import type {
+	ArtifactsEventTrigger,
 	AssetsOptions,
 	Binding,
 	CfD1Database,
@@ -93,6 +96,7 @@ export interface ConfigBundle {
 	routes: string[] | undefined;
 	queueConsumers: Config["queues"]["consumers"];
 	connectHandlers: ConnectHandler[];
+	artifactsEvents: ArtifactsEventTrigger[];
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
 	upstreamProtocol: "http" | "https";
@@ -356,21 +360,67 @@ function pipelineEntry(
 		throw new Error("Pipeline must have either a stream");
 	}
 }
-function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
+function hyperdriveEntry(
+	hyperdrive: CfHyperdrive,
+	remoteProxyConnectionString?: RemoteProxyConnectionString
+):
+	| [string, string]
+	| [
+			string,
+			{
+				id: string;
+				remoteProxyConnectionString: RemoteProxyConnectionString;
+			},
+	  ] {
+	if (hyperdrive.remote && remoteProxyConnectionString) {
+		return [
+			hyperdrive.binding,
+			{
+				id: hyperdrive.id,
+				remoteProxyConnectionString,
+			},
+		];
+	}
+
+	// Opted into a remote binding, but no remote proxy session is available
+	// (not logged in, offline, or remote bindings turned off). There is nothing
+	// to tunnel to, so fall back to the local database if one was configured and
+	// otherwise explain how to get either half working — without this the empty
+	// connection string below fails miniflare's URL validation with an opaque
+	// error.
+	if (hyperdrive.remote) {
+		if (hyperdrive.localConnectionString === undefined) {
+			throw new UserError(
+				`The Hyperdrive binding "${hyperdrive.binding}" is configured with "remote": true, but no remote connection could be established, and it has no local database to fall back to. Please make sure you are authenticated (run \`wrangler login\`) and connected to the internet so that Wrangler can reach your Hyperdrive configuration, or set the value of the 'CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to a local Postgres connection string.`,
+				{
+					telemetryMessage:
+						"hyperdrive remote binding session and local connection string missing",
+				}
+			);
+		}
+		logger.once.warn(
+			`The Hyperdrive binding "${hyperdrive.binding}" is configured with "remote": true, but no remote connection could be established. Falling back to its "localConnectionString".`
+		);
+	}
+
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
 }
-function workflowEntry({
-	binding,
-	name,
-	class_name: className,
-	script_name: scriptName,
-	limits,
-}: CfWorkflow): [
+function workflowEntry(
+	{
+		binding,
+		name,
+		class_name: className,
+		script_name: scriptName,
+		limits,
+	}: CfWorkflow,
+	events: ArtifactsEventSubscription[] | undefined
+): [
 	string,
 	{
 		name: string;
 		className: string;
 		scriptName?: string;
+		events?: ArtifactsEventSubscription[];
 		stepLimit?: number;
 	},
 ] {
@@ -382,6 +432,7 @@ function workflowEntry({
 			name,
 			className,
 			scriptName,
+			events,
 			...(stepLimit !== undefined && { stepLimit }),
 		},
 	];
@@ -504,7 +555,10 @@ type MiniflareBindingsConfig = Pick<
 	| "enableContainers"
 > &
 	Partial<
-		Pick<ConfigBundle, "format" | "bundle" | "assets" | "compatibilityFlags">
+		Pick<
+			ConfigBundle,
+			"format" | "bundle" | "assets" | "compatibilityFlags" | "artifactsEvents"
+		>
 	>;
 
 // TODO(someday): would be nice to type these methods more, can we export types for
@@ -799,19 +853,25 @@ export function buildMiniflareBindingOptions(
 	// Workflows declared under `exports` (accessible via `ctx.exports`) are
 	// carried to Miniflare separately from `workflows[]` env bindings, keyed by
 	// the exported class name.
+	const exportedWorkflows = partitionExports(config.exports).workflow;
+	const workflowEvents = assignWorkflowEvents(
+		config.artifactsEvents,
+		config.name,
+		exportedWorkflows,
+		workflows
+	);
 	const workflowExports: NonNullable<WorkerOptionsBindings["workflowExports"]> =
 		Object.fromEntries(
-			Object.entries(partitionExports(config.exports).workflow).map(
-				([className, workflow]) => [
-					className,
-					{
-						name: workflow.name,
-						...(workflow.limits?.steps !== undefined && {
-							stepLimit: workflow.limits.steps,
-						}),
-					},
-				]
-			)
+			Object.entries(exportedWorkflows).map(([className, workflow]) => [
+				className,
+				{
+					name: workflow.name,
+					events: workflowEvents.exports.get(className),
+					...(workflow.limits?.steps !== undefined && {
+						stepLimit: workflow.limits.steps,
+					}),
+				},
+			])
 		);
 
 	const bindingOptions: WorkerOptionsBindings = {
@@ -905,11 +965,19 @@ export function buildMiniflareBindingOptions(
 				];
 			})
 		),
-		hyperdrives: Object.fromEntries(hyperdrives.map(hyperdriveEntry)),
+		hyperdrives: Object.fromEntries(
+			hyperdrives.map((hyperdrive) =>
+				hyperdriveEntry(hyperdrive, remoteProxyConnectionString)
+			)
+		),
 		analyticsEngineDatasets: Object.fromEntries(
 			analyticsEngineDatasets.map((binding) => [
 				binding.binding,
-				{ dataset: binding.dataset ?? "dataset" },
+				{
+					dataset: binding.dataset ?? "dataset",
+					...(remoteProxyConnectionString &&
+						binding.remote && { remoteProxyConnectionString }),
+				},
 			])
 		),
 		workflows: Object.fromEntries(
@@ -940,7 +1008,10 @@ export function buildMiniflareBindingOptions(
 						);
 					}
 				}
-				return workflowEntry(workflow);
+				return workflowEntry(
+					workflow,
+					workflowEvents.bindings.get(workflow.binding)
+				);
 			})
 		),
 		workflowExports,
@@ -960,7 +1031,12 @@ export function buildMiniflareBindingOptions(
 				binding.binding,
 				{
 					namespace: binding.namespace,
-					remoteProxyConnectionString,
+					remoteProxyConnectionString: resolveBindingRemote(
+						"artifacts",
+						binding.remote
+					)
+						? remoteProxyConnectionString
+						: undefined,
 				},
 			])
 		),
@@ -1246,6 +1322,76 @@ export async function buildMiniflareOptions(
 		],
 	};
 	return options;
+}
+
+/** Workflow-owned events, keyed by export class name or binding name. */
+interface WorkflowEventAssignment {
+	exports: Map<string, ArtifactsEventSubscription[]>;
+	bindings: Map<string, ArtifactsEventSubscription[]>;
+}
+
+/**
+ * Gives each `triggers.events` target to the one local declaration of its
+ * Workflow: the export when there is one, otherwise the first local binding.
+ * Miniflare starts a subscription for every declaration it receives, so a
+ * Workflow declared both ways must not receive its events twice.
+ *
+ * @throws {UserError} If a target is not a Workflow this Worker defines,
+ * matching the check `wrangler deploy` makes.
+ */
+function assignWorkflowEvents(
+	triggers: ArtifactsEventTrigger[] | undefined,
+	scriptName: string | undefined,
+	exportedWorkflows: Record<string, { name: string }>,
+	workflowBindings: CfWorkflow[]
+): WorkflowEventAssignment {
+	const assignment: WorkflowEventAssignment = {
+		exports: new Map(),
+		bindings: new Map(),
+	};
+	if (!triggers?.length) {
+		return assignment;
+	}
+	const owners = new Map<string, ArtifactsEventSubscription[]>();
+	for (const [className, { name }] of Object.entries(exportedWorkflows)) {
+		if (!owners.has(name)) {
+			const events: ArtifactsEventSubscription[] = [];
+			owners.set(name, events);
+			assignment.exports.set(className, events);
+		}
+	}
+	for (const workflow of workflowBindings) {
+		const local =
+			workflow.script_name === undefined || workflow.script_name === scriptName;
+		if (local && !owners.has(workflow.name)) {
+			const events: ArtifactsEventSubscription[] = [];
+			owners.set(workflow.name, events);
+			assignment.bindings.set(workflow.binding, events);
+		}
+	}
+	for (const trigger of triggers) {
+		for (const target of trigger.targets) {
+			const events = owners.get(target.workflow_name);
+			if (events === undefined) {
+				throw new UserError(
+					`Event trigger "${trigger.type}" targets Workflow "${target.workflow_name}", but that Workflow is not defined by this Worker.\n\nAdd it to the "workflows" configuration or remove the event trigger target.`,
+					{ telemetryMessage: "dev event target workflow not defined" }
+				);
+			}
+			events.push({
+				type: trigger.type,
+				...(trigger.filter === undefined
+					? {}
+					: {
+							filter: {
+								namespace: trigger.filter.namespace,
+								repoName: trigger.filter.repo_name,
+							},
+						}),
+			});
+		}
+	}
+	return assignment;
 }
 
 /**

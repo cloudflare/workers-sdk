@@ -7,6 +7,8 @@ export function getSourceType(source: EventSource): string {
 
 export function getSourceResource(source: EventSource): string {
 	switch (source.type) {
+		case EventSourceType.ARTIFACTS_REPO:
+			return `${source.namespace}/${source.repo_name}`;
 		case EventSourceType.EMAIL_SENDING:
 			return source.domain;
 		case EventSourceType.WORKERS_AI_MODEL:

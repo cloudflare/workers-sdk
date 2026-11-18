@@ -281,9 +281,9 @@ describe("versions upload", () => {
 			).resolves.toBeUndefined();
 
 			expect(previewAccountRequests).toBe(1);
-			expect(std.out).toContain(TEMPORARY_TERMS_NOTICE);
-			expect(std.out).toContain("Temporary account ready:");
-			expect(std.out).toContain("Account: Preview Account Alpha (created)");
+			expect(std.err).toContain(TEMPORARY_TERMS_NOTICE);
+			expect(std.err).toContain("Temporary account ready:");
+			expect(std.err).toContain("Account: Preview Account Alpha (created)");
 			expect(std.out).toContain("Uploaded test-name");
 		});
 	});
@@ -839,7 +839,7 @@ describe("versions upload", () => {
 			});
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo top-level \`name\` has been defined in Wrangler configuration. Add a top-level \`name\` to group this Worker together with its sibling environments in the Cloudflare dashboard.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo top-level \`name\` has been defined in your wrangler.toml. Add a top-level \`name\` to group this Worker together with its sibling environments in the Cloudflare dashboard.[0m
 
 				"
 			`);
@@ -1751,6 +1751,58 @@ describe("versions upload", () => {
 			);
 			expect(std.out).not.toContain("Uploaded");
 			expect(process.exitCode).not.toBe(0);
+		});
+
+		test("should not fetch routes when checking dashboard config in strict mode", async ({
+			expect,
+		}) => {
+			let routeRequests = 0;
+			let customDomainRequests = 0;
+			mockGetScript({
+				default_environment: {
+					environment: "production",
+					script: {
+						last_deployed_from: "dash",
+						tag: "test-tag",
+						tags: null,
+					},
+				},
+			});
+			mockRemoteWorkerConfig([]);
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/workers/services/:serviceName/environments/:env/routes",
+					() => {
+						routeRequests++;
+						return HttpResponse.json({}, { status: 403 });
+					}
+				),
+				http.get("*/accounts/:accountId/workers/domains/records", () => {
+					customDomainRequests++;
+					return HttpResponse.json({}, { status: 403 });
+				})
+			);
+			mockUploadVersion(false);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				compatibility_date: "2024-01-01",
+				routes: ["example.com/*"],
+			});
+			writeWorkerSource();
+
+			await runWrangler("versions upload --strict");
+
+			expect(routeRequests).toBe(0);
+			expect(customDomainRequests).toBe(0);
+			expect(std.warn).not.toContain(
+				"Uploading the Worker will override the remote configuration with your local one."
+			);
+			expect(std.err).not.toContain(
+				"Aborting the upload operation because of conflicts"
+			);
+			expect(std.out).toContain("Uploaded test-name");
 		});
 
 		test("should abort in non-interactive strict mode when remote secrets would be overridden", async ({
@@ -2968,7 +3020,7 @@ describe("versions upload", () => {
 			setIsTTY(false);
 		});
 
-		test("sends workflow exports by name without provisioning the Workflow", async ({
+		test("sends workflow exports with their settings without provisioning the Workflow", async ({
 			expect,
 		}) => {
 			mockGetScript();
@@ -3007,9 +3059,17 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload --config ./wrangler.json");
 
-			const metadata = await getMetadata(requests[requests.length - 1]);
+			const request = requests[requests.length - 1];
+			expect(request.headers.get("Cloudflare-Workers-Script-Api-Date")).toBe(
+				"2026-11-09"
+			);
+			const metadata = await getMetadata(request);
 			expect(metadata.exports).toEqual({
-				MyWorkflow: { type: "workflow", name: "my-workflow" },
+				MyWorkflow: {
+					type: "workflow",
+					name: "my-workflow",
+					limits: { steps: 10 },
+				},
 			});
 			expect(workflowPuts).toBe(0);
 		});

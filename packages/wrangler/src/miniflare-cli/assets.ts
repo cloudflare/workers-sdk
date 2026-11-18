@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { createMetadataObject } from "@cloudflare/pages-shared/metadata-generator/createMetadataObject";
 import { parseHeaders, parseRedirects } from "@cloudflare/workers-shared";
 import { watch } from "chokidar";
@@ -231,7 +231,13 @@ async function generateAssetsFetch(
 			logError: logger.error,
 			findAssetEntryForPath: async (path) => {
 				const filepath = resolve(join(directory, path));
-				if (!filepath.startsWith(directory)) {
+				const relativePath = relative(directory, filepath);
+				// Compare path components to exclude neighboring names with the same prefix.
+				if (
+					relativePath === ".." ||
+					relativePath.startsWith(`..${sep}`) ||
+					isAbsolute(relativePath)
+				) {
 					return null;
 				}
 

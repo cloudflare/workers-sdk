@@ -3,7 +3,7 @@
 // Named types and helper factories for declaring event triggers.
 // ═══════════════════════════════════════════════════════════════════════════
 
-interface FetchTriggerOptions {
+export interface FetchTriggerOptions {
 	/**
 	 * A route that your Worker should be published to.
 	 *
@@ -26,7 +26,7 @@ export interface FetchTrigger extends FetchTriggerOptions {
 	type: "fetch";
 }
 
-interface QueueConsumerTriggerOptions {
+export interface QueueConsumerTriggerOptions {
 	/** The name of the queue from which this consumer should consume. */
 	name: string;
 	/** The queue to send messages that failed to be consumed. */
@@ -40,7 +40,7 @@ interface QueueConsumerTriggerOptions {
 	 * Leaving this unset will allow your consumer to scale to the
 	 * maximum concurrency needed to keep up with the message backlog.
 	 */
-	maxConcurrency?: number | null;
+	maxConcurrency?: number;
 	/** The maximum number of retries for each message. */
 	maxRetries?: number;
 	/** The number of seconds to wait before retrying a message. */
@@ -59,7 +59,7 @@ export interface QueueConsumerTrigger extends QueueConsumerTriggerOptions {
 	type: "queue";
 }
 
-interface ScheduledTriggerOptions {
+export interface ScheduledTriggerOptions {
 	/**
 	 * A "cron" definition to trigger a Worker's "scheduled" function.
 	 *
@@ -79,7 +79,7 @@ export interface ScheduledTrigger extends ScheduledTriggerOptions {
 	type: "scheduled";
 }
 
-interface EmailTriggerOptions {
+export interface EmailTriggerOptions {
 	/**
 	 * Inbound Email Routing addresses handled by this Worker.
 	 *
@@ -114,7 +114,7 @@ type UdpConnectTriggerOptions = ConnectTriggerOptionsBase & {
 	maxPendingBytes?: number;
 };
 
-type ConnectTriggerOptions =
+export type ConnectTriggerOptions =
 	| TcpConnectTriggerOptions
 	| UdpConnectTriggerOptions;
 

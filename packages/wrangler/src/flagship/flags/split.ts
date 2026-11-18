@@ -95,7 +95,7 @@ export const flagshipFlagsSplitCommand = createCommand({
 					conditions: [],
 					serve_variation: variation,
 					rollout: {
-						percentage: Math.min(100, Number(cumulative.toFixed(6))),
+						percentage: Math.min(100, Number(cumulative.toFixed(2))),
 						attribute: args.by,
 					},
 				});

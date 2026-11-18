@@ -9,8 +9,16 @@ import {
 	toOutputValue,
 	type UnknownRecord,
 } from "./converter-helpers";
-import { DURABLE_OBJECT_EXPORTS_DOCS_URL, createFollowUp } from "./follow-ups";
+import { WORKFLOW_SETTINGS, isLocalWorkflow } from "./exports";
+import {
+	DURABLE_OBJECT_EXPORTS_DOCS_URL,
+	createFollowUp,
+	followUpToComment,
+} from "./follow-ups";
 import type { MigrationFollowUp, OutputObject, OutputValue } from "./types";
+
+/** Written in place of a legacy pipeline name, which isn't a stream ID. */
+const LEGACY_PIPELINE_STREAM_ID_PLACEHOLDER = "STREAM_ID";
 
 function addBinding(
 	bindings: Map<string, OutputValue>,
@@ -46,7 +54,7 @@ function addBinding(
 
 function reportUnsupportedOptions(
 	record: UnknownRecord,
-	keys: string[],
+	keys: readonly string[],
 	sourcePath: string,
 	report: (followUp: MigrationFollowUp) => void
 ): void {
@@ -68,7 +76,7 @@ export function convertBindings(
 	source: UnknownRecord,
 	sourcePrefix: string,
 	imports: Set<string>,
-	report: (followUp: MigrationFollowUp) => void
+	report: (followUp: MigrationFollowUp, options?: { inline?: boolean }) => void
 ): OutputObject | undefined {
 	const bindings = new Map<string, OutputValue>();
 	const pathFor = (field: string, index?: number) =>
@@ -157,7 +165,8 @@ export function convertBindings(
 		"analytics_engine_datasets",
 		"binding",
 		"bindings.analyticsEngineDataset",
-		[["dataset", "name"]]
+		[["dataset", "name"]],
+		{ remote: true }
 	);
 	convertArrayBindings(
 		"artifacts",
@@ -219,7 +228,7 @@ export function convertBindings(
 			report
 		);
 	}
-	convertArrayBindings("k2", "binding", "bindings.k2", [["stream", "stream"]], {
+	convertArrayBindings("k2", "binding", "bindings.k2", [["stream", "id"]], {
 		remote: true,
 	});
 	convertArrayBindings(
@@ -237,17 +246,41 @@ export function convertBindings(
 		{ remote: true }
 	);
 	for (const [index, entry] of getRecords(source, "pipelines").entries()) {
+		const sourcePath = pathFor("pipelines", index);
+		// The deprecated `pipeline` field names a legacy pipeline, which
+		// `@cloudflare/config` doesn't support. It isn't a stream ID, so write a
+		// placeholder for the user to replace instead of copying it.
+		const isLegacy = entry.stream === undefined && entry.pipeline !== undefined;
 		const options = optionsFromRecord(
-			{ ...entry, name: entry.stream ?? entry.pipeline },
-			[["name", "name"]],
+			{
+				...entry,
+				streamId: isLegacy
+					? LEGACY_PIPELINE_STREAM_ID_PLACEHOLDER
+					: entry.stream,
+			},
+			[["streamId", "streamId"]],
 			true
 		);
+		if (isLegacy) {
+			const followUp = createFollowUp(
+				"legacy-pipeline-binding",
+				`The Pipelines binding at \`${sourcePath}\` used the deprecated \`pipeline\` field, which names a legacy pipeline. Set \`streamId\` to the ID of the stream to write to.`,
+				{ sourcePath }
+			);
+			report(followUp, { inline: true });
+			const streamId = options.properties.find(
+				(property) => property.key === "streamId"
+			);
+			if (streamId) {
+				streamId.comments = [followUpToComment(followUp)];
+			}
+		}
 		imports.add("bindings");
 		addBinding(
 			bindings,
 			entry.binding,
 			call("bindings.pipeline", options),
-			pathFor("pipelines", index),
+			sourcePath,
 			report
 		);
 	}
@@ -303,12 +336,17 @@ export function convertBindings(
 			sourcePath,
 			report
 		);
-		reportUnsupportedOptions(
-			entry,
-			["preview_bucket_name"],
-			sourcePath,
-			report
-		);
+		if (
+			hasOwn(entry, "preview_bucket_name") &&
+			entry.preview_bucket_name !== entry.bucket_name
+		) {
+			reportUnsupportedOptions(
+				entry,
+				["preview_bucket_name"],
+				sourcePath,
+				report
+			);
+		}
 	}
 	convertArrayBindings(
 		"secrets_store_secrets",
@@ -478,6 +516,12 @@ export function convertBindings(
 
 	const durableObjects = getRecord(source, "durable_objects");
 	if (durableObjects) {
+		reportUnsupportedOptions(
+			durableObjects,
+			["code_update_strategy"],
+			pathFor("durable_objects"),
+			report
+		);
 		for (const [index, entry] of getRecords(
 			durableObjects,
 			"bindings"
@@ -492,7 +536,7 @@ export function convertBindings(
 				worker = `${worker}-${entry.environment}`;
 			}
 
-			const sourcePath = pathFor("durable_objects.bindings", index);
+			const sourcePath = pathFor(`durable_objects.bindings[${index}]`);
 			imports.add("bindings");
 
 			addBinding(
@@ -514,27 +558,72 @@ export function convertBindings(
 				sourcePath,
 				report
 			);
-			report(
-				createFollowUp(
-					"durable-object-review",
-					"Durable Object bindings require manual review after migration.",
-					{
-						docsUrl: DURABLE_OBJECT_EXPORTS_DOCS_URL,
-						sourcePath,
-					}
-				)
-			);
+			if (
+				typeof entry.class_name !== "string" ||
+				entry.class_name.length === 0
+			) {
+				report(
+					createFollowUp(
+						"durable-object-missing-class",
+						`The Durable Object binding at \`${sourcePath}\` has no \`class_name\`. Set it to the class exported by the Worker.`,
+						{ docsUrl: DURABLE_OBJECT_EXPORTS_DOCS_URL, sourcePath }
+					)
+				);
+			}
 		}
 	}
 
-	if (getRecords(source, "workflows").length > 0) {
-		report(
-			createFollowUp(
-				"workflows-unsupported",
-				"Workflow bindings are not supported by the new config and were not migrated.",
-				{ sourcePath: pathFor("workflows") }
-			)
-		);
+	const workflows = getRecords(source, "workflows");
+	if (workflows.length > 0) {
+		for (const [index, entry] of workflows.entries()) {
+			const sourcePath = pathFor("workflows", index);
+			if (
+				typeof entry.class_name !== "string" ||
+				entry.class_name.length === 0
+			) {
+				report(
+					createFollowUp(
+						"workflow-missing-class",
+						`The Workflow binding at \`${sourcePath}\` has no \`class_name\` and was not migrated.`,
+						{ sourcePath }
+					)
+				);
+				continue;
+			}
+
+			// A Workflow defined by another Worker keeps its settings on that
+			// Worker's export; this Worker only binds to it. A Workflow this Worker
+			// defines, including one whose `script_name` names this Worker, also gets
+			// an `exports.workflow` entry (see convertExports).
+			const external = !isLocalWorkflow(entry, source);
+			const worker = external
+				? String(entry.script_name)
+				: typeof source.name === "string"
+					? source.name
+					: "TODO";
+
+			imports.add("bindings");
+			addBinding(
+				bindings,
+				entry.binding,
+				call(
+					"bindings.workflow",
+					optionsFromRecord(
+						{ name: entry.name, worker, export_name: entry.class_name },
+						[
+							["name", "name"],
+							["worker", "worker"],
+							["export_name", "exportName"],
+						]
+					)
+				),
+				sourcePath,
+				report
+			);
+			if (external) {
+				reportUnsupportedOptions(entry, WORKFLOW_SETTINGS, sourcePath, report);
+			}
+		}
 	}
 
 	function convertSingletonBinding(
@@ -561,7 +650,7 @@ export function convertBindings(
 	}
 
 	convertSingletonBinding("ai", "binding", "bindings.ai", ["staging"]);
-	convertSingletonBinding("analytics", "binding", "bindings.analyticsSQL");
+	convertSingletonBinding("analytics", "binding", "bindings.analyticsSql");
 	convertSingletonBinding("browser", "binding", "bindings.browser");
 	convertSingletonBinding("images", "binding", "bindings.images");
 	convertSingletonBinding("media", "binding", "bindings.media");

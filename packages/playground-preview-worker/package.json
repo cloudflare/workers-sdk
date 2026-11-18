@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/playground-preview-worker",
-	"version": "0.3.4",
+	"version": "0.3.6",
 	"private": true,
 	"scripts": {
 		"build-middleware": "pnpm run build-middleware:common && pnpm run build-middleware:loader",
@@ -13,7 +13,7 @@
 		"test:e2e": "vitest run --test-timeout 30000"
 	},
 	"dependencies": {
-		"hono": "^4.12.5",
+		"hono": "^4.13.11",
 		"zod": "catalog:default"
 	},
 	"devDependencies": {

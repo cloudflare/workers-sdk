@@ -1,0 +1,184 @@
+# Artifacts in Miniflare
+
+For setup, persistence, Git authentication, and local/remote behavior, see
+[Local development](./LOCAL_DEVELOPMENT.md).
+
+The Artifacts plugin implements the local Artifacts binding in workerd. This
+first version requires Git 2.32 or newer installed globally on the host and
+available on PATH. Miniflare checks the Git version at local startup and gives
+installation or upgrade instructions if needed. A Node worker thread runs the
+native Git backend. Like every other binding, an Artifacts binding uses the
+remote proxy only when `dev.remote` is `true` and the Worker has a remote proxy
+connection string; otherwise it uses local storage. We plan to
+open-source a JavaScript Git engine in the future; it is not included in this
+version.
+
+## Local startup
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer tool
+    participant MF as Miniflare
+    participant Plugin as Artifacts plugin
+    participant Controller as ArtifactsController
+    participant Sidecar as Node Git sidecar
+    participant Workerd as workerd
+
+    Dev->>MF: Configure Artifacts binding
+    MF->>Plugin: getBindings()
+    Plugin->>Plugin: Select local and validate namespace
+    Plugin-->>MF: Wrapped binding around the local namespace entrypoint
+    MF->>Plugin: getServices()
+    Plugin->>Plugin: Verify host Git is available on PATH
+    Plugin->>Controller: get(Git storage path)
+    Controller->>Sidecar: Start worker thread and private HTTP listener
+    Sidecar-->>Controller: Address and secret
+    Controller-->>Plugin: Sidecar endpoint and Git socket port
+    Plugin-->>MF: Binding Worker, DO storage, backend service, Git socket
+    MF->>Workerd: Start configured services and socket
+```
+
+`getBindings()` routes each local binding to a namespace-scoped service through
+a wrapped binding (`wrapped-binding.worker.ts`) that runs in the caller's
+isolate. The binding Worker and Durable Object return `{ ok, value | error }`
+outcomes, and the wrapper throws `ArtifactsError` there: an exception thrown
+across a workerd RPC boundary is logged as uncaught under `--verbose`, which
+Workers Vitest enables, even when the caller catches it.
+`getServices()` creates the binding Worker, namespace Durable Object, persistent
+metadata disk, internal Git backend service, and Git socket. The controller
+reuses a sidecar per Git storage path and closes it when Miniflare is disposed.
+It records the Git socket's port in `git-port` next to the namespace's storage
+and reuses it on the next start while it is free, so clones keep their
+`origin`.
+The socket used by Git clients and the sidecar's private HTTP listener are
+**different endpoints**. If the sidecar exits after startup, the controller
+forgets its endpoint and warns; an explicit Miniflare configuration reload
+reconnects, but existing workerd connections do not recover automatically.
+Restart the dev server or reload its configuration if Git operations stop
+working after a sidecar exit.
+
+## Local binding RPC
+
+For example, `env.REPOS.create("demo")`:
+
+```mermaid
+sequenceDiagram
+    participant App as User Worker
+    participant Entry as Binding Worker
+    participant DO as Namespace DO
+    participant Backend as Backend service
+    participant Sidecar as Node Git sidecar
+    participant Disk as Local disk
+
+    App->>Entry: env.REPOS.create("demo")
+    Entry->>DO: RPC create("demo")
+    DO->>DO: Validate and serialize mutation
+    DO->>Backend: POST internal create request
+    Backend->>Sidecar: Inject private backend header
+    Sidecar->>Disk: git init --bare
+    Sidecar-->>DO: Git state (via backend service)
+    DO->>Disk: Persist metadata and token hash
+    DO-->>Entry: Repository info and initial token
+    Entry-->>App: Create result
+```
+
+The Durable Object stores repository metadata and token hashes on local disk;
+the sidecar stores the bare Git repositories separately. `git-sidecar.ts`
+handles HTTP routing and repository locks, while `git-client.ts` owns
+repository-scoped Git commands and result parsing. Read operations such as
+`readFile()` also use the binding Worker and native Git backend. Node callers
+reach the same binding through Miniflare's Node binding proxy. Namespace and
+repository names are hashed into short, namespace-scoped on-disk paths; this
+leaves room for Git packfiles and workerd SQLite files on platforms with path
+length limits. Creation, fork, and import use private staging directories;
+interrupted staging is removed on the next backend startup. If a process dies
+while creating a repository, a leftover creation lock blocks reuse until you
+confirm no other dev server uses the directory and remove the lock named in
+the error. Import URL credentials are passed to Git as an ephemeral HTTPS
+authorization header,
+not recorded in a repository's Git config. Host Git runs with an isolated HOME
+so it cannot read the developer's `.netrc`; SSH/scp-style imports and Git remote
+helpers are rejected rather than accessing host SSH keys or executing helpers.
+The local Worker binding accepts only explicit HTTPS imports; filesystem paths
+are available only to the internal Git client. Repository locks are process-local:
+do not run two dev servers against the same Artifacts persistence directory at
+the same time. Older draft storage layouts are not migrated automatically:
+startup rejects a detected old layout rather than silently creating empty
+repositories. Back up any local repositories before resetting the Artifacts
+persistence directory. Do not delete the persistence directory without first
+checking whether it holds work you need.
+
+## Git clone and push
+
+```mermaid
+sequenceDiagram
+    participant Git as Git client
+    participant Socket as Git socket
+    participant Entry as Binding Worker
+    participant DO as Namespace DO
+    participant Backend as Backend service
+    participant Sidecar as Node Git sidecar
+    participant Native as Native Git
+
+    Git->>Socket: Git smart HTTP at /git/:namespace/:repo.git
+    Socket->>Entry: Route request
+    Entry->>DO: fetch(request)
+    DO->>DO: Check endpoint, repository, token, and scope
+    DO->>Backend: Forward request without Authorization header
+    Backend->>Sidecar: Inject private backend header
+    Sidecar->>Native: Stream via git http-backend
+    Native-->>Sidecar: Discovery or pack response
+    Sidecar-->>DO: Git response (via backend service)
+    opt Successful receive-pack push
+        DO->>Backend: Read updated refs
+        Backend->>Sidecar: Internal refs request
+        Sidecar-->>DO: Refs (via backend service)
+        DO->>DO: Persist updated push metadata
+    end
+    DO-->>Entry: Git response
+    Entry-->>Socket: Git response
+    Socket-->>Git: Git response
+```
+
+The binding Worker checks the supported Git endpoints and authenticates
+repository tokens before forwarding. The internal service injects the sidecar
+secret; the client's `Authorization` header is removed before that hop. For a
+successful push, the Durable Object refreshes repository metadata before
+returning the response. The sidecar uses native `git http-backend` for Git smart
+HTTP rather than reproducing Git's pack protocol. All native Git commands
+override repository-local hook configuration. The HTTP backend instead points
+`core.hooksPath` at a private directory with one `pre-receive` hook, which
+rejects pushes containing a blob over the 32 MiB per-file limit; reads of a
+larger blob written outside the binding fail with `MEMORY_LIMIT`.
+A failed deletion leaves an inaccessible, persisted tombstone, so retrying
+`delete()` or creating the same name can finish native Git cleanup even after a
+process restart.
+
+## Remote binding
+
+When `dev.remote` is `true` and a remote proxy connection string is set,
+this binding uses the remote-bindings proxy instead of creating local Artifacts
+storage or a local Git sidecar for that namespace.
+
+```mermaid
+sequenceDiagram
+    participant App as User Worker
+    participant MF as Miniflare
+    participant Plugin as Artifacts plugin
+    participant Proxy as Remote-bindings proxy
+    participant CF as Cloudflare Artifacts
+
+    MF->>Plugin: getBindings() with a remote proxy connection
+    Plugin-->>MF: Bind to remote proxy service
+    MF->>Proxy: Start remote proxy Worker
+    App->>Proxy: env.REPOS method call
+    Proxy->>CF: Remote binding request
+    CF-->>Proxy: Result
+    Proxy-->>App: Result
+```
+
+A local binding does not automatically synchronize with production Artifacts.
+An explicit repository import may contact its specified HTTPS Git remote from
+the developer's host, including private-network hosts; it does not follow HTTP
+redirects. This is distinct from enabling a remote Artifacts binding. Do not
+pass an untrusted URL to `import()` when the host can access sensitive services.

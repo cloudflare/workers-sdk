@@ -2,6 +2,7 @@ import path from "node:path";
 import { initDeployHelpersContext } from "@cloudflare/deploy-helpers";
 import { createWranglerProfileStore } from "@cloudflare/workers-auth/wrangler";
 import {
+	CommandLineArgsError,
 	defaultWranglerConfig,
 	FatalError,
 	getCloudflareEnv,
@@ -46,7 +47,10 @@ import { printWranglerBanner } from "../wrangler-banner";
 import { CommandHandledError } from "./CommandHandledError";
 import { getErrorType, handleError } from "./handle-errors";
 import { demandSingleValue } from "./helpers";
-import { temporaryArgDefinition } from "./temporary-commands";
+import {
+	eventCodeArgDefinition,
+	temporaryArgDefinition,
+} from "./temporary-commands";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type {
 	HandlerArgs,
@@ -75,7 +79,11 @@ export function createRegisterYargsCommand(
 			(subYargs) => {
 				if (def.type === "command") {
 					const args: NamedArgDefinitions = def.behaviour?.supportTemporary
-						? { ...def.args, temporary: temporaryArgDefinition }
+						? {
+								...def.args,
+								temporary: temporaryArgDefinition,
+								"event-code": eventCodeArgDefinition,
+							}
 						: (def.args ?? {});
 
 					const positionalArgs = new Set(def.positionalArgs);
@@ -242,9 +250,16 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				"eventCode" in args && typeof args.eventCode === "string"
 					? args.eventCode
 					: undefined;
+			// Never silently ignore an event code on a command that would use
+			// real credentials.
+			if (eventCode && !temporaryAllowed) {
+				throw new CommandLineArgsError("--event-code requires --temporary.", {
+					telemetryMessage: "temporary event code temporary required",
+				});
+			}
 			setTemporaryAllowed(
 				temporaryAllowed,
-				temporaryAllowed && eventCode ? { eventCode } : undefined
+				eventCode ? { eventCode } : undefined
 			);
 
 			await run(experimentalFlags, async () => {

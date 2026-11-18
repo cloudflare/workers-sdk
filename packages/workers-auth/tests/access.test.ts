@@ -14,10 +14,23 @@ import {
 import {
 	clearAccessCaches,
 	domainUsesAccess,
-	getAccessHeaders,
+	getAccessHeaders as getAccessHeadersForConsumer,
 } from "../src/access";
 import { mswAccessHandlers } from "../src/test-helpers/msw-handlers/access";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
+
+function getAccessHeaders(
+	domain: string,
+	options: Omit<
+		Parameters<typeof getAccessHeadersForConsumer>[1],
+		"cliDisplayName"
+	> & { cliDisplayName?: string }
+) {
+	return getAccessHeadersForConsumer(domain, {
+		cliDisplayName: "Wrangler",
+		...options,
+	});
+}
 
 vi.mock("node:child_process", () => ({
 	spawn: vi.fn(() => {
@@ -595,6 +608,16 @@ See https://developers.cloudflare.com/cloudflare-one/access-controls/service-cre
 					})
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: To use Wrangler with Cloudflare Access, please install \`cloudflared\` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation]`
+				);
+
+				await expect(
+					getAccessHeaders("access-protected.com", {
+						logger: silentLogger,
+						isNonInteractiveOrCI: () => false,
+						cliDisplayName: "cf",
+					})
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: To use cf with Cloudflare Access, please install \`cloudflared\` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation]`
 				);
 			});
 		});

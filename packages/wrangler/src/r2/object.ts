@@ -92,6 +92,7 @@ export const r2ObjectGetCommand = createCommand({
 		},
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner({ pipe }) {
 			return !pipe;
 		},
@@ -265,6 +266,7 @@ export const r2ObjectPutCommand = createCommand({
 		},
 	},
 	behaviour: {
+		supportTemporary: true,
 		printResourceLocation(args) {
 			return !args?.pipe;
 		},
@@ -373,15 +375,18 @@ export const r2ObjectPutCommand = createCommand({
 					// currently doesn't support sending these. Instead,
 					// `usingLocalBucket()` provides a single `PUT` endpoint
 					// for writing to a local bucket.
-					await mf.dispatchFetch(`http://localhost/${key}`, {
-						method: "PUT",
-						body: objectStream,
-						duplex: "half",
-						headers: {
-							"Content-Length": String(sizeBytes),
-							"Wrangler-R2-Put-Options": JSON.stringify(putOptions),
-						},
-					});
+					await mf.dispatchFetch(
+						`http://localhost/${encodeURIComponent(key)}`,
+						{
+							method: "PUT",
+							body: objectStream,
+							duplex: "half",
+							headers: {
+								"Content-Length": String(sizeBytes),
+								"Wrangler-R2-Put-Options": JSON.stringify(putOptions),
+							},
+						}
+					);
 				}
 			);
 		} else {
@@ -491,6 +496,7 @@ export const r2ObjectDeleteCommand = createCommand({
 		},
 	},
 	behaviour: {
+		supportTemporary: true,
 		printResourceLocation: true,
 	},
 	async handler(args) {
@@ -581,6 +587,7 @@ export const r2BulkPutCommand = createCommand({
 		},
 	},
 	behaviour: {
+		supportTemporary: true,
 		printResourceLocation: true,
 	},
 	async handler(yArgs, { config }) {
@@ -654,15 +661,18 @@ export const r2BulkPutCommand = createCommand({
 							// currently doesn't support sending these. Instead,
 							// `usingLocalBucket()` provides a single `PUT` endpoint
 							// for writing to a local bucket.
-							await mf.dispatchFetch(`http://localhost/${entry.key}`, {
-								method: "PUT",
-								body: stream.Readable.toWeb(fs.createReadStream(entry.file)),
-								duplex: "half",
-								headers: {
-									"Content-Length": String(entry.size),
-									"Wrangler-R2-Put-Options": jsonPutOptions,
-								},
-							});
+							await mf.dispatchFetch(
+								`http://localhost/${encodeURIComponent(entry.key)}`,
+								{
+									method: "PUT",
+									body: stream.Readable.toWeb(fs.createReadStream(entry.file)),
+									duplex: "half",
+									headers: {
+										"Content-Length": String(entry.size),
+										"Wrangler-R2-Put-Options": jsonPutOptions,
+									},
+								}
+							);
 						})
 					);
 

@@ -3,12 +3,14 @@ import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
 	extractBindingsOfType,
+	getWranglerHiddenDirPath,
 	getWranglerTmpDir,
 } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
 import { BuildFailure } from "../../deployment-bundle/build-failures";
 import { bundleWorker, shouldCheckFetch } from "../../deployment-bundle/bundle";
 import { getBundleType } from "../../deployment-bundle/bundle-type";
+import { guessWorkerFormat } from "../../deployment-bundle/guess-worker-format";
 import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
@@ -142,6 +144,7 @@ export class BundlerController extends Controller {
 	) {
 		this.emitBundleStartEvent(config);
 		try {
+			let exports = config.build.exports;
 			if (runBuildCommand) {
 				const relativeFile =
 					path.relative(config.projectRoot, config.entrypoint) || ".";
@@ -158,6 +161,21 @@ export class BundlerController extends Controller {
 				);
 				if (buildAborter.signal.aborted) {
 					return;
+				}
+				// `config.build.exports` describes the output of the initial build. The
+				// command may now have produced different exports, which determine both
+				// whether the middleware facade applies and the runtime's entrypoints.
+				if (config.build.format === "modules") {
+					exports = (
+						await guessWorkerFormat(
+							config.entrypoint,
+							config.projectRoot,
+							config.build.tsconfig
+						)
+					).exports;
+					if (buildAborter.signal.aborted) {
+						return;
+					}
 				}
 			}
 			assert(this.#tmpDir);
@@ -176,7 +194,7 @@ export class BundlerController extends Controller {
 				configPath: config.config,
 				format: config.build.format,
 				moduleRoot: config.build.moduleRoot,
-				exports: config.build.exports,
+				exports,
 			};
 
 			const entryDirectory = path.dirname(config.entrypoint);
@@ -385,6 +403,7 @@ export class BundlerController extends Controller {
 
 		// Since `this.#customBuildAborter` will change as new builds are scheduled, store the specific AbortController that will be used for this build
 		const buildAborter = this.#bundleBuildAborter;
+		let restartingForExportShape = false;
 
 		if (config.build?.custom?.command) {
 			return;
@@ -455,6 +474,32 @@ export class BundlerController extends Controller {
 						});
 					}
 				},
+				onExportShapeChange: (exports) => {
+					if (
+						restartingForExportShape ||
+						buildAborter.signal.aborted ||
+						this.tearingDown
+					) {
+						return;
+					}
+					restartingForExportShape = true;
+					// The export-shape plugin runs before the output plugin. Abort this
+					// generation now so the stale build is neither emitted nor reported as
+					// a failure while its watch context is being replaced.
+					buildAborter.abort();
+					void this.#startBundle({
+						...config,
+						build: { ...config.build, exports },
+					}).catch((err) => {
+						this.emitErrorEvent({
+							type: "error",
+							reason: "Failed to restart bundler after exports changed",
+							cause: castErrorCause(err),
+							source: "BundlerController",
+							data: { config },
+						});
+					});
+				},
 				checkFetch: shouldCheckFetch(
 					config.compatibilityDate,
 					config.compatibilityFlags
@@ -520,10 +565,17 @@ export class BundlerController extends Controller {
 		this.#debouncedRefreshBundle = debouncedRefreshBundle;
 
 		if (config.dev.watch !== false && config.assets?.directory) {
-			const assetsDir = config.assets.directory;
+			const assetsDir = path.resolve(config.assets.directory);
 			const watcher = watch(assetsDir, {
 				persistent: true,
 				ignoreInitial: true,
+				// Chokidar does not walk an ignored directory, so writes under
+				// `.wrangler` and `dev.persist` do not reload. Drop a write directory
+				// only when it is the assets directory, or the watcher would ignore
+				// the tree it was created to watch.
+				ignored: getDevSessionWriteDirs(config).filter(
+					(dir) => path.resolve(dir) !== assetsDir
+				),
 			})
 				.on("all", async (eventName, filePath) => {
 					const message = getAssetChangeMessage(eventName, filePath);
@@ -653,4 +705,16 @@ export class BundlerController extends Controller {
 	) {
 		this.bus.dispatch({ type: "bundleComplete", config, bundle });
 	}
+}
+
+/**
+ * Directories this dev session writes. `.wrangler` holds tmp, cache, and the
+ * default state dir. `dev.persist` is that default, or a `--persist-to` path.
+ */
+function getDevSessionWriteDirs(config: StartDevWorkerOptions): string[] {
+	const dirs = [getWranglerHiddenDirPath(config.projectRoot)];
+	if (config.dev.persist !== false) {
+		dirs.push(path.resolve(config.dev.persist));
+	}
+	return dirs;
 }

@@ -17,7 +17,12 @@ const BASE_CONFIG = {
 } satisfies RawConfig;
 
 const FIELD_CASES = {
-	access: {},
+	access: {
+		dev: {
+			aud: "my-app-aud-tag",
+			identity: { email: "user@example.com" },
+		},
+	},
 	account_id: "account-id",
 	addresses: ["worker@example.com"],
 	agent_memory: [{ binding: "MEMORY", namespace: "memory" }],
@@ -48,7 +53,7 @@ const FIELD_CASES = {
 	],
 	data_blobs: { DATA: "data.bin" },
 	define: { FEATURE: "true" },
-	dependencies_instrumentation: { enabled: true },
+	dependencies_instrumentation: { enabled: false },
 	dev: { port: 8788 },
 	dispatch_namespaces: [{ binding: "DISPATCH", namespace: "namespace" }],
 	durable_objects: {
