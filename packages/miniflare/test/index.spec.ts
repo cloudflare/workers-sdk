@@ -1244,35 +1244,61 @@ test("Miniflare: service binding to disk", async ({ expect }) => {
 	expect(res.status).toBe(204);
 	expect(await fs.readFile(testPath, "utf8")).toBe("✏️");
 });
-test("Miniflare: rejects bindings to Workers it isn't running", async ({
+test("Miniflare: fails calls to Workers it isn't running, without the dev registry", async ({
 	expect,
-	onTestFinished,
 }) => {
-	for (const binding of [
-		{ type: "worker", worker: "missing" },
-		{ type: "durable-object", worker: "missing", exportName: "Counter" },
-	] as const) {
-		const mf = new Miniflare({
-			// The dev registry would proxy bindings to other Workers
-			enableDevRegistry: false,
-			workers: [
-				{
-					config: {
-						name: "app",
-						compatibilityDate: "2025-05-01",
-						env: { BINDING: binding },
-						manifest: singleModuleManifest("export default {};"),
+	const mf = new Miniflare({
+		enableDevRegistry: false,
+		workers: [
+			{
+				config: {
+					name: "app",
+					compatibilityDate: "2025-05-01",
+					env: {
+						API: { type: "worker", worker: "missing" },
+						COUNTER: {
+							type: "durable-object",
+							worker: "missing",
+							exportName: "Counter",
+						},
+						FLOW: {
+							type: "workflow",
+							name: "flow",
+							worker: "missing",
+							exportName: "Flow",
+						},
 					},
+					manifest: singleModuleManifest(`
+						export default {
+							async fetch(request, env) {
+								const api = await env.API.fetch("http://api/");
+								let counter;
+								try {
+									const id = env.COUNTER.idFromName("a");
+									const response = await env.COUNTER.get(id).fetch("http://counter/");
+									counter = [response.status, await response.text()];
+								} catch (error) {
+									counter = error.message;
+								}
+								// Its run fails when the Engine calls the Workflow's Worker
+								await env.FLOW.create();
+								return Response.json({ api: [api.status, await api.text()], counter });
+							}
+						};
+					`),
 				},
-			],
-		});
-		onTestFinished(() => mf.dispose().catch(() => {}));
+			},
+		],
+	});
+	useDispose(mf);
 
-		await expect(mf.ready).rejects.toMatchObject({
-			code: "ERR_VALIDATION",
-			message: `Worker "app"'s binding "BINDING" refers to Worker "missing", which isn't running.`,
-		});
-	}
+	const response = await mf.dispatchFetch("http://localhost/");
+	const notFound =
+		'Worker "missing" not found. Make sure it is running locally.';
+	expect(await response.json()).toEqual({
+		api: [503, notFound],
+		counter: [503, notFound],
+	});
 });
 
 test("Miniflare: service binding to named entrypoint", async ({ expect }) => {

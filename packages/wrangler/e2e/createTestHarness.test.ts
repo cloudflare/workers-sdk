@@ -1249,7 +1249,7 @@ describe("createTestHarness", () => {
 		expect(await rpcExport.getMessage("World")).toBe("Hello World");
 	});
 
-	it("rejects binding overrides that refer to a Worker that isn't running", async ({
+	it("uses runtime errors for missing binding override targets", async ({
 		expect,
 	}) => {
 		await helper.seed({
@@ -1281,8 +1281,9 @@ describe("createTestHarness", () => {
 		});
 		onTestFinished(server.close);
 
-		await expect(server.listen()).rejects.toThrow(
-			`Worker "app-worker"'s binding "AI" refers to Worker "missing-ai", which isn't running.`
+		await server.listen();
+		await expect(server.fetch("/")).rejects.toThrow(
+			'Worker "missing-ai" not found. Make sure it is running locally.'
 		);
 	});
 

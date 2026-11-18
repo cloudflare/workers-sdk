@@ -553,45 +553,6 @@ function getExternalServiceEntrypoints(
 	return { workerOpts: reroutedWorkerOpts, externalServices };
 }
 
-/**
- * Checks that bindings refer only to Workers in this instance, as they can't
- * reach other Workers without the dev registry. workerd would otherwise refuse
- * to start, naming internal services.
- *
- * @param allWorkerOpts - Options of every Worker in this instance
- * @throws {MiniflareCoreError} If a binding refers to a Worker that isn't in
- * this instance
- */
-function assertBindingTargetsExist(allWorkerOpts: ParsedWorkerOptions[]) {
-	const allWorkerNames = allWorkerOpts.map((opts) => opts.config.name);
-	for (const { config, dev } of allWorkerOpts) {
-		const targets: [bindingName: string, workerName: string | undefined][] = [
-			...getEnvBindingsOfType(config, "worker").map(
-				([name, binding]): [string, string | undefined] => {
-					const { serviceName, remoteProxyConnectionString } =
-						normaliseServiceDesignator(binding, dev);
-					// Remote services and SELF need no Worker in this instance
-					return [
-						name,
-						remoteProxyConnectionString === undefined ? serviceName : undefined,
-					];
-				}
-			),
-			...getEnvBindingsOfType(config, "durable-object").map(
-				([name, { worker }]): [string, string] => [name, worker]
-			),
-		];
-		for (const [bindingName, workerName] of targets) {
-			if (workerName !== undefined && !allWorkerNames.includes(workerName)) {
-				throw new MiniflareCoreError(
-					"ERR_VALIDATION",
-					`Worker ${JSON.stringify(config.name)}'s binding ${JSON.stringify(bindingName)} refers to Worker ${JSON.stringify(workerName)}, which isn't running.`
-				);
-			}
-		}
-	}
-}
-
 function getQueueProducers(
 	allWorkerOpts: ParsedWorkerOptions[]
 ): QueueProducers {
@@ -2129,13 +2090,11 @@ export class Miniflare {
 		sharedOpts.cf = await setupCf(this.#log, sharedOpts.cf);
 		this.#cfObject = sharedOpts.cf;
 
-		if (!this.#devRegistry.isEnabled()) {
-			assertBindingTargetsExist(this.#workerOpts);
-		}
+		// Bindings to Workers outside this instance go through the dev registry
+		// proxy, with or without the dev registry, so they fail when called
+		// rather than stopping workerd from starting
 		const { workerOpts: allWorkerOpts, externalServices } =
-			this.#devRegistry.isEnabled()
-				? getExternalServiceEntrypoints(this.#workerOpts, sharedOpts)
-				: { workerOpts: this.#workerOpts, externalServices: null };
+			getExternalServiceEntrypoints(this.#workerOpts, sharedOpts);
 
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const workflowExporters = getWorkflowExporters(allWorkerOpts);
@@ -2454,19 +2413,20 @@ export class Miniflare {
 			}
 		}
 
+		const devRegistryEnabled = this.#devRegistry.isEnabled();
 		if (
-			this.#devRegistry.isEnabled() &&
-			externalServices !== null &&
-			(externalServices.size > 0 ||
-				hasQueues ||
-				sharedOpts.unsafeEnableSharedStorage)
+			externalServices.size > 0 ||
+			(devRegistryEnabled &&
+				(hasQueues || sharedOpts.unsafeEnableSharedStorage))
 		) {
-			await this.#devRegistry.watch(
-				externalServices,
-				hasQueues,
-				sharedOpts.unsafeEnableSharedStorage === true &&
-					sharedOpts.resourcePersistencePath !== undefined
-			);
+			if (devRegistryEnabled) {
+				await this.#devRegistry.watch(
+					externalServices,
+					hasQueues,
+					sharedOpts.unsafeEnableSharedStorage === true &&
+						sharedOpts.resourcePersistencePath !== undefined
+				);
+			}
 
 			const externalObjects = Array.from(externalServices).flatMap(
 				([scriptName, { classNames }]) =>
