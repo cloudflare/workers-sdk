@@ -79,4 +79,31 @@ describe("shared helper logging", () => {
 		await parseProjectOptions(project, options, nextPoolLogger);
 		expect(std.out.match(/Falling back to its/g)).toHaveLength(2);
 	});
+	it("routes config warnings through the pool logger only once", async ({
+		expect,
+	}) => {
+		await seed({
+			"wrangler.json": JSON.stringify({
+				name: "test-worker",
+				compatibility_date: "2025-12-02",
+				unexpected_field: true,
+			}),
+		});
+		const project = {
+			name: "test",
+			config: { root: process.cwd() },
+			vite: { config: { mode: "test", envDir: process.cwd() } },
+		} as unknown as TestProject;
+		const options = { wrangler: { configPath: "wrangler.json" } };
+		const logger = createSharedLogger(
+			new Log(LogLevel.WARN, { prefix: "vpw" })
+		);
+
+		await parseProjectOptions(project, options, logger);
+		await parseProjectOptions(project, options, logger);
+
+		expect(std.out).toContain("[vpw:warn]");
+		expect(std.out.match(/unexpected_field/g)).toHaveLength(1);
+		expect(std.warn).toBe("");
+	});
 });

@@ -751,7 +751,7 @@ async function parseCustomPoolOptions(
 		// `getMiniflareWorkerOptions` without re-parsing it.
 		config = readConfig(
 			{ config: configPath, env: environment },
-			{ logger: remoteBindingsLogger }
+			{ logger: developmentLogger.once ?? developmentLogger }
 		);
 	}
 
