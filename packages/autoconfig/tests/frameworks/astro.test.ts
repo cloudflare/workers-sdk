@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import * as cliCommand from "@cloudflare/cli-shared-helpers/command";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
@@ -73,6 +73,74 @@ describe("Astro framework", () => {
 		expect(cliPackages.installPackages).not.toHaveBeenCalled();
 		expect(cliCommand.runCommand).not.toHaveBeenCalled();
 		expect(result).toEqual({ workerConfig: null });
+	});
+
+	describe("with the project's own Worker entrypoint", () => {
+		beforeEach(() => {
+			writeFileSync(
+				"astro.config.mjs",
+				'import { defineConfig } from "astro/config";\nexport default defineConfig({ output: "static" });\n'
+			);
+			mkdirSync("worker");
+		});
+
+		it("switches to server output and explains the Worker hand-off", async ({
+			expect,
+		}) => {
+			writeFileSync("worker/index.ts", "return env.ASSETS.fetch(request);");
+
+			await createFramework("7.4.12").configure({
+				...getOptions(process.cwd()),
+				existingWorkerConfig: { entrypoint: "worker/index.ts" },
+			});
+
+			expect(readFileSync("astro.config.mjs", "utf-8")).toContain(
+				'output: "server"'
+			);
+			expect(context.logger.warn).toHaveBeenCalledWith(
+				[
+					'Switched the Astro config to `output: "server"`: `worker/index.ts` is this project\'s own Worker, and the Cloudflare adapter leaves it out of static builds.',
+					"Astro now renders pages on request, so pass the requests your Worker doesn't handle to Astro:",
+					'  import astro from "@astrojs/cloudflare/entrypoints/server";',
+					"  return astro.fetch(request, env, ctx);",
+					"Add `export const prerender = true` to pages that should stay static files.",
+				].join("\n")
+			);
+		});
+
+		it("skips the hand-off when the Worker already uses Astro", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"worker/index.ts",
+				'import astro from "@astrojs/cloudflare/entrypoints/server";'
+			);
+
+			await createFramework("7.4.12").configure({
+				...getOptions(process.cwd()),
+				existingWorkerConfig: { entrypoint: "worker/index.ts" },
+			});
+
+			expect(context.logger.warn).toHaveBeenCalledWith(
+				expect.not.stringContaining("astro.fetch")
+			);
+		});
+
+		it("keeps static output for the adapter's own entrypoint", async ({
+			expect,
+		}) => {
+			await createFramework("7.4.12").configure({
+				...getOptions(process.cwd()),
+				existingWorkerConfig: {
+					entrypoint: "@astrojs/cloudflare/entrypoints/server",
+				},
+			});
+
+			expect(readFileSync("astro.config.mjs", "utf-8")).toContain(
+				'output: "static"'
+			);
+			expect(context.logger.warn).not.toHaveBeenCalled();
+		});
 	});
 
 	it("configures Astro 6 or later for Wrangler with `astro add cloudflare`", async ({
