@@ -29,11 +29,13 @@ describe("triggersDeploy showDiff", () => {
 	const fetchResult = vi.fn();
 	const fetchListResult = vi.fn();
 	const fetchPagedListResult = vi.fn();
+	const updateSchedules = vi.fn();
 
 	beforeEach(() => {
 		remoteRoutes = [];
 		remoteDomains = [];
 		remoteCrons = [];
+		updateSchedules.mockResolvedValue(undefined);
 		fetchResult.mockImplementation(
 			async (_config: Config, path: string, init?: RequestInit) => {
 				if (path.includes("/routes?")) {
@@ -41,7 +43,7 @@ describe("triggersDeploy showDiff", () => {
 				}
 				if (path === `${WORKER_URL}/schedules`) {
 					return init?.method === "PUT"
-						? undefined
+						? updateSchedules()
 						: { schedules: remoteCrons.map((cron) => ({ cron })) };
 				}
 				if (path.endsWith(`/workers/workers/${WORKER_NAME}`)) {
@@ -273,8 +275,13 @@ describe("triggersDeploy showDiff", () => {
 		expect(log).toHaveBeenCalledWith(NO_TRIGGER_CHANGES_MESSAGE);
 	});
 
-	it("displays the diff after a real deployment", async ({ expect }) => {
+	it("displays the diff before a real deployment", async ({ expect }) => {
 		remoteCrons = ["0 0 * * *"];
+		updateSchedules.mockImplementationOnce(() => {
+			expect(log).toHaveBeenCalledWith(
+				expect.stringContaining("Trigger changes")
+			);
+		});
 
 		await deploy({ dryRun: false, crons: ["5 0 * * *"] });
 
@@ -287,6 +294,24 @@ describe("triggersDeploy showDiff", () => {
 			expect.stringContaining("Trigger changes")
 		);
 		expect(log).not.toHaveBeenCalledWith("--dry-run: exiting now.");
+	});
+
+	it("displays the diff even when a trigger update fails", async ({
+		expect,
+	}) => {
+		remoteCrons = ["0 0 * * *"];
+		updateSchedules.mockRejectedValue(new Error("Schedule update failed"));
+
+		await expect(
+			deploy({ dryRun: false, crons: ["5 0 * * *"] })
+		).rejects.toThrow("Schedule update failed");
+
+		expect(log).toHaveBeenCalledWith(
+			expect.stringContaining('-    "0 0 * * *"')
+		);
+		expect(log).toHaveBeenCalledWith(
+			expect.stringContaining('+    "5 0 * * *"')
+		);
 	});
 
 	it("warns and continues a real deployment when the snapshot fails", async ({

@@ -51,7 +51,7 @@ export const triggersDeployCommand = createCommand({
 		},
 		"show-diff": {
 			describe:
-				"Show changes to routes, custom domains, cron schedules, workers.dev, and Preview URLs",
+				"Show changes to routes, custom domains, cron schedules, workers.dev, and Preview URLs before deploying",
 			type: "boolean",
 			default: false,
 		},

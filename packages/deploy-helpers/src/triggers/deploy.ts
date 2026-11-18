@@ -167,8 +167,8 @@ export async function triggersDeploy(
 	const { accountId } = props;
 	assert(accountId);
 
-	let remoteTriggersSnapshot: Record<string, JsonLike> | undefined;
 	if (props.showDiff) {
+		let remoteTriggersSnapshot: Record<string, JsonLike> | undefined;
 		try {
 			remoteTriggersSnapshot = await fetchRemoteTriggers(
 				config,
@@ -186,9 +186,7 @@ export async function triggersDeploy(
 			);
 			logger.debug(error);
 		}
-	}
 
-	if (props.dryRun) {
 		displayTriggerDiff(
 			remoteTriggersSnapshot,
 			buildLocalTriggers(
@@ -200,6 +198,9 @@ export async function triggersDeploy(
 				remoteTriggersSnapshot
 			)
 		);
+	}
+
+	if (props.dryRun) {
 		logger.log(`--dry-run: exiting now.`);
 		return;
 	}
@@ -697,20 +698,6 @@ export async function triggersDeploy(
 				cause: new AggregateError(errors),
 				telemetryMessage: `triggers deploy partial failure: ${aggregateTelemetryMessages(errors)}`,
 			}
-		);
-	}
-
-	if (props.showDiff) {
-		displayTriggerDiff(
-			remoteTriggersSnapshot,
-			buildLocalTriggers(
-				config,
-				routes,
-				routesOnly,
-				customDomainsOnly,
-				crons,
-				remoteTriggersSnapshot
-			)
 		);
 	}
 
