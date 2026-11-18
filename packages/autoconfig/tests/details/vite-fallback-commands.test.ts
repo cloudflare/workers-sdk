@@ -379,7 +379,7 @@ export default { plugins: [cloudflare()] };`,
 
 		const details = await getDetailsForAutoConfig({ context });
 		expect(details.commandError?.message).toContain(
-			"npm install --save-dev @cloudflare/vite-plugin@beta vite-plus"
+			"npm install --save-dev @cloudflare/vite-plugin@^2.0.0-rc.0 vite-plus"
 		);
 	});
 
@@ -398,7 +398,7 @@ export default { plugins: [cloudflare()] };`,
 			const details = await getDetailsForAutoConfig({ context });
 			expect(details.packageManager.type).toBe(manager);
 			expect(details.commandError?.message).toContain(
-				`Run ${manager} ${command} @cloudflare/vite-plugin@beta vite.`
+				`Run ${manager} ${command} @cloudflare/vite-plugin@^2.0.0-rc.0 vite.`
 			);
 		}
 	);
@@ -427,7 +427,7 @@ export default { plugins: [cloudflare()] };`,
 			expect(details.isWorkspaceRoot).toBe(true);
 			expect(details.packageManager.type).toBe(manager);
 			expect(details.commandError?.message).toContain(
-				`Run ${manager} ${command} @cloudflare/vite-plugin@beta vite ${flag}.`
+				`Run ${manager} ${command} @cloudflare/vite-plugin@^2.0.0-rc.0 vite ${flag}.`
 			);
 		}
 	);
