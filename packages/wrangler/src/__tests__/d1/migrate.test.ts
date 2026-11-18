@@ -7,7 +7,6 @@ import {
 import { http, HttpResponse } from "msw";
 import { describe, it, vi } from "vitest";
 import * as d1Execute from "../../d1/execute";
-import { logger } from "../../logger";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockConfirm } from "../helpers/mock-dialogs";
@@ -407,8 +406,8 @@ Your database may not be available to serve requests during the migration, conti
 				result: true,
 			});
 			await runWrangler("d1 migrations apply db --remote");
-			expect(std.out).toContain("Migrations to be applied:");
-			expect(std.out).toContain("0001_test.sql");
+			expect(mockStd.out).toContain("Migrations to be applied:");
+			expect(mockStd.out).toContain("0001_test.sql");
 		});
 
 		it("should throw a clear error when executeSql returns null (execution cancelled)", async ({
@@ -644,78 +643,67 @@ Your database may not be available to serve requests during the migration, conti
 			});
 		});
 
-		it("should not prompt when --force is passed", async ({ expect }) => {
-			vi.stubEnv("WRANGLER_LOG", "debug");
-			logger.loggerLevel = "debug";
-			setIsTTY(false);
-
-			msw.use(
-				http.post(
-					"*/accounts/:accountId/d1/database/:databaseId/query",
-					async () => {
-						return HttpResponse.json(
-							{
-								result: [
-									{
-										results: [],
-										success: true,
-										meta: {},
-									},
-								],
+		it.for([
+			{ flag: "--force", isTTY: true },
+			{ flag: "-y", isTTY: true },
+			{ flag: "--force", isTTY: false },
+			{ flag: "-y", isTTY: false },
+		])(
+			"applies migrations without prompting with $flag (TTY: $isTTY)",
+			async ({ flag, isTTY }, { expect }) => {
+				setIsTTY(isTTY);
+				const queries: string[] = [];
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/d1/database/:databaseId/query",
+						async ({ request }) => {
+							const { sql } = (await request.json()) as { sql: string };
+							queries.push(sql);
+							return HttpResponse.json({
+								result: [{ results: [], success: true, meta: {} }],
 								success: true,
 								errors: [],
 								messages: [],
-							},
-							{ status: 200 }
-						);
-					}
-				)
-			);
-
-			msw.use(
-				http.get("*/accounts/:accountId/d1/database/:databaseId", async () => {
-					return HttpResponse.json(
-						{
-							result: {
-								file_size: 123,
-								name: "testdb",
-								num_tables: 0,
-								uuid: "uuid",
-								version: "production",
-							},
+							});
+						}
+					),
+					http.get("*/accounts/:accountId/d1/database/:databaseId", () =>
+						HttpResponse.json({
+							result: { uuid: "xxxx", name: "db", version: "production" },
 							success: true,
 							errors: [],
 							messages: [],
-						},
-						{ status: 200 }
-					);
-				})
-			);
+						})
+					),
+					...getMswSuccessMembershipHandlers([
+						{ id: "1701", name: "enterprise" },
+					])
+				);
+				writeWranglerConfig({
+					d1_databases: [
+						{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+					],
+				});
+				fs.mkdirSync("migrations");
+				fs.writeFileSync(
+					"migrations/0001_test.sql",
+					"CREATE TABLE users (id INTEGER PRIMARY KEY);"
+				);
 
-			writeWranglerConfig({
-				d1_databases: [
-					{
-						binding: "DATABASE",
-						database_name: "db",
-						database_id: "xxxx",
-						migrations_dir: "migrations",
-					},
-				],
-			});
+				await runWrangler(`d1 migrations apply db --remote ${flag}`);
 
-			// Ensure account selection works in non-interactive mode
-			mockGetMemberships([
-				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
-			]);
-
-			await runWrangler("d1 migrations create db test");
-
-			await runWrangler("d1 migrations apply db --remote --force");
-
-			expect(mockStd.out).toContain(
-				"--force passed, applying 1 migration(s) without prompt."
-			);
-		});
+				expect(queries).toContainEqual(
+					expect.stringContaining(
+						"CREATE TABLE users (id INTEGER PRIMARY KEY);"
+					)
+				);
+				expect(mockStd.out).toContain(
+					"--force passed, applying 1 migration(s) without prompt."
+				);
+				expect(mockStd.out).not.toContain("About to apply");
+				expect(mockStd.out).not.toContain("Using fallback value");
+			}
+		);
 	});
 
 	describe("list", () => {
