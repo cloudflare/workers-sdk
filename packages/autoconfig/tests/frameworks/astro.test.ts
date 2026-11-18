@@ -2,7 +2,10 @@ import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import * as cliCommand from "@cloudflare/cli-shared-helpers/command";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
-import { NpmPackageManager } from "@cloudflare/workers-utils";
+import {
+	NpmPackageManager,
+	YarnPackageManager,
+} from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { AutoConfigFrameworkConfigurationError } from "../../src/errors";
@@ -64,6 +67,20 @@ describe("Astro framework", () => {
 			expect(result).toEqual({ workerConfig: null });
 		}
 	);
+
+	it("runs the Astro beta with npx in Yarn projects, since Yarn Classic has no dlx", async ({
+		expect,
+	}) => {
+		await createFramework("7.3.5").configure({
+			...getOptions(process.cwd()),
+			packageManager: YarnPackageManager,
+		});
+
+		expect(cliCommand.runCommand).toHaveBeenCalledWith(
+			["npx", "--yes", "astro@beta", "add", "@astrojs/cloudflare@beta", "-y"],
+			expect.anything()
+		);
+	});
 
 	it("installs nothing in a dry run for cf", async ({ expect }) => {
 		const result = await createFramework("7.3.5").configure(
