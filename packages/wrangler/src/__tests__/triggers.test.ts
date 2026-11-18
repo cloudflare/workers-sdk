@@ -11,6 +11,114 @@ describe("triggers deploy", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 
+	it("previews resolved trigger targets during a dry run", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			name: "configured-worker",
+			workers_dev: false,
+			routes: [{ pattern: "custom.example.com", custom_domain: true }],
+			triggers: { crons: ["0 * * * *"] },
+			queues: { consumers: [{ queue: "my-queue" }] },
+			workflows: [
+				{ binding: "WORKFLOW", name: "my-workflow", class_name: "Workflow" },
+			],
+		});
+
+		await runWrangler("triggers deploy --dry-run --name overridden-worker");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			--dry-run: no changes will be made. Would deploy overridden-worker triggers:
+			  custom.example.com (custom domain)
+			  schedule: 0 * * * *
+			  Consumer for my-queue
+			  workflow: my-workflow"
+		`);
+	});
+
+	it("previews command-line route and schedule overrides", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			name: "configured-worker",
+			workers_dev: false,
+			routes: ["configured.example.com/*"],
+			triggers: { crons: ["0 * * * *"] },
+		});
+
+		await runWrangler(
+			'triggers deploy --dry-run --route overridden.example.com/* --schedule "30 * * * *"'
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			--dry-run: no changes will be made. Would deploy configured-worker triggers:
+			  overridden.example.com/*
+			  schedule: 30 * * * *"
+		`);
+	});
+
+	it("previews removing all cron schedules", async ({ expect }) => {
+		writeWranglerConfig({
+			name: "configured-worker",
+			workers_dev: false,
+			triggers: { crons: [] },
+		});
+
+		await runWrangler("triggers deploy --dry-run");
+
+		expect(std.out).toContain("  schedule: remove all");
+		expect(std.out).not.toContain("No targets to deploy");
+	});
+
+	it.for([
+		{ addresses: [], target: "  email routing addresses: remove all" },
+		{
+			addresses: ["support@example.com"],
+			target: "  email routing addresses: 1",
+		},
+	])(
+		"previews Email Routing addresses=$addresses",
+		async ({ addresses, target }, { expect }) => {
+			writeWranglerConfig({
+				name: "configured-worker",
+				workers_dev: false,
+				addresses,
+			});
+
+			await runWrangler("triggers deploy --dry-run");
+
+			expect(std.out).toContain(target);
+			expect(std.out).not.toContain("No targets to deploy");
+		}
+	);
+
+	it("rejects external Workflow settings during a dry run", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			name: "configured-worker",
+			workflows: [
+				{
+					binding: "EXTERNAL_WORKFLOW",
+					name: "external-workflow",
+					class_name: "ExternalWorkflow",
+					script_name: "other-worker",
+					limits: { steps: 5000 },
+				},
+			],
+		});
+
+		await expect(runWrangler("triggers deploy --dry-run")).rejects.toThrow(
+			'Workflow "external-workflow" has "limits" configured but references external script "other-worker"'
+		);
+	});
+
 	it("uses a redirected deploy configuration", async ({ expect }) => {
 		writeWranglerConfig({ name: undefined });
 		writeRedirectedWranglerConfig(
@@ -26,7 +134,7 @@ describe("triggers deploy", () => {
 		expect(std.info).toContain(
 			'Using redirected Wrangler configuration.\n - Configuration being used: "dist/wrangler.json"'
 		);
-		expect(std.out).toContain("--dry-run: exiting now.");
+		expect(std.out).toContain("--dry-run: no changes will be made.");
 	});
 
 	describe("--zone and --zone-id flags", () => {
@@ -37,7 +145,7 @@ describe("triggers deploy", () => {
 				"triggers deploy --dry-run --x-route-zones --route a.example.com/* --route b.example.com/* --zone example.com"
 			);
 
-			expect(std.out).toContain("--dry-run: exiting now.");
+			expect(std.out).toContain("--dry-run: no changes will be made.");
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 

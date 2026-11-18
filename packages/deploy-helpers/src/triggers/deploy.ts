@@ -49,8 +49,107 @@ export async function triggersDeploy(
 		validateOwnedWorkflowDeclarations(config, scriptName);
 	}
 
+	const { routesOnly, customDomainsOnly } = partitionRoutes(routes);
+	const ownedWorkflows = getWorkflowsOwnedByScript(config, scriptName);
+
+	for (const workflow of config.workflows) {
+		if (!isWorkflowDefinedInThisScript(workflow, scriptName)) {
+			if (workflow.limits) {
+				throw new UserError(
+					`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
+						`Configure limits on the worker that defines the workflow.`,
+					{
+						telemetryMessage: "triggers deploy workflow limits external script",
+					}
+				);
+			}
+			if (workflow.concurrency) {
+				throw new UserError(
+					`Workflow "${workflow.name}" has "concurrency" configured but references external script "${workflow.script_name}". ` +
+						`Configure concurrency on the worker that defines the workflow.`,
+					{
+						telemetryMessage:
+							"triggers deploy workflow concurrency external script",
+					}
+				);
+			}
+			if (workflow.schedules) {
+				throw new UserError(
+					`Workflow "${workflow.name}" has "schedules" configured but references external script "${workflow.script_name}". ` +
+						`Configure schedules on the worker that defines the workflow.`,
+					{
+						telemetryMessage:
+							"triggers deploy workflow schedules external script",
+					}
+				);
+			}
+			if (workflow.default_retention) {
+				throw new UserError(
+					`Workflow "${workflow.name}" has "default_retention" configured but references external script "${workflow.script_name}". ` +
+						`Configure default_retention on the worker that defines the workflow.`,
+					{
+						telemetryMessage:
+							"triggers deploy workflow default_retention external script",
+					}
+				);
+			}
+			if (workflow.jurisdiction) {
+				throw new UserError(
+					`Workflow "${workflow.name}" has "jurisdiction" configured but references external script "${workflow.script_name}". ` +
+						`Configure jurisdiction on the worker that defines the workflow.`,
+					{
+						telemetryMessage:
+							"triggers deploy workflow jurisdiction external script",
+					}
+				);
+			}
+		}
+	}
+
 	if (props.dryRun) {
-		logger.log(`--dry-run: exiting now.`);
+		const { workers_dev: wantWorkersDev } = getSubdomainValues(
+			config.workers_dev,
+			config.preview_urls,
+			routes
+		);
+		const eventTriggers = config.triggers?.events;
+		const targets = [
+			...(wantWorkersDev ? ["workers.dev (enabled)"] : []),
+			...routesOnly.map(renderRoute),
+			...customDomainsOnly.map(renderRoute),
+			...(crons === undefined
+				? []
+				: crons.length === 0
+					? ["schedule: remove all"]
+					: crons.map((cron) => `schedule: ${cron}`)),
+			...(config.queues.producers ?? []).map(
+				(producer) => `Producer for ${producer.queue ?? producer.binding}`
+			),
+			...(config.queues.consumers ?? []).map(
+				(consumer) => `Consumer for ${consumer.queue}`
+			),
+			...ownedWorkflows.map((workflow) => `workflow: ${workflow.name}`),
+			...(eventTriggers !== undefined
+				? [`event triggers: ${eventTriggers.length}`]
+				: []),
+			...(config.addresses === undefined
+				? []
+				: config.addresses.length === 0
+					? ["email routing addresses: remove all"]
+					: [`email routing addresses: ${config.addresses.length}`]),
+		];
+		if (targets.length > 0) {
+			logger.log(
+				`--dry-run: no changes will be made. Would deploy ${scriptName} triggers:`
+			);
+			for (const target of targets) {
+				logger.log(" ", target);
+			}
+		} else {
+			logger.log(
+				`--dry-run: no changes will be made. No targets to deploy for ${scriptName}.`
+			);
+		}
 		return;
 	}
 
@@ -67,8 +166,6 @@ export async function triggersDeploy(
 		);
 	}
 
-	const { routesOnly, customDomainsOnly } = partitionRoutes(routes);
-
 	const start = Date.now();
 
 	const workerUrl = `/accounts/${accountId}/workers/scripts/${scriptName}`;
@@ -79,8 +176,6 @@ export async function triggersDeploy(
 		name: string;
 		deployment: Promise<TriggerDeployment>;
 	}[] = [];
-	const ownedWorkflows = getWorkflowsOwnedByScript(config, scriptName);
-
 	const { wantWorkersDev, workersDevInSync } = await subdomainDeploy(
 		props,
 		accountId,
@@ -281,63 +376,6 @@ export async function triggersDeploy(
 				}))
 			)
 		);
-	}
-
-	// NOTE: if the user provides a script_name that's not this script (in other words, bound to another worker)
-	// we don't want to send this worker's config.
-	// TODO: move this earlier.
-	for (const workflow of config.workflows) {
-		if (!isWorkflowDefinedInThisScript(workflow, scriptName)) {
-			if (workflow.limits) {
-				throw new UserError(
-					`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
-						`Configure limits on the worker that defines the workflow.`,
-					{
-						telemetryMessage: "triggers deploy workflow limits external script",
-					}
-				);
-			}
-			if (workflow.concurrency) {
-				throw new UserError(
-					`Workflow "${workflow.name}" has "concurrency" configured but references external script "${workflow.script_name}". ` +
-						`Configure concurrency on the worker that defines the workflow.`,
-					{
-						telemetryMessage:
-							"triggers deploy workflow concurrency external script",
-					}
-				);
-			}
-			if (workflow.schedules) {
-				throw new UserError(
-					`Workflow "${workflow.name}" has "schedules" configured but references external script "${workflow.script_name}". ` +
-						`Configure schedules on the worker that defines the workflow.`,
-					{
-						telemetryMessage:
-							"triggers deploy workflow schedules external script",
-					}
-				);
-			}
-			if (workflow.default_retention) {
-				throw new UserError(
-					`Workflow "${workflow.name}" has "default_retention" configured but references external script "${workflow.script_name}". ` +
-						`Configure default_retention on the worker that defines the workflow.`,
-					{
-						telemetryMessage:
-							"triggers deploy workflow default_retention external script",
-					}
-				);
-			}
-			if (workflow.jurisdiction) {
-				throw new UserError(
-					`Workflow "${workflow.name}" has "jurisdiction" configured but references external script "${workflow.script_name}". ` +
-						`Configure jurisdiction on the worker that defines the workflow.`,
-					{
-						telemetryMessage:
-							"triggers deploy workflow jurisdiction external script",
-					}
-				);
-			}
-		}
 	}
 
 	for (const workflow of ownedWorkflows) {
