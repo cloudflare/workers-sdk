@@ -10,7 +10,7 @@ import type {
 	EmailSendingSendResponse,
 	EmailSendingSubdomain,
 } from "./index";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export async function listEmailRoutingZones(
 	config: Config

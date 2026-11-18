@@ -5,11 +5,13 @@ import {
 	getZoneFromConfig,
 } from "@cloudflare/deploy-helpers/miniflare-options";
 import {
-	createArtifactsLocalDefaultWarner,
 	DEFAULT_COMPAT_DATE,
-	extractBindingsOfType,
 	getRegistryPath,
 } from "@cloudflare/workers-utils";
+import {
+	createArtifactsLocalDefaultWarner,
+	extractBindingsOfType,
+} from "@cloudflare/workers-utils/config";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
 import { readConfig } from "../../../config";
@@ -28,13 +30,8 @@ import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import type { RemoteProxySession } from "../../remoteBindings";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
-import type {
-	AssetsOptions,
-	Binding,
-	Config,
-	RawConfig,
-	RawEnvironment,
-} from "@cloudflare/workers-utils";
+import type { AssetsOptions, Binding } from "@cloudflare/workers-utils";
+import type { Config, RawConfig, RawEnvironment } from "@cloudflare/workers-utils/config";
 import type {
 	RemoteProxyConnectionString,
 	V4MiniflareOptions,

@@ -1,13 +1,15 @@
 import assert from "node:assert";
 import events from "node:events";
 import {
-	configFileName,
-	formatConfigSnippet,
 	getLocalExplorerEnabledFromEnv,
 	isInteractive,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { getHostFromRoute } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	formatConfigSnippet,
+} from "@cloudflare/workers-utils/config";
 import { isWebContainer } from "@webcontainer/env";
 import { getAssetsOptions } from "./assets";
 import { createCommand } from "./core/create-command";
@@ -19,14 +21,13 @@ import { logger } from "./logger";
 import { detectAgent } from "./utils/detect-agent";
 import type { Trigger } from "./api/startDevWorker/types";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
+import type { Binding, CfModule } from "@cloudflare/workers-utils";
 import type {
-	Binding,
-	CfModule,
 	Config,
 	Environment,
 	Route,
 	Rule,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import type { EventName } from "chokidar/handler.js";
 import type { Json } from "miniflare";
 

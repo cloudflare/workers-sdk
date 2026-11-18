@@ -5,7 +5,7 @@ import { getBasePath } from "./paths";
 import type { StartDevWorkerOptions } from "./api";
 import type { DeployArgs } from "./deploy";
 import type { StartDevOptions } from "./dev";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export {
 	getAssetsOptions,

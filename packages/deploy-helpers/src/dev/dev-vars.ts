@@ -6,7 +6,8 @@ import {
 import { parse, type DotenvParseOutput } from "dotenv";
 import { logger } from "../shared/context";
 import { getDefaultEnvFiles, loadDotEnv, readEnvFile } from "./dot-env";
-import type { Binding, Config } from "@cloudflare/workers-utils";
+import type { Binding } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type { Json } from "miniflare";
 
 export { getDefaultEnvFiles, loadDotEnv } from "./dot-env";

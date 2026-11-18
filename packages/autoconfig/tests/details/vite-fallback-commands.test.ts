@@ -15,7 +15,7 @@ import {
 import * as frameworkDetection from "../../src/details/framework-detection";
 import { runAutoConfig } from "../../src/run";
 import { createMockContext } from "../helpers/mock-context";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 function invocation(binary: string): string {
 	return process.platform === "win32"

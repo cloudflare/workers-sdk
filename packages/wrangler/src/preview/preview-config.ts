@@ -10,7 +10,7 @@ import type {
 	Config,
 	Environment,
 	PreviewsConfig,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 export const REPLACE_ME = "<REPLACE_ME>";
 

@@ -21,7 +21,8 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
-import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 interface CatalogWithTagsResponse {
 	repositories: Record<string, string[]>;

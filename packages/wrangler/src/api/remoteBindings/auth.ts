@@ -3,7 +3,7 @@ import { logger } from "../../logger";
 import { createAuthForProfile } from "../../user";
 import type { RemoteBindingsAuth } from "@cloudflare/remote-bindings";
 import type { CloudflareAuth } from "@cloudflare/workers-auth/cf";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 /**
  * Get Wrangler's credentials for a remote proxy session started through

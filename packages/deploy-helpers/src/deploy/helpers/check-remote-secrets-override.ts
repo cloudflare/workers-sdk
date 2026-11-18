@@ -1,6 +1,6 @@
 import { fetchResult } from "../../shared/context";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export async function fetchSecrets(
 	config: Config,

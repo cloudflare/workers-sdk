@@ -5,10 +5,8 @@ import {
 	getDefaultEnvFiles,
 	loadDotEnv,
 } from "@cloudflare/deploy-helpers/dev-vars";
-import {
-	CommandLineArgsError,
-	experimental_readRawConfig,
-} from "@cloudflare/workers-utils";
+import { CommandLineArgsError } from "@cloudflare/workers-utils";
+import { experimental_readRawConfig } from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
 import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";

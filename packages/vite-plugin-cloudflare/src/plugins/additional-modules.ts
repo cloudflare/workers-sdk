@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { DEFAULT_MODULE_RULES } from "@cloudflare/workers-utils";
+import { DEFAULT_MODULE_RULES } from "@cloudflare/workers-utils/config";
 import MagicString from "magic-string";
 import { globsToRegExps } from "miniflare";
 import * as vite from "vite";

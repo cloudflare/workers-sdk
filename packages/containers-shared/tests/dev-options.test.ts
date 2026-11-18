@@ -3,7 +3,7 @@ import path from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, test } from "vitest";
 import { createContainerDevPlan } from "../src/dev-options";
-import type { ContainerApp, Exports } from "@cloudflare/workers-utils";
+import type { ContainerApp, Exports } from "@cloudflare/workers-utils/config";
 
 function schedulerContainer(props: Partial<ContainerApp>): ContainerApp {
 	return { image: "./Dockerfile", ...props };

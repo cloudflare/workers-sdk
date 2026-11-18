@@ -20,7 +20,7 @@ import {
 	updateSecret,
 } from "./client";
 import type { Secret, Store } from "./client";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export async function usingLocalSecretsStoreSecretAPI<T>(
 	persistTo: string | undefined,

@@ -5,7 +5,7 @@ import {
 	fetchLatestDeployment,
 } from "../src/deploy/helpers/versions-api";
 import { confirmLatestDeploymentOverwrite } from "../src/index";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 vi.mock("../src/deploy/helpers/versions-api");
 vi.mock("@cloudflare/cli-shared-helpers");

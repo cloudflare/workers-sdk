@@ -32,7 +32,7 @@
 file:
 
 - `wrangler: { configPath, environment }` — a Wrangler configuration file, via
-  `readConfig()` from `@cloudflare/workers-utils`, then `getMiniflareWorkerOptions()`
+  `readConfig()` from `@cloudflare/workers-utils/config`, then `getMiniflareWorkerOptions()`
   from `@cloudflare/deploy-helpers/miniflare-options` (remote
   proxy session, `main`, defines, module rules, tails) merged into the V4 `miniflare`
   options. Remote bindings use Wrangler credentials (`src/pool/auth.ts`)

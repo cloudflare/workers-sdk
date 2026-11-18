@@ -5,14 +5,16 @@ import {
 	resolveWorkerName,
 } from "@cloudflare/deploy-helpers";
 import {
-	configFormat,
-	experimental_patchConfig,
-	formatConfigSnippet,
 	isNonInteractiveOrCI,
 	JSON_CONFIG_FORMATS,
 	JsonFriendlyFatalError,
 	UserError,
 } from "@cloudflare/workers-utils";
+import {
+	configFormat,
+	experimental_patchConfig,
+	formatConfigSnippet,
+} from "@cloudflare/workers-utils/config";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import {
@@ -26,7 +28,7 @@ import type {
 	Config,
 	PreviewsConfig,
 	RawConfig,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 export type EnsurePreviewsConfigArgs = {
 	workerName?: string;

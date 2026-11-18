@@ -1,4 +1,4 @@
-import { ARTIFACTS_EVENT_TYPES as WRANGLER_EVENT_TYPES } from "@cloudflare/workers-utils";
+import { ARTIFACTS_EVENT_TYPES as WRANGLER_EVENT_TYPES } from "@cloudflare/workers-utils/config";
 import { describe, it } from "vitest";
 import { convertToWranglerConfig } from "../convert";
 import { exports, triggers } from "../public";

@@ -12,7 +12,7 @@ import {
 } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
 import type { RemoteProxySession, StartDevWorkerInput } from "../../src/api";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 import type {
 	Awaitable,
 	MiniflareOptions,

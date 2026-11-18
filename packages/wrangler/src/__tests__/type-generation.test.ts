@@ -36,7 +36,7 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { createFetchResult, msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { EnvironmentNonInheritable } from "@cloudflare/workers-utils";
+import type { EnvironmentNonInheritable } from "@cloudflare/workers-utils/config";
 import type { MockInstance } from "vitest";
 
 describe("isValidIdentifier", () => {

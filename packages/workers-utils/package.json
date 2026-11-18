@@ -23,6 +23,10 @@
 			"import": "./dist/index.mjs",
 			"types": "./dist/index.d.mts"
 		},
+		"./config": {
+			"types": "./dist/config/public.d.mts",
+			"import": "./dist/config/public.mjs"
+		},
 		"./prometheus-metrics": {
 			"import": "./dist/prometheus-metrics.mjs",
 			"types": "./dist/prometheus-metrics.d.mts"

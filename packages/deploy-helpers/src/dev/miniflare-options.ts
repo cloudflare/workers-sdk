@@ -2,26 +2,27 @@ import assert from "node:assert";
 import path from "node:path";
 import { createContainerDevPlan } from "@cloudflare/containers-shared";
 import {
+	getWranglerHiddenDirPath,
+	getZoneFromRoute,
+	UserError,
+} from "@cloudflare/workers-utils";
+import {
 	convertConfigToBindings,
 	DEFAULT_MODULE_RULES,
 	resolveBindingRemote,
 	extractBindingsOfType,
 	getDurableObjectClassNameToUseSQLiteMap,
-	getWranglerHiddenDirPath,
-	getZoneFromRoute,
 	isUnsafeBindingType,
 	partitionExports,
 	readConfig,
-	UserError,
 	validateBindingRemoteSetting,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import { getAssetsOptions } from "../deploy/helpers/assets";
 import { logger } from "../shared/context";
 import { getVarsForDev } from "./dev-vars";
 import type { ArtifactsEventSubscription } from "@cloudflare/config";
 import type { ContainerDevRuntimeOptions } from "@cloudflare/containers-shared";
 import type {
-	ArtifactsEventTrigger,
 	AssetsOptions,
 	Binding,
 	CfD1Database,
@@ -35,10 +36,13 @@ import type {
 	CfR2Bucket,
 	CfScriptFormat,
 	CfWorkflow,
-	Config,
 	LegacyAssetPaths,
 	StartDevWorkerInput,
 } from "@cloudflare/workers-utils";
+import type {
+	ArtifactsEventTrigger,
+	Config,
+} from "@cloudflare/workers-utils/config";
 import type {
 	Json,
 	RemoteProxyConnectionString,

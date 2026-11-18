@@ -1,4 +1,4 @@
-import { partitionExports } from "@cloudflare/workers-utils";
+import { partitionExports } from "@cloudflare/workers-utils/config";
 import { resolveDoLifecyclePayload } from "./durable";
 import type { CfWorkerInit } from "@cloudflare/workers-utils";
 

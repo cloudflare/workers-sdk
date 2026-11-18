@@ -36,9 +36,9 @@ import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 import type {
 	AssetsOptions,
 	ComplianceConfig,
-	Config,
 	ValidatedAssetsOptions,
 } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
 

@@ -9,7 +9,7 @@ import {
 	renderCloudflareConfig,
 	renderWranglerConfig,
 } from "../../src/codemods/wrangler-to-cf/config-renderer";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 const BASE_CONFIG = {
 	compatibility_date: "2026-09-23",

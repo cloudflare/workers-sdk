@@ -22,15 +22,17 @@ import type { LoggerLevel } from "../../logger";
 import type { EsbuildBundle } from "../use-esbuild";
 import type { ContainerDevRuntimeOptions } from "@cloudflare/containers-shared";
 import type {
-	ArtifactsEventTrigger,
 	AssetsOptions,
 	CfScriptFormat,
 	ConnectHandler,
-	Config,
-	ContainerEngine,
 	LegacyAssetPaths,
 	ServiceFetch,
 } from "@cloudflare/workers-utils";
+import type {
+	ArtifactsEventTrigger,
+	Config,
+	ContainerEngine,
+} from "@cloudflare/workers-utils/config";
 import type {
 	RemoteProxyConnectionString,
 	V4MiniflareOptions,

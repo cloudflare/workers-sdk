@@ -5,12 +5,14 @@ import { getVarsForDev } from "@cloudflare/deploy-helpers/dev-vars";
 import { RUNTIME_TYPES_MARKER } from "@cloudflare/runtime-types";
 import {
 	CommandLineArgsError,
-	configFileName,
-	experimental_readRawConfig,
 	FatalError,
 	parseJSONC,
 	UserError,
 } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	experimental_readRawConfig,
+} from "@cloudflare/workers-utils/config";
 import { getNodeCompat } from "@cloudflare/workers-utils/node-compat";
 import chalk from "chalk";
 import * as find from "empathic/find";
@@ -36,13 +38,13 @@ import { K2_PRODUCER_TYPE } from "./k2";
 import { fetchPipelineTypes } from "./pipeline-schema";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
+import type { Entry } from "@cloudflare/workers-utils";
 import type {
 	Config,
-	Entry,
 	RawConfig,
 	RawEnvironment,
 	Rule,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 export interface GenerateTypesOptions {
 	/**

@@ -25,7 +25,8 @@ import type { StartDevOptionsBindings } from "../api/startDevWorker/binding-util
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { CfAccount } from "./create-worker-preview";
-import type { Config, ServiceFetch } from "@cloudflare/workers-utils";
+import type { ServiceFetch } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 /**
  * Starts one (primary) or more (secondary) DevEnv environments given the `args`.

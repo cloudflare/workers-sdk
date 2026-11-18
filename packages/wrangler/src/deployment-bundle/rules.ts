@@ -1,6 +1,6 @@
-import { DEFAULT_MODULE_RULES } from "@cloudflare/workers-utils";
+import { DEFAULT_MODULE_RULES } from "@cloudflare/workers-utils/config";
 import { logger } from "../logger";
-import type { Rule } from "@cloudflare/workers-utils";
+import type { Rule } from "@cloudflare/workers-utils/config";
 
 export function isJavaScriptModuleRule(rule: Rule) {
 	return rule.type === "ESModule" || rule.type === "CommonJS";

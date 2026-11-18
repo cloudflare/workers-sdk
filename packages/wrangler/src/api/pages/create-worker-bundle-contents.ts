@@ -1,12 +1,13 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { getBindings } from "@cloudflare/workers-utils";
+import { getBindings } from "@cloudflare/workers-utils/config";
 import { Response } from "undici";
 import { createWorkerUploadForm } from "../../deployment-bundle/create-worker-upload-form";
 import { loadSourceMaps } from "../../deployment-bundle/source-maps";
 import { parseConfigPlacement } from "../../utils/placement";
 import type { BundleResult } from "../../deployment-bundle/bundle";
-import type { CfPlacement, Config } from "@cloudflare/workers-utils";
+import type { CfPlacement } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type { Blob } from "node:buffer";
 import type { FormData } from "undici";
 

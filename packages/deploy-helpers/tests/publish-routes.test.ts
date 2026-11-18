@@ -1,6 +1,6 @@
 import { describe, it } from "vitest";
 import { renderRoute } from "../src/triggers/publish-routes";
-import type { Route } from "@cloudflare/workers-utils";
+import type { Route } from "@cloudflare/workers-utils/config";
 
 const customDomain = { pattern: "example.com", custom_domain: true } as const;
 

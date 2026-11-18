@@ -1,6 +1,6 @@
 import { describe, test } from "vitest";
 import { resolveAssetOptions } from "../assets";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 const assetsDir = {
 	directory: "/tmp/assets",

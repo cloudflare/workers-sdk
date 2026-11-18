@@ -22,7 +22,7 @@ import type {
 	ParsedCloudflareConfig,
 	ParsedWorkerConfig,
 } from "@cloudflare/config";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 export const CLOUDFLARE_CONFIG_FILENAME = "cloudflare.config.ts";
 export const WRANGLER_CONFIG_FILENAME = "wrangler.config.ts";

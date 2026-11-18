@@ -1,6 +1,7 @@
 import { APIError, UserError } from "@cloudflare/workers-utils";
 import { INVALID_INHERIT_BINDING_CODE } from "./error-codes";
-import type { Binding, Config } from "@cloudflare/workers-utils";
+import type { Binding } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 type SecretsValidationOptions =
 	| {

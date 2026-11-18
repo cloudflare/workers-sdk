@@ -4,12 +4,14 @@ import path from "node:path";
 import { getCloudflareAccountIdFromEnv } from "@cloudflare/workers-auth";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
-	configFileName,
 	FatalError,
-	findWranglerConfig,
 	ParseError,
 	UserError,
 } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	findWranglerConfig,
+} from "@cloudflare/workers-utils/config";
 import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
 import { readPagesConfig } from "../config";
@@ -41,7 +43,7 @@ import type {
 	Project,
 	UnifiedDeploymentLogMessages,
 } from "@cloudflare/types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export const pagesDeploymentCreateCommand = createAlias({
 	aliasOf: "wrangler pages deploy",

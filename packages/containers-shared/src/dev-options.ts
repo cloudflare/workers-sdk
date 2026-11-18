@@ -6,7 +6,7 @@ import {
 	isDockerfile,
 	isDurableObjectContainerApp,
 	resolveContainerClassName,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import { resolveInputContainerImage } from "./input-container-image";
 import { getDevContainerImageName } from "./knobs";
 import { MF_DEV_CONTAINER_PREFIX } from "./registry";
@@ -21,7 +21,7 @@ import type {
 	ParsedBuildOutputContainerConfig,
 	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 type CreateContainerDevPlanOptions = {
 	containers: Config["containers"];

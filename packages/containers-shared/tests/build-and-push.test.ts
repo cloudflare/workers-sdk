@@ -28,11 +28,11 @@ import type { BuiltContainerImage, BuiltImage } from "../src/build";
 import type { CompleteAccountCustomer } from "../src/client";
 import type { ContainerNormalizedConfig } from "../src/types";
 import type {
-	Config,
 	FetchPagedListResultFetcher,
 	FetchResultFetcher,
 	Logger,
 } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 vi.mock("node:child_process");
 

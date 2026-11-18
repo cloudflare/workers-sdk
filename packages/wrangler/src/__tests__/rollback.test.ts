@@ -9,7 +9,7 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { ApiDeployment } from "../versions/types";
-import type { DurableObjectCodeUpdateStrategy } from "@cloudflare/workers-utils";
+import type { DurableObjectCodeUpdateStrategy } from "@cloudflare/workers-utils/config";
 import type { ExpectStatic } from "vitest";
 
 describe("rollback", () => {

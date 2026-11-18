@@ -1,15 +1,14 @@
 import assert from "node:assert";
 import path from "node:path";
+import { FatalError, UserError } from "@cloudflare/workers-utils";
 import {
 	configFileName,
 	experimental_readRawConfig,
-	FatalError,
 	isPagesConfig,
 	normalizeAndValidateConfig,
 	readConfig as sharedReadConfig,
-	UserError,
 	validatePagesConfig,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import dedent from "ts-dedent";
 import { version as wranglerVersion } from "../../package.json";
 import { loadNewConfig } from "../experimental-config/load";
@@ -27,7 +26,7 @@ import type {
 	NormalizeAndValidateConfigArgs,
 	RawConfig,
 	ResolveConfigPathOptions,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 export type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
 	config?: string;

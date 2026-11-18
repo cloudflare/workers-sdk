@@ -8,7 +8,8 @@
 // `@cloudflare/workers-auth/wrangler` is re-exported here so those import paths
 // (and the test mocks/spies) keep working unchanged.
 
-import { configFileName, getGlobalConfigPath } from "@cloudflare/workers-utils";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import { createCloudflareAuth } from "../core/factory";
 import { createKeyringPreference } from "../core/keyring-preference";
 import { createPreferences } from "../core/preferences";

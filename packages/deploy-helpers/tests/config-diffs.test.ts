@@ -1,7 +1,7 @@
 import { mapWorkerMetadataBindings } from "@cloudflare/workers-utils";
 import { describe, it } from "vitest";
 import { getRemoteConfigDiff } from "../src/deploy/helpers/config-diffs";
-import type { Config, Route } from "@cloudflare/workers-utils";
+import type { Config, Route } from "@cloudflare/workers-utils/config";
 
 function compareRoutes(remoteRoutes: Route[], localRoutes: Route[]) {
 	return getRemoteConfigDiff({ routes: remoteRoutes }, {

@@ -34,11 +34,8 @@ import {
 	sortObjectRecursive,
 	stripUndefined,
 } from "@cloudflare/containers-shared";
-import {
-	FatalError,
-	formatConfigSnippet,
-	UserError,
-} from "@cloudflare/workers-utils";
+import { FatalError, UserError } from "@cloudflare/workers-utils";
+import { formatConfigSnippet } from "@cloudflare/workers-utils/config";
 import { createCommand } from "../core/create-command";
 import { getOrSelectAccountId } from "../user";
 import {
@@ -68,7 +65,7 @@ import type {
 	Config,
 	ContainerApp,
 	Observability,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 function mergeDeep<T>(target: T, source: Partial<T>): T {
 	if (typeof target !== "object" || target === null) {

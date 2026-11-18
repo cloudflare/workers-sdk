@@ -1,5 +1,6 @@
 import fs from "node:fs";
-import { configFileName, UserError } from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import { Minimatch } from "minimatch";
 import dedent from "ts-dedent";
 import { createCommand } from "../../core/create-command";

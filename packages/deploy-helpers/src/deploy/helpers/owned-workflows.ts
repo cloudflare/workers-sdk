@@ -1,5 +1,6 @@
-import { partitionExports, UserError } from "@cloudflare/workers-utils";
-import type { Config, WorkflowBinding } from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils";
+import { partitionExports } from "@cloudflare/workers-utils/config";
+import type { Config, WorkflowBinding } from "@cloudflare/workers-utils/config";
 
 export type OwnedWorkflow = Omit<WorkflowBinding, "binding" | "script_name">;
 

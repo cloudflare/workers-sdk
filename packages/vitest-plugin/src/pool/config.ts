@@ -4,14 +4,16 @@ import util from "node:util";
 import { setDeployHelpersLogger } from "@cloudflare/deploy-helpers/context";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import {
-	convertConfigToBindings,
 	DEFAULT_COMPAT_DATE,
-	DEFAULT_MODULE_RULES,
 	formatZodError,
 	getCloudflareComplianceRegion,
-	readConfig,
 } from "@cloudflare/workers-utils";
 import { toApiComplianceRegion } from "@cloudflare/workers-utils/compliance";
+import {
+	convertConfigToBindings,
+	DEFAULT_MODULE_RULES,
+	readConfig,
+} from "@cloudflare/workers-utils/config";
 import {
 	convertV4MiniflareOptions,
 	kCurrentWorker,
@@ -49,7 +51,8 @@ import type {
 	RemoteBindingsLogger,
 	RemoteProxySessionData,
 } from "@cloudflare/remote-bindings";
-import type { Config, Logger } from "@cloudflare/workers-utils";
+import type { Logger } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type {
 	LegacyWorkerOptions,
 	RemoteProxyConnectionString,

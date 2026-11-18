@@ -11,16 +11,18 @@ import {
 import {
 	APIError,
 	formatTime,
-	getBindings,
 	getDockerPath,
-	getDurableObjectContainerApps,
-	hasDurableObjectExports,
 	parseNonHyphenedUuid,
 	printBindings,
 	retryOnAPIFailure,
 	UserError,
 	writeOutput,
 } from "@cloudflare/workers-utils";
+import {
+	getBindings,
+	getDurableObjectContainerApps,
+	hasDurableObjectExports,
+} from "@cloudflare/workers-utils/config";
 import { parseAndExpandDotEnv } from "@cloudflare/workers-utils/local-env";
 import { Response } from "undici";
 import { fetchPagedListResult, fetchResult, logger } from "../shared/context";

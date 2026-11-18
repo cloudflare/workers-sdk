@@ -19,6 +19,8 @@ Shared utility package used across wrangler, miniflare, and others. Two main are
 
 - Validation pipeline normalizes wrangler.json/toml into typed config objects
 - Used by wrangler for all config loading
+- Import configuration APIs through `@cloudflare/workers-utils/config`, defined by `src/config/public.ts`. Keep this curated barrel separate from the implementation in `src/config/index.ts` to avoid cycles.
+- Existing root configuration exports are deprecated aliases in `src/config/legacy.ts`; preserve their runtime and type identity. New config APIs, including `readConfig()`, belong only in `/config`.
 
 ### D1 migrations
 

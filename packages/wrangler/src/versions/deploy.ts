@@ -42,7 +42,8 @@ import {
 	resolveDurableObjectsCodeUpdateStrategy,
 } from "./deployment-args";
 import type { Percentage, VersionCache, VersionId } from "./types";
-import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 const EPSILON = 0.001; // used to avoid floating-point errors. Comparions to a value +/- EPSILON will mean "roughly equals the value".
 const BLANK_INPUT = "-"; // To be used where optional user-input is displayed and the value is nullish

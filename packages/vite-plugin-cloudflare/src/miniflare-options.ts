@@ -19,8 +19,8 @@ import {
 	getLocalObservabilityEnabledFromEnv,
 	getWorkerZone,
 } from "@cloudflare/workers-utils";
-import { createArtifactsLocalDefaultWarner } from "@cloudflare/workers-utils";
 import { toApiComplianceRegion } from "@cloudflare/workers-utils/compliance";
+import { createArtifactsLocalDefaultWarner } from "@cloudflare/workers-utils/config";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import {
 	buildPublicUrl,

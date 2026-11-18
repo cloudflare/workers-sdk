@@ -38,7 +38,7 @@ import type {
 	SSHPublicKeyID,
 	SSHPublicKeyItem,
 } from "@cloudflare/containers-shared";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 function _createSSHPublicKeyOptionalYargs(yargs: CommonYargsArgv) {
 	return yargs

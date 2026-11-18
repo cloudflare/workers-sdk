@@ -4,11 +4,11 @@ import { existsSync, lstatSync, readFileSync } from "node:fs";
 import path, { dirname, join, normalize, resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import {
-	configFileName,
 	DEFAULT_COMPAT_DATE,
 	FatalError,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
 import { readConfig } from "../config";
@@ -43,13 +43,12 @@ import { getPagesTmpDir, RUNNING_BUILDERS } from "./utils";
 import type { AdditionalDevProps } from "../dev";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
 import type { PagesConfigCache } from "./types";
+import type { Binding, CfModule } from "@cloudflare/workers-utils";
 import type {
-	Binding,
-	CfModule,
 	Config,
 	DurableObjectBindings,
 	EnvironmentNonInheritable,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 // Cleanup callbacks + a helper to run them, used to tear down `pages dev`
 // resources on shutdown. These are local to `pages dev` (the only command

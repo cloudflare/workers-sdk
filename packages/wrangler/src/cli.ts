@@ -147,12 +147,12 @@ export const unstable_generateASSETSBinding =
 export {
 	defaultWranglerConfig as unstable_defaultWranglerConfig,
 	experimental_readRawConfig,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 // TODO: consider if we want to keep exporting `experimental_patchConfig` from wrangler.
 //       wouldn't it be better for consumers to depend and use it directly from
-//       @cloudflare/workers-utils instead?
-export { experimental_patchConfig } from "@cloudflare/workers-utils";
+//       @cloudflare/workers-utils/config instead?
+export { experimental_patchConfig } from "@cloudflare/workers-utils/config";
 
 export {
 	startRemoteProxySession,

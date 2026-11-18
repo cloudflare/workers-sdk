@@ -21,10 +21,10 @@ import type {
 	CustomDomainChangeset,
 } from "@cloudflare/deploy-helpers";
 import type {
-	Config,
 	ServiceMetadataRes,
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type { FormData } from "undici";
 
 /** Write mock assets to the file system so they can be uploaded. */

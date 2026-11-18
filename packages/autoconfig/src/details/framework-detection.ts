@@ -19,7 +19,8 @@ import { isFrameworkSupported, isKnownFramework } from "../frameworks";
 import { staticFramework } from "../frameworks/all-frameworks";
 import type { AutoConfigContext, AutoConfigTarget } from "../context";
 import type { PackageManager } from "@cloudflare/workers-utils";
-import type { Config, TelemetryMessage } from "@cloudflare/workers-utils";
+import type { TelemetryMessage } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type { Settings } from "@netlify/build-info";
 
 /**

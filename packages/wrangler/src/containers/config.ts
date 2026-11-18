@@ -5,14 +5,14 @@ import {
 	resolveImageName,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
+import { UserError } from "@cloudflare/workers-utils";
 import {
 	getDurableObjectClassNameToUseSQLiteMap,
 	isDockerfile,
 	isDurableObjectContainerApp,
 	resolveContainerClassName,
-	UserError,
 	validateDurableObjectContainerApplications,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import { getOrSelectAccountId } from "../user";
 import type {
 	ApplicationAffinities,
@@ -27,7 +27,7 @@ import type {
 	ContainerApp,
 	ContainerObservability,
 	Observability,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 function isContainerObservabilityEnabled(
 	observability: ContainerObservability | undefined

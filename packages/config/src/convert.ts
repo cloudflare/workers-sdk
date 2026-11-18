@@ -1,11 +1,11 @@
+import { UserError } from "@cloudflare/workers-utils";
+import { toApiComplianceRegion } from "@cloudflare/workers-utils/compliance";
 import {
-	UserError,
 	type RawConfig,
 	type ContainerApp,
 	type DurableObjectContainerImage,
 	type Exports,
-} from "@cloudflare/workers-utils";
-import { toApiComplianceRegion } from "@cloudflare/workers-utils/compliance";
+} from "@cloudflare/workers-utils/config";
 import { isParsedUnsafeBinding } from "./schema";
 import type {
 	ParsedCloudflareConfig,

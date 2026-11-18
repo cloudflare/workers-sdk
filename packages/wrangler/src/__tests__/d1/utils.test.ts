@@ -1,4 +1,4 @@
-import { type Config } from "@cloudflare/workers-utils";
+import { type Config } from "@cloudflare/workers-utils/config";
 import { http, HttpResponse } from "msw";
 import { describe, it } from "vitest";
 import {
