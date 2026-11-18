@@ -49,9 +49,9 @@
 	},
 	"scripts": {
 		"build": "tsdown",
-		"check:type": "tsc -p ./tsconfig.json",
+		"check:type": "tsc -p ./tsconfig.json && tsc -p ./tsconfig.pages-assets.json",
 		"deploy": "echo 'no deploy'",
-		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsdown --watch\" \"pnpm run check:type --watch --preserveWatchOutput\"",
+		"dev": "concurrently -c black,blue,cyan --kill-others-on-fail false \"pnpm tsdown --watch\" \"pnpm exec tsc -p tsconfig.json --watch --preserveWatchOutput\" \"pnpm exec tsc -p tsconfig.pages-assets.json --watch --preserveWatchOutput\"",
 		"test": "vitest",
 		"test:ci": "vitest run",
 		"type:tests": "tsc -p ./tests/tsconfig.json"

@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
 import util from "node:util";
-import { getMiniflareWorkerOptions } from "@cloudflare/deploy-helpers/miniflare-options";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import {
 	convertConfigToBindings,
@@ -792,6 +791,8 @@ async function parseCustomPoolOptions(
 			remoteProxySessionsDataMap.set(configPath, remoteProxySessionData);
 		}
 
+		const { getMiniflareWorkerOptions } =
+			await import("@cloudflare/deploy-helpers/miniflare-options");
 		const { workerOptions, externalWorkers, define, main } =
 			getMiniflareWorkerOptions(config, environment, {
 				overrides: {

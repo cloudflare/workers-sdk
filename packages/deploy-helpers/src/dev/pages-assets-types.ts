@@ -1,7 +1,8 @@
 // `./pages-assets` dynamically imports `@cloudflare/pages-shared`, whose source
 // relies on Workers runtime globals and `global` augmentations that conflict
 // with this package's Node.js typing environment. That file is therefore
-// excluded from type checking, and this file provides its public declarations.
+// checked separately in `tsconfig.pages-assets.json`. This file provides its
+// Node.js public declarations, with their signature checked in `type-tests`.
 import type { Logger } from "@cloudflare/workers-utils";
 import type { Request, Response } from "miniflare";
 

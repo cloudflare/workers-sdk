@@ -1,0 +1,9 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"types": ["node", "@cloudflare/workers-types/experimental"],
+		"tsBuildInfoFile": "pages-assets.tsbuildinfo"
+	},
+	"include": ["src/dev/pages-assets.ts", "type-tests/pages-assets.ts"],
+	"exclude": ["dist", "node_modules"]
+}

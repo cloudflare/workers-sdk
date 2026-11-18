@@ -4,7 +4,8 @@ import { UserError } from "@cloudflare/workers-utils";
 import { caseInsensitiveEnv } from "@cloudflare/workers-utils/local-env";
 import dotenv from "dotenv";
 import dotenvExpand from "dotenv-expand";
-import { logger } from "../shared/context";
+import { logger as contextLogger } from "../shared/context";
+import type { Logger } from "@cloudflare/workers-utils";
 
 const isWindows = process.platform === "win32";
 
@@ -76,11 +77,20 @@ export function getDefaultEnvFiles(env: string | undefined): string[] {
  * @param envPaths - An array of absolute paths to .env files to load.
  * @param options.includeProcessEnv - If true, will include the current process environment variables in the merged result.
  * @param options.silent - If true, will not log any messages about the loaded .env files.
+ * @param options.logger - The logger to use before the shared context has been initialized.
  * @returns An object containing the merged and expanded environment variables.
  */
 export function loadDotEnv(
 	envPaths: string[],
-	{ includeProcessEnv, silent }: { includeProcessEnv: boolean; silent: boolean }
+	{
+		includeProcessEnv,
+		silent,
+		logger = contextLogger,
+	}: {
+		includeProcessEnv: boolean;
+		silent: boolean;
+		logger?: Pick<Logger, "debug" | "log">;
+	}
 ): dotenv.DotenvParseOutput {
 	// The `parsedEnv` object will be mutated to contain the merged values.
 	const parsedEnv = isWindows ? caseInsensitiveEnv() : {};

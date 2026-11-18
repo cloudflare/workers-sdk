@@ -708,6 +708,7 @@ export function createCLIParser(argv: string[]) {
 				args["env-file"] ?? getDefaultEnvFiles(args.env)
 			).map((p) => resolve(p));
 			process.env = loadDotEnv(resolvedEnvFilePaths, {
+				logger,
 				includeProcessEnv: true,
 				silent: true,
 			});

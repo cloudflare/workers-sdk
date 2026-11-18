@@ -5,7 +5,6 @@
 
 import "cloudflare/shims/web";
 import process from "node:process";
-import { generateASSETSBinding } from "@cloudflare/deploy-helpers/pages-assets";
 import { FatalError, splitSqlQuery } from "@cloudflare/workers-utils";
 import { hideBin } from "yargs/helpers";
 import {
@@ -132,8 +131,16 @@ export interface Unstable_ASSETSBindingsOptions {
 	directory?: string;
 	signal?: AbortSignal;
 }
+async function generatePagesASSETSBinding(
+	options: Unstable_ASSETSBindingsOptions
+) {
+	const { generateASSETSBinding } =
+		await import("@cloudflare/deploy-helpers/pages-assets");
+	return generateASSETSBinding(options);
+}
+
 export const unstable_generateASSETSBinding =
-	generateASSETSBinding as unknown as (
+	generatePagesASSETSBinding as unknown as (
 		opts: Unstable_ASSETSBindingsOptions
 	) => (request: Request) => Promise<Response>;
 

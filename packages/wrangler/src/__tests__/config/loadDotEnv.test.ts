@@ -1,6 +1,6 @@
 import { loadDotEnv } from "@cloudflare/deploy-helpers/dev-vars";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
-import { afterEach, beforeEach, describe, it } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { logger } from "../../logger";
 import { mockConsoleMethods } from "../helpers/mock-console";
 const isWindows = process.platform === "win32";
@@ -65,6 +65,22 @@ describe("loadDotEnv()", () => {
 		expect(std.debug).toMatchInlineSnapshot(
 			`".env file not found at "./.env.missing". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/"`
 		);
+	});
+
+	it("uses an injected logger before shared context initialization", ({
+		expect,
+	}) => {
+		const earlyLogger = { debug: vi.fn(), log: vi.fn() };
+		loadDotEnv(["./.env.missing"], {
+			includeProcessEnv: false,
+			silent: true,
+			logger: earlyLogger,
+		});
+
+		expect(earlyLogger.debug).toHaveBeenCalledWith(
+			expect.stringContaining('.env file not found at "./.env.missing"')
+		);
+		expect(std.debug).toBe("");
 	});
 
 	it.skipIf(isWindows)(

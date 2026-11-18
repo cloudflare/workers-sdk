@@ -2,7 +2,6 @@ import assert from "node:assert";
 import path from "node:path";
 import { bold, green } from "@cloudflare/cli-shared-helpers/colors";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
-import { generateASSETSBinding } from "@cloudflare/deploy-helpers/pages-assets";
 import { getRegistryPath, isInteractive } from "@cloudflare/workers-utils";
 import { CorePaths } from "miniflare";
 import dedent from "ts-dedent";
@@ -316,6 +315,8 @@ async function getPagesAssetsFetcher(
 	options: EnablePagesAssetsServiceBindingOptions | undefined
 ): Promise<StartDevWorkerInput["bindings"] | undefined> {
 	if (options !== undefined) {
+		const { generateASSETSBinding } =
+			await import("@cloudflare/deploy-helpers/pages-assets");
 		return {
 			ASSETS: {
 				type: "fetcher",
