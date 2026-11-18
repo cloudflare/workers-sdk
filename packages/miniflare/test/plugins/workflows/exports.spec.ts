@@ -566,6 +566,11 @@ describe("Workflows on ctx.exports", () => {
 			"exporter",
 			"MyWorkflow"
 		);
+		await expect(
+			mf.unsafeIntrospectWorkflow("exporter", "MyWorkflow")
+		).rejects.toThrow(
+			'Workflow "my-workflow" already has an active introspection session.'
+		);
 		await introspector.modifyAll(async (modifier) => {
 			await modifier.mockStepResult({ name: "step 0" }, "mocked");
 		});
