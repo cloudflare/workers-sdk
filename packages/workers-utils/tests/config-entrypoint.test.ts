@@ -1,10 +1,32 @@
 /* eslint-disable @typescript-eslint/no-deprecated -- Verify that deprecated compatibility exports remain usable. */
 import assert from "node:assert";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as legacy from "@cloudflare/workers-utils";
 import * as config from "@cloudflare/workers-utils/config";
 import ts from "typescript";
 import { expectTypeOf, test } from "vitest";
+
+test("published configuration bundles private asset helpers", ({ expect }) => {
+	const distPath = fileURLToPath(new URL("../dist/", import.meta.url));
+	const files = readdirSync(distPath, {
+		recursive: true,
+		encoding: "utf8",
+	}).filter((file) => file.endsWith(".mjs"));
+	expect(files.length).toBeGreaterThan(0);
+	for (const file of files) {
+		const source = readFileSync(join(distPath, file), "utf8");
+		const imports = ts
+			.preProcessFile(source, true, true)
+			.importedFiles.map(({ fileName }) => fileName);
+		expect(imports, file).not.toEqual(
+			expect.arrayContaining([
+				expect.stringMatching(/^@cloudflare\/workers-shared(?:\/|$)/),
+			])
+		);
+	}
+});
 
 test("published config entry points share runtime values", ({ expect }) => {
 	for (const [name, value] of Object.entries(config)) {

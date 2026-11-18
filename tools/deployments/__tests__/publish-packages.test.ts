@@ -316,6 +316,7 @@ describe("the real workspace", () => {
 			  ],
 			  [
 			    "@cloudflare/deploy-helpers",
+			    "@cloudflare/dev-helpers",
 			  ],
 			]
 		`);

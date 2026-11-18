@@ -30,6 +30,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/config",
 				"@cloudflare/containers-shared",
 				"@cloudflare/deploy-helpers",
+				"@cloudflare/dev-helpers",
 				"@cloudflare/devprod-status-bot",
 				"@cloudflare/edge-preview-authenticated-proxy",
 				"@cloudflare/lint-config-shared",
