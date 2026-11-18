@@ -8,8 +8,11 @@ import type {
 	ZoneNameRoute,
 } from "./config/environment";
 import type { WorkerMetadata } from "./types";
-import type { AssetConfig } from "@cloudflare/workers-shared";
-import type { Cloudflare } from "cloudflare";
+import type { AssetConfig } from "@cloudflare/workers-shared/utils/types";
+import type { Worker } from "cloudflare/resources/workers/beta/workers";
+import type { Version } from "cloudflare/resources/workers/beta/workers/versions";
+import type { Domain } from "cloudflare/resources/workers/domains";
+import type { ScheduleGetResponse } from "cloudflare/resources/workers/scripts/schedules";
 
 type RoutesRes = {
 	id: string;
@@ -31,16 +34,16 @@ interface APIWorkerConfig {
 	migration_tag?: string;
 
 	/* sourced from https://developers.cloudflare.com/api/resources/workers/subresources/domains/methods/list/ */
-	domains: Cloudflare.Workers.Domain[];
+	domains: Domain[];
 	/* sourced from https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/schedules/methods/get/ */
-	schedules: Cloudflare.Workers.Scripts.Schedules.ScheduleGetResponse.Schedule[];
+	schedules: ScheduleGetResponse.Schedule[];
 
 	/* sourced from https://developers.cloudflare.com/api/resources/workers/subresources/beta/subresources/workers/subresources/versions/methods/get/ using `{version_id}` of `latest` */
 	assets?: AssetConfig;
 	bindings: WorkerMetadata["bindings"];
-	observability: Cloudflare.Workers.Beta.Worker.Observability | undefined;
+	observability: Worker.Observability | undefined;
 	limits: { cpu_ms?: number; subrequests?: number } | undefined;
-	placement: Cloudflare.Workers.Beta.Workers.Version.Placement | undefined;
+	placement: Version.Placement | undefined;
 	subdomain: {
 		enabled: boolean;
 		previews_enabled: boolean;

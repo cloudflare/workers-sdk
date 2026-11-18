@@ -35,7 +35,7 @@
 		"access": "public"
 	},
 	"scripts": {
-		"build": "tsup",
+		"build": "tsdown",
 		"check:type": "tsc -p ./tsconfig.json",
 		"deploy": "echo 'no deploy'",
 		"test": "vitest",
@@ -52,7 +52,7 @@
 		"esbuild": "catalog:default",
 		"semver": "^7.7.1",
 		"tinyglobby": "catalog:default",
-		"tsup": "8.3.0",
+		"tsdown": "catalog:default",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
 	},

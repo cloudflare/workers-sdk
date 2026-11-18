@@ -12,5 +12,5 @@ export default defineConfig({
 	// Keep zod external so consumers that bundle this package (wrangler,
 	// deploy-helpers, vite-plugin) share a single zod copy instead of inlining
 	// one per consumed entry point.
-	external: [/^zod(\/.*)?$/],
+	deps: { neverBundle: [/^zod(\/.*)?$/] },
 });

@@ -1,10 +1,20 @@
-import fs from "node:fs";
-import path from "node:path";
-
 /**
- * Dependencies that _are not_ bundled along with wrangler
+ * Dependencies that must be installed alongside Wrangler
  */
 export const EXTERNAL_DEPENDENCIES = [
+	// Public declarations must share workers-utils' unique symbol types. Its JS
+	// stays bundled because Wrangler is CommonJS and workers-utils is ESM-only.
+	"@cloudflare/workers-utils",
+
+	// The public API exposes SDK and protocol types. Keep these packages installed
+	// so consumers can resolve their declarations without bundling their namespaces.
+	"cloudflare",
+	"devtools-protocol",
+	"@types/yargs",
+
+	// Share Undici's Request/Response classes and global dispatcher with Miniflare.
+	"undici",
+
 	// The shared source-map helper reloads this module through the real require
 	// cache to isolate stack-trace handlers, so it cannot be bundled.
 	"@cspotcode/source-map-support",
@@ -61,16 +71,18 @@ export const IGNORED_DIST_IMPORTS = [
 	// crypto implementation if installed; falls back to a JS implementation
 	// when missing.
 	"@aws-sdk/signature-v4-crt",
+
+	// ws (bundled transitive dependency) optionally uses these native
+	// acceleration modules if installed; each require is guarded by a
+	// try/catch (and an env flag) and falls back to a JS implementation.
+	"bufferutil",
+	"utf-8-validate",
+
+	// @blitz/internal/env is optionally required inside a try/catch by a
+	// bundled dependency; the failure is swallowed when it is not installed.
+	"@blitz/internal",
+
+	// recast uses this legacy fallback only when @babel/parser is unavailable.
+	// @babel/parser is bundled with Wrangler.
+	"babylon",
 ];
-
-const pathToPackageJson = path.resolve(__dirname, "..", "package.json");
-const packageJson = fs.readFileSync(pathToPackageJson, { encoding: "utf-8" });
-const { dependencies, devDependencies } = JSON.parse(packageJson);
-
-/**
- * Dependencies that _are_ bundled along with wrangler
- */
-export const BUNDLED_DEPENDENCIES = Object.keys({
-	...dependencies,
-	...devDependencies,
-}).filter((dep) => !EXTERNAL_DEPENDENCIES.includes(dep));

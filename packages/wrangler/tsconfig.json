@@ -4,7 +4,8 @@
 		"module": "preserve",
 		"types": ["node"],
 		"jsx": "react-jsx",
-		"tsBuildInfoFile": ".tsbuildinfo"
+		"tsBuildInfoFile": ".tsbuildinfo",
+		"allowImportingTsExtensions": true
 	},
 	"include": ["**/*.ts", "**/*.tsx", "**/*.js", "tsdown.config.mts"],
 	"exclude": [

@@ -43,9 +43,9 @@ Main CLI for Cloudflare Workers. ~2k-line yargs command tree in `src/index.ts`. 
 
 ## Build
 
-- tsup: single entry `src/cli.ts` → `wrangler-dist/cli.js`
+- tsdown: `src/cli.ts` → `wrangler-dist/cli.js` (CommonJS), plus `src/experimental-config.ts` → `wrangler-dist/experimental-config.mjs` (ESM)
 - `package.json` `main` points at `wrangler-dist/cli.js`
-- Custom `embedWorkersPlugin()` bundles Worker templates via esbuild for tests
+- Custom `embedWorkersPlugin()` uses nested esbuild builds for embedded Worker templates
 
 ## Testing
 
