@@ -2,6 +2,6 @@
 "miniflare": patch
 ---
 
-Include the plugin registry's types in Miniflare's declaration bundle
+Fix missing types when using Miniflare with `skipLibCheck: false`
 
-Keep the plugin type import explicit so API Extractor includes it in the public declarations. This prevents an unresolved `./shared` import when checking a project with `skipLibCheck` disabled.
+TypeScript projects importing Miniflare could fail with `Cannot find module './shared'`. The required types are now included in the published package, so projects can check Miniflare's declarations without this error.

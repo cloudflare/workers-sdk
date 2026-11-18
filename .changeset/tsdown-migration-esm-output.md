@@ -10,6 +10,6 @@
 "@cloudflare/vitest-plugin": patch
 ---
 
-Build with tsdown so the ESM output can be loaded in a pure-ESM context
+Fix `Dynamic require` errors when importing packages from ES modules
 
-Previously, bundled CommonJS dependencies could cause `Dynamic require of "..." is not supported` errors when these packages were loaded as ESM. Build the remaining tsup packages with tsdown and provide Node.js shims for their Node.js entry points. Keep the browser and Worker metrics entry points free of Node.js built-ins.
+Importing these packages in a Node.js ES module could fail with `Dynamic require of "..." is not supported` when a dependency loaded a Node.js built-in. These imports now work without requiring a CommonJS wrapper.

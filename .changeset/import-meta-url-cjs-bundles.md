@@ -3,6 +3,6 @@
 "create-cloudflare": patch
 ---
 
-Provide a valid `import.meta.url` when bundling ESM dependencies into CJS output
+Fix startup failures in Miniflare and C3 when loading ESM dependencies
 
-The builds inline ESM dependencies that use `createRequire(import.meta.url)`. Provide a file URL when producing the CommonJS bundles so these dependencies can initialize successfully.
+Miniflare and `create-cloudflare` can now load dependencies that use Node.js's `createRequire()` without failing on an invalid file URL. This prevents these dependencies from causing an error before the CLI or local development environment starts.
