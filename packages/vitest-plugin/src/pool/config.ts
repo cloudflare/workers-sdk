@@ -287,7 +287,10 @@ const remoteBindingsLogger: RemoteBindingsLogger = {
 	warn: console.warn,
 	error: console.error,
 	console(method, ...args) {
-		Reflect.apply(console[method], console, args);
+		const consoleMethod = console[method];
+		if (typeof consoleMethod === "function") {
+			Reflect.apply(consoleMethod, console, args);
+		}
 	},
 };
 

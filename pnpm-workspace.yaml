@@ -124,6 +124,9 @@ patchedDependencies:
   "@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch"
   "toucan-js@4.0.0": "patches/toucan-js@4.0.0.patch"
   "postal-mime": "patches/postal-mime.patch"
+  # Remove the unused name-preservation helper import from declaration output.
+  # See https://github.com/sxzz/rolldown-plugin-dts/issues/369
+  "rolldown-plugin-dts@0.27.14": "patches/rolldown-plugin-dts@0.27.14.patch"
   "youch@4.1.0-beta.10": "patches/youch@4.1.0-beta.10.patch"
   "buffer-equal-constant-time@1.0.1": "patches/buffer-equal-constant-time@1.0.1.patch"
 
@@ -149,6 +152,7 @@ catalog:
   vite: "8.3.4"
   "ws": "8.21.0"
   esbuild: "0.28.2"
+  tsdown: "0.22.14"
   "@playwright/test": "1.61.0"
   playwright-chromium: "1.61.0"
   "@cloudflare/workers-types": "^5.20261118.1"

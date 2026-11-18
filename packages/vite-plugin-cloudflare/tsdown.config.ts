@@ -13,7 +13,18 @@ export default defineConfig([
 		sourcemap,
 		outDir: "dist",
 		tsconfig: "tsconfig.plugin.json",
+		deps: {
+			dts: {
+				alwaysBundle: [
+					/^@cloudflare\/(?!workers-types(?:\/|$))/,
+					/^cloudflare(?:\/.*)?$/,
+					"jsonc-parser",
+					"zod",
+				],
+			},
+		},
 		dts: {
+			resolver: "tsc",
 			sourcemap,
 			compilerOptions: {
 				// workaround for https://github.com/rolldown/tsdown/issues/345
@@ -34,7 +45,7 @@ export default defineConfig([
 			"module-runner": "vite/module-runner",
 			"module-runner-legacy": "vite-legacy/module-runner",
 		},
-		external: ["cloudflare:workers", "vite/module-runner"],
+		deps: { neverBundle: ["cloudflare:workers", "vite/module-runner"] },
 	}),
 	worker("vite-proxy-worker"),
 ]);
@@ -54,7 +65,7 @@ function worker(name: string, options: UserConfig = {}): UserConfig {
 			},
 		},
 		dts: false,
-		external: ["cloudflare:workers"],
+		deps: { neverBundle: ["cloudflare:workers"] },
 		tsconfig: "tsconfig.worker.json",
 		ignoreWatch,
 		...options,

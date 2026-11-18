@@ -24,7 +24,7 @@
 		}
 	},
 	"scripts": {
-		"build": "tsup",
+		"build": "tsdown",
 		"check:type": "tsc -p ./tsconfig.json && pnpm run type:tests",
 		"deploy": "echo 'no deploy'",
 		"test": "vitest",
@@ -42,7 +42,7 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@types/node": "catalog:default",
 		"@types/ws": "^8.5.7",
-		"tsup": "8.3.0",
+		"tsdown": "catalog:default",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default",
 		"ws": "catalog:default"

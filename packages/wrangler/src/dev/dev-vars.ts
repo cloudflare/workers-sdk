@@ -3,7 +3,7 @@ import {
 	getCloudflareIncludeProcessEnvFromEnv,
 	getCloudflareLoadDevVarsFromDotEnv,
 } from "@cloudflare/workers-utils";
-import dotenv from "dotenv";
+import { parse, type DotenvParseOutput } from "dotenv";
 import { getDefaultEnvFiles, loadDotEnv, readEnvFile } from "../config/dot-env";
 import { logger } from "../logger";
 import type { Binding } from "../api/startDevWorker/types";
@@ -151,7 +151,7 @@ function toVarBinding(value: string | Json): VarBinding {
 
 export interface DotDevDotVars {
 	path: string;
-	parsed: dotenv.DotenvParseOutput;
+	parsed: DotenvParseOutput;
 }
 
 function tryLoadDotDevDotVars(basePath: string): DotDevDotVars | undefined {
@@ -163,7 +163,7 @@ function tryLoadDotDevDotVars(basePath: string): DotDevDotVars | undefined {
 		return;
 	}
 
-	const parsed = dotenv.parse(contents);
+	const parsed = parse(contents);
 	return { path: basePath, parsed };
 }
 

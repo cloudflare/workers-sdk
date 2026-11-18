@@ -52,7 +52,10 @@ import {
 } from "./worker-loader";
 import { WORKFLOWS_PLUGIN, WORKFLOWS_PLUGIN_NAME } from "./workflows";
 import type { ValueOf } from "../workers";
+import type { Plugin } from "./shared";
 
+// Keep a named Plugin import in the declarations so API Extractor can bundle it
+// instead of leaking an unresolved relative import into the published types.
 export const PLUGINS = {
 	[CORE_PLUGIN_NAME]: CORE_PLUGIN,
 	[CACHE_PLUGIN_NAME]: CACHE_PLUGIN,
@@ -88,7 +91,7 @@ export const PLUGINS = {
 	[WORKER_LOADER_PLUGIN_NAME]: WORKER_LOADER_PLUGIN,
 	[MEDIA_PLUGIN_NAME]: MEDIA_PLUGIN,
 	[VERSION_METADATA_PLUGIN_NAME]: VERSION_METADATA_PLUGIN,
-};
+} satisfies Record<string, Plugin>;
 export type Plugins = typeof PLUGINS;
 
 export const PLUGIN_ENTRIES = Object.entries(PLUGINS) as [

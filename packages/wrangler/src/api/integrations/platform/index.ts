@@ -26,16 +26,14 @@ import { getZoneFromRoute } from "../../../zones";
 import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
-// TODO: import from `@cloudflare/workers-utils` after migrating to `tsdown`
-// This is a temporary fix to ensure that the types are included in the build output
+import type { RemoteProxySession } from "../../remoteBindings";
+import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
 	AssetsOptions,
 	Config,
 	RawConfig,
 	RawEnvironment,
-} from "../../../../../workers-utils/src";
-import type { RemoteProxySession } from "../../remoteBindings";
-import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
+} from "@cloudflare/workers-utils";
 import type {
 	RemoteProxyConnectionString,
 	V4MiniflareOptions,

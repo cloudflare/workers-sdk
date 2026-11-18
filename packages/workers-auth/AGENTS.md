@@ -176,9 +176,9 @@ Each CLI is a thin **descriptor + entrypoint**:
 
 ## BUILD
 
-- tsup: two entry points — `src/index.ts` and `src/test-helpers/index.ts`
+- tsdown: shared core, Wrangler and cf entry points, plus test helpers
 - ESM-only output to `dist/`
-- `@cloudflare/*`, `undici`, `msw`, and `vitest` are kept external
+- Runtime dependencies (`@cloudflare/workers-utils` and `undici`), `msw`, and `vitest` are kept external
 
 ## CREDENTIAL STORAGE NOTES
 

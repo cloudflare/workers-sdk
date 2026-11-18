@@ -59,6 +59,13 @@ jobs:
           CI_OS: ${{ runner.os }}
           NODE_OPTIONS: "--max_old_space_size=8192"
 
+      # The repository check above builds the packages before these checks run.
+      - name: Check Wrangler build output
+        run: node -r esbuild-register tools/test/check-built-entry-points.ts wrangler
+
+      - name: Check Vite plugin build output
+        run: node -r esbuild-register tools/test/check-built-entry-points.ts vite-plugin-cloudflare
+
       - name: Filter changed paths
         uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: changes

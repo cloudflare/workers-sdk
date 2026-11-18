@@ -59,7 +59,10 @@ import type {
 	CfScriptFormat,
 	CfUnsafe,
 } from "./worker";
-import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
+import type {
+	AssetConfig,
+	RouterConfig,
+} from "@cloudflare/workers-shared/utils/types";
 import type { MockAgent } from "undici";
 
 export type Json =

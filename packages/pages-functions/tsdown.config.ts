@@ -12,7 +12,7 @@ export default defineConfig([
 		// esbuild is invoked at runtime to compile user code; it ships
 		// platform-specific binaries and must be resolved from the consumer's
 		// node_modules at install time — not inlined into our bundle.
-		external: ["esbuild"],
+		deps: { neverBundle: ["esbuild"] },
 	},
 	{
 		entry: { cli: "src/cli.ts" },
@@ -22,6 +22,6 @@ export default defineConfig([
 		dts: false,
 		tsconfig: "tsconfig.json",
 		sourcemap: process.env.SOURCEMAPS !== "false",
-		external: ["esbuild"],
+		deps: { neverBundle: ["esbuild"] },
 	},
 ]);
