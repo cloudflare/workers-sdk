@@ -8,7 +8,7 @@ import { getType } from "mime";
 import { fetch, Request, Response } from "miniflare";
 import { Dispatcher, getGlobalDispatcher } from "undici";
 import { logger } from "../logger";
-import { hashFile } from "../pages/hash";
+import { createFileHasher } from "../pages/hash";
 import type { Logger } from "../logger";
 import type { Metadata } from "@cloudflare/pages-shared/asset-server/metadata";
 import type {
@@ -137,6 +137,7 @@ async function generateAssetsFetch(
 	signal?: AbortSignal
 ): Promise<typeof fetch> {
 	directory = resolve(directory);
+	const hashFile = await createFileHasher();
 	// Defer importing miniflare until we really need it
 
 	// NOTE: These dynamic imports bring in `global` type augmentations from
@@ -245,7 +246,7 @@ async function generateAssetsFetch(
 					lstatSync(filepath, { throwIfNoEntry: false })?.isFile() &&
 					!ignoredFiles.includes(filepath)
 				) {
-					const hash = await hashFile(filepath);
+					const hash = hashFile(filepath);
 					assetKeyEntryMap.set(hash, filepath);
 					return hash;
 				}

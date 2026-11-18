@@ -29,7 +29,7 @@ import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
 import { FormData } from "undici";
 import { fetchResult, logger } from "../../shared/context";
-import { hashFile, initHash } from "./hash";
+import { createFileHasher } from "./hash";
 import { decodeJwtPayload, isJwtExpired } from "./jwt";
 import type { SharedDeployVersionsProps } from "../../shared/types";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
@@ -645,7 +645,7 @@ export const buildAssetManifest = async (dir: string) => {
 			throw error;
 		});
 
-	await initHash();
+	const hashFile = await createFileHasher();
 
 	await Promise.all(
 		files.map(async (relativeFilepath) => {
@@ -685,7 +685,7 @@ export const buildAssetManifest = async (dir: string) => {
 					);
 				}
 				manifest[normalizeFilePath(relativeFilepath)] = {
-					hash: await hashFile(filepath),
+					hash: hashFile(filepath),
 					size: filestat.size,
 				};
 			}

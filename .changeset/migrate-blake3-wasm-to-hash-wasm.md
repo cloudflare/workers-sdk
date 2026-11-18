@@ -3,4 +3,6 @@
 "wrangler": patch
 ---
 
-Update the dependency used for asset hashing. Asset hashes are unchanged, so deploys are unaffected.
+Replace the unmaintained asset hashing dependency with `hash-wasm`
+
+Keep asset hashes unchanged for Workers and Pages deployments and local Pages development while using a maintained WebAssembly implementation.

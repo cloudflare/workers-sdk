@@ -6,7 +6,7 @@ import { Minimatch } from "minimatch";
 import prettyBytes from "pretty-bytes";
 import { createCommand } from "../core/create-command";
 import { MAX_ASSET_COUNT_DEFAULT, MAX_ASSET_SIZE } from "./constants";
-import { hashFile, initHash } from "./hash";
+import { createFileHasher } from "./hash";
 import { maxFileCountAllowedFromClaims } from "./upload";
 
 export const pagesProjectValidateCommand = createCommand({
@@ -137,7 +137,7 @@ export const validate = async (args: {
 						path: filepath,
 						contentType: getType(name) || "application/octet-stream",
 						sizeInBytes: filestat.size,
-						hash: await hashFile(filepath),
+						hash: hashFile(filepath),
 					});
 				}
 			})
@@ -146,7 +146,7 @@ export const validate = async (args: {
 		return fileMap;
 	};
 
-	await initHash();
+	const hashFile = await createFileHasher();
 	const fileMap = await walk(directory);
 
 	if (fileMap.size > fileCountLimit) {

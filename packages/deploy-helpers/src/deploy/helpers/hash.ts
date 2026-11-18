@@ -1,21 +1,30 @@
 import { readFileSync } from "node:fs";
 import { extname } from "node:path";
-import { blake3 } from "hash-wasm";
+import { createBLAKE3 } from "hash-wasm";
 
 /**
- * Warm hash-wasm's internal WASM cache before fanning out concurrent
- * `hashFile` calls. Without this, every cold call takes the cache-miss path
- * and instantiates its own WASM module behind a mutex while retaining its
- * file buffer.
+ * Initialize a reusable hasher for asset manifest hashes.
+ *
+ * Finish WASM initialization before reading any assets, then hash each file
+ * synchronously so concurrent callers only retain one file's contents at a time.
+ *
+ * @returns A function that hashes a file's base64 contents and extension.
  */
-export async function initHash() {
-	await blake3(new Uint8Array());
+export async function createFileHasher(): Promise<
+	(filepath: string) => string
+> {
+	const hasher = await createBLAKE3();
+
+	return function hashFile(filepath: string): string {
+		const contents = readFileSync(filepath);
+		const base64Contents = contents.toString("base64");
+		const extension = extname(filepath).substring(1);
+
+		return hasher
+			.init()
+			.update(base64Contents)
+			.update(extension)
+			.digest("hex")
+			.slice(0, 32);
+	};
 }
-
-export const hashFile = async (filepath: string) => {
-	const contents = readFileSync(filepath);
-	const base64Contents = contents.toString("base64");
-	const extension = extname(filepath).substring(1);
-
-	return (await blake3(Buffer.from(base64Contents + extension))).slice(0, 32);
-};
