@@ -252,6 +252,9 @@ function convertTopLevel(config: ParsedWorkerConfig, result: RawConfig): void {
 		if (config.limits.subrequests !== undefined) {
 			limits.subrequests = config.limits.subrequests;
 		}
+		if (config.limits.durableObjectMemoryMb !== undefined) {
+			limits.durable_object_memory_mb = config.limits.durableObjectMemoryMb;
+		}
 		result.limits = limits;
 	}
 	if (config.observability !== undefined) {

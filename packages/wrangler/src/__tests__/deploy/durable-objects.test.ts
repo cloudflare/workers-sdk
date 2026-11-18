@@ -677,6 +677,56 @@ describe("deploy", () => {
 				Current Version ID: Galaxy-Class"
 			`);
 		});
+
+		it("should allow specifying a durable_object_memory_mb limit", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				limits: { durable_object_memory_mb: 256 },
+				durable_objects: {
+					bindings: [{ name: "DO", class_name: "MyDO" }],
+				},
+				exports: {
+					MyDO: { type: "durable-object", storage: "sqlite" },
+				},
+			});
+
+			fs.writeFileSync("index.js", `export class MyDO {}; export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedLimits: { durable_object_memory_mb: 256 },
+				expectedExports: {
+					MyDO: { type: "durable-object", storage: "sqlite" },
+				},
+				expectedMigrations: undefined,
+				useOldUploadApi: true,
+			});
+
+			await runWrangler("deploy index.js");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).not.toContain("durable_object_memory_mb");
+		});
+
+		it("should warn when durable_object_memory_mb is set without any Durable Objects", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				limits: { durable_object_memory_mb: 512 },
+			});
+
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedLimits: { durable_object_memory_mb: 512 },
+			});
+
+			await runWrangler("deploy index.js");
+
+			expect(std.warn).toContain(
+				'"limits.durable_object_memory_mb" is set, but this Worker does not export any Durable Objects.'
+			);
+		});
 	});
 	describe("ai", () => {
 		it("should upload ai bindings", async ({ expect }) => {

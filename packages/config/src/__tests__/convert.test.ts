@@ -57,6 +57,19 @@ describe("convertToWranglerConfig", () => {
 			expect(result.limits).toEqual({ cpu_ms: 50, subrequests: 100 });
 		});
 
+		it("maps limits.durableObjectMemoryMb to limits.durable_object_memory_mb", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					limits: { durableObjectMemoryMb: 256 },
+				},
+				containers: [],
+			});
+			expect(result.limits).toEqual({ durable_object_memory_mb: 256 });
+		});
+
 		it("converts observability camelCase to snake_case", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {

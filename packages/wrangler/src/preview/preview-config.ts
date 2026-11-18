@@ -201,6 +201,7 @@ export function convertTopLevelSetting(
 				converted.limits = omitNullish({
 					cpu_ms: settings.limits.cpu_ms,
 					subrequests: settings.limits.subrequests,
+					durable_object_memory_mb: settings.limits.durable_object_memory_mb,
 				});
 			}
 			break;
