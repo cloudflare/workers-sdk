@@ -1,5 +1,59 @@
 # wrangler
 
+## 4.165.0
+
+### Minor Changes
+
+- [#10598](https://github.com/cloudflare/workers-sdk/pull/10598) [`24bd3c3`](https://github.com/cloudflare/workers-sdk/commit/24bd3c3aae162b6ef6f8ec661fdd3378123eb811) Thanks [@Ehbraheem](https://github.com/Ehbraheem)! - Add a new `--force` flag to `d1 migrations apply` which skips the interactive confirmation and applies any pending migrations non-interactively. This is useful for CI and automation.
+
+  Usage example:
+
+  ```
+  wrangler d1 migrations apply <db> --remote --force
+  ```
+
+  Fixes #5017
+
+### Patch Changes
+
+- [#16019](https://github.com/cloudflare/workers-sdk/pull/16019) [`8f26e90`](https://github.com/cloudflare/workers-sdk/commit/8f26e9008c8fb50a677f7cb7836beaf6deb66073) Thanks [@penalosa](https://github.com/penalosa)! - Correct the dry-run setup message to say "exiting now" instead of "existing now".
+
+  The previous wording contained a typo and appeared in Wrangler setup output and other consumers of shared autoconfig.
+
+- [#17003](https://github.com/cloudflare/workers-sdk/pull/17003) [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-18
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17003](https://github.com/cloudflare/workers-sdk/pull/17003) [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261117.1 | ^5.20261118.1 |
+  | workerd                   | 1.20261117.1  | 1.20261118.1  |
+
+- [#16719](https://github.com/cloudflare/workers-sdk/pull/16719) [`f833c8a`](https://github.com/cloudflare/workers-sdk/commit/f833c8ac21d5c562a25e1e2f90fa160c8510c127) Thanks [@jaeminbird](https://github.com/jaeminbird)! - Report `.dev.vars` and `.env` files that are not UTF-8 instead of silently loading no variables
+
+  Before Wrangler would incorrectly read non UTF-8 `.dev.vars` and `.env` files as UTF-8. A `.dev.vars` file that is not UTF-8 now stops `wrangler dev` with a message that says how to fix it, and a `.env` file that is not UTF-8 is skipped with a warning. UTF-8 files, with or without a BOM, load as before.
+
+- [#14334](https://github.com/cloudflare/workers-sdk/pull/14334) [`67d7c0a`](https://github.com/cloudflare/workers-sdk/commit/67d7c0a12b7476430d59e7d6a106c8996449f4e6) Thanks [@Divkix](https://github.com/Divkix)! - Replace the unmaintained asset hashing dependency with `hash-wasm`
+
+  Keep asset hashes unchanged for Workers and Pages deployments and local Pages development while using a maintained WebAssembly implementation.
+
+- [#16949](https://github.com/cloudflare/workers-sdk/pull/16949) [`110c162`](https://github.com/cloudflare/workers-sdk/commit/110c16279a91927427396b0f3760e27d59a8079a) Thanks [@edmundhung](https://github.com/edmundhung)! - Fail remote RPC binding requests on network errors instead of hanging
+
+  Remote bindings that connect over RPC treated every network failure, such as being offline, a DNS or TLS error, as a preview reload. The request then waited silently for a reload that never came. These requests now fail with the error, while GET and HEAD requests interrupted by an actual reload are still retried.
+
+- [#14578](https://github.com/cloudflare/workers-sdk/pull/14578) [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3) Thanks [@penalosa](https://github.com/penalosa)! - Fix TypeScript errors when importing Wrangler's APIs
+
+  Projects that import Wrangler's APIs, such as `getPlatformProxy` or `defineWranglerConfig`, can now type-check with `skipLibCheck: false`. The published types no longer refer to missing internal packages, and their required type dependencies are installed automatically.
+
+- Updated dependencies [[`0a4315f`](https://github.com/cloudflare/workers-sdk/commit/0a4315fcf56a1cb6dbc6b4908afe6122e87d4253), [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c), [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c), [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3), [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3), [`d04e667`](https://github.com/cloudflare/workers-sdk/commit/d04e667fadbc4b28666236ae9d85a3cae6bee557), [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3), [`5a6e450`](https://github.com/cloudflare/workers-sdk/commit/5a6e4502f81c4f3032be8b0c174e730ea3817b76)]:
+  - miniflare@5.20261118.0-beta
+  - @cloudflare/workers-utils@0.55.0
+  - @cloudflare/kv-asset-handler@0.5.1
+
 ## 4.164.0
 
 ### Minor Changes

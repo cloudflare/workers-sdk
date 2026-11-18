@@ -1,5 +1,29 @@
 # @cloudflare/containers-shared
 
+## 0.27.0
+
+### Minor Changes
+
+- [#16877](https://github.com/cloudflare/workers-sdk/pull/16877) [`dff5212`](https://github.com/cloudflare/workers-sdk/commit/dff5212681e8282ff47b1ed0006f7e74aed1bf53) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `prepareContainerImagesForCfConfig` for building or pulling the Container images of a `cloudflare.config.ts` project
+
+  Tools that run Containers from cf config can now share one implementation, including Cloudflare-managed registry authentication, instead of keeping their own copies.
+
+### Patch Changes
+
+- [#17003](https://github.com/cloudflare/workers-sdk/pull/17003) [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-18
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#14578](https://github.com/cloudflare/workers-sdk/pull/14578) [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3) Thanks [@penalosa](https://github.com/penalosa)! - Fix `Dynamic require` errors when importing packages from ES modules
+
+  Importing these packages in a Node.js ES module could fail with `Dynamic require of "..." is not supported` when a dependency loaded a Node.js built-in. These imports now work without requiring a CommonJS wrapper.
+
+- Updated dependencies [[`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c), [`d04e667`](https://github.com/cloudflare/workers-sdk/commit/d04e667fadbc4b28666236ae9d85a3cae6bee557), [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3)]:
+  - @cloudflare/workers-utils@0.55.0
+  - @cloudflare/build-output-utils@1.0.0-rc.2
+  - @cloudflare/cli-shared-helpers@0.3.11
+  - @cloudflare/config@1.0.0-rc.2
+
 ## 0.26.3
 
 ### Patch Changes

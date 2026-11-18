@@ -1,5 +1,42 @@
 # @cloudflare/autoconfig
 
+## 0.13.2
+
+### Patch Changes
+
+- [#16995](https://github.com/cloudflare/workers-sdk/pull/16995) [`c79c1fc`](https://github.com/cloudflare/workers-sdk/commit/c79c1fccc307cb16450121fef5353c7ff6ba5c00) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix Astro projects set up for cf getting a `wrangler.jsonc` instead of a `cloudflare.config.ts`
+
+  Autoconfig installed `astro@beta` to get the `astro add` that writes `cloudflare.config.ts`, but package managers such as pnpm kept the project's newer stable Astro, whose `astro add` writes `wrangler.jsonc`, so the build failed. Autoconfig now runs the beta's `astro add` once without installing it, and keeps the project's Astro version.
+
+- [#17009](https://github.com/cloudflare/workers-sdk/pull/17009) [`496a062`](https://github.com/cloudflare/workers-sdk/commit/496a062afca5587050e21ff026d541b730b4e125) Thanks [@edmundhung](https://github.com/edmundhung)! - Require Vite 7 or later when autoconfiguring Vite projects for `cf`
+
+  `cf` installs `@cloudflare/vite-plugin` v2, which requires Vite 7 or 8, so a Vite 6 project is now rejected before any changes are made instead of failing during dependency installation.
+
+- [#16992](https://github.com/cloudflare/workers-sdk/pull/16992) [`f1c64b5`](https://github.com/cloudflare/workers-sdk/commit/f1c64b5c8aae426a85c57aac1def4f7b46019102) Thanks [@edmundhung](https://github.com/edmundhung)! - Stop adding the SolidStart pre-bundling exclude on `cf` for SolidStart 2.2.3 and later
+
+  SolidStart 2.2.3 keeps `@solidjs/start` out of server pre-bundling itself, so autoconfig now adds `environments.ssr.optimizeDeps.exclude` to the Vite config, or asks you to add it, only for earlier 2.x versions.
+
+- [#17010](https://github.com/cloudflare/workers-sdk/pull/17010) [`a959051`](https://github.com/cloudflare/workers-sdk/commit/a95905118cbc64083db1edb861dfa36162a16d3e) Thanks [@edmundhung](https://github.com/edmundhung)! - Suggest a compatible Cloudflare Vite plugin version when the installed one doesn't support cf
+
+  When `@cloudflare/vite-plugin` was missing or too old, autoconfig suggested installing `@cloudflare/vite-plugin@beta`, which resolves to a version that cf rejects. The suggested command now installs `@cloudflare/vite-plugin@^2.0.0-rc.0`, matching the version autoconfig installs when it configures a project for cf.
+
+- [#16019](https://github.com/cloudflare/workers-sdk/pull/16019) [`8f26e90`](https://github.com/cloudflare/workers-sdk/commit/8f26e9008c8fb50a677f7cb7836beaf6deb66073) Thanks [@penalosa](https://github.com/penalosa)! - Correct the dry-run setup message to say "exiting now" instead of "existing now".
+
+  The previous wording contained a typo and appeared in Wrangler setup output and other consumers of shared autoconfig.
+
+- [#17003](https://github.com/cloudflare/workers-sdk/pull/17003) [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-18
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#14578](https://github.com/cloudflare/workers-sdk/pull/14578) [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3) Thanks [@penalosa](https://github.com/penalosa)! - Fix `Dynamic require` errors when importing packages from ES modules
+
+  Importing these packages in a Node.js ES module could fail with `Dynamic require of "..." is not supported` when a dependency loaded a Node.js built-in. These imports now work without requiring a CommonJS wrapper.
+
+- Updated dependencies [[`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c), [`d04e667`](https://github.com/cloudflare/workers-sdk/commit/d04e667fadbc4b28666236ae9d85a3cae6bee557), [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3)]:
+  - @cloudflare/workers-utils@0.55.0
+  - @cloudflare/cli-shared-helpers@0.3.11
+  - @cloudflare/config@1.0.0-rc.2
+
 ## 0.13.1
 
 ### Patch Changes
