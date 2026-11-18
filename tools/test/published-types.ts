@@ -10,14 +10,16 @@ import ts from "typescript";
 
 /**
  * Type-check a Worker project using a package's published declarations and
- * installed dependencies. Call inside a temporary working directory.
+ * installed dependencies.
  *
+ * @param consumerRoot - Absolute path to an empty temporary directory.
  * @param packageRoot - Absolute path to the workspace package.
  * @param buildDirectory - Directory containing the package's built output.
  * @param source - TypeScript source importing the package's public API.
  * @returns Diagnostics in the consumer, package, and workspace dependencies.
  */
 export function checkPublishedTypes(
+	consumerRoot: string,
 	packageRoot: string,
 	buildDirectory: string,
 	source: string
@@ -29,8 +31,12 @@ export function checkPublishedTypes(
 		dependencies?: Record<string, string>;
 		peerDependencies?: Record<string, string>;
 	};
-	const consumerPackage = path.resolve("node_modules", manifest.name);
-	const diagnosticDirectories = [process.cwd(), path.dirname(packageRoot)];
+	const consumerPackage = path.join(
+		consumerRoot,
+		"node_modules",
+		manifest.name
+	);
+	const diagnosticDirectories = [consumerRoot, path.dirname(packageRoot)];
 	mkdirSync(consumerPackage, { recursive: true });
 	cpSync(
 		path.join(packageRoot, buildDirectory),
@@ -47,7 +53,7 @@ export function checkPublishedTypes(
 		"@types/node",
 		"@cloudflare/workers-types",
 	])) {
-		const destination = path.resolve("node_modules", name);
+		const destination = path.join(consumerRoot, "node_modules", name);
 		mkdirSync(path.dirname(destination), { recursive: true });
 		symlinkSync(
 			path.join(packageRoot, "node_modules", name),
@@ -55,16 +61,23 @@ export function checkPublishedTypes(
 			"junction"
 		);
 	}
-	writeFileSync("package.json", JSON.stringify({ type: "module" }));
-	writeFileSync("consumer.ts", source);
-	const program = ts.createProgram([path.resolve("consumer.ts")], {
+	writeFileSync(
+		path.join(consumerRoot, "package.json"),
+		JSON.stringify({ type: "module" })
+	);
+	const consumer = path.join(consumerRoot, "consumer.ts");
+	writeFileSync(consumer, source);
+	const options: ts.CompilerOptions = {
 		module: ts.ModuleKind.NodeNext,
 		target: ts.ScriptTarget.ES2022,
 		strict: true,
 		skipLibCheck: false,
 		noEmit: true,
 		types: ["node", "@cloudflare/workers-types/experimental"],
-	});
+	};
+	const host = ts.createCompilerHost(options);
+	host.getCurrentDirectory = () => consumerRoot;
+	const program = ts.createProgram([consumer], options, host);
 	return ts
 		.getPreEmitDiagnostics(program)
 		.filter(
