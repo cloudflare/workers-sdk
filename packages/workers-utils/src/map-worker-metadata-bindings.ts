@@ -67,7 +67,7 @@ export function mapWorkerMetadataBindings(
 								...(configObj.d1_databases ?? []),
 								{
 									binding: binding.name,
-									database_id: binding.id,
+									database_id: binding.database_id ?? binding.id,
 								},
 							];
 						}
