@@ -103,11 +103,8 @@ export class Astro extends Framework {
 		if (!dryRun) {
 			// Only the Astro beta's `astro add` writes `cloudflare.config.ts`, so run it
 			// without installing it: the project's stable Astro works with the adapter beta
-			// Yarn Classic has no `dlx`; `astro add` still adds the adapter with Yarn
-			const dlx =
-				packageManager.type === "yarn" ? ["npx", "--yes"] : packageManager.dlx;
 			const addCommand = [
-				...dlx,
+				...packageManager.dlx,
 				"astro@beta",
 				"add",
 				"@astrojs/cloudflare@beta",
