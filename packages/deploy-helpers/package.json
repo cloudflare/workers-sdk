@@ -19,20 +19,20 @@
 	"sideEffects": false,
 	"exports": {
 		".": {
-			"import": "./dist/index.mjs",
-			"types": "./dist/index.d.mts"
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
 		},
 		"./context": {
-			"import": "./dist/context.mjs",
-			"types": "./dist/context.d.mts"
+			"types": "./dist/context.d.mts",
+			"import": "./dist/context.mjs"
 		},
 		"./create-worker-upload-form": {
-			"import": "./dist/create-worker-upload-form.mjs",
-			"types": "./dist/create-worker-upload-form.d.mts"
+			"types": "./dist/create-worker-upload-form.d.mts",
+			"import": "./dist/create-worker-upload-form.mjs"
 		},
 		"./startup-profile": {
-			"import": "./dist/startup-profile.mjs",
-			"types": "./dist/startup-profile.d.mts"
+			"types": "./dist/startup-profile.d.mts",
+			"import": "./dist/startup-profile.mjs"
 		}
 	},
 	"scripts": {

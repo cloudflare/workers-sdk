@@ -4,16 +4,16 @@
 	"private": true,
 	"exports": {
 		"./ext": {
-			"default": "./ext.js",
-			"types": "./ext.d.ts"
+			"types": "./ext.d.ts",
+			"default": "./ext.js"
 		},
 		"./no-ext": {
-			"default": "./no-ext.js",
-			"types": "./no-ext.d.ts"
+			"types": "./no-ext.d.ts",
+			"default": "./no-ext.js"
 		},
 		"./json": {
-			"default": "./json.js",
-			"types": "./json.d.ts"
+			"types": "./json.d.ts",
+			"default": "./json.js"
 		}
 	}
 }

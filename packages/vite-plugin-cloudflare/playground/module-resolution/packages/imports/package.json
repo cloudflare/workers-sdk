@@ -5,8 +5,8 @@
 	"type": "module",
 	"exports": {
 		"./cloudflare-builtins": {
-			"default": "./cloudflare-builtins.js",
-			"types": "./cloudflare-builtins.d.ts"
+			"types": "./cloudflare-builtins.d.ts",
+			"default": "./cloudflare-builtins.js"
 		}
 	}
 }
