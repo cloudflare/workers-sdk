@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
-import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { afterEach, describe, it, vi } from "vitest";
+import type { ChildProcessWithoutNullStreams } from "node:child_process";
 
 vi.mock("node:child_process", async () => {
 	return {
