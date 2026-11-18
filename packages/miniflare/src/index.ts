@@ -13,6 +13,10 @@ import zlib from "node:zlib";
 import { checkMacOSVersion } from "@cloudflare/cli-shared-helpers";
 import { removeDir, removeDirSync } from "@cloudflare/workers-utils/fs-helpers";
 import { formatZodError } from "@cloudflare/workers-utils/zod-format";
+import {
+	WorkflowInstanceIntrospectorHandle,
+	WorkflowIntrospectorHandle,
+} from "@cloudflare/workflows-shared/src/introspection";
 import { $ as colors$, bold, dim, green, yellow } from "kleur/colors";
 import stoppable from "stoppable";
 import { getGlobalDispatcher, Pool } from "undici";
@@ -51,6 +55,7 @@ import {
 	getPersistPath,
 	getStorageScope,
 	getTriggersOfType,
+	getWorkflowBindingServiceName,
 	getWorkflowExporters,
 	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
@@ -203,6 +208,11 @@ import type {
 	R2Bucket,
 	StreamBinding,
 } from "@cloudflare/workers-types/experimental";
+import type {
+	WorkflowBinding,
+	WorkflowInstanceIntrospector,
+	WorkflowIntrospector,
+} from "@cloudflare/workflows-shared/src/types";
 import type { Process } from "@puppeteer/browsers";
 import type { Abortable } from "node:events";
 import type { Duplex, Transform, Writable } from "node:stream";
@@ -642,6 +652,21 @@ function getProxyBindingName(plugin: string, worker: string, binding: string) {
 		worker,
 		binding,
 	].join(":");
+}
+/**
+ * @param worker The name of the Worker that exports the Workflow
+ * @param className The Workflow's class name
+ * @returns The name of the `ProxyServer` binding to the Workflow
+ */
+function getExportedWorkflowProxyBindingName(
+	worker: string,
+	className: string
+) {
+	return getProxyBindingName(
+		`${WORKFLOWS_PLUGIN_NAME}-export`,
+		worker,
+		className
+	);
 }
 // Get whether a binding will need a proxy to be supported in Node (i.e. is
 // the implementation of this binding in `workerd`?). If this returns `false`,
@@ -2248,6 +2273,28 @@ export class Miniflare {
 				}
 			}
 
+			// An exported Workflow may have no `env` binding to proxy
+			for (const [className, workflow] of getExportsOfType(
+				workerOpts.config,
+				"workflow"
+			)) {
+				proxyBindings.push({
+					name: getExportedWorkflowProxyBindingName(workerName, className),
+					wrapped: {
+						moduleName: `${WORKFLOWS_PLUGIN_NAME}:local-wrapped-binding`,
+						innerBindings: [
+							{
+								name: "binding",
+								service: {
+									name: getWorkflowBindingServiceName(workflow.name),
+									entrypoint: "WorkflowBinding",
+								},
+							},
+						],
+					},
+				});
+			}
+
 			// Collect all services required by this worker
 			const unsafeEphemeralDurableObjects =
 				workerOpts.dev?.unsafeEphemeralDurableObjects ?? false;
@@ -3723,6 +3770,66 @@ export class Miniflare {
 
 			throw error;
 		}
+	}
+	/**
+	 * Starts introspecting a Workflow that a Worker exports. The introspector
+	 * covers every instance created while it's active, whether through an `env`
+	 * binding or `ctx.exports`.
+	 *
+	 * @param workerName The name of the Worker that exports the Workflow
+	 * @param className The Workflow's class name
+	 * @returns The Workflow's introspector
+	 */
+	async unsafeIntrospectWorkflow(
+		workerName: string,
+		className: string
+	): Promise<WorkflowIntrospector> {
+		const introspector = new WorkflowIntrospectorHandle(
+			await this.#getExportedWorkflow(workerName, className)
+		);
+		await introspector.start();
+		return introspector;
+	}
+	/**
+	 * Introspects an instance of a Workflow that a Worker exports.
+	 *
+	 * @param workerName The name of the Worker that exports the Workflow
+	 * @param className The Workflow's class name
+	 * @param instanceId The instance's ID
+	 * @returns The instance's introspector
+	 */
+	async unsafeIntrospectWorkflowInstance(
+		workerName: string,
+		className: string,
+		instanceId: string
+	): Promise<WorkflowInstanceIntrospector> {
+		return new WorkflowInstanceIntrospectorHandle(
+			await this.#getExportedWorkflow(workerName, className),
+			instanceId
+		);
+	}
+	async #getExportedWorkflow(
+		workerName: string,
+		className: string
+	): Promise<WorkflowBinding> {
+		const proxyClient = await this._getProxyClient();
+		const workerOpts =
+			this.#workerOpts[this.#findAndAssertWorkerIndex(workerName)];
+		if (
+			!getExportsOfType(workerOpts.config, "workflow").some(
+				([exportName]) => exportName === className
+			)
+		) {
+			throw new TypeError(
+				`No Workflow class named ${JSON.stringify(
+					className
+				)} found in ${JSON.stringify(workerName)} worker.`
+			);
+		}
+
+		return proxyClient.env[
+			getExportedWorkflowProxyBindingName(workerName, className)
+		] as WorkflowBinding;
 	}
 	getKVNamespace(
 		bindingName: string,
