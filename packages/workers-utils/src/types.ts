@@ -134,7 +134,10 @@ export type WorkerMetadataBinding =
 	| {
 			type: "d1";
 			name: string;
-			id: string;
+			/** Required by the Workers upload API. */
+			database_id?: string;
+			/** @deprecated Renamed to `database_id`. Still present on some API responses. */
+			id?: string;
 			internalEnv?: string;
 			raw?: boolean;
 	  }
