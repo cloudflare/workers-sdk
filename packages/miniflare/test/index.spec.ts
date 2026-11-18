@@ -1244,6 +1244,37 @@ test("Miniflare: service binding to disk", async ({ expect }) => {
 	expect(res.status).toBe(204);
 	expect(await fs.readFile(testPath, "utf8")).toBe("✏️");
 });
+test("Miniflare: rejects bindings to Workers it isn't running", async ({
+	expect,
+	onTestFinished,
+}) => {
+	for (const binding of [
+		{ type: "worker", worker: "missing" },
+		{ type: "durable-object", worker: "missing", exportName: "Counter" },
+	] as const) {
+		const mf = new Miniflare({
+			// The dev registry would proxy bindings to other Workers
+			enableDevRegistry: false,
+			workers: [
+				{
+					config: {
+						name: "app",
+						compatibilityDate: "2025-05-01",
+						env: { BINDING: binding },
+						manifest: singleModuleManifest("export default {};"),
+					},
+				},
+			],
+		});
+		onTestFinished(() => mf.dispose().catch(() => {}));
+
+		await expect(mf.ready).rejects.toMatchObject({
+			code: "ERR_VALIDATION",
+			message: `Worker "app"'s binding "BINDING" refers to Worker "missing", which isn't running.`,
+		});
+	}
+});
+
 test("Miniflare: service binding to named entrypoint", async ({ expect }) => {
 	const mf = new Miniflare({
 		workers: [
