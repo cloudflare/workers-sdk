@@ -31,6 +31,15 @@ export let prompt: DeployHelpersContext["prompt"];
 export let select: DeployHelpersContext["select"];
 
 /**
+ * Configure logging for consumers that only use local development helpers.
+ *
+ * @param value The consumer's logger, including any level filtering and deduplication.
+ */
+export function setDeployHelpersLogger(value: Logger): void {
+	logger = value;
+}
+
+/**
  * Set the global context for deploy-helpers. Must be called once at
  * startup before any deploy-helpers function that needs these values.
  */

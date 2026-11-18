@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import path from "node:path";
 import util from "node:util";
+import { setDeployHelpersLogger } from "@cloudflare/deploy-helpers/context";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import {
 	convertConfigToBindings,
@@ -33,6 +34,7 @@ import {
 	getRunnerName,
 	WORKER_NAME_PREFIX,
 } from "./helpers";
+import { createSharedLogger } from "./logger";
 import {
 	loadNewConfig,
 	mergeCloudflareConfigWorker,
@@ -268,6 +270,7 @@ function parseWorkerOptions(
 
 const log = new Log(LogLevel.WARN, { prefix: "vpw" });
 const debug = util.debuglog("vitest-plugin");
+const developmentLogger = createSharedLogger(log);
 
 const containerLogger: ViteLogger = {
 	info(message) {
@@ -793,6 +796,7 @@ async function parseCustomPoolOptions(
 
 		const { getMiniflareWorkerOptions } =
 			await import("@cloudflare/deploy-helpers/miniflare-options");
+		setDeployHelpersLogger(developmentLogger);
 		const { workerOptions, externalWorkers, define, main } =
 			getMiniflareWorkerOptions(config, environment, {
 				overrides: {
