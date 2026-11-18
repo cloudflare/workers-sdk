@@ -16,10 +16,13 @@ vi.mock("../../src/frameworks/utils/vite-plugin", () => ({
  * Configures the project in the current directory for cf.
  *
  * @param context The autoconfig context
+ * @param version The installed SolidStart version
  * @returns The configuration results
  */
-function configureForCf(context: AutoConfigContext) {
-	return new SolidStart({ id: "solid-start", name: "Solid Start" }).configure({
+function configureForCf(context: AutoConfigContext, version: string) {
+	const framework = new SolidStart({ id: "solid-start", name: "Solid Start" });
+	vi.spyOn(framework, "frameworkVersion", "get").mockReturnValue(version);
+	return framework.configure({
 		target: "cf",
 		projectPath: process.cwd(),
 		outputDir: "dist",
@@ -53,7 +56,7 @@ describe("SolidStart", () => {
 			`,
 		});
 
-		const result = await configureForCf(createMockContext());
+		const result = await configureForCf(createMockContext(), "2.0.0");
 
 		expect(result).toEqual({
 			buildTool: "vite",
@@ -72,8 +75,65 @@ describe("SolidStart", () => {
 			export default defineConfig({
 			  plugins: [solidStart(),
 			    cloudflare()
-			  ]
+			  ],
+
+			  environments: {
+			    ssr: {
+			      optimizeDeps: {
+			        exclude: ["@solidjs/start"]
+			      }
+			    }
+			  }
 			});"
 		`);
+	});
+
+	it("asks for the exclude by hand when the Vite config already has environments", async ({
+		expect,
+	}) => {
+		await seed({
+			"vite.config.js": dedent`
+				import { defineConfig } from "vite";
+				import { nitro } from "nitro/vite";
+				import { solidStart } from "@solidjs/start/config";
+
+				export default defineConfig({
+				  plugins: [solidStart(), nitro()],
+				  environments: { ssr: { optimizeDeps: { exclude: ["foo"] } } },
+				});
+			`,
+		});
+		const context = createMockContext();
+
+		await configureForCf(context, "2.0.0");
+
+		expect(context.logger.warn).toHaveBeenCalledWith(
+			expect.stringContaining("`environments.ssr.optimizeDeps.exclude`")
+		);
+		const viteConfig = readFileSync("vite.config.js", "utf8");
+		expect(viteConfig.match(/environments/g)).toHaveLength(1);
+		expect(viteConfig).toContain('exclude: ["foo"]');
+	});
+
+	it("leaves server pre-bundling to SolidStart from 2.2.3", async ({
+		expect,
+	}) => {
+		await seed({
+			"vite.config.ts": dedent`
+				import { defineConfig } from "vite";
+				import { nitro } from "nitro/vite";
+				import { solidStart } from "@solidjs/start/config";
+
+				export default defineConfig({
+				  plugins: [solidStart(), nitro()],
+				});
+			`,
+		});
+
+		await configureForCf(createMockContext(), "2.2.3");
+
+		expect(readFileSync("vite.config.ts", "utf8")).not.toContain(
+			"environments"
+		);
 	});
 });
