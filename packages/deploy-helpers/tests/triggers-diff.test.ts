@@ -7,6 +7,8 @@ import type { Config, Route } from "@cloudflare/workers-utils";
 const ACCOUNT_ID = "some-account-id";
 const WORKER_NAME = "test-worker";
 const WORKER_URL = `/accounts/${ACCOUNT_ID}/workers/scripts/${WORKER_NAME}`;
+const NO_TRIGGER_CHANGES_MESSAGE =
+	"No changes detected to routes, custom domains, cron schedules, workers.dev, or Preview URLs.";
 
 function customDomain(hostname = "example.com") {
 	return {
@@ -110,7 +112,7 @@ describe("triggersDeploy showDiff", () => {
 
 		await deploy();
 
-		expect(log).toHaveBeenCalledWith("No trigger changes detected.");
+		expect(log).toHaveBeenCalledWith(NO_TRIGGER_CHANGES_MESSAGE);
 		expect(fetchResult).toHaveBeenCalledTimes(3);
 		expect(fetchPagedListResult).toHaveBeenCalledTimes(1);
 		expect(fetchListResult).not.toHaveBeenCalled();
@@ -126,7 +128,7 @@ describe("triggersDeploy showDiff", () => {
 
 		await deploy({ routes: [route] });
 
-		expect(log).toHaveBeenCalledWith("No trigger changes detected.");
+		expect(log).toHaveBeenCalledWith(NO_TRIGGER_CHANGES_MESSAGE);
 		if (typeof route === "object" && "zone_id" in route) {
 			expect(fetchListResult).toHaveBeenCalledWith(
 				expect.anything(),
@@ -147,7 +149,7 @@ describe("triggersDeploy showDiff", () => {
 
 		await deploy({ routes: [route] });
 
-		expect(log).toHaveBeenCalledWith("No trigger changes detected.");
+		expect(log).toHaveBeenCalledWith(NO_TRIGGER_CHANGES_MESSAGE);
 		expect(fetchListResult).not.toHaveBeenCalled();
 	});
 
@@ -169,7 +171,7 @@ describe("triggersDeploy showDiff", () => {
 		expect(log).toHaveBeenCalledWith(
 			expect.stringContaining("Trigger changes")
 		);
-		expect(log).not.toHaveBeenCalledWith("No trigger changes detected.");
+		expect(log).not.toHaveBeenCalledWith(NO_TRIGGER_CHANGES_MESSAGE);
 	});
 
 	it.for([{ enabled: false }, { previews_enabled: true }])(
@@ -184,7 +186,7 @@ describe("triggersDeploy showDiff", () => {
 			expect(log).toHaveBeenCalledWith(
 				expect.stringContaining(Object.keys(settings)[0])
 			);
-			expect(log).not.toHaveBeenCalledWith("No trigger changes detected.");
+			expect(log).not.toHaveBeenCalledWith(NO_TRIGGER_CHANGES_MESSAGE);
 		}
 	);
 
@@ -226,7 +228,7 @@ describe("triggersDeploy showDiff", () => {
 			crons: [...remoteCrons].reverse(),
 		});
 
-		expect(log).toHaveBeenCalledWith("No trigger changes detected.");
+		expect(log).toHaveBeenCalledWith(NO_TRIGGER_CHANGES_MESSAGE);
 	});
 
 	it("shows an explicit empty cron list as removing schedules", async ({
@@ -245,7 +247,7 @@ describe("triggersDeploy showDiff", () => {
 		expect,
 	}) => {
 		await deploy({ crons: [] });
-		expect(log).toHaveBeenCalledWith("No trigger changes detected.");
+		expect(log).toHaveBeenCalledWith(NO_TRIGGER_CHANGES_MESSAGE);
 	});
 
 	it("fetches all custom domains with the paginated helper", async ({
@@ -268,7 +270,7 @@ describe("triggersDeploy showDiff", () => {
 			{},
 			new URLSearchParams({ service: WORKER_NAME, environment: "production" })
 		);
-		expect(log).toHaveBeenCalledWith("No trigger changes detected.");
+		expect(log).toHaveBeenCalledWith(NO_TRIGGER_CHANGES_MESSAGE);
 	});
 
 	it("displays the diff after a real deployment", async ({ expect }) => {
@@ -302,7 +304,7 @@ describe("triggersDeploy showDiff", () => {
 			`${WORKER_URL}/schedules`,
 			expect.objectContaining({ method: "PUT", body: "[]" })
 		);
-		expect(log).not.toHaveBeenCalledWith("No trigger changes detected.");
+		expect(log).not.toHaveBeenCalledWith(NO_TRIGGER_CHANGES_MESSAGE);
 	});
 
 	it("fails an explicit diff-only dry run when the snapshot is unavailable", async ({

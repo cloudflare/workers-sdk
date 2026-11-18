@@ -916,7 +916,9 @@ function displayTriggerDiff(
 			`Trigger changes (remote ${chalk.red("\u2192")} local):\n${diff}`
 		);
 	} else {
-		logger.log("No trigger changes detected.");
+		logger.log(
+			"No changes detected to routes, custom domains, cron schedules, workers.dev, or Preview URLs."
+		);
 	}
 }
 
