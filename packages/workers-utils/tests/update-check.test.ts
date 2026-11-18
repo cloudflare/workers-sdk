@@ -51,12 +51,12 @@ describe("fetchLatestNpmVersion", () => {
 	function mockPackument(
 		name: string,
 		body: Packument,
-		{ status = 200, times = 1 } = {}
+		{ status = 200, times = 1, origin = REGISTRY_ORIGIN, pathPrefix = "" } = {}
 	) {
 		mockAgent
-			.get(REGISTRY_ORIGIN)
+			.get(origin)
 			.intercept({
-				path: `/${encodeURIComponent(name)}`,
+				path: `${pathPrefix}/${encodeURIComponent(name)}`,
 				method: "GET",
 			})
 			.reply(status, body)
@@ -310,6 +310,90 @@ describe("fetchLatestNpmVersion", () => {
 		await expect(fetchLatestNpmVersion("wrangler", "4.14.1")).resolves.toEqual({
 			status: "update-available",
 			latest: "4.14.2",
+		});
+	});
+
+	// https://github.com/cloudflare/workers-sdk/issues/16356
+	// Users behind a registry mirror (for example in CI with restricted
+	// egress) configure npm with `npm_config_registry` or `.npmrc`. The update
+	// check should ask that registry, as it did before 4.149.0, rather than
+	// always connecting to the public registry. Network access is disabled and
+	// only the configured registry is mocked, so a request to
+	// registry.npmjs.org fails the check, as it does behind blocked egress.
+	describe("with a configured npm registry", () => {
+		const MIRROR_ORIGIN = "https://npm-mirror.example.com";
+
+		beforeEach(() => {
+			// Isolate from the environment running the tests: no npm config from
+			// the environment, and a home directory without a user `.npmrc`.
+			vi.stubEnv("npm_config_registry", undefined);
+			vi.stubEnv("NPM_CONFIG_REGISTRY", undefined);
+			vi.stubEnv("npm_config_userconfig", undefined);
+			vi.stubEnv("NPM_CONFIG_USERCONFIG", undefined);
+			vi.stubEnv("HOME", tempDir);
+			vi.stubEnv("USERPROFILE", tempDir);
+		});
+
+		it("queries the registry set by npm_config_registry", async ({
+			expect,
+		}) => {
+			vi.stubEnv("npm_config_registry", `${MIRROR_ORIGIN}/`);
+			mockPackument(
+				"wrangler",
+				packument({ latest: "4.14.2" }, { "4.14.1": {}, "4.14.2": {} }),
+				{ origin: MIRROR_ORIGIN }
+			);
+
+			await expect(
+				fetchLatestNpmVersion("wrangler", "4.14.1")
+			).resolves.toEqual({ status: "update-available", latest: "4.14.2" });
+		});
+
+		it("queries the registry set by NPM_CONFIG_REGISTRY", async ({
+			expect,
+		}) => {
+			vi.stubEnv("NPM_CONFIG_REGISTRY", `${MIRROR_ORIGIN}/`);
+			mockPackument(
+				"wrangler",
+				packument({ latest: "4.14.2" }, { "4.14.1": {}, "4.14.2": {} }),
+				{ origin: MIRROR_ORIGIN }
+			);
+
+			await expect(
+				fetchLatestNpmVersion("wrangler", "4.14.1")
+			).resolves.toEqual({ status: "update-available", latest: "4.14.2" });
+		});
+
+		it("queries a configured registry that is served under a path", async ({
+			expect,
+		}) => {
+			vi.stubEnv("npm_config_registry", `${MIRROR_ORIGIN}/api/npm/npm-remote/`);
+			mockPackument(
+				"@cloudflare/vite-plugin",
+				packument({ latest: "1.2.0" }, { "1.1.0": {}, "1.2.0": {} }),
+				{ origin: MIRROR_ORIGIN, pathPrefix: "/api/npm/npm-remote" }
+			);
+
+			await expect(
+				fetchLatestNpmVersion("@cloudflare/vite-plugin", "1.1.0")
+			).resolves.toEqual({ status: "update-available", latest: "1.2.0" });
+		});
+
+		it("queries the registry set in the user's .npmrc", async ({ expect }) => {
+			// What `npm config set registry <url>` writes.
+			writeFileSync(
+				path.join(tempDir, ".npmrc"),
+				`registry=${MIRROR_ORIGIN}/\n`
+			);
+			mockPackument(
+				"wrangler",
+				packument({ latest: "4.14.2" }, { "4.14.1": {}, "4.14.2": {} }),
+				{ origin: MIRROR_ORIGIN }
+			);
+
+			await expect(
+				fetchLatestNpmVersion("wrangler", "4.14.1")
+			).resolves.toEqual({ status: "update-available", latest: "4.14.2" });
 		});
 	});
 });
