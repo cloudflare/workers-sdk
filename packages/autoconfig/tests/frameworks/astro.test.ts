@@ -53,13 +53,9 @@ describe("Astro framework", () => {
 				getOptions(projectPath)
 			);
 
-			expect(cliPackages.installPackages).toHaveBeenCalledWith(
-				"npm",
-				["astro@beta"],
-				expect.objectContaining({ cwd: projectPath })
-			);
+			expect(cliPackages.installPackages).not.toHaveBeenCalled();
 			expect(cliCommand.runCommand).toHaveBeenCalledWith(
-				["npx", "astro", "add", "@astrojs/cloudflare@beta", "-y"],
+				["npx", "astro@beta", "add", "@astrojs/cloudflare@beta", "-y"],
 				expect.objectContaining({ cwd: projectPath })
 			);
 			expect(existsSync(join(projectPath, "public", ".assetsignore"))).toBe(

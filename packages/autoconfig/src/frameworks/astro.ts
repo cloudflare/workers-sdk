@@ -101,20 +101,22 @@ export class Astro extends Framework {
 		}
 
 		if (!dryRun) {
-			await installPackages(packageManager.type, ["astro@beta"], {
-				cwd: projectPath,
-				startText: "Installing the Astro beta version",
-				doneText: `${brandColor("installed")} ${dim("Astro")}`,
-				isWorkspaceRoot,
-			});
+			// Only the Astro beta's `astro add` writes `cloudflare.config.ts`, so run it
+			// without installing it: the project's stable Astro works with the adapter beta
 			await runCommand(
-				[packageManager.npx, "astro", "add", "@astrojs/cloudflare@beta", "-y"],
+				[
+					...packageManager.dlx,
+					"astro@beta",
+					"add",
+					"@astrojs/cloudflare@beta",
+					"-y",
+				],
 				{
 					cwd: projectPath,
 					silent: true,
 					startText: "Installing the Cloudflare adapter beta version",
 					doneText: `${brandColor("installed")} ${dim(
-						`via \`${packageManager.npx} astro add @astrojs/cloudflare@beta\``
+						`via \`${packageManager.dlx.join(" ")} astro@beta add @astrojs/cloudflare@beta\``
 					)}`,
 				}
 			);
