@@ -1,4 +1,5 @@
 import path from "node:path";
+import { getVarsForDev } from "@cloudflare/deploy-helpers/dev-vars";
 import {
 	getMiniflareWorkerOptions,
 	getZoneFromConfig,
@@ -29,6 +30,7 @@ import type { RemoteProxySession } from "../../remoteBindings";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
 	AssetsOptions,
+	Binding,
 	Config,
 	RawConfig,
 	RawEnvironment,
@@ -40,7 +42,24 @@ import type {
 	V4WorkerOptions,
 } from "miniflare";
 
-export { getVarsForDev as unstable_getVarsForDev } from "@cloudflare/deploy-helpers/dev-vars";
+/**
+ * Resolve local variable bindings from a Wrangler config and development env files.
+ *
+ * This wrapper keeps the bundled helper out of Wrangler's published type imports.
+ */
+export function unstable_getVarsForDev(
+	configPath: string | undefined,
+	envFiles: string[] | undefined,
+	vars: Config["vars"],
+	env: string | undefined,
+	silent = false,
+	secrets?: Config["secrets"]
+): Record<
+	string,
+	Extract<Binding, { type: "plain_text" | "json" | "secret_text" }>
+> {
+	return getVarsForDev(configPath, envFiles, vars, env, silent, secrets);
+}
 export { readConfig as unstable_readConfig };
 export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectClassNameToUseSQLiteMap };
 
