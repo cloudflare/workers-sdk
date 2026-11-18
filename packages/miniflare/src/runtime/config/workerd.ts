@@ -56,6 +56,7 @@ export type Service = {
 	| { network?: Network }
 	| { external?: ExternalServer }
 	| { disk?: DiskDirectory }
+	| { bucket?: ClusterBucket }
 );
 
 export interface ServiceDesignator {
@@ -116,6 +117,7 @@ export type Worker_Module = {
 	name: string;
 } & (
 	| { esModule?: string }
+	| { bundled?: string }
 	| { commonJsModule?: string }
 	| { text?: string }
 	| { data?: Uint8Array }
@@ -277,6 +279,12 @@ export interface DiskDirectory {
 	path?: string;
 	writable?: boolean;
 	allowDotfiles?: boolean;
+}
+
+export interface ClusterBucket {
+	path?: string;
+	localDisk?: string;
+	minPartSize?: bigint;
 }
 
 export interface HttpOptions {

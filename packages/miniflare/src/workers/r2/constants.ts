@@ -25,6 +25,13 @@ export const R2S3Bindings = {
 // A single entry service shared by every local bucket. The bucket ID is
 // supplied when resolving the entrypoint via `ctx.props`.
 export const R2_LOCAL_ENTRY_SERVICE_NAME = "r2:bucket:entry";
+// The Worker running workerd's R2 (the bundled module `/workerd/r2.js`),
+// reached with props `{ bucket }`.
+export const R2_WORKERD_SERVICE_NAME = "r2:workerd";
+
+export const R2Bindings = {
+	DEBUG_PORT: "MINIFLARE_DEBUG_PORT",
+} as const;
 
 export const R2Headers = {
 	ERROR: "cf-r2-error",

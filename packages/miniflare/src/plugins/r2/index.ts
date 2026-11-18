@@ -1,11 +1,13 @@
 import fs from "node:fs/promises";
-import SCRIPT_R2_BUCKET_OBJECT from "worker:r2/bucket";
+import SCRIPT_R2_ENTRY from "worker:r2/entry";
 import SCRIPT_R2_PUBLIC from "worker:r2/public";
 import SCRIPT_R2_S3 from "worker:r2/s3/index";
+import { kVoid } from "../../runtime";
 import { MiniflareCoreError } from "../../shared";
-import { SharedBindings } from "../../workers";
 import {
 	R2_LOCAL_ENTRY_SERVICE_NAME,
+	R2_WORKERD_SERVICE_NAME,
+	R2Bindings,
 	R2S3Bindings,
 } from "../../workers/r2/constants";
 import {
@@ -16,16 +18,10 @@ import {
 	getPersistPath,
 	getRemoteProxyConnectionString,
 	getStorageService,
-	objectEntryWorker,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
-	SERVICE_LOOPBACK,
 } from "../shared";
-import type {
-	Service,
-	Worker_Binding,
-	Worker_Binding_DurableObjectNamespaceDesignator,
-} from "../../runtime";
+import type { Service, Worker_Binding } from "../../runtime";
 import type {
 	MiniflareBinding,
 	ParsedInstanceOptions,
@@ -41,17 +37,12 @@ type R2S3Credentials = NonNullable<
 >;
 
 export const R2_PLUGIN_NAME = "r2";
-const R2_STORAGE_SERVICE_NAME = `${R2_PLUGIN_NAME}:storage`;
-const R2_BUCKET_SERVICE_PREFIX = `${R2_PLUGIN_NAME}:bucket`;
+// The disk under workerd's R2's local store.
+const R2_WORKERD_STORAGE_SERVICE_NAME = `${R2_WORKERD_SERVICE_NAME}:storage`;
 // One shared remote-proxy service for all remote R2 buckets (config via props).
 const R2_REMOTE_SERVICE_NAME = `${R2_PLUGIN_NAME}:bucket:remote`;
 export const R2_PUBLIC_SERVICE_NAME = `${R2_PLUGIN_NAME}:public`;
 export const R2_S3_SERVICE_NAME = `${R2_PLUGIN_NAME}:s3`;
-const R2_BUCKET_OBJECT_CLASS_NAME = "R2BucketObject";
-const R2_BUCKET_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
-	serviceName: R2_BUCKET_SERVICE_PREFIX,
-	className: R2_BUCKET_OBJECT_CLASS_NAME,
-};
 
 export function getR2PublicService(
 	allWorkerOpts: ParsedWorkerOptions[],
@@ -164,18 +155,31 @@ export const R2_PLUGIN: Plugin = {
 					bucket,
 					options.dev
 				);
+				if (remoteProxyConnectionString) {
+					return {
+						name,
+						r2Bucket: {
+							name: R2_REMOTE_SERVICE_NAME,
+							props: buildRemoteProxyProps(remoteProxyConnectionString, name),
+						},
+					};
+				}
+				// Local buckets are workerd's R2. With shared storage they go
+				// through the storage owner's entry service instead.
+				if (!sharedOptions.unsafeEnableSharedStorage) {
+					const props = { json: JSON.stringify({ bucket: id }) };
+					return {
+						name,
+						r2Bucket: { name: R2_WORKERD_SERVICE_NAME, props },
+					};
+				}
 				return {
 					name,
-					r2Bucket: remoteProxyConnectionString
-						? {
-								name: R2_REMOTE_SERVICE_NAME,
-								props: buildRemoteProxyProps(remoteProxyConnectionString, name),
-							}
-						: getStorageService(
-								R2_LOCAL_ENTRY_SERVICE_NAME,
-								buildObjectEntryProps(id),
-								sharedOptions
-							),
+					r2Bucket: getStorageService(
+						R2_LOCAL_ENTRY_SERVICE_NAME,
+						buildObjectEntryProps(id),
+						sharedOptions
+					),
 				};
 			}
 		);
@@ -193,7 +197,9 @@ export const R2_PLUGIN: Plugin = {
 
 		const services: Service[] = [];
 
-		// One shared entry service for all local buckets (id supplied via props).
+		// workerd's R2, and the entry service that reaches a bucket named at
+		// runtime, for the public and S3 endpoints, the local explorer and
+		// shared storage.
 		const hasLocal =
 			buckets.some(
 				([, b]) => getRemoteProxyConnectionString(b, options.dev) === undefined
@@ -201,10 +207,22 @@ export const R2_PLUGIN: Plugin = {
 			sharedOptions.unsafeEnableSharedStorage ||
 			sharedOptions.unsafeLocalExplorer;
 		if (hasLocal) {
-			services.push({
-				name: R2_LOCAL_ENTRY_SERVICE_NAME,
-				worker: objectEntryWorker(R2_BUCKET_OBJECT),
-			});
+			services.push(
+				{
+					name: R2_LOCAL_ENTRY_SERVICE_NAME,
+					worker: {
+						compatibilityDate: "2025-01-01",
+						modules: [{ name: "entry.worker.js", esModule: SCRIPT_R2_ENTRY() }],
+						bindings: [
+							{ name: R2Bindings.DEBUG_PORT, workerdDebugPort: kVoid },
+						],
+					},
+				},
+				...(await getWorkerdR2Services(
+					tmpPath,
+					sharedOptions.resourcePersistencePath
+				))
+			);
 		}
 
 		// One shared proxy service for all remote (mixed-mode) buckets.
@@ -218,53 +236,51 @@ export const R2_PLUGIN: Plugin = {
 			});
 		}
 
-		if (hasLocal) {
-			const uniqueKey = `miniflare-${R2_BUCKET_OBJECT_CLASS_NAME}`;
-			const persistPath = getPersistPath(
-				R2_PLUGIN_NAME,
-				tmpPath,
-				sharedOptions.resourcePersistencePath
-			);
-			await fs.mkdir(persistPath, { recursive: true });
-			const storageService: Service = {
-				name: R2_STORAGE_SERVICE_NAME,
-				disk: { path: persistPath, writable: true },
-			};
-			const objectService: Service = {
-				name: R2_BUCKET_SERVICE_PREFIX,
-				worker: {
-					compatibilityDate: "2023-07-24",
-					compatibilityFlags: ["nodejs_compat", "experimental"],
-					modules: [
-						{
-							name: "bucket.worker.js",
-							esModule: SCRIPT_R2_BUCKET_OBJECT(),
-						},
-					],
-					durableObjectNamespaces: [
-						{
-							className: R2_BUCKET_OBJECT_CLASS_NAME,
-							uniqueKey,
-						},
-					],
-					// Store Durable Object SQL databases in persist path
-					durableObjectStorage: { localDisk: R2_STORAGE_SERVICE_NAME },
-					// Bind blob disk directory service to object
-					bindings: [
-						{
-							name: SharedBindings.MAYBE_SERVICE_BLOBS,
-							service: { name: R2_STORAGE_SERVICE_NAME },
-						},
-						{
-							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
-							service: { name: SERVICE_LOOPBACK },
-						},
-						...getMiniflareObjectBindings(),
-					],
-				},
-			};
-			services.push(storageService, objectService);
-		}
 		return services;
 	},
 };
+
+// The Worker running workerd's R2 module, `/workerd/r2.js`, its `BLOBS`, a
+// bucket service storing one object per R2 object, and that store's disk.
+// The bindings are the interface r2.js documents; the disk is where the
+// buckets live.
+async function getWorkerdR2Services(
+	tmpPath: string,
+	resourcePersistencePath: string | undefined
+): Promise<Service[]> {
+	const persistPath = getPersistPath(
+		"r2-workerd",
+		tmpPath,
+		resourcePersistencePath
+	);
+	await fs.mkdir(persistPath, { recursive: true });
+	const blobs = `${R2_WORKERD_SERVICE_NAME}:blobs`;
+	const bindings: Worker_Binding[] = [
+		{ name: "BLOBS", service: { name: blobs } },
+	];
+	// Miniflare's tests use multipart parts of a few bytes.
+	const test = getMiniflareObjectBindings().length > 0;
+	if (test) bindings.push({ name: "TEST", json: "true" });
+	return [
+		{
+			name: R2_WORKERD_SERVICE_NAME,
+			worker: {
+				compatibilityDate: "2026-01-01",
+				modules: [{ name: "r2.js", bundled: "/workerd/r2.js" }],
+				bindings,
+			},
+		},
+		{
+			name: blobs,
+			bucket: {
+				path: "r2",
+				localDisk: R2_WORKERD_STORAGE_SERVICE_NAME,
+				minPartSize: test ? 50n : undefined,
+			},
+		},
+		{
+			name: R2_WORKERD_STORAGE_SERVICE_NAME,
+			disk: { path: persistPath, writable: true },
+		},
+	];
+}
