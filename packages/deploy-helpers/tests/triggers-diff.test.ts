@@ -115,8 +115,8 @@ describe("triggersDeploy showDiff", () => {
 		await deploy();
 
 		expect(log).toHaveBeenCalledWith(NO_TRIGGER_CHANGES_MESSAGE);
-		expect(fetchResult).toHaveBeenCalledTimes(3);
-		expect(fetchPagedListResult).toHaveBeenCalledTimes(1);
+		expect(fetchResult).toHaveBeenCalledTimes(2);
+		expect(fetchPagedListResult).not.toHaveBeenCalled();
 		expect(fetchListResult).not.toHaveBeenCalled();
 	});
 
@@ -131,6 +131,7 @@ describe("triggersDeploy showDiff", () => {
 		await deploy({ routes: [route] });
 
 		expect(log).toHaveBeenCalledWith(NO_TRIGGER_CHANGES_MESSAGE);
+		expect(fetchPagedListResult).not.toHaveBeenCalled();
 		if (typeof route === "object" && "zone_id" in route) {
 			expect(fetchListResult).toHaveBeenCalledWith(
 				expect.anything(),
@@ -152,6 +153,10 @@ describe("triggersDeploy showDiff", () => {
 		await deploy({ routes: [route] });
 
 		expect(log).toHaveBeenCalledWith(NO_TRIGGER_CHANGES_MESSAGE);
+		expect(fetchResult).not.toHaveBeenCalledWith(
+			expect.anything(),
+			expect.stringContaining("/routes?")
+		);
 		expect(fetchListResult).not.toHaveBeenCalled();
 	});
 
@@ -317,7 +322,7 @@ describe("triggersDeploy showDiff", () => {
 	it("warns and continues a real deployment when the snapshot fails", async ({
 		expect,
 	}) => {
-		fetchPagedListResult.mockRejectedValue(new Error("Snapshot unavailable"));
+		fetchResult.mockRejectedValueOnce(new Error("Snapshot unavailable"));
 
 		await deploy({ dryRun: false, crons: [] });
 
@@ -336,7 +341,7 @@ describe("triggersDeploy showDiff", () => {
 		expect,
 	}) => {
 		const error = new Error("Snapshot unavailable");
-		fetchPagedListResult.mockRejectedValue(error);
+		fetchResult.mockRejectedValueOnce(error);
 
 		await expect(deploy()).rejects.toBe(error);
 

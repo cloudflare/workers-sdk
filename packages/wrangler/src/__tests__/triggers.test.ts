@@ -4,7 +4,7 @@ import {
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, it } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { createFetchResult, msw } from "./helpers/msw";
@@ -205,6 +205,35 @@ describe("triggers deploy", () => {
 			expect(std.out).toContain(
 				"No changes detected to routes, custom domains, cron schedules, workers.dev, or Preview URLs."
 			);
+			expect(std.out).toContain("--dry-run: exiting now.");
+		});
+
+		it("does not require route or domain permissions for a cron-only diff", async ({
+			expect,
+		}) => {
+			const routingRequest = vi.fn(() =>
+				HttpResponse.json(
+					createFetchResult(null, false, [
+						{ code: 10000, message: "Authentication error" },
+					]),
+					{ status: 403 }
+				)
+			);
+			msw.use(
+				http.get(
+					"*/workers/services/test-worker/environments/production/routes",
+					routingRequest
+				),
+				http.get("*/workers/domains/records", routingRequest)
+			);
+
+			await runWrangler(
+				"triggers deploy --dry-run --show-diff --triggers '5 0 * * *'"
+			);
+
+			expect(routingRequest).not.toHaveBeenCalled();
+			expect(std.out).toContain("Trigger changes (remote → local):");
+			expect(std.out).toContain('+    "5 0 * * *"');
 			expect(std.out).toContain("--dry-run: exiting now.");
 		});
 

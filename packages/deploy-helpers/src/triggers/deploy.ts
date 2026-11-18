@@ -834,25 +834,29 @@ async function fetchRemoteTriggers(
 ): Promise<Record<string, JsonLike>> {
 	const [routes, customDomains, subdomainStatus, cronTriggers] =
 		await Promise.all([
-			fetchResult<Route[]>(
-				config,
-				`/accounts/${accountId}/workers/services/${workerName}/environments/production/routes?show_zonename=true`
-			),
-			fetchPagedListResult<{
-				hostname: string;
-				zone_id: string;
-				zone_name: string;
-				enabled: boolean;
-				previews_enabled: boolean;
-			}>(
-				config,
-				`/accounts/${accountId}/workers/domains/records`,
-				{},
-				new URLSearchParams({
-					service: workerName,
-					environment: "production",
-				})
-			),
+			localRoutes.length > 0
+				? fetchResult<Route[]>(
+						config,
+						`/accounts/${accountId}/workers/services/${workerName}/environments/production/routes?show_zonename=true`
+					)
+				: [],
+			localCustomDomains.length > 0
+				? fetchPagedListResult<{
+						hostname: string;
+						zone_id: string;
+						zone_name: string;
+						enabled: boolean;
+						previews_enabled: boolean;
+					}>(
+						config,
+						`/accounts/${accountId}/workers/domains/records`,
+						{},
+						new URLSearchParams({
+							service: workerName,
+							environment: "production",
+						})
+					)
+				: [],
 			getWorkerSubdomain(config, accountId, workerName),
 			fetchResult<{ schedules: { cron: string }[] }>(
 				config,
