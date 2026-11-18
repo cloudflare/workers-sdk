@@ -126,6 +126,16 @@ describe("mapWorkerMetadataBindings", () => {
 				{ binding: "MY_DB", database_id: "db-456" },
 			]);
 		});
+
+		it("maps d1 binding from database_id", ({ expect }) => {
+			const bindings: WorkerMetadataBinding[] = [
+				{ type: "d1", name: "MY_DB", database_id: "db-456" },
+			];
+			const result = mapWorkerMetadataBindings(bindings);
+			expect(result.d1_databases).toEqual([
+				{ binding: "MY_DB", database_id: "db-456" },
+			]);
+		});
 	});
 
 	describe("r2_buckets", () => {
