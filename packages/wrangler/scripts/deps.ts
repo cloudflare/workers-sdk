@@ -72,17 +72,18 @@ export const IGNORED_DIST_IMPORTS = [
 	// when missing.
 	"@aws-sdk/signature-v4-crt",
 
-	// ws (bundled transitive dependency) optionally uses these native
-	// acceleration modules if installed; each require is guarded by a
-	// try/catch (and an env flag) and falls back to a JS implementation.
+	// ws optionally loads bufferutil inside try/catch for native masking;
+	// otherwise it retains its JavaScript implementation.
 	"bufferutil",
+	// ws prefers Node's buffer.isUtf8. Its older-Node native fallback is guarded
+	// by try/catch and retains a JavaScript implementation if unavailable.
 	"utf-8-validate",
 
-	// @blitz/internal/env is optionally required inside a try/catch by a
-	// bundled dependency; the failure is swallowed when it is not installed.
+	// @webcontainer/env probes @blitz/internal/env inside try/catch. Its absence
+	// makes isWebContainer() return false and leaves normal URLs unchanged.
 	"@blitz/internal",
 
-	// recast uses this legacy fallback only when @babel/parser is unavailable.
-	// @babel/parser is bundled with Wrangler.
+	// recast tries babylon only if loading @babel/parser throws. The primary
+	// parser is bundled with Wrangler, so this legacy fallback is unnecessary.
 	"babylon",
 ];

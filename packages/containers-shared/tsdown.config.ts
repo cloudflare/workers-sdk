@@ -8,6 +8,7 @@ export default defineConfig([
 			index: "index.ts",
 		},
 		platform: "node",
+		outputOptions: { keepNames: true },
 		inputOptions: { resolve: { mainFields: ["module", "main"] } },
 		shims: true,
 		format: "esm",

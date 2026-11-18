@@ -22,6 +22,26 @@ it.for(
 	expect(Number(output.trim())).toBeGreaterThan(0);
 });
 
+it("preserves function and class names in the built output", ({ expect }) => {
+	const output = execFileSync(
+		process.execPath,
+		[
+			"--input-type=module",
+			"-e",
+			`const api = await import(${JSON.stringify(new URL("dist/index.mjs", packageRoot).href)});
+const errors = await import(${JSON.stringify(new URL("dist/errors.mjs", packageRoot).href)});
+console.log(JSON.stringify([api.readFileSync.name, api.parseJSON.name, api.UserError.name, errors.FatalError.name]));`,
+		],
+		{ encoding: "utf8", timeout: 10_000 }
+	);
+	expect(JSON.parse(output)).toEqual([
+		"readFileSync",
+		"parseJSON",
+		"UserError",
+		"FatalError",
+	]);
+});
+
 it.for(["browser.mjs", "prometheus-metrics.mjs"])(
 	"loads %s without Node.js builtins",
 	(entry, { expect }) => {

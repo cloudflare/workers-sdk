@@ -11,6 +11,7 @@ export default defineConfig([
 			"startup-profile": "src/startup-profile.ts",
 		},
 		platform: "node",
+		outputOptions: { keepNames: true },
 		inputOptions: { resolve: { mainFields: ["module", "main"] } },
 		shims: true,
 		format: "esm",

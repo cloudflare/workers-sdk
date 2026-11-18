@@ -9,6 +9,7 @@ export default defineConfig([
 			"src/test-helpers/index.ts",
 		],
 		platform: "node",
+		outputOptions: { keepNames: true },
 		inputOptions: { resolve: { mainFields: ["module", "main"] } },
 		shims: true,
 		format: "esm",

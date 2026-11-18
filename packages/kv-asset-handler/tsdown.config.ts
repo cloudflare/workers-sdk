@@ -3,6 +3,7 @@ import { defineConfig } from "tsdown";
 export default defineConfig({
 	entry: ["src/index.ts"],
 	platform: "node",
+	outputOptions: { keepNames: true },
 	inputOptions: { resolve: { mainFields: ["module", "main"] } },
 	format: ["esm"],
 	dts: true,

@@ -8,6 +8,7 @@ export default defineConfig({
 	// Build both entry points together so their bundled dependencies are shared.
 	clean: true,
 	platform: "node",
+	outputOptions: { keepNames: true },
 	inputOptions: { resolve: { mainFields: ["module", "main"] } },
 	format: "esm",
 	outExtensions: () => ({ js: ".mjs", dts: ".d.ts" }),

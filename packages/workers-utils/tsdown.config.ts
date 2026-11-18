@@ -8,6 +8,7 @@ export default defineConfig([
 		entry: ["src/browser.ts", "src/prometheus-metrics.ts"],
 		clean: true,
 		platform: "node",
+		outputOptions: { keepNames: true },
 		format: "esm",
 		deps: {
 			neverBundle: ["vitest", ...EXTERNAL_DEPENDENCIES],
@@ -59,6 +60,7 @@ export default defineConfig([
 			"src/zod-format.ts",
 		],
 		platform: "node",
+		outputOptions: { keepNames: true },
 		shims: true,
 		format: "esm",
 		deps: {

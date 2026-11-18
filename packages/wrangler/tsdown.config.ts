@@ -188,11 +188,13 @@ export default defineConfig((options): UserConfig[] => [
 			...optionalDefines,
 		},
 		plugins: [embedWorkersPlugin({ isWatch: !!options.watch })],
-		outputOptions: {
+		outputOptions: (outputOptions, _format, { cjsDts }) => ({
+			...outputOptions,
+			keepNames: !cjsDts,
 			// Emit a single `cli.js` bundle (inlining dynamic imports) to match the
 			// published CLI layout.
 			inlineDynamicImports: true,
-		},
+		}),
 		inputOptions(inputOptions, _format, { cjsDts }) {
 			return {
 				...inputOptions,
