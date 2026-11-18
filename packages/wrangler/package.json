@@ -85,7 +85,6 @@
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/unenv-preset": "workspace:*",
 		"@cspotcode/source-map-support": "0.8.1",
-		"blake3-wasm": "2.1.5",
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
