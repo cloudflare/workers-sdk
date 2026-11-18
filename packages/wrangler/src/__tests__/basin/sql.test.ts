@@ -206,6 +206,47 @@ describe("basin sql", () => {
 			expect(std.err).toContain("1002: Table not found");
 		});
 
+		// https://github.com/cloudflare/workers-sdk/issues/16997
+		it.for([
+			{
+				query: "SELECT 1",
+				code: 40003,
+				message: "invalid SQL: query must reference at least one table",
+			},
+			{
+				query: "SELECT json_extract(value, 'a') FROM data",
+				code: 40004,
+				message: "invalid query: Invalid function 'json_extract'",
+			},
+		])(
+			"should exit with a non-zero status when the service rejects the query ($code)",
+			async ({ query, code, message }, { expect }) => {
+				msw.use(
+					http.post(
+						"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/basin-sql/query/:bucketName",
+						async () => {
+							return HttpResponse.json(
+								{
+									success: false,
+									errors: [{ code, message }],
+									messages: [],
+									result: null,
+								},
+								{ status: 400 }
+							);
+						},
+						{ once: true }
+					)
+				);
+
+				// The CLI only exits non-zero when `main()` rejects, so a rejected
+				// query must make the command fail rather than just log an error.
+				await expect(
+					runWrangler(`basin sql query ${mockWarehouse} "${query}"`)
+				).rejects.toThrow();
+			}
+		);
+
 		it("should handle API connection errors", async ({ expect }) => {
 			msw.use(
 				http.post(
