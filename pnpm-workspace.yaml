@@ -110,7 +110,7 @@ overrides:
   # its published output. Override proxy-agent's socks > ip-address and
   # pac-proxy-agent > get-uri > basic-ftp paths so the bundled copies include the
   # upstream security fixes, which consumer dependency audits cannot otherwise see.
-  "get-uri>basic-ftp": "6.2.1"
+  "get-uri>basic-ftp": "6.2.6"
   "socks-proxy-agent>socks": "2.8.10"
 
 peerDependencyRules:
