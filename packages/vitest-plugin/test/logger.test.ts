@@ -30,7 +30,7 @@ describe("shared helper logging", () => {
 		expect(std.warn).toBe("");
 	});
 
-	it("deduplicates helper warnings across project configurations", async ({
+	it("deduplicates helper warnings within a pool and resets them for a new pool", async ({
 		expect,
 	}) => {
 		await seed({
@@ -58,15 +58,25 @@ describe("shared helper logging", () => {
 			remoteBindings: false,
 		};
 
-		await parseProjectOptions(project, options);
+		const poolLogger = createSharedLogger(
+			new Log(LogLevel.WARN, { prefix: "vpw" })
+		);
+		await parseProjectOptions(project, options, poolLogger);
 		await parseProjectOptions(
 			{ ...project, name: "second" } as TestProject,
-			options
+			options,
+			poolLogger
 		);
 
 		expect(std.out).toBe(
 			'[vpw:warn] The Hyperdrive binding "DB" is configured with "remote": true, but no remote connection could be established. Falling back to its "localConnectionString".'
 		);
 		expect(std.warn).toBe("");
+
+		const nextPoolLogger = createSharedLogger(
+			new Log(LogLevel.WARN, { prefix: "vpw" })
+		);
+		await parseProjectOptions(project, options, nextPoolLogger);
+		expect(std.out.match(/Falling back to its/g)).toHaveLength(2);
 	});
 });

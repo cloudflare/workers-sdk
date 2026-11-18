@@ -49,7 +49,7 @@ import type {
 	RemoteBindingsLogger,
 	RemoteProxySessionData,
 } from "@cloudflare/remote-bindings";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config, Logger } from "@cloudflare/workers-utils";
 import type {
 	LegacyWorkerOptions,
 	RemoteProxyConnectionString,
@@ -270,7 +270,6 @@ function parseWorkerOptions(
 
 const log = new Log(LogLevel.WARN, { prefix: "vpw" });
 const debug = util.debuglog("vitest-plugin");
-const developmentLogger = createSharedLogger(log);
 
 const containerLogger: ViteLogger = {
 	info(message) {
@@ -592,7 +591,8 @@ async function parseCustomPoolOptions(
 	rootPath: string,
 	value: unknown,
 	mode: string,
-	envDir: string | false
+	envDir: string | false,
+	developmentLogger: Logger
 ): Promise<WorkersPoolOptionsWithDefines> {
 	// The schema strips unknown options, so `experimental.newConfig` would
 	// otherwise be ignored silently
@@ -863,7 +863,8 @@ async function parseCustomPoolOptions(
 
 export async function parseProjectOptions(
 	project: TestProject,
-	poolOptions: unknown
+	poolOptions: unknown,
+	developmentLogger: Logger = createSharedLogger(log)
 ): Promise<WorkersPoolOptionsWithDefines> {
 	// Make sure the user hasn't specified a custom environment. This was how
 	// users enabled Miniflare 2's Vitest environment, so it's likely users will
@@ -898,7 +899,8 @@ export async function parseProjectOptions(
 			// Vite would give them. Defaults to `"test"`, overridable with `--mode`.
 			project.vite.config.mode,
 			// Local secrets come from Vite's `envDir`, as in `@cloudflare/vite-plugin`
-			project.vite.config.envDir
+			project.vite.config.envDir,
+			developmentLogger
 		);
 	} catch (e) {
 		if (!isZodErrorLike(e)) {
