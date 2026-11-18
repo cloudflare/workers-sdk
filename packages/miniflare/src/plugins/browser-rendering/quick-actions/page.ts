@@ -155,6 +155,18 @@ export async function afterNavigation(page: Page, options: CommonOptions) {
 		const { selector, hidden, visible, timeout } = options.waitForSelector;
 		await page
 			.waitForSelector(selector, { hidden, visible, timeout })
+			.catch((error: unknown) => {
+				if (error instanceof Error) {
+					let cause = error.cause;
+					while (cause instanceof Error) {
+						if (cause.message) {
+							error.message += `: ${cause.message}`;
+						}
+						cause = cause.cause;
+					}
+				}
+				throw error;
+			})
 			.catch(swallowIf(options.bestAttempt));
 	}
 	if (options.waitForTimeout) {

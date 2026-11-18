@@ -113,19 +113,16 @@ const USER_ERRORS: [(string | string[])[], number, string, (string | null)?][] =
 			6006,
 			"Could not inject the requested script into the page. The target page may not support script injection (no <head>/<body>) or the script could not be loaded.",
 		],
-		[[["Protocol error", "Target closed"]], 6001, TARGET_CLOSED],
+		[
+			[
+				["Protocol error", "Target closed"],
+				// How `waitForSelector` fails when the browser goes away
+				"waitForFunction failed: frame got detached",
+			],
+			6001,
+			TARGET_CLOSED,
+		],
 	];
-
-// Puppeteer wraps some errors, such as a `waitForSelector` timeout, and keeps
-// the original as `cause`, so include the causes' messages.
-function errorMessage(error: unknown): string {
-	if (!(error instanceof Error)) {
-		return String(error);
-	}
-	return error.cause === undefined
-		? error.message
-		: `${error.message}: ${errorMessage(error.cause)}`;
-}
 
 export function quickActionErrorResponse(error: unknown): Response {
 	if (error instanceof HtmlToMarkdownError) {
@@ -134,7 +131,7 @@ export function quickActionErrorResponse(error: unknown): Response {
 			{ status: 422 }
 		);
 	}
-	const raw = errorMessage(error);
+	const raw = error instanceof Error ? error.message : String(error);
 	const userError = USER_ERRORS.find(([entries]) =>
 		entries.some((entry) =>
 			typeof entry === "string"

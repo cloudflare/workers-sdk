@@ -150,22 +150,6 @@ describe("quick action errors", () => {
 		}
 	);
 
-	test("a wrapped error is matched and reported with its cause", async ({
-		expect,
-	}) => {
-		const res = quickActionErrorResponse(
-			new Error("Waiting for selector `#never` failed", {
-				cause: new Error("Waiting failed: 100ms exceeded"),
-			})
-		);
-		expect(res.status).toBe(422);
-		const body = (await res.json()) as ErrorBody;
-		expect(body.errors[0].code).toBe(6002);
-		expect(body.errors[0].detail).toBe(
-			"Waiting for selector `#never` failed: Waiting failed: 100ms exceeded"
-		);
-	});
-
 	test("a failed Markdown conversion returns a 422 with code 2012", async ({
 		expect,
 	}) => {
