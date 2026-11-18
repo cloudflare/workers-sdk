@@ -1,5 +1,5 @@
 # Keep the Node.js version aligned with volta.node in package.json.
-FROM node:22.22.1-bookworm
+FROM node:22.23.4-bookworm
 
 ENV CI=true \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
