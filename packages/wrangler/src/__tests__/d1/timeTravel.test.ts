@@ -20,6 +20,20 @@ describe("time-travel", () => {
 	const { setIsTTY } = useMockIsTTY();
 
 	describe("restore", () => {
+		it("should qualify the --timestamp window by plan in its help (#17000)", async ({
+			expect,
+		}) => {
+			await runWrangler("d1 time-travel restore --help");
+
+			// Time Travel retains 30 days of history on Workers Paid but only 7 days
+			// on Workers Free (https://developers.cloudflare.com/d1/platform/limits/),
+			// so the help must not tell every user that 30 days are available.
+			const help = std.out.replace(/\s+/g, " ");
+			expect(help).toContain("--timestamp");
+			expect(help).not.toContain("(within the last 30 days)");
+			expect(help).toMatch(/7 days/);
+		});
+
 		it("should reject the use of --timestamp with --bookmark", async ({
 			expect,
 		}) => {
