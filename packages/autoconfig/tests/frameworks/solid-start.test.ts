@@ -132,8 +132,14 @@ describe("SolidStart", () => {
 
 		await configureForCf(createMockContext(), "2.2.3");
 
-		expect(readFileSync("vite.config.ts", "utf8")).not.toContain(
-			"environments"
-		);
+		expect(readFileSync("vite.config.ts", "utf8")).toMatchInlineSnapshot(`
+			"import { defineConfig } from "vite";
+			import { solidStart } from "@solidjs/start/config";
+			import { cloudflare } from "@cloudflare/vite-plugin";
+
+			export default defineConfig({
+			  plugins: [solidStart(), cloudflare()],
+			});"
+		`);
 	});
 });
