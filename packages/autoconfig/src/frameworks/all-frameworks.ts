@@ -204,16 +204,24 @@ export function getAllKnownFrameworks(target: AutoConfigTarget) {
 			id: "vite",
 			name: "Vite",
 			class: Vite,
-			frameworkPackageInfo: {
-				name: "vite",
-				// Vite 6 introduced the Environment API which @cloudflare/vite-plugin requires
-				// See: https://vite.dev/blog/announcing-vite6#experimental-environment-api
-				// (6.1.0 is the minimum version supported by the vite plugin:
-				//  https://github.com/cloudflare/workers-sdk/blob/b9b7e9d9fe/packages/vite-plugin-cloudflare/package.json#L80
-				//  we anyways allow for `6.0.x` versions since we bump them to `^6.1.0` in the autoconfig process)
-				minimumVersion: "6.0.0",
-				maximumKnownMajorVersion: "8",
-			},
+			frameworkPackageInfo:
+				target === "cf"
+					? {
+							name: "vite",
+							// cf installs @cloudflare/vite-plugin v2, which has a `vite: ^7.0.0 || ^8.0.0` peer dependency
+							minimumVersion: "7.0.0",
+							maximumKnownMajorVersion: "8",
+						}
+					: {
+							name: "vite",
+							// Vite 6 introduced the Environment API which @cloudflare/vite-plugin requires
+							// See: https://vite.dev/blog/announcing-vite6#experimental-environment-api
+							// (6.1.0 is the minimum version supported by the vite plugin:
+							//  https://github.com/cloudflare/workers-sdk/blob/b9b7e9d9fe/packages/vite-plugin-cloudflare/package.json#L80
+							//  we anyways allow for `6.0.x` versions since we bump them to `^6.1.0` in the autoconfig process)
+							minimumVersion: "6.0.0",
+							maximumKnownMajorVersion: "8",
+						},
 			supportsCf: true,
 			supported: true,
 		},
