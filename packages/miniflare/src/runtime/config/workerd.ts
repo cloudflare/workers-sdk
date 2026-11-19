@@ -22,6 +22,11 @@ export interface Config {
 	extensions?: Extension[];
 	autogates?: string[];
 	structuredLogging?: boolean;
+	tracing?: TracingOptions;
+}
+
+export interface TracingOptions {
+	otlp?: ServiceDesignator;
 }
 
 export type Socket = {

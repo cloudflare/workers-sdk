@@ -7,7 +7,12 @@
  *
  * A "trace" is the root span (the one with no parent) plus everything below it.
  * When a request calls other workers, those sub-invocations share its trace_id
- * and attach to the calling span through parent_id. Request-level data (HTTP
+ * and attach to the calling span through parent_id. A span whose parent is not
+ * stored is a root: its parent is kept in `pending_parents` instead, and moved
+ * back to `parent_id` if the parent arrives later. That is how an invocation
+ * started by one of Miniflare's own Workers (whose spans the collector drops)
+ * starts a trace, while one called by another user worker, which usually
+ * finishes and is exported first, still joins its caller's. Request-level data (HTTP
  * status, CPU/wall time, trigger, worker name) is stored on the root span's
  * `attributes`. Times are absolute (epoch ms); the read API shifts them so each
  * trace starts at zero.
@@ -46,6 +51,13 @@ const SCHEMA = [
 		PRIMARY KEY (trace_id, seq)
 	)`,
 	`CREATE INDEX IF NOT EXISTS logs_by_level ON logs (level)`,
+	`CREATE TABLE IF NOT EXISTS pending_parents (
+		trace_id   TEXT NOT NULL,
+		span_id    TEXT NOT NULL,
+		parent_id  TEXT NOT NULL,
+		PRIMARY KEY (trace_id, span_id)
+	)`,
+	`CREATE INDEX IF NOT EXISTS pending_parents_by_parent ON pending_parents (trace_id, parent_id)`,
 ];
 
 /**
@@ -120,6 +132,62 @@ export class TraceStore extends DurableObject {
 								span.durationMs === null ? null : Math.round(span.durationMs),
 						}))
 					)
+				);
+			}
+
+			// With every span of the batch stored, settle parents (see the file
+			// comment): a span whose parent is missing becomes a root, and spans
+			// waiting for one of this batch's spans are attached to it.
+			for (
+				let offset = 0;
+				offset < spans.length;
+				offset += SQL_WRITE_CHUNK_ROWS
+			) {
+				const ids = JSON.stringify(
+					spans
+						.slice(offset, offset + SQL_WRITE_CHUNK_ROWS)
+						.map(({ traceId, spanId }) => ({ traceId, spanId }))
+				);
+				this.sql.exec(
+					`INSERT INTO pending_parents (trace_id, span_id, parent_id)
+					SELECT s.trace_id, s.span_id, s.parent_id
+					FROM json_each(?) j
+					JOIN spans s ON s.trace_id = json_extract(j.value, '$.traceId')
+						AND s.span_id = json_extract(j.value, '$.spanId')
+					WHERE s.parent_id IS NOT NULL
+						AND NOT EXISTS (
+							SELECT 1 FROM spans p
+							WHERE p.trace_id = s.trace_id AND p.span_id = s.parent_id
+						)
+					ON CONFLICT (trace_id, span_id) DO UPDATE SET
+						parent_id = excluded.parent_id`,
+					ids
+				);
+				this.sql.exec(
+					`UPDATE spans SET parent_id = NULL
+					FROM pending_parents pp
+					JOIN json_each(?) j ON pp.trace_id = json_extract(j.value, '$.traceId')
+						AND pp.span_id = json_extract(j.value, '$.spanId')
+					WHERE spans.trace_id = pp.trace_id
+						AND spans.span_id = pp.span_id
+						AND spans.parent_id = pp.parent_id`,
+					ids
+				);
+				this.sql.exec(
+					`UPDATE spans SET parent_id = pp.parent_id
+					FROM pending_parents pp
+					JOIN json_each(?) j ON pp.trace_id = json_extract(j.value, '$.traceId')
+						AND pp.parent_id = json_extract(j.value, '$.spanId')
+					WHERE spans.trace_id = pp.trace_id AND spans.span_id = pp.span_id`,
+					ids
+				);
+				this.sql.exec(
+					`DELETE FROM pending_parents
+					WHERE (trace_id, parent_id) IN (
+						SELECT json_extract(value, '$.traceId'), json_extract(value, '$.spanId')
+						FROM json_each(?)
+					)`,
+					ids
 				);
 			}
 
@@ -336,5 +404,6 @@ export class TraceStore extends DurableObject {
 	clear(): void {
 		this.sql.exec("DELETE FROM logs");
 		this.sql.exec("DELETE FROM spans");
+		this.sql.exec("DELETE FROM pending_parents");
 	}
 }
