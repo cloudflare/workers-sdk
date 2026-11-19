@@ -1,5 +1,4 @@
 ---
-"@cloudflare/remote-bindings": patch
 "wrangler": patch
 "@cloudflare/vite-plugin": patch
 "@cloudflare/vitest-plugin": patch
