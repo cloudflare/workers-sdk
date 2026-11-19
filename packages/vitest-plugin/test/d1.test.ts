@@ -64,6 +64,8 @@ describe("readD1Migrations", () => {
 	}) => {
 		await expect(
 			readD1Migrations(path.resolve("missing-migrations"))
-		).rejects.toThrow();
+		).rejects.toThrow(
+			`No migrations present at ${path.resolve("missing-migrations")}.`
+		);
 	});
 });
