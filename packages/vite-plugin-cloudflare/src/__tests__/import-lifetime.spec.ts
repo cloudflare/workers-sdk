@@ -29,6 +29,17 @@ describe("deferred import caller lifetime", () => {
 			}
 			const runtimeReady = vi.spyOn(Miniflare.prototype, "ready", "get");
 			await fs.writeFile(
+				"cloudflare.config.ts",
+				`export default {
+					worker: {
+						name: "import-lifetime",
+						entrypoint: "./index.js",
+						compatibilityDate: "2026-04-01",
+						compatibilityFlags: ["enable_request_signal", "request_signal_passthrough"],
+					},
+				};`
+			);
+			await fs.writeFile(
 				"state.js",
 				`export const state = { aborted: false, entered: false, released: false, evaluated: false, settled: "pending" };`
 			);
@@ -87,15 +98,6 @@ describe("deferred import caller lifetime", () => {
 				server: { watch: null },
 				plugins: [
 					cloudflare({
-						config: {
-							name: "import-lifetime",
-							entrypoint: "./index.js",
-							compatibilityDate: "2026-04-01",
-							compatibilityFlags: [
-								"enable_request_signal",
-								"request_signal_passthrough",
-							],
-						},
 						inspectorPort: false,
 						persistState: false,
 						remoteBindings: false,
