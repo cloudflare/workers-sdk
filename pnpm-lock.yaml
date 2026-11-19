@@ -301,9 +301,12 @@ importers:
 
   fixtures/create-test-harness-example:
     devDependencies:
+      '@cloudflare/test-harness':
+        specifier: workspace:*
+        version: link:../../packages/test-harness
       '@cloudflare/vite-plugin':
-        specifier: npm:@cloudflare/vite-plugin@1.63.2
-        version: 1.63.2(@types/node@22.15.17)(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))(wrangler@packages+wrangler)
+        specifier: workspace:*
+        version: link:../../packages/vite-plugin-cloudflare
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -316,6 +319,9 @@ importers:
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
+      cf:
+        specifier: catalog:default
+        version: 1.0.0-beta.17(@types/node@22.15.17)
       msw:
         specifier: catalog:default
         version: 2.14.6(@types/node@22.15.17)(typescript@6.0.3)
@@ -328,9 +334,6 @@ importers:
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@6.0.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
-      wrangler:
-        specifier: workspace:*
-        version: link:../../packages/wrangler
 
   fixtures/d1-read-replication-app:
     devDependencies:

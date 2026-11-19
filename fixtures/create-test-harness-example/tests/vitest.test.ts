@@ -1,3 +1,5 @@
+import { createTestHarness } from "@cloudflare/test-harness";
+import { bindings } from "cf/config";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import {
@@ -8,40 +10,33 @@ import {
 	describe,
 	test,
 } from "vitest";
-import { createTestHarness } from "wrangler";
 
-// Point each worker to its Wrangler config and previously built output.
+// Point each worker to the project containing its build output.
 const server = createTestHarness({
 	workers: [
 		{
-			configPath: "./workers/web/wrangler.jsonc",
-			prebuiltWorkerDir: "./dist/wrangler/web",
-			bindingOverrides: { BROWSER: "mock-browser" },
+			projectDir: "./workers/web",
+			envOverrides: { BROWSER: bindings.worker({ worker: "mock-browser" }) },
 		},
-		{
-			configPath: "./workers/api/wrangler.jsonc",
-			prebuiltWorkerDir: "./dist/wrangler/api",
-		},
-		{
-			configPath: "./workers/mock-browser/wrangler.jsonc",
-			prebuiltWorkerDir: "./dist/wrangler/mock-browser",
-		},
+		{ projectDir: "./workers/api" },
+		{ projectDir: "./workers/mock-browser" },
 	],
 });
 
 // server.getWorker() would return the first Worker, but naming it makes it explicit.
-const webWorker = server.getWorker<
-	WebEnv,
-	typeof import("../workers/web/index")
->("web-worker");
-const apiWorker = server.getWorker<
-	ApiEnv,
-	typeof import("../workers/api/index")
->("api-worker");
-const mockBrowserWorker = server.getWorker<
-	unknown,
-	typeof import("../workers/mock-browser/index")
->("mock-browser");
+// Each Worker's types come from its config module.
+const webWorker =
+	server.getWorker<typeof import("../workers/web/cloudflare.config")>(
+		"web-worker"
+	);
+const apiWorker =
+	server.getWorker<typeof import("../workers/api/cloudflare.config")>(
+		"api-worker"
+	);
+const mockBrowserWorker =
+	server.getWorker<typeof import("../workers/mock-browser/cloudflare.config")>(
+		"mock-browser"
+	);
 
 // Workers started by createTestHarness route outbound fetches to globalThis.fetch().
 // You can use libraries like MSW to intercept those requests.

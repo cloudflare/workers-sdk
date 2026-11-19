@@ -1,3 +1,10 @@
+import type ApiWorker from "../api/index";
+
+type Env = {
+	BROWSER: BrowserRun;
+	API: Service<ApiWorker>;
+};
+
 /**
  * Web Worker: renders user profiles and reports by calling the API Worker over a service binding.
  */
@@ -39,4 +46,4 @@ export default {
 
 		return new Response("Not Found", { status: 404 });
 	},
-} satisfies ExportedHandler<WebEnv>;
+} satisfies ExportedHandler<Env>;
