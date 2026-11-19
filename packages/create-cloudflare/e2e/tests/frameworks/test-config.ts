@@ -661,6 +661,9 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "svelte:pages",
+			// TODO: Unquarantine once C3 installs a compatible adapter.
+			// `@sveltejs/adapter-cloudflare` 9.0.0 removed Cloudflare Pages support.
+			quarantine: true,
 			argv: ["--platform", "pages"],
 			flags: [
 				"--no-install",
@@ -686,6 +689,10 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "svelte:workers",
+			// TODO: Unquarantine once the template supports
+			// `@sveltejs/adapter-cloudflare` 9.0.0, which rejects the `main` setting
+			// in the template's Wrangler configuration.
+			quarantine: true,
 			argv: ["--platform", "workers"],
 			flags: [
 				"--no-install",
