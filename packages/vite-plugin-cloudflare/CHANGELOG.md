@@ -1,5 +1,17 @@
 # @cloudflare/vite-plugin
 
+## 1.70.1
+
+### Patch Changes
+
+- [#16952](https://github.com/cloudflare/workers-sdk/pull/16952) [`c938af3`](https://github.com/cloudflare/workers-sdk/commit/c938af351410d8cd4e2fe877b442284593596eb6) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Expose `canBeForwarded` when testing email handlers locally
+
+  Update Miniflare to 5.20261117.0-beta so incoming email messages delivered through the Vite development server expose `canBeForwarded: true`, matching production. Align Wrangler and the shared compatibility-date helpers with the November 17 runtime and Workers types.
+
+- [#16983](https://github.com/cloudflare/workers-sdk/pull/16983) [`a2f3b29`](https://github.com/cloudflare/workers-sdk/commit/a2f3b292a907765b891386fe437e4ebb31071c03) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fail remote RPC binding requests on network errors instead of hanging
+
+  Remote bindings that connect over RPC treated network failures as preview reloads and waited silently for a reload. These requests now fail with the error, while GET and HEAD requests interrupted by a preview reload are retried against the replacement preview.
+
 ## 1.70.0
 
 ### Minor Changes
