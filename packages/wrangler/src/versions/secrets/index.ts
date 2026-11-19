@@ -5,9 +5,9 @@ import { getMetricsUsageHeaders } from "../../metrics";
 import type {
 	CfPlacement,
 	CfUserLimits,
-	Config,
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export const versionsSecretNamespace = createNamespace({
 	metadata: {

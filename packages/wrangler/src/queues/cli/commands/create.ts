@@ -1,7 +1,5 @@
-import {
-	CommandLineArgsError,
-	formatConfigSnippet,
-} from "@cloudflare/workers-utils";
+import { CommandLineArgsError } from "@cloudflare/workers-utils";
+import { formatConfigSnippet } from "@cloudflare/workers-utils/config";
 import dedent from "ts-dedent";
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";

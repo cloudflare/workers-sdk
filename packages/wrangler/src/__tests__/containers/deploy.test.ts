@@ -41,7 +41,7 @@ import type {
 	CreateDurableObjectApplicationRequest,
 	ImageRegistryCredentialsConfiguration,
 } from "@cloudflare/containers-shared";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 import type { ChildProcess } from "node:child_process";
 import type { ExpectStatic } from "vitest";
 

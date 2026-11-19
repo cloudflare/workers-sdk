@@ -57,7 +57,8 @@ import type {
 	AutoConfigSummary,
 } from "./types";
 import type { WorkerConfig } from "@cloudflare/config";
-import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
+import type { PackageJSON } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 /**
  * Runs the full autoconfig flow: displays detected settings, confirms with the user,
@@ -220,9 +221,7 @@ export async function runAutoConfig(
 	}
 
 	if (dryRun) {
-		logger.log(
-			`✋  ${"Autoconfig process run in dry-run mode, existing now."}`
-		);
+		logger.log(`✋  ${"Autoconfig process run in dry-run mode, exiting now."}`);
 		logger.log("");
 
 		return autoConfigSummary;

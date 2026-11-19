@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
 import semiver from "semiver";
 import { hasViteConfig } from "../frameworks/utils/vite-config";
+import { CF_VITE_PLUGIN_VERSION_RANGE } from "../frameworks/utils/vite-plugin-version";
 import type { AutoConfigCommandError } from "../types";
 import type { PackageJSON, PackageManager } from "@cloudflare/workers-utils";
 
@@ -213,5 +214,5 @@ function getInstallCommand(
 		nub: " --workspace-root",
 	};
 	const workspaceFlag = isWorkspaceRoot ? workspaceFlags[packageManager] : "";
-	return `${packageManager} ${command} @cloudflare/vite-plugin@beta ${packageName}${workspaceFlag}`;
+	return `${packageManager} ${command} @cloudflare/vite-plugin@${CF_VITE_PLUGIN_VERSION_RANGE} ${packageName}${workspaceFlag}`;
 }

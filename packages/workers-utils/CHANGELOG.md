@@ -1,5 +1,31 @@
 # @cloudflare/workers-utils
 
+## 0.55.0
+
+### Minor Changes
+
+- [#16880](https://github.com/cloudflare/workers-sdk/pull/16880) [`d04e667`](https://github.com/cloudflare/workers-sdk/commit/d04e667fadbc4b28666236ae9d85a3cae6bee557) Thanks [@edmundhung](https://github.com/edmundhung)! - Export `getWorkerZone()` and `toApiComplianceRegion()`
+
+  `getWorkerZone()` returns the zone of a Worker's first route, taken from its domains or fetch triggers. `toApiComplianceRegion()` converts a `cloudflare.config.ts` compliance region to the form Cloudflare's API takes.
+
+### Patch Changes
+
+- [#17003](https://github.com/cloudflare/workers-sdk/pull/17003) [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-18
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#14578](https://github.com/cloudflare/workers-sdk/pull/14578) [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3) Thanks [@penalosa](https://github.com/penalosa)! - Fix `Dynamic require` errors when importing packages from ES modules
+
+  Importing these packages in a Node.js ES module could fail with `Dynamic require of "..." is not supported` when a dependency loaded a Node.js built-in. These imports now work without requiring a CommonJS wrapper.
+
+## 0.54.2
+
+### Patch Changes
+
+- [#16974](https://github.com/cloudflare/workers-sdk/pull/16974) [`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-17
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
 ## 0.54.1
 
 ### Patch Changes

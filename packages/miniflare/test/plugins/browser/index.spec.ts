@@ -237,6 +237,7 @@ describe("browser rendering", { concurrent: false, timeout: 20_000 }, () => {
 			vi.stubEnv("XDG_CACHE_HOME", path.dirname(getGlobalWranglerCachePath()));
 			vi.stubEnv("HOME", home);
 			vi.stubEnv("XDG_CONFIG_HOME", path.join(home, ".config"));
+			vi.stubEnv("XDG_DATA_HOME", path.join(home, ".local", "share"));
 
 			const server = https.createServer(
 				{ key: KEY, cert: CERT },
@@ -272,7 +273,7 @@ export default {
 			\`https://localhost/v1/devtools/browser/\${sessionId}/json/list\`
 		).then(r => r.json());
 		const { webSocket: ws } = await env.MYBROWSER.fetch(
-			\`https://localhost/v1/devtools/browser/\${sessionId}/page/\${targets[0].id}\`,
+			\`https://localhost/v1/devtools/browser/\${sessionId}/page/\${targets.find(t => t.type === "page").id}\`,
 			{ headers: { Upgrade: "websocket" } }
 		);
 		ws.accept();
@@ -302,7 +303,7 @@ export default {
 			if (process.platform !== "linux") {
 				return;
 			}
-			const nss = path.join(home, ".pki", "nssdb");
+			const nss = path.join(home, ".local", "share", "pki", "nssdb");
 			for (const directory of [home, path.dirname(nss), nss]) {
 				const stat = await fs.stat(directory);
 				expect(stat.uid).toBe(process.getuid?.());
@@ -873,10 +874,15 @@ export default {
 			expect(Array.isArray(list)).toBe(true);
 			// The page title for about:blank can change between sequential
 			// requests (from "" to "about:blank"), so strip the volatile
-			// `title` field before comparing the two alias endpoints.
-			const stripTitle = (arr: any[]) =>
-				arr.map(({ title, ...rest }: any) => rest);
-			expect(stripTitle(list)).toEqual(stripTitle(listAlias));
+			// `title` field before comparing the two alias endpoints. Chrome
+			// also adds and reorders its own targets, such as browser UI and
+			// extension service workers, so compare only the pages.
+			const pages = (arr: any[]) =>
+				arr
+					.filter(({ type }: any) => type === "page")
+					.map(({ title, ...rest }: any) => rest);
+			expect(pages(list)).toHaveLength(1);
+			expect(pages(list)).toEqual(pages(listAlias));
 		}
 	);
 
@@ -1152,7 +1158,7 @@ export default {
 		const targets = await env.MYBROWSER.fetch(
 			\`https://localhost/v1/devtools/browser/\${sessionId}/json/list\`
 		).then(r => r.json());
-		const targetId = targets[0].id;
+		const targetId = targets.find(t => t.type === "page").id;
 		const { webSocket: ws } = await env.MYBROWSER.fetch(
 			\`https://localhost/v1/devtools/browser/\${sessionId}/page/\${targetId}\`,
 			{ headers: { Upgrade: "websocket" } }
@@ -1264,7 +1270,7 @@ export default {
 			\`https://localhost/v1/devtools/browser/\${sessionId}/json/list\`
 		).then(r => r.json());
 		const { webSocket: pageWs } = await env.MYBROWSER.fetch(
-			\`https://localhost/v1/devtools/browser/\${sessionId}/page/\${targets[0].id}\`,
+			\`https://localhost/v1/devtools/browser/\${sessionId}/page/\${targets.find(t => t.type === "page").id}\`,
 			{ headers: { Upgrade: "websocket" } }
 		);
 		pageWs.accept();

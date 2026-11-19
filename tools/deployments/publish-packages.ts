@@ -2,7 +2,7 @@
 import { spawn } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { prerelease, valid } from "semver";
+import { gt, prerelease, valid } from "semver";
 
 /**
  * Publishes the monorepo's npm packages in dependency-tier order, waiting for
@@ -26,7 +26,8 @@ import { prerelease, valid } from "semver";
  * ## Tagging
  *
  * Each package's npm dist-tag is derived from its version, so stable and
- * prerelease packages can be published together in the same tier.
+ * prerelease packages can be published together in the same tier. Release
+ * candidates also update `beta` after all packages have been published.
  *
  * Publishing here is deliberately split from tagging. Once every tier has been
  * published we hand off to `changeset tag`, which creates the git tags and — via
@@ -214,6 +215,7 @@ export function escapePackageName(name: string): string {
 
 type AbbreviatedPackument = {
 	versions?: Record<string, { dist?: { tarball?: string } }>;
+	"dist-tags"?: Record<string, string>;
 };
 
 export type FetchLike = (
@@ -504,6 +506,43 @@ export function createPublishRunner(options: {
 	};
 }
 
+/** Adds an npm dist-tag using the CLI's trusted publishing authentication. */
+export function createDistTagRunner(options: {
+	registry: string;
+}): MainOptions["addDistTag"] {
+	return function addDistTag(pkg, tag) {
+		return new Promise<void>((promiseResolve, reject) => {
+			const child = spawn(
+				"npm",
+				["dist-tag", "add", `${pkg.name}@${pkg.version}`, tag],
+				{
+					cwd: pkg.dir,
+					env: { ...process.env, npm_config_registry: options.registry },
+				}
+			);
+			let output = "";
+			child.stdout?.on("data", (chunk) => {
+				output += String(chunk);
+			});
+			child.stderr?.on("data", (chunk) => {
+				output += String(chunk);
+			});
+			child.on("error", reject);
+			child.on("close", (code) => {
+				if (code === 0) {
+					promiseResolve();
+				} else {
+					reject(
+						new Error(
+							`Failed to tag ${pkg.name}@${pkg.version} as ${tag}: npm dist-tag exited with code ${code}\n${output}`
+						)
+					);
+				}
+			});
+		});
+	};
+}
+
 /**
  * Publishes a batch of packages with bounded concurrency, returning results in
  * the same order as the input so logs stay deterministic.
@@ -568,6 +607,7 @@ export type MainOptions = {
 	readRetry: Omit<ReadRetryOptions, "sleep" | "log">;
 	fetchImpl: FetchLike;
 	publish: PublishRunner;
+	addDistTag: (pkg: WorkspacePackage, tag: string) => Promise<void>;
 	runChangesetTag: () => Promise<number>;
 	sleep: (ms: number) => Promise<void>;
 	now: () => number;
@@ -590,6 +630,9 @@ export async function publishAllPackages(options: MainOptions): Promise<void> {
 				options.log(
 					`  ${pkg.name}@${pkg.version}${deps === "" ? "" : ` <- ${deps}`}`
 				);
+				if (getDistTag(pkg.version) === "rc") {
+					options.log("    additional npm dist-tag: beta");
+				}
 			}
 		});
 		options.log("\nDry run: nothing was published.");
@@ -676,6 +719,8 @@ export async function publishAllPackages(options: MainOptions): Promise<void> {
 		options.log("\nNo unpublished packages found.");
 	}
 
+	await updateReleaseCandidateTags(packages, options);
+
 	// `changeset tag` creates the git tags and prints the `New tag:` lines that
 	// `changesets/action` parses into its `publishedPackages` output. It also
 	// covers private packages, which is how the non-npm deployment step learns
@@ -684,6 +729,58 @@ export async function publishAllPackages(options: MainOptions): Promise<void> {
 	const tagExitCode = await options.runChangesetTag();
 	if (tagExitCode !== 0) {
 		throw new Error(`\`changeset tag\` exited with code ${tagExitCode}`);
+	}
+}
+
+/**
+ * Keeps beta users on the release candidate, including when retrying a release
+ * whose npm publish succeeded but whose dist-tag update failed.
+ */
+async function updateReleaseCandidateTags(
+	packages: WorkspacePackage[],
+	options: MainOptions
+): Promise<void> {
+	const candidates = packages.filter((pkg) => getDistTag(pkg.version) === "rc");
+	if (candidates.length === 0) {
+		return;
+	}
+	// The final tier normally needs no propagation gate, but these versions must
+	// be visible before npm can attach another dist-tag to them.
+	await waitForPropagation(candidates, {
+		...options.propagation,
+		registry: options.registry,
+		fetchImpl: options.fetchImpl,
+		minSeconds: 0,
+		sleep: options.sleep,
+		now: options.now,
+		log: options.log,
+	});
+	for (const pkg of candidates) {
+		const packument = await fetchPackumentWithRetry(
+			options.registry,
+			pkg.name,
+			options.fetchImpl,
+			{
+				...options.readRetry,
+				sleep: options.sleep,
+				log: options.log,
+			}
+		);
+		const tags = packument?.["dist-tags"] ?? {};
+		// An old release retry must not move a newer prerelease backwards.
+		if (
+			tags.beta === pkg.version ||
+			[tags.rc, tags.beta].some(
+				(version) =>
+					version !== undefined &&
+					valid(version) !== null &&
+					gt(version, pkg.version)
+			)
+		) {
+			continue;
+		}
+		options.log(`Updating npm dist-tag: ${pkg.name}@${pkg.version} -> beta`);
+		await options.addDistTag(pkg, "beta");
 	}
 }
 
@@ -721,6 +818,7 @@ if (require.main === module) {
 		},
 		fetchImpl: fetch,
 		publish: createPublishRunner({ registry }),
+		addDistTag: createDistTagRunner({ registry }),
 		runChangesetTag,
 		sleep,
 		now: () => Date.now(),

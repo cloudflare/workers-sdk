@@ -5,15 +5,17 @@ import { blue, gray } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	APIError,
 	formatTime,
-	getBindings,
-	getDurableObjectContainerApps,
-	hasDurableObjectExports,
 	ParseError,
 	printBindings,
 	retryOnAPIFailure,
 	UserError,
 	writeOutput,
 } from "@cloudflare/workers-utils";
+import {
+	getBindings,
+	getDurableObjectContainerApps,
+	hasDurableObjectExports,
+} from "@cloudflare/workers-utils/config";
 import { parseAndExpandDotEnv } from "@cloudflare/workers-utils/local-env";
 import { Response } from "undici";
 import { fetchResult, logger } from "../shared/context";

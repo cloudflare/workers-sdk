@@ -2,7 +2,8 @@ import path from "node:path";
 import { normalizeBasePath } from "@cloudflare/workers-shared/utils/base-path";
 import { UserError } from "@cloudflare/workers-utils";
 import { logger } from "../../shared/context";
-import type { AssetsOptions, Route } from "@cloudflare/workers-utils";
+import type { AssetsOptions } from "@cloudflare/workers-utils";
+import type { Route } from "@cloudflare/workers-utils/config";
 
 export const validateRoutes = (
 	routes: Route[],

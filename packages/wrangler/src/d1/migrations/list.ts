@@ -1,4 +1,5 @@
-import { configFileName, UserError } from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";

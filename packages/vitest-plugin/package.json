@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vitest-plugin",
-	"version": "1.8.3",
+	"version": "1.8.5",
 	"description": "Workers Vitest integration for writing Vitest unit and integration tests that run inside the Workers runtime",
 	"keywords": [
 		"cloudflare",
@@ -53,13 +53,13 @@
 		"cjs-module-lexer": "1.2.3",
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
-		"wrangler": "workspace:*",
 		"zod": "catalog:default"
 	},
 	"devDependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/config": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
+		"@cloudflare/dev-helpers": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/remote-bindings": "workspace:*",
 		"@cloudflare/runtime-types": "workspace:*",
@@ -79,7 +79,7 @@
 		"semver": "^7.7.1",
 		"tree-kill": "catalog:default",
 		"ts-dedent": "^2.2.0",
-		"tsdown": "0.16.3",
+		"tsdown": "catalog:default",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
 		"vitest": "catalog:default"

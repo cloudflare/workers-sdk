@@ -3,16 +3,18 @@ import { initDeployHelpersContext } from "@cloudflare/deploy-helpers";
 import { createWranglerProfileStore } from "@cloudflare/workers-auth/wrangler";
 import {
 	CommandLineArgsError,
-	defaultWranglerConfig,
 	FatalError,
 	getCloudflareEnv,
 	getNoSkillsUpdatePromptsFromEnv,
 	getWranglerHideBanner,
-	experimental_readRawConfig,
 	parseRetryAfterValue,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
+import {
+	defaultWranglerConfig,
+	experimental_readRawConfig,
+} from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
 import {
 	runSkillsInstallFlow,

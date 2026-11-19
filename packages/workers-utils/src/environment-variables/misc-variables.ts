@@ -400,6 +400,19 @@ export const getLocalExplorerEnabledFromEnv =
 	});
 
 /**
+ * Experimental opt-in to extend Miniflare's `/cdn-cgi/` Host and Origin allowlist
+ * with Vite's resolved `server.allowedHosts` or `preview.allowedHosts`.
+ *
+ * Defaults to `false`. Enable only when every listed host should have access to
+ * Local Explorer APIs. Vite's `allowedHosts: true` retains the default allowlist.
+ */
+export const getLocalExplorerUseViteAllowedHostsFromEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "X_LOCAL_EXPLORER_USE_VITE_ALLOWED_HOSTS",
+		defaultValue: false,
+	});
+
+/**
  * `X_LOCAL_OBSERVABILITY` turns on local-dev observability capture. Both
  * `wrangler dev` and the Vite plugin read it and pass it through as the one
  * `unsafeObservability` Miniflare option, which makes core attach the trace

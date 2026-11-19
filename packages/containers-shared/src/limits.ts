@@ -8,7 +8,8 @@ import type {
 	UserDeploymentConfiguration,
 } from "./client";
 import type { ContainerNormalizedConfig } from "./types";
-import type { ComplianceConfig, ContainerApp } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { ContainerApp } from "@cloudflare/workers-utils/config";
 
 const MB = 1000 * 1000;
 const MiB = 1024 * 1024;

@@ -3,7 +3,7 @@ import { beforeEach, describe, it, vi } from "vitest";
 import { initDeployHelpersContext } from "../src/shared/context";
 import { applyEmailRoutingAddresses } from "../src/triggers/email-routing";
 import type { EmailRoutingPlanResponse } from "../src/triggers/email-routing-plan";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 const { isNonInteractiveOrCI } = vi.hoisted(() => ({
 	isNonInteractiveOrCI: vi.fn(() => true),

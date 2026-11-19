@@ -1,8 +1,8 @@
 import { APIError, UserError } from "@cloudflare/workers-utils";
-import { configFileName } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import { fetchResult } from "../../shared/context";
 import { getWorkflowsOwnedByScript } from "./owned-workflows";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export type Workflow = {
 	name: string;

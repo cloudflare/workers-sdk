@@ -13,7 +13,7 @@ import chalk from "chalk";
 import { createCLIParser } from "..";
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 const ONE_KIB_BYTES = 1024;
 

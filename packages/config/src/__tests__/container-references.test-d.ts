@@ -87,11 +87,8 @@ workerExports.durableObject({
 const invalidObservabilityTargets: ContainerConfig = {
 	name: "invalid-observability",
 	image: { dockerfile: "./Dockerfile" },
-	observability: {
-		targetInstancePercentage: 50,
-		// @ts-expect-error Observability targets are mutually exclusive.
-		targetInstanceCount: 2,
-	},
+	// @ts-expect-error Observability targets are mutually exclusive.
+	observability: { targetInstancePercentage: 50, targetInstanceCount: 2 },
 };
 void invalidObservabilityTargets;
 

@@ -13,7 +13,7 @@ import type {
 	AutoConfigOptions,
 	AutoConfigSummary,
 } from "@cloudflare/autoconfig";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export type { AutoConfigWranglerTriggerCommand } from "./telemetry-utils";
 export {

@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/autoconfig",
-	"version": "0.13.0",
+	"version": "0.13.2",
 	"description": "Framework autoconfig detection and configuration for Cloudflare Workers",
 	"license": "MIT OR Apache-2.0",
 	"repository": {
@@ -22,9 +22,9 @@
 		}
 	},
 	"scripts": {
-		"build": "tsup",
+		"build": "tsdown",
 		"check:type": "tsc -p ./tsconfig.json",
-		"dev": "tsup --watch",
+		"dev": "tsdown --watch",
 		"test": "vitest",
 		"test:ci": "vitest run"
 	},
@@ -47,7 +47,7 @@
 		"recast": "0.23.11",
 		"semiver": "^1.1.0",
 		"ts-dedent": "^2.2.0",
-		"tsup": "8.3.0",
+		"tsdown": "catalog:default",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default",
 		"yaml": "^2.9.0"

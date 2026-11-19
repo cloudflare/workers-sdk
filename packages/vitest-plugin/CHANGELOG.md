@@ -1,5 +1,37 @@
 # @cloudflare/vitest-plugin
 
+## 1.8.5
+
+### Patch Changes
+
+- [#17003](https://github.com/cloudflare/workers-sdk/pull/17003) [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-18
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16949](https://github.com/cloudflare/workers-sdk/pull/16949) [`110c162`](https://github.com/cloudflare/workers-sdk/commit/110c16279a91927427396b0f3760e27d59a8079a) Thanks [@edmundhung](https://github.com/edmundhung)! - Fail remote RPC binding requests on network errors instead of hanging
+
+  Remote bindings that connect over RPC treated every network failure, such as being offline, a DNS or TLS error, as a preview reload. The request then waited silently for a reload that never came. These requests now fail with the error, while GET and HEAD requests interrupted by an actual reload are still retried.
+
+- [#14578](https://github.com/cloudflare/workers-sdk/pull/14578) [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3) Thanks [@penalosa](https://github.com/penalosa)! - Fix `Dynamic require` errors when importing packages from ES modules
+
+  Importing these packages in a Node.js ES module could fail with `Dynamic require of "..." is not supported` when a dependency loaded a Node.js built-in. These imports now work without requiring a CommonJS wrapper.
+
+- Updated dependencies [[`24bd3c3`](https://github.com/cloudflare/workers-sdk/commit/24bd3c3aae162b6ef6f8ec661fdd3378123eb811), [`0a4315f`](https://github.com/cloudflare/workers-sdk/commit/0a4315fcf56a1cb6dbc6b4908afe6122e87d4253), [`8f26e90`](https://github.com/cloudflare/workers-sdk/commit/8f26e9008c8fb50a677f7cb7836beaf6deb66073), [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c), [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c), [`f833c8a`](https://github.com/cloudflare/workers-sdk/commit/f833c8ac21d5c562a25e1e2f90fa160c8510c127), [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3), [`67d7c0a`](https://github.com/cloudflare/workers-sdk/commit/67d7c0a12b7476430d59e7d6a106c8996449f4e6), [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3), [`110c162`](https://github.com/cloudflare/workers-sdk/commit/110c16279a91927427396b0f3760e27d59a8079a), [`5a6e450`](https://github.com/cloudflare/workers-sdk/commit/5a6e4502f81c4f3032be8b0c174e730ea3817b76), [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3)]:
+  - wrangler@4.165.0
+  - miniflare@5.20261118.0-beta
+
+## 1.8.4
+
+### Patch Changes
+
+- [#16974](https://github.com/cloudflare/workers-sdk/pull/16974) [`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-17
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666), [`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666), [`51064e6`](https://github.com/cloudflare/workers-sdk/commit/51064e6d4fa630d950fb0544fda07efd877dd2fb), [`5f05841`](https://github.com/cloudflare/workers-sdk/commit/5f05841d4d4a4a67fee5ddc0150309b5ed782069)]:
+  - miniflare@5.20261117.0-beta
+  - wrangler@4.164.0
+
 ## 1.8.3
 
 ### Patch Changes

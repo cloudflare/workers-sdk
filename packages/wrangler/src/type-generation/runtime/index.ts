@@ -1,6 +1,6 @@
 import { generateRuntimeTypes as generateRuntimeTypesImpl } from "@cloudflare/runtime-types";
 import { logger } from "../../logger";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 /**
  * Generates runtime types for a Workers project based on the provided project configuration.

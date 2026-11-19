@@ -1,13 +1,12 @@
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import {
-	configFileName,
 	DEFAULT_COMPAT_DATE,
 	getWorkerNameFromProject,
 	UserError,
-	type Config,
 } from "@cloudflare/workers-utils";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
+import { configFileName, type Config } from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
 import {
 	runAutoConfigDetection,

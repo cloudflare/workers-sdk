@@ -2,16 +2,15 @@ import path from "node:path";
 import { convertToWranglerConfig } from "@cloudflare/config";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import { maybeGetFile } from "@cloudflare/workers-shared/utils/helpers";
+import { getDockerPath, UserError } from "@cloudflare/workers-utils";
 import {
 	configFileName,
 	defaultWranglerConfig,
 	formatConfigSnippet,
 	getBindingTypeFriendlyName,
 	getDurableObjectExports,
-	getDockerPath,
 	isLiveDurableObjectExport,
-	UserError,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import { parseAndExpandDotEnv } from "@cloudflare/workers-utils/local-env";
 import chalk from "chalk";
 import { syncAssets } from "../deploy/helpers/assets";
@@ -70,7 +69,7 @@ import type {
 	PreviewsConfig,
 	RawEnvironment,
 	Route,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 export type PreviewArgs = {
 	script?: string;
@@ -1340,12 +1339,12 @@ export async function preview(
  * Upload a Preview from resolved Build Output configuration.
  *
  * @param accountId Account that owns the parent Worker.
- * @param args Preview name and deployment annotations.
+ * @param args Preview name, deployment annotations, and secrets file.
  * @param buildOutput Exact configuration and artifacts emitted by the build.
  */
 export async function previewBuildOutput(
 	accountId: string,
-	args: Pick<PreviewArgs, "name" | "tag" | "message" | "json">,
+	args: Pick<PreviewArgs, "name" | "tag" | "message" | "json" | "secretsFile">,
 	buildOutput: PreviewBuildOutput,
 	options?: PreviewOptions
 ): Promise<PreviewResult> {

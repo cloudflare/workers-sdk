@@ -3,12 +3,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
+import { splitSqlQuery, UserError } from "@cloudflare/workers-utils";
 import {
 	convertConfigToBindings,
 	normalizeAndValidateConfig,
-	splitSqlQuery,
-	UserError,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import {
 	WorkflowInstanceIntrospectorHandle,
 	WorkflowIntrospectorHandle,
@@ -47,7 +46,7 @@ import type {
 	FetcherScheduledOptions,
 	FetcherScheduledResult,
 } from "@cloudflare/workers-types/experimental";
-import type { Config, RawConfig } from "@cloudflare/workers-utils";
+import type { Config, RawConfig } from "@cloudflare/workers-utils/config";
 import type {
 	WorkflowBinding,
 	WorkflowInstanceIntrospector,

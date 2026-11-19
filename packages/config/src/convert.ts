@@ -1,10 +1,11 @@
+import { UserError } from "@cloudflare/workers-utils";
+import { toApiComplianceRegion } from "@cloudflare/workers-utils/compliance";
 import {
-	UserError,
 	type RawConfig,
 	type ContainerApp,
 	type DurableObjectContainerImage,
 	type Exports,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import { isParsedUnsafeBinding } from "./schema";
 import type {
 	ParsedCloudflareConfig,
@@ -206,8 +207,7 @@ function convertSettings(settings: ParsedSettings, result: RawConfig): void {
 		result.account_id = settings.accountId;
 	}
 	if (settings.complianceRegion !== undefined) {
-		result.compliance_region =
-			settings.complianceRegion === "fedramp-high" ? "fedramp_high" : "public";
+		result.compliance_region = toApiComplianceRegion(settings.complianceRegion);
 	}
 }
 

@@ -1,4 +1,5 @@
-import { configFormat, isInteractive } from "@cloudflare/workers-utils";
+import { isInteractive } from "@cloudflare/workers-utils";
+import { configFormat } from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
 import ci from "ci-info";
 import { fetch } from "undici";

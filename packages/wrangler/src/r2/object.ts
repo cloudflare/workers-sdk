@@ -3,12 +3,14 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as stream from "node:stream";
 import {
-	bucketFormatMessage,
 	CommandLineArgsError,
 	FatalError,
-	isValidR2BucketName,
 	UserError,
 } from "@cloudflare/workers-utils";
+import {
+	bucketFormatMessage,
+	isValidR2BucketName,
+} from "@cloudflare/workers-utils/config";
 import PQueue from "p-queue";
 import { readConfig } from "../config";
 import { createCommand, createNamespace } from "../core/create-command";

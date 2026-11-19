@@ -24,8 +24,8 @@ import type {
 	CfWorkerInit,
 	ComplianceConfig,
 	LegacyAssetPaths,
-	Route,
 } from "@cloudflare/workers-utils";
+import type { Route } from "@cloudflare/workers-utils/config";
 
 /**
  * Error thrown when a remote dev session fails due to an authentication

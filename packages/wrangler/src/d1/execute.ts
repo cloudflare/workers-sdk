@@ -4,7 +4,6 @@ import path from "node:path";
 import { spinnerWhile } from "@cloudflare/cli-shared-helpers/interactive";
 import {
 	APIError,
-	configFileName,
 	createFatalError,
 	JsonFriendlyFatalError,
 	normalizeSqlLineEndings,
@@ -12,6 +11,7 @@ import {
 	splitSqlQuery,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
 import md5File from "md5-file";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
@@ -31,7 +31,8 @@ import type {
 	PollingFailure,
 } from "./types";
 import type { D1Result } from "@cloudflare/workers-types/experimental";
-import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export type QueryResult = {
 	results: Record<string, string | number | boolean | null>[];

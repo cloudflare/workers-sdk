@@ -1,11 +1,11 @@
-import { constructWranglerConfig } from "@cloudflare/workers-utils";
+import { constructWranglerConfig } from "@cloudflare/workers-utils/config";
 import { fetchResult } from "../../shared/context";
 import type {
 	ComplianceConfig,
-	RawConfig,
 	ServiceMetadataRes,
 	WorkerMetadata,
 } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 type CustomDomainsRes = {
 	id: string;

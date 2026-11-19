@@ -1,5 +1,49 @@
 # @cloudflare/deploy-helpers
 
+## 0.28.0
+
+### Minor Changes
+
+- [#16751](https://github.com/cloudflare/workers-sdk/pull/16751) [`7b72b22`](https://github.com/cloudflare/workers-sdk/commit/7b72b22ea3355743ef5df3357e459c514672c13d) Thanks [@edmundhung](https://github.com/edmundhung)! - Accept a secrets file when uploading a Preview from Build Output
+
+  `previewBuildOutput()` now takes the same `secretsFile` option as `preview()`. The file's secrets are uploaded with the Preview deployment, so a CLI that deploys Previews from Build Output can set Preview secrets without a separate command or the Cloudflare dashboard.
+
+### Patch Changes
+
+- [#17003](https://github.com/cloudflare/workers-sdk/pull/17003) [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-18
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#14334](https://github.com/cloudflare/workers-sdk/pull/14334) [`67d7c0a`](https://github.com/cloudflare/workers-sdk/commit/67d7c0a12b7476430d59e7d6a106c8996449f4e6) Thanks [@Divkix](https://github.com/Divkix)! - Replace the unmaintained asset hashing dependency with `hash-wasm`
+
+  Keep asset hashes unchanged for Workers and Pages deployments and local Pages development while using a maintained WebAssembly implementation.
+
+- [#14578](https://github.com/cloudflare/workers-sdk/pull/14578) [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3) Thanks [@penalosa](https://github.com/penalosa)! - Fix `Dynamic require` errors when importing packages from ES modules
+
+  Importing these packages in a Node.js ES module could fail with `Dynamic require of "..." is not supported` when a dependency loaded a Node.js built-in. These imports now work without requiring a CommonJS wrapper.
+
+- Updated dependencies [[`0a4315f`](https://github.com/cloudflare/workers-sdk/commit/0a4315fcf56a1cb6dbc6b4908afe6122e87d4253), [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c), [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c), [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3), [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3), [`dff5212`](https://github.com/cloudflare/workers-sdk/commit/dff5212681e8282ff47b1ed0006f7e74aed1bf53), [`d04e667`](https://github.com/cloudflare/workers-sdk/commit/d04e667fadbc4b28666236ae9d85a3cae6bee557), [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3), [`5a6e450`](https://github.com/cloudflare/workers-sdk/commit/5a6e4502f81c4f3032be8b0c174e730ea3817b76)]:
+  - miniflare@5.20261118.0-beta
+  - @cloudflare/workers-utils@0.55.0
+  - @cloudflare/cli-shared-helpers@0.3.11
+  - @cloudflare/config@1.0.0-rc.2
+  - @cloudflare/containers-shared@0.27.0
+
+## 0.27.2
+
+### Patch Changes
+
+- [#16974](https://github.com/cloudflare/workers-sdk/pull/16974) [`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-17
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666), [`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666), [`51064e6`](https://github.com/cloudflare/workers-sdk/commit/51064e6d4fa630d950fb0544fda07efd877dd2fb)]:
+  - @cloudflare/workers-utils@0.54.2
+  - @cloudflare/cli-shared-helpers@0.3.10
+  - @cloudflare/config@1.0.0-rc.1
+  - @cloudflare/containers-shared@0.26.3
+  - miniflare@5.20261117.0-beta
+
 ## 0.27.1
 
 ### Patch Changes

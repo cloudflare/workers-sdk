@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-auth",
-	"version": "0.18.3",
+	"version": "0.18.5",
 	"description": "Internal OAuth 2.0 + PKCE flow for Cloudflare CLIs. Not intended for external use — APIs may change without notice.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/workers-auth#readme",
 	"bugs": {
@@ -36,10 +36,10 @@
 		}
 	},
 	"scripts": {
-		"build": "tsup",
+		"build": "tsdown",
 		"check:type": "tsc -p ./tsconfig.json",
 		"deploy": "echo 'no deploy'",
-		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsup --watch src\" \"pnpm run check:type --watch --preserveWatchOutput\"",
+		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsdown --watch\" \"pnpm run check:type --watch --preserveWatchOutput\"",
 		"test": "vitest",
 		"test:ci": "vitest run"
 	},
@@ -56,7 +56,7 @@
 		"msw": "catalog:default",
 		"smol-toml": "catalog:default",
 		"ts-dedent": "^2.2.0",
-		"tsup": "8.3.0",
+		"tsdown": "catalog:default",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
 	},

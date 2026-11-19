@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { prepareContainerImagesForCfConfig } from "@cloudflare/containers-shared";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { buildPublicUrl, CoreHeaders } from "miniflare";
@@ -9,7 +10,6 @@ import {
 	kRequestType,
 	ROUTER_WORKER_NAME,
 } from "../constants";
-import { prepareContainerImagesForVite } from "../containers";
 import { assertIsNotPreview } from "../context";
 import {
 	compareExportTypes,
@@ -215,7 +215,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						)
 					);
 
-					await prepareContainerImagesForVite({
+					await prepareContainerImagesForCfConfig({
 						dockerPath,
 						containerOptions,
 						settings: ctx.resolvedPluginConfig.settings,

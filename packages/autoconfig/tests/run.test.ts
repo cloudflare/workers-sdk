@@ -169,7 +169,7 @@ describe("runAutoConfig()", () => {
 				devDependencies: vitePlus ? { "vite-plus": "1.4.0" } : {},
 			};
 			await seed({ "package.json": JSON.stringify(packageJson) });
-			const framework = getFrameworkClassInstance("static");
+			const framework = getFrameworkClassInstance("static", "cf");
 			vi.spyOn(framework, "configure").mockReturnValue({
 				buildTool: "wrangler",
 				workerConfig: {},
@@ -217,7 +217,7 @@ describe("runAutoConfig()", () => {
 					configured: false,
 					projectPath: process.cwd(),
 					workerName: "next-app",
-					framework: getFrameworkClassInstance("next"),
+					framework: getFrameworkClassInstance("next", "cf"),
 					outputDir: ".next",
 					buildCommand: `${packageManager.npx} next build`,
 					packageManager,

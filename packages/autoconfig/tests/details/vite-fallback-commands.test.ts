@@ -15,7 +15,7 @@ import {
 import * as frameworkDetection from "../../src/details/framework-detection";
 import { runAutoConfig } from "../../src/run";
 import { createMockContext } from "../helpers/mock-context";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 function invocation(binary: string): string {
 	return process.platform === "win32"
@@ -274,7 +274,7 @@ export default { plugins: [cloudflare()] };`,
 			});
 			const details = await getDetailsForAutoConfig({ context });
 
-			expect(details.framework.id).toBe(id);
+			expect(details.framework?.id).toBe(id);
 			await expect(
 				runAutoConfig(details, { target: "cf", context, dryRun: true })
 			).rejects.toThrow("You can still use Wrangler");
@@ -379,7 +379,7 @@ export default { plugins: [cloudflare()] };`,
 
 		const details = await getDetailsForAutoConfig({ context });
 		expect(details.commandError?.message).toContain(
-			"npm install --save-dev @cloudflare/vite-plugin@beta vite-plus"
+			"npm install --save-dev @cloudflare/vite-plugin@^2.0.0-rc.0 vite-plus"
 		);
 	});
 
@@ -398,7 +398,7 @@ export default { plugins: [cloudflare()] };`,
 			const details = await getDetailsForAutoConfig({ context });
 			expect(details.packageManager.type).toBe(manager);
 			expect(details.commandError?.message).toContain(
-				`Run ${manager} ${command} @cloudflare/vite-plugin@beta vite.`
+				`Run ${manager} ${command} @cloudflare/vite-plugin@^2.0.0-rc.0 vite.`
 			);
 		}
 	);
@@ -427,7 +427,7 @@ export default { plugins: [cloudflare()] };`,
 			expect(details.isWorkspaceRoot).toBe(true);
 			expect(details.packageManager.type).toBe(manager);
 			expect(details.commandError?.message).toContain(
-				`Run ${manager} ${command} @cloudflare/vite-plugin@beta vite ${flag}.`
+				`Run ${manager} ${command} @cloudflare/vite-plugin@^2.0.0-rc.0 vite ${flag}.`
 			);
 		}
 	);
@@ -794,7 +794,7 @@ export default { plugins: [cloudflare()] };`,
 			});
 			const details = await getDetailsForAutoConfig({ context });
 			expect(details.framework?.id).toBe("astro");
-			expect(details.env).toEqual(detected.detectedFramework.framework.env);
+			expect(details.env).toBeUndefined();
 			expect(details[missing]).toBeUndefined();
 			expect(
 				details[missing === "devCommand" ? "buildCommand" : "devCommand"]

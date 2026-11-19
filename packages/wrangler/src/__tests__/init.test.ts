@@ -23,7 +23,7 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { PackageManager } from "../package-manager";
-import type { RawConfig, UserLimits } from "@cloudflare/workers-utils";
+import type { RawConfig, UserLimits } from "@cloudflare/workers-utils/config";
 import type { Mock } from "vitest";
 
 describe("init", () => {

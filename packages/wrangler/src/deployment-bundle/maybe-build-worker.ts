@@ -14,12 +14,14 @@ import { loadSourceMaps } from "./source-maps";
 import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
 import type {
 	CfModule,
-	Config,
-	DurableObjectBindings,
 	EphemeralDirectory,
 	Entry,
-	WorkflowBinding,
 } from "@cloudflare/workers-utils";
+import type {
+	Config,
+	DurableObjectBindings,
+	WorkflowBinding,
+} from "@cloudflare/workers-utils/config";
 
 /**
  * The subset of merged config/args needed to build (bundle) a Worker.

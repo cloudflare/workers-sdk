@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { rm, writeFile } from "node:fs/promises";
 import { describe, onTestFinished, test, vi } from "vitest";
 import {
@@ -56,9 +57,7 @@ describe("basic e2e tests", () => {
 
 					// Read at least one chunk to confirm the stream is active
 					const reader = waitResponse.body?.getReader();
-					if (!reader) {
-						expect.unreachable("Expected response body to be readable");
-					}
+					assert(reader, "Expected response body to be readable");
 					await reader.read();
 
 					// Now abort — the Worker has definitely registered its abort listener

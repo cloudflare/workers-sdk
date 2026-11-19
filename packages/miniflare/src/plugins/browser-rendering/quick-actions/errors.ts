@@ -113,7 +113,15 @@ const USER_ERRORS: [(string | string[])[], number, string, (string | null)?][] =
 			6006,
 			"Could not inject the requested script into the page. The target page may not support script injection (no <head>/<body>) or the script could not be loaded.",
 		],
-		[[["Protocol error", "Target closed"]], 6001, TARGET_CLOSED],
+		[
+			[
+				["Protocol error", "Target closed"],
+				// How `waitForSelector` fails when the browser goes away
+				"waitForFunction failed: frame got detached",
+			],
+			6001,
+			TARGET_CLOSED,
+		],
 	];
 
 export function quickActionErrorResponse(error: unknown): Response {

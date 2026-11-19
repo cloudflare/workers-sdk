@@ -1,4 +1,7 @@
-import type { CustomDomainRoute, Route } from "@cloudflare/workers-utils";
+import type {
+	CustomDomainRoute,
+	Route,
+} from "@cloudflare/workers-utils/config";
 
 /**
  * Splits Worker routes into the categories handled by the routes and custom

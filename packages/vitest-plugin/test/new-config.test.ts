@@ -20,7 +20,7 @@ const {
 	maybeStartOrUpdateRemoteProxySession: vi.fn(),
 	requireAuth: vi.fn(async () => "cf-account-id"),
 	resolveProfile: vi.fn(() => ({ name: "cf-profile" })),
-	state: { wranglerImported: false },
+	state: { wranglerHelpersImported: false },
 }));
 
 vi.mock("@cloudflare/remote-bindings", () => ({
@@ -678,14 +678,14 @@ describe("remote bindings", () => {
 	let project: TestProject;
 
 	beforeEach(() => {
-		// Records whether Wrangler was imported. Registered after
+		// Records whether Wrangler config helpers were imported. Registered after
 		// `vi.resetModules()`, so it runs again on each test's first import.
 		vi.resetModules();
-		vi.doMock("wrangler", () => {
-			state.wranglerImported = true;
+		vi.doMock("@cloudflare/dev-helpers/miniflare-options", () => {
+			state.wranglerHelpersImported = true;
 			return {};
 		});
-		state.wranglerImported = false;
+		state.wranglerHelpersImported = false;
 		project = {
 			name: "test",
 			config: { root: process.cwd() },
@@ -699,7 +699,7 @@ describe("remote bindings", () => {
 		});
 	});
 
-	it("uses cf credentials with `config`, without Wrangler", async ({
+	it("uses cf credentials with `config`, without loading Wrangler config helpers", async ({
 		expect,
 	}) => {
 		// A config function, so the account follows the mode between parses
@@ -752,7 +752,7 @@ describe("remote bindings", () => {
 			[{ account_id: "staging-account" }],
 		]);
 		expect(resolveProfile).toHaveBeenCalledWith({ cwd: process.cwd() });
-		expect(state.wranglerImported).toBe(false);
+		expect(state.wranglerHelpersImported).toBe(false);
 	});
 
 	it("rejects `miniflare` remote bindings on another proxy session", async ({

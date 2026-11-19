@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-utils",
-	"version": "0.54.1",
+	"version": "0.55.0",
 	"description": "Internal utility package for workers-sdk. Not intended for external use — APIs may change without notice.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/workers-utils#readme",
 	"bugs": {
@@ -22,6 +22,10 @@
 			"browser": "./dist/browser.mjs",
 			"import": "./dist/index.mjs",
 			"types": "./dist/index.d.mts"
+		},
+		"./config": {
+			"types": "./dist/config/public.d.mts",
+			"import": "./dist/config/public.mjs"
 		},
 		"./prometheus-metrics": {
 			"import": "./dist/prometheus-metrics.mjs",
@@ -78,13 +82,17 @@
 		"./sanitize-headers": {
 			"import": "./dist/sanitize-headers.mjs",
 			"types": "./dist/sanitize-headers.d.mts"
+		},
+		"./asset-hash": {
+			"types": "./dist/asset-hash.d.mts",
+			"import": "./dist/asset-hash.mjs"
 		}
 	},
 	"scripts": {
-		"build": "tsup",
+		"build": "tsdown",
 		"check:type": "tsc -p ./tsconfig.json",
 		"deploy": "echo 'no deploy'",
-		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsup --watch src\" \"pnpm run check:type --watch --preserveWatchOutput\"",
+		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsdown --watch\" \"pnpm run check:type --watch --preserveWatchOutput\"",
 		"test": "vitest",
 		"test:ci": "vitest run",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
@@ -109,14 +117,14 @@
 		"concurrently": "^8.2.2",
 		"dotenv-expand": "13.0.0",
 		"empathic": "^2.0.0",
+		"hash-wasm": "4.13.0",
 		"jsonc-parser": "catalog:default",
 		"minimatch": "^5.1.9",
 		"open": "catalog:default",
 		"signal-exit": "catalog:default",
 		"smol-toml": "catalog:default",
 		"ts-dedent": "^2.2.0",
-		"tsdown": "^0.15.9",
-		"tsup": "8.3.0",
+		"tsdown": "catalog:default",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default",
 		"xdg-app-paths": "^8.3.0",

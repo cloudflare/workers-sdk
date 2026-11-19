@@ -814,23 +814,23 @@ describe("resolvePluginConfig", () => {
 		fs.mkdirSync(envDir);
 		fs.writeFileSync(
 			path.join(envDir, ".env.production"),
-			"CLOUDFLARE_VITE_FORCE_LOCAL=true\nCLOUDFLARE_ACCOUNT_ID=test-account-id"
+			"CLOUDFLARE_ACCOUNT_ID=test-account-id"
 		);
 		fs.writeFileSync(
 			path.join(envDir, ".dev.vars.production"),
 			"CLOUDFLARE_ACCOUNT_ID=from-dev-vars"
 		);
-		vi.stubEnv("CLOUDFLARE_VITE_FORCE_LOCAL", undefined);
 		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
 
 		const result = await resolvePluginConfig(
-			{ remoteBindings: true },
+			{},
 			{ root, envDir: "environment" },
 			buildEnv
 		);
 
-		expect(result.remoteBindings).toBe(false);
-		expect(result.localEnv.values.CLOUDFLARE_VITE_FORCE_LOCAL).toBe("true");
+		expect(result.localEnv.values.CLOUDFLARE_ACCOUNT_ID).toBe(
+			"test-account-id"
+		);
 		expect(result.devVars?.CLOUDFLARE_ACCOUNT_ID).toBe("from-dev-vars");
 		expect(process.env.CLOUDFLARE_ACCOUNT_ID).toBe("test-account-id");
 	});
@@ -839,17 +839,18 @@ describe("resolvePluginConfig", () => {
 		writeEntryConfig();
 		fs.writeFileSync(
 			path.join(root, ".env.production"),
-			"CLOUDFLARE_VITE_FORCE_LOCAL=true"
+			"CLOUDFLARE_ACCOUNT_ID=test-account-id"
 		);
-		vi.stubEnv("CLOUDFLARE_VITE_FORCE_LOCAL", undefined);
+
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
 
 		const result = await resolvePluginConfig(
-			{ remoteBindings: true },
+			{},
 			{ root, envDir: false },
 			buildEnv
 		);
 
-		expect(result.remoteBindings).toBe(true);
+		expect(result.localEnv.values.CLOUDFLARE_ACCOUNT_ID).toBeUndefined();
 	});
 
 	test("rejects duplicate Vite environment names", async ({ expect }) => {

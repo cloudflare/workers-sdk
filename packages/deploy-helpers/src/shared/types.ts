@@ -9,17 +9,19 @@ import type {
 	CfModule,
 	CfModuleType,
 	CfWorkerSourceMap,
-	Config,
 	FetchKVGetValueFetcher,
 	FetchResultFetcher,
 	FetchListResultFetcher,
 	FetchPagedListResultFetcher,
 	Logger,
-	Route,
 	Entry,
+} from "@cloudflare/workers-utils";
+import type {
+	Config,
+	Route,
 	ContainerApp,
 	DurableObjectCodeUpdateStrategy,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 /** API, logging, and prompt implementations supplied by the consumer. */
 export type DeployHelpersContext = {
@@ -205,6 +207,7 @@ export type TriggerProps = {
 	routes: Route[];
 	firstDeploy: boolean;
 	dryRun: boolean;
+	showDiff?: boolean;
 	validated: boolean;
 	queueCreateCommand: (queueName: string) => string;
 	workersDevConfigFieldName: string;

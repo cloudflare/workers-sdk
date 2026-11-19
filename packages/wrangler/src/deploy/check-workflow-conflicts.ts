@@ -1,5 +1,5 @@
 import { checkWorkflowConflicts as checkWorkflowConflictsBase } from "@cloudflare/deploy-helpers";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export type { WorkflowConflict } from "@cloudflare/deploy-helpers";
 export { WORKFLOW_NOT_FOUND_CODE } from "@cloudflare/deploy-helpers";

@@ -1,4 +1,4 @@
-import { convertConfigToBindings } from "@cloudflare/workers-utils";
+import { convertConfigToBindings } from "@cloudflare/workers-utils/config";
 import { describe, test } from "vitest";
 
 describe("convertConfigToBindings", () => {

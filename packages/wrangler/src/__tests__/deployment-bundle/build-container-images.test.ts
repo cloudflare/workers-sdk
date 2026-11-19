@@ -9,7 +9,7 @@ import { buildDurableObjectContainerImages } from "../../deployment-bundle/build
 import type {
 	Config,
 	DurableObjectContainerImage,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@cloudflare/containers-shared")>()),

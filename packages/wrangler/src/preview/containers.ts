@@ -18,7 +18,8 @@ import type {
 	ImageURIConfig,
 } from "@cloudflare/containers-shared";
 import type { DeploymentResource } from "@cloudflare/deploy-helpers";
-import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 /**
  * Confirm the API token carries the `containers` scope. `applyPreviewContainers`

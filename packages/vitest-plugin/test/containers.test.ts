@@ -21,7 +21,7 @@ import type {
 	ContainerDevOptions,
 	ViteLogger,
 } from "@cloudflare/containers-shared";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type { TestProject, Vitest } from "vitest/node";
 
 vi.mock("@cloudflare/containers-shared", () => ({

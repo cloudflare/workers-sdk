@@ -1,5 +1,59 @@
 # miniflare
 
+## 5.20261118.0-beta
+
+### Patch Changes
+
+- [#16954](https://github.com/cloudflare/workers-sdk/pull/16954) [`0a4315f`](https://github.com/cloudflare/workers-sdk/commit/0a4315fcf56a1cb6dbc6b4908afe6122e87d4253) Thanks [@mkuritsu](https://github.com/mkuritsu)! - Local Browser Run sessions now use Chrome 152
+
+  Local Browser Run bindings now run Chrome 152.0.7977.64, the same version that Browser Run uses in production. Miniflare will download Chrome 152 the first time you start a local Browser Run session after you upgrade.
+
+- [#17003](https://github.com/cloudflare/workers-sdk/pull/17003) [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-18
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17003](https://github.com/cloudflare/workers-sdk/pull/17003) [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261117.1 | ^5.20261118.1 |
+  | workerd                   | 1.20261117.1  | 1.20261118.1  |
+
+- [#14578](https://github.com/cloudflare/workers-sdk/pull/14578) [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3) Thanks [@penalosa](https://github.com/penalosa)! - Fix startup failures in Miniflare and C3 when loading ESM dependencies
+
+  Miniflare and `create-cloudflare` can now load dependencies that use Node.js's `createRequire()` without failing on an invalid file URL. This prevents these dependencies from causing an error before the CLI or local development environment starts.
+
+- [#14578](https://github.com/cloudflare/workers-sdk/pull/14578) [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3) Thanks [@penalosa](https://github.com/penalosa)! - Fix missing types when using Miniflare with `skipLibCheck: false`
+
+  TypeScript projects importing Miniflare could fail with `Cannot find module './shared'`. The required types are now included in the published package, so projects can check Miniflare's declarations without this error.
+
+- [#17015](https://github.com/cloudflare/workers-sdk/pull/17015) [`5a6e450`](https://github.com/cloudflare/workers-sdk/commit/5a6e4502f81c4f3032be8b0c174e730ea3817b76) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update the bundled FTP client to include upstream denial-of-service fixes
+
+  Update `basic-ftp` to 6.2.6 in the browser download proxy dependency graph. This includes fixes for malformed FTP credentials and directory listings when loading FTP-hosted PAC files.
+
+## 5.20261117.0-beta
+
+### Patch Changes
+
+- [#16974](https://github.com/cloudflare/workers-sdk/pull/16974) [`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-17
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16974](https://github.com/cloudflare/workers-sdk/pull/16974) [`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261116.1 | ^5.20261117.1 |
+  | workerd                   | 1.20261116.1  | 1.20261117.1  |
+
+- [#16811](https://github.com/cloudflare/workers-sdk/pull/16811) [`51064e6`](https://github.com/cloudflare/workers-sdk/commit/51064e6d4fa630d950fb0544fda07efd877dd2fb) Thanks [@mindulle](https://github.com/mindulle)! - Expose `canBeForwarded` boolean property on `ForwardableEmailMessage` in email handler
+
+  Previously, in `wrangler dev`, the `ForwardableEmailMessage` passed to a Worker's `email()` handler did not expose the documented `canBeForwarded` property, causing it to read as `undefined` locally while production exposes it as a read-only boolean. `canBeForwarded: true` is now set on the incoming message object in Miniflare, matching production behavior.
+
 ## 5.20261116.0-beta
 
 ### Minor Changes

@@ -1,5 +1,53 @@
 # @cloudflare/vite-plugin
 
+## 2.0.0-rc.2
+
+### Patch Changes
+
+- [#17003](https://github.com/cloudflare/workers-sdk/pull/17003) [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-18
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16949](https://github.com/cloudflare/workers-sdk/pull/16949) [`110c162`](https://github.com/cloudflare/workers-sdk/commit/110c16279a91927427396b0f3760e27d59a8079a) Thanks [@edmundhung](https://github.com/edmundhung)! - Fail remote RPC binding requests on network errors instead of hanging
+
+  Remote bindings that connect over RPC treated every network failure, such as being offline, a DNS or TLS error, as a preview reload. The request then waited silently for a reload that never came. These requests now fail with the error, while GET and HEAD requests interrupted by an actual reload are still retried.
+
+- [#16877](https://github.com/cloudflare/workers-sdk/pull/16877) [`dff5212`](https://github.com/cloudflare/workers-sdk/commit/dff5212681e8282ff47b1ed0006f7e74aed1bf53) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `prepareContainerImagesForCfConfig` for building or pulling the Container images of a `cloudflare.config.ts` project
+
+  Tools that run Containers from cf config can now share one implementation, including Cloudflare-managed registry authentication, instead of keeping their own copies.
+
+- [#14578](https://github.com/cloudflare/workers-sdk/pull/14578) [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3) Thanks [@penalosa](https://github.com/penalosa)! - Fix `Dynamic require` errors when importing packages from ES modules
+
+  Importing these packages in a Node.js ES module could fail with `Dynamic require of "..." is not supported` when a dependency loaded a Node.js built-in. These imports now work without requiring a CommonJS wrapper.
+
+- Updated dependencies [[`0a4315f`](https://github.com/cloudflare/workers-sdk/commit/0a4315fcf56a1cb6dbc6b4908afe6122e87d4253), [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c), [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c), [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3), [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3), [`5a6e450`](https://github.com/cloudflare/workers-sdk/commit/5a6e4502f81c4f3032be8b0c174e730ea3817b76)]:
+  - miniflare@5.20261118.0-beta
+  - @cloudflare/build-output-utils@1.0.0-rc.2
+  - @cloudflare/config@1.0.0-rc.2
+  - @cloudflare/runtime-types@0.1.31
+
+## 2.0.0-rc.1
+
+### Minor Changes
+
+- [#16759](https://github.com/cloudflare/workers-sdk/pull/16759) [`5d352e0`](https://github.com/cloudflare/workers-sdk/commit/5d352e00d38c97572be9e653fc2556003181095e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Remove the experimental internal `cf-vite` executable
+
+  Run development and builds through Vite's CLI or your framework's own commands instead. Configure `cloudflare({ remoteBindings: false })` to disable remote bindings.
+
+  When using the plugin through `cf`, upgrade to `cf@1.0.0-rc.0` or newer. This is the first cf release that runs the project's native Vite or Vite+ commands instead of the removed executable.
+
+### Patch Changes
+
+- [#16974](https://github.com/cloudflare/workers-sdk/pull/16974) [`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-17
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666), [`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666), [`51064e6`](https://github.com/cloudflare/workers-sdk/commit/51064e6d4fa630d950fb0544fda07efd877dd2fb)]:
+  - @cloudflare/build-output-utils@1.0.0-rc.1
+  - @cloudflare/config@1.0.0-rc.1
+  - @cloudflare/runtime-types@0.1.30
+  - miniflare@5.20261117.0-beta
+
 ## 2.0.0-rc.0
 
 ### Minor Changes

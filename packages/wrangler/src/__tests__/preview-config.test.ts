@@ -10,7 +10,7 @@ import {
 } from "../preview/preview-config";
 import type { PreviewTopLevelSettings } from "../preview/preview-config";
 import type { Binding } from "@cloudflare/deploy-helpers";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 function topLevelSettings(
 	overrides: Partial<PreviewTopLevelSettings> = {}

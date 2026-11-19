@@ -15,10 +15,8 @@ import type {
 	VersionCache,
 	VersionId,
 } from "./types";
-import type {
-	ComplianceConfig,
-	DurableObjectCodeUpdateStrategy,
-} from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { DurableObjectCodeUpdateStrategy } from "@cloudflare/workers-utils/config";
 
 export type { NonVersionedScriptSettings } from "@cloudflare/deploy-helpers";
 

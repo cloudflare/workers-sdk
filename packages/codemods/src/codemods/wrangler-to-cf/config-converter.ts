@@ -27,7 +27,7 @@ import type {
 	OutputObject,
 	OutputProperty,
 } from "./types";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 const VITE_DEFAULT_MODES = new Set(["development", "production"]);
 

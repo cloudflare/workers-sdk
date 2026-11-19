@@ -28,7 +28,8 @@ import type {
 } from "../types";
 import type { DetectedFramework } from "./framework-detection";
 import type { PackageManager } from "@cloudflare/workers-utils";
-import type { Config, PackageJSON } from "@cloudflare/workers-utils";
+import type { PackageJSON } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 const CLOUDFLARE_CONFIG_FILE = "cloudflare.config.ts";
 

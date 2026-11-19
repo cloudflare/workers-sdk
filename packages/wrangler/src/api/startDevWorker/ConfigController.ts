@@ -5,14 +5,16 @@ import {
 	resolveDockerHost,
 } from "@cloudflare/containers-shared";
 import {
-	configFileName,
 	DEFAULT_COMPAT_DATE,
-	extractBindingsOfType,
-	formatConfigSnippet,
 	getDisableConfigWatching,
 	getDockerPath,
 	UserError,
 } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	extractBindingsOfType,
+	formatConfigSnippet,
+} from "@cloudflare/workers-utils/config";
 import { watch } from "chokidar";
 import { getWorkerRegistry, resolveDevRegistryPath } from "miniflare";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
@@ -55,7 +57,8 @@ import type {
 	WranglerStartDevWorkerInput,
 } from "./types";
 import type { LoginOrRefreshFailureReason } from "@cloudflare/workers-auth";
-import type { CfUnsafe, Config } from "@cloudflare/workers-utils";
+import type { CfUnsafe } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type { WorkerRegistry } from "miniflare";
 
 const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT, "127.0.0.1");
