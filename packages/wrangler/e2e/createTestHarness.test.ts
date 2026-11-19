@@ -888,7 +888,7 @@ describe("createTestHarness", () => {
 		const workflow = await worker.introspectWorkflow("MODERATOR");
 		onTestFinished(workflow.dispose);
 		await expect(worker.introspectWorkflow("MODERATOR")).rejects.toThrow(
-			`Workflow "moderator-workflow" already has an active introspection session for binding "MODERATOR".`
+			`Workflow "moderator-workflow" already has an active introspection session.`
 		);
 		await workflow.modifyAll(async (modifier) => {
 			await modifier.disableSleeps();
