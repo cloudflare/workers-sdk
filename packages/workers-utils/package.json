@@ -110,7 +110,6 @@
 	"devDependencies": {
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@types/command-exists": "^1.2.0",
 		"@types/minimatch": "^5.1.2",
