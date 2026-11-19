@@ -370,6 +370,7 @@ export async function getOrSelectAccountId(
  * historical `from "../user"` import path (and test mocks/spies) keep working.
  *
  * @param config - Configuration containing an optional `account_id` and compliance settings
+ * @param options - Controls whether missing credentials may trigger an interactive login
  * @returns The resolved account ID
  * @throws {UserError} If the user is not logged in and cannot authenticate
  * @throws {UserError} If no account ID can be resolved (see {@link getOrSelectAccountId})
@@ -377,9 +378,10 @@ export async function getOrSelectAccountId(
 export async function requireAuth(
 	config: ComplianceConfig & {
 		account_id?: string;
-	}
+	},
+	options?: { allowLogin?: boolean }
 ): Promise<string> {
-	return getAuth().requireAuth(config);
+	return getAuth().requireAuth(config, options);
 }
 
 /**

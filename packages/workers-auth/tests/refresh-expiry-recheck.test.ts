@@ -76,7 +76,7 @@ function storageWithSibling(sibling: UserAuthConfig, onRead: number) {
 	return { storage, write };
 }
 
-function flowWithStorage(storage: AuthConfigStorage) {
+function flowWithStorage(storage: AuthConfigStorage, interactive = false) {
 	const ignore = () => {};
 	const context: OAuthFlowContext = {
 		logger: {
@@ -86,7 +86,7 @@ function flowWithStorage(storage: AuthConfigStorage) {
 			warn: ignore,
 			error: ignore,
 		},
-		isNonInteractiveOrCI: () => true,
+		isNonInteractiveOrCI: () => !interactive,
 		openInBrowser: async () => {
 			throw new Error("Unexpected interactive login");
 		},
@@ -105,6 +105,56 @@ function flowWithStorage(storage: AuthConfigStorage) {
 	};
 	return createOAuthFlow(context);
 }
+
+it.for([
+	{
+		name: "missing",
+		stored: undefined,
+		reason: "no-credentials-non-interactive",
+	},
+	{
+		name: "expired and revoked",
+		stored: expired,
+		reason: "token-expired-non-interactive",
+	},
+])(
+	"does not start a login for $name credentials when login is disabled in an interactive terminal",
+	async ({ stored, reason }, { expect }) => {
+		msw.use(
+			http.post("https://dash.cloudflare.com/oauth2/token", () =>
+				HttpResponse.json({ error: "invalid_grant" }, { status: 400 })
+			)
+		);
+		const storage: AuthConfigStorage = {
+			read: () => stored,
+			write: vi.fn(),
+			clear: vi.fn(),
+			path: () => "<memory>",
+		};
+		await expect(
+			flowWithStorage(storage, true).loginOrRefreshIfRequired({
+				complianceConfig: {},
+				scopes: ["account:read"],
+				allowLogin: false,
+			})
+		).resolves.toEqual({ loggedIn: false, reason });
+	}
+);
+
+it("still refreshes existing credentials when login is disabled", async ({
+	expect,
+}) => {
+	const { storage, write } = storageWithSibling(expired, 1);
+	await expect(
+		flowWithStorage(storage, true).loginOrRefreshIfRequired({
+			complianceConfig: {},
+			scopes: ["account:read"],
+			allowLogin: false,
+		})
+	).resolves.toEqual({ loggedIn: true });
+	expect(refreshes).toEqual(["RT_A"]);
+	expect(write).toHaveBeenCalledOnce();
+});
 
 it("reuses a sibling's valid credentials without refreshing or writing when resolving the access token", async ({
 	expect,

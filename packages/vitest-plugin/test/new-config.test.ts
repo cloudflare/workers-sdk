@@ -748,8 +748,8 @@ describe("remote bindings", () => {
 		});
 		await stagingAuth.hook();
 		expect(requireAuth.mock.calls).toEqual([
-			[{ account_id: "test-account" }],
-			[{ account_id: "staging-account" }],
+			[{ account_id: "test-account" }, undefined],
+			[{ account_id: "staging-account" }, undefined],
 		]);
 		expect(resolveProfile).toHaveBeenCalledWith({ cwd: process.cwd() });
 		expect(state.wranglerHelpersImported).toBe(false);

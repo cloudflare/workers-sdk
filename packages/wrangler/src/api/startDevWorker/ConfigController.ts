@@ -87,7 +87,9 @@ async function resolveDevConfig(
 	config: Config,
 	input: WranglerStartDevWorkerInput
 ): Promise<StartDevWorkerOptions["dev"]> {
-	const auth = async () => {
+	const auth: NonNullable<StartDevWorkerOptions["dev"]["auth"]> = async (
+		options
+	) => {
 		if (input.dev?.remote) {
 			const result = await loginOrRefreshIfRequired(config);
 			if (!result.loggedIn) {
@@ -102,11 +104,11 @@ async function resolveDevConfig(
 		}
 
 		if (input.dev?.auth) {
-			return unwrapHook(input.dev.auth, config);
+			return unwrapHook(input.dev.auth, { ...config, ...options });
 		}
 
 		return {
-			accountId: await requireAuth(config),
+			accountId: await requireAuth(config, options),
 			apiToken: requireApiToken(),
 		};
 	};

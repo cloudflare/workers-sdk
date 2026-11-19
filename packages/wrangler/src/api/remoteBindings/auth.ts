@@ -22,14 +22,15 @@ export function getDefaultRemoteBindingsAuth(
 ): RemoteBindingsAuth {
 	let auth: CloudflareAuth | undefined;
 	return {
-		hook: async () => {
+		hook: async (options) => {
 			// Resolve the profile only once a session needs credentials
 			auth ??= createAuthForProfile(
 				createWranglerProfileStore({ logger }).resolve({ cwd: profileDir })
 			);
 			return {
 				accountId: await auth.requireAuth(
-					accountId ? { account_id: accountId } : {}
+					accountId ? { account_id: accountId } : {},
+					options
 				),
 				apiToken: auth.requireApiToken(),
 			};

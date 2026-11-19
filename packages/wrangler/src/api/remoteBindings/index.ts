@@ -7,10 +7,10 @@ import { convertConfigBindingsToStartWorkerBindings } from "../startDevWorker";
 import { getDefaultRemoteBindingsAuth } from "./auth";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
 import type {
+	RemoteBindingsAuth,
 	RemoteProxySessionData,
 	WorkerConfigObject,
 } from "@cloudflare/remote-bindings";
-import type { AsyncHook, CfAccount } from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils/config";
 
 export * from "@cloudflare/remote-bindings";
@@ -34,7 +34,7 @@ export function maybeStartOrUpdateRemoteProxySession(
 		| WranglerConfigObject
 		| WranglerWorkerConfigObject,
 	preExistingRemoteProxySessionData?: RemoteProxySessionData | null,
-	auth?: AsyncHook<CfAccount>
+	auth?: RemoteBindingsAuth["hook"]
 ) {
 	if ("path" in wranglerOrWorkerConfigObject) {
 		const config = readConfig({

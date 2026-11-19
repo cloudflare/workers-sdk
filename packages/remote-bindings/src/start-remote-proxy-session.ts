@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import events from "node:events";
+import { AuthenticationError } from "@cloudflare/workers-auth";
 import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { DeferredPromise } from "miniflare";
@@ -72,15 +73,17 @@ function formatRemoteProxySessionError(error: unknown): string | undefined {
 
 /**
  * Walk an error's cause chain (including through error events) for a
- * {@link RemoteSessionAuthenticationError}, mirroring the original Wrangler
- * `findRemoteSessionAuthError` walk. Only this specific user error is surfaced
- * verbatim from the chain — generic API errors (which also extend
- * {@link UserError} via {@link APIError}) fall through to the wrapping logic.
+ * missing-credentials or remote-session authentication error. These errors
+ * must retain their types so local development can continue without remote-only
+ * bindings. Generic API errors fall through to the wrapping logic.
  */
 function findRemoteSessionAuthError(
 	error: unknown
-): RemoteSessionAuthenticationError | undefined {
-	if (error instanceof RemoteSessionAuthenticationError) {
+): RemoteSessionAuthenticationError | AuthenticationError | undefined {
+	if (
+		error instanceof RemoteSessionAuthenticationError ||
+		error instanceof AuthenticationError
+	) {
 		return error;
 	}
 	if (isErrorEvent(error)) {
@@ -219,6 +222,10 @@ export async function startRemoteProxySession(
 		try {
 			await reloadComplete;
 		} catch (errorOrEvent) {
+			const authError = findRemoteSessionAuthError(errorOrEvent);
+			if (authError) {
+				throw authError;
+			}
 			throw errorOrEvent instanceof Error
 				? errorOrEvent
 				: new Error(

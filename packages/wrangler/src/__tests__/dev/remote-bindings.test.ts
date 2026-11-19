@@ -57,6 +57,7 @@ let proxyWorkerBindings: Record<string, Binding> | undefined;
 let sessionOptions: StartRemoteProxySessionOptions | undefined;
 let startRemoteProxySessionCallCount = 0;
 let disposeRemoteProxySessionCallCount = 0;
+let authenticateRemoteSession = false;
 vi.mock("../../api/remoteBindings/start-remote-proxy-session", async () => {
 	const actual = await vi.importActual<
 		typeof import("../../api/remoteBindings/start-remote-proxy-session")
@@ -70,6 +71,9 @@ vi.mock("../../api/remoteBindings/start-remote-proxy-session", async () => {
 			proxyWorkerBindings = remoteBindings;
 			sessionOptions = options;
 			startRemoteProxySessionCallCount++;
+			if (authenticateRemoteSession) {
+				await unwrapHook(options.auth);
+			}
 			return {
 				ready: Promise.resolve(),
 				async dispose() {
@@ -127,6 +131,53 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 		startRemoteProxySessionCallCount = 0;
 		disposeRemoteProxySessionCallCount = 0;
 		workerOptions = [];
+		authenticateRemoteSession = false;
+	});
+
+	describe("without credentials", () => {
+		mockApiToken({ apiToken: null });
+		it.for([undefined, true])(
+			"serves unrelated routes and throws only when AI is called (remote=%s)",
+			async (remote, { expect, onTestFinished }) => {
+				authenticateRemoteSession = true;
+				await seed({
+					"wrangler.json": JSON.stringify({
+						name: "worker",
+						main: "index.js",
+						compatibility_date: "2025-01-01",
+						ai: { binding: "AI", remote },
+					}),
+					"index.js": `export default { async fetch(request, env) {
+					if (new URL(request.url).pathname === "/ai") {
+						try { await env.AI.run("@cf/meta/llama-3.1-8b-instruct", { prompt: "Hello" }); }
+						catch (error) { return new Response(error.message, { status: 503 }); }
+					}
+					return new Response("hello");
+				} }`,
+				});
+				const stopped = runWrangler("dev --port=0 --inspector-port=0");
+				const match = await vi.waitUntil(
+					() => std.out.match(/Ready on (http:\/\/[^\s]+)/),
+					{ timeout: devReadyTimeout }
+				);
+				const teardown = stopWrangler;
+				onTestFinished(async () => {
+					await teardown();
+					await stopped;
+				});
+				assert(match);
+				const url = match[1];
+				expect(await (await fetch(url)).text()).toBe("hello");
+				const response = await fetch(new URL("/ai", url));
+				expect(response.status).toBe(503);
+				expect(await response.text()).toContain(
+					"Binding AI needs to be run remotely"
+				);
+				expect(await (await fetch(url)).text()).toBe("hello");
+				expect(std.out).not.toContain("Attempting to login");
+				expect(std.warn).toContain("will throw when called");
+			}
+		);
 	});
 
 	// These test cases cover all the different types of remote bindings we support

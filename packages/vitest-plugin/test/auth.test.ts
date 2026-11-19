@@ -79,6 +79,11 @@ test("remote bindings sessions share auth by profile directory and profile", asy
 	expect(createCfAuth).not.toHaveBeenCalled();
 	await Promise.all([first.hook(), second.hook()]);
 	expect(createCfAuth).toHaveBeenCalledOnce();
+	await first.hook({ allowLogin: false });
+	expect(mocks.cfAuth.requireAuth).toHaveBeenLastCalledWith(
+		{},
+		{ allowLogin: false }
+	);
 
 	const other = getRemoteBindingsAuth(
 		"cf",
@@ -196,9 +201,12 @@ test("Wrangler configs use Wrangler credentials", async ({ expect }) => {
 	expect(mocks.wranglerAuth.setProfile).toHaveBeenCalledWith(
 		"wrangler-profile"
 	);
-	expect(mocks.wranglerAuth.requireAuth).toHaveBeenCalledWith({
-		account_id: "configured-account",
-	});
+	expect(mocks.wranglerAuth.requireAuth).toHaveBeenCalledWith(
+		{
+			account_id: "configured-account",
+		},
+		undefined
+	);
 
 	// The hint about `cloudflare.config.ts` only applies to cf credentials
 	assert(mocks.authContext !== undefined);

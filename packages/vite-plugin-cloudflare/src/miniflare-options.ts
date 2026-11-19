@@ -520,6 +520,8 @@ export async function getDevMiniflareOptions(
 									worker.config.name,
 									remoteProxySessionData
 								);
+							} else {
+								remoteProxySessionsDataMap.delete(worker.config.name);
 							}
 
 							const wrappers = [
@@ -856,6 +858,8 @@ export async function getPreviewMiniflareOptions(
 					workerConfig.name,
 					remoteProxySessionData
 				);
+			} else {
+				remoteProxySessionsDataMap.delete(workerConfig.name);
 			}
 
 			const { manifest: _manifest, assets, exports, ...config } = workerConfig;

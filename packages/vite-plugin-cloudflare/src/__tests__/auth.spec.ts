@@ -72,9 +72,17 @@ test("remote bindings auth uses the cf profile for the project", async ({
 	});
 	expect(mocks.resolveProfile).toHaveBeenCalledWith({ cwd: "/project" });
 	expect(mocks.cfAuth.setProfile).toHaveBeenCalledWith("cf-profile");
-	expect(mocks.cfAuth.requireAuth).toHaveBeenCalledWith({
-		account_id: "account-id",
-	});
+	expect(mocks.cfAuth.requireAuth).toHaveBeenCalledWith(
+		{
+			account_id: "account-id",
+		},
+		undefined
+	);
+	await auth.hook({ allowLogin: false });
+	expect(mocks.cfAuth.requireAuth).toHaveBeenLastCalledWith(
+		{ account_id: "account-id" },
+		{ allowLogin: false }
+	);
 	// The key identifies the credentials, so a rebuilt hook keeps the session
 	expect(getRemoteBindingsAuth("/project", "account-id", getAuth).key).toBe(
 		auth.key

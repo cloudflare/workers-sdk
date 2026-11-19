@@ -127,11 +127,12 @@ export function getRemoteBindingsAuth(
 			: createWranglerProfileStore({ logger });
 	const profile = profileStore.resolve({ cwd: profileDir });
 	return {
-		hook: async () => {
+		hook: async (options) => {
 			const auth = getAuth(target, profileDir, profile, logger);
 			return {
 				accountId: await auth.requireAuth(
-					accountId ? { account_id: accountId } : {}
+					accountId ? { account_id: accountId } : {},
+					options
 				),
 				apiToken: auth.requireApiToken(),
 			};

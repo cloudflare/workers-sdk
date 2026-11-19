@@ -45,8 +45,16 @@ describe("getDefaultRemoteBindingsAuth", () => {
 		expect(mocks.resolveProfile).toHaveBeenCalledWith({ cwd: "/project" });
 		expect(createAuthForProfile).toHaveBeenCalledOnce();
 		expect(createAuthForProfile).toHaveBeenCalledWith("work");
-		expect(mocks.auth.requireAuth).toHaveBeenCalledWith({
-			account_id: "configured-account-id",
-		});
+		expect(mocks.auth.requireAuth).toHaveBeenCalledWith(
+			{
+				account_id: "configured-account-id",
+			},
+			undefined
+		);
+		await hook({ allowLogin: false });
+		expect(mocks.auth.requireAuth).toHaveBeenLastCalledWith(
+			{ account_id: "configured-account-id" },
+			{ allowLogin: false }
+		);
 	});
 });
