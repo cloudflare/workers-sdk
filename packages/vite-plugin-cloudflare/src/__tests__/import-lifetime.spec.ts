@@ -1,21 +1,36 @@
 import assert from "node:assert";
 import * as fs from "node:fs/promises";
+import { get } from "node:http";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
+import { CoreHeaders, Miniflare } from "miniflare";
 import { createServer } from "vite";
 import { afterEach, describe, test, vi } from "vitest";
+import type { ClientRequest } from "node:http";
 
 describe("deferred import caller lifetime", () => {
 	runInTempDir();
 	afterEach(() => vi.unstubAllEnvs());
 
 	// https://github.com/cloudflare/workers-sdk/issues/16214
-	test.for(["fulfilled", "rejected"] as const)(
-		"settles a cached import as %s after its first response completes",
-		async (outcome, { expect, onTestFinished }) => {
+	test.for([
+		{ ending: "response completion", outcome: "fulfilled" },
+		{ ending: "response completion", outcome: "rejected" },
+		{ ending: "client disconnection", outcome: "fulfilled" },
+	] as const)(
+		"settles a cached import as $outcome after $ending",
+		async ({ ending, outcome }, { expect, onTestFinished, skip }) => {
+			const disconnect = ending === "client disconnection";
+			if (disconnect && process.platform === "win32") {
+				// https://github.com/cloudflare/workerd/pull/5062
+				skip(
+					"workerd does not notify Workers of client disconnection on Windows"
+				);
+			}
+			const runtimeReady = vi.spyOn(Miniflare.prototype, "ready", "get");
 			await fs.writeFile(
 				"state.js",
-				`export const state = { entered: false, released: false, evaluated: false, settled: "pending" };`
+				`export const state = { aborted: false, entered: false, released: false, evaluated: false, settled: "pending" };`
 			);
 			await fs.writeFile(
 				"delayed.js",
@@ -38,25 +53,28 @@ describe("deferred import caller lifetime", () => {
 					async fetch(request) {
 						switch (new URL(request.url).pathname) {
 							case "/__import-lifetime/kick":
+								request.signal.addEventListener("abort", () => { state.aborted = true; });
 								cached = import("./delayed.js");
 								void cached.then(
 									() => { state.settled = "fulfilled"; },
 									() => { state.settled = "rejected"; }
 								);
-								return new Response("kicked");
+								if (${!disconnect}) return new Response("kicked");
+								break;
 							case "/__import-lifetime/release":
 								state.released = true;
 								return new Response("released");
 							case "/__import-lifetime/state":
 								return Response.json(state);
 							case "/__import-lifetime/read":
-								try {
-									return new Response((await cached).value);
-								} catch (error) {
-									return new Response(error.message, { status: 500 });
-								}
+								break;
 							default:
 								return new Response("ready");
+						}
+						try {
+							return new Response((await cached).value);
+						} catch (error) {
+							return new Response(error.message, { status: 500 });
 						}
 					}
 				};
@@ -73,6 +91,10 @@ describe("deferred import caller lifetime", () => {
 							name: "import-lifetime",
 							entrypoint: "./index.js",
 							compatibilityDate: "2026-04-01",
+							compatibilityFlags: [
+								"enable_request_signal",
+								"request_signal_passthrough",
+							],
 						},
 						inspectorPort: false,
 						persistState: false,
@@ -92,7 +114,24 @@ describe("deferred import caller lifetime", () => {
 				});
 			}
 
-			expect(await (await request("kick")).text()).toBe("kicked");
+			let first: ClientRequest | undefined;
+			if (disconnect) {
+				const runtime = runtimeReady.mock.contexts[0];
+				assert(runtime instanceof Miniflare);
+				// Connect directly to workerd so the reset affects only this request,
+				// without depending on Vite's pooled connection to the runtime.
+				first = get(new URL("/__import-lifetime/kick", await runtime.ready), {
+					agent: false,
+					headers: { [CoreHeaders.ROUTE_OVERRIDE]: "import-lifetime" },
+				});
+				first.on("error", () => {}); // Resetting the connection produces ECONNRESET.
+				first.on("response", (response) => response.resume());
+				onTestFinished(() => {
+					first?.destroy();
+				});
+			} else {
+				expect(await (await request("kick")).text()).toBe("kicked");
+			}
 			await vi.waitFor(
 				async () => {
 					expect(await (await request("state")).json()).toMatchObject({
@@ -103,6 +142,20 @@ describe("deferred import caller lifetime", () => {
 				},
 				{ timeout: 10_000 }
 			);
+			if (first) {
+				assert(first.socket);
+				first.socket.resetAndDestroy();
+				await vi.waitFor(
+					async () => {
+						expect(await (await request("state")).json()).toMatchObject({
+							aborted: true,
+							evaluated: false,
+							settled: "pending",
+						});
+					},
+					{ timeout: 10_000 }
+				);
+			}
 			expect(await (await request("release")).text()).toBe("released");
 			await vi.waitFor(
 				async () => {
