@@ -369,16 +369,16 @@ export type WorkflowBatchCreateResult = {
 const RETENTION_DURATION_ERROR_MESSAGE =
 	"Duration must be a number or a string in format '{{number}} {{unit}}' where unit is second(s), minute(s), etc.";
 
-// Numeric durations are whole milliseconds; both forms must be positive. A
-// single refinement keeps one error message for every invalid duration.
-const retentionDurationSchema = z.union([z.number(), z.string()]).refine(
+// The production binding accepts any finite number of milliseconds and any
+// string that itty-time parses to a finite number, so durations do not have
+// to be positive. z.number() already rejects NaN and infinite numbers.
+const createRetentionDurationSchema = z.union([z.number(), z.string()]).refine(
 	(value) => {
 		if (typeof value === "number") {
-			return Number.isInteger(value) && value > 0;
+			return true;
 		}
 		try {
-			const duration = ms(value);
-			return Number.isFinite(duration) && duration > 0;
+			return Number.isFinite(ms(value));
 		} catch {
 			return false;
 		}
@@ -386,13 +386,16 @@ const retentionDurationSchema = z.union([z.number(), z.string()]).refine(
 	{ message: RETENTION_DURATION_ERROR_MESSAGE }
 );
 
-const workflowInstanceCreateOptionsSchema = z.object({
+// The options that create() and each createBatch() entry accept. The
+// production binding checks them with zod's rules and messages, so the
+// `(body)` errors below read the same.
+const createOptionsSchema = z.object({
 	id: z.string().optional(),
 	params: z.any().optional(),
 	retention: z
 		.object({
-			successRetention: retentionDurationSchema.optional(),
-			errorRetention: retentionDurationSchema.optional(),
+			successRetention: createRetentionDurationSchema.optional(),
+			errorRetention: createRetentionDurationSchema.optional(),
 		})
 		.optional(),
 	locationHint: z
@@ -409,35 +412,6 @@ const workflowInstanceCreateOptionsSchema = z.object({
 			"afr",
 			"me",
 		])
-		.optional(),
-});
-
-// The production binding's create() accepts any finite number of milliseconds
-// and any string that itty-time parses to a finite number, so unlike the batch
-// entries above its durations do not have to be positive. z.number() already
-// rejects NaN and infinite numbers.
-const createRetentionDurationSchema = z.union([z.number(), z.string()]).refine(
-	(value) => {
-		if (typeof value === "number") {
-			return true;
-		}
-		try {
-			return Number.isFinite(ms(value));
-		} catch {
-			return false;
-		}
-	},
-	{ message: RETENTION_DURATION_ERROR_MESSAGE }
-);
-
-// The options that create() accepts. The production binding checks them with
-// zod's rules and messages, so the `(body)` errors below read the same.
-const createOptionsSchema = workflowInstanceCreateOptionsSchema.extend({
-	retention: z
-		.object({
-			successRetention: createRetentionDurationSchema.optional(),
-			errorRetention: createRetentionDurationSchema.optional(),
-		})
 		.optional(),
 });
 
@@ -720,14 +694,14 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			);
 		}
 
-		// Validate only object-form entries before probing ids, which persists
-		// storage. The deprecated array form keeps the checks that create() made
-		// before it matched the production binding: its options are not
-		// validated, and its ids only have to satisfy isValidWorkflowInstanceId().
-		for (const instanceOptions of batch) {
-			if (!isLegacyBatch) {
-				const validation =
-					workflowInstanceCreateOptionsSchema.safeParse(instanceOptions);
+		// Like the production binding, check every object-form entry's options
+		// before any id, and both before probing ids, which persists storage. The
+		// deprecated array form keeps the checks that create() made before it
+		// matched the production binding: its options are not validated, and its
+		// ids only have to satisfy isValidWorkflowInstanceId().
+		if (!isLegacyBatch) {
+			for (const instanceOptions of batch) {
+				const validation = createOptionsSchema.safeParse(instanceOptions);
 				if (!validation.success) {
 					throw createWorkflowError(
 						validation.error.issues.map((issue) => issue.message).join("; "),
@@ -735,6 +709,8 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 					);
 				}
 			}
+		}
+		for (const instanceOptions of batch) {
 			// Reserved ids are rejected by the object form, as by create(); the
 			// deprecated array form keeps accepting them.
 			if (

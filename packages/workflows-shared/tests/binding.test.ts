@@ -201,8 +201,6 @@ describe("WorkflowBinding", () => {
 			const binding = createBinding();
 			setTestWorkflowCallback(async () => "done");
 
-			// Unlike object-form batch entries, create() does not require positive
-			// durations.
 			const { id } = await binding.create({
 				retention: { successRetention: 0, errorRetention: "0 days" },
 				locationHint: "weur",
@@ -832,6 +830,18 @@ describe("WorkflowBinding", () => {
 			);
 			await expect(
 				binding.createBatch({
+					instances: [null],
+				} as unknown as WorkflowBatchCreateOptions)
+			).rejects.toThrow("(body) Invalid input: expected object, received null");
+			await expect(
+				binding.createBatch({
+					instances: [{ id: 5 }],
+				} as unknown as WorkflowBatchCreateOptions)
+			).rejects.toThrow(
+				"(body) Invalid input: expected string, received number"
+			);
+			await expect(
+				binding.createBatch({
 					count: 1,
 					retention: { successRetention: "invalid" },
 				} as unknown as WorkflowBatchCreateOptions)
@@ -847,32 +857,58 @@ describe("WorkflowBinding", () => {
 			);
 		});
 
-		it("should only accept positive retention durations", async ({
+		it("should accept the retention durations that the production binding accepts", async ({
 			expect,
 		}) => {
 			const binding = createBinding();
 			setTestWorkflowCallback(async () => "done");
 
-			for (const successRetention of [-1, 0, 0.5, "0 days", "-1 day"]) {
-				await expect(
-					binding.createBatch({
-						count: 1,
-						retention: { successRetention },
-					} as unknown as WorkflowBatchCreateOptions)
-				).rejects.toThrow(
-					"(body) Duration must be a number or a string in format '{{number}} {{unit}}' where unit is second(s), minute(s), etc."
+			// As in create(), durations do not have to be positive.
+			const durations = [0, -1, 0.5, "0 days", "-1 day", ""];
+			const explicit = await binding.createBatch({
+				instances: durations.map((successRetention) => ({
+					retention: { successRetention },
+				})),
+			} as unknown as WorkflowBatchCreateOptions);
+			const counted = await binding.createBatch({
+				count: 1,
+				retention: { successRetention: 0, errorRetention: "-1 day" },
+			});
+
+			expect(explicit.errors).toEqual([]);
+			expect(explicit.created).toHaveLength(durations.length);
+			expect(counted).toEqual({
+				created: [{ id: expect.any(String) }],
+				errors: [],
+			});
+			for (const { id } of [...explicit.created, ...counted.created]) {
+				await waitUntilLogEvent(
+					env.ENGINE.get(env.ENGINE.idFromName(id)),
+					InstanceEvent.WORKFLOW_SUCCESS
 				);
 			}
+		});
 
-			const result = await binding.createBatch({
-				count: 1,
-				retention: { successRetention: 1000, errorRetention: "1 day" },
-			});
-			expect(result.created).toHaveLength(1);
-			await waitUntilLogEvent(
-				env.ENGINE.get(env.ENGINE.idFromName(result.created[0].id)),
-				InstanceEvent.WORKFLOW_SUCCESS
-			);
+		it("should check every entry's options before any id, like the production binding", async ({
+			expect,
+		}) => {
+			const good = uniqueId("batch-options-first");
+			const binding = createBinding();
+
+			await expect(
+				binding.createBatch({
+					instances: [
+						{ id: "-bad" },
+						{ id: good, retention: { successRetention: "nope" } },
+					],
+				} as unknown as WorkflowBatchCreateOptions)
+			).rejects.toThrow("(body) Duration must be a number");
+			await expect(
+				binding.createBatch({
+					instances: [{ id: "batch" }, { locationHint: "invalid" }],
+				} as unknown as WorkflowBatchCreateOptions)
+			).rejects.toThrow("(body) Invalid option");
+			await expect(binding.get(good)).rejects.toThrow("instance.not_found");
 		});
 
 		it("should prefer count when instances are also provided", async ({
