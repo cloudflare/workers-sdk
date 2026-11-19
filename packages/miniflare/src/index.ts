@@ -2422,12 +2422,10 @@ export class Miniflare {
 			);
 		}
 
-		// Bindings to Workers outside this instance always need the proxy, while
-		// queues and shared storage only use it to reach other dev sessions
 		if (
 			externalServices.size > 0 ||
-			(this.#devRegistry.isEnabled() &&
-				(hasQueues || sharedOpts.unsafeEnableSharedStorage))
+			hasQueues ||
+			sharedOpts.unsafeEnableSharedStorage
 		) {
 			const externalObjects = Array.from(externalServices).flatMap(
 				([scriptName, { classNames }]) =>
