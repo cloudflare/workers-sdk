@@ -39,7 +39,8 @@ export class ProxyController {
 
 	constructor(
 		private onError: (event: ErrorEvent) => void,
-		private onPreviewTokenExpired: () => void
+		private onPreviewTokenExpired: () => void,
+		private onRequestConnection: () => void = () => {}
 	) {}
 
 	protected createProxyWorker() {
@@ -183,6 +184,10 @@ export class ProxyController {
 		this.latestConfig = config;
 		void this.sendMessageToProxyWorker({ type: "pause" });
 	}
+	/** Fail queued binding requests without stopping the local development server. */
+	connectionFailed(message: string) {
+		void this.sendMessageToProxyWorker({ type: "connectionFailed", message });
+	}
 	play(data: ReloadCompleteEvent) {
 		this.localServerReady.resolve();
 
@@ -196,6 +201,10 @@ export class ProxyController {
 	}
 	onProxyWorkerMessage(message: ProxyWorkerOutgoingRequestBody) {
 		switch (message.type) {
+			case "requestConnection":
+				this.onRequestConnection();
+				break;
+
 			case "previewTokenExpired":
 				this.onPreviewTokenExpired();
 

@@ -7,7 +7,6 @@ import {
 } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { CF_CLI } from "../../src/cf";
-import { AuthenticationError } from "../../src/core/authentication-error";
 import { createCloudflareAuth } from "../../src/core/factory";
 import { createOAuthFlow } from "../../src/flow";
 import { WRANGLER_CLI } from "../../src/wrangler";
@@ -257,23 +256,6 @@ describe("consumer auth guidance", () => {
 			reason: "no-credentials-non-interactive",
 			telemetryMessage: "cfetch auth login required",
 		});
-	});
-
-	it("can require existing credentials without starting a login", async ({
-		expect,
-	}) => {
-		flow.isTemporaryAllowed.mockReturnValue(false);
-		flow.loginOrRefreshIfRequired.mockResolvedValue({
-			loggedIn: false,
-			reason: "no-credentials-non-interactive",
-		});
-		const auth = createCloudflareAuth(CF_CLI, createTestContext());
-		await expect(
-			auth.requireAuth(COMPLIANCE_CONFIG, { allowLogin: false })
-		).rejects.toBeInstanceOf(AuthenticationError);
-		expect(flow.loginOrRefreshIfRequired).toHaveBeenCalledWith(
-			expect.objectContaining({ allowLogin: false })
-		);
 	});
 });
 

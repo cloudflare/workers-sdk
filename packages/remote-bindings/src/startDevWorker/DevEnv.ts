@@ -17,15 +17,24 @@ export class DevEnv extends EventEmitter {
 	start() {
 		this.proxy.start(this.#config);
 		this.update(this.#config);
+		if (this.#config.lazy) {
+			this.proxy.localServerReady.resolve();
+		}
 	}
 
 	update(config: StartDevWorkerOptions) {
 		this.#config = config;
 		this.proxy.pause(config);
 		this.runtime.onUpdateStart();
+		if (!config.lazy) {
+			this.connect();
+		}
+	}
+
+	private connect() {
 		this.runtime.onBundleComplete({
 			type: "bundleComplete",
-			config,
+			config: this.#config,
 			bundle: {
 				...this.#bundle,
 				// Ensure binding-only updates cannot reuse the previous edge-preview artifact.
@@ -46,7 +55,12 @@ export class DevEnv extends EventEmitter {
 		};
 		this.proxy = new ProxyController(
 			(event) => this.handleErrorEvent(event),
-			() => this.runtime.onPreviewTokenExpired()
+			() => this.runtime.onPreviewTokenExpired(),
+			() => {
+				if (this.#config.lazy) {
+					this.connect();
+				}
+			}
 		);
 		this.runtime = new RemoteRuntimeController(
 			(event) => this.handleErrorEvent(event),
@@ -65,6 +79,9 @@ export class DevEnv extends EventEmitter {
 	}
 
 	private handleErrorEvent(event: ErrorEvent): void {
+		if (this.#config.lazy && event.source === "RemoteRuntimeController") {
+			this.proxy.connectionFailed(event.cause.message);
+		}
 		if (
 			event.cause instanceof MiniflareCoreError &&
 			event.cause.isUserError()

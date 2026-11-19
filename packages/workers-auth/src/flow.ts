@@ -27,11 +27,11 @@ import type {
  * authenticate the user.
  */
 export type LoginOrRefreshFailureReason =
-	/** No stored credentials and interactive login is disabled or unavailable (CI, piped stdin, etc.). */
+	/** no stored credentials and the environment is non-interactive (CI, piped stdin, etc.) so a browser login cannot be started. */
 	| "no-credentials-non-interactive"
 	/** stored credentials and the interactive login attempt was unsuccessful (user cancelled, etc.). */
 	| "no-credentials-login-failed"
-	/** The stored token has expired, refresh failed, and interactive login is disabled or unavailable. */
+	/** the stored token has expired, refresh failed, and the environment is non-interactive so a browser login cannot be started. */
 	| "token-expired-non-interactive"
 	/** the stored token has expired, refresh failed, and the interactive login attempt was unsuccessful. */
 	| "token-expired-login-failed"
@@ -53,8 +53,6 @@ export type LoginOrRefreshResult =
  * Options for an interactive OAuth login.
  */
 export interface LoginProps {
-	/** Whether to start an interactive login when credentials cannot be refreshed. Defaults to `true`. */
-	allowLogin?: boolean;
 	complianceConfig: ComplianceConfig;
 	/**
 	 * The OAuth scopes to request. The catalog of valid scope keys is
@@ -405,7 +403,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		if (!stored.accessToken && !stored.deprecatedApiToken) {
 			// Not logged in.
 			// If we are not interactive, we cannot ask the user to login
-			if (props.allowLogin === false || ctx.isNonInteractiveOrCI()) {
+			if (ctx.isNonInteractiveOrCI()) {
 				return {
 					loggedIn: false,
 					reason: "no-credentials-non-interactive",
@@ -429,7 +427,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				return { loggedIn: false, reason: "token-refresh-unreachable" };
 			}
 			// If the refresh token isn't valid, then we ask the user to login again
-			if (props.allowLogin === false || ctx.isNonInteractiveOrCI()) {
+			if (ctx.isNonInteractiveOrCI()) {
 				return {
 					loggedIn: false,
 					reason: "token-expired-non-interactive",

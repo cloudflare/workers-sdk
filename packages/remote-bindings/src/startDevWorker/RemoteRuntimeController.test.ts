@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { initLogger } from "../logger";
-import { PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL } from "./utils";
+import { createDeferred, PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL } from "./utils";
 import type {
 	CfPreviewSession,
 	CfPreviewToken,
@@ -75,6 +75,74 @@ describe("RemoteRuntimeController preview token refresh", () => {
 
 	afterEach(() => {
 		vi.useRealTimers();
+	});
+
+	it("refreshes lazy sessions only in response to a binding call", async ({
+		expect,
+	}) => {
+		createPreviewSession.mockResolvedValue(session);
+		createWorkerPreview.mockResolvedValue(token);
+		const auth = vi.fn(() => ({
+			accountId: "account-id",
+			apiToken: { apiToken: "api-token" },
+		}));
+		const controller = new RemoteRuntimeController(vi.fn(), vi.fn());
+		controller.onBundleComplete({
+			type: "bundleComplete",
+			config: { ...config, auth, lazy: true },
+			bundle,
+		});
+		await vi.advanceTimersByTimeAsync(0);
+		expect(auth).toHaveBeenCalledOnce();
+		await vi.advanceTimersByTimeAsync(3 * 60 * 60 * 1000);
+		expect(auth).toHaveBeenCalledOnce();
+		expect(createPreviewSession).toHaveBeenCalledOnce();
+		controller.onPreviewTokenExpired();
+		await vi.advanceTimersByTimeAsync(0);
+		expect(auth).toHaveBeenCalledTimes(2);
+		await controller.teardown();
+	});
+
+	it("ignores login failures from a configuration that has been replaced", async ({
+		expect,
+	}) => {
+		const login = createDeferred<void>();
+		const auth = vi.fn(async () => {
+			await login.promise;
+			throw new Error("Login cancelled for the old configuration");
+		});
+		const onError = vi.fn();
+		const controller = new RemoteRuntimeController(onError, vi.fn());
+		controller.onBundleComplete({
+			type: "bundleComplete",
+			config: { ...config, auth, lazy: true },
+			bundle,
+		});
+		await vi.advanceTimersByTimeAsync(0);
+		expect(auth).toHaveBeenCalledOnce();
+		controller.onUpdateStart();
+		login.resolve();
+		await vi.advanceTimersByTimeAsync(0);
+		expect(onError).not.toHaveBeenCalled();
+		expect(createPreviewSession).not.toHaveBeenCalled();
+		await controller.teardown();
+	});
+
+	it("does not start login for a late binding notification after teardown", async ({
+		expect,
+	}) => {
+		const auth = vi.fn(async () => {
+			throw new Error("Login must not start after teardown");
+		});
+		const controller = new RemoteRuntimeController(vi.fn(), vi.fn());
+		await controller.teardown();
+		controller.onBundleComplete({
+			type: "bundleComplete",
+			config: { ...config, auth, lazy: true },
+			bundle,
+		});
+		await vi.advanceTimersByTimeAsync(0);
+		expect(auth).not.toHaveBeenCalled();
 	});
 
 	it("refreshes on the session deadline despite an update", async ({

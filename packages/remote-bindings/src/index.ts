@@ -4,7 +4,6 @@ export {
 } from "./maybe-start-or-update-session";
 export type {
 	RemoteBindingsAuth,
-	RemoteBindingsAuthOptions,
 	RemoteBindingsContext,
 	RemoteProxySessionData,
 	WorkerConfigObject,

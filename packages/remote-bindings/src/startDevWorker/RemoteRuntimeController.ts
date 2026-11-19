@@ -253,6 +253,9 @@ export class RemoteRuntimeController {
 		});
 
 		const proxyData: ProxyData = {
+			...(config.lazy
+				? { refreshAt: Date.now() + PREVIEW_TOKEN_REFRESH_INTERVAL }
+				: {}),
 			userWorkerUrl: {
 				protocol: "https:",
 				hostname: token.host,
@@ -280,6 +283,11 @@ export class RemoteRuntimeController {
 
 	#scheduleRefresh(interval: number) {
 		clearTimeout(this.#refreshTimer);
+		// Lazy sessions refresh in response to binding calls, so an unused binding
+		// cannot trigger an interactive login from a background timer.
+		if (this.#latestConfig?.lazy) {
+			return;
+		}
 		const delay =
 			interval === PREVIEW_TOKEN_REFRESH_INTERVAL &&
 			this.#sessionCreatedAt !== undefined
@@ -302,7 +310,7 @@ export class RemoteRuntimeController {
 
 	async #onBundleComplete({ config, bundle }: BundleCompleteEvent, id: number) {
 		// A newer bundle has already been queued — skip this stale one.
-		if (id !== this.#currentBundleId) {
+		if (id !== this.#currentBundleId || this.#tearingDown) {
 			return;
 		}
 
@@ -310,9 +318,16 @@ export class RemoteRuntimeController {
 
 		try {
 			const auth = await unwrapHook(config.auth);
+			if (id !== this.#currentBundleId || this.#tearingDown) {
+				return;
+			}
 
 			this.#latestConfig = config;
 			this.#latestBundle = bundle;
+			if (config.lazy) {
+				// A demand-driven reconnect may follow a long idle period.
+				this.#session = undefined;
+			}
 
 			if (this.#session) {
 				logger.log(chalk.dim("⎔ Detected changes, restarted server."));
@@ -321,6 +336,9 @@ export class RemoteRuntimeController {
 			this.#session ??= await this.#getPreviewSession(config, auth);
 			await this.#updatePreviewToken(config, bundle, auth, id);
 		} catch (error) {
+			if (id !== this.#currentBundleId || this.#tearingDown) {
+				return;
+			}
 			if (error instanceof Error && error.name == "AbortError") {
 				return;
 			}
@@ -336,6 +354,9 @@ export class RemoteRuntimeController {
 	}
 
 	async #refreshPreviewToken() {
+		if (this.#tearingDown) {
+			return;
+		}
 		if (!this.#latestConfig || !this.#latestBundle) {
 			logger.warn(
 				"Cannot refresh preview token: missing config or bundle data"
@@ -344,13 +365,8 @@ export class RemoteRuntimeController {
 		}
 
 		const bundleId = this.#currentBundleId;
-		// Captured before anything async: `onUpdateStart()` aborts this exact
-		// signal (before replacing `#abortController`) if a rebuild starts
-		// while this refresh is in flight, but doesn't bump `#currentBundleId`
-		// until that rebuild *completes* — so a bundle-ID match alone can't
-		// tell an aborted-by-rebuild refresh apart from a genuine failure,
-		// whether that failure surfaces as a thrown error or (from
-		// `#previewToken`'s non-restart upload-error path) a `false` return.
+		// Capture the signal as well as the bundle ID so cancellation cannot
+		// schedule another refresh for a superseded preview.
 		const abortSignal = this.#abortController.signal;
 		// A newer bundle superseding this refresh, or this refresh's own
 		// signal having been aborted, means a rebuild is already handling
@@ -410,10 +426,9 @@ export class RemoteRuntimeController {
 	// ******************
 
 	onUpdateStart() {
-		// Unlike Wrangler's copy, this needs no "bundle pending" guard against a
-		// retry reloading the previous bundle: `DevEnv.update()` calls
-		// `onBundleComplete()` synchronously right after this, so there is no
-		// window in which the stored bundle is stale while the proxy is paused.
+		// Lazy sessions can stay paused until the next binding call. Invalidate
+		// in-flight work now, even though the replacement bundle isn't queued yet.
+		this.#currentBundleId++;
 		// Abort any previous operations when a new bundle is started
 		this.#abortController.abort();
 		this.#abortController = new AbortController();

@@ -106,11 +106,10 @@ export function getRemoteBindingsAuth(
 ): RemoteBindingsAuth {
 	const auth = getAuth();
 	return {
-		hook: async (options) => {
+		hook: async () => {
 			return {
 				accountId: await auth.requireAuth(
-					accountId ? { account_id: accountId } : {},
-					options
+					accountId ? { account_id: accountId } : {}
 				),
 				apiToken: auth.requireApiToken(),
 			};

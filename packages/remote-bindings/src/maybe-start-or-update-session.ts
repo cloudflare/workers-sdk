@@ -1,12 +1,10 @@
 import assert from "node:assert";
-import { AuthenticationError } from "@cloudflare/workers-auth";
 import {
 	getBindingLocalSupport,
 	resolveBindingRemote,
 } from "@cloudflare/workers-utils/config";
 import { getRemoteBindings } from "./config-bindings";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
-import { CLI_COMMANDS, RemoteSessionAuthenticationError } from "./utils/remote";
 import type { ConfigBindings } from "./config-bindings";
 import type { RemoteBindingsLogger } from "./logger";
 import type { RemoteProxySession } from "./start-remote-proxy-session";
@@ -52,18 +50,10 @@ export type WorkerConfigObject = {
 	  }
 );
 
-/**
- * Controls whether resolving remote binding credentials may start a login.
- * Accepts account configuration for Wrangler's forwarded config-aware auth hooks.
- */
-export type RemoteBindingsAuthOptions = Partial<Pick<Config, "account_id">> & {
-	allowLogin?: boolean;
-};
-
 /** Credentials for a remote proxy session. */
 export type RemoteBindingsAuth = {
 	/** Resolves the account ID and API token for the session. */
-	hook: AsyncHook<CfAccount, [RemoteBindingsAuthOptions?]>;
+	hook: AsyncHook<CfAccount>;
 	/**
 	 * Identifies the credentials `hook` resolves. When set, a session is only
 	 * restarted when the key changes; otherwise, when it gets a different `hook`.
@@ -74,8 +64,10 @@ export type RemoteBindingsAuth = {
 export type RemoteProxySessionData = {
 	session: RemoteProxySession;
 	remoteBindings: Record<string, Binding>;
-	auth?: RemoteBindingsAuth["hook"];
+	auth?: AsyncHook<CfAccount>;
 	authKey?: string;
+	/** Whether this session establishes its remote connection on the first call. */
+	lazy?: boolean;
 };
 
 export type RemoteBindingsContext = {
@@ -87,7 +79,7 @@ export type RemoteBindingsContext = {
 export async function maybeStartOrUpdateRemoteProxySession(
 	workerConfigObject: WorkerConfigObject,
 	preExistingRemoteProxySessionData: RemoteProxySessionData | null | undefined,
-	auth: RemoteBindingsAuth | RemoteBindingsAuth["hook"],
+	auth: RemoteBindingsAuth | AsyncHook<CfAccount>,
 	context: RemoteBindingsContext,
 	startSession: typeof startRemoteProxySession = startRemoteProxySession
 ): Promise<RemoteProxySessionData | null> {
@@ -106,79 +98,56 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	) {
 		return null;
 	}
-	const onlyRemoteOnlyBindings =
-		Object.values(remoteBindings).every(isRemoteOnlyBinding);
-	// An empty binding set no longer records the login policy the session captured.
-	const sameLoginPolicy =
-		Object.keys(remoteBindings).length === 0 ||
-		(Object.keys(preExistingRemoteProxySessionData?.remoteBindings ?? {})
-			.length > 0 &&
-			onlyRemoteOnlyBindings ===
-				Object.values(
-					preExistingRemoteProxySessionData?.remoteBindings ?? {}
-				).every(isRemoteOnlyBinding));
+	const lazy =
+		Object.keys(remoteBindings).length === 0
+			? (preExistingRemoteProxySessionData?.lazy ?? false)
+			: Object.values(remoteBindings).every(isRemoteOnlyBinding);
 	const authSameAsBefore =
-		sameLoginPolicy &&
 		(key !== undefined ||
 		preExistingRemoteProxySessionData?.authKey !== undefined
 			? key === preExistingRemoteProxySessionData?.authKey
-			: deepStrictEqual(hook, preExistingRemoteProxySessionData?.auth));
+			: deepStrictEqual(hook, preExistingRemoteProxySessionData?.auth)) &&
+		lazy === (preExistingRemoteProxySessionData?.lazy ?? false);
 	let remoteProxySession = preExistingRemoteProxySessionData?.session;
 
-	function startSessionWithAuth() {
-		return startSession(remoteBindings, {
+	if (!authSameAsBefore) {
+		if (preExistingRemoteProxySessionData?.session) {
+			await preExistingRemoteProxySessionData.session.dispose();
+		}
+
+		remoteProxySession = await startSession(remoteBindings, {
 			workerName: workerConfigObject.name,
 			complianceRegion: workerConfigObject.complianceRegion,
 			cliDisplayName: context.cliDisplayName,
-			auth:
-				onlyRemoteOnlyBindings && typeof hook === "function"
-					? async () => hook({ allowLogin: false })
-					: hook,
+			auth: hook,
+			lazy,
 			logger: context.logger,
 		});
-	}
+	} else {
+		const remoteBindingsAreSameAsBefore = deepStrictEqual(
+			remoteBindings,
+			preExistingRemoteProxySessionData?.remoteBindings
+		);
 
-	try {
-		if (!authSameAsBefore) {
-			await remoteProxySession?.dispose();
-			remoteProxySession = undefined;
-
-			remoteProxySession = await startSessionWithAuth();
-		} else {
-			const remoteBindingsAreSameAsBefore = deepStrictEqual(
-				remoteBindings,
-				preExistingRemoteProxySessionData?.remoteBindings
-			);
-
-			if (!remoteBindingsAreSameAsBefore) {
-				if (!remoteProxySession) {
-					if (Object.keys(remoteBindings).length > 0) {
-						remoteProxySession = await startSessionWithAuth();
-					}
-				} else {
-					await remoteProxySession.updateBindings(remoteBindings);
+		if (!remoteBindingsAreSameAsBefore) {
+			if (!remoteProxySession) {
+				if (Object.keys(remoteBindings).length > 0) {
+					remoteProxySession = await startSession(remoteBindings, {
+						workerName: workerConfigObject.name,
+						complianceRegion: workerConfigObject.complianceRegion,
+						cliDisplayName: context.cliDisplayName,
+						auth: hook,
+						lazy,
+						logger: context.logger,
+					});
 				}
+			} else {
+				await remoteProxySession.updateBindings(remoteBindings);
 			}
 		}
-		await remoteProxySession?.ready;
-	} catch (error) {
-		if (
-			!onlyRemoteOnlyBindings ||
-			!(
-				error instanceof AuthenticationError ||
-				error instanceof RemoteSessionAuthenticationError
-			)
-		) {
-			throw error;
-		}
-		await remoteProxySession?.dispose();
-		context.logger.warn(
-			`Remote-only bindings (${Object.keys(remoteBindings).join(", ")}) could not be authenticated and will throw when called. Run \`${CLI_COMMANDS[context.cliDisplayName].login}\` or set CLOUDFLARE_API_TOKEN, then restart your dev server.`
-		);
-		context.logger.debug(error);
-		return null;
 	}
 
+	await remoteProxySession?.ready;
 	if (!remoteProxySession) {
 		return null;
 	}
@@ -187,6 +156,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		remoteBindings,
 		auth: hook,
 		authKey: key,
+		lazy,
 	};
 }
 

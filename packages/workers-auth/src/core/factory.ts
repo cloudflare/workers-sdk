@@ -74,8 +74,6 @@ export interface RequireAuthConfig extends ComplianceConfig {
 
 /** Overrides accepted by {@link CloudflareAuth.login} / {@link CloudflareAuth.loginOrRefreshIfRequired}. */
 export interface CloudflareLoginProps {
-	/** Whether to start an interactive login when credentials cannot be refreshed. Defaults to `true`. */
-	allowLogin?: boolean;
 	scopes?: string[];
 	browser?: boolean;
 	callbackHost?: string;
@@ -144,10 +142,7 @@ export interface CloudflareAuth {
 	) => Promise<Account[]>;
 
 	/** Ensure the user is logged in and resolve a valid account ID. */
-	requireAuth: (
-		config: RequireAuthConfig,
-		options?: { allowLogin?: boolean }
-	) => Promise<string>;
+	requireAuth: (config: RequireAuthConfig) => Promise<string>;
 }
 
 // Cloudflare API error codes returned by `/memberships` that mean "the current
@@ -344,7 +339,6 @@ export function createCloudflareAuth(
 	): LoginProps {
 		return {
 			complianceConfig,
-			allowLogin: props?.allowLogin,
 			scopes: props?.scopes ?? descriptor.getDefaultScopeKeys(),
 			browser: props?.browser ?? true,
 			callbackHost: props?.callbackHost,
@@ -643,10 +637,7 @@ ${accounts
 		return accountSelectionPromise;
 	}
 
-	async function requireAuth(
-		config: RequireAuthConfig,
-		options?: { allowLogin?: boolean }
-	): Promise<string> {
+	async function requireAuth(config: RequireAuthConfig): Promise<string> {
 		if (oauthFlow.isTemporaryAllowed()) {
 			if (getCloudflareComplianceRegion(config) !== "public") {
 				throw new UserError(
@@ -689,30 +680,25 @@ ${accounts
 			return temporaryPreviewAccount.account.id;
 		}
 
-		const result = await loginOrRefreshIfRequired(config, options);
+		const result = await loginOrRefreshIfRequired(config);
 		if (!result.loggedIn) {
 			if (
 				result.reason === "no-credentials-non-interactive" ||
 				result.reason === "token-expired-non-interactive"
 			) {
-				throw new AuthenticationError(
+				throw new UserError(
 					`In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for ${cliName} to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.`,
-					result.reason,
-					"user auth missing api token non interactive"
+					{ telemetryMessage: "user auth missing api token non interactive" }
 				);
 			} else if (result.reason === "token-refresh-unreachable") {
-				throw new AuthenticationError(
-					NOT_LOGGED_IN_ERROR_BODIES[result.reason],
-					result.reason,
-					"user auth token refresh unreachable"
-				);
+				throw new UserError(NOT_LOGGED_IN_ERROR_BODIES[result.reason], {
+					telemetryMessage: "user auth token refresh unreachable",
+				});
 			} else {
 				// didn't login, let's just quit
-				throw new AuthenticationError(
-					"Did not login, quitting...",
-					result.reason,
-					"user login cancelled"
-				);
+				throw new UserError("Did not login, quitting...", {
+					telemetryMessage: "user login cancelled",
+				});
 			}
 		}
 

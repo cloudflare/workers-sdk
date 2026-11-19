@@ -5,12 +5,12 @@ import type {
 	ContainerDevPlan,
 	ContainerNormalizedConfig,
 } from "@cloudflare/containers-shared";
-import type { RemoteBindingsAuth } from "@cloudflare/remote-bindings";
 import type {
 	AsyncHook,
 	AssetsOptions,
 	BinaryFile,
 	Binding,
+	CfAccount,
 	CfModule,
 	CfScriptFormat,
 	File,
@@ -77,9 +77,9 @@ export type StartDevWorkerOptions = Omit<
 	legacy: StartDevWorkerInput["legacy"] & {
 		site?: Config["site"];
 	};
-	dev: Omit<NonNullable<StartDevWorkerInput["dev"]>, "auth"> & {
+	dev: StartDevWorkerInput["dev"] & {
 		persist: string | false;
-		auth?: RemoteBindingsAuth["hook"]; // ConfigController captures config.account_id before this hook reaches runtime controllers.
+		auth?: AsyncHook<CfAccount>; // redefine without config.account_id hook param (can only be provided by ConfigController with access to the Wrangler configuration file, not by other controllers eg RemoteRuntimeContoller)
 		/** Handles structured runtime logs. */
 		structuredLogsHandler?: (log: WorkerdStructuredLog) => void;
 		/** An undici MockAgent to declaratively mock fetch calls to particular resources. */

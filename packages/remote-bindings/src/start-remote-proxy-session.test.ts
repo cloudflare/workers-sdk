@@ -1,4 +1,3 @@
-import { AuthenticationError } from "@cloudflare/workers-auth";
 import { APIError, UserError } from "@cloudflare/workers-utils";
 import { afterEach, describe, it, vi } from "vitest";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
@@ -11,7 +10,6 @@ import type { ErrorEvent } from "./startDevWorker/events";
 const mockDevEnv = vi.hoisted(() => ({
 	error: undefined as unknown,
 	startError: undefined as unknown,
-	updateError: undefined as unknown,
 	teardown: vi.fn(async () => {}),
 }));
 
@@ -46,11 +44,7 @@ vi.mock("./startDevWorker/DevEnv", async () => {
 				queueMicrotask(() => this.emit("error", mockDevEnv.error));
 			}
 		}
-		update() {
-			if (mockDevEnv.updateError !== undefined) {
-				queueMicrotask(() => this.emit("error", mockDevEnv.updateError));
-			}
-		}
+		update() {}
 		teardown = mockDevEnv.teardown;
 	}
 	return { DevEnv };
@@ -114,21 +108,6 @@ describe("startRemoteProxySession Flagship validation", () => {
 });
 
 describe("startRemoteProxySession error handling", () => {
-	it("preserves a missing-credentials error so local development can continue", async ({
-		expect,
-	}) => {
-		const error = new AuthenticationError(
-			"No credentials",
-			"no-credentials-non-interactive",
-			"test authentication failure"
-		);
-		mockDevEnv.error = makeErrorEvent(error);
-		await expect(startRemoteProxySession({}, createTestOptions())).rejects.toBe(
-			error
-		);
-		expect(mockDevEnv.teardown).toHaveBeenCalledOnce();
-	});
-
 	it("throws a UserError under Bun before starting the session", async ({
 		expect,
 		onTestFinished,
@@ -155,26 +134,8 @@ describe("startRemoteProxySession error handling", () => {
 	afterEach(() => {
 		mockDevEnv.error = undefined;
 		mockDevEnv.startError = undefined;
-		mockDevEnv.updateError = undefined;
 		mockDevEnv.teardown.mockReset();
 		mockDevEnv.teardown.mockResolvedValue(undefined);
-	});
-
-	it("preserves authentication errors during a binding update", async ({
-		expect,
-		onTestFinished,
-	}) => {
-		const session = await startRemoteProxySession({}, createTestOptions());
-		onTestFinished(() => session.dispose());
-		const error = new AuthenticationError(
-			"Expired credentials",
-			"token-expired-non-interactive",
-			"test authentication failure"
-		);
-		mockDevEnv.updateError = makeErrorEvent(error);
-		await expect(session.updateBindings({ AI: { type: "ai" } })).rejects.toBe(
-			error
-		);
 	});
 
 	it("disposes only once even when teardown rejects", async ({ expect }) => {

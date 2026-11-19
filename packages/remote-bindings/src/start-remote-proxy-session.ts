@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import events from "node:events";
-import { AuthenticationError } from "@cloudflare/workers-auth";
 import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { DeferredPromise } from "miniflare";
@@ -28,6 +27,8 @@ export type StartRemoteProxySessionOptions = {
 	workerName?: string;
 	/** Resolves the account ID and API token for the session. */
 	auth: AsyncHook<CfAccount>;
+	/** Defer authentication and the remote preview until the first binding call. */
+	lazy?: boolean;
 	/** If running in a non-public compliance region, set this here. */
 	complianceRegion?: Config["compliance_region"];
 	/** Consumer name used in actionable error messages. */
@@ -73,17 +74,15 @@ function formatRemoteProxySessionError(error: unknown): string | undefined {
 
 /**
  * Walk an error's cause chain (including through error events) for a
- * missing-credentials or remote-session authentication error. These errors
- * must retain their types so local development can continue without remote-only
- * bindings. Generic API errors fall through to the wrapping logic.
+ * {@link RemoteSessionAuthenticationError}, mirroring the original Wrangler
+ * `findRemoteSessionAuthError` walk. Only this specific user error is surfaced
+ * verbatim from the chain — generic API errors (which also extend
+ * {@link UserError} via {@link APIError}) fall through to the wrapping logic.
  */
 function findRemoteSessionAuthError(
 	error: unknown
-): RemoteSessionAuthenticationError | AuthenticationError | undefined {
-	if (
-		error instanceof RemoteSessionAuthenticationError ||
-		error instanceof AuthenticationError
-	) {
+): RemoteSessionAuthenticationError | undefined {
+	if (error instanceof RemoteSessionAuthenticationError) {
 		return error;
 	}
 	if (isErrorEvent(error)) {
@@ -121,7 +120,9 @@ export async function startRemoteProxySession(
 		);
 	}
 
-	options.logger.log(chalk.dim("⎔ Establishing remote connection..."));
+	if (!options.lazy) {
+		options.logger.log(chalk.dim("⎔ Establishing remote connection..."));
+	}
 	initLogger(getInternalLogger(options.logger));
 	const rawBindings = toRawBindings(bindings);
 	const workerConfig = {
@@ -135,6 +136,7 @@ export async function startRemoteProxySession(
 		complianceRegion: options.complianceRegion,
 		bindings: rawBindings,
 		auth: options.auth,
+		lazy: options.lazy,
 		server: { port: 0, secure: false },
 	};
 
@@ -172,7 +174,9 @@ export async function startRemoteProxySession(
 	try {
 		const maybeError = await Promise.race([
 			maybeErrorPromise,
-			devEnv.proxy.localServerReady.promise,
+			options.lazy
+				? devEnv.proxy.ready.promise.then(() => undefined)
+				: devEnv.proxy.localServerReady.promise,
 		]);
 
 		if (maybeError && maybeError.error) {
@@ -210,11 +214,21 @@ export async function startRemoteProxySession(
 	} finally {
 		devEnv.removeListener("error", onStartupError);
 	}
+	if (options.lazy) {
+		devEnv.on("error", (error: unknown) => {
+			options.logger.warn(
+				`Could not connect remote bindings: ${formatRemoteProxySessionError(error) ?? "unknown error"}`
+			);
+			options.logger.debug(error);
+		});
+	}
 	let disposePromise: Promise<void> | undefined;
 	const updateBindings = async (
 		newBindings: StartDevWorkerInput["bindings"]
 	) => {
-		const reloadComplete = events.once(devEnv, "reloadComplete");
+		const reloadComplete = options.lazy
+			? undefined
+			: events.once(devEnv, "reloadComplete");
 		devEnv.update({
 			...workerConfig,
 			bindings: toRawBindings(newBindings),
@@ -222,10 +236,6 @@ export async function startRemoteProxySession(
 		try {
 			await reloadComplete;
 		} catch (errorOrEvent) {
-			const authError = findRemoteSessionAuthError(errorOrEvent);
-			if (authError) {
-				throw authError;
-			}
 			throw errorOrEvent instanceof Error
 				? errorOrEvent
 				: new Error(

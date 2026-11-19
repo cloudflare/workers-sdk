@@ -719,8 +719,6 @@ async function parseCustomPoolOptions(
 			: null;
 		if (remoteProxySessionData) {
 			remoteProxySessionsDataMap.set(configPath, remoteProxySessionData);
-		} else {
-			remoteProxySessionsDataMap.delete(configPath);
 		}
 		remoteProxyConnectionString =
 			remoteProxySessionData?.session?.remoteProxyConnectionString;
@@ -796,8 +794,6 @@ async function parseCustomPoolOptions(
 
 		if (remoteProxySessionData) {
 			remoteProxySessionsDataMap.set(configPath, remoteProxySessionData);
-		} else {
-			remoteProxySessionsDataMap.delete(configPath);
 		}
 
 		const { getMiniflareWorkerOptions } =

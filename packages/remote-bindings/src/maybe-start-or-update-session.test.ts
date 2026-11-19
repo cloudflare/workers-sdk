@@ -1,10 +1,8 @@
-import { AuthenticationError } from "@cloudflare/workers-auth";
 import { describe, it, vi } from "vitest";
 import {
 	maybeStartOrUpdateRemoteProxySession,
 	pickRemoteBindings,
 } from "./maybe-start-or-update-session";
-import { RemoteSessionAuthenticationError } from "./utils/remote";
 import type { RemoteBindingsLogger } from "./logger";
 import type {
 	RemoteBindingsContext,
@@ -43,265 +41,89 @@ function createTestSession() {
 }
 
 describe("maybeStartOrUpdateRemoteProxySession", () => {
-	it("also leaves remote-only bindings unavailable when remote authentication is rejected", async ({
-		expect,
-	}) => {
-		const logger = createTestLogger();
-		const startSession = vi
-			.fn<typeof startRemoteProxySession>()
-			.mockRejectedValue(
-				new RemoteSessionAuthenticationError(new Error("401"), "cf")
-			);
-		const result = await maybeStartOrUpdateRemoteProxySession(
-			{ target: "cf", env: { AI: { type: "ai" } } },
-			undefined,
-			testAuth,
-			{ cliDisplayName: "cf", logger },
-			startSession
-		);
-		expect(result).toBeNull();
-		expect(logger.warn).toHaveBeenCalledWith(
-			expect.stringContaining("cf auth login")
-		);
-	});
-
-	it("disposes a session that loses authentication during a binding update", async ({
-		expect,
-	}) => {
-		const session = createTestSession();
-		session.updateBindings.mockRejectedValueOnce(
-			new AuthenticationError(
-				"Expired",
-				"token-expired-non-interactive",
-				"test authentication failure"
-			)
-		);
-		const result = await maybeStartOrUpdateRemoteProxySession(
-			{ bindings: { AI: { type: "ai" }, OTHER_AI: { type: "ai" } } },
-			{ session, remoteBindings: { AI: { type: "ai" } }, auth: testAuth },
-			testAuth,
-			{ cliDisplayName: "Wrangler", logger: createTestLogger() }
-		);
-		expect(result).toBeNull();
-		expect(session.dispose).toHaveBeenCalledOnce();
-	});
-
-	it("restarts the session when adding an explicitly remote local-capable binding changes the login policy", async ({
-		expect,
-	}) => {
-		const first = createTestSession();
-		const startSession = vi
-			.fn<typeof startRemoteProxySession>()
-			.mockResolvedValueOnce(first)
-			.mockResolvedValueOnce(createTestSession());
-		const auth = vi.fn(testAuth);
-		const context: RemoteBindingsContext = {
-			cliDisplayName: "Wrangler",
-			logger: createTestLogger(),
-		};
-		const previous = await maybeStartOrUpdateRemoteProxySession(
-			{ bindings: { AI: { type: "ai" } } },
-			undefined,
-			auth,
-			context,
-			startSession
-		);
-		const next = await maybeStartOrUpdateRemoteProxySession(
-			{
-				bindings: {
-					AI: { type: "ai" },
-					KV: { type: "kv_namespace", id: "kv", remote: true },
-				},
-			},
-			previous,
-			auth,
-			context,
-			startSession
-		);
-		expect(first.dispose).toHaveBeenCalledOnce();
-		expect(next?.session).not.toBe(first);
-		expect(startSession).toHaveBeenLastCalledWith(
-			expect.anything(),
-			expect.objectContaining({ auth })
-		);
-	});
-
-	it.for<Record<string, Binding>>([
-		{ AI: { type: "ai" as const } },
+	it.for<{ bindings: Record<string, Binding>; lazy: boolean }>([
+		{ bindings: { AI: { type: "ai" } }, lazy: true },
+		{ bindings: { AI: { type: "ai", remote: true } }, lazy: true },
 		{
-			VECTORIZE: {
-				type: "vectorize" as const,
-				index_name: "search",
-				remote: true,
+			bindings: {
+				VECTORS: { type: "vectorize", index_name: "search", remote: true },
 			},
+			lazy: true,
 		},
 		{
-			AI: { type: "ai" as const, remote: true },
-			ORDERS: { type: "k2" as const, stream: "orders" },
+			bindings: {
+				AI: { type: "ai" },
+				ORDERS: { type: "k2", stream: "orders" },
+			},
+			lazy: true,
+		},
+		{
+			bindings: {
+				AI: { type: "ai" },
+				KV: { type: "kv_namespace", id: "kv", remote: true },
+			},
+			lazy: false,
 		},
 	])(
-		"keeps local development available when remote-only bindings cannot authenticate (%j)",
-		async (bindings, { expect }) => {
-			const logger = createTestLogger();
-			const auth = vi.fn(async () => {
-				throw new AuthenticationError(
-					"No credentials",
-					"no-credentials-non-interactive",
-					"test authentication failure"
-				);
-			});
-			const startSession = vi.fn<typeof startRemoteProxySession>(
-				async (_bindings, options) => {
-					if (typeof options.auth === "function") {
-						await options.auth();
-					}
-					return createTestSession();
-				}
-			);
-			const result = await maybeStartOrUpdateRemoteProxySession(
+		"defers the connection only for remote-only resources (%j)",
+		async ({ bindings, lazy }, { expect }) => {
+			const startSession = vi
+				.fn<typeof startRemoteProxySession>()
+				.mockResolvedValue(createTestSession());
+			await maybeStartOrUpdateRemoteProxySession(
 				{ bindings },
-				undefined,
-				auth,
-				{ cliDisplayName: "Wrangler", logger },
-				startSession
-			);
-			expect(result).toBeNull();
-			expect(auth).toHaveBeenCalledWith({ allowLogin: false });
-			expect(logger.warn).toHaveBeenCalledWith(
-				expect.stringContaining("will throw when called")
-			);
-		}
-	);
-
-	it("disables login when remote-only bindings are added after removing every remote binding", async ({
-		expect,
-	}) => {
-		const first = createTestSession();
-		const startSession = vi.fn<typeof startRemoteProxySession>(
-			async (_bindings, options) => {
-				if (typeof options.auth === "function") {
-					await options.auth();
-				}
-				return createTestSession();
-			}
-		);
-		const auth = vi.fn(testAuth);
-		const context: RemoteBindingsContext = {
-			cliDisplayName: "Wrangler",
-			logger: createTestLogger(),
-		};
-		const removed = await maybeStartOrUpdateRemoteProxySession(
-			{ bindings: {} },
-			{
-				session: first,
-				remoteBindings: {
-					KV: { type: "kv_namespace", id: "kv", remote: true },
-				},
-				auth,
-			},
-			auth,
-			context,
-			startSession
-		);
-		await maybeStartOrUpdateRemoteProxySession(
-			{ bindings: { AI: { type: "ai" } } },
-			removed,
-			auth,
-			context,
-			startSession
-		);
-		expect(first.dispose).toHaveBeenCalledOnce();
-		expect(auth).toHaveBeenCalledWith({ allowLogin: false });
-	});
-
-	it("does not hide setup errors unrelated to authentication", async ({
-		expect,
-	}) => {
-		const error = new Error("Invalid binding configuration");
-		const startSession = vi
-			.fn<typeof startRemoteProxySession>()
-			.mockRejectedValue(error);
-		await expect(
-			maybeStartOrUpdateRemoteProxySession(
-				{ bindings: { AI: { type: "ai" } } },
 				undefined,
 				testAuth,
 				{ cliDisplayName: "Wrangler", logger: createTestLogger() },
 				startSession
-			)
-		).rejects.toBe(error);
-	});
+			);
+			expect(startSession).toHaveBeenCalledWith(
+				bindings,
+				expect.objectContaining({ lazy, auth: testAuth })
+			);
+		}
+	);
 
-	it("still requires authentication when local-capable bindings explicitly use remote resources", async ({
+	it("restarts when adding a local-capable remote binding requires an eager connection", async ({
 		expect,
 	}) => {
-		const error = new AuthenticationError(
-			"No credentials",
-			"no-credentials-non-interactive",
-			"test authentication failure"
-		);
-		const auth = vi.fn(async () => {
-			throw error;
-		});
-		const startSession = vi.fn<typeof startRemoteProxySession>(
-			async (_bindings, options) => {
-				if (typeof options.auth === "function") {
-					await options.auth();
-				}
-				return createTestSession();
-			}
-		);
-		await expect(
-			maybeStartOrUpdateRemoteProxySession(
-				{
-					bindings: {
-						AI: { type: "ai" },
-						KV: { type: "kv_namespace", id: "kv", remote: true },
-					},
-				},
-				undefined,
-				auth,
-				{ cliDisplayName: "Wrangler", logger: createTestLogger() },
-				startSession
-			)
-		).rejects.toBe(error);
-		expect(auth).toHaveBeenCalledWith();
-	});
-
-	it("can authenticate after an unauthenticated config reload", async ({
-		expect,
-	}) => {
-		const logger = createTestLogger();
 		const startSession = vi
 			.fn<typeof startRemoteProxySession>()
-			.mockRejectedValueOnce(
-				new AuthenticationError(
-					"No credentials",
-					"no-credentials-non-interactive",
-					"test authentication failure"
-				)
-			)
-			.mockResolvedValueOnce(createTestSession());
-		const config = { bindings: { AI: { type: "ai" as const } } };
-		const previous = await maybeStartOrUpdateRemoteProxySession(
-			config,
+			.mockImplementation(async () => createTestSession());
+		const context: RemoteBindingsContext = {
+			cliDisplayName: "Wrangler",
+			logger: createTestLogger(),
+		};
+		const first = await maybeStartOrUpdateRemoteProxySession(
+			{ bindings: { AI: { type: "ai" } } },
 			undefined,
 			testAuth,
-			{ cliDisplayName: "Wrangler", logger },
+			context,
 			startSession
 		);
-		const next = await maybeStartOrUpdateRemoteProxySession(
-			config,
-			previous,
+		const removed = await maybeStartOrUpdateRemoteProxySession(
+			{ bindings: {} },
+			first,
 			testAuth,
-			{ cliDisplayName: "Wrangler", logger },
+			context,
 			startSession
 		);
-		expect(previous).toBeNull();
-		expect(next?.session).toBeDefined();
+		expect(removed?.session).toBe(first?.session);
+		const next = await maybeStartOrUpdateRemoteProxySession(
+			{ bindings: { KV: { type: "kv_namespace", id: "kv", remote: true } } },
+			removed,
+			testAuth,
+			context,
+			startSession
+		);
+		expect(first?.session.dispose).toHaveBeenCalledOnce();
+		expect(next?.session).not.toBe(first?.session);
 		expect(startSession).toHaveBeenCalledTimes(2);
+		expect(startSession).toHaveBeenLastCalledWith(
+			expect.anything(),
+			expect.objectContaining({ lazy: false })
+		);
 	});
-
 	it.for([undefined, true])(
 		"selects K2 bindings for remote development with remote=%s",
 		(remote, { expect }) => {
