@@ -171,7 +171,7 @@ export class BrowserSession extends MiniflareDurableObject<BrowserSessionEnv> {
 
 	@POST("/session-info")
 	setSessionInfoRoute: RouteHandler = async (req) => {
-		this.sessionInfo = await req.json();
+		this.sessionInfo = await req.json<SessionInfo>();
 		// Establish a persistent WebSocket to Chrome's DevTools endpoint.
 		// This serves as the health indicator for the session and is reused
 		// by the legacy chunked-framing client (/v1/connectDevtools).
