@@ -2413,20 +2413,22 @@ export class Miniflare {
 			}
 		}
 
+		if (this.#devRegistry.isEnabled()) {
+			await this.#devRegistry.watch(
+				externalServices,
+				hasQueues,
+				sharedOpts.unsafeEnableSharedStorage === true &&
+					sharedOpts.resourcePersistencePath !== undefined
+			);
+		}
+
+		// Bindings to Workers outside this instance always need the proxy, while
+		// queues and shared storage only use it to reach other dev sessions
 		if (
 			externalServices.size > 0 ||
 			(this.#devRegistry.isEnabled() &&
 				(hasQueues || sharedOpts.unsafeEnableSharedStorage))
 		) {
-			if (this.#devRegistry.isEnabled()) {
-				await this.#devRegistry.watch(
-					externalServices,
-					hasQueues,
-					sharedOpts.unsafeEnableSharedStorage === true &&
-						sharedOpts.resourcePersistencePath !== undefined
-				);
-			}
-
 			const externalObjects = Array.from(externalServices).flatMap(
 				([scriptName, { classNames }]) =>
 					Array.from(classNames).map<[string, string]>((className) => [
