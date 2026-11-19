@@ -23,6 +23,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {
