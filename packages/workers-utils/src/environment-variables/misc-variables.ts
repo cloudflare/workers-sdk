@@ -1,6 +1,4 @@
 import path from "node:path";
-import { dedent } from "ts-dedent";
-import { UserError } from "../errors";
 import { getGlobalConfigPath } from "../global-wrangler-config-path";
 import {
 	getBooleanEnvironmentVariableFactory,
@@ -131,20 +129,6 @@ export const getCloudflareComplianceRegion = (
 	complianceConfig: ComplianceConfig
 ) => {
 	const complianceRegionFromEnv = getCloudflareComplianceRegionFromEnv();
-	if (
-		complianceRegionFromEnv !== undefined &&
-		complianceConfig?.compliance_region !== undefined &&
-		complianceRegionFromEnv !== complianceConfig.compliance_region
-	) {
-		throw new UserError(
-			dedent`
-			The compliance region has been set to different values in two places:
-			 - \`CLOUDFLARE_COMPLIANCE_REGION\` environment variable: \`${complianceRegionFromEnv}\`
-			 - \`compliance_region\` configuration property: \`${complianceConfig.compliance_region}\`
-			`,
-			{ telemetryMessage: false }
-		);
-	}
 	return (
 		complianceRegionFromEnv || complianceConfig?.compliance_region || "public"
 	);
