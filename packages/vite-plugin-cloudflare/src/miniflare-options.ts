@@ -15,6 +15,7 @@ import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-binding
 import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
+	getLocalExplorerUseViteAllowedHostsFromEnv,
 	getLocalObservabilityEnabledFromEnv,
 	getWorkerZone,
 } from "@cloudflare/workers-utils";
@@ -644,6 +645,12 @@ export async function getDevMiniflareOptions(
 			inputInspectorPort === false ? undefined : inputInspectorPort,
 		unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 		unsafeTriggerHandlers: true,
+		// Trust Vite's hosts only with explicit opt-in; true never disables validation.
+		unsafeCdnCgiAllowedHosts:
+			getLocalExplorerUseViteAllowedHostsFromEnv() &&
+			serverConfig.allowedHosts !== true
+				? serverConfig.allowedHosts
+				: undefined,
 		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 		// The switch for local observability capture: tells Miniflare core to
 		// attach the trace collector to each user worker. Opt-in via the
@@ -909,6 +916,12 @@ export async function getPreviewMiniflareOptions(
 			inputInspectorPort === false ? undefined : inputInspectorPort,
 		unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 		unsafeTriggerHandlers: true,
+		// Trust Vite's hosts only with explicit opt-in; true never disables validation.
+		unsafeCdnCgiAllowedHosts:
+			getLocalExplorerUseViteAllowedHostsFromEnv() &&
+			serverConfig.allowedHosts !== true
+				? serverConfig.allowedHosts
+				: undefined,
 		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 		// The one switch for local observability: this env var tells Miniflare
 		// core to attach the trace collector to each user worker.

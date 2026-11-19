@@ -788,6 +788,10 @@ export function getGlobalServices({
 		WORKER_BINDING_SERVICE_LOOPBACK, // For converting stack-traces to pretty-error pages
 		{ name: CoreBindings.JSON_ROUTES, json: JSON.stringify(routes) },
 		{
+			name: CoreBindings.JSON_CDN_CGI_ALLOWED_HOSTS,
+			json: JSON.stringify(sharedOptions.unsafeCdnCgiAllowedHosts ?? []),
+		},
+		{
 			name: CoreBindings.TRIGGER_HANDLERS,
 			json: JSON.stringify(!!sharedOptions.unsafeTriggerHandlers),
 		},
