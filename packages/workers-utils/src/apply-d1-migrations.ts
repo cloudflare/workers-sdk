@@ -20,32 +20,6 @@ export type D1Migration = {
 	queries: string[];
 };
 
-/**
- * Default name of the table that records applied migrations. Wrangler and cf
- * use the same table, so a project can switch between tools.
- */
-export const DEFAULT_D1_MIGRATIONS_TABLE = "d1_migrations";
-
-function escapeId(id: string): string {
-	return `"${id.replace(/"/g, '""')}"`;
-}
-
-/**
- * Returns the query that creates the migrations table if it doesn't exist.
- *
- * @param migrationsTableName Name of the migrations table.
- * @returns The `CREATE TABLE IF NOT EXISTS` query.
- */
-export function getCreateD1MigrationsTableQuery(
-	migrationsTableName: string
-): string {
-	return `CREATE TABLE IF NOT EXISTS ${escapeId(migrationsTableName)} (
-		id         INTEGER PRIMARY KEY AUTOINCREMENT,
-		name       TEXT UNIQUE,
-		applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
-	);`;
-}
-
 // Checks methods, not `constructor.name`, so Miniflare's Node.js proxy for a
 // D1 binding (from `getD1Database()`) is accepted too.
 function isD1Database(v: unknown): v is D1Database {
@@ -84,12 +58,12 @@ function isD1Migrations(v: unknown): v is D1Migration[] {
  * @param migrations Migrations in the order to apply them, for example from
  * `readD1Migrations()`.
  * @param migrationsTableName Table that records applied migrations. Defaults
- * to {@link DEFAULT_D1_MIGRATIONS_TABLE}.
+ * to `d1_migrations`.
  */
 export async function applyD1Migrations(
 	db: D1Database,
 	migrations: D1Migration[],
-	migrationsTableName = DEFAULT_D1_MIGRATIONS_TABLE
+	migrationsTableName = "d1_migrations"
 ) {
 	if (!isD1Database(db)) {
 		throw new TypeError(
@@ -108,9 +82,16 @@ export async function applyD1Migrations(
 		);
 	}
 
+	const escapeId = (id: string) => `"${id.replace(/"/g, '""')}"`;
 	const escapedTableName = escapeId(migrationsTableName);
 
-	await db.prepare(getCreateD1MigrationsTableQuery(migrationsTableName)).run();
+	// Create migrations table if it doesn't exist
+	const schema = `CREATE TABLE IF NOT EXISTS ${escapedTableName} (
+		id         INTEGER PRIMARY KEY AUTOINCREMENT,
+		name       TEXT UNIQUE,
+		applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+	);`;
+	await db.prepare(schema).run();
 
 	// Find applied migrations
 	const appliedMigrationNamesResult = await db
