@@ -102,7 +102,9 @@ describe("triggersDeploy showDiff", () => {
 		await deploy({ showDiff: false, accountId: undefined });
 		expect(fetchResult).not.toHaveBeenCalled();
 		expect(fetchPagedListResult).not.toHaveBeenCalled();
-		expect(log).toHaveBeenCalledWith("--dry-run: exiting now.");
+		expect(log).toHaveBeenCalledWith(
+			`--dry-run: no changes will be made. No targets to deploy for ${WORKER_NAME}.`
+		);
 	});
 
 	it("preserves remote categories that deployment skips", async ({
