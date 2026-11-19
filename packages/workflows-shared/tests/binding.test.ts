@@ -230,6 +230,25 @@ describe("WorkflowBinding", () => {
 			);
 		});
 
+		it("should run null params as {}, like the production binding", async ({
+			expect,
+		}) => {
+			const id = uniqueId("null-params");
+			const binding = createBinding();
+			setTestWorkflowCallback(async (event) => {
+				return (event as WorkflowEvent<unknown>).payload;
+			});
+
+			await binding.create({ id, params: null });
+			await waitUntilLogEvent(
+				env.ENGINE.get(env.ENGINE.idFromName(id)),
+				InstanceEvent.WORKFLOW_SUCCESS
+			);
+
+			const status = await (await binding.get(id)).status();
+			expect(status.output).toEqual({});
+		});
+
 		it("should reject params that the engine cannot store", async ({
 			expect,
 		}) => {

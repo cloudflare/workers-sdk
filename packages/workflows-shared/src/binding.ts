@@ -512,18 +512,22 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			throw duplicateInstanceError(id);
 		}
 
+		// Like the production binding, run the instance with {} when the params
+		// are null.
+		const params = createOptions.params ?? {};
+
 		// The production engine stores params with the instance, after its
 		// duplicate check, and rejects params that storage cannot clone. The local
 		// engine stores them after create() has returned, so they would leave the
 		// instance queued forever.
-		if (!canStoreInstanceParams(createOptions.params)) {
+		if (!canStoreInstanceParams(params)) {
 			throw createBindingError(
 				"Provided instance parameters are not serializable",
 				"body"
 			);
 		}
 
-		return this.#createUnchecked(id, createOptions);
+		return this.#createUnchecked(id, { ...createOptions, params });
 	}
 
 	// Creation body shared by create() and createBatch(), which perform their
