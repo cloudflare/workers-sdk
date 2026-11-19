@@ -1272,6 +1272,10 @@ test("Miniflare: fails calls to Workers that aren't running", async ({
 					manifest: singleModuleManifest(`
 						export default {
 							async fetch(request, env) {
+								if (new URL(request.url).pathname === "/flow") {
+									const flow = await env.FLOW.get("flow");
+									return Response.json(await flow.status());
+								}
 								const api = await env.API.fetch("http://api/");
 								let counter;
 								try {
@@ -1282,7 +1286,7 @@ test("Miniflare: fails calls to Workers that aren't running", async ({
 									counter = error.message;
 								}
 								// Its run fails when the Engine calls the Workflow's Worker
-								await env.FLOW.create();
+								await env.FLOW.create({ id: "flow" });
 								return Response.json({ api: [api.status, await api.text()], counter });
 							}
 						};
@@ -1299,6 +1303,13 @@ test("Miniflare: fails calls to Workers that aren't running", async ({
 	expect(await response.json()).toEqual({
 		api: [503, notFound],
 		counter: [503, notFound],
+	});
+	await vi.waitFor(async () => {
+		const flow = await mf.dispatchFetch("http://localhost/flow");
+		expect(await flow.json()).toMatchObject({
+			status: "errored",
+			error: { message: notFound },
+		});
 	});
 });
 
