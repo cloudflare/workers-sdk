@@ -149,6 +149,28 @@ describe("cf-wrangler dev", () => {
 		}
 	);
 
+	// https://github.com/cloudflare/workers-sdk/issues/17040
+	it.for([["--env-file", "../../.env"], ["--env-file=../../.env"]])(
+		"passes a forwarded --env-file path from the binary to startDev: %j",
+		async (argv, { expect }) => {
+			const devEnv = new EventEmitter();
+			mocks.startDev.mockResolvedValue({ devEnv, secondary: [] });
+			const runDev = vi.fn(runCfWranglerDev);
+			const { exit, stderr } = invokeBin(["dev", ...argv], runDev);
+
+			expect(stderr).not.toHaveBeenCalled();
+			expect(exit).not.toHaveBeenCalledWith(2);
+			await vi.waitFor(() => expect(devEnv.listenerCount("teardown")).toBe(1));
+			const [options] = mocks.startDev.mock.calls[0] ?? [];
+			expect(
+				(options?.envFile as string[] | undefined)?.map((p) => path.resolve(p))
+			).toEqual([path.resolve("../../.env")]);
+
+			devEnv.emit("teardown");
+			await expect(runDev.mock.results[0]?.value).resolves.toBe(0);
+		}
+	);
+
 	it.for([
 		{
 			options: { nodeCompat: true },
