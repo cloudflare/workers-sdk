@@ -5,7 +5,10 @@ import {
 	inputPrompt,
 	spinner,
 } from "@cloudflare/cli-shared-helpers/interactive";
-import { transformFile } from "@cloudflare/shared-ast-primitives";
+import {
+	mergeObjectProperties,
+	transformFile,
+} from "@cloudflare/shared-ast-primitives";
 import { runFrameworkGenerator } from "frameworks/index";
 import { readJSON, usesTypescript, writeJSON } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
@@ -72,7 +75,8 @@ function transformViteConfig(ctx: C3Context) {
 			// Add the imported plugin to the config
 			// ```
 			// defineConfig({
-			//   plugins: [react(), cloudflare()],
+			//   plugins: [react(), cloudflare({ viteEnvironment: { name: "worker" } })],
+			//   environments: { worker: { build: { sourcemap: true } } },
 			// });
 			const callee = n.node.callee as types.namedTypes.Identifier;
 			if (callee.name !== "defineConfig") {
@@ -84,8 +88,42 @@ function transformViteConfig(ctx: C3Context) {
 			const pluginsProp = config.properties.find((prop) => isPluginsProp(prop));
 			assert(pluginsProp && t.ArrayExpression.check(pluginsProp.value));
 			pluginsProp.value.elements.push(
-				b.callExpression(b.identifier("cloudflare"), [])
+				b.callExpression(b.identifier("cloudflare"), [
+					b.objectExpression([
+						b.objectProperty(
+							b.identifier("viteEnvironment"),
+							b.objectExpression([
+								b.objectProperty(
+									b.identifier("name"),
+									b.stringLiteral("worker")
+								),
+							])
+						),
+					]),
+				])
 			);
+
+			mergeObjectProperties(config, [
+				b.objectProperty(
+					b.identifier("environments"),
+					b.objectExpression([
+						b.objectProperty(
+							b.identifier("worker"),
+							b.objectExpression([
+								b.objectProperty(
+									b.identifier("build"),
+									b.objectExpression([
+										b.objectProperty(
+											b.identifier("sourcemap"),
+											b.booleanLiteral(true)
+										),
+									])
+								),
+							])
+						),
+					])
+				),
+			]);
 
 			return false;
 		},

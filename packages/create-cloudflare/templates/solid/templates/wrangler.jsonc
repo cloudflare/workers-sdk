@@ -1,6 +1,7 @@
 {
   "name": "<WORKER_NAME>",
   "compatibility_date": "<COMPATIBILITY_DATE>",
+  "upload_source_maps": true,
   "observability": {
     "enabled": true
   }

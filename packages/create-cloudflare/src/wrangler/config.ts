@@ -79,7 +79,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 			wranglerJson = appendJSONProperty(
 				wranglerJson,
 				"upload_source_maps",
-				true
+				wranglerJson.upload_source_maps ?? true
 			);
 			wranglerJson = applyNodejsCompatFlags(wranglerJson, compatibilityDate);
 		}

@@ -2,6 +2,7 @@
 	"name": "<WORKER_NAME>",
 	"compatibility_date": "<COMPATIBILITY_DATE>",
 	"main": "server/index.js",
+	"upload_source_maps": true,
 	"assets": {
 		"not_found_handling": "single-page-application",
 	},
