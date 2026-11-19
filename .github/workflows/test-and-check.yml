@@ -36,6 +36,9 @@ jobs:
       - run: pnpm check
         env:
           NODE_OPTIONS: --max_old_space_size=8192
+      # The repository check above builds the plugin before this check runs.
+      - name: Check Vite plugin build output
+        run: node -r esbuild-register tools/test/check-built-entry-points.ts vite-plugin-cloudflare
   test:
     name: Tests (${{ matrix.description }}, ${{ matrix.suite }})
     runs-on: ${{ matrix.os }}

@@ -74,7 +74,7 @@
 		"semver": "7.8.5",
 		"tinyglobby": "0.2.16",
 		"tree-kill": "1.2.2",
-		"tsdown": "0.16.3",
+		"tsdown": "catalog:default",
 		"typescript": "5.8.3",
 		"vite": "catalog:default",
 		"vite-legacy": "npm:vite@7.1.12",
