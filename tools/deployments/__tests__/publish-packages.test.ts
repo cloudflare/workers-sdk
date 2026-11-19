@@ -312,6 +312,7 @@ describe("the real workspace", () => {
 			  [
 			    "@cloudflare/autoconfig",
 			    "@cloudflare/containers-shared",
+			    "@cloudflare/test-harness",
 			    "@cloudflare/vite-plugin",
 			  ],
 			  [
