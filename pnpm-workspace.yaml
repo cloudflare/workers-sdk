@@ -119,6 +119,11 @@ peerDependencyRules:
     react-dom: "18"
     "@types/react": "18"
     "@types/react-dom": "18"
+    # The latest unbuild and Remix releases work with TypeScript 6 but still
+    # declare TypeScript 5 peer ranges.
+    "unbuild>typescript": "6"
+    "@remix-run/cloudflare>typescript": "6"
+    "@remix-run/server-runtime>typescript": "6"
 
 patchedDependencies:
   "@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch"
