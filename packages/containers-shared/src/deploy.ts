@@ -19,7 +19,7 @@ import {
 	dim,
 	green,
 } from "@cloudflare/cli-shared-helpers/colors";
-import { formatConfigSnippet } from "@cloudflare/workers-utils";
+import { formatConfigSnippet } from "@cloudflare/workers-utils/config";
 import { FatalError, UserError } from "@cloudflare/workers-utils/errors";
 import {
 	ApiError,
@@ -47,10 +47,9 @@ import type {
 import type { ContainerNormalizedConfig } from "./types";
 import type {
 	ComplianceConfig,
-	Config,
-	ContainerApp,
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
+import type { Config, ContainerApp } from "@cloudflare/workers-utils/config";
 
 type DeployContainersArgs = {
 	dispatchNamespace?: string;

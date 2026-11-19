@@ -2,11 +2,11 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { isDeepStrictEqual } from "node:util";
 import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
+import { getDockerPath } from "@cloudflare/workers-utils";
 import {
 	configFileName,
 	createArtifactsLocalDefaultWarner,
-	getDockerPath,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
 import {
 	buildPublicUrl,

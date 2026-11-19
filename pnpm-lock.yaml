@@ -2116,6 +2116,9 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 5.20261119.1
       '@cspotcode/source-map-support':
         specifier: 0.8.1
         version: 0.8.1
@@ -2137,15 +2140,70 @@ importers:
       esbuild:
         specifier: catalog:default
         version: 0.28.2
-      hash-wasm:
-        specifier: 4.13.0
-        version: 4.13.0
       json-diff:
         specifier: ^1.0.6
         version: 1.0.6
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0
+      tsdown:
+        specifier: catalog:default
+        version: 0.22.14(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
+      typescript:
+        specifier: catalog:default
+        version: 6.0.3
+      vitest:
+        specifier: catalog:default
+        version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@6.0.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
+
+  packages/dev-helpers:
+    dependencies:
+      '@cloudflare/config':
+        specifier: workspace:*
+        version: link:../config
+      '@cloudflare/containers-shared':
+        specifier: workspace:*
+        version: link:../containers-shared
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
+      miniflare:
+        specifier: workspace:*
+        version: link:../miniflare
+      undici:
+        specifier: catalog:default
+        version: 7.30.2
+    devDependencies:
+      '@cloudflare/pages-shared':
+        specifier: workspace:*
+        version: link:../pages-shared
+      '@cloudflare/workers-shared':
+        specifier: workspace:*
+        version: link:../workers-shared
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 5.20261119.1
+      '@types/mime':
+        specifier: ^3.0.4
+        version: 3.0.4
+      '@types/node':
+        specifier: 22.15.17
+        version: 22.15.17
+      chokidar:
+        specifier: 4.0.3
+        version: 4.0.3
+      dotenv:
+        specifier: catalog:default
+        version: 16.3.1
+      dotenv-expand:
+        specifier: 12.0.2
+        version: 12.0.2
+      mime:
+        specifier: 3.0.0
+        version: 3.0.0
       tsdown:
         specifier: catalog:default
         version: 0.22.14(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
@@ -4176,9 +4234,6 @@ importers:
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
-      wrangler:
-        specifier: workspace:*
-        version: link:../wrangler
       zod:
         specifier: catalog:default
         version: 4.6.6
@@ -4192,6 +4247,9 @@ importers:
       '@cloudflare/containers-shared':
         specifier: workspace:*
         version: link:../containers-shared
+      '@cloudflare/dev-helpers':
+        specifier: workspace:*
+        version: link:../dev-helpers
       '@cloudflare/mock-npm-registry':
         specifier: workspace:*
         version: link:../mock-npm-registry
@@ -4552,6 +4610,9 @@ importers:
       empathic:
         specifier: ^2.0.0
         version: 2.0.0
+      hash-wasm:
+        specifier: 4.13.0
+        version: 4.13.0
       jsonc-parser:
         specifier: catalog:default
         version: 3.2.0
@@ -4692,12 +4753,12 @@ importers:
       '@cloudflare/deploy-helpers':
         specifier: workspace:*
         version: link:../deploy-helpers
+      '@cloudflare/dev-helpers':
+        specifier: workspace:*
+        version: link:../dev-helpers
       '@cloudflare/pages-functions':
         specifier: workspace:*
         version: link:../pages-functions
-      '@cloudflare/pages-shared':
-        specifier: workspace:^
-        version: link:../pages-shared
       '@cloudflare/remote-bindings':
         specifier: workspace:*
         version: link:../remote-bindings
@@ -4818,9 +4879,6 @@ importers:
       dotenv:
         specifier: catalog:default
         version: 16.3.1
-      dotenv-expand:
-        specifier: ^12.0.2
-        version: 12.0.2
       empathic:
         specifier: ^2.0.0
         version: 2.0.0

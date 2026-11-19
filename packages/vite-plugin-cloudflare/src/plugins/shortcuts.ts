@@ -1,8 +1,6 @@
 import { convertToWranglerConfig } from "@cloudflare/config";
-import {
-	convertConfigToBindings,
-	printBindings,
-} from "@cloudflare/workers-utils";
+import { printBindings } from "@cloudflare/workers-utils";
+import { convertConfigToBindings } from "@cloudflare/workers-utils/config";
 import {
 	CorePaths,
 	getDefaultDevRegistryPath,
@@ -20,7 +18,7 @@ import type {
 	ParsedBuildOutputContainerConfig,
 	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
-import type { ContainerApp } from "@cloudflare/workers-utils";
+import type { ContainerApp } from "@cloudflare/workers-utils/config";
 import type * as vite from "vite";
 
 export const shortcutsPlugin = createPlugin("shortcuts", (ctx) => {

@@ -38,7 +38,7 @@ import type {
 	Trigger,
 } from "../api";
 import type { StartDevOptions } from "../dev";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 import type { ExpectStatic } from "vitest";
 import type { Mock, MockInstance } from "vitest";
 

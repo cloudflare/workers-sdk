@@ -10,7 +10,8 @@ import { assertIsNotPreview, assertIsPreview } from "../context";
 import { createPlugin, debuglog } from "../utils";
 import type { PluginContext } from "../context";
 import type { CloudflareAuth } from "@cloudflare/workers-auth/cf";
-import type { Config, Tunnel } from "@cloudflare/workers-utils";
+import type { Tunnel } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type * as vite from "vite";
 
 function createPublicExposureWarning(

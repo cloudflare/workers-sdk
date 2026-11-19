@@ -51,7 +51,7 @@ import {
 import { getMswSuccessMembershipHandlers } from "./helpers/msw/handlers/user";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { UserAuthConfig } from "../user";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 describe("User", () => {
 	runInTempDir();

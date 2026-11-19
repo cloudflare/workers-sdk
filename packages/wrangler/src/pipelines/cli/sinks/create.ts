@@ -1,9 +1,8 @@
+import { CommandLineArgsError, UserError } from "@cloudflare/workers-utils";
 import {
 	bucketFormatMessage,
-	CommandLineArgsError,
 	isValidR2BucketName,
-	UserError,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";

@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { BUILD_OUTPUT_ROOT } from "@cloudflare/build-output-utils";
 import { UserError } from "@cloudflare/workers-utils";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 const CF_DOCS_URL = "https://developers.cloudflare.com/cf/";
 

@@ -19,7 +19,7 @@ import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import type { PagesConfigCache } from "./types";
 import type { Project } from "@cloudflare/types";
-import type { RawEnvironment } from "@cloudflare/workers-utils";
+import type { RawEnvironment } from "@cloudflare/workers-utils/config";
 
 // TODO: fix the Project definition
 type DeploymentConfig = Project["deployment_configs"]["production"];

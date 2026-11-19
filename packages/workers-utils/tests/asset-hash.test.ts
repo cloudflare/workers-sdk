@@ -2,7 +2,7 @@ import { writeFileSync } from "node:fs";
 import { stat } from "node:fs/promises";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
-import { createFileHasher } from "../src/deploy/helpers/hash";
+import { createFileHasher } from "../src/asset-hash";
 
 // Golden values pre-computed from blake3-wasm@2.1.5 to lock in byte-for-byte
 // compatibility with the previous implementation. These must never change —

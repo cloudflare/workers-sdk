@@ -1,9 +1,9 @@
 import { URLSearchParams } from "node:url";
 import {
-	configFileName,
 	mapWorkerMetadataBindings,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
 import * as TOML from "smol-toml";
 import { FormData } from "undici";
@@ -18,10 +18,10 @@ import { printWranglerBanner } from "./wrangler-banner";
 import type { CommonYargsOptions } from "./yargs-types";
 import type {
 	ComplianceConfig,
-	Config,
 	ServiceMetadataRes,
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type { ArgumentsCamelCase } from "yargs";
 
 type DeploymentDetails = {

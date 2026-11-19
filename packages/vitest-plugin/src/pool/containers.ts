@@ -17,7 +17,8 @@ import type {
 	ContainerDevRuntimeOptions,
 	ViteLogger,
 } from "@cloudflare/containers-shared";
-import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type { V4MiniflareOptions } from "miniflare";
 import type { TestProject, Vitest } from "vitest/node";
 

@@ -1,11 +1,13 @@
 import {
 	APIError,
-	configFileName,
 	FatalError,
-	formatConfigSnippet,
 	getCIMatchTag,
 	getEnvironmentVariableFactory,
 } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	formatConfigSnippet,
+} from "@cloudflare/workers-utils/config";
 import { fetchResult, logger } from "../../shared/context";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type {

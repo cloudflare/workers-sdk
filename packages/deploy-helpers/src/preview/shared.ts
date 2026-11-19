@@ -1,13 +1,15 @@
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import {
-	configFileName,
 	getCIOverrideName,
-	getDurableObjectExports,
 	getWorkersCIBranchName,
-	isLiveDurableObjectExport,
 	UserError,
 } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	getDurableObjectExports,
+	isLiveDurableObjectExport,
+} from "@cloudflare/workers-utils/config";
 import { gitCommandText, resolveGitBranchName } from "../shared/git-branch";
 import { shortHash, truncateWithSuffix } from "../shared/names";
 import type { Binding, EnvBindings, UpdatePreviewRequestParams } from "./api";
@@ -16,7 +18,7 @@ import type {
 	PreviewsConfig,
 	RawConfig,
 	RawEnvironment,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 const MAX_CONTAINER_APP_NAME_LENGTH = 253;
 

@@ -1,4 +1,4 @@
-import { getBindingTypeFriendlyName } from "@cloudflare/workers-utils";
+import { getBindingTypeFriendlyName } from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
 import { padToVisibleWidth, visibleLength } from "./box";
 import { getBindingValue } from "./shared";

@@ -24,7 +24,7 @@ import { runWrangler } from "../helpers/run-wrangler";
 import type { Binding } from "../../api";
 import type { StartDevOptions } from "../../dev";
 import type { StartRemoteProxySessionOptions } from "@cloudflare/remote-bindings";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 import type { RemoteProxyConnectionString, V4WorkerOptions } from "miniflare";
 
 const devReadyTimeout = process.platform === "win32" ? 30_000 : 5_000;

@@ -1,7 +1,7 @@
 import { describe, it } from "vitest";
 import { convertWranglerConfig } from "../../src/codemods/wrangler-to-cf/config-converter";
 import { renderCloudflareConfig } from "../../src/codemods/wrangler-to-cf/config-renderer";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 describe("tail consumer conversion", () => {
 	it("moves streaming tail consumers under `experimental`", ({ expect }) => {

@@ -1,10 +1,10 @@
 import {
 	APIError,
-	configFileName,
 	getComplianceRegionSubdomain,
 	retryOnAPIFailure,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
 import { confirm, fetchResult, logger, prompt } from "../shared/context";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";

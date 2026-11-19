@@ -7,7 +7,7 @@ import { Cloudflare as CloudflareSDK } from "cloudflare";
 import { version as wranglerVersion } from "../../package.json";
 import { logger } from "../logger";
 import { requireApiToken, requireAuth } from "../user";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type Cloudflare from "cloudflare";
 import type { CloudflareTunnel } from "cloudflare/resources/shared";
 import type { CloudflaredCreateResponse } from "cloudflare/resources/zero-trust/tunnels/cloudflared";

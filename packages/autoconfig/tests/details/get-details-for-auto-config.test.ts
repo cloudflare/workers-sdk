@@ -11,7 +11,7 @@ import { afterEach, describe, it, vi } from "vitest";
 import * as details from "../../src/details";
 import { detectFramework } from "../../src/details/framework-detection";
 import { createMockContext } from "../helpers/mock-context";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 const fileSystemErrors = vi.hoisted(() => ({
 	readdir: new Map<string, string>(),

@@ -56,7 +56,8 @@ import type {
 	AutoConfigSummary,
 } from "./types";
 import type { WorkerConfig } from "@cloudflare/config";
-import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
+import type { PackageJSON } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 /**
  * Runs the full autoconfig flow: displays detected settings, confirms with the user,

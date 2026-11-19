@@ -1,13 +1,15 @@
 import assert from "node:assert";
 import {
-	configFileName,
 	DEFAULT_COMPAT_DATE,
-	experimental_patchConfig,
-	formatConfigSnippet,
-	isDurableObjectContainerApp,
 	isNonInteractiveOrCI,
 	UserError,
 } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	experimental_patchConfig,
+	formatConfigSnippet,
+	isDurableObjectContainerApp,
+} from "@cloudflare/workers-utils/config";
 import { confirm, fetchResult, logger } from "../../shared/context";
 import { partitionRoutes } from "../../shared/partition-routes";
 import {
@@ -30,7 +32,8 @@ import type {
 	DeployProps,
 	VersionsUploadProps,
 } from "../../shared/types";
-import type { AssetsOptions, RawConfig } from "@cloudflare/workers-utils";
+import type { AssetsOptions } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 /**
  *

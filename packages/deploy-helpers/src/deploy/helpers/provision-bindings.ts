@@ -1,14 +1,16 @@
 import assert from "node:assert";
 import {
 	APIError,
-	experimental_patchConfig,
-	experimental_readRawConfig,
 	INHERIT_SYMBOL,
 	isNonInteractiveOrCI,
-	PatchConfigError,
 	printBindings,
 	UserError,
 } from "@cloudflare/workers-utils";
+import {
+	experimental_patchConfig,
+	experimental_readRawConfig,
+	PatchConfigError,
+} from "@cloudflare/workers-utils/config";
 import dedent from "ts-dedent";
 import {
 	fetchListResult,
@@ -29,11 +31,10 @@ import type {
 	CfKvNamespace,
 	CfR2Bucket,
 	ComplianceConfig,
-	Config,
-	RawConfig,
 	StartDevWorkerInput,
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
+import type { Config, RawConfig } from "@cloudflare/workers-utils/config";
 
 export type Settings = {
 	bindings: Array<WorkerMetadataBinding>;

@@ -2,13 +2,15 @@ import { FormData } from "undici";
 import { fetchResult } from "../shared/context";
 import type {
 	CfWorkerInit,
-	CacheOptions,
 	CfPlacement,
 	CfUserLimits,
-	Config,
 	Json,
-	Observability,
 } from "@cloudflare/workers-utils";
+import type {
+	CacheOptions,
+	Config,
+	Observability,
+} from "@cloudflare/workers-utils/config";
 
 export interface Binding {
 	type: string;

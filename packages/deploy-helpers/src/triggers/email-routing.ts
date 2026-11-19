@@ -20,7 +20,7 @@ import type {
 	EmailRoutingPlanRequest,
 	EmailRoutingPlanResponse,
 } from "./email-routing-plan";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 /**
  * Network side of the `addresses` config field: plan the change set via the

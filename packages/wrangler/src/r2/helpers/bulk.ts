@@ -1,9 +1,6 @@
 import fs from "node:fs";
-import {
-	isRequiredProperty,
-	readFileSync,
-	UserError,
-} from "@cloudflare/workers-utils";
+import { readFileSync, UserError } from "@cloudflare/workers-utils";
+import { isRequiredProperty } from "@cloudflare/workers-utils/config";
 import prettyBytes from "pretty-bytes";
 import { logger } from "../../logger";
 import { MAX_UPLOAD_SIZE_BYTES } from "../constants";

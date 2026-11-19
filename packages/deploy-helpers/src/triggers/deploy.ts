@@ -1,13 +1,13 @@
 import assert from "node:assert";
 import {
 	APIError,
-	configFileName,
 	formatTime,
 	getSubdomainMixedStateCheckDisabled,
 	isNonInteractiveOrCI,
 	retryOnAPIFailure,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
 import PQueue from "p-queue";
 import { diffJsonObjects } from "../deploy/helpers/diff-json";
@@ -45,7 +45,7 @@ import type {
 	Config,
 	CustomDomainRoute,
 	Route,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 export const PREVIEW_DOMAIN_PROVISIONING_NOTE =
 	"Note: DNS and TLS certificate provisioning for Preview domains may continue after this deploy. If a new Preview URL does not work immediately, wait a few minutes and retry.";

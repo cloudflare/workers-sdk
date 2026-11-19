@@ -39,7 +39,7 @@
 		"build": "tsdown",
 		"check:type": "tsc -p ./tsconfig.json",
 		"deploy": "echo 'no deploy'",
-		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsdown --watch\" \"pnpm run check:type --watch --preserveWatchOutput\"",
+		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsdown --watch\" \"pnpm exec tsc -p tsconfig.json --watch --preserveWatchOutput\"",
 		"test": "vitest",
 		"test:ci": "vitest run",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
@@ -62,6 +62,7 @@
 	"devDependencies": {
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@types/command-exists": "^1.2.0",
 		"@types/json-diff": "^1.0.3",
@@ -69,7 +70,6 @@
 		"@types/ws": "^8.5.7",
 		"concurrently": "^8.2.2",
 		"esbuild": "catalog:default",
-		"hash-wasm": "4.13.0",
 		"json-diff": "^1.0.6",
 		"ts-dedent": "^2.2.0",
 		"tsdown": "catalog:default",

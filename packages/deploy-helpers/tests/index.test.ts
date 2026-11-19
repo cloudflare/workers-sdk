@@ -8,7 +8,8 @@ import {
 } from "@cloudflare/deploy-helpers";
 import { logger } from "@cloudflare/deploy-helpers/context";
 import { describe, it, vi } from "vitest";
-import type { Config, Logger } from "@cloudflare/workers-utils";
+import type { Logger } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 describe("context singleton", () => {
 	// Verifies that both package entry points (. and ./context) share the same

@@ -1,11 +1,9 @@
 import { readFileSync } from "node:fs";
+import { APIError, parseJSON, UserError } from "@cloudflare/workers-utils";
 import {
-	APIError,
 	bucketFormatMessage,
 	isValidR2BucketName,
-	parseJSON,
-	UserError,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
 import { createCommand } from "../../core/create-command";
 import { confirm, prompt, select } from "../../dialogs";
@@ -42,7 +40,7 @@ import type {
 	SinkFormat,
 	Stream,
 } from "../types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 function getErrorMessage(error: unknown, fallback: string): string {
 	if (error instanceof APIError && error.notes.length > 0) {

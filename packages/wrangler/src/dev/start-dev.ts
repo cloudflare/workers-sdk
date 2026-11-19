@@ -25,7 +25,8 @@ import type { StartDevOptionsBindings } from "../api/startDevWorker/binding-util
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { CfAccount } from "./create-worker-preview";
-import type { Config } from "@cloudflare/workers-utils";
+import type { ServiceFetch } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 /**
  * Starts one (primary) or more (secondary) DevEnv environments given the `args`.
@@ -315,23 +316,15 @@ async function getPagesAssetsFetcher(
 	options: EnablePagesAssetsServiceBindingOptions | undefined
 ): Promise<StartDevWorkerInput["bindings"] | undefined> {
 	if (options !== undefined) {
-		/* eslint-disable-next-line @typescript-eslint/no-require-imports --
-		  `./miniflare-cli/assets` dynamically imports`@cloudflare/pages-shared/environment-polyfills`.
-		  `@cloudflare/pages-shared/environment-polyfills/types.ts` defines `global`
-		  augmentations that pollute the `import`-site's typing environment.
-
-		  We `require` instead of `import`ing here to avoid polluting the main
-		  `wrangler` TypeScript project with the `global` augmentations. This
-		  relies on the fact that `require` is untyped.
-		*/
-		const generateASSETSBinding = require("../miniflare-cli/assets").default;
+		const { generateASSETSBinding } =
+			await import("@cloudflare/dev-helpers/pages-assets");
 		return {
 			ASSETS: {
 				type: "fetcher",
-				fetcher: await generateASSETSBinding({
+				fetcher: (await generateASSETSBinding({
 					log: logger,
 					...options,
-				}),
+				})) as unknown as ServiceFetch,
 			},
 		};
 	}

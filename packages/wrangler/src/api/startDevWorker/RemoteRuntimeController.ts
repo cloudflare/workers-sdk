@@ -42,7 +42,7 @@ import type {
 	ReloadStartEvent,
 } from "./events";
 import type { Bundle, StartDevWorkerOptions, Trigger } from "./types";
-import type { Route } from "@cloudflare/workers-utils";
+import type { Route } from "@cloudflare/workers-utils/config";
 
 type CreateRemoteWorkerInitProps = Parameters<typeof createRemoteWorkerInit>[0];
 

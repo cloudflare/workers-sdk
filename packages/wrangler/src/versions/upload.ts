@@ -6,10 +6,8 @@ import {
 	versionsUpload,
 	type AssetUploadStats,
 } from "@cloudflare/deploy-helpers";
-import {
-	getDockerPath,
-	getDurableObjectContainerApps,
-} from "@cloudflare/workers-utils";
+import { getDockerPath } from "@cloudflare/workers-utils";
+import { getDurableObjectContainerApps } from "@cloudflare/workers-utils/config";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { containersScope } from "../containers";

@@ -1,6 +1,7 @@
 import { describe, it } from "vitest";
 import { buildMiniflareBindingOptions } from "../../dev/miniflare";
-import type { ArtifactsEventTrigger, Binding } from "@cloudflare/workers-utils";
+import type { Binding } from "@cloudflare/workers-utils";
+import type { ArtifactsEventTrigger } from "@cloudflare/workers-utils/config";
 
 const CREATED: ArtifactsEventTrigger = {
 	type: "cf.artifacts.repo.created",

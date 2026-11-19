@@ -2,14 +2,14 @@ import assert from "node:assert";
 import {
 	configFileName,
 	getDurableObjectExports,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import { fetchResult, logger } from "../../shared/context";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type {
 	CfWorkerInit,
-	Config,
 	ServiceMetadataRes,
 } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 /**
  * For a given Worker + migrations config, figure out which migrations

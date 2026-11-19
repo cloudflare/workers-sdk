@@ -4,13 +4,15 @@ import {
 } from "@cloudflare/containers-shared";
 import { deploy } from "@cloudflare/deploy-helpers";
 import {
-	configFileName,
 	DEFAULT_COMPAT_DATE,
 	getDockerPath,
-	getDurableObjectContainerApps,
 	getWorkerNameFromProject,
 	isNonInteractiveOrCI,
 } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	getDurableObjectContainerApps,
+} from "@cloudflare/workers-utils/config";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { containersScope } from "../containers";
@@ -46,7 +48,7 @@ import { getScriptName } from "../utils/getScriptName";
 import { durableObjectsCodeUpdateModeArg } from "../versions/deployment-args";
 import { maybeRunAutoConfig, promptForMissingDeployConfig } from "./autoconfig";
 import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export const deployCommand = createCommand({
 	metadata: {

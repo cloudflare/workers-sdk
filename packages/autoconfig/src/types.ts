@@ -3,7 +3,8 @@ import type { Framework } from "./frameworks/framework-class";
 import type { BuildConfig } from "./frameworks/framework-class";
 import type { WorkerConfig } from "@cloudflare/config";
 import type { PackageManager } from "@cloudflare/workers-utils";
-import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
+import type { PackageJSON } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 /** Makes the specified keys of T optional. */
 type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;

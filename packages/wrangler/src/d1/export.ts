@@ -5,7 +5,8 @@ import {
 	spinner,
 	spinnerWhile,
 } from "@cloudflare/cli-shared-helpers/interactive";
-import { APIError, configFileName, UserError } from "@cloudflare/workers-utils";
+import { APIError, UserError } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { fetch } from "undici";
@@ -18,7 +19,8 @@ import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
 import type { Database, ExportPollingResponse, PollingFailure } from "./types";
-import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 /**
  * Dump formats that the D1 export API accepts as `dump_options.compatibility`.

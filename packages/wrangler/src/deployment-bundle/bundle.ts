@@ -26,14 +26,12 @@ import { writeAdditionalModules } from "./find-additional-modules";
 import { noopModuleCollector } from "./module-collection";
 import type { MiddlewareLoader } from "./apply-middleware";
 import type { ModuleCollector } from "./module-collection";
+import type { CfModule, CfModuleType, Entry } from "@cloudflare/workers-utils";
 import type {
-	CfModule,
-	CfModuleType,
 	Config,
 	DurableObjectBindings,
-	Entry,
 	WorkflowBinding,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import type { NodeJSCompatMode } from "@cloudflare/workers-utils/node-compat";
 
 // Taken from https://stackoverflow.com/a/3561711

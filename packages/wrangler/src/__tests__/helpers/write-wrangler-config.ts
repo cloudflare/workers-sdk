@@ -1,13 +1,16 @@
 import * as fs from "node:fs";
 import { dirname, relative } from "node:path";
 import {
-	formatConfigSnippet,
 	parseJSONC,
 	parseTOML,
 	PATH_TO_DEPLOY_CONFIG,
 	readFileSync,
 } from "@cloudflare/workers-utils";
-import type { RawConfig, RedirectedRawConfig } from "@cloudflare/workers-utils";
+import { formatConfigSnippet } from "@cloudflare/workers-utils/config";
+import type {
+	RawConfig,
+	RedirectedRawConfig,
+} from "@cloudflare/workers-utils/config";
 
 /** Write a mock wrangler config file to disk. */
 export function writeWranglerConfig(

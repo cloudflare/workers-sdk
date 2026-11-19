@@ -24,7 +24,7 @@ import { mockConsoleMethods } from "../../helpers/mock-console";
 import { useTeardown } from "../../helpers/teardown";
 import { unusable } from "../../helpers/unusable";
 import type { Bundle, File, StartDevWorkerOptions } from "../../../api";
-import type { Config, Rule } from "@cloudflare/workers-utils";
+import type { Config, Rule } from "@cloudflare/workers-utils/config";
 
 export type Module<ModuleType extends Rule["type"] = Rule["type"]> = File<
 	string | Uint8Array

@@ -23,7 +23,7 @@ import type {
 	InstanceStatusAndLogs,
 	Workflow,
 } from "../workflows/types";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 import type { ExpectStatic } from "vitest";
 
 describe("wrangler workflows", () => {

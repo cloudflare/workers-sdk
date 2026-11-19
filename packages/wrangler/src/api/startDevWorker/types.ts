@@ -13,17 +13,16 @@ import type {
 	CfAccount,
 	CfModule,
 	CfScriptFormat,
-	Config,
 	File,
 	Hook,
 	HookValues,
 	LogLevel,
 	NodeJSCompatMode,
-	Rule,
 	ServiceFetch,
 	StartDevWorkerInput,
 	Trigger,
 } from "@cloudflare/workers-utils";
+import type { Config, Rule } from "@cloudflare/workers-utils/config";
 import type { DispatchFetch, Miniflare, WorkerdStructuredLog } from "miniflare";
 import type * as undici from "undici";
 

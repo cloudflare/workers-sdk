@@ -6,7 +6,8 @@ import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
-import type { CfModule, Environment, Rule } from "@cloudflare/workers-utils";
+import type { CfModule } from "@cloudflare/workers-utils";
+import type { Environment, Rule } from "@cloudflare/workers-utils/config";
 import type { Json } from "miniflare";
 import type { RequestInfo, RequestInit, Response } from "undici";
 

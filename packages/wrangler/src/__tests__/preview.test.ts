@@ -12,7 +12,7 @@ import {
 	previewContainerAppName,
 	resolveWorkerName,
 } from "@cloudflare/deploy-helpers";
-import { defaultWranglerConfig } from "@cloudflare/workers-utils";
+import { defaultWranglerConfig } from "@cloudflare/workers-utils/config";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterAll, afterEach, beforeEach, describe, test, vi } from "vitest";
@@ -31,7 +31,11 @@ import {
 	writeWranglerConfig,
 } from "./helpers/write-wrangler-config";
 import type { OutputEntry } from "../output";
-import type { Config, PreviewsConfig, Route } from "@cloudflare/workers-utils";
+import type {
+	Config,
+	PreviewsConfig,
+	Route,
+} from "@cloudflare/workers-utils/config";
 
 const NO_ACTIVE_PREVIEW_URLS_MESSAGE =
 	"Note: This Preview deployment has no active URLs.";

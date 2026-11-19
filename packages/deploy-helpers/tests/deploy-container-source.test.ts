@@ -4,7 +4,7 @@ import {
 	pushBuiltContainerImage,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
-import { defaultWranglerConfig } from "@cloudflare/workers-utils";
+import { defaultWranglerConfig } from "@cloudflare/workers-utils/config";
 import { beforeEach, describe, it, vi } from "vitest";
 import deploy from "../src/deploy/deploy";
 import { initDeployHelpersContext } from "../src/shared/context";
@@ -17,10 +17,8 @@ import type {
 	BuiltContainerImage,
 	DockerfileContainerConfig,
 } from "@cloudflare/containers-shared";
-import type {
-	ContainerApp,
-	FetchResultFetcher,
-} from "@cloudflare/workers-utils";
+import type { FetchResultFetcher } from "@cloudflare/workers-utils";
+import type { ContainerApp } from "@cloudflare/workers-utils/config";
 
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@cloudflare/containers-shared")>()),

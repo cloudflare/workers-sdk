@@ -1,9 +1,9 @@
 import {
 	defaultWranglerConfig,
 	validatePagesConfig,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import { describe, it } from "vitest";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 // TODO: Move these tests to the workers-utils package
 describe("validatePagesConfig()", () => {

@@ -4,7 +4,8 @@
 // SDK support (see `src/ai-search/client.ts`).
 import { fetchListResult, fetchResult } from "../cfetch";
 import { requireAuth } from "../user";
-import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export type AgentMemoryNamespace = {
 	id: string;

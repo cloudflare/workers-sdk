@@ -2,31 +2,27 @@ import assert from "node:assert";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { createMetadataObject } from "@cloudflare/pages-shared/metadata-generator/createMetadataObject";
-import { parseHeaders, parseRedirects } from "@cloudflare/workers-shared";
+import { parseHeaders } from "@cloudflare/workers-shared/utils/configuration/parseHeaders";
+import { parseRedirects } from "@cloudflare/workers-shared/utils/configuration/parseRedirects";
+import { createFileHasher } from "@cloudflare/workers-utils/asset-hash";
 import { watch } from "chokidar";
 import { getType } from "mime";
 import { fetch, Request, Response } from "miniflare";
 import { Dispatcher, getGlobalDispatcher } from "undici";
-import { logger } from "../logger";
-import { createFileHasher } from "../pages/hash";
-import type { Logger } from "../logger";
+import type { Options } from "./pages-assets-types";
 import type { Metadata } from "@cloudflare/pages-shared/asset-server/metadata";
 import type {
 	ParsedHeaders,
 	ParsedRedirects,
 } from "@cloudflare/workers-shared";
 import type { Request as WorkersRequest } from "@cloudflare/workers-types/experimental";
+import type { Logger } from "@cloudflare/workers-utils";
 import type { RequestInit } from "miniflare";
 import type { IncomingHttpHeaders } from "undici/types/header";
 
-export interface Options {
-	log: Logger;
-	proxyPort?: number;
-	directory?: string;
-	signal?: AbortSignal;
-}
-
-export default async function generateASSETSBinding(options: Options) {
+export async function generateASSETSBinding(
+	options: Options
+): Promise<(request: Request) => Promise<Response>> {
 	const assetsFetch =
 		options.directory !== undefined
 			? await generateAssetsFetch(
@@ -41,7 +37,10 @@ export default async function generateASSETSBinding(options: Options) {
 			try {
 				const url = new URL(miniflareRequest.url);
 				url.host = `localhost:${options.proxyPort}`;
-				const proxyRequest = new Request(url, miniflareRequest as RequestInit);
+				const proxyRequest = new Request(
+					url.toString(),
+					miniflareRequest as RequestInit
+				);
 				if (proxyRequest.headers.get("Upgrade") === "websocket") {
 					proxyRequest.headers.delete("Sec-WebSocket-Accept");
 					proxyRequest.headers.delete("Sec-WebSocket-Key");
@@ -94,10 +93,13 @@ class ProxyDispatcher extends Dispatcher {
 
 	dispatch(
 		options: Dispatcher.DispatchOptions,
-		handler: Dispatcher.DispatchHandlers
+		handler: Dispatcher.DispatchHandler
 	): boolean {
 		if (this.host !== null) {
-			ProxyDispatcher.reinstateHostHeader(options.headers, this.host);
+			ProxyDispatcher.reinstateHostHeader(
+				options.headers as IncomingHttpHeaders | null | undefined,
+				this.host
+			);
 		}
 		return this.dispatcher.dispatch(options, handler);
 	}
@@ -225,11 +227,11 @@ async function generateAssetsFetch(
 		const assetKeyEntryMap = new Map<string, string>();
 
 		return await generateHandler<string>({
-			request: request as unknown as WorkersRequest,
+			request: request as unknown as globalThis.Request,
 			metadata: metadata as Metadata,
 			xServerEnvHeader: "dev",
 			xWebAnalyticsHeader: false,
-			logError: logger.error,
+			logError: log.error,
 			findAssetEntryForPath: async (path) => {
 				const filepath = resolve(join(directory, path));
 				const relativePath = relative(directory, filepath);
@@ -257,13 +259,10 @@ async function generateAssetsFetch(
 				return assetEntry;
 			},
 			negotiateContent: (contentRequest) => {
+				const { cf } = contentRequest as unknown as WorkersRequest;
 				let rawAcceptEncoding: string | undefined;
-				if (
-					contentRequest.cf &&
-					"clientAcceptEncoding" in contentRequest.cf &&
-					contentRequest.cf.clientAcceptEncoding
-				) {
-					rawAcceptEncoding = contentRequest.cf.clientAcceptEncoding as string;
+				if (cf && "clientAcceptEncoding" in cf && cf.clientAcceptEncoding) {
+					rawAcceptEncoding = cf.clientAcceptEncoding as string;
 				} else {
 					rawAcceptEncoding =
 						contentRequest.headers.get("Accept-Encoding") || undefined;

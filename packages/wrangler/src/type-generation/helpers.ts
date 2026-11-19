@@ -4,18 +4,16 @@ import {
 	RUNTIME_HEADER_COMMENT_PREFIX,
 	RUNTIME_TYPES_MARKER,
 } from "@cloudflare/runtime-types";
-import {
-	configFileName,
-	ParseError,
-	UserError,
-} from "@cloudflare/workers-utils";
+import { ParseError, UserError } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import { version } from "workerd";
 import yargs from "yargs";
 import { getEntry } from "../deployment-bundle/entry";
 import { logger } from "../logger";
 import { generateRuntimeTypes } from "./runtime";
 import { generateEnvTypes } from ".";
-import type { Config, Entry } from "@cloudflare/workers-utils";
+import type { Entry } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export const DEFAULT_WORKERS_TYPES_FILE_NAME = "worker-configuration.d.ts";
 export const DEFAULT_WORKERS_TYPES_FILE_PATH = `./${DEFAULT_WORKERS_TYPES_FILE_NAME}`;

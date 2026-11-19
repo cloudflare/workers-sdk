@@ -9,7 +9,7 @@ import {
 	pushImageIfChanged,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
-import { getDurableObjectContainerApps } from "@cloudflare/workers-utils";
+import { getDurableObjectContainerApps } from "@cloudflare/workers-utils/config";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	deployDurableObjectContainerApplications,
@@ -22,7 +22,7 @@ import type { Application } from "@cloudflare/containers-shared";
 import type {
 	Config,
 	DurableObjectContainerApp,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 vi.mock("../src/shared/context", async (importOriginal) => ({
 	...(await importOriginal<typeof import("../src/shared/context")>()),

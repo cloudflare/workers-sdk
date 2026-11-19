@@ -11,7 +11,7 @@ import type {
 	ConfigBindingFieldName,
 	RawConfig,
 	Route,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 // Exhaustive map of all binding keys in CfWorkerInit["bindings"].
 // When a new binding type is added, TypeScript will error here until it is handled.

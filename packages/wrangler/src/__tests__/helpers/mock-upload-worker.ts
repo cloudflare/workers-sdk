@@ -20,12 +20,14 @@ import type { NonVersionedScriptSettings } from "../../versions/api";
 import type {
 	AssetConfigMetadata,
 	CfWorkerInit,
-	DurableObjectCodeUpdateStrategy,
 	ExportsReconciliationResult,
-	RawConfig,
-	RawEnvironment,
 	WorkerMetadata,
 } from "@cloudflare/workers-utils";
+import type {
+	DurableObjectCodeUpdateStrategy,
+	RawConfig,
+	RawEnvironment,
+} from "@cloudflare/workers-utils/config";
 import type { HttpResponseResolver } from "msw";
 
 /** Create a mock handler for the request to upload a worker script. */

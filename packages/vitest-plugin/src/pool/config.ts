@@ -4,11 +4,15 @@ import util from "node:util";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import {
 	DEFAULT_COMPAT_DATE,
-	DEFAULT_MODULE_RULES,
 	formatZodError,
 	getCloudflareComplianceRegion,
 } from "@cloudflare/workers-utils";
 import { toApiComplianceRegion } from "@cloudflare/workers-utils/compliance";
+import {
+	convertConfigToBindings,
+	DEFAULT_MODULE_RULES,
+	readConfig,
+} from "@cloudflare/workers-utils/config";
 import {
 	convertV4MiniflareOptions,
 	kCurrentWorker,
@@ -31,6 +35,7 @@ import {
 	getRunnerName,
 	WORKER_NAME_PREFIX,
 } from "./helpers";
+import { createSharedLogger } from "./logger";
 import {
 	loadNewConfig,
 	mergeCloudflareConfigWorker,
@@ -45,7 +50,8 @@ import type {
 	RemoteBindingsLogger,
 	RemoteProxySessionData,
 } from "@cloudflare/remote-bindings";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Logger } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type {
 	LegacyWorkerOptions,
 	RemoteProxyConnectionString,
@@ -587,7 +593,8 @@ async function parseCustomPoolOptions(
 	rootPath: string,
 	value: unknown,
 	mode: string,
-	envDir: string | false
+	envDir: string | false,
+	developmentLogger: Logger
 ): Promise<WorkersPoolOptionsWithDefines> {
 	// The schema strips unknown options, so `experimental.newConfig` would
 	// otherwise be ignored silently
@@ -742,14 +749,12 @@ async function parseCustomPoolOptions(
 		options.wrangler.configPath = configPath;
 		environment = options.wrangler.environment;
 
-		// Lazily import `wrangler` if and when we need it. Parse the config once so
-		// we can pass the parsed config straight into
-		// `unstable_getMiniflareWorkerOptions` without re-parsing it.
-		const wrangler = await import("wrangler");
-		config = wrangler.unstable_readConfig({
-			config: configPath,
-			env: environment,
-		});
+		// Parse the config once so we can pass the parsed config straight into
+		// `getMiniflareWorkerOptions` without re-parsing it.
+		config = readConfig(
+			{ config: configPath, env: environment },
+			{ logger: developmentLogger.once ?? developmentLogger }
+		);
 	}
 
 	if (configPath !== undefined && config !== undefined) {
@@ -766,9 +771,6 @@ async function parseCustomPoolOptions(
 		);
 		options.containerEngine = containerEnvironment?.containerEngine;
 
-		// Already imported above, so the module registry makes this a no-op
-		const wrangler = await import("wrangler");
-
 		const preExistingRemoteProxySessionData =
 			remoteProxySessionsDataMap.get(configPath);
 
@@ -776,10 +778,7 @@ async function parseCustomPoolOptions(
 			? await maybeStartOrUpdateRemoteProxySession(
 					{
 						name: config.name ?? "worker",
-						bindings:
-							wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
-								config
-							) ?? {},
+						bindings: convertConfigToBindings(config, { usePreviewIds: true }),
 						complianceRegion: getCloudflareComplianceRegion(config),
 					},
 					preExistingRemoteProxySessionData ?? null,
@@ -797,8 +796,11 @@ async function parseCustomPoolOptions(
 			remoteProxySessionsDataMap.set(configPath, remoteProxySessionData);
 		}
 
+		const { getMiniflareWorkerOptions } =
+			await import("@cloudflare/dev-helpers/miniflare-options");
 		const { workerOptions, externalWorkers, define, main } =
-			wrangler.unstable_getMiniflareWorkerOptions(config, environment, {
+			getMiniflareWorkerOptions(config, environment, {
+				logger: developmentLogger,
 				overrides: {
 					assets: options.miniflare.assets,
 				},
@@ -863,7 +865,8 @@ async function parseCustomPoolOptions(
 
 export async function parseProjectOptions(
 	project: TestProject,
-	poolOptions: unknown
+	poolOptions: unknown,
+	developmentLogger: Logger = createSharedLogger(log)
 ): Promise<WorkersPoolOptionsWithDefines> {
 	// Make sure the user hasn't specified a custom environment. This was how
 	// users enabled Miniflare 2's Vitest environment, so it's likely users will
@@ -898,7 +901,8 @@ export async function parseProjectOptions(
 			// Vite would give them. Defaults to `"test"`, overridable with `--mode`.
 			project.vite.config.mode,
 			// Local secrets come from Vite's `envDir`, as in `@cloudflare/vite-plugin`
-			project.vite.config.envDir
+			project.vite.config.envDir,
+			developmentLogger
 		);
 	} catch (e) {
 		if (!isZodErrorLike(e)) {

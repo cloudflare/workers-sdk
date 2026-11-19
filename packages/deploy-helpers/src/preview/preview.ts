@@ -2,16 +2,15 @@ import path from "node:path";
 import { convertToWranglerConfig } from "@cloudflare/config";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import { maybeGetFile } from "@cloudflare/workers-shared/utils/helpers";
+import { getDockerPath, UserError } from "@cloudflare/workers-utils";
 import {
 	configFileName,
 	defaultWranglerConfig,
 	formatConfigSnippet,
 	getBindingTypeFriendlyName,
 	getDurableObjectExports,
-	getDockerPath,
 	isLiveDurableObjectExport,
-	UserError,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import { parseAndExpandDotEnv } from "@cloudflare/workers-utils/local-env";
 import chalk from "chalk";
 import { syncAssets } from "../deploy/helpers/assets";
@@ -70,7 +69,7 @@ import type {
 	PreviewsConfig,
 	RawEnvironment,
 	Route,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 export type PreviewArgs = {
 	script?: string;

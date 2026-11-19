@@ -1,7 +1,7 @@
 import { beforeEach, describe, it, vi } from "vitest";
 import { initDeployHelpersContext } from "../src/shared/context";
 import { triggersDeploy } from "../src/triggers/deploy";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 vi.mock("@cloudflare/workers-utils", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@cloudflare/workers-utils")>()),
