@@ -644,11 +644,12 @@ export async function getDevMiniflareOptions(
 			inputInspectorPort === false ? undefined : inputInspectorPort,
 		unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 		unsafeTriggerHandlers: true,
-		// Even when Vite accepts every host, retain Miniflare's /cdn-cgi/ checks.
+		// Trust Vite's hosts only with explicit opt-in; true never disables validation.
 		unsafeCdnCgiAllowedHosts:
-			serverConfig.allowedHosts === true
-				? undefined
-				: serverConfig.allowedHosts,
+			resolvedPluginConfig.localExplorer.useViteAllowedHosts &&
+			serverConfig.allowedHosts !== true
+				? serverConfig.allowedHosts
+				: undefined,
 		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 		// The switch for local observability capture: tells Miniflare core to
 		// attach the trace collector to each user worker. Opt-in via the
@@ -914,11 +915,12 @@ export async function getPreviewMiniflareOptions(
 			inputInspectorPort === false ? undefined : inputInspectorPort,
 		unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 		unsafeTriggerHandlers: true,
-		// Even when Vite accepts every host, retain Miniflare's /cdn-cgi/ checks.
+		// Trust Vite's hosts only with explicit opt-in; true never disables validation.
 		unsafeCdnCgiAllowedHosts:
-			serverConfig.allowedHosts === true
-				? undefined
-				: serverConfig.allowedHosts,
+			resolvedPluginConfig.localExplorer.useViteAllowedHosts &&
+			serverConfig.allowedHosts !== true
+				? serverConfig.allowedHosts
+				: undefined,
 		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 		// The one switch for local observability: this env var tells Miniflare
 		// core to attach the trace collector to each user worker.

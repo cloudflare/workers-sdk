@@ -12,20 +12,28 @@ const fixturesPath = fileURLToPath(new URL("./fixtures", import.meta.url));
 
 afterEach(() => vi.unstubAllEnvs());
 
-test.for([
-	{
-		mode: "dev",
-		allowedHosts: ["my-app.test", ".example.com"],
-	},
-	{
-		mode: "preview",
-		allowedHosts: ["my-app.test", ".example.com"],
-	},
-	{ mode: "dev", allowedHosts: true },
-	{ mode: "preview", allowedHosts: true },
-] as const)(
+test.for(
+	(["dev", "preview"] as const).flatMap((mode) => [
+		{
+			mode,
+			useViteAllowedHosts: undefined,
+			allowedHosts: ["my-app.test", ".example.com"],
+		},
+		{
+			mode,
+			useViteAllowedHosts: false,
+			allowedHosts: ["my-app.test", ".example.com"],
+		},
+		{
+			mode,
+			useViteAllowedHosts: true,
+			allowedHosts: ["my-app.test", ".example.com"],
+		},
+		{ mode, useViteAllowedHosts: true, allowedHosts: true as const },
+	])
+)(
 	"validates Local Explorer origins with %j",
-	async ({ mode, allowedHosts }, { expect }) => {
+	async ({ mode, allowedHosts, useViteAllowedHosts }, { expect }) => {
 		vi.stubEnv("X_LOCAL_EXPLORER", "true");
 		const root = mkdtempSync(path.join(fixturesPath, "local-explorer-"));
 		writeFileSync(
@@ -48,7 +56,14 @@ test.for([
 			configFile: false as const,
 			logLevel: "silent" as const,
 			plugins: [
-				cloudflare({ inspectorPort: false, persistState: false }),
+				cloudflare({
+					inspectorPort: false,
+					persistState: false,
+					localExplorer:
+						useViteAllowedHosts === undefined
+							? undefined
+							: { useViteAllowedHosts },
+				}),
 				{
 					name: "add-tunnel-host",
 					configResolved(resolvedConfig) {
@@ -91,7 +106,8 @@ test.for([
 			const html = await (await fetch(explorerUrl)).text();
 			const assetPath = html.match(/src="([^"]+\.js)"/)?.[1];
 			assert(assetPath, "Local Explorer HTML should reference a module script");
-			const configuredStatus = allowedHosts === true ? 403 : 200;
+			const configuredStatus =
+				useViteAllowedHosts && allowedHosts !== true ? 200 : 403;
 			for (const [hostname, status] of [
 				["localhost:8787", 200],
 				["my-app.localhost:5173", 200],
