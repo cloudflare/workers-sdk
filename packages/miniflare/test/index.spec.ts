@@ -1244,10 +1244,11 @@ test("Miniflare: service binding to disk", async ({ expect }) => {
 	expect(res.status).toBe(204);
 	expect(await fs.readFile(testPath, "utf8")).toBe("✏️");
 });
-test("Miniflare: fails calls to Workers it isn't running, without the dev registry", async ({
+test("Miniflare: fails calls to Workers that aren't running", async ({
 	expect,
 }) => {
 	const mf = new Miniflare({
+		// Keeps Workers in other dev sessions out of reach
 		enableDevRegistry: false,
 		workers: [
 			{

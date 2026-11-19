@@ -2091,8 +2091,8 @@ export class Miniflare {
 		this.#cfObject = sharedOpts.cf;
 
 		// Bindings to Workers outside this instance go through the dev registry
-		// proxy, with or without the dev registry, so they fail when called
-		// rather than stopping workerd from starting
+		// proxy, so a Worker that isn't running fails calls to it rather than
+		// stopping workerd from starting
 		const { workerOpts: allWorkerOpts, externalServices } =
 			getExternalServiceEntrypoints(this.#workerOpts, sharedOpts);
 
