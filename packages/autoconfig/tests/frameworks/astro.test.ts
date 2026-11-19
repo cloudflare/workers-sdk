@@ -40,7 +40,7 @@ describe("Astro framework", () => {
 	runInTempDir();
 
 	beforeEach(() => {
-		vi.spyOn(cliCommand, "runCommand").mockImplementation(async () => {});
+		vi.spyOn(cliCommand, "runCommand").mockImplementation(async () => "");
 		vi.spyOn(cliPackages, "installPackages").mockImplementation(async () => {});
 	});
 
