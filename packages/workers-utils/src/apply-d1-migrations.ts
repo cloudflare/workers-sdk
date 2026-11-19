@@ -1,5 +1,17 @@
 // No Node.js imports here: this module also runs inside workerd.
-import type { D1Database } from "@cloudflare/workers-types/experimental";
+
+// What applying migrations uses of a D1 binding, or of Miniflare's Node.js
+// proxy for one. The declaration bundler can't import workers-types' globals.
+type D1PreparedStatement = {
+	bind(...values: unknown[]): D1PreparedStatement;
+	run(): Promise<unknown>;
+	all<T>(): Promise<{ results: T[] }>;
+};
+type D1Database = {
+	prepare(query: string): D1PreparedStatement;
+	batch(statements: D1PreparedStatement[]): Promise<unknown>;
+	exec(query: string): Promise<unknown>;
+};
 
 // Can't use an `interface` here as we expect this type to be passed via
 // Miniflare's `bindings` option, which requires all values to be JSON-typed.
