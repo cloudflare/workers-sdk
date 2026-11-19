@@ -441,6 +441,28 @@ const createOptionsSchema = workflowInstanceCreateOptionsSchema.extend({
 		.optional(),
 });
 
+/**
+ * Checks whether Durable Object storage could clone instance params, which
+ * rules out functions, RPC targets and streams. Storage and structuredClone()
+ * share workerd's serializer. As in the production engine, only a
+ * `DataCloneError` means the params cannot be stored; any other error is
+ * rethrown.
+ *
+ * @param params - The params passed to `create()`.
+ * @returns `false` if the engine could not store the params.
+ */
+function canStoreInstanceParams(params: unknown): boolean {
+	try {
+		structuredClone(params);
+		return true;
+	} catch (error) {
+		if (error instanceof Error && error.name === "DataCloneError") {
+			return false;
+		}
+		throw error;
+	}
+}
+
 // this.env.WORKFLOW is WorkflowBinding
 export class WorkflowBinding extends WorkerEntrypoint<Env> {
 	constructor(ctx: ExecutionContext, env: Env) {
@@ -488,6 +510,17 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		// no-op, so the race cannot double-execute the workflow body.
 		if (createOptions.id !== undefined && (await this.#instanceExists(id))) {
 			throw duplicateInstanceError(id);
+		}
+
+		// The production engine stores params with the instance, after its
+		// duplicate check, and rejects params that storage cannot clone. The local
+		// engine stores them after create() has returned, so they would leave the
+		// instance queued forever.
+		if (!canStoreInstanceParams(createOptions.params)) {
+			throw createBindingError(
+				"Provided instance parameters are not serializable",
+				"body"
+			);
 		}
 
 		return this.#createUnchecked(id, createOptions);

@@ -230,6 +230,70 @@ describe("WorkflowBinding", () => {
 			);
 		});
 
+		it("should reject params that the engine cannot store", async ({
+			expect,
+		}) => {
+			const id = uniqueId("unstorable-params");
+			const binding = createBinding();
+			setTestWorkflowCallback(async () => "done");
+
+			// These calls stay in one isolate, so the binding gets the raw values. A
+			// calling Worker's functions arrive as RPC stubs instead, which the
+			// Miniflare tests cover.
+			for (const params of [
+				{ fn: () => 1 },
+				{ stream: new ReadableStream() },
+			]) {
+				await expect(binding.create({ id, params })).rejects.toStrictEqual(
+					new Error("(body) Provided instance parameters are not serializable")
+				);
+			}
+
+			// The production engine stores nothing when it rejects the params, so
+			// the id stays free.
+			await binding.create({ id, params: { key: "value" } });
+			await waitUntilLogEvent(
+				env.ENGINE.get(env.ENGINE.idFromName(id)),
+				InstanceEvent.WORKFLOW_SUCCESS
+			);
+		});
+
+		it("should rethrow errors other than clone failures while checking params", async ({
+			expect,
+		}) => {
+			const binding = createBinding();
+			const params = {
+				get value(): never {
+					throw new RangeError("getter failed");
+				},
+			};
+
+			await expect(binding.create({ params })).rejects.toStrictEqual(
+				new RangeError("getter failed")
+			);
+		});
+
+		it("should check the id before the params, like production", async ({
+			expect,
+		}) => {
+			const id = uniqueId("id-before-params");
+			const binding = createBinding();
+			setTestWorkflowCallback(async () => "done");
+			await binding.create({ id });
+			await waitUntilLogEvent(
+				env.ENGINE.get(env.ENGINE.idFromName(id)),
+				InstanceEvent.WORKFLOW_SUCCESS
+			);
+
+			const params = { fn: () => 1 };
+			await expect(binding.create({ id: "batch", params })).rejects.toThrow(
+				"(instance.invalid_id) Instance has invalid id"
+			);
+			await expect(binding.create({ id, params })).rejects.toThrow(
+				`(instance.already_exists) Workflow instance with id "${id}" already exists`
+			);
+		});
+
 		for (const method of ["create", "createBatch"] as const) {
 			it(`${method} should retry failed cleanup before reusing an instance ID`, async ({
 				expect,

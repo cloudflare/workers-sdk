@@ -406,12 +406,13 @@ test("supports object-form Workflow batches", async ({ expect }) => {
 });
 
 const CREATE_ERRORS_WORKFLOW_SCRIPT = () => `
-import { WorkflowEntrypoint } from "cloudflare:workers";
+import { RpcTarget, WorkflowEntrypoint } from "cloudflare:workers";
 export class CreateErrorsWorkflow extends WorkflowEntrypoint {
 	async run() {
 		return "done";
 	}
 }
+class Target extends RpcTarget {}
 async function rejection(promise) {
 	try {
 		await promise;
@@ -454,6 +455,40 @@ export default {
 			invalidOptions: await rejection(
 				env.CREATE_ERRORS_WORKFLOW.create({ locationHint: "invalid" })
 			),
+			functionParams: await rejection(
+				env.CREATE_ERRORS_WORKFLOW.create({ params: { fn: () => 1 } })
+			),
+			rpcTargetParams: await rejection(
+				env.CREATE_ERRORS_WORKFLOW.create({ params: { target: new Target() } })
+			),
+			streamParams: await rejection(
+				env.CREATE_ERRORS_WORKFLOW.create({ params: { stream: new ReadableStream() } })
+			),
+			idBeforeParams: await rejection(
+				env.CREATE_ERRORS_WORKFLOW.create({ id: "batch", params: { fn: () => 1 } })
+			),
+			duplicateBeforeParams: await rejection(
+				env.CREATE_ERRORS_WORKFLOW.create({ id: "existing", params: { fn: () => 1 } })
+			),
+			storableParams: await waitForStatus(
+				await env.CREATE_ERRORS_WORKFLOW.create({
+					params: {
+						map: new Map([[1, 2]]),
+						set: new Set([1]),
+						date: new Date(0),
+						bigint: 10n,
+						regexp: /x/g,
+						bytes: new Uint8Array([1, 2]),
+						buffer: new ArrayBuffer(4),
+						blob: new Blob(["x"]),
+						headers: new Headers({ a: "b" }),
+						request: new Request("https://example.com"),
+						error: new Error("x"),
+						sparse: [1, , 3],
+					},
+				}),
+				"complete"
+			),
 		});
 	},
 };`;
@@ -471,6 +506,10 @@ test.for([
 			name: "Error",
 			message:
 				'(body) Invalid option: expected one of "wnam"|"weur"|"enam"|"eeur"|"apac"|"apac-ne"|"apac-se"|"oc"|"sam"|"afr"|"me"',
+		};
+		const unstorableParamsRejection = {
+			name: "Error",
+			message: "(body) Provided instance parameters are not serializable",
 		};
 		const tmp = await useTmp();
 		const mf = new Miniflare({
@@ -525,6 +564,23 @@ test.for([
 				message:
 					'(body) Invalid option: expected one of "wnam"|"weur"|"enam"|"eeur"|"apac"|"apac-ne"|"apac-se"|"oc"|"sam"|"afr"|"me"',
 			},
+			// JSRPC hands functions and RPC targets to the binding as stubs, and
+			// streams as streams. Durable Object storage can clone none of them.
+			functionParams: unstorableParamsRejection,
+			rpcTargetParams: unstorableParamsRejection,
+			streamParams: unstorableParamsRejection,
+			// As in production, the id and duplicate checks come first.
+			idBeforeParams: {
+				name: "Error",
+				message: "(instance.invalid_id) Instance has invalid id",
+			},
+			duplicateBeforeParams: {
+				name: "Error",
+				message:
+					'(instance.already_exists) Workflow instance with id "existing" already exists',
+			},
+			// Params that storage can clone still run, however unusual.
+			storableParams: "complete",
 		});
 	}
 );
