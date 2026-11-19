@@ -76,8 +76,8 @@ catalogs:
       specifier: 5.8.3
       version: 5.8.3
     undici:
-      specifier: 7.30.1
-      version: 7.30.1
+      specifier: 7.30.2
+      version: 7.30.2
     vite:
       specifier: 8.3.4
       version: 8.3.4
@@ -100,7 +100,7 @@ overrides:
   '@types/react-transition-group>@types/react': ^18
   '@cloudflare/elements>@types/react': ^18
   '@types/node': 22.15.17
-  '@types/node>undici-types': 7.30.1
+  '@types/node>undici-types': 7.30.2
   brace-expansion@2: ^2.1.7
   brace-expansion@5: ^5.0.12
   concurrently@8>shell-quote: ^1.11.0
@@ -207,7 +207,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -342,7 +342,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -363,7 +363,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -405,7 +405,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.9.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -438,7 +438,7 @@ importers:
         version: 5.20261119.1
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.9.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -474,7 +474,7 @@ importers:
         version: 2.2.0
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.9.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -501,7 +501,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -528,7 +528,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -573,7 +573,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -590,7 +590,7 @@ importers:
         version: link:../shared
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.9.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -672,7 +672,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -727,7 +727,7 @@ importers:
         version: 5.20261119.1
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.9.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -760,7 +760,7 @@ importers:
         version: 1.2.7
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.9.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -781,7 +781,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -809,7 +809,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -830,7 +830,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -848,7 +848,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -869,7 +869,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -890,7 +890,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -911,7 +911,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -951,7 +951,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -972,7 +972,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -987,7 +987,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.9.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -1008,7 +1008,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -1029,7 +1029,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -1047,7 +1047,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -1065,7 +1065,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -1083,7 +1083,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -1101,7 +1101,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -1119,7 +1119,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -1137,7 +1137,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -1152,7 +1152,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.9.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -1167,7 +1167,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.9.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -1385,7 +1385,7 @@ importers:
         version: link:../shared
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1407,7 +1407,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -1503,7 +1503,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -1524,7 +1524,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -1545,7 +1545,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -1566,7 +1566,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -1587,7 +1587,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -1620,7 +1620,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -1647,7 +1647,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -1668,7 +1668,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -1686,7 +1686,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -2048,7 +2048,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vite:
         specifier: catalog:default
         version: 8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0)
@@ -2108,7 +2108,7 @@ importers:
         version: 6.1.1
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       ws:
         specifier: catalog:default
         version: 8.21.0
@@ -2395,7 +2395,7 @@ importers:
         version: 0.35.5(@types/node@22.15.17)
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       workerd:
         specifier: catalog:default
         version: 1.20261119.1
@@ -2714,7 +2714,7 @@ importers:
         version: 4.0.0(patch_hash=60bdb1dcdbde0a135bb56d6fa1a1027caba891b149e2cfcb48d6a5b3524e0a91)
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -2781,7 +2781,7 @@ importers:
         version: link:../miniflare
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       ws:
         specifier: catalog:default
         version: 8.21.0
@@ -3052,7 +3052,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -4257,7 +4257,7 @@ importers:
         version: 5.8.3
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vitest:
         specifier: catalog:default
         version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
@@ -4269,7 +4269,7 @@ importers:
         version: link:../workers-utils
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
     devDependencies:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
@@ -4452,7 +4452,7 @@ importers:
         version: 4.13.0
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       vite:
         specifier: catalog:default
         version: 8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0)
@@ -4511,7 +4511,7 @@ importers:
         version: 16.3.1
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
     devDependencies:
       '@cloudflare/workers-shared':
         specifier: workspace:*
@@ -4657,7 +4657,7 @@ importers:
         version: 6.3.0
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       unenv:
         specifier: 2.0.0-rc.24
         version: 2.0.0-rc.24
@@ -4989,7 +4989,7 @@ importers:
         version: 2.2.0
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
       wrangler:
         specifier: workspace:*
         version: link:../packages/wrangler
@@ -15433,8 +15433,8 @@ packages:
   unconfig-core@7.5.0:
     resolution: {integrity: sha512-Su3FauozOGP44ZmKdHy2oE6LPjk51M/TRRjHv2HNCWiDvfvCoxC2lno6jevMA91MYAdCdwP05QnWdWpSbncX/w==}
 
-  undici-types@7.30.1:
-    resolution: {integrity: sha512-4CNTj7RmIepmiez9hX5pJzYLi5bv1ZBA6puqC3qYyqluB8zu5uygFc+4iG5Nmcx3fg+6bPFxuEbCrxTa7Yqy3A==}
+  undici-types@7.30.2:
+    resolution: {integrity: sha512-Vx15rZHtDo7X+sZVzcecz08ooRvEa0cjSs8z85v/jRRf81BT1m9eaoMI4gxvaNwgQg2IgkfjJ45dMpKrSl0zEQ==}
 
   undici@5.28.5:
     resolution: {integrity: sha512-zICwjrDrcrUE0pyyJc1I2QzBkLM8FINsgOrt6WjA+BgajVq9Nxu2PbFFXUrAggLfDXlZGZBVZYw7WNV5KiBiBA==}
@@ -15448,8 +15448,8 @@ packages:
     resolution: {integrity: sha512-RYONW2MeafgYlkVOKYKkA/Ag7BmXqgIWCa8t1m0JcxrQg9pI9lEqRhAOruOBCbAohOa/gkCF+iPi9hrgvTzu6Q==}
     engines: {node: '>=20.18.1'}
 
-  undici@7.30.1:
-    resolution: {integrity: sha512-03KrMbjIFDWQR5RNPrSw3bd1r12JpyFQl9/yxjUbJtqkjmllqC5lFjZh6ujeuJCKr8EOQvRW872Oy/az+nLYxg==}
+  undici@7.30.2:
+    resolution: {integrity: sha512-mLyPQnHwUxaM/rideoK/+KL8DaAJLRl4aBCfmX444aCSLnIaomqPLtNRe2jdCYcsk5wZzXrDIQC8ZeYNRAYyIA==}
     engines: {node: '>=20.18.1'}
 
   unenv@2.0.0-rc.24:
@@ -20688,7 +20688,7 @@ snapshots:
 
   '@types/node@22.15.17':
     dependencies:
-      undici-types: 7.30.1
+      undici-types: 7.30.2
 
   '@types/normalize-package-data@2.4.4': {}
 
@@ -26845,7 +26845,7 @@ snapshots:
       '@quansync/fs': 1.0.0
       quansync: 1.0.0
 
-  undici-types@7.30.1: {}
+  undici-types@7.30.2: {}
 
   undici@5.28.5:
     dependencies:
@@ -26855,7 +26855,7 @@ snapshots:
 
   undici@7.29.1: {}
 
-  undici@7.30.1: {}
+  undici@7.30.2: {}
 
   unenv@2.0.0-rc.24:
     dependencies:
