@@ -49,6 +49,12 @@ export const triggersDeployCommand = createCommand({
 			type: "boolean",
 			default: false,
 		},
+		"show-diff": {
+			describe:
+				"Show changes to routes, custom domains, cron schedules, workers.dev, and Preview URLs before deploying",
+			type: "boolean",
+			default: false,
+		},
 		"experimental-deploy-helpers": {
 			describe: "Experimental: Gates refactored deploy/upload path",
 			type: "boolean",
@@ -71,13 +77,15 @@ export const triggersDeployCommand = createCommand({
 			sendMetrics: config.send_metrics,
 		});
 		const props = resolveTriggersInput(args, config);
-		const accountId = args.dryRun ? undefined : await requireAuth(config);
+		const accountId =
+			args.dryRun && !args.showDiff ? undefined : await requireAuth(config);
 
 		await triggersDeploy({
 			config,
 			accountId,
 			firstDeploy: false,
 			dryRun: args.dryRun,
+			showDiff: args.showDiff,
 			validated: false,
 			queueCreateCommand: (queueName) => `wrangler queues create ${queueName}`,
 			workersDevConfigFieldName: "workers_dev",
