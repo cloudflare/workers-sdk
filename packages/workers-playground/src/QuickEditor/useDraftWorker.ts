@@ -73,7 +73,8 @@ export function serialiseWorker(service: PartialWorker): FormData {
 	for (const { name, content, type } of typedModules) {
 		formData.set(
 			name,
-			new Blob([content.contents], {
+			// Playground module contents are never backed by a SharedArrayBuffer.
+			new Blob([content.contents as Uint8Array<ArrayBuffer>], {
 				type: content.type ?? toMimeType(type ?? "esm"),
 			}),
 			name
