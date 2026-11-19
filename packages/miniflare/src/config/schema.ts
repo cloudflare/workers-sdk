@@ -799,6 +799,13 @@ export const InstanceOptionsSchema = z.strictObject({
 		.optional(),
 	unsafeTriggerHandlers: z.boolean().optional(),
 	unsafeRuntimeEnv: z.record(z.string(), z.string()).optional(),
+	/**
+	 * Additional trusted Host and Origin hostnames for /cdn-cgi/* requests.
+	 * A leading dot also allows subdomains (e.g. ".example.com" allows both
+	 * "example.com" and "app.example.com"). Localhost, routes, and upstream
+	 * hostnames remain allowed.
+	 */
+	unsafeCdnCgiAllowedHosts: z.array(z.string()).optional(),
 	unsafeLocalExplorer: z.boolean().optional(),
 	// Turn on local-dev observability: attach the trace collector to the
 	// user's worker(s) so it receives their tail events.

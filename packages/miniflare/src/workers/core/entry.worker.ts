@@ -31,6 +31,7 @@ type Env = {
 	[CoreBindings.JSON_CF_BLOB]: IncomingRequestCfProperties;
 	[CoreBindings.TEXT_FALLBACK_WORKER_NAME]: string;
 	[CoreBindings.JSON_ROUTES]: WorkerRoute[];
+	[CoreBindings.JSON_CDN_CGI_ALLOWED_HOSTS]: string[];
 	[CoreBindings.JSON_LOG_LEVEL]: LogLevel;
 	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
 	[CoreBindings.DATA_PROXY_SHARED_SECRET]?: ArrayBuffer;
@@ -207,7 +208,8 @@ function isCdnCgiRequest(url: string | null): boolean {
 function validateCdnCgiRequest(
 	request: Request,
 	routes: WorkerRoute[],
-	upstreamUrl: string | undefined
+	upstreamUrl: string | undefined,
+	allowedHosts: string[]
 ): void {
 	if (
 		!isCdnCgiRequest(request.url) &&
@@ -216,11 +218,18 @@ function validateCdnCgiRequest(
 		return;
 	}
 
-	// Subdomain matching should only apply to wildcard routes (e.g.
-	// "*.example.com/*"). Exact routes and the configured upstream hostname
-	// must match the request hostname exactly.
+	// Subdomain matching applies to wildcard routes (e.g. "*.example.com/*")
+	// and additional allowed hosts with a leading dot. Exact routes, other
+	// allowed hosts, and the configured upstream hostname must match exactly.
 	const exactHostnames = new Set<string>();
 	const wildcardHostnames = new Set<string>();
+	for (const hostname of allowedHosts) {
+		if (hostname.startsWith(".")) {
+			wildcardHostnames.add(hostname.slice(1));
+		} else {
+			exactHostnames.add(hostname);
+		}
+	}
 	for (const route of routes) {
 		// route.hostname has already had the leading "*" stripped by parseRoutes,
 		// but wildcard routes still carry a leading "." (e.g., "*.example.com" -> ".example.com")
@@ -275,8 +284,8 @@ function validateCdnCgiRequest(
 
 /**
  * Checks whether a hostname is allowed.
- * - exactHostnames: must match exactly (configured non-wildcard routes, upstream)
- * - wildcardHostnames: also match any subdomain (for wildcard routes like *.example.com)
+ * - exactHostnames: must match exactly (non-wildcard routes, upstream, allowed hosts)
+ * - wildcardHostnames: also match any subdomain (wildcard routes, allowed hosts with a leading dot)
  *
  * Localhost hostnames are always allowed.
  */
@@ -285,7 +294,10 @@ function isHostnameAllowed(
 	exactHostnames: Set<string>,
 	wildcardHostnames: Set<string>
 ): boolean {
-	if (LOCALHOST_HOSTNAMES.includes(hostname)) {
+	if (
+		LOCALHOST_HOSTNAMES.includes(hostname) ||
+		hostname.endsWith(".localhost")
+	) {
 		return true;
 	}
 	if (exactHostnames.has(hostname)) {
@@ -526,7 +538,8 @@ export default <ExportedHandler<Env>>{
 
 		// Restrict /cdn-cgi/* requests to allowed hostnames.
 		// These endpoints should be served only when the browser-sent Host and
-		// Origin headers match localhost, a configured route, or the configured upstream.
+		// Origin headers match localhost, a configured route, the configured upstream,
+		// or an additional allowed host.
 		// This must happen before getUserRequest() so we validate the
 		// original browser-sent headers, not Miniflare-rewritten ones.
 		const requestUrl = new URL(request.url);
@@ -534,7 +547,8 @@ export default <ExportedHandler<Env>>{
 			validateCdnCgiRequest(
 				request,
 				env[CoreBindings.JSON_ROUTES],
-				env[CoreBindings.TEXT_UPSTREAM_URL]
+				env[CoreBindings.TEXT_UPSTREAM_URL],
+				env[CoreBindings.JSON_CDN_CGI_ALLOWED_HOSTS]
 			);
 		} catch (e) {
 			if (e instanceof HttpError) {
