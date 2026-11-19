@@ -430,6 +430,39 @@ describe("R2 API", () => {
 			expect(await response.json()).toMatchObject({ success: true });
 		});
 
+		// https://github.com/cloudflare/workers-sdk/issues/17037
+		// The Cloudflare API's Delete Objects endpoint still deletes the keys that
+		// exist, but reports each missing key as a failure: HTTP 200 with
+		// `success: false`, `result: null` and one entry in `errors` per failed
+		// key (code 10007, "The specified key does not exist.").
+		test("reports a missing key as a failure while deleting the others", async ({
+			expect,
+		}) => {
+			const r2 = await mf.getR2Bucket("TEST_BUCKET");
+			await r2.put("mixed-first.txt", "sample");
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/r2/buckets/test-bucket/objects`,
+				{
+					method: "DELETE",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(["mixed-first.txt", "mixed-absent.txt"]),
+				}
+			);
+
+			expect(response.status).toBe(200);
+			const data = (await response.json()) as {
+				success: boolean;
+				result: unknown;
+				errors: { code: number; message: string }[];
+			};
+			expect(await r2.head("mixed-first.txt")).toBeNull();
+			expect(data.success).toBe(false);
+			expect(data.result).toBeNull();
+			expect(data.errors).toHaveLength(1);
+			expect(data.errors[0]).toMatchObject({ code: 10007 });
+		});
+
 		test("deletes from an unlisted bucket", async ({ expect }) => {
 			const response = await dispatchFetchWithRetry(
 				mf,
