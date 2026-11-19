@@ -2,10 +2,10 @@ import assert from "node:assert";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { setTimeout } from "node:timers/promises";
 import { CACHE_PLUGIN_NAME, Miniflare, Request, Response } from "miniflare";
 import { beforeEach, type ExpectStatic, onTestFinished, test } from "vitest";
 import {
-	MiniflareDurableObjectControlStub,
 	miniflareTest,
 	singleModuleManifest,
 	useDispose,
@@ -22,7 +22,6 @@ import type {
 
 interface Context extends MiniflareTestContext {
 	caches: ReplaceWorkersTypes<CacheStorage>;
-	defaultObject: MiniflareDurableObjectControlStub;
 }
 
 const ctx = miniflareTest<never, Context>({}, async (global, req) => {
@@ -39,39 +38,8 @@ const ctx = miniflareTest<never, Context>({}, async (global, req) => {
 	return new global.Response(null, { status: 404 });
 });
 
-async function getControlStub(
-	mf: Miniflare,
-	name = "default"
-): Promise<MiniflareDurableObjectControlStub> {
-	const objectNamespace = await mf._getInternalDurableObjectNamespace(
-		CACHE_PLUGIN_NAME,
-		"cache:cache",
-		"CacheObject"
-	);
-	const objectId = objectNamespace.idFromName(name);
-	const objectStub = objectNamespace.get(objectId);
-	const stub = new MiniflareDurableObjectControlStub(objectStub);
-	await stub.enableFakeTimers(1_000_000);
-	return stub;
-}
-
-function sqlStmts(object: MiniflareDurableObjectControlStub) {
-	return {
-		getBlobIdByKey: async (key: string): Promise<string | undefined> => {
-			const rows = await object.sqlQuery<{ blob_id: string }>(
-				"SELECT blob_id FROM _mf_entries WHERE key = ?",
-				key
-			);
-			return rows[0]?.blob_id;
-		},
-	};
-}
-
 beforeEach(async () => {
 	ctx.caches = await ctx.mf.getCaches();
-
-	// Enable fake timers
-	ctx.defaultObject = await getControlStub(ctx.mf);
 });
 
 test("match returns cached responses", async ({ expect }) => {
@@ -243,70 +211,48 @@ test("match respects Range header", async ({ expect }) => {
 });
 test("put overrides existing responses", async ({ expect }) => {
 	const cache = ctx.caches.default;
-	const defaultObject = ctx.defaultObject;
-	const stmts = sqlStmts(defaultObject);
-
 	const resToCache = (body: string) =>
 		new Response(body, { headers: { "Cache-Control": "max-age=3600" } });
 
 	const key = "http://localhost/cache-override";
 	await cache.put(key, resToCache("body1"));
-	const blobId = await stmts.getBlobIdByKey(key);
-	assert(blobId !== undefined);
 	await cache.put(key, resToCache("body2"));
 	const res = await cache.match(key);
 	expect(await res?.text()).toBe("body2");
-
-	// Check deletes old blob
-	await defaultObject.waitForFakeTasks();
-	expect(await defaultObject.getBlob(blobId)).toBe(null);
-
-	// Check created new blob
-	const newBlobId = await stmts.getBlobIdByKey(key);
-	assert(newBlobId !== undefined);
-	expect(blobId).not.toBe(newBlobId);
 });
 
-// Note this helper must be used with serial tests to avoid races.
+// The cache runs on workerd's clock, so these wait for entries to expire.
 async function testExpire(
 	expect: ExpectStatic,
-	opts: { headers: HeadersInit; expectedTtl: number }
+	opts: { key: string; headers: HeadersInit; expires: number }
 ) {
 	const cache = ctx.caches.default;
-	const defaultObject = ctx.defaultObject;
-
-	const key = "http://localhost/cache-expire";
-	await cache.put(key, new Response("body", { headers: opts.headers }));
-
-	let res = await cache.match(key);
-	expect(res?.status).toBe(200);
-
-	await defaultObject.advanceFakeTime(opts.expectedTtl / 2);
-	res = await cache.match(key);
-	expect(res?.status).toBe(200);
-
-	await defaultObject.advanceFakeTime(opts.expectedTtl / 2);
-	res = await cache.match(key);
-	expect(res).toBeUndefined();
+	await cache.put(opts.key, new Response("body", { headers: opts.headers }));
+	expect((await cache.match(opts.key))?.status).toBe(200);
+	await setTimeout(opts.expires - Date.now() + 250);
+	expect(await cache.match(opts.key)).toBeUndefined();
 }
 test("expires after Expires", async ({ expect }) => {
+	// HTTP dates have whole seconds
+	const expires = Math.ceil(Date.now() / 1000) * 1000 + 1000;
 	await testExpire(expect, {
-		headers: {
-			Expires: new Date(1_000_000 + 2_000).toUTCString(),
-		},
-		expectedTtl: 2000,
+		key: "http://localhost/cache-expire-expires",
+		headers: { Expires: new Date(expires).toUTCString() },
+		expires,
 	});
 });
 test("expires after Cache-Control's max-age", async ({ expect }) => {
 	await testExpire(expect, {
+		key: "http://localhost/cache-expire-max-age",
 		headers: { "Cache-Control": "max-age=1" },
-		expectedTtl: 1000,
+		expires: Date.now() + 1000,
 	});
 });
 test("expires after Cache-Control's s-maxage", async ({ expect }) => {
 	await testExpire(expect, {
+		key: "http://localhost/cache-expire-s-maxage",
 		headers: { "Cache-Control": "s-maxage=1, max-age=10" },
-		expectedTtl: 1000,
+		expires: Date.now() + 1000,
 	});
 });
 
@@ -326,7 +272,7 @@ async function testIsCached(
 		.digest("hex");
 	const key = `http://localhost/cache-is-cached-${headersHash}`;
 
-	const expires = new Date(1_000_000 + 2000).toUTCString();
+	const expires = new Date(Date.now() + 3_600_000).toUTCString();
 	const resToCache = new Response("body", {
 		headers: { ...opts.headers, Expires: expires },
 	});
@@ -442,9 +388,10 @@ test("operations persist cached data", async ({ expect }) => {
 	});
 	await cache.put(key, resToCache);
 
-	// Check directory created for namespace under the plugin subdirectory
-	const names = await fs.readdir(path.join(tmp, CACHE_PLUGIN_NAME));
-	expect(names.includes("miniflare-CacheObject")).toBe(true);
+	// Check the entry is a file in the default cache's directory under the
+	// plugin subdirectory
+	const names = await fs.readdir(path.join(tmp, CACHE_PLUGIN_NAME, "default"));
+	expect(names.some((name) => /^[0-9a-f]{64}$/.test(name))).toBe(true);
 
 	// Check "restarting" keeps persisted data
 	await mf.dispose();
@@ -525,9 +472,6 @@ test("default and named caches are disjoint", async ({ expect }) => {
 });
 
 test("purgeCache clears all default cache entries", async ({ expect }) => {
-	// Purging does not need a fake clock. An idle object can be evicted on slow
-	// runners, losing its fake clock and expiring entries written in 1970.
-	await ctx.defaultObject.disableFakeTimers();
 	const cache = ctx.caches.default;
 	const headers = { "Cache-Control": "max-age=3600" };
 
@@ -561,7 +505,6 @@ test("purgeCache clears all default cache entries", async ({ expect }) => {
 });
 
 test("purgeCache clears specific named cache", async ({ expect }) => {
-	await ctx.defaultObject.disableFakeTimers();
 	const defaultCache = ctx.caches.default;
 	const namedCache = await ctx.caches.open("my-cache");
 	const headers = { "Cache-Control": "max-age=3600" };

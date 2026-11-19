@@ -1,32 +1,67 @@
+import crypto from "node:crypto";
 import fs from "node:fs/promises";
-import SCRIPT_CACHE_OBJECT from "worker:cache/cache";
-import SCRIPT_CACHE_ENTRY from "worker:cache/cache-entry";
+import path from "node:path";
+import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
 import SCRIPT_CACHE_ENTRY_NOOP from "worker:cache/cache-entry-noop";
-import { SharedBindings } from "../../workers";
-import {
-	getMiniflareObjectBindings,
-	getPersistPath,
-	SERVICE_LOOPBACK,
-} from "../shared";
-import type {
-	Service,
-	Worker,
-	Worker_Binding_DurableObjectNamespaceDesignator,
-} from "../../runtime";
+import SCRIPT_CACHE_SITES from "worker:cache/cache-sites";
+import { getPersistPath } from "../shared";
+import type { Service, Worker_Binding } from "../../runtime";
 import type { Plugin } from "../shared";
 
 export const CACHE_PLUGIN_NAME = "cache";
-const CACHE_STORAGE_SERVICE_NAME = `${CACHE_PLUGIN_NAME}:storage`;
-const CACHE_SERVICE_PREFIX = `${CACHE_PLUGIN_NAME}:cache`;
-
-const CACHE_OBJECT_CLASS_NAME = "CacheObject";
-const CACHE_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
-	serviceName: CACHE_SERVICE_PREFIX,
-	className: CACHE_OBJECT_CLASS_NAME,
-};
+const CACHE_DIRECTORY_SERVICE_NAME = `${CACHE_PLUGIN_NAME}:directory`;
 
 export function getCacheServiceName(workerIndex: number) {
 	return `${CACHE_PLUGIN_NAME}:${workerIndex}`;
+}
+
+/** The directory workerd's `cache` services keep their entries in. */
+export function getCachePath(
+	tmpPath: string,
+	isolatedResourcePersistencePath: string | undefined
+) {
+	return getPersistPath(
+		CACHE_PLUGIN_NAME,
+		tmpPath,
+		isolatedResourcePersistencePath
+	);
+}
+
+/**
+ * Removes every entry of the cache `name`, or of the default cache, from the
+ * cache directory `dir`. A cache's entries are the files of its subdirectory:
+ * `default`, or the SHA-256 of its name in hex. Answers how many it removed.
+ */
+export async function purgeCacheDirectory(
+	dir: string,
+	name?: string
+): Promise<number> {
+	const cache = path.join(
+		dir,
+		name === undefined
+			? "default"
+			: crypto.createHash("sha256").update(name).digest("hex")
+	);
+	const names = await fs.readdir(cache).catch(() => []);
+	await removeDir(cache);
+	return names.filter((name) => /^[0-9a-f]{64}$/.test(name)).length;
+}
+
+function worker(
+	name: string,
+	script: string,
+	esModule: string,
+	bindings: Worker_Binding[] = []
+): Service {
+	return {
+		name,
+		worker: {
+			compatibilityDate: "2023-07-24",
+			compatibilityFlags: ["nodejs_compat", "experimental"],
+			modules: [{ name: `${script}.worker.js`, esModule }],
+			bindings,
+		},
+	};
 }
 
 export const CACHE_PLUGIN: Plugin = {
@@ -37,91 +72,24 @@ export const CACHE_PLUGIN: Plugin = {
 		return {};
 	},
 	async getServices({ options, workerIndex, tmpPath, sharedOptions }) {
-		const cache = options.dev?.cacheAPI ?? true;
-
-		let entryWorker: Worker;
-		if (cache) {
-			entryWorker = {
-				compatibilityDate: "2023-07-24",
-				compatibilityFlags: ["nodejs_compat", "experimental"],
-				modules: [
-					{ name: "cache-entry.worker.js", esModule: SCRIPT_CACHE_ENTRY() },
-				],
-				bindings: [
-					{
-						name: SharedBindings.DURABLE_OBJECT_NAMESPACE_OBJECT,
-						durableObjectNamespace: CACHE_OBJECT,
-					},
-				],
-			};
-		} else {
-			entryWorker = {
-				compatibilityDate: "2023-07-24",
-				compatibilityFlags: ["nodejs_compat", "experimental"],
-				modules: [
-					{
-						name: "cache-entry-noop.worker.js",
-						esModule: SCRIPT_CACHE_ENTRY_NOOP(),
-					},
-				],
-			};
+		const name = getCacheServiceName(workerIndex);
+		if (!(options.dev?.cacheAPI ?? true)) {
+			return [worker(name, "cache-entry-noop", SCRIPT_CACHE_ENTRY_NOOP())];
 		}
-		const services: Service[] = [
-			{ name: getCacheServiceName(workerIndex), worker: entryWorker },
-		];
-
-		if (cache) {
-			const uniqueKey = `miniflare-${CACHE_OBJECT_CLASS_NAME}`;
-
-			const persistPath = getPersistPath(
-				CACHE_PLUGIN_NAME,
-				tmpPath,
-				sharedOptions.isolatedResourcePersistencePath
-			);
-			await fs.mkdir(persistPath, { recursive: true });
-			const storageService: Service = {
-				name: CACHE_STORAGE_SERVICE_NAME,
-				disk: { path: persistPath, writable: true },
-			};
-			const objectService: Service = {
-				name: CACHE_SERVICE_PREFIX,
-				worker: {
-					compatibilityDate: "2023-07-24",
-					compatibilityFlags: ["nodejs_compat", "experimental"],
-					modules: [
-						{
-							name: "cache.worker.js",
-							esModule: SCRIPT_CACHE_OBJECT(),
-						},
-					],
-					durableObjectNamespaces: [
-						{
-							className: CACHE_OBJECT_CLASS_NAME,
-							uniqueKey,
-						},
-					],
-					// Store Durable Object SQL databases in persist path
-					durableObjectStorage: { localDisk: CACHE_STORAGE_SERVICE_NAME },
-					// Bind blob disk directory service to object
-					bindings: [
-						{
-							name: SharedBindings.MAYBE_SERVICE_BLOBS,
-							service: { name: CACHE_STORAGE_SERVICE_NAME },
-						},
-						{
-							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
-							service: { name: SERVICE_LOOPBACK },
-						},
-						...getMiniflareObjectBindings(),
-					],
-				},
-			};
-			services.push(storageService, objectService);
-
-			// NOTE: not migrating here as applications should be able to recover from
-			// cache evictions, and we'd need to locate all named caches
+		// Every Worker's `cache` service names this one directory, so they share
+		// one cache, as they shared one Durable Object before.
+		const cachePath = getCachePath(
+			tmpPath,
+			sharedOptions.isolatedResourcePersistencePath
+		);
+		await fs.mkdir(cachePath, { recursive: true });
+		const cache = { path: cachePath };
+		if (options.legacy?.sitePath === undefined) {
+			return [{ name, cache }];
 		}
-
-		return services;
+		const sites = worker(name, "cache-sites", SCRIPT_CACHE_SITES(), [
+			{ name: "CACHE", service: { name: CACHE_DIRECTORY_SERVICE_NAME } },
+		]);
+		return [sites, { name: CACHE_DIRECTORY_SERVICE_NAME, cache }];
 	},
 };

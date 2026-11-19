@@ -821,6 +821,12 @@ export const Service_Which = {
 	 *
 	 */
 	DISK: 4,
+	/**
+	 * The Cache API's backend, which a Worker's `cacheApiOutbound` names, its entries in a
+	 * directory on disk.
+	 *
+	 */
+	CACHE: 7,
 } as const;
 export type Service_Which = (typeof Service_Which)[keyof typeof Service_Which];
 /**
@@ -834,6 +840,7 @@ export class Service extends $.Struct {
 	static readonly NETWORK = Service_Which.NETWORK;
 	static readonly EXTERNAL = Service_Which.EXTERNAL;
 	static readonly DISK = Service_Which.DISK;
+	static readonly CACHE = Service_Which.CACHE;
 	static readonly _capnp = {
 		displayName: "Service",
 		id: "e5c88e8bb7bcb6b9",
@@ -975,6 +982,36 @@ export class Service extends $.Struct {
 	}
 	set disk(value: DiskDirectory) {
 		$.utils.setUint16(0, 4, this);
+		$.utils.copyFrom(value, $.utils.getPointer(1, this));
+	}
+	_adoptCache(value: $.Orphan<CacheDirectory>): void {
+		$.utils.setUint16(0, 7, this);
+		$.utils.adopt(value, $.utils.getPointer(1, this));
+	}
+	_disownCache(): $.Orphan<CacheDirectory> {
+		return $.utils.disown(this.cache);
+	}
+	/**
+	 * The Cache API's backend, which a Worker's `cacheApiOutbound` names, its entries in a
+	 * directory on disk.
+	 *
+	 */
+	get cache(): CacheDirectory {
+		$.utils.testWhich("cache", $.utils.getUint16(0, this), 7, this);
+		return $.utils.getStruct(1, CacheDirectory, this);
+	}
+	_hasCache(): boolean {
+		return !$.utils.isNull($.utils.getPointer(1, this));
+	}
+	_initCache(): CacheDirectory {
+		$.utils.setUint16(0, 7, this);
+		return $.utils.initStructAt(1, CacheDirectory, this);
+	}
+	get _isCache(): boolean {
+		return $.utils.getUint16(0, this) === 7;
+	}
+	set cache(value: CacheDirectory) {
+		$.utils.setUint16(0, 7, this);
 		$.utils.copyFrom(value, $.utils.getPointer(1, this));
 	}
 	toString(): string {
@@ -4627,6 +4664,34 @@ export class DiskDirectory extends $.Struct {
 	}
 	toString(): string {
 		return "DiskDirectory_" + super.toString();
+	}
+}
+/**
+ * Serves `caches.default` and `caches.open()` for the Workers whose `cacheApiOutbound` names
+ * it: a response is stored for as long as its `Cache-Control`, `Expires` or `Last-Modified`
+ * allows, and a match answers `Range`, `If-None-Match` and `If-Modified-Since`. Each entry is a
+ * file in the directory, so entries survive a restart. Experimental: requires `--experimental`.
+ *
+ */
+export class CacheDirectory extends $.Struct {
+	static readonly _capnp = {
+		displayName: "CacheDirectory",
+		id: "bc3351c8a819a6a3",
+		size: new $.ObjectSize(0, 1),
+	};
+	/**
+	 * The directory, as in `DiskDirectory`: relative to the current directory, and if not
+	 * specified, given on the command line with `--directory-path <service-name>=<path>`.
+	 *
+	 */
+	get path(): string {
+		return $.utils.getText(0, this);
+	}
+	set path(value: string) {
+		$.utils.setText(0, value, this);
+	}
+	toString(): string {
+		return "CacheDirectory_" + super.toString();
 	}
 }
 export const HttpOptions_Style = {
