@@ -15,10 +15,8 @@ import type {
 	ParsedHeaders,
 	ParsedRedirects,
 } from "@cloudflare/workers-shared";
-import type { Request as WorkersRequest } from "@cloudflare/workers-types/experimental";
 import type { Logger } from "@cloudflare/workers-utils";
 import type { RequestInit } from "miniflare";
-import type { IncomingHttpHeaders } from "undici/types/header";
 
 export async function generateASSETSBinding(
 	options: Options
@@ -96,10 +94,7 @@ class ProxyDispatcher extends Dispatcher {
 		handler: Dispatcher.DispatchHandler
 	): boolean {
 		if (this.host !== null) {
-			ProxyDispatcher.reinstateHostHeader(
-				options.headers as IncomingHttpHeaders | null | undefined,
-				this.host
-			);
+			ProxyDispatcher.reinstateHostHeader(options.headers, this.host);
 		}
 		return this.dispatcher.dispatch(options, handler);
 	}
@@ -117,12 +112,12 @@ class ProxyDispatcher extends Dispatcher {
 	 * by the `fetch()` function before calling `dispatcher.dispatch()`.
 	 */
 	private static reinstateHostHeader(
-		headers: string[] | IncomingHttpHeaders | null | undefined,
+		headers: Dispatcher.DispatchOptions["headers"],
 		host: string
 	) {
 		assert(headers, "Expected all proxy requests to contain headers.");
 		assert(
-			!Array.isArray(headers),
+			!Array.isArray(headers) && !(Symbol.iterator in headers),
 			"Expected proxy request headers to be a hash object"
 		);
 		assert(
@@ -141,11 +136,6 @@ async function generateAssetsFetch(
 	directory = resolve(directory);
 	const hashFile = await createFileHasher();
 	// Defer importing miniflare until we really need it
-
-	// NOTE: These dynamic imports bring in `global` type augmentations from
-	// `@cloudflare/pages-shared/environment-polyfills/types.ts`, allowing us to
-	// use `fetch`, `Headers`, `Request` and `Response` as globals in this file
-	// and the *entire* `miniflare-cli` TypeScript project.
 	const polyfill = (
 		await import("@cloudflare/pages-shared/environment-polyfills/miniflare")
 	).default;
@@ -153,6 +143,7 @@ async function generateAssetsFetch(
 
 	const { generateHandler, parseQualityWeightedList } =
 		await import("@cloudflare/pages-shared/asset-server/handler");
+	type HandlerRequest = Parameters<typeof generateHandler>[0]["request"];
 
 	const headersFile = join(directory, "_headers");
 	const redirectsFile = join(directory, "_redirects");
@@ -227,7 +218,7 @@ async function generateAssetsFetch(
 		const assetKeyEntryMap = new Map<string, string>();
 
 		return await generateHandler<string>({
-			request: request as unknown as globalThis.Request,
+			request: request as unknown as HandlerRequest,
 			metadata: metadata as Metadata,
 			xServerEnvHeader: "dev",
 			xWebAnalyticsHeader: false,
@@ -259,7 +250,8 @@ async function generateAssetsFetch(
 				return assetEntry;
 			},
 			negotiateContent: (contentRequest) => {
-				const { cf } = contentRequest as unknown as WorkersRequest;
+				// The handler passes back the Miniflare request it was given.
+				const { cf } = contentRequest as unknown as Request;
 				let rawAcceptEncoding: string | undefined;
 				if (cf && "clientAcceptEncoding" in cf && cf.clientAcceptEncoding) {
 					rawAcceptEncoding = cf.clientAcceptEncoding as string;
