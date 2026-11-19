@@ -151,6 +151,33 @@ describe("R2 API", () => {
 				result: [],
 			});
 		});
+
+		// https://github.com/cloudflare/workers-sdk/issues/17039
+		test("lists only objects after start_after", async ({ expect }) => {
+			for (const [key, body] of [
+				["first", "sample"],
+				["second", "other"],
+			]) {
+				const putResponse = await dispatchFetchWithRetry(
+					mf,
+					`${BASE_URL}/r2/buckets/start-after-bucket/objects/${key}`,
+					{ method: "PUT", body }
+				);
+				expect(putResponse.status).toBe(200);
+				await putResponse.arrayBuffer();
+			}
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/r2/buckets/start-after-bucket/objects?start_after=first`
+			);
+
+			const data = await expectValidResponse(
+				response,
+				zR2BucketListObjectsResponse,
+				expect
+			);
+			expect(data.result?.map((object) => object.key)).toEqual(["second"]);
+		});
 	});
 
 	describe("GET /r2/buckets/:bucket_name/objects/:object_key", () => {
