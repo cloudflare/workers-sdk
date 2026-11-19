@@ -586,12 +586,13 @@ test.for([
 );
 
 const CREATE_BATCH_ERRORS_WORKFLOW_SCRIPT = () => `
-import { WorkflowEntrypoint } from "cloudflare:workers";
+import { RpcTarget, WorkflowEntrypoint } from "cloudflare:workers";
 export class CreateBatchErrorsWorkflow extends WorkflowEntrypoint {
 	async run() {
 		return "done";
 	}
 }
+class Target extends RpcTarget {}
 async function rejection(promise) {
 	try {
 		await promise;
@@ -622,6 +623,8 @@ async function settle(result) {
 export default {
 	async fetch(_request, env) {
 		const workflow = env.CREATE_BATCH_ERRORS_WORKFLOW;
+		await waitForStatus(await workflow.create({ id: "existing" }), "complete");
+		const fn = () => 1;
 
 		return Response.json({
 			emptyObject: await rejection(workflow.createBatch({})),
@@ -654,6 +657,23 @@ export default {
 			countRetention: await settle(
 				await workflow.createBatch({ count: 1, retention: { successRetention: 0 } })
 			),
+			unstorableParams: await settle(
+				await workflow.createBatch({
+					instances: [
+						{ id: "unstorable", params: { fn } },
+						{ id: "plain" },
+						{ params: { target: new Target() } },
+						{ params: { stream: new ReadableStream() } },
+						{ id: "existing", params: { fn } },
+						{ id: "repeated" },
+						{ id: "repeated", params: { fn } },
+					],
+				})
+			),
+			unstorableEntry: await rejection(workflow.get("unstorable")),
+			unstorableCount: await settle(
+				await workflow.createBatch({ count: 2, params: { fn } })
+			),
 		});
 	},
 };`;
@@ -671,6 +691,11 @@ test.for([
 			name: "Error",
 			message: "(instance.invalid_id) Instance ID is invalid",
 		};
+		const notFoundRejection = {
+			name: "Error",
+			message: expect.stringContaining("instance.not_found"),
+		};
+		const bodyError = { code: 10002, message: "workflows.api.error.body" };
 		const tmp = await useTmp();
 		const mf = new Miniflare({
 			resourcePersistencePath: tmp,
@@ -738,13 +763,43 @@ test.for([
 				message:
 					"(body) Duration must be a number or a string in format '{{number}} {{unit}}' where unit is second(s), minute(s), etc.",
 			},
-			optionsFirstEntry: {
-				name: "Error",
-				message: expect.stringContaining("instance.not_found"),
-			},
+			optionsFirstEntry: notFoundRejection,
 			// As in production, durations do not have to be positive.
 			retention: { created: Array(6).fill("complete"), errors: [] },
 			countRetention: { created: ["complete"], errors: [] },
+			// JSRPC hands functions and RPC targets to the binding as stubs, and
+			// streams as streams. Durable Object storage can clone none of them, so
+			// as in production their entries fail on their own, with the ids they
+			// would have had.
+			unstorableParams: {
+				created: ["complete", "complete"],
+				errors: [
+					{ index: 0, id: "unstorable", ...bodyError },
+					{ index: 2, id: expect.any(String), ...bodyError },
+					{ index: 3, id: expect.any(String), ...bodyError },
+					// As in production, the id checks come first.
+					{
+						index: 4,
+						id: "existing",
+						code: 10405,
+						message: "workflows.api.error.instance.already_exists",
+					},
+					{
+						index: 6,
+						id: "repeated",
+						code: 10415,
+						message: "workflows.api.error.instance.duplicate_in_batch",
+					},
+				],
+			},
+			unstorableEntry: notFoundRejection,
+			unstorableCount: {
+				created: [],
+				errors: [
+					{ index: 0, id: expect.any(String), ...bodyError },
+					{ index: 1, id: expect.any(String), ...bodyError },
+				],
+			},
 		});
 	}
 );

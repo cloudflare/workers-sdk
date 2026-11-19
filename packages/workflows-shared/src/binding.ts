@@ -422,7 +422,7 @@ const createOptionsSchema = z.object({
  * `DataCloneError` means the params cannot be stored; any other error is
  * rethrown.
  *
- * @param params - The params passed to `create()`.
+ * @param params - The params passed to `create()` or a `createBatch()` entry.
  * @returns `false` if the engine could not store the params.
  */
 function canStoreInstanceParams(params: unknown): boolean {
@@ -649,6 +649,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			| WorkflowBatchCreateOptions
 	): Promise<{ id: string }[] | WorkflowBatchCreateResult> {
 		const isLegacyBatch = Array.isArray(options);
+		let isCountBatch = false;
 		let batch: WorkflowInstanceCreateOptions<unknown>[];
 		if (isLegacyBatch) {
 			batch = options;
@@ -663,6 +664,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 						"body"
 					);
 				}
+				isCountBatch = true;
 				batch = Array.from({ length: options.count }, () => ({
 					params: options.params,
 					retention: options.retention,
@@ -746,8 +748,14 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			})
 		);
 
-		// Existing and repeated ids are excluded from the created instances. The
-		// legacy form omits them, while the object form reports their input indexes.
+		// The count form's entries share one params value, so it is checked once.
+		const countParamsStorable = isCountBatch
+			? canStoreInstanceParams(batch[0].params)
+			: undefined;
+
+		// Entries with existing or repeated ids are not created, and neither are
+		// object-form entries whose params storage cannot clone. The legacy form
+		// omits them, while the object form reports their input indexes.
 		const result: WorkflowBatchCreateResult = { created: [], errors: [] };
 		const seenIds = new Set<string>();
 		for (const [index, instanceOptions] of batch.entries()) {
@@ -777,6 +785,21 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 				}
 			}
 			const { id = crypto.randomUUID() } = instanceOptions;
+			// As in production, where the engine stores the params after its
+			// duplicate check, params that storage cannot clone fail only their own
+			// entry. The error carries the id that the instance would have had.
+			if (
+				!isLegacyBatch &&
+				!(countParamsStorable ?? canStoreInstanceParams(instanceOptions.params))
+			) {
+				result.errors.push({
+					index,
+					id,
+					code: 10002,
+					message: "workflows.api.error.body",
+				});
+				continue;
+			}
 			result.created.push(await this.#createUnchecked(id, instanceOptions));
 		}
 		return isLegacyBatch ? result.created : result;

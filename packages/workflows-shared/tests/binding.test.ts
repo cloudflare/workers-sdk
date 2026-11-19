@@ -778,6 +778,82 @@ describe("WorkflowBinding", () => {
 			);
 		});
 
+		it("should report entries whose params storage cannot clone, like the production binding", async ({
+			expect,
+		}) => {
+			const binding = createBinding();
+			const unstorable = uniqueId("batch-unstorable");
+			const plain = uniqueId("batch-unstorable-plain");
+			const existing = uniqueId("batch-unstorable-existing");
+			const repeated = uniqueId("batch-unstorable-repeated");
+			const params = { fn: () => 1 };
+			const bodyError = { code: 10002, message: "workflows.api.error.body" };
+			setTestWorkflowCallback(async () => "done");
+			await binding.create({ id: existing });
+			await waitUntilLogEvent(
+				env.ENGINE.get(env.ENGINE.idFromName(existing)),
+				InstanceEvent.WORKFLOW_SUCCESS
+			);
+
+			const explicit = await binding.createBatch({
+				instances: [
+					{ id: unstorable, params },
+					{ id: plain },
+					{ params },
+					{ id: existing, params },
+					{ id: repeated },
+					{ id: repeated, params },
+				],
+			});
+
+			expect(explicit).toEqual({
+				created: [{ id: plain }, { id: repeated }],
+				errors: [
+					{ index: 0, id: unstorable, ...bodyError },
+					{ index: 2, id: expect.any(String), ...bodyError },
+					// As in production, the id checks come first.
+					{
+						index: 3,
+						id: existing,
+						code: 10405,
+						message: "workflows.api.error.instance.already_exists",
+					},
+					{
+						index: 5,
+						id: repeated,
+						code: 10415,
+						message: "workflows.api.error.instance.duplicate_in_batch",
+					},
+				],
+			});
+			// The id reported for the entry without one is the id it would have had.
+			for (const id of [unstorable, explicit.errors[1].id]) {
+				await expect(binding.get(id as string)).rejects.toThrow(
+					"instance.not_found"
+				);
+			}
+
+			const clone = vi.spyOn(globalThis, "structuredClone");
+			const counted = await binding.createBatch({ count: 2, params });
+			// The count form's entries share their params, which are checked once.
+			expect(clone).toHaveBeenCalledTimes(1);
+			expect(counted).toEqual({
+				created: [],
+				errors: [
+					{ index: 0, id: expect.any(String), ...bodyError },
+					{ index: 1, id: expect.any(String), ...bodyError },
+				],
+			});
+			expect(counted.errors[0].id).not.toBe(counted.errors[1].id);
+
+			for (const id of [plain, repeated]) {
+				await waitUntilLogEvent(
+					env.ENGINE.get(env.ENGINE.idFromName(id)),
+					InstanceEvent.WORKFLOW_SUCCESS
+				);
+			}
+		});
+
 		it("should throw error for empty batch", async ({ expect }) => {
 			const binding = createBinding();
 
