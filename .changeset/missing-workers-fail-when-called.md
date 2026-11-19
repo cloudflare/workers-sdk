@@ -1,5 +1,5 @@
 ---
-"miniflare": patch
+"miniflare": minor
 ---
 
 Start even when a binding refers to a Worker that isn't running
