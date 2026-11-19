@@ -43,6 +43,7 @@ import type {
 	FlagshipFlag,
 	FlagshipJsonValue,
 	FlagshipPatchFlagData,
+	FlagshipRule as FlagshipApiRule,
 } from "../../api";
 import type { JSX } from "react";
 
@@ -366,6 +367,9 @@ export function FlagDialog({
 
 		setSaving(true);
 		try {
+			// Editable conditions nest at most two levels deep, and other rules
+			// keep their original API conditions.
+			const apiRules = rules as FlagshipApiRule[];
 			if (editing && !replaceDefinition) {
 				const body: FlagshipPatchFlagData["body"] = {};
 				if (defaultVariation !== flag.default_variation) {
@@ -392,7 +396,7 @@ export function FlagDialog({
 						key: flag.key,
 						// The dialog doesn't edit metadata, and PUT clears it if omitted.
 						metadata: flag.metadata,
-						rules,
+						rules: apiRules,
 						variations,
 					},
 					path: { app_id: appId, flag_key: flag.key },
@@ -404,7 +408,7 @@ export function FlagDialog({
 						description: description ?? undefined,
 						enabled: form.enabled,
 						key: form.key.trim(),
-						rules,
+						rules: apiRules,
 						variations,
 					},
 					path: { app_id: appId },
