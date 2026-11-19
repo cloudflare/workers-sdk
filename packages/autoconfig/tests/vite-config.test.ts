@@ -513,6 +513,35 @@ export default defineConfig({
 			expect(result).toContain("nitroOptions: nitro");
 		});
 
+		it("warns which options of a removed incompatible plugin no longer apply", async ({
+			expect,
+		}) => {
+			await writeFile(
+				"vite.config.ts",
+				`import { defineConfig } from "vite";
+import { nitro } from "nitro/vite";
+import { solidStart } from "@solidjs/start/config";
+
+export default defineConfig({
+  plugins: [solidStart(), nitro({ prerender: { crawlLinks: true } })]
+});
+`
+			);
+
+			transformViteConfig(".", { context });
+
+			expect(readFileSync("vite.config.ts", "utf-8")).toMatchInlineSnapshot(`
+				"import { defineConfig } from "vite";
+				import { solidStart } from "@solidjs/start/config";
+				import { cloudflare } from "@cloudflare/vite-plugin";
+
+				export default defineConfig({
+				  plugins: [solidStart(), cloudflare()]
+				});"
+			`);
+			expect(std.warn).toMatchInlineSnapshot(`"Removed \`nitro(…)\` from \`plugins\` in vite.config.ts, as it is incompatible with the Cloudflare Vite plugin. Its options no longer apply: \`prerender\`."`);
+		});
+
 		it("should throw UserError when plugins array is missing", async ({
 			expect,
 		}) => {

@@ -42,7 +42,8 @@ export class SolidStart extends Framework {
 					projectPath,
 					version: CF_VITE_PLUGIN_VERSION_RANGE,
 				});
-				transformViteConfig(projectPath);
+				// Says which Nitro options, such as `prerender`, stop applying once Nitro is removed
+				transformViteConfig(projectPath, { context });
 				// SolidStart 2.2.3 and later add this exclude themselves
 				if (semiver(this.frameworkVersion, "2.2.3") < 0) {
 					excludeSolidStartFromServerPrebundling(projectPath, context);

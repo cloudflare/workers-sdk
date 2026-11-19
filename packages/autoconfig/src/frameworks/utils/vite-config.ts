@@ -226,6 +226,8 @@ export function transformViteConfig(
 	options: {
 		viteEnvironmentName?: string;
 		incompatibleVitePlugins?: string[];
+		/** Used to warn which options of a removed incompatible plugin no longer apply */
+		context?: AutoConfigContext;
 	} = {}
 ) {
 	const filePath = getViteConfigPath(projectPath);
@@ -399,6 +401,19 @@ export function transformViteConfig(
 					el.callee.type === "Identifier" &&
 					incompatibleVitePlugins.includes(el.callee.name)
 				) {
+					const [pluginOptions] = el.arguments;
+					if (options.context && pluginOptions) {
+						const optionNames =
+							pluginOptions.type === "ObjectExpression"
+								? pluginOptions.properties.flatMap((prop) => {
+										const name = getStaticPropertyName(prop);
+										return name ? [`\`${name}\``] : [];
+									})
+								: [];
+						options.context.logger.warn(
+							`Removed \`${el.callee.name}(…)\` from \`plugins\` in ${path.relative(process.cwd(), filePath)}, as it is incompatible with the Cloudflare Vite plugin. Its options no longer apply${optionNames.length > 0 ? `: ${optionNames.join(", ")}` : ""}.`
+						);
+					}
 					removedIncompatiblePlugins.add(el.callee.name);
 					return false;
 				}
