@@ -13496,6 +13496,77 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
+			it.for([true, false, undefined])(
+				"should warn when invocation logs are enabled but logs are disabled, with observability.enabled=%s",
+				(enabled, { expect }) => {
+					const observability = {
+						enabled,
+						logs: { enabled: false, invocation_logs: true },
+					};
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						{ observability },
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.hasErrors()).toBe(false);
+					expect(diagnostics.hasWarnings()).toBe(true);
+					expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+						"Processing wrangler configuration:
+						  - "observability.logs.invocation_logs" has no effect when "observability.logs.enabled" is false. Set "observability.logs.enabled" to true to enable invocation logs."
+					`);
+					expect(config.observability).toEqual(observability);
+				}
+			);
+
+			it("should warn about disabled invocation logs in a named environment", ({
+				expect,
+			}) => {
+				const observability = {
+					enabled: true,
+					logs: { enabled: false, invocation_logs: true },
+				};
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{ env: { staging: { observability } } },
+					undefined,
+					undefined,
+					{ env: "staging" }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+
+					  - "env.staging" environment configuration
+					    - "observability.logs.invocation_logs" has no effect when "observability.logs.enabled" is false. Set "observability.logs.enabled" to true to enable invocation logs."
+				`);
+				expect(config.observability).toEqual(observability);
+			});
+
+			it.for([
+				{ enabled: true, logs: { enabled: true, invocation_logs: true } },
+				{ enabled: false, logs: { enabled: true, invocation_logs: true } },
+				{ enabled: true, logs: { invocation_logs: true } },
+				{ enabled: true, logs: { enabled: false, invocation_logs: false } },
+				{ enabled: true, logs: { enabled: false } },
+			])(
+				"should not warn about invocation logs for observability=%j",
+				(observability, { expect }) => {
+					const { config, diagnostics } = normalizeAndValidateConfig(
+						{ observability },
+						undefined,
+						undefined,
+						{ env: undefined }
+					);
+
+					expect(diagnostics.hasErrors()).toBe(false);
+					expect(diagnostics.hasWarnings()).toBe(false);
+					expect(config.observability).toEqual(observability);
+				}
+			);
+
 			it("should error on invalid observability.logs", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
