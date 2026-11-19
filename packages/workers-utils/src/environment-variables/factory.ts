@@ -120,6 +120,8 @@ type VariableNames =
 
 	/** Enable the local explorer UI at /cdn-cgi/local/explorer (experimental, default: false). */
 	| "X_LOCAL_EXPLORER"
+	/** Trust Vite's allowed hosts for Local Explorer and other /cdn-cgi/ endpoints (experimental, default: false). */
+	| "X_LOCAL_EXPLORER_USE_VITE_ALLOWED_HOSTS"
 	/** Enable local-dev observability capture (experimental, default: false). */
 	| "X_LOCAL_OBSERVABILITY"
 	/** Open the browser in headful (visible) mode when using the Browser Run API in local dev (default: false). */

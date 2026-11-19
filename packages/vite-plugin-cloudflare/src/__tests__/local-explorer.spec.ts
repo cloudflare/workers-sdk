@@ -18,23 +18,35 @@ test.for(
 			mode,
 			useViteAllowedHosts: undefined,
 			allowedHosts: ["my-app.test", ".example.com"],
+			configuredStatus: 403,
 		},
 		{
 			mode,
-			useViteAllowedHosts: false,
+			useViteAllowedHosts: "false",
 			allowedHosts: ["my-app.test", ".example.com"],
+			configuredStatus: 403,
 		},
 		{
 			mode,
-			useViteAllowedHosts: true,
+			useViteAllowedHosts: "true",
 			allowedHosts: ["my-app.test", ".example.com"],
+			configuredStatus: 200,
 		},
-		{ mode, useViteAllowedHosts: true, allowedHosts: true as const },
+		{
+			mode,
+			useViteAllowedHosts: "true",
+			allowedHosts: true as const,
+			configuredStatus: 403,
+		},
 	])
 )(
 	"validates Local Explorer origins with %j",
-	async ({ mode, allowedHosts, useViteAllowedHosts }, { expect }) => {
+	async (
+		{ mode, allowedHosts, useViteAllowedHosts, configuredStatus },
+		{ expect }
+	) => {
 		vi.stubEnv("X_LOCAL_EXPLORER", "true");
+		vi.stubEnv("X_LOCAL_EXPLORER_USE_VITE_ALLOWED_HOSTS", useViteAllowedHosts);
 		const root = mkdtempSync(path.join(fixturesPath, "local-explorer-"));
 		writeFileSync(
 			path.join(root, "cloudflare.config.ts"),
@@ -59,10 +71,6 @@ test.for(
 				cloudflare({
 					inspectorPort: false,
 					persistState: false,
-					localExplorer:
-						useViteAllowedHosts === undefined
-							? undefined
-							: { useViteAllowedHosts },
 				}),
 				{
 					name: "add-tunnel-host",
@@ -106,8 +114,6 @@ test.for(
 			const html = await (await fetch(explorerUrl)).text();
 			const assetPath = html.match(/src="([^"]+\.js)"/)?.[1];
 			assert(assetPath, "Local Explorer HTML should reference a module script");
-			const configuredStatus =
-				useViteAllowedHosts && allowedHosts !== true ? 200 : 403;
 			for (const [hostname, status] of [
 				["localhost:8787", 200],
 				["my-app.localhost:5173", 200],

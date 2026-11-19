@@ -108,18 +108,6 @@ interface ResolvedTypeGenerationOptions {
 	includeRuntime: boolean;
 }
 
-interface LocalExplorerOptions {
-	/**
-	 * Extend Miniflare's `/cdn-cgi/` Host and Origin allowlist with Vite's resolved
-	 * `server.allowedHosts` (or `preview.allowedHosts` during preview).
-	 * Only enable this when all listed hosts should have access to Local Explorer
-	 * APIs. Vite's `allowedHosts: true` never disables Miniflare's validation.
-	 *
-	 * @default false
-	 */
-	useViteAllowedHosts?: boolean;
-}
-
 interface Experimental {
 	/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
 	headersAndRedirectsDevModeSupport?: boolean;
@@ -153,8 +141,6 @@ export interface PluginConfig extends EntryWorkerOptions {
 	inspectorPort?: number | false;
 	remoteBindings?: boolean;
 	tunnel?: boolean | TunnelConfig;
-	/** Configure Local Explorer access during development and preview. */
-	localExplorer?: LocalExplorerOptions;
 	/**
 	 * Options for generating Worker types from `cloudflare.config.ts`. Type
 	 * generation is skipped when the file does not exist.
@@ -183,7 +169,6 @@ interface BaseResolvedConfig {
 	experimental: Pick<Experimental, "headersAndRedirectsDevModeSupport">;
 	remoteBindings: boolean;
 	tunnel: TunnelConfig;
-	localExplorer: Required<LocalExplorerOptions>;
 	localEnv: LoadedEnv;
 	devVars: Record<string, string> | undefined;
 	settings: ParsedSettings;
@@ -321,10 +306,6 @@ export async function resolvePluginConfig(
 		persistState: pluginConfig.persistState ?? true,
 		inspectorPort: pluginConfig.inspectorPort,
 		types,
-		localExplorer: {
-			useViteAllowedHosts:
-				pluginConfig.localExplorer?.useViteAllowedHosts ?? false,
-		},
 		tunnel:
 			typeof pluginConfig.tunnel === "boolean"
 				? { autoStart: pluginConfig.tunnel }

@@ -15,6 +15,7 @@ import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-binding
 import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
+	getLocalExplorerUseViteAllowedHostsFromEnv,
 	getLocalObservabilityEnabledFromEnv,
 	getWorkerZone,
 } from "@cloudflare/workers-utils";
@@ -646,7 +647,7 @@ export async function getDevMiniflareOptions(
 		unsafeTriggerHandlers: true,
 		// Trust Vite's hosts only with explicit opt-in; true never disables validation.
 		unsafeCdnCgiAllowedHosts:
-			resolvedPluginConfig.localExplorer.useViteAllowedHosts &&
+			getLocalExplorerUseViteAllowedHostsFromEnv() &&
 			serverConfig.allowedHosts !== true
 				? serverConfig.allowedHosts
 				: undefined,
@@ -917,7 +918,7 @@ export async function getPreviewMiniflareOptions(
 		unsafeTriggerHandlers: true,
 		// Trust Vite's hosts only with explicit opt-in; true never disables validation.
 		unsafeCdnCgiAllowedHosts:
-			resolvedPluginConfig.localExplorer.useViteAllowedHosts &&
+			getLocalExplorerUseViteAllowedHostsFromEnv() &&
 			serverConfig.allowedHosts !== true
 				? serverConfig.allowedHosts
 				: undefined,

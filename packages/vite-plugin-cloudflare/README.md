@@ -22,12 +22,10 @@ Full documentation can be found [here](https://developers.cloudflare.com/workers
 
 Local Explorer trusts loopback hostnames, including `*.localhost`, and configured Worker route and upstream hostnames. It does not inherit Vite's `allowedHosts` by default.
 
-To also trust Vite's resolved `server.allowedHosts` (or `preview.allowedHosts` during preview), opt in explicitly:
+To also trust Vite's resolved `server.allowedHosts` (or `preview.allowedHosts` during preview), set the experimental environment variable `X_LOCAL_EXPLORER_USE_VITE_ALLOWED_HOSTS=true`. It defaults to `false`.
 
-```ts
-cloudflare({
-  localExplorer: { useViteAllowedHosts: true },
-});
+```sh
+X_LOCAL_EXPLORER_USE_VITE_ALLOWED_HOSTS=true pnpm exec vite
 ```
 
 This extends the Host and Origin allowlist for all `/cdn-cgi/` endpoints, including Local Explorer APIs. Enable it only when every hostname in Vite's allowed list should have access to those APIs. Exact hostnames and suffix entries such as `.example.com` are supported, including tunnel hostnames added by the plugin. Setting Vite's `allowedHosts: true` keeps Miniflare's default allowlist, even with this opt-in enabled.
