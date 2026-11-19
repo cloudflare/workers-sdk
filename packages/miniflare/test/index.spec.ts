@@ -1269,6 +1269,7 @@ test("Miniflare: fails calls to Workers that aren't running", async ({
 							exportName: "Flow",
 						},
 					},
+					tailConsumers: [{ worker: "missing" }],
 					manifest: singleModuleManifest(`
 						export default {
 							async fetch(request, env) {
