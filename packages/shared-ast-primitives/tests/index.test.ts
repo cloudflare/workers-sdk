@@ -197,3 +197,31 @@ const createObjectExpression = (
 		).declarations[0] as recast.types.namedTypes.VariableDeclarator
 	).init as recast.types.namedTypes.ObjectExpression;
 };
+
+describe("mergeObjectProperties with values that aren't literals", () => {
+	test("spreads a variable or a call to keep its settings", ({ expect }) => {
+		const sourceObj = parseObject(`{ vite, modules: getModules() }`);
+
+		mergeObjectProperties(
+			sourceObj,
+			parseObject(
+				`{ vite: { plugins: [cloudflare()] }, modules: ["nitro-cloudflare-dev"] }`
+			).properties as recast.types.namedTypes.ObjectProperty[]
+		);
+
+		expect(recast.print(sourceObj).code).toMatchInlineSnapshot(`
+			"{ vite: {
+			  ...vite,
+			  plugins: [...(vite?.plugins ?? []), cloudflare()]
+			}, modules: [...getModules(), "nitro-cloudflare-dev"] }"
+		`);
+	});
+});
+
+function parseObject(code: string): recast.types.namedTypes.ObjectExpression {
+	const declaration = parseTs(`const obj = ${code};`).program
+		.body[0] as recast.types.namedTypes.VariableDeclaration;
+	return (
+		declaration.declarations[0] as recast.types.namedTypes.VariableDeclarator
+	).init as recast.types.namedTypes.ObjectExpression;
+}

@@ -95,6 +95,10 @@ export function transformFile(filePath: string, methods: recast.types.Visitor) {
  * some properties are objects themselves and concatenating them (de-duplicating string entries) in case
  * some properties are arrays
  *
+ * objects and arrays are also merged into an existing value that isn't a literal, such as a variable or a call,
+ * by spreading it, so that `vite: viteConfig` keeps its settings as
+ * `vite: { ...viteConfig, plugins: [...(viteConfig?.plugins ?? []), cloudflare()] }`
+ *
  * @param sourceObject the object into which merge the new properties
  * @param newProperties the new properties to add/merge
  */
@@ -138,8 +142,91 @@ export function mergeObjectProperties(
 			return;
 		}
 
+		if (
+			existing.type === "ObjectProperty" &&
+			(newProp.value.type === "ObjectExpression" ||
+				newProp.value.type === "ArrayExpression") &&
+			!isLiteral(existing.value)
+		) {
+			// A shorthand such as `{ vite }` must be expanded to print as `vite: value`
+			existing.shorthand = false;
+			existing.value = spreadInto(existing.value as Expression, newProp.value);
+			return;
+		}
+
 		sourceObject.properties[indexOfExisting] = newProp;
 	});
+}
+
+type Expression = Parameters<typeof recast.types.builders.spreadElement>[0];
+
+/**
+ * merges new properties or elements into a value whose content isn't known without running the code,
+ * by spreading the value before them, including into its nested values that the new ones extend
+ *
+ * @param value the existing value, such as a variable or a call
+ * @param newValue the object or array to merge into it
+ * @returns the merged expression
+ */
+function spreadInto(
+	value: Expression,
+	newValue:
+		| recast.types.namedTypes.ObjectExpression
+		| recast.types.namedTypes.ArrayExpression
+): Expression {
+	const b = recast.types.builders;
+	if (newValue.type === "ArrayExpression") {
+		return b.arrayExpression([b.spreadElement(value), ...newValue.elements]);
+	}
+
+	// `value?.key` needs parentheses around values such as `isDev ? a : b` to keep its meaning
+	const object = [
+		"Identifier",
+		"MemberExpression",
+		"OptionalMemberExpression",
+		"CallExpression",
+	].includes(value.type)
+		? value
+		: b.parenthesizedExpression(value);
+
+	return b.objectExpression([
+		b.spreadElement(value),
+		...newValue.properties.map((prop) => {
+			if (
+				prop.type !== "ObjectProperty" ||
+				(prop.value.type !== "ObjectExpression" &&
+					prop.value.type !== "ArrayExpression")
+			) {
+				return prop;
+			}
+			const nested = b.optionalMemberExpression(
+				object,
+				prop.key,
+				prop.key.type !== "Identifier",
+				true
+			);
+			return b.objectProperty(
+				prop.key,
+				spreadInto(
+					prop.value.type === "ArrayExpression"
+						? b.logicalExpression("??", nested, b.arrayExpression([]))
+						: nested,
+					prop.value
+				)
+			);
+		}),
+	]);
+}
+
+/** whether a value is an object, array or primitive literal, which spreading wouldn't extend */
+function isLiteral(
+	value: recast.types.namedTypes.ObjectProperty["value"]
+): boolean {
+	return (
+		value.type === "ObjectExpression" ||
+		value.type === "ArrayExpression" ||
+		recast.types.namedTypes.Literal.check(value)
+	);
 }
 
 /**
