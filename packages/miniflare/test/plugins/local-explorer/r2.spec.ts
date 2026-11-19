@@ -239,6 +239,53 @@ describe("R2 API", () => {
 			expect(response.status).toBe(200);
 			expect(await response.text()).toBe("special content");
 		});
+
+		test("returns 304 without a body when If-None-Match matches the ETag", async ({
+			expect,
+		}) => {
+			const r2 = await mf.getR2Bucket("TEST_BUCKET");
+			const object = await r2.put("conditional-etag.txt", "sample");
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/r2/buckets/test-bucket/objects/conditional-etag.txt`,
+				{ headers: { "If-None-Match": object.httpEtag } }
+			);
+
+			const body = await response.text();
+			expect(response.status).toBe(304);
+			expect(body).toBe("");
+		});
+
+		test("returns 304 without a body when the object is not modified since If-Modified-Since", async ({
+			expect,
+		}) => {
+			const r2 = await mf.getR2Bucket("TEST_BUCKET");
+			await r2.put("conditional-date.txt", "sample");
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/r2/buckets/test-bucket/objects/conditional-date.txt`,
+				{ headers: { "If-Modified-Since": "Fri, 01 Jan 2100 00:00:00 GMT" } }
+			);
+
+			const body = await response.text();
+			expect(response.status).toBe(304);
+			expect(body).toBe("");
+		});
+
+		test("returns object content when If-None-Match does not match the ETag", async ({
+			expect,
+		}) => {
+			const r2 = await mf.getR2Bucket("TEST_BUCKET");
+			await r2.put("conditional-mismatch.txt", "sample");
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/r2/buckets/test-bucket/objects/conditional-mismatch.txt`,
+				{ headers: { "If-None-Match": '"different-etag"' } }
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toBe("sample");
+		});
 	});
 
 	describe("PUT /r2/buckets/:bucket_name/objects/:object_key", () => {
