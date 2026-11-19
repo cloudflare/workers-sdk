@@ -10,7 +10,6 @@ import {
 	isUserTriggeredRestart,
 	createWorkflowError,
 	isUserTriggeredTerminate,
-	WorkflowError,
 } from "./lib/errors";
 import {
 	isReservedWorkflowInstanceId,
@@ -679,50 +678,27 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			throw createBindingError("Provided argument is invalid", "body");
 		}
 
-		if (batch.length === 0) {
-			if (!isLegacyBatch) {
-				throw createBindingError("Batch size exceeds maximum allowed", "body");
-			}
-			throw new Error(
-				"WorkflowError: batchCreate should have at least 1 instance"
-			);
-		}
-		if (batch.length > 100) {
-			if (!isLegacyBatch) {
-				throw createBindingError("Batch size exceeds maximum allowed", "body");
-			}
-			throw new Error(
-				"WorkflowError: batchCreate only supports 100 instances at a time"
-			);
+		if (batch.length === 0 || batch.length > 100) {
+			throw createBindingError("Batch size exceeds maximum allowed", "body");
 		}
 
-		// Like the production binding, check every object-form entry's options
-		// before any id, and both before probing ids, which persists storage. The
-		// deprecated array form keeps the checks that create() made before it
-		// matched the production binding: its options are not validated, and its
-		// ids only have to satisfy isValidWorkflowInstanceId().
-		if (!isLegacyBatch) {
-			for (const instanceOptions of batch) {
-				const validation = createOptionsSchema.safeParse(instanceOptions);
-				if (!validation.success) {
-					throw createBindingError(
-						validation.error.issues.map((issue) => issue.message).join("; "),
-						"body"
-					);
-				}
+		// Like the production binding, check every entry's options before any
+		// id, and both before probing ids, which persists storage. The deprecated
+		// array form gets the same checks as the object form.
+		for (const instanceOptions of batch) {
+			const validation = createOptionsSchema.safeParse(instanceOptions);
+			if (!validation.success) {
+				throw createBindingError(
+					validation.error.issues.map((issue) => issue.message).join("; "),
+					"body"
+				);
 			}
 		}
-		for (const instanceOptions of batch) {
-			// Reserved ids are rejected by the object form, as by create(); the
-			// deprecated array form keeps accepting them.
+		for (const { id } of batch) {
 			if (
-				instanceOptions.id !== undefined &&
-				(!isValidWorkflowInstanceId(instanceOptions.id) ||
-					(!isLegacyBatch && isReservedWorkflowInstanceId(instanceOptions.id)))
+				id !== undefined &&
+				(!isValidWorkflowInstanceId(id) || isReservedWorkflowInstanceId(id))
 			) {
-				if (isLegacyBatch) {
-					throw new WorkflowError("Workflow instance has invalid id");
-				}
 				throw createBindingError(
 					"Instance ID is invalid",
 					"instance.invalid_id"
@@ -753,34 +729,30 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			? canStoreInstanceParams(batch[0].params)
 			: undefined;
 
-		// Entries with existing or repeated ids are not created, and neither are
-		// object-form entries whose params storage cannot clone. The legacy form
-		// omits them, while the object form reports their input indexes.
+		// Entries with existing or repeated ids, or with params that storage
+		// cannot clone, are not created. The object form reports their input
+		// indexes, while the deprecated array form omits them, as in production.
 		const result: WorkflowBatchCreateResult = { created: [], errors: [] };
 		const seenIds = new Set<string>();
 		for (const [index, instanceOptions] of batch.entries()) {
 			if (instanceOptions.id !== undefined) {
 				if (seenIds.has(instanceOptions.id)) {
-					if (!isLegacyBatch) {
-						result.errors.push({
-							index,
-							id: instanceOptions.id,
-							code: 10415,
-							message: "workflows.api.error.instance.duplicate_in_batch",
-						});
-					}
+					result.errors.push({
+						index,
+						id: instanceOptions.id,
+						code: 10415,
+						message: "workflows.api.error.instance.duplicate_in_batch",
+					});
 					continue;
 				}
 				seenIds.add(instanceOptions.id);
 				if (existing.has(instanceOptions.id)) {
-					if (!isLegacyBatch) {
-						result.errors.push({
-							index,
-							id: instanceOptions.id,
-							code: 10405,
-							message: "workflows.api.error.instance.already_exists",
-						});
-					}
+					result.errors.push({
+						index,
+						id: instanceOptions.id,
+						code: 10405,
+						message: "workflows.api.error.instance.already_exists",
+					});
 					continue;
 				}
 			}
@@ -789,7 +761,6 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			// duplicate check, params that storage cannot clone fail only their own
 			// entry. The error carries the id that the instance would have had.
 			if (
-				!isLegacyBatch &&
 				!(countParamsStorable ?? canStoreInstanceParams(instanceOptions.params))
 			) {
 				result.errors.push({

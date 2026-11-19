@@ -674,6 +674,29 @@ export default {
 			unstorableCount: await settle(
 				await workflow.createBatch({ count: 2, params: { fn } })
 			),
+			arrayEmpty: await rejection(workflow.createBatch([])),
+			arrayTooMany: await rejection(
+				workflow.createBatch(Array.from({ length: 101 }, () => ({})))
+			),
+			arrayInvalidOptions: await rejection(
+				workflow.createBatch([{ locationHint: "invalid" }])
+			),
+			arrayNullEntry: await rejection(workflow.createBatch([null])),
+			arrayInvalidId: await rejection(workflow.createBatch([{ id: "-bad" }])),
+			arrayReservedId: await rejection(workflow.createBatch([{ id: "batch" }])),
+			arrayUnstorableParams: await Promise.all(
+				(
+					await workflow.createBatch([
+						{ id: "array-unstorable", params: { fn } },
+						{ id: "array-plain" },
+						{ id: "existing" },
+					])
+				).map(async (instance) => ({
+					id: instance.id,
+					status: await waitForStatus(instance, "complete"),
+				}))
+			),
+			arrayUnstorableEntry: await rejection(workflow.get("array-unstorable")),
 		});
 	},
 };`;
@@ -800,6 +823,30 @@ test.for([
 					{ index: 1, id: expect.any(String), ...bodyError },
 				],
 			},
+			// The deprecated array form rejects with the object form's errors.
+			arrayEmpty: {
+				name: "Error",
+				message: "(body) Batch size exceeds maximum allowed",
+			},
+			arrayTooMany: {
+				name: "Error",
+				message: "(body) Batch size exceeds maximum allowed",
+			},
+			arrayInvalidOptions: {
+				name: "Error",
+				message:
+					'(body) Invalid option: expected one of "wnam"|"weur"|"enam"|"eeur"|"apac"|"apac-ne"|"apac-se"|"oc"|"sam"|"afr"|"me"',
+			},
+			arrayNullEntry: {
+				name: "Error",
+				message: "(body) Invalid input: expected object, received null",
+			},
+			arrayInvalidId: invalidIdRejection,
+			arrayReservedId: invalidIdRejection,
+			// As in production, the array form omits the entries that the object
+			// form reports as errors.
+			arrayUnstorableParams: [{ id: "array-plain", status: "complete" }],
+			arrayUnstorableEntry: notFoundRejection,
 		});
 	}
 );

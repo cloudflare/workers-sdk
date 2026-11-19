@@ -858,7 +858,7 @@ describe("WorkflowBinding", () => {
 			const binding = createBinding();
 
 			await expect(binding.createBatch([])).rejects.toThrow(
-				"WorkflowError: batchCreate should have at least 1 instance"
+				"(body) Batch size exceeds maximum allowed"
 			);
 			await expect(binding.createBatch({ instances: [] })).rejects.toThrow(
 				"(body) Batch size exceeds maximum allowed"
@@ -875,7 +875,7 @@ describe("WorkflowBinding", () => {
 			}));
 
 			await expect(binding.createBatch(tooMany)).rejects.toThrow(
-				"WorkflowError: batchCreate only supports 100 instances at a time"
+				"(body) Batch size exceeds maximum allowed"
 			);
 			await expect(binding.createBatch({ instances: tooMany })).rejects.toThrow(
 				"(body) Batch size exceeds maximum allowed"
@@ -960,6 +960,17 @@ describe("WorkflowBinding", () => {
 					{ instances: [{ id: "batch" }] },
 					"(instance.invalid_id) Instance ID is invalid",
 				],
+				// The deprecated array form rejects with the object form's errors.
+				[[], "(body) Batch size exceeds maximum allowed"],
+				[tooMany, "(body) Batch size exceeds maximum allowed"],
+				[
+					[{ locationHint: "invalid" }],
+					'(body) Invalid option: expected one of "wnam"|"weur"|"enam"|"eeur"|"apac"|"apac-ne"|"apac-se"|"oc"|"sam"|"afr"|"me"',
+				],
+				[[null], "(body) Invalid input: expected object, received null"],
+				[[{ id: 5 }], "(body) Invalid input: expected string, received number"],
+				[[{ id: "-bad" }], "(instance.invalid_id) Instance ID is invalid"],
+				[[{ id: "batch" }], "(instance.invalid_id) Instance ID is invalid"],
 			];
 
 			// toStrictEqual() also compares prototypes, so a WorkflowError fails.
@@ -1089,7 +1100,7 @@ describe("WorkflowBinding", () => {
 
 			await expect(
 				binding.createBatch([{ id: good }, { id: "#invalid!" }])
-			).rejects.toThrow("Workflow instance has invalid id");
+			).rejects.toThrow("(instance.invalid_id) Instance ID is invalid");
 
 			// The valid entry listed before the invalid one must not have been
 			// created.
@@ -1109,50 +1120,58 @@ describe("WorkflowBinding", () => {
 				await expect(
 					binding.createBatch({ instances: [{ id }] })
 				).rejects.toThrow("(instance.invalid_id) Instance ID is invalid");
-			}
-		});
-
-		it("should keep accepting reserved ids in the array form", async ({
-			expect,
-		}) => {
-			const binding = createBinding();
-			const ids = [
-				"batch",
-				"terminate",
-				"terminateAll",
-				`cf_${"1".repeat(64)}`,
-			];
-			setTestWorkflowCallback(async () => "done");
-
-			const results = await binding.createBatch(ids.map((id) => ({ id })));
-
-			expect(results.map((r) => r.id)).toEqual(ids);
-			for (const id of ids) {
-				await waitUntilLogEvent(
-					env.ENGINE.get(env.ENGINE.idFromName(id)),
-					InstanceEvent.WORKFLOW_SUCCESS
+				await expect(binding.createBatch([{ id }])).rejects.toThrow(
+					"(instance.invalid_id) Instance ID is invalid"
 				);
 			}
 		});
 
-		it("should keep accepting unvalidated options in the array form", async ({
+		it("should validate array-form entries like the production binding", async ({
 			expect,
 		}) => {
 			const binding = createBinding();
 			const id = uniqueId("legacy-batch-options");
+
+			await expect(
+				binding.createBatch([
+					{
+						id,
+						retention: { successRetention: "invalid" },
+						locationHint: "invalid",
+					},
+				] as unknown as WorkflowInstanceCreateOptions<unknown>[])
+			).rejects.toThrow(
+				"(body) Duration must be a number or a string in format '{{number}} {{unit}}' where unit is second(s), minute(s), etc.; Invalid option"
+			);
+			// As in the object form, every entry's options are checked before any id.
+			await expect(
+				binding.createBatch([
+					{ id: "-bad" },
+					{ id, locationHint: "invalid" },
+				] as unknown as WorkflowInstanceCreateOptions<unknown>[])
+			).rejects.toThrow("(body) Invalid option");
+			await expect(binding.get(id)).rejects.toThrow("instance.not_found");
+		});
+
+		it("should omit array-form entries whose params storage cannot clone, like the production binding", async ({
+			expect,
+		}) => {
+			const binding = createBinding();
+			const unstorable = uniqueId("legacy-batch-unstorable");
+			const plain = uniqueId("legacy-batch-plain");
 			setTestWorkflowCallback(async () => "done");
 
 			const results = await binding.createBatch([
-				{
-					id,
-					retention: { successRetention: "invalid" },
-					locationHint: "invalid",
-				},
-			] as unknown as WorkflowInstanceCreateOptions<unknown>[]);
+				{ id: unstorable, params: { fn: () => 1 } },
+				{ id: plain },
+			]);
 
-			expect(results).toEqual([{ id }]);
+			expect(results).toEqual([{ id: plain }]);
+			await expect(binding.get(unstorable)).rejects.toThrow(
+				"instance.not_found"
+			);
 			await waitUntilLogEvent(
-				env.ENGINE.get(env.ENGINE.idFromName(id)),
+				env.ENGINE.get(env.ENGINE.idFromName(plain)),
 				InstanceEvent.WORKFLOW_SUCCESS
 			);
 		});
