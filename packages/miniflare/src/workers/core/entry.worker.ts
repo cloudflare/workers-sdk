@@ -29,7 +29,6 @@ type Env = {
 	[CoreBindings.TEXT_CUSTOM_SERVICE]: string;
 	[CoreBindings.TEXT_UPSTREAM_URL]?: string;
 	[CoreBindings.JSON_CF_BLOB]: IncomingRequestCfProperties;
-	[CoreBindings.TEXT_FALLBACK_WORKER_NAME]: string;
 	[CoreBindings.JSON_ROUTES]: WorkerRoute[];
 	[CoreBindings.JSON_CDN_CGI_ALLOWED_HOSTS]: string[];
 	[CoreBindings.JSON_LOG_LEVEL]: LogLevel;

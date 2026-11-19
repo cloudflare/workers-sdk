@@ -274,7 +274,7 @@ export default { plugins: [cloudflare()] };`,
 			});
 			const details = await getDetailsForAutoConfig({ context });
 
-			expect(details.framework.id).toBe(id);
+			expect(details.framework?.id).toBe(id);
 			await expect(
 				runAutoConfig(details, { target: "cf", context, dryRun: true })
 			).rejects.toThrow("You can still use Wrangler");
@@ -794,7 +794,7 @@ export default { plugins: [cloudflare()] };`,
 			});
 			const details = await getDetailsForAutoConfig({ context });
 			expect(details.framework?.id).toBe("astro");
-			expect(details.env).toEqual(detected.detectedFramework.framework.env);
+			expect(details.env).toBeUndefined();
 			expect(details[missing]).toBeUndefined();
 			expect(
 				details[missing === "devCommand" ? "buildCommand" : "devCommand"]

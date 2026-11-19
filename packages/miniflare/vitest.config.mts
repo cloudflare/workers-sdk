@@ -12,7 +12,8 @@ export default defineConfig({
 		// setting, so keep the worker count fixed rather than scaling it with
 		// the runner's cores.
 		maxWorkers: 4,
-		shard: getVitestShard(),
+		// Vitest reads `shard` from inline test config but only types it as a CLI option.
+		...{ shard: getVitestShard() },
 		include: ["test/**/*.spec.ts"],
 		setupFiles: [path.resolve(import.meta.dirname, "test/setup.mjs")],
 		globals: true,

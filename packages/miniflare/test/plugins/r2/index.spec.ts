@@ -24,7 +24,6 @@ import type {
 	R2Bucket,
 	R2Conditional,
 	R2ListOptions,
-	R2Object,
 	R2ObjectBody,
 } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, ReplaceWorkersTypes } from "miniflare";
@@ -518,7 +517,7 @@ test("put: stores only if passes onlyIf", async ({ expect }) => {
 	};
 	const fail = async (cond: R2Conditional) => {
 		const object = await r2.put("key", "2", { onlyIf: cond });
-		expect(object as R2Object | null).toBe(null);
+		expect(object).toBe(null);
 		expect(await (await r2.get("key"))?.text()).toBe("1");
 		// No `reset()` as we've just checked we didn't update anything
 	};
@@ -541,7 +540,7 @@ test("put: stores only if passes onlyIf", async ({ expect }) => {
 
 	// Check non-existent key with failed condition
 	const object = await r2.put("no-key", "2", { onlyIf: { etagMatches: etag } });
-	expect(object as R2Object | null).toBe(null);
+	expect(object).toBe(null);
 });
 test("put: validates metadata size", async ({ expect }) => {
 	const { r2 } = ctx;
