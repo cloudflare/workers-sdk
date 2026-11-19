@@ -93,6 +93,7 @@ export const buildOutputPlugin = createPlugin("build-output", (ctx) => {
 					containers: ctx.resolvedPluginConfig.containers,
 					root: builder.config.root,
 					pathToDocker: getDockerPath(),
+					previousOutputHadContainers: ctx.previousOutputHadContainers,
 				});
 				await writeRootConfig();
 			},

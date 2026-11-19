@@ -1,5 +1,7 @@
+import { existsSync } from "node:fs";
 import {
 	cleanBuildOutputDir,
+	getContainersDir,
 	getWorkerBundleDir,
 	writeRootConfig,
 } from "@cloudflare/build-output-utils";
@@ -51,6 +53,9 @@ export async function writeBuildOutput({
 			});
 		}
 
+		// Checked before cleaning, so that a project with no Containers, now or in
+		// the output being replaced, does not run Docker to look for stale tags.
+		const previousOutputHadContainers = existsSync(getContainersDir(root));
 		await cleanBuildOutputDir(root);
 		await writeRootConfig({
 			root,
@@ -77,6 +82,7 @@ export async function writeBuildOutput({
 			containers: parsedConfig.containers ?? [],
 			root,
 			pathToDocker,
+			previousOutputHadContainers,
 		});
 	} finally {
 		if (buildProps) {

@@ -34,20 +34,34 @@ const DOCKER_REPOSITORY_NAME_LENGTH = 255;
  * Registry references pass through unchanged. Locally built tags are retained
  * on success so a later deploy can resolve each emitted `localReference`.
  *
+ * Tags left by a previous build are removed first. Finding them means running
+ * Docker, so a project with no Containers skips the lookup when the caller
+ * reports that the output it replaced had no Containers either.
+ *
  * @param options - The validated Container configs and Docker build environment.
+ * @param options.previousOutputHadContainers - Whether the Build Output tree
+ * that this build replaces held any Container output. Callers clean the tree
+ * before this runs, so they must check beforehand. When omitted, previous tags
+ * are always looked up.
  */
 export async function buildAndWriteContainerOutput(options: {
 	containers: ParsedContainerConfig[];
 	root: string;
 	pathToDocker: string;
+	previousOutputHadContainers?: boolean;
 }): Promise<void> {
 	const localTags = new Set<string>();
 	try {
 		const containers = resolveContainerDirectories(options.containers);
-		await cleanupPreviousBuildOutputImageTags({
-			root: options.root,
-			pathToDocker: options.pathToDocker,
-		});
+		if (
+			containers.length > 0 ||
+			options.previousOutputHadContainers !== false
+		) {
+			await cleanupPreviousBuildOutputImageTags({
+				root: options.root,
+				pathToDocker: options.pathToDocker,
+			});
+		}
 		const buildId = createBuildId();
 		const dockerfileCount = countDockerfiles(options.containers);
 		if (dockerfileCount > 0) {

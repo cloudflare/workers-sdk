@@ -1,6 +1,8 @@
+import { existsSync } from "node:fs";
 import * as path from "node:path";
 import {
 	cleanBuildOutputDir,
+	getContainersDir,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
 } from "@cloudflare/build-output-utils";
@@ -116,6 +118,12 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			]);
 
 			if (ctx.resolvedViteConfig.command === "build") {
+				// Checked before cleaning, so that a project with no Containers, now
+				// or in the output being replaced, does not run Docker to look for
+				// stale image tags at the end of the build.
+				if (existsSync(getContainersDir(ctx.resolvedViteConfig.root))) {
+					ctx.setPreviousOutputHadContainers();
+				}
 				await cleanBuildOutputDir(ctx.resolvedViteConfig.root);
 			}
 		},
