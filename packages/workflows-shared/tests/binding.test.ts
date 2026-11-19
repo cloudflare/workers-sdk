@@ -1103,6 +1103,34 @@ describe("WorkflowBinding", () => {
 			);
 		});
 
+		it("should reject with plain Errors, like the production binding", async ({
+			expect,
+		}) => {
+			const id = uniqueId("plain-errors");
+			const binding = createBinding();
+			setTestWorkflowCallback(async () => "done");
+			await binding.create({ id });
+			await waitUntilLogEvent(
+				env.ENGINE.get(env.ENGINE.idFromName(id)),
+				InstanceEvent.WORKFLOW_SUCCESS
+			);
+
+			// toStrictEqual() also compares prototypes, so a WorkflowError fails.
+			await expect(binding.create({ id })).rejects.toStrictEqual(
+				new Error(
+					`(instance.already_exists) Workflow instance with id "${id}" already exists`
+				)
+			);
+			await expect(binding.create({ id: "batch" })).rejects.toStrictEqual(
+				new Error("(instance.invalid_id) Instance has invalid id")
+			);
+			await expect(
+				binding.create({ id: null as unknown as string })
+			).rejects.toStrictEqual(
+				new Error("(body) Invalid input: expected string, received null")
+			);
+		});
+
 		it("should not throw for auto-generated ids", async ({ expect }) => {
 			const binding = createBinding();
 			setTestWorkflowCallback(async () => "done");

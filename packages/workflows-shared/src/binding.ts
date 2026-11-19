@@ -3,6 +3,7 @@ import { ms } from "itty-time";
 import { z } from "zod";
 import { InstanceEvent, instanceStatusName } from "./instance";
 import {
+	createBindingError,
 	duplicateInstanceError,
 	isUserTriggeredDelete,
 	isUserTriggeredPause,
@@ -457,11 +458,11 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		id: string;
 	}> {
 		// Like the production binding, treat a missing or null argument as no
-		// options, and check the options before the id.
+		// options, check the options before the id, and reject with plain Errors.
 		const createOptions = options ?? {};
 		const validation = createOptionsSchema.safeParse(createOptions);
 		if (!validation.success) {
-			throw createWorkflowError(
+			throw createBindingError(
 				validation.error.issues.map((issue) => issue.message).join("; "),
 				"body"
 			);
@@ -471,7 +472,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			(!isValidWorkflowInstanceId(createOptions.id) ||
 				isReservedWorkflowInstanceId(createOptions.id))
 		) {
-			throw createWorkflowError(
+			throw createBindingError(
 				"Instance has invalid id",
 				"instance.invalid_id"
 			);

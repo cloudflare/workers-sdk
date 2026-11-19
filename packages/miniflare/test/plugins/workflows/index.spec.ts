@@ -405,6 +405,130 @@ test("supports object-form Workflow batches", async ({ expect }) => {
 	expect(result.counted[0].id).not.toBe(result.counted[1].id);
 });
 
+const CREATE_ERRORS_WORKFLOW_SCRIPT = () => `
+import { WorkflowEntrypoint } from "cloudflare:workers";
+export class CreateErrorsWorkflow extends WorkflowEntrypoint {
+	async run() {
+		return "done";
+	}
+}
+async function rejection(promise) {
+	try {
+		await promise;
+		return "resolved";
+	} catch (error) {
+		return { name: error.name, message: error.message };
+	}
+}
+async function waitForStatus(instance, status) {
+	let current;
+	for (let attempt = 0; attempt < 500; attempt++) {
+		current = (await instance.status()).status;
+		if (current === status || current === "errored" || current === "terminated") {
+			break;
+		}
+		await new Promise((resolve) => setTimeout(resolve, 10));
+	}
+	return current;
+}
+export default {
+	async fetch(_request, env) {
+		const existing = await env.CREATE_ERRORS_WORKFLOW.create({ id: "existing" });
+
+		return Response.json({
+			existing: await waitForStatus(existing, "complete"),
+			noOptions: await waitForStatus(await env.CREATE_ERRORS_WORKFLOW.create(), "complete"),
+			nullOptions: await waitForStatus(
+				await env.CREATE_ERRORS_WORKFLOW.create(null),
+				"complete"
+			),
+			optionsBeforeId: await rejection(
+				env.CREATE_ERRORS_WORKFLOW.create({ id: "batch", locationHint: "invalid" })
+			),
+			optionsBeforeDuplicate: await rejection(
+				env.CREATE_ERRORS_WORKFLOW.create({ id: "existing", locationHint: "invalid" })
+			),
+			duplicate: await rejection(env.CREATE_ERRORS_WORKFLOW.create({ id: "existing" })),
+			invalidId: await rejection(env.CREATE_ERRORS_WORKFLOW.create({ id: "#invalid!" })),
+			reservedId: await rejection(env.CREATE_ERRORS_WORKFLOW.create({ id: "batch" })),
+			invalidOptions: await rejection(
+				env.CREATE_ERRORS_WORKFLOW.create({ locationHint: "invalid" })
+			),
+		});
+	},
+};`;
+
+test.for([
+	{ serialization: "legacy", compatibilityFlags: [] },
+	{
+		serialization: "enhanced",
+		compatibilityFlags: ["enhanced_error_serialization"],
+	},
+])(
+	"rejects Workflow create() calls with production's error codes ($serialization error serialization)",
+	async ({ compatibilityFlags }, { expect }) => {
+		const invalidLocationHintRejection = {
+			name: "Error",
+			message:
+				'(body) Invalid option: expected one of "wnam"|"weur"|"enam"|"eeur"|"apac"|"apac-ne"|"apac-se"|"oc"|"sam"|"afr"|"me"',
+		};
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			resourcePersistencePath: tmp,
+			workers: [
+				{
+					config: {
+						name: "create-errors-worker",
+						compatibilityDate: "2024-11-20",
+						compatibilityFlags,
+						manifest: singleModuleManifest(CREATE_ERRORS_WORKFLOW_SCRIPT()),
+						env: {
+							CREATE_ERRORS_WORKFLOW: {
+								type: "workflow",
+								name: "CREATE_ERRORS_WORKFLOW",
+								worker: "create-errors-worker",
+								exportName: "CreateErrorsWorkflow",
+							},
+						},
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const response = await mf.dispatchFetch("http://localhost");
+
+		// Without enhanced error serialization, workerd prefixes the messages of
+		// error types other than Error with their name when they cross JSRPC.
+		expect(await response.json()).toEqual({
+			existing: "complete",
+			noOptions: "complete",
+			nullOptions: "complete",
+			// As in production, the options are checked before the id.
+			optionsBeforeId: invalidLocationHintRejection,
+			optionsBeforeDuplicate: invalidLocationHintRejection,
+			duplicate: {
+				name: "Error",
+				message:
+					'(instance.already_exists) Workflow instance with id "existing" already exists',
+			},
+			invalidId: {
+				name: "Error",
+				message: "(instance.invalid_id) Instance has invalid id",
+			},
+			reservedId: {
+				name: "Error",
+				message: "(instance.invalid_id) Instance has invalid id",
+			},
+			invalidOptions: {
+				name: "Error",
+				message:
+					'(body) Invalid option: expected one of "wnam"|"weur"|"enam"|"eeur"|"apac"|"apac-ne"|"apac-se"|"oc"|"sam"|"afr"|"me"',
+			},
+		});
+	}
+);
+
 const LIFECYCLE_WORKFLOW_SCRIPT = () => `
 import { WorkflowEntrypoint } from "cloudflare:workers";
 export class LifecycleWorkflow extends WorkflowEntrypoint {
