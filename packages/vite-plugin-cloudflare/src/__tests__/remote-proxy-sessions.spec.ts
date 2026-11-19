@@ -16,14 +16,11 @@ vi.mock("@cloudflare/remote-bindings", () => ({
 	maybeStartOrUpdateRemoteProxySession: vi.fn(),
 }));
 
-// Source imports must read the worker scripts emitted by the package build.
+// These tests inspect configuration without executing the embedded Worker scripts.
 vi.mock("node:fs/promises", async (importOriginal) => {
 	const original = await importOriginal<typeof import("node:fs/promises")>();
 	const { fileURLToPath } = await import("node:url");
 	const sourceWorkers = fileURLToPath(new URL("../workers/", import.meta.url));
-	const builtWorkers = fileURLToPath(
-		new URL("../../dist/workers/", import.meta.url)
-	);
 	return {
 		...original,
 		readFile(file: Parameters<typeof original.readFile>[0], options?: object) {
@@ -32,7 +29,7 @@ vi.mock("node:fs/promises", async (importOriginal) => {
 				file.startsWith(sourceWorkers) &&
 				file.endsWith(".js")
 			) {
-				file = builtWorkers + file.slice(sourceWorkers.length);
+				return Promise.resolve("export default {};");
 			}
 			return original.readFile(file, options);
 		},

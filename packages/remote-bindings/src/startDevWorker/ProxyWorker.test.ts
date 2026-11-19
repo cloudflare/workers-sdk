@@ -7,7 +7,11 @@ import { ProxyController } from "./ProxyController";
 import { createDeferred } from "./utils";
 import type { ErrorEvent } from "./events";
 import type { StartDevWorkerOptions } from "./types";
-import type { IncomingMessage, RequestListener } from "node:http";
+import type {
+	IncomingMessage,
+	RequestListener,
+	ServerResponse,
+} from "node:http";
 import type { AddressInfo } from "node:net";
 
 initLogger({
@@ -41,11 +45,13 @@ const config: StartDevWorkerOptions = {
  *
  * @param onPreviewRequest Handles requests that reach the preview.
  * @param onRequestConnection Starts the remote connection when a request arrives.
+ * @param lazy Whether binding requests should start the connection on demand.
  * @returns The proxy, its error listener, and a function to point it at a preview.
  */
 async function startProxy(
 	onPreviewRequest: RequestListener,
-	onRequestConnection = vi.fn()
+	onRequestConnection = vi.fn(),
+	lazy = true
 ) {
 	const preview = createServer(onPreviewRequest);
 	preview.listen(0, "127.0.0.1");
@@ -57,15 +63,29 @@ async function startProxy(
 	const { port } = preview.address() as AddressInfo;
 
 	const onError = vi.fn<(event: ErrorEvent) => void>();
-	const controller = new ProxyController(onError, vi.fn(), onRequestConnection);
+	const onPreviewTokenExpired = vi.fn();
+	const controller = new ProxyController(
+		onError,
+		onPreviewTokenExpired,
+		onRequestConnection
+	);
 	onTestFinished(() => controller.teardown());
-	controller.start(config);
+	controller.start({ ...config, lazy });
 	const { proxyWorker } = await controller.ready.promise;
+	controller.pause({ ...config, lazy });
+	await controller.runtimeMessageMutex.drained();
 
 	// Remote previews keep the same host across reloads; only the token changes.
 	function play(previewToken: string, refreshAt?: number) {
-		return controller.sendMessageToProxyWorker({
-			type: "play",
+		controller.play({
+			type: "reloadComplete",
+			config: { ...config, lazy },
+			bundle: {
+				path: "proxy-worker.js",
+				entrypointSource: config.entrypointSource,
+				type: "esm",
+				modules: [],
+			},
 			proxyData: {
 				refreshAt,
 				userWorkerUrl: {
@@ -76,9 +96,62 @@ async function startProxy(
 				headers: { "cf-workers-preview-token": previewToken },
 			},
 		});
+		return controller.runtimeMessageMutex.drained();
 	}
-	return { proxyWorker, onError, play, controller, preview };
+	return {
+		proxyWorker,
+		onError,
+		onPreviewTokenExpired,
+		play,
+		controller,
+		preview,
+	};
 }
+
+it("does not request a connection for an eager session", async ({ expect }) => {
+	const requestConnection = vi.fn();
+	const { proxyWorker, play } = await startProxy(
+		(_request, response) => response.end("connected"),
+		requestConnection,
+		false
+	);
+	const pending = proxyWorker.dispatchFetch("http://localhost/");
+	await play("signed-in");
+	expect(await (await pending).text()).toBe("connected");
+	expect(requestConnection).not.toHaveBeenCalled();
+});
+
+it.for(["current", "paused", "replaced", "failed"] as const)(
+	"handles expiry notifications only from the current preview: %s",
+	async (state, { expect }) => {
+		const oldResponse = createDeferred<ServerResponse>();
+		const { proxyWorker, play, controller, onPreviewTokenExpired } =
+			await startProxy((_request, response) => oldResponse.resolve(response));
+		const onMessage = vi.spyOn(controller, "onProxyWorkerMessage");
+		await play("old-preview");
+		const pending = proxyWorker.dispatchFetch("http://localhost/");
+		const response = await oldResponse.promise;
+		if (state === "paused") {
+			controller.pause({ ...config, lazy: true });
+			await controller.runtimeMessageMutex.drained();
+		} else if (state === "replaced") {
+			await play("new-preview");
+		} else if (state === "failed") {
+			controller.connectionFailed("Login cancelled");
+			await controller.runtimeMessageMutex.drained();
+		}
+		response.writeHead(400).end("error code: 1031");
+		expect(await (await pending).text()).toBe("error code: 1031");
+		await vi.waitFor(() =>
+			expect(onMessage).toHaveBeenCalledWith(
+				expect.objectContaining({ type: "previewTokenExpired" })
+			)
+		);
+		expect(onPreviewTokenExpired).toHaveBeenCalledTimes(
+			state === "current" ? 1 : 0
+		);
+	}
+);
 
 it("refreshes an aging preview on the next binding request without forwarding to the old preview", async ({
 	expect,

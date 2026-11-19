@@ -49,7 +49,7 @@ export type ReadyEvent = {
 // ProxyWorker
 export type ProxyWorkerIncomingRequestBody =
 	| { type: "play"; proxyData: ProxyData }
-	| { type: "pause" }
+	| { type: "pause"; lazy: boolean }
 	| { type: "connectionFailed"; message: string };
 export type ProxyWorkerOutgoingRequestBody =
 	| { type: "error"; error: SerializedError }

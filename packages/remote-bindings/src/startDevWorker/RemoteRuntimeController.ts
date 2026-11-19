@@ -251,6 +251,9 @@ export class RemoteRuntimeController {
 			cliDisplayName: config.cliDisplayName,
 			previewToken: token.value,
 		});
+		if (bundleId !== this.#currentBundleId || this.#tearingDown) {
+			return false;
+		}
 
 		const proxyData: ProxyData = {
 			...(config.lazy
@@ -353,18 +356,19 @@ export class RemoteRuntimeController {
 		}
 	}
 
-	async #refreshPreviewToken() {
-		if (this.#tearingDown) {
+	async #refreshPreviewToken(bundleId: number) {
+		if (this.#tearingDown || bundleId !== this.#currentBundleId) {
 			return;
 		}
-		if (!this.#latestConfig || !this.#latestBundle) {
+		const config = this.#latestConfig;
+		const bundle = this.#latestBundle;
+		if (!config || !bundle) {
 			logger.warn(
 				"Cannot refresh preview token: missing config or bundle data"
 			);
 			return;
 		}
 
-		const bundleId = this.#currentBundleId;
 		// Capture the signal as well as the bundle ID so cancellation cannot
 		// schedule another refresh for a superseded preview.
 		const abortSignal = this.#abortController.signal;
@@ -377,13 +381,20 @@ export class RemoteRuntimeController {
 			!abortSignal.aborted &&
 			!this.#tearingDown;
 		try {
-			const auth = await unwrapHook(this.#latestConfig.auth);
+			const auth = await unwrapHook(config.auth);
+			if (!shouldRetry()) {
+				return;
+			}
 
-			this.#session = await this.#getPreviewSession(this.#latestConfig, auth);
+			const session = await this.#getPreviewSession(config, auth);
+			if (!shouldRetry()) {
+				return;
+			}
+			this.#session = session;
 
 			const refreshed = await this.#updatePreviewToken(
-				this.#latestConfig,
-				this.#latestBundle,
+				config,
+				bundle,
 				auth,
 				bundleId
 			);
@@ -397,6 +408,10 @@ export class RemoteRuntimeController {
 				this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
 			}
 		} catch (error) {
+			// A superseded lazy refresh must not fail calls waiting for the new bindings.
+			if (config.lazy && !shouldRetry()) {
+				return;
+			}
 			if (error instanceof Error && error.name == "AbortError") {
 				return;
 			}
@@ -432,6 +447,12 @@ export class RemoteRuntimeController {
 		// Abort any previous operations when a new bundle is started
 		this.#abortController.abort();
 		this.#abortController = new AbortController();
+		if (this.#latestConfig?.lazy) {
+			// Only a binding call using the updated DevEnv config may resume this session.
+			this.#latestConfig = undefined;
+			this.#latestBundle = undefined;
+			this.#latestProxyData = undefined;
+		}
 		if (!this.#refreshTimer && this.#latestProxyData && !this.#tearingDown) {
 			this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
 		}
@@ -442,8 +463,12 @@ export class RemoteRuntimeController {
 		void this.#mutex.runWith(() => this.#onBundleComplete(ev, id));
 	}
 	onPreviewTokenExpired(): void {
+		if (!this.#latestProxyData || this.#tearingDown) {
+			return;
+		}
+		const bundleId = this.#currentBundleId;
 		logger.log(chalk.dim("⎔ Refreshing preview token..."));
-		void this.#mutex.runWith(() => this.#refreshPreviewToken());
+		void this.#mutex.runWith(() => this.#refreshPreviewToken(bundleId));
 	}
 
 	async teardown() {
