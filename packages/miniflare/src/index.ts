@@ -2413,13 +2413,12 @@ export class Miniflare {
 			}
 		}
 
-		const devRegistryEnabled = this.#devRegistry.isEnabled();
 		if (
 			externalServices.size > 0 ||
-			(devRegistryEnabled &&
+			(this.#devRegistry.isEnabled() &&
 				(hasQueues || sharedOpts.unsafeEnableSharedStorage))
 		) {
-			if (devRegistryEnabled) {
+			if (this.#devRegistry.isEnabled()) {
 				await this.#devRegistry.watch(
 					externalServices,
 					hasQueues,
