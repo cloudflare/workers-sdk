@@ -112,13 +112,29 @@ describe("WorkflowBinding", () => {
 			);
 		});
 
-		it("should throw WorkflowError for invalid instance id", async ({
-			expect,
-		}) => {
+		it("should reject an invalid instance id", async ({ expect }) => {
 			const binding = createBinding();
-			await expect(binding.create({ id: "#invalid!" })).rejects.toThrow(
-				"Workflow instance has invalid id"
-			);
+			for (const id of ["#invalid!", "-leading-dash", "", "a".repeat(101)]) {
+				await expect(binding.create({ id })).rejects.toThrow(
+					"(instance.invalid_id) Instance has invalid id"
+				);
+			}
+		});
+
+		it("should reject reserved instance ids", async ({ expect }) => {
+			const binding = createBinding();
+			const reservedIds = [
+				"batch",
+				"terminate",
+				"terminateAll",
+				`cf_${"0".repeat(64)}`,
+			];
+
+			for (const id of reservedIds) {
+				await expect(binding.create({ id })).rejects.toThrow(
+					"(instance.invalid_id) Instance has invalid id"
+				);
+			}
 		});
 
 		it("should reject a null id instead of generating one", async ({
@@ -127,7 +143,91 @@ describe("WorkflowBinding", () => {
 			const binding = createBinding();
 			await expect(
 				binding.create({ id: null as unknown as string })
-			).rejects.toThrow("Workflow instance has invalid id");
+			).rejects.toThrow("(body) Invalid input: expected string, received null");
+		});
+
+		it("should reject invalid options", async ({ expect }) => {
+			const binding = createBinding();
+			const locationHintIssue =
+				'Invalid option: expected one of "wnam"|"weur"|"enam"|"eeur"|"apac"|"apac-ne"|"apac-se"|"oc"|"sam"|"afr"|"me"';
+			const cases: [unknown, string][] = [
+				["options", "(body) Invalid input: expected object, received string"],
+				[[], "(body) Invalid input: expected object, received array"],
+				[{ id: 5 }, "(body) Invalid input: expected string, received number"],
+				[
+					{ retention: { successRetention: "invalid" } },
+					"(body) Duration must be a number or a string in format '{{number}} {{unit}}' where unit is second(s), minute(s), etc.",
+				],
+				[{ retention: { errorRetention: true } }, "(body) Invalid input"],
+				[{ locationHint: "invalid" }, `(body) ${locationHintIssue}`],
+				[
+					{ id: 5, locationHint: "invalid" },
+					`(body) Invalid input: expected string, received number; ${locationHintIssue}`,
+				],
+			];
+
+			for (const [options, message] of cases) {
+				await expect(
+					binding.create(options as WorkflowInstanceCreateOptions)
+				).rejects.toThrow(message);
+			}
+		});
+
+		it("should check options before the id, like the production binding", async ({
+			expect,
+		}) => {
+			const id = uniqueId("options-before-id");
+			const binding = createBinding();
+			setTestWorkflowCallback(async () => "done");
+			await binding.create({ id });
+			await waitUntilLogEvent(
+				env.ENGINE.get(env.ENGINE.idFromName(id)),
+				InstanceEvent.WORKFLOW_SUCCESS
+			);
+
+			for (const invalidId of [id, "batch"]) {
+				await expect(
+					binding.create({
+						id: invalidId,
+						locationHint: "invalid",
+					} as unknown as WorkflowInstanceCreateOptions)
+				).rejects.toThrow("(body) Invalid option");
+			}
+		});
+
+		it("should accept the retention durations that the production binding accepts", async ({
+			expect,
+		}) => {
+			const binding = createBinding();
+			setTestWorkflowCallback(async () => "done");
+
+			// Unlike object-form batch entries, create() does not require positive
+			// durations.
+			const { id } = await binding.create({
+				retention: { successRetention: 0, errorRetention: "0 days" },
+				locationHint: "weur",
+			});
+
+			await waitUntilLogEvent(
+				env.ENGINE.get(env.ENGINE.idFromName(id)),
+				InstanceEvent.WORKFLOW_SUCCESS
+			);
+			expect((await (await binding.get(id)).status()).status).toBe("complete");
+		});
+
+		it("should treat null options as no options", async ({ expect }) => {
+			const binding = createBinding();
+			setTestWorkflowCallback(async () => "done");
+
+			const { id } = await binding.create(
+				null as unknown as WorkflowInstanceCreateOptions
+			);
+
+			expect(id).toEqual(expect.any(String));
+			await waitUntilLogEvent(
+				env.ENGINE.get(env.ENGINE.idFromName(id)),
+				InstanceEvent.WORKFLOW_SUCCESS
+			);
 		});
 
 		for (const method of ["create", "createBatch"] as const) {
