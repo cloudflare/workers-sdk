@@ -2118,7 +2118,7 @@ importers:
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 5.20261118.1
+        version: 5.20261119.1
       '@cspotcode/source-map-support':
         specifier: 0.8.1
         version: 0.8.1
@@ -2172,7 +2172,7 @@ importers:
         version: link:../miniflare
       undici:
         specifier: catalog:default
-        version: 7.30.1
+        version: 7.30.2
     devDependencies:
       '@cloudflare/pages-shared':
         specifier: workspace:*
@@ -2185,7 +2185,7 @@ importers:
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 5.20261118.1
+        version: 5.20261119.1
       '@types/mime':
         specifier: ^3.0.4
         version: 3.0.4
@@ -2206,13 +2206,13 @@ importers:
         version: 3.0.0
       tsdown:
         specifier: catalog:default
-        version: 0.22.14(tsx@4.23.15)(typescript@5.8.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
+        version: 0.22.14(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.8(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(synckit@0.11.12))
       typescript:
         specifier: catalog:default
-        version: 5.8.3
+        version: 6.0.3
       vitest:
         specifier: catalog:default
-        version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@5.8.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
+        version: 5.0.4(@opentelemetry/api@1.9.1)(@types/node@22.15.17)(@vitest/ui@5.0.4)(msw@2.14.6(@types/node@22.15.17)(typescript@6.0.3))(vite@8.3.4(@types/node@22.15.17)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.15)(yaml@2.9.0))
 
   packages/devprod-status-bot:
     devDependencies:

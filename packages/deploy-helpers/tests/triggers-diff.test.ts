@@ -2,7 +2,7 @@ import { beforeEach, describe, it, vi } from "vitest";
 import { initDeployHelpersContext } from "../src/shared/context";
 import { triggersDeploy } from "../src/triggers/deploy";
 import type { TriggerProps } from "../src/shared/types";
-import type { Config, Route } from "@cloudflare/workers-utils";
+import type { Config, Route } from "@cloudflare/workers-utils/config";
 
 const ACCOUNT_ID = "some-account-id";
 const WORKER_NAME = "test-worker";
