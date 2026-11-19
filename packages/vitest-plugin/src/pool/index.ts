@@ -87,8 +87,11 @@ const ignoreMessages = [
 	"disconnected: peer disconnected without gracefully ending TLS session",
 	"CODE_MOVED for unknown code block",
 	"broken.outputGateBroken; jsg.Error: Instance dispose",
-	// Every ABORT_REASONS entry in workflows-shared is a deliberate engine abort
-	"broken.outputGateBroken; jsg.Error: Aborting engine",
+	// The expected result of a step throwing `NonRetryableError` or of
+	// `terminate()`. Other `Aborting engine` reasons stay visible: for some
+	// (e.g. a step output that is not serialisable) this is the only output.
+	"broken.outputGateBroken; jsg.Error: Aborting engine: A step threw a NonRetryableError",
+	"broken.outputGateBroken; jsg.Error: Aborting engine: User called terminate",
 ];
 function handleStructuredLogs({ level, message }: WorkerdStructuredLog): void {
 	if (ignoreMessages.some((ignore) => message.includes(ignore))) {

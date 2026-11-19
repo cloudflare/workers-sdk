@@ -74,6 +74,99 @@ test("routes workerd structured logs to the correct output stream", async ({
 	expect(result.stderr).toContain("__STDERR_ERROR__");
 });
 
+test(
+	"ignores Workflow engine aborts for NonRetryableError and terminate only",
+	{ timeout: 60_000 },
+	async ({ expect, seed, vitestRun }) => {
+		await seed({
+			"vitest.config.mts": vitestConfig({
+				main: "./index.ts",
+				wrangler: { configPath: "./wrangler.jsonc" },
+			}),
+			"wrangler.jsonc": dedent`
+				{
+					"name": "workflow-aborts",
+					"main": "./index.ts",
+					"compatibility_date": "2025-12-02",
+					"workflows": [
+						{
+							"binding": "MY_WORKFLOW",
+							"name": "my-workflow",
+							"class_name": "MyWorkflow"
+						}
+					]
+				}
+			`,
+			"index.ts": dedent`
+				import { WorkflowEntrypoint } from "cloudflare:workers";
+				import { NonRetryableError } from "cloudflare:workflows";
+
+				export class MyWorkflow extends WorkflowEntrypoint {
+					async run(event, step) {
+						await step.do("first", async () => {
+							if (event.payload.mode === "fail") {
+								throw new NonRetryableError("boom");
+							}
+							if (event.payload.mode === "unserialisable") {
+								return () => {};
+							}
+							return "ok";
+						});
+						await step.sleep("wait", "1 hour");
+					}
+				}
+
+				export default {
+					fetch() {
+						return new Response("ok");
+					},
+				};
+			`,
+			"index.test.ts": dedent`
+				import { env } from "cloudflare:workers";
+				import { it } from "vitest";
+
+				async function status(id) {
+					const instance = await env.MY_WORKFLOW.get(id);
+					return (await instance.status()).status;
+				}
+
+				it("ends instances as errored and terminated", async ({ expect }) => {
+					// First, so its abort is logged before the run ends
+					await env.MY_WORKFLOW.create({
+						id: "unserialisable",
+						params: { mode: "unserialisable" },
+					});
+					await expect.poll(() => status("unserialisable")).toBe("errored");
+
+					await env.MY_WORKFLOW.create({ id: "fail", params: { mode: "fail" } });
+					await expect.poll(() => status("fail")).toBe("errored");
+
+					const sleeping = await env.MY_WORKFLOW.create({
+						id: "sleep",
+						params: { mode: "sleep" },
+					});
+					await expect.poll(() => status("sleep")).toBe("running");
+					await sleeping.terminate();
+					await expect.poll(() => status("sleep")).toBe("terminated");
+				});
+			`,
+		});
+
+		const result = await vitestRun();
+		expect(await result.exitCode).toBe(0);
+
+		// workerd reports these on stderr on macOS and on stdout on Linux
+		const output = result.stdout + result.stderr;
+		expect(output).not.toContain(
+			"Aborting engine: A step threw a NonRetryableError"
+		);
+		expect(output).not.toContain("Aborting engine: User called terminate");
+		// Nothing else reports this failure, so its abort must stay visible
+		expect(output).toContain("Aborting engine: Value is not serialisable");
+	}
+);
+
 test("enables verbose workerd logging by default", async ({
 	expect,
 	seed,
