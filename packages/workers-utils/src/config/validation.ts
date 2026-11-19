@@ -7881,6 +7881,12 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 				"boolean"
 			) && isValid;
 
+		if (val.logs.enabled === false && val.logs.invocation_logs === true) {
+			diagnostics.warnings.push(
+				`"${field}.logs.invocation_logs" has no effect when "${field}.logs.enabled" is false. Set "${field}.logs.enabled" to true to enable invocation logs.`
+			);
+		}
+
 		isValid =
 			validateOptionalTypedArray(
 				diagnostics,
