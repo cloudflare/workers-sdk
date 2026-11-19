@@ -49,6 +49,8 @@ export const DefaultScopes = {
 		"See and change Email Sending settings and configuration.",
 	"browser:write": "See and manage Browser Run sessions",
 	"challenge-widgets.write": "See and change Turnstile widgets",
+	"billing:write":
+		"See and change Cloudflare billing data such as billing profiles, payment methods, and subscriptions.",
 } as const;
 
 /**

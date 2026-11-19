@@ -6,8 +6,6 @@ import {
 } from "../../src/cf/scopes";
 
 const CLIENT_REGISTERED_BUT_NON_CONSENTABLE_SCOPES = [
-	"billing:read",
-	"billing:write",
 	"email_routing:read",
 	"email_sending:read",
 	"notebook-managed:read",
@@ -34,6 +32,12 @@ describe("cf OAuth scopes", () => {
 		expect(validateScopeKeys(["user-api-tokens.write"])).toBe(true);
 	});
 
+	it("requests the billing scopes in cf login defaults", ({ expect }) => {
+		expect(CF_CLI.getDefaultScopeKeys()).toContain("billing:read");
+		expect(CF_CLI.getDefaultScopeKeys()).toContain("billing:write");
+		expect(validateScopeKeys(["billing:read", "billing:write"])).toBe(true);
+	});
+
 	it("matches the production client registration", ({ expect }) => {
 		expect(CF_CLIENT_REGISTERED_SCOPES).toHaveLength(483);
 		expect(new Set(CF_CLIENT_REGISTERED_SCOPES).size).toBe(
@@ -42,7 +46,7 @@ describe("cf OAuth scopes", () => {
 	});
 
 	it("matches the requestable production catalog", ({ expect }) => {
-		expect(CF_REQUESTABLE_SCOPES).toHaveLength(477);
+		expect(CF_REQUESTABLE_SCOPES).toHaveLength(479);
 		expect(new Set(CF_REQUESTABLE_SCOPES).size).toBe(
 			CF_REQUESTABLE_SCOPES.length
 		);
