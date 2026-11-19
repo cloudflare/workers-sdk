@@ -54,12 +54,15 @@ export default {
 				}
 			}
 
-			let img = await env.BROWSER_KV_DEMO.get(url, { type: "arrayBuffer" });
+			let img: ArrayBuffer | Uint8Array | null = await env.BROWSER_KV_DEMO.get(
+				url,
+				{ type: "arrayBuffer" }
+			);
 			if (img === null) {
 				await using browser = await playwright.launch(env.MYBROWSER);
 				const page = await browser.newPage();
 				await page.goto(url);
-				img = (await page.screenshot()) as Buffer;
+				img = await page.screenshot();
 				await env.BROWSER_KV_DEMO.put(url, img, {
 					expirationTtl: 60 * 60 * 24,
 				});
