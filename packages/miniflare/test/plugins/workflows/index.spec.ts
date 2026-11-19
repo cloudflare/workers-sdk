@@ -585,6 +585,170 @@ test.for([
 	}
 );
 
+const CREATE_BATCH_ERRORS_WORKFLOW_SCRIPT = () => `
+import { WorkflowEntrypoint } from "cloudflare:workers";
+export class CreateBatchErrorsWorkflow extends WorkflowEntrypoint {
+	async run() {
+		return "done";
+	}
+}
+async function rejection(promise) {
+	try {
+		await promise;
+		return "resolved";
+	} catch (error) {
+		return { name: error.name, message: error.message };
+	}
+}
+async function waitForStatus(instance, status) {
+	let current;
+	for (let attempt = 0; attempt < 500; attempt++) {
+		current = (await instance.status()).status;
+		if (current === status || current === "errored" || current === "terminated") {
+			break;
+		}
+		await new Promise((resolve) => setTimeout(resolve, 10));
+	}
+	return current;
+}
+async function settle(result) {
+	return {
+		created: await Promise.all(
+			result.created.map((instance) => waitForStatus(instance, "complete"))
+		),
+		errors: result.errors,
+	};
+}
+export default {
+	async fetch(_request, env) {
+		const workflow = env.CREATE_BATCH_ERRORS_WORKFLOW;
+
+		return Response.json({
+			emptyObject: await rejection(workflow.createBatch({})),
+			nullOptions: await rejection(workflow.createBatch(null)),
+			emptyInstances: await rejection(workflow.createBatch({ instances: [] })),
+			zeroCount: await rejection(workflow.createBatch({ count: 0 })),
+			tooManyCount: await rejection(workflow.createBatch({ count: 101 })),
+			invalidOptions: await rejection(
+				workflow.createBatch({ instances: [{ locationHint: "invalid" }] })
+			),
+			nullEntry: await rejection(workflow.createBatch({ instances: [null] })),
+			invalidId: await rejection(workflow.createBatch({ instances: [{ id: "-bad" }] })),
+			reservedId: await rejection(workflow.createBatch({ instances: [{ id: "batch" }] })),
+			optionsBeforeId: await rejection(
+				workflow.createBatch({
+					instances: [
+						{ id: "-bad" },
+						{ id: "options-first", retention: { successRetention: "nope" } },
+					],
+				})
+			),
+			optionsFirstEntry: await rejection(workflow.get("options-first")),
+			retention: await settle(
+				await workflow.createBatch({
+					instances: [0, -1, 0.5, "0 days", "-1 day", ""].map((successRetention) => ({
+						retention: { successRetention },
+					})),
+				})
+			),
+			countRetention: await settle(
+				await workflow.createBatch({ count: 1, retention: { successRetention: 0 } })
+			),
+		});
+	},
+};`;
+
+test.for([
+	{ serialization: "legacy", compatibilityFlags: [] },
+	{
+		serialization: "enhanced",
+		compatibilityFlags: ["enhanced_error_serialization"],
+	},
+])(
+	"rejects Workflow createBatch() calls with production's error codes ($serialization error serialization)",
+	async ({ compatibilityFlags }, { expect }) => {
+		const invalidIdRejection = {
+			name: "Error",
+			message: "(instance.invalid_id) Instance ID is invalid",
+		};
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			resourcePersistencePath: tmp,
+			workers: [
+				{
+					config: {
+						name: "create-batch-errors-worker",
+						compatibilityDate: "2024-11-20",
+						compatibilityFlags,
+						manifest: singleModuleManifest(
+							CREATE_BATCH_ERRORS_WORKFLOW_SCRIPT()
+						),
+						env: {
+							CREATE_BATCH_ERRORS_WORKFLOW: {
+								type: "workflow",
+								name: "CREATE_BATCH_ERRORS_WORKFLOW",
+								worker: "create-batch-errors-worker",
+								exportName: "CreateBatchErrorsWorkflow",
+							},
+						},
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const response = await mf.dispatchFetch("http://localhost");
+
+		expect(await response.json()).toEqual({
+			emptyObject: {
+				name: "Error",
+				message: "(body) Provided argument is invalid",
+			},
+			nullOptions: {
+				name: "Error",
+				message: "(body) Provided argument is invalid",
+			},
+			emptyInstances: {
+				name: "Error",
+				message: "(body) Batch size exceeds maximum allowed",
+			},
+			zeroCount: {
+				name: "Error",
+				message: "(body) count must be a positive integer",
+			},
+			tooManyCount: {
+				name: "Error",
+				message: "(body) batchCreate only supports 100 instances at a time",
+			},
+			invalidOptions: {
+				name: "Error",
+				message:
+					'(body) Invalid option: expected one of "wnam"|"weur"|"enam"|"eeur"|"apac"|"apac-ne"|"apac-se"|"oc"|"sam"|"afr"|"me"',
+			},
+			nullEntry: {
+				name: "Error",
+				message: "(body) Invalid input: expected object, received null",
+			},
+			invalidId: invalidIdRejection,
+			reservedId: invalidIdRejection,
+			// As in production, every entry's options are checked before any id,
+			// and nothing is created.
+			optionsBeforeId: {
+				name: "Error",
+				message:
+					"(body) Duration must be a number or a string in format '{{number}} {{unit}}' where unit is second(s), minute(s), etc.",
+			},
+			optionsFirstEntry: {
+				name: "Error",
+				message: expect.stringContaining("instance.not_found"),
+			},
+			// As in production, durations do not have to be positive.
+			retention: { created: Array(6).fill("complete"), errors: [] },
+			countRetention: { created: ["complete"], errors: [] },
+		});
+	}
+);
+
 const LIFECYCLE_WORKFLOW_SCRIPT = () => `
 import { WorkflowEntrypoint } from "cloudflare:workers";
 export class LifecycleWorkflow extends WorkflowEntrypoint {

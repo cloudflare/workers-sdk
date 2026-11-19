@@ -857,6 +857,43 @@ describe("WorkflowBinding", () => {
 			);
 		});
 
+		it("should reject with plain Errors, like the production binding", async ({
+			expect,
+		}) => {
+			const binding = createBinding();
+			const tooMany = Array.from({ length: 101 }, () => ({}));
+			const cases: [unknown, string][] = [
+				[{}, "(body) Provided argument is invalid"],
+				[null, "(body) Provided argument is invalid"],
+				[{ instances: [] }, "(body) Batch size exceeds maximum allowed"],
+				[{ instances: tooMany }, "(body) Batch size exceeds maximum allowed"],
+				[{ count: 0 }, "(body) count must be a positive integer"],
+				[
+					{ count: 101 },
+					"(body) batchCreate only supports 100 instances at a time",
+				],
+				[
+					{ instances: [{ locationHint: "invalid" }] },
+					'(body) Invalid option: expected one of "wnam"|"weur"|"enam"|"eeur"|"apac"|"apac-ne"|"apac-se"|"oc"|"sam"|"afr"|"me"',
+				],
+				[
+					{ instances: [{ id: "-bad" }] },
+					"(instance.invalid_id) Instance ID is invalid",
+				],
+				[
+					{ instances: [{ id: "batch" }] },
+					"(instance.invalid_id) Instance ID is invalid",
+				],
+			];
+
+			// toStrictEqual() also compares prototypes, so a WorkflowError fails.
+			for (const [options, message] of cases) {
+				await expect(
+					binding.createBatch(options as WorkflowBatchCreateOptions)
+				).rejects.toStrictEqual(new Error(message));
+			}
+		});
+
 		it("should accept the retention durations that the production binding accepts", async ({
 			expect,
 		}) => {

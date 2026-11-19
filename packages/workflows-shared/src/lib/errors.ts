@@ -65,9 +65,9 @@ export function createWorkflowError(
 }
 
 /**
- * Creates an error for `WorkflowBinding.create()` to reject with: a plain
- * `Error` whose message starts with the error code, as the production binding
- * throws.
+ * Creates an error for `WorkflowBinding.create()` and
+ * `WorkflowBinding.createBatch()` to reject with: a plain `Error` whose
+ * message starts with the error code, as the production binding throws.
  *
  * A `WorkflowError` would reach the calling Worker as an `Error` whose message
  * begins with `WorkflowError: `, because Miniflare runs the binding Worker

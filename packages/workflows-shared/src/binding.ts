@@ -655,10 +655,10 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		} else if (options !== null && typeof options === "object") {
 			if ("count" in options && options.count !== undefined) {
 				if (!Number.isInteger(options.count) || options.count <= 0) {
-					throw createWorkflowError("count must be a positive integer", "body");
+					throw createBindingError("count must be a positive integer", "body");
 				}
 				if (options.count > 100) {
-					throw createWorkflowError(
+					throw createBindingError(
 						"batchCreate only supports 100 instances at a time",
 						"body"
 					);
@@ -671,15 +671,15 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			} else if ("instances" in options && Array.isArray(options.instances)) {
 				batch = options.instances;
 			} else {
-				throw createWorkflowError("Provided argument is invalid", "body");
+				throw createBindingError("Provided argument is invalid", "body");
 			}
 		} else {
-			throw createWorkflowError("Provided argument is invalid", "body");
+			throw createBindingError("Provided argument is invalid", "body");
 		}
 
 		if (batch.length === 0) {
 			if (!isLegacyBatch) {
-				throw createWorkflowError("Batch size exceeds maximum allowed", "body");
+				throw createBindingError("Batch size exceeds maximum allowed", "body");
 			}
 			throw new Error(
 				"WorkflowError: batchCreate should have at least 1 instance"
@@ -687,7 +687,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		}
 		if (batch.length > 100) {
 			if (!isLegacyBatch) {
-				throw createWorkflowError("Batch size exceeds maximum allowed", "body");
+				throw createBindingError("Batch size exceeds maximum allowed", "body");
 			}
 			throw new Error(
 				"WorkflowError: batchCreate only supports 100 instances at a time"
@@ -703,7 +703,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			for (const instanceOptions of batch) {
 				const validation = createOptionsSchema.safeParse(instanceOptions);
 				if (!validation.success) {
-					throw createWorkflowError(
+					throw createBindingError(
 						validation.error.issues.map((issue) => issue.message).join("; "),
 						"body"
 					);
@@ -721,7 +721,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 				if (isLegacyBatch) {
 					throw new WorkflowError("Workflow instance has invalid id");
 				}
-				throw createWorkflowError(
+				throw createBindingError(
 					"Instance ID is invalid",
 					"instance.invalid_id"
 				);
