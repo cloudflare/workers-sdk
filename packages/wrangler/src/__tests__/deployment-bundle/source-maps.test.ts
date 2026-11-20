@@ -6,6 +6,7 @@ import {
 	loadSourceMaps,
 	tryAttachSourcemapToModule,
 } from "../../deployment-bundle/source-maps";
+import { wasmModuleWithSourceMappingUrl } from "../helpers/wasm-module";
 import type { SourceMapBundle } from "../../deployment-bundle/source-maps";
 import type { CfModule } from "@cloudflare/workers-utils";
 
@@ -154,6 +155,146 @@ describe("loadSourceMaps", () => {
 		expect(result).toHaveLength(2);
 		expect(result[0].name).toBe("a.js.map");
 		expect(result[1].name).toBe("b.js.map");
+	});
+});
+
+describe("loadSourceMaps for WebAssembly modules", () => {
+	function makeWasmModule(
+		name: string,
+		filePath: string | undefined,
+		sourceMappingUrl?: string
+	): CfModule {
+		return {
+			name,
+			filePath,
+			content: wasmModuleWithSourceMappingUrl(sourceMappingUrl),
+			type: "compiled-wasm",
+		};
+	}
+
+	it("loads the source map named by the sourceMappingURL section alongside the bundle's", ({
+		expect,
+	}) => {
+		const dir = createTempDir();
+		writeFileSync(path.join(dir, "index.js.map"), validSourceMap);
+		writeFileSync(
+			path.join(dir, "index_bg.wasm.map"),
+			JSON.stringify({
+				version: 3,
+				file: "index_bg.wasm",
+				sources: ["./src/lib.rs", "worker-0.8.0/src/lib.rs"],
+				names: [],
+				mappings: "gBAAA",
+			})
+		);
+		const main = makeModule("index.js", path.join(dir, "index.js"), "");
+		const wasm = makeWasmModule(
+			"./0123abcd-index_bg.wasm",
+			path.join(dir, "index_bg.wasm"),
+			"index_bg.wasm.map"
+		);
+		const bundle: SourceMapBundle = {
+			sourceMapPath: "index.js.map",
+			sourceMapMetadata: { tmpDir: dir, entryDirectory: dir },
+		};
+
+		const result = loadSourceMaps(main, [wasm], bundle);
+
+		expect(result.map((sourceMap) => sourceMap.name)).toEqual([
+			"index.js.map",
+			"./0123abcd-index_bg.wasm.map",
+		]);
+		expect(JSON.parse(result[1].content.toString())).toEqual({
+			version: 3,
+			file: "./0123abcd-index_bg.wasm",
+			sources: ["src/lib.rs", "worker-0.8.0/src/lib.rs"],
+			names: [],
+			mappings: "gBAAA",
+		});
+	});
+
+	it("ignores modules without a WebAssembly source map", ({ expect }) => {
+		const dir = createTempDir();
+		const main = makeModule("index.js", path.join(dir, "index.js"), "");
+		const noSection = makeWasmModule("a.wasm", path.join(dir, "a.wasm"));
+		const virtual = makeWasmModule("b.wasm", undefined, "b.wasm.map");
+		expect(loadSourceMaps(main, [noSection, virtual], {})).toEqual([]);
+	});
+
+	it("throws when the source map is missing, unless not strict", ({
+		expect,
+	}) => {
+		const dir = createTempDir();
+		const main = makeModule("index.js", path.join(dir, "index.js"), "");
+		const wasm = makeWasmModule(
+			"index_bg.wasm",
+			path.join(dir, "index_bg.wasm"),
+			"index_bg.wasm.map"
+		);
+
+		expect(() => loadSourceMaps(main, [wasm], {})).toThrow(
+			/Invalid source map path in .*index_bg\.wasm: .*index_bg\.wasm\.map does not exist\./
+		);
+		expect(loadSourceMaps(main, [wasm], {}, { strict: false })).toEqual([]);
+	});
+
+	it("skips a source map named by an absolute URL, even when strict", ({
+		expect,
+	}) => {
+		const dir = createTempDir();
+		const main = makeModule("index.js", path.join(dir, "index.js"), "");
+		const wasm = makeWasmModule(
+			"index_bg.wasm",
+			path.join(dir, "index_bg.wasm"),
+			"https://example.com/index_bg.wasm.map"
+		);
+
+		expect(loadSourceMaps(main, [wasm], {})).toEqual([]);
+	});
+
+	it.for([
+		"../private.json",
+		"maps/../../private.json",
+		"/private.json",
+		// A drive-letter path on Windows.
+		path.join(tmpdir(), "private.json"),
+		// A drive-relative path on Windows. Joining it to the module's directory
+		// keeps `C:..` as a segment, so the `..` after it climb out of `pkg`.
+		...(process.platform === "win32"
+			? [`${tmpdir().slice(0, 2)}..\\..\\..\\private.json`]
+			: []),
+	])(
+		"won't read %s outside the module's directory, unless not strict",
+		(url, { expect }) => {
+			const dir = createTempDir();
+			mkdirSync(path.join(dir, "pkg"));
+			writeFileSync(path.join(dir, "private.json"), validSourceMap);
+			const main = makeModule("index.js", path.join(dir, "index.js"), "");
+			const wasm = makeWasmModule(
+				"index_bg.wasm",
+				path.join(dir, "pkg", "index_bg.wasm"),
+				url
+			);
+
+			expect(() => loadSourceMaps(main, [wasm], {})).toThrow(
+				"expected a file in the module's directory"
+			);
+			expect(loadSourceMaps(main, [wasm], {}, { strict: false })).toEqual([]);
+		}
+	);
+
+	it("throws on a data URL", ({ expect }) => {
+		const dir = createTempDir();
+		const main = makeModule("index.js", path.join(dir, "index.js"), "");
+		const wasm = makeWasmModule(
+			"index_bg.wasm",
+			path.join(dir, "index_bg.wasm"),
+			"data:application/json;base64,e30="
+		);
+
+		expect(() => loadSourceMaps(main, [wasm], {})).toThrow(
+			"expected file path but found data URL"
+		);
 	});
 });
 

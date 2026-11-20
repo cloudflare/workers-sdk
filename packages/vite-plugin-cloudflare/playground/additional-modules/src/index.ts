@@ -1,11 +1,13 @@
 import bin from "./modules/bin-example.bin";
 import html from "./modules/html-example.html";
+import otherWasmWithSourceMap from "./modules/other/wasm-with-source-map.wasm";
 import sql from "./modules/sql-example.sql";
 import text from "./modules/text-example.txt";
 import text2 from "./modules/text__example__2.txt";
 import wasm from "./modules/wasm-example.wasm";
 import init from "./modules/wasm-example.wasm?init";
 import wasmWithModuleParam from "./modules/wasm-example.wasm?module";
+import wasmWithSourceMap from "./modules/wasm-with-source-map.wasm";
 import subpathHtml from "#html";
 import subpathHtmlWithExt from "#modules/html-example.html";
 
@@ -62,6 +64,22 @@ export default {
 			case "/wasm-with-init-param": {
 				const instance = (await init()) as Instance;
 				const result = instance.exports.add(7, 8);
+
+				return Response.json({ result });
+			}
+			case "/wasm-with-source-map": {
+				const instance = (await WebAssembly.instantiate(
+					wasmWithSourceMap
+				)) as Instance;
+				const result = instance.exports.add(9, 10);
+
+				return Response.json({ result });
+			}
+			case "/other-wasm-with-source-map": {
+				const instance = (await WebAssembly.instantiate(
+					otherWasmWithSourceMap
+				)) as Instance;
+				const result = instance.exports.add(11, 12);
 
 				return Response.json({ result });
 			}
