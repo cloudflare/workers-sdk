@@ -1,5 +1,17 @@
 # @cloudflare/vite-plugin
 
+## 1.70.2
+
+### Patch Changes
+
+- [#17012](https://github.com/cloudflare/workers-sdk/pull/17012) [`2f74598`](https://github.com/cloudflare/workers-sdk/commit/2f74598579fa424b87741f0bd265ee420211b624) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update the local runtime and default compatibility date to November 18
+
+  Update Miniflare to 5.20261118.0-beta for workerd 1.20261118.1 and align Workers types, Wrangler, and the shared compatibility-date helpers. Projects without an explicit compatibility date now use 2026-11-18.
+
+- [#17049](https://github.com/cloudflare/workers-sdk/pull/17049) [`8fb66eb`](https://github.com/cloudflare/workers-sdk/commit/8fb66eb875189c435746a98697c328605bc93250) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update the plugin build and bundle shared declaration dependencies
+
+  Use tsdown 0.22.14 for the plugin and retained remote bindings package, and keep shared SDK types bundled in the published plugin declarations. Validate the declarations from a consumer project without workspace development dependencies.
+
 ## 1.70.1
 
 ### Patch Changes
