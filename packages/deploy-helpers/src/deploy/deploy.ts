@@ -911,12 +911,6 @@ async function deployWorker(
 		return { versionId, workerTag, assetUploadStats, bundleSize };
 	}
 	assert(accountId);
-	await applyImagesUrlTransformations(
-		config,
-		accountId,
-		scriptName,
-		options.deployCommand
-	);
 	// deploy triggers
 	const targets = await triggersDeploy({
 		config,
@@ -934,6 +928,13 @@ async function deployWorker(
 		previewUrlsConfigFieldName: options.previewUrlsConfigFieldName,
 		previewUrlsConfigAssignment: options.previewUrlsConfigAssignment,
 	});
+
+	await applyImagesUrlTransformations(
+		config,
+		accountId,
+		scriptName,
+		options.deployCommand
+	);
 
 	logger.log("Current Version ID:", versionId);
 

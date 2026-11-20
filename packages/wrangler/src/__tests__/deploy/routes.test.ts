@@ -1943,6 +1943,56 @@ Update them to point to this script instead?`,
 					"Fix the Images URL transformations setting in your configuration and run `wrangler deploy` again."
 			);
 		});
+
+		it("should suggest checking permissions if url_transformations is forbidden", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				images: { url_transformations: { enabled: true } },
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockPutImageTransformationsRequest({
+				expectedBody: { enabled: true },
+				status: 403,
+			});
+
+			await expect(runWrangler("deploy ./index")).rejects.toThrow(
+				"The Worker was deployed, but its Images URL transformations setting could not be applied:\n" +
+					"A request to the Cloudflare API (/accounts/some-account-id/settings/transformations/workers/test-name) failed.\n" +
+					"Authentication error [code: 10000]\n\n" +
+					"Check that your API token has permission to edit Workers scripts on this account, then run `wrangler deploy` again."
+			);
+		});
+
+		it("should still deploy triggers if url_transformations could not be applied", async ({
+			expect,
+		}) => {
+			const crons = ["*/5 * * * *"];
+			writeWranglerConfig({
+				triggers: { crons },
+				images: {
+					url_transformations: {
+						enabled: true,
+						allowed_origins: ["bad host.com"],
+					},
+				},
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockPublishSchedulesRequest({ crons });
+			mockPutImageTransformationsRequest({
+				expectedBody: { enabled: true, allowed_origins: ["bad host.com"] },
+				status: 400,
+			});
+
+			await expect(runWrangler("deploy ./index")).rejects.toThrow(
+				"could not be applied"
+			);
+			expect(std.out).toContain("schedule: */5 * * * *");
+		});
 	});
 
 	describe("triggers", () => {
