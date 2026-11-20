@@ -117,6 +117,43 @@ describe("printBindings", () => {
 		expect(output).toMatch(/K2 Stream\s+not supported/);
 	});
 
+	test("prints OIDC token bindings with their audience and alg", ({
+		expect,
+	}) => {
+		const output = captureBindings({
+			API_TOKEN: { type: "oidc_token", audience: "https://api.example.com" },
+			RSA_TOKEN: {
+				type: "oidc_token",
+				audience: "api://token-exchange",
+				alg: "RS256",
+			},
+		});
+
+		expect(output).toMatch(
+			/env\.API_TOKEN \(https:\/\/api\.example\.com\)\s+OIDC Token/
+		);
+		expect(output).toMatch(
+			/env\.RSA_TOKEN \(api:\/\/token-exchange \(RS256\)\)\s+OIDC Token/
+		);
+	});
+
+	test.for([false, true])(
+		"labels OIDC token bindings as unsupported in local development with remote bindings disabled=%s",
+		(remoteBindingsDisabled, { expect }) => {
+			const output = captureBindings(
+				{
+					API_TOKEN: {
+						type: "oidc_token",
+						audience: "https://api.example.com",
+					},
+				},
+				{ local: true, remoteBindingsDisabled }
+			);
+
+			expect(output).toMatch(/OIDC Token\s+not supported/);
+		}
+	);
+
 	test.for([
 		{ label: "default", remote: undefined, disabled: false, mode: "local" },
 		{ label: "explicit local", remote: false, disabled: false, mode: "local" },

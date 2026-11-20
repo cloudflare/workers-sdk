@@ -151,6 +151,7 @@ export function createWorkerUploadForm(
 	const ratelimits = extractBindingsOfType("ratelimit", bindings);
 	const vpc_services = extractBindingsOfType("vpc_service", bindings);
 	const vpc_networks = extractBindingsOfType("vpc_network", bindings);
+	const oidc_tokens = extractBindingsOfType("oidc_token", bindings);
 	const services = extractBindingsOfType("service", bindings);
 	const analytics_engine_datasets = extractBindingsOfType(
 		"analytics_engine",
@@ -599,6 +600,15 @@ export function createWorkerUploadForm(
 		metadataBindings.push({
 			name: binding,
 			type: "worker_loader",
+		});
+	});
+
+	oidc_tokens.forEach(({ binding, audience, alg }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "oidc_token",
+			audience,
+			...(alg !== undefined && { alg }),
 		});
 	});
 

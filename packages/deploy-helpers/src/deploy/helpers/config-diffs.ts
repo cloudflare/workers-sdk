@@ -42,6 +42,7 @@ const reorderableBindings = {
 	worker_loaders: true,
 	vpc_services: true,
 	vpc_networks: true,
+	oidc_tokens: true,
 
 	// Wrapper objects containing binding arrays
 	durable_objects: true,

@@ -38,6 +38,7 @@ import type {
 	CfMediaBinding,
 	CfMTlsCertificate,
 	CfModule,
+	CfOidcToken,
 	CfPipeline,
 	CfK2Binding,
 	CfPlacement,
@@ -216,6 +217,12 @@ export type WorkerMetadataBinding =
 	| {
 			type: "worker_loader";
 			name: string;
+	  }
+	| {
+			type: "oidc_token";
+			name: string;
+			audience: string;
+			alg?: "ES256" | "RS256";
 	  }
 	| {
 			type: "logfwdr";
@@ -527,6 +534,7 @@ export type Binding =
 	| ({ type: "worker_loader" } & BindingOmit<CfWorkerLoader>)
 	| ({ type: "vpc_service" } & BindingOmit<CfVpcService>)
 	| ({ type: "vpc_network" } & BindingOmit<CfVpcNetwork>)
+	| ({ type: "oidc_token" } & BindingOmit<CfOidcToken>)
 	| ({ type: "media" } & BindingOmit<CfMediaBinding>)
 	| ({ type: `unsafe_${string}` } & Omit<CfUnsafeBinding, "name" | "type">)
 	| { type: "assets" }

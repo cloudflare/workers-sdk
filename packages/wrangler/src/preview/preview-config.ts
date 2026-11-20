@@ -798,6 +798,22 @@ export function convertBinding(
 		case "worker_loader":
 			config = { worker_loaders: [{ binding: name }] };
 			break;
+		case "oidc_token":
+			if (binding.audience === undefined) {
+				break;
+			}
+			config = {
+				oidc_tokens: [
+					{
+						binding: name,
+						audience: binding.audience,
+						...((binding.alg === "ES256" || binding.alg === "RS256") && {
+							alg: binding.alg,
+						}),
+					},
+				],
+			};
+			break;
 		default:
 			break;
 	}

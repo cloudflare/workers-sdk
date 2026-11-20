@@ -28,6 +28,7 @@ import type {
 	LogfwdrBinding,
 	MediaBinding,
 	MtlsCertificateBinding,
+	OidcTokenBinding,
 	PipelineBinding,
 	QueueBinding,
 	R2Binding,
@@ -124,6 +125,7 @@ type Binding =
 	| LogfwdrBinding
 	| MediaBinding
 	| MtlsCertificateBinding
+	| OidcTokenBinding
 	| PipelineBinding
 	| QueueBinding
 	| R2Binding

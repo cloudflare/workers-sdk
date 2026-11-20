@@ -381,6 +381,13 @@ export interface CfVpcNetwork {
 	remote?: boolean;
 }
 
+/** A binding that issues OIDC tokens for the Worker's identity, for one audience. */
+export interface CfOidcToken {
+	binding: string;
+	audience: string;
+	alg?: "ES256" | "RS256";
+}
+
 export interface CfAnalyticsEngineDataset {
 	binding: string;
 	dataset?: string;

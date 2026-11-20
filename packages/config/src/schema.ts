@@ -258,6 +258,11 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		id: z.string(),
 		dev: RemoteBindingDevSchema.optional(),
 	}),
+	z.strictObject({
+		type: z.literal("oidc-token"),
+		audience: z.string(),
+		alg: z.enum(["ES256", "RS256"]).optional(),
+	}),
 	z
 		.strictObject({
 			type: z.literal("vpc-network"),
