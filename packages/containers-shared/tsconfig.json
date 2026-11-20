@@ -1,6 +1,7 @@
 {
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
+		"allowImportingTsExtensions": true,
 		"module": "ESNext",
 		"moduleResolution": "bundler",
 		"target": "ES2022",
@@ -9,8 +10,7 @@
 		"skipLibCheck": true,
 		"types": ["node"],
 		"noUncheckedIndexedAccess": true,
-		"tsBuildInfoFile": ".tsbuildinfo",
-		"allowImportingTsExtensions": true
+		"tsBuildInfoFile": ".tsbuildinfo"
 	},
 	"include": ["src/**/*", "index.ts"],
 	"exclude": ["dist", "node_modules"]
