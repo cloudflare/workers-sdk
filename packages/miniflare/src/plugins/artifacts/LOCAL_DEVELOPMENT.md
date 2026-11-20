@@ -163,6 +163,26 @@ Local delivery is unordered: events from consecutive operations (including repos
 
 Delivery happens after the repository change commits and does not fail the repository operation. A failed delivery is logged and not retried by the publisher. Local Artifacts-to-queue delivery is not supported by this feature; queue subscription configuration is outside this change's scope.
 
+## Manage local repositories without a Worker
+
+`cf --local` manages local repositories through the Local Explorer API, which implements the namespace, repository, fork, import, and token routes of the Artifacts REST API with the same request and response shapes:
+
+```sh
+cf artifacts namespaces repos create default --name demo --local --persist-to .wrangler/state
+cf artifacts namespaces repos list --namespace default --local --persist-to .wrangler/state
+cf artifacts namespaces repos fork demo --namespace default --body '{"name":"demo-fork"}' --local --persist-to .wrangler/state
+cf artifacts namespaces repos delete demo-fork --namespace default --force --local --persist-to .wrangler/state
+```
+
+These commands share state with `wrangler dev --persist-to .wrangler/state`, in either direction, including while the dev server runs. `cf --local` can use the `default` namespace in an empty state directory, plus any namespace that already has local state. A namespace is recorded the first time a dev server with this version starts with a binding to it; state from an earlier version appears once you have done that. Local namespaces cannot be created or deleted through the API: create one by binding it in your Worker.
+
+The local explorer of a running dev server (`/cdn-cgi/local/explorer/api`) serves the same routes for the namespaces it binds and those already in its state directory. It does not create `default` unless a Worker binds it. A missing Git installation disables only these routes, which return `503`, not the dev server.
+
+`cf --local` stops its simulator after each command:
+
+- **Git remotes**: a returned `remote` uses the port recorded with the namespace's state, so it works once a dev server for that state directory is running. Clone and push while `wrangler dev` (or another dev tool) runs with the same persistence directory.
+- **Events**: repositories created, forked, deleted, or imported by `cf --local` do not publish events and start no Workflows, even if a dev server with matching `triggers.events` is running. Changes made through a dev server's own explorer publish events to that server's subscriptions, as binding calls do.
+
 ## Storage and network boundaries
 
 Local repositories and metadata persist under the dev tool's Miniflare resource persistence path (for example, Wrangler's `.wrangler/state/` when persistence is enabled). Use the same project root and persistence settings to keep local data across reloads and restarts. Disabling persistence (for example, Vite's `persistState: false`) makes the data temporary. Local and deployed Artifacts are separate: local create, push, and delete operations do not update remote resources. To opt in to a remote binding, set `"remote": true` on that Artifacts binding (`dev: { remote: true }` in `cloudflare.config.ts`) and configure the credentials required by your development tool. Remote mode uses a Cloudflare proxy, not the local Git store; do not assume local data migrates to it.

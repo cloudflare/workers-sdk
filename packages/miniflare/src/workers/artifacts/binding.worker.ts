@@ -113,6 +113,34 @@ type RepositoryListResult = {
 	cursor?: string;
 };
 
+/** Repository listing options supported by the REST API. */
+export interface ExplorerRepositoryListOptions {
+	cursor?: string;
+	limit?: number;
+	search?: string;
+	sort?: "created_at" | "updated_at" | "last_push_at" | "name";
+	direction?: "asc" | "desc";
+}
+
+export type ExplorerRepository = RepositoryMetadata & { status: "ready" };
+
+export interface ExplorerRepositoryList {
+	repos: ExplorerRepository[];
+	total: number;
+	cursor?: string;
+}
+
+export interface ExplorerNamespaceSummary {
+	namespace: string;
+	repoCount: number;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export type ExplorerForkResult = CreateRepositoryResult & { objects: number };
+
+export type ExplorerTokenInfo = TokenInfo;
+
 interface RepositoryLogOptions {
 	ref?: string;
 	limit?: number;
@@ -122,6 +150,8 @@ interface RepositoryLogOptions {
 interface BackendState {
 	defaultBranch: string;
 	refs: Record<string, string>;
+	/** Set by a fork: the objects copied from its source. */
+	objects?: number;
 }
 
 type BackendRequest =
@@ -254,7 +284,7 @@ export type Outcome<T> =
 	  };
 
 interface LocalArtifactsEnvironment {
-	config: { namespace: string; origin: string };
+	config: { namespace: string; origin: string; createdAt?: string };
 	localArtifactsNamespace: DurableObjectNamespace<LocalArtifactsNamespaceObject>;
 	gitBackend: Fetcher;
 	/**
@@ -320,6 +350,82 @@ export class LocalArtifactsNamespace extends WorkerEntrypoint<LocalArtifactsEnvi
 	}
 }
 
+/**
+ * Administrative entrypoint for the Local Explorer, which serves the public
+ * REST API, as `cf --local` uses it. It reuses the binding's operations and
+ * adds the REST-only views: repository IDs, namespace summaries, and token
+ * revocation by ID across the namespace.
+ */
+export class LocalArtifactsExplorer extends WorkerEntrypoint<LocalArtifactsEnvironment> {
+	summary(): Promise<Outcome<ExplorerNamespaceSummary>> {
+		return forward(() => this.#namespace().explorerSummary());
+	}
+
+	list(
+		options: ExplorerRepositoryListOptions = {}
+	): Promise<Outcome<ExplorerRepositoryList>> {
+		return forward(() => this.#namespace().explorerList(options));
+	}
+
+	info(name: string): Promise<Outcome<RepositoryMetadata>> {
+		return forward(() => this.#namespace().explorerInfo(name));
+	}
+
+	create(
+		name: string,
+		options: RepositoryOptions = {}
+	): Promise<Outcome<CreateRepositoryResult>> {
+		return forward(() => this.#namespace().create(name, options));
+	}
+
+	import(
+		options: ImportRepositoryOptions
+	): Promise<Outcome<CreateRepositoryResult>> {
+		return forward(() => this.#namespace().import(options));
+	}
+
+	/** Resolves to the deleted repository's ID, or `null` if there was none. */
+	delete(name: string): Promise<Outcome<string | null>> {
+		return forward(() => this.#namespace().explorerDelete(name));
+	}
+
+	fork(
+		sourceName: string,
+		name: string,
+		options: ForkOptions = {}
+	): Promise<Outcome<ExplorerForkResult>> {
+		return forward(() =>
+			this.#namespace().explorerFork(sourceName, name, options)
+		);
+	}
+
+	listTokens(name: string): Promise<Outcome<ExplorerTokenInfo[]>> {
+		return forward(() => this.#namespace().explorerTokens(name));
+	}
+
+	createToken(
+		name: string,
+		scope?: TokenScope,
+		ttl?: number
+	): Promise<Outcome<CreateTokenResult>> {
+		return forward(() =>
+			this.#namespace().explorerCreateToken(name, scope, ttl)
+		);
+	}
+
+	/** Resolves to whether an active token with this ID was revoked. */
+	revokeToken(id: string): Promise<Outcome<boolean>> {
+		return forward(() => this.#namespace().explorerRevokeToken(id));
+	}
+
+	#namespace(): DurableObjectStub<LocalArtifactsNamespaceObject> {
+		const { localArtifactsNamespace, config } = this.env;
+		return localArtifactsNamespace.get(
+			localArtifactsNamespace.idFromName(config.namespace)
+		);
+	}
+}
+
 export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsEnvironment> {
 	// The resolved tail lets the first mutation run immediately. exclusive()
 	// serializes subsequent metadata and backend mutations across awaits.
@@ -354,6 +460,122 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 
 	async delete(name: string): Promise<Outcome<boolean>> {
 		return outcome(() => this.#delete(name));
+	}
+
+	async explorerSummary(): Promise<Outcome<ExplorerNamespaceSummary>> {
+		return outcome(async () => {
+			const repositories = liveRepositories(await this.repos());
+			const createdAt =
+				this.env.config.createdAt ??
+				repositories.map((repository) => repository.createdAt).sort()[0] ??
+				new Date().toISOString();
+			const updatedAt = repositories
+				.map((repository) => repository.updatedAt)
+				.reduce((latest, time) => (time > latest ? time : latest), createdAt);
+			return {
+				namespace: this.env.config.namespace,
+				repoCount: repositories.length,
+				createdAt,
+				updatedAt,
+			};
+		});
+	}
+
+	async explorerList(
+		options: ExplorerRepositoryListOptions = {}
+	): Promise<Outcome<ExplorerRepositoryList>> {
+		return outcome(async () => {
+			const limit = options.limit ?? 50;
+			if (!Number.isInteger(limit) || limit < 1 || limit > 200) {
+				throw new ArtifactsError(
+					"INVALID_INPUT",
+					"Invalid limit: must be between 1 and 200."
+				);
+			}
+			const search = options.search?.toLowerCase();
+			const repositories = sortRepositories(
+				liveRepositories(await this.repos()).filter(
+					(repository) =>
+						!search || repository.name.toLowerCase().includes(search)
+				),
+				options.sort ?? "created_at",
+				options.direction ?? "desc"
+			);
+			const offset = decodeCursor(options.cursor);
+			const page = repositories.slice(offset, offset + limit);
+			const next = offset + page.length;
+			return {
+				repos: page.map((repository) => ({
+					...repoMetadata(repository),
+					status: "ready" as const,
+				})),
+				total: repositories.length,
+				...(next < repositories.length ? { cursor: encodeCursor(next) } : {}),
+			};
+		});
+	}
+
+	async explorerInfo(name: string): Promise<Outcome<RepositoryMetadata>> {
+		return outcome(async () => {
+			validateName(name);
+			return repoMetadata(await this.getRepo(name));
+		});
+	}
+
+	async explorerDelete(name: string): Promise<Outcome<string | null>> {
+		return outcome(async () => {
+			validateName(name);
+			const repositories = await this.repos();
+			const key = name.toLowerCase();
+			const repository = Object.hasOwn(repositories, key)
+				? repositories[key]
+				: undefined;
+			if (repository === undefined || repository.deleting) {
+				return null;
+			}
+			return (await this.#delete(name)) ? repository.id : null;
+		});
+	}
+
+	async explorerFork(
+		sourceName: string,
+		name: string,
+		options: ForkOptions = {}
+	): Promise<Outcome<ExplorerForkResult>> {
+		return outcome(() => this.#fork(sourceName, name, options));
+	}
+
+	async explorerTokens(name: string): Promise<Outcome<ExplorerTokenInfo[]>> {
+		return outcome(async () => {
+			validateName(name);
+			return tokenInfos(await this.getRepo(name));
+		});
+	}
+
+	async explorerCreateToken(
+		name: string,
+		scope?: TokenScope,
+		ttl?: number
+	): Promise<Outcome<CreateTokenResult>> {
+		return outcome(async () => {
+			validateName(name);
+			return this.createToken(name, scope, ttl);
+		});
+	}
+
+	async explorerRevokeToken(id: string): Promise<Outcome<boolean>> {
+		return outcome(async () => {
+			if (!isTokenId(id)) {
+				return false;
+			}
+			const repository = liveRepositories(await this.repos()).find(
+				(candidate) => candidate.tokens.some((token) => token.id === id)
+			);
+			if (repository === undefined) {
+				return false;
+			}
+			return this.revokeToken(repository.name, id, repository.id);
+		});
 	}
 
 	#create(
@@ -554,21 +776,7 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		expectedId?: string
 	): Promise<{ total: number; tokens: TokenInfo[] }> {
 		const repository = await this.getRepo(name, expectedId);
-		// Active tokens come first so retained history cannot push a token that
-		// still authenticates off the 30-item page. Each group is newest first.
-		const newestFirst = repository.tokens.toReversed();
-		const tokens = [
-			...newestFirst.filter((token) => tokenState(token) === "active"),
-			...newestFirst.filter((token) => tokenState(token) !== "active"),
-		]
-			.slice(0, 30)
-			.map((token) => ({
-				id: token.id,
-				scope: token.scope,
-				createdAt: token.createdAt,
-				expiresAt: token.expiresAt,
-				state: tokenState(token),
-			}));
+		const tokens = tokenInfos(repository).slice(0, 30);
 		return { total: repository.tokens.length, tokens };
 	}
 
@@ -618,6 +826,21 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		options: ForkOptions = {},
 		expectedId?: string
 	): Promise<CreateRepositoryResult> {
+		const { objects: _objects, ...result } = await this.#fork(
+			sourceName,
+			name,
+			options,
+			expectedId
+		);
+		return result;
+	}
+
+	#fork(
+		sourceName: string,
+		name: string,
+		options: ForkOptions,
+		expectedId?: string
+	): Promise<ExplorerForkResult> {
 		return this.exclusive(async () => {
 			validateName(name);
 			validateRepositoryOptions(options);
@@ -674,7 +897,7 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 				})
 			);
 			this.publish(tokenCreatedEvent(fork, token.record));
-			return createRepoResult(fork, token);
+			return { ...createRepoResult(fork, token), objects: state.objects ?? 0 };
 		});
 	}
 
@@ -1183,6 +1406,62 @@ function makeRepo(
 		lastPushAt: undefined,
 		tokens: [],
 	};
+}
+
+function liveRepositories(repositories: RepositoryMap): Repository[] {
+	return Object.values(repositories).filter(
+		(repository) => !repository.deleting
+	);
+}
+
+function sortRepositories(
+	repositories: Repository[],
+	sort: NonNullable<ExplorerRepositoryListOptions["sort"]>,
+	direction: NonNullable<ExplorerRepositoryListOptions["direction"]>
+): Repository[] {
+	const key = (repository: Repository): string | undefined => {
+		switch (sort) {
+			case "name":
+				return repository.name.toLowerCase();
+			case "updated_at":
+				return repository.updatedAt;
+			case "last_push_at":
+				return repository.lastPushAt;
+			case "created_at":
+				return repository.createdAt;
+		}
+	};
+	const sign = direction === "asc" ? 1 : -1;
+	return repositories.toSorted((left, right) => {
+		const leftKey = key(left);
+		const rightKey = key(right);
+		// Repositories never pushed to sort last in either direction.
+		if (leftKey === undefined || rightKey === undefined) {
+			return leftKey === rightKey ? 0 : leftKey === undefined ? 1 : -1;
+		}
+		return (
+			sign * leftKey.localeCompare(rightKey) ||
+			left.name.localeCompare(right.name)
+		);
+	});
+}
+
+/**
+ * Active tokens come first so retained history cannot push a token that
+ * still authenticates off a page. Each group is newest first.
+ */
+function tokenInfos(repository: Repository): TokenInfo[] {
+	const newestFirst = repository.tokens.toReversed();
+	return [
+		...newestFirst.filter((token) => tokenState(token) === "active"),
+		...newestFirst.filter((token) => tokenState(token) !== "active"),
+	].map((token) => ({
+		id: token.id,
+		scope: token.scope,
+		createdAt: token.createdAt,
+		expiresAt: token.expiresAt,
+		state: tokenState(token),
+	}));
 }
 
 function repoMetadata(repository: Repository): RepositoryMetadata {

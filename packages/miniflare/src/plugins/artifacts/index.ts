@@ -13,9 +13,19 @@ import {
 } from "../shared";
 import { getArtifactsNamespaceEventBindings } from "./events";
 import { assertGitAvailable } from "./git-client";
-import { assertSupportedGitLayout } from "./storage";
+import {
+	assertSupportedGitLayout,
+	findLocalNamespaces,
+	recordLocalNamespace,
+} from "./storage";
+import type { ParsedInstanceOptions } from "../../config/schema";
 import type { Service, Socket } from "../../runtime";
-import type { MiniflareBinding, ParsedDevConfig, Plugin } from "../shared";
+import type {
+	MiniflareBinding,
+	ParsedDevConfig,
+	ParsedWorkerOptions,
+	Plugin,
+} from "../shared";
 import type { ArtifactsController } from "./controller";
 import type { ArtifactsEventSubscriptionRoute } from "./events";
 
@@ -31,6 +41,9 @@ export type { ArtifactsEventSubscriptionRoute } from "./events";
 export const ARTIFACTS_PLUGIN_NAME = "artifacts";
 const ARTIFACTS_REMOTE_SERVICE_NAME = `${ARTIFACTS_PLUGIN_NAME}:remote`;
 const ENTRYPOINT = "LocalArtifactsNamespace";
+const EXPLORER_ENTRYPOINT = "LocalArtifactsExplorer";
+/** `cf --local` can create repositories here before any binding names it. */
+const DEFAULT_NAMESPACE = "default";
 const OBJECT_CLASS = "LocalArtifactsNamespaceObject";
 const WRAPPED_BINDING_MODULE = `${ARTIFACTS_PLUGIN_NAME}:local-binding`;
 const LOCAL_NAMESPACE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
@@ -66,6 +79,89 @@ function namespaceId(namespace: string): string {
 
 function localServiceName(namespace: string): string {
 	return `${ARTIFACTS_PLUGIN_NAME}-${namespaceId(namespace)}`;
+}
+
+/** Local namespaces the Local Explorer API can manage. */
+export interface LocalArtifactsExplorerNamespaces {
+	/** Every local namespace, whether or not a Worker binds it. */
+	namespaces: string[];
+	/** Namespaces started only for the explorer, without a Worker binding. */
+	unbound: string[];
+	/** Why unbound namespaces could not start, such as missing Git. */
+	unavailableReason?: string;
+}
+
+/**
+ * The Local Explorer manages bound namespaces and, without a binding, those
+ * persisted under `<persist>/artifacts/`. With shared storage, as `cf --local`
+ * uses, `default` is always available so a repository can be created in an
+ * empty state directory. Missing Git only disables the unbound namespaces: it
+ * must not stop a session that never uses Artifacts.
+ */
+export async function getLocalArtifactsExplorerNamespaces(
+	allWorkerOpts: ParsedWorkerOptions[],
+	sharedOptions: Pick<
+		ParsedInstanceOptions,
+		| "resourcePersistencePath"
+		| "unsafeEnableSharedStorage"
+		| "unsafeLocalExplorer"
+	>,
+	tmpPath: string
+): Promise<LocalArtifactsExplorerNamespaces> {
+	const bound = new Set<string>();
+	for (const { config, dev } of allWorkerOpts) {
+		for (const namespace of getLocalArtifactsNamespaceNames(
+			getEnvBindingsOfType(config, "artifacts"),
+			dev
+		)) {
+			bound.add(namespace);
+		}
+	}
+	if (
+		!sharedOptions.unsafeLocalExplorer &&
+		!sharedOptions.unsafeEnableSharedStorage
+	) {
+		return { namespaces: [...bound], unbound: [] };
+	}
+	const root = getPersistPath(
+		ARTIFACTS_PLUGIN_NAME,
+		tmpPath,
+		sharedOptions.resourcePersistencePath
+	);
+	const candidates = await findLocalNamespaces(root, namespaceId);
+	if (sharedOptions.unsafeEnableSharedStorage) {
+		candidates.push(DEFAULT_NAMESPACE);
+	}
+	const unbound = [...new Set(candidates)].filter(
+		(namespace) =>
+			!bound.has(namespace) && LOCAL_NAMESPACE_PATTERN.test(namespace)
+	);
+	if (unbound.length > 0) {
+		try {
+			await assertGitAvailable();
+		} catch (error) {
+			return {
+				namespaces: [...bound],
+				unbound: [],
+				unavailableReason:
+					error instanceof Error ? error.message : String(error),
+			};
+		}
+	}
+	return {
+		namespaces: [...bound, ...unbound].sort(),
+		unbound: unbound.sort(),
+	};
+}
+
+/** The binding name of a namespace's Local Explorer service. */
+export function getArtifactsExplorerBindingName(namespace: string): string {
+	return `MINIFLARE_ARTIFACTS_${namespaceId(namespace)}`;
+}
+
+/** The Local Explorer's administrative entrypoint for one local namespace. */
+export function getArtifactsExplorerService(namespace: string) {
+	return { name: localServiceName(namespace), entrypoint: EXPLORER_ENTRYPOINT };
 }
 
 export const ARTIFACTS_PLUGIN: Plugin = {
@@ -117,8 +213,10 @@ export const ARTIFACTS_PLUGIN: Plugin = {
 		options,
 		sharedOptions,
 		tmpPath,
+		workerIndex,
 		artifactsController,
 		artifactsEventSubscriptions,
+		artifactsExplorerNamespaces,
 	}) {
 		const bindings = getEnvBindingsOfType(options.config, "artifacts");
 		const services: Service[] = [];
@@ -148,10 +246,25 @@ export const ARTIFACTS_PLUGIN: Plugin = {
 				root,
 				namespace,
 				artifactsController,
-				artifactsEventSubscriptions
+				artifactsEventSubscriptions,
+				{ bound: true }
 			);
 			sockets.push(local.socket);
 			services.push(...local.services);
+		}
+		// Unbound namespaces are instance-wide, so start them once.
+		if (workerIndex === 0) {
+			for (const namespace of artifactsExplorerNamespaces.unbound) {
+				const local = await createLocalNamespaceRuntime(
+					root,
+					namespace,
+					artifactsController,
+					artifactsEventSubscriptions,
+					{ bound: false }
+				);
+				sockets.push(local.socket);
+				services.push(...local.services);
+			}
 		}
 		return { services, extensions: [], sockets };
 	},
@@ -182,7 +295,8 @@ async function createLocalNamespaceRuntime(
 	root: string,
 	namespace: string,
 	artifactsController: ArtifactsController,
-	eventSubscriptions: ArtifactsEventSubscriptionRoute[]
+	eventSubscriptions: ArtifactsEventSubscriptionRoute[],
+	{ bound }: { bound: boolean }
 ): Promise<{ services: Service[]; socket: Socket }> {
 	await mkdir(root, { recursive: true });
 	await assertSupportedGitLayout(root);
@@ -190,9 +304,16 @@ async function createLocalNamespaceRuntime(
 	const metadataPath = path.join(persistPath, "metadata").replaceAll("\\", "/");
 	await mkdir(metadataPath, { recursive: true });
 	await assertSupportedGitLayout(metadataPath);
-	const { sidecar, port } = await artifactsController.get(
+	const { createdAt } = await recordLocalNamespace(persistPath, namespace);
+	// Only bound namespaces print their remote prefix: an explorer-only
+	// instance, such as one `cf --local` command, may stop straight away.
+	const { sidecar, port, advertisedPort } = await artifactsController.get(
 		path.join(persistPath, "git"),
-		{ namespace, portFile: path.join(persistPath, "git-port") }
+		{
+			...(bound ? { namespace } : {}),
+			portFile: path.join(persistPath, "git-port"),
+			keepRecordedPort: !bound,
+		}
 	);
 	const serviceName = localServiceName(namespace);
 	const storageName = `${serviceName}-storage`;
@@ -228,7 +349,8 @@ async function createLocalNamespaceRuntime(
 					name: "config",
 					json: JSON.stringify({
 						namespace,
-						origin: `http://127.0.0.1:${port}`,
+						origin: `http://127.0.0.1:${advertisedPort}`,
+						createdAt,
 					}),
 				},
 				{

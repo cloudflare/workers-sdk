@@ -2582,6 +2582,7389 @@
 				"tags": ["Evaluation"]
 			}
 		},
+		"/artifacts/namespaces": {
+			"get": {
+				"operationId": "artifacts_namespaces_list",
+				"summary": "List namespaces",
+				"description": "Lists Artifacts namespaces for an account.",
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "Namespaces.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"created_at": {
+														"type": "string",
+														"format": "date-time",
+														"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+													},
+													"jurisdiction": {
+														"type": "string",
+														"enum": ["unrestricted", "us", "eu", "fedramp"]
+													},
+													"namespace": {
+														"type": "string"
+													},
+													"repo_count": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"updated_at": {
+														"type": "string",
+														"format": "date-time",
+														"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+													}
+												},
+												"required": [
+													"namespace",
+													"jurisdiction",
+													"repo_count",
+													"created_at",
+													"updated_at"
+												],
+												"type": "object"
+											}
+										},
+										"result_info": {
+											"anyOf": [
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"cursor": {
+															"type": "string"
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": ["cursor", "per_page", "count"],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_pages": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": [
+														"page",
+														"per_page",
+														"total_pages",
+														"count",
+														"total_count"
+													],
+													"type": "object"
+												}
+											]
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [true]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Insufficient permissions.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Artifacts"]
+			}
+		},
+		"/artifacts/namespaces/{namespace}": {
+			"get": {
+				"operationId": "artifacts_namespaces_get",
+				"summary": "Get a namespace",
+				"description": "Returns an Artifacts namespace summary.",
+				"parameters": [
+					{
+						"name": "namespace",
+						"in": "path",
+						"description": "Artifacts namespace name.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"maxLength": 63,
+							"minLength": 2,
+							"pattern": "^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9._])?$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Namespace.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"properties": {
+												"created_at": {
+													"type": "string",
+													"format": "date-time",
+													"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+												},
+												"jurisdiction": {
+													"type": "string",
+													"enum": ["unrestricted", "us", "eu", "fedramp"]
+												},
+												"namespace": {
+													"type": "string"
+												},
+												"repo_count": {
+													"type": "integer",
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991
+												},
+												"updated_at": {
+													"type": "string",
+													"format": "date-time",
+													"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+												}
+											},
+											"required": [
+												"namespace",
+												"jurisdiction",
+												"repo_count",
+												"created_at",
+												"updated_at"
+											]
+										},
+										"result_info": {
+											"anyOf": [
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"cursor": {
+															"type": "string"
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": ["cursor", "per_page", "count"],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_pages": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": [
+														"page",
+														"per_page",
+														"total_pages",
+														"count",
+														"total_count"
+													],
+													"type": "object"
+												}
+											]
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [true]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Insufficient permissions.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Artifacts"]
+			}
+		},
+		"/artifacts/namespaces/{namespace}/repos": {
+			"get": {
+				"operationId": "artifacts_repos_list",
+				"summary": "List repositories",
+				"description": "Lists repositories in a namespace.",
+				"parameters": [
+					{
+						"name": "namespace",
+						"in": "path",
+						"description": "Artifacts namespace name.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"maxLength": 63,
+							"minLength": 2,
+							"pattern": "^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9._])?$"
+						}
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"schema": {
+							"type": "integer",
+							"default": 50,
+							"maximum": 200,
+							"minimum": 1
+						}
+					},
+					{
+						"name": "cursor",
+						"in": "query",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "search",
+						"in": "query",
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "sort",
+						"in": "query",
+						"schema": {
+							"type": "string",
+							"default": "created_at",
+							"enum": ["created_at", "updated_at", "last_push_at", "name"]
+						}
+					},
+					{
+						"name": "direction",
+						"in": "query",
+						"schema": {
+							"type": "string",
+							"default": "desc",
+							"enum": ["asc", "desc"]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Repositories.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"created_at": {
+														"type": "string",
+														"format": "date-time",
+														"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+													},
+													"default_branch": {
+														"description": "Default branch name. Must not contain '..' and must not end with '/' or '.'.",
+														"type": "string"
+													},
+													"description": {
+														"type": "string",
+														"nullable": true
+													},
+													"id": {
+														"type": "string"
+													},
+													"last_push_at": {
+														"type": "string",
+														"format": "date-time",
+														"nullable": true,
+														"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+													},
+													"name": {
+														"type": "string"
+													},
+													"read_only": {
+														"type": "boolean"
+													},
+													"remote": {
+														"type": "string"
+													},
+													"source": {
+														"type": "string",
+														"nullable": true
+													},
+													"updated_at": {
+														"type": "string",
+														"format": "date-time",
+														"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+													}
+												},
+												"required": [
+													"id",
+													"name",
+													"description",
+													"default_branch",
+													"created_at",
+													"updated_at",
+													"last_push_at",
+													"source",
+													"read_only",
+													"remote"
+												],
+												"type": "object"
+											}
+										},
+										"result_info": {
+											"anyOf": [
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"cursor": {
+															"type": "string"
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": ["cursor", "per_page", "count"],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_pages": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": [
+														"page",
+														"per_page",
+														"total_pages",
+														"count",
+														"total_count"
+													],
+													"type": "object"
+												}
+											]
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [true]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Insufficient permissions.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Artifacts"]
+			},
+			"post": {
+				"operationId": "artifacts_repos_create",
+				"summary": "Create a repository",
+				"description": "Creates a Git-compatible Artifacts repository in a namespace.",
+				"parameters": [
+					{
+						"name": "namespace",
+						"in": "path",
+						"description": "Artifacts namespace name.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"maxLength": 63,
+							"minLength": 2,
+							"pattern": "^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9._])?$"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"default_branch": {
+										"description": "Git branch name. Must match /^[a-zA-Z0-9][a-zA-Z0-9._/-]*$/, must not contain '..', and must not end with '/' or '.'.",
+										"type": "string",
+										"maxLength": 256,
+										"minLength": 1,
+										"pattern": "^[a-zA-Z0-9][a-zA-Z0-9._/-]*$"
+									},
+									"description": {
+										"type": "string",
+										"maxLength": 1024
+									},
+									"name": {
+										"type": "string",
+										"pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+									},
+									"read_only": {
+										"type": "boolean"
+									}
+								},
+								"required": ["name"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Repository created.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"properties": {
+												"default_branch": {
+													"type": "string"
+												},
+												"description": {
+													"type": "string",
+													"nullable": true
+												},
+												"id": {
+													"type": "string"
+												},
+												"name": {
+													"type": "string"
+												},
+												"remote": {
+													"type": "string"
+												},
+												"token": {
+													"type": "string"
+												}
+											},
+											"required": [
+												"id",
+												"name",
+												"description",
+												"default_branch",
+												"remote",
+												"token"
+											]
+										},
+										"result_info": {
+											"anyOf": [
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"cursor": {
+															"type": "string"
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": ["cursor", "per_page", "count"],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_pages": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": [
+														"page",
+														"per_page",
+														"total_pages",
+														"count",
+														"total_count"
+													],
+													"type": "object"
+												}
+											]
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [true]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Insufficient permissions.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "Operation conflict.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Artifacts"]
+			}
+		},
+		"/artifacts/namespaces/{namespace}/repos/{name}": {
+			"get": {
+				"operationId": "artifacts_repos_get",
+				"summary": "Get a repository",
+				"description": "Returns repository metadata.",
+				"parameters": [
+					{
+						"name": "namespace",
+						"in": "path",
+						"description": "Artifacts namespace name.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"maxLength": 63,
+							"minLength": 2,
+							"pattern": "^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9._])?$"
+						}
+					},
+					{
+						"name": "name",
+						"in": "path",
+						"description": "Repository name.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Repository.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"properties": {
+												"created_at": {
+													"type": "string",
+													"format": "date-time",
+													"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+												},
+												"default_branch": {
+													"description": "Default branch name. Must not contain '..' and must not end with '/' or '.'.",
+													"type": "string"
+												},
+												"description": {
+													"type": "string",
+													"nullable": true
+												},
+												"id": {
+													"type": "string"
+												},
+												"last_push_at": {
+													"type": "string",
+													"format": "date-time",
+													"nullable": true,
+													"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+												},
+												"name": {
+													"type": "string"
+												},
+												"read_only": {
+													"type": "boolean"
+												},
+												"remote": {
+													"type": "string"
+												},
+												"source": {
+													"type": "string",
+													"nullable": true
+												},
+												"updated_at": {
+													"type": "string",
+													"format": "date-time",
+													"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+												}
+											},
+											"required": [
+												"id",
+												"name",
+												"description",
+												"default_branch",
+												"created_at",
+												"updated_at",
+												"last_push_at",
+												"source",
+												"read_only",
+												"remote"
+											]
+										},
+										"result_info": {
+											"anyOf": [
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"cursor": {
+															"type": "string"
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": ["cursor", "per_page", "count"],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_pages": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": [
+														"page",
+														"per_page",
+														"total_pages",
+														"count",
+														"total_count"
+													],
+													"type": "object"
+												}
+											]
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [true]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Insufficient permissions.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "Operation conflict.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Artifacts"]
+			},
+			"delete": {
+				"operationId": "artifacts_repos_delete",
+				"summary": "Delete a repository",
+				"description": "Deletes a repository and schedules cleanup of its backing data.",
+				"parameters": [
+					{
+						"name": "namespace",
+						"in": "path",
+						"description": "Artifacts namespace name.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"maxLength": 63,
+							"minLength": 2,
+							"pattern": "^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9._])?$"
+						}
+					},
+					{
+						"name": "name",
+						"in": "path",
+						"description": "Repository name.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+						}
+					}
+				],
+				"responses": {
+					"202": {
+						"description": "Delete accepted.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string"
+												}
+											},
+											"required": ["id"]
+										},
+										"result_info": {
+											"anyOf": [
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"cursor": {
+															"type": "string"
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": ["cursor", "per_page", "count"],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_pages": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": [
+														"page",
+														"per_page",
+														"total_pages",
+														"count",
+														"total_count"
+													],
+													"type": "object"
+												}
+											]
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [true]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Insufficient permissions.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Artifacts"]
+			}
+		},
+		"/artifacts/namespaces/{namespace}/repos/{name}/fork": {
+			"post": {
+				"operationId": "artifacts_repos_fork",
+				"summary": "Fork a repository",
+				"description": "Forks a source repository into a new repository.",
+				"parameters": [
+					{
+						"name": "namespace",
+						"in": "path",
+						"description": "Artifacts namespace name.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"maxLength": 63,
+							"minLength": 2,
+							"pattern": "^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9._])?$"
+						}
+					},
+					{
+						"name": "name",
+						"in": "path",
+						"description": "Repository name.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"default_branch_only": {
+										"type": "boolean"
+									},
+									"description": {
+										"type": "string",
+										"maxLength": 1024
+									},
+									"name": {
+										"type": "string",
+										"pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+									},
+									"read_only": {
+										"type": "boolean"
+									}
+								},
+								"required": ["name"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Repository forked.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"properties": {
+												"default_branch": {
+													"type": "string"
+												},
+												"description": {
+													"type": "string",
+													"nullable": true
+												},
+												"id": {
+													"type": "string"
+												},
+												"name": {
+													"type": "string"
+												},
+												"objects": {
+													"type": "integer",
+													"maximum": 9007199254740991,
+													"minimum": -9007199254740991
+												},
+												"remote": {
+													"type": "string"
+												},
+												"token": {
+													"type": "string"
+												}
+											},
+											"required": [
+												"id",
+												"name",
+												"description",
+												"default_branch",
+												"remote",
+												"token",
+												"objects"
+											]
+										},
+										"result_info": {
+											"anyOf": [
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"cursor": {
+															"type": "string"
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": ["cursor", "per_page", "count"],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_pages": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": [
+														"page",
+														"per_page",
+														"total_pages",
+														"count",
+														"total_count"
+													],
+													"type": "object"
+												}
+											]
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [true]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Insufficient permissions.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "Operation conflict.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Service unavailable.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Artifacts"]
+			}
+		},
+		"/artifacts/namespaces/{namespace}/repos/{name}/import": {
+			"post": {
+				"operationId": "artifacts_repos_import",
+				"summary": "Import a repository",
+				"description": "Imports an HTTPS Git repository into an Artifacts repository.",
+				"parameters": [
+					{
+						"name": "namespace",
+						"in": "path",
+						"description": "Artifacts namespace name.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"maxLength": 63,
+							"minLength": 2,
+							"pattern": "^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9._])?$"
+						}
+					},
+					{
+						"name": "name",
+						"in": "path",
+						"description": "Repository name.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"branch": {
+										"description": "Git branch name. Must match /^[a-zA-Z0-9][a-zA-Z0-9._/-]*$/, must not contain '..', and must not end with '/' or '.'.",
+										"type": "string",
+										"maxLength": 256,
+										"minLength": 1,
+										"pattern": "^[a-zA-Z0-9][a-zA-Z0-9._/-]*$"
+									},
+									"depth": {
+										"type": "integer",
+										"maximum": 9007199254740991,
+										"minimum": 1
+									},
+									"read_only": {
+										"type": "boolean"
+									},
+									"url": {
+										"type": "string",
+										"format": "uri"
+									}
+								},
+								"required": ["url"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Repository import started.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"properties": {
+												"default_branch": {
+													"type": "string"
+												},
+												"description": {
+													"type": "string",
+													"nullable": true
+												},
+												"id": {
+													"type": "string"
+												},
+												"name": {
+													"type": "string"
+												},
+												"remote": {
+													"type": "string"
+												},
+												"token": {
+													"type": "string"
+												}
+											},
+											"required": [
+												"id",
+												"name",
+												"description",
+												"default_branch",
+												"remote",
+												"token"
+											]
+										},
+										"result_info": {
+											"anyOf": [
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"cursor": {
+															"type": "string"
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": ["cursor", "per_page", "count"],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_pages": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": [
+														"page",
+														"per_page",
+														"total_pages",
+														"count",
+														"total_count"
+													],
+													"type": "object"
+												}
+											]
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [true]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Insufficient permissions.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "Operation conflict.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"413": {
+						"description": "Request entity too large.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "Unprocessable entity.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"502": {
+						"description": "Upstream unavailable.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"503": {
+						"description": "Service unavailable.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"504": {
+						"description": "Gateway timeout.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Artifacts"]
+			}
+		},
+		"/artifacts/namespaces/{namespace}/repos/{name}/tokens": {
+			"get": {
+				"operationId": "artifacts_repo_tokens_list",
+				"summary": "List repository tokens",
+				"description": "Lists tokens for a repository.",
+				"parameters": [
+					{
+						"name": "namespace",
+						"in": "path",
+						"description": "Artifacts namespace name.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"maxLength": 63,
+							"minLength": 2,
+							"pattern": "^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9._])?$"
+						}
+					},
+					{
+						"name": "name",
+						"in": "path",
+						"description": "Repository name.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+						}
+					},
+					{
+						"name": "state",
+						"in": "query",
+						"schema": {
+							"type": "string",
+							"default": "active",
+							"enum": ["active", "expired", "revoked", "all"]
+						}
+					},
+					{
+						"name": "page",
+						"in": "query",
+						"schema": {
+							"type": "integer",
+							"default": 1,
+							"minimum": 1
+						}
+					},
+					{
+						"name": "per_page",
+						"in": "query",
+						"schema": {
+							"type": "integer",
+							"default": 30,
+							"maximum": 100,
+							"minimum": 1
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Tokens.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"created_at": {
+														"type": "string",
+														"format": "date-time",
+														"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+													},
+													"expires_at": {
+														"type": "string",
+														"format": "date-time",
+														"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+													},
+													"id": {
+														"type": "string"
+													},
+													"scope": {
+														"type": "string",
+														"enum": ["read", "write"]
+													},
+													"state": {
+														"type": "string",
+														"enum": ["active", "expired", "revoked"]
+													}
+												},
+												"required": [
+													"id",
+													"scope",
+													"state",
+													"created_at",
+													"expires_at"
+												],
+												"type": "object"
+											}
+										},
+										"result_info": {
+											"anyOf": [
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"cursor": {
+															"type": "string"
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": ["cursor", "per_page", "count"],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_pages": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": [
+														"page",
+														"per_page",
+														"total_pages",
+														"count",
+														"total_count"
+													],
+													"type": "object"
+												}
+											]
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [true]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Insufficient permissions.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "Operation conflict.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Artifacts"]
+			}
+		},
+		"/artifacts/namespaces/{namespace}/tokens": {
+			"post": {
+				"operationId": "artifacts_tokens_create",
+				"summary": "Create a repository token",
+				"description": "Creates a scoped Git token for a repository.",
+				"parameters": [
+					{
+						"name": "namespace",
+						"in": "path",
+						"description": "Artifacts namespace name.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"maxLength": 63,
+							"minLength": 2,
+							"pattern": "^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9._])?$"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"repo": {
+										"type": "string",
+										"pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]*$"
+									},
+									"scope": {
+										"type": "string",
+										"enum": ["read", "write"]
+									},
+									"ttl": {
+										"type": "integer",
+										"maximum": 31536000,
+										"minimum": 60
+									}
+								},
+								"required": ["repo"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Token created.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"properties": {
+												"expires_at": {
+													"type": "string",
+													"format": "date-time",
+													"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+												},
+												"id": {
+													"type": "string"
+												},
+												"plaintext": {
+													"type": "string"
+												},
+												"scope": {
+													"type": "string",
+													"enum": ["read", "write"]
+												}
+											},
+											"required": ["id", "plaintext", "scope", "expires_at"]
+										},
+										"result_info": {
+											"anyOf": [
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"cursor": {
+															"type": "string"
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": ["cursor", "per_page", "count"],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_pages": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": [
+														"page",
+														"per_page",
+														"total_pages",
+														"count",
+														"total_count"
+													],
+													"type": "object"
+												}
+											]
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [true]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Insufficient permissions.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"409": {
+						"description": "Operation conflict.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Artifacts"]
+			}
+		},
+		"/artifacts/namespaces/{namespace}/tokens/{id}": {
+			"delete": {
+				"operationId": "artifacts_tokens_revoke",
+				"summary": "Revoke a token",
+				"description": "Revokes an Artifacts repository token. Token IDs are resolved through an eventually consistent index, so revoking a token within about a second of creating it can return 404; retry after a short delay.",
+				"parameters": [
+					{
+						"name": "namespace",
+						"in": "path",
+						"description": "Artifacts namespace name.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"maxLength": 63,
+							"minLength": 2,
+							"pattern": "^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9._])?$"
+						}
+					},
+					{
+						"name": "id",
+						"in": "path",
+						"description": "Token ID. Must match /^[0-9a-z]{16}$/.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-z]{16}$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Token revoked.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"properties": {
+												"id": {
+													"type": "string"
+												}
+											},
+											"required": ["id"]
+										},
+										"result_info": {
+											"anyOf": [
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"cursor": {
+															"type": "string"
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": ["cursor", "per_page", "count"],
+													"type": "object"
+												},
+												{
+													"properties": {
+														"count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"per_page": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_count": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														},
+														"total_pages": {
+															"type": "integer",
+															"maximum": 9007199254740991,
+															"minimum": -9007199254740991
+														}
+													},
+													"required": [
+														"page",
+														"per_page",
+														"total_pages",
+														"count",
+														"total_count"
+													],
+													"type": "object"
+												}
+											]
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [true]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Authentication required.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"403": {
+						"description": "Insufficient permissions.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Resource not found.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal server error.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"errors": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											},
+											"minItems": 1
+										},
+										"messages": {
+											"type": "array",
+											"items": {
+												"properties": {
+													"code": {
+														"type": "integer",
+														"maximum": 9007199254740991,
+														"minimum": -9007199254740991
+													},
+													"documentation_url": {
+														"type": "string",
+														"format": "uri"
+													},
+													"message": {
+														"type": "string"
+													},
+													"source": {
+														"type": "object",
+														"properties": {
+															"pointer": {
+																"type": "string"
+															}
+														}
+													}
+												},
+												"required": ["code", "message"],
+												"type": "object"
+											}
+										},
+										"result": {
+											"type": "object",
+											"nullable": true
+										},
+										"success": {
+											"type": "boolean",
+											"enum": [false]
+										}
+									},
+									"required": ["result", "success", "errors", "messages"]
+								}
+							}
+						}
+					}
+				},
+				"tags": ["Artifacts"]
+			}
+		},
 		"/r2/buckets/{bucket_name}/objects": {
 			"get": {
 				"description": "List objects in an R2 bucket with optional prefix and delimiter.",

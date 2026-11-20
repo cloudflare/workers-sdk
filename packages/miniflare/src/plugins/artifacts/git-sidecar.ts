@@ -440,18 +440,21 @@ function handleCreate(
 	);
 }
 
-function handleFork(
+async function handleFork(
 	root: string,
 	body: ForkRequest,
 	git: GitClient
-): Promise<RepositoryState> {
+): Promise<RepositoryState & { objects: number }> {
 	const { sourceName, sourceBranch } = body;
 	const source = git.withRepository(
 		repositoryPath(root, body.namespace, sourceName)
 	);
-	return withNewRepository(root, body, git, (staged) =>
-		staged.forkFrom(source, sourceBranch, body.defaultBranchOnly ?? true)
-	);
+	let objects = 0;
+	const state = await withNewRepository(root, body, git, async (staged) => {
+		await staged.forkFrom(source, sourceBranch, body.defaultBranchOnly ?? true);
+		objects = await staged.objectCount();
+	});
+	return { ...state, objects };
 }
 
 function handleImport(

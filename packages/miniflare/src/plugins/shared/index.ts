@@ -22,6 +22,7 @@ import type {
 	QueueConsumerSchema,
 	QueueProducerSchema,
 } from "../../workers";
+import type { LocalArtifactsExplorerNamespaces } from "../artifacts";
 import type { ArtifactsController } from "../artifacts/controller";
 import type { ArtifactsEventSubscriptionRoute } from "../artifacts/events";
 import type { ContainerPrivilegesCache } from "../core/container";
@@ -93,6 +94,7 @@ export interface PluginServicesOptions {
 	hyperdriveProxyController: HyperdriveProxyController;
 	artifactsController: ArtifactsController;
 	artifactsEventSubscriptions: ArtifactsEventSubscriptionRoute[];
+	artifactsExplorerNamespaces: LocalArtifactsExplorerNamespaces;
 }
 
 export interface ServicesExtensions {
