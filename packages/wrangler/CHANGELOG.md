@@ -1,5 +1,23 @@
 # wrangler
 
+## 4.167.0
+
+### Minor Changes
+
+- [#17093](https://github.com/cloudflare/workers-sdk/pull/17093) [`310633d`](https://github.com/cloudflare/workers-sdk/commit/310633d2c435d7035f706fbf08052b8d9d910857) Thanks [@for-the-kidz](https://github.com/for-the-kidz)! - Remove the `wrangler dispatch-namespace rename` command
+
+  Renaming a Workers for Platforms dispatch namespace left the namespace name stored in dispatcher bindings out of date, which could make Workers in the namespace impossible to read or delete by name. The Cloudflare API now rejects requests that change a dispatch namespace's name, so the command has been removed. To use a different name, create a new dispatch namespace and redeploy your Workers to it.
+
+### Patch Changes
+
+- [#17078](https://github.com/cloudflare/workers-sdk/pull/17078) [`b007991`](https://github.com/cloudflare/workers-sdk/commit/b00799168dc2580013ea3c9b7d4f4505e120afa2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Recover from missing Worker scripts after an interrupted first deploy
+
+  When the Workers API returns a service without a script, `wrangler deploy` uses the first-deploy flow instead of crashing. `wrangler versions upload` tells you to run `wrangler deploy` first.
+
+- Updated dependencies [[`b007991`](https://github.com/cloudflare/workers-sdk/commit/b00799168dc2580013ea3c9b7d4f4505e120afa2)]:
+  - @cloudflare/workers-utils@0.56.1
+  - miniflare@5.20261119.0-beta
+
 ## 4.166.0
 
 ### Minor Changes
