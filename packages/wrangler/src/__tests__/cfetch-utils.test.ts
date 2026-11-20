@@ -137,8 +137,8 @@ describe("throwFetchError", () => {
 			",
 			  "info": "",
 			  "out": "
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Getting User settings...
 			",
 			  "warn": "",

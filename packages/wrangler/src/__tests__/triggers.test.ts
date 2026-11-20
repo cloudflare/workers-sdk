@@ -33,8 +33,8 @@ describe("triggers deploy", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			--dry-run: no changes will be made. Would deploy overridden-worker triggers:
 			  custom.example.com (custom domain)
 			  schedule: 0 * * * *
@@ -59,8 +59,8 @@ describe("triggers deploy", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			--dry-run: no changes will be made. Would deploy configured-worker triggers:
 			  overridden.example.com/*
 			  schedule: 30 * * * *"

@@ -1,13 +1,13 @@
 import { NpmPackageManager } from "@cloudflare/workers-utils";
-import { mockConsoleMethods } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import { displayAutoConfigDetails } from "../../src/details";
 import { Static } from "../../src/frameworks/static";
+import { mockCliOutput } from "../helpers/mock-cli-output";
 import { createMockContext } from "../helpers/mock-context";
 import type { Framework } from "../../src/frameworks";
 
 describe("autoconfig details - displayAutoConfigDetails()", () => {
-	const std = mockConsoleMethods();
+	const std = mockCliOutput();
 	const context = createMockContext();
 
 	it("should cleanly handle a case in which only the worker name has been detected", ({
@@ -26,11 +26,13 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 		);
 		expect(std.out).toMatchInlineSnapshot(
 			`
-			"
-			Detected Project Settings:
-			 - Worker Name: my-project
-			 - Framework: Static
-			 - Output Directory: ./public
+			"◇  Detected Project Settings ──╮
+			│                              │
+			│  Worker Name: my-project     │
+			│  Framework: Static           │
+			│  Output Directory: ./public  │
+			│                              │
+			╰──────────────────────────────╯
 			"
 		`
 		);
@@ -60,12 +62,14 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 			context
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			Detected Project Settings:
-			 - Worker Name: my-astro-app
-			 - Framework: Astro
-			 - Build Command: astro build
-			 - Output Directory: dist
+			"◇  Detected Project Settings ──╮
+			│                              │
+			│  Worker Name: my-astro-app   │
+			│  Framework: Astro            │
+			│  Build Command: astro build  │
+			│  Output Directory: dist      │
+			│                              │
+			╰──────────────────────────────╯
 			"
 		`);
 	});
@@ -85,11 +89,13 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 			context
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			Detected Project Settings:
-			 - Worker Name: my-site
-			 - Framework: Static
-			 - Output Directory: dist
+			"◇  Detected Project Settings ─╮
+			│                             │
+			│  Worker Name: my-site       │
+			│  Framework: Static          │
+			│  Output Directory: dist     │
+			│                             │
+			╰─────────────────────────────╯
 			"
 		`);
 	});

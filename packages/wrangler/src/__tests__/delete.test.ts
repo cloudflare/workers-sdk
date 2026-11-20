@@ -54,8 +54,8 @@ describe("delete", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Successfully deleted my-script",
 			  "warn": "",
 			}
@@ -81,8 +81,8 @@ describe("delete", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Successfully deleted my-positional-worker",
 			  "warn": "",
 			}
@@ -109,8 +109,8 @@ describe("delete", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Successfully deleted cli-provided-name",
 			  "warn": "",
 			}
@@ -135,8 +135,8 @@ describe("delete", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Successfully deleted test-name",
 			  "warn": "",
 			}
@@ -154,8 +154,8 @@ describe("delete", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			--dry-run: exiting now.",
 			  "warn": "",
 			}
@@ -176,8 +176,8 @@ describe("delete", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "
-			 ⛅️ wrangler x.x.x
-			──────────────────",
+			⛅️ wrangler · vx.x.x
+			────────────────────",
 			  "warn": "",
 			}
 		`);
@@ -228,8 +228,8 @@ describe("delete", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🌀 Deleted asset namespace for Workers Site "__my-script-workers_sites_assets"
 			Successfully deleted my-script",
 			  "warn": "",
@@ -314,8 +314,8 @@ describe("delete", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🌀 Deleted asset namespace for Workers Site "__my-script-workers_sites_assets"
 			🌀 Deleted asset namespace for Workers Site "__my-script-workers_sites_assets_preview"
 			Successfully deleted my-script",
@@ -505,19 +505,19 @@ Delete it as well?`,
 
 				// The application is deleted by its own ID, not its namespace's.
 				expect(std).toMatchInlineSnapshot(`
-				{
-				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				Successfully deleted my-script
-				🗑️ Deleted Container application "my-script-container"
-				Deleted 1 Container application. Its instances may take a while to shut down.",
-				  "warn": "",
-				}
-			`);
+					{
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "
+					⛅️ wrangler · vx.x.x
+					────────────────────
+					Successfully deleted my-script
+					🗑️ Deleted Container application "my-script-container"
+					Deleted 1 Container application. Its instances may take a while to shut down.",
+					  "warn": "",
+					}
+				`);
 				expect(std.err).toBe("");
 			}
 		);
@@ -1026,8 +1026,8 @@ Are you sure you want to continue?`,
 				  "err": "",
 				  "info": "",
 				  "out": "
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Successfully deleted test-name",
 				  "warn": "",
 				}
@@ -1073,8 +1073,8 @@ Are you sure you want to continue?`,
 				  "err": "",
 				  "info": "",
 				  "out": "
-				 ⛅️ wrangler x.x.x
-				──────────────────",
+				⛅️ wrangler · vx.x.x
+				────────────────────",
 				  "warn": "",
 				}
 			`);
@@ -1094,8 +1094,8 @@ Are you sure you want to continue?`,
 				  "err": "",
 				  "info": "",
 				  "out": "
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Successfully deleted test-name",
 				  "warn": "",
 				}
@@ -1137,8 +1137,8 @@ Are you sure you want to continue?`,
 				  "err": "",
 				  "info": "",
 				  "out": "
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Successfully deleted test-name",
 				  "warn": "",
 				}
@@ -1197,8 +1197,8 @@ Are you sure you want to continue?`,
 				  "err": "",
 				  "info": "",
 				  "out": "
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Successfully deleted test-name",
 				  "warn": "",
 				}

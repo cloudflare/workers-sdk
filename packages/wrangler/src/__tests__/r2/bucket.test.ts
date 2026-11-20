@@ -128,8 +128,8 @@ describe("r2", () => {
 				await runWrangler(`r2 bucket list`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Listing buckets...
 					name:           bucket-1-local-once
 					creation_date:  01-01-2001
@@ -182,8 +182,8 @@ describe("r2", () => {
 				await runWrangler(`r2 bucket list`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Listing buckets...
 					name:           bucket-1-local-once
 					creation_date:  01-01-2001
@@ -230,8 +230,8 @@ describe("r2", () => {
 				await runWrangler(`r2 bucket info ${bucketName}`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Getting info for 'my-bucket'...
 					name:                   my-bucket
 					created:                01-01-2001
@@ -458,8 +458,8 @@ describe("r2", () => {
 					",
 					  "info": "",
 					  "out": "
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Creating bucket 'test-bucket'...
 					",
 					  "warn": "",
@@ -504,8 +504,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Updating bucket testBucket to Foo default storage class.
 						"
 					`);
@@ -517,8 +517,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Updating bucket testBucket to InfrequentAccess default storage class.
 						Updated bucket testBucket to InfrequentAccess default storage class."
 					`);
@@ -606,8 +606,8 @@ describe("r2", () => {
 				await runWrangler(`r2 bucket delete some-bucket`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Deleting bucket some-bucket.
 					Deleted bucket some-bucket."
 				`);
@@ -663,8 +663,8 @@ describe("r2", () => {
 					expect(std.out).toMatchInlineSnapshot(
 						`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						✨ Successfully enabled Sippy on the 'testBucket' bucket."
 					`
 					);
@@ -701,8 +701,8 @@ describe("r2", () => {
 					expect(std.out).toMatchInlineSnapshot(
 						`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						✨ Successfully enabled Sippy on the 'testBucket' bucket."
 					`
 					);
@@ -896,8 +896,8 @@ describe("r2", () => {
 					expect(std.out).toMatchInlineSnapshot(
 						`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						✨ Successfully disabled Sippy on the 'testBucket' bucket."
 					`
 					);
@@ -942,8 +942,8 @@ describe("r2", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Sippy configuration: https://storage.googleapis.com/storage/v1/b/testBucket"
 				`
 				);
@@ -987,8 +987,8 @@ describe("r2", () => {
 					expect(std.out).toMatchInlineSnapshot(
 						`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						✨ Successfully enabled Basin Catalog on bucket 'testBucket'.
 
 						Catalog URI: 'https://catalog.cloudflarestorage.com/test-account-id/test-warehouse-name'
@@ -1049,8 +1049,8 @@ describe("r2", () => {
 					expect(std.out).toMatchInlineSnapshot(
 						`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Successfully disabled Basin Catalog on bucket 'testBucket'."
 					`
 					);
@@ -1090,8 +1090,8 @@ describe("r2", () => {
 					await runWrangler("r2 bucket catalog disable testBucket");
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Basin Catalog is not enabled for bucket 'testBucket'. Please use 'wrangler basin catalog enable testBucket' to first enable Basin Catalog on this bucket."
 					`);
 				});
@@ -1137,8 +1137,8 @@ describe("r2", () => {
 					await runWrangler("r2 bucket catalog get test-bucket");
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Getting Basin Catalog status for 'test-bucket'...
 
 						Catalog URI:  https://catalog.cloudflarestorage.com/test-account-id/test-name
@@ -1175,8 +1175,8 @@ describe("r2", () => {
 					await runWrangler("r2 bucket catalog get test-bucket");
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Getting Basin Catalog status for 'test-bucket'...
 
 						Basin Catalog is not enabled for bucket 'test-bucket'. Please use 'wrangler basin catalog enable test-bucket' to first enable Basin Catalog on this bucket."
@@ -1239,8 +1239,8 @@ describe("r2", () => {
 						expect(std.out).toMatchInlineSnapshot(
 							`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							✨ Successfully enabled file compaction for Basin Catalog on bucket 'testBucket'.
 
 							Compaction will automatically combine small files into larger ones to improve query performance.
@@ -1297,8 +1297,8 @@ describe("r2", () => {
 						expect(std.out).toMatchInlineSnapshot(
 							`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							✨ Successfully enabled file compaction for table 'testNamespace.testTable' in bucket 'testBucket'."
 						`
 						);
@@ -1330,8 +1330,8 @@ describe("r2", () => {
 						expect(std.out).toMatchInlineSnapshot(
 							`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							✨ Successfully enabled file compaction for table 'testNamespace.testTable' in bucket 'testBucket'."
 						`
 						);
@@ -1406,8 +1406,8 @@ describe("r2", () => {
 						expect(std.out).toMatchInlineSnapshot(
 							`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							Successfully disabled file compaction for Basin Catalog on bucket 'testBucket'."
 						`
 						);
@@ -1424,8 +1424,8 @@ describe("r2", () => {
 						);
 						expect(std.out).toMatchInlineSnapshot(`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							Disable cancelled."
 						`);
 					});
@@ -1460,8 +1460,8 @@ describe("r2", () => {
 						expect(std.out).toMatchInlineSnapshot(
 							`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							Successfully disabled file compaction for table 'testNamespace.testTable' in bucket 'testBucket'."
 						`
 						);
@@ -1478,8 +1478,8 @@ describe("r2", () => {
 						);
 						expect(std.out).toMatchInlineSnapshot(`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							Disable cancelled."
 						`);
 					});
@@ -1542,8 +1542,8 @@ describe("r2", () => {
 						expect(std.out).toMatchInlineSnapshot(
 							`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							✨ Successfully enabled snapshot expiration for Basin Catalog on bucket 'testBucket'.
 
 							Snapshot expiration will automatically delete old table snapshots to save storage costs.
@@ -1593,8 +1593,8 @@ describe("r2", () => {
 						expect(std.out).toMatchInlineSnapshot(
 							`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							✨ Successfully enabled snapshot expiration for Basin Catalog on bucket 'testBucket'.
 
 							Snapshot expiration will automatically delete old table snapshots to save storage costs.
@@ -1643,8 +1643,8 @@ describe("r2", () => {
 						expect(std.out).toMatchInlineSnapshot(
 							`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							✨ Successfully enabled snapshot expiration for table 'testNamespace.testTable' in bucket 'testBucket'."
 						`
 						);
@@ -1677,8 +1677,8 @@ describe("r2", () => {
 						expect(std.out).toMatchInlineSnapshot(
 							`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							✨ Successfully enabled snapshot expiration for table 'testNamespace.testTable' in bucket 'testBucket'."
 						`
 						);
@@ -1740,8 +1740,8 @@ describe("r2", () => {
 						expect(std.out).toMatchInlineSnapshot(
 							`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							Successfully disabled snapshot expiration for Basin Catalog on bucket 'testBucket'."
 						`
 						);
@@ -1758,8 +1758,8 @@ describe("r2", () => {
 						);
 						expect(std.out).toMatchInlineSnapshot(`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							Disable cancelled."
 						`);
 					});
@@ -1794,8 +1794,8 @@ describe("r2", () => {
 						expect(std.out).toMatchInlineSnapshot(
 							`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							Successfully disabled snapshot expiration for table 'testNamespace.testTable' in bucket 'testBucket'."
 						`
 						);
@@ -1812,8 +1812,8 @@ describe("r2", () => {
 						);
 						expect(std.out).toMatchInlineSnapshot(`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							Disable cancelled."
 						`);
 					});
@@ -1842,8 +1842,8 @@ describe("r2", () => {
 						expect(std.out).toMatchInlineSnapshot(
 							`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							Successfully disabled snapshot expiration for Basin Catalog on bucket 'testBucket'."
 						`
 						);
@@ -1900,8 +1900,8 @@ describe("r2", () => {
 					).toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Fetching notification rules for bucket my-bucket...
 						rule_id:     8cdcce8a-89b3-474f-a087-3eb4fcacfa37
 						created_at:  2024-09-05T01:02:03.000Z
@@ -1969,8 +1969,8 @@ describe("r2", () => {
 					).toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Fetching notification rules for bucket my-bucket...
 						rule_id:
 						created_at:
@@ -2067,8 +2067,8 @@ describe("r2", () => {
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Creating event notification rule for object creation and deletion (PutObject,CompleteMultipartUpload,CopyObject,DeleteObject,LifecycleDeletion)
 						Event notification rule created successfully!"
 					`);
@@ -2152,8 +2152,8 @@ describe("r2", () => {
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Creating event notification rule for object creation and deletion (PutObject,CompleteMultipartUpload,CopyObject,DeleteObject,LifecycleDeletion)
 						Event notification rule created successfully!"
 					`);
@@ -2237,8 +2237,8 @@ describe("r2", () => {
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Creating event notification rule for object creation and deletion (PutObject,CompleteMultipartUpload,CopyObject,DeleteObject,LifecycleDeletion)
 						Event notification rule created successfully!"
 					`);
@@ -2328,8 +2328,8 @@ describe("r2", () => {
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Creating event notification rule for object creation and deletion (PutObject,CompleteMultipartUpload,CopyObject,DeleteObject,LifecycleDeletion)
 						Event notification rule created successfully!"
 					`);
@@ -2402,8 +2402,8 @@ describe("r2", () => {
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Deleting event notification rules associated with queue my-queue...
 						Event notification rule deleted successfully!"
 					`);
@@ -2469,8 +2469,8 @@ describe("r2", () => {
 					).resolves.toBe(undefined);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Deleting event notifications rule "rule123456789"...
 						Event notification rule deleted successfully!"
 					`);
@@ -2526,8 +2526,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Retrieving custom domain 'test.com' connected to bucket 'my-bucket'...
 						domain:            test.com
 						enabled:           No
@@ -2576,8 +2576,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Connecting custom domain 'example.com' to bucket 'my-bucket'...
 						✨ Custom domain 'example.com' connected successfully."
 					`);
@@ -2643,8 +2643,8 @@ describe("r2", () => {
 					await runWrangler(`r2 bucket domain list ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Listing custom domains connected to bucket 'my-bucket'...
 						domain:            example.com
 						enabled:           Yes
@@ -2697,8 +2697,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Removing custom domain 'example.com' from bucket 'my-bucket'...
 						Custom domain 'example.com' removed successfully."
 					`);
@@ -2735,8 +2735,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Updating custom domain 'example.com' for bucket 'my-bucket'...
 						✨ Custom domain 'example.com' updated successfully."
 					`);
@@ -2770,8 +2770,8 @@ describe("r2", () => {
 					await runWrangler(`r2 bucket dev-url get ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Public access is enabled at 'https://pub-bucket-id-123.r2.dev'."
 					`);
 				});
@@ -2798,8 +2798,8 @@ describe("r2", () => {
 					await runWrangler(`r2 bucket dev-url get ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Public access via the r2.dev URL is disabled."
 					`);
 				});
@@ -2838,8 +2838,8 @@ describe("r2", () => {
 					await runWrangler(`r2 bucket dev-url enable ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Enabling public access for bucket 'my-bucket'...
 						✨ Public access enabled at 'https://pub-bucket-id-123.r2.dev'."
 					`);
@@ -2879,8 +2879,8 @@ describe("r2", () => {
 					await runWrangler(`r2 bucket dev-url disable ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Disabling public access for bucket 'my-bucket'...
 						Public access disabled at 'https://pub-bucket-id-123.r2.dev'."
 					`);
@@ -2926,8 +2926,8 @@ describe("r2", () => {
 					await runWrangler(`r2 bucket lifecycle list ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Listing lifecycle rules for bucket 'my-bucket'...
 						name:     rule-1
 						enabled:  Yes
@@ -2991,8 +2991,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Adding lifecycle rule 'my-rule' to bucket 'my-bucket'...
 						✨ Added lifecycle rule 'my-rule' to bucket 'my-bucket'."
 					`);
@@ -3144,8 +3144,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Adding lifecycle rule 'my-rule' to bucket 'my-bucket'...
 						✨ Added lifecycle rule 'my-rule' to bucket 'my-bucket'."
 					`);
@@ -3195,8 +3195,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Removing lifecycle rule 'my-rule' from bucket 'my-bucket'...
 						Lifecycle rule 'my-rule' removed from bucket 'my-bucket'."
 					`);
@@ -3244,8 +3244,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Removing lifecycle rule 'my-rule' from bucket 'my-bucket'...
 						Lifecycle rule 'my-rule' removed from bucket 'my-bucket'."
 					`);
@@ -3327,8 +3327,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Setting lifecycle configuration (1 rules) for bucket 'my-bucket'...
 						✨ Set lifecycle configuration for bucket 'my-bucket'."
 					`);
@@ -3373,8 +3373,8 @@ describe("r2", () => {
 					await runWrangler(`r2 bucket cors list ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Listing CORS rules for bucket 'my-bucket'...
 						allowed_origins:  https://www.example.com
 						allowed_methods:  GET, PUT
@@ -3474,8 +3474,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Setting CORS configuration (1 rules) for bucket 'my-bucket'...
 						✨ Set CORS configuration for bucket 'my-bucket'."
 					`);
@@ -3527,8 +3527,8 @@ describe("r2", () => {
 					await runWrangler(`r2 bucket cors delete ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Deleting the CORS configuration for bucket 'my-bucket'...
 						CORS configuration deleted for bucket 'my-bucket'."
 					`);
@@ -3589,8 +3589,8 @@ describe("r2", () => {
 					await runWrangler(`r2 bucket lock list ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Listing lock rules for bucket 'my-bucket'...
 						name:       rule-age
 						enabled:    Yes
@@ -3641,8 +3641,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Adding lock rule 'rule-no-prefix' to bucket 'my-bucket'...
 						✨ Added lock rule 'rule-no-prefix' to bucket 'my-bucket'."
 					`);
@@ -3665,8 +3665,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Add cancelled."
 					`);
 				});
@@ -3691,8 +3691,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Adding lock rule 'rule-age' to bucket 'my-bucket'...
 						✨ Added lock rule 'rule-age' to bucket 'my-bucket'."
 					`);
@@ -3756,8 +3756,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Adding lock rule 'rule-date' to bucket 'my-bucket'...
 						✨ Added lock rule 'rule-date' to bucket 'my-bucket'."
 					`);
@@ -3796,8 +3796,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Adding lock rule 'rule-indefinite' to bucket 'my-bucket'...
 						✨ Added lock rule 'rule-indefinite' to bucket 'my-bucket'."
 					`);
@@ -3829,8 +3829,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						? Are you sure you want to add lock rule 'rule-indefinite' to bucket 'my-bucket' without retention? The lock rule will apply to all matching objects indefinitely.
 						🤖 Using fallback value in non-interactive context: yes
 						Adding lock rule 'rule-indefinite' to bucket 'my-bucket'...
@@ -3894,8 +3894,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Removing lock rule 'my-rule' from bucket 'my-bucket'...
 						Lock rule 'my-rule' removed from bucket 'my-bucket'."
 					`);
@@ -3919,8 +3919,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Removing lock rule 'my-rule' from bucket 'my-bucket'...
 						Lock rule 'my-rule' removed from bucket 'my-bucket'."
 					`);
@@ -3992,8 +3992,8 @@ describe("r2", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						? Are you sure you want to overwrite all existing lock rules for bucket 'my-bucket'?
 						🤖 Using fallback value in non-interactive context: yes
 						Setting lock configuration (2 rules) for bucket 'my-bucket'...

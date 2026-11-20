@@ -46,8 +46,7 @@ export function createAuthForProfile(
 			}
 			return inputPrompt<string>({
 				type: "text",
-				question,
-				label: "Answer",
+				message: question,
 				throwOnError: true,
 			});
 		},
@@ -60,8 +59,7 @@ export function createAuthForProfile(
 			}
 			const accountId = await inputPrompt<string>({
 				type: "select",
-				question,
-				label: "Account",
+				message: question,
 				options: options.choices.map((choice) => ({
 					label: choice.title,
 					value: choice.value,

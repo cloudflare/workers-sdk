@@ -19,9 +19,8 @@ export async function copyExistingWorkerFiles(ctx: C3Context) {
 			"existingScript",
 			{
 				type: "text",
-				question:
+				message:
 					"Please specify the name of the existing worker in this account?",
-				label: "worker",
 				defaultValue: ctx.project.name,
 			}
 		);
@@ -45,7 +44,7 @@ export async function copyExistingWorkerFiles(ctx: C3Context) {
 			cwd: tempdir, // use a tempdir because we don't want all the files
 			env: { CLOUDFLARE_ACCOUNT_ID: ctx.account?.id },
 			startText: "Downloading existing worker files",
-			doneText: `${brandColor("downloaded")} ${dim(
+			doneText: `${brandColor("Downloaded")} ${dim(
 				`existing "${ctx.args.existingScript}" worker files`
 			)}`,
 		}

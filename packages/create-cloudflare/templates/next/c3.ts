@@ -48,10 +48,9 @@ async function getNextVariant(ctx: C3Context): Promise<NextVariant> {
 
 	const value = await inputPrompt({
 		type: "select",
-		question: "Which Next.js adapter do you want to use?",
-		label: "variant",
+		message: "Which Next.js adapter do you want to use?",
 		options: NEXT_VARIANTS,
-		defaultValue: NEXT_VARIANTS[0].value,
+		initialValue: NEXT_VARIANTS[0].value,
 		// Honour -y / --accept-defaults by taking the recommended vinext path.
 		acceptDefault: Boolean(ctx.args.acceptDefaults),
 	});

@@ -204,7 +204,7 @@ To continue without logging in, rerun this command with \`--temporary\`. Wrangle
 		});
 
 		await runWrangler("d1 execute db --command 'select 1;'");
-		expect(std.out).toContain("⛅️ wrangler x.x.x");
+		expect(std.out).toContain("⛅️ wrangler · vx.x.x");
 	});
 
 	it("should execute locally without database_id", async ({ expect }) => {

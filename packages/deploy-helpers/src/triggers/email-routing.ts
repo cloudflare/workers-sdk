@@ -48,7 +48,7 @@ function startApplyProgress(total: number): {
 		progress.start(applyProgressMessage(0, total));
 
 		return {
-			update: (done) => progress.update(applyProgressMessage(done, total)),
+			update: (done) => progress.message(applyProgressMessage(done, total)),
 			stop: () => progress.stop(),
 		};
 	}

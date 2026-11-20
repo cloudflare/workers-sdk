@@ -69,8 +69,8 @@ describe("list", () => {
 		await runWrangler("d1 list");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			┌─┬─┬─┐
 			│ uuid │ name │ binding │
 			├─┼─┼─┤

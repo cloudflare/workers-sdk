@@ -25,8 +25,8 @@ describe("r2", () => {
 
 				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: local
 
 					Use --remote if you want to access the remote instance.
@@ -42,8 +42,8 @@ describe("r2", () => {
 
 				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: local
 
 					Use --remote if you want to access the remote instance.
@@ -57,8 +57,8 @@ describe("r2", () => {
 				);
 				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: local
 
 					Use --remote if you want to access the remote instance.
@@ -154,8 +154,8 @@ describe("r2", () => {
 
 				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: local
 
 					Use --remote if you want to access the remote instance.
@@ -174,8 +174,8 @@ describe("r2", () => {
 
 				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: local
 
 					Use --remote if you want to access the remote instance.
@@ -204,8 +204,8 @@ describe("r2", () => {
 				);
 				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: local
 
 					Use --remote if you want to access the remote instance.
@@ -220,8 +220,8 @@ describe("r2", () => {
 
 				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: local
 
 					Use --remote if you want to access the remote instance.
@@ -236,8 +236,8 @@ describe("r2", () => {
 
 				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: local
 
 					Use --remote if you want to access the remote instance.
@@ -255,8 +255,8 @@ describe("r2", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: local
 
 					Use --remote if you want to access the remote instance.
@@ -270,8 +270,8 @@ describe("r2", () => {
 				);
 				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: local
 
 					Use --remote if you want to access the remote instance.
@@ -286,8 +286,8 @@ describe("r2", () => {
 
 				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: local
 
 					Use --remote if you want to access the remote instance.
@@ -313,8 +313,8 @@ describe("r2", () => {
 
 				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: local
 
 					Use --remote if you want to access the remote instance.
@@ -329,8 +329,8 @@ describe("r2", () => {
 
 				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: local
 
 					Use --remote if you want to access the remote instance.
@@ -349,8 +349,8 @@ describe("r2", () => {
 
 				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: local
 
 					Use --remote if you want to access the remote instance.
@@ -365,8 +365,8 @@ describe("r2", () => {
 
 				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Resource location: local
 
 					Use --remote if you want to access the remote instance.

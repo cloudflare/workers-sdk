@@ -735,8 +735,8 @@ describe("wrangler pipelines setup", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Cloudflare Pipelines Setup
 
 
@@ -965,8 +965,8 @@ describe("wrangler pipelines setup", () => {
 			expect(deleteReq.count).toBe(1);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Cloudflare Pipelines Setup
 
 
@@ -1053,8 +1053,8 @@ describe("wrangler pipelines setup", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Cloudflare Pipelines Setup
 
 
@@ -1428,8 +1428,8 @@ describe("wrangler pipelines setup", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Cloudflare Pipelines Setup
 
 

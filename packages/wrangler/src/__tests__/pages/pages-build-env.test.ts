@@ -32,8 +32,8 @@ describe("pages build env", () => {
 		await runWrangler("pages functions build-env . --outfile data.json");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Checking for configuration in a Wrangler configuration file (BETA)
 
 			Found wrangler.toml file. Reading build configuration...
@@ -70,8 +70,8 @@ describe("pages build env", () => {
 		expect(process.exitCode).toEqual(EXIT_CODE_NO_CONFIG_FOUND);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Checking for configuration in a Wrangler configuration file (BETA)
 			"
 		`);
@@ -117,8 +117,8 @@ describe("pages build env", () => {
 		expect(process.exitCode).toEqual(EXIT_CODE_INVALID_PAGES_CONFIG);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Checking for configuration in a Wrangler configuration file (BETA)
 
 			Found wrangler.toml file. Reading build configuration..."
@@ -148,8 +148,8 @@ describe("pages build env", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Checking for configuration in a Wrangler configuration file (BETA)
 
 			Found wrangler.toml file. Reading build configuration..."
@@ -193,8 +193,8 @@ describe("pages build env", () => {
 		expect(process.exitCode).toEqual(EXIT_CODE_INVALID_PAGES_CONFIG);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Checking for configuration in a Wrangler configuration file (BETA)
 
 			Found wrangler.toml file. Reading build configuration..."
@@ -247,8 +247,8 @@ describe("pages build env", () => {
 		expect(process.exitCode).toEqual(EXIT_CODE_INVALID_PAGES_CONFIG);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Checking for configuration in a Wrangler configuration file (BETA)
 
 			Found wrangler.toml file. Reading build configuration..."
@@ -286,8 +286,8 @@ describe("pages build env", () => {
 		await runWrangler("pages functions build-env . --outfile data.json");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Checking for configuration in a Wrangler configuration file (BETA)
 
 			Found wrangler.toml file. Reading build configuration...
@@ -335,8 +335,8 @@ describe("pages build env", () => {
 		await runWrangler("pages functions build-env . --outfile data.json");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Checking for configuration in a Wrangler configuration file (BETA)
 
 			Found wrangler.json file. Reading build configuration...
@@ -381,8 +381,8 @@ describe("pages build env", () => {
 		await runWrangler("pages functions build-env . --outfile data.json");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Checking for configuration in a Wrangler configuration file (BETA)
 
 			Found wrangler.toml file. Reading build configuration...
@@ -428,8 +428,8 @@ describe("pages build env", () => {
 		await runWrangler("pages functions build-env . --outfile data.json");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Checking for configuration in a Wrangler configuration file (BETA)
 
 			Found wrangler.toml file. Reading build configuration...
@@ -464,8 +464,8 @@ describe("pages build env", () => {
 		await runWrangler("pages functions build-env . --outfile data.json");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Checking for configuration in a Wrangler configuration file (BETA)
 
 			Found wrangler.json file. Reading build configuration...

@@ -564,8 +564,8 @@ describe("wrangler", () => {
 		await endEventLoop();
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			No bindings found.
 			--dry-run: exiting now."

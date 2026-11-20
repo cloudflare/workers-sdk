@@ -35,8 +35,8 @@ describe("logout", () => {
 		await runWrangler("logout", { CLOUDFLARE_API_TOKEN: undefined });
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Not logged in, exiting..."
 		`);
 	});
@@ -58,8 +58,8 @@ describe("logout", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Cleared temporary preview account."
 		`);
 		expect(fs.existsSync(temporaryAccountConfigPath)).toBeFalsy();
@@ -72,8 +72,8 @@ describe("logout", () => {
 		expect(std.out).toMatchInlineSnapshot(
 			`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			You are logged in with an API Token. Unset the CLOUDFLARE_API_TOKEN in the environment to log out."
 		`
 		);
@@ -117,8 +117,8 @@ describe("logout", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Successfully logged out."
 		`);
 		expect(fs.existsSync(config)).toBeFalsy();
@@ -154,8 +154,8 @@ describe("logout", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Successfully logged out."
 		`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -190,8 +190,8 @@ describe("logout", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Successfully logged out."
 		`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -229,8 +229,8 @@ describe("logout", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Successfully logged out."
 		`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -289,8 +289,8 @@ describe("logout", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Successfully logged out."
 		`);
 		expect(keyringStore.size).toBe(0);

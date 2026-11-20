@@ -528,8 +528,8 @@ describe("wrangler", () => {
 					expect(std.out).toMatchInlineSnapshot(
 						`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Uploading mTLS Certificate...
 						Success! Uploaded mTLS Certificate
 						ID: 1234
@@ -555,8 +555,8 @@ describe("wrangler", () => {
 					expect(std.out).toMatchInlineSnapshot(
 						`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Uploading mTLS Certificate my-cert...
 						Success! Uploaded mTLS Certificate my-cert
 						ID: 1234
@@ -579,8 +579,8 @@ describe("wrangler", () => {
 					expect(std.out).toMatchInlineSnapshot(
 						`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Uploading CA Certificate...
 						Success! Uploaded CA Certificate
 						ID: 1234
@@ -605,8 +605,8 @@ describe("wrangler", () => {
 					expect(std.out).toMatchInlineSnapshot(
 						`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Uploading CA Certificate my-caCert...
 						Success! Uploaded CA Certificate my-caCert
 						ID: 1234
@@ -627,8 +627,8 @@ describe("wrangler", () => {
 					expect(std.out).toMatchInlineSnapshot(
 						`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						ID: 1234
 						Name: cert one
 						Issuer: example.com...
@@ -659,8 +659,8 @@ describe("wrangler", () => {
 			`);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────"
+						⛅️ wrangler · vx.x.x
+						────────────────────"
 					`);
 				});
 
@@ -676,8 +676,8 @@ describe("wrangler", () => {
 			`);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────"
+						⛅️ wrangler · vx.x.x
+						────────────────────"
 					`);
 				});
 
@@ -696,8 +696,8 @@ describe("wrangler", () => {
 					expect(std.out).toMatchInlineSnapshot(
 						`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Deleted certificate 1234 (my-cert) successfully"
 					`
 					);
@@ -718,8 +718,8 @@ describe("wrangler", () => {
 					expect(std.out).toMatchInlineSnapshot(
 						`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Deleted certificate 1234 (my-cert) successfully"
 					`
 					);
@@ -737,8 +737,8 @@ describe("wrangler", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						"
 					`);
 				});
@@ -772,8 +772,8 @@ describe("wrangler", () => {
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						"
 					`);
 				});
@@ -790,8 +790,8 @@ describe("wrangler", () => {
 					expect(std.err).toMatchInlineSnapshot(`""`);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Not deleting"
 					`);
 				});

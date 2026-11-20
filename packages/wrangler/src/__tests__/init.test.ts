@@ -70,8 +70,8 @@ describe("init", () => {
 				  "err": "",
 				  "info": "",
 				  "out": "
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				🌀 Running \`mockpm create cloudflare\`...",
 				  "warn": "",
 				}
@@ -181,8 +181,8 @@ describe("init", () => {
 					  "err": "",
 					  "info": "",
 					  "out": "
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					🌀 Running \`mockpm run create-cloudflare\`...",
 					  "warn": "",
 					}
@@ -898,8 +898,8 @@ describe("init", () => {
 				  "err": "",
 				  "info": "",
 				  "out": "
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				🌀 Running \`mockpm create cloudflare existing-memory-crystal --existing-script existing-memory-crystal\`...",
 				  "warn": "",
 				}

@@ -1,4 +1,3 @@
-import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { detectPackageManager } from "helpers/packageManagers";
@@ -16,8 +15,6 @@ const generate = async (ctx: C3Context) => {
 		variant,
 		"--no-immediate",
 	]);
-
-	logRaw("");
 };
 
 const variantsOptions = [
@@ -52,10 +49,9 @@ async function getVariant(ctx: C3Context) {
 
 	return await inputPrompt({
 		type: "select",
-		question: "Select a variant:",
-		label: "variant",
+		message: "Select a variant:",
 		options: variantsOptions,
-		defaultValue: variantsOptions[0].value,
+		initialValue: variantsOptions[0].value,
 	});
 }
 

@@ -66,8 +66,8 @@ describe("r2 bucket local-uploads", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Local uploads are enabled for bucket 'my-bucket'. Object data is written to the nearest region first, then asynchronously replicated to the bucket's primary region."
 			`);
 		});
@@ -92,8 +92,8 @@ describe("r2 bucket local-uploads", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Local uploads are disabled for bucket 'my-bucket'. Object data is written directly to the bucket's primary region."
 			`);
 		});
@@ -136,8 +136,8 @@ describe("r2 bucket local-uploads", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Enabling local uploads for bucket 'my-bucket'...
 				✨ Local uploads enabled for bucket 'my-bucket'."
 			`);
@@ -165,8 +165,8 @@ describe("r2 bucket local-uploads", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Enabling local uploads for bucket 'my-bucket'...
 				✨ Local uploads enabled for bucket 'my-bucket'."
 			`);
@@ -194,8 +194,8 @@ describe("r2 bucket local-uploads", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Enabling local uploads for bucket 'my-bucket'...
 				✨ Local uploads enabled for bucket 'my-bucket'."
 			`);
@@ -214,8 +214,8 @@ describe("r2 bucket local-uploads", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Enable cancelled."
 			`);
 		});
@@ -258,8 +258,8 @@ describe("r2 bucket local-uploads", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Disabling local uploads for bucket 'my-bucket'...
 				Local uploads disabled for bucket 'my-bucket'."
 			`);
@@ -287,8 +287,8 @@ describe("r2 bucket local-uploads", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Disabling local uploads for bucket 'my-bucket'...
 				Local uploads disabled for bucket 'my-bucket'."
 			`);
@@ -316,8 +316,8 @@ describe("r2 bucket local-uploads", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Disabling local uploads for bucket 'my-bucket'...
 				Local uploads disabled for bucket 'my-bucket'."
 			`);
@@ -336,8 +336,8 @@ describe("r2 bucket local-uploads", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Disable cancelled."
 			`);
 		});

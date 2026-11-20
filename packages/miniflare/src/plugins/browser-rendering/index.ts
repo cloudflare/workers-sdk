@@ -141,7 +141,7 @@ export async function launchBrowser({
 						startedDownloading = true;
 					}
 					const progress = Math.round((downloadedBytes / totalBytes) * 100);
-					s.update(`Downloading browser... ${progress}%`);
+					s.message(`Downloading browser... ${progress}%`);
 				},
 			});
 		} catch (e) {

@@ -1,4 +1,4 @@
-import { logRaw, updateStatus } from "@cloudflare/cli-shared-helpers";
+import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import { blue } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	mergeObjectProperties,
@@ -21,7 +21,6 @@ const generate = async (ctx: C3Context) => {
 		// Analog's npm Vite overrides can fail as deps shift; remove once fixed upstream.
 		...(npm === "npm" ? ["--skipViteOverrides"] : []),
 	]);
-	logRaw("");
 };
 
 const configure = async (ctx: C3Context) => {

@@ -95,7 +95,7 @@ const addBindingsProxy = (ctx: C3Context) => {
 		},
 	});
 
-	s.stop(`${brandColor("updated")} \`vite.config.ts\``);
+	s.stop(`${brandColor("Updated")} vite.config.ts`);
 };
 
 const config: TemplateConfig = {

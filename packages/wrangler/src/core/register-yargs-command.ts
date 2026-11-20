@@ -6,7 +6,7 @@ import {
 	FatalError,
 	getCloudflareEnv,
 	getNoSkillsUpdatePromptsFromEnv,
-	getWranglerHideBanner,
+	getHideBanner,
 	parseRetryAfterValue,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -21,6 +21,7 @@ import {
 	runSkillsUpdateFlow,
 	skillInstallPromptMessageAfterWranglerCommandHandler,
 } from "../agents-skills-install";
+import { printWranglerBanner } from "../banner";
 import {
 	fetchKVGetValue,
 	fetchResult,
@@ -45,7 +46,6 @@ import { addBreadcrumb } from "../sentry";
 import { setProfile, setTemporaryAllowed } from "../user";
 import { dedent } from "../utils/dedent";
 import { isLocal, printResourceLocation } from "../utils/is-local";
-import { printWranglerBanner } from "../wrangler-banner";
 import { CommandHandledError } from "./CommandHandledError";
 import { getErrorType, handleError } from "./handle-errors";
 import { demandSingleValue } from "./helpers";
@@ -192,7 +192,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				await runSkillsInstallFlow({ force: true, command: sanitizedCommand });
 			}
 
-			if (!getWranglerHideBanner()) {
+			if (!getHideBanner()) {
 				if (def.metadata.deprecated) {
 					logger.warn(def.metadata.deprecatedMessage);
 				}

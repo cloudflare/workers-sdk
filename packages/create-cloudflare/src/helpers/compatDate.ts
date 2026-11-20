@@ -1,21 +1,9 @@
 import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
-import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import type { C3Context } from "types";
-
-/**
- * Retrieves the compatibility date to scaffold projects with, which is the
- * release date of the workerd version that this release of C3 supports.
- *
- * @returns The compatibility date in the form "YYYY-MM-DD"
- */
-export function getWorkerdCompatibilityDate() {
-	const s = spinner();
-	s.start("Selecting workerd compatibility date");
-	s.stop(`${brandColor("compatibility date")} ${dim(DEFAULT_COMPAT_DATE)}`);
-
+/** Returns the release date of the workerd version supported by this release. */
+export function getWorkerdCompatibilityDate(_projectPath?: string) {
 	return DEFAULT_COMPAT_DATE;
 }
 

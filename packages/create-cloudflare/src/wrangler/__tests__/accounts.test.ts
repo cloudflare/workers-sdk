@@ -125,7 +125,7 @@ describe("wrangler account helpers", () => {
 									label: `${name} (${id})`,
 									value: id,
 								})),
-								defaultValue: available[0].id,
+								initialValue: available[0].id,
 							})
 						);
 						expect(testCtx.account).toEqual(selected);

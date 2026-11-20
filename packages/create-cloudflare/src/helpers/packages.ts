@@ -83,7 +83,7 @@ export const npmInstall = async (ctx: C3Context) => {
 	await runCommand([npm, "install"], {
 		silent: true,
 		startText: "Installing dependencies",
-		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
+		doneText: `${brandColor("Installed")} dependencies via ${dim(`\`${npm} install\``)}`,
 	});
 };
 
@@ -136,9 +136,8 @@ const isStdinEOFError = (err: unknown): boolean =>
 const promptOrEOF = async (packages: string[]): Promise<boolean> => {
 	const prompt = inputPrompt<boolean>({
 		type: "confirm",
-		question: `Run \`pnpm approve-builds ${packages.join(" ")}\` and retry the install?`,
-		label: "approve-builds",
-		defaultValue: true,
+		message: `Run \`pnpm approve-builds ${packages.join(" ")}\` and retry the install?`,
+		initialValue: true,
 		throwOnError: true,
 	});
 

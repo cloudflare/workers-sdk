@@ -314,8 +314,8 @@ describe("versions upload", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 500 ms
 			Your Worker has access to the following bindings:
@@ -349,8 +349,8 @@ describe("versions upload", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 500 ms
 			Your Worker has access to the following bindings:
@@ -382,8 +382,8 @@ describe("versions upload", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 500 ms
 			Uploaded test-name (TIMINGS)
@@ -414,8 +414,8 @@ describe("versions upload", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 500 ms
 			Your Worker has access to the following bindings:
@@ -459,8 +459,8 @@ describe("versions upload", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 500 ms
 			Uploaded test-name (TIMINGS)
@@ -492,8 +492,8 @@ describe("versions upload", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 500 ms
 			Your Worker has access to the following bindings:
@@ -532,8 +532,8 @@ describe("versions upload", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			┌─┬─┬─┐
 			│ Name │ Type │ Size │
 			├─┼─┼─┤

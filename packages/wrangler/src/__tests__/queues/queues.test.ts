@@ -146,8 +146,8 @@ describe("wrangler", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					┌─┬─┬─┬─┬─┬─┐
 					│ id │ name │ created_on │ modified_on │ producers │ consumers │
 					├─┼─┼─┼─┼─┼─┤
@@ -181,8 +181,8 @@ describe("wrangler", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					┌─┬─┬─┬─┬─┬─┐
 					│ id │ name │ created_on │ modified_on │ producers │ consumers │
 					├─┼─┼─┼─┼─┼─┤
@@ -230,8 +230,8 @@ describe("wrangler", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					┌─┬─┬─┬─┬─┬─┬─┐
 					│ id │ name │ jurisdiction │ created_on │ modified_on │ producers │ consumers │
 					├─┼─┼─┼─┼─┼─┼─┤
@@ -379,8 +379,8 @@ describe("wrangler", () => {
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					🌀 Creating queue 'testQueue'
 					✅ Created queue 'testQueue'
 
@@ -579,8 +579,8 @@ describe("wrangler", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Updating queue testQueue.
 					Updated queue testQueue."
 				`);
@@ -742,8 +742,8 @@ describe("wrangler", () => {
 				await runWrangler("queues delete testQueue");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Deleting queue testQueue.
 					Deleted queue testQueue."
 				`);
@@ -899,8 +899,8 @@ describe("wrangler", () => {
 
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Adding consumer to queue testQueue.
 						Added consumer to queue testQueue."
 					`);
@@ -949,8 +949,8 @@ describe("wrangler", () => {
 
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Adding consumer to queue testQueue.
 						Added consumer to queue testQueue."
 					`);
@@ -1001,8 +1001,8 @@ describe("wrangler", () => {
 
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Adding consumer to queue testQueue.
 						Added consumer to queue testQueue."
 					`);
@@ -1276,8 +1276,8 @@ describe("wrangler", () => {
 						expect(deleteRequest.count).toEqual(1);
 						expect(std.out).toMatchInlineSnapshot(`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							Removing consumer from queue testQueue.
 							Removed consumer from queue testQueue."
 						`);
@@ -1360,8 +1360,8 @@ describe("wrangler", () => {
 						expect(deleteRequest.count).toEqual(1);
 						expect(std.out).toMatchInlineSnapshot(`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							Removing consumer from queue testQueue.
 							Removed consumer from queue testQueue."
 						`);
@@ -1450,8 +1450,8 @@ describe("wrangler", () => {
 						expect(serviceRequest.count).toEqual(1);
 						expect(std.out).toMatchInlineSnapshot(`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							Removing consumer from queue testQueue.
 							Removed consumer from queue testQueue."
 						`);
@@ -1509,8 +1509,8 @@ describe("wrangler", () => {
 							expect(deleteRequest.count).toEqual(1);
 							expect(std.out).toMatchInlineSnapshot(`
 								"
-								 ⛅️ wrangler x.x.x
-								──────────────────
+								⛅️ wrangler · vx.x.x
+								────────────────────
 								Removing consumer from queue testQueue.
 								Removed consumer from queue testQueue."
 							`);
@@ -1562,8 +1562,8 @@ describe("wrangler", () => {
 							expect(deleteRequest.count).toEqual(1);
 							expect(std.out).toMatchInlineSnapshot(`
 								"
-								 ⛅️ wrangler x.x.x
-								──────────────────
+								⛅️ wrangler · vx.x.x
+								────────────────────
 								Removing consumer from queue testQueue.
 								Removed consumer from queue testQueue."
 							`);
@@ -1744,8 +1744,8 @@ describe("wrangler", () => {
 					expect(postRequest.count).toEqual(1);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Adding consumer to queue testQueue.
 						Added consumer to queue testQueue."
 					`);
@@ -1789,8 +1789,8 @@ describe("wrangler", () => {
 					expect(postRequest.count).toEqual(1);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Adding consumer to queue testQueue.
 						Added consumer to queue testQueue."
 					`);
@@ -1885,8 +1885,8 @@ describe("wrangler", () => {
 					expect(queueNameResolveRequest.count).toEqual(1);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Removing consumer from queue testQueue.
 						Removed consumer from queue testQueue."
 					`);
@@ -1963,8 +1963,8 @@ describe("wrangler", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Worker consumers:
 					┌─┬─┬─┬─┬─┬─┬─┬─┐
 					│ consumer_id │ script │ dead_letter_queue │ batch_size │ max_retries │ max_wait_time_ms │ max_concurrency │ retry_delay │
@@ -1998,8 +1998,8 @@ describe("wrangler", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Worker consumers:
 					┌─┬─┬─┬─┬─┬─┬─┬─┐
 					│ consumer_id │ script │ dead_letter_queue │ batch_size │ max_retries │ max_wait_time_ms │ max_concurrency │ retry_delay │
@@ -2027,8 +2027,8 @@ describe("wrangler", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					HTTP pull consumers:
 					┌─┬─┬─┬─┬─┬─┐
 					│ consumer_id │ dead_letter_queue │ batch_size │ max_retries │ visibility_timeout_ms │ retry_delay │
@@ -2056,8 +2056,8 @@ describe("wrangler", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					No consumers found for queue "testQueue"."
 				`);
 			});
@@ -2195,8 +2195,8 @@ describe("wrangler", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					┌─┬─┬─┬─┬─┬─┬─┬─┐
 					│ consumer_id │ script │ dead_letter_queue │ batch_size │ max_retries │ max_wait_time_ms │ max_concurrency │ retry_delay │
 					├─┼─┼─┼─┼─┼─┼─┼─┤
@@ -2229,8 +2229,8 @@ describe("wrangler", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					No worker consumers found for queue "testQueue"."
 				`);
 			});
@@ -2361,8 +2361,8 @@ describe("wrangler", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					┌─┬─┬─┬─┬─┬─┐
 					│ consumer_id │ dead_letter_queue │ batch_size │ max_retries │ visibility_timeout_ms │ retry_delay │
 					├─┼─┼─┼─┼─┼─┤
@@ -2396,8 +2396,8 @@ describe("wrangler", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					No HTTP pull consumers found for queue "testQueue"."
 				`);
 			});
@@ -2538,8 +2538,8 @@ describe("wrangler", () => {
 				await runWrangler("queues info testQueue");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Queue Name: testQueue
 					Queue ID: 1234567
 					Jurisdiction: eu
@@ -2559,8 +2559,8 @@ describe("wrangler", () => {
 				await runWrangler("queues info testQueue");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Queue Name: testQueue
 					Queue ID: 1234567
 					Created On: 2024-05-20T14:43:56.70498Z
@@ -2583,8 +2583,8 @@ describe("wrangler", () => {
 				await runWrangler("queues info testQueue");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Queue Name: testQueue
 					Queue ID: 1234567
 					Created On: 2024-05-20T14:43:56.70498Z
@@ -2624,8 +2624,8 @@ describe("wrangler", () => {
 				await runWrangler("queues info testQueue");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Queue Name: testQueue
 					Queue ID: 1234567
 					Created On: 2024-05-20T14:43:56.70498Z
@@ -2749,8 +2749,8 @@ describe("wrangler", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Pausing message delivery for queue testQueue.
 				Paused message delivery for queue testQueue."
 			`);
@@ -2867,8 +2867,8 @@ describe("wrangler", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Resuming message delivery for queue testQueue.
 				Resumed message delivery for queue testQueue."
 			`);
@@ -2983,8 +2983,8 @@ describe("wrangler", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				"
 			`);
 		});
@@ -3002,8 +3002,8 @@ describe("wrangler", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Purged Queue 'testQueue'"
 			`);
 		});
@@ -3021,8 +3021,8 @@ describe("wrangler", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Purged Queue 'testQueue'"
 			`);
 		});
@@ -3040,8 +3040,8 @@ describe("wrangler", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Purged Queue 'testQueue'"
 			`);
 		});
@@ -3067,8 +3067,8 @@ describe("wrangler", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				"
 			`);
 		});
@@ -3090,8 +3090,8 @@ describe("wrangler", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Purged Queue 'testQueue'"
 			`);
 		});

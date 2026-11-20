@@ -216,8 +216,8 @@ describe("vectorize commands", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🚧 Creating index: 'some-index'
 			✅ Successfully created a new Vectorize index: 'test-index'
 			To access your new Vectorize Index in your Worker, add the following snippet to your configuration file:
@@ -239,8 +239,8 @@ describe("vectorize commands", () => {
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			🚧 Creating index: 'test-index'
 			✅ Successfully created a new Vectorize index: 'test-index'
 			To access your new Vectorize Index in your Worker, add the following snippet to your configuration file:
@@ -264,8 +264,8 @@ describe("vectorize commands", () => {
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Configuring index based for the embedding model openai/text-embedding-ada-002.
 			🚧 Creating index: 'test-index'
 			✅ Successfully created a new Vectorize index: 'test-index'
@@ -340,8 +340,8 @@ describe("vectorize commands", () => {
 		await runWrangler("vectorize list --deprecated-v1=true");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Listing Vectorize indexes...
 			┌─┬─┬─┬─┬─┬─┐
 			│ name │ dimensions │ metric │ description │ created │ modified │
@@ -358,8 +358,8 @@ describe("vectorize commands", () => {
 		await runWrangler("vectorize list");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Listing Vectorize indexes...
 			┌─┬─┬─┬─┬─┬─┐
 			│ name │ dimensions │ metric │ description │ created │ modified │
@@ -376,8 +376,8 @@ describe("vectorize commands", () => {
 		await runWrangler("vectorize list");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Listing Vectorize indexes..."
 		`);
 
@@ -503,8 +503,8 @@ describe("vectorize commands", () => {
 		await runWrangler("vectorize get test-index --deprecated-v1=true");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			┌─┬─┬─┬─┬─┬─┐
 			│ name │ dimensions │ metric │ description │ created │ modified │
 			├─┼─┼─┼─┼─┼─┤
@@ -518,8 +518,8 @@ describe("vectorize commands", () => {
 		await runWrangler("vectorize get test-index");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			┌─┬─┬─┬─┬─┬─┐
 			│ name │ dimensions │ metric │ description │ created │ modified │
 			├─┼─┼─┼─┼─┼─┤
@@ -537,8 +537,8 @@ describe("vectorize commands", () => {
 		await runWrangler("vectorize delete test-index --deprecated-v1=true");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Deleting Vectorize index test-index
 			✅ Deleted index test-index"
 		`);
@@ -553,8 +553,8 @@ describe("vectorize commands", () => {
 		await runWrangler("vectorize delete test-index");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Deleting Vectorize index test-index
 			✅ Deleted index test-index"
 		`);
@@ -565,8 +565,8 @@ describe("vectorize commands", () => {
 		await runWrangler("vectorize get-vectors test-index --ids a 'b'");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Fetching vectors...
 			[
 			  {
@@ -607,8 +607,8 @@ describe("vectorize commands", () => {
 		await runWrangler("vectorize get-vectors test-index --ids a 'b'");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Fetching vectors..."
 		`);
 
@@ -636,8 +636,8 @@ describe("vectorize commands", () => {
 		await runWrangler("vectorize delete-vectors test-index --ids a 'b'");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Deleting vectors...
 			✅ Successfully enqueued 2 vectors into index 'test-index' for deletion. Mutation changeset identifier: xxxxxx-xxxx-xxxx-xxxx-xxxxxx."
 		`);
@@ -663,8 +663,8 @@ describe("vectorize commands", () => {
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Searching for relevant vectors...
 			{
 			  "count": 2,
@@ -708,8 +708,8 @@ describe("vectorize commands", () => {
 		await runWrangler("vectorize query test-index --vector-id some-vector-id");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Searching for relevant vectors...
 			{
 			  "count": 2,
@@ -761,8 +761,8 @@ describe("vectorize commands", () => {
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Searching for relevant vectors...
 			{
 			  "count": 2,
@@ -813,8 +813,8 @@ describe("vectorize commands", () => {
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Searching for relevant vectors...
 			{
 			  "count": 2,
@@ -864,8 +864,8 @@ describe("vectorize commands", () => {
 		await runWrangler("vectorize query test-index --vector 1 2 3 '4'");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Searching for relevant vectors..."
 		`);
 
@@ -928,8 +928,8 @@ describe("vectorize commands", () => {
 		await runWrangler("vectorize info test-index");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Fetching index info...
 			┌─┬─┬─┬─┐
 			│ dimensions │ vectorCount │ processedUpToMutation │ processedUpToDatetime │
@@ -946,8 +946,8 @@ describe("vectorize commands", () => {
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Creating metadata index...
 			✅ Successfully enqueued metadata index creation request. Mutation changeset identifier: xxxxxx-xxxx-xxxx-xxxx-xxxxxx."
 		`);
@@ -978,8 +978,8 @@ describe("vectorize commands", () => {
 		await runWrangler(`vectorize list-metadata-index test-index`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Fetching metadata indexes...
 			┌─┬─┐
 			│ propertyName │ type │
@@ -1000,8 +1000,8 @@ describe("vectorize commands", () => {
 		await runWrangler("vectorize list-metadata-index test-index");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Fetching metadata indexes..."
 		`);
 
@@ -1060,8 +1060,8 @@ describe("vectorize commands", () => {
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Deleting metadata index...
 			✅ Successfully enqueued metadata index deletion request. Mutation changeset identifier: xxxxxx-xxxx-xxxx-xxxx-xxxxxx."
 		`);
@@ -1115,8 +1115,8 @@ describe("vectorize commands", () => {
 		await runWrangler("vectorize list-vectors test-index");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Listing vectors in index 'test-index'...
 			┌─┬─┐
 			│ # │ Vector ID │
@@ -1142,8 +1142,8 @@ describe("vectorize commands", () => {
 		await runWrangler("vectorize list-vectors test-index --count 2");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Listing vectors in index 'test-index'...
 			┌─┬─┐
 			│ # │ Vector ID │
@@ -1169,8 +1169,8 @@ describe("vectorize commands", () => {
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Listing vectors in index 'test-index'...
 			┌─┬─┐
 			│ # │ Vector ID │
@@ -1218,8 +1218,8 @@ describe("vectorize commands", () => {
 		await runWrangler("vectorize list-vectors test-index");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			📋 Listing vectors in index 'test-index'..."
 		`);
 

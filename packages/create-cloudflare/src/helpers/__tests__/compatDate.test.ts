@@ -3,28 +3,19 @@ import {
 	getLatestTypesEntrypoint,
 	getWorkerdCompatibilityDate,
 } from "helpers/compatDate";
-import { beforeEach, describe, test, vi } from "vitest";
+import { describe, test, vi } from "vitest";
 import { createTestContext } from "../../__tests__/helpers";
-import { mockSpinner, mockWorkersTypesDirectory } from "./mocks";
+import { mockWorkersTypesDirectory } from "./mocks";
 
 vi.mock("helpers/files");
 vi.mock("fs");
-vi.mock("@cloudflare/cli-shared-helpers/interactive");
 
 describe("Compatibility Date Helpers", () => {
-	let spinner: ReturnType<typeof mockSpinner>;
-
-	beforeEach(() => {
-		spinner = mockSpinner();
-	});
-
 	describe("getWorkerdCompatibilityDate()", () => {
 		test("returns the default compatibility date", async ({ expect }) => {
 			const date = getWorkerdCompatibilityDate();
 
 			expect(date).toBe(DEFAULT_COMPAT_DATE);
-			expect(spinner.start).toHaveBeenCalled();
-			expect(spinner.stop).toHaveBeenCalledWith(expect.stringContaining(date));
 		});
 	});
 

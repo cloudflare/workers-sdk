@@ -963,8 +963,8 @@ describe("generate types - CLI", () => {
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -987,8 +987,8 @@ describe("generate types - CLI", () => {
 			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 
 
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -1011,8 +1011,8 @@ describe("generate types - CLI", () => {
 			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 
 
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -1069,8 +1069,8 @@ describe("generate types - CLI", () => {
 		await runWrangler("types --include-runtime=false");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -1199,8 +1199,8 @@ describe("generate types - CLI", () => {
 		await runWrangler("types --include-runtime=false");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -1390,8 +1390,8 @@ describe("generate types - CLI", () => {
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			- Found Worker 'service_name' at 'b/index.ts' (b/wrangler.jsonc)
 			- Found Worker 'service_name_2' at 'c/index.ts' (c/wrangler.jsonc)
 			Generating project types...
@@ -1577,8 +1577,8 @@ describe("generate types - CLI", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			- Found Worker 'do-worker' at 'secondary/index.ts' (secondary/wrangler.jsonc)
 			Generating project types...
 
@@ -1695,8 +1695,8 @@ describe("generate types - CLI", () => {
 			expect(std.out).not.toContain('declare module "*.html"');
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				export {};
@@ -1764,8 +1764,8 @@ describe("generate types - CLI", () => {
 				`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				export {};
@@ -1805,8 +1805,8 @@ describe("generate types - CLI", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				interface __BaseEnv_Env {
@@ -1880,8 +1880,8 @@ describe("generate types - CLI", () => {
 		await runWrangler("types --include-runtime=false");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			export {};
@@ -1914,8 +1914,8 @@ describe("generate types - CLI", () => {
 		await runWrangler("types");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -1959,8 +1959,8 @@ describe("generate types - CLI", () => {
 		await runWrangler("types --include-runtime=false");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -2017,8 +2017,8 @@ describe("generate types - CLI", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -2074,8 +2074,8 @@ describe("generate types - CLI", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -2215,8 +2215,8 @@ describe("generate types - CLI", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -2258,8 +2258,8 @@ describe("generate types - CLI", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -2354,8 +2354,8 @@ describe("generate types - CLI", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -2390,8 +2390,8 @@ describe("generate types - CLI", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -2432,8 +2432,8 @@ describe("generate types - CLI", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -2469,8 +2469,8 @@ describe("generate types - CLI", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -2516,8 +2516,8 @@ describe("generate types - CLI", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -2572,8 +2572,8 @@ describe("generate types - CLI", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -2613,8 +2613,8 @@ describe("generate types - CLI", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -2654,8 +2654,8 @@ describe("generate types - CLI", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -2720,8 +2720,8 @@ describe("generate types - CLI", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				interface __BaseEnv_Env {
@@ -2759,8 +2759,8 @@ describe("generate types - CLI", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				interface __BaseEnv_Env {
@@ -2851,8 +2851,8 @@ describe("generate types - CLI", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				interface __BaseEnv_Env {
@@ -2929,8 +2929,8 @@ describe("generate types - CLI", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				interface __BaseEnv_Env {
@@ -2988,8 +2988,8 @@ describe("generate types - CLI", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				interface __BaseEnv_Env {
@@ -3044,8 +3044,8 @@ describe("generate types - CLI", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				interface __BaseEnv_Env {
@@ -3149,8 +3149,8 @@ describe("generate types - CLI", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				interface __BaseEnv_Env {
@@ -3199,8 +3199,8 @@ describe("generate types - CLI", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				interface __BaseEnv_Env {
@@ -3255,8 +3255,8 @@ describe("generate types - CLI", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				interface __BaseEnv_Env {
@@ -3300,8 +3300,8 @@ describe("generate types - CLI", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				interface __BaseEnv_Env {
@@ -3361,8 +3361,8 @@ describe("generate types - CLI", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				interface __BaseEnv_Env {
@@ -3420,8 +3420,8 @@ describe("generate types - CLI", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				interface __BaseEnv_Env {
@@ -3477,8 +3477,8 @@ describe("generate types - CLI", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				interface __BaseEnv_Env {
@@ -3539,8 +3539,8 @@ describe("generate types - CLI", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				interface __BaseEnv_Env {
@@ -3588,8 +3588,8 @@ describe("generate types - CLI", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				interface __BaseEnv_Env {
@@ -3630,8 +3630,8 @@ describe("generate types - CLI", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				interface __BaseEnv_Env {
@@ -3695,8 +3695,8 @@ describe("generate types - CLI", () => {
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Generating project types...
 
 					interface __BaseEnv_CloudflareEnv {
@@ -3991,8 +3991,8 @@ describe("generate types - CLI", () => {
 			await runWrangler("types --include-env=false");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating runtime types...
 
 				Runtime types generated.
@@ -4029,8 +4029,8 @@ describe("generate types - CLI", () => {
 			await runWrangler("types --include-env=false");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating runtime types...
 
 				Runtime types generated.
@@ -4078,8 +4078,8 @@ describe("generate types - CLI", () => {
 		await runWrangler("types --include-runtime=false");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -4130,8 +4130,8 @@ describe("generate types - CLI", () => {
 		await runWrangler("types --include-runtime=false");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -4180,8 +4180,8 @@ describe("generate types - CLI", () => {
 		await runWrangler("types --include-runtime=false");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -4250,8 +4250,8 @@ export default { async fetch() { return new Response("ok"); } };`
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				interface __BaseEnv_Env {
@@ -5511,8 +5511,8 @@ describe("pipeline schema type generation", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -5569,8 +5569,8 @@ describe("pipeline schema type generation", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -5624,8 +5624,8 @@ describe("pipeline schema type generation", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -5721,8 +5721,8 @@ describe("pipeline schema type generation", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -5791,8 +5791,8 @@ describe("pipeline schema type generation", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			interface __BaseEnv_Env {
@@ -5859,8 +5859,8 @@ describe("pipeline schema type generation", () => {
 		// since the type definition is at the top level, not inside a namespace
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Generating project types...
 
 			type EventsRecord = { event_type: string; timestamp: string | number };

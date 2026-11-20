@@ -429,7 +429,7 @@ function renderProgress(done: number, total: number) {
 	if (isInteractive()) {
 		s.start(`Uploading... (${done}/${total})\n`);
 		return {
-			update: (d: number, t: number) => s.update(`Uploading... (${d}/${t})\n`),
+			update: (d: number, t: number) => s.message(`Uploading... (${d}/${t})\n`),
 			stop: s.stop,
 		};
 	} else {

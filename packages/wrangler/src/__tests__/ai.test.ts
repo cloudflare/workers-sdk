@@ -143,8 +143,8 @@ describe("ai commands", () => {
 		await runWrangler("ai finetune list");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			┌─┬─┬─┐
 			│ finetune_id │ name │ description │
 			├─┼─┼─┤
@@ -168,8 +168,8 @@ describe("ai commands", () => {
 		await runWrangler("ai models list");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			┌─┬─┬─┬─┐
 			│ model │ name │ description │ task │
 			├─┼─┼─┼─┤
@@ -185,8 +185,8 @@ describe("ai commands", () => {
 		await runWrangler("ai models");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			┌─┬─┬─┬─┐
 			│ model │ name │ description │ task │
 			├─┼─┼─┼─┤
@@ -252,8 +252,8 @@ describe("ai commands", () => {
 		await runWrangler("ai models list");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			┌─┬─┬─┬─┐
 			│ model │ name │ description │ task │
 			├─┼─┼─┼─┤
@@ -273,8 +273,8 @@ describe("ai commands", () => {
 		await runWrangler("ai models list");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			┌─┬─┬─┬─┐
 			│ model │ name │ description │ task │
 			├─┼─┼─┼─┤

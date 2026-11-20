@@ -55,9 +55,8 @@ async function handleDeleteCommand(
 	const deployment = await pickDeployment(args.deploymentId);
 	logDeployment(deployment);
 	const yes = await inputPrompt({
-		question: "Are you sure that you want to delete this deployment?",
+		message: "Are you sure that you want to delete this deployment?",
 		type: "confirm",
-		label: "",
 	});
 	if (!yes) {
 		cancel("The operation has been cancelled");

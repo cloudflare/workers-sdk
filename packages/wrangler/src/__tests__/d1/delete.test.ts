@@ -41,8 +41,8 @@ describe("delete", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Resource location: remote
 
 			About to delete remote database DB 'test-db' (db-uuid-123).
@@ -68,8 +68,8 @@ describe("delete", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Resource location: remote
 
 			About to delete remote database DB 'test-db' (db-uuid-123).

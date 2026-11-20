@@ -179,11 +179,11 @@ describe("containers registries configure", () => {
 			`containers registries configure registry.cloudflare.com`
 		);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
-			"╭ Configure a container registry
+			"┌  Configure a container registry
+			You do not need to configure credentials for Cloudflare managed registries.
+
 			│
-			│ You do not need to configure credentials for Cloudflare managed registries.
-			│
-			╰ No configuration required
+			└  No configuration required
 
 			"
 		`);
@@ -220,13 +220,13 @@ describe("containers registries configure", () => {
 			);
 
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
-				"╭ Configure a container registry
-				│
-				│ Configuring AWS ECR registry: 123456789012.dkr.ecr.us-west-2.amazonaws.com
-				│
-				│ Getting AWS Secret Access Key...
-				│
-				╰ Registry configuration completed
+				"[90m┌[39m  Configure a container registry
+				Configuring AWS ECR registry: 123456789012.dkr.ecr.us-west-2.amazonaws.com
+
+				Getting AWS Secret Access Key...
+
+				[90m│[39m
+				[90m└[39m  Registry configuration completed
 
 				"
 			`);
@@ -398,20 +398,20 @@ describe("containers registries configure", () => {
 			).resolves.not.toThrow();
 			// Should not call listStores or createStore
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
-				"╭ Configure a container registry
-				│
-				│ Configuring AWS ECR registry: 123456789012.dkr.ecr.us-west-2.amazonaws.com
-				│
-				│
-				│ Setting up integration with Secrets Store...
-				│
-				│
-				│
-				│ Getting AWS Secret Access Key...
-				│
-				│ Container-scoped secret "AWS_Secret_Access_Key" created in Secrets Store.
-				│
-				╰ Registry configuration completed
+				"[90m┌[39m  Configure a container registry
+				Configuring AWS ECR registry: 123456789012.dkr.ecr.us-west-2.amazonaws.com
+
+
+				Setting up integration with Secrets Store...
+
+
+
+				Getting AWS Secret Access Key...
+
+				Container-scoped secret "AWS_Secret_Access_Key" created in Secrets Store.
+
+				[90m│[39m
+				[90m└[39m  Registry configuration completed
 
 				"
 			`);
@@ -1135,9 +1135,9 @@ describe("containers registries list", () => {
 		mockListRegistries([]);
 		await runWrangler("containers registries list");
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
-			"╭ List configured container registries
-			│
-			╰ No registries configured for this account
+			"[90m┌[39m  List configured container registries
+			[90m│[39m
+			[90m└[39m  No registries configured for this account
 
 			"
 		`);
@@ -1152,17 +1152,17 @@ describe("containers registries list", () => {
 		await runWrangler("containers registries list");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────"
+			⛅️ wrangler · vx.x.x
+			────────────────────"
 		`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
-			"╭ List configured container registries
-			│
-			├ 123456789012.dkr.ecr.us-west-2.amazonaws.com
-			│
-			├ 987654321098.dkr.ecr.eu-west-1.amazonaws.com
-			│
-			╰ End
+			"[90m┌[39m  List configured container registries
+			[90m│[39m
+			[32m◇[39m  123456789012.dkr.ecr.us-west-2.amazonaws.com
+			[90m│[39m
+			[32m◇[39m  987654321098.dkr.ecr.eu-west-1.amazonaws.com
+			[90m│[39m
+			[90m└[39m  End
 
 			"
 		`);
@@ -1210,9 +1210,9 @@ describe("containers registries delete", () => {
 		mockDeleteRegistry(domain);
 		await runWrangler(`containers registries delete ${domain}`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
-			"╭ Delete registry 123456789012.dkr.ecr.us-west-2.amazonaws.com
-			│
-			╰ Deleted registry 123456789012.dkr.ecr.us-west-2.amazonaws.com
+			"[90m┌[39m  Delete registry 123456789012.dkr.ecr.us-west-2.amazonaws.com
+			[90m│[39m
+			[90m└[39m  Deleted registry 123456789012.dkr.ecr.us-west-2.amazonaws.com
 
 
 			"
@@ -1238,17 +1238,17 @@ describe("containers registries delete", () => {
 		mockDeleteRegistry(domain);
 		await runWrangler(`containers registries delete ${domain}`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
-			"╭ Delete registry 123456789012.dkr.ecr.us-west-2.amazonaws.com
+			"┌  Delete registry 123456789012.dkr.ecr.us-west-2.amazonaws.com
 			│
-			╰ Deleted registry 123456789012.dkr.ecr.us-west-2.amazonaws.com
+			└  Deleted registry 123456789012.dkr.ecr.us-west-2.amazonaws.com
 
 
 			"
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			? Are you sure you want to delete the registry credentials for 123456789012.dkr.ecr.us-west-2.amazonaws.com? This action cannot be undone.
 			🤖 Using fallback value in non-interactive context: yes"
 		`);
@@ -1264,9 +1264,9 @@ describe("containers registries delete", () => {
 			`containers registries delete ${domain} --skip-confirmation`
 		);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
-			"╭ Delete registry 123456789012.dkr.ecr.us-west-2.amazonaws.com
-			│
-			╰ Deleted registry 123456789012.dkr.ecr.us-west-2.amazonaws.com
+			"[90m┌[39m  Delete registry 123456789012.dkr.ecr.us-west-2.amazonaws.com
+			[90m│[39m
+			[90m└[39m  Deleted registry 123456789012.dkr.ecr.us-west-2.amazonaws.com
 
 
 			"

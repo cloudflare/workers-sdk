@@ -1,9 +1,10 @@
 import {
 	endSection,
+	error,
 	log,
 	logRaw,
 	newline,
-	status,
+	success,
 	updateStatus,
 } from "@cloudflare/cli-shared-helpers";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
@@ -297,7 +298,7 @@ async function waitForVMToStart(deployment: DeploymentV2) {
 
 	endSection("Done");
 
-	logRaw(status.success + " Created your container\n");
+	success("Created your container");
 
 	logRaw(
 		`Run ${brandColor(
@@ -351,8 +352,7 @@ async function waitForPlacementInstance(deployment: DeploymentV2) {
 	}
 
 	updateStatus(
-		"Assigned placement in " + idToLocationName(deployment.location.name),
-		false
+		"Assigned placement in " + idToLocationName(deployment.location.name)
 	);
 
 	if (d.current_placement !== undefined) {
@@ -377,7 +377,7 @@ export async function waitForPlacement(deployment: DeploymentV2) {
 			keepIterating = false;
 		} catch (err) {
 			if (err instanceof WaitForAnotherPlacement) {
-				updateStatus(status.error + " " + err.message);
+				error(err.message);
 				log(
 					"We will retry by waiting for another placement. You can see more details about your deployment with \n" +
 						brandColor("wrangler cloudchamber list " + currentDeployment.id) +

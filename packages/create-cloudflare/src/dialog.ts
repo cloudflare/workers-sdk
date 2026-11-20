@@ -1,65 +1,52 @@
 import { relative } from "node:path";
-import {
-	hyperlink,
-	logRaw,
-	shapes,
-	stripAnsi,
-} from "@cloudflare/cli-shared-helpers";
-import { bgGreen, blue, gray } from "@cloudflare/cli-shared-helpers/colors";
+import { logRaw } from "@cloudflare/cli-shared-helpers";
+import { printBanner } from "@cloudflare/cli-shared-helpers/banner";
+import { brandBox, successBox } from "@cloudflare/cli-shared-helpers/box";
+import { blue, gray } from "@cloudflare/cli-shared-helpers/colors";
 import { quoteShellArgs } from "@cloudflare/cli-shared-helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import type { C3Args, C3Context } from "types";
 
 /**
- * Wrap the lines with a border and inner padding
+ * Render lines as a branded panel.
+ *
+ * Used for any multi-line panel content that warrants a box. The
+ * slim "name + version" welcome banner uses `printBanner` from
+ * cli-shared-helpers instead.
  */
-export function createDialog(lines: string[]) {
-	const screenWidth = process.stdout.columns;
-	const maxLineWidth = Math.max(
-		...lines.map((line) => stripAnsi(line).length),
-		60 // Min inner width
-	);
-	const dividerWidth = Math.min(maxLineWidth, screenWidth);
-
-	return [
-		gray(shapes.dash).repeat(dividerWidth),
-		...lines,
-		gray(shapes.dash).repeat(dividerWidth),
-		"",
-	].join("\n");
+export function createDialog(lines: string[], title?: string) {
+	return brandBox(lines.join("\n"), title);
 }
 
-export function printWelcomeMessage(
+export async function printWelcomeMessage(
 	version: string,
 	telemetryEnabled: boolean,
 	args: Partial<C3Args>
 ) {
-	const lines = [
-		`👋 Welcome to create-cloudflare v${version}!`,
-		`🧡 Let's get started.`,
-	];
+	// Slim wrangler-style banner: `👋 create-cloudflare 2.67.4` over a
+	// Tangerine underline. C3 has its own update check (see
+	// helpers/cli.ts isUpdateAvailable), so disable the shared one.
+	await printBanner({
+		name: "create-cloudflare",
+		version,
+		emoji: "👋",
+		skipUpdateCheck: true,
+	});
 
 	if (args.experimental) {
-		lines.push("", blue`🧪 Running in experimental mode`);
+		logRaw(blue("🧪 Running in experimental mode"));
 	}
 
 	if (telemetryEnabled) {
-		if (args.experimental) {
-			lines.push("");
-		}
-
+		// Plain URL — modern terminals auto-link it, and embedding the OSC
+		// 8 hyperlink escape sequences breaks boxen's width calculations
+		// downstream (see printSummary).
 		const telemetryDocsUrl = `https://github.com/cloudflare/workers-sdk/blob/main/packages/create-cloudflare/telemetry.md`;
-
-		lines.push(
-			`📊 Cloudflare collects telemetry about your usage of Create-Cloudflare.`,
-			"",
-			`Learn more at: ${blue.underline(hyperlink(telemetryDocsUrl))}`
+		logRaw(
+			`📊 Cloudflare collects telemetry about your usage of Create-Cloudflare.`
 		);
+		logRaw(`Learn more at: ${blue.underline(telemetryDocsUrl)}`);
 	}
-
-	const dialog = createDialog(lines);
-
-	logRaw(dialog);
 }
 
 export const printSummary = (ctx: C3Context) => {
@@ -81,17 +68,22 @@ export const printSummary = (ctx: C3Context) => {
 	const reportIssueUrl =
 		"https://github.com/cloudflare/workers-sdk/issues/new/choose";
 
-	// Prepare the dialog
+	// Build a success summary, rendered inside a green rounded box
+	// (boxen).
 	const lines = [
-		`🎉 ${bgGreen(" SUCCESS ")} Application ${ctx.deployment.url ? "deployed" : "created"} successfully!`,
+		`🎉 Application ${ctx.deployment.url ? "deployed" : "created"} successfully!`,
 		``,
 	];
 
+	// URLs are printed as plain text (not wrapped in OSC 8 hyperlink
+	// escape sequences) — modern terminals auto-detect and link them,
+	// and the hyperlink escapes confuse boxen's width calculation,
+	// causing RangeError on long URLs.
 	if (ctx.deployment.url && dashboardUrl) {
 		lines.push(
 			`🔍 View Project`,
-			`${gray("Visit:")} ${blue.underline(hyperlink(ctx.deployment.url))}`,
-			`${gray("Dash:")} ${blue.underline(hyperlink(dashboardUrl))}`,
+			`${gray("Visit:")} ${blue.underline(ctx.deployment.url)}`,
+			`${gray("Dash:")} ${blue.underline(dashboardUrl)}`,
 			``
 		);
 	}
@@ -99,20 +91,17 @@ export const printSummary = (ctx: C3Context) => {
 	lines.push(
 		`💻 Continue Developing`,
 		...(cdCommand ? [`${gray("Change directories:")} ${blue(cdCommand)}`] : []),
-		`${gray(ctx.deployment.url ? `Deploy again:` : "Deploy:")} ${blue(deployCommand)}`,
+		`${gray(ctx.deployment.url ? "Deploy again:" : "Deploy:")} ${blue(deployCommand)}`,
 		``,
 		`📖 Explore Documentation`,
-		`${blue.underline(hyperlink(documentationUrl))}`,
+		`${blue.underline(documentationUrl)}`,
 		``,
 		`🐛 Report an Issue`,
-		`${blue.underline(hyperlink(reportIssueUrl))}`,
+		`${blue.underline(reportIssueUrl)}`,
 		``,
 		`💬 Join our Community`,
-		`${blue.underline(hyperlink(discordUrl))}`
+		`${blue.underline(discordUrl)}`
 	);
 
-	const dialog = createDialog(lines);
-
-	// Print dialog
-	logRaw(dialog);
+	logRaw(successBox(lines.join("\n")));
 };

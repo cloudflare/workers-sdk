@@ -29,11 +29,10 @@ export const offerGit = async (ctx: C3Context) => {
 
 	ctx.args.git ??= await processArgument(ctx.args, "git", {
 		type: "confirm",
-		question: ctx.gitRepoAlreadyExisted
+		message: ctx.gitRepoAlreadyExisted
 			? "You're in an existing git repository. Do you want to use git for version control?"
 			: "Do you want to use git for version control?",
-		label: "git",
-		defaultValue: C3_DEFAULTS.git,
+		initialValue: C3_DEFAULTS.git,
 	});
 
 	if (!ctx.args.git) {
@@ -107,9 +106,11 @@ export const gitCommit = async (ctx: C3Context) => {
 			}
 		);
 
-		updateStatus(`${brandColor("git")} ${dim(`commit`)}`);
+		updateStatus(`${brandColor("Committed")} new files to git`);
 	} catch {
-		updateStatus(`${brandColor("git")} ${dim(`commit failed`)}`);
+		updateStatus(
+			`${brandColor("git commit failed")} — you can commit manually later`
+		);
 		updateStatus(
 			"Failed to create initial commit. You can commit manually later."
 		);
@@ -250,7 +251,7 @@ export async function initializeGit(cwd: string) {
 		// Unable to create the repo with a HEAD branch name, so just fall back to the default.
 		await runCommand(["git", "init"], { useSpinner: false, silent: true, cwd });
 	} finally {
-		s.stop(`${brandColor("initialized")} ${dim(`git`)}`);
+		s.stop(`${brandColor("Initialized")} git repository`);
 	}
 }
 

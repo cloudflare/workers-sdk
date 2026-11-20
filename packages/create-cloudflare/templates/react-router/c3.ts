@@ -1,5 +1,4 @@
 import { resolve } from "node:path";
-import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
@@ -21,8 +20,6 @@ const generate = async (ctx: C3Context) => {
 		"--no-git-init",
 		"--no-install",
 	]);
-
-	logRaw(""); // newline
 };
 
 const configure = async (ctx: C3Context) => {

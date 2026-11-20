@@ -1,50 +1,8 @@
 import { exit } from "node:process";
-import {
-	bgBlue,
-	bgGreen,
-	bgRed,
-	bgYellow,
-	brandColor,
-	dim,
-	gray,
-	hidden,
-	white,
-} from "./colors";
+import * as clack from "@clack/prompts";
+import chalk from "chalk";
+import { dim, hidden } from "./colors";
 import { stderr, stdout } from "./streams";
-
-export const shapes = {
-	diamond: "◇",
-	dash: "─",
-	radioInactive: "○",
-	radioActive: "●",
-
-	backActive: "◀",
-	backInactive: "◁",
-
-	bar: "│",
-	leftT: "├",
-	rigthT: "┤",
-
-	arrows: {
-		left: "‹",
-		right: "›",
-	},
-
-	corners: {
-		tl: "╭",
-		bl: "╰",
-		tr: "╮",
-		br: "╯",
-	},
-};
-
-export const status = {
-	error: bgRed(` ERROR `),
-	warning: bgYellow(` WARNING `),
-	info: bgBlue(` INFO `),
-	success: bgGreen(` SUCCESS `),
-	cancel: white.bgRed(` X `),
-};
 
 // Returns a string containing n non-trimmable spaces
 // This is useful for places where clack trims lines of output
@@ -87,19 +45,25 @@ export const logRaw = (msg: string) => {
 	}
 };
 
-// A simple stylized log for use within a prompt
+// Plain log line — no prefix symbol, no gutter. Identical to logRaw
+// but kept as a separate export for callers that want a multi-line
+// message printed verbatim.
 export const log = (msg: string) => {
-	const lines = msg
-		.split("\n")
-		.map((ln) => `${gray(shapes.bar)}${ln.length > 0 ? " " + white(ln) : ""}`);
-
-	logRaw(lines.join("\n"));
+	logRaw(msg);
 };
 
 export const newline = () => {
-	log("");
+	logRaw("");
 };
 
+/**
+ * Format a multi-line message with optional per-line prefix decoration.
+ *
+ * This used to draw the gutter `│` thread for the C3 wizard layout.
+ * Reduced to a simple line-prefix utility — most callers can now use
+ * the prefix-symbol helpers (`success`, `warn`, `error`,
+ * `updateStatus`) directly.
+ */
 type FormatOptions = {
 	linePrefix?: string;
 	firstLinePrefix?: string;
@@ -111,123 +75,118 @@ type FormatOptions = {
 export const format = (
 	msg: string,
 	{
-		linePrefix = gray(shapes.bar),
+		linePrefix = "",
 		firstLinePrefix = linePrefix,
 		newlineBefore = false,
 		newlineAfter = false,
-		formatLine = (line: string) => white(line),
+		formatLine = (line: string) => line,
 		multiline = true,
 	}: FormatOptions = {}
 ) => {
 	const lines = multiline ? msg.split("\n") : [msg];
 	const formattedLines = lines.map(
-		(line, i) =>
-			(i === 0 ? firstLinePrefix : linePrefix) + space() + formatLine(line)
+		(line, i) => (i === 0 ? firstLinePrefix : linePrefix) + formatLine(line)
 	);
 
 	if (newlineBefore) {
-		formattedLines.unshift(linePrefix);
+		formattedLines.unshift("");
 	}
 	if (newlineAfter) {
-		formattedLines.push(linePrefix);
+		formattedLines.push("");
 	}
 
 	return formattedLines.join("\n");
 };
 
-// Log a simple status update with a style similar to the clack spinner
-export const updateStatus = (msg: string, printNewLine = true) => {
-	logRaw(
-		format(msg, {
-			firstLinePrefix: gray(shapes.leftT),
-			linePrefix: gray(shapes.bar),
-			newlineAfter: printNewLine,
-		})
-	);
+// All clack helpers below thread `output: stdout` from `./streams`
+// rather than letting clack default to `process.stdout` directly.
+// This keeps a single mockable boundary so consumers' tests can
+// intercept clack output via existing helpers like
+// `mockCLIOutput()` / `collectCLIOutput()` (which spy on
+// `cli-shared-helpers/streams`). Without it, `clack.intro()`,
+// `clack.outro()`, `clack.log.*`, and `clack.note()` write straight
+// to `process.stdout` and bypass any test mock.
+
+/**
+ * Status update line — delegates to `clack.log.step` (`◇  message`).
+ */
+export const updateStatus = (msg: string) => {
+	clack.log.step(msg, { output: stdout });
 };
 
-export const startSection = (
-	heading: string,
-	subheading?: string,
-	printNewLine = true
+/**
+ * Start a logical section. Delegates to `clack.intro()` which renders
+ * the right-angle `┌  heading` opener, with the (optional) subheading
+ * appended dim and middot-separated.
+ *
+ *     ┌  Create an application with Cloudflare · Step 1 of 3
+ *
+ * Pairs with `endSection()` (`└`) which closes the same thread.
+ */
+export const startSection = (heading: string, subheading?: string) => {
+	const head = chalk.bold(heading);
+	const tail = subheading ? ` ${dim("·")} ${dim(subheading)}` : "";
+	clack.intro(`${head}${tail}`, { output: stdout });
+};
+
+/**
+ * End a logical section. Delegates to `clack.outro()` which renders
+ * the right-angle `└  heading` closer.
+ */
+export const endSection = (heading?: string, subheading?: string) => {
+	const head = heading ? chalk.bold(heading) : "";
+	const tail = subheading ? ` ${dim("·")} ${dim(subheading)}` : "";
+	clack.outro(`${head}${tail}`, { output: stdout });
+};
+
+/**
+ * User cancelled the operation (ctrl+c, esc, or programmatic cancel).
+ * Delegates to `clack.cancel()` which renders the closing `└` corner
+ * + red message.
+ */
+export const cancel = (msg: string) => {
+	clack.cancel(msg, { output: stdout });
+};
+
+/**
+ * Warning. Delegates to `clack.log.warn` (`▲  message`, yellow).
+ */
+export const warn = (msg: string) => {
+	clack.log.warn(msg, { output: stdout });
+};
+
+/**
+ * Success / step in flow. Delegates to `clack.log.step`
+ * (`◇  message`, green hollow diamond — matching the submitted-prompt
+ * symbol so success lines visually thread with the surrounding prompt
+ * flow).
+ */
+export const success = (msg: string) => {
+	clack.log.step(msg, { output: stdout });
+};
+
+/**
+ * Multi-line block with optional title — delegates to `clack.note()`
+ * (`├──╮ Title  body  ├──╯`). Use for grouped informational content
+ * inside a flow.
+ *
+ * `withGuide` (default `true`) controls whether clack draws the
+ * leading `│` spacing line above the box and uses `├` for the
+ * bottom-left corner (so the box visually threads with a surrounding
+ * `clack.intro()` / prompts gutter). Pass `false` for a standalone
+ * box with `╰` corner — useful for the FIRST note in a flow that
+ * follows non-clack output (e.g. a `logger.warn(...)` warning) where
+ * a leading orphaned `│` would look ugly.
+ */
+export const note = (
+	message: string,
+	title?: string,
+	opts?: { withGuide?: boolean }
 ) => {
-	logRaw(
-		`${gray(shapes.corners.tl)} ${brandColor(heading)} ${
-			subheading ? dim(subheading) : ""
-		}`
-	);
-	if (printNewLine) {
-		newline();
-	}
-};
-
-export const endSection = (heading: string, subheading?: string) => {
-	logRaw(
-		`${gray(shapes.corners.bl)} ${brandColor(heading)} ${
-			subheading ? dim(subheading) : ""
-		}\n`
-	);
-};
-
-export const cancel = (
-	msg: string,
-	{
-		// current default is backcompat and makes sense going forward too
-		shape = shapes.corners.bl,
-		// current default for backcompat -- TODO: change default to true once all callees have been updated
-		multiline = false,
-	} = {}
-) => {
-	logRaw(
-		format(msg, {
-			firstLinePrefix: `${gray(shape)} ${status.cancel}`,
-			linePrefix: gray(shapes.bar),
-			newlineBefore: true,
-			formatLine: (line) => dim(line), // for backcompat but it's not ideal for this to be "dim"
-			multiline,
-		})
-	);
-};
-
-export const warn = (
-	msg: string,
-	{
-		// current default for backcompat -- TODO: change default to shapes.bar once all callees have been updated
-		shape = shapes.corners.bl,
-		// current default for backcompat -- TODO: change default to true once all callees have been updated
-		multiline = false,
-		newlineBefore = true,
-	} = {}
-) => {
-	logRaw(
-		format(msg, {
-			firstLinePrefix: gray(shape) + space() + status.warning,
-			linePrefix: gray(shapes.bar),
-			formatLine: (line) => dim(line), // for backcompat but it's not ideal for this to be "dim"
-			multiline,
-			newlineBefore,
-		})
-	);
-};
-
-export const success = (
-	msg: string,
-	{
-		// current default for backcompat -- TODO: change default to shapes.bar once all callees have been updated
-		shape = shapes.corners.bl,
-		// current default for backcompat -- TODO: change default to true once all callees have been updated
-		multiline = false,
-	} = {}
-) => {
-	logRaw(
-		format(msg, {
-			firstLinePrefix: gray(shape) + space() + status.success,
-			linePrefix: gray(shapes.bar),
-			newlineBefore: true,
-			formatLine: (line) => dim(line), // for backcompat but it's not ideal for this to be "dim"
-			multiline,
-		})
-	);
+	clack.note(message, title, {
+		output: stdout,
+		...(opts?.withGuide !== undefined && { withGuide: opts.withGuide }),
+	});
 };
 
 // Strip the ansi color characters out of the line when calculating
@@ -255,24 +214,29 @@ export const hyperlink = (url: string, label = url) => {
 	return `\u001B]8;;${url}\u001B\\${label}\u001B]8;;\u001B\\`;
 };
 
+/**
+ * Print an error and exit with code 1.
+ */
 export const crash: (msg?: string, extra?: string) => never = (msg, extra) => {
 	error(msg, extra);
 	exit(1);
 };
 
-export const error = (
-	msg?: string,
-	extra?: string,
-	corner = shapes.corners.bl
-) => {
-	// Only output if current log level allows 'error' level messages
+/**
+ * Error. Delegates to `clack.log.error` (`■  message`, red). The
+ * optional `<extra>` line is appended on its own line within the
+ * gutter.
+ *
+ * `msg` is coerced to a string — callers occasionally pass `Error`
+ * instances (e.g. C3's top-level `.catch((e) => error(e))`), and
+ * `clack.log.error` calls `.split("\n")` on its input which would
+ * throw `TypeError: e.split is not a function`.
+ */
+export const error = (msg?: unknown, extra?: string) => {
 	const currentLevel = getLogLevel();
-	if (msg && LOGGER_LEVELS[currentLevel] >= LOGGER_LEVELS.error) {
-		stderr.write(
-			`${gray(corner)} ${status.error} ${dim(msg)}\n${
-				extra ? space() + extra + "\n" : ""
-			}`
-		);
+	if (msg !== undefined && LOGGER_LEVELS[currentLevel] >= LOGGER_LEVELS.error) {
+		const text = typeof msg === "string" ? msg : String(msg);
+		clack.log.error(extra ? `${text}\n${extra}` : text, { output: stderr });
 	}
 };
 

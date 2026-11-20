@@ -1,5 +1,4 @@
 import { resolve } from "node:path";
-import { logRaw } from "@cloudflare/cli-shared-helpers";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
@@ -13,7 +12,6 @@ const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [ctx.project.name, "--ssr"]);
-	logRaw("");
 };
 
 const configure = async (ctx: C3Context) => {
@@ -26,7 +24,7 @@ async function installCFWorker() {
 	await installPackages(["xhr2"], {
 		dev: true,
 		startText: "Installing additional dependencies",
-		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
+		doneText: `${brandColor("Installed")} dependencies via ${dim(`\`${npm} install\``)}`,
 	});
 }
 async function updateAppCode() {
@@ -44,7 +42,7 @@ async function updateAppCode() {
 			"providers: [provideHttpClient(withFetch()), "
 		);
 	writeFile(resolve(appConfigPath), newAppConfig);
-	s.stop(`${brandColor(`updated`)} ${dim(appConfigPath)}`);
+	s.stop(`${brandColor("Updated")} ${dim(appConfigPath)}`);
 
 	// Update an app server routes file to:
 	const appServerRoutesPath = "src/app/app.routes.server.ts";
@@ -54,7 +52,7 @@ async function updateAppCode() {
 		"RenderMode.Server"
 	);
 	writeFile(resolve(appServerRoutesPath), newAppRoutes);
-	s.stop(`${brandColor(`updated`)} ${dim(appServerRoutesPath)}`);
+	s.stop(`${brandColor("Updated")} ${dim(appServerRoutesPath)}`);
 
 	// Remove unwanted dependencies
 	s.start(`Updating package.json`);
@@ -65,7 +63,7 @@ async function updateAppCode() {
 	delete packageManifest["devDependencies"]?.["@types/express"];
 
 	writeFile(packageJsonPath, JSON.stringify(packageManifest, null, 2));
-	s.stop(`${brandColor(`updated`)} ${dim(`\`package.json\``)}`);
+	s.stop(`${brandColor("Updated")} package.json`);
 }
 
 function updateAngularJson(ctx: C3Context) {
@@ -81,7 +79,7 @@ function updateAngularJson(ctx: C3Context) {
 	architectSection.build.options.assets.push("src/_routes.json");
 
 	writeFile(resolve("angular.json"), JSON.stringify(angularJson, null, 2));
-	s.stop(`${brandColor(`updated`)} ${dim(`\`angular.json\``)}`);
+	s.stop(`${brandColor("Updated")} angular.json`);
 }
 
 const config: TemplateConfig = {
