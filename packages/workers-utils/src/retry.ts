@@ -97,7 +97,8 @@ export async function retryOnAPIFailure<T>(
  * Reads a Worker version that is known to exist, retrying while the API reports it as not found.
  *
  * Reads of a just-uploaded version can alternate between found and not found for a few seconds,
- * so this waits up to about 12 seconds before giving up.
+ * so this retries not-found reads for up to about 12 seconds. Other transient failures are retried
+ * as in `retryOnAPIFailure`, including any `Retry-After` wait the API asks for.
  *
  * @param read - Reads the Worker version.
  * @param logger - Logs each retry.
