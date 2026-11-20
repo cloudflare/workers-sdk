@@ -46,6 +46,19 @@ function getAttachmentExtension(filename: string): string {
 }
 
 /**
+ * Normalises an optional MessageBuilder recipient field to an array.
+ * Missing fields become `[]` so callers never wrap `undefined` as `[undefined]`.
+ */
+function normalizeRecipients(
+	value: string | EmailAddress | (string | EmailAddress)[] | undefined
+): (string | EmailAddress)[] {
+	if (value === undefined) {
+		return [];
+	}
+	return Array.isArray(value) ? value : [value];
+}
+
+/**
  * Formats a MessageBuilder for logging
  */
 function formatMessageBuilder(builder: MessageBuilder): string {
@@ -53,16 +66,18 @@ function formatMessageBuilder(builder: MessageBuilder): string {
 
 	lines.push("From: " + formatEmailAddress(builder.from));
 
-	const toArray = Array.isArray(builder.to) ? builder.to : [builder.to];
-	lines.push("To: " + toArray.map(formatEmailAddress).join(", "));
+	const toArray = normalizeRecipients(builder.to);
+	if (toArray.length > 0) {
+		lines.push("To: " + toArray.map(formatEmailAddress).join(", "));
+	}
 
-	if (builder.cc) {
-		const ccArray = Array.isArray(builder.cc) ? builder.cc : [builder.cc];
+	const ccArray = normalizeRecipients(builder.cc);
+	if (ccArray.length > 0) {
 		lines.push("Cc: " + ccArray.map(formatEmailAddress).join(", "));
 	}
 
-	if (builder.bcc) {
-		const bccArray = Array.isArray(builder.bcc) ? builder.bcc : [builder.bcc];
+	const bccArray = normalizeRecipients(builder.bcc);
+	if (bccArray.length > 0) {
 		lines.push("Bcc: " + bccArray.map(formatEmailAddress).join(", "));
 	}
 
@@ -204,11 +219,22 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 		const fromEmail = extractEmailAddress(builder.from);
 		this.checkSenderAllowed(fromEmail);
 
-		// Check "to" recipients are allowed (same as EmailMessage - only validate "to")
-		// Extract email addresses from potential EmailAddress objects
-		const toArray = Array.isArray(builder.to) ? builder.to : [builder.to];
-		const toEmails = toArray.map((addr) => extractEmailAddress(addr));
-		this.validateRecipients(toEmails);
+		const toArray = normalizeRecipients(builder.to);
+		const ccArray = normalizeRecipients(builder.cc);
+		const bccArray = normalizeRecipients(builder.bcc);
+
+		if (toArray.length + ccArray.length + bccArray.length === 0) {
+			throw new TypeError(
+				'Email must have at least one recipient in "to", "cc", or "bcc".'
+			);
+		}
+
+		// Destination limits apply to every recipient field (to/cc/bcc), including
+		// cc-only and bcc-only MessageBuilders that omit `to`.
+		const destinationEmails = [...toArray, ...ccArray, ...bccArray].map(
+			(addr) => extractEmailAddress(addr)
+		);
+		this.validateRecipients(destinationEmails);
 	}
 
 	async send(
@@ -317,11 +343,13 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			const messageId = synthesizeMessageId(extractEmailAddress(builder.from));
 			const id = messageIdToStorageId(messageId);
 
-			function toDisplay(
-				addr: string | EmailAddress | (string | EmailAddress)[]
-			): string[] {
-				return (Array.isArray(addr) ? addr : [addr]).map(formatEmailAddress);
+			function toDisplay(addrs: (string | EmailAddress)[]): string[] {
+				return addrs.map(formatEmailAddress);
 			}
+
+			const toRecipients = normalizeRecipients(builder.to);
+			const ccRecipients = normalizeRecipients(builder.cc);
+			const bccRecipients = normalizeRecipients(builder.bcc);
 
 			const sentAttachments: StoredEmailAttachment[] = (
 				builder.attachments ?? []
@@ -338,9 +366,10 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 					{
 						worker: this.env.SEND_EMAIL_OWNER_WORKER,
 						from: formatEmailAddress(builder.from),
-						to: toDisplay(builder.to),
-						cc: builder.cc ? toDisplay(builder.cc) : undefined,
-						bcc: builder.bcc ? toDisplay(builder.bcc) : undefined,
+						to: toDisplay(toRecipients),
+						cc: ccRecipients.length > 0 ? toDisplay(ccRecipients) : undefined,
+						bcc:
+							bccRecipients.length > 0 ? toDisplay(bccRecipients) : undefined,
 						replyTo: builder.replyTo
 							? formatEmailAddress(builder.replyTo)
 							: undefined,

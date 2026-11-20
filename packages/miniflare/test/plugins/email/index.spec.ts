@@ -1840,6 +1840,94 @@ test("MessageBuilder with multiple recipients", async ({ expect }) => {
 	expect(message).toContain("Bcc: bcc1@example.com, bcc2@example.com");
 });
 
+/**
+ * @see https://github.com/cloudflare/workers-sdk/issues/16789
+ */
+test("MessageBuilder with cc only (no to) succeeds", async ({ expect }) => {
+	const log = new TestLog();
+	const mf = useMessageBuilderMiniflare({
+		log,
+		workerScript: MESSAGE_BUILDER_RETURNS_RESULT_WORKER,
+	});
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			cc: "cc@example.com",
+			subject: "CC only",
+			text: "Hello cc",
+		}),
+	});
+
+	expect(res.status).toBe(200);
+	expect(await res.json()).toEqual({
+		messageId: synthesizedMessageId(expect, "example.com"),
+	});
+
+	const message = await waitForMessageBuilderLog(log);
+	expect(message).toContain("From: sender@example.com");
+	expect(message).not.toContain("To:");
+	expect(message).toContain("Cc: cc@example.com");
+	expect(message).toContain("Subject: CC only");
+});
+
+/**
+ * @see https://github.com/cloudflare/workers-sdk/issues/16789
+ */
+test("MessageBuilder with bcc only (no to) succeeds", async ({ expect }) => {
+	const log = new TestLog();
+	const mf = useMessageBuilderMiniflare({
+		log,
+		workerScript: MESSAGE_BUILDER_RETURNS_RESULT_WORKER,
+	});
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			bcc: "bcc@example.com",
+			subject: "BCC only",
+			text: "Hello bcc",
+		}),
+	});
+
+	expect(res.status).toBe(200);
+	expect(await res.json()).toEqual({
+		messageId: synthesizedMessageId(expect, "example.com"),
+	});
+
+	const message = await waitForMessageBuilderLog(log);
+	expect(message).toContain("From: sender@example.com");
+	expect(message).not.toContain("To:");
+	expect(message).toContain("Bcc: bcc@example.com");
+	expect(message).toContain("Subject: BCC only");
+});
+
+/**
+ * @see https://github.com/cloudflare/workers-sdk/issues/16789
+ */
+test("MessageBuilder with no recipients throws TypeError", async ({
+	expect,
+}) => {
+	const mf = useMessageBuilderMiniflare();
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			subject: "No recipients",
+			text: "Hello nobody",
+		}),
+	});
+
+	expect(res.status).toBe(500);
+	const error = await res.text();
+	expect(error).toContain(
+		'Email must have at least one recipient in "to", "cc", or "bcc".'
+	);
+});
+
 test("MessageBuilder with custom headers", async ({ expect }) => {
 	const mf = useMessageBuilderMiniflare();
 
@@ -1880,6 +1968,70 @@ test("MessageBuilder respects allowed_destination_addresses", async ({
 	expect(res.status).toBe(500);
 	const error = await res.text();
 	expect(error).toContain("not allowed");
+});
+
+test("MessageBuilder allowed_destination_addresses applies to cc-only sends", async ({
+	expect,
+}) => {
+	const mf = useMessageBuilderMiniflare({
+		allowedDestinationAddresses: ["allowed@example.com"],
+	});
+
+	const resDisallowed = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			cc: "notallowed@example.com",
+			subject: "CC only blocked",
+			text: "Test",
+		}),
+	});
+	expect(resDisallowed.status).toBe(500);
+	expect(await resDisallowed.text()).toContain("not allowed");
+
+	const resAllowed = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			cc: "allowed@example.com",
+			subject: "CC only allowed",
+			text: "Test",
+		}),
+	});
+	expect(resAllowed.status).toBe(200);
+	expect(await resAllowed.text()).toBe("ok");
+});
+
+test("MessageBuilder allowed_destination_addresses applies to bcc-only sends", async ({
+	expect,
+}) => {
+	const mf = useMessageBuilderMiniflare({
+		allowedDestinationAddresses: ["allowed@example.com"],
+	});
+
+	const resDisallowed = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			bcc: "notallowed@example.com",
+			subject: "BCC only blocked",
+			text: "Test",
+		}),
+	});
+	expect(resDisallowed.status).toBe(500);
+	expect(await resDisallowed.text()).toContain("not allowed");
+
+	const resAllowed = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			bcc: "allowed@example.com",
+			subject: "BCC only allowed",
+			text: "Test",
+		}),
+	});
+	expect(resAllowed.status).toBe(200);
+	expect(await resAllowed.text()).toBe("ok");
 });
 
 test("MessageBuilder respects allowed_sender_addresses", async ({ expect }) => {

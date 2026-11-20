@@ -61,6 +61,26 @@ export const Route = createFileRoute("/email/sending")({
 
 const rootRoute = getRouteApi("__root__");
 
+/** Prefer To, then Cc, then Bcc so cc/bcc-only sends still show a list subtitle. */
+function sentEmailListRecipients(email: EmailSendingItem): {
+	secondary: string;
+	secondaryTitle: string;
+} {
+	if (email.to.length > 0) {
+		const list = email.to.map(formatEmailAddress).join(", ");
+		return { secondary: list, secondaryTitle: `To: ${list}` };
+	}
+	if ((email.cc?.length ?? 0) > 0) {
+		const list = (email.cc ?? []).map(formatEmailAddress).join(", ");
+		return { secondary: list, secondaryTitle: `Cc: ${list}` };
+	}
+	if ((email.bcc?.length ?? 0) > 0) {
+		const list = (email.bcc ?? []).map(formatEmailAddress).join(", ");
+		return { secondary: list, secondaryTitle: `Bcc: ${list}` };
+	}
+	return { secondary: "", secondaryTitle: "" };
+}
+
 function EmailSendingView(): JSX.Element {
 	const loaderData = Route.useLoaderData();
 	const rootData = rootRoute.useLoaderData();
@@ -239,13 +259,16 @@ function EmailSendingView(): JSX.Element {
 					disabled={paging || refreshing}
 					emptyState="No emails sent yet. Messages sent via a send_email binding will appear here."
 					error={error}
-					getRow={(email) => ({
-						id: toEmailId(email.messageId),
-						primary: email.subject || "(no subject)",
-						secondary: email.to.map(formatEmailAddress).join(", "),
-						secondaryTitle: `To: ${email.to.map(formatEmailAddress).join(", ")}`,
-						timestamp: timeAgo(email.sentAt) || "—",
-					})}
+					getRow={(email) => {
+						const recipientsLabel = sentEmailListRecipients(email);
+						return {
+							id: toEmailId(email.messageId),
+							primary: email.subject || "(no subject)",
+							secondary: recipientsLabel.secondary,
+							secondaryTitle: recipientsLabel.secondaryTitle,
+							timestamp: timeAgo(email.sentAt) || "—",
+						};
+					}}
 					hasNext={hasNext}
 					hasPrevious={hasPrevious}
 					items={emails}
