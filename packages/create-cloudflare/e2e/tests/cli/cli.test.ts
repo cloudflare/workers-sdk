@@ -749,7 +749,7 @@ describe("Create Cloudflare CLI", () => {
 			}
 		);
 
-		["solid", "next", "react-router", "analog"].forEach((framework) =>
+		["solid", "next", "react-router", "analog", "svelte"].forEach((framework) =>
 			test(`error when trying to create a ${framework} app on Pages`, async ({
 				expect,
 				logStream,
@@ -964,6 +964,7 @@ describe("Create Cloudflare CLI", () => {
 				expect(output).not.toContain("SolidStart");
 				expect(output).not.toContain("React Router");
 				expect(output).not.toContain("Analog");
+				expect(output).not.toContain("SvelteKit");
 			}
 		);
 

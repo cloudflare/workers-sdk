@@ -2,5 +2,10 @@
   "name": "<WORKER_NAME>",
   "compatibility_date": "<COMPATIBILITY_DATE>",
   "compatibility_flags": ["nodejs_als"],
-  "pages_build_output_dir": ".svelte-kit/cloudflare"
+  "assets": {
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  }
 }

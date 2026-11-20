@@ -2,8 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, test, vi } from "vitest";
-import sveltePages from "../../templates/svelte/pages/c3";
-import svelteWorkers from "../../templates/svelte/workers/c3";
+import svelteWorkers from "../../templates/svelte/c3";
 import { createTestContext } from "./helpers";
 
 vi.mock("helpers/packages", () => ({ installPackages: vi.fn() }));
@@ -11,15 +10,12 @@ vi.mock("helpers/packages", () => ({ installPackages: vi.fn() }));
 describe("SvelteKit configuration", () => {
 	runInTempDir();
 
-	test.for([
-		["Workers", svelteWorkers],
-		["Pages", sveltePages],
-	] as const)(
-		"updates the %s adapter in a JavaScript configuration containing object spread",
-		async ([, template], { expect }) => {
-			const ctx = createTestContext();
-			ctx.project.path = process.cwd();
-			const source = `import adapter from "@sveltejs/adapter-auto";
+	test("updates the Workers adapter in a JavaScript configuration containing object spread", async ({
+		expect,
+	}) => {
+		const ctx = createTestContext();
+		ctx.project.path = process.cwd();
+		const source = `import adapter from "@sveltejs/adapter-auto";
 import { defineConfig } from "vite";
 
 const shared = { server: { port: 5173 } };
@@ -28,23 +24,22 @@ export default defineConfig({
 	plugins: [adapter()]
 });
 `;
-			writeFileSync("vite.config.js", source);
-			const configure = template.configure;
-			if (!configure) {
-				throw new Error(
-					"The SvelteKit template must configure the Cloudflare adapter"
-				);
-			}
-			await configure(ctx);
-			expect(
-				readFileSync("vite.config.js", "utf8").replaceAll("\r\n", "\n")
-			).toBe(
-				source
-					.replace("@sveltejs/adapter-auto", "@sveltejs/adapter-cloudflare")
-					.trimEnd()
+		writeFileSync("vite.config.js", source);
+		const configure = svelteWorkers.configure;
+		if (!configure) {
+			throw new Error(
+				"The SvelteKit template must configure the Cloudflare adapter"
 			);
 		}
-	);
+		await configure(ctx);
+		expect(
+			readFileSync("vite.config.js", "utf8").replaceAll("\r\n", "\n")
+		).toBe(
+			source
+				.replace("@sveltejs/adapter-auto", "@sveltejs/adapter-cloudflare")
+				.trimEnd()
+		);
+	});
 });
 
 describe("SvelteKit Workers scripts", () => {
