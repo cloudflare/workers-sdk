@@ -1,0 +1,16 @@
+{
+	"extends": "./tsconfig.declarations.experimental.json",
+	"compilerOptions": {
+		"paths": {
+			"@cloudflare/config": [
+				"./emitted-types/experimental/packages/config/src/index.d.ts"
+			],
+			"@cloudflare/workers-shared": [
+				"./emitted-types/experimental/packages/workers-shared/index.d.ts"
+			],
+			"@cloudflare/workers-shared/*": [
+				"./emitted-types/experimental/packages/workers-shared/*.d.ts"
+			]
+		}
+	}
+}

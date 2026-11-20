@@ -1,11 +1,11 @@
 {
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
+		"allowImportingTsExtensions": true,
 		"module": "preserve",
 		"types": ["node"],
 		"jsx": "react-jsx",
-		"tsBuildInfoFile": ".tsbuildinfo",
-		"allowImportingTsExtensions": true
+		"tsBuildInfoFile": ".tsbuildinfo"
 	},
 	"include": ["**/*.ts", "**/*.tsx", "**/*.js"],
 	"exclude": [
