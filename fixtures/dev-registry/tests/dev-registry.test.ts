@@ -1246,15 +1246,15 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 			devRegistryPath
 		);
 
-		expect(() =>
+		await expect(
 			env.WORKER_ENTRYPOINT.ping()
-		).toThrowErrorMatchingInlineSnapshot(
+		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Worker "worker-entrypoint" not found. Make sure it is running locally.]`
 		);
 
-		expect(() =>
+		await expect(
 			env.WORKER_ENTRYPOINT_WITH_ASSETS.ping()
-		).toThrowErrorMatchingInlineSnapshot(
+		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Worker "worker-entrypoint-with-assets" not found. Make sure it is running locally.]`
 		);
 
