@@ -3,7 +3,9 @@ import path from "node:path";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
+import { stripAnsi } from "../src/preview/box";
 import { previewBuildOutput } from "../src/preview/preview";
+import { logger } from "../src/shared/context";
 import type {
 	PreviewBuildOutput,
 	PreviewOptions,
@@ -19,6 +21,7 @@ const mocks = vi.hoisted(() => ({
 	createPreviewParentWorker: vi.fn(),
 	editPreview: vi.fn(),
 	getPreview: vi.fn(),
+	getPreviewBaseConfig: vi.fn(),
 	getPreviewDeployment: vi.fn(),
 	syncAssets: vi.fn(),
 }));
@@ -30,6 +33,7 @@ vi.mock("../src/preview/api", async (importOriginal) => ({
 	createPreviewParentWorker: mocks.createPreviewParentWorker,
 	editPreview: mocks.editPreview,
 	getPreview: mocks.getPreview,
+	getPreviewBaseConfig: mocks.getPreviewBaseConfig,
 	getPreviewDeployment: mocks.getPreviewDeployment,
 }));
 
@@ -104,6 +108,7 @@ describe("previewBuildOutput", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.getPreview.mockResolvedValue(previewResource);
+		mocks.getPreviewBaseConfig.mockResolvedValue({});
 		mocks.getPreviewDeployment.mockResolvedValue(deploymentResource);
 		mocks.editPreview.mockResolvedValue(previewResource);
 		mocks.createPreview.mockResolvedValue(previewResource);
@@ -635,6 +640,86 @@ describe("previewBuildOutput", () => {
 
 		const request = mocks.createPreviewDeployment.mock.calls[0]?.[4];
 		expect(request).not.toHaveProperty("env");
+	});
+
+	it("warns in JSON mode about bindings without identifiers that the Preview base config doesn't define", async ({
+		expect,
+	}) => {
+		mocks.getPreviewBaseConfig.mockResolvedValue({
+			env: { D1: { type: "d1", database_id: "base-d1-id" } },
+		});
+
+		await uploadPreview(
+			buildOutputConfig({
+				env: {
+					KV: { type: "kv" },
+					D1: { type: "d1" },
+					R2: { type: "r2" },
+					PREVIEW_KV: { type: "kv", id: "preview-kv-id" },
+				},
+			})
+		);
+
+		expect(mocks.getPreviewBaseConfig).toHaveBeenCalledWith(
+			expect.objectContaining({ name: "preview-worker" }),
+			"account-id",
+			"preview-worker"
+		);
+		expect(logger.warn).toHaveBeenCalledOnce();
+		expect(stripAnsi(String(vi.mocked(logger.warn).mock.calls[0]?.[0])))
+			.toMatchInlineSnapshot(`
+				"These bindings have no resource ID, so they were left out of this Preview, and the Preview base config doesn't define them either:
+
+				  KV  KV Namespace
+				  R2  R2 Bucket
+
+				Code that uses these bindings will fail in the Preview. Set a resource ID on these bindings for Previews, or add them to the Preview base config.
+
+				Configuration: https://developers.cloudflare.com/workers/previews/configuration/
+				Resources: https://developers.cloudflare.com/workers/previews/resources/"
+			`);
+	});
+
+	it("does not warn when the Preview base config defines bindings without identifiers", async ({
+		expect,
+	}) => {
+		mocks.getPreviewBaseConfig.mockResolvedValue({
+			env: { KV: { type: "kv_namespace", namespace_id: "base-kv-id" } },
+		});
+
+		await uploadPreview(buildOutputConfig({ env: { KV: { type: "kv" } } }));
+
+		expect(logger.warn).not.toHaveBeenCalled();
+	});
+
+	it("still resolves when the Preview base config can't be read", async ({
+		expect,
+	}) => {
+		mocks.getPreviewBaseConfig.mockRejectedValue(new Error("Internal error"));
+
+		await expect(
+			uploadPreview(buildOutputConfig({ env: { KV: { type: "kv" } } }))
+		).resolves.toMatchObject({ deployment: deploymentResource });
+		expect(logger.warn).toHaveBeenCalledOnce();
+		expect(stripAnsi(String(vi.mocked(logger.warn).mock.calls[0]?.[0])))
+			.toMatchInlineSnapshot(`
+				"These bindings have no resource ID, so they were left out of this Preview. The Preview base config could not be retrieved to check whether it defines them:
+
+				  KV  KV Namespace"
+			`);
+	});
+
+	it("does not read the Preview base config when every binding has an identifier", async ({
+		expect,
+	}) => {
+		await uploadPreview(
+			buildOutputConfig({
+				env: { PREVIEW_KV: { type: "kv", id: "preview-kv-id" } },
+			})
+		);
+
+		expect(mocks.getPreviewBaseConfig).not.toHaveBeenCalled();
+		expect(logger.warn).not.toHaveBeenCalled();
 	});
 
 	it("keeps secrets from the latest deployment of an existing Preview", async ({
