@@ -45,6 +45,14 @@ export type CloudchamberConfig = config.CloudchamberConfig;
 /** @deprecated Import DurableObjectContainerImage from `@cloudflare/workers-utils/config` instead. */
 export type DurableObjectContainerImage = config.DurableObjectContainerImage;
 
+/** @deprecated Import DURABLE_OBJECT_CONTAINER_IMAGE_JURISDICTIONS from `@cloudflare/workers-utils/config` instead. */
+export const DURABLE_OBJECT_CONTAINER_IMAGE_JURISDICTIONS =
+	config.DURABLE_OBJECT_CONTAINER_IMAGE_JURISDICTIONS;
+
+/** @deprecated Import DurableObjectContainerImageJurisdiction from `@cloudflare/workers-utils/config` instead. */
+export type DurableObjectContainerImageJurisdiction =
+	config.DurableObjectContainerImageJurisdiction;
+
 /** @deprecated Import ContainerObservability from `@cloudflare/workers-utils/config` instead. */
 export type ContainerObservability = config.ContainerObservability;
 
