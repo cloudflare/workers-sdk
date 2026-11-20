@@ -6,7 +6,7 @@ import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import * as recast from "recast";
-import type { TemplateConfig } from "../../../src/templates";
+import type { TemplateConfig } from "../../src/templates";
 import type { C3Context, PackageJson } from "types";
 
 const { npm } = detectPackageManager();
@@ -107,7 +107,7 @@ const config: TemplateConfig = {
 	copyFiles: {
 		path: "./templates",
 	},
-	path: "templates/svelte/workers",
+	path: "templates/svelte",
 	generate,
 	configure,
 	transformPackageJson: async (original: PackageJson, ctx: C3Context) => {

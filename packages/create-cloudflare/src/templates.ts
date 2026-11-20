@@ -44,7 +44,7 @@ import reactTemplate from "templates/react/c3";
 import redwoodTemplate from "templates/redwood/c3";
 import scheduledTemplate from "templates/scheduled/c3";
 import solidTemplate from "templates/solid/c3";
-import svelteTemplate from "templates/svelte/workers/c3";
+import svelteTemplate from "templates/svelte/c3";
 import tanStackStartTemplate from "templates/tanstack-start/c3";
 import vikeTemplate from "templates/vike/c3";
 import vikeExperimentalTemplate from "templates/vike/experimental-c3";

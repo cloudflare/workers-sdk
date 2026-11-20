@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, test, vi } from "vitest";
-import svelteWorkers from "../../templates/svelte/workers/c3";
+import svelteWorkers from "../../templates/svelte/c3";
 import { createTestContext } from "./helpers";
 
 vi.mock("helpers/packages", () => ({ installPackages: vi.fn() }));
