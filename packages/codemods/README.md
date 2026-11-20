@@ -58,3 +58,15 @@ const result = await migrateWranglerToCf("./wrangler.jsonc", {
 ```
 
 The options object and all of its fields are optional. The defaults are the Vite bundler, writes enabled, dirty-worktree protection enabled, and automatic dependency installation enabled. The migration installs `cf` when missing, installs `@cloudflare/vite-plugin@^2.0.0-rc.0` when Vite is selected and the plugin is missing or older than the v2 release candidate, and upgrades Wrangler when generated Wrangler tooling requires a newer version. Dist tags such as `beta` count as incompatible, because they can stop pointing at a compatible release. Project-managed Vite plugin specifiers such as `workspace:` and `catalog:` are preserved; incompatible or unverified versions require a manual update. Set `installDependencies` to `false` to prevent dependency changes; required dependencies are then returned as blocking follow-ups. The migration always creates `cloudflare.config.ts`; selecting the Wrangler bundler also creates `wrangler.config.ts` when Wrangler-specific tooling config exists. Existing target files are never overwritten. Inspect `result.followUps` when `result.status` is `needs-intervention`.
+
+### Convert Wrangler config in memory
+
+Tools that already hold a parsed Wrangler configuration can convert it without files or a project. Import `convertWranglerConfig` from the `@cloudflare/codemods/wrangler-to-cf` entry point, which loads only the converter:
+
+```ts
+import { convertWranglerConfig } from "@cloudflare/codemods/wrangler-to-cf";
+
+const { base, environments, followUps } = convertWranglerConfig(rawConfig);
+```
+
+`base` is the top-level configuration and `environments` maps each Wrangler environment name to its configuration. Each is a tree of plain values, objects (`kind: "object"`), and calls to the `cf/config` helpers (`kind: "call"`, for example `bindings.kv`), which is what `migrateWranglerToCf` renders into `cloudflare.config.ts`. Pass `{ bundler: "wrangler" }` to convert for the Wrangler bundler. The function reads and writes no files, so it reports no dependency or secret-file follow-ups.
