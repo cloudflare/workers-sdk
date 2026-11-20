@@ -111,7 +111,7 @@ exports[`Wrangler binding conversion > converts supported bindings and reports m
                     "properties": [
                       {
                         "key": "worker",
-                        "value": "outbound-staging",
+                        "value": "outbound",
                       },
                     ],
                   },
@@ -172,7 +172,7 @@ exports[`Wrangler binding conversion > converts supported bindings and reports m
               "properties": [
                 {
                   "key": "worker",
-                  "value": "backend-staging",
+                  "value": "backend",
                 },
               ],
             },
@@ -283,20 +283,6 @@ exports[`Wrangler binding conversion > converts supported bindings and reports m
       "docsUrl": undefined,
       "message": "The options \`preview_database_id\` at \`d1_databases.0\` require manual migration.",
       "sourcePath": "d1_databases.0",
-    },
-    {
-      "blocking": true,
-      "code": "service-environment",
-      "docsUrl": undefined,
-      "message": "A dispatch namespace uses a legacy service environment. Verify its target Worker name.",
-      "sourcePath": "dispatch_namespaces.0",
-    },
-    {
-      "blocking": true,
-      "code": "service-environment",
-      "docsUrl": undefined,
-      "message": "A service binding used a legacy service environment. Verify the generated Worker name.",
-      "sourcePath": "services.0",
     },
     {
       "blocking": true,
