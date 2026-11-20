@@ -923,6 +923,93 @@ test("verifies Content-MD5", async ({ expect }) => {
 	await expectError(invalid, 400, "InvalidDigest", expect);
 });
 
+test("verifies x-amz-checksum-sha256 against the body", async ({ expect }) => {
+	const body = "data";
+	const goodDigest = crypto.createHash("sha256").update(body).digest("base64");
+	const otherDigest = crypto
+		.createHash("sha256")
+		.update("other")
+		.digest("base64");
+
+	const good = await s3Fetch("bucket/checksum-sha256.txt", {
+		method: "PUT",
+		body,
+		headers: { "x-amz-checksum-sha256": goodDigest },
+	});
+	expect(good.status).toBe(200);
+
+	const bad = await s3Fetch("bucket/checksum-sha256-bad.txt", {
+		method: "PUT",
+		body,
+		headers: { "x-amz-checksum-sha256": otherDigest },
+	});
+	await expectError(bad, 400, "BadDigest", expect);
+	// Mismatched checksum must not store the object
+	expect(await (await bucket()).head("checksum-sha256-bad.txt")).toBeNull();
+
+	const invalid = await s3Fetch("bucket/checksum-sha256.txt", {
+		method: "PUT",
+		body,
+		headers: { "x-amz-checksum-sha256": "not-base64!!!" },
+	});
+	await expectError(invalid, 400, "InvalidDigest", expect);
+});
+
+test("verifies x-amz-checksum-sha1 and CRC headers on PutObject", async ({
+	expect,
+}) => {
+	const body = "123456789";
+	const sha1 = crypto.createHash("sha1").update(body).digest("base64");
+	// IEEE CRC-32 of "123456789" is 0xCBF43926
+	const crc32 = Buffer.from([0xcb, 0xf4, 0x39, 0x26]).toString("base64");
+	// Castagnoli CRC-32C of "123456789" is 0xE3069283
+	const crc32c = Buffer.from([0xe3, 0x06, 0x92, 0x83]).toString("base64");
+
+	for (const [header, value, badLength] of [
+		["x-amz-checksum-sha1", sha1, 20],
+		["x-amz-checksum-crc32", crc32, 4],
+		["x-amz-checksum-crc32c", crc32c, 4],
+	] as const) {
+		const good = await s3Fetch(`bucket/checksum-${header}.txt`, {
+			method: "PUT",
+			body,
+			headers: { [header]: value },
+		});
+		expect(good.status).toBe(200);
+
+		const bad = await s3Fetch(`bucket/checksum-${header}-bad.txt`, {
+			method: "PUT",
+			body,
+			headers: { [header]: Buffer.alloc(badLength, 0).toString("base64") },
+		});
+		await expectError(bad, 400, "BadDigest", expect);
+	}
+});
+
+test("rejects SHA checksum headers on UploadPart with NotImplemented", async ({
+	expect,
+}) => {
+	const client = s3();
+	const created = await client.send(
+		new CreateMultipartUploadCommand({
+			Bucket: "bucket",
+			Key: "part-checksum.txt",
+		})
+	);
+	assert(created.UploadId !== undefined);
+
+	const digest = crypto.createHash("sha256").update("part").digest("base64");
+	const res = await s3Fetch(
+		`bucket/part-checksum.txt?partNumber=1&uploadId=${encodeURIComponent(created.UploadId)}`,
+		{
+			method: "PUT",
+			body: "part",
+			headers: { "x-amz-checksum-sha256": digest },
+		}
+	);
+	await expectError(res, 501, "NotImplemented", expect);
+});
+
 test("validates x-amz-storage-class", async ({ expect }) => {
 	const ok = await s3Fetch("bucket/sc.txt", {
 		method: "PUT",

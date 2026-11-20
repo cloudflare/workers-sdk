@@ -309,19 +309,110 @@ const CONDITIONAL_HEADERS = [
 ];
 
 /**
+ * Flexible checksum headers real R2 verifies against the request body.
+ * SHA-1 / SHA-256 are rejected with NotImplemented on UploadPart (matching
+ * R2); CRC32 / CRC32C are verified on both PutObject and UploadPart.
+ * CRC64NVME is still ignored (see gaps in index.worker.ts).
+ */
+const FLEXIBLE_CHECKSUMS = [
+	{
+		header: "x-amz-checksum-crc32",
+		algorithm: "CRC32",
+		length: 4,
+		partUpload: true,
+		digest: (body: ArrayBuffer) => crcDigest(body, 0xedb88320),
+	},
+	{
+		header: "x-amz-checksum-crc32c",
+		algorithm: "CRC32C",
+		length: 4,
+		partUpload: true,
+		digest: (body: ArrayBuffer) => crcDigest(body, 0x82f63b78),
+	},
+	{
+		header: "x-amz-checksum-sha1",
+		algorithm: "SHA1",
+		length: 20,
+		partUpload: false,
+		digest: (body: ArrayBuffer) => crypto.subtle.digest("SHA-1", body),
+	},
+	{
+		header: "x-amz-checksum-sha256",
+		algorithm: "SHA256",
+		length: 32,
+		partUpload: false,
+		digest: (body: ArrayBuffer) => crypto.subtle.digest("SHA-256", body),
+	},
+] as const;
+
+function hasVerifiableBodyChecksum(c: S3Context): boolean {
+	if (c.req.header("Content-MD5") !== undefined) {
+		return true;
+	}
+	return FLEXIBLE_CHECKSUMS.some(
+		({ header }) => c.req.header(header) !== undefined
+	);
+}
+
+/**
  * The request body for a write: streamed through untouched unless
- * Content-MD5 verification requires buffering it.
+ * Content-MD5 or a verifiable x-amz-checksum-* header requires buffering.
  */
 async function verifiedRequestBody(
-	c: S3Context
+	c: S3Context,
+	options: { partUpload?: boolean } = {}
 ): Promise<ReadableStream | ArrayBuffer | string | Response> {
-	if (c.req.header("Content-MD5") === undefined) {
+	if (options.partUpload === true) {
+		for (const { header, partUpload } of FLEXIBLE_CHECKSUMS) {
+			const value = c.req.header(header);
+			if (value !== undefined && !partUpload) {
+				return notImplementedHeader(header, value);
+			}
+		}
+	}
+
+	if (!hasVerifiableBodyChecksum(c)) {
 		return c.req.raw.body ?? "";
 	}
 
 	const buffered = await c.req.raw.arrayBuffer();
-	const digestError = await verifyContentMD5(c, buffered);
-	return digestError ?? buffered;
+	const md5Error = await verifyContentMD5(c, buffered);
+	if (md5Error !== undefined) {
+		return md5Error;
+	}
+	const checksumError = await verifyFlexibleChecksums(c, buffered);
+	return checksumError ?? buffered;
+}
+
+function decodeChecksumHeader(
+	value: string,
+	expectedLength: number
+): Uint8Array | Response {
+	try {
+		const provided = Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
+		if (provided.length !== expectedLength) {
+			throw new Error("bad length");
+		}
+		return provided;
+	} catch {
+		return errorResponse(
+			400,
+			"InvalidDigest",
+			"The checksum or Content-MD5 you specified is not valid."
+		);
+	}
+}
+
+function badDigestResponse(
+	algorithm: string,
+	provided: Uint8Array,
+	computed: string
+): Response {
+	return errorResponse(
+		400,
+		"BadDigest",
+		`The ${algorithm} checksum you specified did not match what we received.\nYou provided a ${algorithm} checksum with value: ${hex(provided)}\nActual ${algorithm} was: ${computed}`
+	);
 }
 
 async function verifyContentMD5(
@@ -332,28 +423,53 @@ async function verifyContentMD5(
 	if (contentMd5 === undefined) {
 		return undefined;
 	}
-	let provided: Uint8Array;
-	try {
-		provided = Uint8Array.from(atob(contentMd5), (char) => char.charCodeAt(0));
-		if (provided.length !== 16) {
-			throw new Error("bad length");
-		}
-	} catch {
-		return errorResponse(
-			400,
-			"InvalidDigest",
-			"The checksum or Content-MD5 you specified is not valid."
-		);
+	const provided = decodeChecksumHeader(contentMd5, 16);
+	if (provided instanceof Response) {
+		return provided;
 	}
 	const computed = hex(await crypto.subtle.digest("MD5", body));
 	if (hex(provided) !== computed) {
-		return errorResponse(
-			400,
-			"BadDigest",
-			`The MD5 checksum you specified did not match what we received.\nYou provided a MD5 checksum with value: ${hex(provided)}\nActual MD5 was: ${computed}`
-		);
+		return badDigestResponse("MD5", provided, computed);
 	}
 	return undefined;
+}
+
+async function verifyFlexibleChecksums(
+	c: S3Context,
+	body: ArrayBuffer
+): Promise<Response | undefined> {
+	for (const { header, algorithm, length, digest } of FLEXIBLE_CHECKSUMS) {
+		const value = c.req.header(header);
+		if (value === undefined) {
+			continue;
+		}
+		const provided = decodeChecksumHeader(value, length);
+		if (provided instanceof Response) {
+			return provided;
+		}
+		const computed = hex(await digest(body));
+		if (hex(provided) !== computed) {
+			return badDigestResponse(algorithm, provided, computed);
+		}
+	}
+	return undefined;
+}
+
+/** IEEE CRC-32 / Castagnoli CRC-32C over `body`, as a 4-byte big-endian digest. */
+function crcDigest(body: ArrayBuffer, polynomial: number): ArrayBuffer {
+	const bytes = new Uint8Array(body);
+	let crc = 0xffffffff;
+	for (let i = 0; i < bytes.length; i++) {
+		crc ^= bytes[i];
+		for (let bit = 0; bit < 8; bit++) {
+			crc = (crc >>> 1) ^ (polynomial & -(crc & 1));
+		}
+	}
+	crc = (crc ^ 0xffffffff) >>> 0;
+	const out = new ArrayBuffer(4);
+	const view = new DataView(out);
+	view.setUint32(0, crc, false);
+	return out;
 }
 
 /** Returns the R2 storage class for x-amz-storage-class, or an error */
@@ -775,7 +891,7 @@ export const MULTIPART_OPERATIONS: Record<
 				return partNumber;
 			}
 
-			const body = await verifiedRequestBody(c);
+			const body = await verifiedRequestBody(c, { partUpload: true });
 			if (body instanceof Response) {
 				return body;
 			}
