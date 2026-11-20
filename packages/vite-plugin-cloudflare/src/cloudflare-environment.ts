@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import { nonPrefixedNodeModules } from "@cloudflare/unenv-preset";
-import { CoreHeaders } from "miniflare";
 import * as vite from "vite";
 import { nodeBuiltinsRE } from "./nodejs-compat";
 import { additionalModuleRE } from "./plugins/additional-modules";
@@ -110,6 +109,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		workerConfig: ResolvedWorkerConfig,
 		options: { isEntryWorker: boolean; isParentEnvironment: boolean }
 	): Promise<void> {
+		const { CoreHeaders } = await import("miniflare");
 		const response = await miniflare.dispatchFetch(
 			new URL(INIT_PATH, UNKNOWN_HOST),
 			{
@@ -150,6 +150,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		// Wait for dependencies to be optimized before making the request
 		await this.depsOptimizer?.init();
 
+		const { CoreHeaders } = await import("miniflare");
 		const response = await miniflare.dispatchFetch(
 			new URL(GET_EXPORT_TYPES_PATH, UNKNOWN_HOST),
 			{

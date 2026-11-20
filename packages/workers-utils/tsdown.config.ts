@@ -55,6 +55,7 @@ export default defineConfig([
 			"src/custom-api-headers.ts",
 			"src/sanitize-headers.ts",
 			"src/fs-helpers.ts",
+			"src/glob-matcher.ts",
 			"src/global-wrangler-config-path.ts",
 			"src/local-env.ts",
 			"src/node-compat.ts",
