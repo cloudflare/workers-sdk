@@ -55,6 +55,10 @@ Turbo orchestrates workspace tasks. Shared TypeScript configuration lives in
 `packages/workers-tsconfig/`; lint and formatting behavior is defined by
 `.oxlintrc.jsonc`, `.oxfmtrc.jsonc`, and `packages/lint-config-shared/`.
 
+Workspace type checks and direct compiler API consumers use tsrs.
+Standalone consumer fixtures and scaffolded projects retain their own TypeScript
+setup.
+
 ## Cross-Tool Development Features
 
 Wrangler, the Vite plugin, and the Vitest plugin are all consumers of the

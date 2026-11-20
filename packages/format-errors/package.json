@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"build": "wrangler build",
-		"check:type": "tsc",
+		"check:type": "tsrs",
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev",
 		"test:ci": "vitest run"

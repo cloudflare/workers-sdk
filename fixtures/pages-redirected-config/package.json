@@ -7,7 +7,7 @@
 	"main": "src/index.js",
 	"scripts": {
 		"build": "node -r esbuild-register tools/build.ts",
-		"check:type": "tsc",
+		"check:type": "tsrs",
 		"dev": "pnpm run build && wrangler pages dev",
 		"test:ci": "pnpm run build && vitest run"
 	},

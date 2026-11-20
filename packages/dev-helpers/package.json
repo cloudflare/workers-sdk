@@ -34,11 +34,11 @@
 	},
 	"scripts": {
 		"build": "tsdown",
-		"check:type": "tsc -p ./tsconfig.json && tsc -p ./tsconfig.pages-assets.json",
+		"check:type": "tsrs -p ./tsconfig.json && tsrs -p ./tsconfig.pages-assets.json",
 		"dev": "tsdown --watch",
 		"test": "vitest",
 		"test:ci": "vitest run",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
+		"type:tests": "tsrs -p ./tests/tsconfig.json"
 	},
 	"dependencies": {
 		"@cloudflare/config": "workspace:*",

@@ -44,7 +44,7 @@
 	"scripts": {
 		"build": "tsdown",
 		"capnp:rtti": "capnp-es scripts/rtti/rtti.capnp -ojs",
-		"check:type": "tsc && tsc -p src/worker/tsconfig.json && tsc -p types/tsconfig.json",
+		"check:type": "tsrs && tsrs -p src/worker/tsconfig.json && tsrs -p types/tsconfig.json",
 		"dev": "tsdown --watch",
 		"test": "vitest run",
 		"test:ci": "vitest run"

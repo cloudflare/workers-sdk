@@ -37,7 +37,7 @@
 	},
 	"scripts": {
 		"build": "tsdown",
-		"check:type": "tsc -p ./tsconfig.json",
+		"check:type": "tsrs -p ./tsconfig.json",
 		"deploy": "echo 'no deploy'",
 		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsdown --watch\" \"pnpm run check:type --watch --preserveWatchOutput\"",
 		"test": "vitest",

@@ -3,7 +3,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"check:type": "tsc --build",
+		"check:type": "tsrs --build",
 		"dev": "node server.js"
 	},
 	"devDependencies": {

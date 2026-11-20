@@ -15,7 +15,7 @@
 	],
 	"scripts": {
 		"build": "node -r esbuild-register ./scripts/build.ts",
-		"check:type": "tsc",
+		"check:type": "tsrs",
 		"prepack": "npm run build",
 		"test": "vitest run",
 		"test:ci": "vitest run"

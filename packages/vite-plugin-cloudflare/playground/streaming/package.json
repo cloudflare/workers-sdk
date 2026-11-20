@@ -5,7 +5,7 @@
 	"scripts": {
 		"build:default": "vite build",
 		"build:https": "vite build -c ./vite.config.https.ts",
-		"check:type": "tsc --build",
+		"check:type": "tsrs --build",
 		"dev": "vite dev",
 		"dev:https": "vite dev -c ./vite.config.https.ts",
 		"preview": "vite preview",

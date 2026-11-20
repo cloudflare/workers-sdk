@@ -3,7 +3,7 @@
 	"version": "1.5.1",
 	"private": true,
 	"scripts": {
-		"check:type": "tsc && tsc -p tsconfig.tests.json",
+		"check:type": "tsrs && tsrs -p tsconfig.tests.json",
 		"deploy": "wrangler deploy",
 		"test:ci": "vitest run"
 	},

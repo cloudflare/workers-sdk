@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { createReadStream } from "node:fs";
 import {
 	mkdir,
@@ -54,9 +54,11 @@ export async function publishPackage(
 		await mkdtemp(path.join(os.tmpdir(), "mock-npm-publish-"))
 	);
 	try {
-		// eslint-disable-next-line workers-sdk/no-unsafe-command-execution -- workDir is a temporary directory we created
-		execSync(`pnpm pack --pack-destination "${workDir}"`, {
+		// Turbo already built the packages, possibly on Linux for Windows tests.
+		// Keep those outputs rather than invoking the native compiler on Windows.
+		execFileSync("pnpm", ["pack", "--pack-destination", workDir], {
 			cwd: packagePath,
+			env: overrideConfigEnv(process.env, { "ignore-scripts": "true" }).env,
 			stdio,
 		});
 		const tarballs = (await readdir(workDir)).filter((file) =>
@@ -86,7 +88,7 @@ export async function publishPackage(
 		const tag = localVersions.has(packed.name)
 			? LOCAL_DIST_TAG
 			: (packed["workers-sdk"]?.npmPrerelease?.tag ?? "latest");
-		// The lifecycle scripts already ran when the package was packed. Git
+		// Packages were built before packing. Git
 		// checks don't apply, since the contents aren't in a repository.
 		execSync("pnpm publish --ignore-scripts --no-git-checks", {
 			cwd: contentsPath,

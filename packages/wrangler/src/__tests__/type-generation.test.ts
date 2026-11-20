@@ -3,11 +3,7 @@ import { getRuntimeHeader } from "@cloudflare/runtime-types";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import {
-	createProgram,
-	flattenDiagnosticMessageText,
-	getPreEmitDiagnostics,
-} from "typescript";
+import { API } from "tsrs/unstable/sync";
 import { afterAll, beforeAll, beforeEach, describe, it, vi } from "vitest";
 import { version as workerdVersion } from "workerd";
 import { experimental_generateTypes } from "../api";
@@ -38,6 +34,9 @@ import { createFetchResult, msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { EnvironmentNonInheritable } from "@cloudflare/workers-utils/config";
 import type { MockInstance } from "vitest";
+
+// Native compiler regressions run on Linux/macOS; Windows tests product output.
+const test = process.platform === "win32" ? it.skip : it;
 
 describe("isValidIdentifier", () => {
 	it("should return true for valid identifiers", ({ expect }) => {
@@ -4401,7 +4400,7 @@ describe("generate types - API", () => {
 		expect(generated.content).toContain('declare module "*.html"');
 	});
 
-	it("includes module rules introduced by a named environment", async ({
+	test("includes module rules introduced by a named environment", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4431,19 +4430,12 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("unions module types when an environment override suppresses a default rule", async ({
+	test("unions module types when an environment override suppresses a default rule", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4487,19 +4479,12 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("unions broader environment matches into scoped module declarations", async ({
+	test("unions broader environment matches into scoped module declarations", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4534,19 +4519,12 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("unions broader scoped rules into narrower environment declarations", async ({
+	test("unions broader scoped rules into narrower environment declarations", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4581,19 +4559,12 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("uses broader scoped rules instead of recursive fallbacks for exact environment declarations", async ({
+	test("uses broader scoped rules instead of recursive fallbacks for exact environment declarations", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4636,19 +4607,12 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("keeps recursive types after non-representable scoped rules", async ({
+	test("keeps recursive types after non-representable scoped rules", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4684,19 +4648,12 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("uses direct-import glob semantics for exact environment declarations", async ({
+	test("uses direct-import glob semantics for exact environment declarations", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4749,19 +4706,12 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("uses discovery glob semantics for exact environment declarations", async ({
+	test("uses discovery glob semantics for exact environment declarations", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4808,19 +4758,12 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("defaults module discovery on for unbundled module rules", async ({
+	test("defaults module discovery on for unbundled module rules", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4860,14 +4803,7 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
@@ -4905,7 +4841,7 @@ describe("generate types - API", () => {
 		);
 	});
 
-	it("preserves representable directory scopes for same-extension rules", async ({
+	test("preserves representable directory scopes for same-extension rules", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4944,19 +4880,12 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("uses a safe union when relative imports cannot preserve directory scope", async ({
+	test("uses a safe union when relative imports cannot preserve directory scope", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -4999,19 +4928,12 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
 
-	it("uses a safe union when an exact rule overlaps a default rule", async ({
+	test("uses a safe union when an exact rule overlaps a default rule", async ({
 		expect,
 	}) => {
 		fs.writeFileSync(
@@ -5047,14 +4969,7 @@ describe("generate types - API", () => {
 			"utf-8"
 		);
 
-		const diagnostics = getPreEmitDiagnostics(
-			createProgram(["./generated.d.ts", "./consumer.ts"], {
-				noEmit: true,
-				types: [],
-			})
-		).map((diagnostic) =>
-			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-		);
+		const diagnostics = getGeneratedTypesDiagnostics();
 
 		expect(diagnostics).toEqual([]);
 	});
@@ -5122,7 +5037,7 @@ describe("generate types - API", () => {
 		expect(std.warn).toBe("");
 	});
 
-	it.for([
+	test.for([
 		{ name: "simple", environmentConfig: {} },
 		{
 			name: "per-environment",
@@ -5164,14 +5079,7 @@ describe("generate types - API", () => {
 				"utf-8"
 			);
 
-			const diagnostics = getPreEmitDiagnostics(
-				createProgram(["./generated.d.ts", "./consumer.ts"], {
-					noEmit: true,
-					types: [],
-				})
-			).map((diagnostic) =>
-				flattenDiagnosticMessageText(diagnostic.messageText, "\n")
-			);
+			const diagnostics = getGeneratedTypesDiagnostics();
 
 			expect(diagnostics).toEqual([]);
 		}
@@ -5877,3 +5785,20 @@ describe("pipeline schema type generation", () => {
 		`);
 	});
 });
+
+/** Check generated declarations together with their consumer, including library errors. */
+function getGeneratedTypesDiagnostics(): string[] {
+	using api = new API({ cwd: process.cwd() });
+	using program = api.createProgram(["./generated.d.ts", "./consumer.ts"], {
+		noEmit: true,
+		strict: false,
+		types: [],
+	});
+	return [
+		...program.getProgramDiagnostics(),
+		...program.getSyntacticDiagnostics(),
+		...program.getBindDiagnostics(),
+		...program.getGlobalDiagnostics(),
+		...program.getSemanticDiagnostics(),
+	].map((diagnostic) => diagnostic.text);
+}

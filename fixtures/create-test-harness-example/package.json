@@ -7,7 +7,7 @@
 		"cf-typegen": "pnpm typegen:web && pnpm typegen:api",
 		"typegen:web": "wrangler types ./workers/web/worker-configuration.d.ts -c ./workers/web/wrangler.jsonc -c ./workers/api/wrangler.jsonc --env-interface WebEnv --no-include-runtime",
 		"typegen:api": "wrangler types ./workers/api/worker-configuration.d.ts -c ./workers/api/wrangler.jsonc --env-interface ApiEnv --no-include-runtime",
-		"check:type": "tsc",
+		"check:type": "tsrs",
 		"build": "pnpm build:vite && pnpm build:wrangler",
 		"build:vite": "vite build",
 		"build:wrangler": "pnpm build:wrangler:web && pnpm build:wrangler:api && pnpm build:wrangler:mock-browser",
@@ -20,7 +20,7 @@
 		"test:playwright": "playwright test",
 		"test:vitest": "vitest run",
 		"test:ci": "vitest run && playwright test",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
+		"type:tests": "tsrs -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "npm:@cloudflare/vite-plugin@1.63.2",

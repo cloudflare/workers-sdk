@@ -19,6 +19,7 @@
 		"e2e/tests/frameworks/fixtures/*"
 	],
 	"compilerOptions": {
+		"rootDir": "../..",
 		"target": "ESNext",
 		"module": "preserve",
 		"moduleResolution": "bundler",

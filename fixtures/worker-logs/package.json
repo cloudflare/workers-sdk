@@ -2,7 +2,7 @@
 	"name": "@fixture/worker-logs",
 	"private": true,
 	"scripts": {
-		"check:type": "tsc",
+		"check:type": "tsrs",
 		"dev": "pnpm dev.module",
 		"dev.module": "wrangler dev -c wrangler.module.jsonc",
 		"dev.service": "wrangler dev -c wrangler.service.jsonc",

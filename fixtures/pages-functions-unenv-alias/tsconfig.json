@@ -8,7 +8,8 @@
 		"moduleResolution": "bundler",
 		"noEmit": true,
 		"skipLibCheck": true,
-		"checkJs": true
+		"checkJs": true,
+		"strict": false
 	},
 	"include": [
 		"apps/workerjs-directory/_worker.js/index.js",

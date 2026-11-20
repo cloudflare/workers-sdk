@@ -1,0 +1,18 @@
+name: Restore Windows build
+description: Restore Linux-built package outputs for Windows product tests
+runs:
+  using: composite
+  steps:
+    - name: Download build cache
+      shell: bash
+      run: gh run download "$GITHUB_RUN_ID" --name windows-build-cache --dir .turbo/cache
+      env:
+        GH_TOKEN: ${{ github.token }}
+
+    - name: Enable build cache reads
+      shell: bash
+      # Even an uncached test run needs the prebuilt packages. The artifact
+      # contains build tasks only, so reading it cannot reuse test results.
+      run: echo "TURBO_CACHE=$WINDOWS_TURBO_CACHE" >> "$GITHUB_ENV"
+      env:
+        WINDOWS_TURBO_CACHE: ${{ contains(github.event.pull_request.labels.*.name, 'ci:no-turbo-cache') && 'local:r,remote:' || 'local:rw,remote:rw' }}

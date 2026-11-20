@@ -2,13 +2,13 @@
 	"name": "@fixture/workers-with-assets-static-routing",
 	"private": true,
 	"scripts": {
-		"check:type": "tsc",
+		"check:type": "tsrs",
 		"dev": "wrangler dev",
 		"dev:spa": "wrangler dev -c spa.wrangler.jsonc",
 		"pretest:ci": "pnpm playwright install chromium",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
-		"type:tests": "tsc -p ./test/tsconfig.json"
+		"type:tests": "tsrs -p ./test/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",

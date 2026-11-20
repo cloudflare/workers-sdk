@@ -8,6 +8,7 @@
 		"moduleResolution": "bundler",
 		"esModuleInterop": true,
 		"noEmit": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"strict": false
 	}
 }

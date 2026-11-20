@@ -39,7 +39,7 @@ async function main() {
 	});
 
 	console.log("Generating types...");
-	execFileSync("tsc", ["-p", "tsconfig.build.json"], {
+	execFileSync("tsrs", ["-p", "tsconfig.build.json"], {
 		stdio: "inherit",
 		shell: true,
 	});

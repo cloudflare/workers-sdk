@@ -37,12 +37,12 @@
 	},
 	"scripts": {
 		"build": "tsdown",
-		"check:type": "tsc -p ./tsconfig.json",
+		"check:type": "tsrs -p ./tsconfig.json",
 		"deploy": "echo 'no deploy'",
-		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsdown --watch\" \"pnpm exec tsc -p tsconfig.json --watch --preserveWatchOutput\"",
+		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsdown --watch\" \"pnpm exec tsrs -p tsconfig.json --watch --preserveWatchOutput\"",
 		"test": "vitest",
 		"test:ci": "vitest run",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
+		"type:tests": "tsrs -p ./tests/tsconfig.json"
 	},
 	"dependencies": {
 		"@cloudflare/cli-shared-helpers": "workspace:*",

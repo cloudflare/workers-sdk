@@ -14,7 +14,7 @@
 		"build": "wrangler deploy --dry-run --outdir=./dist",
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev",
-		"type:check": "tsc"
+		"type:check": "tsrs"
 	},
 	"dependencies": {
 		"@hono/zod-validator": "^0.8.0",

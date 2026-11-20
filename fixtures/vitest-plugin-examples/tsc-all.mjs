@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import childProcess from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -16,17 +15,11 @@ async function* walkTsConfigs(rootPath) {
 	}
 }
 
-assert(
-	process.env.PATH?.includes(path.join(__dirname, "node_modules/.bin")),
-	"Expected `tsc-all.mjs` to be run with `pnpm check:type`"
-);
-
 for await (const tsconfigPath of walkTsConfigs(__dirname)) {
 	console.log(`Checking ${path.relative(__dirname, tsconfigPath)}...`);
-	const result = childProcess.spawnSync("tsc", ["-p", tsconfigPath], {
+	const result = childProcess.spawnSync("tsrs", ["-p", tsconfigPath], {
 		stdio: "inherit",
 		cwd: __dirname,
-		shell: true,
 	});
 	if (result.status !== 0) process.exitCode = 1;
 }
