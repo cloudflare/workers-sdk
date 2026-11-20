@@ -29,6 +29,10 @@
 		".": {
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.mjs"
+		},
+		"./wrangler-to-cf": {
+			"types": "./dist/wrangler-to-cf.d.ts",
+			"import": "./dist/wrangler-to-cf.mjs"
 		}
 	},
 	"publishConfig": {
