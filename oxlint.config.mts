@@ -358,10 +358,6 @@ export default defineConfig({
 		// Temporarily disabled only where rules that were already enforced report new
 		// findings after upgrading Oxlint and moving to the tsrs type checker.
 		{
-			files: ["packages/miniflare/src/index.ts"],
-			rules: { "no-unused-vars": "off" },
-		},
-		{
 			files: ["packages/wrangler/src/logger.ts"],
 			rules: { "prefer-spread": "off" },
 		},
