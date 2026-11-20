@@ -56,6 +56,7 @@ export type Service = {
 	| { network?: Network }
 	| { external?: ExternalServer }
 	| { disk?: DiskDirectory }
+	| { cache?: CacheDirectory }
 );
 
 export interface ServiceDesignator {
@@ -277,6 +278,10 @@ export interface DiskDirectory {
 	path?: string;
 	writable?: boolean;
 	allowDotfiles?: boolean;
+}
+
+export interface CacheDirectory {
+	path?: string;
 }
 
 export interface HttpOptions {

@@ -45,6 +45,7 @@ import {
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	FLAGSHIP_PLUGIN_NAME,
+	getCachePath,
 	getConnectSocketName,
 	getDirectSocketName,
 	getDurableObjectUniqueKey,
@@ -66,6 +67,7 @@ import {
 	PLUGIN_ENTRIES,
 	ProxyClient,
 	ProxyNodeBinding,
+	purgeCacheDirectory,
 	QUEUES_PLUGIN_NAME,
 	QueuesError,
 	R2_PLUGIN_NAME,
@@ -141,7 +143,6 @@ import {
 	withPersistRootStartupLock,
 } from "./shared/persist-root-lock";
 import {
-	CacheHeaders,
 	CoreBindings,
 	CoreHeaders,
 	decodeErrorPayload,
@@ -3603,32 +3604,13 @@ export class Miniflare {
 	 */
 	async purgeCache(cacheName?: string): Promise<number> {
 		await this.ready;
-
-		const proxyClient = await this._getProxyClient();
-
-		// Get the cache service binding from proxy env. This is a Fetcher to
-		// the cache-entry worker which properly sets cf.miniflare.name before
-		// forwarding to the CacheObject Durable Object.
-		const cacheService = proxyClient.env[CoreBindings.SERVICE_CACHE] as Fetcher;
-
-		// Build the request with the cache namespace header if specified
-		const headers: Record<string, string> = {};
-		if (cacheName !== undefined) {
-			headers[CacheHeaders.NAMESPACE] = cacheName;
-		}
-
-		// Call the cache-entry worker's /purge-all endpoint
-		const response = await cacheService.fetch("http://localhost/purge-all", {
-			method: "DELETE",
-			headers,
-		});
-
-		if (!response.ok) {
-			throw new Error(`Failed to purge cache: ${response.statusText}`);
-		}
-
-		const result = (await response.json()) as { deleted: number };
-		return result.deleted;
+		return purgeCacheDirectory(
+			getCachePath(
+				this.#tmpPath,
+				this.#sharedOpts.isolatedResourcePersistencePath
+			),
+			cacheName
+		);
 	}
 	getD1Database(bindingName: string, workerName?: string): Promise<D1Database> {
 		return this.#getProxy(D1_PLUGIN_NAME, bindingName, workerName);

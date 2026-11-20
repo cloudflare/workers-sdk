@@ -823,11 +823,6 @@ export function getGlobalServices({
 		},
 		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`
 		...proxyBindings,
-		// Add cache service binding for purgeCache() API
-		{
-			name: CoreBindings.SERVICE_CACHE,
-			service: { name: getCacheServiceName(0) },
-		},
 		{
 			name: CoreBindings.SERVICE_DEV_CONTROL,
 			service: { name: CoreBindings.SERVICE_DEV_CONTROL },

@@ -2521,9 +2521,6 @@ importers:
       '@types/glob-to-regexp':
         specifier: ^0.4.1
         version: 0.4.1
-      '@types/http-cache-semantics':
-        specifier: ^4.0.1
-        version: 4.0.4
       '@types/mime':
         specifier: ^3.0.4
         version: 3.0.4
@@ -2593,9 +2590,6 @@ importers:
       hono:
         specifier: ^4.13.16
         version: 4.13.16
-      http-cache-semantics:
-        specifier: ^4.1.0
-        version: 4.1.1
       jsonc-parser:
         specifier: catalog:default
         version: 3.2.0
@@ -9647,9 +9641,6 @@ packages:
     peerDependencies:
       '@types/react': '*'
 
-  '@types/http-cache-semantics@4.0.4':
-    resolution: {integrity: sha512-1m0bIFVc7eJWyve9S0RnuRgcQqF/Xd5QsUZAZeQFr1Q3/p9JWoQQEqmVy+DPTNpGXwhgIetAoYF8JSc33q29QA==}
-
   '@types/http-errors@2.0.4':
     resolution: {integrity: sha512-D0CFMMtydbJAegzOyHjtiKPLlvnm3iTZyZRSZoLq2mRhDdmLfIWOCYPfQJ4cu2erKghU++QvjcUjp/5h7hESpA==}
 
@@ -12213,9 +12204,6 @@ packages:
 
   html-void-elements@3.0.0:
     resolution: {integrity: sha512-bEqo66MRXsUGxWHV5IP0PUiAWwoEjba4VCzg0LjFJBpchPaTfyfCKTG6bc5F8ucKec3q5y6qOdGyYTSBEvhCrg==}
-
-  http-cache-semantics@4.1.1:
-    resolution: {integrity: sha512-er295DKPVsV82j5kw1Gjt+ADA/XYHsajl82cGNQG2eyoPkvgUhX+nDIyelzhIWbbsXP39EHcI6l5tYs2FYqYXQ==}
 
   http-errors@2.0.0:
     resolution: {integrity: sha512-FtwrG/euBzaEjYeRqOgly7G0qviiXoJWnvEH2Z1plBdXgbyjv34pHTSb9zoeHMyDy33+DWy5Wt9Wo+TURtOYSQ==}
@@ -20677,8 +20665,6 @@ snapshots:
       '@types/react': 18.3.18
       hoist-non-react-statics: 3.3.2
 
-  '@types/http-cache-semantics@4.0.4': {}
-
   '@types/http-errors@2.0.4': {}
 
   '@types/is-even@1.0.2': {}
@@ -23436,8 +23422,6 @@ snapshots:
   html-rewriter-wasm@0.4.1: {}
 
   html-void-elements@3.0.0: {}
-
-  http-cache-semantics@4.1.1: {}
 
   http-errors@2.0.0:
     dependencies:
