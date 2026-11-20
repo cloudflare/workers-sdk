@@ -7,7 +7,6 @@ import {
 const WRANGLER_ONLY_FRAMEWORKS = [
 	"analog",
 	"angular",
-	"nuxt",
 	"qwik",
 	"svelte-kit",
 	"vike",
@@ -40,6 +39,7 @@ describe("cf framework configuration support", () => {
 	it.for([
 		"astro",
 		"next",
+		"nuxt",
 		"react-router",
 		"solid-start",
 		"static",
