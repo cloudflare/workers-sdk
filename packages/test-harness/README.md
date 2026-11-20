@@ -19,4 +19,6 @@ const response = await server.fetch("/");
 await server.close();
 ```
 
+See [`fixtures/create-test-harness-example`](https://github.com/cloudflare/workers-sdk/tree/main/fixtures/create-test-harness-example) for a complete example with Vitest and Playwright.
+
 This package is experimental and its API may change in minor versions.

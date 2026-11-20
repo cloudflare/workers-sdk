@@ -1,7 +1,8 @@
+import { createTestHarness } from "@cloudflare/test-harness";
 import { test as base, expect } from "@playwright/test";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { createTestHarness, type TestHarness } from "wrangler";
+import type { TestHarness } from "@cloudflare/test-harness";
 
 type TestFixtures = {
 	reset: void;
@@ -29,9 +30,9 @@ const test = base.extend<TestFixtures, WorkerFixtures>({
 		async ({}, use) => {
 			const server = createTestHarness({
 				workers: [
-					// Playwright tests run against the Vite build output.
-					{ configPath: "./dist/web_worker/wrangler.json" },
-					{ configPath: "./dist/api_worker/wrangler.json" },
+					// Playwright tests run against the same build output as Vitest.
+					{ projectDir: "./workers/web" },
+					{ projectDir: "./workers/api" },
 				],
 			});
 
