@@ -11,11 +11,11 @@ import {
 	createRequestHandler,
 	getAuthority,
 	getForwardedProto,
-	getOutputDirectory,
 	getScheme,
 	resolveRequestTarget,
 	toMiniflareRequest,
-} from "../utils";
+} from "../request-handler";
+import { getOutputDirectory } from "../utils";
 import type { AddressInfo } from "node:net";
 import type * as vite from "vite";
 

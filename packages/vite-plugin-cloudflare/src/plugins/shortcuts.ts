@@ -8,8 +8,6 @@ import {
 } from "miniflare";
 import open from "open";
 import colors from "picocolors";
-import { assertIsNotPreview, assertIsPreview } from "../context";
-import { createPlugin, satisfiesMinimumViteVersion } from "../utils";
 import { extendTunnelExpiry, isTunnelOpen, toggleTunnel } from "./tunnel";
 import type { PluginContext } from "../context";
 import type {
@@ -20,31 +18,6 @@ import type {
 } from "@cloudflare/config";
 import type { ContainerApp } from "@cloudflare/workers-utils/config";
 import type * as vite from "vite";
-
-export const shortcutsPlugin = createPlugin("shortcuts", (ctx) => {
-	// This requires Vite 7.2.7 which fixes custom CLI shortcuts support
-	// @see https://github.com/vitejs/vite/pull/21103
-	const isCustomShortcutsSupported = satisfiesMinimumViteVersion("7.2.7");
-
-	return {
-		async configureServer(viteDevServer) {
-			if (!isCustomShortcutsSupported) {
-				return;
-			}
-
-			assertIsNotPreview(ctx);
-			addShortcuts(viteDevServer, ctx);
-		},
-		async configurePreviewServer(vitePreviewServer) {
-			if (!isCustomShortcutsSupported) {
-				return;
-			}
-
-			assertIsPreview(ctx);
-			addShortcuts(vitePreviewServer, ctx);
-		},
-	};
-});
 
 export function addShortcuts(
 	server: vite.ViteDevServer | vite.PreviewServer,
