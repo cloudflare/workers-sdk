@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { SemVer } from "semver";
@@ -60,6 +60,7 @@ interface CorrectVersionReferencesOptions {
 	packagePath: string;
 	versionAfterChangesets: string;
 	nextVersion: string;
+	workspaceRoot?: string;
 }
 
 function getPkg(filePath: string): PackageJSON {
@@ -258,21 +259,38 @@ function getPackagesBeforeVersioning(): PreviousPackage[] {
 	return packages;
 }
 
+/** Reconciles manifests and changelogs after applying custom release versions. */
 export function correctVersionReferences({
 	packageName,
 	packagePath,
 	versionAfterChangesets,
 	nextVersion,
+	workspaceRoot = rootPath,
 }: CorrectVersionReferencesOptions): void {
 	// Changesets has already updated the affected manifests and changelogs. Limit
 	// corrections to those files instead of scanning and rewriting the workspace.
-	const changedPathsBuffer = execSync("git ls-files --modified", {
-		cwd: rootPath,
+	const modifiedPaths = execFileSync("git", ["ls-files", "--modified", "-z"], {
+		cwd: workspaceRoot,
+		encoding: "utf8",
 	});
-	console.log("Checking modified files...");
-	const changedPaths = changedPathsBuffer.toString().trim().split("\n");
+	const newChangelogPaths = execFileSync(
+		"git",
+		[
+			"ls-files",
+			"--others",
+			"--exclude-standard",
+			"-z",
+			"--",
+			":(glob)**/CHANGELOG.md",
+		],
+		{ cwd: workspaceRoot, encoding: "utf8" }
+	);
+	console.log("Checking modified files and new changelogs...");
+	const changedPaths = (modifiedPaths + newChangelogPaths)
+		.split("\0")
+		.filter(Boolean);
 	for (const relativeChangedPath of changedPaths) {
-		const changedPath = resolve(rootPath, relativeChangedPath);
+		const changedPath = resolve(workspaceRoot, relativeChangedPath);
 		const name = basename(changedPath);
 		if (name === "package.json") {
 			console.log("Updating dependencies in", changedPath);
