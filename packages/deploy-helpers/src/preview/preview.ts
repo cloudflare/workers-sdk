@@ -1168,10 +1168,14 @@ async function runPreview(
 				{ ignoreBaseConfig }
 			);
 		} catch (e) {
+			/**
+			 * Error 100338 means a Preview with this name already exists.
+			 * Another build may have created it between our initial GET and POST,
+			 * so re-read the Preview and continue through the update path.
+			 */
 			if (!(e instanceof Error && "code" in e && e.code === 100338)) {
 				throw e;
 			}
-			// Another build may have created this Preview after our initial lookup.
 			previewResource = await getPreview(
 				config,
 				accountId,
