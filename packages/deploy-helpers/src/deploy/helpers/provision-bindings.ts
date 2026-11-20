@@ -688,10 +688,17 @@ class D1Handler extends ProvisionResourceHandler<
 
 			// ...and the user HAS specified a name or jurisdiction in their config, so we need to check if the provided values
 			// match the existing binding (which aren't present in settings, so we'll need to make an API call to check).
+			let databaseId: string;
+			if ("database_id" in maybeInherited) {
+				databaseId = maybeInherited.database_id;
+			} else {
+				// oxlint-disable-next-line typescript/no-deprecated -- intentional support of deprecated binding style
+				databaseId = maybeInherited.id;
+			}
 			const dbFromId = await getDatabaseInfoFromIdOrName(
 				this.complianceConfig,
 				this.accountId,
-				maybeInherited.id
+				databaseId
 			);
 			const nameMatches =
 				!this.binding.database_name ||

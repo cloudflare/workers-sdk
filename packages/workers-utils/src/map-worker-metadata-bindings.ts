@@ -63,11 +63,14 @@ export function mapWorkerMetadataBindings(
 						break;
 					case "d1":
 						{
+							const databaseId =
+								// oxlint-disable-next-line typescript/no-deprecated -- intentional support of deprecated binding style
+								"database_id" in binding ? binding.database_id : binding.id;
 							configObj.d1_databases = [
 								...(configObj.d1_databases ?? []),
 								{
 									binding: binding.name,
-									database_id: binding.id,
+									database_id: databaseId,
 								},
 							];
 						}
@@ -90,6 +93,9 @@ export function mapWorkerMetadataBindings(
 						{
 							configObj.ai = {
 								binding: binding.name,
+								...(binding.staging !== undefined && {
+									staging: binding.staging,
+								}),
 							};
 						}
 						break;
