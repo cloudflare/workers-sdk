@@ -1,4 +1,5 @@
-import { fetchResult } from "../../shared/context";
+import { retryOnUnreadableVersion } from "@cloudflare/workers-utils";
+import { fetchResult, logger } from "../../shared/context";
 import type {
 	ApiDeployment,
 	ApiVersion,
@@ -98,12 +99,22 @@ export async function fetchDeploymentVersions(
 		deployment.versions.map((v) => [v.version_id, v.percentage])
 	);
 
-	const versions = await fetchVersions(
-		complianceConfig,
-		accountId,
-		workerName,
-		versionCache,
-		[...versionTraffic.keys()]
+	// A version in a deployment is known to exist, so one that the API cannot
+	// find is only temporarily unreadable.
+	const versions = await Promise.all(
+		[...versionTraffic.keys()].map((versionId) =>
+			retryOnUnreadableVersion(
+				() =>
+					fetchVersion(
+						complianceConfig,
+						accountId,
+						workerName,
+						versionId,
+						versionCache
+					),
+				logger
+			)
+		)
 	);
 
 	return [versions, versionTraffic];

@@ -17,7 +17,11 @@ import {
 	renderInconsistentExportsAcrossVersionsError,
 	resolveVersionedDurableObjectContainerApplications,
 } from "@cloudflare/deploy-helpers";
-import { APIError, UserError } from "@cloudflare/workers-utils";
+import {
+	APIError,
+	retryOnUnreadableVersion,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { containersScope } from "../containers";
@@ -34,7 +38,6 @@ import {
 	fetchDeploymentVersions,
 	fetchLatestDeployment,
 	fetchVersion,
-	fetchVersions,
 	patchNonVersionedScriptSettings,
 } from "./api";
 import {
@@ -214,7 +217,7 @@ export const versionsDeployCommand = createCommand({
 
 		const selectedVersions = await Promise.all(
 			confirmedVersionsToDeploy.map((versionId) =>
-				fetchVersion(config, accountId, workerName, versionId)
+				fetchVersionToDeploy(config, accountId, workerName, versionId)
 			)
 		);
 		const containerApplications =
@@ -386,6 +389,39 @@ export async function printLatestDeployment(
 }
 
 /**
+ * Fetches a version that the user has asked to deploy.
+ *
+ * A just-uploaded version can be temporarily unreadable, so the read is
+ * retried rather than failing the deployment before it has been attempted.
+ *
+ * @param complianceConfig The compliance region to send the request to
+ * @param accountId The account that owns the Worker
+ * @param workerName The name of the Worker
+ * @param versionId The ID of the version to fetch
+ * @param versionCache A cache to read the version from, and add it to
+ * @returns The version
+ */
+function fetchVersionToDeploy(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	workerName: string,
+	versionId: VersionId,
+	versionCache?: VersionCache
+): Promise<ApiVersion> {
+	return retryOnUnreadableVersion(
+		() =>
+			fetchVersion(
+				complianceConfig,
+				accountId,
+				workerName,
+				versionId,
+				versionCache
+			),
+		logger
+	);
+}
+
+/**
  * Prompts the user to select which versions they want to deploy.
  * The list of possible versions will include:
  * - versions within the latest deployment
@@ -425,12 +461,16 @@ async function promptVersionsToDeploy(
 					versionCache
 				);
 			}
-			await fetchVersions(
-				complianceConfig,
-				accountId,
-				workerName,
-				versionCache,
-				...defaultSelectedVersionIds
+			await Promise.all(
+				defaultSelectedVersionIds.map((versionId) =>
+					fetchVersionToDeploy(
+						complianceConfig,
+						accountId,
+						workerName,
+						versionId,
+						versionCache
+					)
+				)
 			);
 		},
 	});

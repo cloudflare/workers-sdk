@@ -83,6 +83,10 @@
 			"import": "./dist/sanitize-headers.mjs",
 			"types": "./dist/sanitize-headers.d.mts"
 		},
+		"./retry": {
+			"import": "./dist/retry.mjs",
+			"types": "./dist/retry.d.mts"
+		},
 		"./asset-hash": {
 			"types": "./dist/asset-hash.d.mts",
 			"import": "./dist/asset-hash.mjs"

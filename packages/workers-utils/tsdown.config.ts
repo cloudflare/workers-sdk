@@ -58,6 +58,7 @@ export default defineConfig([
 			"src/global-wrangler-config-path.ts",
 			"src/local-env.ts",
 			"src/node-compat.ts",
+			"src/retry.ts",
 			"src/sourcemap.ts",
 			"src/zod-format.ts",
 		],

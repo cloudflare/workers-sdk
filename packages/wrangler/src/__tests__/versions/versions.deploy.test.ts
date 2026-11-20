@@ -2023,6 +2023,109 @@ describe("versions deploy", () => {
 			`);
 		});
 
+		describe("temporarily unreadable versions", () => {
+			// Not part of the current deployment, so this version is only read
+			// because it is going to be deployed.
+			const versionId = "30000000-0000-0000-0000-000000000000";
+
+			const versionNotFoundError = {
+				code: 100146,
+				message:
+					"The requested Worker version could not be found, please check the ID being passed and try again.",
+			};
+
+			/**
+			 * Mocks the API for reading a version.
+			 *
+			 * @param id The ID of the version
+			 * @param getError Returns the API error that a read should fail with, if any. Reads are counted from 1.
+			 * @returns A function that returns how many times the version has been read
+			 */
+			function mockGetVersion(
+				id: string,
+				getError: (
+					read: number
+				) => { code: number; message: string } | undefined
+			): () => number {
+				let reads = 0;
+				msw.use(
+					http.get(
+						`*/accounts/:accountId/workers/scripts/:workerName/versions/${id}`,
+						() => {
+							reads++;
+							const error = getError(reads);
+							return error === undefined
+								? HttpResponse.json(createFetchResult(containerVersion(id, [])))
+								: HttpResponse.json(createFetchResult(null, false, [error]), {
+										status: 404,
+									});
+						}
+					)
+				);
+				return () => reads;
+			}
+
+			test("retries reading a version that is not readable yet", async ({
+				expect,
+			}) => {
+				// The API can alternate between finding a new version and not finding it.
+				const getReads = mockGetVersion(versionId, (read) =>
+					read % 2 === 1 ? versionNotFoundError : undefined
+				);
+
+				await expect(
+					runWrangler(`versions deploy ${versionId}@100% --yes`)
+				).resolves.toBeUndefined();
+
+				// The version is read twice before it is deployed, and each of those
+				// reads had to be retried once.
+				expect(getReads()).toBe(4);
+				expect(consoleStd.info).toContain(
+					"The Cloudflare API could not find a Worker version."
+				);
+				expect(normalizeOutput(cliStd.out)).toContain(
+					"Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100%"
+				);
+			});
+
+			test("retries reading a version in the current deployment that is not readable yet", async ({
+				expect,
+			}) => {
+				// Part of the current deployment, and not being deployed, so this
+				// version is only read to show what is currently deployed.
+				const getReads = mockGetVersion(
+					"10000000-0000-0000-0000-000000000000",
+					(read) => (read === 1 ? versionNotFoundError : undefined)
+				);
+
+				await expect(
+					runWrangler(
+						"versions deploy 20000000-0000-0000-0000-000000000000@100% --yes"
+					)
+				).resolves.toBeUndefined();
+
+				expect(getReads()).toBe(2);
+				expect(normalizeOutput(cliStd.out)).toContain(
+					"Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100%"
+				);
+			});
+
+			test("does not retry a read that fails for another reason", async ({
+				expect,
+			}) => {
+				const getReads = mockGetVersion(versionId, () => ({
+					code: 10007,
+					message: "This Worker does not exist on your account.",
+				}));
+
+				await expect(
+					runWrangler(`versions deploy ${versionId}@100% --yes`)
+				).rejects.toThrow(/A request to the Cloudflare API .* failed/);
+
+				expect(getReads()).toBe(1);
+			});
+		});
+
 		test("fails if --percentage > 100", async ({ expect }) => {
 			const result = runWrangler(
 				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage 101 --yes"
