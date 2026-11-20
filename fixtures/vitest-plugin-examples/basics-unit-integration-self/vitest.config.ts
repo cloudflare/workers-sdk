@@ -12,9 +12,7 @@ export default mergeConfig(
 					// compatibility flag, and cannot be enabled in production.
 					compatibilityFlags: ["service_binding_extra_handlers"],
 				},
-				wrangler: {
-					configPath: "./wrangler.jsonc",
-				},
+				config: true,
 			}),
 		],
 	})

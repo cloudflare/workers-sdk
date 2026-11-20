@@ -7,7 +7,11 @@ export default mergeConfig(
 	defineProject({
 		plugins: [
 			cloudflareTest({
-				wrangler: { configPath: "./wrangler.jsonc" },
+				config: true,
+				miniflare: {
+					// `cloudflare.config.ts` doesn't set the assets directory
+					assets: { directory: "./public" },
+				},
 			}),
 		],
 	})

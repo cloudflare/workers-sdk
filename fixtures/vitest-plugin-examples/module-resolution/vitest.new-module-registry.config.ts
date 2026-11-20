@@ -7,10 +7,7 @@ export default mergeConfig(
 	defineProject({
 		plugins: [
 			cloudflareTest({
-				wrangler: { configPath: "./wrangler.jsonc" },
-				miniflare: {
-					compatibilityFlags: ["new_module_registry"],
-				},
+				config: "./cloudflare.new-module-registry.config.ts",
 			}),
 		],
 		test: { name: "module-resolution-new-module-registry" },

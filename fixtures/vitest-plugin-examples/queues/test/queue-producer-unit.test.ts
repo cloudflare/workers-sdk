@@ -48,8 +48,8 @@ it("produces queue message with mocked send", async ({ expect }) => {
 
 it("produces queue message with mocked consumer", async ({ expect }) => {
 	// Intercept calls to `worker.queue()`. Note the runner worker has a queue
-	// consumer configured that gets its handler from the `main` option in
-	// `vitest.config.mts`. Importantly, this uses the exact `worker` instance
+	// consumer configured that gets its handler from the `entrypoint` in
+	// `cloudflare.config.ts`. Importantly, this uses the exact `worker` instance
 	// we're spying on here.
 	const consumerSpy = vi
 		.spyOn(worker, "queue")

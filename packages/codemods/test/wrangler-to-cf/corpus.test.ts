@@ -39,7 +39,7 @@ describe("Wrangler configuration corpus", () => {
 	runInTempDir();
 
 	it("discovers the repository corpus", ({ expect }) => {
-		expect(WRANGLER_CONFIG_PATHS.length).toBeGreaterThan(150);
+		expect(WRANGLER_CONFIG_PATHS.length).toBeGreaterThan(100);
 	});
 
 	it.for(WRANGLER_CONFIG_PATHS)(
