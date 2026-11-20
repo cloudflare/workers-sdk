@@ -260,6 +260,16 @@ function convertTopLevel(config: ParsedWorkerConfig, result: RawConfig): void {
 	if (config.access !== undefined) {
 		result.access = config.access;
 	}
+	if (config.images?.urlTransformations !== undefined) {
+		const { enabled, allowedOrigins } = config.images.urlTransformations;
+		result.images = {
+			...result.images,
+			url_transformations: omitUndefined({
+				enabled,
+				allowed_origins: allowedOrigins,
+			}),
+		};
+	}
 	if (config.cache !== undefined) {
 		type RawCacheConfig = NonNullable<RawConfig["cache"]>;
 		const cache: RawCacheConfig = {
@@ -554,6 +564,7 @@ function convertBindingsAndAssets(
 			}
 			case "images": {
 				result.images = omitUndefined({
+					...result.images,
 					binding: name,
 					remote: binding.dev?.remote,
 				});

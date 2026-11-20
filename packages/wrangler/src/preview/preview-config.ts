@@ -77,12 +77,32 @@ export function convertPreviewBaseToPreviewsConfig(
 	return convertedSettings;
 }
 
+/**
+ * Projects production config into the `previews` shape. Previews only support the Images binding,
+ * not `url_transformations`, so only the binding is carried over.
+ */
+function productionAsPreviews(config: Config): PreviewsConfig {
+	const { images, ...rest } = config;
+	return {
+		...rest,
+		images: images?.binding
+			? {
+					binding: images.binding,
+					...(images.remote !== undefined && { remote: images.remote }),
+				}
+			: undefined,
+	};
+}
+
 /** Creates local Preview configuration without copying production values. */
 export function convertProductionToPreviewsConfig(
 	config: Config
 ): ProposedPreviewsConfig {
 	const convertedSettings = convertPreviewSettings(
-		extractConfigBindings({ ...config, previews: config }),
+		extractConfigBindings({
+			...config,
+			previews: productionAsPreviews(config),
+		}),
 		{
 			define: config.define,
 			observability: config.observability,
@@ -109,7 +129,10 @@ export function convertProductionToPreviewsConfig(
 export function getProductionBindingsExpectedInPreview(
 	config: Config
 ): EnvBindings {
-	const bindings = extractConfigBindings({ ...config, previews: config });
+	const bindings = extractConfigBindings({
+		...config,
+		previews: productionAsPreviews(config),
+	});
 	return Object.fromEntries(
 		Object.entries(bindings).filter(
 			([name, binding]) =>

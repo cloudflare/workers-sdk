@@ -691,7 +691,7 @@ function extractBindings(
 		env[previews.ai.binding] = { type: "ai", staging: previews.ai.staging };
 	}
 
-	if (previews?.images) {
+	if (previews?.images?.binding) {
 		env[previews.images.binding] = { type: "images" };
 	}
 

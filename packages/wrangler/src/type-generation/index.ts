@@ -3069,7 +3069,9 @@ function collectCoreBindings(
 		}
 
 		if (env.images) {
-			if (!env.images.binding) {
+			if (env.images.binding) {
+				addBinding(env.images.binding, "ImagesBinding", "images", envName);
+			} else if (env.images.url_transformations === undefined) {
 				throwMissingBindingError({
 					binding: env.images,
 					bindingType: "images",
@@ -3077,8 +3079,6 @@ function collectCoreBindings(
 					envName,
 					fieldName: "binding",
 				});
-			} else {
-				addBinding(env.images.binding, "ImagesBinding", "images", envName);
 			}
 		}
 
@@ -4097,19 +4097,19 @@ function collectCoreBindingsPerEnvironment(
 		}
 
 		if (env.images) {
-			if (!env.images.binding) {
+			if (env.images.binding) {
+				bindings.push({
+					bindingCategory: "images",
+					name: env.images.binding,
+					type: "ImagesBinding",
+				});
+			} else if (env.images.url_transformations === undefined) {
 				throwMissingBindingError({
 					binding: env.images,
 					bindingType: "images",
 					configPath: args.config,
 					envName,
 					fieldName: "binding",
-				});
-			} else {
-				bindings.push({
-					bindingCategory: "images",
-					name: env.images.binding,
-					type: "ImagesBinding",
 				});
 			}
 		}
