@@ -459,4 +459,5 @@ export const defaultWranglerConfig: Config = {
 	k2: [],
 	vpc_services: [],
 	vpc_networks: [],
+	oidc_tokens: [],
 };

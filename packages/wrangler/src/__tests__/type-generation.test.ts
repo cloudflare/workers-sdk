@@ -4102,6 +4102,56 @@ describe("generate types - CLI", () => {
 		`);
 	});
 
+	it("should generate types for OIDC token bindings", async ({ expect }) => {
+		fs.writeFileSync(
+			"./index.ts",
+			`export default { async fetch(request, env) { return new Response(await env.API_TOKEN.getToken()); } };`
+		);
+		fs.writeFileSync(
+			"./wrangler.json",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				name: "test-oidc-tokens",
+				main: "./index.ts",
+				oidc_tokens: [
+					{ binding: "API_TOKEN", audience: "https://api.example.com" },
+					{
+						binding: "RSA_TOKEN",
+						audience: "api://token-exchange",
+						alg: "RS256",
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			interface __BaseEnv_Env {
+				API_TOKEN: OidcTokenBinding;
+				RSA_TOKEN: OidcTokenBinding;
+			}
+			declare namespace Cloudflare {
+				interface GlobalProps {
+					mainModule: typeof import("./index");
+				}
+				interface Env extends __BaseEnv_Env {}
+			}
+			interface Env extends __BaseEnv_Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			"
+		`);
+	});
+
 	it("should generate types for VPC networks bindings", async ({ expect }) => {
 		fs.writeFileSync(
 			"./index.ts",

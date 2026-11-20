@@ -122,7 +122,8 @@ function extractBindingNames(config: Config): string[] {
 			case "mtls_certificates":
 			case "dispatch_namespaces":
 			case "vpc_services":
-			case "vpc_networks": {
+			case "vpc_networks":
+			case "oidc_tokens": {
 				const value: Config[typeof key] = untypedValue;
 				return (value ?? []).map((workflowBinding) => workflowBinding.binding);
 			}

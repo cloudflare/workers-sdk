@@ -365,6 +365,15 @@ export function convertBindings(
 		{ remote: true }
 	);
 	convertArrayBindings(
+		"oidc_tokens",
+		"binding",
+		"bindings.oidcToken",
+		[
+			["audience", "audience"],
+			["alg", "alg"],
+		]
+	);
+	convertArrayBindings(
 		"vpc_services",
 		"binding",
 		"bindings.vpcService",

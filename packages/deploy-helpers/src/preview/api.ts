@@ -56,6 +56,8 @@ export interface Binding {
 	service_id?: string;
 	tunnel_id?: string;
 	network_id?: string;
+	audience?: string;
+	alg?: string;
 	destination?: string;
 	staging?: boolean;
 	enable_timer?: boolean;

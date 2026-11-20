@@ -108,6 +108,8 @@ interface BindingTypeMap<TBinding> {
 	logfwdr: any;
 	media: MediaBinding;
 	"mtls-certificate": Fetcher;
+	// Structural until @cloudflare/workers-types publishes OidcTokenBinding.
+	"oidc-token": { getToken(): Promise<string> };
 	"rate-limit": RateLimit;
 	r2: R2Bucket;
 	secret: string;
