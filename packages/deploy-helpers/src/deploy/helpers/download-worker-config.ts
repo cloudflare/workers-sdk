@@ -3,7 +3,7 @@ import { fetchResult } from "../../shared/context";
 import type {
 	ComplianceConfig,
 	ServiceMetadataRes,
-	WorkerMetadata,
+	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
 import type { RawConfig } from "@cloudflare/workers-utils/config";
 
@@ -57,7 +57,7 @@ export async function fetchWorkerConfig(
 		serviceEnvMetadata,
 		cronTriggers,
 	] = await Promise.all([
-		fetchResult<WorkerMetadata["bindings"]>(
+		fetchResult<WorkerMetadataBinding[]>(
 			complianceConfig,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/bindings`
 		),
