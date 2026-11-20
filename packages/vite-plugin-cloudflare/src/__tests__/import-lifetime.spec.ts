@@ -5,11 +5,20 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { CoreHeaders, Miniflare } from "miniflare";
 import { createServer } from "vite";
-import { afterEach, describe, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import type { ClientRequest } from "node:http";
 
 describe("deferred import caller lifetime", () => {
 	runInTempDir();
+	beforeEach(async () => {
+		if (process.platform === "win32") {
+			// Unlike runInTempDir's synchronous realpath, this expands Windows 8.3
+			// names such as RUNNER~1 so Vite can resolve modules.
+			const root = await fs.realpath(process.cwd());
+			process.chdir(root);
+			vi.stubEnv("PWD", root);
+		}
+	});
 	afterEach(() => vi.unstubAllEnvs());
 
 	// https://github.com/cloudflare/workers-sdk/issues/16214
