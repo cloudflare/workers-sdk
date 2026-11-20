@@ -1,5 +1,47 @@
 # miniflare
 
+## 5.20261119.0-beta
+
+### Minor Changes
+
+- [#17016](https://github.com/cloudflare/workers-sdk/pull/17016) [`8f45554`](https://github.com/cloudflare/workers-sdk/commit/8f4555407cd0954fb4eba2cf10e5d3a94a1da2ed) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `unsafeIntrospectWorkflow()` and `unsafeIntrospectWorkflowInstance()` for exported Workflows
+
+  They find a Workflow by its Worker's name and its class name, so code running in Node.js can introspect a Workflow on `ctx.exports` that has no `env` binding:
+
+  ```ts
+  const introspector = await mf.unsafeIntrospectWorkflow(
+    "my-worker",
+    "MyWorkflow"
+  );
+  ```
+
+### Patch Changes
+
+- [#17034](https://github.com/cloudflare/workers-sdk/pull/17034) [`8712fc5`](https://github.com/cloudflare/workers-sdk/commit/8712fc53a8070de0542e02fbb7105a3c2c3ffc7d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix Local Explorer access through localhost subdomains
+
+  Miniflare now trusts `*.localhost` in Host and Origin checks for `/cdn-cgi/` requests. This allows Local Explorer to load through localhost subdomains without returning `403 Invalid Origin header` for its module scripts and API requests.
+
+- [#17031](https://github.com/cloudflare/workers-sdk/pull/17031) [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-19
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17031](https://github.com/cloudflare/workers-sdk/pull/17031) [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261118.1 | ^5.20261119.1 |
+  | workerd                   | 1.20261118.1  | 1.20261119.1  |
+
+- [#17043](https://github.com/cloudflare/workers-sdk/pull/17043) [`4f5b118`](https://github.com/cloudflare/workers-sdk/commit/4f5b1182f2481ddafbc84e32d654fd4fa415128f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update Undici to 7.30.2 to include upstream security fixes
+
+  This patch includes six upstream security fixes covering caching, redirects, and Subresource Integrity verification. Update the shared Undici dependency and matching types together so affected packages ship the patched version.
+
+- [#17016](https://github.com/cloudflare/workers-sdk/pull/17016) [`8f45554`](https://github.com/cloudflare/workers-sdk/commit/8f4555407cd0954fb4eba2cf10e5d3a94a1da2ed) Thanks [@edmundhung](https://github.com/edmundhung)! - Name only the Workflow in the error for a second introspection session
+
+  For a Workflow declared in `exports`, the error said the session was "for binding" the Workflow's class. It now reads `Workflow "my-workflow" already has an active introspection session.`
+
 ## 5.20261118.0-beta
 
 ### Patch Changes

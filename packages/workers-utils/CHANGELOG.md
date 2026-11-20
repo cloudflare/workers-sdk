@@ -1,5 +1,75 @@
 # @cloudflare/workers-utils
 
+## 0.56.0
+
+### Minor Changes
+
+- [#16679](https://github.com/cloudflare/workers-sdk/pull/16679) [`be6aa81`](https://github.com/cloudflare/workers-sdk/commit/be6aa81eb24c8ac86e6fa0a0274a3c9257f58e24) Thanks [@mglewis](https://github.com/mglewis)! - Add `images.url_transformations` to the Wrangler configuration
+
+  The `images` block now accepts a `url_transformations` object for controlling `/cdn-cgi/image/` transformations on requests served by a Worker. `enabled` is required, and `allowed_origins` optionally lists the origins images may be fetched from (use `["*"]` to allow any origin). `binding` is now optional, so `url_transformations` can be configured without an Images binding:
+
+  ```jsonc
+  {
+    "images": {
+      "url_transformations": {
+        "enabled": true,
+        "allowed_origins": ["images.example.com"]
+      }
+    }
+  }
+  ```
+
+  Like the rest of the `images` block, `url_transformations` is not inherited by named environments, and must be specified in each environment that needs it.
+
+  `cloudflare.config.ts` gains the equivalent setting as a top-level `images` field on the Worker, with the Images binding remaining in `env`:
+
+  ```ts
+  export default defineConfig({
+    worker: {
+      name: "my-worker",
+      compatibilityDate: "2026-11-01",
+      images: {
+        urlTransformations: {
+          enabled: true,
+          allowedOrigins: ["images.example.com"],
+        },
+      },
+    },
+  });
+  ```
+
+  `cf migrate` carries `images.url_transformations` over to this field.
+
+  This change adds configuration and validation only. `url_transformations` is not supported in `previews`.
+
+- [#17081](https://github.com/cloudflare/workers-sdk/pull/17081) [`08eeaf4`](https://github.com/cloudflare/workers-sdk/commit/08eeaf4846ee4cd65a3cf73d063dbb88df322033) Thanks [@Naapperas](https://github.com/Naapperas)! - Add `retryWhileVersionNotReadable()` and an optional extra-retryable predicate to `retryOnAPIFailure()`
+
+  `retryWhileVersionNotReadable(read, logger)` retries a Worker version read for up to about 12 seconds while the API reports the version as not found, which can happen for a few seconds after an upload. `retryOnAPIFailure()` accepts a new optional last argument for treating further errors as transient.
+
+- [#16174](https://github.com/cloudflare/workers-sdk/pull/16174) [`629f135`](https://github.com/cloudflare/workers-sdk/commit/629f135e4259c6a19aa9331a7346d993b8ef328a) Thanks [@james-elicx](https://github.com/james-elicx)! - Share static asset configuration and hashing helpers across development and deployment
+
+  The configuration entry point now exposes asset directory validation and option resolution with caller-provided logging. The focused `@cloudflare/workers-utils/asset-hash` entry point provides the content hash used by asset uploads and local Pages serving, allowing development integrations to share this behavior without depending on deployment tooling.
+
+- [#16174](https://github.com/cloudflare/workers-sdk/pull/16174) [`629f135`](https://github.com/cloudflare/workers-sdk/commit/629f135e4259c6a19aa9331a7346d993b8ef328a) Thanks [@james-elicx](https://github.com/james-elicx)! - Add a focused configuration entry point and deprecate root configuration imports
+
+  Import configuration APIs and types from `@cloudflare/workers-utils/config`, including the new `readConfig()` helper for reading, validating and normalizing Wrangler configuration with a caller-provided logger. The entry point also provides configuration discovery, defaults, validation, diagnostics, editing, formatting and binding interpretation helpers.
+
+  Existing configuration exports from `@cloudflare/workers-utils` remain available as deprecated compatibility aliases with the same runtime values and underlying types. Change their import specifier to `@cloudflare/workers-utils/config`; no previously published exports are removed.
+
+### Patch Changes
+
+- [#17031](https://github.com/cloudflare/workers-sdk/pull/17031) [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-19
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17044](https://github.com/cloudflare/workers-sdk/pull/17044) [`56974d4`](https://github.com/cloudflare/workers-sdk/commit/56974d49141e72b19b33b74a19c160f734128108) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Warn when invocation logs are enabled while logs are disabled
+
+  Configuration validation now warns when `observability.logs.invocation_logs` is `true` and `observability.logs.enabled` is `false`. Invocation logging remains disabled until `observability.logs.enabled` is set to `true`.
+
+- [#17043](https://github.com/cloudflare/workers-sdk/pull/17043) [`4f5b118`](https://github.com/cloudflare/workers-sdk/commit/4f5b1182f2481ddafbc84e32d654fd4fa415128f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update Undici to 7.30.2 to include upstream security fixes
+
+  This patch includes six upstream security fixes covering caching, redirects, and Subresource Integrity verification. Update the shared Undici dependency and matching types together so affected packages ship the patched version.
+
 ## 0.55.0
 
 ### Minor Changes
