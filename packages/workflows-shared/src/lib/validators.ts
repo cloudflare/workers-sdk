@@ -48,6 +48,30 @@ export function isValidWorkflowInstanceId(id: string): boolean {
 	return ALLOWED_WORKFLOW_INSTANCE_ID_REGEX.test(id);
 }
 
+// IDs that would collide with Workflows REST API routes.
+const RESERVED_WORKFLOW_INSTANCE_IDS: ReadonlySet<string> = new Set([
+	"batch",
+	"terminate",
+	"terminateAll",
+]);
+// The shape of instance IDs that Workflows generates itself.
+const RESERVED_GENERATED_WORKFLOW_INSTANCE_ID_REGEX = /^cf_[0-9a-f]{64}$/;
+
+/**
+ * Checks whether production reserves an instance ID, so that a new instance
+ * cannot use it even though it satisfies {@link isValidWorkflowInstanceId}.
+ *
+ * @param id - The instance ID to check.
+ * @returns `true` for `batch`, `terminate`, `terminateAll`, and for `cf_`
+ * followed by 64 lowercase hexadecimal characters.
+ */
+export function isReservedWorkflowInstanceId(id: string): boolean {
+	return (
+		RESERVED_WORKFLOW_INSTANCE_IDS.has(id) ||
+		RESERVED_GENERATED_WORKFLOW_INSTANCE_ID_REGEX.test(id)
+	);
+}
+
 /** Validates IDs that address existing instances, including generated cron IDs. */
 export function isValidAddressableWorkflowInstanceId(id: string): boolean {
 	return (
