@@ -55,7 +55,16 @@ export default defineConfig({
 		"unicorn/no-unnecessary-await": "error",
 		"unicorn/no-useless-length-check": "error",
 		"unicorn/prefer-string-starts-ends-with": "error",
+		"vitest/consistent-each-for": "error",
+		"vitest/expect-expect": "error",
+		"vitest/no-conditional-expect": "error",
+		"vitest/no-disabled-tests": "error",
+		"vitest/no-standalone-expect": "error",
 		"vitest/require-local-test-context-for-concurrent-snapshots": "error",
+		"vitest/require-to-throw-message": "error",
+		"vitest/valid-describe-callback": "error",
+		"vitest/valid-expect": "error",
+		"vitest/valid-title": "error",
 
 		// Project rules not covered by, or configured differently from, the preset.
 		curly: ["error", "all"],
@@ -142,6 +151,18 @@ export default defineConfig({
 	],
 	overrides: [
 		...cloudflare.overrides,
+		// The preset relaxes these in tests, but this project enforces them there
+		// too. Miniflare's exemption for explicit `any` below still applies.
+		{
+			files: [
+				"**/*.{test,spec,integration,e2e}.{ts,tsx,mts,cts}",
+				"**/__tests__/**/*.{ts,tsx,mts,cts}",
+			],
+			rules: {
+				"typescript/no-explicit-any": "error",
+				"typescript/no-non-null-assertion": "error",
+			},
+		},
 		// Published packages which all have their own "logger" class that should be used instead.
 		{
 			files: [
@@ -371,6 +392,109 @@ export default defineConfig({
 				"packages/workflows-shared/src/lib/rollback.ts",
 			],
 			rules: { "typescript/no-deprecated": "off" },
+		},
+		{
+			files: [
+				"packages/containers-shared/tests/build-and-push.test.ts",
+				"packages/miniflare/test/http/websocket.spec.ts",
+				"packages/miniflare/test/index.spec.ts",
+				"packages/miniflare/test/plugins/cache/index.spec.ts",
+				"packages/miniflare/test/plugins/cache/parse-http.spec.ts",
+				"packages/miniflare/test/plugins/core/proxy/fetch-sync.spec.ts",
+				"packages/miniflare/test/plugins/d1/suite.ts",
+				"packages/miniflare/test/plugins/kv/index.spec.ts",
+				"packages/miniflare/test/plugins/kv/sites.spec.ts",
+				"packages/miniflare/test/plugins/local-explorer/observability.spec.ts",
+				"packages/miniflare/test/plugins/pipelines/index.spec.ts",
+				"packages/miniflare/test/plugins/r2/index.spec.ts",
+				"packages/miniflare/test/plugins/r2/s3.spec.ts",
+				"packages/miniflare/test/plugins/r2/validator.spec.ts",
+				"packages/miniflare/test/plugins/shared/router.spec.ts",
+				"packages/miniflare/test/runtime/container-session.spec.ts",
+				"packages/miniflare/test/storage-owner.spec.ts",
+				"packages/vite-plugin-cloudflare/playground/config-changes/__tests__/config-changes.spec.ts",
+				"packages/vite-plugin-cloudflare/playground/websockets/__tests__/websockets.spec.ts",
+				"packages/vite-plugin-cloudflare/src/__tests__/websockets.spec.ts",
+				"packages/workers-utils/tests/xdg-app-paths.test.ts",
+				"packages/wrangler/e2e/containers.dev.test.ts",
+				"packages/wrangler/e2e/deployments.test.ts",
+				"packages/wrangler/e2e/dev.test.ts",
+				"packages/wrangler/e2e/multiworker-dev.test.ts",
+				"packages/wrangler/e2e/pages-dev.test.ts",
+				"packages/wrangler/e2e/versions.test.ts",
+				"packages/wrangler/src/__tests__/containers/delete.test.ts",
+				"packages/wrangler/src/__tests__/containers/deploy.test.ts",
+				"packages/wrangler/src/__tests__/containers/registries.test.ts",
+				"packages/wrangler/src/__tests__/deploy/assets.test.ts",
+				"packages/wrangler/src/__tests__/deploy/build.test.ts",
+				"packages/wrangler/src/__tests__/deploy/core.test.ts",
+				"packages/wrangler/src/__tests__/deploy/environments.test.ts",
+				"packages/wrangler/src/__tests__/deploy/routes.test.ts",
+				"packages/wrangler/src/__tests__/deploy/secrets.test.ts",
+				"packages/wrangler/src/__tests__/dev.test.ts",
+				"packages/wrangler/src/__tests__/init.test.ts",
+				"packages/wrangler/src/__tests__/middleware.test.ts",
+				"packages/wrangler/src/__tests__/versions/versions.deploy.test.ts",
+			],
+			rules: { "vitest/expect-expect": "off" },
+		},
+		{
+			files: [
+				"packages/wrangler/src/__tests__/init.test.ts",
+				"packages/wrangler/src/__tests__/versions/versions.upload.test.ts",
+			],
+			rules: { "vitest/no-conditional-expect": "off" },
+		},
+		{
+			files: [
+				"packages/miniflare/test/index.spec.ts",
+				"packages/miniflare/test/plugins/queues/index.spec.ts",
+				"packages/miniflare/test/runtime/container-session.spec.ts",
+				"packages/vite-plugin-cloudflare/e2e/remote-bindings.test.ts",
+				"packages/wrangler/e2e/remote-binding/miniflare-remote-resources.test.ts",
+				"packages/wrangler/src/__tests__/queues/queues.test.ts",
+			],
+			rules: { "vitest/no-disabled-tests": "off" },
+		},
+		{
+			files: [
+				"packages/wrangler/src/__tests__/pages/deploy.test.ts",
+				"packages/wrangler/src/__tests__/r2/bucket.test.ts",
+				"packages/wrangler/src/__tests__/worker-namespace.test.ts",
+			],
+			rules: { "vitest/no-standalone-expect": "off" },
+		},
+		{
+			files: [
+				"packages/wrangler/src/__tests__/init.test.ts",
+				"packages/wrangler/src/__tests__/output.test.ts",
+			],
+			rules: { "vitest/require-to-throw-message": "off" },
+		},
+		{
+			files: [
+				"packages/vite-plugin-cloudflare/e2e/remote-bindings.test.ts",
+				"packages/wrangler/e2e/remote-binding/miniflare-remote-resources.test.ts",
+			],
+			rules: { "vitest/valid-describe-callback": "off" },
+		},
+		{
+			files: [
+				"packages/cli/__tests__/cli.test.ts",
+				"packages/create-cloudflare/e2e/tests/cli/cli.test.ts",
+				"packages/miniflare/test/index.spec.ts",
+				"packages/miniflare/test/plugins/local-explorer/email.spec.ts",
+				"packages/workers-utils/tests/config/patch-config.test.ts",
+				"packages/wrangler/e2e/assets-multiworker.test.ts",
+				"packages/wrangler/src/__tests__/containers/deploy.test.ts",
+				"packages/wrangler/src/__tests__/deploy/workers-dev.test.ts",
+				"packages/wrangler/src/__tests__/package-manager.test.ts",
+				"packages/wrangler/src/__tests__/r2/bucket.test.ts",
+				"packages/wrangler/src/__tests__/type-generation.test.ts",
+				"packages/wrangler/src/__tests__/versions/versions.deploy.test.ts",
+				"packages/wrangler/src/__tests__/workflows.test.ts",
+			],
+			rules: { "vitest/valid-title": "off" },
 		},
 	],
 });
