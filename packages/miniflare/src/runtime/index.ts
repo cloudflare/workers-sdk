@@ -292,7 +292,34 @@ export class Runtime {
 		const startupLogBuffer = new StartupLogBuffer();
 		this.#process = runtimeProcess;
 		const processExitPromise = waitForExit(runtimeProcess);
-		this.#processExitPromise = processExitPromise;
+		const processClosedPromise = new Promise<void>((resolve) => {
+			runtimeProcess.once("close", () => resolve());
+		});
+		const processSpawnPromise = once(runtimeProcess, "spawn");
+		// Failed spawns emit error and close, but never exit.
+		this.#processExitPromise = processSpawnPromise.then(
+			() => processExitPromise,
+			() => processClosedPromise
+		);
+		try {
+			await processSpawnPromise;
+		} catch (cause) {
+			this.#process = undefined;
+			for (const stream of runtimeProcess.stdio) {
+				stream?.destroy();
+			}
+			await processClosedPromise;
+			assert(cause instanceof Error);
+			const errno =
+				"code" in cause && typeof cause.code === "string"
+					? cause.code
+					: "UNKNOWN";
+			throw new MiniflareCoreError(
+				"WORKERD_SPAWN_FAILED",
+				`WORKERD_SPAWN_FAILED: ${errno}`,
+				cause
+			);
+		}
 
 		const stdoutStream = runtimeProcess.stdout.pipe(
 			startupLogBuffer.stdoutStream
@@ -394,7 +421,7 @@ export class Runtime {
 	dispose(): Awaitable<void> {
 		const runtimeProcess = this.#process;
 		if (runtimeProcess === undefined) {
-			return;
+			return this.#processExitPromise;
 		}
 
 		// Clear reference to prevent potential race conditions
