@@ -171,6 +171,96 @@ test("accepts another active batch while the full batch persists", async ({
 	await drained;
 });
 
+test("waits for room instead of dropping spans that arrive at once", async ({
+	expect,
+}) => {
+	const store = new DeferredStore();
+	// One row per batch: the first span starts a save, the second fills the
+	// active batch, and the third used to be dropped.
+	const writer = new TraceWriter(1);
+	const owner = writer.createOwner(store);
+
+	const ingested = writer
+		.enqueueCompletedSpans(owner, [span("a", 1), span("b", 1), span("c", 1)])
+		.then(() => writer.drain(owner));
+	for (let i = 0; i < 3; i++) {
+		await setImmediate();
+		expect(store.calls).toHaveLength(i + 1);
+		store.calls[i].resolve();
+	}
+	await ingested;
+
+	expect(
+		store.calls.flatMap((call) => call.spans.map((row) => row.spanId))
+	).toEqual(["a", "b", "c"]);
+	expect(store.maxInFlight).toBe(1);
+});
+
+test("waits for room when another owner filled the writer", async ({
+	expect,
+}) => {
+	const store = new DeferredStore();
+	const writer = new TraceWriter(1);
+	const tail = writer.createOwner(store);
+	const otlp = writer.createOwner(store);
+
+	// Another invocation fills both batches before this export queues anything,
+	// so there are none of its own rows to wait for.
+	expect(writer.enqueueCompletedSpan(tail, span("tail-1", 1))).toBe(true);
+	expect(writer.enqueueCompletedSpan(tail, span("tail-2", 1))).toBe(true);
+	const tailDrained = writer.drain(tail);
+	const otlpDrained = writer
+		.enqueueCompletedSpans(otlp, [span("otlp", 1)])
+		.then(() => writer.drain(otlp));
+	for (let i = 0; i < 3; i++) {
+		await setImmediate();
+		expect(store.calls).toHaveLength(i + 1);
+		store.calls[i].resolve();
+	}
+	await Promise.all([tailDrained, otlpDrained]);
+
+	expect(
+		store.calls.flatMap((call) => call.spans.map((row) => row.spanId))
+	).toEqual(["tail-1", "tail-2", "otlp"]);
+});
+
+test("waits for room freed by a clear", async ({ expect }) => {
+	const store = new DeferredStore();
+	const writer = new TraceWriter(1);
+	const tail = writer.createOwner(store);
+	const otlp = writer.createOwner(store);
+
+	expect(writer.enqueueCompletedSpan(tail, span("tail-1", 1))).toBe(true);
+	expect(writer.enqueueCompletedSpan(tail, span("tail-2", 1))).toBe(true);
+	let accepted = false;
+	const queued = writer
+		.enqueueCompletedSpans(otlp, [span("otlp", 1)])
+		.then(() => {
+			accepted = true;
+		});
+	await setImmediate();
+	expect(accepted).toBe(false);
+
+	// The clear takes the full batch, so the waiting span fits at once.
+	const cleared = writer.clear(store);
+	await queued;
+	const drained = Promise.all([writer.drain(tail), writer.drain(otlp)]);
+	store.calls[0].resolve();
+	await setImmediate();
+	store.calls[1].resolve();
+	await setImmediate();
+	store.clearCalls[0].resolve();
+	await cleared;
+	await setImmediate();
+	expect(store.calls).toHaveLength(3);
+	store.calls[2].resolve();
+	await drained;
+
+	expect(
+		store.calls.map((call) => call.spans.map((row) => row.spanId))
+	).toEqual([["tail-1"], ["tail-2"], ["otlp"]]);
+});
+
 test("continues draining after a failed persist and rejects the owner fence", async ({
 	expect,
 }) => {

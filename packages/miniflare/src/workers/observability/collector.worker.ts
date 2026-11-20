@@ -57,10 +57,11 @@ export default class LocalObservabilityCollector extends WorkerEntrypoint<Env> {
 			if (spans.length > 0) {
 				writer ??= new TraceWriter(this.env.TRACE_BATCH_SIZE);
 				const owner = writer.createOwner(store);
-				for (const span of spans) {
-					writer.enqueueCompletedSpan(owner, span);
+				try {
+					await writer.enqueueCompletedSpans(owner, spans);
+				} finally {
+					await writer.drain(owner);
 				}
-				await writer.drain(owner);
 			}
 			// An empty `ExportTraceServiceResponse`.
 			return new Response(null, {

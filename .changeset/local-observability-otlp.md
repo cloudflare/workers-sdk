@@ -2,6 +2,8 @@
 "miniflare": minor
 ---
 
-Capture local observability spans over OTLP instead of from streaming tail events
+Show precise span timings in local observability
 
-With `unsafeObservability`, workerd now exports every invocation's spans to the local observability collector over OTLP, rather than the collector rebuilding them from streaming tail events. Spans carry precise timestamps rather than the coarse I/O time tail events report. Logs and exceptions are still captured from the tail stream. Requires a workerd release with the `tracing.otlp` config setting.
+With local observability on, the Local Explorer now shows each span's real start time and duration. Previously, spans were rebuilt from streaming tail events, which only report coarse I/O times. workerd now exports the spans directly to Miniflare's collector. Logs and exceptions are captured as before.
+
+While local observability is on, which it is by default, a streaming tail worker configured locally no longer receives `spanOpen` and `spanClose` events. Spans on streaming tail workers are being deprecated, both in local development and in production.
