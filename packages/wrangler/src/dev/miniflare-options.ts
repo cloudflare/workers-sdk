@@ -6,6 +6,7 @@ import type { RemoteProxyConnectionString } from "miniflare";
 
 export {
 	buildAssetOptions,
+	buildImageUrlTransformationsOptions,
 	buildSitesOptions,
 	getDefaultProjectTmpPath,
 	getIdentifier,

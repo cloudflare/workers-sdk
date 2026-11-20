@@ -1388,6 +1388,9 @@ export function getMiniflareWorkerOptions(
 		modulesRules,
 		zone: getZoneFromConfig(config),
 		access: config.access?.dev,
+		imageUrlTransformations: buildImageUrlTransformationsOptions(
+			config.images?.url_transformations
+		),
 		connectHandlers: config.connect.map((handler) => ({
 			protocol: handler.protocol,
 			port: handler.port,
@@ -1481,4 +1484,23 @@ function assignWorkflowEvents(
 		}
 	}
 	return assignment;
+}
+
+/**
+ * Converts the Wrangler `images.url_transformations` config to Miniflare's
+ * `imageUrlTransformations` option.
+ *
+ * @param urlTransformations The Wrangler `images.url_transformations` config.
+ * @returns The Miniflare option, or `undefined` if not configured.
+ */
+export function buildImageUrlTransformationsOptions(
+	urlTransformations: NonNullable<Config["images"]>["url_transformations"]
+): V4WorkerOptions["imageUrlTransformations"] {
+	if (urlTransformations === undefined) {
+		return undefined;
+	}
+	return {
+		enabled: urlTransformations.enabled,
+		allowedOrigins: urlTransformations.allowed_origins,
+	};
 }

@@ -64,6 +64,7 @@ import {
 	renderExportsReconciliationSuccess,
 } from "./helpers/exports-reconciliation";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
+import { applyImagesUrlTransformations } from "./helpers/images-url-transformations";
 import { collectPackageDependencies } from "./helpers/package-dependencies";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
@@ -927,6 +928,13 @@ async function deployWorker(
 		previewUrlsConfigFieldName: options.previewUrlsConfigFieldName,
 		previewUrlsConfigAssignment: options.previewUrlsConfigAssignment,
 	});
+
+	await applyImagesUrlTransformations(
+		config,
+		accountId,
+		scriptName,
+		options.deployCommand
+	);
 
 	logger.log("Current Version ID:", versionId);
 
