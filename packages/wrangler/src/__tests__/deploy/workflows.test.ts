@@ -1454,43 +1454,6 @@ describe("deploy", () => {
 				]);
 			});
 
-			it("should explain a paid-plan error for scheduled workflow exports returned by the deploy", async ({
-				expect,
-			}) => {
-				writeWranglerConfig({
-					main: "index.js",
-					exports: {
-						MyWorkflow: {
-							type: "workflow",
-							name: "my-workflow",
-							schedules: "0 * * * *",
-						},
-					},
-				});
-				await fs.promises.writeFile("index.js", workflowSource);
-
-				mockUploadWorkerRequest();
-				msw.use(
-					http.post(
-						"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
-						() =>
-							HttpResponse.json(
-								createFetchResult(null, false, [
-									{
-										code: WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE,
-										message: "workflow.cron_requires_paid_plan",
-									},
-								]),
-								{ status: 403 }
-							)
-					)
-				);
-
-				await expect(runWrangler("deploy")).rejects.toThrow(
-					'A Workflow has "schedules" configured, but scheduled Workflows require a paid Workers plan.'
-				);
-			});
-
 			it("should check a binding against an export using the name passed to --name", async ({
 				expect,
 			}) => {

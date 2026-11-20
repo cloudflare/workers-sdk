@@ -53,10 +53,7 @@ import {
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "./helpers/environments";
-import {
-	EXPORTS_RECONCILIATION_ERROR_CODE,
-	WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE,
-} from "./helpers/error-codes";
+import { EXPORTS_RECONCILIATION_ERROR_CODE } from "./helpers/error-codes";
 import { resolveExportsUploadPayload } from "./helpers/exports";
 import {
 	isExportsReconciliationErrorDetails,
@@ -720,22 +717,6 @@ async function deployWorker(
 				throw new UserError(
 					renderExportsReconciliationError(err.meta.details),
 					{ telemetryMessage: "deploy do exports reconciliation failed" }
-				);
-			}
-
-			// Workflow exports are provisioned on deploy, so this can come back here
-			// as well as from `triggers deploy`.
-			if (
-				err instanceof APIError &&
-				err.code === WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE
-			) {
-				err.preventReport();
-				throw new UserError(
-					`A Workflow has "schedules" configured, but scheduled Workflows require a paid Workers plan.`,
-					{
-						cause: err,
-						telemetryMessage: "deploy workflow cron requires paid plan",
-					}
 				);
 			}
 
