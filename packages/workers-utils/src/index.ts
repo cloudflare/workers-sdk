@@ -98,7 +98,7 @@ export { openInBrowser } from "./open-in-browser";
 export { clearOutputFilePath, writeOutput } from "./output";
 export type { OutputEntry } from "./output";
 
-export { retryOnAPIFailure } from "./retry";
+export { retryOnAPIFailure, retryWhileVersionNotReadable } from "./retry";
 export { formatTime } from "./format-time";
 export {
 	getHostFromRoute,

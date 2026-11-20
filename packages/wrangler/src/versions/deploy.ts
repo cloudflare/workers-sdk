@@ -17,7 +17,11 @@ import {
 	renderInconsistentExportsAcrossVersionsError,
 	resolveVersionedDurableObjectContainerApplications,
 } from "@cloudflare/deploy-helpers";
-import { APIError, UserError } from "@cloudflare/workers-utils";
+import {
+	APIError,
+	retryWhileVersionNotReadable,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { containersScope } from "../containers";
@@ -214,7 +218,10 @@ export const versionsDeployCommand = createCommand({
 
 		const selectedVersions = await Promise.all(
 			confirmedVersionsToDeploy.map((versionId) =>
-				fetchVersion(config, accountId, workerName, versionId)
+				retryWhileVersionNotReadable(
+					() => fetchVersion(config, accountId, workerName, versionId),
+					logger
+				)
 			)
 		);
 		const containerApplications =
@@ -425,12 +432,16 @@ async function promptVersionsToDeploy(
 					versionCache
 				);
 			}
-			await fetchVersions(
-				complianceConfig,
-				accountId,
-				workerName,
-				versionCache,
-				...defaultSelectedVersionIds
+			await retryWhileVersionNotReadable(
+				() =>
+					fetchVersions(
+						complianceConfig,
+						accountId,
+						workerName,
+						versionCache,
+						...defaultSelectedVersionIds
+					),
+				logger
 			);
 		},
 	});
