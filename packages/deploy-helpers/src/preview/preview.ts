@@ -1154,42 +1154,60 @@ async function runPreview(
 			throw e;
 		}
 	}
-	const isNewPreview = !existingPreview;
+	let isNewPreview = !existingPreview;
 	const previewRequest = assemblePreviewScriptSettings(config);
 
 	let previewResource: PreviewResource;
-	if (isNewPreview) {
-		previewResource = await createPreview(
+	if (!existingPreview) {
+		try {
+			previewResource = await createPreview(
+				config,
+				accountId,
+				workerName,
+				{ name: previewName, ...previewRequest },
+				{ ignoreBaseConfig }
+			);
+		} catch (e) {
+			/**
+			 * Error 100338 means a Preview with this name already exists.
+			 * Another build may have created it between our initial GET and POST,
+			 * so re-read the Preview and continue through the update path.
+			 */
+			if (!(e instanceof Error && "code" in e && e.code === 100338)) {
+				throw e;
+			}
+			previewResource = await getPreview(
+				config,
+				accountId,
+				workerName,
+				previewIdentifier
+			);
+			isNewPreview = false;
+		}
+	} else {
+		previewResource = existingPreview;
+	}
+
+	if (
+		isNewPreview &&
+		replaceTailConsumersAfterCreate &&
+		previewRequest.tail_consumers !== undefined
+	) {
+		previewResource = await editPreview(
 			config,
 			accountId,
 			workerName,
-			{ name: previewName, ...previewRequest },
-			{ ignoreBaseConfig }
+			previewIdentifier,
+			{ tail_consumers: previewRequest.tail_consumers }
 		);
-		if (
-			replaceTailConsumersAfterCreate &&
-			previewRequest.tail_consumers !== undefined
-		) {
-			previewResource = await editPreview(
-				config,
-				accountId,
-				workerName,
-				previewIdentifier,
-				{ tail_consumers: previewRequest.tail_consumers }
-			);
-		}
-	} else {
-		if (Object.keys(previewRequest).length > 0) {
-			previewResource = await editPreview(
-				config,
-				accountId,
-				workerName,
-				previewIdentifier,
-				previewRequest
-			);
-		} else {
-			previewResource = existingPreview as PreviewResource;
-		}
+	} else if (!isNewPreview && Object.keys(previewRequest).length > 0) {
+		previewResource = await editPreview(
+			config,
+			accountId,
+			workerName,
+			previewIdentifier,
+			previewRequest
+		);
 	}
 
 	const { scopedContainerConfig, normalisedContainerConfig } =
