@@ -56,7 +56,7 @@ export class Response extends BaseResponse {
 		this[kWebSocket] = init?.webSocket ?? null;
 	}
 
-	// JSDoc comment so retained when bundling types with api-extractor
+	// JSDoc comment so retained when bundling declarations.
 	/** @ts-expect-error `status` is actually defined as a getter internally */
 	get status() {
 		// When passing a WebSocket, we validate that the passed status was actually
