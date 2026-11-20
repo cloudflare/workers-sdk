@@ -69,4 +69,6 @@ import { convertWranglerConfig } from "@cloudflare/codemods/wrangler-to-cf";
 const { base, environments, followUps } = convertWranglerConfig(rawConfig);
 ```
 
-`base` is the top-level configuration and `environments` maps each Wrangler environment name to its configuration. Each is a tree of plain values, objects (`kind: "object"`), and calls to the `cf/config` helpers (`kind: "call"`, for example `bindings.kv`), which is what `migrateWranglerToCf` renders into `cloudflare.config.ts`. Pass `{ bundler: "wrangler" }` to convert for the Wrangler bundler. The function reads and writes no files, so it reports no dependency or secret-file follow-ups.
+`base` is the top-level `ConvertedBranch`, and `environments` is a `Map<string, ConvertedBranch>` keyed by Wrangler environment name. Each branch has a `config: OutputObject` and, if the source branch defines `previews`, a `previewConfig: OutputObject`. For example, read the top-level tree from `base.config` or the `staging` tree from `environments.get("staging")?.config`. These trees contain plain values, objects (`kind: "object"`), and calls to `cf/config` helpers (`kind: "call"`, for example `bindings.kv`). `migrateWranglerToCf` renders these trees into `cloudflare.config.ts`.
+
+Pass `{ bundler: "wrangler" }` to convert for the Wrangler bundler. The function reads and writes no files, so it reports no dependency or secret-file follow-ups.
