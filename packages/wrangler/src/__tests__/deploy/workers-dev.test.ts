@@ -1193,6 +1193,38 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
+			it.for([null, undefined])(
+				"recovers an interrupted first deploy when script is %s",
+				async (script, { expect }) => {
+					writeWranglerConfig();
+					writeWorkerSource();
+					const lookupSubdomain = vi.fn(() =>
+						HttpResponse.json(
+							createFetchResult({ subdomain: "test-sub-domain" })
+						)
+					);
+					msw.use(
+						http.get("*/accounts/:accountId/workers/services/:scriptName", () =>
+							HttpResponse.json(
+								createFetchResult({
+									default_environment: { environment: "production", script },
+								})
+							)
+						),
+						http.get("*/accounts/:accountId/workers/subdomain", lookupSubdomain)
+					);
+					mockUploadWorkerRequest({
+						useOldUploadApi: true,
+						expectedEntry: () => expect(lookupSubdomain).toHaveBeenCalled(),
+					});
+
+					await runWrangler("deploy ./index");
+
+					expect(std.out).toContain("Uploaded test-name");
+					expect(std.out).toContain("Current Version ID: Galaxy-Class");
+				}
+			);
+
 			it("uploads a new Worker when granular auth prevents the account subdomain lookup", async ({
 				expect,
 			}) => {

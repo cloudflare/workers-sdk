@@ -46,7 +46,7 @@ export async function getMigrationsToUpload(
 					config,
 					`/accounts/${accountId}/workers/services/${scriptName}`
 				);
-				script = serviceMetadata.default_environment.script;
+				script = serviceMetadata.default_environment.script ?? undefined;
 			} catch (err) {
 				suppressNotFoundError(err);
 			}

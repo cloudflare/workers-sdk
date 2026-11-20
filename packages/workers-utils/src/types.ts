@@ -396,10 +396,10 @@ export type ServiceMetadataRes = {
 		environment: string;
 		created_on: string;
 		modified_on: string;
-		script: {
+		script?: {
 			id: string;
 			tag: string;
-			tags: string[];
+			tags: string[] | null;
 			etag: string;
 			handlers: string[];
 			modified_on: string;
@@ -416,7 +416,7 @@ export type ServiceMetadataRes = {
 			placement_mode?: "smart";
 			tail_consumers?: TailConsumer[];
 			observability?: Observability;
-		};
+		} | null;
 	};
 	created_on: string;
 	modified_on: string;

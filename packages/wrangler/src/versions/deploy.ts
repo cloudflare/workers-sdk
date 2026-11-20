@@ -46,7 +46,10 @@ import {
 	resolveDurableObjectsCodeUpdateStrategy,
 } from "./deployment-args";
 import type { Percentage, VersionCache, VersionId } from "./types";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type {
+	ComplianceConfig,
+	ServiceMetadataRes,
+} from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils/config";
 
 const EPSILON = 0.001; // used to avoid floating-point errors. Comparions to a value +/- EPSILON will mean "roughly equals the value".
@@ -343,10 +346,11 @@ export const versionsDeployCommand = createCommand({
 
 		let workerTag: string | null = null;
 		try {
-			const serviceMetaData = await fetchResult<{
-				default_environment: { script: { tag: string } };
-			}>(config, `/accounts/${accountId}/workers/services/${workerName}`);
-			workerTag = serviceMetaData.default_environment.script.tag;
+			const serviceMetaData = await fetchResult<ServiceMetadataRes>(
+				config,
+				`/accounts/${accountId}/workers/services/${workerName}`
+			);
+			workerTag = serviceMetaData.default_environment.script?.tag ?? null;
 		} catch {
 			// If the fetch fails then we just output a null for the workerTag.
 		}
