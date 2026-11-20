@@ -28,6 +28,12 @@ overrides:
   "@aws-sdk/core@3>fast-xml-parser": "^4.5.5"
   # Verdaccio pins 4.17.21 in the retained mock npm registry.
   "lodash@<4.18.1": "^4.18.1"
+peerDependencyRules:
+  allowedVersions:
+    # Retained Remix playground dependencies still declare TypeScript 5 ranges.
+    "unbuild>typescript": "6"
+    "@remix-run/cloudflare>typescript": "6"
+    "@remix-run/server-runtime>typescript": "6"
 patchedDependencies:
   # Remove the unused name-preservation helper import from declaration output.
   # See https://github.com/sxzz/rolldown-plugin-dts/issues/369
@@ -38,7 +44,7 @@ patchedDependencies:
 catalog:
   tsdown: "0.22.14"
   "@types/node": 22.15.17
-  typescript: 5.8.3
+  typescript: 6.0.3
   undici: 7.30.2
   undici-types: 7.30.2
   vitest: 5.0.4
