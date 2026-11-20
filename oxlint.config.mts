@@ -359,12 +359,6 @@ export default defineConfig({
 		// findings after upgrading Oxlint and moving to the tsrs type checker.
 		{
 			files: [
-				"packages/pages-functions/src/__tests__/routes-consolidation.test.ts",
-			],
-			rules: { "unicorn/prefer-set-size": "off" },
-		},
-		{
-			files: [
 				"packages/vite-plugin-cloudflare/playground/node-compat/worker-process/index.ts",
 			],
 			rules: { "no-global-assign": "off" },
