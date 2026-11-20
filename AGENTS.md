@@ -53,7 +53,8 @@ unless the task and environment support them.
 
 Turbo orchestrates workspace tasks. Shared TypeScript configuration lives in
 `packages/workers-tsconfig/`; lint and formatting behavior is defined by
-`.oxlintrc.jsonc`, `.oxfmtrc.jsonc`, and `packages/lint-config-shared/`.
+`oxlint.config.mts` (built on `@cloudflare/oxlint-config`), `.oxfmtrc.jsonc`,
+and `packages/lint-config-shared/`.
 
 ## Cross-Tool Development Features
 
