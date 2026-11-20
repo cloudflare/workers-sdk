@@ -10,9 +10,14 @@ import {
 	prepareContainerImagesForDev,
 	validateAndEncodeGarKey,
 } from "../src/images";
+import { dockerImageInspect } from "../src/inspect";
 import { runDockerCmd, verifyDockerInstalled } from "../src/utils";
 
 vi.mock("../src/build", () => ({ startContainerBuild: vi.fn() }));
+
+vi.mock("../src/inspect", () => ({
+	dockerImageInspect: vi.fn().mockResolvedValue("sha256:test"),
+}));
 
 vi.mock("../src/login", () => ({
 	dockerLoginImageRegistry: vi.fn(),
@@ -364,6 +369,62 @@ describe("prepareContainerImagesForDev", () => {
 	afterEach(() => {
 		vi.unstubAllEnvs();
 	});
+
+	it.skipIf(process.platform === "win32")(
+		"waits for the built image tag to become inspectable",
+		async ({ expect }) => {
+			let finishInspect: (imageId: string) => void = () => undefined;
+			const inspection = new Promise<string>((resolve) => {
+				finishInspect = resolve;
+			});
+			const onEnd = vi.fn();
+			vi.mocked(startContainerBuild).mockResolvedValue({
+				abort: vi.fn(),
+				ready: Promise.resolve(),
+			});
+			vi.mocked(dockerImageInspect).mockReturnValueOnce(inspection);
+
+			const preparation = prepareContainerImagesForDev({
+				dockerPath: "test-docker",
+				containerOptions: [
+					{
+						class_name: "Container",
+						image_tag: "cloudflare-dev/container:build-id",
+						dockerfile: "FROM scratch",
+						image_build_context: ".",
+					},
+				],
+				registryConfigureCommand: "test registry configure",
+				onContainerImagePreparationStart: vi.fn(),
+				onContainerImagePreparationEnd: onEnd,
+				logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+			});
+
+			await vi.waitFor(() =>
+				expect(dockerImageInspect).toHaveBeenCalledWith("test-docker", {
+					imageTag: "cloudflare-dev/container:build-id",
+					formatString: "{{ .Id }}",
+				})
+			);
+			expect(onEnd).not.toHaveBeenCalled();
+
+			finishInspect("sha256:test");
+			await preparation;
+
+			expect(onEnd).toHaveBeenCalledWith({
+				containerOptions: expect.objectContaining({
+					image_tag: "cloudflare-dev/container:build-id",
+				}),
+			});
+			expect(dockerImageInspect).toHaveBeenCalledExactlyOnceWith(
+				"test-docker",
+				{
+					imageTag: "cloudflare-dev/container:build-id",
+					formatString: "{{ .Id }}",
+				}
+			);
+		}
+	);
 
 	it.skipIf(process.platform === "win32")(
 		"prepares only the sidecar when no application images are configured",
