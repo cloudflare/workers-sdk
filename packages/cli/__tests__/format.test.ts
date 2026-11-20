@@ -50,12 +50,10 @@ describe("format", () => {
 		);
 	});
 
-	test("sectionHeader joins title and subtitle with a middot", ({
-		expect,
-	}) => {
-		expect(sectionHeader("Step 1 of 3", "Create an application")).toMatchInlineSnapshot(
-			'"▎ Step 1 of 3 · Create an application"'
-		);
+	test("sectionHeader joins title and subtitle with a middot", ({ expect }) => {
+		expect(
+			sectionHeader("Step 1 of 3", "Create an application")
+		).toMatchInlineSnapshot('"▎ Step 1 of 3 · Create an application"');
 	});
 
 	test("labelValue separates with colon-space", ({ expect }) => {

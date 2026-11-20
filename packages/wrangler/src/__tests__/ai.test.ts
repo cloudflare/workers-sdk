@@ -168,8 +168,8 @@ describe("ai commands", () => {
 		await runWrangler("ai models list");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			┌─┬─┬─┬─┐
 			│ model │ name │ description │ task │
 			├─┼─┼─┼─┤

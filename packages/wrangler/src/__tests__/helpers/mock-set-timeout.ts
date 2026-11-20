@@ -7,9 +7,9 @@ export function mockSetTimeout() {
 	beforeEach(() => {
 		setTimeoutSpy = vi
 			.spyOn(global, "setTimeout")
-			// @ts-expect-error we're using a very simple setTimeout mock here
+			// @ts-expect-error -- The test substitutes an immediate callback for the timeout overloads
 			.mockImplementation((fn, _period) => {
-				setImmediate(fn);
+				return setImmediate(fn);
 			});
 	});
 

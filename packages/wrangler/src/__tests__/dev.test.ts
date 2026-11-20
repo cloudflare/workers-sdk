@@ -2834,8 +2834,8 @@ describe("wrangler dev", { concurrent: false }, () => {
 			await runWranglerUntilConfig("dev index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Your Worker has access to the following bindings:
 				Binding                                Resource               Mode
 				env.HYPERDRIVE_REMOTE (remote-id)      Hyperdrive Config      remote

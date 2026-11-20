@@ -962,10 +962,10 @@ describe("deploy", () => {
 			);
 
 			expect(std.info).toMatchInlineSnapshot(`
-			"Fetching list of already uploaded assets...
-			Building list of assets to upload...
-			 + large-file.0ea0637a45.txt (uploading new version of large-file.txt)"
-		`);
+				"Fetching list of already uploaded assets...
+				Building list of assets to upload...
+				 + large-file.0ea0637a45.txt (uploading new version of large-file.txt)"
+			`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				⛅️ wrangler · vx.x.x
@@ -973,10 +973,10 @@ describe("deploy", () => {
 				"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
-			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFile too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFile too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits[0m
 
-			        "
-		      `);
+				"
+			`);
 		});
 
 		it("should batch assets in groups <100 mb", async ({ expect }) => {
@@ -1107,9 +1107,9 @@ describe("deploy", () => {
 			);
 
 			expect(std.info).toMatchInlineSnapshot(`
-			"Fetching list of already uploaded assets...
-			Building list of assets to upload..."
-		`);
+				"Fetching list of already uploaded assets...
+				Building list of assets to upload..."
+			`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				⛅️ wrangler · vx.x.x
@@ -1362,20 +1362,20 @@ describe("deploy", () => {
 
 			expect(requestCount).toBeLessThan(3);
 			expect(std.info).toMatchInlineSnapshot(`
-			"Fetching list of already uploaded assets...
-			Building list of assets to upload...
-			 + file-0.f0d69f705d.txt (uploading new version of file-0.txt)
-			 + file-1.f0d69f705d.txt (uploading new version of file-1.txt)
-			 + file-2.f0d69f705d.txt (uploading new version of file-2.txt)
-			 + file-3.f0d69f705d.txt (uploading new version of file-3.txt)
-			 + file-4.f0d69f705d.txt (uploading new version of file-4.txt)
-			 + file-5.f0d69f705d.txt (uploading new version of file-5.txt)
-			 + file-6.f0d69f705d.txt (uploading new version of file-6.txt)
-			 + file-7.f0d69f705d.txt (uploading new version of file-7.txt)
-			 + file-8.f0d69f705d.txt (uploading new version of file-8.txt)
-			Uploading 9 new assets...
-			Upload failed, aborting..."
-		`);
+				"Fetching list of already uploaded assets...
+				Building list of assets to upload...
+				 + file-0.f0d69f705d.txt (uploading new version of file-0.txt)
+				 + file-1.f0d69f705d.txt (uploading new version of file-1.txt)
+				 + file-2.f0d69f705d.txt (uploading new version of file-2.txt)
+				 + file-3.f0d69f705d.txt (uploading new version of file-3.txt)
+				 + file-4.f0d69f705d.txt (uploading new version of file-4.txt)
+				 + file-5.f0d69f705d.txt (uploading new version of file-5.txt)
+				 + file-6.f0d69f705d.txt (uploading new version of file-6.txt)
+				 + file-7.f0d69f705d.txt (uploading new version of file-7.txt)
+				 + file-8.f0d69f705d.txt (uploading new version of file-8.txt)
+				Uploading 9 new assets...
+				Upload failed, aborting..."
+			`);
 		});
 
 		describe("should truncate diff with over 100 assets unless debug log level set", () => {

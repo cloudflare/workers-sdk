@@ -164,9 +164,9 @@ describe("secrets-store store commands", () => {
 				err = e as Error;
 			}
 
-			expect(err?.message).toMatchInlineSnapshot(`
-        "List request returned no stores."
-      `);
+			expect(err?.message).toMatchInlineSnapshot(
+				`"List request returned no stores."`
+			);
 		});
 	});
 });
@@ -302,9 +302,9 @@ describe("secrets-store secret commands", () => {
 			} catch (e) {
 				err = e as Error;
 			}
-			expect(err?.message).toMatchInlineSnapshot(`
-				"Need to pass in a value when creating a secret."
-			`);
+			expect(err?.message).toMatchInlineSnapshot(
+				`"Need to pass in a value when creating a secret."`
+			);
 		});
 
 		it("errors in creating a secret when no scopes passed", async ({

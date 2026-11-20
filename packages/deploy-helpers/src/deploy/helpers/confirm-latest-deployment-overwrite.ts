@@ -95,9 +95,7 @@ async function printDeployment(
 		deployment,
 		versionCache
 	);
-	cli.logRaw(
-		`Your ${adjective} deployment has ${versions.length} version(s):`
-	);
+	cli.logRaw(`Your ${adjective} deployment has ${versions.length} version(s):`);
 	printVersions(versions, traffic);
 }
 

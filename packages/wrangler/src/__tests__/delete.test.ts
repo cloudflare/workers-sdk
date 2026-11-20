@@ -505,19 +505,19 @@ Delete it as well?`,
 
 				// The application is deleted by its own ID, not its namespace's.
 				expect(std).toMatchInlineSnapshot(`
-				{
-				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				Successfully deleted my-script
-				🗑️ Deleted Container application "my-script-container"
-				Deleted 1 Container application. Its instances may take a while to shut down.",
-				  "warn": "",
-				}
-			`);
+					{
+					  "debug": "",
+					  "err": "",
+					  "info": "",
+					  "out": "
+					⛅️ wrangler · vx.x.x
+					────────────────────
+					Successfully deleted my-script
+					🗑️ Deleted Container application "my-script-container"
+					Deleted 1 Container application. Its instances may take a while to shut down.",
+					  "warn": "",
+					}
+				`);
 				expect(std.err).toBe("");
 			}
 		);

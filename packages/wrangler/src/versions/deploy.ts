@@ -1,6 +1,5 @@
-import assert from "node:assert";
 import * as cli from "@cloudflare/cli-shared-helpers";
-import { brandColor, gray, white } from "@cloudflare/cli-shared-helpers/colors";
+import { gray } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	inputPrompt,
 	spinnerWhile,
@@ -44,8 +43,9 @@ import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils/config";
 
 const EPSILON = 0.001; // used to avoid floating-point errors. Comparions to a value +/- EPSILON will mean "roughly equals the value".
+const leftT = gray("├");
 const BLANK_INPUT = "-"; // To be used where optional user-input is displayed and the value is nullish
-const ZERO_WIDTH_SPACE = "\u200B"; // Some log lines get trimmed and so, to indent, the line is prefixed with a zero-width space
+// Some log lines get trimmed and so, to indent, the line is prefixed with a zero-width space
 
 type OptionalPercentage = number | null; // null means automatically assign (evenly distribute remaining traffic)
 
@@ -445,9 +445,7 @@ async function promptVersionsToDeploy(
 			hint: gray(
 				`Created ${version.metadata.created_on} · Tag ${
 					version.annotations?.["workers/tag"] ?? BLANK_INPUT
-				} · ${
-					version.annotations?.["workers/message"] ?? BLANK_INPUT
-				}`
+				} · ${version.annotations?.["workers/message"] ?? BLANK_INPUT}`
 			),
 		})),
 		initialValues: defaultSelectedVersionIds,

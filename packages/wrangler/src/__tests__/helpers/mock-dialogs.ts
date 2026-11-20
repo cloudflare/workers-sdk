@@ -1,6 +1,6 @@
 import * as clack from "@clack/prompts";
-// eslint-disable-next-line no-restricted-imports
-import { expect, vi } from "vitest";
+// eslint-disable-next-line no-restricted-imports -- Shared prompt assertions need the static expect helper
+import { afterEach, expect, vi } from "vitest";
 import type { Mock } from "vitest";
 
 /**
@@ -110,9 +110,7 @@ function ensurePromptHandlerInstalled() {
 			!expectation.options.isSecret &&
 			"initialValue" in opts
 		) {
-			expect(opts.initialValue).toStrictEqual(
-				expectation.options.defaultValue
-			);
+			expect(opts.initialValue).toStrictEqual(expectation.options.defaultValue);
 		}
 		return Promise.resolve(expectation.result);
 	};
@@ -175,7 +173,7 @@ export function mockSelect<Values>(
 						expectation.options.choices.map((choice) => ({
 							label: choice.title,
 							value: choice.value,
-							hint: choice.description,
+							...(choice.description ? { hint: choice.description } : {}),
 						}))
 					);
 					const expectedInitial =
@@ -211,3 +209,5 @@ export function clearDialogs() {
 	clackMocks.text.mockImplementation(reject("text"));
 	clackMocks.password.mockImplementation(reject("password"));
 }
+
+afterEach(clearDialogs);

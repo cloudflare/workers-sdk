@@ -6,7 +6,6 @@ import {
 } from "@cloudflare/cli-shared-helpers";
 import { processArgument } from "@cloudflare/cli-shared-helpers/args";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
-import chalk from "chalk";
 import {
 	ApiError,
 	ImageRegistriesService,
@@ -15,6 +14,7 @@ import {
 } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
+import chalk from "chalk";
 import { createCommand, createNamespace } from "../../core/create-command";
 import { logger } from "../../logger";
 import { pollRegistriesUntilCondition } from "../cli";

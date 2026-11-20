@@ -230,8 +230,8 @@ describe("wrangler", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					┌─┬─┬─┬─┬─┬─┬─┐
 					│ id │ name │ jurisdiction │ created_on │ modified_on │ producers │ consumers │
 					├─┼─┼─┼─┼─┼─┼─┤
@@ -899,8 +899,8 @@ describe("wrangler", () => {
 
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Adding consumer to queue testQueue.
 						Added consumer to queue testQueue."
 					`);
@@ -1276,8 +1276,8 @@ describe("wrangler", () => {
 						expect(deleteRequest.count).toEqual(1);
 						expect(std.out).toMatchInlineSnapshot(`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							Removing consumer from queue testQueue.
 							Removed consumer from queue testQueue."
 						`);
@@ -1360,8 +1360,8 @@ describe("wrangler", () => {
 						expect(deleteRequest.count).toEqual(1);
 						expect(std.out).toMatchInlineSnapshot(`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							Removing consumer from queue testQueue.
 							Removed consumer from queue testQueue."
 						`);
@@ -1744,8 +1744,8 @@ describe("wrangler", () => {
 					expect(postRequest.count).toEqual(1);
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Adding consumer to queue testQueue.
 						Added consumer to queue testQueue."
 					`);
@@ -2538,8 +2538,8 @@ describe("wrangler", () => {
 				await runWrangler("queues info testQueue");
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Queue Name: testQueue
 					Queue ID: 1234567
 					Jurisdiction: eu

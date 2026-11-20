@@ -1,12 +1,12 @@
 import assert from "node:assert";
 import { exit } from "node:process";
+import * as clack from "@clack/prompts";
 import {
 	cancel,
 	endSection,
 	log,
 	newline,
 } from "@cloudflare/cli-shared-helpers";
-import * as clack from "@clack/prompts";
 import { processArgument } from "@cloudflare/cli-shared-helpers/args";
 import { brandColor, dim, yellow } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";

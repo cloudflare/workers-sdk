@@ -19,7 +19,7 @@ import { brandColor, brandColorHex } from "./colors";
 import { stdout } from "./streams";
 import { updateCheck } from "./update-check";
 
-const MIN_NODE_VERSION = "22.0.0";
+const MIN_NODE_VERSION = "22.12.0";
 
 // Grace period for a cached update-check result to settle. One event
 // loop tick is enough for a /tmp readFile (<1ms on SSD). On cache miss
@@ -80,8 +80,8 @@ export interface BannerConfig {
 	 * test convention in wrangler).
 	 */
 	write?: (msg: string) => void;
- warn?: (msg: string) => void;
- prereleaseLabel?: string;
+	warn?: (msg: string) => void;
+	prereleaseLabel?: string;
 }
 
 /**
@@ -102,7 +102,7 @@ export async function printBanner(config: BannerConfig): Promise<void> {
 	const write = config.write ?? ((msg: string) => stdout.write(msg + "\n"));
 
 	const warn = config.warn ?? write;
- const prereleaseLabel = config.prereleaseLabel ?? resolvePrereleaseLabel();
+	const prereleaseLabel = config.prereleaseLabel ?? resolvePrereleaseLabel();
 	// Render order:
 	//   ` <emoji> <bold-brand-name> <dim ·> <dim vX.Y.Z>`
 	const name = brandColor.bold(config.name);
@@ -123,13 +123,15 @@ export async function printBanner(config: BannerConfig): Promise<void> {
 		// available. On a cache miss or slow network the timer wins and
 		// the banner prints immediately — no blocking.
 		maybeNewVersion = await Promise.race([
-			updateCheck(config.name, config.version).then((result) => result.status === "update-available" ? result.latest : undefined),
+			updateCheck(config.name, config.version).then((result) =>
+				result.status === "update-available" ? result.latest : undefined
+			),
 			new Promise<undefined>((resolve) => {
 				const timer = setTimeout(
 					() => resolve(undefined),
 					UPDATE_CHECK_GRACE_MS
 				);
-				timer.unref();
+				timer?.unref?.();
 			}),
 		]);
 		if (maybeNewVersion !== undefined) {
@@ -147,7 +149,7 @@ export async function printBanner(config: BannerConfig): Promise<void> {
 	write("\n" + text + "\n" + underline);
 
 	if (semiver(process.versions.node, MIN_NODE_VERSION) < 0) {
-		write(
+		warn(
 			`${config.name} requires at least Node.js v${MIN_NODE_VERSION}. You are using v${process.versions.node}. Please update your version of Node.js.`
 		);
 	}
@@ -160,7 +162,7 @@ export async function printBanner(config: BannerConfig): Promise<void> {
 		const currentMajor = parseInt(config.version.split(".")[0]);
 		const newMajor = parseInt(maybeNewVersion.split(".")[0]);
 		if (newMajor > currentMajor) {
-			write(config.upgradeInstruction(newMajor));
+			warn(config.upgradeInstruction(newMajor));
 		}
 	}
 }

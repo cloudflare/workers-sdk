@@ -25,8 +25,6 @@ import {
 import type { C3Context } from "types";
 
 export const offerToDeploy = async (ctx: C3Context) => {
-	const { npm } = detectPackageManager();
-
 	startSection(`Deploy with Cloudflare`, `Step 3 of 3`);
 
 	// Coerce no-deploy if it isn't possible (i.e. if its a worker with any bindings)
@@ -38,12 +36,6 @@ export const offerToDeploy = async (ctx: C3Context) => {
 			)} before your application can be deployed`
 		);
 	}
-
-	const label = `deploy via \`${quoteShellArgs([
-		npm,
-		"run",
-		ctx.template.deployScript ?? "deploy",
-	])}\``;
 
 	const shouldDeploy = await processArgument(ctx.args, "deploy", {
 		type: "confirm",

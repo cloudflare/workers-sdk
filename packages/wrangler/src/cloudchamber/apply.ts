@@ -457,9 +457,7 @@ export async function apply(
 				continue;
 			}
 
-			updateStatus(
-				`${brandColor.underline("EDIT")} ${application.name}`
-			);
+			updateStatus(`${brandColor.underline("EDIT")} ${application.name}`);
 
 			newline();
 

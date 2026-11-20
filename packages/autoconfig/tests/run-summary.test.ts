@@ -1,10 +1,9 @@
 import { NpmPackageManager } from "@cloudflare/workers-utils";
-import { mockConsoleMethods } from "@cloudflare/workers-utils/test-helpers";
-import { dedent } from "ts-dedent";
 import { describe, test } from "vitest";
 import { Astro } from "../src/frameworks/astro";
 import { Static } from "../src/frameworks/static";
 import { buildOperationsSummary } from "../src/run";
+import { mockCliOutput } from "./helpers/mock-cli-output";
 import { createMockContext } from "./helpers/mock-context";
 import type { WorkerConfig } from "@cloudflare/config";
 
@@ -17,7 +16,7 @@ const testWorkerConfig: WorkerConfig = {
 };
 
 describe("autoconfig run - buildOperationsSummary()", () => {
-	const std = mockConsoleMethods();
+	const std = mockCliOutput();
 	const context = createMockContext();
 
 	describe("interactive mode", () => {
@@ -46,16 +45,19 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"
-				📄 Create wrangler.jsonc:
-				  {
-				    "$schema": "node_modules/wrangler/config-schema.json",
-				    "name": "worker-name",
-				    "compatibility_date": "2026-08-04",
-				    "observability": {
-				      "enabled": true
-				    }
-				  }
+				"│
+				◇  📄 Create wrangler.jsonc ─────────────────────────────────╮
+				│                                                            │
+				│  {                                                         │
+				│    "$schema": "node_modules/wrangler/config-schema.json",  │
+				│    "name": "worker-name",                                  │
+				│    "compatibility_date": "2026-08-04",                     │
+				│    "observability": {                                      │
+				│      "enabled": true                                       │
+				│    }                                                       │
+				│  }                                                         │
+				│                                                            │
+				├────────────────────────────────────────────────────────────╯
 				"
 			`);
 
@@ -229,13 +231,9 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			expect(summary.scripts).toEqual({
 				deploy: "cf deploy",
 			});
-			expect(std.out).toContain(
-				dedent`
-				📦 Install packages:
-				 - cf (devDependency)
-				 - wrangler (devDependency)
-				`
-			);
+			expect(std.out).toContain("📦 Install packages");
+			expect(std.out).toContain("- cf (devDependency)");
+			expect(std.out).toContain("- wrangler (devDependency)");
 			expect(std.out).toContain('  import { defineConfig } from "cf/config";');
 			expect(std.out).toContain("  export default defineConfig({");
 			expect(std.out).toContain(
@@ -268,7 +266,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					context
 				);
 
-				expect(std.out).toContain(` - ${plugin} (devDependency)`);
+				expect(std.out).toContain(`- ${plugin} (devDependency)`);
 			}
 		);
 

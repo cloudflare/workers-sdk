@@ -136,9 +136,8 @@ const isStdinEOFError = (err: unknown): boolean =>
 const promptOrEOF = async (packages: string[]): Promise<boolean> => {
 	const prompt = inputPrompt<boolean>({
 		type: "confirm",
-		question: `Run \`pnpm approve-builds ${packages.join(" ")}\` and retry the install?`,
-		label: "approve-builds",
-		defaultValue: true,
+		message: `Run \`pnpm approve-builds ${packages.join(" ")}\` and retry the install?`,
+		initialValue: true,
 		throwOnError: true,
 	});
 

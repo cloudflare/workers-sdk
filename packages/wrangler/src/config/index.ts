@@ -1,4 +1,3 @@
-import { updateCheck } from "../update-check";
 import assert from "node:assert";
 import path from "node:path";
 import { FatalError, UserError } from "@cloudflare/workers-utils";
@@ -15,6 +14,7 @@ import { version as wranglerVersion } from "../../package.json";
 import { loadNewConfig } from "../experimental-config/load";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
+import { updateCheck } from "../update-check";
 import type {
 	NormalizedTypes,
 	ParsedProjectConfig,

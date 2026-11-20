@@ -47,7 +47,6 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Arg } from "@cloudflare/cli-shared-helpers/interactive";
 import type {
 	CreateDeploymentV2RequestBody,
 	EnvironmentVariable,

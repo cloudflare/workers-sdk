@@ -89,15 +89,15 @@
 	},
 	"dependencies": {
 		"@clack/core": "1.2.0",
-"@clack/prompts": "^1.2.0",
-"boxen": "^8.0.1",
-"figures": "^6.1.0",
-"semiver": "^1.1.0",
+		"@clack/prompts": "1.2.0",
 		"@cloudflare/workers-utils": "workspace:*",
+		"boxen": "8.0.1",
 		"chalk": "catalog:default",
 		"ci-info": "catalog:default",
 		"cross-spawn": "7.0.6",
-		"log-update": "5.0.1"
+		"figures": "6.1.0",
+		"log-update": "5.0.1",
+		"semiver": "1.1.0"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",

@@ -1205,23 +1205,23 @@ addEventListener('fetch', event => {});`
 				expect(fs.existsSync("wrangler.jsonc")).toBe(false);
 				expect(std.out.replaceAll(DEFAULT_COMPAT_DATE, "<default-date>"))
 					.toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+						"
+						⛅️ wrangler · vx.x.x
+						────────────────────
 
 
 
-					You should run wrangler deploy ./index.js --name test-name --compatibility-date <default-date> --assets ./assets next time to deploy this Worker without going through this flow again.
+						You should run wrangler deploy ./index.js --name test-name --compatibility-date <default-date> --assets ./assets next time to deploy this Worker without going through this flow again.
 
-					Proceeding with deployment...
+						Proceeding with deployment...
 
-					Total Upload: xx KiB / gzip: xx KiB
-					Worker Startup Time: 100 ms
-					Uploaded test-name (TIMINGS)
-					Deployed test-name triggers (TIMINGS)
-					  https://test-name.test-sub-domain.workers.dev
-					Current Version ID: Galaxy-Class"
-				`);
+						Total Upload: xx KiB / gzip: xx KiB
+						Worker Startup Time: 100 ms
+						Uploaded test-name (TIMINGS)
+						Deployed test-name triggers (TIMINGS)
+						  https://test-name.test-sub-domain.workers.dev
+						Current Version ID: Galaxy-Class"
+					`);
 			});
 
 			it("includes --assets in suggestion when positional path is a file and --assets is separate", async ({
@@ -1259,23 +1259,23 @@ addEventListener('fetch', event => {});`
 				expect(fs.existsSync("wrangler.jsonc")).toBe(false);
 				expect(std.out.replaceAll(DEFAULT_COMPAT_DATE, "<default-date>"))
 					.toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+						"
+						⛅️ wrangler · vx.x.x
+						────────────────────
 
 
 
-					You should run wrangler deploy ./index.js --name test-name --compatibility-date <default-date> --assets ./assets next time to deploy this Worker without going through this flow again.
+						You should run wrangler deploy ./index.js --name test-name --compatibility-date <default-date> --assets ./assets next time to deploy this Worker without going through this flow again.
 
-					Proceeding with deployment...
+						Proceeding with deployment...
 
-					Total Upload: xx KiB / gzip: xx KiB
-					Worker Startup Time: 100 ms
-					Uploaded test-name (TIMINGS)
-					Deployed test-name triggers (TIMINGS)
-					  https://test-name.test-sub-domain.workers.dev
-					Current Version ID: Galaxy-Class"
-				`);
+						Total Upload: xx KiB / gzip: xx KiB
+						Worker Startup Time: 100 ms
+						Uploaded test-name (TIMINGS)
+						Deployed test-name triggers (TIMINGS)
+						  https://test-name.test-sub-domain.workers.dev
+						Current Version ID: Galaxy-Class"
+					`);
 			});
 		});
 	});

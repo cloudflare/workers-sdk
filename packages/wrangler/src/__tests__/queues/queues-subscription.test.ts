@@ -220,8 +220,8 @@ describe("queues subscription", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Creating event subscription for queue 'testQueue'...
 				✨ Successfully created event subscription 'testQueue images' with id 'sub-123'."
 			`);
@@ -402,8 +402,8 @@ describe("queues subscription", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Creating event subscription for queue 'testQueue'...
 				✨ Successfully created event subscription 'testQueue email.sending' with id 'sub-123'."
 			`);
@@ -798,8 +798,8 @@ describe("queues subscription", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				ID:           sub-email
 				Name:         Test Subscription Email
 				Source:       email.sending
@@ -838,8 +838,8 @@ describe("queues subscription", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				ID:           sub-artifacts-repo
 				Name:         Test Subscription Artifacts Repo
 				Source:       artifacts.repo

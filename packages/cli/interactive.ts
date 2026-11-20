@@ -125,10 +125,7 @@ function resolveDefault(config: PromptConfig): unknown {
 	}
 }
 
-function formatAutoAcceptedValue(
-	config: PromptConfig,
-	value: unknown
-): string {
+function formatAutoAcceptedValue(config: PromptConfig, value: unknown): string {
 	if (config.format) {
 		return config.format(value);
 	}
@@ -167,9 +164,7 @@ function dispatch(config: PromptConfig): Promise<unknown> {
 		case "select":
 			return clack.select(opts as Parameters<typeof clack.select>[0]);
 		case "multiselect":
-			return clack.multiselect(
-				opts as Parameters<typeof clack.multiselect>[0]
-			);
+			return clack.multiselect(opts as Parameters<typeof clack.multiselect>[0]);
 	}
 }
 
@@ -213,5 +208,3 @@ export const spinnerWhile = async <T>(opts: {
 		s.stop(unwrapFactory(opts.endMessage));
 	}
 };
-
-

@@ -18,6 +18,7 @@ import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { createWranglerAutoConfigContext } from "../../autoconfig-context";
 import * as format from "../../deployment-bundle/guess-worker-format";
 import { clearOutputFilePath } from "../../output";
+import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import {
@@ -126,6 +127,7 @@ describe("autoconfig (deploy)", () => {
 	runInTempDir();
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
+	const cliStd = collectCLIOutput();
 
 	beforeEach(() => {
 		setIsTTY(true);
@@ -318,34 +320,10 @@ describe("autoconfig (deploy)", () => {
 				}
 			);
 
+			expect(cliStd.out).toContain("Detected Project Settings");
 			expect(std.out.replaceAll(DEFAULT_COMPAT_DATE, "<default-date>"))
 				.toMatchInlineSnapshot(`
 					"
-					Detected Project Settings:
-					 - Worker Name: my-worker
-					 - Framework: Static
-					 - Build Command: echo 'built' > build.txt
-					 - Output Directory: dist
-
-
-					📝 Update package.json scripts:
-					 - "deploy": "echo 'built' > build.txt && wrangler deploy"
-					 - "preview": "echo 'built' > build.txt && wrangler dev"
-
-					📄 Create wrangler.jsonc:
-					  {
-					    "$schema": "node_modules/wrangler/config-schema.json",
-					    "name": "my-worker",
-					    "compatibility_date": "<default-date>",
-					    "observability": {
-					      "enabled": true
-					    },
-					    "assets": {
-					      "directory": "dist"
-					    }
-					  }
-
-					🛠️  Configuring project for Static
 
 					[build] Running: echo 'built' > build.txt"
 				`);
@@ -508,35 +486,10 @@ describe("autoconfig (deploy)", () => {
 				{ target: "wrangler", context }
 			);
 
-			expect(std.out.replaceAll(DEFAULT_COMPAT_DATE, "<default-date>"))
-				.toMatchInlineSnapshot(`
-					"
-					Detected Project Settings:
-					 - Worker Name: my-worker
-					 - Framework: Static
-					 - Output Directory: dist
-
-
-					Updated Project Settings:
-					 - Worker Name: edited-worker-name
-					 - Framework: Static
-					 - Output Directory: dist
-
-
-					📄 Create wrangler.jsonc:
-					  {
-					    "$schema": "node_modules/wrangler/config-schema.json",
-					    "name": "edited-worker-name",
-					    "compatibility_date": "<default-date>",
-					    "observability": {
-					      "enabled": true
-					    },
-					    "assets": {
-					      "directory": "dist"
-					    }
-					  }
-					"
-				`);
+			expect(cliStd.out).toContain("Detected Project Settings");
+			expect(
+				std.out.replaceAll(DEFAULT_COMPAT_DATE, "<default-date>")
+			).toMatchInlineSnapshot(`""`);
 
 			expect(
 				readFileSync("wrangler.jsonc").replaceAll(

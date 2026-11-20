@@ -987,8 +987,8 @@ describe("r2", () => {
 					expect(std.out).toMatchInlineSnapshot(
 						`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						✨ Successfully enabled Basin Catalog on bucket 'testBucket'.
 
 						Catalog URI: 'https://catalog.cloudflarestorage.com/test-account-id/test-warehouse-name'
@@ -1049,8 +1049,8 @@ describe("r2", () => {
 					expect(std.out).toMatchInlineSnapshot(
 						`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Successfully disabled Basin Catalog on bucket 'testBucket'."
 					`
 					);
@@ -1090,8 +1090,8 @@ describe("r2", () => {
 					await runWrangler("r2 bucket catalog disable testBucket");
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Basin Catalog is not enabled for bucket 'testBucket'. Please use 'wrangler basin catalog enable testBucket' to first enable Basin Catalog on this bucket."
 					`);
 				});
@@ -1137,8 +1137,8 @@ describe("r2", () => {
 					await runWrangler("r2 bucket catalog get test-bucket");
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Getting Basin Catalog status for 'test-bucket'...
 
 						Catalog URI:  https://catalog.cloudflarestorage.com/test-account-id/test-name
@@ -1175,8 +1175,8 @@ describe("r2", () => {
 					await runWrangler("r2 bucket catalog get test-bucket");
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
+						⛅️ wrangler · vx.x.x
+						────────────────────
 						Getting Basin Catalog status for 'test-bucket'...
 
 						Basin Catalog is not enabled for bucket 'test-bucket'. Please use 'wrangler basin catalog enable test-bucket' to first enable Basin Catalog on this bucket."
@@ -1239,8 +1239,8 @@ describe("r2", () => {
 						expect(std.out).toMatchInlineSnapshot(
 							`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							✨ Successfully enabled file compaction for Basin Catalog on bucket 'testBucket'.
 
 							Compaction will automatically combine small files into larger ones to improve query performance.
@@ -1406,8 +1406,8 @@ describe("r2", () => {
 						expect(std.out).toMatchInlineSnapshot(
 							`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							Successfully disabled file compaction for Basin Catalog on bucket 'testBucket'."
 						`
 						);
@@ -1542,8 +1542,8 @@ describe("r2", () => {
 						expect(std.out).toMatchInlineSnapshot(
 							`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							✨ Successfully enabled snapshot expiration for Basin Catalog on bucket 'testBucket'.
 
 							Snapshot expiration will automatically delete old table snapshots to save storage costs.
@@ -1593,8 +1593,8 @@ describe("r2", () => {
 						expect(std.out).toMatchInlineSnapshot(
 							`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							✨ Successfully enabled snapshot expiration for Basin Catalog on bucket 'testBucket'.
 
 							Snapshot expiration will automatically delete old table snapshots to save storage costs.
@@ -1740,8 +1740,8 @@ describe("r2", () => {
 						expect(std.out).toMatchInlineSnapshot(
 							`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							Successfully disabled snapshot expiration for Basin Catalog on bucket 'testBucket'."
 						`
 						);
@@ -1842,8 +1842,8 @@ describe("r2", () => {
 						expect(std.out).toMatchInlineSnapshot(
 							`
 							"
-							 ⛅️ wrangler x.x.x
-							──────────────────
+							⛅️ wrangler · vx.x.x
+							────────────────────
 							Successfully disabled snapshot expiration for Basin Catalog on bucket 'testBucket'."
 						`
 						);

@@ -319,8 +319,8 @@ describe("containers images delete", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Deleted one:hundred (some-digest)"
 		`);
 	});
@@ -349,8 +349,8 @@ describe("containers images delete", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Deleted one:hundred (some-digest)"
 		`);
 	});
@@ -363,8 +363,8 @@ describe("containers images delete", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Deleted one:hundred (some-digest)"
 		`);
 	});

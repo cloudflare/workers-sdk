@@ -4250,8 +4250,8 @@ export default { async fetch() { return new Response("ok"); } };`
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Generating project types...
 
 				interface __BaseEnv_Env {

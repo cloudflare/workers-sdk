@@ -1,8 +1,8 @@
-import { note, success } from "@cloudflare/cli-shared-helpers";
 import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { note, success } from "@cloudflare/cli-shared-helpers";
 import {
 	maybeAppendWranglerToGitIgnoreLikeFile,
 	maybeAppendWranglerToGitIgnore,
@@ -221,8 +221,7 @@ export async function runAutoConfig(
 	}
 
 	if (dryRun) {
-		logger.log(`✋  ${"Autoconfig process run in dry-run mode, exiting now."}`);
-		logger.log("");
+		success("Dry-run complete — no changes written");
 
 		return autoConfigSummary;
 	}
@@ -400,6 +399,7 @@ export async function runAutoConfig(
 		);
 	}
 
+	success("Setup complete");
 	return autoConfigSummary;
 }
 
@@ -654,7 +654,12 @@ export async function buildOperationsSummary(
 	}
 
 	if (packagesToInstall.size > 0) {
-		note([...packagesToInstall].map((packageName) => `- ${packageName} (devDependency)`).join("\n"), "📦 Install packages");
+		note(
+			[...packagesToInstall]
+				.map((packageName) => `- ${packageName} (devDependency)`)
+				.join("\n"),
+			"📦 Install packages"
+		);
 	}
 
 	if (autoConfigDetails.packageJson) {
@@ -688,7 +693,12 @@ export async function buildOperationsSummary(
 				(target === "cf" ? "cf workers types" : "wrangler types");
 		}
 
-		note(Object.entries(summary.scripts).map(([name, script]) => `- "${name}": "${script}"`).join("\n"), "📝 Update package.json scripts");
+		note(
+			Object.entries(summary.scripts)
+				.map(([name, script]) => `- "${name}": "${script}"`)
+				.join("\n"),
+			"📝 Update package.json scripts"
+		);
 	}
 
 	// Projects with Worker code (an entrypoint) get the `cf-typegen` script. Its output in
@@ -734,7 +744,10 @@ export async function buildOperationsSummary(
 			"wrangler.jsonc"
 		);
 		const configExists = existsSync(wranglerConfigPath);
-		note(JSON.stringify(wranglerConfig, null, 2), configExists ? "📄 Update wrangler.jsonc" : "📄 Create wrangler.jsonc");
+		note(
+			JSON.stringify(wranglerConfig, null, 2),
+			configExists ? "📄 Update wrangler.jsonc" : "📄 Create wrangler.jsonc"
+		);
 	}
 
 	if (

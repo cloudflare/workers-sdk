@@ -1,8 +1,8 @@
-import { note } from "@cloudflare/cli-shared-helpers";
 import assert from "node:assert";
 import { existsSync, statSync, type Stats } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
+import { note } from "@cloudflare/cli-shared-helpers";
 import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	checkWorkerNameValidity,
@@ -473,10 +473,10 @@ export function getProjectCommand(
 }
 
 /**
- * Displays the detected autoconfig details to the user via the context logger.
+ * Displays detected autoconfig details using the shared CLI note renderer.
  *
  * @param autoConfigDetails - The detected project details to display.
- * @param context - The autoconfig context providing the logger.
+ * @param _context - The autoconfig context shared with the configuration flow.
  * @param displayOptions - Optional display customization.
  */
 export function displayAutoConfigDetails(

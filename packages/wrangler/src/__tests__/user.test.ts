@@ -1330,8 +1330,8 @@ describe("User", () => {
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Attempting to login via OAuth Device Authorization Grant...
 				To authorize Wrangler, please visit:
 

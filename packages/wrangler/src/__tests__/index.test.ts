@@ -4,7 +4,7 @@ import {
 } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getPackageManager } from "../package-manager";
-import { updateCheck } from "@cloudflare/cli-shared-helpers/update-check";
+import { updateCheck } from "../update-check";
 import { logPossibleBugMessage } from "../utils/logPossibleBugMessage";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockConsoleMethods } from "./helpers/mock-console";

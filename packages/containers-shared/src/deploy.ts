@@ -1035,7 +1035,7 @@ const doAction = async (
 
 		success(
 			action.successMessage ??
-			`Modified application ${brandColor(action.name)} (Application ID: ${action.id})`
+				`Modified application ${brandColor(action.name)} (Application ID: ${action.id})`
 		);
 	}
 };

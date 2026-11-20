@@ -28,7 +28,6 @@ const generate = async (ctx: C3Context) => {
 	]);
 
 	writeFile(join(ctx.project.path, ".node-version"), "22.23.1");
-
 };
 
 const configure = async () => {

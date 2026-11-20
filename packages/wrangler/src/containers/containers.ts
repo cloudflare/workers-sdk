@@ -1,9 +1,9 @@
+import * as clack from "@clack/prompts";
 import {
 	cancel,
 	endSection,
 	startSection,
 } from "@cloudflare/cli-shared-helpers";
-import * as clack from "@clack/prompts";
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { ApiError, ApplicationsService } from "@cloudflare/containers-shared";
 import { JsonFriendlyFatalError, UserError } from "@cloudflare/workers-utils";

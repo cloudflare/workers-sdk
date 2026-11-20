@@ -58,8 +58,8 @@ describe("logout", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Cleared temporary preview account."
 		`);
 		expect(fs.existsSync(temporaryAccountConfigPath)).toBeFalsy();
@@ -289,8 +289,8 @@ describe("logout", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			Successfully logged out."
 		`);
 		expect(keyringStore.size).toBe(0);

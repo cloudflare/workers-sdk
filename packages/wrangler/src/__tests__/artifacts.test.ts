@@ -73,8 +73,8 @@ describe("artifacts", () => {
 			expect(std.err).toBe("");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				┌─┬─┬─┬─┐
 				│ namespace │ repo_count │ created_at │ updated_at │
 				├─┼─┼─┼─┤
@@ -109,8 +109,8 @@ describe("artifacts", () => {
 			expect(std.err).toBe("");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				namespace:   default
 				repo_count:  3
 				created_at:  2026-04-20T10:00:00.000Z
@@ -215,8 +215,8 @@ describe("artifacts", () => {
 			expect(std.out).toContain("read_only:       true");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Created Artifacts repo "starter-repo" in namespace "default".
 				id:              repo_123
 				name:            starter-repo
@@ -309,8 +309,8 @@ describe("artifacts", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				id:              repo_123
 				name:            starter-repo
 				description:     Starter repo
@@ -450,8 +450,8 @@ describe("artifacts", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Issued a read token for repo "starter-repo" in namespace "default".
 				id:          tok_123
 				scope:       read

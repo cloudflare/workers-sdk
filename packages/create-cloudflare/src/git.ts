@@ -106,9 +106,11 @@ export const gitCommit = async (ctx: C3Context) => {
 			}
 		);
 
-		s.stop(`${brandColor("Committed")} new files to git`);
+		updateStatus(`${brandColor("Committed")} new files to git`);
 	} catch {
-		s.stop(`${brandColor("git commit failed")} — you can commit manually later`);
+		updateStatus(
+			`${brandColor("git commit failed")} — you can commit manually later`
+		);
 		updateStatus(
 			"Failed to create initial commit. You can commit manually later."
 		);

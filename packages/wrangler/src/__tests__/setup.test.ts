@@ -238,29 +238,8 @@ describe("wrangler setup", () => {
 					)
 			).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-
-				Detected Project Settings:
-				 - Worker Name: <WORKER_NAME>
-				 - Framework: Static
-				 - Output Directory: public
-
-
-				📄 Create wrangler.jsonc:
-				  {
-				    "$schema": "node_modules/wrangler/config-schema.json",
-				    "name": "<WORKER_NAME>",
-				    "compatibility_date": "yyyy-mm-dd",
-				    "observability": {
-				      "enabled": true
-				    },
-				    "assets": {
-				      "directory": "<DIR>"
-				    }
-				  }
-
-				✋  Autoconfig process run in dry-run mode, exiting now.
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				"
 			`);
 		});

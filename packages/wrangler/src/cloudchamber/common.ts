@@ -1,6 +1,5 @@
 import { space, updateStatus } from "@cloudflare/cli-shared-helpers";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
-import chalk from "chalk";
 import {
 	inputPrompt,
 	spinner,
@@ -17,12 +16,13 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
+import chalk from "chalk";
+import { printWranglerBanner } from "../banner";
 import { addUserAgent } from "../cfetch/internal";
 import { readConfig } from "../config";
 import { constructStatusMessage } from "../core/CommandRegistry";
 import { logger } from "../logger";
 import { getScopes, printScopes, requireApiToken, requireAuth } from "../user";
-import { printWranglerBanner } from "../banner";
 import { wrap } from "./helpers/wrap";
 import { idToLocationName } from "./locations";
 import type { containersScope } from "../containers";
@@ -30,7 +30,6 @@ import type {
 	CommonYargsOptions,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Arg } from "@cloudflare/cli-shared-helpers/interactive";
 import type {
 	CompleteAccountCustomer,
 	EnvironmentVariable,

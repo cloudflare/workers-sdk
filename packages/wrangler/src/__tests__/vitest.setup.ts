@@ -288,10 +288,7 @@ vi.mock("../agents-skills-install", async (importOriginal) => {
 // helpers like `collectCLIOutput()` and `mockCLIOutput()` capture
 // clack output too.
 vi.mock("@clack/prompts", async (importOriginal) => {
-	const real =
-		await importOriginal<typeof import("@clack/prompts")>();
-	const { stdout } = await import("@cloudflare/cli-shared-helpers/streams");
-	real.updateSettings({ output: stdout });
+	const real = await importOriginal<typeof import("@clack/prompts")>();
 	const reject = (kind: string) =>
 		vi.fn((opts: unknown) => {
 			throw new Error(

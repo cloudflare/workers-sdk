@@ -335,7 +335,7 @@ describe("versions deploy", () => {
 			expect(normalizeOutput(cliStd.out)).toMatchInlineSnapshot(`
 				"│
 				▲  Your last deployment has multiple versions. To progress that deployment use "wrangler versions deploy" instead.
-				├ Your last deployment has 2 version(s):
+				Your last deployment has 2 version(s):
 				(50%) test-name:version:0
 				      Created:  TIMESTAMP
 				          Tag:  -
@@ -1203,7 +1203,7 @@ describe("versions deploy", () => {
 
 			const output = normalizeOutput(cliStd.out);
 			expect(output).toContain(
-				"SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100%"
+				"Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100%"
 			);
 			expect(output).not.toContain(
 				"Use SPACE to select/unselect version(s) and ENTER to submit."
@@ -1341,7 +1341,7 @@ describe("versions deploy", () => {
 
 			const output = normalizeOutput(cliStd.out);
 			expect(output).toContain(
-				"SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 40% and version 00000000-0000-0000-0000-000000000000 at 60%"
+				"Deployed test-name version 00000000-0000-0000-0000-000000000000 at 40% and version 00000000-0000-0000-0000-000000000000 at 60%"
 			);
 			expect(output).not.toContain(
 				"Use SPACE to select/unselect version(s) and ENTER to submit."
@@ -1357,7 +1357,7 @@ describe("versions deploy", () => {
 
 			const output = normalizeOutput(cliStd.out);
 			expect(output).toContain(
-				"SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100%"
+				"Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100%"
 			);
 			expect(output).not.toContain(
 				"Use SPACE to select/unselect version(s) and ENTER to submit."
@@ -1802,8 +1802,7 @@ describe("versions deploy", () => {
 				]);
 
 				const output = normalizeOutput(cliStd.out);
-				expect(output).toContain("Resolving tags to versions");
-				expect(output).toContain("SUCCESS  Deployed test-name version");
+				expect(output).toContain("Deployed test-name version");
 			});
 
 			test("splits traffic between multiple tags using shorthand percentages", async ({

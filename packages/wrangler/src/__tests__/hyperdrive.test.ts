@@ -1584,8 +1584,8 @@ describe("hyperdrive commands", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
+			⛅️ wrangler · vx.x.x
+			────────────────────
 			"
 		`);
 	});

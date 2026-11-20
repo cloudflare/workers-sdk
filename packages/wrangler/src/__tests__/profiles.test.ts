@@ -217,8 +217,8 @@ describe("Profiles", () => {
 			expect(profiles().configs.exists("client-a")).toBe(true);
 			expect(normalizeString(std.out)).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Attempting to login via OAuth...
 				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=k2.read%20k2.write%20account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=<OAUTH_STATE>&code_challenge=<OAUTH_CODE_CHALLENGE>&code_challenge_method=S256
 				Successfully logged in.
@@ -235,8 +235,8 @@ describe("Profiles", () => {
 
 			expect(normalizeString(std.out)).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Attempting to login via OAuth...
 				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=k2.read%20k2.write%20account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20agent-memory%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20artifacts%3Awrite%20flagship%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20email_routing%3Awrite%20email_sending%3Awrite%20browser%3Awrite%20challenge-widgets.write%20offline_access&state=<OAUTH_STATE>&code_challenge=<OAUTH_CODE_CHALLENGE>&code_challenge_method=S256
 				Successfully logged in.
@@ -378,8 +378,8 @@ describe("Profiles", () => {
 			);
 			expect(normalizeString(std.out)).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Profile "client-a" activated for "<cwd>"."
 			`);
 		});
@@ -463,12 +463,12 @@ describe("Profiles", () => {
 			).toBeUndefined();
 			expect(normalizeString(std.out)).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Profile "client-a" activated for "<cwd>".
 
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Profile "client-a" deactivated from "<cwd>".
 				This directory now uses the default profile."
 			`);
@@ -485,12 +485,12 @@ describe("Profiles", () => {
 
 			expect(normalizeString(std.out)).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Profile "client-a" activated for "<cwd>".
 
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Profile "client-a" deactivated from "<cwd>".
 				No active profile for this directory. Run \`wrangler login\` to set up the default profile, or \`wrangler auth create <name>\` to create a named profile."
 			`);
@@ -502,7 +502,7 @@ describe("Profiles", () => {
 			await runWrangler("auth list");
 
 			const out = normalizeString(std.out);
-			expect(out).toContain("wrangler x.x.x");
+			expect(out).toContain("wrangler · vx.x.x");
 			expect(out).toContain(
 				"No profiles found. Run `wrangler login` to get started."
 			);
@@ -584,12 +584,12 @@ describe("Profiles", () => {
 
 			expect(normalizeString(std.out)).toMatchInlineSnapshot(`
 				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Profile "my-profile" activated for "<cwd>".
 
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				Active profile: my-profile
 				Getting User settings...
 				"

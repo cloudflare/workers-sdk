@@ -1020,8 +1020,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Success! It may take a few minutes for DNS records to update.
 					Visit https://dash.cloudflare.com/some-account-id/workers/subdomain to edit your workers.dev subdomain
 					Total Upload: xx KiB / gzip: xx KiB
@@ -1181,8 +1181,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Uploaded test-name (TIMINGS)
@@ -1244,8 +1244,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Uploaded test-name (TIMINGS)
@@ -1274,8 +1274,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
+					⛅️ wrangler · vx.x.x
+					────────────────────
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Uploaded test-name (TIMINGS)

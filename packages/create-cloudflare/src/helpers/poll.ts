@@ -1,5 +1,5 @@
 import { setTimeout } from "node:timers/promises";
-import { blue, brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
+import { blue, brandColor } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import dns2 from "dns2";
 import { request } from "undici";
@@ -72,9 +72,7 @@ const pollHttp = async (
 				headers: { "Cache-Control": "no-cache" },
 			});
 			if (statusCode === 200) {
-				s.stop(
-					`${brandColor("Deployment ready")} at ${blue(url)}`
-				);
+				s.stop(`${brandColor("Deployment ready")} at ${blue(url)}`);
 				return true;
 			}
 		} catch (e) {

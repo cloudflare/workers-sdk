@@ -398,20 +398,20 @@ describe("containers registries configure", () => {
 			).resolves.not.toThrow();
 			// Should not call listStores or createStore
 			expect(cliStd.stdout).toMatchInlineSnapshot(`
-				"╭ Configure a container registry
-				│
-				│ Configuring AWS ECR registry: 123456789012.dkr.ecr.us-west-2.amazonaws.com
-				│
-				│
-				│ Setting up integration with Secrets Store...
-				│
-				│
-				│
-				│ Getting AWS Secret Access Key...
-				│
-				│ Container-scoped secret "AWS_Secret_Access_Key" created in Secrets Store.
-				│
-				╰ Registry configuration completed
+				"[90m┌[39m  Configure a container registry
+				Configuring AWS ECR registry: 123456789012.dkr.ecr.us-west-2.amazonaws.com
+
+
+				Setting up integration with Secrets Store...
+
+
+
+				Getting AWS Secret Access Key...
+
+				Container-scoped secret "AWS_Secret_Access_Key" created in Secrets Store.
+
+				[90m│[39m
+				[90m└[39m  Registry configuration completed
 
 				"
 			`);

@@ -85,8 +85,7 @@ export const format = (
 ) => {
 	const lines = multiline ? msg.split("\n") : [msg];
 	const formattedLines = lines.map(
-		(line, i) =>
-			(i === 0 ? firstLinePrefix : linePrefix) + formatLine(line)
+		(line, i) => (i === 0 ? firstLinePrefix : linePrefix) + formatLine(line)
 	);
 
 	if (newlineBefore) {

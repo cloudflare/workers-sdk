@@ -817,8 +817,8 @@ describe("wrangler pages secret", () => {
 				",
 				  "info": "",
 				  "out": "
-				 ⛅️ wrangler x.x.x
-				──────────────────
+				⛅️ wrangler · vx.x.x
+				────────────────────
 				🌀 Processing the secrets for the Worker "script-name"
 
 				🚨 Secrets failed to upload

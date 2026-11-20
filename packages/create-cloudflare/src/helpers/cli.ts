@@ -1,9 +1,6 @@
 import { updateStatus, warn } from "@cloudflare/cli-shared-helpers";
-import { blue } from "@cloudflare/cli-shared-helpers/colors";
 import { runCommand } from "@cloudflare/cli-shared-helpers/command";
-import {
-	spinner,
-} from "@cloudflare/cli-shared-helpers/interactive";
+import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
 import Haikunator from "haikunator";
 import { detectPackageManager } from "helpers/packageManagers";
 import { getLatestPackageVersion } from "helpers/packages";
