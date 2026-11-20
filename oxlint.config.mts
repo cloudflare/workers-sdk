@@ -358,10 +358,6 @@ export default defineConfig({
 		// Temporarily disabled only where rules that were already enforced report new
 		// findings after upgrading Oxlint and moving to the tsrs type checker.
 		{
-			files: ["packages/wrangler/src/logger.ts"],
-			rules: { "prefer-spread": "off" },
-		},
-		{
 			files: [
 				"packages/pages-functions/src/__tests__/routes-consolidation.test.ts",
 			],

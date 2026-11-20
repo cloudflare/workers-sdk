@@ -180,7 +180,10 @@ export class Logger {
 		) {
 			Logger.#beforeLogHook?.();
 			// eslint-disable-next-line no-console -- Logger implementation must use console directly
-			(console[method] as (...args: unknown[]) => unknown).apply(console, args);
+			(console[method] as (...args: unknown[]) => unknown).call(
+				console,
+				...args
+			);
 			Logger.#afterLogHook?.();
 		}
 	}
