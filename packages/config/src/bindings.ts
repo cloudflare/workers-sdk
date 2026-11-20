@@ -160,6 +160,8 @@ export interface AnalyticsSqlBinding extends AnalyticsSqlBindingOptions {
 }
 
 export interface D1BindingOptions {
+	/** Public account ID of the existing resource owner. */
+	accountId?: string;
 	/** The UUID of this D1 database (not required). */
 	id?: string;
 	/** The name of this D1 database. */
@@ -301,6 +303,8 @@ export interface JsonBinding<T extends Json = Json> {
 }
 
 export interface KvBindingOptions {
+	/** Public account ID of the existing resource owner. */
+	accountId?: string;
 	/** The ID of the KV namespace. */
 	id?: string;
 	// TODO: name support not yet implemented
@@ -462,6 +466,8 @@ export interface TypedQueueBinding<TBody = unknown> extends QueueBinding {
 }
 
 export interface R2BindingOptions {
+	/** Public account ID of the existing resource owner. */
+	accountId?: string;
 	/** The name of this R2 bucket at the edge. */
 	name?: string;
 	/** The jurisdiction that the bucket exists in. Default if not present. */
@@ -667,6 +673,8 @@ export interface WorkerBindingOptions<
 > {
 	/** The name or config of the bound Worker. */
 	worker: TWorker;
+	/** Public ID of the target account in the same Cloudflare Organization. */
+	accountId?: string;
 	/** The named export to bind to (defaults to the default export). */
 	exportName?: TExportName;
 	/** Optional properties that will be made available to the service via `ctx.props`. */

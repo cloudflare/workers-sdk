@@ -597,6 +597,7 @@ function convertOutboundService(
 		return {
 			type: "worker",
 			worker: converted.worker,
+			accountId: converted.accountId,
 			exportName: converted.exportName,
 			props: converted.props,
 			dev: converted.dev,
@@ -631,6 +632,7 @@ function convertServiceDesignator(
 		return {
 			type: "worker",
 			worker: convertWorkerName(binding.name),
+			accountId: binding.targetAccountId,
 			exportName: binding.entrypoint,
 			props: binding.props,
 			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
