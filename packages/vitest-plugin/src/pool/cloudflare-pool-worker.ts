@@ -2,7 +2,7 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import util from "node:util";
-import { compileModuleRules, testRegExps } from "miniflare";
+import { compileModuleRules, Log, LogLevel, testRegExps } from "miniflare";
 import { type ProvidedContext } from "vitest";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { disposeAllRemoteProxySessions, parseProjectOptions } from "./config";
@@ -26,6 +26,7 @@ import type {
 import type { Logger } from "@cloudflare/workers-utils";
 import type {
 	Miniflare,
+	CloseEvent as MiniflareCloseEvent,
 	MessageEvent as MiniflareMessageEvent,
 	WebSocket,
 } from "miniflare";
@@ -35,6 +36,10 @@ import type {
 	WorkerRequest,
 	WorkerResponse,
 } from "vitest/node";
+
+const log = new Log(LogLevel.INFO, { prefix: "vpw" });
+
+type ModuleFetchMethod = "fetch" | "fetchWarmModules";
 
 /**
  * On a filesystem-cache hit, Vitest sends `{ cached: true, tmp }` instead of
@@ -90,9 +95,17 @@ function inlineCachedModules(response: unknown): unknown {
 	}
 
 	let hasCachedModules = false;
+	// Vitest keys a module under both its URL and its ID with one shared
+	// object. Keep it shared so the serialized reply still writes it once and
+	// `serializePartialWarmModulesReply()` counts it once.
+	const inlinedModules = new Map<unknown, unknown>();
 	const entries = Object.entries(response).flatMap(([specifier, module]) => {
 		try {
-			const inlinedModule = inlineCachedModule(module, cacheContents);
+			let inlinedModule = inlinedModules.get(module);
+			if (inlinedModule === undefined) {
+				inlinedModule = inlineCachedModule(module, cacheContents);
+				inlinedModules.set(module, inlinedModule);
+			}
 			hasCachedModules ||= inlinedModule !== module;
 			return [[specifier, inlinedModule] as const];
 		} catch {
@@ -105,10 +118,80 @@ function inlineCachedModules(response: unknown): unknown {
 	return hasCachedModules ? Object.fromEntries(entries) : response;
 }
 
+/**
+ * workerd closes a WebSocket when it receives a message larger than this, with
+ * close code 1009 ("Message is too large").
+ */
+const MAX_WEBSOCKET_MESSAGE_BYTES = 32 * 1024 * 1024;
+
+/**
+ * The sum of per-entry sizes in `serializePartialWarmModulesReply()` can
+ * differ slightly from the size of the combined message, which also includes
+ * the RPC envelope. Leave headroom so the combined message still fits.
+ */
+const WARM_MODULES_BUDGET_BYTES = MAX_WEBSOCKET_MESSAGE_BYTES - 1024 * 1024;
+
+/**
+ * Serialize a `fetchWarmModules()` reply that is too large for one WebSocket
+ * message. The inlined code of a large import graph can exceed workerd's
+ * limit. Vitest calls `fetch()` for any module missing from the snapshot, so
+ * keep the entries that fit and leave the rest for Vitest to fetch one at a
+ * time.
+ *
+ * @param message The BiRPC reply, with cached modules already inlined.
+ * @returns The serialized reply, its size in bytes, and the number of
+ * snapshot entries it kept and dropped.
+ */
+function serializePartialWarmModulesReply(message: { r?: unknown }): {
+	serialized: string;
+	bytes: number;
+	kept: number;
+	dropped: number;
+} {
+	const entries =
+		message.r !== null && typeof message.r === "object"
+			? Object.entries(message.r)
+			: [];
+	const kept: [string, unknown][] = [];
+	const counted = new Set<unknown>();
+	let remaining = WARM_MODULES_BUDGET_BYTES;
+	for (const [specifier, module] of entries) {
+		// devalue writes a shared object once, so an alias only costs its key.
+		const size =
+			Buffer.byteLength(JSON.stringify(specifier)) +
+			(counted.has(module)
+				? 0
+				: Buffer.byteLength(structuredSerializableStringify(module)));
+		if (size > remaining) {
+			continue;
+		}
+		remaining -= size;
+		counted.add(module);
+		kept.push([specifier, module]);
+	}
+
+	let partial = structuredSerializableStringify({
+		...message,
+		r: Object.fromEntries(kept),
+	});
+	let partialBytes = Buffer.byteLength(partial);
+	if (partialBytes > MAX_WEBSOCKET_MESSAGE_BYTES) {
+		kept.length = 0;
+		partial = structuredSerializableStringify({ ...message, r: {} });
+		partialBytes = Buffer.byteLength(partial);
+	}
+	return {
+		serialized: partial,
+		bytes: partialBytes,
+		kept: kept.length,
+		dropped: entries.length - kept.length,
+	};
+}
+
 export class CloudflarePoolWorker implements PoolWorker {
 	name = "cloudflare-pool";
 	private readonly debug = util.debuglog("vitest-plugin");
-	private readonly moduleFetchRequestIds = new Set<string>();
+	private readonly moduleFetchRequests = new Map<string, ModuleFetchMethod>();
 	private mf: Miniflare | undefined;
 	private socket: WebSocket | undefined;
 	private parsedPoolOptions: WorkersPoolOptionsWithDefines | undefined;
@@ -117,7 +200,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 	// Vitest registers at most one listener per event type.
 	private messageListener?: (event: MiniflareMessageEvent) => void;
 	private errorListener?: (event: Event) => void;
-	private closeListener?: () => void;
+	private closeListener?: (event: MiniflareCloseEvent) => void;
 
 	constructor(
 		private options: PoolOptions,
@@ -187,7 +270,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 	async stop(): Promise<void> {
 		this.socket?.close();
 		this.socket = undefined;
-		this.moduleFetchRequestIds.clear();
+		this.moduleFetchRequests.clear();
 		// Disposal errors should not override the test result, but log them for
 		// diagnostics in case they indicate an underlying teardown issue.
 		await this.mf?.dispose().catch((err) => {
@@ -275,19 +358,37 @@ export class CloudflarePoolWorker implements PoolWorker {
 		// finished requests do not leave stale state.
 		// https://github.com/antfu-collective/birpc/blob/f5bb5a45b/src/index.ts#L202-L246
 		const rpcResponse = message as { t?: string; i?: string; r?: unknown };
-		if (
-			rpcResponse.t === "s" &&
-			typeof rpcResponse.i === "string" &&
-			this.moduleFetchRequestIds.delete(rpcResponse.i) &&
-			rpcResponse.r !== undefined
-		) {
+		let fetchMethod: ModuleFetchMethod | undefined;
+		if (rpcResponse.t === "s" && typeof rpcResponse.i === "string") {
+			fetchMethod = this.moduleFetchRequests.get(rpcResponse.i);
+			this.moduleFetchRequests.delete(rpcResponse.i);
+		}
+		if (fetchMethod !== undefined && rpcResponse.r !== undefined) {
 			const inlined = inlineCachedModules(rpcResponse.r);
 			if (inlined !== rpcResponse.r) {
 				const inlinedResponse = { ...message, r: inlined };
 				toSend = inlinedResponse;
 			}
 		}
-		this.socket.send(structuredSerializableStringify(toSend));
+		let serialized = structuredSerializableStringify(toSend);
+		if (fetchMethod === "fetchWarmModules") {
+			const bytes = Buffer.byteLength(serialized);
+			if (bytes > MAX_WEBSOCKET_MESSAGE_BYTES) {
+				const partial = serializePartialWarmModulesReply(
+					toSend as { r?: unknown }
+				);
+				this.debug(
+					"warm-modules snapshot of %d bytes is over the %d-byte message limit; sending %d bytes with %d entries and leaving %d to fetch()",
+					bytes,
+					MAX_WEBSOCKET_MESSAGE_BYTES,
+					partial.bytes,
+					partial.kept,
+					partial.dropped
+				);
+				serialized = partial.serialized;
+			}
+		}
+		this.socket.send(serialized);
 	}
 
 	on(
@@ -393,7 +494,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 					"i" in d &&
 					typeof d.i === "string"
 				) {
-					this.moduleFetchRequestIds.add(d.i);
+					this.moduleFetchRequests.set(d.i, d.m);
 				}
 				(callback as (response: WorkerResponse) => void)(d);
 			};
@@ -407,7 +508,17 @@ export class CloudflarePoolWorker implements PoolWorker {
 			};
 			this.socket.addEventListener("error", this.errorListener);
 		} else if (event === "exit") {
-			this.closeListener = callback as () => void;
+			this.closeListener = ({ code, reason }: MiniflareCloseEvent) => {
+				// Vitest only reports that the worker exited, and only the first
+				// error a worker emits reaches the test run, so log why the
+				// runner's WebSocket closed before Vitest reports the exit.
+				let message = `The runner's WebSocket closed with code ${code}${reason ? ` (${reason})` : ""}.`;
+				if (code === 1009) {
+					message += ` A message to the runner was over workerd's ${MAX_WEBSOCKET_MESSAGE_BYTES}-byte WebSocket message limit.`;
+				}
+				log.logWithLevel(LogLevel.ERROR, message);
+				(callback as () => void)();
+			};
 			this.socket.addEventListener("close", this.closeListener);
 		}
 	}

@@ -239,3 +239,49 @@ test(
 		}
 	}
 );
+
+test(
+	"runs files whose warm-modules snapshot is over workerd's message limit",
+	{ timeout: 180_000 },
+	async ({ expect, seed, vitestRun }) => {
+		// The first file transforms 20 modules of 1 MiB into the cache, so the
+		// second file's worker asks for a snapshot of about 48 MiB. workerd
+		// rejects WebSocket messages over 32 MiB.
+		const count = 20;
+		const files: Record<string, string> = {
+			"vitest.config.mts": vitestConfig(
+				{},
+				{ ...cacheConfig, fileParallelism: false }
+			),
+			"graph.ts": [
+				...Array.from(
+					{ length: count },
+					(_, index) => `import { part${index} } from "./graph/part-${index}";`
+				),
+				`export const totalLength = ${Array.from(
+					{ length: count },
+					(_, index) => `part${index}.length`
+				).join(" + ")};`,
+			].join("\n"),
+		};
+		for (let index = 0; index < count; index++) {
+			files[`graph/part-${index}.ts`] =
+				`export const part${index} = ${JSON.stringify(`${index}`.padEnd(1024 * 1024, "x"))};`;
+		}
+		for (const name of ["first", "second"]) {
+			files[`${name}.test.ts`] = dedent`
+				import { it } from "vitest";
+				import { totalLength } from "./graph";
+
+				it("loads the graph", ({ expect }) => {
+					expect(totalLength).toBe(${count} * 1024 * 1024);
+				});
+			`;
+		}
+		await seed(files);
+
+		const result = await vitestRun();
+		expect(await result.exitCode, result.stderr + result.stdout).toBe(0);
+		expect(result.stdout).toContain("Tests  2 passed");
+	}
+);
