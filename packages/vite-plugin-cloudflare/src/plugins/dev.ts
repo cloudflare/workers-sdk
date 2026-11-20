@@ -159,7 +159,8 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						viteDevServer.httpServer,
 						ctx.miniflare,
 						entryWorkerName,
-						viteDevServer.config.server.ws !== false
+						viteDevServer.config.server.ws !== false,
+						viteDevServer.config.server.proxy
 					);
 				}
 

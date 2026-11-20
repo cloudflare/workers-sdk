@@ -13,8 +13,15 @@ import {
 	vi,
 } from "vitest";
 import { WebSocket, WebSocketServer } from "ws";
-import { handleWebSocket } from "../websockets";
+import {
+	findViteProxyWebSocketOptions,
+	getWorkerUpgradeUrl,
+	handleWebSocket,
+	shareViteProxyBypassResults,
+} from "../websockets";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
+import type * as vite from "vite";
 
 describe("handleWebSocket", () => {
 	let httpServer: http.Server;
@@ -109,9 +116,12 @@ describe("handleWebSocket", () => {
 		return dispatchFetch;
 	}
 
-	async function listen(entryWorkerName?: string) {
+	async function listen(
+		entryWorkerName?: string,
+		viteProxy?: Record<string, string | vite.ProxyOptions>
+	) {
 		const mf = miniflare ?? startMiniflare();
-		handleWebSocket(httpServer, mf, entryWorkerName);
+		handleWebSocket(httpServer, mf, entryWorkerName, false, viteProxy);
 		await listenHttpServer();
 		// Wait for `workerd` to boot here (under the generous `testTimeout`)
 		// rather than letting the cold start eat into the tight `vi.waitFor`
@@ -683,5 +693,366 @@ describe("handleWebSocket", () => {
 		);
 
 		await closed;
+	});
+
+	// https://github.com/cloudflare/workers-sdk/issues/16638
+	test("leaves upgrades matching a `server.proxy` WebSocket rule to Vite's proxy", async ({
+		expect,
+	}) => {
+		const mf = await listen(undefined, {
+			"/graphql": { target: "http://127.0.0.1:1", ws: true },
+		});
+		const dispatchFetch = vi
+			.spyOn(mf, "dispatchFetch")
+			.mockResolvedValue(new Response("not found", { status: 404 }));
+
+		// Stands in for Vite's proxy `upgrade` listener.
+		const proxy = new WebSocketServer({ noServer: true });
+		onTestFinished(() => {
+			for (const client of proxy.clients) {
+				client.terminate();
+			}
+			proxy.close();
+		});
+		httpServer.on("upgrade", (request, socket, head) => {
+			if (request.url?.startsWith("/graphql")) {
+				proxy.handleUpgrade(request, socket, head, (ws) => {
+					ws.on("message", (message) => ws.send(message));
+				});
+			}
+		});
+
+		const socket = await connect();
+		const client = new WebSocket(`ws://127.0.0.1:${port}/graphql`, {
+			createConnection: () => socket,
+		});
+		onTestFinished(() => client.terminate());
+		const closed = once(client, "close").then(() => "closed");
+		await once(client, "open");
+		// Give a (wrongly) dispatched upgrade time to resolve and destroy the socket.
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		const received = once(client, "message").then(([message]) =>
+			String(message)
+		);
+		client.send("proxied");
+		expect(await Promise.race([received, closed])).toBe("proxied");
+		expect(dispatchFetch).not.toHaveBeenCalled();
+	});
+
+	test("forwards upgrades matching a non-WebSocket `server.proxy` rule to the Worker", async ({
+		expect,
+	}) => {
+		const mf = await listen(undefined, { "/api": "http://127.0.0.1:1" });
+		const host = `127.0.0.1:${port}`;
+		const url = await dispatchUpgrade(expect, mf, { Host: host }, "/api/ws");
+		expect(`${url}`).toBe(`http://${host}/api/ws`);
+	});
+
+	test("forwards upgrades that a `server.proxy` `bypass` rewrites to the Worker at the rewritten URL", async ({
+		expect,
+	}) => {
+		const mf = await listen(undefined, {
+			"/socket": {
+				target: "http://127.0.0.1:1",
+				ws: true,
+				bypass: () => "/worker-socket?from=bypass",
+			},
+		});
+		const host = `127.0.0.1:${port}`;
+		const url = await dispatchUpgrade(expect, mf, { Host: host }, "/socket");
+		expect(`${url}`).toBe(`http://${host}/worker-socket?from=bypass`);
+	});
+
+	test("calls a `server.proxy` `bypass` once per upgrade and shares its result with Vite's proxy", async ({
+		expect,
+	}) => {
+		let calls = 0;
+		const bypass = vi.fn(() => (++calls === 1 ? "/worker-socket" : false));
+		const options: vite.ProxyOptions = {
+			target: "http://127.0.0.1:1",
+			ws: true,
+			bypass,
+		};
+		const mf = await listen(undefined, { "/socket": options });
+
+		// Stands in for Vite's proxy `upgrade` listener, which copies each
+		// entry's options when Vite creates its proxy middleware.
+		const viteOptions = { ...options };
+		const viteBypassResults: unknown[] = [];
+		httpServer.on("upgrade", async (request: IncomingMessage) => {
+			viteBypassResults.push(
+				await viteOptions.bypass?.(request, undefined, viteOptions)
+			);
+		});
+
+		const host = `127.0.0.1:${port}`;
+		const url = await dispatchUpgrade(expect, mf, { Host: host }, "/socket");
+		expect(`${url}`).toBe(`http://${host}/worker-socket`);
+		await vi.waitFor(() => expect(viteBypassResults).toHaveLength(1));
+		expect(viteBypassResults).toEqual(["/worker-socket"]);
+		expect(bypass).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("findViteProxyWebSocketOptions", () => {
+	test("returns undefined without a proxy config", ({ expect }) => {
+		expect(findViteProxyWebSocketOptions("/graphql")).toBeUndefined();
+		expect(findViteProxyWebSocketOptions("/graphql", {})).toBeUndefined();
+	});
+
+	test("matches string contexts as URL prefixes", ({ expect }) => {
+		const proxy = { "/graphql": { target: "http://localhost:4000", ws: true } };
+		expect(findViteProxyWebSocketOptions("/graphql", proxy)).toBeDefined();
+		expect(
+			findViteProxyWebSocketOptions("/graphql/ws?token=1", proxy)
+		).toBeDefined();
+		expect(findViteProxyWebSocketOptions("/graphqlx", proxy)).toBeDefined();
+		expect(
+			findViteProxyWebSocketOptions("/api/graphql", proxy)
+		).toBeUndefined();
+	});
+
+	test("matches contexts starting with `^` as regular expressions", ({
+		expect,
+	}) => {
+		const proxy = {
+			"^/socket/\\d+$": { target: "http://localhost:4000", ws: true },
+		};
+		expect(findViteProxyWebSocketOptions("/socket/42", proxy)).toBeDefined();
+		expect(findViteProxyWebSocketOptions("/socket/abc", proxy)).toBeUndefined();
+		expect(
+			findViteProxyWebSocketOptions("/socket/42/extra", proxy)
+		).toBeUndefined();
+	});
+
+	test("ignores matching entries that do not proxy WebSockets", ({
+		expect,
+	}) => {
+		expect(
+			findViteProxyWebSocketOptions("/api", {
+				"/api": { target: "http://localhost:4000" },
+			})
+		).toBeUndefined();
+		expect(
+			findViteProxyWebSocketOptions("/api", {
+				"/api": { target: "http://localhost:4000", ws: false },
+			})
+		).toBeUndefined();
+		// The string shorthand has no `ws` option.
+		expect(
+			findViteProxyWebSocketOptions("/api", { "/api": "http://localhost:4000" })
+		).toBeUndefined();
+	});
+
+	test.for(["ws://localhost:4000", "wss://localhost:4000"])(
+		"treats entries targeting %s as WebSocket proxies",
+		(target, { expect }) => {
+			expect(
+				findViteProxyWebSocketOptions("/ws", { "/ws": { target } })
+			).toBeDefined();
+			expect(
+				findViteProxyWebSocketOptions("/ws", { "/ws": target })
+			).toBeDefined();
+		}
+	);
+
+	test("treats URL object targets like Vite does", ({ expect }) => {
+		expect(
+			findViteProxyWebSocketOptions("/ws", {
+				"/ws": { target: new URL("ws://localhost:4000") },
+			})
+		).toBeDefined();
+		expect(
+			findViteProxyWebSocketOptions("/ws", {
+				"/ws": { target: new URL("http://localhost:4000") },
+			})
+		).toBeUndefined();
+	});
+
+	test("checks later entries when an earlier match does not proxy WebSockets", ({
+		expect,
+	}) => {
+		const proxy = {
+			"/api": "http://localhost:4000",
+			"/api/ws": { target: "http://localhost:4001", ws: true },
+		};
+		expect(findViteProxyWebSocketOptions("/api/ws", proxy)).toBeDefined();
+		expect(findViteProxyWebSocketOptions("/api/other", proxy)).toBeUndefined();
+	});
+});
+
+describe("getWorkerUpgradeUrl", () => {
+	function upgradeRequest(url: string) {
+		return { url } as IncomingMessage;
+	}
+
+	test("returns the request URL when no WebSocket proxy entry matches", async ({
+		expect,
+	}) => {
+		const proxy = { "/api": "http://localhost:4000" };
+		expect(await getWorkerUpgradeUrl(upgradeRequest("/ws"))).toBe("/ws");
+		expect(await getWorkerUpgradeUrl(upgradeRequest("/api/ws"), proxy)).toBe(
+			"/api/ws"
+		);
+	});
+
+	test("returns undefined when a WebSocket proxy entry matches", async ({
+		expect,
+	}) => {
+		const proxy = { "/ws": { target: "http://localhost:4000", ws: true } };
+		expect(
+			await getWorkerUpgradeUrl(upgradeRequest("/ws"), proxy)
+		).toBeUndefined();
+	});
+
+	test("returns the URL a `bypass` rewrites the upgrade to", async ({
+		expect,
+	}) => {
+		const request = upgradeRequest("/ws?token=1");
+		const bypass = vi.fn(() => "/worker-ws");
+		const options = { target: "http://localhost:4000", ws: true, bypass };
+		expect(await getWorkerUpgradeUrl(request, { "/ws": options })).toBe(
+			"/worker-ws"
+		);
+		expect(bypass).toHaveBeenCalledWith(request, undefined, options);
+	});
+
+	test("awaits an async `bypass`", async ({ expect }) => {
+		const proxy = {
+			"/ws": {
+				target: "http://localhost:4000",
+				ws: true,
+				bypass: async () => "/worker-ws",
+			},
+		};
+		expect(await getWorkerUpgradeUrl(upgradeRequest("/ws"), proxy)).toBe(
+			"/worker-ws"
+		);
+	});
+
+	test.for<[string, NonNullable<vite.ProxyOptions["bypass"]>]>([
+		["false", () => false],
+		["undefined", () => undefined],
+		["null", () => null],
+		["an error", () => Promise.reject(new Error("bypass failed"))],
+	])(
+		"leaves the upgrade to Vite when `bypass` returns %s",
+		async ([, bypass], { expect }) => {
+			const proxy = {
+				"/ws": { target: "http://localhost:4000", ws: true, bypass },
+			};
+			expect(
+				await getWorkerUpgradeUrl(upgradeRequest("/ws"), proxy)
+			).toBeUndefined();
+		}
+	);
+
+	test("does not call `bypass` on entries that do not proxy WebSockets", async ({
+		expect,
+	}) => {
+		const bypass = vi.fn(() => "/rewritten");
+		const proxy = { "/api": { target: "http://localhost:4000", bypass } };
+		expect(await getWorkerUpgradeUrl(upgradeRequest("/api/ws"), proxy)).toBe(
+			"/api/ws"
+		);
+		expect(bypass).not.toHaveBeenCalled();
+	});
+});
+
+describe("shareViteProxyBypassResults", () => {
+	function upgradeRequest(url: string) {
+		return { url } as IncomingMessage;
+	}
+
+	function webSocketEntry(bypass: NonNullable<vite.ProxyOptions["bypass"]>) {
+		return { target: "http://localhost:4000", ws: true, bypass };
+	}
+
+	test("calls `bypass` once per upgrade request and shares its result", async ({
+		expect,
+	}) => {
+		const bypass = vi.fn(async (request: IncomingMessage) => request.url);
+		const options = webSocketEntry(bypass);
+		shareViteProxyBypassResults({ "/ws": options });
+
+		const first = upgradeRequest("/ws?first");
+		const second = upgradeRequest("/ws?second");
+		expect(await options.bypass(first, undefined, options)).toBe("/ws?first");
+		expect(await options.bypass(first, undefined, options)).toBe("/ws?first");
+		expect(await options.bypass(second, undefined, options)).toBe("/ws?second");
+		expect(bypass).toHaveBeenCalledTimes(2);
+		expect(bypass).toHaveBeenCalledWith(first, undefined, options);
+	});
+
+	test("shares a synchronous `bypass` error as a rejection", async ({
+		expect,
+	}) => {
+		const bypass = vi.fn(() => {
+			throw new Error("bypass failed");
+		});
+		const options = webSocketEntry(bypass);
+		shareViteProxyBypassResults({ "/ws": options });
+
+		const request = upgradeRequest("/ws");
+		await expect(
+			Promise.resolve(options.bypass(request, undefined, options))
+		).rejects.toThrow("bypass failed");
+		await expect(
+			Promise.resolve(options.bypass(request, undefined, options))
+		).rejects.toThrow("bypass failed");
+		expect(bypass).toHaveBeenCalledTimes(1);
+	});
+
+	test("calls `bypass` for every HTTP request", async ({ expect }) => {
+		const bypass = vi.fn(() => undefined);
+		const options = webSocketEntry(bypass);
+		shareViteProxyBypassResults({ "/ws": options });
+
+		const request = upgradeRequest("/ws");
+		const response = {} as ServerResponse;
+		await options.bypass(request, response, options);
+		await options.bypass(request, response, options);
+		expect(bypass).toHaveBeenCalledTimes(2);
+	});
+
+	test("calls `bypass` with the options it is called on as `this`", async ({
+		expect,
+	}) => {
+		const options: vite.ProxyOptions = {
+			target: "ws://localhost:5000",
+			bypass(this: vite.ProxyOptions) {
+				return this.target === "ws://localhost:5000" ? "/worker-ws" : false;
+			},
+		};
+		shareViteProxyBypassResults({ "/ws": options });
+
+		const request = upgradeRequest("/ws");
+		expect(await options.bypass?.(request, undefined, options)).toBe(
+			"/worker-ws"
+		);
+		expect(
+			await options.bypass?.(
+				upgradeRequest("/ws"),
+				{} as ServerResponse,
+				options
+			)
+		).toBe("/worker-ws");
+	});
+
+	test("leaves `bypass` on entries that do not proxy WebSockets", ({
+		expect,
+	}) => {
+		const bypass = () => "/rewritten";
+		const options = { target: "http://localhost:4000", bypass };
+		shareViteProxyBypassResults({ "/api": options, "/ws": undefined });
+		expect(options.bypass).toBe(bypass);
+	});
+
+	test("wraps each `bypass` only once", ({ expect }) => {
+		const options = webSocketEntry(() => "/rewritten");
+		shareViteProxyBypassResults({ "/ws": options });
+		const sharedBypass = options.bypass;
+		shareViteProxyBypassResults({ "/ws": options });
+		expect(options.bypass).toBe(sharedBypass);
 	});
 });
