@@ -241,8 +241,11 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				 - wrangler (devDependency)
 				`
 			);
-			expect(std.out).toContain('  import { defineConfig } from "cf/config";');
-			expect(std.out).toContain("  export default defineConfig({");
+			expect(std.out).toContain(
+				'  import type { CloudflareConfig } from "cf/config";'
+			);
+			expect(std.out).toContain("  export default {");
+			expect(std.out).toContain("  } satisfies CloudflareConfig;");
 			expect(std.out).toContain(
 				'  import { defineWranglerConfig } from "wrangler/experimental-config";'
 			);

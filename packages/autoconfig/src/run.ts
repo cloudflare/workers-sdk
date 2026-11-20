@@ -557,7 +557,8 @@ async function saveWranglerConfigTs(
  * @returns The configuration module source
  */
 function renderCloudflareConfig(workerConfig: WorkerConfig): string {
-	return `import { defineConfig } from "cf/config";\n\nexport default defineConfig({\n  worker: ${JSON.stringify(workerConfig, null, 2).replaceAll("\n", "\n  ")}\n});\n`;
+	// Static directories may have no package.json or local cf installation.
+	return `import type { CloudflareConfig } from "cf/config";\n\nexport default {\n  worker: ${JSON.stringify(workerConfig, null, 2).replaceAll("\n", "\n  ")}\n} satisfies CloudflareConfig;\n`;
 }
 
 /**
