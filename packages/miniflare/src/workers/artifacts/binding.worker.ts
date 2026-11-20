@@ -1,11 +1,21 @@
 import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
 import {
 	createArtifactsEvent,
+	createPushedPayload,
+	getRefUpdates,
+	getUploadPackEventType,
+	listsPushedCommits,
 	matchesArtifactsEventRoute,
+	MAX_PUSH_COMMITS,
+	routeReceives,
 	toArtifactsEventMessage,
 	type ArtifactsEvent,
 	type ArtifactsEventRoute,
+	type ArtifactsEventType,
+	type CommitRange,
+	type RefUpdate,
 	type RepoPayload,
+	type UploadPackEventType,
 } from "./events";
 
 const repoName = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
@@ -124,6 +134,12 @@ interface BackendState {
 	refs: Record<string, string>;
 }
 
+/** Refs before and after one push, as the Git backend recorded them. */
+interface PushRefs {
+	before: Record<string, string>;
+	after: Record<string, string>;
+}
+
 type BackendRequest =
 	| { action: "create"; defaultBranch: string }
 	| { action: "delete" }
@@ -136,6 +152,14 @@ type BackendRequest =
 	| { action: "import"; sourceUrl: string; branch?: string; depth?: number }
 	| { action: "refs" }
 	| { action: "abortPush"; requestId: string }
+	| { action: "pushRefs"; requestId: string }
+	| {
+			action: "commitRange";
+			after: string;
+			before: string;
+			limit: number;
+			maxWalk: number;
+	  }
 	| { action: "readBlob"; hash: string }
 	| { action: "readTree"; hash: string }
 	| { action: "readCommit"; hash: string }
@@ -815,23 +839,102 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		);
 	}
 
+	/**
+	 * Records a finished push: bumps the repository's push time and publishes
+	 * a push event for each ref it changed.
+	 *
+	 * @param requestId - The push request, whose refs the Git backend
+	 * recorded under its repository lock
+	 */
 	async syncAfterPush(
 		name: string,
 		id: string,
-		previousRefs: Record<string, string>
+		requestId: string
 	): Promise<void> {
-		await this.exclusive(async () => {
+		// Read outside exclusive(): the backend may wait for another push's lock.
+		const pushed = await this.backend<PushRefs | null>(
+			await this.getRepo(name, id),
+			{ action: "pushRefs", requestId }
+		);
+		const updates =
+			pushed === null ? [] : getRefUpdates(pushed.before, pushed.after);
+		if (updates.length === 0) {
+			return;
+		}
+		const repository = await this.exclusive(async () => {
 			const repositories = await this.repos();
 			const repository = getRepo(repositories, name, id);
-			const state = await this.backend<BackendState>(repository, {
-				action: "refs",
-			});
-			if (JSON.stringify(state.refs) !== JSON.stringify(previousRefs)) {
-				repository.updatedAt = new Date().toISOString();
-				repository.lastPushAt = repository.updatedAt;
-			}
+			repository.updatedAt = new Date().toISOString();
+			repository.lastPushAt = repository.updatedAt;
 			await this.saveRepos(repositories);
+			return repository;
 		});
+		if (this.subscribesTo(["cf.artifacts.repo.pushed"], repository.name)) {
+			// Reading commits must not hold up the push response.
+			this.ctx.waitUntil(this.publishPushes(repository, updates));
+		}
+	}
+
+	/**
+	 * Publishes pushes one ref at a time: each reads up to 21 commits with
+	 * native Git, and a push can change thousands of refs.
+	 */
+	private async publishPushes(
+		repository: Repository,
+		updates: RefUpdate[]
+	): Promise<void> {
+		for (const update of updates) {
+			await this.publishPush(repository, update);
+		}
+	}
+
+	/** Publishes one push event per changed ref, as production does. */
+	private async publishPush(
+		repository: Repository,
+		update: RefUpdate
+	): Promise<void> {
+		let range: CommitRange | undefined;
+		try {
+			range = listsPushedCommits(update)
+				? await this.backend<CommitRange>(repository, {
+						action: "commitRange",
+						after: update.after,
+						before: update.before,
+						limit: MAX_PUSH_COMMITS,
+						// One more than listed shows that commits were left out.
+						maxWalk: MAX_PUSH_COMMITS + 1,
+					})
+				: undefined;
+		} catch (error) {
+			// Production skips an update whose commits it cannot read.
+			console.warn(
+				`Artifacts push event skipped (repo=${repository.name} ref=${update.ref}): ${String(error)}`
+			);
+			return;
+		}
+		this.publish(
+			createArtifactsEvent(
+				"cf.artifacts.repo.pushed",
+				eventRepo(repository),
+				createPushedPayload(update, range)
+			)
+		);
+	}
+
+	/** Publishes a clone or fetch event for a served upload-pack request. */
+	publishUploadPack(repository: Repository, type: UploadPackEventType): void {
+		this.publish(createArtifactsEvent(type, eventRepo(repository), {}));
+	}
+
+	/**
+	 * Whether any subscription receives one of these event types from a
+	 * repository. Git events cost extra Git work to build, so they are only
+	 * built for a subscriber.
+	 */
+	subscribesTo(types: ArtifactsEventType[], repoName: string): boolean {
+		return (this.env.eventRoutes ?? []).some((route) =>
+			types.some((type) => routeReceives(route, type, repoName))
+		);
 	}
 
 	private publish(event: ArtifactsEvent): void {
@@ -996,7 +1099,12 @@ function createRepoHandle(
 function parseGitRoute(
 	request: Request,
 	namespace: string
-): { name: string; write: boolean; push: boolean } | null {
+): {
+	name: string;
+	write: boolean;
+	push: boolean;
+	uploadPack: boolean;
+} | null {
 	const url = new URL(request.url);
 	const match = url.pathname.match(/^\/git\/([^/]+)\/([^/]+)\.git(?:\/(.*))?$/);
 	if (!match || match[1] !== namespace || !match[2]) {
@@ -1018,7 +1126,61 @@ function parseGitRoute(
 		name: match[2],
 		write: path === "git-receive-pack" || service === "git-receive-pack",
 		push: request.method === "POST" && path === "git-receive-pack",
+		uploadPack: request.method === "POST" && path === "git-upload-pack",
 	};
+}
+
+const UPLOAD_PACK_EVENT_TYPES: UploadPackEventType[] = [
+	"cf.artifacts.repo.cloned",
+	"cf.artifacts.repo.fetched",
+];
+
+/**
+ * Serves an upload-pack request and publishes the clone or fetch it served.
+ * The body is read whole to classify it; Git keeps these requests small,
+ * since they only name refs and objects, never pack data.
+ */
+async function serveUploadPack(
+	state: LocalArtifactsNamespaceObject,
+	repository: Repository,
+	request: Request
+): Promise<Response> {
+	const body = new Uint8Array(await request.arrayBuffer());
+	const response = await state.gitFetch(
+		repository,
+		// Upload-pack requests are always POSTs; see parseGitRoute().
+		new Request(request, { method: "POST", body })
+	);
+	if (response.ok) {
+		try {
+			const type = getUploadPackEventType(
+				await decodeGitRequestBody(body, request.headers)
+			);
+			if (type !== undefined) {
+				state.publishUploadPack(repository, type);
+			}
+		} catch (error) {
+			// Git has already served the request; its event must not fail it.
+			console.warn(
+				`Artifacts clone or fetch event skipped (repo=${repository.name}): ${String(error)}`
+			);
+		}
+	}
+	return response;
+}
+
+/** Git compresses large request bodies with gzip. */
+async function decodeGitRequestBody(
+	body: Uint8Array,
+	headers: Headers
+): Promise<Uint8Array> {
+	if (headers.get("Content-Encoding")?.toLowerCase() !== "gzip") {
+		return body;
+	}
+	const decompressed = new Blob([body])
+		.stream()
+		.pipeThrough(new DecompressionStream("gzip"));
+	return new Uint8Array(await new Response(decompressed).arrayBuffer());
 }
 
 async function handleGitRequest(
@@ -1051,26 +1213,28 @@ async function handleGitRequest(
 	if (route.write && repository.readOnly) {
 		return new Response("Artifacts repository is read-only", { status: 403 });
 	}
+	if (
+		route.uploadPack &&
+		state.subscribesTo(UPLOAD_PACK_EVENT_TYPES, repository.name)
+	) {
+		return serveUploadPack(state, repository, request);
+	}
 
-	const previousRefs = route.push
-		? (await state.backend<BackendState>(repository, { action: "refs" })).refs
-		: undefined;
-	const requestId = route.push ? crypto.randomUUID() : undefined;
+	if (!route.push) {
+		return state.gitFetch(repository, request);
+	}
+	// The Git backend records this push's refs under its repository lock.
+	const requestId = crypto.randomUUID();
 	const response = await state.gitFetch(repository, request, requestId);
-	if (!previousRefs || !requestId) {
-		return response;
-	}
-
-	if (!response.ok) {
-		return response;
-	}
 	const syncRefs = async () => {
 		try {
-			await state.syncAfterPush(repository.name, repository.id, previousRefs);
+			await state.syncAfterPush(repository.name, repository.id, requestId);
 		} catch {
 			// Git has already accepted the push; metadata bookkeeping must not fail the client request.
 		}
 	};
+	// Sync failed pushes too: Git may have updated some refs, and syncing
+	// releases the backend's record of the push.
 	if (!response.body) {
 		await syncRefs();
 		return response;

@@ -46,6 +46,17 @@ type InFlightGitRequest = {
 	generation: string;
 	abort: () => void;
 };
+/** Refs before and after a push, recorded under the repository lock. */
+type PushRefs = {
+	path: string;
+	generation: string;
+	before: Record<string, string>;
+	after: Record<string, string>;
+};
+/** Pushes whose refs the Worker has not read yet, by request ID. */
+type CompletedPushes = Map<string, PushRefs>;
+/** The Worker reads each push's refs straight away; this only bounds a leak. */
+const MAX_COMPLETED_PUSHES = 1000;
 const decoder = new TextDecoder();
 
 if (parentPort) {
@@ -126,13 +137,27 @@ const AdminRequestSchema = z.discriminatedUnion("action", [
 		offset: z.number().optional(),
 	}),
 	generatedRepo.extend({
+		action: z.literal("commitRange"),
+		after: z.string().regex(/^[0-9a-f]{40}$/),
+		before: z.string().regex(/^[0-9a-f]{40}$/),
+		limit: z.number().int().min(0),
+		maxWalk: z.number().int().min(0),
+	}),
+	generatedRepo.extend({
 		action: z.literal("abortPush"),
+		requestId: z.uuid(),
+	}),
+	generatedRepo.extend({
+		action: z.literal("pushRefs"),
 		requestId: z.uuid(),
 	}),
 ]);
 
 type AdminRequest = z.infer<typeof AdminRequestSchema>;
-type GitAction = Exclude<AdminRequest, { action: "abortPush" }>;
+type GitAction = Exclude<
+	AdminRequest,
+	{ action: "abortPush" } | { action: "pushRefs" }
+>;
 type CreateRequest = Extract<AdminRequest, { action: "create" }>;
 type ForkRequest = Extract<AdminRequest, { action: "fork" }>;
 type ImportRequest = Extract<AdminRequest, { action: "import" }>;
@@ -192,6 +217,7 @@ async function startGitServer(
 	const shutdown = new AbortController();
 	const repositoryLocks: RepositoryLocks = new Map();
 	const inFlight = new Map<string, InFlightGitRequest>();
+	const completedPushes: CompletedPushes = new Map();
 	const server = createServer((request, response) => {
 		if (request.headers["x-local-artifacts-backend"] !== secret) {
 			response.writeHead(403).end("Forbidden");
@@ -202,6 +228,7 @@ async function startGitServer(
 			hooks,
 			repositoryLocks,
 			inFlight,
+			completedPushes,
 			request,
 			response,
 			shutdown.signal
@@ -278,13 +305,22 @@ async function handleRequest(
 	hooks: string,
 	locks: RepositoryLocks,
 	inFlight: Map<string, InFlightGitRequest>,
+	completedPushes: CompletedPushes,
 	request: IncomingMessage,
 	response: ServerResponse,
 	signal: AbortSignal
 ): Promise<void> {
 	const url = new URL(request.url ?? "/", "http://local-artifacts.invalid");
 	if (url.pathname === adminPath) {
-		await handleAdmin(root, locks, inFlight, request, response, signal);
+		await handleAdmin(
+			root,
+			locks,
+			inFlight,
+			completedPushes,
+			request,
+			response,
+			signal
+		);
 		return;
 	}
 	const gitPath = parseGitPath(url.pathname);
@@ -312,6 +348,10 @@ async function handleRequest(
 			suffix === "/git-receive-pack" &&
 			typeof requestId === "string" &&
 			/^[0-9a-f-]{36}$/.test(requestId);
+		// Refs read under this lock belong to this push alone: pushes to the
+		// same repository wait here, so a concurrent push cannot blur them.
+		const git = new GitClient(path, signal);
+		const refsBefore = trackPush ? (await git.state()).refs : undefined;
 		try {
 			await runGitHttpBackend(
 				root,
@@ -333,15 +373,45 @@ async function handleRequest(
 		} finally {
 			if (trackPush) {
 				inFlight.delete(requestId);
+				// Record the refs even if the push failed or was aborted: Git may
+				// already have updated some of them.
+				const refsAfter = await git.state().then(
+					(state) => state.refs,
+					// Never mask the push's own outcome; its events are best-effort.
+					() => undefined
+				);
+				if (refsBefore !== undefined && refsAfter !== undefined) {
+					recordPush(completedPushes, requestId, {
+						path,
+						generation,
+						before: refsBefore,
+						after: refsAfter,
+					});
+				}
 			}
 		}
 	});
+}
+
+function recordPush(
+	completedPushes: CompletedPushes,
+	requestId: string,
+	refs: PushRefs
+): void {
+	completedPushes.set(requestId, refs);
+	for (const oldest of completedPushes.keys()) {
+		if (completedPushes.size <= MAX_COMPLETED_PUSHES) {
+			break;
+		}
+		completedPushes.delete(oldest);
+	}
 }
 
 async function handleAdmin(
 	root: string,
 	locks: RepositoryLocks,
 	inFlight: Map<string, InFlightGitRequest>,
+	completedPushes: CompletedPushes,
 	request: IncomingMessage,
 	response: ServerResponse,
 	signal: AbortSignal
@@ -361,6 +431,21 @@ async function handleAdmin(
 		}
 		response.writeHead(200, { "Content-Type": "application/json" });
 		response.end("true");
+		return;
+	}
+	if (body.action === "pushRefs") {
+		// The push holds this lock until its refs are recorded, so waiting for
+		// it here means a finished push is never missed.
+		const refs = await withRepositoryLocks(locks, [repository], async () => {
+			const recorded = completedPushes.get(body.requestId);
+			completedPushes.delete(body.requestId);
+			return recorded?.path === repository &&
+				recorded.generation === body.generation
+				? { before: recorded.before, after: recorded.after }
+				: null;
+		});
+		response.writeHead(200, { "Content-Type": "application/json" });
+		response.end(JSON.stringify(refs));
 		return;
 	}
 	const lockPaths = [repository];
@@ -427,6 +512,8 @@ async function handleAction(
 			return git.readFile(body.ref, body.path);
 		case "log":
 			return git.log(body.ref, body.limit, body.offset);
+		case "commitRange":
+			return git.commitRange(body.after, body.before, body.limit, body.maxWalk);
 	}
 }
 
