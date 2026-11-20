@@ -1,0 +1,20 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"rootDir": "../..",
+		"outDir": "emitted-types",
+		"declaration": true,
+		"declarationMap": true,
+		"emitDeclarationOnly": true,
+		"noEmit": false,
+		"noCheck": true,
+		"incremental": false
+	},
+	"files": [
+		"src/index.ts",
+		"src/public.ts",
+		"../workers-shared/index.ts",
+		"../workers-shared/utils/types.ts"
+	],
+	"include": ["src/**/*.d.ts"]
+}

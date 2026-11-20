@@ -1,0 +1,37 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"rootDir": "../..",
+		"outDir": "emitted-types",
+		"declaration": true,
+		"declarationMap": true,
+		"emitDeclarationOnly": true,
+		"noEmit": false,
+		"noCheck": true,
+		"incremental": false
+	},
+	"files": [
+		"src/browser.ts",
+		"src/prometheus-metrics.ts",
+		"src/index.ts",
+		"src/config/public.ts",
+		"src/asset-hash.ts",
+		"src/test-helpers/index.ts",
+		"src/compliance.ts",
+		"src/compatibility-date.ts",
+		"src/docker-path.ts",
+		"src/errors.ts",
+		"src/custom-api-headers.ts",
+		"src/sanitize-headers.ts",
+		"src/fs-helpers.ts",
+		"src/global-wrangler-config-path.ts",
+		"src/local-env.ts",
+		"src/node-compat.ts",
+		"src/sourcemap.ts",
+		"src/zod-format.ts",
+		"../workers-shared/index.ts",
+		"../workers-shared/utils/types.ts",
+		"../workflows-shared/src/types.ts"
+	],
+	"include": ["src/**/*.d.ts"]
+}
