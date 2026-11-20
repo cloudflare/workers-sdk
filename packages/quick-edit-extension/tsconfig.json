@@ -5,8 +5,9 @@
 		"outDir": "dist",
 		"lib": ["ES2020", "WebWorker"],
 		"sourceMap": true,
+		"noEmit": true,
 		"rootDir": "src",
 		"strict": true
 	},
-	"exclude": ["scripts"]
+	"include": ["src", "vscode*.d.ts"]
 }

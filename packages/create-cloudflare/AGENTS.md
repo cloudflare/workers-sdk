@@ -11,11 +11,11 @@ Project scaffolding CLI for Cloudflare Workers. Main source entry: `src/cli.ts`.
 - `templates/` — Scaffolding templates (excluded from linting and most formatting)
 - `src/wrangler/` — Wrangler config, login, and account helpers
 - `src/cf/` — Helpers for projects configured by `cloudflare.config.ts`, which use the `cf` CLI instead of Wrangler (detected with `usesCfCli`)
-- `scripts/build.ts` — esbuild-based build → `dist/cli.js`
+- `tsdown.config.ts` — Rolldown/Oxc build → `dist/cli.js`
 
 ## BUILD
 
-- esbuild bundles `src/cli.ts` as CJS → `dist/cli.js`
+- tsdown bundles `src/cli.ts` as CJS → `dist/cli.js`
 - `package.json` `main` and `exports["."]` point at `dist/cli.js`; `bin` points at `bin/c3.js`
 - `bin/c3.js` is a plain CommonJS shim that gates on Node.js version (read from `package.json` `engines.node`) before requiring `dist/cli.js`
 

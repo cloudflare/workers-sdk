@@ -14,7 +14,7 @@
 		"metadata-generator/**/*"
 	],
 	"scripts": {
-		"build": "node -r esbuild-register ./scripts/build.ts",
+		"build": "tsdown && tsrs -p tsconfig.build.json",
 		"check:type": "tsrs",
 		"prepack": "npm run build",
 		"test": "vitest run",
@@ -29,8 +29,8 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"concurrently": "^8.2.2",
-		"esbuild": "catalog:default",
 		"html-rewriter-wasm": "^0.4.1",
+		"tsdown": "0.23.1",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
 	},
