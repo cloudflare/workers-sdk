@@ -318,6 +318,8 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 					className: "MyWorkflow",
 					scriptName: undefined,
 					stepLimit: 5000,
+					// `schedules` is kept: local dev uses it for cron-triggered Workflows
+					schedules: ["0 * * * *"],
 				},
 			});
 		});
