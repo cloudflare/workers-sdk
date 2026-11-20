@@ -98,29 +98,6 @@ async function getWorkerNamespaceInfo(
 	);
 }
 
-/**
- * Rename a dynamic dispatch namespace
- */
-async function renameWorkerNamespace(
-	complianceConfig: ComplianceConfig,
-	accountId: string,
-	oldName: string,
-	newName: string
-) {
-	await fetchResult(
-		complianceConfig,
-		`/accounts/${accountId}/workers/dispatch/namespaces/${oldName}`,
-		{
-			method: "PUT",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({ name: newName }),
-		}
-	);
-	logger.log(`Renamed dispatch namespace "${oldName}" to "${newName}"`);
-}
-
 export const dispatchNamespaceNamespace = createNamespace({
 	metadata: {
 		description: "🏗️ Manage dispatch namespaces",
@@ -208,34 +185,6 @@ export const dispatchNamespaceDeleteCommand = createCommand({
 		const accountId = await requireAuth(config);
 		await deleteWorkerNamespace(config, accountId, args.name);
 		metrics.sendMetricsEvent("delete dispatch namespace", {
-			sendMetrics: config.send_metrics,
-		});
-	},
-});
-
-export const dispatchNamespaceRenameCommand = createCommand({
-	metadata: {
-		description: "Rename a dispatch namespace",
-		owner: "Workers: Deploy and Config",
-		status: "stable",
-	},
-	args: {
-		oldName: {
-			describe: "Name of the dispatch namespace",
-			type: "string",
-			demandOption: true,
-		},
-		newName: {
-			describe: "New name of the dispatch namespace",
-			type: "string",
-			demandOption: true,
-		},
-	},
-	positionalArgs: ["oldName", "newName"],
-	async handler(args, { config }) {
-		const accountId = await requireAuth(config);
-		await renameWorkerNamespace(config, accountId, args.oldName, args.newName);
-		metrics.sendMetricsEvent("rename dispatch namespace", {
 			sendMetrics: config.send_metrics,
 		});
 	},
