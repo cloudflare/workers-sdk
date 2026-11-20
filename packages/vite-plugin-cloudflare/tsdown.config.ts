@@ -1,4 +1,5 @@
 import { defineConfig } from "tsdown";
+import { emitDeclarations } from "../../tools/build/declarations.mjs";
 import type { UserConfig } from "tsdown";
 
 const ignoreWatch = ["dist", "playground", "e2e"];
@@ -13,28 +14,8 @@ export default defineConfig([
 		sourcemap,
 		outDir: "dist",
 		tsconfig: "tsconfig.plugin.json",
-		deps: {
-			dts: {
-				alwaysBundle: [
-					/^@cloudflare\/(?!workers-types(?:\/|$))/,
-					/^cloudflare(?:\/.*)?$/,
-					"jsonc-parser",
-					"zod",
-				],
-			},
-		},
-		dts: {
-			resolver: "tsc",
-			sourcemap,
-			compilerOptions: {
-				// workaround for https://github.com/rolldown/tsdown/issues/345
-				paths: {
-					"@cloudflare/workers-shared/utils/types": [
-						"../workers-shared/utils/types",
-					],
-				},
-			},
-		},
+
+		dts: false,
 		ignoreWatch,
 	},
 	worker("asset-worker"),
@@ -48,6 +29,35 @@ export default defineConfig([
 		deps: { neverBundle: ["cloudflare:workers", "vite/module-runner"] },
 	}),
 	worker("vite-proxy-worker"),
+	{
+		entry: {
+			index: "emitted-types/packages/vite-plugin-cloudflare/src/index.d.ts",
+		},
+		platform: "node",
+		format: "esm",
+		outDir: "dist",
+		clean: false,
+		dts: {
+			dtsInput: true,
+			emitDtsOnly: true,
+			sourcemap: process.env.SOURCEMAPS !== "false",
+		},
+		outputOptions: {
+			entryFileNames: "[name].d.mts",
+			chunkFileNames: "[name]-[hash].d.mts",
+		},
+		tsconfig: "tsconfig.bundle.json",
+		sourcemap: process.env.SOURCEMAPS !== "false",
+		plugins: [emitDeclarations()],
+		deps: {
+			alwaysBundle: [
+				/^@cloudflare\/(?!workers-types(?:\/|$))/,
+				/^cloudflare(?:\/.*)?$/,
+				"jsonc-parser",
+				"zod",
+			],
+		},
+	},
 ]);
 
 /**

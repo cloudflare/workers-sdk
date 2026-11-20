@@ -60,10 +60,13 @@ and internal bindings to it, and the Durable Object designators are read from it
 
 ## BUILD
 
-`tsdown.config.ts` defines 2 separate builds (all ESM):
+`tsdown.config.ts` defines separate JavaScript and declaration builds (all ESM):
 
-1. pool — `src/pool/index.ts` → `dist/pool` (emits type declarations)
+1. pool — `src/pool/index.ts` → `dist/pool`
 2. worker + libs — `src/worker/index.ts` plus `src/worker/lib` and `src/worker/node` → `dist/worker`
+
+Declarations are emitted by tsrs using `tsconfig.declarations.json`, then bundled
+from `emitted-types/` into `dist/pool` by tsdown.
 
 Types entry `types/cloudflare-test.d.ts` is hand-written (NOT generated from source).
 

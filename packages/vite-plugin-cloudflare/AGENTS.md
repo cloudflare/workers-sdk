@@ -14,7 +14,7 @@ Vite plugin for Cloudflare Workers development. Exports `cloudflare()` plugin fa
 
 ## BUILD
 
-- Uses `tsdown` as its build tool
+- Uses `tsdown` for JavaScript builds and declaration bundling; tsrs emits declarations using `tsconfig.declarations.json`
 - Outputs ESM (`.mjs`) to `dist/index.mjs`
 - Also bundles 4 internal worker scripts from `src/workers/*/index.ts` as separate neutral-platform outputs to `dist/workers/`
 - Release builds set `SOURCEMAPS=false` to omit the plugin's JavaScript and declaration maps. Normal builds retain maps for debugging; the setting does not change source maps for applications built with the plugin.
