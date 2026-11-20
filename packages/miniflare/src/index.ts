@@ -57,6 +57,7 @@ import {
 	getTriggersOfType,
 	getWorkflowBindingServiceName,
 	getWorkflowExporters,
+	getWorkflowsEngineServiceName,
 	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
 	IMAGES_PLUGIN_NAME,
@@ -168,6 +169,7 @@ import type {
 	QueueConsumers,
 	QueueProducers,
 	ReplaceWorkersTypes,
+	TracedServices,
 } from "./plugins";
 import type { QuickActionBrowser } from "./plugins/browser-rendering/quick-actions";
 import type {
@@ -579,6 +581,38 @@ function getQueueProducers(
 		}
 	}
 	return queueProducers;
+}
+
+/**
+ * The services whose spans the observability collector keeps: each user worker,
+ * and the Workflows services that run its workflows (attributed to the
+ * workflow, or for the engine of exported workflows, to the worker). A worker
+ * that isn't registered (`unsafeRegisterWorker: false`) isn't observed, as it
+ * isn't tailed either.
+ */
+function getTracedServices(
+	allWorkerOpts: ParsedWorkerOptions[]
+): TracedServices {
+	const tracedServices: TracedServices = {};
+	for (const { config, dev } of allWorkerOpts) {
+		if (dev?.unsafeRegisterWorker === false) {
+			continue;
+		}
+		tracedServices[getUserServiceName(config.name)] = config.name;
+		for (const [, binding] of getEnvBindingsOfType(config, "workflow")) {
+			tracedServices[getWorkflowBindingServiceName(binding.name)] =
+				binding.name;
+		}
+		const exportedWorkflows = getExportsOfType(config, "workflow");
+		if (exportedWorkflows.length > 0) {
+			tracedServices[getWorkflowsEngineServiceName(config.name)] = config.name;
+		}
+		for (const [, workflow] of exportedWorkflows) {
+			tracedServices[getWorkflowBindingServiceName(workflow.name)] =
+				workflow.name;
+		}
+	}
+	return tracedServices;
 }
 
 function getQueueConsumers(
@@ -2581,6 +2615,7 @@ export class Miniflare {
 			durableObjectClassNames,
 			workflowExporters,
 			allWorkerOpts,
+			tracedServices: getTracedServices(allWorkerOpts),
 		});
 		for (const service of globalServices) {
 			// Global services should all have unique names
@@ -2598,6 +2633,15 @@ export class Miniflare {
 			// that Miniflare parses and either forwards to a `handleStructuredLogs`
 			// handler or writes to the console by default.
 			structuredLogging: true,
+			// workerd exports the spans of every invocation to the observability
+			// collector, which keeps those of the user's workers.
+			tracing: sharedOpts.unsafeObservability
+				? {
+						otlp: {
+							name: getUserServiceName(OBSERVABILITY_COLLECTOR_SERVICE_NAME),
+						},
+					}
+				: undefined,
 			autogates: process.env.MINIFLARE_WORKERD_AUTOGATES
 				? process.env.MINIFLARE_WORKERD_AUTOGATES.split(" ")
 				: [],

@@ -69,6 +69,7 @@ export class TraceWriter {
 	#pendingPump = false;
 	#pendingClearPumps = new Set<TraceWriterOwner>();
 	#clearInFlight: Promise<void> | undefined;
+	#capacityWaiters: Array<() => void> = [];
 
 	constructor(private readonly capacity = TRACE_BATCH_CAPACITY) {}
 
@@ -106,6 +107,25 @@ export class TraceWriter {
 			this.flush(owner);
 		}
 		return true;
+	}
+
+	/**
+	 * Queue every span in `rows`, waiting for earlier batches to be saved whenever
+	 * the active batch is full. `enqueueCompletedSpan` drops a span it has no room
+	 * for, which suits tail callbacks: they arrive one at a time, so saves keep
+	 * up. Spans that arrive all at once, such as an OTLP export, would instead fill
+	 * both batches before the first save finishes and lose the rest.
+	 */
+	async enqueueCompletedSpans(
+		owner: TraceWriterOwner,
+		rows: Iterable<SpanInput>
+	): Promise<void> {
+		for (const row of rows) {
+			// Another invocation can fill the freed batch first, so check again.
+			while (!this.enqueueCompletedSpan(owner, row)) {
+				await this.#capacityFreed();
+			}
+		}
 	}
 
 	enqueueLog(owner: TraceWriterOwner, row: LogInput): boolean {
@@ -146,6 +166,7 @@ export class TraceWriter {
 		const batch = this.#active;
 		this.#active = emptyBatch();
 		this.#flushRequested = false;
+		this.#releaseCapacityWaiters();
 
 		const previous = this.#clearInFlight;
 		const operation =
@@ -228,6 +249,7 @@ export class TraceWriter {
 		this.#active = emptyBatch();
 		this.#flushRequested = false;
 		void this.#persistBatch(batch, store);
+		this.#releaseCapacityWaiters();
 	}
 
 	#persistBatch(batch: Batch, store: BatchStore): Promise<void> {
@@ -264,6 +286,32 @@ export class TraceWriter {
 				state.failure = error;
 			}
 			this.#settleWaiters(state);
+		}
+	}
+
+	/**
+	 * Resolves when the full active batch is swapped out, by a store write or a
+	 * clear. Waiting on the write in progress instead is not enough: the next
+	 * batch is started by a continuation registered from another invocation's
+	 * request context, which workerd may run on a later event-loop turn, after
+	 * this one.
+	 */
+	#capacityFreed(): Promise<void> {
+		if (this.#inFlight === undefined && this.#clearInFlight === undefined) {
+			// The batch is flushed when it fills, so it only stays full behind a
+			// write in progress. Fail rather than wait forever if that stops holding.
+			return Promise.reject(
+				new Error("TraceWriter is full with no write in progress")
+			);
+		}
+		return new Promise((resolve) => this.#capacityWaiters.push(resolve));
+	}
+
+	#releaseCapacityWaiters(): void {
+		const waiters = this.#capacityWaiters;
+		this.#capacityWaiters = [];
+		for (const resolve of waiters) {
+			resolve();
 		}
 	}
 
