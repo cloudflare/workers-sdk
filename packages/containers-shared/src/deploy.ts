@@ -3,7 +3,6 @@
  * However this code is only used for containers interactions, not cloudchamber ones!
  */
 import assert from "node:assert";
-import { setTimeout } from "node:timers/promises";
 import {
 	endSection,
 	log,
@@ -19,6 +18,7 @@ import {
 	dim,
 	green,
 } from "@cloudflare/cli-shared-helpers/colors";
+import { retryWhileVersionNotReadable } from "@cloudflare/workers-utils";
 import { formatConfigSnippet } from "@cloudflare/workers-utils/config";
 import { FatalError, UserError } from "@cloudflare/workers-utils/errors";
 import {
@@ -27,7 +27,7 @@ import {
 	CreateApplicationRolloutRequest,
 	RolloutsService,
 } from "./client";
-import { fetchPagedListResult, fetchResult } from "./context";
+import { fetchPagedListResult, fetchResult, logger } from "./context";
 import { Diff } from "./diff";
 import { resolveImageName } from "./images";
 import { inferInstanceType } from "./limits";
@@ -111,11 +111,13 @@ export function createDurableObjectNamespaceResolver(
 		// Worker version endpoints do not address dispatch scripts. Resolve those
 		// from the account list, including their dispatch namespace in the identity.
 		if (boundDOs.has(className) && dispatchNamespace === undefined) {
-			maybeVersionInfo ??= await fetchUploadedVersion(
-				config,
-				accountId,
-				scriptName,
-				versionId
+			maybeVersionInfo ??= await retryWhileVersionNotReadable(
+				() =>
+					fetchResult<ApiVersion>(
+						config,
+						`/accounts/${accountId}/workers/scripts/${scriptName}/versions/${versionId}`
+					),
+				logger
 			);
 			type DurableObjectBinding = Extract<
 				WorkerMetadataBinding,
@@ -197,36 +199,6 @@ export async function deployContainers(
 			accountId
 		);
 	}
-}
-
-async function fetchUploadedVersion(
-	config: Config,
-	accountId: string,
-	scriptName: string,
-	versionId: string
-): Promise<ApiVersion> {
-	for (let attempt = 0; attempt < 5; attempt++) {
-		try {
-			return await fetchResult<ApiVersion>(
-				config,
-				`/accounts/${accountId}/workers/scripts/${scriptName}/versions/${versionId}`
-			);
-		} catch (error) {
-			if (!isUploadedVersionNotReadyError(error) || attempt === 4) {
-				throw error;
-			}
-			await setTimeout(500);
-		}
-	}
-	throw new Error("Unable to fetch uploaded Worker version");
-}
-
-function isUploadedVersionNotReadyError(error: unknown): boolean {
-	return (
-		error instanceof Error &&
-		"code" in error &&
-		(error as { code?: unknown }).code === 100146
-	);
 }
 
 export async function listDurableObjects(

@@ -2392,6 +2392,41 @@ describe("versions deploy", () => {
 				);
 			});
 		});
+
+		test("retries reading a version the API briefly reports as not found", async ({
+			expect,
+		}) => {
+			const versionId = "40000000-0000-0000-0000-000000000000";
+			const responses = ["not found", "found", "not found", "found"];
+			let reads = 0;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/scripts/:workerName/versions/${versionId}`,
+					() => {
+						if (responses[reads++] === "not found") {
+							return HttpResponse.json(
+								createFetchResult(null, false, [
+									{
+										code: 100146,
+										message:
+											"The requested Worker version could not be found, please check the ID being passed and try again.",
+									},
+								]),
+								{ status: 404 }
+							);
+						}
+						return undefined;
+					}
+				)
+			);
+
+			await runWrangler(`versions deploy ${versionId}@100% --yes`);
+
+			expect(reads).toBe(4);
+			expect(normalizeOutput(cliStd.out)).toContain(
+				"SUCCESS  Deployed test-name version"
+			);
+		});
 	});
 });
 
