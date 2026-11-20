@@ -50,6 +50,7 @@ import type {
 	Binding,
 	CreatePreviewDeploymentRequestParams,
 	DeploymentResource,
+	PreviewBaseConfig,
 	PreviewDeploymentModule,
 	PreviewResource,
 } from "./api";
@@ -77,6 +78,12 @@ export type PreviewArgs = {
 	tag?: string;
 	message?: string;
 	json?: boolean;
+	/**
+	 * Set to false to return the result without progress or summary output.
+	 * Warnings are still logged and failures still reject the promise.
+	 * Confirmation prompts are unchanged.
+	 */
+	log?: boolean;
 	ignoreBaseConfig: boolean;
 	workerName?: string;
 	"worker-name"?: string;
@@ -108,6 +115,8 @@ export type PreviewResult = {
 	preview: PreviewResource;
 	deployment: DeploymentResource;
 	isNewPreview: boolean;
+	/** PR fields used by the summary, preferring deployment annotations over CI metadata. */
+	pullRequest?: Pick<PullRequestMetadata, "url" | "number">;
 };
 
 export type PreviewBuildOutputRootConfig = ParsedBuildOutputRootConfig & {
@@ -705,6 +714,7 @@ async function assemblePreviewDeploymentSettings(
 		secrets?: Record<string, string>;
 		cliVars?: Record<string, string>;
 		isNewPreview: boolean;
+		quiet?: boolean;
 	}
 ): Promise<CreatePreviewDeploymentRequestParams> {
 	const previews = config.previews as PreviewsConfig | undefined;
@@ -725,7 +735,9 @@ async function assemblePreviewDeploymentSettings(
 			config,
 			accountId,
 			options.assetsOptions.directory,
-			workerName
+			workerName,
+			undefined,
+			{ quiet: options.quiet }
 		);
 		request.assets = {
 			jwt: assetsUploadResult.jwt,
@@ -899,21 +911,36 @@ function formatUrlLines(label: string, urls: string[] | undefined): string[] {
 	];
 }
 
+function resolvePreviewPullRequest(
+	deployment: DeploymentResource,
+	pullRequest: PullRequestMetadata | undefined
+): PreviewResult["pullRequest"] {
+	const url =
+		deployment.annotations?.["workers/pull_request_url"] ?? pullRequest?.url;
+	const number =
+		deployment.annotations?.["workers/pull_request_number"] ??
+		pullRequest?.number;
+	if (!url && !number) {
+		return undefined;
+	}
+	return {
+		...(url !== undefined && { url }),
+		...(number !== undefined && { number }),
+	};
+}
+
 function formatPreviewDeploymentSummary(
 	config: Config,
 	previewResource: PreviewResource,
 	deployment: DeploymentResource,
 	isNew: boolean,
-	pullRequest: PullRequestMetadata | undefined,
+	pullRequest: PreviewResult["pullRequest"],
 	deployCommand: string | undefined,
 	previewCommand: string | undefined
 ): string {
 	const statusLabel = isNew ? chalk.green("(new)") : chalk.dim("(updated)");
-	const pullRequestUrl =
-		deployment.annotations?.["workers/pull_request_url"] ?? pullRequest?.url;
-	const pullRequestNumber =
-		deployment.annotations?.["workers/pull_request_number"] ??
-		pullRequest?.number;
+	const pullRequestUrl = pullRequest?.url;
+	const pullRequestNumber = pullRequest?.number;
 	const hasActiveUrls =
 		(previewResource.urls?.length ?? 0) > 0 ||
 		(deployment.urls?.length ?? 0) > 0;
@@ -983,7 +1010,8 @@ function logMissingCustomDomainPreviewUrlsWarning(
 	previewResource: PreviewResource,
 	deployment: DeploymentResource,
 	deployCommand = "your deploy command",
-	previewCommand = "the preview command"
+	previewCommand = "the preview command",
+	log = true
 ) {
 	const customDomains = getPreviewCustomDomainHostnames(config);
 	const urls = [...(previewResource.urls ?? []), ...(deployment.urls ?? [])];
@@ -995,7 +1023,9 @@ function logMissingCustomDomainPreviewUrlsWarning(
 		return;
 	}
 
-	logger.log("");
+	if (log) {
+		logger.log("");
+	}
 	logger.warn(
 		`Custom domain Preview URLs are configured, but none are active for this Preview. If you enabled Preview URLs after your last deployment, run \`${deployCommand}\` once to publish the custom domain Preview route, then run \`${previewCommand}\` again. If you already deployed with that setting, the custom domain may still be provisioning.`
 	);
@@ -1041,14 +1071,16 @@ Resources: https://developers.cloudflare.com/workers/previews/resources/`);
  * @param config The resolved Wrangler config.
  * @param accountId The Cloudflare account ID.
  * @param workerName The parent Worker name.
- * @param json Whether to suppress human-readable output.
+ * @param json Whether to use the existing non-interactive JSON mode.
+ * @param log Whether to log parent Worker creation progress.
  * @returns A promise that resolves when the parent Worker has been created.
  */
 async function provisionParentWorker(
 	config: Config,
 	accountId: string,
 	workerName: string,
-	json: boolean
+	json: boolean,
+	log = true
 ): Promise<void> {
 	const confirmed =
 		json ||
@@ -1064,7 +1096,7 @@ async function provisionParentWorker(
 		);
 	}
 
-	if (!json) {
+	if (!json && log) {
 		logger.log(`🌀 Creating new Worker "${workerName}"...`);
 	}
 	const routes = config.routes ?? (config.route ? [config.route] : []);
@@ -1148,7 +1180,8 @@ async function runPreview(
 				config,
 				accountId,
 				workerName,
-				args.json ?? false
+				args.json ?? false,
+				args.log !== false
 			);
 		} else if (!(e instanceof Error && "code" in e && e.code === 10025)) {
 			throw e;
@@ -1217,6 +1250,7 @@ async function runPreview(
 			secrets,
 			cliVars: args.cliVars,
 			isNewPreview,
+			quiet: args.log === false,
 		}
 	);
 	const deployment = await createPreviewDeployment(
@@ -1247,7 +1281,10 @@ async function runPreview(
 				normalisedContainerConfig,
 				deployment,
 				accountId,
-				{ quiet: args.json === true, localImageReferences }
+				{
+					quiet: args.json === true || args.log === false,
+					localImageReferences,
+				}
 			);
 		} catch (error) {
 			// The deployment is live by this point, so say so before the build or
@@ -1260,7 +1297,11 @@ async function runPreview(
 		}
 	}
 
-	if (args.json) {
+	const resolvedPullRequest = resolvePreviewPullRequest(
+		deployment,
+		pullRequest
+	);
+	if (args.json && args.log !== false) {
 		logger.log(
 			JSON.stringify({ preview: previewResource, deployment }, null, 2)
 		);
@@ -1268,39 +1309,58 @@ async function runPreview(
 		const productionBindingsExpectedInPreview =
 			options.productionBindingsExpectedInPreview ?? {};
 		if (Object.keys(productionBindingsExpectedInPreview).length > 0) {
-			const previewBaseConfig = await getPreviewBaseConfig(
-				config,
-				accountId,
-				workerName
-			);
-			logMissingPreviewsBindingsWarning(
-				productionBindingsExpectedInPreview,
-				previewBaseConfig.env,
-				deploymentRequest.env ?? {}
-			);
+			let previewBaseConfig: PreviewBaseConfig | undefined;
+			try {
+				previewBaseConfig = await getPreviewBaseConfig(
+					config,
+					accountId,
+					workerName
+				);
+			} catch (error) {
+				// This lookup is diagnostic-only; the deployment is already live.
+				logger.debug(error);
+				logger.warn(
+					"The Preview was deployed, but its missing bindings could not be checked because the parent Worker's configuration could not be retrieved."
+				);
+			}
+			if (previewBaseConfig) {
+				logMissingPreviewsBindingsWarning(
+					productionBindingsExpectedInPreview,
+					previewBaseConfig.env,
+					deploymentRequest.env ?? {}
+				);
+			}
 		}
 
-		logger.log(
-			formatPreviewDeploymentSummary(
-				config,
-				previewResource,
-				deployment,
-				isNewPreview,
-				pullRequest,
-				options.deployCommand,
-				options.previewCommand
-			)
-		);
+		if (args.log !== false) {
+			logger.log(
+				formatPreviewDeploymentSummary(
+					config,
+					previewResource,
+					deployment,
+					isNewPreview,
+					resolvedPullRequest,
+					options.deployCommand,
+					options.previewCommand
+				)
+			);
+		}
 		logMissingCustomDomainPreviewUrlsWarning(
 			config,
 			previewResource,
 			deployment,
 			options.deployCommand,
-			options.previewCommand
+			options.previewCommand,
+			args.log !== false
 		);
 	}
 
-	return { preview: previewResource, deployment, isNewPreview };
+	return {
+		preview: previewResource,
+		deployment,
+		isNewPreview,
+		...(resolvedPullRequest && { pullRequest: resolvedPullRequest }),
+	};
 }
 
 /**
@@ -1340,11 +1400,17 @@ export async function preview(
  *
  * @param accountId Account that owns the parent Worker.
  * @param args Preview name, deployment annotations, and secrets file.
+ * Set `log: false` to return the result without printing progress or a summary,
+ * even when `json` is true. Warnings remain on the configured logger and errors
+ * reject the promise.
  * @param buildOutput Exact configuration and artifacts emitted by the build.
  */
 export async function previewBuildOutput(
 	accountId: string,
-	args: Pick<PreviewArgs, "name" | "tag" | "message" | "json" | "secretsFile">,
+	args: Pick<
+		PreviewArgs,
+		"name" | "tag" | "message" | "json" | "secretsFile" | "log"
+	>,
 	buildOutput: PreviewBuildOutput,
 	options?: PreviewOptions
 ): Promise<PreviewResult> {

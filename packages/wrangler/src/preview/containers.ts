@@ -1,4 +1,3 @@
-import { getLogLevel, setLogLevel } from "@cloudflare/cli-shared-helpers";
 import {
 	apply,
 	buildAndMaybePush,
@@ -20,6 +19,11 @@ import type {
 import type { DeploymentResource } from "@cloudflare/deploy-helpers";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils/config";
+
+type PreviewContainerOptions = {
+	quiet: boolean;
+	localImageReferences?: Map<string, string>;
+};
 
 /**
  * Confirm the API token carries the `containers` scope. `applyPreviewContainers`
@@ -50,39 +54,17 @@ export async function deployPreviewContainers(
 	normalisedContainerConfig: ContainerNormalizedConfig[],
 	deployment: DeploymentResource,
 	accountId: string,
-	options: { quiet: boolean; localImageReferences?: Map<string, string> }
+	options: PreviewContainerOptions
 ): Promise<void> {
-	if (!options.quiet) {
-		return applyPreviewContainers(
+	const deploy = () =>
+		applyPreviewContainers(
 			scopedConfig,
 			normalisedContainerConfig,
 			deployment,
 			accountId,
-			options.localImageReferences
+			options
 		);
-	}
-
-	// Two independent log levels gate stdout here. `logger` reads an
-	// AsyncLocalStorage override and `@cloudflare/cli`'s `logRaw` reads module
-	// level state, so lowering one leaves the other printing. `logger` drops
-	// messages above its level instead of redirecting them, so it stays at
-	// `warn` to keep warnings and errors on stderr. `logRaw` only writes to
-	// stdout, so it can go lower.
-	const previousLogLevel = getLogLevel();
-	setLogLevel("error");
-	try {
-		return await runWithLogLevel("warn", () =>
-			applyPreviewContainers(
-				scopedConfig,
-				normalisedContainerConfig,
-				deployment,
-				accountId,
-				options.localImageReferences
-			)
-		);
-	} finally {
-		setLogLevel(previousLogLevel);
-	}
+	return options.quiet ? runWithLogLevel("warn", deploy) : deploy();
 }
 
 /**
@@ -93,6 +75,7 @@ export async function deployPreviewContainers(
  * @param normalisedContainerConfig - Containers to build and apply.
  * @param deployment - The preview deployment the containers belong to.
  * @param accountId - Account the preview belongs to.
+ * @param options Output settings and local image references for this deployment.
  * @returns A promise that resolves once every container has been applied.
  */
 async function applyPreviewContainers(
@@ -100,7 +83,7 @@ async function applyPreviewContainers(
 	normalisedContainerConfig: ContainerNormalizedConfig[],
 	deployment: DeploymentResource,
 	accountId: string,
-	localImageReferences: Map<string, string> | undefined
+	{ quiet, localImageReferences }: PreviewContainerOptions
 ): Promise<void> {
 	initContainersSharedContext({
 		logger,
@@ -193,6 +176,7 @@ async function applyPreviewContainers(
 
 		await apply(
 			{
+				quiet,
 				imageRef,
 				durable_object_namespace_id: namespaceId,
 				configFileName: "Wrangler config",
