@@ -193,8 +193,6 @@ import type {
 import type { WorkerDefinition } from "./shared/dev-registry-types";
 import type { Awaitable } from "./workers";
 import type { FlagshipAdmin } from "./workers/flagship/admin";
-import type { EvaluationDetails, FlagValue } from "./workers/flagship/evaluate";
-import type { Flag, FlagInput } from "./workers/flagship/flags";
 import type {
 	CacheStorage,
 	D1Database,

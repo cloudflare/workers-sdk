@@ -358,26 +358,6 @@ export default defineConfig({
 		// Temporarily disabled only where rules that were already enforced report new
 		// findings after upgrading Oxlint and moving to the tsrs type checker.
 		{
-			files: ["packages/miniflare/src/index.ts"],
-			rules: { "no-unused-vars": "off" },
-		},
-		{
-			files: ["packages/wrangler/src/logger.ts"],
-			rules: { "prefer-spread": "off" },
-		},
-		{
-			files: [
-				"packages/pages-functions/src/__tests__/routes-consolidation.test.ts",
-			],
-			rules: { "unicorn/prefer-set-size": "off" },
-		},
-		{
-			files: [
-				"packages/vite-plugin-cloudflare/playground/node-compat/worker-process/index.ts",
-			],
-			rules: { "no-global-assign": "off" },
-		},
-		{
 			files: [
 				"packages/codemods/test/wrangler-to-cf/stream-bindings.test.ts",
 				"packages/deploy-helpers/src/deploy/deploy.ts",
