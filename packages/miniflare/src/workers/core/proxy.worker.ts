@@ -347,9 +347,14 @@ export class ProxyServer implements DurableObject {
 					result = transform.output(args[2]);
 				} else if (["RpcProperty", "RpcStub"].includes(func.constructor.name)) {
 					// let's resolve RpcPromise instances right away (to support serialization)
-					result = await func(...args);
-					// Mark that we've awaited this RPC call, so we set the Promise header below
-					rpcAwaited = true;
+					try {
+						result = await func(...args);
+					} finally {
+						// Mark that we've awaited this RPC call, so we set the Promise header
+						// below, even if the call rejected: the client must parse a rejection
+						// as an async response too.
+						rpcAwaited = true;
+					}
 				} else {
 					result = func.apply(target, args);
 				}
