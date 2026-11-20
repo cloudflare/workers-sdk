@@ -52,7 +52,7 @@
 		"esbuild": "catalog:default",
 		"semver": "^7.7.1",
 		"tinyglobby": "catalog:default",
-		"tsdown": "catalog:default",
+		"tsdown": "0.23.1",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
 	},

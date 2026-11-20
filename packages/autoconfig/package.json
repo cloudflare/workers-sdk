@@ -47,7 +47,7 @@
 		"recast": "0.23.11",
 		"semiver": "^1.1.0",
 		"ts-dedent": "^2.2.0",
-		"tsdown": "catalog:default",
+		"tsdown": "0.23.1",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
 	},
