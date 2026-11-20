@@ -349,7 +349,9 @@ function hasVerifiableBodyChecksum(c: S3Context): boolean {
 	if (c.req.header("Content-MD5") !== undefined) {
 		return true;
 	}
-	return FLEXIBLE_CHECKSUMS.some(({ header }) => c.req.header(header) !== undefined);
+	return FLEXIBLE_CHECKSUMS.some(
+		({ header }) => c.req.header(header) !== undefined
+	);
 }
 
 /**
