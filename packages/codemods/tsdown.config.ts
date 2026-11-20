@@ -1,4 +1,5 @@
 import { defineConfig } from "tsdown";
+import { EXTERNAL_DEPENDENCIES } from "./scripts/deps.ts";
 
 export default defineConfig({
 	entry: {
@@ -17,5 +18,5 @@ export default defineConfig({
 	tsconfig: "tsconfig.json",
 	sourcemap: process.env.SOURCEMAPS !== "false",
 	shims: true,
-	deps: { alwaysBundle: [/.*/] },
+	deps: { neverBundle: EXTERNAL_DEPENDENCIES },
 });

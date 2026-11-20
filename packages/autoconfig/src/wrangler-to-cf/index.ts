@@ -1,12 +1,11 @@
 import path from "node:path";
-import { fileExists } from "../../files";
-import { ensureCleanGitWorktree } from "../../git";
 import { convertWranglerConfig } from "./config-converter";
 import { findSecretFiles, readWranglerConfig } from "./config-reader";
 import {
 	renderCloudflareConfig,
 	renderWranglerConfig,
 } from "./config-renderer";
+import { fileExists } from "./file-exists";
 import {
 	cleanupMigrationOutputs,
 	rewriteMigrationOutput,
@@ -70,7 +69,6 @@ export async function migrateWranglerToCf(
 	const {
 		bundler = "vite",
 		dryRun = false,
-		force = false,
 		installDependencies = true,
 	} = options;
 	if (bundler !== "vite" && bundler !== "wrangler") {
@@ -87,9 +85,6 @@ export async function migrateWranglerToCf(
 	);
 
 	await assertTargetsDoNotExist([cloudflareConfigPath]);
-	if (!dryRun) {
-		await ensureCleanGitWorktree(projectDirectory, force);
-	}
 
 	const [rawConfig, secretFiles] = await Promise.all([
 		readWranglerConfig(absoluteConfigPath),

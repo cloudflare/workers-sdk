@@ -1,15 +1,15 @@
 import { describe, it } from "vitest";
-import { convertWranglerConfig } from "../../src/codemods/wrangler-to-cf/config-converter";
-import { renderCloudflareConfig } from "../../src/codemods/wrangler-to-cf/config-renderer";
+import { convertWranglerConfig } from "../../src/wrangler-to-cf/config-converter";
+import { renderCloudflareConfig } from "../../src/wrangler-to-cf/config-renderer";
 import type { RawConfig } from "@cloudflare/workers-utils/config";
 
-describe("tail consumer conversion", () => {
-	it("moves streaming tail consumers under `experimental`", ({ expect }) => {
+describe("experimental Worker settings", () => {
+	it("moves `first_party_worker` under `experimental`", ({ expect }) => {
 		const converted = convertWranglerConfig(
 			{
 				compatibility_date: "2026-09-23",
-				name: "tail-consumers",
-				tail_consumers: [{ service: "tail" }],
+				name: "first-party",
+				first_party_worker: true,
 				streaming_tail_consumers: [{ service: "streaming-tail" }],
 			} satisfies RawConfig,
 			"wrangler",
@@ -21,19 +21,15 @@ describe("tail consumer conversion", () => {
 
 			export default defineConfig({
 				worker: {
-					name: "tail-consumers",
+					name: "first-party",
 					compatibilityDate: "2026-09-23",
-					tailConsumers: [
-						{
-							worker: "tail",
-						},
-					],
 					experimental: {
 						streamingTailConsumers: [
 							{
 								worker: "streaming-tail",
 							},
 						],
+						firstPartyWorker: true,
 					},
 				},
 			});

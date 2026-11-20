@@ -68,7 +68,6 @@ describe("Wrangler configuration corpus", () => {
 
 				const result = await migrateWranglerToCf(targetConfigPath, {
 					bundler,
-					force: true,
 				});
 				const cloudflareConfigPath = path.join(
 					projectDirectory,
