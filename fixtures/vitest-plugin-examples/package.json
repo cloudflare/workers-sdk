@@ -36,6 +36,7 @@
 	},
 	"devDependencies": {
 		"@better-auth/stripe": "^1.4.6",
+		"@cloudflare/config": "workspace:*",
 		"@cloudflare/vitest-plugin": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@microlabs/otel-cf-workers": "1.0.0-rc.45",
@@ -61,7 +62,6 @@
 		"vite": "catalog:default",
 		"vitest": "catalog:default",
 		"wasm-module-dep": "file:./module-resolution/vendor/wasm-module-dep",
-		"wrangler": "workspace:*",
-		"@cloudflare/config": "workspace:*"
+		"wrangler": "workspace:*"
 	}
 }

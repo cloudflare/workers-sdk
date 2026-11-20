@@ -1,1 +1,5 @@
-export default {fetch(){return new Response("Local identity fixture");}};
+export default {
+	fetch() {
+		return new Response("Local identity fixture");
+	},
+};

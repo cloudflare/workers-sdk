@@ -76,8 +76,8 @@ import {
 	getExplorerServices,
 	wrapDurableObjectModules,
 } from "./explorer";
-import { LOCAL_IDENTITY_ROUTER } from "./local-identity";
 import { usesLocalIdentity, LOCAL_IDENTITY_ENTRY_BINDING } from "./identity";
+import { LOCAL_IDENTITY_ROUTER } from "./local-identity";
 import {
 	buildStringScriptPath,
 	convertManifestModule,
@@ -368,7 +368,7 @@ function getServiceBindings(
 }
 
 export const CORE_PLUGIN: Plugin = {
-	async getBindings(options, sharedOptions, workerIndex) {
+	getBindings(options, _sharedOptions, workerIndex) {
 		const { config, legacy, dev } = options;
 		const bindings: Awaitable<Worker_Binding>[] = [];
 
@@ -438,8 +438,6 @@ export const CORE_PLUGIN: Plugin = {
 	async getNodeBindings(options) {
 		const { config, legacy, dev } = options;
 		const bindingEntries: Awaitable<unknown[]>[] = [];
-		for (const [name] of getEnvBindingsOfType(config, "identity"))
-			bindingEntries.push([name, new ProxyNodeBinding()]);
 
 		for (const [name, binding] of getEnvBindingsOfType(config, "json")) {
 			bindingEntries.push([name, JSON.parse(JSON.stringify(binding.value))]);
@@ -487,7 +485,6 @@ export const CORE_PLUGIN: Plugin = {
 		return Object.fromEntries(await Promise.all(bindingEntries));
 	},
 	async getServices({
-		tmpPath,
 		// TODO: check if any of this can be simplified by reading from options in here
 		options,
 		sharedOptions,
@@ -505,7 +502,7 @@ export const CORE_PLUGIN: Plugin = {
 		const workerScript = getWorkerScript(options, workerIndex);
 		if (localIdentity) {
 			workerBindings.push(
-				...localIdentity.bindings(options, JSON.stringify(workerScript))
+				...(await localIdentity.bindings(options, JSON.stringify(workerScript)))
 			);
 		}
 		if (dev?.unsafeSuppressNativeCaller) {
@@ -745,14 +742,6 @@ export const CORE_PLUGIN: Plugin = {
 					compatibilityDate: "2025-01-01",
 					compatibilityFlags: ["connect_pass_through", "experimental"],
 					bindings: [
-						...(usesLocalIdentity(options)
-							? [
-									{
-										name: LOCAL_IDENTITY_ENTRY_BINDING,
-										service: { name: LOCAL_IDENTITY_ROUTER },
-									},
-								]
-							: []),
 						{
 							name: "CF_WORKER_ZONE",
 							text: cfWorkerValue,
@@ -906,7 +895,7 @@ export function getGlobalServices({
 	if (allWorkerOpts?.some(usesLocalIdentity)) {
 		serviceEntryBindings.push({
 			name: LOCAL_IDENTITY_ENTRY_BINDING,
-			service: { name: LOCAL_IDENTITY_ROUTER },
+			service: { name: LOCAL_IDENTITY_ROUTER, suppressNativeCaller: true },
 		});
 	}
 	if (sharedOptions.unsafeLocalExplorer) {

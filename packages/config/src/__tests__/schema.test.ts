@@ -1986,7 +1986,7 @@ describe("OIDC capability bindings", () => {
 			},
 		};
 		expect(
-			InputWorkerSchema.parse({
+			WorkerConfigSchema.parse({
 				...baseConfig,
 				env: { IDENTITY: { type: "identity", ...limits } },
 			}).env?.IDENTITY
@@ -1999,7 +1999,7 @@ describe("OIDC capability bindings", () => {
 		"rejects invalid limits or caller authority: %j",
 		(binding, { expect }) => {
 			expect(
-				InputWorkerSchema.safeParse({
+				WorkerConfigSchema.safeParse({
 					...baseConfig,
 					env: { IDENTITY: { type: "identity", ...binding } },
 				}).success

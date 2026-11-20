@@ -1,7 +1,7 @@
 import { parseCallerIdentity } from "@cloudflare/workers-utils/oidc";
 import { it } from "vitest";
 import { convertToWranglerConfig } from "../convert";
-import { InputWorkerSchema } from "../schema";
+import { WorkerConfigSchema } from "../schema";
 
 const receiver = {
 	profile: "poppy-0.3" as const,
@@ -75,14 +75,14 @@ it("round-trips explicit camelCase overrides and rejects the old shape", ({
 		compatibilityDate: "2026-10-31",
 		callerIdentity,
 	};
-	expect(InputWorkerSchema.parse(worker).callerIdentity).toEqual(
+	expect(WorkerConfigSchema.parse(worker).callerIdentity).toEqual(
 		callerIdentity
 	);
 	expect(
 		convertToWranglerConfig({ worker, containers: [] }).caller_identity
 	).toEqual(callerIdentity);
 	expect(
-		InputWorkerSchema.safeParse({ ...worker, identityReceiver: receiver })
+		WorkerConfigSchema.safeParse({ ...worker, identityReceiver: receiver })
 			.success
 	).toBe(false);
 	for (const value of [

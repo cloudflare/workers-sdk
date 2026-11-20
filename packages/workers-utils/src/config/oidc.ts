@@ -274,8 +274,9 @@ export function isIdentityBinding(
 		record(value) &&
 		("connector_id" in value ||
 			(record(value.oauth) && value.oauth.grant === "authorization_code"))
-	)
+	) {
 		return isConnectionBinding(value);
+	}
 	if (
 		!record(value) ||
 		!fields(value, [

@@ -14,8 +14,8 @@ import type {
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "./config/environment";
-import type { NodeJSCompatMode } from "./node-compat";
 import type { CallerIdentityConfiguration } from "./config/receiver";
+import type { NodeJSCompatMode } from "./node-compat";
 import type {
 	CfAIBinding,
 	CfAgentMemory,

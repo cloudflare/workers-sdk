@@ -35,6 +35,7 @@ export default {
 		if (
 			env.LOCAL_IDENTITY_ROUTER &&
 			(env.LOCAL_IDENTITY_ORIGINS?.includes(url.origin) ||
+				url.hostname.endsWith(".identity.local") ||
 				(url.protocol === "https:" && url.hostname.endsWith(".local.test")) ||
 				(url.protocol === "https:" &&
 					!url.port &&

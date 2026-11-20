@@ -125,126 +125,128 @@ function producer() {
 }
 
 for (const legacy of [false, true]) {
-	test(`verifies delegated credentials and shared replay through native caller (${legacy ? "legacy" : "config"})`, async ({
-		expect,
-	}) => {
-		const f = producer();
-		const script = `const documents=${JSON.stringify(f.documents)};
+	test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
+		`verifies delegated credentials and shared replay through native caller (${legacy ? "legacy" : "config"})`,
+		async ({ expect }) => {
+			const f = producer();
+			const script = `const documents=${JSON.stringify(f.documents)};
  export default {async fetch(request,env,ctx){
  const path=new URL(request.url).pathname;
  if(documents[path])return Response.json(documents[path]);
  try {const caller=await ctx.identity.caller();return Response.json({caller,frozen:caller&&Object.isFrozen(caller)&&(!caller.account||(Object.isFrozen(caller.account)&&Object.isFrozen(caller.account.scopes)))});}
  catch(error){return Response.json({name:error.name,response:error.response??null},{status:error.response?.status??503});}
  }};`;
-		const mf = new Miniflare(
-			legacy
-				? convertV4MiniflareOptions({
-						name: "receiver",
-						modules: true,
-						script,
-						host: "127.0.0.1",
-						enableDevRegistry: false,
-						cf: false,
-						callerIdentity: f.callerIdentity,
-						compatibilityDate: "2026-10-31",
-					})
-				: {
-						host: "127.0.0.1",
-						enableDevRegistry: false,
-						cf: false,
-						workers: [
-							{
-								config: {
-									name: "receiver",
-									compatibilityDate: "2026-10-31",
-									callerIdentity: f.callerIdentity,
-									manifest: singleModuleManifest(script),
+			const mf = new Miniflare(
+				legacy
+					? convertV4MiniflareOptions({
+							name: "receiver",
+							modules: true,
+							script,
+							host: "127.0.0.1",
+							enableDevRegistry: false,
+							cf: false,
+							callerIdentity: f.callerIdentity,
+							compatibilityDate: "2026-10-31",
+						})
+					: {
+							host: "127.0.0.1",
+							enableDevRegistry: false,
+							cf: false,
+							workers: [
+								{
+									config: {
+										name: "receiver",
+										compatibilityDate: "2026-10-31",
+										callerIdentity: f.callerIdentity,
+										manifest: singleModuleManifest(script),
+									},
 								},
-							},
-						],
-					}
-		);
-		useDispose(mf);
-		for (const mode of ["signed-out", "bearer", "dpop"] as const) {
-			const headers = f.request(`fresh-${mode}`, mode);
-			const response = await mf.dispatchFetch("http://localhost/orders", {
-				headers,
-			});
-			const body = await response.text();
-			expect(response.status, body).toBe(200);
-			expect(JSON.parse(body)).toMatchObject({
-				frozen: true,
-				caller: {
-					kind: "delegated-request",
-					userId: "pairwise-user",
-					sessionId: "session-123",
-					agentId: "🤖".repeat(100),
-					...(mode === "signed-out"
-						? {}
-						: {
-								account: { subject: "account-user", scopes: ["orders:read"] },
-							}),
-				},
-			});
-			const duplicate = await mf.dispatchFetch("http://localhost/orders", {
-				headers,
-			});
-			expect(duplicate.status).toBe(400);
-			expect(await duplicate.json()).toMatchObject({
-				name: "WorkloadIdentityError",
-				response: { status: 400, body: { error: "invalid_session" } },
-			});
+							],
+						}
+			);
+			useDispose(mf);
+			for (const mode of ["signed-out", "bearer", "dpop"] as const) {
+				const headers = f.request(`fresh-${mode}`, mode);
+				const response = await mf.dispatchFetch("http://localhost/orders", {
+					headers,
+				});
+				const body = await response.text();
+				expect(response.status, body).toBe(200);
+				expect(JSON.parse(body)).toMatchObject({
+					frozen: true,
+					caller: {
+						kind: "delegated-request",
+						userId: "pairwise-user",
+						sessionId: "session-123",
+						agentId: "🤖".repeat(100),
+						...(mode === "signed-out"
+							? {}
+							: {
+									account: { subject: "account-user", scopes: ["orders:read"] },
+								}),
+					},
+				});
+				const duplicate = await mf.dispatchFetch("http://localhost/orders", {
+					headers,
+				});
+				expect(duplicate.status).toBe(400);
+				expect(await duplicate.json()).toMatchObject({
+					name: "WorkloadIdentityError",
+					response: { status: 400, body: { error: "invalid_session" } },
+				});
+			}
 		}
-	});
+	);
 }
 
-test("tooling proxy bindings preserve HTTP verification without asserting native provenance", async ({
-	expect,
-}) => {
-	const f = producer();
-	const receiverScript = `const documents=${JSON.stringify(f.documents)};export default {async fetch(request,env,ctx){const path=new URL(request.url).pathname;if(documents[path])return Response.json(documents[path]);return Response.json(await ctx.identity.caller());}};`;
-	const mf = new Miniflare({
-		host: "127.0.0.1",
-		enableDevRegistry: false,
-		cf: false,
-		workers: [
-			{
-				config: {
-					name: "tooling-proxy",
-					compatibilityDate: "2026-10-31",
-					manifest: singleModuleManifest(
-						"export default {fetch(request,env){return env.RECEIVER.fetch(request)}}"
-					),
-					env: { RECEIVER: { type: "worker", worker: "receiver" } },
+test.skipIf(!process.env.MINIFLARE_WORKERD_PATH)(
+	"tooling proxy bindings preserve HTTP verification without asserting native provenance",
+	async ({ expect }) => {
+		const f = producer();
+		const receiverScript = `const documents=${JSON.stringify(f.documents)};export default {async fetch(request,env,ctx){const path=new URL(request.url).pathname;if(documents[path])return Response.json(documents[path]);return Response.json(await ctx.identity.caller());}};`;
+		const mf = new Miniflare({
+			host: "127.0.0.1",
+			enableDevRegistry: false,
+			cf: false,
+			workers: [
+				{
+					config: {
+						name: "tooling-proxy",
+						compatibilityDate: "2026-10-31",
+						manifest: singleModuleManifest(
+							"export default {fetch(request,env){return env.RECEIVER.fetch(request)}}"
+						),
+						env: { RECEIVER: { type: "worker", worker: "receiver" } },
+					},
+					dev: { unsafeSuppressNativeCaller: true },
 				},
-				dev: { unsafeSuppressNativeCaller: true },
-			},
-			{
-				config: {
-					name: "receiver",
-					compatibilityDate: "2026-10-31",
-					callerIdentity: f.callerIdentity,
-					manifest: singleModuleManifest(receiverScript),
+				{
+					config: {
+						name: "receiver",
+						compatibilityDate: "2026-10-31",
+						callerIdentity: f.callerIdentity,
+						manifest: singleModuleManifest(receiverScript),
+					},
 				},
-			},
-		],
-	});
-	useDispose(mf);
-	expect(
-		await (await mf.dispatchFetch("http://localhost/orders")).json()
-	).toBeNull();
-	expect(
-		await (
-			await mf.dispatchFetch("http://localhost/orders", {
-				headers: f.request("through-proxy"),
-			})
-		).json()
-	).toMatchObject({
-		kind: "delegated-request",
-		userId: "pairwise-user",
-		account: { subject: "account-user" },
-	});
-});
+			],
+		});
+		useDispose(mf);
+		expect(
+			await (await mf.dispatchFetch("http://localhost/orders")).json()
+		).toBeNull();
+		expect(
+			await (
+				await mf.dispatchFetch("http://localhost/orders", {
+					headers: f.request("through-proxy"),
+				})
+			).json()
+		).toMatchObject({
+			kind: "delegated-request",
+			userId: "pairwise-user",
+			account: { subject: "account-user" },
+		});
+	}
+);
 
 test("rejects the previous local receiver key instead of dropping trust", ({
 	expect,

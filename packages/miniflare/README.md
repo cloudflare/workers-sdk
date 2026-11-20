@@ -855,23 +855,35 @@ Local receiver support needs the companion runtime from workerd PR #8121.
 Set `MINIFLARE_WORKERD_PATH` to that binary and opt in with
 `enable_workload_identity_context` in the receiver's compatibility flags.
 Regenerate runtime types and the Cap'n Proto schema from the same release
-before publishing the SDK.
+before publishing the SDK. The generated development schema includes
+`ServiceDesignator.suppressNativeCaller` and `Worker.workloadIdentityService`
+from companion commit `40cc7a73dae239b870aa80b9e631d92d1bb3eb8f`, together
+with the pinned workerd release's other configuration fields.
 
 Native service-binding facts identify the immediate calling Worker. JWT facts identify the originating binding authority; signed-request facts expose the selected capability URL as `signatureAgent`. Forwarding preserves authority and does not attest the current executor. Keep human identity separate.
 
 Static service bindings expose local immediate callers using account `local`
 and `local:<worker-name>` IDs. These IDs establish no production authority.
-Anonymous requests return `null`. HTTP credentials pass through the real bundled verifier. Local identity bindings issue credentials with a separate local issuer and synthetic workload IDs. No Cloudflare login or remote signer is required.
+Anonymous requests return `null`. Shared local services issue and verify workload
+JWTs, selected-agent JWTs, WAG assertions and signed requests with purpose-separated
+keys. HTTP caller verification uses the same private verifier channel as the runtime.
 
-Use `https://<worker-name>.local.test` to reach cooperating Workers in one Miniflare graph. Exact HTTPS origin routes also work. Managed signed/OAuth requests never fall back to the public network. Normal service bindings retain their local native caller identity; URL requests verify their credentials.
+Identity bindings also support app/customer saved accounts through a generic local
+broker, authorization server and API fixture. Configure the ordinary binding;
+no application adapter or provisioning harness is needed. Local realms and encrypted
+broker state persist under a project-scoped realm in the Miniflare persistence directory. One runtime owns that state; stop it before starting another. Stale ownership requires explicit recovery after all owners stop. Keep authority keys and replay storage together. A new directory
+creates a new realm. Corrupt authority state fails rather than silently rotating keys.
 
-`await mf.getLocalIdentity()` returns the public issuer, discovery URLs, subjects, revisions, and routes. Authority keys and SQLite replay state share project-scoped development storage. Hot reload preserves identity. Delete the project's whole `identity` state directory to reset both together. Tests without persistence get separate realms. A persisted realm accepts one runtime at a time. Cross-process shared realms and automatic TLS forwarding to host/container servers are outside this prototype.
+The deterministic fixture uses `https://as.identity.local` and
+`https://api.identity.local`. The callback uses the local server's
+`http://127.0.0.1:<port>/cdn-cgi/local/identity/oauth/callback`. No Cloudflare account
+login or production signing material is used. External provider requests fail
+unless `MINIFLARE_IDENTITY_LIVE_PROVIDER=1` explicitly enables live qualification.
+Keep live provider storage separate from deterministic tests.
 
 Wrangler, cf, Vite and Vitest consume this Miniflare behavior. Add no receiver
 binding or JavaScript verification polyfill. See the [runtime caller contract](https://developers.cloudflare.com/workers/runtime-apis/context/#identitycaller)
 for caller kinds, body ordering and application authorization.
-
-If a local runtime exits without cleanup, stop all runtimes using that state and remove its `owner.json` lock. Keep `authority.json` and replay storage together to retain the realm safely. Automatic stale-lock reclamation would let concurrent processes steal a replacement lock.
 
 ### Stored-secret identity bindings
 

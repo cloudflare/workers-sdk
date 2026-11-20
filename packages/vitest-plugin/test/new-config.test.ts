@@ -801,7 +801,7 @@ test("issues real local credentials through cloudflare:test without cloud auth",
 				compatibilityDate: "2026-07-01",
 				compatibilityFlags: ["nodejs_compat"],
 			},
-			experimental: { newConfig: true },
+			config: true,
 		}),
 		"cloudflare.config.ts": `export default {worker:{name:'identity-vitest',compatibilityDate:'2026-07-01',entrypoint:'./index.ts',env:{IDENTITY:{type:'identity',audience:'urn:vitest'}}}};`,
 		"index.ts":

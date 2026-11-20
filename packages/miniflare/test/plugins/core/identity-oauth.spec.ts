@@ -105,8 +105,9 @@ for (const exchange of [
 				expect(await setup.json()).toEqual({ registered: true });
 				for (let i = 0; i < 2; i++) {
 					const response = await mf.dispatchFetch("http://localhost/call");
-					expect(response.status).toBe(200);
-					expect(await response.json()).toMatchObject({
+					const body = await response.text();
+					expect(response.status, body).toBe(200);
+					expect(JSON.parse(body)).toMatchObject({
 						body: "local body",
 						query: "?q=one",
 					});
