@@ -3,19 +3,21 @@ import { ConfigChangeCoordinator } from "./config-change-coordinator";
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
 import { additionalModulesPlugin } from "./plugins/additional-modules";
-import { agentHintPlugin } from "./plugins/agent-hint";
 import { buildOutputPlugin } from "./plugins/build-output";
 import { configPlugin } from "./plugins/config";
 import { debugPlugin } from "./plugins/debug";
-import { devPlugin } from "./plugins/dev";
 import {
 	nodeJsAlsPlugin,
 	nodeJsCompatPlugin,
 	nodeJsCompatWarningsPlugin,
 } from "./plugins/nodejs-compat";
-import { previewPlugin } from "./plugins/preview";
 import { rscPlugin } from "./plugins/rsc";
-import { shortcutsPlugin } from "./plugins/shortcuts";
+import {
+	agentHintPlugin,
+	devPlugin,
+	previewPlugin,
+	shortcutsPlugin,
+} from "./plugins/runtime";
 import { triggerHandlersPlugin } from "./plugins/trigger-handlers";
 import { tunnelPlugin } from "./plugins/tunnel";
 import {

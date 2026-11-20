@@ -2,7 +2,6 @@ import { isDeepStrictEqual } from "node:util";
 import { resolveNamedTunnel, startTunnel } from "@cloudflare/workers-utils";
 import { toApiComplianceRegion } from "@cloudflare/workers-utils/compliance";
 import getPort from "get-port";
-import { buildPublicUrl } from "miniflare";
 import colors from "picocolors";
 import encodeQR from "qr";
 import { createLogger, USER_AGENT } from "../auth";
@@ -456,6 +455,7 @@ export async function resolvePreviewTunnelOrigin(server: vite.PreviewServer) {
 		}
 	}
 
+	const { buildPublicUrl } = await import("miniflare");
 	return new URL(
 		buildPublicUrl({
 			hostname: host,
