@@ -53,6 +53,8 @@ export type {
 	PipelineBindingOptions,
 	QueueBinding,
 	QueueBindingOptions,
+	IdentityBinding,
+	IdentityBindingOptions,
 	RateLimitBinding,
 	RateLimitBindingOptions,
 	R2Binding,

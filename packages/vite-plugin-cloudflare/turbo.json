@@ -7,7 +7,7 @@
 			"outputs": ["dist/**"]
 		},
 		"test:ci": {
-			"env": ["SOURCEMAPS"]
+			"env": ["SOURCEMAPS", "MINIFLARE_WORKERD_PATH"]
 		},
 		"test:e2e": {
 			"env": ["$TURBO_EXTENDS$", "CLOUDFLARE_VITE_E2E_KEEP_TEMP_DIRS"],

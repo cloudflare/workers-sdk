@@ -34,6 +34,7 @@ import {
 	TOP_LEVEL_ENV_NAME,
 	validateEnvInterfaceNames,
 } from "./helpers";
+import { getIdentityBindingType } from "./identity";
 import { K2_PRODUCER_TYPE } from "./k2";
 import { fetchPipelineTypes } from "./pipeline-schema";
 import { generateRuntimeTypes } from "./runtime";
@@ -2893,6 +2894,15 @@ function collectCoreBindings(
 			addBinding(flagshipBinding.binding, "Flagship", "flagship", envName);
 		}
 
+		for (const binding of env.identities ?? []) {
+			addBinding(
+				binding.binding,
+				getIdentityBindingType(binding),
+				"identity",
+				envName
+			);
+		}
+
 		for (const [index, ratelimit] of (env.ratelimits ?? []).entries()) {
 			if (!ratelimit.name) {
 				throwMissingBindingError({
@@ -3953,6 +3963,14 @@ function collectCoreBindingsPerEnvironment(
 				bindingCategory: "flagship",
 				name: flagshipBinding.binding,
 				type: "Flagship",
+			});
+		}
+
+		for (const binding of env.identities ?? []) {
+			bindings.push({
+				bindingCategory: "identity",
+				name: binding.binding,
+				type: getIdentityBindingType(binding),
 			});
 		}
 

@@ -1,0 +1,14 @@
+{
+	"name": "@playground/identity",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite --host 127.0.0.1 --port 5178 --strictPort",
+		"check:identity": "node smoke.mjs"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "workspace:*",
+		"cf": "catalog:default",
+		"vite": "catalog:default"
+	}
+}

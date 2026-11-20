@@ -663,6 +663,9 @@ function extractBindings(
 		};
 	}
 
+	for (const { binding, ...value } of previews?.identities ?? []) {
+		env[binding] = { type: "identity", ...value };
+	}
 	for (const ratelimit of previews?.ratelimits ?? []) {
 		env[ratelimit.name] = {
 			type: "ratelimit",

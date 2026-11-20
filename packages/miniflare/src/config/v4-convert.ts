@@ -134,6 +134,7 @@ function convertWorkerOptions(
 		name: worker.name ?? "",
 		compatibilityDate: worker.compatibilityDate ?? FALLBACK_COMPATIBILITY_DATE,
 		compatibilityFlags: worker.compatibilityFlags,
+		callerIdentity: worker.callerIdentity,
 		manifest,
 		env,
 		exports,
@@ -729,6 +730,9 @@ function addProductBindings(
 				? { remote: isRemote(value.remoteProxyConnectionString) }
 				: { connectionString: String(value) },
 		};
+	}
+	for (const [name, binding] of Object.entries(worker.identities ?? {})) {
+		env[name] = { type: "identity", ...binding };
 	}
 	for (const [name, binding] of Object.entries(worker.ratelimits ?? {})) {
 		env[name] = {

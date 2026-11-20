@@ -128,6 +128,16 @@ export class ProxyClient {
 		return (this.#envProxy ??= this.#bridge.getProxy(TARGET_ENV));
 	}
 
+	/** Invoke known-async setup RPC without blocking Node-backed callbacks on its first call. */
+	async call(
+		target: unknown,
+		key: string,
+		...args: unknown[]
+	): Promise<unknown> {
+		assert(isNativeTarget(target));
+		return new ProxyStubHandler(this.#bridge, target).callAsync(key, args);
+	}
+
 	poisonProxies(): void {
 		this.#bridge.poisonProxies();
 		// Reset `#{global,env}Proxy` so they aren't poisoned on next access
@@ -701,6 +711,10 @@ class ProxyStubHandler<T extends object>
 		}[key];
 		return func;
 	}
+	callAsync(key: string, args: unknown[]): unknown {
+		return this.#call(key, true, args, this.callAsync);
+	}
+
 	#call(
 		key: string,
 		knownAsync: boolean,

@@ -281,6 +281,7 @@ export async function getDevMiniflareOptions(
 			},
 			dev: {
 				unsafeRegisterWorker: false,
+				unsafeSuppressNativeCaller: true,
 			},
 		},
 		{
@@ -424,6 +425,7 @@ export async function getDevMiniflareOptions(
 			},
 			dev: {
 				unsafeRegisterWorker: false,
+				unsafeSuppressNativeCaller: true,
 			},
 		},
 		{
@@ -448,6 +450,7 @@ export async function getDevMiniflareOptions(
 			},
 			dev: {
 				unsafeRegisterWorker: false,
+				unsafeSuppressNativeCaller: true,
 			},
 		},
 	];
@@ -651,6 +654,7 @@ export async function getDevMiniflareOptions(
 			serverConfig.allowedHosts !== true
 				? serverConfig.allowedHosts
 				: undefined,
+		unsafeDeferIdentitySetup: true,
 		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 		// The switch for local observability capture: tells Miniflare core to
 		// attach the trace collector to each user worker. Opt-in via the

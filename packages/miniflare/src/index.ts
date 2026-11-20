@@ -99,6 +99,11 @@ import {
 } from "./plugins/core";
 import { ContainerPrivilegesCache } from "./plugins/core/container";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
+import {
+	createLocalIdentityGraph,
+	type LocalIdentityGraph,
+	type LocalIdentityMetadata,
+} from "./plugins/core/local-identity";
 import { isModuleFallbackRequest } from "./plugins/core/module-fallback";
 import { writeTempFile } from "./plugins/core/temp-file";
 import { HyperdriveProxyController } from "./plugins/hyperdrive/hyperdrive-proxy";
@@ -925,6 +930,7 @@ export class Miniflare {
 	// Object storage. Note this may not exist, it's up to the consumers to
 	// create this if needed. Deleted on `dispose()`.
 	readonly #tmpPath: string;
+	#localIdentity?: LocalIdentityGraph;
 
 	// Mutual exclusion lock for runtime operations (i.e. initialisation and
 	// updating config). This essentially puts initialisation and future updates
@@ -1073,6 +1079,9 @@ export class Miniflare {
 					removeContainerSessionDetached(session);
 				}
 			}
+			// Runtime disposal sends SIGKILL synchronously. Release ownership only
+			// after that request; async cleanup cannot run during process exit.
+			this.#localIdentity?.disposeSync();
 			// This exit hook is synchronous — the event loop will never run again
 			// after it returns, so any operation that schedules a microtask (like
 			// fs.promises.rm) will never even be executed, let alone completed.
@@ -2112,7 +2121,15 @@ export class Miniflare {
 
 		await this.#loadExternalPlugins(this.#workerOpts);
 
-		sharedOpts.cf = await setupCf(this.#log, sharedOpts.cf);
+		const localIdentityEnabled = this.#workerOpts.some(
+			({ config }) =>
+				getEnvBindingsOfType(config, "identity").length ||
+				config.compatibilityFlags?.includes("enable_workload_identity_context")
+		);
+		sharedOpts.cf = await setupCf(
+			this.#log,
+			sharedOpts.cf ?? (localIdentityEnabled ? false : undefined)
+		);
 		this.#cfObject = sharedOpts.cf;
 
 		const { workerOpts: allWorkerOpts, externalServices } =
@@ -2151,7 +2168,25 @@ export class Miniflare {
 		const workerNames = [...allWorkerRoutes.keys()];
 
 		// Use Map to dedupe services by name
-		const services = new Map<string, Service>();
+		const previousIdentity = this.#localIdentity;
+		this.#localIdentity = await createLocalIdentityGraph(
+			this.#workerOpts,
+			sharedOpts,
+			this.#tmpPath,
+			allWorkerRoutes
+		);
+		if (
+			previousIdentity &&
+			previousIdentity.directory !== this.#localIdentity?.directory
+		) {
+			await previousIdentity.dispose();
+		}
+		const services = new Map<string, Service>(
+			this.#localIdentity?.services.map((service) => {
+				assert(service.name);
+				return [service.name, service];
+			})
+		);
 		const extensions: Extension[] = [
 			{
 				modules: [
@@ -2308,6 +2343,7 @@ export class Miniflare {
 				"options" | "sharedOptions" | "devRegistryEnabled"
 			> = {
 				log: this.#log,
+				localIdentity: this.#localIdentity,
 				workerBindings,
 				workerIndex,
 				additionalModules,
@@ -2361,6 +2397,17 @@ export class Miniflare {
 						}
 					}
 				}
+			}
+
+			// Identity bindings are assembled by core.getServices after the ordinary
+			// plugin binding pass. Expose the same protected targets to Node tooling.
+			for (const [name] of getEnvBindingsOfType(
+				workerOpts.config,
+				"identity"
+			)) {
+				const binding = workerBindings.find((binding) => binding.name === name);
+				assert(binding !== undefined);
+				proxyBindings.push(buildProxyBinding("core", workerName, binding));
 			}
 
 			// Allow additional sockets to be opened directly to specific workers,
@@ -2932,6 +2979,10 @@ export class Miniflare {
 			this.#proxyClient.setRuntimeEntryURL(this.#runtimeEntryURL);
 		}
 
+		if (!this.#sharedOpts.unsafeDeferIdentitySetup) {
+			await this.#prepareIdentityBindings();
+		}
+
 		await this.#registerWorkers();
 
 		// Catch any registry updates that occurred while workerd was booting.
@@ -3093,6 +3144,43 @@ export class Miniflare {
 		}
 
 		this.#devRegistry.register(Object.fromEntries(entries));
+	}
+
+	/** Internal Vite bridge; configureServer awaits setup before accepting application requests. */
+	async unsafePrepareIdentityBindings(): Promise<void> {
+		await this.ready;
+		// Vite serializes setup. Its module fallback may await ready, so do not hold the runtime mutex.
+		await this.#prepareIdentityBindings();
+	}
+
+	async #prepareIdentityBindings(): Promise<void> {
+		const setupBindings = this.#workerOpts.flatMap(({ config }) =>
+			getEnvBindingsOfType(config, "identity")
+				.filter(
+					([, binding]) =>
+						"connector_id" in binding ||
+						"resources" in binding ||
+						(binding.oauth &&
+							"exchange" in binding.oauth &&
+							(binding.oauth.token_endpoint === undefined ||
+								binding.oauth.authentication !== undefined))
+				)
+				.map(([name]) => getProxyBindingName("core", config.name, name))
+		);
+		if (setupBindings.length) {
+			assert(this.#runtimeEntryURL);
+			const startup = new ProxyClient(this.#runtimeEntryURL, (input, init) =>
+				fetch(input, { ...init, dispatcher: this.#runtimeDispatcher })
+			);
+			try {
+				await startup.warm();
+				for (const name of setupBindings) {
+					await startup.call(startup.env[name], "prepareLocal");
+				}
+			} finally {
+				await startup.dispose();
+			}
+		}
 	}
 
 	get ready(): Promise<URL> {
@@ -3461,6 +3549,14 @@ export class Miniflare {
 			}
 			return index;
 		}
+	}
+
+	/** Return public local issuer, subjects, revisions, and route metadata. */
+	async getLocalIdentity(): Promise<LocalIdentityMetadata | undefined> {
+		await this.ready;
+		return this.#localIdentity
+			? structuredClone(this.#localIdentity.metadata)
+			: undefined;
 	}
 
 	async getBindings<Env = Record<string, unknown>>(
@@ -3997,6 +4093,7 @@ export class Miniflare {
 		}
 
 		const runtimeCleanupOutcome = await runtimeDisposeOutcome;
+		await this.#localIdentity?.dispose();
 		try {
 			await this.#artifactsController.dispose();
 		} catch (error) {
@@ -4183,6 +4280,7 @@ export type {
 	V4FetchHandler,
 	V4IdEntry,
 	V4MiniflareOptions,
+	V4IdentityBindingOptions,
 	V4ModuleDefinition,
 	V4ModuleRule,
 	V4ModuleRuleType,
@@ -4199,3 +4297,5 @@ export type {
 	V4WorkerOptionsShape,
 	V4WorkerdStructuredLog,
 } from "./config/v4-schema";
+
+export type { LocalIdentityMetadata } from "./plugins/core/local-identity";

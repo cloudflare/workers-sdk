@@ -10,6 +10,7 @@ import { errorResponse, validateQuery, validateRequestBody } from "./common";
 import { wrapResponse } from "./common";
 import { EXPLORER_REFRESH_HEADER } from "./explorer-refresh";
 import {
+	zSecretsStoreSecretCreateData,
 	zD1ListDatabasesData,
 	zD1RawDatabaseQueryData,
 	zDurableObjectsNamespaceListObjectsData,
@@ -79,6 +80,7 @@ import {
 	putR2Object,
 } from "./resources/r2";
 import { dispatchScheduledToWorker } from "./resources/scheduled";
+import { createSecrets } from "./resources/secrets-store";
 import {
 	changeWorkflowInstanceStatus,
 	createWorkflowInstance,
@@ -137,6 +139,7 @@ export type Env = {
 		(appId: string) => FlagshipAdmin
 	>;
 	[CoreBindings.SERVICE_KV]: Fetcher;
+	[CoreBindings.SERVICE_SECRETS_STORE]: Fetcher;
 	[CoreBindings.SERVICE_R2]: Fetcher;
 	// Per-worker resource bindings for the /local/workers endpoint
 	[CoreBindings.JSON_EXPLORER_WORKER_OPTS]: ExplorerWorkerOpts;
@@ -250,6 +253,12 @@ app.get("/*", async (c, next) => {
 // ============================================================================
 
 app.get("/api", (c) => c.json(openApiSpec));
+
+app.post(
+	"/api/secrets_store/stores/:store_id/secrets",
+	validateRequestBody(zSecretsStoreSecretCreateData.shape.body),
+	(c) => createSecrets(c, c.req.valid("json"))
+);
 
 // ============================================================================
 // KV Endpoints

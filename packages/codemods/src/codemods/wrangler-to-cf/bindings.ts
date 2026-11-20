@@ -228,6 +228,15 @@ export function convertBindings(
 			report
 		);
 	}
+	convertArrayBindings("identities", "binding", "bindings.identity", [
+		["audience", "audience"],
+		["subject", "subject"],
+		["namespace_id", "namespace_id"],
+		["authorization_grants", "authorization_grants"],
+		["request_signing", "request_signing"],
+		["oauth", "oauth"],
+		["client_authentication", "client_authentication"],
+	]);
 	convertArrayBindings("k2", "binding", "bindings.k2", [["stream", "id"]], {
 		remote: true,
 	});

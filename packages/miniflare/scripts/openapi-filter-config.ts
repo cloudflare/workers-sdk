@@ -6,6 +6,10 @@ import type { FilterConfig } from "./filter-openapi";
  */
 const config = {
 	endpoints: [
+		{
+			path: "/accounts/{account_id}/secrets_store/stores/{store_id}/secrets",
+			methods: ["post"],
+		},
 		// KV Storage endpoints
 		{
 			path: "/accounts/{account_id}/storage/kv/namespaces",

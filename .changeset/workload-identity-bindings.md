@@ -1,0 +1,24 @@
+---
+"@cloudflare/config": minor
+"@cloudflare/codemods": minor
+"@cloudflare/workers-utils": minor
+"@cloudflare/deploy-helpers": minor
+"miniflare": minor
+"wrangler": minor
+"@cloudflare/vite-plugin": minor
+"@cloudflare/vitest-plugin": minor
+---
+
+Add experimental Workers identity bindings with fully local development
+
+Configure token audiences, authorization grants, HTTP signing, and managed OAuth through identity bindings. Use `getToken()`, `getAuthorizationGrant()`, and selected `getIdentity(agentId?)` RPC handles. Managed OAuth supports workload authorization and client credentials, automatic DPoP, and optional Web Bot Auth signatures. Configuration, migration, uploads, Previews, and generated types preserve these capabilities.
+
+Miniflare runs signing, discovery, verification, and replay protection with separate local keys and no cloud login. Cooperating Workers share one local graph; persisted restarts retain keys and replay state. With the companion runtime and `enable_workload_identity_context`, `ctx.identity.caller()` verifies local HTTP credentials and identifies immediate service-binding callers.
+
+Account-owned connectors support app and customer selection, staged consent, status, defaults, disconnect and private provisioning. Saved handles expose fetch/status without token export. Literal configuration generates only the permitted selectors and management methods. URL/origin permissions and independent connector ceilings retain their scope through uploads and readback.
+
+Shared local support runs the source-built connection broker and standards fixtures through ordinary cf, Wrangler, Vite and Vitest workflows. Local authority, connector/grant state and replay protection persist together in a project-scoped realm; ownership conflicts and old formats require explicit recovery. Live-provider qualification requires explicit opt-in.
+
+Use one per-destination resources grammar for signing, machine OAuth and saved accounts. Missing OAuth endpoints default to retained setup discovery from a trusted issuer. Explicit assertion export fixes client ID and audience in configuration; metadata and assertion methods take no arguments. Saved connector attachment can omit a revision for deployment-time pinning. Structured recovery errors retain name, code and referenceId across enhanced RPC serialization; legacy serialization is rejected. Signing handles expose signatureAgent as their public key-discovery URL.
+
+Configure incoming callers with `callerIdentity: { profile, accountTokens: { issuer, audience } }`. Optional companyId, accountTokens.profile, jwksUri and algorithms retain explicit signed-out trust and advanced tightening. The typed configuration is camelCase; uploads use caller_identity. Keep ctx.identity.caller() and all verification/session boundaries unchanged. Reject the old nested prototype configuration.

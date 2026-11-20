@@ -71,6 +71,7 @@ export function createWorkerUploadForm(
 		exports: configuredExports,
 		compatibility_date,
 		compatibility_flags,
+		caller_identity,
 		keepVars,
 		keepSecrets,
 		keepBindings,
@@ -107,6 +108,7 @@ export function createWorkerUploadForm(
 				},
 				...(annotations && { annotations }),
 				...(compatibility_date && { compatibility_date }),
+				...(caller_identity && { caller_identity }),
 				...(compatibility_flags && { compatibility_flags }),
 			})
 		);
@@ -473,6 +475,17 @@ export function createWorkerUploadForm(
 		);
 	});
 
+	for (const {
+		binding,
+		type: _type,
+		...bindingLimits
+	} of extractBindingsOfType("identity", bindings)) {
+		metadataBindings.push({
+			type: "identity",
+			name: binding,
+			...bindingLimits,
+		});
+	}
 	ratelimits.forEach(({ name, namespace_id, simple }) => {
 		metadataBindings.push({
 			name,
@@ -892,6 +905,7 @@ export function createWorkerUploadForm(
 					})),
 
 		...(compatibility_date && { compatibility_date }),
+		...(caller_identity && { caller_identity }),
 		...(compatibility_flags && {
 			compatibility_flags,
 		}),

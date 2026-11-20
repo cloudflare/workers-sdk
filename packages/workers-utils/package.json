@@ -86,6 +86,14 @@
 		"./asset-hash": {
 			"types": "./dist/asset-hash.d.mts",
 			"import": "./dist/asset-hash.mjs"
+		},
+		"./oidc": {
+			"import": "./dist/oidc.mjs",
+			"types": "./dist/oidc.d.mts"
+		},
+		"./identity-connectors": {
+			"import": "./dist/identity-connectors.mjs",
+			"types": "./dist/identity-connectors.d.mts"
 		}
 	},
 	"scripts": {

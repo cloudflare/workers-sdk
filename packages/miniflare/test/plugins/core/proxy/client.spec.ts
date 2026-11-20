@@ -80,6 +80,40 @@ describe("ProxyClient", () => {
 		expect(event.data).toBe("echo:hello");
 	});
 
+	test("service RPC can await a Node-backed binding on its first call", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			cf: false,
+			enableDevRegistry: false,
+			workers: [
+				{
+					config: {
+						name: "rpc",
+						compatibilityDate: "2026-10-01",
+						env: {
+							CALLBACK: {
+								type: "fetcher",
+								handler: () => new Response("node-callback"),
+							},
+						},
+						manifest: singleModuleManifest(`
+						import { WorkerEntrypoint } from "cloudflare:workers";
+						export default class Callback extends WorkerEntrypoint {
+							async roundTrip() { return (await this.env.CALLBACK.fetch("http://callback/")).text(); }
+						}
+					`),
+					},
+				},
+			],
+		});
+		useDispose(mf);
+		const callback = await mf.getWorker("rpc");
+		const client = await mf._getProxyClient();
+		expect(await client.call(callback, "roundTrip")).toBe("node-callback");
+		await expect(client.call(callback, "missingMethod")).rejects.toThrow();
+	});
+
 	test("preserves error codes and names thrown by RPC bindings", async ({
 		expect,
 	}) => {

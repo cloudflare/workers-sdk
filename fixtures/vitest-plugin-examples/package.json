@@ -36,6 +36,7 @@
 	},
 	"devDependencies": {
 		"@better-auth/stripe": "^1.4.6",
+		"@cloudflare/config": "workspace:*",
 		"@cloudflare/vitest-plugin": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@microlabs/otel-cf-workers": "1.0.0-rc.45",

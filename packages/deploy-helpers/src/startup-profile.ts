@@ -311,6 +311,7 @@ type MiniflareBindingOptions = Pick<
 	| "k2"
 	| "queueProducers"
 	| "r2Buckets"
+	| "identities"
 	| "ratelimits"
 	| "secretsStoreSecrets"
 	| "serviceBindings"
@@ -368,6 +369,7 @@ async function convertWorkerBundleBindings(
 		{ queueName: string; deliveryDelay?: number }
 	> = {};
 	const r2Buckets: Record<string, { id: string }> = {};
+	const oidc: MiniflareBindingOption<"identities"> = {};
 	const ratelimits: MiniflareBindingOption<"ratelimits"> = {};
 	const secretsStoreSecrets: MiniflareBindingOption<"secretsStoreSecrets"> = {};
 	const serviceBindings: NonNullable<V4WorkerOptionsShape["serviceBindings"]> =
@@ -538,6 +540,11 @@ async function convertWorkerBundleBindings(
 			case "flagship":
 				flagship[binding.name] = { app_id: binding.app_id };
 				break;
+			case "identity": {
+				const { name, type: _type, ...request } = binding;
+				oidc[name] = request;
+				break;
+			}
 			case "ratelimit":
 				ratelimits[binding.name] = {
 					namespace_id: binding.namespace_id,
@@ -611,6 +618,7 @@ async function convertWorkerBundleBindings(
 			k2,
 			queueProducers,
 			r2Buckets,
+			identities: oidc,
 			ratelimits,
 			secretsStoreSecrets,
 			serviceBindings,

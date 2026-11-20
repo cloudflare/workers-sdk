@@ -679,6 +679,126 @@ export type WorkersKvResultInfo = {
 	count?: number;
 };
 
+export type SecretsStoreApiResponseCommonFailure = {
+	errors: SecretsStoreMessages;
+	messages: SecretsStoreMessages;
+	result: null;
+	/**
+	 * Whether the API call was successful.
+	 */
+	success: false;
+};
+
+export type SecretsStoreMessages = Array<{
+	code: number;
+	documentation_url?: string;
+	message: string;
+	source?: {
+		pointer?: string;
+	};
+}>;
+
+export type SecretsStoreSecretsResponseCollection =
+	SecretsStoreApiResponseCollection & {
+		result?: Array<SecretsStoreSecretObject>;
+	};
+
+export type SecretsStoreSecretObject = {
+	comment?: SecretsStoreComment;
+	created: SecretsStoreCreated;
+	id: SecretsStoreIdentifier;
+	modified: SecretsStoreModified;
+	name: SecretsStoreSecretName;
+	scopes?: SecretsStoreScopes;
+	status: SecretsStoreSecretStatus;
+	store_id: SecretsStoreStoreIdentifier;
+};
+
+/**
+ * Store Identifier.
+ */
+export type SecretsStoreStoreIdentifier = string;
+
+export type SecretsStoreSecretStatus = "pending" | "active" | "deleted";
+
+/**
+ * The list of services that can use this secret.
+ */
+export type SecretsStoreScopes = Array<
+	"workers" | "ai_gateway" | "dex" | "access" | "containers" | "websearch"
+>;
+
+/**
+ * The name of the secret.
+ */
+export type SecretsStoreSecretName = string;
+
+/**
+ * When the secret was modified.
+ */
+export type SecretsStoreModified = string;
+
+/**
+ * Secret identifier tag.
+ */
+export type SecretsStoreIdentifier = string;
+
+/**
+ * When the secret was created.
+ */
+export type SecretsStoreCreated = string;
+
+/**
+ * Freeform text describing the secret.
+ */
+export type SecretsStoreComment = string;
+
+export type SecretsStoreApiResponseCollection =
+	SecretsStoreApiResponseCommon & {
+		result_info?: {
+			/**
+			 * Total number of results for the requested service.
+			 */
+			count?: number;
+			/**
+			 * Current page within paginated list of results.
+			 */
+			page?: number;
+			/**
+			 * Number of results per page of results.
+			 */
+			per_page?: number;
+			/**
+			 * Total results available without any search parameters.
+			 */
+			total_count?: number;
+			/**
+			 * The number of total pages in the entire result set.
+			 */
+			total_pages?: number;
+		};
+	};
+
+export type SecretsStoreApiResponseCommon = {
+	errors: SecretsStoreMessages;
+	messages: SecretsStoreMessages;
+	/**
+	 * Whether the API call was successful.
+	 */
+	success: true;
+};
+
+export type SecretsStoreCreateSecretObject = {
+	comment?: SecretsStoreComment;
+	name: SecretsStoreSecretName;
+	scopes: SecretsStoreScopes;
+};
+
+/**
+ * The value of the secret. Maximum 64 KiB (65,536 bytes). Note that this is 'write only' - the API never returns this value; it exists only to create or modify secrets.
+ */
+export type SecretsStoreValue = string;
+
 export type LocalExplorerScheduledRequest = {
 	cron: string;
 	/**
@@ -1466,6 +1586,25 @@ export type WorkersKvNamespaceWritable = {
 	title: WorkersKvNamespaceTitle;
 };
 
+export type SecretsStoreSecretsResponseCollectionWritable =
+	SecretsStoreApiResponseCollection & {
+		result?: Array<SecretsStoreSecretObjectWritable>;
+	};
+
+export type SecretsStoreSecretObjectWritable = {
+	comment?: SecretsStoreComment;
+	name: SecretsStoreSecretName;
+	scopes?: SecretsStoreScopes;
+	status: SecretsStoreSecretStatus;
+};
+
+export type SecretsStoreCreateSecretObjectWritable = {
+	comment?: SecretsStoreComment;
+	name: SecretsStoreSecretName;
+	scopes: SecretsStoreScopes;
+	value: SecretsStoreValue;
+};
+
 /**
  * Jurisdiction where objects in this bucket are guaranteed to be stored.
  */
@@ -1475,6 +1614,52 @@ export type R2CfR2Jurisdiction =
 	| "us"
 	| "fedramp"
 	| "fedramp-high";
+
+/**
+ * Store identifier.
+ */
+export type SecretsStoreStoreId = string;
+
+/**
+ * Account identifier.
+ */
+export type SecretsStoreAccountId = string;
+
+export type SecretsStoreSecretCreateData = {
+	body: Array<SecretsStoreCreateSecretObjectWritable>;
+	path: {
+		/**
+		 * Account identifier.
+		 */
+		account_id: string;
+		/**
+		 * Store identifier.
+		 */
+		store_id: string;
+	};
+	query?: never;
+	url: "/secrets_store/stores/{store_id}/secrets";
+};
+
+export type SecretsStoreSecretCreateErrors = {
+	/**
+	 * Create secret response failure.
+	 */
+	"4XX": SecretsStoreApiResponseCommonFailure;
+};
+
+export type SecretsStoreSecretCreateError =
+	SecretsStoreSecretCreateErrors[keyof SecretsStoreSecretCreateErrors];
+
+export type SecretsStoreSecretCreateResponses = {
+	/**
+	 * Secret detail.
+	 */
+	200: SecretsStoreSecretsResponseCollection;
+};
+
+export type SecretsStoreSecretCreateResponse =
+	SecretsStoreSecretCreateResponses[keyof SecretsStoreSecretCreateResponses];
 
 export type WorkersKvNamespaceListNamespacesData = {
 	body?: never;
