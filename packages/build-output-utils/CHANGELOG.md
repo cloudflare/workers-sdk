@@ -1,5 +1,16 @@
 # @cloudflare/build-output-utils
 
+## 1.0.0-rc.3
+
+### Patch Changes
+
+- [#17031](https://github.com/cloudflare/workers-sdk/pull/17031) [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-19
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22), [`be6aa81`](https://github.com/cloudflare/workers-sdk/commit/be6aa81eb24c8ac86e6fa0a0274a3c9257f58e24)]:
+  - @cloudflare/config@1.0.0-rc.3
+
 ## 1.0.0-rc.2
 
 ### Patch Changes

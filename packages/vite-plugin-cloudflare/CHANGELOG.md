@@ -1,5 +1,41 @@
 # @cloudflare/vite-plugin
 
+## 2.0.0-rc.3
+
+### Minor Changes
+
+- [#17034](https://github.com/cloudflare/workers-sdk/pull/17034) [`8712fc5`](https://github.com/cloudflare/workers-sdk/commit/8712fc53a8070de0542e02fbb7105a3c2c3ffc7d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add an experimental opt-in to trust Vite's allowed hosts for Local Explorer
+
+  Set `X_LOCAL_EXPLORER_USE_VITE_ALLOWED_HOSTS=true` to trust resolved `server.allowedHosts` and `preview.allowedHosts` entries for Local Explorer APIs and other `/cdn-cgi/` endpoints. Exact hostnames, suffix entries such as `.example.com`, and tunnel hostnames are supported. The environment variable defaults to `false`, keeping Vite's allowed hosts separate from Miniflare's allowlist. Setting Vite's `allowedHosts: true` keeps Miniflare's default protections enabled, even with the opt-in enabled.
+
+### Patch Changes
+
+- [#17031](https://github.com/cloudflare/workers-sdk/pull/17031) [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-19
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17076](https://github.com/cloudflare/workers-sdk/pull/17076) [`2ace09b`](https://github.com/cloudflare/workers-sdk/commit/2ace09beffb8de1f309be3cbd38566fb31b1fac9) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Avoid loading Miniflare during bundle-only Vite builds
+
+  The plugin now loads Miniflare when it needs the local runtime, such as for development, preview, or regenerating runtime types. Builds that only bundle Workers and assets no longer pay the cost of loading Miniflare.
+
+- [#16385](https://github.com/cloudflare/workers-sdk/pull/16385) [`ed3e5e7`](https://github.com/cloudflare/workers-sdk/commit/ed3e5e781b48c7848223572bdbdd1880c950007e) Thanks [@aryasaatvik](https://github.com/aryasaatvik)! - Keep deferred imports alive after their originating request ends
+
+  Retain the module runner's RPC operation until its result is retrieved and cleaned up. This prevents subsequent requests from hanging on a cached import when the first request returns early or its client disconnects.
+
+- [#17030](https://github.com/cloudflare/workers-sdk/pull/17030) [`f3f7bbc`](https://github.com/cloudflare/workers-sdk/commit/f3f7bbc1fe609e14ea9a7be78a25551d270f1fce) Thanks [@cpojer](https://github.com/cpojer)! - Stop running Docker at the end of builds for projects with no Containers
+
+  Builds that write the Build Output Specification ran `docker image ls` on every build to find image tags left by a previous build, even when the project configured no Containers. On a machine with Docker installed this added about a quarter of a second to each build, and the build waited on the Docker CLI for as long as it took to respond. The lookup is now skipped when the project has no Containers and the build output being replaced had none either. Projects that configure Containers, and the first build after the last Container is removed, still remove previous tags as before.
+
+- [#17035](https://github.com/cloudflare/workers-sdk/pull/17035) [`1b563db`](https://github.com/cloudflare/workers-sdk/commit/1b563db5ae1d78d7393befaa90b1b947646d76ab) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix remote bindings authentication with API tokens scoped to an individual Worker
+
+  Remote bindings now create preview sessions through the Worker-scoped endpoint. When the response includes a usable exchange URL, its hostname is used without account-wide Workers subdomain access; otherwise, the existing account subdomain lookup or registration is used. This applies to `getPlatformProxy` and remote bindings in Wrangler, the Cloudflare Vite plugin, and the Vitest integration. Tokens still need permission to update the named Worker.
+
+- Updated dependencies [[`8712fc5`](https://github.com/cloudflare/workers-sdk/commit/8712fc53a8070de0542e02fbb7105a3c2c3ffc7d), [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22), [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22), [`be6aa81`](https://github.com/cloudflare/workers-sdk/commit/be6aa81eb24c8ac86e6fa0a0274a3c9257f58e24), [`8f45554`](https://github.com/cloudflare/workers-sdk/commit/8f4555407cd0954fb4eba2cf10e5d3a94a1da2ed), [`4f5b118`](https://github.com/cloudflare/workers-sdk/commit/4f5b1182f2481ddafbc84e32d654fd4fa415128f), [`8f45554`](https://github.com/cloudflare/workers-sdk/commit/8f4555407cd0954fb4eba2cf10e5d3a94a1da2ed)]:
+  - miniflare@5.20261119.0-beta
+  - @cloudflare/build-output-utils@1.0.0-rc.3
+  - @cloudflare/config@1.0.0-rc.3
+  - @cloudflare/runtime-types@0.1.32
+
 ## 2.0.0-rc.2
 
 ### Patch Changes

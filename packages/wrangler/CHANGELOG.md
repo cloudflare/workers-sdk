@@ -1,5 +1,106 @@
 # wrangler
 
+## 4.166.0
+
+### Minor Changes
+
+- [#16961](https://github.com/cloudflare/workers-sdk/pull/16961) [`bf7568a`](https://github.com/cloudflare/workers-sdk/commit/bf7568a8ec3d447bc21c57f32a49de3d03dd18d8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Show configured trigger targets during experimental `wrangler triggers deploy --dry-run`
+
+  Dry runs now print a "Would deploy" summary of routes, custom domains, cron schedules, Queue producers and consumers, Workflows, event triggers, and Email Routing addresses instead of exiting without a summary. Explicitly empty cron schedules and Email Routing addresses are shown as removals. The preview makes no API requests or authentication checks; when workers.dev is enabled, it reports that setting without looking up the account's subdomain.
+
+- [#16679](https://github.com/cloudflare/workers-sdk/pull/16679) [`be6aa81`](https://github.com/cloudflare/workers-sdk/commit/be6aa81eb24c8ac86e6fa0a0274a3c9257f58e24) Thanks [@mglewis](https://github.com/mglewis)! - Add `images.url_transformations` to the Wrangler configuration
+
+  The `images` block now accepts a `url_transformations` object for controlling `/cdn-cgi/image/` transformations on requests served by a Worker. `enabled` is required, and `allowed_origins` optionally lists the origins images may be fetched from (use `["*"]` to allow any origin). `binding` is now optional, so `url_transformations` can be configured without an Images binding:
+
+  ```jsonc
+  {
+    "images": {
+      "url_transformations": {
+        "enabled": true,
+        "allowed_origins": ["images.example.com"]
+      }
+    }
+  }
+  ```
+
+  Like the rest of the `images` block, `url_transformations` is not inherited by named environments, and must be specified in each environment that needs it.
+
+  `cloudflare.config.ts` gains the equivalent setting as a top-level `images` field on the Worker, with the Images binding remaining in `env`:
+
+  ```ts
+  export default defineConfig({
+    worker: {
+      name: "my-worker",
+      compatibilityDate: "2026-11-01",
+      images: {
+        urlTransformations: {
+          enabled: true,
+          allowedOrigins: ["images.example.com"],
+        },
+      },
+    },
+  });
+  ```
+
+  `cf migrate` carries `images.url_transformations` over to this field.
+
+  This change adds configuration and validation only. `url_transformations` is not supported in `previews`.
+
+- [#14114](https://github.com/cloudflare/workers-sdk/pull/14114) [`dce615c`](https://github.com/cloudflare/workers-sdk/commit/dce615c87798905e758a0e477f8e4b5752a61cac) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `--show-diff` flag to `wrangler triggers deploy`
+
+  When `--show-diff` is passed, the command fetches the currently deployed trigger configuration from the remote worker and displays a colored diff against the local configuration before deploying. This covers routes, custom domains, cron schedules, and the `workers_dev`/`preview_urls` subdomain settings. Route and custom-domain lists are fetched only when that category has local entries to deploy, avoiding unnecessary permission requirements. Queue consumers and event triggers are not compared.
+
+  The flag also works with `--dry-run` to preview these changes without actually deploying. Displaying a diff requires authentication, including during a dry run.
+
+### Patch Changes
+
+- [#17031](https://github.com/cloudflare/workers-sdk/pull/17031) [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-19
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17031](https://github.com/cloudflare/workers-sdk/pull/17031) [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261118.1 | ^5.20261119.1 |
+  | workerd                   | 1.20261118.1  | 1.20261119.1  |
+
+- [#16961](https://github.com/cloudflare/workers-sdk/pull/16961) [`bf7568a`](https://github.com/cloudflare/workers-sdk/commit/bf7568a8ec3d447bc21c57f32a49de3d03dd18d8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Validate external Workflow settings before updating Worker triggers
+
+  Reject `limits`, `concurrency`, `schedules`, `default_retention`, and `jurisdiction` configured on external Workflows before making trigger API calls. This prevents failed deployments from partially updating workers.dev or routes; dry runs reject the same invalid configurations.
+
+- [#17044](https://github.com/cloudflare/workers-sdk/pull/17044) [`56974d4`](https://github.com/cloudflare/workers-sdk/commit/56974d49141e72b19b33b74a19c160f734128108) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Warn when invocation logs are enabled while logs are disabled
+
+  Configuration validation now warns when `observability.logs.invocation_logs` is `true` and `observability.logs.enabled` is `false`. Invocation logging remains disabled until `observability.logs.enabled` is set to `true`.
+
+- [#17072](https://github.com/cloudflare/workers-sdk/pull/17072) [`3c91a13`](https://github.com/cloudflare/workers-sdk/commit/3c91a13b34f8a3531410b0b062ae546c52b77cb7) Thanks [@mykcs](https://github.com/mykcs)! - Recover when concurrent `wrangler preview` builds try to create the same Preview name.
+
+  If another build creates a Preview after the initial lookup, Wrangler now reads the existing Preview and applies the requested Preview settings instead of failing with Cloudflare API error 100338. Other creation errors still fail, and existing Previews are never deleted.
+
+- [#17081](https://github.com/cloudflare/workers-sdk/pull/17081) [`08eeaf4`](https://github.com/cloudflare/workers-sdk/commit/08eeaf4846ee4cd65a3cf73d063dbb88df322033) Thanks [@Naapperas](https://github.com/Naapperas)! - Wait for a just-uploaded Worker version to become readable during deploys
+
+  For a few seconds after a version is uploaded, the Workers API can alternate between returning it and reporting it as not found. `wrangler versions deploy` failed on the first not-found read, and `wrangler deploy` for Durable Object-managed containers gave up after about 2 seconds and reported that the container settings were not fully applied.
+
+  Both now keep retrying a not-found version for up to about 12 seconds and log a message while they wait. These reads also retry transient API failures, such as server errors, rate limiting, timeouts and network errors, which can wait longer when the API asks for it. Other errors still fail immediately.
+
+- [#17030](https://github.com/cloudflare/workers-sdk/pull/17030) [`f3f7bbc`](https://github.com/cloudflare/workers-sdk/commit/f3f7bbc1fe609e14ea9a7be78a25551d270f1fce) Thanks [@cpojer](https://github.com/cpojer)! - Stop running Docker at the end of builds for projects with no Containers
+
+  Builds that write the Build Output Specification ran `docker image ls` on every build to find image tags left by a previous build, even when the project configured no Containers. On a machine with Docker installed this added about a quarter of a second to each build, and the build waited on the Docker CLI for as long as it took to respond. The lookup is now skipped when the project has no Containers and the build output being replaced had none either. Projects that configure Containers, and the first build after the last Container is removed, still remove previous tags as before.
+
+- [#17043](https://github.com/cloudflare/workers-sdk/pull/17043) [`4f5b118`](https://github.com/cloudflare/workers-sdk/commit/4f5b1182f2481ddafbc84e32d654fd4fa415128f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update Undici to 7.30.2 to include upstream security fixes
+
+  This patch includes six upstream security fixes covering caching, redirects, and Subresource Integrity verification. Update the shared Undici dependency and matching types together so affected packages ship the patched version.
+
+- [#17035](https://github.com/cloudflare/workers-sdk/pull/17035) [`1b563db`](https://github.com/cloudflare/workers-sdk/commit/1b563db5ae1d78d7393befaa90b1b947646d76ab) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix remote bindings authentication with API tokens scoped to an individual Worker
+
+  Remote bindings now create preview sessions through the Worker-scoped endpoint. When the response includes a usable exchange URL, its hostname is used without account-wide Workers subdomain access; otherwise, the existing account subdomain lookup or registration is used. This applies to `getPlatformProxy` and remote bindings in Wrangler, the Cloudflare Vite plugin, and the Vitest integration. Tokens still need permission to update the named Worker.
+
+- Updated dependencies [[`8712fc5`](https://github.com/cloudflare/workers-sdk/commit/8712fc53a8070de0542e02fbb7105a3c2c3ffc7d), [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22), [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22), [`be6aa81`](https://github.com/cloudflare/workers-sdk/commit/be6aa81eb24c8ac86e6fa0a0274a3c9257f58e24), [`8f45554`](https://github.com/cloudflare/workers-sdk/commit/8f4555407cd0954fb4eba2cf10e5d3a94a1da2ed), [`56974d4`](https://github.com/cloudflare/workers-sdk/commit/56974d49141e72b19b33b74a19c160f734128108), [`08eeaf4`](https://github.com/cloudflare/workers-sdk/commit/08eeaf4846ee4cd65a3cf73d063dbb88df322033), [`629f135`](https://github.com/cloudflare/workers-sdk/commit/629f135e4259c6a19aa9331a7346d993b8ef328a), [`4f5b118`](https://github.com/cloudflare/workers-sdk/commit/4f5b1182f2481ddafbc84e32d654fd4fa415128f), [`629f135`](https://github.com/cloudflare/workers-sdk/commit/629f135e4259c6a19aa9331a7346d993b8ef328a), [`8f45554`](https://github.com/cloudflare/workers-sdk/commit/8f4555407cd0954fb4eba2cf10e5d3a94a1da2ed)]:
+  - miniflare@5.20261119.0-beta
+  - @cloudflare/workers-utils@0.56.0
+
 ## 4.165.0
 
 ### Minor Changes

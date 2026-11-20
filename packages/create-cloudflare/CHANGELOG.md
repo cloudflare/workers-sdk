@@ -1,5 +1,27 @@
 # create-cloudflare
 
+## 2.75.0
+
+### Minor Changes
+
+- [#17074](https://github.com/cloudflare/workers-sdk/pull/17074) [`4717798`](https://github.com/cloudflare/workers-sdk/commit/4717798e6a3358e98f5c802037eee0fc3a264204) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Scaffold SvelteKit projects for Workers only
+
+  The SvelteKit Cloudflare adapter no longer supports Pages. Use `--framework svelte --platform workers` to create a new project, or omit `--platform` to select Workers automatically. The adapter now sets the Worker entry point and assets directory at build time. Existing projects are not modified.
+
+### Patch Changes
+
+- [#17041](https://github.com/cloudflare/workers-sdk/pull/17041) [`2469829`](https://github.com/cloudflare/workers-sdk/commit/2469829c4fe1ce37f2f09499913bbd7d1a58c999) Thanks [@camc314](https://github.com/camc314)! - Use `bundler` module resolution in the remaining TypeScript Worker templates
+
+  The common, Durable Object, Workflows, Queues, and Scheduled TypeScript templates used `moduleResolution: "node"`, which TypeScript 6 deprecates. New projects created from these templates now use `bundler` resolution, matching the other Worker templates and the way Wrangler bundles Worker code.
+
+- [#17031](https://github.com/cloudflare/workers-sdk/pull/17031) [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-19
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17043](https://github.com/cloudflare/workers-sdk/pull/17043) [`4f5b118`](https://github.com/cloudflare/workers-sdk/commit/4f5b1182f2481ddafbc84e32d654fd4fa415128f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update Undici to 7.30.2 to include upstream security fixes
+
+  This patch includes six upstream security fixes covering caching, redirects, and Subresource Integrity verification. Update the shared Undici dependency and matching types together so affected packages ship the patched version.
+
 ## 2.74.15
 
 ### Patch Changes
