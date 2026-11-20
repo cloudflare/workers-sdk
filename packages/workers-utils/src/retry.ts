@@ -107,16 +107,23 @@ export function retryWhileVersionNotReadable<T>(
 	read: () => Promise<T>,
 	logger: Logger
 ): Promise<T> {
+	let loggedRetry = false;
 	return retryOnAPIFailure(
 		read,
 		logger,
 		VERSION_NOT_READABLE_INITIAL_BACKOFF_MS,
 		VERSION_NOT_READABLE_ATTEMPTS,
 		undefined,
-		isWorkerVersionNotFoundError
+		(err) => {
+			const notFound =
+				err instanceof APIError && err.code === WORKER_VERSION_NOT_FOUND_CODE;
+			if (notFound && !loggedRetry) {
+				loggedRetry = true;
+				logger.info(
+					"The Cloudflare API reports the Worker version as not found. Versions can take a few seconds to become readable after an upload, so retrying for up to 12 seconds..."
+				);
+			}
+			return notFound;
+		}
 	);
-}
-
-function isWorkerVersionNotFoundError(err: unknown): boolean {
-	return err instanceof APIError && err.code === WORKER_VERSION_NOT_FOUND_CODE;
 }

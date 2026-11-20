@@ -51,6 +51,11 @@ describe("retryWhileVersionNotReadable", () => {
 		);
 		expect(read).toHaveBeenCalledTimes(3);
 		expect(waits()).toEqual([500, 1500]);
+		expect(vi.mocked(logger.info).mock.calls).toEqual([
+			[
+				"The Cloudflare API reports the Worker version as not found. Versions can take a few seconds to become readable after an upload, so retrying for up to 12 seconds...",
+			],
+		]);
 	});
 
 	it("does not retry other client errors", async ({ expect }) => {
@@ -62,6 +67,7 @@ describe("retryWhileVersionNotReadable", () => {
 		);
 		expect(read).toHaveBeenCalledOnce();
 		expect(setTimeout).not.toHaveBeenCalled();
+		expect(logger.info).not.toHaveBeenCalled();
 	});
 
 	it("throws the last not found error after about 12 seconds", async ({

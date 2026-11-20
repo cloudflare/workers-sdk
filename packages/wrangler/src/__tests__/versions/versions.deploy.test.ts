@@ -2423,6 +2423,9 @@ describe("versions deploy", () => {
 			await runWrangler(`versions deploy ${versionId}@100% --yes`);
 
 			expect(reads).toBe(4);
+			expect(consoleStd.info).toContain(
+				"Versions can take a few seconds to become readable after an upload"
+			);
 			expect(normalizeOutput(cliStd.out)).toContain(
 				"SUCCESS  Deployed test-name version"
 			);
