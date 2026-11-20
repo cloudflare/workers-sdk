@@ -1154,42 +1154,56 @@ async function runPreview(
 			throw e;
 		}
 	}
-	const isNewPreview = !existingPreview;
+	let isNewPreview = !existingPreview;
 	const previewRequest = assemblePreviewScriptSettings(config);
 
 	let previewResource: PreviewResource;
-	if (isNewPreview) {
-		previewResource = await createPreview(
+	if (!existingPreview) {
+		try {
+			previewResource = await createPreview(
+				config,
+				accountId,
+				workerName,
+				{ name: previewName, ...previewRequest },
+				{ ignoreBaseConfig }
+			);
+		} catch (e) {
+			if (!(e instanceof Error && "code" in e && e.code === 100338)) {
+				throw e;
+			}
+			// Another build may have created this Preview after our initial lookup.
+			previewResource = await getPreview(
+				config,
+				accountId,
+				workerName,
+				previewIdentifier
+			);
+			isNewPreview = false;
+		}
+	} else {
+		previewResource = existingPreview;
+	}
+
+	if (
+		isNewPreview &&
+		replaceTailConsumersAfterCreate &&
+		previewRequest.tail_consumers !== undefined
+	) {
+		previewResource = await editPreview(
 			config,
 			accountId,
 			workerName,
-			{ name: previewName, ...previewRequest },
-			{ ignoreBaseConfig }
+			previewIdentifier,
+			{ tail_consumers: previewRequest.tail_consumers }
 		);
-		if (
-			replaceTailConsumersAfterCreate &&
-			previewRequest.tail_consumers !== undefined
-		) {
-			previewResource = await editPreview(
-				config,
-				accountId,
-				workerName,
-				previewIdentifier,
-				{ tail_consumers: previewRequest.tail_consumers }
-			);
-		}
-	} else {
-		if (Object.keys(previewRequest).length > 0) {
-			previewResource = await editPreview(
-				config,
-				accountId,
-				workerName,
-				previewIdentifier,
-				previewRequest
-			);
-		} else {
-			previewResource = existingPreview as PreviewResource;
-		}
+	} else if (!isNewPreview && Object.keys(previewRequest).length > 0) {
+		previewResource = await editPreview(
+			config,
+			accountId,
+			workerName,
+			previewIdentifier,
+			previewRequest
+		);
 	}
 
 	const { scopedContainerConfig, normalisedContainerConfig } =

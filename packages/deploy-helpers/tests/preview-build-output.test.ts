@@ -683,6 +683,96 @@ describe("previewBuildOutput", () => {
 		expect(result.deployment.env).toEqual({ TOKEN: { type: "secret_text" } });
 	});
 
+	it("recovers when concurrent builds create the same Preview name", async ({
+		expect,
+	}) => {
+		let previewExists = false;
+		let initialReads = 0;
+		let releaseReads: () => void = () => {};
+		const initialReadsComplete = new Promise<void>((resolve) => {
+			releaseReads = resolve;
+		});
+
+		mocks.getPreview.mockImplementation(async () => {
+			if (!previewExists) {
+				initialReads++;
+				if (initialReads === 2) {
+					releaseReads();
+				}
+				await initialReadsComplete;
+				throw Object.assign(new Error("Preview not found"), { code: 10025 });
+			}
+			return previewResource;
+		});
+		mocks.createPreview.mockImplementation(async () => {
+			if (previewExists) {
+				throw Object.assign(new Error("Preview name already exists"), {
+					code: 100338,
+				});
+			}
+			previewExists = true;
+			return previewResource;
+		});
+
+		const output = buildOutputConfig({
+			observability: { enabled: true },
+		});
+		const results = await Promise.all([
+			uploadPreview(output),
+			uploadPreview(output),
+		]);
+
+		expect(results.map(({ isNewPreview }) => isNewPreview)).toEqual([
+			true,
+			false,
+		]);
+		expect(mocks.getPreview).toHaveBeenCalledTimes(3);
+		expect(mocks.createPreview).toHaveBeenCalledTimes(2);
+		expect(mocks.editPreview).toHaveBeenCalledWith(
+			expect.anything(),
+			"account-id",
+			"preview-worker",
+			"feature",
+			{ observability: { enabled: true } }
+		);
+		expect(mocks.createPreviewDeployment).toHaveBeenCalledTimes(2);
+	});
+
+	it("preserves a non-conflict create Preview error", async ({ expect }) => {
+		mocks.getPreview.mockRejectedValueOnce(
+			Object.assign(new Error("Preview not found"), { code: 10025 })
+		);
+		mocks.createPreview.mockRejectedValueOnce(
+			Object.assign(new Error("Permission denied"), { code: 10000 })
+		);
+
+		await expect(uploadPreview(buildOutputConfig())).rejects.toThrow(
+			"Permission denied"
+		);
+		expect(mocks.getPreview).toHaveBeenCalledOnce();
+		expect(mocks.createPreviewDeployment).not.toHaveBeenCalled();
+	});
+
+	it("fails safely when a conflicting Preview still cannot be read", async ({
+		expect,
+	}) => {
+		mocks.getPreview.mockRejectedValue(
+			Object.assign(new Error("Preview not found"), { code: 10025 })
+		);
+		mocks.createPreview.mockRejectedValueOnce(
+			Object.assign(new Error("Preview name already exists"), {
+				code: 100338,
+			})
+		);
+
+		await expect(uploadPreview(buildOutputConfig())).rejects.toThrow(
+			"Preview not found"
+		);
+		expect(mocks.createPreview).toHaveBeenCalledOnce();
+		expect(mocks.getPreview).toHaveBeenCalledTimes(2);
+		expect(mocks.createPreviewDeployment).not.toHaveBeenCalled();
+	});
+
 	it("does not look up the latest deployment of a new Preview", async ({
 		expect,
 	}) => {
