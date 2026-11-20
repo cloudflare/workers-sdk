@@ -31,6 +31,10 @@
 			"import": "./dist/prometheus-metrics.mjs",
 			"types": "./dist/prometheus-metrics.d.mts"
 		},
+		"./apply-d1-migrations": {
+			"import": "./dist/apply-d1-migrations.mjs",
+			"types": "./dist/apply-d1-migrations.d.mts"
+		},
 		"./compliance": {
 			"import": "./dist/compliance.mjs",
 			"types": "./dist/compliance.d.mts"
