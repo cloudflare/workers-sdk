@@ -87,14 +87,14 @@ export async function cleanupOldLogFiles(logsDir: string): Promise<void> {
 	}
 }
 
-/**
- * Resolved lazily (and memoized) on first access so that `WRANGLER_LOG_PATH`
- * set after module import — e.g. in `vite.config.ts` after a static import of
- * `@cloudflare/vite-plugin` — is still respected. Matches the lazy read of
- * `WRANGLER_WRITE_LOGS` in `shouldLogToDisk()`.
- */
 let cachedDebugLogFilepath: string | undefined;
 
+/**
+ * Returns the memoized debug log filepath, resolving `WRANGLER_LOG_PATH` on
+ * first access so values set after module import — e.g. in `vite.config.ts`
+ * after a static import of `@cloudflare/vite-plugin` — are still respected.
+ * Matches the lazy read of `WRANGLER_WRITE_LOGS` in `shouldLogToDisk()`.
+ */
 export function getDebugLogFilepath(): string {
 	return (cachedDebugLogFilepath ??= getDebugFilepath());
 }
