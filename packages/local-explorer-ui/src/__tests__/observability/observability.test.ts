@@ -1,4 +1,5 @@
-import { describe, test } from "vitest";
+import { beforeEach, describe, test, vi } from "vitest";
+import { observabilityQuery } from "../../api";
 import {
 	buildSpanTree,
 	buildWaterfall,
@@ -7,6 +8,8 @@ import {
 	formatLogMessage,
 	isRunning,
 	isViteWrapperSpan,
+	listEvents,
+	listTraces,
 	parseAttributes,
 	spanIsError,
 	stripDevRunnerSpans,
@@ -15,6 +18,11 @@ import {
 	visibleTraceSpans,
 } from "../../utils/observability";
 import type { Span } from "../../utils/observability";
+
+vi.mock("../../api", () => ({
+	observabilityQuery: vi.fn(),
+	observabilityClear: vi.fn(),
+}));
 
 function span(partial: Partial<Span>): Span {
 	return {
@@ -148,6 +156,81 @@ describe("isViteWrapperSpan", () => {
 				attributes: null,
 			})
 		).toBe(true);
+	});
+});
+
+describe("listEvents filtering", () => {
+	beforeEach(() => {
+		vi.mocked(observabilityQuery).mockReset();
+		vi.mocked(observabilityQuery).mockResolvedValue({
+			data: { result: { columns: [], rows: [] } },
+		} as never);
+	});
+
+	async function eventsSql(): Promise<string> {
+		await listEvents();
+		const call = vi.mocked(observabilityQuery).mock.calls.at(-1)?.[0];
+		return String((call as { body?: { sql?: string } })?.body?.sql ?? "");
+	}
+
+	test("only hides executeCallback logs when the trace is really Vite dev", async ({
+		expect,
+	}) => {
+		// A `wrangler dev` user can have their own executeCallback RPC method, so
+		// the shape rule must be paired with a wrapper-span check on the trace.
+		const sql = await eventsSql();
+		expect(sql).toMatch(
+			/executeCallback[\s\S]*EXISTS[\s\S]*v\.trace_id = l\.trace_id/
+		);
+	});
+
+	test("filters in the WHERE clause, before LIMIT", async ({ expect }) => {
+		// Filtering after LIMIT would short-change the page and skew its count.
+		const sql = await eventsSql();
+		const where = sql.indexOf("WHERE");
+		expect(where).toBeGreaterThan(-1);
+		expect(sql.indexOf("executeCallback")).toBeGreaterThan(where);
+		expect(sql.lastIndexOf("LIMIT ?")).toBeGreaterThan(
+			sql.indexOf("executeCallback")
+		);
+	});
+});
+
+describe("listTraces filtering", () => {
+	beforeEach(() => {
+		vi.mocked(observabilityQuery).mockReset();
+		vi.mocked(observabilityQuery).mockResolvedValue({
+			data: { result: { columns: [], rows: [] } },
+		} as never);
+	});
+
+	async function tracesSql(): Promise<string> {
+		await listTraces();
+		const call = vi.mocked(observabilityQuery).mock.calls.at(-1)?.[0];
+		return String((call as { body?: { sql?: string } })?.body?.sql ?? "");
+	}
+
+	test("hides Vite's own internal requests by path", async ({ expect }) => {
+		const sql = await tracesSql();
+		expect(sql).toContain("'/__vite_plugin_cloudflare'");
+	});
+
+	test("doesn't marker-match the root span, which would hide real traffic", async ({
+		expect,
+	}) => {
+		// Vite routes every request through __router-worker__, so a root-span
+		// marker match would blank out the user's own requests too.
+		const sql = await tracesSql();
+		expect(sql).not.toContain("__router-worker__");
+	});
+
+	test("keeps a hidden Vite request visible when it failed", async ({
+		expect,
+	}) => {
+		// Only a 5xx (or an uncaught error) counts as a failure — a 404 is just how
+		// an unserved path answers.
+		const sql = await tracesSql();
+		expect(sql).toMatch(/AND NOT COALESCE\([\s\S]*>= 500/);
 	});
 });
 
