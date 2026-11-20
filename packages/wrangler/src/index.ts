@@ -159,7 +159,6 @@ import {
 	dispatchNamespaceGetCommand,
 	dispatchNamespaceListCommand,
 	dispatchNamespaceNamespace,
-	dispatchNamespaceRenameCommand,
 } from "./dispatch-namespace";
 import { docs } from "./docs";
 import { emailRoutingAddressesCreateCommand } from "./email-routing/addresses/create";
@@ -2246,10 +2245,6 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler dispatch-namespace delete",
 			definition: dispatchNamespaceDeleteCommand,
-		},
-		{
-			command: "wrangler dispatch-namespace rename",
-			definition: dispatchNamespaceRenameCommand,
 		},
 	]);
 	registry.registerNamespace("dispatch-namespace");
