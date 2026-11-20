@@ -359,12 +359,6 @@ export default defineConfig({
 		// findings after upgrading Oxlint and moving to the tsrs type checker.
 		{
 			files: [
-				"packages/vite-plugin-cloudflare/playground/node-compat/worker-process/index.ts",
-			],
-			rules: { "no-global-assign": "off" },
-		},
-		{
-			files: [
 				"packages/codemods/test/wrangler-to-cf/stream-bindings.test.ts",
 				"packages/deploy-helpers/src/deploy/deploy.ts",
 				"packages/deploy-helpers/src/deploy/versions-upload.ts",
