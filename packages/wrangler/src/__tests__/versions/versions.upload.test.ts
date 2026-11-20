@@ -1589,6 +1589,19 @@ describe("versions upload", () => {
 				"You cannot upload a new version of a Worker that does not yet exist. Please run the `deploy` command first."
 			);
 		});
+
+		test.for([null, undefined])(
+			"should require deploy first when the service script is %s",
+			async (script, { expect }) => {
+				mockGetScript({ default_environment: { script } });
+				writeWranglerConfig({ name: "test-name", main: "./index.js" });
+				writeWorkerSource();
+
+				await expect(runWrangler("versions upload")).rejects.toThrow(
+					"You cannot upload a new version of a Worker that does not yet exist. Please run the `deploy` command first."
+				);
+			}
+		);
 	});
 
 	describe("non-interactive/CI behavior", () => {
