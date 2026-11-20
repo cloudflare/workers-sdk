@@ -15,6 +15,7 @@ export * from "./src/inspect";
 export * from "./src/registry";
 export * from "./src/images";
 export * from "./src/spinner";
+export { getDockerHostFromContainerEngine } from "./src/docker-command";
 export * from "./src/dev-options";
 export { prepareContainerImagesForCfConfig } from "./src/cf-config-images";
 export * from "./src/ssh";

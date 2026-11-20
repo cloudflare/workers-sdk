@@ -1,4 +1,7 @@
-import { prepareContainerImagesForCfConfig } from "@cloudflare/containers-shared";
+import {
+	getDockerHostFromContainerEngine,
+	prepareContainerImagesForCfConfig,
+} from "@cloudflare/containers-shared";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { buildPublicUrl } from "miniflare";
 import colors from "picocolors";
@@ -38,6 +41,12 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 				// Miniflare Container sidecar is always prepared as well.
 				await prepareContainerImagesForCfConfig({
 					dockerPath: getDockerPath(),
+					dockerHost:
+						miniflareOptions.containerEngine === undefined
+							? undefined
+							: getDockerHostFromContainerEngine(
+									miniflareOptions.containerEngine
+								),
 					containerOptions,
 					settings: ctx.resolvedPluginConfig.settings,
 					logger: vitePreviewServer.config.logger,

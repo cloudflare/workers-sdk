@@ -75,6 +75,7 @@ export function normalizeContainerImageUris(options: {
  */
 export async function prepareContainerImagesForCfConfig(options: {
 	dockerPath: string;
+	dockerHost?: string;
 	containerOptions: ContainerDevOptions[];
 	settings: ParsedSettings;
 	logger: ViteLogger;
@@ -119,6 +120,7 @@ export async function prepareContainerImagesForCfConfig(options: {
 
 	await prepareContainerImagesForDev({
 		dockerPath: options.dockerPath,
+		dockerHost: options.dockerHost,
 		containerOptions,
 		onContainerImagePreparationStart: () => {},
 		onContainerImagePreparationEnd: () => {},

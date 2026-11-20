@@ -28,7 +28,8 @@ export function getEgressInterceptorImage(): string {
 }
 
 export async function pullEgressInterceptorImage(
-	dockerPath: string
+	dockerPath: string,
+	dockerHost?: string
 ): Promise<void> {
 	const image = getEgressInterceptorImage();
 	const platform = getEgressInterceptorPlatform();
@@ -36,7 +37,7 @@ export async function pullEgressInterceptorImage(
 	if (platform !== undefined) {
 		args.push("--platform", platform);
 	}
-	await runDockerCmd(dockerPath, args);
+	await runDockerCmd(dockerPath, args, undefined, dockerHost);
 }
 
 /**
@@ -53,14 +54,15 @@ export async function pullImage(
 	options: Exclude<ContainerDevOptions, DockerfileConfig>,
 	logger: WranglerLogger | ViteLogger,
 	complianceConfig: ComplianceConfig | undefined,
-	registryConfigureCommand: string
+	registryConfigureCommand: string,
+	dockerHost?: string
 ): Promise<{ abort: () => void; ready: Promise<{ aborted: boolean }> }> {
 	const domain = new URL(`http://${options.image_uri}`).hostname;
 
 	const isExternalRegistry =
 		domain !== getCloudflareContainerRegistry(complianceConfig);
 	try {
-		await dockerLoginImageRegistry(dockerPath, domain);
+		await dockerLoginImageRegistry(dockerPath, domain, dockerHost);
 	} catch (e) {
 		if (!isExternalRegistry) {
 			throw e;
@@ -72,23 +74,29 @@ export async function pullImage(
 		);
 	}
 
-	const pull = runDockerCmd(dockerPath, [
-		"pull",
-		options.image_uri,
-		// All containers running on our platform need to be built for amd64 architecture, but by default docker pull seems to look for an image matching the host system, so we need to specify this here
-		"--platform",
-		"linux/amd64",
-	]);
+	const pull = runDockerCmd(
+		dockerPath,
+		[
+			"pull",
+			options.image_uri,
+			// All containers running on our platform need to be built for amd64 architecture, but by default docker pull seems to look for an image matching the host system, so we need to specify this here
+			"--platform",
+			"linux/amd64",
+		],
+		undefined,
+		dockerHost
+	);
 	const ready = pull.ready.then(async ({ aborted }: { aborted: boolean }) => {
 		// During Vite preview, remote Build Output references are pulled under the
 		// exact image tag used by the runtime, so avoid tagging an image as itself.
 		if (!aborted && options.image_uri !== options.image_tag) {
 			// re-tag image with the expected dev-formatted image tag for consistency
-			await runDockerCmd(dockerPath, [
-				"tag",
-				options.image_uri,
-				options.image_tag,
-			]);
+			await runDockerCmd(
+				dockerPath,
+				["tag", options.image_uri, options.image_tag],
+				undefined,
+				dockerHost
+			);
 		}
 		return { aborted };
 	});
@@ -115,6 +123,7 @@ export async function pullImage(
  */
 export async function prepareContainerImagesForDev(args: {
 	dockerPath: string;
+	dockerHost?: string;
 	containerOptions: ContainerDevOptions[];
 	onContainerImagePreparationStart: (args: {
 		containerOptions: ContainerDevOptions;
@@ -139,6 +148,7 @@ export async function prepareContainerImagesForDev(args: {
 }): Promise<{ aborted: boolean }> {
 	const {
 		dockerPath,
+		dockerHost,
 		containerOptions,
 		onContainerImagePreparationStart,
 		onContainerImagePreparationEnd,
@@ -152,6 +162,7 @@ export async function prepareContainerImagesForDev(args: {
 	}
 	await verifyDockerInstalled({
 		dockerPath,
+		dockerHost,
 		operation: args.operation ?? "running dev",
 		imageNoun:
 			containerOptions.length !== 1
@@ -163,6 +174,7 @@ export async function prepareContainerImagesForDev(args: {
 		if ("dockerfile" in options) {
 			const build = await startContainerBuild({
 				pathToDocker: dockerPath,
+				dockerHost,
 				verifyDockerIsRunning: false,
 				build: {
 					tag: options.image_tag,
@@ -190,7 +202,8 @@ export async function prepareContainerImagesForDev(args: {
 				options,
 				args.logger,
 				args.complianceConfig,
-				args.registryConfigureCommand
+				args.registryConfigureCommand,
+				dockerHost
 			);
 			onContainerImagePreparationStart({
 				containerOptions: options,
@@ -213,7 +226,7 @@ export async function prepareContainerImagesForDev(args: {
 	// Pull the egress interceptor image used to intercept outbound HTTP from
 	// containers and route it back to workerd (e.g. for interceptOutboundHttp).
 	if (!aborted) {
-		await pullEgressInterceptorImage(dockerPath);
+		await pullEgressInterceptorImage(dockerPath, dockerHost);
 	}
 
 	return { aborted };

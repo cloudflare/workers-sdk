@@ -1,5 +1,8 @@
 import assert from "node:assert";
-import { prepareContainerImagesForCfConfig } from "@cloudflare/containers-shared";
+import {
+	getDockerHostFromContainerEngine,
+	prepareContainerImagesForCfConfig,
+} from "@cloudflare/containers-shared";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { buildPublicUrl, CoreHeaders } from "miniflare";
@@ -36,6 +39,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 			assertIsNotPreview(ctx);
 			const initialOptions = await getDevMiniflareOptions(ctx, viteDevServer);
 			let containerOptions = initialOptions.containerOptions;
+			let containerEngine = initialOptions.miniflareOptions.containerEngine;
 			await ctx.startOrUpdateMiniflare(initialOptions.miniflareOptions);
 
 			// Dispose Miniflare when the dev server shuts down.
@@ -101,6 +105,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						viteDevServer
 					);
 					containerOptions = updatedOptions.containerOptions;
+					containerEngine = updatedOptions.miniflareOptions.containerEngine;
 					await ctx.startOrUpdateMiniflare(updatedOptions.miniflareOptions);
 					await initRunners(
 						ctx.resolvedPluginConfig,
@@ -217,6 +222,10 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 
 					await prepareContainerImagesForCfConfig({
 						dockerPath,
+						dockerHost:
+							containerEngine === undefined
+								? undefined
+								: getDockerHostFromContainerEngine(containerEngine),
 						containerOptions,
 						settings: ctx.resolvedPluginConfig.settings,
 						logger: viteDevServer.config.logger,

@@ -1,7 +1,11 @@
+import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { isDeepStrictEqual } from "node:util";
-import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
+import {
+	getDockerHostFromContainerEngine,
+	prepareContainerImagesForDev,
+} from "@cloudflare/containers-shared";
 import { getDockerPath } from "@cloudflare/workers-utils";
 import {
 	configFileName,
@@ -237,6 +241,7 @@ export async function convertToConfigBundle(
 
 export type ContainerImagePreparationState = {
 	dockerPath: string;
+	dockerHost?: string;
 	configFileName: string;
 	complianceRegion: StartDevWorkerOptions["complianceRegion"];
 	hasContainers: boolean;
@@ -310,6 +315,10 @@ export class LocalRuntimeController extends RuntimeController {
 	): Promise<ContainerImagePreparationState | undefined> {
 		const nextState: ContainerImagePreparationState = {
 			dockerPath: data.config.dev.dockerPath ?? getDockerPath(),
+			dockerHost:
+				data.config.dev.containerEngine === undefined
+					? undefined
+					: getDockerHostFromContainerEngine(data.config.dev.containerEngine),
 			configFileName: configFileName(data.config.config),
 			complianceRegion: data.config.complianceRegion,
 			hasContainers: Boolean(
@@ -328,9 +337,14 @@ export class LocalRuntimeController extends RuntimeController {
 			return nextState;
 		}
 
+		assert(
+			nextState.dockerHost,
+			"Container engine should be set if containers are enabled and defined"
+		);
 		logger.log(chalk.dim("⎔ Preparing container image(s)..."));
 		const { aborted } = await prepareContainerImagesForDev({
 			dockerPath: nextState.dockerPath,
+			dockerHost: nextState.dockerHost,
 			containerOptions: nextState.containerOptions,
 			onContainerImagePreparationStart: (buildStartEvent) => {
 				this.containerBeingBuilt = {

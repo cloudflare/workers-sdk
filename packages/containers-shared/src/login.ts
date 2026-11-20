@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { UserError } from "@cloudflare/workers-utils/errors";
 import { ImageRegistriesService, ImageRegistryPermissions } from "./client";
 import { OpenAPI } from "./client/core/OpenAPI";
+import { getDockerCommandArgs } from "./docker-command";
 
 export function configureOpenAPIForContainerPull(
 	accountId: string,
@@ -25,7 +26,8 @@ export function configureOpenAPIForContainerPull(
  */
 export async function dockerLoginImageRegistry(
 	pathToDocker: string,
-	domain: string
+	domain: string,
+	dockerHost?: string
 ) {
 	// how long the credentials should be valid for
 	const expirationMinutes = 15;
@@ -41,7 +43,10 @@ export async function dockerLoginImageRegistry(
 
 	const child = spawn(
 		pathToDocker,
-		["login", "--password-stdin", "--username", credentials.username, domain],
+		getDockerCommandArgs(
+			["login", "--password-stdin", "--username", credentials.username, domain],
+			dockerHost
+		),
 		{ stdio: ["pipe", "inherit", "inherit"] }
 	).on("error", (err) => {
 		throw err;
