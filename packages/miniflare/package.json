@@ -22,7 +22,8 @@
 	},
 	"files": [
 		"dist/src",
-		"dist/local-explorer-ui"
+		"dist/local-explorer-ui",
+		"dist/saffron"
 	],
 	"main": "./dist/src/index.js",
 	"types": "./dist/src/index.d.ts",
