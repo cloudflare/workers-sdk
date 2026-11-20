@@ -8,6 +8,7 @@
 		"strict": true,
 		"declaration": true,
 		"resolveJsonModule": true,
+		"rootDir": "src",
 		"outDir": "dist",
 		"sourceMap": true
 	},
