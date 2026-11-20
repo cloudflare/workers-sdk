@@ -19,7 +19,7 @@ const generate = async (ctx: C3Context) => {
 
 const configure = async (ctx: C3Context) => {
 	// Install the adapter
-	const pkg = `@sveltejs/adapter-cloudflare`;
+	const pkg = `@sveltejs/adapter-cloudflare@^9`;
 	await installPackages([pkg], {
 		dev: true,
 		startText: "Adding the Cloudflare adapter",
