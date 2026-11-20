@@ -3632,6 +3632,91 @@ test("Miniflare: unsafeEvictDurableObject() resets in-memory state and preserves
 	});
 });
 
+test(
+	"Miniflare: unsafeEvictDurableObject() doesn't block the Node.js event loop while the Durable Object waits on Node.js",
+	{ timeout: 60_000 },
+	async ({ expect }) => {
+		// https://github.com/cloudflare/workers-sdk/issues/17089
+		let nodeWorkDone = false;
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "do-worker",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`
+			export class Busy {
+				constructor(ctx, env) {
+					this.ctx = ctx;
+					this.env = env;
+				}
+
+				fetch() {
+					// This work is served by Node.js
+					this.ctx.waitUntil(this.env.NODE.fetch("http://node/"));
+					return new Response("started");
+				}
+			}
+
+			export default {
+				fetch(_request, env) {
+					const id = env.BUSY.idFromName("busy");
+					return env.BUSY.get(id).fetch("http://busy");
+				}
+			};
+		`),
+						env: {
+							BUSY: {
+								type: "durable-object",
+								worker: "do-worker",
+								exportName: "Busy",
+							},
+							NODE: {
+								type: "node-handler",
+								handler: (_req, res) => {
+									setTimeout(() => {
+										nodeWorkDone = true;
+										res.end("done");
+									}, 300);
+								},
+							},
+						},
+						exports: {
+							Busy: { type: "durable-object", storage: "legacy-kv" },
+						},
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const response = await mf.dispatchFetch("http://localhost");
+		expect(await response.text()).toBe("started");
+
+		// Node.js timers should keep firing while the eviction waits for the
+		// Durable Object's `waitUntil()` work
+		let ticks = 0;
+		const interval = setInterval(() => ticks++, 50);
+		const start = performance.now();
+		let evictError: unknown;
+		try {
+			await mf.unsafeEvictDurableObject("do-worker", "Busy", {
+				name: "busy",
+			});
+		} catch (e) {
+			evictError = e;
+		} finally {
+			clearInterval(interval);
+		}
+		const elapsed = performance.now() - start;
+
+		expect(evictError).toBeUndefined();
+		expect(nodeWorkDone).toBe(true);
+		expect(elapsed).toBeLessThan(10_000);
+		expect(ticks).toBeGreaterThan(0);
+	}
+);
+
 test("Miniflare: allows direct access to workers", async ({ expect }) => {
 	const mf = new Miniflare({
 		workers: [
