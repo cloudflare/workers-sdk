@@ -1,4 +1,3 @@
-import { runWithLogLevel as runWithCliLogLevel } from "@cloudflare/cli-shared-helpers";
 import {
 	apply,
 	buildAndMaybePush,
@@ -20,6 +19,11 @@ import type {
 import type { DeploymentResource } from "@cloudflare/deploy-helpers";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils/config";
+
+type PreviewContainerOptions = {
+	quiet: boolean;
+	localImageReferences?: Map<string, string>;
+};
 
 /**
  * Confirm the API token carries the `containers` scope. `applyPreviewContainers`
@@ -50,31 +54,17 @@ export async function deployPreviewContainers(
 	normalisedContainerConfig: ContainerNormalizedConfig[],
 	deployment: DeploymentResource,
 	accountId: string,
-	options: { quiet: boolean; localImageReferences?: Map<string, string> }
+	options: PreviewContainerOptions
 ): Promise<void> {
-	if (!options.quiet) {
-		return applyPreviewContainers(
+	const deploy = () =>
+		applyPreviewContainers(
 			scopedConfig,
 			normalisedContainerConfig,
 			deployment,
 			accountId,
-			options.localImageReferences
+			options
 		);
-	}
-
-	// Both Wrangler's logger and the raw CLI output need a per-call level.
-	// Keep warnings and errors on stderr while suppressing stdout progress.
-	return runWithCliLogLevel("warn", () =>
-		runWithLogLevel("warn", () =>
-			applyPreviewContainers(
-				scopedConfig,
-				normalisedContainerConfig,
-				deployment,
-				accountId,
-				options.localImageReferences
-			)
-		)
-	);
+	return options.quiet ? runWithLogLevel("warn", deploy) : deploy();
 }
 
 /**
@@ -85,6 +75,7 @@ export async function deployPreviewContainers(
  * @param normalisedContainerConfig - Containers to build and apply.
  * @param deployment - The preview deployment the containers belong to.
  * @param accountId - Account the preview belongs to.
+ * @param options Output settings and local image references for this deployment.
  * @returns A promise that resolves once every container has been applied.
  */
 async function applyPreviewContainers(
@@ -92,7 +83,7 @@ async function applyPreviewContainers(
 	normalisedContainerConfig: ContainerNormalizedConfig[],
 	deployment: DeploymentResource,
 	accountId: string,
-	localImageReferences: Map<string, string> | undefined
+	{ quiet, localImageReferences }: PreviewContainerOptions
 ): Promise<void> {
 	initContainersSharedContext({
 		logger,
@@ -185,6 +176,7 @@ async function applyPreviewContainers(
 
 		await apply(
 			{
+				quiet,
 				imageRef,
 				durable_object_namespace_id: namespaceId,
 				configFileName: "Wrangler config",

@@ -4,15 +4,7 @@
  */
 import assert from "node:assert";
 import { setTimeout } from "node:timers/promises";
-import {
-	endSection,
-	log,
-	newline,
-	shapes,
-	startSection,
-	success,
-	updateStatus,
-} from "@cloudflare/cli-shared-helpers";
+import * as cli from "@cloudflare/cli-shared-helpers";
 import {
 	bold,
 	brandColor,
@@ -629,9 +621,18 @@ function formatContainerSnippetForDisplay<
 	return formatConfigSnippet(snippet, configPath);
 }
 
+function createDeploymentProgress(quiet = false) {
+	return {
+		output: quiet ? undefined : cli,
+		spinner: quiet ? <T>(operation: Promise<T>) => operation : promiseSpinner,
+	};
+}
+
 export async function apply(
 	args: {
 		imageRef: ImageRef;
+		/** Suppress CLI progress and interactive spinners for this application. */
+		quiet?: boolean;
 		durable_object_namespace_id: string;
 		configFileName: string;
 		observabilityTargetPercentageField: string;
@@ -644,12 +645,14 @@ export async function apply(
 	if (!config.containers || config.containers.length === 0) {
 		return;
 	}
-	startSection(
+	const progress = createDeploymentProgress(args.quiet);
+	const { output } = progress;
+	output?.startSection(
 		"Deploy a container application",
 		"deploy changes to your application"
 	);
 
-	const existingApplications = await promiseSpinner(
+	const existingApplications = await progress.spinner(
 		ApplicationsService.listApplications(),
 		{ message: "Loading applications" }
 	);
@@ -664,7 +667,7 @@ export async function apply(
 		"remoteDigest" in args.imageRef
 			? args.imageRef.remoteDigest
 			: args.imageRef.newTag;
-	log(dim("Container application changes\n"));
+	output?.log(dim("Container application changes\n"));
 
 	let migratedLegacyObservability = false;
 
@@ -712,7 +715,7 @@ export async function apply(
 			if (hasMixedEnabledObservability(prevApp)) {
 				const migrationObservability =
 					buildLegacyObservabilityMigrationPatch(prevApp);
-				await doAction({
+				await doAction(progress, {
 					action: "modify",
 					application: { observability: migrationObservability },
 					id: prevApp.id,
@@ -803,23 +806,26 @@ export async function apply(
 
 		if (diff.changes === 0) {
 			if (migratedLegacyObservability) {
-				newline();
-				endSection("Applied changes");
+				output?.newline();
+				output?.endSection("Applied changes");
 				return;
 			}
-			updateStatus(`no changes ${brandColor(prevApp.name)}`);
-			endSection("No changes to be made");
+			output?.updateStatus(`no changes ${brandColor(prevApp.name)}`);
+			output?.endSection("No changes to be made");
 			return;
 		}
 
-		updateStatus(`${brandColor.underline("EDIT")} ${prevApp.name}`, false);
+		output?.updateStatus(
+			`${brandColor.underline("EDIT")} ${prevApp.name}`,
+			false
+		);
 
-		newline();
-		diff.print();
-		newline();
+		output?.newline();
+		output?.log(diff.toString());
+		output?.newline();
 
 		if (containerConfig.rollout_kind !== "none") {
-			await doAction({
+			await doAction(progress, {
 				action: "modify",
 				application: modifyReq,
 				id: prevApp.id,
@@ -835,37 +841,34 @@ export async function apply(
 					: {}),
 			});
 		} else {
-			log("Skipping application rollout");
-			newline();
+			output?.log("Skipping application rollout");
+			output?.newline();
 		}
 	} else {
-		// **************
-		// *** CREATE ***
-		// **************
+		if (output) {
+			output.updateStatus(
+				bold.underline(green.underline("NEW")) + ` ${appConfig.name}`
+			);
+			const configStr = formatContainerSnippetForDisplay(
+				appConfig,
+				config.configPath
+			);
 
-		// print the header of the app
-		updateStatus(bold.underline(green.underline("NEW")) + ` ${appConfig.name}`);
+			// go line by line and pretty print it
+			configStr
+				.trimEnd()
+				.split("\n")
+				.forEach((el) => output.log(`  ${el}`));
+			output.newline();
+		}
 
-		const configStr = formatContainerSnippetForDisplay(
-			appConfig,
-			config.configPath
-		);
-
-		// go line by line and pretty print it
-		configStr
-			.trimEnd()
-			.split("\n")
-			.forEach((el) => log(`  ${el}`));
-		newline();
-		// add to the actions array to create the app later
-
-		await doAction({
+		await doAction(progress, {
 			action: "create",
 			application: appConfig,
 		});
 	}
-	newline();
-	endSection("Applied changes");
+	output?.newline();
+	output?.endSection("Applied changes");
 }
 
 /**
@@ -912,6 +915,7 @@ export function formatError(err: ApiError): string {
 }
 
 const doAction = async (
+	{ output, spinner }: ReturnType<typeof createDeploymentProgress>,
 	action:
 		| { action: "create"; application: CreateApplicationRequest }
 		| {
@@ -927,7 +931,7 @@ const doAction = async (
 	if (action.action === "create") {
 		let application: Application;
 		try {
-			application = await promiseSpinner(
+			application = await spinner(
 				ApplicationsService.createApplication(action.application),
 				{ message: `Creating "${action.application.name}"` }
 			);
@@ -955,17 +959,17 @@ const doAction = async (
 			});
 		}
 
-		success(
+		output?.success(
 			`Created application ${brandColor(action.application.name)} (Application ID: ${application.id})`,
 			{
-				shape: shapes.bar,
+				shape: cli.shapes.bar,
 			}
 		);
 	}
 
 	if (action.action === "modify") {
 		try {
-			await promiseSpinner(
+			await spinner(
 				ApplicationsService.modifyApplication(action.id, action.application),
 				{ message: `Modifying ${action.application.name}` }
 			);
@@ -999,7 +1003,7 @@ const doAction = async (
 			action.rollout_kind !== undefined
 		) {
 			try {
-				await promiseSpinner(
+				await spinner(
 					RolloutsService.createApplicationRollout(action.id, {
 						description: "Progressive update",
 						strategy: CreateApplicationRolloutRequest.strategy.ROLLING,
@@ -1037,11 +1041,11 @@ const doAction = async (
 			}
 		}
 
-		success(
+		output?.success(
 			action.successMessage ??
 				`Modified application ${brandColor(action.name)} (Application ID: ${action.id})`,
 			{
-				shape: shapes.bar,
+				shape: cli.shapes.bar,
 			}
 		);
 	}
