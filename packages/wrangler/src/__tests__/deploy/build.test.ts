@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
+import * as path from "node:path";
 import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
 import { ParseError } from "@cloudflare/workers-utils";
 import {
@@ -1342,7 +1343,7 @@ export default { fetch() { return new Response(mod); } };`;
 				expectedMainModule: "index.js",
 				expectedModules: {
 					"index.js.map": expect.stringMatching(
-						/"sources":\["another.ts","index.ts"\],"sourceRoot":"".*"file":"index.js"/
+						/"sources":\["another.ts","index.ts"\],"sourcesContent".*"file":"index.js"/
 					),
 				},
 			});
@@ -1360,12 +1361,30 @@ export default { fetch() { return new Response(mod); } };`;
 				expectedMainModule: "index.js",
 				expectedModules: {
 					"index.js.map": expect.stringMatching(
-						/"sources":\["another.ts","index.ts"\],"sourceRoot":"".*"file":"index.js"/
+						/"sources":\["another.ts","index.ts"\],"sourcesContent".*"file":"index.js"/
 					),
 				},
 			});
 
 			await runWrangler("deploy");
+		});
+
+		it("should write source maps to --outdir whose sources resolve relative to the map", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({ main: "index.ts" });
+			writeWorkerSource({ format: "ts" });
+
+			await runWrangler("deploy --dry-run --outdir dist");
+
+			const map = JSON.parse(fs.readFileSync("dist/index.js.map", "utf-8"));
+			// Consumers resolve a sourceRoot relative to the map, so a relative
+			// --outdir as sourceRoot would point at dist/dist/...
+			expect(map.sourceRoot).toBeUndefined();
+			expect(map.sources.length).toBeGreaterThan(0);
+			for (const source of map.sources) {
+				expect(fs.existsSync(path.resolve("dist", source))).toBe(true);
+			}
 		});
 
 		it("should skip unresolvable source maps by default rather than failing", async () => {
@@ -1558,7 +1577,7 @@ export default { fetch() { return new Response(mod); } };`;
 				expectedMainModule: "index.js",
 				expectedModules: {
 					"index.js.map": expect.stringMatching(
-						/"sources":\[".*?another\.ts",".*?index\.ts"\],"sourceRoot":"".*"file":"index.js"/
+						/"sources":\[".*?another\.ts",".*?index\.ts"\],"sourcesContent".*"file":"index.js"/
 					),
 				},
 			});
