@@ -1942,6 +1942,25 @@ export interface EnvironmentNonInheritable {
 				remote?: boolean;
 		  }
 	)[];
+
+	/**
+	 * Specifies OIDC token bindings. Each one issues short-lived OpenID Connect
+	 * tokens for this Worker's identity, for a single audience.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	oidc_tokens: {
+		/** The binding name used to refer to the OIDC token binding in the Worker. */
+		binding: string;
+		/** The `aud` claim of every token the binding issues: 1 to 2048 printable ASCII characters, with no whitespace. */
+		audience: string;
+		/** The JWS algorithm that signs the tokens. Defaults to ES256; use RS256 for verifiers that only accept RS256. */
+		alg?: "ES256" | "RS256";
+	}[];
 }
 
 /**

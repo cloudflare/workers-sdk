@@ -559,6 +559,10 @@ async function convertWorkerBundleBindings(
 			case "worker_loader":
 				workerLoaders[binding.name] = {};
 				break;
+			case "oidc_token":
+				// There is no local OIDC token signer.
+				unsupportedBindings.push(binding);
+				break;
 			case "inherit":
 				// Inheritance erases the original binding type from upload metadata.
 				unsupportedBindings.push(binding);

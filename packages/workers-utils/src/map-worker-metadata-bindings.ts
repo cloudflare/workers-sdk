@@ -429,6 +429,18 @@ export function mapWorkerMetadataBindings(
 							}
 						}
 						break;
+					case "oidc_token":
+						{
+							configObj.oidc_tokens = [
+								...(configObj.oidc_tokens ?? []),
+								{
+									binding: binding.name,
+									audience: binding.audience,
+									...(binding.alg !== undefined && { alg: binding.alg }),
+								},
+							];
+						}
+						break;
 					default: {
 						configObj.unsafe = {
 							bindings: [...(configObj.unsafe?.bindings ?? []), binding],

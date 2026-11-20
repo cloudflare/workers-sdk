@@ -659,6 +659,18 @@ export interface VpcServiceBinding extends VpcServiceBindingOptions {
 	type: "vpc-service";
 }
 
+export interface OidcTokenBindingOptions {
+	/** The `aud` claim of every token the binding issues: 1 to 2048 printable ASCII characters, with no whitespace. */
+	audience: string;
+	/** The JWS algorithm that signs the tokens. Defaults to ES256; use RS256 for verifiers that only accept RS256. */
+	alg?: "ES256" | "RS256";
+}
+
+/** Binding that issues short-lived OpenID Connect tokens for the Worker's identity, for one audience. */
+export interface OidcTokenBinding extends OidcTokenBindingOptions {
+	type: "oidc-token";
+}
+
 export interface WorkerBindingOptions<
 	TWorker extends WorkerReference = WorkerReference,
 	TExportName extends WorkerEntrypointExportName<TWorker> | undefined =
@@ -852,6 +864,8 @@ export interface Bindings {
 	): TypedPipelineBinding<TRecord>;
 	/** A producer binding to a K2 stream created using the Dashboard or API. */
 	k2(options: K2BindingOptions): K2Binding;
+	/** Binding that issues short-lived OpenID Connect tokens for the Worker's identity, for one audience. */
+	oidcToken(options: OidcTokenBindingOptions): OidcTokenBinding;
 	/**
 	 * Producer binding to a Cloudflare Queue.
 	 *
@@ -971,6 +985,7 @@ export const bindings = {
 	mtlsCertificate: (options) => ({ type: "mtls-certificate", ...options }),
 	pipeline: (options) => ({ type: "pipeline", ...options }),
 	k2: (options) => ({ type: "k2", ...options }),
+	oidcToken: (options) => ({ type: "oidc-token", ...options }),
 	queue: (options) => ({ type: "queue", ...options }),
 	rateLimit: (options) => ({ type: "rate-limit", ...options }),
 	r2: (options) => ({ type: "r2", ...options }),

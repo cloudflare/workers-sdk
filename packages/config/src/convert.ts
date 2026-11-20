@@ -399,6 +399,7 @@ function convertBindingsAndAssets(
 	const sendEmail: NonNullable<RawConfig["send_email"]> = [];
 	const vpcServices: NonNullable<RawConfig["vpc_services"]> = [];
 	const vpcNetworks: NonNullable<RawConfig["vpc_networks"]> = [];
+	const oidcTokens: NonNullable<RawConfig["oidc_tokens"]> = [];
 	const workerLoaders: NonNullable<RawConfig["worker_loaders"]> = [];
 	const ratelimits: NonNullable<RawConfig["ratelimits"]> = [];
 	const services: NonNullable<RawConfig["services"]> = [];
@@ -601,6 +602,16 @@ function convertBindingsAndAssets(
 						binding: name,
 						certificate_id: binding.id,
 						remote: binding.dev?.remote,
+					})
+				);
+				break;
+			}
+			case "oidc-token": {
+				oidcTokens.push(
+					omitUndefined({
+						binding: name,
+						audience: binding.audience,
+						alg: binding.alg,
 					})
 				);
 				break;
@@ -830,6 +841,9 @@ function convertBindingsAndAssets(
 	}
 	if (vpcNetworks.length) {
 		result.vpc_networks = vpcNetworks;
+	}
+	if (oidcTokens.length) {
+		result.oidc_tokens = oidcTokens;
 	}
 	if (workerLoaders.length) {
 		result.worker_loaders = workerLoaders;

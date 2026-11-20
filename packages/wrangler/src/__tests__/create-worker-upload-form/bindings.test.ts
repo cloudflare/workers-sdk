@@ -435,6 +435,37 @@ describe("createWorkerUploadForm — bindings", () => {
 		});
 	});
 
+	describe("oidc_token bindings", () => {
+		it("should include the audience and omit an unset alg", ({ expect }) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				API_TOKEN: { type: "oidc_token", audience: "https://api.example.com" },
+			};
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
+			expect(getBindings(form)).toContainEqual({
+				name: "API_TOKEN",
+				type: "oidc_token",
+				audience: "https://api.example.com",
+			});
+		});
+
+		it("should include alg when set", ({ expect }) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				RSA_TOKEN: {
+					type: "oidc_token",
+					audience: "api://token-exchange",
+					alg: "RS256",
+				},
+			};
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
+			expect(getBindings(form)).toContainEqual({
+				name: "RSA_TOKEN",
+				type: "oidc_token",
+				audience: "api://token-exchange",
+				alg: "RS256",
+			});
+		});
+	});
+
 	describe("singleton bindings", () => {
 		it.for([
 			{ bindingName: "BROWSER", type: "browser" as const },

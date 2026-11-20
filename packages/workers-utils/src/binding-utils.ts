@@ -348,6 +348,12 @@ export function convertConfigToBindings(
 				}
 				break;
 			}
+			case "oidc_tokens": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "oidc_token", ...x };
+				}
+				break;
+			}
 			case "media": {
 				const { binding, ...x } = info;
 				output[binding] = { type: "media", ...x };

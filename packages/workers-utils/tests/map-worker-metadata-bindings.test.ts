@@ -608,6 +608,33 @@ describe("mapWorkerMetadataBindings", () => {
 		});
 	});
 
+	describe("oidc_tokens", () => {
+		it("maps oidc_token bindings, with alg only when set", ({ expect }) => {
+			const bindings: WorkerMetadataBinding[] = [
+				{
+					type: "oidc_token",
+					name: "API_TOKEN",
+					audience: "https://api.example.com",
+				},
+				{
+					type: "oidc_token",
+					name: "RSA_TOKEN",
+					audience: "api://token-exchange",
+					alg: "RS256",
+				},
+			];
+			const result = mapWorkerMetadataBindings(bindings);
+			expect(result.oidc_tokens).toEqual([
+				{ binding: "API_TOKEN", audience: "https://api.example.com" },
+				{
+					binding: "RSA_TOKEN",
+					audience: "api://token-exchange",
+					alg: "RS256",
+				},
+			]);
+		});
+	});
+
 	describe("vpc_networks", () => {
 		it("maps vpc_network binding with tunnel_id", ({ expect }) => {
 			const bindings: WorkerMetadataBinding[] = [

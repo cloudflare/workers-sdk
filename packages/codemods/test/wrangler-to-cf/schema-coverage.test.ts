@@ -83,6 +83,7 @@ const FIELD_CASES = {
 	name: "renamed-worker",
 	no_bundle: true,
 	observability: { enabled: true },
+	oidc_tokens: [{ binding: "API_TOKEN", audience: "https://api.example.com" }],
 	pages_build_output_dir: "dist",
 	pipelines: [{ binding: "PIPELINE", pipeline: "pipeline" }],
 	placement: { mode: "smart" },

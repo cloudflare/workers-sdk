@@ -85,6 +85,7 @@ describe("normalizeAndValidateConfig()", () => {
 			ratelimits: [],
 			vpc_services: [],
 			vpc_networks: [],
+			oidc_tokens: [],
 			services: [],
 			analytics_engine_datasets: [],
 			route: undefined,
@@ -10714,6 +10715,130 @@ describe("normalizeAndValidateConfig()", () => {
 					  - "vpc_services[2]" bindings should have a string "binding" field but got {"binding":null,"service_id":123,"invalid":true}.
 					  - "vpc_services[2]" bindings must have a "service_id" field but got {"binding":null,"service_id":123,"invalid":true}.
 					  - "vpc_services[3]" bindings must have a "service_id" field but got {"binding":"MISSING_SERVICE_ID"}."
+				`);
+			});
+		});
+
+		describe("[oidc_tokens]", () => {
+			it("should accept valid bindings", ({ expect }) => {
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					{
+						oidc_tokens: [
+							{ binding: "API_TOKEN", audience: "https://api.example.com" },
+							{
+								binding: "RSA_TOKEN",
+								audience: "api://token-exchange",
+								alg: "RS256",
+							},
+						],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(config.oidc_tokens).toEqual([
+					{ binding: "API_TOKEN", audience: "https://api.example.com" },
+					{
+						binding: "RSA_TOKEN",
+						audience: "api://token-exchange",
+						alg: "RS256",
+					},
+				]);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should accept an audience of the maximum length", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						oidc_tokens: [{ binding: "TOKEN", audience: "a".repeat(2048) }],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if the audience is too long", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						oidc_tokens: [{ binding: "TOKEN", audience: "a".repeat(2049) }],
+					} as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+			});
+
+			it("should error if oidc_tokens bindings are not valid", ({
+				expect,
+			}) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						oidc_tokens: [
+							{},
+							{ binding: "VALID", audience: "https://api.example.com" },
+							{ binding: 123, audience: 456 },
+							{ binding: "EMPTY_AUDIENCE", audience: "" },
+							{ binding: "SPACE", audience: "https://api.example.com " },
+							{ binding: "NON_ASCII", audience: "https://api.exämple.com" },
+							{
+								binding: "LOWERCASE_ALG",
+								audience: "https://api.example.com",
+								alg: "rs256",
+							},
+							{
+								binding: "HMAC",
+								audience: "https://api.example.com",
+								alg: "HS256",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "oidc_tokens[0]" bindings should have a string "binding" field but got {}.
+					  - "oidc_tokens[0]" bindings must have an "audience" field of 1 to 2048 printable ASCII characters with no whitespace, but got {}.
+					  - "oidc_tokens[2]" bindings should have a string "binding" field but got {"binding":123,"audience":456}.
+					  - "oidc_tokens[2]" bindings must have an "audience" field of 1 to 2048 printable ASCII characters with no whitespace, but got {"binding":123,"audience":456}.
+					  - "oidc_tokens[3]" bindings must have an "audience" field of 1 to 2048 printable ASCII characters with no whitespace, but got {"binding":"EMPTY_AUDIENCE","audience":""}.
+					  - "oidc_tokens[4]" bindings must have an "audience" field of 1 to 2048 printable ASCII characters with no whitespace, but got {"binding":"SPACE","audience":"https://api.example.com "}.
+					  - "oidc_tokens[5]" bindings must have an "audience" field of 1 to 2048 printable ASCII characters with no whitespace, but got {"binding":"NON_ASCII","audience":"https://api.exämple.com"}.
+					  - "oidc_tokens[6]" bindings must have an "alg" field of "ES256" or "RS256" if one is set, but got {"binding":"LOWERCASE_ALG","audience":"https://api.example.com","alg":"rs256"}.
+					  - "oidc_tokens[7]" bindings must have an "alg" field of "ES256" or "RS256" if one is set, but got {"binding":"HMAC","audience":"https://api.example.com","alg":"HS256"}."
+				`);
+			});
+
+			it("should warn about unexpected fields", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						oidc_tokens: [
+							{
+								binding: "TOKEN",
+								audience: "https://api.example.com",
+								subject: "worker:someone-else",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in oidc_tokens[0] field: "subject""
 				`);
 			});
 		});

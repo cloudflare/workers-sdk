@@ -683,6 +683,32 @@ describe("convertToWranglerConfig", () => {
 			]);
 		});
 
+		it("maps oidc-token to oidc_tokens, with alg only when set", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					env: {
+						API_TOKEN: {
+							type: "oidc-token",
+							audience: "https://api.example.com",
+						},
+						RSA_TOKEN: {
+							type: "oidc-token",
+							audience: "api://token-exchange",
+							alg: "RS256",
+						},
+					},
+				},
+				containers: [],
+			});
+			expect(result.oidc_tokens).toEqual([
+				{ binding: "API_TOKEN", audience: "https://api.example.com" },
+				{ binding: "RSA_TOKEN", audience: "api://token-exchange", alg: "RS256" },
+			]);
+		});
+
 		it("maps vpc-network with tunnelId", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
