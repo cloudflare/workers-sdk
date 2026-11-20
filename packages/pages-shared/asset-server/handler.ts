@@ -188,6 +188,7 @@ export async function generateHandler<
 	caches,
 	waitUntil,
 }: HandlerContext<AssetEntry, ContentNegotiation, Asset>) {
+	request = collapseRepeatedPathSlashes(request);
 	const url = new URL(request.url);
 	const { protocol, host, search } = url;
 	let { pathname } = url;
@@ -807,6 +808,30 @@ export function parseQualityWeightedList(list = "") {
 		});
 
 	return items;
+}
+
+/**
+ * Collapse repeated slashes in the request pathname.
+ *
+ * Pages' production asset server ran on the original Workers URL parser
+ * (`url_original`), which collapses repeated slashes. Customers' `//old` and
+ * `//secure/page` links have therefore always matched `/old` redirects,
+ * `/secure/*` headers and `/secure/page` assets. The WHATWG parser
+ * (`url_standard`) keeps the slashes, so switching to it would make those
+ * requests 404 and skip their `_headers` rules. Collapsing here keeps that
+ * behavior regardless of which parser the runtime uses.
+ *
+ * @param request The incoming request.
+ * @returns The same request, or a copy whose pathname has no repeated slashes.
+ */
+function collapseRepeatedPathSlashes(request: Request): Request {
+	const url = new URL(request.url);
+	if (!url.pathname.includes("//")) {
+		return request;
+	}
+
+	url.pathname = url.pathname.replace(/\/{2,}/g, "/");
+	return new Request(url, request);
 }
 
 function isCacheable(request: Request) {
