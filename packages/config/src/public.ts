@@ -49,6 +49,7 @@ export type {
 	MediaBindingOptions,
 	MtlsCertificateBinding,
 	MtlsCertificateBindingOptions,
+	OptionalSecretBinding,
 	PipelineBinding,
 	PipelineBindingOptions,
 	QueueBinding,
