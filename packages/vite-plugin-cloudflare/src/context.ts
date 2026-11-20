@@ -56,6 +56,7 @@ export class PluginContext {
 	#sharedContext: SharedContext;
 	#resolvedPluginConfig?: ResolvedPluginConfig;
 	#resolvedViteConfig?: vite.ResolvedConfig;
+	#previousOutputHadContainers = false;
 	#environmentNameToAdditionalModules = new Map<
 		string,
 		Map<string, ModuleType>
@@ -191,6 +192,19 @@ export class PluginContext {
 
 	setResolvedViteConfig(resolvedViteConfig: vite.ResolvedConfig): void {
 		this.#resolvedViteConfig = resolvedViteConfig;
+	}
+
+	/**
+	 * Records that the Build Output tree cleaned at the start of this build held
+	 * Container output. It stays set if the config is resolved again after the
+	 * tree has been cleaned.
+	 */
+	setPreviousOutputHadContainers(): void {
+		this.#previousOutputHadContainers = true;
+	}
+
+	get previousOutputHadContainers(): boolean {
+		return this.#previousOutputHadContainers;
 	}
 
 	get resolvedViteConfig(): vite.ResolvedConfig {

@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { buildAndWriteContainerOutput } from "@cloudflare/containers-shared";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -8,6 +9,16 @@ import { runWrangler } from "./helpers/run-wrangler";
 vi.mock("@cloudflare/config", async (importOriginal) => {
 	const { createConfigMock } = await import("./helpers/mock-new-config");
 	return createConfigMock(importOriginal);
+});
+
+vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
+	const original =
+		await importOriginal<typeof import("@cloudflare/containers-shared")>();
+
+	return {
+		...original,
+		buildAndWriteContainerOutput: vi.fn(original.buildAndWriteContainerOutput),
+	};
 });
 
 vi.mock("../type-generation/runtime", () => ({
@@ -543,6 +554,64 @@ describe("wrangler build --experimental-cf-build-output", () => {
 				"build --experimental-new-config --experimental-cf-build-output"
 			)
 		).rejects.toThrow();
+	});
+
+	describe("previous Container output", () => {
+		async function seedWorker() {
+			await seed({
+				"cloudflare.config.ts": `export default { worker: {
+					name: "${WORKER_NAME}",
+					compatibilityDate: "2026-05-18",
+					entrypoint: "./src/index.js",
+				} };`,
+				"src/index.js": `export default {
+					async fetch() { return new Response("hello"); }
+				};`,
+			});
+		}
+
+		it("reports that the previous output had no Containers so the build does not look up stale image tags", async ({
+			expect,
+		}) => {
+			vi.mocked(buildAndWriteContainerOutput).mockClear();
+			await seedWorker();
+
+			await runWrangler(
+				"build --experimental-new-config --experimental-cf-build-output"
+			);
+
+			expect(buildAndWriteContainerOutput).toHaveBeenCalledOnce();
+			expect(buildAndWriteContainerOutput).toHaveBeenCalledWith(
+				expect.objectContaining({
+					containers: [],
+					previousOutputHadContainers: false,
+				})
+			);
+		});
+
+		it("reports Container output left by a previous build before cleaning it", async ({
+			expect,
+		}) => {
+			vi.mocked(buildAndWriteContainerOutput).mockClear();
+			await seedWorker();
+			const previousContainerDir = path.resolve(
+				".cloudflare/output/v1/containers/old-api"
+			);
+			fs.mkdirSync(previousContainerDir, { recursive: true });
+
+			await runWrangler(
+				"build --experimental-new-config --experimental-cf-build-output"
+			);
+
+			expect(fs.existsSync(previousContainerDir)).toBe(false);
+			expect(buildAndWriteContainerOutput).toHaveBeenCalledOnce();
+			expect(buildAndWriteContainerOutput).toHaveBeenCalledWith(
+				expect.objectContaining({
+					containers: [],
+					previousOutputHadContainers: true,
+				})
+			);
+		});
 	});
 
 	describe("root config.json", () => {

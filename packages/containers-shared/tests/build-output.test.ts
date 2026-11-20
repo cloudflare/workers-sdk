@@ -476,6 +476,73 @@ describe("buildAndWriteContainerOutput", () => {
 		);
 	});
 
+	it("does not invoke Docker when neither this build nor the previous output has Containers", async ({
+		expect,
+	}) => {
+		await buildAndWriteContainerOutput({
+			containers: [],
+			root,
+			pathToDocker: "docker",
+			previousOutputHadContainers: false,
+		});
+
+		expect(runDockerCmdWithOutput).not.toHaveBeenCalled();
+		expect(verifyDockerInstalled).not.toHaveBeenCalled();
+		expect(cleanupBuiltImages).not.toHaveBeenCalled();
+	});
+
+	it("removes previous tags when the previous output had Containers and this build has none", async ({
+		expect,
+	}) => {
+		const staleTag = expectedBuildOutputTag(root, "old-api", BUILD_IDS[1]);
+		vi.mocked(runDockerCmdWithOutput).mockReturnValue(staleTag);
+
+		await buildAndWriteContainerOutput({
+			containers: [],
+			root,
+			pathToDocker: "docker",
+			previousOutputHadContainers: true,
+		});
+
+		expect(runDockerCmdWithOutput).toHaveBeenCalledOnce();
+		expect(cleanupBuiltImages).toHaveBeenCalledWith(
+			[{ localTag: staleTag }],
+			"docker"
+		);
+	});
+
+	it("removes previous tags when Containers are configured and the previous output had none", async ({
+		expect,
+	}) => {
+		const config = ContainerConfigSchema.parse({
+			name: "api",
+			image: { dockerfile: "./Dockerfile" },
+		});
+		const staleTag = expectedBuildOutputTag(root, "api", BUILD_IDS[1]);
+		vi.mocked(runDockerCmdWithOutput).mockReturnValue(staleTag);
+
+		await buildAndWriteContainerOutput({
+			containers: [config],
+			root,
+			pathToDocker: "docker",
+			previousOutputHadContainers: false,
+		});
+
+		expect(runDockerCmdWithOutput).toHaveBeenCalledWith("docker", [
+			"image",
+			"ls",
+			"--filter",
+			`reference=${path.posix.dirname(staleTag)}/*`,
+			"--format",
+			"{{.Repository}}:{{.Tag}}",
+		]);
+		expect(cleanupBuiltImages).toHaveBeenCalledWith(
+			[{ localTag: staleTag }],
+			"docker"
+		);
+		expect(startContainerBuild).toHaveBeenCalledOnce();
+	});
+
 	it("rejects image names that normalize to the same repository", async ({
 		expect,
 	}) => {
