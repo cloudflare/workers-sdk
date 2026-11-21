@@ -45,6 +45,7 @@
 		"types:build": "node scripts/types.mjs tsconfig.json --bundle && node scripts/types.mjs src/workers/tsconfig.json"
 	},
 	"dependencies": {
+		"@cloudflare/workers-types": "catalog:default",
 		"@cspotcode/source-map-support": "0.8.1",
 		"sharp": "0.35.5",
 		"undici": "catalog:default",
