@@ -84,7 +84,7 @@ import {
 import { getLocalArtifactsNamespaceNames } from "./plugins/artifacts";
 import { ArtifactsController } from "./plugins/artifacts/controller";
 import { getArtifactsEventSubscriptions } from "./plugins/artifacts/events";
-import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
+import { ROUTER_SERVICE_NAME } from "./plugins/assets/constants";
 import { BROWSER_VERSION } from "./plugins/browser-rendering/browser-version";
 import { closeBrowserProcess } from "./plugins/browser-rendering/process";
 import {
@@ -2264,7 +2264,7 @@ export class Miniflare {
 							);
 							if (maybeAssetTargetService && !binding.service?.entrypoint) {
 								assert(binding.service?.name);
-								binding.service.name = `${RPC_PROXY_SERVICE_NAME}:${targetWorkerName}`;
+								binding.service.name = `${ROUTER_SERVICE_NAME}:${targetWorkerName}`;
 							}
 						}
 					}
@@ -2384,7 +2384,7 @@ export class Miniflare {
 				const service =
 					workerOpts.config.assets && entrypoint === "default"
 						? {
-								name: `${RPC_PROXY_SERVICE_NAME}:${workerOpts.config.name}`,
+								name: `${ROUTER_SERVICE_NAME}:${workerOpts.config.name}`,
 							}
 						: {
 								name: getUserServiceName(serviceName),
@@ -2573,7 +2573,7 @@ export class Miniflare {
 			fallbackWorkerName:
 				this.#workerOpts[0].config.assets &&
 				!this.#workerOpts[0].config.name.startsWith("vitest-plugin-runner-")
-					? `${RPC_PROXY_SERVICE_NAME}:${this.#workerOpts[0].config.name}`
+					? `${ROUTER_SERVICE_NAME}:${this.#workerOpts[0].config.name}`
 					: getUserServiceName(this.#workerOpts[0].config.name),
 			tmpPath: this.#tmpPath,
 			log: this.#log,
@@ -3067,7 +3067,7 @@ export class Miniflare {
 					workerOpts.dev.unsafeOverrideFetchWorker
 				);
 			} else if (workerOpts.config.assets) {
-				defaultEntrypointService = `${RPC_PROXY_SERVICE_NAME}:${workerName}`;
+				defaultEntrypointService = `${ROUTER_SERVICE_NAME}:${workerName}`;
 			} else {
 				defaultEntrypointService = getUserServiceName(workerName);
 			}

@@ -268,7 +268,7 @@ function maybeGetCustomServiceService(
 	}
 }
 
-const FALLBACK_COMPATIBILITY_DATE = "2000-01-01";
+export const FALLBACK_COMPATIBILITY_DATE = "2000-01-01";
 
 function validateCompatibilityDate(compatibilityDate: string) {
 	if (compatibilityDate > getTodaysCompatDate()) {
