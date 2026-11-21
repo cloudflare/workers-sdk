@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { resolveBindingRemote } from "@cloudflare/workers-utils";
+import { resolveBindingRemote } from "@cloudflare/workers-utils/config";
 import { getRemoteBindingsAuthHook } from "./auth";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
 import type { RemoteBindingsLogger } from "./logger";
@@ -8,9 +8,9 @@ import type {
 	AsyncHook,
 	Binding,
 	CfAccount,
-	Config,
 	StartDevWorkerInput,
 } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export function pickRemoteBindings(
 	bindings: Record<string, Binding>

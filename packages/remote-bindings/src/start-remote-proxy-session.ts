@@ -12,9 +12,9 @@ import type { RemoteBindingsLogger } from "./logger";
 import type {
 	AsyncHook,
 	CfAccount,
-	Config,
 	StartDevWorkerInput,
 } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type { RemoteProxyConnectionString } from "miniflare";
 
 type ErrorEvent = {
