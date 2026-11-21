@@ -4,6 +4,7 @@ import http from "node:http";
 import path from "node:path";
 import { text } from "node:stream/consumers";
 import { ReadableStream, WritableStream } from "node:stream/web";
+import { setTimeout } from "node:timers/promises";
 import util from "node:util";
 import {
 	CorePaths,
@@ -823,6 +824,64 @@ describe("ProxyClient", () => {
 		);
 		expect(cfResponse.headers.get("X-Cf-Colo")).toBe("GLOBAL_REQUEST");
 		await cfResponse.text();
+	});
+
+	// https://github.com/cloudflare/workers-sdk/issues/17100
+	test("disposes RPC stubs it resolves when looking up Durable Object methods", async ({
+		expect,
+	}) => {
+		const logs: string[] = [];
+		const mf = new Miniflare({
+			handleStructuredLogs(log) {
+				logs.push(log.message);
+			},
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`
+import { DurableObject } from "cloudflare:workers";
+export class Counter extends DurableObject {
+	ping() { return "x".repeat(8 * 1024 * 1024); }
+}
+export default { fetch() { return new Response(null, { status: 404 }); } };
+`),
+						env: {
+							COUNTER: {
+								type: "durable-object",
+								worker: "",
+								exportName: "Counter",
+							},
+						},
+						exports: {
+							Counter: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const { COUNTER } = await mf.getBindings<{
+			COUNTER: {
+				getByName(name: string): { ping(): Promise<string> };
+			};
+		}>();
+		// Large results put the proxy worker under memory pressure, so it
+		// garbage collects any RPC stubs left undisposed during these calls.
+		for (let i = 0; i < 12; i++) {
+			const stub = COUNTER.getByName("example");
+			expect((await stub.ping()).length).toBe(8 * 1024 * 1024);
+		}
+		// Let workerd's logs for the calls above reach `handleStructuredLogs`
+		await setTimeout(500);
+
+		expect(
+			logs.filter((message) =>
+				message.includes("An RPC stub was not disposed properly")
+			)
+		).toEqual([]);
 	});
 
 	test("ProxyServer: prevents unauthorised access", async ({ expect }) => {
