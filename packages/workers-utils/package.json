@@ -19,41 +19,41 @@
 	"sideEffects": false,
 	"exports": {
 		".": {
+			"types": "./dist/index.d.mts",
 			"browser": "./dist/browser.mjs",
-			"import": "./dist/index.mjs",
-			"types": "./dist/index.d.mts"
+			"import": "./dist/index.mjs"
 		},
 		"./config": {
 			"types": "./dist/config/public.d.mts",
 			"import": "./dist/config/public.mjs"
 		},
 		"./prometheus-metrics": {
-			"import": "./dist/prometheus-metrics.mjs",
-			"types": "./dist/prometheus-metrics.d.mts"
+			"types": "./dist/prometheus-metrics.d.mts",
+			"import": "./dist/prometheus-metrics.mjs"
 		},
 		"./compliance": {
-			"import": "./dist/compliance.mjs",
-			"types": "./dist/compliance.d.mts"
+			"types": "./dist/compliance.d.mts",
+			"import": "./dist/compliance.mjs"
 		},
 		"./test-helpers": {
-			"import": "./dist/test-helpers/index.mjs",
-			"types": "./dist/test-helpers/index.d.mts"
+			"types": "./dist/test-helpers/index.d.mts",
+			"import": "./dist/test-helpers/index.mjs"
 		},
 		"./fs-helpers": {
-			"import": "./dist/fs-helpers.mjs",
-			"types": "./dist/fs-helpers.d.mts"
+			"types": "./dist/fs-helpers.d.mts",
+			"import": "./dist/fs-helpers.mjs"
 		},
 		"./glob-matcher": {
 			"types": "./dist/glob-matcher.d.mts",
 			"import": "./dist/glob-matcher.mjs"
 		},
 		"./compatibility-date": {
-			"import": "./dist/compatibility-date.mjs",
-			"types": "./dist/compatibility-date.d.mts"
+			"types": "./dist/compatibility-date.d.mts",
+			"import": "./dist/compatibility-date.mjs"
 		},
 		"./docker-path": {
-			"import": "./dist/docker-path.mjs",
-			"types": "./dist/docker-path.d.mts"
+			"types": "./dist/docker-path.d.mts",
+			"import": "./dist/docker-path.mjs"
 		},
 		"./node-compat": {
 			"types": "./dist/node-compat.d.mts",
@@ -64,28 +64,28 @@
 			"import": "./dist/sourcemap.mjs"
 		},
 		"./errors": {
-			"import": "./dist/errors.mjs",
-			"types": "./dist/errors.d.mts"
+			"types": "./dist/errors.d.mts",
+			"import": "./dist/errors.mjs"
 		},
 		"./custom-api-headers": {
-			"import": "./dist/custom-api-headers.mjs",
-			"types": "./dist/custom-api-headers.d.mts"
+			"types": "./dist/custom-api-headers.d.mts",
+			"import": "./dist/custom-api-headers.mjs"
 		},
 		"./global-wrangler-config-path": {
-			"import": "./dist/global-wrangler-config-path.mjs",
-			"types": "./dist/global-wrangler-config-path.d.mts"
+			"types": "./dist/global-wrangler-config-path.d.mts",
+			"import": "./dist/global-wrangler-config-path.mjs"
 		},
 		"./local-env": {
-			"import": "./dist/local-env.mjs",
-			"types": "./dist/local-env.d.mts"
+			"types": "./dist/local-env.d.mts",
+			"import": "./dist/local-env.mjs"
 		},
 		"./zod-format": {
-			"import": "./dist/zod-format.mjs",
-			"types": "./dist/zod-format.d.mts"
+			"types": "./dist/zod-format.d.mts",
+			"import": "./dist/zod-format.mjs"
 		},
 		"./sanitize-headers": {
-			"import": "./dist/sanitize-headers.mjs",
-			"types": "./dist/sanitize-headers.d.mts"
+			"types": "./dist/sanitize-headers.d.mts",
+			"import": "./dist/sanitize-headers.mjs"
 		},
 		"./asset-hash": {
 			"types": "./dist/asset-hash.d.mts",
