@@ -1233,6 +1233,89 @@ test("reply: missing In-Reply-To", async ({ expect }) => {
 	);
 });
 
+// https://github.com/cloudflare/workers-sdk/issues/17111
+// Email Service sets `In-Reply-To` and `References` from the incoming email for
+// both reply payload forms, including a raw MIME `EmailMessage` that omits them:
+// https://developers.cloudflare.com/email-service/api/route-emails/email-handler/#reply-to-emails
+test("reply: raw EmailMessage without threading headers gets In-Reply-To and References", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+	const mf = new Miniflare({
+		log,
+		handleStructuredLogs({ message }: { message: string }) {
+			log.info(message);
+		},
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(
+						REPLY_EMAIL_WORKER(
+							JSON.stringify(dedent`
+								From: someone else <someone-else@example.com>
+								To: someone <someone@example.com>
+								Subject: Re: Test
+								MIME-Version: 1.0
+								Content-Type: text/plain
+
+								This is a reply body.`)
+						)
+					),
+				},
+			},
+		],
+	});
+
+	useDispose(mf);
+
+	const email = dedent`
+		From: someone <someone@example.com>
+		To: someone else <someone-else@example.com>
+		Subject: Test
+		Message-ID: <im-a-random-parent-message-id@example.com>
+		In-Reply-To: <root@example.com>
+		References: <root@example.com>
+		MIME-Version: 1.0
+		Content-Type: text/plain
+
+		This is a random email body.`;
+
+	const res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/local/email?" +
+			new URLSearchParams({
+				from: "someone@example.com",
+				to: "someone-else@example.com",
+			}).toString(),
+		{
+			body: email,
+			method: "POST",
+		}
+	);
+
+	expect(await res.text()).toBe("Worker successfully processed email");
+	expect(res.status).toBe(200);
+
+	const replyLog = log
+		.logsAtLevel(LogLevel.INFO)
+		.find((message) =>
+			message.startsWith(
+				"Email handler replied to sender with the following message:"
+			)
+		);
+	expect(replyLog).toBeDefined();
+	const file = replyLog?.match(/^ {2}(.+)$/m)?.[1];
+	expect(file).toBeDefined();
+	const parsed = await PostalMime.parse(await readFile(String(file), "utf-8"));
+	expect(parsed.inReplyTo).toBe("<im-a-random-parent-message-id@example.com>");
+	expect(parsed.references).toBe(
+		"<root@example.com> <im-a-random-parent-message-id@example.com>"
+	);
+	expect(parsed.text).toContain("This is a reply body.");
+});
+
 test("reply: wrong In-Reply-To", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
