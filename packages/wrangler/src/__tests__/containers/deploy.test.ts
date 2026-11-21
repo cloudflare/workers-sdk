@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import * as fs from "node:fs";
 import path from "node:path";
 import { PassThrough, Writable } from "node:stream";
+import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import {
 	ApplicationAffinityHardwareGeneration,
 	ContainerImagePreparationStatus,
@@ -18,6 +19,7 @@ import {
 import { http, HttpResponse } from "msw";
 import { afterEach, assert, beforeEach, describe, it, vi } from "vitest";
 import { clearCachedAccount } from "../../cloudchamber/locations";
+import { clearOutputFilePath } from "../../output";
 import * as user from "../../user";
 import { mockAccountV4 as mockContainersAccount } from "../cloudchamber/utils";
 import { mockServiceScriptData } from "../deploy/helpers";
@@ -68,6 +70,7 @@ describe("wrangler deploy with containers", () => {
 		vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
 	});
 	afterEach(() => {
+		clearOutputFilePath();
 		vi.unstubAllEnvs();
 	});
 
@@ -1108,6 +1111,7 @@ describe("wrangler deploy with containers", () => {
 
 			Uploaded test-name (TIMINGS)
 			Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
+			Container applications may take a few minutes to become ready. During provisioning, requests may return 503 or 500. Check status with \`wrangler containers list\`.
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Version ID: Galaxy-Class"
@@ -1190,6 +1194,187 @@ describe("wrangler deploy with containers", () => {
 			"rm",
 			`my-container:${TEST_CONTAINER_BUILD_TAG}`,
 		]);
+	});
+
+	it("should auto-configure and deploy an explicit Dockerfile target", async ({
+		expect,
+	}) => {
+		const dockerfile = "FROM node:22\nEXPOSE 3000\n";
+		fs.writeFileSync("package.json", JSON.stringify({ name: "test-name" }));
+		fs.writeFileSync("Dockerfile", dockerfile);
+		writeContainersPackageStub();
+		mockAutoConfigPackageInstalls();
+		const upload = mockUploadGeneratedContainerWorker();
+		mockGetVersion("Galaxy-Class", [appContainerDOBinding]);
+		setupDockerMocks(expect, "test-name", "Galaxy", dockerfile, process.cwd());
+		mockGetApplications([]);
+		mockGenerateImageRegistryCredentials(expect);
+		mockCreateApplication(expect, {
+			name: "test-name",
+			max_instances: 1,
+			configuration: {
+				image:
+					getCloudflareContainerRegistry() +
+					"/some-account-id/test-name@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			},
+			durable_objects: {
+				namespace_id: "1",
+			},
+		});
+
+		await runWrangler("deploy Dockerfile");
+
+		expect(JSON.parse(fs.readFileSync("wrangler.jsonc", "utf8"))).toMatchObject(
+			{
+				name: "test-name",
+				main: "src/worker.js",
+				containers: [
+					{
+						name: "test-name",
+						class_name: "AppContainer",
+						image: "./Dockerfile",
+						max_instances: 1,
+					},
+				],
+			}
+		);
+		expect(fs.readFileSync("src/worker.js", "utf8")).toContain(
+			"defaultPort = 3000;"
+		);
+		expectGeneratedContainerUpload(upload.metadata, expect);
+		expect(std.out).toContain("Uploaded test-name");
+		expect(std.out).toContain(
+			`Building image test-name:${TEST_CONTAINER_BUILD_TAG}`
+		);
+	});
+
+	it("should auto-configure and deploy a nested explicit Dockerfile target from its directory", async ({
+		expect,
+	}) => {
+		const dockerfile = "FROM node:22\nEXPOSE 8787\n";
+		const projectPath = path.resolve("services/api");
+		fs.mkdirSync(projectPath, { recursive: true });
+		fs.writeFileSync(
+			path.join(projectPath, "package.json"),
+			JSON.stringify({ name: "test-name" })
+		);
+		fs.writeFileSync(path.join(projectPath, "Dockerfile"), dockerfile);
+		writeContainersPackageStub(projectPath);
+		mockAutoConfigPackageInstalls();
+		const upload = mockUploadGeneratedContainerWorker();
+		mockGetVersion("Galaxy-Class", [appContainerDOBinding]);
+		setupDockerMocks(expect, "test-name", "Galaxy", dockerfile, projectPath);
+		mockGetApplications([]);
+		mockGenerateImageRegistryCredentials(expect);
+		mockCreateApplication(expect, {
+			name: "test-name",
+			max_instances: 1,
+			configuration: {
+				image:
+					getCloudflareContainerRegistry() +
+					"/some-account-id/test-name@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			},
+			durable_objects: {
+				namespace_id: "1",
+			},
+		});
+
+		await runWrangler("deploy services/api/Dockerfile");
+
+		expect(fs.existsSync("wrangler.jsonc")).toBe(false);
+		expect(
+			JSON.parse(
+				fs.readFileSync(path.join(projectPath, "wrangler.jsonc"), "utf8")
+			)
+		).toMatchObject({
+			name: "test-name",
+			main: "src/worker.js",
+			containers: [
+				{
+					name: "test-name",
+					class_name: "AppContainer",
+					image: "./Dockerfile",
+					max_instances: 1,
+				},
+			],
+		});
+		expect(
+			fs.readFileSync(path.join(projectPath, "src/worker.js"), "utf8")
+		).toContain("defaultPort = 8787;");
+		expectGeneratedContainerUpload(upload.metadata, expect);
+		expect(std.out).toContain("Uploaded test-name");
+		expect(std.out).toContain(
+			`Building image test-name:${TEST_CONTAINER_BUILD_TAG}`
+		);
+	});
+	it("should write container deployment details to WRANGLER_OUTPUT_FILE_PATH", async ({
+		expect,
+	}) => {
+		const outputFile = path.resolve("output.json");
+		mockGetVersion("Galaxy-Class");
+		setupDockerMocks(expect, "my-container", "Galaxy");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [DEFAULT_CONTAINER_FROM_DOCKERFILE],
+		});
+		mockGetApplications([]);
+		fs.writeFileSync("./Dockerfile", "FROM scratch");
+		mockGenerateImageRegistryCredentials(expect);
+		msw.use(
+			http.post("*/applications", async ({ request }) => {
+				const json = (await request.json()) as CreateApplicationRequest;
+				expect(json).toMatchObject({
+					name: "my-container",
+					configuration: {
+						image:
+							getCloudflareContainerRegistry() +
+							"/some-account-id/my-container@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+					},
+				});
+
+				return HttpResponse.json({
+					success: true,
+					result: {
+						id: "app-id",
+						...json,
+					},
+				});
+			})
+		);
+
+		await runWrangler("deploy index.js", {
+			...process.env,
+			WRANGLER_OUTPUT_FILE_PATH: outputFile,
+		});
+
+		expect(std.out).toContain(
+			"Container applications may take a few minutes to become ready."
+		);
+		expect(std.out).toContain("wrangler containers instances app-id");
+
+		const deployOutputEntry = fs
+			.readFileSync(outputFile, "utf8")
+			.split("\n")
+			.filter(Boolean)
+			.map((line) => JSON.parse(line))
+			.find((entry) => entry.type === "deploy");
+
+		expect(deployOutputEntry).toMatchObject({
+			type: "deploy",
+			containers_rollout: "gradual",
+			containers: [
+				{
+					name: "my-container",
+					application_id: "app-id",
+					action: "created",
+					image:
+						getCloudflareContainerRegistry() +
+						"/some-account-id/my-container@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+					image_digest:
+						"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				},
+			],
+		});
 	});
 	it("should be able to deploy a snapshot-enabled container from a dockerfile", async ({
 		expect,
@@ -1293,6 +1478,7 @@ describe("wrangler deploy with containers", () => {
 			- my-container (registry.cloudflare.com/hello:world)
 
 			Uploaded test-name (TIMINGS)
+			Container applications may take a few minutes to become ready. During provisioning, requests may return 503 or 500. Check status with \`wrangler containers list\`.
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Version ID: Galaxy-Class"
@@ -1386,6 +1572,7 @@ describe("wrangler deploy with containers", () => {
 			- my-container (registry.cloudflare.com/hello:world)
 
 			Uploaded test-name (TIMINGS)
+			Container applications may take a few minutes to become ready. During provisioning, requests may return 503 or 500. Check status with \`wrangler containers list\`.
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Version ID: Galaxy-Class"
@@ -1489,6 +1676,7 @@ describe("wrangler deploy with containers", () => {
 			- my-container (registry.cloudflare.com/hello:world)
 
 			Uploaded test-name (TIMINGS)
+			Container applications may take a few minutes to become ready. During provisioning, requests may return 503 or 500. Check status with \`wrangler containers list\`.
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Version ID: Galaxy-Class"
@@ -1602,6 +1790,7 @@ describe("wrangler deploy with containers", () => {
 
 				Uploaded test-name (TIMINGS)
 				Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
+				Container applications may take a few minutes to become ready. During provisioning, requests may return 503 or 500. Check status with \`wrangler containers list\`.
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
@@ -1671,6 +1860,7 @@ describe("wrangler deploy with containers", () => {
 
 			Uploaded test-name (TIMINGS)
 			Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
+			Container applications may take a few minutes to become ready. During provisioning, requests may return 503 or 500. Check status with \`wrangler containers list\`.
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Version ID: Galaxy-Class"
@@ -4033,6 +4223,7 @@ describe("wrangler deploy with containers", () => {
 				- my-container (registry.cloudflare.com/hello:world)
 
 				Uploaded test-name (TIMINGS)
+				Container applications may take a few minutes to become ready. During provisioning, requests may return 503 or 500. Check status with \`wrangler containers list\`.
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
@@ -5208,6 +5399,122 @@ const defaultDOBinding = {
 	namespace_id: "1",
 	class_name: "ExampleDurableObject",
 };
+
+const appContainerDOBinding = {
+	type: "durable_object_namespace",
+	namespace_id: "1",
+	class_name: "AppContainer",
+};
+
+function mockAutoConfigPackageInstalls() {
+	vi.spyOn(cliPackages, "installWrangler").mockResolvedValue();
+	vi.spyOn(cliPackages, "installPackages").mockResolvedValue();
+}
+
+type UploadedMetadata = {
+	bindings?: unknown[];
+	containers?: unknown[];
+	main_module?: string;
+};
+
+function mockUploadGeneratedContainerWorker(): {
+	metadata: UploadedMetadata | undefined;
+} {
+	const upload: { metadata: UploadedMetadata | undefined } = {
+		metadata: undefined,
+	};
+
+	msw.use(
+		http.put(
+			"*/accounts/:accountId/workers/scripts/:scriptName",
+			async ({ request }) => {
+				// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API; only deprecated on undici's server-side types
+				const formBody = await request.formData();
+				upload.metadata = JSON.parse(
+					await formDataEntryToString(formBody.get("metadata"))
+				) as UploadedMetadata;
+
+				return HttpResponse.json(
+					createFetchResult({
+						id: "abc12345",
+						etag: "etag98765",
+						pipeline_hash: "hash9999",
+						mutable_pipeline_id: "mutableId",
+						tag: "sample-tag",
+						deployment_id: "Galaxy-Class",
+						startup_time_ms: 100,
+					})
+				);
+			}
+		)
+	);
+
+	return upload;
+}
+
+function expectGeneratedContainerUpload(
+	metadata: UploadedMetadata | undefined,
+	expect: ExpectStatic
+) {
+	expect(metadata).toMatchObject({ main_module: "worker.js" });
+	expect(metadata?.bindings).toEqual(
+		expect.arrayContaining([
+			expect.objectContaining({
+				class_name: "AppContainer",
+				name: "APP_CONTAINER",
+				type: "durable_object_namespace",
+			}),
+		])
+	);
+	expect(metadata?.containers).toEqual([
+		{ name: "test-name", class_name: "AppContainer" },
+	]);
+}
+
+type TextFormDataEntry = {
+	text: () => Promise<string>;
+};
+
+async function formDataEntryToString(entry: unknown): Promise<string> {
+	if (typeof entry === "string") {
+		return entry;
+	}
+
+	if (hasText(entry)) {
+		return await entry.text();
+	}
+
+	return "";
+}
+
+function hasText(entry: unknown): entry is TextFormDataEntry {
+	return (
+		typeof entry === "object" &&
+		entry !== null &&
+		"text" in entry &&
+		typeof entry.text === "function"
+	);
+}
+
+function writeContainersPackageStub(projectPath = process.cwd()) {
+	const packagePath = path.join(
+		projectPath,
+		"node_modules/@cloudflare/containers"
+	);
+	fs.mkdirSync(packagePath, { recursive: true });
+	fs.writeFileSync(
+		path.join(packagePath, "package.json"),
+		JSON.stringify({ name: "@cloudflare/containers", type: "module" })
+	);
+	fs.writeFileSync(
+		path.join(packagePath, "index.js"),
+		`export class Container {}
+export function getContainer() {
+	return { fetch: (request) => new Response(request.url) };
+}
+`
+	);
+}
 
 function expectedDurableObjectApplicationRequest(
 	name: string,

@@ -1,10 +1,16 @@
-import { execFile, spawn, type ChildProcess } from "node:child_process";
+import {
+	execFileSync,
+	execFile,
+	spawn,
+	type ChildProcess,
+} from "node:child_process";
 import { EventEmitter } from "node:events";
 import { existsSync } from "node:fs";
 import { release } from "node:os";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	containerPrivilegesAllowed,
+	runDockerCmdWithOutput,
 	verifyDockerInstalled,
 } from "./../src/utils";
 
@@ -280,6 +286,27 @@ describe("verifyDockerInstalled", () => {
 			})
 		).rejects.toThrow(
 			/The Docker CLI is needed to build the configured images before deploying \(even in dry-run mode\) but could not be launched/
+		);
+	});
+});
+
+describe("runDockerCmdWithOutput", () => {
+	beforeEach(() => {
+		vi.mocked(execFileSync).mockReset();
+	});
+
+	it("pipes stderr so callers can decide whether to surface failures", ({
+		expect,
+	}) => {
+		vi.mocked(execFileSync).mockReturnValue("ok\n");
+
+		expect(runDockerCmdWithOutput("docker", ["manifest", "inspect"])).toBe(
+			"ok"
+		);
+		expect(execFileSync).toHaveBeenCalledWith(
+			"docker",
+			["manifest", "inspect"],
+			{ encoding: "utf8", stdio: "pipe" }
 		);
 	});
 });

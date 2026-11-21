@@ -88,8 +88,6 @@ export const runDockerCmdWithOutput = (dockerPath: string, args: string[]) => {
 	try {
 		const stdout = execFileSync(dockerPath, args, {
 			encoding: "utf8",
-			// Without an explicit `stdio`, Node echoes the child's stderr to ours.
-			// A failure still carries that stderr in the thrown error message.
 			stdio: "pipe",
 		});
 		return stdout.trim();

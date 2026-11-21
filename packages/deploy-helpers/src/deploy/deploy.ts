@@ -112,6 +112,12 @@ import type { FormData } from "undici";
  * Consumer-specific values and integrations injected into `deploy()`.
  */
 export type DeployOptions = {
+	autoConfigDeploymentMetadata?: {
+		adapterId?: string;
+		projectKind?: string;
+		deployMode?: "persistent" | "no-write";
+		sourceCategory?: string;
+	};
 	deployCommand: string;
 	versionsDeployCommand: string;
 	d1ListCommand: string;
@@ -147,7 +153,19 @@ export type DeployOptions = {
 	) => Promise<Record<string, unknown>>;
 };
 
+export type ContainerDeploymentAction = "created" | "modified" | "unchanged";
+export type ContainerDeployResult = {
+	name: string;
+	applicationId?: string;
+	action: ContainerDeploymentAction;
+	image?: string;
+	imageDigest?: string;
+};
+export type ContainersRollout = "gradual" | "immediate" | "none";
+
 type DeployResult = {
+	containerDeployments?: ContainerDeployResult[];
+	containersRollout?: ContainersRollout;
 	sourceMapSize?: number;
 	versionId: string | null;
 	workerTag: string | null;
@@ -166,6 +184,8 @@ export default async function deploy(
 
 	const result = await deployWorker(props, config, buildResult, options);
 
+	const autoConfigDeploymentMetadata = options.autoConfigDeploymentMetadata;
+	const liveUrl = getLiveUrl(result.targets);
 	writeOutput({
 		type: "deploy",
 		version: 1,
@@ -175,6 +195,21 @@ export default async function deploy(
 		targets: result.targets,
 		wrangler_environment: props.env,
 		worker_name_overridden: props.workerNameOverridden ?? false,
+		auto_config_adapter_id: autoConfigDeploymentMetadata?.adapterId,
+		auto_config_project_kind: autoConfigDeploymentMetadata?.projectKind,
+		auto_config_deploy_mode: autoConfigDeploymentMetadata?.deployMode,
+		auto_config_source_category: autoConfigDeploymentMetadata?.sourceCategory,
+		live_url: autoConfigDeploymentMetadata ? liveUrl : undefined,
+		containers: result.containerDeployments?.map(
+			({ name, applicationId, action, image, imageDigest }) => ({
+				name,
+				application_id: applicationId,
+				action,
+				image,
+				image_digest: imageDigest,
+			})
+		),
+		containers_rollout: result.containersRollout,
 		bundle_size: result.bundleSize
 			? {
 					raw_bytes: result.bundleSize.size,
@@ -242,6 +277,9 @@ async function deployWorker(
 	const isDryRun = props.dryRun;
 
 	const normalisedContainerConfig = props.containers.standard.normalized;
+	const containersRollout = normalisedContainerConfig.length
+		? (props.containersRollout ?? "gradual")
+		: undefined;
 	const builtContainerImages = props.containers.standard.builtImages;
 	const durableObjectContainerConfig = getDurableObjectContainerApps(
 		props.containers.source
@@ -825,6 +863,7 @@ async function deployWorker(
 
 	logger.log("Uploaded", workerName, formatTime(uploadMs));
 
+	let containerDeployments: ContainerDeployResult[] | undefined;
 	if (shouldDeployContainers) {
 		assert(versionId && accountId);
 		initContainersSharedContext({
@@ -832,7 +871,7 @@ async function deployWorker(
 			fetchPagedListResult,
 			fetchResult,
 		});
-		const containerDeployments: ResolvedContainerDeployment[] = [];
+		const resolvedContainerDeployments: ResolvedContainerDeployment[] = [];
 		for (const container of normalisedContainerConfig) {
 			if ("dockerfile" in container) {
 				const builtImage = builtContainerImages.find(
@@ -842,7 +881,7 @@ async function deployWorker(
 					builtImage,
 					"Expected container image to be built before upload"
 				);
-				containerDeployments.push({
+				resolvedContainerDeployments.push({
 					container,
 					imageRef: await pushBuiltContainerImage(
 						builtImage,
@@ -853,15 +892,15 @@ async function deployWorker(
 					),
 				});
 			} else {
-				containerDeployments.push({
+				resolvedContainerDeployments.push({
 					container,
 					imageRef: { newTag: container.image_uri },
 				});
 			}
 		}
-		await deployContainers(
+		containerDeployments = await deployContainers(
 			{ ...config, containers: props.containers.source },
-			containerDeployments,
+			resolvedContainerDeployments,
 			{
 				versionId,
 				accountId,
@@ -899,6 +938,8 @@ async function deployWorker(
 		}
 	}
 
+	printContainerReadinessMessage(containerDeployments);
+
 	// Early exit for WfP since it doesn't need the below code
 	if (props.dispatchNamespace !== undefined) {
 		if (props.triggers?.length) {
@@ -907,7 +948,14 @@ async function deployWorker(
 			);
 		}
 		deployWfpUserWorker(props.dispatchNamespace, versionId);
-		return { versionId, workerTag, assetUploadStats, bundleSize };
+		return {
+			versionId,
+			workerTag,
+			assetUploadStats,
+			bundleSize,
+			containerDeployments,
+			containersRollout,
+		};
 	}
 	assert(accountId);
 	// deploy triggers
@@ -937,5 +985,31 @@ async function deployWorker(
 		assetUploadStats,
 		targets: targets ?? [],
 		bundleSize,
+		containerDeployments,
+		containersRollout,
 	};
+}
+
+function getLiveUrl(targets: string[] | undefined): string | undefined {
+	return targets?.find((target) => /^https?:\/\//.test(target));
+}
+
+function printContainerReadinessMessage(
+	containerDeployments: ContainerDeployResult[] | undefined
+): void {
+	const updatedContainers = containerDeployments?.filter(
+		(container) =>
+			container.action === "created" || container.action === "modified"
+	);
+	if (!updatedContainers?.length) {
+		return;
+	}
+
+	const statusCommand =
+		updatedContainers.length === 1 && updatedContainers[0].applicationId
+			? `wrangler containers instances ${updatedContainers[0].applicationId}`
+			: "wrangler containers list";
+	logger.log(
+		`Container applications may take a few minutes to become ready. During provisioning, requests may return 503 or 500. Check status with \`${statusCommand}\`.`
+	);
 }
