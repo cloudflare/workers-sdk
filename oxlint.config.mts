@@ -263,12 +263,6 @@ export default defineConfig({
 		// findings after upgrading Oxlint and moving to the tsrs type checker.
 		{
 			files: [
-				"packages/vite-plugin-cloudflare/playground/node-compat/worker-process/index.ts",
-			],
-			rules: { "no-global-assign": "off" },
-		},
-		{
-			files: [
 				"packages/vite-plugin-cloudflare/playground/**/vite.config*.ts",
 				"packages/vite-plugin-cloudflare/src/__tests__/build-app.spec.ts",
 				"packages/vite-plugin-cloudflare/src/cloudflare-environment.ts",
