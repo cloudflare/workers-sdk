@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { partitionExports } from "@cloudflare/workers-utils";
+import { partitionExports } from "@cloudflare/workers-utils/config";
 import * as wrangler from "wrangler";
 import { debuglog } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";

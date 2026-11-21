@@ -12,11 +12,11 @@ import {
 } from "@cloudflare/containers-shared";
 import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
 import {
-	createArtifactsLocalDefaultWarner,
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
 	getLocalObservabilityEnabledFromEnv,
 } from "@cloudflare/workers-utils";
+import { createArtifactsLocalDefaultWarner } from "@cloudflare/workers-utils/config";
 import {
 	buildPublicUrl,
 	getDefaultDevRegistryPath,
