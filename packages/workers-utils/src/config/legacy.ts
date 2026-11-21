@@ -177,6 +177,10 @@ export const getContainerDurableObjectClassNames =
 export const getContainerNameToClassNameMap =
 	config.getContainerNameToClassNameMap;
 
+/** @deprecated Import getDefaultDurableObjectContainerAppName from `@cloudflare/workers-utils/config` instead. */
+export const getDefaultDurableObjectContainerAppName =
+	config.getDefaultDurableObjectContainerAppName;
+
 /** @deprecated Import getDurableObjectClassNameToUseSQLiteMap from `@cloudflare/workers-utils/config` instead. */
 export const getDurableObjectClassNameToUseSQLiteMap =
 	config.getDurableObjectClassNameToUseSQLiteMap;
