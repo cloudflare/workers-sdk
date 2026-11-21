@@ -1,38 +1,31 @@
 import fs from "node:fs/promises";
-import SCRIPT_D1_DATABASE_OBJECT from "worker:d1/database";
 import SCRIPT_D1_ENTRY from "worker:d1/entry";
-import { SharedBindings } from "../../workers";
-import { D1_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/d1/constants";
+import { kVoid } from "../../runtime";
+import {
+	D1Bindings,
+	D1_LOCAL_ENTRY_SERVICE_NAME,
+	D1_WORKERD_SERVICE_NAME,
+} from "../../workers/d1/constants";
 import {
 	buildObjectEntryProps,
 	buildRemoteProxyProps,
 	getEnvBindingsOfType,
-	getMiniflareObjectBindings,
 	getPersistPath,
 	getRemoteProxyConnectionString,
 	getStorageService,
-	objectEntryWorker,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
-	SERVICE_LOOPBACK,
 } from "../shared";
-import type {
-	Service,
-	Worker_Binding,
-	Worker_Binding_DurableObjectNamespaceDesignator,
-} from "../../runtime";
+import type { Service, Worker_Binding } from "../../runtime";
 import type { Plugin } from "../shared";
 
 export const D1_PLUGIN_NAME = "d1";
 const D1_STORAGE_SERVICE_NAME = `${D1_PLUGIN_NAME}:storage`;
-const D1_DATABASE_SERVICE_PREFIX = `${D1_PLUGIN_NAME}:db`;
 // One shared remote-proxy service for all remote D1 databases (config via props).
 const D1_REMOTE_SERVICE_NAME = `${D1_PLUGIN_NAME}:db:remote`;
-const D1_DATABASE_OBJECT_CLASS_NAME = "D1DatabaseObject";
-const D1_DATABASE_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
-	serviceName: D1_DATABASE_SERVICE_PREFIX,
-	className: D1_DATABASE_OBJECT_CLASS_NAME,
-};
+// The `uniqueKey` of Miniflare's own D1 objects before workerd's D1, kept so
+// that existing local databases are the same files.
+const D1_UNIQUE_KEY = "miniflare-D1DatabaseObject";
 
 export const D1_PLUGIN: Plugin = {
 	bindingTypeDescription: "D1 database",
@@ -45,18 +38,24 @@ export const D1_PLUGIN: Plugin = {
 					options.dev
 				);
 
-				// Remote databases share one proxy service (config via props); local
-				// databases share one entry service with the id supplied via props.
+				// Remote databases share one proxy service (config via props). Local
+				// databases are workerd's D1, or with shared storage the storage
+				// owner's entry service.
 				const serviceDesignator = remoteProxyConnectionString
 					? {
 							name: D1_REMOTE_SERVICE_NAME,
 							props: buildRemoteProxyProps(remoteProxyConnectionString, name),
 						}
-					: getStorageService(
-							D1_LOCAL_ENTRY_SERVICE_NAME,
-							buildObjectEntryProps(id),
-							sharedOptions
-						);
+					: sharedOptions.unsafeEnableSharedStorage
+						? getStorageService(
+								D1_LOCAL_ENTRY_SERVICE_NAME,
+								buildObjectEntryProps(id),
+								sharedOptions
+							)
+						: {
+								name: D1_WORKERD_SERVICE_NAME,
+								props: { json: JSON.stringify({ database: id }) },
+							};
 
 				return {
 					name,
@@ -86,7 +85,8 @@ export const D1_PLUGIN: Plugin = {
 
 		const services: Service[] = [];
 
-		// One shared entry service for all local databases (id supplied via props).
+		// workerd's D1, and the entry service that reaches a database named at
+		// runtime, for the local explorer and shared storage.
 		const hasLocal =
 			databases.some(
 				([, db]) =>
@@ -95,18 +95,50 @@ export const D1_PLUGIN: Plugin = {
 			sharedOptions.unsafeEnableSharedStorage ||
 			sharedOptions.unsafeLocalExplorer;
 		if (hasLocal) {
-			services.push({
-				name: D1_LOCAL_ENTRY_SERVICE_NAME,
-				worker: {
-					...objectEntryWorker(D1_DATABASE_OBJECT),
-					// Preserve D1 error names across RPC without changing the helper's
-					// compatibility date (internal workers don't inherit the user's date).
-					compatibilityFlags: ["enhanced_error_serialization"],
-					// Reuse the DO binding configuration, but replace the HTTP-only router
-					// with D1's entrypoint, which also implements the query RPC method.
-					modules: [{ name: "entry.worker.js", esModule: SCRIPT_D1_ENTRY() }],
+			const persistPath = getPersistPath(
+				D1_PLUGIN_NAME,
+				tmpPath,
+				sharedOptions.resourcePersistencePath
+			);
+			await fs.mkdir(persistPath, { recursive: true });
+			services.push(
+				{
+					name: D1_LOCAL_ENTRY_SERVICE_NAME,
+					worker: {
+						compatibilityDate: "2025-01-01",
+						modules: [{ name: "entry.worker.js", esModule: SCRIPT_D1_ENTRY() }],
+						bindings: [
+							{ name: D1Bindings.DEBUG_PORT, workerdDebugPort: kVoid },
+						],
+					},
 				},
-			});
+				// workerd's D1 module and its config, as d1.js documents it.
+				{
+					name: D1_WORKERD_SERVICE_NAME,
+					worker: {
+						compatibilityDate: "2026-01-01",
+						modules: [{ name: "d1.js", bundled: "/workerd/d1.js" }],
+						bindings: [
+							{
+								name: "DATABASE",
+								durableObjectNamespace: { className: "D1Database" },
+							},
+						],
+						durableObjectNamespaces: [
+							{
+								className: "D1Database",
+								uniqueKey: D1_UNIQUE_KEY,
+								enableSql: true,
+							},
+						],
+						durableObjectStorage: { localDisk: D1_STORAGE_SERVICE_NAME },
+					},
+				},
+				{
+					name: D1_STORAGE_SERVICE_NAME,
+					disk: { path: persistPath, writable: true },
+				}
+			);
 		}
 
 		// One shared proxy service for all remote (mixed-mode) databases.
@@ -120,54 +152,6 @@ export const D1_PLUGIN: Plugin = {
 			});
 		}
 
-		if (hasLocal) {
-			const uniqueKey = `miniflare-${D1_DATABASE_OBJECT_CLASS_NAME}`;
-			const persistPath = getPersistPath(
-				D1_PLUGIN_NAME,
-				tmpPath,
-				sharedOptions.resourcePersistencePath
-			);
-			await fs.mkdir(persistPath, { recursive: true });
-
-			const storageService: Service = {
-				name: D1_STORAGE_SERVICE_NAME,
-				disk: { path: persistPath, writable: true },
-			};
-			const objectService: Service = {
-				name: D1_DATABASE_SERVICE_PREFIX,
-				worker: {
-					compatibilityDate: "2023-07-24",
-					compatibilityFlags: ["nodejs_compat", "experimental"],
-					modules: [
-						{
-							name: "database.worker.js",
-							esModule: SCRIPT_D1_DATABASE_OBJECT(),
-						},
-					],
-					durableObjectNamespaces: [
-						{
-							className: D1_DATABASE_OBJECT_CLASS_NAME,
-							uniqueKey,
-						},
-					],
-					// Store Durable Object SQL databases in persist path
-					durableObjectStorage: { localDisk: D1_STORAGE_SERVICE_NAME },
-					// Bind blob disk directory service to object
-					bindings: [
-						{
-							name: SharedBindings.MAYBE_SERVICE_BLOBS,
-							service: { name: D1_STORAGE_SERVICE_NAME },
-						},
-						{
-							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
-							service: { name: SERVICE_LOOPBACK },
-						},
-						...getMiniflareObjectBindings(),
-					],
-				},
-			};
-			services.push(storageService, objectService);
-		}
 		return services;
 	},
 };

@@ -275,7 +275,7 @@ test("D1PreparedStatement: run", async ({ expect }) => {
 			duration: result.meta.duration,
 			// Not an `INSERT`, so `last_row_id` non-deterministic
 			last_row_id: result.meta.last_row_id,
-			served_by: "miniflare.db",
+			served_by: "workerd",
 			served_by_primary: true,
 			total_attempts: 1,
 			timings: { sql_duration_ms: result.meta.duration },
@@ -302,7 +302,7 @@ test("D1PreparedStatement: run", async ({ expect }) => {
 			// Don't know duration, so just match on returned value asserted > 0
 			duration: result.meta.duration,
 			last_row_id: 4,
-			served_by: "miniflare.db",
+			served_by: "workerd",
 			served_by_primary: true,
 			total_attempts: 1,
 			timings: { sql_duration_ms: result.meta.duration },
@@ -331,7 +331,7 @@ test("D1PreparedStatement: run", async ({ expect }) => {
 				last_row_id: result.meta.last_row_id,
 				rows_read: 1,
 				rows_written: 1,
-				served_by: "miniflare.db",
+				served_by: "workerd",
 				served_by_primary: true,
 				total_attempts: 1,
 				timings: { sql_duration_ms: result.meta.duration },
@@ -364,7 +364,7 @@ test("D1PreparedStatement: run", async ({ expect }) => {
 			// Don't know duration, so just match on returned value asserted > 0
 			duration: result.meta.duration,
 			last_row_id: 5,
-			served_by: "miniflare.db",
+			served_by: "workerd",
 			served_by_primary: true,
 			total_attempts: 1,
 			timings: { sql_duration_ms: result.meta.duration },
@@ -396,7 +396,7 @@ test("D1PreparedStatement: all", async ({ expect }) => {
 			duration: result.meta.duration,
 			// Not an `INSERT`, so `last_row_id` non-deterministic
 			last_row_id: result.meta.last_row_id,
-			served_by: "miniflare.db",
+			served_by: "workerd",
 			served_by_primary: true,
 			total_attempts: 1,
 			timings: { sql_duration_ms: result.meta.duration },
@@ -425,7 +425,7 @@ test("D1PreparedStatement: all", async ({ expect }) => {
 				last_row_id: result.meta.last_row_id,
 				rows_read: 1,
 				rows_written: 0,
-				served_by: "miniflare.db",
+				served_by: "workerd",
 				served_by_primary: true,
 				total_attempts: 1,
 				timings: { sql_duration_ms: result.meta.duration },
