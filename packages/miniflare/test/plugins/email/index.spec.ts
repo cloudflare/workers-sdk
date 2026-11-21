@@ -728,6 +728,107 @@ test("reply validation: >100 References", async ({ expect }) => {
 	);
 });
 
+// Email Routing only rejects replies to emails with *more than* 100 References
+// entries, so an incoming email with exactly 100 entries can still be replied to.
+// https://developers.cloudflare.com/email-service/platform/limits/#email-routing-limits
+// https://github.com/cloudflare/workers-sdk/issues/17112
+describe("reply validation: References entry limit boundary", () => {
+	const STRUCTURED_REPLY_WORKER = dedent /* javascript */ `
+		export default {
+			fetch() {},
+			async email(message) {
+				await message.reply({
+					from: message.to,
+					subject: "Re: References boundary",
+					text: "Reply fixture",
+				});
+			},
+		};
+	`;
+
+	async function sendWithReferences(count: number) {
+		const log = new TestLog();
+		const mf = new Miniflare({
+			log,
+			handleStructuredLogs({ message }: { message: string }) {
+				log.info(message);
+			},
+			unsafeTriggerHandlers: true,
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-03-17",
+						manifest: singleModuleManifest(STRUCTURED_REPLY_WORKER),
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const ids = Array.from(
+			{ length: count },
+			(_, index) => `<previous-${index}@example.net>`
+		);
+		const email = [
+			"From: sender@example.net",
+			"To: reply-worker@example.com",
+			"Subject: References boundary",
+			`Message-ID: <boundary-${count}@example.net>`,
+			`In-Reply-To: ${ids[ids.length - 1]}`,
+			`References: ${ids.join("\r\n ")}`,
+			"MIME-Version: 1.0",
+			"Content-Type: text/plain; charset=utf-8",
+			"",
+			"Please reply to this fixture.",
+			"",
+		].join("\r\n");
+
+		const res = await mf.dispatchFetch(
+			"http://localhost/cdn-cgi/local/email?" +
+				new URLSearchParams({
+					from: "sender@example.net",
+					to: "reply-worker@example.com",
+					format: "json",
+				}).toString(),
+			{ body: email, method: "POST" }
+		);
+		const result = (await res.json()) as {
+			outcome: string;
+			replies: Array<{ raw: string }>;
+		};
+		const loggedLimit = log.logs.some(([, message]) =>
+			message.includes('"References" header has more than 100 entries')
+		);
+		return { status: res.status, result, loggedLimit };
+	}
+
+	test("99 References entries can be replied to", async ({ expect }) => {
+		const { status, result, loggedLimit } = await sendWithReferences(99);
+		expect(status).toBe(200);
+		expect(result.outcome).toBe("ok");
+		expect(result.replies).toHaveLength(1);
+		expect(loggedLimit).toBe(false);
+	});
+
+	test("exactly 100 References entries can be replied to", async ({
+		expect,
+	}) => {
+		const { status, result, loggedLimit } = await sendWithReferences(100);
+		expect(loggedLimit).toBe(false);
+		expect(status).toBe(200);
+		expect(result.outcome).toBe("ok");
+		expect(result.replies).toHaveLength(1);
+	});
+
+	test("101 References entries cannot be replied to", async ({ expect }) => {
+		const { status, result, loggedLimit } = await sendWithReferences(101);
+		expect(status).toBe(500);
+		expect(result.replies).toHaveLength(0);
+		expect(loggedLimit).toBe(true);
+	});
+});
+
 test("reply: mismatched From: header", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
