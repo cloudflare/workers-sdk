@@ -1030,6 +1030,54 @@ describe("ContainerConfigSchema", () => {
 		expect(result.success).toBe(true);
 	});
 
+	it("accepts image jurisdictions for a Durable Object Container", ({
+		expect,
+	}) => {
+		const result = ContainerConfigSchema.safeParse({
+			name: "durable-object-container",
+			schedulingPolicy: "durable-object",
+			images: {
+				primary: { dockerfile: "./Dockerfile", jurisdictions: ["fedramp"] },
+				eu: { dockerfile: "./Dockerfile", jurisdictions: ["eu"] },
+				us: { dockerfile: "./Dockerfile", jurisdictions: ["us"] },
+				fallback: {
+					reference: "frm.registry.cloudflare.com/account/fallback@sha256:abc",
+					jurisdictions: ["fedramp"],
+				},
+			},
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it.for([
+		{ jurisdictions: [] },
+		{ jurisdictions: ["fedramp", "fedramp"] },
+		{ jurisdictions: ["eu", "us"] },
+		{ jurisdictions: ["ca"] },
+		{ jurisdictions: "fedramp" },
+	])(
+		"rejects invalid image jurisdictions for a Durable Object Container: $jurisdictions",
+		({ jurisdictions }, { expect }) => {
+			const result = ContainerConfigSchema.safeParse({
+				name: "durable-object-container",
+				schedulingPolicy: "durable-object",
+				images: { primary: { dockerfile: "./Dockerfile", jurisdictions } },
+			});
+
+			expect(result.success).toBe(false);
+		}
+	);
+
+	it("rejects image jurisdictions for a standard Container", ({ expect }) => {
+		const result = ContainerConfigSchema.safeParse({
+			...baseContainer,
+			image: { dockerfile: "./Dockerfile", jurisdictions: ["fedramp"] },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
 	it("accepts a Durable Object Container without images", ({ expect }) => {
 		const result = ContainerConfigSchema.safeParse({
 			name: "durable-object-container",
@@ -1365,6 +1413,31 @@ describe("BuildOutputContainerConfigSchema", () => {
 		});
 
 		expect(result.success).toBe(true);
+	});
+
+	it("preserves image jurisdictions for a Durable Object Container", ({
+		expect,
+	}) => {
+		const container = {
+			name: "durable-object-container",
+			schedulingPolicy: "durable-object",
+			images: {
+				primary: {
+					reference: "frm.registry.cloudflare.com/account/primary@sha256:abc",
+					jurisdictions: ["fedramp"],
+				},
+				local: {
+					localReference: "locally-built:latest",
+					jurisdictions: ["fedramp"],
+				},
+			},
+		};
+		const result = BuildOutputContainerConfigSchema.safeParse(container);
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data).toEqual(container);
+		}
 	});
 
 	it("preserves SSH settings for a Durable Object Container", ({ expect }) => {

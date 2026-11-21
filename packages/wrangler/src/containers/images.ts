@@ -11,6 +11,10 @@ import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { getOrSelectAccountId } from "../user";
+import {
+	getRegistryConfigForJurisdiction,
+	registryJurisdictionArg,
+} from "./registry-jurisdiction";
 import { containersScope } from ".";
 import type { ContainerImageRepository } from "@cloudflare/containers-shared";
 import type { Config } from "@cloudflare/workers-utils/config";
@@ -47,6 +51,7 @@ export const containersImagesListCommand = createCommand({
 			description: "Format output as JSON",
 			default: false,
 		},
+		jurisdiction: registryJurisdictionArg,
 	},
 	async handler(args, { config }) {
 		await fillOpenAPIConfiguration(config, containersScope);
@@ -76,6 +81,7 @@ export const containersImagesDeleteCommand = createCommand({
 			alias: "y",
 			default: false,
 		},
+		jurisdiction: registryJurisdictionArg,
 	},
 	positionalArgs: ["image"],
 	async handler(args, { config }) {
@@ -87,7 +93,7 @@ export const containersImagesDeleteCommand = createCommand({
 // --- Handler functions ---
 
 async function handleDeleteImageCommand(
-	args: { image: string; skipConfirmation: boolean },
+	args: { image: string; skipConfirmation: boolean; jurisdiction?: string },
 	config: Config
 ) {
 	parseContainerImageTag(args.image);
@@ -106,7 +112,10 @@ async function handleDeleteImageCommand(
 	const { digest, warning } = await promiseSpinner(
 		deleteContainerImage({
 			accountId,
-			complianceConfig: config,
+			complianceConfig: getRegistryConfigForJurisdiction(
+				config,
+				args.jurisdiction
+			),
 			image: args.image,
 		}),
 		{ message: `Deleting ${args.image}` }
@@ -119,14 +128,17 @@ async function handleDeleteImageCommand(
 }
 
 async function handleListImagesCommand(
-	args: { filter?: string; json: boolean },
+	args: { filter?: string; json: boolean; jurisdiction?: string },
 	config: Config
 ) {
 	const accountId = await getOrSelectAccountId(config);
 	const responses = await promiseSpinner(
 		listContainerImages({
 			accountId,
-			complianceConfig: config,
+			complianceConfig: getRegistryConfigForJurisdiction(
+				config,
+				args.jurisdiction
+			),
 			filter: args.filter,
 		}),
 		{ message: "Listing" }

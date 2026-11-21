@@ -177,13 +177,39 @@ export function getComplianceRegionSubdomain(
 }
 
 /**
- * Returns the managed container registry for the configured API environment and compliance region.
+ * Selects the managed container registry for a Container image.
+ */
+export type ContainerRegistryConfig = ComplianceConfig & {
+	/**
+	 * One of the image's `jurisdictions`. In the public compliance region, each
+	 * jurisdiction selects its own managed registry.
+	 */
+	jurisdiction?: string;
+};
+
+/** Jurisdictions with their own managed container registry. */
+export const CONTAINER_REGISTRY_JURISDICTIONS = [
+	"eu",
+	"fedramp",
+	"us",
+] as const;
+
+/** Managed registry subdomain for each Container image jurisdiction. */
+const CONTAINER_REGISTRY_JURISDICTION_SUBDOMAINS = new Map<string, string>([
+	["eu", "eu"],
+	["fedramp", "frm"],
+	["us", "us"],
+] satisfies [(typeof CONTAINER_REGISTRY_JURISDICTIONS)[number], string][]);
+
+/**
+ * Returns the managed container registry for the configured API environment,
+ * compliance region, and image jurisdiction.
  *
- * @param complianceConfig - Compliance configuration used to select the public or FedRAMP registry.
+ * @param registryConfig - Compliance region, and optionally one of the image's jurisdictions.
  * @returns The managed registry hostname, respecting `CLOUDFLARE_CONTAINER_REGISTRY` and `WRANGLER_API_ENVIRONMENT`.
  */
 export function getCloudflareContainerRegistry(
-	complianceConfig: ComplianceConfig = COMPLIANCE_REGION_CONFIG_UNKNOWN
+	registryConfig: ContainerRegistryConfig = COMPLIANCE_REGION_CONFIG_UNKNOWN
 ): string {
 	if (process.env.CLOUDFLARE_CONTAINER_REGISTRY) {
 		return process.env.CLOUDFLARE_CONTAINER_REGISTRY;
@@ -191,10 +217,79 @@ export function getCloudflareContainerRegistry(
 
 	const environmentPrefix =
 		process.env.WRANGLER_API_ENVIRONMENT === "staging" ? "staging." : "";
+	const jurisdictionSubdomain =
+		registryConfig.jurisdiction === undefined
+			? undefined
+			: CONTAINER_REGISTRY_JURISDICTION_SUBDOMAINS.get(
+					registryConfig.jurisdiction
+				);
+	// The FedRAMP High environment only has its own registry.
+	if (
+		jurisdictionSubdomain !== undefined &&
+		getCloudflareComplianceRegion(registryConfig) === "public"
+	) {
+		return `${environmentPrefix}${jurisdictionSubdomain}.registry.cloudflare.com`;
+	}
 	const complianceRegionSubdomain =
-		getComplianceRegionSubdomain(complianceConfig);
+		getComplianceRegionSubdomain(registryConfig);
 
 	return `${environmentPrefix}registry${complianceRegionSubdomain}.cloudflare.com`;
+}
+
+/**
+ * Returns the registry selection for each of a Container image's
+ * `jurisdictions`, or the default registry when it has none.
+ *
+ * @param complianceConfig - Compliance configuration used to select the managed registries.
+ * @param jurisdictions - The image's `jurisdictions`.
+ * @returns One registry selection per registry the image is pushed to.
+ */
+export function getContainerImageRegistryConfigs(
+	complianceConfig: ComplianceConfig,
+	jurisdictions: readonly string[] | undefined
+): ContainerRegistryConfig[] {
+	const { compliance_region } = complianceConfig;
+	return jurisdictions === undefined || jurisdictions.length === 0
+		? [{ compliance_region }]
+		: jurisdictions.map((jurisdiction) => ({
+				compliance_region,
+				jurisdiction,
+			}));
+}
+
+/**
+ * Returns the account's Cloudflare-managed container registries, including the
+ * registries used by images with `jurisdictions`.
+ *
+ * @param complianceConfig - Compliance configuration used to select the managed registries.
+ * @returns The distinct managed registry hostnames, default registry first.
+ */
+export function getCloudflareContainerRegistries(
+	complianceConfig: ComplianceConfig = COMPLIANCE_REGION_CONFIG_UNKNOWN
+): string[] {
+	const registries = [undefined, ...CONTAINER_REGISTRY_JURISDICTIONS].map(
+		(jurisdiction) =>
+			getCloudflareContainerRegistry({
+				compliance_region: complianceConfig.compliance_region,
+				jurisdiction,
+			})
+	);
+	return [...new Set(registries)];
+}
+
+/**
+ * Whether a hostname is one of the account's Cloudflare-managed container
+ * registries, including the registries used by images with `jurisdictions`.
+ *
+ * @param hostname - Registry hostname to check.
+ * @param complianceConfig - Compliance configuration used to select the managed registries.
+ * @returns Whether the hostname is a Cloudflare-managed registry.
+ */
+export function isCloudflareContainerRegistry(
+	hostname: string,
+	complianceConfig: ComplianceConfig = COMPLIANCE_REGION_CONFIG_UNKNOWN
+): boolean {
+	return getCloudflareContainerRegistries(complianceConfig).includes(hostname);
 }
 
 /**
