@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
 import { CorePaths } from "../../../src/workers/core/constants";
@@ -168,6 +169,41 @@ describe("R2 API", () => {
 			expect(await response.text()).toBe("test content for download");
 			expect(response.headers.get("Content-Type")).toBe("text/plain");
 			expect(response.headers.get("ETag")).toBeTruthy();
+		});
+
+		test("honors conditional download headers", async ({ expect }) => {
+			const r2 = await mf.getR2Bucket("TEST_BUCKET");
+			const object = await r2.put("conditional-download.txt", "sample");
+			assert(object !== null);
+			const url = `${BASE_URL}/r2/buckets/test-bucket/objects/conditional-download.txt`;
+			const lastModified = object.uploaded.toUTCString();
+
+			const conditions: [string, string][] = [
+				["If-None-Match", object.httpEtag],
+				["If-None-Match", object.etag],
+				["If-None-Match", `"different", W/${object.httpEtag}`],
+				["If-None-Match", "*"],
+				["If-Modified-Since", lastModified],
+				["If-Modified-Since", "Fri, 01 Jan 2100 00:00:00 GMT"],
+			];
+			for (const [name, value] of conditions) {
+				const response = await mf.dispatchFetch(url, {
+					headers: { [name]: value },
+				});
+				expect(response.status).toBe(304);
+				expect(response.body).toBeNull();
+				expect(response.headers.get("ETag")).toBe(object.etag);
+				expect(response.headers.get("Last-Modified")).toBe(lastModified);
+			}
+
+			const response = await mf.dispatchFetch(url, {
+				headers: {
+					"If-None-Match": '"different"',
+					"If-Modified-Since": lastModified,
+				},
+			});
+			expect(response.status).toBe(200);
+			expect(await response.text()).toBe("sample");
 		});
 
 		test("returns metadata only when cf-metadata-only header is set", async ({
