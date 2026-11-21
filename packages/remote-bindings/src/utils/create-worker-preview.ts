@@ -144,6 +144,26 @@ export interface CfPreviewToken {
 	tailUrl?: string;
 }
 
+/** Derives the preview host without requiring account-level subdomain access. */
+function getWorkersDevPreviewHost(
+	exchangeUrl: string | undefined,
+	name: string
+): string | undefined {
+	if (!exchangeUrl) {
+		return undefined;
+	}
+
+	try {
+		const exchangeHost = new URL(exchangeUrl).hostname;
+		const firstDot = exchangeHost.indexOf(".");
+		return firstDot === -1
+			? undefined
+			: `${name}${exchangeHost.slice(firstDot)}`;
+	} catch {
+		return undefined;
+	}
+}
+
 /**
  * Try and get a re-encoded token from the edge. Returns null if the exchange
  * fails for any reason (expected with particular zone settings).
@@ -209,7 +229,7 @@ export async function createPreviewSession(
 	cliDisplayName: string
 ): Promise<CfPreviewSession> {
 	const { accountId } = account;
-	const initUrl = `/accounts/${accountId}/workers/subdomain/edge-preview`;
+	const initUrl = `/accounts/${accountId}/workers/scripts/${name}/subdomain/edge-preview`;
 
 	const { token, exchange_url } = await fetchResult<{
 		token: string;
@@ -225,12 +245,15 @@ export async function createPreviewSession(
 		: token;
 
 	try {
-		const subdomain = await getOrRegisterWorkersDevSubdomain(
-			complianceConfig,
-			account,
-			withTimeout(abortSignal)
-		);
-		const host = `${name}.${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`;
+		let host = getWorkersDevPreviewHost(exchange_url, name);
+		if (!host) {
+			const subdomain = await getOrRegisterWorkersDevSubdomain(
+				complianceConfig,
+				account,
+				withTimeout(abortSignal)
+			);
+			host = `${name}.${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`;
+		}
 		return {
 			value: previewSessionToken,
 			host,
