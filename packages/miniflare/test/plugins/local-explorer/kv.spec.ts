@@ -907,6 +907,43 @@ describe("KV API", () => {
 			});
 		});
 
+		test.for([
+			{ options: {}, expected: '{"n":7}' },
+			{ options: { type: "json" }, expected: { n: 7 } },
+			{
+				options: { withMetadata: true },
+				expected: { value: '{"n":7}', metadata: { label: "one" } },
+			},
+			{
+				options: { type: "json", withMetadata: true },
+				expected: { value: { n: 7 }, metadata: { label: "one" } },
+			},
+		])(
+			"honors bulk read options $options",
+			async ({ options, expected }, { expect }) => {
+				const kv = await mf.getKVNamespace("TEST_KV");
+				await kv.put("bulk-options", '{"n":7}', { metadata: { label: "one" } });
+
+				const response = await mf.dispatchFetch(
+					`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk/get`,
+					{
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							keys: ["bulk-options", "missing"],
+							...options,
+						}),
+					}
+				);
+
+				expect(response.status).toBe(200);
+				expect(await response.json()).toMatchObject({
+					success: true,
+					result: { values: { "bulk-options": expected, missing: null } },
+				});
+			}
+		);
+
 		test("returns null values as success if all keys are non-existent", async ({
 			expect,
 		}) => {
