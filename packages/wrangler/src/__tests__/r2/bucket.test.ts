@@ -139,6 +139,134 @@ describe("r2", () => {
 				`);
 			});
 
+			it("paginates buckets through the SDK and preserves request headers", async ({
+				expect,
+			}) => {
+				const firstPage = Array.from({ length: 100 }, (_, index) => ({
+					name: `bucket-${String(index + 1).padStart(3, "0")}`,
+					creation_date: "01-01-2001",
+				}));
+				const secondPage = Array.from({ length: 100 }, (_, index) => ({
+					name: `bucket-${index + 101}`,
+					creation_date: "02-01-2001",
+				}));
+				const requests: Array<{
+					startAfter: string | null;
+					jurisdiction: string | null;
+				}> = [];
+				function getPage(startAfter: string | null) {
+					switch (startAfter) {
+						case null:
+							return firstPage;
+						case "bucket-100":
+							return secondPage;
+						case "bucket-200":
+							return [];
+						default:
+							throw new Error(`Unexpected start_after: ${startAfter}`);
+					}
+				}
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/r2/buckets",
+						({ request, params }) => {
+							const url = new URL(request.url);
+							const startAfter = url.searchParams.get("start_after");
+							const jurisdiction = request.headers.get("cf-r2-jurisdiction");
+							const buckets = getPage(startAfter);
+
+							expect(params.accountId).toEqual("some-account-id");
+							expect(Object.fromEntries(url.searchParams)).toEqual({
+								direction: "asc",
+								order: "name",
+								per_page: "100",
+								...(startAfter === null ? {} : { start_after: startAfter }),
+							});
+							expect(jurisdiction).toEqual("eu");
+							requests.push({ startAfter, jurisdiction });
+
+							return HttpResponse.json(createFetchResult({ buckets }));
+						}
+					)
+				);
+
+				await runWrangler("r2 bucket list --jurisdiction eu");
+
+				expect(requests).toEqual([
+					{ startAfter: null, jurisdiction: "eu" },
+					{ startAfter: "bucket-100", jurisdiction: "eu" },
+					{ startAfter: "bucket-200", jurisdiction: "eu" },
+				]);
+				expect(std.out).toContain("name:           bucket-001");
+				expect(std.out).toContain("name:           bucket-200");
+				expect(std.out.match(/creation_date:/g)).toHaveLength(200);
+			});
+
+			it("paginates through null and empty result_info", async ({ expect }) => {
+				const firstPage = Array.from({ length: 100 }, (_, index) => ({
+					name: `bucket-${String(index + 1).padStart(3, "0")}`,
+					creation_date: "01-01-2001",
+				}));
+				const requests: Array<Record<string, string>> = [];
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/r2/buckets",
+						({ request, params }) => {
+							const query = Object.fromEntries(
+								new URL(request.url).searchParams
+							);
+							requests.push(query);
+							expect(params.accountId).toEqual("some-account-id");
+
+							const buckets =
+								query.start_after === undefined
+									? firstPage
+									: [{ name: "bucket-101", creation_date: "02-01-2001" }];
+							return HttpResponse.json({
+								...createFetchResult({ buckets }),
+								result_info: query.start_after === undefined ? null : {},
+							});
+						}
+					)
+				);
+
+				await runWrangler("r2 bucket list");
+
+				expect(requests).toEqual([
+					{ direction: "asc", order: "name", per_page: "100" },
+					{
+						direction: "asc",
+						order: "name",
+						per_page: "100",
+						start_after: "bucket-100",
+					},
+				]);
+				expect(std.out).toContain("name:           bucket-001");
+				expect(std.out).toContain("name:           bucket-101");
+				expect(std.out.match(/creation_date:/g)).toHaveLength(101);
+			});
+
+			it("reports when SDK pagination does not advance", async ({ expect }) => {
+				const page = Array.from({ length: 100 }, (_, index) => ({
+					name: `bucket-${String(index + 1).padStart(3, "0")}`,
+					creation_date: "01-01-2001",
+				}));
+				let requests = 0;
+				msw.use(
+					http.get("*/accounts/:accountId/r2/buckets", () => {
+						requests++;
+						return HttpResponse.json(createFetchResult({ buckets: page }));
+					})
+				);
+
+				await expect(
+					runWrangler("r2 bucket list")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Unable to list every R2 bucket because API pagination did not advance. Retry the command.]`
+				);
+				expect(requests).toBe(2);
+			});
+
 			it("should list buckets even if the local wrangler config is invalid", async () => {
 				writeWranglerConfig(
 					{
