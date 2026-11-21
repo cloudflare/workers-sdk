@@ -1,5 +1,6 @@
 {
 	"compilerOptions": {
+		"strict": false,
 		"types": ["@cloudflare/workers-types/experimental"],
 		"target": "ES2022",
 		"module": "Preserve",
