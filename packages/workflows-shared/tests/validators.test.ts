@@ -1,5 +1,6 @@
 import { describe, it } from "vitest";
 import {
+	isReservedWorkflowInstanceId,
 	isValidAddressableWorkflowInstanceId,
 	isValidStepConfig,
 	isValidStepName,
@@ -55,6 +56,29 @@ describe("Workflow instance ID validation", () => {
 		"w".repeat(MAX_WORKFLOW_INSTANCE_ID_LENGTH),
 	])("should accept valid IDs", (value, { expect }) => {
 		expect(isValidWorkflowInstanceId(value as string)).toBe(true);
+	});
+});
+
+describe("Reserved Workflow instance ID detection", () => {
+	it.for([
+		"batch",
+		"terminate",
+		"terminateAll",
+		`cf_${"0123456789abcdef".repeat(4)}`,
+	])("should reserve %s", (value, { expect }) => {
+		expect(isReservedWorkflowInstanceId(value)).toBe(true);
+	});
+
+	it.for([
+		"Batch",
+		"batches",
+		"terminate-all",
+		`cf_${"0".repeat(63)}`,
+		`cf_${"0".repeat(65)}`,
+		`cf_${"A".repeat(64)}`,
+		`x_cf_${"0".repeat(64)}`,
+	])("should not reserve %s", (value, { expect }) => {
+		expect(isReservedWorkflowInstanceId(value)).toBe(false);
 	});
 });
 
