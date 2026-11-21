@@ -3,49 +3,28 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
-import { text } from "node:stream/consumers";
-import { Headers, Miniflare, R2_PLUGIN_NAME } from "miniflare";
+import { Headers, Miniflare } from "miniflare";
 import { beforeEach, type ExpectStatic, onTestFinished, test } from "vitest";
 import {
-	MiniflareDurableObjectControlStub,
 	miniflareTest,
 	namespace,
 	singleModuleManifest,
 	useDispose,
 	useTmp,
 } from "../../test-shared";
-import type {
-	MultipartPartRow,
-	ObjectRow,
-} from "../../../src/workers/r2/schemas.worker";
 import type { MiniflareTestContext, Namespaced } from "../../test-shared";
 import type {
 	R2Bucket,
 	R2Conditional,
 	R2ListOptions,
 	R2ObjectBody,
+	R2UploadedPart,
 } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, ReplaceWorkersTypes } from "miniflare";
 
 const WITHIN_EPSILON = 10_000;
-
-function sqlStmts(object: MiniflareDurableObjectControlStub) {
-	return {
-		getObjectByKey: async (key: string): Promise<ObjectRow | undefined> =>
-			(
-				await object.sqlQuery<ObjectRow>(
-					"SELECT * FROM _mf_objects WHERE key = ?",
-					key
-				)
-			)[0],
-		getPartsByUploadId: (uploadId: string) =>
-			object.sqlQuery<MultipartPartRow>(
-				"SELECT * FROM _mf_multipart_parts WHERE upload_id = ? ORDER BY part_number",
-				uploadId
-			),
-	};
-}
 
 function hash(value: string, algorithm = "md5") {
 	return crypto.createHash(algorithm).update(value).digest("hex");
@@ -54,10 +33,15 @@ function hash(value: string, algorithm = "md5") {
 interface Context extends MiniflareTestContext {
 	ns: string;
 	r2: Namespaced<ReplaceWorkersTypes<R2Bucket>>;
-	object: MiniflareDurableObjectControlStub;
 }
 
+// workerd's R2 keeps a file per object and part in
+// `<persist>/r2-workerd/r2/blobs/`.
+const PERSIST = await fs.mkdtemp(path.join(os.tmpdir(), "miniflare-r2-"));
+const BLOBS = path.join(PERSIST, "r2-workerd", "r2", "blobs");
+
 const opts: Partial<MiniflareOptions> = {
+	resourcePersistencePath: PERSIST,
 	workers: [
 		{
 			config: {
@@ -83,18 +67,28 @@ beforeEach(async () => {
 	)}`;
 	ctx.ns = ns;
 	ctx.r2 = namespace(ns, await ctx.mf.getR2Bucket("BUCKET"));
-
-	// Enable fake timers
-	const objectNamespace = await ctx.mf._getInternalDurableObjectNamespace(
-		R2_PLUGIN_NAME,
-		"r2:bucket",
-		"R2BucketObject"
-	);
-	const objectId = objectNamespace.idFromName("bucket");
-	const objectStub = objectNamespace.get(objectId);
-	ctx.object = new MiniflareDurableObjectControlStub(objectStub);
-	await ctx.object.enableFakeTimers(1_000_000);
 });
+
+// Every blob file of every bucket.
+async function chunks(): Promise<Set<string>> {
+	return new Set(await fs.readdir(BLOBS).catch(() => []));
+}
+
+// The chunk files `f` writes.
+async function written(f: () => Promise<unknown>): Promise<string[]> {
+	const before = await chunks();
+	await f();
+	const after = [...(await chunks())].filter((c) => !before.has(c));
+	assert(after.length > 0, "no chunks written");
+	return after;
+}
+
+// Expects `files` gone: workerd's R2 deletes an object's or part's file
+// with it.
+async function expectCollected(expect: ExpectStatic, files: string[]) {
+	const after = await chunks();
+	expect(files.filter((f) => after.has(f))).toEqual([]);
+}
 
 async function testValidatesKey(
 	expect: ExpectStatic,
@@ -415,20 +409,17 @@ test("put: puts empty value", async ({ expect }) => {
 	expect(await objectBody?.text()).toBe("");
 });
 test("put: overrides existing keys", async ({ expect }) => {
-	const { r2, ns, object } = ctx;
-	await r2.put("key", "value1");
-	const stmts = sqlStmts(object);
-	const objectRow = await stmts.getObjectByKey(`${ns}key`);
-	assert(objectRow?.blob_id != null);
+	const { r2 } = ctx;
+	const value2 = "value2";
+	const files = await written(() => r2.put("key", "value1"));
 
-	await r2.put("key", "value2");
+	await r2.put("key", value2);
 	const body = await r2.get("key");
 	assert(body !== null);
-	expect(await body.text()).toBe("value2");
+	expect(await body.text()).toBe(value2);
 
 	// Check deletes old blob
-	await object.waitForFakeTasks();
-	expect(await object.getBlob(objectRow.blob_id)).toBe(null);
+	await expectCollected(expect, files);
 });
 test("put: validates key", async ({ expect }) => {
 	await testValidatesKey(expect, {
@@ -628,22 +619,18 @@ test("put: can copy values", async ({ expect }) => {
 });
 
 test("delete: deletes existing keys", async ({ expect }) => {
-	const { r2, ns, object } = ctx;
+	const { r2 } = ctx;
 
 	// Check does nothing with non-existent key
 	await r2.delete("key");
 
 	// Check deletes single key
-	await r2.put("key", "value");
-	const stmts = sqlStmts(object);
-	const objectRow = await stmts.getObjectByKey(`${ns}key`);
-	assert(objectRow?.blob_id != null);
+	const files = await written(() => r2.put("key", "value"));
 	expect(await r2.head("key")).not.toBe(null);
 	await r2.delete("key");
 	expect(await r2.head("key")).toBe(null);
 	// Check deletes old blob
-	await object.waitForFakeTasks();
-	expect(await object.getBlob(objectRow.blob_id)).toBe(null);
+	await expectCollected(expect, files);
 
 	// Check deletes multiple keys, skipping non-existent keys
 	await r2.put("key1", "value1");
@@ -1066,9 +1053,9 @@ test("operations persist stored data", async ({ expect }) => {
 	let object = await r2.head("key");
 	expect(object?.size).toBe(5);
 
-	// Check directory created for namespace under the plugin subdirectory
-	const names = await fs.readdir(path.join(tmp, R2_PLUGIN_NAME));
-	expect(names.includes("miniflare-R2BucketObject")).toBe(true);
+	// Check the store created under the plugin subdirectory
+	const names = await fs.readdir(path.join(tmp, "r2-workerd", "r2"));
+	expect(names.includes("objects")).toBe(true);
 
 	// Check "restarting" keeps persisted data
 	await mf.dispose();
@@ -1128,6 +1115,18 @@ test("operations permit strange bucket names", async ({ expect }) => {
 // Multipart tests
 const PART_SIZE = 50;
 
+// An upload of key "key" with parts 1-3 of PART_SIZE, and their chunk files.
+async function threeParts(r2: Namespaced<ReplaceWorkersTypes<R2Bucket>>) {
+	const upload = await r2.createMultipartUpload("key");
+	const parts: R2UploadedPart[] = [];
+	const files = await written(async () => {
+		for (const n of [1, 2, 3]) {
+			parts.push(await upload.uploadPart(n, String(n).repeat(PART_SIZE)));
+		}
+	});
+	return { upload, parts, files };
+}
+
 test("createMultipartUpload", async ({ expect }) => {
 	const { r2, ns } = ctx;
 
@@ -1169,10 +1168,11 @@ test("createMultipartUpload: validates metadata size", async ({ expect }) => {
 	);
 });
 test("uploadPart", async ({ expect }) => {
-	const { r2, object } = ctx;
+	const { r2 } = ctx;
 
 	// Check uploads parts
 	const upload = await r2.createMultipartUpload("key");
+	const before = await chunks();
 	const part1 = await upload.uploadPart(1, "value1");
 	expect(part1.partNumber).toBe(1);
 	expect(part1.etag).not.toBe("");
@@ -1180,29 +1180,24 @@ test("uploadPart", async ({ expect }) => {
 	expect(part2.partNumber).toBe(2);
 	expect(part2.etag).not.toBe("");
 	expect(part2.etag).not.toBe(part1.etag);
-	const stmts = sqlStmts(object);
-	const partRows = await stmts.getPartsByUploadId(upload.uploadId);
-	expect(partRows.length).toBe(2);
-	expect(partRows[0].part_number).toBe(1);
-	expect(partRows[0].size).toBe(6);
-	expect(partRows[1].part_number).toBe(2);
-	expect(partRows[1].size).toBe(9);
-	const value1 = await object.getBlob(partRows[0].blob_id);
-	assert(value1 !== null);
-	expect(await text(value1)).toBe("value1");
-	const value2 = await object.getBlob(partRows[1].blob_id);
-	assert(value2 !== null);
-	expect(await text(value2)).toBe("value two");
+	// Each part is a chunk file holding its value
+	const files = [...(await chunks())].filter((c) => !before.has(c));
+	const values = await Promise.all(
+		files.map((f) => fs.readFile(path.join(BLOBS, f), "utf8"))
+	);
+	expect(values.sort()).toEqual(["value two", "value1"]);
 
-	// Check upload part with same part number and same value
+	// Check upload part with same part number and same value. A part's etag
+	// is the store's, its bytes' MD5, so the same bytes have the same etag;
+	// the simulator's was random.
 	const part1b = await upload.uploadPart(1, "value1");
 	expect(part1b.partNumber).toBe(1);
-	expect(part1b.etag).not.toBe(part1.etag);
+	expect(part1b.etag).toBe(part1.etag);
 
 	// Check upload part with different part number but same value
 	const part100 = await upload.uploadPart(100, "value1");
 	expect(part100.partNumber).toBe(100);
-	expect(part100.etag).not.toBe(part1.etag);
+	expect(part100.etag).toBe(part1.etag);
 
 	// Check validates key and uploadId
 	let nonExistentUpload = r2.resumeMultipartUpload("key", "bad");
@@ -1223,24 +1218,18 @@ test("uploadPart", async ({ expect }) => {
 	);
 });
 test("abortMultipartUpload", async ({ expect }) => {
-	const { r2, object } = ctx;
+	const { r2 } = ctx;
 
 	// Check deletes upload and all parts for corresponding upload
 	const upload1 = await r2.createMultipartUpload("key");
 	const upload2 = await r2.createMultipartUpload("key");
-	await upload1.uploadPart(1, "value1");
-	await upload1.uploadPart(2, "value2");
-	await upload1.uploadPart(3, "value3");
-	const stmts = sqlStmts(object);
-	const parts = await stmts.getPartsByUploadId(upload1.uploadId);
-	expect(parts.length).toBe(3);
+	const files = await written(async () => {
+		await upload1.uploadPart(1, "value1");
+		await upload1.uploadPart(2, "value2");
+		await upload1.uploadPart(3, "value3");
+	});
+	expect(files.length).toBe(3);
 	await upload1.abort();
-	expect((await stmts.getPartsByUploadId(upload1.uploadId)).length).toBe(0);
-	// Check blobs deleted
-	await object.waitForFakeTasks();
-	for (const part of parts) {
-		expect(await object.getBlob(part.blob_id)).toBe(null);
-	}
 
 	// Check cannot upload after abort
 	await expect(upload1.uploadPart(4, "value4")).rejects.toThrow(
@@ -1260,28 +1249,24 @@ test("abortMultipartUpload", async ({ expect }) => {
 
 	// Check validates key and uploadId
 	const upload3 = await r2.createMultipartUpload("key");
-	// Note this is internalErrorExpectations, not doesNotExistExpectations
+	// An upload the store doesn't know aborts, as a finished one does; the
+	// simulator refused it with an internal error.
 	let nonExistentUpload = r2.resumeMultipartUpload("key", "bad");
-	await expect(nonExistentUpload.abort()).rejects.toThrow(
-		new Error(
-			`abortMultipartUpload: We encountered an internal error. Please try again. (10001)`
-		)
-	);
+	await nonExistentUpload.abort();
 	nonExistentUpload = r2.resumeMultipartUpload("bad", upload3.uploadId);
-	await expect(nonExistentUpload.abort()).rejects.toThrow(
-		new Error(
-			"abortMultipartUpload: We encountered an internal error. Please try again. (10001)"
-		)
-	);
+	await nonExistentUpload.abort();
 	nonExistentUpload = r2.resumeMultipartUpload("x".repeat(1025), "bad");
 	await expect(nonExistentUpload.abort()).rejects.toThrow(
 		new Error(
 			"abortMultipartUpload: The specified object name is not valid. (10020)"
 		)
 	);
+
+	// Check blobs deleted. Last: a collection also forgets finished uploads.
+	await expectCollected(expect, files);
 });
 test("completeMultipartUpload", async ({ expect }) => {
-	const { r2, ns, object: objectStub } = ctx;
+	const { r2, ns } = ctx;
 
 	// Check creates regular key with correct metadata, and returns object
 	const upload1 = await r2.createMultipartUpload("key", {
@@ -1289,9 +1274,12 @@ test("completeMultipartUpload", async ({ expect }) => {
 		httpMetadata: { contentType: "text/plain" },
 	});
 	const upload2 = await r2.createMultipartUpload("key");
-	let part1 = await upload1.uploadPart(1, "1".repeat(PART_SIZE));
-	let part2 = await upload1.uploadPart(2, "2".repeat(PART_SIZE));
-	let part3 = await upload1.uploadPart(3, "3");
+	let part1!: R2UploadedPart, part2!: R2UploadedPart, part3!: R2UploadedPart;
+	const files = await written(async () => {
+		part1 = await upload1.uploadPart(1, "1".repeat(PART_SIZE));
+		part2 = await upload1.uploadPart(2, "2".repeat(PART_SIZE));
+		part3 = await upload1.uploadPart(3, "3");
+	});
 	let object = await upload1.complete([part1, part2, part3]);
 	expect(object.key).toBe(`${ns}key`);
 	expect(object.version).not.toBe("");
@@ -1307,9 +1295,7 @@ test("completeMultipartUpload", async ({ expect }) => {
 		`${"1".repeat(PART_SIZE)}${"2".repeat(PART_SIZE)}3`
 	);
 
-	const stmts = sqlStmts(objectStub);
-	const parts = await stmts.getPartsByUploadId(upload1.uploadId);
-	expect(parts.length).toBe(3);
+	expect(files.length).toBe(3);
 
 	// Check requires all but last part to be greater than 5MB
 	part1 = await upload2.uploadPart(1, "1");
@@ -1325,29 +1311,24 @@ test("completeMultipartUpload", async ({ expect }) => {
 	object = await upload2.complete([part1]);
 	expect(object.size).toBe(1);
 	expect(object.etag).toBe("46d1741e8075da4ac72c71d8130fcb71-1");
-	// Check previous multipart uploads blobs deleted
-	await objectStub.waitForFakeTasks();
-	for (const part of parts) {
-		expect(await objectStub.getBlob(part.blob_id)).toBe(null);
-	}
-
-	// Check completing multiple uploads overrides existing, deleting all parts
-	expect((await stmts.getPartsByUploadId(upload1.uploadId)).length).toBe(0);
-	expect((await stmts.getPartsByUploadId(upload2.uploadId)).length).toBe(1);
+	// Check previous multipart uploads blobs deleted, and completing multiple
+	// uploads overrides existing, deleting all parts
+	await expectCollected(expect, files);
 	objectBody = await r2.get("key");
 	expect(await objectBody?.text()).toBe("1");
 
 	// Check completing with overridden part
 	const upload3 = await r2.createMultipartUpload("key");
+	// The same bytes re-uploaded have the same etag (see uploadPart), so
+	// the first upload's etag names the second.
 	let part1a = await upload3.uploadPart(1, "value");
 	let part1b = await upload3.uploadPart(1, "value");
 	expect(part1a.partNumber).toBe(part1b.partNumber);
-	expect(part1a.etag).not.toBe(part1b.etag);
+	expect(part1a.etag).toBe(part1b.etag);
 	const notFoundError = new Error(
 		"completeMultipartUpload: One or more of the specified parts could not be found. (10025)"
 	);
-	await expect(upload3.complete([part1a])).rejects.toThrow(notFoundError);
-	object = await upload3.complete([part1b]);
+	object = await upload3.complete([part1a]);
 	expect(object.size).toBe(5);
 
 	// Check completing with multiple parts of same part number
@@ -1410,7 +1391,8 @@ test("completeMultipartUpload", async ({ expect }) => {
 	const upload7 = await r2.createMultipartUpload("key");
 	object = await upload7.complete([]);
 	expect(object.size).toBe(0);
-	expect(object.etag).toBe("d41d8cd98f00b204e9800998ecf8427e-0");
+	// No parts is a plain empty object, its etag the bare MD5.
+	expect(object.etag).toBe("d41d8cd98f00b204e9800998ecf8427e");
 	objectBody = await r2.get("key");
 	expect(await objectBody?.text()).toBe("");
 
@@ -1578,72 +1560,44 @@ test("get: is multipart aware", async ({ expect }) => {
 	);
 });
 test("put: is multipart aware", async ({ expect }) => {
-	const { r2, object: objectStub } = ctx;
+	const { r2 } = ctx;
 
 	// Check doesn't overwrite parts for in-progress multipart upload
-	const upload = await r2.createMultipartUpload("key");
-	const part1 = await upload.uploadPart(1, "1".repeat(PART_SIZE));
-	const part2 = await upload.uploadPart(2, "2".repeat(PART_SIZE));
-	const part3 = await upload.uploadPart(3, "3".repeat(PART_SIZE));
+	const { upload, parts, files } = await threeParts(r2);
 	await r2.put("key", "value");
 
-	const stmts = sqlStmts(objectStub);
-	expect((await stmts.getPartsByUploadId(upload.uploadId)).length).toBe(3);
-
-	const object = await upload.complete([part1, part2, part3]);
+	const object = await upload.complete(parts);
 	expect(object.size).toBe(3 * PART_SIZE);
-	const parts = await stmts.getPartsByUploadId(upload.uploadId);
-	expect(parts.length).toBe(3);
 
-	// Check overwrites all multipart parts of completed upload
+	// Check overwrites all multipart parts of completed upload, deleting all
+	// previous blobs
 	await r2.put("key", "new-value");
-	expect((await stmts.getPartsByUploadId(upload.uploadId)).length).toBe(0);
-	// Check deletes all previous blobs
-	await objectStub.waitForFakeTasks();
-	for (const part of parts) {
-		expect(await objectStub.getBlob(part.blob_id)).toBe(null);
-	}
+	await expectCollected(expect, files);
 });
 test("delete: is multipart aware", async ({ expect }) => {
-	const { r2, object: objectStub } = ctx;
+	const { r2 } = ctx;
 
 	// Check doesn't remove parts for in-progress multipart upload
-	const upload = await r2.createMultipartUpload("key");
-	const part1 = await upload.uploadPart(1, "1".repeat(PART_SIZE));
-	const part2 = await upload.uploadPart(2, "2".repeat(PART_SIZE));
-	const part3 = await upload.uploadPart(3, "3".repeat(PART_SIZE));
+	const { upload, parts, files } = await threeParts(r2);
 	await r2.delete("key");
 
-	// Check removes all multipart parts of completed upload
-	const object = await upload.complete([part1, part2, part3]);
+	// Check removes all multipart parts of completed upload, deleting all
+	// previous blobs
+	const object = await upload.complete(parts);
 	expect(object.size).toBe(3 * PART_SIZE);
-	const stmts = sqlStmts(objectStub);
-	const parts = await stmts.getPartsByUploadId(upload.uploadId);
-	expect(parts.length).toBe(3);
 	await r2.delete("key");
-	expect((await stmts.getPartsByUploadId(upload.uploadId)).length).toBe(0);
-	// Check deletes all previous blobs
-	await objectStub.waitForFakeTasks();
-	for (const part of parts) {
-		expect(await objectStub.getBlob(part.blob_id)).toBe(null);
-	}
+	await expectCollected(expect, files);
 });
 test("delete: waits for in-progress multipart gets before deleting part blobs", async ({
 	expect,
 }) => {
-	const { r2, object: objectStub } = ctx;
+	const { r2 } = ctx;
 
-	const upload = await r2.createMultipartUpload("key");
-	const part1 = await upload.uploadPart(1, "1".repeat(PART_SIZE));
-	const part2 = await upload.uploadPart(2, "2".repeat(PART_SIZE));
-	const part3 = await upload.uploadPart(3, "3".repeat(PART_SIZE));
-	await upload.complete([part1, part2, part3]);
+	const { upload, parts, files } = await threeParts(r2);
+	await upload.complete(parts);
 
 	const objectBody1 = await r2.get("key");
 	const objectBody2 = await r2.get("key", { range: { offset: PART_SIZE } });
-	const stmts = sqlStmts(objectStub);
-	const parts = await stmts.getPartsByUploadId(upload.uploadId);
-	expect(parts.length).toBe(3);
 	await r2.delete("key");
 	expect(await objectBody1?.text()).toBe(
 		`${"1".repeat(PART_SIZE)}${"2".repeat(PART_SIZE)}${"3".repeat(PART_SIZE)}`
@@ -1652,10 +1606,7 @@ test("delete: waits for in-progress multipart gets before deleting part blobs", 
 		`${"2".repeat(PART_SIZE)}${"3".repeat(PART_SIZE)}`
 	);
 
-	await objectStub.waitForFakeTasks();
-	for (const part of parts) {
-		expect(await objectStub.getBlob(part.blob_id)).toBe(null);
-	}
+	await expectCollected(expect, files);
 });
 test("list: is multipart aware", async ({ expect }) => {
 	const { r2, ns } = ctx;

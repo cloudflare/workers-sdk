@@ -1643,17 +1643,14 @@ test("multipart error cases", async ({ expect }) => {
 		expect
 	);
 
-	await expectSdkError(
-		client.send(
-			new AbortMultipartUploadCommand({
-				Bucket: "bucket",
-				Key: "mp/err.bin",
-				UploadId: "bogus",
-			})
-		),
-		404,
-		"NoSuchUpload",
-		expect
+	// An upload the store doesn't know aborts: workerd's R2 cannot tell it
+	// from a finished one.
+	await client.send(
+		new AbortMultipartUploadCommand({
+			Bucket: "bucket",
+			Key: "mp/err.bin",
+			UploadId: "bogus",
+		})
 	);
 
 	const create = await client.send(

@@ -697,8 +697,8 @@ function buildProxyBinding(
 	}
 	return proxyBinding;
 }
-// Gets an array of proxy bindings for internal Durable Objects, only used in
-// testing for accessing internal methods
+// Gets an array of proxy bindings for internal services and their Durable
+// Objects, only used in testing for accessing internal methods
 function getInternalDurableObjectProxyBindings(
 	plugin: string,
 	service: Service
@@ -709,13 +709,20 @@ function getInternalDurableObjectProxyBindings(
 	assert(service.worker !== undefined);
 	const serviceName = service.name;
 	assert(serviceName !== undefined);
-	return service.worker.durableObjectNamespaces?.map(({ className }) => {
-		assert(className !== undefined);
-		return {
-			name: getProxyBindingName(`${plugin}-internal`, serviceName, className),
-			durableObjectNamespace: { serviceName, className },
-		};
-	});
+	const fetcher = {
+		name: getProxyBindingName(`${plugin}-internal`, serviceName, "fetch"),
+		service: { name: serviceName },
+	};
+	const objects = (service.worker.durableObjectNamespaces ?? []).map(
+		({ className }) => {
+			assert(className !== undefined);
+			return {
+				name: getProxyBindingName(`${plugin}-internal`, serviceName, className),
+				durableObjectNamespace: { serviceName, className },
+			};
+		}
+	);
+	return [fetcher, ...objects];
 }
 
 type StoppableServer = http.Server & stoppable.WithStop;
@@ -3928,6 +3935,14 @@ export class Miniflare {
 			);
 		}
 		return this.#getProxy(`${pluginName}-internal`, className, serviceName);
+	}
+
+	/** @internal */
+	async _getInternalFetcher(
+		pluginName: string,
+		serviceName: string
+	): Promise<ReplaceWorkersTypes<Fetcher>> {
+		return this.#getProxy(`${pluginName}-internal`, "fetch", serviceName);
 	}
 
 	get #mergedPluginEntries() {

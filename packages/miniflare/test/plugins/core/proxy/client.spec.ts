@@ -671,7 +671,7 @@ describe("ProxyClient", () => {
 			key: "key",
 			size: 5,
 			uploaded: object.uploaded.toISOString(),
-			storageClass: "",
+			storageClass: "Standard",
 			version: object.version,
 		});
 	});
