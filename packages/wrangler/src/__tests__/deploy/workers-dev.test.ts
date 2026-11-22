@@ -1193,6 +1193,60 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
+			// https://github.com/cloudflare/workers-sdk/issues/17069
+			it("deploys a new Worker when the Worker resource briefly reports it does not exist after upload", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockWorkerDoesNotExist();
+				mockSubDomainRequest("test-sub-domain");
+				// Registers the Worker resource read, and the subdomain update, that
+				// follow every upload.
+				mockUploadWorkerRequest({ useOldUploadApi: true });
+
+				let workerResourceReads = 0;
+				msw.use(
+					// Right after the first upload of a new Worker, the Worker resource
+					// can still answer "not found", although the upload succeeded.
+					http.get(
+						"*/accounts/:accountId/workers/workers/:scriptName",
+						() => {
+							workerResourceReads++;
+							return HttpResponse.json(
+								createFetchResult(null, false, [
+									{
+										code: 10007,
+										message: "This Worker does not exist on your account.",
+									},
+								]),
+								{ status: 404 }
+							);
+						},
+						{ once: true }
+					),
+					// The Worker's subdomain settings are also readable from the
+					// scripts endpoint, which already sees the new Worker.
+					http.get(
+						"*/accounts/:accountId/workers/scripts/:scriptName/subdomain",
+						() =>
+							HttpResponse.json(
+								createFetchResult({ enabled: false, previews_enabled: false })
+							)
+					)
+				);
+
+				await runWrangler("deploy ./index");
+
+				expect(workerResourceReads).toBe(1);
+				expect(std.out).toContain("Uploaded test-name");
+				expect(std.out).toContain(
+					"https://test-name.test-sub-domain.workers.dev"
+				);
+				expect(std.out).toContain("Current Version ID: Galaxy-Class");
+				expect(std.err).toBe("");
+			});
+
 			it("uploads a new Worker when granular auth prevents the account subdomain lookup", async ({
 				expect,
 			}) => {
