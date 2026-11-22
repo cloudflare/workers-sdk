@@ -633,14 +633,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "solid",
-			quarantine: true,
-			promptHandlers: [
-				{
-					matcher: /Which template would you like to use/,
-					input: [keys.enter],
-				},
-			],
-			flags: ["--ts"],
+			flags: ["--ts", "--v2", "--template", "basic"],
 			extraEnv: {
 				BEGIT_GH_API_KEY: process.env.GITHUB_TOKEN,
 			},
@@ -1006,14 +999,7 @@ function getExperimentalFrameworkTestConfig(
 		},
 		{
 			name: "solid",
-			quarantine: true,
-			promptHandlers: [
-				{
-					matcher: /Which template would you like to use/,
-					input: [keys.enter],
-				},
-			],
-			flags: ["--ts"],
+			flags: ["--ts", "--v2", "--template", "basic"],
 			extraEnv: {
 				BEGIT_GH_API_KEY: process.env.GITHUB_TOKEN,
 			},
