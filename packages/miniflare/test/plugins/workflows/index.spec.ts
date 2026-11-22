@@ -37,23 +37,23 @@ export class MyWorkflow extends WorkflowEntrypoint {
 const COMPLETE_STATUS =
 	'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}';
 
-// Requests WORKFLOW_SCRIPT until the instance it creates reports that it is complete. The first
-// request returns the status as soon as the instance is created, when the Workflow may still be
-// running.
-async function waitForWorkflowComplete(mf: Miniflare, timeoutMs = 2000) {
+// Requests WORKFLOW_SCRIPT until the instance it creates reports that it is complete, or until
+// `timeoutMs` passes, and returns the last status. The first request returns the status as soon as
+// the instance is created, when the Workflow may still be running. The timeout starts once
+// Miniflare is ready, so a slow startup doesn't use it up.
+async function pollWorkflowStatus(mf: Miniflare, timeoutMs = 2000) {
+	await mf.ready;
 	const begin = performance.now();
 	let status = "";
 	while (performance.now() - begin < timeoutMs) {
 		const res = await mf.dispatchFetch("http://localhost");
 		status = await res.text();
 		if (status === COMPLETE_STATUS) {
-			return;
+			break;
 		}
 		await scheduler.wait(50);
 	}
-	throw new Error(
-		`Workflow did not complete in ${timeoutMs}ms. Last status: ${status}`
-	);
+	return status;
 }
 
 test("starts Workflows with user-provided experimental compatibility flag", async ({
@@ -87,7 +87,7 @@ test("starts Workflows with user-provided experimental compatibility flag", asyn
 	});
 	useDispose(mf);
 
-	await waitForWorkflowComplete(mf);
+	expect(await pollWorkflowStatus(mf)).toBe(COMPLETE_STATUS);
 });
 
 test("subscribes to Workflow instance events through an RPC target", async ({
@@ -282,7 +282,7 @@ test("persists Workflow data on file-system between runs", async ({
 	const mf = new Miniflare(opts);
 	useDispose(mf);
 
-	await waitForWorkflowComplete(mf);
+	expect(await pollWorkflowStatus(mf)).toBe(COMPLETE_STATUS);
 
 	// check if files were committed under the plugin subdirectory
 	const names = await fs.readdir(path.join(tmp, WORKFLOWS_PLUGIN_NAME));
