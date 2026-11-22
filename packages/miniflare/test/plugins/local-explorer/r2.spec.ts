@@ -178,6 +178,40 @@ describe("R2 API", () => {
 			);
 			expect(data.result?.map((object) => object.key)).toEqual(["second"]);
 		});
+
+		test("paginates objects after start_after", async ({ expect }) => {
+			for (const key of ["a", "b", "c", "d"]) {
+				const putResponse = await dispatchFetchWithRetry(
+					mf,
+					`${BASE_URL}/r2/buckets/start-after-pagination-bucket/objects/${key}`,
+					{ method: "PUT", body: key }
+				);
+				expect(putResponse.status).toBe(200);
+				await putResponse.arrayBuffer();
+			}
+
+			const firstPage = await expectValidResponse(
+				await mf.dispatchFetch(
+					`${BASE_URL}/r2/buckets/start-after-pagination-bucket/objects?start_after=a&per_page=2`
+				),
+				zR2BucketListObjectsResponse,
+				expect
+			);
+			expect(firstPage.result?.map((object) => object.key)).toEqual(["b", "c"]);
+			expect(firstPage.result_info?.is_truncated).toBe("true");
+			const cursor = firstPage.result_info?.cursor;
+			expect(cursor).toBeDefined();
+
+			const secondPage = await expectValidResponse(
+				await mf.dispatchFetch(
+					`${BASE_URL}/r2/buckets/start-after-pagination-bucket/objects?start_after=a&per_page=2&cursor=${encodeURIComponent(cursor ?? "")}`
+				),
+				zR2BucketListObjectsResponse,
+				expect
+			);
+			expect(secondPage.result?.map((object) => object.key)).toEqual(["d"]);
+			expect(secondPage.result_info?.is_truncated).toBe("false");
+		});
 	});
 
 	describe("GET /r2/buckets/:bucket_name/objects/:object_key", () => {
