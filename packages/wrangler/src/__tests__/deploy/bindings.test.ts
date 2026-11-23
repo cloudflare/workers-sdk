@@ -27,6 +27,7 @@ import {
 	mockDeploymentsListRequest,
 	mockLastDeploymentRequest,
 	mockPatchScriptSettings,
+	mockServiceScriptData,
 } from "./helpers";
 import type { Mock } from "vitest";
 
@@ -2284,6 +2285,88 @@ describe("deploy", () => {
 				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+		});
+
+		describe("[oidc_tokens]", () => {
+			it("should upload OIDC token bindings and print the issuer and subject from the new Worker's tag", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					oidc_tokens: [
+						{ binding: "API_TOKEN", audience: "https://api.example.com" },
+					],
+				});
+				writeWorkerSource();
+				mockServiceScriptData({});
+				// A new Worker checks the subdomain before the upload and again after it.
+				mockSubDomainRequest("test-sub-domain", true, false);
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							name: "API_TOKEN",
+							type: "oidc_token",
+							audience: "https://api.example.com",
+						},
+					],
+					useOldUploadApi: true,
+				});
+
+				await runWrangler("deploy index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your Worker has access to the following bindings:
+					Binding                                      Resource
+					env.API_TOKEN (https://api.example.com)      OIDC Token
+
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					OIDC tokens for this Worker:
+					  Issuer:  https://oidc.cloudflare.com/accounts/some-account-id
+					  Subject: worker:sample-tag
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should print the subject from an existing Worker's tag", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					oidc_tokens: [
+						{ binding: "API_TOKEN", audience: "https://api.example.com" },
+					],
+				});
+				writeWorkerSource();
+				mockServiceScriptData({
+					scriptName: "test-name",
+					script: { id: "test-name", tag: "abc123" },
+				});
+				mockSubDomainRequest();
+				mockUploadWorkerRequest();
+
+				await runWrangler("deploy index.js");
+				expect(std.out).toContain(
+					"OIDC tokens for this Worker:\n  Issuer:  https://oidc.cloudflare.com/accounts/some-account-id\n  Subject: worker:abc123"
+				);
+			});
+
+			it("should not print OIDC token details without the binding", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest();
+
+				await runWrangler("deploy index.js");
+				expect(std.out).not.toContain("OIDC");
 			});
 		});
 
