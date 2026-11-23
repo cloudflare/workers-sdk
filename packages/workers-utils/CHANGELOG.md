@@ -1,5 +1,23 @@
 # @cloudflare/workers-utils
 
+## 0.57.0
+
+### Minor Changes
+
+- [#16879](https://github.com/cloudflare/workers-sdk/pull/16879) [`5970e6a`](https://github.com/cloudflare/workers-sdk/commit/5970e6a842b36665ab092f54ae276d34b02e3a29) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `readD1Migrations()` and `applyD1Migrations()` for reading and applying D1 migrations
+
+  These move from the Vitest plugin so other tools apply migrations the same way. `readD1Migrations()` is available from the main entry point and throws when the migrations directory is missing. `applyD1Migrations()` is available from the `apply-d1-migrations` entry point, which has no Node.js imports so it runs inside workerd, and it also accepts the D1 binding from Miniflare's `getD1Database()`.
+
+### Patch Changes
+
+- [#17070](https://github.com/cloudflare/workers-sdk/pull/17070) [`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17078](https://github.com/cloudflare/workers-sdk/pull/17078) [`b007991`](https://github.com/cloudflare/workers-sdk/commit/b00799168dc2580013ea3c9b7d4f4505e120afa2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Recover from missing Worker scripts after an interrupted first deploy
+
+  When the Workers API returns a service without a script, `wrangler deploy` uses the first-deploy flow instead of crashing. `wrangler versions upload` tells you to run `wrangler deploy` first.
+
 ## 0.56.0
 
 ### Minor Changes

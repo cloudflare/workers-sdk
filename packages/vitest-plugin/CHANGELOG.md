@@ -1,5 +1,24 @@
 # @cloudflare/vitest-plugin
 
+## 1.9.1
+
+### Patch Changes
+
+- [#17070](https://github.com/cloudflare/workers-sdk/pull/17070) [`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16879](https://github.com/cloudflare/workers-sdk/pull/16879) [`5970e6a`](https://github.com/cloudflare/workers-sdk/commit/5970e6a842b36665ab092f54ae276d34b02e3a29) Thanks [@edmundhung](https://github.com/edmundhung)! - Throw from `readD1Migrations()` when the migrations directory doesn't exist
+
+  Passing options with a missing `migrationsDir` used to return no migrations, so a typo silently applied nothing. It now throws "No migrations present at …", as Wrangler does. Passing a directory path that doesn't exist throws the same error. A migrations directory that can't be read now also throws when you pass options, and both forms name the directory in the error.
+
+- [#17108](https://github.com/cloudflare/workers-sdk/pull/17108) [`65f6f33`](https://github.com/cloudflare/workers-sdk/commit/65f6f33eaad8a4712f915d884bfb4c04a862c516) Thanks [@Hebilicious](https://github.com/Hebilicious)! - Resolve the runner's `vitest/worker` import from the plugin, not from the project root
+
+  The runner is a virtual module, `/index.mjs`, so Vite resolved its `vitest/worker` import from the project root. When the root could not resolve `vitest`, as in a pnpm workspace whose root package does not depend on it, no test file ran and Workers threw `No such module "vitest/worker"`. When a parent directory had another `vitest` version, the runner loaded that version and Vitest failed to find the runner. The plugin now resolves `vitest/worker` from its own package, so the runner uses the same Vitest as the pool.
+
+- Updated dependencies [[`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef), [`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef), [`7afc49c`](https://github.com/cloudflare/workers-sdk/commit/7afc49c652d8be84e4f7a6d3673145340e37a685), [`086706d`](https://github.com/cloudflare/workers-sdk/commit/086706dfec2238540e8170d69fd9481c547f306d), [`5b45f32`](https://github.com/cloudflare/workers-sdk/commit/5b45f32b75e40540f6be934978e48b2cd816ed42), [`00413bb`](https://github.com/cloudflare/workers-sdk/commit/00413bbb0decc8d3282a7bc5259d629614e66876), [`5bc7dba`](https://github.com/cloudflare/workers-sdk/commit/5bc7dba8e4d2b9254b48d3c4d3ef2df23a918637), [`086706d`](https://github.com/cloudflare/workers-sdk/commit/086706dfec2238540e8170d69fd9481c547f306d)]:
+  - miniflare@5.20261123.0-beta
+
 ## 1.9.0
 
 ### Minor Changes

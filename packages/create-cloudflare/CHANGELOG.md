@@ -1,5 +1,53 @@
 # create-cloudflare
 
+## 2.75.1
+
+### Patch Changes
+
+- [#17114](https://github.com/cloudflare/workers-sdk/pull/17114) [`6564a0c`](https://github.com/cloudflare/workers-sdk/commit/6564a0cbbf9167e6617f1121ffa826d7e3ff35da) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-solid | 0.12.0 | 0.13.0 |
+
+- [#17115](https://github.com/cloudflare/workers-sdk/pull/17115) [`2180512`](https://github.com/cloudflare/workers-sdk/commit/2180512b16b7edc4b023cd16e518a78c960a56d0) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.694 | 0.0.695 |
+
+- [#17116](https://github.com/cloudflare/workers-sdk/pull/17116) [`0db5742`](https://github.com/cloudflare/workers-sdk/commit/0db57427a9eb8f148f43360ce77735917fffca82) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 22.2.7 | 22.3.0 |
+
+- [#17117](https://github.com/cloudflare/workers-sdk/pull/17117) [`beac369`](https://github.com/cloudflare/workers-sdk/commit/beac369fe43905d6b2839a5d67080039b74f0a7e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 8.5.1 | 8.5.2 |
+
+- [#17118](https://github.com/cloudflare/workers-sdk/pull/17118) [`97ed185`](https://github.com/cloudflare/workers-sdk/commit/97ed1852ddaf9893b8b0fd01e4bb3751ef5df130) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To    |
+  | ---------- | ----- | ----- |
+  | sv         | 1.3.0 | 1.7.0 |
+
+- [#17070](https://github.com/cloudflare/workers-sdk/pull/17070) [`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
 ## 2.75.0
 
 ### Minor Changes
