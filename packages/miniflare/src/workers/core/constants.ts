@@ -173,6 +173,16 @@ export function isFetcherFetch(targetName: string, key: string) {
 		key === "fetch"
 	);
 }
+// `DevControl` RPC calls wait on Durable Object work (e.g. eviction waits for
+// `waitUntil()` promises), which may in turn be waiting on Node.js (service
+// bindings, outbound handlers). They must be async: blocking the Node.js event
+// loop with `Atomics.wait()` would deadlock until workerd times out.
+export function isDevControlCall(targetName: string, key: string) {
+	return (
+		targetName === "Fetcher" &&
+		(key === "evictDurableObject" || key === "execDurableObjectSql")
+	);
+}
 // `R2Object#writeHttpMetadata()` is one of the few functions that mutates its
 // arguments. This would be proxied correctly if the argument were a native
 // target proxy itself, but `Headers` can be constructed in Node. Instead, we
