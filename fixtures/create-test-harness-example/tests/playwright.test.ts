@@ -30,7 +30,7 @@ const test = base.extend<TestFixtures, WorkerFixtures>({
 		async ({}, use) => {
 			const server = createTestHarness({
 				workers: [
-					// Playwright tests run against the same build output as Vitest.
+					// Runs the Build Output in each project directory
 					{ projectDir: "./workers/web" },
 					{ projectDir: "./workers/api" },
 				],
