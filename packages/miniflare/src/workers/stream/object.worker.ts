@@ -269,6 +269,30 @@ export class StreamObject extends DurableObject<Env> {
 		return all(this.#stmts.listCaptionsByVideo({ video_id: videoId }));
 	}
 
+	async getCaptionFile(
+		videoId: string,
+		language: string
+	): Promise<ReadableStream<Uint8Array>> {
+		const video = get(this.#stmts.getVideo({ id: videoId }));
+		if (video === undefined) {
+			throw new NotFoundError(`Video not found: ${videoId}`);
+		}
+		const row = get(this.#stmts.getCaption({ video_id: videoId, language }));
+		if (row === undefined) {
+			throw new NotFoundError(`Caption not found: ${videoId}/${language}`);
+		}
+		// Generated captions have no content in local mode, so return an empty
+		// WebVTT file for them
+		if (row.blob_id === null) {
+			return new Blob(["WEBVTT\n"]).stream();
+		}
+		const stream = await this.#blob.get(row.blob_id);
+		if (stream === null) {
+			throw new NotFoundError(`Caption not found: ${videoId}/${language}`);
+		}
+		return stream;
+	}
+
 	async deleteCaption(videoId: string, language: string): Promise<void> {
 		const deleted = get(
 			this.#stmts.deleteCaption({ video_id: videoId, language })
