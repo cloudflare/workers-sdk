@@ -1171,19 +1171,19 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					try {
 						// A binding name first, then a class this Worker exports, as
 						// Miniflare resolved them when it took either
-						const binding = getWorkerWranglerConfig(
-							session,
-							workerName
-						).durable_objects.bindings.find(
-							(durableObject) => durableObject.name === classNameOrBindingName
-						);
-						const scriptName = binding?.script_name ?? workerName;
+						const binding = getWorkerDevEnv(session, workerName).config
+							.latestConfig?.bindings?.[classNameOrBindingName];
+						const durableObject =
+							binding?.type === "durable_object_namespace"
+								? binding
+								: undefined;
+						const scriptName = durableObject?.script_name ?? workerName;
 						// The harness keeps no storage for a Worker it doesn't run
 						const ids = session.devEnvs.some(
 							(devEnv) => devEnv.config.latestConfig?.name === scriptName
 						)
 							? await miniflare.listDurableObjectIds(
-									binding?.class_name ?? classNameOrBindingName,
+									durableObject?.class_name ?? classNameOrBindingName,
 									scriptName
 								)
 							: [];
