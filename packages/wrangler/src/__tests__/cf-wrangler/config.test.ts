@@ -4,6 +4,7 @@ import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { DevEnv } from "../../api";
 import { ConfigController } from "../../api/startDevWorker/ConfigController";
+import { parseArgs } from "../../cf-wrangler/args";
 import { runCfWranglerDev } from "../../cf-wrangler/dev";
 import { startDev } from "../../dev/start-dev";
 import { FakeBus } from "../helpers/fake-bus";
@@ -17,7 +18,7 @@ vi.mock("@cloudflare/config", async (importOriginal) => {
 	return createConfigMock(importOriginal);
 });
 
-describe("cf-wrangler dev persistence", () => {
+describe("cf-wrangler dev configuration", () => {
 	runInTempDir();
 	mockConsoleMethods();
 	let controller: ConfigController;
@@ -43,6 +44,55 @@ describe("cf-wrangler dev persistence", () => {
 	afterEach(async () => {
 		await controller.teardown();
 	});
+
+	it.for([false, true])(
+		"loads explicit env files outside the project (override: %s)",
+		async (override, { expect }) => {
+			vi.stubEnv("CLOUDFLARE_INCLUDE_PROCESS_ENV", undefined);
+			vi.stubEnv("CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV", undefined);
+			vi.stubEnv("UNRELATED_SHELL_VARIABLE", "shell-only");
+			await seed({
+				".env": "EXAMPLE_VALUE=hello\nSHARED_VALUE=shared",
+				"apps/example/cloudflare.config.ts": `export default {
+					worker: {
+						name: "env-file-worker",
+						compatibilityDate: "2026-05-18",
+						entrypoint: "./src/index.js",
+					},
+				};`,
+				"apps/example/src/index.js": "export default {}",
+				"apps/example/.dev.vars":
+					"EXAMPLE_VALUE=dev-vars\nDEV_VARS_ONLY=ignored",
+				"apps/example/.env": "EXAMPLE_VALUE=project\nPROJECT_ONLY=ignored",
+				"apps/example/.env.local": "EXAMPLE_VALUE=override",
+			});
+			process.chdir("apps/example");
+			const options = parseArgs([
+				"--local",
+				"--env-file",
+				"../../.env",
+				...(override ? ["--env-file=.env.local"] : []),
+			]);
+			await runCfWranglerDev({
+				...options,
+				port: 8787,
+				inspectorPort: 9229,
+				disableDevRegistry: true,
+				showInteractiveDevSession: false,
+				onReady() {
+					setImmediate(() => devEnv.emit("teardown"));
+				},
+			});
+
+			expect(controller.latestConfig?.bindings).toEqual({
+				EXAMPLE_VALUE: {
+					type: "secret_text",
+					value: override ? "override" : "hello",
+				},
+				SHARED_VALUE: { type: "secret_text", value: "shared" },
+			});
+		}
+	);
 
 	it.for([
 		{

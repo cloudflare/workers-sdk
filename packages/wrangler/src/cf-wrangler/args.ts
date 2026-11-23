@@ -38,6 +38,7 @@ export function parseDevArgs(argv: string[]): StartDevOptions {
 	const options = {
 		...serverArgs,
 		mode: { type: "string", requiresArg: true },
+		"env-file": { type: "string", array: true, requiresArg: true },
 		port: { ...serverArgs.port, requiresArg: true, coerce: parsePort },
 		"inspector-port": {
 			...serverArgs["inspector-port"],
@@ -88,7 +89,6 @@ export function parseDevArgs(argv: string[]): StartDevOptions {
 			script: undefined,
 			cwd: undefined,
 			v: undefined,
-			envFile: undefined,
 		};
 		validateDevArgs(devOptions);
 		return devOptions;

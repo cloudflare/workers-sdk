@@ -14,6 +14,7 @@ For example:
 ```sh
 cf dev --inspector-port 9229 --port=8788
 cf dev --mode staging -- --local --persist-to "custom state" --var "MESSAGE:hello world"
+cf dev -- --env-file ../../.env --env-file .env.local
 ```
 
 cf forwards server arguments,
@@ -22,6 +23,12 @@ separator. In particular, `cf dev --local` and `cf dev --persist-to ...` are
 rejected by cf itself; put those server options after `--`. cf's `--mode` is
 forwarded to this delegate and selects the named configuration environment.
 The separator is removed by cf before invoking `cf-wrangler`.
+
+`--env-file` selects explicit files for local Worker bindings, including shared
+files outside the project directory. Paths resolve relative to the configuration
+directory. The option can be repeated; values in later files override earlier
+ones. Explicit files replace automatic `.dev.vars` and `.env` discovery without
+requiring `CLOUDFLARE_INCLUDE_PROCESS_ENV=true`.
 
 The delegate intentionally differs from `wrangler dev` in these ways:
 
@@ -34,7 +41,7 @@ The delegate intentionally differs from `wrangler dev` in these ways:
 - The new configuration format is always enabled. It cannot be disabled with
   `--experimental-new-config` or its aliases. Provisioning and automatic resource
   creation remain disabled; their Wrangler global options are unsupported.
-- Other Wrangler global options, including `--env-file`, `--profile`, and
+- Other Wrangler global options, including `--profile` and
   `--install-skills`, are unsupported. cf supplies authentication through its
   inherited profile context.
 - Types are not generated unless `--types` is passed. State defaults to

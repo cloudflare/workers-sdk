@@ -49,6 +49,24 @@ describe("cf-wrangler parseArgs", () => {
 		expect(parseArgs([]).env).toBeUndefined();
 		expect(parseArgs([]).config).toBeUndefined();
 		expect(parseArgs([]).local).toBeUndefined();
+		expect(parseArgs([]).envFile).toBeUndefined();
+	});
+
+	it.for([["--env-file", "../../.env"], ["--env-file=../../.env"]])(
+		"parses an explicit env file: %j",
+		(argv, { expect }) => {
+			expect(parseArgs(argv).envFile).toEqual(["../../.env"]);
+		}
+	);
+
+	it("preserves env file order and paths containing spaces", ({ expect }) => {
+		expect(
+			parseArgs([
+				"--env-file",
+				"../../shared config/.env",
+				"--env-file=.env.local",
+			]).envFile
+		).toEqual(["../../shared config/.env", ".env.local"]);
 	});
 
 	it("uses Wrangler aliases, repeated string options, and boolean negation", ({
@@ -150,6 +168,8 @@ describe("cf-wrangler parseArgs", () => {
 		["--my-vite-flag"],
 		["--id", "001"],
 		["--mode"],
+		["--env-file"],
+		["--env-file=.env", "--env-file"],
 		["--port"],
 		["--inspector-port"],
 		["--var"],
