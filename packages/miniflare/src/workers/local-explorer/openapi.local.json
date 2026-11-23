@@ -512,6 +512,17 @@
 											"$ref": "#/components/schemas/workers-kv_key_name_bulk"
 										},
 										"maxItems": 100
+									},
+									"type": {
+										"description": "Return values as strings with `text`, or parse stored JSON values with `json`.",
+										"type": "string",
+										"default": "text",
+										"enum": ["text", "json"]
+									},
+									"withMetadata": {
+										"description": "Whether to include metadata in the response.",
+										"type": "boolean",
+										"default": false
 									}
 								},
 								"required": ["keys"]

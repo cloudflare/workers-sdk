@@ -177,16 +177,6 @@ const config = {
 			},
 		],
 
-		// Request body properties not implemented
-		requestBodyProperties: [
-			// Bulk get - type and withMetadata options not implemented
-			{
-				path: "/accounts/{account_id}/storage/kv/namespaces/{namespace_id}/bulk/get",
-				method: "post",
-				properties: ["type", "withMetadata"],
-			},
-		],
-
 		// Schema properties not returned by local implementation
 		schemaProperties: {
 			// Namespace response doesn't include jurisdiction or supports_url_encoding locally
