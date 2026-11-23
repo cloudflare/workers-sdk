@@ -140,11 +140,11 @@ export default defineConfig({
 	overrides: [
 		...cloudflare.overrides,
 		{
-				files: ["tools/**/*.{ts,tsx,mts,cts}"],
-				rules: {
-						"no-const-assign": "error",
-						"no-func-assign": "error",
-				},
+			files: ["tools/**/*.{ts,tsx,mts,cts}"],
+			rules: {
+				"no-const-assign": "error",
+				"no-func-assign": "error",
+			},
 		},
 		// The preset relaxes these in tests, but this project enforces them there
 		// too.
