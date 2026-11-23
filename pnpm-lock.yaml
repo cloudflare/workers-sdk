@@ -6,21 +6,93 @@ settings:
 
 catalogs:
   default:
+    '@cloudflare/vitest-plugin':
+      specifier: 1.4.3
+      version: 1.4.3
+    '@cloudflare/workers-types':
+      specifier: ^5.20261119.1
+      version: 5.20261119.1
+    '@hey-api/openapi-ts':
+      specifier: 0.94.0
+      version: 0.94.0
+    '@playwright/test':
+      specifier: 1.61.0
+      version: 1.61.0
+    '@vitest/ui':
+      specifier: 5.0.4
+      version: 5.0.4
+    capnp-es:
+      specifier: 0.0.17
+      version: 0.0.17
+    capnweb:
+      specifier: 0.12.0
+      version: 0.12.0
+    cf:
+      specifier: 1.0.0-beta.17
+      version: 1.0.0-beta.17
+    chalk:
+      specifier: 5.3.0
+      version: 5.3.0
+    ci-info:
+      specifier: 4.4.0
+      version: 4.4.0
+    command-exists:
+      specifier: 1.2.9
+      version: 1.2.9
+    dotenv:
+      specifier: 16.3.1
+      version: 16.3.1
     esbuild:
       specifier: 0.28.2
       version: 0.28.2
     jsonc-parser:
       specifier: 3.2.0
       version: 3.2.0
+    msw:
+      specifier: 2.14.6
+      version: 2.14.6
+    open:
+      specifier: 11.0.0
+      version: 11.0.0
+    playwright-chromium:
+      specifier: 1.61.0
+      version: 1.61.0
+    signal-exit:
+      specifier: 4.1.0
+      version: 4.1.0
+    smol-toml:
+      specifier: 1.9.0
+      version: 1.9.0
+    tinyglobby:
+      specifier: 0.2.16
+      version: 0.2.16
     tree-kill:
       specifier: 1.2.2
       version: 1.2.2
+    tsdown:
+      specifier: 0.22.14
+      version: 0.22.14
     typescript:
       specifier: 6.0.3
       version: 6.0.3
+    undici:
+      specifier: 7.30.2
+      version: 7.30.2
+    vite:
+      specifier: 8.3.4
+      version: 8.3.4
     vitest:
       specifier: 5.0.4
       version: 5.0.4
+    workerd:
+      specifier: 1.20261119.1
+      version: 1.20261119.1
+    ws:
+      specifier: 8.21.0
+      version: 8.21.0
+    zod:
+      specifier: 4.6.6
+      version: 4.6.6
 
 overrides:
   '@types/react-dom@18>@types/react': ^18
