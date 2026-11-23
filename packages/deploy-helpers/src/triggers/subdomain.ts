@@ -6,6 +6,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { configFileName } from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
+import { WORKER_NOT_FOUND_ERR_CODE } from "../deploy/helpers/worker-not-found-error";
 import { confirm, fetchResult, logger, prompt } from "../shared/context";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
@@ -154,24 +155,51 @@ export async function getWorkersDevSubdomainIfAccessible(
 	return "unauthorizedError" in result ? undefined : result.subdomain;
 }
 
-/** Gets the Worker-scoped subdomain configuration and routable URLs. */
+/**
+ * Gets the Worker-scoped subdomain configuration and routable URLs.
+ *
+ * @param options - Allow the script subdomain fallback after a successful first upload,
+ * when the Worker resource may not yet be readable.
+ */
 export async function getWorkerSubdomain(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	workerName: string
+	workerName: string,
+	options: { fallbackToScriptOnNotFound?: boolean } = {}
 ): Promise<WorkerSubdomain> {
-	const worker = await retryOnAPIFailure(
-		() =>
-			fetchResult<{ subdomain: Partial<WorkerSubdomain> }>(
-				complianceConfig,
-				`/accounts/${accountId}/workers/workers/${workerName}`
-			),
-		logger
-	);
+	let subdomain: Partial<WorkerSubdomain>;
+	try {
+		const worker = await retryOnAPIFailure(
+			() =>
+				fetchResult<{ subdomain: Partial<WorkerSubdomain> }>(
+					complianceConfig,
+					`/accounts/${accountId}/workers/workers/${workerName}`
+				),
+			logger
+		);
+		subdomain = worker.subdomain;
+	} catch (error) {
+		if (
+			!options.fallbackToScriptOnNotFound ||
+			!(error instanceof APIError) ||
+			error.status !== 404 ||
+			error.code !== WORKER_NOT_FOUND_ERR_CODE
+		) {
+			throw error;
+		}
+		subdomain = await retryOnAPIFailure(
+			() =>
+				fetchResult<Pick<WorkerSubdomain, "enabled" | "previews_enabled">>(
+					complianceConfig,
+					`/accounts/${accountId}/workers/scripts/${workerName}/subdomain`
+				),
+			logger
+		);
+	}
 	return {
-		...worker.subdomain,
-		enabled: worker.subdomain.enabled ?? false,
-		previews_enabled: worker.subdomain.previews_enabled ?? false,
+		...subdomain,
+		enabled: subdomain.enabled ?? false,
+		previews_enabled: subdomain.previews_enabled ?? false,
 	};
 }
 

@@ -1090,7 +1090,9 @@ async function subdomainDeploy(
 
 	const { workers_dev: wantWorkersDev, preview_urls: wantPreviews } =
 		getSubdomainValues(config.workers_dev, config.preview_urls, routes);
-	const before = await getWorkerSubdomain(config, accountId, scriptName);
+	const before = await getWorkerSubdomain(config, accountId, scriptName, {
+		fallbackToScriptOnNotFound: firstDeploy,
+	});
 
 	// workers.dev URL is only set if we want to deploy to workers.dev.
 	if (wantWorkersDev) {

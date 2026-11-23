@@ -87,6 +87,10 @@ async function handleCommand(stream, op, args) {
 			return stream.video(args.id).captions.generate(args.language);
 		case "captions.list":
 			return stream.video(args.id).captions.list(args.language);
+		case "captions.get": {
+			const file = await stream.video(args.id).captions.get(args.language);
+			return new Response(file).text();
+		}
 		case "captions.delete":
 			await stream.video(args.id).captions.delete(args.language);
 			return null;
@@ -214,6 +218,7 @@ describe("Stream videos", () => {
 		expect(video.created).toBeTruthy();
 		expect(video.modified).toBeTruthy();
 		expect(video.hlsPlaybackUrl).toContain(video.id);
+		expect(video.customerCode).toBe("placeholder");
 		expect(video.dashPlaybackUrl).toContain(video.id);
 		expect(video.preview).toMatch(
 			new RegExp(`^http://.*?/__cf_local/stream/${video.id}/watch$`)
@@ -974,6 +979,42 @@ describe("Stream captions", () => {
 		expect(caption.language).toBe("en");
 		expect(caption.generated).toBe(false);
 		expect(caption.status).toBe("ready");
+	});
+
+	test("get caption file", async ({ expect }) => {
+		const mf = createMiniflare();
+		useDispose(mf);
+		const { http: videoUrl } = await useServer(
+			staticBytesListener(TEST_VIDEO_BYTES)
+		);
+
+		const video = (await sendCmdToWorker(mf, "upload", {
+			url: videoUrl.toString(),
+		})) as Video;
+		await sendCmdToWorker(mf, "captions.upload", {
+			id: video.id,
+			language: "en",
+		});
+		await sendCmdToWorker(mf, "captions.generate", {
+			id: video.id,
+			language: "fr",
+		});
+
+		expect(
+			await sendCmdToWorker(mf, "captions.get", {
+				id: video.id,
+				language: "en",
+			})
+		).toBe("test");
+		expect(
+			await sendCmdToWorker(mf, "captions.get", {
+				id: video.id,
+				language: "fr",
+			})
+		).toBe("WEBVTT\n");
+		await expect(
+			sendCmdToWorker(mf, "captions.get", { id: video.id, language: "de" })
+		).rejects.toThrow("Caption not found");
 	});
 
 	test("caption upload throws for non-existent video", async ({ expect }) => {

@@ -130,4 +130,28 @@ describe("getWorkersDevSubdomain", () => {
 		});
 		expect(fetchResult).toHaveBeenCalledTimes(2);
 	});
+
+	it.for([
+		{ status: 404, code: 10007, fallbackToScriptOnNotFound: false },
+		{ status: 404, code: 10090, fallbackToScriptOnNotFound: true },
+		{ status: 403, code: 10000, fallbackToScriptOnNotFound: true },
+	])(
+		"does not fall back on lookup failure with %j",
+		async (options, { expect }) => {
+			const error = new APIError({
+				status: options.status,
+				text: "Worker lookup failed",
+				telemetryMessage: false,
+			});
+			error.code = options.code;
+			fetchResult.mockRejectedValueOnce(error);
+
+			await expect(
+				getWorkerSubdomain({}, ACCOUNT_ID, "my-worker", {
+					fallbackToScriptOnNotFound: options.fallbackToScriptOnNotFound,
+				})
+			).rejects.toBe(error);
+			expect(fetchResult).toHaveBeenCalledTimes(1);
+		}
+	);
 });

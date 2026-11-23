@@ -132,6 +132,11 @@ class StreamScopedCaptionsImpl
 		return rows.map(rowToStreamCaption);
 	}
 
+	async get(language: string): Promise<ReadableStream> {
+		const stub = getStub(this.#env);
+		return stub.getCaptionFile(this.#videoId, language);
+	}
+
 	async delete(language: string): Promise<void> {
 		const stub = getStub(this.#env);
 		await stub.deleteCaption(this.#videoId, language);
