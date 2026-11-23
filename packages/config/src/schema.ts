@@ -260,7 +260,12 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 	}),
 	z.strictObject({
 		type: z.literal("oidc-token"),
-		audience: z.string(),
+		// The same rule as Wrangler's validation and the API: printable ASCII, no whitespace.
+		audience: z
+			.string()
+			.min(1)
+			.max(2048)
+			.regex(/^[\x21-\x7e]+$/),
 		alg: z.enum(["ES256", "RS256"]).optional(),
 	}),
 	z

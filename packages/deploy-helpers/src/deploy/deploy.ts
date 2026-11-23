@@ -941,7 +941,7 @@ async function deployWorker(
 		options.deployCommand
 	);
 
-	printOidcTokenIdentity(config.oidc_tokens, accountId, uploadedWorkerTag);
+	printOidcTokenIdentity(bindings, accountId, uploadedWorkerTag);
 	logger.log("Current Version ID:", versionId);
 
 	return {

@@ -1029,6 +1029,14 @@ describe("wrangler preview", () => {
 				stream: { binding: "MY_STREAM" },
 				version_metadata: { binding: "MY_VERSION_METADATA" },
 				flagship: [{ binding: "MY_FLAGS", app_id: "flagship-app-id" }],
+				oidc_tokens: [
+					{ binding: "MY_TOKEN", audience: "https://api.example.com" },
+					{
+						binding: "MY_RSA_TOKEN",
+						audience: "api://token-exchange",
+						alg: "RS256",
+					},
+				],
 			});
 			const bindings = extractConfigBindings(config);
 			expect(bindings).toMatchObject({
@@ -1041,7 +1049,14 @@ describe("wrangler preview", () => {
 				MY_STREAM: { type: "stream" },
 				MY_VERSION_METADATA: { type: "version_metadata" },
 				MY_FLAGS: { type: "flagship", app_id: "flagship-app-id" },
+				MY_TOKEN: { type: "oidc_token", audience: "https://api.example.com" },
+				MY_RSA_TOKEN: {
+					type: "oidc_token",
+					audience: "api://token-exchange",
+					alg: "RS256",
+				},
 			});
+			expect(bindings.MY_TOKEN).not.toHaveProperty("alg");
 		});
 
 		test("should pass cross_account_grant on service bindings", ({

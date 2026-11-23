@@ -2368,6 +2368,26 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 				expect(std.out).not.toContain("OIDC");
 			});
+
+			it("should not print OIDC token details when a --var replaces the binding", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					oidc_tokens: [
+						{ binding: "API_TOKEN", audience: "https://api.example.com" },
+					],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{ name: "API_TOKEN", type: "plain_text", text: "not-a-token" },
+					],
+				});
+
+				await runWrangler("deploy index.js --var API_TOKEN:not-a-token");
+				expect(std.out).not.toContain("OIDC tokens for this Worker");
+			});
 		});
 
 		describe("[unsafe]", () => {

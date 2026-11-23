@@ -806,7 +806,7 @@ export function convertBinding(
 				oidc_tokens: [
 					{
 						binding: name,
-						audience: binding.audience,
+						audience: usePlaceholderValue ? REPLACE_ME : binding.audience,
 						...((binding.alg === "ES256" || binding.alg === "RS256") && {
 							alg: binding.alg,
 						}),

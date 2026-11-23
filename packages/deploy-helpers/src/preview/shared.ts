@@ -438,7 +438,7 @@ export function getBindingValue(binding: Binding): string {
 			return String(binding.service_id ?? "");
 		case "oidc_token":
 			return binding.alg
-				? `${binding.audience} (${binding.alg})`
+				? `${binding.audience}, ${binding.alg}`
 				: String(binding.audience ?? "");
 		case "send_email":
 			return String(binding.destination_address ?? "");

@@ -396,6 +396,11 @@ describe("startup profile", () => {
 				bindings: [
 					{ name: "INHERITED", type: "inherit" },
 					{
+						name: "STARTUP_OIDC_TOKEN",
+						type: "oidc_token",
+						audience: "https://api.example.com",
+					},
+					{
 						name: "STARTUP_DO",
 						type: "durable_object_namespace",
 						class_name: "StartupDurableObject",

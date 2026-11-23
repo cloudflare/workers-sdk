@@ -1,5 +1,5 @@
 import { logger } from "../../shared/context";
-import type { CfOidcToken } from "@cloudflare/workers-utils";
+import type { Binding } from "@cloudflare/workers-utils";
 
 // Verifiers pin this origin in their trust policies, so it never changes.
 const OIDC_ISSUER_ORIGIN = "https://oidc.cloudflare.com";
@@ -9,11 +9,15 @@ const OIDC_ISSUER_ORIGIN = "https://oidc.cloudflare.com";
  * subject is the Worker's immutable tag, which no other output shows.
  */
 export function printOidcTokenIdentity(
-	oidcTokens: CfOidcToken[],
+	bindings: Record<string, Binding>,
 	accountId: string,
 	workerTag: string | null
 ) {
-	if (oidcTokens.length === 0 || workerTag === null) {
+	// Checks the uploaded bindings, which a --var or secret of the same name replaces.
+	const hasOidcToken = Object.values(bindings).some(
+		(binding) => binding.type === "oidc_token"
+	);
+	if (!hasOidcToken || workerTag === null) {
 		return;
 	}
 	logger.log("OIDC tokens for this Worker:");
