@@ -42,7 +42,7 @@
 		"@changesets/changelog-github": "^0.5.0",
 		"@changesets/cli": "^2.29.7",
 		"@changesets/parse": "^0.4.1",
-		"@cloudflare/oxlint-config": "^0.1.0",
+		"@cloudflare/oxlint-config": "^0.2.0",
 		"@manypkg/cli": "^0.23.0",
 		"@types/node": "catalog:default",
 		"@vue/compiler-sfc": "^3.3.4",
@@ -55,7 +55,7 @@
 		"oxfmt": "^0.68.0",
 		"oxlint": "^1.94.0",
 		"tree-kill": "catalog:default",
-		"tsrs": "0.25.0-ts7.1.0-beta",
+		"tsrs": "7.1.0-beta.tsrs3",
 		"turbo": "^2.7.2",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
