@@ -241,10 +241,7 @@ export async function listR2Objects(
 
 type GetObjectHeaders = NonNullable<
 	z.output<typeof zR2BucketGetObjectData>["headers"]
-> & {
-	"if-none-match"?: string;
-	"if-modified-since"?: string;
-};
+>;
 
 function getDownloadConditions(
 	headers: GetObjectHeaders

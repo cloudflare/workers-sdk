@@ -226,10 +226,17 @@ describe("Local Explorer API validation", () => {
 
 	test("handles CORS preflight", async ({ expect }) => {
 		// allowed origin
-		let res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
-			method: "OPTIONS",
-			headers: { Origin: "http://localhost:5173" },
-		});
+		let res = await mf.dispatchFetch(
+			`${BASE_URL}/r2/buckets/test-bucket/objects/example.txt`,
+			{
+				method: "OPTIONS",
+				headers: {
+					Origin: "http://localhost:5173",
+					"Access-Control-Request-Method": "GET",
+					"Access-Control-Request-Headers": "if-none-match, if-modified-since",
+				},
+			}
+		);
 		expect(res.status).toBe(204);
 		expect(res.headers.get("Access-Control-Allow-Origin")).toBe(
 			"http://localhost:5173"
@@ -237,8 +244,16 @@ describe("Local Explorer API validation", () => {
 		expect(res.headers.get("Access-Control-Allow-Methods")).toBe(
 			"GET, POST, PUT, PATCH, DELETE, OPTIONS"
 		);
-		expect(res.headers.get("Access-Control-Allow-Headers")).toContain(
-			"X-Miniflare-Explorer-Refresh"
+		const allowedHeaders = res.headers
+			.get("Access-Control-Allow-Headers")
+			?.toLowerCase()
+			.split(/,\s*/);
+		expect(allowedHeaders).toEqual(
+			expect.arrayContaining([
+				"x-miniflare-explorer-refresh",
+				"if-none-match",
+				"if-modified-since",
+			])
 		);
 		await res.arrayBuffer();
 

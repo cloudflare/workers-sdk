@@ -177,7 +177,7 @@ app.use("/api/*", async (c, next) => {
 				"Access-Control-Allow-Origin": origin ?? "*",
 				"Access-Control-Allow-Methods":
 					"GET, POST, PUT, PATCH, DELETE, OPTIONS",
-				"Access-Control-Allow-Headers": `Content-Type, cf-metadata-only, cf-r2-custom-metadata, ${EXPLORER_REFRESH_HEADER}`,
+				"Access-Control-Allow-Headers": `Content-Type, cf-metadata-only, cf-r2-custom-metadata, If-None-Match, If-Modified-Since, ${EXPLORER_REFRESH_HEADER}`,
 				"Access-Control-Max-Age": "86400",
 			},
 		});
