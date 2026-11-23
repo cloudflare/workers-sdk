@@ -1,10 +1,31 @@
-import type { D1Migration } from "../shared/d1";
+// No Node.js imports here: this module also runs inside workerd.
 
+// What applying migrations uses of a D1 binding, or of Miniflare's Node.js
+// proxy for one. The declaration bundler can't import workers-types' globals.
+type D1PreparedStatement = {
+	bind(...values: unknown[]): D1PreparedStatement;
+	run(): Promise<unknown>;
+	all<T>(): Promise<{ results: T[] }>;
+};
+type D1Database = {
+	prepare(query: string): D1PreparedStatement;
+	batch(statements: D1PreparedStatement[]): Promise<unknown>;
+	exec(query: string): Promise<unknown>;
+};
+
+// Can't use an `interface` here as we expect this type to be passed via
+// Miniflare's `bindings` option, which requires all values to be JSON-typed.
+export type D1Migration = {
+	name: string;
+	queries: string[];
+};
+
+// Checks methods, not `constructor.name`, so Miniflare's Node.js proxy for a
+// D1 binding (from `getD1Database()`) is accepted too.
 function isD1Database(v: unknown): v is D1Database {
 	return (
 		typeof v === "object" &&
 		v !== null &&
-		v.constructor.name === "D1Database" &&
 		"prepare" in v &&
 		typeof v.prepare === "function" &&
 		"batch" in v &&
@@ -29,6 +50,16 @@ function isD1Migrations(v: unknown): v is D1Migration[] {
 	return Array.isArray(v) && v.every(isD1Migration);
 }
 
+/**
+ * Applies the `migrations` that haven't been applied to `db` yet, recording
+ * each one in the migrations table.
+ *
+ * @param db Database to apply the migrations to.
+ * @param migrations Migrations in the order to apply them, for example from
+ * `readD1Migrations()`.
+ * @param migrationsTableName Table that records applied migrations. Defaults
+ * to `d1_migrations`.
+ */
 export async function applyD1Migrations(
 	db: D1Database,
 	migrations: D1Migration[],
