@@ -1281,7 +1281,10 @@ describe("createTestHarness", () => {
 		});
 		onTestFinished(server.close);
 
-		await expect(server.listen()).rejects.toThrow("core:user:missing-ai");
+		await server.listen();
+		await expect(server.fetch("/")).rejects.toThrow(
+			'Worker "missing-ai" not found. Make sure it is running locally.'
+		);
 	});
 
 	it("routes fetches based on worker routes", async ({ expect }) => {

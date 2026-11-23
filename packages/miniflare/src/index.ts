@@ -2113,10 +2113,11 @@ export class Miniflare {
 		sharedOpts.cf = await setupCf(this.#log, sharedOpts.cf);
 		this.#cfObject = sharedOpts.cf;
 
+		// Bindings to Workers outside this instance go through the dev registry
+		// proxy, so a Worker that isn't running fails calls to it rather than
+		// stopping workerd from starting
 		const { workerOpts: allWorkerOpts, externalServices } =
-			this.#devRegistry.isEnabled()
-				? getExternalServiceEntrypoints(this.#workerOpts, sharedOpts)
-				: { workerOpts: this.#workerOpts, externalServices: null };
+			getExternalServiceEntrypoints(this.#workerOpts, sharedOpts);
 
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const workflowExporters = getWorkflowExporters(allWorkerOpts);
@@ -2457,20 +2458,20 @@ export class Miniflare {
 			}
 		}
 
-		if (
-			this.#devRegistry.isEnabled() &&
-			externalServices !== null &&
-			(externalServices.size > 0 ||
-				hasQueues ||
-				sharedOpts.unsafeEnableSharedStorage)
-		) {
+		if (this.#devRegistry.isEnabled()) {
 			await this.#devRegistry.watch(
 				externalServices,
 				hasQueues,
 				sharedOpts.unsafeEnableSharedStorage === true &&
 					sharedOpts.resourcePersistencePath !== undefined
 			);
+		}
 
+		if (
+			externalServices.size > 0 ||
+			hasQueues ||
+			sharedOpts.unsafeEnableSharedStorage
+		) {
 			const externalObjects = Array.from(externalServices).flatMap(
 				([scriptName, { classNames }]) =>
 					Array.from(classNames).map<[string, string]>((className) => [
