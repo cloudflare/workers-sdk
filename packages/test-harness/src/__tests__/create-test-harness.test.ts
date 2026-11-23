@@ -1,38 +1,129 @@
-import { readFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
-import { mockConsoleMethods } from "@cloudflare/workers-utils/test-helpers";
+import {
+	getWorkerAssetsDir,
+	getWorkerBundleDir,
+	writeContainerConfig,
+	writeRootConfig,
+	writeWorkerConfig,
+} from "@cloudflare/build-output-utils";
+import { bindings, defineConfig } from "@cloudflare/config";
+import { isDockerRunning } from "@cloudflare/containers-shared";
+import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-bindings";
+import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
+import {
+	mockConsoleMethods,
+	runInTempDir,
+	seed,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import dedent from "ts-dedent";
 import {
-	afterEach,
 	beforeEach,
 	describe,
+	expectTypeOf,
 	it,
 	onTestFinished,
 	vi,
 } from "vitest";
-import {
-	importWrangler,
-	WranglerE2ETestHelper,
-} from "./helpers/e2e-wrangler-test";
+import { createTestHarness } from "../index";
 import type {
-	CloudflareWorkersModule,
-	D1Database,
-	DurableObjectNamespace,
-	ExportedHandler,
-	KVNamespace,
-	R2Bucket,
-} from "@cloudflare/workers-types";
+	WriteContainerConfigOptions,
+	WriteWorkerConfigOptions,
+} from "@cloudflare/build-output-utils";
+import type { CloudflareWorkersModule } from "@cloudflare/workers-types";
 
-const { createTestHarness } = await importWrangler();
+// Starting a real session needs Cloudflare credentials
+vi.mock("@cloudflare/remote-bindings", () => ({
+	maybeStartOrUpdateRemoteProxySession: vi.fn(),
+}));
+
+// As the Vite plugin's container tests: images are linux/amd64, which CI
+// runs on Linux only, and local runs need Docker
+const canRunContainers =
+	process.env.LOCAL_TESTS_WITHOUT_DOCKER !== "true" &&
+	(process.env.CI === "true"
+		? process.platform === "linux"
+		: await isDockerRunning(getDockerPath()));
+
+/**
+ * Writes a project's Build Output with the writers that build tools use.
+ *
+ * @param options.projectDir The project directory
+ * @param options.workers The Workers, keyed by their directory under `workers/`
+ * @param options.containers The Containers, keyed by their directory under `containers/`
+ * @param options.mode The mode the build ran in
+ */
+async function writeBuild({
+	projectDir,
+	workers,
+	containers = {},
+	mode = "production",
+}: {
+	projectDir: string;
+	workers: Record<
+		string,
+		{
+			// Without a compatibility date, the Worker gets a default one
+			config: Omit<WriteWorkerConfigOptions["config"], "compatibilityDate"> & {
+				compatibilityDate?: string;
+			};
+			script?: string;
+			assets?: Record<string, string>;
+		}
+	>;
+	containers?: Record<string, WriteContainerConfigOptions["config"]>;
+	mode?: string;
+}) {
+	await writeRootConfig({
+		root: projectDir,
+		buildContext: { isPreview: false, mode },
+	});
+	for (const [directoryName, worker] of Object.entries(workers)) {
+		await writeWorkerConfig({
+			root: projectDir,
+			directoryName,
+			config: { compatibilityDate: "2026-10-01", ...worker.config },
+			manifest:
+				worker.script === undefined
+					? undefined
+					: { type: "partial", mainModule: "index.js", modules: {} },
+		});
+		const files: Record<string, string> = {};
+		if (worker.script !== undefined) {
+			const bundleDir = getWorkerBundleDir(projectDir, directoryName);
+			files[path.join(bundleDir, "index.js")] = worker.script;
+		}
+		const assetsDir = getWorkerAssetsDir(projectDir, directoryName);
+		for (const [name, contents] of Object.entries(worker.assets ?? {})) {
+			files[path.join(assetsDir, name)] = contents;
+		}
+		await seed(files);
+	}
+	for (const [directoryName, config] of Object.entries(containers)) {
+		await writeContainerConfig({ root: projectDir, directoryName, config });
+	}
+}
+
+/**
+ * @param contents The code of an inline Worker's only module
+ * @returns The Worker's manifest
+ */
+function singleModuleManifest(contents: string) {
+	return {
+		mainModule: "index.js",
+		modules: { "index.js": { type: "esm", contents } },
+	} as const;
+}
 
 describe("createTestHarness", () => {
 	const logs = mockConsoleMethods();
-
-	let helper: WranglerE2ETestHelper;
+	runInTempDir();
+	beforeEach(() => {
+		vi.mocked(maybeStartOrUpdateRemoteProxySession).mockResolvedValue(null);
+	});
 
 	function normalizeDebugOutput(output: string) {
 		return String(output)
@@ -40,40 +131,28 @@ describe("createTestHarness", () => {
 			.replace(/http:\/\/127\.0\.0\.1:\d+/g, "http://127.0.0.1:<port>");
 	}
 
-	beforeEach(() => {
-		helper = new WranglerE2ETestHelper();
-	});
-
-	afterEach(() => {
-		vi.resetAllMocks();
-	});
-
 	it("starts with default server options", async ({ expect, onTestFailed }) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "hello-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20"
-				}
-			`,
-			"src/index.ts": dedent`
-				export default {
-					fetch(request) {
-						if (new URL(request.url).pathname === "/url") {
-							return new Response(request.url);
+		await writeBuild({
+			projectDir: ".",
+			workers: {
+				default: {
+					config: { name: "hello-worker" },
+					script: `
+					export default {
+						fetch(request) {
+							if (new URL(request.url).pathname === "/url") {
+								return new Response(request.url);
+							}
+							return new Response("Hello World");
 						}
-						return new Response("Hello World");
-					}
-				};
-			`,
+					};
+				`,
+					assets: { "style.css": "body { color: red; }" },
+				},
+			},
 		});
 
-		const server = createTestHarness({
-			workers: [
-				{ configPath: path.resolve(helper.tmpPath, "./wrangler.jsonc") },
-			],
-		});
+		const server = createTestHarness({ workers: [{ projectDir: "." }] });
 		onTestFinished(server.close);
 		onTestFailed(server.debug);
 
@@ -95,211 +174,429 @@ describe("createTestHarness", () => {
 		await expect(relativeWorkerResponse.text()).resolves.toBe(
 			new URL("/url", url).href
 		);
+
+		const assetResponse = await server.fetch("/style.css");
+		await expect(assetResponse.text()).resolves.toBe("body { color: red; }");
 	});
 
-	it("runs existing dry-run output without rebuilding it", async ({
-		expect,
-		onTestFailed,
-	}) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "prebuilt-worker",
-					"main": "src/worker.ts",
-					"compatibility_date": "2026-05-20",
-					"vars": { "ENVIRONMENT": "top-level" },
-					"rules": [
-						{ "type": "Text", "globs": ["**/*.txt"] }
-					],
-					"build": { "command": "node build.mjs" },
-					"env": {
-						"test": {
-							"vars": { "ENVIRONMENT": "test" }
+	it("runs an assets-only Worker", async ({ expect }) => {
+		await writeBuild({
+			projectDir: "app",
+			workers: {
+				default: {
+					config: { name: "app" },
+					assets: { "index.html": "<h1>Hello</h1>" },
+				},
+			},
+		});
+		const harness = createTestHarness({ workers: [{ projectDir: "app" }] });
+		onTestFinished(harness.close);
+
+		await harness.listen();
+		expect(await (await harness.fetch("/")).text()).toBe("<h1>Hello</h1>");
+	});
+
+	it.skipIf(!canRunContainers)(
+		"runs a Container-backed Durable Object from a locally built image",
+		{ timeout: 180_000 },
+		async ({ expect }) => {
+			// Stands in for the image a build tool builds for the Build Output
+			const image = "test-harness-container:test";
+			await seed({
+				"image/Dockerfile": [
+					"FROM node:22-alpine",
+					`RUN echo 'require("http").createServer((req, res) => res.end("Hello from the container")).listen(8080)' > app.js`,
+					'CMD ["node", "app.js"]',
+				].join("\n"),
+			});
+			execFileSync(
+				getDockerPath(),
+				["build", "--platform", "linux/amd64", "--tag", image, "image"],
+				{ stdio: "ignore" }
+			);
+			onTestFinished(() => {
+				execFileSync(getDockerPath(), ["image", "rm", "--force", image], {
+					stdio: "ignore",
+				});
+			});
+
+			await writeBuild({
+				projectDir: ".",
+				workers: {
+					default: {
+						config: {
+							name: "container-worker",
+							exports: {
+								Sandbox: {
+									type: "durable-object",
+									storage: "sqlite",
+									container: "sandbox",
+								},
+							},
+							env: {
+								SANDBOX: {
+									type: "durable-object",
+									worker: "container-worker",
+									exportName: "Sandbox",
+								},
+							},
+						},
+						script: `
+						import { DurableObject } from "cloudflare:workers";
+
+						export class Sandbox extends DurableObject {
+							fetch() {
+								if (!this.ctx.container.running) {
+									this.ctx.container.start({ enableInternet: false });
+								}
+								return this.ctx.container.getTcpPort(8080).fetch("http://container/");
+							}
 						}
-					}
-				}
-			`,
-			"build.mjs": dedent`
-				import { writeFileSync } from "node:fs";
 
-				writeFileSync(
-					"src/generated.ts",
-					'export default "from custom build";'
-				);
-			`,
-			"src/message.txt": "from emitted text module",
-			"src/worker.ts": dedent`
-				import generated from "./generated";
-				import message from "./message.txt";
-
-				export default {
-					fetch(_request, env) {
-						return new Response(generated + ":" + message + ":" + env.ENVIRONMENT);
-					}
-				};
-			`,
-		});
-
-		await helper.run(
-			"wrangler deploy --dry-run --env test --outdir worker-output"
-		);
-
-		const outputPath = path.join(helper.tmpPath, "worker-output", "worker.js");
-		const originalOutput = await readFile(outputPath);
-		await helper.seed({
-			"build.mjs": 'throw new Error("The test harness ran the custom build");',
-		});
-
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [
-				{
-					configPath: "./wrangler.jsonc",
-					env: "test",
-					prebuiltWorkerDir: pathToFileURL(
-						path.join(helper.tmpPath, "worker-output")
-					),
+						export default {
+							fetch(request, env) {
+								return env.SANDBOX.get(env.SANDBOX.idFromName("test")).fetch(request);
+							}
+						};
+					`,
+					},
 				},
-			],
-		});
-		onTestFinished(server.close);
-		onTestFailed(server.debug);
+				containers: {
+					sandbox: {
+						name: "sandbox",
+						maxInstances: 20,
+						image: { localReference: image },
+					},
+				},
+			});
+			const harness = createTestHarness({ workers: [{ projectDir: "." }] });
+			onTestFinished(harness.close);
 
-		await server.listen();
-		const response = await server.fetch("/");
-		await expect(response.text()).resolves.toBe(
-			"from custom build:from emitted text module:test"
-		);
-		expect(await readFile(outputPath)).toEqual(originalOutput);
+			await harness.listen();
+			// The container takes a moment to start listening
+			await vi.waitFor(
+				async () => {
+					expect(await (await harness.fetch("/")).text()).toBe(
+						"Hello from the container"
+					);
+				},
+				{ timeout: 60_000, interval: 500 }
+			);
+		}
+	);
 
-		await server.reset();
-		const resetResponse = await server.fetch("/");
-		await expect(resetResponse.text()).resolves.toBe(
-			"from custom build:from emitted text module:test"
-		);
-		expect(await readFile(outputPath)).toEqual(originalOutput);
-	});
-
-	it("fails when the expected dry-run entrypoint is missing", async ({
+	it("reads secrets for the build's mode, which the test can override", async ({
 		expect,
 	}) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "missing-prebuilt-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20"
-				}
-			`,
-			"src/index.ts": dedent`
-				export default {
-					fetch() {
-						return new Response("source fallback");
-					}
-				};
-			`,
-			"missing-output/README.md": "",
+		await writeBuild({
+			projectDir: "app",
+			workers: {
+				default: {
+					config: {
+						name: "app",
+						env: {
+							TOKEN: { type: "secret" },
+							API_KEY: { type: "secret" },
+							GREETING: { type: "text", value: "Hello" },
+							EXTRA: { type: "json", value: {} },
+						},
+					},
+					script: `export default {
+						fetch(request, env) {
+							const { TOKEN, API_KEY, GREETING, EXTRA } = env;
+							return Response.json({ TOKEN, API_KEY, GREETING, EXTRA });
+						},
+					};`,
+				},
+			},
+			mode: "staging",
 		});
-
-		const server = createTestHarness({
-			root: helper.tmpPath,
+		await seed({
+			"app/.dev.vars.production": "TOKEN=production\nAPI_KEY=production",
+			"app/.dev.vars.staging": "TOKEN=staging",
+		});
+		const harness = createTestHarness({
 			workers: [
 				{
-					configPath: "./wrangler.jsonc",
-					prebuiltWorkerDir: "./missing-output",
+					projectDir: "app",
+					envOverrides: {
+						API_KEY: bindings.text("from-test"),
+						GREETING: bindings.text("Hi"),
+						EXTRA: bindings.json({ nested: true }),
+					},
 				},
 			],
 		});
-		onTestFinished(server.close);
+		onTestFinished(harness.close);
 
-		await expect(server.listen()).rejects.toThrow(
-			'wrangler deploy --dry-run --config "./wrangler.jsonc" --outdir "./missing-output"'
-		);
+		await harness.listen();
+		expect(await (await harness.fetch("/")).json()).toEqual({
+			TOKEN: "staging",
+			API_KEY: "from-test",
+			GREETING: "Hi",
+			EXTRA: { nested: true },
+		});
 	});
 
-	it("fails when the prebuilt directory does not exist", async ({ expect }) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "unbuilt-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20",
-					"account_id": ""
-				}
-			`,
-			"src/index.ts": dedent`
-				export default {
-					fetch() {
-						return new Response("source fallback");
-					}
-				};
-			`,
-		});
-
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [
-				{
-					configPath: "./wrangler.jsonc",
-					prebuiltWorkerDir: "./missing-output",
-				},
-			],
-		});
-		onTestFinished(server.close);
-
-		await expect(server.listen()).rejects.toThrow(
-			'The `prebuiltWorkerDir` directory "./missing-output" does not exist. Build the Worker first by running `wrangler deploy --dry-run --config "./wrangler.jsonc" --outdir "./missing-output"`.'
-		);
-		expect(logs.warn).toBe("");
-	});
-
-	it("rejects prebuilt output for an assets-only Worker", async ({
+	it("runs Workers from several builds, each with its project's secrets, picking non-default ones by name", async ({
 		expect,
 	}) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "assets-only-worker",
-					"compatibility_date": "2026-05-20",
-					"assets": { "directory": "./public" }
-				}
-			`,
-			"public/index.html": "assets-only Worker",
+		await writeBuild({
+			projectDir: "./apps/frontend",
+			workers: {
+				default: {
+					config: {
+						name: "frontend",
+						env: {
+							API: { type: "worker", worker: "api" },
+							SECRET: { type: "secret" },
+						},
+					},
+					script: `export default {
+					async fetch(request, env) {
+						return new Response("frontend " + env.SECRET + " -> " + (await (await env.API.fetch(request)).text()));
+					},
+				};`,
+				},
+			},
+		});
+		await writeBuild({
+			projectDir: "./apps/backend",
+			workers: {
+				default: {
+					config: { name: "api", env: { SECRET: { type: "secret" } } },
+					script: `export default { fetch(request, env) { return new Response("api " + env.SECRET); } };`,
+				},
+				// Build tools lowercase the folder name
+				admin: {
+					config: { name: "Admin" },
+					script: `export default { fetch() { return new Response("admin"); } };`,
+				},
+			},
+		});
+		// Each Worker reads the files in its own project
+		await seed({
+			"apps/frontend/.env": "SECRET=from-frontend",
+			"apps/backend/.dev.vars": "SECRET=from-backend",
 		});
 
-		const server = createTestHarness({
-			root: helper.tmpPath,
+		// A project resolves from `root`, or is a `file:` URL
+		const harness = createTestHarness({
+			root: "apps",
 			workers: [
-				{
-					configPath: "./wrangler.jsonc",
-					prebuiltWorkerDir: "./missing-output",
-				},
+				{ projectDir: "frontend" },
+				{ projectDir: pathToFileURL(path.resolve("apps/backend")) },
+				{ projectDir: "backend", name: "Admin" },
 			],
 		});
-		onTestFinished(server.close);
+		onTestFinished(harness.close);
+		await harness.listen();
+		expect(await (await harness.fetch("/")).text()).toBe(
+			"frontend from-frontend -> api from-backend"
+		);
+		expect(await (await harness.getWorker("Admin").fetch("/")).text()).toBe(
+			"admin"
+		);
 
-		await expect(server.listen()).rejects.toThrow(
-			"The `prebuiltWorkerDir` option only loads a prebuilt Worker script. This Wrangler config is assets-only, so the test harness loads its assets from `assets.directory` instead. Remove `prebuiltWorkerDir` from the test harness configuration."
+		const missing = createTestHarness({
+			workers: [{ projectDir: "./apps/backend", name: "missing" }],
+		});
+		onTestFinished(missing.close);
+		await expect(missing.listen()).rejects.toThrow(
+			'No Worker named "missing" in the Build Output'
 		);
 	});
 
-	it("can be configured after creation", async ({ expect }) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
+	it("connects remote bindings through a remote session", async ({
+		expect,
+	}) => {
+		const session = { dispose: vi.fn() };
+		// Only the Build Output Worker has remote bindings
+		vi.mocked(maybeStartOrUpdateRemoteProxySession).mockImplementation(
+			async ({ name }) =>
+				(name === "app" ? { session } : null) as unknown as Awaited<
+					ReturnType<typeof maybeStartOrUpdateRemoteProxySession>
+				>
+		);
+		const env = {
+			KV: { type: "kv" as const, id: "abc", dev: { remote: true } },
+		};
+		await writeBuild({
+			projectDir: "app",
+			workers: {
+				default: {
+					config: {
+						name: "app",
+						env: {
+							...env,
+							CACHE: { type: "kv", id: "def", dev: { remote: true } },
+						},
+					},
+					script: `export default { fetch() { return new Response("ok"); } };`,
+				},
+			},
+		});
+		const harness = createTestHarness({
+			workers: [
 				{
-					"name": "delayed-config-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20",
-					"vars": { "GREETING": "initial" }
-				}
-			`,
-			"src/index.ts": dedent`
-				export default {
-					fetch(_request, env) {
-						return new Response(env.GREETING);
-					}
-				};
-			`,
+					projectDir: "app",
+					// A local namespace in place of the remote one
+					envOverrides: { CACHE: bindings.kv() },
+				},
+			],
+		});
+
+		await harness.listen();
+		// `envOverrides` replaces bindings before the session starts, so a
+		// replaced remote binding never reaches it
+		expect(maybeStartOrUpdateRemoteProxySession).toHaveBeenCalledWith(
+			expect.objectContaining({
+				name: "app",
+				target: "cf",
+				env: { ...env, CACHE: { type: "kv" } },
+			}),
+			null,
+			expect.objectContaining({ hook: expect.any(Function) }),
+			expect.objectContaining({ cliDisplayName: "cf" })
+		);
+		// update() updates the Worker's session rather than starting another,
+		// even when another Worker now comes first
+		await harness.update((options) => ({
+			...options,
+			workers: [
+				{
+					config: {
+						name: "mock",
+						compatibilityDate: "2026-05-20",
+						manifest: singleModuleManifest("export default {};"),
+					},
+				},
+				...options.workers,
+			],
+		}));
+		expect(maybeStartOrUpdateRemoteProxySession).toHaveBeenLastCalledWith(
+			expect.objectContaining({ name: "app" }),
+			{ session },
+			expect.anything(),
+			expect.anything()
+		);
+		expect(session.dispose).not.toHaveBeenCalled();
+		// Replacing the Worker with an inline one of the same name disposes its
+		// session, as removing it does
+		await harness.update((options) => ({
+			...options,
+			workers: [
+				...options.workers.slice(0, 1),
+				{
+					config: {
+						name: "app",
+						compatibilityDate: "2026-05-20",
+						manifest: singleModuleManifest("export default {};"),
+					},
+				},
+			],
+		}));
+		expect(session.dispose).toHaveBeenCalledTimes(1);
+		await harness.close();
+	});
+
+	it("disposes the remote sessions when the runtime fails to start", async ({
+		expect,
+	}) => {
+		const session = { dispose: vi.fn() };
+		vi.mocked(maybeStartOrUpdateRemoteProxySession).mockResolvedValue({
+			session,
+		} as unknown as Awaited<
+			ReturnType<typeof maybeStartOrUpdateRemoteProxySession>
+		>);
+		await writeBuild({
+			projectDir: "app",
+			workers: {
+				default: {
+					config: { name: "app" },
+					script: `export default {`,
+				},
+			},
+		});
+		const harness = createTestHarness({ workers: [{ projectDir: "app" }] });
+		onTestFinished(harness.close);
+
+		await expect(harness.listen()).rejects.toThrow();
+		expect(session.dispose).toHaveBeenCalled();
+
+		// Or when a later Worker can't be resolved
+		session.dispose.mockClear();
+		await writeBuild({
+			projectDir: "working",
+			workers: {
+				default: {
+					config: { name: "working" },
+					script: `export default {};`,
+				},
+			},
+		});
+		const unresolved = createTestHarness({
+			workers: [{ projectDir: "working" }, { projectDir: "missing" }],
+		});
+		onTestFinished(unresolved.close);
+		await expect(unresolved.listen()).rejects.toThrow();
+		expect(session.dispose).toHaveBeenCalled();
+
+		// A Worker's modules are read before its session starts, so one that
+		// can't be read starts none
+		vi.mocked(maybeStartOrUpdateRemoteProxySession).mockClear();
+		await writeRootConfig({
+			root: "unreadable",
+			buildContext: { isPreview: false, mode: "production" },
+		});
+		await writeWorkerConfig({
+			root: "unreadable",
+			directoryName: "default",
+			config: { name: "unreadable", compatibilityDate: "2026-10-01" },
+			manifest: {
+				type: "complete",
+				mainModule: "index.js",
+				modules: { "index.js": { type: "esm" } },
+			},
+		});
+		// The bundle doesn't have the module its manifest lists
+		await seed({
+			[path.join(getWorkerBundleDir("unreadable"), "other.js")]: "",
+		});
+		const unreadable = createTestHarness({
+			workers: [{ projectDir: "unreadable" }],
+		});
+		onTestFinished(unreadable.close);
+		await expect(unreadable.listen()).rejects.toThrow();
+		expect(maybeStartOrUpdateRemoteProxySession).not.toHaveBeenCalled();
+	});
+
+	it("can be configured after creation, and reset to its starting options and storage", async ({
+		expect,
+	}) => {
+		await writeBuild({
+			projectDir: ".",
+			workers: {
+				default: {
+					config: {
+						name: "delayed-config-worker",
+						env: {
+							GREETING: { type: "text", value: "initial" },
+							STORE: { type: "kv", id: "test-store" },
+						},
+					},
+					script: `
+					export default {
+						async fetch(request, env) {
+							if (new URL(request.url).pathname === "/set") {
+								await env.STORE.put("key", "value");
+							}
+							return new Response(env.GREETING + " " + ((await env.STORE.get("key")) ?? "missing"));
+						}
+					};
+				`,
+				},
+			},
 		});
 
 		const server = createTestHarness();
@@ -308,872 +605,364 @@ describe("createTestHarness", () => {
 		await expect(server.listen()).rejects.toThrow(
 			"Test harness options have not been configured."
 		);
+		await expect(server.reset()).rejects.toThrow(
+			"Test harness has not been started. Start it with harness.listen() before calling this method."
+		);
 
-		await server.update({
-			root: helper.tmpPath,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
+		await server.update({ workers: [{ projectDir: "." }] });
 		await server.listen();
 
 		const initialResponse = await server.fetch("/");
-		await expect(initialResponse.text()).resolves.toBe("initial");
+		await expect(initialResponse.text()).resolves.toBe("initial missing");
 
 		await server.update((options) => ({
 			...options,
-			workers: options.workers.map((worker) =>
-				"configPath" in worker
-					? { ...worker, vars: { GREETING: "updated" } }
-					: worker
-			),
+			workers: options.workers.map((worker) => ({
+				...worker,
+				envOverrides: { GREETING: bindings.text("updated") },
+			})),
 		}));
 
-		const updatedResponse = await server.fetch("/");
-		await expect(updatedResponse.text()).resolves.toBe("updated");
+		const updatedResponse = await server.fetch("/set");
+		await expect(updatedResponse.text()).resolves.toBe("updated value");
 
 		await server.reset();
 
 		const resetResponse = await server.fetch("/");
-		await expect(resetResponse.text()).resolves.toBe("initial");
+		await expect(resetResponse.text()).resolves.toBe("initial missing");
 	});
 
-	it("support fetching different workers from the same session", async ({
+	it("accesses Durable Objects by export name", async ({
 		expect,
+		onTestFailed,
 	}) => {
-		await helper.seed({
-			"wrangler.primary.jsonc": dedent`
-				{
-					"name": "primary-worker",
-					"main": "src/primary.ts",
-					"compatibility_date": "2026-05-20"
-				}
-			`,
-			"wrangler.auxiliary.jsonc": dedent`
-				{
-					"name": "auxiliary-worker",
-					"main": "src/auxiliary.ts",
-					"compatibility_date": "2026-05-20"
-				}
-			`,
-			"src/primary.ts": dedent`
-				export default {
-					fetch() {
-						return new Response("Hello from Primary Worker");
-					}
-				};
-			`,
-			"src/auxiliary.ts": dedent`
-				export default {
-					fetch() {
-						return new Response("Hello from Auxiliary Worker");
-					}
-				};
-			`,
-		});
-
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [
-				{ configPath: "./wrangler.primary.jsonc" },
-				{ configPath: "./wrangler.auxiliary.jsonc" },
-			],
-		});
-		onTestFinished(server.close);
-
-		await server.listen();
-
-		const defaultServerResponse = await server.fetch("/");
-		await expect(defaultServerResponse.text()).resolves.toBe(
-			"Hello from Primary Worker"
-		);
-
-		const defaultWorkerResponse = await server.getWorker().fetch("/");
-		await expect(defaultWorkerResponse.text()).resolves.toBe(
-			"Hello from Primary Worker"
-		);
-
-		const primaryResponse = await server.getWorker("primary-worker").fetch("/");
-		await expect(primaryResponse.text()).resolves.toBe(
-			"Hello from Primary Worker"
-		);
-
-		const auxiliaryResponse = await server
-			.getWorker("auxiliary-worker")
-			.fetch("/");
-		await expect(auxiliaryResponse.text()).resolves.toBe(
-			"Hello from Auxiliary Worker"
-		);
-	});
-
-	it("exposes resource bindings scoped to each worker environment", async ({
-		expect,
-	}) => {
-		await helper.seed({
-			"wrangler.api.jsonc": dedent`
-				{
-					"name": "api-worker",
-					"main": "src/api.ts",
-					"compatibility_date": "2026-05-20",
-					"vars": { "GREETING": "api" },
-					"kv_namespaces": [
-						{ "binding": "STORE", "id": "api-store" }
-					],
-					"r2_buckets": [
-						{ "binding": "BUCKET", "bucket_name": "api-bucket" }
-					]
-				}
-			`,
-			"wrangler.admin.jsonc": dedent`
-				{
-					"name": "admin-worker",
-					"main": "src/admin.ts",
-					"compatibility_date": "2026-05-20",
-					"vars": { "GREETING": "admin" },
-					"d1_databases": [
-						{
-							"binding": "DATABASE",
-							"database_name": "admin-database",
-							"database_id": "00000000-0000-0000-0000-000000000002"
-						}
-					],
-					"durable_objects": {
-						"bindings": [
-							{ "name": "OBJECT", "class_name": "Counter" }
-						]
+		await writeBuild({
+			projectDir: ".",
+			workers: {
+				default: {
+					config: {
+						name: "do-worker",
+						exports: { Counter: { type: "durable-object", storage: "sqlite" } },
+						env: {
+							COUNTER: {
+								type: "durable-object",
+								worker: "do-worker",
+								exportName: "Counter",
+							},
+						},
 					},
-					"migrations": [
-						{ "tag": "v1", "new_sqlite_classes": ["Counter"] }
-					]
-				}
-			`,
-			"src/api.ts": dedent`
-				export default {
-					async fetch(request, env) {
-						const url = new URL(request.url);
-						if (url.pathname === "/write-storage") {
-							await env.STORE.put("key", "api");
-							await env.BUCKET.put("key", "api");
-							return new Response("written");
+					script: `
+					import { DurableObject } from "cloudflare:workers";
+
+					export class Counter extends DurableObject {
+						memoryCount = 0;
+
+						fetch() {
+							this.memoryCount += 1;
+							this.ctx.storage.sql.exec("CREATE TABLE IF NOT EXISTS visits (id INTEGER PRIMARY KEY)");
+							this.ctx.storage.sql.exec("INSERT INTO visits DEFAULT VALUES");
+							const { count } = this.ctx.storage.sql.exec("SELECT COUNT(*) AS count FROM visits").one();
+							return Response.json({ memoryCount: this.memoryCount, storageCount: count });
 						}
-
-						return new Response("ok");
-					}
-				};
-			`,
-			"src/admin.ts": dedent`
-			import { DurableObject } from "cloudflare:workers";
-
-			export class Counter extends DurableObject {
-				async fetch() {
-					const value = (await this.ctx.storage.get("value")) ?? 0;
-					const next = value + 1;
-					await this.ctx.storage.put("value", next);
-					return new Response(String(next));
-				}
-			}
-
-			export default {
-				async fetch(request, env) {
-					const url = new URL(request.url);
-					if (url.pathname === "/write-storage") {
-						await env.DATABASE.exec("CREATE TABLE entries (value TEXT);");
-						await env.DATABASE.prepare("INSERT INTO entries (value) VALUES (?);")
-							.bind("admin")
-							.run();
-
-						const id = env.OBJECT.idFromName("shared");
-						const stub = env.OBJECT.get(id);
-						return stub.fetch("http://example.com/");
 					}
 
-					return new Response("ok");
-				}
-			};
-			`,
-		});
-
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [
-				{
-					configPath: "./wrangler.api.jsonc",
-					secrets: { SECRET: "api-secret" },
+					export default {
+						fetch(request, env) {
+							const id = env.COUNTER.idFromName(new URL(request.url).searchParams.get("name"));
+							return env.COUNTER.get(id).fetch(request);
+						}
+					};
+				`,
 				},
-				{
-					configPath: "./wrangler.admin.jsonc",
-					secrets: { SECRET: "admin-secret" },
-				},
-			],
-		});
-		onTestFinished(server.close);
-
-		await server.listen();
-
-		const api = server.getWorker<{
-			GREETING: string;
-			SECRET: string;
-			STORE: KVNamespace;
-			BUCKET: R2Bucket;
-		}>("api-worker");
-		const admin = server.getWorker<{
-			GREETING: string;
-			SECRET: string;
-			DATABASE: D1Database;
-			OBJECT: DurableObjectNamespace;
-		}>("admin-worker");
-		const apiWriteResponse = await api.fetch("/write-storage");
-		expect(await apiWriteResponse.text()).toBe("written");
-		const adminWriteResponse = await admin.fetch("/write-storage");
-		expect(await adminWriteResponse.text()).toBe("1");
-
-		const apiEnv = await api.getEnv();
-		const adminEnv = await admin.getEnv();
-
-		expect(apiEnv.GREETING).toBe("api");
-		expect(apiEnv.SECRET).toBe("api-secret");
-		expect(adminEnv.GREETING).toBe("admin");
-		expect(adminEnv.SECRET).toBe("admin-secret");
-
-		// KV Namespace
-		await expect(apiEnv.STORE.get("key")).resolves.toBe("api");
-
-		// R2 Bucket
-		const object = await apiEnv.BUCKET.get("key");
-
-		if (object === null) {
-			expect.fail("Expected R2 object to exist");
-		} else {
-			await expect(object.text()).resolves.toBe("api");
-		}
-
-		// D1 Database
-		await expect(
-			adminEnv.DATABASE.prepare("SELECT value FROM entries").first("value")
-		).resolves.toBe("admin");
-
-		// Durable Object Namespace
-		const adminStub = adminEnv.OBJECT.get(adminEnv.OBJECT.idFromName("shared"));
-		const adminResponse = await adminStub.fetch("http://example.com/");
-		await expect(adminResponse.text()).resolves.toBe("2");
-	});
-
-	it("evicts Durable Objects by class name or binding name", async ({
-		expect,
-	}) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "do-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20",
-					"exports": {
-						"Counter": {
-							"type": "durable-object",
-							"storage": "sqlite"
-						}
-					},
-					"durable_objects": {
-						"bindings": [
-							{ "name": "COUNTER", "class_name": "Counter" }
-						]
-					}
-				}
-			`,
-			"src/index.ts": dedent`
-				import { DurableObject } from "cloudflare:workers";
-
-				export class Counter extends DurableObject {
-					memoryCount = 0;
-
-					async fetch() {
-						this.memoryCount += 1;
-						const storageCount = ((await this.ctx.storage.get("count")) ?? 0) + 1;
-						await this.ctx.storage.put("count", storageCount);
-						return Response.json({
-							memoryCount: this.memoryCount,
-							storageCount,
-						});
-					}
-				}
-
-				export default {
-					fetch(_request, _env, ctx) {
-						const id = ctx.exports.Counter.idFromName("user-123");
-						return ctx.exports.Counter.get(id).fetch("http://counter");
-					}
-				};
-			`,
+			},
 		});
 
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
-		onTestFinished(server.close);
-
-		await server.listen();
-
-		const worker = server.getWorker<
-			{ COUNTER: DurableObjectNamespace },
-			{
-				default: ExportedHandler<{ COUNTER: DurableObjectNamespace }>;
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match runtime class exports by instance type.
-				Counter: new (...args: any[]) => CloudflareWorkersModule.DurableObject;
-			}
-		>("do-worker");
-
-		const response1 = await worker.fetch("/");
-		expect(await response1.json()).toEqual({
-			memoryCount: 1,
-			storageCount: 1,
-		});
-
-		// Evict by class name
-		await worker.evictDurableObject("Counter", { name: "user-123" });
-
-		const response2 = await worker.fetch("/");
-		expect(await response2.json()).toEqual({
-			memoryCount: 1,
-			storageCount: 2,
-		});
-
-		// Evict by binding name
-		await worker.evictDurableObject("COUNTER", { name: "user-123" });
-
-		const response3 = await worker.fetch("/");
-		expect(await response3.json()).toEqual({
-			memoryCount: 1,
-			storageCount: 3,
-		});
-	});
-
-	it("exposes Durable Object storage", async ({ expect, onTestFailed }) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "do-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20",
-					"durable_objects": {
-						"bindings": [
-							{ "name": "OBJECT", "class_name": "TestObject" }
-						]
-					},
-					"migrations": [
-						{ "tag": "v1", "new_sqlite_classes": ["TestObject"] }
-					]
-				}
-			`,
-			"src/index.ts": dedent`
-				import { DurableObject } from "cloudflare:workers";
-
-				export class TestObject extends DurableObject {
-					constructor(ctx, env) {
-						super(ctx, env);
-						this.ctx.storage.sql.exec(
-							"CREATE TABLE IF NOT EXISTS entries (id TEXT PRIMARY KEY, value TEXT)"
-						);
-					}
-
-					fetch(request) {
-						const url = new URL(request.url);
-						const sql = this.ctx.storage.sql;
-
-						if (url.pathname === "/write") {
-							sql.exec(
-								"INSERT OR REPLACE INTO entries (id, value) VALUES ('key', ?)",
-								url.searchParams.get("value")
-							);
-							return new Response("ok");
-						}
-
-						const row = sql.exec("SELECT value FROM entries WHERE id = 'key'").one();
-						return new Response(row?.value ?? "missing");
-					}
-				}
-
-				export default {
-					fetch(request, env) {
-						const url = new URL(request.url);
-						const id = env.OBJECT.idFromName(url.searchParams.get("name") ?? "user-123");
-						return env.OBJECT.get(id).fetch(request);
-					}
-				}
-			`,
-		});
-
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
+		const server = createTestHarness({ workers: [{ projectDir: "." }] });
 		onTestFinished(server.close);
 		onTestFailed(server.debug);
 
 		await server.listen();
 
-		const worker = server.getWorker<
-			{ OBJECT: DurableObjectNamespace },
-			{
-				default: ExportedHandler<{ OBJECT: DurableObjectNamespace }>;
-				TestObject: new (
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match runtime class exports by instance type.
-					...args: any[]
-				) => CloudflareWorkersModule.DurableObject;
-			}
-		>();
+		const worker = server.getWorker();
+		await expect(worker.listDurableObjectIds("Counter")).resolves.toEqual([]);
 
-		const storageByClassName = await worker.getDurableObjectStorage(
-			"TestObject",
-			{
-				name: "by-class",
-			}
+		const storage = await worker.getDurableObjectStorage("Counter", {
+			name: "user-123",
+		});
+		await storage.exec("CREATE TABLE visits (id INTEGER PRIMARY KEY)");
+		await storage.exec("INSERT INTO visits DEFAULT VALUES");
+
+		const response1 = await worker.fetch("/?name=user-123");
+		expect(await response1.json()).toEqual({
+			memoryCount: 1,
+			storageCount: 2,
+		});
+
+		await worker.evictDurableObject("Counter", { name: "user-123" });
+
+		const response2 = await worker.fetch("/?name=user-123");
+		expect(await response2.json()).toEqual({
+			memoryCount: 1,
+			storageCount: 3,
+		});
+
+		const env = await worker.getEnv();
+		await expect(worker.listDurableObjectIds("Counter")).resolves.toEqual([
+			env.COUNTER.idFromName("user-123").toString(),
+		]);
+
+		// Not by binding name
+		await expect(
+			worker.getDurableObjectStorage("COUNTER", { name: "user-123" })
+		).rejects.toThrow(
+			'No Durable Object class named "COUNTER" found in "do-worker" worker.'
 		);
-		await storageByClassName.exec(
-			"INSERT INTO entries (id, value) VALUES ('key', ?)",
-			"seeded-by-class"
+		await expect(worker.listDurableObjectIds("COUNTER")).rejects.toThrow(
+			'No Durable Object class named "COUNTER" found in "do-worker" worker.'
 		);
-
-		const response3 = await worker.fetch("/read?name=by-class");
-		await expect(response3.text()).resolves.toBe("seeded-by-class");
-
-		const storageByBindingName = await worker.getDurableObjectStorage(
-			"OBJECT",
-			{
-				name: "user-123",
-			}
-		);
-		await storageByBindingName.exec(
-			"INSERT INTO entries (id, value) VALUES ('key', ?)",
-			"seeded"
-		);
-
-		const response1 = await worker.fetch("/read?name=user-123");
-		await expect(response1.text()).resolves.toBe("seeded");
-
-		const response2 = await worker.fetch("/write?name=user-123&value=app");
-		await expect(response2.text()).resolves.toBe("ok");
-
-		const rows = await storageByBindingName.exec<{ value: string }>(
-			"SELECT value FROM entries WHERE id = 'key'"
-		);
-		expect(rows).toEqual([{ value: "app" }]);
 	});
 
-	it("introspects Workflow instances by binding name", async ({ expect }) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "workflow-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20",
-					"workflows": [
-						{
-							"binding": "MODERATOR",
-							"class_name": "ModeratorWorkflow",
-							"name": "moderator-workflow"
+	it("only replaces a binding with one that can stand in for it", async ({
+		expect,
+	}) => {
+		await writeBuild({
+			projectDir: ".",
+			workers: {
+				default: {
+					config: {
+						name: "app",
+						exports: {
+							TestObject: { type: "durable-object", storage: "sqlite" },
+						},
+						env: {
+							GREETING: { type: "text", value: "Hello" },
+							AI: { type: "ai" },
+							OBJECT: {
+								type: "durable-object",
+								worker: "app",
+								exportName: "TestObject",
+							},
+						},
+					},
+					script: `
+					import { DurableObject } from "cloudflare:workers";
+					export class TestObject extends DurableObject {}
+					export default {};
+				`,
+				},
+			},
+		});
+
+		for (const [envOverrides, message] of [
+			// As in production, a Worker only has the bindings it declares
+			[
+				{ ADDED: bindings.text("added") },
+				'`envOverrides` names "ADDED", which isn\'t a binding of Worker "app". It has: GREETING, AI, OBJECT.',
+			],
+			[
+				{ GREETING: bindings.kv() },
+				'`envOverrides` can\'t replace binding "GREETING" of type "text" with one of type "kv". Use `bindings.text()` or `bindings.json()`.',
+			],
+			[
+				{ AI: bindings.text("mock") },
+				'`envOverrides` can\'t replace binding "AI" of type "ai" with one of type "text". Use type "ai", or `bindings.worker()` to mock it.',
+			],
+			[
+				{ OBJECT: bindings.worker({ worker: "mock" }) },
+				'`envOverrides` can\'t replace binding "OBJECT" of type "durable-object" with one of type "worker". Use another Durable Object binding.',
+			],
+		] as const) {
+			const server = createTestHarness({
+				workers: [{ projectDir: ".", envOverrides }],
+			});
+			onTestFinished(server.close);
+			await expect(server.listen()).rejects.toThrow(message);
+		}
+	});
+
+	it("introspects Workflow instances by export name", async ({ expect }) => {
+		await writeBuild({
+			projectDir: ".",
+			workers: {
+				default: {
+					config: {
+						name: "workflow-worker",
+						exports: {
+							ModeratorWorkflow: {
+								type: "workflow",
+								name: "moderator-workflow",
+							},
+						},
+						env: {
+							MODERATOR: {
+								type: "workflow",
+								name: "moderator-workflow",
+								worker: "workflow-worker",
+								exportName: "ModeratorWorkflow",
+							},
+						},
+					},
+					script: `
+					import { WorkflowEntrypoint } from "cloudflare:workers";
+
+					export class ModeratorWorkflow extends WorkflowEntrypoint {
+						run(event, step) {
+							return step.do("AI content scan", () => "scanned");
 						}
-					]
-				}
-			`,
-			"src/index.ts": dedent`
-				import { WorkflowEntrypoint } from "cloudflare:workers";
-
-				export class ModeratorWorkflow extends WorkflowEntrypoint {
-					async run(event, step) {
-						if (event.payload?.streamTest) {
-							const stream = await step.do("stream result", async () => {
-								return new ReadableStream({
-									start(controller) {
-										controller.enqueue(new TextEncoder().encode("real stream"));
-										controller.close();
-									}
-								});
-							});
-							return { streamResult: await new Response(stream).text() };
-						}
-
-						await step.sleep("sleep for a while", "10 seconds");
-
-						const result = await step.do("AI content scan", async () => {
-							const violationScore = Math.floor(Math.random() * 100);
-							return { violationScore };
-						});
-
-						if (result.violationScore < 10) {
-							await step.do("auto approve content", async () => {
-								return { status: "auto_approved" };
-							});
-							return { status: "auto_approved" };
-						}
-
-						await step.do("auto reject content", async () => {
-							return { status: "auto_rejected" };
-						});
-						return { status: "auto_rejected" };
 					}
-				}
 
-				export default {
-					async fetch(request, env) {
-						const url = new URL(request.url);
-
-						if (url.pathname === "/moderate-known") {
-							const id = url.searchParams.get("id");
+					export default {
+						async fetch(request, env) {
+							const id = new URL(request.url).searchParams.get("id");
 							const workflow = await env.MODERATOR.create({ id });
 							return Response.json({ id: workflow.id });
 						}
-
-						if (url.pathname === "/moderate") {
-							const workflow = await env.MODERATOR.create();
-							return Response.json({
-								id: workflow.id,
-								details: await workflow.status()
-							});
-						}
-
-						if (url.pathname === "/moderate-batch") {
-							const workflows = await env.MODERATOR.createBatch([
-								{},
-								{ id: "321" },
-								{}
-							]);
-							return Response.json({ ids: workflows.map((workflow) => workflow.id) });
-						}
-
-						if (url.pathname === "/moderate-stream") {
-							const workflow = await env.MODERATOR.create({ params: { streamTest: true } });
-							return Response.json({ id: workflow.id });
-						}
-
-						return new Response("Not found", { status: 404 });
-					}
-				};
-			`,
+					};
+				`,
+				},
+			},
 		});
 
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
+		const server = createTestHarness({ workers: [{ projectDir: "." }] });
 		onTestFinished(server.close);
 
 		await server.listen();
 
 		const worker = server.getWorker("workflow-worker");
-		const stepName = "AI content scan";
-		const mockResult = { violationScore: 0 };
+		const step = { name: "AI content scan" };
 
-		const instanceId = "known-workflow-instance";
 		const instance = await worker.introspectWorkflowInstance(
-			"MODERATOR",
-			instanceId
+			"ModeratorWorkflow",
+			"known"
 		);
 		onTestFinished(instance.dispose);
-
 		await instance.modify(async (modifier) => {
-			await modifier.disableSleeps();
-			await modifier.mockStepResult({ name: stepName }, mockResult);
+			await modifier.mockStepResult(step, "mocked");
 		});
+		await worker.fetch("/?id=known");
+		await instance.waitForStatus("complete");
+		await expect(instance.getOutput()).resolves.toBe("mocked");
 
-		const response = await worker.fetch(`/moderate-known?id=${instanceId}`);
-		await expect(response.json()).resolves.toEqual({ id: instanceId });
-
-		await expect(
-			instance.waitForStepResult({ name: stepName })
-		).resolves.toEqual(mockResult);
-		await expect(instance.waitForStatus("complete")).resolves.not.toThrow();
-		await expect(instance.getOutput()).resolves.toEqual({
-			status: "auto_approved",
-		});
-
-		const workflow = await worker.introspectWorkflow("MODERATOR");
+		const workflow = await worker.introspectWorkflow("ModeratorWorkflow");
 		onTestFinished(workflow.dispose);
-		await expect(worker.introspectWorkflow("MODERATOR")).rejects.toThrow(
-			`Workflow "moderator-workflow" already has an active introspection session.`
-		);
 		await workflow.modifyAll(async (modifier) => {
-			await modifier.disableSleeps();
-			await modifier.mockStepResult({ name: stepName }, mockResult);
+			await modifier.mockStepResult(step, "mocked");
 		});
-
-		const unknownIdResponse = await worker.fetch("/moderate");
-		const unknownIdResult = (await unknownIdResponse.json()) as { id: string };
-		expect(unknownIdResult.id).not.toBe(instanceId);
-
+		await worker.fetch("/?id=other");
 		const instances = await workflow.get();
 		expect(instances).toHaveLength(1);
-		await expect(
-			instances[0].waitForStepResult({ name: stepName })
-		).resolves.toEqual(mockResult);
-		await expect(instances[0].waitForStatus("complete")).resolves.not.toThrow();
-		await expect(instances[0].getOutput()).resolves.toEqual({
-			status: "auto_approved",
-		});
-		await workflow.dispose();
-		await expect(workflow.get()).rejects.toThrow(
-			`Workflow "moderator-workflow" does not have an active introspection session for this introspector.`
-		);
-		await expect(workflow.modifyAll(async () => {})).rejects.toThrow(
-			`Workflow "moderator-workflow" does not have an active introspection session for this introspector.`
-		);
-
-		const batchWorkflow = await worker.introspectWorkflow("MODERATOR");
-		onTestFinished(batchWorkflow.dispose);
-		await batchWorkflow.modifyAll(async (modifier) => {
-			await modifier.disableSleeps();
-			await modifier.mockStepResult({ name: stepName }, mockResult);
-		});
-
-		const batchResponse = await worker.fetch("/moderate-batch");
-		await expect(batchResponse.json()).resolves.toMatchObject({
-			ids: [expect.any(String), "321", expect.any(String)],
-		});
-
-		const batchInstances = await batchWorkflow.get();
-		expect(batchInstances).toHaveLength(3);
-		for (const batchInstance of batchInstances) {
-			await expect(
-				batchInstance.waitForStepResult({ name: stepName })
-			).resolves.toEqual(mockResult);
-			await expect(
-				batchInstance.waitForStatus("complete")
-			).resolves.not.toThrow();
-			await expect(batchInstance.getOutput()).resolves.toEqual({
-				status: "auto_approved",
-			});
-		}
-
-		await batchWorkflow.dispose();
-
-		const streamWorkflow = await worker.introspectWorkflow("MODERATOR");
-		onTestFinished(streamWorkflow.dispose);
-		await streamWorkflow.modifyAll(async (modifier) => {
-			await modifier.mockStepResult(
-				{ name: "stream result" },
-				new ReadableStream({
-					start(controller) {
-						controller.enqueue(new TextEncoder().encode("mock stream"));
-						controller.close();
-					},
-				})
-			);
-		});
-
-		await worker.fetch("/moderate-stream");
-		const [streamInstance] = await streamWorkflow.get();
-		await expect(
-			streamInstance.waitForStatus("complete")
-		).resolves.not.toThrow();
-		await expect(streamInstance.getOutput()).resolves.toEqual({
-			streamResult: "mock stream",
-		});
+		await instances[0]?.waitForStatus("complete");
+		await expect(instances[0]?.getOutput()).resolves.toBe("mocked");
 	});
 
 	it("applies D1 migrations to a worker binding", async ({ expect }) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "d1-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20",
-					"d1_databases": [
-						{
-							"binding": "DATABASE",
-							"database_name": "test-database",
-							"database_id": "00000000-0000-0000-0000-000000000001",
-							"migrations_dir": "migrations",
-							"migrations_pattern": "migrations/*/migration.sql",
-							"migrations_table": "custom_migrations"
-						}
-					]
-				}
-			`,
-			"src/index.ts": dedent`
-				export default {
-					async fetch(request, env) {
-						const key = new URL(request.url).pathname.slice(1);
-						const row = await env.DATABASE.prepare("SELECT value FROM settings WHERE key = ?")
-							.bind(key)
-							.first();
+		await writeBuild({
+			projectDir: "app",
+			workers: {
+				default: {
+					config: { name: "d1-worker", env: { DATABASE: { type: "d1" } } },
+					script: `
+					export default {
+						async fetch(request, env) {
+							const key = new URL(request.url).pathname.slice(1);
+							const row = await env.DATABASE.prepare("SELECT value FROM settings WHERE key = ?")
+								.bind(key)
+								.first();
 
-						if (row === null) {
-							return new Response("missing", { status: 404 });
-						}
+							if (row === null) {
+								return new Response("missing", { status: 404 });
+							}
 
-						return new Response(row.value);
-					}
-				};
-			`,
-			"migrations/0001_settings/migration.sql": dedent`
-				CREATE TABLE settings (
-					key TEXT PRIMARY KEY,
-					value TEXT NOT NULL
-				);
-			`,
-			"migrations/0002_seed/migration.sql": dedent`
-				INSERT INTO settings (key, value) VALUES ('greeting', 'Hello D1');
-			`,
+							return new Response(row.value);
+						}
+					};
+				`,
+				},
+			},
+		});
+		await seed({
+			"app/migrations/0001_settings/migration.sql":
+				"CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);",
+			"app/migrations/0002_seed/migration.sql":
+				"INSERT INTO settings (key, value) VALUES ('greeting', 'Hello D1');",
 		});
 
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
+		const server = createTestHarness({ workers: [{ projectDir: "app" }] });
 		onTestFinished(server.close);
 
 		await server.listen();
 
-		const worker = server.getWorker<{ DATABASE: D1Database }>();
-		await worker.applyD1Migrations("DATABASE");
+		const worker = server.getWorker();
+		// Build Output has no migrations config, so the test passes it. `dir`
+		// defaults to `migrations`, in the Worker's project directory.
+		const migrationsOptions = {
+			pattern: "migrations/*/migration.sql",
+			table: "custom_migrations",
+		};
+		await worker.applyD1Migrations("DATABASE", migrationsOptions);
 
 		const response = await worker.fetch("/greeting");
 		await expect(response.text()).resolves.toBe("Hello D1");
 
-		await worker.applyD1Migrations("DATABASE");
+		await worker.applyD1Migrations("DATABASE", migrationsOptions);
 		const secondResponse = await worker.fetch("/greeting");
 		await expect(secondResponse.text()).resolves.toBe("Hello D1");
 
 		server.debug();
 		const debugOutput = normalizeDebugOutput(logs.getAndClearOut());
 		expect(debugOutput).toContain(
-			"[server] [d1-worker] d1 migrations - DATABASE - applied 0001_settings/migration.sql"
-		);
-		expect(debugOutput).toContain(
-			"[server] [d1-worker] d1 migrations - DATABASE - applied 0002_seed/migration.sql"
-		);
-		expect(debugOutput).toContain(
-			"[server] [d1-worker] d1 migrations - DATABASE - completed (2 applied)"
-		);
-		expect(debugOutput).toContain(
-			"[server] [d1-worker] d1 migrations - DATABASE - completed (no migrations to apply)"
-		);
-	});
-
-	it("supports service bindings between workers", async ({ expect }) => {
-		await helper.seed({
-			"wrangler.primary.jsonc": dedent`
-				{
-					"name": "primary-worker",
-					"main": "src/primary.ts",
-					"compatibility_date": "2026-05-20",
-					"services": [
-						{ "binding": "AUXILIARY", "service": "auxiliary-worker" }
-					]
-				}
-			`,
-			"wrangler.auxiliary.jsonc": dedent`
-				{
-					"name": "auxiliary-worker",
-					"main": "src/auxiliary.ts",
-					"compatibility_date": "2026-05-20",
-					"services": [
-						{ "binding": "PRIMARY", "service": "primary-worker" }
-					]
-				}
-			`,
-			"src/primary.ts": dedent`
-				export default {
-					async fetch(request, env) {
-						const url = new URL(request.url);
-						if (url.pathname === "/call-auxiliary") {
-							return env.AUXILIARY.fetch("http://auxiliary.example.com/from-primary");
-						}
-
-						return new Response("primary:" + url.pathname);
-					}
-				};
-			`,
-			"src/auxiliary.ts": dedent`
-				export default {
-					async fetch(request, env) {
-						const url = new URL(request.url);
-						if (url.pathname === "/call-primary") {
-							return env.PRIMARY.fetch("http://primary.example.com/from-auxiliary");
-						}
-
-						return new Response("auxiliary:" + url.pathname);
-					}
-				};
-			`,
-		});
-
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [
-				{ configPath: "./wrangler.primary.jsonc" },
-				{ configPath: "./wrangler.auxiliary.jsonc" },
-			],
-		});
-		onTestFinished(server.close);
-
-		await server.listen();
-
-		const auxiliaryResponse = await server
-			.getWorker("primary-worker")
-			.fetch("/call-auxiliary");
-		await expect(auxiliaryResponse.text()).resolves.toBe(
-			"auxiliary:/from-primary"
-		);
-
-		const primaryResponse = await server
-			.getWorker("auxiliary-worker")
-			.fetch("/call-primary");
-		await expect(primaryResponse.text()).resolves.toBe(
-			"primary:/from-auxiliary"
+			"[server] [d1-worker] d1 migrations - DATABASE - completed (2 found)"
 		);
 	});
 
 	it("supports binding overrides for first-party bindings", async ({
 		expect,
 	}) => {
-		await helper.seed({
-			"wrangler.app.jsonc": dedent`
-				{
-					"name": "app-worker",
-					"main": "src/app.ts",
-					"compatibility_date": "2026-05-20",
-					"ai": { "binding": "AI" }
-				}
-			`,
-			"src/app.ts": dedent`
-				export default {
-					async fetch(_request, env) {
-						return Response.json(await env.AI.run("@cf/test/model", {
-							prompt: "What should the test return?"
-						}));
-					}
-				};
-			`,
-			"src/mock-ai.ts": dedent`
-				import { WorkerEntrypoint } from "cloudflare:workers";
-
-				let calls = 0;
-				export default class MockAi extends WorkerEntrypoint {
-					run(model, options) {
-						calls += 1;
-						return {
-							model,
-							response: "mock-ai:" + calls,
-							prompt: options.prompt,
-						};
-					}
-				}
-			`,
+		await writeBuild({
+			projectDir: ".",
+			workers: {
+				default: {
+					config: { name: "app-worker", env: { AI: { type: "ai" } } },
+					script: `
+					export default {
+						async fetch(_request, env) {
+							return Response.json(await env.AI.run("@cf/test/model", {
+								prompt: "What should the test return?"
+							}));
+						}
+					};
+				`,
+				},
+			},
 		});
 
 		const server = createTestHarness({
-			root: helper.tmpPath,
 			workers: [
 				{
-					configPath: "./wrangler.app.jsonc",
-					bindingOverrides: {
-						AI: "mock-ai",
+					projectDir: ".",
+					envOverrides: {
+						AI: bindings.worker({ worker: "mock-ai" }),
 					},
 				},
 				{
 					config: {
 						name: "mock-ai",
-						main: "src/mock-ai.ts",
-						compatibility_date: "2026-05-20",
+						compatibilityDate: "2026-05-20",
+						manifest: singleModuleManifest(`
+							import { WorkerEntrypoint } from "cloudflare:workers";
+
+							let calls = 0;
+							export default class MockAi extends WorkerEntrypoint {
+								run(model, options) {
+									calls += 1;
+									return {
+										model,
+										response: "mock-ai:" + calls,
+										prompt: options.prompt,
+									};
+								}
+							}
+						`),
 					},
 				},
 			],
@@ -1207,29 +996,28 @@ describe("createTestHarness", () => {
 	});
 
 	it("returns the default worker export", async ({ expect }) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "rpc-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20"
-				}
-			`,
-			"src/index.ts": dedent`
-				import { WorkerEntrypoint } from "cloudflare:workers";
+		await writeBuild({
+			projectDir: ".",
+			workers: {
+				default: {
+					config: {
+						name: "rpc-worker",
+						env: { GREETING: { type: "text", value: "Hello" } },
+					},
+					script: `
+					import { WorkerEntrypoint } from "cloudflare:workers";
 
-				export default class RpcWorker extends WorkerEntrypoint {
-					getMessage(name) {
-						return "Hello " + name;
+					export default class RpcWorker extends WorkerEntrypoint {
+						getMessage(name) {
+							return "Hello " + name;
+						}
 					}
-				}
-			`,
+				`,
+				},
+			},
 		});
 
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
+		const server = createTestHarness({ workers: [{ projectDir: "." }] });
 		onTestFinished(server.close);
 
 		await server.listen();
@@ -1243,83 +1031,80 @@ describe("createTestHarness", () => {
 			>
 		) => RpcWorker;
 		type RpcWorkerModule = { default: RpcWorkerConstructor };
-		const rpcWorker = server.getWorker<unknown, RpcWorkerModule>("rpc-worker");
+		// What `typeof import("./cloudflare.config")` gives
+		const config = defineConfig({
+			worker: {
+				name: "rpc-worker",
+				compatibilityDate: "2026-10-01",
+				entrypoint: {} as RpcWorkerModule,
+				env: { GREETING: bindings.text("Hello") },
+			},
+		});
+		const rpcWorker = server.getWorker<{ default: typeof config }>(
+			"rpc-worker"
+		);
 		const rpcExport = await rpcWorker.getExport();
 
 		expect(await rpcExport.getMessage("World")).toBe("Hello World");
-	});
+		expectTypeOf<
+			Awaited<ReturnType<typeof rpcExport.getMessage>>
+		>().toEqualTypeOf<string>();
+		const env = await rpcWorker.getEnv();
+		expect(env.GREETING).toBe("Hello");
+		expectTypeOf(env.GREETING).toEqualTypeOf<"Hello">();
 
-	it("uses runtime errors for missing binding override targets", async ({
-		expect,
-	}) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "app-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20",
-					"ai": { "binding": "AI" }
-				}
-			`,
-			"src/index.ts": dedent`
-				export default {
-					async fetch(_request, env) {
-						return Response.json(await env.AI.run("@cf/test/model", {}));
-					}
-				};
-			`,
-		});
-
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [
-				{
-					configPath: "./wrangler.jsonc",
-					bindingOverrides: { AI: "missing-ai" },
-				},
-			],
-		});
-		onTestFinished(server.close);
-
-		await expect(server.listen()).rejects.toThrow("core:user:missing-ai");
+		// Without a config module, the env and export are `any`, or the types the
+		// test gives
+		const untypedWorker = server.getWorker("rpc-worker");
+		expectTypeOf(await untypedWorker.getEnv()).toBeAny();
+		expectTypeOf(await untypedWorker.getExport()).toBeAny();
+		expectTypeOf(
+			await untypedWorker.getEnv<{ GREETING: string }>()
+		).toEqualTypeOf<{ GREETING: string }>();
+		const typedExport = await untypedWorker.getExport<{
+			getMessage(name: string): string;
+		}>();
+		expectTypeOf<
+			Awaited<ReturnType<typeof typedExport.getMessage>>
+		>().toEqualTypeOf<string>();
 	});
 
 	it("routes fetches based on worker routes", async ({ expect }) => {
-		await helper.seed({
-			"wrangler.primary.jsonc": dedent`
-				{
-					"name": "primary-worker",
-					"main": "src/primary.ts",
-					"compatibility_date": "2026-05-20",
-					"routes": ["primary.example.com/*"]
-				}
-			`,
-			"src/primary.ts": dedent`
-				export default {
-					fetch(request) {
-						return Response.json({ name: "primary", url: request.url });
-					}
-				};
-			`,
-			"src/auxiliary.ts": dedent`
-				export default {
-					fetch(request) {
-						return Response.json({ name: "auxiliary", url: request.url });
-					}
-				};
-			`,
+		await writeBuild({
+			projectDir: ".",
+			workers: {
+				default: {
+					config: {
+						name: "primary-worker",
+						triggers: [{ type: "fetch", pattern: "primary.example.com/*" }],
+					},
+					script: `
+					export default {
+						fetch(request) {
+							return Response.json({ name: "primary", url: request.url });
+						}
+					};
+				`,
+				},
+			},
 		});
+		const auxiliaryManifest = singleModuleManifest(`
+			export default {
+				fetch(request) {
+					return Response.json({ name: "auxiliary", url: request.url });
+				}
+			};
+		`);
 
 		const server = createTestHarness({
-			root: helper.tmpPath,
 			workers: [
-				{ configPath: "./wrangler.primary.jsonc" },
+				{ projectDir: "." },
 				{
 					config: {
 						name: "auxiliary-worker",
-						main: "src/auxiliary.ts",
-						compatibility_date: "2026-05-20",
-						routes: ["auxiliary.example.com/*"],
+						compatibilityDate: "2026-05-20",
+						triggers: [{ type: "fetch", pattern: "auxiliary.example.com/*" }],
+						manifest: auxiliaryManifest,
 					},
 				},
 			],
@@ -1345,15 +1130,16 @@ describe("createTestHarness", () => {
 		});
 
 		await server.update({
-			root: helper.tmpPath,
 			workers: [
-				{ configPath: "./wrangler.primary.jsonc" },
+				{ projectDir: "." },
 				{
 					config: {
 						name: "auxiliary-worker",
-						main: "src/auxiliary.ts",
-						compatibility_date: "2026-05-20",
-						routes: ["updated-auxiliary.example.com/*"],
+						compatibilityDate: "2026-05-20",
+						triggers: [
+							{ type: "fetch", pattern: "updated-auxiliary.example.com/*" },
+						],
+						manifest: auxiliaryManifest,
 					},
 				},
 			],
@@ -1378,34 +1164,20 @@ describe("createTestHarness", () => {
 		});
 	});
 
-	it("rejects updates that change the number of workers without committing them", async ({
-		expect,
-	}) => {
-		await helper.seed({
-			"src/primary.ts": dedent`
-				export default {
-					fetch() {
-						return new Response("primary");
-					}
-				};
-			`,
-			"src/auxiliary.ts": dedent`
-				export default {
-					fetch() {
-						return new Response("auxiliary");
-					}
-				};
-			`,
-		});
-
+	it("updates the number of workers", async ({ expect }) => {
 		const server = createTestHarness({
-			root: helper.tmpPath,
 			workers: [
 				{
 					config: {
 						name: "primary-worker",
-						main: "src/primary.ts",
-						compatibility_date: "2026-05-20",
+						compatibilityDate: "2026-05-20",
+						manifest: singleModuleManifest(`
+							export default {
+								fetch() {
+									return new Response("primary");
+								}
+							};
+						`),
 					},
 				},
 			],
@@ -1414,86 +1186,88 @@ describe("createTestHarness", () => {
 
 		await server.listen();
 
-		await expect(
-			server.update((options) => ({
-				...options,
-				workers: [
-					...options.workers,
-					{
-						config: {
-							name: "auxiliary-worker",
-							main: "src/auxiliary.ts",
-							compatibility_date: "2026-05-20",
-						},
+		await server.update((options) => ({
+			...options,
+			workers: [
+				...options.workers,
+				{
+					config: {
+						name: "auxiliary-worker",
+						compatibilityDate: "2026-05-20",
+						manifest: singleModuleManifest(`
+							export default {
+								fetch() {
+									return new Response("auxiliary");
+								}
+							};
+						`),
 					},
-				],
-			}))
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Updating the number of workers running in the server is not supported.]`
+				},
+			],
+		}));
+		const auxiliaryResponse = await server
+			.getWorker("auxiliary-worker")
+			.fetch("/");
+		await expect(auxiliaryResponse.text()).resolves.toBe("auxiliary");
+
+		await server.update((options) => ({
+			...options,
+			workers: options.workers.slice(0, 1),
+		}));
+		await expect(
+			server.getWorker("auxiliary-worker").fetch("/")
+		).rejects.toThrow(
+			'Worker "auxiliary-worker" does not exist in this server.'
 		);
-
-		let workerCountAfterRejectedUpdate = 0;
-		await server.update((options) => {
-			workerCountAfterRejectedUpdate = options.workers.length;
-			return options;
-		});
-
-		expect(workerCountAfterRejectedUpdate).toBe(1);
 	});
 
-	it("rejects update when a worker fails to build", async ({ expect }) => {
-		await helper.seed({
-			"wrangler.primary.jsonc": dedent`
-				{
-					"name": "primary-worker",
-					"main": "src/primary.ts",
-					"compatibility_date": "2026-05-20"
-				}
-			`,
-			"wrangler.auxiliary.jsonc": dedent`
-				{
-					"name": "auxiliary-worker",
-					"main": "src/auxiliary.ts",
-					"compatibility_date": "2026-05-20"
-				}
-			`,
-			"src/primary.ts": dedent`
-				export default {
-					fetch() {
-						return new Response("Hello from Primary Worker");
-					}
-				};
-			`,
-			"src/auxiliary.ts": dedent`
-				export default {
-					fetch() {
-						return new Response("Hello from Auxiliary Worker");
-					}
-				};
-			`,
+	it("rejects update when a worker fails to start", async ({ expect }) => {
+		await writeBuild({
+			projectDir: ".",
+			workers: {
+				default: {
+					config: { name: "primary-worker" },
+					script: `
+					export default {
+						fetch() {
+							return new Response("Hello from Primary Worker");
+						}
+					};
+				`,
+				},
+				"auxiliary-worker": {
+					config: { name: "auxiliary-worker" },
+					script: `
+					export default {
+						fetch() {
+							return new Response("Hello from Auxiliary Worker");
+						}
+					};
+				`,
+				},
+			},
 		});
 
 		const server = createTestHarness({
-			root: helper.tmpPath,
 			workers: [
-				{ configPath: "./wrangler.primary.jsonc" },
-				{ configPath: "./wrangler.auxiliary.jsonc" },
+				{ projectDir: "." },
+				{ projectDir: ".", name: "auxiliary-worker" },
 			],
 		});
 		onTestFinished(server.close);
 
 		await server.listen();
 
-		// Either of these changes should cause a build failure
-		await helper.seed({
-			"src/primary.ts": dedent`
+		// Either of these changes should cause a startup failure
+		await seed({
+			[path.join(getWorkerBundleDir("."), "index.js")]: `
 				export default {
 					fetch() {
 						return new Response("broken);
 					}
 				};
 			`,
-			"src/auxiliary.ts": dedent`
+			[path.join(getWorkerBundleDir(".", "auxiliary-worker"), "index.js")]: `
 				export default {
 					fetch() {
 						return new Response("broken too";
@@ -1509,356 +1283,79 @@ describe("createTestHarness", () => {
 					throw new Error("server.update() timed out");
 				}),
 			])
-		).rejects.toThrow("Build failed");
-	});
-
-	it("rejects calls on unknown worker handles", async ({ expect }) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "primary-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20"
-				}
-			`,
-			"src/index.ts": dedent`
-				export default {
-					fetch() {
-						return new Response("primary");
-					}
-				};
-			`,
-		});
-
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
-		onTestFinished(server.close);
-
-		await server.listen();
-
-		await expect(
-			server.getWorker("unknown-worker").fetch("/")
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[TypeError: Worker "unknown-worker" does not exist in this server.]`
-		);
-
-		await expect(
-			server.getWorker("unknown-worker").scheduled({
-				cron: "0 0 * * *",
-			})
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[TypeError: Worker "unknown-worker" does not exist in this server.]`
-		);
+		).rejects.toThrow("The Workers runtime failed to start");
 	});
 
 	it("uses the current Node process fetch for outbound requests by default", async ({
 		expect,
 	}) => {
 		const mockServer = setupServer(
-			http.get("http://example.com/", () => {
-				return HttpResponse.text("Mocked by MSW");
+			http.get("http://example.com/", ({ request }) => {
+				// As in production, CF-Worker names the zone of the Worker's route
+				return HttpResponse.text(
+					`Mocked by MSW for ${request.headers.get("CF-Worker")}`
+				);
 			})
 		);
 		mockServer.listen({ onUnhandledRequest: "error" });
 		onTestFinished(() => mockServer.close());
 
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "default-outbound-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20"
-				}
-			`,
-			"src/index.ts": dedent`
-				export default {
-					fetch() {
-						return fetch("http://example.com");
-					}
-				};
-			`,
-		});
-
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
-		onTestFinished(server.close);
-
-		await server.listen();
-
-		const response = await server.fetch("/");
-		await expect(response.text()).resolves.toBe("Mocked by MSW");
-	});
-
-	it("starts workers from inline config", async ({ expect }) => {
-		await helper.seed({
-			"src/index.ts": dedent`
-				export default {
-					fetch() {
-						return new Response("Hello from inline config");
-					}
-				};
-			`,
-		});
-
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [
-				{
+		await writeBuild({
+			projectDir: ".",
+			workers: {
+				default: {
 					config: {
-						main: "src/index.ts",
-						compatibility_date: "2026-05-20",
+						name: "default-outbound-worker",
+						triggers: [{ type: "fetch", pattern: "shop.example.com/*" }],
 					},
+					script: `
+					export default {
+						fetch() {
+							return fetch("http://example.com");
+						}
+					};
+				`,
 				},
-			],
+			},
 		});
+
+		const server = createTestHarness({ workers: [{ projectDir: "." }] });
 		onTestFinished(server.close);
 
 		await server.listen();
 
 		const response = await server.fetch("/");
-		await expect(response.text()).resolves.toBe("Hello from inline config");
-	});
-
-	it("loads default .env files for config path workers", async ({ expect }) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "env-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20",
-					"vars": { "CONFIG_VAR": "from-config" }
-				}
-			`,
-			".env": dedent`
-				ENV_SECRET=from-env
-			`,
-			"src/index.ts": dedent`
-				export default {
-					fetch(request, env) {
-						return Response.json({
-							CONFIG_VAR: env.CONFIG_VAR,
-							ENV_SECRET: env.ENV_SECRET,
-						});
-					}
-				};
-			`,
-		});
-
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
-		onTestFinished(server.close);
-
-		await server.listen();
-
-		const response = await server.fetch("/");
-		await expect(response.json()).resolves.toEqual({
-			CONFIG_VAR: "from-config",
-			ENV_SECRET: "from-env",
-		});
-	});
-
-	it("loads default .dev.vars files for config path workers", async ({
-		expect,
-	}) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "dev-vars-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20",
-					"vars": { "CONFIG_VAR": "from-config" }
-				}
-			`,
-			".env": dedent`
-				SECRET=from-env
-			`,
-			".dev.vars": dedent`
-				SECRET=from-dev-vars
-			`,
-			"src/index.ts": dedent`
-				export default {
-					fetch(request, env) {
-						return Response.json({
-							CONFIG_VAR: env.CONFIG_VAR,
-							SECRET: env.SECRET,
-						});
-					}
-				};
-			`,
-		});
-
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
-		onTestFinished(server.close);
-
-		await server.listen();
-
-		const response = await server.fetch("/");
-		await expect(response.json()).resolves.toEqual({
-			CONFIG_VAR: "from-config",
-			SECRET: "from-dev-vars",
-		});
-	});
-
-	it("overrides vars and secrets for config path workers", async ({
-		expect,
-	}) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "var-overrides-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20",
-					"vars": { "CONFIG_VAR": "from-config" },
-					"secrets": { "required": ["API_TOKEN", "SECRET_FROM_FILE"] }
-				}
-			`,
-			".dev.vars": dedent`
-				API_TOKEN=from-dev-vars
-				SECRET_FROM_FILE=from-dev-vars
-			`,
-			"src/index.ts": dedent`
-				export default {
-					fetch(request, env) {
-						return Response.json({
-							CONFIG_VAR: env.CONFIG_VAR,
-							API_TOKEN: env.API_TOKEN,
-							SECRET_FROM_FILE: env.SECRET_FROM_FILE,
-							ADDED_VAR: env.ADDED_VAR,
-							NULL_VAR: env.NULL_VAR,
-						});
-					}
-				};
-			`,
-		});
-
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [
-				{
-					configPath: "./wrangler.jsonc",
-					vars: {
-						CONFIG_VAR: "from-override",
-						ADDED_VAR: "from-override",
-						NULL_VAR: null,
-					},
-					secrets: {
-						API_TOKEN: "from-override",
-					},
-				},
-			],
-		});
-		onTestFinished(server.close);
-
-		await server.listen();
-
-		const response = await server.fetch("/");
-		await expect(response.json()).resolves.toEqual({
-			CONFIG_VAR: "from-override",
-			API_TOKEN: "from-override",
-			SECRET_FROM_FILE: "from-dev-vars",
-			ADDED_VAR: "from-override",
-			NULL_VAR: null,
-		});
-
-		await server.update({
-			root: helper.tmpPath,
-			workers: [
-				{
-					configPath: "./wrangler.jsonc",
-					vars: {
-						CONFIG_VAR: "from-updated-override",
-						ADDED_VAR: "from-updated-override",
-						NULL_VAR: null,
-					},
-					secrets: {
-						API_TOKEN: "from-updated-override",
-					},
-				},
-			],
-		});
-
-		const updatedResponse = await server.fetch("/");
-		await expect(updatedResponse.json()).resolves.toEqual({
-			CONFIG_VAR: "from-updated-override",
-			API_TOKEN: "from-updated-override",
-			SECRET_FROM_FILE: "from-dev-vars",
-			ADDED_VAR: "from-updated-override",
-			NULL_VAR: null,
-		});
-	});
-
-	it(`supports "nodejs_compat" flag`, async ({ expect }) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "nodejs-compat-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20",
-					"compatibility_flags": ["nodejs_compat"]
-				}
-			`,
-			"src/index.ts": dedent`
-				import { Stream } from "node:stream";
-
-				export default {
-					fetch() {
-						return new Response(String(typeof Stream));
-					}
-				};
-			`,
-		});
-
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
-		onTestFinished(server.close);
-
-		await server.listen();
-
-		const response = await server.fetch("/");
-		await expect(response.text()).resolves.toBe("function");
+		await expect(response.text()).resolves.toBe(
+			"Mocked by MSW for shop.example.com"
+		);
 	});
 
 	it("uses ephemeral storage by default", async ({ expect }) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "ephemeral-storage-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20",
-					"kv_namespaces": [
-						{ "binding": "STORE", "id": "test-store" }
-					]
-				}
-			`,
-			"src/index.ts": dedent`
-				export default {
-					async fetch(request, env) {
-						const url = new URL(request.url);
-						if (url.pathname === "/set") {
-							await env.STORE.put("key", "value");
-							return new Response("stored");
+		await writeBuild({
+			projectDir: ".",
+			workers: {
+				default: {
+					config: {
+						name: "ephemeral-storage-worker",
+						env: { STORE: { type: "kv", id: "test-store" } },
+					},
+					script: `
+					export default {
+						async fetch(request, env) {
+							const url = new URL(request.url);
+							if (url.pathname === "/set") {
+								await env.STORE.put("key", "value");
+								return new Response("stored");
+							}
+							return new Response((await env.STORE.get("key")) ?? "missing");
 						}
-						return new Response((await env.STORE.get("key")) ?? "missing");
-					}
-				};
-			`,
+					};
+				`,
+				},
+			},
 		});
 
-		const firstServer = createTestHarness({
-			root: helper.tmpPath,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
+		const firstServer = createTestHarness({ workers: [{ projectDir: "." }] });
 		onTestFinished(firstServer.close);
 
 		await firstServer.listen();
@@ -1871,10 +1368,7 @@ describe("createTestHarness", () => {
 
 		await firstServer.close();
 
-		const secondServer = createTestHarness({
-			root: helper.tmpPath,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
+		const secondServer = createTestHarness({ workers: [{ projectDir: "." }] });
 		onTestFinished(secondServer.close);
 
 		await secondServer.listen();
@@ -1883,82 +1377,29 @@ describe("createTestHarness", () => {
 		await expect(resetResponse.text()).resolves.toBe("missing");
 	});
 
-	it("resets server options and restarts the session", async ({ expect }) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "storage-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20",
-					"kv_namespaces": [
-						{ "binding": "STORE", "id": "test-store" }
-					]
-				}
-			`,
-			"src/index.ts": dedent`
-				export default {
-					async fetch(request, env) {
-						const url = new URL(request.url);
-						if (url.pathname === "/set") {
-							await env.STORE.put("key", "value");
-							return new Response("stored");
-						}
-						return new Response((await env.STORE.get("key")) ?? "missing");
-					}
-				};
-			`,
-		});
-
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
-		onTestFinished(server.close);
-
-		await expect(server.reset()).rejects.toThrow(
-			"Server has not been started. Start it with server.listen() before calling this method."
-		);
-
-		await server.listen();
-
-		const setResponse = await server.fetch("/set");
-		await expect(setResponse.text()).resolves.toBe("stored");
-		const storedResponse = await server.fetch("/");
-		await expect(storedResponse.text()).resolves.toBe("value");
-
-		await server.reset();
-
-		const resetResponse = await server.fetch("/");
-		await expect(resetResponse.text()).resolves.toBe("missing");
-	});
-
 	it("triggers scheduled handlers", async ({ expect }) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "scheduled-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20"
-				}
-			`,
-			"src/index.ts": dedent`
-				let lastCron = "missing";
+		await writeBuild({
+			projectDir: ".",
+			workers: {
+				default: {
+					config: { name: "scheduled-worker" },
+					script: `
+					let lastCron = "missing";
 
-				export default {
-					fetch() {
-						return new Response(lastCron);
-					},
-					scheduled(event) {
-						lastCron = event.cron;
-					}
-				};
-			`,
+					export default {
+						fetch() {
+							return new Response(lastCron);
+						},
+						scheduled(event) {
+							lastCron = event.cron;
+						}
+					};
+				`,
+				},
+			},
 		});
 
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
+		const server = createTestHarness({ workers: [{ projectDir: "." }] });
 		onTestFinished(server.close);
 
 		await server.listen();
@@ -1991,48 +1432,44 @@ describe("createTestHarness", () => {
 	});
 
 	it("triggers email handlers", async ({ expect }) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "email-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20"
-				}
-			`,
-			"src/index.ts": dedent`
-				import { EmailMessage } from "cloudflare:email";
+		await writeBuild({
+			projectDir: ".",
+			workers: {
+				default: {
+					config: { name: "email-worker" },
+					script: `
+					import { EmailMessage } from "cloudflare:email";
 
-				export default {
-					async email(message) {
-						const mode = message.to.split("@")[0];
-						if (mode === "rejected") {
-							message.setReject("blocked sender");
-							return;
+					export default {
+						async email(message) {
+							const mode = message.to.split("@")[0];
+							if (mode === "rejected") {
+								message.setReject("blocked sender");
+								return;
+							}
+
+							await message.forward(
+								"archive@example.com",
+								new Headers({ "X-Test": mode })
+							);
+							await message.reply(new EmailMessage(
+								\`reply-\${mode}@example.com\`,
+								message.from,
+								\`From: reply-\${mode}@example.com\\r\\nTo: \${message.from}\\r\\nIn-Reply-To: <\${mode}@example.com>\\r\\nMessage-ID: <reply-\${mode}@example.com>\\r\\nContent-Type: text/plain\\r\\n\\r\\nReply for \${mode}\\r\\n\`
+							));
+
+							if (mode === "exception") {
+								message.setReject("triggered exception");
+								throw new Error("sensitive handler error");
+							}
 						}
-
-						await message.forward(
-							"archive@example.com",
-							new Headers({ "X-Test": mode })
-						);
-						await message.reply(new EmailMessage(
-							\`reply-\${mode}@example.com\`,
-							message.from,
-							\`From: reply-\${mode}@example.com\r\nTo: \${message.from}\r\nIn-Reply-To: <\${mode}@example.com>\r\nMessage-ID: <reply-\${mode}@example.com>\r\nContent-Type: text/plain\r\n\r\nReply for \${mode}\r\n\`
-						));
-
-						if (mode === "exception") {
-							message.setReject("triggered exception");
-							throw new Error("sensitive handler error");
-						}
-					}
-				};
-			`,
+					};
+				`,
+				},
+			},
 		});
 
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
+		const server = createTestHarness({ workers: [{ projectDir: "." }] });
 		onTestFinished(server.close);
 		await server.listen();
 		const worker = server.getWorker();
@@ -2165,186 +1602,39 @@ describe("createTestHarness", () => {
 		).resolves.toMatchObject({ outcome: "ok" });
 	});
 
-	it("lists Durable Object ids by class name or binding name", async ({
-		expect,
-	}) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "durable-object-list-worker",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20",
-					"durable_objects": {
-						"bindings": [
-							{ "name": "COUNTER", "class_name": "Counter" }
-						]
-					},
-					"migrations": [
-						{ "tag": "v1", "new_sqlite_classes": ["Counter"] }
-					]
-				}
-			`,
-			"src/index.ts": dedent`
-				export class Counter {
-					constructor(ctx) {
-						this.ctx = ctx;
-					}
-
-					async fetch() {
-						await this.ctx.storage.put("count", 1);
-						return new Response("stored");
-					}
-				}
-
-				export default {
-					fetch(request, env) {
-						const name = new URL(request.url).searchParams.get("name") ?? "default";
-						const id = env.COUNTER.idFromName(name);
-						return env.COUNTER.get(id).fetch("https://counter.example");
-					}
-				};
-			`,
-		});
-
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
-		onTestFinished(server.close);
-
-		await server.listen();
-
-		const worker = server.getWorker<
-			{ COUNTER: DurableObjectNamespace },
-			{
-				default: ExportedHandler<{ COUNTER: DurableObjectNamespace }>;
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Match runtime class exports by instance type.
-				Counter: new (...args: any[]) => CloudflareWorkersModule.DurableObject;
-			}
-		>();
-		const env = await worker.getEnv();
-		const firstId = env.COUNTER.idFromName("first").toString();
-		const secondId = env.COUNTER.idFromName("second").toString();
-
-		await expect(worker.listDurableObjectIds("COUNTER")).resolves.toEqual([]);
-
-		await expect(server.fetch("/?name=first")).resolves.toHaveProperty(
-			"status",
-			200
-		);
-		await expect(server.fetch("/?name=second")).resolves.toHaveProperty(
-			"status",
-			200
-		);
-
-		await expect(worker.listDurableObjectIds("Counter")).resolves.toEqual(
-			[firstId, secondId].sort()
-		);
-		await expect(worker.listDurableObjectIds("COUNTER")).resolves.toEqual(
-			[firstId, secondId].sort()
-		);
-	});
-
-	it("does not reload on source changes by default", async ({ expect }) => {
-		await helper.seed({
-			"wrangler.jsonc": dedent`
-				{
-					"name": "create-server-test",
-					"main": "src/index.ts",
-					"compatibility_date": "2026-05-20"
-				}
-			`,
-			"src/index.ts": dedent`
-				export default {
-					fetch() {
-						return new Response("Hello World");
-					}
-				};
-			`,
-		});
-
-		const server = createTestHarness({
-			root: helper.tmpPath,
-			workers: [{ configPath: "./wrangler.jsonc" }],
-		});
-		onTestFinished(server.close);
-
-		await server.listen();
-
-		const response1 = await server.fetch("/");
-		await expect(response1.text()).resolves.toBe("Hello World");
-
-		await helper.seed({
-			"src/index.ts": dedent`
-				export default {
-					fetch() {
-						return new Response("Greeting");
-					}
-				};
-			`,
-		});
-
-		// Wait a moment to ensure that if the server were going to reload, it would have done so by now
-		await setTimeout(1000);
-
-		const response2 = await server.fetch("/");
-		await expect(response2.text()).resolves.toBe("Hello World");
-
-		await helper.seed({
-			"src/index.ts": dedent`
-				export default {
-					fetch() {
-						return new Response("Bonjour");
-					}
-				};
-			`,
-		});
-
-		await setTimeout(1000);
-
-		const response3 = await server.fetch("/");
-		await expect(response3.text()).resolves.toBe("Hello World");
-	});
-
 	it("captures runtime logs and prints debug timelines", async ({ expect }) => {
-		await helper.seed({
-			"wrangler.primary.jsonc": dedent`
-				{
-					"name": "primary-worker",
-					"main": "src/primary.ts",
-					"compatibility_date": "2026-05-20"
-				}
-			`,
-			"wrangler.auxiliary.jsonc": dedent`
-				{
-					"name": "auxiliary-worker",
-					"main": "src/auxiliary.ts",
-					"compatibility_date": "2026-05-20"
-				}
-			`,
-			"src/primary.ts": dedent`
-				export default {
-					fetch() {
-						console.info("primary log");
-						return new Response("primary ok");
-					}
-				};
-			`,
-			"src/auxiliary.ts": dedent`
-				export default {
-					fetch() {
-						console.warn("auxiliary warning");
-						throw new Error("auxiliary failed");
-					}
-				};
-			`,
+		await writeBuild({
+			projectDir: ".",
+			workers: {
+				default: {
+					config: { name: "primary-worker" },
+					script: `
+					export default {
+						fetch() {
+							console.info("primary log");
+							return new Response("primary ok");
+						}
+					};
+				`,
+				},
+				"auxiliary-worker": {
+					config: { name: "auxiliary-worker" },
+					script: `
+					export default {
+						fetch() {
+							console.warn("auxiliary warning");
+							throw new Error("auxiliary failed");
+						}
+					};
+				`,
+				},
+			},
 		});
 
 		const server = createTestHarness({
-			root: helper.tmpPath,
 			workers: [
-				{ configPath: "./wrangler.primary.jsonc" },
-				{ configPath: "./wrangler.auxiliary.jsonc" },
+				{ projectDir: "." },
+				{ projectDir: ".", name: "auxiliary-worker" },
 			],
 		});
 		onTestFinished(server.close);
@@ -2363,11 +1653,14 @@ describe("createTestHarness", () => {
 		const primaryResponse = await server.getWorker("primary-worker").fetch("/");
 
 		await expect(primaryResponse.text()).resolves.toBe("primary ok");
-		await expect(
-			server
-				.getWorker("auxiliary-worker")
-				.fetch("https://example.com/greet", { method: "post" })
-		).rejects.toThrow("auxiliary failed");
+		// As in production, a Worker's uncaught error is a 500 response
+		const auxiliaryResponse = await server
+			.getWorker("auxiliary-worker")
+			.fetch("https://example.com/greet", { method: "post" });
+		expect(auxiliaryResponse.status).toBe(500);
+		await expect(auxiliaryResponse.text()).resolves.toContain(
+			"auxiliary failed"
+		);
 		expect(server.getLogs()).toEqual([
 			{ timestamp: expect.any(Number), level: "info", message: "primary log" },
 			{
@@ -2387,7 +1680,7 @@ describe("createTestHarness", () => {
 			<timestamp> [server] [primary-worker] fetch - GET / - 200
 			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - started
 			<timestamp> [runtime] warn: auxiliary warning
-			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - failed"
+			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - 500"
 		`);
 
 		server.clearLogs();
@@ -2403,7 +1696,7 @@ describe("createTestHarness", () => {
 			<timestamp> [server] [primary-worker] fetch - GET / - 200
 			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - started
 			<timestamp> [runtime] warn: auxiliary warning
-			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - failed"
+			<timestamp> [server] [auxiliary-worker] fetch - POST https://example.com/greet - 500"
 		`);
 
 		await server.reset();
