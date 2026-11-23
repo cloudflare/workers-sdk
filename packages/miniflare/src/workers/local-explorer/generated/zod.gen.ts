@@ -1627,6 +1627,7 @@ export const zR2BucketListObjectsData = z.object({
 			prefix: z.string().optional(),
 			delimiter: z.string().optional(),
 			cursor: z.string().optional(),
+			start_after: z.string().optional(),
 			per_page: z.int().optional().default(1000),
 		})
 		.optional(),

@@ -273,6 +273,13 @@ const config = {
 						},
 						{
 							in: "query",
+							name: "start_after",
+							schema: { type: "string" },
+							description:
+								"Only return objects with keys lexicographically after this key",
+						},
+						{
+							in: "query",
 							name: "per_page",
 							schema: { type: "integer", default: 1000 },
 							description: "Maximum number of objects to return",

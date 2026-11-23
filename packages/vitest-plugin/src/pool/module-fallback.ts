@@ -445,7 +445,22 @@ async function resolve(
 		return filePath;
 	}
 
-	return viteResolve(vite, specifier, referrer, method === "require");
+	return viteResolve(
+		vite,
+		specifier,
+		getViteReferrer(specifier, referrer),
+		method === "require"
+	);
+}
+
+// The runner's main module is the virtual `/index.mjs`. Vite can't find that
+// file, so it would resolve the runner's imports from the project root, which
+// may not see `vitest`, or may see a different version. Resolve Vitest's entry
+// points from this package instead, like the pool's own `vitest` imports.
+function getViteReferrer(specifier: string, referrer: string): string {
+	return vitestNativeEntrySpecifiers.has(specifier)
+		? ensurePosixLikePath(__filename)
+		: referrer;
 }
 
 // `workerd` resolves a non-prefixed specifier by joining it to the referrer's
@@ -927,7 +942,7 @@ async function resolveV2(
 	const resolved = await viteResolve(
 		vite,
 		specifier,
-		modulePathToViteId(referrer),
+		getViteReferrer(specifier, modulePathToViteId(referrer)),
 		method === "require"
 	);
 	if (/^\/?(node|cloudflare|workerd):/.test(resolved)) {
