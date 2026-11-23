@@ -1565,8 +1565,9 @@ async function generateSimpleEnvTypes(
 	}
 
 	for (const service of collectedServices) {
-		const serviceEntry =
-			service.service !== entrypoint?.name
+		const serviceEntry = service.target_account_id
+			? undefined
+			: service.service !== entrypoint?.name
 				? serviceEntries?.get(service.service)
 				: entrypoint;
 
@@ -1847,10 +1848,12 @@ async function generatePerEnvironmentTypes(
 	function getServiceType(service: {
 		binding: string;
 		service: string;
+		target_account_id?: string;
 		entrypoint?: string;
 	}): string {
-		const serviceEntry =
-			service.service !== entrypoint?.name
+		const serviceEntry = service.target_account_id
+			? undefined
+			: service.service !== entrypoint?.name
 				? serviceEntries?.get(service.service)
 				: entrypoint;
 
@@ -3236,12 +3239,14 @@ function collectAllServices(
 	binding: string;
 	service: string;
 	entrypoint?: string;
+	target_account_id?: string;
 }> {
 	const servicesMap = new Map<
 		string,
 		{
 			binding: string;
 			entrypoint?: string;
+			target_account_id?: string;
 			service: string;
 		}
 	>();
@@ -3273,6 +3278,7 @@ function collectAllServices(
 			servicesMap.set(service.binding, {
 				binding: service.binding,
 				entrypoint: service.entrypoint,
+				target_account_id: service.target_account_id,
 				service: service.service,
 			});
 		}
@@ -4413,6 +4419,7 @@ function collectServicesPerEnvironment(
 		const services = new Array<{
 			binding: string;
 			service: string;
+			target_account_id?: string;
 			entrypoint?: string;
 		}>();
 
@@ -4435,6 +4442,7 @@ function collectServicesPerEnvironment(
 			services.push({
 				binding: service.binding,
 				entrypoint: service.entrypoint,
+				target_account_id: service.target_account_id,
 				service: service.service,
 			});
 		}

@@ -503,6 +503,7 @@ export function convertBindings(
 					service,
 					[
 						["service", "worker"],
+						["target_account_id", "accountId"],
 						["entrypoint", "exportName"],
 						["props", "props"],
 					],

@@ -95,7 +95,13 @@ export type WorkerMetadataBinding =
 	| { type: "ai_search_namespace"; name: string; namespace: string }
 	| { type: "ai_search"; name: string; instance_name: string }
 	| { type: "agent_memory"; name: string; namespace: string }
-	| { type: "kv_namespace"; name: string; namespace_id: string; raw?: boolean }
+	| {
+			type: "kv_namespace";
+			name: string;
+			namespace_id: string;
+			target_account_id?: string;
+			raw?: boolean;
+	  }
 	| { type: "media"; name: string }
 	| {
 			type: "send_email";
@@ -129,6 +135,7 @@ export type WorkerMetadataBinding =
 	  }
 	| {
 			type: "r2_bucket";
+			target_account_id?: string;
 			name: string;
 			bucket_name: string;
 			jurisdiction?: string;
@@ -136,6 +143,7 @@ export type WorkerMetadataBinding =
 	  }
 	| {
 			type: "d1";
+			target_account_id?: string;
 			name: string;
 			id: string;
 			internalEnv?: string;
@@ -156,6 +164,7 @@ export type WorkerMetadataBinding =
 			environment?: string;
 			entrypoint?: string;
 			cross_account_grant?: string;
+			target_account_id?: string;
 	  }
 	| { type: "analytics_engine"; name: string; dataset?: string }
 	| {
