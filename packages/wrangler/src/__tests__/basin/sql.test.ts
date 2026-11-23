@@ -198,7 +198,9 @@ describe("basin sql", () => {
 				)
 			);
 
-			await runWrangler(`basin sql query ${mockWarehouse} "${mockQuery}"`);
+			await expect(
+				runWrangler(`basin sql query ${mockWarehouse} "${mockQuery}"`)
+			).rejects.toThrow("Query failed because of the following errors:");
 			expect(std.err).toContain(
 				"Query failed because of the following errors:"
 			);
