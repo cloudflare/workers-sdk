@@ -3,9 +3,9 @@ import type {
 	CfAccount,
 	CfModule,
 	CfModuleType,
-	Config,
 	StartDevWorkerInput,
 } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export type StartDevWorkerOptions = {
 	name: string;

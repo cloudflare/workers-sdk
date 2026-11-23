@@ -6,7 +6,8 @@ import {
 import { isNonInteractiveOrCI, UserError } from "@cloudflare/workers-utils";
 import { version as packageVersion } from "../package.json";
 import type { RemoteBindingsLogger } from "./logger";
-import type { AsyncHook, CfAccount, Config } from "@cloudflare/workers-utils";
+import type { AsyncHook, CfAccount } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 class NoDefaultValueProvided extends UserError {
 	constructor() {
