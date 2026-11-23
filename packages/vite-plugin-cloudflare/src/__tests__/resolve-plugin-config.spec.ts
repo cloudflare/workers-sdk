@@ -563,9 +563,7 @@ describe("resolvePluginConfig - zero-config mode", () => {
 
 		expect(result.type).toBe("assets-only");
 		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
-		expect(assetsOnlyResult.config.compatibility_date).toBe(
-			DEFAULT_COMPAT_DATE
-		);
+		expect(assetsOnlyResult.config.compatibility_date).toBe("2026-11-23");
 	});
 
 	test("should allow config() to add main in zero-config mode", async ({
