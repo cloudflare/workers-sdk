@@ -85,6 +85,14 @@ export const r2SqlAlias = createAlias({
 	},
 });
 
+const DEFAULT_API_HOST = "api.sql.cloudflarestorage.com";
+
+const JURISDICTION_API_HOSTS = {
+	fedramp: "api.fedramp.sql.cloudflarestorage.com",
+};
+
+type Jurisdiction = keyof typeof JURISDICTION_API_HOSTS;
+
 export const basinSqlQueryCommand = createCommand({
 	metadata: {
 		description: "Execute SQL query against Basin Catalog",
@@ -103,8 +111,14 @@ export const basinSqlQueryCommand = createCommand({
 			type: "string",
 			demandOption: true,
 		},
+		jurisdiction: {
+			describe: "The jurisdiction of the warehouse's R2 bucket",
+			alias: "J",
+			requiresArg: true,
+			choices: Object.keys(JURISDICTION_API_HOSTS) as Jurisdiction[],
+		},
 	},
-	async handler({ warehouse, query }) {
+	async handler({ warehouse, query, jurisdiction }) {
 		let token = getWranglerBasinSqlAuthToken();
 		if (!token) {
 			token = getCloudflareAPITokenFromEnv();
@@ -140,7 +154,11 @@ export const basinSqlQueryCommand = createCommand({
 
 		const s = spinner();
 		s.start("Query in progress");
-		const apiUrl = `https://api.sql.cloudflarestorage.com/api/v1/accounts/${accountId}/basin-sql/query/${bucketName}`;
+		const apiHost =
+			jurisdiction === undefined
+				? DEFAULT_API_HOST
+				: JURISDICTION_API_HOSTS[jurisdiction];
+		const apiUrl = `https://${apiHost}/api/v1/accounts/${accountId}/basin-sql/query/${bucketName}`;
 		let responseStatus = null;
 		let statusText = null;
 		let text = null;
