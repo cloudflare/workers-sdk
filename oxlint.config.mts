@@ -80,7 +80,6 @@ export default defineConfig({
 		"workers-sdk/no-direct-recursive-rm": "error",
 		"workers-sdk/require-description-when-disabling": "error",
 		"@typescript-eslint/no-deprecated": "error",
-		// Only published packages forbid `console`, see the override below.
 		"no-console": "off",
 
 		"no-unused-vars": [
@@ -140,6 +139,13 @@ export default defineConfig({
 	],
 	overrides: [
 		...cloudflare.overrides,
+		{
+				files: ["tools/**/*.{ts,tsx,mts,cts}"],
+				rules: {
+						"no-const-assign": "error",
+						"no-func-assign": "error",
+				},
+		},
 		// The preset relaxes these in tests, but this project enforces them there
 		// too.
 		{
