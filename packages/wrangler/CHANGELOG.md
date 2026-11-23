@@ -1,5 +1,52 @@
 # wrangler
 
+## 4.167.0
+
+### Minor Changes
+
+- [#17060](https://github.com/cloudflare/workers-sdk/pull/17060) [`fa50aba`](https://github.com/cloudflare/workers-sdk/commit/fa50abac64e5d9a3e5daa7258c8cf816a90c5349) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Support `--env-file` in the experimental `cf-wrangler dev` delegate
+
+  Wrangler-bundled projects can now use `cf dev -- --env-file ../../.env` to load a shared development file outside the project directory without enabling `CLOUDFLARE_INCLUDE_PROCESS_ENV`. Repeat `--env-file` to load multiple files, with later files overriding earlier values.
+
+- [#17093](https://github.com/cloudflare/workers-sdk/pull/17093) [`310633d`](https://github.com/cloudflare/workers-sdk/commit/310633d2c435d7035f706fbf08052b8d9d910857) Thanks [@for-the-kidz](https://github.com/for-the-kidz)! - Remove the `wrangler dispatch-namespace rename` command
+
+  Renaming a Workers for Platforms dispatch namespace left the namespace name stored in dispatcher bindings out of date, which could make Workers in the namespace impossible to read or delete by name. The Cloudflare API now rejects requests that change a dispatch namespace's name, so the command has been removed. To use a different name, create a new dispatch namespace and redeploy your Workers to it.
+
+### Patch Changes
+
+- [#17102](https://github.com/cloudflare/workers-sdk/pull/17102) [`1e65920`](https://github.com/cloudflare/workers-sdk/commit/1e65920b41428e28f372ba6d864a3fee8ae06acf) Thanks [@samarthyadavv](https://github.com/samarthyadavv)! - Exit with a nonzero status when the Basin SQL service rejects a query
+
+  `wrangler basin sql query` reports the service error and exits with status 1 so shell scripts and CI can detect a rejected query.
+
+- [#17099](https://github.com/cloudflare/workers-sdk/pull/17099) [`fc3d770`](https://github.com/cloudflare/workers-sdk/commit/fc3d7708bbfee147e0fd34a285d88eeb8d9c1a65) Thanks [@mayanthacreates](https://github.com/mayanthacreates)! - Show that `--local` is the default in D1 command help
+
+  `wrangler d1 execute`, `wrangler d1 export`, `wrangler d1 migrations apply` and `wrangler d1 migrations list` run against the local database unless `--remote` is passed, but their `--help` output did not say so. The `--local` flag description now ends with "(default)".
+
+- [#17070](https://github.com/cloudflare/workers-sdk/pull/17070) [`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17070](https://github.com/cloudflare/workers-sdk/pull/17070) [`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261119.1 | ^5.20261123.1 |
+  | workerd                   | 1.20261119.1  | 1.20261123.1  |
+
+- [#17078](https://github.com/cloudflare/workers-sdk/pull/17078) [`b007991`](https://github.com/cloudflare/workers-sdk/commit/b00799168dc2580013ea3c9b7d4f4505e120afa2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Recover from missing Worker scripts after an interrupted first deploy
+
+  When the Workers API returns a service without a script, `wrangler deploy` uses the first-deploy flow instead of crashing. `wrangler versions upload` tells you to run `wrangler deploy` first.
+
+- [#17123](https://github.com/cloudflare/workers-sdk/pull/17123) [`1edd2f4`](https://github.com/cloudflare/workers-sdk/commit/1edd2f45a69c442dbc084a44ae5372d04775be2a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix intermittent subdomain lookup failures on a Worker's first deploy
+
+  After a successful first upload, `wrangler deploy` can now read the subdomain settings from the script API if the Worker API does not yet see the new Worker. The normal deploy continues without waiting for the Worker API to catch up.
+
+- Updated dependencies [[`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef), [`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef), [`b007991`](https://github.com/cloudflare/workers-sdk/commit/b00799168dc2580013ea3c9b7d4f4505e120afa2), [`7afc49c`](https://github.com/cloudflare/workers-sdk/commit/7afc49c652d8be84e4f7a6d3673145340e37a685), [`086706d`](https://github.com/cloudflare/workers-sdk/commit/086706dfec2238540e8170d69fd9481c547f306d), [`5b45f32`](https://github.com/cloudflare/workers-sdk/commit/5b45f32b75e40540f6be934978e48b2cd816ed42), [`00413bb`](https://github.com/cloudflare/workers-sdk/commit/00413bbb0decc8d3282a7bc5259d629614e66876), [`5bc7dba`](https://github.com/cloudflare/workers-sdk/commit/5bc7dba8e4d2b9254b48d3c4d3ef2df23a918637), [`086706d`](https://github.com/cloudflare/workers-sdk/commit/086706dfec2238540e8170d69fd9481c547f306d), [`5970e6a`](https://github.com/cloudflare/workers-sdk/commit/5970e6a842b36665ab092f54ae276d34b02e3a29)]:
+  - @cloudflare/workers-utils@0.57.0
+  - miniflare@5.20261123.0-beta
+
 ## 4.166.0
 
 ### Minor Changes
