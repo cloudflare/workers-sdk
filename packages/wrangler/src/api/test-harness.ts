@@ -185,6 +185,7 @@ export type WorkerHandle<
 	/**
 	 * Lists the string IDs of Durable Object instances with persisted storage.
 	 * Pass an exported Durable Object class name, or a Durable Object binding name.
+	 * Class names are resolved before binding names.
 	 */
 	listDurableObjectIds(
 		classNameOrBindingName:
@@ -1169,9 +1170,14 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					);
 
 					try {
+						const { scriptName, className } = resolveDurableObjectTarget(
+							session,
+							workerName,
+							classNameOrBindingName
+						);
 						const ids = await miniflare.listDurableObjectIds(
-							classNameOrBindingName,
-							workerName
+							className,
+							scriptName
 						);
 						debugLog(
 							`durable object ids - ${classNameOrBindingName} - completed (${ids.length} found)`,

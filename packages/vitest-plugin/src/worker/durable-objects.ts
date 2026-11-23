@@ -257,16 +257,25 @@ export async function listDurableObjectIds(
 	// user-accessible constructor. This means `namespace` must be in `globalEnv`.
 	// We can use this to find the bound name for this binding. We inject a
 	// mapping between bound names and Durable Object designators. We pass the
-	// bound name to Miniflare's Node-side loopback to find all IDs on disk.
+	// designated class and Worker to Miniflare's Node-side loopback to find all
+	// IDs on disk.
 	const boundName = Object.entries(env).find(
 		(entry) => namespace === entry[1]
 	)?.[0];
 	assert(boundName !== undefined, "Expected to find bound name for namespace");
 
 	const options = getSerializedOptions();
-	const searchParams = new URLSearchParams({ binding_name: boundName });
-	if (options.selfName !== undefined) {
-		searchParams.set("worker_name", options.selfName);
+	const designator = options.durableObjectBindingDesignators?.get(boundName);
+	assert(
+		designator !== undefined,
+		"Expected to find Durable Object designator for namespace"
+	);
+	const searchParams = new URLSearchParams({
+		class_name: designator.className,
+	});
+	const workerName = designator.scriptName ?? options.selfName;
+	if (workerName !== undefined) {
+		searchParams.set("worker_name", workerName);
 	}
 
 	const url = `http://placeholder/durable-objects?${searchParams.toString()}`;
