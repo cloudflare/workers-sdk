@@ -2772,6 +2772,10 @@ export type R2BucketListObjectsData = {
 		 */
 		cursor?: string;
 		/**
+		 * Only return objects with keys lexicographically after this key
+		 */
+		start_after?: string;
+		/**
 		 * Maximum number of objects to return
 		 */
 		per_page?: number;
