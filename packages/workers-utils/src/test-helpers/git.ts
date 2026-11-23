@@ -83,3 +83,29 @@ export async function pushGitFixture({
 		options
 	);
 }
+
+/**
+ * Runs host Git in `cwd` with the isolated test environment, authenticating
+ * any HTTP request with a bearer `token`. Use it to clone, commit, push or
+ * fetch after `pushGitFixture`.
+ *
+ * @returns Git's standard output, trimmed
+ */
+export async function runFixtureGit({
+	cwd,
+	token,
+	args,
+}: {
+	cwd: string;
+	token: string;
+	args: string[];
+}): Promise<string> {
+	const execFileAsync = promisify(execFile);
+	await mkdir(cwd, { recursive: true });
+	const { stdout } = await execFileAsync(
+		"git",
+		["-c", `http.extraHeader=Authorization: Bearer ${token}`, ...args],
+		{ cwd, env: isolatedGitEnv(cwd) }
+	);
+	return stdout.trim();
+}
