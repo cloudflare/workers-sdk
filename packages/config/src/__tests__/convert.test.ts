@@ -730,7 +730,11 @@ describe("convertToWranglerConfig", () => {
 			});
 			expect(result.oidc_tokens).toEqual([
 				{ binding: "API_TOKEN", audience: "https://api.example.com" },
-				{ binding: "RSA_TOKEN", audience: "api://token-exchange", alg: "RS256" },
+				{
+					binding: "RSA_TOKEN",
+					audience: "api://token-exchange",
+					alg: "RS256",
+				},
 			]);
 		});
 

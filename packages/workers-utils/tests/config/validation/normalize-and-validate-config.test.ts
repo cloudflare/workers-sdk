@@ -10878,9 +10878,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 			});
 
-			it("should error if oidc_tokens bindings are not valid", ({
-				expect,
-			}) => {
+			it("should error if oidc_tokens bindings are not valid", ({ expect }) => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						oidc_tokens: [

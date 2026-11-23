@@ -371,15 +371,10 @@ export function convertBindings(
 		[["index_name", "name"]],
 		{ remote: true }
 	);
-	convertArrayBindings(
-		"oidc_tokens",
-		"binding",
-		"bindings.oidcToken",
-		[
-			["audience", "audience"],
-			["alg", "alg"],
-		]
-	);
+	convertArrayBindings("oidc_tokens", "binding", "bindings.oidcToken", [
+		["audience", "audience"],
+		["alg", "alg"],
+	]);
 	convertArrayBindings(
 		"vpc_services",
 		"binding",
