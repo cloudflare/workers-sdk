@@ -418,7 +418,7 @@ export function printBindings(
 				return {
 					name: binding,
 					type: getBindingTypeFriendlyName("oidc_token"),
-					value: alg === undefined ? audience : `${audience} (${alg})`,
+					value: alg === undefined ? audience : `${audience}, ${alg}`,
 					// No local signer yet, and a remote proxy session would issue tokens
 					// for the proxy Worker's identity, not this one's.
 					mode: getMode(),

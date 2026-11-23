@@ -133,7 +133,7 @@ describe("printBindings", () => {
 			/env\.API_TOKEN \(https:\/\/api\.example\.com\)\s+OIDC Token/
 		);
 		expect(output).toMatch(
-			/env\.RSA_TOKEN \(api:\/\/token-exchange \(RS256\)\)\s+OIDC Token/
+			/env\.RSA_TOKEN \(api:\/\/token-exchange, RS256\)\s+OIDC Token/
 		);
 	});
 
