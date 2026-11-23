@@ -102,11 +102,11 @@ async function processKeyValue(
 			`At least one of the requested keys corresponds to a non-${type} value`
 		);
 	}
-	if (val !== null && withMetadata) {
+	if (obj !== null && withMetadata) {
 		return [
 			{
 				value: val,
-				metadata: obj?.metadata ?? null,
+				metadata: obj.metadata ?? null,
 			},
 			size,
 		];
