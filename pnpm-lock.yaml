@@ -182,7 +182,7 @@ importers:
         specifier: catalog:default
         version: 1.2.2
       tsrs:
-        specifier: 7.1.0-beta.tsrs3
+        specifier: ^7.1.0-beta.tsrs3
         version: 7.1.0-beta.tsrs3
       turbo:
         specifier: ^2.7.2
