@@ -432,7 +432,11 @@ describe("/cdn-cgi/image/ local transforms", () => {
 			{ redirect: "manual" }
 		);
 		expect(offSite.status).toBe(307);
-		expect(offSite.headers.get("location")).toBe("/example.com/missing.png");
+		const location = offSite.headers.get("location") ?? "";
+		expect(location).toBe("/.//example.com/missing.png");
+		expect(new URL(location, "http://localhost").href).toBe(
+			"http://localhost//example.com/missing.png"
+		);
 		await offSite.arrayBuffer();
 	});
 

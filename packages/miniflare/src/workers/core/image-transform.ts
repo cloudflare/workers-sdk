@@ -310,10 +310,14 @@ function notResized(
 		"content-security-policy": "default-src 'none'",
 	});
 	if (onerror === "redirect" && sourceUrl.hostname === requestUrl.hostname) {
-		// Collapse leading slashes so `//host/` can't redirect off-site
+		// A `/.` prefix stops a `//host/` path being read as another origin,
+		// while still resolving to the same path
+		const path = sourceUrl.pathname.startsWith("//")
+			? `/.${sourceUrl.pathname}`
+			: sourceUrl.pathname;
 		const location =
 			sourceUrl.host === requestUrl.host
-				? sourceUrl.pathname.replace(/^\/+/, "/") + sourceUrl.search
+				? path + sourceUrl.search
 				: sourceUrl.href;
 		headers.set("location", location);
 		headers.set("cf-not-resized", "err=9524");
