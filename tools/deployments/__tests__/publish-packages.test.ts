@@ -1,4 +1,4 @@
-import { ChildProcess, spawn } from "node:child_process";
+import { ChildProcess, execFileSync, spawn } from "node:child_process";
 import {
 	mkdirSync,
 	mkdtempSync,
@@ -19,6 +19,7 @@ import {
 	getDistTag,
 	publishAllPackages,
 	publishTier,
+	runPublishCommand,
 	waitForPropagation,
 } from "../publish-packages";
 import type {
@@ -31,10 +32,51 @@ import type {
 
 vi.mock("node:child_process", async (importOriginal) => ({
 	...(await importOriginal<typeof import("node:child_process")>()),
+	execFileSync: vi.fn(),
 	spawn: vi.fn(),
 }));
 
 const REGISTRY = "https://registry.example.com";
+
+describe("runPublishCommand()", () => {
+	beforeEach(() => {
+		vi.spyOn(console, "log").mockImplementation(() => {});
+	});
+
+	afterEach(() => {
+		vi.mocked(execFileSync).mockReset();
+		vi.restoreAllMocks();
+	});
+
+	it("should run the production build before checking the registry", async ({
+		expect,
+	}) => {
+		const buildError = new Error("Build failed");
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockRejectedValue(new Error("Unexpected registry request"));
+		vi.mocked(execFileSync).mockImplementationOnce(() => {
+			throw buildError;
+		});
+
+		await expect(runPublishCommand([])).rejects.toBe(buildError);
+
+		expect(execFileSync).toHaveBeenCalledExactlyOnceWith(
+			"pnpm",
+			["run", "build"],
+			expect.objectContaining({
+				env: expect.objectContaining({ NODE_ENV: "production" }),
+			})
+		);
+		expect(fetchSpy).not.toHaveBeenCalled();
+	});
+
+	it("should skip the build in dry-run mode", async ({ expect }) => {
+		await runPublishCommand(["--dry-run"]);
+
+		expect(execFileSync).not.toHaveBeenCalled();
+	});
+});
 
 function makePackage(
 	name: string,

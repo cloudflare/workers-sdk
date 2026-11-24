@@ -802,8 +802,9 @@ function runChangesetTag(): Promise<number> {
 	});
 }
 
-async function main(): Promise<void> {
-	const dryRun = process.argv.includes("--dry-run");
+/** Runs the publish CLI, building release artifacts first unless this is a dry run. */
+export async function runPublishCommand(args: string[]): Promise<void> {
+	const dryRun = args.includes("--dry-run");
 	if (!dryRun) {
 		buildPackages();
 	}
@@ -840,7 +841,7 @@ async function main(): Promise<void> {
 }
 
 if (require.main === module) {
-	void main().catch((e) => {
+	void runPublishCommand(process.argv.slice(2)).catch((e) => {
 		console.error(`::error::${e instanceof Error ? e.message : String(e)}`);
 		process.exit(1);
 	});
