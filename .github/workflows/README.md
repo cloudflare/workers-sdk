@@ -164,6 +164,7 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
   - Only `dependencies`/`peerDependencies`/`optionalDependencies` create ordering. `devDependencies` are excluded: consumers never install them, and including them would create cycles because packages like `wrangler` dev-depend on their own dependents.
   - Packages whose exact version is already on npm are skipped, so re-running a partially failed release picks up only what is still missing. That "is it already published?" check runs once per tier _during_ the release, so its reads are retried (`PUBLISH_READ_RETRY_ATTEMPTS`, with exponential backoff) — otherwise one transient 5xx while checking a later tier would abort a run that had already published earlier tiers. A 404 is not retried, since it legitimately means "not published yet".
   - If any package in a tier fails, later tiers are not attempted and **no git tags are created**, so a re-run retries cleanly. Tags are created at the very end by `changeset tag`, which also emits the `New tag:` lines that `changesets/action` parses into its `publishedPackages` output (consumed by the non-npm deployment step).
+  - With `--fetch-main`, the publish script fetches the current `origin/main` immediately before tagging without moving the checked-out release commit. This gives Git more recent common history for the subsequent tag pushes.
   - Run `node -r esbuild-register tools/deployments/publish-packages.ts --dry-run` to print the computed tiers without publishing.
 
 ## C3 related actions

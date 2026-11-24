@@ -44,6 +44,8 @@ describe("runPublishCommand()", () => {
 
 	afterEach(() => {
 		vi.mocked(execFileSync).mockReset();
+		vi.mocked(spawn).mockReset();
+		vi.unstubAllEnvs();
 		vi.restoreAllMocks();
 	});
 
@@ -70,11 +72,59 @@ describe("runPublishCommand()", () => {
 		expect(fetchSpy).not.toHaveBeenCalled();
 	});
 
-	it("should skip the build in dry-run mode", async ({ expect }) => {
-		await runPublishCommand(["--dry-run"]);
+	it("should skip the build and Git fetch in dry-run mode", async ({
+		expect,
+	}) => {
+		await runPublishCommand(["--dry-run", "--fetch-main"]);
 
 		expect(execFileSync).not.toHaveBeenCalled();
+		expect(spawn).not.toHaveBeenCalled();
 		expect(std.out).toContain("Dry run: nothing was published.");
+	});
+
+	it("should fetch origin/main immediately before tagging when requested", async ({
+		expect,
+	}) => {
+		const packages = findPublishablePackages(
+			resolve(__dirname, "../../../packages")
+		);
+		const registry = createFakeRegistry({
+			published: Object.fromEntries(
+				packages.map(({ name, version }) => [name, [version]])
+			),
+			distTags: Object.fromEntries(
+				packages.map(({ name, version }) => [name, { beta: version }])
+			),
+		});
+		vi.stubEnv("PUBLISH_REGISTRY", REGISTRY);
+		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+			const response = await registry.fetchImpl(String(input));
+			return Response.json(await response.json(), { status: response.status });
+		});
+		vi.mocked(spawn).mockImplementationOnce(() => {
+			expect(execFileSync).toHaveBeenNthCalledWith(
+				2,
+				"git",
+				[
+					"fetch",
+					"--no-tags",
+					"origin",
+					"refs/heads/main:refs/remotes/origin/main",
+				],
+				{ stdio: ["ignore", 2, 2] }
+			);
+			const child = new ChildProcess();
+			queueMicrotask(() => child.emit("close", 0));
+			return child;
+		});
+
+		await runPublishCommand(["--fetch-main"]);
+
+		expect(spawn).toHaveBeenCalledExactlyOnceWith(
+			"pnpm",
+			["exec", "changeset", "tag"],
+			{ stdio: "inherit" }
+		);
 	});
 });
 
