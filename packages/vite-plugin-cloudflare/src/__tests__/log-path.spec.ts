@@ -32,6 +32,8 @@ test("respects WRANGLER_LOG_PATH set in the Vite config after importing the plug
 	});
 	// A fresh process preserves the original import-before-configuration order,
 	// without a debug-log path cached by another plugin test.
+	// Expand Windows 8.3 directory names so Vite resolves the Worker entry.
+	const root = await fs.realpath(process.cwd());
 	await execFileAsync(
 		process.execPath,
 		[
@@ -52,8 +54,10 @@ test("respects WRANGLER_LOG_PATH set in the Vite config after importing the plug
 			`,
 		],
 		{
+			cwd: root,
 			env: {
 				...process.env,
+				PWD: root,
 				WRANGLER_LOG_PATH: "",
 				WRANGLER_WRITE_LOGS: "true",
 				WRANGLER_SEND_METRICS: "false",
