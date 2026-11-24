@@ -225,7 +225,7 @@ describe("Nuxt", () => {
 		});
 
 		await expect(configureForCf()).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: This project has \`server/api\` and \`server/middleware\`, but Nuxt's Vite server builder, which cf uses, doesn't support \`server/\` routes or middleware. Keep using Wrangler for this project until it does.]`
+			`[Error: This project has \`server/api\` and \`server/middleware\`, but Nuxt's Vite server builder, which cf uses, doesn't support \`server/\` routes, middleware or plugins. Keep using Wrangler for this project until it does.]`
 		);
 		expect(installCloudflareVitePlugin).not.toHaveBeenCalled();
 	});
