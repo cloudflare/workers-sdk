@@ -306,6 +306,19 @@ export class Nuxt extends Framework {
 		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (target === "cf") {
+			const serverDirectories = [
+				"server/api",
+				"server/routes",
+				"server/middleware",
+			].filter((directory) => existsSync(path.join(projectPath, directory)));
+			// Nuxt's Vite server builder has no server runtime, so these would stop running after deploy
+			if (serverDirectories.length > 0) {
+				throw new AutoConfigFrameworkConfigurationError(
+					`This project has ${new Intl.ListFormat("en").format(serverDirectories.map((directory) => `\`${directory}\``))}, but Nuxt's Vite server builder, which cf uses, doesn't support \`server/\` routes or middleware. Keep using Wrangler for this project until it does.`,
+					{ telemetryMessage: "autoconfig nuxt server routes unsupported" }
+				);
+			}
+
 			const configPath = findNuxtConfigFile(projectPath);
 			if (!canEditNuxtConfig(configPath)) {
 				throw new AutoConfigFrameworkConfigurationError(

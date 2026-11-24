@@ -211,4 +211,22 @@ describe("Nuxt", () => {
 			})"
 		`);
 	});
+
+	it("stops before installing anything when the project has server routes or middleware", async ({
+		expect,
+	}) => {
+		await seed({
+			"nuxt.config.ts": dedent`
+				export default defineNuxtConfig({})
+			`,
+			"server/api/hello.ts": "export default defineEventHandler(() => 'hello')",
+			"server/middleware/auth.ts":
+				"export default defineEventHandler(() => {})",
+		});
+
+		await expect(configureForCf()).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: This project has \`server/api\` and \`server/middleware\`, but Nuxt's Vite server builder, which cf uses, doesn't support \`server/\` routes or middleware. Keep using Wrangler for this project until it does.]`
+		);
+		expect(installCloudflareVitePlugin).not.toHaveBeenCalled();
+	});
 });
