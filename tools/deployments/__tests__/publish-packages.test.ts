@@ -82,9 +82,16 @@ describe("runPublishCommand()", () => {
 		expect(std.out).toContain("Dry run: nothing was published.");
 	});
 
-	it("should fetch origin/main immediately before tagging when requested", async ({
-		expect,
-	}) => {
+	it.for([
+		{
+			behavior: "fetch origin/main immediately before tagging",
+			fetchFails: false,
+		},
+		{
+			behavior: "warn and still tag if fetching origin/main fails",
+			fetchFails: true,
+		},
+	])("should $behavior", async ({ fetchFails }, { expect }) => {
 		const packages = findPublishablePackages(
 			resolve(__dirname, "../../../packages")
 		);
@@ -101,6 +108,13 @@ describe("runPublishCommand()", () => {
 			const response = await registry.fetchImpl(String(input));
 			return Response.json(await response.json(), { status: response.status });
 		});
+		if (fetchFails) {
+			vi.mocked(execFileSync)
+				.mockReturnValueOnce(Buffer.alloc(0))
+				.mockImplementationOnce(() => {
+					throw new Error("Git fetch failed");
+				});
+		}
 		vi.mocked(spawn).mockImplementationOnce(() => {
 			expect(execFileSync).toHaveBeenNthCalledWith(
 				2,
@@ -125,6 +139,13 @@ describe("runPublishCommand()", () => {
 			["exec", "changeset", "tag"],
 			{ stdio: "inherit" }
 		);
+		const warning =
+			"::warning::Could not refresh origin/main; continuing with Git tag creation.";
+		if (fetchFails) {
+			expect(std.out).toContain(warning);
+		} else {
+			expect(std.out).not.toContain(warning);
+		}
 	});
 });
 

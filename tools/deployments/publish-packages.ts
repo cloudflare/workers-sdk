@@ -795,16 +795,22 @@ function buildPackages() {
 function runChangesetTag(fetchMain: boolean): Promise<number> {
 	if (fetchMain) {
 		console.log("\nRefreshing origin/main before tagging...");
-		execFileSync(
-			"git",
-			[
-				"fetch",
-				"--no-tags",
-				"origin",
-				"refs/heads/main:refs/remotes/origin/main",
-			],
-			{ stdio: ["ignore", 2, 2] }
-		);
+		try {
+			execFileSync(
+				"git",
+				[
+					"fetch",
+					"--no-tags",
+					"origin",
+					"refs/heads/main:refs/remotes/origin/main",
+				],
+				{ stdio: ["ignore", 2, 2] }
+			);
+		} catch {
+			console.log(
+				"::warning::Could not refresh origin/main; continuing with Git tag creation."
+			);
+		}
 	}
 
 	return new Promise((promiseResolve) => {
