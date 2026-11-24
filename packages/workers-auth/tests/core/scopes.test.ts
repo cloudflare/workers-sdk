@@ -30,3 +30,10 @@ describe("K2 OAuth scopes", () => {
 		expect(validateScopeKeys(["k2:read"])).toBe(false);
 	});
 });
+
+describe("billing OAuth scope", () => {
+	it("requests billing write in Wrangler login defaults", ({ expect }) => {
+		expect(WRANGLER_CLI.getDefaultScopeKeys()).toContain("billing:write");
+		expect(validateScopeKeys(["billing:write"])).toBe(true);
+	});
+});
