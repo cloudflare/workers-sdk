@@ -1,4 +1,4 @@
-import { ChildProcess, execFileSync, spawn } from "node:child_process";
+import { ChildProcess, spawn } from "node:child_process";
 import {
 	mkdirSync,
 	mkdtempSync,
@@ -31,7 +31,6 @@ import type {
 
 vi.mock("node:child_process", async (importOriginal) => ({
 	...(await importOriginal<typeof import("node:child_process")>()),
-	execFileSync: vi.fn(),
 	spawn: vi.fn(),
 }));
 
@@ -802,7 +801,6 @@ describe("publishAllPackages()", () => {
 	});
 
 	afterEach(() => {
-		vi.mocked(execFileSync).mockReset();
 		// eslint-disable-next-line workers-sdk/no-direct-recursive-rm -- test cleanup
 		rmSync(packagesDir, { recursive: true, force: true });
 	});
@@ -832,12 +830,12 @@ describe("publishAllPackages()", () => {
 		const distTagCalls: { name: string; version: string; tag: string }[] = [];
 		const state = { tagCalls: 0 };
 
-		const defaultPublish = vi.fn<MainOptions["publish"]>(async (pkg) => {
+		const defaultPublish: MainOptions["publish"] = async (pkg) => {
 			publishOrder.push(pkg.name);
 			registry.publish(pkg.name, pkg.version);
 			registry.addDistTag(pkg.name, pkg.version, getDistTag(pkg.version));
 			return { name: pkg.name, version: pkg.version, output: "" };
-		});
+		};
 
 		const options: MainOptions = {
 			packagesDir,
@@ -853,7 +851,6 @@ describe("publishAllPackages()", () => {
 			readRetry: { attempts: 3, delaySeconds: 2 },
 			fetchImpl:
 				overrides.fetchImpl?.(registry.fetchImpl) ?? registry.fetchImpl,
-			build: vi.fn(),
 			publish: overrides.publish ?? defaultPublish,
 			addDistTag: async (pkg, tag) => {
 				distTagCalls.push({ name: pkg.name, version: pkg.version, tag });
@@ -894,7 +891,6 @@ describe("publishAllPackages()", () => {
 
 		await harness.run();
 
-		expect(harness.options.build).not.toHaveBeenCalled();
 		expect(harness.publishOrder).toEqual([]);
 		expect(harness.distTagCalls).toEqual([]);
 		expect(harness.registry.requests).toEqual([]);
@@ -905,7 +901,7 @@ describe("publishAllPackages()", () => {
 		);
 	});
 
-	it("should build once, publish tier by tier, then tag", async ({
+	it("should publish tier by tier and only tag once everything is published", async ({
 		expect,
 	}) => {
 		const harness = createHarness({
@@ -921,10 +917,6 @@ describe("publishAllPackages()", () => {
 
 		await harness.run();
 
-		expect(harness.options.build).toHaveBeenCalledOnce();
-		expect(harness.options.build).toHaveBeenCalledBefore(
-			harness.options.publish
-		);
 		expect(harness.publishOrder).toEqual(["core", "app"]);
 		expect(harness.distTagCalls).toEqual([]);
 		expect(harness.tagCalls).toBe(1);
@@ -991,10 +983,8 @@ describe("publishAllPackages()", () => {
 		expect(harness.tagCalls).toBe(0);
 
 		harness.options.addDistTag = addDistTag;
-		vi.mocked(harness.options.build).mockClear();
 		await harness.run();
 
-		expect(harness.options.build).not.toHaveBeenCalled();
 		expect(harness.publishOrder).toEqual(["app", "core"]);
 		expect(harness.distTagCalls).toEqual([
 			{ name: "app", version, tag: "beta" },
@@ -1062,10 +1052,9 @@ describe("publishAllPackages()", () => {
 		await harness.run();
 
 		expect(harness.publishOrder).toEqual(["app"]);
-		expect(harness.options.build).toHaveBeenCalledOnce();
 	});
 
-	it("should still tag without building when there is nothing to publish or deploy", async ({
+	it("should still tag when there is nothing to publish", async ({
 		expect,
 	}) => {
 		const harness = createHarness({
@@ -1074,71 +1063,11 @@ describe("publishAllPackages()", () => {
 
 		await harness.run();
 
-		expect(harness.options.build).not.toHaveBeenCalled();
 		expect(harness.publishOrder).toEqual([]);
 		// Matches `changeset publish`, which tags untagged private packages even
 		// when no public package needed publishing.
 		expect(harness.tagCalls).toBe(1);
 		expect(harness.logs.join("\n")).toContain("No unpublished packages found.");
-	});
-
-	it.for(["local", "origin", "missing"])(
-		"should build for a private deployment only if its tag is missing (tag: %s)",
-		async (tagLocation, { expect }) => {
-			const tag = "core@2.0.0";
-			writeFileSync(
-				join(packagesDir, "core/package.json"),
-				JSON.stringify({
-					name: "core",
-					version: "2.0.0",
-					private: true,
-					scripts: { deploy: "wrangler deploy" },
-					"workers-sdk": { deploy: true },
-				})
-			);
-			vi.mocked(execFileSync)
-				.mockReturnValueOnce(tagLocation === "local" ? `${tag}\n` : "")
-				.mockReturnValueOnce(
-					tagLocation === "origin" ? `commit\trefs/tags/${tag}\n` : ""
-				);
-			const harness = createHarness({ published: { app: ["2.0.0"] } });
-			const runChangesetTag = harness.options.runChangesetTag;
-			harness.options.runChangesetTag = () => {
-				expect(harness.options.build).toHaveBeenCalledTimes(
-					tagLocation === "missing" ? 1 : 0
-				);
-				return runChangesetTag();
-			};
-
-			await harness.run();
-
-			expect(harness.tagCalls).toBe(1);
-			expect(harness.publishOrder).toEqual([]);
-			const localLookup = ["git", ["tag", "--list", tag], { encoding: "utf8" }];
-			const remoteLookup = [
-				"git",
-				["ls-remote", "--tags", "--refs", "origin", tag],
-				{ encoding: "utf8" },
-			];
-			expect(vi.mocked(execFileSync).mock.calls).toEqual(
-				tagLocation === "local" ? [localLookup] : [localLookup, remoteLookup]
-			);
-		}
-	);
-
-	it("should not publish or tag if the build fails", async ({ expect }) => {
-		const harness = createHarness({
-			options: {
-				build: () => {
-					throw new Error("build failed");
-				},
-			},
-		});
-
-		await expect(harness.run()).rejects.toThrow("build failed");
-
-		expect(harness.publishOrder).toEqual([]);
-		expect(harness.tagCalls).toBe(0);
 	});
 
 	it("should survive a transient registry failure while checking a later tier", async ({
