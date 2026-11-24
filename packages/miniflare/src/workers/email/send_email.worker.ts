@@ -4,11 +4,7 @@ import { LogLevel } from "miniflare:shared";
 import PostalMime from "postal-mime";
 import { CoreBindings } from "../core/constants";
 import { extractEmailAddress, formatEmailAddress } from "./address";
-import {
-	captureRawForJsonRow,
-	captureTextAndHtmlForJsonRow,
-	RAW_EMAIL,
-} from "./capture";
+import { captureRawForJsonRow, captureTextAndHtmlForJsonRow } from "./capture";
 import {
 	contentByteLength,
 	getParsedEmailCaptureFields,
@@ -176,15 +172,6 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 	}
 
 	/**
-	 * Type guard to check if argument is an EmailMessage (has RAW_EMAIL symbol)
-	 */
-	private isEmailMessage(
-		arg: EmailMessage | MessageBuilder
-	): arg is EmailMessage {
-		return RAW_EMAIL in arg;
-	}
-
-	/**
 	 * Validates recipients against binding configuration
 	 */
 	private validateRecipients(recipients: string | string[]): void {
@@ -214,16 +201,14 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 	async send(
 		emailMessageOrBuilder: EmailMessage | MessageBuilder
 	): Promise<EmailSendResult> {
-		// Check if this is an EmailMessage (has RAW_EMAIL symbol) or MessageBuilder
-		if (this.isEmailMessage(emailMessageOrBuilder)) {
+		if ("raw" in emailMessageOrBuilder) {
 			// Original EmailMessage API - validate and parse MIME
 			const emailMessage = emailMessageOrBuilder;
 			this.checkSenderAllowed(emailMessage.from);
 			this.validateRecipients(emailMessage.to);
 
-			const rawEmail: ReadableStream<Uint8Array> = emailMessage[RAW_EMAIL];
 			const rawEmailBuffer = new Uint8Array(
-				await new Response(rawEmail).arrayBuffer()
+				await new Response(emailMessage.raw).arrayBuffer()
 			);
 
 			let parsedEmail: Email;
