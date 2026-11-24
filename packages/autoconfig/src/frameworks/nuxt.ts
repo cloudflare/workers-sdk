@@ -10,6 +10,7 @@ import {
 import { parseJSONC } from "@cloudflare/workers-utils";
 import { applyEdits, modify } from "jsonc-parser";
 import * as recast from "recast";
+import dedent from "ts-dedent";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { Framework } from "./framework-class";
 import { getStaticPropertyName } from "./utils/vite-config";
@@ -308,7 +309,13 @@ export class Nuxt extends Framework {
 			const configPath = findNuxtConfigFile(projectPath);
 			if (!canEditNuxtConfig(configPath)) {
 				throw new AutoConfigFrameworkConfigurationError(
-					`Autoconfig can't edit ${path.basename(configPath)}, because it doesn't pass an object literal to \`defineNuxtConfig()\`. To set up Nuxt for cf by hand, add \`cloudflare()\` from \`@cloudflare/vite-plugin\` to \`vite.plugins\`, set \`server.builder\` to \`"vite"\`, and create a cloudflare.config.ts whose Worker \`entrypoint\` is \`"#server-entry"\`, or whose \`assets.notFoundHandling\` is \`"single-page-application"\` if the app sets \`ssr: false\`.`,
+					dedent`
+						Autoconfig can't edit ${path.basename(configPath)}, because it doesn't pass an object literal to \`defineNuxtConfig()\`. To set up Nuxt for cf by hand:
+						- add \`cloudflare()\` from \`@cloudflare/vite-plugin\` to \`vite.plugins\`
+						- set \`server.builder\` to \`"vite"\`
+						- remove the \`./.nuxt/tsconfig.server.json\` reference from tsconfig.json
+						- create a cloudflare.config.ts whose Worker sets \`name\`, \`compatibilityDate\` and \`entrypoint: "#server-entry"\`, or \`assets.notFoundHandling: "single-page-application"\` instead of \`entrypoint\` if the app sets \`ssr: false\`
+					`,
 					{ telemetryMessage: "autoconfig nuxt config not editable" }
 				);
 			}

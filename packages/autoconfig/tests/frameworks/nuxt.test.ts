@@ -177,7 +177,13 @@ describe("Nuxt", () => {
 		});
 
 		await expect(configureForCf()).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Autoconfig can't edit nuxt.config.ts, because it doesn't pass an object literal to \`defineNuxtConfig()\`. To set up Nuxt for cf by hand, add \`cloudflare()\` from \`@cloudflare/vite-plugin\` to \`vite.plugins\`, set \`server.builder\` to \`"vite"\`, and create a cloudflare.config.ts whose Worker \`entrypoint\` is \`"#server-entry"\`, or whose \`assets.notFoundHandling\` is \`"single-page-application"\` if the app sets \`ssr: false\`.]`
+			`
+			[Error: Autoconfig can't edit nuxt.config.ts, because it doesn't pass an object literal to \`defineNuxtConfig()\`. To set up Nuxt for cf by hand:
+			- add \`cloudflare()\` from \`@cloudflare/vite-plugin\` to \`vite.plugins\`
+			- set \`server.builder\` to \`"vite"\`
+			- remove the \`./.nuxt/tsconfig.server.json\` reference from tsconfig.json
+			- create a cloudflare.config.ts whose Worker sets \`name\`, \`compatibilityDate\` and \`entrypoint: "#server-entry"\`, or \`assets.notFoundHandling: "single-page-application"\` instead of \`entrypoint\` if the app sets \`ssr: false\`]
+		`
 		);
 		expect(installCloudflareVitePlugin).not.toHaveBeenCalled();
 	});
