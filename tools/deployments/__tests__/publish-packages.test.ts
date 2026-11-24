@@ -1,4 +1,4 @@
-import { ChildProcess, spawn } from "node:child_process";
+import { ChildProcess, execFileSync, spawn } from "node:child_process";
 import {
 	mkdirSync,
 	mkdtempSync,
@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { mockConsoleMethods } from "../../../packages/workers-utils/src/test-helpers/mock";
 import {
 	computeTiers,
 	createDistTagRunner,
@@ -19,6 +20,7 @@ import {
 	getDistTag,
 	publishAllPackages,
 	publishTier,
+	runPublishCommand,
 	waitForPropagation,
 } from "../publish-packages";
 import type {
@@ -31,10 +33,50 @@ import type {
 
 vi.mock("node:child_process", async (importOriginal) => ({
 	...(await importOriginal<typeof import("node:child_process")>()),
+	execFileSync: vi.fn(),
 	spawn: vi.fn(),
 }));
 
 const REGISTRY = "https://registry.example.com";
+
+describe("runPublishCommand()", () => {
+	const std = mockConsoleMethods();
+
+	afterEach(() => {
+		vi.mocked(execFileSync).mockReset();
+		vi.restoreAllMocks();
+	});
+
+	it("should run the production build before checking the registry", async ({
+		expect,
+	}) => {
+		const buildError = new Error("Build failed");
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockRejectedValue(new Error("Unexpected registry request"));
+		vi.mocked(execFileSync).mockImplementationOnce(() => {
+			throw buildError;
+		});
+
+		await expect(runPublishCommand([])).rejects.toBe(buildError);
+
+		expect(execFileSync).toHaveBeenCalledExactlyOnceWith(
+			"pnpm",
+			["run", "build"],
+			expect.objectContaining({
+				env: expect.objectContaining({ NODE_ENV: "production" }),
+			})
+		);
+		expect(fetchSpy).not.toHaveBeenCalled();
+	});
+
+	it("should skip the build in dry-run mode", async ({ expect }) => {
+		await runPublishCommand(["--dry-run"]);
+
+		expect(execFileSync).not.toHaveBeenCalled();
+		expect(std.out).toContain("Dry run: nothing was published.");
+	});
+});
 
 function makePackage(
 	name: string,

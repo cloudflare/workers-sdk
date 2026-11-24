@@ -1,5 +1,5 @@
 /* eslint-disable turbo/no-undeclared-env-vars -- this script reads CI environment variables */
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { gt, prerelease, valid } from "semver";
@@ -784,6 +784,14 @@ async function updateReleaseCandidateTags(
 	}
 }
 
+/** Builds release artifacts without forwarding the Changesets token or logging to its tag parser. */
+function buildPackages() {
+	console.log("\nBuilding packages for release...");
+	const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "production" };
+	delete env.GITHUB_TOKEN;
+	execFileSync("pnpm", ["run", "build"], { env, stdio: ["ignore", 2, 2] });
+}
+
 function runChangesetTag(): Promise<number> {
 	return new Promise((promiseResolve) => {
 		const child = spawn("pnpm", ["exec", "changeset", "tag"], {
@@ -794,16 +802,22 @@ function runChangesetTag(): Promise<number> {
 	});
 }
 
-if (require.main === module) {
+/** Runs the publish CLI, building release artifacts first unless this is a dry run. */
+export async function runPublishCommand(args: string[]): Promise<void> {
+	const dryRun = args.includes("--dry-run");
+	if (!dryRun) {
+		buildPackages();
+	}
+
 	const registry =
 		process.env.PUBLISH_REGISTRY ??
 		process.env.npm_config_registry ??
 		DEFAULT_REGISTRY;
 	const log = (message: string) => console.log(message);
 
-	void publishAllPackages({
+	await publishAllPackages({
 		packagesDir: resolve(__dirname, "../../packages"),
-		dryRun: process.argv.includes("--dry-run"),
+		dryRun,
 		registry,
 		concurrency: readIntEnv("PUBLISH_CONCURRENCY", 4),
 		propagation: {
@@ -823,7 +837,11 @@ if (require.main === module) {
 		sleep,
 		now: () => Date.now(),
 		log,
-	}).catch((e) => {
+	});
+}
+
+if (require.main === module) {
+	void runPublishCommand(process.argv.slice(2)).catch((e) => {
 		console.error(`::error::${e instanceof Error ? e.message : String(e)}`);
 		process.exit(1);
 	});
