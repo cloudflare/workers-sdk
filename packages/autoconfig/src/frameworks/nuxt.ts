@@ -87,19 +87,16 @@ function findNuxtConfigFile(projectPath: string): string {
 
 /**
  * Checks whether autoconfig can edit the Nuxt config, which needs an object literal passed to
- * `defineNuxtConfig()`, and whether the config already imports the Cloudflare Vite plugin.
+ * `defineNuxtConfig()`.
  *
  * @param configPath The path of the Nuxt config file
- * @returns Whether the config can be edited and whether it imports the plugin
+ * @returns Whether the config can be edited
  */
-function inspectNuxtConfig(configPath: string): {
-	editable: boolean;
-	importsCloudflareVitePlugin: boolean;
-} {
+function canEditNuxtConfig(configPath: string): boolean {
 	const ast = parseFile(configPath);
 	// An empty config has no `defineNuxtConfig()` call to edit
 	if (!ast) {
-		return { editable: false, importsCloudflareVitePlugin: false };
+		return false;
 	}
 
 	let editable = false;
@@ -114,14 +111,45 @@ function inspectNuxtConfig(configPath: string): {
 		},
 	});
 
-	return {
-		editable,
-		importsCloudflareVitePlugin: ast.body.some(
-			(statement) =>
-				statement.type === "ImportDeclaration" &&
-				statement.source.value === "@cloudflare/vite-plugin"
-		),
-	};
+	return editable;
+}
+
+/**
+ * Checks whether the Nuxt config already lists `cloudflare()` in a literal `vite.plugins` array,
+ * as the shared Vite config helper does before adding the plugin.
+ *
+ * @param config The object passed to `defineNuxtConfig()`
+ * @returns Whether `vite.plugins` already calls `cloudflare()`
+ */
+function listsCloudflarePlugin(
+	config: recast.types.namedTypes.ObjectExpression
+): boolean {
+	const vite = config.properties.find(
+		(prop) =>
+			prop.type === "ObjectProperty" && getStaticPropertyName(prop) === "vite"
+	);
+	if (
+		vite?.type !== "ObjectProperty" ||
+		vite.value.type !== "ObjectExpression"
+	) {
+		return false;
+	}
+
+	const plugins = vite.value.properties.find(
+		(prop) =>
+			prop.type === "ObjectProperty" &&
+			getStaticPropertyName(prop) === "plugins"
+	);
+	return (
+		plugins?.type === "ObjectProperty" &&
+		plugins.value.type === "ArrayExpression" &&
+		plugins.value.elements.some(
+			(element) =>
+				element?.type === "CallExpression" &&
+				element.callee.type === "Identifier" &&
+				element.callee.name === "cloudflare"
+		)
+	);
 }
 
 /**
@@ -158,31 +186,34 @@ function updateNuxtConfigForCf(configPath: string): void {
 		visitCallExpression(n) {
 			const callee = n.node.callee as recast.types.namedTypes.Identifier;
 			if (callee.name === "defineNuxtConfig") {
-				mergeObjectProperties(
-					n.node.arguments[0] as recast.types.namedTypes.ObjectExpression,
-					[
-						b.objectProperty(
-							b.identifier("vite"),
-							b.objectExpression([
+				const config = n.node
+					.arguments[0] as recast.types.namedTypes.ObjectExpression;
+				mergeObjectProperties(config, [
+					...(listsCloudflarePlugin(config)
+						? []
+						: [
 								b.objectProperty(
-									b.identifier("plugins"),
-									b.arrayExpression([
-										b.callExpression(b.identifier("cloudflare"), []),
+									b.identifier("vite"),
+									b.objectExpression([
+										b.objectProperty(
+											b.identifier("plugins"),
+											b.arrayExpression([
+												b.callExpression(b.identifier("cloudflare"), []),
+											])
+										),
 									])
 								),
-							])
-						),
-						b.objectProperty(
-							b.identifier("server"),
-							b.objectExpression([
-								b.objectProperty(
-									b.identifier("builder"),
-									b.stringLiteral("vite")
-								),
-							])
-						),
-					]
-				);
+							]),
+					b.objectProperty(
+						b.identifier("server"),
+						b.objectExpression([
+							b.objectProperty(
+								b.identifier("builder"),
+								b.stringLiteral("vite")
+							),
+						])
+					),
+				]);
 			}
 
 			return this.traverse(n);
@@ -275,12 +306,9 @@ export class Nuxt extends Framework {
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (target === "cf") {
 			const configPath = findNuxtConfigFile(projectPath);
-			const { editable, importsCloudflareVitePlugin } =
-				inspectNuxtConfig(configPath);
-			// A config that autoconfig can't edit works once it's set up by hand
-			if (!editable && !importsCloudflareVitePlugin) {
+			if (!canEditNuxtConfig(configPath)) {
 				throw new AutoConfigFrameworkConfigurationError(
-					`Autoconfig can't edit ${path.basename(configPath)}, because it doesn't pass an object literal to \`defineNuxtConfig()\`. Add \`cloudflare()\` from \`@cloudflare/vite-plugin\` to \`vite.plugins\` and set \`server.builder\` to \`"vite"\` by hand, then try again.`,
+					`Autoconfig can't edit ${path.basename(configPath)}, because it doesn't pass an object literal to \`defineNuxtConfig()\`. To set up Nuxt for cf by hand, add \`cloudflare()\` from \`@cloudflare/vite-plugin\` to \`vite.plugins\`, set \`server.builder\` to \`"vite"\`, and create a cloudflare.config.ts whose Worker \`entrypoint\` is \`"#server-entry"\`, or whose \`assets.notFoundHandling\` is \`"single-page-application"\` if the app sets \`ssr: false\`.`,
 					{ telemetryMessage: "autoconfig nuxt config not editable" }
 				);
 			}
@@ -291,9 +319,7 @@ export class Nuxt extends Framework {
 					isWorkspaceRoot,
 					version: CF_VITE_PLUGIN_VERSION_RANGE,
 				});
-				if (editable) {
-					updateNuxtConfigForCf(configPath);
-				}
+				updateNuxtConfigForCf(configPath);
 				removeServerTsconfigReference(projectPath);
 			}
 

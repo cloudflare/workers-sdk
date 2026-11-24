@@ -177,27 +177,32 @@ describe("Nuxt", () => {
 		});
 
 		await expect(configureForCf()).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Autoconfig can't edit nuxt.config.ts, because it doesn't pass an object literal to \`defineNuxtConfig()\`. Add \`cloudflare()\` from \`@cloudflare/vite-plugin\` to \`vite.plugins\` and set \`server.builder\` to \`"vite"\` by hand, then try again.]`
+			`[Error: Autoconfig can't edit nuxt.config.ts, because it doesn't pass an object literal to \`defineNuxtConfig()\`. To set up Nuxt for cf by hand, add \`cloudflare()\` from \`@cloudflare/vite-plugin\` to \`vite.plugins\`, set \`server.builder\` to \`"vite"\`, and create a cloudflare.config.ts whose Worker \`entrypoint\` is \`"#server-entry"\`, or whose \`assets.notFoundHandling\` is \`"single-page-application"\` if the app sets \`ssr: false\`.]`
 		);
 		expect(installCloudflareVitePlugin).not.toHaveBeenCalled();
 	});
 
-	it("leaves a Nuxt config that was set up by hand as it is", async ({
-		expect,
-	}) => {
-		const config = dedent`
-			import { cloudflare } from "@cloudflare/vite-plugin";
-			import { sharedConfig } from "./shared-config";
-			export default defineNuxtConfig(sharedConfig)
-		`;
-		await seed({ "nuxt.config.ts": config });
-
-		const result = await configureForCf();
-
-		expect(result).toEqual({
-			buildTool: "vite",
-			workerConfig: { entrypoint: "#server-entry" },
+	it("doesn't add the Cloudflare Vite plugin twice", async ({ expect }) => {
+		await seed({
+			"nuxt.config.ts": dedent`
+				import { cloudflare } from "@cloudflare/vite-plugin";
+				export default defineNuxtConfig({
+				  vite: { plugins: [cloudflare()] },
+				})
+			`,
 		});
-		expect(readFileSync("nuxt.config.ts", "utf8")).toBe(config);
+
+		await configureForCf();
+
+		expect(readFileSync("nuxt.config.ts", "utf8")).toMatchInlineSnapshot(`
+			"import { cloudflare } from "@cloudflare/vite-plugin";
+			export default defineNuxtConfig({
+			  vite: { plugins: [cloudflare()] },
+
+			  server: {
+			    builder: "vite"
+			  }
+			})"
+		`);
 	});
 });
