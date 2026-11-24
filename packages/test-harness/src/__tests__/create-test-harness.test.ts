@@ -465,7 +465,7 @@ describe("createTestHarness", () => {
 			...options,
 			workers: [
 				{
-					config: {
+					miniflareConfig: {
 						name: "mock",
 						compatibilityDate: "2026-05-20",
 						manifest: singleModuleManifest("export default {};"),
@@ -488,7 +488,7 @@ describe("createTestHarness", () => {
 			workers: [
 				...options.workers.slice(0, 1),
 				{
-					config: {
+					miniflareConfig: {
 						name: "app",
 						compatibilityDate: "2026-05-20",
 						manifest: singleModuleManifest("export default {};"),
@@ -945,7 +945,7 @@ describe("createTestHarness", () => {
 					},
 				},
 				{
-					config: {
+					miniflareConfig: {
 						name: "mock-ai",
 						compatibilityDate: "2026-05-20",
 						manifest: singleModuleManifest(`
@@ -1100,7 +1100,7 @@ describe("createTestHarness", () => {
 			workers: [
 				{ projectDir: "." },
 				{
-					config: {
+					miniflareConfig: {
 						name: "auxiliary-worker",
 						compatibilityDate: "2026-05-20",
 						triggers: [{ type: "fetch", pattern: "auxiliary.example.com/*" }],
@@ -1133,7 +1133,7 @@ describe("createTestHarness", () => {
 			workers: [
 				{ projectDir: "." },
 				{
-					config: {
+					miniflareConfig: {
 						name: "auxiliary-worker",
 						compatibilityDate: "2026-05-20",
 						triggers: [
@@ -1168,7 +1168,7 @@ describe("createTestHarness", () => {
 		const server = createTestHarness({
 			workers: [
 				{
-					config: {
+					miniflareConfig: {
 						name: "primary-worker",
 						compatibilityDate: "2026-05-20",
 						manifest: singleModuleManifest(`
@@ -1191,7 +1191,7 @@ describe("createTestHarness", () => {
 			workers: [
 				...options.workers,
 				{
-					config: {
+					miniflareConfig: {
 						name: "auxiliary-worker",
 						compatibilityDate: "2026-05-20",
 						manifest: singleModuleManifest(`

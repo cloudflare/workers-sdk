@@ -147,10 +147,10 @@ async function resolveWorker(
 	input: WorkerInput,
 	previousSessions: Map<string, RemoteProxySessionData | null>
 ): Promise<ResolvedWorker> {
-	if ("config" in input) {
+	if ("miniflareConfig" in input) {
 		return {
 			projectDir: root,
-			options: { config: input.config },
+			options: { config: input.miniflareConfig },
 			remoteProxySessionData: null,
 		};
 	}

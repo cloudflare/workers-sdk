@@ -445,7 +445,7 @@ export type WorkerInput =
 			 * `{ type: "text", value }` rather than a secret. D1 migrations are
 			 * read from the harness's `root`.
 			 */
-			config: WorkerOptions["config"];
+			miniflareConfig: WorkerOptions["config"];
 	  };
 
 /** A binding in the shape of `env` in a Build Output's `worker.config.json` */
