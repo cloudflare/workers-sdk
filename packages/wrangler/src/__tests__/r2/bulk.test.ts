@@ -289,6 +289,230 @@ describe("r2", () => {
 
 				expect(std.out).toContain("Uploaded 100%");
 			});
+
+			// https://github.com/cloudflare/workers-sdk/issues/17136
+			describe("when uploads fail", () => {
+				const objectUrl =
+					"*/accounts/:accountId/r2/buckets/bulk-bucket/objects/:objectName";
+
+				function writeEntries(count: number) {
+					const entries: { key: string; file: string }[] = [];
+					for (let i = 0; i < count; i++) {
+						fs.writeFileSync(`file-${i}`, `content-${i}`);
+						entries.push({ key: `key-${i}`, file: `file-${i}` });
+					}
+					fs.writeFileSync("list.json", JSON.stringify(entries));
+					return entries;
+				}
+
+				function sleep(ms: number) {
+					return new Promise((resolve) => setTimeout(resolve, ms));
+				}
+
+				function badRequest() {
+					return HttpResponse.json(
+						{
+							success: false,
+							errors: [{ code: 10020, message: "Invalid object key" }],
+							messages: [],
+							result: null,
+						},
+						{ status: 400 }
+					);
+				}
+
+				/**
+				 * Every PUT request takes 100ms and succeeds, except the one for
+				 * `failingKey`, which is rejected straight away with a 400.
+				 */
+				function mockUploadsWithOneRejected(failingKey: string) {
+					const started = new Set<string>();
+					const finished = new Set<string>();
+					msw.use(
+						http.put(objectUrl, async ({ params }) => {
+							const key = String(params.objectName);
+							started.add(key);
+							if (key === failingKey) {
+								return badRequest();
+							}
+							await sleep(100);
+							finished.add(key);
+							return HttpResponse.json(createFetchResult({}));
+						})
+					);
+					return { started, finished };
+				}
+
+				it.for([
+					{
+						name: "a 429 response",
+						fail: () => new HttpResponse("Too Many Requests", { status: 429 }),
+					},
+					{
+						name: "a 500 response",
+						fail: () =>
+							new HttpResponse("Internal Server Error", { status: 500 }),
+					},
+					{
+						name: "a 503 response",
+						fail: () =>
+							new HttpResponse("Service Unavailable", { status: 503 }),
+					},
+					{
+						name: "a network error",
+						fail: () => HttpResponse.error(),
+					},
+				])(
+					"should retry an upload that fails with $name",
+					async ({ fail }, { expect }) => {
+						writeEntries(3);
+						const attempts: Record<string, number> = {};
+						const bodies: Record<string, string> = {};
+						msw.use(
+							http.put(objectUrl, async ({ params, request }) => {
+								const key = String(params.objectName);
+								attempts[key] = (attempts[key] ?? 0) + 1;
+								if (key === "key-1" && attempts[key] === 1) {
+									return fail();
+								}
+								bodies[key] = await request.text();
+								return HttpResponse.json(createFetchResult({}));
+							})
+						);
+
+						await runWrangler(
+							`r2 bulk put bulk-bucket --filename list.json --remote`
+						);
+
+						expect(attempts).toEqual({ "key-0": 1, "key-1": 2, "key-2": 1 });
+						// The retried upload sends the whole file again
+						expect(bodies).toEqual({
+							"key-0": "content-0",
+							"key-1": "content-1",
+							"key-2": "content-2",
+						});
+						expect(std.out).toContain("Uploaded 100% (3 out of 3)");
+					}
+				);
+
+				it("should stop starting uploads once one fails, and wait for those in flight", async ({
+					expect,
+				}) => {
+					writeEntries(30);
+					const { started, finished } = mockUploadsWithOneRejected("key-3");
+
+					await expect(
+						runWrangler(
+							`r2 bulk put bulk-bucket --filename list.json --remote --concurrency 10`
+						)
+					).rejects.toThrow();
+					const startedWhenCommandFailed = started.size;
+					const finishedWhenCommandFailed = finished.size;
+
+					// Give anything still running in the background time to show up
+					await sleep(500);
+
+					// Every upload that had started, other than the rejected one,
+					// had finished by the time the command failed
+					expect(finishedWhenCommandFailed).toBe(startedWhenCommandFailed - 1);
+					// Nothing was started after the command failed
+					expect(started.size).toBe(startedWhenCommandFailed);
+					// Only the first 10 uploads (the concurrency) were in flight when
+					// key-3 was rejected; at most one more may have been started as
+					// its slot freed up, but not the rest of the list
+					expect(started.size).toBeLessThanOrEqual(11);
+				});
+
+				it("should report what was uploaded and what was not when an upload fails", async ({
+					expect,
+				}) => {
+					const entries = writeEntries(30);
+					const { started, finished } = mockUploadsWithOneRejected("key-3");
+
+					let error: unknown;
+					try {
+						await runWrangler(
+							`r2 bulk put bulk-bucket --filename list.json --remote --concurrency 10`
+						);
+					} catch (e) {
+						error = e;
+					}
+					expect(error).toBeInstanceOf(Error);
+
+					// Give anything still running in the background time to settle
+					await sleep(500);
+
+					const uploadedCount = finished.size;
+					const notAttempted = entries
+						.map(({ key }) => key)
+						.filter((key) => !started.has(key));
+
+					// Everything the command reported, apart from the start line and
+					// the progress lines
+					const report = [std.out, std.warn, std.err, (error as Error).message]
+						.join("\n")
+						.split("\n")
+						.filter(
+							(line) => !/^(Starting bulk upload|Uploaded \d+% \()/.test(line)
+						)
+						.join("\n");
+					const mentionsCount = (count: number) =>
+						new RegExp(`\\b${count}\\b`).test(report);
+
+					// How many objects made it into the bucket
+					expect(
+						mentionsCount(uploadedCount),
+						`expected the report to say ${uploadedCount} objects were uploaded:\n${report}`
+					).toBe(true);
+					// Which upload failed
+					expect(report).toContain("key-3");
+					// Which objects were never attempted, by count or by key
+					expect(
+						mentionsCount(notAttempted.length) ||
+							notAttempted.every((key) => report.includes(key)),
+						`expected the report to say ${notAttempted.length} objects were not attempted:\n${report}`
+					).toBe(true);
+				});
+
+				it("should count an upload in the progress only once it has finished", async ({
+					expect,
+				}) => {
+					writeEntries(20);
+					let arrived = 0;
+					let onAllArrived!: () => void;
+					const allArrived = new Promise<void>((resolve) => {
+						onAllArrived = resolve;
+					});
+					let release!: () => void;
+					const released = new Promise<void>((resolve) => {
+						release = resolve;
+					});
+					msw.use(
+						http.put(objectUrl, async () => {
+							if (++arrived === 20) {
+								onAllArrived();
+							}
+							await released;
+							return HttpResponse.json(createFetchResult({}));
+						})
+					);
+
+					const run = runWrangler(
+						`r2 bulk put bulk-bucket --filename list.json --remote`
+					);
+					// All 20 uploads are in flight (the default concurrency is 20),
+					// and none of them has finished yet
+					await Promise.race([allArrived, run]);
+					const countedWhileInFlight = [
+						...std.out.matchAll(/Uploaded \d+% \((\d+) out of/g),
+					].map((match) => Number(match[1]));
+					release();
+					await run;
+
+					expect(countedWhileInFlight.filter((count) => count > 0)).toEqual([]);
+					expect(std.out).toContain("Uploaded 100% (20 out of 20)");
+				});
+			});
 		});
 	});
 });
