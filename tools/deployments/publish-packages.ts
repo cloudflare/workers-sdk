@@ -1,8 +1,9 @@
 /* eslint-disable turbo/no-undeclared-env-vars -- this script reads CI environment variables */
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { gt, prerelease, valid } from "semver";
+import { findDeployablePackages } from "./deploy-non-npm-packages";
 
 /**
  * Publishes the monorepo's npm packages in dependency-tier order, waiting for
@@ -606,6 +607,7 @@ export type MainOptions = {
 	> & { skip: boolean };
 	readRetry: Omit<ReadRetryOptions, "sleep" | "log">;
 	fetchImpl: FetchLike;
+	build: () => void;
 	publish: PublishRunner;
 	addDistTag: (pkg: WorkspacePackage, tag: string) => Promise<void>;
 	runChangesetTag: () => Promise<number>;
@@ -657,6 +659,10 @@ export async function publishAllPackages(options: MainOptions): Promise<void> {
 		if (pending.length === 0) {
 			options.log(`\nTier ${index}: nothing to publish.`);
 			continue;
+		}
+
+		if (!publishedAny) {
+			options.build();
 		}
 
 		options.log(
@@ -717,6 +723,9 @@ export async function publishAllPackages(options: MainOptions): Promise<void> {
 
 	if (!publishedAny) {
 		options.log("\nNo unpublished packages found.");
+		if (hasPendingDeployments(options.packagesDir)) {
+			options.build();
+		}
 	}
 
 	await updateReleaseCandidateTags(packages, options);
@@ -784,6 +793,45 @@ async function updateReleaseCandidateTags(
 	}
 }
 
+/** Checks local and remote tags, as `changeset tag` does, for deployable packages. */
+function hasPendingDeployments(packagesDir: string): boolean {
+	const tags = findDeployablePackages(packagesDir).flatMap((pkg) =>
+		pkg.version ? [`${pkg.name}@${pkg.version}`] : []
+	);
+	if (tags.length === 0) {
+		return false;
+	}
+	const localTags = new Set(
+		execFileSync("git", ["tag", "--list", ...tags], { encoding: "utf8" }).split(
+			"\n"
+		)
+	);
+	const missingTags = tags.filter((tag) => !localTags.has(tag));
+	if (missingTags.length === 0) {
+		return false;
+	}
+	const remoteTags = new Set(
+		execFileSync(
+			"git",
+			["ls-remote", "--tags", "--refs", "origin", ...missingTags],
+			{
+				encoding: "utf8",
+			}
+		)
+			.split("\n")
+			.map((line) => line.split("\t")[1])
+	);
+	return missingTags.some((tag) => !remoteTags.has(`refs/tags/${tag}`));
+}
+
+/** Builds release artifacts without forwarding the Changesets token or logging to its tag parser. */
+function buildPackages() {
+	console.log("\nBuilding packages for release...");
+	const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "production" };
+	delete env.GITHUB_TOKEN;
+	execFileSync("pnpm", ["run", "build"], { env, stdio: ["ignore", 2, 2] });
+}
+
 function runChangesetTag(): Promise<number> {
 	return new Promise((promiseResolve) => {
 		const child = spawn("pnpm", ["exec", "changeset", "tag"], {
@@ -817,6 +865,7 @@ if (require.main === module) {
 			delaySeconds: readIntEnv("PUBLISH_READ_RETRY_DELAY_SECONDS", 2),
 		},
 		fetchImpl: fetch,
+		build: buildPackages,
 		publish: createPublishRunner({ registry }),
 		addDistTag: createDistTagRunner({ registry }),
 		runChangesetTag,

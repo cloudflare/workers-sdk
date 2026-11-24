@@ -81,7 +81,13 @@ export function getUpdatedPackages(): UpdatedPackage[] {
  * This is determined by the package containing a package.json "workers-sdk": { "deploy": true }`
  */
 export function findDeployablePackageNames(): Set<string> {
-	const packagesDirectory = resolve(__dirname, "../../packages");
+	return new Set(findDeployablePackages().map((pkg) => pkg.name));
+}
+
+/** Finds the manifests for packages that are eligible for a non-npm deployment. */
+export function findDeployablePackages(
+	packagesDirectory = resolve(__dirname, "../../packages")
+): PackageJSON[] {
 	const allPackageDirectories = readdirSync(packagesDirectory).map((p) =>
 		resolve(packagesDirectory, p)
 	);
@@ -95,14 +101,14 @@ export function findDeployablePackageNames(): Set<string> {
 			// Do nothing
 		}
 	}
-	const deployablePackages = new Set<string>();
+	const deployablePackages: PackageJSON[] = [];
 	for (const pkg of allPackages) {
 		if (pkg["workers-sdk"]?.deploy) {
 			assert(
 				pkg.scripts?.deploy !== undefined,
 				`Expected package "${pkg.name}" to have a deploy script`
 			);
-			deployablePackages.add(pkg.name);
+			deployablePackages.push(pkg);
 		}
 	}
 	return deployablePackages;
@@ -138,6 +144,7 @@ export type UpdatedPackage = { name: string; version: string };
 
 export type PackageJSON = {
 	name: string;
+	version?: string;
 	private?: boolean;
 	scripts?: Record<string, unknown>;
 	"workers-sdk"?: {
