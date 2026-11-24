@@ -800,8 +800,9 @@ describe("entrypoints", () => {
 		// Wait for error to be thrown
 		await waitFor(async () => {
 			let response = await fetch(url);
-			expect(await response.text()).toBe(
-				'Worker "bound" not found. Make sure it is running locally.'
+			expect(response.status).toBe(500);
+			expect(await response.text()).toContain(
+				'Worker does not export an entrypoint named "ThingEntrypoint"'
 			);
 		});
 	});

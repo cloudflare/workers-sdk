@@ -145,13 +145,18 @@ export async function startDev(args: StartDevOptions) {
 				process.send &&
 				typeof vitest === "undefined"
 			) {
-				process.send(
-					JSON.stringify({
-						event: "DEV_SERVER_READY",
-						ip: url.hostname,
-						port: parseInt(url.port),
-					})
-				);
+				// The proxy accepts connections before the user Worker has started
+				// and holds requests until it has. Wait for that first start, so the
+				// parent process can send requests as soon as it gets the message.
+				void primaryDevEnv.proxy.localServerReady.promise.then(() => {
+					process.send?.(
+						JSON.stringify({
+							event: "DEV_SERVER_READY",
+							ip: url.hostname,
+							port: parseInt(url.port),
+						})
+					);
+				});
 			}
 
 			// Print scheduled worker warning with the actual public URL
