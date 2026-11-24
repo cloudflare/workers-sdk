@@ -490,6 +490,7 @@ const bindingsConfigMock: Omit<
 	mtls_certificates: [
 		{ binding: "MTLS_BINDING", certificate_id: "MTLS_CERTIFICATE_ID" },
 	],
+	oidc_tokens: [{ binding: "OIDC_TOKEN_BINDING", audience: "api://example" }],
 	browser: {
 		binding: "BROWSER_BINDING",
 	},
@@ -1108,6 +1109,7 @@ describe("generate types - CLI", () => {
 				RATE_LIMITER: RateLimit;
 				WORKER_LOADER_BINDING: WorkerLoader;
 				VPC_SERVICE_BINDING: Fetcher;
+				OIDC_TOKEN_BINDING: OidcTokenBinding;
 				AI_SEARCH_NS_BINDING: AiSearchNamespace;
 				AI_SEARCH_BINDING: AiSearchInstance;
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
@@ -1239,6 +1241,7 @@ describe("generate types - CLI", () => {
 				RATE_LIMITER: RateLimit;
 				WORKER_LOADER_BINDING: WorkerLoader;
 				VPC_SERVICE_BINDING: Fetcher;
+				OIDC_TOKEN_BINDING: OidcTokenBinding;
 				AI_SEARCH_NS_BINDING: AiSearchNamespace;
 				AI_SEARCH_BINDING: AiSearchInstance;
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
@@ -1433,6 +1436,7 @@ describe("generate types - CLI", () => {
 				RATE_LIMITER: RateLimit;
 				WORKER_LOADER_BINDING: WorkerLoader;
 				VPC_SERVICE_BINDING: Fetcher;
+				OIDC_TOKEN_BINDING: OidcTokenBinding;
 				AI_SEARCH_NS_BINDING: AiSearchNamespace;
 				AI_SEARCH_BINDING: AiSearchInstance;
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
