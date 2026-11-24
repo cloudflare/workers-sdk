@@ -1,7 +1,6 @@
 import { describe, test } from "vitest";
 import { DevEnv } from "../../../api/startDevWorker/DevEnv";
 import { castErrorCause } from "../../../api/startDevWorker/events";
-import { logger } from "../../../logger";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 
 describe("DevEnv", () => {
@@ -98,46 +97,35 @@ describe("DevEnv", () => {
 			void devEnv.teardown();
 		});
 
-		test("should log ProxyWorker request errors without tearing down the dev session", ({
-			expect,
-			onTestFinished,
-		}) => {
-			logger.loggerLevel = "debug";
-			onTestFinished(() => logger.resetLoggerLevel());
+		test("should keep unexpected ProxyWorker errors fatal", ({ expect }) => {
 			const devEnv = new DevEnv();
 
 			const fatalEvents: unknown[] = [];
 			devEnv.on("error", (event) => fatalEvents.push(event));
 
-			// the ProxyWorker posts its error to the ProxyController as JSON, which
-			// rehydrates it with castErrorCause. Build the cause the same way so
-			// this test exercises the shape the production path produces.
+			// Request I/O failures are handled inside the ProxyWorker. Unexpected
+			// proxy defects still reach DevEnv and must remain fatal. Rehydrate
+			// the serialized error as the ProxyController does in production.
 			const reportedByProxyWorker = JSON.parse(
 				JSON.stringify({
 					name: "Error",
 					message:
-						"GET http://127.0.0.1:8787/ (failed after 3 attempts): Network connection lost.",
+						"GET http://127.0.0.1:8787/ (failed after 1 attempt): Failed to inject live-reload script",
 					stack:
-						"Error: Network connection lost.\n    at fetch (ProxyWorker.ts:167:9)",
-					cause: { name: "TypeError", message: "socket hang up" },
+						"Error: Failed to inject live-reload script\n    at <anonymous>",
 				})
 			) as unknown;
 
-			devEnv.dispatch({
+			const event = {
 				type: "error",
 				reason: "Error inside ProxyWorker",
 				cause: castErrorCause(reportedByProxyWorker),
 				source: "ProxyController",
 				data: {},
-			});
+			} as const;
+			devEnv.dispatch(event);
 
-			expect(std.err).toContain("Error inside ProxyWorker");
-			expect(std.err).toContain("Network connection lost.");
-			// the stack and cause are the only clue to why the request failed
-			expect(std.debug).toContain("at fetch (ProxyWorker.ts:167:9)");
-			expect(std.debug).toContain("socket hang up");
-			// one failed proxied request must not become a fatal dev-session error
-			expect(fatalEvents).toHaveLength(0);
+			expect(fatalEvents).toEqual([event]);
 
 			void devEnv.teardown();
 		});
