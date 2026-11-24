@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { mockConsoleMethods } from "../../../packages/workers-utils/src/test-helpers/mock";
 import {
 	computeTiers,
 	createDistTagRunner,
@@ -39,9 +40,7 @@ vi.mock("node:child_process", async (importOriginal) => ({
 const REGISTRY = "https://registry.example.com";
 
 describe("runPublishCommand()", () => {
-	beforeEach(() => {
-		vi.spyOn(console, "log").mockImplementation(() => {});
-	});
+	const std = mockConsoleMethods();
 
 	afterEach(() => {
 		vi.mocked(execFileSync).mockReset();
@@ -75,6 +74,7 @@ describe("runPublishCommand()", () => {
 		await runPublishCommand(["--dry-run"]);
 
 		expect(execFileSync).not.toHaveBeenCalled();
+		expect(std.out).toContain("Dry run: nothing was published.");
 	});
 });
 
