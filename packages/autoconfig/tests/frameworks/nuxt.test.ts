@@ -212,7 +212,7 @@ describe("Nuxt", () => {
 		`);
 	});
 
-	it("stops before installing anything when the project has server routes or middleware", async ({
+	it("stops before installing anything when the project has server routes, middleware or plugins", async ({
 		expect,
 	}) => {
 		await seed({
@@ -222,10 +222,11 @@ describe("Nuxt", () => {
 			"server/api/hello.ts": "export default defineEventHandler(() => 'hello')",
 			"server/middleware/auth.ts":
 				"export default defineEventHandler(() => {})",
+			"server/plugins/auth.ts": "export default defineNitroPlugin(() => {})",
 		});
 
 		await expect(configureForCf()).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: This project has \`server/api\` and \`server/middleware\`, but Nuxt's Vite server builder, which cf uses, doesn't support \`server/\` routes, middleware or plugins. Keep using Wrangler for this project until it does.]`
+			`[Error: This project has \`server/api\`, \`server/middleware\`, and \`server/plugins\`, but Nuxt's Vite server builder, which cf uses, doesn't support \`server/\` routes, middleware or plugins. Keep using Wrangler for this project until it does.]`
 		);
 		expect(installCloudflareVitePlugin).not.toHaveBeenCalled();
 	});
