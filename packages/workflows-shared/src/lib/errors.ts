@@ -64,21 +64,6 @@ export function createWorkflowError(
 	return new WorkflowError(`(${errorCode}) ${message}`);
 }
 
-/**
- * Creates an error for `WorkflowBinding.create()` and
- * `WorkflowBinding.createBatch()` to reject with: a plain `Error` whose
- * message starts with the error code, as the production binding throws.
- *
- * A `WorkflowError` would reach the calling Worker as an `Error` whose message
- * begins with `WorkflowError: `, because Miniflare runs the binding Worker
- * without enhanced error serialization unless the calling Worker sets the
- * `enhanced_error_serialization` compatibility flag. A plain `Error` reads the
- * same either way.
- *
- * @param message - The text that follows the error code.
- * @param errorCode - The error code, such as `instance.invalid_id`.
- * @returns An `Error` whose message is `(errorCode) message`.
- */
 export function createBindingError(message: string, errorCode: string): Error {
 	return new Error(`(${errorCode}) ${message}`);
 }

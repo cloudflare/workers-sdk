@@ -414,21 +414,12 @@ const createOptionsSchema = z.object({
 		.optional(),
 });
 
-/**
- * Checks whether Durable Object storage could clone instance params, which
- * rules out functions, RPC targets and streams. Storage and structuredClone()
- * share workerd's serializer. As in the production engine, only a
- * `DataCloneError` means the params cannot be stored; any other error is
- * rethrown.
- *
- * @param params - The params passed to `create()` or a `createBatch()` entry.
- * @returns `false` if the engine could not store the params.
- */
 function canStoreInstanceParams(params: unknown): boolean {
 	try {
 		structuredClone(params);
 		return true;
 	} catch (error) {
+		// As in production, only a DataCloneError means the params can't be stored.
 		if (error instanceof Error && error.name === "DataCloneError") {
 			return false;
 		}
