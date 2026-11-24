@@ -18,12 +18,13 @@
 // - x-amz-storage-class: the simulator can't persist storage classes, so
 //   non-default classes (STANDARD_IA) are rejected with NotImplemented
 //   rather than silently stored as STANDARD.
-// - Flexible checksums: real R2 validates, stores, and echoes
-//   x-amz-checksum-* request headers (returning BadDigest on mismatch); the
-//   local binding has no checksum surface beyond MD5, so they are silently
-//   ignored like other unrecognized x-amz-* headers (Content-MD5 IS
-//   verified). The aws-chunked content encoding SDKs use to stream trailing
-//   checksums is not decoded either; clients must send plain bodies.
+// - Flexible checksums: CRC32 / CRC32C / SHA-1 / SHA-256 request headers are
+//   validated against the body (BadDigest on mismatch; SHA-1 / SHA-256 on
+//   UploadPart return NotImplemented, matching R2). CRC64NVME is still
+//   ignored. The local binding has no checksum surface beyond MD5, so
+//   verified digests are not stored or echoed on GET/HEAD. The aws-chunked
+//   content encoding SDKs use to stream trailing checksums is not decoded
+//   either; clients must send plain bodies.
 // - ListParts, ListMultipartUploads, the partNumber query parameter, the
 //   bucket-configuration reads ?acl, ?cors, and ?lifecycle, and the
 //   bucket-configuration writes/deletes for ?cors, ?encryption, ?lifecycle,
