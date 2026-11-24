@@ -14,6 +14,7 @@ import {
 	validateTrafficSubtotal,
 } from "../../versions/deploy";
 import { normalizeDurableObjectsCodeUpdateModeArgs } from "../../versions/deployment-args";
+import { mockPutImageTransformationsRequest } from "../deploy/helpers";
 import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -1178,6 +1179,25 @@ describe("versions deploy", () => {
 
 	describe("with wrangler.toml", () => {
 		beforeEach(() => writeWranglerConfig());
+
+		test("applies images url_transformations", async ({ expect }) => {
+			writeWranglerConfig({
+				images: {
+					url_transformations: { enabled: true, allowed_origins: ["*"] },
+				},
+			});
+			mockPutImageTransformationsRequest({
+				expectedBody: { enabled: true, allowed_origins: ["*"] },
+			});
+
+			await runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
+			);
+
+			expect(normalizeOutput(consoleStd.out)).toContain(
+				"Images URL transformations: enabled (any origin)"
+			);
+		});
 
 		test("no args", async ({ expect }) => {
 			const result = runWrangler("versions deploy --yes");
