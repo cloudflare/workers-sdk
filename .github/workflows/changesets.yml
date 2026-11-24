@@ -24,7 +24,6 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          # See https://github.com/changesets/action/issues/187
           token: ${{ secrets.GH_ACCESS_TOKEN }}
           persist-credentials: true
           # Pull in more history to cover the changeset commits
@@ -57,19 +56,13 @@ jobs:
 
       - name: Create Version PR or Publish to NPM
         id: changesets
-        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
-          version: node -r esbuild-register tools/deployments/changeset-version.ts
-          # Replaces `changeset publish` with an orchestrator that publishes in
-          # dependency-tier order and waits for each tier to become resolvable
-          # on the registry before starting the next one. Packages pin their
-          # siblings at an exact version, so publishing a dependent before its
-          # dependency has propagated produces an installable-but-broken
-          # release. It still ends with `changeset tag`, so the `New tag:` lines
-          # this action parses into `publishedPackages` are unchanged.
-          publish: node -r esbuild-register tools/deployments/publish-packages.ts
+          github-token: ${{ secrets.GH_ACCESS_TOKEN }}
+          push-with-git-cli: false
+          version-script: node -r esbuild-register tools/deployments/changeset-version.ts
+          publish-script: node -r esbuild-register tools/deployments/publish-packages.ts
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           CI_OS: ${{ runner.os }}
           SOURCEMAPS: "false"
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
@@ -100,7 +93,7 @@ jobs:
           node -r esbuild-register tools/deployments/deploy-non-npm-packages.ts
           echo "status=$(cat deployment-status.json)" >> $GITHUB_OUTPUT;
         env:
-          PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
+          PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.published-packages }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           WORKERS_NEW_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.WORKERS_NEW_CLOUDFLARE_ACCOUNT_ID }}
           WORKERS_NEW_CLOUDFLARE_API_TOKEN: ${{ secrets.WORKERS_NEW_CLOUDFLARE_API_TOKEN }}
@@ -114,7 +107,7 @@ jobs:
         run: node -r esbuild-register tools/deployments/alert-on-error.ts
         env:
           PUBLISH_STATUS: ${{ steps.changesets.outcome }}
-          HAS_CHANGESETS: ${{ steps.changesets.outputs.hasChangesets }}
+          HAS_CHANGESETS: ${{ steps.changesets.outputs.has-changesets }}
           DEPLOYMENT_STATUS: ${{ steps.deploy.outputs.status }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           TOKEN: ${{ secrets.STATUS_BOT_SECRET }}

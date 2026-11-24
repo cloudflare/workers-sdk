@@ -168,13 +168,15 @@ describe("validateChangesets()", () => {
 				},
 			]
 		);
-		expect(errors).toMatchInlineSnapshot(`
-			[
-			  "Error: could not parse changeset - invalid frontmatter: at file "invalid-frontmatter.md"",
-			  "Unknown package name "package-invalid" in changeset at "invalid-package.md".",
-			  "Invalid type "foo" for package "package-a" in changeset at "invalid-type.md".",
-			]
-		`);
+		expect(errors).toEqual([
+			expect.stringContaining("file is empty."),
+			'Unknown package name "package-invalid" in changeset at "invalid-package.md".',
+			expect.stringContaining(
+				'invalid version type "foo" for package "package-a".'
+			),
+		]);
+		expect(errors[0]).toContain('In changeset at "invalid-frontmatter.md".');
+		expect(errors[2]).toContain('In changeset at "invalid-type.md".');
 	});
 
 	it("should allow major bumps for private packages", ({ expect }) => {

@@ -44,12 +44,16 @@ describe("runPublishCommand()", () => {
 
 	afterEach(() => {
 		vi.mocked(execFileSync).mockReset();
+		vi.mocked(spawn).mockReset();
 		vi.restoreAllMocks();
+		vi.unstubAllEnvs();
 	});
 
 	it("should run the production build before checking the registry", async ({
 		expect,
 	}) => {
+		vi.stubEnv("GITHUB_TOKEN", "changesets-token");
+		vi.stubEnv("CHANGESETS_OUTPUT", "/changesets/output.jsonl");
 		const buildError = new Error("Build failed");
 		const fetchSpy = vi
 			.spyOn(globalThis, "fetch")
@@ -67,6 +71,9 @@ describe("runPublishCommand()", () => {
 				env: expect.objectContaining({ NODE_ENV: "production" }),
 			})
 		);
+		const buildEnv = vi.mocked(execFileSync).mock.calls[0]?.[2]?.env;
+		expect(buildEnv).not.toHaveProperty("GITHUB_TOKEN");
+		expect(buildEnv).not.toHaveProperty("CHANGESETS_OUTPUT");
 		expect(fetchSpy).not.toHaveBeenCalled();
 	});
 
@@ -75,6 +82,40 @@ describe("runPublishCommand()", () => {
 
 		expect(execFileSync).not.toHaveBeenCalled();
 		expect(std.out).toContain("Dry run: nothing was published.");
+	});
+
+	it("should hand off to Changesets git-tag after publishing", async ({
+		expect,
+	}) => {
+		const packages = findPublishablePackages(
+			resolve(__dirname, "../../../packages")
+		);
+		const registry = createFakeRegistry({
+			published: Object.fromEntries(
+				packages.map(({ name, version }) => [name, [version]])
+			),
+			distTags: Object.fromEntries(
+				packages.map(({ name, version }) => [name, { beta: version }])
+			),
+		});
+		vi.stubEnv("PUBLISH_REGISTRY", REGISTRY);
+		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+			const response = await registry.fetchImpl(String(input));
+			return Response.json(await response.json(), { status: response.status });
+		});
+		vi.mocked(spawn).mockImplementationOnce(() => {
+			const child = new ChildProcess();
+			queueMicrotask(() => child.emit("close", 0));
+			return child;
+		});
+
+		await runPublishCommand([]);
+
+		expect(spawn).toHaveBeenCalledExactlyOnceWith(
+			"pnpm",
+			["exec", "changeset", "git-tag"],
+			{ stdio: "inherit" }
+		);
 	});
 });
 
@@ -1170,11 +1211,11 @@ describe("publishAllPackages()", () => {
 		);
 	});
 
-	it("should fail when `changeset tag` fails", async ({ expect }) => {
+	it("should fail when `changeset git-tag` fails", async ({ expect }) => {
 		const harness = createHarness({ tagExitCode: 1 });
 
 		await expect(harness.run()).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: \`changeset tag\` exited with code 1]`
+			`[Error: \`changeset git-tag\` exited with code 1]`
 		);
 	});
 });
