@@ -968,6 +968,10 @@ export class Miniflare {
 	// than on every `setOptions()`.
 	#warnedArtifactsEventsWithoutLocalNamespace = false;
 
+	// Keys of `/core/log` messages sent with `MF-Log-Once` that have already
+	// been logged, so embedded workers can warn once per instance
+	#loggedOnce = new Set<string>();
+
 	constructor(opts: MiniflareOptions) {
 		// Split and validate options
 		const [sharedOpts, workerOpts] = validateOptions(opts);
@@ -1658,12 +1662,20 @@ export class Miniflare {
 					`Expected ${SharedHeaders.LOG_LEVEL} header to be log level, got ${level}`
 				);
 				const logLevel = level as LogLevel;
-				let message = await request.text();
-				if (!colors$.enabled) {
-					message = stripAnsi(message);
+				const onceKey = request.headers.get(SharedHeaders.LOG_ONCE);
+				if (onceKey !== null && this.#loggedOnce.has(onceKey)) {
+					response = new Response(null, { status: 204 });
+				} else {
+					if (onceKey !== null) {
+						this.#loggedOnce.add(onceKey);
+					}
+					let message = await request.text();
+					if (!colors$.enabled) {
+						message = stripAnsi(message);
+					}
+					this.#log.logWithLevel(logLevel, message);
+					response = new Response(null, { status: 204 });
 				}
-				this.#log.logWithLevel(logLevel, message);
-				response = new Response(null, { status: 204 });
 			} else if (url.pathname === "/core/remote-bindings-access-warning") {
 				// Reported by the remote-bindings proxy CLIENT worker when it sees
 				// a 403 + "Cloudflare Access" body, or a redirect to the Access login
@@ -1817,6 +1829,10 @@ export class Miniflare {
 							this.#devRegistry.instanceId,
 					},
 				});
+			} else if (url.pathname === "/core/configured-public-url") {
+				// Returns the public URL only if one has been set (e.g. the Vite dev
+				// server URL), without falling back to the runtime entry URL
+				response = Response.json(this.publicUrl ?? null);
 			} else if (url.pathname === "/core/public-url") {
 				// Returns the public URL for this Miniflare instance. If a publicUrl
 				// has been set (e.g. the Vite dev server URL), use that; otherwise

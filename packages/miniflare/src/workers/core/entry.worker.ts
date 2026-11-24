@@ -517,8 +517,12 @@ function handleProxy(request: Request, env: Env) {
 	return stub.fetch(request);
 }
 
-export default <ExportedHandler<Env>>{
-	async fetch(request, env, ctx) {
+const handler = {
+	async fetch(
+		request: Request<unknown, IncomingRequestCfProperties>,
+		env: Env,
+		ctx: ExecutionContext
+	): Promise<Response> {
 		const startTime = Date.now();
 
 		const clientIp = request.cf?.clientIp as string;
@@ -685,7 +689,13 @@ export default <ExportedHandler<Env>>{
 					env[
 						`${CoreBindings.JSON_IMAGE_URL_TRANSFORMATIONS_PREFIX}${routeTarget}`
 					],
-					env
+					env,
+					(sourceRequest) =>
+						handler.fetch(
+							sourceRequest as Request<unknown, IncomingRequestCfProperties>,
+							env,
+							ctx
+						)
 				);
 				if (env[CoreBindings.LOG_REQUESTS]) {
 					response = maybeLogRequest(request, response, env, ctx, startTime);
@@ -716,5 +726,7 @@ export default <ExportedHandler<Env>>{
 		}
 	},
 };
+
+export default handler satisfies ExportedHandler<Env>;
 
 export { ProxyServer } from "./proxy.worker";

@@ -6,7 +6,6 @@
 // low-fidelity Sharp mock used for `cf.image` fetches.
 
 import { LogLevel, SharedHeaders } from "miniflare:shared";
-import { getPublicUrl } from "../shared/public-url";
 import { CoreBindings, CoreHeaders, CorePaths } from "./constants";
 import type { RequestInitCfPropertiesImage } from "@cloudflare/workers-types/experimental";
 
@@ -24,8 +23,8 @@ const PATH_RE = /^\/cdn-cgi\/image\/(?:(fastly|akamai|flow)\/)?([^/]*)\/(.+)$/;
 
 const RESIZING_VIA_TOKEN = "image-resizing";
 
-let warnedDisabled = false;
-let warnedLowFidelity = false;
+/** Dispatches a request through the entry Worker's routing. */
+export type DispatchFetch = (request: Request) => Promise<Response>;
 
 /**
  * Returns whether `pathname` should be handled as a `/cdn-cgi/image/` URL transformation.
@@ -47,13 +46,15 @@ export function isImageTransformPath(pathname: string): boolean {
  * @param url The parsed request URL.
  * @param config The routed Worker's URL transformation config, if any.
  * @param env The entry Worker's environment.
+ * @param dispatch Dispatches same-host source requests through local routing.
  * @returns The transformed image, or an error response.
  */
 export async function handleImageTransform(
 	request: Request,
 	url: URL,
 	config: ImageUrlTransformationsConfig | undefined,
-	env: Env
+	env: Env,
+	dispatch: DispatchFetch
 ): Promise<Response> {
 	// Production returns a 404 for `/cdn-cgi/image/` when transformations aren't
 	// enabled, without invoking the Worker
@@ -101,7 +102,14 @@ export async function handleImageTransform(
 		return new Response(authorization.reason, { status: 403 });
 	}
 
-	const fetched = await fetchSource(request, url, sourceUrl, config, env);
+	const fetched = await fetchSource(
+		request,
+		url,
+		sourceUrl,
+		config,
+		env,
+		dispatch
+	);
 	if (!fetched.ok) {
 		return fetched.response;
 	}
@@ -158,9 +166,10 @@ async function fetchSource(
 	requestUrl: URL,
 	sourceUrl: URL,
 	config: ImageUrlTransformationsConfig,
-	env: Env
+	env: Env,
+	dispatch: DispatchFetch
 ): Promise<FetchSourceResult> {
-	let publicUrl: URL | undefined;
+	let publicUrl: Promise<URL | null> | undefined;
 	let url = sourceUrl;
 	for (let redirects = 0; ; redirects++) {
 		const sameHost = url.host === requestUrl.host;
@@ -185,17 +194,14 @@ async function fetchSource(
 
 		let response: Response;
 		try {
-			// In production, same-zone source images are fetched back through the
-			// zone. Locally, go back through the dev server (or this Miniflare
-			// instance) so routing, assets and middleware all apply.
-			let target = url;
 			if (sameHost) {
-				publicUrl ??= await getPublicUrl(env[CoreBindings.SERVICE_LOOPBACK]);
-				target = new URL(url.pathname + url.search, publicUrl);
+				publicUrl ??= getConfiguredPublicUrl(env);
+				response = await fetchSameHost(url, headers, await publicUrl, dispatch);
+			} else {
+				response = await fetch(
+					new Request(url, { headers, redirect: "manual" })
+				);
 			}
-			response = await fetch(
-				new Request(target, { headers, redirect: "manual" })
-			);
 		} catch {
 			return {
 				ok: false,
@@ -233,6 +239,38 @@ async function fetchSource(
 		}
 		url = next;
 	}
+}
+
+/**
+ * In production, same-zone source images are fetched back through the zone.
+ * Locally, they go back through routing so the right Worker, assets and
+ * middleware apply, keeping the source's hostname for route matching. If a
+ * public URL is configured (e.g. the Vite dev server), they're fetched from
+ * there instead, as it may serve files that Miniflare can't.
+ */
+function fetchSameHost(
+	url: URL,
+	headers: Headers,
+	publicUrl: URL | null,
+	dispatch: DispatchFetch
+): Promise<Response> {
+	if (publicUrl === null) {
+		return dispatch(new Request(url, { headers, redirect: "manual" }));
+	}
+	// Assign the path rather than resolving it against the public URL, so a
+	// path such as `//example.com/` can't change the host
+	const target = new URL(publicUrl);
+	target.pathname = url.pathname;
+	target.search = url.search;
+	return fetch(new Request(target, { headers, redirect: "manual" }));
+}
+
+async function getConfiguredPublicUrl(env: Env): Promise<URL | null> {
+	const response = await env[CoreBindings.SERVICE_LOOPBACK].fetch(
+		"http://localhost/core/configured-public-url"
+	);
+	const url = (await response.json()) as string | null;
+	return url === null ? null : new URL(url);
 }
 
 /**
@@ -274,20 +312,12 @@ async function warnOnce(
 	kind: "disabled" | "low-fidelity",
 	message: string
 ): Promise<void> {
-	if (kind === "disabled") {
-		if (warnedDisabled) {
-			return;
-		}
-		warnedDisabled = true;
-	} else {
-		if (warnedLowFidelity) {
-			return;
-		}
-		warnedLowFidelity = true;
-	}
 	await env[CoreBindings.SERVICE_LOOPBACK].fetch("http://localhost/core/log", {
 		method: "POST",
-		headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString() },
+		headers: {
+			[SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString(),
+			[SharedHeaders.LOG_ONCE]: `image-transform:${kind}`,
+		},
 		body: message,
 	});
 }

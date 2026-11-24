@@ -181,6 +181,137 @@ describe("/cdn-cgi/image/ local transforms", () => {
 		).toHaveLength(1);
 	});
 
+	test("fetches same-host sources from the Worker routed by hostname", async ({
+		expect,
+	}) => {
+		const squarePng = await sharp({
+			create: {
+				width: 40,
+				height: 40,
+				channels: 3,
+				background: { r: 0, g: 0, b: 255 },
+			},
+		})
+			.png()
+			.toBuffer();
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "a",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(WORKER_SCRIPT),
+						env: {
+							PNG: { type: "text", value: sourcePng.toString("base64") },
+						},
+					},
+				},
+				{
+					config: {
+						name: "b",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(WORKER_SCRIPT),
+						env: {
+							PNG: { type: "text", value: squarePng.toString("base64") },
+						},
+						triggers: [{ type: "fetch", pattern: "b.localhost/*" }],
+						images: { urlTransformations: { enabled: true } },
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const res = await mf.dispatchFetch(
+			"http://b.localhost/cdn-cgi/image/width=20/img.png"
+		);
+		expect(res.status).toBe(200);
+		const meta = await metadata(res);
+		expect(meta.width).toBe(20);
+		expect(meta.height).toBe(20);
+	});
+
+	test("transforms same-host sources over local HTTPS", async ({ expect }) => {
+		const mf = new Miniflare({
+			https: true,
+			workers: [
+				{
+					config: {
+						name: "worker",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(WORKER_SCRIPT),
+						env: {
+							PNG: { type: "text", value: sourcePng.toString("base64") },
+						},
+						images: { urlTransformations: { enabled: true } },
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const res = await mf.dispatchFetch(
+			"https://localhost/cdn-cgi/image/width=50/img.png"
+		);
+		expect(res.status).toBe(200);
+		expect((await metadata(res)).width).toBe(50);
+	});
+
+	test("keeps same-host sources with a protocol-relative path on the same host", async ({
+		expect,
+	}) => {
+		const origin = await useOrigin();
+		const { mf } = createMiniflare({ enabled: true });
+
+		const res = await mf.dispatchFetch(
+			`http://localhost/cdn-cgi/image/width=50/http://localhost//${origin.url.host}/img.png`,
+			{ headers: { cookie: "session=secret" } }
+		);
+		expect(res.status).toBe(200);
+		await res.arrayBuffer();
+		expect(origin.requests).toHaveLength(0);
+	});
+
+	test("fetches same-host sources from the configured public URL", async ({
+		expect,
+	}) => {
+		const origin = await useOrigin();
+		const publicRequests: Origin["requests"] = [];
+		const { http: publicUrl } = await useServer((req, res) => {
+			publicRequests.push({ url: req.url ?? "", headers: req.headers });
+			res.writeHead(200, { "content-type": "image/png" });
+			res.end(sourcePng);
+		});
+		const mf = new Miniflare({
+			publicUrl: publicUrl.href,
+			workers: [
+				{
+					config: {
+						name: "worker",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(WORKER_SCRIPT),
+						env: {
+							PNG: { type: "text", value: sourcePng.toString("base64") },
+						},
+						images: { urlTransformations: { enabled: true } },
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const res = await mf.dispatchFetch(
+			`http://localhost/cdn-cgi/image/width=50/http://localhost//${origin.url.host}/img.png`,
+			{ headers: { cookie: "session=secret" } }
+		);
+		expect(res.status).toBe(200);
+		await res.arrayBuffer();
+		expect(origin.requests).toHaveLength(0);
+		expect(publicRequests).toHaveLength(1);
+		expect(publicRequests[0].url).toBe(`//${origin.url.host}/img.png`);
+		expect(publicRequests[0].headers.cookie).toBe("session=secret");
+	});
+
 	test("parses comma-separated options and aliases", async ({ expect }) => {
 		const { mf } = createMiniflare({ enabled: true });
 

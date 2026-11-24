@@ -1,5 +1,7 @@
 export const SharedHeaders = {
 	LOG_LEVEL: "MF-Log-Level",
+	/** Logs the message only the first time this key is seen */
+	LOG_ONCE: "MF-Log-Once",
 	NAMESPACE: "MF-Namespace",
 } as const;
 
