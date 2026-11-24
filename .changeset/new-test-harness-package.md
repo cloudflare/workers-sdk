@@ -4,7 +4,7 @@
 
 Add `@cloudflare/test-harness` for testing a project's production build
 
-Like Wrangler's `createTestHarness()`, the harness runs your Workers in tests, but from the project's build output, so your tests exercise what you deploy.
+Like Wrangler's `createTestHarness()`, the harness runs your Workers in tests, but from the Build Output that `cf build` writes, so your tests exercise what you deploy. Remote bindings use the same credentials as cf.
 
 ```ts
 const harness = createTestHarness({ workers: [{ projectDir: "./" }] });
