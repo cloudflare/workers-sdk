@@ -2725,6 +2725,2372 @@ export type FlagshipEvaluateFlagPostResponses = {
 export type FlagshipEvaluateFlagPostResponse =
 	FlagshipEvaluateFlagPostResponses[keyof FlagshipEvaluateFlagPostResponses];
 
+export type ArtifactsNamespacesListData = {
+	body?: never;
+	path?: never;
+	query?: never;
+	url: "/artifacts/namespaces";
+};
+
+export type ArtifactsNamespacesListErrors = {
+	/**
+	 * Bad request.
+	 */
+	400: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Authentication required.
+	 */
+	401: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Insufficient permissions.
+	 */
+	403: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Internal server error.
+	 */
+	500: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+};
+
+export type ArtifactsNamespacesListError =
+	ArtifactsNamespacesListErrors[keyof ArtifactsNamespacesListErrors];
+
+export type ArtifactsNamespacesListResponses = {
+	/**
+	 * Namespaces.
+	 */
+	200: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: Array<{
+			created_at: string;
+			jurisdiction: "unrestricted" | "us" | "eu" | "fedramp";
+			namespace: string;
+			repo_count: number;
+			updated_at: string;
+		}>;
+		result_info?:
+			| {
+					count: number;
+					cursor: string;
+					per_page: number;
+			  }
+			| {
+					count: number;
+					page: number;
+					per_page: number;
+					total_count: number;
+					total_pages: number;
+			  };
+		success: true;
+	};
+};
+
+export type ArtifactsNamespacesListResponse =
+	ArtifactsNamespacesListResponses[keyof ArtifactsNamespacesListResponses];
+
+export type ArtifactsNamespacesGetData = {
+	body?: never;
+	path: {
+		/**
+		 * Artifacts namespace name.
+		 */
+		namespace: string;
+	};
+	query?: never;
+	url: "/artifacts/namespaces/{namespace}";
+};
+
+export type ArtifactsNamespacesGetErrors = {
+	/**
+	 * Bad request.
+	 */
+	400: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Authentication required.
+	 */
+	401: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Insufficient permissions.
+	 */
+	403: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Resource not found.
+	 */
+	404: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Internal server error.
+	 */
+	500: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+};
+
+export type ArtifactsNamespacesGetError =
+	ArtifactsNamespacesGetErrors[keyof ArtifactsNamespacesGetErrors];
+
+export type ArtifactsNamespacesGetResponses = {
+	/**
+	 * Namespace.
+	 */
+	200: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			created_at: string;
+			jurisdiction: "unrestricted" | "us" | "eu" | "fedramp";
+			namespace: string;
+			repo_count: number;
+			updated_at: string;
+		};
+		result_info?:
+			| {
+					count: number;
+					cursor: string;
+					per_page: number;
+			  }
+			| {
+					count: number;
+					page: number;
+					per_page: number;
+					total_count: number;
+					total_pages: number;
+			  };
+		success: true;
+	};
+};
+
+export type ArtifactsNamespacesGetResponse =
+	ArtifactsNamespacesGetResponses[keyof ArtifactsNamespacesGetResponses];
+
+export type ArtifactsReposListData = {
+	body?: never;
+	path: {
+		/**
+		 * Artifacts namespace name.
+		 */
+		namespace: string;
+	};
+	query?: {
+		limit?: number;
+		cursor?: string;
+		search?: string;
+		sort?: "created_at" | "updated_at" | "last_push_at" | "name";
+		direction?: "asc" | "desc";
+	};
+	url: "/artifacts/namespaces/{namespace}/repos";
+};
+
+export type ArtifactsReposListErrors = {
+	/**
+	 * Bad request.
+	 */
+	400: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Authentication required.
+	 */
+	401: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Insufficient permissions.
+	 */
+	403: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Internal server error.
+	 */
+	500: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+};
+
+export type ArtifactsReposListError =
+	ArtifactsReposListErrors[keyof ArtifactsReposListErrors];
+
+export type ArtifactsReposListResponses = {
+	/**
+	 * Repositories.
+	 */
+	200: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: Array<{
+			created_at: string;
+			/**
+			 * Default branch name. Must not contain '..' and must not end with '/' or '.'.
+			 */
+			default_branch: string;
+			description: string | null;
+			id: string;
+			last_push_at: string | null;
+			name: string;
+			read_only: boolean;
+			remote: string;
+			source: string | null;
+			updated_at: string;
+		}>;
+		result_info?:
+			| {
+					count: number;
+					cursor: string;
+					per_page: number;
+			  }
+			| {
+					count: number;
+					page: number;
+					per_page: number;
+					total_count: number;
+					total_pages: number;
+			  };
+		success: true;
+	};
+};
+
+export type ArtifactsReposListResponse =
+	ArtifactsReposListResponses[keyof ArtifactsReposListResponses];
+
+export type ArtifactsReposCreateData = {
+	body: {
+		/**
+		 * Git branch name. Must match /^[a-zA-Z0-9][a-zA-Z0-9._/-]*$/, must not contain '..', and must not end with '/' or '.'.
+		 */
+		default_branch?: string;
+		description?: string;
+		name: string;
+		read_only?: boolean;
+	};
+	path: {
+		/**
+		 * Artifacts namespace name.
+		 */
+		namespace: string;
+	};
+	query?: never;
+	url: "/artifacts/namespaces/{namespace}/repos";
+};
+
+export type ArtifactsReposCreateErrors = {
+	/**
+	 * Bad request.
+	 */
+	400: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Authentication required.
+	 */
+	401: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Insufficient permissions.
+	 */
+	403: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Operation conflict.
+	 */
+	409: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Internal server error.
+	 */
+	500: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+};
+
+export type ArtifactsReposCreateError =
+	ArtifactsReposCreateErrors[keyof ArtifactsReposCreateErrors];
+
+export type ArtifactsReposCreateResponses = {
+	/**
+	 * Repository created.
+	 */
+	201: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			default_branch: string;
+			description: string | null;
+			id: string;
+			name: string;
+			remote: string;
+			token: string;
+		};
+		result_info?:
+			| {
+					count: number;
+					cursor: string;
+					per_page: number;
+			  }
+			| {
+					count: number;
+					page: number;
+					per_page: number;
+					total_count: number;
+					total_pages: number;
+			  };
+		success: true;
+	};
+};
+
+export type ArtifactsReposCreateResponse =
+	ArtifactsReposCreateResponses[keyof ArtifactsReposCreateResponses];
+
+export type ArtifactsReposDeleteData = {
+	body?: never;
+	path: {
+		/**
+		 * Artifacts namespace name.
+		 */
+		namespace: string;
+		/**
+		 * Repository name.
+		 */
+		name: string;
+	};
+	query?: never;
+	url: "/artifacts/namespaces/{namespace}/repos/{name}";
+};
+
+export type ArtifactsReposDeleteErrors = {
+	/**
+	 * Bad request.
+	 */
+	400: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Authentication required.
+	 */
+	401: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Insufficient permissions.
+	 */
+	403: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Resource not found.
+	 */
+	404: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Internal server error.
+	 */
+	500: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+};
+
+export type ArtifactsReposDeleteError =
+	ArtifactsReposDeleteErrors[keyof ArtifactsReposDeleteErrors];
+
+export type ArtifactsReposDeleteResponses = {
+	/**
+	 * Delete accepted.
+	 */
+	202: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			id: string;
+		};
+		result_info?:
+			| {
+					count: number;
+					cursor: string;
+					per_page: number;
+			  }
+			| {
+					count: number;
+					page: number;
+					per_page: number;
+					total_count: number;
+					total_pages: number;
+			  };
+		success: true;
+	};
+};
+
+export type ArtifactsReposDeleteResponse =
+	ArtifactsReposDeleteResponses[keyof ArtifactsReposDeleteResponses];
+
+export type ArtifactsReposGetData = {
+	body?: never;
+	path: {
+		/**
+		 * Artifacts namespace name.
+		 */
+		namespace: string;
+		/**
+		 * Repository name.
+		 */
+		name: string;
+	};
+	query?: never;
+	url: "/artifacts/namespaces/{namespace}/repos/{name}";
+};
+
+export type ArtifactsReposGetErrors = {
+	/**
+	 * Bad request.
+	 */
+	400: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Authentication required.
+	 */
+	401: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Insufficient permissions.
+	 */
+	403: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Resource not found.
+	 */
+	404: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Operation conflict.
+	 */
+	409: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Internal server error.
+	 */
+	500: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+};
+
+export type ArtifactsReposGetError =
+	ArtifactsReposGetErrors[keyof ArtifactsReposGetErrors];
+
+export type ArtifactsReposGetResponses = {
+	/**
+	 * Repository.
+	 */
+	200: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			created_at: string;
+			/**
+			 * Default branch name. Must not contain '..' and must not end with '/' or '.'.
+			 */
+			default_branch: string;
+			description: string | null;
+			id: string;
+			last_push_at: string | null;
+			name: string;
+			read_only: boolean;
+			remote: string;
+			source: string | null;
+			updated_at: string;
+		};
+		result_info?:
+			| {
+					count: number;
+					cursor: string;
+					per_page: number;
+			  }
+			| {
+					count: number;
+					page: number;
+					per_page: number;
+					total_count: number;
+					total_pages: number;
+			  };
+		success: true;
+	};
+};
+
+export type ArtifactsReposGetResponse =
+	ArtifactsReposGetResponses[keyof ArtifactsReposGetResponses];
+
+export type ArtifactsReposForkData = {
+	body: {
+		default_branch_only?: boolean;
+		description?: string;
+		name: string;
+		read_only?: boolean;
+	};
+	path: {
+		/**
+		 * Artifacts namespace name.
+		 */
+		namespace: string;
+		/**
+		 * Repository name.
+		 */
+		name: string;
+	};
+	query?: never;
+	url: "/artifacts/namespaces/{namespace}/repos/{name}/fork";
+};
+
+export type ArtifactsReposForkErrors = {
+	/**
+	 * Bad request.
+	 */
+	400: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Authentication required.
+	 */
+	401: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Insufficient permissions.
+	 */
+	403: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Resource not found.
+	 */
+	404: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Operation conflict.
+	 */
+	409: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Internal server error.
+	 */
+	500: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Service unavailable.
+	 */
+	503: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+};
+
+export type ArtifactsReposForkError =
+	ArtifactsReposForkErrors[keyof ArtifactsReposForkErrors];
+
+export type ArtifactsReposForkResponses = {
+	/**
+	 * Repository forked.
+	 */
+	201: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			default_branch: string;
+			description: string | null;
+			id: string;
+			name: string;
+			objects: number;
+			remote: string;
+			token: string;
+		};
+		result_info?:
+			| {
+					count: number;
+					cursor: string;
+					per_page: number;
+			  }
+			| {
+					count: number;
+					page: number;
+					per_page: number;
+					total_count: number;
+					total_pages: number;
+			  };
+		success: true;
+	};
+};
+
+export type ArtifactsReposForkResponse =
+	ArtifactsReposForkResponses[keyof ArtifactsReposForkResponses];
+
+export type ArtifactsReposImportData = {
+	body: {
+		/**
+		 * Git branch name. Must match /^[a-zA-Z0-9][a-zA-Z0-9._/-]*$/, must not contain '..', and must not end with '/' or '.'.
+		 */
+		branch?: string;
+		depth?: number;
+		read_only?: boolean;
+		url: string;
+	};
+	path: {
+		/**
+		 * Artifacts namespace name.
+		 */
+		namespace: string;
+		/**
+		 * Repository name.
+		 */
+		name: string;
+	};
+	query?: never;
+	url: "/artifacts/namespaces/{namespace}/repos/{name}/import";
+};
+
+export type ArtifactsReposImportErrors = {
+	/**
+	 * Bad request.
+	 */
+	400: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Authentication required.
+	 */
+	401: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Insufficient permissions.
+	 */
+	403: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Resource not found.
+	 */
+	404: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Operation conflict.
+	 */
+	409: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Request entity too large.
+	 */
+	413: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Unprocessable entity.
+	 */
+	422: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Internal server error.
+	 */
+	500: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Upstream unavailable.
+	 */
+	502: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Service unavailable.
+	 */
+	503: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Gateway timeout.
+	 */
+	504: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+};
+
+export type ArtifactsReposImportError =
+	ArtifactsReposImportErrors[keyof ArtifactsReposImportErrors];
+
+export type ArtifactsReposImportResponses = {
+	/**
+	 * Repository import started.
+	 */
+	201: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			default_branch: string;
+			description: string | null;
+			id: string;
+			name: string;
+			remote: string;
+			token: string;
+		};
+		result_info?:
+			| {
+					count: number;
+					cursor: string;
+					per_page: number;
+			  }
+			| {
+					count: number;
+					page: number;
+					per_page: number;
+					total_count: number;
+					total_pages: number;
+			  };
+		success: true;
+	};
+};
+
+export type ArtifactsReposImportResponse =
+	ArtifactsReposImportResponses[keyof ArtifactsReposImportResponses];
+
+export type ArtifactsRepoTokensListData = {
+	body?: never;
+	path: {
+		/**
+		 * Artifacts namespace name.
+		 */
+		namespace: string;
+		/**
+		 * Repository name.
+		 */
+		name: string;
+	};
+	query?: {
+		state?: "active" | "expired" | "revoked" | "all";
+		page?: number;
+		per_page?: number;
+	};
+	url: "/artifacts/namespaces/{namespace}/repos/{name}/tokens";
+};
+
+export type ArtifactsRepoTokensListErrors = {
+	/**
+	 * Bad request.
+	 */
+	400: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Authentication required.
+	 */
+	401: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Insufficient permissions.
+	 */
+	403: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Resource not found.
+	 */
+	404: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Operation conflict.
+	 */
+	409: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Internal server error.
+	 */
+	500: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+};
+
+export type ArtifactsRepoTokensListError =
+	ArtifactsRepoTokensListErrors[keyof ArtifactsRepoTokensListErrors];
+
+export type ArtifactsRepoTokensListResponses = {
+	/**
+	 * Tokens.
+	 */
+	200: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: Array<{
+			created_at: string;
+			expires_at: string;
+			id: string;
+			scope: "read" | "write";
+			state: "active" | "expired" | "revoked";
+		}>;
+		result_info?:
+			| {
+					count: number;
+					cursor: string;
+					per_page: number;
+			  }
+			| {
+					count: number;
+					page: number;
+					per_page: number;
+					total_count: number;
+					total_pages: number;
+			  };
+		success: true;
+	};
+};
+
+export type ArtifactsRepoTokensListResponse =
+	ArtifactsRepoTokensListResponses[keyof ArtifactsRepoTokensListResponses];
+
+export type ArtifactsTokensCreateData = {
+	body: {
+		repo: string;
+		scope?: "read" | "write";
+		ttl?: number;
+	};
+	path: {
+		/**
+		 * Artifacts namespace name.
+		 */
+		namespace: string;
+	};
+	query?: never;
+	url: "/artifacts/namespaces/{namespace}/tokens";
+};
+
+export type ArtifactsTokensCreateErrors = {
+	/**
+	 * Bad request.
+	 */
+	400: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Authentication required.
+	 */
+	401: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Insufficient permissions.
+	 */
+	403: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Resource not found.
+	 */
+	404: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Operation conflict.
+	 */
+	409: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Internal server error.
+	 */
+	500: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+};
+
+export type ArtifactsTokensCreateError =
+	ArtifactsTokensCreateErrors[keyof ArtifactsTokensCreateErrors];
+
+export type ArtifactsTokensCreateResponses = {
+	/**
+	 * Token created.
+	 */
+	201: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			expires_at: string;
+			id: string;
+			plaintext: string;
+			scope: "read" | "write";
+		};
+		result_info?:
+			| {
+					count: number;
+					cursor: string;
+					per_page: number;
+			  }
+			| {
+					count: number;
+					page: number;
+					per_page: number;
+					total_count: number;
+					total_pages: number;
+			  };
+		success: true;
+	};
+};
+
+export type ArtifactsTokensCreateResponse =
+	ArtifactsTokensCreateResponses[keyof ArtifactsTokensCreateResponses];
+
+export type ArtifactsTokensRevokeData = {
+	body?: never;
+	path: {
+		/**
+		 * Artifacts namespace name.
+		 */
+		namespace: string;
+		/**
+		 * Token ID. Must match /^[0-9a-z]{16}$/.
+		 */
+		id: string;
+	};
+	query?: never;
+	url: "/artifacts/namespaces/{namespace}/tokens/{id}";
+};
+
+export type ArtifactsTokensRevokeErrors = {
+	/**
+	 * Authentication required.
+	 */
+	401: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Insufficient permissions.
+	 */
+	403: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Resource not found.
+	 */
+	404: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+	/**
+	 * Internal server error.
+	 */
+	500: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			[key: string]: unknown;
+		} | null;
+		success: false;
+	};
+};
+
+export type ArtifactsTokensRevokeError =
+	ArtifactsTokensRevokeErrors[keyof ArtifactsTokensRevokeErrors];
+
+export type ArtifactsTokensRevokeResponses = {
+	/**
+	 * Token revoked.
+	 */
+	200: {
+		errors: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		messages: Array<{
+			code: number;
+			documentation_url?: string;
+			message: string;
+			source?: {
+				pointer?: string;
+			};
+		}>;
+		result: {
+			id: string;
+		};
+		result_info?:
+			| {
+					count: number;
+					cursor: string;
+					per_page: number;
+			  }
+			| {
+					count: number;
+					page: number;
+					per_page: number;
+					total_count: number;
+					total_pages: number;
+			  };
+		success: true;
+	};
+};
+
+export type ArtifactsTokensRevokeResponse =
+	ArtifactsTokensRevokeResponses[keyof ArtifactsTokensRevokeResponses];
+
 export type R2BucketDeleteObjectsData = {
 	/**
 	 * Array of object keys to delete

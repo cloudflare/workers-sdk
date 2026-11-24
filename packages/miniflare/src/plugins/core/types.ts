@@ -9,6 +9,19 @@ export type BindingIdMap = {
 	r2: Record<string, string>; // bucketName -> bindingName
 	workflows: Record<string, WorkflowBindingInfo>; // workflowName -> binding info
 	flagship: Record<string, FlagshipBindingInfo>; // appId -> binding info
+	artifacts: ArtifactsExplorerInfo;
+};
+
+export type ArtifactsExplorerInfo = {
+	namespaces: Record<string, ArtifactsNamespaceInfo>; // namespace -> info
+	/** Set when local namespaces without a binding could not start. */
+	unavailableReason?: string;
+};
+
+export type ArtifactsNamespaceInfo = {
+	namespace: string;
+	binding: string; // explorer service binding name in env
+	bindings: string[]; // user-facing binding names using this namespace
 };
 
 export type FlagshipBindingInfo = {

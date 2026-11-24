@@ -57,6 +57,24 @@ reconnects, but existing workerd connections do not recover automatically.
 Restart the dev server or reload its configuration if Git operations stop
 working after a sidecar exit.
 
+## Local Explorer API
+
+With `unsafeLocalExplorer` or `unsafeEnableSharedStorage`, Miniflare also starts
+namespaces without a binding, so the Local Explorer can serve the Artifacts REST
+routes (`cf --local` uses both options). Namespace directories are hashed, so
+each records its name in `namespace.json`; Miniflare starts every recorded
+namespace and, with shared storage, `default`. If Git is unavailable, only these
+unbound namespaces are skipped, and their routes return `503`.
+
+The explorer calls each namespace's `LocalArtifactsExplorer` entrypoint, which
+reuses the binding's operations and adds REST-only views: repository IDs,
+namespace summaries, fork object counts, and token revocation by ID. Unbound
+namespaces keep the recorded Git port in their remote URLs even when another
+process holds it, so a short-lived `cf --local` returns the URL a running or
+later dev server serves, and they never rewrite `git-port`. Artifacts storage is
+not routed through a shared storage owner: instances sharing a persistence
+directory open it directly.
+
 ## Local binding RPC
 
 For example, `env.REPOS.create("demo")`:

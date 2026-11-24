@@ -1594,6 +1594,842 @@ export const zFlagshipEvaluateFlagPostData = z.object({
  */
 export const zFlagshipEvaluateFlagPostResponse = zFlagshipEvaluationResult;
 
+export const zArtifactsNamespacesListData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z.never().optional(),
+});
+
+/**
+ * Namespaces.
+ */
+export const zArtifactsNamespacesListResponse = z.object({
+	errors: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	messages: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	result: z.array(
+		z.object({
+			created_at: z.iso
+				.datetime()
+				.regex(
+					/^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$/
+				),
+			jurisdiction: z.enum(["unrestricted", "us", "eu", "fedramp"]),
+			namespace: z.string(),
+			repo_count: z.int().gte(-9007199254740991).lte(9007199254740991),
+			updated_at: z.iso
+				.datetime()
+				.regex(
+					/^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$/
+				),
+		})
+	),
+	result_info: z
+		.union([
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				cursor: z.string(),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_pages: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+		])
+		.optional(),
+	success: z.literal(true),
+});
+
+export const zArtifactsNamespacesGetData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		namespace: z
+			.string()
+			.min(2)
+			.max(63)
+			.regex(/^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9._])?$/),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Namespace.
+ */
+export const zArtifactsNamespacesGetResponse = z.object({
+	errors: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	messages: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	result: z.object({
+		created_at: z.iso
+			.datetime()
+			.regex(
+				/^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$/
+			),
+		jurisdiction: z.enum(["unrestricted", "us", "eu", "fedramp"]),
+		namespace: z.string(),
+		repo_count: z.int().gte(-9007199254740991).lte(9007199254740991),
+		updated_at: z.iso
+			.datetime()
+			.regex(
+				/^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$/
+			),
+	}),
+	result_info: z
+		.union([
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				cursor: z.string(),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_pages: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+		])
+		.optional(),
+	success: z.literal(true),
+});
+
+export const zArtifactsReposListData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		namespace: z
+			.string()
+			.min(2)
+			.max(63)
+			.regex(/^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9._])?$/),
+	}),
+	query: z
+		.object({
+			limit: z.int().gte(1).lte(200).optional().default(50),
+			cursor: z.string().optional(),
+			search: z.string().optional(),
+			sort: z
+				.enum(["created_at", "updated_at", "last_push_at", "name"])
+				.optional(),
+			direction: z.enum(["asc", "desc"]).optional(),
+		})
+		.optional(),
+});
+
+/**
+ * Repositories.
+ */
+export const zArtifactsReposListResponse = z.object({
+	errors: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	messages: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	result: z.array(
+		z.object({
+			created_at: z.iso
+				.datetime()
+				.regex(
+					/^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$/
+				),
+			default_branch: z.string(),
+			description: z.string().nullable(),
+			id: z.string(),
+			last_push_at: z.iso
+				.datetime()
+				.regex(
+					/^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$/
+				)
+				.nullable(),
+			name: z.string(),
+			read_only: z.boolean(),
+			remote: z.string(),
+			source: z.string().nullable(),
+			updated_at: z.iso
+				.datetime()
+				.regex(
+					/^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$/
+				),
+		})
+	),
+	result_info: z
+		.union([
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				cursor: z.string(),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_pages: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+		])
+		.optional(),
+	success: z.literal(true),
+});
+
+export const zArtifactsReposCreateData = z.object({
+	body: z.object({
+		default_branch: z
+			.string()
+			.min(1)
+			.max(256)
+			.regex(/^[a-zA-Z0-9][a-zA-Z0-9._\/-]*$/)
+			.optional(),
+		description: z.string().max(1024).optional(),
+		name: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/),
+		read_only: z.boolean().optional(),
+	}),
+	path: z.object({
+		namespace: z
+			.string()
+			.min(2)
+			.max(63)
+			.regex(/^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9._])?$/),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Repository created.
+ */
+export const zArtifactsReposCreateResponse = z.object({
+	errors: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	messages: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	result: z.object({
+		default_branch: z.string(),
+		description: z.string().nullable(),
+		id: z.string(),
+		name: z.string(),
+		remote: z.string(),
+		token: z.string(),
+	}),
+	result_info: z
+		.union([
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				cursor: z.string(),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_pages: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+		])
+		.optional(),
+	success: z.literal(true),
+});
+
+export const zArtifactsReposDeleteData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		namespace: z
+			.string()
+			.min(2)
+			.max(63)
+			.regex(/^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9._])?$/),
+		name: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Delete accepted.
+ */
+export const zArtifactsReposDeleteResponse = z.object({
+	errors: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	messages: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	result: z.object({
+		id: z.string(),
+	}),
+	result_info: z
+		.union([
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				cursor: z.string(),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_pages: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+		])
+		.optional(),
+	success: z.literal(true),
+});
+
+export const zArtifactsReposGetData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		namespace: z
+			.string()
+			.min(2)
+			.max(63)
+			.regex(/^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9._])?$/),
+		name: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Repository.
+ */
+export const zArtifactsReposGetResponse = z.object({
+	errors: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	messages: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	result: z.object({
+		created_at: z.iso
+			.datetime()
+			.regex(
+				/^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$/
+			),
+		default_branch: z.string(),
+		description: z.string().nullable(),
+		id: z.string(),
+		last_push_at: z.iso
+			.datetime()
+			.regex(
+				/^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$/
+			)
+			.nullable(),
+		name: z.string(),
+		read_only: z.boolean(),
+		remote: z.string(),
+		source: z.string().nullable(),
+		updated_at: z.iso
+			.datetime()
+			.regex(
+				/^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$/
+			),
+	}),
+	result_info: z
+		.union([
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				cursor: z.string(),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_pages: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+		])
+		.optional(),
+	success: z.literal(true),
+});
+
+export const zArtifactsReposForkData = z.object({
+	body: z.object({
+		default_branch_only: z.boolean().optional(),
+		description: z.string().max(1024).optional(),
+		name: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/),
+		read_only: z.boolean().optional(),
+	}),
+	path: z.object({
+		namespace: z
+			.string()
+			.min(2)
+			.max(63)
+			.regex(/^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9._])?$/),
+		name: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Repository forked.
+ */
+export const zArtifactsReposForkResponse = z.object({
+	errors: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	messages: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	result: z.object({
+		default_branch: z.string(),
+		description: z.string().nullable(),
+		id: z.string(),
+		name: z.string(),
+		objects: z.int().gte(-9007199254740991).lte(9007199254740991),
+		remote: z.string(),
+		token: z.string(),
+	}),
+	result_info: z
+		.union([
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				cursor: z.string(),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_pages: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+		])
+		.optional(),
+	success: z.literal(true),
+});
+
+export const zArtifactsReposImportData = z.object({
+	body: z.object({
+		branch: z
+			.string()
+			.min(1)
+			.max(256)
+			.regex(/^[a-zA-Z0-9][a-zA-Z0-9._\/-]*$/)
+			.optional(),
+		depth: z.int().gte(1).lte(9007199254740991).optional(),
+		read_only: z.boolean().optional(),
+		url: z.url(),
+	}),
+	path: z.object({
+		namespace: z
+			.string()
+			.min(2)
+			.max(63)
+			.regex(/^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9._])?$/),
+		name: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Repository import started.
+ */
+export const zArtifactsReposImportResponse = z.object({
+	errors: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	messages: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	result: z.object({
+		default_branch: z.string(),
+		description: z.string().nullable(),
+		id: z.string(),
+		name: z.string(),
+		remote: z.string(),
+		token: z.string(),
+	}),
+	result_info: z
+		.union([
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				cursor: z.string(),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_pages: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+		])
+		.optional(),
+	success: z.literal(true),
+});
+
+export const zArtifactsRepoTokensListData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		namespace: z
+			.string()
+			.min(2)
+			.max(63)
+			.regex(/^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9._])?$/),
+		name: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/),
+	}),
+	query: z
+		.object({
+			state: z.enum(["active", "expired", "revoked", "all"]).optional(),
+			page: z.int().gte(1).optional().default(1),
+			per_page: z.int().gte(1).lte(100).optional().default(30),
+		})
+		.optional(),
+});
+
+/**
+ * Tokens.
+ */
+export const zArtifactsRepoTokensListResponse = z.object({
+	errors: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	messages: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	result: z.array(
+		z.object({
+			created_at: z.iso
+				.datetime()
+				.regex(
+					/^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$/
+				),
+			expires_at: z.iso
+				.datetime()
+				.regex(
+					/^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$/
+				),
+			id: z.string(),
+			scope: z.enum(["read", "write"]),
+			state: z.enum(["active", "expired", "revoked"]),
+		})
+	),
+	result_info: z
+		.union([
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				cursor: z.string(),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_pages: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+		])
+		.optional(),
+	success: z.literal(true),
+});
+
+export const zArtifactsTokensCreateData = z.object({
+	body: z.object({
+		repo: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/),
+		scope: z.enum(["read", "write"]).optional(),
+		ttl: z.int().gte(60).lte(31536000).optional(),
+	}),
+	path: z.object({
+		namespace: z
+			.string()
+			.min(2)
+			.max(63)
+			.regex(/^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9._])?$/),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Token created.
+ */
+export const zArtifactsTokensCreateResponse = z.object({
+	errors: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	messages: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	result: z.object({
+		expires_at: z.iso
+			.datetime()
+			.regex(
+				/^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z))$/
+			),
+		id: z.string(),
+		plaintext: z.string(),
+		scope: z.enum(["read", "write"]),
+	}),
+	result_info: z
+		.union([
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				cursor: z.string(),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_pages: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+		])
+		.optional(),
+	success: z.literal(true),
+});
+
+export const zArtifactsTokensRevokeData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		namespace: z
+			.string()
+			.min(2)
+			.max(63)
+			.regex(/^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9._])?$/),
+		id: z.string().regex(/^[0-9a-z]{16}$/),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Token revoked.
+ */
+export const zArtifactsTokensRevokeResponse = z.object({
+	errors: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	messages: z.array(
+		z.object({
+			code: z.int().gte(-9007199254740991).lte(9007199254740991),
+			documentation_url: z.url().optional(),
+			message: z.string(),
+			source: z
+				.object({
+					pointer: z.string().optional(),
+				})
+				.optional(),
+		})
+	),
+	result: z.object({
+		id: z.string(),
+	}),
+	result_info: z
+		.union([
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				cursor: z.string(),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+			z.object({
+				count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				per_page: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_count: z.int().gte(-9007199254740991).lte(9007199254740991),
+				total_pages: z.int().gte(-9007199254740991).lte(9007199254740991),
+			}),
+		])
+		.optional(),
+	success: z.literal(true),
+});
+
 export const zR2BucketDeleteObjectsData = z.object({
 	body: z.array(z.string()),
 	path: z.object({
