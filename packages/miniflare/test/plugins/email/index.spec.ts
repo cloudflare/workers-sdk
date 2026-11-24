@@ -99,6 +99,49 @@ async function expectPersistedEmail(
 	);
 }
 
+test.for(["string", "stream"])(
+	"EmailMessage exposes a raw byte stream when constructed from a %s",
+	async (inputType, { expect }) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-03-17",
+						manifest: singleModuleManifest(dedent /* javascript */ `
+							import { EmailMessage } from "cloudflare:email";
+
+							export default {
+								async fetch(request) {
+									const input = ${JSON.stringify(inputType)} === "string"
+										? await request.text()
+										: request.body;
+									const message = new EmailMessage(
+										"sender@example.com", "recipient@example.com", input
+									);
+									if (!(message.raw instanceof ReadableStream)) {
+										throw new Error("Expected EmailMessage.raw to be a ReadableStream");
+									}
+									return new Response(message.raw);
+								},
+							};
+						`),
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const body = "Subject: Café\r\n\r\nHello!";
+		const response = await mf.dispatchFetch("http://localhost", {
+			method: "POST",
+			body,
+		});
+		expect(response.status).toBe(200);
+		expect(await response.text()).toBe(body);
+	}
+);
+
 test("Unbound send_email binding works", async ({ expect }) => {
 	const log = new TestLog();
 	const projectTmpPath = await useProjectTmpPath();
