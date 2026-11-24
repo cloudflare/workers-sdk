@@ -2,7 +2,7 @@
 "miniflare": minor
 "wrangler": minor
 "@cloudflare/vite-plugin": minor
-"@cloudflare/workers-utils": patch
+"@cloudflare/workers-utils": minor
 ---
 
 Add local development support for `/cdn-cgi/image/` URL transformations

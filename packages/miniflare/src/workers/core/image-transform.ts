@@ -310,7 +310,12 @@ function notResized(
 		"content-security-policy": "default-src 'none'",
 	});
 	if (onerror === "redirect" && sourceUrl.hostname === requestUrl.hostname) {
-		headers.set("location", sourceUrl.pathname + sourceUrl.search);
+		// Collapse leading slashes so `//host/` can't redirect off-site
+		const location =
+			sourceUrl.host === requestUrl.host
+				? sourceUrl.pathname.replace(/^\/+/, "/") + sourceUrl.search
+				: sourceUrl.href;
+		headers.set("location", location);
 		headers.set("cf-not-resized", "err=9524");
 		return new Response(
 			`Error 9524: image could not be resized (${error.reason})`,
@@ -479,14 +484,15 @@ export function parseImageOptions(
 	raw: string,
 	accept: string | null
 ): ImageOptions | null {
+	let decoded: string;
+	try {
+		decoded = decodeURIComponent(raw);
+	} catch {
+		return null;
+	}
+
 	const options: Record<string, string | number> = {};
-	for (const rawPart of splitOptions(raw)) {
-		let part: string;
-		try {
-			part = decodeURIComponent(rawPart);
-		} catch {
-			return null;
-		}
+	for (const part of splitOptions(decoded)) {
 		if (part.trim() === "") {
 			continue;
 		}

@@ -1,6 +1,6 @@
 import { LogLevel, Miniflare } from "miniflare";
 import sharp from "sharp";
-import { beforeAll, describe, test } from "vitest";
+import { beforeAll, describe, test, vi } from "vitest";
 import {
 	singleModuleManifest,
 	TestLog,
@@ -19,7 +19,7 @@ export default {
 		if (url.pathname.startsWith("/cdn-cgi/image")) {
 			return new Response("user worker reached", { status: 418 });
 		}
-		if (url.pathname === "/missing.png") {
+		if (url.pathname.endsWith("/missing.png")) {
 			return new Response("not found", { status: 404 });
 		}
 		png ??= Uint8Array.from(atob(env.PNG), (c) => c.charCodeAt(0));
@@ -127,11 +127,13 @@ describe("/cdn-cgi/image/ local transforms", () => {
 			expect(await res.text()).toBe("");
 		}
 
-		const warnings = log
-			.logsAtLevel(LogLevel.WARN)
-			.filter((message) => message.includes("/cdn-cgi/image/"));
-		expect(warnings).toHaveLength(1);
-		expect(warnings[0]).toContain("images.url_transformations.enabled");
+		await vi.waitFor(() => {
+			const warnings = log
+				.logsAtLevel(LogLevel.WARN)
+				.filter((message) => message.includes("/cdn-cgi/image/"));
+			expect(warnings).toHaveLength(1);
+			expect(warnings[0]).toContain("images.url_transformations.enabled");
+		});
 	});
 
 	test("passes requests through to the Worker when configured to", async ({
@@ -174,11 +176,13 @@ describe("/cdn-cgi/image/ local transforms", () => {
 		expect(meta.width).toBe(50);
 		expect(meta.height).toBe(25);
 
-		expect(
-			log
-				.logsAtLevel(LogLevel.WARN)
-				.filter((message) => message.includes("low-fidelity"))
-		).toHaveLength(1);
+		await vi.waitFor(() => {
+			expect(
+				log
+					.logsAtLevel(LogLevel.WARN)
+					.filter((message) => message.includes("low-fidelity"))
+			).toHaveLength(1);
+		});
 	});
 
 	test("fetches same-host sources from the Worker routed by hostname", async ({
@@ -352,7 +356,7 @@ describe("/cdn-cgi/image/ local transforms", () => {
 		const { mf } = createMiniflare({ enabled: true });
 
 		const res = await mf.dispatchFetch(
-			"http://localhost/cdn-cgi/image/w=80,h=80,fit=cover,background=rgb(240,40,145),f=webp,q=50/img.png"
+			"http://localhost/cdn-cgi/image/w=80,h=80%2Cfit=cover,background=rgb(240,40,145),f=webp,q=50/img.png"
 		);
 		expect(res.status).toBe(200);
 		expect(res.headers.get("content-type")).toBe("image/webp");
@@ -422,6 +426,14 @@ describe("/cdn-cgi/image/ local transforms", () => {
 		expect(await res.text()).toBe(
 			"Error 9524: image could not be resized (origin returned 404)"
 		);
+
+		const offSite = await mf.dispatchFetch(
+			"http://localhost/cdn-cgi/image/width=50,onerror=redirect/http://localhost//example.com/missing.png",
+			{ redirect: "manual" }
+		);
+		expect(offSite.status).toBe(307);
+		expect(offSite.headers.get("location")).toBe("/example.com/missing.png");
+		await offSite.arrayBuffer();
 	});
 
 	test("doesn't pass through cross-zone sources that can't be transformed", async ({
