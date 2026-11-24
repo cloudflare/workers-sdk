@@ -10,11 +10,11 @@ import {
 import { parseJSONC } from "@cloudflare/workers-utils";
 import { applyEdits, modify } from "jsonc-parser";
 import * as recast from "recast";
+import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { Framework } from "./framework-class";
 import { getStaticPropertyName } from "./utils/vite-config";
 import { installCloudflareVitePlugin } from "./utils/vite-plugin";
 import { CF_VITE_PLUGIN_VERSION_RANGE } from "./utils/vite-plugin-version";
-import { AutoConfigFrameworkConfigurationError } from "../errors";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -83,6 +83,45 @@ function findNuxtConfigFile(projectPath: string): string {
 		"Could not find a Nuxt config file (nuxt.config.ts, nuxt.config.mts, nuxt.config.js or nuxt.config.mjs)",
 		{ telemetryMessage: "autoconfig nuxt config file not found" }
 	);
+}
+
+/**
+ * Checks whether autoconfig can edit the Nuxt config, which needs an object literal passed to
+ * `defineNuxtConfig()`, and whether the config already imports the Cloudflare Vite plugin.
+ *
+ * @param configPath The path of the Nuxt config file
+ * @returns Whether the config can be edited and whether it imports the plugin
+ */
+function inspectNuxtConfig(configPath: string): {
+	editable: boolean;
+	importsCloudflareVitePlugin: boolean;
+} {
+	const ast = parseFile(configPath);
+	// An empty config has no `defineNuxtConfig()` call to edit
+	if (!ast) {
+		return { editable: false, importsCloudflareVitePlugin: false };
+	}
+
+	let editable = false;
+	recast.visit(ast, {
+		visitCallExpression(n) {
+			const callee = n.node.callee as recast.types.namedTypes.Identifier;
+			if (callee.name !== "defineNuxtConfig") {
+				return this.traverse(n);
+			}
+			editable = n.node.arguments[0]?.type === "ObjectExpression";
+			return false;
+		},
+	});
+
+	return {
+		editable,
+		importsCloudflareVitePlugin: ast.body.some(
+			(statement) =>
+				statement.type === "ImportDeclaration" &&
+				statement.source.value === "@cloudflare/vite-plugin"
+		),
+	};
 }
 
 /**
@@ -236,6 +275,15 @@ export class Nuxt extends Framework {
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (target === "cf") {
 			const configPath = findNuxtConfigFile(projectPath);
+			const { editable, importsCloudflareVitePlugin } =
+				inspectNuxtConfig(configPath);
+			// A config that autoconfig can't edit works once it's set up by hand
+			if (!editable && !importsCloudflareVitePlugin) {
+				throw new AutoConfigFrameworkConfigurationError(
+					`Autoconfig can't edit ${path.basename(configPath)}, because it doesn't pass an object literal to \`defineNuxtConfig()\`. Add \`cloudflare()\` from \`@cloudflare/vite-plugin\` to \`vite.plugins\` and set \`server.builder\` to \`"vite"\` by hand, then try again.`,
+					{ telemetryMessage: "autoconfig nuxt config not editable" }
+				);
+			}
 			if (!dryRun) {
 				await installCloudflareVitePlugin({
 					packageManager: packageManager.type,
@@ -243,7 +291,9 @@ export class Nuxt extends Framework {
 					isWorkspaceRoot,
 					version: CF_VITE_PLUGIN_VERSION_RANGE,
 				});
-				updateNuxtConfigForCf(configPath);
+				if (editable) {
+					updateNuxtConfigForCf(configPath);
+				}
 				removeServerTsconfigReference(projectPath);
 			}
 

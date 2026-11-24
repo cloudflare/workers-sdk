@@ -165,4 +165,39 @@ describe("Nuxt", () => {
 			})"
 		`);
 	});
+
+	it("explains how to set up a Nuxt config that isn't an object literal before installing anything", async ({
+		expect,
+	}) => {
+		await seed({
+			"nuxt.config.ts": dedent`
+				import { sharedConfig } from "./shared-config";
+				export default defineNuxtConfig(sharedConfig)
+			`,
+		});
+
+		await expect(configureForCf()).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Autoconfig can't edit nuxt.config.ts, because it doesn't pass an object literal to \`defineNuxtConfig()\`. Add \`cloudflare()\` from \`@cloudflare/vite-plugin\` to \`vite.plugins\` and set \`server.builder\` to \`"vite"\` by hand, then try again.]`
+		);
+		expect(installCloudflareVitePlugin).not.toHaveBeenCalled();
+	});
+
+	it("leaves a Nuxt config that was set up by hand as it is", async ({
+		expect,
+	}) => {
+		const config = dedent`
+			import { cloudflare } from "@cloudflare/vite-plugin";
+			import { sharedConfig } from "./shared-config";
+			export default defineNuxtConfig(sharedConfig)
+		`;
+		await seed({ "nuxt.config.ts": config });
+
+		const result = await configureForCf();
+
+		expect(result).toEqual({
+			buildTool: "vite",
+			workerConfig: { entrypoint: "#server-entry" },
+		});
+		expect(readFileSync("nuxt.config.ts", "utf8")).toBe(config);
+	});
 });
