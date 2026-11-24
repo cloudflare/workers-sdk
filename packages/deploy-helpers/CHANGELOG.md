@@ -1,5 +1,20 @@
 # @cloudflare/deploy-helpers
 
+## 0.30.0
+
+### Minor Changes
+
+- [#16680](https://github.com/cloudflare/workers-sdk/pull/16680) [`96e936c`](https://github.com/cloudflare/workers-sdk/commit/96e936c34a7e071dfb1e90adffbc3e53814b757b) Thanks [@mglewis](https://github.com/mglewis)! - Apply `images.url_transformations` when deploying a Worker
+
+  `wrangler deploy` and `wrangler versions deploy` now apply the `images.url_transformations` setting to the deployed Worker. The setting is applied after the Worker and its triggers have been deployed. If it can't be applied, the command fails with the reason from the API. Removing `url_transformations` from the configuration leaves the Worker's existing setting in place.
+
+  The setting isn't applied for `--dry-run`, `wrangler versions upload`, or Workers deployed to a dispatch namespace.
+
+### Patch Changes
+
+- Updated dependencies [[`3d228ba`](https://github.com/cloudflare/workers-sdk/commit/3d228ba0f1b155e96f3ab09e1a467937e1d51051)]:
+  - miniflare@5.20261123.1-beta
+
 ## 0.29.1
 
 ### Patch Changes

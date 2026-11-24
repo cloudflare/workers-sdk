@@ -1,5 +1,13 @@
 # miniflare
 
+## 5.20261123.1-beta
+
+### Minor Changes
+
+- [#17133](https://github.com/cloudflare/workers-sdk/pull/17133) [`3d228ba`](https://github.com/cloudflare/workers-sdk/commit/3d228ba0f1b155e96f3ab09e1a467937e1d51051) Thanks [@edmundhung](https://github.com/edmundhung)! - List Durable Object IDs by the class the Worker exports
+
+  `listDurableObjectIds()` now takes the Durable Object class and the Worker that exports it, as in `mf.listDurableObjectIds("Counter", "my-worker")`. This is a breaking change in v5 beta: a binding name now throws `No Durable Object class named …`, unless the Worker also exports a class with that name, in which case that class's IDs are listed.
+
 ## 5.20261123.0-beta
 
 ### Minor Changes
