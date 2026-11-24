@@ -39,7 +39,7 @@ import SCRIPT_ROUTER from "worker:assets/router";
 import SCRIPT_RPC_PROXY from "worker:assets/rpc-proxy";
 import { MiniflareCoreError } from "../../shared";
 import { SharedBindings } from "../../workers";
-import { getUserServiceName } from "../core";
+import { getUserServiceName, hasWorkerCode } from "../core";
 import { getEnvBindingsOfType, ProxyNodeBinding } from "../shared";
 import {
 	ASSETS_KV_SERVICE_NAME,
@@ -48,7 +48,7 @@ import {
 	ROUTER_SERVICE_NAME,
 	RPC_PROXY_SERVICE_NAME,
 } from "./constants";
-import type { ParsedMiniflareWorkerConfig } from "../../config/schema";
+import type { ParsedWorkerOptions } from "../../config/schema";
 import type { Service } from "../../runtime";
 import type { Plugin } from "../shared";
 import type { Logger, RouterConfig } from "@cloudflare/workers-shared";
@@ -65,22 +65,24 @@ function resolveAssetDirectory(
 }
 
 /**
- * Builds the router worker's `RouterConfig` from the parsed worker config,
+ * Builds the router worker's `RouterConfig` from the parsed worker options,
  * mirroring `resolveAssetOptions` in `@cloudflare/deploy-helpers`:
- * - `has_user_worker` comes from the explicit `assets.hasUserWorker` flag
- *   (defaults to false). It can't be inferred from manifest presence because
- *   wrangler injects a placeholder script for assets-only workers.
+ * - `has_user_worker` is whether the Worker has code. As in
+ *   `@cloudflare/config`, a Worker with assets and no code is assets-only.
  * - `run_worker_first: boolean` → `invoke_user_worker_ahead_of_assets`.
  * - `run_worker_first: string[]` → parsed `static_routing` rules.
+ *
+ * @param options The Worker's parsed options.
+ * @returns The router worker's configuration.
  */
 function resolveRouterConfig(
-	config: ParsedMiniflareWorkerConfig
+	options: Pick<ParsedWorkerOptions, "config" | "legacy">
 ): RouterConfig {
 	const routerConfig: RouterConfig = {
-		has_user_worker: config.assets?.hasUserWorker ?? false,
+		has_user_worker: hasWorkerCode(options),
 	};
 
-	const runWorkerFirst = config.assets?.runWorkerFirst;
+	const runWorkerFirst = options.config.assets?.runWorkerFirst;
 	if (typeof runWorkerFirst === "boolean") {
 		routerConfig.invoke_user_worker_ahead_of_assets = runWorkerFirst;
 	} else if (Array.isArray(runWorkerFirst)) {
@@ -200,7 +202,7 @@ export const ASSETS_PLUGIN: Plugin = {
 			);
 		}
 
-		const routerConfig = resolveRouterConfig(options.config);
+		const routerConfig = resolveRouterConfig(options);
 
 		const assetConfig: AssetConfig = {
 			compatibility_date: options.config.compatibilityDate,
