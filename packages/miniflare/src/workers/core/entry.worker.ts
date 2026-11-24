@@ -40,6 +40,7 @@ type Env = {
 	[CoreBindings.LOG_REQUESTS]: boolean;
 	[CoreBindings.STRIP_DISABLE_PRETTY_ERROR]: boolean;
 	[CoreBindings.IMAGE_URL_TRANSFORMATIONS_PASSTHROUGH]: boolean;
+	[CoreBindings.IMAGE_URL_TRANSFORMATIONS_FETCH_VIA_PUBLIC_URL]: boolean;
 } & {
 	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
 		| Fetcher
@@ -690,6 +691,7 @@ const handler = {
 						`${CoreBindings.JSON_IMAGE_URL_TRANSFORMATIONS_PREFIX}${routeTarget}`
 					],
 					env,
+					ctx,
 					(sourceRequest) =>
 						handler.fetch(
 							sourceRequest as Request<unknown, IncomingRequestCfProperties>,

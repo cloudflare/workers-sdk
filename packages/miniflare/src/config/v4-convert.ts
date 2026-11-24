@@ -79,6 +79,8 @@ function convertSharedOptions(options: ParsedV4MiniflareOptions) {
 		stripDisablePrettyError: options.stripDisablePrettyError,
 		unsafeImageUrlTransformationsPassthrough:
 			options.unsafeImageUrlTransformationsPassthrough,
+		unsafeImageUrlTransformationsFetchViaPublicUrl:
+			options.unsafeImageUrlTransformationsFetchViaPublicUrl,
 		telemetry: options.telemetry,
 		publicUrl: options.publicUrl,
 		containerEngine: options.containerEngine,

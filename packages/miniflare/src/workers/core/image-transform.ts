@@ -1,11 +1,8 @@
-// Local handler for `/cdn-cgi/image/<options>/<source>` URL transformations.
-//
-// Mirrors the production pipeline (FL2 -> image-resizing-worker -> IRP) closely
-// enough for local development: the per-Worker gate, same-zone and allowed
-// origins checks follow FL2/IRW, while the transform itself is the same
-// low-fidelity Sharp mock used for `cf.image` fetches.
+// Local `/cdn-cgi/image/<options>/<source>` URL transformations, using a
+// Sharp-backed mock with support for only basic transforms.
 
 import { LogLevel, SharedHeaders } from "miniflare:shared";
+import { getPublicUrl } from "../shared/public-url";
 import { CoreBindings, CoreHeaders, CorePaths } from "./constants";
 import type { RequestInitCfPropertiesImage } from "@cloudflare/workers-types/experimental";
 
@@ -16,14 +13,15 @@ export interface ImageUrlTransformationsConfig {
 
 interface Env {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
+	[CoreBindings.IMAGE_URL_TRANSFORMATIONS_FETCH_VIA_PUBLIC_URL]: boolean;
 }
 
-// Mirrors IRW's URL regex, operating on the pathname only
+type ImageOptions = RequestInitCfPropertiesImage & { onerror?: string };
+
 const PATH_RE = /^\/cdn-cgi\/image\/(?:(fastly|akamai|flow)\/)?([^/]*)\/(.+)$/;
 
 const RESIZING_VIA_TOKEN = "image-resizing";
 
-/** Dispatches a request through the entry Worker's routing. */
 export type DispatchFetch = (request: Request) => Promise<Response>;
 
 /**
@@ -46,6 +44,7 @@ export function isImageTransformPath(pathname: string): boolean {
  * @param url The parsed request URL.
  * @param config The routed Worker's URL transformation config, if any.
  * @param env The entry Worker's environment.
+ * @param ctx The entry Worker's execution context.
  * @param dispatch Dispatches same-host source requests through local routing.
  * @returns The transformed image, or an error response.
  */
@@ -54,13 +53,13 @@ export async function handleImageTransform(
 	url: URL,
 	config: ImageUrlTransformationsConfig | undefined,
 	env: Env,
+	ctx: ExecutionContext,
 	dispatch: DispatchFetch
 ): Promise<Response> {
-	// Production returns a 404 for `/cdn-cgi/image/` when transformations aren't
-	// enabled, without invoking the Worker
 	if (!config?.enabled) {
-		await warnOnce(
+		warnOnce(
 			env,
+			ctx,
 			"disabled",
 			"`/cdn-cgi/image/` returned 404 because URL transformations are not enabled for this Worker. " +
 				"Set `images.url_transformations.enabled` in your Wrangler configuration (or `images.urlTransformations.enabled` in `cloudflare.config.ts`) to enable them."
@@ -89,10 +88,11 @@ export async function handleImageTransform(
 		return badRequest("Invalid source image URL.");
 	}
 
-	const options = parseImageOptions(rawOptions, request.headers.get("accept"));
-	if (options === null) {
+	const parsed = parseImageOptions(rawOptions, request.headers.get("accept"));
+	if (parsed === null) {
 		return badRequest("Invalid transformation options.");
 	}
+	const { onerror, ...options } = parsed;
 
 	// The local zone isn't known, so unlike production, subdomains of the
 	// request hostname aren't considered same-zone
@@ -116,7 +116,12 @@ export async function handleImageTransform(
 	const { response: originResponse, url: finalSourceUrl } = fetched;
 	if (!originResponse.ok) {
 		await originResponse.body?.cancel();
-		return notResized(originResponse, finalSourceUrl, url);
+		return notResized(
+			originErrorCode(originResponse.status),
+			finalSourceUrl,
+			url,
+			onerror
+		);
 	}
 
 	const source = await originResponse.arrayBuffer();
@@ -138,11 +143,17 @@ export async function handleImageTransform(
 
 	if (!transformed.ok) {
 		await transformed.arrayBuffer();
-		return notResized(originResponse, finalSourceUrl, url);
+		return notResized(
+			{ code: 9412, status: 415, reason: "not an image" },
+			finalSourceUrl,
+			url,
+			onerror
+		);
 	}
 
-	await warnOnce(
+	warnOnce(
 		env,
+		ctx,
 		"low-fidelity",
 		"Local `/cdn-cgi/image/` transforms are a low-fidelity mock; only resize, rotate, format conversion and a small set of options are applied. Deploy to preview the full transformation."
 	);
@@ -169,7 +180,7 @@ async function fetchSource(
 	env: Env,
 	dispatch: DispatchFetch
 ): Promise<FetchSourceResult> {
-	let publicUrl: Promise<URL | null> | undefined;
+	let publicUrl: Promise<URL> | undefined;
 	let url = sourceUrl;
 	for (let redirects = 0; ; redirects++) {
 		const sameHost = url.host === requestUrl.host;
@@ -180,7 +191,6 @@ async function fetchSource(
 				headers.delete(name);
 			}
 		}
-		// VULN-467: don't send credentials to other origins
 		if (!sameHost) {
 			headers.delete("cookie");
 			headers.delete("authorization");
@@ -194,15 +204,24 @@ async function fetchSource(
 
 		let response: Response;
 		try {
-			if (sameHost) {
-				publicUrl ??= getConfiguredPublicUrl(env);
-				response = await fetchSameHost(url, headers, await publicUrl, dispatch);
+			if (
+				sameHost &&
+				env[CoreBindings.IMAGE_URL_TRANSFORMATIONS_FETCH_VIA_PUBLIC_URL]
+			) {
+				publicUrl ??= getPublicUrl(env[CoreBindings.SERVICE_LOOPBACK]);
+				response = await fetchFromPublicUrl(url, headers, await publicUrl);
+			} else if (sameHost) {
+				headers.set("host", url.host);
+				response = await dispatch(
+					new Request(url, { headers, redirect: "manual" })
+				);
 			} else {
 				response = await fetch(
 					new Request(url, { headers, redirect: "manual" })
 				);
 			}
-		} catch {
+		} catch (error) {
+			console.warn("Unable to fetch the source image:", error);
 			return {
 				ok: false,
 				response: new Response("Unable to fetch the source image.", {
@@ -242,21 +261,15 @@ async function fetchSource(
 }
 
 /**
- * In production, same-zone source images are fetched back through the zone.
- * Locally, they go back through routing so the right Worker, assets and
- * middleware apply, keeping the source's hostname for route matching. If a
- * public URL is configured (e.g. the Vite dev server), they're fetched from
- * there instead, as it may serve files that Miniflare can't.
+ * Fetches a same-host source image from the configured public URL, for dev
+ * servers that serve files Miniflare can't see. Other same-host sources are
+ * routed within Miniflare, mirroring production fetching them through the zone.
  */
-function fetchSameHost(
+function fetchFromPublicUrl(
 	url: URL,
 	headers: Headers,
-	publicUrl: URL | null,
-	dispatch: DispatchFetch
+	publicUrl: URL
 ): Promise<Response> {
-	if (publicUrl === null) {
-		return dispatch(new Request(url, { headers, redirect: "manual" }));
-	}
 	// Assign the path rather than resolving it against the public URL, so a
 	// path such as `//example.com/` can't change the host
 	const target = new URL(publicUrl);
@@ -265,38 +278,50 @@ function fetchSameHost(
 	return fetch(new Request(target, { headers, redirect: "manual" }));
 }
 
-async function getConfiguredPublicUrl(env: Env): Promise<URL | null> {
-	const response = await env[CoreBindings.SERVICE_LOOPBACK].fetch(
-		"http://localhost/core/configured-public-url"
-	);
-	const url = (await response.json()) as string | null;
-	return url === null ? null : new URL(url);
+interface ResizeError {
+	code: number;
+	status: number;
+	reason: string;
 }
 
-/**
- * Builds the response for a source image that couldn't be transformed,
- * following image-resizing-worker: same-zone requests are redirected to the
- * source, and nothing from cross-zone sources is passed through (VULN-608).
- */
-function notResized(
-	originResponse: Response,
-	sourceUrl: URL,
-	requestUrl: URL
-): Response {
-	const status = originResponse.status;
-	const headers = new Headers();
-	let responseStatus = status >= 200 && status < 400 ? 500 : status;
-	if (sourceUrl.hostname === requestUrl.hostname) {
-		headers.set("location", sourceUrl.href);
-		responseStatus = 307;
+function originErrorCode(status: number): ResizeError {
+	const reason = `origin returned ${status}`;
+	if (status === 404 || status === 410) {
+		return { code: 9404, status, reason };
 	}
-	headers.set("cf-not-resized", "err=9524");
-	headers.set("content-type", "text/plain;charset=UTF-8");
-	headers.set("content-security-policy", "default-src 'none'");
-	return new Response(`Error 9524: image could not be resized (${status})`, {
-		status: responseStatus,
-		headers,
+	if (status >= 400 && status < 500) {
+		return { code: 9408, status, reason };
+	}
+	if (status >= 522 && status <= 524) {
+		return { code: 9509, status, reason };
+	}
+	return { code: 9509, status: 502, reason };
+}
+
+/** Builds the response for a source image that couldn't be transformed. */
+function notResized(
+	error: ResizeError,
+	sourceUrl: URL,
+	requestUrl: URL,
+	onerror: string | undefined
+): Response {
+	const headers = new Headers({
+		"content-type": "text/plain;charset=UTF-8",
+		"content-security-policy": "default-src 'none'",
 	});
+	if (onerror === "redirect" && sourceUrl.hostname === requestUrl.hostname) {
+		headers.set("location", sourceUrl.pathname + sourceUrl.search);
+		headers.set("cf-not-resized", "err=9524");
+		return new Response(
+			`Error 9524: image could not be resized (${error.reason})`,
+			{ status: 307, headers }
+		);
+	}
+	headers.set("cf-resized", `err=${error.code}`);
+	return new Response(
+		`ERROR ${error.code}: image could not be resized (${error.reason})\n`,
+		{ status: error.status, headers }
+	);
 }
 
 function isHttpUrl(url: URL): boolean {
@@ -307,23 +332,31 @@ function badRequest(message: string): Response {
 	return new Response(message, { status: 400 });
 }
 
-async function warnOnce(
+function warnOnce(
 	env: Env,
+	ctx: ExecutionContext,
 	kind: "disabled" | "low-fidelity",
 	message: string
-): Promise<void> {
-	await env[CoreBindings.SERVICE_LOOPBACK].fetch("http://localhost/core/log", {
-		method: "POST",
-		headers: {
-			[SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString(),
-			[SharedHeaders.LOG_ONCE]: `image-transform:${kind}`,
-		},
-		body: message,
-	});
+): void {
+	ctx.waitUntil(
+		env[CoreBindings.SERVICE_LOOPBACK]
+			.fetch("http://localhost/core/log", {
+				method: "POST",
+				headers: {
+					[SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString(),
+					[SharedHeaders.LOG_ONCE]: `image-transform:${kind}`,
+				},
+				body: message,
+			})
+			.then(
+				(response) => response.body?.cancel(),
+				() => {}
+			)
+	);
 }
 
 /**
- * Resolves the source image URL in the same way as image-resizing-worker.
+ * Resolves the source image URL.
  *
  * @param rawSource The source segment of the path, including any query string.
  * @param requestUrl The `/cdn-cgi/image/` request URL, used to resolve relative sources.
@@ -362,8 +395,7 @@ type AuthorizationResult =
 
 /**
  * Checks whether the source image may be transformed. Same-zone sources are
- * always allowed; `allowedOrigins` lists additional origins, matched in the
- * same way as image-resizing-worker's `isAuthorizedRequest()`.
+ * always allowed; `allowedOrigins` lists additional origins.
  *
  * @param sourceUrl The source image URL.
  * @param sameZone Whether the source is on the same host as the request.
@@ -446,16 +478,15 @@ const NAMED_QUALITIES = new Set(["low", "medium-low", "medium-high", "high"]);
 export function parseImageOptions(
 	raw: string,
 	accept: string | null
-): RequestInitCfPropertiesImage | null {
-	let decoded: string;
-	try {
-		decoded = decodeURIComponent(raw);
-	} catch {
-		return null;
-	}
-
+): ImageOptions | null {
 	const options: Record<string, string | number> = {};
-	for (const part of decoded.split(",")) {
+	for (const rawPart of splitOptions(raw)) {
+		let part: string;
+		try {
+			part = decodeURIComponent(rawPart);
+		} catch {
+			return null;
+		}
 		if (part.trim() === "") {
 			continue;
 		}
@@ -466,6 +497,11 @@ export function parseImageOptions(
 		const rawKey = part.slice(0, separator).trim();
 		const key = OPTION_ALIASES[rawKey] ?? rawKey;
 		const value = part.slice(separator + 1).trim();
+		// Grouped values such as `gravity=(x=0.5,y=0.5)` aren't supported by
+		// the local mock
+		if (value.startsWith("(")) {
+			continue;
+		}
 
 		if (NUMERIC_OPTIONS.has(key)) {
 			// `width=auto` relies on client hints, which the local mock ignores
@@ -491,12 +527,31 @@ export function parseImageOptions(
 			if (format !== undefined) {
 				options[key] = format;
 			}
-		} else if (STRING_OPTIONS.has(key)) {
+		} else if (key === "onerror" || STRING_OPTIONS.has(key)) {
 			options[key] = value;
 		}
 	}
 
-	return options as RequestInitCfPropertiesImage;
+	return options as ImageOptions;
+}
+
+/** Splits options on commas outside parentheses, e.g. in `rgb(1,2,3)`. */
+function splitOptions(raw: string): string[] {
+	const parts: string[] = [];
+	let depth = 0;
+	let start = 0;
+	for (let i = 0; i < raw.length; i++) {
+		if (raw[i] === "(") {
+			depth++;
+		} else if (raw[i] === ")") {
+			depth = Math.max(0, depth - 1);
+		} else if (raw[i] === "," && depth === 0) {
+			parts.push(raw.slice(start, i));
+			start = i + 1;
+		}
+	}
+	parts.push(raw.slice(start));
+	return parts;
 }
 
 function negotiateFormat(accept: string | null): string | undefined {

@@ -645,6 +645,8 @@ export async function getDevMiniflareOptions(
 	const miniflareOptions: MiniflareOptions = {
 		log: logger,
 		publicUrl,
+		// Vite serves `public/` files that Miniflare can't see
+		unsafeImageUrlTransformationsFetchViaPublicUrl: true,
 		unsafeProxySharedSecret: PROXY_SHARED_SECRET,
 		logRequests: false,
 		inspectorPort:

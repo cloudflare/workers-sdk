@@ -284,6 +284,7 @@ describe("/cdn-cgi/image/ local transforms", () => {
 		});
 		const mf = new Miniflare({
 			publicUrl: publicUrl.href,
+			unsafeImageUrlTransformationsFetchViaPublicUrl: true,
 			workers: [
 				{
 					config: {
@@ -312,11 +313,46 @@ describe("/cdn-cgi/image/ local transforms", () => {
 		expect(publicRequests[0].headers.cookie).toBe("session=secret");
 	});
 
+	test("routes same-host sources within Miniflare when only publicUrl is set", async ({
+		expect,
+	}) => {
+		const publicRequests: string[] = [];
+		const { http: publicUrl } = await useServer((req, res) => {
+			publicRequests.push(req.url ?? "");
+			res.writeHead(500);
+			res.end();
+		});
+		const mf = new Miniflare({
+			publicUrl: publicUrl.href,
+			workers: [
+				{
+					config: {
+						name: "worker",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(WORKER_SCRIPT),
+						env: {
+							PNG: { type: "text", value: sourcePng.toString("base64") },
+						},
+						images: { urlTransformations: { enabled: true } },
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const res = await mf.dispatchFetch(
+			"http://localhost/cdn-cgi/image/width=50/img.png"
+		);
+		expect(res.status).toBe(200);
+		await res.arrayBuffer();
+		expect(publicRequests).toHaveLength(0);
+	});
+
 	test("parses comma-separated options and aliases", async ({ expect }) => {
 		const { mf } = createMiniflare({ enabled: true });
 
 		const res = await mf.dispatchFetch(
-			"http://localhost/cdn-cgi/image/w=80,h=80,fit=cover,f=webp,q=50/img.png"
+			"http://localhost/cdn-cgi/image/w=80,h=80,fit=cover,background=rgb(240,40,145),f=webp,q=50/img.png"
 		);
 		expect(res.status).toBe(200);
 		expect(res.headers.get("content-type")).toBe("image/webp");
@@ -354,7 +390,7 @@ describe("/cdn-cgi/image/ local transforms", () => {
 		expect((await metadata(res)).width).toBe(25);
 	});
 
-	test("redirects to same-zone sources that can't be transformed", async ({
+	test("returns an error for same-zone sources that can't be transformed", async ({
 		expect,
 	}) => {
 		const { mf } = createMiniflare({ enabled: true });
@@ -363,11 +399,28 @@ describe("/cdn-cgi/image/ local transforms", () => {
 			"http://localhost/cdn-cgi/image/width=50/missing.png",
 			{ redirect: "manual" }
 		);
+		expect(res.status).toBe(404);
+		expect(res.headers.get("location")).toBe(null);
+		expect(res.headers.get("cf-resized")).toBe("err=9404");
+		expect(await res.text()).toBe(
+			"ERROR 9404: image could not be resized (origin returned 404)\n"
+		);
+	});
+
+	test("redirects to same-zone sources that can't be transformed with onerror=redirect", async ({
+		expect,
+	}) => {
+		const { mf } = createMiniflare({ enabled: true });
+
+		const res = await mf.dispatchFetch(
+			"http://localhost/cdn-cgi/image/width=50,onerror=redirect/missing.png",
+			{ redirect: "manual" }
+		);
 		expect(res.status).toBe(307);
-		expect(res.headers.get("location")).toBe("http://localhost/missing.png");
+		expect(res.headers.get("location")).toBe("/missing.png");
 		expect(res.headers.get("cf-not-resized")).toBe("err=9524");
 		expect(await res.text()).toBe(
-			"Error 9524: image could not be resized (404)"
+			"Error 9524: image could not be resized (origin returned 404)"
 		);
 	});
 
@@ -380,20 +433,22 @@ describe("/cdn-cgi/image/ local transforms", () => {
 		const html = await mf.dispatchFetch(
 			`http://localhost/cdn-cgi/image/width=50/${origin.url}html`
 		);
-		expect(html.status).toBe(500);
+		expect(html.status).toBe(415);
 		expect(html.headers.get("set-cookie")).toBe(null);
 		expect(html.headers.get("content-type")).toBe("text/plain;charset=UTF-8");
+		expect(html.headers.get("cf-resized")).toBe("err=9412");
 		expect(await html.text()).toBe(
-			"Error 9524: image could not be resized (200)"
+			"ERROR 9412: image could not be resized (not an image)\n"
 		);
 
 		const error = await mf.dispatchFetch(
 			`http://localhost/cdn-cgi/image/width=50/${origin.url}error`
 		);
-		expect(error.status).toBe(500);
+		expect(error.status).toBe(502);
 		expect(error.headers.get("set-cookie")).toBe(null);
+		expect(error.headers.get("cf-resized")).toBe("err=9509");
 		expect(await error.text()).toBe(
-			"Error 9524: image could not be resized (500)"
+			"ERROR 9509: image could not be resized (origin returned 500)\n"
 		);
 	});
 
@@ -454,6 +509,17 @@ describe("/cdn-cgi/image/ local transforms", () => {
 			{ headers: { via: "image-resizing" } }
 		);
 		expect(res.status).toBe(508);
+		await res.arrayBuffer();
+	});
+
+	test("stops self-referential sources from looping", async ({ expect }) => {
+		const { mf } = createMiniflare({ enabled: true });
+
+		const res = await mf.dispatchFetch(
+			"http://localhost/cdn-cgi/image/width=50/cdn-cgi/image/width=50/img.png"
+		);
+		expect(res.status).toBe(502);
+		expect(res.headers.get("cf-resized")).toBe("err=9509");
 		await res.arrayBuffer();
 	});
 

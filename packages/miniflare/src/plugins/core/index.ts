@@ -827,6 +827,12 @@ export function getGlobalServices({
 				!!sharedOptions.unsafeImageUrlTransformationsPassthrough
 			),
 		},
+		{
+			name: CoreBindings.IMAGE_URL_TRANSFORMATIONS_FETCH_VIA_PUBLIC_URL,
+			json: JSON.stringify(
+				!!sharedOptions.unsafeImageUrlTransformationsFetchViaPublicUrl
+			),
+		},
 		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`
 		...proxyBindings,
 		// Add cache service binding for purgeCache() API

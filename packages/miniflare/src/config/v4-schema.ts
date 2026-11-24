@@ -409,7 +409,6 @@ const V4WorkerOptionsShapeSchema = z.object({
 			identity: z.record(z.string(), z.unknown()).optional(),
 		})
 		.optional(),
-	/** `/cdn-cgi/image/` URL transformations config, independent of the `images` binding */
 	imageUrlTransformations: z
 		.object({
 			enabled: z.boolean(),
@@ -716,6 +715,7 @@ export const V4SharedOptionsSchema = z.object({
 	resourceTmpPath: z.string().optional(),
 	stripDisablePrettyError: z.boolean().default(true),
 	unsafeImageUrlTransformationsPassthrough: z.boolean().optional(),
+	unsafeImageUrlTransformationsFetchViaPublicUrl: z.boolean().optional(),
 	telemetry: z
 		.object({
 			enabled: z.boolean().default(false),
@@ -1039,6 +1039,7 @@ export type V4SharedOptions = {
 	resourceTmpPath?: string;
 	stripDisablePrettyError?: boolean;
 	unsafeImageUrlTransformationsPassthrough?: boolean;
+	unsafeImageUrlTransformationsFetchViaPublicUrl?: boolean;
 	telemetry?: { enabled?: boolean; deviceId?: string };
 	publicUrl?: string;
 	containerEngine?:

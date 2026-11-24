@@ -733,6 +733,12 @@ export const InstanceOptionsSchema = z.strictObject({
 	 * Miniflare instance or to the edge, which handles them instead.
 	 */
 	unsafeImageUrlTransformationsPassthrough: z.boolean().optional(),
+	/**
+	 * Fetch same-host `/cdn-cgi/image/` source images from `publicUrl` rather
+	 * than routing them within Miniflare. For dev servers, such as Vite, that
+	 * serve files Miniflare can't see.
+	 */
+	unsafeImageUrlTransformationsFetchViaPublicUrl: z.boolean().optional(),
 
 	// Persistence
 	/**
