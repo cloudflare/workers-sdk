@@ -14,6 +14,7 @@ import { Framework } from "./framework-class";
 import { getStaticPropertyName } from "./utils/vite-config";
 import { installCloudflareVitePlugin } from "./utils/vite-plugin";
 import { CF_VITE_PLUGIN_VERSION_RANGE } from "./utils/vite-plugin-version";
+import { AutoConfigFrameworkConfigurationError } from "../errors";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -66,14 +67,33 @@ const updateNuxtConfig = (projectPath: string) => {
 };
 
 /**
- * Sets up Nuxt's Vite server builder, whose `ssr` environment the Cloudflare Vite plugin runs.
+ * Finds the project's Nuxt config file, which can be TypeScript or JavaScript.
  *
  * @param projectPath The path of the project
+ * @returns The path of the config file
  */
-function updateNuxtConfigForCf(projectPath: string): void {
+function findNuxtConfigFile(projectPath: string): string {
+	for (const extension of ["ts", "mts", "js", "mjs"]) {
+		const configPath = path.join(projectPath, `nuxt.config.${extension}`);
+		if (existsSync(configPath)) {
+			return configPath;
+		}
+	}
+	throw new AutoConfigFrameworkConfigurationError(
+		"Could not find a Nuxt config file (nuxt.config.ts, nuxt.config.mts, nuxt.config.js or nuxt.config.mjs)",
+		{ telemetryMessage: "autoconfig nuxt config file not found" }
+	);
+}
+
+/**
+ * Sets up Nuxt's Vite server builder, whose `ssr` environment the Cloudflare Vite plugin runs.
+ *
+ * @param configPath The path of the Nuxt config file
+ */
+function updateNuxtConfigForCf(configPath: string): void {
 	const b = recast.types.builders;
 
-	transformFile(path.join(projectPath, "nuxt.config.ts"), {
+	transformFile(configPath, {
 		visitProgram(n) {
 			const hasImport = n.node.body.some(
 				(statement) =>
@@ -164,16 +184,16 @@ function removeServerTsconfigReference(projectPath: string): void {
 }
 
 /**
- * Checks whether nuxt.config.ts turns off server-side rendering with a literal `ssr: false`,
+ * Checks whether the Nuxt config turns off server-side rendering with a literal `ssr: false`,
  * in which case Nuxt builds a static single-page app and no server.
  *
- * @param projectPath The path of the project
+ * @param configPath The path of the Nuxt config file
  * @returns Whether the `defineNuxtConfig()` object sets `ssr: false`
  */
-function disablesSsr(projectPath: string): boolean {
+function disablesSsr(configPath: string): boolean {
 	let ast: Program | null = null;
 	try {
-		ast = parseFile(path.join(projectPath, "nuxt.config.ts"));
+		ast = parseFile(configPath);
 	} catch {}
 
 	if (!ast) {
@@ -215,6 +235,7 @@ export class Nuxt extends Framework {
 		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (target === "cf") {
+			const configPath = findNuxtConfigFile(projectPath);
 			if (!dryRun) {
 				await installCloudflareVitePlugin({
 					packageManager: packageManager.type,
@@ -222,11 +243,11 @@ export class Nuxt extends Framework {
 					isWorkspaceRoot,
 					version: CF_VITE_PLUGIN_VERSION_RANGE,
 				});
-				updateNuxtConfigForCf(projectPath);
+				updateNuxtConfigForCf(configPath);
 				removeServerTsconfigReference(projectPath);
 			}
 
-			if (disablesSsr(projectPath)) {
+			if (disablesSsr(configPath)) {
 				return {
 					buildTool: "vite",
 					workerConfig: {

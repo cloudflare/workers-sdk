@@ -130,4 +130,39 @@ describe("Nuxt", () => {
 			},
 		});
 	});
+
+	it("edits a JavaScript Nuxt config when configuring for cf", async ({
+		expect,
+	}) => {
+		await seed({
+			"nuxt.config.mjs": dedent`
+				export default defineNuxtConfig({
+				  ssr: false,
+				})
+			`,
+		});
+
+		const result = await configureForCf();
+
+		expect(result).toEqual({
+			buildTool: "vite",
+			workerConfig: {
+				assets: { notFoundHandling: "single-page-application" },
+			},
+		});
+		expect(readFileSync("nuxt.config.mjs", "utf8")).toMatchInlineSnapshot(`
+			"import { cloudflare } from "@cloudflare/vite-plugin";
+			export default defineNuxtConfig({
+			  ssr: false,
+
+			  vite: {
+			    plugins: [cloudflare()]
+			  },
+
+			  server: {
+			    builder: "vite"
+			  }
+			})"
+		`);
+	});
 });
