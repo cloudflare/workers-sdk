@@ -5,14 +5,14 @@ import proxyWorker from "../templates/remoteBindings/ProxyServerWorker";
 
 vi.mock("capnweb", () => ({ newWorkersRpcResponse: vi.fn() }));
 vi.mock("cloudflare:email", () => {
-	class EmailMessage {
+	class MockEmailMessage {
 		constructor(
 			readonly from: string,
 			readonly to: string,
 			readonly raw: ReadableStream | string
 		) {}
 	}
-	return { EmailMessage };
+	return { EmailMessage: MockEmailMessage };
 });
 
 class SendEmail {
