@@ -1,5 +1,13 @@
 # @cloudflare/workers-auth
 
+## 0.18.8
+
+### Patch Changes
+
+- [#17063](https://github.com/cloudflare/workers-sdk/pull/17063) [`6c45ad7`](https://github.com/cloudflare/workers-sdk/commit/6c45ad7ccb87e0de8a8117cf5a547c1d005207a8) Thanks [@sidharthachatterjee](https://github.com/sidharthachatterjee)! - Request the billing scopes when logging in with cf and Wrangler
+
+  Include `billing:write` in the default OAuth scopes of cf and Wrangler so they can create account subscriptions, which is how products such as R2 are enabled on an account. cf also requests `billing:read`. Existing OAuth sessions need a new login to request the scopes.
+
 ## 0.18.7
 
 ### Patch Changes

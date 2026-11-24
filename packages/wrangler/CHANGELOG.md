@@ -1,5 +1,28 @@
 # wrangler
 
+## 4.168.0
+
+### Minor Changes
+
+- [#16680](https://github.com/cloudflare/workers-sdk/pull/16680) [`96e936c`](https://github.com/cloudflare/workers-sdk/commit/96e936c34a7e071dfb1e90adffbc3e53814b757b) Thanks [@mglewis](https://github.com/mglewis)! - Apply `images.url_transformations` when deploying a Worker
+
+  `wrangler deploy` and `wrangler versions deploy` now apply the `images.url_transformations` setting to the deployed Worker. The setting is applied after the Worker and its triggers have been deployed. If it can't be applied, the command fails with the reason from the API. Removing `url_transformations` from the configuration leaves the Worker's existing setting in place.
+
+  The setting isn't applied for `--dry-run`, `wrangler versions upload`, or Workers deployed to a dispatch namespace.
+
+### Patch Changes
+
+- [#17063](https://github.com/cloudflare/workers-sdk/pull/17063) [`6c45ad7`](https://github.com/cloudflare/workers-sdk/commit/6c45ad7ccb87e0de8a8117cf5a547c1d005207a8) Thanks [@sidharthachatterjee](https://github.com/sidharthachatterjee)! - Request the billing scopes when logging in with cf and Wrangler
+
+  Include `billing:write` in the default OAuth scopes of cf and Wrangler so they can create account subscriptions, which is how products such as R2 are enabled on an account. cf also requests `billing:read`. Existing OAuth sessions need a new login to request the scopes.
+
+- [#16947](https://github.com/cloudflare/workers-sdk/pull/16947) [`de6b171`](https://github.com/cloudflare/workers-sdk/commit/de6b171603576fd12afa4f32736c0c0ecb28eeab) Thanks [@umeraamir69](https://github.com/umeraamir69)! - Fix `WRANGLER_LOG_PATH` being ignored when set in `vite.config.ts` after a static import of `@cloudflare/vite-plugin`
+
+  The debug log filepath is now resolved lazily on first write (memoized), matching how `WRANGLER_WRITE_LOGS` is read. Setting `process.env.WRANGLER_LOG_PATH` in the Vite config body after importing the plugin now writes logs to the configured path instead of the global default directory.
+
+- Updated dependencies [[`3d228ba`](https://github.com/cloudflare/workers-sdk/commit/3d228ba0f1b155e96f3ab09e1a467937e1d51051)]:
+  - miniflare@5.20261123.1-beta
+
 ## 4.167.0
 
 ### Minor Changes
