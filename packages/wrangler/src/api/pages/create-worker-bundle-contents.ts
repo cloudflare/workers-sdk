@@ -6,24 +6,38 @@ import { createWorkerUploadForm } from "../../deployment-bundle/create-worker-up
 import { loadSourceMaps } from "../../deployment-bundle/source-maps";
 import { parseConfigPlacement } from "../../utils/placement";
 import type { BundleResult } from "../../deployment-bundle/bundle";
-import type { CfPlacement } from "@cloudflare/workers-utils";
+import type {
+	CfPlacement,
+	WorkerMetadataBinding,
+	WorkerUploadMetadataBinding,
+} from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils/config";
 import type { Blob } from "node:buffer";
 import type { FormData } from "undici";
 
 /**
- * Takes a Worker bundle - `BundleResult` - and generates the _worker.bundle
- * contents
+ * Generates the `_worker.bundle` contents for Pages, which still reads D1 IDs
+ * from `id` rather than `database_id`.
  */
 export async function createUploadWorkerBundleContents(
 	workerBundle: BundleResult,
 	config: Config | undefined
 ): Promise<Blob> {
 	const workerBundleFormData = createWorkerBundleFormData(workerBundle, config);
-	const metadata = JSON.parse(workerBundleFormData.get("metadata") as string);
+	const metadata: {
+		bindings?: (WorkerMetadataBinding | WorkerUploadMetadataBinding)[];
+	} = JSON.parse(workerBundleFormData.get("metadata") as string);
 	// Remove the empty bindings array if no Pages config has been found
 	if (config === undefined) {
 		delete metadata.bindings;
+	} else if (metadata.bindings) {
+		metadata.bindings = metadata.bindings.map((binding) => {
+			if (binding.type !== "d1" || !("database_id" in binding)) {
+				return binding;
+			}
+			const { database_id: id, ...pagesBinding } = binding;
+			return { ...pagesBinding, id };
+		});
 	}
 	workerBundleFormData.set("metadata", JSON.stringify(metadata));
 
