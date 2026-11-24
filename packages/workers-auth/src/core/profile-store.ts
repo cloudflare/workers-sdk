@@ -13,10 +13,12 @@ import {
 } from "../credential-store";
 import { createProfileStore } from "../profiles";
 import { createFileStorage } from "./file-storage";
+import { createPreferences } from "./preferences";
 import type { UserAuthConfig } from "../config-file/auth";
 import type { OAuthFlowContext } from "../context";
 import type {
 	DirectoryBindingsStorage,
+	GlobalProfileStorage,
 	ProfileConfigOperations,
 	ProfileStore,
 } from "../profiles";
@@ -139,5 +141,18 @@ export function createCloudflareProfileStore(
 		},
 	};
 
-	return createProfileStore({ configs, bindings });
+	// The global active profile (`<cli> auth use <name>`) lives in the shared
+	// user preferences file so it sits next to the other user-level settings.
+	const preferences = createPreferences(getConfigPath);
+	const global: GlobalProfileStorage = {
+		read() {
+			const value = preferences.readUserPreferences().active_profile;
+			return typeof value === "string" && value !== "" ? value : undefined;
+		},
+		write(profile) {
+			preferences.updateUserPreferences({ active_profile: profile });
+		},
+	};
+
+	return createProfileStore({ configs, bindings, global });
 }

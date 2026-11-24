@@ -519,6 +519,196 @@ describe("Profiles", () => {
 			expect(out).toContain("client-a");
 			expect(out).toContain(normalizeString(targetDir));
 			expect(out).toContain("default");
+			expect(out).toContain(
+				"Current profile for this directory: default (default profile)."
+			);
+		});
+
+		it("marks the active and global profiles", async ({ expect }) => {
+			createProfileFile("default");
+			createProfileFile("client-a");
+			createProfileFile("client-b");
+			await runWrangler("auth use client-b");
+			await runWrangler("auth activate client-a");
+
+			await runWrangler("auth list");
+			const out = normalizeString(std.out);
+			expect(out).toContain(
+				`Current profile for this directory: client-a (bound to ${normalizeString(process.cwd())}).`
+			);
+			// client-a is active here, client-b is the global switch
+			const rows = out.split("\n").filter((r) => r.startsWith("│"));
+			const clientA = rows.find((r) => r.includes("client-a"));
+			const clientB = rows.find((r) => r.includes("client-b"));
+			expect(clientA).toMatch(/client-a\s*│\s*\*\s*│\s*│/);
+			expect(clientB).toMatch(/client-b\s*│\s*│\s*\*\s*│/);
+		});
+	});
+
+	describe("wrangler auth use", () => {
+		it("errors when profile does not exist", async ({ expect }) => {
+			await expect(runWrangler("auth use nope")).rejects.toThrow(
+				/Profile "nope" does not exist/
+			);
+			expect(profiles().global.read()).toBeUndefined();
+		});
+
+		it("validates name", async ({ expect }) => {
+			await expect(runWrangler("auth use staging")).rejects.toThrow(
+				/reserved profile name/
+			);
+		});
+
+		it("rejects --profile", async ({ expect }) => {
+			createProfileFile("client-a");
+			await expect(
+				runWrangler("auth use client-a --profile other")
+			).rejects.toThrow(/--profile flag cannot be used/);
+		});
+
+		it("errors without switching when env credentials are set", async ({
+			expect,
+		}) => {
+			createProfileFile("client-a");
+
+			await expect(
+				runWrangler("auth use client-a", { CLOUDFLARE_API_TOKEN: "env-token" })
+			).rejects.toThrow(
+				/Cannot manage auth profiles while CLOUDFLARE_API_TOKEN is set/
+			);
+			expect(profiles().global.read()).toBeUndefined();
+		});
+
+		it("errors in non-interactive mode when no name is given", async ({
+			expect,
+		}) => {
+			createProfileFile("client-a");
+			createProfileFile("client-b");
+			await expect(runWrangler("auth use")).rejects.toThrow(
+				/Available profiles: client-a, client-b/
+			);
+		});
+
+		it("switches the global active profile and uses it for commands", async ({
+			expect,
+		}) => {
+			createProfileFile("default");
+			createProfileFile("client-a");
+
+			await runWrangler("auth use client-a");
+
+			expect(profiles().global.read()).toBe("client-a");
+			expect(profiles().resolve({ cwd: process.cwd() })).toBe("client-a");
+			expect(normalizeString(std.out)).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Now using profile "client-a" globally."
+			`);
+
+			await runWrangler("auth token");
+			expect(std.out).toContain("client-a-token");
+		});
+
+		it("is also available as `wrangler auth switch`", async ({ expect }) => {
+			createProfileFile("client-a");
+
+			await runWrangler("auth switch client-a");
+
+			expect(profiles().global.read()).toBe("client-a");
+		});
+
+		it("`auth use default` clears the global active profile", async ({
+			expect,
+		}) => {
+			createProfileFile("default");
+			createProfileFile("client-a");
+			await runWrangler("auth use client-a");
+
+			await runWrangler("auth use default");
+
+			expect(profiles().global.read()).toBeUndefined();
+			expect(profiles().resolve({ cwd: process.cwd() })).toBe("default");
+			expect(std.out).toContain("Now using the default profile globally.");
+		});
+
+		it("warns when a directory binding still takes precedence", async ({
+			expect,
+		}) => {
+			createProfileFile("client-a");
+			createProfileFile("client-b");
+			await runWrangler("auth activate client-a");
+
+			await runWrangler("auth use client-b");
+
+			expect(profiles().global.read()).toBe("client-b");
+			expect(profiles().resolve({ cwd: process.cwd() })).toBe("client-a");
+			expect(normalizeString(std.warn)).toContain(
+				'This directory is bound to profile "client-a"'
+			);
+		});
+
+		it("warns when CLOUDFLARE_AUTH_PROFILE takes precedence", async ({
+			expect,
+		}) => {
+			createProfileFile("client-a");
+			createProfileFile("client-b");
+
+			await runWrangler("auth use client-b", {
+				CLOUDFLARE_AUTH_PROFILE: "client-a",
+			});
+
+			expect(profiles().global.read()).toBe("client-b");
+			expect(std.warn).toContain("CLOUDFLARE_AUTH_PROFILE=client-a is set");
+		});
+
+		it("--profile flag overrides the global active profile", async ({
+			expect,
+		}) => {
+			createProfileFile("client-a");
+			createProfileFile("client-b");
+			await runWrangler("auth use client-a");
+
+			await runWrangler("auth token --profile client-b");
+			expect(std.out).toContain("client-b-token");
+		});
+
+		it("deleting the global active profile clears the switch", async ({
+			expect,
+		}) => {
+			createProfileFile("default");
+			createProfileFile("client-a");
+			await runWrangler("auth use client-a");
+
+			await runWrangler("auth delete client-a");
+
+			expect(profiles().global.read()).toBeUndefined();
+			expect(std.out).toContain(
+				'"client-a" was the global active profile. Cleared'
+			);
+			expect(profiles().resolve({ cwd: process.cwd() })).toBe("default");
+		});
+
+		it("deactivating a directory falls back to the global active profile", async ({
+			expect,
+		}) => {
+			createProfileFile("client-a");
+			createProfileFile("client-b");
+			await runWrangler("auth use client-b");
+			await runWrangler("auth activate client-a");
+
+			await runWrangler("auth deactivate");
+
+			expect(std.out).toContain("Now using: client-b (global active profile).");
+		});
+
+		it("shows the global active profile in the banner", async ({ expect }) => {
+			createProfileFile("client-a");
+			await runWrangler("auth use client-a");
+
+			// whoami prints the banner (with active profile) before failing on auth
+			await runWrangler("whoami").catch(() => {});
+			expect(std.out).toContain("Active profile: client-a");
 		});
 	});
 

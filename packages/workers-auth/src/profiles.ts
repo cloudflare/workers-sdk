@@ -23,10 +23,51 @@ export interface DirectoryBindingOperations extends DirectoryBindingsStorage {
 	removeAllBindingsForProfile(profile: string): string[];
 }
 
+/**
+ * Storage for the user-level "global active profile": the profile a user has
+ * switched to with `<cli> auth use <name>`. It applies everywhere a directory
+ * binding, the `CLOUDFLARE_AUTH_PROFILE` environment variable, or an explicit
+ * `--profile` flag does not.
+ */
+export interface GlobalProfileStorage {
+	read(): string | undefined;
+	write(profile: string | undefined): void;
+}
+
+export interface GlobalProfileOperations extends GlobalProfileStorage {
+	/**
+	 * Switch the global active profile. Passing `"default"` (or `undefined`)
+	 * clears the override so the default profile is used again.
+	 */
+	use(profile: string | undefined): void;
+	/**
+	 * The global active profile, or `undefined` if none is set or the stored
+	 * profile no longer exists.
+	 */
+	get(): string | undefined;
+}
+
+/** Where a resolved profile came from, in precedence order. */
+export type ProfileResolutionSource =
+	| "flag"
+	| "env"
+	| "directory"
+	| "global"
+	| "default";
+
+export interface ProfileResolution {
+	profile: string;
+	source: ProfileResolutionSource;
+	/** For `source === "directory"`: the directory the profile is bound to. */
+	boundDirectory?: string;
+}
+
 export interface ProfileStore {
 	configs: ProfileConfigOperations;
 	bindings: DirectoryBindingOperations;
+	global: GlobalProfileOperations;
 	resolve(args: { profile?: string; cwd: string }): string;
+	resolveWithSource(args: { profile?: string; cwd: string }): ProfileResolution;
 }
 
 export interface DeactivateDirectoryResult {
@@ -37,7 +78,73 @@ export interface DeactivateDirectoryResult {
 export function createProfileStore(args: {
 	configs: ProfileConfigOperations;
 	bindings: DirectoryBindingsStorage;
+	/**
+	 * Storage for the global active profile. Optional for backwards
+	 * compatibility: without it, there is no global switch and resolution
+	 * falls straight through to the default profile.
+	 */
+	global?: GlobalProfileStorage;
 }): ProfileStore {
+	let inMemoryGlobalProfile: string | undefined;
+	const globalStorage: GlobalProfileStorage = args.global ?? {
+		read: () => inMemoryGlobalProfile,
+		write: (profile) => {
+			inMemoryGlobalProfile = profile;
+		},
+	};
+
+	const global: GlobalProfileOperations = {
+		read() {
+			return globalStorage.read();
+		},
+		write(profile) {
+			globalStorage.write(profile);
+		},
+		use(profile) {
+			if (profile === undefined || profile === "default") {
+				globalStorage.write(undefined);
+				return;
+			}
+			validateProfileName(profile);
+			globalStorage.write(profile);
+		},
+		get() {
+			const stored = globalStorage.read();
+			if (!stored || stored === "default") {
+				return undefined;
+			}
+			// Ignore a stale or hand-edited value rather than failing every
+			// command: the profile may have been deleted out from under us.
+			if (!isValidProfileName(stored) || !args.configs.exists(stored)) {
+				return undefined;
+			}
+			return stored;
+		},
+	};
+
+	/**
+	 * Resolve the profile for `cwd` ignoring the explicit flag and the
+	 * environment: directory binding → global active profile → default.
+	 */
+	function resolveImplicit(cwd: string): ProfileResolution {
+		const dirBinding = getProfileForDirectoryFromBindings(
+			cwd,
+			args.bindings.read()
+		);
+		if (dirBinding) {
+			return {
+				profile: dirBinding.profile,
+				source: "directory",
+				boundDirectory: dirBinding.dir,
+			};
+		}
+		const globalProfile = global.get();
+		if (globalProfile) {
+			return { profile: globalProfile, source: "global" };
+		}
+		return { profile: "default", source: "default" };
+	}
+
 	const bindings: DirectoryBindingOperations = {
 		read() {
 			return args.bindings.read();
@@ -91,6 +198,16 @@ export function createProfileStore(args: {
 					},
 				};
 			}
+			const globalProfile = global.get();
+			if (globalProfile) {
+				return {
+					removedProfile: boundProfile,
+					newResolution: {
+						profile: globalProfile,
+						source: "global active profile",
+					},
+				};
+			}
 			if (args.configs.exists("default")) {
 				return {
 					removedProfile: boundProfile,
@@ -127,27 +244,46 @@ export function createProfileStore(args: {
 		},
 	};
 
+	function resolveWithSource(resolveArgs: {
+		profile?: string;
+		cwd: string;
+	}): ProfileResolution {
+		if (resolveArgs.profile) {
+			if (resolveArgs.profile === "default") {
+				return { profile: "default", source: "flag" };
+			}
+			validateProfileName(resolveArgs.profile);
+			return { profile: resolveArgs.profile, source: "flag" };
+		}
+
+		const envProfile = getCloudflareAuthProfileFromEnv();
+		if (envProfile) {
+			if (envProfile === "default") {
+				return { profile: "default", source: "env" };
+			}
+			validateProfileName(envProfile);
+			return { profile: envProfile, source: "env" };
+		}
+
+		return resolveImplicit(resolveArgs.cwd);
+	}
+
 	return {
 		configs: args.configs,
 		bindings,
+		global,
 		resolve(resolveArgs) {
-			const profile = resolveArgs.profile || getCloudflareAuthProfileFromEnv();
-			if (profile) {
-				if (profile === "default") {
-					return "default";
-				}
-				validateProfileName(profile);
-				return profile;
-			}
-
-			const dirProfile = bindings.getProfileForDirectory(resolveArgs.cwd);
-			if (dirProfile) {
-				return dirProfile;
-			}
-
-			return "default";
+			return resolveWithSource(resolveArgs).profile;
 		},
+		resolveWithSource,
 	};
+}
+
+function isValidProfileName(name: string): boolean {
+	return (
+		!RESERVED_PROFILE_NAMES.includes(name.toLowerCase()) &&
+		/^[a-zA-Z0-9_-]+$/.test(name)
+	);
 }
 
 export function validateProfileName(name: string): void {

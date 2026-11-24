@@ -509,6 +509,8 @@ import {
 	authDeactivateCommand,
 	authDeleteCommand,
 	authListCommand,
+	authSwitchAlias,
+	authUseCommand,
 } from "./user/profiles";
 import { noProxy, proxy } from "./utils/constants";
 import { logDidYouMean } from "./utils/did-you-mean";
@@ -2647,6 +2649,14 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler auth list",
 			definition: authListCommand,
+		},
+		{
+			command: "wrangler auth use",
+			definition: authUseCommand,
+		},
+		{
+			command: "wrangler auth switch",
+			definition: authSwitchAlias,
 		},
 	]);
 	registry.registerNamespace("auth");

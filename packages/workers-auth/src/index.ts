@@ -55,7 +55,11 @@ export type {
 	DeactivateDirectoryResult,
 	DirectoryBindingOperations,
 	DirectoryBindingsStorage,
+	GlobalProfileOperations,
+	GlobalProfileStorage,
 	ProfileConfigOperations,
+	ProfileResolution,
+	ProfileResolutionSource,
 	ProfileStore,
 } from "./profiles";
 

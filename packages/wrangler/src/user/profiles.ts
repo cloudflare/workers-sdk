@@ -1,11 +1,39 @@
 import path from "node:path";
-import { validateProfileName } from "@cloudflare/workers-auth";
+import {
+	getCloudflareAuthProfileFromEnv,
+	validateProfileName,
+} from "@cloudflare/workers-auth";
 import { createWranglerProfileStore } from "@cloudflare/workers-auth/wrangler";
-import { UserError } from "@cloudflare/workers-utils";
-import { createCommand, createNamespace } from "../core/create-command";
+import { isNonInteractiveOrCI, UserError } from "@cloudflare/workers-utils";
+import {
+	createAlias,
+	createCommand,
+	createNamespace,
+} from "../core/create-command";
+import { select } from "../dialogs";
 import { logger } from "../logger";
 import { oauthArgs } from "./commands";
 import { getAuthFromEnv, login, logout, validateScopeKeys } from "./user";
+import type { ProfileResolution } from "@cloudflare/workers-auth";
+
+/**
+ * Human-readable description of where a resolved profile came from, for the
+ * `auth list` / `auth use` output.
+ */
+export function describeProfileSource(resolution: ProfileResolution): string {
+	switch (resolution.source) {
+		case "flag":
+			return "--profile flag";
+		case "env":
+			return "CLOUDFLARE_AUTH_PROFILE";
+		case "directory":
+			return `bound to ${resolution.boundDirectory ?? "this directory"}`;
+		case "global":
+			return "global active profile";
+		case "default":
+			return "default profile";
+	}
+}
 
 function assertNoEnvCredentials() {
 	if (getAuthFromEnv() === undefined) {
@@ -146,6 +174,13 @@ export const authDeleteCommand = createCommand({
 
 		logger.log(`Profile "${args.name}" deleted.`);
 
+		if (profiles.global.read() === args.name) {
+			profiles.global.use(undefined);
+			logger.log(
+				`"${args.name}" was the global active profile. Cleared; the default profile is now used globally.`
+			);
+		}
+
 		const currentProfile = profiles.bindings.getProfileForDirectory(
 			process.cwd()
 		);
@@ -266,7 +301,114 @@ export const authDeactivateCommand = createCommand({
 	},
 });
 
-// TODO: show what accounts are connected
+export const authUseCommand = createCommand({
+	metadata: {
+		description:
+			"Switch the globally active auth profile (applies everywhere no directory binding does)",
+		owner: "Workers: Authoring and Testing",
+		status: "experimental",
+		category: "Account",
+		hideGlobalFlags: ["profile"],
+	},
+	behaviour: {
+		printConfigWarnings: false,
+		provideConfig: false,
+		printActiveProfile: false,
+	},
+	positionalArgs: ["name"],
+	args: {
+		name: {
+			describe:
+				'Name of the auth profile to switch to. Use "default" to go back to the default profile. Omit to pick interactively.',
+			type: "string",
+		},
+	},
+	validateArgs(args) {
+		rejectProfileFlag(
+			args,
+			"The --profile flag cannot be used with `wrangler auth use`. Pass the profile name as the command argument: `wrangler auth use <name>`."
+		);
+	},
+	async handler(args) {
+		assertNoEnvCredentials();
+		const profiles = createWranglerProfileStore({ logger });
+		const cwd = process.cwd();
+
+		let name = args.name;
+		if (name === undefined) {
+			const available = profiles.configs.list().sort();
+			if (available.length === 0) {
+				throw new UserError(
+					"No profiles found. Run `wrangler login` to set up the default profile, or `wrangler auth create <name>` to create a named profile.",
+					{ telemetryMessage: "auth use no profiles" }
+				);
+			}
+			if (isNonInteractiveOrCI()) {
+				throw new UserError(
+					`Pass the profile to switch to: \`wrangler auth use <name>\`. Available profiles: ${available.join(", ")}.`,
+					{ telemetryMessage: "auth use missing name non-interactive" }
+				);
+			}
+			const current = profiles.resolveWithSource({ cwd });
+			name = await select("Which auth profile do you want to use?", {
+				choices: available.map((profile) => ({
+					title:
+						profile === current.profile
+							? `${profile} (current, ${describeProfileSource(current)})`
+							: profile,
+					value: profile,
+				})),
+				defaultOption: Math.max(0, available.indexOf(current.profile)),
+			});
+		}
+
+		if (name === "default") {
+			profiles.global.use(undefined);
+			if (profiles.configs.exists("default")) {
+				logger.log("Now using the default profile globally.");
+			} else {
+				logger.log(
+					"Cleared the global active profile. No default profile exists yet; run `wrangler login` to set one up."
+				);
+			}
+		} else {
+			validateProfileName(name);
+			if (!profiles.configs.exists(name)) {
+				throw new UserError(
+					`Profile "${name}" does not exist. Run \`wrangler auth create ${name}\` to create it, or \`wrangler auth list\` to see available profiles.`,
+					{ telemetryMessage: "auth use profile not found" }
+				);
+			}
+			profiles.global.use(name);
+			logger.log(`Now using profile "${name}" globally.`);
+		}
+
+		// The global switch is the lowest-precedence way to pick a profile, so
+		// tell the user if something else still wins in this directory.
+		const envProfile = getCloudflareAuthProfileFromEnv();
+		if (envProfile) {
+			logger.warn(
+				`CLOUDFLARE_AUTH_PROFILE=${envProfile} is set and takes precedence over the global active profile in this shell.`
+			);
+		}
+		const resolution = profiles.resolveWithSource({ cwd });
+		if (resolution.source === "directory") {
+			logger.warn(
+				`This directory is bound to profile "${resolution.profile}" (${describeProfileSource(resolution)}), which takes precedence here.\n` +
+					"Run `wrangler auth deactivate` from the bound directory to remove that binding."
+			);
+		}
+	},
+});
+
+export const authSwitchAlias = createAlias({
+	aliasOf: "wrangler auth use",
+	metadata: {
+		description: "Alias for `wrangler auth use`",
+		hidden: true,
+	},
+});
+
 export const authListCommand = createCommand({
 	metadata: {
 		description: "List all auth profiles",
@@ -306,11 +448,28 @@ export const authListCommand = createCommand({
 			bindingsByProfile[profile].push(dir);
 		}
 
-		const data = profileNames.map((name) => ({
+		const active = profiles.resolveWithSource({ cwd: process.cwd() });
+		const globalProfile = profiles.global.get();
+
+		const data = profileNames.sort().map((name) => ({
 			Profile: name,
+			Active: name === active.profile ? "*" : "",
+			Global: name === (globalProfile ?? "default") ? "*" : "",
 			"Bound Directories": (bindingsByProfile[name] ?? []).join(", ") || "-",
 		}));
 
 		logger.table(data);
+		logger.log(
+			`Current profile for this directory: ${active.profile} (${describeProfileSource(active)}).`
+		);
+		if (!profiles.configs.exists(active.profile)) {
+			logger.warn(
+				`Profile "${active.profile}" has no stored credentials. Run \`${
+					active.profile === "default"
+						? "wrangler login"
+						: `wrangler auth create ${active.profile}`
+				}\` to authenticate.`
+			);
+		}
 	},
 });

@@ -15,6 +15,12 @@ export interface UserPreferences {
 	 * `<cli> login --no-use-keyring`.
 	 */
 	keyring_enabled?: boolean;
+	/**
+	 * The globally active named auth profile, set by `<cli> auth use <name>`.
+	 * Used when no `--profile` flag, `CLOUDFLARE_AUTH_PROFILE` variable, or
+	 * directory binding selects a profile. Unset means the default profile.
+	 */
+	active_profile?: string;
 }
 
 /** Reads/writes for the {@link UserPreferences} file. */
