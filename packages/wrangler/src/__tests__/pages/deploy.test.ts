@@ -611,6 +611,109 @@ describe("pages deploy", () => {
 		`);
 	});
 
+	it("should say when a deploy went to a preview branch instead of production", async ({
+		expect,
+	}) => {
+		writeFileSync("logo.png", "foobar");
+		mockGetUploadTokenRequest(
+			expect,
+			"<<funfetti-auth-jwt>>",
+			"some-account-id",
+			"foo"
+		);
+
+		msw.use(
+			http.post(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = (await request.json()) as { hashes: string[] };
+					return HttpResponse.json(
+						{ success: true, errors: [], messages: [], result: body.hashes },
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post(
+				"*/pages/assets/upload",
+				() =>
+					HttpResponse.json(
+						{ success: true, errors: [], messages: [], result: null },
+						{ status: 200 }
+					),
+				{ once: true }
+			),
+			http.post(
+				"*/accounts/:accountId/pages/projects/foo/deployments",
+				async ({ request, params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(await formDataToObject(await request.formData())).toEqual(
+						expect.arrayContaining([{ name: "branch", value: "master" }])
+					);
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "123-456-789",
+								project_name: "foo",
+								url: "https://abcxyz.foo.pages.dev/",
+								// "master" is not the project's production branch, so the
+								// API reports this deployment as a preview one.
+								environment: "preview",
+								production_branch: "main",
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				() =>
+					HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "123-456-789",
+								latest_stage: { name: "deploy", status: "success" },
+								aliases: ["https://master.foo.pages.dev"],
+							},
+						},
+						{ status: 200 }
+					),
+				{ once: true }
+			),
+			http.get("*/accounts/:accountId/pages/projects/foo", () =>
+				HttpResponse.json(
+					{
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							production_branch: "main",
+							deployment_configs: { production: {}, preview: {} },
+						},
+					},
+					{ status: 200 }
+				)
+			)
+		);
+
+		await runWrangler("pages deploy . --project-name=foo --branch=master");
+
+		const out = normalizeProgressSteps(std.out);
+		// Production was not updated, so the success message must say that this
+		// went to a preview and name the branch that reaches production.
+		expect(out).toMatch(/preview/i);
+		expect(out).toMatch(/production branch/i);
+		expect(out).toMatch(/\bmain\b/);
+	});
+
 	it("should retry uploads", async ({ expect }) => {
 		writeFileSync("logo.txt", "foobar");
 
