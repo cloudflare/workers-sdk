@@ -13,6 +13,8 @@ type GitOptions = {
 	timeout?: number;
 	httpAuthorization?: { origin: string; value: string };
 	signal?: AbortSignal;
+	/** Bytes written to Git's standard input. */
+	input?: Uint8Array;
 };
 type GitResult = { stdout: Buffer; stderr: Buffer; status: number };
 
@@ -201,7 +203,9 @@ export async function runGit(
 				);
 			}
 		});
-		child.stdin.end();
+		// Git may exit before reading all its input; that surfaces as its status.
+		child.stdin.on("error", () => {});
+		child.stdin.end(options.input);
 	});
 }
 
@@ -578,6 +582,72 @@ export class GitClient {
 		return true;
 	}
 
+	/**
+	 * Lists the commits a push added to a branch, as production does: walk the
+	 * first-parent chain from `after` until `before`, reading at most `limit`
+	 * commits and counting at most `maxWalk`.
+	 *
+	 * @param after - The branch's new commit
+	 * @param before - The branch's previous commit, or the zero ID for a new branch
+	 * @returns The commits, newest first, and how many were walked
+	 */
+	async commitRange(
+		after: string,
+		before: string,
+		limit: number,
+		maxWalk: number
+	): Promise<{ commits: CommitMetadata[]; totalCount: number }> {
+		if (
+			!Number.isSafeInteger(limit) ||
+			!Number.isSafeInteger(maxWalk) ||
+			limit < 0 ||
+			maxWalk < limit ||
+			maxWalk > 1000
+		) {
+			throw new RangeError("Invalid commit range bounds");
+		}
+		// A branch can point at a tag or other object; production lists nothing.
+		if ((await this.objectType(after)) !== "commit") {
+			return { commits: [], totalCount: 0 };
+		}
+		const revs = await this.git([
+			"rev-list",
+			"--first-parent",
+			`--max-count=${maxWalk}`,
+			after,
+		]);
+		const walked: string[] = [];
+		for (const hash of decoder.decode(revs.stdout).trim().split("\n")) {
+			// `before` ends the walk; it is not part of what the push added.
+			if (!hash || hash === before) {
+				break;
+			}
+			walked.push(hash);
+		}
+		// One process reads every listed commit; a push can change many refs.
+		const listed = walked.slice(0, limit);
+		const objects =
+			listed.length === 0
+				? []
+				: parseCatFileBatch(
+						(
+							await this.git(["cat-file", "--batch"], {
+								input: Buffer.from(listed.map((hash) => `${hash}\n`).join("")),
+							})
+						).stdout
+					);
+		const commits: CommitMetadata[] = [];
+		for (const [index, hash] of listed.entries()) {
+			const object = objects[index];
+			// Production ends its walk at a commit it cannot read.
+			if (object?.hash !== hash || object.type !== "commit") {
+				return { commits, totalCount: commits.length };
+			}
+			commits.push(parseCommit(hash, decoder.decode(object.content)));
+		}
+		return { commits, totalCount: walked.length };
+	}
+
 	async log(ref?: string, limit = 50, offset = 0): Promise<CommitMetadata[]> {
 		if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1000) {
 			throw new RangeError(
@@ -804,6 +874,44 @@ function parseCommitIdentity(
 		person: { name: match[1], email: match[2] },
 		time: Number(match[3]),
 	};
+}
+
+/** One object from `git cat-file --batch`; `missing` objects have no content. */
+type BatchObject = { hash: string; type: string; content: Uint8Array };
+
+/**
+ * Parses `git cat-file --batch` output: `<oid> <type> <size>\n<content>\n`
+ * for each object, or `<oid> missing\n`.
+ */
+export function parseCatFileBatch(output: Uint8Array): BatchObject[] {
+	const objects: BatchObject[] = [];
+	let offset = 0;
+	while (offset < output.length) {
+		const end = output.indexOf(0x0a, offset);
+		if (end < 0) {
+			throw new Error("Truncated git cat-file output");
+		}
+		const [hash = "", type = "", size] = decoder
+			.decode(output.subarray(offset, end))
+			.split(" ");
+		offset = end + 1;
+		if (size === undefined) {
+			objects.push({ hash, type, content: new Uint8Array() });
+			continue;
+		}
+		const length = Number(size);
+		if (!Number.isSafeInteger(length) || offset + length >= output.length) {
+			throw new Error("Truncated git cat-file output");
+		}
+		objects.push({
+			hash,
+			type,
+			content: output.subarray(offset, offset + length),
+		});
+		// Skip the newline that ends each object's content.
+		offset += length + 1;
+	}
+	return objects;
 }
 
 function parseCommit(hash: string, value: string): CommitMetadata {

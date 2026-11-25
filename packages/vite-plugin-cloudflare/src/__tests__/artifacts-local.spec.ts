@@ -2,7 +2,10 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { removeDirSync } from "@cloudflare/workers-utils";
-import { pushGitFixture } from "@cloudflare/workers-utils/test-helpers";
+import {
+	pushGitFixture,
+	runFixtureGit,
+} from "@cloudflare/workers-utils/test-helpers";
 import { createLogger, createServer } from "vite";
 import { afterEach, test, vi } from "vitest";
 
@@ -136,6 +139,108 @@ export default {
 				});
 			},
 			{ timeout: 10_000 }
+		);
+	} finally {
+		await server.close();
+	}
+});
+
+test("Vite native Artifacts Git events start a Workflow", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const root = createFixture(
+		false,
+		`
+import { defineConfig, exports } from "@cloudflare/config";
+export default defineConfig({ worker: {
+	name: "vite-artifacts-git-events", entrypoint: "./index.js",
+	compatibilityDate: "2026-09-03",
+	env: {
+		REPOS: { type: "artifacts", namespace: "examples", dev: { remote: false } },
+		EVENTS: { type: "kv" },
+	},
+	exports: { RecordRepoEvent: exports.workflow({ name: "record-git-events", events: [
+		{ type: "cf.artifacts.repo.pushed", filter: { namespace: "examples", repoName: "demo" } },
+		{ type: "cf.artifacts.repo.cloned" },
+		{ type: "cf.artifacts.repo.fetched" },
+	] }) },
+} });
+`,
+		`
+import { WorkflowEntrypoint } from "cloudflare:workers";
+export class RecordRepoEvent extends WorkflowEntrypoint {
+	async run(event, step) {
+		await step.do("record", async () => {
+			const { type, source } = event.payload;
+			await this.env.EVENTS.put(type + ":" + source.repoName, JSON.stringify(event.payload));
+			return "recorded";
+		});
+	}
+}
+export default {
+	async fetch(request, env) {
+		const name = new URL(request.url).pathname.slice(1);
+		if (request.method === "POST") return Response.json(await env.REPOS.create(name));
+		const { keys } = await env.EVENTS.list();
+		return Response.json(keys.map(({ name }) => name).sort());
+	}
+};
+`
+	);
+	onTestFinished(() => removeDirSync(root));
+	const server = await createServer({
+		root,
+		configFile: false,
+		logLevel: "silent",
+		server: { port: 0 },
+		plugins: [
+			cloudflare({
+				inspectorPort: false,
+				persistState: false,
+				remoteBindings: false,
+			}),
+		],
+	});
+	try {
+		await server.listen();
+		const url = server.resolvedUrls?.local[0];
+		if (!url) {
+			throw new Error("Vite server did not provide a local URL");
+		}
+		const created: Record<string, { remote: string; token: string }> = {};
+		for (const name of ["ignored", "demo"]) {
+			created[name] = (await (
+				await fetch(new URL(name, url), { method: "POST" })
+			).json()) as { remote: string; token: string };
+			await pushGitFixture({
+				directory: path.join(root, `git-${name}`),
+				remote: created[name].remote,
+				token: created[name].token,
+				files: { "hello.txt": "hello artifacts\n" },
+			});
+		}
+		const demo = created.demo;
+		if (!demo) {
+			throw new Error("Repository demo was not created");
+		}
+		const git = (cwd: string, ...args: string[]) =>
+			runFixtureGit({ cwd: path.join(root, cwd), token: demo.token, args });
+		await git(".", "clone", demo.remote, "git-clone");
+		// A fetch only negotiates when there is something new to fetch.
+		await git("git-demo", "commit", "--allow-empty", "-m", "second");
+		await git("git-demo", "push", demo.remote, "main");
+		await git("git-clone", "fetch", "origin");
+
+		await vi.waitFor(
+			async () => {
+				expect(await (await fetch(url)).json()).toEqual([
+					"cf.artifacts.repo.cloned:demo",
+					"cf.artifacts.repo.fetched:demo",
+					"cf.artifacts.repo.pushed:demo",
+				]);
+			},
+			{ timeout: 15_000 }
 		);
 	} finally {
 		await server.close();
