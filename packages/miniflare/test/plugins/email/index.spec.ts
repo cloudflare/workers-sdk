@@ -1883,6 +1883,132 @@ test("MessageBuilder with multiple recipients", async ({ expect }) => {
 	expect(message).toContain("Bcc: bcc1@example.com, bcc2@example.com");
 });
 
+// The Email Sending Workers API limits the combined `to`, `cc` and `bcc`
+// recipients of a structured message to 50, rejecting more with
+// `E_TOO_MANY_RECIPIENTS`. The local simulator should reject the same messages.
+// https://developers.cloudflare.com/email-service/api/send-emails/workers-api/#error-codes
+const RECIPIENT_LIMIT_WORKER = dedent /* javascript */ `
+	export default {
+		async fetch(request, env) {
+			const builder = await request.json();
+			try {
+				return Response.json(await env.SEND_EMAIL.send(builder));
+			} catch (error) {
+				return Response.json(
+					{ code: error.code, message: error.message },
+					{ status: 400 }
+				);
+			}
+		},
+	};
+`;
+
+function recipientAddresses(prefix: string, count: number): string[] {
+	return Array.from(
+		{ length: count },
+		(_, index) => `${prefix}${index}@example.com`
+	);
+}
+
+function useRecipientLimitMiniflare(): Miniflare {
+	const mf = new Miniflare({
+		unsafeLocalExplorer: true,
+		workers: [
+			{
+				config: {
+					name: "recipient-limit",
+					compatibilityDate: "2025-03-17",
+					manifest: singleModuleManifest(RECIPIENT_LIMIT_WORKER),
+					env: { SEND_EMAIL: { type: "send-email" } },
+				},
+			},
+		],
+	});
+	useDispose(mf);
+	return mf;
+}
+
+async function listSentEmails(
+	mf: Miniflare
+): Promise<{ messageId: string; to?: string[] }[]> {
+	const res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/local/explorer/api/local/email/sending"
+	);
+	const body = (await res.json()) as {
+		result: { messageId: string; to?: string[] }[];
+	};
+	return body.result;
+}
+
+test("MessageBuilder accepts 50 combined to, cc and bcc recipients", async ({
+	expect,
+}) => {
+	const mf = useRecipientLimitMiniflare();
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			to: recipientAddresses("to", 20),
+			cc: recipientAddresses("cc", 20),
+			bcc: recipientAddresses("bcc", 10),
+			subject: "Recipient limit",
+			text: "Fifty recipients",
+		}),
+	});
+
+	expect(res.status).toBe(200);
+	const { messageId } = (await res.json()) as { messageId: string };
+	expect(messageId).toEqual(expect.any(String));
+	expect((await listSentEmails(mf)).map((email) => email.messageId)).toContain(
+		messageId
+	);
+});
+
+test("MessageBuilder rejects more than 50 combined to, cc and bcc recipients", async ({
+	expect,
+}) => {
+	const mf = useRecipientLimitMiniflare();
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			to: recipientAddresses("to", 21),
+			cc: recipientAddresses("cc", 20),
+			bcc: recipientAddresses("bcc", 10),
+			subject: "Recipient limit",
+			text: "Fifty-one recipients",
+		}),
+	});
+
+	const body = await res.text();
+	expect(res.status, body).toBe(400);
+	expect(JSON.parse(body)).not.toHaveProperty("messageId");
+	expect(await listSentEmails(mf)).toEqual([]);
+});
+
+test("MessageBuilder rejects more than 50 to recipients", async ({
+	expect,
+}) => {
+	const mf = useRecipientLimitMiniflare();
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			to: recipientAddresses("to", 51),
+			subject: "Recipient limit",
+			text: "Fifty-one recipients",
+		}),
+	});
+
+	const body = await res.text();
+	expect(res.status, body).toBe(400);
+	expect(JSON.parse(body)).not.toHaveProperty("messageId");
+	expect(await listSentEmails(mf)).toEqual([]);
+});
+
 test("MessageBuilder with custom headers", async ({ expect }) => {
 	const mf = useMessageBuilderMiniflare();
 
