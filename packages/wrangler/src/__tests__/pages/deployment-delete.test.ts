@@ -102,6 +102,20 @@ describe("pages deployment delete", () => {
 		expect(std.out).not.toContain("Successfully deleted");
 	});
 
+	it("should error instead of exiting 0 without deleting when it cannot prompt and --force is not provided", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+
+		await expect(
+			runWrangler("pages deployment delete abc123 --project-name=my-project")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: The --force flag is required to delete a Pages deployment in non-interactive mode]`
+		);
+
+		expect(std.out).not.toContain("Successfully deleted");
+	});
+
 	it("should delete without asking if --force is provided", async ({
 		expect,
 	}) => {
