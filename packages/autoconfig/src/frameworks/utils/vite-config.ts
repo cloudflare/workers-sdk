@@ -69,6 +69,9 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 	projectPath: string,
 	context?: AutoConfigContext
 ): boolean {
+	if (!hasViteConfig(projectPath)) {
+		return false;
+	}
 	const filePath = getViteConfigPath(projectPath);
 	const ast = parseFile(filePath);
 	if (!ast) {
@@ -93,6 +96,23 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 
 			this.traverse(n);
 		},
+		visitExportDefaultDeclaration(n) {
+			// `export default { plugins: [...] }`, without `defineConfig()`
+			let { declaration } = n.node;
+			while (
+				t.TSSatisfiesExpression.check(declaration) ||
+				t.TSAsExpression.check(declaration)
+			) {
+				declaration = declaration.expression;
+			}
+			if (
+				t.ObjectExpression.check(declaration) &&
+				configObjectUsesCloudflarePlugin(declaration, context)
+			) {
+				usesCloudflarePlugin = true;
+			}
+			return this.traverse(n);
+		},
 		visitCallExpression: function (n) {
 			const callee = n.node.callee as types.namedTypes.Identifier;
 			if (callee.name !== "defineConfig") {
@@ -107,40 +127,50 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 				return this.traverse(n);
 			}
 
-			const pluginsProp = configObject.properties.findLast((prop) =>
-				isPluginsProp(prop)
-			);
-			if (!pluginsProp || !t.ArrayExpression.check(pluginsProp.value)) {
-				context?.logger.debug(
-					`Vite config does not have a valid plugins array. Skipping Cloudflare plugin check.`
-				);
-				return this.traverse(n);
-			}
-
-			if (hasFollowingOverride(configObject, pluginsProp)) {
-				context?.logger.debug(
-					`Vite config has a later property that may override its plugins array. Skipping Cloudflare plugin check.`
-				);
-				return this.traverse(n);
-			}
-
-			if (
-				pluginsProp.value.elements.some(
-					(el) =>
-						el?.type === "CallExpression" &&
-						el.callee.type === "Identifier" &&
-						el.callee.name === "cloudflare"
-				)
-			) {
+			if (configObjectUsesCloudflarePlugin(configObject, context)) {
 				usesCloudflarePlugin = true;
-				return this.traverse(n);
 			}
-
 			this.traverse(n);
 		},
 	});
 
 	return importsCloudflarePlugin && usesCloudflarePlugin;
+}
+
+/**
+ * Checks whether a Vite config object lists `cloudflare()` in its plugins array.
+ *
+ * @param configObject The Vite config object
+ * @param context The autoconfig context, for debug logs
+ * @returns Whether the plugins array calls `cloudflare()`
+ */
+function configObjectUsesCloudflarePlugin(
+	configObject: types.namedTypes.ObjectExpression,
+	context?: AutoConfigContext
+): boolean {
+	const pluginsProp = configObject.properties.findLast((prop) =>
+		isPluginsProp(prop)
+	);
+	if (!pluginsProp || !t.ArrayExpression.check(pluginsProp.value)) {
+		context?.logger.debug(
+			`Vite config does not have a valid plugins array. Skipping Cloudflare plugin check.`
+		);
+		return false;
+	}
+
+	if (hasFollowingOverride(configObject, pluginsProp)) {
+		context?.logger.debug(
+			`Vite config has a later property that may override its plugins array. Skipping Cloudflare plugin check.`
+		);
+		return false;
+	}
+
+	return pluginsProp.value.elements.some(
+		(el) =>
+			el?.type === "CallExpression" &&
+			el.callee.type === "Identifier" &&
+			el.callee.name === "cloudflare"
+	);
 }
 
 // Match Vite's DEFAULT_CONFIG_FILES order so inspection and execution use the same file.

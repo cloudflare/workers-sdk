@@ -51,13 +51,24 @@ describe("Vite framework", () => {
 					`import { cloudflare } from '@cloudflare/vite-plugin'; import { defineConfig, mergeConfig } from 'vite'; ${config}`
 				);
 				const framework = new Vite({ id: "vite", name: "Vite" });
-				expect(framework.isConfigured(".", { target: "wrangler" })).toBe(true);
+				expect(framework.isConfigured(".")).toBe(true);
 			}
 		);
 
-		it("only treats the Cloudflare plugin as configured in legacy Wrangler mode", async ({
+		it("treats the Cloudflare plugin in a plain object export as configured", async ({
 			expect,
 		}) => {
+			await writeFile(
+				"vite.config.ts",
+				`import { cloudflare } from "@cloudflare/vite-plugin";
+				 export default { plugins: [cloudflare()] };`
+			);
+			const framework = new Vite({ id: "vite", name: "Vite" });
+
+			expect(framework.isConfigured(".")).toBe(true);
+		});
+
+		it("treats the Cloudflare plugin as configured", async ({ expect }) => {
 			await writeFile(
 				"vite.config.ts",
 				`import { cloudflare } from "@cloudflare/vite-plugin";
@@ -66,8 +77,7 @@ describe("Vite framework", () => {
 			);
 			const framework = new Vite({ id: "vite", name: "Vite" });
 
-			expect(framework.isConfigured(".")).toBe(false);
-			expect(framework.isConfigured(".", { target: "wrangler" })).toBe(true);
+			expect(framework.isConfigured(".")).toBe(true);
 		});
 	});
 

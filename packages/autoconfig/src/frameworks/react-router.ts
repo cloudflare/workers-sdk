@@ -8,10 +8,13 @@ import * as recast from "recast";
 import semiver from "semiver";
 import dedent from "ts-dedent";
 import { Framework } from "./framework-class";
-import { transformViteConfig } from "./utils/vite-config";
+import {
+	checkIfViteConfigUsesCloudflarePlugin,
+	transformViteConfig,
+} from "./utils/vite-config";
 import { installCloudflareVitePlugin } from "./utils/vite-plugin";
 import { CF_VITE_PLUGIN_VERSION_RANGE } from "./utils/vite-plugin-version";
-import type { AutoConfigContext } from "../context";
+import type { AutoConfigContext, AutoConfigTarget } from "../context";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -473,6 +476,15 @@ export class ReactRouter extends Framework {
 	readonly env = {
 		CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT: "true",
 	} as const;
+
+	isConfigured(
+		projectPath: string,
+		{ target = "cf" }: { target?: AutoConfigTarget } = {}
+	): boolean {
+		return (
+			target === "cf" && checkIfViteConfigUsesCloudflarePlugin(projectPath)
+		);
+	}
 
 	async configure({
 		dryRun,

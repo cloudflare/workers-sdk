@@ -10,14 +10,22 @@ import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import {
 	mergeObjectProperties,
+	parseFile,
 	transformFile,
 } from "@cloudflare/shared-ast-primitives";
-import { parseJSONC } from "@cloudflare/workers-utils";
+import {
+	getInstalledPackageVersion,
+	parseJSONC,
+} from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import semiver from "semiver";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { Framework } from "./framework-class";
-import type { AutoConfigContext } from "../context";
+import {
+	extractConfigObject,
+	getStaticPropertyName,
+} from "./utils/vite-config";
+import type { AutoConfigContext, AutoConfigTarget } from "../context";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -26,6 +34,25 @@ import type { PackageManager } from "@cloudflare/workers-utils";
 
 export class Astro extends Framework {
 	override readonly supportsMode = true;
+
+	isConfigured(
+		projectPath: string,
+		{ target = "cf" }: { target?: AutoConfigTarget } = {}
+	): boolean {
+		if (target !== "cf") {
+			return false;
+		}
+		// The adapter supports cf from version 15, which reads `cloudflare.config.ts`
+		const adapterVersion = getInstalledPackageVersion(
+			"@astrojs/cloudflare",
+			projectPath
+		);
+		return (
+			adapterVersion !== undefined &&
+			Number(adapterVersion.split(".")[0]) >= 15 &&
+			usesCloudflareAdapter(projectPath)
+		);
+	}
 
 	async configure({
 		target,
@@ -151,6 +178,59 @@ function findAstroConfigFile(projectPath: string): string {
 	throw new Error(
 		"Could not find Astro config file (astro.config.mjs, astro.config.mts, astro.config.ts, or astro.config.js)"
 	);
+}
+
+/**
+ * Checks whether the Astro config sets the Cloudflare adapter, as in `adapter: cloudflare()`.
+ *
+ * @param projectPath The path of the project
+ * @returns Whether the project's Astro config uses the Cloudflare adapter
+ */
+function usesCloudflareAdapter(projectPath: string): boolean {
+	let configPath: string;
+	try {
+		configPath = findAstroConfigFile(projectPath);
+	} catch {
+		// Astro projects do not need a config file
+		return false;
+	}
+	const program = parseFile(configPath);
+	let adapterName: string | undefined;
+	for (const statement of program?.body ?? []) {
+		if (
+			statement.type === "ImportDeclaration" &&
+			statement.source.value === "@astrojs/cloudflare"
+		) {
+			adapterName = statement.specifiers.find(
+				(specifier) => specifier.type === "ImportDefaultSpecifier"
+			)?.local.name;
+		}
+	}
+	if (!program || !adapterName) {
+		return false;
+	}
+
+	let usesAdapter = false;
+	recast.visit(program, {
+		visitCallExpression(path) {
+			const { callee } = path.node;
+			if (callee.type !== "Identifier" || callee.name !== "defineConfig") {
+				return this.traverse(path);
+			}
+			const adapter = extractConfigObject(
+				path.node.arguments[0]
+			)?.properties.findLast(
+				(property) => getStaticPropertyName(property) === "adapter"
+			);
+			usesAdapter =
+				adapter?.type === "ObjectProperty" &&
+				adapter.value.type === "CallExpression" &&
+				adapter.value.callee.type === "Identifier" &&
+				adapter.value.callee.name === adapterName;
+			return false;
+		},
+	});
+	return usesAdapter;
 }
 
 /**

@@ -15,7 +15,10 @@ import {
 	AutoConfigDetectionError,
 	AutoConfigFrameworkConfigurationError,
 } from "../errors";
-import { getFrameworkClassInstance } from "../frameworks";
+import {
+	getFrameworkClassInstance,
+	requiresFrameworkSetup,
+} from "../frameworks";
 import {
 	getAllFrameworksInfos,
 	staticFramework,
@@ -144,8 +147,9 @@ function normalizeOutputDir(projectPath: string, outputDir: string): string {
  * Detects project details needed for autoconfig: framework, package manager,
  * output directory, worker name, commands, and whether the project is already configured.
  * By default, the project is considered configured when `cloudflare.config.ts`
- * exists. Passing `target: "wrangler"` opts into Wrangler configuration
- * detection instead.
+ * exists and, for frameworks that autoconfig sets up for cf, the framework is set
+ * up, for example with the Cloudflare Vite plugin. Passing `target: "wrangler"`
+ * opts into Wrangler configuration detection instead.
  *
  * For the cf target, build and dev commands may use bare framework executables.
  * Callers must resolve these from `nodeModulesPaths`, which includes the
@@ -225,17 +229,6 @@ export async function getDetailsForAutoConfig({
 				? resolve(projectPath, wranglerConfigPath)
 				: findWranglerConfigFile(projectPath)
 			: undefined;
-	if (wranglerConfigFile !== undefined) {
-		return {
-			configured: false,
-			projectPath,
-			wranglerConfigPath: wranglerConfigFile,
-			workerName: getWorkerName(undefined, projectPath),
-			// The migration finds the package manager itself
-			packageManager: NpmPackageManager,
-		};
-	}
-
 	const { detectedFramework, packageManager, isWorkspaceRoot, workspaceRoot } =
 		await detectFramework(projectPath, context, { wranglerConfig, target });
 	const nodeModulesPaths = getNodeModulesPaths(projectPath, workspaceRoot);
@@ -245,8 +238,11 @@ export async function getDetailsForAutoConfig({
 		target
 	);
 	const configured =
-		hasCloudflareConfig ||
-		detectedFrameworkInstance.isConfigured(projectPath, { target });
+		target === "cf"
+			? hasCloudflareConfig &&
+				(!requiresFrameworkSetup(detectedFramework.framework.id) ||
+					detectedFrameworkInstance.isConfigured(projectPath, { target }))
+			: detectedFrameworkInstance.isConfigured(projectPath, { target });
 	const useStaticAssets =
 		!configured &&
 		requestedOutputDir !== undefined &&
@@ -265,6 +261,21 @@ export async function getDetailsForAutoConfig({
 		);
 	} catch {
 		logger.debug("No package.json found when running autoconfig");
+	}
+
+	if (wranglerConfigFile !== undefined) {
+		return {
+			configured: false,
+			projectPath,
+			wranglerConfigPath: wranglerConfigFile,
+			// Setup migrates the Wrangler config, then sets up the framework when it needs it
+			framework: detectedFrameworkInstance,
+			outputDir: detectedFramework.dist,
+			packageJson,
+			packageManager,
+			isWorkspaceRoot,
+			workerName: getWorkerName(packageJson?.name, projectPath),
+		};
 	}
 
 	let outputDir = configured

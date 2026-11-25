@@ -100,11 +100,15 @@ export type AutoConfigOptions = {
 	skipConfirmations?: boolean;
 	/**
 	 * Whether to install the selected target CLI during autoconfig. When migrating a Wrangler project,
-	 * also whether to install the Vite plugin and Wrangler upgrades it needs, which are otherwise
-	 * reported as follow-ups.
+	 * also whether the migration installs the Vite plugin and Wrangler upgrades it needs, which are
+	 * otherwise reported as follow-ups. Framework setup after the migration still installs the
+	 * packages it needs, as it does for any project.
 	 */
 	enableTargetCliInstallation?: boolean;
-	/** The bundler a migrated Wrangler project uses (default: vite) */
+	/**
+	 * The bundler a migrated Wrangler project uses. Defaults to Vite for frameworks that autoconfig
+	 * sets up for cf and for projects that declare `@cloudflare/vite-plugin`, and to Wrangler otherwise.
+	 */
 	bundler?: MigrationBundler;
 	/** Whether migrating a Wrangler project requires a clean Git worktree (default: false) */
 	requireCleanGitWorktree?: boolean;

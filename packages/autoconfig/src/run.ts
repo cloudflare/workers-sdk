@@ -1,7 +1,7 @@
 import assert from "node:assert";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
-import { relative, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import {
 	maybeAppendWranglerToGitIgnoreLikeFile,
 	maybeAppendWranglerToGitIgnore,
@@ -18,9 +18,14 @@ import {
 import {
 	DEFAULT_COMPAT_DATE,
 	FatalError,
+	getInstalledPackageVersion,
 	isNodejsCompatDefaultOn,
 	parseJSONC,
 } from "@cloudflare/workers-utils";
+import {
+	mergeCloudflareConfig,
+	readWorkerEntrypoint,
+} from "./cloudflare-config";
 import {
 	assertNonConfigured,
 	assertProjectCommandsAvailable,
@@ -32,6 +37,7 @@ import {
 import {
 	isFrameworkSupported,
 	isKnownFramework,
+	requiresFrameworkSetup,
 	type PackageJsonScriptsOverrides,
 	validateFrameworkTargetSupport,
 } from "./frameworks";
@@ -84,11 +90,61 @@ export async function runAutoConfig(
 		autoConfigOptions.enableTargetCliInstallation ?? true;
 
 	if ("wranglerConfigPath" in autoConfigDetails) {
+		const { framework, outputDir, packageJson, projectPath } =
+			autoConfigDetails;
+		// Framework setup works on the project root, so it only follows a migration of the root's Wrangler config
+		const cfFramework =
+			framework !== undefined &&
+			requiresFrameworkSetup(framework.id) &&
+			dirname(autoConfigDetails.wranglerConfigPath) === resolve(projectPath);
+		// Framework setup sets up Vite when the framework isn't set up for cf yet
+		const frameworkSetsUpVite =
+			cfFramework &&
+			autoConfigOptions.bundler !== "wrangler" &&
+			outputDir !== undefined &&
+			!framework.isConfigured(projectPath, { target });
+		// It runs after migrating once the framework is installed, which a fresh checkout isn't yet,
+		// and otherwise on the next run
+		const frameworkPackageInfo = frameworkSetsUpVite
+			? getFrameworkPackageInfo(framework.id, target)
+			: undefined;
+		const setUpFramework =
+			frameworkSetsUpVite &&
+			(frameworkPackageInfo === undefined ||
+				getInstalledPackageVersion(frameworkPackageInfo.name, projectPath) !==
+					undefined);
+		const bundler =
+			autoConfigOptions.bundler ??
+			(cfFramework ||
+			packageJson?.dependencies?.["@cloudflare/vite-plugin"] !== undefined ||
+			packageJson?.devDependencies?.["@cloudflare/vite-plugin"] !== undefined
+				? "vite"
+				: "wrangler");
+		if (setUpFramework) {
+			// Check that the framework can be set up before the migration changes anything
+			if (frameworkPackageInfo) {
+				framework.validateFrameworkVersion(
+					projectPath,
+					frameworkPackageInfo,
+					context
+				);
+			}
+			await framework.configure({
+				target,
+				outputDir,
+				projectPath,
+				workerName: autoConfigDetails.workerName,
+				isWorkspaceRoot: autoConfigDetails.isWorkspaceRoot ?? false,
+				dryRun: true,
+				packageManager: autoConfigDetails.packageManager,
+				context,
+			});
+		}
 		if (
 			!(
 				skipConfirmations ||
 				(await context.dialogs.confirm(
-					`Migrate ${relative(process.cwd(), autoConfigDetails.wranglerConfigPath)} to cloudflare.config.ts?`
+					`Migrate ${relative(process.cwd(), autoConfigDetails.wranglerConfigPath)} to cloudflare.config.ts${setUpFramework ? ` and set up ${framework.name}` : ""}?`
 				))
 			)
 		) {
@@ -99,19 +155,52 @@ export async function runAutoConfig(
 
 		// Loaded on use, so that importing autoconfig doesn't load the migration and its Git helper
 		const { migrateWranglerToCf } = await import("./wrangler-to-cf");
+		const wranglerMigration = await migrateWranglerToCf(
+			autoConfigDetails.wranglerConfigPath,
+			{
+				bundler,
+				dryRun,
+				force: !autoConfigOptions.requireCleanGitWorktree,
+				installDependencies: enableTargetCliInstallation,
+				// Framework setup installs and configures the Vite plugin, and builds the static assets
+				frameworkAssetsDirectory: frameworkSetsUpVite ? outputDir : undefined,
+			}
+		);
+		if (!setUpFramework || dryRun || wranglerMigration.status !== "complete") {
+			return { scripts: {}, wranglerMigration };
+		}
+
+		// Now that the project has a cloudflare.config.ts, detection finds the framework setup it needs
+		const migratedDetails = await getDetailsForAutoConfig({
+			projectPath,
+			target,
+			context,
+		});
+		if (migratedDetails.configured) {
+			return { scripts: {}, wranglerMigration };
+		}
 		return {
-			scripts: {},
-			wranglerMigration: await migrateWranglerToCf(
-				autoConfigDetails.wranglerConfigPath,
-				{
-					bundler: autoConfigOptions.bundler,
-					dryRun,
-					force: !autoConfigOptions.requireCleanGitWorktree,
-					installDependencies: enableTargetCliInstallation,
-				}
-			),
+			...(await runAutoConfig(migratedDetails, {
+				...autoConfigOptions,
+				skipConfirmations: true,
+			})),
+			wranglerMigration,
 		};
 	}
+
+	// Frameworks can keep parts of an existing Worker config, such as a migrated one's own Worker entrypoint
+	const cloudflareConfigPath = resolve(
+		autoConfigDetails.projectPath,
+		"cloudflare.config.ts"
+	);
+	const existingWorkerConfig =
+		target === "cf" && existsSync(cloudflareConfigPath)
+			? {
+					entrypoint: readWorkerEntrypoint(
+						readFileSync(cloudflareConfigPath, "utf8")
+					),
+				}
+			: undefined;
 
 	assertNonConfigured(autoConfigDetails);
 
@@ -186,6 +275,7 @@ export async function runAutoConfig(
 			dryRun: true,
 			packageManager,
 			context,
+			existingWorkerConfig,
 		});
 	const dryRunWorkerConfig = mergeWorkerConfig(
 		defaultWorkerConfig,
@@ -294,6 +384,7 @@ export async function runAutoConfig(
 		dryRun: false,
 		packageManager,
 		context,
+		existingWorkerConfig,
 	});
 	const workerConfig = mergeWorkerConfig(
 		defaultWorkerConfig,
@@ -339,7 +430,11 @@ export async function runAutoConfig(
 
 	if (target === "cf") {
 		if (workerConfig !== null) {
-			await saveCloudflareConfig(autoConfigDetails.projectPath, workerConfig);
+			await saveCloudflareConfig(
+				autoConfigDetails.projectPath,
+				workerConfig,
+				configurationResults.workerConfig ?? {}
+			);
 		}
 		// Only projects with Worker code (an entrypoint) use the types that `cf-typegen` generates
 		if (workerConfig?.entrypoint) {
@@ -550,19 +645,45 @@ export async function saveWranglerJsonc(
 }
 
 /**
- * Writes the Worker configuration used by `cf`.
+ * Writes the Worker configuration used by `cf`, merging it into an existing
+ * `cloudflare.config.ts` instead of replacing it.
  *
  * @param projectPath The project directory
  * @param workerConfig The Worker configuration to write
+ * @param frameworkWorkerConfig The part of `workerConfig` set by the framework
  */
 async function saveCloudflareConfig(
 	projectPath: string,
-	workerConfig: WorkerConfig
+	workerConfig: WorkerConfig,
+	frameworkWorkerConfig: Partial<WorkerConfig>
 ): Promise<void> {
 	await writeFile(
 		resolve(projectPath, "cloudflare.config.ts"),
-		renderCloudflareConfig(workerConfig)
+		getCloudflareConfigContent(projectPath, workerConfig, frameworkWorkerConfig)
 	);
+}
+
+/**
+ * Renders the `cloudflare.config.ts` that autoconfig writes.
+ *
+ * @param projectPath The project directory
+ * @param workerConfig The Worker configuration to write
+ * @param frameworkWorkerConfig The part of `workerConfig` set by the framework
+ * @returns A new configuration module, or the existing one with the configuration merged into it
+ */
+function getCloudflareConfigContent(
+	projectPath: string,
+	workerConfig: WorkerConfig,
+	frameworkWorkerConfig: Partial<WorkerConfig>
+): string {
+	const configPath = resolve(projectPath, "cloudflare.config.ts");
+	return existsSync(configPath)
+		? mergeCloudflareConfig(
+				readFileSync(configPath, "utf8"),
+				workerConfig,
+				frameworkWorkerConfig
+			)
+		: renderCloudflareConfig(workerConfig);
 }
 
 /**
@@ -748,8 +869,23 @@ export async function buildOperationsSummary(
 	}
 
 	if (target === "cf" && workerConfig) {
-		logger.log("📄 Create cloudflare.config.ts:");
-		logger.log(indentFileContent(renderCloudflareConfig(workerConfig)));
+		const configExists = existsSync(
+			resolve(autoConfigDetails.projectPath, "cloudflare.config.ts")
+		);
+		logger.log(
+			configExists
+				? "📄 Update cloudflare.config.ts:"
+				: "📄 Create cloudflare.config.ts:"
+		);
+		logger.log(
+			indentFileContent(
+				getCloudflareConfigContent(
+					autoConfigDetails.projectPath,
+					workerConfig,
+					configurationResults.workerConfig ?? {}
+				)
+			)
+		);
 		logger.log("");
 	}
 

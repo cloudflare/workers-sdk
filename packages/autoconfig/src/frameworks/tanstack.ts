@@ -1,7 +1,11 @@
 import { Framework } from "./framework-class";
-import { transformViteConfig } from "./utils/vite-config";
+import {
+	checkIfViteConfigUsesCloudflarePlugin,
+	transformViteConfig,
+} from "./utils/vite-config";
 import { installCloudflareVitePlugin } from "./utils/vite-plugin";
 import { CF_VITE_PLUGIN_VERSION_RANGE } from "./utils/vite-plugin-version";
+import type { AutoConfigTarget } from "../context";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -11,6 +15,15 @@ export class TanstackStart extends Framework {
 	readonly env = {
 		CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT: "true",
 	} as const;
+
+	isConfigured(
+		projectPath: string,
+		{ target = "cf" }: { target?: AutoConfigTarget } = {}
+	): boolean {
+		return (
+			target === "cf" && checkIfViteConfigUsesCloudflarePlugin(projectPath)
+		);
+	}
 
 	async configure({
 		dryRun,
