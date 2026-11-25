@@ -2336,6 +2336,31 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
+			it("should record a new Worker's tag from the upload in the output file", async ({
+				expect,
+			}) => {
+				vi.stubEnv("WRANGLER_OUTPUT_FILE_PATH", "output.json");
+				writeWranglerConfig({
+					oidc_tokens: [
+						{ binding: "API_TOKEN", audience: "https://api.example.com" },
+					],
+				});
+				writeWorkerSource();
+				mockServiceScriptData({});
+				mockSubDomainRequest("test-sub-domain", true, false);
+				mockUploadWorkerRequest({ useOldUploadApi: true });
+
+				await runWrangler("deploy index.js");
+				const deployEntry = fs
+					.readFileSync("output.json", "utf8")
+					.split("\n")
+					.filter(Boolean)
+					.map((line) => JSON.parse(line))
+					.find((entry) => entry.type === "deploy");
+				expect(deployEntry).toMatchObject({ worker_tag: "sample-tag" });
+				expect(std.out).toContain("Subject: worker:sample-tag");
+			});
+
 			it("should print the subject from an existing Worker's tag", async ({
 				expect,
 			}) => {
