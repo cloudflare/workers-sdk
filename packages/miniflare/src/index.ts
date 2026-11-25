@@ -193,8 +193,6 @@ import type {
 import type { WorkerDefinition } from "./shared/dev-registry-types";
 import type { Awaitable } from "./workers";
 import type { FlagshipAdmin } from "./workers/flagship/admin";
-import type { EvaluationDetails, FlagValue } from "./workers/flagship/evaluate";
-import type { Flag, FlagInput } from "./workers/flagship/flags";
 import type {
 	CacheStorage,
 	D1Database,
@@ -2115,10 +2113,11 @@ export class Miniflare {
 		sharedOpts.cf = await setupCf(this.#log, sharedOpts.cf);
 		this.#cfObject = sharedOpts.cf;
 
+		// Bindings to Workers outside this instance go through the dev registry
+		// proxy, so a Worker that isn't running fails calls to it rather than
+		// stopping workerd from starting
 		const { workerOpts: allWorkerOpts, externalServices } =
-			this.#devRegistry.isEnabled()
-				? getExternalServiceEntrypoints(this.#workerOpts, sharedOpts)
-				: { workerOpts: this.#workerOpts, externalServices: null };
+			getExternalServiceEntrypoints(this.#workerOpts, sharedOpts);
 
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const workflowExporters = getWorkflowExporters(allWorkerOpts);
@@ -2459,20 +2458,20 @@ export class Miniflare {
 			}
 		}
 
-		if (
-			this.#devRegistry.isEnabled() &&
-			externalServices !== null &&
-			(externalServices.size > 0 ||
-				hasQueues ||
-				sharedOpts.unsafeEnableSharedStorage)
-		) {
+		if (this.#devRegistry.isEnabled()) {
 			await this.#devRegistry.watch(
 				externalServices,
 				hasQueues,
 				sharedOpts.unsafeEnableSharedStorage === true &&
 					sharedOpts.resourcePersistencePath !== undefined
 			);
+		}
 
+		if (
+			externalServices.size > 0 ||
+			hasQueues ||
+			sharedOpts.unsafeEnableSharedStorage
+		) {
 			const externalObjects = Array.from(externalServices).flatMap(
 				([scriptName, { classNames }]) =>
 					Array.from(classNames).map<[string, string]>((className) => [
@@ -3678,8 +3677,15 @@ export class Miniflare {
 		const control = await this.#getDevControl();
 		await control.evictDurableObject(scriptName, className, options);
 	}
+	/**
+	 * Lists the IDs of a Durable Object class's instances with persisted storage.
+	 *
+	 * @param className The Durable Object class, as the Worker exports it
+	 * @param workerName The Worker that exports it. Defaults to the first Worker.
+	 * @returns The IDs of the class's instances
+	 */
 	async listDurableObjectIds(
-		classNameOrBindingName: string,
+		className: string,
 		workerName?: string
 	): Promise<string[]> {
 		this.#checkDisposed();
@@ -3689,36 +3695,22 @@ export class Miniflare {
 		const workerOpts = this.#workerOpts[workerIndex];
 		const resolvedWorkerName = workerOpts.config.name;
 
-		// `classNameOrBindingName` may be either a namespace binding name (a
-		// `durable-object` entry in `config.env`) or a class name exported by this
-		// worker (a `durable-object` entry in `config.exports`).
-		let className: string | undefined;
-		let scriptName: string | undefined;
-		const binding = workerOpts.config.env?.[classNameOrBindingName];
-		if (binding?.type === "durable-object") {
-			className = binding.exportName;
-			scriptName = binding.worker;
-		} else if (
-			getExportsOfType(workerOpts.config, "durable-object").some(
-				([exportName]) => exportName === classNameOrBindingName
+		if (
+			!getExportsOfType(workerOpts.config, "durable-object").some(
+				([exportName]) => exportName === className
 			)
 		) {
-			className = classNameOrBindingName;
-			scriptName = resolvedWorkerName;
-		}
-
-		if (className === undefined) {
 			const friendlyWorkerName = resolvedWorkerName
 				? `${JSON.stringify(resolvedWorkerName)} worker`
 				: "the worker";
 			throw new TypeError(
-				`No Durable Object class or namespace binding named ${JSON.stringify(
-					classNameOrBindingName
+				`No Durable Object class named ${JSON.stringify(
+					className
 				)} found in ${friendlyWorkerName}.`
 			);
 		}
 
-		const serviceName = getUserServiceName(scriptName ?? resolvedWorkerName);
+		const serviceName = getUserServiceName(resolvedWorkerName);
 		const classConfig = getDurableObjectClassNames(this.#workerOpts)
 			.get(serviceName)
 			?.get(className);
@@ -3726,14 +3718,14 @@ export class Miniflare {
 
 		const namespaceKey = getDurableObjectUniqueKey(
 			className,
-			scriptName ?? resolvedWorkerName,
+			resolvedWorkerName,
 			unsafeUniqueKey
 		);
 
 		if (namespaceKey === undefined) {
 			throw new TypeError(
 				`Cannot list Durable Object ids for ${JSON.stringify(
-					classNameOrBindingName
+					className
 				)} because the namespace uses ephemeral local storage.`
 			);
 		}

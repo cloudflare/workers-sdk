@@ -128,6 +128,47 @@ describe("convertToWranglerConfig", () => {
 			});
 		});
 
+		it("maps Images URL transformations without a binding", ({ expect }) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					images: { urlTransformations: { enabled: true } },
+				},
+				containers: [],
+			});
+
+			expect(result.images).toEqual({
+				url_transformations: { enabled: true },
+			});
+		});
+
+		it("merges Images URL transformations with the Images binding", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					images: {
+						urlTransformations: {
+							enabled: true,
+							allowedOrigins: ["*.example.com"],
+						},
+					},
+					env: { IMAGES: { type: "images", dev: { remote: true } } },
+				},
+				containers: [],
+			});
+
+			expect(result.images).toEqual({
+				binding: "IMAGES",
+				remote: true,
+				url_transformations: {
+					enabled: true,
+					allowed_origins: ["*.example.com"],
+				},
+			});
+		});
+
 		it("passes cache through unchanged", ({ expect }) => {
 			expect(
 				convertToWranglerConfig({

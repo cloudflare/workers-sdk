@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import { Miniflare } from "miniflare";
 import { createAuthForProfile, resolveAuthProfile } from "./auth";
 import { getInitialWorkerNameToExportTypesMap } from "./export-types";
 import { debuglog } from "./utils";
@@ -21,7 +20,7 @@ import type {
 } from "@cloudflare/config";
 import type { CloudflareAuth } from "@cloudflare/workers-auth/cf";
 import type { Logger } from "@cloudflare/workers-utils";
-import type { MiniflareOptions } from "miniflare";
+import type { Miniflare, MiniflareOptions } from "miniflare";
 import type * as vite from "vite";
 
 /**
@@ -56,6 +55,7 @@ export class PluginContext {
 	#sharedContext: SharedContext;
 	#resolvedPluginConfig?: ResolvedPluginConfig;
 	#resolvedViteConfig?: vite.ResolvedConfig;
+	#previousOutputHadContainers = false;
 	#environmentNameToAdditionalModules = new Map<
 		string,
 		Map<string, ModuleType>
@@ -75,6 +75,7 @@ export class PluginContext {
 
 	/** Creates a new Miniflare instance or updates the existing instance */
 	async startOrUpdateMiniflare(options: MiniflareOptions): Promise<void> {
+		const { Miniflare } = await import("miniflare");
 		if (!this.#sharedContext.miniflare) {
 			debuglog("Creating new Miniflare instance");
 			this.#sharedContext.miniflare = new Miniflare(options);
@@ -191,6 +192,19 @@ export class PluginContext {
 
 	setResolvedViteConfig(resolvedViteConfig: vite.ResolvedConfig): void {
 		this.#resolvedViteConfig = resolvedViteConfig;
+	}
+
+	/**
+	 * Records that the Build Output tree cleaned at the start of this build held
+	 * Container output. It stays set if the config is resolved again after the
+	 * tree has been cleaned.
+	 */
+	setPreviousOutputHadContainers(): void {
+		this.#previousOutputHadContainers = true;
+	}
+
+	get previousOutputHadContainers(): boolean {
+		return this.#previousOutputHadContainers;
 	}
 
 	get resolvedViteConfig(): vite.ResolvedConfig {

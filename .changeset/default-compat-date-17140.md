@@ -18,6 +18,6 @@
 "wrangler": patch
 ---
 
-Update `DEFAULT_COMPAT_DATE` to 2026-11-19
+Update `DEFAULT_COMPAT_DATE` to 2026-11-24
 
 Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.

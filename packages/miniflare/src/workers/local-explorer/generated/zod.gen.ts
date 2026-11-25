@@ -1116,6 +1116,8 @@ export const zWorkersKvNamespaceDeleteMultipleKeyValuePairsResponse =
 export const zWorkersKvNamespaceGetMultipleKeyValuePairsData = z.object({
 	body: z.object({
 		keys: z.array(zWorkersKvKeyNameBulk).max(100),
+		type: z.enum(["text", "json"]).optional(),
+		withMetadata: z.boolean().optional().default(false),
 	}),
 	path: z.object({
 		namespace_id: zWorkersKvNamespaceIdentifier,
@@ -1625,6 +1627,7 @@ export const zR2BucketListObjectsData = z.object({
 			prefix: z.string().optional(),
 			delimiter: z.string().optional(),
 			cursor: z.string().optional(),
+			start_after: z.string().optional(),
 			per_page: z.int().optional().default(1000),
 		})
 		.optional(),

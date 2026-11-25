@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-utils",
-	"version": "0.55.0",
+	"version": "0.57.0",
 	"description": "Internal utility package for workers-sdk. Not intended for external use — APIs may change without notice.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/workers-utils#readme",
 	"bugs": {
@@ -31,6 +31,10 @@
 			"import": "./dist/prometheus-metrics.mjs",
 			"types": "./dist/prometheus-metrics.d.mts"
 		},
+		"./apply-d1-migrations": {
+			"import": "./dist/apply-d1-migrations.mjs",
+			"types": "./dist/apply-d1-migrations.d.mts"
+		},
 		"./compliance": {
 			"import": "./dist/compliance.mjs",
 			"types": "./dist/compliance.d.mts"
@@ -42,6 +46,10 @@
 		"./fs-helpers": {
 			"import": "./dist/fs-helpers.mjs",
 			"types": "./dist/fs-helpers.d.mts"
+		},
+		"./glob-matcher": {
+			"types": "./dist/glob-matcher.d.mts",
+			"import": "./dist/glob-matcher.mjs"
 		},
 		"./compatibility-date": {
 			"import": "./dist/compatibility-date.mjs",
@@ -108,6 +116,7 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@types/command-exists": "^1.2.0",
+		"@types/glob-to-regexp": "^0.4.1",
 		"@types/minimatch": "^5.1.2",
 		"@types/node": "catalog:default",
 		"@vitest/ui": "catalog:default",
@@ -117,6 +126,7 @@
 		"concurrently": "^8.2.2",
 		"dotenv-expand": "13.0.0",
 		"empathic": "^2.0.0",
+		"glob-to-regexp": "0.4.1",
 		"hash-wasm": "4.13.0",
 		"jsonc-parser": "catalog:default",
 		"minimatch": "^5.1.9",

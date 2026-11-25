@@ -1,5 +1,56 @@
 # @cloudflare/vitest-plugin
 
+## 1.9.2
+
+### Patch Changes
+
+- Updated dependencies [[`3d228ba`](https://github.com/cloudflare/workers-sdk/commit/3d228ba0f1b155e96f3ab09e1a467937e1d51051)]:
+  - miniflare@5.20261123.1-beta
+
+## 1.9.1
+
+### Patch Changes
+
+- [#17070](https://github.com/cloudflare/workers-sdk/pull/17070) [`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16879](https://github.com/cloudflare/workers-sdk/pull/16879) [`5970e6a`](https://github.com/cloudflare/workers-sdk/commit/5970e6a842b36665ab092f54ae276d34b02e3a29) Thanks [@edmundhung](https://github.com/edmundhung)! - Throw from `readD1Migrations()` when the migrations directory doesn't exist
+
+  Passing options with a missing `migrationsDir` used to return no migrations, so a typo silently applied nothing. It now throws "No migrations present at …", as Wrangler does. Passing a directory path that doesn't exist throws the same error. A migrations directory that can't be read now also throws when you pass options, and both forms name the directory in the error.
+
+- [#17108](https://github.com/cloudflare/workers-sdk/pull/17108) [`65f6f33`](https://github.com/cloudflare/workers-sdk/commit/65f6f33eaad8a4712f915d884bfb4c04a862c516) Thanks [@Hebilicious](https://github.com/Hebilicious)! - Resolve the runner's `vitest/worker` import from the plugin, not from the project root
+
+  The runner is a virtual module, `/index.mjs`, so Vite resolved its `vitest/worker` import from the project root. When the root could not resolve `vitest`, as in a pnpm workspace whose root package does not depend on it, no test file ran and Workers threw `No such module "vitest/worker"`. When a parent directory had another `vitest` version, the runner loaded that version and Vitest failed to find the runner. The plugin now resolves `vitest/worker` from its own package, so the runner uses the same Vitest as the pool.
+
+- Updated dependencies [[`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef), [`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef), [`7afc49c`](https://github.com/cloudflare/workers-sdk/commit/7afc49c652d8be84e4f7a6d3673145340e37a685), [`086706d`](https://github.com/cloudflare/workers-sdk/commit/086706dfec2238540e8170d69fd9481c547f306d), [`5b45f32`](https://github.com/cloudflare/workers-sdk/commit/5b45f32b75e40540f6be934978e48b2cd816ed42), [`00413bb`](https://github.com/cloudflare/workers-sdk/commit/00413bbb0decc8d3282a7bc5259d629614e66876), [`5bc7dba`](https://github.com/cloudflare/workers-sdk/commit/5bc7dba8e4d2b9254b48d3c4d3ef2df23a918637), [`086706d`](https://github.com/cloudflare/workers-sdk/commit/086706dfec2238540e8170d69fd9481c547f306d)]:
+  - miniflare@5.20261123.0-beta
+
+## 1.9.0
+
+### Minor Changes
+
+- [#16174](https://github.com/cloudflare/workers-sdk/pull/16174) [`629f135`](https://github.com/cloudflare/workers-sdk/commit/629f135e4259c6a19aa9331a7346d993b8ef328a) Thanks [@james-elicx](https://github.com/james-elicx)! - Remove the dependency on `wrangler`
+
+  The Vitest plugin no longer depends on `wrangler`. Reading the Wrangler configuration file, generating Miniflare options, loading local variables and serving the Pages `ASSETS` binding now use shared workers-sdk packages that are bundled into the plugin. Installing the plugin no longer installs `wrangler` as well. If your project runs the `wrangler` CLI (for example `wrangler types`), add `wrangler` to your own `devDependencies`.
+
+### Patch Changes
+
+- [#17031](https://github.com/cloudflare/workers-sdk/pull/17031) [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-19
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17043](https://github.com/cloudflare/workers-sdk/pull/17043) [`4f5b118`](https://github.com/cloudflare/workers-sdk/commit/4f5b1182f2481ddafbc84e32d654fd4fa415128f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update Undici to 7.30.2 to include upstream security fixes
+
+  This patch includes six upstream security fixes covering caching, redirects, and Subresource Integrity verification. Update the shared Undici dependency and matching types together so affected packages ship the patched version.
+
+- [#17035](https://github.com/cloudflare/workers-sdk/pull/17035) [`1b563db`](https://github.com/cloudflare/workers-sdk/commit/1b563db5ae1d78d7393befaa90b1b947646d76ab) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix remote bindings authentication with API tokens scoped to an individual Worker
+
+  Remote bindings now create preview sessions through the Worker-scoped endpoint. When the response includes a usable exchange URL, its hostname is used without account-wide Workers subdomain access; otherwise, the existing account subdomain lookup or registration is used. This applies to `getPlatformProxy` and remote bindings in Wrangler, the Cloudflare Vite plugin, and the Vitest integration. Tokens still need permission to update the named Worker.
+
+- Updated dependencies [[`8712fc5`](https://github.com/cloudflare/workers-sdk/commit/8712fc53a8070de0542e02fbb7105a3c2c3ffc7d), [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22), [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22), [`8f45554`](https://github.com/cloudflare/workers-sdk/commit/8f4555407cd0954fb4eba2cf10e5d3a94a1da2ed), [`4f5b118`](https://github.com/cloudflare/workers-sdk/commit/4f5b1182f2481ddafbc84e32d654fd4fa415128f), [`8f45554`](https://github.com/cloudflare/workers-sdk/commit/8f4555407cd0954fb4eba2cf10e5d3a94a1da2ed)]:
+  - miniflare@5.20261119.0-beta
+
 ## 1.8.5
 
 ### Patch Changes

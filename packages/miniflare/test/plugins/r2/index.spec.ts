@@ -793,6 +793,16 @@ test("list: lists keys with startAfter and limit (where startAfter doesn't match
 		],
 	});
 });
+test("list: paginates with startAfter and cursor using UTF-8 key order", async ({
+	expect,
+}) => {
+	// "Ａ" (U+FF21) sorts after emoji in UTF-16 but before them in UTF-8
+	await testList(expect, {
+		keys: ["Ａ", "📷", "📸"],
+		options: { startAfter: "Ａ", limit: 1 },
+		pages: [["📷"], ["📸"]],
+	});
+});
 test("list: accepts long prefix", async ({ expect }) => {
 	const { r2, ns } = ctx;
 	// Max key length, minus padding for `context.ns`

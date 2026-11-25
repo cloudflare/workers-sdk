@@ -1244,6 +1244,76 @@ test("Miniflare: service binding to disk", async ({ expect }) => {
 	expect(res.status).toBe(204);
 	expect(await fs.readFile(testPath, "utf8")).toBe("✏️");
 });
+test("Miniflare: fails calls to Workers that aren't running", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		// Keeps Workers in other dev sessions out of reach
+		enableDevRegistry: false,
+		workers: [
+			{
+				config: {
+					name: "app",
+					compatibilityDate: "2025-05-01",
+					env: {
+						API: { type: "worker", worker: "missing" },
+						COUNTER: {
+							type: "durable-object",
+							worker: "missing",
+							exportName: "Counter",
+						},
+						FLOW: {
+							type: "workflow",
+							name: "flow",
+							worker: "missing",
+							exportName: "Flow",
+						},
+					},
+					tailConsumers: [{ worker: "missing" }],
+					manifest: singleModuleManifest(`
+						export default {
+							async fetch(request, env) {
+								if (new URL(request.url).pathname === "/flow") {
+									const flow = await env.FLOW.get("flow");
+									return Response.json(await flow.status());
+								}
+								const api = await env.API.fetch("http://api/");
+								let counter;
+								try {
+									const id = env.COUNTER.idFromName("a");
+									const response = await env.COUNTER.get(id).fetch("http://counter/");
+									counter = [response.status, await response.text()];
+								} catch (error) {
+									counter = error.message;
+								}
+								// Its run fails when the Engine calls the Workflow's Worker
+								await env.FLOW.create({ id: "flow" });
+								return Response.json({ api: [api.status, await api.text()], counter });
+							}
+						};
+					`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const response = await mf.dispatchFetch("http://localhost/");
+	const notFound =
+		'Worker "missing" not found. Make sure it is running locally.';
+	expect(await response.json()).toEqual({
+		api: [503, notFound],
+		counter: [503, notFound],
+	});
+	await vi.waitFor(async () => {
+		const flow = await mf.dispatchFetch("http://localhost/flow");
+		expect(await flow.json()).toMatchObject({
+			status: "errored",
+			error: { message: notFound },
+		});
+	});
+});
+
 test("Miniflare: service binding to named entrypoint", async ({ expect }) => {
 	const mf = new Miniflare({
 		workers: [
@@ -3630,6 +3700,106 @@ test("Miniflare: unsafeEvictDurableObject() resets in-memory state and preserves
 		memoryCount: 1,
 		storageCount: 2,
 	});
+});
+
+test("Miniflare: unsafeEvictDurableObject() does not block the Node.js event loop while the Durable Object awaits Node.js", async ({
+	expect,
+}) => {
+	// Eviction waits for the Durable Object's `waitUntil()` work. If that work
+	// awaits a Node.js service binding, a synchronous (`Atomics.wait()`) proxy
+	// call would block Node.js from ever answering it, until workerd gave up
+	// after 30 seconds.
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "do-worker",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+			export class Busy {
+				constructor(ctx, env) {
+					this.ctx = ctx;
+					this.env = env;
+				}
+
+				fetch() {
+					this.ctx.waitUntil(this.env.NODE.fetch("http://node/"));
+					return new Response("started");
+				}
+			}
+
+			export default {
+				fetch(_request, env) {
+					return env.BUSY.get(env.BUSY.idFromName("busy")).fetch("http://busy");
+				}
+			};
+		`),
+					env: {
+						BUSY: {
+							type: "durable-object",
+							worker: "do-worker",
+							exportName: "Busy",
+						},
+						NODE: {
+							type: "node-handler",
+							handler: (_req, res) => {
+								setTimeout(() => res.end("done"), 300);
+							},
+						},
+					},
+					exports: {
+						Busy: { type: "durable-object", storage: "sqlite" },
+					},
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const response = await mf.dispatchFetch("http://localhost");
+	expect(await response.text()).toBe("started");
+
+	let ticks = 0;
+	const interval = setInterval(() => ticks++, 10);
+	const start = Date.now();
+	try {
+		await mf.unsafeEvictDurableObject("do-worker", "Busy", { name: "busy" });
+	} finally {
+		clearInterval(interval);
+	}
+	expect(Date.now() - start).toBeLessThan(5000);
+	expect(ticks).toBeGreaterThan(5);
+});
+
+test("Miniflare: unsafeEvictDurableObject() rejects for a Durable Object that is not running", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "do-worker",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+			export class Counter {
+				fetch() {
+					return new Response("ok");
+				}
+			}
+			export default { fetch: () => new Response("ok") };
+		`),
+					exports: {
+						Counter: { type: "durable-object", storage: "legacy-kv" },
+					},
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	await expect(
+		mf.unsafeEvictDurableObject("do-worker", "Counter", { name: "cold" })
+	).rejects.toThrow(/not currently running/);
 });
 
 test("Miniflare: allows direct access to workers", async ({ expect }) => {

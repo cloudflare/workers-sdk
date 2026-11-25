@@ -98,7 +98,7 @@ export { openInBrowser } from "./open-in-browser";
 export { clearOutputFilePath, writeOutput } from "./output";
 export type { OutputEntry } from "./output";
 
-export { retryOnAPIFailure } from "./retry";
+export { retryOnAPIFailure, retryWhileVersionNotReadable } from "./retry";
 export { formatTime } from "./format-time";
 export {
 	getHostFromRoute,
@@ -132,9 +132,12 @@ export {
 	compareMigrationPaths,
 	getD1MigrationFiles,
 	normalizeRelativePath,
+	readD1Migrations,
 } from "./d1-migrations";
 export type {
 	D1MigrationFile,
 	GetD1MigrationFilesOptions,
+	ReadD1MigrationsOptions,
 } from "./d1-migrations";
+export type { D1Migration } from "./apply-d1-migrations";
 export { normalizeSqlLineEndings, splitSqlQuery } from "./d1-splitter";

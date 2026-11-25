@@ -159,7 +159,6 @@ import {
 	dispatchNamespaceGetCommand,
 	dispatchNamespaceListCommand,
 	dispatchNamespaceNamespace,
-	dispatchNamespaceRenameCommand,
 } from "./dispatch-namespace";
 import { docs } from "./docs";
 import { emailRoutingAddressesCreateCommand } from "./email-routing/addresses/create";
@@ -513,7 +512,7 @@ import {
 } from "./user/profiles";
 import { noProxy, proxy } from "./utils/constants";
 import { logDidYouMean } from "./utils/did-you-mean";
-import { debugLogFilepath } from "./utils/log-file";
+import { getDebugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
 import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
 import { vectorizeDeleteCommand } from "./vectorize/delete";
@@ -714,7 +713,7 @@ export function createCLIParser(argv: string[]) {
 				version: 1,
 				wrangler_version: wranglerVersion,
 				command_line_args: redactEventCode(argv),
-				log_file_path: debugLogFilepath,
+				log_file_path: getDebugLogFilepath(),
 			});
 
 			return true;
@@ -2246,10 +2245,6 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler dispatch-namespace delete",
 			definition: dispatchNamespaceDeleteCommand,
-		},
-		{
-			command: "wrangler dispatch-namespace rename",
-			definition: dispatchNamespaceRenameCommand,
 		},
 	]);
 	registry.registerNamespace("dispatch-namespace");

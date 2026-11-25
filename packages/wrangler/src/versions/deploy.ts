@@ -10,6 +10,7 @@ import {
 import { initContainersSharedContext } from "@cloudflare/containers-shared";
 import {
 	type ApiVersion,
+	applyImagesUrlTransformations,
 	deployVersionedDurableObjectContainerApplications,
 	getVersionedDurableObjectContainerApplications,
 	INCONSISTENT_EXPORTS_ACROSS_VERSIONS_CODE,
@@ -17,7 +18,11 @@ import {
 	renderInconsistentExportsAcrossVersionsError,
 	resolveVersionedDurableObjectContainerApplications,
 } from "@cloudflare/deploy-helpers";
-import { APIError, UserError } from "@cloudflare/workers-utils";
+import {
+	APIError,
+	retryWhileVersionNotReadable,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { containersScope } from "../containers";
@@ -42,7 +47,10 @@ import {
 	resolveDurableObjectsCodeUpdateStrategy,
 } from "./deployment-args";
 import type { Percentage, VersionCache, VersionId } from "./types";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type {
+	ComplianceConfig,
+	ServiceMetadataRes,
+} from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils/config";
 
 const EPSILON = 0.001; // used to avoid floating-point errors. Comparions to a value +/- EPSILON will mean "roughly equals the value".
@@ -214,7 +222,10 @@ export const versionsDeployCommand = createCommand({
 
 		const selectedVersions = await Promise.all(
 			confirmedVersionsToDeploy.map((versionId) =>
-				fetchVersion(config, accountId, workerName, versionId)
+				retryWhileVersionNotReadable(
+					() => fetchVersion(config, accountId, workerName, versionId),
+					logger
+				)
 			)
 		);
 		const containerApplications =
@@ -318,6 +329,12 @@ export const versionsDeployCommand = createCommand({
 		}
 
 		await maybePatchSettings(config, accountId, workerName);
+		await applyImagesUrlTransformations(
+			config,
+			accountId,
+			workerName,
+			"wrangler versions deploy"
+		);
 
 		const elapsedMilliseconds = Date.now() - start;
 		const elapsedSeconds = elapsedMilliseconds / 1000;
@@ -336,10 +353,11 @@ export const versionsDeployCommand = createCommand({
 
 		let workerTag: string | null = null;
 		try {
-			const serviceMetaData = await fetchResult<{
-				default_environment: { script: { tag: string } };
-			}>(config, `/accounts/${accountId}/workers/services/${workerName}`);
-			workerTag = serviceMetaData.default_environment.script.tag;
+			const serviceMetaData = await fetchResult<ServiceMetadataRes>(
+				config,
+				`/accounts/${accountId}/workers/services/${workerName}`
+			);
+			workerTag = serviceMetaData.default_environment.script?.tag ?? null;
 		} catch {
 			// If the fetch fails then we just output a null for the workerTag.
 		}
@@ -425,12 +443,16 @@ async function promptVersionsToDeploy(
 					versionCache
 				);
 			}
-			await fetchVersions(
-				complianceConfig,
-				accountId,
-				workerName,
-				versionCache,
-				...defaultSelectedVersionIds
+			await retryWhileVersionNotReadable(
+				() =>
+					fetchVersions(
+						complianceConfig,
+						accountId,
+						workerName,
+						versionCache,
+						...defaultSelectedVersionIds
+					),
+				logger
 			);
 		},
 	});

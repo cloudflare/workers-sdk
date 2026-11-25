@@ -272,6 +272,9 @@ jobs:
         if: steps.check-frameworks.outputs.run_frameworks == 'true' && steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies
         with:
+          # SolidStart 2 requires Node 24+ and its tests only run with pnpm.
+          # Keep the npm framework jobs on the repository's Node 22 pin for coverage.
+          node-version: ${{ matrix.pm.name == 'pnpm' && '24' || '' }}
           turbo-api: ${{ secrets.TURBO_API }}
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}

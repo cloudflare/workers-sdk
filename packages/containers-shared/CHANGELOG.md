@@ -1,5 +1,43 @@
 # @cloudflare/containers-shared
 
+## 0.27.2
+
+### Patch Changes
+
+- [#17070](https://github.com/cloudflare/workers-sdk/pull/17070) [`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef), [`b007991`](https://github.com/cloudflare/workers-sdk/commit/b00799168dc2580013ea3c9b7d4f4505e120afa2), [`5970e6a`](https://github.com/cloudflare/workers-sdk/commit/5970e6a842b36665ab092f54ae276d34b02e3a29)]:
+  - @cloudflare/workers-utils@0.57.0
+  - @cloudflare/build-output-utils@1.0.0-rc.4
+  - @cloudflare/cli-shared-helpers@0.3.13
+  - @cloudflare/config@1.0.0-rc.4
+
+## 0.27.1
+
+### Patch Changes
+
+- [#17031](https://github.com/cloudflare/workers-sdk/pull/17031) [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-19
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17081](https://github.com/cloudflare/workers-sdk/pull/17081) [`08eeaf4`](https://github.com/cloudflare/workers-sdk/commit/08eeaf4846ee4cd65a3cf73d063dbb88df322033) Thanks [@Naapperas](https://github.com/Naapperas)! - Wait for a just-uploaded Worker version to become readable during deploys
+
+  For a few seconds after a version is uploaded, the Workers API can alternate between returning it and reporting it as not found. `wrangler versions deploy` failed on the first not-found read, and `wrangler deploy` for Durable Object-managed containers gave up after about 2 seconds and reported that the container settings were not fully applied.
+
+  Both now keep retrying a not-found version for up to about 12 seconds and log a message while they wait. These reads also retry transient API failures, such as server errors, rate limiting, timeouts and network errors, which can wait longer when the API asks for it. Other errors still fail immediately.
+
+- [#17030](https://github.com/cloudflare/workers-sdk/pull/17030) [`f3f7bbc`](https://github.com/cloudflare/workers-sdk/commit/f3f7bbc1fe609e14ea9a7be78a25551d270f1fce) Thanks [@cpojer](https://github.com/cpojer)! - Stop running Docker at the end of builds for projects with no Containers
+
+  Builds that write the Build Output Specification ran `docker image ls` on every build to find image tags left by a previous build, even when the project configured no Containers. On a machine with Docker installed this added about a quarter of a second to each build, and the build waited on the Docker CLI for as long as it took to respond. The lookup is now skipped when the project has no Containers and the build output being replaced had none either. Projects that configure Containers, and the first build after the last Container is removed, still remove previous tags as before.
+
+- Updated dependencies [[`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22), [`be6aa81`](https://github.com/cloudflare/workers-sdk/commit/be6aa81eb24c8ac86e6fa0a0274a3c9257f58e24), [`56974d4`](https://github.com/cloudflare/workers-sdk/commit/56974d49141e72b19b33b74a19c160f734128108), [`08eeaf4`](https://github.com/cloudflare/workers-sdk/commit/08eeaf4846ee4cd65a3cf73d063dbb88df322033), [`629f135`](https://github.com/cloudflare/workers-sdk/commit/629f135e4259c6a19aa9331a7346d993b8ef328a), [`4f5b118`](https://github.com/cloudflare/workers-sdk/commit/4f5b1182f2481ddafbc84e32d654fd4fa415128f), [`629f135`](https://github.com/cloudflare/workers-sdk/commit/629f135e4259c6a19aa9331a7346d993b8ef328a)]:
+  - @cloudflare/workers-utils@0.56.0
+  - @cloudflare/build-output-utils@1.0.0-rc.3
+  - @cloudflare/cli-shared-helpers@0.3.12
+  - @cloudflare/config@1.0.0-rc.3
+
 ## 0.27.0
 
 ### Minor Changes

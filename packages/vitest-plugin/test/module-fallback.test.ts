@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { Request } from "miniflare";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { createViteServer } from "vitest/node";
 import { realPackagePath } from "../src/pool/helpers";
 import {
 	decodeEncodedSpecifier,
@@ -1044,6 +1045,71 @@ describe("realPackagePath", () => {
 		const root = tmp.replaceAll("\\", "/");
 		expect(realPackagePath(`${root}/node_modules/missing/index.js`)).toBe(
 			`${root}/node_modules/missing/index.js`
+		);
+	});
+});
+
+describe("resolving the runner's Vitest entry point", () => {
+	let tmp: string;
+	let vite: Vite.ViteDevServer;
+
+	// The project root can't resolve `vitest`, as in a workspace whose root
+	// package doesn't depend on it. The runner must still load the Vitest that
+	// this package resolves.
+	beforeEach(async () => {
+		tmp = fs.realpathSync(
+			fs.mkdtempSync(path.join(os.tmpdir(), "mf-fallback-vitest-"))
+		);
+		vite = await createViteServer({
+			root: tmp,
+			configFile: false,
+			logLevel: "silent",
+			server: { middlewareMode: true, ws: false },
+		});
+	});
+
+	afterEach(async () => {
+		await vite.close();
+		removeDirSync(tmp);
+	});
+
+	const vitestWorkerPath = fileURLToPath(import.meta.resolve("vitest/worker"));
+
+	it("resolves `vitest/worker` from this package with the legacy registry", async ({
+		expect,
+	}) => {
+		const response = await handleModuleFallbackRequest(
+			vite,
+			moduleFallbackRequest({
+				method: "import",
+				specifier: "/vitest/worker",
+				referrer: "/index.mjs",
+				rawSpecifier: "vitest/worker",
+			})
+		);
+
+		expect(response.status).toBe(301);
+		expect(response.headers.get("Location")).toBe(
+			toWorkerdSpecifier(vitestWorkerPath)
+		);
+	});
+
+	it("resolves `vitest/worker` from this package with the new registry", async ({
+		expect,
+	}) => {
+		const response = await handleModuleFallbackRequest(
+			vite,
+			v2ModuleFallbackRequest({
+				type: "import",
+				specifier: "file:///vitest/worker",
+				referrer: "file:///index.mjs",
+				rawSpecifier: "vitest/worker",
+			})
+		);
+
+		expect(response.status).toBe(301);
+		expect(response.headers.get("Location")).toBe(
+			pathToFileURL(vitestWorkerPath).href
 		);
 	});
 });

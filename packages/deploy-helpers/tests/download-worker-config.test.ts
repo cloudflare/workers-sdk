@@ -1,9 +1,13 @@
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils";
 import { beforeEach, describe, it, vi } from "vitest";
-import { fetchWorkerConfig } from "../src/deploy/helpers/download-worker-config";
+import {
+	downloadWorkerConfig,
+	fetchWorkerConfig,
+} from "../src/deploy/helpers/download-worker-config";
 import { initDeployHelpersContext } from "../src/shared/context";
 
 describe("fetchWorkerConfig", () => {
+	let hasScript: boolean;
 	const fetchResult = vi.fn(async (_config: unknown, resource: string) => {
 		if (resource.endsWith("/bindings")) {
 			return [];
@@ -20,10 +24,11 @@ describe("fetchWorkerConfig", () => {
 		if (resource.endsWith("/schedules")) {
 			return { schedules: [] };
 		}
-		return { script: {} };
+		return { script: hasScript ? {} : null };
 	});
 
 	beforeEach(() => {
+		hasScript = true;
 		fetchResult.mockClear();
 		initDeployHelpersContext({
 			fetchResult: fetchResult as never,
@@ -79,5 +84,24 @@ describe("fetchWorkerConfig", () => {
 		expect(
 			resources.some((resource) => resource.includes("/domains/records?"))
 		).toBe(testCase.fetchCustomDomains);
+	});
+
+	it("cannot download config for a Worker with no script", async ({
+		expect,
+	}) => {
+		hasScript = false;
+		await expect(
+			downloadWorkerConfig(
+				COMPLIANCE_REGION_CONFIG_UNKNOWN,
+				"worker-name",
+				"production",
+				"index.js",
+				"account-id",
+				false,
+				false
+			)
+		).rejects.toThrow(
+			'Cannot download configuration for Worker "worker-name" because it has no uploaded script. Deploy the Worker first.'
+		);
 	});
 });

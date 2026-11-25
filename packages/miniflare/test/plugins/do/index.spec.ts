@@ -213,18 +213,19 @@ test("lists Durable Object ids with persisted storage", async ({ expect }) => {
 	const firstId = namespace.idFromName("/first").toString();
 	const secondId = namespace.idFromName("/second").toString();
 
-	await expect(mf.listDurableObjectIds("COUNTER")).resolves.toEqual([]);
+	await expect(mf.listDurableObjectIds("Counter")).resolves.toEqual([]);
 
 	let res = await mf.dispatchFetch("http://localhost/first");
 	expect(await res.text()).toBe("1");
 	res = await mf.dispatchFetch("http://localhost/second");
 	expect(await res.text()).toBe("1");
 
-	await expect(mf.listDurableObjectIds("COUNTER")).resolves.toEqual(
-		[firstId, secondId].sort()
-	);
 	await expect(mf.listDurableObjectIds("Counter")).resolves.toEqual(
 		[firstId, secondId].sort()
+	);
+	// Not by binding name
+	await expect(mf.listDurableObjectIds("COUNTER")).rejects.toThrow(
+		'No Durable Object class named "COUNTER" found in "worker" worker.'
 	);
 });
 
@@ -826,8 +827,8 @@ test("colo-local actors", async ({ expect }) => {
 	res = await stub.fetch("http://localhost");
 	expect(await res.text()).toBe("body:thing2");
 
-	await expect(mf.listDurableObjectIds("OBJECT")).rejects.toThrow(
-		`Cannot list Durable Object ids for "OBJECT" because the namespace uses ephemeral local storage.`
+	await expect(mf.listDurableObjectIds("TestObject")).rejects.toThrow(
+		`Cannot list Durable Object ids for "TestObject" because the namespace uses ephemeral local storage.`
 	);
 });
 

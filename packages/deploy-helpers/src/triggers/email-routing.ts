@@ -20,6 +20,7 @@ import type {
 	EmailRoutingPlanRequest,
 	EmailRoutingPlanResponse,
 } from "./email-routing-plan";
+import type { ServiceMetadataRes } from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils/config";
 
 /**
@@ -105,22 +106,26 @@ async function resolveOwnerWorkerTag(
 	const deadline = Date.now() + PLAN_RETRY_TIMEOUT_MS;
 	for (;;) {
 		try {
-			const { default_environment } = await fetchResult<{
-				default_environment: { script: { tag: string } };
-			}>(config, `/accounts/${accountId}/workers/services/${scriptName}`);
-			return default_environment.script.tag;
+			const { default_environment } = await fetchResult<ServiceMetadataRes>(
+				config,
+				`/accounts/${accountId}/workers/services/${scriptName}`
+			);
+			const tag = default_environment.script?.tag;
+			if (tag) {
+				return tag;
+			}
 		} catch (error) {
 			if (!isWorkerNotFoundError(error)) {
 				throw error;
 			}
-			if (Date.now() + PLAN_RETRY_DELAY_MS >= deadline) {
-				throw new UserError(
-					"Email Routing could not find the deployed Worker yet. Re-run the deployment.",
-					{ telemetryMessage: "email routing worker metadata not found" }
-				);
-			}
-			await new Promise((resolve) => setTimeout(resolve, PLAN_RETRY_DELAY_MS));
 		}
+		if (Date.now() + PLAN_RETRY_DELAY_MS >= deadline) {
+			throw new UserError(
+				"Email Routing could not find the deployed Worker yet. Re-run the deployment.",
+				{ telemetryMessage: "email routing worker metadata not found" }
+			);
+		}
+		await new Promise((resolve) => setTimeout(resolve, PLAN_RETRY_DELAY_MS));
 	}
 }
 

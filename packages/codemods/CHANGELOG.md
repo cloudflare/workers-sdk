@@ -1,5 +1,65 @@
 # @cloudflare/codemods
 
+## 0.9.1
+
+### Patch Changes
+
+- [#17070](https://github.com/cloudflare/workers-sdk/pull/17070) [`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+## 0.9.0
+
+### Minor Changes
+
+- [#17068](https://github.com/cloudflare/workers-sdk/pull/17068) [`aabe9f5`](https://github.com/cloudflare/workers-sdk/commit/aabe9f5316917832c540dc19df8cfbcfe76753b5) Thanks [@cpojer](https://github.com/cpojer)! - Export the Wrangler config converter from `@cloudflare/codemods/wrangler-to-cf`
+
+  Tools that already hold a parsed Wrangler configuration can now convert it to the cf configuration in memory with `convertWranglerConfig`, instead of writing a `wrangler.json` and running `migrateWranglerToCf` on it. The new entry point loads only the converter, not the codemod runner.
+
+- [#16679](https://github.com/cloudflare/workers-sdk/pull/16679) [`be6aa81`](https://github.com/cloudflare/workers-sdk/commit/be6aa81eb24c8ac86e6fa0a0274a3c9257f58e24) Thanks [@mglewis](https://github.com/mglewis)! - Add `images.url_transformations` to the Wrangler configuration
+
+  The `images` block now accepts a `url_transformations` object for controlling `/cdn-cgi/image/` transformations on requests served by a Worker. `enabled` is required, and `allowed_origins` optionally lists the origins images may be fetched from (use `["*"]` to allow any origin). `binding` is now optional, so `url_transformations` can be configured without an Images binding:
+
+  ```jsonc
+  {
+    "images": {
+      "url_transformations": {
+        "enabled": true,
+        "allowed_origins": ["images.example.com"]
+      }
+    }
+  }
+  ```
+
+  Like the rest of the `images` block, `url_transformations` is not inherited by named environments, and must be specified in each environment that needs it.
+
+  `cloudflare.config.ts` gains the equivalent setting as a top-level `images` field on the Worker, with the Images binding remaining in `env`:
+
+  ```ts
+  export default defineConfig({
+    worker: {
+      name: "my-worker",
+      compatibilityDate: "2026-11-01",
+      images: {
+        urlTransformations: {
+          enabled: true,
+          allowedOrigins: ["images.example.com"],
+        },
+      },
+    },
+  });
+  ```
+
+  `cf migrate` carries `images.url_transformations` over to this field.
+
+  This change adds configuration and validation only. `url_transformations` is not supported in `previews`.
+
+### Patch Changes
+
+- [#17031](https://github.com/cloudflare/workers-sdk/pull/17031) [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-19
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
 ## 0.8.2
 
 ### Patch Changes

@@ -12,7 +12,8 @@ import { beforeEach, describe, it, vi } from "vitest";
 import {
 	appendToDebugLogFile,
 	cleanupOldLogFiles,
-	debugLogFilepath,
+	getDebugLogFilepath,
+	resetDebugLogFilepathForTests,
 	tryCleanupLogs,
 } from "../../utils/log-file";
 import type { ExpectStatic } from "vitest";
@@ -21,10 +22,12 @@ describe("appendToDebugLogFile", () => {
 	runInTempDir();
 
 	beforeEach(() => {
+		resetDebugLogFilepathForTests();
 		vi.stubEnv("WRANGLER_LOG_PATH", "logs");
 	});
 
 	function getLogFileContent(expect: ExpectStatic): string {
+		const debugLogFilepath = getDebugLogFilepath();
 		if (existsSync(debugLogFilepath)) {
 			return readFileSync(debugLogFilepath, "utf8");
 		}
@@ -206,6 +209,7 @@ describe("tryCleanupLogs", () => {
 	runInTempDir();
 
 	beforeEach(() => {
+		resetDebugLogFilepathForTests();
 		vi.stubEnv("WRANGLER_LOG_PATH", "logs");
 	});
 
@@ -219,5 +223,29 @@ describe("tryCleanupLogs", () => {
 
 	it("should not throw when called", ({ expect }) => {
 		expect(() => tryCleanupLogs()).not.toThrow();
+	});
+});
+
+describe("getDebugLogFilepath lazy resolution", () => {
+	runInTempDir();
+
+	beforeEach(() => {
+		resetDebugLogFilepathForTests();
+	});
+
+	it("should respect WRANGLER_LOG_PATH set after the module has already been imported", async ({
+		expect,
+	}) => {
+		// Module is already loaded via the static import at the top of this
+		// file — same as `import { cloudflare } from "@cloudflare/vite-plugin"`
+		// evaluating wrangler before the vite.config.ts body runs.
+		vi.stubEnv("WRANGLER_LOG_PATH", "after-import-logs");
+
+		await appendToDebugLogFile("info", "lazy path test");
+
+		const filepath = getDebugLogFilepath();
+		expect(filepath).toContain("after-import-logs");
+		expect(existsSync(filepath)).toBe(true);
+		expect(readFileSync(filepath, "utf8")).toContain("lazy path test");
 	});
 });

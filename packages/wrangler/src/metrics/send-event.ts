@@ -43,7 +43,6 @@ export type EventNames =
 	| "view dispatch namespace"
 	| "create dispatch namespace"
 	| "delete dispatch namespace"
-	| "rename dispatch namespace"
 	| "create pages project"
 	| "list pages projects"
 	| "create pages deployment"

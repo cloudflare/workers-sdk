@@ -30,7 +30,7 @@ export const d1MigrationsListCommand = createCommand({
 		local: {
 			type: "boolean",
 			description:
-				"Check migrations against a local DB for use with wrangler dev",
+				"Check migrations against a local DB for use with wrangler dev (default)",
 		},
 		remote: {
 			type: "boolean",

@@ -1,11 +1,11 @@
 import { CoreHeaders, coupleWebSocket } from "miniflare";
 import { WebSocketServer } from "ws";
-import { UNKNOWN_HOST } from "./shared";
 import {
 	createHeadersForIncomingMessage,
 	getForwardedProto,
 	resolveRequestTarget,
-} from "./utils";
+} from "./request-handler";
+import { UNKNOWN_HOST } from "./shared";
 import type { Headers, Miniflare } from "miniflare";
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";

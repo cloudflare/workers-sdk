@@ -1,7 +1,7 @@
 {
 	"name": "@cloudflare/config",
-	"version": "1.0.0-rc.2",
-	"description": "Definitions and utilities for configuring Cloudflare Workers and related products. This is not yet stable enough for external use — APIs may change without notice.",
+	"version": "1.0.0-rc.4",
+	"description": "Definitions and utilities for configuring Cloudflare Workers and related products. This is a release candidate for 1.0.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/config#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
+import { loadAndParseConfig } from "@cloudflare/config";
 import {
 	NpmPackageManager,
 	PnpmPackageManager,
@@ -64,6 +65,32 @@ class BuildCommandOverrideFramework extends Static {
 describe("runAutoConfig()", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
+
+	it("creates loadable cf config without a package.json or local cf installation", async ({
+		expect,
+	}) => {
+		await seed({ "index.html": "static site", ".env": "SECRET=secret" });
+		const context = createMockContext();
+		const details = await getDetailsForAutoConfig({
+			projectPath: process.cwd(),
+			outputDir: ".",
+			context,
+		});
+
+		await runAutoConfig(details, {
+			context,
+			skipConfirmations: true,
+			runBuild: false,
+		});
+
+		const { result } = await loadAndParseConfig(
+			join(process.cwd(), "cloudflare.config.ts"),
+			{ isPreview: false, mode: undefined }
+		);
+		expect(result.success).toBe(true);
+		expect(existsSync("package.json")).toBe(false);
+		expect(readFileSync(".assetsignore", "utf8")).toContain(".env*");
+	});
 
 	it.for([
 		{ installTool: true, runBuild: true },
@@ -364,7 +391,7 @@ describe("runAutoConfig()", () => {
 		expect(summary.deployCommand).toBe("npx cf deploy");
 		expect(summary.versionCommand).toBe("npx cf versions upload");
 		expect(readFileSync("cloudflare.config.ts", "utf8")).toContain(
-			'import { defineConfig } from "cf/config";\n\nexport default defineConfig({\n  worker: {\n    "name": "my-static-app"'
+			'import type { CloudflareConfig } from "cf/config";\n\nexport default {\n  worker: {\n    "name": "my-static-app"'
 		);
 		expect(readFileSync("wrangler.config.ts", "utf8")).toContain(
 			'import { defineWranglerConfig } from "wrangler/experimental-config";\n\nexport default defineWranglerConfig({\n  "assetsDirectory": "public"'

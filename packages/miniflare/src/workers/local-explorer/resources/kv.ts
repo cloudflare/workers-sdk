@@ -493,17 +493,15 @@ export async function bulkGetKVValues(c: AppContext, body: BulkGetBody) {
 	if (!namespace_id) {
 		return errorResponse(400, 10000, "Missing namespace_id parameter");
 	}
-	const { keys } = body;
-
 	const response = await sendKVRequest(c, namespace_id, "http://kv/bulk/get", {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ keys }),
+		body: JSON.stringify(body),
 	});
 	if (!response.ok) {
 		return toKVErrorResponse(response);
 	}
-	const values = (await response.json()) as Record<string, string | null>;
+	const values = (await response.json()) as Record<string, unknown>;
 	return c.json(wrapResponse({ values }));
 }
 

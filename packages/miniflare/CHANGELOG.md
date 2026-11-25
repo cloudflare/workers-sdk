@@ -1,5 +1,100 @@
 # miniflare
 
+## 5.20261123.1-beta
+
+### Minor Changes
+
+- [#17133](https://github.com/cloudflare/workers-sdk/pull/17133) [`3d228ba`](https://github.com/cloudflare/workers-sdk/commit/3d228ba0f1b155e96f3ab09e1a467937e1d51051) Thanks [@edmundhung](https://github.com/edmundhung)! - List Durable Object IDs by the class the Worker exports
+
+  `listDurableObjectIds()` now takes the Durable Object class and the Worker that exports it, as in `mf.listDurableObjectIds("Counter", "my-worker")`. This is a breaking change in v5 beta: a binding name now throws `No Durable Object class named …`, unless the Worker also exports a class with that name, in which case that class's IDs are listed.
+
+## 5.20261123.0-beta
+
+### Minor Changes
+
+- [#17129](https://github.com/cloudflare/workers-sdk/pull/17129) [`5b45f32`](https://github.com/cloudflare/workers-sdk/commit/5b45f32b75e40540f6be934978e48b2cd816ed42) Thanks [@edmundhung](https://github.com/edmundhung)! - Support `captions.get()` and `customerCode` in the local Stream binding
+
+  The local Stream binding now implements the Stream fields added in `@cloudflare/workers-types`. `captions.get(language)` returns the stored WebVTT file for an uploaded caption. Generated captions have no content in local mode, so they return an empty WebVTT file, and a missing caption throws `NotFoundError` as the API does. Videos also include `customerCode`, set to `"placeholder"` to match the placeholder subdomain in local playback URLs.
+
+- [#17024](https://github.com/cloudflare/workers-sdk/pull/17024) [`00413bb`](https://github.com/cloudflare/workers-sdk/commit/00413bbb0decc8d3282a7bc5259d629614e66876) Thanks [@edmundhung](https://github.com/edmundhung)! - Start even when a binding refers to a Worker that isn't running
+
+  A service, Durable Object or Workflow binding to a Worker that isn't running now always fails only when it's used, and events sent to a tail consumer that isn't running are dropped. Before, Miniflare failed to start when the dev registry was disabled, as it is in the Vitest plugin.
+
+### Patch Changes
+
+- [#17070](https://github.com/cloudflare/workers-sdk/pull/17070) [`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17070](https://github.com/cloudflare/workers-sdk/pull/17070) [`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261119.1 | ^5.20261123.1 |
+  | workerd                   | 1.20261119.1  | 1.20261123.1  |
+
+- [#17101](https://github.com/cloudflare/workers-sdk/pull/17101) [`7afc49c`](https://github.com/cloudflare/workers-sdk/commit/7afc49c652d8be84e4f7a6d3673145340e37a685) Thanks [@samarthyadavv](https://github.com/samarthyadavv)! - Honor KV bulk read options in Local Explorer
+
+  Local Explorer now parses values when `type: "json"` is set and includes metadata when `withMetadata: true` is set. Both options also work together, including when using `cf kv keys bulk-get --local`.
+
+  Bulk reads also preserve metadata for stored JSON `null` values when requested. Missing keys still return bare `null`.
+
+- [#17119](https://github.com/cloudflare/workers-sdk/pull/17119) [`086706d`](https://github.com/cloudflare/workers-sdk/commit/086706dfec2238540e8170d69fd9481c547f306d) Thanks [@tw4](https://github.com/tw4)! - Honor `start_after` when listing R2 objects through the Local Explorer API
+
+  Previously, the local R2 list objects endpoint ignored the `start_after` query parameter, so a listing resumed from a saved key returned that key again. Local listings now only return objects whose keys sort after `start_after`, matching the R2 list objects API.
+
+- [#17090](https://github.com/cloudflare/workers-sdk/pull/17090) [`5bc7dba`](https://github.com/cloudflare/workers-sdk/commit/5bc7dba8e4d2b9254b48d3c4d3ef2df23a918637) Thanks [@pelle](https://github.com/pelle)! - Fix `unsafeEvictDurableObject()` blocking the Node.js event loop
+
+  Dev control calls (`evictDurableObject()` and `execDurableObjectSql()`) were proxied synchronously with `Atomics.wait()`. Eviction waits for the Durable Object's `waitUntil()` work, so if that work was waiting on Node.js (for example a function-valued service binding or `node-handler`), Node.js could never answer and eviction failed after workerd's 30 second timeout. These calls are now always asynchronous. A rejected RPC call made through the proxy is now also parsed as an asynchronous response, so errors such as evicting a Durable Object that is not running are still thrown.
+
+- [#17119](https://github.com/cloudflare/workers-sdk/pull/17119) [`086706d`](https://github.com/cloudflare/workers-sdk/commit/086706dfec2238540e8170d69fd9481c547f306d) Thanks [@tw4](https://github.com/tw4)! - Fix local R2 listings repeating a page when `startAfter` and `cursor` are used together with some Unicode keys
+
+  When both options were passed, the local R2 simulator picked the later of the two using JavaScript string comparison, which orders some characters (such as fullwidth letters and emoji) differently from how keys are stored and listed. Paginating with a saved `startAfter` could then return the same page forever. Keys are now compared in the same order they are listed in.
+
+## 5.20261119.0-beta
+
+### Minor Changes
+
+- [#17016](https://github.com/cloudflare/workers-sdk/pull/17016) [`8f45554`](https://github.com/cloudflare/workers-sdk/commit/8f4555407cd0954fb4eba2cf10e5d3a94a1da2ed) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `unsafeIntrospectWorkflow()` and `unsafeIntrospectWorkflowInstance()` for exported Workflows
+
+  They find a Workflow by its Worker's name and its class name, so code running in Node.js can introspect a Workflow on `ctx.exports` that has no `env` binding:
+
+  ```ts
+  const introspector = await mf.unsafeIntrospectWorkflow(
+    "my-worker",
+    "MyWorkflow"
+  );
+  ```
+
+### Patch Changes
+
+- [#17034](https://github.com/cloudflare/workers-sdk/pull/17034) [`8712fc5`](https://github.com/cloudflare/workers-sdk/commit/8712fc53a8070de0542e02fbb7105a3c2c3ffc7d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix Local Explorer access through localhost subdomains
+
+  Miniflare now trusts `*.localhost` in Host and Origin checks for `/cdn-cgi/` requests. This allows Local Explorer to load through localhost subdomains without returning `403 Invalid Origin header` for its module scripts and API requests.
+
+- [#17031](https://github.com/cloudflare/workers-sdk/pull/17031) [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-19
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17031](https://github.com/cloudflare/workers-sdk/pull/17031) [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261118.1 | ^5.20261119.1 |
+  | workerd                   | 1.20261118.1  | 1.20261119.1  |
+
+- [#17043](https://github.com/cloudflare/workers-sdk/pull/17043) [`4f5b118`](https://github.com/cloudflare/workers-sdk/commit/4f5b1182f2481ddafbc84e32d654fd4fa415128f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update Undici to 7.30.2 to include upstream security fixes
+
+  This patch includes six upstream security fixes covering caching, redirects, and Subresource Integrity verification. Update the shared Undici dependency and matching types together so affected packages ship the patched version.
+
+- [#17016](https://github.com/cloudflare/workers-sdk/pull/17016) [`8f45554`](https://github.com/cloudflare/workers-sdk/commit/8f4555407cd0954fb4eba2cf10e5d3a94a1da2ed) Thanks [@edmundhung](https://github.com/edmundhung)! - Name only the Workflow in the error for a second introspection session
+
+  For a Workflow declared in `exports`, the error said the session was "for binding" the Workflow's class. It now reads `Workflow "my-workflow" already has an active introspection session.`
+
 ## 5.20261118.0-beta
 
 ### Patch Changes

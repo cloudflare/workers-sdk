@@ -48,7 +48,8 @@ export const d1ExportCommand = createCommand({
 		},
 		local: {
 			type: "boolean",
-			description: "Export from your local DB you use with wrangler dev",
+			description:
+				"Export from your local DB you use with wrangler dev (default)",
 			conflicts: "remote",
 		},
 		remote: {

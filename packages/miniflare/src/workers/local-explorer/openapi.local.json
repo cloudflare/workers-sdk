@@ -512,6 +512,17 @@
 											"$ref": "#/components/schemas/workers-kv_key_name_bulk"
 										},
 										"maxItems": 100
+									},
+									"type": {
+										"description": "Return values as strings with `text`, or parse stored JSON values with `json`.",
+										"type": "string",
+										"default": "text",
+										"enum": ["text", "json"]
+									},
+									"withMetadata": {
+										"description": "Whether to include metadata in the response.",
+										"type": "boolean",
+										"default": false
 									}
 								},
 								"required": ["keys"]
@@ -2618,6 +2629,14 @@
 							"type": "string"
 						},
 						"description": "Pagination cursor from previous response"
+					},
+					{
+						"in": "query",
+						"name": "start_after",
+						"schema": {
+							"type": "string"
+						},
+						"description": "Only return objects with keys lexicographically after this key"
 					},
 					{
 						"in": "query",
