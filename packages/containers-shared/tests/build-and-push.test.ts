@@ -970,6 +970,52 @@ describe("buildCommand arguments", () => {
 		]);
 	});
 
+	it("builds for linux/arm64", async ({ expect }) => {
+		const { dir } = createBuildArgs();
+		tempDirs.push(dir);
+
+		await expect(
+			buildCommand({
+				PATH: dir,
+				tag: "test-app:tag",
+				pathToDocker: "docker",
+				push: false,
+				platform: "linux/arm64",
+			})
+		).resolves.toBeUndefined();
+
+		expectSpawnWith([
+			"build",
+			"--load",
+			"-t",
+			"test-app:tag",
+			"--platform",
+			"linux/arm64",
+			"--provenance=false",
+			"-f",
+			"-",
+			dir,
+		]);
+	});
+
+	it("rejects unsupported platforms", async ({ expect }) => {
+		const { dir } = createBuildArgs();
+		tempDirs.push(dir);
+
+		await expect(
+			buildCommand({
+				PATH: dir,
+				tag: "test-app:tag",
+				pathToDocker: "docker",
+				push: false,
+				platform: "linux/386",
+			})
+		).rejects.toThrow(
+			'Unsupported platform: Platform "linux/386" is unsupported. Please use "linux/amd64" or "linux/arm64" instead.'
+		);
+		expect(spawn).not.toHaveBeenCalled();
+	});
+
 	it("falls back to WRANGLER_DOCKER_BIN when no Docker path is provided", async ({
 		expect,
 	}) => {
@@ -1072,15 +1118,31 @@ describe("pushCommand", () => {
 		]);
 	});
 
-	it("rejects unsupported image platforms", async ({ expect }) => {
+	it("pushes linux/arm64 images", async () => {
 		inspectOutputs = ["linux/arm64"];
+
+		await pushCommand(
+			{ TAG: "test-app:tag", pathToDocker: "docker" },
+			"some-account-id"
+		);
+
+		expectSpawnWith([
+			"push",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+	});
+
+	it("rejects unsupported image platforms", async ({ expect }) => {
+		inspectOutputs = ["linux/386"];
 
 		await expect(
 			pushCommand(
 				{ TAG: "test-app:tag", pathToDocker: "docker" },
 				"some-account-id"
 			)
-		).rejects.toThrow("Unsupported platform");
+		).rejects.toThrow(
+			"Unsupported platform: Image platform (linux/386) is not linux/amd64 or linux/arm64"
+		);
 		expectNoSpawnWith([
 			"push",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,

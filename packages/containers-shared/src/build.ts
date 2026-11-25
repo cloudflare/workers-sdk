@@ -117,6 +117,8 @@ export type ContainerPushCommandArgs = {
 
 type StartedContainerBuild = Awaited<ReturnType<typeof dockerBuild>>;
 
+const SUPPORTED_PLATFORMS = ["linux/amd64", "linux/arm64"];
+
 /**
  * Builds a container image from the given container options.
  *
@@ -457,9 +459,12 @@ export async function buildCommand(
 			{ telemetryMessage: "container build invalid path" }
 		);
 	}
-	if (args.platform !== undefined && args.platform !== "linux/amd64") {
+	if (
+		args.platform !== undefined &&
+		!SUPPORTED_PLATFORMS.includes(args.platform)
+	) {
 		throw new UserError(
-			`Unsupported platform: Platform "${args.platform}" is unsupported. Please use "linux/amd64" instead.`,
+			`Unsupported platform: Platform "${args.platform}" is unsupported. Please use "linux/amd64" or "linux/arm64" instead.`,
 			{ telemetryMessage: "container build unsupported platform" }
 		);
 	}
@@ -535,19 +540,15 @@ export async function pushCommand(
 	}
 }
 
-async function checkImagePlatform(
-	pathToDocker: string,
-	imageTag: string,
-	expectedPlatform: string = "linux/amd64"
-) {
+async function checkImagePlatform(pathToDocker: string, imageTag: string) {
 	const platform = await dockerImageInspect(pathToDocker, {
 		imageTag,
 		formatString: "{{ .Os }}/{{ .Architecture }}",
 	});
 
-	if (platform !== expectedPlatform) {
+	if (!SUPPORTED_PLATFORMS.includes(platform)) {
 		throw new Error(
-			`Unsupported platform: Image platform (${platform}) does not match the expected platform (${expectedPlatform})`
+			`Unsupported platform: Image platform (${platform}) is not linux/amd64 or linux/arm64`
 		);
 	}
 }
