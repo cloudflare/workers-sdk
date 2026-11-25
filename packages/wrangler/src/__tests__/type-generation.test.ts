@@ -440,6 +440,13 @@ const bindingsConfigMock: Omit<
 			app_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 		},
 	],
+	realtimekit: [
+		{
+			binding: "RTK",
+			app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+			remote: true,
+		},
+	],
 	services: [
 		{ binding: "SERVICE_BINDING", service: "service_name" },
 		{
@@ -1097,6 +1104,7 @@ describe("generate types - CLI", () => {
 				MY_ARTIFACTS: Artifacts;
 				HELLO_WORLD: HelloWorldBinding;
 				FLAGS: Flagship;
+				RTK: RealtimeKitBinding;
 				RATE_LIMITER: RateLimit;
 				WORKER_LOADER_BINDING: WorkerLoader;
 				VPC_SERVICE_BINDING: Fetcher;
@@ -1227,6 +1235,7 @@ describe("generate types - CLI", () => {
 				MY_ARTIFACTS: Artifacts;
 				HELLO_WORLD: HelloWorldBinding;
 				FLAGS: Flagship;
+				RTK: RealtimeKitBinding;
 				RATE_LIMITER: RateLimit;
 				WORKER_LOADER_BINDING: WorkerLoader;
 				VPC_SERVICE_BINDING: Fetcher;
@@ -1420,6 +1429,7 @@ describe("generate types - CLI", () => {
 				MY_ARTIFACTS: Artifacts;
 				HELLO_WORLD: HelloWorldBinding;
 				FLAGS: Flagship;
+				RTK: RealtimeKitBinding;
 				RATE_LIMITER: RateLimit;
 				WORKER_LOADER_BINDING: WorkerLoader;
 				VPC_SERVICE_BINDING: Fetcher;

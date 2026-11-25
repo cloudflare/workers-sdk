@@ -32,6 +32,7 @@ import type {
 	QueueBinding,
 	R2Binding,
 	RateLimitBinding,
+	RealtimeKitBinding,
 	SecretBinding,
 	SecretsStoreSecretBinding,
 	SendEmailBinding,
@@ -114,6 +115,7 @@ type Binding =
 	| DispatchNamespaceBinding
 	| DurableObjectBinding
 	| FlagshipBinding
+	| RealtimeKitBinding
 	| HyperdriveBinding
 	| ImagesBinding
 	| JsonBinding

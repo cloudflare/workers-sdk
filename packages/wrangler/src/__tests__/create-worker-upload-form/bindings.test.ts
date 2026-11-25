@@ -435,6 +435,26 @@ describe("createWorkerUploadForm — bindings", () => {
 		});
 	});
 
+	describe("realtimekit bindings", () => {
+		it("should upload only the app_id, omitting the local-dev remote flag", ({
+			expect,
+		}) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				RTK: {
+					type: "realtimekit",
+					app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+					remote: true,
+				},
+			};
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
+			expect(getBindings(form)).toContainEqual({
+				name: "RTK",
+				type: "realtimekit",
+				app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+			});
+		});
+	});
+
 	describe("singleton bindings", () => {
 		it.for([
 			{ bindingName: "BROWSER", type: "browser" as const },

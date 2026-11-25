@@ -753,6 +753,19 @@ export function convertBinding(
 				],
 			};
 			break;
+		case "realtimekit":
+			if (binding.app_id === undefined) {
+				break;
+			}
+			config = {
+				realtimekit: [
+					{
+						binding: name,
+						app_id: usePlaceholderValue ? REPLACE_ME : binding.app_id,
+					},
+				],
+			};
+			break;
 		case "ratelimit":
 			if (binding.namespace_id === undefined || binding.simple === undefined) {
 				break;

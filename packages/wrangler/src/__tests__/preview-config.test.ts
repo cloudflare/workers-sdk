@@ -82,6 +82,7 @@ describe("Preview configuration conversion", () => {
 				},
 				ARTIFACT: { type: "artifacts", namespace: "production-artifact" },
 				FLAGS: { type: "flagship", app_id: "production-app" },
+				RTK: { type: "realtimekit", app_id: "production-realtimekit-app" },
 				LIMITER: {
 					type: "ratelimit",
 					namespace_id: "production-limiter",
@@ -129,6 +130,7 @@ describe("Preview configuration conversion", () => {
 			"secrets_store_secrets",
 			"artifacts",
 			"flagship",
+			"realtimekit",
 			"ratelimits",
 			"vpc_services",
 			"worker_loaders",
@@ -155,6 +157,7 @@ describe("Preview configuration conversion", () => {
 				{ binding: "AI_SEARCH_NAMESPACE", namespace: "<REPLACE_ME>" },
 			],
 			ai_search: [{ binding: "AI_SEARCH", instance_name: "<REPLACE_ME>" }],
+			realtimekit: [{ binding: "RTK", app_id: "<REPLACE_ME>" }],
 			define: { API_URL: "<REPLACE_ME>" },
 			placement: { mode: "smart", hint: "<REPLACE_ME>" },
 			tail_consumers: [{ service: "<REPLACE_ME>" }],

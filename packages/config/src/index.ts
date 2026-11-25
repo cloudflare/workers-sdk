@@ -30,6 +30,7 @@ export {
 	R2BindingSchema,
 	SINGLETON_BINDING_TYPES,
 	FlagshipBindingSchema,
+	RealtimeKitBindingSchema,
 	HyperdriveBindingSchema,
 	TailConsumerSchema,
 	UnsafeBindingSchema,

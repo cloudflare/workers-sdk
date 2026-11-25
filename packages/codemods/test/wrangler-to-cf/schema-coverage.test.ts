@@ -99,6 +99,9 @@ const FIELD_CASES = {
 			simple: { limit: 100, period: 60 },
 		},
 	],
+	realtimekit: [
+		{ app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486", binding: "RTK" },
+	],
 	route: "example.com/*",
 	routes: [{ pattern: "api.example.com/*", zone_name: "example.com" }],
 	rules: [{ globs: ["**/*.txt"], type: "Text" }],

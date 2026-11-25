@@ -302,6 +302,7 @@ type MiniflareBindingOptions = Pick<
 	| "dispatchNamespaces"
 	| "email"
 	| "flagship"
+	| "realtimekit"
 	| "helloWorld"
 	| "images"
 	| "kvNamespaces"
@@ -355,6 +356,7 @@ async function convertWorkerBundleBindings(
 		MiniflareBindingOption<"email">["send_email"]
 	> = [];
 	const flagship: MiniflareBindingOption<"flagship"> = {};
+	const realtimekit: MiniflareBindingOption<"realtimekit"> = {};
 	const helloWorld: MiniflareBindingOption<"helloWorld"> = {};
 	let images: MiniflareBindingOption<"images"> | undefined;
 	const kvNamespaces: Record<string, { id: string }> = {};
@@ -538,6 +540,9 @@ async function convertWorkerBundleBindings(
 			case "flagship":
 				flagship[binding.name] = { app_id: binding.app_id };
 				break;
+			case "realtimekit":
+				realtimekit[binding.name] = { app_id: binding.app_id };
+				break;
 			case "ratelimit":
 				ratelimits[binding.name] = {
 					namespace_id: binding.namespace_id,
@@ -602,6 +607,7 @@ async function convertWorkerBundleBindings(
 			dispatchNamespaces,
 			email: { send_email: sendEmailBindings },
 			flagship,
+			realtimekit,
 			helloWorld,
 			images,
 			kvNamespaces,

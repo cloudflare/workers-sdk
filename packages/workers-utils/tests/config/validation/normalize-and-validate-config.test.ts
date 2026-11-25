@@ -82,6 +82,7 @@ describe("normalizeAndValidateConfig()", () => {
 			artifacts: [],
 			unsafe_hello_world: [],
 			flagship: [],
+			realtimekit: [],
 			ratelimits: [],
 			vpc_services: [],
 			vpc_networks: [],
@@ -9569,6 +9570,108 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - Unexpected fields found in flagship[0] field: "unknown_field""
+				`);
+			});
+		});
+
+		describe("[realtimekit]", () => {
+			it("should error if realtimekit is an object", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ realtimekit: {} },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - The field "realtimekit" should be an array but got {}."
+				`);
+			});
+
+			it("should accept valid realtimekit bindings", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						realtimekit: [
+							{
+								binding: "RTK",
+								app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+								remote: true,
+							},
+						],
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should error if realtimekit bindings are not valid", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						realtimekit: [
+							// @ts-expect-error purposely using an invalid value
+							{},
+							// @ts-expect-error purposely omitting the required app_id
+							{ binding: "VALID" },
+							// @ts-expect-error purposely using an invalid value
+							{ binding: 2000, app_id: 2111 },
+							{
+								binding: "BINDING_2",
+								app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+								// @ts-expect-error purposely using an invalid value
+								remote: "yes",
+							},
+							{
+								binding: "BINDING_3",
+								app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+							},
+						],
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - "realtimekit[0]" bindings must have a string "binding" field but got {}.
+					  - "realtimekit[0]" bindings must have a string "app_id" field but got {}.
+					  - "realtimekit[1]" bindings must have a string "app_id" field but got {"binding":"VALID"}.
+					  - "realtimekit[2]" bindings must have a string "binding" field but got {"binding":2000,"app_id":2111}.
+					  - "realtimekit[2]" bindings must have a string "app_id" field but got {"binding":2000,"app_id":2111}.
+					  - "realtimekit[3]" should, optionally, have a boolean "remote" field but got {"binding":"BINDING_2","app_id":"2da1c5c6-8e8f-4119-b89e-18558e051486","remote":"yes"}."
+				`);
+			});
+
+			it("should warn on unexpected fields", ({ expect }) => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						realtimekit: [
+							{
+								binding: "RTK",
+								app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+								// @ts-expect-error purposely using an invalid field
+								account_id: "some-account",
+							},
+						],
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in realtimekit[0] field: "account_id""
 				`);
 			});
 		});
