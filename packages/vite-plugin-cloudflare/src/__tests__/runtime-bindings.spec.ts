@@ -30,17 +30,17 @@ describe("local runtime bindings through Vite", () => {
 				export default {
 					async fetch(request, env) {
 						switch (new URL(request.url).pathname) {
-                            case "/email-string":
-                            case "/email-stream": {
+							case "/email-string":
+							case "/email-stream": {
 								const body = ${JSON.stringify(EMAIL_BODY)};
-                                const input = new URL(request.url).pathname === "/email-string"
-                                    ? body : new Blob([body]).stream();
-                                const message = new EmailMessage("sender@example.com", "recipient@example.com", input);
-                                if (!(message.raw instanceof ReadableStream)) {
-                                    throw new Error("Expected EmailMessage.raw to be a ReadableStream");
-                                }
-                                return Response.json(await new Response(message.raw).text());
-                            }
+								const input = new URL(request.url).pathname === "/email-string"
+									? body : new Blob([body]).stream();
+								const message = new EmailMessage("sender@example.com", "recipient@example.com", input);
+								if (!(message.raw instanceof ReadableStream)) {
+									throw new Error("Expected EmailMessage.raw to be a ReadableStream");
+								}
+								return Response.json(await new Response(message.raw).text());
+							}
 							case "/stream": {
 								const video = await env.STREAM.upload(new Response(new Uint8Array([0, 1, 2, 3])).body);
 								const captions = env.STREAM.video(video.id).captions;
@@ -112,7 +112,7 @@ describe("local runtime bindings through Vite", () => {
 			const url = server.resolvedUrls?.local[0];
 			assert(url);
 			const response = await fetch(new URL(path, url));
-			expect(response.status).toBe(200);
+			expect(response.status, await response.clone().text()).toBe(200);
 			expect(await response.json()).toEqual(
 				path === "/stream"
 					? { ...result, missing: expect.stringContaining("Caption not found") }
