@@ -2980,6 +2980,21 @@ function collectCoreBindings(
 			addBinding(vpcNetwork.binding, "Fetcher", "vpc_networks", envName);
 		}
 
+		for (const [index, oidcToken] of (env.oidc_tokens ?? []).entries()) {
+			if (!oidcToken.binding) {
+				throwMissingBindingError({
+					binding: oidcToken,
+					bindingType: "oidc_tokens",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(oidcToken.binding, "OidcTokenBinding", "oidc_tokens", envName);
+		}
+
 		for (const [index, aiSearchNamespace] of (
 			env.ai_search_namespaces ?? []
 		).entries()) {
@@ -4072,6 +4087,25 @@ function collectCoreBindingsPerEnvironment(
 				bindingCategory: "vpc_networks",
 				name: vpcNetwork.binding,
 				type: "Fetcher",
+			});
+		}
+
+		for (const [index, oidcToken] of (env.oidc_tokens ?? []).entries()) {
+			if (!oidcToken.binding) {
+				throwMissingBindingError({
+					binding: oidcToken,
+					bindingType: "oidc_tokens",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "oidc_tokens",
+				name: oidcToken.binding,
+				type: "OidcTokenBinding",
 			});
 		}
 

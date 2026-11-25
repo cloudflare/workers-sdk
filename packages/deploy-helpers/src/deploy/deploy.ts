@@ -65,6 +65,7 @@ import {
 } from "./helpers/exports-reconciliation";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
 import { applyImagesUrlTransformations } from "./helpers/images-url-transformations";
+import { printOidcTokenIdentity } from "./helpers/oidc-tokens";
 import { collectPackageDependencies } from "./helpers/package-dependencies";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
@@ -213,6 +214,8 @@ async function deployWorker(
 	}
 
 	let versionId: string | null = null;
+	// A Worker's first upload creates its tag, so the upload response has it.
+	let uploadedWorkerTag = workerTag;
 	const scriptName = name;
 
 	const start = Date.now();
@@ -618,6 +621,7 @@ async function deployWorker(
 							mutable_pipeline_id: string | null;
 							deployment_id: string | null;
 							startup_time_ms: number;
+							tag?: string;
 							exports_reconciliation?: ExportsReconciliationResult;
 						}>(
 							config,
@@ -640,6 +644,7 @@ async function deployWorker(
 					logger
 				);
 				result = uploadResult;
+				uploadedWorkerTag ??= uploadResult.tag ?? null;
 				if (uploadResult.exports_reconciliation) {
 					renderExportsReconciliationSuccess(
 						uploadResult.exports_reconciliation
@@ -908,6 +913,7 @@ async function deployWorker(
 			);
 		}
 		deployWfpUserWorker(props.dispatchNamespace, versionId);
+		printOidcTokenIdentity(bindings, accountId, uploadedWorkerTag);
 		return { versionId, workerTag, assetUploadStats, bundleSize };
 	}
 	assert(accountId);
@@ -928,6 +934,9 @@ async function deployWorker(
 		previewUrlsConfigFieldName: options.previewUrlsConfigFieldName,
 		previewUrlsConfigAssignment: options.previewUrlsConfigAssignment,
 	});
+
+	// Before the Images update, which can throw after the Worker is deployed.
+	printOidcTokenIdentity(bindings, accountId, uploadedWorkerTag);
 
 	await applyImagesUrlTransformations(
 		config,

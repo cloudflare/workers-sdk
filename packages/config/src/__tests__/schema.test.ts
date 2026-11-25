@@ -2016,3 +2016,37 @@ describe("ExportSchema", () => {
 		expect(typeAssertions).toBeTypeOf("function");
 	});
 });
+
+describe("oidc-token bindings", () => {
+	it.for([
+		["a URL", "https://api.example.com"],
+		["a URI", "api://token-exchange"],
+		["2,048 characters", "a".repeat(2048)],
+	])("accepts an audience of %s", ([, audience], { expect }) => {
+		expect(
+			BindingSchema.safeParse({ type: "oidc-token", audience }).success
+		).toBe(true);
+	});
+
+	it.for([
+		["empty", ""],
+		["with a space", "has space"],
+		["with a tab", "tab\there"],
+		["of 2,049 characters", "a".repeat(2049)],
+		["with non-ASCII characters", "café"],
+	])("rejects an audience %s", ([, audience], { expect }) => {
+		expect(
+			BindingSchema.safeParse({ type: "oidc-token", audience }).success
+		).toBe(false);
+	});
+
+	it("rejects an alg other than ES256 or RS256", ({ expect }) => {
+		expect(
+			BindingSchema.safeParse({
+				type: "oidc-token",
+				audience: "https://api.example.com",
+				alg: "HS256",
+			}).success
+		).toBe(false);
+	});
+});

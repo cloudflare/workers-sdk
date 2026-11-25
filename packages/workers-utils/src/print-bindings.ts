@@ -97,6 +97,7 @@ export function printBindings(
 	const services = extractBindingsOfType("service", bindings);
 	const vpc_services = extractBindingsOfType("vpc_service", bindings);
 	const vpc_networks = extractBindingsOfType("vpc_network", bindings);
+	const oidc_tokens = extractBindingsOfType("oidc_token", bindings);
 	const analytics_engine_datasets = extractBindingsOfType(
 		"analytics_engine",
 		bindings
@@ -406,6 +407,21 @@ export function printBindings(
 						isSimulatedLocally:
 							remote && !context.remoteBindingsDisabled ? false : undefined,
 					}),
+				};
+			})
+		);
+	}
+
+	if (oidc_tokens.length > 0) {
+		output.push(
+			...oidc_tokens.map(({ binding, audience, alg }) => {
+				return {
+					name: binding,
+					type: getBindingTypeFriendlyName("oidc_token"),
+					value: alg === undefined ? audience : `${audience}, ${alg}`,
+					// No local signer yet, and a remote proxy session would issue tokens
+					// for the proxy Worker's identity, not this one's.
+					mode: getMode(),
 				};
 			})
 		);
