@@ -266,7 +266,7 @@ export interface RealtimeKitBindingOptions {
 
 /** Binding to a RealtimeKit app. */
 export interface RealtimeKitBinding extends RealtimeKitBindingOptions {
-	type: "realtimekit";
+	type: "realtime-kit";
 }
 
 export interface HyperdriveBindingOptions {
@@ -834,7 +834,7 @@ export interface Bindings {
 	/** Binding to a Flagship feature-flag service. */
 	flagship(options?: FlagshipBindingOptions): FlagshipBinding;
 	/** Binding to a RealtimeKit app. */
-	realtimekit(options: RealtimeKitBindingOptions): RealtimeKitBinding;
+	realtimeKit(options: RealtimeKitBindingOptions): RealtimeKitBinding;
 	/**
 	 * Binding to a Hyperdrive configuration.
 	 *
@@ -990,7 +990,7 @@ export const bindings = {
 	}),
 	durableObject: (options) => ({ type: "durable-object", ...options }),
 	flagship: (options) => ({ type: "flagship", ...options }),
-	realtimekit: (options) => ({ type: "realtimekit", ...options }),
+	realtimeKit: (options) => ({ type: "realtime-kit", ...options }),
 	hyperdrive: (options) => ({ type: "hyperdrive", ...options }),
 	images: (options) => ({ type: "images", ...options }),
 	json: (value) => ({ type: "json", value }),

@@ -204,7 +204,7 @@ export function convertBindings(
 	convertArrayBindings(
 		"realtimekit",
 		"binding",
-		"bindings.realtimekit",
+		"bindings.realtimeKit",
 		[["app_id", "id"]],
 		{ remote: true }
 	);

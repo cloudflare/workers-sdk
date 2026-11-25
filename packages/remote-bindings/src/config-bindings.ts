@@ -95,7 +95,7 @@ export function getRemoteBindings(
 					remote: binding.dev?.remote,
 				};
 				break;
-			case "realtimekit":
+			case "realtime-kit":
 				bindings[name] = {
 					type: "realtimekit",
 					app_id: binding.id,
