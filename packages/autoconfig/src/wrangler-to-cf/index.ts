@@ -1,12 +1,12 @@
 import path from "node:path";
-import { fileExists } from "../../files";
-import { ensureCleanGitWorktree } from "../../git";
+import { ensureCleanGitWorktree } from "@cloudflare/cli-shared-helpers/git";
 import { convertWranglerConfig } from "./config-converter";
 import { findSecretFiles, readWranglerConfig } from "./config-reader";
 import {
 	renderCloudflareConfig,
 	renderWranglerConfig,
 } from "./config-renderer";
+import { fileExists } from "./file-exists";
 import {
 	cleanupMigrationOutputs,
 	rewriteMigrationOutput,

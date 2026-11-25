@@ -1,6 +1,10 @@
 import type { AutoConfigContext, AutoConfigTarget } from "./context";
 import type { Framework } from "./frameworks/framework-class";
 import type { BuildConfig } from "./frameworks/framework-class";
+import type {
+	MigrationBundler,
+	WranglerToCfMigrationResult,
+} from "./wrangler-to-cf/types";
 import type { WorkerConfig } from "@cloudflare/config";
 import type { PackageManager } from "@cloudflare/workers-utils";
 import type { PackageJSON } from "@cloudflare/workers-utils";
@@ -60,9 +64,20 @@ export type AutoConfigDetailsForNonConfiguredProject = AutoConfigDetailsBase & {
 	configured: false;
 };
 
+/** A project whose Wrangler config setup migrates to `cloudflare.config.ts`, instead of setting up a framework. */
+export type AutoConfigDetailsForWranglerProject = Optional<
+	AutoConfigDetailsBase,
+	"framework" | "outputDir"
+> & {
+	configured: false;
+	/** The Wrangler config file to migrate */
+	wranglerConfigPath: string;
+};
+
 export type AutoConfigDetails =
 	| AutoConfigDetailsForConfiguredProject
-	| AutoConfigDetailsForNonConfiguredProject;
+	| AutoConfigDetailsForNonConfiguredProject
+	| AutoConfigDetailsForWranglerProject;
 
 export type AutoConfigOptions = {
 	/** The configuration target, defaults to cf. */
@@ -84,9 +99,15 @@ export type AutoConfigOptions = {
 	 */
 	skipConfirmations?: boolean;
 	/**
-	 * Whether to install the selected target CLI during autoconfig.
+	 * Whether to install the selected target CLI during autoconfig. When migrating a Wrangler project,
+	 * also whether to install the Vite plugin and Wrangler upgrades it needs, which are otherwise
+	 * reported as follow-ups.
 	 */
 	enableTargetCliInstallation?: boolean;
+	/** The bundler a migrated Wrangler project uses (default: vite) */
+	bundler?: MigrationBundler;
+	/** Whether migrating a Wrangler project requires a clean Git worktree (default: false) */
+	requireCleanGitWorktree?: boolean;
 };
 
 export type AutoConfigSummary = {
@@ -95,9 +116,12 @@ export type AutoConfigSummary = {
 	buildConfig?: BuildConfig;
 	wranglerConfig?: RawConfig;
 	frameworkConfiguration?: string;
-	outputDir: string;
+	/** The output directory (absent after migrating a Wrangler project) */
+	outputDir?: string;
 	frameworkId?: string;
 	buildCommand?: string;
 	deployCommand?: string;
 	versionCommand?: string;
+	/** The result of migrating a Wrangler project */
+	wranglerMigration?: WranglerToCfMigrationResult;
 };

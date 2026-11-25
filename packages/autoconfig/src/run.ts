@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import {
 	maybeAppendWranglerToGitIgnoreLikeFile,
 	maybeAppendWranglerToGitIgnore,
@@ -62,7 +62,8 @@ import type { RawConfig } from "@cloudflare/workers-utils/config";
 /**
  * Runs the full autoconfig flow: displays detected settings, confirms with the user,
  * validates the framework version, runs framework configuration, writes configuration,
- * updates package.json scripts, and optionally runs the build command.
+ * updates package.json scripts, and optionally runs the build command. For a Wrangler project it
+ * migrates the Wrangler config to `cloudflare.config.ts` instead, without setting up a framework.
  *
  * @param autoConfigDetails - The detected project details from `getDetailsForAutoConfig()`.
  * @param autoConfigOptions - Options controlling dry-run, confirmations, build, and context.
@@ -81,6 +82,36 @@ export async function runAutoConfig(
 		dryRun || autoConfigOptions.skipConfirmations === true;
 	const enableTargetCliInstallation =
 		autoConfigOptions.enableTargetCliInstallation ?? true;
+
+	if ("wranglerConfigPath" in autoConfigDetails) {
+		if (
+			!(
+				skipConfirmations ||
+				(await context.dialogs.confirm(
+					`Migrate ${relative(process.cwd(), autoConfigDetails.wranglerConfigPath)} to cloudflare.config.ts?`
+				))
+			)
+		) {
+			throw new FatalError("Setup cancelled", {
+				telemetryMessage: "autoconfig run setup cancelled",
+			});
+		}
+
+		// Loaded on use, so that importing autoconfig doesn't load the migration and its Git helper
+		const { migrateWranglerToCf } = await import("./wrangler-to-cf");
+		return {
+			scripts: {},
+			wranglerMigration: await migrateWranglerToCf(
+				autoConfigDetails.wranglerConfigPath,
+				{
+					bundler: autoConfigOptions.bundler,
+					dryRun,
+					force: !autoConfigOptions.requireCleanGitWorktree,
+					installDependencies: enableTargetCliInstallation,
+				}
+			),
+		};
+	}
 
 	assertNonConfigured(autoConfigDetails);
 

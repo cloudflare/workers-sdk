@@ -1,5 +1,5 @@
 import { describe, it } from "vitest";
-import { camelObject } from "../src/codemods/wrangler-to-cf/converter-helpers";
+import { camelObject } from "../../src/wrangler-to-cf/converter-helpers";
 
 describe("converter helpers", () => {
 	it("camel-cases record keys at every array depth", ({ expect }) => {

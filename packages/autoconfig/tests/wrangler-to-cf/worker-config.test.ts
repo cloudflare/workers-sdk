@@ -1,10 +1,10 @@
 import { describe, it } from "vitest";
-import { renderCloudflareConfig } from "../src/codemods/wrangler-to-cf/config-renderer";
-import { convertRootConfig } from "../src/codemods/wrangler-to-cf/worker-config";
+import { renderCloudflareConfig } from "../../src/wrangler-to-cf/config-renderer";
+import { convertRootConfig } from "../../src/wrangler-to-cf/worker-config";
 import type {
 	ConvertedWranglerConfig,
 	MigrationFollowUp,
-} from "../src/codemods/wrangler-to-cf/types";
+} from "../../src/wrangler-to-cf/types";
 
 function convert(source: Record<string, unknown>): {
 	followUps: MigrationFollowUp[];

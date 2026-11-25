@@ -1724,6 +1724,9 @@ importers:
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
+      '@types/semver':
+        specifier: ^7.5.1
+        version: 7.7.1
       chalk:
         specifier: catalog:default
         version: 5.3.0
@@ -1745,6 +1748,12 @@ importers:
       semiver:
         specifier: ^1.1.0
         version: 1.1.0
+      semver:
+        specifier: ^7.7.1
+        version: 7.8.5
+      tinyglobby:
+        specifier: catalog:default
+        version: 0.2.16
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0
@@ -1837,15 +1846,9 @@ importers:
       '@types/node':
         specifier: 22.15.17
         version: 22.15.17
-      '@types/semver':
-        specifier: ^7.5.1
-        version: 7.7.1
       esbuild:
         specifier: catalog:default
         version: 0.28.2
-      semver:
-        specifier: ^7.7.1
-        version: 7.8.5
       tinyglobby:
         specifier: catalog:default
         version: 0.2.16

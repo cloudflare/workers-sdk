@@ -138,6 +138,7 @@ function normalizeOutputDir(projectPath: string, outputDir: string): string {
 export async function getDetailsForAutoConfig({
 	projectPath = process.cwd(),
 	wranglerConfig,
+	wranglerConfigPath,
 	target = "cf",
 	outputDir: requestedOutputDir,
 	context,
@@ -146,6 +147,11 @@ export async function getDetailsForAutoConfig({
 	projectPath?: string;
 	/** The parsed wrangler configuration for the project (if any). */
 	wranglerConfig?: Config;
+	/**
+	 * For the cf target, a Wrangler config file that setup migrates to `cloudflare.config.ts`
+	 * instead of setting up a framework. Relative paths are resolved against `projectPath`.
+	 */
+	wranglerConfigPath?: string;
 	/** The configuration target, defaults to cf. */
 	target?: AutoConfigTarget;
 	/**
@@ -180,6 +186,17 @@ export async function getDetailsForAutoConfig({
 			projectPath,
 			workerName: getWorkerName(wranglerConfig.name, projectPath),
 			// Fall back to npm when already configured since we don't need to run package manager commands
+			packageManager: NpmPackageManager,
+		};
+	}
+
+	if (target === "cf" && wranglerConfigPath !== undefined) {
+		return {
+			configured: false,
+			projectPath,
+			wranglerConfigPath: resolve(projectPath, wranglerConfigPath),
+			workerName: getWorkerName(undefined, projectPath),
+			// The migration finds the package manager itself
 			packageManager: NpmPackageManager,
 		};
 	}

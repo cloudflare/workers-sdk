@@ -1,13 +1,9 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { ensureCleanGitWorktree } from "@cloudflare/cli-shared-helpers/git";
 import { vitestCodemods } from "./codemods/vitest";
-import { wranglerToCfCodemod } from "./codemods/wrangler-to-cf/codemod";
-import { ensureCleanGitWorktree } from "./git";
 import type { Codemod, CodemodContext, CodemodResult } from "./types";
 
-export const availableCodemods: Codemod[] = [
-	wranglerToCfCodemod,
-	...vitestCodemods,
-];
+export const availableCodemods: Codemod[] = [...vitestCodemods];
 
 /** Returns a canonical form used to compare codemod names and aliases. */
 function normaliseName(value: string): string {
@@ -41,9 +37,7 @@ export async function runCodemod(
 	if (!codemod) {
 		throw new Error(`Unknown codemod: ${name}`);
 	}
-	if (!codemod.managesGitWorktreeSafety) {
-		await ensureCleanGitWorktree(context.cwd, context.force ?? false);
-	}
+	await ensureCleanGitWorktree(context.cwd, context.force ?? false);
 
 	const stagedFiles = new Map<string, string>();
 	const result = await codemod.run({ ...context, stagedFiles });
