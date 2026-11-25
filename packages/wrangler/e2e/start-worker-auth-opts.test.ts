@@ -158,7 +158,11 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 			// session, which may still be failing a binding call from the last
 			// poll. A disposed session reports no errors, and disposal precedes
 			// `reloadComplete`, so clear warnings only once the reload completes.
-			const reloaded = events.once(worker.raw, "reloadComplete");
+			// A failed rebuild emits `buildFailed` rather than `error`, so bound the
+			// wait instead of relying on `events.once` rejecting.
+			const reloaded = events.once(worker.raw, "reloadComplete", {
+				signal: AbortSignal.timeout(20_000),
+			});
 			await worker.patchConfig({
 				dev: {
 					auth: validAuth,
