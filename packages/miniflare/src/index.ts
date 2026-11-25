@@ -2635,6 +2635,8 @@ export class Miniflare {
 		);
 		// A crash destroys the proxy server heap just like a config update.
 		this.#proxyClient?.poisonProxies();
+		// The crashed workerd released its Git sockets' ports.
+		this.#artifactsController.detachRuntime();
 		// The runtime behind this candidate is gone. Withdraw before restarting so
 		// peers can take ownership if recovery stalls; successful assembly registers
 		// this instance again with its new debug-port address.
@@ -2812,6 +2814,9 @@ export class Miniflare {
 			onWorkerdCrashRestart: () => this.#handleWorkerdCrash(),
 			runtimeEnv: this.#sharedOpts.unsafeRuntimeEnv,
 		};
+		// The new workerd's Git sockets get new ports, and the old ones are
+		// released as it stops.
+		this.#artifactsController.detachRuntime();
 		const maybeSocketPorts = await withPersistRootStartupLock(
 			this.#sharedOpts.unsafeEnableSharedStorage
 				? this.#sharedOpts.resourcePersistencePath

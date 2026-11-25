@@ -564,16 +564,41 @@ test("artifacts: the Git port is held from the moment it is chosen and forwarded
 		expect(outcome).toBe("EADDRINUSE");
 
 		await controller.commitUpdate(new Map([["git", runtimePort]]));
-		const client = net.connect({ host: "127.0.0.1", port: backend.port });
-		client.end("ping");
-		const chunks: Buffer[] = [];
-		for await (const chunk of client) {
-			chunks.push(chunk as Buffer);
-		}
-		expect(Buffer.concat(chunks).toString()).toBe("ping");
+		expect(await echo(backend.port)).toBe("ping");
+
+		// Once workerd stops, its port may belong to anyone: refuse instead.
+		controller.detachRuntime();
+		expect(await echo(backend.port)).toBe("");
 	} finally {
 		await controller.dispose();
 		runtime.close();
+	}
+});
+
+test("artifacts: a backend that fails to start releases its Git port", async ({
+	expect,
+}) => {
+	const root = await useTmp();
+	const portFile = path.join(root, "git-port");
+	const controller = new ArtifactsController(() => ({
+		info() {
+			throw new Error("log failed");
+		},
+		warn() {},
+	}));
+	try {
+		controller.beginUpdate();
+		await expect(
+			controller.get(path.join(root, "repos"), { namespace: "test", portFile })
+		).rejects.toThrow("log failed");
+		await controller.abortUpdate();
+		const port = Number.parseInt(await readFile(portFile, "utf8"), 10);
+		const server = net.createServer();
+		server.listen({ host: "127.0.0.1", port, exclusive: true });
+		await once(server, "listening");
+		await new Promise((resolve) => server.close(resolve));
+	} finally {
+		await controller.dispose();
 	}
 });
 
@@ -635,6 +660,21 @@ test("artifacts: a stopped backend is replaced on the next config update", async
 		await controller.dispose();
 	}
 });
+
+/** Sends "ping" to `port`, and returns everything received back. */
+async function echo(port: number): Promise<string> {
+	const client = net.connect({ host: "127.0.0.1", port });
+	client.end("ping");
+	const chunks: Buffer[] = [];
+	try {
+		for await (const chunk of client) {
+			chunks.push(chunk as Buffer);
+		}
+	} catch {
+		// A refused connection is reset.
+	}
+	return Buffer.concat(chunks).toString();
+}
 
 function withRemoteProxy(base: MiniflareOptions): MiniflareOptions {
 	return {

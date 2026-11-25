@@ -37,13 +37,17 @@ export class GitRelay {
 	}
 
 	/**
-	 * Sets the port workerd's Git socket listens on. Connections accepted before
-	 * the first call are refused.
+	 * Sets the port workerd's Git socket listens on. Connections accepted while
+	 * it is unset are refused.
 	 */
 	setRuntimePort(port: number | undefined): void {
 		this.#runtimePort = port;
 	}
 
+	/**
+	 * Stops listening, and cuts off connections still open, including Git
+	 * transfers in progress.
+	 */
 	async close(): Promise<void> {
 		const closed = new Promise<void>((resolve) =>
 			this.server.close(() => resolve())

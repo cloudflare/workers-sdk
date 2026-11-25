@@ -29,6 +29,8 @@ export class ArtifactsController {
 	// Keep the old roots alive until workerd accepts the replacement config.
 	#activeRoots = new Set<string>();
 	#pendingRoots?: Set<string>;
+	// Every open Git listener, including those of backends still starting.
+	#relays = new Set<GitRelay>();
 
 	constructor(private readonly getLog?: () => Pick<Log, "info" | "warn">) {}
 
@@ -56,6 +58,17 @@ export class ArtifactsController {
 			if (backend?.socketName !== undefined) {
 				backend.relay.setRuntimePort(socketPorts?.get(backend.socketName));
 			}
+		}
+	}
+
+	/**
+	 * Stops forwarding Git connections, until the next `commitUpdate()`. Call it
+	 * before workerd stops, or once it has crashed: another process could take
+	 * the port its Git socket had, and be sent the next request's token.
+	 */
+	detachRuntime(): void {
+		for (const relay of this.#relays) {
+			relay.setRuntimePort(undefined);
 		}
 	}
 
@@ -106,6 +119,28 @@ export class ArtifactsController {
 		onExit: () => void
 	): Promise<Backend> {
 		const relay = await listenForGit(portFile);
+		this.#relays.add(relay);
+		try {
+			return await this.#startSidecar(
+				root,
+				relay,
+				namespace,
+				socketName,
+				onExit
+			);
+		} catch (error) {
+			await this.#closeRelay(relay);
+			throw error;
+		}
+	}
+
+	async #startSidecar(
+		root: string,
+		relay: GitRelay,
+		namespace: string | undefined,
+		socketName: string | undefined,
+		onExit: () => void
+	): Promise<Backend> {
 		const { port } = relay;
 		if (namespace !== undefined) {
 			this.getLog?.().info(
@@ -119,6 +154,7 @@ export class ArtifactsController {
 		);
 		try {
 			const endpoint = await waitForSidecarReady(worker);
+			const closeRelay = () => this.#closeRelay(relay);
 			let stopping = false;
 			worker.on("error", () => {
 				this.getLog?.().warn("Local Artifacts Git backend failed");
@@ -126,7 +162,7 @@ export class ArtifactsController {
 			worker.once("exit", (code) => {
 				onExit();
 				// Frees the port for the backend that replaces this one.
-				void relay.close();
+				void closeRelay();
 				if (!stopping) {
 					this.getLog?.().warn(
 						`Local Artifacts Git backend exited (${code}). Restart the dev server or reload its configuration to reconnect.`
@@ -156,15 +192,19 @@ export class ArtifactsController {
 						});
 						worker.postMessage("close");
 						await exited;
-						await relay.close();
+						await closeRelay();
 					},
 				},
 			};
 		} catch (error) {
 			await worker.terminate();
-			await relay.close();
 			throw error;
 		}
+	}
+
+	async #closeRelay(relay: GitRelay): Promise<void> {
+		this.#relays.delete(relay);
+		await relay.close();
 	}
 
 	async #closeExcept(roots: Set<string>): Promise<void> {
