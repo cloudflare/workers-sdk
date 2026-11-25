@@ -224,6 +224,12 @@ export type WorkerMetadataBinding =
 	  }
 	| { type: "assets"; name: string };
 
+export type WorkerUploadMetadataBinding =
+	| Exclude<WorkerMetadataBinding, { type: "d1" }>
+	| (Omit<Extract<WorkerMetadataBinding, { type: "d1" }>, "id"> & {
+			database_id: string;
+	  });
+
 export type AssetConfigMetadata = {
 	html_handling?: AssetConfig["html_handling"];
 	not_found_handling?: AssetConfig["not_found_handling"];
@@ -291,7 +297,7 @@ type WorkerMetadataPut = {
 	code_update_strategy?: DurableObjectCodeUpdateStrategy;
 	exports?: CfExports;
 	capnp_schema?: string;
-	bindings: WorkerMetadataBinding[];
+	bindings: WorkerUploadMetadataBinding[];
 	keep_bindings?: (
 		| WorkerMetadataBinding["type"]
 		| "secret_text"

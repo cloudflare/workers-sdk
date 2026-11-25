@@ -108,6 +108,7 @@ describe("startup profile", () => {
 			const expectedMethods = {
 				STARTUP_KV: "get",
 				STARTUP_D1: "prepare",
+				STARTUP_LEGACY_D1: "prepare",
 				STARTUP_R2: "get",
 				STARTUP_QUEUE: "send",
 				STARTUP_SERVICE: "fetch",
@@ -133,7 +134,8 @@ describe("startup profile", () => {
 						type: "kv_namespace",
 						namespace_id: "startup-kv",
 					},
-					{ name: "STARTUP_D1", type: "d1", id: "startup-d1" },
+					{ name: "STARTUP_D1", type: "d1", database_id: "startup-d1" },
+					{ name: "STARTUP_LEGACY_D1", type: "d1", id: "startup-legacy-d1" },
 					{
 						name: "STARTUP_R2",
 						type: "r2_bucket",

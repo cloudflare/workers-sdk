@@ -145,7 +145,7 @@ describe("createWorkerUploadForm — bindings", () => {
 			expect(getBindings(form)).toContainEqual({
 				name: "MY_DB",
 				type: "d1",
-				id: "db-123",
+				database_id: "db-123",
 			});
 		});
 

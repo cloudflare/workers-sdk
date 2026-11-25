@@ -14,6 +14,7 @@ import type {
 	CfModuleType,
 	Json,
 	WorkerMetadataBinding,
+	WorkerUploadMetadataBinding,
 } from "@cloudflare/workers-utils";
 import type { Protocol } from "devtools-protocol";
 import type { V4ModuleDefinition, V4WorkerOptionsShape } from "miniflare";
@@ -21,6 +22,10 @@ import type { FormData, FormDataEntryValue } from "undici";
 import type { RawData } from "ws";
 
 const STARTUP_PROFILE_TIMEOUT_MS = 10_000;
+
+type StartupProfileBinding =
+	| WorkerUploadMetadataBinding
+	| WorkerMetadataBinding;
 
 const MODULE_TYPE_TO_MINIFLARE_TYPE: Record<
 	CfModuleType,
@@ -387,7 +392,7 @@ async function convertWorkerBundleBindings(
 			unsupportedBindings.push({ name: "<unknown>", type: "unknown" });
 			continue;
 		}
-		const binding = value as WorkerMetadataBinding;
+		const binding = value as StartupProfileBinding;
 		// Raw resource bindings expose a Fetcher instead of their product API.
 		if (isRawWorkerBinding(binding)) {
 			serviceBindings[binding.name] = createOfflineFetcherBinding();
@@ -417,7 +422,9 @@ async function convertWorkerBundleBindings(
 				kvNamespaces[binding.name] = { id: binding.namespace_id };
 				break;
 			case "d1":
-				d1Databases[binding.name] = { id: binding.id };
+				d1Databases[binding.name] = {
+					id: "database_id" in binding ? binding.database_id : binding.id,
+				};
 				break;
 			case "r2_bucket":
 				r2Buckets[binding.name] = { id: binding.bucket_name };
@@ -631,7 +638,7 @@ async function convertWorkerBundleBindings(
 	};
 }
 
-function isRawWorkerBinding(binding: WorkerMetadataBinding): boolean {
+function isRawWorkerBinding(binding: StartupProfileBinding): boolean {
 	switch (binding.type) {
 		case "browser":
 		case "ai":
