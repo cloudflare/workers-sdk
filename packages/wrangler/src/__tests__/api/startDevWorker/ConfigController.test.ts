@@ -757,4 +757,56 @@ describe("ConfigController", () => {
 			await expect(update).resolves.toBeDefined();
 		}
 	});
+
+	describe("dev vars files", () => {
+		const secretUpdateFor = (value: string) =>
+			bus.waitFor(
+				"configUpdate",
+				(e) => {
+					const binding = e.config.bindings?.MY_SECRET;
+					return binding?.type === "secret_text" && binding.value === value;
+				},
+				5_000
+			);
+
+		beforeEach(async () => {
+			vi.stubEnv("WRANGLER_CI_DISABLE_CONFIG_WATCHING", "false");
+			await seed({
+				"wrangler.toml": dedent /* toml */ `
+					name = "my-worker"
+					main = "src/index.js"
+					compatibility_date = "2024-06-01"
+				`,
+				"src/index.js": "export default {}",
+			});
+		});
+
+		it("should notice changes to .dev.vars while running", async ({
+			expect,
+		}) => {
+			await seed({ ".dev.vars": "MY_SECRET=one" });
+
+			const initial = secretUpdateFor("one");
+			await controller.set({ config: "./wrangler.toml" });
+			await initial;
+
+			const update = secretUpdateFor("two");
+			await seed({ ".dev.vars": "MY_SECRET=two" });
+			await expect(update).resolves.toBeDefined();
+		});
+
+		it("should notice a .dev.vars file created while running, which takes over from .env", async ({
+			expect,
+		}) => {
+			await seed({ ".env": "MY_SECRET=from-dot-env" });
+
+			const initial = secretUpdateFor("from-dot-env");
+			await controller.set({ config: "./wrangler.toml" });
+			await initial;
+
+			const update = secretUpdateFor("from-dev-vars");
+			await seed({ ".dev.vars": "MY_SECRET=from-dev-vars" });
+			await expect(update).resolves.toBeDefined();
+		});
+	});
 });
