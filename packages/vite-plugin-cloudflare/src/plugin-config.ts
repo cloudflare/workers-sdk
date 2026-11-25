@@ -195,6 +195,8 @@ export interface WorkersResolvedConfig extends NonPreviewResolvedConfig {
 
 export interface PreviewResolvedConfig extends BaseResolvedConfig {
 	type: "preview";
+	/** The mode recorded in Build Output, which selected the local env files. */
+	mode: string | undefined;
 	containers: ParsedBuildOutputContainerConfig[];
 	workers: BuildOutputPreviewWorker[];
 }
@@ -332,6 +334,7 @@ export async function resolvePluginConfig(
 			...shared,
 			remoteBindings,
 			type: "preview",
+			mode: localEnvMode,
 			settings: { accountId, complianceRegion },
 			containers: preview.containers,
 			workers: preview.workers,

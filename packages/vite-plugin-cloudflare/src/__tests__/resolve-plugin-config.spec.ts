@@ -1037,6 +1037,9 @@ describe("resolvePluginConfig", () => {
 		expect(result.type).toBe("preview");
 		expect(result.localEnv.values.PREVIEW_MODE_VALUE).toBe("build-mode");
 		expect(result.devVars?.PREVIEW_SECRET).toBe("build-mode");
+		if (result.type === "preview") {
+			expect(result.mode).toBe("staging");
+		}
 	});
 
 	test("preview loads local env without a mode when Build Output records none", async ({
@@ -1076,6 +1079,9 @@ describe("resolvePluginConfig", () => {
 		expect(result.type).toBe("preview");
 		expect(result.localEnv.values.PREVIEW_MODE_VALUE).toBe("no-mode");
 		expect(result.devVars?.PREVIEW_SECRET).toBe("no-mode");
+		if (result.type === "preview") {
+			expect(result.mode).toBeUndefined();
+		}
 	});
 
 	test("preview uses all Workers read from Build Output", async ({
