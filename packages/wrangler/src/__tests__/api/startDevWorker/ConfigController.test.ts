@@ -757,4 +757,119 @@ describe("ConfigController", () => {
 			await expect(update).resolves.toBeDefined();
 		}
 	});
+
+	// https://github.com/cloudflare/workers-sdk/issues/17157
+	describe("local vars files", () => {
+		const secretUpdateFor = (value: string) =>
+			bus.waitFor(
+				"configUpdate",
+				(e) =>
+					e.config.bindings?.MY_SECRET?.type === "secret_text" &&
+					e.config.bindings.MY_SECRET.value === value
+			);
+
+		beforeEach(async () => {
+			vi.stubEnv("WRANGLER_CI_DISABLE_CONFIG_WATCHING", "false");
+			await seed({
+				"wrangler.jsonc": JSON.stringify({
+					name: "devvars-repro",
+					main: "src/index.js",
+					compatibility_date: "2026-11-01",
+					env: { staging: {} },
+				}),
+				"src/index.js": "export default {}",
+			});
+		});
+
+		it("should reload bindings when `.dev.vars` changes", async ({
+			expect,
+		}) => {
+			await seed({ ".dev.vars": "MY_SECRET=one" });
+			const initial = secretUpdateFor("one");
+			await controller.set({ config: "./wrangler.jsonc" });
+			await initial;
+
+			const update = secretUpdateFor("two");
+			await seed({ ".dev.vars": "MY_SECRET=two" });
+			await expect(update).resolves.toBeDefined();
+		});
+
+		it("should reload bindings when `.dev.vars.<env>` changes with an environment selected", async ({
+			expect,
+		}) => {
+			await seed({ ".dev.vars.staging": "MY_SECRET=one" });
+			const initial = secretUpdateFor("one");
+			await controller.set({ config: "./wrangler.jsonc", env: "staging" });
+			await initial;
+
+			const update = secretUpdateFor("two");
+			await seed({ ".dev.vars.staging": "MY_SECRET=two" });
+			await expect(update).resolves.toBeDefined();
+		});
+
+		it("should reload bindings when `.env` changes and there is no `.dev.vars`", async ({
+			expect,
+		}) => {
+			await seed({ ".env": "MY_SECRET=one" });
+			const initial = secretUpdateFor("one");
+			await controller.set({ config: "./wrangler.jsonc" });
+			await initial;
+
+			const update = secretUpdateFor("two");
+			await seed({ ".env": "MY_SECRET=two" });
+			await expect(update).resolves.toBeDefined();
+		});
+
+		it("should reload bindings when a file passed as `envFiles` changes", async ({
+			expect,
+		}) => {
+			await seed({ "other/.env": "MY_SECRET=one" });
+			const initial = secretUpdateFor("one");
+			await controller.set({
+				config: "./wrangler.jsonc",
+				envFiles: ["other/.env"],
+			});
+			await initial;
+
+			const update = secretUpdateFor("two");
+			await seed({ "other/.env": "MY_SECRET=two" });
+			await expect(update).resolves.toBeDefined();
+		});
+
+		it("should reload bindings when `.dev.vars` is created, taking over from `.env`", async ({
+			expect,
+		}) => {
+			await seed({ ".env": "MY_SECRET=one" });
+			const initial = secretUpdateFor("one");
+			await controller.set({ config: "./wrangler.jsonc" });
+			await initial;
+
+			const update = secretUpdateFor("two");
+			await seed({ ".dev.vars": "MY_SECRET=two" });
+			await expect(update).resolves.toBeDefined();
+		});
+
+		it("still reloads bindings when the config file changes", async ({
+			expect,
+		}) => {
+			await seed({ ".dev.vars": "MY_SECRET=one" });
+			const initial = secretUpdateFor("one");
+			await controller.set({ config: "./wrangler.jsonc" });
+			await initial;
+
+			const update = secretUpdateFor("two");
+			await seed({ ".dev.vars": "MY_SECRET=two" });
+			// Touching the config file is what makes the edit above take effect.
+			await seed({
+				"wrangler.jsonc": JSON.stringify({
+					name: "devvars-repro",
+					main: "src/index.js",
+					compatibility_date: "2026-11-01",
+					env: { staging: {} },
+					vars: { OTHER: "x" },
+				}),
+			});
+			await expect(update).resolves.toBeDefined();
+		});
+	});
 });
