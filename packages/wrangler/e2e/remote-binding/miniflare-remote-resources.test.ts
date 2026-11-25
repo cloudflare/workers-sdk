@@ -972,6 +972,96 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 			);
 		});
 	});
+
+	// Separate describe block because oidc_tokens is enabled per account, so a
+	// failed deploy must not fail the shared setup of the other test cases. The
+	// binding isn't available in remote dev, so this deploys a Worker with one
+	// and calls it through a remote service binding.
+	describe("Remote bindings (oidc_tokens)", () => {
+		it("issues tokens for the identity that wrangler deploy printed", async ({
+			expect,
+		}) => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed(path.resolve(__dirname, "./workers"));
+
+			const workerName = generateResourceName();
+			const audience = "https://wrangler-e2e.example.com";
+			const wranglerConfig: RawConfig = {
+				name: workerName,
+				main: "oidc-worker.js",
+				oidc_tokens: [{ binding: "OIDC", audience }],
+			};
+			await helper.seed({
+				"oidc-worker.js": dedent /* javascript */ `
+					export default {
+						async fetch(request, env) {
+							const token = await env.OIDC.getToken();
+							const payload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+							const claims = JSON.parse(atob(payload));
+							// The token is a bearer credential, so only its identity claims leave this Worker.
+							return Response.json({ iss: claims.iss, sub: claims.sub, aud: claims.aud });
+						},
+					};
+				`,
+				"oidc-wrangler.json": JSON.stringify(wranglerConfig, null, 2),
+			});
+			const { stdout } = await helper.worker({
+				workerName,
+				configPath: "oidc-wrangler.json",
+			});
+			// Verifiers' trust policies are written from this output.
+			const issuer = stdout.match(/Issuer:\s+(?<value>\S+)/)?.groups?.value;
+			const subject = stdout.match(/Subject:\s+(?<value>\S+)/)?.groups?.value;
+			assert(issuer && subject, `Cannot find the OIDC identity in ${stdout}`);
+
+			const remoteProxySession = await startRemoteProxySession({
+				OIDC_WORKER: { type: "service", service: workerName },
+			});
+			helper.onTeardown(() => remoteProxySession.dispose());
+			const mf = new Miniflare({
+				workers: [
+					{
+						config: {
+							name: "",
+							compatibilityDate: "2025-09-06",
+							manifest: createManifest(helper.tmpPath, ["oidc-token.js"]),
+							env: {
+								OIDC_WORKER: {
+									type: "worker",
+									worker: workerName,
+									dev: { remote: true },
+								},
+							},
+						},
+						dev: {
+							remoteProxyConnectionString:
+								remoteProxySession.remoteProxyConnectionString,
+						},
+					},
+				],
+			});
+			helper.onTeardown(() => mf.dispose());
+
+			const text = await vi.waitFor(
+				async () => {
+					const body = await (
+						await mf.dispatchFetch("http://example.com/")
+					).text();
+					// A newly deployed Worker can take a few seconds to reach the service binding.
+					if (body === "Worker not found.") {
+						throw new Error(body);
+					}
+					return body;
+				},
+				{ interval: 2_000, timeout: 30_000 }
+			);
+			expect(JSON.parse(text)).toEqual({
+				iss: issuer,
+				sub: subject,
+				aud: audience,
+			});
+		});
+	});
 }
 
 describe("Remote bindings (remote proxy session disabled)", () => {
