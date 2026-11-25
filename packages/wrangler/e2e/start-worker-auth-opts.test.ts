@@ -159,16 +159,18 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 			// poll. A disposed session reports no errors, and disposal precedes
 			// `reloadComplete`, so clear warnings only once the reload completes.
 			// A failed rebuild emits `buildFailed` rather than `error`, so bound the
-			// wait instead of relying on `events.once` rejecting.
-			const reloaded = events.once(worker.raw, "reloadComplete", {
-				signal: AbortSignal.timeout(20_000),
-			});
-			await worker.patchConfig({
-				dev: {
-					auth: validAuth,
-				},
-			});
-			await reloaded;
+			// wait instead of relying on `events.once` rejecting. Awaiting both
+			// together handles a timeout even while `patchConfig` is pending.
+			await Promise.all([
+				events.once(worker.raw, "reloadComplete", {
+					signal: AbortSignal.timeout(20_000),
+				}),
+				worker.patchConfig({
+					dev: {
+						auth: validAuth,
+					},
+				}),
+			]);
 			vi.mocked(console.warn).mockClear();
 
 			await assertValidWorkerAiResponse(expect);
