@@ -498,7 +498,7 @@ describe("convertToWranglerConfig", () => {
 			expect(result.flagship).toEqual([{ binding: "F" }]);
 		});
 
-		it("maps realtimekit.id to app_id and dev.remote to remote", ({
+		it("maps realtimeKit.id to app_id and dev.remote to remote", ({
 			expect,
 		}) => {
 			const result = convertToWranglerConfig({
@@ -506,7 +506,7 @@ describe("convertToWranglerConfig", () => {
 					...baseWorker,
 					env: {
 						RTK: {
-							type: "realtimekit",
+							type: "realtime-kit",
 							id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
 							dev: { remote: true },
 						},

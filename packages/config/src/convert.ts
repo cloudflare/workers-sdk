@@ -552,7 +552,7 @@ function convertBindingsAndAssets(
 				);
 				break;
 			}
-			case "realtimekit": {
+			case "realtime-kit": {
 				realtimekit.push(
 					omitUndefined({
 						binding: name,

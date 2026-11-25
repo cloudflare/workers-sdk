@@ -129,7 +129,7 @@ export const FlagshipBindingSchema = z.strictObject({
 });
 
 export const RealtimeKitBindingSchema = z.strictObject({
-	type: z.literal("realtimekit"),
+	type: z.literal("realtime-kit"),
 	id: z.string(),
 	dev: RemoteBindingDevSchema.optional(),
 });

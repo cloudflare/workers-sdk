@@ -5,7 +5,7 @@ const config = defineWorker({
 	name: "meetings",
 	compatibilityDate: "2025-04-28",
 	env: {
-		RTK: bindings.realtimekit({
+		RTK: bindings.realtimeKit({
 			id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
 		}),
 	},

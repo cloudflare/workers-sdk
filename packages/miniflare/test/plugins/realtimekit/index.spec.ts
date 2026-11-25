@@ -48,7 +48,7 @@ function realtimeKitWorker(proxyUrl?: URL) {
 			manifest: singleModuleManifest(script),
 			env: {
 				RTK: {
-					type: "realtimekit" as const,
+					type: "realtime-kit" as const,
 					id: appId,
 					dev: { remote: true },
 				},
