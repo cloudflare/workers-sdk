@@ -388,20 +388,23 @@ const walk = async (dir: string) => {
 	);
 	let counter = 0;
 	async function walkDirectory(directory: string): Promise<void> {
-		const entries = await fs.readdir(directory);
+		const entries = await fs.readdir(directory, { withFileTypes: true });
 		await Promise.all(
 			entries.map(async (entry) => {
-				const filepath = path.join(directory, entry);
+				const filepath = path.join(directory, entry.name);
 				const relativeFilepath = path.relative(dir, filepath);
 				const assetPath = relativeFilepath.split(path.sep).join("/");
+				if (entry.isDirectory()) {
+					if (!assetsIgnoreFunction(`${assetPath}/`)) {
+						await walkDirectory(filepath);
+					}
+					return;
+				}
 				if (assetsIgnoreFunction(assetPath)) {
 					return;
 				}
 				const filestat = await fs.stat(filepath);
-				if (filestat.isDirectory()) {
-					if (!assetsIgnoreFunction(`${assetPath}/`)) {
-						await walkDirectory(filepath);
-					}
+				if (!filestat.isFile()) {
 					return;
 				}
 				// TODO: Warn about _worker.js

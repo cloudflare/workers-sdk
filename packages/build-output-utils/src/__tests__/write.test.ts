@@ -420,6 +420,25 @@ describe("writeAssets", () => {
 		}
 	);
 
+	it("copies nested HTML under a directory-only allowlist", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		fs.mkdirSync(path.join(root, "docs/guide"), { recursive: true });
+		fs.writeFileSync(path.join(root, ".assetsignore"), "*\n!*/\n!*.html\n");
+		fs.writeFileSync(path.join(root, "docs/guide/index.html"), "included");
+		fs.writeFileSync(path.join(root, "docs/guide/notes.txt"), "ignored");
+		fs.writeFileSync(path.join(root, "notes.txt"), "ignored");
+
+		await writeAssets({ root, sourceDirectory: root });
+
+		const assetsDir = getWorkerAssetsDir(root);
+		expect(fs.readdirSync(path.join(assetsDir, "docs/guide"))).toEqual([
+			"index.html",
+		]);
+		expect(fs.existsSync(path.join(assetsDir, "notes.txt"))).toBe(false);
+	});
+
 	it("preserves files already generated in the build output", async ({
 		expect,
 	}) => {

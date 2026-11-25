@@ -88,11 +88,14 @@ export async function writeAssets({
 			) {
 				return true;
 			}
-			return (
-				!assetsIgnoreFunction(relative) &&
-				(!assetsIgnoreFunction(`${relative}/`) ||
-					!(await fsp.stat(source)).isDirectory())
-			);
+			const ignoredAsFile = assetsIgnoreFunction(relative);
+			const ignoredAsDirectory = assetsIgnoreFunction(`${relative}/`);
+			if (ignoredAsFile === ignoredAsDirectory) {
+				return !ignoredAsFile;
+			}
+			return !((await fsp.stat(source)).isDirectory()
+				? ignoredAsDirectory
+				: ignoredAsFile);
 		},
 	};
 	await fsp.mkdir(assetsDir, { recursive: true });

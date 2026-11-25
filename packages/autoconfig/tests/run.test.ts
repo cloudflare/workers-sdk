@@ -1,8 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { join } from "node:path";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
-import { loadAndParseConfig } from "@cloudflare/config";
+import { loadAndParseConfig, loadConfig } from "@cloudflare/config";
 import {
 	NpmPackageManager,
 	PnpmPackageManager,
@@ -72,10 +73,20 @@ describe("runAutoConfig()", () => {
 		vi.spyOn(cliPackages, "installWrangler").mockResolvedValue();
 	});
 
-	it("creates loadable cf config in a bare project without installing cf", async ({
+	it("creates loadable configs without changing how existing CommonJS scripts run", async ({
 		expect,
 	}) => {
-		await seed({ "index.html": "static site", ".env": "SECRET=secret" });
+		await seed({
+			"index.html": "static site",
+			".env": "SECRET=secret",
+			"legacy.js":
+				'module.exports = require("node:path").basename(__filename);',
+			"node_modules/wrangler/package.json": JSON.stringify({
+				exports: { "./experimental-config": "./experimental-config.mjs" },
+			}),
+			"node_modules/wrangler/experimental-config.mjs":
+				"export function defineWranglerConfig(config) { return config; }",
+		});
 		const context = createMockContext();
 		const details = await getDetailsForAutoConfig({
 			projectPath: process.cwd(),
@@ -95,6 +106,14 @@ describe("runAutoConfig()", () => {
 			{ isPreview: false, mode: undefined }
 		);
 		expect(result.success).toBe(true);
+		const { config } = await loadConfig(
+			join(process.cwd(), "wrangler.config.ts")
+		);
+		expect(config).toEqual({ assetsDirectory: "." });
+		const requireFromProject = createRequire(
+			join(process.cwd(), "package.json")
+		);
+		expect(requireFromProject("./legacy.js")).toBe("legacy.js");
 		expect(cliPackages.installPackages).toHaveBeenCalledWith(
 			"npm",
 			["typescript"],
@@ -120,17 +139,16 @@ describe("runAutoConfig()", () => {
 				"node_modules/@cloudflare/vite-plugin/package.json": JSON.stringify({
 					version: "2.0.0-beta.v.13",
 				}),
+				"node_modules/vite/package.json": JSON.stringify({
+					name: "vite",
+					version: "8.1.0",
+					bin: { vite: "cli.js" },
+				}),
 			});
 			vi.spyOn(Vite.prototype, "configure").mockImplementation(
 				async ({ dryRun }) => {
 					if (!dryRun && installTool) {
-						await seed({
-							"node_modules/vite/package.json": JSON.stringify({
-								version: "8.1.0",
-								bin: { vite: "cli.js" },
-							}),
-							"node_modules/vite/cli.js": "",
-						});
+						await seed({ "node_modules/vite/cli.js": "" });
 					}
 					return { buildTool: "vite", workerConfig: {} };
 				}
@@ -227,8 +245,8 @@ describe("runAutoConfig()", () => {
 			expect(manifest).toMatchObject({
 				name: "site",
 				private: true,
-				type: "module",
 			});
+			expect(manifest).not.toHaveProperty("type");
 			await writeFile(
 				packageJsonPath,
 				JSON.stringify({
@@ -578,7 +596,7 @@ describe("runAutoConfig()", () => {
 		expect(summary.frameworkId).toBe("static");
 	});
 
-	it("creates new configuration and cf scripts by default", async ({
+	it("creates configuration without replacing existing package scripts", async ({
 		expect,
 	}) => {
 		const packageJson = {
@@ -586,6 +604,7 @@ describe("runAutoConfig()", () => {
 			type: "module",
 			scripts: {
 				build: "generate && vite build",
+				deploy: "node scripts/deploy.cjs",
 				dev: "node start.cjs",
 				preview: "vite preview",
 			},
@@ -596,26 +615,28 @@ describe("runAutoConfig()", () => {
 		});
 		const context = createMockContext();
 
-		const summary = await runAutoConfig(
-			{
-				configured: false,
-				projectPath: process.cwd(),
-				workerName: "my-static-app",
-				framework: new BuildCommandOverrideFramework({
-					id: "static",
-					name: "Static",
-				}),
-				buildCommand: "npm run build",
-				outputDir: "public",
-				packageJson,
-				packageManager: NpmPackageManager,
-			},
-			{
-				context,
-				skipConfirmations: true,
-				enableTargetCliInstallation: false,
-			}
-		);
+		const details = {
+			configured: false,
+			projectPath: process.cwd(),
+			workerName: "my-static-app",
+			framework: new BuildCommandOverrideFramework({
+				id: "static",
+				name: "Static",
+			}),
+			buildCommand: "npm run build",
+			outputDir: "public",
+			packageJson,
+			packageManager: NpmPackageManager,
+		} as const;
+		const preview = await runAutoConfig(details, { context, dryRun: true });
+		expect(preview.scripts).toEqual({});
+		expect(std.out).not.toContain("Update package.json scripts:");
+
+		const summary = await runAutoConfig(details, {
+			context,
+			skipConfirmations: true,
+			enableTargetCliInstallation: false,
+		});
 
 		expect(summary.workerConfig).toMatchObject({
 			name: "my-static-app",
@@ -642,15 +663,10 @@ describe("runAutoConfig()", () => {
 			process.cwd(),
 			"[build]"
 		);
-		expect(JSON.parse(readFileSync("package.json", "utf8"))).toMatchObject({
-			type: "module",
-			scripts: {
-				build: "generate && vite build",
-				deploy: "cf deploy",
-				dev: "node start.cjs",
-				preview: "vite preview",
-			},
-		});
+		expect(summary.scripts).toEqual({});
+		expect(readFileSync("package.json", "utf8")).toBe(
+			JSON.stringify(packageJson)
+		);
 	});
 
 	it("installs cf and Wrangler for cf projects", async ({ expect }) => {
@@ -725,7 +741,164 @@ describe("runAutoConfig()", () => {
 		expect(cliPackages.installPackages).not.toHaveBeenCalled();
 	});
 
-	it("installs the Vite runner when missing and generates a Worker tsconfig", async ({
+	it.for([
+		{ declared: false, viteVersion: "8.1.0" },
+		{ declared: true, viteVersion: "7.1.12" },
+	])(
+		"sets up a Vite project without an installed runner (declared=$declared)",
+		async ({ declared, viteVersion }, { expect }) => {
+			const viteConfig =
+				'import { defineConfig } from "vite";\nexport default defineConfig({ plugins: [] });\n';
+			const packageJson = {
+				name: "vite-app",
+				devDependencies: {
+					cf: "^0.8.0",
+					typescript: "^6.0.0",
+					"@cloudflare/vite-plugin": "^2.0.0-rc.0",
+					...(declared ? { vite: viteVersion } : {}),
+				},
+			};
+			await seed({
+				"package.json": JSON.stringify(packageJson),
+				"vite.config.ts": viteConfig,
+				"index.html": "<h1>Hello World</h1>",
+			});
+			const context = createMockContext({
+				isNonInteractiveOrCI: () => declared,
+			});
+			const detected = await getDetailsForAutoConfig({ context });
+			const details = declared
+				? detected
+				: {
+						...detected,
+						framework: getFrameworkClassInstance("vite", "cf"),
+						outputDir: "dist",
+						buildCommand: "vite build",
+					};
+			expect(details.framework).toBeInstanceOf(Vite);
+			expect(existsSync("node_modules/vite")).toBe(false);
+
+			await runAutoConfig(details, { context, dryRun: true });
+			expect(cliPackages.installPackages).not.toHaveBeenCalled();
+			expect(context.logger.log).toHaveBeenCalledWith(
+				declared
+					? "📦 Install project dependencies"
+					: " - vite@^8.0.0 (devDependency)"
+			);
+			expect(existsSync("cloudflare.config.ts")).toBe(false);
+			expect(readFileSync("vite.config.ts", "utf8")).toBe(viteConfig);
+
+			vi.mocked(cliPackages.installPackages).mockImplementationOnce(
+				async () => {
+					await seed({
+						"package.json": JSON.stringify({
+							...packageJson,
+							devDependencies: {
+								...packageJson.devDependencies,
+								vite: declared ? viteVersion : "^8.0.0",
+							},
+						}),
+						"node_modules/vite/package.json": JSON.stringify({
+							name: "vite",
+							version: viteVersion,
+							bin: { vite: "cli.js" },
+						}),
+						"node_modules/vite/cli.js": "",
+						"node_modules/@cloudflare/vite-plugin/package.json": JSON.stringify(
+							{
+								name: "@cloudflare/vite-plugin",
+								version: "2.0.0-rc.0",
+							}
+						),
+					});
+				}
+			);
+			vi.mocked(context.dialogs.select).mockResolvedValue("vite");
+			vi.mocked(context.dialogs.prompt)
+				.mockResolvedValueOnce("vite-app")
+				.mockResolvedValueOnce("dist")
+				.mockResolvedValueOnce("vite build");
+			const summary = await runAutoConfig(detected, { context });
+
+			expect(cliPackages.installPackages).toHaveBeenNthCalledWith(
+				1,
+				"npm",
+				declared ? [] : ["vite@^8.0.0"],
+				{ cwd: process.cwd(), dev: true, isWorkspaceRoot: false }
+			);
+			expect(cliPackages.installPackages).toHaveBeenNthCalledWith(
+				2,
+				"npm",
+				["@cloudflare/vite-plugin@^2.0.0-rc.0"],
+				expect.objectContaining({ cwd: process.cwd(), dev: true })
+			);
+			expect(cliPackages.installWrangler).not.toHaveBeenCalled();
+			if (declared) {
+				expect(context.dialogs.confirm).not.toHaveBeenCalled();
+			} else {
+				expect(context.dialogs.select).toHaveBeenCalledOnce();
+			}
+			expect(context.runCommand).toHaveBeenCalledExactlyOnceWith(
+				"vite build",
+				process.cwd(),
+				"[build]"
+			);
+			expect(summary.scripts).toEqual({
+				build: "cf build",
+				deploy: "cf deploy",
+				dev: "cf dev",
+			});
+			expect(existsSync("cloudflare.config.ts")).toBe(true);
+			expect(readFileSync("vite.config.ts", "utf8")).toContain(
+				"@cloudflare/vite-plugin"
+			);
+		}
+	);
+
+	it.for([true, false])(
+		"rejects an unsupported Vite version before configuring (already installed=%s)",
+		async (installed, { expect }) => {
+			const packageJson = JSON.stringify({
+				devDependencies: { cf: "^0.8.0", vite: "6.3.5" },
+			});
+			await seed({
+				"package.json": packageJson,
+				"tsconfig.json": "{}",
+				"index.html": "<h1>Hello World</h1>",
+			});
+			const runnerFiles = {
+				"node_modules/vite/package.json": JSON.stringify({
+					name: "vite",
+					version: "6.3.5",
+				}),
+			};
+			if (installed) {
+				await seed(runnerFiles);
+			} else {
+				vi.mocked(cliPackages.installPackages).mockImplementationOnce(() =>
+					seed(runnerFiles)
+				);
+			}
+			const context = createMockContext();
+			const details = await getDetailsForAutoConfig({ context });
+			expect(details.framework).toBeInstanceOf(Vite);
+
+			await expect(
+				runAutoConfig(details, { context, skipConfirmations: true })
+			).rejects.toThrow(
+				'The version of Vite used in the project ("6.3.5") cannot be automatically configured.'
+			);
+			expect(cliPackages.installPackages).toHaveBeenCalledTimes(
+				installed ? 0 : 1
+			);
+			expect(context.runCommand).not.toHaveBeenCalled();
+			expect(existsSync("vite.config.mts")).toBe(false);
+			expect(existsSync("cloudflare.config.ts")).toBe(false);
+			expect(readFileSync("package.json", "utf8")).toBe(packageJson);
+		}
+	);
+
+	it("generates a tsconfig that includes the generated Worker types", async ({
 		expect,
 	}) => {
 		const packageJson = { name: "my-vite-app" };
@@ -975,7 +1148,7 @@ describe("runAutoConfig()", () => {
 				"cloudflare.config.ts": config,
 				"package.json": JSON.stringify({
 					...packageJson,
-					scripts: { build: "vite build" },
+					scripts: { build: "vite build", deploy: "vite build && cf deploy" },
 				}),
 			});
 			return configure({ ...options, dryRun: true });
@@ -994,11 +1167,15 @@ describe("runAutoConfig()", () => {
 			{ context, skipConfirmations: true, runBuild: false }
 		);
 
-		expect(summary.scripts).toEqual({ dev: "cf dev", deploy: "cf deploy" });
+		expect(summary.scripts).toEqual({ dev: "cf dev" });
 		expect(readFileSync("cloudflare.config.ts", "utf8")).toBe(config);
 		expect(readFileSync("tsconfig.json", "utf8")).toBe(tsconfig);
 		expect(JSON.parse(readFileSync("package.json", "utf8"))).toMatchObject({
-			scripts: { build: "vite build", dev: "cf dev" },
+			scripts: {
+				build: "vite build",
+				deploy: "vite build && cf deploy",
+				dev: "cf dev",
+			},
 		});
 	});
 

@@ -144,7 +144,8 @@ export async function runAutoConfig(
 		autoConfigDetails.framework.id,
 		target
 	);
-	if (frameworkPackageInfo) {
+	const validateViteAfterInstall = needsViteInstall(autoConfigDetails, target);
+	if (frameworkPackageInfo && !validateViteAfterInstall) {
 		autoConfigDetails.framework.validateFrameworkVersion(
 			autoConfigDetails.projectPath,
 			frameworkPackageInfo,
@@ -261,7 +262,6 @@ export async function runAutoConfig(
 					.replaceAll(/\s+/g, "-")
 			),
 			private: true,
-			type: "module",
 		};
 		await writeFile(packageJsonPath, `${JSON.stringify(manifest, null, 2)}\n`, {
 			flag: "wx",
@@ -277,7 +277,7 @@ export async function runAutoConfig(
 				enableTargetCliInstallation,
 				scaffold
 			);
-			if (packages.length > 0) {
+			if (packages.length > 0 || validateViteAfterInstall) {
 				await installPackages(packageManager.type, packages, {
 					cwd: projectPath,
 					dev: true,
@@ -294,6 +294,14 @@ export async function runAutoConfig(
 		} else if (enableTargetCliInstallation) {
 			await installWrangler(packageManager.type, isWorkspaceRoot);
 		}
+	}
+
+	if (frameworkPackageInfo && validateViteAfterInstall) {
+		autoConfigDetails.framework.validateFrameworkVersion(
+			projectPath,
+			frameworkPackageInfo,
+			context
+		);
 	}
 
 	const configurationResults = await autoConfigDetails.framework.configure({
@@ -318,28 +326,27 @@ export async function runAutoConfig(
 		const existingScripts = existingPackageJson.scripts ?? {};
 		const scriptsToAdd = Object.fromEntries(
 			Object.entries(autoConfigSummary.scripts).filter(
-				([name]) =>
-					target === "wrangler" ||
-					name === "deploy" ||
-					!(name in existingScripts)
+				([name]) => target === "wrangler" || !(name in existingScripts)
 			)
 		);
 		autoConfigSummary.scripts = scriptsToAdd;
 
-		await writeFile(
-			packageJsonPath,
-			JSON.stringify(
-				{
-					...existingPackageJson,
-					scripts: {
-						...existingScripts,
-						...scriptsToAdd,
-					},
-				} satisfies PackageJSON,
-				null,
-				2
-			) + "\n"
-		);
+		if (Object.keys(scriptsToAdd).length > 0) {
+			await writeFile(
+				packageJsonPath,
+				JSON.stringify(
+					{
+						...existingPackageJson,
+						scripts: {
+							...existingScripts,
+							...scriptsToAdd,
+						},
+					} satisfies PackageJSON,
+					null,
+					2
+				) + "\n"
+			);
+		}
 	}
 
 	if (target === "wrangler") {
@@ -464,6 +471,24 @@ export async function runAutoConfig(
 	}
 
 	return autoConfigSummary;
+}
+
+/** Determines whether cf must install the plain Vite project's runner before validating it. */
+function needsViteInstall(
+	{
+		framework,
+		nodeModulesPaths,
+		projectPath,
+	}: AutoConfigDetailsForNonConfiguredProject,
+	target: AutoConfigTarget
+): boolean {
+	return (
+		target === "cf" &&
+		framework.id === "vite" &&
+		!(nodeModulesPaths ?? [resolve(projectPath, "node_modules")]).some(
+			(directory) => existsSync(resolve(directory, "vite", "package.json"))
+		)
+	);
 }
 
 type CfProjectScaffold = {
@@ -799,6 +824,13 @@ export async function buildOperationsSummary(
 			)) {
 				packagesToInstall.add(pkg);
 			}
+			if (
+				packagesToInstall.size === 0 &&
+				needsViteInstall(autoConfigDetails, target)
+			) {
+				logger.log("📦 Install project dependencies");
+				logger.log("");
+			}
 		} else if (enableTargetCliInstallation) {
 			packagesToInstall.add("wrangler");
 		}
@@ -832,10 +864,10 @@ export async function buildOperationsSummary(
 			target === "wrangler" && autoConfigDetails.buildCommand
 				? `${autoConfigDetails.buildCommand} && `
 				: "";
-		summary.scripts = {
-			deploy:
-				scriptOverrides?.deploy ?? `${buildCommandPrefix}${target} deploy`,
-		};
+		if (target === "wrangler" || !("deploy" in existingScripts)) {
+			summary.scripts.deploy =
+				scriptOverrides?.deploy ?? `${buildCommandPrefix}${target} deploy`;
+		}
 		if (target === "wrangler") {
 			summary.scripts.preview =
 				scriptOverrides?.preview ?? `${buildCommandPrefix}${target} dev`;
@@ -862,11 +894,13 @@ export async function buildOperationsSummary(
 				(target === "cf" ? "cf workers types" : "wrangler types");
 		}
 
-		logger.log("📝 Update package.json scripts:");
-		for (const [name, script] of Object.entries(summary.scripts)) {
-			logger.log(` - "${name}": "${script}"`);
+		if (Object.keys(summary.scripts).length > 0) {
+			logger.log("📝 Update package.json scripts:");
+			for (const [name, script] of Object.entries(summary.scripts)) {
+				logger.log(` - "${name}": "${script}"`);
+			}
+			logger.log("");
 		}
-		logger.log("");
 	}
 
 	// Projects with Worker code (an entrypoint) get the `cf-typegen` script. Its output in
