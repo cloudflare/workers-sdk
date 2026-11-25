@@ -1666,6 +1666,48 @@ test("MessageBuilder with attachments", async ({ expect }) => {
 	expect(await readFile(attachmentFile, "utf-8")).toBe("base64content");
 });
 
+test("MessageBuilder captures the decoded bytes of a base64 attachment", async ({
+	expect,
+}) => {
+	// A string attachment `content` is base64, as the reply path and the
+	// Explorer's compose endpoint already treat it. The captured file should
+	// hold the bytes it encodes, as it does for the same bytes passed as binary.
+	const log = new TestLog();
+	const projectTmpPath = await useProjectTmpPath();
+	const mf = useMessageBuilderMiniflare({
+		log,
+		resourceTmpPath: projectTmpPath,
+	});
+
+	const res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: JSON.stringify({
+			from: "sender@example.com",
+			to: "recipient@example.com",
+			subject: "Base64 attachment",
+			text: "See attached.",
+			attachments: [
+				{
+					disposition: "attachment",
+					filename: "fixture.bin",
+					type: "application/octet-stream",
+					content: "AAEC/w==",
+				},
+			],
+		}),
+	});
+
+	expect(await res.text()).toBe("ok");
+	expect(res.status).toBe(200);
+
+	const message = await waitForMessageBuilderLog(log);
+	const attachmentFile = getLoggedArtifactPath(
+		message,
+		"Attachment (attachment): fixture.bin -> "
+	);
+	expect([...(await readFile(attachmentFile))]).toEqual([0, 1, 2, 255]);
+});
+
 test("MessageBuilder log output format snapshot", async ({ expect }) => {
 	const log = new TestLog();
 	const projectTmpPath = await useProjectTmpPath();

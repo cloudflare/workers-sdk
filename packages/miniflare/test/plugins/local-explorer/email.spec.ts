@@ -1528,6 +1528,53 @@ describe("Local Explorer email API", () => {
 		});
 	});
 
+	test("reports the decoded size of a base64 MessageBuilder attachment", async ({
+		expect,
+	}) => {
+		// "AAEC/w==" is the base64 encoding of the four bytes 00 01 02 ff, so the
+		// captured attachment's size should be 4, not the 8 characters encoding it.
+		const sendResponse = await mf.dispatchFetch(
+			"http://localhost/send-builder",
+			{
+				method: "POST",
+				body: JSON.stringify({
+					from: "sender@example.com",
+					to: "recipient@example.com",
+					subject: "Base64 attachment size",
+					text: "See attached.",
+					attachments: [
+						{
+							filename: "fixture.bin",
+							type: "application/octet-stream",
+							disposition: "attachment",
+							content: "AAEC/w==",
+						},
+					],
+				}),
+			}
+		);
+
+		expect(sendResponse.status).toBe(200);
+		const sentResult = (await sendResponse.json()) as { messageId: string };
+
+		const list = await expectValidResponse(
+			await mf.dispatchFetch(`${BASE_URL}/local/email/sending`),
+			zEmailListSendingResponse,
+			expect
+		);
+		const item = getListResult(list.result).find(
+			(email) => email.messageId === sentResult.messageId
+		);
+		expect(item?.attachments).toEqual([
+			{
+				filename: "fixture.bin",
+				contentType: "application/octet-stream",
+				disposition: "attachment",
+				size: 4,
+			},
+		]);
+	});
+
 	test("sends an EmailMessage at the production limit and captures a truncated copy", async ({
 		expect,
 	}) => {
