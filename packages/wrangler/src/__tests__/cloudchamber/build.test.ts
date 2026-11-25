@@ -51,6 +51,30 @@ describe("containers build", () => {
 		);
 	});
 
+	it("passes --jurisdiction through to the shared command", async ({
+		expect,
+	}) => {
+		await runWrangler(
+			"containers build ./container-context -t test-app:tag -p --jurisdiction eu"
+		);
+
+		expect(vi.mocked(buildCommand).mock.calls[0]?.[1]).toEqual({
+			compliance_region: undefined,
+			jurisdiction: "eu",
+		});
+	});
+
+	it("rejects --jurisdiction without --push", async ({ expect }) => {
+		await expect(
+			runWrangler(
+				"containers build ./container-context -t test-app:tag --jurisdiction eu"
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: The --jurisdiction option only applies with --push.]`
+		);
+		expect(buildCommand).not.toHaveBeenCalled();
+	});
+
 	it("passes a custom Docker path through to the shared command", async ({
 		expect,
 	}) => {

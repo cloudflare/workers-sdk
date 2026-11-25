@@ -11,6 +11,7 @@ import { dockerImageInspect } from "./inspect";
 import { getCloudflareContainerRegistry } from "./knobs";
 import { ensureContainerLimits, getContainerAccount } from "./limits";
 import { dockerLoginImageRegistry } from "./login";
+import { getContainerRegistryConfig } from "./registry";
 import { verifyDockerInstalled } from "./utils";
 import { runDockerCmd, runDockerCmdWithOutput } from "./utils";
 import type {
@@ -18,7 +19,10 @@ import type {
 	ContainerNormalizedConfig,
 	ImageURIConfig,
 } from "./types";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type {
+	ComplianceConfig,
+	ContainerRegistryConfig,
+} from "@cloudflare/workers-utils";
 
 export type DockerfileContainerConfig = Exclude<
 	ContainerNormalizedConfig,
@@ -168,7 +172,7 @@ const TAG_SUFFIX_REGEXP = /:[\w][\w.-]{0,127}$/;
 function getRepositoryOnly(
 	externalAccountId: string,
 	imageTag: string,
-	complianceConfig?: ComplianceConfig
+	complianceConfig?: ContainerRegistryConfig
 ): string {
 	return resolveImageName(externalAccountId, imageTag, complianceConfig)
 		.replace(DIGEST_SUFFIX_REGEXP, "")
@@ -179,7 +183,7 @@ function imageRefWithDigest(
 	externalAccountId: string,
 	imageTag: string,
 	digest: string,
-	complianceConfig?: ComplianceConfig
+	complianceConfig?: ContainerRegistryConfig
 ): string {
 	if (!DIGEST_VALUE_REGEXP.test(digest)) {
 		throw new Error(
@@ -204,7 +208,7 @@ function findRemoteDigest(
 	repoDigestsJson: string,
 	externalAccountId: string,
 	imageTag: string,
-	complianceConfig?: ComplianceConfig
+	complianceConfig?: ContainerRegistryConfig
 ): string {
 	const parsedDigests = JSON.parse(repoDigestsJson);
 	if (!Array.isArray(parsedDigests)) {
@@ -267,7 +271,7 @@ async function tagAndPushImage({
 	sourceTag: string;
 	targetTag: string;
 	externalAccountId: string;
-	complianceConfig?: ComplianceConfig;
+	complianceConfig?: ContainerRegistryConfig;
 	cleanupSourceTag?: boolean;
 }): Promise<string> {
 	const namespacedImageTag = resolveImageName(
@@ -285,7 +289,8 @@ async function tagAndPushImage({
 }
 
 /**
- * Checks the remote manifest to see if there are changes, and only push if there are
+ * Checks the remote manifest to see if there are changes, and only push if there are.
+ * `complianceConfig.jurisdiction` selects the registry for images with `jurisdictions`.
  */
 export async function pushImageIfChanged({
 	pathToDocker,
@@ -301,7 +306,7 @@ export async function pushImageIfChanged({
 	targetTag: string;
 	containerConfig?: ContainerNormalizedConfig;
 	accountId?: string;
-	complianceConfig?: ComplianceConfig;
+	complianceConfig?: ContainerRegistryConfig;
 	cleanupSourceTag?: boolean;
 }): Promise<ImageRef> {
 	/**
@@ -443,12 +448,12 @@ export async function pushImageIfChanged({
  * pushes it to the Cloudflare managed registry.
  *
  * @param args - Parsed container build command arguments.
- * @param complianceConfig - Compliance configuration used to select the managed registry.
+ * @param complianceConfig - Compliance region and jurisdiction used to select the managed registry.
  * @returns A promise that resolves when the build and optional push complete.
  */
 export async function buildCommand(
 	args: ContainerBuildCommandArgs,
-	complianceConfig?: ComplianceConfig
+	complianceConfig?: ContainerRegistryConfig
 ) {
 	// TODO: merge args with Wrangler config if available.
 	if (existsSync(args.PATH) && !isDirectory(args.PATH)) {
@@ -504,7 +509,7 @@ export async function buildCommand(
 export async function pushCommand(
 	args: ContainerPushCommandArgs,
 	accountId: string,
-	complianceConfig?: ComplianceConfig
+	complianceConfig?: ContainerRegistryConfig
 ) {
 	try {
 		const dockerPath = args.pathToDocker ?? getDockerPath();
@@ -561,7 +566,7 @@ async function checkImagePlatform(
  * @param push - Whether to push the built image to the remote registry.
  * @param containerConfig - Optional container configuration for limit validation.
  * @param verifyDockerIsRunning - Whether to verify Docker before building.
- * @param complianceConfig - Compliance configuration used to select the managed registry.
+ * @param complianceConfig - Compliance region and jurisdiction used to select the managed registry.
  * @returns An {@link ImageRef} describing the built or pushed image.
  */
 export async function buildAndMaybePush(
@@ -570,7 +575,7 @@ export async function buildAndMaybePush(
 	push: boolean,
 	containerConfig?: DockerfileContainerConfig,
 	verifyDockerIsRunning?: boolean,
-	complianceConfig?: ComplianceConfig
+	complianceConfig?: ContainerRegistryConfig
 ): Promise<ImageRef> {
 	try {
 		const build = await startContainerBuild({
@@ -674,7 +679,8 @@ export async function buildContainerImages(
 }
 
 /**
- * Pushes a configured, already-built container image to the managed registry.
+ * Pushes a configured, already-built container image to the managed registry
+ * selected by the Container's `constraints.jurisdiction`.
  * The caller owns local image cleanup after the complete upload workflow.
  *
  * @param builtImage - Built Dockerfile-based container image metadata.
@@ -698,7 +704,10 @@ export async function pushBuiltContainerImage(
 			targetTag: getContainerImageTag(builtImage.container, versionId),
 			containerConfig: builtImage.container,
 			accountId,
-			complianceConfig,
+			complianceConfig: getContainerRegistryConfig(
+				complianceConfig,
+				builtImage.container
+			),
 			cleanupSourceTag: false,
 		});
 		return imageRef;

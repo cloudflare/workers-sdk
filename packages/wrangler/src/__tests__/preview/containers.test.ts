@@ -101,7 +101,7 @@ describe("deployPreviewContainers", () => {
 			true,
 			expect.objectContaining({ name: "test-worker_my-feature_mycontainer" }),
 			false,
-			config
+			{ compliance_region: undefined, jurisdiction: undefined }
 		);
 		expect(vi.mocked(apply).mock.calls[0]?.[1]).toMatchObject({
 			name: PREVIEW_APP_NAME,
@@ -149,6 +149,26 @@ describe("deployPreviewContainers", () => {
 
 		expect(vi.mocked(buildAndMaybePush).mock.calls[0]?.[5]).toMatchObject({
 			compliance_region: "fedramp_high",
+		});
+	});
+
+	test("should forward the Container's jurisdiction to the image build", async ({
+		expect,
+	}) => {
+		const container = containerConfig({ constraints: { jurisdiction: "eu" } });
+		const config = {
+			...defaultWranglerConfig,
+			compliance_region: "public",
+			containers: [container],
+		} as unknown as Config;
+
+		await deployPreviewContainers(config, [container], deployment, ACCOUNT_ID, {
+			quiet: false,
+		});
+
+		expect(vi.mocked(buildAndMaybePush).mock.calls[0]?.[5]).toStrictEqual({
+			compliance_region: "public",
+			jurisdiction: "eu",
 		});
 	});
 
@@ -228,7 +248,7 @@ describe("deployPreviewContainers", () => {
 		expect,
 	}) => {
 		const container = {
-			...containerConfig(),
+			...containerConfig({ constraints: { jurisdiction: "us" } }),
 			dockerfile: undefined,
 			image_build_context: undefined,
 			image_uri: "registry.cloudflare.com/some-account-id/test:latest",
@@ -251,7 +271,7 @@ describe("deployPreviewContainers", () => {
 			sourceTag: "cloudflare-build/project/test:build-id",
 			targetTag: "cloudflare-build/project/test:build-id",
 			accountId: ACCOUNT_ID,
-			complianceConfig: config,
+			complianceConfig: { compliance_region: undefined, jurisdiction: "us" },
 			containerConfig: container,
 			cleanupSourceTag: false,
 		});

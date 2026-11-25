@@ -49,7 +49,8 @@ describe("containers push", () => {
 			  -v, --version         Show version number  [boolean]
 
 			OPTIONS
-			      --path-to-docker  Path to your docker binary if it's not on $PATH  [string]"
+			      --path-to-docker  Path to your docker binary if it's not on $PATH  [string]
+			      --jurisdiction    Use the managed registry for this jurisdiction instead of the default registry. Ignored in the FedRAMP High compliance region, which has a single registry.  [string] [choices: "eu", "fedramp", "us"]"
 		`);
 	});
 
@@ -69,6 +70,24 @@ describe("containers push", () => {
 		expect(vi.mocked(pushCommand).mock.calls[0]?.[0]).not.toHaveProperty(
 			"pathToDocker"
 		);
+	});
+
+	it("passes --jurisdiction through to the shared command", async ({
+		expect,
+	}) => {
+		await runWrangler("containers push test-app:tag --jurisdiction fedramp");
+
+		expect(vi.mocked(pushCommand).mock.calls[0]?.[2]).toEqual({
+			compliance_region: undefined,
+			jurisdiction: "fedramp",
+		});
+	});
+
+	it("rejects an unsupported --jurisdiction", async ({ expect }) => {
+		await expect(
+			runWrangler("containers push test-app:tag --jurisdiction ca")
+		).rejects.toThrow("Invalid values");
+		expect(pushCommand).not.toHaveBeenCalled();
 	});
 
 	it("passes a custom Docker path through to the shared command", async ({

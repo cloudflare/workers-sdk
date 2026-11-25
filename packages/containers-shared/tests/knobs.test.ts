@@ -1,5 +1,10 @@
 import { afterEach, describe, it, vi } from "vitest";
-import { getCloudflareContainerRegistry } from "./../src/knobs";
+import {
+	getCloudflareContainerRegistries,
+	getCloudflareContainerRegistry,
+	getContainerImageRegistryConfigs,
+	isCloudflareContainerRegistry,
+} from "./../src/knobs";
 
 describe("getCloudflareContainerRegistry", () => {
 	afterEach(() => {
@@ -50,5 +55,126 @@ describe("getCloudflareContainerRegistry", () => {
 		expect(
 			getCloudflareContainerRegistry({ compliance_region: "public" })
 		).toBe("registry.example.com");
+		expect(getCloudflareContainerRegistry({ jurisdiction: "fedramp" })).toBe(
+			"registry.example.com"
+		);
+	});
+
+	it("should return the FedRAMP Moderate registry for fedramp images", ({
+		expect,
+	}) => {
+		expect(getCloudflareContainerRegistry({ jurisdiction: "fedramp" })).toBe(
+			"frm.registry.cloudflare.com"
+		);
+		expect(
+			getCloudflareContainerRegistry({
+				compliance_region: "public",
+				jurisdiction: "fedramp",
+			})
+		).toBe("frm.registry.cloudflare.com");
+		vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
+		expect(getCloudflareContainerRegistry({ jurisdiction: "fedramp" })).toBe(
+			"staging.frm.registry.cloudflare.com"
+		);
+	});
+
+	it.for([
+		{ jurisdiction: "eu", registry: "eu.registry.cloudflare.com" },
+		{ jurisdiction: "us", registry: "us.registry.cloudflare.com" },
+	])(
+		"should return the $registry registry for $jurisdiction images",
+		({ jurisdiction, registry }, { expect }) => {
+			expect(getCloudflareContainerRegistry({ jurisdiction })).toBe(registry);
+			vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
+			expect(getCloudflareContainerRegistry({ jurisdiction })).toBe(
+				`staging.${registry}`
+			);
+		}
+	);
+
+	it("should ignore unknown jurisdictions", ({ expect }) => {
+		expect(getCloudflareContainerRegistry({ jurisdiction: "toString" })).toBe(
+			"registry.cloudflare.com"
+		);
+	});
+
+	it.for(["eu", "fedramp", "us"])(
+		"should keep the FedRAMP High registry for %s images",
+		(jurisdiction, { expect }) => {
+			expect(
+				getCloudflareContainerRegistry({
+					compliance_region: "fedramp_high",
+					jurisdiction,
+				})
+			).toBe("registry.fed.cloudflare.com");
+		}
+	);
+});
+
+describe("getContainerImageRegistryConfigs", () => {
+	it("should select one registry per jurisdiction", ({ expect }) => {
+		expect(
+			getContainerImageRegistryConfigs({ compliance_region: "public" }, [
+				"fedramp",
+			])
+		).toEqual([{ compliance_region: "public", jurisdiction: "fedramp" }]);
+	});
+
+	it.for([undefined, []])(
+		"should select the default registry without jurisdictions: %j",
+		(jurisdictions, { expect }) => {
+			expect(getContainerImageRegistryConfigs({}, jurisdictions)).toEqual([
+				{ compliance_region: undefined },
+			]);
+		}
+	);
+});
+
+describe("getCloudflareContainerRegistries", () => {
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
+	it("should list the default and jurisdiction registries", ({ expect }) => {
+		expect(getCloudflareContainerRegistries()).toEqual([
+			"registry.cloudflare.com",
+			"eu.registry.cloudflare.com",
+			"frm.registry.cloudflare.com",
+			"us.registry.cloudflare.com",
+		]);
+	});
+
+	it("should list only the FedRAMP High registry", ({ expect }) => {
+		expect(
+			getCloudflareContainerRegistries({ compliance_region: "fedramp_high" })
+		).toEqual(["registry.fed.cloudflare.com"]);
+	});
+
+	it("should list an explicit registry override once", ({ expect }) => {
+		vi.stubEnv("CLOUDFLARE_CONTAINER_REGISTRY", "registry.example.com");
+		expect(getCloudflareContainerRegistries()).toEqual([
+			"registry.example.com",
+		]);
+	});
+});
+
+describe("isCloudflareContainerRegistry", () => {
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
+	it("should recognise the managed and FedRAMP Moderate registries", ({
+		expect,
+	}) => {
+		expect(isCloudflareContainerRegistry("registry.cloudflare.com")).toBe(true);
+		expect(isCloudflareContainerRegistry("frm.registry.cloudflare.com")).toBe(
+			true
+		);
+		expect(isCloudflareContainerRegistry("docker.io")).toBe(false);
+		expect(
+			isCloudflareContainerRegistry("frm.registry.cloudflare.com", {
+				compliance_region: "fedramp_high",
+			})
+		).toBe(false);
 	});
 });

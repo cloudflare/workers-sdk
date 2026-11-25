@@ -1147,6 +1147,51 @@ describe("wrangler deploy with containers", () => {
 		`);
 	});
 
+	it.for([
+		{ jurisdiction: "eu", registry: "eu.registry.cloudflare.com" },
+		{ jurisdiction: "fedramp", registry: "frm.registry.cloudflare.com" },
+		{ jurisdiction: "us", registry: "us.registry.cloudflare.com" },
+	] as const)(
+		"pushes a Dockerfile image to $registry for constraints.jurisdiction $jurisdiction",
+		async ({ jurisdiction, registry }, { expect }) => {
+			mockGetVersion("Galaxy-Class");
+			setupDockerMocks(
+				expect,
+				"my-container",
+				"Galaxy",
+				undefined,
+				undefined,
+				registry
+			);
+			writeWranglerConfig({
+				...DEFAULT_DURABLE_OBJECTS,
+				containers: [
+					{
+						...DEFAULT_CONTAINER_FROM_DOCKERFILE,
+						constraints: { jurisdiction },
+					},
+				],
+			});
+			mockGetApplications([]);
+			fs.writeFileSync("./Dockerfile", "FROM scratch");
+			mockGenerateImageRegistryCredentials(expect, registry);
+			mockCreateApplication(expect, {
+				name: "my-container",
+				configuration: {
+					image: `${registry}/some-account-id/my-container@sha256:${"a".repeat(64)}`,
+				},
+				constraints: expect.objectContaining({ jurisdiction }),
+			});
+
+			await runWrangler("deploy index.js");
+
+			expect(std.out).toContain(
+				`Image does not exist remotely, pushing: ${registry}/some-account-id/my-container:Galaxy`
+			);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		}
+	);
+
 	it("cleans up built container images when Worker upload fails", async ({
 		expect,
 	}) => {
@@ -4211,11 +4256,10 @@ describe("wrangler deploy with containers", () => {
 			);
 		});
 
-		it.for(["populated", "empty"] as const)(
+		it.for(["populated", "fedramp", "empty"] as const)(
 			"deploys a name-only managed Container export with %s images",
 			async (imageMap, { expect }) => {
-				const image =
-					"registry.cloudflare.com/some-account-id/app@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+				const image = `${imageMap === "fedramp" ? "frm." : ""}registry.cloudflare.com/some-account-id/app@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb`;
 				const imageRefs: Record<string, string> =
 					imageMap === "empty" ? {} : { app: image };
 				const namespaceId = "14758f1afd44c09b7992073ccf00b43d";
@@ -4237,7 +4281,16 @@ describe("wrangler deploy with containers", () => {
 								{ name: "laptop", public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1" },
 							],
 							unsafe: { configuration: { experimental_flags: ["test-flag"] } },
-							...(imageMap === "populated" && { images: { app: { image } } }),
+							...(imageMap !== "empty" && {
+								images: {
+									app: {
+										image,
+										...(imageMap === "fedramp" && {
+											jurisdictions: ["fedramp" as const],
+										}),
+									},
+								},
+							}),
 						},
 					],
 					exports,
@@ -4253,7 +4306,7 @@ describe("wrangler deploy with containers", () => {
 						{
 							name: "managed-app",
 							class_name: "Sandbox",
-							...(imageMap === "populated" && { images: imageRefs }),
+							...(imageMap !== "empty" && { images: imageRefs }),
 						},
 					],
 					expectedExports: exports,
@@ -5048,7 +5101,8 @@ function createDockerMockChain(
 	containerName: string,
 	tag: string,
 	dockerfilePath?: string,
-	buildContext?: string
+	buildContext?: string,
+	registry = getCloudflareContainerRegistry()
 ) {
 	const localTag = TEST_CONTAINER_BUILD_TAG;
 	const mocks = [
@@ -5070,13 +5124,14 @@ function createDockerMockChain(
 			containerName,
 			"some-account-id/" + containerName,
 			localTag,
-			tag
+			tag,
+			registry
 		),
-		mockDockerPush(expect, "some-account-id/" + containerName, tag),
+		mockDockerPush(expect, "some-account-id/" + containerName, tag, registry),
 		mockDockerImageInspectDigestsForImage(
 			expect,
-			`${getCloudflareContainerRegistry()}/some-account-id/${containerName}:${tag}`,
-			`${getCloudflareContainerRegistry()}/some-account-id/${containerName}@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`
+			`${registry}/some-account-id/${containerName}:${tag}`,
+			`${registry}/some-account-id/${containerName}@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`
 		),
 		mockDockerImageDelete(expect, containerName, localTag),
 	];
@@ -5089,14 +5144,16 @@ function setupDockerMocks(
 	containerName: string,
 	tag: string,
 	dockerfilePath?: string,
-	buildContext?: string
+	buildContext?: string,
+	registry?: string
 ) {
 	const mocks = createDockerMockChain(
 		expect,
 		containerName,
 		tag,
 		dockerfilePath,
-		buildContext
+		buildContext,
+		registry
 	);
 
 	// Clear any existing mock state
@@ -5400,10 +5457,13 @@ function mockTrackApplicationRollout() {
 	return rolloutSpy;
 }
 
-function mockGenerateImageRegistryCredentials(expect: ExpectStatic) {
+function mockGenerateImageRegistryCredentials(
+	expect: ExpectStatic,
+	registry = getCloudflareContainerRegistry()
+) {
 	msw.use(
 		http.post(
-			`*/registries/${getCloudflareContainerRegistry()}/credentials`,
+			`*/registries/${registry}/credentials`,
 			async ({ request }) => {
 				const json =
 					(await request.json()) as ImageRegistryCredentialsConfiguration;
@@ -5413,7 +5473,7 @@ function mockGenerateImageRegistryCredentials(expect: ExpectStatic) {
 					success: true,
 					result: {
 						account_id: "some-account-id",
-						registry_host: getCloudflareContainerRegistry(),
+						registry_host: registry,
 						username: "v1",
 						password: "mockpassword",
 					} as AccountRegistryToken,
@@ -5679,14 +5739,12 @@ function mockDockerLogin(expect: ExpectStatic, expectedPassword: string) {
 function mockDockerPush(
 	expect: ExpectStatic,
 	containerName: string,
-	tag: string
+	tag: string,
+	registry = getCloudflareContainerRegistry()
 ) {
 	return (cmd: string, args: readonly string[]) => {
 		expect(cmd).toBe("/usr/bin/docker");
-		expect(args).toEqual([
-			"push",
-			`${getCloudflareContainerRegistry()}/${containerName}:${tag}`,
-		]);
+		expect(args).toEqual(["push", `${registry}/${containerName}:${tag}`]);
 		return defaultChildProcess();
 	};
 }
@@ -5696,14 +5754,15 @@ function mockDockerTag(
 	from: string,
 	to: string,
 	fromTag: string,
-	toTag: string = fromTag
+	toTag: string = fromTag,
+	registry = getCloudflareContainerRegistry()
 ) {
 	return (cmd: string, args: readonly string[]) => {
 		expect(cmd).toBe("/usr/bin/docker");
 		expect(args).toEqual([
 			"tag",
 			`${from}:${fromTag}`,
-			`${getCloudflareContainerRegistry()}/${to}:${toTag}`,
+			`${registry}/${to}:${toTag}`,
 		]);
 		return defaultChildProcess();
 	};

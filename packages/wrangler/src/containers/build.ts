@@ -3,11 +3,16 @@ import {
 	initContainersSharedContext,
 	pushCommand,
 } from "@cloudflare/containers-shared";
+import { CommandLineArgsError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { getOrSelectAccountId } from "../user";
+import {
+	getRegistryConfigForJurisdiction,
+	registryJurisdictionArg,
+} from "./registry-jurisdiction";
 import { containersScope } from ".";
 
 // --- Command definitions ---
@@ -44,6 +49,7 @@ export const containersBuildCommand = createCommand({
 			describe: "Push the built image to Cloudflare's managed registry",
 			default: false,
 		},
+		jurisdiction: registryJurisdictionArg,
 		platform: {
 			type: "string",
 			default: "linux/amd64",
@@ -55,13 +61,24 @@ export const containersBuildCommand = createCommand({
 		},
 	},
 	positionalArgs: ["PATH"],
+	validateArgs(args) {
+		if (args.jurisdiction !== undefined && !args.push) {
+			throw new CommandLineArgsError(
+				"The --jurisdiction option only applies with --push.",
+				{ telemetryMessage: "containers build jurisdiction without push" }
+			);
+		}
+	},
 	async handler(args, { config }) {
 		initContainersSharedContext({
 			logger,
 			fetchResult,
 		});
 		await fillOpenAPIConfiguration(config, containersScope);
-		await buildCommand(args, config);
+		await buildCommand(
+			args,
+			getRegistryConfigForJurisdiction(config, args.jurisdiction)
+		);
 	},
 });
 
@@ -85,6 +102,7 @@ export const containersPushCommand = createCommand({
 			describe: "Path to your docker binary if it's not on $PATH",
 			demandOption: false,
 		},
+		jurisdiction: registryJurisdictionArg,
 	},
 	positionalArgs: ["TAG"],
 	async handler(args, { config }) {
@@ -93,6 +111,10 @@ export const containersPushCommand = createCommand({
 			fetchResult,
 		});
 		await fillOpenAPIConfiguration(config, containersScope);
-		await pushCommand(args, await getOrSelectAccountId(config), config);
+		await pushCommand(
+			args,
+			await getOrSelectAccountId(config),
+			getRegistryConfigForJurisdiction(config, args.jurisdiction)
+		);
 	},
 });

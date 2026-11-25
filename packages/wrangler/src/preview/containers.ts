@@ -2,6 +2,7 @@ import { getLogLevel, setLogLevel } from "@cloudflare/cli-shared-helpers";
 import {
 	apply,
 	buildAndMaybePush,
+	getContainerRegistryConfig,
 	initContainersSharedContext,
 	listDurableObjects,
 	pushImageIfChanged,
@@ -18,7 +19,7 @@ import type {
 	ImageURIConfig,
 } from "@cloudflare/containers-shared";
 import type { DeploymentResource } from "@cloudflare/deploy-helpers";
-import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { ContainerRegistryConfig } from "@cloudflare/workers-utils/compliance";
 import type { Config } from "@cloudflare/workers-utils/config";
 
 /**
@@ -164,7 +165,7 @@ async function applyPreviewContainers(
 				sourceTag: localImageReference,
 				targetTag: localImageReference,
 				accountId,
-				complianceConfig: scopedConfig,
+				complianceConfig: getContainerRegistryConfig(scopedConfig, container),
 				containerConfig: container,
 				// Build Output can be uploaded again without rebuilding the image.
 				cleanupSourceTag: false,
@@ -183,9 +184,10 @@ async function applyPreviewContainers(
 				// `preview()` already verified Docker before creating the
 				// deployment, so skip the redundant per-container check.
 				false,
-				// Selects the managed registry for the account's compliance
-				// region. Without it the push defaults to the public registry.
-				scopedConfig
+				// Selects the managed registry for the account's compliance region
+				// and the Container's jurisdiction. Without it the push defaults to
+				// the public registry.
+				getContainerRegistryConfig(scopedConfig, container)
 			);
 		} else {
 			imageRef = { newTag: container.image_uri };
@@ -212,7 +214,7 @@ async function buildContainer(
 	dryRun: boolean,
 	pathToDocker: string,
 	verifyDockerIsRunning: boolean,
-	complianceConfig?: ComplianceConfig
+	complianceConfig?: ContainerRegistryConfig
 ): Promise<ImageRef> {
 	const imageFullName = `${containerConfig.name}:${imageTag.split("-")[0]}`;
 	logger.log("Building image", imageFullName);
