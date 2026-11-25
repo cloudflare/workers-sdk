@@ -8,6 +8,8 @@ type ApiErrorBody = {
 };
 
 type ApiSuccessBody<T> = {
+	success?: boolean;
+	errors?: unknown[];
 	result: T[];
 };
 
@@ -92,6 +94,29 @@ class ApiError extends Error {
 	}
 }
 
+/**
+ * Logs why an API request failed.
+ *
+ * An error body that isn't JSON (such as an HTML error page) is logged as text,
+ * so that it can't throw and stop the remaining cleanup steps.
+ *
+ * @param error The error thrown by the request.
+ */
+async function logApiError(error: unknown): Promise<void> {
+	if (!(error instanceof ApiError)) {
+		console.error(error);
+		return;
+	}
+	console.error(error.url, error.init);
+	console.error(`(${error.status}) ${error.statusText}`);
+	const text = await error.text;
+	try {
+		console.error((JSON.parse(text) as ApiErrorBody).errors);
+	} catch {
+		console.error(text);
+	}
+}
+
 async function apiFetchResponse(
 	path: string,
 	init = { method: "GET" },
@@ -127,17 +152,17 @@ async function apiFetch<T>(
 	try {
 		const response = await apiFetchResponse(path, { method }, queryParams);
 		const json = (await response.json()) as ApiSuccessBody<T>;
+		// The API can reject a request in a response with a successful status
+		if (json.success === false) {
+			if (!failSilently) {
+				console.error(`${method} ${path} was unsuccessful`, json.errors);
+			}
+			return false;
+		}
 		return json.result as T;
 	} catch (e) {
 		if (!failSilently) {
-			if (e instanceof ApiError) {
-				console.error(e.url, e.init);
-				console.error(`(${e.status}) ${e.statusText}`);
-				const body = JSON.parse(await e.text) as ApiErrorBody;
-				console.error(body.errors);
-			} else {
-				console.error(e);
-			}
+			await logApiError(e);
 		}
 		return false;
 	}
@@ -165,14 +190,7 @@ async function apiFetchAllPages<T>(
 			page++;
 		}
 	} catch (e) {
-		if (e instanceof ApiError) {
-			console.error(e.url, e.init);
-			console.error(`(${e.status}) ${e.statusText}`);
-			const body = JSON.parse(await e.text) as ApiErrorBody;
-			console.error(body.errors);
-		} else {
-			console.error(e);
-		}
+		await logApiError(e);
 	}
 	return result;
 }
@@ -226,14 +244,7 @@ async function apiFetchList<T>(path: string, queryParams = {}): Promise<T[]> {
 			}
 		}
 	} catch (e) {
-		if (e instanceof ApiError) {
-			console.error(e.url, e.init);
-			console.error(`(${e.status}) ${e.statusText}`);
-			const body = JSON.parse(await e.text) as ApiErrorBody;
-			console.error(body.errors);
-		} else {
-			console.error(e);
-		}
+		await logApiError(e);
 		return [];
 	}
 }
@@ -442,7 +453,14 @@ export const deleteAgentMemoryNamespace = async (name: string) => {
 // Wrangler E2E names K2 streams `tmp_e2e_k2_<uuid>`, with underscores rather than hyphens
 const TMP_K2_STREAM_PREFIX = "tmp_e2e_k2_";
 
-export const listTmpK2Streams = async () => {
+/**
+ * Lists the K2 streams left behind by Wrangler E2E runs.
+ *
+ * Streams under an hour old are excluded, since a running job may still be using them.
+ *
+ * @returns The temporary streams that are more than an hour old.
+ */
+export async function listTmpK2Streams(): Promise<K2Stream[]> {
 	return (
 		await apiFetchList<K2Stream>(`/k2/streams`, {
 			per_page: 100,
@@ -452,17 +470,22 @@ export const listTmpK2Streams = async () => {
 	).filter(
 		(stream) =>
 			stream.name.startsWith(TMP_K2_STREAM_PREFIX) &&
-			// Streams are more than an hour old
 			Date.now() - new Date(stream.created_at).valueOf() > 1000 * 60 * 60
 	);
-};
+}
 
-export const deleteK2Stream = async (id: string) => {
+/**
+ * Deletes a K2 stream.
+ *
+ * @param id The stream's ID.
+ * @returns Whether the stream was deleted.
+ */
+export async function deleteK2Stream(id: string): Promise<boolean> {
 	return (
 		(await apiFetch(`/k2/streams/${encodeURIComponent(id)}`, "DELETE")) !==
 		false
 	);
-};
+}
 
 // Note: the container images functions below don't directly use the REST API since
 //       they interact with the cloudflare images registry which has it's own

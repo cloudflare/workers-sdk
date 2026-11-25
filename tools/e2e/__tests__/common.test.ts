@@ -1,5 +1,6 @@
 import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
-import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
+import { mockConsoleMethods } from "../../../packages/workers-utils/src/test-helpers/mock";
 import {
 	deleteDatabase,
 	deleteK2Stream,
@@ -492,6 +493,8 @@ describe("deleteR2Bucket()", () => {
 });
 
 describe("listTmpK2Streams()", () => {
+	const std = mockConsoleMethods();
+
 	it("makes paged REST requests and returns a filtered list of K2 streams", async ({
 		expect,
 	}) => {
@@ -544,43 +547,87 @@ describe("listTmpK2Streams()", () => {
 			"tmp_e2e_k2_old_page_2",
 		]);
 	});
+
+	it("returns no streams and logs the body when an error response isn't JSON", async ({
+		expect,
+	}) => {
+		agent
+			.get("https://api.cloudflare.com")
+			.intercept({
+				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/k2/streams`,
+				method: "GET",
+				query: { page: 1, per_page: 100, name: "tmp_e2e_k2_" },
+			})
+			.reply(502, "<html>Bad gateway</html>");
+
+		expect(await listTmpK2Streams()).toEqual([]);
+		expect(std.err).toContain("(502)");
+		expect(std.err).toContain("<html>Bad gateway</html>");
+	});
 });
 
 describe("deleteK2Stream()", () => {
+	const std = mockConsoleMethods();
+	const MOCK_STREAM_ID = "mock-stream";
+
+	function interceptDeletion(id = MOCK_STREAM_ID) {
+		return agent.get("https://api.cloudflare.com").intercept({
+			path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/k2/streams/${id}`,
+			method: "DELETE",
+		});
+	}
+
 	it("makes a REST request to delete the given K2 stream", async ({
 		expect,
 	}) => {
-		const MOCK_STREAM_ID = "stream/id";
-		agent
-			.get("https://api.cloudflare.com")
-			.intercept({
-				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/k2/streams/stream%2Fid`,
-				method: "DELETE",
-			})
-			.reply(200, JSON.stringify({ success: true, result: {} }));
+		interceptDeletion("stream%2Fid").reply(
+			200,
+			JSON.stringify({ success: true, result: {} })
+		);
 
-		expect(await deleteK2Stream(MOCK_STREAM_ID)).toBe(true);
+		expect(await deleteK2Stream("stream/id")).toBe(true);
+		expect(std.err).toBe("");
 	});
 
-	it("returns false when the K2 stream can't be deleted", async ({
+	it("returns false and logs the API errors when the deletion is rejected", async ({
 		expect,
 	}) => {
-		const MOCK_STREAM_ID = "mock-stream";
-		vi.spyOn(console, "error").mockImplementation(() => {});
-		agent
-			.get("https://api.cloudflare.com")
-			.intercept({
-				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/k2/streams/${MOCK_STREAM_ID}`,
-				method: "DELETE",
+		interceptDeletion().reply(
+			403,
+			JSON.stringify({
+				success: false,
+				errors: [{ code: 10000, message: "Authentication error" }],
 			})
-			.reply(
-				403,
-				JSON.stringify({
-					success: false,
-					errors: [{ code: 10000, message: "Authentication error" }],
-				})
-			);
+		);
 
 		expect(await deleteK2Stream(MOCK_STREAM_ID)).toBe(false);
+		expect(std.err).toContain("(403) Forbidden");
+		expect(console.error).toHaveBeenCalledWith([
+			{ code: 10000, message: "Authentication error" },
+		]);
+	});
+
+	it("returns false when a successful response reports the deletion as unsuccessful", async ({
+		expect,
+	}) => {
+		interceptDeletion().reply(
+			200,
+			JSON.stringify({ success: false, errors: [], result: {} })
+		);
+
+		expect(await deleteK2Stream(MOCK_STREAM_ID)).toBe(false);
+		expect(std.err).toContain(
+			`DELETE /k2/streams/${MOCK_STREAM_ID} was unsuccessful`
+		);
+	});
+
+	it("returns false and logs the body when an error response isn't JSON", async ({
+		expect,
+	}) => {
+		interceptDeletion().reply(502, "<html>Bad gateway</html>");
+
+		expect(await deleteK2Stream(MOCK_STREAM_ID)).toBe(false);
+		expect(std.err).toContain("(502)");
+		expect(std.err).toContain("<html>Bad gateway</html>");
 	});
 });
