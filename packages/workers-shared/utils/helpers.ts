@@ -100,8 +100,8 @@ function readAssetsIgnoreFile(filePath: string): string | undefined {
 /**
  * Create a function for filtering out ignored assets.
  *
- * The generated function takes an asset path, relative to the asset directory,
- * and returns true if the asset should not be ignored.
+ * The generated filter returns true if a path relative to the asset directory
+ * should be ignored. A separate matcher can identify explicit directory exceptions.
  */
 export async function createAssetsIgnoreFunction(dir: string) {
 	const cfAssetIgnorePath = resolve(dir, CF_ASSETS_IGNORE_FILENAME);
@@ -118,11 +118,30 @@ export async function createAssetsIgnoreFunction(dir: string) {
 	const assetsIgnore = readAssetsIgnoreFile(cfAssetIgnorePath);
 	if (assetsIgnore !== undefined) {
 		assetsIgnoreFilePresent = true;
-		ignorePatterns.push(...assetsIgnore.split("\n"));
+		ignorePatterns.push(...assetsIgnore.split(/\r?\n/));
+	}
+
+	const traversalOnlyPatterns = new Set(["!*/", "!**/", "!**/*/"]);
+	let directoryExceptions: ReturnType<typeof ignore> | undefined;
+	/**
+	 * Whether an exception names or narrows down this directory, rather than
+	 * merely allowing traversal through all directories. Callers must first
+	 * check the main filter to account for exclusions and parent directories.
+	 */
+	function hasExplicitDirectoryException(relativePath: string): boolean {
+		directoryExceptions ??= ignore().add(
+			ignorePatterns.filter(
+				(pattern) =>
+					pattern.startsWith("!") &&
+					!traversalOnlyPatterns.has(pattern.trimEnd())
+			)
+		);
+		return directoryExceptions.test(`${relativePath}/`).unignored;
 	}
 
 	return {
 		assetsIgnoreFunction: createPatternMatcher(ignorePatterns, true),
 		assetsIgnoreFilePresent,
+		hasExplicitDirectoryException,
 	};
 }

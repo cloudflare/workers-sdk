@@ -860,20 +860,35 @@ describe("runAutoConfig()", () => {
 			scenario: "Vite from the workspace",
 			workspaceRunner: "vite",
 			installCf: false,
+			initialInstall: "empty",
 		},
 		{
 			scenario: "Vite+ from the workspace, with cf missing",
 			workspaceRunner: "vite-plus",
 			installCf: true,
+			initialInstall: "empty",
+		},
+		{
+			scenario: "Vite+ from the workspace, with plain Vite already installed",
+			workspaceRunner: "vite-plus",
+			installCf: true,
+			initialInstall: "plain-vite",
+		},
+		{
+			scenario: "Vite+ from the workspace, with a missing vp executable",
+			workspaceRunner: "vite-plus",
+			installCf: true,
+			initialInstall: "missing-vp",
 		},
 		{
 			scenario: "an enclosing workspace that excludes the app",
 			workspaceRunner: undefined,
 			installCf: false,
+			initialInstall: "empty",
 		},
 	] as const)(
 		"respects runner declarations for $scenario",
-		async ({ workspaceRunner, installCf }, { expect }) => {
+		async ({ workspaceRunner, installCf, initialInstall }, { expect }) => {
 			const vitePlus = workspaceRunner === "vite-plus";
 			const runnerVersion = vitePlus ? "0.2.2" : "7.1.12";
 			const rootManifest = JSON.stringify({
@@ -883,6 +898,11 @@ describe("runAutoConfig()", () => {
 			const projectPath = join(process.cwd(), "apps/site");
 			const manifestPath = join(projectPath, "package.json");
 			const projectManifest = { name: "site" };
+			const vpManifest = JSON.stringify({
+				name: "vite-plus",
+				version: runnerVersion,
+				bin: { vp: "cli.mjs" },
+			});
 			await seed({
 				"package.json": rootManifest,
 				"pnpm-workspace.yaml": `packages: ['${workspaceRunner ? "apps" : "packages"}/*']\n`,
@@ -892,6 +912,17 @@ describe("runAutoConfig()", () => {
 				"apps/site/index.html": "<h1>Hello World</h1>",
 				"apps/site/vite.config.ts":
 					'import { defineConfig } from "vite"; export default defineConfig({ plugins: [] });',
+				...(initialInstall !== "empty" && {
+					"apps/site/node_modules/vite/package.json": JSON.stringify({
+						name: "vite",
+						version: "8.0.0",
+						bin: { vite: "cli.js" },
+					}),
+					"apps/site/node_modules/vite/cli.js": "",
+				}),
+				...(initialInstall === "missing-vp" && {
+					"node_modules/vite-plus/package.json": vpManifest,
+				}),
 			});
 			const context = createMockContext();
 			const details = await getDetailsForAutoConfig({ projectPath, context });
@@ -902,12 +933,18 @@ describe("runAutoConfig()", () => {
 			const runnerManifest = JSON.stringify({
 				name: vitePlus ? "@voidzero-dev/vite-plus-core" : "vite",
 				version: workspaceRunner ? runnerVersion : "8.1.0",
+				bin: { vite: "cli.js" },
 				...(vitePlus && { bundledVersions: { vite: "8.1.2" } }),
 			});
+			const runnerModules = `${workspaceRunner ? "" : "apps/site/"}node_modules`;
 			install.mockImplementationOnce(() =>
 				seed({
-					[`${workspaceRunner ? "" : "apps/site/"}node_modules/vite/package.json`]:
-						runnerManifest,
+					[`${runnerModules}/vite/package.json`]: runnerManifest,
+					[`${runnerModules}/vite/cli.js`]: "",
+					...(vitePlus && {
+						"node_modules/vite-plus/package.json": vpManifest,
+						"node_modules/vite-plus/cli.mjs": "",
+					}),
 				})
 			);
 			vi.mocked(context.dialogs.select).mockResolvedValue("vite");
@@ -954,6 +991,43 @@ describe("runAutoConfig()", () => {
 	);
 
 	it.for([true, false])(
+		"previews the workspace install when cf installation is %s",
+		async (installCf, { expect }) => {
+			await seed({
+				"package.json": JSON.stringify({
+					name: "workspace",
+					devDependencies: { "vite-plus": "0.2.2" },
+				}),
+				"pnpm-workspace.yaml": "packages: ['apps/*']\n",
+				"pnpm-lock.yaml": "",
+				"apps/site/package.json": JSON.stringify({
+					name: "site",
+					devDependencies: { "@cloudflare/vite-plugin": "^2.0.0-rc.0" },
+				}),
+				"apps/site/tsconfig.json": "{}",
+				"apps/site/index.html": "<h1>Hello World</h1>",
+			});
+			const projectPath = join(process.cwd(), "apps/site");
+			const context = createMockContext();
+			const details = await getDetailsForAutoConfig({ projectPath, context });
+			const { buildCommand } = await runAutoConfig(details, {
+				context,
+				dryRun: true,
+				enableTargetCliInstallation: installCf,
+			});
+
+			expect(buildCommand).toBe("vp build");
+			expect(context.logger.log).toHaveBeenCalledWith(
+				installCf
+					? "📦 Install workspace dependencies if Vite tooling is still missing"
+					: "📦 Install workspace dependencies"
+			);
+			expect(cliPackages.installPackages).not.toHaveBeenCalled();
+			expect(existsSync(join(projectPath, "cloudflare.config.ts"))).toBe(false);
+		}
+	);
+
+	it.for([true, false])(
 		"rejects an unsupported Vite version before configuring (already installed=%s)",
 		async (installed, { expect }) => {
 			const packageJson = JSON.stringify({
@@ -968,7 +1042,9 @@ describe("runAutoConfig()", () => {
 				"node_modules/vite/package.json": JSON.stringify({
 					name: "vite",
 					version: "6.3.5",
+					bin: { vite: "cli.js" },
 				}),
+				"node_modules/vite/cli.js": "",
 			};
 			if (installed) {
 				await seed(runnerFiles);
@@ -1056,7 +1132,9 @@ describe("runAutoConfig()", () => {
 			"node_modules/vite/package.json": JSON.stringify({
 				name: "vite",
 				version: "7.1.12",
+				bin: { vite: "cli.js" },
 			}),
+			"node_modules/vite/cli.js": "",
 			"index.html": "<h1>Hello World</h1>",
 		});
 		const context = createMockContext();

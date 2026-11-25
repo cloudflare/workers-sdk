@@ -77,6 +77,22 @@ describe("assets", () => {
 			}
 		);
 
+		it.for(["!*/", "!**/", "!**/*/"])(
+			"distinguishes explicit directory exceptions from traversal via %s",
+			async (traverse, { expect }) => {
+				await writeFile(
+					join(tmpDir, ".assetsignore"),
+					`*\r\n${traverse}\r\n!*.html\r\n!/docs/guide/\r\n`
+				);
+				const { assetsIgnoreFunction, hasExplicitDirectoryException } =
+					await createAssetsIgnoreFunction(tmpDir);
+
+				expect(assetsIgnoreFunction("docs/notes/")).toBe(false);
+				expect(hasExplicitDirectoryException("docs/notes")).toBe(false);
+				expect(hasExplicitDirectoryException("docs/guide")).toBe(true);
+			}
+		);
+
 		it.for([
 			["UTF-16 LE", Buffer.from("\ufeffignored.txt", "utf16le")],
 			["UTF-16 BE", Buffer.from("\ufeffignored.txt", "utf16le").swap16()],

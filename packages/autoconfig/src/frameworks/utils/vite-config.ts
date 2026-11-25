@@ -271,7 +271,8 @@ export function transformViteConfig(
 				const lastImportIndex = n.node.body.findLastIndex(
 					(statement) => statement.type === "ImportDeclaration"
 				);
-				// Static form: import { cloudflare } from "@cloudflare/vite-plugin";
+				// Keep the config synchronous when the plugin can be imported directly:
+				// import { cloudflare } from "@cloudflare/vite-plugin";
 				const importAst = b.importDeclaration(
 					[b.importSpecifier(b.identifier("cloudflare"))],
 					b.stringLiteral(CLOUDFLARE_VITE_PLUGIN)

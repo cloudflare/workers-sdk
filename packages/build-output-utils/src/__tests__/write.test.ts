@@ -442,19 +442,27 @@ describe("writeAssets", () => {
 		expect(fs.readdirSync(assetsDir)).not.toContain("link.txt");
 	});
 
-	it("reports a missing target for an included asset symlink", async ({
-		expect,
-	}) => {
-		const root = process.cwd();
-		fs.writeFileSync(path.join(root, ".assetsignore"), "*\n!*.html\n");
-		fs.symlinkSync("not-generated.html", path.join(root, "index.html"));
+	it.for([
+		{ asset: "index.html", type: "file", rules: "*\n!*.html\n" },
+		{ asset: "docs", type: "dir", rules: "*\n!/docs/\n!/docs/**\n" },
+		{ asset: "docs/guide", type: "dir", rules: "*\n!*/\n!/docs/guide/\n" },
+	] as const)(
+		"reports a missing target for an included asset symlink ($asset)",
+		async ({ asset, type, rules }, { expect }) => {
+			const root = process.cwd();
+			const source = path.join(root, asset);
+			fs.mkdirSync(path.dirname(source), { recursive: true });
+			fs.writeFileSync(path.join(root, ".assetsignore"), rules);
+			fs.symlinkSync("not-generated", source, type);
 
-		await expect(
-			writeAssets({ root, sourceDirectory: root })
-		).rejects.toMatchObject({
-			code: "ENOENT",
-		});
-	});
+			await expect(
+				writeAssets({ root, sourceDirectory: root })
+			).rejects.toMatchObject({
+				code: "ENOENT",
+				path: source,
+			});
+		}
+	);
 
 	it("preserves files already generated in the build output", async ({
 		expect,

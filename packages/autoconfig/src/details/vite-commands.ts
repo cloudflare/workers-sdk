@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
 import semiver from "semiver";
@@ -11,6 +11,8 @@ type ProjectPackageJSON = PackageJSON & {
 	peerDependencies?: Record<string, unknown>;
 	optionalDependencies?: Record<string, unknown>;
 };
+
+export type ViteRunner = "vite" | "vite-plus";
 
 /** Whether the project uses Vite+ as its Vite command runner. */
 export function usesVitePlus(packageJson?: PackageJSON): boolean {
@@ -112,14 +114,8 @@ export function getViteProjectCommands({
 	}
 
 	const commandName = packageName === "vite-plus" ? "vp" : "vite";
-	const tool = readProjectPackage(nodeModulesPaths, packageName);
-	const bin = tool?.packageJson.bin;
-	const relativeBinary = typeof bin === "string" ? bin : bin?.[commandName];
-	const binary =
-		tool && relativeBinary
-			? resolve(tool.directory, relativeBinary)
-			: undefined;
-	if (!binary || !existsSync(binary)) {
+	const binary = resolveViteRunnerExecutable(nodeModulesPaths, packageName);
+	if (!binary) {
 		return {
 			error: {
 				code: "vite-tool-not-installed",
@@ -140,10 +136,31 @@ export function getViteProjectCommands({
 	};
 }
 
+/** Finds the installed executable for the selected runner, not just its Vite core dependency. */
+export function resolveViteRunnerExecutable(
+	nodeModulesPaths: readonly string[],
+	runner: ViteRunner
+): string | undefined {
+	const tool = readProjectPackage(nodeModulesPaths, runner);
+	const commandName = runner === "vite-plus" ? "vp" : "vite";
+	const bin = tool?.packageJson.bin;
+	const relativeBinary = typeof bin === "string" ? bin : bin?.[commandName];
+	if (tool && relativeBinary) {
+		const binary = resolve(tool.directory, relativeBinary);
+		try {
+			if (statSync(binary).isFile()) {
+				return binary;
+			}
+		} catch {
+			return;
+		}
+	}
+}
+
 /** Selects the Vite runner declared in a manifest, ignoring peer and optional dependencies. */
 export function getViteRunner(
 	packageJson?: PackageJSON
-): "vite" | "vite-plus" | undefined {
+): ViteRunner | undefined {
 	if (usesVitePlus(packageJson)) {
 		return "vite-plus";
 	}

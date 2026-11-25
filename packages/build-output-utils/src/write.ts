@@ -60,16 +60,17 @@ export async function writeAssets({
 	sourceDirectory,
 }: WriteAssetsOptions): Promise<void> {
 	const assetsDir = getWorkerAssetsDir(root);
-	const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(
-		sourceDirectory
-	).catch((error: unknown) => {
-		if (error instanceof InvalidAssetsIgnoreError) {
-			throw new UserError(error.message, {
-				telemetryMessage: "assets ignore invalid encoding",
-			});
-		}
-		throw error;
-	});
+	const { assetsIgnoreFunction, hasExplicitDirectoryException } =
+		await createAssetsIgnoreFunction(sourceDirectory).catch(
+			(error: unknown) => {
+				if (error instanceof InvalidAssetsIgnoreError) {
+					throw new UserError(error.message, {
+						telemetryMessage: "assets ignore invalid encoding",
+					});
+				}
+				throw error;
+			}
+		);
 	const copyOptions = {
 		recursive: true,
 		force: false,
@@ -98,7 +99,11 @@ export async function writeAssets({
 				const stats = await fsp.stat(source);
 				return !(stats.isDirectory() ? ignoredAsDirectory : ignoredAsFile);
 			} catch (error) {
-				if (ignoredAsFile && thrownIsDoesNotExistError(error)) {
+				if (
+					ignoredAsFile &&
+					thrownIsDoesNotExistError(error) &&
+					!hasExplicitDirectoryException(relative)
+				) {
 					return false;
 				}
 				throw error;
