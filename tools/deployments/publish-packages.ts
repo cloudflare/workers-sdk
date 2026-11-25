@@ -792,7 +792,27 @@ function buildPackages() {
 	execFileSync("pnpm", ["run", "build"], { env, stdio: ["ignore", 2, 2] });
 }
 
-function runChangesetTag(): Promise<number> {
+function runChangesetTag(fetchMain: boolean): Promise<number> {
+	if (fetchMain) {
+		console.log("\nRefreshing origin/main before tagging...");
+		try {
+			execFileSync(
+				"git",
+				[
+					"fetch",
+					"--no-tags",
+					"origin",
+					"refs/heads/main:refs/remotes/origin/main",
+				],
+				{ stdio: ["ignore", 2, 2] }
+			);
+		} catch {
+			console.log(
+				"::warning::Could not refresh origin/main; continuing with Git tag creation."
+			);
+		}
+	}
+
 	return new Promise((promiseResolve) => {
 		const child = spawn("pnpm", ["exec", "changeset", "tag"], {
 			stdio: "inherit",
@@ -833,7 +853,7 @@ export async function runPublishCommand(args: string[]): Promise<void> {
 		fetchImpl: fetch,
 		publish: createPublishRunner({ registry }),
 		addDistTag: createDistTagRunner({ registry }),
-		runChangesetTag,
+		runChangesetTag: () => runChangesetTag(args.includes("--fetch-main")),
 		sleep,
 		now: () => Date.now(),
 		log,
