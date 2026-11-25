@@ -1051,6 +1051,7 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 			cliDisplayName: "Wrangler",
 			complianceRegion: undefined,
 			workerName: "worker",
+			lazy: false,
 		});
 		assert(auth);
 		expect(await unwrapHook(auth)).toEqual({
@@ -1096,6 +1097,7 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 			cliDisplayName: "Wrangler",
 			complianceRegion: undefined,
 			workerName: "worker",
+			lazy: false,
 		});
 		assert(auth2);
 		expect(await unwrapHook(auth2)).toEqual({
