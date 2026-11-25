@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import test, { describe } from "node:test";
-import getPort from "get-port";
 import { unstable_startWorker } from "wrangler";
 
 describe("startWorker - configuration errors", () => {
@@ -52,7 +51,7 @@ describe("startWorker - configuration errors", () => {
 			dev: {
 				persist: false,
 				server: {
-					port: await getPort(),
+					port: 0,
 				},
 				inspector: false,
 			},
@@ -79,7 +78,7 @@ describe("startWorker - configuration errors", () => {
 			dev: {
 				persist: false,
 				server: {
-					port: await getPort(),
+					port: 0,
 				},
 				inspector: false,
 			},

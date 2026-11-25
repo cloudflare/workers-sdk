@@ -1,6 +1,43 @@
 import cloudflare from "@cloudflare/oxlint-config";
 import { defineConfig } from "oxlint";
 
+const getPortRestriction = {
+	name: "get-port",
+	message:
+		"get-port finds a free port and releases it, so another process can take " +
+		"the port before your code listens on it (ERR_ADDRESS_IN_USE / EADDRINUSE " +
+		"flakes). Let the code that listens choose the port: listen on port 0 and " +
+		"read the port it got, e.g. `server.address().port`, Miniflare's `ready` " +
+		"URL or `getInspectorURL()`, or workerd's `--control-fd` reports. If the " +
+		"port must be known before something else listens, keep a listener on it " +
+		"for as long as it is needed and forward its connections.",
+};
+
+const restrictedImportPaths = [
+	{
+		name: "ci-info",
+		importNames: [
+			"isCI",
+			"CLOUDFLARE_PAGES",
+			"CLOUDFLARE_WORKERS",
+			"isPR",
+			"name",
+		],
+		message:
+			'Use default import (`import ci from "ci-info"`) and access properties via `ci.isCI`, `ci.CLOUDFLARE_PAGES`, etc. Named imports cannot be controlled in test mocks.',
+	},
+	{
+		name: "vitest",
+		importNames: ["expect"],
+		message:
+			"Import 'expect' from the test context instead of 'vitest' for concurrency safety. Use: test('name', ({ expect }) => { ... })",
+	},
+	{
+		name: "am-i-vibing",
+		message: "Use `detectAgent()` from `src/utils/detect-agent` instead.",
+	},
+];
+
 export default defineConfig({
 	...cloudflare,
 	options: {
@@ -94,33 +131,7 @@ export default defineConfig({
 		],
 		"no-restricted-imports": [
 			"error",
-			{
-				paths: [
-					{
-						name: "ci-info",
-						importNames: [
-							"isCI",
-							"CLOUDFLARE_PAGES",
-							"CLOUDFLARE_WORKERS",
-							"isPR",
-							"name",
-						],
-						message:
-							'Use default import (`import ci from "ci-info"`) and access properties via `ci.isCI`, `ci.CLOUDFLARE_PAGES`, etc. Named imports cannot be controlled in test mocks.',
-					},
-					{
-						name: "vitest",
-						importNames: ["expect"],
-						message:
-							"Import 'expect' from the test context instead of 'vitest' for concurrency safety. Use: test('name', ({ expect }) => { ... })",
-					},
-					{
-						name: "am-i-vibing",
-						message:
-							"Use `detectAgent()` from `src/utils/detect-agent` instead.",
-					},
-				],
-			},
+			{ paths: [...restrictedImportPaths, getPortRestriction] },
 		],
 	},
 	ignorePatterns: [
@@ -225,6 +236,7 @@ export default defineConfig({
 								allowTypeImports: true,
 								message: "Import runtime values from `miniflare:zod` instead.",
 							},
+							getPortRestriction,
 						],
 					},
 				],
@@ -234,6 +246,41 @@ export default defineConfig({
 			files: ["packages/miniflare/src/workers/shared/zod.worker.ts"],
 			rules: {
 				"no-restricted-imports": "off",
+			},
+		},
+		// Existing uses of get-port that can't yet let the listener choose the port.
+		// Don't add files here; fix the code instead.
+		{
+			files: [
+				// Chooses the local Artifacts Git port.
+				// cloudflare/workers-sdk#17182 holds that port with a listener instead;
+				// remove this entry when it lands.
+				"packages/miniflare/src/plugins/artifacts/controller.ts",
+				// Prefer a well-known default port (8787 for `wrangler dev`, 9229 for
+				// inspectors) and pick another one only if it is taken. Choosing a
+				// fallback race-free needs Miniflare to try the default port and fall
+				// back to port 0 itself. The wrangler tests mock get-port to test the
+				// default-port logic.
+				"packages/wrangler/src/utils/memoizeGetPort.ts",
+				"packages/wrangler/src/__tests__/utils-memoizeGetPort.test.ts",
+				"packages/wrangler/src/__tests__/dev.test.ts",
+				"packages/vite-plugin-cloudflare/src/debug.ts",
+				"packages/vitest-plugin/src/pool/index.ts",
+				// Predicts the port Vite's preview server will choose, so the tunnel can
+				// start before the server listens.
+				"packages/vite-plugin-cloudflare/src/plugins/tunnel.ts",
+				// Pass `--port` to the dev and preview servers of each framework
+				// template, which take only a port number and don't report the port
+				// they listen on in a common format.
+				"packages/create-cloudflare/e2e/helpers/framework-helpers.ts",
+				"packages/create-cloudflare/e2e/helpers/workers-helpers.ts",
+				// Verdaccio runs in a child process, listens on the port its config file
+				// names, and must keep the same port across restarts.
+				"packages/mock-npm-registry/src/index.ts",
+				"packages/mock-npm-registry/tests/publish-package.test.ts",
+			],
+			rules: {
+				"no-restricted-imports": ["error", { paths: restrictedImportPaths }],
 			},
 		},
 		// Relax some rules for test & script files

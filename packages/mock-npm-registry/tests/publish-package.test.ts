@@ -9,6 +9,7 @@ import { describe, onTestFinished, test, vi } from "vitest";
 import { packageManager } from "../../../package.json";
 import { publishPackage, restoreLatestTag } from "../src/publish-package";
 import type { LocalVersion } from "../src/local-versions";
+import type { AddressInfo } from "node:net";
 
 const name = "@cloudflare/mock-npm-registry-dist-tag-test";
 
@@ -17,17 +18,15 @@ const name = "@cloudflare/mock-npm-registry-dist-tag-test";
  * of the test package.
  */
 async function startUpstream() {
-	const upstreamPort = await getPort();
-	const upstreamUrl = `http://127.0.0.1:${upstreamPort}/`;
-	const stable = {
-		name,
-		version: "1.0.0",
-		dist: {
-			tarball: `${upstreamUrl}stable.tgz`,
-			shasum: "0".repeat(40),
-		},
-	};
 	const upstream = createServer((request, response) => {
+		const stable = {
+			name,
+			version: "1.0.0",
+			dist: {
+				tarball: `${upstreamUrl}stable.tgz`,
+				shasum: "0".repeat(40),
+			},
+		};
 		response.setHeader("content-type", "application/json");
 		response.end(
 			JSON.stringify(
@@ -41,8 +40,10 @@ async function startUpstream() {
 			)
 		);
 	});
-	upstream.listen(upstreamPort, "127.0.0.1");
+	upstream.listen(0, "127.0.0.1");
 	await once(upstream, "listening");
+	const { port } = upstream.address() as AddressInfo;
+	const upstreamUrl = `http://127.0.0.1:${port}/`;
 	onTestFinished(
 		() =>
 			new Promise<void>((resolve, reject) => {
