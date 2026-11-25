@@ -1,3 +1,4 @@
+import events from "node:events";
 import path from "node:path";
 import { mockConsoleMethods } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
@@ -153,13 +154,17 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 				};
 			});
 
+			// `patchConfig` resolves before the reload disposes the failed remote
+			// session, which may still be failing a binding call from the last
+			// poll. A disposed session reports no errors, and disposal precedes
+			// `reloadComplete`, so clear warnings only once the reload completes.
+			const reloaded = events.once(worker.raw, "reloadComplete");
 			await worker.patchConfig({
 				dev: {
 					auth: validAuth,
 				},
 			});
-			// Requests now wait for the reload, which disposes the failed remote
-			// session (stopping its error reports) before starting the new one.
+			await reloaded;
 			vi.mocked(console.warn).mockClear();
 
 			await assertValidWorkerAiResponse(expect);
