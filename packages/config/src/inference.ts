@@ -110,6 +110,7 @@ interface BindingTypeMap<TBinding> {
 	"mtls-certificate": Fetcher;
 	"rate-limit": RateLimit;
 	r2: R2Bucket;
+	realtimekit: RealtimeKitBinding;
 	secret: string;
 	"secrets-store-secret": SecretsStoreSecret;
 	"send-email": SendEmail;
