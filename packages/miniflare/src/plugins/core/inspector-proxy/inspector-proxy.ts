@@ -27,6 +27,14 @@ export class InspectorProxy {
 		this.#workerName = workerName;
 		this.#runtimeWs = runtimeWs;
 		this.#runtimeWs.once("open", () => this.#handleRuntimeWebSocketOpen());
+		// Miniflare kills the runtime whenever it restarts or is disposed, which
+		// can reset this connection, even before it opens. Without a listener,
+		// the `error` event would be thrown as an uncaught exception.
+		this.#runtimeWs.on("error", (error) =>
+			this.#log.debug(
+				`Inspector connection to the runtime for worker "${workerName}" failed: ${error}`
+			)
+		);
 	}
 
 	get workerName() {
@@ -58,7 +66,7 @@ export class InspectorProxy {
 		this.#devtoolsWs.on("error", (message) => this.#log.error(message));
 
 		this.#devtoolsWs.once("close", () => {
-			if (this.#runtimeWs?.OPEN) {
+			if (this.#runtimeWs.readyState === WebSocket.OPEN) {
 				// Since Miniflare proxies the inspector, reloading Chrome DevTools won't trigger debugger initialisation events (because it's connecting to an extant session).
 				// This sends a `Debugger.disable` message to the remote when a new WebSocket connection is initialised,
 				// with the assumption that the new connection will shortly send a `Debugger.enable` event and trigger re-initialisation.
@@ -73,8 +81,14 @@ export class InspectorProxy {
 
 		this.#devtoolsWs.on("message", (data) => {
 			const message = JSON.parse(data.toString());
-			assert(this.#runtimeWs?.OPEN);
-			this.#sendMessageToRuntime(message);
+			if (this.#runtimeWs.readyState === WebSocket.CONNECTING) {
+				// Proxies are listed before their runtime connection opens
+				this.#runtimeWs.once("open", () => this.#sendMessageToRuntime(message));
+			} else if (this.#runtimeWs.readyState === WebSocket.OPEN) {
+				this.#sendMessageToRuntime(message);
+			}
+			// Otherwise the runtime has gone away. Miniflare replaces this proxy,
+			// closing the DevTools connection, once the new runtime starts.
 		});
 	}
 
@@ -86,8 +100,6 @@ export class InspectorProxy {
 	#runtimeKeepAliveInterval: NodeJS.Timeout | undefined;
 
 	#handleRuntimeWebSocketOpen() {
-		assert(this.#runtimeWs?.OPEN);
-
 		this.#runtimeWs.on("message", (data) => {
 			const message = JSON.parse(data.toString());
 
@@ -105,7 +117,7 @@ export class InspectorProxy {
 
 		clearInterval(this.#runtimeKeepAliveInterval);
 		this.#runtimeKeepAliveInterval = setInterval(() => {
-			if (this.#runtimeWs?.OPEN) {
+			if (this.#runtimeWs.readyState === WebSocket.OPEN) {
 				this.#sendMessageToRuntime({
 					method: "Runtime.getIsolateId",
 					id: this.#nextCounter(),
@@ -143,7 +155,7 @@ export class InspectorProxy {
 	#sendMessageToDevtools(message: DevToolsEvents) {
 		assert(this.#devtoolsWs);
 
-		if (!this.#devtoolsWs.OPEN) {
+		if (this.#devtoolsWs.readyState === WebSocket.CONNECTING) {
 			// the devtools web socket is established but not yet connected
 			this.#devtoolsWs.once("open", () =>
 				this.#devtoolsWs?.send(JSON.stringify(message))
@@ -155,7 +167,7 @@ export class InspectorProxy {
 	}
 
 	#sendMessageToRuntime(message: DevToolsCommandRequests) {
-		assert(this.#runtimeWs?.OPEN);
+		assert(this.#runtimeWs.readyState === WebSocket.OPEN);
 
 		this.#runtimeWs.send(JSON.stringify(message));
 	}
@@ -164,6 +176,8 @@ export class InspectorProxy {
 		clearInterval(this.#runtimeKeepAliveInterval);
 
 		this.#devtoolsWs?.close();
-		this.#runtimeWs?.close();
+		// `close()` on a connection that hasn't opened yet aborts the handshake
+		// with an `error` event, which the listener above logs.
+		this.#runtimeWs.close();
 	}
 }

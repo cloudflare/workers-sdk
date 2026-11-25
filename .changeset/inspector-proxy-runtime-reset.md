@@ -1,0 +1,9 @@
+---
+"miniflare": patch
+---
+
+Stop the inspector proxy crashing the process when workerd restarts
+
+Miniflare kills workerd whenever it restarts or is disposed. This can reset the inspector proxy's connection to workerd, sometimes before the connection has opened. That connection had no `error` listener, so the reset was thrown as an uncaught `ECONNRESET` exception. The proxy now logs it at debug level. Messages from DevTools that arrive before the connection to workerd has opened are now sent once it opens, instead of throwing an uncaught exception.
+
+`setOptions()` also no longer restarts the inspector proxy's server when `inspectorPort` is changed to the port the server already listens on, for example one it was given through port 0.

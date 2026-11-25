@@ -285,13 +285,19 @@ export class InspectorProxyController {
 		workerNamesToProxy: Set<string>
 	) {
 		this.workerNamesToProxy = workerNamesToProxy;
-		if (
-			this.inspectorPortOption !== inspectorPortOption ||
-			this.inspectorHostOption !== inspectorHostOption
-		) {
-			this.inspectorPortOption = inspectorPortOption;
-			this.inspectorHostOption = inspectorHostOption;
-
+		const hostChanged = this.inspectorHostOption !== inspectorHostOption;
+		const portChanged = this.inspectorPortOption !== inspectorPortOption;
+		// A fixed port the server already listens on, such as one it was given
+		// through port 0, needs no restart. Closing and listening again would let
+		// another process take the port in between.
+		const alreadyListening =
+			!hostChanged &&
+			portChanged &&
+			inspectorPortOption !== 0 &&
+			inspectorPortOption === (await this.#getInspectorPort());
+		this.inspectorPortOption = inspectorPortOption;
+		this.inspectorHostOption = inspectorHostOption;
+		if ((hostChanged || portChanged) && !alreadyListening) {
 			await this.#restartServer();
 		}
 		await this.#server;
