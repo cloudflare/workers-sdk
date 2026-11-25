@@ -3,7 +3,7 @@ import {
 	readFileSync as fsReadFileSync,
 	writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import { blue, brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { runCommand } from "@cloudflare/cli-shared-helpers/command";
@@ -62,6 +62,7 @@ export class Astro extends Framework {
 		projectPath,
 		isWorkspaceRoot,
 		context,
+		existingWorkerConfig,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const astroVersion = this.frameworkVersion;
 
@@ -147,6 +148,11 @@ export class Astro extends Framework {
 					)}`,
 				}
 			);
+
+			const entrypoint = existingWorkerConfig?.entrypoint;
+			if (isCustomWorkerEntrypoint(entrypoint)) {
+				useServerOutputForCustomWorker(projectPath, entrypoint, context);
+			}
 		}
 
 		return {
@@ -157,6 +163,101 @@ export class Astro extends Framework {
 
 	configurationDescription =
 		'Configuring project for Astro with "astro add cloudflare"';
+}
+
+const ADAPTER_SERVER_ENTRYPOINT = "@astrojs/cloudflare/entrypoints/server";
+
+/**
+ * Checks whether a Worker entrypoint is the project's own rather than the adapter's.
+ *
+ * @param entrypoint The entrypoint from the project's Worker configuration
+ * @returns `true` when the project brings its own Worker
+ */
+function isCustomWorkerEntrypoint(entrypoint: unknown): entrypoint is string {
+	return (
+		typeof entrypoint === "string" &&
+		entrypoint !== ADAPTER_SERVER_ENTRYPOINT &&
+		entrypoint !== `${ADAPTER_SERVER_ENTRYPOINT}.js`
+	);
+}
+
+/**
+ * Sets `output: "server"` for a project that brings its own Worker, and tells the user
+ * what their Worker needs. With static output the Cloudflare adapter builds only
+ * assets and leaves a custom Worker entrypoint out of the build.
+ *
+ * @param projectPath The path of the project
+ * @param entrypoint The project's own Worker entrypoint
+ * @param context The autoconfig context providing the logger
+ */
+function useServerOutputForCustomWorker(
+	projectPath: string,
+	entrypoint: string,
+	context: AutoConfigContext
+): void {
+	const reason = `\`${entrypoint}\` is this project's own Worker, and the Cloudflare adapter leaves it out of static builds.`;
+	const lines = [
+		setServerOutput(projectPath)
+			? `Switched the Astro config to \`output: "server"\`: ${reason}`
+			: `Set \`output: "server"\` in your Astro config: ${reason}`,
+	];
+	if (
+		!readSource(resolve(projectPath, entrypoint))?.includes(
+			ADAPTER_SERVER_ENTRYPOINT
+		)
+	) {
+		lines.push(
+			"Astro now renders pages on request, so pass the requests your Worker doesn't handle to Astro:",
+			`  import astro from "${ADAPTER_SERVER_ENTRYPOINT}";`,
+			"  return astro.fetch(request, env, ctx);"
+		);
+	}
+	lines.push(
+		"Add `export const prerender = true` to pages that should stay static files."
+	);
+	context.logger.warn(lines.join("\n"));
+}
+
+/**
+ * Sets `output: "server"` in the `defineConfig` call of the project's Astro config.
+ *
+ * @param projectPath The path of the project
+ * @returns Whether the config was updated
+ */
+function setServerOutput(projectPath: string): boolean {
+	let updated = false;
+	transformFile(findAstroConfigFile(projectPath), {
+		visitCallExpression(path) {
+			const { callee } = path.node;
+			if (callee.type !== "Identifier" || callee.name !== "defineConfig") {
+				return this.traverse(path);
+			}
+			const [configArg] = path.node.arguments;
+			if (configArg?.type === "ObjectExpression") {
+				const b = recast.types.builders;
+				mergeObjectProperties(configArg, [
+					b.objectProperty(b.identifier("output"), b.literal("server")),
+				]);
+				updated = true;
+			}
+			return false;
+		},
+	});
+	return updated;
+}
+
+/**
+ * Reads a source file, or returns `undefined` when it can't be read.
+ *
+ * @param filePath The path of the file
+ * @returns The file's contents
+ */
+function readSource(filePath: string): string | undefined {
+	try {
+		return fsReadFileSync(filePath, "utf-8");
+	} catch {
+		return undefined;
+	}
 }
 
 /**
