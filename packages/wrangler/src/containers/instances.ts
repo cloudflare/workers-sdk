@@ -190,6 +190,7 @@ function rowsToJsonOutput(rows: InstanceRow[]): Record<string, unknown>[] {
 				id: row.durableObject?.id ?? row.instance?.id ?? null,
 				name: row.durableObject?.name ?? null,
 				state,
+				status: row.instance?.current_placement?.status ?? null,
 				location: row.instance?.location ?? null,
 				version: row.instance?.app_version ?? null,
 				created:
@@ -203,6 +204,7 @@ function rowsToJsonOutput(rows: InstanceRow[]): Record<string, unknown>[] {
 		return {
 			id: row.instance?.id ?? null,
 			state,
+			status: row.instance?.current_placement?.status ?? null,
 			location: row.instance?.location ?? null,
 			version: row.instance?.app_version ?? null,
 			created: row.instance?.created_at ?? null,
@@ -224,6 +226,33 @@ function instancesToJsonOutput(
 			next_page_token: nextPageToken ?? null,
 		},
 	};
+}
+
+function hasActionableInstanceState(rows: InstanceRow[]): boolean {
+	return rows.some((row) => {
+		const state = row.instance ? deriveInstanceState(row.instance) : "inactive";
+		return (
+			state === "failed" ||
+			state === "stopped" ||
+			state === "stopping" ||
+			state === "unhealthy"
+		);
+	});
+}
+
+function maybeLogInstanceDiagnosticHint(
+	rows: InstanceRow[],
+	applicationId: string
+): void {
+	if (!hasActionableInstanceState(rows)) {
+		return;
+	}
+
+	logger.log(
+		dim(
+			`Some instances are stopped or unhealthy. Run \`wrangler containers instances ${applicationId} --json\` for placement status details.`
+		)
+	);
 }
 
 function renderTable(rows: InstanceRow[]): void {
@@ -396,6 +425,7 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 			return;
 		}
 		renderTable(rows);
+		maybeLogInstanceDiagnosticHint(rows, args.ID);
 		return;
 	}
 
@@ -427,6 +457,7 @@ export async function instancesCommand(args: InstancesArgs): Promise<void> {
 
 		if (rows.length > 0) {
 			renderTable(rows);
+			maybeLogInstanceDiagnosticHint(rows, args.ID);
 			totalShown += rows.length;
 		}
 

@@ -60,6 +60,7 @@ export async function runPagesToWorkersDeploy(
 		oldAssetTtl: undefined,
 		dispatchNamespace: undefined,
 		containersRollout: undefined,
+		experimentalAutoConfigStaticAssets: false,
 		durableObjectsCodeUpdateMode: undefined,
 		path: undefined,
 		script: undefined,

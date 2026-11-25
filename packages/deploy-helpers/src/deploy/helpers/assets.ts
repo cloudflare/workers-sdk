@@ -16,6 +16,7 @@ import {
 	APIError,
 	FatalError,
 	formatTime,
+	getOutputFilePathFromEnv,
 	LOGGER_LEVELS,
 	retryOnAPIFailure,
 	UserError,
@@ -631,6 +632,12 @@ export function getEdgeKvUploadConcurrency(jwt: string): number {
 export const buildAssetManifest = async (dir: string) => {
 	const files = await readdir(dir, { recursive: true });
 	logReadFilesFromDirectory(dir, files);
+	const outputFileRelativePath = getOutputFileRelativePath(dir);
+	if (outputFileRelativePath) {
+		logger.warn(
+			`Ignoring ${outputFileRelativePath} because WRANGLER_OUTPUT_FILE_PATH points inside the assets directory.`
+		);
+	}
 
 	const manifest: AssetManifest = {};
 
@@ -648,6 +655,11 @@ export const buildAssetManifest = async (dir: string) => {
 
 	await Promise.all(
 		files.map(async (relativeFilepath) => {
+			if (relativeFilepath === outputFileRelativePath) {
+				logger.debug("Ignoring asset:", relativeFilepath);
+				return;
+			}
+
 			if (assetsIgnoreFunction(relativeFilepath)) {
 				logger.debug("Ignoring asset:", relativeFilepath);
 				// This file should not be included in the manifest.
@@ -692,6 +704,27 @@ export const buildAssetManifest = async (dir: string) => {
 	);
 	return manifest;
 };
+
+function getOutputFileRelativePath(dir: string): string | undefined {
+	const outputFilePath = getOutputFilePathFromEnv();
+	if (!outputFilePath) {
+		return undefined;
+	}
+
+	const relativePath = path.relative(
+		path.resolve(dir),
+		path.resolve(outputFilePath)
+	);
+	if (
+		relativePath === "" ||
+		relativePath.startsWith("..") ||
+		path.isAbsolute(relativePath)
+	) {
+		return undefined;
+	}
+
+	return relativePath;
+}
 
 function logAssetUpload(line: string, diffCount: number) {
 	const level = logger.loggerLevel ?? "log";

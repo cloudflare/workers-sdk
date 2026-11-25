@@ -176,7 +176,7 @@ export async function deployContainers(
 		observabilityTargetPercentageField,
 		observabilityTargetCountField,
 	}: DeployContainersArgs
-) {
+): Promise<ContainerDeployResult[]> {
 	const resolveNamespaceId = createDurableObjectNamespaceResolver(config, {
 		versionId,
 		accountId,
@@ -184,21 +184,25 @@ export async function deployContainers(
 		dispatchNamespace,
 	});
 
+	const results: ContainerDeployResult[] = [];
 	for (const { container, imageRef } of containerDeployments) {
 		const namespaceId = await resolveNamespaceId(container.class_name);
-		await apply(
-			{
-				imageRef,
-				durable_object_namespace_id: namespaceId,
-				configFileName,
-				observabilityTargetPercentageField,
-				observabilityTargetCountField,
-			},
-			container,
-			config,
-			accountId
+		results.push(
+			await apply(
+				{
+					imageRef,
+					durable_object_namespace_id: namespaceId,
+					configFileName,
+					observabilityTargetPercentageField,
+					observabilityTargetCountField,
+				},
+				container,
+				config,
+				accountId
+			)
 		);
 	}
+	return results;
 }
 
 export async function listDurableObjects(
@@ -612,9 +616,12 @@ export async function apply(
 	containerConfig: ContainerNormalizedConfig,
 	config: Config,
 	accountId: string
-) {
+): Promise<ContainerDeployResult> {
 	if (!config.containers || config.containers.length === 0) {
-		return;
+		return {
+			name: containerConfig.name,
+			action: "unchanged",
+		};
 	}
 	startSection(
 		"Deploy a container application",
@@ -636,7 +643,9 @@ export async function apply(
 		"remoteDigest" in args.imageRef
 			? args.imageRef.remoteDigest
 			: args.imageRef.newTag;
+	const imageDigest = getImageDigest(args.imageRef);
 	log(dim("Container application changes\n"));
+	let result: ContainerDeployResult;
 
 	let migratedLegacyObservability = false;
 
@@ -777,11 +786,23 @@ export async function apply(
 			if (migratedLegacyObservability) {
 				newline();
 				endSection("Applied changes");
-				return;
+				return {
+					name: prevApp.name,
+					applicationId: prevApp.id,
+					action: "modified",
+					image: imageRef,
+					imageDigest,
+				};
 			}
 			updateStatus(`no changes ${brandColor(prevApp.name)}`);
 			endSection("No changes to be made");
-			return;
+			return {
+				name: prevApp.name,
+				applicationId: prevApp.id,
+				action: "unchanged",
+				image: imageRef,
+				imageDigest,
+			};
 		}
 
 		updateStatus(`${brandColor.underline("EDIT")} ${prevApp.name}`, false);
@@ -791,7 +812,7 @@ export async function apply(
 		newline();
 
 		if (containerConfig.rollout_kind !== "none") {
-			await doAction({
+			const modifiedApplication = await doAction({
 				action: "modify",
 				application: modifyReq,
 				id: prevApp.id,
@@ -806,9 +827,23 @@ export async function apply(
 						}
 					: {}),
 			});
+			result = {
+				name: modifiedApplication.name,
+				applicationId: modifiedApplication.id,
+				action: "modified",
+				image: imageRef,
+				imageDigest,
+			};
 		} else {
 			log("Skipping application rollout");
 			newline();
+			result = {
+				name: prevApp.name,
+				applicationId: prevApp.id,
+				action: "unchanged",
+				image: imageRef,
+				imageDigest,
+			};
 		}
 	} else {
 		// **************
@@ -831,13 +866,21 @@ export async function apply(
 		newline();
 		// add to the actions array to create the app later
 
-		await doAction({
+		const createdApplication = await doAction({
 			action: "create",
 			application: appConfig,
 		});
+		result = {
+			name: createdApplication.name,
+			applicationId: createdApplication.id,
+			action: "created",
+			image: imageRef,
+			imageDigest,
+		};
 	}
 	newline();
 	endSection("Applied changes");
+	return result;
 }
 
 /**
@@ -895,7 +938,7 @@ const doAction = async (
 				rollout_kind?: CreateApplicationRolloutRequest.kind;
 				successMessage?: string;
 		  }
-) => {
+): Promise<{ id: ApplicationID; name: ApplicationName }> => {
 	if (action.action === "create") {
 		let application: Application;
 		try {
@@ -933,6 +976,7 @@ const doAction = async (
 				shape: shapes.bar,
 			}
 		);
+		return { id: application.id, name: application.name };
 	}
 
 	if (action.action === "modify") {
@@ -1016,7 +1060,10 @@ const doAction = async (
 				shape: shapes.bar,
 			}
 		);
+		return { id: action.id, name: action.name };
 	}
+
+	throw new Error("Unexpected container action");
 };
 
 /**
@@ -1108,3 +1155,22 @@ export const configRolloutStepsToAPI = (rolloutSteps: number | number[]) => {
 		return { steps: output };
 	}
 };
+
+export type ContainerDeployResult = {
+	name: string;
+	applicationId?: string;
+	action: "created" | "modified" | "unchanged";
+	image?: string;
+	imageDigest?: string;
+};
+
+function getImageDigest(imageRef: ImageRef): string | undefined {
+	if (!("remoteDigest" in imageRef)) {
+		return undefined;
+	}
+
+	const digestSeparatorIndex = imageRef.remoteDigest.lastIndexOf("@");
+	return digestSeparatorIndex === -1
+		? undefined
+		: imageRef.remoteDigest.slice(digestSeparatorIndex + 1);
+}

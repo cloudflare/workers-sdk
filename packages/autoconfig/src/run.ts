@@ -29,6 +29,7 @@ import {
 	getProjectCommand,
 	getDetailsForAutoConfig,
 } from "./details";
+import { ensureDirectoryForFile } from "./details/project-adapters";
 import {
 	isFrameworkSupported,
 	isKnownFramework,
@@ -98,18 +99,21 @@ export async function runAutoConfig(
 
 	autoConfigDetails = updatedAutoConfigDetails;
 	assertNonConfigured(autoConfigDetails);
-	validateFrameworkTargetSupport(autoConfigDetails.framework, target);
 
-	if (isKnownFramework(autoConfigDetails.framework.id, target)) {
-		const frameworkIsSupported = isFrameworkSupported(
-			autoConfigDetails.framework.id,
-			target
-		);
+	if (autoConfigDetails.configurationPlan) {
+		return await runConfigurationPlan(autoConfigDetails, autoConfigOptions);
+	}
+	const framework = autoConfigDetails.framework;
+	assert(framework, "The framework is unexpectedly missing");
+	validateFrameworkTargetSupport(framework, target);
+
+	if (isKnownFramework(framework.id, target)) {
+		const frameworkIsSupported = isFrameworkSupported(framework.id, target);
 		if (!frameworkIsSupported) {
 			throw new FatalError(
-				autoConfigDetails.framework.id === "cloudflare-pages"
+				framework.id === "cloudflare-pages"
 					? `The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to Workers is not yet supported.`
-					: `The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`,
+					: `The detected framework ("${framework.name}") cannot be automatically configured.`,
 				{ telemetryMessage: "autoconfig run framework unsupported" }
 			);
 		}
@@ -133,29 +137,25 @@ export async function runAutoConfig(
 	const { packageManager } = autoConfigDetails;
 	const isWorkspaceRoot = autoConfigDetails.isWorkspaceRoot ?? false;
 
-	const frameworkPackageInfo = getFrameworkPackageInfo(
-		autoConfigDetails.framework.id,
-		target
-	);
+	const frameworkPackageInfo = getFrameworkPackageInfo(framework.id, target);
 	if (frameworkPackageInfo) {
-		autoConfigDetails.framework.validateFrameworkVersion(
+		framework.validateFrameworkVersion(
 			autoConfigDetails.projectPath,
 			frameworkPackageInfo,
 			context
 		);
 	}
 
-	const dryRunConfigurationResults =
-		await autoConfigDetails.framework.configure({
-			target,
-			outputDir: autoConfigDetails.outputDir,
-			projectPath: autoConfigDetails.projectPath,
-			workerName: autoConfigDetails.workerName,
-			isWorkspaceRoot,
-			dryRun: true,
-			packageManager,
-			context,
-		});
+	const dryRunConfigurationResults = await framework.configure({
+		target,
+		outputDir: autoConfigDetails.outputDir,
+		projectPath: autoConfigDetails.projectPath,
+		workerName: autoConfigDetails.workerName,
+		isWorkspaceRoot,
+		dryRun: true,
+		packageManager,
+		context,
+	});
 	const dryRunWorkerConfig = mergeWorkerConfig(
 		defaultWorkerConfig,
 		dryRunConfigurationResults.workerConfig
@@ -176,7 +176,7 @@ export async function runAutoConfig(
 	let buildCommand =
 		dryRunConfigurationResults.buildCommandOverride ??
 		autoConfigDetails.buildCommand ??
-		(autoConfigDetails.commandError && autoConfigDetails.framework.id === "vite"
+		(autoConfigDetails.commandError && framework.id === "vite"
 			? "vite build"
 			: undefined);
 	// Preserve shell commands while normalizing Vite selected by framework overrides.
@@ -190,7 +190,7 @@ export async function runAutoConfig(
 	}
 
 	const autoConfigSummary = await buildOperationsSummary(
-		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
+		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir, framework },
 		dryRunWorkerConfig,
 		dryRunConfigurationResults,
 		{
@@ -254,7 +254,7 @@ export async function runAutoConfig(
 		await installWrangler(packageManager.type, isWorkspaceRoot);
 	}
 
-	const configurationResults = await autoConfigDetails.framework.configure({
+	const configurationResults = await framework.configure({
 		target,
 		outputDir: autoConfigDetails.outputDir,
 		projectPath: autoConfigDetails.projectPath,
@@ -400,6 +400,258 @@ export async function runAutoConfig(
 	}
 
 	return autoConfigSummary;
+}
+
+async function runConfigurationPlan(
+	autoConfigDetails: AutoConfigDetailsForNonConfiguredProject,
+	autoConfigOptions: AutoConfigOptions
+): Promise<AutoConfigSummary> {
+	const { context } = autoConfigOptions;
+	const { logger } = context;
+	const dryRun = autoConfigOptions.dryRun === true;
+	const runBuild = !dryRun && (autoConfigOptions.runBuild ?? true);
+	const skipConfirmations =
+		dryRun || autoConfigOptions.skipConfirmations === true;
+	const enableWranglerInstallation =
+		autoConfigOptions.enableTargetCliInstallation ?? true;
+	const plan = autoConfigDetails.configurationPlan;
+	assert(plan, "Expected configuration plan to be present");
+
+	const wranglerConfigToWrite = getConfigurationPlanWranglerConfig(
+		plan.wranglerConfig,
+		autoConfigDetails.workerName
+	);
+	const autoConfigSummary = buildConfigurationPlanSummary(
+		autoConfigDetails,
+		wranglerConfigToWrite,
+		context,
+		enableWranglerInstallation
+	);
+
+	if (
+		plan.mode === "persistent" &&
+		!(
+			skipConfirmations ||
+			(await context.dialogs.confirm("Proceed with setup?"))
+		)
+	) {
+		throw new FatalError("Setup cancelled", {
+			telemetryMessage: "autoconfig run setup cancelled",
+		});
+	}
+
+	if (dryRun) {
+		logger.log(`✋  ${"Autoconfig process run in dry-run mode, exiting now."}`);
+		logger.log("");
+
+		return autoConfigSummary;
+	}
+
+	const isWorkspaceRoot = autoConfigDetails.isWorkspaceRoot ?? false;
+
+	if (autoConfigSummary.wranglerInstall && enableWranglerInstallation) {
+		await installWrangler(
+			autoConfigDetails.packageManager.type,
+			isWorkspaceRoot
+		);
+	}
+
+	if (plan.dependencies?.length) {
+		const dependencyGroups = new Map<boolean, string[]>();
+		for (const dependency of plan.dependencies) {
+			const dev = dependency.dev ?? false;
+			dependencyGroups.set(dev, [
+				...(dependencyGroups.get(dev) ?? []),
+				dependency.name,
+			]);
+		}
+
+		for (const [dev, dependencies] of dependencyGroups) {
+			await installPackages(
+				autoConfigDetails.packageManager.type,
+				dependencies,
+				{
+					dev,
+					isWorkspaceRoot,
+				}
+			);
+		}
+	}
+
+	if (plan.filesToCreate?.length) {
+		for (const file of plan.filesToCreate) {
+			const filePath = resolve(autoConfigDetails.projectPath, file.path);
+			if (existsSync(filePath)) {
+				throw new FatalError(
+					`Refusing to overwrite generated file ${file.path}. Move or remove it and try again.`,
+					{ telemetryMessage: "autoconfig run generated file exists" }
+				);
+			}
+			await ensureDirectoryForFile(filePath);
+			await writeFile(filePath, file.contents);
+		}
+	}
+
+	if (autoConfigDetails.packageJson && plan.packageJsonScripts) {
+		const packageJsonPath = resolve(
+			autoConfigDetails.projectPath,
+			"package.json"
+		);
+		const existingPackageJson = JSON.parse(
+			await readFile(packageJsonPath, "utf8")
+		) as PackageJSON;
+
+		await writeFile(
+			packageJsonPath,
+			JSON.stringify(
+				{
+					...existingPackageJson,
+					scripts: {
+						...existingPackageJson.scripts,
+						...autoConfigSummary.scripts,
+					},
+				} satisfies PackageJSON,
+				null,
+				2
+			) + "\n"
+		);
+	}
+
+	if (wranglerConfigToWrite && plan.mode === "persistent") {
+		await saveWranglerJsonc(
+			autoConfigDetails.projectPath,
+			wranglerConfigToWrite
+		);
+	}
+
+	if (plan.mode === "persistent") {
+		maybeAppendWranglerToGitIgnore(autoConfigDetails.projectPath);
+	}
+
+	for (const command of plan.commands ?? []) {
+		if (command.when === "setup" || (command.when === "build" && runBuild)) {
+			await context.runCommand(
+				command.command,
+				autoConfigDetails.projectPath,
+				`[${command.label ?? command.when}]`
+			);
+		}
+	}
+
+	return autoConfigSummary;
+}
+
+function buildConfigurationPlanSummary(
+	autoConfigDetails: AutoConfigDetailsForNonConfiguredProject,
+	wranglerConfigToWrite: RawConfig | null | undefined,
+	context: AutoConfigContext,
+	enableWranglerInstallation: boolean
+): AutoConfigSummary {
+	const { logger } = context;
+	const plan = autoConfigDetails.configurationPlan;
+	assert(plan, "Expected configuration plan to be present");
+	logger.log("");
+
+	const summary: AutoConfigSummary = {
+		wranglerInstall:
+			enableWranglerInstallation &&
+			plan.mode === "persistent" &&
+			Boolean(autoConfigDetails.packageJson),
+		scripts: plan.packageJsonScripts ?? {},
+		...(wranglerConfigToWrite ? { wranglerConfig: wranglerConfigToWrite } : {}),
+		outputDir: autoConfigDetails.outputDir,
+		buildCommand: autoConfigDetails.buildCommand,
+		projectKind: autoConfigDetails.projectKind,
+		adapterId: autoConfigDetails.adapterId,
+		adapterName: autoConfigDetails.adapterName,
+		confidence: autoConfigDetails.confidence,
+		deployMode: plan.mode,
+		sourceCategory: autoConfigDetails.sourceCategory,
+		evidence: autoConfigDetails.evidence,
+		warnings: plan.warnings,
+		generatedFiles: plan.generatedFiles,
+		deploy: plan.deploy,
+		summaryFields: plan.summaryFields,
+	};
+
+	if (plan.mode === "no-write") {
+		logger.log("📝 No local project files will be written.");
+		logger.log("");
+	}
+
+	if (summary.wranglerInstall || plan.dependencies?.length) {
+		logger.log("📦 Install packages:");
+		if (summary.wranglerInstall) {
+			logger.log(` - wrangler (devDependency)`);
+		}
+		for (const dependency of plan.dependencies ?? []) {
+			logger.log(
+				` - ${dependency.name}${dependency.dev ? " (devDependency)" : ""}`
+			);
+		}
+		logger.log("");
+	}
+
+	if (Object.keys(summary.scripts).length > 0) {
+		logger.log("📝 Update package.json scripts:");
+		for (const [name, script] of Object.entries(summary.scripts)) {
+			logger.log(` - "${name}": "${script}"`);
+		}
+		logger.log("");
+	}
+
+	if (plan.filesToCreate?.length) {
+		logger.log("📄 Create files:");
+		for (const file of plan.filesToCreate) {
+			logger.log(` - ${file.path}`);
+		}
+		logger.log("");
+	}
+
+	if (wranglerConfigToWrite) {
+		const wranglerConfigPath = resolve(
+			autoConfigDetails.projectPath,
+			"wrangler.jsonc"
+		);
+		const configExists = existsSync(wranglerConfigPath);
+		logger.log(
+			configExists ? "📄 Update wrangler.jsonc:" : "📄 Create wrangler.jsonc:"
+		);
+		logger.log(
+			"  " +
+				JSON.stringify(wranglerConfigToWrite, null, 2).replace(/\n/g, "\n  ")
+		);
+		logger.log("");
+	}
+
+	if (plan.commands?.length) {
+		logger.log("🏗️  Run commands:");
+		for (const command of plan.commands) {
+			logger.log(` - ${command.command}`);
+		}
+		logger.log("");
+	}
+
+	return summary;
+}
+
+function getConfigurationPlanWranglerConfig(
+	wranglerConfig: RawConfig | null | undefined,
+	workerName: string
+): RawConfig | null | undefined {
+	if (!wranglerConfig) {
+		return wranglerConfig;
+	}
+
+	return {
+		...wranglerConfig,
+		name: workerName,
+		containers: wranglerConfig.containers?.map((container) => ({
+			...container,
+			name:
+				container.name === wranglerConfig.name ? workerName : container.name,
+		})),
+	};
 }
 
 /**
@@ -599,6 +851,7 @@ function indentFileContent(content: string): string {
 export async function buildOperationsSummary(
 	autoConfigDetails: AutoConfigDetailsForNonConfiguredProject & {
 		outputDir: NonNullable<AutoConfigDetails["outputDir"]>;
+		framework: NonNullable<AutoConfigDetails["framework"]>;
 	},
 	workerConfig: WorkerConfig | null,
 	configurationResults: ConfigurationResults,

@@ -12,6 +12,7 @@ import type {
 	AutoConfigDetails,
 	AutoConfigOptions,
 	AutoConfigSummary,
+	DeployIntent,
 } from "@cloudflare/autoconfig";
 import type { Config } from "@cloudflare/workers-utils/config";
 
@@ -40,15 +41,24 @@ export async function runAutoConfigDetection({
 	wranglerConfig,
 	outputDir,
 	context,
+	deployIntent,
 }: {
 	command: NonNullable<AutoConfigWranglerTriggerCommand>;
 	wranglerConfig: Config;
 	outputDir?: string;
 	context: AutoConfigContext;
+	deployIntent?: DeployIntent;
 }): Promise<AutoConfigDetails> {
 	sendMetricsEvent(
 		"autoconfig_detection_started",
-		{ autoConfigId: getAutoConfigId(), command },
+		{
+			autoConfigId: getAutoConfigId(),
+			command,
+			deployTrigger: deployIntent?.trigger,
+			targetKind: deployIntent?.targetKind,
+			currentDeployInterpretation: deployIntent?.currentDeployInterpretation,
+			sourceCategory: deployIntent?.sourceCategory,
+		},
 		{}
 	);
 
@@ -58,6 +68,7 @@ export async function runAutoConfigDetection({
 			target: "wrangler",
 			outputDir,
 			context,
+			deployIntent,
 		});
 
 		sendMetricsEvent(
@@ -65,6 +76,10 @@ export async function runAutoConfigDetection({
 			{
 				autoConfigId: getAutoConfigId(),
 				framework: details.framework?.id,
+				projectKind: details.projectKind,
+				adapterId: details.adapterId,
+				confidence: details.confidence,
+				sourceCategory: details.sourceCategory,
 				configured: details.configured,
 				success: true,
 			},
@@ -110,11 +125,19 @@ export async function runAutoConfigLogic(
 	options: AutoConfigOptions & { dryRun: boolean }
 ): Promise<AutoConfigSummary> {
 	const frameworkId = details.framework?.id;
+	const adapterId = details.adapterId;
+	const projectKind = details.projectKind;
 	const { dryRun } = options;
 
 	sendMetricsEvent(
 		"autoconfig_configuration_started",
-		{ autoConfigId: getAutoConfigId(), framework: frameworkId, dryRun },
+		{
+			autoConfigId: getAutoConfigId(),
+			framework: frameworkId,
+			adapterId,
+			projectKind,
+			dryRun,
+		},
 		{}
 	);
 
@@ -129,6 +152,8 @@ export async function runAutoConfigLogic(
 			{
 				autoConfigId: getAutoConfigId(),
 				framework: frameworkId,
+				adapterId,
+				projectKind,
 				dryRun,
 				success: true,
 			},
@@ -142,6 +167,8 @@ export async function runAutoConfigLogic(
 			{
 				autoConfigId: getAutoConfigId(),
 				framework: frameworkId,
+				adapterId,
+				projectKind,
 				dryRun,
 				success: false,
 				...sanitizeError(error),
