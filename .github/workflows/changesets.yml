@@ -68,6 +68,11 @@ jobs:
           # release. It still ends with `changeset tag`, so the `New tag:` lines
           # this action parses into `publishedPackages` are unchanged.
           publish: node -r esbuild-register tools/deployments/publish-packages.ts
+          # Create release tags and the Version Packages commit through the
+          # GitHub API instead of `git push`. By default, the action pushes every
+          # tag at once, and GitHub has repeatedly rejected those simultaneous
+          # pushes with `remote unpack failed` after npm publishing had succeeded.
+          commitMode: github-api
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           CI_OS: ${{ runner.os }}
