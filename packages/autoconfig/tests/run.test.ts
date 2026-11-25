@@ -3,6 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import { loadAndParseConfig } from "@cloudflare/config";
+import * as workersUtils from "@cloudflare/workers-utils";
 import {
 	NpmPackageManager,
 	PnpmPackageManager,
@@ -799,6 +800,40 @@ export default defineConfig({
 		expect(existsSync(".assetsignore")).toBe(false);
 	});
 
+	it("passes the existing Worker entrypoint to framework setup", async ({
+		expect,
+	}) => {
+		await seed({
+			"cloudflare.config.ts": `import { defineConfig } from "cf/config";
+export default defineConfig({ worker: { name: "my-app", entrypoint: "./worker/index.ts" } });`,
+		});
+		const framework = new ViteBuildToolFramework({ id: "vite", name: "Vite" });
+		const configure = vi.spyOn(framework, "configure");
+
+		await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "my-app",
+				framework,
+				outputDir: "dist",
+				packageManager: NpmPackageManager,
+			},
+			{
+				context: createMockContext(),
+				skipConfirmations: true,
+				runBuild: false,
+				enableTargetCliInstallation: false,
+			}
+		);
+
+		expect(configure).toHaveBeenCalledWith(
+			expect.objectContaining({
+				existingWorkerConfig: { entrypoint: "./worker/index.ts" },
+			})
+		);
+	});
+
 	describe("for a Wrangler project", () => {
 		/**
 		 * Seeds a Wrangler project whose migration needs no installs, and detects it.
@@ -857,6 +892,162 @@ export default defineConfig({
 			).rejects.toThrow("Git worktree is not clean");
 			await runAutoConfig(details, { context: createMockContext() });
 			expect(existsSync("cloudflare.config.ts")).toBe(true);
+		});
+
+		it("sets up the framework after migrating, with the Vite bundler", async ({
+			expect,
+		}) => {
+			vi.spyOn(cliPackages, "installPackages").mockResolvedValue();
+			await seed({
+				"package.json": JSON.stringify({
+					name: "my-spa",
+					devDependencies: { cf: "1.0.0", vite: "^7.0.0" },
+				}),
+				"node_modules/vite/package.json": JSON.stringify({
+					name: "vite",
+					version: "7.0.0",
+				}),
+				"vite.config.ts": `import { defineConfig } from "vite";\nexport default defineConfig({ plugins: [] });\n`,
+				"index.html": "<h1>Hello World</h1>",
+				"wrangler.jsonc": JSON.stringify({
+					name: "my-spa",
+					compatibility_date: "2026-09-24",
+					assets: { directory: "./dist" },
+					kv_namespaces: [{ binding: "KV", id: "kv-id" }],
+				}),
+			});
+			const context = createMockContext();
+
+			const summary = await runAutoConfig(
+				await getDetailsForAutoConfig({ projectPath: process.cwd(), context }),
+				{
+					context,
+					skipConfirmations: true,
+					runBuild: false,
+					enableTargetCliInstallation: false,
+				}
+			);
+
+			expect(summary.wranglerMigration).toMatchObject({
+				followUps: [],
+				status: "complete",
+			});
+			expect(readFileSync("vite.config.ts", "utf8")).toContain("cloudflare()");
+			const cloudflareConfig = readFileSync("cloudflare.config.ts", "utf8");
+			expect(cloudflareConfig).toContain('name: "my-spa"');
+			expect(cloudflareConfig).toContain("bindings.kv");
+			expect(cloudflareConfig).toContain("single-page-application");
+		});
+
+		it("checks that the framework can be set up before migrating", async ({
+			expect,
+		}) => {
+			await seed({
+				"node_modules/vite/package.json": JSON.stringify({
+					name: "vite",
+					version: "7.0.0",
+				}),
+				"wrangler.jsonc": JSON.stringify({
+					name: "my-spa",
+					compatibility_date: "2026-09-24",
+				}),
+			});
+			const framework = new ViteBuildToolFramework({
+				id: "vite",
+				name: "Vite",
+			});
+			vi.spyOn(framework, "configure").mockRejectedValue(
+				new Error("Unsupported Vite config")
+			);
+
+			await expect(
+				runAutoConfig(
+					{
+						configured: false,
+						projectPath: process.cwd(),
+						wranglerConfigPath: join(process.cwd(), "wrangler.jsonc"),
+						framework,
+						outputDir: "dist",
+						workerName: "my-spa",
+						packageManager: NpmPackageManager,
+					},
+					{ context: createMockContext(), skipConfirmations: true }
+				)
+			).rejects.toThrow("Unsupported Vite config");
+			expect(existsSync("cloudflare.config.ts")).toBe(false);
+		});
+
+		it("only migrates a Wrangler config outside the project root", async ({
+			expect,
+		}) => {
+			await seed({
+				"package.json": JSON.stringify({
+					name: "my-spa",
+					devDependencies: { cf: "1.0.0", vite: "^7.0.0" },
+				}),
+				"vite.config.ts": "export default { plugins: [] };",
+				"config/wrangler.jsonc": JSON.stringify({
+					name: "my-spa",
+					compatibility_date: "2026-09-24",
+				}),
+			});
+			const context = createMockContext();
+
+			await runAutoConfig(
+				await getDetailsForAutoConfig({
+					projectPath: process.cwd(),
+					wranglerConfigPath: "config/wrangler.jsonc",
+					context,
+				}),
+				{ context, skipConfirmations: true, enableTargetCliInstallation: false }
+			);
+
+			expect(existsSync("config/cloudflare.config.ts")).toBe(true);
+			expect(readFileSync("vite.config.ts", "utf8")).not.toContain(
+				"cloudflare()"
+			);
+		});
+
+		it("only migrates while the framework isn't installed yet", async ({
+			expect,
+		}) => {
+			const { getInstalledPackageVersion } = workersUtils;
+			// pnpm's NODE_PATH would otherwise find the workspace's own Vite
+			vi.spyOn(workersUtils, "getInstalledPackageVersion").mockImplementation(
+				(packageName, ...args) =>
+					packageName === "vite"
+						? undefined
+						: getInstalledPackageVersion(packageName, ...args)
+			);
+			await seed({
+				"package.json": JSON.stringify({
+					name: "my-spa",
+					devDependencies: { cf: "1.0.0", vite: "^7.0.0" },
+				}),
+				"vite.config.ts": "export default { plugins: [] };",
+				"index.html": "<h1>Hello World</h1>",
+				"wrangler.jsonc": JSON.stringify({
+					name: "my-spa",
+					compatibility_date: "2026-09-24",
+					assets: { directory: "./dist" },
+				}),
+			});
+			const context = createMockContext();
+
+			const summary = await runAutoConfig(
+				await getDetailsForAutoConfig({ projectPath: process.cwd(), context }),
+				{ context, skipConfirmations: true, enableTargetCliInstallation: false }
+			);
+
+			// Migrated for the Vite bundler, which framework setup completes on the next run
+			expect(summary.wranglerMigration).toMatchObject({
+				changedFiles: ["cloudflare.config.ts"],
+				followUps: [],
+				status: "complete",
+			});
+			expect(readFileSync("vite.config.ts", "utf8")).not.toContain(
+				"cloudflare()"
+			);
 		});
 	});
 });

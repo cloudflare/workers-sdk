@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { existsSync, readFileSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
-import { relative, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import {
 	maybeAppendWranglerToGitIgnoreLikeFile,
 	maybeAppendWranglerToGitIgnore,
@@ -18,10 +18,14 @@ import {
 import {
 	DEFAULT_COMPAT_DATE,
 	FatalError,
+	getInstalledPackageVersion,
 	isNodejsCompatDefaultOn,
 	parseJSONC,
 } from "@cloudflare/workers-utils";
-import { mergeCloudflareConfig } from "./cloudflare-config";
+import {
+	mergeCloudflareConfig,
+	readWorkerEntrypoint,
+} from "./cloudflare-config";
 import {
 	assertNonConfigured,
 	assertProjectCommandsAvailable,
@@ -33,6 +37,7 @@ import {
 import {
 	isFrameworkSupported,
 	isKnownFramework,
+	requiresFrameworkSetup,
 	type PackageJsonScriptsOverrides,
 	validateFrameworkTargetSupport,
 } from "./frameworks";
@@ -85,11 +90,61 @@ export async function runAutoConfig(
 		autoConfigOptions.enableTargetCliInstallation ?? true;
 
 	if ("wranglerConfigPath" in autoConfigDetails) {
+		const { framework, outputDir, packageJson, projectPath } =
+			autoConfigDetails;
+		// Framework setup works on the project root, so it only follows a migration of the root's Wrangler config
+		const cfFramework =
+			framework !== undefined &&
+			requiresFrameworkSetup(framework.id) &&
+			dirname(autoConfigDetails.wranglerConfigPath) === resolve(projectPath);
+		// Framework setup sets up Vite when the framework isn't set up for cf yet
+		const frameworkSetsUpVite =
+			cfFramework &&
+			autoConfigOptions.bundler !== "wrangler" &&
+			outputDir !== undefined &&
+			!framework.isConfigured(projectPath, { target });
+		// It runs after migrating once the framework is installed, which a fresh checkout isn't yet,
+		// and otherwise on the next run
+		const frameworkPackageInfo = frameworkSetsUpVite
+			? getFrameworkPackageInfo(framework.id, target)
+			: undefined;
+		const setUpFramework =
+			frameworkSetsUpVite &&
+			(frameworkPackageInfo === undefined ||
+				getInstalledPackageVersion(frameworkPackageInfo.name, projectPath) !==
+					undefined);
+		const bundler =
+			autoConfigOptions.bundler ??
+			(cfFramework ||
+			packageJson?.dependencies?.["@cloudflare/vite-plugin"] !== undefined ||
+			packageJson?.devDependencies?.["@cloudflare/vite-plugin"] !== undefined
+				? "vite"
+				: "wrangler");
+		if (setUpFramework) {
+			// Check that the framework can be set up before the migration changes anything
+			if (frameworkPackageInfo) {
+				framework.validateFrameworkVersion(
+					projectPath,
+					frameworkPackageInfo,
+					context
+				);
+			}
+			await framework.configure({
+				target,
+				outputDir,
+				projectPath,
+				workerName: autoConfigDetails.workerName,
+				isWorkspaceRoot: autoConfigDetails.isWorkspaceRoot ?? false,
+				dryRun: true,
+				packageManager: autoConfigDetails.packageManager,
+				context,
+			});
+		}
 		if (
 			!(
 				skipConfirmations ||
 				(await context.dialogs.confirm(
-					`Migrate ${relative(process.cwd(), autoConfigDetails.wranglerConfigPath)} to cloudflare.config.ts?`
+					`Migrate ${relative(process.cwd(), autoConfigDetails.wranglerConfigPath)} to cloudflare.config.ts${setUpFramework ? ` and set up ${framework.name}` : ""}?`
 				))
 			)
 		) {
@@ -100,19 +155,52 @@ export async function runAutoConfig(
 
 		// Loaded on use, so that importing autoconfig doesn't load the migration and its Git helper
 		const { migrateWranglerToCf } = await import("./wrangler-to-cf");
+		const wranglerMigration = await migrateWranglerToCf(
+			autoConfigDetails.wranglerConfigPath,
+			{
+				bundler,
+				dryRun,
+				force: !autoConfigOptions.requireCleanGitWorktree,
+				installDependencies: enableTargetCliInstallation,
+				// Framework setup installs and configures the Vite plugin, and builds the static assets
+				frameworkAssetsDirectory: frameworkSetsUpVite ? outputDir : undefined,
+			}
+		);
+		if (!setUpFramework || dryRun || wranglerMigration.status !== "complete") {
+			return { scripts: {}, wranglerMigration };
+		}
+
+		// Now that the project has a cloudflare.config.ts, detection finds the framework setup it needs
+		const migratedDetails = await getDetailsForAutoConfig({
+			projectPath,
+			target,
+			context,
+		});
+		if (migratedDetails.configured) {
+			return { scripts: {}, wranglerMigration };
+		}
 		return {
-			scripts: {},
-			wranglerMigration: await migrateWranglerToCf(
-				autoConfigDetails.wranglerConfigPath,
-				{
-					bundler: autoConfigOptions.bundler,
-					dryRun,
-					force: !autoConfigOptions.requireCleanGitWorktree,
-					installDependencies: enableTargetCliInstallation,
-				}
-			),
+			...(await runAutoConfig(migratedDetails, {
+				...autoConfigOptions,
+				skipConfirmations: true,
+			})),
+			wranglerMigration,
 		};
 	}
+
+	// Frameworks can keep parts of an existing Worker config, such as a migrated one's own Worker entrypoint
+	const cloudflareConfigPath = resolve(
+		autoConfigDetails.projectPath,
+		"cloudflare.config.ts"
+	);
+	const existingWorkerConfig =
+		target === "cf" && existsSync(cloudflareConfigPath)
+			? {
+					entrypoint: readWorkerEntrypoint(
+						readFileSync(cloudflareConfigPath, "utf8")
+					),
+				}
+			: undefined;
 
 	assertNonConfigured(autoConfigDetails);
 
@@ -187,6 +275,7 @@ export async function runAutoConfig(
 			dryRun: true,
 			packageManager,
 			context,
+			existingWorkerConfig,
 		});
 	const dryRunWorkerConfig = mergeWorkerConfig(
 		defaultWorkerConfig,
@@ -295,6 +384,7 @@ export async function runAutoConfig(
 		dryRun: false,
 		packageManager,
 		context,
+		existingWorkerConfig,
 	});
 	const workerConfig = mergeWorkerConfig(
 		defaultWorkerConfig,

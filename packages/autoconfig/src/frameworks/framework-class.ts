@@ -108,6 +108,8 @@ export type ConfigurationOptions = {
 	packageManager: PackageManager;
 	isWorkspaceRoot: boolean;
 	context: AutoConfigContext;
+	/** The project's current Worker configuration, if it has one, such as a migrated Wrangler config. */
+	existingWorkerConfig?: Partial<WorkerConfig>;
 };
 
 export type PackageJsonScriptsOverrides = {

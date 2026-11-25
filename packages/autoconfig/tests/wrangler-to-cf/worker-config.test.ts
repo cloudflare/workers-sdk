@@ -12,7 +12,14 @@ function convert(source: Record<string, unknown>): {
 } {
 	const followUps: MigrationFollowUp[] = [];
 	const imports = new Set<string>();
-	const config = convertRootConfig(source, "", "vite", imports, followUps);
+	const config = convertRootConfig(
+		source,
+		"",
+		"vite",
+		undefined,
+		imports,
+		followUps
+	);
 	const converted: ConvertedWranglerConfig = {
 		base: { config },
 		environments: new Map(),

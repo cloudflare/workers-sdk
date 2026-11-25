@@ -229,17 +229,6 @@ export async function getDetailsForAutoConfig({
 				? resolve(projectPath, wranglerConfigPath)
 				: findWranglerConfigFile(projectPath)
 			: undefined;
-	if (wranglerConfigFile !== undefined) {
-		return {
-			configured: false,
-			projectPath,
-			wranglerConfigPath: wranglerConfigFile,
-			workerName: getWorkerName(undefined, projectPath),
-			// The migration finds the package manager itself
-			packageManager: NpmPackageManager,
-		};
-	}
-
 	const { detectedFramework, packageManager, isWorkspaceRoot, workspaceRoot } =
 		await detectFramework(projectPath, context, { wranglerConfig, target });
 	const nodeModulesPaths = getNodeModulesPaths(projectPath, workspaceRoot);
@@ -272,6 +261,21 @@ export async function getDetailsForAutoConfig({
 		);
 	} catch {
 		logger.debug("No package.json found when running autoconfig");
+	}
+
+	if (wranglerConfigFile !== undefined) {
+		return {
+			configured: false,
+			projectPath,
+			wranglerConfigPath: wranglerConfigFile,
+			// Setup migrates the Wrangler config, then sets up the framework when it needs it
+			framework: detectedFrameworkInstance,
+			outputDir: detectedFramework.dist,
+			packageJson,
+			packageManager,
+			isWorkspaceRoot,
+			workerName: getWorkerName(packageJson?.name, projectPath),
+		};
 	}
 
 	let outputDir = configured

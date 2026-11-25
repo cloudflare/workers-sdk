@@ -31,23 +31,7 @@ export function mergeCloudflareConfig(
 	frameworkWorkerConfig: Partial<WorkerConfig>
 ): string {
 	const ast = parseTs(source);
-	let declaration = ast.program.body.find((statement) =>
-		t.ExportDefaultDeclaration.check(statement)
-	)?.declaration;
-	// `export default { ... } satisfies CloudflareConfig`, as autoconfig writes it
-	while (
-		t.TSSatisfiesExpression.check(declaration) ||
-		t.TSAsExpression.check(declaration)
-	) {
-		declaration = declaration.expression;
-	}
-	const workerObjects = t.ObjectExpression.check(declaration)
-		? [getWorkerObject(declaration)]
-		: t.CallExpression.check(declaration) &&
-			  t.Identifier.check(declaration.callee) &&
-			  declaration.callee.name === "defineConfig"
-			? getConfigObjects(declaration.arguments[0]).map(getWorkerObject)
-			: [];
+	const workerObjects = findWorkerObjects(ast);
 
 	if (
 		workerObjects.length === 0 ||
@@ -81,6 +65,56 @@ export function mergeCloudflareConfig(
 	}
 
 	return recast.print(ast).code;
+}
+
+/**
+ * Reads the Worker entrypoint from a `cloudflare.config.ts` without running it.
+ *
+ * @param source The `cloudflare.config.ts` source
+ * @returns The entrypoint, if the file sets it as a string literal
+ */
+export function readWorkerEntrypoint(source: string): string | undefined {
+	for (const workerObject of findWorkerObjects(parseTs(source))) {
+		const entrypoint = workerObject?.properties.findLast(
+			(property) => getStaticPropertyName(property) === "entrypoint"
+		);
+		if (
+			t.ObjectProperty.check(entrypoint) &&
+			t.StringLiteral.check(entrypoint.value)
+		) {
+			return entrypoint.value.value;
+		}
+	}
+	return undefined;
+}
+
+/**
+ * Finds the Worker objects of the config that `cloudflare.config.ts` exports, directly or through `defineConfig()`.
+ *
+ * @param ast The parsed `cloudflare.config.ts`
+ * @returns One entry per config object, `undefined` where its `worker` is not an object literal
+ */
+function findWorkerObjects(
+	ast: ReturnType<typeof parseTs>
+): (types.namedTypes.ObjectExpression | undefined)[] {
+	let declaration = ast.program.body.find((statement) =>
+		t.ExportDefaultDeclaration.check(statement)
+	)?.declaration;
+	// `export default { ... } satisfies CloudflareConfig`, as autoconfig writes it
+	while (
+		t.TSSatisfiesExpression.check(declaration) ||
+		t.TSAsExpression.check(declaration)
+	) {
+		declaration = declaration.expression;
+	}
+	if (t.ObjectExpression.check(declaration)) {
+		return [getWorkerObject(declaration)];
+	}
+	return t.CallExpression.check(declaration) &&
+		t.Identifier.check(declaration.callee) &&
+		declaration.callee.name === "defineConfig"
+		? getConfigObjects(declaration.arguments[0]).map(getWorkerObject)
+		: [];
 }
 
 /**
