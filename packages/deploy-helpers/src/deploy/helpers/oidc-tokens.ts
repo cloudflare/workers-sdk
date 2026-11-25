@@ -6,18 +6,19 @@ const OIDC_ISSUER_ORIGIN = "https://oidc.cloudflare.com";
 
 /**
  * Prints the issuer and subject that a verifier's trust policy names. The
- * subject is the Worker's immutable tag, which no other output shows.
+ * subject is the Worker's immutable tag, which the deploy output doesn't
+ * otherwise show.
  */
 export function printOidcTokenIdentity(
 	bindings: Record<string, Binding>,
-	accountId: string,
+	accountId: string | undefined,
 	workerTag: string | null
 ) {
 	// Checks the uploaded bindings, which a --var or secret of the same name replaces.
 	const hasOidcToken = Object.values(bindings).some(
 		(binding) => binding.type === "oidc_token"
 	);
-	if (!hasOidcToken || workerTag === null) {
+	if (!hasOidcToken || accountId === undefined || workerTag === null) {
 		return;
 	}
 	logger.log("OIDC tokens for this Worker:");

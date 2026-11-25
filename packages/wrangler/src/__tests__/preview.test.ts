@@ -976,6 +976,30 @@ describe("wrangler preview", () => {
 			});
 		});
 
+		test("should extract oidc_tokens, keeping alg only when set", ({
+			expect,
+		}) => {
+			const config = configWithPreviews({
+				oidc_tokens: [
+					{ binding: "API_TOKEN", audience: "https://api.example.com" },
+					{
+						binding: "ENTRA_TOKEN",
+						audience: "api://AzureADTokenExchange",
+						alg: "RS256",
+					},
+				],
+			});
+			const bindings = extractConfigBindings(config);
+			expect(bindings).toEqual({
+				API_TOKEN: { type: "oidc_token", audience: "https://api.example.com" },
+				ENTRA_TOKEN: {
+					type: "oidc_token",
+					audience: "api://AzureADTokenExchange",
+					alg: "RS256",
+				},
+			});
+		});
+
 		test("should return empty object when no previews block", ({ expect }) => {
 			const config = { ...defaultWranglerConfig, previews: undefined };
 			const bindings = extractConfigBindings(config);

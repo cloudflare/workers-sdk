@@ -913,6 +913,7 @@ async function deployWorker(
 			);
 		}
 		deployWfpUserWorker(props.dispatchNamespace, versionId);
+		printOidcTokenIdentity(bindings, accountId, uploadedWorkerTag);
 		return { versionId, workerTag, assetUploadStats, bundleSize };
 	}
 	assert(accountId);
@@ -934,6 +935,9 @@ async function deployWorker(
 		previewUrlsConfigAssignment: options.previewUrlsConfigAssignment,
 	});
 
+	// Before the Images update, which can throw after the Worker is deployed.
+	printOidcTokenIdentity(bindings, accountId, uploadedWorkerTag);
+
 	await applyImagesUrlTransformations(
 		config,
 		accountId,
@@ -941,7 +945,6 @@ async function deployWorker(
 		options.deployCommand
 	);
 
-	printOidcTokenIdentity(bindings, accountId, uploadedWorkerTag);
 	logger.log("Current Version ID:", versionId);
 
 	return {

@@ -27,6 +27,7 @@ import {
 	mockDeploymentsListRequest,
 	mockLastDeploymentRequest,
 	mockPatchScriptSettings,
+	mockPutImageTransformationsRequest,
 	mockServiceScriptData,
 } from "./helpers";
 import type { Mock } from "vitest";
@@ -2387,6 +2388,59 @@ describe("deploy", () => {
 
 				await runWrangler("deploy index.js --var API_TOKEN:not-a-token");
 				expect(std.out).not.toContain("OIDC tokens for this Worker");
+			});
+
+			it("should print the issuer and subject for a Worker in a dispatch namespace", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					oidc_tokens: [
+						{ binding: "API_TOKEN", audience: "https://api.example.com" },
+					],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockServiceScriptData({ dispatchNamespace: "test-namespace" });
+				mockUploadWorkerRequest({
+					useOldUploadApi: true,
+					expectedDispatchNamespace: "test-namespace",
+				});
+
+				await runWrangler(
+					"deploy index.js --dispatch-namespace test-namespace"
+				);
+				expect(std.out).toContain(
+					"OIDC tokens for this Worker:\n  Issuer:  https://oidc.cloudflare.com/accounts/some-account-id\n  Subject: worker:sample-tag"
+				);
+			});
+
+			it("should print the issuer and subject before an Images update that fails", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					oidc_tokens: [
+						{ binding: "API_TOKEN", audience: "https://api.example.com" },
+					],
+					images: { url_transformations: { enabled: true } },
+				});
+				writeWorkerSource();
+				mockServiceScriptData({
+					scriptName: "test-name",
+					script: { id: "test-name", tag: "abc123" },
+				});
+				mockSubDomainRequest();
+				mockUploadWorkerRequest();
+				mockPutImageTransformationsRequest({
+					expectedBody: { enabled: true },
+					status: 500,
+				});
+
+				await expect(runWrangler("deploy index.js")).rejects.toThrow(
+					"The Worker was deployed, but its Images URL transformations setting could not be applied"
+				);
+				expect(std.out).toContain(
+					"OIDC tokens for this Worker:\n  Issuer:  https://oidc.cloudflare.com/accounts/some-account-id\n  Subject: worker:abc123"
+				);
 			});
 		});
 
