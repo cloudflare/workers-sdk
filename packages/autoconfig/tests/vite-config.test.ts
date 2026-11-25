@@ -225,7 +225,7 @@ export default defineConfig({ plugins: [] });
 				transformViteConfig(".", { target: "cf" });
 
 				const result = readFileSync("vite.config.ts", "utf8");
-				expect(result.trimEnd()).toBe(
+				expect(result.replaceAll("\r\n", "\n").trimEnd()).toBe(
 					config.replace("plugins: []", "plugins: [cloudflare()]").trimEnd()
 				);
 				transformViteConfig(".", { target: "cf" });
