@@ -1039,6 +1039,45 @@ describe("resolvePluginConfig", () => {
 		expect(result.devVars?.PREVIEW_SECRET).toBe("build-mode");
 	});
 
+	test("preview loads local env without a mode when Build Output records none", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(path.join(root, ".env"), "PREVIEW_MODE_VALUE=no-mode");
+		fs.writeFileSync(
+			path.join(root, ".env.production"),
+			"PREVIEW_MODE_VALUE=preview-mode"
+		);
+		fs.writeFileSync(path.join(root, ".dev.vars"), "PREVIEW_SECRET=no-mode");
+		fs.writeFileSync(
+			path.join(root, ".dev.vars.production"),
+			"PREVIEW_SECRET=preview-mode"
+		);
+		readBuildOutputPreviewMock.mockResolvedValue({
+			rootConfig: { buildContext: { isPreview: false } },
+			containers: [],
+			workers: [
+				{
+					config: {
+						name: "preview-worker",
+						compatibilityDate: "2024-12-30",
+					},
+					assetsDir: undefined,
+					bundle: undefined,
+				},
+			],
+		});
+
+		const result = await resolvePluginConfig(
+			{} satisfies PluginConfig,
+			{ root },
+			{ mode: "production", command: "serve", isPreview: true }
+		);
+
+		expect(result.type).toBe("preview");
+		expect(result.localEnv.values.PREVIEW_MODE_VALUE).toBe("no-mode");
+		expect(result.devVars?.PREVIEW_SECRET).toBe("no-mode");
+	});
+
 	test("preview uses all Workers read from Build Output", async ({
 		expect,
 	}) => {

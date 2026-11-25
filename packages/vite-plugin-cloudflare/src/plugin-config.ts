@@ -286,7 +286,7 @@ export async function resolvePluginConfig(
 	const preview = viteEnv.isPreview
 		? await readBuildOutputPreview(root, !!process.env.CLOUDFLARE_VITE_BUILD)
 		: undefined;
-	const localEnvMode = preview?.rootConfig.buildContext.mode ?? mode;
+	const localEnvMode = preview ? preview.rootConfig.buildContext.mode : mode;
 	const [localEnv, devVars] = await Promise.all([
 		loadEnv(envDir, localEnvMode),
 		loadDevVars(envDir, localEnvMode),
