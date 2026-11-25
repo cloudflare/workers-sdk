@@ -238,6 +238,7 @@ export type WorkerUploadMetadataBinding =
 	  });
 
 export type AssetConfigMetadata = {
+	compatibility_flags?: AssetConfig["compatibility_flags"];
 	html_handling?: AssetConfig["html_handling"];
 	not_found_handling?: AssetConfig["not_found_handling"];
 	base_path?: AssetConfig["base_path"];

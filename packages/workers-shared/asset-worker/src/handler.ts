@@ -1,4 +1,8 @@
 import {
+	flagIsEnabled,
+	SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING,
+} from "../../utils/compatibility-flags";
+import {
 	FoundResponse,
 	InternalServerErrorResponse,
 	MethodNotAllowedResponse,
@@ -12,10 +16,6 @@ import {
 	TemporaryRedirectResponse,
 } from "../../utils/responses";
 import { mockJaegerBinding } from "../../utils/tracing";
-import {
-	flagIsEnabled,
-	SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING,
-} from "./compatibility-flags";
 import { addBasePath, stripBasePath } from "./utils/base-path";
 import { attachCustomHeaders, getAssetHeaders } from "./utils/headers";
 import {
