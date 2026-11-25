@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import parseChangeset from "@changesets/parse";
+import { parseChangesetFile } from "@changesets/parse";
 
 if (require.main === module) {
 	const packages = findPackages();
@@ -50,7 +50,7 @@ export function validateChangesets(
 	}
 	changesets.map(({ file, contents }) => {
 		try {
-			const changeset = parseChangeset(contents);
+			const changeset = parseChangesetFile(contents);
 			for (const release of changeset.releases) {
 				const targetPackage = packages.get(release.name);
 				if (!targetPackage) {
@@ -71,15 +71,10 @@ export function validateChangesets(
 						`Major version bumps are not allowed for package "${release.name}" in changeset at "${file}".`
 					);
 				}
-				if (!["major", "minor", "patch", "none"].includes(release.type)) {
-					errors.push(
-						`Invalid type "${release.type}" for package "${release.name}" in changeset at "${file}".`
-					);
-				}
 			}
 		} catch (e) {
 			if (e instanceof Error) {
-				errors.push(e.toString() + `at file "${file}"`);
+				errors.push(`${e.message}\nIn changeset at "${file}".`);
 			} else {
 				throw e;
 			}

@@ -8,7 +8,7 @@ import { gt, prerelease, valid } from "semver";
  * Publishes the monorepo's npm packages in dependency-tier order, waiting for
  * each tier to become resolvable on the registry before publishing the next.
  *
- * This replaces `changeset publish` as the `publish:` command for the
+ * This replaces `changeset publish` as the `publish-script` command for the
  * `changesets/action` step in `.github/workflows/changesets.yml`.
  *
  * ## Why
@@ -30,10 +30,9 @@ import { gt, prerelease, valid } from "semver";
  * candidates also update `beta` after all packages have been published.
  *
  * Publishing here is deliberately split from tagging. Once every tier has been
- * published we hand off to `changeset tag`, which creates the git tags and — via
- * its `New tag: <name>@<version>` output — feeds the `publishedPackages` output
- * of `changesets/action`. That output drives the GitHub releases and the
- * downstream non-npm deployments, so its format must not change.
+ * published we hand off to `changeset git-tag`, which records the tags in
+ * `CHANGESETS_OUTPUT`. `changesets/action` reads those records to create GitHub
+ * releases and populate its `published-packages` output for non-npm deployments.
  */
 
 /** The registry we publish to, and check for propagation against. */
@@ -102,7 +101,7 @@ export function findPublishablePackages(
 			continue;
 		}
 		// Private packages are never published to npm. They are still versioned
-		// and tagged, but `changeset tag` takes care of that for us.
+		// and tagged, but `changeset git-tag` takes care of that for us.
 		if (pkg.private === true) {
 			continue;
 		}
@@ -686,7 +685,7 @@ export async function publishAllPackages(options: MainOptions): Promise<void> {
 				options.log(failure.output);
 			}
 			// Abort without tagging. Nothing gets a git tag or a GitHub release, and
-			// `publishedPackages` stays empty, so the alert step fires and a re-run
+			// `published-packages` stays empty, so the alert step fires and a re-run
 			// picks up exactly the packages that are still missing.
 			throw new Error(
 				`${failures.length} package(s) failed to publish in tier ${index}. No tags were created; re-run this job to retry.`
@@ -721,14 +720,10 @@ export async function publishAllPackages(options: MainOptions): Promise<void> {
 
 	await updateReleaseCandidateTags(packages, options);
 
-	// `changeset tag` creates the git tags and prints the `New tag:` lines that
-	// `changesets/action` parses into its `publishedPackages` output. It also
-	// covers private packages, which is how the non-npm deployment step learns
-	// what changed.
-	options.log("\nCreating git tags via `changeset tag`...");
+	options.log("\nCreating git tags via `changeset git-tag`...");
 	const tagExitCode = await options.runChangesetTag();
 	if (tagExitCode !== 0) {
-		throw new Error(`\`changeset tag\` exited with code ${tagExitCode}`);
+		throw new Error(`\`changeset git-tag\` exited with code ${tagExitCode}`);
 	}
 }
 
@@ -784,17 +779,18 @@ async function updateReleaseCandidateTags(
 	}
 }
 
-/** Builds release artifacts without forwarding the Changesets token or logging to its tag parser. */
+/** Builds release artifacts without exposing the Changesets token or tag report. */
 function buildPackages() {
 	console.log("\nBuilding packages for release...");
 	const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: "production" };
 	delete env.GITHUB_TOKEN;
+	delete env.CHANGESETS_OUTPUT;
 	execFileSync("pnpm", ["run", "build"], { env, stdio: ["ignore", 2, 2] });
 }
 
 function runChangesetTag(): Promise<number> {
 	return new Promise((promiseResolve) => {
-		const child = spawn("pnpm", ["exec", "changeset", "tag"], {
+		const child = spawn("pnpm", ["exec", "changeset", "git-tag"], {
 			stdio: "inherit",
 		});
 		child.on("error", () => promiseResolve(1));
