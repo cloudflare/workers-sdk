@@ -2,7 +2,7 @@ import { access, open, unlink } from "node:fs/promises";
 import path from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, describe, it, vi } from "vitest";
-import { writeMigrationOutputs } from "../../src/codemods/wrangler-to-cf/file-writer";
+import { writeMigrationOutputs } from "../../src/wrangler-to-cf/file-writer";
 
 vi.mock("node:fs/promises", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("node:fs/promises")>();

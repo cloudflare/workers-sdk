@@ -9,6 +9,7 @@ import {
 	NpmPackageManager,
 	parsePackageJSON,
 	readFileSync,
+	UserError,
 } from "@cloudflare/workers-utils";
 import {
 	AutoConfigDetectionError,
@@ -32,6 +33,31 @@ import type { PackageJSON } from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils/config";
 
 const CLOUDFLARE_CONFIG_FILE = "cloudflare.config.ts";
+const WRANGLER_CONFIG_FILES = [
+	"wrangler.json",
+	"wrangler.jsonc",
+	"wrangler.toml",
+];
+
+/**
+ * Finds the Wrangler config at the root of a project.
+ *
+ * @param projectPath The path of the project
+ * @returns The path of the Wrangler config, if the project has one
+ * @throws {UserError} When the project has more than one, since migrating either would drop the other
+ */
+function findWranglerConfigFile(projectPath: string): string | undefined {
+	const configFiles = WRANGLER_CONFIG_FILES.filter((file) =>
+		existsSync(resolve(projectPath, file))
+	);
+	if (configFiles.length > 1) {
+		throw new UserError(
+			`Found more than one Wrangler config in ${projectPath} (${configFiles.join(", ")}). Remove the ones the project doesn't use, so that autoconfig knows which one to migrate.`,
+			{ telemetryMessage: "autoconfig details multiple wrangler configs" }
+		);
+	}
+	return configFiles[0] && resolve(projectPath, configFiles[0]);
+}
 
 /**
  * Asserts that the current project being targeted for autoconfig is not already configured.
@@ -138,6 +164,7 @@ function normalizeOutputDir(projectPath: string, outputDir: string): string {
 export async function getDetailsForAutoConfig({
 	projectPath = process.cwd(),
 	wranglerConfig,
+	wranglerConfigPath,
 	target = "cf",
 	outputDir: requestedOutputDir,
 	context,
@@ -146,6 +173,13 @@ export async function getDetailsForAutoConfig({
 	projectPath?: string;
 	/** The parsed wrangler configuration for the project (if any). */
 	wranglerConfig?: Config;
+	/**
+	 * For the cf target, the Wrangler config file that setup migrates to `cloudflare.config.ts`
+	 * instead of setting up a framework. Defaults to the `wrangler.json`, `wrangler.jsonc` or
+	 * `wrangler.toml` at the project root. Ignored when `cloudflare.config.ts` already exists.
+	 * Relative paths are resolved against `projectPath`.
+	 */
+	wranglerConfigPath?: string;
 	/** The configuration target, defaults to cf. */
 	target?: AutoConfigTarget;
 	/**
@@ -180,6 +214,24 @@ export async function getDetailsForAutoConfig({
 			projectPath,
 			workerName: getWorkerName(wranglerConfig.name, projectPath),
 			// Fall back to npm when already configured since we don't need to run package manager commands
+			packageManager: NpmPackageManager,
+		};
+	}
+
+	// An existing cloudflare.config.ts takes precedence, so a migrated project isn't migrated again
+	const wranglerConfigFile =
+		target === "cf" && !hasCloudflareConfig
+			? wranglerConfigPath !== undefined
+				? resolve(projectPath, wranglerConfigPath)
+				: findWranglerConfigFile(projectPath)
+			: undefined;
+	if (wranglerConfigFile !== undefined) {
+		return {
+			configured: false,
+			projectPath,
+			wranglerConfigPath: wranglerConfigFile,
+			workerName: getWorkerName(undefined, projectPath),
+			// The migration finds the package manager itself
 			packageManager: NpmPackageManager,
 		};
 	}

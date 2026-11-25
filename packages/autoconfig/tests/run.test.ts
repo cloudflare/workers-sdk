@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import { loadAndParseConfig } from "@cloudflare/config";
@@ -749,5 +750,66 @@ describe("runAutoConfig()", () => {
 		);
 
 		expect(existsSync(".assetsignore")).toBe(false);
+	});
+
+	describe("for a Wrangler project", () => {
+		/**
+		 * Seeds a Wrangler project whose migration needs no installs, and detects it.
+		 *
+		 * @returns The detected project details
+		 */
+		async function detectWranglerProject() {
+			await seed({
+				"package.json": JSON.stringify({
+					name: "my-worker",
+					devDependencies: {
+						"@cloudflare/vite-plugin": "^2.0.0-rc.0",
+						cf: "1.0.0",
+					},
+				}),
+				"wrangler.jsonc": JSON.stringify({
+					name: "my-worker",
+					compatibility_date: "2026-09-24",
+				}),
+			});
+			return getDetailsForAutoConfig({
+				projectPath: process.cwd(),
+				wranglerConfigPath: "wrangler.jsonc",
+				context: createMockContext(),
+			});
+		}
+
+		it("migrates the Wrangler config instead of setting up a framework", async ({
+			expect,
+		}) => {
+			const details = await detectWranglerProject();
+
+			const summary = await runAutoConfig(details, {
+				context: createMockContext(),
+			});
+
+			expect(summary.wranglerMigration).toMatchObject({
+				changedFiles: ["cloudflare.config.ts"],
+				status: "complete",
+			});
+			expect(readFileSync("cloudflare.config.ts", "utf8")).toContain(
+				'name: "my-worker"'
+			);
+		});
+
+		it("requires a clean Git worktree only when asked", async ({ expect }) => {
+			const details = await detectWranglerProject();
+			execFileSync("git", ["init", "--quiet"]);
+			writeFileSync(".gitignore", "");
+
+			await expect(
+				runAutoConfig(details, {
+					context: createMockContext(),
+					requireCleanGitWorktree: true,
+				})
+			).rejects.toThrow("Git worktree is not clean");
+			await runAutoConfig(details, { context: createMockContext() });
+			expect(existsSync("cloudflare.config.ts")).toBe(true);
+		});
 	});
 });

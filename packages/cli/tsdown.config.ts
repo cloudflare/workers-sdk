@@ -7,6 +7,7 @@ export default defineConfig({
 		"colors.ts",
 		"command.ts",
 		"error.ts",
+		"git.ts",
 		"gitignore.ts",
 		"interactive.ts",
 		"packages.ts",
