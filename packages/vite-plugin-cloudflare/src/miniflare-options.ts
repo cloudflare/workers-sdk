@@ -796,7 +796,7 @@ export async function getPreviewMiniflareOptions(
 		resolvedPluginConfig.localEnv,
 		resolvedPluginConfig.devVars,
 		resolvedPluginConfig.remoteBindings,
-		resolvedViteConfig.mode,
+		resolvedPluginConfig.mode,
 		resolvedViteConfig.root,
 		vitePreviewServer.config.logger
 	);
@@ -957,7 +957,7 @@ function resolveLocalBindingsByWorkerName(
 	localEnv: LoadedEnv,
 	devVars: Record<string, string> | undefined,
 	remoteBindings: boolean,
-	mode: string,
+	mode: string | undefined,
 	projectRoot: string,
 	logger: vite.Logger
 ): Map<string, MiniflareEnv> {
