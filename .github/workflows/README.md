@@ -45,12 +45,13 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
   - Builds all the packages.
   - Runs formatting, linting and type checks.
   - Runs fixture tests, Wrangler unit tests, C3 unit tests, Miniflare unit tests, and Oxlint + Oxfmt checks.
+  - Runs each test file the PR adds or edits five times at once, without retries.
   - Adds the PR to a GitHub project
   - Makes sure that Wrangler's warning for old Node.js versions works.
 - Test scheduling
   - Each OS starts Vite/Vitest integrations independently of the other packages, fixtures in two package shards, and dev-registry in a dedicated partition. Wrangler and Miniflare use three complete Vitest file shards on Windows and two on Linux/macOS. Tools and release source map tests run on Linux. All existing platform coverage is retained.
   - Fixture shards execute whole packages, preserving custom test commands and multi-project suites. New fixtures with a `test:ci` script are assigned automatically. dev-registry starts independently so it cannot queue behind other fixtures. The remaining fixtures are balanced using duration estimates in `tools/test/run-fixture-shard.ts`.
-  - The single `Tests` branch-protection gate waits for all test partitions and fails if any partition fails, is cancelled, or is skipped. Individual partition checks and Turbo summaries identify the failing workload. When rolling this out, replace the six previous `Tests (OS, suite)` requirements with `Tests` in branch protection.
+  - The single `Tests` branch-protection gate waits for all test partitions and the `Repeat changed tests` jobs, and fails if any of them fails, is cancelled, or is skipped. Individual partition checks and Turbo summaries identify the failing workload. When rolling this out, replace the six previous `Tests (OS, suite)` requirements with `Tests` in branch protection.
   - Run the CI fixture groups locally with `pnpm run test:ci:fixtures --group=remaining --shard=1/2` and `pnpm run test:ci:fixtures --group=dev-registry --shard=1/1`. Omitting `--group` includes every fixture, as before. Run a runtime shard with `CI_TEST_SHARD=1/3 pnpm test:ci --filter=wrangler --filter=miniflare` (use `/2` for Linux/macOS). The runtime test tasks hash the shard environment variable without changing build cache keys.
 - Uncached benchmarks
   - Add `ci:no-turbo-cache` before pushing a commit to disable both local and remote Turbo cache reads and writes, including dependent builds and repository checks. Remove the label afterwards to restore normal caching. Adding or removing the label alone does not start this workflow; reruns retain the label state from the original event.
@@ -62,6 +63,12 @@ Workflow changes should avoid unsuppressed `zizmor` findings. In particular:
   - Interactive container tests wait for HTTP readiness independently of process state, keeping their assertions, 90-second test deadline, and zero whole-test retries. Fixture cleanup waits until its containers are gone, tolerating concurrent removal by Wrangler.
   - The workflow attempt number identifies job-level reruns. Assertion polling (`vi.waitFor`, `expect.poll`) and retries inside custom test commands are separate mechanisms and are not counted by this report. Wrangler's E2E file retry loop runs in `e2e-wrangler.yml`, outside this workflow.
   - Run `node -r esbuild-register tools/test/report-test-retries.ts` after a local Turbo test run with `--summarize` to inspect retry results.
+- Repeated runs of changed tests
+  - On each PR, the `Repeat changed tests` job finds the Vitest test files (`*.test.*` and `*.spec.*`) the PR adds or edits, builds their packages, and runs each package's files in five Vitest processes started at once, with `--retry=0`. It fails if any run fails, and the `Tests` gate requires it. A test that fails a few percent of the time usually passes one CI run; five runs that compete for CPU and ports expose it before it lands. Deleting a test file runs nothing.
+  - Each file runs with the closest `vitest.config.*` in its package, which is the config `test:ci` uses for most packages. Files that config does not include are listed as skipped in the job summary, as are end-to-end tests (any path with an `e2e` directory), which run in their own workflows, and test files outside workspace packages, such as those in C3 templates. Retries a test sets for itself still apply.
+  - The runs share the package directory, so a test that writes to a fixed path or listens on a fixed port can fail here when its copies collide. Give each run its own temporary directory and port `0` instead.
+  - The job runs on Linux, macOS and Windows, and is skipped in the merge queue, since the PR already ran it. When no test file changed it stops after checkout. The job summary lists how many runs each file passed and which tests failed; each run's log and Vitest JSON report are uploaded as the `repeat-changed-tests-<os>` artifact.
+  - Run it locally against your base branch with `node -r esbuild-register tools/test/repeat-changed-tests.ts --base=origin/main`. It compares committed changes only, and `--runs` sets the number of runs.
 
 ### Wrangler E2E tests (e2e-wrangler.yml)
 

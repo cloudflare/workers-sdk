@@ -353,10 +353,76 @@ jobs:
             .turbo/test-retries.json
             .turbo/ci-logs
 
+  # Run each Vitest file a PR adds or edits five times at once, with retries
+  # disabled, so a test that fails only occasionally fails before it lands.
+  repeat-changed-tests:
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-repeat-changed-tests
+      cancel-in-progress: ${{ github.head_ref != 'changeset-release/main' }}
+
+    name: ${{ format('Repeat changed tests ({0})', matrix.description) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            description: macOS
+          - os: ubuntu-latest
+            description: Linux
+          - os: windows-latest
+            description: Windows
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          # The PR's merge commit and its first parent, the base branch.
+          fetch-depth: 2
+          persist-credentials: false
+
+      # The merge queue skips this: the PR already ran these files. Markdown-only
+      # changes never match, so this also covers the partitions' path filter.
+      - name: Find changed test files
+        id: changes
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          if git diff --name-only --diff-filter=AMR HEAD^1 HEAD | grep -qE '\.(test|spec)\.[cm]?[jt]sx?$'; then
+            echo "tests=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No test files changed."
+          fi
+
+      - name: Install Dependencies
+        if: steps.changes.outputs.tests == 'true'
+        uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: Run changed test files 5 times
+        if: steps.changes.outputs.tests == 'true'
+        run: node -r esbuild-register tools/test/repeat-changed-tests.ts --base=HEAD^1 --runs=5
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          CI_OS: ${{ matrix.description }}
+
+      - name: Upload test logs
+        if: always() && steps.changes.outputs.tests == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: repeat-changed-tests-${{ matrix.os }}
+          path: .turbo/repeat-tests
+
   # Keep one stable required check for every test partition. Always run it so
   # failed, cancelled, or skipped partitions cannot bypass branch protection.
   test:
-    needs: test-partitions
+    needs: [test-partitions, repeat-changed-tests]
     if: always()
     timeout-minutes: 5
     name: "Tests"
@@ -365,8 +431,13 @@ jobs:
       - name: Require all test partitions to pass
         env:
           TEST_RESULT: ${{ needs.test-partitions.result }}
+          REPEAT_RESULT: ${{ needs.repeat-changed-tests.result }}
         run: |
           if [ "$TEST_RESULT" != "success" ]; then
             echo "Test partitions did not all pass: $TEST_RESULT"
+            exit 1
+          fi
+          if [ "$REPEAT_RESULT" != "success" ]; then
+            echo "Changed test files did not pass every repeated run: $REPEAT_RESULT"
             exit 1
           fi
