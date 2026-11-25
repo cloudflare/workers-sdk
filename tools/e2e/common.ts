@@ -57,6 +57,12 @@ export type AgentMemoryNamespace = {
 	updated_at: string;
 };
 
+export type K2Stream = {
+	id: string;
+	name: string;
+	created_at: string;
+};
+
 export type MTlsCertificateResponse = {
 	id: string;
 	name?: string;
@@ -431,6 +437,31 @@ export const deleteAgentMemoryNamespace = async (name: string) => {
 	const result = await apiFetch(`/agent-memory/namespaces/${name}`, "DELETE");
 	// If successful the result is `null`, if the namespace is not found the result is `false`
 	return result !== false;
+};
+
+// Wrangler E2E names K2 streams `tmp_e2e_k2_<uuid>`, with underscores rather than hyphens
+const TMP_K2_STREAM_PREFIX = "tmp_e2e_k2_";
+
+export const listTmpK2Streams = async () => {
+	return (
+		await apiFetchList<K2Stream>(`/k2/streams`, {
+			per_page: 100,
+			// A case-insensitive substring filter, so the prefix is checked below
+			name: TMP_K2_STREAM_PREFIX,
+		})
+	).filter(
+		(stream) =>
+			stream.name.startsWith(TMP_K2_STREAM_PREFIX) &&
+			// Streams are more than an hour old
+			Date.now() - new Date(stream.created_at).valueOf() > 1000 * 60 * 60
+	);
+};
+
+export const deleteK2Stream = async (id: string) => {
+	return (
+		(await apiFetch(`/k2/streams/${encodeURIComponent(id)}`, "DELETE")) !==
+		false
+	);
 };
 
 // Note: the container images functions below don't directly use the REST API since

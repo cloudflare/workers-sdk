@@ -1,7 +1,8 @@
 import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
-import { afterEach, beforeEach, describe, it } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	deleteDatabase,
+	deleteK2Stream,
 	deleteKVNamespace,
 	deleteProject,
 	deleteR2Bucket,
@@ -9,10 +10,11 @@ import {
 	listTmpDatabases,
 	listTmpE2EProjects,
 	listTmpE2EWorkers,
+	listTmpK2Streams,
 	listTmpKVNamespaces,
 	listTmpR2Buckets,
 } from "../common";
-import type { Worker } from "../common";
+import type { K2Stream, Worker } from "../common";
 
 const originalAccountID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const MOCK_CLOUDFLARE_ACCOUNT_ID = "mock-cloudflare-account";
@@ -486,5 +488,99 @@ describe("deleteR2Bucket()", () => {
 			})
 			.reply(200, JSON.stringify({ result: [] }));
 		await deleteR2Bucket(MOCK_BUCKET);
+	});
+});
+
+describe("listTmpK2Streams()", () => {
+	it("makes paged REST requests and returns a filtered list of K2 streams", async ({
+		expect,
+	}) => {
+		const query = { per_page: 100, name: "tmp_e2e_k2_" };
+		agent
+			.get("https://api.cloudflare.com")
+			.intercept({
+				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/k2/streams`,
+				method: "GET",
+				query: { page: 1, ...query },
+			})
+			.reply(
+				200,
+				JSON.stringify({
+					result: [
+						{ id: "1", name: "tmp_e2e_k2_recent", created_at: nowStr },
+						{ id: "2", name: "tmp_e2e_k2_old", created_at: oldTimeStr },
+						// The name filter matches substrings, but only the prefix is ours
+						{ id: "3", name: "keep_tmp_e2e_k2_old", created_at: oldTimeStr },
+						...Array(97).fill({
+							id: "4",
+							name: "TMP_E2E_K2_UPPERCASE",
+							created_at: oldTimeStr,
+						}),
+					] satisfies K2Stream[],
+					result_info: { page: 1, per_page: 100, count: 100, total_count: 101 },
+				})
+			);
+		agent
+			.get("https://api.cloudflare.com")
+			.intercept({
+				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/k2/streams`,
+				method: "GET",
+				query: { page: 2, ...query },
+			})
+			.reply(
+				200,
+				JSON.stringify({
+					result: [
+						{ id: "5", name: "tmp_e2e_k2_old_page_2", created_at: oldTimeStr },
+					] satisfies K2Stream[],
+					result_info: { page: 2, per_page: 100, count: 1, total_count: 101 },
+				})
+			);
+
+		const result = await listTmpK2Streams();
+
+		expect(result.map((s) => s.name)).toEqual([
+			"tmp_e2e_k2_old",
+			"tmp_e2e_k2_old_page_2",
+		]);
+	});
+});
+
+describe("deleteK2Stream()", () => {
+	it("makes a REST request to delete the given K2 stream", async ({
+		expect,
+	}) => {
+		const MOCK_STREAM_ID = "stream/id";
+		agent
+			.get("https://api.cloudflare.com")
+			.intercept({
+				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/k2/streams/stream%2Fid`,
+				method: "DELETE",
+			})
+			.reply(200, JSON.stringify({ success: true, result: {} }));
+
+		expect(await deleteK2Stream(MOCK_STREAM_ID)).toBe(true);
+	});
+
+	it("returns false when the K2 stream can't be deleted", async ({
+		expect,
+	}) => {
+		const MOCK_STREAM_ID = "mock-stream";
+		vi.spyOn(console, "error").mockImplementation(() => {});
+		agent
+			.get("https://api.cloudflare.com")
+			.intercept({
+				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/k2/streams/${MOCK_STREAM_ID}`,
+				method: "DELETE",
+			})
+			.reply(
+				403,
+				JSON.stringify({
+					success: false,
+					errors: [{ code: 10000, message: "Authentication error" }],
+				})
+			);
+
+		expect(await deleteK2Stream(MOCK_STREAM_ID)).toBe(false);
 	});
 });
