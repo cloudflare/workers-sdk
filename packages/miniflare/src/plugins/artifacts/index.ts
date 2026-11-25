@@ -190,16 +190,19 @@ async function createLocalNamespaceRuntime(
 	const metadataPath = path.join(persistPath, "metadata").replaceAll("\\", "/");
 	await mkdir(metadataPath, { recursive: true });
 	await assertSupportedGitLayout(metadataPath);
+	const serviceName = localServiceName(namespace);
+	const socketName = `${serviceName}-git`;
 	const { sidecar, port } = await artifactsController.get(
 		path.join(persistPath, "git"),
-		{ namespace, portFile: path.join(persistPath, "git-port") }
+		{ namespace, portFile: path.join(persistPath, "git-port"), socketName }
 	);
-	const serviceName = localServiceName(namespace);
 	const storageName = `${serviceName}-storage`;
 	const backendName = `${serviceName}-backend`;
+	// Git clients connect to `port`, which the controller holds and forwards to
+	// this socket, so workerd can pick its own port.
 	const socket: Socket = {
-		name: `${serviceName}-git`,
-		address: `127.0.0.1:${port}`,
+		name: socketName,
+		address: "127.0.0.1:0",
 		http: {},
 		service: { name: serviceName, entrypoint: ENTRYPOINT },
 	};

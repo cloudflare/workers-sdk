@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
+import { once } from "node:events";
 import {
 	chmod,
 	mkdir,
@@ -9,6 +10,7 @@ import {
 	stat,
 	writeFile,
 } from "node:fs/promises";
+import net from "node:net";
 import path from "node:path";
 import { Readable, Writable } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -531,6 +533,71 @@ exec '${gitPath.trim().replaceAll("'", "'\\''")}' "$@"
 	},
 	12_000
 );
+
+test("artifacts: the Git port is held from the moment it is chosen and forwarded to workerd", async ({
+	expect,
+}) => {
+	// Stands in for workerd's Git socket: echoes what it receives.
+	const runtime = net.createServer((socket) => socket.pipe(socket));
+	runtime.listen(0, "127.0.0.1");
+	await once(runtime, "listening");
+	const runtimePort = (runtime.address() as net.AddressInfo).port;
+	const controller = new ArtifactsController();
+	try {
+		controller.beginUpdate();
+		const backend = await controller.get(path.join(await useTmp(), "repos"), {
+			socketName: "git",
+		});
+		// Nothing else can take the port before workerd starts.
+		const squatter = net.createServer();
+		const outcome = await new Promise<string | undefined>((resolve) => {
+			squatter.once("error", (error: NodeJS.ErrnoException) =>
+				resolve(error.code)
+			);
+			squatter.once("listening", () => squatter.close(() => resolve("bound")));
+			squatter.listen({
+				host: "127.0.0.1",
+				port: backend.port,
+				exclusive: true,
+			});
+		});
+		expect(outcome).toBe("EADDRINUSE");
+
+		await controller.commitUpdate(new Map([["git", runtimePort]]));
+		const client = net.connect({ host: "127.0.0.1", port: backend.port });
+		client.end("ping");
+		const chunks: Buffer[] = [];
+		for await (const chunk of client) {
+			chunks.push(chunk as Buffer);
+		}
+		expect(Buffer.concat(chunks).toString()).toBe("ping");
+	} finally {
+		await controller.dispose();
+		runtime.close();
+	}
+});
+
+test("artifacts: Git keeps its remote and keeps working across a reload", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	const created = await rpc(mf, "create", ["repo"]);
+	const refs = async () => {
+		const response = await fetch(
+			`${created.remote}/info/refs?service=git-upload-pack`,
+			{ headers: { Authorization: `Bearer ${created.token}` } }
+		);
+		await response.body?.cancel();
+		return response.status;
+	};
+	expect(await refs()).toBe(200);
+
+	// The reload starts a new workerd, whose Git socket gets a new port.
+	await mf.setOptions(options());
+	expect((await rpc(mf, "info", [], "repo")).remote).toBe(created.remote);
+	expect(await refs()).toBe(200);
+});
 
 test("artifacts: sidecar startup failures reject without crashing Miniflare", async ({
 	expect,
