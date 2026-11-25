@@ -855,6 +855,104 @@ describe("runAutoConfig()", () => {
 		}
 	);
 
+	it.for([
+		{
+			scenario: "Vite from the workspace",
+			workspaceRunner: "vite",
+			installCf: false,
+		},
+		{
+			scenario: "Vite+ from the workspace, with cf missing",
+			workspaceRunner: "vite-plus",
+			installCf: true,
+		},
+		{
+			scenario: "an enclosing workspace that excludes the app",
+			workspaceRunner: undefined,
+			installCf: false,
+		},
+	] as const)(
+		"respects runner declarations for $scenario",
+		async ({ workspaceRunner, installCf }, { expect }) => {
+			const vitePlus = workspaceRunner === "vite-plus";
+			const runnerVersion = vitePlus ? "0.2.2" : "7.1.12";
+			const rootManifest = JSON.stringify({
+				name: "workspace",
+				devDependencies: { [workspaceRunner ?? "vite"]: runnerVersion },
+			});
+			const projectPath = join(process.cwd(), "apps/site");
+			const manifestPath = join(projectPath, "package.json");
+			const projectManifest = { name: "site" };
+			await seed({
+				"package.json": rootManifest,
+				"pnpm-workspace.yaml": `packages: ['${workspaceRunner ? "apps" : "packages"}/*']\n`,
+				"pnpm-lock.yaml": "",
+				"apps/site/package.json": JSON.stringify(projectManifest),
+				"apps/site/tsconfig.json": "{}",
+				"apps/site/index.html": "<h1>Hello World</h1>",
+				"apps/site/vite.config.ts":
+					'import { defineConfig } from "vite"; export default defineConfig({ plugins: [] });',
+			});
+			const context = createMockContext();
+			const details = await getDetailsForAutoConfig({ projectPath, context });
+			const install = vi.mocked(cliPackages.installPackages);
+			if (installCf) {
+				install.mockResolvedValueOnce();
+			}
+			const runnerManifest = JSON.stringify({
+				name: vitePlus ? "@voidzero-dev/vite-plus-core" : "vite",
+				version: workspaceRunner ? runnerVersion : "8.1.0",
+				...(vitePlus && { bundledVersions: { vite: "8.1.2" } }),
+			});
+			install.mockImplementationOnce(() =>
+				seed({
+					[`${workspaceRunner ? "" : "apps/site/"}node_modules/vite/package.json`]:
+						runnerManifest,
+				})
+			);
+			vi.mocked(context.dialogs.select).mockResolvedValue("vite");
+			vi.mocked(context.dialogs.prompt)
+				.mockResolvedValueOnce("site")
+				.mockResolvedValueOnce("dist")
+				.mockResolvedValueOnce("vite build");
+
+			const summary = await runAutoConfig(details, {
+				context,
+				enableTargetCliInstallation: installCf,
+			});
+
+			const appInstall = {
+				cwd: projectPath,
+				dev: true,
+				isWorkspaceRoot: false,
+			};
+			expect(install.mock.calls).toEqual([
+				...(installCf ? [["pnpm", ["cf@latest"], appInstall]] : []),
+				workspaceRunner
+					? ["pnpm", [], { cwd: process.cwd() }]
+					: [details.packageManager.type, ["vite@^8.0.0"], appInstall],
+				[
+					details.packageManager.type,
+					["@cloudflare/vite-plugin@^2.0.0-rc.0"],
+					expect.objectContaining(appInstall),
+				],
+			]);
+			expect(context.dialogs.select).toHaveBeenCalledOnce();
+			const buildCommand = vitePlus ? "vp build" : "vite build";
+			expect(summary.buildCommand).toBe(buildCommand);
+			expect(context.runCommand).toHaveBeenCalledExactlyOnceWith(
+				buildCommand,
+				projectPath,
+				"[build]"
+			);
+			expect(readFileSync("package.json", "utf8")).toBe(rootManifest);
+			expect(JSON.parse(readFileSync(manifestPath, "utf8"))).toMatchObject(
+				projectManifest
+			);
+			expect(existsSync(join(projectPath, "cloudflare.config.ts"))).toBe(true);
+		}
+	);
+
 	it.for([true, false])(
 		"rejects an unsupported Vite version before configuring (already installed=%s)",
 		async (installed, { expect }) => {

@@ -429,6 +429,8 @@ describe("writeAssets", () => {
 		fs.writeFileSync(path.join(root, "docs/guide/index.html"), "included");
 		fs.writeFileSync(path.join(root, "docs/guide/notes.txt"), "ignored");
 		fs.writeFileSync(path.join(root, "notes.txt"), "ignored");
+		fs.symlinkSync("not-generated.txt", path.join(root, "docs/guide/link.txt"));
+		fs.symlinkSync("not-generated.txt", path.join(root, "link.txt"));
 
 		await writeAssets({ root, sourceDirectory: root });
 
@@ -437,6 +439,21 @@ describe("writeAssets", () => {
 			"index.html",
 		]);
 		expect(fs.existsSync(path.join(assetsDir, "notes.txt"))).toBe(false);
+		expect(fs.readdirSync(assetsDir)).not.toContain("link.txt");
+	});
+
+	it("reports a missing target for an included asset symlink", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		fs.writeFileSync(path.join(root, ".assetsignore"), "*\n!*.html\n");
+		fs.symlinkSync("not-generated.html", path.join(root, "index.html"));
+
+		await expect(
+			writeAssets({ root, sourceDirectory: root })
+		).rejects.toMatchObject({
+			code: "ENOENT",
+		});
 	});
 
 	it("preserves files already generated in the build output", async ({

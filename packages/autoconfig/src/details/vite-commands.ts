@@ -63,7 +63,7 @@ export function getViteProjectCommands({
 		("@cloudflare/vite-plugin" in projectDependencies ||
 			projectRunner ||
 			hasViteConfig(projectPath))
-			? readPackage(join(workspaceRoot, "package.json"))
+			? readWorkspacePackage(workspaceRoot)
 			: undefined;
 	const dependencies = {
 		...getDeclaredDependencies(workspacePackageJson),
@@ -140,8 +140,8 @@ export function getViteProjectCommands({
 	};
 }
 
-/** Peer and optional declarations alone do not select a project's command runner. */
-function getViteRunner(
+/** Selects the Vite runner declared in a manifest, ignoring peer and optional dependencies. */
+export function getViteRunner(
 	packageJson?: PackageJSON
 ): "vite" | "vite-plus" | undefined {
 	if (usesVitePlus(packageJson)) {
@@ -161,9 +161,13 @@ function getDeclaredDependencies(packageJson?: ProjectPackageJSON) {
 	};
 }
 
-function readPackage(path: string): ProjectPackageJSON | undefined {
+/** Reads the manifest of a validated workspace root, if one exists. */
+export function readWorkspacePackage(
+	workspaceRoot: string
+): ProjectPackageJSON | undefined {
+	const packageJsonPath = join(workspaceRoot, "package.json");
 	try {
-		return parsePackageJSON(readFileSync(path), path);
+		return parsePackageJSON(readFileSync(packageJsonPath), packageJsonPath);
 	} catch {
 		return;
 	}

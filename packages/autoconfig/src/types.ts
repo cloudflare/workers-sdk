@@ -37,6 +37,8 @@ type AutoConfigDetailsBase = {
 	commandError?: AutoConfigCommandError;
 	/** Application and enclosing workspace node_modules directories, nearest first. */
 	nodeModulesPaths?: readonly string[];
+	/** Root of the validated enclosing workspace, if any. */
+	workspaceRoot?: string;
 	/** Environment required when running the detected dev or build commands. */
 	env?: Readonly<Record<string, string>>;
 	/** The output directory (if no framework is used, points to the raw asset files) */

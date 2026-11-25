@@ -8,6 +8,7 @@ import {
 import {
 	createAssetsIgnoreFunction,
 	InvalidAssetsIgnoreError,
+	thrownIsDoesNotExistError,
 } from "@cloudflare/workers-shared/utils/helpers";
 import { removeDir, UserError } from "@cloudflare/workers-utils";
 import {
@@ -93,9 +94,15 @@ export async function writeAssets({
 			if (ignoredAsFile === ignoredAsDirectory) {
 				return !ignoredAsFile;
 			}
-			return !((await fsp.stat(source)).isDirectory()
-				? ignoredAsDirectory
-				: ignoredAsFile);
+			try {
+				const stats = await fsp.stat(source);
+				return !(stats.isDirectory() ? ignoredAsDirectory : ignoredAsFile);
+			} catch (error) {
+				if (ignoredAsFile && thrownIsDoesNotExistError(error)) {
+					return false;
+				}
+				throw error;
+			}
 		},
 	};
 	await fsp.mkdir(assetsDir, { recursive: true });

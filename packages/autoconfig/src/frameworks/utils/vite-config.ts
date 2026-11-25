@@ -123,7 +123,6 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 				)
 			) {
 				configuresCloudflarePlugin = true;
-				return this.traverse(n);
 			}
 
 			this.traverse(n);
@@ -272,6 +271,7 @@ export function transformViteConfig(
 				const lastImportIndex = n.node.body.findLastIndex(
 					(statement) => statement.type === "ImportDeclaration"
 				);
+				// Static form: import { cloudflare } from "@cloudflare/vite-plugin";
 				const importAst = b.importDeclaration(
 					[b.importSpecifier(b.identifier("cloudflare"))],
 					b.stringLiteral(CLOUDFLARE_VITE_PLUGIN)

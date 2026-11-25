@@ -209,6 +209,30 @@ export default defineConfig({
 			);
 		});
 
+		it.for([undefined, "module"])(
+			"reuses an existing static plugin import (package type: %s)",
+			async (type, { expect }) => {
+				const config = `import { cloudflare } from "@cloudflare/vite-plugin";
+import { defineConfig } from "vite";
+export default defineConfig({ plugins: [] });
+`;
+				await writeFile(
+					"package.json",
+					JSON.stringify({ name: "vite-app", type })
+				);
+				await writeFile("vite.config.ts", config);
+
+				transformViteConfig(".", { target: "cf" });
+
+				const result = readFileSync("vite.config.ts", "utf8");
+				expect(result.trimEnd()).toBe(
+					config.replace("plugins: []", "plugins: [cloudflare()]").trimEnd()
+				);
+				transformViteConfig(".", { target: "cf" });
+				expect(readFileSync("vite.config.ts", "utf8")).toBe(result);
+			}
+		);
+
 		it.for(["cjs", "cts"])(
 			"does not insert ESM imports into a .%s file even with ESM syntax",
 			async (extension, { expect }) => {

@@ -266,6 +266,7 @@ export async function getDetailsForAutoConfig({
 		packageJson,
 		packageManager,
 		nodeModulesPaths,
+		workspaceRoot,
 		commandError: viteCommands?.error,
 		devCommand: useStaticAssets
 			? undefined

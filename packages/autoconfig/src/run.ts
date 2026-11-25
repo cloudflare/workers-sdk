@@ -30,6 +30,7 @@ import {
 	getProjectCommand,
 	getDetailsForAutoConfig,
 } from "./details";
+import { getViteRunner, readWorkspacePackage } from "./details/vite-commands";
 import {
 	isFrameworkSupported,
 	isKnownFramework,
@@ -180,6 +181,11 @@ export async function runAutoConfig(
 		);
 	}
 
+	const scaffold = getCfProjectScaffold(
+		autoConfigDetails,
+		dryRunConfigurationResults,
+		target
+	);
 	const { npx } = packageManager;
 	let buildCommand =
 		dryRunConfigurationResults.buildCommandOverride ??
@@ -192,7 +198,7 @@ export async function runAutoConfig(
 		buildCommand = getProjectCommand(
 			buildCommand,
 			packageManager,
-			autoConfigDetails.packageJson,
+			scaffold?.workspaceVite?.packageJson ?? autoConfigDetails.packageJson,
 			target
 		);
 	}
@@ -223,11 +229,6 @@ export async function runAutoConfig(
 		return autoConfigSummary;
 	}
 
-	const scaffold = getCfProjectScaffold(
-		autoConfigDetails,
-		dryRunConfigurationResults,
-		target
-	);
 	if (!skipConfirmations) {
 		const newProjectFiles = [
 			scaffold?.createPackageJson && "package.json",
@@ -277,11 +278,24 @@ export async function runAutoConfig(
 				enableTargetCliInstallation,
 				scaffold
 			);
-			if (packages.length > 0 || validateViteAfterInstall) {
+			const workspaceViteRoot = scaffold?.workspaceVite?.root;
+			if (
+				packages.length > 0 ||
+				(validateViteAfterInstall && !workspaceViteRoot)
+			) {
 				await installPackages(packageManager.type, packages, {
 					cwd: projectPath,
 					dev: true,
 					isWorkspaceRoot,
+				});
+			}
+			if (
+				workspaceViteRoot &&
+				validateViteAfterInstall &&
+				needsViteInstall(autoConfigDetails, target)
+			) {
+				await installPackages(packageManager.type, [], {
+					cwd: workspaceViteRoot,
 				});
 			}
 			if (dryRunConfigurationResults.buildTool === "wrangler") {
@@ -453,10 +467,13 @@ export async function runAutoConfig(
 			configuredDetails.buildCommand ??
 			buildCommand;
 		if (buildCommand === "vite build" || buildCommand === `${npx} vite build`) {
+			const configuredPackageJson = configuredDetails.packageJson;
 			buildCommand = getProjectCommand(
 				buildCommand,
 				packageManager,
-				configuredDetails.packageJson,
+				getViteRunner(configuredPackageJson)
+					? configuredPackageJson
+					: (scaffold?.workspaceVite?.packageJson ?? configuredPackageJson),
 				target
 			);
 		}
@@ -495,6 +512,7 @@ type CfProjectScaffold = {
 	createPackageJson: boolean;
 	createTsconfig: boolean;
 	installVite: boolean;
+	workspaceVite?: { root: string; packageJson: PackageJSON };
 };
 
 /** Plans the supporting files and local Vite runner when setup generates a Cloudflare config. */
@@ -503,6 +521,7 @@ function getCfProjectScaffold(
 		packageJson,
 		projectPath,
 		nodeModulesPaths,
+		workspaceRoot,
 	}: AutoConfigDetailsForNonConfiguredProject,
 	{ workerConfig, createsCloudflareConfig, buildTool }: ConfigurationResults,
 	target: AutoConfigTarget
@@ -529,21 +548,32 @@ function getCfProjectScaffold(
 			{ telemetryMessage: "autoconfig commonjs package unsupported" }
 		);
 	}
-	const hasViteRunner = ["vite", "vite-plus"].some(
-		(pkg) =>
-			packageJson?.dependencies?.[pkg] !== undefined ||
-			packageJson?.devDependencies?.[pkg] !== undefined ||
-			nodeModulesPaths
-				?.slice(1)
-				.some((directory) =>
-					existsSync(resolve(directory, pkg, "package.json"))
-				)
-	);
+	const usesVite = buildTool === "vite";
+	const projectViteRunner = usesVite ? getViteRunner(packageJson) : undefined;
+	const workspacePackageJson =
+		usesVite && !projectViteRunner && workspaceRoot
+			? readWorkspacePackage(workspaceRoot)
+			: undefined;
+	const workspaceVite =
+		workspaceRoot && workspacePackageJson && getViteRunner(workspacePackageJson)
+			? { root: workspaceRoot, packageJson: workspacePackageJson }
+			: undefined;
 	return {
 		createPackageJson,
 		createTsconfig: !usesTypescript(projectPath),
+		workspaceVite,
 		installVite:
-			buildTool === "vite" && workerConfig !== null && !hasViteRunner,
+			usesVite &&
+			workerConfig !== null &&
+			!projectViteRunner &&
+			!workspaceVite &&
+			!nodeModulesPaths
+				?.slice(1)
+				.some((directory) =>
+					["vite", "vite-plus"].some((pkg) =>
+						existsSync(resolve(directory, pkg, "package.json"))
+					)
+				),
 	};
 }
 
@@ -828,7 +858,11 @@ export async function buildOperationsSummary(
 				packagesToInstall.size === 0 &&
 				needsViteInstall(autoConfigDetails, target)
 			) {
-				logger.log("📦 Install project dependencies");
+				logger.log(
+					scaffold?.workspaceVite
+						? "📦 Install workspace dependencies"
+						: "📦 Install project dependencies"
+				);
 				logger.log("");
 			}
 		} else if (enableTargetCliInstallation) {
