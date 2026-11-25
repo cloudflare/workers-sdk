@@ -914,12 +914,7 @@ async function deployWorker(
 		}
 		deployWfpUserWorker(props.dispatchNamespace, versionId);
 		printOidcTokenIdentity(bindings, accountId, uploadedWorkerTag);
-		return {
-			versionId,
-			workerTag: uploadedWorkerTag,
-			assetUploadStats,
-			bundleSize,
-		};
+		return { versionId, workerTag, assetUploadStats, bundleSize };
 	}
 	assert(accountId);
 	// deploy triggers
@@ -955,8 +950,7 @@ async function deployWorker(
 	return {
 		sourceMapSize,
 		versionId,
-		// A first deploy has no tag until the upload response returns one.
-		workerTag: uploadedWorkerTag,
+		workerTag,
 		assetUploadStats,
 		targets: targets ?? [],
 		bundleSize,

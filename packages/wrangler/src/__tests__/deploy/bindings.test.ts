@@ -2336,31 +2336,6 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should record a new Worker's tag from the upload in the output file", async ({
-				expect,
-			}) => {
-				vi.stubEnv("WRANGLER_OUTPUT_FILE_PATH", "output.json");
-				writeWranglerConfig({
-					oidc_tokens: [
-						{ binding: "API_TOKEN", audience: "https://api.example.com" },
-					],
-				});
-				writeWorkerSource();
-				mockServiceScriptData({});
-				mockSubDomainRequest("test-sub-domain", true, false);
-				mockUploadWorkerRequest({ useOldUploadApi: true });
-
-				await runWrangler("deploy index.js");
-				const deployEntry = fs
-					.readFileSync("output.json", "utf8")
-					.split("\n")
-					.filter(Boolean)
-					.map((line) => JSON.parse(line))
-					.find((entry) => entry.type === "deploy");
-				expect(deployEntry).toMatchObject({ worker_tag: "sample-tag" });
-				expect(std.out).toContain("Subject: worker:sample-tag");
-			});
-
 			it("should print the subject from an existing Worker's tag", async ({
 				expect,
 			}) => {
@@ -2415,7 +2390,7 @@ describe("deploy", () => {
 				expect(std.out).not.toContain("OIDC tokens for this Worker");
 			});
 
-			it("should print the issuer and subject for a new Worker in a dispatch namespace", async ({
+			it("should print the issuer and subject for a Worker in a dispatch namespace", async ({
 				expect,
 			}) => {
 				writeWranglerConfig({
@@ -2436,33 +2411,6 @@ describe("deploy", () => {
 				);
 				expect(std.out).toContain(
 					"OIDC tokens for this Worker:\n  Issuer:  https://oidc.cloudflare.com/accounts/some-account-id\n  Subject: worker:sample-tag"
-				);
-			});
-
-			it("should print the subject from an existing dispatch namespace Worker's tag", async ({
-				expect,
-			}) => {
-				writeWranglerConfig({
-					oidc_tokens: [
-						{ binding: "API_TOKEN", audience: "https://api.example.com" },
-					],
-				});
-				writeWorkerSource();
-				mockSubDomainRequest();
-				mockServiceScriptData({
-					script: { id: "test-name", tag: "abc123" },
-					dispatchNamespace: "test-namespace",
-				});
-				mockUploadWorkerRequest({
-					useOldUploadApi: true,
-					expectedDispatchNamespace: "test-namespace",
-				});
-
-				await runWrangler(
-					"deploy index.js --dispatch-namespace test-namespace"
-				);
-				expect(std.out).toContain(
-					"OIDC tokens for this Worker:\n  Issuer:  https://oidc.cloudflare.com/accounts/some-account-id\n  Subject: worker:abc123"
 				);
 			});
 

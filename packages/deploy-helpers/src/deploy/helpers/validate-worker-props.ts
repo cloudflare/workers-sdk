@@ -189,11 +189,10 @@ export async function preUploadApiChecks(
 
 	if (props.command === "deploy" && props.dispatchNamespace) {
 		try {
-			const dispatchScript = await fetchResult<{ script?: { tag?: string } }>(
+			await fetchResult(
 				config,
 				`/accounts/${accountId}/workers/dispatch/namespaces/${props.dispatchNamespace}/scripts/${name}`
 			);
-			workerTag = dispatchScript.script?.tag ?? null;
 		} catch (e) {
 			if (
 				typeof e === "object" &&
