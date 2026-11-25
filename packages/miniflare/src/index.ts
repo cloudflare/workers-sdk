@@ -2814,20 +2814,21 @@ export class Miniflare {
 			onWorkerdCrashRestart: () => this.#handleWorkerdCrash(),
 			runtimeEnv: this.#sharedOpts.unsafeRuntimeEnv,
 		};
-		// The new workerd's Git sockets get new ports, and the old ones are
-		// released as it stops.
-		this.#artifactsController.detachRuntime();
 		const maybeSocketPorts = await withPersistRootStartupLock(
 			this.#sharedOpts.unsafeEnableSharedStorage
 				? this.#sharedOpts.resourcePersistencePath
 				: undefined,
-			() =>
-				runtime.updateConfig(
+			() => {
+				// The new workerd's Git sockets get new ports, and the old ones are
+				// released as it stops. Detach only once the old one is sure to stop.
+				this.#artifactsController.detachRuntime();
+				return runtime.updateConfig(
 					configBuffer,
 					runtimeOpts,
 					this.#workerOpts.map((w) => w.config.name),
 					this.#disposeController.signal
-				)
+				);
+			}
 		);
 		if (this.#disposeController.signal.aborted) {
 			return;

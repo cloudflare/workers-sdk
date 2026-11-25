@@ -33,6 +33,9 @@ export class GitRelay {
 		}
 		const relay = new GitRelay(server, port);
 		server.on("connection", (client) => relay.#forward(client));
+		// Failing to accept a connection, for example when out of file
+		// descriptors, costs only that connection, and the server keeps listening.
+		server.on("error", () => {});
 		return relay;
 	}
 

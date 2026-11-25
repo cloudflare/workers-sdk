@@ -564,11 +564,18 @@ test("artifacts: the Git port is held from the moment it is chosen and forwarded
 		expect(outcome).toBe("EADDRINUSE");
 
 		await controller.commitUpdate(new Map([["git", runtimePort]]));
-		expect(await echo(backend.port)).toBe("ping");
+		expect(await echo(backend.port)).toEqual({
+			connected: true,
+			received: "ping",
+		});
 
-		// Once workerd stops, its port may belong to anyone: refuse instead.
+		// Once workerd stops, its port may belong to anyone: the listener still
+		// accepts connections, but closes them instead of forwarding.
 		controller.detachRuntime();
-		expect(await echo(backend.port)).toBe("");
+		expect(await echo(backend.port)).toEqual({
+			connected: true,
+			received: "",
+		});
 	} finally {
 		await controller.dispose();
 		runtime.close();
@@ -661,9 +668,16 @@ test("artifacts: a stopped backend is replaced on the next config update", async
 	}
 });
 
-/** Sends "ping" to `port`, and returns everything received back. */
-async function echo(port: number): Promise<string> {
+/**
+ * Sends "ping" to `port`, and returns whether the connection opened and
+ * everything received back.
+ */
+async function echo(
+	port: number
+): Promise<{ connected: boolean; received: string }> {
 	const client = net.connect({ host: "127.0.0.1", port });
+	let connected = false;
+	client.once("connect", () => (connected = true));
 	client.end("ping");
 	const chunks: Buffer[] = [];
 	try {
@@ -671,9 +685,9 @@ async function echo(port: number): Promise<string> {
 			chunks.push(chunk as Buffer);
 		}
 	} catch {
-		// A refused connection is reset.
+		// The relay resets connections it refuses to forward.
 	}
-	return Buffer.concat(chunks).toString();
+	return { connected, received: Buffer.concat(chunks).toString() };
 }
 
 function withRemoteProxy(base: MiniflareOptions): MiniflareOptions {
