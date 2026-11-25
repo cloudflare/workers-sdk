@@ -1,5 +1,41 @@
 # @cloudflare/vite-plugin
 
+## 1.70.2
+
+### Patch Changes
+
+- [#17082](https://github.com/cloudflare/workers-sdk/pull/17082) [`ae2a49f`](https://github.com/cloudflare/workers-sdk/commit/ae2a49f60cf2981e10847736cc5337d0a92f4a31) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Keep deferred imports alive after their originating request ends
+
+  Retain the module runner's RPC operation until its result is retrieved and cleaned up. This prevents subsequent requests from hanging on a cached import when the first request returns early or its client disconnects.
+
+- [#17130](https://github.com/cloudflare/workers-sdk/pull/17130) [`8849c83`](https://github.com/cloudflare/workers-sdk/commit/8849c835feecd9edd6f6d6ea6f32ec8df5acd9b1) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Respect `WRANGLER_LOG_PATH` set after importing the plugin in `vite.config.ts`
+
+  Require Wrangler 4.168.0 or newer, which resolves the debug log path on first use. A path set in the Vite configuration body now selects the configured log file.
+
+- [#17012](https://github.com/cloudflare/workers-sdk/pull/17012) [`2f74598`](https://github.com/cloudflare/workers-sdk/commit/2f74598579fa424b87741f0bd265ee420211b624) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update the local runtime and default compatibility date to November 18
+
+  Update Miniflare to 5.20261118.0-beta for workerd 1.20261118.1 and align Workers types, Wrangler, and the shared compatibility-date helpers. Projects without an explicit compatibility date now use 2026-11-18.
+
+- [#17054](https://github.com/cloudflare/workers-sdk/pull/17054) [`02fb0d4`](https://github.com/cloudflare/workers-sdk/commit/02fb0d4579bf899491557bf0fb1515f04c448570) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update the local Workers runtime to the November 19 release
+
+  Use Miniflare 5.20261119.0-beta, workerd 1.20261119.1 and the matching Workers types. Update the default compatibility date to November 19 through workers-utils and require Wrangler 4.166.0 or newer. Use the matching released authentication and CLI helpers so remote bindings also consume the Undici 7.30.2 fixes.
+
+- [#17130](https://github.com/cloudflare/workers-sdk/pull/17130) [`8849c83`](https://github.com/cloudflare/workers-sdk/commit/8849c835feecd9edd6f6d6ea6f32ec8df5acd9b1) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update the local runtime and default compatibility date to November 23
+
+  Use Miniflare 5.20261123.1-beta, workerd 1.20261123.1 and the matching Workers types. The default compatibility date advances to November 23. Local Stream bindings support caption retrieval and video customer codes; R2 pagination uses UTF-8 key order, and KV bulk reads preserve metadata for stored JSON nulls.
+
+- [#17049](https://github.com/cloudflare/workers-sdk/pull/17049) [`8fb66eb`](https://github.com/cloudflare/workers-sdk/commit/8fb66eb875189c435746a98697c328605bc93250) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update the plugin build and bundle shared declaration dependencies
+
+  Use tsdown 0.22.14 for the plugin and retained remote bindings package, and keep shared SDK types bundled in the published plugin declarations. Validate the declarations from a consumer project without workspace development dependencies.
+
+- [#17083](https://github.com/cloudflare/workers-sdk/pull/17083) [`ce239be`](https://github.com/cloudflare/workers-sdk/commit/ce239be766dc44dac694037a60c35a07a6cc3120) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update Undici to 7.30.2 in the bundled remote bindings support
+
+  Consume the upstream security fixes in remote binding requests. The Miniflare and Wrangler runtime copies will update separately through their next published releases.
+
+- [#17054](https://github.com/cloudflare/workers-sdk/pull/17054) [`02fb0d4`](https://github.com/cloudflare/workers-sdk/commit/02fb0d4579bf899491557bf0fb1515f04c448570) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix remote bindings authentication with API tokens scoped to an individual Worker
+
+  Remote bindings now create preview sessions through the Worker-scoped endpoint. When the response includes a usable exchange URL, its hostname is used without account-wide Workers subdomain access; otherwise, the existing account subdomain lookup or registration is used. This applies to remote bindings in the Cloudflare Vite plugin. Tokens still need permission to update the named Worker.
+
 ## 1.70.1
 
 ### Patch Changes
