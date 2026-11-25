@@ -498,6 +498,22 @@ describe("mapWorkerMetadataBindings", () => {
 		});
 	});
 
+	describe("realtimekit", () => {
+		it("maps realtimekit binding", ({ expect }) => {
+			const bindings: WorkerMetadataBinding[] = [
+				{
+					type: "realtimekit",
+					name: "RTK",
+					app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+				},
+			];
+			const result = mapWorkerMetadataBindings(bindings);
+			expect(result.realtimekit).toEqual([
+				{ binding: "RTK", app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486" },
+			]);
+		});
+	});
+
 	describe("pipelines", () => {
 		it("maps pipelines binding with stream", ({ expect }) => {
 			const bindings: WorkerMetadataBinding[] = [

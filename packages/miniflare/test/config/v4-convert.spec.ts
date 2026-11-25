@@ -129,6 +129,32 @@ describe("convertV4MiniflareOptions", () => {
 		);
 	});
 
+	test("converts RealtimeKit app IDs to remote bindings", ({ expect }) => {
+		const remoteProxyConnectionString = new URL(
+			"http://127.0.0.1:8787"
+		) as RemoteProxyConnectionString;
+		const converted = convertV4MiniflareOptions({
+			name: "realtimekit",
+			script: "export default {};",
+			modules: true,
+			realtimekit: {
+				RTK: {
+					app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+					remoteProxyConnectionString,
+				},
+			},
+		});
+
+		expect(converted.workers[0].config.env?.RTK).toEqual({
+			type: "realtimekit",
+			id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+			dev: { remote: true },
+		});
+		expect(converted.workers[0].dev?.remoteProxyConnectionString).toEqual(
+			remoteProxyConnectionString
+		);
+	});
+
 	test("converts local and remote Analytics Engine datasets", ({ expect }) => {
 		const remoteProxyConnectionString = new URL(
 			"http://127.0.0.1:8787"

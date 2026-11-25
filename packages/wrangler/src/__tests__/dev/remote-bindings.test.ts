@@ -402,6 +402,35 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 			],
 		},
 		{
+			name: "realtimekit app",
+			config: {
+				realtimekit: [
+					{
+						binding: "RTK",
+						app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+						remote: true,
+					},
+				],
+			},
+			expectedProxyWorkerBindings: {
+				RTK: {
+					app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+					remote: true,
+					type: "realtimekit",
+				},
+			},
+			expectedWorkerOptions: [
+				expect.objectContaining({
+					realtimekit: {
+						RTK: {
+							app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+							remoteProxyConnectionString,
+						},
+					},
+				}),
+			],
+		},
+		{
 			name: "r2 bucket",
 			config: {
 				r2_buckets: [

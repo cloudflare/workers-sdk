@@ -498,6 +498,31 @@ describe("convertToWranglerConfig", () => {
 			expect(result.flagship).toEqual([{ binding: "F" }]);
 		});
 
+		it("maps realtimekit.id to app_id and dev.remote to remote", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					env: {
+						RTK: {
+							type: "realtimekit",
+							id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+							dev: { remote: true },
+						},
+					},
+				},
+				containers: [],
+			});
+			expect(result.realtimekit).toEqual([
+				{
+					binding: "RTK",
+					app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+					remote: true,
+				},
+			]);
+		});
+
 		it("maps ai-search.name to instance_name", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {

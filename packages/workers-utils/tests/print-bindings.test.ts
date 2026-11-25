@@ -47,6 +47,43 @@ describe("printBindings", () => {
 		expect(output).toContain("local [connected]");
 	});
 
+	test("labels RealtimeKit bindings as remote when `remote: true` is set", ({
+		expect,
+	}) => {
+		const output = captureBindings(
+			{
+				RTK: {
+					type: "realtimekit",
+					app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+					remote: true,
+				},
+			},
+			{ local: true }
+		);
+
+		expect(output).toMatch(
+			/env\.RTK \(2da1c5c6-8e8f-4119-b89e-18558e051486\)\s+RealtimeKit\s+remote/
+		);
+	});
+
+	test("labels RealtimeKit bindings as unsupported without `remote: true`", ({
+		expect,
+	}) => {
+		const output = captureBindings(
+			{
+				RTK: {
+					type: "realtimekit",
+					app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+				},
+			},
+			{ local: true }
+		);
+
+		expect(output).toMatch(
+			/env\.RTK \(2da1c5c6-8e8f-4119-b89e-18558e051486\)\s+RealtimeKit\s+not supported/
+		);
+	});
+
 	test.for([undefined, true])(
 		"labels K2 bindings as remote in local development with remote=%s",
 		(remote, { expect }) => {

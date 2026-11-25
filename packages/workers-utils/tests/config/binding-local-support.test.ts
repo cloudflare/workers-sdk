@@ -80,6 +80,18 @@ describe("resolveBindingRemote", () => {
 			remoteBindingsDisabled: false,
 			expected: false,
 		},
+		{
+			type: "realtimekit",
+			remote: true,
+			remoteBindingsDisabled: false,
+			expected: true,
+		},
+		{
+			type: "realtimekit",
+			remote: undefined,
+			remoteBindingsDisabled: false,
+			expected: false,
+		},
 		// Fixed modes ignore the setting.
 		{
 			type: "ratelimit",
@@ -157,6 +169,20 @@ describe("validateBindingRemoteSetting", () => {
 				validateBindingRemoteSetting("vectorize", true, warn)
 			).not.toThrow();
 			expect(warn).not.toHaveBeenCalled();
+		});
+
+		it("treats RealtimeKit bindings as remote-only", ({ expect }) => {
+			expect(() =>
+				validateBindingRemoteSetting("realtimekit", false, warn)
+			).toThrow(
+				"RealtimeKit bindings do not support local development. You can set `remote: true` for the binding definition in your configuration file to access a remote version of the resource."
+			);
+			validateBindingRemoteSetting("realtimekit", undefined, warn);
+			expect(warn).toHaveBeenCalledWith(
+				expect.stringContaining(
+					"RealtimeKit bindings do not support local development"
+				)
+			);
 		});
 	});
 

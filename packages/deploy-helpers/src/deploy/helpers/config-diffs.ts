@@ -38,6 +38,7 @@ const reorderableBindings = {
 	analytics_engine_datasets: true,
 	unsafe_hello_world: true,
 	flagship: true,
+	realtimekit: true,
 	worker_loaders: true,
 	vpc_services: true,
 	vpc_networks: true,
@@ -328,6 +329,12 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 
 	if (normalizedConfig.flagship?.length) {
 		normalizedConfig.flagship = normalizedConfig.flagship.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.realtimekit?.length) {
+		normalizedConfig.realtimekit = normalizedConfig.realtimekit.map(
 			({ remote: _, ...binding }) => binding
 		);
 	}

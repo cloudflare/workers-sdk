@@ -1861,6 +1861,26 @@ export interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * Specifies RealtimeKit app bindings that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	realtimekit: {
+		/** The binding name used to refer to the bound RealtimeKit app. */
+		binding: string;
+
+		/** The ID of the RealtimeKit app to bind to. */
+		app_id: string;
+
+		/** RealtimeKit has no local simulator. Set to `true` to use the remote RealtimeKit app during local dev. */
+		remote?: boolean;
+	}[];
+
+	/**
 	 * Specifies rate limit bindings that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,

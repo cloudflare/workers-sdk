@@ -124,6 +124,7 @@ export type ConfigBindingFieldName =
 	| "assets"
 	| "unsafe_hello_world"
 	| "flagship"
+	| "realtimekit"
 	| "worker_loaders"
 	| "vpc_services"
 	| "vpc_networks";
@@ -166,6 +167,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	assets: "Assets",
 	unsafe_hello_world: "Hello World",
 	flagship: "Flagship",
+	realtimekit: "RealtimeKit",
 	worker_loaders: "Worker Loader",
 	vpc_services: "VPC Service",
 	vpc_networks: "VPC Network",
@@ -213,6 +215,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	logfwdr: "logfwdr",
 	unsafe_hello_world: "Hello World",
 	flagship: "Flagship",
+	realtimekit: "RealtimeKit",
 	ratelimit: "Rate Limit",
 	worker_loader: "Worker Loader",
 	vpc_service: "VPC Service",
@@ -2113,6 +2116,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateFlagshipBinding),
 			[]
 		),
+		realtimekit: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"realtimekit",
+			validateBindingArray(envName, validateRealtimeKitBinding),
+			[]
+		),
 		worker_loaders: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -3890,6 +3903,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"worker_loader",
 			"vpc_service",
 			"flagship",
+			"realtimekit",
 			"vpc_network",
 			"stream",
 			"media",
@@ -6647,6 +6661,44 @@ const validateFlagshipBinding: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
+const validateRealtimeKitBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"realtimekit" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "app_id", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "app_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"app_id",
+		"remote",
+	]);
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
+	return isValid;
+};
+
 const validateWorkerLoaderBinding: ValidatorFn = (
 	diagnostics,
 	field,
@@ -6839,6 +6891,7 @@ const validatePreviewsConfig =
 				"artifacts",
 				"unsafe_hello_world",
 				"flagship",
+				"realtimekit",
 				"worker_loaders",
 				"ratelimits",
 				"vpc_services",
@@ -7138,6 +7191,14 @@ const validatePreviewsConfig =
 				diagnostics,
 				`${field}.flagship`,
 				previews.flagship,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateRealtimeKitBinding)(
+				diagnostics,
+				`${field}.realtimekit`,
+				previews.realtimekit,
 				undefined
 			) && isValid;
 
