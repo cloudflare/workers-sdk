@@ -32,7 +32,8 @@ export interface EmailReplyMessageBuilder {
 }
 
 export interface MessageBuilder extends EmailReplyMessageBuilder {
-	to: string | EmailAddress | (string | EmailAddress)[];
+	/** At least one of `to`, `cc`, or `bcc` must be provided. */
+	to?: string | EmailAddress | (string | EmailAddress)[];
 	cc?: string | EmailAddress | (string | EmailAddress)[];
 	bcc?: string | EmailAddress | (string | EmailAddress)[];
 }
