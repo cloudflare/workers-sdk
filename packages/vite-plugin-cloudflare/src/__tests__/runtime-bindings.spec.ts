@@ -5,6 +5,8 @@ import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { createServer } from "vite";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 
+const EMAIL_BODY = "Subject: Café\r\n\r\nHello!";
+
 describe("local runtime bindings through Vite", () => {
 	runInTempDir();
 	afterEach(() => vi.unstubAllEnvs());
@@ -24,9 +26,21 @@ describe("local runtime bindings through Vite", () => {
 				kv_namespaces: [{ binding: "KV", id: "runtime-kv" }],
 			}),
 			"index.js": `
+				import { EmailMessage } from "cloudflare:email";
 				export default {
 					async fetch(request, env) {
 						switch (new URL(request.url).pathname) {
+                            case "/email-string":
+                            case "/email-stream": {
+								const body = ${JSON.stringify(EMAIL_BODY)};
+                                const input = new URL(request.url).pathname === "/email-string"
+                                    ? body : new Blob([body]).stream();
+                                const message = new EmailMessage("sender@example.com", "recipient@example.com", input);
+                                if (!(message.raw instanceof ReadableStream)) {
+                                    throw new Error("Expected EmailMessage.raw to be a ReadableStream");
+                                }
+                                return Response.json(await new Response(message.raw).text());
+                            }
 							case "/stream": {
 								const video = await env.STREAM.upload(new Response(new Uint8Array([0, 1, 2, 3])).body);
 								const captions = env.STREAM.video(video.id).captions;
@@ -58,6 +72,8 @@ describe("local runtime bindings through Vite", () => {
 	});
 
 	test.for([
+		{ path: "/email-string", result: EMAIL_BODY },
+		{ path: "/email-stream", result: EMAIL_BODY },
 		{
 			path: "/stream",
 			result: {

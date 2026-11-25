@@ -31,12 +31,12 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
-		"@cloudflare/cli-shared-helpers": "0.3.13",
-		"@cloudflare/deploy-helpers": "0.29.1",
-		"@cloudflare/workers-auth": "0.18.8",
-		"@cloudflare/workers-utils": "0.57.0",
+		"@cloudflare/cli-shared-helpers": "0.3.14",
+		"@cloudflare/deploy-helpers": "0.31.0",
+		"@cloudflare/workers-auth": "0.18.9",
+		"@cloudflare/workers-utils": "0.58.0",
 		"chalk": "catalog:default",
-		"miniflare": "5.20261123.1-beta",
+		"miniflare": "5.20261125.0-beta",
 		"undici": "catalog:default",
 		"ws": "catalog:default"
 	},
