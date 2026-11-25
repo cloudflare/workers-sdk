@@ -18,11 +18,14 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 		let helper: WranglerE2ETestHelper;
 
 		let consoleErrorMock: MockInstance<typeof console.error>;
+		let consoleWarnMock: MockInstance<typeof console.warn>;
 
 		beforeEach(async () => {
 			consoleErrorMock = vi.spyOn(console, "error").mockImplementation(() => {
 				// suppress error output during tests
 			});
+			// Record warnings without suppressing them, so they still appear in the test output
+			consoleWarnMock = vi.spyOn(console, "warn");
 
 			helper = new WranglerE2ETestHelper();
 			const aiWorkerScript = dedent`
@@ -49,7 +52,10 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 			});
 		});
 
-		afterEach(() => worker?.dispose());
+		afterEach(() => {
+			consoleWarnMock.mockRestore();
+			return worker?.dispose();
+		});
 
 		test("starting a worker with startWorker with the valid auth information and updating it with invalid information", async ({
 			expect,
@@ -64,8 +70,6 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 					},
 				};
 			});
-
-			let emittedErrors: unknown[] = [];
 
 			worker = await startWorker({
 				entrypoint: path.resolve(helper.tmpPath, "src/index.js"),
@@ -84,13 +88,11 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 				},
 			});
 
-			worker.raw.on("error", (e: unknown) => emittedErrors.push(e));
-
-			await assertValidWorkerAiResponse(expect, emittedErrors);
+			await assertValidWorkerAiResponse(expect);
 
 			expect(validAuth).toHaveBeenCalled();
 
-			emittedErrors = [];
+			consoleWarnMock.mockClear();
 
 			const incorrectAuth = vi.fn(() => {
 				return {
@@ -107,7 +109,7 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 				},
 			});
 
-			await assertAuthErrorForWorkerAiResponse(expect, emittedErrors);
+			await assertAuthErrorForWorkerAiResponse(expect);
 
 			expect(incorrectAuth).toHaveBeenCalled();
 		});
@@ -124,8 +126,6 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 				};
 			});
 
-			let emittedErrors: unknown[] = [];
-
 			worker = await startWorker({
 				entrypoint: path.resolve(helper.tmpPath, "src/index.js"),
 				bindings: {
@@ -143,14 +143,11 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 				},
 			});
 
-			worker.raw.on("error", (e: unknown) => emittedErrors.push(e));
-
-			await assertAuthErrorForWorkerAiResponse(expect, emittedErrors);
+			await assertAuthErrorForWorkerAiResponse(expect);
 
 			expect(incorrectAuth).toHaveBeenCalled();
 
 			consoleErrorMock.mockReset();
-			emittedErrors = [];
 
 			const validAuth = vi.fn(() => {
 				assert(process.env.CLOUDFLARE_API_TOKEN);
@@ -169,15 +166,12 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 				},
 			});
 
-			await assertValidWorkerAiResponse(expect, emittedErrors);
+			await assertValidWorkerAiResponse(expect);
 
 			expect(validAuth).toHaveBeenCalled();
 		});
 
-		async function assertValidWorkerAiResponse(
-			expect: ExpectStatic,
-			emittedErrors: unknown[]
-		) {
+		async function assertValidWorkerAiResponse(expect: ExpectStatic) {
 			assert(worker, "Worker is not defined");
 			const responseText = await fetchTimedTextFromWorker(worker);
 
@@ -185,21 +179,9 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 			// a valid response from the worker
 			expect(responseText).toBeTruthy();
 			expect(responseText).toContain("This is a response from Workers AI.");
-
-			// And there should be no authentication error emitted
-			const authErrors = emittedErrors.filter((e) =>
-				hasMatchingCauseMessage(
-					e,
-					/the remote session could not be authenticated./
-				)
-			);
-			expect(authErrors).toHaveLength(0);
 		}
 
-		async function assertAuthErrorForWorkerAiResponse(
-			expect: ExpectStatic,
-			emittedErrors: unknown[]
-		) {
+		async function assertAuthErrorForWorkerAiResponse(expect: ExpectStatic) {
 			assert(worker, "Worker is not defined");
 			const responseText = await fetchTimedTextFromWorker(worker);
 
@@ -207,37 +189,17 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 			// get a response from the worker
 			expect(responseText).toBe(null);
 
-			// And an authentication error was emitted
-			const authErrors = emittedErrors.filter((e) =>
-				hasMatchingCauseMessage(
-					e,
-					/the remote session could not be authenticated./
+			// AI is a remote-only binding, so its remote session only connects on
+			// the first binding call. A failed authentication fails that call and is
+			// logged as a warning, rather than emitted as an error on the worker.
+			const authWarnings = consoleWarnMock.mock.calls.filter((args) =>
+				args.some((arg) =>
+					String(arg).includes(
+						"Could not connect remote bindings: This Worker uses bindings that need to run remotely, even when developing locally, but the remote session could not be authenticated."
+					)
 				)
 			);
-			expect(authErrors.length).toBeGreaterThan(0);
-		}
-
-		/**
-		 * Checks whether an emitted error event (or its cause chain) contains
-		 * a message matching the given pattern.
-		 *
-		 * @param event - the error event to inspect
-		 * @param pattern - the regex pattern to match against error messages
-		 * @returns whether any error in the cause chain matches the pattern
-		 */
-		function hasMatchingCauseMessage(event: unknown, pattern: RegExp): boolean {
-			if (event == null || typeof event !== "object") {
-				return false;
-			}
-			const cause = (event as { cause?: unknown }).cause;
-			if (cause instanceof Error && pattern.test(cause.message)) {
-				return true;
-			}
-			// Recurse into nested cause
-			if (cause instanceof Error && cause.cause) {
-				return hasMatchingCauseMessage({ cause: cause.cause }, pattern);
-			}
-			return false;
+			expect(authWarnings.length).toBeGreaterThan(0);
 		}
 	});
 
