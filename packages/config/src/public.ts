@@ -124,6 +124,7 @@ export type {
 export { exports } from "./exports";
 export type {
 	DefaultModule,
+	InferCrons,
 	InferEnv,
 	InferDurableNamespaces,
 	InferMainModule,

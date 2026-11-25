@@ -39,6 +39,13 @@ describe("generateTypes", () => {
 		expect(out).toContain(`interface Env extends __Env {}`);
 	});
 
+	it("declares the inferred cron expressions in GlobalProps", ({ expect }) => {
+		const out = generateTypes({ configPath: "./cloudflare.config.ts" });
+		expect(out).toContain(
+			`crons: import("@cloudflare/config").InferCrons<__WorkerConfig>;`
+		);
+	});
+
 	it("emits a global script (no top-level import/export, no declare global)", ({
 		expect,
 	}) => {

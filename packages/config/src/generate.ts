@@ -5,7 +5,8 @@ interface GenerateTypesOptions {
 	configPath: string;
 	/**
 	 * Package name used in the inline `import("<packageName>")` type expressions
-	 * for `InferEnv`/`InferDurableNamespaces`/`InferMainModule`/`UnwrapConfig`.
+	 * for `InferEnv`/`InferCrons`/`InferDurableNamespaces`/`InferMainModule`/
+	 * `UnwrapConfig`.
 	 *
 	 * Defaults to `"@cloudflare/config"`. Integrations should pass the public
 	 * `cf/config` package used to author `cloudflare.config.ts` files.
@@ -46,6 +47,7 @@ export function generateTypes({
 			interface GlobalProps {
 				mainModule: import("${packageName}").InferMainModule<__WorkerConfig>;
 				durableNamespaces: import("${packageName}").InferDurableNamespaces<__WorkerConfig>;
+				crons: import("${packageName}").InferCrons<__WorkerConfig>;
 			}
 			interface Env extends __Env {}
 		}

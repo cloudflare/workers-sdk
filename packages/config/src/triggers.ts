@@ -59,7 +59,7 @@ export interface QueueConsumerTrigger extends QueueConsumerTriggerOptions {
 	type: "queue";
 }
 
-export interface ScheduledTriggerOptions {
+export interface ScheduledTriggerOptions<TSchedule extends string = string> {
 	/**
 	 * A "cron" definition to trigger a Worker's "scheduled" function.
 	 *
@@ -67,7 +67,7 @@ export interface ScheduledTriggerOptions {
 	 *
 	 * More details here https://developers.cloudflare.com/workers/platform/cron-triggers
 	 */
-	schedule: string;
+	schedule: TSchedule;
 }
 
 /**
@@ -75,7 +75,9 @@ export interface ScheduledTriggerOptions {
  *
  * More details here https://developers.cloudflare.com/workers/platform/cron-triggers
  */
-export interface ScheduledTrigger extends ScheduledTriggerOptions {
+export interface ScheduledTrigger<
+	TSchedule extends string = string,
+> extends ScheduledTriggerOptions<TSchedule> {
 	type: "scheduled";
 }
 
@@ -152,7 +154,11 @@ export interface Triggers {
 	 *
 	 * More details here https://developers.cloudflare.com/workers/platform/cron-triggers
 	 */
-	scheduled(options: ScheduledTriggerOptions): ScheduledTrigger;
+	// `NoInfer` stops the contextual `Trigger[]` type of `triggers` from
+	// widening the inferred schedule literal to `string`.
+	scheduled<TSchedule extends string>(
+		options: ScheduledTriggerOptions<TSchedule>
+	): ScheduledTrigger<NoInfer<TSchedule>>;
 	/**
 	 * Email trigger — invokes this Worker for the configured Email Routing
 	 * addresses.

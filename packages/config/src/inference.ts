@@ -371,6 +371,51 @@ export type InferDurableNamespaces<TUnwrappedConfig> =
 			}[keyof TExports]
 		: never;
 
+/** Collect the `schedule` of every scheduled trigger in each config branch. */
+type ExtractSchedules<TConfig> = TConfig extends {
+	triggers: readonly (infer TTrigger)[];
+}
+	? TTrigger extends { type: "scheduled"; schedule: infer TSchedule }
+		? TSchedule
+		: never
+	: never;
+
+/**
+ * Infer the cron expressions that can invoke a Worker's `scheduled()` handler.
+ *
+ * Returns a union of the `schedule` literals of every scheduled trigger across
+ * every branch of a conditional config. Falls back to `string` when the config
+ * declares no scheduled triggers, or when any schedule is not a literal (for
+ * example, one read from `process.env`).
+ *
+ * Literals are kept for entries created with `triggers.scheduled(...)`.
+ * Hand-written trigger objects keep them only when the config is passed to
+ * `defineConfig` or `defineWorker` directly rather than returned from a
+ * function.
+ *
+ * @example
+ * ```typescript
+ * import { defineWorker, triggers } from "@cloudflare/config";
+ * import type { InferCrons, UnwrapConfig } from "@cloudflare/config";
+ *
+ * const config = defineWorker({
+ *   triggers: [
+ *     triggers.scheduled({ schedule: "0 * * * *" }),
+ *     triggers.scheduled({ schedule: "30 0 * * *" }),
+ *   ],
+ * });
+ *
+ * type WorkerConfig = UnwrapConfig<typeof config>;
+ * // Inferred as: "0 * * * *" | "30 0 * * *"
+ * type Crons = InferCrons<WorkerConfig>;
+ * ```
+ */
+export type InferCrons<TUnwrappedConfig> = [
+	ExtractSchedules<TUnwrappedConfig>,
+] extends [never]
+	? string
+	: ExtractSchedules<TUnwrappedConfig>;
+
 /**
  * Infer the main module type from a Worker config's entrypoint.
  * If entrypoint is a module namespace object, returns that type.

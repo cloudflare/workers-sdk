@@ -148,8 +148,9 @@ mistakes are caught as the user types.
 
 Types that come from the config are inferred from it rather than generated, so
 they update as soon as the config changes. This includes the Worker's `env`
-type, across every branch of a conditional config, and the export names a
-binding can reference on another Worker. Runtime types are generated
+type, across every branch of a conditional config, the export names a
+binding can reference on another Worker, and the cron expressions of its
+scheduled triggers. Runtime types are generated
 separately and depend only on the compatibility date and flags. Keep the two
 separate.
 
