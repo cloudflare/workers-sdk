@@ -201,6 +201,13 @@ export function convertBindings(
 		[["app_id", "id"]],
 		{ remote: true }
 	);
+	convertArrayBindings(
+		"realtimekit",
+		"binding",
+		"bindings.realtimeKit",
+		[["app_id", "id"]],
+		{ remote: true }
+	);
 	for (const [index, entry] of getRecords(source, "hyperdrive").entries()) {
 		const options = optionsFromRecord(entry, [["id", "id"]]);
 		const sourcePath = pathFor("hyperdrive", index);
@@ -364,6 +371,10 @@ export function convertBindings(
 		[["index_name", "name"]],
 		{ remote: true }
 	);
+	convertArrayBindings("oidc_tokens", "binding", "bindings.oidcToken", [
+		["audience", "audience"],
+		["alg", "alg"],
+	]);
 	convertArrayBindings(
 		"vpc_services",
 		"binding",

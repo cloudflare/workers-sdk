@@ -440,6 +440,13 @@ const bindingsConfigMock: Omit<
 			app_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 		},
 	],
+	realtimekit: [
+		{
+			binding: "RTK",
+			app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+			remote: true,
+		},
+	],
 	services: [
 		{ binding: "SERVICE_BINDING", service: "service_name" },
 		{
@@ -483,6 +490,7 @@ const bindingsConfigMock: Omit<
 	mtls_certificates: [
 		{ binding: "MTLS_BINDING", certificate_id: "MTLS_CERTIFICATE_ID" },
 	],
+	oidc_tokens: [{ binding: "OIDC_TOKEN_BINDING", audience: "api://example" }],
 	browser: {
 		binding: "BROWSER_BINDING",
 	},
@@ -1097,9 +1105,11 @@ describe("generate types - CLI", () => {
 				MY_ARTIFACTS: Artifacts;
 				HELLO_WORLD: HelloWorldBinding;
 				FLAGS: Flagship;
+				RTK: RealtimeKitBinding;
 				RATE_LIMITER: RateLimit;
 				WORKER_LOADER_BINDING: WorkerLoader;
 				VPC_SERVICE_BINDING: Fetcher;
+				OIDC_TOKEN_BINDING: OidcTokenBinding;
 				AI_SEARCH_NS_BINDING: AiSearchNamespace;
 				AI_SEARCH_BINDING: AiSearchInstance;
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
@@ -1227,9 +1237,11 @@ describe("generate types - CLI", () => {
 				MY_ARTIFACTS: Artifacts;
 				HELLO_WORLD: HelloWorldBinding;
 				FLAGS: Flagship;
+				RTK: RealtimeKitBinding;
 				RATE_LIMITER: RateLimit;
 				WORKER_LOADER_BINDING: WorkerLoader;
 				VPC_SERVICE_BINDING: Fetcher;
+				OIDC_TOKEN_BINDING: OidcTokenBinding;
 				AI_SEARCH_NS_BINDING: AiSearchNamespace;
 				AI_SEARCH_BINDING: AiSearchInstance;
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
@@ -1420,9 +1432,11 @@ describe("generate types - CLI", () => {
 				MY_ARTIFACTS: Artifacts;
 				HELLO_WORLD: HelloWorldBinding;
 				FLAGS: Flagship;
+				RTK: RealtimeKitBinding;
 				RATE_LIMITER: RateLimit;
 				WORKER_LOADER_BINDING: WorkerLoader;
 				VPC_SERVICE_BINDING: Fetcher;
+				OIDC_TOKEN_BINDING: OidcTokenBinding;
 				AI_SEARCH_NS_BINDING: AiSearchNamespace;
 				AI_SEARCH_BINDING: AiSearchInstance;
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
@@ -4127,6 +4141,56 @@ describe("generate types - CLI", () => {
 			interface __BaseEnv_Env {
 				VPC_API: Fetcher;
 				VPC_DATABASE: Fetcher;
+			}
+			declare namespace Cloudflare {
+				interface GlobalProps {
+					mainModule: typeof import("./index");
+				}
+				interface Env extends __BaseEnv_Env {}
+			}
+			interface Env extends __BaseEnv_Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			"
+		`);
+	});
+
+	it("should generate types for OIDC token bindings", async ({ expect }) => {
+		fs.writeFileSync(
+			"./index.ts",
+			`export default { async fetch(request, env) { return new Response(await env.API_TOKEN.getToken()); } };`
+		);
+		fs.writeFileSync(
+			"./wrangler.json",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				name: "test-oidc-tokens",
+				main: "./index.ts",
+				oidc_tokens: [
+					{ binding: "API_TOKEN", audience: "https://api.example.com" },
+					{
+						binding: "RSA_TOKEN",
+						audience: "api://token-exchange",
+						alg: "RS256",
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			interface __BaseEnv_Env {
+				API_TOKEN: OidcTokenBinding;
+				RSA_TOKEN: OidcTokenBinding;
 			}
 			declare namespace Cloudflare {
 				interface GlobalProps {

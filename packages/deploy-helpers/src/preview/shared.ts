@@ -430,11 +430,16 @@ export function getBindingValue(binding: Binding): string {
 		case "artifacts":
 			return String(binding.namespace ?? "");
 		case "flagship":
+		case "realtimekit":
 			return String(binding.app_id ?? "");
 		case "ratelimit":
 			return String(binding.namespace_id ?? "");
 		case "vpc_service":
 			return String(binding.service_id ?? "");
+		case "oidc_token":
+			return binding.alg
+				? `${binding.audience}, ${binding.alg}`
+				: String(binding.audience ?? "");
 		case "send_email":
 			return String(binding.destination_address ?? "");
 		default:
@@ -663,6 +668,13 @@ function extractBindings(
 		};
 	}
 
+	for (const realtimekit of previews?.realtimekit ?? []) {
+		env[realtimekit.binding] = {
+			type: "realtimekit",
+			app_id: realtimekit.app_id,
+		};
+	}
+
 	for (const ratelimit of previews?.ratelimits ?? []) {
 		env[ratelimit.name] = {
 			type: "ratelimit",
@@ -677,6 +689,14 @@ function extractBindings(
 
 	for (const vpc of previews?.vpc_services ?? []) {
 		env[vpc.binding] = { type: "vpc_service", service_id: vpc.service_id };
+	}
+
+	for (const token of previews?.oidc_tokens ?? []) {
+		env[token.binding] = {
+			type: "oidc_token",
+			audience: token.audience,
+			...(token.alg !== undefined && { alg: token.alg }),
+		};
 	}
 
 	if (previews?.browser) {

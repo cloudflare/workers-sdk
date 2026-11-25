@@ -257,6 +257,18 @@ export interface FlagshipBinding extends FlagshipBindingOptions {
 	type: "flagship";
 }
 
+export interface RealtimeKitBindingOptions {
+	/** The ID of the RealtimeKit app to bind to. */
+	id: string;
+	/** RealtimeKit has no local simulator. Set remote to true to use the remote app during development. */
+	dev?: BindingDevOptions;
+}
+
+/** Binding to a RealtimeKit app. */
+export interface RealtimeKitBinding extends RealtimeKitBindingOptions {
+	type: "realtime-kit";
+}
+
 export interface HyperdriveBindingOptions {
 	/** The ID of the Hyperdrive configuration. */
 	id: string;
@@ -659,6 +671,18 @@ export interface VpcServiceBinding extends VpcServiceBindingOptions {
 	type: "vpc-service";
 }
 
+export interface OidcTokenBindingOptions {
+	/** The `aud` claim of every token the binding issues: 1 to 2048 printable ASCII characters, with no whitespace. */
+	audience: string;
+	/** The JWS algorithm that signs the tokens. Defaults to ES256; use RS256 for verifiers that only accept RS256. */
+	alg?: "ES256" | "RS256";
+}
+
+/** Binding that issues short-lived OpenID Connect tokens for the Worker's identity, for one audience. */
+export interface OidcTokenBinding extends OidcTokenBindingOptions {
+	type: "oidc-token";
+}
+
 export interface WorkerBindingOptions<
 	TWorker extends WorkerReference = WorkerReference,
 	TExportName extends WorkerEntrypointExportName<TWorker> | undefined =
@@ -809,6 +833,8 @@ export interface Bindings {
 	): DurableObjectBinding<TWorker, TExportName>;
 	/** Binding to a Flagship feature-flag service. */
 	flagship(options?: FlagshipBindingOptions): FlagshipBinding;
+	/** Binding to a RealtimeKit app. */
+	realtimeKit(options: RealtimeKitBindingOptions): RealtimeKitBinding;
 	/**
 	 * Binding to a Hyperdrive configuration.
 	 *
@@ -852,6 +878,8 @@ export interface Bindings {
 	): TypedPipelineBinding<TRecord>;
 	/** A producer binding to a K2 stream created using the Dashboard or API. */
 	k2(options: K2BindingOptions): K2Binding;
+	/** Binding that issues short-lived OpenID Connect tokens for the Worker's identity, for one audience. */
+	oidcToken(options: OidcTokenBindingOptions): OidcTokenBinding;
 	/**
 	 * Producer binding to a Cloudflare Queue.
 	 *
@@ -962,6 +990,7 @@ export const bindings = {
 	}),
 	durableObject: (options) => ({ type: "durable-object", ...options }),
 	flagship: (options) => ({ type: "flagship", ...options }),
+	realtimeKit: (options) => ({ type: "realtime-kit", ...options }),
 	hyperdrive: (options) => ({ type: "hyperdrive", ...options }),
 	images: (options) => ({ type: "images", ...options }),
 	json: (value) => ({ type: "json", value }),
@@ -971,6 +1000,7 @@ export const bindings = {
 	mtlsCertificate: (options) => ({ type: "mtls-certificate", ...options }),
 	pipeline: (options) => ({ type: "pipeline", ...options }),
 	k2: (options) => ({ type: "k2", ...options }),
+	oidcToken: (options) => ({ type: "oidc-token", ...options }),
 	queue: (options) => ({ type: "queue", ...options }),
 	rateLimit: (options) => ({ type: "rate-limit", ...options }),
 	r2: (options) => ({ type: "r2", ...options }),

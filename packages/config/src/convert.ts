@@ -386,6 +386,7 @@ function convertBindingsAndAssets(
 	const pipelines: NonNullable<RawConfig["pipelines"]> = [];
 	const k2: NonNullable<RawConfig["k2"]> = [];
 	const flagship: NonNullable<RawConfig["flagship"]> = [];
+	const realtimekit: NonNullable<RawConfig["realtimekit"]> = [];
 	const aiSearch: NonNullable<RawConfig["ai_search"]> = [];
 	const aiSearchNamespaces: NonNullable<RawConfig["ai_search_namespaces"]> = [];
 	const agentMemory: NonNullable<RawConfig["agent_memory"]> = [];
@@ -399,6 +400,7 @@ function convertBindingsAndAssets(
 	const sendEmail: NonNullable<RawConfig["send_email"]> = [];
 	const vpcServices: NonNullable<RawConfig["vpc_services"]> = [];
 	const vpcNetworks: NonNullable<RawConfig["vpc_networks"]> = [];
+	const oidcTokens: NonNullable<RawConfig["oidc_tokens"]> = [];
 	const workerLoaders: NonNullable<RawConfig["worker_loaders"]> = [];
 	const ratelimits: NonNullable<RawConfig["ratelimits"]> = [];
 	const services: NonNullable<RawConfig["services"]> = [];
@@ -551,6 +553,16 @@ function convertBindingsAndAssets(
 				);
 				break;
 			}
+			case "realtime-kit": {
+				realtimekit.push(
+					omitUndefined({
+						binding: name,
+						app_id: binding.id,
+						remote: binding.dev?.remote,
+					})
+				);
+				break;
+			}
 			case "hyperdrive": {
 				hyperdrive.push(
 					omitUndefined({
@@ -601,6 +613,16 @@ function convertBindingsAndAssets(
 						binding: name,
 						certificate_id: binding.id,
 						remote: binding.dev?.remote,
+					})
+				);
+				break;
+			}
+			case "oidc-token": {
+				oidcTokens.push(
+					omitUndefined({
+						binding: name,
+						audience: binding.audience,
+						alg: binding.alg,
 					})
 				);
 				break;
@@ -801,6 +823,9 @@ function convertBindingsAndAssets(
 	if (flagship.length) {
 		result.flagship = flagship;
 	}
+	if (realtimekit.length) {
+		result.realtimekit = realtimekit;
+	}
 	if (aiSearch.length) {
 		result.ai_search = aiSearch;
 	}
@@ -830,6 +855,9 @@ function convertBindingsAndAssets(
 	}
 	if (vpcNetworks.length) {
 		result.vpc_networks = vpcNetworks;
+	}
+	if (oidcTokens.length) {
+		result.oidc_tokens = oidcTokens;
 	}
 	if (workerLoaders.length) {
 		result.worker_loaders = workerLoaders;

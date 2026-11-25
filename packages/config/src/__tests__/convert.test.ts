@@ -498,6 +498,31 @@ describe("convertToWranglerConfig", () => {
 			expect(result.flagship).toEqual([{ binding: "F" }]);
 		});
 
+		it("maps realtimeKit.id to app_id and dev.remote to remote", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					env: {
+						RTK: {
+							type: "realtime-kit",
+							id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+							dev: { remote: true },
+						},
+					},
+				},
+				containers: [],
+			});
+			expect(result.realtimekit).toEqual([
+				{
+					binding: "RTK",
+					app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+					remote: true,
+				},
+			]);
+		});
+
 		it("maps ai-search.name to instance_name", ({ expect }) => {
 			const result = convertToWranglerConfig({
 				worker: {
@@ -680,6 +705,36 @@ describe("convertToWranglerConfig", () => {
 			});
 			expect(result.vpc_services).toEqual([
 				{ binding: "V", service_id: "svc-1" },
+			]);
+		});
+
+		it("maps oidc-token to oidc_tokens, with alg only when set", ({
+			expect,
+		}) => {
+			const result = convertToWranglerConfig({
+				worker: {
+					...baseWorker,
+					env: {
+						API_TOKEN: {
+							type: "oidc-token",
+							audience: "https://api.example.com",
+						},
+						RSA_TOKEN: {
+							type: "oidc-token",
+							audience: "api://token-exchange",
+							alg: "RS256",
+						},
+					},
+				},
+				containers: [],
+			});
+			expect(result.oidc_tokens).toEqual([
+				{ binding: "API_TOKEN", audience: "https://api.example.com" },
+				{
+					binding: "RSA_TOKEN",
+					audience: "api://token-exchange",
+					alg: "RS256",
+				},
 			]);
 		});
 

@@ -2893,6 +2893,28 @@ function collectCoreBindings(
 			addBinding(flagshipBinding.binding, "Flagship", "flagship", envName);
 		}
 
+		for (const [index, realtimekitBinding] of (
+			env.realtimekit ?? []
+		).entries()) {
+			if (!realtimekitBinding.binding) {
+				throwMissingBindingError({
+					binding: realtimekitBinding,
+					bindingType: "realtimekit",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(
+				realtimekitBinding.binding,
+				"RealtimeKitBinding",
+				"realtimekit",
+				envName
+			);
+		}
+
 		for (const [index, ratelimit] of (env.ratelimits ?? []).entries()) {
 			if (!ratelimit.name) {
 				throwMissingBindingError({
@@ -2956,6 +2978,21 @@ function collectCoreBindings(
 			}
 
 			addBinding(vpcNetwork.binding, "Fetcher", "vpc_networks", envName);
+		}
+
+		for (const [index, oidcToken] of (env.oidc_tokens ?? []).entries()) {
+			if (!oidcToken.binding) {
+				throwMissingBindingError({
+					binding: oidcToken,
+					bindingType: "oidc_tokens",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(oidcToken.binding, "OidcTokenBinding", "oidc_tokens", envName);
 		}
 
 		for (const [index, aiSearchNamespace] of (
@@ -3956,6 +3993,27 @@ function collectCoreBindingsPerEnvironment(
 			});
 		}
 
+		for (const [index, realtimekitBinding] of (
+			env.realtimekit ?? []
+		).entries()) {
+			if (!realtimekitBinding.binding) {
+				throwMissingBindingError({
+					binding: realtimekitBinding,
+					bindingType: "realtimekit",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "realtimekit",
+				name: realtimekitBinding.binding,
+				type: "RealtimeKitBinding",
+			});
+		}
+
 		for (const [index, ratelimit] of (env.ratelimits ?? []).entries()) {
 			if (!ratelimit.name) {
 				throwMissingBindingError({
@@ -4029,6 +4087,25 @@ function collectCoreBindingsPerEnvironment(
 				bindingCategory: "vpc_networks",
 				name: vpcNetwork.binding,
 				type: "Fetcher",
+			});
+		}
+
+		for (const [index, oidcToken] of (env.oidc_tokens ?? []).entries()) {
+			if (!oidcToken.binding) {
+				throwMissingBindingError({
+					binding: oidcToken,
+					bindingType: "oidc_tokens",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "oidc_tokens",
+				name: oidcToken.binding,
+				type: "OidcTokenBinding",
 			});
 		}
 

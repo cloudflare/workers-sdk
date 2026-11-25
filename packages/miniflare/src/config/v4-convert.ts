@@ -812,6 +812,13 @@ function addProductBindings(
 			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
+	for (const [name, binding] of Object.entries(worker.realtimekit ?? {})) {
+		env[name] = {
+			type: "realtime-kit",
+			id: binding.app_id,
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
+		};
+	}
 	for (const [name, binding] of Object.entries(worker.artifacts ?? {})) {
 		env[name] = {
 			type: "artifacts",

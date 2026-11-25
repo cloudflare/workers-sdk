@@ -5,6 +5,7 @@ import {
 	deleteContainerImage,
 	deleteDatabase,
 	deleteHyperdriveConfig,
+	deleteK2Stream,
 	deleteKVNamespace,
 	deleteProject,
 	deleteR2Bucket,
@@ -17,6 +18,7 @@ import {
 	listTmpE2EContainerApplications,
 	listTmpE2EProjects,
 	listTmpE2EWorkers,
+	listTmpK2Streams,
 	listTmpKVNamespaces,
 	listTmpR2Buckets,
 } from "./common";
@@ -47,6 +49,9 @@ async function run() {
 	await deleteProjects();
 
 	await deleteWorkers();
+
+	// After the Workers, in case a leftover Worker bound to a stream blocks its deletion
+	await deleteK2Streams();
 
 	await deleteD1Databases();
 
@@ -125,6 +130,23 @@ async function deleteWorkers() {
 
 	if (workersToDelete.length === 0) {
 		console.log(`No workers to delete.`);
+	}
+}
+
+async function deleteK2Streams() {
+	const streamsToDelete = await listTmpK2Streams();
+
+	for (const stream of streamsToDelete) {
+		console.log("Deleting K2 stream: " + stream.name);
+		if (await deleteK2Stream(stream.id)) {
+			console.log(`Successfully deleted K2 stream ${stream.id}`);
+		} else {
+			console.log(`Failed to delete K2 stream ${stream.id}`);
+		}
+	}
+
+	if (streamsToDelete.length === 0) {
+		console.log(`No K2 streams to delete.`);
 	}
 }
 

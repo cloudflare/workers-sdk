@@ -5,12 +5,15 @@ import { RemoteSessionAuthenticationError } from "./utils/remote";
 import type { RemoteBindingsLogger } from "./logger";
 import type { StartRemoteProxySessionOptions } from "./start-remote-proxy-session";
 import type { ErrorEvent } from "./startDevWorker/events";
+import type { EventEmitter } from "node:events";
 
 // The error that the mocked `DevEnv` emits asynchronously from `start()`.
 const mockDevEnv = vi.hoisted(() => ({
 	error: undefined as unknown,
 	startError: undefined as unknown,
 	teardown: vi.fn(async () => {}),
+	// The most recently created `DevEnv`, for emitting errors after startup.
+	instance: undefined as EventEmitter | undefined,
 }));
 
 // Replace `DevEnv` with a configurable stub so we can exercise startup errors
@@ -35,6 +38,7 @@ vi.mock("./startDevWorker/DevEnv", async () => {
 			super();
 			// Avoid Node's throw-on-unhandled-"error" behaviour.
 			this.on("error", () => {});
+			mockDevEnv.instance = this;
 		}
 		start() {
 			if (mockDevEnv.startError !== undefined) {
@@ -245,6 +249,61 @@ describe("startRemoteProxySession error handling", () => {
 		);
 		expect((thrown as Error).message).toContain(
 			"The remote worker preview failed."
+		);
+	});
+});
+
+describe("startRemoteProxySession lazy connection errors", () => {
+	afterEach(() => {
+		mockDevEnv.instance = undefined;
+	});
+
+	async function startLazySession() {
+		const options = { ...createTestOptions(), lazy: true };
+		await startRemoteProxySession({ AI: { type: "ai" } }, options);
+		const devEnv = mockDevEnv.instance;
+		if (devEnv === undefined) {
+			throw new Error("Expected the session to create a DevEnv");
+		}
+		return { devEnv, warn: vi.mocked(options.logger.warn) };
+	}
+
+	it("warns with the actionable message for an authentication failure on first use", async ({
+		expect,
+	}) => {
+		const { devEnv, warn } = await startLazySession();
+		const apiError = new APIError({
+			text: "A request to the Cloudflare API (/accounts/account/workers/subdomain/edge-preview) failed.",
+			telemetryMessage: "test api error",
+		});
+
+		devEnv.emit(
+			"error",
+			makeErrorEvent(new RemoteSessionAuthenticationError(apiError, "Wrangler"))
+		);
+
+		expect(warn).toHaveBeenCalledExactlyOnceWith(
+			expect.stringContaining(
+				"Could not connect remote bindings: This Worker uses bindings that need to run remotely, even when developing locally, but the remote session could not be authenticated."
+			)
+		);
+		expect(warn).not.toHaveBeenCalledWith(
+			expect.stringContaining(apiError.message)
+		);
+	});
+
+	it("warns with the event's reason and innermost message for other failures", async ({
+		expect,
+	}) => {
+		const { devEnv, warn } = await startLazySession();
+
+		devEnv.emit(
+			"error",
+			makeErrorEvent(new Error("outer", { cause: new Error("boom") }))
+		);
+
+		expect(warn).toHaveBeenCalledExactlyOnceWith(
+			"Could not connect remote bindings: Failed to start ProxyWorker: boom"
 		);
 	});
 });

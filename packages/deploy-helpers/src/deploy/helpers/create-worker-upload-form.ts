@@ -16,7 +16,7 @@ import type {
 	CfSendEmailBindings,
 	CfWorkerInit,
 	WorkerMetadata,
-	WorkerMetadataBinding,
+	WorkerUploadMetadataBinding,
 } from "@cloudflare/workers-utils";
 
 export const moduleTypeMimeType: {
@@ -114,7 +114,7 @@ export function createWorkerUploadForm(
 	}
 	let { modules } = worker;
 
-	const metadataBindings: WorkerMetadataBinding[] = [];
+	const metadataBindings: WorkerUploadMetadataBinding[] = [];
 
 	const plain_text = extractBindingsOfType("plain_text", bindings);
 	const json_bindings = extractBindingsOfType("json", bindings);
@@ -147,9 +147,11 @@ export function createWorkerUploadForm(
 		bindings
 	);
 	const flagship = extractBindingsOfType("flagship", bindings);
+	const realtimekit = extractBindingsOfType("realtimekit", bindings);
 	const ratelimits = extractBindingsOfType("ratelimit", bindings);
 	const vpc_services = extractBindingsOfType("vpc_service", bindings);
 	const vpc_networks = extractBindingsOfType("vpc_network", bindings);
+	const oidc_tokens = extractBindingsOfType("oidc_token", bindings);
 	const services = extractBindingsOfType("service", bindings);
 	const analytics_engine_datasets = extractBindingsOfType(
 		"analytics_engine",
@@ -341,7 +343,7 @@ export function createWorkerUploadForm(
 				metadataBindings.push({
 					name: binding,
 					type: "d1",
-					id: database_id,
+					database_id,
 					internalEnv: database_internal_env,
 					raw,
 				});
@@ -473,6 +475,10 @@ export function createWorkerUploadForm(
 		);
 	});
 
+	realtimekit.forEach(({ binding, app_id }) => {
+		metadataBindings.push({ name: binding, type: "realtimekit", app_id });
+	});
+
 	ratelimits.forEach(({ name, namespace_id, simple }) => {
 		metadataBindings.push({
 			name,
@@ -594,6 +600,15 @@ export function createWorkerUploadForm(
 		metadataBindings.push({
 			name: binding,
 			type: "worker_loader",
+		});
+	});
+
+	oidc_tokens.forEach(({ binding, audience, alg }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "oidc_token",
+			audience,
+			...(alg !== undefined && { alg }),
 		});
 	});
 
@@ -744,7 +759,7 @@ export function createWorkerUploadForm(
 				name: bindingName,
 				type: type.slice("unsafe_".length),
 				...data,
-			} as WorkerMetadataBinding);
+			} as WorkerUploadMetadataBinding);
 		}
 	}
 

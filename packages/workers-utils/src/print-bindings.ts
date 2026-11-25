@@ -97,6 +97,7 @@ export function printBindings(
 	const services = extractBindingsOfType("service", bindings);
 	const vpc_services = extractBindingsOfType("vpc_service", bindings);
 	const vpc_networks = extractBindingsOfType("vpc_network", bindings);
+	const oidc_tokens = extractBindingsOfType("oidc_token", bindings);
 	const analytics_engine_datasets = extractBindingsOfType(
 		"analytics_engine",
 		bindings
@@ -138,6 +139,7 @@ export function printBindings(
 		bindings
 	);
 	const flagship = extractBindingsOfType("flagship", bindings);
+	const realtimekit = extractBindingsOfType("realtimekit", bindings);
 	const media = extractBindingsOfType("media", bindings);
 	const worker_loaders = extractBindingsOfType("worker_loader", bindings);
 
@@ -410,6 +412,21 @@ export function printBindings(
 		);
 	}
 
+	if (oidc_tokens.length > 0) {
+		output.push(
+			...oidc_tokens.map(({ binding, audience, alg }) => {
+				return {
+					name: binding,
+					type: getBindingTypeFriendlyName("oidc_token"),
+					value: alg === undefined ? audience : `${audience}, ${alg}`,
+					// No local signer yet, and a remote proxy session would issue tokens
+					// for the proxy Worker's identity, not this one's.
+					mode: getMode(),
+				};
+			})
+		);
+	}
+
 	if (r2_buckets.length > 0) {
 		output.push(
 			...r2_buckets.map(({ binding, bucket_name, jurisdiction, remote }) => {
@@ -497,6 +514,22 @@ export function printBindings(
 					value: app_id,
 					mode: getMode({
 						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
+					}),
+				};
+			})
+		);
+	}
+
+	if (realtimekit.length > 0) {
+		output.push(
+			...realtimekit.map(({ binding, app_id, remote }) => {
+				return {
+					name: binding,
+					type: getBindingTypeFriendlyName("realtimekit"),
+					value: app_id,
+					mode: getMode({
+						isSimulatedLocally:
+							remote && !context.remoteBindingsDisabled ? false : undefined,
 					}),
 				};
 			})

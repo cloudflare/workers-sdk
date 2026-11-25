@@ -128,6 +128,12 @@ export const FlagshipBindingSchema = z.strictObject({
 	dev: RemoteBindingDevSchema.optional(),
 });
 
+export const RealtimeKitBindingSchema = z.strictObject({
+	type: z.literal("realtime-kit"),
+	id: z.string(),
+	dev: RemoteBindingDevSchema.optional(),
+});
+
 export const HyperdriveBindingSchema = z.strictObject({
 	type: z.literal("hyperdrive"),
 	id: z.string(),
@@ -183,6 +189,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		exportName: z.string(),
 	}),
 	FlagshipBindingSchema,
+	RealtimeKitBindingSchema,
 	HyperdriveBindingSchema,
 	z.strictObject({
 		type: z.literal("images"),
@@ -250,6 +257,16 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		type: z.literal("vpc-service"),
 		id: z.string(),
 		dev: RemoteBindingDevSchema.optional(),
+	}),
+	z.strictObject({
+		type: z.literal("oidc-token"),
+		// The same rule as Wrangler's validation and the API: printable ASCII, no whitespace.
+		audience: z
+			.string()
+			.min(1)
+			.max(2048)
+			.regex(/^[\x21-\x7e]+$/),
+		alg: z.enum(["ES256", "RS256"]).optional(),
 	}),
 	z
 		.strictObject({

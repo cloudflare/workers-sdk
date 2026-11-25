@@ -28,10 +28,12 @@ import type {
 	LogfwdrBinding,
 	MediaBinding,
 	MtlsCertificateBinding,
+	OidcTokenBinding,
 	PipelineBinding,
 	QueueBinding,
 	R2Binding,
 	RateLimitBinding,
+	RealtimeKitBinding,
 	SecretBinding,
 	SecretsStoreSecretBinding,
 	SendEmailBinding,
@@ -114,6 +116,7 @@ type Binding =
 	| DispatchNamespaceBinding
 	| DurableObjectBinding
 	| FlagshipBinding
+	| RealtimeKitBinding
 	| HyperdriveBinding
 	| ImagesBinding
 	| JsonBinding
@@ -122,6 +125,7 @@ type Binding =
 	| LogfwdrBinding
 	| MediaBinding
 	| MtlsCertificateBinding
+	| OidcTokenBinding
 	| PipelineBinding
 	| QueueBinding
 	| R2Binding

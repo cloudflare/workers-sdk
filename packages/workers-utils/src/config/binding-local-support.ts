@@ -42,6 +42,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	secrets_store_secret: "local-only",
 	ratelimit: "local-only",
 	worker_loader: "local-only",
+	oidc_token: "local-only",
 
 	kv_namespace: "local-and-remote",
 	r2_bucket: "local-and-remote",
@@ -63,6 +64,7 @@ const BINDING_LOCAL_SUPPORT: Record<
 	vectorize: "remote",
 	mtls_certificate: "remote",
 	dispatch_namespace: "remote",
+	realtimekit: "remote",
 
 	// Reach out to the @cloudflare/wrangler team before adding anything here
 	k2: "DO-NOT-USE-this-resource-will-never-have-a-local-simulator",

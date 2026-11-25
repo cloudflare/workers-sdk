@@ -29,6 +29,7 @@ import type {
 	CfExports,
 	CfDurableObjectMigrations,
 	CfFlagship,
+	CfRealtimeKit,
 	CfHelloWorld,
 	CfHyperdrive,
 	CfImagesBinding,
@@ -37,6 +38,7 @@ import type {
 	CfMediaBinding,
 	CfMTlsCertificate,
 	CfModule,
+	CfOidcToken,
 	CfPipeline,
 	CfK2Binding,
 	CfPlacement,
@@ -195,6 +197,11 @@ export type WorkerMetadataBinding =
 			app_id: string;
 	  }
 	| {
+			type: "realtimekit";
+			name: string;
+			app_id: string;
+	  }
+	| {
 			type: "ratelimit";
 			name: string;
 			namespace_id: string;
@@ -212,11 +219,23 @@ export type WorkerMetadataBinding =
 			name: string;
 	  }
 	| {
+			type: "oidc_token";
+			name: string;
+			audience: string;
+			alg?: "ES256" | "RS256";
+	  }
+	| {
 			type: "logfwdr";
 			name: string;
 			destination: string;
 	  }
 	| { type: "assets"; name: string };
+
+export type WorkerUploadMetadataBinding =
+	| Exclude<WorkerMetadataBinding, { type: "d1" }>
+	| (Omit<Extract<WorkerMetadataBinding, { type: "d1" }>, "id"> & {
+			database_id: string;
+	  });
 
 export type AssetConfigMetadata = {
 	html_handling?: AssetConfig["html_handling"];
@@ -285,7 +304,7 @@ type WorkerMetadataPut = {
 	code_update_strategy?: DurableObjectCodeUpdateStrategy;
 	exports?: CfExports;
 	capnp_schema?: string;
-	bindings: WorkerMetadataBinding[];
+	bindings: WorkerUploadMetadataBinding[];
 	keep_bindings?: (
 		| WorkerMetadataBinding["type"]
 		| "secret_text"
@@ -516,10 +535,12 @@ export type Binding =
 	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
 	| ({ type: "unsafe_hello_world" } & BindingOmit<CfHelloWorld>)
 	| ({ type: "flagship" } & BindingOmit<CfFlagship>)
+	| ({ type: "realtimekit" } & BindingOmit<CfRealtimeKit>)
 	| ({ type: "ratelimit" } & NameOmit<CfRateLimit>)
 	| ({ type: "worker_loader" } & BindingOmit<CfWorkerLoader>)
 	| ({ type: "vpc_service" } & BindingOmit<CfVpcService>)
 	| ({ type: "vpc_network" } & BindingOmit<CfVpcNetwork>)
+	| ({ type: "oidc_token" } & BindingOmit<CfOidcToken>)
 	| ({ type: "media" } & BindingOmit<CfMediaBinding>)
 	| ({ type: `unsafe_${string}` } & Omit<CfUnsafeBinding, "name" | "type">)
 	| { type: "assets" }

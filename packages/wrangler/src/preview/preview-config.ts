@@ -753,6 +753,19 @@ export function convertBinding(
 				],
 			};
 			break;
+		case "realtimekit":
+			if (binding.app_id === undefined) {
+				break;
+			}
+			config = {
+				realtimekit: [
+					{
+						binding: name,
+						app_id: usePlaceholderValue ? REPLACE_ME : binding.app_id,
+					},
+				],
+			};
+			break;
 		case "ratelimit":
 			if (binding.namespace_id === undefined || binding.simple === undefined) {
 				break;
@@ -784,6 +797,22 @@ export function convertBinding(
 			break;
 		case "worker_loader":
 			config = { worker_loaders: [{ binding: name }] };
+			break;
+		case "oidc_token":
+			if (binding.audience === undefined) {
+				break;
+			}
+			config = {
+				oidc_tokens: [
+					{
+						binding: name,
+						audience: usePlaceholderValue ? REPLACE_ME : binding.audience,
+						...((binding.alg === "ES256" || binding.alg === "RS256") && {
+							alg: binding.alg,
+						}),
+					},
+				],
+			};
 			break;
 		default:
 			break;

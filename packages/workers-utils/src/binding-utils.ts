@@ -324,6 +324,12 @@ export function convertConfigToBindings(
 				}
 				break;
 			}
+			case "realtimekit": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "realtimekit", ...x };
+				}
+				break;
+			}
 			case "ratelimits": {
 				for (const { name, ...x } of info) {
 					output[name] = { type: "ratelimit", ...x };
@@ -345,6 +351,12 @@ export function convertConfigToBindings(
 			case "vpc_networks": {
 				for (const { binding, ...x } of info) {
 					output[binding] = { type: "vpc_network", ...x };
+				}
+				break;
+			}
+			case "oidc_tokens": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "oidc_token", ...x };
 				}
 				break;
 			}

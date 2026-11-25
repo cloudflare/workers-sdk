@@ -108,8 +108,10 @@ interface BindingTypeMap<TBinding> {
 	logfwdr: any;
 	media: MediaBinding;
 	"mtls-certificate": Fetcher;
+	"oidc-token": OidcTokenBinding;
 	"rate-limit": RateLimit;
 	r2: R2Bucket;
+	"realtime-kit": RealtimeKitBinding;
 	secret: string;
 	"secrets-store-secret": SecretsStoreSecret;
 	"send-email": SendEmail;

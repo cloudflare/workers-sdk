@@ -83,6 +83,7 @@ const FIELD_CASES = {
 	name: "renamed-worker",
 	no_bundle: true,
 	observability: { enabled: true },
+	oidc_tokens: [{ binding: "API_TOKEN", audience: "https://api.example.com" }],
 	pages_build_output_dir: "dist",
 	pipelines: [{ binding: "PIPELINE", pipeline: "pipeline" }],
 	placement: { mode: "smart" },
@@ -98,6 +99,9 @@ const FIELD_CASES = {
 			namespace_id: "1",
 			simple: { limit: 100, period: 60 },
 		},
+	],
+	realtimekit: [
+		{ app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486", binding: "RTK" },
 	],
 	route: "example.com/*",
 	routes: [{ pattern: "api.example.com/*", zone_name: "example.com" }],

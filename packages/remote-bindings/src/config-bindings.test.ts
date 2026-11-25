@@ -19,6 +19,11 @@ describe("getRemoteBindings", () => {
 						id: "hyperdrive-id",
 						dev: { remote: true },
 					},
+					RTK: {
+						type: "realtime-kit",
+						id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+						dev: { remote: true },
+					},
 				},
 			})
 		).toEqual({
@@ -34,6 +39,11 @@ describe("getRemoteBindings", () => {
 			HYPERDRIVE: {
 				type: "hyperdrive",
 				id: "hyperdrive-id",
+				remote: true,
+			},
+			RTK: {
+				type: "realtimekit",
+				app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
 				remote: true,
 			},
 		});
