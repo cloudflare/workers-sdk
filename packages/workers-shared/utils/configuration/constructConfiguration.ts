@@ -143,13 +143,19 @@ export function constructHeaders({
 
 	const rules: MetadataHeaders = {};
 	for (const rule of headers.rules) {
-		const configuredRule: MetadataHeaders[string] = {};
+		// A path can appear in more than one block, and the headers of every
+		// block for that path should be applied, so merge them rather than
+		// letting a later block replace an earlier one.
+		const configuredRule: MetadataHeaders[string] = rules[rule.path] ?? {};
 
 		if (Object.keys(rule.headers).length) {
-			configuredRule.set = rule.headers;
+			configuredRule.set = { ...configuredRule.set, ...rule.headers };
 		}
 		if (rule.unsetHeaders.length) {
-			configuredRule.unset = rule.unsetHeaders;
+			configuredRule.unset = [
+				...(configuredRule.unset ?? []),
+				...rule.unsetHeaders,
+			];
 		}
 
 		rules[rule.path] = configuredRule;
