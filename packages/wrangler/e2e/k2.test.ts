@@ -4,10 +4,15 @@ import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
-import { getCloudflareApiBaseUrl } from "@cloudflare/workers-utils";
-import Cloudflare from "cloudflare";
-import { fetch } from "undici";
+import { fetchResultBase, retryOnAPIFailure } from "@cloudflare/workers-utils";
+import {
+	fetch,
+	getGlobalDispatcher,
+	MockAgent,
+	setGlobalDispatcher,
+} from "undici";
 import { describe, it, onTestFinished, vi } from "vitest";
+import { logger } from "../src/logger";
 import { quote } from "../src/utils/shell-quote";
 import {
 	CLOUDFLARE_ACCOUNT_ID,
@@ -222,19 +227,53 @@ describe("K2 producer configuration", () => {
 
 type Stream = K2Stream & { endpoint: string };
 
-/** Creates an isolated stream through the CLI and registers API cleanup. */
-async function createStream(helper: WranglerE2ETestHelper) {
-	assert(
-		process.env.CLOUDFLARE_API_TOKEN,
-		"CLOUDFLARE_API_TOKEN is required for live K2 E2E tests"
-	);
-	const client = new Cloudflare({
-		apiToken: process.env.CLOUDFLARE_API_TOKEN,
-		baseURL: getCloudflareApiBaseUrl({}),
-		maxRetries: 0,
-	});
-	const collection = `/accounts/${CLOUDFLARE_ACCOUNT_ID}/k2/streams`;
+/** Registers cleanup before creating a stream, in case the CLI fails after creating it. */
+async function createStream(
+	helper: WranglerE2ETestHelper,
+	accountId = CLOUDFLARE_ACCOUNT_ID
+) {
+	const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+	assert(apiToken, "CLOUDFLARE_API_TOKEN is required for live K2 E2E tests");
+	const collection = `/accounts/${accountId}/k2/streams`;
 	const name = generateResourceName("k2").replaceAll("-", "_");
+	let createdStreamId: string | undefined;
+	helper.onTeardown(async () => {
+		const signal = AbortSignal.timeout(20_000);
+		await retryOnAPIFailure(
+			async () => {
+				if (createdStreamId === undefined) {
+					const streams = await fetchResultBase<K2Stream[]>(
+						{},
+						collection,
+						{},
+						"wrangler-e2e",
+						logger,
+						new URLSearchParams({ name }),
+						signal,
+						{ apiToken }
+					);
+					createdStreamId = streams.find((stream) => stream.name === name)?.id;
+				}
+				if (createdStreamId) {
+					await fetchResultBase(
+						{},
+						`${collection}/${encodeURIComponent(createdStreamId)}`,
+						{ method: "DELETE" },
+						"wrangler-e2e",
+						logger,
+						undefined,
+						signal,
+						{ apiToken }
+					);
+				}
+			},
+			logger,
+			0,
+			3,
+			signal
+		);
+	}, 30_000);
+
 	const created = await helper.run(
 		`wrangler k2 streams create ${name} --http-enabled --retention-seconds 3600 --json`
 	);
@@ -247,19 +286,111 @@ async function createStream(helper: WranglerE2ETestHelper) {
 			stream.endpoint,
 		"K2 stream creation failed"
 	);
-	helper.onTeardown(async () => {
-		try {
-			await client.delete(`${collection}/${encodeURIComponent(stream.id)}`, {
-				timeout: 20_000,
-			});
-		} catch (error) {
-			if (!(error instanceof Cloudflare.NotFoundError)) {
-				throw error;
-			}
-		}
-	}, 30_000);
+	createdStreamId = stream.id;
 	return stream;
 }
+
+describe("K2 E2E stream cleanup", () => {
+	const accountId = "a".repeat(32);
+	const collection = `/client/v4/accounts/${accountId}/k2/streams`;
+	const deleteRequest = { method: "DELETE", path: `${collection}/${streamId}` };
+
+	function mockCleanupApi() {
+		const origin = "https://k2-e2e.example.invalid";
+		const dispatcher = getGlobalDispatcher();
+		const agent = new MockAgent();
+		agent.disableNetConnect();
+		setGlobalDispatcher(agent);
+		vi.stubEnv("CLOUDFLARE_API_BASE_URL", `${origin}/client/v4`);
+		vi.stubEnv("CLOUDFLARE_API_TOKEN", "k2-test-token");
+		onTestFinished(async () => {
+			setGlobalDispatcher(dispatcher);
+			vi.unstubAllEnvs();
+			await agent.close();
+		});
+		onTestFinished(() => agent.assertNoPendingInterceptors());
+		return agent.get(origin);
+	}
+
+	function mockCreateCommand(
+		helper: WranglerE2ETestHelper,
+		getStdout: (name: string) => string
+	) {
+		vi.spyOn(helper, "run").mockImplementation(async (command) => {
+			const name = command.split(" ")[4];
+			assert(name);
+			const stdout = getStdout(name);
+			return { status: 0, stdout, stderr: "", output: stdout };
+		});
+	}
+
+	function streamJson(name: string) {
+		return JSON.stringify({
+			id: streamId,
+			name,
+			endpoint: "https://stream.example",
+		});
+	}
+
+	it("deletes the created stream on teardown, retrying transient failures", async ({
+		expect,
+	}) => {
+		const api = mockCleanupApi();
+		api.intercept(deleteRequest).reply(503, { success: false });
+		api.intercept(deleteRequest).reply(200, { success: true, result: {} });
+		const helper = new WranglerE2ETestHelper();
+		mockCreateCommand(helper, streamJson);
+
+		expect(await createStream(helper, accountId)).toMatchObject({
+			id: streamId,
+		});
+	});
+
+	it("deletes only the exact stream when the create output cannot be parsed", async ({
+		expect,
+	}) => {
+		const api = mockCleanupApi();
+		const helper = new WranglerE2ETestHelper();
+		mockCreateCommand(helper, (name) => {
+			api
+				.intercept({ method: "GET", path: `${collection}?name=${name}` })
+				.reply(200, {
+					success: true,
+					result: [
+						{ id: "different-stream", name: `${name}_other` },
+						{ id: streamId, name },
+					],
+				});
+			api.intercept(deleteRequest).reply(200, { success: true, result: {} });
+			return "not JSON";
+		});
+
+		await expect(createStream(helper, accountId)).rejects.toBeInstanceOf(
+			SyntaxError
+		);
+	});
+
+	it("reports an API-declared deletion failure even with HTTP 200", async ({
+		expect,
+	}) => {
+		const api = mockCleanupApi();
+		api.intercept(deleteRequest).reply(200, {
+			success: false,
+			errors: [{ code: 1000, message: "Unable to delete stream" }],
+		});
+		const helper = new WranglerE2ETestHelper((cleanup, timeout) => {
+			onTestFinished(async () => {
+				await expect(cleanup()).rejects.toMatchObject({
+					status: 200,
+					code: 1000,
+				});
+			}, timeout);
+		});
+		mockCreateCommand(helper, streamJson);
+
+		await createStream(helper, accountId);
+	});
+});
 
 /** Add Access credentials only to the Worker URL for this E2E account. */
 function workerAccessHeaders(workerName: string, url: string) {
