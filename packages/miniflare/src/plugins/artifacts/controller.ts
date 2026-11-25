@@ -63,8 +63,9 @@ export class ArtifactsController {
 
 	/**
 	 * Stops forwarding Git connections, until the next `commitUpdate()`. Call it
-	 * before workerd stops, or once it has crashed: another process could take
-	 * the port its Git socket had, and be sent the next request's token.
+	 * before anything stops workerd, or once it has crashed: another process
+	 * could take the port its Git socket had, and be sent the next request's
+	 * token.
 	 */
 	detachRuntime(): void {
 		for (const relay of this.#relays) {

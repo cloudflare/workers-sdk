@@ -2794,6 +2794,7 @@ export class Miniflare {
 		if (containerSession.ended !== undefined) {
 			// Names include the session, so the ended session's resources can be
 			// removed while the next workerd starts.
+			this.#artifactsController.detachRuntime();
 			await runtime.dispose();
 			this.#endContainerSession(containerSession.ended);
 		}
@@ -2820,7 +2821,8 @@ export class Miniflare {
 				: undefined,
 			() => {
 				// The new workerd's Git sockets get new ports, and the old ones are
-				// released as it stops. Detach only once the old one is sure to stop.
+				// released as it stops. Detach only once the old one is sure to stop:
+				// every other path that stops workerd detaches before it, too.
 				this.#artifactsController.detachRuntime();
 				return runtime.updateConfig(
 					configBuffer,
@@ -3964,6 +3966,8 @@ export class Miniflare {
 		// cleanup so those hooks cannot delay or skip the termination request.
 		let runtimeDisposePromise: Promise<void>;
 		try {
+			// The Git listeners close only after other cleanup below.
+			this.#artifactsController.detachRuntime();
 			runtimeDisposePromise = Promise.resolve(this.#runtime?.dispose());
 		} catch (error) {
 			runtimeDisposePromise = Promise.reject(error);
