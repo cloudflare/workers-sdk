@@ -1,5 +1,8 @@
 import assert from "node:assert";
-import { resolveBindingRemote } from "@cloudflare/workers-utils/config";
+import {
+	getBindingLocalSupport,
+	resolveBindingRemote,
+} from "@cloudflare/workers-utils/config";
 import { getRemoteBindingsAuthHook } from "./auth";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
 import type { RemoteBindingsLogger } from "./logger";
@@ -42,6 +45,8 @@ export type RemoteProxySessionData = {
 	session: RemoteProxySession;
 	remoteBindings: Record<string, Binding>;
 	auth?: AsyncHook<CfAccount>;
+	/** Whether this session establishes its remote connection on the first call. */
+	lazy?: boolean;
 };
 
 export type RemoteBindingsContext = {
@@ -64,10 +69,13 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	) {
 		return null;
 	}
-	const authSameAsBefore = deepStrictEqual(
-		auth,
-		preExistingRemoteProxySessionData?.auth
-	);
+	const lazy =
+		Object.keys(remoteBindings).length === 0
+			? (preExistingRemoteProxySessionData?.lazy ?? false)
+			: Object.values(remoteBindings).every(isRemoteOnlyBinding);
+	const authSameAsBefore =
+		deepStrictEqual(auth, preExistingRemoteProxySessionData?.auth) &&
+		lazy === (preExistingRemoteProxySessionData?.lazy ?? false);
 	let remoteProxySession = preExistingRemoteProxySessionData?.session;
 
 	if (!authSameAsBefore) {
@@ -85,6 +93,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 				workerConfigObject.profileDir,
 				context.logger
 			),
+			lazy,
 			logger: context.logger,
 		});
 	} else {
@@ -106,6 +115,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 							workerConfigObject.profileDir,
 							context.logger
 						),
+						lazy,
 						logger: context.logger,
 					});
 				}
@@ -123,7 +133,16 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		session: remoteProxySession,
 		remoteBindings,
 		auth,
+		lazy,
 	};
+}
+
+function isRemoteOnlyBinding(binding: Binding): boolean {
+	const support = getBindingLocalSupport(binding.type);
+	return (
+		support === "remote" ||
+		support === "DO-NOT-USE-this-resource-will-never-have-a-local-simulator"
+	);
 }
 
 function deepStrictEqual(source: unknown, target: unknown): boolean {
