@@ -338,6 +338,38 @@ describe("createTestHarness", () => {
 		});
 	});
 
+	it("reads secrets from the files without a mode when the build records none", async ({
+		expect,
+	}) => {
+		await writeBuild({
+			projectDir: "app",
+			workers: {
+				default: {
+					config: { name: "app", env: { TOKEN: { type: "secret" } } },
+					script: `export default {
+						fetch(request, env) {
+							return new Response(env.TOKEN);
+						},
+					};`,
+				},
+			},
+		});
+		// As `wrangler build` writes it without `--mode`
+		await writeRootConfig({
+			root: "app",
+			buildContext: { isPreview: false, mode: undefined },
+		});
+		await seed({
+			"app/.dev.vars.production": "TOKEN=production",
+			"app/.dev.vars": "TOKEN=default",
+		});
+		const harness = createTestHarness({ workers: [{ projectDir: "app" }] });
+		onTestFinished(harness.close);
+
+		await harness.listen();
+		expect(await (await harness.fetch("/")).text()).toBe("default");
+	});
+
 	it("runs Workers from several builds, each with its project's secrets, picking non-default ones by name", async ({
 		expect,
 	}) => {

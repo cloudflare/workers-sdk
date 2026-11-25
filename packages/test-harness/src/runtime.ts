@@ -161,8 +161,9 @@ async function resolveWorker(
 	const settings = buildOutput.rootConfig.settings ?? {};
 	const testBindings = input.envOverrides;
 
-	// Secrets come from the files for the build's mode, as in `vite preview`
-	const mode = buildOutput.rootConfig.buildContext.mode ?? "production";
+	// Secrets come from the files for the build's mode. As in cf, a build that
+	// records no mode has none, so only the files read in every mode apply.
+	const mode = buildOutput.rootConfig.buildContext.mode;
 	const [localEnv, devVars] = await Promise.all([
 		loadEnv(projectDir, mode),
 		loadDevVars(projectDir, mode),
