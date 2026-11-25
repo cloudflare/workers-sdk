@@ -179,13 +179,13 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				"This is a response from Workers AI."
 			);
 
-			// This should only include logs from the user Wrangler session (i.e. a single list of attached bindings, and only one ready message)
+			// This should only include logs from the user Wrangler session (i.e. a single list of attached bindings, and only one ready message).
+			// AI is a remote-only binding, so its remote session connects lazily on the first call without logging "Establishing remote connection...".
 			await waitFor(() =>
 				expect(normalizeOutput(worker.currentOutput)).toEqual(dedent`
 					Your Worker has access to the following bindings:
 					Binding        Resource      Mode
 					env.AI         AI            remote
-					⎔ Establishing remote connection...
 					▲ [WARNING] AI bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.
 					⎔ Starting local server...
 					[wrangler:info] Ready on http://<HOST>:<PORT>
