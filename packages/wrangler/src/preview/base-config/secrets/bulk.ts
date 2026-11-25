@@ -7,7 +7,7 @@ import { logger } from "../../../logger";
 import { parseBulkInputToObject } from "../../../secret";
 import { requireAuth } from "../../../user";
 import { toSecretBindingsPatch } from "../../secrets";
-import { rejectUnsupportedPreviewArgs } from ".";
+import { rejectUnsupportedPreviewArgs, shouldPatchExistingPreviews } from ".";
 
 export const previewBaseConfigSecretBulkCommand = createCommand({
 	metadata: {
@@ -27,6 +27,10 @@ export const previewBaseConfigSecretBulkCommand = createCommand({
 				"Name of the Worker to target (defaults to the name in your local config file)",
 			type: "string",
 			requiresArg: true,
+		},
+		"patch-existing-previews": {
+			describe: "Apply the base config update to existing Previews",
+			type: "boolean",
 		},
 	},
 	behaviour: {
@@ -56,9 +60,15 @@ export const previewBaseConfigSecretBulkCommand = createCommand({
 			(name) => content[name] === null
 		);
 
-		await patchPreviewBaseConfig(config, accountId, workerName, {
-			env: toSecretBindingsPatch(content),
-		});
+		await patchPreviewBaseConfig(
+			config,
+			accountId,
+			workerName,
+			{
+				env: toSecretBindingsPatch(content),
+			},
+			await shouldPatchExistingPreviews(args.patchExistingPreviews)
+		);
 
 		for (const name of deleted) {
 			logger.log(`💥 Successfully deleted secret for key: ${name}`);

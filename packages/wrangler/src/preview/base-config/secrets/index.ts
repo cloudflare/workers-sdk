@@ -1,5 +1,6 @@
 import { CommandLineArgsError } from "@cloudflare/workers-utils";
 import { createNamespace } from "../../../core/create-command";
+import { confirm } from "../../../dialogs";
 
 export const previewBaseConfigSecretNamespace = createNamespace({
 	metadata: {
@@ -23,4 +24,19 @@ export function rejectUnsupportedPreviewArgs(args: Record<string, unknown>) {
 			telemetryMessage: "preview base-config unsupported flag",
 		});
 	}
+}
+
+export async function shouldPatchExistingPreviews(
+	patchExistingPreviews: boolean | undefined,
+	skipPrompt = false
+) {
+	return (
+		patchExistingPreviews ??
+		(!skipPrompt && process.stdin.isTTY
+			? await confirm("Apply this update to existing Previews?", {
+					defaultValue: false,
+					fallbackValue: false,
+				})
+			: false)
+	);
 }
