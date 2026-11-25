@@ -1,4 +1,5 @@
 import path from "node:path";
+import { mockConsoleMethods } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
 import { afterEach, assert, beforeEach, describe, test, vi } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
@@ -8,25 +9,24 @@ import {
 } from "./helpers/e2e-wrangler-test";
 import { waitForLong } from "./helpers/wait-for";
 import type { Worker } from "../src/api/startDevWorker";
-import type { ExpectStatic, MockInstance } from "vitest";
+import type { ExpectStatic } from "vitest";
 
 const { unstable_startWorker: startWorker } = await importWrangler();
+
+// AI is a remote-only binding, so its remote session only connects on the first
+// binding call. A failed authentication fails that call and is logged as this
+// warning, rather than emitted as an error on the worker.
+const AUTH_WARNING =
+	"Could not connect remote bindings: This Worker uses bindings that need to run remotely, even when developing locally, but the remote session could not be authenticated.";
 
 describe("startWorker - auth options", { concurrent: false }, () => {
 	let worker: Worker | undefined;
 	describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("with remote bindings", () => {
 		let helper: WranglerE2ETestHelper;
 
-		let consoleErrorMock: MockInstance<typeof console.error>;
-		let consoleWarnMock: MockInstance<typeof console.warn>;
+		const std = mockConsoleMethods();
 
 		beforeEach(async () => {
-			consoleErrorMock = vi.spyOn(console, "error").mockImplementation(() => {
-				// suppress error output during tests
-			});
-			// Record warnings without suppressing them, so they still appear in the test output
-			consoleWarnMock = vi.spyOn(console, "warn");
-
 			helper = new WranglerE2ETestHelper();
 			const aiWorkerScript = dedent`
 			export default {
@@ -52,10 +52,7 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 			});
 		});
 
-		afterEach(() => {
-			consoleWarnMock.mockRestore();
-			return worker?.dispose();
-		});
+		afterEach(() => worker?.dispose());
 
 		test("starting a worker with startWorker with the valid auth information and updating it with invalid information", async ({
 			expect,
@@ -91,8 +88,6 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 			await assertValidWorkerAiResponse(expect);
 
 			expect(validAuth).toHaveBeenCalled();
-
-			consoleWarnMock.mockClear();
 
 			const incorrectAuth = vi.fn(() => {
 				return {
@@ -147,8 +142,6 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 
 			expect(incorrectAuth).toHaveBeenCalled();
 
-			consoleErrorMock.mockReset();
-
 			const validAuth = vi.fn(() => {
 				assert(process.env.CLOUDFLARE_API_TOKEN);
 
@@ -165,6 +158,9 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 					auth: validAuth,
 				},
 			});
+			// Requests now wait for the reload, which disposes the failed remote
+			// session (stopping its error reports) before starting the new one.
+			vi.mocked(console.warn).mockClear();
 
 			await assertValidWorkerAiResponse(expect);
 
@@ -179,6 +175,9 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 			// a valid response from the worker
 			expect(responseText).toBeTruthy();
 			expect(responseText).toContain("This is a response from Workers AI.");
+
+			// And the remote session authenticated without logging an auth warning
+			expect(std.warn).not.toContain(AUTH_WARNING);
 		}
 
 		async function assertAuthErrorForWorkerAiResponse(expect: ExpectStatic) {
@@ -189,17 +188,8 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 			// get a response from the worker
 			expect(responseText).toBe(null);
 
-			// AI is a remote-only binding, so its remote session only connects on
-			// the first binding call. A failed authentication fails that call and is
-			// logged as a warning, rather than emitted as an error on the worker.
-			const authWarnings = consoleWarnMock.mock.calls.filter((args) =>
-				args.some((arg) =>
-					String(arg).includes(
-						"Could not connect remote bindings: This Worker uses bindings that need to run remotely, even when developing locally, but the remote session could not be authenticated."
-					)
-				)
-			);
-			expect(authWarnings.length).toBeGreaterThan(0);
+			// And the authentication failure was logged as a warning
+			expect(std.warn).toContain(AUTH_WARNING);
 		}
 	});
 
