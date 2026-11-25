@@ -13,8 +13,12 @@ export interface ResolveLocalBindingsOptions {
 	 * provided.
 	 */
 	devVars?: Record<string, string>;
-	/** The mode, used to name mode-specific files in the missing secrets warning. */
-	mode: string;
+	/**
+	 * The mode, used to name mode-specific files in the missing secrets warning.
+	 * When it's `undefined`, the warning names only the files that are read in
+	 * every mode.
+	 */
+	mode: string | undefined;
 	/** Whether remote binding sessions are enabled. Defaults to `true`. */
 	remoteBindings?: boolean;
 	/** Receives the warning about declared secrets without a local value. */
@@ -75,10 +79,13 @@ export function resolveLocalBindings(
 	}
 
 	if (missingSecrets.length > 0) {
+		const devVarsForMode = mode === undefined ? "" : `\`.dev.vars.${mode}\`, `;
+		const envForMode =
+			mode === undefined ? "" : `\`.env.${mode}.local\`, \`.env.${mode}\`, `;
 		options.logger.warn(
 			`Missing required secrets for Worker "${options.workerName}": ${missingSecrets.join(", ")}. ` +
-				`Add them to one of \`.dev.vars.${mode}\`, \`.dev.vars\`, ` +
-				`\`.env.${mode}.local\`, \`.env.${mode}\`, \`.env.local\`, or \`.env\`. ` +
+				`Add them to one of ${devVarsForMode}\`.dev.vars\`, ` +
+				`${envForMode}\`.env.local\`, or \`.env\`. ` +
 				"Alternatively, set them as environment variables."
 		);
 	}

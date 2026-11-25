@@ -48,6 +48,17 @@ describe("resolveLocalBindings", () => {
 		);
 	});
 
+	test("names only the files read in every mode when there is no mode", ({
+		expect,
+	}) => {
+		const resolveOptions = options({ mode: undefined });
+
+		resolveLocalBindings({ MISSING: env.MISSING }, resolveOptions);
+		expect(resolveOptions.logger.warn).toHaveBeenCalledWith(
+			'Missing required secrets for Worker "worker": MISSING. Add them to one of `.dev.vars`, `.env.local`, or `.env`. Alternatively, set them as environment variables.'
+		);
+	});
+
 	test("requires a local Hyperdrive connection string", ({ expect }) => {
 		expect(() =>
 			resolveLocalBindings({ HYPERDRIVE: env.HYPERDRIVE }, options())
