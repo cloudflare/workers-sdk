@@ -413,6 +413,53 @@ describe("runAutoConfig()", () => {
 		});
 	});
 
+	it("merges into an existing cloudflare.config.ts instead of replacing it", async ({
+		expect,
+	}) => {
+		const migratedConfig = `import { bindings, defineConfig } from "cf/config";
+
+export default defineConfig({
+	worker: {
+		name: "migrated-worker",
+		compatibilityDate: "2026-07-01",
+		env: {
+			KV: bindings.kv({ id: "abc" }),
+		},
+	},
+});
+`;
+		await seed({
+			"cloudflare.config.ts": migratedConfig,
+			"dist/index.html": "<h1>Hello World</h1>",
+		});
+
+		await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "my-vite-app",
+				framework: new ViteBuildToolFramework({
+					id: "static",
+					name: "Static",
+				}),
+				outputDir: "dist",
+				packageManager: NpmPackageManager,
+			},
+			{
+				context: createMockContext(),
+				skipConfirmations: true,
+				runBuild: false,
+			}
+		);
+
+		const config = readFileSync("cloudflare.config.ts", "utf8");
+		expect(config).toContain('name: "migrated-worker"');
+		expect(config).toContain('compatibilityDate: "2026-07-01"');
+		expect(config).toContain('KV: bindings.kv({ id: "abc" })');
+		expect(config).toContain('entrypoint: "src/index.ts"');
+		expect(std.out).toContain("📄 Update cloudflare.config.ts:");
+	});
+
 	it("installs cf and Wrangler for cf projects", async ({ expect }) => {
 		const installPackages = vi
 			.spyOn(cliPackages, "installPackages")

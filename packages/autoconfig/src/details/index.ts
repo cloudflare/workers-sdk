@@ -15,7 +15,10 @@ import {
 	AutoConfigDetectionError,
 	AutoConfigFrameworkConfigurationError,
 } from "../errors";
-import { getFrameworkClassInstance } from "../frameworks";
+import {
+	getFrameworkClassInstance,
+	requiresFrameworkSetup,
+} from "../frameworks";
 import {
 	getAllFrameworksInfos,
 	staticFramework,
@@ -144,8 +147,9 @@ function normalizeOutputDir(projectPath: string, outputDir: string): string {
  * Detects project details needed for autoconfig: framework, package manager,
  * output directory, worker name, commands, and whether the project is already configured.
  * By default, the project is considered configured when `cloudflare.config.ts`
- * exists. Passing `target: "wrangler"` opts into Wrangler configuration
- * detection instead.
+ * exists and, for frameworks that autoconfig sets up for cf, the framework is set
+ * up, for example with the Cloudflare Vite plugin. Passing `target: "wrangler"`
+ * opts into Wrangler configuration detection instead.
  *
  * For the cf target, build and dev commands may use bare framework executables.
  * Callers must resolve these from `nodeModulesPaths`, which includes the
@@ -245,8 +249,11 @@ export async function getDetailsForAutoConfig({
 		target
 	);
 	const configured =
-		hasCloudflareConfig ||
-		detectedFrameworkInstance.isConfigured(projectPath, { target });
+		target === "cf"
+			? hasCloudflareConfig &&
+				(!requiresFrameworkSetup(detectedFramework.framework.id) ||
+					detectedFrameworkInstance.isConfigured(projectPath, { target }))
+			: detectedFrameworkInstance.isConfigured(projectPath, { target });
 	const useStaticAssets =
 		!configured &&
 		requestedOutputDir !== undefined &&

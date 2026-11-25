@@ -140,6 +140,13 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 	}) => {
 		await seed({
 			"cloudflare.config.ts": "export default {};",
+			"astro.config.mjs": `import cloudflare from "@astrojs/cloudflare";
+import { defineConfig } from "astro/config";
+export default defineConfig({ adapter: cloudflare() });`,
+			"node_modules/@astrojs/cloudflare/package.json": JSON.stringify({
+				name: "@astrojs/cloudflare",
+				version: "15.0.0-beta.6",
+			}),
 			"package.json": JSON.stringify({
 				scripts: { build: "astro build", dev: "cf dev" },
 				dependencies: { astro: "5" },
@@ -155,6 +162,29 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			buildCommand: "astro build",
 			devCommand: "astro dev",
 			packageManager: { type: "npm" },
+		});
+	});
+
+	it("should not treat a cloudflare.config.ts as configured until the framework is set up", async ({
+		expect,
+	}) => {
+		await seed({
+			"cloudflare.config.ts": "export default {};",
+			"astro.config.mjs": `import { defineConfig } from "astro/config";
+export default defineConfig({ output: "static" });`,
+			"package.json": JSON.stringify({
+				scripts: { build: "astro build" },
+				dependencies: { astro: "7" },
+			}),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).resolves.toMatchObject({
+			configured: false,
+			framework: { id: "astro" },
+			outputDir: "dist",
 		});
 	});
 
