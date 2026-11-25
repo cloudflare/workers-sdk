@@ -171,6 +171,38 @@ test("serves files from assets directory", async ({ expect }) => {
 	expect(await res.text()).toBe("hello from asset");
 });
 
+test("skips traversing directories excluded by .assetsignore", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const ignored = path.join(tmp, "node_modules");
+	const included = path.join(tmp, "public");
+	await fs.writeFile(path.join(tmp, ".assetsignore"), "/node_modules/\n");
+	await fs.mkdir(ignored);
+	await fs.mkdir(included);
+	await fs.writeFile(path.join(ignored, "test.txt"), "ignored asset");
+	await fs.writeFile(path.join(included, "test.txt"), "included asset");
+
+	const readDirectory = vi.spyOn(fs, "readdir");
+	const mf = new Miniflare(makeOptions(tmp));
+	useDispose(mf);
+	try {
+		const response = await mf.dispatchFetch(
+			"http://example.com/public/test.txt"
+		);
+		expect(await response.text()).toBe("included asset");
+		const missing = await mf.dispatchFetch(
+			"http://example.com/node_modules/test.txt"
+		);
+		await missing.arrayBuffer();
+		expect(missing.status).toBe(404);
+		expect(readDirectory).toHaveBeenCalledWith(included);
+		expect(readDirectory).not.toHaveBeenCalledWith(ignored);
+	} finally {
+		readDirectory.mockRestore();
+	}
+});
+
 test("reports an invalid .assetsignore encoding as a user validation error", async ({
 	expect,
 	onTestFinished,

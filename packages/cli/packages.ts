@@ -158,18 +158,24 @@ function getWorkspaceInstallRootFlag(
 
 /**
  *  Installs the latest version of wrangler in the project directory if it isn't already.
+ *
+ * @param packageManager - The package manager to use for installation
+ * @param isWorkspaceRoot - Whether the project is the root of a workspace
+ * @param cwd - The project directory, defaults to the current working directory
  */
 export async function installWrangler(
 	packageManager: "npm" | "pnpm" | "yarn" | "bun" | "nub",
-	isWorkspaceRoot: boolean
+	isWorkspaceRoot: boolean,
+	cwd = process.cwd()
 ) {
 	const packages = [`wrangler@latest`] satisfies string[];
-	if (hasDependency("@cloudflare/workers-types")) {
+	if (hasDependency("@cloudflare/workers-types", cwd)) {
 		packages.push("@cloudflare/workers-types@latest");
 	}
 
 	// Even if Wrangler is already installed, make sure we install the latest version, as some framework CLIs are pinned to an older version
 	await installPackages(packageManager, packages, {
+		cwd,
 		dev: true,
 		isWorkspaceRoot,
 		startText: `Installing wrangler ${dim(
@@ -181,8 +187,8 @@ export async function installWrangler(
 	});
 }
 
-function hasDependency(packageName: string): boolean {
-	const pkgJsonPath = path.join(process.cwd(), "package.json");
+function hasDependency(packageName: string, projectPath: string): boolean {
+	const pkgJsonPath = path.join(projectPath, "package.json");
 	if (!existsSync(pkgJsonPath)) {
 		return false;
 	}

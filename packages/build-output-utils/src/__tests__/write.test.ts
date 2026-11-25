@@ -372,6 +372,54 @@ describe("writeAssets", () => {
 		expect(fs.existsSync(path.join(assetsDir, ".cloudflare"))).toBe(false);
 	});
 
+	it.for([".", "public"])(
+		"skips ignored assets and keeps metadata in %s",
+		async (directory, { expect }) => {
+			const root = process.cwd();
+			const sourceDirectory = path.resolve(root, directory);
+			const ignore =
+				"/node_modules/\n*.txt\n!keep.txt\n/_headers\n/_redirects\n";
+			fs.mkdirSync(path.join(sourceDirectory, "node_modules"), {
+				recursive: true,
+			});
+			fs.mkdirSync(path.join(sourceDirectory, "public-files"));
+			fs.writeFileSync(path.join(sourceDirectory, ".assetsignore"), ignore);
+			fs.writeFileSync(
+				path.join(sourceDirectory, "_headers"),
+				"/*\n  X-Test: yes\n"
+			);
+			fs.writeFileSync(
+				path.join(sourceDirectory, "_redirects"),
+				"/old /new 301\n"
+			);
+			fs.writeFileSync(
+				path.join(sourceDirectory, "node_modules/package.json"),
+				"{}"
+			);
+			fs.writeFileSync(
+				path.join(sourceDirectory, "public-files/drop.txt"),
+				"excluded"
+			);
+			fs.writeFileSync(
+				path.join(sourceDirectory, "public-files/keep.txt"),
+				"included"
+			);
+
+			await writeAssets({ root, sourceDirectory });
+
+			const assetsDir = getWorkerAssetsDir(root);
+			expect(fs.existsSync(path.join(assetsDir, "node_modules"))).toBe(false);
+			expect(fs.existsSync(path.join(assetsDir, "_headers"))).toBe(true);
+			expect(fs.existsSync(path.join(assetsDir, "_redirects"))).toBe(true);
+			expect(
+				fs.readFileSync(path.join(assetsDir, ".assetsignore"), "utf8")
+			).toBe(ignore);
+			expect(fs.readdirSync(path.join(assetsDir, "public-files"))).toEqual([
+				"keep.txt",
+			]);
+		}
+	);
+
 	it("preserves files already generated in the build output", async ({
 		expect,
 	}) => {

@@ -125,6 +125,7 @@ export class Astro extends Framework {
 		return {
 			// `astro add` owns the Cloudflare configuration.
 			workerConfig: null,
+			createsCloudflareConfig: true,
 		};
 	}
 

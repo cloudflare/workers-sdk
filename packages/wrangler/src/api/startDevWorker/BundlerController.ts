@@ -566,16 +566,19 @@ export class BundlerController extends Controller {
 
 		if (config.dev.watch !== false && config.assets?.directory) {
 			const assetsDir = path.resolve(config.assets.directory);
+			const ignoredDirs = getDevSessionWriteDirs(config).filter(
+				(dir) => path.resolve(dir) !== assetsDir
+			);
+			if (assetsDir === path.resolve(config.projectRoot)) {
+				ignoredDirs.push(
+					path.join(assetsDir, "node_modules"),
+					path.join(assetsDir, ".cloudflare")
+				);
+			}
 			const watcher = watch(assetsDir, {
 				persistent: true,
 				ignoreInitial: true,
-				// Chokidar does not walk an ignored directory, so writes under
-				// `.wrangler` and `dev.persist` do not reload. Drop a write directory
-				// only when it is the assets directory, or the watcher would ignore
-				// the tree it was created to watch.
-				ignored: getDevSessionWriteDirs(config).filter(
-					(dir) => path.resolve(dir) !== assetsDir
-				),
+				ignored: ignoredDirs,
 			})
 				.on("all", async (eventName, filePath) => {
 					const message = getAssetChangeMessage(eventName, filePath);

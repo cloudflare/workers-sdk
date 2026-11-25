@@ -265,7 +265,9 @@ describe("BundlerController — assets watcher", () => {
 		}
 	);
 
-	test("ignores the dev session write directories", async ({ expect }) => {
+	test("ignores dependencies and generated directories when watching the project root", async ({
+		expect,
+	}) => {
 		const watchers = mockWatchers(expect);
 
 		const projectRoot = path.resolve(".");
@@ -280,6 +282,8 @@ describe("BundlerController — assets watcher", () => {
 		expect(watchers.ignoredDirs(0)).toEqual([
 			path.join(projectRoot, ".wrangler"),
 			path.join(projectRoot, ".wrangler/state"),
+			path.join(projectRoot, "node_modules"),
+			path.join(projectRoot, ".cloudflare"),
 		]);
 	});
 
@@ -301,6 +305,8 @@ describe("BundlerController — assets watcher", () => {
 		expect(watchers.ignoredDirs(0)).toEqual([
 			path.join(projectRoot, ".wrangler"),
 			persist,
+			path.join(projectRoot, "node_modules"),
+			path.join(projectRoot, ".cloudflare"),
 		]);
 	});
 

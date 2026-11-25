@@ -8,6 +8,37 @@ import type { AutoConfigContext } from "./context";
 /** Where `cf workers types` generates the Worker's types, as included by `cf init` */
 export const CLOUDFLARE_TYPES_INCLUDE = ".cloudflare/types";
 
+/**
+ * Creates a TypeScript config for the Cloudflare config and project sources.
+ * Includes Worker types only for projects with a Worker entrypoint.
+ */
+export async function saveCloudflareTsconfig(
+	projectPath: string,
+	includeWorkerTypes: boolean
+): Promise<void> {
+	const tsconfig = {
+		compilerOptions: {
+			target: "es2024",
+			module: "preserve",
+			moduleResolution: "bundler",
+			jsx: "preserve",
+			strict: true,
+			noEmit: true,
+			allowImportingTsExtensions: true,
+			skipLibCheck: true,
+		},
+		include: [
+			"**/*",
+			...(includeWorkerTypes ? [CLOUDFLARE_TYPES_INCLUDE] : []),
+		],
+	};
+	await writeFile(
+		join(projectPath, "tsconfig.json"),
+		`${JSON.stringify(tsconfig, null, 2)}\n`,
+		{ flag: "wx" }
+	);
+}
+
 /** jsonc-parser can't parse a UTF-8 byte order mark, so it is set aside while editing */
 const BOM = "\uFEFF";
 

@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import { loadAndParseConfig } from "@cloudflare/config";
@@ -11,7 +12,7 @@ import {
 	runInTempDir,
 	seed,
 } from "@cloudflare/workers-utils/test-helpers";
-import { describe, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { getDetailsForAutoConfig } from "../src/details";
 import { getFrameworkClassInstance } from "../src/frameworks";
 import { Framework } from "../src/frameworks/framework-class";
@@ -66,7 +67,12 @@ describe("runAutoConfig()", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 
-	it("creates loadable cf config without a package.json or local cf installation", async ({
+	beforeEach(() => {
+		vi.spyOn(cliPackages, "installPackages").mockResolvedValue();
+		vi.spyOn(cliPackages, "installWrangler").mockResolvedValue();
+	});
+
+	it("creates loadable cf config in a bare project without installing cf", async ({
 		expect,
 	}) => {
 		await seed({ "index.html": "static site", ".env": "SECRET=secret" });
@@ -80,6 +86,7 @@ describe("runAutoConfig()", () => {
 		await runAutoConfig(details, {
 			context,
 			skipConfirmations: true,
+			enableTargetCliInstallation: false,
 			runBuild: false,
 		});
 
@@ -88,7 +95,12 @@ describe("runAutoConfig()", () => {
 			{ isPreview: false, mode: undefined }
 		);
 		expect(result.success).toBe(true);
-		expect(existsSync("package.json")).toBe(false);
+		expect(cliPackages.installPackages).toHaveBeenCalledWith(
+			"npm",
+			["typescript"],
+			expect.objectContaining({ cwd: process.cwd() })
+		);
+		expect(existsSync("node_modules/cf")).toBe(false);
 		expect(readFileSync(".assetsignore", "utf8")).toContain(".env*");
 	});
 
@@ -150,7 +162,6 @@ describe("runAutoConfig()", () => {
 	it("updates the application manifest, not its enclosing workspace", async ({
 		expect,
 	}) => {
-		vi.spyOn(cliPackages, "installWrangler").mockResolvedValue();
 		const rootManifest = JSON.stringify({
 			name: "workspace-root",
 			packageManager: "pnpm@10.0.0",
@@ -175,11 +186,237 @@ describe("runAutoConfig()", () => {
 		});
 
 		expect(readFileSync("package.json", "utf8")).toBe(rootManifest);
+		expect(cliPackages.installPackages).toHaveBeenCalledWith(
+			"pnpm",
+			["typescript"],
+			{
+				cwd: projectPath,
+				dev: true,
+				isWorkspaceRoot: false,
+			}
+		);
+		expect(cliPackages.installWrangler).toHaveBeenCalledWith(
+			"pnpm",
+			false,
+			projectPath
+		);
 		expect(
 			JSON.parse(readFileSync(join(projectPath, "package.json"), "utf8"))
 		).toMatchObject({ name: "static-app", scripts: { deploy: "cf deploy" } });
 		expect(existsSync("cloudflare.config.ts")).toBe(false);
 		expect(existsSync(join(projectPath, "cloudflare.config.ts"))).toBe(true);
+	});
+
+	it("asks before creating and installing tooling for a bare static site", async ({
+		expect,
+	}) => {
+		await seed({ "site/index.html": "<h1>Hello World</h1>" });
+		const context = createMockContext();
+		const projectPath = join(process.cwd(), "site");
+		const packageJsonPath = join(projectPath, "package.json");
+		vi.mocked(context.dialogs.confirm)
+			.mockResolvedValueOnce(false)
+			.mockImplementationOnce(async () => {
+				expect(existsSync(packageJsonPath)).toBe(false);
+				expect(existsSync(join(projectPath, "tsconfig.json"))).toBe(false);
+				expect(cliPackages.installPackages).not.toHaveBeenCalled();
+				return true;
+			});
+		vi.mocked(cliPackages.installPackages).mockImplementation(async () => {
+			const manifest = JSON.parse(readFileSync(packageJsonPath, "utf8"));
+			expect(manifest).toMatchObject({
+				name: "site",
+				private: true,
+				type: "module",
+			});
+			await writeFile(
+				packageJsonPath,
+				JSON.stringify({
+					...manifest,
+					devDependencies: { cf: "^0.8.0", typescript: "^6.0.0" },
+				})
+			);
+		});
+		const details = await getDetailsForAutoConfig({
+			projectPath,
+			outputDir: ".",
+			context,
+		});
+		const summary = await runAutoConfig(details, { context });
+
+		expect(context.dialogs.confirm).toHaveBeenLastCalledWith(
+			"Proceed with setup and create package.json and tsconfig.json?",
+			{ defaultValue: false, fallbackValue: true }
+		);
+		expect(cliPackages.installPackages).toHaveBeenCalledWith(
+			"npm",
+			["cf@latest", "typescript"],
+			{
+				cwd: projectPath,
+				dev: true,
+				isWorkspaceRoot: false,
+			}
+		);
+		expect(cliPackages.installWrangler).toHaveBeenCalledWith(
+			"npm",
+			false,
+			projectPath
+		);
+		expect(summary.scripts).toEqual({
+			dev: "cf dev",
+			build: "cf build",
+			deploy: "cf deploy",
+		});
+		expect(JSON.parse(readFileSync(packageJsonPath, "utf8"))).toMatchObject({
+			scripts: summary.scripts,
+			devDependencies: { cf: "^0.8.0", typescript: "^6.0.0" },
+		});
+		expect(
+			JSON.parse(readFileSync(join(projectPath, "tsconfig.json"), "utf8"))
+		).toMatchObject({
+			compilerOptions: {
+				module: "preserve",
+				moduleResolution: "bundler",
+				noEmit: true,
+			},
+			include: ["**/*"],
+		});
+		expect(
+			readFileSync(join(projectPath, ".gitignore"), "utf8").split("\n")
+		).toEqual(expect.arrayContaining([".cloudflare/", "node_modules/"]));
+		expect(existsSync(join(projectPath, "cloudflare.config.ts"))).toBe(true);
+		expect(existsSync("package.json")).toBe(false);
+
+		const configured = await getDetailsForAutoConfig({ projectPath, context });
+		expect(configured).toMatchObject({ configured: true });
+		expect(configured.buildCommand).toBeUndefined();
+		expect(configured.devCommand).toBeUndefined();
+		expect(context.runCommand).not.toHaveBeenCalled();
+	});
+
+	it("leaves the project unchanged when the user declines to add missing files", async ({
+		expect,
+	}) => {
+		const packageJson = JSON.stringify({ name: "static-app" });
+		await seed({
+			"index.html": "<h1>Hello World</h1>",
+			"package.json": packageJson,
+		});
+		const context = createMockContext();
+		vi.mocked(context.dialogs.confirm).mockResolvedValue(false);
+		const details = await getDetailsForAutoConfig({ context });
+
+		await expect(runAutoConfig(details, { context })).rejects.toThrow(
+			"Setup cancelled"
+		);
+
+		expect(context.dialogs.confirm).toHaveBeenLastCalledWith(
+			"Proceed with setup and create tsconfig.json?",
+			{ defaultValue: false, fallbackValue: true }
+		);
+		expect(readFileSync("package.json", "utf8")).toBe(packageJson);
+		for (const file of [
+			"tsconfig.json",
+			"cloudflare.config.ts",
+			"wrangler.config.ts",
+			".gitignore",
+			".assetsignore",
+		]) {
+			expect(existsSync(file)).toBe(false);
+		}
+		expect(cliPackages.installPackages).not.toHaveBeenCalled();
+		expect(cliPackages.installWrangler).not.toHaveBeenCalled();
+		expect(context.runCommand).not.toHaveBeenCalled();
+	});
+
+	it("creates the missing project files without asking for confirmation in CI", async ({
+		expect,
+	}) => {
+		await seed({ "index.html": "<h1>Hello World</h1>" });
+		const context = createMockContext({ isNonInteractiveOrCI: () => true });
+		const details = await getDetailsForAutoConfig({ context });
+
+		await runAutoConfig(details, { context });
+
+		expect(context.dialogs.confirm).not.toHaveBeenCalled();
+		expect(existsSync("package.json")).toBe(true);
+		expect(existsSync("tsconfig.json")).toBe(true);
+		expect(existsSync("cloudflare.config.ts")).toBe(true);
+		expect(cliPackages.installPackages).toHaveBeenCalled();
+	});
+
+	it("previews the missing files without writing or installing anything", async ({
+		expect,
+	}) => {
+		await seed({ "index.html": "<h1>Hello World</h1>" });
+		const context = createMockContext();
+		const details = await getDetailsForAutoConfig({ context });
+		const summary = await runAutoConfig(details, { context, dryRun: true });
+
+		expect(summary.scripts).toEqual({
+			dev: "cf dev",
+			build: "cf build",
+			deploy: "cf deploy",
+		});
+		expect(std.out).toContain("Create package.json");
+		expect(std.out).toContain("Create tsconfig.json");
+		expect(context.dialogs.confirm).not.toHaveBeenCalled();
+		for (const file of [
+			"package.json",
+			"tsconfig.json",
+			".gitignore",
+			"cloudflare.config.ts",
+		]) {
+			expect(existsSync(file)).toBe(false);
+		}
+		expect(cliPackages.installPackages).not.toHaveBeenCalled();
+		expect(cliPackages.installWrangler).not.toHaveBeenCalled();
+	});
+
+	it("does not overwrite a malformed manifest", async ({ expect }) => {
+		const packageJson = '{"name":';
+		await seed({
+			"index.html": "<h1>Hello World</h1>",
+			"package.json": packageJson,
+		});
+		await expect(
+			runAutoConfig(
+				{
+					configured: false,
+					projectPath: process.cwd(),
+					workerName: "static-app",
+					framework: new Static({ id: "static", name: "Static" }),
+					outputDir: ".",
+					packageManager: NpmPackageManager,
+				},
+				{ context: createMockContext(), skipConfirmations: true }
+			)
+		).rejects.toThrow("The existing package.json could not be read");
+		expect(readFileSync("package.json", "utf8")).toBe(packageJson);
+		expect(existsSync("cloudflare.config.ts")).toBe(false);
+		expect(cliPackages.installPackages).not.toHaveBeenCalled();
+	});
+
+	it("leaves an explicit CommonJS package untouched instead of writing an unusable config", async ({
+		expect,
+	}) => {
+		const packageJson = JSON.stringify({ name: "my-app", type: "commonjs" });
+		await seed({
+			"index.html": "<h1>My app</h1>",
+			"package.json": packageJson,
+		});
+		const context = createMockContext();
+		const details = await getDetailsForAutoConfig({ context });
+		await expect(
+			runAutoConfig(details, { context, skipConfirmations: true })
+		).rejects.toThrow(
+			'Cannot generate cloudflare.config.ts in a package with "type": "commonjs"'
+		);
+		expect(readFileSync("package.json", "utf8")).toBe(packageJson);
+		expect(existsSync("cloudflare.config.ts")).toBe(false);
+		expect(existsSync("tsconfig.json")).toBe(false);
+		expect(cliPackages.installPackages).not.toHaveBeenCalled();
+		expect(cliPackages.installWrangler).not.toHaveBeenCalled();
 	});
 
 	it.for([
@@ -310,7 +547,6 @@ describe("runAutoConfig()", () => {
 	it("allows selecting a cf-supported framework during confirmation", async ({
 		expect,
 	}) => {
-		vi.spyOn(cliPackages, "installWrangler").mockResolvedValue();
 		const context = createMockContext({
 			dialogs: {
 				confirm: vi.fn().mockResolvedValue(true),
@@ -345,13 +581,12 @@ describe("runAutoConfig()", () => {
 	it("creates new configuration and cf scripts by default", async ({
 		expect,
 	}) => {
-		const installWrangler = vi
-			.spyOn(cliPackages, "installWrangler")
-			.mockResolvedValue();
 		const packageJson = {
 			name: "my-static-app",
+			type: "module",
 			scripts: {
 				build: "generate && vite build",
+				dev: "node start.cjs",
 				preview: "vite preview",
 			},
 		};
@@ -397,28 +632,28 @@ describe("runAutoConfig()", () => {
 			'import { defineWranglerConfig } from "wrangler/experimental-config";\n\nexport default defineWranglerConfig({\n  "assetsDirectory": "public"'
 		);
 		expect(existsSync("wrangler.jsonc")).toBe(false);
-		expect(installWrangler).toHaveBeenCalledWith("npm", false);
+		expect(cliPackages.installWrangler).toHaveBeenCalledWith(
+			"npm",
+			false,
+			process.cwd()
+		);
 		expect(context.runCommand).toHaveBeenCalledWith(
 			"npx framework build",
 			process.cwd(),
 			"[build]"
 		);
 		expect(JSON.parse(readFileSync("package.json", "utf8"))).toMatchObject({
+			type: "module",
 			scripts: {
 				build: "generate && vite build",
 				deploy: "cf deploy",
+				dev: "node start.cjs",
 				preview: "vite preview",
 			},
 		});
 	});
 
 	it("installs cf and Wrangler for cf projects", async ({ expect }) => {
-		const installPackages = vi
-			.spyOn(cliPackages, "installPackages")
-			.mockResolvedValue();
-		const installWrangler = vi
-			.spyOn(cliPackages, "installWrangler")
-			.mockResolvedValue();
 		const packageJson = { name: "my-static-app" };
 		await seed({
 			"package.json": JSON.stringify(packageJson),
@@ -442,21 +677,28 @@ describe("runAutoConfig()", () => {
 			}
 		);
 
-		expect(installPackages).toHaveBeenCalledWith("npm", ["cf@latest"], {
-			dev: true,
-			isWorkspaceRoot: false,
-		});
-		expect(installWrangler).toHaveBeenCalledWith("npm", false);
+		expect(cliPackages.installPackages).toHaveBeenCalledWith(
+			"npm",
+			["cf@latest", "typescript"],
+			{
+				cwd: process.cwd(),
+				dev: true,
+				isWorkspaceRoot: false,
+			}
+		);
+		expect(cliPackages.installWrangler).toHaveBeenCalledWith(
+			"npm",
+			false,
+			process.cwd()
+		);
 	});
 
-	it("does not reinstall an existing cf dependency", async ({ expect }) => {
-		const installPackages = vi
-			.spyOn(cliPackages, "installPackages")
-			.mockResolvedValue();
-		vi.spyOn(cliPackages, "installWrangler").mockResolvedValue();
+	it("does not reinstall existing cf or TypeScript dependencies", async ({
+		expect,
+	}) => {
 		const packageJson = {
 			name: "my-static-app",
-			devDependencies: { cf: "^0.8.0" },
+			devDependencies: { cf: "^0.8.0", typescript: "^6.0.0" },
 		};
 		await seed({
 			"package.json": JSON.stringify(packageJson),
@@ -480,23 +722,16 @@ describe("runAutoConfig()", () => {
 			}
 		);
 
-		expect(installPackages).not.toHaveBeenCalled();
+		expect(cliPackages.installPackages).not.toHaveBeenCalled();
 	});
 
-	it("does not install Wrangler when cf delegates to Vite", async ({
+	it("installs the Vite runner when missing and generates a Worker tsconfig", async ({
 		expect,
 	}) => {
-		const installPackages = vi
-			.spyOn(cliPackages, "installPackages")
-			.mockResolvedValue();
-		const installWrangler = vi
-			.spyOn(cliPackages, "installWrangler")
-			.mockResolvedValue();
 		const packageJson = { name: "my-vite-app" };
 		await seed({
 			"package.json": JSON.stringify(packageJson),
 			"dist/index.html": "<h1>Hello World</h1>",
-			"tsconfig.json": "{}",
 		});
 
 		await runAutoConfig(
@@ -519,16 +754,68 @@ describe("runAutoConfig()", () => {
 			}
 		);
 
-		expect(installPackages).toHaveBeenCalledWith("npm", ["cf@latest"], {
-			dev: true,
-			isWorkspaceRoot: false,
-		});
-		expect(installWrangler).not.toHaveBeenCalled();
+		expect(cliPackages.installPackages).toHaveBeenCalledWith(
+			"npm",
+			["cf@latest", "typescript", "vite@^8.0.0"],
+			{
+				cwd: process.cwd(),
+				dev: true,
+				isWorkspaceRoot: false,
+			}
+		);
+		expect(cliPackages.installWrangler).not.toHaveBeenCalled();
 		expect(JSON.parse(readFileSync("package.json", "utf8"))).toMatchObject({
 			scripts: {
 				"cf-typegen": "cf workers types",
 			},
 		});
+		expect(JSON.parse(readFileSync("tsconfig.json", "utf8"))).toMatchObject({
+			include: ["**/*", ".cloudflare/types"],
+		});
+	});
+
+	it("configures a Vite app without changing its package module type or replacing Vite", async ({
+		expect,
+	}) => {
+		await seed({
+			"package.json": JSON.stringify({
+				name: "vite-app",
+				devDependencies: { vite: "7.1.12" },
+			}),
+			"node_modules/vite/package.json": JSON.stringify({
+				name: "vite",
+				version: "7.1.12",
+			}),
+			"index.html": "<h1>Hello World</h1>",
+		});
+		const context = createMockContext();
+		const details = await getDetailsForAutoConfig({ context });
+		expect(details.framework?.id).toBe("vite");
+		await runAutoConfig(details, {
+			context,
+			skipConfirmations: true,
+			runBuild: false,
+		});
+
+		expect(
+			vi
+				.mocked(cliPackages.installPackages)
+				.mock.calls.map(([, packages]) => packages)
+		).toEqual([
+			["cf@latest", "typescript"],
+			["@cloudflare/vite-plugin@^2.0.0-rc.0"],
+		]);
+		expect(cliPackages.installWrangler).not.toHaveBeenCalled();
+		const manifest = JSON.parse(readFileSync("package.json", "utf8"));
+		expect(manifest).not.toHaveProperty("type");
+		expect(manifest).toMatchObject({
+			devDependencies: { vite: "7.1.12" },
+			scripts: { dev: "cf dev", build: "cf build" },
+		});
+		expect(existsSync("tsconfig.json")).toBe(true);
+		expect(readFileSync("vite.config.mts", "utf8")).toContain(
+			"plugins: [cloudflare()]"
+		);
 	});
 
 	it("adds the cf-generated types to tsconfig.json", async ({ expect }) => {
@@ -657,9 +944,90 @@ describe("runAutoConfig()", () => {
 		);
 
 		expect(existsSync("cloudflare.config.ts")).toBe(false);
+		expect(existsSync("package.json")).toBe(false);
+		expect(existsSync("tsconfig.json")).toBe(false);
 		expect(readFileSync("wrangler.config.ts", "utf8")).toContain(
 			'"assetsDirectory": "dist"'
 		);
+	});
+
+	it("keeps supporting files and scripts generated by a framework's setup", async ({
+		expect,
+	}) => {
+		const packageJson = { name: "next-app", dependencies: { next: "16.1.0" } };
+		await seed({
+			"package.json": JSON.stringify(packageJson),
+			"node_modules/next/package.json": JSON.stringify({
+				name: "next",
+				version: "16.1.0",
+			}),
+		});
+		const framework = getFrameworkClassInstance("next", "cf");
+		const tsconfig = '{"extends":"./tsconfig.next.json"}\n';
+		const config = "export default { worker: { name: 'next-app' } };\n";
+		const configure = framework.configure.bind(framework);
+		vi.spyOn(framework, "configure").mockImplementation(async (options) => {
+			if (options.dryRun) {
+				return configure(options);
+			}
+			await seed({
+				"tsconfig.json": tsconfig,
+				"cloudflare.config.ts": config,
+				"package.json": JSON.stringify({
+					...packageJson,
+					scripts: { build: "vite build" },
+				}),
+			});
+			return configure({ ...options, dryRun: true });
+		});
+		const context = createMockContext();
+		const summary = await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "next-app",
+				framework,
+				outputDir: ".next",
+				packageJson,
+				packageManager: NpmPackageManager,
+			},
+			{ context, skipConfirmations: true, runBuild: false }
+		);
+
+		expect(summary.scripts).toEqual({ dev: "cf dev", deploy: "cf deploy" });
+		expect(readFileSync("cloudflare.config.ts", "utf8")).toBe(config);
+		expect(readFileSync("tsconfig.json", "utf8")).toBe(tsconfig);
+		expect(JSON.parse(readFileSync("package.json", "utf8"))).toMatchObject({
+			scripts: { build: "vite build", dev: "cf dev" },
+		});
+	});
+
+	it("does not scaffold supporting files for legacy Wrangler projects", async ({
+		expect,
+	}) => {
+		await seed({ "index.html": "<h1>Hello World</h1>" });
+		const context = createMockContext();
+		const details = await getDetailsForAutoConfig({
+			target: "wrangler",
+			context,
+		});
+		await runAutoConfig(details, {
+			target: "wrangler",
+			context,
+			skipConfirmations: true,
+		});
+
+		expect(existsSync("wrangler.jsonc")).toBe(true);
+		for (const file of [
+			"package.json",
+			"tsconfig.json",
+			".gitignore",
+			"cloudflare.config.ts",
+		]) {
+			expect(existsSync(file)).toBe(false);
+		}
+		expect(cliPackages.installPackages).not.toHaveBeenCalled();
+		expect(cliPackages.installWrangler).not.toHaveBeenCalled();
 	});
 
 	it("fails rather than overwriting existing Wrangler build configuration", async ({
@@ -719,7 +1087,18 @@ describe("runAutoConfig()", () => {
 		);
 
 		const assetsIgnore = readFileSync(".assetsignore", "utf8");
-		for (const entry of [".env*", ".dev.vars*", "/functions", "node_modules"]) {
+		for (const entry of [
+			".env*",
+			".dev.vars*",
+			"/functions",
+			"node_modules",
+			"/package.json",
+			"/tsconfig.json",
+			"/cloudflare.config.ts",
+			"/wrangler.config.ts",
+			"/package-lock.json",
+			"/.cloudflare",
+		]) {
 			expect(assetsIgnore.split("\n")).toContain(entry);
 		}
 	});

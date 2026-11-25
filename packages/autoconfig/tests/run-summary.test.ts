@@ -232,12 +232,15 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			);
 
 			expect(summary.scripts).toEqual({
+				dev: "cf dev",
+				build: "cf build",
 				deploy: "cf deploy",
 			});
 			expect(std.out).toContain(
 				dedent`
 				📦 Install packages:
 				 - cf (devDependency)
+				 - typescript (devDependency)
 				 - wrangler (devDependency)
 				`
 			);

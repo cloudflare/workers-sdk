@@ -20,6 +20,7 @@ import {
 	FatalError,
 	isNodejsCompatDefaultOn,
 	parseJSONC,
+	toValidWorkerName,
 } from "@cloudflare/workers-utils";
 import {
 	assertNonConfigured,
@@ -37,10 +38,14 @@ import {
 } from "./frameworks";
 import { getFrameworkPackageInfo } from "./frameworks/all-frameworks";
 import { Static } from "./frameworks/static";
-import { CF_VITE_PLUGIN_VERSION_RANGE } from "./frameworks/utils/vite-plugin-version";
+import {
+	CF_VITE_PLUGIN_VERSION_RANGE,
+	CF_VITE_VERSION_RANGE,
+} from "./frameworks/utils/vite-plugin-version";
 import {
 	CLOUDFLARE_TYPES_INCLUDE,
 	getCloudflareTypesTsconfigUpdate,
+	saveCloudflareTsconfig,
 	saveCloudflareTypesTsconfigUpdate,
 } from "./tsconfig";
 import { usesTypescript } from "./uses-typescript";
@@ -78,7 +83,9 @@ export async function runAutoConfig(
 	const dryRun = autoConfigOptions.dryRun === true;
 	const runBuild = !dryRun && (autoConfigOptions.runBuild ?? true);
 	const skipConfirmations =
-		dryRun || autoConfigOptions.skipConfirmations === true;
+		dryRun ||
+		autoConfigOptions.skipConfirmations === true ||
+		(target === "cf" && context.isNonInteractiveOrCI?.() === true);
 	const enableTargetCliInstallation =
 		autoConfigOptions.enableTargetCliInstallation ?? true;
 
@@ -208,17 +215,6 @@ export async function runAutoConfig(
 		dryRunConfigurationResults.packageJsonScriptsOverrides
 	);
 
-	if (
-		!(
-			skipConfirmations ||
-			(await context.dialogs.confirm("Proceed with setup?"))
-		)
-	) {
-		throw new FatalError("Setup cancelled", {
-			telemetryMessage: "autoconfig run setup cancelled",
-		});
-	}
-
 	if (dryRun) {
 		logger.log(`✋  ${"Autoconfig process run in dry-run mode, exiting now."}`);
 		logger.log("");
@@ -226,32 +222,78 @@ export async function runAutoConfig(
 		return autoConfigSummary;
 	}
 
+	const scaffold = getCfProjectScaffold(
+		autoConfigDetails,
+		dryRunConfigurationResults,
+		target
+	);
+	if (!skipConfirmations) {
+		const newProjectFiles = [
+			scaffold?.createPackageJson && "package.json",
+			scaffold?.createTsconfig && "tsconfig.json",
+		].filter(Boolean);
+		const confirmed =
+			newProjectFiles.length > 0
+				? await context.dialogs.confirm(
+						`Proceed with setup and create ${newProjectFiles.join(" and ")}?`,
+						{ defaultValue: false, fallbackValue: true }
+					)
+				: await context.dialogs.confirm("Proceed with setup?");
+		if (!confirmed) {
+			throw new FatalError("Setup cancelled", {
+				telemetryMessage: "autoconfig run setup cancelled",
+			});
+		}
+	}
+
 	logger.debug(
 		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
 	);
 
-	if (autoConfigDetails.packageJson && enableTargetCliInstallation) {
+	const { projectPath, packageJson } = autoConfigDetails;
+	const packageJsonPath = resolve(projectPath, "package.json");
+	if (scaffold?.createPackageJson) {
+		const manifest = {
+			name: toValidWorkerName(
+				autoConfigDetails.workerName
+					.trim()
+					.toLowerCase()
+					.replaceAll(/\s+/g, "-")
+			),
+			private: true,
+			type: "module",
+		};
+		await writeFile(packageJsonPath, `${JSON.stringify(manifest, null, 2)}\n`, {
+			flag: "wx",
+		});
+	}
+
+	const hasPackageJson =
+		packageJson !== undefined || scaffold?.createPackageJson;
+	if (hasPackageJson) {
 		if (target === "cf") {
-			const hasCfDependency =
-				autoConfigDetails.packageJson.dependencies?.cf !== undefined ||
-				autoConfigDetails.packageJson.devDependencies?.cf !== undefined;
-			if (!hasCfDependency) {
-				await installPackages(packageManager.type, ["cf@latest"], {
+			const packages = getCfPackagesToInstall(
+				packageJson,
+				enableTargetCliInstallation,
+				scaffold
+			);
+			if (packages.length > 0) {
+				await installPackages(packageManager.type, packages, {
+					cwd: projectPath,
 					dev: true,
 					isWorkspaceRoot,
 				});
 			}
-		} else {
+			if (dryRunConfigurationResults.buildTool === "wrangler") {
+				await installWrangler(
+					packageManager.type,
+					isWorkspaceRoot,
+					projectPath
+				);
+			}
+		} else if (enableTargetCliInstallation) {
 			await installWrangler(packageManager.type, isWorkspaceRoot);
 		}
-	}
-
-	if (
-		autoConfigDetails.packageJson &&
-		target === "cf" &&
-		dryRunConfigurationResults.buildTool === "wrangler"
-	) {
-		await installWrangler(packageManager.type, isWorkspaceRoot);
 	}
 
 	const configurationResults = await autoConfigDetails.framework.configure({
@@ -269,14 +311,20 @@ export async function runAutoConfig(
 		configurationResults.workerConfig
 	);
 
-	if (autoConfigDetails.packageJson) {
-		const packageJsonPath = resolve(
-			autoConfigDetails.projectPath,
-			"package.json"
-		);
+	if (hasPackageJson) {
 		const existingPackageJson = JSON.parse(
 			await readFile(packageJsonPath, "utf8")
 		) as PackageJSON;
+		const existingScripts = existingPackageJson.scripts ?? {};
+		const scriptsToAdd = Object.fromEntries(
+			Object.entries(autoConfigSummary.scripts).filter(
+				([name]) =>
+					target === "wrangler" ||
+					name === "deploy" ||
+					!(name in existingScripts)
+			)
+		);
+		autoConfigSummary.scripts = scriptsToAdd;
 
 		await writeFile(
 			packageJsonPath,
@@ -284,8 +332,8 @@ export async function runAutoConfig(
 				{
 					...existingPackageJson,
 					scripts: {
-						...existingPackageJson.scripts,
-						...autoConfigSummary.scripts,
+						...existingScripts,
+						...scriptsToAdd,
 					},
 				} satisfies PackageJSON,
 				null,
@@ -307,28 +355,29 @@ export async function runAutoConfig(
 	}
 
 	if (target === "cf") {
-		if (workerConfig !== null) {
-			await saveCloudflareConfig(autoConfigDetails.projectPath, workerConfig);
-		}
-		// Only projects with Worker code (an entrypoint) use the types that `cf-typegen` generates
-		if (workerConfig?.entrypoint) {
-			await saveCloudflareTypesTsconfigUpdate(
-				autoConfigDetails.projectPath,
-				context
+		if (scaffold?.createTsconfig && !usesTypescript(projectPath)) {
+			await saveCloudflareTsconfig(
+				projectPath,
+				Boolean(workerConfig?.entrypoint)
 			);
+		} else if (workerConfig?.entrypoint) {
+			await saveCloudflareTypesTsconfigUpdate(projectPath, context);
 		}
 		if (
 			configurationResults.buildTool === "wrangler" &&
 			configurationResults.buildConfig
 		) {
-			await saveWranglerConfigTs(
-				autoConfigDetails.projectPath,
-				configurationResults.buildConfig
-			);
+			await saveWranglerConfigTs(projectPath, configurationResults.buildConfig);
 		}
 	}
 
-	maybeAppendWranglerToGitIgnore(autoConfigDetails.projectPath);
+	if (scaffold) {
+		maybeAppendWranglerToGitIgnoreLikeFile(resolve(projectPath, ".gitignore"), {
+			additionalEntries: [".cloudflare/", "node_modules/"],
+		});
+	} else {
+		maybeAppendWranglerToGitIgnore(projectPath);
+	}
 
 	// If the project root is the assets directory, make sure we don't
 	// accidentally upload sensitive files or anything a Cloudflare Pages upload
@@ -347,7 +396,18 @@ export async function runAutoConfig(
 		maybeAppendWranglerToGitIgnoreLikeFile(
 			`${autoConfigDetails.projectPath}/.assetsignore`,
 			{
-				additionalEntries: PROJECT_ROOT_ASSETS_IGNORE_ENTRIES,
+				additionalEntries: scaffold
+					? [
+							...PROJECT_ROOT_ASSETS_IGNORE_ENTRIES,
+							"/.cloudflare",
+							"/.gitignore",
+							"/cloudflare.config.ts",
+							"/wrangler.config.ts",
+							"/package.json",
+							"/tsconfig.json",
+							...packageManager.lockFiles.map((lockFile) => `/${lockFile}`),
+						]
+					: PROJECT_ROOT_ASSETS_IGNORE_ENTRIES,
 				requireEnvWildcard: true,
 			}
 		);
@@ -366,6 +426,10 @@ export async function runAutoConfig(
 				`${pagesServerCode.map((name) => `\`${name}\``).join(" and ")} in the project root will not be deployed: the project is configured as static assets, so Pages server code is excluded from the upload (via .assetsignore) and is not run. To keep it, migrate it to a Worker: https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/`
 			);
 		}
+	}
+
+	if (target === "cf" && workerConfig !== null) {
+		await saveCloudflareConfig(projectPath, workerConfig);
 	}
 
 	// Setup can install missing packages or activate the plugin. Recheck command
@@ -400,6 +464,85 @@ export async function runAutoConfig(
 	}
 
 	return autoConfigSummary;
+}
+
+type CfProjectScaffold = {
+	createPackageJson: boolean;
+	createTsconfig: boolean;
+	installVite: boolean;
+};
+
+/** Plans the supporting files and local Vite runner when setup generates a Cloudflare config. */
+function getCfProjectScaffold(
+	{
+		packageJson,
+		projectPath,
+		nodeModulesPaths,
+	}: AutoConfigDetailsForNonConfiguredProject,
+	{ workerConfig, createsCloudflareConfig, buildTool }: ConfigurationResults,
+	target: AutoConfigTarget
+): CfProjectScaffold | undefined {
+	if (target !== "cf" || (workerConfig === null && !createsCloudflareConfig)) {
+		return;
+	}
+
+	const createPackageJson = packageJson === undefined;
+	if (createPackageJson && existsSync(resolve(projectPath, "package.json"))) {
+		throw new FatalError(
+			"The existing package.json could not be read. Fix it before running autoconfig again.",
+			{ telemetryMessage: "autoconfig invalid package json" }
+		);
+	}
+	if (
+		workerConfig !== null &&
+		packageJson &&
+		"type" in packageJson &&
+		packageJson.type === "commonjs"
+	) {
+		throw new FatalError(
+			'Cannot generate cloudflare.config.ts in a package with "type": "commonjs". Convert the package to ESM (moving any remaining CommonJS files to .cjs) before running autoconfig again.',
+			{ telemetryMessage: "autoconfig commonjs package unsupported" }
+		);
+	}
+	const hasViteRunner = ["vite", "vite-plus"].some(
+		(pkg) =>
+			packageJson?.dependencies?.[pkg] !== undefined ||
+			packageJson?.devDependencies?.[pkg] !== undefined ||
+			nodeModulesPaths
+				?.slice(1)
+				.some((directory) =>
+					existsSync(resolve(directory, pkg, "package.json"))
+				)
+	);
+	return {
+		createPackageJson,
+		createTsconfig: !usesTypescript(projectPath),
+		installVite:
+			buildTool === "vite" && workerConfig !== null && !hasViteRunner,
+	};
+}
+
+/** Returns missing tooling dependencies not installed by the framework adapter. */
+function getCfPackagesToInstall(
+	packageJson: PackageJSON | undefined,
+	enableTargetCliInstallation: boolean,
+	scaffold: CfProjectScaffold | undefined
+): string[] {
+	const packages = [];
+	const dependencies = {
+		...packageJson?.dependencies,
+		...packageJson?.devDependencies,
+	};
+	if (enableTargetCliInstallation && !("cf" in dependencies)) {
+		packages.push("cf@latest");
+	}
+	if (scaffold?.createTsconfig && !("typescript" in dependencies)) {
+		packages.push("typescript");
+	}
+	if (scaffold?.installVite) {
+		packages.push(`vite@${CF_VITE_VERSION_RANGE}`);
+	}
+	return packages;
 }
 
 /**
@@ -634,10 +777,30 @@ export async function buildOperationsSummary(
 		versionCommand: projectCommands.version,
 	};
 
+	const scaffold = getCfProjectScaffold(
+		autoConfigDetails,
+		configurationResults,
+		target
+	);
+	if (scaffold?.createPackageJson) {
+		logger.log("📄 Create package.json");
+		logger.log("");
+	}
+	const { packageJson, projectPath } = autoConfigDetails;
+	const hasPackageJson =
+		packageJson !== undefined || scaffold?.createPackageJson;
 	const packagesToInstall = new Set<string>();
-	if (autoConfigDetails.packageJson) {
-		if (enableTargetCliInstallation) {
-			packagesToInstall.add(target);
+	if (hasPackageJson) {
+		if (target === "cf") {
+			for (const pkg of getCfPackagesToInstall(
+				packageJson,
+				enableTargetCliInstallation,
+				scaffold
+			)) {
+				packagesToInstall.add(pkg);
+			}
+		} else if (enableTargetCliInstallation) {
+			packagesToInstall.add("wrangler");
 		}
 		if (configurationResults.buildTool === "vite") {
 			packagesToInstall.add(
@@ -656,12 +819,13 @@ export async function buildOperationsSummary(
 	if (packagesToInstall.size > 0) {
 		logger.log("📦 Install packages:");
 		for (const packageName of packagesToInstall) {
-			logger.log(` - ${packageName} (devDependency)`);
+			logger.log(` - ${packageName.replace(/@latest$/, "")} (devDependency)`);
 		}
 		logger.log("");
 	}
 
-	if (autoConfigDetails.packageJson) {
+	if (hasPackageJson) {
+		const existingScripts = packageJson?.scripts ?? {};
 		const scriptOverrides =
 			target === "wrangler" ? packageJsonScriptsOverrides : undefined;
 		const buildCommandPrefix =
@@ -675,6 +839,12 @@ export async function buildOperationsSummary(
 		if (target === "wrangler") {
 			summary.scripts.preview =
 				scriptOverrides?.preview ?? `${buildCommandPrefix}${target} dev`;
+		} else if (scaffold) {
+			for (const command of ["dev", "build"]) {
+				if (!(command in existingScripts)) {
+					summary.scripts[command] = `cf ${command}`;
+				}
+			}
 		}
 
 		const containsServerSideCode =
@@ -684,8 +854,8 @@ export async function buildOperationsSummary(
 		if (
 			// If there is no server side code, then there is no need to add the cf-typegen script
 			containsServerSideCode &&
-			usesTypescript(autoConfigDetails.projectPath) &&
-			!("cf-typegen" in (autoConfigDetails.packageJson.scripts ?? {}))
+			(scaffold?.createTsconfig || usesTypescript(projectPath)) &&
+			!("cf-typegen" in existingScripts)
 		) {
 			summary.scripts["cf-typegen"] =
 				scriptOverrides?.typegen ??
@@ -705,7 +875,10 @@ export async function buildOperationsSummary(
 		target === "cf" && workerConfig?.entrypoint
 			? getCloudflareTypesTsconfigUpdate(autoConfigDetails.projectPath)
 			: undefined;
-	if (tsconfigUpdate?.type === "update") {
+	if (scaffold?.createTsconfig) {
+		logger.log("📄 Create tsconfig.json");
+		logger.log("");
+	} else if (tsconfigUpdate?.type === "update") {
 		logger.log("📝 Update tsconfig.json:");
 		logger.log(
 			` - Add ${JSON.stringify(CLOUDFLARE_TYPES_INCLUDE)} to "include"`

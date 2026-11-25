@@ -42,7 +42,7 @@ export class SolidStart extends Framework {
 					projectPath,
 					version: CF_VITE_PLUGIN_VERSION_RANGE,
 				});
-				transformViteConfig(projectPath);
+				transformViteConfig(projectPath, { target });
 				// SolidStart 2.2.3 and later add this exclude themselves
 				if (semiver(this.frameworkVersion, "2.2.3") < 0) {
 					excludeSolidStartFromServerPrebundling(projectPath, context);

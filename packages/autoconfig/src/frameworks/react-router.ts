@@ -508,6 +508,7 @@ export class ReactRouter extends Framework {
 			writeEntryServerTsx(useMiddlewarePattern, context);
 
 			transformViteConfig(projectPath, {
+				target,
 				viteEnvironmentName: "ssr",
 				incompatibleVitePlugins: ["netlifyReactRouter"],
 			});

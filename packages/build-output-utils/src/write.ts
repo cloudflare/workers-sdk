@@ -1,6 +1,15 @@
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { removeDir } from "@cloudflare/workers-utils";
+import {
+	CF_ASSETS_IGNORE_FILENAME,
+	HEADERS_FILENAME,
+	REDIRECTS_FILENAME,
+} from "@cloudflare/workers-shared/utils/constants";
+import {
+	createAssetsIgnoreFunction,
+	InvalidAssetsIgnoreError,
+} from "@cloudflare/workers-shared/utils/helpers";
+import { removeDir, UserError } from "@cloudflare/workers-utils";
 import {
 	BUILD_OUTPUT_ROOT,
 	DEFAULT_WORKER_DIRECTORY_NAME,
@@ -38,6 +47,8 @@ export interface WriteAssetsOptions {
  * Copy static assets into the Build Output Specification tree.
  *
  * Symlinks are dereferenced so the output remains portable and self-contained.
+ * Files excluded by `.assetsignore` are not copied, but the ignore file and
+ * other asset metadata are kept for the tools that read the output.
  *
  * When the project root is itself the asset source, the reserved
  * `.cloudflare` directory is omitted so the nested output is not copied into
@@ -48,14 +59,46 @@ export async function writeAssets({
 	sourceDirectory,
 }: WriteAssetsOptions): Promise<void> {
 	const assetsDir = getWorkerAssetsDir(root);
+	const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(
+		sourceDirectory
+	).catch((error: unknown) => {
+		if (error instanceof InvalidAssetsIgnoreError) {
+			throw new UserError(error.message, {
+				telemetryMessage: "assets ignore invalid encoding",
+			});
+		}
+		throw error;
+	});
+	const copyOptions = {
+		recursive: true,
+		force: false,
+		dereference: true,
+		filter: async (source: string) => {
+			const relative = path
+				.relative(sourceDirectory, source)
+				.split(path.sep)
+				.join("/");
+			if (
+				relative === "" ||
+				[
+					CF_ASSETS_IGNORE_FILENAME,
+					HEADERS_FILENAME,
+					REDIRECTS_FILENAME,
+				].includes(relative)
+			) {
+				return true;
+			}
+			return (
+				!assetsIgnoreFunction(relative) &&
+				(!assetsIgnoreFunction(`${relative}/`) ||
+					!(await fsp.stat(source)).isDirectory())
+			);
+		},
+	};
 	await fsp.mkdir(assetsDir, { recursive: true });
 
 	if (path.resolve(sourceDirectory) !== path.resolve(root)) {
-		await fsp.cp(sourceDirectory, assetsDir, {
-			recursive: true,
-			force: false,
-			dereference: true,
-		});
+		await fsp.cp(sourceDirectory, assetsDir, copyOptions);
 		return;
 	}
 
@@ -64,11 +107,11 @@ export async function writeAssets({
 		entries
 			.filter((entry) => entry !== path.dirname(BUILD_OUTPUT_ROOT))
 			.map((entry) =>
-				fsp.cp(path.join(sourceDirectory, entry), path.join(assetsDir, entry), {
-					recursive: true,
-					force: false,
-					dereference: true,
-				})
+				fsp.cp(
+					path.join(sourceDirectory, entry),
+					path.join(assetsDir, entry),
+					copyOptions
+				)
 			)
 	);
 }

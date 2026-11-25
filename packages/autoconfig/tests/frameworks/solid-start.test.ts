@@ -42,6 +42,7 @@ describe("SolidStart", () => {
 	}) => {
 		// The vite.config.ts of the SolidStart 2 basic template
 		await seed({
+			"package.json": '{"type":"module"}',
 			"vite.config.ts": dedent`
 				import { defineConfig } from "vite";
 				import { nitro } from "nitro/vite";
@@ -119,6 +120,7 @@ describe("SolidStart", () => {
 		expect,
 	}) => {
 		await seed({
+			"package.json": '{"type":"module"}',
 			"vite.config.ts": dedent`
 				import { defineConfig } from "vite";
 				import { nitro } from "nitro/vite";

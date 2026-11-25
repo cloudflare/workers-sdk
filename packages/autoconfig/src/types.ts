@@ -80,7 +80,8 @@ export type AutoConfigOptions = {
 	/**
 	 * Whether the confirmation prompts should be skipped (default: false)
 	 *
-	 * Note: When `dryRun` is `true` the the confirmation prompts are always skipped.
+	 * Prompts are also skipped in dry runs and when targeting cf in CI or other
+	 * non-interactive environments.
 	 */
 	skipConfirmations?: boolean;
 	/**

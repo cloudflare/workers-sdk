@@ -376,7 +376,6 @@ export type AssetReverseMap = {
  * NB: This runs every time the dev server restarts.
  */
 const walk = async (dir: string) => {
-	const files = await fs.readdir(dir, { recursive: true });
 	const manifest: ManifestEntry[] = [];
 	const assetsReverseMap: AssetReverseMap = {};
 	const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(dir).catch(
@@ -388,20 +387,23 @@ const walk = async (dir: string) => {
 		}
 	);
 	let counter = 0;
-	await Promise.all(
-		files.map(async (file) => {
-			if (assetsIgnoreFunction(file)) {
-				return;
-			}
-			/** absolute file path */
-			const filepath = path.join(dir, file);
-			const relativeFilepath = path.relative(dir, filepath);
-			const filestat = await fs.stat(filepath);
-
-			// TODO: decide whether to follow symbolic links
-			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
-				return;
-			} else {
+	async function walkDirectory(directory: string): Promise<void> {
+		const entries = await fs.readdir(directory);
+		await Promise.all(
+			entries.map(async (entry) => {
+				const filepath = path.join(directory, entry);
+				const relativeFilepath = path.relative(dir, filepath);
+				const assetPath = relativeFilepath.split(path.sep).join("/");
+				if (assetsIgnoreFunction(assetPath)) {
+					return;
+				}
+				const filestat = await fs.stat(filepath);
+				if (filestat.isDirectory()) {
+					if (!assetsIgnoreFunction(`${assetPath}/`)) {
+						await walkDirectory(filepath);
+					}
+					return;
+				}
 				// TODO: Warn about _worker.js
 
 				if (filestat.size > MAX_ASSET_SIZE) {
@@ -455,13 +457,14 @@ const walk = async (dir: string) => {
 					contentHash,
 				});
 				assetsReverseMap[bytesToHex(contentHash)] = {
-					filePath: relativeFilepath.split(path.sep).join("/"),
+					filePath: assetPath,
 					contentType: getContentType(filepath),
 				};
 				counter++;
-			}
-		})
-	);
+			})
+		);
+	}
+	await walkDirectory(dir);
 	if (counter > MAX_ASSET_COUNT) {
 		throw new Error(
 			`Maximum number of assets exceeded.\n` +
