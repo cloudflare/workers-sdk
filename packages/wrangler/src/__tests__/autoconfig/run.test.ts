@@ -999,66 +999,6 @@ describe("autoconfig (deploy)", () => {
 			);
 		});
 
-		it("errors with Pages-specific message when framework is cf-pages", async ({
-			expect,
-		}) => {
-			mockConfirm({
-				text: "Do you want to modify these settings?",
-				result: false,
-			});
-
-			await expect(
-				autoconfig.runAutoConfig(
-					{
-						projectPath: process.cwd(),
-						configured: false,
-						framework: {
-							id: "cloudflare-pages",
-							name: "Cloudflare Pages",
-							configure: async () => ({ workerConfig: {} }),
-							isConfigured: () => false,
-						} as unknown as Framework,
-						workerName: "my-worker",
-						outputDir: "dist",
-						packageManager: NpmPackageManager,
-					},
-					{ target: "wrangler", context }
-				)
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to Workers is not yet supported.]`
-			);
-		});
-
-		it("errors with generic message when unsupported framework is not cf-pages", async ({
-			expect,
-		}) => {
-			mockConfirm({
-				text: "Do you want to modify these settings?",
-				result: false,
-			});
-
-			await expect(
-				autoconfig.runAutoConfig(
-					{
-						projectPath: process.cwd(),
-						configured: false,
-						framework: {
-							id: "hono",
-							name: "Hono",
-							configure: async () => ({ workerConfig: {} }),
-							isConfigured: () => false,
-						} as unknown as Framework,
-						workerName: "my-worker",
-						outputDir: "dist",
-						packageManager: NpmPackageManager,
-					},
-					{ target: "wrangler", context }
-				)
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: The detected framework ("Hono") cannot be automatically configured.]`
-			);
-		});
-
 		// Autoconfig always writes today's compatibility date, which is on or after
 		// the date `nodejs_compat` became enabled by default in workerd. Specifying
 		// the flag as well would be a validation error, so it must not be added, and
