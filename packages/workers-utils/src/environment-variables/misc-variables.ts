@@ -119,18 +119,22 @@ export const COMPLIANCE_REGION_CONFIG_UNKNOWN: ComplianceConfig = {
 
 const getCloudflareComplianceRegionFromEnv = getEnvironmentVariableFactory({
 	variableName: "CLOUDFLARE_COMPLIANCE_REGION",
-	choices: ["public", "fedramp_high"] as const,
+	choices: ["public", "fedramp_high", "fedramp-high"] as const,
 });
 
 /**
  * Set `CLOUDFLARE_COMPLIANCE_REGION` environment variable to "fedramp_high"
- * or set the `compliance_region` property in the Wrangler configuration
- * to tell Wrangler to run in FedRAMP High compliance region mode, rather than "public" mode.
+ * or "fedramp-high", or set the `compliance_region` property in the Wrangler
+ * configuration to tell Wrangler to run in FedRAMP High compliance region mode,
+ * rather than "public" mode.
  */
 export const getCloudflareComplianceRegion = (
 	complianceConfig: ComplianceConfig
 ) => {
-	const complianceRegionFromEnv = getCloudflareComplianceRegionFromEnv();
+	const regionFromEnv = getCloudflareComplianceRegionFromEnv();
+	// `cloudflare.config.ts` writes the region as `fedramp-high`.
+	const complianceRegionFromEnv =
+		regionFromEnv === "fedramp-high" ? "fedramp_high" : regionFromEnv;
 	if (
 		complianceRegionFromEnv !== undefined &&
 		complianceConfig?.compliance_region !== undefined &&
@@ -139,7 +143,7 @@ export const getCloudflareComplianceRegion = (
 		throw new UserError(
 			dedent`
 			The compliance region has been set to different values in two places:
-			 - \`CLOUDFLARE_COMPLIANCE_REGION\` environment variable: \`${complianceRegionFromEnv}\`
+			 - \`CLOUDFLARE_COMPLIANCE_REGION\` environment variable: \`${regionFromEnv}\`
 			 - \`compliance_region\` configuration property: \`${complianceConfig.compliance_region}\`
 			`,
 			{ telemetryMessage: false }
