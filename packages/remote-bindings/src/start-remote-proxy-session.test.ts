@@ -1,4 +1,5 @@
 import { APIError, UserError } from "@cloudflare/workers-utils";
+import { DeferredPromise } from "miniflare";
 import { afterEach, describe, it, vi } from "vitest";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
 import { RemoteSessionAuthenticationError } from "./utils/remote";
@@ -12,6 +13,7 @@ const mockDevEnv = vi.hoisted(() => ({
 	error: undefined as unknown,
 	startError: undefined as unknown,
 	teardown: vi.fn(async () => {}),
+	drained: vi.fn(async () => {}),
 	// The most recently created `DevEnv`, for emitting errors after startup.
 	instance: undefined as EventEmitter | undefined,
 }));
@@ -32,7 +34,7 @@ vi.mock("./startDevWorker/DevEnv", async () => {
 			ready: {
 				promise: Promise.resolve({ url: new URL("http://localhost:8787") }),
 			},
-			runtimeMessageMutex: { drained: async () => {} },
+			runtimeMessageMutex: { drained: mockDevEnv.drained },
 		};
 		constructor() {
 			super();
@@ -251,6 +253,28 @@ describe("startRemoteProxySession error handling", () => {
 			"The remote worker preview failed."
 		);
 	});
+});
+
+it("waits for workerd to receive the preview connection before returning an eager session", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const delivered = new DeferredPromise<void>();
+	mockDevEnv.drained.mockClear().mockReturnValueOnce(delivered);
+	onTestFinished(() => delivered.resolve());
+	const started = vi.fn();
+	const pendingSession = startRemoteProxySession({}, createTestOptions()).then(
+		(session) => {
+			onTestFinished(() => session.dispose());
+			started();
+			return session;
+		}
+	);
+	await vi.waitFor(() => expect(mockDevEnv.drained).toHaveBeenCalled());
+	expect(started).not.toHaveBeenCalled();
+	delivered.resolve();
+	await pendingSession;
+	expect(started).toHaveBeenCalledOnce();
 });
 
 describe("startRemoteProxySession lazy connection errors", () => {

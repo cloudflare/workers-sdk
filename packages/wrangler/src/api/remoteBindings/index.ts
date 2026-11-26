@@ -20,6 +20,8 @@ export type { StartRemoteProxySessionOptions } from "./start-remote-proxy-sessio
 type WranglerConfigObject = {
 	path: string;
 	environment?: string;
+	/** Set to false to establish the remote connection during startup. */
+	allowLazy?: boolean;
 };
 
 type WranglerWorkerConfigObject = WorkerConfigObject & {
@@ -36,6 +38,10 @@ export function maybeStartOrUpdateRemoteProxySession(
 	preExistingRemoteProxySessionData?: RemoteProxySessionData | null,
 	auth?: AsyncHook<CfAccount>
 ) {
+	const allowLazy =
+		"path" in wranglerOrWorkerConfigObject
+			? wranglerOrWorkerConfigObject.allowLazy
+			: undefined;
 	if ("path" in wranglerOrWorkerConfigObject) {
 		const config = readConfig({
 			config: wranglerOrWorkerConfigObject.path,
@@ -55,7 +61,7 @@ export function maybeStartOrUpdateRemoteProxySession(
 		workerConfigObject,
 		preExistingRemoteProxySessionData,
 		auth ?? getDefaultRemoteBindingsAuth(account_id, profileDir),
-		{ cliDisplayName: isCfAuthActive() ? "cf" : "Wrangler", logger },
+		{ cliDisplayName: isCfAuthActive() ? "cf" : "Wrangler", logger, allowLazy },
 		startRemoteProxySession
 	);
 }

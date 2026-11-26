@@ -118,7 +118,9 @@ export type GetPlatformProxyOptions = {
 	 */
 	persist?: boolean | { path: string };
 	/**
-	 * Whether remote bindings should be enabled or not (defaults to `true`)
+	 * Whether remote bindings should be enabled or not (defaults to `true`).
+	 * When enabled and configured, the remote session connects before this function
+	 * returns because a binding call can block the Node.js thread needed to connect.
 	 */
 	remoteBindings?: boolean;
 };
@@ -198,6 +200,7 @@ export async function getPlatformProxy<
 			(await maybeStartOrUpdateRemoteProxySession({
 				path: config.configPath,
 				environment: env,
+				allowLazy: false,
 			})) ?? {}
 		).session;
 	}

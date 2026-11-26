@@ -6,6 +6,7 @@ import {
 } from "@cloudflare/workers-utils/test-helpers";
 import { fetch } from "undici";
 import { beforeEach, describe, it, vi } from "vitest";
+import * as remoteBindingsAuth from "../api/remoteBindings/auth";
 import { mockConsoleMethods } from "./helpers/mock-console";
 
 const { miniflareInstances } = vi.hoisted(() => ({
@@ -33,6 +34,37 @@ describe("getPlatformProxy", () => {
 
 	beforeEach(() => {
 		miniflareInstances.length = 0;
+	});
+
+	it("authenticates a remote-only K2 binding before returning the platform proxy", async ({
+		expect,
+		onTestFinished,
+	}) => {
+		writeWranglerConfig(
+			{
+				name: "test-worker",
+				compatibility_date: "2026-11-02",
+				k2: [
+					{
+						binding: "ORDERS",
+						stream: "0123456789abcdef0123456789abcdef",
+						remote: true,
+					},
+				],
+			},
+			"./wrangler.json"
+		);
+		const hook = vi.fn().mockRejectedValue(new Error("Login cancelled"));
+		const auth = vi
+			.spyOn(remoteBindingsAuth, "getDefaultRemoteBindingsAuth")
+			.mockReturnValue({ hook });
+		onTestFinished(() => auth.mockRestore());
+
+		const startup = getPlatformProxy({ persist: false }).then(async (proxy) => {
+			await proxy.dispose();
+		});
+		await expect(startup).rejects.toThrow("Login cancelled");
+		expect(hook).toHaveBeenCalledOnce();
 	});
 
 	it("returns 404 for asset misses", async ({ expect }) => {
