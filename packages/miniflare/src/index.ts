@@ -743,6 +743,32 @@ export function _transformsForContentEncodingAndContentType(
 	return encoders;
 }
 
+/**
+ * Whether `undici.fetch()` decodes a response body with this `Content-Encoding`.
+ * It decodes only the codings it knows, `zstd` only where `node:zlib` has it,
+ * and passes the body through still encoded if any listed coding is another:
+ * https://github.com/nodejs/undici/blob/v7.30.1/lib/web/fetch/index.js#L2239-L2270
+ *
+ * @param contentEncoding The response's `Content-Encoding` header
+ * @returns `true` if `undici.fetch()` decodes every listed coding
+ */
+function isDecodedByUndiciFetch(contentEncoding: string): boolean {
+	const hasZstd = typeof zlib.createZstdDecompress === "function";
+	return contentEncoding
+		.toLowerCase()
+		.split(",")
+		.every((coding) => {
+			coding = coding.trim();
+			return (
+				coding === "gzip" ||
+				coding === "x-gzip" ||
+				coding === "deflate" ||
+				coding === "br" ||
+				(coding === "zstd" && hasZstd)
+			);
+		});
+}
+
 function safeReadableStreamFrom(iterable: AsyncIterable<Uint8Array>) {
 	// Adapted from `undici`, catches errors from `next()` to avoid unhandled
 	// rejections from aborted request body streams:
@@ -3216,11 +3242,12 @@ export class Miniflare {
 		// on the Content-Encoding header rather than trying to infer it from the body.
 		// Technically, at this point, this a malformed response so let's remove the header
 		// Retain it as MF-Content-Encoding so we can tell the body was actually compressed.
+		// Codings undici can't decode leave the body encoded, so keep their header.
 		const contentEncoding = response.headers.get("Content-Encoding");
-		if (contentEncoding) {
+		if (contentEncoding !== null && isDecodedByUndiciFetch(contentEncoding)) {
 			response.headers.set("MF-Content-Encoding", contentEncoding);
+			response.headers.delete("Content-Encoding");
 		}
-		response.headers.delete("Content-Encoding");
 
 		if (
 			process.env.MINIFLARE_ASSERT_BODIES_CONSUMED === "true" &&
