@@ -105,7 +105,7 @@ describe("K2 producer configuration", () => {
 		assert(address && typeof address !== "string");
 		const { stderr } = await promisify(execFile)(
 			process.execPath,
-			["--use-openssl-ca", "platform-proxy.mjs"],
+			["--no-use-bundled-ca=true", "--use-openssl-ca", "platform-proxy.mjs"],
 			{
 				cwd: helper.tmpPath,
 				timeout: 15_000,
@@ -115,8 +115,11 @@ describe("K2 producer configuration", () => {
 					HOME: helper.tmpPath,
 					USERPROFILE: helper.tmpPath,
 					XDG_CONFIG_HOME: helper.tmpPath,
+					NODE_OPTIONS: "--use-bundled-ca",
 					NODE_EXTRA_CA_CERTS: "",
 					NODE_TLS_REJECT_UNAUTHORIZED: "1",
+					NO_PROXY: "127.0.0.1",
+					no_proxy: "127.0.0.1",
 					SSL_CERT_FILE: path.join(helper.tmpPath, "localhost-ca.pem"),
 					CLOUDFLARE_ACCOUNT_ID: "",
 					CF_ACCOUNT_ID: "",

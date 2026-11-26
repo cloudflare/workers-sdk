@@ -98,7 +98,7 @@ async function startBackgroundSession(
 		[PLATFORM_PROXY_REMOTE_SESSION_ARG],
 		{
 			execArgv: process.execArgv.filter((arg) =>
-				/^--(?:no-)?use-(?:(?:bundled|openssl|system)-ca|env-proxy)$/.test(
+				/^--(?:no-)?use-(?:(?:bundled|openssl|system)-ca|env-proxy)(?:=|$)/.test(
 					arg.replaceAll("_", "-")
 				)
 			),
