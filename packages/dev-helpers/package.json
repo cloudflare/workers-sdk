@@ -1,0 +1,68 @@
+{
+	"name": "@cloudflare/dev-helpers",
+	"version": "0.0.3",
+	"private": true,
+	"description": "Shared local development integrations for workers-sdk, including Wrangler compatibility. Not intended for external use — APIs may change without notice.",
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/dev-helpers#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"license": "MIT OR Apache-2.0",
+	"author": "workers-devprod@cloudflare.com",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/dev-helpers"
+	},
+	"files": [
+		"dist"
+	],
+	"sideEffects": false,
+	"exports": {
+		"./dev-vars": {
+			"types": "./dist/dev-vars.d.mts",
+			"import": "./dist/dev-vars.mjs"
+		},
+		"./miniflare-options": {
+			"types": "./dist/miniflare-options.d.mts",
+			"import": "./dist/miniflare-options.mjs"
+		},
+		"./pages-assets": {
+			"types": "./dist/pages-assets.d.mts",
+			"import": "./dist/pages-assets.mjs"
+		}
+	},
+	"scripts": {
+		"build": "tsdown",
+		"check:type": "tsc -p ./tsconfig.json && tsc -p ./tsconfig.pages-assets.json",
+		"dev": "tsdown --watch",
+		"test": "vitest",
+		"test:ci": "vitest run",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
+	},
+	"dependencies": {
+		"@cloudflare/config": "workspace:*",
+		"@cloudflare/containers-shared": "workspace:*",
+		"@cloudflare/workers-utils": "workspace:*",
+		"miniflare": "workspace:*",
+		"undici": "catalog:default"
+	},
+	"devDependencies": {
+		"@cloudflare/pages-shared": "workspace:*",
+		"@cloudflare/workers-shared": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"@types/mime": "^3.0.4",
+		"@types/node": "catalog:default",
+		"chokidar": "4.0.3",
+		"dotenv": "catalog:default",
+		"dotenv-expand": "12.0.2",
+		"mime": "3.0.0",
+		"tsdown": "catalog:default",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

@@ -1,14 +1,17 @@
 import assert from "node:assert";
 import {
-	configFileName,
 	DEFAULT_COMPAT_DATE,
-	experimental_patchConfig,
-	formatConfigSnippet,
-	isDurableObjectContainerApp,
 	isNonInteractiveOrCI,
 	UserError,
 } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	experimental_patchConfig,
+	formatConfigSnippet,
+	isDurableObjectContainerApp,
+} from "@cloudflare/workers-utils/config";
 import { confirm, fetchResult, logger } from "../../shared/context";
+import { partitionRoutes } from "../../shared/partition-routes";
 import {
 	getSubdomainValues,
 	validateEventTriggerTargets,
@@ -29,7 +32,11 @@ import type {
 	DeployProps,
 	VersionsUploadProps,
 } from "../../shared/types";
-import type { AssetsOptions, RawConfig } from "@cloudflare/workers-utils";
+import type {
+	AssetsOptions,
+	ServiceMetadataRes,
+} from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 /**
  *
@@ -172,6 +179,7 @@ export async function preUploadApiChecks(
 
 	const deployConfirm = getDeployConfirmFunction({
 		strictMode: props.strict,
+		strictModeAbortMessage: props.strictModeAbortMessage,
 	});
 
 	// TODO: warn if git/hg has uncommitted changes
@@ -199,21 +207,18 @@ export async function preUploadApiChecks(
 		}
 	} else {
 		try {
-			const serviceMetaData = await fetchResult<{
-				default_environment: {
-					environment: string;
-					script: {
-						tag: string;
-						tags: string[] | null;
-						last_deployed_from: "dash" | "api";
-					};
-				};
-			}>(config, `/accounts/${accountId}/workers/services/${name}`);
+			const serviceMetaData = await fetchResult<ServiceMetadataRes>(
+				config,
+				`/accounts/${accountId}/workers/services/${name}`
+			);
 			const {
 				default_environment: { script },
 			} = serviceMetaData;
-			workerTag = script.tag;
-			tags = script.tags ?? tags;
+			workerExists = Boolean(script);
+			if (script) {
+				workerTag = script.tag;
+				tags = script.tags ?? tags;
+			}
 
 			// This non-interactive deploy could not prove the local project owns
 			// the target Worker name (no config file names it, and the name was
@@ -230,13 +235,21 @@ export async function preUploadApiChecks(
 				);
 			}
 
-			if (script.last_deployed_from === "dash") {
+			if (script?.last_deployed_from === "dash") {
+				// Trigger configuration is only changed by `deploy`, and only for
+				// route categories present in the local configuration. Avoid requiring
+				// unrelated route permissions just to compare versioned settings.
+				const { routesOnly, customDomainsOnly } = partitionRoutes(
+					props.command === "deploy" ? props.routes : []
+				);
 				const remoteWorkerConfig = await downloadWorkerConfig(
 					config,
 					name,
 					serviceMetaData.default_environment.environment,
 					props.entry.file,
-					accountId
+					accountId,
+					routesOnly.length > 0,
+					customDomainsOnly.length > 0
 				);
 
 				const configForDiff =
@@ -287,7 +300,7 @@ export async function preUploadApiChecks(
 						return { workerTag, tags, workerExists, aborted: true };
 					}
 				}
-			} else if (script.last_deployed_from === "api") {
+			} else if (script?.last_deployed_from === "api") {
 				logger.warn(
 					`You are about to upload a Worker that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
 				);
@@ -296,17 +309,17 @@ export async function preUploadApiChecks(
 				}
 			}
 		} catch (e) {
-			if (isWorkerNotFoundError(e)) {
-				if (props.command === "versions upload") {
-					throw new UserError(
-						"You cannot upload a new version of a Worker that does not yet exist. Please run the `deploy` command first.",
-						{ telemetryMessage: "versions upload worker not found" }
-					);
-				}
-				workerExists = false;
-			} else {
+			if (!isWorkerNotFoundError(e)) {
 				throw e;
 			}
+			workerExists = false;
+		}
+
+		if (!workerExists && props.command === "versions upload") {
+			throw new UserError(
+				"You cannot upload a new version of a Worker that does not yet exist. Please run the `deploy` command first.",
+				{ telemetryMessage: "versions upload worker not found" }
+			);
 		}
 	}
 

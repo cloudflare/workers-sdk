@@ -5957,6 +5957,28 @@ and that at least one include rule is provided.
 		const workerIsBundled = async (contents: FormDataEntryValue | null) =>
 			(await toString(contents)).includes("worker_default as default");
 
+		it("uploads D1 bindings with id in the Pages worker bundle", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				name: "foo",
+				pages_build_output_dir: "public",
+				d1_databases: [
+					{ binding: "DB", database_name: "database", database_id: "db-id" },
+				],
+			});
+			let bundle = "";
+			simulateServer(async (generatedWorkerBundle) => {
+				bundle = await toString(generatedWorkerBundle);
+			});
+
+			await runWrangler("pages deploy");
+
+			expect(bundle).toContain(
+				JSON.stringify({ name: "DB", type: "d1", id: "db-id" })
+			);
+		});
+
 		it("should bundle the _worker.js when both `--bundle` and `--no-bundle` are omitted", async ({
 			expect,
 		}) => {

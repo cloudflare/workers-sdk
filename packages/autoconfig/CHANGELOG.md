@@ -1,5 +1,248 @@
 # @cloudflare/autoconfig
 
+## 0.13.4
+
+### Patch Changes
+
+- [#17070](https://github.com/cloudflare/workers-sdk/pull/17070) [`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef), [`b007991`](https://github.com/cloudflare/workers-sdk/commit/b00799168dc2580013ea3c9b7d4f4505e120afa2), [`5970e6a`](https://github.com/cloudflare/workers-sdk/commit/5970e6a842b36665ab092f54ae276d34b02e3a29)]:
+  - @cloudflare/workers-utils@0.57.0
+  - @cloudflare/cli-shared-helpers@0.3.13
+  - @cloudflare/config@1.0.0-rc.4
+
+## 0.13.3
+
+### Patch Changes
+
+- [#17031](https://github.com/cloudflare/workers-sdk/pull/17031) [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-19
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17059](https://github.com/cloudflare/workers-sdk/pull/17059) [`5858179`](https://github.com/cloudflare/workers-sdk/commit/5858179a9349819dc5eaf4f9643350991ca02972) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Generate cf configuration without a runtime dependency on cf
+
+  Use a type-only import when generating `cloudflare.config.ts`, so static directories without a `package.json` or local cf installation can load their configuration after setup.
+
+- Updated dependencies [[`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22), [`be6aa81`](https://github.com/cloudflare/workers-sdk/commit/be6aa81eb24c8ac86e6fa0a0274a3c9257f58e24), [`56974d4`](https://github.com/cloudflare/workers-sdk/commit/56974d49141e72b19b33b74a19c160f734128108), [`08eeaf4`](https://github.com/cloudflare/workers-sdk/commit/08eeaf4846ee4cd65a3cf73d063dbb88df322033), [`629f135`](https://github.com/cloudflare/workers-sdk/commit/629f135e4259c6a19aa9331a7346d993b8ef328a), [`4f5b118`](https://github.com/cloudflare/workers-sdk/commit/4f5b1182f2481ddafbc84e32d654fd4fa415128f), [`629f135`](https://github.com/cloudflare/workers-sdk/commit/629f135e4259c6a19aa9331a7346d993b8ef328a)]:
+  - @cloudflare/workers-utils@0.56.0
+  - @cloudflare/cli-shared-helpers@0.3.12
+  - @cloudflare/config@1.0.0-rc.3
+
+## 0.13.2
+
+### Patch Changes
+
+- [#16995](https://github.com/cloudflare/workers-sdk/pull/16995) [`c79c1fc`](https://github.com/cloudflare/workers-sdk/commit/c79c1fccc307cb16450121fef5353c7ff6ba5c00) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix Astro projects set up for cf getting a `wrangler.jsonc` instead of a `cloudflare.config.ts`
+
+  Autoconfig installed `astro@beta` to get the `astro add` that writes `cloudflare.config.ts`, but package managers such as pnpm kept the project's newer stable Astro, whose `astro add` writes `wrangler.jsonc`, so the build failed. Autoconfig now runs the beta's `astro add` once without installing it, and keeps the project's Astro version.
+
+- [#17009](https://github.com/cloudflare/workers-sdk/pull/17009) [`496a062`](https://github.com/cloudflare/workers-sdk/commit/496a062afca5587050e21ff026d541b730b4e125) Thanks [@edmundhung](https://github.com/edmundhung)! - Require Vite 7 or later when autoconfiguring Vite projects for `cf`
+
+  `cf` installs `@cloudflare/vite-plugin` v2, which requires Vite 7 or 8, so a Vite 6 project is now rejected before any changes are made instead of failing during dependency installation.
+
+- [#16992](https://github.com/cloudflare/workers-sdk/pull/16992) [`f1c64b5`](https://github.com/cloudflare/workers-sdk/commit/f1c64b5c8aae426a85c57aac1def4f7b46019102) Thanks [@edmundhung](https://github.com/edmundhung)! - Stop adding the SolidStart pre-bundling exclude on `cf` for SolidStart 2.2.3 and later
+
+  SolidStart 2.2.3 keeps `@solidjs/start` out of server pre-bundling itself, so autoconfig now adds `environments.ssr.optimizeDeps.exclude` to the Vite config, or asks you to add it, only for earlier 2.x versions.
+
+- [#17010](https://github.com/cloudflare/workers-sdk/pull/17010) [`a959051`](https://github.com/cloudflare/workers-sdk/commit/a95905118cbc64083db1edb861dfa36162a16d3e) Thanks [@edmundhung](https://github.com/edmundhung)! - Suggest a compatible Cloudflare Vite plugin version when the installed one doesn't support cf
+
+  When `@cloudflare/vite-plugin` was missing or too old, autoconfig suggested installing `@cloudflare/vite-plugin@beta`, which resolves to a version that cf rejects. The suggested command now installs `@cloudflare/vite-plugin@^2.0.0-rc.0`, matching the version autoconfig installs when it configures a project for cf.
+
+- [#16019](https://github.com/cloudflare/workers-sdk/pull/16019) [`8f26e90`](https://github.com/cloudflare/workers-sdk/commit/8f26e9008c8fb50a677f7cb7836beaf6deb66073) Thanks [@penalosa](https://github.com/penalosa)! - Correct the dry-run setup message to say "exiting now" instead of "existing now".
+
+  The previous wording contained a typo and appeared in Wrangler setup output and other consumers of shared autoconfig.
+
+- [#17003](https://github.com/cloudflare/workers-sdk/pull/17003) [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-18
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#14578](https://github.com/cloudflare/workers-sdk/pull/14578) [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3) Thanks [@penalosa](https://github.com/penalosa)! - Fix `Dynamic require` errors when importing packages from ES modules
+
+  Importing these packages in a Node.js ES module could fail with `Dynamic require of "..." is not supported` when a dependency loaded a Node.js built-in. These imports now work without requiring a CommonJS wrapper.
+
+- Updated dependencies [[`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c), [`d04e667`](https://github.com/cloudflare/workers-sdk/commit/d04e667fadbc4b28666236ae9d85a3cae6bee557), [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3)]:
+  - @cloudflare/workers-utils@0.55.0
+  - @cloudflare/cli-shared-helpers@0.3.11
+  - @cloudflare/config@1.0.0-rc.2
+
+## 0.13.1
+
+### Patch Changes
+
+- [#16967](https://github.com/cloudflare/workers-sdk/pull/16967) [`092ac28`](https://github.com/cloudflare/workers-sdk/commit/092ac28e1f4097d09d012cabf589a185b3b7a032) Thanks [@james-elicx](https://github.com/james-elicx)! - Use vinext 1.4.6 or later when configuring Next.js projects
+
+  Autoconfig now runs `vinext init` with `vinext@^1.4.6` (previously `^1.3.0`), so newly configured Next.js projects pick up the latest vinext fixes.
+
+- [#16974](https://github.com/cloudflare/workers-sdk/pull/16974) [`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-17
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666)]:
+  - @cloudflare/workers-utils@0.54.2
+  - @cloudflare/cli-shared-helpers@0.3.10
+  - @cloudflare/config@1.0.0-rc.1
+
+## 0.13.0
+
+### Minor Changes
+
+- [#16803](https://github.com/cloudflare/workers-sdk/pull/16803) [`b219078`](https://github.com/cloudflare/workers-sdk/commit/b219078a4c1b008485ce022f01ad7292d613d9f0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Run experimental cf projects with their installed Vite or Vite+ commands
+
+  `cf dev`, `cf build`, and deployments that build your project can use Vite or Vite+ even when no framework command is detected. This removes the need for the internal `cf-vite` delegate and supports dependencies declared and hoisted at the root of a configured workspace. A workspace application using a custom-named Vite config should declare `@cloudflare/vite-plugin` in its own manifest, or add `vite` or `vite-plus` as a dependency or dev dependency to identify its tooling; this keeps shared root tools from selecting Vite for non-Vite siblings. Configs passed later via `--config` are evaluated by Vite when the command runs. Existing framework commands keep their priority. Consumers resolve bare executables using the detected `nodeModulesPaths` in order, adding `.bin` to each directory. Lookup stops at the validated workspace root; standalone applications use only their own `node_modules/.bin`.
+
+  Project inspection can recognize an existing Cloudflare configuration before dependencies are installed. Running a command provides guidance when the required tools are missing or the plugin version does not support cf profiles (`>=2.0.0-beta.v.13 <3`). Vite evaluates the project configuration when the command runs, including dynamic configs and custom config files. Repair guidance uses the project’s detected package manager. Automatic setup asks users to convert CommonJS `.cjs` and `.cts` Vite configs to ESM imports and exports in `.mjs` or `.mts` before adding the ESM-only Cloudflare plugin. Native builds also work with the Windows shell. Pages migration safeguards, unsupported-framework setup checks, and Wrangler command selection retain their existing behavior.
+
+### Patch Changes
+
+- [#16921](https://github.com/cloudflare/workers-sdk/pull/16921) [`6785363`](https://github.com/cloudflare/workers-sdk/commit/6785363bc2d9b7cda463d8cc71765c4780f8d64d) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Install the Vite plugin release candidate when configuring projects for `cf`
+
+  Configuring a Vite project for `cf` now installs `@cloudflare/vite-plugin@^2.0.0-rc.0` instead of `^2.0.0-beta.v.0`, so an existing lockfile can't keep a beta that doesn't support the generated configuration.
+
+- [#16946](https://github.com/cloudflare/workers-sdk/pull/16946) [`e97c9f8`](https://github.com/cloudflare/workers-sdk/commit/e97c9f8bd2cdbd15faf402b146582e49d65dd1a7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-16
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`d36b39d`](https://github.com/cloudflare/workers-sdk/commit/d36b39d440a8f408f41dcf4925a81f2f8a58f73b), [`0bf81ac`](https://github.com/cloudflare/workers-sdk/commit/0bf81ac16041a1f47f5474f7d6f5b0da6160f76b), [`e97c9f8`](https://github.com/cloudflare/workers-sdk/commit/e97c9f8bd2cdbd15faf402b146582e49d65dd1a7), [`349fc4e`](https://github.com/cloudflare/workers-sdk/commit/349fc4e7443aa744cbe129f84f28571bf8625155)]:
+  - @cloudflare/config@1.0.0-rc.0
+  - @cloudflare/workers-utils@0.54.1
+  - @cloudflare/cli-shared-helpers@0.3.9
+
+## 0.12.1
+
+### Patch Changes
+
+- [#16849](https://github.com/cloudflare/workers-sdk/pull/16849) [`3cea40b`](https://github.com/cloudflare/workers-sdk/commit/3cea40b078519222db432b5edf827ddc3e629a2a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-12
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16886](https://github.com/cloudflare/workers-sdk/pull/16886) [`63eb6da`](https://github.com/cloudflare/workers-sdk/commit/63eb6daa0eda348e1f9e86a506cfd80d104a1e28) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-13
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`f005593`](https://github.com/cloudflare/workers-sdk/commit/f005593c1ed0d1f429dafc6919c4335f4d5070c7), [`3cea40b`](https://github.com/cloudflare/workers-sdk/commit/3cea40b078519222db432b5edf827ddc3e629a2a), [`63eb6da`](https://github.com/cloudflare/workers-sdk/commit/63eb6daa0eda348e1f9e86a506cfd80d104a1e28), [`3b1b408`](https://github.com/cloudflare/workers-sdk/commit/3b1b40832ac323de709001d9cc3823517b988985)]:
+  - @cloudflare/workers-utils@0.54.0
+  - @cloudflare/cli-shared-helpers@0.3.8
+  - @cloudflare/config@0.32.1
+
+## 0.12.0
+
+### Minor Changes
+
+- [#16559](https://github.com/cloudflare/workers-sdk/pull/16559) [`575d136`](https://github.com/cloudflare/workers-sdk/commit/575d1366aa4c3a83cca69253bc5247e7fa1ab002) Thanks [@edmundhung](https://github.com/edmundhung)! - Support SolidStart on `cf` from version 2.0.0
+
+  Autoconfig now sets up SolidStart 2 projects for `cf` with the Cloudflare Vite plugin. Projects configured for Wrangler keep using Nitro.
+
+### Patch Changes
+
+- [#16559](https://github.com/cloudflare/workers-sdk/pull/16559) [`575d136`](https://github.com/cloudflare/workers-sdk/commit/575d1366aa4c3a83cca69253bc5247e7fa1ab002) Thanks [@edmundhung](https://github.com/edmundhung)! - Update `@netlify/build-info` to 11.3.1
+
+- Updated dependencies []:
+  - @cloudflare/workers-utils@0.53.1
+
+## 0.11.1
+
+### Patch Changes
+
+- Updated dependencies [[`877b249`](https://github.com/cloudflare/workers-sdk/commit/877b249292307ae4dd282080e68b1d88c0fd0bb0), [`8d2bb3d`](https://github.com/cloudflare/workers-sdk/commit/8d2bb3dccf55ba8ac3fdf8ac12cca7cd52a5bad0)]:
+  - @cloudflare/config@0.32.0
+  - @cloudflare/workers-utils@0.53.1
+  - @cloudflare/cli-shared-helpers@0.3.7
+
+## 0.11.0
+
+### Minor Changes
+
+- [#16787](https://github.com/cloudflare/workers-sdk/pull/16787) [`0d4741a`](https://github.com/cloudflare/workers-sdk/commit/0d4741ad6345009b39a6a0b1ccca3bcc8485a062) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Detect cf applications inside package-manager workspaces without requiring an application-local lockfile.
+
+  Use the enclosing workspace's package manager while keeping framework commands, output directories, and package.json updates local to the application. Wrangler's detection and command behavior are unchanged.
+
+  This changes the pre-1.0 cf integration contract: framework commands are returned without package-manager prefixes for all cf projects, including standalone applications. Before upgrading, cf consumers must resolve executables from the application's and ancestor directories' `node_modules/.bin` for build, dev, and the autoconfig `runCommand` callback. Older cf runners without local executable resolution must be updated first.
+
+### Patch Changes
+
+- [#16810](https://github.com/cloudflare/workers-sdk/pull/16810) [`cdc970b`](https://github.com/cloudflare/workers-sdk/commit/cdc970b7bd39dcd42af65bdadab7c38ce0b409fb) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-10
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16758](https://github.com/cloudflare/workers-sdk/pull/16758) [`325dc69`](https://github.com/cloudflare/workers-sdk/commit/325dc69bb06a78ef237322b89ac9aeafc7060534) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix JavaScript configuration parsing for Svelte projects using object spread
+
+  Use a parser that supports object spread when updating JavaScript configuration files. This prevents configuration failures for Svelte projects using Drizzle or Better Auth and other framework configurations containing modern JavaScript syntax.
+
+  Vite autoconfiguration reports a configuration error when an object spread, computed property, or accessor after the plugins array could override the Cloudflare plugin. Place the effective plugins array after these properties before retrying autoconfiguration.
+
+- Updated dependencies [[`6af492e`](https://github.com/cloudflare/workers-sdk/commit/6af492e92394c3e638bda4cf6d560698cef1c715), [`cdc970b`](https://github.com/cloudflare/workers-sdk/commit/cdc970b7bd39dcd42af65bdadab7c38ce0b409fb), [`44b39b0`](https://github.com/cloudflare/workers-sdk/commit/44b39b02765d246479f49b690f9e9b3d8645a303)]:
+  - @cloudflare/workers-utils@0.53.0
+  - @cloudflare/cli-shared-helpers@0.3.6
+  - @cloudflare/config@0.31.1
+
+## 0.10.0
+
+### Minor Changes
+
+- [#16018](https://github.com/cloudflare/workers-sdk/pull/16018) [`bd6b82a`](https://github.com/cloudflare/workers-sdk/commit/bd6b82a8d401dad64df2b5d98c7be76fa422f647) Thanks [@edmundhung](https://github.com/edmundhung)! - Configure Astro projects for cf with the latest compatible beta releases
+
+  Astro 7 projects can now be automatically configured for cf with the latest compatible beta releases of Astro and the Cloudflare adapter.
+
+### Patch Changes
+
+- [#16746](https://github.com/cloudflare/workers-sdk/pull/16746) [`abf924e`](https://github.com/cloudflare/workers-sdk/commit/abf924ee1820b4af139f21dffc877eaf6122c056) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-06
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16792](https://github.com/cloudflare/workers-sdk/pull/16792) [`de10016`](https://github.com/cloudflare/workers-sdk/commit/de100160f243451355480e8f815d0f7d4b3ec8b9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-09
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`abf924e`](https://github.com/cloudflare/workers-sdk/commit/abf924ee1820b4af139f21dffc877eaf6122c056), [`de10016`](https://github.com/cloudflare/workers-sdk/commit/de100160f243451355480e8f815d0f7d4b3ec8b9), [`cff83d0`](https://github.com/cloudflare/workers-sdk/commit/cff83d0220b51c7cfdf422bcd5091a8fbea76d81), [`c64fdfb`](https://github.com/cloudflare/workers-sdk/commit/c64fdfba7d2531b4f58d7b76474f2ae636b17044)]:
+  - @cloudflare/workers-utils@0.52.1
+  - @cloudflare/cli-shared-helpers@0.3.5
+  - @cloudflare/config@0.31.0
+
+## 0.9.3
+
+### Patch Changes
+
+- [#16700](https://github.com/cloudflare/workers-sdk/pull/16700) [`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195) Thanks [@cjol](https://github.com/cjol)! - Bump bundled `brace-expansion` to pick up security fixes
+
+  These packages bundle `brace-expansion` (a dependency of `minimatch`), and the bundled versions were affected by published advisories. The bundles now include `brace-expansion` 2.1.7 (from 2.0.1) and 5.0.12 (from 5.0.5). Normal glob patterns expand as before; only the pathological patterns targeted by the advisories are handled differently.
+
+- [#16695](https://github.com/cloudflare/workers-sdk/pull/16695) [`b2061f4`](https://github.com/cloudflare/workers-sdk/commit/b2061f40f812d8888b461f68506552b58f8e468b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-04
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195), [`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195), [`b2061f4`](https://github.com/cloudflare/workers-sdk/commit/b2061f40f812d8888b461f68506552b58f8e468b), [`f1d81a2`](https://github.com/cloudflare/workers-sdk/commit/f1d81a20c8e535ec7cb870143283f4a683fec70d)]:
+  - @cloudflare/workers-utils@0.52.0
+  - @cloudflare/cli-shared-helpers@0.3.4
+  - @cloudflare/config@0.30.2
+
+## 0.9.2
+
+### Patch Changes
+
+- [#16670](https://github.com/cloudflare/workers-sdk/pull/16670) [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-03
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815)]:
+  - @cloudflare/workers-utils@0.51.1
+  - @cloudflare/cli-shared-helpers@0.3.3
+  - @cloudflare/config@0.30.1
+
+## 0.9.1
+
+### Patch Changes
+
+- [#16642](https://github.com/cloudflare/workers-sdk/pull/16642) [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-02
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72), [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67), [`51bbf8b`](https://github.com/cloudflare/workers-sdk/commit/51bbf8b257dbf5c7a8f26600f5875ba45acbe89c), [`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72), [`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72)]:
+  - @cloudflare/config@0.30.0
+  - @cloudflare/workers-utils@0.51.0
+  - @cloudflare/cli-shared-helpers@0.3.2
+
 ## 0.9.0
 
 ### Minor Changes

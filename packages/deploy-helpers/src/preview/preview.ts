@@ -2,16 +2,15 @@ import path from "node:path";
 import { convertToWranglerConfig } from "@cloudflare/config";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import { maybeGetFile } from "@cloudflare/workers-shared/utils/helpers";
+import { getDockerPath, UserError } from "@cloudflare/workers-utils";
 import {
 	configFileName,
 	defaultWranglerConfig,
 	formatConfigSnippet,
 	getBindingTypeFriendlyName,
 	getDurableObjectExports,
-	getDockerPath,
 	isLiveDurableObjectExport,
-	UserError,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import { parseAndExpandDotEnv } from "@cloudflare/workers-utils/local-env";
 import chalk from "chalk";
 import { syncAssets } from "../deploy/helpers/assets";
@@ -56,10 +55,10 @@ import type {
 } from "./api";
 import type { PullRequestMetadata } from "./shared";
 import type {
-	ParsedInputContainerConfig,
-	ParsedOutputContainerConfig,
-	ParsedOutputRootConfig,
-	ParsedOutputWorkerConfig,
+	ParsedContainerConfig,
+	ParsedBuildOutputContainerConfig,
+	ParsedBuildOutputRootConfig,
+	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
 import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
@@ -70,7 +69,7 @@ import type {
 	PreviewsConfig,
 	RawEnvironment,
 	Route,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 export type PreviewArgs = {
 	script?: string;
@@ -111,13 +110,15 @@ export type PreviewResult = {
 	isNewPreview: boolean;
 };
 
-export type PreviewBuildOutputRootConfig = ParsedOutputRootConfig & {
-	buildContext: ParsedOutputRootConfig["buildContext"] & { isPreview: true };
+export type PreviewBuildOutputRootConfig = ParsedBuildOutputRootConfig & {
+	buildContext: ParsedBuildOutputRootConfig["buildContext"] & {
+		isPreview: true;
+	};
 };
 
 export type PreviewBuildOutput = {
 	// Authoritative Worker settings and bindings from Build Output.
-	workerConfig: ParsedOutputWorkerConfig;
+	workerConfig: ParsedBuildOutputWorkerConfig;
 	// Account settings and build context from the root Build Output config.
 	rootConfig: PreviewBuildOutputRootConfig;
 	// Compiled Worker code and modules, if this is not an assets-only build.
@@ -126,7 +127,7 @@ export type PreviewBuildOutput = {
 	assets?: Pick<PreviewAssetsOptions, "directory" | "_headers" | "_redirects">;
 	// Container definitions are emitted separately from the Worker config because
 	// Build Output records resolved image references rather than source config.
-	containers?: ParsedOutputContainerConfig[];
+	containers?: ParsedBuildOutputContainerConfig[];
 };
 
 type PreviewWorkerBuildResult = WorkerBuildResult & {
@@ -135,7 +136,7 @@ type PreviewWorkerBuildResult = WorkerBuildResult & {
 
 /** Verify that Build Output was produced with Preview configuration. */
 export function assertPreviewBuildOutputRootConfig(
-	rootConfig: ParsedOutputRootConfig | undefined
+	rootConfig: ParsedBuildOutputRootConfig | undefined
 ): asserts rootConfig is PreviewBuildOutputRootConfig {
 	if (rootConfig?.buildContext.isPreview !== true) {
 		throw new UserError("Build Output was not created by a Preview build.", {
@@ -191,8 +192,8 @@ export type PreviewOptions = {
 };
 
 function convertBuildOutputContainerToInput(
-	container: ParsedOutputContainerConfig
-): ParsedInputContainerConfig {
+	container: ParsedBuildOutputContainerConfig
+): ParsedContainerConfig {
 	if ("image" in container) {
 		const { image, ...config } = container;
 		return {
@@ -214,7 +215,7 @@ function convertBuildOutputContainerToInput(
 }
 
 function getLocalContainerImageReferences(
-	containers: ParsedOutputContainerConfig[] | undefined,
+	containers: ParsedBuildOutputContainerConfig[] | undefined,
 	previewContainers: ContainerApp[]
 ): Map<string, string> {
 	const localReferences = new Map<string, string>();
@@ -241,7 +242,7 @@ function getLocalContainerImageReferences(
  * Converts resolved Build Output containers into preview application configs.
  */
 function convertBuildOutputContainers(
-	containers: ParsedOutputContainerConfig[] | undefined,
+	containers: ParsedBuildOutputContainerConfig[] | undefined,
 	exports: Exports | undefined
 ): ContainerApp[] {
 	const containerClassNames = new Map<string, string>();
@@ -1153,42 +1154,60 @@ async function runPreview(
 			throw e;
 		}
 	}
-	const isNewPreview = !existingPreview;
+	let isNewPreview = !existingPreview;
 	const previewRequest = assemblePreviewScriptSettings(config);
 
 	let previewResource: PreviewResource;
-	if (isNewPreview) {
-		previewResource = await createPreview(
+	if (!existingPreview) {
+		try {
+			previewResource = await createPreview(
+				config,
+				accountId,
+				workerName,
+				{ name: previewName, ...previewRequest },
+				{ ignoreBaseConfig }
+			);
+		} catch (e) {
+			/**
+			 * Error 100338 means a Preview with this name already exists.
+			 * Another build may have created it between our initial GET and POST,
+			 * so re-read the Preview and continue through the update path.
+			 */
+			if (!(e instanceof Error && "code" in e && e.code === 100338)) {
+				throw e;
+			}
+			previewResource = await getPreview(
+				config,
+				accountId,
+				workerName,
+				previewIdentifier
+			);
+			isNewPreview = false;
+		}
+	} else {
+		previewResource = existingPreview;
+	}
+
+	if (
+		isNewPreview &&
+		replaceTailConsumersAfterCreate &&
+		previewRequest.tail_consumers !== undefined
+	) {
+		previewResource = await editPreview(
 			config,
 			accountId,
 			workerName,
-			{ name: previewName, ...previewRequest },
-			{ ignoreBaseConfig }
+			previewIdentifier,
+			{ tail_consumers: previewRequest.tail_consumers }
 		);
-		if (
-			replaceTailConsumersAfterCreate &&
-			previewRequest.tail_consumers !== undefined
-		) {
-			previewResource = await editPreview(
-				config,
-				accountId,
-				workerName,
-				previewIdentifier,
-				{ tail_consumers: previewRequest.tail_consumers }
-			);
-		}
-	} else {
-		if (Object.keys(previewRequest).length > 0) {
-			previewResource = await editPreview(
-				config,
-				accountId,
-				workerName,
-				previewIdentifier,
-				previewRequest
-			);
-		} else {
-			previewResource = existingPreview as PreviewResource;
-		}
+	} else if (!isNewPreview && Object.keys(previewRequest).length > 0) {
+		previewResource = await editPreview(
+			config,
+			accountId,
+			workerName,
+			previewIdentifier,
+			previewRequest
+		);
 	}
 
 	const { scopedContainerConfig, normalisedContainerConfig } =
@@ -1338,12 +1357,12 @@ export async function preview(
  * Upload a Preview from resolved Build Output configuration.
  *
  * @param accountId Account that owns the parent Worker.
- * @param args Preview name and deployment annotations.
+ * @param args Preview name, deployment annotations, and secrets file.
  * @param buildOutput Exact configuration and artifacts emitted by the build.
  */
 export async function previewBuildOutput(
 	accountId: string,
-	args: Pick<PreviewArgs, "name" | "tag" | "message" | "json">,
+	args: Pick<PreviewArgs, "name" | "tag" | "message" | "json" | "secretsFile">,
 	buildOutput: PreviewBuildOutput,
 	options?: PreviewOptions
 ): Promise<PreviewResult> {
@@ -1358,7 +1377,7 @@ export async function previewBuildOutput(
 			}
 		);
 	}
-	if (workerConfig.tailConsumers?.some((consumer) => consumer.streaming)) {
+	if ((workerConfig.experimental?.streamingTailConsumers?.length ?? 0) > 0) {
 		throw new UserError(
 			"Preview uploads from Build Output don't support streaming tail consumers.",
 			{
@@ -1378,10 +1397,9 @@ export async function previewBuildOutput(
 			}
 		);
 	}
-	const { buildContext: _buildContext, ...settings } = rootConfig;
 	const { manifest: _manifest, ...worker } = workerConfig;
 	const convertedConfig = convertToWranglerConfig({
-		...settings,
+		...rootConfig.settings,
 		worker,
 		containers: [],
 	});

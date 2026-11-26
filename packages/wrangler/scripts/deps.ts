@@ -1,15 +1,26 @@
-import fs from "node:fs";
-import path from "node:path";
-
 /**
- * Dependencies that _are not_ bundled along with wrangler
+ * Dependencies that must be installed alongside Wrangler
  */
 export const EXTERNAL_DEPENDENCIES = [
+	// Public declarations must share workers-utils' unique symbol types. Its JS
+	// stays bundled because Wrangler is CommonJS and workers-utils is ESM-only.
+	"@cloudflare/workers-utils",
+
+	// The public API exposes SDK and protocol types. Keep these packages installed
+	// so consumers can resolve their declarations without bundling their namespaces.
+	"cloudflare",
+	"devtools-protocol",
+	"@types/yargs",
+
+	// Share Undici's Request/Response classes and global dispatcher with Miniflare.
+	"undici",
+
+	// The shared source-map helper reloads this module through the real require
+	// cache to isolate stack-trace handlers, so it cannot be bundled.
+	"@cspotcode/source-map-support",
+
 	// Wrangler depends on a pinned version of esbuild.
 	"esbuild",
-
-	// This blows up when bundled, and has WASM dependencies. Wrangler depends on a pinned version.
-	"blake3-wasm",
 
 	// Wrangler depends on a pinned version of Miniflare.
 	"miniflare",
@@ -60,16 +71,19 @@ export const IGNORED_DIST_IMPORTS = [
 	// crypto implementation if installed; falls back to a JS implementation
 	// when missing.
 	"@aws-sdk/signature-v4-crt",
+
+	// ws optionally loads bufferutil inside try/catch for native masking;
+	// otherwise it retains its JavaScript implementation.
+	"bufferutil",
+	// ws prefers Node's buffer.isUtf8. Its older-Node native fallback is guarded
+	// by try/catch and retains a JavaScript implementation if unavailable.
+	"utf-8-validate",
+
+	// @webcontainer/env probes @blitz/internal/env inside try/catch. Its absence
+	// makes isWebContainer() return false and leaves normal URLs unchanged.
+	"@blitz/internal",
+
+	// recast tries babylon only if loading @babel/parser throws. The primary
+	// parser is bundled with Wrangler, so this legacy fallback is unnecessary.
+	"babylon",
 ];
-
-const pathToPackageJson = path.resolve(__dirname, "..", "package.json");
-const packageJson = fs.readFileSync(pathToPackageJson, { encoding: "utf-8" });
-const { dependencies, devDependencies } = JSON.parse(packageJson);
-
-/**
- * Dependencies that _are_ bundled along with wrangler
- */
-export const BUNDLED_DEPENDENCIES = Object.keys({
-	...dependencies,
-	...devDependencies,
-}).filter((dep) => !EXTERNAL_DEPENDENCIES.includes(dep));

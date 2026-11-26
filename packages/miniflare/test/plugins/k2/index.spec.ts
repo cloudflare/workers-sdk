@@ -56,7 +56,7 @@ function producerWorker(proxyUrl?: URL, remote?: boolean) {
 			env: {
 				ORDERS: {
 					type: "k2" as const,
-					stream,
+					id: stream,
 					...(remote === undefined ? {} : { dev: { remote } }),
 				},
 			},

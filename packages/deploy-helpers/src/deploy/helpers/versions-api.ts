@@ -6,12 +6,12 @@ import type {
 	VersionCache,
 	VersionId,
 } from "./versions-types";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type {
-	ComplianceConfig,
 	Observability,
 	StreamingTailConsumer,
 	TailConsumer,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 export async function fetchVersion(
 	complianceConfig: ComplianceConfig,

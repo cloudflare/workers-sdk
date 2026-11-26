@@ -7,16 +7,21 @@ describe("getRemoteBindings", () => {
 			getRemoteBindings({
 				env: {
 					ANALYTICS: {
-						type: "analytics",
+						type: "analytics-sql",
 						dev: { remote: true },
 					},
 					K2: {
 						type: "k2",
-						stream: "stream-id",
+						id: "0123456789abcdef0123456789abcdef",
 					},
 					HYPERDRIVE: {
 						type: "hyperdrive",
 						id: "hyperdrive-id",
+						dev: { remote: true },
+					},
+					RTK: {
+						type: "realtime-kit",
+						id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
 						dev: { remote: true },
 					},
 				},
@@ -28,12 +33,17 @@ describe("getRemoteBindings", () => {
 			},
 			K2: {
 				type: "k2",
-				stream: "stream-id",
+				stream: "0123456789abcdef0123456789abcdef",
 				remote: undefined,
 			},
 			HYPERDRIVE: {
 				type: "hyperdrive",
 				id: "hyperdrive-id",
+				remote: true,
+			},
+			RTK: {
+				type: "realtimekit",
+				app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
 				remote: true,
 			},
 		});

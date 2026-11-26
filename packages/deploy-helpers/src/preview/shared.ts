@@ -1,13 +1,15 @@
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import {
-	configFileName,
 	getCIOverrideName,
-	getDurableObjectExports,
 	getWorkersCIBranchName,
-	isLiveDurableObjectExport,
 	UserError,
 } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	getDurableObjectExports,
+	isLiveDurableObjectExport,
+} from "@cloudflare/workers-utils/config";
 import { gitCommandText, resolveGitBranchName } from "../shared/git-branch";
 import { shortHash, truncateWithSuffix } from "../shared/names";
 import type { Binding, EnvBindings, UpdatePreviewRequestParams } from "./api";
@@ -16,7 +18,7 @@ import type {
 	PreviewsConfig,
 	RawConfig,
 	RawEnvironment,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 const MAX_CONTAINER_APP_NAME_LENGTH = 253;
 
@@ -428,11 +430,16 @@ export function getBindingValue(binding: Binding): string {
 		case "artifacts":
 			return String(binding.namespace ?? "");
 		case "flagship":
+		case "realtimekit":
 			return String(binding.app_id ?? "");
 		case "ratelimit":
 			return String(binding.namespace_id ?? "");
 		case "vpc_service":
 			return String(binding.service_id ?? "");
+		case "oidc_token":
+			return binding.alg
+				? `${binding.audience}, ${binding.alg}`
+				: String(binding.audience ?? "");
 		case "send_email":
 			return String(binding.destination_address ?? "");
 		default:
@@ -661,6 +668,13 @@ function extractBindings(
 		};
 	}
 
+	for (const realtimekit of previews?.realtimekit ?? []) {
+		env[realtimekit.binding] = {
+			type: "realtimekit",
+			app_id: realtimekit.app_id,
+		};
+	}
+
 	for (const ratelimit of previews?.ratelimits ?? []) {
 		env[ratelimit.name] = {
 			type: "ratelimit",
@@ -677,6 +691,14 @@ function extractBindings(
 		env[vpc.binding] = { type: "vpc_service", service_id: vpc.service_id };
 	}
 
+	for (const token of previews?.oidc_tokens ?? []) {
+		env[token.binding] = {
+			type: "oidc_token",
+			audience: token.audience,
+			...(token.alg !== undefined && { alg: token.alg }),
+		};
+	}
+
 	if (previews?.browser) {
 		env[previews.browser.binding] = { type: "browser" };
 	}
@@ -689,7 +711,7 @@ function extractBindings(
 		env[previews.ai.binding] = { type: "ai", staging: previews.ai.staging };
 	}
 
-	if (previews?.images) {
+	if (previews?.images?.binding) {
 		env[previews.images.binding] = { type: "images" };
 	}
 

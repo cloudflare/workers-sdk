@@ -1,6 +1,8 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { beginContainerConfiguration } from "./containers";
+import { realPackagePath } from "./helpers";
 import { cloudflarePool } from "./pool";
 import type { WorkersPoolOptions } from "./config";
 import type { ProvidedContext } from "vitest";
@@ -87,6 +89,7 @@ export function cloudflareTest(
 				)
 				.digest("hex");
 			cloudflareTestId = `\0cloudflare:test-${projectId}`;
+			beginContainerConfiguration(context.project.vitest);
 			context.project.config.poolRunner = cloudflarePool(options);
 			context.project.config.pool = "cloudflare-pool";
 			context.project.config.snapshotEnvironment = "cloudflare:snapshot";
@@ -123,12 +126,31 @@ export function cloudflareTest(
 			// https://github.com/vitejs/vite/blob/v5.1.4/packages/vite/src/node/plugins/resolve.ts#L175
 			config.ssr.target = "webworker";
 		},
-		resolveId(id) {
-			if (id === "cloudflare:test" || id.startsWith("\0cloudflare:test-")) {
-				// Remap IDs from other projects sharing the cache or older sessions.
-				// Vitest invalidates cached importers when resolved dependencies change.
-				return cloudflareTestId;
-			}
+		resolveId: {
+			order: "pre",
+			async handler(id, importer, resolveOptions) {
+				if (id === "cloudflare:test" || id.startsWith("\0cloudflare:test-")) {
+					// Remap IDs from other projects sharing the cache or older sessions.
+					// Vitest invalidates cached importers when resolved dependencies change.
+					return cloudflareTestId;
+				}
+				if (!this.environment.config.resolve.preserveSymlinks) {
+					return;
+				}
+				// `this.resolve()` drops `kind`, so a `require()` of a dual-format package
+				// would load its `import` entry. `viteResolve()` in the module fallback maps these.
+				if (resolveOptions.kind === "require-call") {
+					return;
+				}
+				const resolved = await this.resolve(id, importer, {
+					...resolveOptions,
+					skipSelf: true,
+				});
+				if (resolved === null || resolved.external) {
+					return resolved;
+				}
+				return { ...resolved, id: realPackagePath(resolved.id) };
+			},
 		},
 		async load(id) {
 			if (id === cloudflareTestId) {

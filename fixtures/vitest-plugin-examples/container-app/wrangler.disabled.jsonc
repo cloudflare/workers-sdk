@@ -1,0 +1,40 @@
+{
+	"name": "container-app-disabled",
+	"main": "src/index.ts",
+	// Keep the production Container shape while disabling local execution.
+	"dev": { "enable_containers": false },
+	"containers": [
+		{
+			"class_name": "NamedImageContainer",
+			"name": "named-image-container",
+			"scheduling_policy": "durable_object",
+			"images": {
+				"app": { "dockerfile": "./Dockerfile" },
+			},
+		},
+		{
+			"class_name": "DefaultImageContainer",
+			"name": "default-image-container",
+			"image": "./Dockerfile",
+			"max_instances": 2,
+		},
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "NamedImageContainer",
+				"name": "NAMED_CONTAINER",
+			},
+			{
+				"class_name": "DefaultImageContainer",
+				"name": "DEFAULT_CONTAINER",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["NamedImageContainer", "DefaultImageContainer"],
+		},
+	],
+}

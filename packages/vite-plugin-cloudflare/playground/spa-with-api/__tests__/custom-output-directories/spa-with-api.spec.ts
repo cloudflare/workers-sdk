@@ -15,7 +15,7 @@ describe.runIf(isBuild)("output directories", () => {
 						rootDir,
 						".cloudflare",
 						"output",
-						"v0",
+						"v1",
 						"workers",
 						"default",
 						"bundle"
@@ -28,7 +28,7 @@ describe.runIf(isBuild)("output directories", () => {
 						rootDir,
 						".cloudflare",
 						"output",
-						"v0",
+						"v1",
 						"workers",
 						"default",
 						"assets"

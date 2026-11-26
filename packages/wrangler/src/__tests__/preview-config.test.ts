@@ -10,7 +10,7 @@ import {
 } from "../preview/preview-config";
 import type { PreviewTopLevelSettings } from "../preview/preview-config";
 import type { Binding } from "@cloudflare/deploy-helpers";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 function topLevelSettings(
 	overrides: Partial<PreviewTopLevelSettings> = {}
@@ -82,6 +82,7 @@ describe("Preview configuration conversion", () => {
 				},
 				ARTIFACT: { type: "artifacts", namespace: "production-artifact" },
 				FLAGS: { type: "flagship", app_id: "production-app" },
+				RTK: { type: "realtimekit", app_id: "production-realtimekit-app" },
 				LIMITER: {
 					type: "ratelimit",
 					namespace_id: "production-limiter",
@@ -89,6 +90,11 @@ describe("Preview configuration conversion", () => {
 				},
 				VPC: { type: "vpc_service", service_id: "production-vpc" },
 				LOADER: { type: "worker_loader" },
+				TOKEN: {
+					type: "oidc_token",
+					audience: "https://production.example.com",
+					alg: "RS256",
+				},
 			},
 			topLevelSettings({
 				define: { API_URL: "production-url" },
@@ -129,9 +135,11 @@ describe("Preview configuration conversion", () => {
 			"secrets_store_secrets",
 			"artifacts",
 			"flagship",
+			"realtimekit",
 			"ratelimits",
 			"vpc_services",
 			"worker_loaders",
+			"oidc_tokens",
 			"define",
 			"placement",
 			"tail_consumers",
@@ -155,11 +163,38 @@ describe("Preview configuration conversion", () => {
 				{ binding: "AI_SEARCH_NAMESPACE", namespace: "<REPLACE_ME>" },
 			],
 			ai_search: [{ binding: "AI_SEARCH", instance_name: "<REPLACE_ME>" }],
+			realtimekit: [{ binding: "RTK", app_id: "<REPLACE_ME>" }],
+			oidc_tokens: [
+				{ binding: "TOKEN", audience: "<REPLACE_ME>", alg: "RS256" },
+			],
 			define: { API_URL: "<REPLACE_ME>" },
 			placement: { mode: "smart", hint: "<REPLACE_ME>" },
 			tail_consumers: [{ service: "<REPLACE_ME>" }],
 		});
 		expect(JSON.stringify(result)).not.toContain("production");
+	});
+
+	test("copies OIDC token bindings, dropping an unknown alg or a missing audience", ({
+		expect,
+	}) => {
+		const result = convertPreviewSettings(
+			{
+				TOKEN: { type: "oidc_token", audience: "https://api.example.com" },
+				RSA_TOKEN: {
+					type: "oidc_token",
+					audience: "api://token-exchange",
+					alg: "HS256",
+				},
+				NO_AUDIENCE: { type: "oidc_token" },
+			},
+			topLevelSettings(),
+			false
+		);
+
+		expect(result.config.oidc_tokens).toEqual([
+			{ binding: "TOKEN", audience: "https://api.example.com" },
+			{ binding: "RSA_TOKEN", audience: "api://token-exchange" },
+		]);
 	});
 
 	test("copies supported Preview Base configuration and blocks Durable Objects", ({

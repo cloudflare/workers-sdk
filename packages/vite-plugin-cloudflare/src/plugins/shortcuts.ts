@@ -1,8 +1,6 @@
 import { convertToWranglerConfig } from "@cloudflare/config";
-import {
-	convertConfigToBindings,
-	printBindings,
-} from "@cloudflare/workers-utils";
+import { printBindings } from "@cloudflare/workers-utils";
+import { convertConfigToBindings } from "@cloudflare/workers-utils/config";
 import {
 	CorePaths,
 	getDefaultDevRegistryPath,
@@ -10,43 +8,16 @@ import {
 } from "miniflare";
 import open from "open";
 import colors from "picocolors";
-import { assertIsNotPreview, assertIsPreview } from "../context";
-import { createPlugin, satisfiesMinimumViteVersion } from "../utils";
 import { extendTunnelExpiry, isTunnelOpen, toggleTunnel } from "./tunnel";
 import type { PluginContext } from "../context";
 import type {
-	ParsedInputContainerConfig,
-	ParsedInputWorkerConfig,
-	ParsedOutputContainerConfig,
-	ParsedOutputWorkerConfig,
+	ParsedContainerConfig,
+	ParsedWorkerConfig,
+	ParsedBuildOutputContainerConfig,
+	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
-import type { ContainerApp } from "@cloudflare/workers-utils";
+import type { ContainerApp } from "@cloudflare/workers-utils/config";
 import type * as vite from "vite";
-
-export const shortcutsPlugin = createPlugin("shortcuts", (ctx) => {
-	// This requires Vite 7.2.7 which fixes custom CLI shortcuts support
-	// @see https://github.com/vitejs/vite/pull/21103
-	const isCustomShortcutsSupported = satisfiesMinimumViteVersion("7.2.7");
-
-	return {
-		async configureServer(viteDevServer) {
-			if (!isCustomShortcutsSupported) {
-				return;
-			}
-
-			assertIsNotPreview(ctx);
-			addShortcuts(viteDevServer, ctx);
-		},
-		async configurePreviewServer(vitePreviewServer) {
-			if (!isCustomShortcutsSupported) {
-				return;
-			}
-
-			assertIsPreview(ctx);
-			addShortcuts(vitePreviewServer, ctx);
-		},
-	};
-});
 
 export function addShortcuts(
 	server: vite.ViteDevServer | vite.PreviewServer,
@@ -95,6 +66,7 @@ export function addShortcuts(
 					isMultiWorker: workerConfigs.length > 1,
 					name: workerConfig.name ?? "Your Worker",
 					registry: getWorkerRegistry(registryPath),
+					remoteBindingsDisabled: !ctx.resolvedPluginConfig.remoteBindings,
 					log: (message) => viteServer.config.logger.info(message),
 				});
 			}
@@ -190,8 +162,8 @@ export function addShortcuts(
  * from input Container definitions and Worker export links.
  */
 export function getWorkerContainersForDisplay(options: {
-	workerConfig: ParsedInputWorkerConfig | ParsedOutputWorkerConfig;
-	containers: Array<ParsedInputContainerConfig | ParsedOutputContainerConfig>;
+	workerConfig: ParsedWorkerConfig | ParsedBuildOutputWorkerConfig;
+	containers: Array<ParsedContainerConfig | ParsedBuildOutputContainerConfig>;
 }): ContainerApp[] {
 	const containersByName = new Map(
 		options.containers.map((container) => [container.name, container])

@@ -4,11 +4,12 @@ import { EmailMessage } from "cloudflare:email";
 type Env = Record<string, unknown>;
 
 type SendEmailInput =
-	| Parameters<SendEmail["send"]>[0]
+	| EmailMessageBuilder
+	| EmailMessage
 	| {
 			from: string;
 			to: string;
-			"EmailMessage::raw": ReadableStream<Uint8Array>;
+			"EmailMessage::raw": ReadableStream<Uint8Array> | string;
 	  };
 
 class BindingNotFoundError extends Error {
@@ -73,21 +74,20 @@ function getExposedJSRPCBinding(request: Request, env: Env) {
 	}
 
 	if (targetBinding.constructor.name === "SendEmail") {
+		const binding = targetBinding as SendEmail;
 		return {
-			async send(e: SendEmailInput) {
-				// Check if this is an EmailMessage (has EmailMessage::raw property) or MessageBuilder
-				if ("EmailMessage::raw" in e) {
-					// EmailMessage API - reconstruct the EmailMessage object
-					const message = new EmailMessage(
-						e.from,
-						e.to,
-						e["EmailMessage::raw"]
+			async send(input: SendEmailInput) {
+				if ("raw" in input) {
+					return binding.send(
+						new EmailMessage(input.from, input.to, input.raw)
 					);
-					return (targetBinding as SendEmail).send(message);
-				} else {
-					// MessageBuilder API - pass through directly as a plain object
-					return (targetBinding as SendEmail).send(e);
 				}
+				if ("EmailMessage::raw" in input) {
+					return binding.send(
+						new EmailMessage(input.from, input.to, input["EmailMessage::raw"])
+					);
+				}
+				return binding.send(input);
 			},
 		};
 	}
@@ -333,6 +333,30 @@ async function pipeSocketOverWebSocket(
 	await Promise.all([toWebSocket, fromWebSocket]);
 }
 
+/**
+ * Tag a response returned by an exposed binding, so that the local
+ * remote-bindings proxy client can tell it apart from a response generated in
+ * front of this worker (e.g. a Cloudflare Access login redirect or block page),
+ * which never carries the tag. The client only reports Access blocks for
+ * untagged responses and strips the tag before handing the response to the
+ * binding. See `makeFetch` in
+ * packages/miniflare/src/workers/shared/remote-bindings-utils.ts
+ *
+ * Like the `MF-*` request headers this worker reads, the header name is
+ * reserved for remote bindings: a binding's own `MF-Forwarded-Response` header
+ * is overwritten here and then removed by the client.
+ */
+function markForwardedResponse(response: Response): Response {
+	// A WebSocket upgrade response can't be re-wrapped without losing its
+	// socket, and is never mistaken for an Access block anyway.
+	if (response.webSocket) {
+		return response;
+	}
+	const marked = new Response(response.body, response);
+	marked.headers.set("MF-Forwarded-Response", "true");
+	return marked;
+}
+
 export default {
 	async fetch(request, env) {
 		try {
@@ -356,13 +380,14 @@ export default {
 					}
 				}
 
-				return await fetcher.fetch(
+				const response = await fetcher.fetch(
 					request.headers.get("MF-URL") ?? "http://example.com",
 					new Request(request, {
 						redirect: "manual",
 						headers: originalHeaders,
 					})
 				);
+				return markForwardedResponse(response);
 			}
 		} catch (e) {
 			if (e instanceof BindingNotFoundError) {

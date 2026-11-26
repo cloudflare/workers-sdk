@@ -4,17 +4,17 @@ import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { DeferredPromise } from "miniflare";
 import remoteBindingsWorkerSource from "worker:remoteBindings/ProxyServerWorker";
-import { getRemoteBindingsAuthHook } from "./auth";
 import { initLogger } from "./logger";
 import { DevEnv } from "./startDevWorker/DevEnv";
-import { RemoteSessionAuthenticationError } from "./utils/remote";
+import { CLI_COMMANDS, RemoteSessionAuthenticationError } from "./utils/remote";
 import type { RemoteBindingsLogger } from "./logger";
+import type { RemoteBindingsCliDisplayName } from "./utils/remote";
 import type {
 	AsyncHook,
 	CfAccount,
-	Config,
 	StartDevWorkerInput,
 } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type { RemoteProxyConnectionString } from "miniflare";
 
 type ErrorEvent = {
@@ -25,11 +25,14 @@ type ErrorEvent = {
 
 export type StartRemoteProxySessionOptions = {
 	workerName?: string;
-	auth?: AsyncHook<CfAccount>;
+	/** Resolves the account ID and API token for the session. */
+	auth: AsyncHook<CfAccount>;
+	/** Defer authentication and the remote preview until the first binding call. */
+	lazy?: boolean;
 	/** If running in a non-public compliance region, set this here. */
 	complianceRegion?: Config["compliance_region"];
 	/** Consumer name used in actionable error messages. */
-	cliDisplayName: string;
+	cliDisplayName: RemoteBindingsCliDisplayName;
 	logger: RemoteBindingsLogger;
 };
 
@@ -97,8 +100,11 @@ export async function startRemoteProxySession(
 ): Promise<RemoteProxySession> {
 	for (const [name, binding] of Object.entries(bindings ?? {})) {
 		if (binding.type === "flagship" && binding.app_id === undefined) {
+			// cf reads `cloudflare.config.ts`, where the app ID setting is `id`
+			const setting = options.cliDisplayName === "cf" ? "id" : "app_id";
+			const { createFlagshipApp } = CLI_COMMANDS[options.cliDisplayName];
 			throw new UserError(
-				`Flagship binding "${name}" has no \`app_id\` and has not been created, but needs to run remotely. Run \`wrangler flagship apps create\` to create an app.`,
+				`Flagship binding "${name}" has no \`${setting}\` and has not been created, but needs to run remotely. Run \`${createFlagshipApp}\` to create an app.`,
 				{ telemetryMessage: "flagship remote binding missing app_id" }
 			);
 		}
@@ -114,7 +120,9 @@ export async function startRemoteProxySession(
 		);
 	}
 
-	options.logger.log(chalk.dim("⎔ Establishing remote connection..."));
+	if (!options.lazy) {
+		options.logger.log(chalk.dim("⎔ Establishing remote connection..."));
+	}
 	initLogger(getInternalLogger(options.logger));
 	const rawBindings = toRawBindings(bindings);
 	const workerConfig = {
@@ -127,12 +135,8 @@ export async function startRemoteProxySession(
 		compatibilityFlags: ["enhanced_error_serialization"],
 		complianceRegion: options.complianceRegion,
 		bindings: rawBindings,
-		auth: getRemoteBindingsAuthHook(
-			options.auth,
-			undefined,
-			undefined,
-			options.logger
-		),
+		auth: options.auth,
+		lazy: options.lazy,
 		server: { port: 0, secure: false },
 	};
 
@@ -170,7 +174,9 @@ export async function startRemoteProxySession(
 	try {
 		const maybeError = await Promise.race([
 			maybeErrorPromise,
-			devEnv.proxy.localServerReady.promise,
+			options.lazy
+				? devEnv.proxy.ready.promise.then(() => undefined)
+				: devEnv.proxy.localServerReady.promise,
 		]);
 
 		if (maybeError && maybeError.error) {
@@ -208,11 +214,25 @@ export async function startRemoteProxySession(
 	} finally {
 		devEnv.removeListener("error", onStartupError);
 	}
+	if (options.lazy) {
+		devEnv.on("error", (error: unknown) => {
+			// As at startup, show an authentication failure's actionable guidance
+			// rather than the innermost API error, which doesn't explain the fix.
+			const details =
+				findRemoteSessionAuthError(error)?.message ??
+				formatRemoteProxySessionError(error) ??
+				"unknown error";
+			options.logger.warn(`Could not connect remote bindings: ${details}`);
+			options.logger.debug(error);
+		});
+	}
 	let disposePromise: Promise<void> | undefined;
 	const updateBindings = async (
 		newBindings: StartDevWorkerInput["bindings"]
 	) => {
-		const reloadComplete = events.once(devEnv, "reloadComplete");
+		const reloadComplete = options.lazy
+			? undefined
+			: events.once(devEnv, "reloadComplete");
 		devEnv.update({
 			...workerConfig,
 			bindings: toRawBindings(newBindings),

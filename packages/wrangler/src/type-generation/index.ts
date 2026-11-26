@@ -4,16 +4,18 @@ import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { RUNTIME_TYPES_MARKER } from "@cloudflare/runtime-types";
 import {
 	CommandLineArgsError,
-	configFileName,
-	experimental_readRawConfig,
 	FatalError,
 	parseJSONC,
 	UserError,
 } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	experimental_readRawConfig,
+} from "@cloudflare/workers-utils/config";
+import { getNodeCompat } from "@cloudflare/workers-utils/node-compat";
 import chalk from "chalk";
 import * as find from "empathic/find";
 import globToRegExp from "glob-to-regexp";
-import { getNodeCompat } from "miniflare";
 import yargs from "yargs";
 import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
@@ -36,13 +38,13 @@ import { K2_PRODUCER_TYPE } from "./k2";
 import { fetchPipelineTypes } from "./pipeline-schema";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
+import type { Entry } from "@cloudflare/workers-utils";
 import type {
 	Config,
-	Entry,
 	RawConfig,
 	RawEnvironment,
 	Rule,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 export interface GenerateTypesOptions {
 	/**
@@ -76,6 +78,12 @@ export interface GenerateTypesOptions {
 	includeRuntime?: boolean;
 
 	/**
+	 * Whether to infer `Cloudflare.GlobalProps.mainModule` from the Worker entrypoint.
+	 * Defaults to true. Disabling this opts out of module-derived `ctx.exports` types.
+	 */
+	includeMainModule?: boolean;
+
+	/**
 	 * Path to the declaration file for generated types.
 	 */
 	path?: string;
@@ -94,6 +102,7 @@ interface ResolvedGenerateTypesOptions {
 	envInterface: string;
 	includeEnv: boolean;
 	includeRuntime: boolean;
+	includeMainModule: boolean;
 	path: string;
 	secondaryEntries: Map<string, Entry>;
 	strictVars: boolean;
@@ -149,6 +158,13 @@ export const typesCommand = createCommand({
 			type: "boolean",
 			default: true,
 			describe: "Generate literal and union types for variables",
+		},
+		"include-main-module": {
+			type: "boolean",
+			// Keep an omitted flag distinguishable from an explicit override for --check.
+			defaultDescription: "true",
+			describe:
+				"Include the main module import used to infer ctx.exports types",
 		},
 		"experimental-include-runtime": {
 			alias: "x-include-runtime",
@@ -243,7 +259,8 @@ export const typesCommand = createCommand({
 				outputPath,
 				effectiveSecondaryEntries,
 				args.envFile,
-				args.env
+				args.env,
+				args.includeMainModule
 			);
 			if (outOfDate) {
 				throw new FatalError(
@@ -384,6 +401,10 @@ function buildGenerateTypesHeaderCommand(
 		commandParts.push("--include-env=false");
 	}
 
+	if (options.includeMainModule === false) {
+		commandParts.push("--include-main-module=false");
+	}
+
 	if (options.strictVars === false) {
 		commandParts.push("--strict-vars=false");
 	}
@@ -428,6 +449,7 @@ async function resolveGenerateTypesOptions(
 	const envInterface = options.envInterface ?? "Env";
 	const includeEnv = options.includeEnv ?? true;
 	const includeRuntime = options.includeRuntime ?? true;
+	const includeMainModule = options.includeMainModule ?? true;
 	const path = options.path ?? DEFAULT_WORKERS_TYPES_FILE_NAME;
 	const strictVars = options.strictVars ?? true;
 
@@ -469,6 +491,7 @@ async function resolveGenerateTypesOptions(
 		includeRuntime,
 		path,
 		secondaryEntries,
+		includeMainModule,
 		strictVars,
 	};
 }
@@ -507,6 +530,7 @@ async function generateTypesFromResolvedOptions(
 				env: options.env,
 				envFile: options.envFile,
 				strictVars: options.strictVars,
+				includeMainModule: options.includeMainModule,
 			},
 			options.envInterface,
 			options.path,
@@ -1679,7 +1703,7 @@ async function generateSimpleEnvTypes(
 			stringKeys,
 			config.compatibility_date,
 			config.compatibility_flags,
-			entrypoint
+			entrypoint && collectionArgs.includeMainModule !== false
 				? generateImportSpecifier(fullOutputPath, entrypoint.file)
 				: undefined,
 			[
@@ -2148,7 +2172,7 @@ async function generatePerEnvironmentTypes(
 		stringKeys,
 		config.compatibility_date,
 		config.compatibility_flags,
-		entrypoint
+		entrypoint && collectionArgs.includeMainModule !== false
 			? generateImportSpecifier(fullOutputPath, entrypoint.file)
 			: undefined,
 		[
@@ -2180,6 +2204,24 @@ async function generatePerEnvironmentTypes(
  */
 function prefixEnvInterface(envInterface: string) {
 	return `__BaseEnv_${envInterface}`;
+}
+
+function generateGlobalProps(
+	entrypointModule: string | undefined,
+	configuredDurableObjects: string[]
+): string {
+	const members: string[] = [];
+	if (entrypointModule) {
+		members.push(`\n\t\tmainModule: typeof import("${entrypointModule}");`);
+	}
+	if (configuredDurableObjects.length > 0) {
+		members.push(
+			`\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};`
+		);
+	}
+	return members.length > 0
+		? `\n\tinterface GlobalProps {${members.join("")}\n\t}`
+		: "";
 }
 
 /**
@@ -2241,9 +2283,10 @@ function generatePerEnvTypeStrings(
 			.map((b) => `\t${b.key}${b.required ? "" : "?"}: ${b.type};`)
 			.join("\n");
 
-		const globalPropsContent = entrypointModule
-			? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}`
-			: "";
+		const globalPropsContent = generateGlobalProps(
+			entrypointModule,
+			configuredDurableObjects
+		);
 
 		const internalEnvInterface = prefixEnvInterface(envInterface);
 
@@ -2361,7 +2404,11 @@ function generateTypeStrings(
 
 		const internalEnvInterface = prefixEnvInterface(envInterface);
 
-		baseContent = `interface ${internalEnvInterface} {${envTypeStructure.map((value) => `\n\t${value}`).join("")}\n}\ndeclare namespace Cloudflare {${entrypointModule ? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}` : ""}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n\tinterface Env extends ${internalEnvInterface} {}\n}\ninterface ${envInterface} extends ${internalEnvInterface} {}${processEnv}`;
+		const globalPropsContent = generateGlobalProps(
+			entrypointModule,
+			configuredDurableObjects
+		);
+		baseContent = `interface ${internalEnvInterface} {${envTypeStructure.map((value) => `\n\t${value}`).join("")}\n}\ndeclare namespace Cloudflare {${globalPropsContent}${typeDefsContent ? `\n${typeDefsContent}` : ""}\n\tinterface Env extends ${internalEnvInterface} {}\n}\ninterface ${envInterface} extends ${internalEnvInterface} {}${processEnv}`;
 	} else {
 		const globalTypeDefsContent =
 			typeDefinitions.length > 0 ? typeDefinitions.join("\n") + "\n" : "";
@@ -2846,6 +2893,28 @@ function collectCoreBindings(
 			addBinding(flagshipBinding.binding, "Flagship", "flagship", envName);
 		}
 
+		for (const [index, realtimekitBinding] of (
+			env.realtimekit ?? []
+		).entries()) {
+			if (!realtimekitBinding.binding) {
+				throwMissingBindingError({
+					binding: realtimekitBinding,
+					bindingType: "realtimekit",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(
+				realtimekitBinding.binding,
+				"RealtimeKitBinding",
+				"realtimekit",
+				envName
+			);
+		}
+
 		for (const [index, ratelimit] of (env.ratelimits ?? []).entries()) {
 			if (!ratelimit.name) {
 				throwMissingBindingError({
@@ -2909,6 +2978,21 @@ function collectCoreBindings(
 			}
 
 			addBinding(vpcNetwork.binding, "Fetcher", "vpc_networks", envName);
+		}
+
+		for (const [index, oidcToken] of (env.oidc_tokens ?? []).entries()) {
+			if (!oidcToken.binding) {
+				throwMissingBindingError({
+					binding: oidcToken,
+					bindingType: "oidc_tokens",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			addBinding(oidcToken.binding, "OidcTokenBinding", "oidc_tokens", envName);
 		}
 
 		for (const [index, aiSearchNamespace] of (
@@ -3022,7 +3106,9 @@ function collectCoreBindings(
 		}
 
 		if (env.images) {
-			if (!env.images.binding) {
+			if (env.images.binding) {
+				addBinding(env.images.binding, "ImagesBinding", "images", envName);
+			} else if (env.images.url_transformations === undefined) {
 				throwMissingBindingError({
 					binding: env.images,
 					bindingType: "images",
@@ -3030,8 +3116,6 @@ function collectCoreBindings(
 					envName,
 					fieldName: "binding",
 				});
-			} else {
-				addBinding(env.images.binding, "ImagesBinding", "images", envName);
 			}
 		}
 
@@ -3909,6 +3993,27 @@ function collectCoreBindingsPerEnvironment(
 			});
 		}
 
+		for (const [index, realtimekitBinding] of (
+			env.realtimekit ?? []
+		).entries()) {
+			if (!realtimekitBinding.binding) {
+				throwMissingBindingError({
+					binding: realtimekitBinding,
+					bindingType: "realtimekit",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "realtimekit",
+				name: realtimekitBinding.binding,
+				type: "RealtimeKitBinding",
+			});
+		}
+
 		for (const [index, ratelimit] of (env.ratelimits ?? []).entries()) {
 			if (!ratelimit.name) {
 				throwMissingBindingError({
@@ -3985,6 +4090,25 @@ function collectCoreBindingsPerEnvironment(
 			});
 		}
 
+		for (const [index, oidcToken] of (env.oidc_tokens ?? []).entries()) {
+			if (!oidcToken.binding) {
+				throwMissingBindingError({
+					binding: oidcToken,
+					bindingType: "oidc_tokens",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			bindings.push({
+				bindingCategory: "oidc_tokens",
+				name: oidcToken.binding,
+				type: "OidcTokenBinding",
+			});
+		}
+
 		// Pipelines handled separately for async schema fetching
 
 		if (env.logfwdr?.bindings?.length) {
@@ -4050,19 +4174,19 @@ function collectCoreBindingsPerEnvironment(
 		}
 
 		if (env.images) {
-			if (!env.images.binding) {
+			if (env.images.binding) {
+				bindings.push({
+					bindingCategory: "images",
+					name: env.images.binding,
+					type: "ImagesBinding",
+				});
+			} else if (env.images.url_transformations === undefined) {
 				throwMissingBindingError({
 					binding: env.images,
 					bindingType: "images",
 					configPath: args.config,
 					envName,
 					fieldName: "binding",
-				});
-			} else {
-				bindings.push({
-					bindingCategory: "images",
-					name: env.images.binding,
-					type: "ImagesBinding",
 				});
 			}
 		}

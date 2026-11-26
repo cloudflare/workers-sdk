@@ -9,7 +9,10 @@ export default async function globalSetup() {
 		await startMockNpmRegistry(
 			"create-cloudflare",
 			"@cloudflare/vitest-plugin",
-			"@cloudflare/vite-plugin"
+			"@cloudflare/vite-plugin",
+			// C3 installs `wrangler@latest` (and templates use `wrangler@^4`), so
+			// publish it at its real version to test the local copy.
+			"wrangler"
 		);
 	const onExit = () => {
 		stopMockNpmRegistry?.();

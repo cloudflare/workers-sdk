@@ -1,10 +1,10 @@
 import {
-	configFileName,
 	ENVIRONMENT_TAG_PREFIX,
 	SERVICE_TAG_PREFIX,
 } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import { logger } from "../../shared/context";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export function hasDefinedEnvironments(config: Config) {
 	return Boolean(config.definedEnvironments?.length);

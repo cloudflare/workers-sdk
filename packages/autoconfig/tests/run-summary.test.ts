@@ -241,8 +241,11 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				 - wrangler (devDependency)
 				`
 			);
-			expect(std.out).toContain('  import { defineConfig } from "cf/config";');
-			expect(std.out).toContain("  export default defineConfig({");
+			expect(std.out).toContain(
+				'  import type { CloudflareConfig } from "cf/config";'
+			);
+			expect(std.out).toContain("  export default {");
+			expect(std.out).toContain("  } satisfies CloudflareConfig;");
 			expect(std.out).toContain(
 				'  import { defineWranglerConfig } from "wrangler/experimental-config";'
 			);
@@ -250,7 +253,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 		});
 
 		test.for([
-			{ target: "cf", plugin: "@cloudflare/vite-plugin@^2.0.0-beta.v.0" },
+			{ target: "cf", plugin: "@cloudflare/vite-plugin@^2.0.0-rc.0" },
 			{ target: "wrangler", plugin: "@cloudflare/vite-plugin" },
 		] as const)(
 			"shows that $plugin will be installed for $target",

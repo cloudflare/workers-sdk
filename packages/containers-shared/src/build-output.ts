@@ -16,12 +16,12 @@ import { runDockerCmdWithOutput, verifyDockerInstalled } from "./utils";
 import type { InputContainerImage } from "./input-container-image";
 import type { WriteContainerConfigOptions } from "@cloudflare/build-output-utils";
 import type {
-	ParsedInputContainerConfig,
-	ParsedOutputContainerConfig,
+	ParsedContainerConfig,
+	ParsedBuildOutputContainerConfig,
 } from "@cloudflare/config";
 
 type OutputContainerImage = Extract<
-	ParsedOutputContainerConfig,
+	ParsedBuildOutputContainerConfig,
 	{ image: unknown }
 >["image"];
 
@@ -34,20 +34,34 @@ const DOCKER_REPOSITORY_NAME_LENGTH = 255;
  * Registry references pass through unchanged. Locally built tags are retained
  * on success so a later deploy can resolve each emitted `localReference`.
  *
+ * Tags left by a previous build are removed first. Finding them means running
+ * Docker, so a project with no Containers skips the lookup when the caller
+ * reports that the output it replaced had no Containers either.
+ *
  * @param options - The validated Container configs and Docker build environment.
+ * @param options.previousOutputHadContainers - Whether the Build Output tree
+ * that this build replaces held any Container output. Callers clean the tree
+ * before this runs, so they must check beforehand. When omitted, previous tags
+ * are always looked up.
  */
 export async function buildAndWriteContainerOutput(options: {
-	containers: ParsedInputContainerConfig[];
+	containers: ParsedContainerConfig[];
 	root: string;
 	pathToDocker: string;
+	previousOutputHadContainers?: boolean;
 }): Promise<void> {
 	const localTags = new Set<string>();
 	try {
 		const containers = resolveContainerDirectories(options.containers);
-		await cleanupPreviousBuildOutputImageTags({
-			root: options.root,
-			pathToDocker: options.pathToDocker,
-		});
+		if (
+			containers.length > 0 ||
+			options.previousOutputHadContainers !== false
+		) {
+			await cleanupPreviousBuildOutputImageTags({
+				root: options.root,
+				pathToDocker: options.pathToDocker,
+			});
+		}
 		const buildId = createBuildId();
 		const dockerfileCount = countDockerfiles(options.containers);
 		if (dockerfileCount > 0) {
@@ -96,8 +110,8 @@ export async function buildAndWriteContainerOutput(options: {
 }
 
 function resolveContainerDirectories(
-	containers: ParsedInputContainerConfig[]
-): Array<{ config: ParsedInputContainerConfig; directoryName: string }> {
+	containers: ParsedContainerConfig[]
+): Array<{ config: ParsedContainerConfig; directoryName: string }> {
 	const containerNameByDirectory = new Map<string, string>();
 
 	return containers.map((config) => {
@@ -116,12 +130,12 @@ function resolveContainerDirectories(
 }
 
 async function buildContainerOutputConfig(options: {
-	config: ParsedInputContainerConfig;
+	config: ParsedContainerConfig;
 	root: string;
 	pathToDocker: string;
 	buildId: string;
 	localTags: Set<string>;
-}): Promise<ParsedOutputContainerConfig> {
+}): Promise<ParsedBuildOutputContainerConfig> {
 	if (options.config.schedulingPolicy === "durable-object") {
 		if (options.config.images === undefined) {
 			return { ...options.config, images: undefined };
@@ -129,7 +143,7 @@ async function buildContainerOutputConfig(options: {
 
 		const images: NonNullable<
 			Extract<
-				ParsedOutputContainerConfig,
+				ParsedBuildOutputContainerConfig,
 				{ schedulingPolicy: "durable-object" }
 			>["images"]
 		> = {};
@@ -258,7 +272,7 @@ function createBuildId(): string {
 	return crypto.randomUUID().replaceAll("-", "").slice(0, 12);
 }
 
-function countDockerfiles(containers: ParsedInputContainerConfig[]): number {
+function countDockerfiles(containers: ParsedContainerConfig[]): number {
 	let count = 0;
 	for (const config of containers) {
 		if (config.schedulingPolicy === "durable-object") {

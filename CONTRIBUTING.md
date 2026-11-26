@@ -442,7 +442,7 @@ Packages in this monorepo should bundle their dependencies into the distributabl
 
 ### The Rule
 
-- **Bundle dependencies**: Most dependencies should be listed in `devDependencies` and bundled into the package output by esbuild/tsup/etc.
+- **Bundle dependencies**: Most dependencies should be listed in `devDependencies` and bundled into the package output by esbuild/tsdown/etc.
 - **External dependencies**: Only dependencies that _cannot_ be bundled should be listed in `dependencies`. These must be explicitly declared with documentation explaining why.
 
 ### Why This Matters

@@ -1,8 +1,8 @@
+import { UserError } from "@cloudflare/workers-utils";
 import {
 	bucketFormatMessage,
 	isValidR2BucketName,
-	UserError,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import * as metrics from "../metrics";

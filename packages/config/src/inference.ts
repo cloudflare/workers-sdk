@@ -95,7 +95,7 @@ interface BindingTypeMap<TBinding> {
 	"ai-search": AiSearchInstance;
 	"ai-search-namespace": AiSearchNamespace;
 	"analytics-engine-dataset": AnalyticsEngineDataset;
-	analytics: AnalyticsSQLBinding;
+	"analytics-sql": AnalyticsSQLBinding;
 	artifacts: Artifacts;
 	assets: Fetcher;
 	browser: BrowserRun;
@@ -108,8 +108,10 @@ interface BindingTypeMap<TBinding> {
 	logfwdr: any;
 	media: MediaBinding;
 	"mtls-certificate": Fetcher;
+	"oidc-token": OidcTokenBinding;
 	"rate-limit": RateLimit;
 	r2: R2Bucket;
+	"realtime-kit": RealtimeKitBinding;
 	secret: string;
 	"secrets-store-secret": SecretsStoreSecret;
 	"send-email": SendEmail;

@@ -1,6 +1,5 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import {
 	BunPackageManager,
@@ -10,6 +9,7 @@ import {
 	PnpmPackageManager,
 	YarnPackageManager,
 } from "@cloudflare/workers-utils";
+import { satisfies, subset, valid, validRange } from "semver";
 import { glob } from "tinyglobby";
 import { fileExists } from "../../files";
 import { getWranglerUpgradeSpec, isVersionSupported } from "./wrangler-version";
@@ -17,12 +17,11 @@ import type { MigrationBundler } from "./types";
 import type { PackageManager } from "@cloudflare/workers-utils";
 
 const VITE_PLUGIN = "@cloudflare/vite-plugin";
-// Recognize full installed v2 versions, including prerelease and build labels.
-const VITE_PLUGIN_VERSION_PATTERN =
-	/^2\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
-// Only these declared ranges stay within v2; the beta tag tracks new prereleases.
-const VITE_PLUGIN_RANGE_PATTERN =
-	/^(?:(?:\^|~)?2(?:\.\d+){0,2}(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?|>=2\.0\.0-0 <3\.0\.0-0|beta)$/;
+/**
+ * The Vite plugin versions that support the generated configuration: the v2
+ * release candidates and every later v2 release.
+ */
+export const VITE_PLUGIN_VERSION_RANGE = "^2.0.0-rc.0";
 // Managed specifiers need an installed-version check instead of range parsing.
 const MANAGED_VITE_PLUGIN_SPECIFIER =
 	/^(?:workspace:|file:|link:|portal:|catalog:)/;
@@ -84,7 +83,6 @@ export class DependencyInstallError extends Error {
 	constructor(
 		readonly changedFiles: string[],
 		readonly pendingDependencies: DependencyToInstall[],
-		readonly stage: "install" | "manifest-update" | "lockfile-sync",
 		cause: unknown
 	) {
 		super(
@@ -118,24 +116,6 @@ interface DetectedPackageManager {
 
 async function readPackageJson(packageJsonPath: string): Promise<PackageJson> {
 	return JSON.parse(await readFile(packageJsonPath, "utf8")) as PackageJson;
-}
-
-async function setVitePluginDepToBeta(
-	packageDirectory: string,
-	dev: boolean
-): Promise<boolean> {
-	const packageJsonPath = path.join(packageDirectory, "package.json");
-	const packageJson = await readPackageJson(packageJsonPath);
-	const dependencySection = dev ? "devDependencies" : "dependencies";
-	const packageDependencies = packageJson[dependencySection] ?? {};
-	if (packageDependencies[VITE_PLUGIN] === "beta") {
-		return false;
-	}
-
-	packageDependencies[VITE_PLUGIN] = "beta";
-	packageJson[dependencySection] = packageDependencies;
-	await writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
-	return true;
 }
 
 function getPackageJsonWorkspacePatterns(
@@ -296,6 +276,30 @@ function hasCfDependency(packageJson: PackageJson): boolean {
 	);
 }
 
+/**
+ * Checks whether every version a declared range can resolve to supports the
+ * generated configuration. Dist tags and other non-range specifiers are not
+ * compatible.
+ */
+function isCompatibleVitePluginRange(declaredVersion: string): boolean {
+	// `subset()` rejects exact prerelease versions that the range includes.
+	const exactVersion = valid(declaredVersion);
+	if (exactVersion !== null) {
+		return isCompatibleVitePluginVersion(exactVersion);
+	}
+	return (
+		validRange(declaredVersion) !== null &&
+		subset(declaredVersion, VITE_PLUGIN_VERSION_RANGE)
+	);
+}
+
+/** Checks whether an exact version supports the generated configuration. */
+function isCompatibleVitePluginVersion(version: string): boolean {
+	return satisfies(version, VITE_PLUGIN_VERSION_RANGE, {
+		includePrerelease: true,
+	});
+}
+
 function needsVitePluginUpgrade(
 	packageJson: PackageJson,
 	projectDirectory: string
@@ -313,9 +317,9 @@ function needsVitePluginUpgrade(
 	);
 	const compatibleInstalledVersion =
 		installedVersion !== undefined &&
-		VITE_PLUGIN_VERSION_PATTERN.test(installedVersion);
+		isCompatibleVitePluginVersion(installedVersion);
 	if (
-		!VITE_PLUGIN_RANGE_PATTERN.test(declaredVersion) &&
+		!isCompatibleVitePluginRange(declaredVersion) &&
 		!(
 			MANAGED_VITE_PLUGIN_SPECIFIER.test(declaredVersion) &&
 			compatibleInstalledVersion
@@ -619,7 +623,7 @@ export async function planVitePluginDependencyUpgrade(
 		dependency: {
 			dev: packageJson.dependencies?.[VITE_PLUGIN] === undefined,
 			name: VITE_PLUGIN,
-			version: "beta",
+			version: VITE_PLUGIN_VERSION_RANGE,
 		},
 	};
 }
@@ -742,44 +746,18 @@ export async function installProjectDependencies(
 			.filter((dependency) => dependency.dev === dev)
 			.map(({ name, version }) => `${name}@${version}`);
 		if (packages.length > 0) {
-			let stage: "install" | "manifest-update" | "lockfile-sync" = "install";
 			try {
 				await installPackages(packageManager.type, packages, {
 					cwd: packageDirectory,
 					dev,
 					isWorkspaceRoot,
 				});
-				if (
-					dependencies.some(
-						(dependency) =>
-							dependency.dev === dev && dependency.name === VITE_PLUGIN
-					)
-				) {
-					stage = "manifest-update";
-					if (await setVitePluginDepToBeta(packageDirectory, dev)) {
-						stage = "lockfile-sync";
-						if (packageManager.type === "bun") {
-							await runCommand(["bun", "install"], {
-								cwd: packageDirectory,
-								silent: true,
-							});
-						} else {
-							await installPackages(packageManager.type, [], {
-								cwd: packageDirectory,
-								isWorkspaceRoot,
-							});
-						}
-					}
-				}
 			} catch (error) {
 				throw new DependencyInstallError(
 					getChangedFiles(before, await readFiles(packageFilePaths)),
-					stage === "install"
-						? dev
-							? dependencies
-							: dependencies.filter((dependency) => !dependency.dev)
-						: [],
-					stage,
+					dev
+						? dependencies
+						: dependencies.filter((dependency) => !dependency.dev),
 					error
 				);
 			}

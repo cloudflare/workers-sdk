@@ -15,7 +15,7 @@ import type {
 	CommonYargsOptions,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type { Argv } from "yargs";
 
 export function yargsCurl(args: Argv<CommonYargsOptions>) {

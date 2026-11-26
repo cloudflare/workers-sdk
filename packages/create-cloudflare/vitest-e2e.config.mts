@@ -1,10 +1,11 @@
-import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
 import { isExperimental, testPackageManager } from "./e2e/helpers/constants";
 import { getLogFolder } from "./e2e/helpers/log-stream";
 
 export default defineConfig({
-	plugins: [tsconfigPaths({ projects: ["tsconfig.json"] })],
+	resolve: {
+		tsconfigPaths: true,
+	},
 	test: {
 		include: ["e2e/tests/**/*.test.ts"],
 		testTimeout: 1000 * 60 * 10, // 10 min for lengthy installs

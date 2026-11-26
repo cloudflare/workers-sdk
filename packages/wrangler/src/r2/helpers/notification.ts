@@ -1,7 +1,8 @@
 import { fetchResult } from "../../cfetch";
 import { logger } from "../../logger";
 import { getQueue, getQueueById } from "../../queues/client";
-import type { Config, ApiCredentials } from "@cloudflare/workers-utils";
+import type { ApiCredentials } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type { HeadersInit } from "undici";
 
 export type R2EventableOperation =

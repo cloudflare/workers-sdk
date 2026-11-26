@@ -1,5 +1,4 @@
-import { CoreHeaders } from "miniflare";
-import { createPlugin, createRequestHandler } from "../utils";
+import { createPlugin } from "../utils";
 
 /**
  * Plugin to forward local testing routes to Miniflare in development.
@@ -14,6 +13,10 @@ export const triggerHandlersPlugin = createPlugin("trigger-handlers", (ctx) => {
 				return;
 			}
 
+			const [{ CoreHeaders }, { createRequestHandler }] = await Promise.all([
+				import("miniflare"),
+				import("../request-handler"),
+			]);
 			const entryWorkerName = entryWorkerConfig.name;
 			const requestHandler = createRequestHandler((request) => {
 				request.headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);

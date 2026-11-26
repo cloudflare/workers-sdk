@@ -1,14 +1,18 @@
 import assert from "node:assert";
 import { fileURLToPath } from "node:url";
 import { readBuildOutput } from "@cloudflare/build-output-utils";
-import { getZoneFromRoute } from "@cloudflare/workers-utils";
+import { getWorkerZone } from "@cloudflare/workers-utils";
 import { Miniflare } from "miniflare";
 import { createBuilder, preview } from "vite";
 import { afterEach, describe, test, vi } from "vitest";
 import { cloudflare } from "../index";
-import type { ParsedInputConfigWithWorker } from "../index";
+import type { CloudflareConfig } from "../index";
 
-vi.mock("@cloudflare/workers-utils");
+vi.mock("@cloudflare/workers-utils", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("@cloudflare/workers-utils")>();
+	return { ...actual, getWorkerZone: vi.fn() };
+});
 
 const fixturesPath = fileURLToPath(new URL("./fixtures", import.meta.url));
 
@@ -34,7 +38,7 @@ describe("preview server", () => {
 			const actual = await vi.importActual<
 				typeof import("@cloudflare/workers-utils")
 			>("@cloudflare/workers-utils");
-			vi.mocked(getZoneFromRoute).mockImplementation(actual.getZoneFromRoute);
+			vi.mocked(getWorkerZone).mockImplementation(actual.getWorkerZone);
 			const disposeSpy = vi.spyOn(Miniflare.prototype, "dispose");
 			const builder = await createBuilder({
 				root: fixturesPath,
@@ -49,7 +53,7 @@ describe("preview server", () => {
 								accountId: "customized-account",
 								complianceRegion: "fedramp-high",
 								containers: [
-									...loadedConfig.containers,
+									...(loadedConfig.containers ?? []),
 									{
 										name: "customized-container",
 										image: {
@@ -72,8 +76,11 @@ describe("preview server", () => {
 			await builder.buildApp();
 			const output = await readBuildOutput(fixturesPath);
 			expect(output.rootConfig).toMatchObject({
-				accountId: "customized-account",
-				complianceRegion: "fedramp-high",
+				producer: { name: "@cloudflare/vite-plugin" },
+				settings: {
+					accountId: "customized-account",
+					complianceRegion: "fedramp-high",
+				},
 			});
 			expect(output.containers.map(({ config }) => config)).toEqual([
 				expect.objectContaining({
@@ -82,11 +89,9 @@ describe("preview server", () => {
 					maxInstances: 2,
 				}),
 			]);
-			const customizePreview = vi.fn(
-				(loadedConfig: ParsedInputConfigWithWorker) => ({
-					...loadedConfig,
-				})
-			);
+			const customizePreview = vi.fn((loadedConfig: CloudflareConfig) => ({
+				...loadedConfig,
+			}));
 
 			// Start a preview server
 			const previewServer = await preview({
@@ -107,11 +112,7 @@ describe("preview server", () => {
 				const url = previewServer.resolvedUrls?.local[0];
 				assert(url);
 				expect(await (await fetch(url)).text()).toBe("Hello World!");
-				if (expectedHostname === undefined) {
-					expect(getZoneFromRoute).not.toHaveBeenCalled();
-				} else {
-					expect(getZoneFromRoute).toHaveBeenCalledWith(expectedHostname);
-				}
+				expect(getWorkerZone).toHaveReturnedWith(expectedHostname);
 				expect(disposeSpy).not.toHaveBeenCalled();
 			} finally {
 				await previewServer.close();

@@ -3,7 +3,7 @@
 		"isolatedModules": true,
 		"esModuleInterop": true,
 		"allowSyntheticDefaultImports": true,
-		"moduleResolution": "node",
+		"moduleResolution": "bundler",
 		"target": "esnext",
 		"module": "esnext",
 		"strict": true,

@@ -199,7 +199,9 @@ export async function downloadWorker(accountId: string, workerName: string) {
 		workerName,
 		defaultEnvironment,
 		entrypoint,
-		accountId
+		accountId,
+		true,
+		true
 	);
 
 	if (config.assets) {

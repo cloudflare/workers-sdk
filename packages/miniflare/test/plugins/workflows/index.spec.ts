@@ -34,6 +34,28 @@ export class MyWorkflow extends WorkflowEntrypoint {
 	},
   };`;
 
+const COMPLETE_STATUS =
+	'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}';
+
+// Requests WORKFLOW_SCRIPT until the instance it creates reports that it is complete, or until
+// `timeoutMs` passes, and returns the last status. The first request returns the status as soon as
+// the instance is created, when the Workflow may still be running. The timeout starts once
+// Miniflare is ready, so a slow startup doesn't use it up.
+async function pollWorkflowStatus(mf: Miniflare, timeoutMs = 2000) {
+	await mf.ready;
+	const begin = performance.now();
+	let status = "";
+	while (performance.now() - begin < timeoutMs) {
+		const res = await mf.dispatchFetch("http://localhost");
+		status = await res.text();
+		if (status === COMPLETE_STATUS) {
+			break;
+		}
+		await scheduler.wait(50);
+	}
+	return status;
+}
+
 test("starts Workflows with user-provided experimental compatibility flag", async ({
 	expect,
 }) => {
@@ -65,10 +87,7 @@ test("starts Workflows with user-provided experimental compatibility flag", asyn
 	});
 	useDispose(mf);
 
-	const res = await mf.dispatchFetch("http://localhost");
-	expect(await res.text()).toBe(
-		'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}'
-	);
+	expect(await pollWorkflowStatus(mf)).toBe(COMPLETE_STATUS);
 });
 
 test("subscribes to Workflow instance events through an RPC target", async ({
@@ -263,30 +282,7 @@ test("persists Workflow data on file-system between runs", async ({
 	const mf = new Miniflare(opts);
 	useDispose(mf);
 
-	let res = await mf.dispatchFetch("http://localhost");
-	expect(await res.text()).toBe(
-		'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}'
-	);
-
-	// there's no waitUntil in ava haha
-	const begin = performance.now();
-	let success = false;
-	let test = "";
-	while (performance.now() - begin < 2000) {
-		const res = await mf.dispatchFetch("http://localhost");
-		test = await res.text();
-		if (
-			test ===
-			'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}'
-		) {
-			success = true;
-			break;
-		}
-		await scheduler.wait(50);
-	}
-	expect(success, `Condition was not met in 2000ms - output is ${test}`).toBe(
-		true
-	);
+	expect(await pollWorkflowStatus(mf)).toBe(COMPLETE_STATUS);
 
 	// check if files were committed under the plugin subdirectory
 	const names = await fs.readdir(path.join(tmp, WORKFLOWS_PLUGIN_NAME));
@@ -298,10 +294,8 @@ test("persists Workflow data on file-system between runs", async ({
 	useDispose(mf2);
 
 	// state should be persisted now
-	res = await mf2.dispatchFetch("http://localhost");
-	expect(await res.text()).toBe(
-		'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}'
-	);
+	const res = await mf2.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe(COMPLETE_STATUS);
 });
 
 const BATCH_WORKFLOW_SCRIPT = () => `
@@ -606,6 +600,29 @@ function updateLocalExplorerWorkflowInstanceStatus(
 }
 
 describe("workflow instance lifecycle methods", () => {
+	test("enforces binding-only Workflow step limits from unsafeConfig", async ({
+		expect,
+	}) => {
+		const options = lifecycleMiniflareOpts(await useTmp());
+		const binding = options.workers[0].config.env?.LIFECYCLE_WORKFLOW;
+		assert(binding?.type === "workflow");
+		binding.unsafeConfig = { limits: { steps: 1 } };
+		const mf = new Miniflare(options);
+		useDispose(mf);
+
+		const response = await mf.dispatchFetch(
+			"http://localhost/create?id=limited"
+		);
+		expect(await response.json()).toMatchObject({ id: "limited" });
+		expect(await waitForStatus(mf, "limited", "errored")).toMatchObject({
+			error: {
+				message: expect.stringContaining(
+					"The limit of 1 steps has been reached"
+				),
+			},
+		});
+	});
+
 	test("pause and resume a running workflow", async ({ expect }) => {
 		const tmp = await useTmp();
 		const mf = new Miniflare(lifecycleMiniflareOpts(tmp));

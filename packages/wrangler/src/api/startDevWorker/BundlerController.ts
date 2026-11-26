@@ -2,10 +2,10 @@ import assert from "node:assert";
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
-	extractBindingsOfType,
 	getWranglerHiddenDirPath,
 	getWranglerTmpDir,
 } from "@cloudflare/workers-utils";
+import { extractBindingsOfType } from "@cloudflare/workers-utils/config";
 import { watch } from "chokidar";
 import { BuildFailure } from "../../deployment-bundle/build-failures";
 import { bundleWorker, shouldCheckFetch } from "../../deployment-bundle/bundle";

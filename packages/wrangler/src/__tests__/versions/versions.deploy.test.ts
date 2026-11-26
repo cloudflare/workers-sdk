@@ -14,6 +14,7 @@ import {
 	validateTrafficSubtotal,
 } from "../../versions/deploy";
 import { normalizeDurableObjectsCodeUpdateModeArgs } from "../../versions/deployment-args";
+import { mockPutImageTransformationsRequest } from "../deploy/helpers";
 import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -1178,6 +1179,25 @@ describe("versions deploy", () => {
 
 	describe("with wrangler.toml", () => {
 		beforeEach(() => writeWranglerConfig());
+
+		test("applies images url_transformations", async ({ expect }) => {
+			writeWranglerConfig({
+				images: {
+					url_transformations: { enabled: true, allowed_origins: ["*"] },
+				},
+			});
+			mockPutImageTransformationsRequest({
+				expectedBody: { enabled: true, allowed_origins: ["*"] },
+			});
+
+			await runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
+			);
+
+			expect(normalizeOutput(consoleStd.out)).toContain(
+				"Images URL transformations: enabled (any origin)"
+			);
+		});
 
 		test("no args", async ({ expect }) => {
 			const result = runWrangler("versions deploy --yes");
@@ -2391,6 +2411,44 @@ describe("versions deploy", () => {
 					/Deploy the version that changes `exports` at 100% first/
 				);
 			});
+		});
+
+		test("retries reading a version the API briefly reports as not found", async ({
+			expect,
+		}) => {
+			const versionId = "40000000-0000-0000-0000-000000000000";
+			const responses = ["not found", "found", "not found", "found"];
+			let reads = 0;
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/scripts/:workerName/versions/${versionId}`,
+					() => {
+						if (responses[reads++] === "not found") {
+							return HttpResponse.json(
+								createFetchResult(null, false, [
+									{
+										code: 100146,
+										message:
+											"The requested Worker version could not be found, please check the ID being passed and try again.",
+									},
+								]),
+								{ status: 404 }
+							);
+						}
+						return undefined;
+					}
+				)
+			);
+
+			await runWrangler(`versions deploy ${versionId}@100% --yes`);
+
+			expect(reads).toBe(4);
+			expect(consoleStd.info).toContain(
+				"Versions can take a few seconds to become readable after an upload"
+			);
+			expect(normalizeOutput(cliStd.out)).toContain(
+				"SUCCESS  Deployed test-name version"
+			);
 		});
 	});
 });

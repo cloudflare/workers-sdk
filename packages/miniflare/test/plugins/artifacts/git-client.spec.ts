@@ -164,7 +164,9 @@ test("Git client imports, reads and forks a local repository", async ({
 	const tag = (
 		await git(["rev-parse", "refs/tags/v1"], imported.repository)
 	).stdout.trim();
-	expect(await imported.readCommit(tag)).toBeNull();
+	await expect(imported.readCommit(tag)).rejects.toThrow(
+		"is a tag, not a commit"
+	);
 	expect(await imported.readBlob(tag)).toBeNull();
 	const blob = (
 		await git(["rev-parse", "HEAD:hello.txt"], source)

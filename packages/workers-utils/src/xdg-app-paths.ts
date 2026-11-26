@@ -9,8 +9,8 @@ import path from "node:path";
  * repository relies on.
  *
  * `xdg-app-paths` (and its `xdg-portable` / `os-paths` dependencies) ship as
- * CommonJS. When the consuming package is bundled to ESM (e.g. via tsup or when
- * a downstream consumer runs through Vite), the CJS `require()` calls are
+ * CommonJS. When the consuming package is bundled to ESM (e.g. via a bundler
+ * or when a downstream consumer runs through Vite), the CJS `require()` calls are
  * shimmed and throw at runtime ("Dynamic require of 'path' is not supported").
  * Vendoring the resolution logic here keeps the behaviour identical while
  * remaining pure ESM.

@@ -4,7 +4,8 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { fetchListResult, logger } from "../shared/context";
-import type { ComplianceConfig, Route } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Route } from "@cloudflare/workers-utils/config";
 
 export interface Zone {
 	id: string;

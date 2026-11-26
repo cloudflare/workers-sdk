@@ -17,14 +17,10 @@ import {
 } from "../deployment-bundle/module-collection";
 import { logger } from "../logger";
 import type { SourceMapMetadata } from "../deployment-bundle/bundle";
-import type {
-	CfModule,
-	CfModuleType,
-	Config,
-	Entry,
-} from "@cloudflare/workers-utils";
+import type { CfModule, CfModuleType, Entry } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
+import type { NodeJSCompatMode } from "@cloudflare/workers-utils/node-compat";
 import type { Metafile, Message, Plugin } from "esbuild";
-import type { NodeJSCompatMode } from "miniflare";
 
 export type EsbuildBundle = {
 	id: number;

@@ -24,7 +24,8 @@ import type {
 	ValidateSqlRequest,
 	ValidateSqlResponse,
 } from "./types";
-import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export async function listPipelines(
 	config: Config,

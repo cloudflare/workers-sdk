@@ -3,7 +3,7 @@ import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
 import { detectFramework } from "../../../src/details/framework-detection";
 import { createMockContext } from "../../helpers/mock-context";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 describe("detectFramework() / Pages project detection", () => {
 	runInTempDir();

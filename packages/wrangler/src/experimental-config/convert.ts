@@ -1,5 +1,5 @@
 import type { ParsedWranglerConfig } from "./schema";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 /**
  * Convert the validated camelCase `wrangler.config.ts` shape into the

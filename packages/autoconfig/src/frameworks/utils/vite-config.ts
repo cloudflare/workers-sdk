@@ -19,8 +19,11 @@ const t = recast.types.namedTypes;
  *   - defineConfig(({ isSsrBuild }) => ({ ... }))
  *   - defineConfig(() => { return { ... }; })
  *   - defineConfig(function() { return { ... }; })
+ *
+ * @param node The first argument of defineConfig()
+ * @returns The config object, or null if it can't be found
  */
-function extractConfigObject(
+export function extractConfigObject(
 	node: recast.types.ASTNode
 ): types.namedTypes.ObjectExpression | null {
 	// Direct object: defineConfig({ ... })
@@ -61,6 +64,7 @@ function extractFromBlockStatement(
 	return null;
 }
 
+/** Recognizes existing plugin setup without reconfiguring legacy Wrangler projects. */
 export function checkIfViteConfigUsesCloudflarePlugin(
 	projectPath: string,
 	context?: AutoConfigContext
@@ -103,12 +107,19 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 				return this.traverse(n);
 			}
 
-			const pluginsProp = configObject.properties.find((prop) =>
+			const pluginsProp = configObject.properties.findLast((prop) =>
 				isPluginsProp(prop)
 			);
 			if (!pluginsProp || !t.ArrayExpression.check(pluginsProp.value)) {
 				context?.logger.debug(
 					`Vite config does not have a valid plugins array. Skipping Cloudflare plugin check.`
+				);
+				return this.traverse(n);
+			}
+
+			if (hasFollowingOverride(configObject, pluginsProp)) {
+				context?.logger.debug(
+					`Vite config has a later property that may override its plugins array. Skipping Cloudflare plugin check.`
 				);
 				return this.traverse(n);
 			}
@@ -132,32 +143,38 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 	return importsCloudflarePlugin && usesCloudflarePlugin;
 }
 
-/**
- * Returns whether a Vite config file (`vite.config.ts` or `vite.config.js`)
- * exists in the given project directory.
- */
+// Match Vite's DEFAULT_CONFIG_FILES order so inspection and execution use the same file.
+const VITE_CONFIG_FILES = [
+	"vite.config.js",
+	"vite.config.mjs",
+	"vite.config.ts",
+	"vite.config.cjs",
+	"vite.config.mts",
+	"vite.config.cts",
+];
+
+/** Returns whether the project has a Vite configuration file. */
 export function hasViteConfig(projectPath: string): boolean {
-	return (
-		existsSync(path.join(projectPath, "vite.config.ts")) ||
-		existsSync(path.join(projectPath, "vite.config.js"))
+	return VITE_CONFIG_FILES.some((name) =>
+		existsSync(path.join(projectPath, name))
 	);
 }
 
-function getViteConfigPath(projectPath: string): string {
-	const filePathTS = path.join(projectPath, `vite.config.ts`);
-	const filePathJS = path.join(projectPath, `vite.config.js`);
-
-	let filePath: string;
-
-	if (existsSync(filePathTS)) {
-		filePath = filePathTS;
-	} else if (existsSync(filePathJS)) {
-		filePath = filePathJS;
-	} else {
+/**
+ * Finds the project's Vite config file.
+ *
+ * @param projectPath The path of the project
+ * @returns The first existing file in Vite's default configuration-file order
+ * @throws If the project has no Vite config file
+ */
+export function getViteConfigPath(projectPath: string): string {
+	const file = VITE_CONFIG_FILES.map((name) =>
+		path.join(projectPath, name)
+	).find((filePath) => existsSync(filePath));
+	if (!file) {
 		throw new Error("Could not find Vite config file to modify");
 	}
-
-	return filePath;
+	return file;
 }
 
 /**
@@ -191,6 +208,19 @@ function hasIdentifierOutsideImport(
 	return hasIdentifier;
 }
 
+/** Checks unsupported CommonJS files before setup installs or changes any files. */
+export function assertViteConfigCanBeTransformed(projectPath: string): void {
+	const filePath = getViteConfigPath(projectPath);
+	if ([".cjs", ".cts"].includes(path.extname(filePath))) {
+		// Vite bundles these extensions as CommonJS even when they use ESM syntax.
+		// The Cloudflare plugin only exposes an ESM import entry point.
+		throw new UserError(
+			"Cannot automatically modify a CommonJS Vite configuration. Convert it to ESM (import/export) in vite.config.mjs or vite.config.mts before adding the Cloudflare plugin.",
+			{ telemetryMessage: "autoconfig CommonJS vite config unsupported" }
+		);
+	}
+}
+
 export function transformViteConfig(
 	projectPath: string,
 	options: {
@@ -199,6 +229,7 @@ export function transformViteConfig(
 	} = {}
 ) {
 	const filePath = getViteConfigPath(projectPath);
+	assertViteConfigCanBeTransformed(projectPath);
 	const removedIncompatiblePlugins = new Set<string>();
 
 	transformFile(filePath, {
@@ -293,7 +324,7 @@ export function transformViteConfig(
 				);
 			}
 
-			const pluginsProp = configObject.properties.find((prop) =>
+			const pluginsProp = configObject.properties.findLast((prop) =>
 				isPluginsProp(prop)
 			);
 			if (!pluginsProp || !t.ArrayExpression.check(pluginsProp.value)) {
@@ -309,6 +340,19 @@ export function transformViteConfig(
 				`,
 					{
 						telemetryMessage: "autoconfig vite plugins array missing",
+					}
+				);
+			}
+
+			if (hasFollowingOverride(configObject, pluginsProp)) {
+				throw new UserError(
+					dedent`
+					Cannot modify Vite config: a later property may override the plugins array.
+
+					Define the effective plugins array after all spreads, computed properties, and plugins accessors, then retry autoconfiguration.
+				`,
+					{
+						telemetryMessage: "autoconfig vite plugins array overridden",
 					}
 				);
 			}
@@ -370,7 +414,46 @@ function isPluginsProp(
 ): prop is types.namedTypes.ObjectProperty | types.namedTypes.Property {
 	return (
 		(t.Property.check(prop) || t.ObjectProperty.check(prop)) &&
-		t.Identifier.check(prop.key) &&
-		prop.key.name === "plugins"
+		getStaticPropertyName(prop) === "plugins"
 	);
+}
+
+/**
+ * Gets the name of an object property whose key is known without evaluating code.
+ *
+ * @param prop A member of an object expression
+ * @returns The property name, or undefined for spreads and computed keys
+ */
+export function getStaticPropertyName(prop: unknown): string | undefined {
+	if (
+		!t.Property.check(prop) &&
+		!t.ObjectProperty.check(prop) &&
+		!t.ObjectMethod.check(prop)
+	) {
+		return undefined;
+	}
+	if (!prop.computed && t.Identifier.check(prop.key)) {
+		return prop.key.name;
+	}
+	if (
+		t.StringLiteral.check(prop.key) ||
+		t.NumericLiteral.check(prop.key) ||
+		t.BigIntLiteral.check(prop.key) ||
+		t.Literal.check(prop.key)
+	) {
+		return String(prop.key.value);
+	}
+	return undefined;
+}
+
+function hasFollowingOverride(
+	configObject: types.namedTypes.ObjectExpression,
+	pluginsProp: types.namedTypes.ObjectProperty | types.namedTypes.Property
+): boolean {
+	return configObject.properties
+		.slice(configObject.properties.indexOf(pluginsProp) + 1)
+		.some((prop) => {
+			const name = getStaticPropertyName(prop);
+			return name === undefined || name === "plugins";
+		});
 }

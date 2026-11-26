@@ -6,7 +6,7 @@ import type { NamedArgDefinitions } from "../core/types";
 import type {
 	Config,
 	DurableObjectCodeUpdateStrategy,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 export const DEFAULT_DURABLE_OBJECTS_CODE_UPDATE_STRATEGY = {
 	mode: "deferred",

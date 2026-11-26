@@ -31,7 +31,10 @@ const ECHO_PLUGIN_NAME = "echo-plugin";
 function getEchoBindings(config: ParsedWorkerOptions["config"]) {
 	return Object.entries(config.env ?? {}).filter(
 		([, binding]) =>
-			"dev" in binding && binding.dev?.plugin?.name === ECHO_PLUGIN_NAME
+			"dev" in binding &&
+			binding.dev !== undefined &&
+			"plugin" in binding.dev &&
+			binding.dev.plugin.name === ECHO_PLUGIN_NAME
 	);
 }
 

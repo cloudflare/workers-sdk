@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/codemods",
-	"version": "0.7.1",
+	"version": "0.9.1",
 	"description": "Codemods for upgrading Cloudflare developer projects",
 	"keywords": [
 		"cloudflare",
@@ -29,13 +29,17 @@
 		".": {
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.mjs"
+		},
+		"./wrangler-to-cf": {
+			"types": "./dist/wrangler-to-cf.d.ts",
+			"import": "./dist/wrangler-to-cf.mjs"
 		}
 	},
 	"publishConfig": {
 		"access": "public"
 	},
 	"scripts": {
-		"build": "tsup",
+		"build": "tsdown",
 		"check:type": "tsc -p ./tsconfig.json",
 		"deploy": "echo 'no deploy'",
 		"test": "vitest",
@@ -48,9 +52,11 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-utils": "workspace:*",
 		"@types/node": "catalog:default",
+		"@types/semver": "^7.5.1",
 		"esbuild": "catalog:default",
+		"semver": "^7.7.1",
 		"tinyglobby": "catalog:default",
-		"tsup": "8.3.0",
+		"tsdown": "catalog:default",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
 	},

@@ -21,10 +21,10 @@ import type {
 	CustomDomainChangeset,
 } from "@cloudflare/deploy-helpers";
 import type {
-	Config,
 	ServiceMetadataRes,
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type { FormData } from "undici";
 
 /** Write mock assets to the file system so they can be uploaded. */
@@ -66,6 +66,37 @@ export function mockPublishSchedulesRequest({
 				const body = (await request.json()) as [{ cron: string }];
 				expect(body).toEqual(crons.map((cron) => ({ cron })));
 				return HttpResponse.json(createFetchResult(null));
+			},
+			{ once: true }
+		)
+	);
+}
+
+export function mockPutImageTransformationsRequest({
+	expectedBody,
+	env = undefined,
+	status = 200,
+	errors = [{ code: 10000, message: "Authentication error" }],
+}: {
+	expectedBody: unknown;
+	env?: string | undefined;
+	status?: number;
+	errors?: { code: number; message: string }[];
+}) {
+	msw.use(
+		http.put(
+			`*/accounts/:accountId/settings/transformations/workers/:scriptName`,
+			async ({ request, params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toEqual(
+					env ? `test-name-${env}` : "test-name"
+				);
+				expect(await request.json()).toEqual(expectedBody);
+				return status === 200
+					? HttpResponse.json(createFetchResult(null))
+					: HttpResponse.json(createFetchResult(null, false, errors), {
+							status,
+						});
 			},
 			{ once: true }
 		)

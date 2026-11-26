@@ -15,7 +15,7 @@ import type {
 	VectorizeVectorIds,
 	VectorizeVectorMutation,
 } from "./types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type { FormData } from "undici";
 
 const jsonContentType = "application/json; charset=utf-8;";

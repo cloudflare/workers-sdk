@@ -11,7 +11,7 @@ import type {
 	ConfigBindingFieldName,
 	RawConfig,
 	Route,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 // Exhaustive map of all binding keys in CfWorkerInit["bindings"].
 // When a new binding type is added, TypeScript will error here until it is handled.
@@ -38,9 +38,11 @@ const reorderableBindings = {
 	analytics_engine_datasets: true,
 	unsafe_hello_world: true,
 	flagship: true,
+	realtimekit: true,
 	worker_loaders: true,
 	vpc_services: true,
 	vpc_networks: true,
+	oidc_tokens: true,
 
 	// Wrapper objects containing binding arrays
 	durable_objects: true,
@@ -332,6 +334,12 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 		);
 	}
 
+	if (normalizedConfig.realtimekit?.length) {
+		normalizedConfig.realtimekit = normalizedConfig.realtimekit.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
 	if (normalizedConfig.artifacts?.length) {
 		normalizedConfig.artifacts = normalizedConfig.artifacts.map(
 			({ remote: _, ...binding }) => binding
@@ -352,6 +360,15 @@ function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
 			"remote" in normalizedConfig[singleBindingField]
 		) {
 			delete normalizedConfig[singleBindingField].remote;
+		}
+	}
+
+	// `url_transformations` isn't part of the deployed Worker's settings, so it
+	// would always appear as a local-only difference
+	if (normalizedConfig.images) {
+		delete normalizedConfig.images.url_transformations;
+		if (normalizedConfig.images.binding === undefined) {
+			delete normalizedConfig.images;
 		}
 	}
 }

@@ -25,7 +25,7 @@ import type {
 	QueueResponse,
 	TypedConsumerResponse,
 } from "@cloudflare/deploy-helpers";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 // Queue types now live in `@cloudflare/deploy-helpers`; re-export them here so
 // existing `../client` imports across the queue commands keep working.

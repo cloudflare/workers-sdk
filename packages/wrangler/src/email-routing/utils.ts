@@ -4,7 +4,8 @@ import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { listEmailSendingSubdomains } from "./client";
 import type { EmailSendingSubdomain } from "./index";
-import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export async function resolveZoneId(
 	config: Config,

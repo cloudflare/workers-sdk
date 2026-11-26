@@ -1,11 +1,13 @@
 import * as path from "node:path";
 
 /**
- * Initial draft version of the Build Output Specification.
+ * Version of the Build Output Specification, and the name of its directory
+ * under {@link BUILD_OUTPUT_ROOT}.
  *
- * Will move to `v1` when the spec stabilises.
+ * Only the `.cloudflare/output/v<N>/` convention is permanent. Everything
+ * inside a version directory belongs to that version.
  */
-export const BUILD_OUTPUT_VERSION = "v0";
+export const BUILD_OUTPUT_VERSION = "v1";
 
 /** Build output directory relative to the project root. */
 export const BUILD_OUTPUT_ROOT = ".cloudflare/output";

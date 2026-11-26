@@ -1,14 +1,16 @@
 import { isDeepStrictEqual } from "node:util";
 import { resolveNamedTunnel, startTunnel } from "@cloudflare/workers-utils";
+import { toApiComplianceRegion } from "@cloudflare/workers-utils/compliance";
 import getPort from "get-port";
-import { buildPublicUrl } from "miniflare";
 import colors from "picocolors";
 import encodeQR from "qr";
-import { createAuth, createLogger, USER_AGENT } from "../auth";
+import { createLogger, USER_AGENT } from "../auth";
 import { assertIsNotPreview, assertIsPreview } from "../context";
-import { createPlugin, debuglog, toApiComplianceRegion } from "../utils";
+import { createPlugin, debuglog } from "../utils";
 import type { PluginContext } from "../context";
-import type { Config, Tunnel } from "@cloudflare/workers-utils";
+import type { CloudflareAuth } from "@cloudflare/workers-auth/cf";
+import type { Tunnel } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type * as vite from "vite";
 
 function createPublicExposureWarning(
@@ -130,7 +132,7 @@ export class TunnelManager {
 		allowedHosts: true | string[] | undefined;
 		accountId: string | undefined;
 		complianceRegion: Config["compliance_region"];
-		profileDir: string;
+		getAuth: () => CloudflareAuth;
 	}): Promise<string[] | null> {
 		const abortController = new AbortController();
 		const allowedMail = normalizeAllowedMail(options.allowedMail);
@@ -159,7 +161,7 @@ export class TunnelManager {
 			let namedTunnel;
 			if (options.name !== undefined) {
 				const logger = createLogger(this.#logger);
-				const auth = createAuth(options.profileDir, logger);
+				const auth = options.getAuth();
 				const accountId = await auth.requireAuth({
 					...(options.accountId ? { account_id: options.accountId } : {}),
 					...(options.complianceRegion
@@ -453,6 +455,7 @@ export async function resolvePreviewTunnelOrigin(server: vite.PreviewServer) {
 		}
 	}
 
+	const { buildPublicUrl } = await import("miniflare");
 	return new URL(
 		buildPublicUrl({
 			hostname: host,
@@ -486,9 +489,13 @@ export async function setupDevTunnel(
 		complianceRegion: toApiComplianceRegion(
 			ctx.resolvedPluginConfig.settings.complianceRegion
 		),
-		profileDir: server.config.root,
 		// We will restart the server with the tunnel hostnames in allowedHosts if needed
 		allowedHosts: true,
+		getAuth: () =>
+			ctx.getCloudflareAuth(
+				server.config.root,
+				createLogger(server.config.logger)
+			),
 	});
 
 	if (!publicUrls) {
@@ -562,7 +569,11 @@ export async function setupPreviewTunnel(
 		complianceRegion: toApiComplianceRegion(
 			ctx.resolvedPluginConfig.settings.complianceRegion
 		),
-		profileDir: server.config.root,
+		getAuth: () =>
+			ctx.getCloudflareAuth(
+				server.config.root,
+				createLogger(server.config.logger)
+			),
 	});
 
 	if (!publicUrls) {

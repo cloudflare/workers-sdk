@@ -1721,6 +1721,14 @@ export type WorkersKvNamespaceGetMultipleKeyValuePairsData = {
 		 * Array of keys to retrieve (maximum of 100).
 		 */
 		keys: Array<WorkersKvKeyNameBulk>;
+		/**
+		 * Return values as strings with `text`, or parse stored JSON values with `json`.
+		 */
+		type?: "text" | "json";
+		/**
+		 * Whether to include metadata in the response.
+		 */
+		withMetadata?: boolean;
 	};
 	path: {
 		namespace_id: WorkersKvNamespaceIdentifier;
@@ -2771,6 +2779,10 @@ export type R2BucketListObjectsData = {
 		 * Pagination cursor from previous response
 		 */
 		cursor?: string;
+		/**
+		 * Only return objects with keys lexicographically after this key
+		 */
+		start_after?: string;
 		/**
 		 * Maximum number of objects to return
 		 */

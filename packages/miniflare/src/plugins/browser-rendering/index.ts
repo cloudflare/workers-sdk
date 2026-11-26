@@ -15,6 +15,7 @@ import {
 	remoteProxyClientWorker,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
+import { getBrowserEnvironment } from "./environment";
 import { ensureBrowserInstalled } from "./install";
 import { BrowserStartupError, waitForExit } from "./process";
 import type { Service } from "../../runtime";
@@ -218,7 +219,7 @@ export async function launchBrowser({
 			"browser-rendering",
 			`profile-${sessionId}-${attempt++}`
 		);
-		await fs.promises.mkdir(tempUserData, { recursive: true });
+		await fs.promises.mkdir(tempUserData, { recursive: true, mode: 0o700 });
 
 		// Whether Chrome got far enough to announce its DevTools endpoint, which
 		// is the line between "this install might be broken" and "something else
@@ -229,6 +230,9 @@ export async function launchBrowser({
 		const browserProcess = launch({
 			executablePath: installed.executablePath,
 			args: process.env.CI ? [...launchArgs, "--no-sandbox"] : launchArgs,
+			// @puppeteer/browsers defaults to an empty environment. Chrome needs
+			// a user home for NSS and other configuration outside its profile.
+			env: getBrowserEnvironment(tempUserData),
 			handleSIGTERM: false,
 			dumpio: false,
 			pipe: false,
@@ -253,7 +257,7 @@ export async function launchBrowser({
 			started = true;
 			// On Windows in particular, Chrome may print the DevTools URL slightly
 			// before its listening socket is fully ready to accept connections.
-			// Probe the HTTP /json/version endpoint (served on the same port as the
+			// Probe the HTTP /json/list endpoint (served on the same port as the
 			// WS endpoint) with retry/backoff before declaring the browser ready, so
 			// that subsequent fetches from workerd don't race the OS and surface as
 			// `ConnectEx (#1225) connection refused` errors.
@@ -336,6 +340,10 @@ export async function launchBrowser({
  * point. Without this probe, the first request from workerd to Chrome can
  * fail with `ConnectEx (#1225) The remote computer refused the network
  * connection.` even though Chrome is otherwise healthy.
+ *
+ * Chrome can also answer before it has opened its initial `about:blank` page,
+ * so wait until `/json/list` includes a page target. Otherwise a client that
+ * lists targets straight after acquiring a session can find no page.
  */
 async function waitForBrowserReady(
 	wsEndpoint: string,
@@ -345,7 +353,7 @@ async function waitForBrowserReady(
 	const initialDelayMs = 25;
 	const maxDelayMs = 250;
 	const perRequestTimeoutMs = 500;
-	const probeUrl = `${new URL(wsEndpoint.replace("ws://", "http://")).origin}/json/version`;
+	const probeUrl = `${new URL(wsEndpoint.replace("ws://", "http://")).origin}/json/list`;
 	const deadline = Date.now() + timeoutMs;
 	let attempt = 0;
 	let lastError: unknown;
@@ -354,16 +362,21 @@ async function waitForBrowserReady(
 			const response = await fetch(probeUrl, {
 				signal: AbortSignal.timeout(perRequestTimeoutMs),
 			});
-			// Drain the body so the connection can be reused/closed cleanly.
-			await response.arrayBuffer();
-			if (response.ok) {
+			const targets: unknown = await response.json().catch(() => null);
+			if (
+				response.ok &&
+				Array.isArray(targets) &&
+				targets.some((target) => target?.type === "page")
+			) {
 				if (attempt > 0) {
 					log.debug(`Chrome ready after ${attempt + 1} attempt(s)`);
 				}
 				return;
 			}
 			lastError = new Error(
-				`Chrome readiness probe got status ${response.status}`
+				response.ok
+					? "Chrome has not opened a page yet"
+					: `Chrome readiness probe got status ${response.status}`
 			);
 		} catch (e) {
 			lastError = e;

@@ -124,6 +124,7 @@ class DigestingStream<
 
 const validate = new Validator();
 const decoder = new TextDecoder();
+const encoder = new TextEncoder();
 
 function generateVersion() {
 	return Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString(
@@ -146,6 +147,27 @@ function generateMultipartEtag(md5Hexes: string[]) {
 
 function rangeOverlaps(a: InclusiveRange, b: InclusiveRange): boolean {
 	return a.start <= b.end && b.start <= a.end;
+}
+
+/**
+ * Compares two keys by their UTF-8 bytes, matching SQLite's `BINARY` collation
+ * used to order keys in list queries. JavaScript's `<`/`>` compare UTF-16 code
+ * units instead, which disagree for some characters, such as U+FF21 and emoji.
+ *
+ * @param a The first key
+ * @param b The second key
+ * @returns A negative number if `a` sorts first, positive if `b` does, or 0
+ */
+function compareKeys(a: string, b: string): number {
+	const aBytes = encoder.encode(a);
+	const bBytes = encoder.encode(b);
+	const length = Math.min(aBytes.length, bBytes.length);
+	for (let i = 0; i < length; i++) {
+		if (aBytes[i] !== bBytes[i]) {
+			return aBytes[i] - bBytes[i];
+		}
+	}
+	return aBytes.length - bBytes.length;
 }
 
 async function decodeMetadata(req: Request<unknown, unknown>) {
@@ -907,7 +929,10 @@ export class R2BucketObject extends MiniflareDurableObject {
 		let startAfter = opts.startAfter;
 		if (opts.cursor !== undefined) {
 			const cursorStartAfter = base64Decode(opts.cursor);
-			if (startAfter === undefined || cursorStartAfter > startAfter) {
+			if (
+				startAfter === undefined ||
+				compareKeys(cursorStartAfter, startAfter) > 0
+			) {
 				startAfter = cursorStartAfter;
 			}
 		}

@@ -10,6 +10,7 @@ andyjessop
 Ankcorn
 anonrig
 caass
+camc314
 cameron-robey
 CarmenPopoviciu
 Cherry
@@ -41,12 +42,14 @@ martijnwalraven
 matingathani
 mattdeboard
 maxwellpeterson
+mglewis
 mikenomitch
 mrbbot
 mtlemilio
 nickpatt
 nora-soderlund
 ns476
+punkeel
 RamIdeas
 roerohan
 rozenmd

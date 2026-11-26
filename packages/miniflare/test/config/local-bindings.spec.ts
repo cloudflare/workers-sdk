@@ -48,6 +48,17 @@ describe("resolveLocalBindings", () => {
 		);
 	});
 
+	test("names only the files read in every mode when there is no mode", ({
+		expect,
+	}) => {
+		const resolveOptions = options({ mode: undefined });
+
+		resolveLocalBindings({ MISSING: env.MISSING }, resolveOptions);
+		expect(resolveOptions.logger.warn).toHaveBeenCalledWith(
+			'Missing required secrets for Worker "worker": MISSING. Add them to one of `.dev.vars`, `.env.local`, or `.env`. Alternatively, set them as environment variables.'
+		);
+	});
+
 	test("requires a local Hyperdrive connection string", ({ expect }) => {
 		expect(() =>
 			resolveLocalBindings({ HYPERDRIVE: env.HYPERDRIVE }, options())
@@ -72,4 +83,27 @@ describe("resolveLocalBindings", () => {
 			HYPERDRIVE: binding,
 		});
 	});
+
+	test.for([
+		{ remote: undefined, remoteBindings: true },
+		{ remote: undefined, remoteBindings: false },
+		{ remote: false, remoteBindings: true },
+		{ remote: true, remoteBindings: true },
+	])(
+		"passes Artifacts dev.remote=$remote through with remoteBindings=$remoteBindings",
+		({ remote, remoteBindings }, { expect }) => {
+			const binding = {
+				type: "artifacts" as const,
+				namespace: "examples",
+				...(remote === undefined ? {} : { dev: { remote } }),
+			};
+			// Miniflare routes remotely only for `dev.remote: true`, so an omitted
+			// `remote` uses the local simulator.
+			const resolveOptions = options({ remoteBindings });
+			expect(resolveLocalBindings({ REPOS: binding }, resolveOptions)).toEqual({
+				REPOS: binding,
+			});
+			expect(resolveOptions.logger.warn).not.toHaveBeenCalled();
+		}
+	);
 });

@@ -25,7 +25,8 @@ import type { StartDevOptionsBindings } from "../api/startDevWorker/binding-util
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { CfAccount } from "./create-worker-preview";
-import type { Config } from "@cloudflare/workers-utils";
+import type { ServiceFetch } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 /**
  * Starts one (primary) or more (secondary) DevEnv environments given the `args`.
@@ -139,20 +140,6 @@ export async function startDev(args: StartDevOptions) {
 				args.onReady(url.hostname, parseInt(url.port));
 			}
 
-			if (
-				(args.enableIpc || !args.onReady) &&
-				process.send &&
-				typeof vitest === "undefined"
-			) {
-				process.send(
-					JSON.stringify({
-						event: "DEV_SERVER_READY",
-						ip: url.hostname,
-						port: parseInt(url.port),
-					})
-				);
-			}
-
 			// Print scheduled worker warning with the actual public URL
 			const allDevEnvs = [primaryDevEnv, ...secondary];
 			const hasCrons = allDevEnvs.some(
@@ -165,6 +152,29 @@ export async function startDev(args: StartDevOptions) {
 				printLocalExplorerAgentHint(url);
 			}
 		});
+
+		if (
+			(args.enableIpc || !args.onReady) &&
+			process.send &&
+			typeof vitest === "undefined"
+		) {
+			// The proxy accepts connections before the user Worker has started
+			// and holds requests until it has. Wait for that first start, so the
+			// parent process can send requests as soon as it gets the message.
+			// Read the proxy address only then, as a config change while waiting
+			// can move the proxy to another port.
+			void primaryDevEnv.proxy.localServerReady.promise
+				.then(() => primaryDevEnv.proxy.ready.promise)
+				.then(({ url }) => {
+					process.send?.(
+						JSON.stringify({
+							event: "DEV_SERVER_READY",
+							ip: url.hostname,
+							port: parseInt(url.port),
+						})
+					);
+				});
+		}
 
 		// Start tunnel early, before the proxy is ready.
 		// The port is already resolved by ConfigController, so we can build the
@@ -315,23 +325,15 @@ async function getPagesAssetsFetcher(
 	options: EnablePagesAssetsServiceBindingOptions | undefined
 ): Promise<StartDevWorkerInput["bindings"] | undefined> {
 	if (options !== undefined) {
-		/* eslint-disable-next-line @typescript-eslint/no-require-imports --
-		  `./miniflare-cli/assets` dynamically imports`@cloudflare/pages-shared/environment-polyfills`.
-		  `@cloudflare/pages-shared/environment-polyfills/types.ts` defines `global`
-		  augmentations that pollute the `import`-site's typing environment.
-
-		  We `require` instead of `import`ing here to avoid polluting the main
-		  `wrangler` TypeScript project with the `global` augmentations. This
-		  relies on the fact that `require` is untyped.
-		*/
-		const generateASSETSBinding = require("../miniflare-cli/assets").default;
+		const { generateASSETSBinding } =
+			await import("@cloudflare/dev-helpers/pages-assets");
 		return {
 			ASSETS: {
 				type: "fetcher",
-				fetcher: await generateASSETSBinding({
+				fetcher: (await generateASSETSBinding({
 					log: logger,
 					...options,
-				}),
+				})) as unknown as ServiceFetch,
 			},
 		};
 	}

@@ -9,7 +9,7 @@ import {
 	pushImageIfChanged,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
-import { getDurableObjectContainerApps } from "@cloudflare/workers-utils";
+import { getDurableObjectContainerApps } from "@cloudflare/workers-utils/config";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	deployDurableObjectContainerApplications,
@@ -22,7 +22,7 @@ import type { Application } from "@cloudflare/containers-shared";
 import type {
 	Config,
 	DurableObjectContainerApp,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 vi.mock("../src/shared/context", async (importOriginal) => ({
 	...(await importOriginal<typeof import("../src/shared/context")>()),
@@ -766,11 +766,11 @@ describe("Container image preparation", () => {
 			targetTag: builtImage.localTag,
 			accountId: "account",
 			complianceConfig: config,
-			cleanupSourceTag: true,
+			cleanupSourceTag: false,
 		});
-		expect(builtImage.localTagCleaned).toBe(true);
+		expect(builtImage.localTagCleaned).toBeUndefined();
 	});
-	it("pushes a shared local tag once and marks every image and class alias cleaned", async ({
+	it("pushes a shared local tag once and retains every image and class alias", async ({
 		expect,
 	}) => {
 		const prepare = vi
@@ -822,11 +822,11 @@ describe("Container image preparation", () => {
 		});
 		expect(push).toHaveBeenCalledOnce();
 		expect(push).toHaveBeenCalledWith(
-			expect.objectContaining({ sourceTag: localTag, cleanupSourceTag: true })
+			expect.objectContaining({ sourceTag: localTag, cleanupSourceTag: false })
 		);
 		expect(prepare).toHaveBeenCalledOnce();
 		expect(builtImages.map((builtImage) => builtImage.localTagCleaned)).toEqual(
-			[true, true, true]
+			[undefined, undefined, undefined]
 		);
 	});
 	it("pushes distinct local tags independently even when Dockerfile paths match", async ({
@@ -894,8 +894,67 @@ describe("Container image preparation", () => {
 		expect(prepare).toHaveBeenNthCalledWith(1, { image });
 		expect(prepare).toHaveBeenNthCalledWith(2, { image: otherImage });
 		expect(builtImages.map((builtImage) => builtImage.localTagCleaned)).toEqual(
-			[true, true]
+			[undefined, undefined]
 		);
+	});
+	it("retains a pushed image when preparation fails and allows a fresh retry", async ({
+		expect,
+	}) => {
+		const prepare = vi
+			.spyOn(ContainerImagePreparationsService, "prepareContainerImage")
+			.mockResolvedValueOnce({
+				image,
+				status: ContainerImagePreparationStatus.ERROR,
+				reason: "Image cannot be prepared",
+			})
+			.mockResolvedValueOnce({
+				image,
+				status: ContainerImagePreparationStatus.READY,
+			});
+		const push = vi
+			.mocked(pushImageIfChanged)
+			.mockResolvedValue({ remoteDigest: image });
+		const builtImage: BuiltDurableObjectContainerImage = {
+			className: "Sandbox",
+			imageName: "tools",
+			localTag: "worker-sandbox-tools:wrangler-test",
+		};
+		const containers = [
+			{
+				...durableObjectContainerConfig[0],
+				images: { tools: { dockerfile: "./Dockerfile" } },
+			},
+		];
+
+		await expect(
+			prepareDurableObjectContainerApplications(
+				config,
+				containers,
+				[builtImage],
+				args
+			)
+		).rejects.toThrow("Image cannot be prepared");
+		expect(builtImage.localTagCleaned).toBeUndefined();
+
+		await expect(
+			prepareDurableObjectContainerApplications(
+				config,
+				containers,
+				[builtImage],
+				args
+			)
+		).resolves.toEqual({ Sandbox: { tools: image } });
+		expect(push).toHaveBeenCalledTimes(2);
+		expect(push).toHaveBeenNthCalledWith(
+			1,
+			expect.objectContaining({ cleanupSourceTag: false })
+		);
+		expect(push).toHaveBeenNthCalledWith(
+			2,
+			expect.objectContaining({ cleanupSourceTag: false })
+		);
+		expect(prepare).toHaveBeenCalledTimes(2);
+		expect(builtImage.localTagCleaned).toBeUndefined();
 	});
 	it("returns prebuilt local tags for a dry run without pushing or preparing", async ({
 		expect,

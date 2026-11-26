@@ -18,39 +18,17 @@ export default defineConfig({
 
 Full documentation can be found [here](https://developers.cloudflare.com/workers/vite-plugin/).
 
-## Programmatic configuration
+## Local Explorer allowed hosts
 
-The `config` option accepts a customizer with the signature
-`(loadedConfig: ParsedInputConfigWithWorker) => ParsedInputConfigWithWorker`. It receives the parsed
-`cloudflare.config.ts` configuration, or a default Worker configuration when no
-file exists, and can customize account settings, Containers, and the entry Worker.
-The loaded and returned configurations must include a Worker, even for assets-only projects.
+Local Explorer trusts loopback hostnames, including `*.localhost`, and configured Worker route and upstream hostnames. It does not inherit Vite's `allowedHosts` by default.
 
-Return a new configuration object, spreading any existing fields you want to
-preserve. Nested objects and arrays are replaced rather than merged:
+To also trust Vite's resolved `server.allowedHosts` (or `preview.allowedHosts` during preview), set the experimental environment variable `X_LOCAL_EXPLORER_USE_VITE_ALLOWED_HOSTS=true`. It defaults to `false`.
 
-```ts
-import { cloudflare } from "@cloudflare/vite-plugin";
-
-cloudflare({
-  config(loadedConfig) {
-    return {
-      ...loadedConfig,
-      worker: {
-        ...loadedConfig.worker,
-        env: {
-          ...loadedConfig.worker.env,
-          FRAMEWORK_NAME: { type: "text", value: "my-framework" },
-        },
-      },
-    };
-  },
-});
+```sh
+X_LOCAL_EXPLORER_USE_VITE_ALLOWED_HOSTS=true pnpm exec vite
 ```
 
-The customized configuration is recorded in the build output. Preview and
-deployment from that output use the recorded configuration. Generated types
-continue to describe `cloudflare.config.ts`.
+This extends the Host and Origin allowlist for all `/cdn-cgi/` endpoints, including Local Explorer APIs. Enable it only when every hostname in Vite's allowed list should have access to those APIs. Exact hostnames and suffix entries such as `.example.com` are supported, including tunnel hostnames added by the plugin. Setting Vite's `allowedHosts: true` keeps Miniflare's default allowlist, even with this opt-in enabled.
 
 ## Features
 

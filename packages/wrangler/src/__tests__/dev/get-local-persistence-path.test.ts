@@ -2,7 +2,7 @@ import path from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 function makeConfig(userConfigPath?: string): Config {
 	return {

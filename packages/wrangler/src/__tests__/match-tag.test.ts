@@ -16,17 +16,14 @@ import { writeWorkerSource } from "./helpers/write-worker-source";
 describe("match-tag", () => {
 	mockAccountId();
 	mockApiToken();
-	function mockWorker(workerName: string, tag: string) {
+	function mockWorker(workerName: string, tag: string | null) {
 		const dummyWorker = {
 			id: workerName,
 			default_environment: {
 				environment: "production",
 				created_on: "1987-09-27",
 				modified_on: "1987-09-27",
-				script: {
-					id: workerName,
-					tag,
-				},
+				script: tag === null ? null : { id: workerName, tag },
 			},
 			created_on: "1987-09-27",
 			modified_on: "1987-09-27",
@@ -119,6 +116,20 @@ describe("match-tag", () => {
 				)
 			).rejects.toMatchInlineSnapshot(
 				`[Error: The Worker "b-worker" was not found in your account. Check that the name in your Wrangler configuration file is correct and that the Worker exists in this account.]`
+			);
+		});
+
+		it("reports a missing script as a Worker not found", async ({ expect }) => {
+			vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123");
+			mockWorker("my-worker", null);
+			await expect(
+				verifyWorkerMatchesCITag(
+					COMPLIANCE_REGION_CONFIG_UNKNOWN,
+					"some-account-id",
+					"my-worker"
+				)
+			).rejects.toThrow(
+				'The Worker "my-worker" was not found in your account.'
 			);
 		});
 

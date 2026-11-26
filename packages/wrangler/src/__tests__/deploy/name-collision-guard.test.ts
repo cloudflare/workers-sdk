@@ -51,18 +51,20 @@ describe("deploy name-collision guard (non-interactive)", () => {
 	}
 
 	// Pretend a Worker with the deployed name already exists on the account.
-	function mockExistingWorker() {
+	function mockExistingWorker({ hasScript = true } = {}) {
 		msw.use(
 			http.get("*/accounts/:accountId/workers/services/:scriptName", () =>
 				HttpResponse.json(
 					createFetchResult({
 						default_environment: {
 							environment: "production",
-							script: {
-								tag: "existing-tag",
-								tags: null,
-								last_deployed_from: "wrangler",
-							},
+							script: hasScript
+								? {
+										tag: "existing-tag",
+										tags: null,
+										last_deployed_from: "wrangler",
+									}
+								: null,
 						},
 					})
 				)
@@ -98,29 +100,30 @@ describe("deploy name-collision guard (non-interactive)", () => {
 		);
 	});
 
-	it("aborts when the delegated name was auto-generated (no --name)", async ({
-		expect,
-	}) => {
-		const args = delegatedDeployArgs({});
-		const config = readConfig(args, { useRedirectIfAvailable: true });
-		// No config file on disk, so `configPath` is undefined. The name here
-		// stands in for one autoconfig would have generated from the directory.
-		config.name = "existing-worker";
-		config.main = "index.js";
-		config.compatibility_date = "2024-01-01";
-		mockExistingWorker();
+	it.for([true, false])(
+		"aborts when an auto-generated delegated name matches a service (has script: %s)",
+		async (hasScript, { expect }) => {
+			const args = delegatedDeployArgs({});
+			const config = readConfig(args, { useRedirectIfAvailable: true });
+			// No config file on disk, so `configPath` is undefined. The name here
+			// stands in for one autoconfig would have generated from the directory.
+			config.name = "existing-worker";
+			config.main = "index.js";
+			config.compatibility_date = "2024-01-01";
+			mockExistingWorker({ hasScript });
 
-		await expect(
-			run(experimentalFlags, () =>
-				runDeployCommandHandler(args, {
-					config,
-					pagesToWorkersDelegation: true,
-				})
-			)
-		).rejects.toThrow(
-			'A Worker named "existing-worker" already exists in your account.'
-		);
-	});
+			await expect(
+				run(experimentalFlags, () =>
+					runDeployCommandHandler(args, {
+						config,
+						pagesToWorkersDelegation: true,
+					})
+				)
+			).rejects.toThrow(
+				'A Worker named "existing-worker" already exists in your account.'
+			);
+		}
+	);
 
 	it("aborts even when the delegated name was carried across as --name", async ({
 		expect,

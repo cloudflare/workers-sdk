@@ -36,7 +36,7 @@ describe("route-consolidation", () => {
 			const consolidated = consolidateRoutes(routes);
 			expect(consolidated.length).toEqual(limit);
 			// Should be all unique
-			expect(Array.from(new Set(consolidated)).length).toEqual(limit);
+			expect(new Set(consolidated).size).toEqual(limit);
 			// Should all have pattern `/$id/*`
 			expect(
 				consolidated.every((route) => route.match(/\/[a-z0-9-]+\/\*/) !== null)
@@ -62,7 +62,7 @@ describe("route-consolidation", () => {
 			const consolidated = consolidateRoutes(routes);
 			expect(consolidated.length).toEqual(limit);
 			// Should be all unique
-			expect(Array.from(new Set(consolidated)).length).toEqual(limit);
+			expect(new Set(consolidated).size).toEqual(limit);
 			// Should all have pattern `/$id/*`
 			expect(
 				consolidated.every((route) => route.match(/\/[a-z0-9-]+\/\*/) !== null)

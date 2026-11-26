@@ -34,7 +34,7 @@ import type {
 } from "@cloudflare/deploy-helpers";
 import type { AssetsOptions } from "@cloudflare/workers-utils";
 import type { EphemeralDirectory } from "@cloudflare/workers-utils";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 type SharedArgs = HandlerArgs<typeof sharedDeployVersionsArgs>;
 

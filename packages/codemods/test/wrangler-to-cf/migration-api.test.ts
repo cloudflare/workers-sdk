@@ -9,7 +9,6 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { afterEach, describe, it, vi } from "vitest";
 import { migrateWranglerToCf } from "../../src";
@@ -22,9 +21,6 @@ const temporaryDirectories: string[] = [];
 
 vi.mock("@cloudflare/cli-shared-helpers/packages", () => ({
 	installPackages: vi.fn(),
-}));
-vi.mock("@cloudflare/cli-shared-helpers/command", () => ({
-	runCommand: vi.fn(),
 }));
 
 vi.mock(
@@ -75,6 +71,99 @@ afterEach(async () => {
 });
 
 describe("migrateWranglerToCf", () => {
+	it.for(["vite", "wrangler"] as const)(
+		"migrates Durable Object history without manual intervention with %s",
+		async (bundler, { expect }) => {
+			const cwd = await createProject({
+				"node_modules/wrangler/package.json": JSON.stringify({
+					name: "wrangler",
+					version: "4.100.0",
+				}),
+				"package.json": JSON.stringify({
+					devDependencies: {
+						"@cloudflare/vite-plugin": "^2.0.0-rc.0",
+						cf: "1.0.0",
+					},
+				}),
+				"wrangler.jsonc": JSON.stringify({
+					compatibility_date: "2026-09-23",
+					durable_objects: {
+						bindings: [{ class_name: "Counter", name: "COUNTER" }],
+					},
+					main: "src/index.ts",
+					migrations: [
+						{
+							new_classes: ["LegacyCounter"],
+							new_sqlite_classes: ["OldCounter"],
+							tag: "v1",
+						},
+						{
+							deleted_classes: ["LegacyCounter"],
+							renamed_classes: [{ from: "OldCounter", to: "Counter" }],
+							tag: "v2",
+						},
+					],
+					name: "counter-worker",
+				}),
+			});
+
+			const result = await migrateWranglerToCf(
+				path.join(cwd, "wrangler.jsonc"),
+				{
+					bundler,
+				}
+			);
+			const output = await readFile(
+				path.join(cwd, "cloudflare.config.ts"),
+				"utf8"
+			);
+
+			expect(result.status).toBe("complete");
+			expect(result.followUps).toEqual([]);
+			expect(output).toMatchSnapshot();
+			expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
+		}
+	);
+
+	it("keeps transferred Durable Objects blocked until their transfer status is reviewed", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({ devDependencies: { cf: "1.0.0" } }),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				migrations: [
+					{
+						tag: "v1",
+						transferred_classes: [
+							{
+								from: "Original",
+								from_script: "source-worker",
+								to: "Incoming",
+							},
+						],
+					},
+				],
+				name: "worker",
+			}),
+		});
+
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+		const output = await readFile(
+			path.join(cwd, "cloudflare.config.ts"),
+			"utf8"
+		);
+
+		expect(result.status).toBe("needs-intervention");
+		expect(result.followUps).toEqual([
+			expect.objectContaining({
+				code: "durable-object-transfer",
+				sourcePath: "migrations[0].transferred_classes[0]",
+			}),
+		]);
+		expect(output).toMatchSnapshot();
+	});
+
 	it("rejects unsupported bundlers", async ({ expect }) => {
 		await expect(
 			migrateWranglerToCf("wrangler.json", {
@@ -113,7 +202,7 @@ describe("migrateWranglerToCf", () => {
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
 			"pnpm",
-			["cf@latest", "@cloudflare/vite-plugin@beta"],
+			["cf@latest", "@cloudflare/vite-plugin@^2.0.0-rc.0"],
 			{ cwd, dev: true, isWorkspaceRoot: false }
 		);
 		expect(result.changedFiles).toEqual([
@@ -159,7 +248,7 @@ describe("migrateWranglerToCf", () => {
 					path.join(cwd, "package.json"),
 					JSON.stringify({
 						devDependencies: {
-							"@cloudflare/vite-plugin": "beta",
+							"@cloudflare/vite-plugin": "^2.0.0-rc.0",
 							cf: "1.0.0-beta.5",
 						},
 						packageManager: `${packageManager}@${packageManagerVersion}`,
@@ -177,7 +266,7 @@ describe("migrateWranglerToCf", () => {
 
 			expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
 				packageManager,
-				["@cloudflare/vite-plugin@beta"],
+				["@cloudflare/vite-plugin@^2.0.0-rc.0"],
 				{ cwd, dev: true, isWorkspaceRoot: false }
 			);
 			expect(result.changedFiles).toEqual([
@@ -190,114 +279,16 @@ describe("migrateWranglerToCf", () => {
 	);
 
 	it.for([
-		{ packageManager: "npm", lockFile: "package-lock.json" },
-		{ packageManager: "pnpm", lockFile: "pnpm-lock.yaml" },
-		{ packageManager: "yarn", lockFile: "yarn.lock" },
-		{ packageManager: "bun", lockFile: "bun.lock" },
-		{ packageManager: "nub", lockFile: "nub.lock" },
-	] as const)(
-		"sets beta when $packageManager saves a resolved Vite plugin version",
-		async ({ packageManager, lockFile }, { expect }) => {
-			const cwd = await createProject({
-				"package.json": JSON.stringify({
-					devDependencies: {
-						"@cloudflare/vite-plugin": "^1.60.2",
-						cf: "1.0.0-beta.5",
-					},
-					packageManager: `${packageManager}@1.2.0`,
-				}),
-				[lockFile]: "old lockfile",
-				"wrangler.json": JSON.stringify({
-					compatibility_date: "2026-09-23",
-					name: "example-worker",
-				}),
-			});
-			vi.mocked(installPackages).mockImplementationOnce(async () => {
-				await writeFile(
-					path.join(cwd, "package.json"),
-					JSON.stringify({
-						devDependencies: {
-							"@cloudflare/vite-plugin": "^2.0.0-beta.sha-805ec1ff3",
-							cf: "1.0.0-beta.5",
-						},
-						packageManager: `${packageManager}@1.2.0`,
-					})
-				);
-				await writeFile(path.join(cwd, lockFile), "resolved lockfile");
-			});
-			const syncLockfile = async () => {
-				await writeFile(path.join(cwd, lockFile), "synced lockfile");
-			};
-			if (packageManager === "bun") {
-				vi.mocked(runCommand).mockImplementationOnce(async () => {
-					await syncLockfile();
-					return "";
-				});
-			} else {
-				vi.mocked(installPackages).mockImplementationOnce(syncLockfile);
-			}
-
-			const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
-
-			expect(vi.mocked(installPackages)).toHaveBeenNthCalledWith(
-				1,
-				packageManager,
-				["@cloudflare/vite-plugin@beta"],
-				{ cwd, dev: true, isWorkspaceRoot: false }
-			);
-			if (packageManager === "bun") {
-				expect(vi.mocked(runCommand)).toHaveBeenCalledWith(["bun", "install"], {
-					cwd,
-					silent: true,
-				});
-			} else {
-				expect(vi.mocked(installPackages)).toHaveBeenNthCalledWith(
-					2,
-					packageManager,
-					[],
-					{ cwd, isWorkspaceRoot: false }
-				);
-			}
-			expect(
-				JSON.parse(await readFile(path.join(cwd, "package.json"), "utf8"))
-					.devDependencies["@cloudflare/vite-plugin"]
-			).toBe("beta");
-			expect(await readFile(path.join(cwd, lockFile), "utf8")).toBe(
-				"synced lockfile"
-			);
-			expect(result.changedFiles).toEqual([
-				"cloudflare.config.ts",
-				"package.json",
-				lockFile,
-			]);
-		}
-	);
-
-	it.for([
+		{ declaredVersion: "^2.0.0-rc.0", installedVersion: "2.0.0-rc.0" },
+		{ declaredVersion: "^2.0.0-rc.3", installedVersion: "2.0.0-rc.3" },
+		{ declaredVersion: "2.0.0-rc.1", installedVersion: "2.0.0-rc.1" },
+		{ declaredVersion: "^2", installedVersion: "2.1.0" },
 		{
-			declaredVersion: "^2.0.0-beta.sha-805ec1ff3",
-			installedVersion: "2.0.0-beta.sha-805ec1ff3",
+			declaredVersion: ">=2.0.0-rc.0 <3.0.0-0",
+			installedVersion: "2.0.0-rc.0",
 		},
-		{
-			declaredVersion: "^2.0.0-beta.123",
-			installedVersion: "2.0.0-beta.123",
-		},
-		{
-			declaredVersion: "beta",
-			installedVersion: "2.0.0-beta.sha-805ec1ff3",
-		},
-		{
-			declaredVersion: ">=2.0.0-0 <3.0.0-0",
-			installedVersion: "2.0.0-beta.sha-805ec1ff3",
-		},
-		{
-			declaredVersion: "workspace:*",
-			installedVersion: "2.0.0-beta.sha-805ec1ff3",
-		},
-		{
-			declaredVersion: "catalog:default",
-			installedVersion: "2.0.0-beta.sha-805ec1ff3",
-		},
+		{ declaredVersion: "workspace:*", installedVersion: "2.0.0-rc.0" },
+		{ declaredVersion: "catalog:default", installedVersion: "2.0.0-rc.0" },
 	])(
 		"keeps a compatible Vite plugin declared as $declaredVersion unchanged",
 		async ({ declaredVersion, installedVersion }, { expect }) => {
@@ -331,7 +322,47 @@ describe("migrateWranglerToCf", () => {
 	);
 
 	it.for([
+		{ declaredVersion: "beta", installedVersion: "2.0.0-beta.v.17" },
+		{ declaredVersion: "rc", installedVersion: "2.0.0-rc.0" },
+		{ declaredVersion: "^2.0.0-beta.v.0", installedVersion: "2.0.0-beta.v.17" },
+		{
+			declaredVersion: ">=2.0.0-0 <3.0.0-0",
+			installedVersion: "2.0.0-beta.v.17",
+		},
+		{ declaredVersion: "^2.0.0-rc.0", installedVersion: "2.0.0-beta.v.17" },
+	])(
+		"upgrades a Vite plugin declared as $declaredVersion with installed version $installedVersion",
+		async ({ declaredVersion, installedVersion }, { expect }) => {
+			const cwd = await createProject({
+				"node_modules/@cloudflare/vite-plugin/package.json": JSON.stringify({
+					name: "@cloudflare/vite-plugin",
+					version: installedVersion,
+				}),
+				"package.json": JSON.stringify({
+					devDependencies: {
+						"@cloudflare/vite-plugin": declaredVersion,
+						cf: "1.0.0-beta.5",
+					},
+				}),
+				"wrangler.json": JSON.stringify({
+					compatibility_date: "2026-09-23",
+					name: "example-worker",
+				}),
+			});
+
+			await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+
+			expect(vi.mocked(installPackages)).toHaveBeenCalledExactlyOnceWith(
+				"npm",
+				["@cloudflare/vite-plugin@^2.0.0-rc.0"],
+				{ cwd, dev: true, isWorkspaceRoot: false }
+			);
+		}
+	);
+
+	it.for([
 		{ declaredVersion: "workspace:*", installedVersion: "1.60.2" },
+		{ declaredVersion: "workspace:*", installedVersion: "2.0.0-beta.v.17" },
 		{ declaredVersion: "workspace:*", installedVersion: undefined },
 		{ declaredVersion: "file:../vite-plugin", installedVersion: "1.60.2" },
 		{ declaredVersion: "link:../vite-plugin", installedVersion: "1.60.2" },
@@ -418,7 +449,7 @@ describe("migrateWranglerToCf", () => {
 			}),
 			"package.json": JSON.stringify({
 				devDependencies: {
-					"@cloudflare/vite-plugin": "^2.0.0-beta.sha-805ec1ff3",
+					"@cloudflare/vite-plugin": "^2.0.0-rc.0",
 					cf: "1.0.0-beta.5",
 				},
 			}),
@@ -432,7 +463,7 @@ describe("migrateWranglerToCf", () => {
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
 			"npm",
-			["@cloudflare/vite-plugin@beta"],
+			["@cloudflare/vite-plugin@^2.0.0-rc.0"],
 			{ cwd, dev: true, isWorkspaceRoot: false }
 		);
 	});
@@ -456,7 +487,7 @@ describe("migrateWranglerToCf", () => {
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
 			"npm",
-			["@cloudflare/vite-plugin@beta"],
+			["@cloudflare/vite-plugin@^2.0.0-rc.0"],
 			{ cwd, dev: true, isWorkspaceRoot: false }
 		);
 	});
@@ -477,18 +508,8 @@ describe("migrateWranglerToCf", () => {
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
 			"npm",
-			["@cloudflare/vite-plugin@beta"],
+			["@cloudflare/vite-plugin@^2.0.0-rc.0"],
 			{ cwd, dev: false, isWorkspaceRoot: false }
-		);
-		const packageJson = JSON.parse(
-			await readFile(path.join(cwd, "package.json"), "utf8")
-		) as {
-			dependencies: Record<string, string>;
-			devDependencies: Record<string, string>;
-		};
-		expect(packageJson.dependencies["@cloudflare/vite-plugin"]).toBe("beta");
-		expect(packageJson.devDependencies).not.toHaveProperty(
-			"@cloudflare/vite-plugin"
 		);
 	});
 
@@ -580,7 +601,7 @@ describe("migrateWranglerToCf", () => {
 			status: "needs-intervention",
 		});
 		expect(result.followUps[0].message).toContain(
-			"@cloudflare/vite-plugin@beta"
+			"@cloudflare/vite-plugin@^2.0.0-rc.0"
 		);
 	});
 
@@ -772,7 +793,7 @@ describe("migrateWranglerToCf", () => {
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
 			"pnpm",
-			["cf@latest", "@cloudflare/vite-plugin@beta"],
+			["cf@latest", "@cloudflare/vite-plugin@^2.0.0-rc.0"],
 			{ cwd: workerDirectory, dev: true, isWorkspaceRoot: false }
 		);
 		expect(previewResult.changedFiles).toContain(rootLockFile);
@@ -996,65 +1017,6 @@ describe("migrateWranglerToCf", () => {
 		expect(cloudflareConfig).toContain("Migration incomplete.");
 	});
 
-	it("reports a lockfile sync failure after installing cf and the Vite plugin", async ({
-		expect,
-	}) => {
-		const cwd = await createProject({
-			"package.json": JSON.stringify({
-				devDependencies: { "@cloudflare/vite-plugin": "^1.60.2" },
-				packageManager: "pnpm@10.27.0",
-			}),
-			"pnpm-lock.yaml": "old lockfile",
-			"wrangler.json": JSON.stringify({
-				compatibility_date: "2026-09-23",
-				name: "example-worker",
-			}),
-		});
-		vi.mocked(installPackages)
-			.mockImplementationOnce(async () => {
-				await writeFile(
-					path.join(cwd, "package.json"),
-					JSON.stringify({
-						devDependencies: {
-							"@cloudflare/vite-plugin": "^2.0.0-beta.123",
-							cf: "latest",
-						},
-						packageManager: "pnpm@10.27.0",
-					})
-				);
-				await writeFile(path.join(cwd, "pnpm-lock.yaml"), "installed lockfile");
-			})
-			.mockRejectedValueOnce(new Error("Lockfile is read-only."));
-
-		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
-
-		expect(vi.mocked(installPackages)).toHaveBeenNthCalledWith(2, "pnpm", [], {
-			cwd,
-			isWorkspaceRoot: false,
-		});
-		expect(result).toMatchObject({
-			changedFiles: ["cloudflare.config.ts", "package.json", "pnpm-lock.yaml"],
-			followUps: [{ blocking: true, code: "vite-plugin-lockfile-sync-failed" }],
-			requiresInstall: true,
-			status: "needs-intervention",
-		});
-		expect(result.followUps[0].message).toContain(
-			"lockfile could not be synchronized"
-		);
-		expect(result.followUps[0].message).not.toContain("cf@latest");
-		expect(result.followUps[0].message).not.toContain("could not be installed");
-		expect(
-			JSON.parse(await readFile(path.join(cwd, "package.json"), "utf8"))
-				.devDependencies
-		).toMatchObject({
-			"@cloudflare/vite-plugin": "beta",
-			cf: "latest",
-		});
-		expect(await readFile(path.join(cwd, "pnpm-lock.yaml"), "utf8")).toBe(
-			"installed lockfile"
-		);
-	});
-
 	it("reports package files changed before a later install fails", async ({
 		expect,
 	}) => {
@@ -1268,7 +1230,7 @@ describe("migrateWranglerToCf", () => {
 	}) => {
 		const manifest = JSON.stringify({
 			devDependencies: {
-				"@cloudflare/vite-plugin": "beta",
+				"@cloudflare/vite-plugin": "^2.0.0-rc.0",
 				cf: "^1.0.0",
 				wrangler: "^4.99.0",
 			},

@@ -874,7 +874,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 	public async unsafeStartIntrospection(): Promise<string> {
 		if (workflowIntrospectionSessions.has(this.env.WORKFLOW_NAME)) {
 			throw new Error(
-				`Workflow ${JSON.stringify(this.env.WORKFLOW_NAME)} already has an active introspection session for binding ${JSON.stringify(this.env.BINDING_NAME)}.`
+				`Workflow ${JSON.stringify(this.env.WORKFLOW_NAME)} already has an active introspection session.`
 			);
 		}
 

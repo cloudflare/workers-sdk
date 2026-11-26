@@ -1,3 +1,4 @@
+import { ArtifactsEventSubscriptionSchema } from "@cloudflare/config";
 import {
 	AssetConfigSchema,
 	RouterConfigSchema,
@@ -15,6 +16,7 @@ import type { RemoteProxyConnectionString } from "../plugins/shared";
 import type { Json } from "../shared";
 import type { WorkerRegistry } from "../shared/dev-registry-types";
 import type { Awaitable } from "../workers";
+import type { ArtifactsEventSubscription } from "@cloudflare/config";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 import type * as http from "node:http";
 
@@ -476,6 +478,7 @@ const V4WorkerOptionsShapeSchema = z.object({
 			z.object({
 				name: z.string(),
 				className: z.string(),
+				events: z.array(ArtifactsEventSubscriptionSchema).optional(),
 				scriptName: z.string().optional(),
 				external: z.boolean().optional(),
 				stepLimit: z.number().int().min(1).optional(),
@@ -487,6 +490,7 @@ const V4WorkerOptionsShapeSchema = z.object({
 			z.string(),
 			z.object({
 				name: z.string(),
+				events: z.array(ArtifactsEventSubscriptionSchema).optional(),
 				stepLimit: z.number().int().min(1).optional(),
 			})
 		)
@@ -627,6 +631,16 @@ const V4WorkerOptionsShapeSchema = z.object({
 		.record(z.string(), z.object({ enable_timer: z.boolean().optional() }))
 		.optional(),
 	flagship: z
+		.record(
+			z.string(),
+			z.object({
+				app_id: z.string(),
+				remoteProxyConnectionString:
+					RemoteProxyConnectionStringSchema.optional(),
+			})
+		)
+		.optional(),
+	realtimekit: z
 		.record(
 			z.string(),
 			z.object({
@@ -913,6 +927,7 @@ export type V4WorkerOptionsShape = {
 			className: string;
 			scriptName?: string;
 			external?: boolean;
+			events?: ArtifactsEventSubscription[];
 			stepLimit?: number;
 		}
 	>;
@@ -920,6 +935,7 @@ export type V4WorkerOptionsShape = {
 		string,
 		{
 			name: string;
+			events?: ArtifactsEventSubscription[];
 			stepLimit?: number;
 		}
 	>;
@@ -985,6 +1001,7 @@ export type V4WorkerOptionsShape = {
 	>;
 	helloWorld?: Record<string, { enable_timer?: boolean }>;
 	flagship?: Record<string, { app_id: string } & V4RemoteBinding>;
+	realtimekit?: Record<string, { app_id: string } & V4RemoteBinding>;
 	artifacts?: Record<string, { namespace: string } & V4RemoteBinding>;
 	workerLoaders?: Record<string, Record<string, never>>;
 	media?: V4RemoteBindingWithName;

@@ -25,6 +25,7 @@ type Manifest = NonNullable<MiniflareWorkerConfig["manifest"]>;
 type ManifestModule = Manifest["modules"][string];
 type Assets = NonNullable<MiniflareWorkerConfig["assets"]>;
 type ServiceBinding = Extract<Env[string], { type: "worker" }>;
+type TailConsumer = NonNullable<MiniflareWorkerConfig["tailConsumers"]>[number];
 
 export function convertV4MiniflareOptions(
 	options: V4MiniflareOptions
@@ -167,8 +168,17 @@ function convertWorkerOptions(
 		isRemote
 	);
 	addServiceBindings(env, worker.serviceBindings, isRemote);
-	addServiceBindingArray(config, worker.tails, false);
-	addServiceBindingArray(config, worker.streamingTails, true);
+	const tailConsumers = convertTailConsumers(worker.tails, "tails");
+	if (tailConsumers !== undefined) {
+		config.tailConsumers = tailConsumers;
+	}
+	const streamingTailConsumers = convertTailConsumers(
+		worker.streamingTails,
+		"streamingTails"
+	);
+	if (streamingTailConsumers !== undefined) {
+		config.experimental = { streamingTailConsumers };
+	}
 	addProductBindings(env, exports, config, worker, isRemote);
 
 	legacy.wasmBindings = worker.wasmBindings;
@@ -470,6 +480,7 @@ function addWorkflowExports(exports: Exports, worker: ParsedV4WorkerOptions) {
 		exports[className] = {
 			type: "workflow",
 			name: workflow.name,
+			events: workflow.events,
 			limits:
 				workflow.stepLimit === undefined
 					? undefined
@@ -537,13 +548,14 @@ function addServiceBindings(
 	}
 }
 
-function addServiceBindingArray(
-	config: MiniflareWorkerConfig,
+function convertTailConsumers(
 	bindings: ParsedV4WorkerOptions["tails"],
-	streaming: boolean
-) {
-	const option = streaming ? "streamingTails" : "tails";
-	for (const binding of bindings ?? []) {
+	option: "tails" | "streamingTails"
+): TailConsumer[] | undefined {
+	if (bindings === undefined || bindings.length === 0) {
+		return undefined;
+	}
+	return bindings.map((binding) => {
 		if (hasRemoteProxyConnectionString(binding)) {
 			throwUnsupportedOption(`${option}[].remoteProxyConnectionString`);
 		}
@@ -551,14 +563,12 @@ function addServiceBindingArray(
 		if (converted.type !== "worker" || typeof converted.worker !== "string") {
 			throwUnsupportedOption(option);
 		}
-		config.tailConsumers ??= [];
-		config.tailConsumers.push({
+		return {
 			worker: converted.worker,
 			entrypoint: converted.exportName,
 			props: converted.props,
-			streaming,
-		});
-	}
+		};
+	});
 }
 
 function hasRemoteProxyConnectionString(
@@ -670,7 +680,7 @@ function addProductBindings(
 	}
 	if (worker.analyticsSql !== undefined) {
 		env[worker.analyticsSql.binding] = {
-			type: "analytics",
+			type: "analytics-sql",
 			dev: {
 				remote: isRemote(worker.analyticsSql.remoteProxyConnectionString),
 			},
@@ -731,7 +741,7 @@ function addProductBindings(
 	for (const [name, binding] of Object.entries(worker.k2 ?? {})) {
 		env[name] = {
 			type: "k2",
-			stream: binding.stream,
+			id: binding.stream,
 			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
@@ -802,15 +812,18 @@ function addProductBindings(
 			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
+	for (const [name, binding] of Object.entries(worker.realtimekit ?? {})) {
+		env[name] = {
+			type: "realtime-kit",
+			id: binding.app_id,
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
+		};
+	}
 	for (const [name, binding] of Object.entries(worker.artifacts ?? {})) {
 		env[name] = {
 			type: "artifacts",
 			namespace: binding.namespace,
-			// At this stage, only explicit V5 dev.remote: false selects local.
-			// Do not reinterpret an omitted legacy setting as that opt-in.
-			...(binding.remoteProxyConnectionString === undefined
-				? {}
-				: { dev: { remote: isRemote(binding.remoteProxyConnectionString) } }),
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
 	for (const name of Object.keys(worker.workerLoaders ?? {})) {
@@ -835,10 +848,15 @@ function addProductBindings(
 			name: workflow.name,
 			worker: targetWorkerName,
 			exportName: workflow.className,
-			limits:
-				workflow.stepLimit === undefined
+			unsafeConfig:
+				workflow.events === undefined && workflow.stepLimit === undefined
 					? undefined
-					: { steps: workflow.stepLimit },
+					: {
+							events: workflow.events,
+							...(workflow.stepLimit === undefined
+								? {}
+								: { limits: { steps: workflow.stepLimit } }),
+						},
 		};
 	}
 }
@@ -853,14 +871,14 @@ function addPipelineBindings(
 	}
 	if (Array.isArray(pipelines)) {
 		for (const name of pipelines) {
-			env[name] = { type: "pipeline", name };
+			env[name] = { type: "pipeline", streamId: name };
 		}
 		return;
 	}
 	for (const [name, binding] of Object.entries(pipelines)) {
 		env[name] = {
 			type: "pipeline",
-			name:
+			streamId:
 				typeof binding === "string"
 					? binding
 					: "stream" in binding

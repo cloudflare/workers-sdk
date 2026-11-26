@@ -47,17 +47,13 @@ async function createPersistedDatabase() {
 	return { db, external };
 }
 
-// Regression test for https://github.com/cloudflare/workers-sdk/issues/14916.
-test("surfaces recoverable SQLite errors as catchable D1 query errors", async ({
-	expect,
-}) => {
-	const { db, external } = await createPersistedDatabase();
-
+/** Holds the SQLite write lock from the external connection. */
+async function lockForWrites(external: DatabaseSync) {
 	// The runtime may still be flushing its own write; retry briefly.
 	for (let attempt = 0; ; attempt++) {
 		try {
 			external.exec("BEGIN IMMEDIATE");
-			break;
+			return;
 		} catch (e) {
 			if (attempt === 9) {
 				throw e;
@@ -65,12 +61,21 @@ test("surfaces recoverable SQLite errors as catchable D1 query errors", async ({
 			await setTimeout(100);
 		}
 	}
+}
+
+// Regression test for https://github.com/cloudflare/workers-sdk/issues/14916.
+test("surfaces recoverable SQLite errors as catchable D1 query errors", async ({
+	expect,
+}) => {
+	const { db, external } = await createPersistedDatabase();
+	const session = db.withSession();
+	await lockForWrites(external);
 
 	try {
 		// A read succeeds while another connection holds the write lock, but
 		// writing the session bookmark fails. The error must stay catchable.
 		await expect(
-			db.prepare("SELECT * FROM entries").all()
+			session.prepare("SELECT * FROM entries").all()
 		).rejects.toMatchObject({
 			message: expect.stringMatching(
 				/^D1_ERROR: Failed to get session commit token:/
@@ -85,6 +90,32 @@ test("surfaces recoverable SQLite errors as catchable D1 query errors", async ({
 
 	const { results } = await db.prepare("SELECT * FROM entries").all();
 	expect(results).toEqual([]);
+});
+
+// Regression test for https://github.com/cloudflare/workers-sdk/issues/16549.
+test("does not write for read-only queries outside a session", async ({
+	expect,
+}) => {
+	const { db, external } = await createPersistedDatabase();
+	await db.prepare("INSERT INTO entries (value) VALUES ('read')").run();
+	await lockForWrites(external);
+
+	try {
+		// Any write, such as storing a session bookmark, fails while another
+		// connection holds the write lock. Reads outside a session must not write.
+		const statement = db.prepare("SELECT value FROM entries");
+		expect(await statement.all()).toMatchObject({
+			results: [{ value: "read" }],
+		});
+		expect(await statement.first("value")).toBe("read");
+		expect(await statement.raw()).toEqual([["read"]]);
+		expect(await db.batch([statement, statement])).toMatchObject([
+			{ results: [{ value: "read" }] },
+			{ results: [{ value: "read" }] },
+		]);
+	} finally {
+		external.exec("ROLLBACK");
+	}
 });
 
 // Regression test for https://github.com/cloudflare/workers-sdk/pull/14921#discussion_r4047630401.

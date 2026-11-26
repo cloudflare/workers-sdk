@@ -751,7 +751,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "existing-d1-id",
+						database_id: "existing-d1-id",
 					},
 				],
 			});
@@ -874,7 +874,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "existing-d1-id-1",
+						database_id: "existing-d1-id-1",
 					},
 				],
 			});
@@ -1007,7 +1007,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "new-d1-id",
+						database_id: "new-d1-id",
 					},
 				],
 			});
@@ -1170,7 +1170,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "new-d1-id",
+						database_id: "new-d1-id",
 					},
 				],
 			});
@@ -1290,8 +1290,8 @@ describe("resource provisioning", () => {
 			});
 			mockUploadWorkerRequest({
 				expectedBindings: [
-					{ name: "NEW", type: "d1", id: "new-d1-id" },
-					{ name: "EXISTING", type: "d1", id: "generated-id" },
+					{ name: "NEW", type: "d1", database_id: "new-d1-id" },
+					{ name: "EXISTING", type: "d1", database_id: "generated-id" },
 				],
 			});
 
@@ -1384,7 +1384,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "new-d1-id",
+						database_id: "new-d1-id",
 					},
 				],
 			});
@@ -1500,7 +1500,7 @@ describe("resource provisioning", () => {
 				mockUploadWorkerRequest({
 					expectedBindings: [
 						{ name: "KV", type: "kv_namespace", namespace_id: "new-kv-id" },
-						{ name: "D1", type: "d1", id: "existing-d1-id" },
+						{ name: "D1", type: "d1", database_id: "existing-d1-id" },
 					],
 				});
 
@@ -1607,7 +1607,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "test-name-d1-id",
+						database_id: "test-name-d1-id",
 					},
 				],
 			});
@@ -1766,7 +1766,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "new-d1-id",
+						database_id: "new-d1-id",
 					},
 				],
 			});
@@ -1804,6 +1804,103 @@ describe("resource provisioning", () => {
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("creates an auto-provisioned D1 database in the configured jurisdiction", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				d1_databases: [{ binding: "D1", jurisdiction: "eu" }],
+			});
+			mockGetSettings();
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database", () =>
+					HttpResponse.json(createFetchResult([]))
+				)
+			);
+			mockCreateD1Database(expect, {
+				assertName: "test-name-d1",
+				assertJurisdiction: "eu",
+				resultId: "new-d1-id",
+			});
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "D1",
+						type: "d1",
+						database_id: "new-d1-id",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.out).toContain('Creating new D1 Database "test-name-d1"');
+			expect(std.err).toBe("");
+		});
+
+		it("can inherit a D1 binding when the jurisdiction matches", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				d1_databases: [{ binding: "D1", jurisdiction: "eu" }],
+			});
+			mockGetSettings({
+				result: {
+					bindings: [
+						{
+							type: "d1",
+							name: "D1",
+							id: "d1-id",
+						},
+					],
+				},
+			});
+			mockGetD1Database(expect, "d1-id", { jurisdiction: "eu" });
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "D1",
+						type: "inherit",
+					},
+				],
+			});
+
+			await runWrangler("deploy --x-auto-create=false");
+
+			expect(std.out).toContain("env.D1 (inherited)");
+			expect(std.err).toBe("");
+		});
+
+		it("throws when an inherited D1 database has a different jurisdiction", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				d1_databases: [{ binding: "D1", jurisdiction: "eu" }],
+			});
+			mockGetSettings({
+				result: {
+					bindings: [
+						{
+							type: "d1",
+							name: "D1",
+							id: "old-d1-id",
+						},
+					],
+				},
+			});
+			mockGetD1Database(expect, "old-d1-id", {
+				name: "test-name-d1",
+				uuid: "old-d1-id",
+				jurisdiction: "us",
+			});
+
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				'D1 database "test-name-d1" (old-d1-id) is in jurisdiction "us", but the "D1" binding specifies jurisdiction "eu".'
+			);
 		});
 
 		it("can inherit d1 binding when the database name is provided", async ({
@@ -1899,7 +1996,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "new-d1-id",
+						database_id: "new-d1-id",
 					},
 				],
 			});
@@ -2104,7 +2201,7 @@ describe("resource provisioning", () => {
 					{
 						name: "DB_NAME",
 						type: "d1",
-						id: "existing-d1-id",
+						database_id: "existing-d1-id",
 					},
 				],
 			});
@@ -2128,6 +2225,31 @@ describe("resource provisioning", () => {
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("throws when a named D1 database has a different jurisdiction", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				d1_databases: [
+					{
+						binding: "DB_NAME",
+						database_name: "existing-db-name",
+						jurisdiction: "eu",
+					},
+				],
+			});
+			mockGetSettings();
+			mockGetD1Database(expect, "existing-db-name", {
+				name: "existing-db-name",
+				uuid: "existing-d1-id",
+				jurisdiction: "us",
+			});
+
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				'D1 database "existing-db-name" (existing-d1-id) is in jurisdiction "us", but the "DB_NAME" binding specifies jurisdiction "eu".'
+			);
 		});
 
 		// because buckets with the same name can exist in different jurisdictions
@@ -2337,15 +2459,21 @@ function mockCreateD1Database(
 	options: {
 		resultId?: string;
 		assertName?: string;
+		assertJurisdiction?: string;
 	} = {}
 ) {
 	msw.use(
 		http.post(
 			"*/accounts/:accountId/d1/database",
 			async ({ request }) => {
-				if (options.assertName) {
+				if (options.assertName || options.assertJurisdiction) {
 					const requestBody = await request.json();
-					expect(requestBody).toEqual({ name: options.assertName });
+					expect(requestBody).toEqual({
+						name: options.assertName,
+						...(options.assertJurisdiction && {
+							jurisdiction: options.assertJurisdiction,
+						}),
+					});
 				}
 
 				return HttpResponse.json(

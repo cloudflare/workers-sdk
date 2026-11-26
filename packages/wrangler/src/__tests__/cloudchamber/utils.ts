@@ -5,7 +5,7 @@ import { vi } from "vitest";
 import * as user from "../../user";
 import { msw } from "../helpers/msw";
 import type { CompleteAccountCustomer } from "@cloudflare/containers-shared";
-import type { CloudchamberConfig } from "@cloudflare/workers-utils";
+import type { CloudchamberConfig } from "@cloudflare/workers-utils/config";
 
 export function setWranglerConfig(cloudchamber: CloudchamberConfig) {
 	fs.writeFileSync(

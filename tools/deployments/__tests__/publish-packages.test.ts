@@ -1,3 +1,4 @@
+import { ChildProcess, execFileSync, spawn } from "node:child_process";
 import {
 	mkdirSync,
 	mkdtempSync,
@@ -7,15 +8,19 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { afterEach, beforeEach, describe, it } from "vitest";
+import { PassThrough } from "node:stream";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { mockConsoleMethods } from "../../../packages/workers-utils/src/test-helpers/mock";
 import {
 	computeTiers,
+	createDistTagRunner,
 	escapePackageName,
 	filterUnpublished,
 	findPublishablePackages,
 	getDistTag,
 	publishAllPackages,
 	publishTier,
+	runPublishCommand,
 	waitForPropagation,
 } from "../publish-packages";
 import type {
@@ -26,7 +31,123 @@ import type {
 	WorkspacePackage,
 } from "../publish-packages";
 
+vi.mock("node:child_process", async (importOriginal) => ({
+	...(await importOriginal<typeof import("node:child_process")>()),
+	execFileSync: vi.fn(),
+	spawn: vi.fn(),
+}));
+
 const REGISTRY = "https://registry.example.com";
+
+describe("runPublishCommand()", () => {
+	const std = mockConsoleMethods();
+
+	afterEach(() => {
+		vi.mocked(execFileSync).mockReset();
+		vi.mocked(spawn).mockReset();
+		vi.unstubAllEnvs();
+		vi.restoreAllMocks();
+	});
+
+	it("should run the production build before checking the registry", async ({
+		expect,
+	}) => {
+		const buildError = new Error("Build failed");
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockRejectedValue(new Error("Unexpected registry request"));
+		vi.mocked(execFileSync).mockImplementationOnce(() => {
+			throw buildError;
+		});
+
+		await expect(runPublishCommand([])).rejects.toBe(buildError);
+
+		expect(execFileSync).toHaveBeenCalledExactlyOnceWith(
+			"pnpm",
+			["run", "build"],
+			expect.objectContaining({
+				env: expect.objectContaining({ NODE_ENV: "production" }),
+			})
+		);
+		expect(fetchSpy).not.toHaveBeenCalled();
+	});
+
+	it("should skip the build and Git fetch in dry-run mode", async ({
+		expect,
+	}) => {
+		await runPublishCommand(["--dry-run", "--fetch-main"]);
+
+		expect(execFileSync).not.toHaveBeenCalled();
+		expect(spawn).not.toHaveBeenCalled();
+		expect(std.out).toContain("Dry run: nothing was published.");
+	});
+
+	it.for([
+		{
+			behavior: "fetch origin/main immediately before tagging",
+			fetchFails: false,
+		},
+		{
+			behavior: "warn and still tag if fetching origin/main fails",
+			fetchFails: true,
+		},
+	])("should $behavior", async ({ fetchFails }, { expect }) => {
+		const packages = findPublishablePackages(
+			resolve(__dirname, "../../../packages")
+		);
+		const registry = createFakeRegistry({
+			published: Object.fromEntries(
+				packages.map(({ name, version }) => [name, [version]])
+			),
+			distTags: Object.fromEntries(
+				packages.map(({ name, version }) => [name, { beta: version }])
+			),
+		});
+		vi.stubEnv("PUBLISH_REGISTRY", REGISTRY);
+		vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+			const response = await registry.fetchImpl(String(input));
+			return Response.json(await response.json(), { status: response.status });
+		});
+		if (fetchFails) {
+			vi.mocked(execFileSync)
+				.mockReturnValueOnce(Buffer.alloc(0))
+				.mockImplementationOnce(() => {
+					throw new Error("Git fetch failed");
+				});
+		}
+		vi.mocked(spawn).mockImplementationOnce(() => {
+			expect(execFileSync).toHaveBeenNthCalledWith(
+				2,
+				"git",
+				[
+					"fetch",
+					"--no-tags",
+					"origin",
+					"refs/heads/main:refs/remotes/origin/main",
+				],
+				{ stdio: ["ignore", 2, 2] }
+			);
+			const child = new ChildProcess();
+			queueMicrotask(() => child.emit("close", 0));
+			return child;
+		});
+
+		await runPublishCommand(["--fetch-main"]);
+
+		expect(spawn).toHaveBeenCalledExactlyOnceWith(
+			"pnpm",
+			["exec", "changeset", "tag"],
+			{ stdio: "inherit" }
+		);
+		const warning =
+			"::warning::Could not refresh origin/main; continuing with Git tag creation.";
+		if (fetchFails) {
+			expect(std.out).toContain(warning);
+		} else {
+			expect(std.out).not.toContain(warning);
+		}
+	});
+});
 
 function makePackage(
 	name: string,
@@ -54,7 +175,9 @@ function tierNames(tiers: WorkspacePackage[][]): string[][] {
 function createFakeRegistry(options?: {
 	published?: Record<string, string[]>;
 	missingTarballs?: string[];
+	distTags?: Record<string, Record<string, string>>;
 }) {
+	const distTags = new Map(Object.entries(options?.distTags ?? {}));
 	const published = new Map<string, Set<string>>(
 		Object.entries(options?.published ?? {}).map(([name, versions]) => [
 			name,
@@ -92,6 +215,7 @@ function createFakeRegistry(options?: {
 			ok: true,
 			status: 200,
 			json: async () => ({
+				"dist-tags": distTags.get(name),
 				versions: Object.fromEntries(
 					[...versions].map((version) => [
 						version,
@@ -102,7 +226,18 @@ function createFakeRegistry(options?: {
 		};
 	};
 
-	return { fetchImpl, publish, requests, tarballUrl, missingTarballs };
+	function addDistTag(name: string, version: string, tag: string) {
+		distTags.set(name, { ...distTags.get(name), [tag]: version });
+	}
+
+	return {
+		fetchImpl,
+		publish,
+		requests,
+		tarballUrl,
+		missingTarballs,
+		addDistTag,
+	};
 }
 
 /** A clock whose only way of advancing is an awaited `sleep`. */
@@ -283,14 +418,15 @@ describe("the real workspace", () => {
 			    "@cloudflare/cli-shared-helpers",
 			    "@cloudflare/pages-shared",
 			    "@cloudflare/runtime-types",
+			    "@cloudflare/vitest-plugin",
 			    "@cloudflare/workers-auth",
 			    "wrangler",
 			  ],
 			  [
 			    "@cloudflare/autoconfig",
 			    "@cloudflare/containers-shared",
+			    "@cloudflare/test-server",
 			    "@cloudflare/vite-plugin",
-			    "@cloudflare/vitest-plugin",
 			  ],
 			  [
 			    "@cloudflare/deploy-helpers",
@@ -299,7 +435,7 @@ describe("the real workspace", () => {
 		`);
 	});
 
-	it("should publish wrangler before the packages that pin it", ({
+	it("should publish miniflare and wrangler before the packages that pin them", ({
 		expect,
 	}) => {
 		const packagesDir = resolve(__dirname, "../../../packages");
@@ -309,7 +445,7 @@ describe("the real workspace", () => {
 
 		expect(tierOf("wrangler")).toBeGreaterThan(tierOf("miniflare"));
 		expect(tierOf("@cloudflare/vitest-plugin")).toBeGreaterThan(
-			tierOf("wrangler")
+			tierOf("miniflare")
 		);
 	});
 });
@@ -449,6 +585,7 @@ describe("getDistTag()", () => {
 		expect(getDistTag("5.20261006.2-beta")).toBe("beta");
 		expect(getDistTag("2.0.0-beta.0")).toBe("beta");
 		expect(getDistTag("2.0.0-beta.sha-abcdef123")).toBe("beta");
+		expect(getDistTag("2.0.0-rc.1")).toBe("rc");
 	});
 
 	it("should reject invalid versions and numeric prerelease tags", ({
@@ -641,6 +778,62 @@ describe("waitForPropagation()", () => {
 	});
 });
 
+describe("createDistTagRunner()", () => {
+	function mockChild() {
+		const child = new ChildProcess();
+		child.stdout = new PassThrough();
+		child.stderr = new PassThrough();
+		vi.mocked(spawn).mockReturnValue(child);
+		return child;
+	}
+
+	it("should invoke npm with the exact version, tag, registry and package directory", async ({
+		expect,
+	}) => {
+		const child = mockChild();
+		const pkg = makePackage("@cloudflare/vite-plugin", [], "2.0.0-rc.1");
+		const result = createDistTagRunner({ registry: REGISTRY })(pkg, "beta");
+		child.emit("close", 0);
+		await result;
+
+		expect(spawn).toHaveBeenCalledWith(
+			"npm",
+			["dist-tag", "add", "@cloudflare/vite-plugin@2.0.0-rc.1", "beta"],
+			{
+				cwd: pkg.dir,
+				env: { ...process.env, npm_config_registry: REGISTRY },
+			}
+		);
+	});
+
+	it("should report a failed tag update with the CLI output", async ({
+		expect,
+	}) => {
+		const child = mockChild();
+		const result = createDistTagRunner({ registry: REGISTRY })(
+			makePackage("app"),
+			"beta"
+		);
+		child.stderr?.emit("data", "permission denied");
+		child.emit("close", 1);
+
+		await expect(result).rejects.toThrow(
+			"Failed to tag app@1.0.0 as beta: npm dist-tag exited with code 1\npermission denied"
+		);
+	});
+
+	it("should report a failure to start npm", async ({ expect }) => {
+		const child = mockChild();
+		const result = createDistTagRunner({ registry: REGISTRY })(
+			makePackage("app"),
+			"beta"
+		);
+		child.emit("error", new Error("spawn npm ENOENT"));
+
+		await expect(result).rejects.toThrow("spawn npm ENOENT");
+	});
+});
+
 describe("publishTier()", () => {
 	function ok(pkg: WorkspacePackage): PublishResult {
 		return { name: pkg.name, version: pkg.version, output: "" };
@@ -733,6 +926,7 @@ describe("publishAllPackages()", () => {
 	function createHarness(
 		overrides: {
 			published?: Record<string, string[]>;
+			distTags?: Record<string, Record<string, string>>;
 			options?: Partial<MainOptions>;
 			publish?: MainOptions["publish"];
 			/** Wraps the fake registry, so reads can be made to fail. */
@@ -740,15 +934,20 @@ describe("publishAllPackages()", () => {
 			tagExitCode?: number;
 		} = {}
 	) {
-		const registry = createFakeRegistry({ published: overrides.published });
+		const registry = createFakeRegistry({
+			published: overrides.published,
+			distTags: overrides.distTags,
+		});
 		const clock = createFakeClock();
 		const logs: string[] = [];
 		const publishOrder: string[] = [];
+		const distTagCalls: { name: string; version: string; tag: string }[] = [];
 		const state = { tagCalls: 0 };
 
 		const defaultPublish: MainOptions["publish"] = async (pkg) => {
 			publishOrder.push(pkg.name);
 			registry.publish(pkg.name, pkg.version);
+			registry.addDistTag(pkg.name, pkg.version, getDistTag(pkg.version));
 			return { name: pkg.name, version: pkg.version, output: "" };
 		};
 
@@ -767,6 +966,10 @@ describe("publishAllPackages()", () => {
 			fetchImpl:
 				overrides.fetchImpl?.(registry.fetchImpl) ?? registry.fetchImpl,
 			publish: overrides.publish ?? defaultPublish,
+			addDistTag: async (pkg, tag) => {
+				distTagCalls.push({ name: pkg.name, version: pkg.version, tag });
+				registry.addDistTag(pkg.name, pkg.version, tag);
+			},
 			runChangesetTag: async () => {
 				state.tagCalls++;
 				return overrides.tagExitCode ?? 0;
@@ -781,6 +984,7 @@ describe("publishAllPackages()", () => {
 			options,
 			logs,
 			publishOrder,
+			distTagCalls,
 			registry,
 			clock,
 			run: () => publishAllPackages(options),
@@ -793,12 +997,19 @@ describe("publishAllPackages()", () => {
 	it("should print the plan and publish nothing on a dry run", async ({
 		expect,
 	}) => {
+		writeFileSync(
+			join(packagesDir, "core/package.json"),
+			JSON.stringify({ name: "core", version: "2.0.0-rc.1" })
+		);
 		const harness = createHarness({ options: { dryRun: true } });
 
 		await harness.run();
 
 		expect(harness.publishOrder).toEqual([]);
+		expect(harness.distTagCalls).toEqual([]);
+		expect(harness.registry.requests).toEqual([]);
 		expect(harness.tagCalls).toBe(0);
+		expect(harness.logs.join("\n")).toContain("additional npm dist-tag: beta");
 		expect(harness.logs.join("\n")).toContain(
 			"Dry run: nothing was published."
 		);
@@ -821,10 +1032,130 @@ describe("publishAllPackages()", () => {
 		await harness.run();
 
 		expect(harness.publishOrder).toEqual(["core", "app"]);
+		expect(harness.distTagCalls).toEqual([]);
 		expect(harness.tagCalls).toBe(1);
 		// The gate between the two tiers observed the settle wait, and there was no
 		// gate after the final tier.
 		expect(harness.clock.now()).toBe(30_000);
+	});
+
+	it.for(["2.0.0-rc", "2.0.0-rc.1"])(
+		"should also tag %s as beta and leave it unchanged on a rerun",
+		async (version, { expect }) => {
+			writeFileSync(
+				join(packagesDir, "app/package.json"),
+				JSON.stringify({ name: "app", version })
+			);
+			const harness = createHarness();
+
+			await harness.run();
+
+			expect(harness.distTagCalls).toEqual([
+				{ name: "app", version, tag: "beta" },
+			]);
+			expect(harness.tagCalls).toBe(1);
+
+			await harness.run();
+
+			expect(harness.publishOrder).toEqual(["app", "core"]);
+			expect(harness.distTagCalls).toHaveLength(1);
+		}
+	);
+
+	it.for(["2.0.0-beta.1", "2.0.0-alpha.1", "2.0.0-rc-custom.1"])(
+		"should not add an alias for %s",
+		async (version, { expect }) => {
+			writeFileSync(
+				join(packagesDir, "app/package.json"),
+				JSON.stringify({ name: "app", version })
+			);
+			const harness = createHarness();
+
+			await harness.run();
+
+			expect(harness.distTagCalls).toEqual([]);
+		}
+	);
+
+	it("should repair a failed beta tag update without republishing", async ({
+		expect,
+	}) => {
+		const version = "2.0.0-rc.1";
+		writeFileSync(
+			join(packagesDir, "app/package.json"),
+			JSON.stringify({ name: "app", version })
+		);
+		const harness = createHarness();
+		const addDistTag = harness.options.addDistTag;
+		harness.options.addDistTag = async () => {
+			throw new Error("tag update failed");
+		};
+
+		await expect(harness.run()).rejects.toThrow("tag update failed");
+
+		expect(harness.publishOrder).toEqual(["app", "core"]);
+		expect(harness.tagCalls).toBe(0);
+
+		harness.options.addDistTag = addDistTag;
+		await harness.run();
+
+		expect(harness.publishOrder).toEqual(["app", "core"]);
+		expect(harness.distTagCalls).toEqual([
+			{ name: "app", version, tag: "beta" },
+		]);
+		expect(harness.tagCalls).toBe(1);
+	});
+
+	it.for([
+		{ tag: "beta", version: "3.0.0-beta.1" },
+		{ tag: "rc", version: "2.0.0-rc.2" },
+	])(
+		"should not move newer prerelease tags backwards: %j",
+		async ({ tag, version: newerVersion }, { expect }) => {
+			const version = "2.0.0-rc.1";
+			writeFileSync(
+				join(packagesDir, "app/package.json"),
+				JSON.stringify({ name: "app", version })
+			);
+			const harness = createHarness({
+				published: { app: [version] },
+				distTags: { app: { [tag]: newerVersion } },
+			});
+
+			await harness.run();
+
+			expect(harness.distTagCalls).toEqual([]);
+		}
+	);
+
+	it("should wait for a final-tier release candidate to propagate before adding beta", async ({
+		expect,
+	}) => {
+		const version = "2.0.0-rc.1";
+		writeFileSync(
+			join(packagesDir, "app/package.json"),
+			JSON.stringify({
+				name: "app",
+				version,
+				dependencies: { core: "workspace:*" },
+			})
+		);
+		let appReads = 0;
+		const harness = createHarness({
+			fetchImpl: (registryFetch) => async (url, init) => {
+				if (url.endsWith("/app") && ++appReads <= 2) {
+					return { ok: false, status: 404, json: async () => ({}) };
+				}
+				return registryFetch(url, init);
+			},
+		});
+
+		await harness.run();
+
+		expect(harness.clock.now()).toBe(5_000);
+		expect(harness.distTagCalls).toEqual([
+			{ name: "app", version, tag: "beta" },
+		]);
 	});
 
 	it("should skip packages whose version is already published", async ({

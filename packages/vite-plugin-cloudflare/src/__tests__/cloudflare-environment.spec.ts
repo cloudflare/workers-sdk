@@ -109,3 +109,39 @@ test.for([
 		expect(getWorkerSourcemap(userConfig)).toBe(expected);
 	}
 );
+
+function getWorkerCssTarget(userConfig: UserConfig) {
+	const options = createCloudflareEnvironmentOptions({
+		workerConfig: {
+			entrypoint: "./src/index.ts",
+		} as ResolvedWorkerConfig,
+		userConfig,
+		mode: "production",
+		environmentName: "worker",
+		isParentEnvironment: true,
+		hasNodeJsCompat: false,
+	});
+
+	return options.build?.cssTarget;
+}
+
+test.for([
+	{ label: "by default", userConfig: {}, expected: "es2024" },
+	{
+		label: "from the environment's `build.cssTarget`",
+		userConfig: {
+			environments: { worker: { build: { cssTarget: ["chrome123"] } } },
+		},
+		expected: undefined,
+	},
+	{
+		label: "from the top-level `build.cssTarget`",
+		userConfig: { build: { cssTarget: ["chrome123", "safari17.5"] } },
+		expected: undefined,
+	},
+])(
+	"resolves the Worker environment's `build.cssTarget` $label",
+	({ userConfig, expected }, { expect }) => {
+		expect(getWorkerCssTarget(userConfig)).toBe(expected);
+	}
+);

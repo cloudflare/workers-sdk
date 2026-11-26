@@ -56,13 +56,26 @@ When checking for or rendering warnings and errors, the `Diagnostics` class will
 
 ## Usage
 
-The [high level API](./index.ts) for configuration processing consists of the `findWranglerToml()` and `readConfig()` functions.
+Import configuration APIs from `@cloudflare/workers-utils/config`, whose
+[public barrel](./public.ts) includes `findWranglerConfig()`, `readConfig()`,
+`experimental_readRawConfig()`, configuration types, validation, editing and
+binding interpretation helpers. The existing configuration exports at the package
+root are deprecated compatibility aliases; migrate their import specifier to
+`@cloudflare/workers-utils/config`.
 
 ### readConfig()
 
 The `readConfig()` function will find the nearest Wrangler configuration file, load and parse it, then validate and normalize the values into a `Config` object.
 Note that you should pass the current active environment name in as a parameter. The resulting `Config` object will contain only the fields appropriate to that environment.
+Pass a logger with `info()` and `warn()` methods in the second argument so the
+caller controls how redirected configuration and validation warnings are reported.
 If there are validation errors then it will throw a suitable error.
+
+```ts
+import { readConfig } from "@cloudflare/workers-utils/config";
+
+const config = readConfig({ env: "staging" }, { logger });
+```
 
 ## Changing configuration
 

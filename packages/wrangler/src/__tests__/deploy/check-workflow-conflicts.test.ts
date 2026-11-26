@@ -8,7 +8,7 @@ import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { createFetchResult, msw } from "../helpers/msw";
 import type { WorkflowConflict } from "../../deploy/check-workflow-conflicts";
 import type { Workflow } from "../../workflows/types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 function mockWorkflowGet(workflowsByName: Record<string, Workflow | null>) {
 	msw.use(

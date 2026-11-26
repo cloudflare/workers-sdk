@@ -7,11 +7,9 @@ export default mergeConfig(
 	defineProject({
 		plugins: [
 			cloudflareTest({
-				experimental: {
-					// Load the Worker's configuration from `cloudflare.config.ts`
-					// instead of a Wrangler configuration file
-					newConfig: true,
-				},
+				// Load the Worker's configuration from `cloudflare.config.ts`
+				// instead of a Wrangler configuration file
+				config: true,
 			}),
 		],
 	})

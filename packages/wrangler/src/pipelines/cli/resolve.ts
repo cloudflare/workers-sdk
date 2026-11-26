@@ -8,7 +8,7 @@ import {
 	listStreams,
 } from "../client";
 import type { Pipeline, Sink, Stream } from "../types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 const PER_PAGE = 100;
 

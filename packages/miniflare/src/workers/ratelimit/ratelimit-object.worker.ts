@@ -15,6 +15,7 @@ interface LimitRequestBody {
 	key: string;
 	limit: number;
 	period: number;
+	delta: number;
 }
 
 interface LimitResult {
@@ -86,7 +87,7 @@ export class RateLimiterObject extends MiniflareDurableObject {
 
 	@POST("/limit")
 	limit: RouteHandler = async (req) => {
-		const { key, limit, period } = await req.json<LimitRequestBody>();
+		const { key, limit, period, delta } = await req.json<LimitRequestBody>();
 
 		const epoch = Math.floor(Date.now() / (period * 1000));
 		const bucket = get(this.stmts.getBucket({ key, period }));
@@ -98,10 +99,13 @@ export class RateLimiterObject extends MiniflareDurableObject {
 			drain(this.stmts.deleteExpired({ period, epoch }));
 		}
 
+		// Like production, the decision is made on the count *before* this call,
+		// so a weighted call is allowed whenever any headroom remains (even if it
+		// overshoots the limit), and a rejected call adds nothing.
 		if (count >= limit) {
 			return Response.json({ success: false } satisfies LimitResult);
 		}
-		this.stmts.putBucket({ key, period, epoch, count: count + 1 });
+		this.stmts.putBucket({ key, period, epoch, count: count + delta });
 		return Response.json({ success: true } satisfies LimitResult);
 	};
 }

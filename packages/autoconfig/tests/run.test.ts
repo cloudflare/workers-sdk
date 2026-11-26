@@ -1,5 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
+import { loadAndParseConfig } from "@cloudflare/config";
 import {
 	NpmPackageManager,
 	PnpmPackageManager,
@@ -10,9 +12,11 @@ import {
 	seed,
 } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
+import { getDetailsForAutoConfig } from "../src/details";
 import { getFrameworkClassInstance } from "../src/frameworks";
 import { Framework } from "../src/frameworks/framework-class";
 import { Static } from "../src/frameworks/static";
+import { Vite } from "../src/frameworks/vite";
 import { runAutoConfig } from "../src/run";
 import { createMockContext } from "./helpers/mock-context";
 import type {
@@ -62,6 +66,122 @@ describe("runAutoConfig()", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 
+	it("creates loadable cf config without a package.json or local cf installation", async ({
+		expect,
+	}) => {
+		await seed({ "index.html": "static site", ".env": "SECRET=secret" });
+		const context = createMockContext();
+		const details = await getDetailsForAutoConfig({
+			projectPath: process.cwd(),
+			outputDir: ".",
+			context,
+		});
+
+		await runAutoConfig(details, {
+			context,
+			skipConfirmations: true,
+			runBuild: false,
+		});
+
+		const { result } = await loadAndParseConfig(
+			join(process.cwd(), "cloudflare.config.ts"),
+			{ isPreview: false, mode: undefined }
+		);
+		expect(result.success).toBe(true);
+		expect(existsSync("package.json")).toBe(false);
+		expect(readFileSync(".assetsignore", "utf8")).toContain(".env*");
+	});
+
+	it.for([
+		{ installTool: true, runBuild: true },
+		{ installTool: false, runBuild: true },
+		{ installTool: false, runBuild: false },
+	])(
+		"checks installed tools after setup only when building (installTool=$installTool, runBuild=$runBuild)",
+		async ({ installTool, runBuild }, { expect }) => {
+			await seed({
+				"package.json": JSON.stringify({
+					name: "vite-app",
+					devDependencies: { vite: "8.1.0", "@cloudflare/vite-plugin": "beta" },
+				}),
+				"vite.config.ts": "export default { plugins: [] };",
+				"node_modules/@cloudflare/vite-plugin/package.json": JSON.stringify({
+					version: "2.0.0-beta.v.13",
+				}),
+			});
+			vi.spyOn(Vite.prototype, "configure").mockImplementation(
+				async ({ dryRun }) => {
+					if (!dryRun && installTool) {
+						await seed({
+							"node_modules/vite/package.json": JSON.stringify({
+								version: "8.1.0",
+								bin: { vite: "cli.js" },
+							}),
+							"node_modules/vite/cli.js": "",
+						});
+					}
+					return { buildTool: "vite", workerConfig: {} };
+				}
+			);
+			const context = createMockContext();
+			const details = await getDetailsForAutoConfig({ context });
+			expect(details.commandError?.code).toBe("vite-tool-not-installed");
+			const setup = runAutoConfig(details, {
+				context,
+				skipConfirmations: true,
+				enableTargetCliInstallation: false,
+				runBuild,
+			});
+			if (runBuild && !installTool) {
+				await expect(setup).rejects.toThrow(
+					"project's vite executable could not be found"
+				);
+			} else {
+				await expect(setup).resolves.toMatchObject({
+					buildCommand: "vite build",
+				});
+			}
+			expect(context.runCommand).toHaveBeenCalledTimes(
+				runBuild && installTool ? 1 : 0
+			);
+		}
+	);
+
+	it("updates the application manifest, not its enclosing workspace", async ({
+		expect,
+	}) => {
+		vi.spyOn(cliPackages, "installWrangler").mockResolvedValue();
+		const rootManifest = JSON.stringify({
+			name: "workspace-root",
+			packageManager: "pnpm@10.0.0",
+		});
+		await seed({
+			"package.json": rootManifest,
+			"pnpm-workspace.yaml": "packages: ['packages/*']\n",
+			"pnpm-lock.yaml": "",
+			"packages/app/package.json": JSON.stringify({ name: "static-app" }),
+			"packages/app/public/index.html": "<h1>Application</h1>",
+		});
+		const context = createMockContext();
+		const projectPath = join(process.cwd(), "packages/app");
+		const details = await getDetailsForAutoConfig({ projectPath, context });
+		expect(details.packageManager.type).toBe("pnpm");
+
+		await runAutoConfig(details, {
+			context,
+			skipConfirmations: true,
+			enableTargetCliInstallation: false,
+			runBuild: false,
+		});
+
+		expect(readFileSync("package.json", "utf8")).toBe(rootManifest);
+		expect(
+			JSON.parse(readFileSync(join(projectPath, "package.json"), "utf8"))
+		).toMatchObject({ name: "static-app", scripts: { deploy: "cf deploy" } });
+		expect(existsSync("cloudflare.config.ts")).toBe(false);
+		expect(existsSync(join(projectPath, "cloudflare.config.ts"))).toBe(true);
+	});
+
 	it.for([
 		{ vitePlus: false, override: false },
 		{ vitePlus: true, override: false },
@@ -76,7 +196,7 @@ describe("runAutoConfig()", () => {
 				devDependencies: vitePlus ? { "vite-plus": "1.4.0" } : {},
 			};
 			await seed({ "package.json": JSON.stringify(packageJson) });
-			const framework = getFrameworkClassInstance("static");
+			const framework = getFrameworkClassInstance("static", "cf");
 			vi.spyOn(framework, "configure").mockReturnValue({
 				buildTool: "wrangler",
 				workerConfig: {},
@@ -124,7 +244,7 @@ describe("runAutoConfig()", () => {
 					configured: false,
 					projectPath: process.cwd(),
 					workerName: "next-app",
-					framework: getFrameworkClassInstance("next"),
+					framework: getFrameworkClassInstance("next", "cf"),
 					outputDir: ".next",
 					buildCommand: `${packageManager.npx} next build`,
 					packageManager,
@@ -133,7 +253,7 @@ describe("runAutoConfig()", () => {
 				{ context: createMockContext(), dryRun: true }
 			);
 			expect(summary.buildCommand).toBe(
-				`${packageManager.npx} ${vitePlus ? "vp" : "vite"} build`
+				vitePlus ? "vp build" : `${packageManager.npx} vite build`
 			);
 		}
 	);
@@ -271,7 +391,7 @@ describe("runAutoConfig()", () => {
 		expect(summary.deployCommand).toBe("npx cf deploy");
 		expect(summary.versionCommand).toBe("npx cf versions upload");
 		expect(readFileSync("cloudflare.config.ts", "utf8")).toContain(
-			'import { defineConfig } from "cf/config";\n\nexport default defineConfig({\n  worker: {\n    "name": "my-static-app"'
+			'import type { CloudflareConfig } from "cf/config";\n\nexport default {\n  worker: {\n    "name": "my-static-app"'
 		);
 		expect(readFileSync("wrangler.config.ts", "utf8")).toContain(
 			'import { defineWranglerConfig } from "wrangler/experimental-config";\n\nexport default defineWranglerConfig({\n  "assetsDirectory": "public"'

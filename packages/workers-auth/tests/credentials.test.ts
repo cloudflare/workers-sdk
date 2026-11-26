@@ -3,7 +3,7 @@ import { getAPIToken, getAuthFromEnv } from "../src/credentials";
 import type {
 	AuthConfigStorage,
 	UserAuthConfig,
-} from "../src/auth-config-file";
+} from "../src/config-file/auth";
 
 /** An in-memory storage adapter for tests. */
 function memoryStorage(initial?: UserAuthConfig): AuthConfigStorage {
@@ -20,7 +20,9 @@ function memoryStorage(initial?: UserAuthConfig): AuthConfigStorage {
 			value = config;
 		},
 		clear() {
+			const existed = value !== undefined;
 			value = undefined;
+			return existed;
 		},
 		path() {
 			return "<memory>";

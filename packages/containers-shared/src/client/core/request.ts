@@ -1,6 +1,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import { addCustomApiHeaders } from "@cloudflare/workers-utils/custom-api-headers";
+import { sanitizeHeaders } from "@cloudflare/workers-utils/sanitize-headers";
 import { ApiError } from "./ApiError";
 import { CancelablePromise } from "./CancelablePromise";
 import { type OpenAPIConfig } from "./OpenAPI";
@@ -206,7 +208,9 @@ const getHeaders = async (
 		}
 	}
 
-	return new Headers(headers);
+	const requestHeaders = new Headers(headers);
+	addCustomApiHeaders(requestHeaders);
+	return requestHeaders;
 };
 
 const getRequestBody = (options: ApiRequestOptions): any => {
@@ -497,11 +501,9 @@ const debugLogRequest = async (
 	body: FormData | unknown
 ) => {
 	config.LOGGER?.debug(`-- START CF API REQUEST: ${url}`);
-	const logHeaders = new Headers(headers);
-	logHeaders.delete("Authorization");
 	config.LOGGER?.debugWithSanitization(
 		"HEADERS:",
-		JSON.stringify(logHeaders, null, 2)
+		JSON.stringify(sanitizeHeaders(headers), null, 2)
 	);
 	config.LOGGER?.debugWithSanitization(
 		"BODY:",

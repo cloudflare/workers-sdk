@@ -3,7 +3,8 @@ import {
 	isWorkerNotFoundError,
 	parseBulkInputToObject,
 } from "@cloudflare/deploy-helpers";
-import { APIError, configFileName, UserError } from "@cloudflare/workers-utils";
+import { APIError, UserError } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import { fetchResult } from "../cfetch";
 import { createCommand, createNamespace } from "../core/create-command";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
@@ -13,7 +14,7 @@ import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export const VERSION_NOT_DEPLOYED_ERR_CODE = 10215;
 /** Script-settings edit on an undeployed latest version (logpush / tail_consumers). */
