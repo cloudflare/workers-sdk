@@ -253,6 +253,34 @@ class StartupLogBuffer {
 	}
 }
 
+function spawnFailedError(command: string, cause: unknown) {
+	assert(cause instanceof Error);
+	const errno =
+		"code" in cause && typeof cause.code === "string" ? cause.code : "UNKNOWN";
+	return new MiniflareCoreError(
+		"ERR_RUNTIME_SPAWN_FAILED",
+		`Failed to start workerd at ${command} (${errno})`,
+		cause
+	);
+}
+
+function spawnRuntime(command: string, args: string[], env: NodeJS.ProcessEnv) {
+	try {
+		return childProcess.spawn(command, args, {
+			stdio: ["pipe", "pipe", "pipe", "pipe"],
+			// `windowsHide: true` prevents a console window from popping up when the
+			// parent has no console (e.g. a detached/backgrounded Node process).
+			// Without it, Windows allocates a new console for workerd.exe, and on
+			// Windows 11 that is hosted by a visible, focus-stealing Terminal window.
+			windowsHide: true,
+			env,
+		});
+	} catch (cause) {
+		// Some failures (e.g. `ENAMETOOLONG`) throw synchronously.
+		throw spawnFailedError(command, cause);
+	}
+}
+
 export class Runtime {
 	#process?: childProcess.ChildProcess;
 	#processExitPromise?: Promise<void>;
@@ -275,19 +303,11 @@ export class Runtime {
 		// Default `TZ` to `UTC` to match the production Cloudflare runtime.
 		// Callers can override via `options.runtimeEnv` (e.g. for tests of
 		// timezone-dependent behaviour).
-		// `windowsHide: true` prevents a console window from popping up when the
-		// parent has no console (e.g. a detached/backgrounded Node process).
-		// Without it, Windows allocates a new console for workerd.exe, and on
-		// Windows 11 that is hosted by a visible, focus-stealing Terminal window.
-		const runtimeProcess = childProcess.spawn(command, args, {
-			stdio: ["pipe", "pipe", "pipe", "pipe"],
-			windowsHide: true,
-			env: {
-				...process.env,
-				TZ: "UTC",
-				FORCE_COLOR,
-				...options.runtimeEnv,
-			},
+		const runtimeProcess = spawnRuntime(command, args, {
+			...process.env,
+			TZ: "UTC",
+			FORCE_COLOR,
+			...options.runtimeEnv,
 		});
 		const startupLogBuffer = new StartupLogBuffer();
 		this.#process = runtimeProcess;
@@ -305,20 +325,12 @@ export class Runtime {
 			await processSpawnPromise;
 		} catch (cause) {
 			this.#process = undefined;
-			for (const stream of runtimeProcess.stdio) {
+			// `stdio` is unset when spawning fails with `EMFILE`/`ENFILE`.
+			for (const stream of runtimeProcess.stdio ?? []) {
 				stream?.destroy();
 			}
 			await processClosedPromise;
-			assert(cause instanceof Error);
-			const errno =
-				"code" in cause && typeof cause.code === "string"
-					? cause.code
-					: "UNKNOWN";
-			throw new MiniflareCoreError(
-				"WORKERD_SPAWN_FAILED",
-				`WORKERD_SPAWN_FAILED: ${errno}`,
-				cause
-			);
+			throw spawnFailedError(command, cause);
 		}
 
 		const stdoutStream = runtimeProcess.stdout.pipe(
