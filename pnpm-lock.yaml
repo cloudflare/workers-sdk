@@ -299,7 +299,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
-  fixtures/create-test-harness-example:
+  fixtures/create-test-server-example:
     devDependencies:
       '@cloudflare/test-server':
         specifier: workspace:*

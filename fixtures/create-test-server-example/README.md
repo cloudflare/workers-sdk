@@ -35,14 +35,14 @@ Each Worker is a project with its own `cloudflare.config.ts`, built by the Cloud
 To build each Worker's Build Output, run:
 
 ```sh
-pnpm build --filter @fixture/create-test-harness-example
+pnpm build --filter @fixture/create-test-server-example
 ```
 
 Then run the tests with:
 
 ```sh
-pnpm --filter @fixture/create-test-harness-example test:vitest
-pnpm --filter @fixture/create-test-harness-example test:playwright
+pnpm --filter @fixture/create-test-server-example test:vitest
+pnpm --filter @fixture/create-test-server-example test:playwright
 ```
 
 ## Files

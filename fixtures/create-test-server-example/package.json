@@ -1,5 +1,5 @@
 {
-	"name": "@fixture/create-test-harness-example",
+	"name": "@fixture/create-test-server-example",
 	"private": true,
 	"description": "Integration tests with the createTestServer() API",
 	"type": "module",
