@@ -1,10 +1,10 @@
 {
 	"compilerOptions": {
-		"module": "node16",
+		"module": "esnext",
 		"target": "esnext",
 		"lib": ["esnext"],
 		"strict": true,
-		"moduleResolution": "node16",
+		"moduleResolution": "bundler",
 		"isolatedModules": true,
 		"experimentalDecorators": true,
 		"noEmit": true,

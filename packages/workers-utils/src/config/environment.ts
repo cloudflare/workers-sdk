@@ -1323,6 +1323,8 @@ export interface EnvironmentNonInheritable {
 		database_name?: string;
 		/** The UUID of this D1 database (not required). */
 		database_id?: string;
+		/** The jurisdiction where an automatically provisioned D1 database will be created. */
+		jurisdiction?: string;
 		/** The UUID of this D1 database for Wrangler Dev (if specified). */
 		preview_database_id?: string;
 		/** The name of the migrations table for this D1 database (defaults to 'd1_migrations'). */
@@ -1565,7 +1567,7 @@ export interface EnvironmentNonInheritable {
 		| undefined;
 
 	/**
-	 * Binding to Cloudflare Images
+	 * Binding to Cloudflare Images, and configuration for Images URL transformations
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
@@ -1577,9 +1579,20 @@ export interface EnvironmentNonInheritable {
 	 */
 	images:
 		| {
-				binding: string;
+				binding?: string;
 				/** Whether the Images binding should be remote or not in local development */
 				remote?: boolean;
+				/** Controls `/cdn-cgi/image/` URL transformations for requests served by this Worker */
+				url_transformations?: {
+					/** Whether URL transformations are enabled for this Worker */
+					enabled: boolean;
+					/**
+					 * Origins that images may be fetched from, in addition to the Worker's own zone,
+					 * e.g. `"images.example.com"`, `"*.example.com"` or `"example.com/images"`.
+					 * Don't include the protocol. Use `["*"]` to allow any origin. At most 10 entries.
+					 */
+					allowed_origins?: string[];
+				};
 		  }
 		| undefined;
 
@@ -1848,6 +1861,26 @@ export interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * Specifies RealtimeKit app bindings that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	realtimekit: {
+		/** The binding name used to refer to the bound RealtimeKit app. */
+		binding: string;
+
+		/** The ID of the RealtimeKit app to bind to. */
+		app_id: string;
+
+		/** RealtimeKit has no local simulator. Set to `true` to use the remote RealtimeKit app during local dev. */
+		remote?: boolean;
+	}[];
+
+	/**
 	 * Specifies rate limit bindings that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
@@ -1929,6 +1962,25 @@ export interface EnvironmentNonInheritable {
 				remote?: boolean;
 		  }
 	)[];
+
+	/**
+	 * Specifies OIDC token bindings. Each one issues short-lived OpenID Connect
+	 * tokens for this Worker's identity, for a single audience.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	oidc_tokens: {
+		/** The binding name used to refer to the OIDC token binding in the Worker. */
+		binding: string;
+		/** The `aud` claim of every token the binding issues: 1 to 2048 printable ASCII characters, with no whitespace. */
+		audience: string;
+		/** The JWS algorithm that signs the tokens. Defaults to ES256; use RS256 for verifiers that only accept RS256. */
+		alg?: "ES256" | "RS256";
+	}[];
 }
 
 /**
@@ -2124,7 +2176,7 @@ export type ContainerEngine =
  */
 export interface PreviewsConfig
 	extends
-		Partial<Omit<EnvironmentNonInheritable, "durable_objects">>,
+		Partial<Omit<EnvironmentNonInheritable, "durable_objects" | "images">>,
 		Partial<
 			Pick<
 				EnvironmentInheritable,
@@ -2132,4 +2184,10 @@ export interface PreviewsConfig
 			>
 		> {
 	durable_objects?: { bindings: DurableObjectBindings };
+	/** Binding to Cloudflare Images. `url_transformations` is not supported in previews. */
+	images?: {
+		binding: string;
+		/** Whether the Images binding should be remote or not in local development */
+		remote?: boolean;
+	};
 }

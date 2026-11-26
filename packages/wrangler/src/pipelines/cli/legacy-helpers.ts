@@ -15,7 +15,7 @@ import {
 } from "../legacy-client";
 import { validateName } from "../validate";
 import type { BindingSource, HttpSource, Source } from "../legacy-client";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export async function listLegacyPipelines(
 	config: Config,

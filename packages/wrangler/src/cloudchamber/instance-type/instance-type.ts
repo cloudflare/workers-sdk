@@ -6,7 +6,7 @@ import {
 	InstanceType,
 } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
-import type { CloudchamberConfig } from "@cloudflare/workers-utils";
+import type { CloudchamberConfig } from "@cloudflare/workers-utils/config";
 
 export {
 	cleanForInstanceTypeFromShared as cleanForInstanceType,

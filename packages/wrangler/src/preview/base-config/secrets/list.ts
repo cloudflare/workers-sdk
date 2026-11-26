@@ -6,7 +6,7 @@ import {
 	resolveWorkerName,
 	visibleLength,
 } from "@cloudflare/deploy-helpers";
-import { getBindingTypeFriendlyName } from "@cloudflare/workers-utils";
+import { getBindingTypeFriendlyName } from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";

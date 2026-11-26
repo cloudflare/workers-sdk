@@ -3,13 +3,16 @@ import {
 	loadAndParseConfig,
 	SINGLETON_BINDING_TYPES,
 } from "@cloudflare/config";
-import { formatZodError, getZoneFromRoute } from "@cloudflare/workers-utils";
+import { createMiniflareExports } from "@cloudflare/containers-shared";
+import { formatZodError, getWorkerZone } from "@cloudflare/workers-utils";
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import { Log, LogLevel, resolveLocalBindings } from "miniflare";
 import type {
-	ParsedInputConfig,
-	ParsedInputWorkerConfig,
+	ParsedCloudflareConfig,
+	ParsedContainerConfig,
+	ParsedWorkerConfig,
 } from "@cloudflare/config";
+import type { ContainerDevRuntimeOptions } from "@cloudflare/containers-shared";
 import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";
 
 export const NEW_CONFIG_FILENAME = "cloudflare.config.ts";
@@ -17,8 +20,10 @@ export const NEW_CONFIG_FILENAME = "cloudflare.config.ts";
 const log = new Log(LogLevel.INFO, { prefix: "vpw" });
 
 export interface LoadedNewConfig {
-	settings: Pick<ParsedInputConfig, "accountId" | "complianceRegion">;
-	worker: ParsedInputWorkerConfig;
+	settings: Pick<ParsedCloudflareConfig, "accountId" | "complianceRegion">;
+	worker: ParsedWorkerConfig;
+	/** Containers the config defines; Durable Object exports reference them by name. */
+	containers: ParsedContainerConfig[];
 	/** The mode config functions were called with. */
 	mode: string;
 	/** Values resolved from `.env` files and the process environment. */
@@ -83,6 +88,7 @@ export async function loadNewConfig(
 			complianceRegion: result.data.complianceRegion,
 		},
 		worker,
+		containers: result.data.containers ?? [],
 		mode,
 		localEnv: localEnv.values,
 		devVars,
@@ -102,12 +108,14 @@ export async function loadNewConfig(
  *
  * The config's remaining secrets and Hyperdrive bindings are then resolved
  * locally. Its assets binding and settings are dropped, unless `miniflare.assets`
- * provides a directory.
+ * provides a directory. Durable Object exports that reference a Container get
+ * that Container's local runtime options.
  *
  * @param userWorker The Worker under test, converted from `miniflare` options.
  * @param cloudflareConfig The loaded `cloudflare.config.ts`.
- * @param customOptions Whether remote bindings are enabled, and the config's
- *   remote proxy session, if any.
+ * @param customOptions Whether remote bindings are enabled, the config's remote
+ *   proxy session, if any, and the runtime options of its Container-backed
+ *   Durable Object classes, if any.
  * @returns The merged Worker under test.
  */
 export function mergeCloudflareConfigWorker(
@@ -116,6 +124,7 @@ export function mergeCloudflareConfigWorker(
 	customOptions: {
 		remoteBindings?: boolean;
 		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		containerRuntimeOptions?: Map<string, ContainerDevRuntimeOptions>;
 	}
 ): WorkerOptions {
 	const {
@@ -124,6 +133,7 @@ export function mergeCloudflareConfigWorker(
 		entrypoint: _entrypoint,
 		env: configEnv,
 		exports: configExports,
+		experimental: configExperimental,
 		tailConsumers: configTailConsumers,
 		triggers: configTriggers,
 		...config
@@ -158,14 +168,11 @@ export function mergeCloudflareConfigWorker(
 		logger: log,
 	});
 
-	const workerExports: NonNullable<WorkerOptions["config"]["exports"]> = {};
-	for (const [name, exported] of Object.entries(configExports ?? {})) {
-		// Containers aren't supported by the pool, as for Wrangler configs
-		const { container: _container, ...rest } = exported as typeof exported & {
-			container?: string;
-		};
-		workerExports[name] = rest;
-	}
+	const workerExports: NonNullable<WorkerOptions["config"]["exports"]> =
+		createMiniflareExports({
+			exports: configExports,
+			containerRuntimeOptions: customOptions.containerRuntimeOptions,
+		});
 	// Binding a Durable Object in `miniflare` options also declares its class,
 	// with `legacy-kv` storage unless `useSQLite` is set, so keep the config's
 	// declaration of that class
@@ -221,6 +228,14 @@ export function mergeCloudflareConfigWorker(
 				...(configTailConsumers ?? []),
 				...(userConfig.tailConsumers ?? []),
 			],
+			experimental: {
+				...configExperimental,
+				...withoutUndefined(userConfig.experimental ?? {}),
+				streamingTailConsumers: [
+					...(configExperimental?.streamingTailConsumers ?? []),
+					...(userConfig.experimental?.streamingTailConsumers ?? []),
+				],
+			},
 			assets:
 				userConfig.assets === undefined
 					? undefined
@@ -243,38 +258,4 @@ function withoutUndefined<T extends object>(value: T): Partial<T> {
 	return Object.fromEntries(
 		Object.entries(value).filter(([, entry]) => entry !== undefined)
 	) as Partial<T>;
-}
-
-/**
- * Gets the zone of the Worker's first route, as Wrangler configs get it. Copied
- * from `@cloudflare/vite-plugin` (`src/miniflare-options.ts`); keep the two in
- * sync.
- *
- * @param config The Worker's domains and triggers.
- * @returns The zone, if the Worker has a route.
- */
-function getWorkerZone(
-	config: Pick<LoadedNewConfig["worker"], "domains" | "triggers">
-): string | undefined {
-	// Domains are converted to routes before fetch triggers, so this mirrors the
-	// first-route selection used by Wrangler's Miniflare options.
-	const domain = config.domains?.[0];
-	if (domain !== undefined) {
-		return getZoneFromRoute(
-			typeof domain === "string" ? domain : domain.hostname
-		);
-	}
-
-	const fetchTrigger = config.triggers?.find(
-		(trigger) => trigger.type === "fetch"
-	);
-	if (fetchTrigger?.type !== "fetch") {
-		return undefined;
-	}
-
-	return getZoneFromRoute(
-		fetchTrigger.zone?.includes(".")
-			? { pattern: fetchTrigger.pattern, zone_name: fetchTrigger.zone }
-			: fetchTrigger.pattern
-	);
 }

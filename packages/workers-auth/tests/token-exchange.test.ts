@@ -68,7 +68,8 @@ describe("fetchAuthToken", () => {
 		const result = fetchAuthToken(
 			new URLSearchParams({ grant_type: "authorization_code" }),
 			logger,
-			() => false
+			() => false,
+			"TestCLI"
 		);
 		// Attach the handlers before the rejection happens.
 		const assertions = Promise.all([
@@ -125,7 +126,7 @@ describe("refreshing an expired token", () => {
 				granted: { url: "https://example.com/granted" },
 				denied: { url: "https://example.com/denied", error: "denied" },
 			},
-			displayName: "TestCLI",
+			cliDisplayName: "TestCLI",
 			deviceLoginCommand: "testcli auth login --device",
 			redirectUri: "http://localhost:9999/oauth/callback",
 			storageFactory: () => ({
@@ -145,7 +146,8 @@ describe("refreshing an expired token", () => {
 
 		await expect(
 			createOAuthFlow(ctx).loginOrRefreshIfRequired({
-				compliance_region: undefined,
+				complianceConfig: {},
+				scopes: ["account:read"],
 			})
 		).resolves.toEqual({
 			loggedIn: false,

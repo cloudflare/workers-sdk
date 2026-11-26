@@ -1,18 +1,18 @@
+import { JSON_CONFIG_FORMATS } from "@cloudflare/workers-utils";
 import {
 	configFormat,
 	experimental_readRawConfig,
 	experimental_patchConfig,
 	formatConfigSnippet,
 	friendlyBindingNames,
-	JSON_CONFIG_FORMATS,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
 import type {
 	Config,
 	ConfigBindingFieldName,
 	RawConfig,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 // Config binding field names that follow a "regular" binding shape (Binding[])
 // and can be modified using `updateConfigFile`. Excludes singleton bindings,

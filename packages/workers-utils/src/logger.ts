@@ -25,6 +25,6 @@ export type Logger = {
 	};
 	console?<M extends Exclude<keyof Console, "Console">>(
 		method: M,
-		...args: Parameters<Console[M]>
+		...args: Parameters<NonNullable<Console[M]>>
 	): void;
 };

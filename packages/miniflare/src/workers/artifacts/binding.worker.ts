@@ -1,6 +1,15 @@
 import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
+import {
+	createArtifactsEvent,
+	matchesArtifactsEventRoute,
+	toArtifactsEventMessage,
+	type ArtifactsEvent,
+	type ArtifactsEventRoute,
+	type RepoPayload,
+} from "./events";
 
 const repoName = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const MAX_LOG_LIMIT = 1000;
 
 type TokenScope = "read" | "write";
 
@@ -95,7 +104,10 @@ interface RepositoryListOptions {
 
 type RepositoryListResult = {
 	repos: Array<
-		RepositoryMetadata & { status: "ready"; jurisdiction: "unrestricted" }
+		Omit<RepositoryMetadata, "remote"> & {
+			status: "ready";
+			jurisdiction: "unrestricted";
+		}
 	>;
 	total: number;
 	cursor?: string;
@@ -148,21 +160,47 @@ interface CommitMetadata {
 	committedAt: number;
 }
 
+/** Repository handle as sent over RPC; the wrapped binding unwraps each outcome. */
 interface LocalArtifactsRepo {
-	info(): Promise<RepositoryMetadata>;
-	createToken(scope?: TokenScope, ttl?: number): Promise<CreateTokenResult>;
-	listTokens(): Promise<{ total: number; tokens: TokenInfo[] }>;
-	revokeToken(tokenOrId: string): Promise<boolean>;
-	readBlob(hash: string): Promise<Blob | null>;
-	readTree(hash: string): Promise<TreeEntry[] | null>;
-	readCommit(hash: string): Promise<CommitMetadata | null>;
-	readFile(args: { ref: string; path: string }): Promise<Blob | null>;
-	log(options?: RepositoryLogOptions): Promise<CommitMetadata[]>;
-	fork(name: string, options?: ForkOptions): Promise<CreateRepositoryResult>;
+	info(): Promise<Outcome<RepositoryMetadata>>;
+	createToken(
+		scope?: TokenScope,
+		ttl?: number
+	): Promise<Outcome<CreateTokenResult>>;
+	listTokens(): Promise<Outcome<{ total: number; tokens: TokenInfo[] }>>;
+	revokeToken(tokenOrId: string): Promise<Outcome<boolean>>;
+	readBlob(hash: string): Promise<Outcome<RepoFile | null>>;
+	readTree(hash: string): Promise<Outcome<TreeEntry[] | null>>;
+	readCommit(hash: string): Promise<Outcome<CommitMetadata | null>>;
+	readFile(args: {
+		ref: string;
+		path: string;
+	}): Promise<Outcome<RepoFile | null>>;
+	log(options?: RepositoryLogOptions): Promise<Outcome<CommitMetadata[]>>;
+	fork(
+		name: string,
+		options?: ForkOptions
+	): Promise<Outcome<CreateRepositoryResult>>;
 }
 
 interface BackendBlob {
 	data: string;
+}
+
+/**
+ * File contents as sent over RPC. A `Blob` is serialized whole, and workerd
+ * caps a serialized RPC value at 32 MiB, so a file at Artifacts' 32 MiB limit
+ * would not fit. A stream is not subject to that cap; the wrapped binding turns
+ * it back into a `Blob` in the caller's isolate.
+ */
+export interface RepoFile {
+	body: ReadableStream<Uint8Array>;
+	/** The `Blob` type; empty for `readBlob()`, as for a typeless `Blob`. */
+	type: string;
+}
+
+function repoFile(bytes: Uint8Array<ArrayBuffer>, type = ""): RepoFile {
+	return { body: new Blob([bytes]).stream(), type };
 }
 
 type ArtifactsErrorCode =
@@ -202,10 +240,37 @@ class ArtifactsError extends Error {
 	}
 }
 
+/**
+ * Exceptions that cross a workerd RPC boundary are logged as uncaught when
+ * workerd runs with `--verbose`, as Workers Vitest does by default. Every RPC
+ * method here returns an outcome instead, and the wrapped binding in
+ * `wrapped-binding.worker.ts` rethrows failures inside the caller's isolate.
+ */
+export type Outcome<T> =
+	| { ok: true; value: T }
+	| {
+			ok: false;
+			error: { code: ArtifactsErrorCode; numericCode: number; message: string };
+	  };
+
 interface LocalArtifactsEnvironment {
 	config: { namespace: string; origin: string };
 	localArtifactsNamespace: DurableObjectNamespace<LocalArtifactsNamespaceObject>;
 	gitBackend: Fetcher;
+	/**
+	 * Subscriptions receiving this namespace's events. Miniflare generates these
+	 * routes and their target bindings together, so each target binding exists
+	 * and matches its route's target type.
+	 */
+	eventRoutes?: ArtifactsEventRoute[];
+	[target: `ARTIFACTS_EVENT_TARGET_${number}`]:
+		| WorkflowCreateTarget
+		| undefined;
+}
+
+/** The parts of a Workflow binding service used to start an instance. */
+interface WorkflowCreateTarget {
+	create(options: { params: unknown }): Promise<unknown>;
 }
 
 type RepositoryMap = Record<string, Repository>;
@@ -214,29 +279,33 @@ export class LocalArtifactsNamespace extends WorkerEntrypoint<LocalArtifactsEnvi
 	async create(
 		name: string,
 		options: RepositoryOptions = {}
-	): Promise<CreateRepositoryResult> {
-		return publicCall(() => this.#namespace().create(name, options));
+	): Promise<Outcome<CreateRepositoryResult>> {
+		return forward(() => this.#namespace().create(name, options));
 	}
 
-	async get(name: string): Promise<LocalArtifactsRepo> {
-		const repository = await publicCall(() => this.#namespace().get(name));
-		return repository as unknown as LocalArtifactsRepo;
+	async get(name: string): Promise<Outcome<LocalArtifactsRepo>> {
+		return forward(
+			() =>
+				this.#namespace().get(name) as unknown as Promise<
+					Outcome<LocalArtifactsRepo>
+				>
+		);
 	}
 
 	async import(
 		options: ImportRepositoryOptions
-	): Promise<CreateRepositoryResult> {
-		return publicCall(() => this.#namespace().import(options));
+	): Promise<Outcome<CreateRepositoryResult>> {
+		return forward(() => this.#namespace().import(options));
 	}
 
 	async list(
 		options: RepositoryListOptions = {}
-	): Promise<RepositoryListResult> {
-		return publicCall(() => this.#namespace().list(options));
+	): Promise<Outcome<RepositoryListResult>> {
+		return forward(() => this.#namespace().list(options));
 	}
 
-	async delete(name: string): Promise<boolean> {
-		return publicCall(() => this.#namespace().delete(name));
+	async delete(name: string): Promise<Outcome<boolean>> {
+		return forward(() => this.#namespace().delete(name));
 	}
 
 	override async fetch(request: Request): Promise<Response> {
@@ -259,6 +328,37 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 	async create(
 		name: string,
 		options: RepositoryOptions = {}
+	): Promise<Outcome<CreateRepositoryResult>> {
+		return outcome(() => this.#create(name, options));
+	}
+
+	async get(name: string): Promise<Outcome<LocalArtifactsRepo>> {
+		return outcome(async () => {
+			validateName(name);
+			const repository = await this.getRepo(name);
+			return createRepoHandle(this, repository.name, repository.id);
+		});
+	}
+
+	async import(
+		options: ImportRepositoryOptions
+	): Promise<Outcome<CreateRepositoryResult>> {
+		return outcome(() => this.#import(options));
+	}
+
+	async list(
+		options: RepositoryListOptions = {}
+	): Promise<Outcome<RepositoryListResult>> {
+		return outcome(() => this.#list(options));
+	}
+
+	async delete(name: string): Promise<Outcome<boolean>> {
+		return outcome(() => this.#delete(name));
+	}
+
+	#create(
+		name: string,
+		options: RepositoryOptions
 	): Promise<CreateRepositoryResult> {
 		return this.exclusive(async () => {
 			validateName(name);
@@ -295,6 +395,14 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 						"Unable to persist Artifacts repository"
 					);
 				}
+				this.publish(
+					createArtifactsEvent(
+						"cf.artifacts.repo.created",
+						eventRepo(repository),
+						repoPayload(repository)
+					)
+				);
+				this.publish(tokenCreatedEvent(repository, token.record));
 				return createRepoResult(repository, token);
 			} catch (error) {
 				if (error instanceof ArtifactsError) {
@@ -308,15 +416,7 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		});
 	}
 
-	async get(name: string): Promise<LocalArtifactsRepo> {
-		validateName(name);
-		const repository = await this.getRepo(name);
-		return createRepoHandle(this, repository.name, repository.id);
-	}
-
-	async import(
-		options: ImportRepositoryOptions
-	): Promise<CreateRepositoryResult> {
+	#import(options: ImportRepositoryOptions): Promise<CreateRepositoryResult> {
 		return this.exclusive(async () => {
 			const { source, target, sourceUrl } = parseImportRequest(options);
 			const repositories = await this.repos();
@@ -361,13 +461,23 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 					"Unable to persist imported Artifacts repository"
 				);
 			}
+			this.publish(
+				createArtifactsEvent(
+					"cf.artifacts.repo.imported",
+					eventRepo(repository),
+					{
+						...repoPayload(repository),
+						sourceUrl: publicSourceUrl.href,
+						branch: source.branch ?? repository.defaultBranch,
+					}
+				)
+			);
+			this.publish(tokenCreatedEvent(repository, token.record));
 			return createRepoResult(repository, token);
 		});
 	}
 
-	async list(
-		options: RepositoryListOptions = {}
-	): Promise<RepositoryListResult> {
+	async #list(options: RepositoryListOptions): Promise<RepositoryListResult> {
 		const limit = options.limit ?? 50;
 		if (!Number.isInteger(limit) || limit < 1 || limit > 200) {
 			throw new ArtifactsError(
@@ -381,12 +491,16 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 			.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 		const page = repositories
 			.slice(offset, offset + limit)
-			.map((repository) => ({
-				...repoMetadata(repository),
-				status: "ready" as const,
-				// Local storage has no placement jurisdiction; this is the public default.
-				jurisdiction: "unrestricted" as const,
-			}));
+			.map((repository) => {
+				// List items have no `remote`; use info() for the Git URL.
+				const { remote: _remote, ...metadata } = repoMetadata(repository);
+				return {
+					...metadata,
+					status: "ready" as const,
+					// Local storage has no placement jurisdiction; this is the public default.
+					jurisdiction: "unrestricted" as const,
+				};
+			});
 		const cursor =
 			offset + page.length < repositories.length
 				? encodeCursor(offset + page.length)
@@ -398,7 +512,7 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		};
 	}
 
-	async delete(name: string): Promise<boolean> {
+	#delete(name: string): Promise<boolean> {
 		return this.exclusive(async () => {
 			validateName(name);
 			const repositories = await this.repos();
@@ -430,6 +544,7 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 			const repository = getRepo(repositories, name, expectedId);
 			const token = await createToken(repository, scope, ttl);
 			await this.saveRepos(repositories);
+			this.publish(tokenCreatedEvent(repository, token.record));
 			return tokenResult(token);
 		});
 	}
@@ -439,17 +554,22 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		expectedId?: string
 	): Promise<{ total: number; tokens: TokenInfo[] }> {
 		const repository = await this.getRepo(name, expectedId);
-		const active = repository.tokens.filter(
-			(token) => !token.revokedAt && isActive(token)
-		);
-		const tokens = active
-			.toReversed()
+		// Active tokens come first so retained history cannot push a token that
+		// still authenticates off the 30-item page. Each group is newest first.
+		const newestFirst = repository.tokens.toReversed();
+		const tokens = [
+			...newestFirst.filter((token) => tokenState(token) === "active"),
+			...newestFirst.filter((token) => tokenState(token) !== "active"),
+		]
 			.slice(0, 30)
-			.map(({ tokenHash: _tokenHash, revokedAt: _revokedAt, ...token }) => ({
-				...token,
-				state: "active" as const,
+			.map((token) => ({
+				id: token.id,
+				scope: token.scope,
+				createdAt: token.createdAt,
+				expiresAt: token.expiresAt,
+				state: tokenState(token),
 			}));
-		return { total: active.length, tokens };
+		return { total: repository.tokens.length, tokens };
 	}
 
 	async revokeToken(
@@ -475,11 +595,19 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 					(tokenHash !== undefined &&
 						constantTimeEqual(candidate.tokenHash, tokenHash))
 			);
-			if (!token || token.revokedAt) {
+			// Only an active token can be revoked; an expired one stays "expired".
+			if (!token || tokenState(token) !== "active") {
 				return false;
 			}
 			token.revokedAt = new Date().toISOString();
 			await this.saveRepos(repositories);
+			this.publish(
+				createArtifactsEvent(
+					"cf.artifacts.repo.token.revoked",
+					eventRepo(repository),
+					{ tokenId: token.id }
+				)
+			);
 			return true;
 		});
 	}
@@ -537,6 +665,15 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 					"Unable to persist forked Artifacts repository"
 				);
 			}
+			// Fork events are published from the source repository.
+			this.publish(
+				createArtifactsEvent("cf.artifacts.repo.forked", eventRepo(source), {
+					...repoPayload(fork),
+					namespace: fork.namespace,
+					repoName: fork.name,
+				})
+			);
+			this.publish(tokenCreatedEvent(fork, token.record));
 			return createRepoResult(fork, token);
 		});
 	}
@@ -563,9 +700,7 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 
 	saveRepos(repositories: RepositoryMap): Promise<void> {
 		for (const repository of Object.values(repositories)) {
-			repository.tokens = repository.tokens.filter(
-				(token) => !token.revokedAt && isActive(token)
-			);
+			repository.tokens = retainTokens(repository.tokens);
 		}
 		return this.ctx.storage.put("repos", repositories);
 	}
@@ -585,6 +720,13 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		await this.backend(repository, { action: "delete" });
 		delete repositories[key];
 		await this.saveRepos(repositories);
+		this.publish(
+			createArtifactsEvent(
+				"cf.artifacts.repo.deleted",
+				eventRepo(repository),
+				repoPayload(repository)
+			)
+		);
 	}
 
 	async getRepo(name: string, expectedId?: string): Promise<Repository> {
@@ -624,6 +766,16 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 				// Only the sidecar's typed local-storage failures carry safe diagnostics.
 				throw new ArtifactsError("INTERNAL_ERROR", message);
 			}
+			if (
+				response.status === 413 &&
+				response.headers.get("X-Local-Artifacts-Object-Error") ===
+					"memory-limit"
+			) {
+				throw new ArtifactsError(
+					"MEMORY_LIMIT",
+					"The object is too large to read through the binding."
+				);
+			}
 			if (request.action === "import") {
 				throw classifyImportError(message);
 			}
@@ -647,6 +799,7 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 	): Promise<Response> {
 		const headers = new Headers(request.headers);
 		headers.delete("Authorization");
+		headers.delete("X-Auth-Key");
 		headers.delete("X-Local-Artifacts-Request-Id");
 		headers.set("X-Local-Artifacts-Generation", repository.id);
 		if (requestId) {
@@ -681,6 +834,37 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 		});
 	}
 
+	private publish(event: ArtifactsEvent): void {
+		for (const route of this.env.eventRoutes ?? []) {
+			if (matchesArtifactsEventRoute(route, event)) {
+				// Committed mutations must not fail because event delivery failed.
+				this.ctx.waitUntil(
+					this.deliver(route, event).catch((error: unknown) => {
+						// Name the subscription, never the payload: it may identify tokens.
+						console.warn(
+							`Artifacts event delivery failed (event=${event.type} subscription=${route.id} target=${route.target.type}): ${String(error)}`
+						);
+					})
+				);
+			}
+		}
+	}
+
+	private async deliver(
+		route: ArtifactsEventRoute,
+		event: ArtifactsEvent
+	): Promise<void> {
+		const message = toArtifactsEventMessage(event, route.id);
+		const target =
+			this.env[route.target.binding as `ARTIFACTS_EVENT_TARGET_${number}`];
+		if (target === undefined) {
+			throw new Error(`Missing event target binding ${route.target.binding}`);
+		}
+		// The instance handle is an RPC stub; release it straight away.
+		const instance = await target.create({ params: message });
+		(instance as Partial<Disposable> | undefined)?.[Symbol.dispose]?.();
+	}
+
 	private async exclusive<T>(action: () => Promise<T>): Promise<T> {
 		const previous = this.operations;
 		let release!: () => void;
@@ -696,19 +880,47 @@ export class LocalArtifactsNamespaceObject extends DurableObject<LocalArtifactsE
 	}
 }
 
+function eventRepo(repository: Repository): {
+	namespace: string;
+	repoName: string;
+} {
+	return { namespace: repository.namespace, repoName: repository.name };
+}
+
+function repoPayload(repository: Repository): RepoPayload {
+	return {
+		repoId: repository.id,
+		defaultBranch: repository.defaultBranch,
+		description: repository.description ?? null,
+		readOnly: repository.readOnly,
+		createdAt: repository.createdAt,
+		updatedAt: repository.updatedAt,
+		lastPushAt: repository.lastPushAt ?? null,
+	};
+}
+
+function tokenCreatedEvent(
+	repository: Repository,
+	token: RepositoryToken
+): ArtifactsEvent<"cf.artifacts.repo.token.created"> {
+	return createArtifactsEvent(
+		"cf.artifacts.repo.token.created",
+		eventRepo(repository),
+		{ tokenId: token.id, scope: token.scope, expiresAt: token.expiresAt }
+	);
+}
+
 function createRepoHandle(
 	namespace: LocalArtifactsNamespaceObject,
 	name: string,
 	id: string
 ): LocalArtifactsRepo {
-	const read = <T>(request: BackendRequest): Promise<T> =>
-		publicCall(async () =>
-			namespace.backend<T>(await namespace.getRepo(name, id), request)
-		);
+	const read = async <T>(request: BackendRequest): Promise<T> =>
+		namespace.backend<T>(await namespace.getRepo(name, id), request);
 	const readFile = async (args: {
 		ref: string;
 		path: string;
-	}): Promise<Blob | null> => {
+	}): Promise<RepoFile | null> => {
 		if (!args?.ref) {
 			throw new ArtifactsError("INVALID_INPUT", "Invalid ref: ref required.");
 		}
@@ -728,45 +940,56 @@ function createRepoHandle(
 			return null;
 		}
 		const bytes = decodeBase64(result.data);
-		return new Blob([bytes], { type: contentType(args.path, bytes) });
+		return repoFile(bytes, contentType(args.path, bytes));
 	};
 
 	return {
 		info: () =>
-			publicCall(async () => repoMetadata(await namespace.getRepo(name, id))),
+			outcome(async () => repoMetadata(await namespace.getRepo(name, id))),
 		createToken: (scope: TokenScope = "write", ttl?: number) =>
-			publicCall(() => namespace.createToken(name, scope, ttl, id)),
-		listTokens: () => publicCall(() => namespace.listTokens(name, id)),
+			outcome(() => namespace.createToken(name, scope, ttl, id)),
+		listTokens: () => outcome(() => namespace.listTokens(name, id)),
 		revokeToken: (tokenOrId: string) =>
-			publicCall(() => namespace.revokeToken(name, tokenOrId, id)),
-		readBlob: async (hash: string) => {
-			validateHash(hash);
-			const result = await read<BackendBlob | null>({
-				action: "readBlob",
-				hash,
-			});
-			return result === null ? null : new Blob([decodeBase64(result.data)]);
-		},
-		readTree: async (hash: string) => {
-			validateHash(hash);
-			return await read({ action: "readTree", hash });
-		},
-		readCommit: async (hash: string) => {
-			validateHash(hash);
-			return await read({ action: "readCommit", hash });
-		},
-		readFile,
-		log: (options: RepositoryLogOptions = {}) => {
-			validateLogOptions(options);
-			return read({
-				action: "log",
-				...(options.ref === undefined ? {} : { ref: options.ref }),
-				...(options.limit === undefined ? {} : { limit: options.limit }),
-				...(options.offset === undefined ? {} : { offset: options.offset }),
-			});
-		},
+			outcome(() => namespace.revokeToken(name, tokenOrId, id)),
+		readBlob: (hash: string) =>
+			outcome(async () => {
+				validateHash(hash);
+				const result = await read<BackendBlob | null>({
+					action: "readBlob",
+					hash,
+				});
+				return result === null ? null : repoFile(decodeBase64(result.data));
+			}),
+		readTree: (hash: string) =>
+			outcome(async () => {
+				validateHash(hash);
+				return await read<TreeEntry[] | null>({ action: "readTree", hash });
+			}),
+		readCommit: (hash: string) =>
+			outcome(async () => {
+				validateHash(hash);
+				return await read<CommitMetadata | null>({
+					action: "readCommit",
+					hash,
+				});
+			}),
+		readFile: (args: { ref: string; path: string }) =>
+			outcome(() => readFile(args)),
+		log: (options: RepositoryLogOptions = {}) =>
+			outcome(async () => {
+				validateLogOptions(options);
+				return await read<CommitMetadata[]>({
+					action: "log",
+					...(options.ref === undefined ? {} : { ref: options.ref }),
+					// The public API caps the page size rather than rejecting it.
+					...(options.limit === undefined
+						? {}
+						: { limit: Math.min(options.limit, MAX_LOG_LIMIT) }),
+					...(options.offset === undefined ? {} : { offset: options.offset }),
+				});
+			}),
 		fork: (targetName: string, options: ForkOptions = {}) =>
-			publicCall(() => namespace.fork(name, targetName, options, id)),
+			outcome(() => namespace.fork(name, targetName, options, id)),
 	};
 }
 
@@ -1151,13 +1374,10 @@ function validateLogOptions(
 	if (ref !== undefined && typeof ref !== "string") {
 		throw new ArtifactsError("INVALID_INPUT", "Invalid ref: must be a string.");
 	}
-	if (
-		limit !== undefined &&
-		(!Number.isInteger(limit) || limit < 1 || limit > 1000)
-	) {
+	if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) {
 		throw new ArtifactsError(
 			"INVALID_INPUT",
-			"Invalid limit: must be between 1 and 1000."
+			"Invalid limit: must be a positive integer."
 		);
 	}
 	if (offset !== undefined && (!Number.isInteger(offset) || offset < 0)) {
@@ -1201,6 +1421,32 @@ async function createToken(
 
 function isActive(token: Pick<RepositoryToken, "expiresAt">): boolean {
 	return Date.parse(token.expiresAt) > Date.now();
+}
+
+function tokenState(
+	token: Pick<RepositoryToken, "expiresAt" | "revokedAt">
+): TokenInfo["state"] {
+	if (token.revokedAt) {
+		return "revoked";
+	}
+	return isActive(token) ? "active" : "expired";
+}
+
+// listTokens() reports revoked and expired tokens, so keep a bounded history
+// of them rather than letting a long-lived repository grow without limit.
+const MAX_INACTIVE_TOKENS = 100;
+
+function retainTokens(tokens: RepositoryToken[]): RepositoryToken[] {
+	let inactive = tokens.filter(
+		(token) => tokenState(token) !== "active"
+	).length;
+	return tokens.filter((token) => {
+		if (tokenState(token) === "active" || inactive <= MAX_INACTIVE_TOKENS) {
+			return true;
+		}
+		inactive--;
+		return false;
+	});
 }
 
 function randomHex(bytes: number): string {
@@ -1302,8 +1548,15 @@ function contentType(path: string, bytes: Uint8Array): string {
 	}
 }
 
+/** workerd implements `Uint8Array.fromBase64()`; TypeScript's lib doesn't declare it yet. */
+const Base64Bytes = Uint8Array as unknown as {
+	fromBase64(value: string): Uint8Array<ArrayBuffer>;
+};
+
 function decodeBase64(value: string): Uint8Array<ArrayBuffer> {
-	return Uint8Array.from(atob(value), (character) => character.charCodeAt(0));
+	// Native decoding takes milliseconds for a 32 MiB file, where mapping each
+	// `atob()` character takes seconds.
+	return Base64Bytes.fromBase64(value);
 }
 
 function encodeCursor(offset: number): string {
@@ -1326,14 +1579,34 @@ function decodeCursor(cursor: string | undefined): number {
 	}
 }
 
-async function publicCall<T>(action: () => Promise<T>): Promise<T> {
+async function outcome<T>(action: () => Promise<T>): Promise<Outcome<T>> {
 	try {
-		return await action();
+		return { ok: true, value: await action() };
 	} catch (error) {
-		if (isArtifactsError(error)) {
-			throw error;
-		}
-		throw new ArtifactsError("INTERNAL_ERROR", "An internal error occurred.");
+		const failure = isArtifactsError(error)
+			? error
+			: new ArtifactsError("INTERNAL_ERROR", "An internal error occurred.");
+		return {
+			ok: false,
+			error: {
+				code: failure.code,
+				numericCode: failure.numericCode,
+				message: failure.message,
+			},
+		};
+	}
+}
+
+/** Forward an outcome from the namespace object, including a failed call to it. */
+async function forward<T>(
+	call: () => Promise<Outcome<T>>
+): Promise<Outcome<T>> {
+	try {
+		return await call();
+	} catch {
+		return outcome(() => {
+			throw new ArtifactsError("INTERNAL_ERROR", "An internal error occurred.");
+		});
 	}
 }
 

@@ -1,10 +1,10 @@
 import assert from "node:assert";
 import {
 	APIError,
-	configFileName,
 	isNonInteractiveOrCI,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import { fetchResult } from "./cfetch";
 import {
 	deleteContainerApplication,
@@ -22,7 +22,8 @@ import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName } from "./utils/getScriptName";
-import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 // Types returned by the /script/{name}/references API
 type ServiceReference = {

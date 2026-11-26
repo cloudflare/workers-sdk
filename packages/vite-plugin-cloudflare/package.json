@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vite-plugin",
-	"version": "2.0.0-beta.v.12",
+	"version": "2.0.0-rc.5",
 	"description": "Cloudflare plugin for Vite",
 	"keywords": [
 		"cloudflare",
@@ -19,11 +19,7 @@
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/vite-plugin-cloudflare"
 	},
-	"bin": {
-		"cf-vite": "./bin/cf-vite"
-	},
 	"files": [
-		"bin",
 		"dist"
 	],
 	"type": "module",
@@ -81,7 +77,7 @@
 		"semver": "^7.7.1",
 		"tinyglobby": "catalog:default",
 		"tree-kill": "catalog:default",
-		"tsdown": "0.16.3",
+		"tsdown": "catalog:default",
 		"typescript": "catalog:default",
 		"vite": "catalog:default",
 		"vite-legacy": "npm:vite@7.1.12",
@@ -93,7 +89,7 @@
 	"workers-sdk": {
 		"prerelease": true,
 		"npmPrerelease": {
-			"tag": "beta",
+			"tag": "rc",
 			"numbered": true
 		}
 	}

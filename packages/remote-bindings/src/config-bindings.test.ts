@@ -1,38 +1,5 @@
-import { describe, test, vi } from "vitest";
-import {
-	getRemoteBindings,
-	warnForDefaultRemoteBindings,
-} from "./config-bindings";
-
-describe("warnForDefaultRemoteBindings", () => {
-	test.for([
-		{ remote: undefined, enabled: true, warns: true },
-		{ remote: false, enabled: true, warns: false },
-		{ remote: true, enabled: true, warns: false },
-		{ remote: undefined, enabled: false, warns: false },
-		{ remote: false, enabled: false, warns: false },
-		{ remote: true, enabled: false, warns: false },
-	])(
-		"remote=$remote enabled=$enabled",
-		({ remote, enabled, warns }, { expect }) => {
-			const warn = vi.fn();
-			const bindings = getRemoteBindings({
-				env: {
-					REPOS: { type: "artifacts", namespace: "examples", dev: { remote } },
-					KV: { type: "kv", id: "kv-id" },
-				},
-			});
-			warnForDefaultRemoteBindings(bindings, enabled, warn);
-			if (warns) {
-				expect(warn).toHaveBeenCalledExactlyOnceWith(
-					"Artifacts binding REPOS uses the deployed resource. Set `dev: { remote: false }` to use the local simulator, or `dev: { remote: true }` to silence this warning."
-				);
-			} else {
-				expect(warn).not.toHaveBeenCalled();
-			}
-		}
-	);
-});
+import { describe, test } from "vitest";
+import { getRemoteBindings } from "./config-bindings";
 
 describe("getRemoteBindings", () => {
 	test("maps supported remote bindings", ({ expect }) => {
@@ -40,16 +7,21 @@ describe("getRemoteBindings", () => {
 			getRemoteBindings({
 				env: {
 					ANALYTICS: {
-						type: "analytics",
+						type: "analytics-sql",
 						dev: { remote: true },
 					},
 					K2: {
 						type: "k2",
-						stream: "stream-id",
+						id: "0123456789abcdef0123456789abcdef",
 					},
 					HYPERDRIVE: {
 						type: "hyperdrive",
 						id: "hyperdrive-id",
+						dev: { remote: true },
+					},
+					RTK: {
+						type: "realtime-kit",
+						id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
 						dev: { remote: true },
 					},
 				},
@@ -61,12 +33,17 @@ describe("getRemoteBindings", () => {
 			},
 			K2: {
 				type: "k2",
-				stream: "stream-id",
+				stream: "0123456789abcdef0123456789abcdef",
 				remote: undefined,
 			},
 			HYPERDRIVE: {
 				type: "hyperdrive",
 				id: "hyperdrive-id",
+				remote: true,
+			},
+			RTK: {
+				type: "realtimekit",
+				app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
 				remote: true,
 			},
 		});

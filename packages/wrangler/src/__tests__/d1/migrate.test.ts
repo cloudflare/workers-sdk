@@ -233,6 +233,7 @@ describe("migrate", () => {
 	describe("apply", () => {
 		mockAccountId({ accountId: null });
 		mockApiToken();
+
 		it("should not attempt to login in local mode", async ({ expect }) => {
 			setIsTTY(false);
 			writeWranglerConfig({
@@ -337,7 +338,7 @@ Your database may not be available to serve requests during the migration, conti
 			expect,
 		}) => {
 			setIsTTY(false);
-			const std = mockConsoleMethods();
+
 			msw.use(
 				http.post(
 					"*/accounts/:accountId/d1/database/:databaseId/query",
@@ -405,8 +406,8 @@ Your database may not be available to serve requests during the migration, conti
 				result: true,
 			});
 			await runWrangler("d1 migrations apply db --remote");
-			expect(std.out).toContain("Migrations to be applied:");
-			expect(std.out).toContain("0001_test.sql");
+			expect(mockStd.out).toContain("Migrations to be applied:");
+			expect(mockStd.out).toContain("0001_test.sql");
 		});
 
 		it("should throw a clear error when executeSql returns null (execution cancelled)", async ({
@@ -641,6 +642,68 @@ Your database may not be available to serve requests during the migration, conti
 				expect(mintRequests()).toBe(1);
 			});
 		});
+
+		it.for([
+			{ flag: "--force", isTTY: true },
+			{ flag: "-y", isTTY: true },
+			{ flag: "--force", isTTY: false },
+			{ flag: "-y", isTTY: false },
+		])(
+			"applies migrations without prompting with $flag (TTY: $isTTY)",
+			async ({ flag, isTTY }, { expect }) => {
+				setIsTTY(isTTY);
+				const queries: string[] = [];
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/d1/database/:databaseId/query",
+						async ({ request }) => {
+							const { sql } = (await request.json()) as { sql: string };
+							queries.push(sql);
+							return HttpResponse.json({
+								result: [{ results: [], success: true, meta: {} }],
+								success: true,
+								errors: [],
+								messages: [],
+							});
+						}
+					),
+					http.get("*/accounts/:accountId/d1/database/:databaseId", () =>
+						HttpResponse.json({
+							result: { uuid: "xxxx", name: "db", version: "production" },
+							success: true,
+							errors: [],
+							messages: [],
+						})
+					),
+					...getMswSuccessMembershipHandlers([
+						{ id: "1701", name: "enterprise" },
+					])
+				);
+				writeWranglerConfig({
+					d1_databases: [
+						{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+					],
+				});
+				fs.mkdirSync("migrations");
+				fs.writeFileSync(
+					"migrations/0001_test.sql",
+					"CREATE TABLE users (id INTEGER PRIMARY KEY);"
+				);
+
+				await runWrangler(`d1 migrations apply db --remote ${flag}`);
+
+				expect(queries).toContainEqual(
+					expect.stringContaining(
+						"CREATE TABLE users (id INTEGER PRIMARY KEY);"
+					)
+				);
+				expect(mockStd.out).toContain(
+					"--force passed, applying 1 migration(s) without prompt."
+				);
+				expect(mockStd.out).not.toContain("About to apply");
+				expect(mockStd.out).not.toContain("Using fallback value");
+			}
+		);
 	});
 
 	describe("list", () => {

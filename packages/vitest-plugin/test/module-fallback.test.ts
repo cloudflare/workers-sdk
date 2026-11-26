@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { Request } from "miniflare";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { createViteServer } from "vitest/node";
 import { realPackagePath } from "../src/pool/helpers";
 import {
 	decodeEncodedSpecifier,
@@ -592,6 +593,59 @@ describe("handleModuleFallbackRequest new module registry", () => {
 		});
 	});
 
+	it("reads a nested package's type even after an ancestor's type was cached", async ({
+		expect,
+	}) => {
+		// The project root is `"type": "module"`
+		fs.writeFileSync(
+			path.join(tmp, "package.json"),
+			JSON.stringify({ type: "module" })
+		);
+		// A `.js` file with no `package.json` of its own, as emitted by a bundler,
+		// is classified by the project root, which caches that answer
+		fs.mkdirSync(path.join(tmp, "vendor"));
+		const vendorPath = path.join(tmp, "vendor", "empty.js");
+		fs.writeFileSync(vendorPath, "");
+		// A dependency with its own `"type": "commonjs"` package.json
+		const depDir = path.join(tmp, "node_modules", "cjs-dep");
+		fs.mkdirSync(path.join(depDir, "lib"), { recursive: true });
+		fs.writeFileSync(
+			path.join(depDir, "package.json"),
+			JSON.stringify({ name: "cjs-dep", type: "commonjs" })
+		);
+		const depPath = path.join(depDir, "lib", "index.js");
+		const depContents = "exports.value = 42;";
+		fs.writeFileSync(depPath, depContents);
+		const referrer = pathToFileURL(path.join(tmp, "entry.mjs")).href;
+
+		const vendorResponse = await handleModuleFallbackRequest(
+			fakeVite(),
+			v2ModuleFallbackRequest({
+				type: "import",
+				specifier: pathToFileURL(vendorPath).href,
+				rawSpecifier: "./vendor/empty.js",
+				referrer,
+			})
+		);
+		expect(await vendorResponse.json()).toMatchObject({ esModule: "" });
+
+		const depSpecifier = pathToFileURL(depPath).href;
+		const depResponse = await handleModuleFallbackRequest(
+			fakeVite(),
+			v2ModuleFallbackRequest({
+				type: "import",
+				specifier: depSpecifier,
+				rawSpecifier: "cjs-dep",
+				referrer,
+			})
+		);
+		expect(await depResponse.json()).toEqual({
+			name: depSpecifier,
+			commonJsModule: depContents,
+			namedExports: ["value"],
+		});
+	});
+
 	it("preserves forced module types encoded in URL queries", async ({
 		expect,
 	}) => {
@@ -991,6 +1045,71 @@ describe("realPackagePath", () => {
 		const root = tmp.replaceAll("\\", "/");
 		expect(realPackagePath(`${root}/node_modules/missing/index.js`)).toBe(
 			`${root}/node_modules/missing/index.js`
+		);
+	});
+});
+
+describe("resolving the runner's Vitest entry point", () => {
+	let tmp: string;
+	let vite: Vite.ViteDevServer;
+
+	// The project root can't resolve `vitest`, as in a workspace whose root
+	// package doesn't depend on it. The runner must still load the Vitest that
+	// this package resolves.
+	beforeEach(async () => {
+		tmp = fs.realpathSync(
+			fs.mkdtempSync(path.join(os.tmpdir(), "mf-fallback-vitest-"))
+		);
+		vite = await createViteServer({
+			root: tmp,
+			configFile: false,
+			logLevel: "silent",
+			server: { middlewareMode: true, ws: false },
+		});
+	});
+
+	afterEach(async () => {
+		await vite.close();
+		removeDirSync(tmp);
+	});
+
+	const vitestWorkerPath = fileURLToPath(import.meta.resolve("vitest/worker"));
+
+	it("resolves `vitest/worker` from this package with the legacy registry", async ({
+		expect,
+	}) => {
+		const response = await handleModuleFallbackRequest(
+			vite,
+			moduleFallbackRequest({
+				method: "import",
+				specifier: "/vitest/worker",
+				referrer: "/index.mjs",
+				rawSpecifier: "vitest/worker",
+			})
+		);
+
+		expect(response.status).toBe(301);
+		expect(response.headers.get("Location")).toBe(
+			toWorkerdSpecifier(vitestWorkerPath)
+		);
+	});
+
+	it("resolves `vitest/worker` from this package with the new registry", async ({
+		expect,
+	}) => {
+		const response = await handleModuleFallbackRequest(
+			vite,
+			v2ModuleFallbackRequest({
+				type: "import",
+				specifier: "file:///vitest/worker",
+				referrer: "file:///index.mjs",
+				rawSpecifier: "vitest/worker",
+			})
+		);
+
+		expect(response.status).toBe(301);
+		expect(response.headers.get("Location")).toBe(
+			pathToFileURL(vitestWorkerPath).href
 		);
 	});
 });

@@ -671,6 +671,19 @@ Options shared between all Workers/"nanoservices".
   development. Use this option to override those defaults, for example to test
   timezone-dependent code with `unsafeRuntimeEnv: { TZ: "Europe/London" }`.
 
+- `unsafeCdnCgiAllowedHosts?: string[]`
+
+  Additional trusted hostnames for `Host` and `Origin` validation on `/cdn-cgi/`
+  requests, including Local Explorer assets and APIs. Entries are hostnames
+  without a scheme or port. An exact entry such as `"app.example.com"` allows only
+  that hostname; a leading-dot entry such as `".example.com"` allows both
+  `example.com` and all its subdomains. Matching ignores the request's port.
+
+  Defaults to `[]`, extending the existing allowlist for localhost (including
+  `*.localhost`), `127.0.0.1`, `[::1]`, configured routes, and the upstream
+  hostname. Only add trusted hostnames: allowed origins can access Local Explorer
+  APIs and other `/cdn-cgi/` endpoints.
+
 - `containerEngine?: string | { localDocker: { socketPath: string, containerEgressInterceptorImage?: string } }`
 
   Configuration used to connect to the container engine for any Workers that

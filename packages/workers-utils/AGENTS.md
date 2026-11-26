@@ -19,10 +19,13 @@ Shared utility package used across wrangler, miniflare, and others. Two main are
 
 - Validation pipeline normalizes wrangler.json/toml into typed config objects
 - Used by wrangler for all config loading
+- Import configuration APIs through `@cloudflare/workers-utils/config`, defined by `src/config/public.ts`. Keep this curated barrel separate from the implementation in `src/config/index.ts` to avoid cycles.
+- Existing root configuration exports are deprecated aliases in `src/config/legacy.ts`; preserve their runtime and type identity. New config APIs, including `readConfig()`, belong only in `/config`.
 
 ### D1 migrations
 
 - `getD1MigrationFiles({ projectPath, migrationsDir, migrationsPattern })` — shared glob-based discovery used by Wrangler and the Vitest plugin. Honour `migrations_pattern` rather than recursively collecting every `.sql` file.
+- `readD1Migrations()` reads those files into `D1Migration`s, and `applyD1Migrations()` (through `/apply-d1-migrations`) applies them and records them in the `d1_migrations` table that Wrangler and cf also use. `/apply-d1-migrations` runs inside workerd, so keep it free of Node.js imports.
 
 ### Shared runtime utilities
 

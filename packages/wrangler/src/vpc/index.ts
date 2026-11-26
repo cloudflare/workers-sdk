@@ -26,6 +26,8 @@ export type CertVerificationMode = "verify_full" | "verify_ca" | "disabled";
 
 export interface TlsSettings {
 	cert_verification_mode: CertVerificationMode;
+	certificate_authority?: string;
+	client_certificate?: string;
 }
 
 export interface ServicePortOptions {
@@ -167,7 +169,17 @@ export const serviceOptions = {
 		type: "string",
 		choices: ["verify_full", "verify_ca", "disabled"] as const,
 		description:
-			"TLS certificate verification mode for the connection to the origin",
+			"Origin verification: verify_full checks chain and hostname; verify_ca checks chain only; disabled skips verification and cannot be used with a custom CA. Required when providing certificates. On update, TLS options you omit are cleared",
+		group: "TLS Options",
+	},
+	"certificate-authority": {
+		type: "string",
+		description: "UUID returned by wrangler cert upload certificate-authority",
+		group: "TLS Options",
+	},
+	"client-certificate": {
+		type: "string",
+		description: "UUID returned by wrangler cert upload mtls-certificate",
 		group: "TLS Options",
 	},
 } as const;

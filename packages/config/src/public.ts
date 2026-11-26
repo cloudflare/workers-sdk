@@ -16,8 +16,8 @@ export type {
 	AiSearchNamespaceBindingOptions,
 	AnalyticsEngineDatasetBinding,
 	AnalyticsEngineDatasetBindingOptions,
-	AnalyticsSQLBinding,
-	AnalyticsSQLBindingOptions,
+	AnalyticsSqlBinding,
+	AnalyticsSqlBindingOptions,
 	ArtifactsBinding,
 	ArtifactsBindingOptions,
 	AssetsBinding,
@@ -31,6 +31,8 @@ export type {
 	DurableObjectBindingOptions,
 	FlagshipBinding,
 	FlagshipBindingOptions,
+	RealtimeKitBinding,
+	RealtimeKitBindingOptions,
 	HyperdriveBinding,
 	HyperdriveBindingOptions,
 	ImagesBinding,
@@ -49,6 +51,8 @@ export type {
 	MediaBindingOptions,
 	MtlsCertificateBinding,
 	MtlsCertificateBindingOptions,
+	OidcTokenBinding,
+	OidcTokenBindingOptions,
 	PipelineBinding,
 	PipelineBindingOptions,
 	QueueBinding,
@@ -89,7 +93,6 @@ export type {
 	Triggers,
 	ConnectTrigger,
 	ConnectTriggerOptions,
-	ConnectTriggerOptionsBase,
 	EmailTrigger,
 	EmailTriggerOptions,
 	FetchTrigger,
@@ -100,6 +103,10 @@ export type {
 	ScheduledTriggerOptions,
 } from "./triggers";
 export { triggers } from "./triggers";
+export type {
+	ArtifactsEventType,
+	ArtifactsEventSubscription,
+} from "./workflow-events";
 export type {
 	Exports,
 	DurableObjectCreatedExport,

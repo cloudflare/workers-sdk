@@ -11,6 +11,7 @@ CLIs. Internal-only — published as `prerelease: true`.
 - `src/generate-auth-url.ts` — authorize URL builder
 - `src/generate-random-state.ts` — CSRF state generator
 - `src/env-vars.ts` — `WRANGLER_*` and `CLOUDFLARE_AUTH_*` env-var getters
+- `src/profiles.ts` — Shared profile resolution: explicit argument → `CLOUDFLARE_AUTH_PROFILE` → nearest directory binding → `default`. Environment values use the same name validation as explicit profiles; empty values are ignored.
 - `src/account-id.ts` — `validateAccountId(id, source)`, applied to every user-supplied account ID (`CLOUDFLARE_ACCOUNT_ID`, the consumer's `account_id` config field) before it reaches an API URL path
 - `src/access.ts` — Cloudflare Access detection + service-token / `cloudflared` headers
 - `src/config-file/auth.ts` — the `AuthConfigStorage` / `UserAuthConfig` storage contract (interfaces only). The default plaintext credential implementation lives alongside the credential-store layer at `src/credential-store/file-store.ts` (see "Credential storage" below). The core `src/core/auth-config-file.ts` (`createAuthConfigFileHelpers({getConfigPath, format})`) and `src/core/file-storage.ts` (`createFileStorage(format, getPath)`) build the per-profile path helpers and non-credential file stores; each CLI descriptor (`src/wrangler/auth-config-file.ts`, `src/cf/auth-config-file.ts`) binds them to its config dir + `FileFormat` and re-exports `createTomlFileStorage` / `createJsonFileStorage`, `getAuthConfigFilePath`, etc. from its entrypoint. See "CORE LAYER" below.
@@ -113,7 +114,7 @@ Cloudflare CLI built on this package. It lives in `src/core/`:
   `keyringServiceName`,
   `clientId`, `consent`, `redirectUri`, `useDeviceFlowByDefault`,
   `getConfigPath`, `fileFormat`,
-  `accountCachePrefix`, `cacheNamespace`, `getConfigFileLabel`,
+  `persistAccountSelection`, `accountCachePrefix`, `cacheNamespace`, `getConfigFileLabel`,
   `getDefaultScopeKeys`, …).
 - `file-storage.ts` (`createFileStorage(format, getPath)`), `auth-config-file.ts`
   (`createAuthConfigFileHelpers({getConfigPath, format})`), `preferences.ts`
@@ -175,9 +176,9 @@ Each CLI is a thin **descriptor + entrypoint**:
 
 ## BUILD
 
-- tsup: two entry points — `src/index.ts` and `src/test-helpers/index.ts`
+- tsdown: shared core, Wrangler and cf entry points, plus test helpers
 - ESM-only output to `dist/`
-- `@cloudflare/*`, `undici`, `msw`, and `vitest` are kept external
+- Runtime dependencies (`@cloudflare/workers-utils` and `undici`), `msw`, and `vitest` are kept external
 
 ## CREDENTIAL STORAGE NOTES
 

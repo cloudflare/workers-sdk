@@ -61,8 +61,8 @@ function cloudflareConfig(): Record<string, string> {
 	};
 }
 
-// Unlike Wrangler and Vite, Workers Vitest keeps tests away from real
-// repositories: an omitted `remote` uses the local simulator, without a warning.
+// An omitted `remote` uses the local simulator. Workers Vitest always did, so
+// unlike Wrangler and Vite it doesn't warn that the default changed.
 test.for([
 	{ label: "Wrangler config with remote=false", files: wranglerConfig(false) },
 	{
@@ -84,6 +84,8 @@ test.for([
 
 		const result = await vitestRun();
 		await expect(result.exitCode, result.stderr).resolves.toBe(0);
-		expect(result.stdout + result.stderr).not.toContain("deployed resource");
+		expect(result.stdout + result.stderr).not.toContain(
+			"uses the local simulator by default"
+		);
 	}
 );

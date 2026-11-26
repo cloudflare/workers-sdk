@@ -39,7 +39,7 @@ import type {
 	ModifyDeploymentV2RequestBody,
 	SSHPublicKeyID,
 } from "@cloudflare/containers-shared";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export function modifyCommandOptionalYargs(yargs: CommonYargsArgv) {
 	return yargs

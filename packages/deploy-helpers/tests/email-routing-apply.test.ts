@@ -3,7 +3,7 @@ import { beforeEach, describe, it, vi } from "vitest";
 import { initDeployHelpersContext } from "../src/shared/context";
 import { applyEmailRoutingAddresses } from "../src/triggers/email-routing";
 import type { EmailRoutingPlanResponse } from "../src/triggers/email-routing-plan";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 const { isNonInteractiveOrCI } = vi.hoisted(() => ({
 	isNonInteractiveOrCI: vi.fn(() => true),
@@ -40,7 +40,7 @@ describe("applyEmailRoutingAddresses", () => {
 	let nonInteractive: boolean;
 	let failTarget: string | undefined;
 	let metadataRequests: number;
-	let metadataFailures: number[];
+	let metadataFailures: (number | null)[];
 	let planFailures: APIError[];
 	let planBody: unknown;
 	let holdRuleWrites: boolean;
@@ -97,6 +97,9 @@ describe("applyEmailRoutingAddresses", () => {
 		if (path.endsWith(`/workers/services/${WORKER_NAME}`)) {
 			metadataRequests++;
 			const code = metadataFailures.shift();
+			if (code === null) {
+				return { default_environment: { script: null } };
+			}
 			if (code !== undefined) {
 				throw { code };
 			}
@@ -202,21 +205,23 @@ describe("applyEmailRoutingAddresses", () => {
 		expect(logs.join("\n")).toContain("Email Routing rules are up to date.");
 	});
 
-	it("retries Worker metadata while a new Worker propagates", async ({
-		expect,
-	}) => {
-		vi.useFakeTimers();
-		metadataFailures = [10007];
+	it.for([10007, null])(
+		"retries Worker metadata while a new Worker propagates (failure: %s)",
+		async (failure, { expect }) => {
+			vi.useFakeTimers();
+			metadataFailures = [failure];
 
-		try {
-			const applying = apply(["support@example.com"], null);
-			await vi.advanceTimersByTimeAsync(PLAN_RETRY_DELAY_MS);
-			await applying;
-			expect(metadataRequests).toBe(2);
-		} finally {
-			vi.useRealTimers();
+			try {
+				const applying = apply(["support@example.com"], null);
+				await vi.advanceTimersByTimeAsync(PLAN_RETRY_DELAY_MS);
+				await applying;
+				expect(metadataRequests).toBe(2);
+				expect(planBody).toMatchObject({ owner_worker_tag: WORKER_TAG });
+			} finally {
+				vi.useRealTimers();
+			}
 		}
-	});
+	);
 
 	it("retries the plan while the Worker propagates to Email Routing", async ({
 		expect,

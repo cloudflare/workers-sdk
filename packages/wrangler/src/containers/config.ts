@@ -5,14 +5,14 @@ import {
 	resolveImageName,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
+import { UserError } from "@cloudflare/workers-utils";
 import {
 	getDurableObjectClassNameToUseSQLiteMap,
 	isDockerfile,
 	isDurableObjectContainerApp,
 	resolveContainerClassName,
-	UserError,
 	validateDurableObjectContainerApplications,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import { getOrSelectAccountId } from "../user";
 import type {
 	ApplicationAffinities,
@@ -27,7 +27,7 @@ import type {
 	ContainerApp,
 	ContainerObservability,
 	Observability,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 function isContainerObservabilityEnabled(
 	observability: ContainerObservability | undefined
@@ -142,8 +142,8 @@ export const getNormalizedContainerOptions = async (
 			);
 		}
 
-		const rolloutStepPercentageFallback =
-			(container.max_instances ?? 0) < 2 ? 100 : [10, 100];
+		const maxInstances = container.max_instances ?? 20;
+		const rolloutStepPercentageFallback = maxInstances < 2 ? 100 : [10, 100];
 
 		// tiers will take precedence over tier
 		// if unset, wrangler will default to [1, 2]
@@ -175,7 +175,7 @@ export const getNormalizedContainerOptions = async (
 		const shared: Omit<SharedContainerConfig, "disk_size" | "instance_type"> = {
 			name: container.name,
 			class_name: className,
-			max_instances: container.max_instances ?? 20,
+			max_instances: maxInstances,
 			scheduling_policy: (container.scheduling_policy ??
 				SchedulingPolicy.DEFAULT) as SchedulingPolicy,
 			constraints: {

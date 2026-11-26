@@ -5,7 +5,7 @@ import {
 	pushImageIfChanged,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
-import { defaultWranglerConfig } from "@cloudflare/workers-utils";
+import { defaultWranglerConfig } from "@cloudflare/workers-utils/config";
 import { beforeEach, describe, test, vi } from "vitest";
 import { logger } from "../../logger";
 import { deployPreviewContainers } from "../../preview/containers";
@@ -15,7 +15,7 @@ import type {
 	SharedContainerConfig,
 } from "@cloudflare/containers-shared";
 import type { DeploymentResource } from "@cloudflare/deploy-helpers";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 vi.mock("../../cloudchamber/common", async (importOriginal) => ({
 	...(await importOriginal<typeof import("../../cloudchamber/common")>()),

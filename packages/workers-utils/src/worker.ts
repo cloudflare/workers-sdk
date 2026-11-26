@@ -8,7 +8,10 @@ import type {
 } from "./config/environment";
 import type { INHERIT_SYMBOL } from "./constants";
 import type { Json, WorkerMetadata } from "./types";
-import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
+import type {
+	AssetConfig,
+	RouterConfig,
+} from "@cloudflare/workers-shared/utils/types";
 
 /**
  * The type of Worker
@@ -246,6 +249,7 @@ export interface CfD1Database {
 	binding: string;
 	database_id?: string | typeof INHERIT_SYMBOL;
 	database_name?: string;
+	jurisdiction?: string;
 	preview_database_id?: string;
 	database_internal_env?: string;
 	migrations_table?: string;
@@ -300,6 +304,12 @@ export interface CfHelloWorld {
 export interface CfFlagship {
 	binding: string;
 	app_id?: string | typeof INHERIT_SYMBOL;
+	remote?: boolean;
+}
+
+export interface CfRealtimeKit {
+	binding: string;
+	app_id: string;
 	remote?: boolean;
 }
 
@@ -369,6 +379,13 @@ export interface CfVpcNetwork {
 	tunnel_id?: string;
 	network_id?: string;
 	remote?: boolean;
+}
+
+/** A binding that issues OIDC tokens for the Worker's identity, for one audience. */
+export interface CfOidcToken {
+	binding: string;
+	audience: string;
+	alg?: "ES256" | "RS256";
 }
 
 export interface CfAnalyticsEngineDataset {

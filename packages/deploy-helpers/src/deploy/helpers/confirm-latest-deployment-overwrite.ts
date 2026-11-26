@@ -11,7 +11,7 @@ import type {
 	VersionCache,
 	VersionId,
 } from "./versions-types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 const BLANK_INPUT = "-";
 

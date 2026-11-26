@@ -2,10 +2,46 @@ import { describe, test } from "vitest";
 import {
 	generateRulesMatcher,
 	generateStaticRoutingRuleMatcher,
+	normalizeRedirectTarget,
 	replacer,
 } from "../src/utils/rules-engine";
 
 describe("rules engine", () => {
+	test.for([
+		["/:splat", "/images/logo.png", "/images/logo.png"],
+		["/:splat", "//images//logo.png", "/images/logo.png"],
+		["/:splat", "\\images\\logo.png", "/images/logo.png"],
+		["/:splat", "%2Fimages/logo.png", "/%2Fimages/logo.png"],
+		["///:splat", "evil.example", "/evil.example"],
+		["////:splat", "evil.example", "/evil.example"],
+		["//\\:splat", "evil.example", "/evil.example"],
+		[
+			"/:splat?next=https://example.com/a//b#section//one",
+			"images//logo.png",
+			"/images/logo.png?next=https://example.com/a//b#section//one",
+		],
+		[
+			"https://other.example/:splat",
+			"/images/logo.png",
+			"https://other.example//images/logo.png",
+		],
+		[
+			"//other.example/:splat",
+			"/images/logo.png",
+			"//other.example//images/logo.png",
+		],
+		[
+			"  //other.example/:splat  ",
+			"images/logo.png",
+			"//other.example/images/logo.png",
+		],
+	])(
+		"normalizes redirect target %s with splat %s",
+		([target, splat, expected], { expect }) => {
+			expect(normalizeRedirectTarget(target, { splat })).toBe(expected);
+		}
+	);
+
 	test("it should match simple pathname hosts", ({ expect }) => {
 		const matcher = generateRulesMatcher({ "/test": 1, "/some%20page": 2 });
 		expect(

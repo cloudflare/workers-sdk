@@ -1,4 +1,5 @@
-import { configFileName, UserError } from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
@@ -29,7 +30,7 @@ export const d1MigrationsListCommand = createCommand({
 		local: {
 			type: "boolean",
 			description:
-				"Check migrations against a local DB for use with wrangler dev",
+				"Check migrations against a local DB for use with wrangler dev (default)",
 		},
 		remote: {
 			type: "boolean",

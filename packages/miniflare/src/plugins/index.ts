@@ -37,6 +37,7 @@ import { PIPELINE_PLUGIN, PIPELINES_PLUGIN_NAME } from "./pipelines";
 import { QUEUES_PLUGIN, QUEUES_PLUGIN_NAME } from "./queues";
 import { R2_PLUGIN, R2_PLUGIN_NAME } from "./r2";
 import { RATELIMIT_PLUGIN, RATELIMIT_PLUGIN_NAME } from "./ratelimit";
+import { REALTIMEKIT_PLUGIN, REALTIMEKIT_PLUGIN_NAME } from "./realtimekit";
 import { SECRET_STORE_PLUGIN, SECRET_STORE_PLUGIN_NAME } from "./secret-store";
 import { STREAM_PLUGIN, STREAM_PLUGIN_NAME } from "./stream";
 import { VECTORIZE_PLUGIN, VECTORIZE_PLUGIN_NAME } from "./vectorize";
@@ -52,7 +53,10 @@ import {
 } from "./worker-loader";
 import { WORKFLOWS_PLUGIN, WORKFLOWS_PLUGIN_NAME } from "./workflows";
 import type { ValueOf } from "../workers";
+import type { Plugin } from "./shared";
 
+// Keep a named Plugin import in the declarations so API Extractor can bundle it
+// instead of leaking an unresolved relative import into the published types.
 export const PLUGINS = {
 	[CORE_PLUGIN_NAME]: CORE_PLUGIN,
 	[CACHE_PLUGIN_NAME]: CACHE_PLUGIN,
@@ -84,11 +88,12 @@ export const PLUGINS = {
 	[MTLS_PLUGIN_NAME]: MTLS_PLUGIN,
 	[HELLO_WORLD_PLUGIN_NAME]: HELLO_WORLD_PLUGIN,
 	[FLAGSHIP_PLUGIN_NAME]: FLAGSHIP_PLUGIN,
+	[REALTIMEKIT_PLUGIN_NAME]: REALTIMEKIT_PLUGIN,
 	[ARTIFACTS_PLUGIN_NAME]: ARTIFACTS_PLUGIN,
 	[WORKER_LOADER_PLUGIN_NAME]: WORKER_LOADER_PLUGIN,
 	[MEDIA_PLUGIN_NAME]: MEDIA_PLUGIN,
 	[VERSION_METADATA_PLUGIN_NAME]: VERSION_METADATA_PLUGIN,
-};
+} satisfies Record<string, Plugin>;
 export type Plugins = typeof PLUGINS;
 
 export const PLUGIN_ENTRIES = Object.entries(PLUGINS) as [
@@ -145,6 +150,7 @@ export * from "./vpc-services";
 export * from "./mtls";
 export * from "./hello-world";
 export * from "./flagship";
+export * from "./realtimekit";
 export * from "./artifacts";
 export * from "./worker-loader";
 export * from "./media";

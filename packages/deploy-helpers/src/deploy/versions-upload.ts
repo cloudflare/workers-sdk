@@ -5,15 +5,17 @@ import { blue, gray } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	APIError,
 	formatTime,
-	getBindings,
-	getDurableObjectContainerApps,
-	hasDurableObjectExports,
 	ParseError,
 	printBindings,
 	retryOnAPIFailure,
 	UserError,
 	writeOutput,
 } from "@cloudflare/workers-utils";
+import {
+	getBindings,
+	getDurableObjectContainerApps,
+	hasDurableObjectExports,
+} from "@cloudflare/workers-utils/config";
 import { parseAndExpandDotEnv } from "@cloudflare/workers-utils/local-env";
 import { Response } from "undici";
 import { fetchResult, logger } from "../shared/context";
@@ -183,7 +185,11 @@ async function uploadWorkerVersion(
 	// script_version row with `SkipDeploy:true`, so reconciliation is
 	// deferred to the subsequent deploy (either `wrangler deploy` or
 	// `wrangler versions deploy <id>`).
-	const { migrations, exports } = await resolveExportsUploadPayload({
+	const {
+		migrations,
+		exports,
+		headers: exportsHeaders,
+	} = await resolveExportsUploadPayload({
 		scriptName,
 		isDryRun: props.dryRun,
 		accountId,
@@ -359,9 +365,10 @@ async function uploadWorkerVersion(
 						{
 							method: "POST",
 							body: workerBundle,
-							headers: props.sendMetrics
-								? { metricsEnabled: "true" }
-								: undefined,
+							headers: {
+								...exportsHeaders,
+								...(props.sendMetrics && { metricsEnabled: "true" }),
+							},
 						},
 						new URLSearchParams({ bindings_inherit: "strict" })
 					),

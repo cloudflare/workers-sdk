@@ -203,7 +203,10 @@ export const basinSqlQueryCommand = createCommand({
 			for (const { code, message } of parsed.errors) {
 				errors += `\n* ${code}: ${message}`;
 			}
-			logger.error(`Query failed because of the following errors:${errors}`);
+			throw new UserError(
+				`Query failed because of the following errors:${errors}`,
+				{ telemetryMessage: "basin sql query failed" }
+			);
 		}
 	},
 });

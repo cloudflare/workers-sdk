@@ -37,7 +37,10 @@ import type {
 	Label,
 	NetworkParameters,
 } from "@cloudflare/containers-shared";
-import type { CloudchamberConfig, Config } from "@cloudflare/workers-utils";
+import type {
+	CloudchamberConfig,
+	Config,
+} from "@cloudflare/workers-utils/config";
 
 export const cloudchamberScope = "cloudchamber:write" as const;
 

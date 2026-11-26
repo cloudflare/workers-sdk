@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { test, describe } from "vitest";
@@ -31,7 +32,7 @@ describe("pre-rendering", () => {
 		({ expect }) => {
 			const workerDir = path.join(
 				rootDir,
-				".cloudflare/output/v0/workers/prerender"
+				".cloudflare/output/v1/workers/prerender"
 			);
 			const config = JSON.parse(
 				fs.readFileSync(path.join(workerDir, "worker.config.json"), "utf-8")
@@ -46,11 +47,25 @@ describe("pre-rendering", () => {
 	);
 
 	test.runIf(isBuild)(
+		"serves an asset imported by the prerender Worker after the build",
+		async ({ expect }) => {
+			await page.goto(`${viteTestUrl}/prerendered`);
+			const assetUrl = await page
+				.locator("#prerender-asset")
+				.getAttribute("href");
+			assert(assetUrl);
+			expect(await getTextResponse(assetUrl)).toBe(
+				"Asset imported by the prerender Worker\n"
+			);
+		}
+	);
+
+	test.runIf(isBuild)(
 		"keeps using declarations in the prerender Worker build",
 		async ({ expect }) => {
 			const workerDir = path.join(
 				rootDir,
-				".cloudflare/output/v0/workers/prerender"
+				".cloudflare/output/v1/workers/prerender"
 			);
 			const config = JSON.parse(
 				fs.readFileSync(path.join(workerDir, "worker.config.json"), "utf-8")

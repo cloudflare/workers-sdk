@@ -167,7 +167,7 @@ export class Logger {
 	}
 	console<M extends Exclude<keyof Console, "Console">>(
 		method: M,
-		...args: Parameters<Console[M]>
+		...args: Parameters<NonNullable<Console[M]>>
 	) {
 		// eslint-disable-next-line no-console -- Logger implementation must use console directly
 		if (typeof console[method] !== "function") {
@@ -180,7 +180,10 @@ export class Logger {
 		) {
 			Logger.#beforeLogHook?.();
 			// eslint-disable-next-line no-console -- Logger implementation must use console directly
-			(console[method] as (...args: unknown[]) => unknown).apply(console, args);
+			(console[method] as (...args: unknown[]) => unknown).call(
+				console,
+				...args
+			);
 			Logger.#afterLogHook?.();
 		}
 	}

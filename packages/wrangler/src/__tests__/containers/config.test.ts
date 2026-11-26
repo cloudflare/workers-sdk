@@ -1,12 +1,13 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
-import { defaultWranglerConfig, UserError } from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils";
+import { defaultWranglerConfig } from "@cloudflare/workers-utils/config";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { getNormalizedContainerOptions } from "../../containers/config";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 describe("getNormalizedContainerOptions", () => {
 	mockApiToken();
@@ -450,43 +451,67 @@ describe("getNormalizedContainerOptions", () => {
 		});
 	});
 
-	it("should default max_instances and rollout_step_percentage accordingly", async ({
-		expect,
-	}) => {
-		writeFileSync("Dockerfile", "FROM scratch");
+	it.for([
+		{
+			maxInstances: undefined,
+			expected: { max_instances: 20, rollout_step_percentage: [10, 100] },
+		},
+		{
+			maxInstances: 0,
+			expected: { max_instances: 0, rollout_step_percentage: 100 },
+		},
+		{
+			maxInstances: 1,
+			expected: { max_instances: 1, rollout_step_percentage: 100 },
+		},
+		{
+			maxInstances: 2,
+			expected: { max_instances: 2, rollout_step_percentage: [10, 100] },
+		},
+		{
+			maxInstances: 20,
+			expected: { max_instances: 20, rollout_step_percentage: [10, 100] },
+		},
+	])(
+		"should default rollout_step_percentage when max_instances is $maxInstances",
+		async ({ maxInstances, expected }, { expect }) => {
+			writeFileSync("Dockerfile", "FROM scratch");
 
-		const config: Config = {
-			name: "test-worker",
-			configPath: "./wrangler.toml",
-			topLevelName: "test-worker",
-			containers: [
-				{
-					class_name: "TestContainer",
-					image: path.resolve("./Dockerfile"),
-					name: "test-container",
-				},
-			],
-			durable_objects: {
-				bindings: [
+			const config: Config = {
+				name: "test-worker",
+				configPath: "./wrangler.toml",
+				topLevelName: "test-worker",
+				containers: [
 					{
-						name: "TEST_DO",
 						class_name: "TestContainer",
+						image: path.resolve("./Dockerfile"),
+						name: "test-container",
+						...(maxInstances === undefined
+							? {}
+							: { max_instances: maxInstances }),
 					},
 				],
-			},
-			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
-		} as Partial<Config> as Config;
+				durable_objects: {
+					bindings: [
+						{
+							name: "TEST_DO",
+							class_name: "TestContainer",
+						},
+					],
+				},
+				migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
+			} as Partial<Config> as Config;
 
-		const result = await getNormalizedContainerOptions(config, {});
+			const result = await getNormalizedContainerOptions(config, {});
 
-		expect(result).toHaveLength(1);
-		expect(result[0]).toMatchObject({
-			name: "test-container",
-			class_name: "TestContainer",
-			max_instances: 20,
-			rollout_step_percentage: 100,
-		});
-	});
+			expect(result).toHaveLength(1);
+			expect(result[0]).toMatchObject({
+				name: "test-container",
+				class_name: "TestContainer",
+				...expected,
+			});
+		}
+	);
 
 	it("should handle custom limit configuration", async ({ expect }) => {
 		// deprecated path for setting custom limits

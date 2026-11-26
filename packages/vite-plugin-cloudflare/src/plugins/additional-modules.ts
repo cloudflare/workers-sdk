@@ -1,9 +1,9 @@
 import assert from "node:assert";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { DEFAULT_MODULE_RULES } from "@cloudflare/workers-utils";
+import { DEFAULT_MODULE_RULES } from "@cloudflare/workers-utils/config";
+import { globsToRegExps } from "@cloudflare/workers-utils/glob-matcher";
 import MagicString from "magic-string";
-import { globsToRegExps } from "miniflare";
 import * as vite from "vite";
 import { cleanUrl, createPlugin } from "../utils";
 import type { ModuleType } from "@cloudflare/config";

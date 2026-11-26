@@ -21,6 +21,9 @@ Tools for helping with CI
 
 - `e2e/runIndividualE2EFiles.ts` - Used to shard the e2e tests into separately cache-able Turbo runs, which helps with flakey tests.
 
+- `test/check-built-entry-points.ts` - Checks that the built Wrangler and Vite plugin declarations resolve in a temporary consumer project. Also checks that Wrangler's CLI and experimental config entry points load in Node.
+  CI runs the checks after building. Locally, run `pnpm run build --filter=wrangler --filter=@cloudflare/vite-plugin`, then `node -r esbuild-register tools/test/check-built-entry-points.ts <wrangler|vite-plugin-cloudflare>` for the package you want to check.
+
 - `test/run-test-file.ts` - Used by in VS Code configuration to launch a debug session to run a single test file.
 
 - `test-workers/` - Contains worker definitions used by CI tests. Each worker has its own subdirectory with `index.js` and `wrangler.jsonc` files. See `test-workers/README.md` for details.

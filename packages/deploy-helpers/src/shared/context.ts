@@ -10,8 +10,8 @@ import type {
 /**
  * Module-level context globals for deploy-helpers.
  *
- * These are typed as non-nullable but are undefined until initDeployHelpersContext()
- * is called. Consumers must import the live binding directly (e.g. `import { logger }`)
+ * These are typed as non-nullable but are
+ * undefined until initDeployHelpersContext() is called. Consumers must import the live binding directly (e.g. `import { logger }`)
  * and NOT destructure or cache the value at module-load time, otherwise they will
  * capture `undefined` before init runs.
  *

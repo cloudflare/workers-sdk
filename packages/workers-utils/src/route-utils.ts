@@ -54,6 +54,41 @@ export function getZoneFromRoute(route: Route): string | undefined {
 }
 
 /**
+ * Gets the zone of a `cloudflare.config.ts` Worker's first route, as Wrangler
+ * configs get it. This is the zone that Miniflare's `dev.zone` puts in the
+ * `CF-Worker` header of the Worker's outgoing requests.
+ *
+ * @param config The Worker's domains and triggers.
+ * @returns The zone, if the Worker has a route.
+ */
+export function getWorkerZone(config: {
+	domains?: readonly (string | { hostname: string })[];
+	triggers?: readonly { type: string; pattern?: string; zone?: string }[];
+}): string | undefined {
+	// Domains are converted to routes before fetch triggers, so this mirrors the
+	// first-route selection used by Wrangler's Miniflare options.
+	const domain = config.domains?.[0];
+	if (domain !== undefined) {
+		return getZoneFromRoute(
+			typeof domain === "string" ? domain : domain.hostname
+		);
+	}
+
+	const fetchTrigger = config.triggers?.find(
+		(trigger) => trigger.type === "fetch"
+	);
+	if (fetchTrigger?.pattern === undefined) {
+		return undefined;
+	}
+
+	return getZoneFromRoute(
+		fetchTrigger.zone?.includes(".")
+			? { pattern: fetchTrigger.pattern, zone_name: fetchTrigger.zone }
+			: fetchTrigger.pattern
+	);
+}
+
+/**
  * Given something that resembles a URL, try to extract a host from it.
  */
 export function getHostFromUrl(urlLike: string): string | undefined {

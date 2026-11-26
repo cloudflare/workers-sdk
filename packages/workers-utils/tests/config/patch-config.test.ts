@@ -1,9 +1,9 @@
 import { writeFileSync } from "node:fs";
-import { experimental_patchConfig } from "@cloudflare/workers-utils";
+import { experimental_patchConfig } from "@cloudflare/workers-utils/config";
 import dedent from "ts-dedent";
 import { describe, it } from "vitest";
 import { runInTempDir, writeWranglerConfig } from "../../src/test-helpers";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 type TestCase = {
 	name: string;

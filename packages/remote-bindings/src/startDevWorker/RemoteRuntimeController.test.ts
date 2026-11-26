@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { initLogger } from "../logger";
-import { PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL } from "./utils";
+import {
+	createDeferred,
+	PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL,
+	unwrapHook,
+} from "./utils";
 import type {
 	CfPreviewSession,
 	CfPreviewToken,
@@ -18,10 +22,12 @@ initLogger({
 	console: vi.fn(),
 });
 
-const { createPreviewSession, createWorkerPreview } = vi.hoisted(() => ({
-	createPreviewSession: vi.fn<() => Promise<CfPreviewSession>>(),
-	createWorkerPreview: vi.fn<() => Promise<CfPreviewToken>>(),
-}));
+const { createPreviewSession, createWorkerPreview, getAccessHeaders } =
+	vi.hoisted(() => ({
+		createPreviewSession: vi.fn<() => Promise<CfPreviewSession>>(),
+		createWorkerPreview: vi.fn<() => Promise<CfPreviewToken>>(),
+		getAccessHeaders: vi.fn<() => Promise<Record<string, string>>>(),
+	}));
 
 vi.mock("../utils/create-worker-preview", () => ({
 	createPreviewSession,
@@ -29,13 +35,13 @@ vi.mock("../utils/create-worker-preview", () => ({
 }));
 
 vi.mock("@cloudflare/workers-auth", () => ({
-	getAccessHeaders: vi.fn().mockResolvedValue({}),
+	getAccessHeaders,
 }));
 
 const { RemoteRuntimeController } = await import("./RemoteRuntimeController");
 
 const config: StartDevWorkerOptions = {
-	cliDisplayName: "Test CLI",
+	cliDisplayName: "Wrangler",
 	name: "remote-bindings-proxy",
 	entrypointSource: "export default {};",
 	bindings: {},
@@ -71,10 +77,212 @@ describe("RemoteRuntimeController preview token refresh", () => {
 		vi.useFakeTimers();
 		createPreviewSession.mockReset();
 		createWorkerPreview.mockReset();
+		getAccessHeaders.mockReset().mockResolvedValue({});
 	});
 
 	afterEach(() => {
 		vi.useRealTimers();
+	});
+
+	it("refreshes lazy sessions only in response to a binding call", async ({
+		expect,
+	}) => {
+		createPreviewSession.mockResolvedValue(session);
+		createWorkerPreview.mockResolvedValue(token);
+		const auth = vi.fn(() => ({
+			accountId: "account-id",
+			apiToken: { apiToken: "api-token" },
+		}));
+		const controller = new RemoteRuntimeController(vi.fn(), vi.fn());
+		controller.onBundleComplete({
+			type: "bundleComplete",
+			config: { ...config, auth, lazy: true },
+			bundle,
+		});
+		await vi.advanceTimersByTimeAsync(0);
+		expect(auth).toHaveBeenCalledOnce();
+		await vi.advanceTimersByTimeAsync(3 * 60 * 60 * 1000);
+		expect(auth).toHaveBeenCalledOnce();
+		expect(createPreviewSession).toHaveBeenCalledOnce();
+		controller.onPreviewTokenExpired();
+		await vi.advanceTimersByTimeAsync(0);
+		expect(auth).toHaveBeenCalledTimes(2);
+		await controller.teardown();
+	});
+
+	it("ignores login failures from a configuration that has been replaced", async ({
+		expect,
+	}) => {
+		const login = createDeferred<void>();
+		const auth = vi.fn(async () => {
+			await login.promise;
+			throw new Error("Login cancelled for the old configuration");
+		});
+		const onError = vi.fn();
+		const controller = new RemoteRuntimeController(onError, vi.fn());
+		controller.onBundleComplete({
+			type: "bundleComplete",
+			config: { ...config, auth, lazy: true },
+			bundle,
+		});
+		await vi.advanceTimersByTimeAsync(0);
+		expect(auth).toHaveBeenCalledOnce();
+		controller.onUpdateStart();
+		login.resolve();
+		await vi.advanceTimersByTimeAsync(0);
+		expect(onError).not.toHaveBeenCalled();
+		expect(createPreviewSession).not.toHaveBeenCalled();
+		await controller.teardown();
+	});
+
+	it("does not revive old bindings when an expiry notification follows a lazy update", async ({
+		expect,
+	}) => {
+		createPreviewSession.mockResolvedValue(session);
+		createWorkerPreview.mockResolvedValue(token);
+		const auth = vi.fn(async () => unwrapHook(config.auth));
+		const onReloadComplete = vi.fn<(event: ReloadCompleteEvent) => void>();
+		const controller = new RemoteRuntimeController(vi.fn(), onReloadComplete);
+		const oldConfig = {
+			...config,
+			auth,
+			lazy: true,
+			bindings: { AI: { type: "ai" as const } },
+		};
+		controller.onBundleComplete({
+			type: "bundleComplete",
+			config: oldConfig,
+			bundle,
+		});
+		await vi.advanceTimersByTimeAsync(0);
+		expect(onReloadComplete).toHaveBeenCalledOnce();
+
+		controller.onUpdateStart();
+		controller.onPreviewTokenExpired();
+		await vi.advanceTimersByTimeAsync(0);
+		expect(auth).toHaveBeenCalledOnce();
+		expect(createWorkerPreview).toHaveBeenCalledOnce();
+		expect(onReloadComplete).toHaveBeenCalledOnce();
+
+		const bindings = {
+			SEARCH: { type: "vectorize" as const, index_name: "new" },
+		};
+		controller.onBundleComplete({
+			type: "bundleComplete",
+			config: { ...oldConfig, bindings },
+			bundle,
+		});
+		await vi.advanceTimersByTimeAsync(0);
+		expect(onReloadComplete).toHaveBeenCalledTimes(2);
+		expect(onReloadComplete).toHaveBeenLastCalledWith(
+			expect.objectContaining({ config: expect.objectContaining({ bindings }) })
+		);
+		await controller.teardown();
+	});
+
+	it.for(["success", "failure"] as const)(
+		"discards queued expiry notifications after a lazy update while refresh auth awaits %s",
+		async (outcome, { expect }) => {
+			createPreviewSession.mockResolvedValue(session);
+			createWorkerPreview.mockResolvedValue(token);
+			const login = createDeferred<void>();
+			const auth = vi.fn(async () => unwrapHook(config.auth));
+			const onError = vi.fn();
+			const onReloadComplete = vi.fn<(event: ReloadCompleteEvent) => void>();
+			const controller = new RemoteRuntimeController(onError, onReloadComplete);
+			const lazyConfig = { ...config, auth, lazy: true };
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config: lazyConfig,
+				bundle,
+			});
+			await vi.advanceTimersByTimeAsync(0);
+			auth.mockImplementationOnce(async () => {
+				await login.promise;
+				if (outcome === "failure") {
+					throw new Error("Login cancelled for the previous bindings");
+				}
+				return unwrapHook(config.auth);
+			});
+			controller.onPreviewTokenExpired();
+			controller.onPreviewTokenExpired();
+			await vi.advanceTimersByTimeAsync(0);
+			expect(auth).toHaveBeenCalledTimes(2);
+
+			controller.onUpdateStart();
+			const bindings = { AI: { type: "ai" as const } };
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config: { ...lazyConfig, bindings },
+				bundle,
+			});
+			login.resolve();
+			await vi.advanceTimersByTimeAsync(0);
+			expect(auth).toHaveBeenCalledTimes(3);
+			expect(createPreviewSession).toHaveBeenCalledTimes(2);
+			expect(onReloadComplete).toHaveBeenCalledTimes(2);
+			expect(onReloadComplete).toHaveBeenLastCalledWith(
+				expect.objectContaining({
+					config: expect.objectContaining({ bindings }),
+				})
+			);
+			expect(onError).not.toHaveBeenCalled();
+			await controller.teardown();
+		}
+	);
+
+	it("does not play an old preview when Access authentication finishes after a lazy update", async ({
+		expect,
+	}) => {
+		createPreviewSession.mockResolvedValue(session);
+		createWorkerPreview.mockResolvedValue(token);
+		const accessHeaders = createDeferred<Record<string, string>>();
+		getAccessHeaders.mockImplementationOnce(() => accessHeaders.promise);
+		const onReloadComplete = vi.fn<(event: ReloadCompleteEvent) => void>();
+		const controller = new RemoteRuntimeController(vi.fn(), onReloadComplete);
+		const lazyConfig = { ...config, lazy: true };
+		controller.onBundleComplete({
+			type: "bundleComplete",
+			config: lazyConfig,
+			bundle,
+		});
+		await vi.advanceTimersByTimeAsync(0);
+		expect(getAccessHeaders).toHaveBeenCalledOnce();
+
+		controller.onUpdateStart();
+		accessHeaders.resolve({});
+		await vi.advanceTimersByTimeAsync(0);
+		expect(onReloadComplete).not.toHaveBeenCalled();
+
+		const bindings = { AI: { type: "ai" as const } };
+		controller.onBundleComplete({
+			type: "bundleComplete",
+			config: { ...lazyConfig, bindings },
+			bundle,
+		});
+		await vi.advanceTimersByTimeAsync(0);
+		expect(onReloadComplete).toHaveBeenCalledOnce();
+		expect(onReloadComplete).toHaveBeenLastCalledWith(
+			expect.objectContaining({ config: expect.objectContaining({ bindings }) })
+		);
+		await controller.teardown();
+	});
+
+	it("does not start login for a late binding notification after teardown", async ({
+		expect,
+	}) => {
+		const auth = vi.fn(async () => {
+			throw new Error("Login must not start after teardown");
+		});
+		const controller = new RemoteRuntimeController(vi.fn(), vi.fn());
+		await controller.teardown();
+		controller.onBundleComplete({
+			type: "bundleComplete",
+			config: { ...config, auth, lazy: true },
+			bundle,
+		});
+		await vi.advanceTimersByTimeAsync(0);
+		expect(auth).not.toHaveBeenCalled();
 	});
 
 	it("refreshes on the session deadline despite an update", async ({

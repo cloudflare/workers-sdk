@@ -9,12 +9,13 @@ import {
 	DurableObjectExpectingTransferExportSchema,
 	DurableObjectRenamedExportSchema,
 	DurableObjectTransferredExportSchema,
+	ExperimentalSchema,
 	FlagshipBindingSchema,
 	HyperdriveBindingSchema,
 	KnownBindingSchema,
-	KVBindingSchema,
+	KvBindingSchema,
 	ModuleTypeSchema,
-	OutputWorkerSchema,
+	BuildOutputWorkerConfigSchema,
 	QueueBindingSchema,
 	R2BindingSchema,
 	UnsafeBindingSchema,
@@ -22,6 +23,7 @@ import {
 	WorkerEntrypointExportSchema,
 	WorkflowBindingSchema,
 	WorkflowExportSchema,
+	ArtifactsEventSubscriptionSchema,
 	TailConsumerSchema,
 	validateSingletonBindings,
 } from "@cloudflare/config";
@@ -222,7 +224,14 @@ const HelloWorldBindingSchema = z.strictObject({
 });
 
 const MiniflareWorkflowBindingSchema = WorkflowBindingSchema.extend({
-	limits: z.strictObject({ steps: z.number().optional() }).optional(),
+	// Wrangler's legacy config puts Workflow settings on bindings. New config
+	// should declare them on exports instead.
+	unsafeConfig: z
+		.strictObject({
+			limits: z.strictObject({ steps: z.number().optional() }).optional(),
+			events: z.array(ArtifactsEventSubscriptionSchema).optional(),
+		})
+		.optional(),
 });
 
 // The miniflare-extended schemas below replace these base `@cloudflare/config`
@@ -260,7 +269,7 @@ const MiniflareKnownBindingSchema = z.discriminatedUnion("type", [
 	...PassthroughBindingSchemas,
 ]);
 
-const ParsedMiniflareKVBindingSchema = KVBindingSchema.omit({
+const ParsedMiniflareKvBindingSchema = KvBindingSchema.omit({
 	id: true,
 }).extend({
 	id: z.string(),
@@ -298,7 +307,7 @@ const ParsedMiniflareQueueBindingSchema = QueueBindingSchema.omit({
 });
 
 const OVERRIDDEN_PARSED_BINDING_SCHEMAS = [
-	KVBindingSchema,
+	KvBindingSchema,
 	D1BindingSchema,
 	FlagshipBindingSchema,
 	R2BindingSchema,
@@ -318,7 +327,7 @@ const ParsedPassthroughBindingSchemas =
 	>[];
 
 export const ParsedMiniflareKnownBindingSchema = z.discriminatedUnion("type", [
-	ParsedMiniflareKVBindingSchema,
+	ParsedMiniflareKvBindingSchema,
 	ParsedMiniflareD1BindingSchema,
 	ParsedMiniflareFlagshipBindingSchema,
 	ParsedMiniflareR2BindingSchema,
@@ -438,8 +447,16 @@ const MiniflareTailConsumerSchema = TailConsumerSchema.extend({
 	props: z.record(z.string(), z.unknown()).optional(),
 });
 
+/**
+ * Extends the config `experimental` table so streaming tail consumers accept
+ * the same miniflare-internal fields as regular tail consumers.
+ */
+const MiniflareExperimentalSchema = ExperimentalSchema.extend({
+	streamingTailConsumers: z.array(MiniflareTailConsumerSchema).optional(),
+});
+
 // ---------------------------------------------------------------------------
-// Worker config schema (extends OutputWorkerSchema)
+// Worker config schema (extends BuildOutputWorkerConfigSchema)
 // ---------------------------------------------------------------------------
 
 /** A single parsed `config.env` binding (known, miniflare-extended, or unsafe). */
@@ -454,22 +471,25 @@ export function isMiniflareUnsafeBinding(
 	return binding.type.startsWith("unsafe:");
 }
 
-export const MiniflareWorkerConfigBaseSchema = OutputWorkerSchema.omit({
-	manifest: true,
-	env: true,
-	exports: true,
-	assets: true,
-	tailConsumers: true,
-}).extend({
-	manifest: MiniflareManifestSchema.optional(),
-	env: z
-		.record(z.string(), MiniflareBindingSchema)
-		.superRefine(validateSingletonBindings)
-		.optional(),
-	exports: MiniflareExportsSchema.optional(),
-	assets: MiniflareAssetsSchema.optional(),
-	tailConsumers: z.array(MiniflareTailConsumerSchema).optional(),
-});
+export const MiniflareWorkerConfigBaseSchema =
+	BuildOutputWorkerConfigSchema.omit({
+		manifest: true,
+		env: true,
+		exports: true,
+		assets: true,
+		tailConsumers: true,
+		experimental: true,
+	}).extend({
+		manifest: MiniflareManifestSchema.optional(),
+		env: z
+			.record(z.string(), MiniflareBindingSchema)
+			.superRefine(validateSingletonBindings)
+			.optional(),
+		exports: MiniflareExportsSchema.optional(),
+		assets: MiniflareAssetsSchema.optional(),
+		tailConsumers: z.array(MiniflareTailConsumerSchema).optional(),
+		experimental: MiniflareExperimentalSchema.optional(),
+	});
 
 export type ParsedMiniflareWorkerConfig = Omit<
 	z.output<typeof MiniflareWorkerConfigBaseSchema>,
@@ -779,6 +799,13 @@ export const InstanceOptionsSchema = z.strictObject({
 		.optional(),
 	unsafeTriggerHandlers: z.boolean().optional(),
 	unsafeRuntimeEnv: z.record(z.string(), z.string()).optional(),
+	/**
+	 * Additional trusted Host and Origin hostnames for /cdn-cgi/* requests.
+	 * A leading dot also allows subdomains (e.g. ".example.com" allows both
+	 * "example.com" and "app.example.com"). Localhost, routes, and upstream
+	 * hostnames remain allowed.
+	 */
+	unsafeCdnCgiAllowedHosts: z.array(z.string()).optional(),
 	unsafeLocalExplorer: z.boolean().optional(),
 	// Turn on local-dev observability: attach the trace collector to the
 	// user's worker(s) so it receives their tail events.

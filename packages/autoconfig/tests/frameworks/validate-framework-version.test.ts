@@ -173,6 +173,57 @@ describe("Framework.validateFrameworkVersion()", () => {
 		}
 	);
 
+	it.for([
+		{ target: "cf", version: "2.0.0", throws: false },
+		{ target: "cf", version: "1.3.2", throws: true },
+		{ target: "wrangler", version: "1.3.2", throws: false },
+	] as const)(
+		"checks the SolidStart version for $target ($version)",
+		({ target, version, throws }, { expect }) => {
+			vi.mocked(getInstalledPackageVersion).mockReturnValue(version);
+			const framework = new TestFramework({
+				id: "solid-start",
+				name: "Solid Start",
+			});
+			const packageInfo = getFrameworkPackageInfo("solid-start", target);
+			if (packageInfo === undefined) {
+				throw new Error("Expected SolidStart to have package information");
+			}
+
+			const validate = () =>
+				framework.validateFrameworkVersion("/project", packageInfo, context);
+			if (throws) {
+				expect(validate).toThrow(AutoConfigFrameworkConfigurationError);
+			} else {
+				expect(validate).not.toThrow();
+			}
+		}
+	);
+
+	it.for([
+		{ target: "cf", version: "7.0.0", throws: false },
+		{ target: "cf", version: "6.3.5", throws: true },
+		{ target: "wrangler", version: "6.3.5", throws: false },
+	] as const)(
+		"checks the Vite version for $target ($version)",
+		({ target, version, throws }, { expect }) => {
+			vi.mocked(getInstalledPackageVersion).mockReturnValue(version);
+			const framework = new TestFramework({ id: "vite", name: "Vite" });
+			const packageInfo = getFrameworkPackageInfo("vite", target);
+			if (packageInfo === undefined) {
+				throw new Error("Expected Vite to have package information");
+			}
+
+			const validate = () =>
+				framework.validateFrameworkVersion("/project", packageInfo, context);
+			if (throws) {
+				expect(validate).toThrow(AutoConfigFrameworkConfigurationError);
+			} else {
+				expect(validate).not.toThrow();
+			}
+		}
+	);
+
 	it("does not warn for Astro 7", ({ expect }) => {
 		vi.mocked(getInstalledPackageVersion).mockReturnValue("7.3.0");
 		const framework = new TestFramework({ id: "astro", name: "Astro" });

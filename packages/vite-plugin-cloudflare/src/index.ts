@@ -1,22 +1,23 @@
 import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import { ConfigChangeCoordinator } from "./config-change-coordinator";
-import { getDevContainerCleanup } from "./container-cleanup";
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
 import { additionalModulesPlugin } from "./plugins/additional-modules";
-import { agentHintPlugin } from "./plugins/agent-hint";
 import { buildOutputPlugin } from "./plugins/build-output";
 import { configPlugin } from "./plugins/config";
 import { debugPlugin } from "./plugins/debug";
-import { devPlugin } from "./plugins/dev";
 import {
 	nodeJsAlsPlugin,
 	nodeJsCompatPlugin,
 	nodeJsCompatWarningsPlugin,
 } from "./plugins/nodejs-compat";
-import { previewPlugin } from "./plugins/preview";
 import { rscPlugin } from "./plugins/rsc";
-import { shortcutsPlugin } from "./plugins/shortcuts";
+import {
+	agentHintPlugin,
+	devPlugin,
+	previewPlugin,
+	shortcutsPlugin,
+} from "./plugins/runtime";
 import { triggerHandlersPlugin } from "./plugins/trigger-handlers";
 import { tunnelPlugin } from "./plugins/tunnel";
 import {
@@ -50,11 +51,9 @@ export function getLocalWorkerdCompatibilityDate(_options?: {
 
 export type {
 	CloudflareConfig,
-	// eslint-disable-next-line @typescript-eslint/no-deprecated -- Preserve the deprecated public type for compatibility.
-	ParsedInputConfigWithWorker,
 	PluginConfig,
+	WorkerConfig,
 } from "./plugin-config";
-export type { WorkerConfig } from "@cloudflare/config";
 
 const sharedContext: SharedContext = {
 	configChangeCoordinator: new ConfigChangeCoordinator(),
@@ -87,29 +86,33 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			},
 			async configureServer(viteDevServer) {
 				ctx.configChangeCoordinator.registerServer(ctx, viteDevServer);
-				const containerCleanup = getDevContainerCleanup(viteDevServer);
 
-				// Coordinate Cloudflare state and Container cleanup around Vite restarts.
+				// Patch the `server.restart` method to track whether the server is restarting or not.
+				// The dev plugin keeps the Miniflare instance across a restart for the restarted
+				// server to reuse, so dispose it if the restarted config drops the dev plugin.
 				const restartServer = viteDevServer.restart.bind(viteDevServer);
-				viteDevServer.restart = () =>
-					containerCleanup.restart(async () => {
-						try {
-							ctx.beginRestartingDevServer();
-							debuglog("From server.restart(): Restarting server...");
-							await restartServer();
-							if (
-								!viteDevServer.config.plugins.some(
-									(plugin) => plugin.name === "vite-plugin-cloudflare:dev"
-								)
-							) {
-								containerCleanup.attachToClose(viteDevServer);
+				viteDevServer.restart = async () => {
+					try {
+						ctx.beginRestartingDevServer();
+						debuglog("From server.restart(): Restarting server...");
+						await restartServer();
+						if (
+							!viteDevServer.config.plugins.some(
+								(plugin) => plugin.name === "vite-plugin-cloudflare:dev"
+							)
+						) {
+							try {
+								await ctx.disposeMiniflare();
+							} catch (error) {
+								debuglog("Failed to dispose Miniflare instance:", error);
 							}
-							debuglog("From server.restart(): Restarted server...");
-						} finally {
-							ctx.endRestartingDevServer();
-							ctx.configChangeCoordinator.restartCompleted();
 						}
-					});
+						debuglog("From server.restart(): Restarted server...");
+					} finally {
+						ctx.endRestartingDevServer();
+						ctx.configChangeCoordinator.restartCompleted();
+					}
+				};
 			},
 		},
 		configPlugin(ctx),

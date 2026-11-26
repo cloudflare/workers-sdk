@@ -28,12 +28,9 @@ import {
 	WORKER_NAME_PREFIX,
 } from "./helpers";
 import { createLoopbackHandler } from "./loopback";
+import { waitForMiniflareReady } from "./miniflare-startup";
 import { handleModuleFallbackRequest } from "./module-fallback";
-import type {
-	ProjectWorkers,
-	WorkersPoolOptions,
-	WorkersPoolOptionsWithDefines,
-} from "./config";
+import type { ProjectWorkers, WorkersPoolOptionsWithDefines } from "./config";
 import type {
 	MiniflareOptions,
 	WorkerdStructuredLog,
@@ -544,7 +541,7 @@ function getModuleFallbackService(ctx: Vitest): ModuleFallbackService {
 async function buildProjectMiniflareOptions(
 	ctx: Vitest,
 	project: TestProject,
-	customOptions: WorkersPoolOptions,
+	customOptions: WorkersPoolOptionsWithDefines,
 	main: string | undefined
 ): Promise<MiniflareOptions> {
 	const moduleFallbackService = getModuleFallbackService(ctx);
@@ -584,6 +581,7 @@ async function buildProjectMiniflareOptions(
 		...SHARED_MINIFLARE_OPTIONS,
 		verbose: customOptions.verbose ?? true,
 		inspectorPort,
+		containerEngine: customOptions.containerEngine,
 		unsafeModuleFallbackService: moduleFallbackService,
 		workers: [runnerWorker, ...auxiliaryWorkers],
 	};
@@ -607,9 +605,7 @@ export async function getProjectMiniflare(
 			`Starting inspector on port ${mfOptions.inspectorPort} for ${getRelativeProjectPath(project)}`
 		);
 	}
-	const mf = new Miniflare(mfOptions);
-	await mf.ready;
-	return mf;
+	return waitForMiniflareReady(new Miniflare(mfOptions));
 }
 
 export function maybeGetResolvedMainPath(

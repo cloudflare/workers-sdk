@@ -17,7 +17,7 @@ import {
 	updateFlag,
 } from "./client";
 import type { EvaluationResult, Flag, FlagInput, Page } from "./client";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type { FlagshipAdmin } from "miniflare";
 
 export interface FlagStore {

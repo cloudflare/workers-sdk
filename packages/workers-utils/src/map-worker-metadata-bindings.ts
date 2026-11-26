@@ -169,6 +169,16 @@ export function mapWorkerMetadataBindings(
 						];
 						break;
 					}
+					case "realtimekit": {
+						configObj.realtimekit = [
+							...(configObj.realtimekit ?? []),
+							{
+								binding: binding.name,
+								app_id: binding.app_id,
+							},
+						];
+						break;
+					}
 					case "service":
 						{
 							configObj.services = [
@@ -427,6 +437,18 @@ export function mapWorkerMetadataBindings(
 									{ binding: binding.name, network_id: binding.network_id },
 								];
 							}
+						}
+						break;
+					case "oidc_token":
+						{
+							configObj.oidc_tokens = [
+								...(configObj.oidc_tokens ?? []),
+								{
+									binding: binding.name,
+									audience: binding.audience,
+									...(binding.alg !== undefined && { alg: binding.alg }),
+								},
+							];
 						}
 						break;
 					default: {

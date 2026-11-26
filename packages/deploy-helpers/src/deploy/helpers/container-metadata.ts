@@ -1,18 +1,15 @@
 import assert from "node:assert";
 import { isDeepStrictEqual } from "node:util";
+import { UserError } from "@cloudflare/workers-utils";
 import {
 	getResolvedDurableObjectContainerApps,
 	isDurableObjectContainerApp,
-	UserError,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import { fetchVersions } from "./versions-api";
 import type { ContainerlessConfig } from "../../shared/types";
 import type { ApiDeployment } from "./versions-types";
-import type {
-	CfWorkerInit,
-	ContainerApp,
-	Exports,
-} from "@cloudflare/workers-utils";
+import type { CfWorkerInit } from "@cloudflare/workers-utils";
+import type { ContainerApp, Exports } from "@cloudflare/workers-utils/config";
 
 type ContainerImages = Record<string, Record<string, string>>;
 

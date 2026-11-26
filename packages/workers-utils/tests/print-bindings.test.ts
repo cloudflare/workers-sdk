@@ -47,6 +47,43 @@ describe("printBindings", () => {
 		expect(output).toContain("local [connected]");
 	});
 
+	test("labels RealtimeKit bindings as remote when `remote: true` is set", ({
+		expect,
+	}) => {
+		const output = captureBindings(
+			{
+				RTK: {
+					type: "realtimekit",
+					app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+					remote: true,
+				},
+			},
+			{ local: true }
+		);
+
+		expect(output).toMatch(
+			/env\.RTK \(2da1c5c6-8e8f-4119-b89e-18558e051486\)\s+RealtimeKit\s+remote/
+		);
+	});
+
+	test("labels RealtimeKit bindings as unsupported without `remote: true`", ({
+		expect,
+	}) => {
+		const output = captureBindings(
+			{
+				RTK: {
+					type: "realtimekit",
+					app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+				},
+			},
+			{ local: true }
+		);
+
+		expect(output).toMatch(
+			/env\.RTK \(2da1c5c6-8e8f-4119-b89e-18558e051486\)\s+RealtimeKit\s+not supported/
+		);
+	});
+
 	test.for([undefined, true])(
 		"labels K2 bindings as remote in local development with remote=%s",
 		(remote, { expect }) => {
@@ -80,8 +117,45 @@ describe("printBindings", () => {
 		expect(output).toMatch(/K2 Stream\s+not supported/);
 	});
 
+	test("prints OIDC token bindings with their audience and alg", ({
+		expect,
+	}) => {
+		const output = captureBindings({
+			API_TOKEN: { type: "oidc_token", audience: "https://api.example.com" },
+			RSA_TOKEN: {
+				type: "oidc_token",
+				audience: "api://token-exchange",
+				alg: "RS256",
+			},
+		});
+
+		expect(output).toMatch(
+			/env\.API_TOKEN \(https:\/\/api\.example\.com\)\s+OIDC Token/
+		);
+		expect(output).toMatch(
+			/env\.RSA_TOKEN \(api:\/\/token-exchange, RS256\)\s+OIDC Token/
+		);
+	});
+
+	test.for([false, true])(
+		"labels OIDC token bindings as unsupported in local development with remote bindings disabled=%s",
+		(remoteBindingsDisabled, { expect }) => {
+			const output = captureBindings(
+				{
+					API_TOKEN: {
+						type: "oidc_token",
+						audience: "https://api.example.com",
+					},
+				},
+				{ local: true, remoteBindingsDisabled }
+			);
+
+			expect(output).toMatch(/OIDC Token\s+not supported/);
+		}
+	);
+
 	test.for([
-		{ label: "default", remote: undefined, disabled: false, mode: "remote" },
+		{ label: "default", remote: undefined, disabled: false, mode: "local" },
 		{ label: "explicit local", remote: false, disabled: false, mode: "local" },
 		{ label: "explicit remote", remote: true, disabled: false, mode: "remote" },
 		{

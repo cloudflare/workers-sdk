@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { Miniflare } from "miniflare";
+import { createAuthForProfile, resolveAuthProfile } from "./auth";
 import { getInitialWorkerNameToExportTypesMap } from "./export-types";
 import { debuglog } from "./utils";
 import type { ConfigChangeCoordinator } from "./config-change-coordinator";
@@ -15,10 +15,12 @@ import type {
 } from "./plugin-config";
 import type {
 	ModuleType,
-	ParsedInputWorkerConfig,
-	ParsedOutputWorkerConfig,
+	ParsedWorkerConfig,
+	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
-import type { MiniflareOptions } from "miniflare";
+import type { CloudflareAuth } from "@cloudflare/workers-auth/cf";
+import type { Logger } from "@cloudflare/workers-utils";
+import type { Miniflare, MiniflareOptions } from "miniflare";
 import type * as vite from "vite";
 
 /**
@@ -34,6 +36,8 @@ export interface SharedContext {
 	configChangeCoordinator?: ConfigChangeCoordinator;
 	/** Allowed hostnames for tunnel connections */
 	tunnelHostnames: Set<string>;
+	/** Auth instance shared by features within the same Vite project. */
+	auth?: CloudflareAuth;
 }
 
 /** An explicitly typed additional module emitted by a Vite environment. */
@@ -51,6 +55,7 @@ export class PluginContext {
 	#sharedContext: SharedContext;
 	#resolvedPluginConfig?: ResolvedPluginConfig;
 	#resolvedViteConfig?: vite.ResolvedConfig;
+	#previousOutputHadContainers = false;
 	#environmentNameToAdditionalModules = new Map<
 		string,
 		Map<string, ModuleType>
@@ -60,8 +65,17 @@ export class PluginContext {
 		this.#sharedContext = sharedContext;
 	}
 
+	getCloudflareAuth(profileDir: string, logger: Logger): CloudflareAuth {
+		const profile = resolveAuthProfile(profileDir, logger);
+		if (this.#sharedContext.auth?.getActiveProfile() !== profile) {
+			this.#sharedContext.auth = createAuthForProfile(profile, logger);
+		}
+		return this.#sharedContext.auth;
+	}
+
 	/** Creates a new Miniflare instance or updates the existing instance */
 	async startOrUpdateMiniflare(options: MiniflareOptions): Promise<void> {
+		const { Miniflare } = await import("miniflare");
 		if (!this.#sharedContext.miniflare) {
 			debuglog("Creating new Miniflare instance");
 			this.#sharedContext.miniflare = new Miniflare(options);
@@ -75,11 +89,15 @@ export class PluginContext {
 	/**
 	 * Disposes the Miniflare instance and clears the export types it was configured with.
 	 * A server created later in the same process starts again from its own config.
+	 * The shared instance is cleared before it is disposed, so that overlapping calls,
+	 * such as from concurrent restarts, dispose it only once.
 	 */
 	async disposeMiniflare(): Promise<void> {
-		await this.#sharedContext.miniflare?.dispose();
+		const miniflare = this.#sharedContext.miniflare;
 		this.#sharedContext.miniflare = undefined;
 		this.#sharedContext.workerNameToExportTypesMap = undefined;
+		this.#sharedContext.auth = undefined;
+		await miniflare?.dispose();
 	}
 
 	get miniflare(): Miniflare {
@@ -176,6 +194,19 @@ export class PluginContext {
 		this.#resolvedViteConfig = resolvedViteConfig;
 	}
 
+	/**
+	 * Records that the Build Output tree cleaned at the start of this build held
+	 * Container output. It stays set if the config is resolved again after the
+	 * tree has been cleaned.
+	 */
+	setPreviousOutputHadContainers(): void {
+		this.#previousOutputHadContainers = true;
+	}
+
+	get previousOutputHadContainers(): boolean {
+		return this.#previousOutputHadContainers;
+	}
+
 	get resolvedViteConfig(): vite.ResolvedConfig {
 		assert(
 			this.#resolvedViteConfig,
@@ -228,9 +259,7 @@ export class PluginContext {
 		return this.#getWorker(environmentName)?.config;
 	}
 
-	getWorkerNewConfig(
-		environmentName: string
-	): ParsedInputWorkerConfig | undefined {
+	getWorkerNewConfig(environmentName: string): ParsedWorkerConfig | undefined {
 		return this.#getWorker(environmentName)?.config;
 	}
 
@@ -282,7 +311,7 @@ export class PluginContext {
 	}
 
 	get allWorkerConfigs(): Array<
-		ParsedInputWorkerConfig | ParsedOutputWorkerConfig
+		ParsedWorkerConfig | ParsedBuildOutputWorkerConfig
 	> {
 		if (this.resolvedPluginConfig.type === "preview") {
 			return this.resolvedPluginConfig.workers.map((worker) => worker.config);

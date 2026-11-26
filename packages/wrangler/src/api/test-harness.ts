@@ -3,12 +3,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
+import { splitSqlQuery, UserError } from "@cloudflare/workers-utils";
 import {
 	convertConfigToBindings,
 	normalizeAndValidateConfig,
-	splitSqlQuery,
-	UserError,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import {
 	WorkflowInstanceIntrospectorHandle,
 	WorkflowIntrospectorHandle,
@@ -47,7 +46,7 @@ import type {
 	FetcherScheduledOptions,
 	FetcherScheduledResult,
 } from "@cloudflare/workers-types/experimental";
-import type { Config, RawConfig } from "@cloudflare/workers-utils";
+import type { Config, RawConfig } from "@cloudflare/workers-utils/config";
 import type {
 	WorkflowBinding,
 	WorkflowInstanceIntrospector,
@@ -1170,10 +1169,24 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					);
 
 					try {
-						const ids = await miniflare.listDurableObjectIds(
-							classNameOrBindingName,
-							workerName
-						);
+						// A binding name first, then a class this Worker exports, as
+						// Miniflare resolved them when it took either
+						const binding = getWorkerDevEnv(session, workerName).config
+							.latestConfig?.bindings?.[classNameOrBindingName];
+						const durableObject =
+							binding?.type === "durable_object_namespace"
+								? binding
+								: undefined;
+						const scriptName = durableObject?.script_name ?? workerName;
+						// The harness keeps no storage for a Worker it doesn't run
+						const ids = session.devEnvs.some(
+							(devEnv) => devEnv.config.latestConfig?.name === scriptName
+						)
+							? await miniflare.listDurableObjectIds(
+									durableObject?.class_name ?? classNameOrBindingName,
+									scriptName
+								)
+							: [];
 						debugLog(
 							`durable object ids - ${classNameOrBindingName} - completed (${ids.length} found)`,
 							workerName

@@ -9,8 +9,8 @@ import type {
 	PreviewOptions,
 } from "../src/preview/preview";
 import type {
-	ParsedOutputRootConfig,
-	ParsedOutputWorkerConfig,
+	ParsedBuildOutputRootConfig,
+	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
 
 const mocks = vi.hoisted(() => ({
@@ -78,8 +78,8 @@ const buildResult: PreviewBuildOutput["buildResult"] = {
 const validRootConfig = { buildContext: { isPreview: true } } as const;
 
 function buildOutputConfig(
-	overrides: Partial<ParsedOutputWorkerConfig> = {}
-): ParsedOutputWorkerConfig {
+	overrides: Partial<ParsedBuildOutputWorkerConfig> = {}
+): ParsedBuildOutputWorkerConfig {
 	return {
 		name: "preview-worker",
 		compatibilityDate: "2026-09-17",
@@ -88,7 +88,7 @@ function buildOutputConfig(
 }
 
 function uploadPreview(
-	config: ParsedOutputWorkerConfig,
+	config: ParsedBuildOutputWorkerConfig,
 	assets?: PreviewBuildOutput["assets"]
 ) {
 	return previewBuildOutput(
@@ -654,6 +654,125 @@ describe("previewBuildOutput", () => {
 		expect(request.env).toEqual({ API_KEY: { type: "inherit" } });
 	});
 
+	it("uploads secrets from a secrets file", async ({ expect }) => {
+		writeFileSync(".env.preview", "API_KEY=new-key\nTOKEN=token\n");
+		mocks.getPreviewDeployment.mockResolvedValue({
+			...deploymentResource,
+			env: { API_KEY: { type: "secret_text" } },
+		});
+		mocks.createPreviewDeployment.mockResolvedValue({
+			...deploymentResource,
+			env: { TOKEN: { type: "secret_text", text: "token" } },
+		});
+
+		const result = await previewBuildOutput(
+			"account-id",
+			{ name: "feature", json: true, secretsFile: ".env.preview" },
+			{
+				workerConfig: buildOutputConfig(),
+				rootConfig: validRootConfig,
+				buildResult,
+			}
+		);
+
+		const request = mocks.createPreviewDeployment.mock.calls[0]?.[4];
+		expect(request.env).toEqual({
+			API_KEY: { type: "secret_text", text: "new-key" },
+			TOKEN: { type: "secret_text", text: "token" },
+		});
+		expect(result.deployment.env).toEqual({ TOKEN: { type: "secret_text" } });
+	});
+
+	it("recovers when concurrent builds create the same Preview name", async ({
+		expect,
+	}) => {
+		let previewExists = false;
+		let initialReads = 0;
+		let releaseReads: () => void = () => {};
+		const initialReadsComplete = new Promise<void>((resolve) => {
+			releaseReads = resolve;
+		});
+
+		mocks.getPreview.mockImplementation(async () => {
+			if (!previewExists) {
+				initialReads++;
+				if (initialReads === 2) {
+					releaseReads();
+				}
+				await initialReadsComplete;
+				throw Object.assign(new Error("Preview not found"), { code: 10025 });
+			}
+			return previewResource;
+		});
+		mocks.createPreview.mockImplementation(async () => {
+			if (previewExists) {
+				throw Object.assign(new Error("Preview name already exists"), {
+					code: 100338,
+				});
+			}
+			previewExists = true;
+			return previewResource;
+		});
+
+		const output = buildOutputConfig({
+			observability: { enabled: true },
+		});
+		const results = await Promise.all([
+			uploadPreview(output),
+			uploadPreview(output),
+		]);
+
+		expect(results.map(({ isNewPreview }) => isNewPreview)).toEqual([
+			true,
+			false,
+		]);
+		expect(mocks.getPreview).toHaveBeenCalledTimes(3);
+		expect(mocks.createPreview).toHaveBeenCalledTimes(2);
+		expect(mocks.editPreview).toHaveBeenCalledWith(
+			expect.anything(),
+			"account-id",
+			"preview-worker",
+			"feature",
+			{ observability: { enabled: true } }
+		);
+		expect(mocks.createPreviewDeployment).toHaveBeenCalledTimes(2);
+	});
+
+	it("preserves a non-conflict create Preview error", async ({ expect }) => {
+		mocks.getPreview.mockRejectedValueOnce(
+			Object.assign(new Error("Preview not found"), { code: 10025 })
+		);
+		mocks.createPreview.mockRejectedValueOnce(
+			Object.assign(new Error("Permission denied"), { code: 10000 })
+		);
+
+		await expect(uploadPreview(buildOutputConfig())).rejects.toThrow(
+			"Permission denied"
+		);
+		expect(mocks.getPreview).toHaveBeenCalledOnce();
+		expect(mocks.createPreviewDeployment).not.toHaveBeenCalled();
+	});
+
+	it("fails safely when a conflicting Preview still cannot be read", async ({
+		expect,
+	}) => {
+		mocks.getPreview.mockRejectedValue(
+			Object.assign(new Error("Preview not found"), { code: 10025 })
+		);
+		mocks.createPreview.mockRejectedValueOnce(
+			Object.assign(new Error("Preview name already exists"), {
+				code: 100338,
+			})
+		);
+
+		await expect(uploadPreview(buildOutputConfig())).rejects.toThrow(
+			"Preview not found"
+		);
+		expect(mocks.createPreview).toHaveBeenCalledOnce();
+		expect(mocks.getPreview).toHaveBeenCalledTimes(2);
+		expect(mocks.createPreviewDeployment).not.toHaveBeenCalled();
+	});
+
 	it("does not look up the latest deployment of a new Preview", async ({
 		expect,
 	}) => {
@@ -678,7 +797,7 @@ describe("previewBuildOutput", () => {
 		expect(mocks.createPreviewDeployment).not.toHaveBeenCalled();
 	});
 
-	it.for<[string, ParsedOutputRootConfig | undefined]>([
+	it.for<[string, ParsedBuildOutputRootConfig | undefined]>([
 		["missing", undefined],
 		["non-Preview", { buildContext: { isPreview: false } }],
 	])("rejects $0 Preview intent", async ([, rootConfig], { expect }) => {
@@ -697,7 +816,7 @@ describe("previewBuildOutput", () => {
 		expect(mocks.getPreview).not.toHaveBeenCalled();
 	});
 
-	it.for<NonNullable<ParsedOutputWorkerConfig["domains"]>>([
+	it.for<NonNullable<ParsedBuildOutputWorkerConfig["domains"]>>([
 		["example.com"],
 		[{ hostname: "example.com", production: true, previews: false }],
 		[{ hostname: "previews.example.com", production: false, previews: true }],
@@ -728,11 +847,15 @@ describe("previewBuildOutput", () => {
 		expect(config.domains).toEqual(domains);
 	});
 
-	it.for<[string, Partial<ParsedOutputWorkerConfig>]>([
+	it.for<[string, Partial<ParsedBuildOutputWorkerConfig>]>([
 		["triggers", { triggers: [{ type: "scheduled", schedule: "0 * * * *" }] }],
 		[
 			"streaming tail consumers",
-			{ tailConsumers: [{ worker: "tail-worker", streaming: true }] },
+			{
+				experimental: {
+					streamingTailConsumers: [{ worker: "tail-worker" }],
+				},
+			},
 		],
 		["unsafe metadata", { unsafe: { metadata: { custom: true } } }],
 		[

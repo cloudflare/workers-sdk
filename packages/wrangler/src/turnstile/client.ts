@@ -1,6 +1,6 @@
 import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { requireAuth } from "../user";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export const WidgetModes = ["managed", "invisible", "non-interactive"] as const;
 export type WidgetMode = (typeof WidgetModes)[number];

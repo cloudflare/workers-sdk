@@ -1,5 +1,5 @@
 import type { WorkerOptions } from "./schema";
-import type { ParsedInputWorkerConfig } from "@cloudflare/config";
+import type { ParsedWorkerConfig } from "@cloudflare/config";
 
 type MiniflareEnv = NonNullable<WorkerOptions["config"]["env"]>;
 
@@ -13,8 +13,12 @@ export interface ResolveLocalBindingsOptions {
 	 * provided.
 	 */
 	devVars?: Record<string, string>;
-	/** The mode, used to name mode-specific files in the missing secrets warning. */
-	mode: string;
+	/**
+	 * The mode, used to name mode-specific files in the missing secrets warning.
+	 * When it's `undefined`, the warning names only the files that are read in
+	 * every mode.
+	 */
+	mode: string | undefined;
 	/** Whether remote binding sessions are enabled. Defaults to `true`. */
 	remoteBindings?: boolean;
 	/** Receives the warning about declared secrets without a local value. */
@@ -24,7 +28,7 @@ export interface ResolveLocalBindingsOptions {
 /**
  * Resolves local binding values from the loaded local env. This replaces
  * declared secret placeholders with text bindings, applies Hyperdrive
- * connection-string overrides, and resolves the Artifacts `dev.remote` default. Missing secrets are omitted, with a warning, so
+ * connection-string overrides. Missing secrets are omitted, with a warning, so
  * Miniflare doesn't receive an unresolved deployment-only placeholder.
  *
  * @param configuredBindings The Worker's configured bindings.
@@ -32,7 +36,7 @@ export interface ResolveLocalBindingsOptions {
  * @returns The complete bindings.
  */
 export function resolveLocalBindings(
-	configuredBindings: ParsedInputWorkerConfig["env"],
+	configuredBindings: ParsedWorkerConfig["env"],
 	options: ResolveLocalBindingsOptions
 ): NonNullable<WorkerOptions["config"]["env"]> {
 	const { localEnv, devVars, mode, remoteBindings = true } = options;
@@ -61,18 +65,6 @@ export function resolveLocalBindings(
 			continue;
 		}
 
-		// Artifacts uses the deployed resource unless `dev.remote` is `false`.
-		// Miniflare routes a binding remotely only for an explicit
-		// `dev.remote: true`, so resolve the default here, where it is known
-		// whether remote bindings are enabled.
-		if (binding.type === "artifacts") {
-			bindings[name] =
-				binding.dev?.remote === undefined
-					? { ...binding, dev: { ...binding.dev, remote: remoteBindings } }
-					: binding;
-			continue;
-		}
-
 		if (binding.type === "secret") {
 			const localValue = localValues[name];
 			if (localValue !== undefined) {
@@ -87,10 +79,13 @@ export function resolveLocalBindings(
 	}
 
 	if (missingSecrets.length > 0) {
+		const devVarsForMode = mode === undefined ? "" : `\`.dev.vars.${mode}\`, `;
+		const envForMode =
+			mode === undefined ? "" : `\`.env.${mode}.local\`, \`.env.${mode}\`, `;
 		options.logger.warn(
 			`Missing required secrets for Worker "${options.workerName}": ${missingSecrets.join(", ")}. ` +
-				`Add them to one of \`.dev.vars.${mode}\`, \`.dev.vars\`, ` +
-				`\`.env.${mode}.local\`, \`.env.${mode}\`, \`.env.local\`, or \`.env\`. ` +
+				`Add them to one of ${devVarsForMode}\`.dev.vars\`, ` +
+				`${envForMode}\`.env.local\`, or \`.env\`. ` +
 				"Alternatively, set them as environment variables."
 		);
 	}

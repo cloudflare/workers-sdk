@@ -6,7 +6,7 @@ const config = defineWorker({
 	compatibilityDate: "2025-04-28",
 	env: {
 		ORDERS: bindings.k2({
-			stream: "0123456789abcdef0123456789abcdef",
+			id: "0123456789abcdef0123456789abcdef",
 		}),
 	},
 });

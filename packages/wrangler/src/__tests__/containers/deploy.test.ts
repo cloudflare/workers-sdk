@@ -41,7 +41,7 @@ import type {
 	CreateDurableObjectApplicationRequest,
 	ImageRegistryCredentialsConfiguration,
 } from "@cloudflare/containers-shared";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 import type { ChildProcess } from "node:child_process";
 import type { ExpectStatic } from "vitest";
 
@@ -1085,6 +1085,12 @@ describe("wrangler deploy with containers", () => {
 		});
 
 		await runWrangler("deploy index.js");
+
+		expect(vi.mocked(spawn).mock.lastCall?.[1]).toEqual([
+			"image",
+			"rm",
+			`my-container:${TEST_CONTAINER_BUILD_TAG}`,
+		]);
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
@@ -5066,13 +5072,13 @@ function createDockerMockChain(
 			localTag,
 			tag
 		),
-		mockDockerImageDelete(expect, containerName, localTag),
 		mockDockerPush(expect, "some-account-id/" + containerName, tag),
 		mockDockerImageInspectDigestsForImage(
 			expect,
 			`${getCloudflareContainerRegistry()}/some-account-id/${containerName}:${tag}`,
 			`${getCloudflareContainerRegistry()}/some-account-id/${containerName}@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`
 		),
+		mockDockerImageDelete(expect, containerName, localTag),
 	];
 
 	return mocks;

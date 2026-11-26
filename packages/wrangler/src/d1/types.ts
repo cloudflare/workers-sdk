@@ -50,6 +50,7 @@ export type DatabaseCreationResult = {
 export type DatabaseInfo = {
 	uuid: string;
 	name: string;
+	jurisdiction?: string;
 	version: "alpha" | "beta" | "production";
 	num_tables: number;
 	file_size: number;

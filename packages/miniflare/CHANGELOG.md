@@ -1,5 +1,349 @@
 # miniflare
 
+## 5.20261123.1-beta
+
+### Minor Changes
+
+- [#17133](https://github.com/cloudflare/workers-sdk/pull/17133) [`3d228ba`](https://github.com/cloudflare/workers-sdk/commit/3d228ba0f1b155e96f3ab09e1a467937e1d51051) Thanks [@edmundhung](https://github.com/edmundhung)! - List Durable Object IDs by the class the Worker exports
+
+  `listDurableObjectIds()` now takes the Durable Object class and the Worker that exports it, as in `mf.listDurableObjectIds("Counter", "my-worker")`. This is a breaking change in v5 beta: a binding name now throws `No Durable Object class named …`, unless the Worker also exports a class with that name, in which case that class's IDs are listed.
+
+## 5.20261123.0-beta
+
+### Minor Changes
+
+- [#17129](https://github.com/cloudflare/workers-sdk/pull/17129) [`5b45f32`](https://github.com/cloudflare/workers-sdk/commit/5b45f32b75e40540f6be934978e48b2cd816ed42) Thanks [@edmundhung](https://github.com/edmundhung)! - Support `captions.get()` and `customerCode` in the local Stream binding
+
+  The local Stream binding now implements the Stream fields added in `@cloudflare/workers-types`. `captions.get(language)` returns the stored WebVTT file for an uploaded caption. Generated captions have no content in local mode, so they return an empty WebVTT file, and a missing caption throws `NotFoundError` as the API does. Videos also include `customerCode`, set to `"placeholder"` to match the placeholder subdomain in local playback URLs.
+
+- [#17024](https://github.com/cloudflare/workers-sdk/pull/17024) [`00413bb`](https://github.com/cloudflare/workers-sdk/commit/00413bbb0decc8d3282a7bc5259d629614e66876) Thanks [@edmundhung](https://github.com/edmundhung)! - Start even when a binding refers to a Worker that isn't running
+
+  A service, Durable Object or Workflow binding to a Worker that isn't running now always fails only when it's used, and events sent to a tail consumer that isn't running are dropped. Before, Miniflare failed to start when the dev registry was disabled, as it is in the Vitest plugin.
+
+### Patch Changes
+
+- [#17070](https://github.com/cloudflare/workers-sdk/pull/17070) [`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17070](https://github.com/cloudflare/workers-sdk/pull/17070) [`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261119.1 | ^5.20261123.1 |
+  | workerd                   | 1.20261119.1  | 1.20261123.1  |
+
+- [#17101](https://github.com/cloudflare/workers-sdk/pull/17101) [`7afc49c`](https://github.com/cloudflare/workers-sdk/commit/7afc49c652d8be84e4f7a6d3673145340e37a685) Thanks [@samarthyadavv](https://github.com/samarthyadavv)! - Honor KV bulk read options in Local Explorer
+
+  Local Explorer now parses values when `type: "json"` is set and includes metadata when `withMetadata: true` is set. Both options also work together, including when using `cf kv keys bulk-get --local`.
+
+  Bulk reads also preserve metadata for stored JSON `null` values when requested. Missing keys still return bare `null`.
+
+- [#17119](https://github.com/cloudflare/workers-sdk/pull/17119) [`086706d`](https://github.com/cloudflare/workers-sdk/commit/086706dfec2238540e8170d69fd9481c547f306d) Thanks [@tw4](https://github.com/tw4)! - Honor `start_after` when listing R2 objects through the Local Explorer API
+
+  Previously, the local R2 list objects endpoint ignored the `start_after` query parameter, so a listing resumed from a saved key returned that key again. Local listings now only return objects whose keys sort after `start_after`, matching the R2 list objects API.
+
+- [#17090](https://github.com/cloudflare/workers-sdk/pull/17090) [`5bc7dba`](https://github.com/cloudflare/workers-sdk/commit/5bc7dba8e4d2b9254b48d3c4d3ef2df23a918637) Thanks [@pelle](https://github.com/pelle)! - Fix `unsafeEvictDurableObject()` blocking the Node.js event loop
+
+  Dev control calls (`evictDurableObject()` and `execDurableObjectSql()`) were proxied synchronously with `Atomics.wait()`. Eviction waits for the Durable Object's `waitUntil()` work, so if that work was waiting on Node.js (for example a function-valued service binding or `node-handler`), Node.js could never answer and eviction failed after workerd's 30 second timeout. These calls are now always asynchronous. A rejected RPC call made through the proxy is now also parsed as an asynchronous response, so errors such as evicting a Durable Object that is not running are still thrown.
+
+- [#17119](https://github.com/cloudflare/workers-sdk/pull/17119) [`086706d`](https://github.com/cloudflare/workers-sdk/commit/086706dfec2238540e8170d69fd9481c547f306d) Thanks [@tw4](https://github.com/tw4)! - Fix local R2 listings repeating a page when `startAfter` and `cursor` are used together with some Unicode keys
+
+  When both options were passed, the local R2 simulator picked the later of the two using JavaScript string comparison, which orders some characters (such as fullwidth letters and emoji) differently from how keys are stored and listed. Paginating with a saved `startAfter` could then return the same page forever. Keys are now compared in the same order they are listed in.
+
+## 5.20261119.0-beta
+
+### Minor Changes
+
+- [#17016](https://github.com/cloudflare/workers-sdk/pull/17016) [`8f45554`](https://github.com/cloudflare/workers-sdk/commit/8f4555407cd0954fb4eba2cf10e5d3a94a1da2ed) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `unsafeIntrospectWorkflow()` and `unsafeIntrospectWorkflowInstance()` for exported Workflows
+
+  They find a Workflow by its Worker's name and its class name, so code running in Node.js can introspect a Workflow on `ctx.exports` that has no `env` binding:
+
+  ```ts
+  const introspector = await mf.unsafeIntrospectWorkflow(
+    "my-worker",
+    "MyWorkflow"
+  );
+  ```
+
+### Patch Changes
+
+- [#17034](https://github.com/cloudflare/workers-sdk/pull/17034) [`8712fc5`](https://github.com/cloudflare/workers-sdk/commit/8712fc53a8070de0542e02fbb7105a3c2c3ffc7d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix Local Explorer access through localhost subdomains
+
+  Miniflare now trusts `*.localhost` in Host and Origin checks for `/cdn-cgi/` requests. This allows Local Explorer to load through localhost subdomains without returning `403 Invalid Origin header` for its module scripts and API requests.
+
+- [#17031](https://github.com/cloudflare/workers-sdk/pull/17031) [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-19
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17031](https://github.com/cloudflare/workers-sdk/pull/17031) [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261118.1 | ^5.20261119.1 |
+  | workerd                   | 1.20261118.1  | 1.20261119.1  |
+
+- [#17043](https://github.com/cloudflare/workers-sdk/pull/17043) [`4f5b118`](https://github.com/cloudflare/workers-sdk/commit/4f5b1182f2481ddafbc84e32d654fd4fa415128f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update Undici to 7.30.2 to include upstream security fixes
+
+  This patch includes six upstream security fixes covering caching, redirects, and Subresource Integrity verification. Update the shared Undici dependency and matching types together so affected packages ship the patched version.
+
+- [#17016](https://github.com/cloudflare/workers-sdk/pull/17016) [`8f45554`](https://github.com/cloudflare/workers-sdk/commit/8f4555407cd0954fb4eba2cf10e5d3a94a1da2ed) Thanks [@edmundhung](https://github.com/edmundhung)! - Name only the Workflow in the error for a second introspection session
+
+  For a Workflow declared in `exports`, the error said the session was "for binding" the Workflow's class. It now reads `Workflow "my-workflow" already has an active introspection session.`
+
+## 5.20261118.0-beta
+
+### Patch Changes
+
+- [#16954](https://github.com/cloudflare/workers-sdk/pull/16954) [`0a4315f`](https://github.com/cloudflare/workers-sdk/commit/0a4315fcf56a1cb6dbc6b4908afe6122e87d4253) Thanks [@mkuritsu](https://github.com/mkuritsu)! - Local Browser Run sessions now use Chrome 152
+
+  Local Browser Run bindings now run Chrome 152.0.7977.64, the same version that Browser Run uses in production. Miniflare will download Chrome 152 the first time you start a local Browser Run session after you upgrade.
+
+- [#17003](https://github.com/cloudflare/workers-sdk/pull/17003) [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-18
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17003](https://github.com/cloudflare/workers-sdk/pull/17003) [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261117.1 | ^5.20261118.1 |
+  | workerd                   | 1.20261117.1  | 1.20261118.1  |
+
+- [#14578](https://github.com/cloudflare/workers-sdk/pull/14578) [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3) Thanks [@penalosa](https://github.com/penalosa)! - Fix startup failures in Miniflare and C3 when loading ESM dependencies
+
+  Miniflare and `create-cloudflare` can now load dependencies that use Node.js's `createRequire()` without failing on an invalid file URL. This prevents these dependencies from causing an error before the CLI or local development environment starts.
+
+- [#14578](https://github.com/cloudflare/workers-sdk/pull/14578) [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3) Thanks [@penalosa](https://github.com/penalosa)! - Fix missing types when using Miniflare with `skipLibCheck: false`
+
+  TypeScript projects importing Miniflare could fail with `Cannot find module './shared'`. The required types are now included in the published package, so projects can check Miniflare's declarations without this error.
+
+- [#17015](https://github.com/cloudflare/workers-sdk/pull/17015) [`5a6e450`](https://github.com/cloudflare/workers-sdk/commit/5a6e4502f81c4f3032be8b0c174e730ea3817b76) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Update the bundled FTP client to include upstream denial-of-service fixes
+
+  Update `basic-ftp` to 6.2.6 in the browser download proxy dependency graph. This includes fixes for malformed FTP credentials and directory listings when loading FTP-hosted PAC files.
+
+## 5.20261117.0-beta
+
+### Patch Changes
+
+- [#16974](https://github.com/cloudflare/workers-sdk/pull/16974) [`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-17
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16974](https://github.com/cloudflare/workers-sdk/pull/16974) [`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261116.1 | ^5.20261117.1 |
+  | workerd                   | 1.20261116.1  | 1.20261117.1  |
+
+- [#16811](https://github.com/cloudflare/workers-sdk/pull/16811) [`51064e6`](https://github.com/cloudflare/workers-sdk/commit/51064e6d4fa630d950fb0544fda07efd877dd2fb) Thanks [@mindulle](https://github.com/mindulle)! - Expose `canBeForwarded` boolean property on `ForwardableEmailMessage` in email handler
+
+  Previously, in `wrangler dev`, the `ForwardableEmailMessage` passed to a Worker's `email()` handler did not expose the documented `canBeForwarded` property, causing it to read as `undefined` locally while production exposes it as a read-only boolean. `canBeForwarded: true` is now set on the incoming message object in Miniflare, matching production behavior.
+
+## 5.20261116.0-beta
+
+### Minor Changes
+
+- [#16246](https://github.com/cloudflare/workers-sdk/pull/16246) [`349fc4e`](https://github.com/cloudflare/workers-sdk/commit/349fc4e7443aa744cbe129f84f28571bf8625155) Thanks [@leostera](https://github.com/leostera)! - Start local Workflows from Artifacts events
+
+  Declare Artifacts events on `exports.workflow({ name, events })` in `cloudflare.config.ts` to start the owning Workflow locally in `cf`, Vite, and Workers Vitest. Wrangler configurations continue to use `triggers.events`. Native config conversion derives those targets from the Workflow export, and `cf migrate` attaches existing event subscriptions to their matching Workflow exports.
+
+  Local Artifacts namespaces publish the documented `cf.artifacts.*` messages for repository create, import, fork, and delete operations and token creation and revocation. Successful create, import, and fork operations also publish the initial token-created event. Delivery follows the committed mutation, is unordered, and does not fail the repository operation if a destination rejects it. Push, clone, and fetch events are not yet published locally. This feature does not provide local Artifacts-to-queue subscriptions.
+
+- [#16907](https://github.com/cloudflare/workers-sdk/pull/16907) [`0bf81ac`](https://github.com/cloudflare/workers-sdk/commit/0bf81ac16041a1f47f5474f7d6f5b0da6160f76b) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Rename the Pipelines, K2 and Analytics SQL `env` binding fields to match `@cloudflare/config`
+
+  Config-style `env` bindings now use these shapes:
+
+  - `{ type: "pipeline", streamId }` instead of `{ type: "pipeline", name }`
+  - `{ type: "k2", id }` instead of `{ type: "k2", stream }`
+  - `{ type: "analytics-sql" }` instead of `{ type: "analytics" }`
+
+### Patch Changes
+
+- [#16946](https://github.com/cloudflare/workers-sdk/pull/16946) [`e97c9f8`](https://github.com/cloudflare/workers-sdk/commit/e97c9f8bd2cdbd15faf402b146582e49d65dd1a7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-16
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16946](https://github.com/cloudflare/workers-sdk/pull/16946) [`e97c9f8`](https://github.com/cloudflare/workers-sdk/commit/e97c9f8bd2cdbd15faf402b146582e49d65dd1a7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261113.1 | ^5.20261116.1 |
+  | workerd                   | 1.20261113.1  | 1.20261116.1  |
+
+## 5.20261113.0-beta
+
+### Minor Changes
+
+- [#16735](https://github.com/cloudflare/workers-sdk/pull/16735) [`f005593`](https://github.com/cloudflare/workers-sdk/commit/f005593c1ed0d1f429dafc6919c4335f4d5070c7) Thanks [@leostera](https://github.com/leostera)! - Use the local simulator for Artifacts bindings that omit `remote`
+
+  **Behavior change:** Artifacts bindings now default to the local simulator during development, like KV, R2 and D1. Previously, an omitted `remote` in Wrangler and the Vite plugin used the deployed Artifacts resource. If you want deployed repos in `wrangler dev` or `vite dev`, set `"remote": true` on the binding (`dev: { remote: true }` in `cloudflare.config.ts`). Artifacts is in beta, so this ships as a minor release.
+
+  While `remote` is omitted, `wrangler dev`, `getPlatformProxy()` and the Vite plugin warn when remote bindings are enabled, once for each binding rather than on every config reload: "Artifacts binding REPOS uses the local simulator by default. Set `remote: true` to use deployed repos, or `remote: false` to silence this warning." Workers Vitest and `wrangler dev --local` already used the simulator, so they don't warn. Local Artifacts needs no Cloudflare credentials, but requires Git 2.32 or newer on the host.
+
+- [#16589](https://github.com/cloudflare/workers-sdk/pull/16589) [`856842e`](https://github.com/cloudflare/workers-sdk/commit/856842ec973ddd530dd385d389d68408f8ce58e2) Thanks [@mkuritsu](https://github.com/mkuritsu)! - Support Browser Run quick actions in local development
+
+  `env.BROWSER.quickAction(action, options)` now works with a local browser binding instead of failing with `The RPC receiver does not implement the method "quickAction"`. The `screenshot`, `pdf`, `content`, `markdown`, `snapshot`, `scrape`, `links` and `accessibilityTree` actions run in a local Chrome and return the same responses and errors as Browser Run.
+
+  Workers AI isn't available locally, so the `json` action returns placeholder data shaped like `response_format.json_schema` and logs a warning. The `kitesurf` browser isn't supported locally either. Set `"remote": true` on the browser binding to use Browser Run for these.
+
+### Patch Changes
+
+- [#16771](https://github.com/cloudflare/workers-sdk/pull/16771) [`61eacca`](https://github.com/cloudflare/workers-sdk/commit/61eacca214a9533f41fac98d732f1cfdd905ddf6) Thanks [@leostera](https://github.com/leostera)! - Fix several local Artifacts emulator issues found while testing it as a customer
+
+  - The local Git remote keeps its port across dev server restarts, so existing clones keep working, and Wrangler prints each namespace's Git remote prefix at startup. If another process holds the port, a new one is chosen and printed.
+  - Workers Vitest no longer logs a caught `ArtifactsError` as an uncaught exception. Local bindings now throw errors in the caller's isolate, so they never cross a workerd RPC boundary.
+  - A push containing a file larger than 32 MiB is rejected, as in production, and a file at that limit can still be read. Reading a larger file throws `ArtifactsError` with code `MEMORY_LIMIT` instead of a raw RPC serialization error.
+  - `listTokens()` includes revoked and expired tokens with `state: "revoked"` or `state: "expired"`, listed after all active tokens. An expired token can no longer be revoked: `revokeToken()` returns `false` and its state stays `"expired"`.
+  - Results now follow the published binding types: `list()` items have no `remote`, `log()` caps `limit` at 1000 instead of rejecting it, and `readTree()` and `readCommit()` throw `INTERNAL_ERROR` for an object of another type instead of returning `null`.
+
+- [#16589](https://github.com/cloudflare/workers-sdk/pull/16589) [`856842e`](https://github.com/cloudflare/workers-sdk/commit/856842ec973ddd530dd385d389d68408f8ce58e2) Thanks [@mkuritsu](https://github.com/mkuritsu)! - Clear a local Browser Run session's `connectionId` when its client disconnects
+
+  Sessions connected through `/v1/devtools/browser/:sessionId`, which current versions of `@cloudflare/puppeteer` and `@cloudflare/playwright` use, kept reporting a `connectionId` after the client closed its WebSocket. Reusing a session by picking one without a `connectionId` therefore never found a free session in local development.
+
+- [#16849](https://github.com/cloudflare/workers-sdk/pull/16849) [`3cea40b`](https://github.com/cloudflare/workers-sdk/commit/3cea40b078519222db432b5edf827ddc3e629a2a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-12
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16886](https://github.com/cloudflare/workers-sdk/pull/16886) [`63eb6da`](https://github.com/cloudflare/workers-sdk/commit/63eb6daa0eda348e1f9e86a506cfd80d104a1e28) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-13
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16849](https://github.com/cloudflare/workers-sdk/pull/16849) [`3cea40b`](https://github.com/cloudflare/workers-sdk/commit/3cea40b078519222db432b5edf827ddc3e629a2a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261110.1 | ^5.20261112.1 |
+  | workerd                   | 1.20261110.1  | 1.20261112.1  |
+
+- [#16886](https://github.com/cloudflare/workers-sdk/pull/16886) [`63eb6da`](https://github.com/cloudflare/workers-sdk/commit/63eb6daa0eda348e1f9e86a506cfd80d104a1e28) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261112.1 | ^5.20261113.1 |
+  | workerd                   | 1.20261112.1  | 1.20261113.1  |
+
+## 5.20261110.2-beta
+
+### Patch Changes
+
+- [#16527](https://github.com/cloudflare/workers-sdk/pull/16527) [`dc47e6d`](https://github.com/cloudflare/workers-sdk/commit/dc47e6d2a061748f47dc9cfba66ed3cffe944754) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Normalize relative redirect pathnames consistently across Pages and Workers assets
+
+  Relative `_redirects` targets now use shared pathname normalization after placeholder replacement, keeping repeated separators within the site's path. Explicit external targets (including scheme-less URLs such as `//example.com/path`), query values and fragments retain their contents.
+
+## 5.20261110.1-beta
+
+### Minor Changes
+
+- [#16824](https://github.com/cloudflare/workers-sdk/pull/16824) [`877b249`](https://github.com/cloudflare/workers-sdk/commit/877b249292307ae4dd282080e68b1d88c0fd0bb0) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Move streaming tail consumers to `experimental.streamingTailConsumers` in `cloudflare.config.ts`
+
+  Streaming Tail Workers are now declared in a separate, experimental list instead of with `streaming: true` on a `tailConsumers` entry. `tailConsumers` now only lists Tail Workers with a `tail()` handler. This is a breaking change to the experimental config API: move each entry that set `streaming: true` to `experimental.streamingTailConsumers`, without the `streaming` field.
+
+  ```ts
+  export default defineConfig({
+    worker: {
+      tailConsumers: [{ worker: "tail-worker" }],
+      experimental: {
+        streamingTailConsumers: [{ worker: "streaming-tail-worker" }],
+      },
+    },
+  });
+  ```
+
+  Fields under `experimental` may change or be removed without a major version bump. The `wrangler-to-cf` codemod now converts `streaming_tail_consumers` to `experimental.streamingTailConsumers`.
+
+- [#16815](https://github.com/cloudflare/workers-sdk/pull/16815) [`69e650c`](https://github.com/cloudflare/workers-sdk/commit/69e650cc8a2823c053139ffdce10285526cf1da1) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Nest Workflow binding limits under `unsafeConfig` in the experimental Miniflare configuration API
+
+  Workflow settings belong in the `exports` definition. Move the binding-level compatibility option from `limits` to `unsafeConfig.limits` to make its status explicit. Existing Wrangler and Miniflare v4 configuration continues to work through the compatibility adapter.
+
+## 5.20261110.0-beta
+
+### Patch Changes
+
+- [#16810](https://github.com/cloudflare/workers-sdk/pull/16810) [`cdc970b`](https://github.com/cloudflare/workers-sdk/commit/cdc970b7bd39dcd42af65bdadab7c38ce0b409fb) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-10
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16810](https://github.com/cloudflare/workers-sdk/pull/16810) [`cdc970b`](https://github.com/cloudflare/workers-sdk/commit/cdc970b7bd39dcd42af65bdadab7c38ce0b409fb) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261109.1 | ^5.20261110.1 |
+  | workerd                   | 1.20261109.1  | 1.20261110.1  |
+
+- [#16807](https://github.com/cloudflare/workers-sdk/pull/16807) [`4e7e9f1`](https://github.com/cloudflare/workers-sdk/commit/4e7e9f12b7996415fb63ae72a6d2c2f6ac3640ed) Thanks [@brady-eaiti](https://github.com/brady-eaiti)! - Remove the empty placeholder directory Miniflare creates when `assets.directory` doesn't exist yet
+
+  Previously each process left an empty `miniflare-assets-*` directory in the system temp directory, which built up over many runs from fresh checkouts or before a first build. The placeholder now lives inside the instance's own temporary directory, so `dispose()` and process exit remove it.
+
+- [#16612](https://github.com/cloudflare/workers-sdk/pull/16612) [`267dadb`](https://github.com/cloudflare/workers-sdk/commit/267dadbe69ac8221febef059382cec68eaec1b19) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Limit the environment passed to local Browser Rendering and ensure a usable home directory
+
+  Chrome now receives only the host configuration needed for browser operation, keeping unrelated application credentials out of its environment. It uses the operating system account's home directory when `HOME` is missing or empty. If the account cannot be looked up, Chrome uses its temporary profile directory as its home. Temporary browser profiles are created with owner-only permissions on POSIX platforms.
+
+- [#16740](https://github.com/cloudflare/workers-sdk/pull/16740) [`44b39b0`](https://github.com/cloudflare/workers-sdk/commit/44b39b02765d246479f49b690f9e9b3d8645a303) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Redact header values outside a safe diagnostic allowlist, regardless of log sanitization settings.
+
+  Apply the same filtering to request, response, and request-options diagnostics. Strip `X-Auth-Key` alongside `Authorization` when forwarding local artifact Git requests.
+
+## 5.20261109.0-beta
+
+### Patch Changes
+
+- [#16793](https://github.com/cloudflare/workers-sdk/pull/16793) [`fea323a`](https://github.com/cloudflare/workers-sdk/commit/fea323a7d419fc60ac7bb2ca616bde54da684c4d) Thanks [@vicb](https://github.com/vicb)! - Bump `capnp-es` to 0.0.17
+
+  This release fixes 3 issues. See the [release notes](https://github.com/unjs/capnp-es/releases/tag/v0.0.17) for details.
+
+- [#16648](https://github.com/cloudflare/workers-sdk/pull/16648) [`56459a5`](https://github.com/cloudflare/workers-sdk/commit/56459a561b7b133a9152b993336e1e5470b1d290) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update bundled third-party dependencies with known security fixes
+
+  Local development and Workers Vitest tests now include security fixes for their bundled dependencies. Local browser rendering also includes security fixes for browser downloads, archive extraction, and proxy support.
+
+  Miniflare and Wrangler now require Node.js 22.12.0 or later, matching the supported runtime range of the new browser installer.
+
+- [#16746](https://github.com/cloudflare/workers-sdk/pull/16746) [`abf924e`](https://github.com/cloudflare/workers-sdk/commit/abf924ee1820b4af139f21dffc877eaf6122c056) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-06
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16792](https://github.com/cloudflare/workers-sdk/pull/16792) [`de10016`](https://github.com/cloudflare/workers-sdk/commit/de100160f243451355480e8f815d0f7d4b3ec8b9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-09
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16746](https://github.com/cloudflare/workers-sdk/pull/16746) [`abf924e`](https://github.com/cloudflare/workers-sdk/commit/abf924ee1820b4af139f21dffc877eaf6122c056) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261104.1 | ^5.20261106.1 |
+  | workerd                   | 1.20261104.1  | 1.20261106.1  |
+
+- [#16792](https://github.com/cloudflare/workers-sdk/pull/16792) [`de10016`](https://github.com/cloudflare/workers-sdk/commit/de100160f243451355480e8f815d0f7d4b3ec8b9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261106.1 | ^5.20261109.1 |
+  | workerd                   | 1.20261106.1  | 1.20261109.1  |
+
+- [#16442](https://github.com/cloudflare/workers-sdk/pull/16442) [`66bc0d6`](https://github.com/cloudflare/workers-sdk/commit/66bc0d6f353904f8a203bcea9298d9f45fbd234a) Thanks [@ghostwriternr](https://github.com/ghostwriternr)! - Remove local Containers once Miniflare stops using them
+
+  Miniflare now removes the application containers, networking sidecars, and snapshot clone volumes that workerd creates for Container-enabled Durable Objects when a reload changes the Container configuration, when Miniflare is disposed, and when its process exits. Previously, workerd left them behind when it stopped, and the next workerd recovered running containers even if the Container configuration had changed. Containers keep running across reloads that leave the Container configuration unchanged, and directory snapshots are kept.
+
 ## 5.20261104.0-beta
 
 ### Minor Changes

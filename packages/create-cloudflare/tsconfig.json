@@ -1,15 +1,22 @@
 {
 	"root": true,
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
-	"include": ["**/*.ts", "**/*.mts"],
+	"include": [
+		"*.ts",
+		"*.mts",
+		"e2e/**/*.ts",
+		"scripts/**/*.ts",
+		"src/**/*.ts",
+		// Only include the template config files that C3 imports; the rest are
+		// source files for generated projects.
+		"templates/**/c3.ts",
+		"templates/**/experimental?c3.ts"
+	],
 	"exclude": [
 		"node_modules",
 		"dist",
 		"scripts/snippets/*",
-		"e2e/tests/frameworks/fixtures/*",
-		// exclude all template files other than those are directly imported into the program,
-		// e.g. the c3.ts files.
-		"templates*"
+		"e2e/tests/frameworks/fixtures/*"
 	],
 	"compilerOptions": {
 		"target": "ESNext",
@@ -18,7 +25,6 @@
 		"allowJs": true,
 		"strict": true,
 		"esModuleInterop": true,
-		"outDir": "dist",
 		"types": ["node"],
 		"resolveJsonModule": true,
 		"paths": {

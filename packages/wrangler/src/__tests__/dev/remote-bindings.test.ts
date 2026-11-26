@@ -24,7 +24,7 @@ import { runWrangler } from "../helpers/run-wrangler";
 import type { Binding } from "../../api";
 import type { StartDevOptions } from "../../dev";
 import type { StartRemoteProxySessionOptions } from "@cloudflare/remote-bindings";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 import type { RemoteProxyConnectionString, V4WorkerOptions } from "miniflare";
 
 const devReadyTimeout = process.platform === "win32" ? 30_000 : 5_000;
@@ -56,6 +56,7 @@ const remoteProxyConnectionString = new URL(
 let proxyWorkerBindings: Record<string, Binding> | undefined;
 let sessionOptions: StartRemoteProxySessionOptions | undefined;
 let startRemoteProxySessionCallCount = 0;
+let disposeRemoteProxySessionCallCount = 0;
 vi.mock("../../api/remoteBindings/start-remote-proxy-session", async () => {
 	const actual = await vi.importActual<
 		typeof import("../../api/remoteBindings/start-remote-proxy-session")
@@ -71,7 +72,9 @@ vi.mock("../../api/remoteBindings/start-remote-proxy-session", async () => {
 			startRemoteProxySessionCallCount++;
 			return {
 				ready: Promise.resolve(),
-				async dispose() {},
+				async dispose() {
+					disposeRemoteProxySessionCallCount++;
+				},
 				async updateBindings() {},
 				remoteProxyConnectionString,
 			};
@@ -122,6 +125,7 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 		sessionOptions = undefined;
 		proxyWorkerBindings = undefined;
 		startRemoteProxySessionCallCount = 0;
+		disposeRemoteProxySessionCallCount = 0;
 		workerOptions = [];
 	});
 
@@ -398,6 +402,35 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 			],
 		},
 		{
+			name: "realtimekit app",
+			config: {
+				realtimekit: [
+					{
+						binding: "RTK",
+						app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+						remote: true,
+					},
+				],
+			},
+			expectedProxyWorkerBindings: {
+				RTK: {
+					app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+					remote: true,
+					type: "realtimekit",
+				},
+			},
+			expectedWorkerOptions: [
+				expect.objectContaining({
+					realtimekit: {
+						RTK: {
+							app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+							remoteProxyConnectionString,
+						},
+					},
+				}),
+			],
+		},
+		{
 			name: "r2 bucket",
 			config: {
 				r2_buckets: [
@@ -539,7 +572,6 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 					artifacts: {
 						MY_ARTIFACTS: {
 							namespace: "default",
-							remote: true,
 							remoteProxyConnectionString,
 						},
 					},
@@ -640,7 +672,6 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 		expect(proxyWorkerBindings).toEqual(undefined);
 
 		// Let's make a fetch to the worker to prove it's running before we update the config to add the bindings
-		// This also should give the config file watching time to settle.
 		const url = match?.groups?.url;
 		if (url === undefined) {
 			throw new Error("No URL found in output");
@@ -674,41 +705,114 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 		await wranglerStopped;
 	});
 
-	it("routes Artifacts remotely when remote is omitted", async ({ expect }) => {
+	it("keeps the remote proxy session when config changes remove the last remote binding", async () => {
+		const writeConfig = (config: RawConfig) =>
+			seed({
+				"wrangler.jsonc": JSON.stringify({
+					name: "worker",
+					main: "index.js",
+					compatibility_date: "2025-01-01",
+					...config,
+				}),
+			});
+		const remoteServiceConfig: RawConfig = {
+			services: [
+				{
+					binding: "REMOTE_WORKER",
+					service: "remote-service-binding-worker",
+					remote: true,
+				},
+			],
+		};
+		await writeConfig(remoteServiceConfig);
 		await seed({
-			"wrangler.jsonc": JSON.stringify({
-				name: "worker",
-				main: "index.js",
-				compatibility_date: "2025-01-01",
-				artifacts: [{ binding: "MY_ARTIFACTS", namespace: "default" }],
-			}),
 			"index.js": `export default { fetch() { return new Response("hello") } }`,
 		});
-		const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
+		const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0", {
+			// Config changes only reload when config watching is enabled
+			WRANGLER_CI_DISABLE_CONFIG_WATCHING: "false",
+		});
+		const match = await vi.waitUntil(
+			() => std.out.match(/Ready on (?<url>http:\/\/[^:]+:\d{4}.+)/),
+			{ timeout: devReadyTimeout }
+		);
+		// By the time `wrangler dev` is ready it is watching the config file, so
+		// the edits below need no delay before them.
+		const url = match?.groups?.url;
+		assert(url);
+		expect((await fetch(url)).ok).toBe(true);
+		expect(startRemoteProxySessionCallCount).toBe(1);
+
+		// Each config change gives `wrangler dev` a new auth hook
+		for (const edit of ["1", "2"]) {
+			await writeConfig({ vars: { EDIT: edit } });
+			await vi.waitFor(
+				() =>
+					expect(workerOptions[0]).toMatchObject({
+						bindings: { EDIT: edit },
+					}),
+				{ timeout: devReadyTimeout }
+			);
+		}
+		expect(startRemoteProxySessionCallCount).toBe(1);
+		expect(disposeRemoteProxySessionCallCount).toBe(0);
+
+		// Adding a remote binding back restarts the session with the current hook
+		await writeConfig(remoteServiceConfig);
+		await vi.waitFor(() => expect(startRemoteProxySessionCallCount).toBe(2), {
+			timeout: devReadyTimeout,
+		});
+		expect(disposeRemoteProxySessionCallCount).toBe(1);
+
+		await stopWrangler();
+		await wranglerStopped;
+	});
+
+	it("routes Artifacts locally when remote is omitted, warning once across config reloads", async ({
+		expect,
+	}) => {
+		const writeConfig = (vars: Record<string, string>) =>
+			seed({
+				"wrangler.jsonc": JSON.stringify({
+					name: "worker",
+					main: "index.js",
+					compatibility_date: "2025-01-01",
+					artifacts: [{ binding: "MY_ARTIFACTS", namespace: "default" }],
+					vars,
+				}),
+			});
+		await writeConfig({});
+		await seed({
+			"index.js": `export default { fetch() { return new Response("hello") } }`,
+		});
+		const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0", {
+			// Config changes only reload when config watching is enabled
+			WRANGLER_CI_DISABLE_CONFIG_WATCHING: "false",
+		});
 		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
 			timeout: devReadyTimeout,
 		});
-		expect(startRemoteProxySessionCallCount).toBe(1);
-		expect(proxyWorkerBindings).toEqual({
-			MY_ARTIFACTS: expect.objectContaining({
-				type: "artifacts",
-				namespace: "default",
-			}),
-		});
+		expect(startRemoteProxySessionCallCount).toBe(0);
 		expect(workerOptions).toEqual([
 			expect.objectContaining({
 				artifacts: {
 					MY_ARTIFACTS: {
 						namespace: "default",
-						remote: undefined,
-						remoteProxyConnectionString,
+						remoteProxyConnectionString: undefined,
 					},
 				},
 			}),
 		]);
-		expect(std.warn).toContain(
-			"Artifacts binding MY_ARTIFACTS uses the deployed resource. Set `remote: false` to use the local simulator, or `remote: true` to silence this warning."
+
+		// A config reload doesn't repeat the warning.
+		await writeConfig({ EDIT: "1" });
+		await vi.waitFor(
+			() => expect(workerOptions[0]).toMatchObject({ bindings: { EDIT: "1" } }),
+			{ timeout: devReadyTimeout }
 		);
+		const warning =
+			"Artifacts binding MY_ARTIFACTS uses the local simulator by default. Set `remote: true` to use deployed repos, or `remote: false` to silence this warning.";
+		expect(std.warn.split(warning)).toHaveLength(2);
 		await stopWrangler();
 		await wranglerStopped;
 	});
@@ -748,6 +852,34 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 		);
 		expect(startRemoteProxySessionCallCount).toBe(1);
 		expect(secondResult).not.toBeNull();
+		expect(secondResult?.session).toBe(firstResult?.session);
+	});
+
+	it("should not recreate the remote proxy session on reload without auth", async () => {
+		const { maybeStartOrUpdateRemoteProxySession } =
+			await import("../../api/remoteBindings");
+
+		const remoteBindings: Record<string, Binding> = {
+			REMOTE_WORKER: {
+				type: "service",
+				service: "remote-service-binding-worker",
+				remote: true,
+			},
+		};
+
+		// Each call creates Wrangler's default credentials, which stay the same
+		const firstResult = await maybeStartOrUpdateRemoteProxySession(
+			{ name: "worker", bindings: remoteBindings },
+			null
+		);
+		expect(startRemoteProxySessionCallCount).toBe(1);
+		expect(sessionOptions?.auth).toEqual(expect.any(Function));
+
+		const secondResult = await maybeStartOrUpdateRemoteProxySession(
+			{ name: "worker", bindings: remoteBindings },
+			firstResult
+		);
+		expect(startRemoteProxySessionCallCount).toBe(1);
 		expect(secondResult?.session).toBe(firstResult?.session);
 	});
 
@@ -919,6 +1051,7 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 			cliDisplayName: "Wrangler",
 			complianceRegion: undefined,
 			workerName: "worker",
+			lazy: false,
 		});
 		assert(auth);
 		expect(await unwrapHook(auth)).toEqual({
@@ -964,6 +1097,7 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 			cliDisplayName: "Wrangler",
 			complianceRegion: undefined,
 			workerName: "worker",
+			lazy: false,
 		});
 		assert(auth2);
 		expect(await unwrapHook(auth2)).toEqual({

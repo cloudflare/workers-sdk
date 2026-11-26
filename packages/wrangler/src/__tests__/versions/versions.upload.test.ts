@@ -1589,6 +1589,19 @@ describe("versions upload", () => {
 				"You cannot upload a new version of a Worker that does not yet exist. Please run the `deploy` command first."
 			);
 		});
+
+		test.for([null, undefined])(
+			"should require deploy first when the service script is %s",
+			async (script, { expect }) => {
+				mockGetScript({ default_environment: { script } });
+				writeWranglerConfig({ name: "test-name", main: "./index.js" });
+				writeWorkerSource();
+
+				await expect(runWrangler("versions upload")).rejects.toThrow(
+					"You cannot upload a new version of a Worker that does not yet exist. Please run the `deploy` command first."
+				);
+			}
+		);
 	});
 
 	describe("non-interactive/CI behavior", () => {
@@ -2079,7 +2092,7 @@ describe("versions upload", () => {
 					expect.objectContaining({
 						type: "d1",
 						name: "MY_DB",
-						id: "d1-db-id-1",
+						database_id: "d1-db-id-1",
 					}),
 					expect.objectContaining({
 						type: "service",
@@ -3020,7 +3033,7 @@ describe("versions upload", () => {
 			setIsTTY(false);
 		});
 
-		test("sends workflow exports by name without provisioning the Workflow", async ({
+		test("sends workflow exports with their settings without provisioning the Workflow", async ({
 			expect,
 		}) => {
 			mockGetScript();
@@ -3059,9 +3072,17 @@ describe("versions upload", () => {
 
 			await runWrangler("versions upload --config ./wrangler.json");
 
-			const metadata = await getMetadata(requests[requests.length - 1]);
+			const request = requests[requests.length - 1];
+			expect(request.headers.get("Cloudflare-Workers-Script-Api-Date")).toBe(
+				"2026-11-09"
+			);
+			const metadata = await getMetadata(request);
 			expect(metadata.exports).toEqual({
-				MyWorkflow: { type: "workflow", name: "my-workflow" },
+				MyWorkflow: {
+					type: "workflow",
+					name: "my-workflow",
+					limits: { steps: 10 },
+				},
 			});
 			expect(workflowPuts).toBe(0);
 		});

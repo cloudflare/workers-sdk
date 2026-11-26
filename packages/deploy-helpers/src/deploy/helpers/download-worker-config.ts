@@ -1,11 +1,12 @@
-import { constructWranglerConfig } from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils";
+import { constructWranglerConfig } from "@cloudflare/workers-utils/config";
 import { fetchResult } from "../../shared/context";
 import type {
 	ComplianceConfig,
-	RawConfig,
 	ServiceMetadataRes,
-	WorkerMetadata,
+	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 type CustomDomainsRes = {
 	id: string;
@@ -57,7 +58,7 @@ export async function fetchWorkerConfig(
 		serviceEnvMetadata,
 		cronTriggers,
 	] = await Promise.all([
-		fetchResult<WorkerMetadata["bindings"]>(
+		fetchResult<WorkerMetadataBinding[]>(
 			complianceConfig,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/bindings`
 		),
@@ -130,16 +131,24 @@ export async function downloadWorkerConfig(
 		fetchCustomDomains
 	);
 
+	const { script } = serviceEnvMetadata;
+	if (!script) {
+		throw new UserError(
+			`Cannot download configuration for Worker "${workerName}" because it has no uploaded script. Deploy the Worker first.`,
+			{ telemetryMessage: "worker config download script missing" }
+		);
+	}
+
 	return constructWranglerConfig({
 		name: workerName,
 		entrypoint,
-		compatibility_date: serviceEnvMetadata.script.compatibility_date,
-		compatibility_flags: serviceEnvMetadata.script.compatibility_flags,
-		tags: serviceEnvMetadata.script.tags,
-		migration_tag: serviceEnvMetadata.script.migration_tag,
-		tail_consumers: serviceEnvMetadata.script.tail_consumers,
-		observability: serviceEnvMetadata.script.observability,
-		limits: serviceEnvMetadata.script.limits,
+		compatibility_date: script.compatibility_date,
+		compatibility_flags: script.compatibility_flags,
+		tags: script.tags,
+		migration_tag: script.migration_tag,
+		tail_consumers: script.tail_consumers,
+		observability: script.observability,
+		limits: script.limits,
 		bindings,
 		routes,
 		domains: customDomains,
@@ -147,8 +156,8 @@ export async function downloadWorkerConfig(
 		schedules: cronTriggers.schedules.map((s) => ({
 			cron: s.cron,
 		})),
-		placement: serviceEnvMetadata.script.placement_mode
-			? { mode: serviceEnvMetadata.script.placement_mode }
+		placement: script.placement_mode
+			? { mode: script.placement_mode }
 			: undefined,
 		logpush: undefined,
 	});

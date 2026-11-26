@@ -12,7 +12,7 @@ import {
 	resolveDurableObjectsCodeUpdateStrategy,
 } from "../deployment-args";
 import type { VersionId } from "../types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export const CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE = 10220;
 

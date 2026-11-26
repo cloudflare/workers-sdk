@@ -3,10 +3,20 @@ import type { Framework } from "./frameworks/framework-class";
 import type { BuildConfig } from "./frameworks/framework-class";
 import type { WorkerConfig } from "@cloudflare/config";
 import type { PackageManager } from "@cloudflare/workers-utils";
-import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
+import type { PackageJSON } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 /** Makes the specified keys of T optional. */
 type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+
+/** Why detected project commands cannot currently be executed. */
+export type AutoConfigCommandError = {
+	code:
+		| "vite-plugin-not-installed"
+		| "vite-plugin-incompatible"
+		| "vite-tool-not-installed";
+	message: string;
+};
 
 type AutoConfigDetailsBase = {
 	/** The name of the worker */
@@ -23,6 +33,10 @@ type AutoConfigDetailsBase = {
 	devCommand?: string;
 	/** The build command used to build the project (if any) */
 	buildCommand?: string;
+	/** Command readiness failure. Detection succeeds; execution must validate this field. */
+	commandError?: AutoConfigCommandError;
+	/** Application and enclosing workspace node_modules directories, nearest first. */
+	nodeModulesPaths?: readonly string[];
 	/** Environment required when running the detected dev or build commands. */
 	env?: Readonly<Record<string, string>>;
 	/** The output directory (if no framework is used, points to the raw asset files) */

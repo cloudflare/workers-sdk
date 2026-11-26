@@ -1,6 +1,6 @@
 import { describe, it } from "vitest";
 import { partitionRoutes } from "../src/shared/partition-routes";
-import type { Route } from "@cloudflare/workers-utils";
+import type { Route } from "@cloudflare/workers-utils/config";
 
 describe("partitionRoutes", () => {
 	it("partitions ordinary routes and custom domains", ({ expect }) => {

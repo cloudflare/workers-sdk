@@ -12,13 +12,11 @@ import {
 	findAdditionalModuleWatchDirs,
 } from "./find-additional-modules";
 import { isJavaScriptModuleRule, parseRules } from "./rules";
+import type { Entry, CfModule, CfModuleType } from "@cloudflare/workers-utils";
 import type {
-	Entry,
-	CfModule,
-	CfModuleType,
 	Config,
 	ConfigModuleRuleType,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import type esbuild from "esbuild";
 
 export function flipObject<

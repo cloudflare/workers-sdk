@@ -11,7 +11,7 @@ import { afterEach, describe, it, vi } from "vitest";
 import * as details from "../../src/details";
 import { detectFramework } from "../../src/details/framework-detection";
 import { createMockContext } from "../helpers/mock-context";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 const fileSystemErrors = vi.hoisted(() => ({
 	readdir: new Map<string, string>(),
@@ -121,8 +121,8 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		).resolves.toMatchObject({
 			configured: true,
 			framework: { id: "astro", supportsMode: true },
-			buildCommand: "npx astro build",
-			devCommand: "npx astro dev",
+			buildCommand: "astro build",
+			devCommand: "astro dev",
 			packageManager: { type: "npm" },
 		});
 	});
@@ -177,8 +177,8 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			await expect(
 				details.getDetailsForAutoConfig({ context })
 			).resolves.toMatchObject({
-				buildCommand: pm === "pnpm" ? "pnpm astro build" : "npx astro build",
-				devCommand: pm === "pnpm" ? "pnpm astro dev" : "npx astro dev",
+				buildCommand: "astro build",
+				devCommand: "astro dev",
 				framework: { supportsMode: true },
 				configured: false,
 				outputDir: "dist",
@@ -305,7 +305,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		await expect(
 			details.getDetailsForAutoConfig({ context })
 		).resolves.toMatchObject({
-			buildCommand: "npx astro build",
+			buildCommand: "astro build",
 		});
 	});
 
@@ -343,7 +343,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			details.getDetailsForAutoConfig({ context })
 		).resolves.toMatchObject({
 			framework: { id: "vite" },
-			buildCommand: "npx vite build",
+			buildCommand: "vite build",
 			env: {
 				CLOUDFLARE_VITE_FORCE_BUILD_OUTPUT: "true",
 			},

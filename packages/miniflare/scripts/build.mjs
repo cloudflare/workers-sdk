@@ -431,6 +431,14 @@ async function buildPackage() {
 		sourcemap,
 		sourcesContent: true,
 		tsconfig: path.join(pkgRoot, "tsconfig.json"),
+		// Provide a real `import.meta.url` for the CJS bundle. Bundled ESM
+		// dependencies (e.g. `@cloudflare/workers-utils`) contain
+		// `createRequire(import.meta.url)` shims that would otherwise receive
+		// `undefined` and throw on load.
+		inject: [path.join(pkgRoot, "import-meta-url.js")],
+		define: {
+			"import.meta.url": "import_meta_url",
+		},
 		external: [
 			// Don't bundle miniflare itself — we want tests to run against
 			// the actual published code, not a re-bundled copy
@@ -443,6 +451,8 @@ async function buildPackage() {
 			"esbuild",
 		],
 		plugins: [embedWorkersPlugin],
+		loader: { ".wasm": "file" },
+		assetNames: "src/[name]",
 		logLevel: watch ? "info" : "warning",
 		outdir: outPath,
 		outbase: pkgRoot,

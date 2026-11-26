@@ -8,7 +8,8 @@
 // `@cloudflare/workers-auth/wrangler` is re-exported here so those import paths
 // (and the test mocks/spies) keep working unchanged.
 
-import { configFileName, getGlobalConfigPath } from "@cloudflare/workers-utils";
+import { getGlobalConfigPath } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import { createCloudflareAuth } from "../core/factory";
 import { createKeyringPreference } from "../core/keyring-preference";
 import { createPreferences } from "../core/preferences";
@@ -86,6 +87,8 @@ export const WRANGLER_CLI: CliDescriptor = {
 	getConfigPath: getGlobalConfigPath,
 	getTemporaryAccountConfigPath: getTemporaryPreviewAccountConfigPath,
 	fileFormat: "toml",
+	// Preserve Wrangler's cross-invocation account selection.
+	persistAccountSelection: true,
 	accountCachePrefix: "wrangler-account",
 	getConfigFileLabel: () => configFileName(undefined),
 	// A getter so any reassignment of the live `DefaultScopeKeys` binding is

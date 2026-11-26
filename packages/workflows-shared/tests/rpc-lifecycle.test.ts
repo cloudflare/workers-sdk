@@ -31,7 +31,12 @@ it("releases the step callback's RPC result and preserves the live data shape", 
 	const dispose = vi.fn();
 	let result: unknown;
 	await runWorkflowAndAwait(crypto.randomUUID(), async (_event, step) => {
-		result = await step.do("RPC result", async () => ({
+		// workers-types rejects symbol keys in RPC results, but workerd disposes
+		// results that define `Symbol.dispose`.
+		result = await step.do<{
+			value: number;
+			bytes: Uint8Array<ArrayBuffer>;
+		}>("RPC result", async () => ({
 			value: 42,
 			bytes: new Uint8Array(new ArrayBuffer(8), 2, 2),
 			[Symbol.dispose]: dispose,
@@ -198,7 +203,7 @@ it.for(["object", "stream", "reject", "cancel-reject"] as const)(
 		const originalCancel = ReadableStream.prototype.cancel;
 		const cancel = vi.spyOn(ReadableStream.prototype, "cancel");
 		if (kind === "cancel-reject") {
-			cancel.mockImplementation(async function (reason) {
+			cancel.mockImplementation(async function (this: ReadableStream, reason) {
 				await originalCancel.call(this, reason);
 				throw new Error("late stream cancellation failed");
 			});
@@ -306,7 +311,9 @@ it("cleans up a late callback that lands after its step has finished", async ({
 	let cleanupSeenByLaterStep = false;
 
 	await runWorkflowAndAwait(crypto.randomUUID(), async (_event, step) => {
-		await step.do(
+		// workers-types rejects symbol keys in RPC results, but workerd disposes
+		// results that define `Symbol.dispose`.
+		await step.do<{ attempt: number }>(
 			"late callback result",
 			{
 				timeout: "1 second",

@@ -5,7 +5,7 @@ import {
 } from "../src/deploy/helpers/owned-workflows";
 
 describe("getWorkflowsOwnedByScript", () => {
-	it("keeps the jurisdiction from either declaration of a Workflow", ({
+	it("takes the settings of a Workflow declared in both places from its export", ({
 		expect,
 	}) => {
 		expect(
@@ -16,11 +16,14 @@ describe("getWorkflowsOwnedByScript", () => {
 							binding: "GREETING",
 							name: "greeting",
 							class_name: "GreetingWorkflow",
-							jurisdiction: "eu",
 						},
 					],
 					exports: {
-						GreetingWorkflow: { type: "workflow", name: "greeting" },
+						GreetingWorkflow: {
+							type: "workflow",
+							name: "greeting",
+							jurisdiction: "eu",
+						},
 						OrdersWorkflow: {
 							type: "workflow",
 							name: "orders",
@@ -31,16 +34,14 @@ describe("getWorkflowsOwnedByScript", () => {
 				"my-worker"
 			)
 		).toMatchObject([
-			{ name: "greeting", jurisdiction: "eu" },
+			{ name: "greeting", class_name: "GreetingWorkflow", jurisdiction: "eu" },
 			{ name: "orders", jurisdiction: "us" },
 		]);
 	});
 });
 
 describe("validateOwnedWorkflowDeclarations", () => {
-	it("accepts a binding and an export that configure the same Workflow settings in different forms", ({
-		expect,
-	}) => {
+	it("accepts a binding to a Workflow declared in exports", ({ expect }) => {
 		expect(() =>
 			validateOwnedWorkflowDeclarations(
 				{
@@ -49,8 +50,7 @@ describe("validateOwnedWorkflowDeclarations", () => {
 							binding: "GREETING",
 							name: "greeting",
 							class_name: "GreetingWorkflow",
-							limits: { steps: 10 },
-							schedules: "0 * * * *",
+							script_name: "my-worker",
 						},
 					],
 					exports: {
@@ -58,7 +58,6 @@ describe("validateOwnedWorkflowDeclarations", () => {
 							type: "workflow",
 							name: "greeting",
 							limits: { steps: 10 },
-							concurrency: { limit: 1 },
 							schedules: ["0 * * * *"],
 						},
 					},
@@ -92,7 +91,7 @@ describe("validateOwnedWorkflowDeclarations", () => {
 		);
 	});
 
-	it("errors when a binding and an export configure the same Workflow with different settings", ({
+	it("errors when a binding sets settings for a Workflow declared in exports", ({
 		expect,
 	}) => {
 		expect(() =>
@@ -111,25 +110,17 @@ describe("validateOwnedWorkflowDeclarations", () => {
 						},
 					],
 					exports: {
-						GreetingWorkflow: {
-							type: "workflow",
-							name: "greeting",
-							limits: { steps: 20 },
-							concurrency: { limit: 2 },
-							schedules: ["30 * * * *"],
-							default_retention: { success_retention: "2 days" },
-							jurisdiction: "us",
-						},
+						GreetingWorkflow: { type: "workflow", name: "greeting" },
 					},
 				},
 				"my-worker"
 			)
 		).toThrowErrorMatchingInlineSnapshot(`
-			[Error: "workflows[0].limits" and "exports.GreetingWorkflow.limits" both configure the Workflow "greeting", but with different values. Set "limits" in only one of them.
-			"workflows[0].concurrency" and "exports.GreetingWorkflow.concurrency" both configure the Workflow "greeting", but with different values. Set "concurrency" in only one of them.
-			"workflows[0].schedules" and "exports.GreetingWorkflow.schedules" both configure the Workflow "greeting", but with different values. Set "schedules" in only one of them.
-			"workflows[0].default_retention" and "exports.GreetingWorkflow.default_retention" both configure the Workflow "greeting", but with different values. Set "default_retention" in only one of them.
-			"workflows[0].jurisdiction" and "exports.GreetingWorkflow.jurisdiction" both configure the Workflow "greeting", but with different values. Set "jurisdiction" in only one of them.]
+			[Error: "workflows[0].limits" configures the Workflow "greeting", which "exports.GreetingWorkflow" declares. Set "limits" on the export instead.
+			"workflows[0].concurrency" configures the Workflow "greeting", which "exports.GreetingWorkflow" declares. Set "concurrency" on the export instead.
+			"workflows[0].schedules" configures the Workflow "greeting", which "exports.GreetingWorkflow" declares. Set "schedules" on the export instead.
+			"workflows[0].default_retention" configures the Workflow "greeting", which "exports.GreetingWorkflow" declares. Set "default_retention" on the export instead.
+			"workflows[0].jurisdiction" configures the Workflow "greeting", which "exports.GreetingWorkflow" declares. Set "jurisdiction" on the export instead.]
 		`);
 	});
 

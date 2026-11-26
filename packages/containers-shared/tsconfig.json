@@ -9,7 +9,8 @@
 		"skipLibCheck": true,
 		"types": ["node"],
 		"noUncheckedIndexedAccess": true,
-		"tsBuildInfoFile": ".tsbuildinfo"
+		"tsBuildInfoFile": ".tsbuildinfo",
+		"allowImportingTsExtensions": true
 	},
 	"include": ["src/**/*", "index.ts"],
 	"exclude": ["dist", "node_modules"]

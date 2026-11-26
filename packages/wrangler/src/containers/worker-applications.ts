@@ -7,7 +7,7 @@ import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
 import { logger } from "../logger";
 import { containersScope } from "./index";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export type WorkerContainerApplication = {
 	id: string;

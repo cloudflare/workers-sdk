@@ -503,11 +503,11 @@ export const CF_CLIENT_REGISTERED_SCOPES = [
 type ClientRegisteredScope = (typeof CF_CLIENT_REGISTERED_SCOPES)[number];
 
 // These entries remain in the OAuth client registration, so the authorization
-// front door accepts them. The consent service cannot resolve them to Bach
-// scopes, though, and fails the login later in the flow.
+// front door accepts them, but cf does not request them. The consent service
+// cannot resolve most of them to Bach scopes and fails the login later in the
+// flow. `notebook-managed:read` resolves only for clients allowed internal
+// scopes and has never been requested.
 const CF_REGISTERED_BUT_UNGRANTABLE_SCOPES = [
-	"billing:read",
-	"billing:write",
 	"email_routing:read",
 	"email_sending:read",
 	"notebook-managed:read",

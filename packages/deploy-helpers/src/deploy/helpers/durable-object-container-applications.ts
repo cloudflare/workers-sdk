@@ -13,14 +13,13 @@ import {
 	resolveImageName,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
+import { getDockerPath, UserError } from "@cloudflare/workers-utils";
 import {
 	configFileName,
 	getResolvedDurableObjectContainerApps,
-	getDockerPath,
 	getDurableObjectClassNameToUseSQLiteMap,
-	UserError,
 	validateDurableObjectContainerApplications,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import type {
 	BuiltDurableObjectContainerImage,
 	ContainerlessConfig,
@@ -36,7 +35,7 @@ import type {
 	DurableObjectContainerApp,
 	DurableObjectContainerImage,
 	ResolvedDurableObjectContainerApp,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 const IMAGE_PREPARATION_POLL_INTERVAL_MS = 2_000;
 const IMAGE_PREPARATION_TIMEOUT_MS = 15 * 60_000;
@@ -532,13 +531,9 @@ async function pushOrResolveImage(
 			targetTag: builtImage.localTag,
 			accountId,
 			complianceConfig: config,
-			cleanupSourceTag: true,
+			// Leave cleanup to the caller's complete upload workflow.
+			cleanupSourceTag: false,
 		});
-		for (const image of builtImages) {
-			if (image.localTag === builtImage.localTag) {
-				image.localTagCleaned = true;
-			}
-		}
 
 		return "remoteDigest" in imageRef ? imageRef.remoteDigest : imageRef.newTag;
 	} catch (error) {
