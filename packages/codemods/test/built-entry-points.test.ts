@@ -1,12 +1,5 @@
 import { execFileSync } from "node:child_process";
-import {
-	cpSync,
-	mkdtempSync,
-	readdirSync,
-	readFileSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -48,18 +41,16 @@ it(
 	({ expect }) => {
 		const cwd = createConsumer();
 		const entry = pathToFileURL(path.join(cwd, "dist/index.mjs")).href;
-		const output = execFileSync(
+		execFileSync(
 			process.execPath,
 			[
 				"--input-type=module",
 				"-e",
 				`const api = await import(${JSON.stringify(entry)});
-await api.runCodemod("vitest:v3-to-v4", { cwd: process.cwd(), dryRun: false, force: true });
-console.log(typeof api.migrateWranglerToCf);`,
+await api.runCodemod("vitest:v3-to-v4", { cwd: process.cwd(), dryRun: false, force: true });`,
 			],
 			{ cwd, encoding: "utf8", timeout: subprocessTimeout }
 		);
-		expect(output.trim()).toBe("function");
 		expect(readFileSync(path.join(cwd, "vitest.config.ts"), "utf8")).toContain(
 			"cloudflareTest"
 		);
@@ -79,47 +70,6 @@ it(
 		expect(output).toContain("vitest:v3-to-v4: 1 file(s)");
 		expect(readFileSync(path.join(cwd, "vitest.config.ts"), "utf8")).toContain(
 			"cloudflareTest"
-		);
-	},
-	subprocessTimeout + 5_000
-);
-
-it(
-	"converts a Wrangler config through the built converter entry without the codemod runner",
-	({ expect }) => {
-		const cwd = createConsumer();
-		// The converter entry must not depend on the runner's chunk.
-		for (const file of readdirSync(path.join(cwd, "dist"))) {
-			if (file.startsWith("runner-")) {
-				rmSync(path.join(cwd, "dist", file));
-			}
-		}
-		const entry = pathToFileURL(path.join(cwd, "dist/wrangler-to-cf.mjs")).href;
-		const output = execFileSync(
-			process.execPath,
-			[
-				"--input-type=module",
-				"-e",
-				`const { convertWranglerConfig } = await import(${JSON.stringify(entry)});
-const { base, environments, followUps } = convertWranglerConfig({
-	name: "worker",
-	compatibility_date: "2026-01-01",
-	kv_namespaces: [{ binding: "KV", id: "kv-id" }],
-	env: { staging: { vars: { STAGE: "staging" } } },
-});
-console.log(JSON.stringify({
-	base: base.config,
-	environments: [...environments.keys()],
-	blocking: followUps.filter(({ blocking }) => blocking),
-}));`,
-			],
-			{ cwd, encoding: "utf8", timeout: subprocessTimeout }
-		);
-		const result = JSON.parse(output);
-		expect(result.environments).toEqual(["staging"]);
-		expect(result.blocking).toEqual([]);
-		expect(JSON.stringify(result.base)).toContain(
-			'{"args":[{"kind":"object","properties":[{"key":"id","value":"kv-id"}]}],"callee":"bindings.kv","kind":"call"}'
 		);
 	},
 	subprocessTimeout + 5_000

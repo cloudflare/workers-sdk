@@ -1,11 +1,14 @@
+import type { RawConfig } from "@cloudflare/workers-utils/config";
+
 export type MigrationBundler = "vite" | "wrangler";
 
 export interface WranglerToCfMigrationOptions {
 	bundler?: MigrationBundler;
 	dryRun?: boolean;
-	force?: boolean;
 	/** Whether to install cf and install or upgrade Vite plugin and Wrangler dependencies when needed. Required dependency changes become blocking follow-ups when false. */
 	installDependencies?: boolean;
+	/** The Wrangler config's contents, when the caller has already read them */
+	wranglerConfig?: RawConfig;
 }
 
 export interface MigrationFollowUp {

@@ -11,11 +11,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { afterEach, describe, it, vi } from "vitest";
-import { migrateWranglerToCf } from "../../src";
+import { migrateWranglerToCf } from "../../src/wrangler-to-cf";
 import {
 	rewriteMigrationOutput,
 	writeMigrationOutputs,
-} from "../../src/codemods/wrangler-to-cf/file-writer";
+} from "../../src/wrangler-to-cf/file-writer";
 
 const temporaryDirectories: string[] = [];
 
@@ -23,20 +23,17 @@ vi.mock("@cloudflare/cli-shared-helpers/packages", () => ({
 	installPackages: vi.fn(),
 }));
 
-vi.mock(
-	"../../src/codemods/wrangler-to-cf/file-writer",
-	async (importOriginal) => {
-		const original =
-			await importOriginal<
-				typeof import("../../src/codemods/wrangler-to-cf/file-writer")
-			>();
-		return {
-			...original,
-			rewriteMigrationOutput: vi.fn(original.rewriteMigrationOutput),
-			writeMigrationOutputs: vi.fn(original.writeMigrationOutputs),
-		};
-	}
-);
+vi.mock("../../src/wrangler-to-cf/file-writer", async (importOriginal) => {
+	const original =
+		await importOriginal<
+			typeof import("../../src/wrangler-to-cf/file-writer")
+		>();
+	return {
+		...original,
+		rewriteMigrationOutput: vi.fn(original.rewriteMigrationOutput),
+		writeMigrationOutputs: vi.fn(original.writeMigrationOutputs),
+	};
+});
 
 async function createProject(files: Record<string, string>): Promise<string> {
 	const directory = await mkdtemp(path.join(tmpdir(), "wrangler-to-cf-"));
@@ -1844,7 +1841,7 @@ describe("migrateWranglerToCf", () => {
 		});
 
 		await expect(
-			migrateWranglerToCf(path.join(cwd, "wrangler.json"), { force: true })
+			migrateWranglerToCf(path.join(cwd, "wrangler.json"))
 		).rejects.toThrow("already exists");
 		expect(await readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")).toBe(
 			existing

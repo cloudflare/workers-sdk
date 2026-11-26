@@ -104,6 +104,43 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		).resolves.toMatchObject({ configured: false });
 	});
 
+	it("should find a root Wrangler config to migrate for cf, unless cloudflare.config.ts exists", async ({
+		expect,
+	}) => {
+		await seed({
+			"package.json": JSON.stringify({ name: "package-name" }),
+			"wrangler.jsonc": JSON.stringify({ name: "my-worker" }),
+		});
+
+		// It keeps the Wrangler Worker name
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).resolves.toMatchObject({
+			configured: false,
+			wranglerConfigPath: join(process.cwd(), "wrangler.jsonc"),
+			wranglerConfig: { name: "my-worker" },
+			workerName: "my-worker",
+		});
+
+		await seed({ "cloudflare.config.ts": "export default {};" });
+		await expect(
+			details.getDetailsForAutoConfig({
+				wranglerConfigPath: "wrangler.jsonc",
+				context,
+			})
+		).resolves.not.toHaveProperty("wranglerConfigPath");
+	});
+
+	it("should refuse to choose between several root Wrangler configs", async ({
+		expect,
+	}) => {
+		await seed({ "wrangler.json": "{}", "wrangler.toml": "" });
+
+		await expect(details.getDetailsForAutoConfig({ context })).rejects.toThrow(
+			"Found more than one Wrangler config"
+		);
+	});
+
 	it("should detect commands without using the package dev script when a Cloudflare config exists", async ({
 		expect,
 	}) => {
@@ -354,7 +391,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		expect,
 	}) => {
 		await expect(
-			details.getDetailsForAutoConfig({ context })
+			details.getDetailsForAutoConfig({ target: "wrangler", context })
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Could not detect a directory containing static files (e.g. html, css and js) for the project]`
 		);
@@ -399,7 +436,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		);
 
 		await expect(
-			details.getDetailsForAutoConfig({ context })
+			details.getDetailsForAutoConfig({ target: "wrangler", context })
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Could not detect a directory containing static files (e.g. html, css and js) for the project]`
 		);

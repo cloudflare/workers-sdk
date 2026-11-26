@@ -1,6 +1,6 @@
 import { describe, it } from "vitest";
-import { convertWranglerConfig } from "../../src/codemods/wrangler-to-cf/config-converter";
-import { renderCloudflareConfig } from "../../src/codemods/wrangler-to-cf/config-renderer";
+import { convertWranglerConfig } from "../../src/wrangler-to-cf/config-converter";
+import { renderCloudflareConfig } from "../../src/wrangler-to-cf/config-renderer";
 import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 describe("experimental Worker settings", () => {

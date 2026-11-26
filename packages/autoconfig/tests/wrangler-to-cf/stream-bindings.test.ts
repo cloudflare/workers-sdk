@@ -1,6 +1,6 @@
 import { describe, it } from "vitest";
-import { convertWranglerConfig } from "../../src/codemods/wrangler-to-cf/config-converter";
-import { renderCloudflareConfig } from "../../src/codemods/wrangler-to-cf/config-renderer";
+import { convertWranglerConfig } from "../../src/wrangler-to-cf/config-converter";
+import { renderCloudflareConfig } from "../../src/wrangler-to-cf/config-renderer";
 import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 const streamId = "0123456789abcdef0123456789abcdef";
@@ -47,6 +47,7 @@ describe("stream binding conversion", () => {
 			{
 				compatibility_date: "2026-09-23",
 				name: "legacy-pipeline",
+				// eslint-disable-next-line @typescript-eslint/no-deprecated -- converts the legacy `pipeline` field
 				pipelines: [{ binding: "EVENTS", pipeline: "my-pipeline" }],
 			} satisfies RawConfig,
 			"wrangler",

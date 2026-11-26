@@ -23,6 +23,7 @@ import type {
 	ConfigurationOptions,
 	ConfigurationResults,
 } from "../src/frameworks/framework-class";
+import type { AutoConfigOptions } from "../src/types";
 
 class ExternalWorkerConfigFramework extends Framework {
 	configure(): ConfigurationResults {
@@ -749,5 +750,127 @@ describe("runAutoConfig()", () => {
 		);
 
 		expect(existsSync(".assetsignore")).toBe(false);
+	});
+
+	it("explains when a project has nothing to deploy", async ({ expect }) => {
+		await seed({ "package.json": JSON.stringify({ name: "empty" }) });
+		const context = createMockContext();
+
+		await expect(
+			runAutoConfig(
+				await getDetailsForAutoConfig({
+					projectPath: process.cwd(),
+					context,
+				}),
+				{ context, runBuild: false, skipConfirmations: true }
+			)
+		).rejects.toThrow("Couldn't tell what to deploy in");
+	});
+
+	describe("for a Wrangler project", () => {
+		/**
+		 * Detects the project in the current directory, set up as cf runs autoconfig.
+		 *
+		 * @param options The autoconfig options to change
+		 * @returns The setup summary
+		 */
+		async function setUp(options: Partial<AutoConfigOptions> = {}) {
+			const context = createMockContext();
+			return runAutoConfig(
+				await getDetailsForAutoConfig({
+					projectPath: process.cwd(),
+					wranglerConfigPath: "wrangler.jsonc",
+					context,
+				}),
+				{
+					context,
+					runBuild: false,
+					skipConfirmations: true,
+					enableTargetCliInstallation: false,
+					...options,
+				}
+			);
+		}
+
+		const worker = {
+			"package.json": JSON.stringify({
+				name: "package-name",
+				devDependencies: { cf: "1.0.0" },
+			}),
+			"wrangler.jsonc": JSON.stringify({
+				name: "my-worker",
+				main: "src/index.ts",
+				compatibility_date: "2026-09-24",
+				kv_namespaces: [{ binding: "KV", id: "kv-id" }],
+			}),
+			"src/index.ts": "export default { fetch: () => new Response() };",
+		};
+
+		it("migrates the Wrangler config as the Worker config", async ({
+			expect,
+		}) => {
+			await seed(worker);
+
+			const summary = await setUp();
+
+			expect(summary.wranglerMigration).toMatchObject({
+				changedFiles: ["cloudflare.config.ts"],
+				followUps: [],
+				status: "complete",
+			});
+			const cloudflareConfig = readFileSync("cloudflare.config.ts", "utf8");
+			expect(cloudflareConfig).toContain('name: "my-worker"');
+			expect(cloudflareConfig).toContain("bindings.kv");
+		});
+
+		it("migrates the Wrangler config of a framework autoconfig can't set up for cf", async ({
+			expect,
+		}) => {
+			await seed({
+				...worker,
+				"package.json": JSON.stringify({
+					name: "my-worker",
+					dependencies: { hono: "^4.0.0" },
+					devDependencies: { cf: "1.0.0" },
+				}),
+			});
+
+			const summary = await setUp();
+
+			expect(summary.wranglerMigration?.status).toBe("complete");
+			expect(summary.frameworkId).toBe("hono");
+			expect(summary.frameworkConfiguration).toBeUndefined();
+		});
+
+		it("refuses a Pages project before changing anything", async ({
+			expect,
+		}) => {
+			await seed({
+				...worker,
+				"wrangler.jsonc": JSON.stringify({
+					name: "my-site",
+					pages_build_output_dir: "./dist",
+				}),
+				"dist/index.html": "<h1>Hello World</h1>",
+			});
+
+			await expect(setUp()).rejects.toThrow(
+				"Automatically migrating from a Pages project to Workers is not yet supported."
+			);
+			expect(existsSync("cloudflare.config.ts")).toBe(false);
+		});
+
+		it("previews the migration in a dry run without changing files", async ({
+			expect,
+		}) => {
+			await seed(worker);
+
+			const summary = await setUp({ dryRun: true });
+
+			expect(summary.wranglerMigration?.changedFiles).toEqual([
+				"cloudflare.config.ts",
+			]);
+			expect(existsSync("cloudflare.config.ts")).toBe(false);
+		});
 	});
 });

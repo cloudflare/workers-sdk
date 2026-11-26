@@ -90,7 +90,7 @@ describe("codemod runner", () => {
 			 * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
 			 */
 			/**
-			 * TODO(@cloudflare): cf migrate: No package.json was found. Create or locate the package that owns this Worker, then install \`cf@latest\` and \`@cloudflare/vite-plugin@^2.0.0-rc.0\` as dev dependencies before using the generated configuration.
+			 * TODO(@cloudflare): cf migrate: No package.json was found. Create or locate the package that owns this Worker, then install \`cf@latest\` as dev dependencies before using the generated configuration.
 			 */
 			throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
 
@@ -221,7 +221,7 @@ describe("codemod runner", () => {
 
 		await expect(
 			runCodemod("wrangler-to-cf", { cwd, dryRun: false })
-		).rejects.toThrow("Multiple Wrangler configs found");
+		).rejects.toThrow("Found more than one Wrangler config");
 	});
 
 	it("runs the Vitest migrations manually, in sequence", async ({ expect }) => {

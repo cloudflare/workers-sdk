@@ -1,6 +1,10 @@
 import type { AutoConfigContext, AutoConfigTarget } from "./context";
 import type { Framework } from "./frameworks/framework-class";
 import type { BuildConfig } from "./frameworks/framework-class";
+import type {
+	MigrationBundler,
+	WranglerToCfMigrationResult,
+} from "./wrangler-to-cf/types";
 import type { WorkerConfig } from "@cloudflare/config";
 import type { PackageManager } from "@cloudflare/workers-utils";
 import type { PackageJSON } from "@cloudflare/workers-utils";
@@ -56,8 +60,16 @@ export type AutoConfigDetailsForConfiguredProject = Optional<
 	configured: true;
 };
 
-export type AutoConfigDetailsForNonConfiguredProject = AutoConfigDetailsBase & {
+export type AutoConfigDetailsForNonConfiguredProject = Optional<
+	AutoConfigDetailsBase,
+	// A Wrangler project can serve a Worker without any static assets
+	"outputDir"
+> & {
 	configured: false;
+	/** For the cf target, the Wrangler config that setup migrates to `cloudflare.config.ts` */
+	wranglerConfigPath?: string;
+	/** The contents of that Wrangler config, read once during detection */
+	wranglerConfig?: RawConfig;
 };
 
 export type AutoConfigDetails =
@@ -87,6 +99,16 @@ export type AutoConfigOptions = {
 	 * Whether to install the selected target CLI during autoconfig.
 	 */
 	enableTargetCliInstallation?: boolean;
+	/**
+	 * Whether autoconfig may install the target CLI and the packages a Wrangler config's migration needs
+	 * (default: true). When false, the migration lists those packages as follow-ups.
+	 */
+	installDependencies?: boolean;
+	/**
+	 * The bundler a migrated Wrangler project uses. Defaults to Vite for projects that declare
+	 * `@cloudflare/vite-plugin`, and to Wrangler for the rest.
+	 */
+	bundler?: MigrationBundler;
 };
 
 export type AutoConfigSummary = {
@@ -95,9 +117,10 @@ export type AutoConfigSummary = {
 	buildConfig?: BuildConfig;
 	wranglerConfig?: RawConfig;
 	frameworkConfiguration?: string;
-	outputDir: string;
+	outputDir?: string;
 	frameworkId?: string;
 	buildCommand?: string;
 	deployCommand?: string;
 	versionCommand?: string;
+	wranglerMigration?: WranglerToCfMigrationResult;
 };

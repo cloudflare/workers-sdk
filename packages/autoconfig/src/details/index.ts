@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { existsSync, statSync, type Stats } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
-import { dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	checkWorkerNameValidity,
@@ -9,6 +9,7 @@ import {
 	NpmPackageManager,
 	parsePackageJSON,
 	readFileSync,
+	UserError,
 } from "@cloudflare/workers-utils";
 import {
 	AutoConfigDetectionError,
@@ -19,6 +20,7 @@ import {
 	getAllFrameworksInfos,
 	staticFramework,
 } from "../frameworks/all-frameworks";
+import { readWranglerConfig } from "../wrangler-to-cf/config-reader";
 import { detectFramework } from "./framework-detection";
 import { getViteProjectCommands, usesVitePlus } from "./vite-commands";
 import type { AutoConfigContext, AutoConfigTarget } from "../context";
@@ -32,6 +34,31 @@ import type { PackageJSON } from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils/config";
 
 const CLOUDFLARE_CONFIG_FILE = "cloudflare.config.ts";
+const WRANGLER_CONFIG_FILES = [
+	"wrangler.jsonc",
+	"wrangler.toml",
+	"wrangler.json",
+];
+
+/**
+ * Finds the Wrangler config at the root of a project.
+ *
+ * @param projectPath The path of the project
+ * @returns The path of the Wrangler config, if the project has one
+ * @throws {UserError} When the project has more than one, since migrating either would drop the other
+ */
+function findWranglerConfigFile(projectPath: string): string | undefined {
+	const configPaths = WRANGLER_CONFIG_FILES.map((file) =>
+		resolve(projectPath, file)
+	).filter((configPath) => existsSync(configPath));
+	if (configPaths.length > 1) {
+		throw new UserError(
+			`Found more than one Wrangler config in ${projectPath} (${configPaths.map((configPath) => basename(configPath)).join(", ")}). Keep only the one this project uses, then try again.`,
+			{ telemetryMessage: "autoconfig details multiple wrangler configs" }
+		);
+	}
+	return configPaths[0];
+}
 
 /**
  * Asserts that the current project being targeted for autoconfig is not already configured.
@@ -138,6 +165,7 @@ function normalizeOutputDir(projectPath: string, outputDir: string): string {
 export async function getDetailsForAutoConfig({
 	projectPath = process.cwd(),
 	wranglerConfig,
+	wranglerConfigPath,
 	target = "cf",
 	outputDir: requestedOutputDir,
 	context,
@@ -146,6 +174,11 @@ export async function getDetailsForAutoConfig({
 	projectPath?: string;
 	/** The parsed wrangler configuration for the project (if any). */
 	wranglerConfig?: Config;
+	/**
+	 * For the cf target, the Wrangler config to migrate, inside `projectPath` and relative to it.
+	 * Defaults to the one at the project root. Ignored if `cloudflare.config.ts` exists.
+	 */
+	wranglerConfigPath?: string;
 	/** The configuration target, defaults to cf. */
 	target?: AutoConfigTarget;
 	/**
@@ -184,8 +217,22 @@ export async function getDetailsForAutoConfig({
 		};
 	}
 
+	// An existing cloudflare.config.ts takes precedence, so a migrated project isn't migrated again
+	const wranglerConfigFile =
+		target === "cf" && !hasCloudflareConfig
+			? wranglerConfigPath !== undefined
+				? resolve(projectPath, wranglerConfigPath)
+				: findWranglerConfigFile(projectPath)
+			: undefined;
+
+	const wranglerRawConfig = readWranglerConfig(wranglerConfigFile);
+
 	const { detectedFramework, packageManager, isWorkspaceRoot, workspaceRoot } =
-		await detectFramework(projectPath, context, { wranglerConfig, target });
+		await detectFramework(projectPath, context, {
+			// Wrangler's parsed config, or the one setup migrates
+			wranglerConfig: wranglerConfig ?? wranglerRawConfig,
+			target,
+		});
 	const nodeModulesPaths = getNodeModulesPaths(projectPath, workspaceRoot);
 
 	const detectedFrameworkInstance = getFrameworkClassInstance(
@@ -284,7 +331,11 @@ export async function getDetailsForAutoConfig({
 					target
 				),
 		env: framework.env,
-		workerName: getWorkerName(packageJson?.name, projectPath),
+		workerName: getWorkerName(
+			// A migrated project keeps its Wrangler Worker name
+			wranglerRawConfig?.name ?? packageJson?.name,
+			projectPath
+		),
 	};
 
 	if (configured) {
@@ -295,7 +346,7 @@ export async function getDetailsForAutoConfig({
 		};
 	}
 
-	if (!outputDir) {
+	if (!outputDir && target === "wrangler") {
 		const errorMessage =
 			framework.id === "static" || framework.id === "cloudflare-pages"
 				? "Could not detect a directory containing static files (e.g. html, css and js) for the project"
@@ -313,6 +364,8 @@ export async function getDetailsForAutoConfig({
 		outputDir,
 		configured: false,
 		isWorkspaceRoot,
+		wranglerConfigPath: wranglerConfigFile,
+		wranglerConfig: wranglerRawConfig,
 	};
 }
 
