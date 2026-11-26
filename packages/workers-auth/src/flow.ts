@@ -256,7 +256,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		if (complianceRegion === "fedramp_high") {
 			const configurationSource = props.complianceConfig?.compliance_region
 				? "`compliance_region` configuration property"
-				: "`CLOUDFLARE_API_ENVIRONMENT` environment variable";
+				: "`CLOUDFLARE_COMPLIANCE_REGION` environment variable";
 			throw new UserError(
 				dedent`
 				OAuth login is not supported in the \`${complianceRegion}\` compliance region.

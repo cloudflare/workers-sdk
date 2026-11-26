@@ -351,7 +351,7 @@ describe("User", () => {
 			await expect(runWrangler("login")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
 			[Error: OAuth login is not supported in the \`fedramp_high\` compliance region.
-			Please use a Cloudflare API token (\`CLOUDFLARE_API_TOKEN\` environment variable) or remove the \`CLOUDFLARE_API_ENVIRONMENT\` environment variable.]
+			Please use a Cloudflare API token (\`CLOUDFLARE_API_TOKEN\` environment variable) or remove the \`CLOUDFLARE_COMPLIANCE_REGION\` environment variable.]
 		`);
 		});
 
