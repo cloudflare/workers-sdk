@@ -18,7 +18,7 @@ Each Worker is a project with its own `cloudflare.config.ts`, built by the Cloud
 
 ## What this fixture covers
 
-- Setup [Vitest](https://vitest.dev/) and [Playwright](https://playwright.dev/) against the Workers' Build Output.
+- Set up [Vitest](https://vitest.dev/) and [Playwright](https://playwright.dev/) against the Workers' Build Output.
 - Route dispatch across multiple Workers.
 - Direct Worker calls with `server.getWorker(name)`.
 - D1 migration setup with `worker.applyD1Migrations()`.
