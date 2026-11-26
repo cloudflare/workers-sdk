@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
-import { UserError } from "@cloudflare/workers-utils";
+import { APIError, UserError } from "@cloudflare/workers-utils";
 import { MiniflareCoreError } from "miniflare";
 import { logger } from "../logger";
+import { RemoteSessionAuthenticationError } from "../utils/remote";
 import { ProxyController } from "./ProxyController";
 import { RemoteRuntimeController } from "./RemoteRuntimeController";
 import type { ErrorEvent, ReloadCompleteEvent } from "./events";
@@ -80,7 +81,23 @@ export class DevEnv extends EventEmitter {
 
 	private handleErrorEvent(event: ErrorEvent): void {
 		if (this.#config.lazy && event.source === "RemoteRuntimeController") {
-			this.proxy.connectionFailed(event.cause.message);
+			const { cause } = event;
+			const apiError =
+				cause instanceof RemoteSessionAuthenticationError ? cause.cause : cause;
+			const definitive =
+				apiError instanceof APIError
+					? !apiError.isRetryable() &&
+						apiError.status !== 429 &&
+						(cause instanceof RemoteSessionAuthenticationError ||
+							apiError.status === 401 ||
+							apiError.status === 403 ||
+							apiError.status === 404)
+					: cause instanceof UserError;
+			const message =
+				definitive && cause instanceof APIError
+					? [cause.message, ...cause.notes.map(({ text }) => text)].join("\n")
+					: cause.message;
+			this.proxy.connectionFailed(message, definitive);
 		}
 		if (
 			event.cause instanceof MiniflareCoreError &&

@@ -191,9 +191,13 @@ export class ProxyController {
 		});
 	}
 	/** Fail queued binding requests without stopping the local development server. */
-	connectionFailed(message: string) {
+	connectionFailed(message: string, definitive = false) {
 		this.latestProxyData = undefined;
-		void this.sendMessageToProxyWorker({ type: "connectionFailed", message });
+		void this.sendMessageToProxyWorker({
+			type: "connectionFailed",
+			message,
+			definitive,
+		});
 	}
 	play(data: ReloadCompleteEvent) {
 		this.localServerReady.resolve();

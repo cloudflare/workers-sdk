@@ -1,5 +1,7 @@
 import { execSync } from "node:child_process";
+import { once } from "node:events";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -14,6 +16,7 @@ import {
 import { getPlatformProxy } from "wrangler";
 import type { KVNamespace } from "@cloudflare/workers-types/experimental";
 import type { DispatchFetch, Response } from "miniflare";
+import type { AddressInfo } from "node:net";
 import type { ExpectStatic } from "vitest";
 
 type Fetcher = { fetch: DispatchFetch };
@@ -301,7 +304,15 @@ test.for(["service", "hyperdrive"] as const)(
 				'Invalid account ID "NOT a valid account id" set in your Wrangler configuration file.';
 			try {
 				if (binding === "hyperdrive") {
-					await expect(proxy).rejects.toThrow(accountError);
+					const startupError = await proxy.then(
+						() => undefined,
+						(error: unknown) => error
+					);
+					expect(startupError).toBeInstanceOf(Error);
+					expect(startupError).toHaveProperty(
+						"message",
+						expect.stringContaining(accountError)
+					);
 					return;
 				}
 				const response = await (
@@ -319,6 +330,71 @@ test.for(["service", "hyperdrive"] as const)(
 			}
 		} finally {
 			vi.unstubAllEnvs();
+			rmSync(directory, { recursive: true, force: true });
+		}
+	}
+);
+
+test.for([
+	{
+		status: 400,
+		code: 10000,
+		message: "remote session could not be authenticated",
+	},
+	{ status: 403, code: 9999, message: "Account access denied" },
+	{ status: 404, code: 9999, message: "Account not found" },
+])(
+	"getPlatformProxy fails remote Hyperdrive startup for an API rejection ($status)",
+	async ({ status, code, message }, { expect }) => {
+		const directory = mkdtempSync(
+			join(tmpdir(), "platform-proxy-api-rejection-")
+		);
+		const configPath = join(directory, "wrangler.json");
+		const requested = vi.fn();
+		const server = createServer((request, response) => {
+			requested(request.url);
+			response
+				.writeHead(status, { "Content-Type": "application/json" })
+				.end(JSON.stringify({ success: false, errors: [{ code, message }] }));
+		});
+		try {
+			server.listen(0, "127.0.0.1");
+			await once(server, "listening");
+			vi.stubEnv(
+				"CLOUDFLARE_API_BASE_URL",
+				`http://127.0.0.1:${(server.address() as AddressInfo).port}/client/v4`
+			);
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "mock-token");
+			writeFileSync(
+				configPath,
+				JSON.stringify({
+					name: "get-platform-proxy-fixture-test",
+					account_id: "a".repeat(32),
+					compatibility_date: "2025-06-01",
+					hyperdrive: [{ binding: "DB", id: "b".repeat(32), remote: true }],
+				})
+			);
+			const startupError = await getPlatformProxy({
+				configPath,
+				persist: false,
+			}).then(
+				async ({ dispose }) => {
+					await dispose();
+				},
+				(error: unknown) => error
+			);
+			expect(startupError).toBeInstanceOf(Error);
+			expect(startupError).toHaveProperty(
+				"message",
+				expect.stringContaining(message)
+			);
+			expect(requested).toHaveBeenCalledExactlyOnceWith(
+				expect.stringMatching(/\/subdomain\/edge-preview$/)
+			);
+		} finally {
+			vi.unstubAllEnvs();
+			server.closeAllConnections();
+			await new Promise<void>((resolve) => server.close(() => resolve()));
 			rmSync(directory, { recursive: true, force: true });
 		}
 	}

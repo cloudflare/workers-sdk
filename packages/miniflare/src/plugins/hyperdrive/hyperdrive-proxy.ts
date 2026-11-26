@@ -8,11 +8,28 @@ import { newWebSocketRpcSession } from "capnweb";
 import WebSocket from "ws";
 import type { Log } from "../../shared";
 import type { RpcStub } from "capnweb";
+import type { IncomingMessage } from "node:http";
 
 const REMOTE_HYPERDRIVE_CONNECTION_ATTEMPTS = 3;
 const REMOTE_HYPERDRIVE_HANDSHAKE_TIMEOUT_MS = 150_000;
 const REMOTE_HYPERDRIVE_RPC_TIMEOUT_MS = 10_000;
 const REMOTE_HYPERDRIVE_RETRY_BACKOFF_MS = 500;
+
+class RemoteHyperdriveSessionError extends Error {}
+
+async function readRemoteSessionError(
+	response: IncomingMessage
+): Promise<string> {
+	let message = "";
+	response.setEncoding("utf8");
+	for await (const chunk of response) {
+		message += chunk;
+		if (message.length >= 16_384) {
+			return message.slice(0, 16_384);
+		}
+	}
+	return message;
+}
 
 export interface HyperdriveProxyConfig {
 	// Name of the Hyperdrive binding
@@ -558,6 +575,30 @@ export class HyperdriveProxyController {
 			const stub = newWebSocketRpcSession<RemoteHyperdrive>(
 				websocket as unknown as globalThis.WebSocket
 			);
+			const handshakeFailure = Promise.withResolvers<never>();
+			websocket.once("unexpected-response", (_request, response) => {
+				if (
+					response.statusCode !== 503 ||
+					response.headers["mf-remote-session-error"] !== "definitive"
+				) {
+					websocket.terminate();
+					return;
+				}
+				const timeout = setTimeout(
+					() => response.destroy(),
+					REMOTE_HYPERDRIVE_RPC_TIMEOUT_MS
+				);
+				void readRemoteSessionError(response)
+					.catch(() => "")
+					.then((message) => {
+						clearTimeout(timeout);
+						handshakeFailure.reject(
+							new RemoteHyperdriveSessionError(
+								`Unable to connect remote Hyperdrive binding "${bindingName}".${message ? ` ${message}` : ""}`
+							)
+						);
+					});
+			});
 			function abortConnection() {
 				stub[Symbol.dispose]();
 				websocket.terminate();
@@ -572,15 +613,22 @@ export class HyperdriveProxyController {
 			}
 			websocket.once("open", startRpcTimeout);
 			try {
-				const connectionString = await stub.getConnectionString();
+				const connectionString = await Promise.race([
+					stub.getConnectionString(),
+					handshakeFailure.promise,
+				]);
 				signal.throwIfAborted();
 				if (typeof connectionString !== "string") {
 					throw new Error("Missing Hyperdrive connection string");
 				}
 				return { stub, connectionString };
-			} catch {
+			} catch (error) {
 				stub[Symbol.dispose]();
 				signal.throwIfAborted();
+				if (error instanceof RemoteHyperdriveSessionError) {
+					websocket.terminate();
+					throw error;
+				}
 			} finally {
 				clearTimeout(timeout);
 				websocket.off("open", startRpcTimeout);
