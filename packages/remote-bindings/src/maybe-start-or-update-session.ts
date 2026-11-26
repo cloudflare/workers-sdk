@@ -160,6 +160,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	};
 }
 
+/** Decide when to connect to a nonempty set of bindings selected by {@link pickRemoteBindings}. */
 export function shouldStartRemoteProxySessionLazily(
 	remoteBindings: Record<string, Binding>
 ): boolean {

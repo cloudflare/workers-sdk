@@ -67,10 +67,13 @@ if (typeof vitest === "undefined" && require.main === module) {
 		args.length === 1 &&
 		args[0] === PLATFORM_PROXY_REMOTE_SESSION_ARG
 	) {
-		runPlatformProxyRemoteSession().catch((error) => {
-			logger.error(error);
-			process.exitCode = 1;
-		});
+		runPlatformProxyRemoteSession().then(
+			() => process.exit(0),
+			(error) => {
+				logger.error(error);
+				process.exit(1);
+			}
+		);
 	} else {
 		main(args).catch((e) => {
 			// The logging of any error that was thrown from `main()` is handled in the `yargs.fail()` handler.

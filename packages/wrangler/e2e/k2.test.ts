@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import { once } from "node:events";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
+import { createServer as createHttpsServer } from "node:https";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { promisify } from "node:util";
@@ -10,6 +11,7 @@ import { getCloudflareApiBaseUrl } from "@cloudflare/workers-utils";
 import Cloudflare from "cloudflare";
 import { fetch } from "undici";
 import { describe, it, onTestFinished, vi } from "vitest";
+import { CERT, KEY } from "../../miniflare/src/http/cert";
 import { quote } from "../src/utils/shell-quote";
 import {
 	CLOUDFLARE_ACCOUNT_ID,
@@ -65,6 +67,7 @@ describe("K2 producer configuration", () => {
 		const helper = new WranglerE2ETestHelper();
 		await seedProducer(helper, streamId);
 		await helper.seed({
+			"localhost-ca.pem": CERT,
 			"platform-proxy.mjs": `
 				import assert from "node:assert/strict";
 				import { getPlatformProxy } from ${JSON.stringify(WRANGLER_IMPORT.href)};
@@ -80,11 +83,16 @@ describe("K2 producer configuration", () => {
 			`,
 		});
 		const requests: string[] = [];
-		const server = createServer((request, response) => {
-			requests.push(new URL(request.url ?? "/", "http://localhost").pathname);
-			response.setHeader("Content-Type", "application/json");
-			response.end(JSON.stringify({ success: true, result: [] }));
-		});
+		const server = createHttpsServer(
+			{ cert: CERT, key: KEY },
+			(request, response) => {
+				requests.push(
+					new URL(request.url ?? "/", "https://localhost").pathname
+				);
+				response.setHeader("Content-Type", "application/json");
+				response.end(JSON.stringify({ success: true, result: [] }));
+			}
+		);
 		server.listen(0, "127.0.0.1");
 		await once(server, "listening");
 		helper.onTeardown(
@@ -97,7 +105,7 @@ describe("K2 producer configuration", () => {
 		assert(address && typeof address !== "string");
 		const { stderr } = await promisify(execFile)(
 			process.execPath,
-			["platform-proxy.mjs"],
+			["--use-openssl-ca", "platform-proxy.mjs"],
 			{
 				cwd: helper.tmpPath,
 				timeout: 15_000,
@@ -107,12 +115,15 @@ describe("K2 producer configuration", () => {
 					HOME: helper.tmpPath,
 					USERPROFILE: helper.tmpPath,
 					XDG_CONFIG_HOME: helper.tmpPath,
+					NODE_EXTRA_CA_CERTS: "",
+					NODE_TLS_REJECT_UNAUTHORIZED: "1",
+					SSL_CERT_FILE: path.join(helper.tmpPath, "localhost-ca.pem"),
 					CLOUDFLARE_ACCOUNT_ID: "",
 					CF_ACCOUNT_ID: "",
 					CLOUDFLARE_API_KEY: "",
 					CF_API_KEY: "",
 					CLOUDFLARE_API_TOKEN: "k2-test-token",
-					CLOUDFLARE_API_BASE_URL: `http://127.0.0.1:${address.port}/client/v4`,
+					CLOUDFLARE_API_BASE_URL: `https://127.0.0.1:${address.port}/client/v4`,
 					WRANGLER_LOG: "warn",
 				},
 			}

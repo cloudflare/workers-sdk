@@ -48,6 +48,11 @@ type StartupMessage =
 			telemetryMessage?: string;
 	  };
 
+/**
+ * Start the configured remote bindings, if any. The caller owns disposal.
+ * A lazy session inherits the environment at proxy creation, but only resolves
+ * credentials on the first binding call.
+ */
 export async function startPlatformProxyRemoteSession(
 	config: Config
 ): Promise<PlatformProxyRemoteSession | undefined> {
@@ -92,7 +97,11 @@ async function startBackgroundSession(
 		path.join(getBasePath(), "wrangler-dist", "cli.js"),
 		[PLATFORM_PROXY_REMOTE_SESSION_ARG],
 		{
-			execArgv: [],
+			execArgv: process.execArgv.filter((arg) =>
+				/^--(?:no-)?use-(?:(?:bundled|openssl|system)-ca|env-proxy)$/.test(
+					arg.replaceAll("_", "-")
+				)
+			),
 			env: { ...process.env, WRANGLER_LOG: logger.loggerLevel },
 			stdio: ["inherit", "inherit", "inherit", "ipc"],
 		}
@@ -160,6 +169,7 @@ async function sendStartupMessage(message: StartupMessage) {
 	}
 }
 
+/** Serve a single lazy session in the forked CLI until its parent disconnects. */
 export async function runPlatformProxyRemoteSession(): Promise<void> {
 	const disconnected = once(process, "disconnect").then(() => undefined);
 	const config: SessionConfig | undefined = await Promise.race([
@@ -183,6 +193,7 @@ export async function runPlatformProxyRemoteSession(): Promise<void> {
 				telemetryMessage:
 					error instanceof UserError ? error.telemetryMessage : undefined,
 			});
+			await disconnected;
 			return;
 		}
 		await sendStartupMessage({
