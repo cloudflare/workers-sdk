@@ -2,6 +2,12 @@ import assert from "node:assert";
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
+	CF_ASSETS_IGNORE_FILENAME,
+	HEADERS_FILENAME,
+	REDIRECTS_FILENAME,
+} from "@cloudflare/workers-shared/utils/constants";
+import { createAssetsIgnoreFunction } from "@cloudflare/workers-shared/utils/helpers";
+import {
 	getWranglerHiddenDirPath,
 	getWranglerTmpDir,
 } from "@cloudflare/workers-utils";
@@ -30,6 +36,7 @@ import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { ConfigUpdateEvent } from "./events";
 import type { StartDevWorkerOptions } from "./types";
 import type { EphemeralDirectory, Entry } from "@cloudflare/workers-utils";
+import type { MatchFunction } from "chokidar";
 
 type PendingCustomBuild = {
 	config: StartDevWorkerOptions;
@@ -533,10 +540,31 @@ export class BundlerController extends Controller {
 	}
 
 	#assetsWatcher?: ReturnType<typeof watch>;
+	#assetsWatcherVersion = 0;
 	#debouncedRefreshBundle?: ReturnType<typeof debounce>;
 
+	#watchAssets(config: StartDevWorkerOptions) {
+		void this.#ensureWatchingAssets(config).catch((err) => {
+			this.emitErrorEvent({
+				type: "error",
+				reason: "Failed to watch assets",
+				cause: castErrorCause(err),
+				source: "BundlerController",
+				data: { config },
+			});
+		});
+	}
+
 	async #ensureWatchingAssets(config: StartDevWorkerOptions) {
+		const version = ++this.#assetsWatcherVersion;
+		const isCurrent = () =>
+			!this.tearingDown && version === this.#assetsWatcherVersion;
 		await this.#assetsWatcher?.close();
+		// Closing the watcher suspends this method. Don't replace a watcher
+		// belonging to a newer config or create one after teardown.
+		if (!isCurrent()) {
+			return;
+		}
 		this.#assetsWatcher = undefined;
 		// The watcher has closed, so no further events can arm the previous refresh.
 		// Discard any that is still pending: it captured the config it was created
@@ -544,45 +572,40 @@ export class BundlerController extends Controller {
 		this.#debouncedRefreshBundle?.cancel();
 		this.#debouncedRefreshBundle = undefined;
 
-		// Closing the previous watcher suspends this method, so `teardown()` may
-		// have run to completion in the meantime. It reads `#assetsWatcher` once,
-		// so a watcher created below would never be closed and would keep the
-		// process alive.
-		if (this.tearingDown) {
-			return;
-		}
-
-		const debouncedRefreshBundle = debounce(() => {
-			// The watcher can deliver events while it is closing, so a refresh can be
-			// armed after dev has stopped.
-			if (this.tearingDown) {
-				return;
-			}
-			if (this.#currentBundle) {
-				this.emitBundleCompleteEvent(config, this.#currentBundle);
-			}
-		});
-		this.#debouncedRefreshBundle = debouncedRefreshBundle;
-
 		if (config.dev.watch !== false && config.assets?.directory) {
 			const assetsDir = path.resolve(config.assets.directory);
+			const ignoreAsset = await createAssetsWatchMatcher(assetsDir);
+			if (!isCurrent()) {
+				return;
+			}
+
+			const assetsIgnorePath = path.join(assetsDir, CF_ASSETS_IGNORE_FILENAME);
+			let assetsIgnoreChanged = false;
+			const debouncedRefreshBundle = debounce(() => {
+				if (!isCurrent()) {
+					return;
+				}
+				if (assetsIgnoreChanged) {
+					this.#watchAssets(config);
+				}
+				if (this.#currentBundle) {
+					this.emitBundleCompleteEvent(config, this.#currentBundle);
+				}
+			});
+			this.#debouncedRefreshBundle = debouncedRefreshBundle;
+
 			const ignoredDirs = getDevSessionWriteDirs(config).filter(
 				(dir) => path.resolve(dir) !== assetsDir
 			);
-			if (assetsDir === path.resolve(config.projectRoot)) {
-				ignoredDirs.push(
-					path.join(assetsDir, "node_modules"),
-					path.join(assetsDir, ".cloudflare")
-				);
-			}
 			const watcher = watch(assetsDir, {
 				persistent: true,
 				ignoreInitial: true,
-				ignored: ignoredDirs,
+				ignored: [...ignoredDirs, ignoreAsset],
 			})
-				.on("all", async (eventName, filePath) => {
+				.on("all", (eventName, filePath) => {
 					const message = getAssetChangeMessage(eventName, filePath);
 					logger.debug(`🌀 ${message}...`);
+					assetsIgnoreChanged ||= path.resolve(filePath) === assetsIgnorePath;
 					debouncedRefreshBundle();
 				})
 				.on("error", (err) => {
@@ -655,15 +678,7 @@ export class BundlerController extends Controller {
 				data: { config: event.config },
 			});
 		});
-		void this.#ensureWatchingAssets(event.config).catch((err) => {
-			this.emitErrorEvent({
-				type: "error",
-				reason: "Failed to watch assets",
-				cause: castErrorCause(err),
-				source: "BundlerController",
-				data: { config: event.config },
-			});
-		});
+		this.#watchAssets(event.config);
 	}
 
 	override async teardown() {
@@ -708,6 +723,48 @@ export class BundlerController extends Controller {
 	) {
 		this.bus.dispatch({ type: "bundleComplete", config, bundle });
 	}
+}
+
+/**
+ * Match the asset scanner's ignore rules without filtering out metadata that
+ * needs to trigger reloads. Let the asset scanner report unreadable ignore
+ * files so the watcher stays up and detects when the file is fixed.
+ */
+async function createAssetsWatchMatcher(
+	assetsDir: string
+): Promise<MatchFunction> {
+	const ignore = await createAssetsIgnoreFunction(assetsDir).catch(
+		() => undefined
+	);
+	return (filePath, stats) => {
+		if (!ignore) {
+			return false;
+		}
+		const relativePath = path
+			.relative(assetsDir, filePath)
+			.split(path.sep)
+			.join("/");
+		if (
+			relativePath === "" ||
+			relativePath === ".." ||
+			relativePath.startsWith("../") ||
+			path.isAbsolute(relativePath) ||
+			relativePath === CF_ASSETS_IGNORE_FILENAME ||
+			relativePath === HEADERS_FILENAME ||
+			relativePath === REDIRECTS_FILENAME
+		) {
+			return false;
+		}
+		if (stats === undefined) {
+			return (
+				ignore.assetsIgnoreFunction(relativePath) &&
+				ignore.assetsIgnoreFunction(`${relativePath}/`)
+			);
+		}
+		return ignore.assetsIgnoreFunction(
+			stats.isDirectory() ? `${relativePath}/` : relativePath
+		);
+	};
 }
 
 /**

@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { EventEmitter } from "node:events";
+import { stat } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
@@ -16,7 +17,7 @@ import { BundlerController } from "../../../api/startDevWorker/BundlerController
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import type { StartDevWorkerOptions } from "../../../api";
-import type { FSWatcher, Matcher } from "chokidar";
+import type { FSWatcher } from "chokidar";
 
 // Mock chokidar so we can drive watcher events and errors directly, without
 // depending on the filesystem delivering them.
@@ -122,9 +123,23 @@ function mockWatchers(expect: ExpectStatic, { closeDelayMs = 0 } = {}) {
 			assert(watcher);
 			return watcher;
 		},
-		ignoredDirs(index: number): (Matcher | undefined)[] {
+		ignoredDirs(index: number): string[] {
 			const ignored = calls[index]?.ignored;
-			return Array.isArray(ignored) ? ignored : [ignored];
+			return (Array.isArray(ignored) ? ignored : [ignored]).filter(
+				(entry) => typeof entry === "string"
+			);
+		},
+		async ignoresAsset(index: number, relativePath: string, withStats = true) {
+			const ignored = calls[index]?.ignored;
+			const matcher = (Array.isArray(ignored) ? ignored : [ignored]).find(
+				(entry) => typeof entry === "function"
+			);
+			assert(matcher);
+			const absolutePath = path.resolve(relativePath);
+			return matcher(
+				absolutePath,
+				withStats ? await stat(absolutePath) : undefined
+			);
 		},
 	};
 }
@@ -265,10 +280,20 @@ describe("BundlerController — assets watcher", () => {
 		}
 	);
 
-	test("ignores dependencies and generated directories when watching the project root", async ({
+	test("uses .assetsignore rules to watch the project root and reloads when they change", async ({
 		expect,
 	}) => {
 		const watchers = mockWatchers(expect);
+		await seed({
+			".assetsignore":
+				"node_modules\n/.cloudflare/\n*.bak\n*private*\n!private/\n",
+			".cloudflare/config.json": "{}",
+			"node_modules/example/index.js": "export {};",
+			"private/index.html": "<h1>Visible</h1>",
+			"index.bak": "Ignored",
+			_headers: "/\n  X-Test: yes\n",
+			_redirects: "/old /new 302\n",
+		});
 
 		const projectRoot = path.resolve(".");
 		const firstBundle = bus.waitFor("bundleComplete");
@@ -277,14 +302,40 @@ describe("BundlerController — assets watcher", () => {
 			config: assetsAt(projectRoot),
 		});
 		await firstBundle;
-		await watchers.at(0);
-
+		const firstWatcher = await watchers.at(0);
 		expect(watchers.ignoredDirs(0)).toEqual([
 			path.join(projectRoot, ".wrangler"),
 			path.join(projectRoot, ".wrangler/state"),
-			path.join(projectRoot, "node_modules"),
-			path.join(projectRoot, ".cloudflare"),
 		]);
+		for (const ignoredPath of ["node_modules", ".cloudflare", "index.bak"]) {
+			expect(await watchers.ignoresAsset(0, ignoredPath), ignoredPath).toBe(
+				true
+			);
+		}
+		for (const watchedPath of [
+			".assetsignore",
+			"_headers",
+			"_redirects",
+			"private",
+		]) {
+			expect(await watchers.ignoresAsset(0, watchedPath), watchedPath).toBe(
+				false
+			);
+		}
+		expect(await watchers.ignoresAsset(0, "node_modules", false)).toBe(true);
+		expect(await watchers.ignoresAsset(0, "private", false)).toBe(false);
+
+		const ignoreReload = bus.waitFor("bundleComplete");
+		await seed({
+			".assetsignore":
+				"node_modules\n/.cloudflare/\n!/node_modules/\n!/.cloudflare/\n",
+		});
+		firstWatcher.emit("all", "change", path.resolve(".assetsignore"));
+		await ignoreReload;
+		await watchers.at(1);
+		expect(firstWatcher.close).toHaveBeenCalled();
+		expect(await watchers.ignoresAsset(1, ".cloudflare")).toBe(false);
+		expect(await watchers.ignoresAsset(1, "node_modules")).toBe(false);
 	});
 
 	test("ignores a persist directory inside the assets tree", async ({
@@ -305,8 +356,6 @@ describe("BundlerController — assets watcher", () => {
 		expect(watchers.ignoredDirs(0)).toEqual([
 			path.join(projectRoot, ".wrangler"),
 			persist,
-			path.join(projectRoot, "node_modules"),
-			path.join(projectRoot, ".cloudflare"),
 		]);
 	});
 
