@@ -33,9 +33,15 @@ export const wranglerToCfCodemod: Codemod = {
 	description: `Migrate a Wrangler project to cf, including its configuration and framework`,
 	managesGitWorktreeSafety: true,
 	run: async (context) => {
+		const configPath =
+			context.configPath === undefined
+				? undefined
+				: path.resolve(context.cwd, context.configPath);
 		const details = await getDetailsForAutoConfig({
-			projectPath: context.cwd,
-			wranglerConfigPath: context.configPath,
+			// An exact Wrangler config is migrated in its own folder, as before
+			projectPath:
+				configPath === undefined ? context.cwd : path.dirname(configPath),
+			wranglerConfigPath: configPath,
 			target: "cf",
 			context: autoConfigContext,
 		});

@@ -11,7 +11,6 @@ import {
 	readFileSync,
 	UserError,
 } from "@cloudflare/workers-utils";
-import * as find from "empathic/find";
 import {
 	AutoConfigDetectionError,
 	AutoConfigFrameworkConfigurationError,
@@ -59,40 +58,6 @@ function findWranglerConfigFile(projectPath: string): string | undefined {
 		);
 	}
 	return configPaths[0];
-}
-
-/**
- * Finds the project that a Wrangler config belongs to. Migration writes `cloudflare.config.ts`
- * next to the Wrangler config and keeps its relative paths, so the config must be at the root of
- * its project, next to the project's package.json.
- *
- * @param configFile The absolute path of the Wrangler config
- * @param requestedProjectPath The project path the caller gave, the furthest up to look for a package.json
- * @returns The path of the project, which is the Wrangler config's directory
- * @throws {UserError} When the Wrangler config is in a subdirectory of its project
- */
-function getWranglerConfigProjectPath(
-	configFile: string,
-	requestedProjectPath: string
-): string {
-	const configDirectory = dirname(configFile);
-	const packageJsonPath = find.file("package.json", {
-		cwd: configDirectory,
-		last: resolve(requestedProjectPath),
-	});
-	if (
-		packageJsonPath !== undefined &&
-		dirname(packageJsonPath) !== configDirectory
-	) {
-		throw new UserError(
-			`${configFile} isn't at the root of its project, ${dirname(packageJsonPath)}, where cloudflare.config.ts goes. Move it next to the project's package.json, then try again.`,
-			{
-				telemetryMessage:
-					"autoconfig details wrangler config outside project root",
-			}
-		);
-	}
-	return configDirectory;
 }
 
 /**
@@ -198,7 +163,7 @@ function normalizeOutputDir(projectPath: string, outputDir: string): string {
  * @returns The detected project details.
  */
 export async function getDetailsForAutoConfig({
-	projectPath: requestedProjectPath = process.cwd(),
+	projectPath = process.cwd(),
 	wranglerConfig,
 	wranglerConfigPath,
 	target = "cf",
@@ -213,8 +178,7 @@ export async function getDetailsForAutoConfig({
 	 * For the cf target, the Wrangler config file that setup migrates to `cloudflare.config.ts`.
 	 * Defaults to the `wrangler.jsonc`, `wrangler.toml` or `wrangler.json` at the project root.
 	 * Ignored when `cloudflare.config.ts` already exists. Relative paths are resolved against
-	 * `projectPath`. The project becomes the one the Wrangler config belongs to, which must be at
-	 * that project's root.
+	 * `projectPath`. It must be in the project folder, where `cloudflare.config.ts` goes.
 	 */
 	wranglerConfigPath?: string;
 	/** The configuration target, defaults to cf. */
@@ -233,18 +197,6 @@ export async function getDetailsForAutoConfig({
 	context: AutoConfigContext;
 }): Promise<AutoConfigDetails> {
 	const { logger } = context;
-	const requestedWranglerConfigFile =
-		target === "cf" && wranglerConfigPath !== undefined
-			? resolve(requestedProjectPath, wranglerConfigPath)
-			: undefined;
-	const projectPath =
-		requestedWranglerConfigFile === undefined
-			? requestedProjectPath
-			: getWranglerConfigProjectPath(
-					requestedWranglerConfigFile,
-					requestedProjectPath
-				);
-
 	logger.debug(`Running autoconfig detection in ${projectPath}...`);
 
 	const hasCloudflareConfig =
@@ -269,8 +221,20 @@ export async function getDetailsForAutoConfig({
 	// An existing cloudflare.config.ts takes precedence, so a migrated project isn't migrated again
 	const wranglerConfigFile =
 		target === "cf" && !hasCloudflareConfig
-			? (requestedWranglerConfigFile ?? findWranglerConfigFile(projectPath))
+			? wranglerConfigPath !== undefined
+				? resolve(projectPath, wranglerConfigPath)
+				: findWranglerConfigFile(projectPath)
 			: undefined;
+	// The migrated config keeps the Wrangler config's relative paths, so both are in the project folder
+	if (
+		wranglerConfigFile !== undefined &&
+		dirname(wranglerConfigFile) !== resolve(projectPath)
+	) {
+		throw new UserError(
+			`Migrating a Wrangler config from outside the project folder isn't supported yet: ${wranglerConfigFile} is in ${dirname(wranglerConfigFile)}, but cloudflare.config.ts goes in ${resolve(projectPath)}. Move the Wrangler config into the project folder, or use ${dirname(wranglerConfigFile)} as the project.`,
+			{ telemetryMessage: "autoconfig details wrangler config outside project" }
+		);
+	}
 
 	const wranglerRawConfig =
 		wranglerConfigFile === undefined

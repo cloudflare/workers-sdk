@@ -141,32 +141,23 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		);
 	});
 
-	it("should detect a given Wrangler config's own project, which must be at its root", async ({
+	it("should refuse a given Wrangler config outside the project folder", async ({
 		expect,
 	}) => {
 		await seed({
-			"package.json": JSON.stringify({ name: "monorepo" }),
-			"apps/web/package.json": JSON.stringify({ name: "web" }),
-			"apps/web/wrangler.jsonc": JSON.stringify({ name: "web" }),
-			"config/wrangler.jsonc": JSON.stringify({ name: "api" }),
+			"package.json": JSON.stringify({ name: "my-worker" }),
+			"config/wrangler.jsonc": JSON.stringify({ name: "my-worker" }),
 		});
 
-		await expect(
-			details.getDetailsForAutoConfig({
-				wranglerConfigPath: "apps/web/wrangler.jsonc",
-				context,
-			})
-		).resolves.toMatchObject({
-			projectPath: join(process.cwd(), "apps/web"),
-			wranglerConfigPath: join(process.cwd(), "apps/web/wrangler.jsonc"),
-		});
-		// cloudflare.config.ts goes next to package.json, where config/'s relative paths would break
+		// The migrated config keeps the Wrangler config's relative paths
 		await expect(
 			details.getDetailsForAutoConfig({
 				wranglerConfigPath: "config/wrangler.jsonc",
 				context,
 			})
-		).rejects.toThrow("isn't at the root of its project");
+		).rejects.toThrow(
+			"Migrating a Wrangler config from outside the project folder isn't supported yet"
+		);
 	});
 
 	it("should detect commands without using the package dev script when a Cloudflare config exists", async ({
