@@ -85,6 +85,9 @@ export class ProxyWorker implements DurableObject {
 				this.processQueue();
 
 				break;
+
+			default:
+				return new Response(null, { status: 400 });
 		}
 
 		return new Response(null, { status: 204 });

@@ -3,6 +3,7 @@ import { EventEmitter } from "node:events";
 import { UserError } from "@cloudflare/workers-utils";
 import { MiniflareCoreError } from "miniflare";
 import { logger } from "../logger";
+import { castErrorCause } from "./events";
 import { ProxyController } from "./ProxyController";
 import { RemoteRuntimeController } from "./RemoteRuntimeController";
 import type { ErrorEvent, ReloadCompleteEvent } from "./events";
@@ -64,7 +65,7 @@ export class DevEnv extends EventEmitter {
 		);
 		this.runtime = new RemoteRuntimeController(
 			(event) => this.handleErrorEvent(event),
-			(event) => this.handleReloadComplete(event)
+			(event) => void this.handleReloadComplete(event)
 		);
 
 		this.on("error", (event: ErrorEvent) => {
@@ -73,9 +74,23 @@ export class DevEnv extends EventEmitter {
 		});
 	}
 
-	private handleReloadComplete(event: ReloadCompleteEvent) {
-		this.proxy.play(event);
-		this.emit("reloadComplete", event);
+	private async handleReloadComplete(event: ReloadCompleteEvent) {
+		let delivered: boolean;
+		try {
+			delivered = await this.proxy.play(event);
+		} catch (error) {
+			this.handleErrorEvent({
+				type: "error",
+				source: "ProxyController",
+				reason: "Failed to install the preview connection in ProxyWorker",
+				cause: castErrorCause(error),
+				data: { config: event.config, bundle: event.bundle },
+			});
+			return;
+		}
+		if (delivered) {
+			this.emit("reloadComplete", event);
+		}
 	}
 
 	private handleErrorEvent(event: ErrorEvent): void {

@@ -212,30 +212,40 @@ export async function getPlatformProxy<
 		}
 	}
 
-	const miniflareOptions = await getMiniflareOptionsFromConfig({
-		config,
-		options,
-		remoteProxyConnectionString:
-			remoteProxySession?.remoteProxyConnectionString,
-	});
+	let miniflare: Miniflare | undefined;
+	try {
+		const miniflareOptions = await getMiniflareOptionsFromConfig({
+			config,
+			options,
+			remoteProxyConnectionString:
+				remoteProxySession?.remoteProxyConnectionString,
+		});
 
-	const mf = new Miniflare(convertV4MiniflareOptions(miniflareOptions));
+		const mf = new Miniflare(convertV4MiniflareOptions(miniflareOptions));
+		miniflare = mf;
 
-	const bindings: Env = await mf.getBindings();
+		const bindings: Env = await mf.getBindings();
 
-	const cf = await mf.getCf();
-	deepFreeze(cf);
+		const cf = await mf.getCf();
+		deepFreeze(cf);
 
-	return {
-		env: bindings,
-		cf: cf as CfProperties,
-		ctx: new ExecutionContext(),
-		caches: new CacheStorage(),
-		dispose: async () => {
-			await remoteProxySession?.dispose();
-			await mf.dispose();
-		},
-	};
+		return {
+			env: bindings,
+			cf: cf as CfProperties,
+			ctx: new ExecutionContext(),
+			caches: new CacheStorage(),
+			dispose: async () => {
+				await remoteProxySession?.dispose();
+				await mf.dispose();
+			},
+		};
+	} catch (error) {
+		await Promise.allSettled([
+			remoteProxySession?.dispose(),
+			miniflare?.dispose(),
+		]);
+		throw error;
+	}
 }
 
 /**

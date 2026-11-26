@@ -204,9 +204,6 @@ export async function startRemoteProxySession(
 
 		remoteProxyConnectionString = (await devEnv.proxy.ready.promise)
 			.url as RemoteProxyConnectionString;
-		if (!options.lazy) {
-			await devEnv.proxy.runtimeMessageMutex.drained();
-		}
 	} catch (error) {
 		try {
 			await devEnv.teardown();

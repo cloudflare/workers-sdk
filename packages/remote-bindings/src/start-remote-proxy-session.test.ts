@@ -13,7 +13,7 @@ const mockDevEnv = vi.hoisted(() => ({
 	error: undefined as unknown,
 	startError: undefined as unknown,
 	teardown: vi.fn(async () => {}),
-	drained: vi.fn(async () => {}),
+	localServerReady: vi.fn(async () => {}),
 	// The most recently created `DevEnv`, for emitting errors after startup.
 	instance: undefined as EventEmitter | undefined,
 }));
@@ -28,13 +28,12 @@ vi.mock("./startDevWorker/DevEnv", async () => {
 				// With an error configured, the error event settles startup instead.
 				promise:
 					mockDevEnv.error === undefined
-						? Promise.resolve()
+						? mockDevEnv.localServerReady()
 						: new Promise<void>(() => {}),
 			},
 			ready: {
 				promise: Promise.resolve({ url: new URL("http://localhost:8787") }),
 			},
-			runtimeMessageMutex: { drained: mockDevEnv.drained },
 		};
 		constructor() {
 			super();
@@ -260,7 +259,7 @@ it("waits for workerd to receive the preview connection before returning an eage
 	onTestFinished,
 }) => {
 	const delivered = new DeferredPromise<void>();
-	mockDevEnv.drained.mockClear().mockReturnValueOnce(delivered);
+	mockDevEnv.localServerReady.mockClear().mockReturnValueOnce(delivered);
 	onTestFinished(() => delivered.resolve());
 	const started = vi.fn();
 	const pendingSession = startRemoteProxySession({}, createTestOptions()).then(
@@ -270,7 +269,9 @@ it("waits for workerd to receive the preview connection before returning an eage
 			return session;
 		}
 	);
-	await vi.waitFor(() => expect(mockDevEnv.drained).toHaveBeenCalled());
+	await vi.waitFor(() =>
+		expect(mockDevEnv.localServerReady).toHaveBeenCalled()
+	);
 	expect(started).not.toHaveBeenCalled();
 	delivered.resolve();
 	await pendingSession;

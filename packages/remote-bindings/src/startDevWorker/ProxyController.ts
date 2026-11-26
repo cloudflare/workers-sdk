@@ -134,49 +134,47 @@ export class ProxyController {
 	}
 
 	runtimeMessageMutex = new Mutex();
-	async sendMessageToProxyWorker(
+	private async sendMessageToProxyWorker(
 		message: ProxyWorkerIncomingRequestBody,
 		retries = 3
-	): Promise<void> {
-		if (this._torndown) {
-			return;
-		}
+	): Promise<boolean> {
+		return this.runtimeMessageMutex.runWith(async () => {
+			const proxyWorker = this.proxyWorker;
+			if (!proxyWorker) {
+				return false;
+			}
+			await proxyWorker.ready;
 
-		// Don't do any async work here. Enqueue the message with the mutex immediately.
-
-		try {
-			await this.runtimeMessageMutex.runWith(async () => {
-				const { proxyWorker } = await this.ready.promise;
-
-				const ready = await proxyWorker.ready.catch(() => undefined);
-				if (!ready) {
-					return;
-				}
-
-				return proxyWorker.dispatchFetch(
-					`http://dummy/cdn-cgi/ProxyWorker/${message.type}`,
-					{
-						headers: { Authorization: this.secret },
-						cf: { hostMetadata: message },
+			for (let attempt = 0; !this._torndown; attempt++) {
+				try {
+					const response = await proxyWorker.dispatchFetch(
+						`http://dummy/cdn-cgi/ProxyWorker/${message.type}`,
+						{
+							headers: { Authorization: this.secret },
+							cf: { hostMetadata: message },
+						}
+					);
+					if (response.status !== 204) {
+						await response.body?.cancel();
+						throw new Error(`ProxyWorker returned HTTP ${response.status}`);
 					}
-				);
-			});
-		} catch (cause) {
-			if (this._torndown) {
-				return;
+					return true;
+				} catch (error) {
+					if (attempt === retries && !this._torndown) {
+						throw error;
+					}
+				}
 			}
-
-			const error = castErrorCause(cause);
-
-			if (retries > 0) {
-				return this.sendMessageToProxyWorker(message, retries - 1);
-			}
-
+			return false;
+		});
+	}
+	private queueMessageToProxyWorker(message: ProxyWorkerIncomingRequestBody) {
+		void this.sendMessageToProxyWorker(message).catch((cause) => {
 			this.emitErrorEvent(
-				`Failed to send message to ProxyWorker: ${JSON.stringify(message)}`,
-				error
+				`Failed to send message to ProxyWorker: ${message.type}`,
+				castErrorCause(cause)
 			);
-		}
+		});
 	}
 	start(config: StartDevWorkerOptions) {
 		this.latestConfig = config;
@@ -185,7 +183,7 @@ export class ProxyController {
 	pause(config: StartDevWorkerOptions) {
 		this.latestConfig = config;
 		this.latestProxyData = undefined;
-		void this.sendMessageToProxyWorker({
+		this.queueMessageToProxyWorker({
 			type: "pause",
 			lazy: config.lazy ?? false,
 		});
@@ -193,19 +191,22 @@ export class ProxyController {
 	/** Fail queued binding requests without stopping the local development server. */
 	connectionFailed(message: string) {
 		this.latestProxyData = undefined;
-		void this.sendMessageToProxyWorker({ type: "connectionFailed", message });
+		this.queueMessageToProxyWorker({ type: "connectionFailed", message });
 	}
-	play(data: ReloadCompleteEvent) {
-		this.localServerReady.resolve();
-
+	/** Install the preview connection and wait for workerd to acknowledge it. */
+	async play(data: ReloadCompleteEvent) {
 		this.latestConfig = data.config;
 		this.latestBundle = data.bundle;
 		this.latestProxyData = data.proxyData;
 
-		void this.sendMessageToProxyWorker({
+		const delivered = await this.sendMessageToProxyWorker({
 			type: "play",
 			proxyData: data.proxyData,
 		});
+		if (delivered) {
+			this.localServerReady.resolve();
+		}
+		return delivered;
 	}
 	onProxyWorkerMessage(message: ProxyWorkerOutgoingRequestBody) {
 		switch (message.type) {

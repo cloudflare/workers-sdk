@@ -1,5 +1,6 @@
 import { once } from "node:events";
 import { createServer } from "node:http";
+import { Response } from "miniflare";
 import { it, onTestFinished, vi } from "vitest";
 import { WebSocketServer } from "ws";
 import { initLogger } from "../logger";
@@ -77,7 +78,7 @@ async function startProxy(
 
 	// Remote previews keep the same host across reloads; only the token changes.
 	function play(previewToken: string, refreshAt?: number) {
-		controller.play({
+		return controller.play({
 			type: "reloadComplete",
 			config: { ...config, lazy },
 			bundle: {
@@ -96,7 +97,6 @@ async function startProxy(
 				headers: { "cf-workers-preview-token": previewToken },
 			},
 		});
-		return controller.runtimeMessageMutex.drained();
 	}
 	return {
 		proxyWorker,
@@ -119,6 +119,72 @@ it("does not request a connection for an eager session", async ({ expect }) => {
 	await play("signed-in");
 	expect(await (await pending).text()).toBe("connected");
 	expect(requestConnection).not.toHaveBeenCalled();
+});
+
+it("does not report readiness until workerd acknowledges the retried connection", async ({
+	expect,
+}) => {
+	const { controller, play, proxyWorker } = await startProxy(
+		(_request, response) => response.end("connected"),
+		vi.fn(),
+		false
+	);
+	const retry = createDeferred<void>();
+	onTestFinished(() => retry.resolve());
+	const dispatch = proxyWorker.dispatchFetch.bind(proxyWorker);
+	const send = vi
+		.spyOn(proxyWorker, "dispatchFetch")
+		.mockRejectedValueOnce(new Error("Disconnected"))
+		.mockResolvedValueOnce(new Response(null, { status: 500 }))
+		.mockImplementationOnce(async (...args) => {
+			await retry.promise;
+			return dispatch(...args);
+		});
+	const ready = vi.fn();
+	const pendingReady = controller.localServerReady.promise.then(ready);
+	const delivery = play("signed-in");
+	await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(3));
+	expect(ready).not.toHaveBeenCalled();
+	retry.resolve();
+	await expect(delivery).resolves.toBe(true);
+	await pendingReady;
+	expect(ready).toHaveBeenCalledOnce();
+	expect(
+		await (await proxyWorker.dispatchFetch("http://localhost/")).text()
+	).toBe("connected");
+});
+
+it("rejects delivery if workerd never acknowledges the connection", async ({
+	expect,
+}) => {
+	const { controller, play, proxyWorker } = await startProxy(
+		(_request, response) => response.end("connected"),
+		vi.fn(),
+		false
+	);
+	const send = vi
+		.spyOn(proxyWorker, "dispatchFetch")
+		.mockImplementation(async () => new Response(null, { status: 500 }));
+	const ready = vi.fn();
+	void controller.localServerReady.promise.then(ready);
+	await expect(play("signed-in")).rejects.toThrow(
+		"ProxyWorker returned HTTP 500"
+	);
+	expect(send).toHaveBeenCalledTimes(4);
+	expect(ready).not.toHaveBeenCalled();
+});
+
+it("does not acknowledge a control request without a message", async ({
+	expect,
+}) => {
+	const { controller, proxyWorker } = await startProxy((_request, response) =>
+		response.end("connected")
+	);
+	const response = await proxyWorker.dispatchFetch(
+		"http://dummy/cdn-cgi/ProxyWorker/play",
+		{ headers: { Authorization: controller.secret } }
+	);
+	expect(response.status).toBe(400);
 });
 
 it.for(["current", "paused", "replaced", "failed"] as const)(

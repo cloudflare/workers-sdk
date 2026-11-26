@@ -4,10 +4,13 @@ import {
 	runInTempDir,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
+import { Miniflare } from "miniflare";
 import { fetch } from "undici";
 import { beforeEach, describe, it, vi } from "vitest";
+import * as remoteBindingsApi from "../api/remoteBindings";
 import * as remoteBindingsAuth from "../api/remoteBindings/auth";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import type { RemoteProxyConnectionString } from "miniflare";
 
 const { miniflareInstances } = vi.hoisted(() => ({
 	miniflareInstances: [] as Array<{ ready: Promise<URL> }>,
@@ -70,6 +73,76 @@ describe("getPlatformProxy", () => {
 		);
 		expect(hook).toHaveBeenCalledOnce();
 	});
+
+	it.for(["config", "runtime"] as const)(
+		"disposes resources and preserves the original %s setup failure",
+		async (stage, { expect, onTestFinished }) => {
+			const originalError = new Error("Miniflare setup failed");
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					compatibility_date: "2026-11-02",
+					kv_namespaces: [
+						{
+							binding: "KV",
+							id: "0123456789abcdef0123456789abcdef",
+							remote: true,
+						},
+					],
+					hyperdrive:
+						stage === "config"
+							? [
+									{
+										binding: "DATABASE",
+										id: "0123456789abcdef0123456789abcdef",
+									},
+								]
+							: undefined,
+				},
+				"./wrangler.json"
+			);
+			vi.stubEnv(
+				"CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DATABASE",
+				undefined
+			);
+			vi.stubEnv(
+				"WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_DATABASE",
+				undefined
+			);
+			const dispose = vi.fn().mockRejectedValue(new Error("Cleanup failed"));
+			const startSession = vi
+				.spyOn(remoteBindingsApi, "startRemoteProxySession")
+				.mockResolvedValue({
+					ready: Promise.resolve(),
+					remoteProxyConnectionString: new URL(
+						"http://127.0.0.1:8787"
+					) as RemoteProxyConnectionString,
+					updateBindings: vi.fn(),
+					dispose,
+				});
+			const disposeMiniflare = vi.spyOn(Miniflare.prototype, "dispose");
+			onTestFinished(() => {
+				startSession.mockRestore();
+				disposeMiniflare.mockRestore();
+			});
+			if (stage === "runtime") {
+				const getBindings = vi
+					.spyOn(Miniflare.prototype, "getBindings")
+					.mockRejectedValueOnce(originalError);
+				onTestFinished(() => getBindings.mockRestore());
+				await expect(getPlatformProxy({ persist: false })).rejects.toBe(
+					originalError
+				);
+				expect(disposeMiniflare).toHaveBeenCalledOnce();
+			} else {
+				await expect(getPlatformProxy({ persist: false })).rejects.toThrow(
+					"you should use a local Postgres connection string"
+				);
+				expect(disposeMiniflare).not.toHaveBeenCalled();
+			}
+			expect(dispose).toHaveBeenCalledOnce();
+		}
+	);
 
 	it.for([
 		{ remote: false, remoteBindings: true },
